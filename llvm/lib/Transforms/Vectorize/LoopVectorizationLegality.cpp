@@ -25,6 +25,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
@@ -1840,6 +1841,9 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
 
   // Check non-dereferenceable loads if any.
   for (LoadInst *LI : NonDerefLoads) {
+    // Occurs after the early exit, so we can predicate it.
+    if (DT->properlyDominates(SingleUncountableExitingBlock, LI->getParent()))
+      continue;
     // Only support unit-stride access for now.
     int Stride = isConsecutivePtr(LI->getType(), LI->getPointerOperand());
     if (Stride != 1) {
@@ -2038,6 +2042,11 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
         else
           return false;
       }
+      // isVectorizableEarlyExitLoop will have predicated some instructions when
+      // they previously weren't. Call canVectorizeWithIfConvert again to
+      // repopulate MaskedOp with any new instructions.
+      if (!canVectorizeWithIfConvert())
+        return false;
     }
   }
 
