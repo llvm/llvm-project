@@ -892,9 +892,6 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
       NB_DOMAIN=${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
       MLIR_CAPI_BUILDING_LIBRARY=1
     )
-    if(MSVC)
-      set_property(TARGET ${libname} PROPERTY WINDOWS_EXPORT_ALL_SYMBOLS ON)
-    endif()
   else()
     nanobind_add_module(${libname}
       NB_DOMAIN ${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
