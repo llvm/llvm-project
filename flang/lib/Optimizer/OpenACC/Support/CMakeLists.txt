@@ -8,6 +8,7 @@ add_flang_library(FIROpenACCSupport
   RegisterOpenACCExtensions.cpp
 
   DEPENDS
+  CUFDialect
   FIRBuilder
   FIRDialect
   FIRDialectSupport
@@ -15,6 +16,7 @@ add_flang_library(FIROpenACCSupport
   HLFIRDialect
 
   LINK_LIBS
+  CUFDialect
   FIRBuilder
   FIRCodeGenDialect
   FIRDialect
