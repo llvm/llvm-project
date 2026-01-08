@@ -23,7 +23,7 @@ namespace Fortran::parser {
 // R867
 ImportStmt::ImportStmt(common::ImportKind &&k, std::list<Name> &&n)
     : t(k, std::move(n)) {
-  auto &[kind, names]{t};
+  const auto &[kind, names]{t};
   CHECK(kind == common::ImportKind::Default ||
       kind == common::ImportKind::Only || names.empty());
 }

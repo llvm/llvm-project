@@ -727,7 +727,7 @@ public:
     }
   }
   void Unparse(const ImportStmt &x) { // R867
-    auto &[kind, names]{x.t};
+    const auto &[kind, names]{x.t};
     Word("IMPORT");
     switch (kind) {
     case common::ImportKind::Default:
@@ -1108,7 +1108,7 @@ public:
         x.u);
   }
   void Unparse(const CaseValueRange::Range &x) { // R1146
-    auto &[lower, upper]{x.t};
+    const auto &[lower, upper]{x.t};
     Walk(lower), Put(':'), Walk(upper);
   }
   void Unparse(const SelectRankStmt &x) { // R1149

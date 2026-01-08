@@ -6160,7 +6160,7 @@ void DeclarationVisitor::Post(const parser::IntrinsicTypeSpec::Character &) {
   charInfo_ = {};
 }
 void DeclarationVisitor::Post(const parser::CharSelector::LengthAndKind &x) {
-  auto &[length, kind]{x.t};
+  const auto &[length, kind]{x.t};
   charInfo_.kind = EvaluateSubscriptIntExpr(kind);
   std::optional<std::int64_t> intKind{ToInt64(charInfo_.kind)};
   if (intKind &&
@@ -7894,7 +7894,7 @@ bool ConstructVisitor::Pre(const parser::LocalitySpec::Shared &x) {
 }
 
 bool ConstructVisitor::Pre(const parser::AcSpec &x) {
-  auto &[type, values]{x.t};
+  const auto &[type, values]{x.t};
   ProcessTypeSpec(type);
   Walk(values);
   return false;
@@ -8494,7 +8494,7 @@ public:
     return true;
   }
   void Post(const parser::ImportStmt &x) {
-    auto &[kind, names]{x.t};
+    const auto &[kind, names]{x.t};
     if (kind == common::ImportKind::None || kind == common::ImportKind::Only) {
       if (!nestedScopes_.front().importOnly.has_value()) {
         nestedScopes_.front().importOnly.emplace();
@@ -8711,7 +8711,7 @@ bool ResolveNamesVisitor::Pre(const parser::CallStmt &x) {
 }
 
 bool ResolveNamesVisitor::Pre(const parser::ImportStmt &x) {
-  auto &[kind, names]{x.t};
+  const auto &[kind, names]{x.t};
   auto &scope{currScope()};
   // Check C896 and C899: where IMPORT statements are allowed
   switch (scope.kind()) {

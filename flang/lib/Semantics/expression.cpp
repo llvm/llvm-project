@@ -2076,7 +2076,7 @@ MaybeExpr ArrayConstructorContext::ToExpr() {
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayConstructor &array) {
   const parser::AcSpec &acSpec{array.v};
-  auto &[type, values]{acSpec.t};
+  const auto &[type, values]{acSpec.t};
   bool hadAnyFatalError{context_.AnyFatalError()};
   ArrayConstructorContext acContext{
       *this, AnalyzeTypeSpec(type, GetFoldingContext())};

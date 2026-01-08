@@ -4011,7 +4011,7 @@ private:
         }
         const auto &caseRange =
             std::get<Fortran::parser::CaseValueRange::Range>(caseValueRange.u);
-        auto &[lower, upper]{caseRange.t};
+        const auto &[lower, upper]{caseRange.t};
         if (lower && upper) {
           attrList.push_back(fir::ClosedIntervalAttr::get(context));
           addValue(*lower);

@@ -123,7 +123,7 @@ private:
                                return PairOfValues{value, value};
                              },
                              [&](const parser::CaseValueRange::Range &x) {
-                               auto &[lower, upper]{x.t};
+                               const auto &[lower, upper]{x.t};
                                std::optional<Value> lo, hi;
                                if (lower) {
                                  lo = GetValue(*lower);
