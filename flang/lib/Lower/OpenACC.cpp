@@ -5008,8 +5008,8 @@ genACC(Fortran::lower::AbstractConverter &converter,
 
     // Use acc.cache directly as the variable definition.
     converter.getSymbolMap().addVariableDefinition(
-        symbol, mlir::cast<fir::FortranVariableOpInterface>(
-                    cacheOp.getOperation()));
+        symbol,
+        mlir::cast<fir::FortranVariableOpInterface>(cacheOp.getOperation()));
   }
 }
 
