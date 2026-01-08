@@ -47,7 +47,7 @@ endif()
 # instructions yet and we end up missing out on way more important constant
 # propagation. That said, we will run the vectorizer again after the runtime
 # has been linked into the user program.
-list(APPEND compile_options -mllvm -vectorize-slp=false)
+list(APPEND compile_options "SHELL: -mllvm -vectorize-slp=false")
 if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn" OR
    "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgcn")
   set(target_name "amdgpu")
@@ -70,32 +70,33 @@ set_target_properties(libompdevice PROPERTIES
   BUILD_RPATH ""
   INSTALL_RPATH ""
   RUNTIME_OUTPUT_NAME libomptarget-${target_name}.bc)
- 
-  # If the user built with the GPU C library enabled we will use that instead.
-  if(TARGET libc)
-    target_compile_definitions(libompdevice PRIVATE OMPTARGET_HAS_LIBC)
-  endif()
-  target_compile_definitions(libompdevice PRIVATE SHARED_SCRATCHPAD_SIZE=512)
-  
-  target_include_directories(libompdevice PRIVATE
-                             ${CMAKE_CURRENT_SOURCE_DIR}/include
-                             ${CMAKE_CURRENT_SOURCE_DIR}/../../libc
-                             ${CMAKE_CURRENT_SOURCE_DIR}/../../offload/include)
-  target_compile_options(libompdevice PRIVATE ${compile_options})
-  if(NOT "${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^spirv" AND
-     NOT "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^spirv")  
-    target_link_options(libompdevice PRIVATE
-                    "-flto" "-r" "-nostdlib" "-Wl,--lto-emit-llvm")
-  else()
-    target_link_options(libompdevice PRIVATE
-                    "-nostdlib" "-emit-llvm" "-Wl")
-  endif()
-  if(LLVM_DEFAULT_TARGET_TRIPLE)
-    target_link_options(libompdevice PRIVATE "--target=${LLVM_DEFAULT_TARGET_TRIPLE}")
-  endif()
-  install(TARGETS libompdevice
-          PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ WORLD_READ
-          DESTINATION ${OPENMP_INSTALL_LIBDIR})
+
+# If the user built with the GPU C library enabled we will use that instead.
+if(TARGET libc)
+  target_compile_definitions(libompdevice PRIVATE OMPTARGET_HAS_LIBC)
+endif()
+target_compile_definitions(libompdevice PRIVATE SHARED_SCRATCHPAD_SIZE=512)
+
+target_include_directories(libompdevice PRIVATE
+                           ${CMAKE_CURRENT_SOURCE_DIR}/include
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../../libc
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../../offload/include)
+target_compile_options(libompdevice PRIVATE ${compile_options})
+if(NOT "${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^spirv" AND
+   NOT "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^spirv")
+  target_link_options(libompdevice PRIVATE
+                  "-flto" "-r" "-nostdlib" "-Wl,--lto-emit-llvm")
+else()
+  target_link_options(libompdevice PRIVATE
+                  "-nostdlib" "-emit-llvm" "-Wl")
+endif()
+
+if(LLVM_DEFAULT_TARGET_TRIPLE)
+  target_link_options(libompdevice PRIVATE "--target=${LLVM_DEFAULT_TARGET_TRIPLE}")
+endif()
+install(TARGETS libompdevice
+        PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ WORLD_READ
+        DESTINATION ${OPENMP_INSTALL_LIBDIR})
 
 add_library(ompdevice.all_objs OBJECT IMPORTED)
 set_property(TARGET ompdevice.all_objs APPEND PROPERTY IMPORTED_OBJECTS
