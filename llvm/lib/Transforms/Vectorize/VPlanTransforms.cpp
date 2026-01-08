@@ -3781,10 +3781,11 @@ void VPlanTransforms::expandBranchOnTwoConds(VPlan &Plan) {
     VPBlockBase *Succ0 = Successors[0];
     VPBlockBase *Succ1 = Successors[1];
     VPBlockBase *Succ2 = Successors[2];
+    assert(!Succ0->getParent() && !Succ1->getParent() && !Succ2->getParent() &&
+           !Cond0BB->getParent() && "regions must already be dissolved");
 
     VPBasicBlock *Cond1BB =
         Plan.createVPBasicBlock(Cond0BB->getName() + ".cond.1");
-    Cond1BB->setParent(Succ1->getParent());
 
     VPBuilder(Cond0BB).createNaryOp(VPInstruction::BranchOnCond, {Cond0}, DL);
     VPBlockUtils::connectBlocks(Cond0BB, Succ0);
