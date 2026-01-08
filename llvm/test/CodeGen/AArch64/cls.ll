@@ -48,7 +48,7 @@ define i32 @cls_i32_knownbits(i32 %x) {
   ret i32 %e
 }
 
-; There are at least 16 redundant sign bits so we don't need an ori after the clsw.
+; There are at least 16 redundant sign bits so we don't need an ori after the cls.
 define i32 @cls_i32_knownbits_2(i16 signext %x) {
 ; CHECK-LABEL: cls_i32_knownbits_2:
 ; CHECK:       // %bb.0:
@@ -61,6 +61,24 @@ define i32 @cls_i32_knownbits_2(i16 signext %x) {
   %d = sub i32 %c, 1
   %e = or i32 %d, 16
   ret i32 %e
+}
+
+; Check that the range max in ctls cls knownbits
+; is not set to 32
+define i64 @cls_i64_knownbits_2(i32 signext %x) {
+; CHECK-LABEL: cls_i64_knownbits_2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:  //{{.*}}
+; CHECK-NEXT:    sxtw x8, w0
+; CHECK-NEXT:    cls x0, x8
+; CHECK-NEXT:    ret
+  %sext = sext i32 %x to i64
+  %a = ashr i64 %sext, 31
+  %b = xor i64 %sext, %a
+  %c = call i64 @llvm.ctlz.i64(i64 %b, i1 false)
+  %d = sub i64 %c, 1
+  %e = or i64 %d, 16
+  ret i64 %e
 }
 
 ; There are at least 24 redundant sign bits so we don't need an ori after the clsw.
@@ -94,5 +112,23 @@ define i32 @cls_i32_knownbits_4(i32 signext %x) {
   %c = call i32 @llvm.ctlz.i32(i32 %b, i1 false)
   %d = sub i32 %c, 1
   %e = or i32 %d, 1
+  ret i32 %e
+ }
+
+; Negative test. Check that the number of sign bits is not
+; overestimated. If it is, the orr disappears.
+define i32 @cls_i32_knownbits_no_overestimate(i32 signext %x) {
+; CHECK-LABEL: cls_i32_knownbits_no_overestimate:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:   asr w8, w0, #15
+; CHECK-NEXT:	  cls	w8, w8
+; CHECK-NEXT:	  orr	w0, w8, #0x1
+; CHECK-NEXT:	  ret
+  %ashr = ashr i32 %x, 15
+  %a = ashr i32 %ashr, 31
+  %b = xor i32 %ashr, %a
+  %c = call i32 @llvm.ctlz.i32(i32 %b, i1 false)
+  %d = sub i32 %c, 1
+  %e = or i32 %d, 16
   ret i32 %e
  }

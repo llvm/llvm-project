@@ -298,6 +298,23 @@ define i32 @cls_i32_knownbits_4(i32 signext %x) {
   ret i32 %e
  }
  
+; Negative test. Check that the number of sign bits is not
+; overestimated. If it is, the orr disappears.
+define i32 @cls_i32_knownbits_no_overestimate(i32 signext %x) {
+; CHECK-LABEL: cls_i32_knownbits_no_overestimate:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:   srai a0, a0, 15
+; CHECK-NEXT:	  cls a0, a0 
+; CHECK-NEXT:	  ori a0, a0, 16
+; CHECK-NEXT:	  ret
+  %ashr = ashr i32 %x, 15
+  %a = ashr i32 %ashr, 31
+  %b = xor i32 %ashr, %a
+  %c = call i32 @llvm.ctlz.i32(i32 %b, i1 false)
+  %d = sub i32 %c, 1
+  %e = or i32 %d, 16
+  ret i32 %e
+ }
 
 define i64 @slx_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: slx_i64:
