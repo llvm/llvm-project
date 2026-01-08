@@ -190,6 +190,44 @@ define <8 x i16> @add_avgceilu2(<8 x i16> %a0, <8 x i16> %a1) {
   ret <8 x i16> %avg
 }
 
+define <16 x i8> @lsb_avgceilu_v16i8(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: lsb_avgceilu_v16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.16b, #1
+; CHECK-NEXT:    ushr v3.16b, v1.16b, #1
+; CHECK-NEXT:    orr v1.16b, v1.16b, v0.16b
+; CHECK-NEXT:    usra v3.16b, v0.16b, #1
+; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    add v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a_shr_1 = lshr <16 x i8> %a, splat (i8 1)
+  %b_shr_1 = lshr <16 x i8> %b, splat (i8 1)
+  %a_or_b = or <16 x i8> %b, %a
+  %a_or_b_lsb = and <16 x i8> %a_or_b, splat (i8 1)
+  %sum0 = add <16 x i8> %b_shr_1, %a_shr_1
+  %sum1 = add <16 x i8> %sum0, %a_or_b_lsb
+  ret <16 x i8> %sum1
+}
+
+define <8 x i16> @lsb_avgceilu_v8i16(<8 x i16> %a, <8 x i16> %b) {
+; CHECK-LABEL: lsb_avgceilu_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.8h, #1
+; CHECK-NEXT:    ushr v3.8h, v1.8h, #1
+; CHECK-NEXT:    orr v1.16b, v1.16b, v0.16b
+; CHECK-NEXT:    usra v3.8h, v0.8h, #1
+; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    add v0.8h, v3.8h, v1.8h
+; CHECK-NEXT:    ret
+  %a_shr_1 = lshr <8 x i16> %a, splat (i16 1)
+  %b_shr_1 = lshr <8 x i16> %b, splat (i16 1)
+  %a_or_b = or <8 x i16> %b, %a
+  %a_or_b_lsb = and <8 x i16> %a_or_b, splat (i16 1)
+  %sum0 = add <8 x i16> %b_shr_1, %a_shr_1
+  %sum1 = add <8 x i16> %sum0, %a_or_b_lsb
+  ret <8 x i16> %sum1
+}
+
 define <8 x i16> @add_avgceilu_mismatch1(<8 x i16> %a0, <8 x i16> %a1) {
 ; CHECK-LABEL: add_avgceilu_mismatch1:
 ; CHECK:       // %bb.0:
@@ -281,6 +319,44 @@ define <8 x i16> @add_avgceils2(<8 x i16> %a0, <8 x i16> %a1) {
   %add = add nsw <8 x i16> %add0, splat(i16 1)
   %avg = ashr <8 x i16> %add, splat(i16 1)
   ret <8 x i16> %avg
+}
+
+define <16 x i8> @lsb_avgceils_v16i8(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: lsb_avgceils_v16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.16b, #1
+; CHECK-NEXT:    sshr v3.16b, v1.16b, #1
+; CHECK-NEXT:    orr v1.16b, v1.16b, v0.16b
+; CHECK-NEXT:    ssra v3.16b, v0.16b, #1
+; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    add v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a_shr_1 = ashr <16 x i8> %a, splat (i8 1)
+  %b_shr_1 = ashr <16 x i8> %b, splat (i8 1)
+  %a_or_b = or <16 x i8> %b, %a
+  %a_or_b_lsb = and <16 x i8> %a_or_b, splat (i8 1)
+  %sum0 = add <16 x i8> %b_shr_1, %a_shr_1
+  %sum1 = add <16 x i8> %sum0, %a_or_b_lsb
+  ret <16 x i8> %sum1
+}
+
+define <8 x i16> @lsb_avgceils_v8i16(<8 x i16> %a, <8 x i16> %b) {
+; CHECK-LABEL: lsb_avgceils_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.8h, #1
+; CHECK-NEXT:    sshr v3.8h, v1.8h, #1
+; CHECK-NEXT:    orr v1.16b, v1.16b, v0.16b
+; CHECK-NEXT:    ssra v3.8h, v0.8h, #1
+; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    add v0.8h, v3.8h, v1.8h
+; CHECK-NEXT:    ret
+  %a_shr_1 = ashr <8 x i16> %a, splat (i16 1)
+  %b_shr_1 = ashr <8 x i16> %b, splat (i16 1)
+  %a_or_b = or <8 x i16> %b, %a
+  %a_or_b_lsb = and <8 x i16> %a_or_b, splat (i16 1)
+  %sum0 = add <8 x i16> %b_shr_1, %a_shr_1
+  %sum1 = add <8 x i16> %sum0, %a_or_b_lsb
+  ret <8 x i16> %sum1
 }
 
 define <8 x i16> @add_avgceils_mismatch1(<8 x i16> %a0, <8 x i16> %a1) {

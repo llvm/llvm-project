@@ -1063,12 +1063,12 @@ foreach bitsVal = [8, 32, 64, 128] in {
 foreach bitsVal = [8, 32, 64, 128] in {
   defvar bitsStr = "b" # !cast<string>(bitsVal);
   def ROCDL_ClusterLoadAsyncToLDS # !toupper(bitsStr) # Op :
-    ROCDL_IntrOp<"cluster.load.async.to.lds." # bitsStr, [], [], [], 0, 0, 1, 0, [2, 3, 4], ["offset", "cpol", "mask"]> {
+    ROCDL_IntrOp<"cluster.load.async.to.lds." # bitsStr, [], [], [], 0, 0, 1, 0, [2, 3], ["offset", "cpol"]> {
     dag args = (ins Arg<ROCDLGlobalBuffer, "", [MemRead]>:$globalPtr,
                    Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
                    I32Attr:$offset,
                    I32Attr:$cpol,
-                   I32Attr:$mask);
+                   I32:$mask);
     let arguments = !con(args, baseArgs);
     let assemblyFormat = [{
       $globalPtr `,`  $ldsPtr `,` $offset `,` $cpol `,` $mask

@@ -1469,7 +1469,7 @@ spillVGPRtoAGPR(const GCNSubtarget &ST, MachineBasicBlock &MBB,
   unsigned Dst = IsStore ? Reg : ValueReg;
   unsigned Src = IsStore ? ValueReg : Reg;
   bool IsVGPR = TRI->isVGPR(MRI, Reg);
-  DebugLoc DL = MI->getDebugLoc();
+  const DebugLoc &DL = MI->getDebugLoc();
   if (IsVGPR == TRI->isVGPR(MRI, ValueReg)) {
     // Spiller during regalloc may restore a spilled register to its superclass.
     // It could result in AGPR spills restored to VGPRs or the other way around,

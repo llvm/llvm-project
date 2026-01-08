@@ -69,12 +69,12 @@ def testValueIsInstance():
         ctx,
     )
     func = module.body.operations[0]
-    assert BlockArgument.isinstance(func.regions[0].blocks[0].arguments[0])
-    assert not OpResult.isinstance(func.regions[0].blocks[0].arguments[0])
+    assert isinstance(func.regions[0].blocks[0].arguments[0], BlockArgument)
+    assert not isinstance(func.regions[0].blocks[0].arguments[0], OpResult)
 
     op = func.regions[0].blocks[0].operations[0]
-    assert not BlockArgument.isinstance(op.results[0])
-    assert OpResult.isinstance(op.results[0])
+    assert not isinstance(op.results[0], BlockArgument)
+    assert isinstance(op.results[0], OpResult)
 
 
 # CHECK-LABEL: TEST: testValueHash

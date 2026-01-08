@@ -2024,7 +2024,8 @@ public:
       StringRef Filename, FileManager &FileMgr, const ModuleCache &ModCache,
       const PCHContainerReader &PCHContainerRdr, const LangOptions &LangOpts,
       const CodeGenOptions &CGOpts, const TargetOptions &TargetOpts,
-      const PreprocessorOptions &PPOpts, StringRef ExistingModuleCachePath,
+      const PreprocessorOptions &PPOpts, const HeaderSearchOptions &HSOpts,
+      StringRef ExistingModuleCachePath,
       bool RequireStrictOptionMatches = false);
 
   /// Returns the suggested contents of the predefines buffer,

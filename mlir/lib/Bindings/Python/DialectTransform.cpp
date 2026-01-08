@@ -11,112 +11,166 @@
 #include "mlir-c/Dialect/Transform.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
+#include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 
 namespace nb = nanobind;
-using namespace mlir;
-using namespace mlir::python;
 using namespace mlir::python::nanobind_adaptors;
 
-static void populateDialectTransformSubmodule(const nb::module_ &m) {
-  //===-------------------------------------------------------------------===//
-  // AnyOpType
-  //===-------------------------------------------------------------------===//
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
+namespace transform {
+//===-------------------------------------------------------------------===//
+// AnyOpType
+//===-------------------------------------------------------------------===//
 
-  auto anyOpType =
-      mlir_type_subclass(m, "AnyOpType", mlirTypeIsATransformAnyOpType,
-                         mlirTransformAnyOpTypeGetTypeID);
-  anyOpType.def_classmethod(
-      "get",
-      [](const nb::object &cls, MlirContext ctx) {
-        return cls(mlirTransformAnyOpTypeGet(ctx));
-      },
-      "Get an instance of AnyOpType in the given context.", nb::arg("cls"),
-      nb::arg("context") = nb::none());
+struct AnyOpType : PyConcreteType<AnyOpType> {
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsATransformAnyOpType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirTransformAnyOpTypeGetTypeID;
+  static constexpr const char *pyClassName = "AnyOpType";
+  using Base::Base;
 
-  //===-------------------------------------------------------------------===//
-  // AnyParamType
-  //===-------------------------------------------------------------------===//
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](DefaultingPyMlirContext context) {
+          return AnyOpType(context->getRef(),
+                           mlirTransformAnyOpTypeGet(context.get()->get()));
+        },
+        "Get an instance of AnyOpType in the given context.",
+        nb::arg("context").none() = nb::none());
+  }
+};
 
-  auto anyParamType =
-      mlir_type_subclass(m, "AnyParamType", mlirTypeIsATransformAnyParamType,
-                         mlirTransformAnyParamTypeGetTypeID);
-  anyParamType.def_classmethod(
-      "get",
-      [](const nb::object &cls, MlirContext ctx) {
-        return cls(mlirTransformAnyParamTypeGet(ctx));
-      },
-      "Get an instance of AnyParamType in the given context.", nb::arg("cls"),
-      nb::arg("context") = nb::none());
+//===-------------------------------------------------------------------===//
+// AnyParamType
+//===-------------------------------------------------------------------===//
 
-  //===-------------------------------------------------------------------===//
-  // AnyValueType
-  //===-------------------------------------------------------------------===//
+struct AnyParamType : PyConcreteType<AnyParamType> {
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsATransformAnyParamType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirTransformAnyParamTypeGetTypeID;
+  static constexpr const char *pyClassName = "AnyParamType";
+  using Base::Base;
 
-  auto anyValueType =
-      mlir_type_subclass(m, "AnyValueType", mlirTypeIsATransformAnyValueType,
-                         mlirTransformAnyValueTypeGetTypeID);
-  anyValueType.def_classmethod(
-      "get",
-      [](const nb::object &cls, MlirContext ctx) {
-        return cls(mlirTransformAnyValueTypeGet(ctx));
-      },
-      "Get an instance of AnyValueType in the given context.", nb::arg("cls"),
-      nb::arg("context") = nb::none());
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](DefaultingPyMlirContext context) {
+          return AnyParamType(context->getRef(), mlirTransformAnyParamTypeGet(
+                                                     context.get()->get()));
+        },
+        "Get an instance of AnyParamType in the given context.",
+        nb::arg("context").none() = nb::none());
+  }
+};
 
-  //===-------------------------------------------------------------------===//
-  // OperationType
-  //===-------------------------------------------------------------------===//
+//===-------------------------------------------------------------------===//
+// AnyValueType
+//===-------------------------------------------------------------------===//
 
-  auto operationType =
-      mlir_type_subclass(m, "OperationType", mlirTypeIsATransformOperationType,
-                         mlirTransformOperationTypeGetTypeID);
-  operationType.def_classmethod(
-      "get",
-      [](const nb::object &cls, const std::string &operationName,
-         MlirContext ctx) {
-        MlirStringRef cOperationName =
-            mlirStringRefCreate(operationName.data(), operationName.size());
-        return cls(mlirTransformOperationTypeGet(ctx, cOperationName));
-      },
-      "Get an instance of OperationType for the given kind in the given "
-      "context",
-      nb::arg("cls"), nb::arg("operation_name"),
-      nb::arg("context") = nb::none());
-  operationType.def_property_readonly(
-      "operation_name",
-      [](MlirType type) {
-        MlirStringRef operationName =
-            mlirTransformOperationTypeGetOperationName(type);
-        return nb::str(operationName.data, operationName.length);
-      },
-      "Get the name of the payload operation accepted by the handle.");
+struct AnyValueType : PyConcreteType<AnyValueType> {
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsATransformAnyValueType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirTransformAnyValueTypeGetTypeID;
+  static constexpr const char *pyClassName = "AnyValueType";
+  using Base::Base;
 
-  //===-------------------------------------------------------------------===//
-  // ParamType
-  //===-------------------------------------------------------------------===//
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](DefaultingPyMlirContext context) {
+          return AnyValueType(context->getRef(), mlirTransformAnyValueTypeGet(
+                                                     context.get()->get()));
+        },
+        "Get an instance of AnyValueType in the given context.",
+        nb::arg("context").none() = nb::none());
+  }
+};
 
-  auto paramType =
-      mlir_type_subclass(m, "ParamType", mlirTypeIsATransformParamType,
-                         mlirTransformParamTypeGetTypeID);
-  paramType.def_classmethod(
-      "get",
-      [](const nb::object &cls, MlirType type, MlirContext ctx) {
-        return cls(mlirTransformParamTypeGet(ctx, type));
-      },
-      "Get an instance of ParamType for the given type in the given context.",
-      nb::arg("cls"), nb::arg("type"), nb::arg("context") = nb::none());
-  paramType.def_property_readonly(
-      "type",
-      [](MlirType type) {
-        MlirType paramType = mlirTransformParamTypeGetType(type);
-        return paramType;
-      },
-      "Get the type this ParamType is associated with.");
+//===-------------------------------------------------------------------===//
+// OperationType
+//===-------------------------------------------------------------------===//
+
+struct OperationType : PyConcreteType<OperationType> {
+  static constexpr IsAFunctionTy isaFunction =
+      mlirTypeIsATransformOperationType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirTransformOperationTypeGetTypeID;
+  static constexpr const char *pyClassName = "OperationType";
+  using Base::Base;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](const std::string &operationName, DefaultingPyMlirContext context) {
+          MlirStringRef cOperationName =
+              mlirStringRefCreate(operationName.data(), operationName.size());
+          return OperationType(context->getRef(),
+                               mlirTransformOperationTypeGet(
+                                   context.get()->get(), cOperationName));
+        },
+        "Get an instance of OperationType for the given kind in the given "
+        "context",
+        nb::arg("operation_name"), nb::arg("context").none() = nb::none());
+    c.def_prop_ro(
+        "operation_name",
+        [](const OperationType &type) {
+          MlirStringRef operationName =
+              mlirTransformOperationTypeGetOperationName(type);
+          return nb::str(operationName.data, operationName.length);
+        },
+        "Get the name of the payload operation accepted by the handle.");
+  }
+};
+
+//===-------------------------------------------------------------------===//
+// ParamType
+//===-------------------------------------------------------------------===//
+
+struct ParamType : PyConcreteType<ParamType> {
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsATransformParamType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirTransformParamTypeGetTypeID;
+  static constexpr const char *pyClassName = "ParamType";
+  using Base::Base;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](const PyType &type, DefaultingPyMlirContext context) {
+          return ParamType(context->getRef(), mlirTransformParamTypeGet(
+                                                  context.get()->get(), type));
+        },
+        "Get an instance of ParamType for the given type in the given context.",
+        nb::arg("type"), nb::arg("context").none() = nb::none());
+    c.def_prop_ro(
+        "type",
+        [](ParamType type) {
+          return PyType(type.getContext(), mlirTransformParamTypeGetType(type))
+              .maybeDownCast();
+        },
+        "Get the type this ParamType is associated with.");
+  }
+};
+
+static void populateDialectTransformSubmodule(nb::module_ &m) {
+  AnyOpType::bind(m);
+  AnyParamType::bind(m);
+  AnyValueType::bind(m);
+  OperationType::bind(m);
+  ParamType::bind(m);
 }
+} // namespace transform
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir
 
 NB_MODULE(_mlirDialectsTransform, m) {
   m.doc() = "MLIR Transform dialect.";
-  populateDialectTransformSubmodule(m);
+  mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::transform::
+      populateDialectTransformSubmodule(m);
 }

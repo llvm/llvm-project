@@ -886,7 +886,7 @@ constexpr const char *firstAttrDerivedResultTypeTemplate =
   _ods_result_type_source_attr = attributes["{0}"]
   _ods_derived_result_type = (
     _ods_ir.TypeAttr(_ods_result_type_source_attr).value
-    if _ods_ir.TypeAttr.isinstance(_ods_result_type_source_attr) else
+    if isinstance(_ods_result_type_source_attr, _ods_ir.TypeAttr) else
     _ods_result_type_source_attr.type)
   results = [_ods_derived_result_type] * {1})Py";
 

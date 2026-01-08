@@ -8,6 +8,7 @@ config.bits = "@ASAN_TEST_BITS@"
 config.arm_thumb = "@COMPILER_RT_ARM_THUMB@"
 config.apple_platform = "@ASAN_TEST_APPLE_PLATFORM@"
 config.apple_platform_min_deployment_target_flag = "@ASAN_TEST_MIN_DEPLOYMENT_TARGET_FLAG@"
+config.apple_target_is_host = @ASAN_TEST_APPLE_TARGET_IS_HOST_PYBOOL@
 config.asan_dynamic = @ASAN_TEST_DYNAMIC@
 config.target_arch = "@ASAN_TEST_TARGET_ARCH@"
 

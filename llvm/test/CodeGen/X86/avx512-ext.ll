@@ -1745,8 +1745,7 @@ define i8 @trunc_8i16_to_8i1(<8 x i16> %a) {
 ; AVX512DQNOBW:       # %bb.0:
 ; AVX512DQNOBW-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; AVX512DQNOBW-NEXT:    vpslld $31, %ymm0, %ymm0
-; AVX512DQNOBW-NEXT:    vpmovd2m %ymm0, %k0
-; AVX512DQNOBW-NEXT:    kmovw %k0, %eax
+; AVX512DQNOBW-NEXT:    vmovmskps %ymm0, %eax
 ; AVX512DQNOBW-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512DQNOBW-NEXT:    vzeroupper
 ; AVX512DQNOBW-NEXT:    retq

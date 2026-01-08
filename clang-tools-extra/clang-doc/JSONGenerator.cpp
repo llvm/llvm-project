@@ -448,7 +448,11 @@ static void serializeInfo(const TypeInfo &I, Object &Obj) {
 
 static void serializeInfo(const FieldTypeInfo &I, Object &Obj) {
   Obj["Name"] = I.Name;
-  Obj["Type"] = I.Type.Name;
+  insertNonEmpty("DefaultValue", I.DefaultValue, Obj);
+  json::Value ReferenceVal = Object();
+  Object &ReferenceObj = *ReferenceVal.getAsObject();
+  serializeReference(I.Type, ReferenceObj);
+  Obj["Type"] = ReferenceVal;
 }
 
 static void serializeInfo(const FunctionInfo &F, json::Object &Obj,

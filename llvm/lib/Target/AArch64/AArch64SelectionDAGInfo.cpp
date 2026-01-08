@@ -27,6 +27,11 @@ static cl::opt<bool>
                                 "to lower to librt functions"),
                        cl::init(true));
 
+static cl::opt<bool> UseMOPS("aarch64-use-mops", cl::Hidden,
+                             cl::desc("Enable AArch64 MOPS instructions "
+                                      "for memcpy/memset/memmove"),
+                             cl::init(true));
+
 AArch64SelectionDAGInfo::AArch64SelectionDAGInfo()
     : SelectionDAGGenTargetInfo(AArch64GenSDNodeInfo) {}
 
@@ -214,7 +219,7 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemcpy(
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
 
-  if (STI.hasMOPS())
+  if (UseMOPS && STI.hasMOPS())
     return EmitMOPS(AArch64::MOPSMemoryCopyPseudo, DAG, DL, Chain, Dst, Src,
                     Size, Alignment, isVolatile, DstPtrInfo, SrcPtrInfo);
 
@@ -233,7 +238,7 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemset(
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
 
-  if (STI.hasMOPS())
+  if (UseMOPS && STI.hasMOPS())
     return EmitMOPS(AArch64::MOPSMemorySetPseudo, DAG, dl, Chain, Dst, Src,
                     Size, Alignment, isVolatile, DstPtrInfo,
                     MachinePointerInfo{});
@@ -253,7 +258,7 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemmove(
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
 
-  if (STI.hasMOPS())
+  if (UseMOPS && STI.hasMOPS())
     return EmitMOPS(AArch64::MOPSMemoryMovePseudo, DAG, dl, Chain, Dst, Src,
                     Size, Alignment, isVolatile, DstPtrInfo, SrcPtrInfo);
 

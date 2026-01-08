@@ -247,7 +247,7 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmLdStPair(
       XqciOpc = RISCV::QC_SETWMI;
       StartRegState = getKillRegState(FirstOp0.isKill() || SecondOp0.isKill());
       AddNextReg = false;
-    } else if (NextReg == StartReg + 1) {
+    } else if (NextReg == StartReg + 1 && StartReg != RISCV::X0) {
       XqciOpc = RISCV::QC_SWMI;
       StartRegState = getKillRegState(FirstOp0.isKill());
       NextRegState = RegState::Implicit | getKillRegState(SecondOp0.isKill());
@@ -482,10 +482,13 @@ RISCVLoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
                                     bool MergeForward) {
   MachineBasicBlock::iterator E = I->getParent()->end();
   MachineBasicBlock::iterator NextI = next_nodbg(I, E);
-  // If NextI is the second of the two instructions to be merged, we need
-  // to skip one further. Either way we merge will invalidate the iterator,
-  // and we don't need to scan the new instruction, as it's a pairwise
-  // instruction, which we're not considering for further action anyway.
+  // If NextI is the second of the two instructions to be merged, skip one
+  // further for now. For the MIPS load/store, the merge will invalidate the
+  // iterator, and we don't need to scan the new instruction, as it's a pairwise
+  // instruction, which we're not considering for further action anyway. For the
+  // Xqcilsm load/store, we may not want to do this as the second instruction
+  // could possibly be the first in another pair if we do not merge here. This
+  // is handled in the else block after the call to tryConvertToLdStPair below.
   if (NextI == Paired)
     NextI = next_nodbg(NextI, E);
 
@@ -535,9 +538,16 @@ RISCVLoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
     First = InsertionPoint;
   }
 
+  MachineFunction *MF = I->getMF();
+  const RISCVSubtarget &STI = MF->getSubtarget<RISCVSubtarget>();
+
   if (tryConvertToLdStPair(First, Second)) {
     LLVM_DEBUG(dbgs() << "Pairing load/store:\n    ");
     LLVM_DEBUG(prev_nodbg(NextI, MBB.begin())->print(dbgs()));
+  } else if (!STI.is64Bit() && STI.hasVendorXqcilsm()) {
+    // We were unable to form the pair, so use the next non-debug instruction
+    // after the first instruction we had wanted to merge.
+    NextI = next_nodbg(I, E);
   }
 
   return NextI;

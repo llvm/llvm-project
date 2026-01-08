@@ -520,9 +520,8 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
     Ctx.setCompilationDir(Opts.DebugCompilationDir);
   else {
     // If no compilation dir is set, try to use the current directory.
-    SmallString<128> CWD;
-    if (!sys::fs::current_path(CWD))
-      Ctx.setCompilationDir(CWD);
+    if (auto CWD = VFS->getCurrentWorkingDirectory())
+      Ctx.setCompilationDir(*CWD);
   }
   if (!Opts.DebugPrefixMap.empty())
     for (const auto &KV : Opts.DebugPrefixMap)

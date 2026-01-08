@@ -4328,26 +4328,32 @@ static Value *simplifySwitchOnSelectUsingRanges(SwitchInst &SI,
 Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
   Value *Cond = SI.getCondition();
   Value *Op0;
-  ConstantInt *AddRHS;
-  if (match(Cond, m_Add(m_Value(Op0), m_ConstantInt(AddRHS)))) {
-    // Change 'switch (X+4) case 1:' into 'switch (X) case -3'.
-    for (auto Case : SI.cases()) {
-      Constant *NewCase = ConstantExpr::getSub(Case.getCaseValue(), AddRHS);
-      assert(isa<ConstantInt>(NewCase) &&
-             "Result of expression should be constant");
-      Case.setValue(cast<ConstantInt>(NewCase));
-    }
-    return replaceOperand(SI, 0, Op0);
-  }
+  const APInt *CondOpC;
+  using InvertFn = std::function<APInt(const APInt &Case, const APInt &C)>;
 
-  ConstantInt *SubLHS;
-  if (match(Cond, m_Sub(m_ConstantInt(SubLHS), m_Value(Op0)))) {
-    // Change 'switch (1-X) case 1:' into 'switch (X) case 0'.
-    for (auto Case : SI.cases()) {
-      Constant *NewCase = ConstantExpr::getSub(SubLHS, Case.getCaseValue());
-      assert(isa<ConstantInt>(NewCase) &&
-             "Result of expression should be constant");
-      Case.setValue(cast<ConstantInt>(NewCase));
+  auto MaybeInvertible = [&](Value *Cond) -> InvertFn {
+    if (match(Cond, m_Add(m_Value(Op0), m_APInt(CondOpC))))
+      // Change 'switch (X+C) case Case:' into 'switch (X) case Case-C'.
+      return [](const APInt &Case, const APInt &C) { return Case - C; };
+
+    if (match(Cond, m_Sub(m_APInt(CondOpC), m_Value(Op0))))
+      // Change 'switch (C-X) case Case:' into 'switch (X) case C-Case'.
+      return [](const APInt &Case, const APInt &C) { return C - Case; };
+
+    if (match(Cond, m_Xor(m_Value(Op0), m_APInt(CondOpC))) &&
+        !CondOpC->isMinSignedValue() && !CondOpC->isMaxSignedValue())
+      // Change 'switch (X^C) case Case:' into 'switch (X) case Case^C'.
+      // Prevent creation of large case values by excluding extremes.
+      return [](const APInt &Case, const APInt &C) { return Case ^ C; };
+
+    return nullptr;
+  };
+
+  // Attempt to invert and simplify the switch condition.
+  if (auto InvertFn = MaybeInvertible(Cond); InvertFn) {
+    for (auto &Case : SI.cases()) {
+      const APInt &New = InvertFn(Case.getCaseValue()->getValue(), *CondOpC);
+      Case.setValue(ConstantInt::get(SI.getContext(), New));
     }
     return replaceOperand(SI, 0, Op0);
   }

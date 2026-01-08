@@ -390,8 +390,9 @@ bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!Ptr.isExtern())
     return true;
 
-  if (Ptr.isInitialized() ||
-      (Ptr.getDeclDesc()->asVarDecl() == S.EvaluatingDecl))
+  if (!Ptr.isPastEnd() &&
+      (Ptr.isInitialized() ||
+       (Ptr.getDeclDesc()->asVarDecl() == S.EvaluatingDecl)))
     return true;
 
   if (S.checkingPotentialConstantExpression() && S.getLangOpts().CPlusPlus &&
@@ -625,6 +626,10 @@ static bool CheckVolatile(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
   if (!S.getLangOpts().CPlusPlus)
     return Invalid(S, OpPC);
+
+  // Volatile object can be written-to and read if they are being constructed.
+  if (llvm::is_contained(S.InitializingBlocks, Ptr.block()))
+    return true;
 
   // The reason why Ptr is volatile might be further up the hierarchy.
   // Find that pointer.

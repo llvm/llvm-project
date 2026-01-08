@@ -396,6 +396,8 @@ public:
     OMPTargetGlobalVarEntryIndirect = 0x8,
     /// Mark the entry as a register requires global.
     OMPTargetGlobalRegisterRequires = 0x10,
+    /// Mark the entry as a declare target indirect vtable.
+    OMPTargetGlobalVarEntryIndirectVTable = 0x20,
   };
 
   /// Kind of device clause for declare target variables
@@ -2517,6 +2519,9 @@ public:
     /// Total number of iterations of the SPMD or Generic-SPMD kernel or null if
     /// it is a generic kernel.
     Value *LoopTripCount = nullptr;
+
+    /// Device ID value used in the kernel launch.
+    Value *DeviceID = nullptr;
   };
 
   /// Data structure that contains the needed information to construct the
@@ -2761,7 +2766,8 @@ public:
   enum EmitMetadataErrorKind {
     EMIT_MD_TARGET_REGION_ERROR,
     EMIT_MD_DECLARE_TARGET_ERROR,
-    EMIT_MD_GLOBAL_VAR_LINK_ERROR
+    EMIT_MD_GLOBAL_VAR_LINK_ERROR,
+    EMIT_MD_GLOBAL_VAR_INDIRECT_ERROR
   };
 
   /// Callback function type

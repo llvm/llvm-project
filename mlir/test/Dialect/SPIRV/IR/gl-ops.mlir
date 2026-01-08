@@ -943,9 +943,9 @@ func.func @pack_half_2x16_scalar_in(%arg0 : f32) -> () {
 
 // -----
 
-func.func @unpack_half_2x16_vector_out(%arg0 : vector<2xf32>) -> () {
-  // expected-error @+1 {{invalid kind of type specified: expected builtin.integer, but found 'vector<2xf32>'}}
-  %0 = spirv.GL.UnpackHalf2x16 %arg0 : vector<2xf32> -> vector<2xi32>
+func.func @pack_half_2x16_vector_out(%arg0 : vector<2xf32>) -> () {
+  // expected-error @+1 {{invalid kind of type specified: expected builtin.integer, but found 'vector<2xi32>'}}
+  %0 = spirv.GL.PackHalf2x16 %arg0 : vector<2xf32> -> vector<2xi32>
   return
 }
 
@@ -998,6 +998,110 @@ func.func @unpack_half_2x16_vec_in(%arg0 : vector<2xf32>) -> () {
 func.func @unpack_half_2x16_scalar_out(%arg0 : i32) -> () {
   // expected-error @+1 {{invalid kind of type specified: expected builtin.vector, but found 'f32'}}
   %0 = spirv.GL.UnpackHalf2x16 %arg0 : i32 -> f32
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.PackSnorm4x8
+//===----------------------------------------------------------------------===//
+
+func.func @pack_snorm_4x8(%arg0 : vector<4xf32>) -> () {
+  // CHECK: spirv.GL.PackSnorm4x8 {{%.*}} : vector<4xf32> -> i32
+  %0 = spirv.GL.PackSnorm4x8 %arg0 : vector<4xf32> -> i32
+  return
+}
+
+// -----
+
+func.func @pack_snorm_4x8_i16_output(%arg0 : vector<4xf32>) -> () {
+  // expected-error @+1 {{op result #0 must be Int32, but got 'i16'}}
+  %0 = spirv.GL.PackSnorm4x8 %arg0 : vector<4xf32> -> i16
+  return
+}
+
+// -----
+
+func.func @pack_snorm_4x8_wrong_vec_size(%arg0 : vector<3xf32>) -> () {
+  // expected-error @+1 {{op operand #0 must be vector of Float32 values of length 4, but got 'vector<3xf32>'}}
+  %0 = spirv.GL.PackSnorm4x8 %arg0 : vector<3xf32> -> i32
+  return
+}
+
+// -----
+
+func.func @pack_snorm_4x8_wrong_vec_type(%arg0 : vector<4xi32>) -> () {
+  // expected-error @+1 {{op operand #0 must be vector of Float32 values of length 4, but got 'vector<4xi32>'}}
+  %0 = spirv.GL.PackSnorm4x8 %arg0 : vector<4xi32> -> i32
+  return
+}
+
+// -----
+
+func.func @pack_snorm_4x8_scalar_in(%arg0 : f32) -> () {
+  // expected-error @+1 {{invalid kind of type specified: expected builtin.vector, but found 'f32'}}
+  %0 = spirv.GL.PackSnorm4x8 %arg0 : f32 -> i32
+  return
+}
+
+// -----
+
+func.func @pack_snorm_4x8_vector_out(%arg0 : vector<4xf32>) -> () {
+  // expected-error @+1 {{invalid kind of type specified: expected builtin.integer, but found 'vector<4xi32>'}}
+  %0 = spirv.GL.PackSnorm4x8 %arg0 : vector<4xf32> -> vector<4xi32>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.UnpackSnorm4x8
+//===----------------------------------------------------------------------===//
+
+func.func @unpack_snorm_4x8(%arg0 : i32) -> () {
+  // CHECK: spirv.GL.UnpackSnorm4x8 {{%.*}} : i32 -> vector<4xf32>
+  %0 = spirv.GL.UnpackSnorm4x8 %arg0 : i32 -> vector<4xf32>
+  return
+}
+
+// -----
+
+func.func @unpack_snorm_4x8_i16_input(%arg0 : i16) -> () {
+  // expected-error @+1 {{op operand #0 must be Int32, but got 'i16'}}
+  %0 = spirv.GL.UnpackSnorm4x8 %arg0 : i16 -> vector<4xf32>
+  return
+}
+
+// -----
+
+func.func @unpack_snorm_4x8_wrong_vec_size(%arg0 : i32) -> () {
+  // expected-error @+1 {{op result #0 must be vector of Float32 values of length 4, but got 'vector<3xf32>'}}
+  %0 = spirv.GL.UnpackSnorm4x8 %arg0 : i32 -> vector<3xf32>
+  return
+}
+
+// -----
+
+func.func @unpack_snorm_4x8_wrong_vec_type(%arg0 : i32) -> () {
+  // expected-error @+1 {{op result #0 must be vector of Float32 values of length 4, but got 'vector<4xi32>'}}
+  %0 = spirv.GL.UnpackSnorm4x8 %arg0 : i32 -> vector<4xi32>
+  return
+}
+
+// -----
+
+func.func @unpack_snorm_4x8_vec_in(%arg0 : vector<4xf32>) -> () {
+  // expected-error @+1 {{invalid kind of type specified: expected builtin.integer, but found 'vector<4xf32>'}}
+  %0 = spirv.GL.UnpackSnorm4x8 %arg0 : vector<4xf32> -> vector<4xf32>
+  return
+}
+
+// -----
+
+func.func @unpack_snorm_4x8_scalar_out(%arg0 : i32) -> () {
+  // expected-error @+1 {{invalid kind of type specified: expected builtin.vector, but found 'f32'}}
+  %0 = spirv.GL.UnpackSnorm4x8 %arg0 : i32 -> f32
   return
 }
 

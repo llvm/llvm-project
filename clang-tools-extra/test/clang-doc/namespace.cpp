@@ -128,16 +128,13 @@ class ClassInNestedNamespace {};
 // HTML-NESTED-INDEX:             </a>
 // HTML-NESTED-INDEX:         </li>
 // HTML-NESTED-INDEX:     </ul>
-// HTML-NESTED-INDEX:     <div class="delimiter-container">
-// HTML-NESTED-INDEX:         <div id="{{([0-9A-F]{40})}}">
-// HTML-NESTED-INDEX:             <pre><code class="language-cpp code-clang-doc">void functionInNestedNamespace ()</code></pre>
-// HTML-NESTED-INDEX:             <div>
-// HTML-NESTED-INDEX:                 <div>
-// HTML-NESTED-INDEX:                     <p> Function in NestedNamespace</p>
-// HTML-NESTED-INDEX:                 </div>
+// HTML-NESTED-INDEX:         <pre><code class="language-cpp code-clang-doc">void functionInNestedNamespace ()</code></pre>
+// HTML-NESTED-INDEX:         <div class="doc-card">
+// HTML-NESTED-INDEX:             <div class="nested-delimiter-container">
+// HTML-NESTED-INDEX:                 <p> Function in NestedNamespace</p>
 // HTML-NESTED-INDEX:             </div>
-// HTML-NESTED-INDEX:             <p>Defined at line 98 of file {{.*}}namespace.cpp</p>
 // HTML-NESTED-INDEX:         </div>
+// HTML-NESTED-INDEX:         <p>Defined at line 98 of file {{.*}}namespace.cpp</p>
 // HTML-NESTED-INDEX:     </div>
 } // namespace PrimaryNamespace
 
@@ -163,16 +160,13 @@ class ClassInNestedNamespace {};
 // HTML-PRIMARY-INDEX:                 </a>
 // HTML-PRIMARY-INDEX:              </li>
 // HTML-PRIMARY-INDEX:          </ul>
-// HTML-PRIMARY-INDEX:      <div class="delimiter-container">
-// HTML-PRIMARY-INDEX:          <div id="{{([0-9A-F]{40})}}">
-// HTML-PRIMARY-INDEX:              <pre><code class="language-cpp code-clang-doc">void functionInPrimaryNamespace ()</code></pre>
-// HTML-PRIMARY-INDEX:              <div>
-// HTML-PRIMARY-INDEX:                  <div>
-// HTML-PRIMARY-INDEX:                      <p> Function in PrimaryNamespace</p>
-// HTML-PRIMARY-INDEX:                  </div>
+// HTML-PRIMARY-INDEX:          <pre><code class="language-cpp code-clang-doc">void functionInPrimaryNamespace ()</code></pre>
+// HTML-PRIMARY-INDEX:          <div class="doc-card">
+// HTML-PRIMARY-INDEX:              <div class="nested-delimiter-container">
+// HTML-PRIMARY-INDEX:                  <p> Function in PrimaryNamespace</p>
 // HTML-PRIMARY-INDEX:              </div>
-// HTML-PRIMARY-INDEX:              <p>Defined at line 81 of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 // HTML-PRIMARY-INDEX:          </div>
+// HTML-PRIMARY-INDEX:          <p>Defined at line 81 of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 // HTML-PRIMARY-INDEX:      </div>
 // AnotherNamespace
 namespace AnotherNamespace {
@@ -211,17 +205,15 @@ class ClassInAnotherNamespace {};
 // HTML-ANOTHER-INDEX:             </a>
 // HTML-ANOTHER-INDEX:         </li>
 // HTML-ANOTHER-INDEX:     </ul>
-// HTML-ANOTHER-INDEX:     <div class="delimiter-container">
-// HTML-ANOTHER-INDEX:         <div id="{{([0-9A-F]{40})}}">
-// HTML-ANOTHER-INDEX:             <pre><code class="language-cpp code-clang-doc">void functionInAnotherNamespace ()</code></pre>
-// HTML-ANOTHER-INDEX:             <div>
-// HTML-ANOTHER-INDEX:                 <div>
-// HTML-ANOTHER-INDEX:                     <p> Function in AnotherNamespace</p>
-// HTML-ANOTHER-INDEX:                 </div>
+// HTML-ANOTHER-INDEX:         <pre><code class="language-cpp code-clang-doc">void functionInAnotherNamespace ()</code></pre>
+// HTML-ANOTHER-INDEX:         <div class="doc-card">
+// HTML-ANOTHER-INDEX:             <div class="nested-delimiter-container">
+// HTML-ANOTHER-INDEX:                 <p> Function in AnotherNamespace</p>
 // HTML-ANOTHER-INDEX:             </div>
-// HTML-ANOTHER-INDEX:             <p>Defined at line 180 of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 // HTML-ANOTHER-INDEX:         </div>
+// HTML-ANOTHER-INDEX:         <p>Defined at line 174 of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}namespace.cpp</p>
 // HTML-ANOTHER-INDEX:     </div>
+// HTML-ANOTHER-INDEX: </div>
 
 // COM: FIXME: Add namespaces to namespace template
 // HTML-GLOBAL-INDEX-NOT: <div id="main-content" class="col-xs-12 col-sm-9 col-md-8 main-content">

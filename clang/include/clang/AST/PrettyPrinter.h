@@ -61,8 +61,9 @@ struct PrintingPolicy {
   /// Create a default printing policy for the specified language.
   PrintingPolicy(const LangOptions &LO)
       : Indentation(2), SuppressSpecifiers(false),
-        SuppressTagKeyword(LO.CPlusPlus), IncludeTagDefinition(false),
-        SuppressScope(false), SuppressUnwrittenScope(false),
+        SuppressTagKeyword(LO.CPlusPlus), SuppressTagKeywordInAnonNames(false),
+        IncludeTagDefinition(false), SuppressScope(false),
+        SuppressUnwrittenScope(false),
         SuppressInlineNamespace(
             llvm::to_underlying(SuppressInlineNamespaceMode::Redundant)),
         SuppressInitializers(false), ConstantArraySizeAsWritten(false),
@@ -123,6 +124,15 @@ struct PrintingPolicy {
   /// \endcode
   LLVM_PREFERRED_TYPE(bool)
   unsigned SuppressTagKeyword : 1;
+
+  /// Whether type printing should skip printing the tag keyword
+  /// of anonymous entities. E.g.,
+  ///
+  /// * \c (anonymous) as opopsed to (anonymous struct)
+  /// * \c (unnamed) as opposed to (unnamed enum)
+  ///
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SuppressTagKeywordInAnonNames : 1;
 
   /// When true, include the body of a tag definition.
   ///
