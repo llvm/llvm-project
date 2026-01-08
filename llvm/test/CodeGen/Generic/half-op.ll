@@ -37,7 +37,7 @@
 ; RUN: %if spirv-registered-target       %{ llc %s -o - -mtriple=spirv-unknown-unknown           | FileCheck %s --check-prefixes=NOCRASH %}
 ; RUN: %if systemz-registered-target     %{ llc %s -o - -mtriple=s390x-unknown-linux-gnu         | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
 ; RUN: %if ve-registered-target          %{ llc %s -o - -mtriple=ve-unknown-unknown              | FileCheck %s --check-prefixes=ALL,BAD-NEG-ABS,BAD-COPYSIGN,BAD-FMA %}
-; RUN: %if webassembly-registered-target %{ llc %s -o - -mtriple=wasm32-unknown-unknown          | FileCheck %s --check-prefixes=ALL,BAD-NEG-ABS,BAD-COPYSIGN,BAD-FMA %}
+; RUN: %if webassembly-registered-target %{ llc %s -o - -mtriple=wasm32-unknown-unknown          | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
 ; RUN: %if x86-registered-target         %{ llc %s -o - -mtriple=i686-unknown-linux-gnu          | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
 ; RUN: %if x86-registered-target         %{ llc %s -o - -mtriple=x86_64-pc-windows-msvc          | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
 ; RUN: %if x86-registered-target         %{ llc %s -o - -mtriple=x86_64-unknown-linux-gnu        | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
