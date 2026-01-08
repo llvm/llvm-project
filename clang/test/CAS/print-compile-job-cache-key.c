@@ -1,4 +1,4 @@
-// REQUIRES: shell
+// UNSUPPORTED: system-windows
 
 // RUN: rm -rf %t && mkdir -p %t
 

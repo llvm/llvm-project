@@ -1,4 +1,5 @@
-// REQUIRES: ondisk_cas, shell
+// REQUIRES: ondisk_cas
+// UNSUPPORTED: system-windows
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t

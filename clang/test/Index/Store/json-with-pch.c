@@ -2,7 +2,7 @@ int main() {
   test1_func();
 }
 
-// REQUIRES: shell
+// UNSUPPORTED: system-windows
 
 // RUN: rm -rf %t
 // RUN: mkdir %t

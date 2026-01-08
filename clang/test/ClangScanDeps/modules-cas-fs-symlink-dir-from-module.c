@@ -1,7 +1,8 @@
 // Check that the path of an "affecting" modulemap file matches what is captured
 // in the cas fs.
 
-// REQUIRES: shell, ondisk_cas
+// REQUIRES: ondisk_cas
+// UNSUPPORTED: system-windows
 
 // RUN: rm -rf %t
 // RUN: split-file %s %t
