@@ -19,7 +19,7 @@ with worker.run(
     __file__,
     llvmsrcroot,
     clobberpaths=[llvmbuilddir, llvminstalldir],
-    jobs=32,
+    workerjobs=32,
 ) as w:
     with w.step("configure-openmp", halt_on_fail=True):
         w.run_command(
