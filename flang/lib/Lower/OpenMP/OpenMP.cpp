@@ -2250,8 +2250,8 @@ static void genTileOp(Fortran::lower::AbstractConverter &converter,
   canonLoops.reserve(numLoops);
 
   genCanonicalLoopNest(converter, symTable, semaCtx, eval,
-                       getNestedDoConstruct(eval), loc, queue, item,
-                       numLoops, canonLoops);
+                       getNestedDoConstruct(eval), loc, queue, item, numLoops,
+                       canonLoops);
   assert((canonLoops.size() == numLoops) &&
          "Expecting the predetermined number of loops");
 
@@ -2309,8 +2309,8 @@ static void genFuseOp(Fortran::lower::AbstractConverter &converter,
     // Skip Compiler Directive
     if (child.getIf<parser::CompilerDirective>())
       continue;
-    // Skip the 
-    //if (nested.getIf<parser::NonLabelDoStmt>())
+    // Skip the
+    // if (nested.getIf<parser::NonLabelDoStmt>())
     //  continue;
 
     // Emit the associated loop
