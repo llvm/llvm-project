@@ -2665,6 +2665,11 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
 
   if (!wsloopOp.getLinearVars().empty()) {
     auto linearVarTypes = wsloopOp.getLinearVarTypes().value();
+    if (linearVarTypes.size() != wsloopOp.getLinearVars().size()) {
+      wsloopOp->emitError("Ill-formed type attributes for linear variables");
+      return failure();
+    }
+
     for (mlir::Attribute linearVarType : linearVarTypes)
       linearClauseProcessor.registerType(moduleTranslation, linearVarType);
 
@@ -2999,6 +3004,10 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
 
   if (!simdOp.getLinearVars().empty()) {
     auto linearVarTypes = simdOp.getLinearVarTypes().value();
+    if (linearVarTypes.size() != simdOp.getLinearVars().size()) {
+      simdOp->emitError("Ill-formed type attributes for linear variables");
+      return failure();
+    }
     for (mlir::Attribute linearVarType : linearVarTypes)
       linearClauseProcessor.registerType(moduleTranslation, linearVarType);
     for (auto [idx, linearVar] : llvm::enumerate(simdOp.getLinearVars())) {
