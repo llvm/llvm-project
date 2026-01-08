@@ -246,6 +246,12 @@ enum {
   /// - SizeInBits(ULEB128) - The size of the pointer value in bits.
   GIM_CheckPointerToAny,
 
+  /// Check the machine type of the specified operand
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - OpIdx(ULEB128) - Operand index
+  /// - MachineOperandType(ULEB128) - Expected type
+  GIM_CheckMachineOperandType,
+
   /// Check the register bank for the specified operand
   /// - InsnID(ULEB128) - Instruction ID
   /// - OpIdx(ULEB128) - Operand index
