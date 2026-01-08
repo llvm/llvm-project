@@ -704,7 +704,7 @@ struct __optional_iterator {};
 #    if _LIBCPP_STD_VER >= 26
 
 template <class _Tp>
-struct __optional_iterator<_Tp, enable_if_t<!is_lvalue_reference_v<_Tp>>> {
+struct __optional_iterator<_Tp, enable_if_t<is_object_v<_Tp>>> {
 private:
   using __pointer _LIBCPP_NODEBUG       = add_pointer_t<_Tp>;
   using __const_pointer _LIBCPP_NODEBUG = add_pointer_t<const _Tp>;
@@ -1106,7 +1106,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr add_pointer_t<_Tp const> operator->() const noexcept
 #    if _LIBCPP_STD_VER >= 26
-    requires(!is_lvalue_reference_v<_Tp>)
+    requires(is_object_v<_Tp>)
 #    endif
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator-> called on a disengaged value");
@@ -1115,7 +1115,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr add_pointer_t<_Tp> operator->() noexcept
 #    if _LIBCPP_STD_VER >= 26
-    requires(!is_lvalue_reference_v<_Tp>)
+    requires(is_object_v<_Tp>)
 #    endif
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator-> called on a disengaged value");
@@ -1124,7 +1124,7 @@ public:
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& operator*() const& noexcept
 #    if _LIBCPP_STD_VER >= 26
-    requires(!is_lvalue_reference_v<_Tp>)
+    requires(is_object_v<_Tp>)
 #    endif
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator* called on a disengaged value");
@@ -1133,7 +1133,7 @@ public:
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp& operator*() & noexcept
 #    if _LIBCPP_STD_VER >= 26
-    requires(!is_lvalue_reference_v<_Tp>)
+    requires(is_object_v<_Tp>)
 #    endif
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator* called on a disengaged value");
@@ -1142,7 +1142,7 @@ public:
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp&& operator*() && noexcept
 #    if _LIBCPP_STD_VER >= 26
-    requires(!is_lvalue_reference_v<_Tp>)
+    requires(is_object_v<_Tp>)
 #    endif
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator* called on a disengaged value");
@@ -1151,7 +1151,7 @@ public:
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&& operator*() const&& noexcept
 #    if _LIBCPP_STD_VER >= 26
-    requires(!is_lvalue_reference_v<_Tp>)
+    requires(is_object_v<_Tp>)
 #    endif
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator* called on a disengaged value");
@@ -1165,7 +1165,7 @@ public:
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp const& value() const&
 #    if _LIBCPP_STD_VER >= 26
-    requires(!is_lvalue_reference_v<_Tp>)
+    requires(is_object_v<_Tp>)
 #    endif
   {
     if (!this->has_value())
@@ -1175,7 +1175,7 @@ public:
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp& value() &
 #    if _LIBCPP_STD_VER >= 26
-    requires(!is_lvalue_reference_v<_Tp>)
+    requires(is_object_v<_Tp>)
 #    endif
   {
     if (!this->has_value())
@@ -1185,7 +1185,7 @@ public:
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp&& value() &&
 #    if _LIBCPP_STD_VER >= 26
-    requires(!is_lvalue_reference_v<_Tp>)
+    requires(is_object_v<_Tp>)
 #    endif
   {
     if (!this->has_value())
@@ -1195,7 +1195,7 @@ public:
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp const&& value() const&&
 #    if _LIBCPP_STD_VER >= 26
-    requires(!is_lvalue_reference_v<_Tp>)
+    requires(is_object_v<_Tp>)
 #    endif
   {
     if (!this->has_value())
@@ -1205,7 +1205,7 @@ public:
 
   template <class _Up = remove_cv_t<_Tp>>
 #    if _LIBCPP_STD_VER >= 26
-    requires(!is_lvalue_reference_v<_Tp>)
+    requires(is_object_v<_Tp>)
 #    endif
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp value_or(_Up&& __v) const& {
     static_assert(is_copy_constructible_v<_Tp>, "optional<T>::value_or: T must be copy constructible");
@@ -1215,7 +1215,7 @@ public:
 
   template <class _Up = remove_cv_t<_Tp>>
 #    if _LIBCPP_STD_VER >= 26
-    requires(!is_lvalue_reference_v<_Tp>)
+    requires(is_object_v<_Tp>)
 #    endif
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp value_or(_Up&& __v) && {
     static_assert(is_move_constructible_v<_Tp>, "optional<T>::value_or: T must be move constructible");
@@ -1226,7 +1226,7 @@ public:
 #    if _LIBCPP_STD_VER >= 23
   template <class _Func>
 #      if _LIBCPP_STD_VER >= 26
-    requires(!is_lvalue_reference_v<_Tp>)
+    requires(is_object_v<_Tp>)
 #      endif
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) & {
     using _Up = invoke_result_t<_Func, _Tp&>;
@@ -1239,7 +1239,7 @@ public:
 
   template <class _Func>
 #      if _LIBCPP_STD_VER >= 26
-    requires(!is_lvalue_reference_v<_Tp>)
+    requires(is_object_v<_Tp>)
 #      endif
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) const& {
     using _Up = invoke_result_t<_Func, const _Tp&>;
@@ -1252,7 +1252,7 @@ public:
 
   template <class _Func>
 #      if _LIBCPP_STD_VER >= 26
-    requires(!is_lvalue_reference_v<_Tp>)
+    requires(is_object_v<_Tp>)
 #      endif
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) && {
     using _Up = invoke_result_t<_Func, _Tp&&>;
@@ -1265,7 +1265,7 @@ public:
 
   template <class _Func>
 #      if _LIBCPP_STD_VER >= 26
-    requires(!is_lvalue_reference_v<_Tp>)
+    requires(is_object_v<_Tp>)
 #      endif
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) const&& {
     using _Up = invoke_result_t<_Func, const _Tp&&>;
@@ -1278,7 +1278,7 @@ public:
 
   template <class _Func>
 #      if _LIBCPP_STD_VER >= 26
-    requires(!is_lvalue_reference_v<_Tp>)
+    requires(is_object_v<_Tp>)
 #      endif
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto transform(_Func&& __f) & {
     using _Up = remove_cv_t<invoke_result_t<_Func, _Tp&>>;
@@ -1293,7 +1293,7 @@ public:
 
   template <class _Func>
 #      if _LIBCPP_STD_VER >= 26
-    requires(!is_lvalue_reference_v<_Tp>)
+    requires(is_object_v<_Tp>)
 #      endif
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto transform(_Func&& __f) const& {
     using _Up = remove_cv_t<invoke_result_t<_Func, const _Tp&>>;
@@ -1308,7 +1308,7 @@ public:
 
   template <class _Func>
 #      if _LIBCPP_STD_VER >= 26
-    requires(!is_lvalue_reference_v<_Tp>)
+    requires(is_object_v<_Tp>)
 #      endif
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto transform(_Func&& __f) && {
     using _Up = remove_cv_t<invoke_result_t<_Func, _Tp&&>>;
@@ -1323,7 +1323,7 @@ public:
 
   template <class _Func>
 #      if _LIBCPP_STD_VER >= 26
-    requires(!is_lvalue_reference_v<_Tp>)
+    requires(is_object_v<_Tp>)
 #      endif
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto transform(_Func&& __f) const&& {
     using _Up = remove_cv_t<invoke_result_t<_Func, const _Tp&&>>;
@@ -1340,7 +1340,7 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr optional or_else(_Func&& __f) const&
     requires is_copy_constructible_v<_Tp>
 #      if _LIBCPP_STD_VER >= 26
-             && (!is_lvalue_reference_v<_Tp>)
+             && (is_object_v<_Tp>)
 #      endif
   {
     static_assert(is_same_v<remove_cvref_t<invoke_result_t<_Func>>, optional>,
@@ -1354,7 +1354,7 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr optional or_else(_Func&& __f) &&
     requires is_move_constructible_v<_Tp>
 #      if _LIBCPP_STD_VER >= 26
-             && (!is_lvalue_reference_v<_Tp>)
+             && (is_object_v<_Tp>)
 #      endif
   {
     static_assert(is_same_v<remove_cvref_t<invoke_result_t<_Func>>, optional>,
