@@ -18,7 +18,7 @@ subroutine test_cache_basic()
 
 ! CHECK: acc.loop
 ! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {{{.*}}name = "b"
-! CHECK: hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_basicEb"}
+! CHECK: hlfir.designate %[[CACHE]]
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_cache_readonly()
@@ -35,7 +35,7 @@ subroutine test_cache_readonly()
 
 ! CHECK: acc.loop
 ! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {dataClause = #acc<data_clause acc_cache_readonly>, name = "b"
-! CHECK: hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_readonlyEb"}
+! CHECK: hlfir.designate %[[CACHE]]
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_cache_array_section()
@@ -61,7 +61,6 @@ subroutine test_cache_array_section()
 ! CHECK: %[[EXT:.*]] = arith.addi %[[TMP2]], %[[C1]] : index
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) extent(%[[EXT]] : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
 ! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xf32>> {{{.*}}name = "b
-! CHECK: hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_array_sectionEb"}
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_cache_multiple()
@@ -78,9 +77,7 @@ subroutine test_cache_multiple()
 
 ! CHECK: acc.loop
 ! CHECK: %[[CACHE_B:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {{{.*}}name = "b"
-! CHECK: hlfir.declare %[[CACHE_B]](%{{.*}}) {uniq_name = "_QFtest_cache_multipleEb"}
 ! CHECK: %[[CACHE_C:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {{{.*}}name = "c"
-! CHECK: hlfir.declare %[[CACHE_C]](%{{.*}}) {uniq_name = "_QFtest_cache_multipleEc"}
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_cache_2d_array()
@@ -114,7 +111,6 @@ subroutine test_cache_2d_array()
 ! CHECK: arith.addi
 ! CHECK: %[[BOUND2:.*]] = acc.bounds lowerbound(%[[LB2]] : index) extent(%{{.*}} : index) stride(%{{.*}} : index) startIdx(%{{.*}} : index)
 ! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND1]], %[[BOUND2]]) -> !fir.ref<!fir.array<10x10xf32>> {{{.*}}name = "b
-! CHECK: hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_2d_arrayEb"}
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_cache_loop_var()
@@ -155,7 +151,6 @@ subroutine test_cache_loop_var()
 ! CHECK: %[[EXT:.*]] = arith.addi %[[DIFF]], %[[C1]] : index
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) extent(%[[EXT]] : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
 ! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xf32>> {{{.*}}name = "b
-! CHECK: hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_loop_varEb"}
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_cache_2d_loop_vars()
@@ -213,7 +208,6 @@ subroutine test_cache_2d_loop_vars()
 ! CHECK: %[[EXT2:.*]] = arith.addi %[[DIFF2]], %[[C1]] : index
 ! CHECK: %[[BOUND2:.*]] = acc.bounds lowerbound(%[[LB2]] : index) extent(%[[EXT2]] : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
 ! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND1]], %[[BOUND2]]) -> !fir.ref<!fir.array<10x10xf32>> {{{.*}}name = "b
-! CHECK: hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_2d_loop_varsEb"}
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_cache_single_element()
@@ -242,7 +236,6 @@ subroutine test_cache_single_element()
 ! CHECK: %[[LB:.*]] = arith.subi %[[I_IDX]], %[[C1]] : index
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) extent(%[[C1]] : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
 ! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xf32>> {{{.*}}name = "b
-! CHECK: hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_single_elementEb"}
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_cache_mixed_bounds()
@@ -278,7 +271,6 @@ subroutine test_cache_mixed_bounds()
 ! CHECK: %[[EXT:.*]] = arith.addi %[[DIFF]], %[[C1]] : index
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) extent(%[[EXT]] : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
 ! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xf32>> {{{.*}}name = "b
-! CHECK: hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_mixed_boundsEb"}
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_cache_nonunit_lb()
@@ -302,8 +294,6 @@ subroutine test_cache_nonunit_lb()
 ! CHECK: %[[LB:.*]] = arith.subi %[[C15]], %[[C10]] : index
 ! Single element has extent = 1
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) extent(%[[C1]] : index) stride(%[[C1]] : index) startIdx(%[[C10]] : index)
-! The varPtr uses the ref type (second result of hlfir.declare with shapeshift)
-! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<11xi32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<11xi32>> {{{.*}}name = "arr
-! The cloned declare produces a box and ref pair
-! CHECK: hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_nonunit_lbEarr"} : (!fir.ref<!fir.array<11xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<11xi32>>, !fir.ref<!fir.array<11xi32>>)
+! For non-unit lower bound arrays, acc.cache uses the box type from hlfir.declare
+! CHECK: %[[CACHE:.*]] = acc.cache var(%{{.*}} : !fir.box<!fir.array<11xi32>>) bounds(%[[BOUND]]) -> !fir.box<!fir.array<11xi32>> {{{.*}}name = "arr
 end subroutine

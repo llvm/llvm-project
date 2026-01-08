@@ -4967,13 +4967,6 @@ static void
 genACC(Fortran::lower::AbstractConverter &converter,
        Fortran::semantics::SemanticsContext &semanticsContext,
        const Fortran::parser::OpenACCCacheConstruct &cacheConstruct) {
-  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-
-  // Verify we're inside an acc.loop region.
-  auto loopOp = builder.getRegion().getParentOfType<mlir::acc::LoopOp>();
-  if (!loopOp)
-    return;
-
   const auto &objectListWithModifier =
       std::get<Fortran::parser::AccObjectListWithModifier>(cacheConstruct.t);
   const auto &accObjectList =
@@ -4996,42 +4989,27 @@ genACC(Fortran::lower::AbstractConverter &converter,
     std::stringstream asFortran;
     asFortran << symbol.name().ToString();
 
-    fir::factory::AddrAndBoundsInfo info = getDataOperandBaseAddr(
-        converter, builder, symbol, operandLocation, /*unwrapFirBox=*/true);
-
-    // For arrays with non-1 lower bounds, info.addr is a box type.
-    // Use rawInput (the underlying ref) when addr and rawInput have different
-    // element types, similar to how other data clauses handle this case.
-    bool useRawInput =
-        info.rawInput && fir::unwrapRefType(info.addr.getType()) !=
-                             fir::unwrapRefType(info.rawInput.getType());
-    mlir::Value baseAddr = useRawInput ? info.rawInput : info.addr;
-
     llvm::SmallVector<mlir::Value> bounds;
     genCacheBounds(converter, semanticsContext, stmtCtx, accObject, asFortran,
                    bounds);
 
-    mlir::acc::CacheOp cacheOp = createDataEntryOp<mlir::acc::CacheOp>(
-        builder, operandLocation, baseAddr, asFortran, bounds,
-        /*structured=*/false, /*implicit=*/false, dataClause,
-        baseAddr.getType(),
-        /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{},
-        /*unwrapBoxAddr=*/true, /*isPresent=*/mlir::Value{});
-
-    // Update symbol map so future lowering uses the cache result.
-    Fortran::lower::SymMap &symbolMap = converter.getSymbolMap();
-    std::optional<fir::FortranVariableOpInterface> hostDef =
-        symbolMap.lookupVariableDefinition(symbol);
-    assert(hostDef.has_value() && llvm::isa<hlfir::DeclareOp>(*hostDef) &&
+    std::optional<fir::FortranVariableOpInterface> varDef =
+        converter.getSymbolMap().lookupVariableDefinition(symbol);
+    assert(varDef.has_value() && llvm::isa<hlfir::DeclareOp>(*varDef) &&
            "expected symbol to be mapped to hlfir.declare");
-    auto hostDeclare = llvm::cast<hlfir::DeclareOp>(*hostDef);
-    // Clone the host declare with cache result as input.
-    mlir::IRMapping mapper;
-    mapper.map(hostDeclare.getMemref(), cacheOp.getAccVar());
-    mlir::Operation *newDef =
-        builder.clone(*hostDeclare.getOperation(), mapper);
-    symbolMap.addVariableDefinition(
-        symbol, llvm::cast<fir::FortranVariableOpInterface>(newDef));
+    mlir::Value base = varDef->getBase();
+
+    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+    mlir::acc::CacheOp cacheOp = createDataEntryOp<mlir::acc::CacheOp>(
+        builder, operandLocation, base, asFortran, bounds,
+        /*structured=*/false, /*implicit=*/false, dataClause, base.getType(),
+        /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{},
+        /*unwrapBoxAddr=*/false, /*isPresent=*/mlir::Value{});
+
+    // Use acc.cache directly as the variable definition.
+    converter.getSymbolMap().addVariableDefinition(
+        symbol, mlir::cast<fir::FortranVariableOpInterface>(
+                    cacheOp.getOperation()));
   }
 }
 
