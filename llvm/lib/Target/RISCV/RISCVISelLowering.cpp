@@ -547,6 +547,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITCAST, VTs, Custom);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, VTs, Custom);
     setOperationAction(ISD::SETCC, VTs, Legal);
+    setCondCodeAction({ISD::SETNE, ISD::SETGT, ISD::SETGE, ISD::SETUGT,
+                       ISD::SETUGE, ISD::SETULE, ISD::SETLE},
+                      VTs, Expand);
     // P extension vector comparisons produce all 1s for true, all 0s for false
     setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
   }
