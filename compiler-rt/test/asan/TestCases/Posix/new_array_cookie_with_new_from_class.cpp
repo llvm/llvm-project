@@ -4,7 +4,7 @@
 //
 // XFAIL: target=arm{{.*}}
 
-// UNSUPPORTED: ios
+// UNSUPPORTED: darwin-remote
 
 #include <new>
 #include <stdlib.h>
