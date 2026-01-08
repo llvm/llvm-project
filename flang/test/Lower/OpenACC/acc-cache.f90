@@ -34,7 +34,7 @@ subroutine test_cache_readonly()
   end do
 
 ! CHECK: acc.loop
-! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {dataClause = #acc<data_clause acc_cache_readonly>, name = "b"
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {modifiers = #acc<data_clause_modifier readonly>, name = "b"
 ! CHECK: hlfir.designate %[[CACHE]]
 end subroutine
 

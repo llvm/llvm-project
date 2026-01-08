@@ -126,7 +126,9 @@ createDataEntryOp(fir::FirOpBuilder &builder, mlir::Location loc,
                   mlir::Type retTy, llvm::ArrayRef<mlir::Value> async,
                   llvm::ArrayRef<mlir::Attribute> asyncDeviceTypes,
                   llvm::ArrayRef<mlir::Attribute> asyncOnlyDeviceTypes,
-                  bool unwrapBoxAddr = false, mlir::Value isPresent = {}) {
+                  bool unwrapBoxAddr = false, mlir::Value isPresent = {},
+                  mlir::acc::DataClauseModifier modifiers =
+                      mlir::acc::DataClauseModifier::none) {
   mlir::Value varPtrPtr;
   llvm::SmallVector<mlir::Value, 8> operands;
   llvm::SmallVector<int32_t, 8> operandSegments;
@@ -156,6 +158,7 @@ createDataEntryOp(fir::FirOpBuilder &builder, mlir::Location loc,
     op.setAsyncOperandsDeviceTypeAttr(builder.getArrayAttr(asyncDeviceTypes));
   if (!asyncOnlyDeviceTypes.empty())
     op.setAsyncOnlyAttr(builder.getArrayAttr(asyncOnlyDeviceTypes));
+  op.setModifiers(modifiers);
   return op;
 }
 
@@ -4974,11 +4977,9 @@ genACC(Fortran::lower::AbstractConverter &converter,
   const auto &modifier =
       std::get<std::optional<Fortran::parser::AccDataModifier>>(
           objectListWithModifier.t);
-  mlir::acc::DataClause dataClause =
-      (modifier &&
-       (*modifier).v == Fortran::parser::AccDataModifier::Modifier::ReadOnly)
-          ? mlir::acc::DataClause::acc_cache_readonly
-          : mlir::acc::DataClause::acc_cache;
+  bool isReadonly =
+      modifier &&
+      (*modifier).v == Fortran::parser::AccDataModifier::Modifier::ReadOnly;
 
   Fortran::lower::StatementContext stmtCtx;
 
@@ -5002,9 +5003,12 @@ genACC(Fortran::lower::AbstractConverter &converter,
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     mlir::acc::CacheOp cacheOp = createDataEntryOp<mlir::acc::CacheOp>(
         builder, operandLocation, base, asFortran, bounds,
-        /*structured=*/false, /*implicit=*/false, dataClause, base.getType(),
+        /*structured=*/false, /*implicit=*/false,
+        mlir::acc::DataClause::acc_cache, base.getType(),
         /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{},
-        /*unwrapBoxAddr=*/false, /*isPresent=*/mlir::Value{});
+        /*unwrapBoxAddr=*/false, /*isPresent=*/mlir::Value{},
+        isReadonly ? mlir::acc::DataClauseModifier::readonly
+                   : mlir::acc::DataClauseModifier::none);
 
     // Use acc.cache directly as the variable definition.
     converter.getSymbolMap().addVariableDefinition(
