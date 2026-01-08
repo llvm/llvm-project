@@ -2686,8 +2686,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (IID == Intrinsic::ceil && KnownSrc.isKnownAlways(fcPosSubnormal))
         return ConstantFP::get(VTy, 1.0);
 
-      Known = KnownFPClass::roundToIntegral(KnownSrc, IID == Intrinsic::trunc,
-                                            VTy->getScalarType()->isMultiUnitFPType());
+      Known = KnownFPClass::roundToIntegral(
+          KnownSrc, IID == Intrinsic::trunc,
+          VTy->getScalarType()->isMultiUnitFPType());
 
       FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
       if (Constant *SingleVal =
