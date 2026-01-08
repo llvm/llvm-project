@@ -1215,7 +1215,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Substring &ss) {
               if (!ubValue) {
                 ubValue = len;
               }
-              if (lbValue && ubValue && *lbValue > *ubValue) {
+              if ((len && *len == 0) ||
+                  (lbValue && ubValue && *lbValue > *ubValue)) {
                 // valid, substring is empty
               } else if (lbValue && *lbValue < 1 && (ubValue || !last)) {
                 Say("Substring must begin at 1 or later, not %jd"_err_en_US,
@@ -1223,7 +1224,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Substring &ss) {
                 return std::nullopt;
               } else if (ubValue && len && *ubValue > *len &&
                   (lbValue || !first)) {
-                Say("Substring must end at %zd or earlier, not %jd"_err_en_US,
+                Say("Substring must end at %jd or earlier, not %jd"_err_en_US,
                     static_cast<std::intmax_t>(*len),
                     static_cast<std::intmax_t>(*ubValue));
                 return std::nullopt;
