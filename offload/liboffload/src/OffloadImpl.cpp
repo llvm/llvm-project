@@ -1217,8 +1217,7 @@ Error olLaunchHostFunction_impl(ol_queue_handle_t Queue,
 }
 
 Error olMemRegister_impl(ol_device_handle_t Device, void *Ptr, size_t Size,
-                         ol_memory_register_flags_t flags,
-                         void **LockedPtr) {
+                         ol_memory_register_flags_t flags, void **LockedPtr) {
   Expected<void *> LockedPtrOrErr = Device->Device->dataLock(Ptr, Size);
   if (!LockedPtrOrErr)
     return LockedPtrOrErr.takeError();

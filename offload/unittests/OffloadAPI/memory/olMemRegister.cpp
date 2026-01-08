@@ -1,4 +1,4 @@
-//===------- Offload API tests - olMemRegister -----------------------------===//
+//===------- Offload API tests - olMemRegister ----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,7 +15,7 @@ OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olMemRegisterTest);
 
 TEST_P(olMemRegisterTest, SuccessRegister) {
   int Arr[50];
-  ol_memory_register_flags_t Flags={};
+  ol_memory_register_flags_t Flags = {};
   void *PinnedPtr = nullptr;
   ASSERT_SUCCESS(olMemRegister(Device, Arr, sizeof(Arr), Flags, &PinnedPtr));
   ASSERT_NE(PinnedPtr, nullptr);
@@ -24,7 +24,7 @@ TEST_P(olMemRegisterTest, SuccessRegister) {
 
 TEST_P(olMemRegisterTest, SuccessMultipleRegister) {
   int Arr[50];
-  ol_memory_register_flags_t Flags={};
+  ol_memory_register_flags_t Flags = {};
   void *PinnedPtr = nullptr;
   void *PinnedPtr1 = nullptr;
   ASSERT_SUCCESS(olMemRegister(Device, Arr, sizeof(Arr), Flags, &PinnedPtr));
@@ -37,21 +37,23 @@ TEST_P(olMemRegisterTest, SuccessMultipleRegister) {
 
 TEST_P(olMemRegisterTest, InvalidSizeRegister) {
   int Arr[50];
-  ol_memory_register_flags_t Flags={};
+  ol_memory_register_flags_t Flags = {};
   void *PinnedPtr = nullptr;
-  ASSERT_ERROR(OL_ERRC_INVALID_SIZE, olMemRegister(Device, Arr, 0, Flags, &PinnedPtr));
+  ASSERT_ERROR(OL_ERRC_INVALID_SIZE,
+               olMemRegister(Device, Arr, 0, Flags, &PinnedPtr));
 }
 
 TEST_P(olMemRegisterTest, InvalidPtrRegister) {
   int Arr[50];
-  ol_memory_register_flags_t Flags={};
+  ol_memory_register_flags_t Flags = {};
   void *PinnedPtr = nullptr;
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER, olMemRegister(Device, nullptr, sizeof(Arr), Flags, &PinnedPtr));
+  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
+               olMemRegister(Device, nullptr, sizeof(Arr), Flags, &PinnedPtr));
 }
 
 TEST_P(olMemRegisterTest, InvalidPtrUnRegister) {
   int Arr[50];
-  ol_memory_register_flags_t Flags={};
+  ol_memory_register_flags_t Flags = {};
   void *PinnedPtr = nullptr;
   ASSERT_SUCCESS(olMemRegister(Device, Arr, sizeof(Arr), Flags, &PinnedPtr));
   ASSERT_NE(PinnedPtr, nullptr);
@@ -62,7 +64,7 @@ TEST_P(olMemRegisterTest, InvalidPtrUnRegister) {
 TEST_P(olMemRegisterTest, UnregisteredPtrUnRegister) {
   int Arr[50];
   int Arr1[50];
-  ol_memory_register_flags_t Flags={};
+  ol_memory_register_flags_t Flags = {};
   void *PinnedPtr = nullptr;
   ASSERT_SUCCESS(olMemRegister(Device, Arr, sizeof(Arr), Flags, &PinnedPtr));
   ASSERT_NE(PinnedPtr, nullptr);
@@ -72,10 +74,11 @@ TEST_P(olMemRegisterTest, UnregisteredPtrUnRegister) {
 
 TEST_P(olMemRegisterTest, PartialOverlapPtrRegister) {
   int Arr[50];
-  ol_memory_register_flags_t Flags={};
+  ol_memory_register_flags_t Flags = {};
   void *PinnedPtr = nullptr;
   ASSERT_SUCCESS(olMemRegister(Device, Arr, sizeof(Arr), Flags, &PinnedPtr));
   ASSERT_NE(PinnedPtr, nullptr);
-  ASSERT_ERROR(OL_ERRC_INVALID_ARGUMENT, olMemRegister(Device, Arr + 2 , sizeof(Arr), Flags, &PinnedPtr));
+  ASSERT_ERROR(OL_ERRC_INVALID_ARGUMENT,
+               olMemRegister(Device, Arr + 2 , sizeof(Arr), Flags, &PinnedPtr));
   ASSERT_SUCCESS(olMemUnregister(Device, PinnedPtr));
 }
