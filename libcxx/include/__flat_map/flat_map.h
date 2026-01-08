@@ -17,8 +17,8 @@
 #include <__algorithm/ranges_equal.h>
 #include <__algorithm/ranges_inplace_merge.h>
 #include <__algorithm/ranges_sort.h>
-#include <__algorithm/ranges_unique.h>
 #include <__algorithm/remove_if.h>
+#include <__algorithm/unique.h>
 #include <__algorithm/upper_bound.h>
 #include <__assert>
 #include <__compare/synth_three_way.h>
@@ -944,7 +944,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __sort_and_unique() {
     auto __zv = ranges::views::zip(__containers_.keys, __containers_.values);
     ranges::sort(__zv, __compare_, [](const auto& __p) -> decltype(auto) { return std::get<0>(__p); });
-    auto __dup_start = ranges::unique(__zv, __key_equiv(__compare_)).begin();
+    auto __dup_start = std::__unchecked_unique<_RangeAlgPolicy>(__zv, __key_not_less(__compare_)).begin();
     auto __dist      = ranges::distance(__zv.begin(), __dup_start);
     __containers_.keys.erase(__containers_.keys.begin() + __dist, __containers_.keys.end());
     __containers_.values.erase(__containers_.values.begin() + __dist, __containers_.values.end());
@@ -979,7 +979,7 @@ private:
       }
       ranges::inplace_merge(__zv.begin(), __zv.begin() + __append_start_offset, __end, __compare_key);
 
-      auto __dup_start = ranges::unique(__zv, __key_equiv(__compare_)).begin();
+      auto __dup_start = std::__unchecked_unique<_RangeAlgPolicy>(__zv, __key_not_less(__compare_)).begin();
       auto __dist      = ranges::distance(__zv.begin(), __dup_start);
       __containers_.keys.erase(__containers_.keys.begin() + __dist, __containers_.keys.end());
       __containers_.values.erase(__containers_.values.begin() + __dist, __containers_.values.end());
@@ -1135,11 +1135,11 @@ private:
   containers __containers_;
   _LIBCPP_NO_UNIQUE_ADDRESS key_compare __compare_;
 
-  struct __key_equiv {
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __key_equiv(key_compare __c) : __comp_(__c) {}
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool
-    operator()(const_reference __x, const_reference __y) const {
-      return !__comp_(std::get<0>(__x), std::get<0>(__y)) && !__comp_(std::get<0>(__y), std::get<0>(__x));
+  struct __key_not_less {
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __key_not_less(key_compare __c) : __comp_(__c) {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool operator()(const auto& __x, const auto& __y) const {
+      // __x is less or equal to __y because the range is already sorted
+      return !__comp_(std::get<0>(__x), std::get<0>(__y));
     }
     key_compare __comp_;
   };

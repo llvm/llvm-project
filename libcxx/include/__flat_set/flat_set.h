@@ -16,8 +16,8 @@
 #include <__algorithm/ranges_equal.h>
 #include <__algorithm/ranges_inplace_merge.h>
 #include <__algorithm/ranges_sort.h>
-#include <__algorithm/ranges_unique.h>
 #include <__algorithm/remove_if.h>
+#include <__algorithm/unique.h>
 #include <__algorithm/upper_bound.h>
 #include <__assert>
 #include <__compare/synth_three_way.h>
@@ -688,7 +688,7 @@ private:
   // is no invariant state to preserve
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __sort_and_unique() {
     ranges::sort(__keys_, __compare_);
-    auto __dup_start = ranges::unique(__keys_, __key_equiv(__compare_)).begin();
+    auto __dup_start = std::__unchecked_unique<_RangeAlgPolicy>(__keys_, __key_not_less(__compare_)).begin();
     __keys_.erase(__dup_start, __keys_.end());
   }
 
@@ -706,7 +706,7 @@ private:
       }
       ranges::inplace_merge(__keys_.begin(), __keys_.begin() + __old_size, __keys_.end(), __compare_);
 
-      auto __dup_start = ranges::unique(__keys_, __key_equiv(__compare_)).begin();
+      auto __dup_start = std::__unchecked_unique<_RangeAlgPolicy>(__keys_, __key_not_less(__compare_)).begin();
       __keys_.erase(__dup_start, __keys_.end());
     }
     __on_failure.__complete();
@@ -781,11 +781,11 @@ private:
   _KeyContainer __keys_;
   _LIBCPP_NO_UNIQUE_ADDRESS key_compare __compare_;
 
-  struct __key_equiv {
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __key_equiv(key_compare __c) : __comp_(__c) {}
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool
-    operator()(const_reference __x, const_reference __y) const {
-      return !__comp_(__x, __y) && !__comp_(__y, __x);
+  struct __key_not_less {
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __key_not_less(key_compare __c) : __comp_(__c) {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool operator()(const auto& __x, const auto& __y) const {
+      // __x is less or equal to __y because the range is already sorted
+      return !__comp_(__x, __y);
     }
     key_compare __comp_;
   };
