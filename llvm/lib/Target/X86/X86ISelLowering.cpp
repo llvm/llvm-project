@@ -1,3 +1,4 @@
+// I
 //===-- X86ISelLowering.cpp - X86 DAG Lowering Implementation -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -727,11 +728,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_LROUND, MVT::f16, Promote);
     setOperationAction(ISD::STRICT_LRINT, MVT::f16, Promote);
     setOperationAction(ISD::STRICT_LLRINT, MVT::f16, Promote);
-
-    AddPromotedToType(ISD::STRICT_LLROUND, MVT::f16, MVT::f32);
-    AddPromotedToType(ISD::STRICT_LROUND, MVT::f16, MVT::f32);
-    AddPromotedToType(ISD::STRICT_LRINT, MVT::f16, MVT::f32);
-    AddPromotedToType(ISD::STRICT_LLRINT, MVT::f16, MVT::f32);
 
     // Lower this to MOVMSK plus an AND.
     setOperationAction(ISD::FGETSIGN, MVT::i64, Custom);
