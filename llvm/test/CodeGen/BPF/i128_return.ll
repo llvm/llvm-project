@@ -2,16 +2,39 @@
 ; RUN: llc -march=bpfel < %s | FileCheck %s
 ; This test used to fail with "unable to allocate function return #1"
 
+
+define i64 @bar(i64 %a, i64 %b) {
+; CHECK-LABEL: bar:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    r3 = r2
+; CHECK-NEXT:    r2 = r1
+; CHECK-NEXT:    r1 = r10
+; CHECK-NEXT:    r1 += -16
+; CHECK-NEXT:    call foo
+; CHECK-NEXT:    r1 = *(u64 *)(r10 - 16)
+; CHECK-NEXT:    r0 = *(u64 *)(r10 - 8)
+; CHECK-NEXT:    r0 += r1
+; CHECK-NEXT:    exit
+entry:
+    %c = call i128 @foo(i64 %a, i64 %b)
+    %d = lshr i128 %c, 64
+    %e = trunc i128 %d to i64
+    %f = trunc i128 %c to i64
+    %g = add i64 %e, %f
+    ret i64 %g
+}
+
+
 define i128 @foo(i64 %a, i64 %b) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    r5 = r2
 ; CHECK-NEXT:    r5 += r3
 ; CHECK-NEXT:    w4 = 1
-; CHECK-NEXT:    if r5 < r2 goto LBB0_2
+; CHECK-NEXT:    if r5 < r2 goto LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    w4 = 0
-; CHECK-NEXT:  LBB0_2: # %entry
+; CHECK-NEXT:  LBB1_2: # %entry
 ; CHECK-NEXT:    *(u64 *)(r1 + 0) = r5
 ; CHECK-NEXT:    r3 s>>= 63
 ; CHECK-NEXT:    r2 s>>= 63
