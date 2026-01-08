@@ -38,7 +38,12 @@ FifoFile::FifoFile(StringRef path, lldb::pipe_t pipe) : m_path(path) {
 }
 
 FifoFile::~FifoFile() {
-#if !defined(_WIN32)
+#ifdef _WIN32
+  if (m_pipe != INVALID_HANDLE_VALUE) {
+    DisconnectNamedPipe(m_pipe);
+    CloseHandle(m_pipe);
+  }
+#else
   unlink(m_path.c_str());
 #endif
 }
@@ -108,8 +113,10 @@ Expected<std::shared_ptr<FifoFile>> CreateFifoFile(StringRef path) {
 #endif
 }
 
-FifoFileIO::FifoFileIO(FifoFile fifo_file, StringRef other_endpoint_name)
-    : m_fifo_file(fifo_file), m_other_endpoint_name(other_endpoint_name) {}
+FifoFileIO::FifoFileIO(std::shared_ptr<FifoFile> fifo_file,
+                       StringRef other_endpoint_name)
+    : m_fifo_file(std::move(fifo_file)),
+      m_other_endpoint_name(other_endpoint_name) {}
 
 Expected<json::Value> FifoFileIO::ReadJSON(std::chrono::milliseconds timeout) {
   // We use a pointer for this future, because otherwise its normal destructor
@@ -117,7 +124,7 @@ Expected<json::Value> FifoFileIO::ReadJSON(std::chrono::milliseconds timeout) {
   std::optional<std::string> line;
   std::future<void> *future =
       new std::future<void>(std::async(std::launch::async, [&]() {
-        std::string buffer = m_fifo_file.ReadLine();
+        std::string buffer = m_fifo_file->ReadLine();
         if (!buffer.empty())
           line = buffer;
       }));
@@ -141,7 +148,7 @@ Error FifoFileIO::SendJSON(const json::Value &json,
   bool done = false;
   std::future<void> *future =
       new std::future<void>(std::async(std::launch::async, [&]() {
-        m_fifo_file.WriteLine(JSONToString(json));
+        m_fifo_file->WriteLine(JSONToString(json));
         done = true;
       }));
   if (future->wait_for(timeout) == std::future_status::timeout || !done) {

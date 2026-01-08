@@ -101,7 +101,7 @@ private:
 class RunInTerminalDebugAdapterCommChannel {
 public:
   RunInTerminalDebugAdapterCommChannel(llvm::StringRef comm_file);
-  RunInTerminalDebugAdapterCommChannel(FifoFile comm_file);
+  RunInTerminalDebugAdapterCommChannel(std::shared_ptr<FifoFile> comm_file);
 
   /// Notify the runInTerminal launcher that it was attached.
   ///

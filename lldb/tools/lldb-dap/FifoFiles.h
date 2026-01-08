@@ -9,7 +9,9 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_FIFOFILES_H
 #define LLDB_TOOLS_LLDB_DAP_FIFOFILES_H
 
+#ifdef _WIN32
 #include "lldb/Host/windows/PipeWindows.h"
+#endif
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 
@@ -31,6 +33,15 @@ struct FifoFile {
 
   std::string ReadLine();
 
+  llvm::StringRef GetPath() { return m_path; }
+
+  /// FifoFile is not copyable.
+  /// @{
+  FifoFile(const FifoFile &rhs) = delete;
+  void operator=(const FifoFile &rhs) = delete;
+  /// @}
+
+protected:
   std::string m_path;
   lldb::pipe_t m_pipe;
 };
@@ -53,7 +64,8 @@ public:
   /// \param[in] other_endpoint_name
   ///     A human readable name for the other endpoint that will communicate
   ///     using this file. This is used for error messages.
-  FifoFileIO(FifoFile fifo_file, llvm::StringRef other_endpoint_name);
+  FifoFileIO(std::shared_ptr<FifoFile> fifo_file,
+             llvm::StringRef other_endpoint_name);
 
   /// Read the next JSON object from the underlying input fifo file.
   ///
@@ -84,7 +96,7 @@ public:
       std::chrono::milliseconds timeout = std::chrono::milliseconds(20000));
 
 private:
-  FifoFile m_fifo_file;
+  std::shared_ptr<FifoFile> m_fifo_file;
   std::string m_other_endpoint_name;
 };
 

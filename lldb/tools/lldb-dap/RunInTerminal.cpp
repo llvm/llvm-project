@@ -99,7 +99,7 @@ static Error ToError(const RunInTerminalMessage &message) {
 
 RunInTerminalLauncherCommChannel::RunInTerminalLauncherCommChannel(
     StringRef comm_file)
-    : m_io(FifoFileIO(FifoFile(comm_file), "debug adapter")) {}
+    : m_io(std::make_shared<FifoFile>(comm_file), "debug adapter") {}
 
 Error RunInTerminalLauncherCommChannel::WaitUntilDebugAdapterAttaches(
     std::chrono::milliseconds timeout) {
@@ -129,11 +129,11 @@ void RunInTerminalLauncherCommChannel::NotifyError(StringRef error) {
 
 RunInTerminalDebugAdapterCommChannel::RunInTerminalDebugAdapterCommChannel(
     StringRef comm_file)
-    : m_io(comm_file, "runInTerminal launcher") {}
+    : m_io(std::make_shared<FifoFile>(comm_file), "runInTerminal launcher") {}
 
 RunInTerminalDebugAdapterCommChannel::RunInTerminalDebugAdapterCommChannel(
-    FifoFile comm_file)
-    : m_io(comm_file, "runInTerminal launcher") {}
+    std::shared_ptr<FifoFile> comm_file)
+    : m_io(std::move(comm_file), "runInTerminal launcher") {}
 
 // Can't use \a std::future<llvm::Error> because it doesn't compile on Windows
 std::future<lldb::SBError>
