@@ -113,6 +113,15 @@ struct VPlanTransforms {
       const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
       const SmallPtrSetImpl<PHINode *> &InLoopReductions, bool AllowReordering);
 
+  /// Create VPReductionRecipes for in-loop reductions. This processes chains
+  /// of operations contributing to in-loop reductions and creates appropriate
+  /// VPReductionRecipe instances. Block masks from \p BlockMaskCache are used
+  /// to add predication for blocks in \p BlocksNeedingPredication.
+  static void createInLoopReductionRecipes(
+      VPlan &Plan, const DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache,
+      const DenseSet<BasicBlock *> &BlocksNeedingPredication,
+      ElementCount MinVF);
+
   /// Update \p Plan to account for all early exits.
   LLVM_ABI_FOR_TEST static void handleEarlyExits(VPlan &Plan,
                                                  bool HasUncountableExit);
@@ -270,11 +279,9 @@ struct VPlanTransforms {
   static void removeDeadRecipes(VPlan &Plan);
 
   /// Update \p Plan to account for the uncountable early exit from \p
-  /// EarlyExitingVPBB to \p EarlyExitVPBB by
-  ///  * updating the condition exiting the loop via the latch to include the
-  ///    early exit condition,
-  ///  * splitting the original middle block to branch to the early exit block
-  ///    conditionally - according to the early exit condition.
+  /// EarlyExitingVPBB to \p EarlyExitVPBB by introducing a BranchOnTwoConds
+  /// terminator in the latch that handles the early exit and the latch exit
+  /// condition.
   static void handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
                                          VPBasicBlock *EarlyExitVPBB,
                                          VPlan &Plan, VPBasicBlock *HeaderVPBB,
@@ -282,6 +289,10 @@ struct VPlanTransforms {
 
   /// Replace loop regions with explicit CFG.
   static void dissolveLoopRegions(VPlan &Plan);
+
+  /// Expand BranchOnTwoConds instructions into explicit CFG with
+  /// BranchOnCond instructions. Should be called after dissolveLoopRegions.
+  static void expandBranchOnTwoConds(VPlan &Plan);
 
   /// Transform EVL loops to use variable-length stepping after region
   /// dissolution.

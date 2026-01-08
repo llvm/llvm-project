@@ -11,6 +11,7 @@
 // UNSUPPORTED: x86_64-unknown-linux-gnu-LTO
 // UNSUPPORTED: s390x-ibm-linux-gnu
 // UNSUPPORTED: s390x-ibm-linux-gnu-LTO
+// XFAIL: intelgpu
 
 #include <omp.h>
 
@@ -28,41 +29,41 @@ int main(void) {
 // CHECK:   dataDelete
 // CHECK:   omp_target_free
 // NDEBG:   main
-// DEBUG:   main {{.*}}double_free.c:25
+// DEBUG:   main {{.*}}double_free.c:26
 //
 // CHECK: Last deallocation:
 // CHECK:  dataDelete
 // CHECK:  omp_target_free
 // NDEBG:  main
-// DEBUG:  main {{.*}}double_free.c:24
+// DEBUG:  main {{.*}}double_free.c:25
 //
 // CHECK: Last allocation of size 8 -> device pointer
 // CHECK:  dataAlloc
 // CHECK:  omp_target_alloc
 // NDEBG:  main
-// DEBUG:  main {{.*}}double_free.c:23
+// DEBUG:  main {{.*}}double_free.c:24
 //
 // CHECK: Prior allocations with the same base pointer:
 // CHECK: #0 Prior deallocation of size 8:
 // CHECK:  dataDelete
 // CHECK:  omp_target_free
 // NDEBG:  main
-// DEBUG:  main {{.*}}double_free.c:22
+// DEBUG:  main {{.*}}double_free.c:23
 //
 // CHECK: #0 Prior allocation -> device pointer
 // CHECK:  dataAlloc
 // CHECK:  omp_target_alloc
 // NDEBG:  main
-// DEBUG:  main {{.*}}double_free.c:20
+// DEBUG:  main {{.*}}double_free.c:21
 //
 // CHECK: #1 Prior deallocation of size 8:
 // CHECK:  dataDelete
 // CHECK:  omp_target_free
 // NDEBG:  main
-// DEBUG:  main {{.*}}double_free.c:20
+// DEBUG:  main {{.*}}double_free.c:21
 //
 // CHECK: #1 Prior allocation -> device pointer
 // CHECK:  dataAlloc
 // CHECK:  omp_target_alloc
 // NDEBG:  main
-// DEBUG:  main {{.*}}double_free.c:19
+// DEBUG:  main {{.*}}double_free.c:20

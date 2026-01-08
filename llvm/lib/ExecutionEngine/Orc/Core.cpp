@@ -1897,9 +1897,9 @@ Error ExecutionSession::registerJITDispatchHandlers(
   return Error::success();
 }
 
-void ExecutionSession::runJITDispatchHandler(SendResultFunction SendResult,
-                                             ExecutorAddr HandlerFnTagAddr,
-                                             ArrayRef<char> ArgBuffer) {
+void ExecutionSession::runJITDispatchHandler(
+    SendResultFunction SendResult, ExecutorAddr HandlerFnTagAddr,
+    shared::WrapperFunctionBuffer ArgBytes) {
 
   std::shared_ptr<JITDispatchHandlerFunction> F;
   {
@@ -1910,7 +1910,7 @@ void ExecutionSession::runJITDispatchHandler(SendResultFunction SendResult,
   }
 
   if (F)
-    (*F)(std::move(SendResult), ArgBuffer.data(), ArgBuffer.size());
+    (*F)(std::move(SendResult), ArgBytes.data(), ArgBytes.size());
   else
     SendResult(shared::WrapperFunctionBuffer::createOutOfBandError(
         ("No function registered for tag " +

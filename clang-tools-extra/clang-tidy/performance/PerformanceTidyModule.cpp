@@ -8,7 +8,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "AvoidEndlCheck.h"
 #include "EnumSizeCheck.h"
 #include "FasterStringFindCheck.h"

@@ -430,164 +430,6 @@ llvm::json::Object CreateEventObject(const llvm::StringRef event_name) {
   return event;
 }
 
-// "StackFrame": {
-//   "type": "object",
-//   "description": "A Stackframe contains the source location.",
-//   "properties": {
-//     "id": {
-//       "type": "integer",
-//       "description": "An identifier for the stack frame. It must be unique
-//                       across all threads. This id can be used to retrieve
-//                       the scopes of the frame with the 'scopesRequest' or
-//                       to restart the execution of a stackframe."
-//     },
-//     "name": {
-//       "type": "string",
-//       "description": "The name of the stack frame, typically a method name."
-//     },
-//     "source": {
-//       "$ref": "#/definitions/Source",
-//       "description": "The optional source of the frame."
-//     },
-//     "line": {
-//       "type": "integer",
-//       "description": "The line within the file of the frame. If source is
-//                       null or doesn't exist, line is 0 and must be ignored."
-//     },
-//     "column": {
-//       "type": "integer",
-//       "description": "The column within the line. If source is null or
-//                       doesn't exist, column is 0 and must be ignored."
-//     },
-//     "endLine": {
-//       "type": "integer",
-//       "description": "An optional end line of the range covered by the
-//                       stack frame."
-//     },
-//     "endColumn": {
-//       "type": "integer",
-//       "description": "An optional end column of the range covered by the
-//                       stack frame."
-//     },
-//     "instructionPointerReference": {
-// 	     "type": "string",
-// 	     "description": "A memory reference for the current instruction
-//                         pointer in this frame."
-//     },
-//     "moduleId": {
-//       "type": ["integer", "string"],
-//       "description": "The module associated with this frame, if any."
-//     },
-//     "presentationHint": {
-//       "type": "string",
-//       "enum": [ "normal", "label", "subtle" ],
-//       "description": "An optional hint for how to present this frame in
-//                       the UI. A value of 'label' can be used to indicate
-//                       that the frame is an artificial frame that is used
-//                       as a visual label or separator. A value of 'subtle'
-//                       can be used to change the appearance of a frame in
-//                       a 'subtle' way."
-//     }
-//   },
-//   "required": [ "id", "name", "line", "column" ]
-// }
-llvm::json::Value CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
-                                   lldb::SBFormat &format) {
-  llvm::json::Object object;
-  int64_t frame_id = MakeDAPFrameID(frame);
-  object.try_emplace("id", frame_id);
-
-  std::string frame_name;
-  lldb::SBStream stream;
-  if (format && frame.GetDescriptionWithFormat(format, stream).Success()) {
-    frame_name = stream.GetData();
-
-    // `function_name` can be a nullptr, which throws an error when assigned to
-    // an `std::string`.
-  } else if (const char *name = frame.GetDisplayFunctionName()) {
-    frame_name = name;
-  }
-
-  if (frame_name.empty()) {
-    // If the function name is unavailable, display the pc address as a 16-digit
-    // hex string, e.g. "0x0000000000012345"
-    frame_name = GetLoadAddressString(frame.GetPC());
-  }
-
-  // We only include `[opt]` if a custom frame format is not specified.
-  if (!format && frame.GetFunction().GetIsOptimized())
-    frame_name += " [opt]";
-
-  EmplaceSafeString(object, "name", frame_name);
-
-  std::optional<protocol::Source> source = dap.ResolveSource(frame);
-
-  if (source && !IsAssemblySource(*source)) {
-    // This is a normal source with a valid line entry.
-    auto line_entry = frame.GetLineEntry();
-    object.try_emplace("line", line_entry.GetLine());
-    auto column = line_entry.GetColumn();
-    object.try_emplace("column", column);
-  } else if (frame.GetSymbol().IsValid()) {
-    // This is a source where the disassembly is used, but there is a valid
-    // symbol. Calculate the line of the current PC from the start of the
-    // current symbol.
-    lldb::SBInstructionList inst_list = dap.target.ReadInstructions(
-        frame.GetSymbol().GetStartAddress(), frame.GetPCAddress(), nullptr);
-    size_t inst_line = inst_list.GetSize();
-
-    // Line numbers are 1-based.
-    object.try_emplace("line", inst_line + 1);
-    object.try_emplace("column", 1);
-  } else {
-    // No valid line entry or symbol.
-    object.try_emplace("line", 1);
-    object.try_emplace("column", 1);
-  }
-
-  if (source)
-    object.try_emplace("source", std::move(source).value());
-
-  const auto pc = frame.GetPC();
-  if (pc != LLDB_INVALID_ADDRESS) {
-    std::string formatted_addr = "0x" + llvm::utohexstr(pc);
-    object.try_emplace("instructionPointerReference", formatted_addr);
-  }
-
-  if (frame.IsArtificial() || frame.IsHidden())
-    object.try_emplace("presentationHint", "subtle");
-
-  lldb::SBModule module = frame.GetModule();
-  if (module.IsValid()) {
-    if (const llvm::StringRef uuid = module.GetUUIDString(); !uuid.empty())
-      object.try_emplace("moduleId", uuid.str());
-  }
-
-  return llvm::json::Value(std::move(object));
-}
-
-llvm::json::Value CreateExtendedStackFrameLabel(lldb::SBThread &thread,
-                                                lldb::SBFormat &format) {
-  std::string name;
-  lldb::SBStream stream;
-  if (format && thread.GetDescriptionWithFormat(format, stream).Success()) {
-    name = stream.GetData();
-  } else {
-    const uint32_t thread_idx = thread.GetExtendedBacktraceOriginatingIndexID();
-    const char *queue_name = thread.GetQueueName();
-    if (queue_name != nullptr) {
-      name = llvm::formatv("Enqueued from {0} (Thread {1})", queue_name,
-                           thread_idx);
-    } else {
-      name = llvm::formatv("Thread {0}", thread_idx);
-    }
-  }
-
-  return llvm::json::Value(llvm::json::Object{{"id", thread.GetThreadID() + 1},
-                                              {"name", name},
-                                              {"presentationHint", "label"}});
-}
-
 // "StoppedEvent": {
 //   "allOf": [ { "$ref": "#/definitions/Event" }, {
 //     "type": "object",
@@ -745,82 +587,77 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
   return llvm::json::Value(std::move(event));
 }
 
-const char *GetNonNullVariableName(lldb::SBValue &v) {
-  const char *name = v.GetName();
-  return name ? name : "<null>";
+llvm::StringRef GetNonNullVariableName(lldb::SBValue &v) {
+  const llvm::StringRef name = v.GetName();
+  return !name.empty() ? name : "<null>";
 }
 
 std::string CreateUniqueVariableNameForDisplay(lldb::SBValue &v,
                                                bool is_name_duplicated) {
-  lldb::SBStream name_builder;
-  name_builder.Print(GetNonNullVariableName(v));
+  std::string unique_name{};
+  llvm::raw_string_ostream name_builder(unique_name);
+  name_builder << GetNonNullVariableName(v);
   if (is_name_duplicated) {
-    lldb::SBDeclaration declaration = v.GetDeclaration();
-    const char *file_name = declaration.GetFileSpec().GetFilename();
+    const lldb::SBDeclaration declaration = v.GetDeclaration();
+    const llvm::StringRef file_name = declaration.GetFileSpec().GetFilename();
     const uint32_t line = declaration.GetLine();
 
-    if (file_name != nullptr && line > 0)
-      name_builder.Printf(" @ %s:%u", file_name, line);
-    else if (const char *location = v.GetLocation())
-      name_builder.Printf(" @ %s", location);
+    if (!file_name.empty() && line != 0 && line != LLDB_INVALID_LINE_NUMBER)
+      name_builder << llvm::formatv(" @ {}:{}", file_name, line);
+    else if (llvm::StringRef location = v.GetLocation(); !location.empty())
+      name_builder << llvm::formatv(" @ {}", location);
   }
-  return name_builder.GetData();
+  return unique_name;
 }
 
-VariableDescription::VariableDescription(lldb::SBValue v,
-                                         bool auto_variable_summaries,
-                                         bool format_hex,
-                                         bool is_name_duplicated,
-                                         std::optional<std::string> custom_name)
-    : v(v) {
-  name = custom_name
-             ? *custom_name
-             : CreateUniqueVariableNameForDisplay(v, is_name_duplicated);
+VariableDescription::VariableDescription(
+    lldb::SBValue val, bool auto_variable_summaries, bool format_hex,
+    bool is_name_duplicated, std::optional<llvm::StringRef> custom_name)
+    : val(val) {
+  name = custom_name.value_or(
+      CreateUniqueVariableNameForDisplay(val, is_name_duplicated));
 
-  type_obj = v.GetType();
-  std::string raw_display_type_name =
-      llvm::StringRef(type_obj.GetDisplayTypeName()).str();
-  display_type_name =
-      !raw_display_type_name.empty() ? raw_display_type_name : NO_TYPENAME;
+  type_obj = val.GetType();
+  const llvm::StringRef type_name = type_obj.GetDisplayTypeName();
+  display_type_name = type_name.empty() ? NO_TYPENAME : type_name;
 
   // Only format hex/default if there is no existing special format.
-  if (v.GetFormat() == lldb::eFormatDefault ||
-      v.GetFormat() == lldb::eFormatHex) {
-    if (format_hex)
-      v.SetFormat(lldb::eFormatHex);
-    else
-      v.SetFormat(lldb::eFormatDefault);
+  if (const lldb::Format current_format = val.GetFormat();
+      current_format == lldb::eFormatDefault ||
+      current_format == lldb::eFormatHex) {
+
+    val.SetFormat(format_hex ? lldb::eFormatHex : lldb::eFormatDefault);
   }
 
   llvm::raw_string_ostream os_display_value(display_value);
 
-  if (lldb::SBError sb_error = v.GetError(); sb_error.Fail()) {
+  if (lldb::SBError sb_error = val.GetError(); sb_error.Fail()) {
     error = sb_error.GetCString();
     os_display_value << "<error: " << error << ">";
   } else {
-    value = llvm::StringRef(v.GetValue()).str();
-    summary = llvm::StringRef(v.GetSummary()).str();
+    value = val.GetValue();
+    summary = val.GetSummary();
     if (summary.empty() && auto_variable_summaries)
-      auto_summary = TryCreateAutoSummary(v);
+      auto_summary = TryCreateAutoSummary(val);
 
-    std::optional<std::string> effective_summary =
-        !summary.empty() ? summary : auto_summary;
+    llvm::StringRef display_summary = auto_summary ? *auto_summary : summary;
+    const bool has_summary = !display_summary.empty();
 
     if (!value.empty()) {
       os_display_value << value;
-      if (effective_summary)
-        os_display_value << " " << *effective_summary;
-    } else if (effective_summary) {
-      os_display_value << *effective_summary;
+      if (has_summary)
+        os_display_value << " " << display_summary;
+    } else if (has_summary) {
+      os_display_value << display_summary;
 
-      // As last resort, we print its type and address if available.
-    } else if (!raw_display_type_name.empty()) {
-      os_display_value << raw_display_type_name;
+    } else if (!type_name.empty()) {
+      // As last resort, we print its type if available.
+      os_display_value << type_name;
     }
   }
 
   lldb::SBStream evaluateStream;
-  v.GetExpressionPath(evaluateStream);
+  val.GetExpressionPath(evaluateStream);
   evaluate_name = llvm::StringRef(evaluateStream.GetData()).str();
 }
 
@@ -830,13 +667,13 @@ std::string VariableDescription::GetResult(protocol::EvaluateContext context) {
   if (context != protocol::eEvaluateContextRepl)
     return display_value;
 
-  if (!v.IsValid())
+  if (!val.IsValid())
     return display_value;
 
   // Try the SBValue::GetDescription(), which may call into language runtime
   // specific formatters (see ValueObjectPrinter).
   lldb::SBStream stream;
-  v.GetDescription(stream);
+  val.GetDescription(stream);
   llvm::StringRef description = stream.GetData();
   return description.trim().str();
 }

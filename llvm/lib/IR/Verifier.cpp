@@ -2613,6 +2613,22 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     Check(FirstArgIdx > 0 && FirstArgIdx <= UpperBound,
           "modular-format attribute first arg index is out of bounds", V);
   }
+
+  if (auto A = Attrs.getFnAttr("target-features"); A.isValid()) {
+    StringRef S = A.getValueAsString();
+    if (!S.empty()) {
+      for (auto FeatureFlag : split(S, ',')) {
+        if (FeatureFlag.empty())
+          CheckFailed(
+              "target-features attribute should not contain an empty string");
+        else
+          Check(FeatureFlag[0] == '+' || FeatureFlag[0] == '-',
+                "target feature '" + FeatureFlag +
+                    "' must start with a '+' or '-'",
+                V);
+      }
+    }
+  }
 }
 void Verifier::verifyUnknownProfileMetadata(MDNode *MD) {
   Check(MD->getNumOperands() == 2,
@@ -6556,23 +6572,31 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
 
     break;
   }
-  case Intrinsic::vector_splice: {
+  case Intrinsic::vector_splice_left:
+  case Intrinsic::vector_splice_right: {
     VectorType *VecTy = cast<VectorType>(Call.getType());
-    int64_t Idx = cast<ConstantInt>(Call.getArgOperand(2))->getSExtValue();
-    int64_t KnownMinNumElements = VecTy->getElementCount().getKnownMinValue();
+    uint64_t Idx = cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue();
+    uint64_t KnownMinNumElements = VecTy->getElementCount().getKnownMinValue();
     if (VecTy->isScalableTy() && Call.getParent() &&
         Call.getParent()->getParent()) {
       AttributeList Attrs = Call.getParent()->getParent()->getAttributes();
       if (Attrs.hasFnAttr(Attribute::VScaleRange))
         KnownMinNumElements *= Attrs.getFnAttrs().getVScaleRangeMin();
     }
-    Check((Idx < 0 && std::abs(Idx) <= KnownMinNumElements) ||
-              (Idx >= 0 && Idx < KnownMinNumElements),
-          "The splice index exceeds the range [-VL, VL-1] where VL is the "
-          "known minimum number of elements in the vector. For scalable "
-          "vectors the minimum number of elements is determined from "
-          "vscale_range.",
-          &Call);
+    if (ID == Intrinsic::vector_splice_left)
+      Check(Idx < KnownMinNumElements,
+            "The splice index exceeds the range [0, VL-1] where VL is the "
+            "known minimum number of elements in the vector. For scalable "
+            "vectors the minimum number of elements is determined from "
+            "vscale_range.",
+            &Call);
+    else
+      Check(Idx <= KnownMinNumElements,
+            "The splice index exceeds the range [0, VL] where VL is the "
+            "known minimum number of elements in the vector. For scalable "
+            "vectors the minimum number of elements is determined from "
+            "vscale_range.",
+            &Call);
     break;
   }
   case Intrinsic::stepvector: {

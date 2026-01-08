@@ -277,12 +277,17 @@ protected:
 
   void requireCGSCCOrder(PassManagerWrapper &PMW) const {
     assert(!AddInCGSCCOrder);
-    flushFPMsToMPM(PMW);
+    assert(PMW.FPM.isEmpty() && PMW.MFPM.isEmpty() &&
+           "Requiring CGSCC ordering requires flushing the current function "
+           "pipelines to the MPM.");
     AddInCGSCCOrder = true;
   }
+
   void stopAddingInCGSCCOrder(PassManagerWrapper &PMW) const {
     assert(AddInCGSCCOrder);
-    flushFPMsToMPM(PMW);
+    assert(PMW.FPM.isEmpty() && PMW.MFPM.isEmpty() &&
+           "Stopping CGSCC ordering requires flushing the current function "
+           "pipelines to the MPM.");
     AddInCGSCCOrder = false;
   }
 
@@ -479,6 +484,8 @@ protected:
 
   /// Add standard basic block placement passes.
   void addBlockPlacement(PassManagerWrapper &PMW) const;
+
+  void addPostBBSections(PassManagerWrapper &PMW) const {}
 
   using CreateMCStreamer =
       std::function<Expected<std::unique_ptr<MCStreamer>>(MCContext &)>;
@@ -721,7 +728,6 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
     flushFPMsToMPM(PMW);
     addModulePass(ShadowStackGCLoweringPass(), PMW);
   }
-  addFunctionPass(LowerConstantIntrinsicsPass(), PMW);
 
   // Make sure that no unreachable blocks are instruction selected.
   addFunctionPass(UnreachableBlockElimPass(), PMW);
@@ -1056,6 +1062,8 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
     }
   }
 
+  derived().addPostBBSections(PMW);
+
   addMachineFunctionPass(StackFrameLayoutAnalysisPass(), PMW);
 
   // Add passes that directly emit MI after all other MI passes.
@@ -1245,6 +1253,9 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
     // addRegAssignmentOptimized did not add a reg alloc pass, so do nothing.
     return;
   }
+
+  addMachineFunctionPass(StackSlotColoringPass(), PMW);
+
   // Allow targets to expand pseudo instructions depending on the choice of
   // registers before MachineCopyPropagation.
   derived().addPostRewrite(PMW);
@@ -1267,6 +1278,9 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
 template <typename Derived, typename TargetMachineT>
 void CodeGenPassBuilder<Derived, TargetMachineT>::addMachineLateOptimization(
     PassManagerWrapper &PMW) const {
+  // Cleanup of redundant (identical) address/immediate loads.
+  addMachineFunctionPass(MachineLateInstrsCleanupPass(), PMW);
+
   // Branch folding must be run after regalloc and prolog/epilog insertion.
   addMachineFunctionPass(BranchFolderPass(Opt.EnableTailMerge), PMW);
 
@@ -1276,9 +1290,6 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addMachineLateOptimization(
   // In addition it can also make CFG irreducible. Thus we disable it.
   if (!TM.requiresStructuredCFG())
     addMachineFunctionPass(TailDuplicatePass(), PMW);
-
-  // Cleanup of redundant (identical) address/immediate loads.
-  addMachineFunctionPass(MachineLateInstrsCleanupPass(), PMW);
 
   // Copy propagation.
   addMachineFunctionPass(MachineCopyPropagationPass(), PMW);

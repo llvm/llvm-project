@@ -9,6 +9,7 @@
 #include "LibStdcpp.h"
 #include "LibCxx.h"
 
+#include "Plugins/Language/CPlusPlus/CxxStringTypes.h"
 #include "Plugins/Language/CPlusPlus/Generic.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
@@ -28,6 +29,8 @@ using namespace lldb_private;
 using namespace lldb_private::formatters;
 
 namespace {
+
+using StringElementType = StringPrinter::StringElementType;
 
 class LibstdcppMapIteratorSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
   /*
@@ -73,7 +76,6 @@ public:
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
-
   // The lifetime of a ValueObject and all its derivative ValueObjects
   // (children, clones, etc.) is managed by a ClusterManager. These
   // objects are only destroyed when every shared pointer to any of them
@@ -245,6 +247,88 @@ bool lldb_private::formatters::LibStdcppStringSummaryProvider(
 
   return true;
 }
+
+template <StringPrinter::StringElementType element_type>
+static bool formatStringViewImpl(ValueObject &valobj, Stream &stream,
+                                 const TypeSummaryOptions &summary_options,
+                                 std::string prefix_token) {
+  auto data_sp = valobj.GetChildMemberWithName("_M_str");
+  auto size_sp = valobj.GetChildMemberWithName("_M_len");
+  if (!data_sp || !size_sp)
+    return false;
+
+  bool success = false;
+  uint64_t size = size_sp->GetValueAsUnsigned(0, &success);
+  if (!success) {
+    stream << "Summary Unavailable";
+    return true;
+  }
+
+  StreamString scratch_stream;
+  success = StringBufferSummaryProvider<element_type>(
+      scratch_stream, summary_options, data_sp, size, prefix_token);
+
+  if (success)
+    stream << scratch_stream.GetData();
+  else
+    stream << "Summary Unavailable";
+  return true;
+}
+
+bool lldb_private::formatters::LibStdcppWStringViewSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  auto wchar_t_size = GetWCharByteSize(valobj);
+  if (!wchar_t_size)
+    return false;
+
+  switch (*wchar_t_size) {
+  case 1:
+    return formatStringViewImpl<StringElementType::UTF8>(valobj, stream,
+                                                         options, "L");
+  case 2:
+    return formatStringViewImpl<StringElementType::UTF16>(valobj, stream,
+                                                          options, "L");
+  case 4:
+    return formatStringViewImpl<StringElementType::UTF32>(valobj, stream,
+                                                          options, "L");
+  }
+  return false;
+}
+
+template <StringElementType element_type>
+static constexpr const char *getPrefixToken() {
+  switch (element_type) {
+  case StringElementType::ASCII:
+    return "";
+  case StringElementType::UTF8:
+    return "u8";
+  case StringElementType::UTF16:
+    return "u";
+  case StringElementType::UTF32:
+    return "U";
+  }
+  llvm_unreachable("invalid element type");
+}
+
+template <StringPrinter::StringElementType element_type>
+bool lldb_private::formatters::LibStdcppStringViewSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  return formatStringViewImpl<element_type>(valobj, stream, options,
+                                            getPrefixToken<element_type>());
+}
+
+template bool lldb_private::formatters::LibStdcppStringViewSummaryProvider<
+    StringElementType::ASCII>(ValueObject &, Stream &,
+                              const TypeSummaryOptions &);
+template bool lldb_private::formatters::LibStdcppStringViewSummaryProvider<
+    StringElementType::UTF8>(ValueObject &, Stream &,
+                             const TypeSummaryOptions &);
+template bool lldb_private::formatters::LibStdcppStringViewSummaryProvider<
+    StringElementType::UTF16>(ValueObject &, Stream &,
+                              const TypeSummaryOptions &);
+template bool lldb_private::formatters::LibStdcppStringViewSummaryProvider<
+    StringElementType::UTF32>(ValueObject &, Stream &,
+                              const TypeSummaryOptions &);
 
 LibStdcppSharedPtrSyntheticFrontEnd::LibStdcppSharedPtrSyntheticFrontEnd(
     lldb::ValueObjectSP valobj_sp)
