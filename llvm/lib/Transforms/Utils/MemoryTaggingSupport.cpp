@@ -60,8 +60,6 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
   }
   bool UncoveredRets = false;
   for (auto *RI : RetVec) {
-    if (!isPotentiallyReachable(Start, RI, nullptr, &DT, &LI))
-      continue;
     // If there is an end in the same basic block as the return, we know for
     // sure that the return is covered. Otherwise, we can check whether there
     // is a way to reach the RI from the start of the lifetime without passing
