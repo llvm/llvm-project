@@ -4900,14 +4900,30 @@ genCacheBounds(Fortran::lower::AbstractConverter &converter,
     if (triplet) {
       asFortran << ':';
 
-      // Compute lower bound (use array lb if not specified).
+      // OpenACC spec requires at least one of lower or upper bound to be
+      // specified: arr(lower:upper), arr(lower:), or arr(:upper).
+      // arr(:) with both bounds missing is not allowed.
       Fortran::semantics::MaybeExpr lowerExpr =
           Fortran::evaluate::AsGenericExpr(triplet->lower());
+      Fortran::semantics::MaybeExpr upperExpr =
+          Fortran::evaluate::AsGenericExpr(triplet->upper());
+
+      if (!lowerExpr && !upperExpr) {
+        mlir::emitError(loc, "OpenACC cache directive requires at least one "
+                             "bound to be specified for array section");
+      }
+
+      // OpenACC cache does not support strided array sections.
+      if (auto strideVal = Fortran::evaluate::ToInt64(triplet->stride())) {
+        if (*strideVal != 1)
+          mlir::emitError(loc, "OpenACC cache directive does not support "
+                               "strided array sections");
+      }
+
+      // Compute lower bound (use array lb if not specified).
       mlir::Value lb = lowerExpr ? genIndex(lowerExpr) : arrayLb;
 
       // Compute upper bound (use array ub if not specified).
-      Fortran::semantics::MaybeExpr upperExpr =
-          Fortran::evaluate::AsGenericExpr(triplet->upper());
       mlir::Value ub;
       if (upperExpr) {
         ub = genIndex(upperExpr);
