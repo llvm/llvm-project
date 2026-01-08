@@ -5956,7 +5956,10 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
         bool IsIEEEMode = Info->getMode().IEEE;
         bool IsGFX12Plus = AMDGPU::isGFX12Plus(ST);
         bool NeedsNANCanonicalization = IsIEEEMode || IsGFX12Plus;
-        const TargetRegisterClass *VregRC = TRI->getVGPR64Class();
+        int SrcIdx =
+            AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src);
+        const TargetRegisterClass *VregRC =
+            TRI->getAllocatableClass(TII->getRegClass(MI.getDesc(), SrcIdx));
         const TargetRegisterClass *VregSubRC =
             TRI->getSubRegisterClass(VregRC, AMDGPU::sub0);
         Register AccumulatorVReg = MRI.createVirtualRegister(VregRC);
