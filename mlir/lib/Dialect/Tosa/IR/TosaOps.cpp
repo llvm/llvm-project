@@ -4701,7 +4701,18 @@ LogicalResult tosa::SliceShapeOp::verify() {
   if (size && size.value() <= 0)
     return emitOpError("expected positive size, got ") << size.value();
 
-  if (!start || !size)
+  if (!size)
+    return success();
+
+  const tosa::shapeType outShapeType =
+      cast<tosa::shapeType>(getResult().getType());
+  const int64_t outputRank = outShapeType.getRank();
+  if (outputRank != size)
+    return emitOpError(
+               "expected output type size to be equal to size attribute, got ")
+           << outputRank << " vs " << size.value();
+
+  if (!start)
     return success();
 
   const tosa::shapeType inShapeType =

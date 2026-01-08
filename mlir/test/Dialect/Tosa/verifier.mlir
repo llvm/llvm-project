@@ -1314,3 +1314,14 @@ func.func @test_slice_out_of_range() -> !tosa.shape<3> {
   %3 = tosa.slice_shape %0, %1, %2 : (!tosa.shape<6>, tensor<1xi32>, tensor<1xi32>) -> !tosa.shape<3>
   return %3 : !tosa.shape<3>
 }
+
+// -----
+
+func.func @test_slice_shape_incorrect_output_size() -> !tosa.shape<4> {
+  %shape = tosa.const_shape {values = dense<[4, 5, 6, 7, 8, 9]> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %start = "tosa.const"() {values = dense<1> : tensor<1xi32>} : () -> tensor<1xi32>
+  %size  = "tosa.const"() {values = dense<3> : tensor<1xi32>} : () -> tensor<1xi32>
+  // expected-error@+1 {{'tosa.slice_shape' op expected output type size to be equal to size attribute, got 4 vs 3}}
+  %slice = tosa.slice_shape %shape, %start, %size : (!tosa.shape<6>, tensor<1xi32>, tensor<1xi32>) -> !tosa.shape<4>
+  return %slice : !tosa.shape<4>
+}
