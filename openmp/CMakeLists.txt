@@ -12,8 +12,6 @@ list(INSERT CMAKE_MODULE_PATH 0
 # Must go below project(..)
 include(GNUInstallDirs)
 
-set(LLVM_TREE_AVAILABLE False)
-
 # Usually <llvm-project>/runtimes/CMakeLists.txt sets LLVM_TREE_AVAILABLE and
 # we assume it is not available otherwise. The exception is that we are in an
 # LLVM_ENABLE_PROJECTS=openmp build, the LLVM tree is actually available.
