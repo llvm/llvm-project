@@ -20,9 +20,8 @@
 // This pass should be run after register allocation and is based on the
 // earliest versions of AArch64RedundantCopyElimination.
 //
-// FIXME: Support compares with non-zero constants for the Zibi extension. Also,
-// support compare with non-zero immediates where the immediate is stored in a
-// register.
+// FIXME: Support compare with non-zero immediates where the immediate is stored
+// in a register.
 //
 //===----------------------------------------------------------------------===//
 
@@ -148,7 +147,7 @@ bool RISCVRedundantCopyElimination::optimizeBlock(MachineBasicBlock &MBB) {
           RemoveMI = true;
       }
     } else {
-      // Xqcibi compare with non-zero immediate:
+      // Xqcibi, XAndesPref and Zibi compare with non-zero immediate:
       // remove redundant addi rd,x0,imm or qc.li rd,imm as applicable.
       if (MI->getOpcode() == RISCV::ADDI && MI->getOperand(0).isReg() &&
           MI->getOperand(1).isReg() && MI->getOperand(2).isImm()) {
