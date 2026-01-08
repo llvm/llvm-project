@@ -141,14 +141,13 @@ def olMemRegister : Function {
   let desc = "Register and page-lock host memory so it can be accessible by the device.";
   let details = [
         "Pins host memory to optimize transfers and returns the device accessible",
-        "pointer that devices should use for memory transfers involving the host",
+        "stable pointer that devices should use for memory transfers involving the host",
         "pinned allocation. If the buffer intersects with other existing buffer,",
         "a new user will be registered. A partial overlapping is not allowed.",
         "The pinned pointer can be accessed both on host and device and",
         "no guarantees are made about consistency.",
-        "The pinned pointer should be used to execute memory transfers.",
-        "The functionality is currently implemented for AMD only",
-        "where memory is pinned for all devices."
+        "The pinned pointer should be used to execute memory transfers",
+        "as it is a stable pointer for memory access."  
   ];
   let params = [
     Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
