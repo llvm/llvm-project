@@ -24,6 +24,7 @@
 #include "lldb/Host/HostThread.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StopInfo.h"
+#include "lldb/Target/ThreadPlanBase.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "gtest/gtest.h"
 
@@ -105,6 +106,18 @@ public:
   bool CalculateStopInfo() override { return false; }
 
   bool IsStillAtLastBreakpointHit() override { return true; }
+
+  using Thread::PushPlan;
+
+  lldb::addr_t GetStoppedAtUnexpectedBP() const {
+    return m_stopped_at_unexecuted_bp;
+  }
+};
+
+class DummyThreadPlan : public ThreadPlanBase {
+public:
+  DummyThreadPlan(Thread &thread) : ThreadPlanBase(thread) {}
+  ~DummyThreadPlan() override = default;
 };
 } // namespace
 
@@ -227,4 +240,45 @@ TEST_F(ThreadTest, GetPrivateStopInfo) {
   ASSERT_TRUE(stopinfo_sp->IsValid() == false);
   StopInfoSP new_stopinfo_sp = thread_sp->GetPrivateStopInfo();
   ASSERT_TRUE(new_stopinfo_sp && stopinfo_sp->IsValid() == true);
+}
+
+TEST_F(ThreadTest, ShouldResume) {
+  ArchSpec arch("x86_64-pc-linux");
+
+  Platform::SetHostPlatform(
+      platform_linux::PlatformLinux::CreateInstance(true, &arch));
+
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+
+  TargetSP target_sp = CreateTarget(debugger_sp, arch);
+  ASSERT_TRUE(target_sp);
+
+  ListenerSP listener_sp(Listener::MakeListener("dummy"));
+  ProcessSP process_sp = std::make_shared<DummyProcess>(target_sp, listener_sp);
+  ASSERT_TRUE(process_sp);
+
+  auto thread_sp = std::make_shared<DummyThread>(*process_sp.get(), 0);
+  ASSERT_TRUE(thread_sp);
+
+  thread_sp->PushPlan(std::make_shared<DummyThreadPlan>(*thread_sp));
+  ASSERT_TRUE(thread_sp->GetCurrentPlan());
+
+  const lldb::addr_t unexpected_bp_addr = 0x1234;
+
+  // If a thread is resumed with 'eStateRunning' or 'eStateStepping', it should
+  // clear the address of an unexpected breakpoint.
+  thread_sp->SetThreadStoppedAtUnexecutedBP(unexpected_bp_addr);
+  EXPECT_TRUE(thread_sp->ShouldResume(eStateRunning));
+  EXPECT_EQ(LLDB_INVALID_ADDRESS, thread_sp->GetStoppedAtUnexpectedBP());
+
+  thread_sp->SetThreadStoppedAtUnexecutedBP(unexpected_bp_addr);
+  EXPECT_TRUE(thread_sp->ShouldResume(eStateStepping));
+  EXPECT_EQ(LLDB_INVALID_ADDRESS, thread_sp->GetStoppedAtUnexpectedBP());
+
+  // If a thread is resumed with 'eStateSuspended', the address of an unexpected
+  // breakpoint should be preserved.
+  thread_sp->SetThreadStoppedAtUnexecutedBP(unexpected_bp_addr);
+  EXPECT_TRUE(thread_sp->ShouldResume(eStateSuspended));
+  EXPECT_EQ(unexpected_bp_addr, thread_sp->GetStoppedAtUnexpectedBP());
 }

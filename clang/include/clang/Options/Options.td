@@ -7840,6 +7840,11 @@ def massembler_fatal_warnings : Flag<["-"], "massembler-fatal-warnings">,
 def crel : Flag<["--"], "crel">,
   HelpText<"Enable CREL relocation format (ELF only)">,
   MarshallingInfoFlag<CodeGenOpts<"Crel">>;
+// The leading 'g' is misleading. This is an unwind tables option, not
+// a debug option. But uses this name for gnu compatibility.
+def gsframe : Flag<["--"], "gsframe">,
+              HelpText<"Generate .sframe unwind sections (ELF only)">,
+              MarshallingInfoFlag<CodeGenOpts<"EmitSFrameUnwind">>;
 def mmapsyms_implicit : Flag<["-"], "mmapsyms=implicit">,
   HelpText<"Allow mapping symbol at section beginning to be implicit, "
     "lowering number of mapping symbols at the expense of some "

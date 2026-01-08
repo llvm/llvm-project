@@ -112,7 +112,9 @@ parsePlatformInfos(const llvm::json::Object &Obj, VersionTuple Version) {
                                llvm::Triple::UnknownEnvironment,
                                llvm::Triple::MachO, "/System/DriverKit"});
     } else {
-      llvm_unreachable("Unrecognized Xcode platform");
+      llvm::reportFatalUsageError(
+          "Unrecognized CanonicalName in SDKSettings.json. SupportedTargets is "
+          "expected, or a recognized CanonicalName.");
     }
     return PlatformInfos;
   }
