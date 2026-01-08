@@ -64,29 +64,28 @@ constexpr bool test_ref() {
 
   return true;
 }
-
 #endif
 
-int main(int, char**) {
-  {
-    const optional<X> opt;
-    ((void)opt);
-    ASSERT_SAME_TYPE(decltype(*opt), X const&);
-    ASSERT_NOEXCEPT(*opt);
-  }
-  {
-    constexpr optional<X> opt(X{});
-    static_assert((*opt).test() == 3, "");
-  }
-  {
-    constexpr optional<Y> opt(Y{});
-    assert((*opt).test() == 2);
-  }
-
+int main(int, char**)
+{
+    {
+        const optional<X> opt; ((void)opt);
+        ASSERT_SAME_TYPE(decltype(*opt), X const&);
+        ASSERT_NOEXCEPT(*opt);
+    }
+    {
+        constexpr optional<X> opt(X{});
+        static_assert((*opt).test() == 3, "");
+    }
+    {
+        constexpr optional<Y> opt(Y{});
+        assert((*opt).test() == 2);
+    }
 #if TEST_STD_VER >= 26
-  assert(test_ref());
-  static_assert(test_ref());
+    {
+      assert(test_ref());
+      static_assert(test_ref());
+    }
 #endif
-
-  return 0;
+    return 0;
 }

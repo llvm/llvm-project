@@ -25,7 +25,7 @@ struct X {
   X(int j) : i(j) {}
 };
 
-int main(int, char**) {
+void test() {
   const std::optional<int> co(1);
   std::optional<int> o0(1);
 
