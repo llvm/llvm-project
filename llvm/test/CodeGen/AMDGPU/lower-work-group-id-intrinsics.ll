@@ -50,7 +50,7 @@ define amdgpu_cs void @_amdgpu_cs_main() {
 ; GFX1250-SDAG-LABEL: _amdgpu_cs_main:
 ; GFX1250-SDAG:       ; %bb.0: ; %.entry
 ; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
+; GFX1250-SDAG-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-NEXT:    s_bfe_u32 s0, ttmp6, 0x4000c
 ; GFX1250-SDAG-NEXT:    s_bfe_u32 s2, ttmp6, 0x40010
 ; GFX1250-SDAG-NEXT:    s_add_co_i32 s0, s0, 1
@@ -82,7 +82,7 @@ define amdgpu_cs void @_amdgpu_cs_main() {
 ; GFX1250-GISEL-LABEL: _amdgpu_cs_main:
 ; GFX1250-GISEL:       ; %bb.0: ; %.entry
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
+; GFX1250-GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    s_bfe_u32 s0, ttmp6, 0x4000c
 ; GFX1250-GISEL-NEXT:    s_and_b32 s1, ttmp6, 15
 ; GFX1250-GISEL-NEXT:    s_add_co_i32 s0, s0, 1
@@ -169,7 +169,7 @@ define amdgpu_cs void @workgroup_id_no_clusters() "amdgpu-cluster-dims"="0,0,0" 
 ; GFX1250-SDAG-LABEL: workgroup_id_no_clusters:
 ; GFX1250-SDAG:       ; %bb.0: ; %.entry
 ; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
+; GFX1250-SDAG-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-NEXT:    s_and_b32 s0, ttmp7, 0xffff
 ; GFX1250-SDAG-NEXT:    s_lshr_b32 s1, ttmp7, 16
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v0, ttmp9 :: v_dual_mov_b32 v1, s0
@@ -180,7 +180,7 @@ define amdgpu_cs void @workgroup_id_no_clusters() "amdgpu-cluster-dims"="0,0,0" 
 ; GFX1250-GISEL-LABEL: workgroup_id_no_clusters:
 ; GFX1250-GISEL:       ; %bb.0: ; %.entry
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
+; GFX1250-GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s0, ttmp9
 ; GFX1250-GISEL-NEXT:    s_and_b32 s1, ttmp7, 0xffff
 ; GFX1250-GISEL-NEXT:    s_lshr_b32 s2, ttmp7, 16
@@ -243,7 +243,7 @@ define amdgpu_cs void @workgroup_id_optimized() "amdgpu-cluster-dims"="2,3,4" {
 ; GFX1250-SDAG-LABEL: workgroup_id_optimized:
 ; GFX1250-SDAG:       ; %bb.0: ; %.entry
 ; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
+; GFX1250-SDAG-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-NEXT:    s_lshr_b32 s1, ttmp7, 14
 ; GFX1250-SDAG-NEXT:    s_and_b32 s2, ttmp7, 0xffff
 ; GFX1250-SDAG-NEXT:    s_and_b32 s0, ttmp6, 15
@@ -263,7 +263,7 @@ define amdgpu_cs void @workgroup_id_optimized() "amdgpu-cluster-dims"="2,3,4" {
 ; GFX1250-GISEL-LABEL: workgroup_id_optimized:
 ; GFX1250-GISEL:       ; %bb.0: ; %.entry
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
+; GFX1250-GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    s_and_b32 s1, ttmp7, 0xffff
 ; GFX1250-GISEL-NEXT:    s_and_b32 s0, ttmp6, 15
 ; GFX1250-GISEL-NEXT:    s_bfe_u32 s2, ttmp6, 0x40004
@@ -347,7 +347,7 @@ define amdgpu_cs void @caller() {
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_mov_b32 s32, 0
 ; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
+; GFX1250-SDAG-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-NEXT:    s_bfe_u32 s0, ttmp6, 0x4000c
 ; GFX1250-SDAG-NEXT:    s_and_b32 s1, ttmp6, 15
 ; GFX1250-SDAG-NEXT:    s_add_co_i32 s0, s0, 1
@@ -366,7 +366,7 @@ define amdgpu_cs void @caller() {
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s32, 0
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
+; GFX1250-GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    s_bfe_u32 s0, ttmp6, 0x4000c
 ; GFX1250-GISEL-NEXT:    s_and_b32 s1, ttmp6, 15
 ; GFX1250-GISEL-NEXT:    s_add_co_i32 s0, s0, 1

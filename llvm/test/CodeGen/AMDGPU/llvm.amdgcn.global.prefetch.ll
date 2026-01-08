@@ -8,7 +8,7 @@ define amdgpu_ps void @global_prefetch(ptr addrspace(1) %ptr) {
 ; GCN-LABEL: global_prefetch:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
+; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    global_prefetch_b8 v[0:1], off
 ; GCN-NEXT:    s_endpgm
 entry:
@@ -20,7 +20,7 @@ define amdgpu_ps void @global_prefetch_sgpr(ptr addrspace(1) inreg %ptr) {
 ; GCN-LABEL: global_prefetch_sgpr:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
+; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    global_prefetch_b8 v0, s[0:1]
 ; GCN-NEXT:    s_endpgm
@@ -33,7 +33,7 @@ define amdgpu_ps void @global_prefetch_offset(ptr addrspace(1) %ptr) {
 ; GCN-LABEL: global_prefetch_offset:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
+; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    global_prefetch_b8 v[0:1], off offset:512
 ; GCN-NEXT:    s_endpgm
 entry:
@@ -46,7 +46,7 @@ define amdgpu_ps void @global_prefetch_sgpr_voffset(ptr addrspace(1) inreg %ptr,
 ; GCN-LABEL: global_prefetch_sgpr_voffset:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
+; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    global_prefetch_b8 v0, s[0:1]
 ; GCN-NEXT:    s_endpgm
 entry:
@@ -59,7 +59,7 @@ define amdgpu_ps void @global_prefetch_sgpr_voffset_offset(ptr addrspace(1) inre
 ; GCN-LABEL: global_prefetch_sgpr_voffset_offset:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
+; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    global_prefetch_b8 v0, s[0:1] offset:128
 ; GCN-NEXT:    s_endpgm
 entry:
@@ -73,7 +73,7 @@ define amdgpu_ps void @global_prefetch_se(ptr addrspace(1) %ptr) {
 ; GCN-LABEL: global_prefetch_se:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
+; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    global_prefetch_b8 v[0:1], off scope:SCOPE_SE
 ; GCN-NEXT:    s_endpgm
 entry:
@@ -85,7 +85,7 @@ define amdgpu_ps void @global_prefetch_se_nt(ptr addrspace(1) %ptr) {
 ; GCN-LABEL: global_prefetch_se_nt:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
+; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    global_prefetch_b8 v[0:1], off th:TH_LOAD_NT scope:SCOPE_SE
 ; GCN-NEXT:    s_endpgm
 entry:
@@ -97,7 +97,7 @@ define amdgpu_ps void @global_prefetch_dev_ht(ptr addrspace(1) %ptr) {
 ; GCN-LABEL: global_prefetch_dev_ht:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
+; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    global_prefetch_b8 v[0:1], off th:TH_LOAD_HT scope:SCOPE_DEV
 ; GCN-NEXT:    s_endpgm
 entry:
@@ -109,7 +109,7 @@ define amdgpu_ps void @global_prefetch_sys_lu(ptr addrspace(1) %ptr) {
 ; GCN-LABEL: global_prefetch_sys_lu:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
+; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    global_prefetch_b8 v[0:1], off th:TH_LOAD_BYPASS scope:SCOPE_SYS
 ; GCN-NEXT:    s_endpgm
 entry:

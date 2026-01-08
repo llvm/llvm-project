@@ -348,41 +348,31 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
   assert((End <= VGPRMSBOffset || Offset >= VGPRMSBEnd) &&
          "S_SETREG_IMM32_B32 should not write to VGPR MSB bits[12:19]");
 
-  MachineOperand *ImmOp = TII->getNamedOperand(MI, AMDGPU::OpName::imm);
-  assert(ImmOp && "ImmOp must be present");
-
-  int64_t OldImm = ImmOp->getImm();
   int64_t ModeValue = static_cast<int64_t>(CurrentMode);
 
-  // Check if we can extend the instruction (no hole).
-  if (End == VGPRMSBOffset) {
-    // Original ends at bit 11, extend to include bits[12:19].
-    // new_size = size + 8, new_imm = old_imm | (CurrentMode << size)
-    unsigned NewSize = Size + VGPRMSBSize;
-    int64_t NewImm = OldImm | (ModeValue << Size);
-    SIMM16Op->setImm(HwregEncoding::encode(HwRegId, Offset, NewSize));
-    ImmOp->setImm(NewImm);
-    return true;
-  }
-  if (Offset == VGPRMSBEnd) {
-    // Original starts at bit 20, extend to include bits[12:19].
-    // new_offset = 12, new_size = size + 8, new_imm = CurrentMode | (old_imm <<
-    // 8)
-    unsigned NewOffset = VGPRMSBOffset;
-    unsigned NewSize = Size + VGPRMSBSize;
-    int64_t NewImm = ModeValue | (OldImm << VGPRMSBSize);
-    SIMM16Op->setImm(HwregEncoding::encode(HwRegId, NewOffset, NewSize));
+  // Case 1: offset < 12 - attach VGPR MSBs to value.
+  // Due to a HW bug, bits[12:19] are picked up regardless of the mask.
+  // The value is shifted by offset before masking, so we place VGPR MSBs
+  // at position (12 - offset) in the immediate.
+  if (Offset < VGPRMSBOffset) {
+    MachineOperand *ImmOp = TII->getNamedOperand(MI, AMDGPU::OpName::imm);
+    assert(ImmOp && "ImmOp must be present");
+    int64_t OldImm = ImmOp->getImm();
+    int64_t NewImm = OldImm | (ModeValue << (VGPRMSBOffset - Offset));
     ImmOp->setImm(NewImm);
     return true;
   }
 
-  // There's a hole - insert a new S_SETREG_IMM32_B32 after the original.
-  MachineBasicBlock::iterator InsertPt = std::next(MI.getIterator());
-  BuildMI(*MBB, InsertPt, MI.getDebugLoc(),
-          TII->get(AMDGPU::S_SETREG_IMM32_B32))
-      .addImm(ModeValue)
-      .addImm(HwregEncoding::encode(ID_MODE, VGPRMSBOffset, VGPRMSBSize));
-  return true;
+  // Case 2: offset >= 20 - insert S_SET_VGPR_MSB after to restore VGPR MSBs.
+  // Don't modify the original instruction.
+  if (Offset >= VGPRMSBEnd) {
+    MachineBasicBlock::iterator InsertPt = std::next(MI.getIterator());
+    BuildMI(*MBB, InsertPt, MI.getDebugLoc(), TII->get(AMDGPU::S_SET_VGPR_MSB))
+        .addImm(ModeValue);
+    return true;
+  }
+
+  llvm_unreachable("Unexpected offset in handleSetregMode");
 }
 
 bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {

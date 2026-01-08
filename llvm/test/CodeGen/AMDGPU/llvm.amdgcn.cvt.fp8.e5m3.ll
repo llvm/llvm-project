@@ -73,7 +73,7 @@ define amdgpu_cs void @test_cvt_pk_fp8_f32_word1_dpp(i32 %a, float %y, i32 %old,
 ; GFX1250-TRUE16-LABEL: test_cvt_pk_fp8_f32_word1_dpp:
 ; GFX1250-TRUE16:       ; %bb.0:
 ; GFX1250-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
+; GFX1250-TRUE16-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-TRUE16-NEXT:    v_mov_b32_dpp v0, v0 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1250-TRUE16-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -84,7 +84,7 @@ define amdgpu_cs void @test_cvt_pk_fp8_f32_word1_dpp(i32 %a, float %y, i32 %old,
 ; GFX1250-FAKE16-LABEL: test_cvt_pk_fp8_f32_word1_dpp:
 ; GFX1250-FAKE16:       ; %bb.0:
 ; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
+; GFX1250-FAKE16-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-FAKE16-NEXT:    v_mov_b32_dpp v0, v0 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -95,7 +95,7 @@ define amdgpu_cs void @test_cvt_pk_fp8_f32_word1_dpp(i32 %a, float %y, i32 %old,
 ; GFX1250-GISEL-LABEL: test_cvt_pk_fp8_f32_word1_dpp:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
+; GFX1250-GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_mov_b32_dpp v0, v0 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v6, v3 :: v_dual_mov_b32 v7, v4
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -165,7 +165,7 @@ define amdgpu_cs void @test_cvt_sr_fp8_f32_byte1_dpp(i32 %a, i32 %r, i32 %old, p
 ; GFX1250-TRUE16-LABEL: test_cvt_sr_fp8_f32_byte1_dpp:
 ; GFX1250-TRUE16:       ; %bb.0:
 ; GFX1250-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
+; GFX1250-TRUE16-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-TRUE16-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1250-TRUE16-NEXT:    v_cvt_sr_fp8_f32_e64_dpp v2, v0, v1 byte_sel:1 clamp quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1250-TRUE16-NEXT:    global_store_b32 v[4:5], v2, off
@@ -174,7 +174,7 @@ define amdgpu_cs void @test_cvt_sr_fp8_f32_byte1_dpp(i32 %a, i32 %r, i32 %old, p
 ; GFX1250-FAKE16-LABEL: test_cvt_sr_fp8_f32_byte1_dpp:
 ; GFX1250-FAKE16:       ; %bb.0:
 ; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
+; GFX1250-FAKE16-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1250-FAKE16-NEXT:    v_cvt_sr_fp8_f32_e64_dpp v2, v0, v1 byte_sel:1 clamp quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1250-FAKE16-NEXT:    global_store_b32 v[4:5], v2, off
@@ -183,7 +183,7 @@ define amdgpu_cs void @test_cvt_sr_fp8_f32_byte1_dpp(i32 %a, i32 %r, i32 %old, p
 ; GFX1250-GISEL-LABEL: test_cvt_sr_fp8_f32_byte1_dpp:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 12, 8), 0
+; GFX1250-GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v6, v3 :: v_dual_mov_b32 v7, v4
 ; GFX1250-GISEL-NEXT:    v_cvt_sr_fp8_f32_e64_dpp v2, v0, v1 byte_sel:1 clamp quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX1250-GISEL-NEXT:    global_store_b32 v[6:7], v2, off
