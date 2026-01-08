@@ -41,12 +41,9 @@ body:             |
   ; CHECK-NEXT: bb.1.loop (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; FIXME: This is a miscompilation, as, for the PHI below, the IMPLICIT_DEF
-  ; happens to be at the beginning of the bb.1 block, redefining previous
-  ; definition of COPY2.
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr64 = COPY killed [[COPY2]]
   ; CHECK-NEXT:   TEST8ri [[COPY1]], 1, implicit-def $eflags
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = IMPLICIT_DEF
   ; CHECK-NEXT:   JCC_1 %bb.1, 4, implicit killed $eflags
   ; CHECK-NEXT:   JMP_1 %bb.2
   ; CHECK-NEXT: {{  $}}
