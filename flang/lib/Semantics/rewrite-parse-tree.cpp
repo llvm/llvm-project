@@ -86,6 +86,9 @@ public:
   void Post(parser::OmpBlockConstruct &);
   void Post(parser::OpenMPLoopConstruct &);
 
+  bool Pre(parser::InterfaceBody &);
+  void Post(parser::InterfaceBody &);
+
 private:
   void FixMisparsedStmtFuncs(parser::SpecificationPart &, parser::Block &);
   void OpenMPSimdOnly(parser::Block &, bool);
@@ -404,6 +407,54 @@ bool RewriteMutator::Pre(parser::OpenMPLoopConstruct &ompLoop) {
 
 void RewriteMutator::Post(parser::OpenMPLoopConstruct &ompLoop) {
   this->Pre(ompLoop);
+}
+
+// Scans through `SpecificationPart` declarations to detect presence of
+// `NAMELIST`.
+static bool HasNameList(const parser::SpecificationPart &spec) {
+  const auto &decls = std::get<std::list<parser::DeclarationConstruct>>(spec.t);
+  for (const auto &decl : decls) {
+    if (const auto *specConstruct =
+            std::get_if<parser::SpecificationConstruct>(&decl.u)) {
+      if (const auto *ossStmt =
+              std::get_if<parser::Statement<parser::OtherSpecificationStmt>>(
+                  &specConstruct->u)) {
+        const auto &oss = ossStmt->statement;
+        if (std::get_if<common::Indirection<parser::NamelistStmt>>(&oss.u)) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+// Suppress `errorOnUnresolvedName_` if a `NAMELIST` is present within an
+// interface body, dummy names should get resolved later by semantics.
+bool RewriteMutator::Pre(parser::InterfaceBody &interfaceBody) {
+  const auto &u = interfaceBody.u;
+  const parser::SpecificationPart *spec = nullptr;
+  if (const auto *func = std::get_if<parser::InterfaceBody::Function>(&u)) {
+    spec = &std::get<common::Indirection<parser::SpecificationPart>>(func->t)
+                .value();
+  } else if (const auto *subroutine =
+                 std::get_if<parser::InterfaceBody::Subroutine>(&u)) {
+    spec =
+        &std::get<common::Indirection<parser::SpecificationPart>>(subroutine->t)
+             .value();
+  }
+
+  if (spec && HasNameList(*spec)) {
+    errorOnUnresolvedName_ = false;
+  }
+
+  return true;
+}
+
+// Restore `errorOnUnresolvedName_` to original value.
+void RewriteMutator::Post(parser::InterfaceBody &) {
+  errorOnUnresolvedName_ = !context_.AnyFatalError();
 }
 
 bool RewriteMutator::Pre(parser::DoConstruct &doConstruct) {
