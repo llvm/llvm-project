@@ -136,6 +136,10 @@ void f(char * p, char * q, std::span<char> s, std::span<char> s2) {
   snprintf(s.data(), s.size_bytes(), "%s%d", __PRETTY_FUNCTION__, *p); // no warn
   snwprintf(s.data(), s.size_bytes(), "%s%d", __PRETTY_FUNCTION__, *p); // no warn
   snwprintf_s(s.data(), s.size_bytes(), "%s%d", __PRETTY_FUNCTION__, *p); // no warn
+  snprintf(s.data(), s.size_bytes(), "%s%d"); // no warn
+  snprintf(s.data(), s.size_bytes(), "%s%d"); // no warn
+  snwprintf(s.data(), s.size_bytes(), "%s%d"); // no warn
+  snwprintf_s(s.data(), s.size_bytes(), "%s%d"); // no warn
   wprintf(L"hello %ls", L"world"); // no warn
   wprintf(L"hello %ls", WS.c_str()); // no warn
   strlen("hello");// no warn
@@ -265,7 +269,30 @@ void myprintf_2(const char *, int, const char *) __attribute__((__format__ (__pr
 void myprintf_3(const char *, const char *, int, const char *) __attribute__((__format__ (__printf__, 2, 4)));
 void myscanf(const char *, ...) __attribute__((__format__ (__scanf__, 1, 2)));
 
-void test_myprintf(char * Str, std::string StdStr) {
+void myprintf_default(const char *, const char * Fmt = "hello %s",
+                      int X = 0, const char * Str = "world") __attribute__((__format__ (__printf__, 2, 4)));
+
+struct FormatAttrTestMember {
+  void myprintf(const char *, ...) __attribute__((__format__ (__printf__, 2, 3)));
+  void myprintf_2(const char *, int, const char *) __attribute__((__format__ (__printf__, 2, 4)));
+  void myprintf_3(const char *, const char *, int, const char *) __attribute__((__format__ (__printf__, 3, 5)));
+  void myscanf(const char *, ...) __attribute__((__format__ (__scanf__, 2, 3)));
+
+  void operator()(const char * Fmt, ...) __attribute__((__format__ (__printf__, 2, 3)));
+  void operator[](const char * Fmt) __attribute__((__format__ (__printf__, 2, 3)));
+
+
+  static const char * StrField;
+
+  void myprintf_default(const char *, const char * Fmt = "hello %s",
+			int X = 0, const char * Str = StrField) __attribute__((__format__ (__printf__, 3, 5)));
+};
+
+struct FormatAttrTestMember2 {
+  void operator()(const char * Fmt, char *) __attribute__((__format__ (__printf__, 2, 3)));
+};
+
+void test_format_attr(char * Str, std::string StdStr) {
   myprintf("hello", Str);
   myprintf("hello %s", StdStr.c_str());
   myprintf("hello %s", Str);  // expected-warning{{function 'myprintf' is unsafe}} \
@@ -280,11 +307,65 @@ void test_myprintf(char * Str, std::string StdStr) {
   myprintf_3("irrelevant", "hello %s", 0, StdStr.c_str());
   myprintf_3("irrelevant", "hello %s", 0, Str);  // expected-warning{{function 'myprintf_3' is unsafe}} \
 			               expected-note{{string argument is not guaranteed to be null-terminated}}
-  
   myscanf("hello %s");
   myscanf("hello %s", Str); // expected-warning{{function 'myscanf' is unsafe}}
+
+  myprintf_default("irrelevant");
 
   int X;
 
   myscanf("hello %d", &X); // expected-warning{{function 'myscanf' is unsafe}}
+
+  // Test member functions:
+  FormatAttrTestMember Obj;
+
+  Obj.myprintf("hello", Str);
+  Obj.myprintf("hello %s", StdStr.c_str());
+  Obj.myprintf("hello %s", Str);  // expected-warning{{function 'myprintf' is unsafe}} \
+			         expected-note{{string argument is not guaranteed to be null-terminated}}
+
+  Obj.myprintf_2("hello", 0, Str);
+  Obj.myprintf_2("hello %s", 0, StdStr.c_str());
+  Obj.myprintf_2("hello %s", 0, Str);  // expected-warning{{function 'myprintf_2' is unsafe}} \
+			              expected-note{{string argument is not guaranteed to be null-terminated}}
+
+  Obj.myprintf_3("irrelevant", "hello", 0, Str);
+  Obj.myprintf_3("irrelevant", "hello %s", 0, StdStr.c_str());
+  Obj.myprintf_3("irrelevant", "hello %s", 0, Str);  // expected-warning{{function 'myprintf_3' is unsafe}} \
+			               expected-note{{string argument is not guaranteed to be null-terminated}}
+
+  Obj.myscanf("hello %s");
+  Obj.myscanf("hello %s", Str); // expected-warning{{function 'myscanf' is unsafe}}
+
+  Obj.myscanf("hello %d", &X); // expected-warning{{function 'myscanf' is unsafe}}
+
+  Obj.myprintf_default("irrelevant"); // expected-warning{{function 'myprintf_default' is unsafe}}
+  // expected-note@*{{string argument is not guaranteed to be null-terminated}}
+
+  Obj("hello", Str);
+  Obj("hello %s", StdStr.c_str());
+  Obj("hello %s", Str);  // expected-warning{{function 'operator()' is unsafe}} \
+    		            expected-note{{string argument is not guaranteed to be null-terminated}}
+  Obj["hello"];
+  Obj["hello %s"];
+
+  FormatAttrTestMember2 Obj2;
+
+  Obj2("hello", Str);
+  Obj2("hello %s", StdStr.c_str());
+  Obj2("hello %s", Str);  // expected-warning{{function 'operator()' is unsafe}} \
+			 expected-note{{string argument is not guaranteed to be null-terminated}}
+}
+
+// The second attribute argument, which points the starting index of
+// format string arguments, may not be a valid argument index:
+void myprintf_arg_idx_oob(const char *) __attribute__((__format__ (__printf__, 1, 2)));
+
+void test_format_attr_invalid_arg_idx(char * Str, std::string StdStr) {
+  myprintf_arg_idx_oob("hello");
+  myprintf_arg_idx_oob(Str); // expected-warning{{function 'myprintf_arg_idx_oob' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
+  myprintf_arg_idx_oob(StdStr.c_str());
+  myprintf("hello");
+  myprintf(Str); // expected-warning{{function 'myprintf' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
+  myprintf(StdStr.c_str());
 }
