@@ -57978,7 +57978,10 @@ static bool needCarryOrOverflowFlag(SDValue Flags) {
 static bool onlyZeroFlagUsed(SDValue Flags) {
   assert(Flags.getValueType() == MVT::i32 && "Unexpected VT!");
 
-  for (const SDNode *User : Flags->users()) {
+  for (const SDUse &Use : Flags->uses()) {
+    if (Use != Flags)
+      continue;
+    const SDNode *User = Use.getUser();
     unsigned CCOpNo;
     switch (User->getOpcode()) {
     default:
