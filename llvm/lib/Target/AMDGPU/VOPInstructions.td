@@ -199,7 +199,6 @@ class VOP3_Real <VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemoni
   let mayStore             = ps.mayStore;
   let TRANS                = ps.TRANS;
   let isConvergent         = ps.isConvergent;
-  let PostEncoderMethod = ps.PostEncoderMethod;
 
   VOPProfile Pfl = ps.Pfl;
 }
