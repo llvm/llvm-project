@@ -1455,7 +1455,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
       Dest = DestCast->getSubExprAsWritten();
     llvm::FoldingSetNodeID SizeOfArgID;
     IdentifierInfo *FnInfo = FD->getIdentifier();
-    CheckSizeOfExpression(LenArg, Dest, SizeOfArgID, FnInfo);
+    CheckSizeofMemaccessArgument(LenArg, Dest, SizeOfArgID, FnInfo);
   }
   }
 
@@ -10245,7 +10245,7 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
       // actually comparing the expressions for equality. Because computing the
       // expression IDs can be expensive, we only do this if the diagnostic is
       // enabled.
-      if (CheckSizeOfExpression(LenExpr, Dest, SizeOfArgID, FnName))
+      if (CheckSizeofMemaccessArgument(LenExpr, Dest, SizeOfArgID, FnName))
         break;
 
       // Also check for cases where the sizeof argument is the exact same
@@ -10349,9 +10349,9 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
   }
 }
 
-bool Sema::CheckSizeOfExpression(const Expr *LenExpr, const Expr *Dest,
-                                 llvm::FoldingSetNodeID SizeOfArgID,
-                                 IdentifierInfo *FnName) {
+bool Sema::CheckSizeofMemaccessArgument(const Expr *LenExpr, const Expr *Dest,
+                                        llvm::FoldingSetNodeID SizeOfArgID,
+                                        IdentifierInfo *FnName) {
   const Expr *SizeOfArg = getSizeOfExprArg(LenExpr);
   if (!SizeOfArg)
     return false;
