@@ -1996,7 +1996,7 @@ def HasShortForwardBranchILoad : Predicate<"Subtarget->hasShortForwardBranchILoa
 def TuneNoSinkSplatOperands
     : RISCVTuneFeature<"no-sink-splat-operands", "no-sink-splat-operands",
                        "sink-splat-operands", "SinkSplatOperands", "false",
-                       "Disable sink splat operands to enable .vx, .vf, .wx, "
+                       "Disable sink splat operands to enable .vx, .vf,.wx, "
                        "and .wf instructions">;
 
 def TunePreferWInst
