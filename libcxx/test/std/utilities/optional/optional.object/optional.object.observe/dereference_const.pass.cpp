@@ -80,8 +80,8 @@ int main(int, char**)
         static_assert((*opt).test() == 3, "");
     }
     {
-        constexpr optional<Y> opt(Y{});
-        assert((*opt).test() == 2);
+      constexpr optional<Y> opt(Y{});
+      assert((*opt).test() == 2);
     }
 #if TEST_STD_VER >= 26
     {
