@@ -23,11 +23,12 @@
 template <typename T>
 constexpr bool test() {
   using Opt = std::optional<T>;
-  using I   = Opt::iterator;
-  using CI  = Opt::const_iterator;
 
-  static_assert(std::three_way_comparable<I>);
-  static_assert(std::three_way_comparable<CI>);
+  static_assert(std::three_way_comparable<typename Opt::iterator>);
+
+  if constexpr (std::is_object_v<T>) {
+    static_assert(std::three_way_comparable<typename Opt::const_iterator>);
+  }
 
   std::remove_reference_t<T> t{};
   Opt opt{t};

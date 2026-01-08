@@ -19,19 +19,6 @@
 #include <type_traits>
 #include <vector>
 
-template <typename T>
-concept has_iterator_aliases = requires {
-  typename T::iterator;
-  typename T::const_iterator;
-};
-
-static_assert(has_iterator_aliases<std::optional<int>>);
-static_assert(has_iterator_aliases<std::optional<const int>>);
-static_assert(has_iterator_aliases<std::optional<int&>>);
-static_assert(has_iterator_aliases<std::optional<const int&>>);
-static_assert(!has_iterator_aliases<std::optional<int (&)[1]>>);
-static_assert(!has_iterator_aliases<std::optional<int (&)()>>);
-
 using Iter1  = std::optional<int>::iterator;
 using Iter2  = std::optional<double>::iterator;
 using Iter3  = std::optional<int>::const_iterator;
