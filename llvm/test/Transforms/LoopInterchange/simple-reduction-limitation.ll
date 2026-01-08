@@ -1,5 +1,5 @@
-; Several cases of undoing simple reductions that have not yet been supported.
-; RUN: opt < %s -passes="loop-interchange"  -loop-interchange-undo-simple-reduction -pass-remarks-missed='loop-interchange' \
+; Several inner-loop reduction patterns not yet supported.
+; RUN: opt < %s -passes="loop-interchange"  -loop-interchange-undo-inner-reduction -pass-remarks-missed='loop-interchange' \
 ; RUN:            -pass-remarks-output=%t -S | FileCheck -check-prefix=IR %s
 ; RUN: FileCheck --input-file=%t %s
 
@@ -14,21 +14,21 @@
 
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            UnsupportedSimpleReduction
-; CHECK-NEXT: Function:        simple_reduction_01
+; CHECK-NEXT: Name:            UnsupportedInnerReduction
+; CHECK-NEXT: Function:        reduction_01
 ; CHECK-NEXT: Args:
 ; CHECK-NEXT:   - String:          Cannot undo a reduction with non-constant initial value.
 
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
 ; CHECK-NEXT: Name:            UnsupportedPHIInner
-; CHECK-NEXT: Function:        simple_reduction_01
+; CHECK-NEXT: Function:        reduction_01
 ; CHECK-NEXT: Args:
 ; CHECK-NEXT:   - String:          Only inner loops with induction or reduction PHI nodes can be interchange currently.
 
-; IR-LABEL: @simple_reduction_01(
+; IR-LABEL: @reduction_01(
 ; IR-NOT: split
-define void @simple_reduction_01(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %s, i64  %n) {
+define void @reduction_01(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %s, i64  %n) {
 entry:
   %cmp = icmp sgt i64 %n, 0
   br i1 %cmp, label %outerloop_header, label %exit
@@ -79,20 +79,20 @@ exit:
 
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            UnsupportedSimpleReduction
-; CHECK-NEXT: Function:        simple_reduction_02
+; CHECK-NEXT: Name:            UnsupportedInnerReduction
+; CHECK-NEXT: Function:        reduction_02
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Cannot undo a reduction with two or more reductions.
+; CHECK-NEXT:   - String:          Cannot undo more than one reduction.
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
 ; CHECK-NEXT: Name:            UnsupportedPHIInner
-; CHECK-NEXT: Function:        simple_reduction_02
+; CHECK-NEXT: Function:        reduction_02
 ; CHECK-NEXT: Args:
 ; CHECK-NEXT:   - String:          Only inner loops with induction or reduction PHI nodes can be interchange currently.
 
-; IR-LABEL: @simple_reduction_02(
+; IR-LABEL: @reduction_02(
 ; IR-NOT: split
-define void @simple_reduction_02(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %s, ptr noalias writeonly %s2, i64  %n) {
+define void @reduction_02(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %s, ptr noalias writeonly %s2, i64  %n) {
 entry:
   %cmp = icmp sgt i64 %n, 0
   br i1 %cmp, label %outerloop_header, label %exit
@@ -144,20 +144,20 @@ exit:
 
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            UnsupportedSimpleReduction
-; CHECK-NEXT: Function:        simple_reduction_03
+; CHECK-NEXT: Name:            UnsupportedInnerReduction
+; CHECK-NEXT: Function:        reduction_03
 ; CHECK-NEXT: Args:
 ; CHECK-NEXT:   - String:          Cannot undo a reduction when the reduction is used more than once in the outer loop.
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
 ; CHECK-NEXT: Name:            UnsupportedPHIInner
-; CHECK-NEXT: Function:        simple_reduction_03
+; CHECK-NEXT: Function:        reduction_03
 ; CHECK-NEXT: Args:
 ; CHECK-NEXT:   - String:          Only inner loops with induction or reduction PHI nodes can be interchange currently.
 
-; IR-LABEL: @simple_reduction_03(
+; IR-LABEL: @reduction_03(
 ; IR-NOT: split
-define void @simple_reduction_03(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %s, i64  %n) {
+define void @reduction_03(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %s, i64  %n) {
 entry:
   %cmp = icmp sgt i64 %n, 0
   br i1 %cmp, label %outerloop_header, label %exit
@@ -210,25 +210,25 @@ exit:
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
 ; CHECK-NEXT: Name:            UnsupportedPHIOuter
-; CHECK-NEXT: Function:        simple_reduction_04
+; CHECK-NEXT: Function:        reduction_04
 ; CHECK-NEXT: Args:
 ; CHECK-NEXT:   - String:          Only outer loops with induction or reduction PHI nodes can be interchanged currently.
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            UnsupportedSimpleReduction
-; CHECK-NEXT: Function:        simple_reduction_04
+; CHECK-NEXT: Name:            UnsupportedInnerReduction
+; CHECK-NEXT: Function:        reduction_04
 ; CHECK-NEXT: Args:
 ; CHECK-NEXT:   - String:          Cannot undo a reduction when the loop is not the innermost loop.
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
 ; CHECK-NEXT: Name:            UnsupportedPHIInner
-; CHECK-NEXT: Function:        simple_reduction_04
+; CHECK-NEXT: Function:        reduction_04
 ; CHECK-NEXT: Args:
 ; CHECK-NEXT:   - String:          Only inner loops with induction or reduction PHI nodes can be interchange currently.
 
-; IR-LABEL: @simple_reduction_04(
+; IR-LABEL: @reduction_04(
 ; IR-NOT: split
-define void @simple_reduction_04(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %c, ptr noalias writeonly %s, i64  %n) {
+define void @reduction_04(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %c, ptr noalias writeonly %s, i64  %n) {
 entry:
   %cmp = icmp sgt i64 %n, 0
   br i1 %cmp, label %i_loop_header, label %exit
@@ -285,20 +285,20 @@ exit:
 
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            UnsupportedSimpleReduction
-; CHECK-NEXT: Function:        simple_reduction_05
+; CHECK-NEXT: Name:            UnsupportedInnerReduction
+; CHECK-NEXT: Function:        reduction_05
 ; CHECK-NEXT: Args:
 ; CHECK-NEXT:   - String:          Cannot undo a reduction when memory reference does not dominate the inner loop.
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
 ; CHECK-NEXT: Name:            UnsupportedPHIInner
-; CHECK-NEXT: Function:        simple_reduction_05
+; CHECK-NEXT: Function:        reduction_05
 ; CHECK-NEXT: Args:
 ; CHECK-NEXT:   - String:          Only inner loops with induction or reduction PHI nodes can be interchange currently.
 
-; IR-LABEL: @simple_reduction_05(
+; IR-LABEL: @reduction_05(
 ; IR-NOT: split
-define void @simple_reduction_05(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %s, i64  %n) {
+define void @reduction_05(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %s, i64  %n) {
 entry:
   %cmp = icmp sgt i64 %n, 0
   br i1 %cmp, label %outerloop_header, label %exit

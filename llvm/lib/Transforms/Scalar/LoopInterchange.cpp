@@ -121,10 +121,10 @@ static cl::list<RuleTy> Profitabilities(
                           "Ignore profitability, force interchange (does not "
                           "work with other options)")));
 
-// Support for simple reduction of inner loop.
-static cl::opt<bool> EnableUndoSimpleReduction(
-    "loop-interchange-undo-simple-reduction", cl::init(false), cl::Hidden,
-    cl::desc("Support for simple reduction of inner loop."));
+// Support for the inner-loop reduction pattern.
+static cl::opt<bool> EnableUndoInnerReduction(
+    "loop-interchange-undo-inner-reduction", cl::init(false), cl::Hidden,
+    cl::desc("Support for the inner-loop reduction pattern."));
 
 #ifndef NDEBUG
 static bool noDuplicateRulesAndIgnore(ArrayRef<RuleTy> Rules) {
@@ -481,25 +481,26 @@ public:
     return HasNoWrapReductions;
   }
 
-  // Record the simple reduction in the inner loop.
-  struct SimpleReduction {
-    // The reduction itself;
-    PHINode *Re;
-    // So far only supports constant initial value.
+  /// Record reductions in the inner loop. Currently supported reductions:
+  /// - initialized from a constant.
+  /// - reduction PHI node has only one user.
+  /// - located in the innermost loop.
+  struct InnerReduction {
+    /// The reduction itself.
+    PHINode *Reduction;
     Value *Init;
     Value *Next;
-    // The Lcssa PHI
+    /// The Lcssa PHI.
     PHINode *LcssaPhi;
-    // Only supports one user for now
-    // Store reduction result into memory object
-    StoreInst *LcssaStorer;
-    // The memory Location
+    /// Store reduction result into memory object.
+    StoreInst *LcssaStore;
+    /// The memory Location.
     Value *MemRef;
     Type *ElemTy;
   };
 
-  ArrayRef<SimpleReduction> getInnerSimpleReductions() const {
-    return InnerSimpleReductions;
+  ArrayRef<InnerReduction> getInnerReductions() const {
+    return InnerReductions;
   }
 
 private:
@@ -514,9 +515,17 @@ private:
                                   SmallVector<PHINode *, 8> &Inductions,
                                   Loop *InnerLoop);
 
-  /// Detect simple-reduction PHIs in the inner loop. Add them to
-  /// InnerSimpleReductions.
-  bool findSimpleReduction(Loop *L, PHINode *Phi,
+  /// Detect and record the reduction of the inner loop. Add them to
+  /// InnerReductions.
+  ///
+  ///    innerloop:
+  ///        Re = phi<0.0, Next>
+  ///        Next = Re op ...
+  ///    OuterLoopLatch:
+  ///        Lcssa = phi<Next>    ; lcssa phi
+  ///        store Lcssa, MemRef  ; LcssaStore
+  ///
+  bool isInnerReduction(Loop *L, PHINode *Phi,
                            SmallVectorImpl<Instruction *> &HasNoWrapInsts);
 
   Loop *OuterLoop;
@@ -524,6 +533,7 @@ private:
 
   ScalarEvolution *SE;
   DominatorTree *DT;
+
   /// Interface to emit optimization remarks.
   OptimizationRemarkEmitter *ORE;
 
@@ -539,8 +549,8 @@ private:
   /// interchanging the loops.
   SmallVector<Instruction *, 4> HasNoWrapReductions;
 
-  /// Vector of simple reductions of inner loop.
-  SmallVector<SimpleReduction, 8> InnerSimpleReductions;
+  /// Vector of reductions in the inner loop.
+  SmallVector<InnerReduction, 8> InnerReductions;
 };
 
 /// Manages information utilized by the profitability check for cache. The main
@@ -610,7 +620,7 @@ public:
 
   /// Interchange OuterLoop and InnerLoop.
   bool transform(ArrayRef<Instruction *> DropNoWrapInsts);
-  void undoSimpleReduction();
+  void undoInnerReduction();
   void restructureLoops(Loop *NewInner, Loop *NewOuter,
                         BasicBlock *OrigInnerPreHeader,
                         BasicBlock *OrigOuterPreHeader);
@@ -801,16 +811,14 @@ bool LoopInterchangeLegality::tightlyNested(Loop *OuterLoop, Loop *InnerLoop) {
 
   LLVM_DEBUG(dbgs() << "Checking instructions in Loop header and Loop latch\n");
 
-  // The inner loop simple-reduction pattern requires storing the LCSSA PHI in
-  // the OuterLoop Latch. Therefore, when UndoSimpleReduction is enabled, skip
+  // The inner loop reduction pattern requires storing the LCSSA PHI in
+  // the OuterLoop Latch. Therefore, when UndoInnerReduction is enabled, skip
   // that store during checks.
   Instruction *Skip = nullptr;
-  if (EnableUndoSimpleReduction) {
-    assert(InnerSimpleReductions.size() <= 1 &&
-           "So far we only support at most one reduction.");
-    if (InnerSimpleReductions.size() == 1)
-      Skip = InnerSimpleReductions[0].LcssaStorer;
-  }
+  assert(InnerReductions.size() <= 1 &&
+         "So far we only support at most one reduction.");
+  if (InnerReductions.size() == 1)
+    Skip = InnerReductions[0].LcssaStore;
 
   // We do not have any basic block in between now make sure the outer header
   // and outer loop latch doesn't contain any unsafe instructions.
@@ -1043,25 +1051,17 @@ findInnerReductionPhi(Loop *L, Value *V,
   return nullptr;
 }
 
-/// Detect and record the simple reduction of the inner loop.
-///
-///    innerloop:
-///        Re = phi<0.0, Next>
-///        ReUser = Re op ...
-///        ...
-///        Next = ReUser op ...
-///    OuterLoopLatch:
-///        Lcssa = phi<Next>    ; lcssa phi
-///        store Lcssa, MemRef  ; LcssaStorer
-///
-bool LoopInterchangeLegality::findSimpleReduction(
+bool LoopInterchangeLegality::isInnerReduction(
     Loop *L, PHINode *Phi, SmallVectorImpl<Instruction *> &HasNoWrapInsts) {
 
-  // Only support undo simple reduction if the loop nest to be interchanged is
-  // the innermostin two loops.
+  // Only support undoing the reduction when the loop nest to be interchanged is
+  // the innermost in two loops.
   if (!L->isInnermost()) {
+    LLVM_DEBUG(
+        dbgs()
+        << "Cannot undo a reduction when the loop is not the innermost.\n");
     ORE->emit([&]() {
-      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedSimpleReduction",
+      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedInnerReduction",
                                       L->getStartLoc(), L->getHeader())
              << "Cannot undo a reduction when the loop is not the innermost "
                 "loop.";
@@ -1077,8 +1077,10 @@ bool LoopInterchangeLegality::findSimpleReduction(
 
   // So far only supports constant initial value.
   if (!isa<Constant>(Init)) {
+    LLVM_DEBUG(
+        dbgs() << "Cannot undo a reduction with non-constant initial value.\n");
     ORE->emit([&]() {
-      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedSimpleReduction",
+      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedInnerReduction",
                                       L->getStartLoc(), L->getHeader())
              << "Cannot undo a reduction with non-constant initial value.";
     });
@@ -1095,16 +1097,9 @@ bool LoopInterchangeLegality::findSimpleReduction(
   // The reduction should have only one user.
   if (!Phi->hasOneUser())
     return false;
-  Instruction *ReUser = dyn_cast<Instruction>(Phi->getUniqueUndroppableUser());
-  if (!ReUser || !L->contains(ReUser->getParent()))
-    return false;
-
-  // Check the reduction operation.
-  if (!ReUser->isAssociative())
-    return false;
 
   // Check the reduction kind.
-  if (ReUser != Next && !checkReductionKind(L, Phi, HasNoWrapInsts))
+  if (!checkReductionKind(L, Phi, HasNoWrapInsts))
     return false;
 
   // Find lcssa_phi in OuterLoop's Latch
@@ -1130,8 +1125,10 @@ bool LoopInterchangeLegality::findSimpleReduction(
     return false;
 
   if (!Lcssa->hasOneUser()) {
+    LLVM_DEBUG(dbgs() << "Cannot undo a reduction when the reduction is used "
+                         "more than once in the outer loop.\n");
     ORE->emit([&]() {
-      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedSimpleReduction",
+      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedInnerReduction",
                                       L->getStartLoc(), L->getHeader())
              << "Cannot undo a reduction when the reduction is used more than "
                 "once in the outer loop.";
@@ -1139,23 +1136,26 @@ bool LoopInterchangeLegality::findSimpleReduction(
     return false;
   }
 
-  StoreInst *LcssaStorer =
+  StoreInst *LcssaStore =
       dyn_cast<StoreInst>(Lcssa->getUniqueUndroppableUser());
-  if (!LcssaStorer || LcssaStorer->getParent() != ExitBlock)
+  if (!LcssaStore || LcssaStore->getParent() != ExitBlock)
     return false;
 
-  Value *MemRef = LcssaStorer->getOperand(1);
-  Type *ElemTy = LcssaStorer->getOperand(0)->getType();
+  Value *MemRef = LcssaStore->getOperand(1);
+  Type *ElemTy = LcssaStore->getOperand(0)->getType();
 
-  // LcssaStorer stores the reduction result in BB.
+  // LcssaStore stores the reduction result in BB.
   // When the reduction is initialized from a constant value, we need to load
   // from the memory object into the target basic block of the inner loop during
   // the undoing of the reduction. This means the memory reference was used
   // prematurely. So we must ensure that the memory reference does not dominate
   // the target basic block.
+  // TODO: Move the memory reference definition into the loop header.
   if (!DT->dominates(dyn_cast<Instruction>(MemRef), L->getHeader())) {
+    LLVM_DEBUG(dbgs() << "Cannot undo a reduction when memory reference does "
+                         "not dominate the inner loop.\n");
     ORE->emit([&]() {
-      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedSimpleReduction",
+      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedInnerReduction",
                                       L->getStartLoc(), L->getHeader())
              << "Cannot undo a reduction when memory reference does not "
                 "dominate the inner loop.";
@@ -1163,17 +1163,17 @@ bool LoopInterchangeLegality::findSimpleReduction(
     return false;
   }
 
-  // Found a simple reduction of inner loop.
-  SimpleReduction SR;
-  SR.Re = Phi;
+  // Found a reduction in the inner loop.
+  InnerReduction SR;
+  SR.Reduction = Phi;
   SR.Init = Init;
   SR.Next = Next;
   SR.LcssaPhi = Lcssa;
-  SR.LcssaStorer = LcssaStorer;
+  SR.LcssaStore = LcssaStore;
   SR.MemRef = MemRef;
   SR.ElemTy = ElemTy;
 
-  InnerSimpleReductions.push_back(SR);
+  InnerReductions.push_back(SR);
   return true;
 }
 
@@ -1191,9 +1191,9 @@ bool LoopInterchangeLegality::findInductionAndReductions(
       if (!InnerLoop) {
         if (OuterInnerReductions.count(&PHI)) {
           LLVM_DEBUG(dbgs() << "Found a reduction across the outer loop.\n");
-        } else if (EnableUndoSimpleReduction &&
-                   findSimpleReduction(L, &PHI, HasNoWrapReductions)) {
-          LLVM_DEBUG(dbgs() << "Found a simple reduction in the inner loop: \n"
+        } else if (EnableUndoInnerReduction &&
+                   isInnerReduction(L, &PHI, HasNoWrapReductions)) {
+          LLVM_DEBUG(dbgs() << "Found a reduction in the inner loop: \n"
                             << PHI << '\n');
         } else
           return false;
@@ -1219,11 +1219,11 @@ bool LoopInterchangeLegality::findInductionAndReductions(
   }
 
   // For now we only support at most one reduction.
-  if (InnerSimpleReductions.size() > 1) {
+  if (InnerReductions.size() > 1) {
     ORE->emit([&]() {
-      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedSimpleReduction",
+      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedInnerReduction",
                                       L->getStartLoc(), L->getHeader())
-             << "Cannot undo a reduction with two or more reductions.";
+             << "Cannot undo more than one reduction.";
     });
     return false;
   }
@@ -1324,13 +1324,14 @@ bool LoopInterchangeLegality::findInductions(
 static bool
 areInnerLoopExitPHIsSupported(Loop *InnerL, Loop *OuterL,
                               SmallPtrSetImpl<PHINode *> &Reductions,
-                              PHINode *LcssaSimpleRed) {
+                              PHINode *LcssaReduction) {
   BasicBlock *InnerExit = OuterL->getUniqueExitBlock();
   for (PHINode &PHI : InnerExit->phis()) {
-    // Reduction lcssa phi will have only 1 incoming block that from loop latch.
+    // The reduction LCSSA PHI will have only one incoming block, which comes
+    // from the loop latch.
     if (PHI.getNumIncomingValues() > 1)
       return false;
-    if (&PHI == LcssaSimpleRed)
+    if (&PHI == LcssaReduction)
       return true;
     if (any_of(PHI.users(), [&Reductions, OuterL](User *U) {
           PHINode *PN = dyn_cast<PHINode>(U);
@@ -1481,18 +1482,16 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
     return false;
   }
 
-  // The LCSSA PHI for the simple reduction has passed checks before; its user
+  // The LCSSA PHI for the reduction has passed checks before; its user
   // is a store instruction.
-  PHINode *LcssaSimpleRed = nullptr;
-  if (EnableUndoSimpleReduction) {
-    assert(InnerSimpleReductions.size() <= 1 &&
-           "So far we only support at most one reduction.");
-    if (InnerSimpleReductions.size() == 1)
-      LcssaSimpleRed = InnerSimpleReductions[0].LcssaPhi;
-  }
+  PHINode *LcssaReduction = nullptr;
+  assert(InnerReductions.size() <= 1 &&
+         "So far we only support at most one reduction.");
+  if (InnerReductions.size() == 1)
+    LcssaReduction = InnerReductions[0].LcssaPhi;
 
   if (!areInnerLoopExitPHIsSupported(OuterLoop, InnerLoop, OuterInnerReductions,
-                                     LcssaSimpleRed)) {
+                                     LcssaReduction)) {
     LLVM_DEBUG(dbgs() << "Found unsupported PHI nodes in inner loop exit.\n");
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedExitPHI",
@@ -1854,8 +1853,8 @@ void LoopInterchangeTransform::restructureLoops(
   SE->forgetLoop(NewOuter);
 }
 
-///  User can write, optimizers can generate simple reduction for inner loop. In
-///  order to make interchange valid, we have to undo reduction by moving th
+///  User can write, optimizers can generate the reduction for inner loop. In
+///  order to make interchange valid, we have to undo reduction by moving the
 ///  initialization and store instructions into the inner loop. So far we only
 ///  handle cases where the reduction variable is initialized to a constant.
 ///  For example, below code:
@@ -1863,8 +1862,9 @@ void LoopInterchangeTransform::restructureLoops(
 ///  loop:
 ///    re = phi<0.0, next>
 ///    next = re op ...
+///  endloop
 ///  reduc_sum = phi<next>       // lcssa phi
-///  MEM_REF[idx] = reduc_sum		// LcssaStorer
+///  MEM_REF[idx] = reduc_sum    // LcssaStore
 ///
 ///  is transformed into:
 ///
@@ -1873,17 +1873,17 @@ void LoopInterchangeTransform::restructureLoops(
 ///    new_var = !first_iteration ? tmp : 0.0;
 ///    next = new_var op ...
 ///    MEM_REF[idx] = next;		// after moving
+///  endloop
 ///
 ///  In this way the initial const is used in the first iteration of loop.
-void LoopInterchangeTransform::undoSimpleReduction() {
+void LoopInterchangeTransform::undoInnerReduction() {
+  ArrayRef<LoopInterchangeLegality::InnerReduction> InnerReductions =
+      LIL.getInnerReductions();
 
-  ArrayRef<LoopInterchangeLegality::SimpleReduction> InnerSimpleReductions =
-      LIL.getInnerSimpleReductions();
-
-  assert(InnerSimpleReductions.size() == 1 &&
+  assert(InnerReductions.size() == 1 &&
          "So far we only support at most one reduction.");
 
-  LoopInterchangeLegality::SimpleReduction SR = InnerSimpleReductions[0];
+  LoopInterchangeLegality::InnerReduction SR = InnerReductions[0];
   BasicBlock *InnerLoopHeader = InnerLoop->getHeader();
   IRBuilder<> Builder(&*(InnerLoopHeader->getFirstNonPHIIt()));
 
@@ -1897,7 +1897,7 @@ void LoopInterchangeTransform::undoSimpleReduction() {
                          InnerLoop->getLoopLatch());
   assert(FirstIter->isComplete() && "The FirstIter PHI node is not complete.");
 
-  // When the reduction is intialized from constant value, we need to add
+  // When the reduction is initialized from a constant value, we need to add
   // a stmt loading from the memory object to target basic block in inner
   // loop during undoing the reduction.
   Instruction *LoadMem = Builder.CreateLoad(SR.ElemTy, SR.MemRef);
@@ -1905,22 +1905,23 @@ void LoopInterchangeTransform::undoSimpleReduction() {
   // Init new_var to MEM_REF or CONST depending on if it is the first iteration.
   Value *NewVar = Builder.CreateSelect(FirstIter, LoadMem, SR.Init, "new.var");
 
-  // Replace all uses of reduction var with new variable.
-  SR.Re->replaceAllUsesWith(NewVar);
+  // Replace all uses of the reduction variable with a new variable.
+  SR.Reduction->replaceAllUsesWith(NewVar);
 
-  // Move store instruction into inner loop, just after reduction next's def.
-  SR.LcssaStorer->setOperand(0, SR.Next);
-  SR.LcssaStorer->moveAfter(dyn_cast<Instruction>(SR.Next));
+  // Move store instruction into inner loop, just after reduction next's
+  // definition.
+  SR.LcssaStore->setOperand(0, SR.Next);
+  SR.LcssaStore->moveAfter(dyn_cast<Instruction>(SR.Next));
 }
 
 bool LoopInterchangeTransform::transform(
     ArrayRef<Instruction *> DropNoWrapInsts) {
   bool Transformed = false;
 
-  ArrayRef<LoopInterchangeLegality::SimpleReduction> InnerSimpleReductions =
-      LIL.getInnerSimpleReductions();
-  if (EnableUndoSimpleReduction && InnerSimpleReductions.size() == 1)
-    undoSimpleReduction();
+  ArrayRef<LoopInterchangeLegality::InnerReduction> InnerReductions =
+      LIL.getInnerReductions();
+  if (InnerReductions.size() == 1)
+    undoInnerReduction();
 
   if (InnerLoop->getSubLoops().empty()) {
     BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
