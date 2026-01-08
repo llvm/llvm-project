@@ -51,6 +51,12 @@ cl::opt<bool> ConservativeInstrumentation(
              "accuracy (for debugging, default: false)"),
     cl::init(false), cl::Optional, cl::cat(BoltInstrCategory));
 
+cl::opt<uint32_t> InstrumentationMaxSize(
+    "instrumentation-max-size",
+    cl::desc("Set max memory size of the instrumentation bump allocator "
+             "default: 0x6400000)"),
+    cl::init(0x6400000), cl::Optional, cl::cat(BoltInstrCategory));
+
 cl::opt<uint32_t> InstrumentationSleepTime(
     "instrumentation-sleep-time",
     cl::desc("interval between profile writes (default: 0 = write only at "
