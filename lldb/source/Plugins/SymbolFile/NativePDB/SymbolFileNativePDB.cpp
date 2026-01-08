@@ -923,11 +923,11 @@ TypeSP SymbolFileNativePDB::CreateAndCacheType(PdbTypeSymId type_id) {
     return nullptr;
 
   PdbAstBuilder* ast_builder = ts->GetNativePDBParser();
-  clang::QualType qt = ast_builder->GetOrCreateType(best_decl_id);
-  if (qt.isNull())
+  CompilerType ct = ast_builder->GetOrCreateType(best_decl_id);
+  if (!ct)
     return nullptr;
 
-  TypeSP result = CreateType(best_decl_id, ast_builder->ToCompilerType(qt));
+  TypeSP result = CreateType(best_decl_id, ct);
   if (!result)
     return nullptr;
 
@@ -1127,10 +1127,7 @@ void SymbolFileNativePDB::ParseDeclsForContext(
   if (!ts_or_err)
     return;
   PdbAstBuilder* ast_builder = ts_or_err->GetNativePDBParser();
-  clang::DeclContext *context = ast_builder->FromCompilerDeclContext(decl_ctx);
-  if (!context)
-    return;
-  ast_builder->ParseDeclsForContext(*context);
+  ast_builder->ParseDeclsForContext(decl_ctx);
 }
 
 lldb::CompUnitSP SymbolFileNativePDB::ParseCompileUnitAtIndex(uint32_t index) {
@@ -2446,12 +2443,7 @@ SymbolFileNativePDB::GetDeclContextForUID(lldb::user_id_t uid) {
     return {};
 
   PdbAstBuilder *ast_builder = ts->GetNativePDBParser();
-  clang::DeclContext *context =
-      ast_builder->GetOrCreateDeclContextForUid(PdbSymUid(uid));
-  if (!context)
-    return {};
-
-  return ast_builder->ToCompilerDeclContext(*context);
+  return ast_builder->GetOrCreateDeclContextForUid(PdbSymUid(uid));
 }
 
 CompilerDeclContext
@@ -2464,10 +2456,7 @@ SymbolFileNativePDB::GetDeclContextContainingUID(lldb::user_id_t uid) {
     return {};
 
   PdbAstBuilder *ast_builder = ts->GetNativePDBParser();
-  clang::DeclContext *context = ast_builder->GetParentDeclContext(PdbSymUid(uid));
-  if (!context)
-    return CompilerDeclContext();
-  return ast_builder->ToCompilerDeclContext(*context);
+  return ast_builder->GetParentDeclContext(PdbSymUid(uid));
 }
 
 Type *SymbolFileNativePDB::ResolveTypeUID(lldb::user_id_t type_uid) {
@@ -2501,19 +2490,11 @@ SymbolFileNativePDB::GetDynamicArrayInfoForUID(
 
 bool SymbolFileNativePDB::CompleteType(CompilerType &compiler_type) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  auto clang_type_system = compiler_type.GetTypeSystem<TypeSystemClang>();
-  if (!clang_type_system)
+  auto ts = compiler_type.GetTypeSystem();
+  if (!ts || !ts->GetNativePDBParser())
     return false;
 
-  PdbAstBuilder *ast_builder =
-      static_cast<PdbAstBuilder *>(clang_type_system->GetNativePDBParser());
-  if (ast_builder &&
-      ast_builder->GetClangASTImporter().CanImport(compiler_type))
-    return ast_builder->GetClangASTImporter().CompleteType(compiler_type);
-  clang::QualType qt =
-      clang::QualType::getFromOpaquePtr(compiler_type.GetOpaqueQualType());
-
-  return ast_builder->CompleteType(qt);
+  return ts->GetNativePDBParser()->CompleteType(compiler_type);
 }
 
 void SymbolFileNativePDB::GetTypes(lldb_private::SymbolContextScope *sc_scope,
@@ -2539,17 +2520,7 @@ SymbolFileNativePDB::FindNamespace(ConstString name,
   if (!ast_builder)
     return {};
 
-  clang::DeclContext *decl_context = nullptr;
-  if (parent_decl_ctx)
-    decl_context = static_cast<clang::DeclContext *>(
-        parent_decl_ctx.GetOpaqueDeclContext());
-
-  auto *namespace_decl =
-      ast_builder->FindNamespaceDecl(decl_context, name.GetStringRef());
-  if (!namespace_decl)
-    return CompilerDeclContext();
-
-  return clang->CreateDeclContext(namespace_decl);
+  return ast_builder->FindNamespaceDecl(parent_decl_ctx, name.GetStringRef());
 }
 
 llvm::Expected<lldb::TypeSystemSP>

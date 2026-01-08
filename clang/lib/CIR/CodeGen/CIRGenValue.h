@@ -328,6 +328,10 @@ public:
     r.initialize(type, type.getQualifiers(), addr.getAlignment(), baseInfo);
     return r;
   }
+
+  RValue asAggregateRValue() const {
+    return RValue::getAggregate(getAddress(), isVolatileQualified());
+  }
 };
 
 /// An aggregate value slot.
