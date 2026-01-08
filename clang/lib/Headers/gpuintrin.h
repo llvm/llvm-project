@@ -59,7 +59,11 @@ _Pragma("omp end declare target");
 #if defined(__NVPTX__)
 #include <nvptxintrin.h>
 #elif defined(__AMDGPU__)
+#if defined(__SPIRV64__)
+#include <spirvamdgpuintrin.h>
+#else
 #include <amdgpuintrin.h>
+#endif
 #elif !defined(_OPENMP)
 #error "This header is only meant to be used on GPU architectures."
 #endif
