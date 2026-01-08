@@ -19,7 +19,8 @@ define void @test1(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) 
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[TMP6]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x float>, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <vscale x 2 x float> [[WIDE_LOAD]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 2 x float>, ptr [[TMP9]], align 4
@@ -31,7 +32,7 @@ define void @test1(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) 
 ; CHECK-NEXT:    [[TMP14:%.*]] = fadd <vscale x 2 x float> [[WIDE_LOAD]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP15:%.*]] = fadd <vscale x 2 x float> [[WIDE_LOAD1]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds float, ptr [[TMP16]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[TMP16]], i64 [[TMP7]]
 ; CHECK-NEXT:    store <vscale x 2 x float> [[TMP14]], ptr [[TMP16]], align 4
 ; CHECK-NEXT:    store <vscale x 2 x float> [[TMP15]], ptr [[TMP19]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
@@ -92,13 +93,14 @@ define void @test2(ptr %a, ptr noalias %b) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[TMP10]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shl nuw nsw i64 [[TMP3]], 2
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[TMP10]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x float>, ptr [[TMP10]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 2 x float>, ptr [[TMP13]], align 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = fadd <vscale x 2 x float> [[WIDE_LOAD]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP15:%.*]] = fadd <vscale x 2 x float> [[WIDE_LOAD3]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds float, ptr [[TMP16]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[TMP16]], i64 [[TMP8]]
 ; CHECK-NEXT:    store <vscale x 2 x float> [[TMP14]], ptr [[TMP16]], align 4
 ; CHECK-NEXT:    store <vscale x 2 x float> [[TMP15]], ptr [[TMP19]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP7]]
@@ -165,13 +167,14 @@ define void @predicated_assume(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP9]], <vscale x 2 x float> splat (float 2.300000e+01), <vscale x 2 x float> splat (float 4.200000e+01)
 ; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <vscale x 2 x i1> [[TMP10]], <vscale x 2 x float> splat (float 2.300000e+01), <vscale x 2 x float> splat (float 4.200000e+01)
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP12:%.*]] = shl nuw nsw i64 [[TMP5]], 2
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP11]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x float>, ptr [[TMP11]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 2 x float>, ptr [[TMP14]], align 4
 ; CHECK-NEXT:    [[TMP15:%.*]] = fmul <vscale x 2 x float> [[PREDPHI]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = fmul <vscale x 2 x float> [[PREDPHI1]], [[WIDE_LOAD2]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds float, ptr [[TMP17]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr [[TMP17]], i64 [[TMP12]]
 ; CHECK-NEXT:    store <vscale x 2 x float> [[TMP15]], ptr [[TMP17]], align 4
 ; CHECK-NEXT:    store <vscale x 2 x float> [[TMP16]], ptr [[TMP20]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]

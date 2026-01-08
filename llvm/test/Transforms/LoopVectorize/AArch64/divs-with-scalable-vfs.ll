@@ -37,7 +37,8 @@ define void @sdiv_feeding_gep(ptr %dst, i32 %x, i64 %M, i64 %conv6, i64 %N) {
 ; CHECK-NEXT:    [[TMP30:%.*]] = add i32 [[TMP28]], [[TMP26]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = sext i32 [[TMP30]] to i64
 ; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP32]]
-; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr double, ptr [[TMP34]], i64 [[TMP11]]
+; CHECK-NEXT:    [[TMP19:%.*]] = shl nuw nsw i64 [[TMP11]], 3
+; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr i8, ptr [[TMP34]], i64 [[TMP19]]
 ; CHECK-NEXT:    store <vscale x 2 x double> zeroinitializer, ptr [[TMP34]], align 8
 ; CHECK-NEXT:    store <vscale x 2 x double> zeroinitializer, ptr [[TMP39]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP9]]

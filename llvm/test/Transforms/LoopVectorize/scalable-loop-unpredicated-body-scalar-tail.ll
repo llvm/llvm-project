@@ -50,13 +50,14 @@ define void @loop(i64 %N, ptr noalias %a, ptr noalias %b) {
 ; CHECKUF2:       [[VECTOR_BODY]]:
 ; CHECKUF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECKUF2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds double, ptr [[B]], i64 [[INDEX]]
-; CHECKUF2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds double, ptr [[TMP7]], i64 [[TMP3]]
+; CHECKUF2-NEXT:    [[TMP8:%.*]] = shl nuw nsw i64 [[TMP3]], 3
+; CHECKUF2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i64 [[TMP8]]
 ; CHECKUF2-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x double>, ptr [[TMP7]], align 8
 ; CHECKUF2-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 4 x double>, ptr [[TMP9]], align 8
 ; CHECKUF2-NEXT:    [[TMP10:%.*]] = fadd <vscale x 4 x double> [[WIDE_LOAD]], splat (double 1.000000e+00)
 ; CHECKUF2-NEXT:    [[TMP11:%.*]] = fadd <vscale x 4 x double> [[WIDE_LOAD3]], splat (double 1.000000e+00)
 ; CHECKUF2-NEXT:    [[TMP12:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[INDEX]]
-; CHECKUF2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds double, ptr [[TMP12]], i64 [[TMP3]]
+; CHECKUF2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 [[TMP8]]
 ; CHECKUF2-NEXT:    store <vscale x 4 x double> [[TMP10]], ptr [[TMP12]], align 8
 ; CHECKUF2-NEXT:    store <vscale x 4 x double> [[TMP11]], ptr [[TMP14]], align 8
 ; CHECKUF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]

@@ -29,7 +29,8 @@ define ptr @test(ptr %start.1, ptr %start.2, ptr %end) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr i8, ptr [[START_2]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr i64, ptr [[TMP30]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP13:%.*]] = shl nuw nsw i64 [[TMP10]], 3
+; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr i8, ptr [[TMP30]], i64 [[TMP13]]
 ; CHECK-NEXT:    store <vscale x 2 x i64> zeroinitializer, ptr [[TMP30]], align 8
 ; CHECK-NEXT:    store <vscale x 2 x i64> zeroinitializer, ptr [[TMP35]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP7]]
