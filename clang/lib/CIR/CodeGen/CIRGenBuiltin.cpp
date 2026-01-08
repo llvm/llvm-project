@@ -748,6 +748,36 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     cir::VACopyOp::create(builder, dstPtr.getLoc(), dstPtr, srcPtr);
     return {};
   }
+
+  case Builtin::BIabs:
+  case Builtin::BIlabs:
+  case Builtin::BIllabs:
+  case Builtin::BI__builtin_abs:
+  case Builtin::BI__builtin_labs:
+  case Builtin::BI__builtin_llabs: {
+    bool sanitizeOverflow = sanOpts.has(SanitizerKind::SignedIntegerOverflow);
+    mlir::Value arg = emitScalarExpr(e->getArg(0));
+    mlir::Value result;
+    switch (getLangOpts().getSignedOverflowBehavior()) {
+    case LangOptions::SOB_Defined:
+      result = cir::AbsOp::create(builder, loc, arg.getType(), arg,
+                                  /*poison=*/false);
+      break;
+    case LangOptions::SOB_Undefined:
+      if (!sanitizeOverflow) {
+        result = cir::AbsOp::create(builder, loc, arg.getType(), arg,
+                                    /*poison=*/true);
+        break;
+      }
+      llvm_unreachable("BI__builtin_abs with LangOptions::SOB_Undefined when "
+                       "SanitizeOverflow is true");
+      [[fallthrough]];
+    case LangOptions::SOB_Trapping:
+      llvm_unreachable("BI__builtin_abs with LangOptions::SOB_Trapping");
+    }
+    return RValue::get(result);
+  }
+
   case Builtin::BI__assume:
   case Builtin::BI__builtin_assume: {
     if (e->getArg(0)->HasSideEffects(getContext()))
@@ -1158,9 +1188,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     if (!isIntTy)
       return emitUnaryFPBuiltin<cir::FAbsOp>(*this, *e);
     mlir::Value arg = emitScalarExpr(e->getArg(0));
-    auto call = builder.create<cir::AbsOp>(getLoc(e->getExprLoc()),
-                                           arg.getType(), arg, false);
-    return RValue::get(call->getResult(0));
+    mlir::Value result = cir::AbsOp::create(builder, getLoc(e->getExprLoc()),
+                                            arg.getType(), arg, false);
+    return RValue::get(result);
   }
   case Builtin::BI__builtin_elementwise_acos:
     return emitUnaryFPBuiltin<cir::ACosOp>(*this, *e);
