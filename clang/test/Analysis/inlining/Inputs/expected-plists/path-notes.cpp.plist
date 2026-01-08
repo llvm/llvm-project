@@ -722,7 +722,7 @@
    <key>type</key><string>Dereference of null pointer</string>
    <key>check_name</key><string>core.NullDereference</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>efde323086a985fe1e8ccc6cd0123c12</string>
+   <key>issue_hash_content_of_line_in_context</key><string>c13b0c1fd27df0a9d9c0b4c125ade016</string>
   <key>issue_context_kind</key><string>C++ method</string>
   <key>issue_context</key><string>method</string>
   <key>issue_hash_function_offset</key><string>1</string>

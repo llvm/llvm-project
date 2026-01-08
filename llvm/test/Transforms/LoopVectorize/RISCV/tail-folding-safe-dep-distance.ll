@@ -44,7 +44,7 @@ define void @test(ptr %p) {
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
 ; NO-VP:       vector.ph:
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 200, [[TMP3]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 200, [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label [[LOOP:%.*]]
@@ -301,7 +301,7 @@ define void @trivial_due_max_vscale(ptr %p) {
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
 ; NO-VP:       vector.ph:
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 200, [[TMP3]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 200, [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label [[LOOP:%.*]]

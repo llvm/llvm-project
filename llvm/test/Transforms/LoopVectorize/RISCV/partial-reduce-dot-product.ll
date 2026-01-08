@@ -20,7 +20,7 @@ define i32 @vqdot(ptr %a, ptr %b) #0 {
 ; V-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; V:       vector.ph:
 ; V-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; V-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
+; V-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; V-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; V-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; V-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -54,7 +54,7 @@ define i32 @vqdot(ptr %a, ptr %b) #0 {
 ; ZVQDOTQ-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; ZVQDOTQ:       vector.ph:
 ; ZVQDOTQ-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; ZVQDOTQ-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
+; ZVQDOTQ-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; ZVQDOTQ-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; ZVQDOTQ-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; ZVQDOTQ-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -215,7 +215,7 @@ define i32 @vqdotu(ptr %a, ptr %b) #0 {
 ; V-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; V:       vector.ph:
 ; V-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; V-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
+; V-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; V-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; V-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; V-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -249,7 +249,7 @@ define i32 @vqdotu(ptr %a, ptr %b) #0 {
 ; ZVQDOTQ-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; ZVQDOTQ:       vector.ph:
 ; ZVQDOTQ-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; ZVQDOTQ-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
+; ZVQDOTQ-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; ZVQDOTQ-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; ZVQDOTQ-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; ZVQDOTQ-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -410,7 +410,7 @@ define i32 @vqdotsu(ptr %a, ptr %b) #0 {
 ; V-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; V:       vector.ph:
 ; V-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; V-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
+; V-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; V-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; V-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; V-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -444,7 +444,7 @@ define i32 @vqdotsu(ptr %a, ptr %b) #0 {
 ; ZVQDOTQ-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; ZVQDOTQ:       vector.ph:
 ; ZVQDOTQ-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; ZVQDOTQ-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
+; ZVQDOTQ-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; ZVQDOTQ-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; ZVQDOTQ-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; ZVQDOTQ-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -604,7 +604,7 @@ define i32 @vqdotsu2(ptr %a, ptr %b) #0 {
 ; V-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; V:       vector.ph:
 ; V-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; V-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
+; V-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; V-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; V-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; V-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -638,7 +638,7 @@ define i32 @vqdotsu2(ptr %a, ptr %b) #0 {
 ; ZVQDOTQ-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; ZVQDOTQ:       vector.ph:
 ; ZVQDOTQ-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; ZVQDOTQ-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
+; ZVQDOTQ-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; ZVQDOTQ-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; ZVQDOTQ-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; ZVQDOTQ-NEXT:    br label [[VECTOR_BODY:%.*]]

@@ -3283,7 +3283,7 @@ def : Pat<(i64 (and GPR64:$Rn, 0xffffffff)),
 // One operand data processing instructions.
 //===----------------------------------------------------------------------===//
 
-defm CLS    : OneOperandData<0b000101, "cls">;
+defm CLS    : OneOperandData<0b000101, "cls", ctls>;
 defm CLZ    : OneOperandData<0b000100, "clz", ctlz>;
 defm RBIT   : OneOperandData<0b000000, "rbit", bitreverse>;
 
@@ -3295,14 +3295,13 @@ def : Pat<(cttz GPR32:$Rn),
           (CLZWr (RBITWr GPR32:$Rn))>;
 def : Pat<(cttz GPR64:$Rn),
           (CLZXr (RBITXr GPR64:$Rn))>;
+// FIXME: Remove these patterns when gisel supports ctls
 def : Pat<(ctlz (or (shl (xor (sra GPR32:$Rn, (i64 31)), GPR32:$Rn), (i64 1)),
                 (i32 1))),
           (CLSWr GPR32:$Rn)>;
 def : Pat<(ctlz (or (shl (xor (sra GPR64:$Rn, (i64 63)), GPR64:$Rn), (i64 1)),
                 (i64 1))),
           (CLSXr GPR64:$Rn)>;
-def : Pat<(int_aarch64_cls GPR32:$Rn), (CLSWr GPR32:$Rn)>;
-def : Pat<(int_aarch64_cls64 GPR64:$Rm), (EXTRACT_SUBREG (CLSXr GPR64:$Rm), sub_32)>;
 
 // Unlike the other one operand instructions, the instructions with the "rev"
 // mnemonic do *not* just different in the size bit, but actually use different

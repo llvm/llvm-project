@@ -410,8 +410,7 @@ define nofpclass(nzero) float @source_is_known_ninf(float nofpclass(pinf nan nor
 define nofpclass(nzero) float @source_is_known_nan(float nofpclass(inf norm sub zero) %must.be.nan) {
 ; CHECK-LABEL: define nofpclass(nzero) float @source_is_known_nan(
 ; CHECK-SAME: float nofpclass(inf zero sub norm) [[MUST_BE_NAN:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd float [[MUST_BE_NAN]], 1.000000e+00
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    ret float [[MUST_BE_NAN]]
 ;
   %exp = call float @llvm.exp2.f32(float %must.be.nan)
   ret float %exp
@@ -420,8 +419,7 @@ define nofpclass(nzero) float @source_is_known_nan(float nofpclass(inf norm sub 
 define nofpclass(nzero) float @source_is_known_nan_preserve_flags(float nofpclass(inf norm sub zero) %must.be.nan) {
 ; CHECK-LABEL: define nofpclass(nzero) float @source_is_known_nan_preserve_flags(
 ; CHECK-SAME: float nofpclass(inf zero sub norm) [[MUST_BE_NAN:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd nsz contract float [[MUST_BE_NAN]], 1.000000e+00
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    ret float [[MUST_BE_NAN]]
 ;
   %exp = call contract nsz float @llvm.exp2.f32(float %must.be.nan)
   ret float %exp
@@ -483,8 +481,7 @@ define nofpclass(pzero) <2 x float> @source_is_known_zero_or_nan_vec(<2 x float>
 define nofpclass(nzero) float @source_is_known_snan(float nofpclass(inf norm sub zero qnan) %must.be.snan) {
 ; CHECK-LABEL: define nofpclass(nzero) float @source_is_known_snan(
 ; CHECK-SAME: float nofpclass(qnan inf zero sub norm) [[MUST_BE_SNAN:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd float [[MUST_BE_SNAN]], 1.000000e+00
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    ret float [[MUST_BE_SNAN]]
 ;
   %exp = call float @llvm.exp2.f32(float %must.be.snan)
   ret float %exp
@@ -493,8 +490,7 @@ define nofpclass(nzero) float @source_is_known_snan(float nofpclass(inf norm sub
 define nofpclass(nzero) float @source_is_known_qnan(float nofpclass(inf norm sub zero snan) %must.be.qnan) {
 ; CHECK-LABEL: define nofpclass(nzero) float @source_is_known_qnan(
 ; CHECK-SAME: float nofpclass(snan inf zero sub norm) [[MUST_BE_QNAN:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd float [[MUST_BE_QNAN]], 1.000000e+00
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    ret float [[MUST_BE_QNAN]]
 ;
   %exp = call float @llvm.exp2.f32(float %must.be.qnan)
   ret float %exp
