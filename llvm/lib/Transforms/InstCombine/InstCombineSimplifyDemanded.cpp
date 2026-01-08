@@ -2659,7 +2659,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         return I;
 
       // Note: Possibly dropping snan quiet.
-      if (KnownSrc.isKnownAlways(fcInf | fcNan))
+      if (KnownSrc.isKnownAlways(fcInf | fcNan | fcZero))
         return CI->getArgOperand(0);
 
       // Propagate nnan-ness to source to simplify source checks.
