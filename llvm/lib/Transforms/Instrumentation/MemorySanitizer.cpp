@@ -5361,15 +5361,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // - < 4 x *> is a 2x2 matrix
   // - <16 x *> is a 2x8 matrix and 8x2 matrix respectively
   //
-  // [ x0 x2 x4 x6 x8 xA xC xE ] [ y0 y1 ]
-  // [ x1 x3 x5 x7 x9 xB xD xF ] [ y2 y3 ]
-  //                             [ y4 y5 ]
-  //                             [ y6 y7 ]
-  //                             [ y8 y9 ]
-  //                             [ yA yB ]
-  //                             [ yC yD ]
-  //                             [ yE yF ]
-  //
   // The general shadow propagation approach is:
   // 1) get the shadows of the input matrices
   // 2) change the shadow values to 0x1 if the corresponding value is fully
