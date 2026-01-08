@@ -3783,8 +3783,10 @@ clang::driver::tools::getCXX20NamedModuleOutputPath(const ArgList &Args,
   if (Arg *FinalOutput = Args.getLastArg(options::OPT_o);
       FinalOutput && Args.hasArg(options::OPT_c))
     OutputPath = FinalOutput->getValue();
-  else
-    OutputPath = BaseInput;
+  else {
+    llvm::sys::fs::current_path(OutputPath);
+    llvm::sys::path::append(OutputPath, llvm::sys::path::filename(BaseInput));
+  }
 
   const char *Extension = types::getTypeTempSuffix(types::TY_ModuleFile);
   llvm::sys::path::replace_extension(OutputPath, Extension);
@@ -6191,6 +6193,22 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       if ((Triple.isX86() || Triple.isAArch64()) && Triple.isOSBinFormatELF())
         A->render(Args, CmdArgs);
       else
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << A->getAsString(Args) << TripleStr;
+    }
+  }
+
+  if (Arg *A =
+          Args.getLastArg(options::OPT_fpartition_static_data_sections,
+                          options::OPT_fno_partition_static_data_sections)) {
+    if (!A->getOption().matches(
+            options::OPT_fno_partition_static_data_sections)) {
+      // This codegen pass is only available on x86 and AArch64 ELF targets.
+      if ((Triple.isX86() || Triple.isAArch64()) && Triple.isOSBinFormatELF()) {
+        A->render(Args, CmdArgs);
+        CmdArgs.push_back("-mllvm");
+        CmdArgs.push_back("-memprof-annotate-static-data-prefix");
+      } else
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << A->getAsString(Args) << TripleStr;
     }

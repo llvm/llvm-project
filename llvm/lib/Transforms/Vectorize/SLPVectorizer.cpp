@@ -7168,7 +7168,7 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
   }
 
   Type *StrideTy = DL->getIndexType(Ptr0->getType());
-  SPtrInfo.StrideVal = ConstantInt::get(StrideTy, StrideIntVal);
+  SPtrInfo.StrideVal = ConstantInt::getSigned(StrideTy, StrideIntVal);
   SPtrInfo.Ty = getWidenedType(NewScalarTy, VecSz);
   return true;
 }
@@ -13445,6 +13445,7 @@ void BoUpSLP::transformNodes() {
       // insertvector instructions.
       unsigned StartIdx = 0;
       unsigned End = VL.size();
+      SmallBitVector Processed(End);
       for (unsigned VF = getFloorFullVectorNumberOfElements(
                *TTI, VL.front()->getType(), VL.size() - 1);
            VF >= MinVF; VF = getFloorFullVectorNumberOfElements(
@@ -13457,7 +13458,7 @@ void BoUpSLP::transformNodes() {
           ArrayRef<Value *> Slice = VL.slice(Cnt, VF);
           // If any instruction is vectorized already - do not try again.
           // Reuse the existing node, if it fully matches the slice.
-          if (isVectorized(Slice.front()) &&
+          if ((Processed.test(Cnt) || isVectorized(Slice.front())) &&
               !getSameValuesTreeEntry(Slice.front(), Slice, /*SameVF=*/true))
             continue;
           // Constant already handled effectively - skip.
@@ -13543,6 +13544,7 @@ void BoUpSLP::transformNodes() {
           continue;
         auto AddCombinedNode = [&](unsigned Idx, unsigned Cnt, unsigned Sz) {
           E.CombinedEntriesWithIndices.emplace_back(Idx, Cnt);
+          Processed.set(Cnt, Cnt + Sz);
           if (StartIdx == Cnt)
             StartIdx = Cnt + Sz;
           if (End == Cnt + Sz)
@@ -20474,7 +20476,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         Value *NewStride =
             Builder.CreateIntCast(Stride, StrideTy, /*isSigned=*/true);
         StrideVal = Builder.CreateMul(
-            NewStride, ConstantInt::get(
+            NewStride, ConstantInt::getSigned(
                            StrideTy, (IsReverseOrder ? -1 : 1) *
                                          static_cast<int>(
                                              DL->getTypeAllocSize(ScalarTy))));
@@ -20556,7 +20558,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             Intrinsic::experimental_vp_strided_store,
             {VecTy, Ptr->getType(), StrideTy},
             {VecValue, Ptr,
-             ConstantInt::get(
+             ConstantInt::getSigned(
                  StrideTy, -static_cast<int>(DL->getTypeAllocSize(ScalarTy))),
              Builder.getAllOnesMask(VecTy->getElementCount()),
              Builder.getInt32(E->Scalars.size())});
@@ -21808,8 +21810,15 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     }
     if (!ControlDependentMembers.empty()) {
       ScheduleBundle Invalid = ScheduleBundle::invalid();
+      bool IsNonSchedulableWithParentPhiNode =
+          EI.UserTE->hasState() &&
+          EI.UserTE->State != TreeEntry::SplitVectorize &&
+          EI.UserTE->getOpcode() == Instruction::PHI;
       calculateDependencies(Invalid, /*InsertInReadyList=*/true, SLP,
-                            ControlDependentMembers, /*NonSchedulable=*/true);
+                            ControlDependentMembers,
+                            /*NonSchedulable=*/HasCopyables ||
+                                IsNonSchedulableWithParentPhiNode ||
+                                !all_of(VL, isUsedOutsideBlock));
     }
     return nullptr;
   }

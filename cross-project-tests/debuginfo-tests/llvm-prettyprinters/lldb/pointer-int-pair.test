@@ -1,3 +1,5 @@
+# REQUIRES: lldb-formatters-compatibility
+#
 # RUN: split-file %s %t
 # RUN: lldb -x \
 # RUN:   -o 'command script import %llvm_src_root/utils/lldbDataFormatters.py' \
@@ -6,6 +8,7 @@
 # RUN:   | FileCheck %t/checks
 
 #--- commands.input
+break set -p "Break here"
 run
 
 p &a

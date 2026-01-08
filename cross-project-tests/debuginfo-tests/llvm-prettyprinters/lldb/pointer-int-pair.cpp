@@ -1,3 +1,5 @@
+#include <cstdio>
+
 #include "llvm/ADT/PointerIntPair.h"
 
 int main() {
@@ -22,9 +24,9 @@ int main() {
 
   S s2;
 
-  __builtin_debugtrap();
+  puts("Break here");
 
   enum_pair.setPointerAndInt(&s2, E::Case3);
 
-  __builtin_debugtrap();
+  puts("Break here");
 }

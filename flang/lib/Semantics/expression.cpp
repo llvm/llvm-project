@@ -2075,10 +2075,14 @@ MaybeExpr ArrayConstructorContext::ToExpr() {
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayConstructor &array) {
   const parser::AcSpec &acSpec{array.v};
+  bool hadAnyFatalError{context_.AnyFatalError()};
   ArrayConstructorContext acContext{
       *this, AnalyzeTypeSpec(acSpec.type, GetFoldingContext())};
   for (const parser::AcValue &value : acSpec.values) {
     acContext.Add(value);
+  }
+  if (!hadAnyFatalError && context_.AnyFatalError()) {
+    return std::nullopt;
   }
   return acContext.ToExpr();
 }

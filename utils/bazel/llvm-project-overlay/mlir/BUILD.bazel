@@ -506,6 +506,7 @@ mlir_c_api_cc_library(
         ":Pass",
         ":Support",
         ":config",
+        ":FuncTransformsPassIncGen",
         ":Rewrite",
         "//llvm:Support",
     ],
@@ -517,6 +518,7 @@ mlir_c_api_cc_library(
         ":IRDLDialect",
         ":InferTypeOpInterface",
         ":Parser",
+        ":TransformsPassIncGen",
     ],
 )
 
@@ -564,6 +566,7 @@ mlir_c_api_cc_library(
     includes = ["include"],
     deps = [
         ":AMDGPUDialect",
+        ":AMDGPUPassIncGen",
     ],
 )
 
@@ -577,6 +580,7 @@ mlir_c_api_cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":ArithPassIncGen",
     ],
 )
 
@@ -686,6 +690,7 @@ mlir_c_api_cc_library(
     includes = ["include"],
     deps = [
         ":LLVMDialect",
+        ":LLVMPassIncGen",
         "//llvm:Support",
     ],
 )
@@ -700,6 +705,7 @@ mlir_c_api_cc_library(
     includes = ["include"],
     deps = [
         ":MathDialect",
+        ":MathPassIncGen",
     ],
 )
 
@@ -713,6 +719,7 @@ mlir_c_api_cc_library(
     includes = ["include"],
     deps = [
         ":MemRefDialect",
+        ":MemRefPassIncGen",
     ],
 )
 
@@ -727,6 +734,7 @@ mlir_c_api_cc_library(
     deps = [
         ":IR",
         ":NVGPUDialect",
+        ":NVGPUPassIncGen",
     ],
 )
 
@@ -753,6 +761,7 @@ mlir_c_api_cc_library(
     includes = ["include"],
     deps = [
         ":ShapeDialect",
+        ":ShapeTransformsPassIncGen",
     ],
 )
 
@@ -787,6 +796,7 @@ mlir_c_api_cc_library(
     includes = ["include"],
     deps = [
         ":TensorDialect",
+        ":TensorPassIncGen",
     ],
 )
 
@@ -837,6 +847,7 @@ mlir_c_api_cc_library(
     includes = ["include"],
     deps = [
         ":SCFDialect",
+        ":SCFPassIncGen",
     ],
 )
 
@@ -915,6 +926,7 @@ mlir_c_api_cc_library(
     includes = ["include"],
     deps = [
         ":TransformDialect",
+        ":TransformDialectTransformsIncGen",
     ],
 )
 
@@ -954,6 +966,7 @@ mlir_c_api_cc_library(
         ":CAPIIR",
         ":MLProgramDialect",
         ":MLProgramOpsIncGen",
+        ":MLProgramPassIncGen",
         ":MLProgramTypesIncGen",
     ],
 )
@@ -968,6 +981,7 @@ mlir_c_api_cc_library(
     includes = ["include"],
     deps = [
         ":VectorDialect",
+        ":VectorPassIncGen",
     ],
 )
 
@@ -1748,10 +1762,16 @@ cc_library(
 
 gentbl_cc_library(
     name = "AMDGPUPassIncGen",
-    tbl_outs = {"include/mlir/Dialect/AMDGPU/Transforms/Passes.h.inc": [
-        "-gen-pass-decls",
-        "-name=AMDGPU",
-    ]},
+    tbl_outs = {
+        "include/mlir/Dialect/AMDGPU/Transforms/Passes.h.inc": [
+            "-gen-pass-decls",
+            "-name=AMDGPU",
+        ],
+        "include/mlir/Dialect/AMDGPU/Transforms/Passes.capi.h.inc": [
+            "-gen-pass-capi-header",
+            "-name=AMDGPU",
+        ],
+    },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/AMDGPU/Transforms/Passes.td",
     deps = [":PassBaseTdFiles"],
@@ -1872,10 +1892,16 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "EmitCPassIncGen",
-    tbl_outs = {"include/mlir/Dialect/EmitC/Transforms/Passes.h.inc": [
-        "-gen-pass-decls",
-        "-name=EmitC",
-    ]},
+    tbl_outs = {
+        "include/mlir/Dialect/EmitC/Transforms/Passes.h.inc": [
+            "-gen-pass-decls",
+            "-name=EmitC",
+        ],
+        "include/mlir/Dialect/EmitC/Transforms/Passes.capi.h.inc": [
+            "-gen-pass-capi-header",
+            "-name=EmitC",
+        ],
+    },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/EmitC/Transforms/Passes.td",
     deps = [":PassBaseTdFiles"],
@@ -2861,10 +2887,16 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "SCFPassIncGen",
-    tbl_outs = {"include/mlir/Dialect/SCF/Transforms/Passes.h.inc": [
-        "-gen-pass-decls",
-        "-name=SCF",
-    ]},
+    tbl_outs = {
+        "include/mlir/Dialect/SCF/Transforms/Passes.h.inc": [
+            "-gen-pass-decls",
+            "-name=SCF",
+        ],
+        "include/mlir/Dialect/SCF/Transforms/Passes.capi.h.inc": [
+            "-gen-pass-capi-header",
+            "-name=SCF",
+        ],
+    },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/SCF/Transforms/Passes.td",
     deps = [":PassBaseTdFiles"],
@@ -3499,10 +3531,16 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "NVGPUPassIncGen",
-    tbl_outs = {"include/mlir/Dialect/NVGPU/Transforms/Passes.h.inc": [
-        "-gen-pass-decls",
-        "-name=NVGPU",
-    ]},
+    tbl_outs = {
+        "include/mlir/Dialect/NVGPU/Transforms/Passes.h.inc": [
+            "-gen-pass-decls",
+            "-name=NVGPU",
+        ],
+        "include/mlir/Dialect/NVGPU/Transforms/Passes.capi.h.inc": [
+            "-gen-pass-capi-header",
+            "-name=NVGPU",
+        ],
+    },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/NVGPU/Transforms/Passes.td",
     deps = [":PassBaseTdFiles"],
@@ -4092,6 +4130,8 @@ cc_library(
         ":ControlFlowInterfaces",
         ":DialectUtils",
         ":IR",
+        ":InferIntRangeCommon",
+        ":InferIntRangeInterface",
         ":InliningUtils",
         ":LoopLikeInterface",
         ":MemRefDialect",
@@ -4251,12 +4291,12 @@ cc_library(
 
 gentbl_cc_library(
     name = "AffinePassIncGen",
-    tbl_outs = {"include/mlir/Dialect/Affine/Passes.h.inc": [
+    tbl_outs = {"include/mlir/Dialect/Affine/Transforms/Passes.h.inc": [
         "-gen-pass-decls",
         "-name=Affine",
     ]},
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/Affine/Passes.td",
+    td_file = "include/mlir/Dialect/Affine/Transforms/Passes.td",
     deps = [":PassBaseTdFiles"],
 )
 
@@ -4266,7 +4306,7 @@ cc_library(
         "lib/Dialect/Affine/Transforms/*.cpp",
     ]),
     hdrs = [
-        "include/mlir/Dialect/Affine/Passes.h",
+        "include/mlir/Dialect/Affine/Transforms/Passes.h",
         "include/mlir/Dialect/Affine/Transforms/Transforms.h",
     ],
     includes = ["include"],
@@ -4530,6 +4570,7 @@ cc_library(
     hdrs = ["include/mlir/Interfaces/Utils/InferIntRangeCommon.h"],
     includes = ["include"],
     deps = [
+        ":IR",
         ":InferIntRangeInterface",
         ":ShapedOpInterfaces",
         "//llvm:Support",
@@ -4747,10 +4788,16 @@ cc_library(
 
 gentbl_cc_library(
     name = "ShapeTransformsPassIncGen",
-    tbl_outs = {"include/mlir/Dialect/Shape/Transforms/Passes.h.inc": [
-        "-gen-pass-decls",
-        "-name=Shape",
-    ]},
+    tbl_outs = {
+        "include/mlir/Dialect/Shape/Transforms/Passes.h.inc": [
+            "-gen-pass-decls",
+            "-name=Shape",
+        ],
+        "include/mlir/Dialect/Shape/Transforms/Passes.capi.h.inc": [
+            "-gen-pass-capi-header",
+            "-name=Shape",
+        ],
+    },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Shape/Transforms/Passes.td",
     deps = [":PassBaseTdFiles"],
@@ -4980,10 +5027,16 @@ cc_library(
 
 gentbl_cc_library(
     name = "FuncTransformsPassIncGen",
-    tbl_outs = {"include/mlir/Dialect/Func/Transforms/Passes.h.inc": [
-        "-gen-pass-decls",
-        "-name=Func",
-    ]},
+    tbl_outs = {
+        "include/mlir/Dialect/Func/Transforms/Passes.h.inc": [
+            "-gen-pass-decls",
+            "-name=Func",
+        ],
+        "include/mlir/Dialect/Func/Transforms/Passes.capi.h.inc": [
+            "-gen-pass-capi-header",
+            "-name=Func",
+        ],
+    },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Func/Transforms/Passes.td",
     deps = [":PassBaseTdFiles"],
@@ -5100,10 +5153,16 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "VectorPassIncGen",
-    tbl_outs = {"include/mlir/Dialect/Vector/Transforms/Passes.h.inc": [
-        "-gen-pass-decls",
-        "-name=Vector",
-    ]},
+    tbl_outs = {
+        "include/mlir/Dialect/Vector/Transforms/Passes.h.inc": [
+            "-gen-pass-decls",
+            "-name=Vector",
+        ],
+        "include/mlir/Dialect/Vector/Transforms/Passes.capi.h.inc": [
+            "-gen-pass-capi-header",
+            "-name=Vector",
+        ],
+    },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Vector/Transforms/Passes.td",
     deps = [":PassBaseTdFiles"],
@@ -5462,10 +5521,16 @@ cc_library(
 
 gentbl_cc_library(
     name = "LLVMPassIncGen",
-    tbl_outs = {"include/mlir/Dialect/LLVMIR/Transforms/Passes.h.inc": [
-        "-gen-pass-decls",
-        "-name=LLVM",
-    ]},
+    tbl_outs = {
+        "include/mlir/Dialect/LLVMIR/Transforms/Passes.h.inc": [
+            "-gen-pass-decls",
+            "-name=LLVM",
+        ],
+        "include/mlir/Dialect/LLVMIR/Transforms/Passes.capi.h.inc": [
+            "-gen-pass-capi-header",
+            "-name=LLVM",
+        ],
+    },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/LLVMIR/Transforms/Passes.td",
     deps = [
@@ -7670,10 +7735,16 @@ cc_library(
 
 gentbl_cc_library(
     name = "TensorPassIncGen",
-    tbl_outs = {"include/mlir/Dialect/Tensor/Transforms/Passes.h.inc": [
-        "-gen-pass-decls",
-        "-name=Tensor",
-    ]},
+    tbl_outs = {
+        "include/mlir/Dialect/Tensor/Transforms/Passes.h.inc": [
+            "-gen-pass-decls",
+            "-name=Tensor",
+        ],
+        "include/mlir/Dialect/Tensor/Transforms/Passes.capi.h.inc": [
+            "-gen-pass-capi-header",
+            "-name=Tensor",
+        ],
+    },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Tensor/Transforms/Passes.td",
     deps = [":PassBaseTdFiles"],
@@ -11932,15 +12003,15 @@ gentbl_cc_library(
     tbl_outs = {
         "include/mlir/Dialect/Tosa/Transforms/Passes.h.inc": [
             "-gen-pass-decls",
-            "-name=TosaOpt",
+            "-name=Tosa",
         ],
         "include/mlir/Dialect/Tosa/Transforms/PassesEnums.h.inc": [
             "-gen-enum-decls",
-            "-name=TosaOpt",
+            "-name=Tosa",
         ],
         "include/mlir/Dialect/Tosa/Transforms/PassesEnums.cpp.inc": [
             "-gen-enum-defs",
-            "-name=TosaOpt",
+            "-name=Tosa",
         ],
     },
     tblgen = ":mlir-tblgen",
@@ -12550,10 +12621,16 @@ td_library(
 
 gentbl_cc_library(
     name = "TransformDialectTransformsIncGen",
-    tbl_outs = {"include/mlir/Dialect/Transform/Transforms/Passes.h.inc": [
-        "-gen-pass-decls",
-        "-name=Transform",
-    ]},
+    tbl_outs = {
+        "include/mlir/Dialect/Transform/Transforms/Passes.h.inc": [
+            "-gen-pass-decls",
+            "-name=Transform",
+        ],
+        "include/mlir/Dialect/Transform/Transforms/Passes.capi.h.inc": [
+            "-gen-pass-capi-header",
+            "-name=Transform",
+        ],
+    },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Transform/Transforms/Passes.td",
     deps = [":TransformDialectTransformsTdFiles"],
@@ -12942,10 +13019,16 @@ cc_library(
 
 gentbl_cc_library(
     name = "ArithPassIncGen",
-    tbl_outs = {"include/mlir/Dialect/Arith/Transforms/Passes.h.inc": [
-        "-gen-pass-decls",
-        "-name=Arith",
-    ]},
+    tbl_outs = {
+        "include/mlir/Dialect/Arith/Transforms/Passes.h.inc": [
+            "-gen-pass-decls",
+            "-name=Arith",
+        ],
+        "include/mlir/Dialect/Arith/Transforms/Passes.capi.h.inc": [
+            "-gen-pass-capi-header",
+            "-name=Arith",
+        ],
+    },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Arith/Transforms/Passes.td",
     deps = [":PassBaseTdFiles"],
@@ -13045,10 +13128,16 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "MathPassIncGen",
-    tbl_outs = {"include/mlir/Dialect/Math/Transforms/Passes.h.inc": [
-        "-gen-pass-decls",
-        "-name=Math",
-    ]},
+    tbl_outs = {
+        "include/mlir/Dialect/Math/Transforms/Passes.h.inc": [
+            "-gen-pass-decls",
+            "-name=Math",
+        ],
+        "include/mlir/Dialect/Math/Transforms/Passes.capi.h.inc": [
+            "-gen-pass-capi-header",
+            "-name=Math",
+        ],
+    },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Math/Transforms/Passes.td",
     deps = [":PassBaseTdFiles"],
@@ -13282,10 +13371,16 @@ cc_library(
 
 gentbl_cc_library(
     name = "MemRefPassIncGen",
-    tbl_outs = {"include/mlir/Dialect/MemRef/Transforms/Passes.h.inc": [
-        "-gen-pass-decls",
-        "-name=MemRef",
-    ]},
+    tbl_outs = {
+        "include/mlir/Dialect/MemRef/Transforms/Passes.h.inc": [
+            "-gen-pass-decls",
+            "-name=MemRef",
+        ],
+        "include/mlir/Dialect/MemRef/Transforms/Passes.capi.h.inc": [
+            "-gen-pass-capi-header",
+            "-name=MemRef",
+        ],
+    },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/MemRef/Transforms/Passes.td",
     deps = [":PassBaseTdFiles"],
@@ -13436,10 +13531,16 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "MLProgramPassIncGen",
-    tbl_outs = {"include/mlir/Dialect/MLProgram/Transforms/Passes.h.inc": [
-        "-gen-pass-decls",
-        "-name=MLProgram",
-    ]},
+    tbl_outs = {
+        "include/mlir/Dialect/MLProgram/Transforms/Passes.h.inc": [
+            "-gen-pass-decls",
+            "-name=MLProgram",
+        ],
+        "include/mlir/Dialect/MLProgram/Transforms/Passes.capi.h.inc": [
+            "-gen-pass-capi-header",
+            "-name=MLProgram",
+        ],
+    },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/MLProgram/Transforms/Passes.td",
     deps = [":PassBaseTdFiles"],

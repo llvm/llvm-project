@@ -717,3 +717,33 @@ def testConcreteAttributesRoundTrip():
         print(repr(Attribute.parse("42.0 : f32")))
 
         assert IntegerAttr.static_typeid is not None
+
+
+# CHECK-LABEL: TEST: testAttrNames
+@run
+def testAttrNames():
+    with Context():
+        # CHECK: builtin.affine_map
+        print(AffineMapAttr.attr_name)
+        # CHECK: builtin.integer_set
+        print(IntegerSetAttr.attr_name)
+        # CHECK: builtin.array
+        print(ArrayAttr.attr_name)
+        # CHECK: builtin.integer
+        print(IntegerAttr.attr_name)
+        # CHECK: builtin.symbol_ref
+        print(SymbolRefAttr.attr_name)
+        # CHECK: builtin.opaque
+        print(OpaqueAttr.attr_name)
+        # CHECK: builtin.dictionary
+        print(DictAttr.attr_name)
+        # CHECK: builtin.type
+        print(TypeAttr.attr_name)
+        # CHECK: builtin.unit
+        print(UnitAttr.attr_name)
+        # CHECK: builtin.strided_layout
+        print(StridedLayoutAttr.attr_name)
+        # CHECK: builtin.dense_resource_elements
+        print(DenseResourceElementsAttr.attr_name)
+        # CHECK: builtin.string
+        print(StringAttr.attr_name)
