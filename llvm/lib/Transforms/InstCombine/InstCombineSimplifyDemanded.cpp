@@ -2589,8 +2589,12 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
     if (KnownRHS.isKnownNever(DemandedMask))
       return I->getOperand(1);
 
-    // TODO: Recognize clamping patterns
-    Known = KnownLHS | KnownRHS;
+    const SimplifyQuery &SQ = getSimplifyQuery();
+    adjustKnownFPClassForSelectArm(KnownLHS, I->getOperand(0), I->getOperand(1),
+                                   /*Invert=*/false, SQ, Depth);
+    adjustKnownFPClassForSelectArm(KnownRHS, I->getOperand(0), I->getOperand(2),
+                                   /*Invert=*/true, SQ, Depth);
+    Known = KnownLHS.intersectWith(KnownRHS);
     break;
   }
   case Instruction::ExtractElement: {
