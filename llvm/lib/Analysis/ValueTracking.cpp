@@ -5665,7 +5665,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       const fltSemantics &FltSem =
           Op->getType()->getScalarType()->getFltSemantics();
 
-      if (KnownSrc.isKnownNever(fcNan) && KnownSrc.isKnownNeverInfinity() &&
+      if (KnownSrc.isKnownNeverInfOrNaN() &&
           KnownSrc.isKnownNeverLogicalZero(F ? F->getDenormalMode(FltSem)
                                              : DenormalMode::getDynamic()))
         Known.knownNot(fcNan);
