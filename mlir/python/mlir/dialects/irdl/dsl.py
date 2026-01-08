@@ -169,6 +169,17 @@ class Operation(ir.OpView):
     def __init_subclass__(cls, *, name: str = None, **kwargs):
         super().__init_subclass__(**kwargs)
 
+        fields = []
+        cls._fields = fields
+
+        for base in cls.__bases__:
+            if hasattr(base, "_fields"):
+                fields.extend(base._fields)
+        for key, value in cls.__dict__.items():
+            if isinstance(value, FieldDef):
+                setattr(value, "name", key)
+                fields.append(value)
+
         # for subclasses without "name" parameter,
         # just treat them as normal classes
         if not name:
@@ -178,15 +189,6 @@ class Operation(ir.OpView):
         cls._op_name = op_name
         dialect_name = cls._dialect_name
         dialect_obj = cls._dialect_obj
-
-        fields = []
-        cls._fields = fields
-
-        for base in reversed(cls.__mro__):
-            for key, value in base.__dict__.items():
-                if isinstance(value, FieldDef):
-                    setattr(value, "name", key)
-                    fields.append(value)
 
         cls._generate_class_attributes(dialect_name, op_name, fields)
         cls._generate_init_method(fields)
