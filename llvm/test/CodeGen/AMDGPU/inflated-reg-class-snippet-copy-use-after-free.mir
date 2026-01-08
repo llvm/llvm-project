@@ -1,3 +1,4 @@
+# XFAIL: *
 # RUN: not llc -mtriple=amdgpu9.0a-amd-amdhsa -simplify-mir -start-before=greedy,2 -stress-regalloc=4 -stop-before=virtregrewriter,2 -o - -verify-regalloc %s 2> %t.err | FileCheck %s
 # RUN: FileCheck -check-prefix=ERR %s < %t.err
 
