@@ -1727,42 +1727,78 @@ public:
     case AArch64::CBZX:     return AArch64::CBNZX;
     case AArch64::CBNZW:    return AArch64::CBZW;
     case AArch64::CBNZX:    return AArch64::CBZX;
-    case AArch64::CBGTWrr:  return AArch64::CBGEWrr;
-    case AArch64::CBGTXrr:  return AArch64::CBGEXrr;
-    case AArch64::CBGEWrr:  return AArch64::CBGTWrr;
-    case AArch64::CBGEXrr:  return AArch64::CBGTXrr;
-    case AArch64::CBHIWrr:  return AArch64::CBHSWrr;
-    case AArch64::CBHIXrr:  return AArch64::CBHSXrr;
-    case AArch64::CBHSWrr:  return AArch64::CBHIWrr;
-    case AArch64::CBHSXrr:  return AArch64::CBHIXrr;
-    case AArch64::CBEQWrr:  return AArch64::CBNEWrr;
-    case AArch64::CBEQXrr:  return AArch64::CBNEXrr;
-    case AArch64::CBNEWrr:  return AArch64::CBEQWrr;
-    case AArch64::CBNEXrr:  return AArch64::CBEQXrr;
-    case AArch64::CBHGTWrr: return AArch64::CBHGEWrr;
-    case AArch64::CBHGEWrr: return AArch64::CBHGTWrr;
-    case AArch64::CBHHIWrr: return AArch64::CBHHSWrr;
-    case AArch64::CBHHSWrr: return AArch64::CBHHIWrr;
-    case AArch64::CBHEQWrr: return AArch64::CBHNEWrr;
-    case AArch64::CBHNEWrr: return AArch64::CBHEQWrr;
-    case AArch64::CBBGTWrr: return AArch64::CBBGEWrr;
-    case AArch64::CBBGEWrr: return AArch64::CBBGTWrr;
-    case AArch64::CBBHIWrr: return AArch64::CBBHSWrr;
-    case AArch64::CBBHSWrr: return AArch64::CBBHIWrr;
-    case AArch64::CBBEQWrr: return AArch64::CBBNEWrr;
-    case AArch64::CBBNEWrr: return AArch64::CBBEQWrr;
-    case AArch64::CBGTWri:  return AArch64::CBLTWri;
-    case AArch64::CBGTXri:  return AArch64::CBLTXri;
-    case AArch64::CBLTWri:  return AArch64::CBGTWri;
-    case AArch64::CBLTXri:  return AArch64::CBGTXri;
-    case AArch64::CBHIWri:  return AArch64::CBLOWri;
-    case AArch64::CBHIXri:  return AArch64::CBLOXri;
-    case AArch64::CBLOWri:  return AArch64::CBHIWri;
-    case AArch64::CBLOXri:  return AArch64::CBHIXri;
-    case AArch64::CBEQWri:  return AArch64::CBNEWri;
-    case AArch64::CBEQXri:  return AArch64::CBNEXri;
-    case AArch64::CBNEWri:  return AArch64::CBEQWri;
-    case AArch64::CBNEXri:  return AArch64::CBEQXri;
+    case AArch64::CBGTWrr:
+      return AArch64::CBGEWrr;
+    case AArch64::CBGTXrr:
+      return AArch64::CBGEXrr;
+    case AArch64::CBGEWrr:
+      return AArch64::CBGTWrr;
+    case AArch64::CBGEXrr:
+      return AArch64::CBGTXrr;
+    case AArch64::CBHIWrr:
+      return AArch64::CBHSWrr;
+    case AArch64::CBHIXrr:
+      return AArch64::CBHSXrr;
+    case AArch64::CBHSWrr:
+      return AArch64::CBHIWrr;
+    case AArch64::CBHSXrr:
+      return AArch64::CBHIXrr;
+    case AArch64::CBEQWrr:
+      return AArch64::CBNEWrr;
+    case AArch64::CBEQXrr:
+      return AArch64::CBNEXrr;
+    case AArch64::CBNEWrr:
+      return AArch64::CBEQWrr;
+    case AArch64::CBNEXrr:
+      return AArch64::CBEQXrr;
+    case AArch64::CBHGTWrr:
+      return AArch64::CBHGEWrr;
+    case AArch64::CBHGEWrr:
+      return AArch64::CBHGTWrr;
+    case AArch64::CBHHIWrr:
+      return AArch64::CBHHSWrr;
+    case AArch64::CBHHSWrr:
+      return AArch64::CBHHIWrr;
+    case AArch64::CBHEQWrr:
+      return AArch64::CBHNEWrr;
+    case AArch64::CBHNEWrr:
+      return AArch64::CBHEQWrr;
+    case AArch64::CBBGTWrr:
+      return AArch64::CBBGEWrr;
+    case AArch64::CBBGEWrr:
+      return AArch64::CBBGTWrr;
+    case AArch64::CBBHIWrr:
+      return AArch64::CBBHSWrr;
+    case AArch64::CBBHSWrr:
+      return AArch64::CBBHIWrr;
+    case AArch64::CBBEQWrr:
+      return AArch64::CBBNEWrr;
+    case AArch64::CBBNEWrr:
+      return AArch64::CBBEQWrr;
+    case AArch64::CBGTWri:
+      return AArch64::CBLTWri;
+    case AArch64::CBGTXri:
+      return AArch64::CBLTXri;
+    case AArch64::CBLTWri:
+      return AArch64::CBGTWri;
+    case AArch64::CBLTXri:
+      return AArch64::CBGTXri;
+    case AArch64::CBHIWri:
+      return AArch64::CBLOWri;
+    case AArch64::CBHIXri:
+      return AArch64::CBLOXri;
+    case AArch64::CBLOWri:
+      return AArch64::CBHIWri;
+    case AArch64::CBLOXri:
+      return AArch64::CBHIXri;
+    case AArch64::CBEQWri:
+      return AArch64::CBNEWri;
+    case AArch64::CBEQXri:
+      return AArch64::CBNEXri;
+    case AArch64::CBNEWri:
+      return AArch64::CBEQWri;
+    case AArch64::CBNEXri:
+      return AArch64::CBEQXri;
     }
   }
 
