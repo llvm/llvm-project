@@ -1,0 +1,67 @@
+name: CI ASAN
+
+on:
+  schedule:
+    - cron: "0 2 * * *" # Runs nightly at 2 AM UTC
+  workflow_dispatch:
+    inputs:
+      linux_amdgpu_families:
+        type: string
+        description: "Insert comma-separated list of Linux GPU families to build and test. ex: gfx94X, gfx1201X"
+        default: ""
+      linux_use_prebuilt_artifacts:
+        type: boolean
+        description: "If enabled, the CI will pull Linux artifacts using artifact_run_id and only run tests"
+      artifact_run_id:
+        type: string
+        description: "If provided, the tests will run on this artifact ID"
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  # A PR number if a pull request and otherwise the commit hash. This cancels
+  # queued and in-progress runs for the same PR (presubmit) or commit
+  # (postsubmit). The workflow name is prepended to avoid conflicts between
+  # different workflows.
+  group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  setup:
+    uses: ./.github/workflows/setup.yml
+    with:
+      build_variant: "asan"
+
+  linux_build_and_test:
+    name: Linux::${{ matrix.variant.family }}::${{ matrix.variant.build_variant_label }}
+    needs: setup
+    if: >-
+      ${{
+        needs.setup.outputs.linux_variants != '[]' &&
+        needs.setup.outputs.enable_build_jobs == 'true'
+      }}
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: ${{ fromJSON(needs.setup.outputs.linux_variants) }}
+    uses: ./.github/workflows/ci_linux.yml
+    secrets: inherit
+    with:
+      amdgpu_families: ${{ matrix.variant.family }}
+      artifact_group: ${{ matrix.variant.artifact_group }}
+      test_runs_on: ${{ matrix.variant.test-runs-on }}
+      build_variant_label: ${{ matrix.variant.build_variant_label }}
+      build_variant_suffix: ${{ matrix.variant.build_variant_suffix }}
+      build_variant_cmake_preset: ${{ matrix.variant.build_variant_cmake_preset }}
+      test_labels: ${{ needs.setup.outputs.linux_test_labels }}
+      artifact_run_id: ${{ inputs.artifact_run_id }}
+      expect_failure: ${{ matrix.variant.expect_failure == true }}
+      use_prebuilt_artifacts: ${{ inputs.linux_use_prebuilt_artifacts == true && 'true' || 'false' }}
+      rocm_package_version: ${{ needs.setup.outputs.rocm_package_version }}
+      test_type: ${{ needs.setup.outputs.test_type }}
+      sanity_check_only_for_family: ${{ matrix.variant.sanity_check_only_for_family == true }}
+    permissions:
+      contents: read
+      id-token: write

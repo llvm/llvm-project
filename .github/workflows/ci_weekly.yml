@@ -1,0 +1,14 @@
+name: WIP Placeholder CI Weekly
+
+on:
+    # For AMD GPU families that expect_failure, we run builds and tests from this scheduled trigger
+    # schedule:
+    #   - cron: "0 3 * * 0" # Runs weekly at 3 AM UTC Sundays
+    workflow_dispatch:
+
+
+jobs:
+  donothing:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Skipped"

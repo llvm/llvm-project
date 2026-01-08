@@ -1,0 +1,135 @@
+name: Build Native Linux Packages
+
+on:
+  workflow_call:
+    inputs:
+      artifact_group:
+        description: gfx arch group for the s3 server
+        type: string
+        default: gfx94X-dcgpu
+      artifact_run_id:
+        description: workflow run id to download the artifacts from.
+        required: true
+        type: string
+      rocm_version:
+        description: ROCm version to append to the package (8.0.0, 8.0.1rc1, ...).
+        required: true
+        type: string
+      native_package_type:
+        description: Specify whether debian or rpm packages are needed (deb or rpm).
+        required: true
+        type: string
+      package_suffix:
+        description: The suffix to be added to package name (asan, static or rpath).
+        required: false
+        type: string
+      release_type:
+        description: The type of release to build ("dev", "nightly", or "prerelease"). All developer-triggered jobs should use "dev"!
+        required: false
+        type: string
+  workflow_dispatch:
+    inputs:
+      artifact_group:
+        type: string
+        default: gfx94X-dcgpu
+      artifact_run_id:
+        description: workflow run id to download the artifacts from
+        type: string
+      rocm_version:
+        description: ROCm version to append to the package (8.0.0, 8.0.1rc1, ...).
+        type: string
+        default: "0.0.1"
+      native_package_type:
+        description: Specify whether debian or rpm packages are needed (deb or rpm).
+        required: true
+        type: choice
+        options:
+          - rpm
+          - deb
+        default: "rpm"
+      package_suffix:
+        description: The suffix to be added to package name (asan, static or rpath).
+        type: string
+        required: false
+      release_type:
+        description: The type of release to build ("dev", "nightly", or "prerelease"). All developer-triggered jobs should use "dev"!
+        type: string
+        default: "dev"
+
+permissions:
+  id-token: write
+  contents: read
+
+run-name: Build native Linux packages (${{ inputs.artifact_group }}, ${{ inputs.rocm_version }}, ${{ inputs.native_package_type }}, ${{ inputs.package_suffix }}, ${{ inputs.release_type }})
+
+jobs:
+  build_native_packages:
+    name: Build Linux native Packages
+    strategy:
+      fail-fast: false
+    runs-on: ${{ github.repository_owner == 'ROCm' && 'azure-linux-scale-rocm' || 'ubuntu-24.04' }}
+    env:
+      BUILD_IMAGE: ghcr.io/rocm/therock_build_manylinux_x86_64@sha256:583d473f263a289222c48d4b493e2956b2354a45796f09dee6f2c8ecd4504ab6
+      ARTIFACT_RUN_ID: ${{ inputs.artifact_run_id || github.run_id }}
+      PACKAGE_SUFFIX: ${{ inputs.package_suffix != '' && inputs.package_suffix || '' }}
+      OUTPUT_DIR: ${{ github.workspace }}/output
+      ARTIFACTS_DIR: ${{ github.workspace }}/output/artifacts
+      PACKAGE_DIST_DIR: ${{ github.workspace }}/output/packages
+      RELEASE_TYPE: ${{ inputs.release_type || '' }}
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+        with:
+          python-version: '3.12'
+      - name: Install Python requirements
+        run: |
+          pip install pyelftools boto3 jinja2
+
+      - name: Install System requirements
+        run: |
+          # Install the needed tools for creating rpm / deb packages
+          # Also install tools for creating repo files
+          sudo apt update
+          sudo apt install -y llvm
+          sudo apt install -y rpm debhelper-compat build-essential
+          sudo apt install -y dpkg-dev createrepo-c
+
+      - name: Fetch Artifacts
+        run: |
+          echo "Fetching artifacts for build ${{ inputs.artifact_run_id }}"
+          python ./build_tools/fetch_artifacts.py \
+            --run-id=${{ env.ARTIFACT_RUN_ID }} \
+            --run-github-repo="ROCm/TheRock" \
+            --artifact-group=${{ inputs.artifact_group }} \
+            --output-dir=${{ env.ARTIFACTS_DIR }}
+
+      - name: Build Packages
+        id: build-packages
+        run: |
+          echo "Building ${{ inputs.native_package_type }} packages for ${{ inputs.artifact_group }} ${{ inputs.artifact_run_id }}"
+          python ./build_tools/packaging/linux/build_package.py \
+            --dest-dir ${{ env.PACKAGE_DIST_DIR }} \
+            --rocm-version  ${{ inputs.rocm_version }} \
+            --target  ${{ inputs.artifact_group }} \
+            --artifacts-dir ${{ env.ARTIFACTS_DIR }} \
+            --pkg-type ${{ inputs.native_package_type }} \
+            --version-suffix ${{ env.ARTIFACT_RUN_ID }}
+
+      - name: Install AWS CLI
+        run: bash ./dockerfiles/install_awscli.sh
+
+      - name: Configure AWS Credentials for non-forked repos
+        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
+        with:
+          aws-region: us-east-2
+          role-to-assume: arn:aws:iam::692859939525:role/therock-artifacts-external
+
+      - name: Upload Package repo to S3
+        id: upload-packages
+        run: |
+          echo "Uploading to s3 bucket"
+          python ./build_tools/packaging/linux/upload_package_repo.py \
+            --pkg-type ${{ inputs.native_package_type }} \
+            --s3-bucket therock-deb-rpm-test \
+            --amdgpu-family ${{ inputs.artifact_group }} \
+            --artifact-id ${{ env.ARTIFACT_RUN_ID }}
