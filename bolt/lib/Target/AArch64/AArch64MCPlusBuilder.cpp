@@ -23,6 +23,7 @@
 #include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegister.h"
@@ -1733,6 +1734,46 @@ public:
     BC.createInstructionPatch(PLTFunction.getAddress(), NewPLTSeq);
   }
 
+  /// Decode entry instruction of \p Function without CFG. If it's a BTI
+  /// matching \p Call, do nothing. If it's a nop, patch it to a BTI. If it's
+  /// neither, emit an error.
+  void patchFunctionEntryForBTI(BinaryFunction &Function,
+                                MCInst &Call) override {
+    BinaryContext &BC = Function.getBinaryContext();
+    const uint64_t InstrAddr = Function.getAddress();
+    ErrorOr<ArrayRef<uint8_t>> FunctionData = Function.getData();
+    if (!FunctionData) {
+      errs() << "BOLT-ERROR: corresponding section is non-executable or "
+             << "empty for function " << Function.getPrintName();
+      exit(1);
+    }
+    // getInstruction writes this, its value doesn't matter here.
+    uint64_t InstrSize = 0;
+    MCInst FirstInst;
+    if (FunctionData->empty() ||
+        !BC.DisAsm->getInstruction(FirstInst, InstrSize, *FunctionData,
+                                   InstrAddr, nulls())) {
+      errs() << "BOLT-ERROR: unable to disassemble first instruction of "
+             << Function.getPrintName()
+             << formatv(" at address {0:x}\n", InstrAddr);
+      exit(1);
+    }
+    if (isCallCoveredByBTI(Call, FirstInst))
+      return;
+    if (!isNoop(FirstInst)) {
+      errs() << "BOLT-ERROR: Cannot add BTI to function without CFG "
+             << Function.getPrintName()
+             << ". Recompile the binary using -fpatchable-function-entry 1 to "
+                "include a nop at the entry";
+      exit(1);
+    }
+    InstructionListType NewEntry;
+    MCInst BTIInst;
+    createBTI(BTIInst, BTIKind::C);
+    NewEntry.push_back(BTIInst);
+    BC.createInstructionPatch(Function.getAddress(), NewEntry);
+  }
+
   void applyBTIFixupToSymbol(BinaryContext &BC, const MCSymbol *TargetSymbol,
                              MCInst &Call) override {
     BinaryFunction *TargetFunction = BC.getFunctionForSymbol(TargetSymbol);
@@ -1762,22 +1803,10 @@ public:
       patchPLTEntryForBTI(*TargetFunction, Call);
       return;
     }
-    if (TargetFunction && TargetFunction->isIgnored()) {
-      errs() << "BOLT-ERROR: Cannot add BTI landing pad to ignored function "
-             << TargetFunction->getPrintName() << "\n";
-      exit(1);
-    }
-    if (TargetFunction && !TargetFunction->hasCFG()) {
-      if (TargetFunction->hasInstructions()) {
-        auto FirstII = TargetFunction->instrs().begin();
-        MCInst FirstInst = FirstII->second;
-        if (isCallCoveredByBTI(Call, FirstInst))
-          return;
-      }
-      errs()
-          << "BOLT-ERROR: Cannot add BTI landing pad to function without CFG: "
-          << TargetFunction->getPrintName() << "\n";
-      exit(1);
+    if (TargetFunction &&
+        (TargetFunction->isIgnored() || !TargetFunction->hasCFG())) {
+      patchFunctionEntryForBTI(*TargetFunction, Call);
+      return;
     }
     if (!TargetBB)
       // No need to check TargetFunction for nullptr, because
