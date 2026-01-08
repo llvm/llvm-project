@@ -495,7 +495,7 @@ gkistanova@gmail.com (email), [gkistanova](https://github.com/gkistanova) (GitHu
 
 Some subprojects maintain their own list of per-component maintainers.
 
-[Bolt maintainers](https://github.com/llvm/llvm-project/blob/main/bolt/Maintainers.txt)
+[BOLT maintainers](https://github.com/llvm/llvm-project/blob/main/bolt/Maintainers.md)
 
 [Clang maintainers](https://github.com/llvm/llvm-project/blob/main/clang/Maintainers.rst)
 
