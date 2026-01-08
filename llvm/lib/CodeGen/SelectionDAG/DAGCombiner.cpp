@@ -18039,6 +18039,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
       return DAG.getNode(ISD::FSUB, DL, VT, N1, NegN0);
 
   // fold (fadd A, Splat(fneg(B))) -> (fsub A, Splat(B))
+  // TODO: move ISD::SPLAT_VECTOR handling inside getCheaperNegatedExpression
   if (N1.getOpcode() == ISD::SPLAT_VECTOR) {
     SDValue SplatN0 = N1->getOperand(0);
     if (SDValue NegN0 = TLI.getCheaperNegatedExpression(
@@ -18290,6 +18291,7 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
     return DAG.getNode(ISD::FADD, DL, VT, N0, NegN1);
 
   // fold (fsub A, Splat(fneg(B))) -> (fadd A, Splat(B))
+  // TODO: move ISD::SPLAT_VECTOR handling inside getCheaperNegatedExpression
   if (N1.getOpcode() == ISD::SPLAT_VECTOR) {
     SDValue SplatN0 = N1->getOperand(0);
     if (SDValue NegN0 = TLI.getCheaperNegatedExpression(
