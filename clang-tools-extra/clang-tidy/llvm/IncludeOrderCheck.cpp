@@ -42,7 +42,7 @@ private:
   };
 
   using FileIncludes = std::vector<IncludeDirective>;
-  std::map<clang::FileID, FileIncludes> IncludeDirectives;
+  llvm::DenseMap<FileID, FileIncludes> IncludeDirectives;
   bool LookForMainModule = true;
 
   ClangTidyCheck &Check;
