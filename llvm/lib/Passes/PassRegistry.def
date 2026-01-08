@@ -243,7 +243,7 @@ MODULE_PASS_WITH_PARAMS(
     parseLoopExtractorPassOptions, "single")
 MODULE_PASS_WITH_PARAMS(
     "memprof-use", "MemProfUsePass",
-    [](std::string Opts) { return MemProfUsePass(Opts); },
+    [this](std::string Opts) { return MemProfUsePass(Opts, this->TM); },
     parseMemProfUsePassOptions, "profile-filename=S")
 MODULE_PASS_WITH_PARAMS(
     "msan", "MemorySanitizerPass",
