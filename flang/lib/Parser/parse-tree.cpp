@@ -102,8 +102,9 @@ static Designator MakeArrayElementRef(
     const Name &name, std::list<Expr> &&subscripts) {
   ArrayElement arrayElement{DataRef{Name{name}}, std::list<SectionSubscript>{}};
   for (Expr &expr : subscripts) {
-    arrayElement.subscripts.push_back(
-        SectionSubscript{Integer{common::Indirection{std::move(expr)}}});
+    std::get<std::list<SectionSubscript>>(arrayElement.t)
+        .push_back(
+            SectionSubscript{Integer{common::Indirection{std::move(expr)}}});
   }
   return Designator{DataRef{common::Indirection{std::move(arrayElement)}}};
 }
@@ -113,8 +114,9 @@ static Designator MakeArrayElementRef(
   ArrayElement arrayElement{DataRef{common::Indirection{std::move(sc)}},
       std::list<SectionSubscript>{}};
   for (Expr &expr : subscripts) {
-    arrayElement.subscripts.push_back(
-        SectionSubscript{Integer{common::Indirection{std::move(expr)}}});
+    std::get<std::list<SectionSubscript>>(arrayElement.t)
+        .push_back(
+            SectionSubscript{Integer{common::Indirection{std::move(expr)}}});
   }
   return Designator{DataRef{common::Indirection{std::move(arrayElement)}}};
 }
@@ -186,6 +188,7 @@ StructureConstructor FunctionReference::ConvertToStructureConstructor(
 
 StructureConstructor ArrayElement::ConvertToStructureConstructor(
     const semantics::DerivedTypeSpec &derived) {
+  auto &[base, subscripts]{t};
   Name name{std::get<parser::Name>(base.u)};
   std::list<ComponentSpec> components;
   for (auto &subscript : subscripts) {
@@ -198,6 +201,7 @@ StructureConstructor ArrayElement::ConvertToStructureConstructor(
 }
 
 Substring ArrayElement::ConvertToSubstring() {
+  auto &[base, subscripts]{t};
   auto iter{subscripts.begin()};
   CHECK(iter != subscripts.end());
   auto &triplet{std::get<SubscriptTriplet>(iter->u)};

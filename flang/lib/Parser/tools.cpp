@@ -13,7 +13,7 @@ namespace Fortran::parser {
 const Name &GetLastName(const Name &x) { return x; }
 
 const Name &GetLastName(const StructureComponent &x) {
-  return GetLastName(x.component);
+  return GetLastName(x.Component());
 }
 
 const Name &GetLastName(const DataRef &x) {
@@ -23,10 +23,12 @@ const Name &GetLastName(const DataRef &x) {
           [](const common::Indirection<StructureComponent> &sc)
               -> const Name & { return GetLastName(sc.value()); },
           [](const common::Indirection<ArrayElement> &sc) -> const Name & {
-            return GetLastName(sc.value().base);
+            return GetLastName(sc.value().Base());
           },
           [](const common::Indirection<CoindexedNamedObject> &ci)
-              -> const Name & { return GetLastName(ci.value().base); },
+              -> const Name & {
+            return GetLastName(std::get<DataRef>(ci.value().t));
+          },
       },
       x.u);
 }
@@ -71,7 +73,7 @@ const Name &GetLastName(const AllocateObject &x) {
 const Name &GetFirstName(const Name &x) { return x; }
 
 const Name &GetFirstName(const StructureComponent &x) {
-  return GetFirstName(x.base);
+  return GetFirstName(x.Base());
 }
 
 const Name &GetFirstName(const DataRef &x) {
@@ -81,10 +83,12 @@ const Name &GetFirstName(const DataRef &x) {
           [](const common::Indirection<StructureComponent> &sc)
               -> const Name & { return GetFirstName(sc.value()); },
           [](const common::Indirection<ArrayElement> &sc) -> const Name & {
-            return GetFirstName(sc.value().base);
+            return GetFirstName(sc.value().Base());
           },
           [](const common::Indirection<CoindexedNamedObject> &ci)
-              -> const Name & { return GetFirstName(ci.value().base); },
+              -> const Name & {
+            return GetFirstName(std::get<DataRef>(ci.value().t));
+          },
       },
       x.u);
 }
@@ -134,7 +138,7 @@ const CoindexedNamedObject *GetCoindexedNamedObject(const DataRef &base) {
           [](const common::Indirection<CoindexedNamedObject> &x)
               -> const CoindexedNamedObject * { return &x.value(); },
           [](const auto &x) -> const CoindexedNamedObject * {
-            return GetCoindexedNamedObject(x.value().base);
+            return GetCoindexedNamedObject(x.value().Base());
           },
       },
       base.u);
@@ -168,7 +172,7 @@ const CoindexedNamedObject *GetCoindexedNamedObject(
   return common::visit(
       common::visitors{
           [](const StructureComponent &x) -> const CoindexedNamedObject * {
-            return GetCoindexedNamedObject(x.base);
+            return GetCoindexedNamedObject(x.Base());
           },
           [](const auto &) -> const CoindexedNamedObject * { return nullptr; },
       },

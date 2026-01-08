@@ -440,8 +440,8 @@ public:
     Walk(std::get<std::list<AcValue>>(x.t), ", ");
   }
   template <typename A, typename B> void Unparse(const LoopBounds<A, B> &x) {
-    Walk(x.name), Put('='), Walk(x.lower), Put(','), Walk(x.upper);
-    Walk(",", x.step);
+    Walk(x.Name()), Put('='), Walk(x.Lower()), Put(','), Walk(x.Upper());
+    Walk(",", x.Step());
   }
   void Unparse(const AcImpliedDo &x) { // R774
     Put('('), Walk(std::get<std::list<AcValue>>(x.t), ", ");
@@ -798,18 +798,18 @@ public:
     Walk(imageSelector);
   }
   void Unparse(const StructureComponent &x) { // R913
-    Walk(x.base);
-    if (structureComponents_.find(x.component.source) !=
+    Walk(x.Base());
+    if (structureComponents_.find(x.Component().source) !=
         structureComponents_.end()) {
       Put('.');
     } else {
       Put('%');
     }
-    Walk(x.component);
+    Walk(x.Component());
   }
   void Unparse(const ArrayElement &x) { // R917
-    Walk(x.base);
-    Put('('), Walk(x.subscripts, ","), Put(')');
+    Walk(x.Base());
+    Put('('), Walk(x.Subscripts(), ","), Put(')');
   }
   void Unparse(const SubscriptTriplet &x) { // R921
     Walk(std::get<0>(x.t)), Put(':'), Walk(std::get<1>(x.t));

@@ -314,56 +314,6 @@ struct ParseTreeVisitorLookupScope {
     }
   }
 
-  template <typename V> static void Walk(const ArrayElement &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.base, visitor);
-      Walk(x.subscripts, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename M> static void Walk(ArrayElement &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.base, mutator);
-      Walk(x.subscripts, mutator);
-      mutator.Post(x);
-    }
-  }
-  template <typename V>
-  static void Walk(const CoindexedNamedObject &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.base, visitor);
-      Walk(x.imageSelector, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename M> static void Walk(CoindexedNamedObject &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.base, mutator);
-      Walk(x.imageSelector, mutator);
-      mutator.Post(x);
-    }
-  }
-  template <typename A, typename B, typename V>
-  static void Walk(const LoopBounds<A, B> &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.name, visitor);
-      Walk(x.lower, visitor);
-      Walk(x.upper, visitor);
-      Walk(x.step, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename A, typename B, typename M>
-  static void Walk(LoopBounds<A, B> &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.name, mutator);
-      Walk(x.lower, mutator);
-      Walk(x.upper, mutator);
-      Walk(x.step, mutator);
-      mutator.Post(x);
-    }
-  }
-
   // Expr traversal uses iteration rather than recursion to avoid
   // blowing out the stack on very deep expression parse trees.
   // It replaces implementations that looked like:
@@ -448,21 +398,6 @@ struct ParseTreeVisitorLookupScope {
       Walk(x.format, mutator);
       Walk(x.controls, mutator);
       Walk(x.items, mutator);
-      mutator.Post(x);
-    }
-  }
-  template <typename V>
-  static void Walk(const StructureComponent &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.base, visitor);
-      Walk(x.component, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename M> static void Walk(StructureComponent &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.base, mutator);
-      Walk(x.component, mutator);
       mutator.Post(x);
     }
   }
