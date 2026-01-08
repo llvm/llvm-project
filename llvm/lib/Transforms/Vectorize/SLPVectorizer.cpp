@@ -13445,6 +13445,7 @@ void BoUpSLP::transformNodes() {
       // insertvector instructions.
       unsigned StartIdx = 0;
       unsigned End = VL.size();
+      SmallBitVector Processed(End);
       for (unsigned VF = getFloorFullVectorNumberOfElements(
                *TTI, VL.front()->getType(), VL.size() - 1);
            VF >= MinVF; VF = getFloorFullVectorNumberOfElements(
@@ -13457,7 +13458,7 @@ void BoUpSLP::transformNodes() {
           ArrayRef<Value *> Slice = VL.slice(Cnt, VF);
           // If any instruction is vectorized already - do not try again.
           // Reuse the existing node, if it fully matches the slice.
-          if (isVectorized(Slice.front()) &&
+          if ((Processed.test(Cnt) || isVectorized(Slice.front())) &&
               !getSameValuesTreeEntry(Slice.front(), Slice, /*SameVF=*/true))
             continue;
           // Constant already handled effectively - skip.
@@ -13543,6 +13544,7 @@ void BoUpSLP::transformNodes() {
           continue;
         auto AddCombinedNode = [&](unsigned Idx, unsigned Cnt, unsigned Sz) {
           E.CombinedEntriesWithIndices.emplace_back(Idx, Cnt);
+          Processed.set(Cnt, Cnt + Sz);
           if (StartIdx == Cnt)
             StartIdx = Cnt + Sz;
           if (End == Cnt + Sz)
