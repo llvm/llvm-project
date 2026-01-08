@@ -243,10 +243,6 @@ Sema::CheckCXX2CRelocatable(const CXXRecordDecl *D) {
     if (!IsEligibleForTrivialRelocation(*this, D))
       return false;
 
-    // has the trivially_relocatable_if_eligible class-property-specifier,
-    if (D->hasAttr<TriviallyRelocatableAttr>())
-      return true;
-
     // is a union with no user-declared special member functions, or
     if (IsUnion())
       return true;
@@ -2082,8 +2078,6 @@ static void DiagnoseNonTriviallyRelocatableReason(Sema &SemaRef,
         << diag::TraitNotSatisfiedReason::DeletedDtr << /*Deleted*/ 0
         << D->getDestructor()->getSourceRange();
 
-  if (D->hasAttr<TriviallyRelocatableAttr>())
-    return;
   DiagnoseNonDefaultMovable(SemaRef, Loc, D);
 }
 

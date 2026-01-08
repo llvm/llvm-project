@@ -1048,6 +1048,10 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_Abs(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::ABS, Op);
 }
 
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_FAbs(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::FABS, Op);
+}
+
 /// Match a zext or identity
 /// Allows to peek through optional extensions
 template <typename Opnd> inline auto m_ZExtOrSelf(const Opnd &Op) {

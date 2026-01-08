@@ -5047,6 +5047,8 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
                         StopBeforeMatch);
               return false;
             }
+          } else {
+            Data.NeedDevicePtrModifier = OMPC_NEED_DEVICE_PTR_unknown;
           }
         }
       }
