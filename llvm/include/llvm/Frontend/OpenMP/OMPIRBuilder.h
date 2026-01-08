@@ -14,6 +14,7 @@
 #ifndef LLVM_FRONTEND_OPENMP_OMPIRBUILDER_H
 #define LLVM_FRONTEND_OPENMP_OMPIRBUILDER_H
 
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Frontend/Atomic/Atomic.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
@@ -648,6 +649,38 @@ public:
   using BodyGenCallbackTy =
       function_ref<Error(InsertPointTy AllocaIP, InsertPointTy CodeGenIP)>;
 
+  /// Callback type for task duplication function code generation. This is the
+  /// task duplication function passed to __kmpc_taskloop. It is expected that
+  /// this function will set up (first)private variables in the duplicated task
+  /// which have non-trivial (copy-)constructors. Insertion points are handled
+  /// the same way as for BodyGenCallbackTy.
+  ///
+  /// \ref createTaskloop lays out the task's auxiliary data structure as:
+  /// `{ lower bound, upper bound, step, data... }`. DestPtr and SrcPtr point
+  /// to this data.
+  ///
+  /// It is acceptable for the callback to be set to nullptr. In that case no
+  /// function will be generated and nullptr will be passed as the task
+  /// duplication function to __kmpc_taskloop.
+  ///
+  /// \param AllocaIP is the insertion point at which new alloca instructions
+  ///                 should be placed. The BasicBlock it is pointing to must
+  ///                 not be split.
+  /// \param CodeGenIP is the insertion point at which the body code should be
+  ///                  placed.
+  /// \param DestPtr This is a pointer to data inside the newly duplicated
+  ///                task's auxiliary data structure (allocated after the task
+  ///                descriptor.)
+  /// \param SrcPtr This is a pointer to data inside the original task's
+  ///               auxiliary data structure (allocated after the task
+  ///               descriptor.)
+  ///
+  /// \return The insertion point immediately after the generated code, or an
+  /// error if any occured.
+  using TaskDupCallbackTy = function_ref<Expected<InsertPointTy>(
+      InsertPointTy AllocaIP, InsertPointTy CodeGenIP, Value *DestPtr,
+      Value *SrcPtr)>;
+
   // This is created primarily for sections construct as llvm::function_ref
   // (BodyGenCallbackTy) is not storable (as described in the comments of
   // function_ref class - function_ref contains non-ownable reference
@@ -1218,6 +1251,26 @@ private:
                        LoopAnalysis &LIA, LoopInfo &LI, llvm::Loop *L,
                        const Twine &NamePrefix = "");
 
+  /// Creates a task duplication function to be passed to kmpc_taskloop.
+  ///
+  /// The OpenMP runtime defines this function as taking the destination
+  /// kmp_task_t, source kmp_task_t, and a lastprivate flag. This function is
+  /// called on the source and destination tasks after the source task has been
+  /// duplicated to create the destination task. At this point the destination
+  /// task has been otherwise set up from the runtime's perspective, but this
+  /// function is needed to fix up any data for the duplicated task e.g. private
+  /// variables with non-trivial constructors.
+  ///
+  /// \param PrivatesTy    The type of the privates structure for the task.
+  /// \param PrivatesIndex The index inside the privates structure containing
+  ///                      the data for the callback.
+  /// \param DupCB         The callback to generate the duplication code. See
+  ///                      documentation for \ref TaskDupCallbackTy. This can be
+  ///                      nullptr.
+  Expected<Value *> createTaskDuplicationFunction(Type *PrivatesTy,
+                                                  int32_t PrivatesIndex,
+                                                  TaskDupCallbackTy DupCB);
+
 public:
   /// Modifies the canonical loop to be a workshare loop.
   ///
@@ -1403,6 +1456,29 @@ public:
                Value *DepVal)
         : DepKind(DepKind), DepValueType(DepValueType), DepVal(DepVal) {}
   };
+
+  /// Generator for `#omp taskloop`
+  ///
+  /// \param Loc The location where the taskloop construct was encountered.
+  /// \param AllocaIP The insertion point to be used for alloca instructions.
+  /// \param BodyGenCB Callback that will generate the region code.
+  /// \param LoopInfo Callback that return the CLI
+  /// \param LBVal Lowerbound value of loop
+  /// \param UBVal Upperbound value of loop
+  /// \param StepVal Step value of loop
+  /// \param Tied True if the task is tied, false if the task is untied.
+  /// \param DupCB The callback to generate the duplication code. See
+  /// documentation for \ref TaskDupCallbackTy. This can be nullptr.
+  /// \param TaskContextStructPtrVal If non-null, a pointer to  to be placed
+  ///                                immediately after the {lower bound, upper
+  ///                                bound, step} values in the task data.
+  LLVM_ABI InsertPointOrErrorTy createTaskloop(
+      const LocationDescription &Loc, InsertPointTy AllocaIP,
+      BodyGenCallbackTy BodyGenCB,
+      llvm::function_ref<llvm::Expected<llvm::CanonicalLoopInfo *>()> LoopInfo,
+      Value *LBVal, Value *UBVal, Value *StepVal, bool Tied = true,
+      TaskDupCallbackTy DupCB = nullptr,
+      Value *TaskContextStructPtrVal = nullptr);
 
   /// Generator for `#omp task`
   ///
@@ -2350,6 +2426,7 @@ public:
     PostOutlineCBTy PostOutlineCB;
     BasicBlock *EntryBB, *ExitBB, *OuterAllocaBB;
     SmallVector<Value *, 2> ExcludeArgsFromAggregate;
+    SetVector<Value *> Inputs, Outputs;
     // TODO: this should be safe to enable by default
     bool FixUpNonEntryAllocas = false;
 
@@ -2519,6 +2596,9 @@ public:
     /// Total number of iterations of the SPMD or Generic-SPMD kernel or null if
     /// it is a generic kernel.
     Value *LoopTripCount = nullptr;
+
+    /// Device ID value used in the kernel launch.
+    Value *DeviceID = nullptr;
   };
 
   /// Data structure that contains the needed information to construct the
