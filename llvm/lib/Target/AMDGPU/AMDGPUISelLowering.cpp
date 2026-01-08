@@ -3772,43 +3772,75 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT_SAT(const SDValue Op,
   SDValue Src = Op.getOperand(0);
   unsigned OpOpcode = Op.getOpcode();
   EVT SrcVT = Src.getValueType();
-  EVT DestVT = Op.getValueType();
-  SDValue SatVT = Op.getNode()->getOperand(1);
+  EVT DstVT = Op.getValueType();
+  SDValue SatVTOp = Op.getNode()->getOperand(1);
+  EVT SatVT = cast<VTSDNode>(SatVTOp)->getVT();
   SDLoc DL(Op);
 
+  uint64_t DstWidth = DstVT.getScalarSizeInBits();
+  uint64_t SatWidth = SatVT.getScalarSizeInBits();
+  assert(SatWidth <= DstWidth && "Saturation width cannot exceed result width");
+
   // Will be selected natively
-  if (DestVT == MVT::i32 && (SrcVT == MVT::f32 || SrcVT == MVT::f64))
+  if (DstVT == MVT::i32 && SatWidth == DstWidth &&
+      (SrcVT == MVT::f32 || SrcVT == MVT::f64))
     return Op;
 
-  // Extend to i64 dst
-  if (DestVT == MVT::i64 &&
-      (SrcVT == MVT::f16 ||
-       (SrcVT == MVT::f32 && Src.getOpcode() == ISD::FP16_TO_FP))) {
-    unsigned Ext =
-        OpOpcode == ISD::FP_TO_SINT_SAT ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
-    SDValue Int32VT = DAG.getValueType(MVT::i32);
+  const SDValue Int32VT = DAG.getValueType(MVT::i32);
+
+  // Perform all saturation at i32 and truncate
+  if (SatWidth < DstWidth) {
+    const uint64_t Int32Width = 32;
     SDValue FpToInt32 = DAG.getNode(OpOpcode, DL, MVT::i32, Src, Int32VT);
-    return DAG.getNode(Ext, DL, MVT::i64, FpToInt32);
+    SDValue Int32SatVal;
+
+    if (Op.getOpcode() == ISD::FP_TO_SINT_SAT) {
+      SDValue MinConst = DAG.getConstant(
+          APInt::getSignedMaxValue(SatWidth).sext(Int32Width), DL, MVT::i32);
+      SDValue MaxConst = DAG.getConstant(
+          APInt::getSignedMinValue(SatWidth).sext(Int32Width), DL, MVT::i32);
+      SDValue MinVal =
+          DAG.getNode(ISD::SMIN, DL, MVT::i32, FpToInt32, MinConst);
+      Int32SatVal = DAG.getNode(ISD::SMAX, DL, MVT::i32, MinVal, MaxConst);
+    } else {
+      SDValue MinConst = DAG.getConstant(
+          APInt::getMaxValue(SatWidth).zext(Int32Width), DL, MVT::i32);
+      Int32SatVal = DAG.getNode(ISD::UMIN, DL, MVT::i32, FpToInt32, MinConst);
+    }
+
+    if (DstWidth == Int32Width)
+      return Int32SatVal;
+    if (DstWidth < Int32Width)
+      return DAG.getNode(ISD::TRUNCATE, DL, DstVT, Int32SatVal);
+
+    // DstWidth > Int32Width
+    const unsigned Ext =
+        OpOpcode == ISD::FP_TO_SINT_SAT ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+    return DAG.getNode(Ext, DL, DstVT, FpToInt32);
+  }
+
+  // SatWidth == DstWidth
+
+  // Saturate at i32 for i64 dst and 16b src (will invoke f16 promotion below)
+  if (DstVT == MVT::i64 &&
+      (SrcVT == MVT::f16 || SrcVT == MVT::bf16 ||
+       (SrcVT == MVT::f32 && Src.getOpcode() == ISD::FP16_TO_FP))) {
+    return DAG.getNode(OpOpcode, DL, DstVT, Src, Int32VT);
   }
 
   // Promote f16/bf16 src to f32
   if (SrcVT == MVT::f16 || SrcVT == MVT::bf16) {
     SDValue PromotedSrc = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Src);
-    return DAG.getNode(Op.getOpcode(), DL, DestVT, PromotedSrc, SatVT);
+    return DAG.getNode(Op.getOpcode(), DL, DstVT, PromotedSrc, SatVTOp);
   }
 
-  // Reject unknown sources
-  if (SrcVT != MVT::f32 && SrcVT != MVT::f64)
-    return SDValue();
-
-  // Promote sub-i32 dst to i32
-  if (DestVT == MVT::i1 || DestVT == MVT::i16) {
-    SDValue Int32VT = DAG.getValueType(MVT::i32);
-    SDValue FpToInt32 = DAG.getNode(OpOpcode, DL, MVT::i32, Src, Int32VT);
-    return DAG.getNode(ISD::TRUNCATE, DL, DestVT, FpToInt32);
+  // Promote sub-i32 dst to i32 with sub-i32 saturation
+  if (DstWidth < 32) {
+    SDValue FpToInt32 = DAG.getNode(OpOpcode, DL, MVT::i32, Src, SatVTOp);
+    return DAG.getNode(ISD::TRUNCATE, DL, DstVT, FpToInt32);
   }
 
-  // TODO: can we implement i64 dst?
+  // TODO: can we implement i64 dst for f32/f64?
 
   return SDValue();
 }
