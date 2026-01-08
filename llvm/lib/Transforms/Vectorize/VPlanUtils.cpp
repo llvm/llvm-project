@@ -86,7 +86,7 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
                                            PredicatedScalarEvolution &PSE,
                                            const Loop *L) {
   ScalarEvolution &SE = *PSE.getSE();
-  if (isa<VPIRValue, VPSymbolicValue>(V)) {
+  if (match(V, m_LiveIn())) {
     Value *LiveIn = V->getUnderlyingValue();
     if (LiveIn && SE.isSCEVable(LiveIn->getType()))
       return SE.getSCEV(LiveIn);
@@ -276,7 +276,7 @@ static bool preservesUniformity(unsigned Opcode) {
 
 bool vputils::isSingleScalar(const VPValue *VPV) {
   // A live-in must be uniform across the scope of VPlan.
-  if (isa<VPIRValue, VPSymbolicValue>(VPV))
+  if (match(VPV, m_LiveIn()))
     return true;
 
   if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV)) {
@@ -313,7 +313,7 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
 
 bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
   // Live-ins are uniform.
-  if (isa<VPIRValue, VPSymbolicValue>(V))
+  if (match(V, m_LiveIn()))
     return true;
 
   VPRecipeBase *R = V->getDefiningRecipe();

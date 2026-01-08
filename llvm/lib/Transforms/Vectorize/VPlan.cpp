@@ -241,7 +241,7 @@ VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
       CurrentParentLoop(CurrentParentLoop), TypeAnalysis(*Plan), VPDT(*Plan) {}
 
 Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
-  if (isa<VPIRValue, VPSymbolicValue>(Def))
+  if (match(Def, m_LiveIn()))
     return Def->getUnderlyingValue();
 
   if (hasScalarValue(Def, Lane))
@@ -274,8 +274,8 @@ Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
 
 Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   if (NeedsScalar) {
-    assert((VF.isScalar() || isa<VPIRValue, VPSymbolicValue>(Def) ||
-            hasVectorValue(Def) || !vputils::onlyFirstLaneUsed(Def) ||
+    assert((VF.isScalar() || match(Def, m_LiveIn()) || hasVectorValue(Def) ||
+            !vputils::onlyFirstLaneUsed(Def) ||
             (hasScalarValue(Def, VPLane(0)) &&
              Data.VPV2Scalars[Def].size() == 1)) &&
            "Trying to access a single scalar per part but has multiple scalars "
