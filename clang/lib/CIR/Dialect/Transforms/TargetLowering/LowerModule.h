@@ -30,7 +30,6 @@ class LowerModule {
   const std::unique_ptr<clang::TargetInfo> target;
   std::unique_ptr<CIRCXXABI> abi;
   [[maybe_unused]] mlir::PatternRewriter &rewriter;
-  clang::CodeGenOptions codeGenOpts;
 
 public:
   LowerModule(clang::LangOptions langOpts, clang::CodeGenOptions codeGenOpts,
@@ -46,7 +45,6 @@ public:
   CIRCXXABI &getCXXABI() const { return *abi; }
   const clang::TargetInfo &getTarget() const { return *target; }
   mlir::MLIRContext *getMLIRContext() { return module.getContext(); }
-  clang::CodeGenOptions getCodeGenOpts() const { return codeGenOpts; }
 };
 
 std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module,

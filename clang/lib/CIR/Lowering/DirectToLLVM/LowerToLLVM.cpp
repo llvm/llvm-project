@@ -1708,9 +1708,15 @@ mlir::LogicalResult CIRToLLVMAddrOfReturnAddrOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-static bool isLoadOrStoreInvariantGroup(cir::LowerModule *lowerMod,
-                                        mlir::Value addr) {
-  if (!lowerMod || lowerMod->getCodeGenOpts().OptimizationLevel == 0)
+static unsigned getOptimizationLevel(mlir::ModuleOp mod) {
+  if (auto optInfo = mlir::cast_if_present<cir::OptInfoAttr>(
+          mod->getAttr(cir::CIRDialect::getOptInfoAttrName())))
+    return optInfo.getLevel();
+  return 0;
+}
+
+static bool isLoadOrStoreInvariantGroup(mlir::ModuleOp mod, mlir::Value addr) {
+  if (getOptimizationLevel(mod) < 1)
     return false;
 
   if (auto addrAllocaOp =
@@ -1740,8 +1746,9 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
       rewriter, op->getLoc(), llvmTy, adaptor.getAddr(), alignment,
       op.getIsVolatile(), /*isNonTemporal=*/false,
       /*isInvariant=*/false,
-      isLoadOrStoreInvariantGroup(lowerMod, op.getAddr()), ordering,
-      syncScope.value_or(llvm::StringRef()));
+      isLoadOrStoreInvariantGroup(op->getParentOfType<mlir::ModuleOp>(),
+                                  op.getAddr()),
+      ordering, syncScope.value_or(llvm::StringRef()));
 
   // Convert adapted result to its original type if needed.
   mlir::Value result =
@@ -1776,8 +1783,9 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
       rewriter, op->getLoc(), value, adaptor.getAddr(), alignment,
       op.getIsVolatile(),
       /*isNonTemporal=*/false,
-      isLoadOrStoreInvariantGroup(lowerMod, op.getAddr()), memorder,
-      syncScope.value_or(llvm::StringRef()));
+      isLoadOrStoreInvariantGroup(op->getParentOfType<mlir::ModuleOp>(),
+                                  op.getAddr()),
+      memorder, syncScope.value_or(llvm::StringRef()));
   rewriter.replaceOp(op, storeOp);
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
   return mlir::LogicalResult::success();
@@ -4300,7 +4308,7 @@ mlir::LogicalResult CIRToLLVMAwaitOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMInvariantGroupOpLowering::matchAndRewrite(
     cir::InvariantGroupOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  if (!lowerMod || lowerMod->getCodeGenOpts().OptimizationLevel == 0)
+  if (getOptimizationLevel(op->getParentOfType<mlir::ModuleOp>()) < 1)
     rewriter.replaceOp(op, adaptor.getPtr());
   else
     rewriter.replaceOpWithNewOp<mlir::LLVM::LaunderInvariantGroupOp>(

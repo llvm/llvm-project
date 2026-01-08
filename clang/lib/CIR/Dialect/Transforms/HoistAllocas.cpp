@@ -61,25 +61,36 @@ static bool hasStoreToAllocaInWhileCond(cir::AllocaOp alloca) {
   //     }
   //   }
   //
-  // Note that %x.slot is emitted outside the cir.while operation. Ideally, the
-  // cir.while operation should cover this cir.alloca operation, but currently
-  // CIR does not work this way. When hoisting such an alloca operation, one
-  // must remove the "const" flag from it, otherwise LLVM lowering code will
+  // Note that %x.slot is emitted outside the cir.while operation.  When
+  // hoisting such an alloca operation, one // must remove the "const" flag from
+  // it, otherwise LLVM lowering code will
   // mistakenly attach invariant group metadata to the load and store operations
   // in the while body, indicating that all loads and stores across all
   // iterations of the loop are constant.
 
   for (mlir::Operation *user : alloca->getUsers()) {
-    if (!mlir::isa<cir::StoreOp>(user))
+    auto store = mlir::dyn_cast<cir::StoreOp>(user);
+    if (!store)
       continue;
 
-    auto store = mlir::cast<cir::StoreOp>(user);
     mlir::Operation *storeParentOp = store->getParentOp();
     if (!mlir::isa<cir::WhileOp>(storeParentOp))
       continue;
 
-    auto whileOp = mlir::cast<cir::WhileOp>(storeParentOp);
-    return &whileOp.getCond() == store->getParentRegion();
+    auto whileOp = mlir::dyn_cast<cir::WhileOp>(storeParentOp);
+    if (!whileOp)
+      continue;
+
+    mlir::Region *region = store->getParentRegion();
+    while (region) {
+      if (region == &whileOp.getCond())
+        return true;
+      if (region == &whileOp.getBody())
+        return false;
+      region = region->getParentRegion();
+    }
+
+    return false;
   }
 
   return false;
@@ -87,7 +98,7 @@ static bool hasStoreToAllocaInWhileCond(cir::AllocaOp alloca) {
 
 static void processConstAlloca(cir::AllocaOp alloca) {
   // When optimization is enabled, LLVM lowering would start emitting invariant
-  // group metadata for loads and stores to alloca-ed objects with "const"
+  // group metadata for loads and stores to alloca-ed objects with the "const"
   // attribute. For example, the following CIR:
   //
   //   %slot = cir.alloca !s32i [init, const]
@@ -103,7 +114,7 @@ static void processConstAlloca(cir::AllocaOp alloca) {
   // The invariant group metadata would tell LLVM optimizer that the store and
   // load instruction would store and load the same value from %slot.
   //
-  // However, things started to get tricky when such an alloca operation
+  // However, things start to get tricky when such an alloca operation
   // appears in the body of a loop construct:
   //
   //   cir.some_loop_construct {
@@ -120,12 +131,12 @@ static void processConstAlloca(cir::AllocaOp alloca) {
   //     %1 = cir.load %slot
   //   }
   //
-  // Notice how alloca hoisting change the semantics of the program in such a
+  // Notice how alloca hoisting changes the semantics of the program in such a
   // case. The transformed code now indicates the optimizer that the load and
   // store operations load and store the same value **across all iterations of
   // the loop**!
   //
-  // To overcome this problem, we instead transform the program into this:
+  // To overcome this problem, we instead transform the CIR into this:
   //
   //   %slot = cir.alloca !s32i [init, const]
   //   cir.some_loop_construct {
@@ -137,9 +148,9 @@ static void processConstAlloca(cir::AllocaOp alloca) {
   // The cir.invariant_group operation attaches fresh invariant information to
   // the operand pointer and yields a pointer with the fresh invariant
   // information. Upon each loop iteration, the old invariant information is
-  // disgarded, and a new invariant information is attached, thus the correct
-  // program semantic retains. During LLVM lowering, the cir.invariant_group
-  // operation would eventually become an intrinsic call to
+  // disgarded, and new invariant information is attached, thus the correct
+  // semantics are retained. During LLVM lowering, the cir.invariant_group
+  // operation will eventually become an intrinsic call to
   // @llvm.launder.invariant.group.
 
   if (isOpInLoop(alloca)) {

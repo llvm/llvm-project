@@ -49,7 +49,7 @@ LowerModule::LowerModule(clang::LangOptions langOpts,
                          std::unique_ptr<clang::TargetInfo> target,
                          mlir::PatternRewriter &rewriter)
     : module(module), target(std::move(target)), abi(createCXXABI(*this)),
-      rewriter(rewriter), codeGenOpts(codeGenOpts) {}
+      rewriter(rewriter) {}
 
 // TODO: not to create it every time
 std::unique_ptr<LowerModule>
