@@ -249,8 +249,7 @@ public:
     Vulkan, // Vulkan SPIR-V
     CheriotRTOS,
     ChipStar,
-    HIPSPV,
-    LastOSType = HIPSPV
+    LastOSType = ChipStar
   };
   enum EnvironmentType {
     UnknownEnvironment,
