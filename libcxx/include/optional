@@ -477,11 +477,6 @@ struct __optional_storage_base : __optional_destruct_base<_Tp> {
     }
   }
 
-  template <class _Up>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __assign_from_val(_Up&& __val) {
-    this->__get() = std::forward<_Up>(__val);
-  }
-
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __swap(__optional_storage_base& __rhs) {
     using std::swap;
     swap(this->__get(), __rhs.__get());
@@ -496,12 +491,18 @@ struct __optional_storage_base<_Tp, true> {
 
   _LIBCPP_HIDE_FROM_ABI constexpr __optional_storage_base() noexcept : __value_(nullptr) {}
 
+  template <class _Up>
+  _LIBCPP_HIDE_FROM_ABI constexpr void __convert_init_ref_val(_Up&& __val) {
+    _Tp& __r(std::forward<_Up>(__val));
+    __value_ = std::addressof(__r);
+  }
+
   template <class _UArg>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __optional_storage_base(in_place_t, _UArg&& __uarg)
-      : __value_(std::addressof(__uarg)) {
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __optional_storage_base(in_place_t, _UArg&& __uarg) {
     static_assert(!__reference_constructs_from_temporary_v<_Tp, _UArg>,
                   "Attempted to construct a reference element in optional from a "
                   "possible temporary");
+    __convert_init_ref_val(__uarg);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void reset() noexcept { __value_ = nullptr; }
@@ -516,7 +517,7 @@ struct __optional_storage_base<_Tp, true> {
     static_assert(!__reference_constructs_from_temporary_v<_Tp, _UArg>,
                   "Attempted to construct a reference element in tuple from a "
                   "possible temporary");
-    __value_ = std::addressof(__val);
+    __convert_init_ref_val(__val);
   }
 
   template <class _That>
@@ -536,11 +537,6 @@ struct __optional_storage_base<_Tp, true> {
       else
         __construct(std::forward<_That>(__opt).__get());
     }
-  }
-
-  template <class _Up>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __assign_from_val(_Up&& __val) noexcept {
-    __value_ = std::addressof(__val);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __swap(__optional_storage_base& __rhs) noexcept {
@@ -1040,11 +1036,11 @@ public:
             enable_if_t<_And<_IsNotSame<__remove_cvref_t<_Up>, optional>,
                              _Or<_IsNotSame<__remove_cvref_t<_Up>, _Tp>, _Not<is_scalar<_Tp>>>,
                              is_constructible<_Tp, _Up>,
-                             is_assignable<_Tp&, _Up>>::value,
+                             is_assignable<_Tp&, _Up>, is_object<_Tp>>::value,
                         int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 optional& operator=(_Up&& __v) {
     if (this->has_value())
-      this->__assign_from_val(std::forward<_Up>(__v));
+      this->__get() = std::forward<_Up>(__v);
     else
       this->__construct(std::forward<_Up>(__v));
     return *this;
