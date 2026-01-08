@@ -4909,15 +4909,15 @@ genCacheBounds(Fortran::lower::AbstractConverter &converter,
           Fortran::evaluate::AsGenericExpr(triplet->upper());
 
       if (!lowerExpr && !upperExpr) {
-        mlir::emitError(loc, "OpenACC cache directive requires at least one "
-                             "bound to be specified for array section");
+        llvm::report_fatal_error("OpenACC cache directive requires at least "
+                                 "one bound to be specified for array section");
       }
 
-      // OpenACC cache does not support strided array sections.
-      if (auto strideVal = Fortran::evaluate::ToInt64(triplet->stride())) {
-        if (*strideVal != 1)
-          mlir::emitError(loc, "OpenACC cache directive does not support "
-                               "strided array sections");
+      // OpenACC cache only supports unit stride (default or explicit 1).
+      auto strideVal = Fortran::evaluate::ToInt64(triplet->stride());
+      if (!strideVal || *strideVal != 1) {
+        llvm::report_fatal_error("OpenACC cache directive does not support "
+                                 "strided array sections");
       }
 
       // Compute lower bound (use array lb if not specified).
