@@ -101,9 +101,7 @@ public:
     return *this;
   }
 
-  bool is_null() const noexcept { return get_id() == 0; }
-
-  bool joinable() const noexcept { return !is_null(); }
+  bool joinable() const noexcept { return !pthread_equal(Thread, native_handle_type()); }
 
   inline id get_id() const noexcept;
 
@@ -139,7 +137,7 @@ thread::thread(std::optional<unsigned> StackSizeInBytes, Function &&f,
 
   Thread = llvm_execute_on_thread_impl(ThreadProxy<CalleeTuple>, Callee.get(),
                                        StackSizeInBytes);
-  if (!is_null())
+  if (joinable())
     Callee.release();
 }
 
