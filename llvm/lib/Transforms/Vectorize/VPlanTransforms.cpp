@@ -3936,7 +3936,7 @@ void VPlanTransforms::handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
       cast<VPIRPhi>(&R)->swapOperands();
   }
 
-  VPBuilder Builder(LatchVPBB->getTerminator());
+  VPBuilder Builder(EarlyExitingVPBB->getTerminator());
   VPBlockBase *TrueSucc = EarlyExitingVPBB->getSuccessors()[0];
   assert(match(EarlyExitingVPBB->getTerminator(), m_BranchOnCond()) &&
          "Terminator must be be BranchOnCond");
@@ -3945,6 +3945,18 @@ void VPlanTransforms::handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
   auto *CondToEarlyExit = TrueSucc == EarlyExitVPBB
                               ? CondOfEarlyExitingVPBB
                               : Builder.createNot(CondOfEarlyExitingVPBB);
+
+  // Create a mask and predicate any "exited" lanes in successor blocks.
+  VPValue *FirstActiveLane =
+      Builder.createNaryOp(VPInstruction::FirstActiveLane, {CondToEarlyExit},
+                           DebugLoc::getUnknown(), "first.active.lane");
+  VPValue *SuccMask = Builder.createICmp(
+      CmpInst::ICMP_ULT,
+      Builder.createNaryOp(VPInstruction::StepVector, {},
+                           Type::getInt64Ty(Plan.getContext())),
+      FirstActiveLane);
+  Builder.createNaryOp(VPInstruction::BranchOnCond, SuccMask);
+  Builder.setInsertPoint(LatchVPBB->getTerminator());
 
   // Create a BranchOnTwoConds in the latch that branches to:
   // [0] vector.early.exit, [1] middle block, [2] header (continue looping).
@@ -3973,9 +3985,6 @@ void VPlanTransforms::handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
     VPValue *IncomingFromEarlyExit = ExitIRI->getOperand(EarlyExitIdx);
     if (!IncomingFromEarlyExit->isLiveIn()) {
       // Update the incoming value from the early exit.
-      VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
-          VPInstruction::FirstActiveLane, {CondToEarlyExit},
-          DebugLoc::getUnknown(), "first.active.lane");
       IncomingFromEarlyExit = EarlyExitB.createNaryOp(
           VPInstruction::ExtractLane, {FirstActiveLane, IncomingFromEarlyExit},
           DebugLoc::getUnknown(), "early.exit.value");
