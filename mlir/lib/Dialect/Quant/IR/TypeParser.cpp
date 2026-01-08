@@ -32,10 +32,12 @@ static Type parseStorageType(DialectAsmParser &parser, bool &isSigned) {
 
     if (auto quantStorageTypeInterface =
             llvm::dyn_cast<QuantStorageTypeInterface>(type)) {
-      isSigned = quantStorageTypeInterface.isStorageSigned();
+      // Returns true if the type defaults to signed (e.g., si8, i8 or float
+      // types), false if it defaults to unsigned.
+      isSigned = quantStorageTypeInterface.shouldDefaultToSigned();
       storageTypeWidth = quantStorageTypeInterface.getStorageWidth();
     } else {
-      parser.emitError(typeLoc, "illegal quantized storage type alias");
+      parser.emitError(typeLoc, "illegal storage type prefix");
       return nullptr;
     }
   } else if (succeeded(parser.parseKeyword(&identifier))) {
@@ -48,7 +50,7 @@ static Type parseStorageType(DialectAsmParser &parser, bool &isSigned) {
       isSigned = false;
       type = parser.getBuilder().getIntegerType(storageTypeWidth);
     } else {
-      parser.emitError(typeLoc, "illegal quantized storage type alias");
+      parser.emitError(typeLoc, "illegal storage type prefix");
       return nullptr;
     }
   } else {
@@ -66,13 +68,13 @@ static Type parseStorageType(DialectAsmParser &parser, bool &isSigned) {
 }
 
 static ParseResult parseStorageRange(DialectAsmParser &parser, Type storageType,
-                                     int64_t &storageTypeMin,
+                                     bool isSigned, int64_t &storageTypeMin,
                                      int64_t &storageTypeMax) {
   auto quantStorageTypeInterface =
       llvm::dyn_cast<QuantStorageTypeInterface>(storageType);
 
-  int64_t defaultMin = quantStorageTypeInterface.getDefaultMinimum();
-  int64_t defaultMax = quantStorageTypeInterface.getDefaultMaximum();
+  int64_t defaultMin = quantStorageTypeInterface.getDefaultMinimum(isSigned);
+  int64_t defaultMax = quantStorageTypeInterface.getDefaultMaximum(isSigned);
 
   if (failed(parser.parseOptionalLess())) {
     storageTypeMin = defaultMin;
@@ -145,7 +147,8 @@ static Type parseAnyType(DialectAsmParser &parser) {
   }
 
   // Storage type range.
-  if (parseStorageRange(parser, storageType, storageTypeMin, storageTypeMax)) {
+  if (parseStorageRange(parser, storageType, isSigned, storageTypeMin,
+                        storageTypeMax)) {
     return nullptr;
   }
 
@@ -360,7 +363,8 @@ static Type parseUniformType(DialectAsmParser &parser) {
   }
 
   // Storage type range.
-  if (parseStorageRange(parser, storageType, storageTypeMin, storageTypeMax)) {
+  if (parseStorageRange(parser, storageType, isSigned, storageTypeMin,
+                        storageTypeMax)) {
     return nullptr;
   }
 
@@ -499,7 +503,7 @@ static void printStorageType(QuantizedType type, DialectAsmPrinter &out) {
   auto quantStorageTypeInterface =
       llvm::dyn_cast<QuantStorageTypeInterface>(type.getStorageType());
 
-  out << quantStorageTypeInterface.getStorageType();
+  out << quantStorageTypeInterface.getStorageType(type.isSigned());
 
   // storageTypeMin and storageTypeMax if not default.
   if (type.hasStorageTypeBounds()) {

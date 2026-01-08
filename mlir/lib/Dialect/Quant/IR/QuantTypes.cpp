@@ -55,8 +55,9 @@ QuantizedType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
     if (integralWidth == 0 || integralWidth > MaxStorageBits)
       return emitError() << "illegal storage type size: " << integralWidth;
 
-    int64_t defaultMin = quantStorageTypeInterface.getDefaultMinimum();
-    int64_t defaultMax = quantStorageTypeInterface.getDefaultMaximum();
+    bool isSigned = flags & QuantizationFlags::Signed;
+    int64_t defaultMin = quantStorageTypeInterface.getDefaultMinimum(isSigned);
+    int64_t defaultMax = quantStorageTypeInterface.getDefaultMaximum(isSigned);
 
     if (storageTypeMax - storageTypeMin <= 0 || storageTypeMin < defaultMin ||
         storageTypeMax > defaultMax) {
@@ -87,8 +88,8 @@ bool QuantizedType::hasStorageTypeBounds() const {
   auto quantStorageTypeInterface =
       llvm::dyn_cast<QuantStorageTypeInterface>(storageType);
 
-  int64_t defaultMin = quantStorageTypeInterface.getDefaultMinimum();
-  int64_t defaultMax = quantStorageTypeInterface.getDefaultMaximum();
+  int64_t defaultMin = quantStorageTypeInterface.getDefaultMinimum(isSigned());
+  int64_t defaultMax = quantStorageTypeInterface.getDefaultMaximum(isSigned());
 
   return defaultMin != getStorageTypeMin() || defaultMax != getStorageTypeMax();
 }

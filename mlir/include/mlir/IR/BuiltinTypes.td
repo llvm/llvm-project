@@ -121,17 +121,18 @@ def Builtin_Float8E5M2 : Builtin_FloatType<"Float8E5M2", "f8E5M2",
 
   let extraClassDeclaration = [{
     /// QuantStorageTypeInterface method implementations
-    bool isStorageSigned() const { return true; }
+    /// Whether the storage type should default to signed when used in quantization.
+    bool shouldDefaultToSigned() const { return true; }
     /// Get the bit width of this 8-bit floating point type.
     unsigned getStorageWidth() const { return 8; }
     
     /// Get default maximum value for this 8-bit floating point type.
-    int64_t getDefaultMaximum() const { return 57344; }
+    int64_t getDefaultMaximum(bool isSigned) const { return 57344; }
     /// Get default minimum value for this 8-bit floating point type.
-    int64_t getDefaultMinimum() const { return -getDefaultMaximum(); }
+    int64_t getDefaultMinimum(bool isSigned) const { return -getDefaultMaximum(isSigned); }
     
     /// Get the storage type as a string.
-    std::string getStorageType() const { return "f8E5M2"; }
+    std::string getStorageType(bool isSigned) const { return "f8E5M2"; }
 
     /// Check if this 8-bit floating point type uses packed representation.
     bool isPacked() const { return false; }
@@ -192,17 +193,18 @@ def Builtin_Float8E4M3FN : Builtin_FloatType<"Float8E4M3FN", "f8E4M3FN",
 
   let extraClassDeclaration = [{
     /// QuantStorageTypeInterface method implementations
-    bool isStorageSigned() const { return true; }
+    /// Whether the storage type should default to signed when used in quantization.
+    bool shouldDefaultToSigned() const { return true; }
     /// Get the bit width of this 8-bit floating point type.
     unsigned getStorageWidth() const { return 8; }
     
     /// Get default maximum value for this 8-bit floating point type.
-    int64_t getDefaultMaximum() const { return 448; }
+    int64_t getDefaultMaximum(bool isSigned) const { return 448; }
     /// Get default minimum value for this 8-bit floating point type.
-    int64_t getDefaultMinimum() const { return -getDefaultMaximum(); }
+    int64_t getDefaultMinimum(bool isSigned) const { return -getDefaultMaximum(isSigned); }
     
     /// Get the storage type as a string.
-    std::string getStorageType() const { return "f8E4M3FN"; }
+    std::string getStorageType(bool isSigned) const { return "f8E4M3FN"; }
 
     /// Check if this 8-bit floating point type uses packed representation.
     bool isPacked() const { return false; }
@@ -617,29 +619,30 @@ def Builtin_Integer : Builtin_Type<"Integer", "integer",
     static constexpr unsigned kMaxWidth = (1 << 24) - 1;
 
     /// QuantStorageTypeInterface method implementations
-    /// Return true if this is a signed or signless integer type.
-    bool isStorageSigned() const { return !isUnsigned(); }
+    /// Whether the storage type should default to signed when used in quantization.
+    /// Returns true if this is a signed or signless integer type.
+    bool shouldDefaultToSigned() const { return !isUnsigned(); }
     /// Get the bit width of this integer type.
     unsigned getStorageWidth() const { return getWidth(); }
     
     /// Get default maximum value for this integer type.
-    int64_t getDefaultMaximum() const {
-      if (isStorageSigned()) {
-        return llvm::maxIntN(getStorageWidth());
+    int64_t getDefaultMaximum(bool isSigned) const {
+      if (isSigned) {
+        return llvm::maxIntN(getWidth());
       }
-      return llvm::maxUIntN(getStorageWidth());
+      return llvm::maxUIntN(getWidth());
     }
     /// Get default minimum value for this integer type.
-    int64_t getDefaultMinimum() const {
-      if (isStorageSigned()) {
-        return llvm::minIntN(getStorageWidth());
+    int64_t getDefaultMinimum(bool isSigned) const {
+      if (isSigned) {
+        return llvm::minIntN(getWidth());
       }
       return 0;
     }
 
     /// Get the storage type as a string.
-    std::string getStorageType() const {
-      return (isStorageSigned() ? "i" : "u") + std::to_string(getWidth());
+    std::string getStorageType(bool isSigned) const {
+      return (isSigned ? "i" : "u") + std::to_string(getWidth());
     }
 
     /// Check if this integer type uses packed representation.

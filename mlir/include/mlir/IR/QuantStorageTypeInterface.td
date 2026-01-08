@@ -13,10 +13,11 @@ def QuantStorageTypeInterface : TypeInterface<"QuantStorageTypeInterface"> {
 
   let methods = [
     InterfaceMethod<[{
-      Check if the storage type is signed.
-      Returns true if the type represents signed values, false for unsigned.
+      Whether the storage type should default to signed when used in quantization.
+      Returns true if the type defaults to signed (e.g., si8, i8 or float types),
+      false if it defaults to unsigned.
     }],
-    "bool", "isStorageSigned", (ins)>,
+    "bool", "shouldDefaultToSigned", (ins)>,
 
     InterfaceMethod<[{
       Get the bit width of this type.
@@ -27,17 +28,17 @@ def QuantStorageTypeInterface : TypeInterface<"QuantStorageTypeInterface"> {
     InterfaceMethod<[{
       Get default minimum value for this type.
     }],
-    "int64_t", "getDefaultMinimum", (ins)>,
+    "int64_t", "getDefaultMinimum", (ins "bool":$isSigned)>,
 
     InterfaceMethod<[{
       Get default maximum value for this type.
     }],
-    "int64_t", "getDefaultMaximum", (ins)>,
+    "int64_t", "getDefaultMaximum", (ins "bool":$isSigned)>,
 
     InterfaceMethod<[{
       Get the storage type as a string.
     }],
-    "std::string", "getStorageType", (ins)>,
+    "std::string", "getStorageType", (ins "bool":$isSigned)>,
 
     InterfaceMethod<[{
       Check if the storage type uses packed representation.
