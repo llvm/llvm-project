@@ -5980,8 +5980,8 @@ static SDValue combineMulWide(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   SDValue RHS = Op.getOperand(1);
   if (Op.getOpcode() == ISD::SHL) {
     const auto ShiftAmt = Op.getConstantOperandVal(1);
-    const auto MulVal = APInt(ToVT.getSizeInBits(), 1) << ShiftAmt;
-    RHS = DCI.DAG.getConstant(MulVal, DL, ToVT);
+    const auto MulVal = APInt(FromVT.getSizeInBits(), 1) << ShiftAmt;
+    RHS = DCI.DAG.getConstant(MulVal, DL, FromVT);
   }
   return DCI.DAG.getNode(Opcode, DL, ToVT, Op.getOperand(0), RHS);
 }
