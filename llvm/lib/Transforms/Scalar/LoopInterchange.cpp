@@ -526,7 +526,7 @@ private:
   ///        store Lcssa, MemRef  ; LcssaStore
   ///
   bool isInnerReduction(Loop *L, PHINode *Phi,
-                           SmallVectorImpl<Instruction *> &HasNoWrapInsts);
+                        SmallVectorImpl<Instruction *> &HasNoWrapInsts);
 
   Loop *OuterLoop;
   Loop *InnerLoop;
