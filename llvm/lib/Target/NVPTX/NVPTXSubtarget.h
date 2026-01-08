@@ -29,10 +29,6 @@
 
 namespace llvm {
 
-// FullSmVersion encoding: SM * 10 + ArchSuffixOffset
-// ArchSuffixOffset: 0 (base), 2 ('f'), 3 ('a')
-// e.g. sm_100 -> 1000, sm_100f -> 1002, sm_100a -> 1003
-
 class NVPTXSubtarget : public NVPTXGenSubtargetInfo {
   virtual void anchor();
   std::string TargetName;
