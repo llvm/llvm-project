@@ -57,13 +57,12 @@ void f1(int len) {
 // CIR:   %[[LEN_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["len", init]
 // CIR:   %[[SAVED_STACK:.*]] = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["saved_stack"]
 // CIR:   cir.store{{.*}} %[[LEN_ARG]], %[[LEN_ADDR]]
-// CIR:   %[[SIXTEEN:.*]] = cir.const #cir.int<16> : !s32i
-// CIR:   %[[SIXTEEN_SIZE_T:.*]] = cir.cast integral %[[SIXTEEN]] : !s32i -> !u64i
+// CIR:   %[[SIXTEEN:.*]] = cir.const #cir.int<16> : !u64i
 // CIR:   %[[LEN:.*]] = cir.load{{.*}} %[[LEN_ADDR]]
 // CIR:   %[[LEN_SIZE_T:.*]] = cir.cast integral %[[LEN]] : !s32i -> !u64i
 // CIR:   %[[STACK_PTR:.*]] = cir.stacksave
 // CIR:   cir.store{{.*}} %[[STACK_PTR]], %[[SAVED_STACK]]
-// CIR:   %[[TOTAL_LEN:.*]] = cir.binop(mul, %[[SIXTEEN_SIZE_T]], %[[LEN_SIZE_T]]) nuw
+// CIR:   %[[TOTAL_LEN:.*]] = cir.binop(mul, %[[SIXTEEN]], %[[LEN_SIZE_T]]) nuw
 // CIR:   %[[ARR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, %[[TOTAL_LEN]] : !u64i, ["arr"]
 // CIR:   %[[STACK_RESTORE_PTR:.*]] = cir.load{{.*}} %[[SAVED_STACK]]
 // CIR:   cir.stackrestore %[[STACK_RESTORE_PTR]]

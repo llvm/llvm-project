@@ -439,6 +439,8 @@ static bool initTargetOptions(const CompilerInstance &CI,
   }
 
   Options.EnableMachineFunctionSplitter = CodeGenOpts.SplitMachineFunctions;
+  Options.EnableStaticDataPartitioning =
+      CodeGenOpts.PartitionStaticDataSections;
   Options.FunctionSections = CodeGenOpts.FunctionSections;
   Options.DataSections = CodeGenOpts.DataSections;
   Options.IgnoreXCOFFVisibility = LangOpts.IgnoreXCOFFVisibility;
@@ -464,36 +466,8 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.Hotpatch = CodeGenOpts.HotPatch;
   Options.JMCInstrument = CodeGenOpts.JMCInstrument;
   Options.XCOFFReadOnlyPointers = CodeGenOpts.XCOFFReadOnlyPointers;
-
-  switch (CodeGenOpts.getVecLib()) {
-  case llvm::driver::VectorLibrary::NoLibrary:
-    Options.VecLib = llvm::VectorLibrary::NoLibrary;
-    break;
-  case llvm::driver::VectorLibrary::Accelerate:
-    Options.VecLib = llvm::VectorLibrary::Accelerate;
-    break;
-  case llvm::driver::VectorLibrary::Darwin_libsystem_m:
-    Options.VecLib = llvm::VectorLibrary::DarwinLibSystemM;
-    break;
-  case llvm::driver::VectorLibrary::LIBMVEC:
-    Options.VecLib = llvm::VectorLibrary::LIBMVEC;
-    break;
-  case llvm::driver::VectorLibrary::MASSV:
-    Options.VecLib = llvm::VectorLibrary::MASSV;
-    break;
-  case llvm::driver::VectorLibrary::SVML:
-    Options.VecLib = llvm::VectorLibrary::SVML;
-    break;
-  case llvm::driver::VectorLibrary::SLEEF:
-    Options.VecLib = llvm::VectorLibrary::SLEEFGNUABI;
-    break;
-  case llvm::driver::VectorLibrary::ArmPL:
-    Options.VecLib = llvm::VectorLibrary::ArmPL;
-    break;
-  case llvm::driver::VectorLibrary::AMDLIBM:
-    Options.VecLib = llvm::VectorLibrary::AMDLIBM;
-    break;
-  }
+  Options.VecLib =
+      convertDriverVectorLibraryToVectorLibrary(CodeGenOpts.getVecLib());
 
   switch (CodeGenOpts.getSwiftAsyncFramePointer()) {
   case CodeGenOptions::SwiftAsyncFramePointerKind::Auto:

@@ -125,6 +125,8 @@ MLIR_CAPI_EXPORTED bool mlirAttributeIsAEmitCCmpPredicate(MlirAttribute attr);
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirEmitCCmpPredicateAttrGet(MlirContext ctx, enum MlirEmitCCmpPredicate val);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirEmitCCmpPredicateAttrGetName(void);
+
 MLIR_CAPI_EXPORTED enum MlirEmitCCmpPredicate
 mlirEmitCCmpPredicateAttrGetValue(MlirAttribute attr);
 
@@ -139,6 +141,8 @@ MLIR_CAPI_EXPORTED bool mlirAttributeIsAEmitCOpaque(MlirAttribute attr);
 MLIR_CAPI_EXPORTED MlirAttribute mlirEmitCOpaqueAttrGet(MlirContext ctx,
                                                         MlirStringRef value);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirEmitCOpaqueAttrGetName(void);
+
 MLIR_CAPI_EXPORTED MlirStringRef
 mlirEmitCOpaqueAttrGetValue(MlirAttribute attr);
 
@@ -147,5 +151,7 @@ MLIR_CAPI_EXPORTED MlirTypeID mlirEmitCOpaqueAttrGetTypeID(void);
 #ifdef __cplusplus
 }
 #endif
+
+#include "mlir/Dialect/EmitC/Transforms/Passes.capi.h.inc"
 
 #endif // MLIR_C_DIALECT_EmitC_H
