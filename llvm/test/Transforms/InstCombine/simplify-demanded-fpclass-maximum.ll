@@ -34,8 +34,7 @@ declare nofpclass(norm sub zero) float @returns_inf_or_nan()
 define nofpclass(inf norm sub zero) float @ret_only_nan(float %x, float %y) {
 ; CHECK-LABEL: define nofpclass(inf zero sub norm) float @ret_only_nan(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[X]], float [[Y]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %result = call float @llvm.maximum.f32(float %x, float %y)
   ret float %result
@@ -64,7 +63,7 @@ define nofpclass(inf norm sub zero snan) float @ret_only_qnan(float %x, float %y
 define nofpclass(nan norm sub zero) float @ret_only_inf(float %x, float %y) {
 ; CHECK-LABEL: define nofpclass(nan zero sub norm) float @ret_only_inf(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.maximum.f32(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call float @llvm.maximum.f32(float %x, float %y)
@@ -92,7 +91,7 @@ define nofpclass(nan ninf norm sub zero) float @ret_only_pinf(float %x, float %y
 define nofpclass(inf nan norm sub) float @ret_only_zero(float %x, float %y) {
 ; CHECK-LABEL: define nofpclass(nan inf sub norm) float @ret_only_zero(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.maximum.f32(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call float @llvm.maximum.f32(float %x, float %y)
@@ -120,7 +119,7 @@ define nofpclass(inf nan norm sub pzero) float @ret_only_nzero(float %x, float %
 define nofpclass(nan) float @ret_no_nans(float %x, float %y) {
 ; CHECK-LABEL: define nofpclass(nan) float @ret_no_nans(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.maximum.f32(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call float @llvm.maximum.f32(float %x, float %y)
@@ -140,7 +139,7 @@ define nofpclass(inf) float @ret_no_infs(float %x, float %y) {
 define nofpclass(nan inf) float @ret_no_nans_no_infs(float %x, float %y) {
 ; CHECK-LABEL: define nofpclass(nan inf) float @ret_no_nans_no_infs(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.maximum.f32(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call float @llvm.maximum.f32(float %x, float %y)
@@ -152,8 +151,7 @@ define nofpclass(ninf nnorm nsub nzero) float @ret_known_positive_or_nan__maximu
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_known_positive_or_nan__maximum__negative_or_nan___negative_or_nan() {
 ; CHECK-NEXT:    [[MUST_BE_NEGATIVE_OR_NAN0:%.*]] = call float @returns_negative_or_nan()
 ; CHECK-NEXT:    [[MUST_BE_NEGATIVE_OR_NAN1:%.*]] = call float @returns_negative_or_nan()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[MUST_BE_NEGATIVE_OR_NAN0]], float [[MUST_BE_NEGATIVE_OR_NAN1]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %must.be.negative.or.nan0 = call float @returns_negative_or_nan()
   %must.be.negative.or.nan1 = call float @returns_negative_or_nan()
@@ -166,8 +164,7 @@ define nofpclass(pinf pnorm psub pzero) float @ret_known_negative_or_nan__maximu
 ; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) float @ret_known_negative_or_nan__maximum__positive_or_nan___positive_or_nan() {
 ; CHECK-NEXT:    [[MUST_BE_POSITIVE_OR_NAN0:%.*]] = call float @returns_positive_or_nan()
 ; CHECK-NEXT:    [[MUST_BE_POSITIVE_OR_NAN1:%.*]] = call float @returns_positive_or_nan()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[MUST_BE_POSITIVE_OR_NAN0]], float [[MUST_BE_POSITIVE_OR_NAN1]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %must.be.positive.or.nan0 = call float @returns_positive_or_nan()
   %must.be.positive.or.nan1 = call float @returns_positive_or_nan()
@@ -205,8 +202,7 @@ define nofpclass(snan) float @known_positive_or_nan__maximum__known_negative() {
 ; CHECK-LABEL: define nofpclass(snan) float @known_positive_or_nan__maximum__known_negative() {
 ; CHECK-NEXT:    [[MUST_BE_POSITIVE_OR_NAN:%.*]] = call float @returns_positive_or_nan()
 ; CHECK-NEXT:    [[MUST_BE_NEGATIVE:%.*]] = call float @returns_negative()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[MUST_BE_POSITIVE_OR_NAN]], float [[MUST_BE_NEGATIVE]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float [[MUST_BE_POSITIVE_OR_NAN]]
 ;
   %must.be.positive.or.nan = call float @returns_positive_or_nan()
   %must.be.negative = call float @returns_negative()
@@ -218,8 +214,7 @@ define nofpclass(snan) float @known_negative__maximum__known_positive_or_nan() {
 ; CHECK-LABEL: define nofpclass(snan) float @known_negative__maximum__known_positive_or_nan() {
 ; CHECK-NEXT:    [[MUST_BE_NEGATIVE:%.*]] = call float @returns_negative()
 ; CHECK-NEXT:    [[MUST_BE_POSITIVE_OR_NAN:%.*]] = call float @returns_positive_or_nan()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[MUST_BE_NEGATIVE]], float [[MUST_BE_POSITIVE_OR_NAN]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float [[MUST_BE_POSITIVE_OR_NAN]]
 ;
   %must.be.negative = call float @returns_negative()
   %must.be.positive.or.nan = call float @returns_positive_or_nan()
@@ -260,7 +255,7 @@ define nofpclass(ninf nnorm nsub nzero nan) float @ret_always_positive__select_a
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[ALWAYS_NEGATIVE:%.*]] = call float @returns_negative()
 ; CHECK-NEXT:    [[SELECT_LHS:%.*]] = select i1 [[COND]], float [[ALWAYS_NEGATIVE]], float [[UNKNOWN0]]
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[SELECT_LHS]], float [[UNKNOWN1]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.maximum.f32(float [[SELECT_LHS]], float [[UNKNOWN1]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %always.negative = call float @returns_negative()
@@ -274,7 +269,7 @@ define nofpclass(ninf nnorm nsub nzero nan) float @ret_always_positive__unknown_
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[ALWAYS_NEGATIVE:%.*]] = call float @returns_negative()
 ; CHECK-NEXT:    [[SELECT_RHS:%.*]] = select i1 [[COND]], float [[ALWAYS_NEGATIVE]], float [[UNKNOWN0]]
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[UNKNOWN1]], float [[SELECT_RHS]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.maximum.f32(float [[UNKNOWN1]], float [[SELECT_RHS]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %always.negative = call float @returns_negative()
@@ -308,7 +303,7 @@ define nofpclass(ninf nnorm nsub nzero nan) float @ret_always_negative__simplify
 ; CHECK-NEXT:    [[ALWAYS_NEGATIVE1:%.*]] = call float @returns_negative()
 ; CHECK-NEXT:    [[SELECT_LHS:%.*]] = select i1 [[COND]], float [[ALWAYS_NEGATIVE0]], float [[UNKNOWN0]]
 ; CHECK-NEXT:    [[SELECT_RHS:%.*]] = select i1 [[COND]], float [[UNKNOWN1]], float [[ALWAYS_NEGATIVE1]]
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[SELECT_LHS]], float [[SELECT_RHS]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.maximum.f32(float [[SELECT_LHS]], float [[SELECT_RHS]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %always.negative0 = call float @returns_negative()
@@ -324,7 +319,7 @@ define nofpclass(nan) float @no_fold_select_always_negative_0(i1 %cond, float %u
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[ALWAYS_NEGATIVE:%.*]] = call float @returns_negative()
 ; CHECK-NEXT:    [[SELECT_LHS:%.*]] = select i1 [[COND]], float [[ALWAYS_NEGATIVE]], float [[UNKNOWN0]]
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[SELECT_LHS]], float [[UNKNOWN1]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.maximum.f32(float [[SELECT_LHS]], float [[UNKNOWN1]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %always.negative = call float @returns_negative()
@@ -338,7 +333,7 @@ define nofpclass(nan) float @no_fold_select_always_negative_1(i1 %cond, float %u
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[ALWAYS_NEGATIVE:%.*]] = call float @returns_negative()
 ; CHECK-NEXT:    [[SELECT_RHS:%.*]] = select i1 [[COND]], float [[ALWAYS_NEGATIVE]], float [[UNKNOWN0]]
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[UNKNOWN1]], float [[SELECT_RHS]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.maximum.f32(float [[UNKNOWN1]], float [[SELECT_RHS]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %always.negative = call float @returns_negative()
@@ -352,7 +347,7 @@ define nofpclass(snan) float @cannot_fold_negative_or_zero__positive_or_zero_0()
 ; CHECK-LABEL: define nofpclass(snan) float @cannot_fold_negative_or_zero__positive_or_zero_0() {
 ; CHECK-NEXT:    [[MUST_BE_NEGATIVE_OR_ZERO:%.*]] = call float @returns_positive_or_zero()
 ; CHECK-NEXT:    [[MUST_BE_POSITIVE_OR_ZERO:%.*]] = call float @returns_negative_or_zero()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[MUST_BE_NEGATIVE_OR_ZERO]], float [[MUST_BE_POSITIVE_OR_ZERO]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.maximum.f32(float [[MUST_BE_NEGATIVE_OR_ZERO]], float [[MUST_BE_POSITIVE_OR_ZERO]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %must.be.negative.or.zero = call float @returns_positive_or_zero()
@@ -366,7 +361,7 @@ define nofpclass(snan) float @cannot_fold_negative_or_zero__positive_or_zero_1()
 ; CHECK-LABEL: define nofpclass(snan) float @cannot_fold_negative_or_zero__positive_or_zero_1() {
 ; CHECK-NEXT:    [[MUST_BE_NEGATIVE_OR_ZERO:%.*]] = call float @returns_positive_or_zero()
 ; CHECK-NEXT:    [[MUST_BE_POSITIVE_OR_ZERO:%.*]] = call float @returns_negative_or_zero()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[MUST_BE_POSITIVE_OR_ZERO]], float [[MUST_BE_NEGATIVE_OR_ZERO]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.maximum.f32(float [[MUST_BE_POSITIVE_OR_ZERO]], float [[MUST_BE_NEGATIVE_OR_ZERO]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %must.be.negative.or.zero = call float @returns_positive_or_zero()
@@ -398,7 +393,7 @@ define nofpclass(nsub) float @rhs_must_be_pinf_or_nan(float nofpclass(ninf norm 
 define nofpclass(nsub) float @lhs_must_be_pinf(float %unknown, float nofpclass(nan ninf norm zero sub) %must.be.pinf) {
 ; CHECK-LABEL: define nofpclass(nsub) float @lhs_must_be_pinf(
 ; CHECK-SAME: float [[UNKNOWN:%.*]], float nofpclass(nan ninf zero sub norm) [[MUST_BE_PINF:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[MUST_BE_PINF]], float [[UNKNOWN]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[UNKNOWN]], float 0x7FF0000000000000)
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call float @llvm.maximum.f32(float %must.be.pinf, float %unknown)
@@ -408,7 +403,7 @@ define nofpclass(nsub) float @lhs_must_be_pinf(float %unknown, float nofpclass(n
 define nofpclass(nsub) float @rhs_must_be_pinf(float nofpclass(nan ninf norm zero sub) %must.be.pinf, float %unknown) {
 ; CHECK-LABEL: define nofpclass(nsub) float @rhs_must_be_pinf(
 ; CHECK-SAME: float nofpclass(nan ninf zero sub norm) [[MUST_BE_PINF:%.*]], float [[UNKNOWN:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[UNKNOWN]], float [[MUST_BE_PINF]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[UNKNOWN]], float 0x7FF0000000000000)
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call float @llvm.maximum.f32(float %unknown, float %must.be.pinf)
@@ -419,8 +414,7 @@ define nofpclass(nsub) float @rhs_must_be_pinf(float nofpclass(nan ninf norm zer
 define nofpclass(nsub) float @lhs_must_be_pinf_rhs_non_nan(float nofpclass(nan) %not.nan, float nofpclass(nan ninf norm zero sub) %must.be.pinf) {
 ; CHECK-LABEL: define nofpclass(nsub) float @lhs_must_be_pinf_rhs_non_nan(
 ; CHECK-SAME: float nofpclass(nan) [[NOT_NAN:%.*]], float nofpclass(nan ninf zero sub norm) [[MUST_BE_PINF:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[MUST_BE_PINF]], float [[NOT_NAN]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float 0x7FF0000000000000
 ;
   %result = call float @llvm.maximum.f32(float %must.be.pinf, float %not.nan)
   ret float %result
@@ -430,8 +424,7 @@ define nofpclass(nsub) float @lhs_must_be_pinf_rhs_non_nan(float nofpclass(nan) 
 define nofpclass(nsub) float @rhs_must_be_pinf_lhs_non_nan(float nofpclass(nan ninf norm zero sub) %must.be.pinf, float nofpclass(nan) %not.nan) {
 ; CHECK-LABEL: define nofpclass(nsub) float @rhs_must_be_pinf_lhs_non_nan(
 ; CHECK-SAME: float nofpclass(nan ninf zero sub norm) [[MUST_BE_PINF:%.*]], float nofpclass(nan) [[NOT_NAN:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[NOT_NAN]], float [[MUST_BE_PINF]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float 0x7FF0000000000000
 ;
   %result = call float @llvm.maximum.f32(float %not.nan, float %must.be.pinf)
   ret float %result
@@ -460,8 +453,7 @@ define nofpclass(nsub) float @rhs_must_be_ninf_or_nan(float nofpclass(pinf norm 
 define nofpclass(nsub) float @lhs_must_be_ninf(float %unknown, float nofpclass(nan pinf norm zero sub) %must.be.ninf) {
 ; CHECK-LABEL: define nofpclass(nsub) float @lhs_must_be_ninf(
 ; CHECK-SAME: float [[UNKNOWN:%.*]], float nofpclass(nan pinf zero sub norm) [[MUST_BE_NINF:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[MUST_BE_NINF]], float [[UNKNOWN]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float [[UNKNOWN]]
 ;
   %result = call float @llvm.maximum.f32(float %must.be.ninf, float %unknown)
   ret float %result
@@ -470,8 +462,7 @@ define nofpclass(nsub) float @lhs_must_be_ninf(float %unknown, float nofpclass(n
 define nofpclass(nsub) float @rhs_must_be_ninf(float nofpclass(nan pinf norm zero sub) %must.be.ninf, float %unknown) {
 ; CHECK-LABEL: define nofpclass(nsub) float @rhs_must_be_ninf(
 ; CHECK-SAME: float nofpclass(nan pinf zero sub norm) [[MUST_BE_NINF:%.*]], float [[UNKNOWN:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[UNKNOWN]], float [[MUST_BE_NINF]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float [[UNKNOWN]]
 ;
   %result = call float @llvm.maximum.f32(float %unknown, float %must.be.ninf)
   ret float %result
@@ -482,8 +473,7 @@ define nofpclass(nsub) float @rhs_must_be_ninf(float nofpclass(nan pinf norm zer
 define nofpclass(nsub) float @lhs_must_be_ninf_rhs_non_nan(float nofpclass(nan) %not.nan, float nofpclass(nan pinf norm zero sub) %must.be.ninf) {
 ; CHECK-LABEL: define nofpclass(nsub) float @lhs_must_be_ninf_rhs_non_nan(
 ; CHECK-SAME: float nofpclass(nan) [[NOT_NAN:%.*]], float nofpclass(nan pinf zero sub norm) [[MUST_BE_NINF:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[MUST_BE_NINF]], float [[NOT_NAN]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float [[NOT_NAN]]
 ;
   %result = call float @llvm.maximum.f32(float %must.be.ninf, float %not.nan)
   ret float %result
@@ -493,8 +483,7 @@ define nofpclass(nsub) float @lhs_must_be_ninf_rhs_non_nan(float nofpclass(nan) 
 define nofpclass(nsub) float @rhs_must_be_ninf_lhs_non_nan(float nofpclass(nan pinf norm zero sub) %must.be.ninf, float nofpclass(nan) %not.nan) {
 ; CHECK-LABEL: define nofpclass(nsub) float @rhs_must_be_ninf_lhs_non_nan(
 ; CHECK-SAME: float nofpclass(nan pinf zero sub norm) [[MUST_BE_NINF:%.*]], float nofpclass(nan) [[NOT_NAN:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[NOT_NAN]], float [[MUST_BE_NINF]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float [[NOT_NAN]]
 ;
   %result = call float @llvm.maximum.f32(float %not.nan, float %must.be.ninf)
   ret float %result
@@ -803,7 +792,7 @@ define nofpclass(snan) float @unknown__maximum__not_nan(float %x, float nofpclas
 define nofpclass(snan) float @not_nan__maximum__not_nan(float nofpclass(nan) %x, float nofpclass(nan) %y) {
 ; CHECK-LABEL: define nofpclass(snan) float @not_nan__maximum__not_nan(
 ; CHECK-SAME: float nofpclass(nan) [[X:%.*]], float nofpclass(nan) [[Y:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.maximum.f32(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call float @llvm.maximum.f32(float %x, float %y)
@@ -834,7 +823,7 @@ define nofpclass(snan) float @known_positive__maximum__only_zero() {
 ; CHECK-LABEL: define nofpclass(snan) float @known_positive__maximum__only_zero() {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @returns_positive()
 ; CHECK-NEXT:    [[KNOWN_ZERO:%.*]] = call float @returns_zero()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[KNOWN_POSITIVE]], float [[KNOWN_ZERO]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.maximum.f32(float [[KNOWN_POSITIVE]], float [[KNOWN_ZERO]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %known.positive = call float @returns_positive()
@@ -847,7 +836,7 @@ define nofpclass(snan) float @only_zero__maximum__known_positive() {
 ; CHECK-LABEL: define nofpclass(snan) float @only_zero__maximum__known_positive() {
 ; CHECK-NEXT:    [[KNOWN_ZERO:%.*]] = call float @returns_zero()
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @returns_positive()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[KNOWN_ZERO]], float [[KNOWN_POSITIVE]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.maximum.f32(float [[KNOWN_ZERO]], float [[KNOWN_POSITIVE]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %known.zero = call float @returns_zero()
@@ -912,8 +901,7 @@ define nofpclass(snan) float @known_positive__maximum__only_nzero() {
 ; CHECK-LABEL: define nofpclass(snan) float @known_positive__maximum__only_nzero() {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @returns_positive()
 ; CHECK-NEXT:    [[KNOWN_NZERO:%.*]] = call float @returns_nzero()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[KNOWN_POSITIVE]], float [[KNOWN_NZERO]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float [[KNOWN_POSITIVE]]
 ;
   %known.positive = call float @returns_positive()
   %known.nzero = call float @returns_nzero()
@@ -925,8 +913,7 @@ define nofpclass(snan) float @only_nzero__maximum__known_positive() {
 ; CHECK-LABEL: define nofpclass(snan) float @only_nzero__maximum__known_positive() {
 ; CHECK-NEXT:    [[KNOWN_NZERO:%.*]] = call float @returns_nzero()
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @returns_positive()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[KNOWN_NZERO]], float [[KNOWN_POSITIVE]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float [[KNOWN_POSITIVE]]
 ;
   %known.nzero = call float @returns_nzero()
   %known.positive = call float @returns_positive()
@@ -938,7 +925,7 @@ define nofpclass(snan) float @known_positive__maximum__only_pzero() {
 ; CHECK-LABEL: define nofpclass(snan) float @known_positive__maximum__only_pzero() {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @returns_positive()
 ; CHECK-NEXT:    [[KNOWN_PZERO:%.*]] = call float @returns_pzero()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[KNOWN_POSITIVE]], float [[KNOWN_PZERO]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.maximum.f32(float [[KNOWN_POSITIVE]], float 0.000000e+00)
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %known.positive = call float @returns_positive()
@@ -951,7 +938,7 @@ define nofpclass(snan) float @only_pzero__maximum__known_positive() {
 ; CHECK-LABEL: define nofpclass(snan) float @only_pzero__maximum__known_positive() {
 ; CHECK-NEXT:    [[KNOWN_PZERO:%.*]] = call float @returns_pzero()
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @returns_positive()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[KNOWN_PZERO]], float [[KNOWN_POSITIVE]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.maximum.f32(float [[KNOWN_POSITIVE]], float 0.000000e+00)
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %known.pzero = call float @returns_pzero()
@@ -1090,8 +1077,7 @@ define nofpclass(snan) float @known_negative__maximum__only_pzero_or_nan() {
 ; CHECK-LABEL: define nofpclass(snan) float @known_negative__maximum__only_pzero_or_nan() {
 ; CHECK-NEXT:    [[KNOWN_NEGATIVE:%.*]] = call float @returns_negative()
 ; CHECK-NEXT:    [[KNOWN_PZERO_OR_NAN:%.*]] = call float @returns_pzero_or_nan()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[KNOWN_NEGATIVE]], float [[KNOWN_PZERO_OR_NAN]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float [[KNOWN_PZERO_OR_NAN]]
 ;
   %known.negative = call float @returns_negative()
   %known.pzero.or.nan = call float @returns_pzero_or_nan()
@@ -1103,8 +1089,7 @@ define nofpclass(snan) float @only_pzero_or_nan__maximum__known_negative() {
 ; CHECK-LABEL: define nofpclass(snan) float @only_pzero_or_nan__maximum__known_negative() {
 ; CHECK-NEXT:    [[KNOWN_PZERO_OR_NAN:%.*]] = call float @returns_pzero_or_nan()
 ; CHECK-NEXT:    [[KNOWN_NEGATIVE:%.*]] = call float @returns_negative()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[KNOWN_PZERO_OR_NAN]], float [[KNOWN_NEGATIVE]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float [[KNOWN_PZERO_OR_NAN]]
 ;
   %known.pzero.or.nan = call float @returns_pzero_or_nan()
   %known.negative = call float @returns_negative()
@@ -1185,8 +1170,7 @@ define nofpclass(nan) float @ret_nonan__known_negative_or_nan__maximum__known_po
 ; CHECK-LABEL: define nofpclass(nan) float @ret_nonan__known_negative_or_nan__maximum__known_positive_or_nan() {
 ; CHECK-NEXT:    [[MUST_BE_NEGATIVE_OR_NAN:%.*]] = call float @returns_negative_or_nan()
 ; CHECK-NEXT:    [[MUST_BE_POSITIVE_OR_NAN:%.*]] = call float @returns_positive_or_nan()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[MUST_BE_NEGATIVE_OR_NAN]], float [[MUST_BE_POSITIVE_OR_NAN]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float [[MUST_BE_POSITIVE_OR_NAN]]
 ;
   %must.be.negative.or.nan = call float @returns_negative_or_nan()
   %must.be.positive.or.nan = call float @returns_positive_or_nan()
@@ -1198,8 +1182,7 @@ define nofpclass(nan) float @ret_nonan__known_positive_or_nan__maximum__known_ne
 ; CHECK-LABEL: define nofpclass(nan) float @ret_nonan__known_positive_or_nan__maximum__known_negative_or_nan() {
 ; CHECK-NEXT:    [[MUST_BE_POSITIVE_OR_NAN:%.*]] = call float @returns_positive_or_nan()
 ; CHECK-NEXT:    [[MUST_BE_NEGATIVE_OR_NAN:%.*]] = call float @returns_negative_or_nan()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[MUST_BE_POSITIVE_OR_NAN]], float [[MUST_BE_NEGATIVE_OR_NAN]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float [[MUST_BE_POSITIVE_OR_NAN]]
 ;
   %must.be.positive.or.nan = call float @returns_positive_or_nan()
   %must.be.negative.or.nan = call float @returns_negative_or_nan()
@@ -1211,8 +1194,7 @@ define nofpclass(nan) float @ret_nonan__select_nan_or_unknown__maximum__unknown(
 ; CHECK-LABEL: define nofpclass(nan) float @ret_nonan__select_nan_or_unknown__maximum__unknown(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[ALWAYS_NAN:%.*]] = call float @returns_nan()
-; CHECK-NEXT:    [[SELECT_LHS:%.*]] = select i1 [[COND]], float [[ALWAYS_NAN]], float [[UNKNOWN0]]
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[SELECT_LHS]], float [[UNKNOWN1]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.maximum.f32(float [[UNKNOWN0]], float [[UNKNOWN1]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %always.nan = call float @returns_nan()
@@ -1225,8 +1207,7 @@ define nofpclass(nan) float @ret_nonan__unknown__maximum__select_nan_or_unknown(
 ; CHECK-LABEL: define nofpclass(nan) float @ret_nonan__unknown__maximum__select_nan_or_unknown(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[ALWAYS_NAN:%.*]] = call float @returns_nan()
-; CHECK-NEXT:    [[SELECT_RHS:%.*]] = select i1 [[COND]], float [[UNKNOWN0]], float [[ALWAYS_NAN]]
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[UNKNOWN1]], float [[SELECT_RHS]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.maximum.f32(float [[UNKNOWN1]], float [[UNKNOWN0]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %always.nan = call float @returns_nan()
@@ -1311,8 +1292,7 @@ define nofpclass(nan) float @ret_no_nan__known_always_positive_or_nan__maximum__
 ; CHECK-LABEL: define nofpclass(nan) float @ret_no_nan__known_always_positive_or_nan__maximum__known_always_negative_or_nan() {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE_OR_NAN:%.*]] = call float @returns_positive_or_nan()
 ; CHECK-NEXT:    [[KNOWN_NEGATIVE_OR_NAN:%.*]] = call float @returns_negative_or_nan()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[KNOWN_POSITIVE_OR_NAN]], float [[KNOWN_NEGATIVE_OR_NAN]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float [[KNOWN_POSITIVE_OR_NAN]]
 ;
   %known.positive.or.nan = call float @returns_positive_or_nan()
   %known.negative.or.nan = call float @returns_negative_or_nan()
@@ -1324,8 +1304,7 @@ define nofpclass(nan) float @ret_no_nan__known_always_negative_or_nan__maximum__
 ; CHECK-LABEL: define nofpclass(nan) float @ret_no_nan__known_always_negative_or_nan__maximum__known_always_positive_or_nan() {
 ; CHECK-NEXT:    [[KNOWN_NEGATIVE_OR_NAN:%.*]] = call float @returns_negative_or_nan()
 ; CHECK-NEXT:    [[KNOWN_POSITIVE_OR_NAN:%.*]] = call float @returns_positive_or_nan()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[KNOWN_NEGATIVE_OR_NAN]], float [[KNOWN_POSITIVE_OR_NAN]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float [[KNOWN_POSITIVE_OR_NAN]]
 ;
   %known.negative.or.nan = call float @returns_negative_or_nan()
   %known.positive.or.nan = call float @returns_positive_or_nan()
@@ -1337,7 +1316,7 @@ define nofpclass(snan) float @pinf__maximum__unknown(float %unknown) {
 ; CHECK-LABEL: define nofpclass(snan) float @pinf__maximum__unknown(
 ; CHECK-SAME: float [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[PINF:%.*]] = call float @returns_pinf()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[PINF]], float [[UNKNOWN]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[UNKNOWN]], float 0x7FF0000000000000)
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %pinf = call float @returns_pinf()
@@ -1349,7 +1328,7 @@ define nofpclass(snan) float @unknown__maximum__pinf(float %unknown) {
 ; CHECK-LABEL: define nofpclass(snan) float @unknown__maximum__pinf(
 ; CHECK-SAME: float [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[PINF:%.*]] = call float @returns_pinf()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[UNKNOWN]], float [[PINF]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[UNKNOWN]], float 0x7FF0000000000000)
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %pinf = call float @returns_pinf()
@@ -1385,8 +1364,7 @@ define nofpclass(snan) float @ninf__maximum__unknown(float %unknown) {
 ; CHECK-LABEL: define nofpclass(snan) float @ninf__maximum__unknown(
 ; CHECK-SAME: float [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[NINF:%.*]] = call float @returns_ninf()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[NINF]], float [[UNKNOWN]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float [[UNKNOWN]]
 ;
   %ninf = call float @returns_ninf()
   %result = call float @llvm.maximum.f32(float %ninf, float %unknown)
@@ -1397,8 +1375,7 @@ define nofpclass(snan) float @unknown__maximum__ninf(float %unknown) {
 ; CHECK-LABEL: define nofpclass(snan) float @unknown__maximum__ninf(
 ; CHECK-SAME: float [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[NINF:%.*]] = call float @returns_ninf()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[UNKNOWN]], float [[NINF]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float [[UNKNOWN]]
 ;
   %ninf = call float @returns_ninf()
   %result = call float @llvm.maximum.f32(float %unknown, float %ninf)
@@ -1505,8 +1482,7 @@ define nofpclass(snan) float @pinf_or_nan__maximum__not_nan(float nofpclass(nan)
 ; CHECK-LABEL: define nofpclass(snan) float @pinf_or_nan__maximum__not_nan(
 ; CHECK-SAME: float nofpclass(nan) [[NOT_NAN:%.*]]) {
 ; CHECK-NEXT:    [[PINF_OR_NAN:%.*]] = call float @returns_pinf_or_nan()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[PINF_OR_NAN]], float [[NOT_NAN]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float [[PINF_OR_NAN]]
 ;
   %pinf.or.nan = call float @returns_pinf_or_nan()
   %result = call float @llvm.maximum.f32(float %pinf.or.nan, float %not.nan)
@@ -1517,8 +1493,7 @@ define nofpclass(snan) float @not_nan__maximum__pinf_or_nan(float nofpclass(nan)
 ; CHECK-LABEL: define nofpclass(snan) float @not_nan__maximum__pinf_or_nan(
 ; CHECK-SAME: float nofpclass(nan) [[NOT_NAN:%.*]]) {
 ; CHECK-NEXT:    [[PINF_OR_NAN:%.*]] = call float @returns_pinf_or_nan()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[NOT_NAN]], float [[PINF_OR_NAN]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float [[PINF_OR_NAN]]
 ;
   %pinf.or.nan = call float @returns_pinf_or_nan()
   %result = call float @llvm.maximum.f32(float %not.nan, float %pinf.or.nan)
@@ -1553,8 +1528,7 @@ define nofpclass(snan) float @ninf__maximum__not_nan(float nofpclass(nan) %not.n
 ; CHECK-LABEL: define nofpclass(snan) float @ninf__maximum__not_nan(
 ; CHECK-SAME: float nofpclass(nan) [[NOT_NAN:%.*]]) {
 ; CHECK-NEXT:    [[NINF_OR_NAN:%.*]] = call float @returns_ninf()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[NINF_OR_NAN]], float [[NOT_NAN]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float [[NOT_NAN]]
 ;
   %ninf.or.nan = call float @returns_ninf()
   %result = call float @llvm.maximum.f32(float %ninf.or.nan, float %not.nan)
@@ -1565,8 +1539,7 @@ define nofpclass(snan) float @not_nan__maximum__ninf(float nofpclass(nan) %not.n
 ; CHECK-LABEL: define nofpclass(snan) float @not_nan__maximum__ninf(
 ; CHECK-SAME: float nofpclass(nan) [[NOT_NAN:%.*]]) {
 ; CHECK-NEXT:    [[NINF_OR_NAN:%.*]] = call float @returns_ninf()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[NOT_NAN]], float [[NINF_OR_NAN]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float [[NOT_NAN]]
 ;
   %ninf.or.nan = call float @returns_ninf()
   %result = call float @llvm.maximum.f32(float %not.nan, float %ninf.or.nan)
@@ -1577,8 +1550,7 @@ define nofpclass(snan) float @pinf__maximum__not_nan(float nofpclass(nan) %not.n
 ; CHECK-LABEL: define nofpclass(snan) float @pinf__maximum__not_nan(
 ; CHECK-SAME: float nofpclass(nan) [[NOT_NAN:%.*]]) {
 ; CHECK-NEXT:    [[PINF_OR_NAN:%.*]] = call float @returns_pinf()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[PINF_OR_NAN]], float [[NOT_NAN]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float 0x7FF0000000000000
 ;
   %pinf.or.nan = call float @returns_pinf()
   %result = call float @llvm.maximum.f32(float %pinf.or.nan, float %not.nan)
@@ -1589,8 +1561,7 @@ define nofpclass(snan) float @not_nan__maximum__pinf(float nofpclass(nan) %not.n
 ; CHECK-LABEL: define nofpclass(snan) float @not_nan__maximum__pinf(
 ; CHECK-SAME: float nofpclass(nan) [[NOT_NAN:%.*]]) {
 ; CHECK-NEXT:    [[PINF_OR_NAN:%.*]] = call float @returns_pinf()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[NOT_NAN]], float [[PINF_OR_NAN]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float 0x7FF0000000000000
 ;
   %pinf.or.nan = call float @returns_pinf()
   %result = call float @llvm.maximum.f32(float %not.nan, float %pinf.or.nan)
@@ -1601,7 +1572,7 @@ define nofpclass(snan) float @inf__maximum__not_nan(float nofpclass(nan) %not.na
 ; CHECK-LABEL: define nofpclass(snan) float @inf__maximum__not_nan(
 ; CHECK-SAME: float nofpclass(nan) [[NOT_NAN:%.*]]) {
 ; CHECK-NEXT:    [[INF_OR_NAN:%.*]] = call float @returns_inf()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[INF_OR_NAN]], float [[NOT_NAN]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.maximum.f32(float [[INF_OR_NAN]], float [[NOT_NAN]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %inf.or.nan = call float @returns_inf()
@@ -1613,7 +1584,7 @@ define nofpclass(snan) float @not_nan__maximum__inf(float nofpclass(nan) %not.na
 ; CHECK-LABEL: define nofpclass(snan) float @not_nan__maximum__inf(
 ; CHECK-SAME: float nofpclass(nan) [[NOT_NAN:%.*]]) {
 ; CHECK-NEXT:    [[INF_OR_NAN:%.*]] = call float @returns_inf()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[NOT_NAN]], float [[INF_OR_NAN]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.maximum.f32(float [[NOT_NAN]], float [[INF_OR_NAN]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %inf.or.nan = call float @returns_inf()
@@ -1624,7 +1595,7 @@ define nofpclass(snan) float @not_nan__maximum__inf(float nofpclass(nan) %not.na
 define nofpclass(nan) float @ret_no_nans__noundef_call_attr(float %x, float %y) {
 ; CHECK-LABEL: define nofpclass(nan) float @ret_no_nans__noundef_call_attr(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call noundef float @llvm.maximum.f32(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.maximum.f32(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call noundef float @llvm.maximum.f32(float %x, float %y)
@@ -1654,7 +1625,7 @@ define nofpclass(snan) float @unknown__noundef_maximum__not_nan(float %unknown, 
 define nofpclass(snan) float @not_nan__noundef_maximum__not_nan(float nofpclass(nan) %not.nan0, float nofpclass(nan) %not.nan1) {
 ; CHECK-LABEL: define nofpclass(snan) float @not_nan__noundef_maximum__not_nan(
 ; CHECK-SAME: float nofpclass(nan) [[NOT_NAN0:%.*]], float nofpclass(nan) [[NOT_NAN1:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call noundef float @llvm.maximum.f32(float [[NOT_NAN0]], float [[NOT_NAN1]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.maximum.f32(float [[NOT_NAN0]], float [[NOT_NAN1]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call noundef float @llvm.maximum.f32(float %not.nan0, float %not.nan1)
@@ -1714,7 +1685,7 @@ define nofpclass(inf) float @not_inf__noundef_maximum__not_inf(float nofpclass(i
 define nofpclass(snan) float @not_nan__maximum_noundef_md__not_nan(float nofpclass(nan) %not.nan0, float nofpclass(nan) %not.nan1) {
 ; CHECK-LABEL: define nofpclass(snan) float @not_nan__maximum_noundef_md__not_nan(
 ; CHECK-SAME: float nofpclass(nan) [[NOT_NAN0:%.*]], float nofpclass(nan) [[NOT_NAN1:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.maximum.f32(float [[NOT_NAN0]], float [[NOT_NAN1]]), !noundef [[META0:![0-9]+]], !unknown.md [[META0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.maximum.f32(float [[NOT_NAN0]], float [[NOT_NAN1]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call float @llvm.maximum.f32(float %not.nan0, float %not.nan1), !noundef !0, !unknown.md !0
@@ -1725,6 +1696,3 @@ define nofpclass(snan) float @not_nan__maximum_noundef_md__not_nan(float nofpcla
 
 attributes #0 = { "denormal-fp-math"="preserve-sign,preserve-sign" }
 attributes #1 = { "denormal-fp-math"="dynamic,dynamic" }
-;.
-; CHECK: [[META0]] = !{}
-;.

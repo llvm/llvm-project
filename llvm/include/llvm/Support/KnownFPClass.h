@@ -175,6 +175,20 @@ struct KnownFPClass {
     signBitMustBeZero();
   }
 
+  // Enum of min/max intrinsics to avoid dependency on IR.
+  enum class MinMaxKind {
+    minimum,
+    maximum,
+    minimumnum,
+    maximumnum,
+    minnum,
+    maxnum
+  };
+
+  LLVM_ABI static KnownFPClass
+  minMaxLike(const KnownFPClass &LHS, const KnownFPClass &RHS, MinMaxKind Kind,
+             DenormalMode DenormMode = DenormalMode::getDynamic());
+
   /// Apply the canonicalize intrinsic to this value. This is essentially a
   /// stronger form of propagateCanonicalizingSrc.
   LLVM_ABI static KnownFPClass
@@ -264,6 +278,10 @@ struct KnownFPClass {
   /// information.
   LLVM_ABI void propagateCanonicalizingSrc(const KnownFPClass &Src,
                                            DenormalMode Mode);
+
+  /// Propagate known class for log/log2/log10
+  static LLVM_ABI KnownFPClass
+  log(const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
 
   void resetAll() { *this = KnownFPClass(); }
 };
