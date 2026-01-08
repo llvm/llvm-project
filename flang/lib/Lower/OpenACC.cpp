@@ -5010,10 +5010,9 @@ genACC(Fortran::lower::AbstractConverter &converter,
         isReadonly ? mlir::acc::DataClauseModifier::readonly
                    : mlir::acc::DataClauseModifier::none);
 
-    // Use acc.cache directly as the variable definition.
-    converter.getSymbolMap().addVariableDefinition(
-        symbol,
-        mlir::cast<fir::FortranVariableOpInterface>(cacheOp.getOperation()));
+    fir::ExtendedValue hostExv = converter.getSymbolExtendedValue(symbol);
+    fir::ExtendedValue cacheExv = fir::substBase(hostExv, cacheOp.getAccVar());
+    converter.bindSymbol(symbol, cacheExv);
   }
 }
 

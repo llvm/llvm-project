@@ -18,7 +18,8 @@ subroutine test_cache_basic()
 
 ! CHECK: acc.loop
 ! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {{{.*}}name = "b"
-! CHECK: hlfir.designate %[[CACHE]]
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_basicEb"}
+! CHECK: hlfir.designate %[[DECL]]#0
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_cache_readonly()
@@ -35,7 +36,8 @@ subroutine test_cache_readonly()
 
 ! CHECK: acc.loop
 ! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {modifiers = #acc<data_clause_modifier readonly>, name = "b"
-! CHECK: hlfir.designate %[[CACHE]]
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_readonlyEb"}
+! CHECK: hlfir.designate %[[DECL]]#0
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_cache_array_section()
