@@ -508,6 +508,7 @@ mlir_c_api_cc_library(
         ":config",
         ":FuncTransformsPassIncGen",
         ":Rewrite",
+        ":FuncTransformsPassIncGen",
         "//llvm:Support",
     ],
     includes = ["include"],
