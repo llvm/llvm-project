@@ -195,18 +195,6 @@ struct CppEmitter {
   /// emitc::ForOp.
   StringRef getOrCreateInductionVarName(Value val);
 
-  // Returns the textual representation of a subscript operation.
-  std::string getSubscriptName(emitc::SubscriptOp op);
-
-  // Returns a string representing the expression of an emitc.apply operation.
-  std::string getApplyName(emitc::ApplyOp op);
-
-  // Returns the textual representation of a member (of object) operation.
-  std::string createMemberAccess(emitc::MemberOp op);
-
-  // Returns the textual representation of a member of pointer operation.
-  std::string createMemberAccess(emitc::MemberOfPtrOp op);
-
   /// Return the existing or a new label of a Block.
   StringRef getOrCreateName(Block &block);
 
@@ -1421,70 +1409,6 @@ CppEmitter::CppEmitter(raw_ostream &os, bool declareVariablesAtTop,
   labelInScopeCount.push(0);
 }
 
-std::string CppEmitter::getSubscriptName(emitc::SubscriptOp op) {
-  std::string out;
-  llvm::raw_string_ostream ss(out);
-  Value baseValue = op.getValue();
-
-  if (auto applyOp = baseValue.getDefiningOp<emitc::ApplyOp>()) {
-    if (applyOp.getApplicableOperator() == "*")
-      ss << "(*" << getOrCreateName(applyOp.getOperand()) << ")";
-    else
-      ss << getOrCreateName(baseValue);
-  } else {
-    ss << getOrCreateName(baseValue);
-  }
-
-  for (auto index : op.getIndices()) {
-    ss << "[" << getOrCreateName(index) << "]";
-  }
-  return out;
-}
-
-std::string CppEmitter::getApplyName(emitc::ApplyOp op) {
-  std::string expr;
-  llvm::raw_string_ostream ss(expr);
-
-  StringRef opStr = op.getApplicableOperator();
-  Value operand = op.getOperand();
-
-  if (opStr == "&") {
-    ss << "&" << getOrCreateName(operand);
-    return ss.str();
-  }
-
-  // Emit '*(&x)' form
-  if (opStr == "*") {
-    if (auto innerApply = operand.getDefiningOp<emitc::ApplyOp>()) {
-      StringRef innerOp = innerApply.getApplicableOperator();
-      if (innerOp == "&") {
-        ss << "*(&" << getOrCreateName(innerApply.getOperand()) << ")";
-        return ss.str();
-      }
-    }
-    ss << "*" << getOrCreateName(operand);
-    return ss.str();
-  }
-
-  ss << getOrCreateName(operand) << opStr;
-  return ss.str();
-}
-
-std::string CppEmitter::createMemberAccess(emitc::MemberOp op) {
-  std::string out;
-  llvm::raw_string_ostream ss(out);
-  ss << getOrCreateName(op.getOperand());
-  ss << "." << op.getMember();
-  return out;
-}
-
-std::string CppEmitter::createMemberAccess(emitc::MemberOfPtrOp op) {
-  std::string out;
-  llvm::raw_string_ostream ss(out);
-  ss << getOrCreateName(op.getOperand());
-  ss << "->" << op.getMember();
-  return out;
-}
 
 void CppEmitter::cacheDeferredOpResult(Value value, StringRef str) {
   if (!valueMapper.count(value))
@@ -1886,46 +1810,6 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
           // Func ops.
           .Case<func::CallOp, func::FuncOp, func::ReturnOp>(
               [&](auto op) { return printOperation(*this, op); })
-          .Case<emitc::GetGlobalOp>([&](auto op) {
-            cacheDeferredOpResult(op.getResult(), op.getName());
-            return success();
-          })
-          .Case<emitc::GetFieldOp>([&](auto op) {
-            cacheDeferredOpResult(op.getResult(), op.getFieldName());
-            return success();
-          })
-          .Case<emitc::LiteralOp>([&](auto op) {
-            cacheDeferredOpResult(op.getResult(), op.getValue());
-            return success();
-          })
-          .Case<emitc::MemberOp>([&](auto op) {
-            cacheDeferredOpResult(op.getResult(), createMemberAccess(op));
-            return success();
-          })
-          .Case<emitc::MemberOfPtrOp>([&](auto op) {
-            cacheDeferredOpResult(op.getResult(), createMemberAccess(op));
-            return success();
-          })
-          .Case<emitc::SubscriptOp>([&](auto op) {
-            cacheDeferredOpResult(op.getResult(), getSubscriptName(op));
-            return success();
-          })
-          .Case<emitc::ApplyOp>([&](emitc::ApplyOp op) {
-            if (emittedExpression) {
-              return printOperation(*this, op);
-            }
-            std::string expr = getApplyName(op);
-            cacheDeferredOpResult(op.getResult(), expr);
-            // If the result is unused, emit it as a standalone statement.
-            if (op->use_empty()) {
-              std::string tmpName = "tmp" + std::to_string(++valueCount);
-              if (failed(emitType(op->getLoc(), op.getResult().getType())))
-                return failure();
-              os << " " << tmpName << " = " << expr << ";\n";
-            }
-            return success();
-          })
-
           .Default([&](Operation *) {
             return op.emitOpError("unable to find printer for op");
           });
@@ -1945,8 +1829,7 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
   // `}`.
   trailingSemicolon &=
       !isa<cf::CondBranchOp, emitc::DeclareFuncOp, emitc::FileOp, emitc::ForOp,
-           emitc::IfOp, emitc::IncludeOp, emitc::SwitchOp, emitc::VerbatimOp,
-           emitc::ApplyOp>(op);
+           emitc::IfOp, emitc::IncludeOp, emitc::SwitchOp, emitc::VerbatimOp>(op);
 
   os << (trailingSemicolon ? ";\n" : "\n");
 

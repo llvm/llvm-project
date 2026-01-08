@@ -98,27 +98,26 @@ struct ConvertAlloca final : public OpConversionPattern<memref::AllocaOp> {
 
     auto noInit = emitc::OpaqueAttr::get(getContext(), "");
     auto arrayVar =
-        rewriter.create<emitc::VariableOp>(op.getLoc(), arrayTy, noInit);
+    emitc::VariableOp::create(rewriter,      op.getLoc(), arrayTy, noInit);
 
     // Build zero indices for the base subscript.
     SmallVector<Value> indices;
     for (unsigned i = 0; i < memRefType.getRank(); ++i) {
-      auto zero = rewriter.create<emitc::ConstantOp>(
+      auto zero = emitc::ConstantOp::create(rewriter,
           op.getLoc(), rewriter.getIndexType(), rewriter.getIndexAttr(0));
       indices.push_back(zero);
     }
 
-    auto current = rewriter.create<emitc::SubscriptOp>(
+    auto current = emitc::SubscriptOp::create(rewriter,
         op.getLoc(), emitc::LValueType::get(elemTy), arrayVar.getResult(),
         indices);
 
     auto ptrElemTy = emitc::PointerType::get(elemTy);
-    auto addrOf = rewriter.create<emitc::ApplyOp>(op.getLoc(), ptrElemTy,
-                                                  rewriter.getStringAttr("&"),
+    auto addrOf = emitc::AddressOfOp::create(rewriter, op.getLoc(), ptrElemTy,
                                                   current.getResult());
 
     auto ptrArrayTy = emitc::PointerType::get(arrayTy);
-    auto casted = rewriter.create<emitc::CastOp>(op.getLoc(), ptrArrayTy,
+    auto casted = emitc::CastOp::create(rewriter,op.getLoc(), ptrArrayTy,
                                                  addrOf.getResult());
 
     rewriter.replaceOp(op, casted.getResult());
@@ -345,8 +344,8 @@ struct ConvertGetGlobal final
       emitc::GetGlobalOp globalLValue = emitc::GetGlobalOp::create(
           rewriter, op.getLoc(), lvalueType, operands.getNameAttr());
       emitc::PointerType pointerType = emitc::PointerType::get(globalType);
-      auto addrOf = rewriter.create<emitc::ApplyOp>(
-          loc, pointerType, rewriter.getStringAttr("&"), globalLValue.getResult());
+      auto addrOf = emitc::AddressOfOp::create(rewriter,
+          loc, pointerType, globalLValue.getResult());
 
       auto arrayTy = emitc::ArrayType::get({1}, globalType);
       auto ptrArrayTy = emitc::PointerType::get(arrayTy);
@@ -356,55 +355,110 @@ struct ConvertGetGlobal final
       return success();
     }
 
-    auto getGlobal = rewriter.create<emitc::GetGlobalOp>(
+    auto getGlobal = emitc::GetGlobalOp::create(rewriter,
         loc, globalType, operands.getNameAttr());
 
     SmallVector<Value> indices;
     for (unsigned i = 0; i < opTy.getRank(); ++i) {
-      auto zero = rewriter.create<emitc::ConstantOp>(
+      auto zero = emitc::ConstantOp::create(rewriter,
           loc, rewriter.getIndexType(), rewriter.getIndexAttr(0));
       indices.push_back(zero);
     }
 
-    auto current = rewriter.create<emitc::SubscriptOp>(
+    auto current = emitc::SubscriptOp::create(rewriter,
         loc, emitc::LValueType::get(elemTy), getGlobal.getResult(), indices);
 
     auto ptrElemTy = emitc::PointerType::get(opTy.getElementType());
-    auto addrOf = rewriter.create<emitc::ApplyOp>(
-        loc, ptrElemTy, rewriter.getStringAttr("&"), current.getResult());
+    auto addrOf = emitc::AddressOfOp::create(rewriter,
+        loc, ptrElemTy,  current.getResult());
 
     auto casted =
-        rewriter.create<emitc::CastOp>(loc, resultTy, addrOf.getResult());
+        emitc::CastOp::create(rewriter, loc, resultTy, addrOf.getResult());
 
     rewriter.replaceOp(op, casted.getResult());
     return success();
   }
 };
 
+
+// Helper to compute a flattened linear index for multi-dimensional memrefs
+// and generate a single subscript access in EmitC.
+
+static Value getFlattenedSubscript(ConversionPatternRewriter &rewriter,
+                                   Location loc,
+                                   Value memrefVal,
+                                   ValueRange indices,
+                                   Type elementTy) {
+    auto module = memrefVal.getDefiningOp() ? memrefVal.getDefiningOp()->getParentOfType<ModuleOp>()
+                                            : rewriter.getBlock()->getParentOp()->getParentOfType<ModuleOp>();
+
+    // Inject mt_index template once per module to compute flattened indices.
+    if (module && !module->getAttr("emitc.macros_inserted")) {
+        OpBuilder::InsertionGuard guard(rewriter);
+        rewriter.setInsertionPointToStart(module.getBody());
+        // The template is used to avoid emitting repeated
+        // index arithmetic and keeps the generated C/C++ code readable and reusable.
+        std::string templateDef =
+            "\n/* Generalized Indexing Template */\n"
+            "template <typename T> constexpr T mt_index(T i_last) { return i_last; }\n"
+            "template <typename T, typename... Args>\n"
+            "constexpr T mt_index(T idx, T stride, Args... rest) {\n"
+            "    return (idx * stride) + mt_index(rest...);\n"
+            "}\n";
+
+        emitc::VerbatimOp::create(rewriter, loc, rewriter.getStringAttr(templateDef));
+        module->setAttr("emitc.macros_inserted", rewriter.getUnitAttr());
+    }
+
+    auto ptrTy = cast<emitc::PointerType>(memrefVal.getType());
+    auto arrayTy = cast<emitc::ArrayType>(ptrTy.getPointee());
+    ArrayRef<int64_t> shape = arrayTy.getShape();
+    unsigned rank = indices.size();
+
+    // Compute static row-major strides from the array shape.
+    SmallVector<int64_t> strideValues(rank, 1);
+    for (int i = (int)rank - 2; i >= 0; --i) {
+        strideValues[i] = strideValues[i + 1] * shape[i + 1];
+    }
+    // build the argument list (index, stride, …) used to invoke it for a given
+    // memref access.
+    SmallVector<Value> macroArgs;
+    for (unsigned i = 0; i < rank; ++i) {
+        macroArgs.push_back(indices[i]);
+        if (i < rank - 1) {
+            auto sVal = emitc::ConstantOp::create(rewriter, loc,
+                                                  rewriter.getIndexType(),
+                                                  rewriter.getIndexAttr(strideValues[i]));
+            macroArgs.push_back(sVal.getResult());
+        }
+    }
+
+    auto flatIndex = emitc::CallOpaqueOp::create(rewriter, loc,
+                                                 rewriter.getIndexType(),
+                                                 "mt_index", macroArgs);
+
+    auto elemPtrTy = emitc::PointerType::get(elementTy);
+    auto flatPtr = emitc::CastOp::create(rewriter, loc, elemPtrTy, memrefVal);
+    auto lvalueTy = emitc::LValueType::get(elementTy);
+    auto subscript = emitc::SubscriptOp::create(rewriter, loc,
+                                                lvalueTy, flatPtr.getResult(),
+                                                flatIndex.getResult(0));
+
+    return subscript.getResult();
+}
 struct ConvertLoad final : public OpConversionPattern<memref::LoadOp> {
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
   matchAndRewrite(memref::LoadOp op, OpAdaptor operands,
                   ConversionPatternRewriter &rewriter) const override {
-
     auto resultTy = getTypeConverter()->convertType(op.getType());
-    if (!resultTy) {
-      return rewriter.notifyMatchFailure(op.getLoc(), "cannot convert type");
-    }
-    ImplicitLocOpBuilder b(op.getLoc(), rewriter);
-    Value memrefVal = operands.getMemref();
-    Value deref;
-    if (auto ptrVal = dyn_cast<TypedValue<emitc::PointerType>>(memrefVal)) {
-      auto arrayTy = dyn_cast<emitc::ArrayType>(ptrVal.getType().getPointee());
-      if (!arrayTy)
-        return failure();
-      deref = emitc::ApplyOp::create(b, arrayTy, b.getStringAttr("*"), ptrVal);
-    }
+    if (!resultTy) return failure();
 
-    auto arrayValue = dyn_cast<TypedValue<emitc::ArrayType>>(deref);
-    auto subscript = emitc::SubscriptOp::create(
-        rewriter, op.getLoc(), arrayValue, operands.getIndices());
+    Value subscript = getFlattenedSubscript(rewriter, op.getLoc(),
+                                            operands.getMemref(),
+                                            operands.getIndices(),
+                                            resultTy);
 
     rewriter.replaceOpWithNewOp<emitc::LoadOp>(op, resultTy, subscript);
     return success();
@@ -417,20 +471,13 @@ struct ConvertStore final : public OpConversionPattern<memref::StoreOp> {
   LogicalResult
   matchAndRewrite(memref::StoreOp op, OpAdaptor operands,
                   ConversionPatternRewriter &rewriter) const override {
-    ImplicitLocOpBuilder b(op.getLoc(), rewriter);
-    Value memrefVal = operands.getMemref();
-    Value deref;
-    if (auto ptrVal = dyn_cast<TypedValue<emitc::PointerType>>(memrefVal)) {
-      auto arrayTy = dyn_cast<emitc::ArrayType>(ptrVal.getType().getPointee());
-      if (!arrayTy)
-        return failure();
-      deref = emitc::ApplyOp::create(b, arrayTy, b.getStringAttr("*"), ptrVal);
-    }
-    auto arrayValue = dyn_cast<TypedValue<emitc::ArrayType>>(deref);
-    auto subscript = emitc::SubscriptOp::create(
-        rewriter, op.getLoc(), arrayValue, operands.getIndices());
-    Value valueToStore = operands.getOperands()[0];
 
+    Value valueToStore = operands.getValue();
+    Type elementTy = valueToStore.getType();
+    Value subscript = getFlattenedSubscript(rewriter, op.getLoc(),
+                                            operands.getMemref(),
+                                            operands.getIndices(),
+                                            elementTy);
     rewriter.replaceOpWithNewOp<emitc::AssignOp>(op, subscript, valueToStore);
     return success();
   }
