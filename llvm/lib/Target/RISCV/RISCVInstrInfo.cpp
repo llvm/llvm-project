@@ -662,7 +662,7 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   } else if (RISCV::GPRF32RegClass.hasSubClassEq(RC)) {
     Opcode = RISCV::SW_INX;
   } else if (RISCV::GPRPairRegClass.hasSubClassEq(RC)) {
-    if (STI.hasStdExtZilsd() && !STI.is64Bit()) {
+    if (!STI.is64Bit() && STI.hasStdExtZilsd() && STI.allowZilsd4ByteAlign()) {
       Opcode = RISCV::SD_RV32;
     } else {
       assert(STI.hasStdExtZdinx() && !STI.is64Bit());
@@ -753,7 +753,7 @@ void RISCVInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   } else if (RISCV::GPRF32RegClass.hasSubClassEq(RC)) {
     Opcode = RISCV::LW_INX;
   } else if (RISCV::GPRPairRegClass.hasSubClassEq(RC)) {
-    if (STI.hasStdExtZilsd() && !STI.is64Bit()) {
+    if (!STI.is64Bit() && STI.hasStdExtZilsd() && STI.allowZilsd4ByteAlign()) {
       Opcode = RISCV::LD_RV32;
     } else {
       assert(STI.hasStdExtZdinx() && !STI.is64Bit());
