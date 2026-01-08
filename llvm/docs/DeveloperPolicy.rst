@@ -793,6 +793,9 @@ for llvm users and not imposing a big burden on llvm developers:
   it is to drop it. That is not very user friendly and a bit more effort is
   expected, but no promises are made.
 
+* Legacy bitcode may have degraded performance when compared to
+  the compiled output with the legacy compiler.
+
 C API Changes
 -------------
 
