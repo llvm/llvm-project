@@ -872,8 +872,8 @@ namespace llvm {
     SDValue combineMUL(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineADD(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineFMALike(SDNode *N, DAGCombinerInfo &DCI) const;
-    SDValue combineTRUNCATE(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineVectorZExtCompare(SDNode *N, DAGCombinerInfo &DCI) const;
+    SDValue combineTRUNCATE(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineSetCC(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineVectorShuffle(ShuffleVectorSDNode *SVN,
                                  SelectionDAG &DAG) const;
