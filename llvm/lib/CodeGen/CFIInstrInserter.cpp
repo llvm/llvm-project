@@ -102,7 +102,7 @@ class CFIInstrInserter : public MachineFunctionPass {
     } U;
 
   public:
-    CSRSavedLocation() { K = Kind::Invalid; }
+    CSRSavedLocation() {}
 
     static CSRSavedLocation createCFAOffset(int64_t Offset) {
       CSRSavedLocation Loc;
@@ -135,7 +135,7 @@ class CFIInstrInserter : public MachineFunctionPass {
         return false;
       switch (K) {
       case Kind::Invalid:
-        return !RHS.isValid();
+        return true;
       case Kind::Register:
         return getRegister() == RHS.getRegister();
       case Kind::CFAOffset:
