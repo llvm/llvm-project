@@ -14,6 +14,18 @@ static const char *ClonedLoopTag = "loop_constrainer.loop.clone";
 
 #define DEBUG_TYPE "loop-constrainer"
 
+static bool isLoopEntryGuardedByCond(ScalarEvolution &SE, Loop *L,
+                                     ICmpInst::Predicate Pred,
+                                     const SCEV *Start, const SCEV *Bound) {
+  // First, try to prove the predicate without applying loop guards.
+  if (SE.isLoopEntryGuardedByCond(L, Pred, Start, Bound))
+    return true;
+  // Otherwise, try again with loop guards applied to the SCEVs.
+  auto StartLG = SE.applyLoopGuards(Start, L);
+  auto BoundLG = SE.applyLoopGuards(Bound, L);
+  return SE.isLoopEntryGuardedByCond(L, Pred, StartLG, BoundLG);
+}
+
 /// Given a loop with an deccreasing induction variable, is it possible to
 /// safely calculate the bounds of a new loop using the given Predicate.
 static bool isSafeDecreasingBound(const SCEV *Start, const SCEV *BoundSCEV,
@@ -42,11 +54,8 @@ static bool isSafeDecreasingBound(const SCEV *Start, const SCEV *BoundSCEV,
   ICmpInst::Predicate BoundPred =
       IsSigned ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT;
 
-  auto StartLG = SE.applyLoopGuards(Start, L);
-  auto BoundLG = SE.applyLoopGuards(BoundSCEV, L);
-
   if (LatchBrExitIdx == 1)
-    return SE.isLoopEntryGuardedByCond(L, BoundPred, StartLG, BoundLG);
+    return isLoopEntryGuardedByCond(SE, L, BoundPred, Start, BoundSCEV);
 
   assert(LatchBrExitIdx == 0 && "LatchBrExitIdx should be either 0 or 1");
 
@@ -57,10 +66,10 @@ static bool isSafeDecreasingBound(const SCEV *Start, const SCEV *BoundSCEV,
   const SCEV *Limit = SE.getMinusSCEV(SE.getConstant(Min), StepPlusOne);
 
   const SCEV *MinusOne =
-      SE.getMinusSCEV(BoundLG, SE.getOne(BoundLG->getType()));
+      SE.getMinusSCEV(BoundSCEV, SE.getOne(BoundSCEV->getType()));
 
-  return SE.isLoopEntryGuardedByCond(L, BoundPred, StartLG, MinusOne) &&
-         SE.isLoopEntryGuardedByCond(L, BoundPred, BoundLG, Limit);
+  return isLoopEntryGuardedByCond(SE, L, BoundPred, Start, MinusOne) &&
+         isLoopEntryGuardedByCond(SE, L, BoundPred, BoundSCEV, Limit);
 }
 
 /// Given a loop with an increasing induction variable, is it possible to
@@ -89,11 +98,8 @@ static bool isSafeIncreasingBound(const SCEV *Start, const SCEV *BoundSCEV,
   ICmpInst::Predicate BoundPred =
       IsSigned ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT;
 
-  auto StartLG = SE.applyLoopGuards(Start, L);
-  auto BoundLG = SE.applyLoopGuards(BoundSCEV, L);
-
   if (LatchBrExitIdx == 1)
-    return SE.isLoopEntryGuardedByCond(L, BoundPred, StartLG, BoundLG);
+    return isLoopEntryGuardedByCond(SE, L, BoundPred, Start, BoundSCEV);
 
   assert(LatchBrExitIdx == 0 && "LatchBrExitIdx should be 0 or 1");
 
@@ -103,9 +109,9 @@ static bool isSafeIncreasingBound(const SCEV *Start, const SCEV *BoundSCEV,
                        : APInt::getMaxValue(BitWidth);
   const SCEV *Limit = SE.getMinusSCEV(SE.getConstant(Max), StepMinusOne);
 
-  return (SE.isLoopEntryGuardedByCond(L, BoundPred, StartLG,
-                                      SE.getAddExpr(BoundLG, Step)) &&
-          SE.isLoopEntryGuardedByCond(L, BoundPred, BoundLG, Limit));
+  return (isLoopEntryGuardedByCond(SE, L, BoundPred, Start,
+                                   SE.getAddExpr(BoundSCEV, Step)) &&
+          isLoopEntryGuardedByCond(SE, L, BoundPred, BoundSCEV, Limit));
 }
 
 /// Returns estimate for max latch taken count of the loop of the narrowest
