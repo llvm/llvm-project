@@ -217,7 +217,8 @@ private:
   bool coalesceStackAccess(MachineInstr *MI, Register Reg);
   bool foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>>,
                          MachineInstr *LoadMI = nullptr);
-  void insertReload(Register VReg, SlotIndex, MachineBasicBlock::iterator MI);
+  void insertReload(Register VReg, unsigned SubReg, SlotIndex,
+                    MachineBasicBlock::iterator MI);
   void insertSpill(Register VReg, bool isKill, MachineBasicBlock::iterator MI);
 
   void spillAroundUses(Register Reg);
@@ -1112,14 +1113,14 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
   return true;
 }
 
-void InlineSpiller::insertReload(Register NewVReg,
+void InlineSpiller::insertReload(Register NewVReg, unsigned SubReg,
                                  SlotIndex Idx,
                                  MachineBasicBlock::iterator MI) {
   MachineBasicBlock &MBB = *MI->getParent();
 
   MachineInstrSpan MIS(MI, &MBB);
   TII.loadRegFromStackSlot(MBB, MI, NewVReg, StackSlot,
-                           MRI.getRegClass(NewVReg), Register());
+                           MRI.getRegClass(NewVReg), Register(), SubReg);
 
   LIS.InsertMachineInstrRangeInMaps(MIS.begin(), MI);
 
@@ -1248,10 +1249,51 @@ void InlineSpiller::spillAroundUses(Register Reg) {
 
     // Create a new virtual register for spill/fill.
     // FIXME: Infer regclass from instruction alone.
-    Register NewVReg = Edit->createFrom(Reg);
+
+    unsigned SubReg = 0;
+    LaneBitmask CoveringLanes = LaneBitmask::getNone();
+    // If the subreg liveness is enabled, identify the subreg use(s) to try
+    // subreg reload. Skip if the instruction also defines the register.
+    // For copy bundles, get the covering lane masks.
+    if (MRI.subRegLivenessEnabled() && !RI.Writes) {
+      for (auto [MI, OpIdx] : Ops) {
+        const MachineOperand &MO = MI->getOperand(OpIdx);
+        assert(MO.isReg() && MO.getReg() == Reg);
+        if (MO.isUse()) {
+          SubReg = MO.getSubReg();
+          if (SubReg)
+            CoveringLanes |= TRI.getSubRegIndexLaneMask(SubReg);
+        }
+      }
+    }
+
+    if (MI.isBundled() && CoveringLanes.any()) {
+      CoveringLanes = LaneBitmask(bit_ceil(CoveringLanes.getAsInteger()) - 1);
+      // Obtain the covering subregister index, including any missing indices
+      // within the identified small range. Although this may be suboptimal due
+      // to gaps in the subregisters that are not part of the copy bundle, it is
+      // benificial when components outside this range of the original tuple can
+      // be completely skipped from the reload.
+      SubReg = TRI.getSubRegIdxFromLaneMask(CoveringLanes);
+    }
+
+    // If the target doesn't support subreg reload, fallback to restoring the
+    // full tuple.
+    if (SubReg && !TRI.shouldEnableSubRegReload(SubReg))
+      SubReg = 0;
+
+    const TargetRegisterClass *OrigRC = MRI.getRegClass(Reg);
+    const TargetRegisterClass *NewRC =
+        SubReg ? TRI.getSubRegisterClass(OrigRC, SubReg) : nullptr;
+
+    // Check if the target needs to constrain the RC further.
+    if (NewRC)
+      NewRC = TRI.getConstrainedRegClass(NewRC);
+
+    Register NewVReg = Edit->createFrom(Reg, NewRC);
 
     if (RI.Reads)
-      insertReload(NewVReg, Idx, &MI);
+      insertReload(NewVReg, SubReg, Idx, &MI);
 
     // Rewrite instruction operands.
     bool hasLiveDef = false;
@@ -1259,7 +1301,10 @@ void InlineSpiller::spillAroundUses(Register Reg) {
       MachineOperand &MO = OpPair.first->getOperand(OpPair.second);
       MO.setReg(NewVReg);
       if (MO.isUse()) {
-        if (!OpPair.first->isRegTiedToDefOperand(OpPair.second))
+        if (SubReg && !MI.isBundled())
+          MO.setSubReg(0);
+        if (!OpPair.first->isRegTiedToDefOperand(OpPair.second) ||
+            (SubReg && !MI.isBundled()))
           MO.setIsKill();
       } else {
         if (!MO.isDead())
