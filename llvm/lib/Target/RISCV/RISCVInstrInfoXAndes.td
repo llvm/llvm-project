@@ -706,7 +706,7 @@ let Predicates = [HasVendorXAndesBFHCvt] in {
   def NDS_FCVT_BF16_S : NDSRVInstBFHCvt<0b0000000, 0b00011,
                                         FPR16, FPR32, "nds.fcvt.bf16.s">,
                         Sched<[WriteFCvtF32ToF16, ReadFCvtF32ToF16]>;
-}
+} // Predicates = [HasVendorXAndesBFHCvt]
 
 //===----------------------------------------------------------------------===//
 // XAndesVBFHCvt
@@ -718,7 +718,8 @@ let Predicates = [HasVendorXAndesVBFHCvt], Constraints = "@earlyclobber $vd",
     def NDS_VFWCVT_S_BF16 : NDSRVInstVBFHCvt<0b00000, "nds.vfwcvt.s.bf16">;
   let Uses = [FRM, VL, VTYPE] in
     def NDS_VFNCVT_BF16_S : NDSRVInstVBFHCvt<0b00001, "nds.vfncvt.bf16.s">;
-}
+} // Predicates = [HasVendorXAndesVBFHCvt], Constraints = "@earlyclobber $vd",
+  // mayRaiseFPException = true
 
 //===----------------------------------------------------------------------===//
 // XAndesVSIntH
@@ -730,7 +731,7 @@ let Predicates = [HasVendorXAndesVSIntH] in {
   def NDS_VFWCVT_F_B  : NDSRVInstVSINTCvt<0b00110, "nds.vfwcvt.f.b.v">;
   def NDS_VFWCVT_F_BU : NDSRVInstVSINTCvt<0b00111, "nds.vfwcvt.f.bu.v">;
   def NDS_VLE4_V : NDSRVInstVSINTLN<0b00000, "nds.vle4.v">;
-}
+} // Predicates = [HasVendorXAndesVSIntH]
 
 //===----------------------------------------------------------------------===//
 // XAndesVSIntLoad
@@ -739,7 +740,7 @@ let Predicates = [HasVendorXAndesVSIntH] in {
 let Predicates = [HasVendorXAndesVSIntLoad] in {
   def NDS_VLN8_V  : NDSRVInstVLN<0b00010, "nds.vln8.v">;
   def NDS_VLNU8_V : NDSRVInstVLN<0b00011, "nds.vlnu8.v">;
-}
+} // Predicates = [HasVendorXAndesVSIntLoad]
 
 //===----------------------------------------------------------------------===//
 // XAndesVPackFPH
@@ -749,7 +750,8 @@ let Predicates = [HasVendorXAndesVPackFPH],
     Uses = [FRM, VL, VTYPE], mayRaiseFPException = true in {
   def NDS_VFPMADT_VF : NDSRVInstVFPMAD<0b000010, "nds.vfpmadt">;
   def NDS_VFPMADB_VF : NDSRVInstVFPMAD<0b000011, "nds.vfpmadb">;
-}
+} // Predicates = [HasVendorXAndesVPackFPH],
+  // Uses = [FRM, VL, VTYPE], mayRaiseFPException = true
 
 //===----------------------------------------------------------------------===//
 // XAndesVDot
@@ -759,7 +761,7 @@ let Predicates = [HasVendorXAndesVDot], Uses = [VL, VTYPE] in {
   def NDS_VD4DOTS_VV  : NDSRVInstVD4DOT<0b000100, "nds.vd4dots">;
   def NDS_VD4DOTU_VV  : NDSRVInstVD4DOT<0b000111, "nds.vd4dotu">;
   def NDS_VD4DOTSU_VV : NDSRVInstVD4DOT<0b000101, "nds.vd4dotsu">;
-}
+} // Predicates = [HasVendorXAndesVDot], Uses = [VL, VTYPE]
 } // DecoderNamespace = "XAndes"
 
 //===----------------------------------------------------------------------===//
@@ -896,7 +898,7 @@ let Predicates = [HasVendorXAndesVDot] in {
   defm PseudoNDS_VD4DOTS  : VPseudoVD4DOT_VV;
   defm PseudoNDS_VD4DOTU  : VPseudoVD4DOT_VV;
   defm PseudoNDS_VD4DOTSU : VPseudoVD4DOT_VV;
-}
+} // Predicates = [HasVendorXAndesVDot]
 
 defset list<VTypeInfoToWide> AllQuadWidenableVD4DOTVectors = {
   def : VTypeInfoToWide<VI8MF2,  VI32MF2>;
