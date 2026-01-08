@@ -1,0 +1,37 @@
+# RUN: not llc -mcpu=gfx1100 -mtriple=amdgcn-amd-amdhsa -stress-regalloc=4 -run-pass=greedy -filetype=null %s 2>&1 | FileCheck %s
+
+# This test demonstrates register pressure mitigation through subreg-aware
+# reloads during register allocation. Currently, the test would fail during
+# RA due to insufficient registers. Subreg-aware reload, when implemented,
+# mitigates register pressure by reloading only the used portions of tuple
+# registers from their spilled locations instead of reloading entire tuples,
+# thereby enhancing register allocation.
+
+# CHECK: error: <unknown>:0:0: ran out of registers during register allocation
+
+---
+name:            subreg-reload
+tracksRegLiveness: true
+machineFunctionInfo:
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+  bb.0.entry:
+    liveins: $vgpr1, $sgpr0_sgpr1, $sgpr2_sgpr3
+
+    %8:vgpr_32 = COPY $vgpr1
+    %12:vreg_64 = COPY killed renamable $sgpr0_sgpr1
+    %11:vreg_128 = FLAT_LOAD_DWORDX4 %12, 0, 0, implicit $exec, implicit $flat_scr
+    undef early-clobber %49.sub0_sub1:vreg_128, $sgpr_null = V_MAD_U64_U32_gfx11_e64 %11.sub0, 42, 0, 0, implicit $exec
+    undef %50.sub0:vreg_64 = COPY %49.sub1
+    early-clobber %49.sub1_sub2:vreg_128, $sgpr_null = V_MAD_U64_U32_gfx11_e64 %11.sub1, 42, %50, 0, implicit $exec
+    early-clobber %15:vreg_64, $sgpr_null = V_MAD_U64_U32_gfx11_e64 %11.sub2, 42, 0, 0, implicit $exec
+    undef %52.sub0:vreg_64 = COPY %15.sub1
+    early-clobber %27:vreg_64, $sgpr_null = V_MAD_U64_U32_gfx11_e64 %11.sub3, 42, %52, 0, implicit $exec
+    %49.sub2:vreg_128 = COPY %15.sub0
+    %49.sub3:vreg_128 = COPY %27.sub0
+    $vgpr31 = COPY %8
+    INLINEASM &"; use v1", 1, 327690, $vgpr1
+    FLAT_STORE_DWORDX4 %12, %49, 0, 0, implicit $exec, implicit $flat_scr
+    SI_RETURN
+...
