@@ -54,17 +54,21 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr year_month_weekday& operator+=(const years&) noexcept;
   _LIBCPP_HIDE_FROM_ABI constexpr year_month_weekday& operator-=(const years&) noexcept;
 
-  _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::year year() const noexcept { return __y_; }
-  _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::month month() const noexcept { return __m_; }
-  _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::weekday weekday() const noexcept { return __wdi_.weekday(); }
-  _LIBCPP_HIDE_FROM_ABI inline constexpr unsigned index() const noexcept { return __wdi_.index(); }
-  _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::weekday_indexed weekday_indexed() const noexcept { return __wdi_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::year year() const noexcept { return __y_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::month month() const noexcept { return __m_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::weekday weekday() const noexcept {
+    return __wdi_.weekday();
+  }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr unsigned index() const noexcept { return __wdi_.index(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::weekday_indexed weekday_indexed() const noexcept {
+    return __wdi_;
+  }
 
   _LIBCPP_HIDE_FROM_ABI inline constexpr operator sys_days() const noexcept { return sys_days{__to_days()}; }
   _LIBCPP_HIDE_FROM_ABI inline explicit constexpr operator local_days() const noexcept {
     return local_days{__to_days()};
   }
-  _LIBCPP_HIDE_FROM_ABI inline constexpr bool ok() const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr bool ok() const noexcept {
     if (!__y_.ok() || !__m_.ok() || !__wdi_.ok())
       return false;
     if (__wdi_.index() <= 4)
@@ -96,55 +100,57 @@ operator==(const year_month_weekday& __lhs, const year_month_weekday& __rhs) noe
          __lhs.weekday_indexed() == __rhs.weekday_indexed();
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday
 operator/(const year_month& __lhs, const weekday_indexed& __rhs) noexcept {
   return year_month_weekday{__lhs.year(), __lhs.month(), __rhs};
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday
 operator/(const year& __lhs, const month_weekday& __rhs) noexcept {
   return year_month_weekday{__lhs, __rhs.month(), __rhs.weekday_indexed()};
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday operator/(int __lhs, const month_weekday& __rhs) noexcept {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday
+operator/(int __lhs, const month_weekday& __rhs) noexcept {
   return year(__lhs) / __rhs;
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday
 operator/(const month_weekday& __lhs, const year& __rhs) noexcept {
   return __rhs / __lhs;
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday operator/(const month_weekday& __lhs, int __rhs) noexcept {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday
+operator/(const month_weekday& __lhs, int __rhs) noexcept {
   return year(__rhs) / __lhs;
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday
 operator+(const year_month_weekday& __lhs, const months& __rhs) noexcept {
   return (__lhs.year() / __lhs.month() + __rhs) / __lhs.weekday_indexed();
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday
 operator+(const months& __lhs, const year_month_weekday& __rhs) noexcept {
   return __rhs + __lhs;
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday
 operator-(const year_month_weekday& __lhs, const months& __rhs) noexcept {
   return __lhs + (-__rhs);
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday
 operator+(const year_month_weekday& __lhs, const years& __rhs) noexcept {
   return year_month_weekday{__lhs.year() + __rhs, __lhs.month(), __lhs.weekday_indexed()};
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday
 operator+(const years& __lhs, const year_month_weekday& __rhs) noexcept {
   return __rhs + __lhs;
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday
 operator-(const year_month_weekday& __lhs, const years& __rhs) noexcept {
   return __lhs + (-__rhs);
 }
@@ -181,15 +187,21 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr year_month_weekday_last& operator+=(const years& __dy) noexcept;
   _LIBCPP_HIDE_FROM_ABI constexpr year_month_weekday_last& operator-=(const years& __dy) noexcept;
 
-  _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::year year() const noexcept { return __y_; }
-  _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::month month() const noexcept { return __m_; }
-  _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::weekday weekday() const noexcept { return __wdl_.weekday(); }
-  _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::weekday_last weekday_last() const noexcept { return __wdl_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::year year() const noexcept { return __y_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::month month() const noexcept { return __m_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::weekday weekday() const noexcept {
+    return __wdl_.weekday();
+  }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::weekday_last weekday_last() const noexcept {
+    return __wdl_;
+  }
   _LIBCPP_HIDE_FROM_ABI inline constexpr operator sys_days() const noexcept { return sys_days{__to_days()}; }
   _LIBCPP_HIDE_FROM_ABI inline explicit constexpr operator local_days() const noexcept {
     return local_days{__to_days()};
   }
-  _LIBCPP_HIDE_FROM_ABI inline constexpr bool ok() const noexcept { return __y_.ok() && __m_.ok() && __wdl_.ok(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr bool ok() const noexcept {
+    return __y_.ok() && __m_.ok() && __wdl_.ok();
+  }
 
   _LIBCPP_HIDE_FROM_ABI constexpr days __to_days() const noexcept;
 };
@@ -204,57 +216,57 @@ operator==(const year_month_weekday_last& __lhs, const year_month_weekday_last& 
   return __lhs.year() == __rhs.year() && __lhs.month() == __rhs.month() && __lhs.weekday_last() == __rhs.weekday_last();
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday_last
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday_last
 operator/(const year_month& __lhs, const weekday_last& __rhs) noexcept {
   return year_month_weekday_last{__lhs.year(), __lhs.month(), __rhs};
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday_last
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday_last
 operator/(const year& __lhs, const month_weekday_last& __rhs) noexcept {
   return year_month_weekday_last{__lhs, __rhs.month(), __rhs.weekday_last()};
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday_last
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday_last
 operator/(int __lhs, const month_weekday_last& __rhs) noexcept {
   return year(__lhs) / __rhs;
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday_last
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday_last
 operator/(const month_weekday_last& __lhs, const year& __rhs) noexcept {
   return __rhs / __lhs;
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday_last
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday_last
 operator/(const month_weekday_last& __lhs, int __rhs) noexcept {
   return year(__rhs) / __lhs;
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday_last
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday_last
 operator+(const year_month_weekday_last& __lhs, const months& __rhs) noexcept {
   return (__lhs.year() / __lhs.month() + __rhs) / __lhs.weekday_last();
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday_last
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday_last
 operator+(const months& __lhs, const year_month_weekday_last& __rhs) noexcept {
   return __rhs + __lhs;
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday_last
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday_last
 operator-(const year_month_weekday_last& __lhs, const months& __rhs) noexcept {
   return __lhs + (-__rhs);
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday_last
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday_last
 operator+(const year_month_weekday_last& __lhs, const years& __rhs) noexcept {
   return year_month_weekday_last{__lhs.year() + __rhs, __lhs.month(), __lhs.weekday_last()};
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday_last
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday_last
 operator+(const years& __lhs, const year_month_weekday_last& __rhs) noexcept {
   return __rhs + __lhs;
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday_last
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr year_month_weekday_last
 operator-(const year_month_weekday_last& __lhs, const years& __rhs) noexcept {
   return __lhs + (-__rhs);
 }
@@ -286,7 +298,7 @@ year_month_weekday_last::operator-=(const years& __dy) noexcept {
 
 template <>
 struct hash<chrono::year_month_weekday> {
-  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::year_month_weekday& __ymw) noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::year_month_weekday& __ymw) noexcept {
     return std::__hash_combine(
         hash<chrono::year>{}(__ymw.year()),
         std::__hash_combine(
@@ -296,7 +308,7 @@ struct hash<chrono::year_month_weekday> {
 
 template <>
 struct hash<chrono::year_month_weekday_last> {
-  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::year_month_weekday_last& __ymwl) noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::year_month_weekday_last& __ymwl) noexcept {
     return std::__hash_combine(
         hash<chrono::year>{}(__ymwl.year()),
         std::__hash_combine(
