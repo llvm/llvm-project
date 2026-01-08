@@ -1812,39 +1812,6 @@ static uint8_t getOsAbi(const Triple &t) {
   }
 }
 
-// For DTLTO, bitcode member names must be valid paths to files on disk.
-// For thin archives, resolve `memberPath` relative to the archive's location.
-// Returns true if adjusted; false otherwise. Non-thin archives are unsupported.
-static bool dtltoAdjustMemberPathIfThinArchive(Ctx &ctx, StringRef archivePath,
-                                               std::string &memberPath) {
-  assert(!archivePath.empty());
-
-  if (ctx.arg.dtltoDistributor.empty())
-    return false;
-
-  // Read the archive header to determine if it's a thin archive.
-  auto bufferOrErr =
-      MemoryBuffer::getFileSlice(archivePath, sizeof(ThinArchiveMagic) - 1, 0);
-  if (std::error_code ec = bufferOrErr.getError()) {
-    ErrAlways(ctx) << "cannot open " << archivePath << ": " << ec.message();
-    return false;
-  }
-
-  if (!bufferOrErr->get()->getBuffer().starts_with(ThinArchiveMagic))
-    return false;
-
-  SmallString<128> resolvedPath;
-  if (path::is_relative(memberPath)) {
-    resolvedPath = path::parent_path(archivePath);
-    path::append(resolvedPath, memberPath);
-  } else
-    resolvedPath = memberPath;
-
-  path::remove_dots(resolvedPath, /*remove_dot_dot=*/true);
-  memberPath = resolvedPath.str();
-  return true;
-}
-
 IRFile::IRFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
                uint64_t offsetInArchive, bool lazy)
     : InputFile(ctx, BitcodeKind, mb) {
