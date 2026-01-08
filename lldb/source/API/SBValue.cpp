@@ -1262,7 +1262,27 @@ lldb::SBValue SBValue::EvaluateExpression(const char *expr,
 
 bool SBValue::GetDescription(SBStream &description) {
   LLDB_INSTRUMENT_VA(this, description);
+
   return GetDescription(description, eDescriptionLevelFull);
+}
+
+static DumpValueObjectOptions
+GetDumpOptions(lldb::DescriptionLevel description_level) {
+  DumpValueObjectOptions options;
+  switch (description_level) {
+  case eDescriptionLevelBrief:
+    options.SetAllowOnelinerMode(true);
+    options.SetHideRootName(true);
+    options.SetHideRootType(true);
+    break;
+  case eDescriptionLevelVerbose:
+    options.SetShowTypes(true);
+    options.SetShowLocation(true);
+    break;
+  default:
+    break;
+  }
+  return options;
 }
 
 bool SBValue::GetDescription(SBStream &description,
@@ -1274,18 +1294,10 @@ bool SBValue::GetDescription(SBStream &description,
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp) {
-    DumpValueObjectOptions options;
+    DumpValueObjectOptions options = GetDumpOptions(description_level);
     if (description_level != eDescriptionLevelInitial) {
       options.SetUseDynamicType(m_opaque_sp->GetUseDynamic());
       options.SetUseSyntheticValue(m_opaque_sp->GetUseSynthetic());
-    }
-    if (description_level == eDescriptionLevelBrief) {
-      options.SetAllowOnelinerMode(true);
-      options.SetHideRootName(true);
-      options.SetHideRootType(true);
-    } else if (description_level == eDescriptionLevelVerbose) {
-      options.SetShowTypes(true);
-      options.SetShowLocation(true);
     }
     if (llvm::Error error = value_sp->Dump(strm, options)) {
       strm << "error: " << toString(std::move(error));
