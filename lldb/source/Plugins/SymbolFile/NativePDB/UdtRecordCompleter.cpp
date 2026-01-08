@@ -229,6 +229,32 @@ Error UdtRecordCompleter::visitKnownMember(
 
 Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
                                            NestedTypeRecord &nested) {
+  // Typedefs can only be added on structs.
+  if (m_record.record.kind != Member::Struct)
+    return Error::success();
+
+  clang::QualType qt =
+      m_ast_builder.GetOrCreateType(PdbTypeSymId(nested.Type, false));
+  if (qt.isNull())
+    return Error::success();
+  CompilerType ct = m_ast_builder.ToCompilerType(qt);
+
+  // There's no distinction between nested types and typedefs, so check if we
+  // encountered a nested type.
+  auto *pdb = static_cast<SymbolFileNativePDB *>(
+      m_ast_builder.clang().GetSymbolFile()->GetBackingSymbolFile());
+  std::optional<TypeIndex> parent = pdb->GetParentType(nested.Type);
+  if (parent && *parent == m_id.index && ct.GetTypeName(true) == nested.Name)
+    return Error::success();
+
+  clang::DeclContext *decl_ctx =
+      m_ast_builder.GetOrCreateDeclContextForUid(m_id);
+  if (!decl_ctx)
+    return Error::success();
+
+  std::string name = nested.Name.str();
+  ct.CreateTypedef(name.c_str(), m_ast_builder.ToCompilerDeclContext(*decl_ctx),
+                   0);
   return Error::success();
 }
 

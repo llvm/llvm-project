@@ -117,6 +117,7 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
   ],
   "HasEnums": true,
   "HasParents": true,
+  "HasProtectedMembers": true,
   "HasPublicFunctions": true,
   "HasRecords": true,
   "HasVirtualParents": true,
@@ -135,7 +136,6 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
     {
       "End": true,
       "Name": "F",
-      "Path": "",
       "QualName": "",
       "USR": "0000000000000000000000000000000000000000"
     }
@@ -247,6 +247,7 @@ TEST_F(JSONGeneratorTest, emitNamespaceJSON) {
   ],
   "HasEnums": true,
   "HasFunctions": true,
+  "HasNamespaces": true,
   "HasRecords": true,
   "InfoType": "namespace",
   "Name": "Global Namespace",

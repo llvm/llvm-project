@@ -44,7 +44,6 @@ define float @global_agent_atomic_fsub_ret_f32(ptr addrspace(1) %ptr, float %val
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_ret_f32:
@@ -276,7 +275,6 @@ define float @global_agent_atomic_fsub_ret_f32__offset12b_pos(ptr addrspace(1) %
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_ret_f32__offset12b_pos:
@@ -510,7 +508,6 @@ define float @global_agent_atomic_fsub_ret_f32__offset12b_neg(ptr addrspace(1) %
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_ret_f32__offset12b_neg:
@@ -752,7 +749,6 @@ define void @global_agent_atomic_fsub_noret_f32(ptr addrspace(1) %ptr, float %va
 ; GFX12-NEXT:    s_cbranch_execnz .LBB3_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_noret_f32:
@@ -973,7 +969,6 @@ define void @global_agent_atomic_fsub_noret_f32__offset12b_pos(ptr addrspace(1) 
 ; GFX12-NEXT:    s_cbranch_execnz .LBB4_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_noret_f32__offset12b_pos:
@@ -1197,7 +1192,6 @@ define void @global_agent_atomic_fsub_noret_f32__offset12b_neg(ptr addrspace(1) 
 ; GFX12-NEXT:    s_cbranch_execnz .LBB5_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_noret_f32__offset12b_neg:
@@ -1432,7 +1426,6 @@ define float @global_system_atomic_fsub_ret_f32__offset12b_pos(ptr addrspace(1) 
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_system_atomic_fsub_ret_f32__offset12b_pos:
@@ -1667,7 +1660,6 @@ define void @global_system_atomic_fsub_noret_f32__offset12b_pos(ptr addrspace(1)
 ; GFX12-NEXT:    s_cbranch_execnz .LBB7_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_system_atomic_fsub_noret_f32__offset12b_pos:
@@ -1899,7 +1891,6 @@ define float @global_agent_atomic_fsub_ret_f32__ftz(ptr addrspace(1) %ptr, float
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_ret_f32__ftz:
@@ -2131,7 +2122,6 @@ define float @global_agent_atomic_fsub_ret_f32__offset12b_pos__ftz(ptr addrspace
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_ret_f32__offset12b_pos__ftz:
@@ -2365,7 +2355,6 @@ define float @global_agent_atomic_fsub_ret_f32__offset12b_neg__ftz(ptr addrspace
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_ret_f32__offset12b_neg__ftz:
@@ -2607,7 +2596,6 @@ define void @global_agent_atomic_fsub_noret_f32__ftz(ptr addrspace(1) %ptr, floa
 ; GFX12-NEXT:    s_cbranch_execnz .LBB11_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_noret_f32__ftz:
@@ -2828,7 +2816,6 @@ define void @global_agent_atomic_fsub_noret_f32__offset12b_pos__ftz(ptr addrspac
 ; GFX12-NEXT:    s_cbranch_execnz .LBB12_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_noret_f32__offset12b_pos__ftz:
@@ -3052,7 +3039,6 @@ define void @global_agent_atomic_fsub_noret_f32__offset12b_neg__ftz(ptr addrspac
 ; GFX12-NEXT:    s_cbranch_execnz .LBB13_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_noret_f32__offset12b_neg__ftz:
@@ -3287,7 +3273,6 @@ define float @global_system_atomic_fsub_ret_f32__offset12b_pos__ftz(ptr addrspac
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_system_atomic_fsub_ret_f32__offset12b_pos__ftz:
@@ -3522,7 +3507,6 @@ define void @global_system_atomic_fsub_noret_f32__offset12b_pos__ftz(ptr addrspa
 ; GFX12-NEXT:    s_cbranch_execnz .LBB15_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_system_atomic_fsub_noret_f32__offset12b_pos__ftz:
@@ -3754,7 +3738,6 @@ define double @global_agent_atomic_fsub_ret_f64(ptr addrspace(1) %ptr, double %v
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v5
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_ret_f64:
@@ -4006,7 +3989,6 @@ define double @global_agent_atomic_fsub_ret_f64__offset12b_pos(ptr addrspace(1) 
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v5
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_ret_f64__offset12b_pos:
@@ -4259,7 +4241,6 @@ define double @global_agent_atomic_fsub_ret_f64__offset12b_neg(ptr addrspace(1) 
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v5
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_ret_f64__offset12b_neg:
@@ -4514,7 +4495,6 @@ define void @global_agent_atomic_fsub_noret_f64(ptr addrspace(1) %ptr, double %v
 ; GFX12-NEXT:    s_cbranch_execnz .LBB19_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_noret_f64:
@@ -4744,7 +4724,6 @@ define void @global_agent_atomic_fsub_noret_f64__offset12b_pos(ptr addrspace(1) 
 ; GFX12-NEXT:    s_cbranch_execnz .LBB20_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_noret_f64__offset12b_pos:
@@ -4977,7 +4956,6 @@ define void @global_agent_atomic_fsub_noret_f64__offset12b_neg(ptr addrspace(1) 
 ; GFX12-NEXT:    s_cbranch_execnz .LBB21_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_noret_f64__offset12b_neg:
@@ -5237,7 +5215,6 @@ define half @global_agent_atomic_fsub_ret_f16(ptr addrspace(1) %ptr, half %val) 
 ; GFX12-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, v3, v5
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: global_agent_atomic_fsub_ret_f16:
@@ -5282,7 +5259,6 @@ define half @global_agent_atomic_fsub_ret_f16(ptr addrspace(1) %ptr, half %val) 
 ; GFX12-FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, v3, v5
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_ret_f16:
@@ -5660,7 +5636,6 @@ define half @global_agent_atomic_fsub_ret_f16__offset12b_pos(ptr addrspace(1) %p
 ; GFX12-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, v3, v5
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: global_agent_atomic_fsub_ret_f16__offset12b_pos:
@@ -5706,7 +5681,6 @@ define half @global_agent_atomic_fsub_ret_f16__offset12b_pos(ptr addrspace(1) %p
 ; GFX12-FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, v3, v5
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_ret_f16__offset12b_pos:
@@ -6096,7 +6070,6 @@ define half @global_agent_atomic_fsub_ret_f16__offset12b_neg(ptr addrspace(1) %p
 ; GFX12-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, v3, v5
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: global_agent_atomic_fsub_ret_f16__offset12b_neg:
@@ -6142,7 +6115,6 @@ define half @global_agent_atomic_fsub_ret_f16__offset12b_neg(ptr addrspace(1) %p
 ; GFX12-FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, v3, v5
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_ret_f16__offset12b_neg:
@@ -6531,7 +6503,6 @@ define void @global_agent_atomic_fsub_noret_f16(ptr addrspace(1) %ptr, half %val
 ; GFX12-TRUE16-NEXT:    s_cbranch_execnz .LBB25_1
 ; GFX12-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: global_agent_atomic_fsub_noret_f16:
@@ -6574,7 +6545,6 @@ define void @global_agent_atomic_fsub_noret_f16(ptr addrspace(1) %ptr, half %val
 ; GFX12-FAKE16-NEXT:    s_cbranch_execnz .LBB25_1
 ; GFX12-FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_noret_f16:
@@ -6940,7 +6910,6 @@ define void @global_agent_atomic_fsub_noret_f16__offset12b_pos(ptr addrspace(1) 
 ; GFX12-TRUE16-NEXT:    s_cbranch_execnz .LBB26_1
 ; GFX12-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: global_agent_atomic_fsub_noret_f16__offset12b_pos:
@@ -6984,7 +6953,6 @@ define void @global_agent_atomic_fsub_noret_f16__offset12b_pos(ptr addrspace(1) 
 ; GFX12-FAKE16-NEXT:    s_cbranch_execnz .LBB26_1
 ; GFX12-FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_noret_f16__offset12b_pos:
@@ -7361,7 +7329,6 @@ define void @global_agent_atomic_fsub_noret_f16__offset12b_neg(ptr addrspace(1) 
 ; GFX12-TRUE16-NEXT:    s_cbranch_execnz .LBB27_1
 ; GFX12-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: global_agent_atomic_fsub_noret_f16__offset12b_neg:
@@ -7405,7 +7372,6 @@ define void @global_agent_atomic_fsub_noret_f16__offset12b_neg(ptr addrspace(1) 
 ; GFX12-FAKE16-NEXT:    s_cbranch_execnz .LBB27_1
 ; GFX12-FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_noret_f16__offset12b_neg:
@@ -7772,7 +7738,6 @@ define half @global_agent_atomic_fsub_ret_f16__offset12b_pos__align4(ptr addrspa
 ; GFX12-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v3.l
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: global_agent_atomic_fsub_ret_f16__offset12b_pos__align4:
@@ -7806,7 +7771,6 @@ define half @global_agent_atomic_fsub_ret_f16__offset12b_pos__align4(ptr addrspa
 ; GFX12-FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_ret_f16__offset12b_pos__align4:
@@ -8094,7 +8058,6 @@ define void @global_agent_atomic_fsub_noret_f16__offset12b__align4_pos(ptr addrs
 ; GFX12-TRUE16-NEXT:    s_cbranch_execnz .LBB29_1
 ; GFX12-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: global_agent_atomic_fsub_noret_f16__offset12b__align4_pos:
@@ -8126,7 +8089,6 @@ define void @global_agent_atomic_fsub_noret_f16__offset12b__align4_pos(ptr addrs
 ; GFX12-FAKE16-NEXT:    s_cbranch_execnz .LBB29_1
 ; GFX12-FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_noret_f16__offset12b__align4_pos:
@@ -8419,7 +8381,6 @@ define half @global_system_atomic_fsub_ret_f16__offset12b_pos(ptr addrspace(1) %
 ; GFX12-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, v3, v5
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: global_system_atomic_fsub_ret_f16__offset12b_pos:
@@ -8466,7 +8427,6 @@ define half @global_system_atomic_fsub_ret_f16__offset12b_pos(ptr addrspace(1) %
 ; GFX12-FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, v3, v5
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_system_atomic_fsub_ret_f16__offset12b_pos:
@@ -8858,7 +8818,6 @@ define void @global_system_atomic_fsub_noret_f16__offset12b_pos(ptr addrspace(1)
 ; GFX12-TRUE16-NEXT:    s_cbranch_execnz .LBB31_1
 ; GFX12-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: global_system_atomic_fsub_noret_f16__offset12b_pos:
@@ -8903,7 +8862,6 @@ define void @global_system_atomic_fsub_noret_f16__offset12b_pos(ptr addrspace(1)
 ; GFX12-FAKE16-NEXT:    s_cbranch_execnz .LBB31_1
 ; GFX12-FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_system_atomic_fsub_noret_f16__offset12b_pos:
@@ -9299,7 +9257,6 @@ define bfloat @global_agent_atomic_fsub_ret_bf16(ptr addrspace(1) %ptr, bfloat %
 ; GFX12-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, v3, v5
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: global_agent_atomic_fsub_ret_bf16:
@@ -9353,7 +9310,6 @@ define bfloat @global_agent_atomic_fsub_ret_bf16(ptr addrspace(1) %ptr, bfloat %
 ; GFX12-FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, v3, v5
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_ret_bf16:
@@ -9802,7 +9758,6 @@ define bfloat @global_agent_atomic_fsub_ret_bf16__offset12b_pos(ptr addrspace(1)
 ; GFX12-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, v3, v5
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: global_agent_atomic_fsub_ret_bf16__offset12b_pos:
@@ -9859,7 +9814,6 @@ define bfloat @global_agent_atomic_fsub_ret_bf16__offset12b_pos(ptr addrspace(1)
 ; GFX12-FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, v3, v5
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_ret_bf16__offset12b_pos:
@@ -10321,7 +10275,6 @@ define bfloat @global_agent_atomic_fsub_ret_bf16__offset12b_neg(ptr addrspace(1)
 ; GFX12-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, v3, v5
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: global_agent_atomic_fsub_ret_bf16__offset12b_neg:
@@ -10378,7 +10331,6 @@ define bfloat @global_agent_atomic_fsub_ret_bf16__offset12b_neg(ptr addrspace(1)
 ; GFX12-FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, v3, v5
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_ret_bf16__offset12b_neg:
@@ -10838,7 +10790,6 @@ define void @global_agent_atomic_fsub_noret_bf16(ptr addrspace(1) %ptr, bfloat %
 ; GFX12-TRUE16-NEXT:    s_cbranch_execnz .LBB35_1
 ; GFX12-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: global_agent_atomic_fsub_noret_bf16:
@@ -10890,7 +10841,6 @@ define void @global_agent_atomic_fsub_noret_bf16(ptr addrspace(1) %ptr, bfloat %
 ; GFX12-FAKE16-NEXT:    s_cbranch_execnz .LBB35_1
 ; GFX12-FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_noret_bf16:
@@ -11325,7 +11275,6 @@ define void @global_agent_atomic_fsub_noret_bf16__offset12b_pos(ptr addrspace(1)
 ; GFX12-TRUE16-NEXT:    s_cbranch_execnz .LBB36_1
 ; GFX12-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: global_agent_atomic_fsub_noret_bf16__offset12b_pos:
@@ -11380,7 +11329,6 @@ define void @global_agent_atomic_fsub_noret_bf16__offset12b_pos(ptr addrspace(1)
 ; GFX12-FAKE16-NEXT:    s_cbranch_execnz .LBB36_1
 ; GFX12-FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_noret_bf16__offset12b_pos:
@@ -11827,7 +11775,6 @@ define void @global_agent_atomic_fsub_noret_bf16__offset12b_neg(ptr addrspace(1)
 ; GFX12-TRUE16-NEXT:    s_cbranch_execnz .LBB37_1
 ; GFX12-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: global_agent_atomic_fsub_noret_bf16__offset12b_neg:
@@ -11882,7 +11829,6 @@ define void @global_agent_atomic_fsub_noret_bf16__offset12b_neg(ptr addrspace(1)
 ; GFX12-FAKE16-NEXT:    s_cbranch_execnz .LBB37_1
 ; GFX12-FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_noret_bf16__offset12b_neg:
@@ -12320,7 +12266,6 @@ define bfloat @global_agent_atomic_fsub_ret_bf16__offset12b_pos__align4(ptr addr
 ; GFX12-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v3.l
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: global_agent_atomic_fsub_ret_bf16__offset12b_pos__align4:
@@ -12364,7 +12309,6 @@ define bfloat @global_agent_atomic_fsub_ret_bf16__offset12b_pos__align4(ptr addr
 ; GFX12-FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_ret_bf16__offset12b_pos__align4:
@@ -12730,7 +12674,6 @@ define void @global_agent_atomic_fsub_noret_bf16__offset12b__align4_pos(ptr addr
 ; GFX12-TRUE16-NEXT:    s_cbranch_execnz .LBB39_1
 ; GFX12-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: global_agent_atomic_fsub_noret_bf16__offset12b__align4_pos:
@@ -12772,7 +12715,6 @@ define void @global_agent_atomic_fsub_noret_bf16__offset12b__align4_pos(ptr addr
 ; GFX12-FAKE16-NEXT:    s_cbranch_execnz .LBB39_1
 ; GFX12-FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_noret_bf16__offset12b__align4_pos:
@@ -13143,7 +13085,6 @@ define bfloat @global_system_atomic_fsub_ret_bf16__offset12b_pos(ptr addrspace(1
 ; GFX12-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, v3, v5
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: global_system_atomic_fsub_ret_bf16__offset12b_pos:
@@ -13201,7 +13142,6 @@ define bfloat @global_system_atomic_fsub_ret_bf16__offset12b_pos(ptr addrspace(1
 ; GFX12-FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, v3, v5
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_system_atomic_fsub_ret_bf16__offset12b_pos:
@@ -13664,7 +13604,6 @@ define void @global_system_atomic_fsub_noret_bf16__offset12b_pos(ptr addrspace(1
 ; GFX12-TRUE16-NEXT:    s_cbranch_execnz .LBB41_1
 ; GFX12-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: global_system_atomic_fsub_noret_bf16__offset12b_pos:
@@ -13720,7 +13659,6 @@ define void @global_system_atomic_fsub_noret_bf16__offset12b_pos(ptr addrspace(1
 ; GFX12-FAKE16-NEXT:    s_cbranch_execnz .LBB41_1
 ; GFX12-FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_system_atomic_fsub_noret_bf16__offset12b_pos:
@@ -14148,7 +14086,6 @@ define <2 x half> @global_agent_atomic_fsub_ret_v2f16(ptr addrspace(1) %ptr, <2 
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_ret_v2f16:
@@ -14424,7 +14361,6 @@ define <2 x half> @global_agent_atomic_fsub_ret_v2f16__offset12b_pos(ptr addrspa
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_ret_v2f16__offset12b_pos:
@@ -14702,7 +14638,6 @@ define <2 x half> @global_agent_atomic_fsub_ret_v2f16__offset12b_neg(ptr addrspa
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_ret_v2f16__offset12b_neg:
@@ -14982,7 +14917,6 @@ define void @global_agent_atomic_fsub_noret_v2f16(ptr addrspace(1) %ptr, <2 x ha
 ; GFX12-NEXT:    s_cbranch_execnz .LBB45_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_noret_v2f16:
@@ -15245,7 +15179,6 @@ define void @global_agent_atomic_fsub_noret_v2f16__offset12b_pos(ptr addrspace(1
 ; GFX12-NEXT:    s_cbranch_execnz .LBB46_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_noret_v2f16__offset12b_pos:
@@ -15511,7 +15444,6 @@ define void @global_agent_atomic_fsub_noret_v2f16__offset12b_neg(ptr addrspace(1
 ; GFX12-NEXT:    s_cbranch_execnz .LBB47_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_noret_v2f16__offset12b_neg:
@@ -15788,7 +15720,6 @@ define <2 x half> @global_system_atomic_fsub_ret_v2f16__offset12b_pos(ptr addrsp
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_system_atomic_fsub_ret_v2f16__offset12b_pos:
@@ -16067,7 +15998,6 @@ define void @global_system_atomic_fsub_noret_v2f16__offset12b_pos(ptr addrspace(
 ; GFX12-NEXT:    s_cbranch_execnz .LBB49_1
 ; GFX12-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_system_atomic_fsub_noret_v2f16__offset12b_pos:
@@ -16363,7 +16293,6 @@ define <2 x bfloat> @global_agent_atomic_fsub_ret_v2bf16(ptr addrspace(1) %ptr, 
 ; GFX12-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: global_agent_atomic_fsub_ret_v2bf16:
@@ -16415,7 +16344,6 @@ define <2 x bfloat> @global_agent_atomic_fsub_ret_v2bf16(ptr addrspace(1) %ptr, 
 ; GFX12-FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_ret_v2bf16:
@@ -16863,7 +16791,6 @@ define <2 x bfloat> @global_agent_atomic_fsub_ret_v2bf16__offset12b_pos(ptr addr
 ; GFX12-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: global_agent_atomic_fsub_ret_v2bf16__offset12b_pos:
@@ -16915,7 +16842,6 @@ define <2 x bfloat> @global_agent_atomic_fsub_ret_v2bf16__offset12b_pos(ptr addr
 ; GFX12-FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_ret_v2bf16__offset12b_pos:
@@ -17365,7 +17291,6 @@ define <2 x bfloat> @global_agent_atomic_fsub_ret_v2bf16__offset12b_neg(ptr addr
 ; GFX12-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: global_agent_atomic_fsub_ret_v2bf16__offset12b_neg:
@@ -17417,7 +17342,6 @@ define <2 x bfloat> @global_agent_atomic_fsub_ret_v2bf16__offset12b_neg(ptr addr
 ; GFX12-FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_ret_v2bf16__offset12b_neg:
@@ -17868,7 +17792,6 @@ define void @global_agent_atomic_fsub_noret_v2bf16(ptr addrspace(1) %ptr, <2 x b
 ; GFX12-TRUE16-NEXT:    s_cbranch_execnz .LBB53_1
 ; GFX12-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: global_agent_atomic_fsub_noret_v2bf16:
@@ -17919,7 +17842,6 @@ define void @global_agent_atomic_fsub_noret_v2bf16(ptr addrspace(1) %ptr, <2 x b
 ; GFX12-FAKE16-NEXT:    s_cbranch_execnz .LBB53_1
 ; GFX12-FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_noret_v2bf16:
@@ -18351,7 +18273,6 @@ define void @global_agent_atomic_fsub_noret_v2bf16__offset12b_pos(ptr addrspace(
 ; GFX12-TRUE16-NEXT:    s_cbranch_execnz .LBB54_1
 ; GFX12-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: global_agent_atomic_fsub_noret_v2bf16__offset12b_pos:
@@ -18402,7 +18323,6 @@ define void @global_agent_atomic_fsub_noret_v2bf16__offset12b_pos(ptr addrspace(
 ; GFX12-FAKE16-NEXT:    s_cbranch_execnz .LBB54_1
 ; GFX12-FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_noret_v2bf16__offset12b_pos:
@@ -18837,7 +18757,6 @@ define void @global_agent_atomic_fsub_noret_v2bf16__offset12b_neg(ptr addrspace(
 ; GFX12-TRUE16-NEXT:    s_cbranch_execnz .LBB55_1
 ; GFX12-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: global_agent_atomic_fsub_noret_v2bf16__offset12b_neg:
@@ -18888,7 +18807,6 @@ define void @global_agent_atomic_fsub_noret_v2bf16__offset12b_neg(ptr addrspace(
 ; GFX12-FAKE16-NEXT:    s_cbranch_execnz .LBB55_1
 ; GFX12-FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_agent_atomic_fsub_noret_v2bf16__offset12b_neg:
@@ -19335,7 +19253,6 @@ define <2 x bfloat> @global_system_atomic_fsub_ret_v2bf16__offset12b_pos(ptr add
 ; GFX12-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: global_system_atomic_fsub_ret_v2bf16__offset12b_pos:
@@ -19388,7 +19305,6 @@ define <2 x bfloat> @global_system_atomic_fsub_ret_v2bf16__offset12b_pos(ptr add
 ; GFX12-FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v0, v3
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_system_atomic_fsub_ret_v2bf16__offset12b_pos:
@@ -19838,7 +19754,6 @@ define void @global_system_atomic_fsub_noret_v2bf16__offset12b_pos(ptr addrspace
 ; GFX12-TRUE16-NEXT:    s_cbranch_execnz .LBB57_1
 ; GFX12-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: global_system_atomic_fsub_noret_v2bf16__offset12b_pos:
@@ -19890,7 +19805,6 @@ define void @global_system_atomic_fsub_noret_v2bf16__offset12b_pos(ptr addrspace
 ; GFX12-FAKE16-NEXT:    s_cbranch_execnz .LBB57_1
 ; GFX12-FAKE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: global_system_atomic_fsub_noret_v2bf16__offset12b_pos:

@@ -3410,13 +3410,6 @@ defm modules_reduced_bmi : BoolOption<"f", "modules-reduced-bmi",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Generate the reduced BMI">>;
 
-def fmodules_driver : Flag<["-"], "fmodules-driver">,
-  Group<f_Group>, Visibility<[ClangOption]>,
-  HelpText<"Enable support for driver managed module builds (experimental)">;
-def fno_modules_driver : Flag<["-"], "fno-modules-driver">,
-  Group<f_Group>, Visibility<[ClangOption]>,
-  HelpText<"Disable support for driver managed module builds (experimental)">;
-
 def experimental_modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduced-bmi">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>, Alias<fmodules_reduced_bmi>;
 
@@ -3482,6 +3475,10 @@ def fno_modules_prune_non_affecting_module_map_files :
     Group<f_Group>, Flags<[]>, Visibility<[CC1Option]>,
     MarshallingInfoNegativeFlag<HeaderSearchOpts<"ModulesPruneNonAffectingModuleMaps">>,
     HelpText<"Do not prune non-affecting module map files when writing module files">;
+def fmodules_single_module_parse_mode :
+  Flag<["-"], "fmodules-single-module-parse-mode">,
+  Group<f_Group>, Flags<[]>, Visibility<[CC1Option]>,
+  MarshallingInfoFlag<PreprocessorOpts<"SingleModuleParseMode">>;
 
 def fincremental_extensions :
   Flag<["-"], "fincremental-extensions">,
@@ -3802,6 +3799,11 @@ defm objc_avoid_heapify_local_blocks : BoolFOption<"objc-avoid-heapify-local-blo
   PosFlag<SetTrue, [], [ClangOption], "Try">,
   NegFlag<SetFalse, [], [ClangOption], "Don't try">,
   BothFlags<[], [CC1Option], " to avoid heapifying local blocks">>;
+defm objc_direct_precondition_thunk : BoolFOption<"objc-direct-precondition-thunk",
+  CodeGenOpts<"ObjCDirectPreconditionThunk">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Move precondition checks for direct methods into thunks">,
+  NegFlag<SetFalse>>;
 defm disable_block_signature_string : BoolFOption<"disable-block-signature-string",
   CodeGenOpts<"DisableBlockSignatureString">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Disable">,
@@ -4669,6 +4671,12 @@ defm split_machine_functions: BoolFOption<"split-machine-functions",
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
   NegFlag<SetFalse, [], [ClangOption], "Disable">,
   BothFlags<[], [ClangOption], " late function splitting using profile information (x86 and aarch64 ELF)">>;
+
+defm partition_static_data_sections: BoolFOption<"partition-static-data-sections",
+  CodeGenOpts<"PartitionStaticDataSections">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+  BothFlags<[], [ClangOption], " partition static data sections using profile information (x86 and aarch64 ELF)">>;
 
 defm strict_return : BoolFOption<"strict-return",
   CodeGenOpts<"StrictReturn">, DefaultTrue,
@@ -7344,6 +7352,10 @@ def fdefault_integer_8 : Flag<["-"],"fdefault-integer-8">, Group<f_Group>,
   HelpText<"Set the default integer and logical kind to an 8 byte wide type">;
 def fdefault_real_8 : Flag<["-"],"fdefault-real-8">, Group<f_Group>,
   HelpText<"Set the default real kind to an 8 byte wide type">;
+def fdefault_integer_4 : Flag<["-"],"fdefault-integer-4">, Group<f_Group>,
+  HelpText<"Set the default integer and logical kind to a 4 byte wide type">;
+def fdefault_real_4 : Flag<["-"],"fdefault-real-4">, Group<f_Group>,
+  HelpText<"Set the default real kind to a 4 byte wide type">;
 def fdisable_real_3 : Flag<["-"],"fdisable-real-3">, Group<f_Group>,
    HelpText<"Disable real(KIND=3) from TargetCharacteristics">, Flags<[HelpHidden]>;
 def fdisable_real_10 : Flag<["-"],"fdisable-real-10">, Group<f_Group>,
@@ -7452,6 +7464,10 @@ defm stack_repack_arrays
 By default, the heap is used. Allocations of polymorphic types
 are always done on the heap, though this may change in future releases.
   }]>;
+
+defm unsafe_cray_pointers : BoolOptionWithoutMarshalling<"f", "unsafe-cray-pointers",
+  PosFlag<SetTrue, [], [FlangOption, FC1Option], "Optimizations allow for unsafe Cray pointer usages">,
+  NegFlag<SetFalse, [], [FlangOption, FC1Option], "Optimizations don't allow for unsafe Cray pointer usages (default)">>;
 
 def fhermetic_module_files : Flag<["-"], "fhermetic-module-files">, Group<f_Group>,
   HelpText<"Emit hermetic module files (no nested USE association)">;
@@ -9607,6 +9623,13 @@ class DXCJoinedOrSeparate<string name> : Option<["/", "-"], name,
   KIND_JOINED_OR_SEPARATE>, Group<dxc_Group>,
   Visibility<[DXCOption]>;
 
+def dxc_all_resources_bound : DXCFlag<"all-resources-bound">,
+  HelpText<"Enables agressive flattening">;
+def hlsl_all_resources_bound : Option<["/", "-"], "hlsl-all-resources-bound", KIND_FLAG>,
+                      Group<dxc_Group>,
+                      Visibility<[ClangOption, CC1Option]>,
+                      HelpText<"Enables agressive flattening">,
+                      MarshallingInfoFlag<CodeGenOpts<"AllResourcesBound">>;
 def dxc_col_major : DXCFlag<"Zpc">, HelpText<"Pack matrices in column-major order">;
 def dxc_row_major : DXCFlag<"Zpr">, HelpText<"Pack matrices in row-major order">;
 def dxc_no_stdinc : DXCFlag<"hlsl-no-stdinc">,

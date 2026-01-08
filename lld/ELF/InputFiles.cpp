@@ -20,7 +20,6 @@
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/LTO/LTO.h"
-#include "llvm/Object/Archive.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Support/AArch64AttributeParser.h"
 #include "llvm/Support/ARMAttributeParser.h"
@@ -1856,25 +1855,22 @@ IRFile::IRFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
   if (ctx.arg.thinLTOIndexOnly)
     path = replaceThinLTOSuffix(ctx, mb.getBufferIdentifier());
 
+  // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
+  // name. If two archives define two members with the same name, this
+  // causes a collision which result in only one of the objects being taken
+  // into consideration at LTO time (which very likely causes undefined
+  // symbols later in the link stage). So we append file offset to make
+  // filename unique.
   StringSaver &ss = ctx.saver;
-  StringRef name;
-  if (archiveName.empty() ||
-      dtltoAdjustMemberPathIfThinArchive(ctx, archiveName, path)) {
-    name = ss.save(path);
-  } else {
-    // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
-    // name. If two archives define two members with the same name, this
-    // causes a collision which result in only one of the objects being taken
-    // into consideration at LTO time (which very likely causes undefined
-    // symbols later in the link stage). So we append file offset to make
-    // filename unique.
-    name = ss.save(archiveName + "(" + path::filename(path) + " at " +
-                   utostr(offsetInArchive) + ")");
-  }
+  StringRef name = archiveName.empty()
+                       ? ss.save(path)
+                       : ss.save(archiveName + "(" + path::filename(path) +
+                                 " at " + utostr(offsetInArchive) + ")");
 
   MemoryBufferRef mbref(mb.getBuffer(), name);
 
   obj = CHECK2(lto::InputFile::create(mbref), this);
+  obj->setArchivePathAndName(archiveName, mb.getBufferIdentifier());
 
   Triple t(obj->getTargetTriple());
   ekind = getBitcodeELFKind(t);

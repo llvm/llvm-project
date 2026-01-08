@@ -94,19 +94,19 @@ void Reverse(){
 
   std::find(K.rbegin(), K.rend(), std::unique_ptr<int>());
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
-  // CHECK-FIXES: std::ranges::find(std::ranges::reverse_view(K), std::unique_ptr<int>());
+  // CHECK-FIXES: std::ranges::find(std::views::reverse(K), std::unique_ptr<int>());
 
   std::find(I.rbegin(), I.rend(), 0);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
-  // CHECK-FIXES: std::ranges::find(std::ranges::reverse_view(I), 0);
+  // CHECK-FIXES: std::ranges::find(std::views::reverse(I), 0);
 
   std::equal(std::rbegin(I), std::rend(I), J.begin(), J.end());
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
-  // CHECK-FIXES: std::ranges::equal(std::ranges::reverse_view(I), J);
+  // CHECK-FIXES: std::ranges::equal(std::views::reverse(I), J);
 
   std::equal(I.begin(), I.end(), std::crbegin(J), std::crend(J));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
-  // CHECK-FIXES: std::ranges::equal(I, std::ranges::reverse_view(J));
+  // CHECK-FIXES: std::ranges::equal(I, std::views::reverse(J));
 }
 
 void Negatives() {

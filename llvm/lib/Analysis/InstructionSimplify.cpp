@@ -3847,17 +3847,19 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
     Type *SrcTy = SrcOp->getType();
     Type *DstTy = LI->getType();
 
-    // Turn icmp (ptrtoint x), (ptrtoint/constant) into a compare of the input
-    // if the integer type is the same size as the pointer type.
-    if (MaxRecurse && isa<PtrToIntInst>(LI) &&
-        Q.DL.getTypeSizeInBits(SrcTy) == DstTy->getPrimitiveSizeInBits()) {
+    // Turn icmp (ptrtoint/ptrtoaddr x), (ptrtoint/ptrtoaddr/constant) into a
+    // compare of the input if the integer type is the same size as the
+    // pointer address type (icmp only compares the address of the pointer).
+    if (MaxRecurse && (isa<PtrToIntInst, PtrToAddrInst>(LI)) &&
+        Q.DL.getAddressType(SrcTy) == DstTy) {
       if (Constant *RHSC = dyn_cast<Constant>(RHS)) {
         // Transfer the cast to the constant.
         if (Value *V = simplifyICmpInst(Pred, SrcOp,
                                         ConstantExpr::getIntToPtr(RHSC, SrcTy),
                                         Q, MaxRecurse - 1))
           return V;
-      } else if (PtrToIntInst *RI = dyn_cast<PtrToIntInst>(RHS)) {
+      } else if (isa<PtrToIntInst, PtrToAddrInst>(RHS)) {
+        auto *RI = cast<CastInst>(RHS);
         if (RI->getOperand(0)->getType() == SrcTy)
           // Compare without the cast.
           if (Value *V = simplifyICmpInst(Pred, SrcOp, RI->getOperand(0), Q,
@@ -4452,6 +4454,23 @@ static Value *simplifyWithOpsReplaced(Value *V,
           any_of(Ops,
                  [=](const auto &Rep) { return impliesPoison(BO, Rep.first); }))
         return Absorber;
+    }
+
+    if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+      // `x == y ? 0 : ucmp(x, y)` where under the replacement y -> x,
+      // `ucmp(x, x)` becomes `0`.
+      if ((II->getIntrinsicID() == Intrinsic::scmp ||
+           II->getIntrinsicID() == Intrinsic::ucmp) &&
+          NewOps[0] == NewOps[1]) {
+        if (II->hasPoisonGeneratingAnnotations()) {
+          if (!DropFlags)
+            return nullptr;
+
+          DropFlags->push_back(II);
+        }
+
+        return ConstantInt::get(I->getType(), 0);
+      }
     }
 
     if (isa<GetElementPtrInst>(I)) {

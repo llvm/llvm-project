@@ -1650,6 +1650,48 @@ void addInstrRequirements(const MachineInstr &MI,
     }
     break;
   }
+  case SPIRV::OpImageQueryFormat: {
+    Register ResultReg = MI.getOperand(0).getReg();
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    static const unsigned CompareOps[] = {
+        SPIRV::OpIEqual,       SPIRV::OpINotEqual,
+        SPIRV::OpUGreaterThan, SPIRV::OpUGreaterThanEqual,
+        SPIRV::OpULessThan,    SPIRV::OpULessThanEqual,
+        SPIRV::OpSGreaterThan, SPIRV::OpSGreaterThanEqual,
+        SPIRV::OpSLessThan,    SPIRV::OpSLessThanEqual};
+
+    auto CheckAndAddExtension = [&](int64_t ImmVal) {
+      if (ImmVal == 4323 || ImmVal == 4324) {
+        if (ST.canUseExtension(SPIRV::Extension::SPV_EXT_image_raw10_raw12))
+          Reqs.addExtension(SPIRV::Extension::SPV_EXT_image_raw10_raw12);
+        else
+          report_fatal_error("This requires the "
+                             "SPV_EXT_image_raw10_raw12 extension");
+      }
+    };
+
+    for (MachineInstr &UseInst : MRI.use_instructions(ResultReg)) {
+      unsigned Opc = UseInst.getOpcode();
+
+      if (Opc == SPIRV::OpSwitch) {
+        for (const MachineOperand &Op : UseInst.operands())
+          if (Op.isImm())
+            CheckAndAddExtension(Op.getImm());
+      } else if (llvm::is_contained(CompareOps, Opc)) {
+        for (unsigned i = 1; i < UseInst.getNumOperands(); ++i) {
+          Register UseReg = UseInst.getOperand(i).getReg();
+          MachineInstr *ConstInst = MRI.getVRegDef(UseReg);
+          if (ConstInst && ConstInst->getOpcode() == SPIRV::OpConstantI) {
+            int64_t ImmVal = ConstInst->getOperand(2).getImm();
+            if (ImmVal)
+              CheckAndAddExtension(ImmVal);
+          }
+        }
+      }
+    }
+    break;
+  }
+
   case SPIRV::OpGroupNonUniformShuffle:
   case SPIRV::OpGroupNonUniformShuffleXor:
     Reqs.addCapability(SPIRV::Capability::GroupNonUniformShuffle);

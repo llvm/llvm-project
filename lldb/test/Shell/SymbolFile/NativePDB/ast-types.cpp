@@ -183,15 +183,15 @@ int SI::*mp9 = nullptr;
 // CHECK: | |-CXXRecordDecl {{.*}} struct Anonymous<int> definition
 // CHECK: | | `-FieldDecl {{.*}} AnonymousMember 'int'
 // CHECK: | `-CXXRecordDecl {{.*}} struct Anonymous<A::B::C<void>> definition
-// CHECK: |   |-FieldDecl {{.*}} AnonymousMember 'int'
 // CHECK: |   |-CXXRecordDecl {{.*}} struct D definition
 // CHECK: |   | |-VarDecl {{.*}} StaticMember 'const int' static cinit
 // CHECK: |   | | `-IntegerLiteral {{.*}} 'int' 1
 // CHECK: |   | `-FieldDecl {{.*}} AnonymousDMember 'int'
-// CHECK: |   `-CXXRecordDecl {{.*}} union U definition
-// CHECK: |     |-VarDecl {{.*}} StaticMember 'const int' static
-// CHECK: |     | `-IntegerLiteral {{.*}} 'int' 2
-// CHECK: |     `-FieldDecl {{.*}} AnonymousUMember 'int'
+// CHECK: |   |-CXXRecordDecl {{.*}} union U definition
+// CHECK: |   | |-VarDecl {{.*}} StaticMember 'const int' static
+// CHECK: |   | | `-IntegerLiteral {{.*}} 'int' 2
+// CHECK: |   | `-FieldDecl {{.*}} AnonymousUMember 'int'
+// CHECK: |   `-FieldDecl {{.*}} AnonymousMember 'int'
 
 
 int main(int argc, char **argv) {

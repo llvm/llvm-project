@@ -325,11 +325,10 @@ private:
 
   void CheckScanModifier(const parser::OmpClause::Reduction &x);
   void CheckLooprangeBounds(const parser::OpenMPLoopConstruct &x);
-  void CheckNestedFuse(const parser::OpenMPLoopConstruct &x);
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
   void CheckSIMDNest(const parser::OpenMPConstruct &x);
-  void CheckNestedBlock(const parser::OpenMPLoopConstruct &x,
-      const parser::Block &body, size_t &nestedCount);
+  void CheckNestedBlock(
+      const parser::OpenMPLoopConstruct &x, const parser::Block &body);
   void CheckNestedConstruct(const parser::OpenMPLoopConstruct &x);
   void CheckFullUnroll(const parser::OpenMPLoopConstruct &x);
   void CheckTargetNest(const parser::OpenMPConstruct &x);
@@ -365,6 +364,8 @@ private:
       const parser::OmpObjectList &ompObjectList);
   void CheckIfContiguous(const parser::OmpObject &object);
   const parser::Name *GetObjectName(const parser::OmpObject &object);
+  void CheckInitOnDepobj(const parser::OpenMPDepobjConstruct &depobj,
+      const parser::OmpClause &initClause);
 
   void CheckAllowedRequiresClause(llvmOmpClause clause);
   bool deviceConstructFound_{false};
