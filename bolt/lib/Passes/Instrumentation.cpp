@@ -606,6 +606,22 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
 }
 
 Error Instrumentation::runOnFunctions(BinaryContext &BC) {
+  if (BC.usesBTI())
+    return createFatalBOLTError(
+        "BOLT-ERROR: instrumenting binaries using BTI is not supported.\n");
+  /* BTI TODO:
+   Instrumentation functions add indirect branches into the .text.injected
+   section, see:
+   - __bolt_instr_ind_call_handler
+   - __bolt_instr_ind_tail_call_handler
+   - __bolt_instr_ind_tailcall_handler_func
+   - __bolt_start_trampoline
+   - __bolt_fini_trampoline
+   We cannot add BTIs to their targets when they are created, because the
+   instrumentation snippets get added later to these targets, and the added BTI
+   instruction will not be the first (rendering it useless).
+   */
+
   const unsigned Flags = BinarySection::getFlags(/*IsReadOnly=*/false,
                                                  /*IsText=*/false,
                                                  /*IsAllocatable=*/true);

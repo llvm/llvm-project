@@ -2635,6 +2635,7 @@ static bool valueIsKnownNeverF32Denorm(SDValue Src) {
     return Src.getOperand(0).getValueType() == MVT::f16;
   case ISD::FP16_TO_FP:
   case ISD::FFREXP:
+  case ISD::FSQRT:
   case AMDGPUISD::LOG:
   case AMDGPUISD::EXP:
     return true;
@@ -2645,6 +2646,7 @@ static bool valueIsKnownNeverF32Denorm(SDValue Src) {
     case Intrinsic::amdgcn_log:
     case Intrinsic::amdgcn_log_clamp:
     case Intrinsic::amdgcn_exp2:
+    case Intrinsic::amdgcn_sqrt:
       return true;
     default:
       return false;

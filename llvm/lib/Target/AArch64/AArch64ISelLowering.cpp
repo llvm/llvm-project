@@ -4595,6 +4595,9 @@ static SDValue lowerADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG,
 
 static SDValue lowerIntNeonIntrinsic(SDValue Op, unsigned Opcode,
                                      SelectionDAG &DAG) {
+  if (Op.getValueType().isVector())
+    return SDValue();
+
   SDLoc DL(Op);
   auto getFloatVT = [](EVT VT) {
     assert((VT == MVT::i32 || VT == MVT::i64) && "Unexpected VT");
@@ -6472,21 +6475,21 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                      Op.getOperand(1).getValueType(),
                                      Op.getOperand(1), Op.getOperand(2)));
     return SDValue();
+  case Intrinsic::aarch64_neon_sqdmulh:
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::SQDMULH, DAG);
+  case Intrinsic::aarch64_neon_sqrdmulh:
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::SQRDMULH, DAG);
+  case Intrinsic::aarch64_neon_sqrdmlah:
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::SQRDMLAH, DAG);
+  case Intrinsic::aarch64_neon_sqrdmlsh:
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::SQRDMLSH, DAG);
   case Intrinsic::aarch64_neon_sqrshl:
-    if (Op.getValueType().isVector())
-      return SDValue();
     return lowerIntNeonIntrinsic(Op, AArch64ISD::SQRSHL, DAG);
   case Intrinsic::aarch64_neon_sqshl:
-    if (Op.getValueType().isVector())
-      return SDValue();
     return lowerIntNeonIntrinsic(Op, AArch64ISD::SQSHL, DAG);
   case Intrinsic::aarch64_neon_uqrshl:
-    if (Op.getValueType().isVector())
-      return SDValue();
     return lowerIntNeonIntrinsic(Op, AArch64ISD::UQRSHL, DAG);
   case Intrinsic::aarch64_neon_uqshl:
-    if (Op.getValueType().isVector())
-      return SDValue();
     return lowerIntNeonIntrinsic(Op, AArch64ISD::UQSHL, DAG);
   case Intrinsic::aarch64_neon_sqadd:
     if (Op.getValueType().isVector())
