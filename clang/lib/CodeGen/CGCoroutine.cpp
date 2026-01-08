@@ -230,8 +230,7 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
 
   auto CommonBinder =
       CodeGenFunction::OpaqueValueMappingData::bind(CGF, S.getOpaqueValue(), E);
-  auto UnbindCommonOnExit =
-      llvm::make_scope_exit([&] { CommonBinder.unbind(CGF); });
+  llvm::scope_exit UnbindCommonOnExit([&] { CommonBinder.unbind(CGF); });
 
   auto Prefix = buildSuspendPrefixStr(Coro, Kind);
   BasicBlock *ReadyBlock = CGF.createBasicBlock(Prefix + Twine(".ready"));
@@ -464,8 +463,7 @@ CodeGenFunction::generateAwaitSuspendWrapper(Twine const &CoroName,
 
   auto *SuspendRet = EmitScalarExpr(S.getSuspendExpr());
 
-  auto UnbindCommonOnExit =
-      llvm::make_scope_exit([&] { AwaiterBinder.unbind(*this); });
+  llvm::scope_exit UnbindCommonOnExit([&] { AwaiterBinder.unbind(*this); });
   if (SuspendRet != nullptr) {
     Fn->addRetAttr(llvm::Attribute::AttrKind::NoUndef);
     Builder.CreateStore(SuspendRet, ReturnValue);
@@ -975,12 +973,9 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
     EmitStmt(S.getPromiseDeclStmt());
 
     Address PromiseAddr = GetAddrOfLocalVar(S.getPromiseDecl());
-    auto *PromiseAddrVoidPtr =
-        new llvm::BitCastInst(PromiseAddr.emitRawPointer(*this), VoidPtrTy, "",
-                              CoroId->getIterator());
     // Update CoroId to refer to the promise. We could not do it earlier because
     // promise local variable was not emitted yet.
-    CoroId->setArgOperand(1, PromiseAddrVoidPtr);
+    CoroId->setArgOperand(1, PromiseAddr.emitRawPointer(*this));
 
     // Now we have the promise, initialize the GRO
     GroManager.EmitGroAlloca();

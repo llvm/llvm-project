@@ -471,7 +471,8 @@ def OpenACC_VarNameAttr : OpenACC_Attr<"VarName", "var_name"> {
 // Used for data specification in data clauses (2.7.1).
 // Either (or both) extent and upperbound must be specified.
 def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
-    [AttrSizedOperandSegments, NoMemoryEffect]> {
+    [AttrSizedOperandSegments, NoMemoryEffect,
+     OutlineRematerializationOpInterface]> {
   let summary = "Represents normalized bounds information for acc data clause.";
 
   let description = [{
@@ -2364,7 +2365,10 @@ def OpenACC_DataOp
   let hasVerifier = 1;
 }
 
-def OpenACC_TerminatorOp : OpenACC_Op<"terminator", [Pure, Terminator]> {
+def OpenACC_TerminatorOp
+    : OpenACC_Op<"terminator", [Pure, Terminator,
+                                DeclareOpInterfaceMethods<
+                                    RegionBranchTerminatorOpInterface>]> {
   let summary = "Generic terminator for OpenACC regions";
 
   let description = [{

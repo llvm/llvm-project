@@ -100,6 +100,26 @@ def Tosa_ConstShapeOp : Tosa_ShapeOp<"const_shape", [ConstantLike, Pure]> {
 }
 
 //===----------------------------------------------------------------------===//
+// Operator: Dim
+//===----------------------------------------------------------------------===//
+def Tosa_DimOp : Tosa_ShapeOp<"dim", [Pure]> {
+  let summary = "Extract size of dimension from input tensor.";
+
+  let description = [{
+    Returns a length 1 shape_t of the size of the input tensor for the given axis.
+  }];
+
+  let arguments = (ins
+    Tosa_TensorAtLeast1D:$input1,
+    I32Attr:$axis
+  );
+
+  let results = (outs Tosa_Shape:$output);
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // Operator: DivCeilShape
 //===----------------------------------------------------------------------===//
 def Tosa_DivCeilShapeOp : Tosa_ElementwiseShapeOp<"div_ceil_shape", [Pure]> {

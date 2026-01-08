@@ -1157,6 +1157,14 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
     }
     break;
+  case ISD::CLMUL:
+  case ISD::CLMULR:
+  case ISD::CLMULH:
+    if (SDValue Expanded = TLI.expandCLMUL(Node, DAG)) {
+      Results.push_back(Expanded);
+      return;
+    }
+    break;
   case ISD::ROTL:
   case ISD::ROTR:
     if (SDValue Expanded = TLI.expandROT(Node, false /*AllowVectorOps*/, DAG)) {
@@ -1943,7 +1951,7 @@ void VectorLegalizer::ExpandUINT_TO_FLOAT(SDNode *Node,
     SDValue UIToFP;
     SDValue Result;
     SDValue TargetZero = DAG.getIntPtrConstant(0, DL, /*isTarget=*/true);
-    EVT FloatVecVT = SrcVT.changeVectorElementType(FPVT);
+    EVT FloatVecVT = SrcVT.changeVectorElementType(*DAG.getContext(), FPVT);
     if (IsStrict) {
       UIToFP = DAG.getNode(ISD::STRICT_UINT_TO_FP, DL, {FloatVecVT, MVT::Other},
                            {Node->getOperand(0), Src});
