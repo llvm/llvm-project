@@ -1010,7 +1010,7 @@ CUDAIntrinsicLibrary::genBarrierTryWait(mlir::Type resultType,
   mlir::Value beforeArg = beforeBlock->addArgument(resultType, loc);
   builder.setInsertionPointToStart(beforeBlock);
   mlir::Value condition = mlir::arith::CmpIOp::create(
-      builder, loc, mlir::arith::CmpIPredicate::ne, beforeArg, zero);
+      builder, loc, mlir::arith::CmpIPredicate::eq, beforeArg, zero);
   mlir::scf::ConditionOp::create(builder, loc, condition, beforeArg);
   mlir::Block *afterBlock = builder.createBlock(&whileOp.getAfter());
   afterBlock->addArgument(resultType, loc);

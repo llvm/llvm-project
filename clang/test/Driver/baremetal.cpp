@@ -4,6 +4,18 @@
 // RUN:   | FileCheck -check-prefixes=CHECK-STATIC-LIB %s
 // CHECK-STATIC-LIB: {{.*}}llvm-ar{{.*}}" "rcsD"
 
+// RUN: %clang %s -### --target=arm-none-eabi -o %t.out 2>&1 \
+// RUN:     --sysroot=%S/Inputs/multiarch-sysroot-tree \
+// RUN:   | FileCheck --check-prefix=CHECK-ARM %s
+// CHECK-ARM: "-internal-isystem" "{{[^"]+}}multiarch-sysroot-tree{{[/\\]+}}arm-unknown-none-eabi{{[/\\]+}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-ARM: "-internal-isystem" "{{[^"]+}}multiarch-sysroot-tree{{[/\\]+}}arm-unknown-none-eabi{{[/\\]+}}include"
+
+// RUN: %clang %s -### --target=aarch64-none-elf -o %t.out 2>&1 \
+// RUN:     --sysroot=%S/Inputs/multiarch-sysroot-tree \
+// RUN:   | FileCheck --check-prefix=CHECK-AARCH64 %s
+// CHECK-AARCH64: "-internal-isystem" "{{[^"]+}}multiarch-sysroot-tree{{[/\\]+}}aarch64-unknown-none-elf{{[/\\]+}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-AARCH64: "-internal-isystem" "{{[^"]+}}multiarch-sysroot-tree{{[/\\]+}}aarch64-unknown-none-elf{{[/\\]+}}include"
+
 // RUN: %clang %s -### --target=armv6m-none-eabi -o %t.out 2>&1 \
 // RUN:     -T semihosted.lds \
 // RUN:     -L some/directory/user/asked/for \

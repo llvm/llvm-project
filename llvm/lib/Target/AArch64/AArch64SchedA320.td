@@ -639,7 +639,7 @@ def : InstRW<[CortexA320Write<2, CortexA320UnitVALU>], (instregex "^PTRUES_[BHSD
 def : InstRW<[CortexA320Write<2, CortexA320UnitVALU>], (instregex "^PFIRST_B", "^PNEXT_[BHSD]")>;
 
 // Predicate test
-def : InstRW<[CortexA320Write<2, CortexA320UnitVALU>], (instrs PTEST_PP)>;
+def : InstRW<[CortexA320Write<2, CortexA320UnitVALU>], (instrs PTEST_PP, PTEST_PP_ANY, PTEST_PP_FIRST)>;
 
 // Predicate transpose
 def : InstRW<[CortexA320Write<2, CortexA320UnitVALU>], (instregex "^TRN[12]_PPP_[BHSDQ]")>;
@@ -674,7 +674,7 @@ def : InstRW<[CortexA320Write<3, CortexA320UnitVALU>],
                         "^(ADD|SUB|SUBR)_ZI_[BHSD]",
                         "^ADR_[SU]XTW_ZZZ_D_[0123]",
                         "^ADR_LSL_ZZZ_[SD]_[0123]",
-                        "^[SU]H(ADD|SUB|SUBR)_ZPmZ_[BHSD]")>;
+                        "^[SU]H(ADD|SUB|SUBR)_(ZPmZ|ZPZZ)_[BHSD]")>;
 def : InstRW<[CortexA320Write<4, CortexA320UnitVALU>],
              (instregex "^[SU](ADD|SUB)[LW][BT]_ZZZ_[HSD]",
                         "^SADDLBT_ZZZ_[HSD]",

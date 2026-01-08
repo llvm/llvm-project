@@ -240,17 +240,16 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
     // be duplications since this is a simple recursive scan, but future
     // optimizations will clean it up.
 
+    if (all_equal(PhiR->incoming_values())) {
+      PhiR->replaceAllUsesWith(PhiR->getIncomingValue(0));
+      PhiR->eraseFromParent();
+      continue;
+    }
+
     SmallVector<VPValue *, 2> OperandsWithMask;
     for (const auto &[InVPV, InVPBB] : PhiR->incoming_values_and_blocks()) {
       OperandsWithMask.push_back(InVPV);
-      VPValue *EdgeMask = getEdgeMask(InVPBB, VPBB);
-      if (!EdgeMask) {
-        assert(all_equal(PhiR->incoming_values()) &&
-               "Distinct incoming values with one having a full mask");
-        break;
-      }
-
-      OperandsWithMask.push_back(EdgeMask);
+      OperandsWithMask.push_back(getEdgeMask(InVPBB, VPBB));
     }
     PHINode *IRPhi = cast_or_null<PHINode>(PhiR->getUnderlyingValue());
     auto *Blend =
@@ -309,16 +308,14 @@ VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
   if (FoldTail) {
     assert(Plan.getExitBlocks().size() == 1 &&
            "only a single-exit block is supported currently");
-    VPBasicBlock *EB = Plan.getExitBlocks().front();
-    assert(EB->getSinglePredecessor() == Plan.getMiddleBlock() &&
+    assert(Plan.getExitBlocks().front()->getSinglePredecessor() ==
+               Plan.getMiddleBlock() &&
            "the exit block must have middle block as single predecessor");
 
     VPBuilder B(Plan.getMiddleBlock()->getTerminator());
-    for (auto &P : EB->phis()) {
-      auto *ExitIRI = cast<VPIRPhi>(&P);
-      VPValue *Inc = ExitIRI->getIncomingValue(0);
+    for (VPRecipeBase &R : *Plan.getMiddleBlock()) {
       VPValue *Op;
-      if (!match(Inc, m_ExtractLastElement(m_VPValue(Op))))
+      if (!match(&R, m_ExtractLastLane(m_ExtractLastPart(m_VPValue(Op)))))
         continue;
 
       // Compute the index of the last active lane.
@@ -327,7 +324,7 @@ VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
           B.createNaryOp(VPInstruction::LastActiveLane, HeaderMask);
       auto *Ext =
           B.createNaryOp(VPInstruction::ExtractLane, {LastActiveLane, Op});
-      Inc->replaceAllUsesWith(Ext);
+      R.getVPSingleValue()->replaceAllUsesWith(Ext);
     }
   }
   return Predicator.getBlockMaskCache();

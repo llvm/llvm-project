@@ -10,9 +10,9 @@ body: |
     ; GCN-LABEL: name: ds_atomic_async_barrier_arrive_b64
     ; GCN: liveins: $vgpr0, $vgpr1
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 65507
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 65411
     ; GCN-NEXT: DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 $vgpr1, 0, 0, implicit-def $asynccnt, implicit $asynccnt, implicit $exec
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 65507
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 65411
     DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 $vgpr1, 0, 0, implicit-def $asynccnt, implicit $asynccnt, implicit $exec
 ...
 

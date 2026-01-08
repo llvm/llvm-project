@@ -236,7 +236,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCOS, MVT::f32, Expand);
     setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
     setOperationAction(ISD::FPOW, MVT::f32, Expand);
-    setOperationAction(ISD::FREM, MVT::f32, Expand);
+    setOperationAction(ISD::FREM, MVT::f32, LibCall);
     setOperationAction(ISD::FP16_TO_FP, MVT::f32,
                        Subtarget.isSoftFPABI() ? LibCall : Custom);
     setOperationAction(ISD::FP_TO_FP16, MVT::f32,
@@ -286,7 +286,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCOS, MVT::f64, Expand);
     setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
     setOperationAction(ISD::FPOW, MVT::f64, Expand);
-    setOperationAction(ISD::FREM, MVT::f64, Expand);
+    setOperationAction(ISD::FREM, MVT::f64, LibCall);
     setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
     setOperationAction(ISD::FP_TO_FP16, MVT::f64,
                        Subtarget.isSoftFPABI() ? LibCall : Custom);
@@ -5542,7 +5542,7 @@ static SDValue performBITCASTCombine(SDNode *N, SelectionDAG &DAG,
       Lo = DAG.getNode(LoongArchISD::VMSKLTZ, DL, GRLenVT, Lo);
       Hi = DAG.getNode(LoongArchISD::VMSKLTZ, DL, GRLenVT, Hi);
       Hi = DAG.getNode(ISD::SHL, DL, GRLenVT, Hi,
-                       DAG.getConstant(16, DL, MVT::i8));
+                       DAG.getShiftAmountConstant(16, GRLenVT, DL));
       V = DAG.getNode(ISD::OR, DL, GRLenVT, Lo, Hi);
     } else if (UseLASX) {
       return SDValue();
@@ -5897,10 +5897,10 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
     if (CC != ISD::SETEQ && CC != ISD::SETNE)
       return SDValue();
     ConstantSDNode *CN = dyn_cast<ConstantSDNode>(AndInputValue1.getOperand(1));
-    if (!CN || CN->getSExtValue() != -1)
+    if (!CN || !CN->isAllOnes())
       return SDValue();
     CN = dyn_cast<ConstantSDNode>(CmpInputValue);
-    if (!CN || CN->getSExtValue() != 0)
+    if (!CN || !CN->isZero())
       return SDValue();
     AndInputValue1 = AndInputValue1.getOperand(0);
     if (AndInputValue1.getOpcode() != ISD::ZERO_EXTEND)

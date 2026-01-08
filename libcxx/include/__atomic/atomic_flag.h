@@ -10,6 +10,7 @@
 #define _LIBCPP___ATOMIC_ATOMIC_FLAG_H
 
 #include <__atomic/atomic_sync.h>
+#include <__atomic/atomic_waitable_traits.h>
 #include <__atomic/contention_t.h>
 #include <__atomic/memory_order.h>
 #include <__atomic/support.h>
@@ -74,8 +75,11 @@ struct atomic_flag {
   atomic_flag& operator=(const atomic_flag&) volatile = delete;
 };
 
+#if _LIBCPP_STD_VER >= 20
 template <>
 struct __atomic_waitable_traits<atomic_flag> {
+  using __value_type _LIBCPP_NODEBUG = _LIBCPP_ATOMIC_FLAG_TYPE;
+
   static _LIBCPP_HIDE_FROM_ABI _LIBCPP_ATOMIC_FLAG_TYPE __atomic_load(const atomic_flag& __a, memory_order __order) {
     return std::__cxx_atomic_load(&__a.__a_, __order);
   }
@@ -95,6 +99,7 @@ struct __atomic_waitable_traits<atomic_flag> {
     return std::addressof(__a.__a_);
   }
 };
+#endif // _LIBCPP_STD_VER >= 20
 
 inline _LIBCPP_HIDE_FROM_ABI bool atomic_flag_test(const volatile atomic_flag* __o) _NOEXCEPT { return __o->test(); }
 

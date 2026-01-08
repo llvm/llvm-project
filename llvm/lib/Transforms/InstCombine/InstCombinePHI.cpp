@@ -1005,7 +1005,7 @@ static bool PHIsEqualValue(PHINode *PN, Value *&NonPhiInVal,
     return true;
 
   // Don't scan crazily complex things.
-  if (ValueEqualPHIs.size() == 16)
+  if (ValueEqualPHIs.size() >= 16)
     return false;
 
   // Scan the operands to see if they are either phi nodes or are equal to

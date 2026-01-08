@@ -502,6 +502,11 @@ static Type convertTensorType(const spirv::TargetEnv &targetEnv,
                << type << " illegal: cannot handle zero-element tensors\n");
     return nullptr;
   }
+  if (arrayElemCount > std::numeric_limits<unsigned>::max()) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: cannot fit tensor into target type\n");
+    return nullptr;
+  }
 
   Type arrayElemType = convertScalarType(targetEnv, options, scalarType);
   if (!arrayElemType)
@@ -1013,7 +1018,7 @@ struct FuncOpConversion final : OpConversionPattern<func::FuncOp> {
                                             : TypeRange()));
 
     // Copy over all attributes other than the function name and type.
-    for (const auto &namedAttr : funcOp->getAttrs()) {
+    for (NamedAttribute namedAttr : funcOp->getAttrs()) {
       if (namedAttr.getName() != funcOp.getFunctionTypeAttrName() &&
           namedAttr.getName() != SymbolTable::getSymbolAttrName())
         newFuncOp->setAttr(namedAttr.getName(), namedAttr.getValue());

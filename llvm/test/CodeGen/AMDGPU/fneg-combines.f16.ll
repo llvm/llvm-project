@@ -5303,7 +5303,7 @@ define half @v_fneg_inlineasm_f16(half %a, half %b, half %c, i32 %d) #0 {
 ; GFX11-NSZ-TRUE16-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul half %a, %b
   %fneg = fneg half %mul
-  call void asm sideeffect "; use $0", "v"(half %fneg) #0
+  call void asm sideeffect "; use $0", "v"(half %fneg)
   ret half %fneg
 }
 
@@ -5372,7 +5372,7 @@ define half @v_fneg_inlineasm_multi_use_src_f16(ptr addrspace(1) %out, half %a, 
   %out.gep = getelementptr inbounds half, ptr addrspace(1) %out, i64 %tid.ext
   %mul = fmul half %a, %b
   %fneg = fneg half %mul
-  call void asm sideeffect "; use $0", "v"(half %fneg) #0
+  call void asm sideeffect "; use $0", "v"(half %fneg)
   ret half %mul
 }
 

@@ -1,6 +1,6 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
-define spir_kernel void @k(i32 addrspace(1)* %a) !kernel_arg_type_qual !7 !spirv.ParameterDecorations !10 {
+define spir_kernel void @k(ptr addrspace(1) %a) !kernel_arg_type_qual !7 !spirv.ParameterDecorations !10 {
 entry:
   ret void
 }

@@ -783,37 +783,20 @@ multiclass MUBUF_Pseudo_Atomics_NO_RTN <string opName,
 
 multiclass MUBUF_Pseudo_Atomics_RTN <string opName,
                                      RegisterOperand vdataClass,
-                                     ValueType vdataType,
-                                     SDPatternOperator atomic> {
+                                     ValueType vdataType> {
   let FPAtomic = vdataType.isFP in {
-    def _OFFSET_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Offset, vdataClass, 0,
-      [(set vdataType:$vdata,
-       (atomic (MUBUFOffset v4i32:$srsrc, i32:$soffset, i32:$offset),
-               vdataType:$vdata_in))]>,
-      MUBUFAddr64Table <0, NAME # "_RTN">;
-
-    def _ADDR64_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Addr64, vdataClass, 0,
-      [(set vdataType:$vdata,
-       (atomic (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset, i32:$offset),
-                vdataType:$vdata_in))]>,
-      MUBUFAddr64Table <1, NAME # "_RTN">;
-
+    def _OFFSET_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Offset, vdataClass, 0>,
+                      MUBUFAddr64Table <0, NAME # "_RTN">;
+    def _ADDR64_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Addr64, vdataClass, 0>,
+                      MUBUFAddr64Table <1, NAME # "_RTN">;
     def _OFFEN_RTN  : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.OffEn,  vdataClass, 0>;
     def _IDXEN_RTN  : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.IdxEn,  vdataClass, 0>;
     def _BOTHEN_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.BothEn, vdataClass, 0>;
 
-    def _VBUFFER_OFFSET_RTN : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.Offset, vdataClass, 1,
-      [(set vdataType:$vdata,
-       (atomic (MUBUFOffset v4i32:$srsrc, i32:$soffset, i32:$offset),
-               vdataType:$vdata_in))]>,
-      MUBUFAddr64Table <0, NAME # "_VBUFFER_RTN">;
-
-    def _VBUFFER_ADDR64_RTN : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.Addr64, vdataClass, 1,
-      [(set vdataType:$vdata,
-       (atomic (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset, i32:$offset),
-                vdataType:$vdata_in))]>,
-      MUBUFAddr64Table <1, NAME # "_VBUFFER_RTN">;
-
+    def _VBUFFER_OFFSET_RTN : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.Offset, vdataClass, 1>,
+                      MUBUFAddr64Table <0, NAME # "_VBUFFER_RTN">;
+    def _VBUFFER_ADDR64_RTN : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.Addr64, vdataClass, 1>,
+                      MUBUFAddr64Table <1, NAME # "_VBUFFER_RTN">;
     def _VBUFFER_OFFEN_RTN  : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.OffEn,  vdataClass, 1>;
     def _VBUFFER_IDXEN_RTN  : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.IdxEn,  vdataClass, 1>;
     def _VBUFFER_BOTHEN_RTN : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.BothEn, vdataClass, 1>;
@@ -822,10 +805,9 @@ multiclass MUBUF_Pseudo_Atomics_RTN <string opName,
 
 multiclass MUBUF_Pseudo_Atomics <string opName,
                                  RegisterOperand vdataClass,
-                                 ValueType vdataType,
-                                 SDPatternOperator atomic = null_frag> :
+                                 ValueType vdataType> :
   MUBUF_Pseudo_Atomics_NO_RTN<opName, vdataClass, vdataType>,
-  MUBUF_Pseudo_Atomics_RTN<opName, vdataClass, vdataType, atomic>;
+  MUBUF_Pseudo_Atomics_RTN<opName, vdataClass, vdataType>;
 
 
 //===----------------------------------------------------------------------===//
@@ -1096,7 +1078,7 @@ defm BUFFER_ATOMIC_DEC_X2 : MUBUF_Pseudo_Atomics <
 
 let OtherPredicates = [HasGFX10_BEncoding] in {
   defm BUFFER_ATOMIC_CSUB : MUBUF_Pseudo_Atomics <
-    "buffer_atomic_csub", VGPROp_32, i32, int_amdgcn_global_atomic_csub
+    "buffer_atomic_csub", VGPROp_32, i32
   >;
 }
 
@@ -1117,22 +1099,22 @@ def BUFFER_WBINVL1_SC : MUBUF_Invalidate <"buffer_wbinvl1_sc",
 let SubtargetPredicate = isGFX6GFX7GFX10Plus in {
 
 defm BUFFER_ATOMIC_FCMPSWAP : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_fcmpswap", AVLdSt_64, v2f32, null_frag
+  "buffer_atomic_fcmpswap", AVLdSt_64, v2f32
 >;
 }
 
 let SubtargetPredicate = HasAtomicFMinFMaxF32GlobalInsts in {
 defm BUFFER_ATOMIC_FMIN : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_fmin", AVLdSt_32, f32, null_frag
+  "buffer_atomic_fmin", AVLdSt_32, f32
 >;
 defm BUFFER_ATOMIC_FMAX : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_fmax", AVLdSt_32, f32, null_frag
+  "buffer_atomic_fmax", AVLdSt_32, f32
 >;
 }
 
 let SubtargetPredicate = isGFX6GFX7GFX10 in {
 defm BUFFER_ATOMIC_FCMPSWAP_X2 : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_fcmpswap_x2", VGPROp_128, v2f64, null_frag
+  "buffer_atomic_fcmpswap_x2", VGPROp_128, v2f64
 >;
 }
 
@@ -1201,12 +1183,12 @@ defm BUFFER_ATOMIC_PK_ADD_F16 : MUBUF_Pseudo_Atomics_NO_RTN <
 
 let SubtargetPredicate = HasAtomicFaddRtnInsts in
 defm BUFFER_ATOMIC_ADD_F32 : MUBUF_Pseudo_Atomics_RTN<
-  "buffer_atomic_add_f32", AVLdSt_32, f32, null_frag
+  "buffer_atomic_add_f32", AVLdSt_32, f32
 >;
 
 let SubtargetPredicate = HasAtomicBufferGlobalPkAddF16Insts in
 defm BUFFER_ATOMIC_PK_ADD_F16 : MUBUF_Pseudo_Atomics_RTN <
-  "buffer_atomic_pk_add_f16", AVLdSt_32, v2f16, null_frag
+  "buffer_atomic_pk_add_f16", AVLdSt_32, v2f16
 >;
 
 let SubtargetPredicate = isGFX12Plus in {

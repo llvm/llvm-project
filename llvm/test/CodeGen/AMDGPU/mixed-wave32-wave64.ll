@@ -34,8 +34,8 @@ define amdgpu_gs void @_amdgpu_gs_main() #4 {
 declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #2
 declare float @llvm.amdgcn.image.sample.2d.f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #3
 
-attributes #0 = { "amdgpu-max-work-group-size"="128" "target-features"=",+wavefrontsize32" }
-attributes #1 = { "target-features"=",+wavefrontsize64" }
+attributes #0 = { "amdgpu-max-work-group-size"="128" "target-features"="+wavefrontsize32" }
+attributes #1 = { "target-features"="+wavefrontsize64" }
 attributes #2 = { nounwind readnone speculatable }
 attributes #3 = { nounwind readonly }
-attributes #4 = { "target-features"=",+wavefrontsize32" }
+attributes #4 = { "target-features"="+wavefrontsize32" }

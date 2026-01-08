@@ -153,8 +153,7 @@ namespace {
       return !BitVector::any();
     }
     bool includes(const RegisterSet &Rs) const {
-      // A.BitVector::test(B)  <=>  A-B != {}
-      return !Rs.BitVector::test(*this);
+      return Rs.BitVector::subsetOf(*this);
     }
     bool intersects(const RegisterSet &Rs) const {
       return BitVector::anyCommon(Rs);

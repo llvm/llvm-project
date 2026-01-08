@@ -8,7 +8,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %s -o %t.o
 # RUN: %clang %cflags  %t.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -o %t.exe.bolt --no-threads | FileCheck %s --check-prefix=CHECK-BOLT
+# RUN: llvm-bolt %t.exe -o %t.exe.bolt -v=1 --no-threads | FileCheck %s --check-prefix=CHECK-BOLT
 
 # CHECK-BOLT: BOLT-INFO: inconsistent RAStates in function foo: ptr authenticating inst encountered in Unsigned RA state
 # CHECK-BOLT: BOLT-INFO: inconsistent RAStates in function bar: ptr signing inst encountered in Signed RA state
