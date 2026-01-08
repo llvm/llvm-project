@@ -925,18 +925,18 @@ using IncomingValueMap = SmallDenseMap<BasicBlock *, Value *, 16>;
 /// \returns the selected value.
 static Value *selectIncomingValueForBlock(Value *OldVal, BasicBlock *BB,
                                           IncomingValueMap &IncomingValues) {
+  IncomingValueMap::const_iterator It = IncomingValues.find(BB);
   if (!isa<UndefValue>(OldVal)) {
-    assert((IncomingValues.count(BB) &&
-            (isa<UndefValue>(IncomingValues.find(BB)->second) ||
-             IncomingValues.find(BB)->second == OldVal)) &&
+    assert((It != IncomingValues.end() &&
+            (!(It->second) || It->second == OldVal)) &&
            "Expected OldVal to match incoming value from BB!");
 
     IncomingValues.insert_or_assign(BB, OldVal);
     return OldVal;
   }
 
-  IncomingValueMap::const_iterator It = IncomingValues.find(BB);
-  if (It != IncomingValues.end() && !isa<UndefValue>(It->second))
+  // IncomingValueMap::const_iterator It = IncomingValues.find(BB);
+  if (It != IncomingValues.end() && It->second)
     return It->second;
 
   return OldVal;
@@ -955,9 +955,8 @@ static Value *selectIncomingValueForBlock(Value *OldVal, BasicBlock *BB,
 static void gatherIncomingValuesToPhi(llvm::PHINode *PN,
                                       IncomingValueMap &IncomingValues,
                                       const PredBlockVector &BBPreds) {
-  llvm::Value *Undef = llvm::UndefValue::get(PN->getType());
   for (llvm::BasicBlock *Pred : BBPreds) {
-    IncomingValues[Pred] = Undef;
+    IncomingValues[Pred] = nullptr;
   }
 
   for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
@@ -995,7 +994,7 @@ static void replaceUndefValuesInPhi(PHINode *PN,
     // them up below if needed.
     // Note: this is conservatively correct, but we could try harder and group
     // the undef values per incoming basic block.
-    if (isa<UndefValue>(It->second)) {
+    if (!It->second) {
       TrueUndefOps.push_back(i);
       continue;
     }
@@ -1093,7 +1092,7 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
   Value *OldVal = PN->removeIncomingValue(BB, false);
   assert(OldVal && "No entry in PHI for Pred BB!");
 
-  // Map BBPreds to defined or undefined values in PN
+  // Maps BBPreds to defined values or nullptr (representing undefined values).
   IncomingValueMap IncomingValues;
 
   // We are merging two blocks - BB, and the block containing PN - and
