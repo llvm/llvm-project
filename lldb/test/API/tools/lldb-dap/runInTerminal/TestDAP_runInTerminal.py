@@ -30,8 +30,8 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     def test_runInTerminal(self):
         """
-            Tests the "runInTerminal" reverse request. It makes sure that the IDE can
-            launch the inferior with the correct environment variables and arguments.
+        Tests the "runInTerminal" reverse request. It makes sure that the IDE can
+        launch the inferior with the correct environment variables and arguments.
         """
         program = self.getBuildArtifact("a.out")
         source = "main.c"
@@ -77,8 +77,8 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     def test_runInTerminalWithObjectEnv(self):
         """
-            Tests the "runInTerminal" reverse request. It makes sure that the IDE can
-            launch the inferior with the correct environment variables using an object.
+        Tests the "runInTerminal" reverse request. It makes sure that the IDE can
+        launch the inferior with the correct environment variables using an object.
         """
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, console="integratedTerminal", env={"FOO": "BAR"})
