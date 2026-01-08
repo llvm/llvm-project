@@ -4,7 +4,7 @@
 // RUN: %clangxx_asan %s -o %t -fsanitize-recover=address
 // RUN: %env_asan_opts=print_module_map=2:halt_on_error=0     %run %t 2>&1 | FileCheck %s
 
-// We can't run system("otool") in the simulator.
+// We can't run system("otool") on remote devices.
 // UNSUPPORTED: darwin-remote
 
 #include <stdio.h>

@@ -7,7 +7,7 @@
 // Due to a bug in atos, this only works on x86_64.
 // REQUIRES: asan-64-bits
 
-// Path returned by `which atos` is invalid on iOS.
+// Path returned by `which atos` is invalid on non-host
 // UNSUPPORTED: darwin-remote
 
 #include <stdlib.h>
