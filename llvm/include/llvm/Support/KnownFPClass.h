@@ -29,7 +29,8 @@ struct KnownFPClass {
   /// definitely set or false if the sign bit is definitely unset.
   std::optional<bool> SignBit;
 
-  KnownFPClass() = default;
+  KnownFPClass(FPClassTest Known = fcAllFlags, std::optional<bool> Sign = {})
+      : KnownFPClasses(Known), SignBit(Sign) {}
   KnownFPClass(const APFloat &C);
 
   bool operator==(KnownFPClass Other) const {
@@ -133,6 +134,11 @@ struct KnownFPClass {
   ///   x < -0 --> true
   bool cannotBeOrderedGreaterEqZero(DenormalMode Mode) const {
     return isKnownNever(fcPositive) && isKnownNeverLogicalNegZero(Mode);
+  }
+
+  KnownFPClass intersectWith(const KnownFPClass &RHS) {
+    return KnownFPClass(~(~KnownFPClasses & ~RHS.KnownFPClasses),
+                        SignBit == RHS.SignBit ? SignBit : std::nullopt);
   }
 
   KnownFPClass &operator|=(const KnownFPClass &RHS) {
