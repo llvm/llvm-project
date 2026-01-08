@@ -623,7 +623,26 @@ CrossTranslationUnitContext::ASTLoader::loadFromSource(
   return CreateASTUnitFromCommandLine(
       CommandLineArgs.begin(), (CommandLineArgs.end()),
       CI.getPCHContainerOperations(), DiagOpts, Diags,
-      CI.getHeaderSearchOpts().ResourceDir);
+      CI.getHeaderSearchOpts().ResourceDir,
+      /*StorePreamblesInMemory=*/false,
+      /*PreambleStoragePath=*/StringRef(),
+      /*OnlyLocalDecls=*/false,
+      /*CaptureDiagnostics=*/CaptureDiagsKind::None,
+      /*RemappedFiles=*/{},
+      /*RemappedFilesKeepOriginalName=*/true,
+      /*PrecompilePreambleAfterNParses=*/0,
+      /*TUKind=*/TU_Complete,
+      /*CacheCodeCompletionResults=*/false,
+      /*IncludeBriefCommentsInCodeCompletion=*/false,
+      /*AllowPCHWithCompilerErrors=*/false,
+      /*SkipFunctionBodies=*/SkipFunctionBodiesScope::None,
+      /*SingleFileParse=*/false,
+      /*UserFilesAreVolatile=*/false,
+      /*ForSerialization=*/false,
+      /*RetainExcludedConditionalBlocks=*/false,
+      /*ModuleFormat=*/std::nullopt,
+      /*ErrAST=*/nullptr,
+      /*VFS=*/CI.getVirtualFileSystemPtr());
 }
 
 llvm::Expected<InvocationListTy>
@@ -710,7 +729,7 @@ llvm::Error CrossTranslationUnitContext::ASTLoader::lazyInitInvocationList() {
     return llvm::make_error<IndexError>(PreviousParsingResult);
 
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileContent =
-      llvm::MemoryBuffer::getFile(InvocationListFilePath);
+      CI.getVirtualFileSystem().getBufferForFile(InvocationListFilePath);
   if (!FileContent) {
     PreviousParsingResult = index_error_code::invocation_list_file_not_found;
     return llvm::make_error<IndexError>(PreviousParsingResult);
