@@ -4911,32 +4911,29 @@ genCacheBounds(Fortran::lower::AbstractConverter &converter,
       Fortran::semantics::MaybeExpr upperExpr =
           Fortran::evaluate::AsGenericExpr(triplet->upper());
 
-      if (!lowerExpr && !upperExpr) {
+      if (!lowerExpr && !upperExpr)
         llvm::report_fatal_error("OpenACC cache directive requires at least "
                                  "one bound to be specified for array section");
-      }
 
       // OpenACC cache only supports unit stride (default or explicit 1).
       auto strideVal = Fortran::evaluate::ToInt64(triplet->stride());
-      if (!strideVal || *strideVal != 1) {
+      if (!strideVal || *strideVal != 1)
         llvm::report_fatal_error("OpenACC cache directive does not support "
                                  "strided array sections");
-      }
 
       // Compute lower bound (use array lb if not specified).
       mlir::Value lb = lowerExpr ? genIndex(lowerExpr) : arrayLb;
 
       // Compute upper bound (use array ub if not specified).
       mlir::Value ub;
-      if (upperExpr) {
+      if (upperExpr)
         ub = genIndex(upperExpr);
-      } else {
+      else
         // arr(lower:) - upper is array's upper bound
         ub = mlir::arith::AddIOp::create(
             builder, loc,
             mlir::arith::SubIOp::create(builder, loc, arrayLb, one),
             arrayExtent);
-      }
 
       // Normalize to zero-based and compute extent.
       lbound = mlir::arith::SubIOp::create(builder, loc, lb, arrayLb);
