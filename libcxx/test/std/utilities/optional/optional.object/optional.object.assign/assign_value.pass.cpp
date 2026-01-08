@@ -350,8 +350,10 @@ int main(int, char**)
     static_assert(pr38638(3) == 5, "");
 
 #if TEST_STD_VER >= 26
-    assert(test_with_ref<int>(3));
+    test_with_ref<int>(3);
+    test_with_ref<ConstexprTestTypes::Copyable>({});
     static_assert(test_with_ref<int>(3));
+    static_assert(test_with_ref<ConstexprTestTypes::Copyable>({}));
 #endif
     return 0;
 }

@@ -154,7 +154,7 @@ struct Throws {
   int val = 42;
   bool b  = false;
   constexpr Throws() {};
-  operator int&() {
+  constexpr operator int&() {
     if (b) {
       TEST_THROW(1);
     }
@@ -175,10 +175,13 @@ constexpr bool test_ref() {
 
 #  ifndef TEST_HAS_NO_EXCEPTIONS
   {
-    using T = Throws;
-    T t{};
+    Throws t{};
     ASSERT_NOT_NOEXCEPT(std::optional<int&>(t));
-    // TODO: There doesn't seem to be a usable type which can actually make the ctor not noexcept
+    try {
+      std::optional<int&> o(t);
+    } catch (int) {
+      assert(false);
+    }
   }
 #  endif
   return true;
