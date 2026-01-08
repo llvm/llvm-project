@@ -4998,7 +4998,14 @@ genACC(Fortran::lower::AbstractConverter &converter,
 
     fir::factory::AddrAndBoundsInfo info = getDataOperandBaseAddr(
         converter, builder, symbol, operandLocation, /*unwrapFirBox=*/true);
-    mlir::Value baseAddr = info.addr;
+
+    // For arrays with non-1 lower bounds, info.addr is a box type.
+    // Use rawInput (the underlying ref) when addr and rawInput have different
+    // element types, similar to how other data clauses handle this case.
+    bool useRawInput =
+        info.rawInput && fir::unwrapRefType(info.addr.getType()) !=
+                             fir::unwrapRefType(info.rawInput.getType());
+    mlir::Value baseAddr = useRawInput ? info.rawInput : info.addr;
 
     llvm::SmallVector<mlir::Value> bounds;
     genCacheBounds(converter, semanticsContext, stmtCtx, accObject, asFortran,
@@ -5011,19 +5018,20 @@ genACC(Fortran::lower::AbstractConverter &converter,
         /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{},
         /*unwrapBoxAddr=*/true, /*isPresent=*/mlir::Value{});
 
-    // Update symbol map so future lowering uses the cache result
+    // Update symbol map so future lowering uses the cache result.
     Fortran::lower::SymMap &symbolMap = converter.getSymbolMap();
-    if (auto hostDef = symbolMap.lookupVariableDefinition(symbol)) {
-      // Clone the host declare with cache result as input
-      // The first operand is the memref/base for both hlfir::DeclareOp and
-      // fir::DeclareOp
-      mlir::Operation *hostDefOp = (*hostDef).getOperation();
-      mlir::IRMapping mapper;
-      mapper.map(hostDefOp->getOperand(0), cacheOp.getAccVar());
-      mlir::Operation *newDef = builder.clone(*hostDefOp, mapper);
-      symbolMap.addVariableDefinition(
-          symbol, llvm::cast<fir::FortranVariableOpInterface>(newDef));
-    }
+    std::optional<fir::FortranVariableOpInterface> hostDef =
+        symbolMap.lookupVariableDefinition(symbol);
+    assert(hostDef.has_value() && llvm::isa<hlfir::DeclareOp>(*hostDef) &&
+           "expected symbol to be mapped to hlfir.declare");
+    auto hostDeclare = llvm::cast<hlfir::DeclareOp>(*hostDef);
+    // Clone the host declare with cache result as input.
+    mlir::IRMapping mapper;
+    mapper.map(hostDeclare.getMemref(), cacheOp.getAccVar());
+    mlir::Operation *newDef =
+        builder.clone(*hostDeclare.getOperation(), mapper);
+    symbolMap.addVariableDefinition(
+        symbol, llvm::cast<fir::FortranVariableOpInterface>(newDef));
   }
 }
 

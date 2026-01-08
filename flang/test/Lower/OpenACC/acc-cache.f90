@@ -280,3 +280,30 @@ subroutine test_cache_mixed_bounds()
 ! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xf32>> {{{.*}}name = "b
 ! CHECK: hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_mixed_boundsEb"}
 end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_cache_nonunit_lb()
+! Test cache with array that has non-1 lower bound: arr(10:20), cache(arr(15))
+subroutine test_cache_nonunit_lb()
+  integer :: arr(10:20)
+  integer :: i
+
+  !$acc loop
+  do i = 10, 20
+    !$acc cache(arr(15))
+    arr(i) = i
+  end do
+
+! For arr(10:20), startIdx = 10, element 15 has lowerbound = 15 - 10 = 5
+! CHECK: %[[C10:.*]] = arith.constant 10 : index
+! CHECK: acc.loop
+! CHECK: %[[C1:.*]] = arith.constant 1 : index
+! CHECK: %[[C15:.*]] = arith.constant 15 : index
+! Compute lowerbound = 15 - startIdx = 15 - 10 = 5
+! CHECK: %[[LB:.*]] = arith.subi %[[C15]], %[[C10]] : index
+! Single element has extent = 1
+! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) extent(%[[C1]] : index) stride(%[[C1]] : index) startIdx(%[[C10]] : index)
+! The varPtr uses the ref type (second result of hlfir.declare with shapeshift)
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<11xi32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<11xi32>> {{{.*}}name = "arr
+! The cloned declare produces a box and ref pair
+! CHECK: hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_nonunit_lbEarr"} : (!fir.ref<!fir.array<11xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<11xi32>>, !fir.ref<!fir.array<11xi32>>)
+end subroutine
