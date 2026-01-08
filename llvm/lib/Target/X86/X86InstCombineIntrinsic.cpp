@@ -1735,8 +1735,8 @@ static Value *simplifyTernarylogic(const IntrinsicInst &II,
 }
 
 static Value *simplifyX86FPMaxMin(const IntrinsicInst &II,
-                                InstCombiner::BuilderTy &Builder,
-                                Intrinsic::ID NewIID) {
+                                  InstCombiner::BuilderTy &Builder,
+                                  Intrinsic::ID NewIID) {
 
   Value *Arg0 = II.getArgOperand(0);
   Value *Arg1 = II.getArgOperand(1);
