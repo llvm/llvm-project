@@ -4456,6 +4456,23 @@ static Value *simplifyWithOpsReplaced(Value *V,
         return Absorber;
     }
 
+    if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+      // `x == y ? 0 : ucmp(x, y)` where under the replacement y -> x,
+      // `ucmp(x, x)` becomes `0`.
+      if ((II->getIntrinsicID() == Intrinsic::scmp ||
+           II->getIntrinsicID() == Intrinsic::ucmp) &&
+          NewOps[0] == NewOps[1]) {
+        if (II->hasPoisonGeneratingAnnotations()) {
+          if (!DropFlags)
+            return nullptr;
+
+          DropFlags->push_back(II);
+        }
+
+        return ConstantInt::get(I->getType(), 0);
+      }
+    }
+
     if (isa<GetElementPtrInst>(I)) {
       // getelementptr x, 0 -> x.
       // This never returns poison, even if inbounds is set.

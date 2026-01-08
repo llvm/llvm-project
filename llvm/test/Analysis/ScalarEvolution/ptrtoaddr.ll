@@ -46,7 +46,7 @@ define void @ptrtoaddr_of_nullptr(ptr %out0) {
 ; CHECK-LABEL: 'ptrtoaddr_of_nullptr'
 ; CHECK-NEXT:  Classifying expressions for: @ptrtoaddr_of_nullptr
 ; CHECK-NEXT:    %p0 = ptrtoaddr ptr null to i64
-; CHECK-NEXT:    --> %p0 U: full-set S: full-set
+; CHECK-NEXT:    --> %p0 U: [0,1) S: [0,1)
 ; CHECK-NEXT:  Determining loop execution counts for: @ptrtoaddr_of_nullptr
 ;
   %p0 = ptrtoaddr ptr null to i64

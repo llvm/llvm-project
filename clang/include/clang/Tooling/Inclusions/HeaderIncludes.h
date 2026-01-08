@@ -130,6 +130,9 @@ private:
   unsigned MaxInsertOffset;
   // True if we find the main-file header in the Code.
   bool MainIncludeFound;
+  // True if header insertion should also insert a C++20 global module fragment
+  // declaration (i.e. a 'module;' declaration).
+  bool ShouldInsertGlobalModuleFragmentDecl;
   IncludeCategoryManager Categories;
   // Record the offset of the end of the last include in each category.
   std::unordered_map<int, int> CategoryEndOffsets;

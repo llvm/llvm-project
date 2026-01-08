@@ -864,6 +864,17 @@ bb5:
   br label %bb5
 }
 
+define <2 x ptr> @select_vector_eq(<2 x ptr> %a, <2 x ptr> %b) {
+; CHECK-LABEL: @select_vector_eq(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x ptr> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x ptr> [[A]], <2 x ptr> [[B]]
+; CHECK-NEXT:    ret <2 x ptr> [[SEL]]
+;
+  %cmp = icmp eq <2 x ptr> %a, %b
+  %sel = select <2 x i1> %cmp, <2 x ptr> %a, <2 x ptr> %b
+  ret <2 x ptr> %sel
+}
+
 define void @select_same_obj(i1 %c, ptr %p, i64 %x) {
 ; CHECK-LABEL: @select_same_obj(
 ; CHECK-NEXT:  entry:
