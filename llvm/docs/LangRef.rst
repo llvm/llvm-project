@@ -21690,7 +21690,7 @@ Semantics:
 The intrinsic interprets the integer value as arbitrary FP bits according to
 ``interpretation``, then converts to the native LLVM floating-point result type.
 
-Conversions from arbitrary FP formats to native LLVM floating-point types are typically
+Conversions from arbitrary FP formats to native LLVM floating-point types are
 widening conversions (e.g., FP8 to FP16 or FP32), which are exact and require no rounding.
 Normal finite values are converted exactly. NaN values follow LLVM's standard :ref:`NaN rules
 <floatnan>`; the NaN representation is preserved (quiet NaNs remain quiet, signaling NaNs

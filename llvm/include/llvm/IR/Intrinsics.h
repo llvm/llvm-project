@@ -308,11 +308,6 @@ namespace Intrinsic {
   LLVM_ABI void printImmArg(ID IID, unsigned ArgIdx, raw_ostream &OS,
                             const Constant *ImmArgVal);
 
-  /// Returns true if the given string is a valid arbitrary floating-point
-  /// format interpretation for llvm.convert.to.arbitrary.fp and
-  /// llvm.convert.from.arbitrary.fp intrinsics.
-  LLVM_ABI bool isValidArbitraryFPFormat(StringRef Format);
-
   } // namespace Intrinsic
 
   } // namespace llvm

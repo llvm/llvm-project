@@ -5960,7 +5960,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           Call);
 
     // Valid interpretation strings: mini-float format names.
-    Check(Intrinsic::isValidArbitraryFPFormat(Interp),
+    Check(APFloatBase::isValidArbitraryFPFormat(Interp),
           "unsupported interpretation metadata string", Call);
 
     // Check rounding mode metadata (argoperand 2).
@@ -6003,7 +6003,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           Call);
 
     // Valid interpretation strings: mini-float format names.
-    Check(Intrinsic::isValidArbitraryFPFormat(Interp),
+    Check(APFloatBase::isValidArbitraryFPFormat(Interp),
           "unsupported interpretation metadata string", Call);
     break;
   }
