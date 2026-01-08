@@ -5772,8 +5772,6 @@ private:
                   DecrUnschedForInst(I, Bundle->getTreeEntry(), OpIdx, Checked);
                 }
               // If parent node is schedulable, it will be handled correctly.
-              if (!IsNonSchedulableWithParentPhiNode)
-                break;
               It = std::find(std::next(It),
                              Bundle->getTreeEntry()->Scalars.end(), In);
             } while (It != Bundle->getTreeEntry()->Scalars.end());
