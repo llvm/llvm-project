@@ -533,7 +533,8 @@ void ReachingDefInfo::getGlobalUses(MachineInstr *MI, Register Reg,
 
 void ReachingDefInfo::getGlobalReachingDefs(MachineInstr *MI, Register Reg,
                                             InstSet &Defs) const {
-  if (auto *Def = getUniqueReachingMIDef(MI, Reg)) {
+  // If there's a local def before MI, return it.
+  if (MachineInstr *LocalDef = getReachingLocalMIDef(MI, Reg);) {
     Defs.insert(Def);
     return;
   }
