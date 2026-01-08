@@ -143,6 +143,7 @@ private:
   bool foldShufflesOfLengthChangingShuffles(Instruction &I);
   bool foldShuffleOfIntrinsics(Instruction &I);
   bool foldShuffleToIdentity(Instruction &I);
+  bool foldFragmentedLoads(Instruction &I);
   bool foldShuffleFromReductions(Instruction &I);
   bool foldShuffleChainsToReduce(Instruction &I);
   bool foldCastFromReductions(Instruction &I);
@@ -3606,6 +3607,97 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
   return true;
 }
 
+struct LaneOrigin {
+  LoadInst *LI = nullptr;
+  int64_t Offset = 0;
+  Value *BasePtr = nullptr;
+};
+
+bool VectorCombine::foldFragmentedLoads(Instruction &I) {
+  auto *VT = dyn_cast<FixedVectorType>(I.getType());
+  if (!VT || I.use_empty())
+    return false;
+
+  unsigned ElementSize = VT->getElementType()->getPrimitiveSizeInBits();
+  if (!ElementSize)
+    return false;
+
+  unsigned NumElts = VT->getNumElements();
+  unsigned VTySize = ElementSize * NumElts;
+  unsigned MaxVectorSize =
+      TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector);
+  unsigned MaxVectorEltNum = MaxVectorSize / ElementSize;
+  if (NumElts > MaxVectorEltNum)
+    return false;
+
+  Type *EltTy = VT->getElementType();
+  SmallVector<LaneOrigin, 4> Origins(NumElts);
+  for (unsigned Lane = 0; Lane < NumElts; ++Lane) {
+    InstLane IL = lookThroughShuffles(&*I.use_begin(), Lane);
+    if (!IL.first)
+      return false;
+
+    auto *LI = dyn_cast<LoadInst>(IL.first->get());
+    if (!canWidenLoad(LI, TTI))
+      return false;
+
+    if (auto *LIVTy = dyn_cast<FixedVectorType>(LI->getType());
+        !LIVTy || LIVTy->getElementType() != EltTy ||
+        LIVTy->getNumElements() >= MaxVectorEltNum)
+      return false;
+
+    int64_t ConstantOffset = 0;
+    Value *Base = GetPointerBaseWithConstantOffset(LI->getPointerOperand(),
+                                                   ConstantOffset, *DL);
+
+    Origins[Lane].LI = LI;
+    Origins[Lane].BasePtr = Base;
+    int64_t Offset = ConstantOffset * 8 + (IL.second * ElementSize);
+    if (Offset < 0 || Offset >= VTySize || Offset % ElementSize)
+      return false;
+
+    Origins[Lane].Offset = Offset;
+  }
+
+  SmallPtrSet<LoadInst *, 4> Loads;
+  SmallVector<Value *, 2> Bases;
+  Align Align = Origins[0].LI->getAlign();
+  for (const auto &O : Origins) {
+    Align = commonAlignment(O.LI->getAlign(), Align.value());
+    Loads.insert(O.LI);
+    if (!is_contained(Bases, O.BasePtr))
+      Bases.push_back(O.BasePtr);
+  }
+
+  if (Bases.size() > 2 || Loads.size() <= Bases.size()) {
+    LLVM_DEBUG(dbgs() << "No load reduction: " << Loads.size() << " loads -> "
+                      << Bases.size() << " wide loads..\n");
+    return false;
+  }
+
+  Type *WideVecTy = VT;
+  Value *WideL0 = Builder.CreateAlignedLoad(WideVecTy, Bases[0], Align);
+  Value *WideL1 = Bases.size() > 1
+                      ? Builder.CreateAlignedLoad(WideVecTy, Bases[1], Align)
+                      : WideL0;
+
+  SmallVector<int, 4> NewMask;
+  for (const auto &O : Origins) {
+    int WideIdx = O.Offset / ElementSize;
+    if (O.BasePtr == Bases[0])
+      NewMask.push_back(WideIdx);
+    else
+      NewMask.push_back(WideIdx + NumElts);
+  }
+
+  LLVM_DEBUG(dbgs() << "VC: Folding " << Loads.size() << " loads with "
+                    << Bases.size() << " widening bases.." << "\n");
+
+  Value *NewSVI = Builder.CreateShuffleVector(WideL0, WideL1, NewMask);
+  replaceValue(I, *NewSVI);
+  return true;
+}
+
 /// Given a commutative reduction, the order of the input lanes does not alter
 /// the results. We can use this to remove certain shuffles feeding the
 /// reduction, removing the need to shuffle at all.
@@ -5031,6 +5123,8 @@ bool VectorCombine::run() {
         if (foldShuffleOfIntrinsics(I))
           return true;
         if (foldSelectShuffle(I))
+          return true;
+        if (foldFragmentedLoads(I))
           return true;
         if (foldShuffleToIdentity(I))
           return true;
