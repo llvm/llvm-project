@@ -4525,6 +4525,191 @@ DiagnosedSilenceableFailure transform::DecomposeWinogradOp::applyToOne(
   return DiagnosedSilenceableFailure::success();
 }
 
+//===----------------------------------------------------------------------===//
+// Hoist Extract to Linalg Argument
+//===----------------------------------------------------------------------===//
+
+/// Scans the body of a linalg.generic operation to find the next hoistable
+/// tensor::ExtractOp.
+///
+/// An extract operation is hoistable if all its indices can be expressed as
+/// affine expressions. Specifically, each index must be one of:
+/// 1. A linalg.index operation (maps to an affine dimension expression)
+/// 2. An arith.constant_index operation (maps to an affine constant)
+/// 3. An arith.index_cast of a block argument that corresponds to a constant
+///    input operand (maps to an affine constant)
+///
+/// When a hoistable extract is found, this function populates `opIndices` with
+/// the affine expressions corresponding to the extract's indices. The function
+/// scans operations in order and returns the first hoistable extract found.
+///
+/// \param genericOp The linalg.generic operation to search
+/// \param opIndices Output parameter populated with affine expressions for
+///                  the extract's indices if a hoistable extract is found
+/// \param builder OpBuilder for creating affine expressions
+/// \returns The first hoistable tensor::ExtractOp found, or nullptr if none
+///          exists
+static tensor::ExtractOp
+findNextHoistableExtract(linalg::GenericOp &genericOp,
+                         SmallVector<AffineExpr> &opIndices,
+                         OpBuilder &builder) {
+  Block &body = genericOp.getRegion().front();
+
+  for (Operation &op : body) {
+    auto extractOp = dyn_cast<tensor::ExtractOp>(op);
+    if (!extractOp)
+      continue;
+
+    bool canHoistExtract = true;
+    opIndices.clear();
+
+    for (Value index : extractOp.getIndices()) {
+      auto linAlgIndexOp = index.getDefiningOp<linalg::IndexOp>();
+      auto constIndexOp = index.getDefiningOp<arith::ConstantIndexOp>();
+      auto indexCastOp = index.getDefiningOp<arith::IndexCastOp>();
+
+      if (linAlgIndexOp) {
+        opIndices.push_back(builder.getAffineDimExpr(linAlgIndexOp.getDim()));
+      } else if (constIndexOp) {
+        opIndices.push_back(
+            builder.getAffineConstantExpr(constIndexOp.value()));
+      } else if (indexCastOp) {
+        // Handle index_cast: the cast input must be a block argument
+        // corresponding to a constant input operand
+        Value castInput = indexCastOp.getIn();
+        auto blockArg = dyn_cast<BlockArgument>(castInput);
+
+        if (!blockArg) {
+          canHoistExtract = false;
+          break;
+        }
+
+        Operation *parentOp = blockArg.getOwner()->getParentOp();
+        auto linalgOp = dyn_cast<linalg::LinalgOp>(parentOp);
+        if (!linalgOp) {
+          canHoistExtract = false;
+          break;
+        }
+
+        OpOperand *opOperand = linalgOp.getMatchingOpOperand(blockArg);
+        Value sourceValue = opOperand->get();
+
+        // The source value must be a constant (not a block argument or
+        // dynamic value)
+        if (isa<BlockArgument>(sourceValue)) {
+          canHoistExtract = false;
+          break;
+        }
+
+        auto constOp = dyn_cast<arith::ConstantOp>(sourceValue.getDefiningOp());
+        if (!constOp) {
+          canHoistExtract = false;
+          break;
+        }
+
+        auto attr = constOp.getValue();
+        auto denseAttr = dyn_cast<DenseElementsAttr>(attr);
+        auto intAttr = dyn_cast<IntegerAttr>(attr);
+
+        if (denseAttr && denseAttr.isSplat()) {
+          int64_t val = denseAttr.getSplatValue<IntegerAttr>().getInt();
+          opIndices.push_back(builder.getAffineConstantExpr(val));
+        } else if (intAttr) {
+          int64_t val = intAttr.getInt();
+          opIndices.push_back(builder.getAffineConstantExpr(val));
+        } else {
+          canHoistExtract = false;
+          break;
+        }
+
+      } else {
+        // Index must be one of: linalg.index, arith.constant_index, or
+        // arith.index_cast of a constant block argument
+        canHoistExtract = false;
+        break;
+      }
+    }
+
+    if (canHoistExtract)
+      return extractOp;
+  }
+
+  return nullptr;
+}
+
+static linalg::GenericOp
+hoistExtractToArgument(tensor::ExtractOp &hoistedOp, OpBuilder &builder,
+                       linalg::GenericOp &genericOp,
+                       SmallVector<AffineExpr> &opIndices,
+                       RewriterBase &rewriter) {
+  // Get the source tensor that is being extracted from
+  Value sourceTensor = hoistedOp.getTensor();
+  SmallVector<Value> newInputs = genericOp.getInputs();
+  newInputs.push_back(sourceTensor);
+  auto newMap = AffineMap::get(genericOp.getNumLoops(), 0, opIndices,
+                               builder.getContext());
+
+  // Update indexing maps: insert the new map at the position after all inputs
+  SmallVector<AffineMap> newIndexMaps = genericOp.getIndexingMapsArray();
+  newIndexMaps.insert(newIndexMaps.begin() + genericOp.getInputs().size(),
+                      newMap);
+
+  // Create new linalg.generic operation with the additional input
+  rewriter.setInsertionPoint(genericOp);
+  auto newGenericOp = linalg::GenericOp::create(
+      rewriter, genericOp.getLoc(), genericOp.getResultTypes(), newInputs,
+      genericOp.getOutputs(), rewriter.getAffineMapArrayAttr(newIndexMaps),
+      genericOp.getIteratorTypes(), nullptr, nullptr);
+  rewriter.inlineRegionBefore(genericOp.getRegion(), newGenericOp.getRegion(),
+                              newGenericOp.getRegion().end());
+
+  // Insert a new block argument for the extracted element value
+  Block *newBlock = newGenericOp.getBlock();
+  Type elementType =
+      cast<RankedTensorType>(sourceTensor.getType()).getElementType();
+  Value newBodyArg = newBlock->insertArgument(genericOp.getInputs().size(),
+                                              elementType, hoistedOp->getLoc());
+
+  // Replace all uses of the hoisted extract operation with the new block
+  // argument
+  rewriter.replaceOp(hoistedOp, {newBodyArg});
+
+  // Replace the old generic operation with the new transformed one
+  rewriter.replaceOp(genericOp, newGenericOp.getResults());
+  return newGenericOp;
+}
+
+DiagnosedSilenceableFailure transform::HoistExtractToArgumentOp::applyToOne(
+    transform::TransformRewriter &rewriter, LinalgOp target,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  rewriter.setInsertionPoint(target);
+
+  auto genericOp = dyn_cast<linalg::GenericOp>(target.getOperation());
+  if (!genericOp) {
+    // If not a generic op, return the original unchanged
+    results.push_back(target);
+    return DiagnosedSilenceableFailure::success();
+  }
+
+  // Find the next hoistable extract operation in the generic's body
+  OpBuilder builder(genericOp.getContext());
+  SmallVector<AffineExpr> opIndices;
+  tensor::ExtractOp hoistedOp =
+      findNextHoistableExtract(genericOp, opIndices, builder);
+
+  if (!hoistedOp) {
+    // No hoistable extract found, return the original unchanged
+    results.push_back(target);
+    return DiagnosedSilenceableFailure::success();
+  }
+
+  // Perform the hoisting transformation
+  auto newGenericOp = hoistExtractToArgument(hoistedOp, builder, genericOp,
+                                             opIndices, rewriter);
+  results.push_back(newGenericOp);
+  return DiagnosedSilenceableFailure::success();
+}
 #include "mlir/Dialect/Linalg/TransformOps/LinalgTransformOpsEnums.cpp.inc"
 
 #define GET_OP_CLASSES
