@@ -7899,8 +7899,7 @@ void IntrinsicLibrary::genShowDescriptor(
 
   // If it's already a reference to a box, convert it to correct type and
   // pass it directly
-  if (fir::isa_ref_type(descriptor.getType()) &&
-      fir::isa_box_type(fir::unwrapRefType(descriptor.getType()))) {
+  if (fir::isBoxAddress(descriptor.getType())) {
     fir::runtime::genShowDescriptor(
         builder, loc, builder.createConvert(loc, targetRefType, descriptor));
     return;
