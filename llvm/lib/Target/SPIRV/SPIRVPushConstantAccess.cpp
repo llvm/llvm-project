@@ -49,24 +49,20 @@ static bool replacePushConstantAccesses(Module &M, SPIRVGlobalRegistry *GR) {
         /* InsertBefore= */ GV, GV->getThreadLocalMode(), GV->getAddressSpace(),
         GV->isExternallyInitialized());
 
-    SmallVector<User *, 4> Users(GV->user_begin(), GV->user_end());
-    for (User *U : Users) {
+    for (User *U : make_early_inc_range(GV->users())) {
       Instruction *I = cast<Instruction>(U);
       IRBuilder<> Builder(I);
       Value *GetPointerCall = Builder.CreateIntrinsic(
           NewGV->getType(), Intrinsic::spv_pushconstant_getpointer, {NewGV});
       GR->buildAssignPtr(Builder, GV->getValueType(), GetPointerCall);
 
-      for (unsigned N = 0; N < I->getNumOperands(); ++N) {
-        if (I->getOperand(N) == GV)
-          I->setOperand(N, GetPointerCall);
-      }
+      I->replaceUsesOfWith(GV, GetPointerCall);
     }
 
     GV->eraseFromParent();
   }
 
-  return true;
+  return !PushConstants.empty();
 }
 
 PreservedAnalyses SPIRVPushConstantAccess::run(Module &M,
