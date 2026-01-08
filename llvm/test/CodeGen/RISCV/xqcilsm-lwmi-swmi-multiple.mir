@@ -11,7 +11,16 @@
   define void @swmi_x0() { ret void }
   define void @swmi_nonconsecutive() { ret void }
   define void @swmi_misaligned() { ret void}
-  define void @setwmi() { ret void }
+
+  define void @setwmi(ptr %a, ptr %b, ptr %c, ptr %d) {
+    entry:
+      store i32 0, ptr %a, align 4
+      store i32 0, ptr %b, align 4
+      store i32 0, ptr %c, align 4
+      store i32 0, ptr %d, align 4
+      ret void
+  }
+
 ...
 ---
 name:            lwmi
@@ -169,11 +178,11 @@ body:             |
     ; CHECK-LABEL: name: setwmi
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: QC_SETWMI $x0, $x10, 4, 0 :: (store (s32))
+    ; CHECK-NEXT: QC_SETWMI $x0, $x10, 4, 0 :: (store (s32) into %ir.a), (store (s32) into %ir.b), (store (s32) into %ir.c), (store (s32) into %ir.d)
     ; CHECK-NEXT: PseudoRET
-    SW $x0, $x10, 0 :: (store (s32), align 4)
-    SW $x0, $x10, 4 :: (store (s32), align 4)
-    SW $x0, $x10, 8 :: (store (s32), align 4)
-    SW $x0, $x10, 12 :: (store (s32), align 4)
+    SW $x0, $x10, 0 :: (store (s32) into %ir.a, align 4)
+    SW $x0, $x10, 4 :: (store (s32) into %ir.b, align 4)
+    SW $x0, $x10, 8 :: (store (s32) into %ir.c, align 4)
+    SW $x0, $x10, 12 :: (store (s32) into %ir.d, align 4)
     PseudoRET
 ...

@@ -101,6 +101,7 @@ private:
   MachineRegisterInfo *MRI;
   const RISCVInstrInfo *TII;
   const RISCVRegisterInfo *TRI;
+  const RISCVSubtarget *STI = nullptr;
   LiveRegUnits ModifiedRegUnits, UsedRegUnits;
 };
 } // end anonymous namespace
@@ -112,17 +113,17 @@ INITIALIZE_PASS(RISCVLoadStoreOpt, DEBUG_TYPE, RISCV_LOAD_STORE_OPT_NAME, false,
 bool RISCVLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   if (skipFunction(Fn.getFunction()))
     return false;
-  const RISCVSubtarget &Subtarget = Fn.getSubtarget<RISCVSubtarget>();
 
   bool MadeChange = false;
-  TII = Subtarget.getInstrInfo();
-  TRI = Subtarget.getRegisterInfo();
+  STI = &Fn.getSubtarget<RISCVSubtarget>();
+  TII = STI->getInstrInfo();
+  TRI = STI->getRegisterInfo();
   MRI = &Fn.getRegInfo();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   ModifiedRegUnits.init(*TRI);
   UsedRegUnits.init(*TRI);
 
-  if (Subtarget.useMIPSLoadStorePairs() || Subtarget.hasVendorXqcilsm()) {
+  if (STI->useMIPSLoadStorePairs() || STI->hasVendorXqcilsm()) {
     for (MachineBasicBlock &MBB : Fn) {
       LLVM_DEBUG(dbgs() << "MBB: " << MBB.getName() << "\n");
 
@@ -137,7 +138,7 @@ bool RISCVLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
     }
   }
 
-  if (!Subtarget.is64Bit() && Subtarget.hasStdExtZilsd()) {
+  if (!STI->is64Bit() && STI->hasStdExtZilsd()) {
     for (auto &MBB : Fn) {
       for (auto MBBI = MBB.begin(), E = MBB.end(); MBBI != E;) {
         if (fixInvalidRegPairOp(MBB, MBBI)) {
@@ -166,8 +167,7 @@ bool RISCVLoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
     return false;
 
   // If Xqcilsm is available, first try to form a multi-instruction group (>2).
-  const RISCVSubtarget &STI = MI.getMF()->getSubtarget<RISCVSubtarget>();
-  if (!STI.is64Bit() && STI.hasVendorXqcilsm()) {
+  if (!STI->is64Bit() && STI->hasVendorXqcilsm()) {
     if (tryConvertToXqcilsmMultiLdSt(MBBI))
       return true;
   }
@@ -186,9 +186,7 @@ bool RISCVLoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
 static bool isMemOpAligned(MachineInstr &MI, Align RequiredAlignment) {
   const MachineMemOperand *MMO = *MI.memoperands_begin();
   Align MMOAlign = MMO->getAlign();
-  if (MMOAlign < RequiredAlignment)
-    return false;
-  return true;
+  return MMOAlign >= RequiredAlignment;
 }
 
 // Convert set of 3 or more LW/SW instructions to QC_LWMI/QC_SWMI/QC_SETWMI.
@@ -199,9 +197,8 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmMultiLdSt(
     MachineBasicBlock::iterator &FirstIt) {
   MachineInstr &FirstMI = *FirstIt;
   MachineFunction *MF = FirstMI.getMF();
-  const RISCVSubtarget &STI = MF->getSubtarget<RISCVSubtarget>();
 
-  if (STI.is64Bit() || !STI.hasVendorXqcilsm())
+  if (STI->is64Bit() || !STI->hasVendorXqcilsm())
     return false;
 
   unsigned Opc = FirstMI.getOpcode();
@@ -350,12 +347,8 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmMultiLdSt(
       .addImm(Len)
       .addImm(BaseOff);
 
-  // Merge memory references from all merged instructions.
-  SmallVector<const MachineInstr *, 8> ConstGroup;
-  ConstGroup.reserve(Group.size());
-  for (MachineInstr *MI : Group)
-    ConstGroup.push_back(MI);
-  MIB.cloneMergedMemRefs(ConstGroup);
+  // Merge memory references.
+  MIB.cloneMergedMemRefs(Group);
 
   if (AddImplicitRegs) {
     // Add implicit operands for the additional registers.
@@ -540,10 +533,9 @@ bool RISCVLoadStoreOpt::tryConvertToMIPSLdStPair(
 bool RISCVLoadStoreOpt::tryConvertToLdStPair(
     MachineBasicBlock::iterator First, MachineBasicBlock::iterator Second) {
   MachineFunction *MF = First->getMF();
-  const RISCVSubtarget &STI = MF->getSubtarget<RISCVSubtarget>();
 
   // Try converting to QC_LWMI/QC_SWMI if the XQCILSM extension is enabled.
-  if (!STI.is64Bit() && STI.hasVendorXqcilsm())
+  if (!STI->is64Bit() && STI->hasVendorXqcilsm())
     return tryConvertToXqcilsmLdStPair(MF, First, Second);
 
   // Else try to convert them into MIPS Paired Loads/Stores.
@@ -740,13 +732,10 @@ RISCVLoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
     First = InsertionPoint;
   }
 
-  MachineFunction *MF = I->getMF();
-  const RISCVSubtarget &STI = MF->getSubtarget<RISCVSubtarget>();
-
   if (tryConvertToLdStPair(First, Second)) {
     LLVM_DEBUG(dbgs() << "Pairing load/store:\n    ");
     LLVM_DEBUG(prev_nodbg(NextI, MBB.begin())->print(dbgs()));
-  } else if (!STI.is64Bit() && STI.hasVendorXqcilsm()) {
+  } else if (!STI->is64Bit() && STI->hasVendorXqcilsm()) {
     // We were unable to form the pair, so use the next non-debug instruction
     // after the first instruction we had wanted to merge.
     NextI = next_nodbg(I, E);
