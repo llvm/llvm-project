@@ -21808,8 +21808,15 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     }
     if (!ControlDependentMembers.empty()) {
       ScheduleBundle Invalid = ScheduleBundle::invalid();
+      bool IsNonSchedulableWithParentPhiNode =
+          EI.UserTE->hasState() &&
+          EI.UserTE->State != TreeEntry::SplitVectorize &&
+          EI.UserTE->getOpcode() == Instruction::PHI;
       calculateDependencies(Invalid, /*InsertInReadyList=*/true, SLP,
-                            ControlDependentMembers, /*NonSchedulable=*/true);
+                            ControlDependentMembers,
+                            /*NonSchedulable=*/HasCopyables ||
+                                IsNonSchedulableWithParentPhiNode ||
+                                !all_of(VL, isUsedOutsideBlock));
     }
     return nullptr;
   }
