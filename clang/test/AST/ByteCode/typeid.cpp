@@ -83,3 +83,13 @@ namespace GH173950 {
   // This used to crash with: Assertion `IsInitialized' failed in invokeDtor()
   const std::type_info &a_ti = typeid(a);
 }
+
+namespace MissingInitalizer {
+  struct Item {
+    const std::type_info &ti;
+  };
+  extern constexpr Item items[] = ; // both-error {{expected expression}} \
+                                    // both-note {{declared here}}
+  constexpr auto &x = items[0].ti; // both-error {{must be initialized by a constant expression}} \
+                                   // both-note {{initializer of 'items' is unknown}}
+}
