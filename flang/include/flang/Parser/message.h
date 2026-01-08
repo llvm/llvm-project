@@ -44,6 +44,15 @@ enum class Severity {
   None // everything else, common for attachments with source locations
 };
 
+inline constexpr bool IsFatalSeverity(Severity severity) {
+  return severity == Severity::Error ||
+      severity == Severity::ErrorUnlessDeadCode || severity == Severity::Todo;
+}
+
+inline constexpr bool IsWarningSeverity(Severity severity) {
+  return severity == Severity::Warning || severity == Severity::Portability;
+}
+
 class MessageFixedText {
 public:
   constexpr MessageFixedText() {}
@@ -62,11 +71,7 @@ public:
     severity_ = severity;
     return *this;
   }
-  bool IsFatal() const {
-    return severity_ == Severity::Error ||
-        severity_ == Severity::ErrorUnlessDeadCode ||
-        severity_ == Severity::Todo;
-  }
+  bool IsFatal() const { return IsFatalSeverity(severity_); }
 
   static const MessageFixedText endOfFileMessage; // "end of file"_err_en_US
 
@@ -122,9 +127,7 @@ public:
   MessageFormattedText &operator=(const MessageFormattedText &) = default;
   MessageFormattedText &operator=(MessageFormattedText &&) = default;
   const std::string &string() const { return string_; }
-  bool IsFatal() const {
-    return severity_ == Severity::Error || severity_ == Severity::Todo;
-  }
+  bool IsFatal() const { return IsFatalSeverity(severity_); }
   Severity severity() const { return severity_; }
   MessageFormattedText &set_severity(Severity severity) {
     severity_ = severity;

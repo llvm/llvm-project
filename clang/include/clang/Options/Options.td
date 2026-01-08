@@ -3799,6 +3799,11 @@ defm objc_avoid_heapify_local_blocks : BoolFOption<"objc-avoid-heapify-local-blo
   PosFlag<SetTrue, [], [ClangOption], "Try">,
   NegFlag<SetFalse, [], [ClangOption], "Don't try">,
   BothFlags<[], [CC1Option], " to avoid heapifying local blocks">>;
+defm objc_direct_precondition_thunk : BoolFOption<"objc-direct-precondition-thunk",
+  CodeGenOpts<"ObjCDirectPreconditionThunk">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Move precondition checks for direct methods into thunks">,
+  NegFlag<SetFalse>>;
 defm disable_block_signature_string : BoolFOption<"disable-block-signature-string",
   CodeGenOpts<"DisableBlockSignatureString">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Disable">,
@@ -4666,6 +4671,12 @@ defm split_machine_functions: BoolFOption<"split-machine-functions",
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
   NegFlag<SetFalse, [], [ClangOption], "Disable">,
   BothFlags<[], [ClangOption], " late function splitting using profile information (x86 and aarch64 ELF)">>;
+
+defm partition_static_data_sections: BoolFOption<"partition-static-data-sections",
+  CodeGenOpts<"PartitionStaticDataSections">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+  BothFlags<[], [ClangOption], " partition static data sections using profile information (x86 and aarch64 ELF)">>;
 
 defm strict_return : BoolFOption<"strict-return",
   CodeGenOpts<"StrictReturn">, DefaultTrue,

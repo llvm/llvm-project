@@ -1915,7 +1915,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   LLVM_DEBUG(dbgs() << "Running ThinLTO\n");
   ThinLTO.CombinedIndex.releaseTemporaryMemory();
   timeTraceProfilerBegin("ThinLink", StringRef(""));
-  auto TimeTraceScopeExit = llvm::make_scope_exit([]() {
+  llvm::scope_exit TimeTraceScopeExit([]() {
     if (llvm::timeTraceProfilerEnabled())
       llvm::timeTraceProfilerEnd();
   });
@@ -2548,7 +2548,7 @@ public:
     if (Err)
       return std::move(*Err);
 
-    auto CleanPerJobFiles = llvm::make_scope_exit([&] {
+    llvm::scope_exit CleanPerJobFiles([&] {
       llvm::TimeTraceScope TimeScope("Remove DTLTO temporary files");
       if (!SaveTemps)
         for (auto &Job : Jobs) {
@@ -2575,7 +2575,7 @@ public:
             BCError + "failed to generate distributor JSON script: " + JsonFile,
             inconvertibleErrorCode());
     }
-    auto CleanJson = llvm::make_scope_exit([&] {
+    llvm::scope_exit CleanJson([&] {
       if (!SaveTemps)
         removeFile(JsonFile);
     });

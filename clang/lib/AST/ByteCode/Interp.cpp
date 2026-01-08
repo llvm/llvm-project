@@ -326,12 +326,13 @@ bool CheckBCPResult(InterpState &S, const Pointer &Ptr) {
 }
 
 bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                 AccessKinds AK) {
+                 AccessKinds AK, bool WillActivate) {
   if (Ptr.isActive())
     return true;
 
   assert(Ptr.inUnion());
 
+  // Find the outermost union.
   Pointer U = Ptr.getBase();
   Pointer C = Ptr;
   while (!U.isRoot() && !U.isActive()) {
@@ -346,6 +347,7 @@ bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     U = U.getBase();
   }
   assert(C.isField());
+  assert(C.getBase() == U);
 
   // Consider:
   // union U {
@@ -361,6 +363,25 @@ bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   // handle this.
   if (!U.getFieldDesc()->isUnion())
     return true;
+
+  // When we will activate Ptr, check that none of the unions in its path have a
+  // non-trivial default constructor.
+  if (WillActivate) {
+    bool Fails = false;
+    Pointer It = Ptr;
+    while (!It.isRoot() && !It.isActive()) {
+      if (const Record *R = It.getRecord(); R && R->isUnion()) {
+        if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(R->getDecl());
+            CXXRD && !CXXRD->hasTrivialDefaultConstructor()) {
+          Fails = true;
+          break;
+        }
+      }
+      It = It.getBase();
+    }
+    if (!Fails)
+      return true;
+  }
 
   // Get the inactive field descriptor.
   assert(!C.isActive());
@@ -390,8 +411,9 @@ bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!Ptr.isExtern())
     return true;
 
-  if (Ptr.isInitialized() ||
-      (Ptr.getDeclDesc()->asVarDecl() == S.EvaluatingDecl))
+  if (!Ptr.isPastEnd() &&
+      (Ptr.isInitialized() ||
+       (Ptr.getDeclDesc()->asVarDecl() == S.EvaluatingDecl)))
     return true;
 
   if (S.checkingPotentialConstantExpression() && S.getLangOpts().CPlusPlus &&
@@ -625,6 +647,10 @@ static bool CheckVolatile(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
   if (!S.getLangOpts().CPlusPlus)
     return Invalid(S, OpPC);
+
+  // Volatile object can be written-to and read if they are being constructed.
+  if (llvm::is_contained(S.InitializingBlocks, Ptr.block()))
+    return true;
 
   // The reason why Ptr is volatile might be further up the hierarchy.
   // Find that pointer.
@@ -885,7 +911,7 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
   if (!CheckRange(S, OpPC, Ptr, AK_Assign))
     return false;
-  if (!WillBeActivated && !CheckActive(S, OpPC, Ptr, AK_Assign))
+  if (!CheckActive(S, OpPC, Ptr, AK_Assign, WillBeActivated))
     return false;
   if (!CheckGlobal(S, OpPC, Ptr))
     return false;
