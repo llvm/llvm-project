@@ -1091,6 +1091,11 @@ LogicalResult ContractionOp::verify() {
                                contractingDimMap, batchDimMap)))
     return failure();
 
+  if (!getKindAttr()) {
+    return emitOpError("expected 'kind' attribute of type CombiningKind (e.g. "
+                       "'vector.kind<add>')");
+  }
+
   // Verify supported combining kind.
   auto vectorType = llvm::dyn_cast<VectorType>(resType);
   auto elementType = vectorType ? vectorType.getElementType() : resType;
@@ -4106,6 +4111,11 @@ LogicalResult OuterProductOp::verify() {
 
   if (vACC && vACC != vRES)
     return emitOpError("expected operand #3 of same type as result type");
+
+  if (!getKindAttr()) {
+    return emitOpError("expected 'kind' attribute of type CombiningKind (e.g. "
+                       "'vector.kind<add>')");
+  }
 
   // Verify supported combining kind.
   if (!isSupportedCombiningKind(getKind(), vRES.getElementType()))
