@@ -23886,23 +23886,7 @@ bool SLPVectorizerPass::vectorizeStores(
   bool Changed = false;
 
   auto TryToVectorize = [&](const RelatedStoreInsts::DistToInstMap &StoreSeq) {
-    int64_t PrevDist = -1;
-    BoUpSLP::ValueList Operands;
-    // Collect the chain into a list.
-    for (auto [Idx, Data] : enumerate(StoreSeq)) {
-      auto &[Dist, InstIdx] = Data;
-      if (Operands.empty() || Dist - PrevDist == 1) {
-        Operands.push_back(Stores[InstIdx]);
-        PrevDist = Dist;
-        if (Idx != StoreSeq.size() - 1)
-          continue;
-      }
-      llvm::scope_exit E([&, &Dist = Dist, &InstIdx = InstIdx]() {
-        Operands.clear();
-        Operands.push_back(Stores[InstIdx]);
-        PrevDist = Dist;
-      });
-
+    auto VectorizeOperands = [&](BoUpSLP::ValueList Operands) -> void {
       if (Operands.size() <= 1 ||
           !Visited
                .insert({Operands.front(),
@@ -23911,7 +23895,7 @@ bool SLPVectorizerPass::vectorizeStores(
                         cast<StoreInst>(Operands.back())->getValueOperand(),
                         Operands.size()})
                .second)
-        continue;
+        return;
 
       unsigned MaxVecRegSize = R.getMaxVecRegSize();
       unsigned EltSize = R.getVectorElementSize(Operands[0]);
@@ -23941,7 +23925,7 @@ bool SLPVectorizerPass::vectorizeStores(
         LLVM_DEBUG(dbgs() << "SLP: Vectorization infeasible as MaxVF (" << MaxVF
                           << ") < "
                           << "MinVF (" << MinVF << ")\n");
-        continue;
+        return;
       }
 
       unsigned NonPowerOf2VF = 0;
@@ -23967,7 +23951,7 @@ bool SLPVectorizerPass::vectorizeStores(
         LLVM_DEBUG(dbgs() << "SLP: Vectorization infeasible as MaxVF (" << MaxVF
                           << ") < "
                           << "MinVF (" << MinVF << ")\n");
-        continue;
+        return;
       }
 
       SmallVector<unsigned> CandidateVFs;
@@ -24163,6 +24147,24 @@ bool SLPVectorizerPass::vectorizeStores(
         // attempts were unsuccessful because of the cost issues.
         CandidateVFs.push_back(VF);
       }
+    };
+
+    int64_t PrevDist = -1;
+    BoUpSLP::ValueList Operands;
+    // Collect the chain into a list.
+    for (auto [Idx, Data] : enumerate(StoreSeq)) {
+      auto &[Dist, InstIdx] = Data;
+      if (Operands.empty() || Dist - PrevDist == 1) {
+        Operands.push_back(Stores[InstIdx]);
+        PrevDist = Dist;
+        if (Idx != StoreSeq.size() - 1)
+          continue;
+      }
+      VectorizeOperands(Operands);
+
+      Operands.clear();
+      Operands.push_back(Stores[InstIdx]);
+      PrevDist = Dist;
     }
   };
 
