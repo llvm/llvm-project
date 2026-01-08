@@ -5642,7 +5642,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   }
   case Instruction::FDiv:
   case Instruction::FRem: {
-    if (Op->getOperand(0) == Op->getOperand(1)) {
+    if (Op->getOperand(0) == Op->getOperand(1) &&
+        isGuaranteedNotToBeUndef(Op->getOperand(0), Q.AC, Q.CxtI, Q.DT)) {
       // TODO: Could filter out snan if we inspect the operand
       if (Op->getOpcode() == Instruction::FDiv) {
         // X / X is always exactly 1.0 or a NaN.
