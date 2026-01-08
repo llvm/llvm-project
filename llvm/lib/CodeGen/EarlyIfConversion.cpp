@@ -942,9 +942,9 @@ bool EarlyIfConverter::shouldConvertIf() {
                all_of(Def->operands(), [&](MachineOperand &Op) {
                  if (Op.isImm())
                    return true;
-                 if (!MO.isReg() || !MO.isUse())
-                   return false;
-                 Register Reg = MO.getReg();
+                 if (!Op.isReg() || !Op.isUse())
+                   return true;
+                 Register Reg = Op.getReg();
                  if (Reg.isPhysical())
                    return false;
 
