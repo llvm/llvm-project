@@ -122,18 +122,37 @@ public:
   };
 };
 
-// HTML-ANIMAL-NOT: <h1>class Animals</h1>
-// HTML-ANIMAL-NOT: <h2 id="Enums">Enums</h2>
-// HTML-ANIMAL-NOT: <th colspan="3">enum AnimalType</th>
-// HTML-ANIMAL-NOT: <td>Dog</td>
-// HTML-ANIMAL-NOT: <td>0</td>
-// HTML-ANIMAL-NOT: <p> Man&apos;s best friend</p>
-// HTML-ANIMAL-NOT: <td>Cat</td>
-// HTML-ANIMAL-NOT: <td>1</td>
-// HTML-ANIMAL-NOT: <p> Man&apos;s other best friend</p>
-// HTML-ANIMAL-NOT: <td>Iguana</td>
-// HTML-ANIMAL-NOT: <td>2</td>
-// HTML-ANIMAL-NOT: <p> A lizard</p>
+// HTML-ANIMAL:      <section id="Enums" class="section-container">
+// HTML-ANIMAL-NEXT:     <h2>Enumerations</h2>
+// HTML-ANIMAL-NEXT:     <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+// HTML-ANIMAL-NEXT:         <div>
+// HTML-ANIMAL-NEXT:             <pre><code class="language-cpp code-clang-doc">enum AnimalType</code></pre>
+// HTML-ANIMAL-NEXT:         </div>
+// HTML-ANIMAL-NEXT:         <table class="table-wrapper">
+// HTML-ANIMAL-NEXT:             <tbody>
+// HTML-ANIMAL-NEXT:                 <tr>
+// HTML-ANIMAL-NEXT:                     <th>Name</th>
+// HTML-ANIMAL-NEXT:                     <th>Value</th>
+// HTML-ANIMAL-NEXT:                 </tr>
+// HTML-ANIMAL-NEXT:                 <tr>
+// HTML-ANIMAL-NEXT:                     <td>Dog</td>
+// HTML-ANIMAL-NEXT:                     <td>0</td>
+// HTML-ANIMAL-NEXT:                 </tr>
+// HTML-ANIMAL-NEXT:                 <tr>
+// HTML-ANIMAL-NEXT:                     <td>Cat</td>
+// HTML-ANIMAL-NEXT:                     <td>1</td>
+// HTML-ANIMAL-NEXT:                 </tr>
+// HTML-ANIMAL-NEXT:                 <tr>
+// HTML-ANIMAL-NEXT:                     <td>Iguana</td>
+// HTML-ANIMAL-NEXT:                     <td>2</td>
+// HTML-ANIMAL-NEXT:                 </tr>
+// HTML-ANIMAL-NEXT:             </tbody>
+// HTML-ANIMAL-NEXT:         </table>
+// HTML-ANIMAL-NEXT:         <div>
+// HTML-ANIMAL-NEXT:             Defined at line 116 of file {{.*}}enum.cpp
+// HTML-ANIMAL-NEXT:         </div>
+// HTML-ANIMAL-NEXT:     </div>
+// HTML-ANIMAL-NEXT: </section>
 
 // MD-ANIMAL: # class Animals
 // MD-ANIMAL: ## Enums
