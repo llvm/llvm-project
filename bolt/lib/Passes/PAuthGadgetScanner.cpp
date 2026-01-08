@@ -123,22 +123,6 @@ static cl::opt<bool> AuthTrapsOnFailure(
   dbgs() << "\n";
 }
 
-// Iterates over BinaryFunction's instructions like a range-based for loop:
-//
-// iterateOverInstrs(BF, [&](MCInstReference Inst) {
-//   // loop body
-// });
-template <typename T> static void iterateOverInstrs(BinaryFunction &BF, T Fn) {
-  if (BF.hasCFG()) {
-    for (BinaryBasicBlock &BB : BF)
-      for (int64_t I = 0, E = BB.size(); I < E; ++I)
-        Fn(MCInstReference(BB, I));
-  } else {
-    for (auto I = BF.instrs().begin(), E = BF.instrs().end(); I != E; ++I)
-      Fn(MCInstReference(BF, I));
-  }
-}
-
 // This class represents mapping from a set of arbitrary physical registers to
 // consecutive array indexes.
 class TrackedRegisters {
@@ -390,7 +374,7 @@ protected:
   /// clobbered inside this function.
   SrcState computePessimisticState(BinaryFunction &BF) {
     BitVector ClobberedRegs(NumRegs);
-    iterateOverInstrs(BF, [&](MCInstReference Inst) {
+    for (auto &Inst : BF.instrs()) {
       BC.MIB->getClobberedRegs(Inst, ClobberedRegs);
 
       // If this is a call instruction, no register is safe anymore, unless
@@ -399,7 +383,7 @@ protected:
       // caller after this point anyway.
       if (BC.MIB->isCall(Inst) && !BC.MIB->isTailCall(Inst))
         ClobberedRegs.set();
-    });
+    }
 
     SrcState S = createEntryState();
     S.SafeToDerefRegs.reset(ClobberedRegs);
@@ -726,8 +710,8 @@ template <typename StateTy> class CFGUnawareAnalysis {
   unsigned StateAnnotationIndex;
 
   void cleanStateAnnotations() {
-    for (auto &I : BF.instrs())
-      BC.MIB->removeAnnotation(I.second, StateAnnotationIndex);
+    for (auto &Inst : BF.instrs())
+      BC.MIB->removeAnnotation(Inst, StateAnnotationIndex);
   }
 
 protected:
@@ -804,8 +788,9 @@ public:
   void run() override {
     const SrcState DefaultState = computePessimisticState(BF);
     SrcState S = createEntryState();
-    for (auto &I : BF.instrs()) {
-      MCInst &Inst = I.second;
+    for (auto It = BF.instr_begin(), End = BF.instr_end(); It != End; ++It) {
+      MCInstReference Point(It);
+      MCInst &Inst = *It;
       if (BC.MIB->isCFI(Inst))
         continue;
 
@@ -813,7 +798,8 @@ public:
       // can be jumped-to, thus conservatively resetting S. As an exception,
       // let's ignore any labels at the beginning of the function, as at least
       // one label is expected there.
-      if (BF.hasLabelAt(I.first) && &Inst != &BF.instrs().begin()->second) {
+      unsigned Offset = Point.computeAddress() - BF.getAddress();
+      if (Offset && BF.hasLabelAt(Offset)) {
         LLVM_DEBUG({
           traceInst(BC, "Due to label, resetting the state before", Inst);
         });
@@ -1297,8 +1283,7 @@ public:
 
   void run() override {
     DstState S = createUnsafeState();
-    for (auto &I : llvm::reverse(BF.instrs())) {
-      MCInst &Inst = I.second;
+    for (auto &Inst : llvm::reverse(BF.instrs())) {
       if (BC.MIB->isCFI(Inst))
         continue;
 
@@ -1605,32 +1590,34 @@ void FunctionAnalysisContext::findUnsafeUses(
   // FIXME: Warn the user about imprecise analysis when the function has no CFG
   //        information at all.
 
-  iterateOverInstrs(BF, [&](MCInstReference Inst) {
+  for (auto It = BF.instr_begin(), End = BF.instr_end(); It != End; ++It) {
+    MCInstReference Point(It);
+    MCInst &Inst = *It;
     if (BC.MIB->isCFI(Inst))
-      return;
+      continue;
 
     const SrcState &S = Analysis->getStateBefore(Inst);
     if (S.empty()) {
       LLVM_DEBUG(traceInst(BC, "Instruction has no state, skipping", Inst));
       assert(UnreachableBBReported && "Should be reported at least once");
       (void)UnreachableBBReported;
-      return;
+      continue;
     }
 
-    if (auto Report = shouldReportReturnGadget(BC, Inst, S))
+    if (auto Report = shouldReportReturnGadget(BC, Point, S))
       Reports.push_back(*Report);
 
     if (PacRetGadgetsOnly)
-      return;
+      continue;
 
-    if (auto Report = shouldReportUnsafeTailCall(BC, BF, Inst, S))
+    if (auto Report = shouldReportUnsafeTailCall(BC, BF, Point, S))
       Reports.push_back(*Report);
 
-    if (auto Report = shouldReportCallGadget(BC, Inst, S))
+    if (auto Report = shouldReportCallGadget(BC, Point, S))
       Reports.push_back(*Report);
-    if (auto Report = shouldReportSigningOracle(BC, Inst, S))
+    if (auto Report = shouldReportSigningOracle(BC, Point, S))
       Reports.push_back(*Report);
-  });
+  }
 }
 
 void FunctionAnalysisContext::augmentUnsafeUseReports(
@@ -1673,15 +1660,17 @@ void FunctionAnalysisContext::findUnsafeDefs(
     BF.dump();
   });
 
-  iterateOverInstrs(BF, [&](MCInstReference Inst) {
+  for (auto It = BF.instr_begin(), End = BF.instr_end(); It != End; ++It) {
+    MCInstReference Point(It);
+    MCInst &Inst = *It;
     if (BC.MIB->isCFI(Inst))
-      return;
+      continue;
 
     const DstState &S = Analysis->getStateAfter(Inst);
 
-    if (auto Report = shouldReportAuthOracle(BC, Inst, S))
+    if (auto Report = shouldReportAuthOracle(BC, Point, S))
       Reports.push_back(*Report);
-  });
+  }
 }
 
 void FunctionAnalysisContext::augmentUnsafeDefReports(
