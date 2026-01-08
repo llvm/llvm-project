@@ -2240,22 +2240,22 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
       if ((DemandedMask & fcNegative) == DemandedMask) {
         // Roundabout way of replacing with fneg(fabs)
-        I->setOperand(1, ConstantFP::get(VTy, -1.0));
+        CI->setOperand(1, ConstantFP::get(VTy, -1.0));
         return I;
       }
 
       if ((DemandedMask & fcPositive) == DemandedMask) {
         // Roundabout way of replacing with fabs
-        I->setOperand(1, ConstantFP::getZero(VTy));
+        CI->setOperand(1, ConstantFP::getZero(VTy));
         return I;
       }
 
-      KnownFPClass KnownSign =
-          computeKnownFPClass(I->getOperand(1), fcAllFlags, CxtI, Depth + 1);
+      KnownFPClass KnownSign = computeKnownFPClass(CI->getArgOperand(1),
+                                                   fcAllFlags, CxtI, Depth + 1);
 
       if (Known.SignBit && KnownSign.SignBit &&
           *Known.SignBit == *KnownSign.SignBit)
-        return I->getOperand(0);
+        return CI->getOperand(0);
 
       // TODO: Call argument attribute not considered
       // Input implied not-nan from flag.
@@ -2264,13 +2264,15 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
       if (KnownSign.SignBit == false ||
           KnownSign.isKnownNever(fcNegative | fcNan)) {
-        I->setOperand(1, ConstantFP::getZero(VTy));
+        CI->dropUBImplyingAttrsAndMetadata();
+        CI->setOperand(1, ConstantFP::getZero(VTy));
         return I;
       }
 
       if (KnownSign.SignBit == true ||
           KnownSign.isKnownNever(fcPositive | fcNan)) {
-        I->setOperand(1, ConstantFP::get(VTy, -1.0));
+        CI->dropUBImplyingAttrsAndMetadata();
+        CI->setOperand(1, ConstantFP::get(VTy, -1.0));
         return I;
       }
 
