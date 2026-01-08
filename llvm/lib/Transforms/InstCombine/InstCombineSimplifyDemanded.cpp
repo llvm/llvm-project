@@ -2262,15 +2262,13 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (FMF.noNaNs())
         KnownSign.knownNot(fcNan);
 
-      if (KnownSign.SignBit == false ||
-          KnownSign.isKnownNever(fcNegative | fcNan)) {
+      if (KnownSign.SignBit == false) {
         CI->dropUBImplyingAttrsAndMetadata();
         CI->setOperand(1, ConstantFP::getZero(VTy));
         return I;
       }
 
-      if (KnownSign.SignBit == true ||
-          KnownSign.isKnownNever(fcPositive | fcNan)) {
+      if (KnownSign.SignBit == true) {
         CI->dropUBImplyingAttrsAndMetadata();
         CI->setOperand(1, ConstantFP::get(VTy, -1.0));
         return I;
