@@ -71,6 +71,8 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
     }
   }
   for_each(Ends, Callback);
+  // We may have inserted untag outside of the lifetime interval.
+  // Signal the caller to remove the lifetime end call for this alloca.
   return !UncoveredRets;
 }
 
