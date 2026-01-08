@@ -513,6 +513,12 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
   EXPECT_TRUE(sd_match(Trunc, m_Trunc(m_Specific(Op1))));
 
   EXPECT_TRUE(sd_match(Abs, m_Abs(m_Specific(Op0))));
+  EXPECT_FALSE(sd_match(Abs, m_FAbs(m_Value())));
+
+  SDValue FAbs = DAG->getNode(ISD::FABS, DL, FloatVT, Op2);
+  EXPECT_TRUE(sd_match(FAbs, m_FAbs(m_Specific(Op2))));
+  EXPECT_TRUE(sd_match(FAbs, m_FAbs(m_Value())));
+  EXPECT_FALSE(sd_match(FAbs, m_Abs(m_Value())));
 
   EXPECT_TRUE(sd_match(Neg, m_Neg(m_Value())));
   EXPECT_TRUE(sd_match(Not, m_Not(m_Value())));
