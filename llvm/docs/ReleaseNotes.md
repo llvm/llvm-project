@@ -163,6 +163,9 @@ Changes to the RISC-V Backend
 Changes to the WebAssembly Backend
 ----------------------------------
 
+* `half` now uses a soft float lowering, which resolves various precision and
+  bitcast issues.
+
 Changes to the Windows Target
 -----------------------------
 
