@@ -1,7 +1,11 @@
 ; RUN: opt < %s -passes='pseudo-probe,cgscc(coro-split),coro-cleanup,always-inline' -mtriple=x86_64 -pass-remarks=inline -S -o %t.ll
 ; RUN: llc -mtriple=x86_64 -stop-after=pseudo-probe-inserter < %t.ll --filetype=asm -o - | FileCheck -check-prefix=MIR %s
+
+; Making sure PseudoProbeInserter is not generating GUID for `_Z3foov.resume`
 ; MIR-NOT: PSEUDO_PROBE 4448042984153125393,
+; Checking the same for `_Z3foov.cleanup`
 ; MIR-NOT: PSEUDO_PROBE 3532999944647676065,
+; Checking the same for `_Z3foov.destroy`
 ; MIR-NOT: PSEUDO_PROBE -7235034626494519075,
 
 ; RUN: llc -mtriple=x86_64 < %t.ll --filetype=obj -o %t.obj
@@ -11,7 +15,21 @@
 ; OBJ-NEXT:    Flags:           [ SHF_LINK_ORDER ]{{$}}
 ; OBJ-NEXT:    Link:            .text{{$}}
 ; OBJ-NEXT:    AddressAlign:    0x1{{$}}
-; OBJ-NEXT:    Content:         7B340AC7FC888D7F{{[0-9A-F]+$}}
+
+; Making sure `_Z3foov.resume` is not a top-level function except when its a sentinel probe (i.e. 20{GUID})
+; OBJ-NOT:     Content:         11921D00879FBA3D{{[0-9A-F]+$}}
+; OBJ-NOT:                      {{([013-9A-F][0-9A-F])|(2[1-9A-F])}}11921D00879FBA3D{{[0-9A-F]+$}}
+; Checking the same for `_Z3foov.cleanup`
+; OBJ-NOT:     Content:         A1103324BBBC0731{{[0-9A-F]+$}}
+; OBJ-NOT:                      {{([013-9A-F][0-9A-F])|(2[1-9A-F])}}A1103324BBBC0731{{[0-9A-F]+$}}
+; Checking the same for `_Z3foov.destroy`
+; OBJ-NOT:     Content:         DDA8240E57FE979B{{[0-9A-F]+$}}
+; OBJ-NOT:                      {{([013-9A-F][0-9A-F])|(2[1-9A-F])}}DDA8240E57FE979B{{[0-9A-F]+$}}
+
+; OBJ:       - Name:            .pseudo_probe{{$}}
+; OBJ-NEXT:    Type:            SHT_PROGBITS{{$}}
+; OBJ-NEXT:    Flags:           [ SHF_LINK_ORDER, SHF_GROUP ]{{$}}
+; OBJ-NEXT:    Link:            .text.__clang_call_terminate{{$}}
 
 
 ; Reduced from original source code:
