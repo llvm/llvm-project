@@ -485,7 +485,7 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
     }
     if (Sym.isVariable() && (Kind == 0 || Layout) && !Sym.isWeakExternal()) {
       Sym.setIsResolving(true);
-      auto _ = make_scope_exit([&] { Sym.setIsResolving(false); });
+      llvm::scope_exit _([&] { Sym.setIsResolving(false); });
       bool IsMachO =
           Asm && Asm->getContext().getAsmInfo()->hasSubsectionsViaSymbols();
       if (!Sym.getVariableValue()->evaluateAsRelocatableImpl(Res, Asm,

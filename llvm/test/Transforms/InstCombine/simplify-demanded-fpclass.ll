@@ -879,9 +879,7 @@ define nofpclass(ninf nnorm nsub nzero) float @ret_nofpclass_negatives__select_c
 define nofpclass(nan ninf nnorm nsub nzero) float @ret_nofpclass_nan_negatives__select_clamp_pos_to_zero(float %x) {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @ret_nofpclass_nan_negatives__select_clamp_pos_to_zero
 ; CHECK-SAME: (float [[X:%.*]]) {
-; CHECK-NEXT:    [[IS_GT_ZERO:%.*]] = fcmp ogt float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_GT_ZERO]], float 0.000000e+00, float [[X]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %is.gt.zero = fcmp ogt float %x, 0.0
   %select = select i1 %is.gt.zero, float 0.0, float %x
@@ -970,8 +968,7 @@ define nofpclass(nan inf nzero nsub nnorm) float @test_powr_issue64870_2(float n
 ; CHECK-NEXT:    [[I:%.*]] = fcmp olt float [[ARG]], 0.000000e+00
 ; CHECK-NEXT:    [[I2:%.*]] = select i1 [[I]], float 0x7FF8000000000000, float [[ARG]]
 ; CHECK-NEXT:    [[I3:%.*]] = tail call float @llvm.log2.f32(float noundef [[I2]])
-; CHECK-NEXT:    [[I4:%.*]] = select i1 [[I]], float 0x7FF8000000000000, float [[ARG1]]
-; CHECK-NEXT:    [[I5:%.*]] = fmul float [[I4]], [[I3]]
+; CHECK-NEXT:    [[I5:%.*]] = fmul float [[ARG1]], [[I3]]
 ; CHECK-NEXT:    [[I6:%.*]] = tail call noundef nofpclass(ninf nzero nsub nnorm) float @llvm.exp2.f32(float noundef [[I5]])
 ; CHECK-NEXT:    [[I10:%.*]] = fcmp oeq float [[I2]], 0.000000e+00
 ; CHECK-NEXT:    [[I12:%.*]] = select i1 [[I10]], float 0.000000e+00, float [[I6]]
@@ -1137,8 +1134,7 @@ define nofpclass(inf) float @ret_nofpclass_inf__select_assumed_call_result_only_
 ; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[MUST_BE_INF]])
 ; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[FABS]], 0x7FF0000000000000
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_INF]])
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[MUST_BE_INF]], float [[Y]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[Y]]
 ;
   %must.be.inf = call float @extern()
   %fabs = call float @llvm.fabs.f32(float %must.be.inf)
@@ -1339,4 +1335,77 @@ define nofpclass(ninf) float @ret_nofpclass_ninf__maxnum_pinf(i1 %cond, float %x
 ;
   %max = call float @llvm.maximumnum.f32(float %x, float 0x7FF0000000000000)
   ret float %max
+}
+
+declare nofpclass(inf norm sub zero) float @returns_nan()
+
+; %nan has multiple uses, but we should still know what class is is
+; %allowing this to fold to a single select.
+define nofpclass(nan) float @known_class_multiple_uses(i1 %cond0, i1 %cond1, i1 %cond2, float %unknown0, float %unknown1) {
+; CHECK-LABEL: define nofpclass(nan) float @known_class_multiple_uses
+; CHECK-SAME: (i1 [[COND0:%.*]], i1 [[COND1:%.*]], i1 [[COND2:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[NAN:%.*]] = call float @returns_nan()
+; CHECK-NEXT:    [[SELECT2:%.*]] = select i1 [[COND2]], float [[UNKNOWN0]], float [[UNKNOWN1]]
+; CHECK-NEXT:    ret float [[SELECT2]]
+;
+  %nan = call float @returns_nan()
+  %select0 = select i1 %cond0, float %unknown0, float %nan
+  %select1 = select i1 %cond1, float %nan, float %unknown1
+  %select2 = select i1 %cond2, float %select0, float %select1
+  ret float %select2
+}
+
+; Do not overdefine the poison element to inf.
+define nofpclass(ninf) <2 x float> @single_class_constant_partially_poison_pinf() {
+; CHECK-LABEL: define nofpclass(ninf) <2 x float> @single_class_constant_partially_poison_pinf() {
+; CHECK-NEXT:    ret <2 x float> <float 0x7FF0000000000000, float poison>
+;
+  ret <2 x float> <float 0x7FF0000000000000, float poison>
+}
+
+define nofpclass(ninf) <2 x float> @single_class_constant_partially_undef_pinf() {
+; CHECK-LABEL: define nofpclass(ninf) <2 x float> @single_class_constant_partially_undef_pinf() {
+; CHECK-NEXT:    ret <2 x float> <float 0x7FF0000000000000, float undef>
+;
+  ret <2 x float> <float 0x7FF0000000000000, float undef>
+}
+
+define nofpclass(zero) <3 x float> @mixed_sign_zero_splat_to_poison() {
+; CHECK-LABEL: define nofpclass(zero) <3 x float> @mixed_sign_zero_splat_to_poison() {
+; CHECK-NEXT:    ret <3 x float> poison
+;
+  ret <3 x float> <float 0.0, float -0.0, float poison>
+}
+
+define nofpclass(zero) <3 x float> @partially_defined_0_splat_to_poison() {
+; CHECK-LABEL: define nofpclass(zero) <3 x float> @partially_defined_0_splat_to_poison() {
+; CHECK-NEXT:    ret <3 x float> poison
+;
+  ret <3 x float> <float 0.0, float 0.0, float poison>
+}
+
+; The select must be 0, so the exp should fold to 1. This requires
+; analysis of the select condition.
+define nofpclass(nan) float @exp_select_must_be_0(float %arg, float nofpclass(inf sub norm) %zero.or.nan) {
+; CHECK-LABEL: define nofpclass(nan) float @exp_select_must_be_0
+; CHECK-SAME: (float [[ARG:%.*]], float nofpclass(inf sub norm) [[ZERO_OR_NAN:%.*]]) {
+; CHECK-NEXT:    ret float 1.000000e+00
+;
+  %not.zero = fcmp one float %arg, 0.0
+  %select = select i1 %not.zero, float %zero.or.nan, float %arg
+  %exp = call float @llvm.exp.f32(float %select)
+  ret float %exp
+}
+
+; The select must be 0, so the exp should fold to 1. This requires
+; analysis of the select condition.
+define nofpclass(nan) float @exp_select_must_be_0_commute(float %arg, float nofpclass(inf sub norm) %zero.or.nan) {
+; CHECK-LABEL: define nofpclass(nan) float @exp_select_must_be_0_commute
+; CHECK-SAME: (float [[ARG:%.*]], float nofpclass(inf sub norm) [[ZERO_OR_NAN:%.*]]) {
+; CHECK-NEXT:    ret float 1.000000e+00
+;
+  %is.zero = fcmp oeq float %arg, 0.0
+  %select = select i1 %is.zero, float %arg, float %zero.or.nan
+  %exp = call float @llvm.exp.f32(float %select)
+  ret float %exp
 }

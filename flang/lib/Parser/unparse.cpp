@@ -1326,65 +1326,26 @@ public:
     Walk(", ", std::get<std::list<OutputItem>>(x.t), ", ");
   }
   bool Pre(const IoControlSpec &x) { // R1213
-    return common::visit(common::visitors{
-                             [&](const IoUnit &) {
-                               Word("UNIT=");
-                               return true;
-                             },
-                             [&](const Format &) {
-                               Word("FMT=");
-                               return true;
-                             },
-                             [&](const Name &) {
-                               Word("NML=");
-                               return true;
-                             },
-                             [&](const IoControlSpec::CharExpr &y) {
-                               Walk(y.t, "=");
-                               return false;
-                             },
-                             [&](const IoControlSpec::Asynchronous &) {
-                               Word("ASYNCHRONOUS=");
-                               return true;
-                             },
-                             [&](const EndLabel &) {
-                               Word("END=");
-                               return true;
-                             },
-                             [&](const EorLabel &) {
-                               Word("EOR=");
-                               return true;
-                             },
-                             [&](const ErrLabel &) {
-                               Word("ERR=");
-                               return true;
-                             },
-                             [&](const IdVariable &) {
-                               Word("ID=");
-                               return true;
-                             },
-                             [&](const MsgVariable &) {
-                               Word("IOMSG=");
-                               return true;
-                             },
-                             [&](const StatVariable &) {
-                               Word("IOSTAT=");
-                               return true;
-                             },
-                             [&](const IoControlSpec::Pos &) {
-                               Word("POS=");
-                               return true;
-                             },
-                             [&](const IoControlSpec::Rec &) {
-                               Word("REC=");
-                               return true;
-                             },
-                             [&](const IoControlSpec::Size &) {
-                               Word("SIZE=");
-                               return true;
-                             },
-                         },
+    common::visit(
+        common::visitors{
+            [&](const IoUnit &) { Word("UNIT="); },
+            [&](const Format &) { Word("FMT="); },
+            [&](const Name &) { Word("NML="); },
+            [&](const IoControlSpec::CharExpr &y) { Walk(y.t, "="); },
+            [&](const IoControlSpec::Asynchronous &) { Word("ASYNCHRONOUS="); },
+            [&](const EndLabel &) { Word("END="); },
+            [&](const EorLabel &) { Word("EOR="); },
+            [&](const ErrLabel &) { Word("ERR="); },
+            [&](const IdVariable &) { Word("ID="); },
+            [&](const MsgVariable &) { Word("IOMSG="); },
+            [&](const StatVariable &) { Word("IOSTAT="); },
+            [&](const IoControlSpec::Pos &) { Word("POS="); },
+            [&](const IoControlSpec::Rec &) { Word("REC="); },
+            [&](const IoControlSpec::Size &) { Word("SIZE="); },
+            [&](const ErrorRecovery &) {},
+        },
         x.u);
+    return true;
   }
   void Unparse(const InputImpliedDo &x) { // R1218
     Put('('), Walk(std::get<std::list<InputItem>>(x.t), ", "), Put(", ");

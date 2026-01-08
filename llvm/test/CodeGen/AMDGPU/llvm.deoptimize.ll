@@ -1,10 +1,6 @@
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s 2> %t.err | FileCheck %s
-; RUN: FileCheck -check-prefix=ERR %s < %t.err
+; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s 2>&1 | FileCheck %s
 
-; ERR: error: <unknown>:0:0: in function caller_0 i32 (): unsupported external symbol
-; ERR: error: unhandled statepoint-like instruction
-
-; CHECK: ;unsupported statepoint/stackmap/patchpoint
+; CHECK: error: no deoptimize libcall available
 declare i32 @llvm.experimental.deoptimize.i32(...)
 declare i8  @llvm.experimental.deoptimize.i8(...)
 
