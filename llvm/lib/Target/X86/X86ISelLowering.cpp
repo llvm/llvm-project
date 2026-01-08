@@ -29727,7 +29727,8 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
   }
 
   EVT SVT = VT.getScalarType();
-  assert(VT.isFloatingPoint() && (SVT == MVT::f16 || SVT == MVT::f32 || SVT == MVT::f64) &&
+  assert(VT.isFloatingPoint() &&
+         (SVT == MVT::f16 || SVT == MVT::f32 || SVT == MVT::f64) &&
          "Unexpected type in LowerFMINIMUM_FMAXIMUM");
 
   bool IgnoreNaN = DAG.getTarget().Options.NoNaNsFPMath ||
