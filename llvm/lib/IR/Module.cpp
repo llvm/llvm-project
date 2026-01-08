@@ -938,8 +938,10 @@ std::optional<Module::PtrAuthABIVersion> Module::getPtrAuthABIVersion() const {
 void Module::setPtrAuthABIVersion(Module::PtrAuthABIVersion ABIVersion) {
   // Add a module flag containing a tuple of i32s representing the version.
   llvm::LLVMContext &Ctx = getContext();
+  // Version can be negative (e.g., -1 for missing version), so use IsSigned.
   auto *ABIVer = llvm::ConstantAsMetadata::get(
-      llvm::ConstantInt::get(Type::getInt32Ty(Ctx), ABIVersion.Version));
+      llvm::ConstantInt::get(Type::getInt32Ty(Ctx), ABIVersion.Version,
+                             /*IsSigned=*/true));
   auto *KernelABI = llvm::ConstantAsMetadata::get(
       llvm::ConstantInt::get(Type::getInt1Ty(Ctx), ABIVersion.Kernel));
   auto *ABIVerNode = llvm::MDNode::get(Ctx, {ABIVer, KernelABI});
