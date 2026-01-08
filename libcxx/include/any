@@ -201,25 +201,31 @@ public:
       __other.__call(_Action::_Move, this);
   }
 
-  template < class _ValueType,
-             class _Tp = decay_t<_ValueType>,
-             class     = enable_if_t< !is_same<_Tp, any>::value && !__is_inplace_type<_ValueType>::value &&
-                                      is_copy_constructible<_Tp>::value> >
-  _LIBCPP_HIDE_FROM_ABI any(_ValueType&& __value);
+  template <class _ValueType,
+            class _Tp        = decay_t<_ValueType>,
+            enable_if_t<!is_same_v<_Tp, any> && !__is_inplace_type<_ValueType>::value && is_copy_constructible_v<_Tp>,
+                        int> = 0>
+  _LIBCPP_HIDE_FROM_ABI any(_ValueType&& __value) : __h_(nullptr) {
+    __any_imp::_Handler<_Tp>::__create(*this, std::forward<_ValueType>(__value));
+  }
 
   template <class _ValueType,
             class... _Args,
-            class _Tp = decay_t<_ValueType>,
-            class     = enable_if_t< is_constructible<_Tp, _Args...>::value && is_copy_constructible<_Tp>::value > >
-  _LIBCPP_HIDE_FROM_ABI explicit any(in_place_type_t<_ValueType>, _Args&&... __args);
+            class _Tp                                                                           = decay_t<_ValueType>,
+            enable_if_t<is_constructible_v<_Tp, _Args...> && is_copy_constructible_v<_Tp>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI explicit any(in_place_type_t<_ValueType>, _Args&&... __args) {
+    __any_imp::_Handler<_Tp>::__create(*this, std::forward<_Args>(__args)...);
+  }
 
-  template <class _ValueType,
-            class _Up,
-            class... _Args,
-            class _Tp = decay_t<_ValueType>,
-            class     = enable_if_t< is_constructible<_Tp, initializer_list<_Up>&, _Args...>::value &&
-                                     is_copy_constructible<_Tp>::value> >
-  _LIBCPP_HIDE_FROM_ABI explicit any(in_place_type_t<_ValueType>, initializer_list<_Up>, _Args&&... __args);
+  template <
+      class _ValueType,
+      class _Up,
+      class... _Args,
+      class _Tp = decay_t<_ValueType>,
+      enable_if_t<is_constructible_v<_Tp, initializer_list<_Up>&, _Args...> && is_copy_constructible_v<_Tp>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI explicit any(in_place_type_t<_ValueType>, initializer_list<_Up> __il, _Args&&... __args) {
+    __any_imp::_Handler<_Tp>::__create(*this, __il, std::forward<_Args>(__args)...);
+  }
 
   _LIBCPP_HIDE_FROM_ABI ~any() { this->reset(); }
 
@@ -234,24 +240,33 @@ public:
     return *this;
   }
 
-  template < class _ValueType,
-             class _Tp = decay_t<_ValueType>,
-             class     = enable_if_t< !is_same<_Tp, any>::value && is_copy_constructible<_Tp>::value> >
-  _LIBCPP_HIDE_FROM_ABI any& operator=(_ValueType&& __rhs);
+  template <class _ValueType,
+            class _Tp                                                              = decay_t<_ValueType>,
+            enable_if_t<!is_same_v<_Tp, any> && is_copy_constructible_v<_Tp>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI any& operator=(_ValueType&& __rhs) {
+    any(std::forward<_ValueType>(__rhs)).swap(*this);
+    return *this;
+  }
 
   template <class _ValueType,
             class... _Args,
-            class _Tp = decay_t<_ValueType>,
-            class     = enable_if_t< is_constructible<_Tp, _Args...>::value && is_copy_constructible<_Tp>::value> >
-  _LIBCPP_HIDE_FROM_ABI _Tp& emplace(_Args&&...);
+            class _Tp                                                                           = decay_t<_ValueType>,
+            enable_if_t<is_constructible_v<_Tp, _Args...> && is_copy_constructible_v<_Tp>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI _Tp& emplace(_Args&&... __args) {
+    reset();
+    return __any_imp::_Handler<_Tp>::__create(*this, std::forward<_Args>(__args)...);
+  }
 
-  template <class _ValueType,
-            class _Up,
-            class... _Args,
-            class _Tp = decay_t<_ValueType>,
-            class     = enable_if_t< is_constructible<_Tp, initializer_list<_Up>&, _Args...>::value &&
-                                     is_copy_constructible<_Tp>::value> >
-  _LIBCPP_HIDE_FROM_ABI _Tp& emplace(initializer_list<_Up>, _Args&&...);
+  template <
+      class _ValueType,
+      class _Up,
+      class... _Args,
+      class _Tp = decay_t<_ValueType>,
+      enable_if_t<is_constructible_v<_Tp, initializer_list<_Up>&, _Args...> && is_copy_constructible_v<_Tp>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI _Tp& emplace(initializer_list<_Up> __il, _Args&&... __args) {
+    reset();
+    return __any_imp::_Handler<_Tp>::__create(*this, __il, std::forward<_Args>(__args)...);
+  }
 
   // 6.3.3 any modifiers
   _LIBCPP_HIDE_FROM_ABI void reset() _NOEXCEPT {
@@ -438,39 +453,6 @@ private:
 };
 
 } // namespace __any_imp
-
-template <class _ValueType, class _Tp, class>
-any::any(_ValueType&& __v) : __h_(nullptr) {
-  __any_imp::_Handler<_Tp>::__create(*this, std::forward<_ValueType>(__v));
-}
-
-template <class _ValueType, class... _Args, class _Tp, class>
-any::any(in_place_type_t<_ValueType>, _Args&&... __args) {
-  __any_imp::_Handler<_Tp>::__create(*this, std::forward<_Args>(__args)...);
-}
-
-template <class _ValueType, class _Up, class... _Args, class _Tp, class>
-any::any(in_place_type_t<_ValueType>, initializer_list<_Up> __il, _Args&&... __args) {
-  __any_imp::_Handler<_Tp>::__create(*this, __il, std::forward<_Args>(__args)...);
-}
-
-template <class _ValueType, class, class>
-inline _LIBCPP_HIDE_FROM_ABI any& any::operator=(_ValueType&& __v) {
-  any(std::forward<_ValueType>(__v)).swap(*this);
-  return *this;
-}
-
-template <class _ValueType, class... _Args, class _Tp, class>
-inline _LIBCPP_HIDE_FROM_ABI _Tp& any::emplace(_Args&&... __args) {
-  reset();
-  return __any_imp::_Handler<_Tp>::__create(*this, std::forward<_Args>(__args)...);
-}
-
-template <class _ValueType, class _Up, class... _Args, class _Tp, class>
-inline _LIBCPP_HIDE_FROM_ABI _Tp& any::emplace(initializer_list<_Up> __il, _Args&&... __args) {
-  reset();
-  return __any_imp::_Handler<_Tp>::__create(*this, __il, std::forward<_Args>(__args)...);
-}
 
 inline _LIBCPP_HIDE_FROM_ABI void any::swap(any& __rhs) _NOEXCEPT {
   if (this == &__rhs)

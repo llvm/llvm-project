@@ -59234,7 +59234,13 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       if (all_of(SubOps, [&](SDValue SubOp) {
             return SubOp0 == SubOp.getOperand(Op);
           })) {
-        if (isa<LoadSDNode>(peekThroughBitcasts(SubOp0)))
+        SDValue Src = SubOp0;
+        while (Src.getOpcode() == ISD::BITCAST ||
+               Src.getOpcode() == ISD::EXTRACT_SUBVECTOR)
+          Src = Src.getOperand(0);
+        if (ISD::isNormalLoad(Src.getNode()) ||
+            Src.getOpcode() == X86ISD::VBROADCAST_LOAD ||
+            Src.getOpcode() == X86ISD::SUBV_BROADCAST_LOAD)
           return true;
       }
       SmallVector<SDValue> Subs;
