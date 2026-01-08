@@ -6631,7 +6631,10 @@ Threads can synchronize execution by performing barrier operations on barrier *o
     *barrier-modification-order<BO>* is a strict total order over ``S``. It is the order
     in which ``BO`` observes barrier operations that change its state.
 
-    * *Barrier-modification-order<BO>* is consistent with *happens-before*.
+    * *Barrier-modification-order<BO>* is consistent with *happens-before* and
+      *thread-barrier-order<BO>*.
+    * Let ``A`` and ``B`` be two barrier modification operations, such that ``A -> B`` in
+      *thread-barrier-order<BO>*, then ``A -> B`` in *barrier-modification-order<BO>*.
     * The first element in *barrier-modification-order<BO>* is a barrier *init*.
       There is only one barrier *init* in *barrier-modification-order<BO>*
 
