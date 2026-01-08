@@ -38,6 +38,16 @@ private:
 };
 
 // CHECK:       {
+// CHECK-NEXT:    "Contexts": [
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "DocumentationFileName": "index",
+// CHECK-NEXT:        "End": true,
+// CHECK-NEXT:        "Name": "Global Namespace",
+// CHECK-NEXT:        "QualName": "GlobalNamespace",
+// CHECK-NEXT:        "RelativePath": "./",
+// CHECK-NEXT:        "USR": "0000000000000000000000000000000000000000"
+// CHECK-NEXT:      }
+// CHECK-NEXT:    ],
 // CHECK-NEXT:    "Description": {
 // CHECK-NEXT:      "BriefComments": [
 // CHECK-NEXT:        [
@@ -156,9 +166,11 @@ private:
 // CHECK-NEXT:        "USR": "0000000000000000000000000000000000000000"
 // CHECK-NEXT:      }
 // CHECK-NEXT:    ],
+// CHECK-NEXT:    "HasContexts": true,
 // CHECK-NEXT:    "HasEnums": true,
 // CHECK-NEXT:    "HasFriends": true,
 // CHECK-NEXT:    "HasPrivateMembers": true,
+// CHECK-NEXT:    "HasProtectedMembers": true,
 // CHECK-NEXT:    "HasPublicFunctions": true,
 // CHECK-NEXT:    "HasPublicMembers": true,
 // CHECK-NEXT:    "HasRecords": true,
@@ -309,6 +321,14 @@ private:
 // HTML-NEXT:         </li>
 // HTML-NEXT:     </ul>
 // HTML-NEXT: </details>
+// HTML:      <section id="ProtectedMembers" class="section-container">
+// HTML-NEXT:     <h2>Protected Members</h2>
+// HTML-NEXT:     <div>
+// HTML-NEXT:         <div id="ProtectedField" class="delimiter-container">
+// HTML-NEXT:             <pre><code class="language-cpp code-clang-doc" >int ProtectedField</code></pre>
+// HTML-NEXT:         </div>
+// HTML-NEXT:     </div>
+// HTML-NEXT: </section>
 // HTML:      <section id="Classes" class="section-container">
 // HTML-NEXT:     <h2>Inner Classes</h2>
 // HTML-NEXT:     <ul class="class-container">
