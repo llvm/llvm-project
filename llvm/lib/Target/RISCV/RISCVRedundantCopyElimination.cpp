@@ -93,11 +93,11 @@ guaranteesRegEqualsImmInBlock(MachineBasicBlock &MBB,
   assert(TBB != nullptr && "Expected branch target basic block");
   auto Opc = Cond[0].getImm();
   if ((Opc == RISCV::QC_BEQI || Opc == RISCV::QC_E_BEQI ||
-       Opc == RISCV::NDS_BEQC) &&
+       Opc == RISCV::NDS_BEQC || Opc == RISCV::BEQI) &&
       Cond[2].isImm() && Cond[2].getImm() != 0 && TBB == &MBB)
     return true;
   if ((Opc == RISCV::QC_BNEI || Opc == RISCV::QC_E_BNEI ||
-       Opc == RISCV::NDS_BNEC) &&
+       Opc == RISCV::NDS_BNEC || Opc == RISCV::BNEI) &&
       Cond[2].isImm() && Cond[2].getImm() != 0 && TBB != &MBB)
     return true;
   return false;
@@ -189,6 +189,8 @@ bool RISCVRedundantCopyElimination::optimizeBlock(MachineBasicBlock &MBB) {
   MachineBasicBlock::iterator CondBr = PredMBB->getFirstTerminator();
   assert((CondBr->getOpcode() == RISCV::BEQ ||
           CondBr->getOpcode() == RISCV::BNE ||
+          CondBr->getOpcode() == RISCV::BEQI ||
+          CondBr->getOpcode() == RISCV::BNEI ||
           CondBr->getOpcode() == RISCV::QC_BEQI ||
           CondBr->getOpcode() == RISCV::QC_BNEI ||
           CondBr->getOpcode() == RISCV::QC_E_BEQI ||
