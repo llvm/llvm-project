@@ -278,6 +278,64 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
   llvm_unreachable("Unknown comment kind encountered.");
 }
 
+/// Creates Contexts for namespaces and records to allow for navigation.
+static void generateContext(const Info &I, Object &Obj) {
+  json::Value ContextArray = json::Array();
+  auto &ContextArrayRef = *ContextArray.getAsArray();
+  ContextArrayRef.reserve(I.Contexts.size());
+
+  std::string CurrentRelativePath;
+  bool PreviousRecord = false;
+  for (const auto &Current : I.Contexts) {
+    json::Value ContextVal = Object();
+    Object &Context = *ContextVal.getAsObject();
+    serializeReference(Current, Context);
+
+    if (ContextArrayRef.empty() && I.IT == InfoType::IT_record) {
+      if (Current.DocumentationFileName == "index") {
+        // If the record's immediate context is a namespace, then the
+        // "index.html" is in the same directory.
+        PreviousRecord = false;
+        Context["RelativePath"] = "./";
+      } else {
+        // If the immediate context is a record, then the file is one level
+        // above
+        PreviousRecord = true;
+        CurrentRelativePath += "../";
+        Context["RelativePath"] = CurrentRelativePath;
+      }
+      ContextArrayRef.push_back(ContextVal);
+      continue;
+    }
+
+    if (PreviousRecord && (Current.DocumentationFileName == "index")) {
+      // If the previous Context was a record then we already went up a level,
+      // so the current namespace index is in the same directory.
+      PreviousRecord = false;
+    } else if (Current.DocumentationFileName != "index") {
+      // If the current Context is a record but the previous wasn't a record,
+      // then the namespace index is located one level above.
+      PreviousRecord = true;
+      CurrentRelativePath += "../";
+    } else {
+      // The current Context is a namespace and so was the previous Context.
+      PreviousRecord = false;
+      CurrentRelativePath += "../";
+      // If this namespace is the global namespace, then its documentation
+      // name needs to be changed to link correctly.
+      if (Current.QualName == "GlobalNamespace" && Current.RelativePath != "./")
+        Context["DocumentationFileName"] =
+            SmallString<16>("GlobalNamespace/index");
+    }
+    Context["RelativePath"] = CurrentRelativePath;
+    ContextArrayRef.insert(ContextArrayRef.begin(), ContextVal);
+  }
+
+  ContextArrayRef.back().getAsObject()->insert({"End", true});
+  Obj["Contexts"] = ContextArray;
+  Obj["HasContexts"] = true;
+}
+
 static void
 serializeCommonAttributes(const Info &I, json::Object &Obj,
                           const std::optional<StringRef> RepositoryUrl) {
@@ -323,6 +381,9 @@ serializeCommonAttributes(const Info &I, json::Object &Obj,
       Obj["Location"] =
           serializeLocation(Symbol->DefLoc.value(), RepositoryUrl);
   }
+
+  if (!I.Contexts.empty())
+    generateContext(I, Obj);
 }
 
 static void serializeReference(const Reference &Ref, Object &ReferenceObj) {
@@ -335,7 +396,7 @@ static void serializeReference(const Reference &Ref, Object &ReferenceObj) {
 
     // If the reference is a nested class it will be put into a folder named
     // after the parent class. We can get that name from the path's stem.
-    if (Ref.Path != "GlobalNamespace")
+    if (Ref.Path != "GlobalNamespace" && !Ref.Path.empty())
       ReferenceObj["PathStem"] = sys::path::stem(Ref.Path);
   }
 }
@@ -448,7 +509,11 @@ static void serializeInfo(const TypeInfo &I, Object &Obj) {
 
 static void serializeInfo(const FieldTypeInfo &I, Object &Obj) {
   Obj["Name"] = I.Name;
-  Obj["Type"] = I.Type.Name;
+  insertNonEmpty("DefaultValue", I.DefaultValue, Obj);
+  json::Value ReferenceVal = Object();
+  Object &ReferenceObj = *ReferenceVal.getAsObject();
+  serializeReference(I.Type, ReferenceObj);
+  Obj["Type"] = ReferenceVal;
 }
 
 static void serializeInfo(const FunctionInfo &F, json::Object &Obj,
@@ -592,7 +657,7 @@ static void serializeInfo(const RecordInfo &I, json::Object &Obj,
     if (!PubMembersArrayRef.empty())
       insertArray(Obj, PublicMembersArray, "PublicMembers");
     if (!ProtMembersArrayRef.empty())
-      Obj["ProtectedMembers"] = ProtectedMembersArray;
+      insertArray(Obj, ProtectedMembersArray, "ProtectedMembers");
     if (!PrivateMembersArrayRef.empty())
       insertArray(Obj, PrivateMembersArray, "PrivateMembers");
   }
@@ -726,6 +791,29 @@ static Error serializeIndex(const ClangDocContext &CDCtx, StringRef RootDir) {
   return Error::success();
 }
 
+static void serializeContexts(Info *I,
+                              StringMap<std::unique_ptr<Info>> &Infos) {
+  if (I->USR == GlobalNamespaceID)
+    return;
+  auto ParentUSR = I->ParentUSR;
+
+  while (true) {
+    auto &ParentInfo = Infos.at(llvm::toHex(ParentUSR));
+
+    if (ParentInfo && ParentInfo->USR == GlobalNamespaceID) {
+      Context GlobalRef(ParentInfo->USR, "Global Namespace",
+                        InfoType::IT_namespace, "GlobalNamespace", "",
+                        SmallString<16>("index"));
+      I->Contexts.push_back(GlobalRef);
+      return;
+    }
+
+    Context ParentRef(*ParentInfo);
+    I->Contexts.push_back(ParentRef);
+    ParentUSR = ParentInfo->ParentUSR;
+  }
+}
+
 Error JSONGenerator::generateDocumentation(
     StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
     const ClangDocContext &CDCtx, std::string DirName) {
@@ -759,9 +847,12 @@ Error JSONGenerator::generateDocumentation(
     if (FileErr)
       return createFileError("cannot open file " + Group.getKey(), FileErr);
 
-    for (const auto &Info : Group.getValue())
+    for (const auto &Info : Group.getValue()) {
+      if (Info->IT == InfoType::IT_record || Info->IT == InfoType::IT_namespace)
+        serializeContexts(Info, Infos);
       if (Error Err = generateDocForInfo(Info, InfoOS, CDCtx))
         return Err;
+    }
   }
 
   return serializeIndex(CDCtx, RootDir);

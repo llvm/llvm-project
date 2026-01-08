@@ -38,6 +38,16 @@ private:
 };
 
 // CHECK:       {
+// CHECK-NEXT:    "Contexts": [
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "DocumentationFileName": "index",
+// CHECK-NEXT:        "End": true,
+// CHECK-NEXT:        "Name": "Global Namespace",
+// CHECK-NEXT:        "QualName": "GlobalNamespace",
+// CHECK-NEXT:        "RelativePath": "./",
+// CHECK-NEXT:        "USR": "0000000000000000000000000000000000000000"
+// CHECK-NEXT:      }
+// CHECK-NEXT:    ],
 // CHECK-NEXT:    "Description": {
 // CHECK-NEXT:      "BriefComments": [
 // CHECK-NEXT:        [
@@ -104,7 +114,11 @@ private:
 // CHECK-NEXT:          {
 // CHECK-NEXT:            "End": true,
 // CHECK-NEXT:            "Name": "",
-// CHECK-NEXT:            "Type": "int"
+// CHECK-NEXT:            "Type": {
+// CHECK-NEXT:              "Name": "int",
+// CHECK-NEXT:              "QualName": "int",
+// CHECK-NEXT:              "USR": "0000000000000000000000000000000000000000"
+// CHECK-NEXT:            }
 // CHECK-NEXT:          }
 // CHECK-NEXT:        ],
 // CHECK-NEXT:        "Reference": {
@@ -152,9 +166,11 @@ private:
 // CHECK-NEXT:        "USR": "0000000000000000000000000000000000000000"
 // CHECK-NEXT:      }
 // CHECK-NEXT:    ],
+// CHECK-NEXT:    "HasContexts": true,
 // CHECK-NEXT:    "HasEnums": true,
 // CHECK-NEXT:    "HasFriends": true,
 // CHECK-NEXT:    "HasPrivateMembers": true,
+// CHECK-NEXT:    "HasProtectedMembers": true,
 // CHECK-NEXT:    "HasPublicFunctions": true,
 // CHECK-NEXT:    "HasPublicMembers": true,
 // CHECK-NEXT:    "HasRecords": true,
@@ -217,7 +233,11 @@ private:
 // CHECK-NEXT:          {
 // CHECK-NEXT:            "End": true,
 // CHECK-NEXT:            "Name": "MyParam",
-// CHECK-NEXT:            "Type": "int"
+// CHECK-NEXT:            "Type": {
+// CHECK-NEXT:              "Name": "int",
+// CHECK-NEXT:              "QualName": "int",
+// CHECK-NEXT:              "USR": "0000000000000000000000000000000000000000"
+// CHECK-NEXT:            }
 // CHECK-NEXT:          }
 // CHECK-NEXT:        ],
 // CHECK-NEXT:        "ReturnType": {
@@ -283,26 +303,32 @@ private:
 // CHECK-NEXT:  }
 
 // HTML:              <a class="sidebar-item" href="#Classes">Inner Classes</a>
-// HTML-NEXT:     </li>
-// HTML-NEXT:     <li>
-// HTML-NEXT:         <ul>
-// HTML-NEXT:             <li class="sidebar-item-container">
-// HTML-NEXT:                 <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">NestedClass</a>
-// HTML-NEXT:             </li>
-// HTML-NEXT:         </ul>
-// HTML-NEXT:     </li>
+// HTML-NEXT:     </summary>
+// HTML-NEXT:     <ul>
+// HTML-NEXT:         <li class="sidebar-item-container">
+// HTML-NEXT:             <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">NestedClass</a>
+// HTML-NEXT:         </li>
+// HTML-NEXT:     </ul>
+// HTML-NEXT: </details>
 // HTML:              <a class="sidebar-item" href="#Friends">Friends</a>
-// HTML-NEXT:     </li>
-// HTML-NEXT:     <li>
-// HTML-NEXT:         <ul>
-// HTML-NEXT:             <li class="sidebar-item-container">
-// HTML-NEXT:                 <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">friendFunction</a>
-// HTML-NEXT:             </li>
-// HTML-NEXT:             <li class="sidebar-item-container">
-// HTML-NEXT:                 <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">Foo</a>
-// HTML-NEXT:             </li>
-// HTML-NEXT:         </ul>
-// HTML-NEXT:     </li>
+// HTML-NEXT:     </summary>
+// HTML-NEXT:     <ul>
+// HTML-NEXT:         <li class="sidebar-item-container">
+// HTML-NEXT:             <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">friendFunction</a>
+// HTML-NEXT:         </li>
+// HTML-NEXT:         <li class="sidebar-item-container">
+// HTML-NEXT:             <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">Foo</a>
+// HTML-NEXT:         </li>
+// HTML-NEXT:     </ul>
+// HTML-NEXT: </details>
+// HTML:      <section id="ProtectedMembers" class="section-container">
+// HTML-NEXT:     <h2>Protected Members</h2>
+// HTML-NEXT:     <div>
+// HTML-NEXT:         <div id="ProtectedField" class="delimiter-container">
+// HTML-NEXT:             <pre><code class="language-cpp code-clang-doc" >int ProtectedField</code></pre>
+// HTML-NEXT:         </div>
+// HTML-NEXT:     </div>
+// HTML-NEXT: </section>
 // HTML:      <section id="Classes" class="section-container">
 // HTML-NEXT:     <h2>Inner Classes</h2>
 // HTML-NEXT:     <ul class="class-container">
@@ -318,15 +344,14 @@ private:
 // HTML-NEXT:     <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-NEXT:         <pre><code class="language-cpp code-clang-doc">template &lt;typename T&gt;</code></pre>
 // HTML-NEXT:         <pre><code class="language-cpp code-clang-doc">void MyClass (int )</code></pre>
-// HTML-NEXT:         <div>
+// HTML-NEXT:         <div class="nested-delimiter-container">
 // HTML-NEXT:             <p> This is a function template friend.</p>
 // HTML-NEXT:         </div>
 // HTML-NEXT:     </div>
 // HTML-NEXT:     <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-NEXT:         <pre><code class="language-cpp code-clang-doc">class Foo</code></pre>
-// HTML-NEXT:         <div>
+// HTML-NEXT:         <div class="nested-delimiter-container">
 // HTML-NEXT:             <p> This is a struct friend.</p>
 // HTML-NEXT:         </div>
 // HTML-NEXT:     </div>
 // HTML-NEXT: </section>
-

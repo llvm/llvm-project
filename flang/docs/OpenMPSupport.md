@@ -37,9 +37,9 @@ Note : No distinction is made between the support in Parser/Semantics, MLIR, Low
 | simd construct                                             | P      | Implicit linearization is skipped if iv is a pointer or allocatable|
 | declare simd construct                                     | N      | |
 | do simd construct                                          | P      | linear clause is not supported |
-| target data construct                                      | P      | device clause not supported |
-| target construct                                           | P      | device clause not supported |
-| target update construct                                    | P      | device clause not supported |
+| target data construct                                      | Y      | |
+| target construct                                           | Y      | |
+| target update construct                                    | Y      | |
 | declare target directive                                   | Y      | |
 | teams construct                                            | Y      | |
 | distribute construct                                       | Y      | |
@@ -52,14 +52,14 @@ Note : No distinction is made between the support in Parser/Semantics, MLIR, Low
 | cancel construct                                           | Y      | |
 | cancellation point construct                               | Y      | |
 | parallel do simd construct                                 | P      | linear clause not supported |
-| target teams construct                                     | P      | device clause not supported |
+| target teams construct                                     | Y      | |
 | teams distribute construct                                 | Y      | |
 | teams distribute simd construct                            | P      | linear clause is not supported |
-| target teams distribute construct                          | P      | device clause is not supported |
+| target teams distribute construct                          | Y      | |
 | teams distribute parallel loop construct                   | Y      | |
-| target teams distribute parallel loop construct            | P      | device clause is not supported |
+| target teams distribute parallel loop construct            | Y      | |
 | teams distribute parallel loop simd construct              | P      | linear clause is not supported |
-| target teams distribute parallel loop simd construct       | P      | device and linear clauses are not supported |
+| target teams distribute parallel loop simd construct       | P      | linear clause is not supported |
 
 ## Extensions
 ### ATOMIC construct

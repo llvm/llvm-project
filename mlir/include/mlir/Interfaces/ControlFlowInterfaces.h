@@ -173,7 +173,7 @@ LogicalResult verifyRegionBranchWeights(Operation *op);
 
 namespace detail {
 /// Verify that types match along control flow edges described the given op.
-LogicalResult verifyTypesAlongControlFlowEdges(Operation *op);
+LogicalResult verifyRegionBranchOpInterface(Operation *op);
 } //  namespace detail
 
 /// A mapping from successor operands to successor inputs.
