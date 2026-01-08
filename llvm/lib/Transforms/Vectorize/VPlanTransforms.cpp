@@ -2979,8 +2979,42 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
   return nullptr;
 }
 
-/// Replace recipes with their EVL variants.
-static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
+/// Optimize away any EVL-based header masks to VP intrinsic based recipes.
+/// The transforms here need to preserve the original semantics.
+void VPlanTransforms::optimizeEVLMasks(VPlan &Plan) {
+  // Find the EVL-based header mask if it exists: icmp ult step-vector, EVL
+  VPInstruction *HeaderMask = nullptr;
+  for (VPRecipeBase &R : *Plan.getVectorLoopRegion()->getEntryBasicBlock()) {
+    if (match(&R, m_ICmp(m_VPInstruction<VPInstruction::StepVector>(),
+                         m_EVL(m_VPValue())))) {
+      HeaderMask = cast<VPInstruction>(&R);
+      break;
+    }
+  }
+  if (!HeaderMask)
+    return;
+
+  VPTypeAnalysis TypeInfo(Plan);
+  VPValue *EVL = HeaderMask->getOperand(1);
+
+  for (VPUser *U : collectUsersRecursively(HeaderMask)) {
+    VPRecipeBase *R = cast<VPRecipeBase>(U);
+    if (auto *NewR = optimizeMaskToEVL(HeaderMask, *R, TypeInfo, *EVL)) {
+      NewR->insertBefore(R);
+      for (auto [Old, New] :
+           zip_equal(R->definedValues(), NewR->definedValues()))
+        Old->replaceAllUsesWith(New);
+      // Erase dead stores, the rest will be removed by removeDeadRecipes.
+      if (R->getNumDefinedValues() == 0)
+        R->eraseFromParent();
+    }
+  }
+  removeDeadRecipes(Plan);
+}
+
+/// After replacing the IV with a EVL-based IV, fixup recipes that use VF to use
+/// the EVL instead to avoid incorrect updates on the penultimate iteration.
+static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
   VPTypeAnalysis TypeInfo(Plan);
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
@@ -3007,10 +3041,6 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
     // canonical induction must not be updated.
     return isa<VPWidenPointerInductionRecipe>(U);
   });
-
-  // Defer erasing recipes till the end so that we don't invalidate the
-  // VPTypeAnalysis cache.
-  SmallVector<VPRecipeBase *> ToErase;
 
   // Create a scalar phi to track the previous EVL if fixed-order recurrence is
   // contained.
@@ -3046,7 +3076,6 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
             R.getDebugLoc());
         VPSplice->insertBefore(&R);
         R.getVPSingleValue()->replaceAllUsesWith(VPSplice);
-        ToErase.push_back(&R);
       }
     }
   }
@@ -3067,43 +3096,6 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
       CmpInst::ICMP_ULT,
       Builder.createNaryOp(VPInstruction::StepVector, {}, EVLType), &EVL);
   HeaderMask->replaceAllUsesWith(EVLMask);
-  ToErase.push_back(HeaderMask->getDefiningRecipe());
-
-  // Try to optimize header mask recipes away to their EVL variants.
-  // TODO: Split optimizeMaskToEVL out and move into
-  // VPlanTransforms::optimize. transformRecipestoEVLRecipes should be run in
-  // tryToBuildVPlanWithVPRecipes beforehand.
-  for (VPUser *U : collectUsersRecursively(EVLMask)) {
-    auto *CurRecipe = cast<VPRecipeBase>(U);
-    VPRecipeBase *EVLRecipe =
-        optimizeMaskToEVL(EVLMask, *CurRecipe, TypeInfo, EVL);
-    if (!EVLRecipe)
-      continue;
-
-    unsigned NumDefVal = EVLRecipe->getNumDefinedValues();
-    assert(NumDefVal == CurRecipe->getNumDefinedValues() &&
-           "New recipe must define the same number of values as the "
-           "original.");
-    EVLRecipe->insertBefore(CurRecipe);
-    if (isa<VPSingleDefRecipe, VPWidenLoadEVLRecipe, VPInterleaveEVLRecipe>(
-            EVLRecipe)) {
-      for (unsigned I = 0; I < NumDefVal; ++I) {
-        VPValue *CurVPV = CurRecipe->getVPValue(I);
-        CurVPV->replaceAllUsesWith(EVLRecipe->getVPValue(I));
-      }
-    }
-    ToErase.push_back(CurRecipe);
-  }
-  // Remove dead EVL mask.
-  if (EVLMask->getNumUsers() == 0)
-    ToErase.push_back(EVLMask->getDefiningRecipe());
-
-  for (VPRecipeBase *R : reverse(ToErase)) {
-    SmallVector<VPValue *> PossiblyDead(R->operands());
-    R->eraseFromParent();
-    for (VPValue *Op : PossiblyDead)
-      recursivelyDeleteDeadRecipes(Op);
-  }
 }
 
 /// Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and
@@ -3201,7 +3193,7 @@ void VPlanTransforms::addExplicitVectorLength(
       DebugLoc::getCompilerGenerated(), "avl.next");
   AVLPhi->addOperand(NextAVL);
 
-  transformRecipestoEVLRecipes(Plan, *VPEVL);
+  fixupVFUsersForEVL(Plan, *VPEVL);
 
   // Replace all uses of VPCanonicalIVPHIRecipe by
   // VPEVLBasedIVPHIRecipe except for the canonical IV increment.
