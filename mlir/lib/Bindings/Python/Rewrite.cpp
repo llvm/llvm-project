@@ -227,23 +227,18 @@ private:
   MlirContext ctx;
 };
 
-enum PyGreedyRewriteStrictness : std::underlying_type_t<
+enum class PyGreedyRewriteStrictness : std::underlying_type_t<
     MlirGreedyRewriteStrictness> {
-  MLIR_GREEDY_REWRITE_STRICTNESS_ANY_OP = MLIR_GREEDY_REWRITE_STRICTNESS_ANY_OP,
-  MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_AND_NEW_OPS =
-      MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_AND_NEW_OPS,
-  MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_OPS =
-      MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_OPS,
+  ANY_OP = MLIR_GREEDY_REWRITE_STRICTNESS_ANY_OP,
+  EXISTING_AND_NEW_OPS = MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_AND_NEW_OPS,
+  EXISTING_OPS = MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_OPS,
 };
 
-enum PyGreedySimplifyRegionLevel : std::underlying_type_t<
+enum class PyGreedySimplifyRegionLevel : std::underlying_type_t<
     MlirGreedySimplifyRegionLevel> {
-  MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_DISABLED =
-      MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_DISABLED,
-  MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_NORMAL =
-      MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_NORMAL,
-  MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_AGGRESSIVE =
-      MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_AGGRESSIVE
+  DISABLED = MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_DISABLED,
+  NORMAL = MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_NORMAL,
+  AGGRESSIVE = MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_AGGRESSIVE
 };
 
 /// Owning Wrapper around a GreedyRewriteDriverConfig.
@@ -330,15 +325,15 @@ private:
 void populateRewriteSubmodule(nb::module_ &m) {
   // Enum definitions
   nb::enum_<PyGreedyRewriteStrictness>(m, "GreedyRewriteStrictness")
-      .value("ANY_OP", MLIR_GREEDY_REWRITE_STRICTNESS_ANY_OP)
+      .value("ANY_OP", PyGreedyRewriteStrictness::ANY_OP)
       .value("EXISTING_AND_NEW_OPS",
-             MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_AND_NEW_OPS)
-      .value("EXISTING_OPS", MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_OPS);
+             PyGreedyRewriteStrictness::EXISTING_AND_NEW_OPS)
+      .value("EXISTING_OPS", PyGreedyRewriteStrictness::EXISTING_OPS);
 
   nb::enum_<PyGreedySimplifyRegionLevel>(m, "GreedySimplifyRegionLevel")
-      .value("DISABLED", MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_DISABLED)
-      .value("NORMAL", MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_NORMAL)
-      .value("AGGRESSIVE", MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_AGGRESSIVE);
+      .value("DISABLED", PyGreedySimplifyRegionLevel::DISABLED)
+      .value("NORMAL", PyGreedySimplifyRegionLevel::NORMAL)
+      .value("AGGRESSIVE", PyGreedySimplifyRegionLevel::AGGRESSIVE);
   //----------------------------------------------------------------------------
   // Mapping of the PatternRewriter
   //----------------------------------------------------------------------------
