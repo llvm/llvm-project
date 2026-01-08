@@ -33,7 +33,8 @@ class TestFrameVarDILCast(TestBase):
         if Is32Bit:
             self.expect_var_path("(char*)1", value="0x00000001", type="char *")
             self.expect_var_path(
-                "(long long**)1", value="0x00000001", type="long long **")
+                "(long long**)1", value="0x00000001", type="long long **"
+            )
         else:
             self.expect_var_path("(char*)1", value="0x0000000000000001", type="char *")
             self.expect_var_path(
