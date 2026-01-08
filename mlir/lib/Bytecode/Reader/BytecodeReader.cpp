@@ -949,9 +949,12 @@ public:
                             llvm::getTypeName<T>(), ", but got: ", baseResult);
   }
 
+  /// The kind of entry being parsed.
+  enum class EntryKind { Attribute, Type };
+
   /// Add an index to the deferred worklist for re-parsing.
-  void addDeferredParsing(uint64_t index, char isType) {
-    deferredWorklist.emplace_back(index, isType);
+  void addDeferredParsing(uint64_t index, EntryKind kind) {
+    deferredWorklist.emplace_back(index, kind);
   }
 
   /// Whether currently resolving.
@@ -1010,8 +1013,8 @@ private:
   /// Worklist for deferred attribute/type parsing. This is used to handle
   /// deeply nested structures like CallSiteLoc iteratively.
   /// - The first element is the index of the attribute/type to parse.
-  /// - The second element is a flag indicating if the entry is a type.
-  std::vector<std::pair<uint64_t, char>> deferredWorklist;
+  /// - The second element is the kind of entry being parsed.
+  std::vector<std::pair<uint64_t, EntryKind>> deferredWorklist;
 
   /// Flag indicating if we are currently resolving an attribute or type.
   bool resolving = false;
@@ -1088,7 +1091,8 @@ public:
         result = attr;
         return success();
       }
-      attrTypeReader.addDeferredParsing(index, /*isType=*/false);
+      attrTypeReader.addDeferredParsing(index,
+                                        AttrTypeReader::EntryKind::Attribute);
       return failure();
     }
     return attrTypeReader.readAttribute(index, result, depth + 1);
@@ -1117,7 +1121,7 @@ public:
         result = type;
         return success();
       }
-      attrTypeReader.addDeferredParsing(index, /*isType=*/true);
+      attrTypeReader.addDeferredParsing(index, AttrTypeReader::EntryKind::Type);
       return failure();
     }
     return attrTypeReader.readType(index, result, depth + 1);
@@ -1384,38 +1388,44 @@ T AttrTypeReader::resolveEntry(SmallVectorImpl<Entry<T>> &entries,
   // - Pop from front to process
   // - Push new dependencies to front (depth-first)
   // - Move failed entries to back (retry after dependencies)
-  std::deque<std::pair<uint64_t, char>> worklist;
-  llvm::DenseSet<std::pair<uint64_t, char>> inWorklist;
+  std::deque<std::pair<uint64_t, EntryKind>> worklist;
+  llvm::DenseSet<std::pair<uint64_t, EntryKind>> inWorklist;
 
-  char isTypeEntry = std::is_same_v<T, Type>;
-  auto addToWorklistFront = [&](std::pair<uint64_t, char> entry) {
+  EntryKind entryKind =
+      std::is_same_v<T, Type> ? EntryKind::Type : EntryKind::Attribute;
+
+  static_assert((std::is_same_v<T, Type> || std::is_same_v<T, Attribute>) &&
+                "Only support resolving Attributes and Types");
+
+  auto addToWorklistFront = [&](std::pair<uint64_t, EntryKind> entry) {
     if (inWorklist.insert(entry).second)
       worklist.push_front(entry);
   };
 
   // Add the original index and any dependencies from the fast path attempt.
-  worklist.emplace_back(index, isTypeEntry);
-  inWorklist.insert({index, isTypeEntry});
+  worklist.emplace_back(index, entryKind);
+  inWorklist.insert({index, entryKind});
   for (auto entry : llvm::reverse(deferredWorklist))
     addToWorklistFront(entry);
 
   while (!worklist.empty()) {
-    auto [currentIndex, isType] = worklist.front();
+    auto [currentIndex, entryKind] = worklist.front();
     worklist.pop_front();
 
     // Clear the deferred worklist before parsing to capture any new entries.
     deferredWorklist.clear();
 
-    if (isType) {
+    if (entryKind == EntryKind::Type) {
       Type result;
       if (succeeded(readType(currentIndex, result, depth))) {
-        inWorklist.erase({currentIndex, isType});
+        inWorklist.erase({currentIndex, entryKind});
         continue;
       }
     } else {
+      assert(entryKind == EntryKind::Attribute && "Unexpected entry kind");
       Attribute result;
       if (succeeded(readAttribute(currentIndex, result, depth))) {
-        inWorklist.erase({currentIndex, isType});
+        inWorklist.erase({currentIndex, entryKind});
         continue;
       }
     }
@@ -1426,7 +1436,7 @@ T AttrTypeReader::resolveEntry(SmallVectorImpl<Entry<T>> &entries,
     }
 
     // Move this entry to the back to retry after dependencies.
-    worklist.emplace_back(currentIndex, isType);
+    worklist.emplace_back(currentIndex, entryKind);
 
     // Add dependencies to the front (in reverse so they maintain order).
     for (auto entry : llvm::reverse(deferredWorklist))
