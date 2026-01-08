@@ -223,7 +223,7 @@ class GitHubAPI:
         self,
         pr_number: int,
         labels: List[str],
-    ) -> bool:
+    ) -> None:
         if self.runner.dry_run:
             self.runner.print(f"[Dry Run] Would set labels for #{pr_number}: {' '.join(labels)}")
             return None
