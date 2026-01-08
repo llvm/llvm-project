@@ -2721,8 +2721,10 @@ bool FormatEntity::Formatter::IsInvalidRecursiveFormat(Entry::Type type) {
   // use-case being array summary strings, in which case Format will call itself
   // with the subrange ValueObject and apply a freshly created Variable entry.
   // E.g., ${var[1-3]} will format the [1-3] range with ${var%S}.
-  if (llvm::is_contained(
-          {Entry::Type::Scope, Entry::Type::Root, Entry::Type::Variable}, type))
+  static constexpr std::array s_permitted_recursive_entities = {
+      Entry::Type::Scope, Entry::Type::Root, Entry::Type::Variable};
+
+  if (llvm::is_contained(s_permitted_recursive_entities, type))
     return false;
 
   return llvm::is_contained(m_entry_type_stack, type);
