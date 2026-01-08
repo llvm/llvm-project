@@ -825,15 +825,20 @@ struct LibcFunNamePrefixSuffixParser {
 //
 // `UnsafeArg` is the output argument that will be set only if this function
 // returns true.
-static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
-                                  const unsigned FmtArgIdx, ASTContext &Ctx,
-                                  bool isKprintf = false) {
+//
+// Format arguments start at `FmtIdx` + 1, if `FmtArgIdx` is insignificant.
+static bool
+hasUnsafeFormatOrSArg(ASTContext &Ctx, const CallExpr *Call,
+                      const Expr *&UnsafeArg, const unsigned FmtIdx,
+                      std::optional<const unsigned> FmtArgIdx = std::nullopt,
+                      bool isKprintf = false) {
   class StringFormatStringHandler
       : public analyze_format_string::FormatStringHandler {
     const CallExpr *Call;
     unsigned FmtArgIdx;
     const Expr *&UnsafeArg;
     ASTContext &Ctx;
+    bool UnsafeArgSet;
 
     // Returns an `Expr` representing the precision if specified, null
     // otherwise.
@@ -846,18 +851,18 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
     const Expr *
     getPrecisionAsExpr(const analyze_printf::OptionalAmount &Precision,
                        const CallExpr *Call) {
-      unsigned PArgIdx = -1;
+      if (Precision.hasDataArgument()) {
+        unsigned PArgIdx = Precision.getArgIndex() + FmtArgIdx;
 
-      if (Precision.hasDataArgument())
-        PArgIdx = Precision.getPositionalArgIndex() + FmtArgIdx;
-      if (0 < PArgIdx && PArgIdx < Call->getNumArgs()) {
-        const Expr *PArg = Call->getArg(PArgIdx);
+        if (PArgIdx < Call->getNumArgs()) {
+          const Expr *PArg = Call->getArg(PArgIdx);
 
-        // Strip the cast if `PArg` is a cast-to-int expression:
-        if (auto *CE = dyn_cast<CastExpr>(PArg);
-            CE && CE->getType()->isSignedIntegerType())
-          PArg = CE->getSubExpr();
-        return PArg;
+          // Strip the cast if `PArg` is a cast-to-int expression:
+          if (auto *CE = dyn_cast<CastExpr>(PArg);
+              CE && CE->getType()->isSignedIntegerType())
+            PArg = CE->getSubExpr();
+          return PArg;
+        }
       }
       if (Precision.getHowSpecified() ==
           analyze_printf::OptionalAmount::HowSpecified::Constant) {
@@ -874,7 +879,8 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
   public:
     StringFormatStringHandler(const CallExpr *Call, unsigned FmtArgIdx,
                               const Expr *&UnsafeArg, ASTContext &Ctx)
-        : Call(Call), FmtArgIdx(FmtArgIdx), UnsafeArg(UnsafeArg), Ctx(Ctx) {}
+        : Call(Call), FmtArgIdx(FmtArgIdx), UnsafeArg(UnsafeArg), Ctx(Ctx),
+          UnsafeArgSet(false) {}
 
     bool HandlePrintfSpecifier(const analyze_printf::PrintfSpecifier &FS,
                                const char *startSpecifier,
@@ -884,9 +890,9 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
           analyze_printf::PrintfConversionSpecifier::sArg)
         return true; // continue parsing
 
-      unsigned ArgIdx = FS.getPositionalArgIndex() + FmtArgIdx;
+      unsigned ArgIdx = FS.getArgIndex() + FmtArgIdx;
 
-      if (!(0 < ArgIdx && ArgIdx < Call->getNumArgs()))
+      if (ArgIdx >= Call->getNumArgs())
         // If the `ArgIdx` is invalid, give up.
         return true; // continue parsing
 
@@ -912,34 +918,43 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
           return true;
       // Handle unsafe case:
       UnsafeArg = Call->getArg(ArgIdx); // output
+      UnsafeArgSet = true;
       return false; // returning false stops parsing immediately
     }
+
+    bool isUnsafeArgSet() { return UnsafeArgSet; }
   };
 
-  const Expr *Fmt = Call->getArg(FmtArgIdx);
+  const Expr *Fmt = Call->getArg(FmtIdx);
+  unsigned FmtArgStartingIdx =
+      FmtArgIdx.has_value() ? static_cast<unsigned>(*FmtArgIdx) : FmtIdx + 1;
 
   if (auto *SL = dyn_cast<clang::StringLiteral>(Fmt->IgnoreParenImpCasts())) {
     if (SL->getCharByteWidth() == 1) {
       StringRef FmtStr = SL->getString();
-      StringFormatStringHandler Handler(Call, FmtArgIdx, UnsafeArg, Ctx);
+      StringFormatStringHandler Handler(Call, FmtArgStartingIdx, UnsafeArg,
+                                        Ctx);
 
       return analyze_format_string::ParsePrintfString(
-          Handler, FmtStr.begin(), FmtStr.end(), Ctx.getLangOpts(),
-          Ctx.getTargetInfo(), isKprintf);
+                 Handler, FmtStr.begin(), FmtStr.end(), Ctx.getLangOpts(),
+                 Ctx.getTargetInfo(), isKprintf) &&
+             Handler.isUnsafeArgSet();
     }
 
     if (auto FmtStr = SL->tryEvaluateString(Ctx)) {
-      StringFormatStringHandler Handler(Call, FmtArgIdx, UnsafeArg, Ctx);
+      StringFormatStringHandler Handler(Call, FmtArgStartingIdx, UnsafeArg,
+                                        Ctx);
       return analyze_format_string::ParsePrintfString(
-          Handler, FmtStr->data(), FmtStr->data() + FmtStr->size(),
-          Ctx.getLangOpts(), Ctx.getTargetInfo(), isKprintf);
+                 Handler, FmtStr->data(), FmtStr->data() + FmtStr->size(),
+                 Ctx.getLangOpts(), Ctx.getTargetInfo(), isKprintf) &&
+             Handler.isUnsafeArgSet();
     }
   }
   // If format is not a string literal, we cannot analyze the format string.
   // In this case, this call is considered unsafe if at least one argument
   // (including the format argument) is unsafe pointer.
   return llvm::any_of(
-      llvm::make_range(Call->arg_begin() + FmtArgIdx, Call->arg_end()),
+      llvm::make_range(Call->arg_begin() + FmtIdx, Call->arg_end()),
       [&UnsafeArg, &Ctx](const Expr *Arg) -> bool {
         if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg, Ctx)) {
           UnsafeArg = Arg;
@@ -1154,7 +1169,7 @@ static bool hasUnsafePrintfStringArg(const CallExpr &Node, ASTContext &Ctx,
     // It is a fprintf:
     const Expr *UnsafeArg;
 
-    if (hasUnsafeFormatOrSArg(&Node, UnsafeArg, 1, Ctx, false)) {
+    if (hasUnsafeFormatOrSArg(Ctx, &Node, UnsafeArg, /* FmtIdx= */ 1)) {
       Result.addNode(Tag, DynTypedNode::create(*UnsafeArg));
       return true;
     }
@@ -1168,7 +1183,8 @@ static bool hasUnsafePrintfStringArg(const CallExpr &Node, ASTContext &Ctx,
 
     if (auto *II = FD->getIdentifier())
       isKprintf = II->getName() == "kprintf";
-    if (hasUnsafeFormatOrSArg(&Node, UnsafeArg, 0, Ctx, isKprintf)) {
+    if (hasUnsafeFormatOrSArg(Ctx, &Node, UnsafeArg, /* FmtIdx= */ 0,
+                              /* FmtArgIdx= */ std::nullopt, isKprintf)) {
       Result.addNode(Tag, DynTypedNode::create(*UnsafeArg));
       return true;
     }
@@ -1183,7 +1199,7 @@ static bool hasUnsafePrintfStringArg(const CallExpr &Node, ASTContext &Ctx,
       // second is an integer, it is a snprintf:
       const Expr *UnsafeArg;
 
-      if (hasUnsafeFormatOrSArg(&Node, UnsafeArg, 2, Ctx, false)) {
+      if (hasUnsafeFormatOrSArg(Ctx, &Node, UnsafeArg, /* FmtIdx= */ 2)) {
         Result.addNode(Tag, DynTypedNode::create(*UnsafeArg));
         return true;
       }
@@ -2061,6 +2077,7 @@ class UnsafeLibcFunctionCallGadget : public WarningGadget {
   constexpr static const char *const UnsafeVaListTag =
       "UnsafeLibcFunctionCall_va_list";
 
+public:
   enum UnsafeKind {
     OTHERS = 0,  // no specific information, the callee function is unsafe
     SPRINTF = 1, // never call `-sprintf`s, call `-snprintf`s instead.
@@ -2073,7 +2090,6 @@ class UnsafeLibcFunctionCallGadget : public WarningGadget {
                  // considered unsafe as it is not compile-time check
   } WarnedFunKind = OTHERS;
 
-public:
   UnsafeLibcFunctionCallGadget(const MatchResult &Result)
       : WarningGadget(Kind::UnsafeLibcFunctionCall),
         Call(Result.getNodeAs<CallExpr>(Tag)) {
@@ -2157,6 +2173,86 @@ public:
                              bool IsRelatedToDecl,
                              ASTContext &Ctx) const override {
     Handler.handleUnsafeLibcCall(Call, WarnedFunKind, Ctx, UnsafeArg);
+  }
+
+  DeclUseList getClaimedVarUseSites() const override { return {}; }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
+};
+
+class UnsafeFormatAttributedFunctionCallGadget : public WarningGadget {
+  const CallExpr *const Call;
+  const Expr *UnsafeArg = nullptr;
+  constexpr static const char *const Tag = "UnsafeFormatAttributedFunctionCall";
+  constexpr static const char *const UnsafeStringTag =
+      "UnsafeFormatAttributedFunctionCall_string";
+
+public:
+  UnsafeFormatAttributedFunctionCallGadget(const MatchResult &Result)
+      : WarningGadget(Kind::UnsafeLibcFunctionCall),
+        Call(Result.getNodeAs<CallExpr>(Tag)),
+        UnsafeArg(Result.getNodeAs<Expr>(UnsafeStringTag)) {}
+
+  static bool matches(const Stmt *S, ASTContext &Ctx,
+                      const UnsafeBufferUsageHandler *Handler,
+                      MatchResult &Result) {
+    if (ignoreUnsafeLibcCall(Ctx, *S, Handler))
+      return false;
+    auto *CE = dyn_cast<CallExpr>(S);
+    if (!CE || !CE->getDirectCallee())
+      return false;
+    const auto *FD = dyn_cast<FunctionDecl>(CE->getDirectCallee());
+    if (!FD)
+      return false;
+
+    const FormatAttr *Attr = nullptr;
+    bool IsPrintf = false;
+    bool AnyAttr = llvm::any_of(
+        FD->specific_attrs<FormatAttr>(),
+        [&Attr, &IsPrintf](const FormatAttr *FA) -> bool {
+          if (const auto *II = FA->getType()) {
+            if (II->getName() == "printf" || II->getName() == "scanf") {
+              Attr = FA;
+              IsPrintf = II->getName() == "printf";
+              return true;
+            }
+          }
+          return false;
+        });
+    const Expr *UnsafeArg;
+
+    if (AnyAttr && !IsPrintf &&
+        (CE->getNumArgs() >= static_cast<unsigned>(Attr->getFirstArg()))) {
+      // for scanf-like functions, any format argument is considered unsafe:
+      Result.addNode(Tag, DynTypedNode::create(*CE));
+      return true;
+    }
+    if (AnyAttr && libc_func_matchers::hasUnsafeFormatOrSArg(
+                       Ctx, CE, UnsafeArg,
+                       // FormatAttribute indexes are 1-based:
+                       /* FmtIdx= */ Attr->getFormatIdx() - 1,
+                       /* FmtArgIdx= */ Attr->getFirstArg() - 1)) {
+      Result.addNode(Tag, DynTypedNode::create(*CE));
+      Result.addNode(UnsafeStringTag, DynTypedNode::create(*UnsafeArg));
+      return true;
+    }
+    return false;
+  }
+
+  const Stmt *getBaseStmt() const { return Call; }
+
+  SourceLocation getSourceLoc() const override { return Call->getBeginLoc(); }
+
+  void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
+                             bool IsRelatedToDecl,
+                             ASTContext &Ctx) const override {
+    if (UnsafeArg)
+      Handler.handleUnsafeLibcCall(
+          Call, UnsafeLibcFunctionCallGadget::UnsafeKind::STRING, Ctx,
+          UnsafeArg);
+    else
+      Handler.handleUnsafeLibcCall(
+          Call, UnsafeLibcFunctionCallGadget::UnsafeKind::OTHERS, Ctx);
   }
 
   DeclUseList getClaimedVarUseSites() const override { return {}; }

@@ -48,8 +48,6 @@ RUN sudo apt-get update \
         tzdata
 
 # Install various tools used by the build or the test suite
-# TODO add ninja-build once 1.11 is available in Ubuntu, also remove the manual
-# installation below.
 RUN sudo apt-get update \
     && sudo apt-get install -y \
         bash \

@@ -430,6 +430,11 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     K = CXCursor_ArraySubscriptExpr;
     break;
 
+  case Stmt::MatrixSingleSubscriptExprClass:
+    // TODO: add support for MatrixSingleSubscriptExpr.
+    K = CXCursor_UnexposedExpr;
+    break;
+
   case Stmt::MatrixSubscriptExprClass:
     // TODO: add support for MatrixSubscriptExpr.
     K = CXCursor_UnexposedExpr;

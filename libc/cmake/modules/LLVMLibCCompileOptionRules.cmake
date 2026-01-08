@@ -123,6 +123,14 @@ function(_get_compile_options_from_config output_var)
     list(APPEND config_options "-DLIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT=${LIBC_CONF_RAW_MUTEX_DEFAULT_SPIN_COUNT}")
   endif()
 
+  if(LIBC_CONF_MATH_USE_SYSTEM_FENV)
+    if(MSVC)
+      list(APPEND config_options "/DLIBC_MATH_USE_SYSTEM_FENV")
+    else()
+      list(APPEND config_options "-DLIBC_MATH_USE_SYSTEM_FENV")
+    endif()
+  endif()
+
   set(${output_var} ${config_options} PARENT_SCOPE)
 endfunction(_get_compile_options_from_config)
 

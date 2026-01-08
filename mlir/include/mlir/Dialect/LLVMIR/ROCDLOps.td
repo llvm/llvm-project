@@ -25,7 +25,88 @@ def ROCDL_Dialect : Dialect {
   let name = "rocdl";
   let cppNamespace = "::mlir::ROCDL";
   let dependentDialects = ["LLVM::LLVMDialect"];
+  let summary = "Dialect for wrapping LLVM AMDGPU backend intrinsics and attributes";
   let hasOperationAttrVerify = 1;
+
+  let description = [{
+    The ROCDL dialect, like the other platform-specific LLVM dialects, serves
+    as the location of wrappers around the AMD-specific intrinsics and attributes
+    in LLVM.
+
+    This dialect, like other GPU lowering targets, also contains the infrastructure
+    used by the built-in compilation/offloading framework to compile AMD-specific
+    LLVM IR into binaries.
+
+    # Dialect inclusion criteria and guidelines
+
+    The operations in this dialect are 1:1 wrappers around their corresponding
+    LLVM intrinsics. Operations that do not correspond to intrinsics should not
+    be placed in this dialect.
+
+    The definition of a ROCDL op should match its LLVM counterpart. If the
+    argument and result types are fixed, they should be specified as type
+    constraints, including by overriding the default variadic type on LLVM
+    intrinsics by doing a `let results` in the operation definition.
+
+    LLVM attributes do not need to be replicated exactly if it wouldn't be
+    easy to do so, but pure operations and ones that read/write memory should
+    be annotated as such.
+
+    While LLVM intrinsics currently don't allow constraining the values an
+    `any_type` can take, it is acceptable (but not required) to impose such
+    constraints if they are known.
+
+    When an LLVM intrinsic uses an `immarg`, this corresponds to an attribute
+    in MLIR.
+
+    Human-readable assembly formats (those that, for example, explicitly indicate
+    parameter names) may be used, and are encouraged for intrinsics that have
+    complex argument schemes and don't have any higher-level wrapper (such as
+    in the `amdgpu` dialect).
+
+    While not all existing operations follow this convention, new operations should
+    generally provide argument and result types except in cases where they are
+    clearly redundant (such as with operations like `rocdl.fmed3`, which doesn't
+    need to reiterate the single type at issue multiple times). This convention
+    enhances the readability of low-level IR and prevents programmers from needing
+    to find non-local type information.
+
+    Dialect-defined discardable attributes (any attribute starting with `rocdl.`
+    that has special handling) need to correspond to AMD-specific attributes, metadata,
+    or other entities (such as calling conventions) in LLVM, or be needed for
+    GPU compilation management. Outside of the compilation infrastructure,
+    dialect-specific enums or attributes are extmelely unlikely to be needed
+    and should be avoided.
+
+    Operation documentation should specify when the operation was introduced
+    (if relevant) and include usage examples. Operations should have
+    parser/printer tests in `mlir/test/Dialect/LLVMIR/rocdl.mlir` and
+    lowering tests in `mlir/test/Target/LLVMIR/rocdl.mlir`.
+
+    # General documentation (What does this op do?)
+
+    While rocdl ops sometimes carry their own documentation, there is no
+    expectation that such documentation will exist (or be kept up to date).
+
+    Since ROCDL operations correspond to LLVM intrinsics, the semantics and
+    behavior of these operations can be determined by investigating the
+    documentation for the corresponding intrinsic. This documentation
+    can be found in
+    - `llvm/docs/AMDGPUUsage.rst` and
+    - The comments of `llvm/include/llvm/IR/IntrinsicsAMDGPU.td`, which
+      is where details of the meaning of certain bitfields or of how an
+      intrinsic corresponds to hardware instructions are most likely to
+      be found.
+
+    Since many intrinsics are themselves minimal wrappers around hardware
+    instructions, these documentation sources often do not repeat hardware
+    documentation. If an intrinsic appears undocumented, information about
+    its behavior will often be available in published ISA descriptions or
+    (sometimes known as shader programming guides).
+
+    If an operation doesn't provide usage examples, it is likely that they
+    can be found in `mlir/test/Dialect/LLVMIR/rocdl.td`.
+  }];
 
   let extraClassDeclaration = [{
     /// Get the name of the attribute used to annotate external kernel
@@ -130,6 +211,7 @@ class ROCDL_SpecialIdRegisterOp<string mnemonic> :
   ];
 }
 
+// TODO(krzysz00): This should be a lowering pattern, not an op.
 class ROCDL_DimGetterFunctionOp<string mnemonic, string device_function,
                              int parameter, list<Trait> traits = []> :
   ROCDL_Op<mnemonic, !listconcat(traits, [Pure])>,
@@ -309,6 +391,11 @@ def ROCDL_SSleepOp : ROCDL_ConcreteNonMemIntrOp<"s.sleep", [], 0, [0], ["count"]
   let assemblyFormat = "attr-dict $count";
 }
 
+def ROCDL_SNopOp : ROCDL_ConcreteNonMemIntrOp<"s.nop", [], 0, [0], ["count"]>,
+  Arguments<(ins I16Attr:$count)> {
+  let assemblyFormat = "attr-dict $count";
+}
+
 def ROCDL_SBarrierOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier", [], 0> {
   let assemblyFormat = "attr-dict";
 }
@@ -321,6 +408,12 @@ def ROCDL_BarrierOp : ROCDL_Op<"barrier"> {
     createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_s_barrier);
     builder.CreateFence(llvm::AtomicOrdering::Acquire,
                         llvmContext.getOrInsertSyncScopeID("workgroup"));
+  }];
+  let description = [{
+    An operation with the same expansion as HIP's __synchthreads();
+
+    **DEPRECATION NOTICE**: Use `gpu.barrier`, which will expand to these
+    operations, instead.
   }];
   let assemblyFormat = "attr-dict";
 }
@@ -624,8 +717,8 @@ def ROCDL_smfmac_f32_32x32x64_fp8_fp8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x64.f
 // WMMA intrinsics
 class ROCDL_WMMA_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<mnemonic,
     [0], [0], [], 1, 0, 0, 0, [], []>,
-  Arguments<(ins 
-             LLVM_ScalarOrVectorOf<AB>:$a, 
+  Arguments<(ins
+             LLVM_ScalarOrVectorOf<AB>:$a,
              LLVM_ScalarOrVectorOf<AB>:$b,
              LLVM_ScalarOrVectorOf<CD>:$c)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
@@ -636,10 +729,10 @@ class ROCDL_WMMA_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<mnemon
 
 class ROCDL_WMMA_Opsel_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<mnemonic,
     [0], [1], [], 1, 0, 0, 0, [3], ["opsel"]>,
-  Arguments<(ins 
+  Arguments<(ins
              LLVM_ScalarOrVectorOf<AB>:$a,
              LLVM_ScalarOrVectorOf<AB>:$b,
-             LLVM_ScalarOrVectorOf<CD>:$c, 
+             LLVM_ScalarOrVectorOf<CD>:$c,
              DefaultValuedAttr<I1Attr, "0">:$opsel)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
@@ -649,12 +742,12 @@ class ROCDL_WMMA_Opsel_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<
 
 class ROCDL_WMMA_IU_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<mnemonic,
     [0], [1], [], 1, 0, 0, 0, [0, 2, 5], ["signA", "signB", "clamp"]>,
-  Arguments<(ins 
+  Arguments<(ins
              DefaultValuedAttr<I1Attr, "0">:$signA,
-             LLVM_ScalarOrVectorOf<AB>:$a, 
+             LLVM_ScalarOrVectorOf<AB>:$a,
              DefaultValuedAttr<I1Attr, "0">:$signB,
              LLVM_ScalarOrVectorOf<AB>:$b,
-             LLVM_ScalarOrVectorOf<CD>:$c, 
+             LLVM_ScalarOrVectorOf<CD>:$c,
              DefaultValuedAttr<I1Attr, "0">:$clamp)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
@@ -664,14 +757,14 @@ class ROCDL_WMMA_IU_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<mne
 
 class ROCDL_WMMA_ModsAll_Reuse_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<mnemonic,
     [0], [1], [], 1, 0, 0, 0, [0, 2, 4, 6, 7], ["signA", "signB","modC","reuseA","reuseB"]>,
-  Arguments<(ins 
+  Arguments<(ins
              DefaultValuedAttr<I1Attr, "0">:$signA,
-             LLVM_ScalarOrVectorOf<AB>:$a, 
+             LLVM_ScalarOrVectorOf<AB>:$a,
              DefaultValuedAttr<I1Attr, "0">:$signB,
              LLVM_ScalarOrVectorOf<AB>:$b,
-             DefaultValuedAttr<I16Attr, "0">:$modC, 
-             LLVM_ScalarOrVectorOf<CD>:$c, 
-             DefaultValuedAttr<I1Attr, "0">:$reuseA, 
+             DefaultValuedAttr<I16Attr, "0">:$modC,
+             LLVM_ScalarOrVectorOf<CD>:$c,
+             DefaultValuedAttr<I1Attr, "0">:$reuseA,
              DefaultValuedAttr<I1Attr, "0">:$reuseB)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
@@ -681,12 +774,12 @@ class ROCDL_WMMA_ModsAll_Reuse_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL
 
 class ROCDL_WMMA_ModsC_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<mnemonic,
     [0], [0], [], 1, 0, 0, 0, [2, 4, 5], ["modC","reuseA","reuseB"]>,
-  Arguments<(ins 
-             LLVM_ScalarOrVectorOf<AB>:$a, 
+  Arguments<(ins
+             LLVM_ScalarOrVectorOf<AB>:$a,
              LLVM_ScalarOrVectorOf<AB>:$b,
-             DefaultValuedAttr<I16Attr, "0">:$modC, 
-             LLVM_ScalarOrVectorOf<CD>:$c, 
-             DefaultValuedAttr<I1Attr, "0">:$reuseA, 
+             DefaultValuedAttr<I16Attr, "0">:$modC,
+             LLVM_ScalarOrVectorOf<CD>:$c,
+             DefaultValuedAttr<I1Attr, "0">:$reuseA,
              DefaultValuedAttr<I1Attr, "0">:$reuseB)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
@@ -696,14 +789,14 @@ class ROCDL_WMMA_ModsC_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<
 
 class ROCDL_WMMA_ModsAll_Diff_IntrOp<string mnemonic, Type AB, Type C, Type D> : ROCDL_IntrOp<mnemonic,
     [0], [1, 5], [], 1, 0, 0, 0, [0, 2, 4, 6, 7], ["signA", "signB","modC","reuseA","reuseB"]>,
-  Arguments<(ins 
+  Arguments<(ins
              DefaultValuedAttr<I1Attr, "0">:$signA,
-             LLVM_ScalarOrVectorOf<AB>:$a, 
+             LLVM_ScalarOrVectorOf<AB>:$a,
              DefaultValuedAttr<I1Attr, "0">:$signB,
              LLVM_ScalarOrVectorOf<AB>:$b,
-             DefaultValuedAttr<I16Attr, "0">:$modC, 
-             LLVM_ScalarOrVectorOf<C>:$c, 
-             DefaultValuedAttr<I1Attr, "0">:$reuseA, 
+             DefaultValuedAttr<I16Attr, "0">:$modC,
+             LLVM_ScalarOrVectorOf<C>:$c,
+             DefaultValuedAttr<I1Attr, "0">:$reuseA,
              DefaultValuedAttr<I1Attr, "0">:$reuseB)> {
   let results = (outs LLVM_ScalarOrVectorOf<D>:$res);
   let assemblyFormat = [{
@@ -713,13 +806,13 @@ class ROCDL_WMMA_ModsAll_Diff_IntrOp<string mnemonic, Type AB, Type C, Type D> :
 
 class ROCDL_WMMA_ModsAB_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<mnemonic,
     [0], [1], [], 1, 0, 0, 0, [0, 2, 5, 6], ["signA", "signB", "reuseA","reuseB"]>,
-  Arguments<(ins 
+  Arguments<(ins
              DefaultValuedAttr<I1Attr, "0">:$signA,
-             LLVM_ScalarOrVectorOf<AB>:$a, 
+             LLVM_ScalarOrVectorOf<AB>:$a,
              DefaultValuedAttr<I1Attr, "0">:$signB,
              LLVM_ScalarOrVectorOf<AB>:$b,
-             LLVM_ScalarOrVectorOf<CD>:$c, 
-             DefaultValuedAttr<I1Attr, "0">:$reuseA, 
+             LLVM_ScalarOrVectorOf<CD>:$c,
+             DefaultValuedAttr<I1Attr, "0">:$reuseA,
              DefaultValuedAttr<I1Attr, "0">:$reuseB)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
@@ -730,15 +823,15 @@ class ROCDL_WMMA_ModsAB_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp
 // Overloaded operands: [1, 3] refers to LLVM intrinsic parameter positions where
 // A is at position 1 and B is at position 3 (after format parameters).
 class ROCDL_WMMA_Scale_IntrOp<string mnemonic, Type AB, Type CD, Type ScaleExpTy> : ROCDL_IntrOp<mnemonic,
-    [0], [1, 3], [], 1, 0, 0, 0, [0, 2, 4, 6, 7, 9, 10, 12, 13], 
-    ["fmtA", "fmtB", "modC", "scaleAType", "fmtScaleA", 
+    [0], [1, 3], [], 1, 0, 0, 0, [0, 2, 4, 6, 7, 9, 10, 12, 13],
+    ["fmtA", "fmtB", "modC", "scaleAType", "fmtScaleA",
      "scaleBType", "fmtScaleB", "reuseA", "reuseB"]>,
-  Arguments<(ins 
+  Arguments<(ins
              DefaultValuedAttr<I32Attr, "0">:$fmtA,
-             LLVM_ScalarOrVectorOf<AB>:$a, 
+             LLVM_ScalarOrVectorOf<AB>:$a,
              DefaultValuedAttr<I32Attr, "0">:$fmtB,
              LLVM_ScalarOrVectorOf<AB>:$b,
-             DefaultValuedAttr<I16Attr, "0">:$modC, 
+             DefaultValuedAttr<I16Attr, "0">:$modC,
              LLVM_ScalarOrVectorOf<CD>:$c,
              DefaultValuedAttr<I32Attr, "0">:$scaleAType,
              DefaultValuedAttr<I32Attr, "0">:$fmtScaleA,
@@ -755,13 +848,13 @@ class ROCDL_WMMA_Scale_IntrOp<string mnemonic, Type AB, Type CD, Type ScaleExpTy
 }
 
 class ROCDL_WMMA_Scale_F4_IntrOp<string mnemonic, Type AB, Type CD, Type ScaleExpTy> : ROCDL_IntrOp<mnemonic,
-    [0], [0, 1], [], 1, 0, 0, 0, [2, 4, 5, 7, 8, 10, 11], 
-    ["modC", "scaleAType", "fmtScaleA", 
+    [0], [0, 1], [], 1, 0, 0, 0, [2, 4, 5, 7, 8, 10, 11],
+    ["modC", "scaleAType", "fmtScaleA",
      "scaleBType", "fmtScaleB", "reuseA", "reuseB"]>,
-  Arguments<(ins 
-             LLVM_ScalarOrVectorOf<AB>:$a, 
+  Arguments<(ins
+             LLVM_ScalarOrVectorOf<AB>:$a,
              LLVM_ScalarOrVectorOf<AB>:$b,
-             DefaultValuedAttr<I16Attr, "0">:$modC, 
+             DefaultValuedAttr<I16Attr, "0">:$modC,
              LLVM_ScalarOrVectorOf<CD>:$c,
              DefaultValuedAttr<I32Attr, "0">:$scaleAType,
              DefaultValuedAttr<I32Attr, "0">:$fmtScaleA,
@@ -1267,7 +1360,7 @@ def ROCDL_DsAtomicAsyncBarrierArriveOp :
   dag args = (ins Arg<ROCDLBufferLDS, "", [MemWrite]>:$barrierPtr);
   let arguments = !con(args, baseArgs);
   let description = [{
-    Waits on a given DS barrier and decrements pending count by -1. 
+    Waits on a given DS barrier and decrements pending count by -1.
     Stays in order with ASYNC loads to LDS, and uses ASYNCcnt to track its completion.
     Available on gfx1250+.
   }];
@@ -2003,14 +2096,14 @@ def ROCDL_FMed3Op : ROCDL_IntrOp<"fmed3", [0], [], [Pure, AllTypesMatch<["res", 
     Computes the median of three floating-point values using the AMDGPU fmed3 intrinsic.
     This operation is equivalent to `max(min(a, b), min(max(a, b), c))` but uses the
     hardware-accelerated V_MED3_F16/V_MED3_F32 instruction for better performance.
-    
+
     The operation supports both scalar and vector floating-point types (f16, f32).
-    
+
     Example:
     ```mlir
     // Scalar f32 median
     %result = rocdl.fmed3 %a, %b, %c : f32
-    
+
     // Vector f16 median
     %result = rocdl.fmed3 %va, %vb, %vc : vector<4xf16>
     ```

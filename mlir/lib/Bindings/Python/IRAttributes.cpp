@@ -867,7 +867,7 @@ public:
     if (PyObject_GetBuffer(array.ptr(), &view, flags) != 0) {
       throw nb::python_error();
     }
-    auto freeBuffer = llvm::make_scope_exit([&]() { PyBuffer_Release(&view); });
+    llvm::scope_exit freeBuffer([&]() { PyBuffer_Release(&view); });
 
     MlirContext context = contextWrapper->get();
     MlirAttribute attr = getAttributeFromBuffer(
@@ -1447,7 +1447,7 @@ public:
 
     // This scope releaser will only release if we haven't yet transferred
     // ownership.
-    auto freeBuffer = llvm::make_scope_exit([&]() {
+    llvm::scope_exit freeBuffer([&]() {
       if (view)
         PyBuffer_Release(view.get());
     });

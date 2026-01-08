@@ -2,7 +2,7 @@
 
 ! UNSUPPORTED: system-windows
 
-! REQUIRES: plugins, shell, examples
+! REQUIRES: plugins, examples
 
 ! RUN: %flang -S %s %loadbye -Xflang -fdebug-pass-manager -o /dev/null \
 ! RUN: 2>&1 | FileCheck %s

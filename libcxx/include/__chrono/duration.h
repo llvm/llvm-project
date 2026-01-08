@@ -13,6 +13,8 @@
 #include <__compare/ordering.h>
 #include <__compare/three_way_comparable.h>
 #include <__config>
+#include <__cstddef/size_t.h>
+#include <__functional/hash.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_convertible.h>
@@ -537,6 +539,18 @@ using namespace literals::chrono_literals;
 } // namespace chrono
 
 #endif // _LIBCPP_STD_VER >= 14
+
+#if _LIBCPP_STD_VER >= 26
+
+template <class _Rep, class _Period>
+  requires __has_enabled_hash<_Rep>::value
+struct hash<chrono::duration<_Rep, _Period>> {
+  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::duration<_Rep, _Period>& __d) {
+    return hash<_Rep>{}(__d.count());
+  }
+};
+
+#endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_END_NAMESPACE_STD
 
