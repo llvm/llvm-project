@@ -233,6 +233,228 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+!vecA = vector<1x1xbf16>
+!vecB = vector<1x8xbf16>
+!vecC = vector<1x8xf32>
+!memrefA = memref<4x1xbf16>
+!memrefB = memref<1x32xbf16>
+!memrefC = memref<2x32xf32>
+#map = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map1 = affine_map<(d0,  d1, d2) -> (d2, d1)>
+#map2 = affine_map<(d0,  d1, d2) -> (d0, d1)>
+func.func @matmul_to_fma_flat_layout(
+  %arg0: !memrefA, %arg1: !memrefB, %arg2: !memrefC) -> !memrefC
+{
+  %c0 = arith.constant 0 : index
+  %c8 = arith.constant 8 : index
+  %0 = ub.poison : bf16
+  %32 = ub.poison : f32
+  %1 = vector.transfer_read %arg0[%c0, %c0], %0 {in_bounds = [true, true]} :
+        !memrefA, !vecA
+  %2 = vector.transfer_read %arg1[%c0, %c0], %0 {in_bounds = [true, true]} :
+        !memrefB, !vecB
+  %3 = vector.transfer_read %arg1[%c0, %c8], %0 {in_bounds = [true, true]} :
+        !memrefB, !vecB
+  %4 = vector.transfer_read %arg2[%c0, %c0], %32 {in_bounds = [true, true]} :
+        !memrefC, !vecC
+  %5 = vector.transfer_read %arg2[%c0, %c8], %32 {in_bounds = [true, true]} :
+        !memrefC, !vecC
+
+  %6 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %2, %4
+    : !vecA, !vecB into !vecC
+
+  %7 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %3, %5
+    : !vecA, !vecB into !vecC
+
+  vector.transfer_write %6, %arg2[%c0, %c0] {in_bounds = [true, true]} : !vecC, !memrefC
+  vector.transfer_write %7, %arg2[%c0, %c8] {in_bounds = [true, true]} : !vecC, !memrefC
+
+  return %arg2 : !memrefC
+}
+
+// CHECK-LABEL: @matmul_to_fma_flat_layout
+// CHECK: vector.shuffle{{.*}}[0, 8, 1, 9, 2, 10, 3, 11] : vector<8xf32>, vector<8xf32>
+// CHECK-NEXT: vector.shuffle{{.*}}[4, 12, 5, 13, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+// CHECK: memref.subview %arg0[%c0, %c0] {{.*}} : memref<4x1xbf16> to memref<1x1xbf16, {{.*}}>
+// CHECK: memref.subview %arg1[%c0, %c0] {{.*}} : memref<1x32xbf16> to memref<1x16xbf16, {{.*}}>
+// CHECK: x86vector.avx.bcst_to_f32.packed {{.*}} : memref<1x1xbf16, strided<[1, 1], offset: ?>>
+// CHECK: x86vector.avx.cvt.packed.even.indexed_to_f32 {{.*}} : memref<1x16xbf16, strided<[32, 1], offset: ?>>
+// CHECK: vector.fma {{.*}} : vector<8xf32>
+// CHECK: x86vector.avx.cvt.packed.odd.indexed_to_f32 {{.*}} : memref<1x16xbf16, strided<[32, 1], offset: ?>>
+// CHECK: vector.fma {{.*}} : vector<8xf32>
+// CHECK: vector.shuffle{{.*}}[0, 8, 1, 9, 2, 10, 3, 11] : vector<8xf32>, vector<8xf32>
+// CHECK-NEXT: vector.shuffle{{.*}}[4, 12, 5, 13, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86vector.shuffle_bf16_vector_contract_result
+      transform.apply_patterns.x86vector.vector_contract_bf16_to_fma
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+!vecA = vector<1x1xbf16>
+!vecB = vector<1x8xbf16>
+!vecC = vector<1x8xf32>
+!memrefA = memref<4x1xbf16>
+!memrefB = memref<1x32xbf16>
+!memrefC = memref<2x32xf32>
+#map = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map1 = affine_map<(d0,  d1, d2) -> (d2, d1)>
+#map2 = affine_map<(d0,  d1, d2) -> (d0, d1)>
+func.func @matmul_to_fma_flat_layout_load(
+  %arg0: !memrefA, %arg1: !memrefB, %arg2: !memrefC) -> !memrefC
+{
+  %c0 = arith.constant 0 : index
+  %c8 = arith.constant 8 : index
+  %0 = ub.poison : bf16
+  %32 = ub.poison : f32
+  %1 = vector.load %arg0[%c0, %c0] :
+        !memrefA, !vecA
+  %2 = vector.load %arg1[%c0, %c0] :
+        !memrefB, !vecB
+  %3 = vector.load %arg1[%c0, %c8] :
+        !memrefB, !vecB
+  %4 = vector.load %arg2[%c0, %c0] :
+        !memrefC, !vecC
+  %5 = vector.load %arg2[%c0, %c8] :
+        !memrefC, !vecC
+
+  %6 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %2, %4
+    : !vecA, !vecB into !vecC
+
+  %7 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %3, %5
+    : !vecA, !vecB into !vecC
+
+  vector.store %6, %arg2[%c0, %c0] : !memrefC, !vecC
+  vector.store %7, %arg2[%c0, %c8] : !memrefC, !vecC
+
+  return %arg2 : !memrefC
+}
+
+// CHECK-LABEL: @matmul_to_fma_flat_layout_load
+// CHECK: vector.shuffle{{.*}}[0, 8, 1, 9, 2, 10, 3, 11] : vector<8xf32>, vector<8xf32>
+// CHECK-NEXT: vector.shuffle{{.*}}[4, 12, 5, 13, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+// CHECK: memref.subview %arg0[%c0, %c0] {{.*}} : memref<4x1xbf16> to memref<1x1xbf16, {{.*}}>
+// CHECK: memref.subview %arg1[%c0, %c0] {{.*}} : memref<1x32xbf16> to memref<1x16xbf16, {{.*}}>
+// CHECK: x86vector.avx.bcst_to_f32.packed {{.*}} : memref<1x1xbf16, strided<[1, 1], offset: ?>>
+// CHECK: x86vector.avx.cvt.packed.even.indexed_to_f32 {{.*}} : memref<1x16xbf16, strided<[32, 1], offset: ?>>
+// CHECK: vector.fma {{.*}} : vector<8xf32>
+// CHECK: x86vector.avx.cvt.packed.odd.indexed_to_f32 {{.*}} : memref<1x16xbf16, strided<[32, 1], offset: ?>>
+// CHECK: vector.fma {{.*}} : vector<8xf32>
+// CHECK: vector.shuffle{{.*}}[0, 8, 1, 9, 2, 10, 3, 11] : vector<8xf32>, vector<8xf32>
+// CHECK-NEXT: vector.shuffle{{.*}}[4, 12, 5, 13, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86vector.shuffle_bf16_vector_contract_result
+      transform.apply_patterns.x86vector.vector_contract_bf16_to_fma
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+!vecA = vector<8x1xbf16>
+!vecB = vector<1x1xbf16>
+!vecC = vector<8x1xf32>
+!memrefA = memref<32x1xbf16>
+!memrefB = memref<1x4xbf16>
+!memrefC = memref<32x4xf32>
+#map = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map1 = affine_map<(d0,  d1, d2) -> (d2, d1)>
+#map2 = affine_map<(d0,  d1, d2) -> (d0, d1)>
+func.func @matmul_to_fma_flat_layout_bcstB(
+  %arg0: !memrefA, %arg1: !memrefB, %arg2: !memrefC) -> !memrefC
+{
+  %c0 = arith.constant 0 : index
+  %c8 = arith.constant 8 : index
+  %0 = ub.poison : bf16
+  %32 = ub.poison : f32
+
+  %1 = vector.transfer_read %arg0[%c0, %c0], %0 {in_bounds = [true, true]} :
+        !memrefA, !vecA
+  %2 = vector.transfer_read %arg0[%c8, %c0], %0 {in_bounds = [true, true]} :
+        !memrefA, !vecA
+
+  %3 = vector.transfer_read %arg1[%c0, %c0], %0 {in_bounds = [true, true]} :
+        !memrefB, !vecB
+
+  %4 = vector.transfer_read %arg2[%c0, %c0], %32 {in_bounds = [true, true]} :
+        !memrefC, !vecC
+  %5 = vector.transfer_read %arg2[%c8, %c0], %32 {in_bounds = [true, true]} :
+        !memrefC, !vecC
+
+  %6 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %3, %4
+    : !vecA, !vecB into !vecC
+
+  %7 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %2, %3, %5
+    : !vecA, !vecB into !vecC
+
+  vector.transfer_write %6, %arg2[%c0, %c0] {in_bounds = [true, true]} : !vecC, !memrefC
+  vector.transfer_write %7, %arg2[%c8, %c0] {in_bounds = [true, true]} : !vecC, !memrefC
+
+  return %arg2 : !memrefC
+}
+
+// CHECK-LABEL: @matmul_to_fma_flat_layout_bcstB
+// CHECK: vector.shuffle{{.*}}[0, 8, 1, 9, 2, 10, 3, 11] : vector<8xf32>, vector<8xf32>
+// CHECK-NEXT: vector.shuffle{{.*}}[4, 12, 5, 13, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+// CHECK: memref.subview %arg1[%c0, %c0] {{.*}} : memref<1x4xbf16> to memref<1x1xbf16, {{.*}}>
+// CHECK: memref.subview %arg0[%c0, %c0] {{.*}} : memref<32x1xbf16> to memref<16x1xbf16, {{.*}}>
+// CHECK: x86vector.avx.bcst_to_f32.packed {{.*}} : memref<1x1xbf16, strided<[4, 1], offset: ?>>
+// CHECK: x86vector.avx.cvt.packed.even.indexed_to_f32 {{.*}} : memref<16x1xbf16, strided<[1, 1], offset: ?>>
+// CHECK: vector.fma {{.*}} : vector<8xf32>
+// CHECK: x86vector.avx.cvt.packed.odd.indexed_to_f32 {{.*}} : memref<16x1xbf16, strided<[1, 1], offset: ?>>
+// CHECK: vector.fma {{.*}} : vector<8xf32>
+// CHECK: vector.shuffle{{.*}}[0, 8, 1, 9, 2, 10, 3, 11] : vector<8xf32>, vector<8xf32>
+// CHECK-NEXT: vector.shuffle{{.*}}[4, 12, 5, 13, 6, 14, 7, 15] : vector<8xf32>, vector<8xf32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86vector.shuffle_bf16_vector_contract_result
+      transform.apply_patterns.x86vector.vector_contract_bf16_to_fma
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 !vecA = vector<1x1x2xbf16>
 !vecB = vector<1x8x2xbf16>
 !vecC = vector<1x8xf32>
@@ -405,6 +627,279 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %0 {
+      transform.apply_patterns.x86vector.vector_contract_bf16_to_fma
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+!vecA = vector<1x1xbf16>
+!vecB = vector<1x8xbf16>
+!vecC = vector<1x8xf32>
+!memrefA = memref<4x1xbf16>
+!memrefB = memref<1x32xbf16>
+!memrefC = memref<2x32xf32>
+#map = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map1 = affine_map<(d0,  d1, d2) -> (d2, d1)>
+#map2 = affine_map<(d0,  d1, d2) -> (d0, d1)>
+func.func @negative_offset_diff_is_not_8(
+  %arg0: !memrefA, %arg1: !memrefB, %arg2: !memrefC) -> !memrefC
+{
+  %c0 = arith.constant 0 : index
+  %c16 = arith.constant 16 : index
+  %0 = ub.poison : bf16
+  %32 = ub.poison : f32
+  %1 = vector.load %arg0[%c0, %c0] :
+        !memrefA, !vecA
+  %2 = vector.load %arg1[%c0, %c0] :
+        !memrefB, !vecB
+  %3 = vector.load %arg1[%c0, %c16] :
+        !memrefB, !vecB
+  %4 = vector.load %arg2[%c0, %c0] :
+        !memrefC, !vecC
+  %5 = vector.load %arg2[%c0, %c16] :
+        !memrefC, !vecC
+
+  %6 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %2, %4
+    : !vecA, !vecB into !vecC
+
+  %7 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %3, %5
+    : !vecA, !vecB into !vecC
+
+  vector.store %6, %arg2[%c0, %c0] : !memrefC, !vecC
+  vector.store %7, %arg2[%c0, %c16] : !memrefC, !vecC
+
+  return %arg2 : !memrefC
+}
+
+// CHECK-LABEL: @negative_offset_diff_is_not_8
+// CHECK-NOT: x86vector.avx.bcst_to_f32.packed
+// CHECK-NOT: x86vector.avx.cvt.packed.even.indexed_to_f32
+// CHECK-NOT: vector.fma {{.*}} : vector<8xf32>
+// CHECK-NOT: x86vector.avx.cvt.packed.odd.indexed_to_f32
+// CHECK: vector.contract
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86vector.vector_contract_bf16_to_fma
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+!vecA = vector<1x1xbf16>
+!vecB = vector<1x8xbf16>
+!vecC = vector<1x8xf32>
+!memrefA = memref<4x1xbf16>
+!memrefB = memref<1x32xbf16>
+!memrefC = memref<2x32xf32>
+#map = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map1 = affine_map<(d0,  d1, d2) -> (d2, d1)>
+#map2 = affine_map<(d0,  d1, d2) -> (d0, d1)>
+func.func @negative_vector_contracts_not_in_order(
+  %arg0: !memrefA, %arg1: !memrefB, %arg2: !memrefC) -> !memrefC
+{
+  %c0 = arith.constant 0 : index
+  %c8 = arith.constant 8 : index
+  %0 = ub.poison : bf16
+  %32 = ub.poison : f32
+  %1 = vector.transfer_read %arg0[%c0, %c0], %0 {in_bounds = [true, true]} :
+        !memrefA, !vecA
+  %2 = vector.transfer_read %arg1[%c0, %c0], %0 {in_bounds = [true, true]} :
+        !memrefB, !vecB
+  %3 = vector.transfer_read %arg1[%c0, %c8], %0 {in_bounds = [true, true]} :
+        !memrefB, !vecB
+  %4 = vector.transfer_read %arg2[%c0, %c0], %32 {in_bounds = [true, true]} :
+        !memrefC, !vecC
+  %5 = vector.transfer_read %arg2[%c0, %c8], %32 {in_bounds = [true, true]} :
+        !memrefC, !vecC
+
+  %7 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %3, %5
+    : !vecA, !vecB into !vecC
+
+  %6 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %2, %4
+    : !vecA, !vecB into !vecC
+
+  vector.transfer_write %6, %arg2[%c0, %c0] {in_bounds = [true, true]} : !vecC, !memrefC
+  vector.transfer_write %7, %arg2[%c0, %c8] {in_bounds = [true, true]} : !vecC, !memrefC
+
+  return %arg2 : !memrefC
+}
+
+// CHECK-LABEL: @negative_vector_contracts_not_in_order
+// CHECK-NOT: x86vector.avx.bcst_to_f32.packed
+// CHECK-NOT: x86vector.avx.cvt.packed.even.indexed_to_f32
+// CHECK-NOT: vector.fma {{.*}} : vector<8xf32>
+// CHECK-NOT: x86vector.avx.cvt.packed.odd.indexed_to_f32
+// CHECK: vector.contract
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86vector.shuffle_bf16_vector_contract_result
+      transform.apply_patterns.x86vector.vector_contract_bf16_to_fma
+    } : !transform.any_op
+    transform.yield
+  }
+}
+  
+// -----
+
+!vecA = vector<8x1xbf16>
+!vecB = vector<1x1xbf16>
+!vecC = vector<8x1xf32>
+!memrefA = memref<32x1xbf16>
+!memrefB = memref<1x4xbf16>
+!memrefC = memref<32x4xf32>
+#map = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map1 = affine_map<(d0,  d1, d2) -> (d2, d1)>
+#map2 = affine_map<(d0,  d1, d2) -> (d0, d1)>
+func.func @negative_flat_layout_dynamic_index(
+  %arg0: !memrefA, %arg1: !memrefB, %arg2: !memrefC, %arg3: index) -> !memrefC
+{
+  %c0 = arith.constant 0 : index
+  %c8 = arith.constant 8 : index
+  %0 = ub.poison : bf16
+  %32 = ub.poison : f32
+
+  %1 = vector.transfer_read %arg0[%c0, %c0], %0 {in_bounds = [true, true]} :
+        !memrefA, !vecA
+  %2 = vector.transfer_read %arg0[%arg3, %c0], %0 {in_bounds = [true, true]} :
+        !memrefA, !vecA
+
+  %3 = vector.transfer_read %arg1[%c0, %c0], %0 {in_bounds = [true, true]} :
+        !memrefB, !vecB
+
+  %4 = vector.transfer_read %arg2[%c0, %c0], %32 {in_bounds = [true, true]} :
+        !memrefC, !vecC
+  %5 = vector.transfer_read %arg2[%c8, %c0], %32 {in_bounds = [true, true]} :
+        !memrefC, !vecC
+
+  %6 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %3, %4
+    : !vecA, !vecB into !vecC
+
+  %7 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %2, %3, %5
+    : !vecA, !vecB into !vecC
+
+  vector.transfer_write %6, %arg2[%c0, %c0] {in_bounds = [true, true]} : !vecC, !memrefC
+  vector.transfer_write %7, %arg2[%c8, %c0] {in_bounds = [true, true]} : !vecC, !memrefC
+
+  return %arg2 : !memrefC
+}
+
+// CHECK-LABEL: @negative_flat_layout_dynamic_index
+// CHECK-NOT: x86vector.avx.bcst_to_f32.packed
+// CHECK-NOT: x86vector.avx.cvt.packed.even.indexed_to_f32
+// CHECK-NOT: vector.fma {{.*}} : vector<8xf32>
+// CHECK-NOT: x86vector.avx.cvt.packed.odd.indexed_to_f32
+// CHECK: vector.contract
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86vector.shuffle_bf16_vector_contract_result
+      transform.apply_patterns.x86vector.vector_contract_bf16_to_fma
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+!vecA = vector<8x2xbf16>
+!vecB = vector<2x1xbf16>
+!vecC = vector<8x1xf32>
+!memrefA = memref<32x2xbf16>
+!memrefB = memref<2x4xbf16>
+!memrefC = memref<32x4xf32>
+#map = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map1 = affine_map<(d0,  d1, d2) -> (d2, d1)>
+#map2 = affine_map<(d0,  d1, d2) -> (d0, d1)>
+func.func @negative_non_unit_K_dim(
+  %arg0: !memrefA, %arg1: !memrefB, %arg2: !memrefC) -> !memrefC
+{
+  %c0 = arith.constant 0 : index
+  %c8 = arith.constant 8 : index
+  %0 = ub.poison : bf16
+  %32 = ub.poison : f32
+
+  %1 = vector.transfer_read %arg0[%c0, %c0], %0 {in_bounds = [true, true]} :
+        !memrefA, !vecA
+  %2 = vector.transfer_read %arg0[%c8, %c0], %0 {in_bounds = [true, true]} :
+        !memrefA, !vecA
+
+  %3 = vector.transfer_read %arg1[%c0, %c0], %0 {in_bounds = [true, true]} :
+        !memrefB, !vecB
+
+  %4 = vector.transfer_read %arg2[%c0, %c0], %32 {in_bounds = [true, true]} :
+        !memrefC, !vecC
+  %5 = vector.transfer_read %arg2[%c8, %c0], %32 {in_bounds = [true, true]} :
+        !memrefC, !vecC
+
+  %6 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %3, %4
+    : !vecA, !vecB into !vecC
+
+  %7 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %2, %3, %5
+    : !vecA, !vecB into !vecC
+
+  vector.transfer_write %6, %arg2[%c0, %c0] {in_bounds = [true, true]} : !vecC, !memrefC
+  vector.transfer_write %7, %arg2[%c8, %c0] {in_bounds = [true, true]} : !vecC, !memrefC
+
+  return %arg2 : !memrefC
+}
+
+// CHECK-LABEL: @negative_non_unit_K_dim
+// CHECK-NOT: x86vector.avx.bcst_to_f32.packed
+// CHECK-NOT: x86vector.avx.cvt.packed.even.indexed_to_f32
+// CHECK-NOT: vector.fma {{.*}} : vector<8xf32>
+// CHECK-NOT: x86vector.avx.cvt.packed.odd.indexed_to_f32
+// CHECK: vector.contract
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86vector.shuffle_bf16_vector_contract_result
       transform.apply_patterns.x86vector.vector_contract_bf16_to_fma
     } : !transform.any_op
     transform.yield

@@ -369,15 +369,16 @@ void shuffleNonUnitDimOperand(mlir::PatternRewriter &rewriter,
   rewriteUses(opB->getResult(0), newAccB.getResult(), contractB, rewriter);
 }
 
+// Return true if vector.contract operations matches on below conditions:
+//  (1) - the unitDim operand Lhs or Rhs should be same,
+//  (2) - the defining source memref should be same for nonUnitDim
+//  operation,
+//  (3) - the nonUnit dim offset difference between the
+//  vector.contracts should be 8.
 bool validatePairVectorContract(vector::ContractionOp contractOp,
                                 vector::ContractionOp pairContOp,
                                 bool rhsHasMultipleNonUnitDims,
                                 int64_t nonUnitDimValue) {
-
-  if (!(contractOp.getLhs() == pairContOp.getLhs()) &&
-      !(contractOp.getRhs() == pairContOp.getRhs()))
-    return false;
-
   if (rhsHasMultipleNonUnitDims &&
       !(contractOp.getLhs() == pairContOp.getLhs()))
     return false;
@@ -386,43 +387,46 @@ bool validatePairVectorContract(vector::ContractionOp contractOp,
       !(contractOp.getRhs() == pairContOp.getRhs()))
     return false;
 
-  auto op =
+  auto nonUnitOperand =
       rhsHasMultipleNonUnitDims ? contractOp.getRhs() : contractOp.getLhs();
-  auto op1 =
+  auto nonUnitOperandPairContOp =
       rhsHasMultipleNonUnitDims ? pairContOp.getRhs() : pairContOp.getLhs();
 
   Value srcBuff;
   SmallVector<OpFoldResult> indexVals;
-  llvm::TypeSwitch<mlir::Operation *>(op.getDefiningOp())
+  llvm::TypeSwitch<mlir::Operation *>(nonUnitOperand.getDefiningOp())
       .Case<vector::TransferReadOp, vector::LoadOp>([&](auto readOp) {
         srcBuff = readOp.getOperand(0);
         indexVals = SmallVector<OpFoldResult>(readOp.getIndices().begin(),
                                               readOp.getIndices().end());
       });
 
-  Value srcBuff1;
-  SmallVector<OpFoldResult> indexVals1;
-  llvm::TypeSwitch<mlir::Operation *>(op1.getDefiningOp())
+  Value srcBuffPairContOp;
+  SmallVector<OpFoldResult> indexValsPairContOp;
+  llvm::TypeSwitch<mlir::Operation *>(nonUnitOperandPairContOp.getDefiningOp())
       .Case<vector::TransferReadOp, vector::LoadOp>([&](auto readOp) {
-        srcBuff1 = readOp.getOperand(0);
-        indexVals1 = SmallVector<OpFoldResult>(readOp.getIndices().begin(),
-                                               readOp.getIndices().end());
+        srcBuffPairContOp = readOp.getOperand(0);
+        indexValsPairContOp = SmallVector<OpFoldResult>(
+            readOp.getIndices().begin(), readOp.getIndices().end());
       });
 
-  if (!srcBuff || !srcBuff1)
+  if (!srcBuff || !srcBuffPairContOp)
     return false;
 
-  if (!(srcBuff == srcBuff1))
+  if (!(srcBuff == srcBuffPairContOp))
     return false;
 
   for (size_t i = 0; i < indexVals.size(); i++) {
-    if (getConstantIntValue(indexVals[i]) == getConstantIntValue(indexVals1[i]))
+    auto v0 = getConstantIntValue(indexVals[i]);
+    auto v1 = getConstantIntValue(indexValsPairContOp[i]);
+
+    if (!v0 || !v1)
+      return false;
+
+    if (*v1 == *v0)
       continue;
 
-    auto value1 = *getConstantIntValue(indexVals1[i]);
-    auto value2 = *getConstantIntValue(indexVals[i]);
-
-    if ((value1 - value2) != nonUnitDimValue)
+    if ((*v1 - *v0) != nonUnitDimValue)
       return false;
   }
 
