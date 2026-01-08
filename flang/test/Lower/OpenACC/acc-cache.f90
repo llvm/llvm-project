@@ -111,3 +111,27 @@ subroutine test_cache_2d_array()
 ! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND1]], %[[BOUND2]]) -> !fir.ref<!fir.array<10x10xf32>> {{{.*}}name = "b
 ! CHECK: hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_2d_arrayEb"}
 end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_cache_loop_var()
+! Test cache with loop variable dependent bounds: b(i:i+2)
+subroutine test_cache_loop_var()
+  integer, parameter :: n = 10
+  real, dimension(n) :: a, b
+  integer :: i
+
+  !$acc loop
+  do i = 1, n-2
+    !$acc cache(b(i:i+2))
+    a(i) = b(i) + b(i+1) + b(i+2)
+  end do
+
+! CHECK: acc.loop
+! CHECK: fir.load
+! CHECK: fir.convert
+! CHECK: fir.load
+! CHECK: arith.addi
+! CHECK: fir.convert
+! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) startIdx(%{{.*}} : index)
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xf32>> {{{.*}}name = "b
+! CHECK: hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_loop_varEb"}
+end subroutine

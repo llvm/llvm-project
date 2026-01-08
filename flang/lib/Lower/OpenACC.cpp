@@ -4870,6 +4870,16 @@ genCacheBounds(Fortran::lower::AbstractConverter &converter,
   if (!arrayRef)
     return;
 
+  // Helper to generate index value from expression.
+  // Optimize for compile-time constants to generate index type directly.
+  auto genIndex =
+      [&](const Fortran::semantics::MaybeExpr &expr) -> mlir::Value {
+    if (auto constVal = Fortran::evaluate::ToInt64(*expr))
+      return builder.createIntegerConstant(loc, idxTy, *constVal);
+    return builder.createConvert(
+        loc, idxTy, fir::getBase(converter.genExprValue(loc, *expr, stmtCtx)));
+  };
+
   const auto &subscripts = arrayRef->subscript();
   int dimension = 0;
   mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
@@ -4891,31 +4901,16 @@ genCacheBounds(Fortran::lower::AbstractConverter &converter,
       asFortran << ':';
 
       // Compute lower bound (use array lb if not specified).
-      Fortran::semantics::MaybeExpr lowerSexpr =
+      Fortran::semantics::MaybeExpr lowerExpr =
           Fortran::evaluate::AsGenericExpr(triplet->lower());
-      mlir::Value lb;
-      if (lowerSexpr) {
-        auto lowerConst = Fortran::evaluate::ToInt64(*lowerSexpr);
-        if (lowerConst) {
-          lb = builder.createIntegerConstant(loc, idxTy, *lowerConst);
-        } else {
-          mlir::emitError(loc, "unsupported OpenACC cache subscript");
-        }
-      } else {
-        lb = arrayLb;
-      }
+      mlir::Value lb = lowerExpr ? genIndex(lowerExpr) : arrayLb;
 
       // Compute upper bound (use array ub if not specified).
-      Fortran::semantics::MaybeExpr upperSexpr =
+      Fortran::semantics::MaybeExpr upperExpr =
           Fortran::evaluate::AsGenericExpr(triplet->upper());
       mlir::Value ub;
-      if (upperSexpr) {
-        auto upperConst = Fortran::evaluate::ToInt64(*upperSexpr);
-        if (upperConst) {
-          ub = builder.createIntegerConstant(loc, idxTy, *upperConst);
-        } else {
-          mlir::emitError(loc, "unsupported OpenACC cache subscript");
-        }
+      if (upperExpr) {
+        ub = genIndex(upperExpr);
       } else {
         // arr(lower:) - upper is array's upper bound
         ub = mlir::arith::AddIOp::create(
@@ -4933,19 +4928,12 @@ genCacheBounds(Fortran::lower::AbstractConverter &converter,
           mlir::arith::SubIOp::create(builder, loc, ubound, lbound), one);
     } else {
       // Single element: arr(elem)
-      using IndirectSubscriptIntegerExpr =
-          Fortran::evaluate::IndirectSubscriptIntegerExpr;
-      using SubscriptInteger = Fortran::evaluate::SubscriptInteger;
-      Fortran::evaluate::Expr<SubscriptInteger> scalarExpr =
-          std::get<IndirectSubscriptIntegerExpr>(subscript.u).value();
-      auto elemConst = Fortran::evaluate::ToInt64(scalarExpr);
-
-      mlir::Value elem;
-      if (elemConst) {
-        elem = builder.createIntegerConstant(loc, idxTy, *elemConst);
-      } else {
-        mlir::emitError(loc, "unsupported OpenACC cache subscript");
-      }
+      Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger> scalarExpr =
+          std::get<Fortran::evaluate::IndirectSubscriptIntegerExpr>(subscript.u)
+              .value();
+      Fortran::semantics::MaybeExpr elemExpr =
+          Fortran::evaluate::AsGenericExpr(std::move(scalarExpr));
+      mlir::Value elem = genIndex(elemExpr);
 
       lbound = mlir::arith::SubIOp::create(builder, loc, elem, arrayLb);
       extent = one;
