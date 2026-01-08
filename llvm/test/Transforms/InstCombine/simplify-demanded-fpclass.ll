@@ -859,6 +859,16 @@ define nofpclass(snan) float @copysign_nnan_sign_known_positive_or_nan(float %x,
   ret float %copysign
 }
 
+define nofpclass(snan) float @copysign_nnan_sign_known_positive_or_nan__drop_ub_attrs(float %x, float nofpclass(ninf nnorm nsub nzero) %always.positive.or.nan) {
+; CHECK-LABEL: define nofpclass(snan) float @copysign_nnan_sign_known_positive_or_nan__drop_ub_attrs
+; CHECK-SAME: (float [[X:%.*]], float nofpclass(ninf nzero nsub nnorm) [[ALWAYS_POSITIVE_OR_NAN:%.*]]) {
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = call nnan float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    ret float [[COPYSIGN]]
+;
+  %copysign = call nnan noundef float @llvm.copysign.f32(float %x, float noundef nofpclass(zero) %always.positive.or.nan)
+  ret float %copysign
+}
+
 define nofpclass(snan) float @copysign_nnan_sign_known_negative_or_nan(float %x, float nofpclass(pinf pnorm psub pzero) %always.negative.or.nan) {
 ; CHECK-LABEL: define nofpclass(snan) float @copysign_nnan_sign_known_negative_or_nan
 ; CHECK-SAME: (float [[X:%.*]], float nofpclass(pinf pzero psub pnorm) [[ALWAYS_NEGATIVE_OR_NAN:%.*]]) {
@@ -866,6 +876,17 @@ define nofpclass(snan) float @copysign_nnan_sign_known_negative_or_nan(float %x,
 ; CHECK-NEXT:    ret float [[COPYSIGN]]
 ;
   %copysign = call nnan float @llvm.copysign.f32(float %x, float %always.negative.or.nan)
+  ret float %copysign
+}
+
+define nofpclass(snan) float @copysign_nnan_sign_known_negative_or_nan__drop_ub_attrs(float %x, float nofpclass(pinf pnorm psub pzero) %always.negative.or.nan) {
+; CHECK-LABEL: define nofpclass(snan) float @copysign_nnan_sign_known_negative_or_nan__drop_ub_attrs
+; CHECK-SAME: (float [[X:%.*]], float nofpclass(pinf pzero psub pnorm) [[ALWAYS_NEGATIVE_OR_NAN:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = fneg nnan float [[TMP1]]
+; CHECK-NEXT:    ret float [[COPYSIGN]]
+;
+  %copysign = call nnan noundef float @llvm.copysign.f32(float %x, float noundef nofpclass(zero) %always.negative.or.nan)
   ret float %copysign
 }
 
