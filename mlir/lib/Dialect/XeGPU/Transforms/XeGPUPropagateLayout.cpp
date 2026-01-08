@@ -1141,10 +1141,11 @@ void LayoutInfoPropagation::visitLoadGatherOp(
 
   LayoutInfo loadLayout;
   LayoutInfo maskLayout;
+  auto uArch = getUArch(getChipStr(load).value_or(""));
+  const int subgroupSize = uArch->getSubgroupSize();
   xegpu::DistributeLayoutAttr anchorLayout = load.getLayoutAttr();
   if (hasParamsOfLayoutKind(anchorLayout)) {
     loadLayout = LayoutInfo(anchorLayout);
-    maskLayout = loadLayout;
   } else {
     LayoutInfo valueLayout = results[0]->getValue();
     // Need the layout of the value to propagate to the tensor descriptor.
@@ -1164,14 +1165,9 @@ void LayoutInfoPropagation::visitLoadGatherOp(
       load.emitWarning("Not propagating, non-vector payload supplied.");
       return;
     }
-    auto uArch = getUArch(getChipStr(load).value_or(""));
     const auto *uArchInstruction =
         dyn_cast<xegpu::uArch::LoadGatherInstruction>(
             uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
-
-    const int subgroupSize = uArch->getSubgroupSize();
-    // Mask operand should have 1D default layout.
-    maskLayout = getDefaultSIMTLayoutInfo(load->getContext(), 1, subgroupSize);
 
     // Check if value inst_data complies with uArch
     if (!instDataIncoming.empty()) {
@@ -1179,7 +1175,6 @@ void LayoutInfoPropagation::visitLoadGatherOp(
           uArchInstruction->getMaxBitSize() /
           payloadTy.getElementType().getIntOrFloatBitWidth();
 
-      xegpu::LayoutAttr sourceAttr;
       // Each lane loads either one element
       SmallVector<int> instDataUarch(instDataIncoming.size(), 1);
       // Or multiple elements as 2D with lane's elements in the inner dimension
@@ -1212,6 +1207,9 @@ void LayoutInfoPropagation::visitLoadGatherOp(
     loadLayout = valueLayout;
     load.setLayoutAttr(dyn_cast<xegpu::DistributeLayoutAttr>(loadLayout.get()));
   }
+  // Mask operand should have 1D default layout.
+  maskLayout = getDefaultSIMTLayoutInfo(load->getContext(), 1, subgroupSize);
+
   // Propagate the new layout to the tensor descriptor operand.
   if (isa<xegpu::TensorDescType>(load.getSourceType()))
     propagateIfChanged(operands[0], operands[0]->meet(loadLayout));
@@ -1246,6 +1244,9 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   LayoutInfo payloadLayout;
   LayoutInfo maskLayout;
   xegpu::DistributeLayoutAttr anchorLayout = storeScatter.getLayoutAttr();
+  auto uArch = getUArch(getChipStr(storeScatter).value_or(""));
+  const int subgroupSize = uArch->getSubgroupSize();
+
   if (hasParamsOfLayoutKind(anchorLayout)) {
     payloadLayout = LayoutInfo(anchorLayout);
     maskLayout = payloadLayout;
@@ -1258,9 +1259,6 @@ void LayoutInfoPropagation::visitStoreScatterOp(
       storeScatter.emitWarning("Not propagating, non-vector payload supplied.");
       return;
     }
-
-    auto uArch = getUArch(getChipStr(storeScatter).value_or(""));
-    const int subgroupSize = uArch->getSubgroupSize();
 
     if (layoutKind == LayoutKind::InstData) {
       const auto *uArchInstruction =
@@ -1293,12 +1291,12 @@ void LayoutInfoPropagation::visitStoreScatterOp(
       payloadLayout = getSIMTLayoutInfoScatterIO(payloadTy, uArch);
     }
 
-    maskLayout =
-        getDefaultSIMTLayoutInfo(storeScatter->getContext(), 1, subgroupSize);
-
     storeScatter.setLayoutAttr(
         dyn_cast<xegpu::DistributeLayoutAttr>(payloadLayout.get()));
   }
+
+  maskLayout =
+      getDefaultSIMTLayoutInfo(storeScatter->getContext(), 1, subgroupSize);
   // Propagate the payload operand layout
   propagateIfChanged(operands[0], operands[0]->meet(payloadLayout));
   // Propagate the destination (if tdesc) operand layout
