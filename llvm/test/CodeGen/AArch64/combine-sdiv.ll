@@ -578,10 +578,10 @@ define <2 x i64> @combine_vec_sdiv_by_pow2b_v2i64(<2 x i64> %x) {
 ; CHECK-SD-NEXT:    adrp x8, .LCPI21_1
 ; CHECK-SD-NEXT:    ushl v1.2d, v1.2d, v2.2d
 ; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI21_1]
-; CHECK-SD-NEXT:    adrp x8, .LCPI21_2
+; CHECK-SD-NEXT:    mov x8, #-1 // =0xffffffffffffffff
 ; CHECK-SD-NEXT:    add v1.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    sshl v1.2d, v1.2d, v2.2d
-; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI21_2]
+; CHECK-SD-NEXT:    fmov d2, x8
 ; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-SD-NEXT:    ret
 ;
@@ -613,20 +613,20 @@ define <4 x i64> @combine_vec_sdiv_by_pow2b_v4i64(<4 x i64> %x) {
 ; CHECK-SD-NEXT:    adrp x8, .LCPI22_0
 ; CHECK-SD-NEXT:    cmlt v2.2d, v0.2d, #0
 ; CHECK-SD-NEXT:    ldr q3, [x8, :lo12:.LCPI22_0]
-; CHECK-SD-NEXT:    adrp x8, .LCPI22_3
-; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI22_3]
+; CHECK-SD-NEXT:    adrp x8, .LCPI22_2
+; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI22_2]
 ; CHECK-SD-NEXT:    adrp x8, .LCPI22_1
 ; CHECK-SD-NEXT:    ushl v2.2d, v2.2d, v3.2d
 ; CHECK-SD-NEXT:    cmlt v3.2d, v1.2d, #0
 ; CHECK-SD-NEXT:    add v2.2d, v0.2d, v2.2d
 ; CHECK-SD-NEXT:    ushl v3.2d, v3.2d, v4.2d
 ; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI22_1]
-; CHECK-SD-NEXT:    adrp x8, .LCPI22_2
+; CHECK-SD-NEXT:    mov x8, #-1 // =0xffffffffffffffff
 ; CHECK-SD-NEXT:    sshl v2.2d, v2.2d, v4.2d
-; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI22_2]
+; CHECK-SD-NEXT:    fmov d4, x8
 ; CHECK-SD-NEXT:    add v1.2d, v1.2d, v3.2d
-; CHECK-SD-NEXT:    adrp x8, .LCPI22_4
-; CHECK-SD-NEXT:    ldr q3, [x8, :lo12:.LCPI22_4]
+; CHECK-SD-NEXT:    adrp x8, .LCPI22_3
+; CHECK-SD-NEXT:    ldr q3, [x8, :lo12:.LCPI22_3]
 ; CHECK-SD-NEXT:    bif v0.16b, v2.16b, v4.16b
 ; CHECK-SD-NEXT:    sshl v1.2d, v1.2d, v3.2d
 ; CHECK-SD-NEXT:    ret
@@ -670,26 +670,26 @@ define <8 x i64> @combine_vec_sdiv_by_pow2b_v8i64(<8 x i64> %x) {
 ; CHECK-SD-NEXT:    cmlt v4.2d, v0.2d, #0
 ; CHECK-SD-NEXT:    cmlt v6.2d, v2.2d, #0
 ; CHECK-SD-NEXT:    ldr q5, [x8, :lo12:.LCPI23_0]
-; CHECK-SD-NEXT:    adrp x8, .LCPI23_3
+; CHECK-SD-NEXT:    adrp x8, .LCPI23_2
 ; CHECK-SD-NEXT:    cmlt v7.2d, v3.2d, #0
-; CHECK-SD-NEXT:    ldr q16, [x8, :lo12:.LCPI23_3]
+; CHECK-SD-NEXT:    ldr q16, [x8, :lo12:.LCPI23_2]
 ; CHECK-SD-NEXT:    adrp x8, .LCPI23_1
 ; CHECK-SD-NEXT:    ushl v4.2d, v4.2d, v5.2d
 ; CHECK-SD-NEXT:    ushl v5.2d, v6.2d, v5.2d
 ; CHECK-SD-NEXT:    cmlt v6.2d, v1.2d, #0
 ; CHECK-SD-NEXT:    ldr q17, [x8, :lo12:.LCPI23_1]
 ; CHECK-SD-NEXT:    ushl v7.2d, v7.2d, v16.2d
-; CHECK-SD-NEXT:    adrp x8, .LCPI23_2
+; CHECK-SD-NEXT:    mov x8, #-1 // =0xffffffffffffffff
 ; CHECK-SD-NEXT:    add v4.2d, v0.2d, v4.2d
 ; CHECK-SD-NEXT:    add v5.2d, v2.2d, v5.2d
 ; CHECK-SD-NEXT:    ushl v6.2d, v6.2d, v16.2d
-; CHECK-SD-NEXT:    ldr q16, [x8, :lo12:.LCPI23_2]
-; CHECK-SD-NEXT:    adrp x8, .LCPI23_4
+; CHECK-SD-NEXT:    fmov d16, x8
+; CHECK-SD-NEXT:    adrp x8, .LCPI23_3
 ; CHECK-SD-NEXT:    add v3.2d, v3.2d, v7.2d
 ; CHECK-SD-NEXT:    sshl v4.2d, v4.2d, v17.2d
 ; CHECK-SD-NEXT:    sshl v5.2d, v5.2d, v17.2d
 ; CHECK-SD-NEXT:    add v1.2d, v1.2d, v6.2d
-; CHECK-SD-NEXT:    ldr q6, [x8, :lo12:.LCPI23_4]
+; CHECK-SD-NEXT:    ldr q6, [x8, :lo12:.LCPI23_3]
 ; CHECK-SD-NEXT:    bif v0.16b, v4.16b, v16.16b
 ; CHECK-SD-NEXT:    bif v2.16b, v5.16b, v16.16b
 ; CHECK-SD-NEXT:    sshl v1.2d, v1.2d, v6.2d
@@ -920,13 +920,13 @@ define <4 x i32> @non_splat_minus_one_divisor_2(<4 x i32> %A) {
 ; CHECK-SD-NEXT:    adrp x8, .LCPI27_1
 ; CHECK-SD-NEXT:    ushl v1.4s, v1.4s, v2.4s
 ; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI27_1]
+; CHECK-SD-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECK-SD-NEXT:    dup v3.2s, w8
 ; CHECK-SD-NEXT:    adrp x8, .LCPI27_2
 ; CHECK-SD-NEXT:    add v1.4s, v0.4s, v1.4s
 ; CHECK-SD-NEXT:    sshl v1.4s, v1.4s, v2.4s
 ; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI27_2]
-; CHECK-SD-NEXT:    adrp x8, .LCPI27_3
-; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI27_3]
+; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v3.16b
 ; CHECK-SD-NEXT:    neg v1.4s, v0.4s
 ; CHECK-SD-NEXT:    bit v0.16b, v1.16b, v2.16b
 ; CHECK-SD-NEXT:    ret
