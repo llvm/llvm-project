@@ -8512,3 +8512,100 @@ bool CombinerHelper::matchSuboCarryOut(const MachineInstr &MI,
 
   return false;
 }
+
+// Fold (ctlz (xor x, (sra x, bitwidth-1))) -> (add (ctls x), 1).
+// Fold (ctlz (or (shl (xor x, (sra x, bitwidth-1)), 1), 1) -> (ctls x)
+bool CombinerHelper::matchCtls(MachineInstr &CtlzMI,
+                               BuildFnTy &MatchInfo) const {
+  assert((CtlzMI.getOpcode() == TargetOpcode::G_CTLZ ||
+          CtlzMI.getOpcode() == TargetOpcode::G_CTLZ_ZERO_UNDEF) &&
+         "Expected G_CTLZ variant");
+
+  const Register Dst = CtlzMI.getOperand(0).getReg();
+  Register Src = CtlzMI.getOperand(1).getReg();
+
+  LLT Ty = MRI.getType(Dst);
+
+  if (!(Ty.isValid() && Ty.isScalar()))
+    return false;
+
+  LegalityQuery Query = {TargetOpcode::G_CTLS, {Ty, MRI.getType(Src)}};
+
+  switch (LI->getAction(Query).Action) {
+  default:
+    return false;
+  case LegalizeActions::Legal:
+  case LegalizeActions::Custom:
+  case LegalizeActions::WidenScalar:
+    break;
+  }
+
+  const MachineInstr *RhsMI = MRI.getVRegDef(Src);
+  if (!RhsMI)
+    return false;
+
+  bool NeedAdd = true;
+  //  Src = or(shl(V, 1), 1) -> Src=V; NeedAdd = False
+  if (auto *OrOp = dyn_cast<GOr>(RhsMI)) {
+    Register ShlReg = OrOp->getLHSReg();
+
+    auto MaybeOne = getIConstantVRegSExtVal(OrOp->getRHSReg(), MRI);
+    if (!MaybeOne || MaybeOne.value() != 1)
+      return false;
+
+    MachineInstr *ShlMI = MRI.getVRegDef(ShlReg);
+    auto *Shl = dyn_cast<GShl>(ShlMI);
+
+    if (!Shl || !MRI.hasOneNonDBGUse(ShlReg))
+      return false;
+
+    auto ShAmt = getIConstantVRegSExtVal(Shl->getShiftReg(), MRI);
+    if (!ShAmt || ShAmt.value() != 1)
+      return false;
+
+    NeedAdd = false;
+    Src = Shl->getSrcReg();
+  }
+
+  if (!MRI.hasOneNonDBGUse(Src))
+    return false;
+
+  //  (xor x, (ashr x, bitwidth-1))
+  auto *Xor = dyn_cast<GXor>(MRI.getVRegDef(Src));
+  if (!Xor || !MRI.hasOneNonDBGUse(Src))
+    return false;
+
+  Register X = Xor->getLHSReg();
+  Register AshrReg = Xor->getRHSReg();
+
+  MachineInstr *AshrMI = MRI.getVRegDef(AshrReg);
+  if (!AshrMI || AshrMI->getOpcode() != TargetOpcode::G_ASHR ||
+      !MRI.hasOneNonDBGUse(AshrReg))
+    return false;
+
+  unsigned BitWidth = Ty.getScalarSizeInBits();
+
+  auto ShAmt = getIConstantVRegSExtVal(AshrMI->getOperand(2).getReg(), MRI);
+  if (!ShAmt || ShAmt.value() != BitWidth - 1)
+    return false;
+
+  Register MaybeX = AshrMI->getOperand(1).getReg();
+  if (MaybeX != X)
+    return false;
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    if (!NeedAdd) {
+      B.buildCTLS(Dst, X);
+      return;
+    }
+
+    Register Tmp = MRI.createGenericVirtualRegister(Ty);
+    B.buildCTLS(Tmp, X);
+
+    LLT STy = Ty.getScalarType();
+    Register One = B.buildConstant(STy, 1).getReg(0);
+    B.buildAdd(Dst, Tmp, One);
+  };
+
+  return true;
+}
