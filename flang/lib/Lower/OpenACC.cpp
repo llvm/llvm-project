@@ -4899,9 +4899,7 @@ genCacheBounds(Fortran::lower::AbstractConverter &converter,
         if (lowerConst) {
           lb = builder.createIntegerConstant(loc, idxTy, *lowerConst);
         } else {
-          lb = builder.createConvert(
-              loc, idxTy,
-              fir::getBase(converter.genExprValue(loc, *lowerSexpr, stmtCtx)));
+          mlir::emitError(loc, "unsupported OpenACC cache subscript");
         }
       } else {
         lb = arrayLb;
@@ -4916,9 +4914,7 @@ genCacheBounds(Fortran::lower::AbstractConverter &converter,
         if (upperConst) {
           ub = builder.createIntegerConstant(loc, idxTy, *upperConst);
         } else {
-          ub = builder.createConvert(
-              loc, idxTy,
-              fir::getBase(converter.genExprValue(loc, *upperSexpr, stmtCtx)));
+          mlir::emitError(loc, "unsupported OpenACC cache subscript");
         }
       } else {
         // arr(lower:) - upper is array's upper bound
@@ -4948,11 +4944,7 @@ genCacheBounds(Fortran::lower::AbstractConverter &converter,
       if (elemConst) {
         elem = builder.createIntegerConstant(loc, idxTy, *elemConst);
       } else {
-        Fortran::semantics::SomeExpr sexpr =
-            Fortran::evaluate::AsGenericExpr(std::move(scalarExpr));
-        elem = builder.createConvert(
-            loc, idxTy,
-            fir::getBase(converter.genExprValue(loc, sexpr, stmtCtx)));
+        mlir::emitError(loc, "unsupported OpenACC cache subscript");
       }
 
       lbound = mlir::arith::SubIOp::create(builder, loc, elem, arrayLb);
