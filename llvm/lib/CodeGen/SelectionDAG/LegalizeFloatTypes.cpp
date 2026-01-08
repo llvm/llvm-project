@@ -3828,15 +3828,21 @@ bool DAGTypeLegalizer::SoftPromoteHalfOperand(SDNode *N, unsigned OpNo) {
   case ISD::FAKE_USE:
     Res = SoftPromoteHalfOp_FAKE_USE(N, OpNo);
     break;
-  case ISD::FCOPYSIGN:  Res = SoftPromoteHalfOp_FCOPYSIGN(N, OpNo); break;
-  case ISD::STRICT_FP_TO_SINT:
-  case ISD::STRICT_FP_TO_UINT:
+  case ISD::FCOPYSIGN:
+    Res = SoftPromoteHalfOp_FCOPYSIGN(N, OpNo);
+    break;
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
-  case ISD::LRINT:
+  case ISD::STRICT_FP_TO_SINT:
+  case ISD::STRICT_FP_TO_UINT:
   case ISD::LLRINT:
-  case ISD::LROUND:
   case ISD::LLROUND:
+  case ISD::LRINT:
+  case ISD::LROUND:
+  case ISD::STRICT_LLRINT:
+  case ISD::STRICT_LLROUND:
+  case ISD::STRICT_LRINT:
+  case ISD::STRICT_LROUND:
     Res = SoftPromoteHalfOp_Op0WithStrict(N);
     break;
   case ISD::FP_TO_SINT_SAT:
