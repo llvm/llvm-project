@@ -167,7 +167,7 @@ define i64 @i64_ctz_nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a) {
 ; RV64-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; RV64-NEXT:    vfirst.m a0, v8
 ; RV64-NEXT:    ret
-  %res = call i64 @llvm.experimental.cttz.elts.i32.nxv16i1(<vscale x 16 x i1> %a, i1 1)
+  %res = call i64 @llvm.experimental.cttz.elts.i64.nxv16i1(<vscale x 16 x i1> %a, i1 1)
   ret i64 %res
 }
 
