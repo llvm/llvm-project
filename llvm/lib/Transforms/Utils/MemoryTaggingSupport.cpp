@@ -58,32 +58,22 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
   for (auto *End : Ends) {
     EndBlocks.insert(End->getParent());
   }
-  SmallVector<Instruction *, 8> ReachableRetVec;
-  unsigned NumCoveredExits = 0;
+  bool UncoveredRets = false;
   for (auto *RI : RetVec) {
-    if (!isPotentiallyReachable(Start, RI, nullptr, &DT, &LI))
-      continue;
-    ReachableRetVec.push_back(RI);
     // If there is an end in the same basic block as the return, we know for
     // sure that the return is covered. Otherwise, we can check whether there
     // is a way to reach the RI from the start of the lifetime without passing
     // through an end.
-    if (EndBlocks.contains(RI->getParent()) ||
-        !isPotentiallyReachable(Start, RI, &EndBlocks, &DT, &LI)) {
-      ++NumCoveredExits;
+    if (!EndBlocks.contains(RI->getParent()) &&
+        isPotentiallyReachable(Start, RI, &EndBlocks, &DT, &LI)) {
+      Callback(RI);
+      UncoveredRets = true;
     }
   }
-  if (NumCoveredExits == ReachableRetVec.size()) {
-    for_each(Ends, Callback);
-  } else {
-    // If there's a mix of covered and non-covered exits, just put the untag
-    // on exits, so we avoid the redundancy of untagging twice.
-    for_each(ReachableRetVec, Callback);
-    // We may have inserted untag outside of the lifetime interval.
-    // Signal the caller to remove the lifetime end call for this alloca.
-    return false;
-  }
-  return true;
+  for_each(Ends, Callback);
+  // We may have inserted untag outside of the lifetime interval.
+  // Signal the caller to remove the lifetime end call for this alloca.
+  return !UncoveredRets;
 }
 
 bool isStandardLifetime(const SmallVectorImpl<IntrinsicInst *> &LifetimeStart,
@@ -159,10 +149,14 @@ void StackInfoBuilder::visit(OptimizationRemarkEmitter &ORE,
     if (!AI ||
         getAllocaInterestingness(*AI) != AllocaInterestingness::kInteresting)
       return;
+    auto &AInfo = Info.AllocasToInstrument[AI];
     if (II->getIntrinsicID() == Intrinsic::lifetime_start)
-      Info.AllocasToInstrument[AI].LifetimeStart.push_back(II);
+      AInfo.LifetimeStart.push_back(II);
+    else if (AInfo.LifetimeEnd.empty() ||
+             AInfo.LifetimeEnd.back()->getParent() != II->getParent())
+      AInfo.LifetimeEnd.push_back(II);
     else
-      Info.AllocasToInstrument[AI].LifetimeEnd.push_back(II);
+      AInfo.RedundantLifetimeEnd.push_back(II);
     return;
   }
 
@@ -328,6 +322,19 @@ Value *incrementThreadLong(IRBuilder<> &IRB, Value *ThreadLong,
   return IRB.CreateAnd(
       IRB.CreateAdd(ThreadLong, ConstantInt::get(ThreadLong->getType(), Inc)),
       WrapMask);
+}
+
+void dropLifetimeEnds(const AllocaInfo &AInfo) {
+  for (auto &II : AInfo.LifetimeEnd)
+    II->eraseFromParent();
+  for (auto &II : AInfo.RedundantLifetimeEnd)
+    II->eraseFromParent();
+}
+
+void dropLifetime(const AllocaInfo &AInfo) {
+  dropLifetimeEnds(AInfo);
+  for (auto &II : AInfo.LifetimeStart)
+    II->eraseFromParent();
 }
 
 } // namespace memtag

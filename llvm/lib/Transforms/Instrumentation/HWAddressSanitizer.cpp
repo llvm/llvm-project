@@ -1518,8 +1518,7 @@ void HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
       tagAlloca(IRB, AI, Tag, Size);
       if (!memtag::forAllReachableExits(DT, PDT, LI, Start, Info.LifetimeEnd,
                                         SInfo.RetVec, TagEnd)) {
-        for (auto *End : Info.LifetimeEnd)
-          End->eraseFromParent();
+        memtag::dropLifetimeEnds(Info);
       }
     } else {
       tagAlloca(IRB, AI, Tag, Size);
@@ -1527,10 +1526,7 @@ void HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
         TagEnd(RI);
       // We inserted tagging outside of the lifetimes, so we have to remove
       // them.
-      for (auto &II : Info.LifetimeStart)
-        II->eraseFromParent();
-      for (auto &II : Info.LifetimeEnd)
-        II->eraseFromParent();
+      memtag::dropLifetime(Info);
     }
     memtag::alignAndPadAlloca(Info, Mapping.getObjectAlignment());
   }

@@ -52,9 +52,12 @@ struct AllocaInfo {
   AllocaInst *AI;
   SmallVector<IntrinsicInst *, 2> LifetimeStart;
   SmallVector<IntrinsicInst *, 2> LifetimeEnd;
+  SmallVector<IntrinsicInst *, 2> RedundantLifetimeEnd;
   SmallVector<DbgVariableRecord *, 2> DbgVariableRecords;
 };
 
+void dropLifetimeEnds(const AllocaInfo &AInfo);
+void dropLifetime(const AllocaInfo &AInfo);
 struct StackInfo {
   MapVector<AllocaInst *, AllocaInfo> AllocasToInstrument;
   SmallVector<Instruction *, 8> RetVec;

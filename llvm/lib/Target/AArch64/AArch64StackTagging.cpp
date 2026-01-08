@@ -592,8 +592,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
       if (!DT || !PDT ||
           !memtag::forAllReachableExits(*DT, *PDT, *LI, Start, Info.LifetimeEnd,
                                         SInfo.RetVec, TagEnd)) {
-        for (auto *End : Info.LifetimeEnd)
-          End->eraseFromParent();
+        memtag::dropLifetimeEnds(Info);
       }
     } else {
       uint64_t Size = *Info.AI->getAllocationSize(*DL);
@@ -604,10 +603,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
       }
       // We may have inserted tag/untag outside of any lifetime interval.
       // Remove all lifetime intrinsics for this alloca.
-      for (auto *II : Info.LifetimeStart)
-        II->eraseFromParent();
-      for (auto *II : Info.LifetimeEnd)
-        II->eraseFromParent();
+      memtag::dropLifetime(Info);
     }
 
     memtag::annotateDebugRecords(Info, Tag);
