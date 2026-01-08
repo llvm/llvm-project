@@ -2117,13 +2117,49 @@ Instruction *SPIRVEmitIntrinsics::visitUnreachableInst(UnreachableInst &I) {
   return &I;
 }
 
-void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
-                                             IRBuilder<> &B) {
+static bool shouldEmitIntrinsicsForGlobalValue(const GlobalVariable &GV,
+                                               const Function *CurrF) {
   // Skip special artificial variables.
   static const StringSet<> ArtificialGlobals{"llvm.global.annotations",
                                              "llvm.compiler.used"};
 
   if (ArtificialGlobals.contains(GV.getName()))
+    return false;
+
+  SmallPtrSet<const Value *, 8> Visited;
+  SmallVector<const Value *> Worklist = {&GV};
+  bool ReferencedByAnotherFunction = false;
+  while (!Worklist.empty()) {
+    const Value *V = Worklist.pop_back_val();
+    if (!Visited.insert(V).second)
+      continue;
+
+    if (const Instruction *I = dyn_cast<Instruction>(V)) {
+      if (I->getFunction() == CurrF)
+        return true;
+      ReferencedByAnotherFunction = true;
+      continue;
+    }
+
+    if (const Constant *C = dyn_cast<Constant>(V))
+      Worklist.append(C->user_begin(), C->user_end());
+  }
+
+  // Do not emit the intrinsics in this function, it's going to be emitted on
+  // the functions that reference it.
+  if (ReferencedByAnotherFunction)
+    return false;
+
+  // Emit definitions for globals that are not referenced by any function on the
+  // first function definition.
+  const Module &M = *CurrF->getParent();
+  const Function &FirstDefinition = *M.getFunctionDefs().begin();
+  return CurrF == &FirstDefinition;
+}
+
+void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
+                                             IRBuilder<> &B) {
+  if (!shouldEmitIntrinsicsForGlobalValue(GV, CurrF))
     return;
 
   Constant *Init = nullptr;
