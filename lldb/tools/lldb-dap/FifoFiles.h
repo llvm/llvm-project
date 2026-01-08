@@ -9,9 +9,7 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_FIFOFILES_H
 #define LLDB_TOOLS_LLDB_DAP_FIFOFILES_H
 
-#ifdef _WIN32
-#include "lldb/Host/windows/PipeWindows.h"
-#endif
+#include "lldb/Host/Pipe.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 
