@@ -1,6 +1,10 @@
 # RUN: llvm-mc -filetype=obj -triple riscv32 < %s --defsym RV32=1  | llvm-objdump -dr -M no-aliases - | FileCheck %s --check-prefixes=INST,RV32
 # RUN: llvm-mc -filetype=obj -triple riscv64 < %s | llvm-objdump -dr -M no-aliases - | FileCheck %s --check-prefixes=INST,RV64
 
+# RUN: llvm-mc -filetype=obj -triple riscv32 < %s --mattr=+relax --defsym RV32=1  | llvm-objdump -dr -M no-aliases - | FileCheck %s --check-prefixes=INST,RELAX,RV32
+# RUN: llvm-mc -filetype=obj -triple riscv64 < %s --mattr=+relax | llvm-objdump -dr -M no-aliases - | FileCheck %s --check-prefixes=INST,RELAX,RV64
+
+
 # RUN: not llvm-mc -triple riscv32 < %s --defsym RV32=1 --defsym ERR=1 2>&1 | FileCheck %s --check-prefixes=ERR
 # RUN: not llvm-mc -triple riscv64 < %s --defsym ERR=1 2>&1 | FileCheck %s --check-prefixes=ERR
 
@@ -10,9 +14,11 @@ start:                                  # @start
 	auipc a0, %tlsdesc_hi(a-4)
 	# INST: auipc a0, 0x0
 	# INST-NEXT: R_RISCV_TLSDESC_HI20 a-0x4
+	# RELAX-NEXT: R_RISCV_RELAX
 	auipc	a0, %tlsdesc_hi(unspecified)
 	# INST-NEXT: auipc a0, 0x0
 	# INST-NEXT: R_RISCV_TLSDESC_HI20 unspecified
+	# RELAX-NEXT: R_RISCV_RELAX
 .ifdef RV32
 	lw	a1, %tlsdesc_load_lo(.Ltlsdesc_hi0)(a0)
 	# RV32: lw a1, 0x0(a0)

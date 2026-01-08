@@ -13,16 +13,16 @@ define dso_local void @test_dmsha2hash(ptr %vop, ptr %vinp, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxvp vsp34, 0(r3)
 ; CHECK-NEXT:    lxvp vsp36, 32(r3)
+; CHECK-NEXT:    lxvp vsp32, 64(r3)
+; CHECK-NEXT:    lxvp vsp38, 96(r3)
+; CHECK-NEXT:    lxvp vsp40, 0(r4)
+; CHECK-NEXT:    lxvp vsp42, 32(r4)
+; CHECK-NEXT:    lxvp vsp44, 64(r4)
+; CHECK-NEXT:    lxvp vsp46, 96(r4)
 ; CHECK-NEXT:    dmxxinstdmr512 wacc_hi0, vsp36, vsp34, 1
-; CHECK-NEXT:    lxvp vsp34, 64(r3)
-; CHECK-NEXT:    lxvp vsp36, 96(r3)
-; CHECK-NEXT:    dmxxinstdmr512 wacc0, vsp36, vsp34, 0
-; CHECK-NEXT:    lxvp vsp34, 0(r4)
-; CHECK-NEXT:    lxvp vsp36, 32(r4)
-; CHECK-NEXT:    dmxxinstdmr512 wacc_hi1, vsp36, vsp34, 1
-; CHECK-NEXT:    lxvp vsp34, 64(r4)
-; CHECK-NEXT:    lxvp vsp36, 96(r4)
-; CHECK-NEXT:    dmxxinstdmr512 wacc1, vsp36, vsp34, 0
+; CHECK-NEXT:    dmxxinstdmr512 wacc_hi1, vsp42, vsp40, 1
+; CHECK-NEXT:    dmxxinstdmr512 wacc0, vsp38, vsp32, 0
+; CHECK-NEXT:    dmxxinstdmr512 wacc1, vsp46, vsp44, 0
 ; CHECK-NEXT:    dmsha256hash dmr0, dmr1
 ; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-NEXT:    stxvp vsp34, 96(r5)
@@ -36,16 +36,16 @@ define dso_local void @test_dmsha2hash(ptr %vop, ptr %vinp, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxvp vsp34, 96(r3)
 ; CHECK-BE-NEXT:    lxvp vsp36, 64(r3)
+; CHECK-BE-NEXT:    lxvp vsp32, 32(r3)
+; CHECK-BE-NEXT:    lxvp vsp38, 0(r3)
+; CHECK-BE-NEXT:    lxvp vsp40, 96(r4)
+; CHECK-BE-NEXT:    lxvp vsp42, 64(r4)
+; CHECK-BE-NEXT:    lxvp vsp44, 32(r4)
+; CHECK-BE-NEXT:    lxvp vsp46, 0(r4)
 ; CHECK-BE-NEXT:    dmxxinstdmr512 wacc_hi0, vsp36, vsp34, 1
-; CHECK-BE-NEXT:    lxvp vsp34, 32(r3)
-; CHECK-BE-NEXT:    lxvp vsp36, 0(r3)
-; CHECK-BE-NEXT:    dmxxinstdmr512 wacc0, vsp36, vsp34, 0
-; CHECK-BE-NEXT:    lxvp vsp34, 96(r4)
-; CHECK-BE-NEXT:    lxvp vsp36, 64(r4)
-; CHECK-BE-NEXT:    dmxxinstdmr512 wacc_hi1, vsp36, vsp34, 1
-; CHECK-BE-NEXT:    lxvp vsp34, 32(r4)
-; CHECK-BE-NEXT:    lxvp vsp36, 0(r4)
-; CHECK-BE-NEXT:    dmxxinstdmr512 wacc1, vsp36, vsp34, 0
+; CHECK-BE-NEXT:    dmxxinstdmr512 wacc_hi1, vsp42, vsp40, 1
+; CHECK-BE-NEXT:    dmxxinstdmr512 wacc0, vsp38, vsp32, 0
+; CHECK-BE-NEXT:    dmxxinstdmr512 wacc1, vsp46, vsp44, 0
 ; CHECK-BE-NEXT:    dmsha256hash dmr0, dmr1
 ; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi0, 1
 ; CHECK-BE-NEXT:    stxvp vsp36, 96(r5)
@@ -69,16 +69,16 @@ define dso_local void @test_dmsha3hash(ptr %vopp, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxvp vsp34, 0(r3)
 ; CHECK-NEXT:    lxvp vsp36, 32(r3)
+; CHECK-NEXT:    lxvp vsp32, 64(r3)
+; CHECK-NEXT:    lxvp vsp38, 96(r3)
+; CHECK-NEXT:    lxvp vsp40, 128(r3)
+; CHECK-NEXT:    lxvp vsp42, 160(r3)
+; CHECK-NEXT:    lxvp vsp44, 192(r3)
+; CHECK-NEXT:    lxvp vsp46, 224(r3)
 ; CHECK-NEXT:    dmxxinstdmr512 wacc_hi1, vsp36, vsp34, 1
-; CHECK-NEXT:    lxvp vsp34, 64(r3)
-; CHECK-NEXT:    lxvp vsp36, 96(r3)
-; CHECK-NEXT:    dmxxinstdmr512 wacc1, vsp36, vsp34, 0
-; CHECK-NEXT:    lxvp vsp34, 128(r3)
-; CHECK-NEXT:    lxvp vsp36, 160(r3)
-; CHECK-NEXT:    dmxxinstdmr512 wacc_hi0, vsp36, vsp34, 1
-; CHECK-NEXT:    lxvp vsp34, 192(r3)
-; CHECK-NEXT:    lxvp vsp36, 224(r3)
-; CHECK-NEXT:    dmxxinstdmr512 wacc0, vsp36, vsp34, 0
+; CHECK-NEXT:    dmxxinstdmr512 wacc1, vsp38, vsp32, 0
+; CHECK-NEXT:    dmxxinstdmr512 wacc_hi0, vsp42, vsp40, 1
+; CHECK-NEXT:    dmxxinstdmr512 wacc0, vsp46, vsp44, 0
 ; CHECK-NEXT:    dmsha3hash dmrp0, 5
 ; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-NEXT:    stxvp vsp34, 224(r4)
@@ -98,16 +98,16 @@ define dso_local void @test_dmsha3hash(ptr %vopp, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxvp vsp34, 224(r3)
 ; CHECK-BE-NEXT:    lxvp vsp36, 192(r3)
+; CHECK-BE-NEXT:    lxvp vsp32, 160(r3)
+; CHECK-BE-NEXT:    lxvp vsp38, 128(r3)
+; CHECK-BE-NEXT:    lxvp vsp40, 96(r3)
+; CHECK-BE-NEXT:    lxvp vsp42, 64(r3)
+; CHECK-BE-NEXT:    lxvp vsp44, 32(r3)
+; CHECK-BE-NEXT:    lxvp vsp46, 0(r3)
 ; CHECK-BE-NEXT:    dmxxinstdmr512 wacc_hi1, vsp36, vsp34, 1
-; CHECK-BE-NEXT:    lxvp vsp34, 160(r3)
-; CHECK-BE-NEXT:    lxvp vsp36, 128(r3)
-; CHECK-BE-NEXT:    dmxxinstdmr512 wacc1, vsp36, vsp34, 0
-; CHECK-BE-NEXT:    lxvp vsp34, 96(r3)
-; CHECK-BE-NEXT:    lxvp vsp36, 64(r3)
-; CHECK-BE-NEXT:    dmxxinstdmr512 wacc_hi0, vsp36, vsp34, 1
-; CHECK-BE-NEXT:    lxvp vsp34, 32(r3)
-; CHECK-BE-NEXT:    lxvp vsp36, 0(r3)
-; CHECK-BE-NEXT:    dmxxinstdmr512 wacc0, vsp36, vsp34, 0
+; CHECK-BE-NEXT:    dmxxinstdmr512 wacc1, vsp38, vsp32, 0
+; CHECK-BE-NEXT:    dmxxinstdmr512 wacc_hi0, vsp42, vsp40, 1
+; CHECK-BE-NEXT:    dmxxinstdmr512 wacc0, vsp46, vsp44, 0
 ; CHECK-BE-NEXT:    dmsha3hash dmrp0, 5
 ; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi1, 1
 ; CHECK-BE-NEXT:    stxvp vsp36, 224(r4)
@@ -136,11 +136,11 @@ define dso_local void @test_dmxxshapad(ptr %vopp, ptr %vcp, ptr %resp) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxvp vsp34, 0(r3)
 ; CHECK-NEXT:    lxvp vsp36, 32(r3)
-; CHECK-NEXT:    dmxxinstdmr512 wacc_hi0, vsp36, vsp34, 1
-; CHECK-NEXT:    lxvp vsp34, 64(r3)
-; CHECK-NEXT:    lxvp vsp36, 96(r3)
-; CHECK-NEXT:    dmxxinstdmr512 wacc0, vsp36, vsp34, 0
+; CHECK-NEXT:    lxvp vsp32, 64(r3)
+; CHECK-NEXT:    lxvp vsp38, 96(r3)
 ; CHECK-NEXT:    lxv vs0, 0(r4)
+; CHECK-NEXT:    dmxxinstdmr512 wacc_hi0, vsp36, vsp34, 1
+; CHECK-NEXT:    dmxxinstdmr512 wacc0, vsp38, vsp32, 0
 ; CHECK-NEXT:    dmxxshapad dmr0, vs0, 2, 1, 3
 ; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-NEXT:    stxvp vsp34, 96(r5)
@@ -154,11 +154,11 @@ define dso_local void @test_dmxxshapad(ptr %vopp, ptr %vcp, ptr %resp) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    lxvp vsp34, 96(r3)
 ; CHECK-BE-NEXT:    lxvp vsp36, 64(r3)
-; CHECK-BE-NEXT:    dmxxinstdmr512 wacc_hi0, vsp36, vsp34, 1
-; CHECK-BE-NEXT:    lxvp vsp34, 32(r3)
-; CHECK-BE-NEXT:    lxvp vsp36, 0(r3)
-; CHECK-BE-NEXT:    dmxxinstdmr512 wacc0, vsp36, vsp34, 0
+; CHECK-BE-NEXT:    lxvp vsp32, 32(r3)
+; CHECK-BE-NEXT:    lxvp vsp38, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r4)
+; CHECK-BE-NEXT:    dmxxinstdmr512 wacc_hi0, vsp36, vsp34, 1
+; CHECK-BE-NEXT:    dmxxinstdmr512 wacc0, vsp38, vsp32, 0
 ; CHECK-BE-NEXT:    dmxxshapad dmr0, vs0, 2, 1, 3
 ; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi0, 1
 ; CHECK-BE-NEXT:    stxvp vsp36, 96(r5)

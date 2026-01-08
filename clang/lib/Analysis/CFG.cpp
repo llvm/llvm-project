@@ -52,6 +52,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <memory>
@@ -5359,6 +5360,7 @@ CFGBlock *CFG::createBlock() {
 /// buildCFG - Constructs a CFG from an AST.
 std::unique_ptr<CFG> CFG::buildCFG(const Decl *D, Stmt *Statement,
                                    ASTContext *C, const BuildOptions &BO) {
+  llvm::TimeTraceScope TimeProfile("BuildCFG");
   CFGBuilder Builder(C, BO);
   return Builder.buildCFG(D, Statement);
 }

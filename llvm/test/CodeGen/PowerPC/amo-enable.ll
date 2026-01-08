@@ -6,15 +6,15 @@
 ; RUN:   -mcpu=pwr9 -ppc-asm-full-reg-names < %s \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-BE
 
-define void @test_us_lwat(ptr noundef %ptr, i32 noundef %value, ptr nocapture %resp) {
-; CHECK-LABEL: test_us_lwat:
+define void @test_lwat(ptr noundef %ptr, i32 noundef %value, ptr nocapture %resp) {
+; CHECK-LABEL: test_lwat:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr r7, r4
 ; CHECK-NEXT:    lwat r6, r3, 0
 ; CHECK-NEXT:    stw r6, 0(r5)
 ; CHECK-NEXT:    blr
 ;
-; CHECK-BE-LABEL: test_us_lwat:
+; CHECK-BE-LABEL: test_lwat:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    mr r7, r4
 ; CHECK-BE-NEXT:    lwat r6, r3, 0
@@ -26,26 +26,25 @@ entry:
   ret void
 }
 
-define void @test_us_ldat(ptr noundef %ptr, i64 noundef %value, ptr nocapture %resp) {
-; CHECK-LABEL: test_us_ldat:
+define void @test_ldat(ptr noundef %ptr, i64 noundef %value, ptr nocapture %resp) {
+; CHECK-LABEL: test_ldat:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr r7, r4
-; CHECK-NEXT:    ldat r6, r3, 3
+; CHECK-NEXT:    ldat r6, r3, 0
 ; CHECK-NEXT:    std r6, 0(r5)
 ; CHECK-NEXT:    blr
 ;
-; CHECK-BE-LABEL: test_us_ldat:
+; CHECK-BE-LABEL: test_ldat:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    mr r7, r4
-; CHECK-BE-NEXT:    ldat r6, r3, 3
+; CHECK-BE-NEXT:    ldat r6, r3, 0
 ; CHECK-BE-NEXT:    std r6, 0(r5)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = tail call i64 @llvm.ppc.amo.ldat(ptr %ptr, i64 %value, i32 3)
+  %0 = tail call i64 @llvm.ppc.amo.ldat(ptr %ptr, i64 %value, i32 0)
   store i64 %0, ptr %resp, align 8
   ret void
 }
 
 declare i64 @llvm.ppc.amo.ldat(ptr, i64, i32 immarg)
 declare i32 @llvm.ppc.amo.lwat(ptr, i32, i32 immarg)
-

@@ -783,7 +783,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         }
       }
     } else if (dummy.intent != common::Intent::In ||
-        (dummyIsPointer && !actualIsPointer)) {
+        (dummyIsPointer && !actualIsPointer) ||
+        (intrinsic && intrinsic->name == "loc")) {
       if (auto named{evaluate::ExtractNamedEntity(actual)}) {
         context.NoteDefinedSymbol(named->GetFirstSymbol());
       }

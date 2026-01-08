@@ -48,6 +48,30 @@ uint32_t test_lwat_swap(uint32_t *ptr, uint32_t val) {
   return amo_lwat_swap(ptr, val);
 }
 
+int32_t test_lwat_sadd(int32_t *ptr, int32_t val) {
+  // CHECK-LABEL: @test_lwat_sadd
+  // CHECK: call i32 @llvm.ppc.amo.lwat(ptr %{{.*}}, i32 %{{.*}}, i32 0)
+  return amo_lwat_sadd(ptr, val);
+}
+
+int32_t test_lwat_smax(int32_t *ptr, int32_t val) {
+  // CHECK-LABEL: @test_lwat_smax
+  // CHECK: call i32 @llvm.ppc.amo.lwat(ptr %{{.*}}, i32 %{{.*}}, i32 5)
+  return amo_lwat_smax(ptr, val);
+}
+
+int32_t test_lwat_smin(int32_t *ptr, int32_t val) {
+  // CHECK-LABEL: @test_lwat_smin
+  // CHECK: call i32 @llvm.ppc.amo.lwat(ptr %{{.*}}, i32 %{{.*}}, i32 7)
+  return amo_lwat_smin(ptr, val);
+}
+
+int32_t test_lwat_sswap(int32_t *ptr, int32_t val) {
+  // CHECK-LABEL: @test_lwat_sswap
+  // CHECK: call i32 @llvm.ppc.amo.lwat(ptr %{{.*}}, i32 %{{.*}}, i32 8)
+  return amo_lwat_sswap(ptr, val);
+}
+
 uint64_t test_ldat_add(uint64_t *ptr, uint64_t val) {
   // CHECK-LABEL: @test_ldat_add
   // CHECK: call i64 @llvm.ppc.amo.ldat(ptr %{{.*}}, i64 %{{.*}}, i32 0)
@@ -88,4 +112,28 @@ uint64_t test_ldat_swap(uint64_t *ptr, uint64_t val) {
   // CHECK-LABEL: @test_ldat_swap
   // CHECK: call i64 @llvm.ppc.amo.ldat(ptr %{{.*}}, i64 %{{.*}}, i32 8)
   return amo_ldat_swap(ptr, val);
+}
+
+int64_t test_ldat_sadd(int64_t *ptr, int64_t val) {
+  // CHECK-LABEL: @test_ldat_sadd
+  // CHECK: call i64 @llvm.ppc.amo.ldat(ptr %{{.*}}, i64 %{{.*}}, i32 0)
+  return amo_ldat_sadd(ptr, val);
+}
+
+int64_t test_ldat_smax(int64_t *ptr, int64_t val) {
+  // CHECK-LABEL: @test_ldat_smax
+  // CHECK: call i64 @llvm.ppc.amo.ldat(ptr %{{.*}}, i64 %{{.*}}, i32 5)
+  return amo_ldat_smax(ptr, val);
+}
+
+int64_t test_ldat_smin(int64_t *ptr, int64_t val) {
+  // CHECK-LABEL: @test_ldat_smin
+  // CHECK: call i64 @llvm.ppc.amo.ldat(ptr %{{.*}}, i64 %{{.*}}, i32 7)
+  return amo_ldat_smin(ptr, val);
+}
+
+int64_t test_ldat_sswap(int64_t *ptr, int64_t val) {
+  // CHECK-LABEL: @test_ldat_sswap
+  // CHECK: call i64 @llvm.ppc.amo.ldat(ptr %{{.*}}, i64 %{{.*}}, i32 8)
+  return amo_ldat_sswap(ptr, val);
 }

@@ -1004,6 +1004,8 @@ TARGET_BUILTIN(__builtin_pack_vector_int128, "V1LLLiULLiULLi", "", "vsx")
 // AMO builtins
 TARGET_BUILTIN(__builtin_amo_lwat, "UiUi*UiIi", "", "isa-v30-instructions")
 TARGET_BUILTIN(__builtin_amo_ldat, "ULiULi*ULiIi", "", "isa-v30-instructions")
+TARGET_BUILTIN(__builtin_amo_lwat_s, "SiSi*SiIi", "", "isa-v30-instructions")
+TARGET_BUILTIN(__builtin_amo_ldat_s, "SLiSLi*SLiIi", "", "isa-v30-instructions")
 
 // Set the floating point rounding mode
 BUILTIN(__builtin_setrnd, "di", "")

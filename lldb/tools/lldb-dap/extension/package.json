@@ -31,9 +31,9 @@
     "chokidar": "^4.0.3"
   },
   "devDependencies": {
+    "@types/mocha": "^10.0.10",
     "@types/node": "^18.19.41",
     "@types/tabulator-tables": "^6.2.10",
-    "@types/mocha": "^10.0.10",
     "@types/vscode": "1.75.0",
     "@types/vscode-webview": "^1.57.5",
     "@vscode/debugprotocol": "^1.68.0",
@@ -42,6 +42,7 @@
     "@vscode/vsce": "^3.2.2",
     "esbuild": "^0.25.9",
     "mocha": "^10.2.0",
+    "ovsx": "^0.10.8",
     "prettier": "^3.4.2",
     "prettier-plugin-curly": "^0.3.1",
     "prettier-plugin-organize-imports": "^4.3.0",
@@ -64,6 +65,7 @@
     "package": "rm -rf ./out && vsce package --out ./out/lldb-dap.vsix",
     "compile": "tsc -p ./",
     "publish": "vsce publish",
+    "publish-ovsx": "ovsx publish",
     "pretest": "npm run compile",
     "preunittest": "npm run pretest",
     "unittest": "mocha --ui tdd ./out/test/unit",

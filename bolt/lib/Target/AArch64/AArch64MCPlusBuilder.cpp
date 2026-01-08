@@ -2274,7 +2274,7 @@ public:
         !I->getOperand(1).isImm() || I->getOperand(0).getReg() != AArch64::X16)
       return 0;
     TargetHiBits = &*I;
-    Addr |= (Address + ((int64_t)I->getOperand(1).getImm() << 12)) &
+    Addr |= (Address + ((uint64_t)I->getOperand(1).getImm() << 12)) &
             0xFFFFFFFFFFFFF000ULL;
     Target = Addr;
     return 3;

@@ -443,21 +443,31 @@ void Prescanner::LabelField(TokenSequence &token) {
     ++column_;
   }
   if (badColumn && !preprocessor_.IsNameDefined(token.CurrentOpenToken())) {
-    if ((prescannerNesting_ > 0 && *badColumn == 6 &&
-            cooked_.BufferedBytes() == firstCookedCharacterOffset_) ||
-        afterPreprocessingDirective_) {
-      // This is the first source line in #include'd text or conditional
-      // code under #if, or the first source line after such.
-      // If it turns out that the preprocessed text begins with a
-      // fixed form continuation line, the newline at the end
-      // of the latest source line beforehand will be deleted in
-      // CookedSource::Marshal().
-      cooked_.MarkPossibleFixedFormContinuation();
-    } else if (features_.ShouldWarn(common::UsageWarning::Scanning)) {
-      Say(common::UsageWarning::Scanning, GetProvenance(start + *badColumn - 1),
-          *badColumn == 6
-              ? "Statement should not begin with a continuation line"_warn_en_US
-              : "Character in fixed-form label field must be a digit"_warn_en_US);
+    if (*badColumn == 6) {
+      if ((prescannerNesting_ > 0 &&
+              cooked_.BufferedBytes() == firstCookedCharacterOffset_) ||
+          afterPreprocessingDirective_) {
+        // This is the first source line in #include'd text or conditional
+        // code under #if, or the first source line after such.
+        // If it turns out that the preprocessed text begins with a
+        // fixed form continuation line, the newline at the end
+        // of the latest source line beforehand will be deleted in
+        // CookedSource::Marshal().
+        cooked_.MarkPossibleFixedFormContinuation();
+      } else if (features_.ShouldWarn(common::UsageWarning::Scanning)) {
+        Say(common::UsageWarning::Scanning,
+            GetProvenance(start + *badColumn - 1),
+            "Statement should not begin with a continuation line"_warn_en_US);
+      }
+    } else if (preprocessingOnly_) {
+      if (features_.ShouldWarn(common::UsageWarning::Scanning)) {
+        Say(common::UsageWarning::Scanning,
+            GetProvenance(start + *badColumn - 1),
+            "Character in fixed-form label field should be a digit"_warn_en_US);
+      }
+    } else {
+      Say(GetProvenance(start + *badColumn - 1),
+          "Character in fixed-form label field must be a digit"_err_en_US);
     }
     token.clear();
     if (*badColumn < 6) {
@@ -467,7 +477,7 @@ void Prescanner::LabelField(TokenSequence &token) {
     }
     outCol = 1;
   }
-  if (outCol == 1) { // empty label field
+  if (outCol == 1) { // empty or ignored label field
     // Emit a space so that, if the line is rescanned after preprocessing,
     // a leading 'C' or 'D' won't be left-justified and then accidentally
     // misinterpreted as a comment card.

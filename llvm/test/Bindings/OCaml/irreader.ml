@@ -29,27 +29,46 @@ let _ =
 let insist cond =
   if not cond then failwith "insist"
 
+(* TODO: Replace with Fun.protect when the minimum OCaml version supports it. *)
+let protect ~finally f =
+  try
+    let r = f () in
+    finally ();
+    r
+  with x ->
+    finally ();
+    raise x
+
 
 (*===-- IR Reader ---------------------------------------------------------===*)
 
 let test_irreader () =
   begin
     let buf = MemoryBuffer.of_string "@foo = global i32 42" in
-    let m   = parse_ir context buf in
-    match lookup_global "foo" m with
-    | Some foo ->
-        insist ((global_initializer foo) = (Some (const_int (i32_type context) 42)))
-    | None ->
-        failwith "global"
+    let m = protect ~finally:(fun () -> MemoryBuffer.dispose buf)
+              (fun () -> parse_ir_bitcode_or_assembly context buf) in
+    protect ~finally:(fun () -> dispose_module m) (fun () ->
+      match lookup_global "foo" m with
+      | Some foo ->
+          insist (global_initializer foo =
+                  Some (const_int (i32_type context) 42))
+      | None ->
+          failwith "global")
   end;
 
   begin
     let buf = MemoryBuffer.of_string "@foo = global garble" in
-    try
-      ignore (parse_ir context buf);
+    let parsed = protect ~finally:(fun () -> MemoryBuffer.dispose buf)
+                   (fun () ->
+                     try
+                       let m = parse_ir_bitcode_or_assembly context buf in
+                       dispose_module m;
+                       true
+                     with Llvm_irreader.Error _ ->
+                       false)
+    in
+    if parsed then
       failwith "parsed"
-    with Llvm_irreader.Error _ ->
-      ()
   end
 
 

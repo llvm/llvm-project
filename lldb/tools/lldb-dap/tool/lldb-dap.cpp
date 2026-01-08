@@ -451,7 +451,7 @@ static llvm::Error serveConnection(
     if (connection_timeout_seconds)
       ResetConnectionTimeout(g_connection_timeout_mutex,
                              g_connection_timeout_time_point);
-    std::string client_name = llvm::formatv("client_{0}", clientCount++).str();
+    const std::string client_name = llvm::formatv("conn{0}", clientCount++);
     lldb::IOObjectSP io(std::move(sock));
 
     // Move the client into a background thread to unblock accepting the next
