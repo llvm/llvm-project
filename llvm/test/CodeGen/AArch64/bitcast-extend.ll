@@ -339,9 +339,8 @@ define <8 x i8> @load_sext_i32_v8i8(ptr %p) {
 define <16 x i8> @load_zext_v16i8(ptr %p) {
 ; CHECK-SD-LABEL: load_zext_v16i8:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    ldr w8, [x0]
-; CHECK-SD-NEXT:    mov v0.d[0], x8
+; CHECK-SD-NEXT:    fmov d0, x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: load_zext_v16i8:

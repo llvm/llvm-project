@@ -688,14 +688,57 @@ bool AArch64MIPeepholeOpt::visitINSviGPR(MachineInstr &MI, unsigned Opc) {
 }
 
 // All instructions that set a FPR64 will implicitly zero the top bits of the
-// register.
+// register. When the def is expressed as a COPY from a GPR, turn it into an
+// explicit FMOV so it cannot be elided later in further passes.
 static bool is64bitDefwithZeroHigh64bit(MachineInstr *MI,
-                                        MachineRegisterInfo *MRI) {
+                                        MachineRegisterInfo *MRI,
+                                        const AArch64InstrInfo *TII) {
   if (!MI->getOperand(0).isReg() || !MI->getOperand(0).isDef())
     return false;
   const TargetRegisterClass *RC = MRI->getRegClass(MI->getOperand(0).getReg());
   if (RC != &AArch64::FPR64RegClass)
     return false;
+  if (MI->getOpcode() == TargetOpcode::COPY) {
+    MachineOperand &SrcOp = MI->getOperand(1);
+    if (!SrcOp.isReg())
+      return false;
+    if (SrcOp.getSubReg())
+      return false;
+    Register SrcReg = SrcOp.getReg();
+    auto IsGPR64Like = [&]() -> bool {
+      if (SrcReg.isVirtual())
+        return AArch64::GPR64allRegClass.hasSubClassEq(
+            MRI->getRegClass(SrcReg));
+      return AArch64::GPR64allRegClass.contains(SrcReg);
+    };
+    if (!IsGPR64Like())
+      return false;
+    assert(TII && "Expected InstrInfo when materializing COPYs");
+    // FMOVXDr insists on strict GPR64 operands, so fix up the COPY source.
+    MachineOperand &SrcMO = MI->getOperand(1);
+    bool SrcKill = SrcMO.isKill();
+    if (SrcReg.isVirtual()) {
+      if (MRI->getRegClass(SrcReg) != &AArch64::GPR64RegClass) {
+        // Pass the value through a temporary GPR64 vreg to satisfy the
+        // verifier.
+        Register NewSrc = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
+        BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+                TII->get(TargetOpcode::COPY), NewSrc)
+            .addReg(SrcReg, getKillRegState(SrcKill));
+        SrcReg = NewSrc;
+        SrcKill = true;
+      }
+    } else if (!AArch64::GPR64RegClass.contains(SrcReg)) {
+      return false;
+    }
+    SrcMO.setReg(SrcReg);
+    SrcMO.setSubReg(0);
+    SrcMO.setIsKill(SrcKill);
+    // Replace the COPY with an explicit FMOV so the zeroing behaviour stays
+    // visible.
+    MI->setDesc(TII->get(AArch64::FMOVXDr));
+    return true;
+  }
   return MI->getOpcode() > TargetOpcode::GENERIC_OP_END;
 }
 
@@ -711,7 +754,7 @@ bool AArch64MIPeepholeOpt::visitINSvi64lane(MachineInstr &MI) {
   if (Low64MI->getOpcode() != AArch64::INSERT_SUBREG)
     return false;
   Low64MI = MRI->getUniqueVRegDef(Low64MI->getOperand(2).getReg());
-  if (!Low64MI || !is64bitDefwithZeroHigh64bit(Low64MI, MRI))
+  if (!Low64MI || !is64bitDefwithZeroHigh64bit(Low64MI, MRI, TII))
     return false;
 
   // Check there is `mov 0` MI for high 64-bits.
@@ -752,7 +795,7 @@ bool AArch64MIPeepholeOpt::visitINSvi64lane(MachineInstr &MI) {
 bool AArch64MIPeepholeOpt::visitFMOVDr(MachineInstr &MI) {
   // An FMOVDr sets the high 64-bits to zero implicitly, similar to ORR for GPR.
   MachineInstr *Low64MI = MRI->getUniqueVRegDef(MI.getOperand(1).getReg());
-  if (!Low64MI || !is64bitDefwithZeroHigh64bit(Low64MI, MRI))
+  if (!Low64MI || !is64bitDefwithZeroHigh64bit(Low64MI, MRI, TII))
     return false;
 
   // Let's remove MIs for high 64-bits.

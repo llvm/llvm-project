@@ -3,16 +3,11 @@
 		"moduleResolution": "node",
 		"module": "commonjs",
 		"outDir": "out",
-		"rootDir": "src",
+		"rootDir": ".",
 		"sourceMap": true,
 		"strict": true,
 		"target": "es6"
 	},
-	"include": [
-		"src"
-	],
-	"exclude": [
-		"node_modules",
-		"src/webview",
-	]
+	"include": ["src", "test"],
+  	"exclude": [".vscode-test", "node_modules", "src/webview"]
 }

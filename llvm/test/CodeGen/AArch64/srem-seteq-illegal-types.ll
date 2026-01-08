@@ -89,9 +89,9 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; CHECK-NEXT:    add x8, x12, x8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    fmov d3, x8
-; CHECK-NEXT:    adrp x8, .LCPI3_1
+; CHECK-NEXT:    mov w8, #3 // =0x3
 ; CHECK-NEXT:    cmeq v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI3_1]
+; CHECK-NEXT:    fmov d2, x8
 ; CHECK-NEXT:    and v1.16b, v3.16b, v1.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
 ; CHECK-NEXT:    cmeq v1.2d, v1.2d, v2.2d
