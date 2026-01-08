@@ -34,16 +34,9 @@ template <typename Pattern> bool match(VPSingleDefRecipe *R, const Pattern &P) {
 
 /// A match functor that can be used as a UnaryPredicate in functional
 /// algorithms like all_of.
-template <typename Val, typename Pattern>
-BinaryPredicateFunctor<Val, Pattern, decltype(match<Val, Pattern>)>
-match_fn(const Pattern &P) {
-  return {P, match<Val, Pattern>};
-}
-
-template <typename Pattern>
-BinaryPredicateFunctor<VPUser *, Pattern, decltype(match<VPUser *, Pattern>)>
-match_fn(const Pattern &P) {
-  return {P, match<Pattern>};
+template <typename Val = VPUser *, typename Pattern>
+auto match_fn(const Pattern &P) {
+  return bind_last<Pattern, decltype(match<Val, Pattern>)>(P, match);
 }
 
 template <typename Class> struct class_match {

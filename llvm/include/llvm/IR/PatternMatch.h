@@ -53,9 +53,8 @@ template <typename Val, typename Pattern> bool match(Val V, const Pattern &P) {
 /// A match functor that can be used as a UnaryPredicate in functional
 /// algorithms like all_of.
 template <typename Val = const Value *, typename Pattern>
-BinaryPredicateFunctor<Val, Pattern, decltype(match<Val, Pattern>)>
-match_fn(const Pattern &P) {
-  return {P, match<Val, Pattern>};
+auto match_fn(const Pattern &P) {
+  return bind_last(P, match<Val, Pattern>);
 }
 
 template <typename Pattern> bool match(ArrayRef<int> Mask, const Pattern &P) {

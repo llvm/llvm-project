@@ -2157,28 +2157,30 @@ template <typename T> bool all_equal(std::initializer_list<T> Values) {
   return all_equal<std::initializer_list<T>>(std::move(Values));
 }
 
-template <typename ValT, typename RefT, typename BinaryPredicate>
-struct BinaryPredicateFunctor {
-  RefT Ref;
-  const BinaryPredicate &P;
-  BinaryPredicateFunctor(RefT Ref, const BinaryPredicate &P) : Ref(Ref), P(P) {}
-  bool operator()(ValT Val) const { return P(Val, Ref); }
-};
+template <typename RefT, typename PredT>
+auto bind_first(const RefT &Ref, const PredT &Pred) {
+  return [&](auto &&...Val) {
+    return Pred(Ref, std::forward<decltype(Val)>(Val)...);
+  };
+}
+
+template <typename RefT, typename PredT>
+auto bind_last(const RefT &Ref, const PredT &Pred) {
+  return [&](auto &&...Val) {
+    return Pred(std::forward<decltype(Val)>(Val)..., Ref);
+  };
+}
 
 /// Functor variant of std::equal_to that can be used as a UnaryPredicate in
 /// functional algorithms like all_of.
-template <typename T>
-BinaryPredicateFunctor<T, T, decltype(std::equal_to<T>())>
-equal_to(const T &Ref) {
-  return {Ref, std::equal_to<T>()};
+template <typename T> auto equal_to(const T &Ref) {
+  return bind_first(Ref, std::equal_to<>());
 }
 
 /// Functor variant of std::not_equal_to that can be used as a UnaryPredicate in
 /// functional algorithms like all_of.
-template <typename T>
-BinaryPredicateFunctor<T, T, decltype(std::not_equal_to<T>())>
-not_equal_to(const T &Ref) {
-  return {Ref, std::not_equal_to<T>()};
+template <typename T> auto not_equal_to(const T &Ref) {
+  return bind_first(Ref, std::not_equal_to<>());
 }
 
 /// Provide a container algorithm similar to C++ Library Fundamentals v2's
