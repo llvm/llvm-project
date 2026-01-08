@@ -79,6 +79,6 @@ TEST_P(olMemRegisterTest, PartialOverlapPtrRegister) {
   ASSERT_SUCCESS(olMemRegister(Device, Arr, sizeof(Arr), Flags, &PinnedPtr));
   ASSERT_NE(PinnedPtr, nullptr);
   ASSERT_ERROR(OL_ERRC_INVALID_ARGUMENT,
-               olMemRegister(Device, Arr + 2 , sizeof(Arr), Flags, &PinnedPtr));
+               olMemRegister(Device, Arr + 2, sizeof(Arr), Flags, &PinnedPtr));
   ASSERT_SUCCESS(olMemUnregister(Device, PinnedPtr));
 }
