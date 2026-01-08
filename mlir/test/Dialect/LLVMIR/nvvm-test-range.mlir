@@ -4,7 +4,7 @@ gpu.module @module{
         %tidx = nvvm.read.ptx.sreg.tid.x range <i32, 0, 32> : i32
         %tidy = nvvm.read.ptx.sreg.tid.y range <i32, 0, 128> : i32
         %tidz = nvvm.read.ptx.sreg.tid.z range <i32, 0, 4> : i32
-        %ctaid = nvvm.read.ptx.sreg.cluster.ctaid.x : i32 // unspecified range
+        %cidx = nvvm.read.ptx.sreg.cluster.ctaid.x : i32 // unspecified range
         %cond = ub.poison : i1
         %c64 = arith.constant 64 : i32
         
@@ -20,8 +20,8 @@ gpu.module @module{
         scf.if %3 {
             gpu.printf "threadidz"
         }
-        %4 = arith.select %cond, %ctaid, %c64 : i32
-        gpu.printf "ctaid", %4 : i32
+        %4 = arith.select %cond, %cidx, %c64 : i32
+        gpu.printf "ctaidx", %4 : i32
 
         gpu.return
     }
