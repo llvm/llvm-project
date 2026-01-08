@@ -250,7 +250,7 @@ define i64 @cls_i64_2(i64 %x) {
 ; Check that the range max in ctls cls knownbits
 ; is not set to 32
 define i64 @cls_i64_not_32(i64 %x) {
-; CHECK-LABEL: cls_i64_3:
+; CHECK-LABEL: cls_i64_not_32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srai a0, a0, 16
 ; CHECK-NEXT:    cls a0, a0

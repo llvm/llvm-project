@@ -65,20 +65,21 @@ define i32 @cls_i32_knownbits_2(i16 signext %x) {
 
 ; Check that the range max in ctls cls knownbits
 ; is not set to 32
-define i64 @cls_i64_knownbits_2(i32 signext %x) {
-; CHECK-LABEL: cls_i64_knownbits_2:
+define i64 @cls_i64_not_32(i64 %x) {
+; CHECK-LABEL: cls_i64_not_32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:  //{{.*}}
-; CHECK-NEXT:    sxtw x8, w0
-; CHECK-NEXT:    cls x0, x8
+; CHECK-NEXT:    asr x8, x0, #16
+; CHECK-NEXT:    cls x8, x8 
+; CHECK-NEXT:    orr x0, x8, #0x10 
 ; CHECK-NEXT:    ret
-  %sext = sext i32 %x to i64
-  %a = ashr i64 %sext, 31
-  %b = xor i64 %sext, %a
-  %c = call i64 @llvm.ctlz.i64(i64 %b, i1 false)
-  %d = sub i64 %c, 1
-  %e = or i64 %d, 16
-  ret i64 %e
+  %val = ashr i64 %x, 16
+  %a = ashr i64 %val, 63
+  %b = xor i64 %val, %a
+  %c = shl i64 %b, 1
+  %d = or i64 %c, 1
+  %e = call i64 @llvm.ctlz.i64(i64 %d, i1 true)
+  %f = or i64 %e, 16
+  ret i64 %f
 }
 
 ; There are at least 24 redundant sign bits so we don't need an ori after the clsw.
