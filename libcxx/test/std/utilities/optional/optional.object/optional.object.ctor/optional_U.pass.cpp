@@ -25,6 +25,8 @@
 #  include "copy_move_types.h"
 #endif
 
+#include "../optional_helper_types.h"
+
 using std::optional;
 
 template <class T, class U>
@@ -94,6 +96,16 @@ constexpr bool test_ref() {
     ASSERT_NOEXCEPT(std::optional<int&>(o2));
     assert(!o2.has_value());
   }
+
+  {
+    ReferenceConversion<int> t{1, 2};
+    std::optional<ReferenceConversion<int>&> o1(t);
+    std::optional<int&> o2(o1);
+    ASSERT_NOEXCEPT(std::optional<int&>(o1));
+    assert(o2.has_value());
+    assert(&(*o2) == &t.lvalue);
+    assert(*o2 == 1);
+  }
   // optional(optional<U>&&)
   {
     int i = 1;
@@ -120,6 +132,16 @@ constexpr bool test_ref() {
     std::optional<TracedCopyMove> o2{std::move(o1)};
     assert(t.constMove == 0);
     assert(t.nonConstMove == 0);
+  }
+
+  {
+    ReferenceConversion<int> t{1, 2};
+    std::optional<ReferenceConversion<int>&> o1(t);
+    std::optional<int&> o2(std::move(o1));
+    ASSERT_NOEXCEPT(std::optional<int&>(o1));
+    assert(o2.has_value());
+    assert(&(*o2) == &t.lvalue);
+    assert(*o2 == 1);
   }
 
   return true;

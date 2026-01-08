@@ -21,6 +21,8 @@
 #include "archetypes.h"
 #include "test_convertible.h"
 
+#include "../optional_helper_types.h"
+
 using std::optional;
 
 struct ImplicitThrow {
@@ -150,18 +152,6 @@ void test_explicit() {
 }
 
 #if TEST_STD_VER >= 26
-struct Throws {
-  int val = 42;
-  bool b  = false;
-  constexpr Throws() {};
-  constexpr operator int&() {
-    if (b) {
-      TEST_THROW(1);
-    }
-    return val;
-  }
-};
-
 constexpr bool test_ref() {
   {
     int i = 0;
@@ -173,12 +163,45 @@ constexpr bool test_ref() {
     assert(o.value() == 0);
   }
 
+  {
+    ReferenceConversion<int> t{1, 2};
+    ASSERT_NOEXCEPT(std::optional<int&>(t));
+    std::optional<int&> o(t);
+    assert(o.has_value());
+    assert(&(*o) == &t.lvalue);
+    assert(*o == 1);
+  }
+
+  {
+    ReferenceConversion<int> t{1, 2};
+    ASSERT_NOEXCEPT(std::optional<int&>(std::move(t)));
+    std::optional<int&> o(std::move(t));
+    assert(o.has_value());
+    assert(&(*o) == &t.rvalue);
+    assert(*o == 2);
+  }
+
 #  ifndef TEST_HAS_NO_EXCEPTIONS
   {
-    Throws t{};
+    ReferenceConversionThrows<int> t{1, 2, false};
     ASSERT_NOT_NOEXCEPT(std::optional<int&>(t));
     try {
       std::optional<int&> o(t);
+      assert(o.has_value());
+      assert(&(*o) == &t.lvalue);
+      assert(*o == 1);
+    } catch (int) {
+      assert(false);
+    }
+  }
+  {
+    ReferenceConversionThrows<int> t{1, 2, false};
+    ASSERT_NOT_NOEXCEPT(std::optional<int&>(std::move(t)));
+    try {
+      std::optional<int&> o(std::move(t));
+      assert(o.has_value());
+      assert(&(*o) == &t.rvalue);
+      assert(*o == 2);
     } catch (int) {
       assert(false);
     }

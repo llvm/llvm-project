@@ -17,6 +17,7 @@
 #include <optional>
 #include <type_traits>
 
+#include "../optional_helper_types.h"
 #include "test_macros.h"
 
 using std::optional;
@@ -109,7 +110,17 @@ constexpr bool test_ref() {
     assert(!o2.has_value());
   }
 
-  // optional(optional<U>&&)
+  {
+    ReferenceConversion<int> t{1, 2};
+    const std::optional<ReferenceConversion<int>&> o1(t);
+    const std::optional<int&> o2(o1);
+    ASSERT_NOEXCEPT(std::optional<int&>(o1));
+    assert(o2.has_value());
+    assert(&(*o2) == &t.lvalue);
+    assert(*o2 == 1);
+  }
+
+  // optional(const optional<U>&&)
   {
     int i = 1;
     const std::optional<int&> o1{i};
@@ -128,6 +139,16 @@ constexpr bool test_ref() {
     const std::optional<int&> o2{std::move(o1)};
     ASSERT_NOEXCEPT(std::optional<int&>(o2));
     assert(!o2.has_value());
+  }
+
+  {
+    ReferenceConversion<int> t{1, 2};
+    const std::optional<ReferenceConversion<int>&> o1(t);
+    const std::optional<int&> o2(std::move(o1));
+    ASSERT_NOEXCEPT(std::optional<int&>(o1));
+    assert(o2.has_value());
+    assert(&(*o2) == &t.lvalue);
+    assert(*o2 == 1);
   }
 
   return true;
@@ -157,6 +178,9 @@ int main(int, char**) {
   }
 
   static_assert(!(std::is_constructible<optional<X>, const optional<Y>&>::value), "");
-
+#if TEST_STD_VER >= 26
+  assert(test_ref());
+  static_assert(test_ref());
+#endif
   return 0;
 }
