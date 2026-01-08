@@ -2289,9 +2289,9 @@ def fir_LenParamIndexOp : fir_OneResultOp<"len_param_index", [NoMemoryEffect]> {
 // Fortran loops
 //===----------------------------------------------------------------------===//
 
-def fir_ResultOp : fir_Op<"result",
-    [NoMemoryEffect, ReturnLike, Terminator,
-     ParentOneOf<["IfOp", "DoLoopOp", "IterWhileOp"]>]> {
+def fir_ResultOp
+    : fir_Op<"result", [Pure, ReturnLike, Terminator,
+                        ParentOneOf<["IfOp", "DoLoopOp", "IterWhileOp"]>]> {
   let summary = "special terminator for use in fir region operations";
 
   let description = [{
