@@ -2792,19 +2792,18 @@ void populateIRCore(nb::module_ &m) {
   // Enums.
   //----------------------------------------------------------------------------
   nb::enum_<PyDiagnosticSeverity>(m, "DiagnosticSeverity")
-      .value("ERROR", MlirDiagnosticError)
-      .value("WARNING", MlirDiagnosticWarning)
-      .value("NOTE", MlirDiagnosticNote)
-      .value("REMARK", MlirDiagnosticRemark);
+      .value("ERROR", PyDiagnosticSeverity::Error)
+      .value("WARNING", PyDiagnosticSeverity::Warning)
+      .value("NOTE", PyDiagnosticSeverity::Note)
+      .value("REMARK", PyDiagnosticSeverity::Remark);
 
   nb::enum_<PyWalkOrder>(m, "WalkOrder")
-      .value("PRE_ORDER", MlirWalkPreOrder)
-      .value("POST_ORDER", MlirWalkPostOrder);
-
+      .value("PRE_ORDER", PyWalkOrder::PreOrder)
+      .value("POST_ORDER", PyWalkOrder::PostOrder);
   nb::enum_<PyWalkResult>(m, "WalkResult")
-      .value("ADVANCE", MlirWalkResultAdvance)
-      .value("INTERRUPT", MlirWalkResultInterrupt)
-      .value("SKIP", MlirWalkResultSkip);
+      .value("ADVANCE", PyWalkResult::Advance)
+      .value("INTERRUPT", PyWalkResult::Interrupt)
+      .value("SKIP", PyWalkResult::Skip);
 
   //----------------------------------------------------------------------------
   // Mapping of Diagnostics.
@@ -3718,7 +3717,7 @@ void populateIRCore(nb::module_ &m) {
             Note:
               After erasing, any Python references to the operation become invalid.)")
       .def("walk", &PyOperationBase::walk, "callback"_a,
-           "walk_order"_a = PyWalkOrder::MlirWalkPostOrder,
+           "walk_order"_a = PyWalkOrder::PostOrder,
            // clang-format off
           nb::sig("def walk(self, callback: Callable[[Operation], WalkResult], walk_order: WalkOrder) -> None"),
            // clang-format on

@@ -330,23 +330,24 @@ private:
   MlirLocation loc;
 };
 
-enum PyDiagnosticSeverity : std::underlying_type_t<MlirDiagnosticSeverity> {
-  MlirDiagnosticError = MlirDiagnosticError,
-  MlirDiagnosticWarning = MlirDiagnosticWarning,
-  MlirDiagnosticNote = MlirDiagnosticNote,
-  MlirDiagnosticRemark = MlirDiagnosticRemark
+enum class PyDiagnosticSeverity : std::underlying_type_t<
+    MlirDiagnosticSeverity> {
+  Error = MlirDiagnosticError,
+  Warning = MlirDiagnosticWarning,
+  Note = MlirDiagnosticNote,
+  Remark = MlirDiagnosticRemark
 };
 
-enum PyWalkResult : std::underlying_type_t<MlirWalkResult> {
-  MlirWalkResultAdvance = MlirWalkResultAdvance,
-  MlirWalkResultInterrupt = MlirWalkResultInterrupt,
-  MlirWalkResultSkip = MlirWalkResultSkip
+enum class PyWalkResult : std::underlying_type_t<MlirWalkResult> {
+  Advance = MlirWalkResultAdvance,
+  Interrupt = MlirWalkResultInterrupt,
+  Skip = MlirWalkResultSkip
 };
 
 /// Traversal order for operation walk.
-enum PyWalkOrder : std::underlying_type_t<MlirWalkOrder> {
-  MlirWalkPreOrder = MlirWalkPreOrder,
-  MlirWalkPostOrder = MlirWalkPostOrder
+enum class PyWalkOrder : std::underlying_type_t<MlirWalkOrder> {
+  PreOrder = MlirWalkPreOrder,
+  PostOrder = MlirWalkPostOrder
 };
 
 /// Python class mirroring the C MlirDiagnostic struct. Note that these structs
