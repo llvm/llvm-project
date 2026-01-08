@@ -4,11 +4,11 @@
 define i64 @inlineasm_br_different_indirect_target(i1 %cmp) {
 ; CHECK-LABEL: inlineasm_br_different_indirect_target:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:  .LBB0_1: # Inline asm indirect target
 ; CHECK-NEXT:    # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    # Label of block must be emitted
-; CHECK-NEXT:    # implicit-def: $rax
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    je .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %loop.end
