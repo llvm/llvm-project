@@ -95,7 +95,7 @@ subroutine teams_distribute_parallel_do
 !CHECK: %[[X:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFteams_distribute_parallel_doEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: omp.teams {
 !CHECK: omp.parallel {
-gCHECK: %[[LINEAR_STEP:.*]] = arith.constant 1 : i32
+!CHECK: %[[LINEAR_STEP:.*]] = arith.constant 1 : i32
 !CHECK: %{{.*}} = arith.constant 1 : i32
 !CHECK: %[[IV_STEP:.*]] = arith.constant 1 : i32
 !CHECK: omp.distribute {
