@@ -94,7 +94,7 @@ int f3(void) {
 // CIR-NEXT:   %[[I:.*]] = cir.load{{.*}} %[[I_PTR]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:   cir.store{{.*}} %[[I]], %[[RV]] : !s32i, !cir.ptr<!s32i>
 // CIR-NEXT:   %[[R:.*]] = cir.load{{.*}} %[[RV]] : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT:   cir.return  %[[R]] : !s32i
+// CIR-NEXT:   cir.return %[[R]] : !s32i
 
 //      LLVM: define{{.*}} i32 @f3()
 // LLVM-NEXT:   %[[RV:.*]] = alloca i32, i64 1, align 4
