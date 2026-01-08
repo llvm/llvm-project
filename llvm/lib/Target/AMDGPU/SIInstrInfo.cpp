@@ -10783,8 +10783,12 @@ bool SIInstrInfo::invertSCCUse(MachineInstr *SCCDef) const {
   bool SCCIsDead = false;
 
   // Scan instructions for SCC uses that need to be inverted until SCC is dead.
+  constexpr unsigned ScanLimit = 12;
+  unsigned Count = 0;
   for (MachineInstr &MI :
        make_range(std::next(MachineBasicBlock::iterator(SCCDef)), MBB->end())) {
+    if (++Count > ScanLimit)
+      return false;
     if (MI.readsRegister(AMDGPU::SCC, &RI)) {
       if (MI.getOpcode() == AMDGPU::S_CSELECT_B32 ||
           MI.getOpcode() == AMDGPU::S_CSELECT_B64 ||
