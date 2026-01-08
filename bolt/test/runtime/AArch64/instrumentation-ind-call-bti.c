@@ -1,5 +1,5 @@
 // Copy of instrumentation-ind-call.c, but checking that BOLT refuses the
-// instrumentation becuase of BTI.
+// instrumentation because of BTI.
 // TODO: once instrumentation support for BTI is added, update this to check the
 // same as instrumentation-ind-call.c
 
