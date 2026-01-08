@@ -6,7 +6,7 @@ define void @test(ptr %p, i64 %idx) {
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[IDX:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [4 x [4 x i32]], align 16
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 64, ptr [[ALLOCA]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ALLOCA]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[IDX]], 6
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[TMP0]], 48
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP1]]
@@ -31,12 +31,12 @@ define void @test(ptr %p, i64 %idx) {
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 64, ptr [[ALLOCA]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ALLOCA]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %alloca = alloca [4 x [4 x i32]], align 16
-  call void @llvm.lifetime.start.p0(i64 64, ptr %alloca)
+  call void @llvm.lifetime.start.p0(ptr %alloca)
   br label %loop
 
 loop:
@@ -54,6 +54,6 @@ loop:
   br i1 %exitcond.not, label %exit, label %loop
 
 exit:
-  call void @llvm.lifetime.end.p0(i64 64, ptr %alloca)
+  call void @llvm.lifetime.end.p0(ptr %alloca)
   ret void
 }

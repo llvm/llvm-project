@@ -30,6 +30,11 @@
 // Altivec transformation functions and pattern fragments.
 //
 
+// fneg is not legal, and desugared as an xor.
+def desugared_fneg : PatFrag<(ops node:$x), (v4f32 (bitconvert (xor (bitconvert $x), 
+                             (int_ppc_altivec_vslw (bitconvert (v16i8 immAllOnesV)), 
+                             (bitconvert (v16i8 immAllOnesV))))))>; 
+
 def vpkuhum_shuffle : PatFrag<(ops node:$lhs, node:$rhs),
                               (vector_shuffle node:$lhs, node:$rhs), [{
   return PPC::isVPKUHUMShuffleMask(cast<ShuffleVectorSDNode>(N), 0, *CurDAG);
@@ -261,6 +266,13 @@ def immEQOneV : PatLeaf<(build_vector), [{
     return C->isOne();
   return false;
 }]>;
+
+def VSRVSRO : PatFrag<(ops node:$input, node:$shift), 
+                      (int_ppc_altivec_vsr 
+                        (int_ppc_altivec_vsro node:$input, node:$shift), 
+                        node:$shift), 
+                      [{ return N->getOperand(1).hasOneUse(); }]>;
+
 //===----------------------------------------------------------------------===//
 // Helpers for defining instructions that directly correspond to intrinsics.
 
@@ -336,7 +348,6 @@ class VXCR_Int_Ty<bits<11> xo, string opc, Intrinsic IntID, ValueType Ty>
 //===----------------------------------------------------------------------===//
 // Instruction Definitions.
 
-def HasAltivec : Predicate<"Subtarget->hasAltivec()">;
 let Predicates = [HasAltivec] in {
 
 def DSS      : DSS_Form<0, 822, (outs), (ins u5imm:$STRM),
@@ -461,11 +472,12 @@ def VMADDFP : VAForm_1<46, (outs vrrc:$RT), (ins vrrc:$RA, vrrc:$RC, vrrc:$RB),
                        [(set v4f32:$RT,
                         (fma v4f32:$RA, v4f32:$RC, v4f32:$RB))]>;
 
-// FIXME: The fma+fneg pattern won't match because fneg is not legal.
+// fneg is not legal, hence we have to match on the desugared version. 
 def VNMSUBFP: VAForm_1<47, (outs vrrc:$RT), (ins vrrc:$RA, vrrc:$RC, vrrc:$RB),
                        "vnmsubfp $RT, $RA, $RC, $RB", IIC_VecFP,
-                       [(set v4f32:$RT, (fneg (fma v4f32:$RA, v4f32:$RC,
-                                                  (fneg v4f32:$RB))))]>;
+                       [(set v4f32:$RT, (desugared_fneg (fma v4f32:$RA, v4f32:$RC,
+                                                  (desugared_fneg v4f32:$RB))))]>;
+
 let hasSideEffects = 1 in {
   def VMHADDSHS  : VA1a_Int_Ty<32, "vmhaddshs", int_ppc_altivec_vmhaddshs, v8i16>;
   def VMHRADDSHS : VA1a_Int_Ty<33, "vmhraddshs", int_ppc_altivec_vmhraddshs,
@@ -877,6 +889,7 @@ def : Pat<(v16i8 (rotl v16i8:$vA, v16i8:$vB)),
           (v16i8 (VRLB v16i8:$vA, v16i8:$vB))>;
 def : Pat<(v8i16 (rotl v8i16:$vA, v8i16:$vB)),
           (v8i16 (VRLH v8i16:$vA, v8i16:$vB))>;
+let Predicates = [IsNotISAFuture] in
 def : Pat<(v4i32 (rotl v4i32:$vA, v4i32:$vB)),
           (v4i32 (VRLW v4i32:$vA, v4i32:$vB))>;
 
@@ -885,6 +898,13 @@ def : Pat<(mul v8i16:$vA, v8i16:$vB), (VMLADDUHM $vA, $vB, (v8i16(V_SET0H)))>;
 
 // Add
 def : Pat<(add (mul v8i16:$vA, v8i16:$vB), v8i16:$vC), (VMLADDUHM $vA, $vB, $vC)>;
+
+
+// Fused negated multiply-subtract
+def : Pat<(v4f32 (desugared_fneg
+                    (int_ppc_altivec_vmaddfp v4f32:$RA, v4f32:$RC,
+                         (desugared_fneg v4f32:$RB)))),
+          (VNMSUBFP $RA, $RC, $RB)>;
 
 // Saturating adds/subtracts.
 def : Pat<(v16i8 (saddsat v16i8:$vA, v16i8:$vB)), (v16i8 (VADDSBS $vA, $vB))>;
@@ -1186,8 +1206,6 @@ class VX_VT5_VA5_VB5_XO9_o<bits<9> xo, string opc, list<dag> pattern>
   let PS = 0;
 }
 
-def HasP8Altivec : Predicate<"Subtarget->hasP8Altivec()">;
-def HasP8Crypto : Predicate<"Subtarget->hasP8Crypto()">;
 let Predicates = [HasP8Altivec] in {
 
 let isCommutable = 1 in {
@@ -1413,7 +1431,6 @@ def VSBOX : VXBX_Int_Ty<1480, "vsbox", int_ppc_altivec_crypto_vsbox, v2i64>;
 } // HasP8Crypto
 
 // The following altivec instructions were introduced in Power ISA 3.0
-def HasP9Altivec : Predicate<"Subtarget->hasP9Altivec()">;
 let Predicates = [HasP9Altivec] in {
 
 // Vector Multiply-Sum
@@ -1471,13 +1488,13 @@ def VINSERTB : VXForm_1<781, (outs vrrc:$VD),
                         "vinsertb $VD, $VB, $VA", IIC_VecGeneral,
                         [(set v16i8:$VD, (PPCvecinsert v16i8:$VDi, v16i8:$VB,
                                                       imm32SExt16:$VA))]>,
-                        RegConstraint<"$VDi = $VD">, NoEncode<"$VDi">;
+                        RegConstraint<"$VDi = $VD">;
 def VINSERTH : VXForm_1<845, (outs vrrc:$VD),
                         (ins vrrc:$VDi, u4imm:$VA, vrrc:$VB),
                         "vinserth $VD, $VB, $VA", IIC_VecGeneral,
                         [(set v8i16:$VD, (PPCvecinsert v8i16:$VDi, v8i16:$VB,
                                                       imm32SExt16:$VA))]>,
-                        RegConstraint<"$VDi = $VD">, NoEncode<"$VDi">;
+                        RegConstraint<"$VDi = $VD">;
 def VINSERTW : VX1_VT5_UIM5_VB5<909, "vinsertw", []>;
 def VINSERTD : VX1_VT5_UIM5_VB5<973, "vinsertd", []>;
 
@@ -1569,7 +1586,7 @@ def VRLWMI : VXForm_1<133, (outs vrrc:$VD), (ins vrrc:$VA, vrrc:$VB, vrrc:$VDi),
                       [(set v4i32:$VD,
                          (int_ppc_altivec_vrlwmi v4i32:$VA, v4i32:$VB,
                                                  v4i32:$VDi))]>,
-                      RegConstraint<"$VDi = $VD">, NoEncode<"$VDi">;
+                      RegConstraint<"$VDi = $VD">;
 def VRLDNM : VX1_VT5_VA5_VB5<453, "vrldnm",
                              [(set v2i64:$VD,
                                  (int_ppc_altivec_vrldnm v2i64:$VA,
@@ -1579,7 +1596,7 @@ def VRLDMI : VXForm_1<197, (outs vrrc:$VD), (ins vrrc:$VA, vrrc:$VB, vrrc:$VDi),
                       [(set v2i64:$VD,
                          (int_ppc_altivec_vrldmi v2i64:$VA, v2i64:$VB,
                                                  v2i64:$VDi))]>,
-                      RegConstraint<"$VDi = $VD">, NoEncode<"$VDi">;
+                      RegConstraint<"$VDi = $VD">;
 
 // Vector Shift Left/Right
 def VSLV : VX1_VT5_VA5_VB5<1860, "vslv",
@@ -1630,9 +1647,11 @@ def BCDCTSQ_rec : VX_VT5_EO5_VB5_XO9_o    <0, 385, "bcdctsq.", []>;
 
 // Decimal Copy-Sign/Set-Sign
 let Defs = [CR6] in
-def BCDCPSGN_rec : VX1_VT5_VA5_VB5<833, "bcdcpsgn.", []>;
+def BCDCPSGN_rec : VX1_VT5_VA5_VB5<833, "bcdcpsgn.",
+    [(set v16i8:$VD, (int_ppc_bcdcopysign v16i8:$VA, v16i8:$VB))]>;
 
-def BCDSETSGN_rec : VX_VT5_EO5_VB5_PS1_XO9_o<31, 385, "bcdsetsgn.", []>;
+def BCDSETSGN_rec : VX_VT5_EO5_VB5_PS1_XO9_o<31, 385, "bcdsetsgn.",
+    [(set v16i8:$VD, (int_ppc_bcdsetsign v16i8:$VB, i32:$PS))]>;
 
 // Decimal Shift/Unsigned-Shift/Shift-and-Round
 def BCDS_rec :  VX_VT5_VA5_VB5_PS1_XO9_o<193, "bcds." , []>;

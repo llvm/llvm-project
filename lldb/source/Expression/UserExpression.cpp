@@ -246,7 +246,7 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
   // language in the target's properties if specified, else default to the
   // langage for the frame.
   if (!language) {
-    if (target->GetLanguage() != lldb::eLanguageTypeUnknown)
+    if (target->GetLanguage())
       language = target->GetLanguage();
     else if (StackFrame *frame = exe_ctx.GetFramePtr())
       language = frame->GetLanguage();

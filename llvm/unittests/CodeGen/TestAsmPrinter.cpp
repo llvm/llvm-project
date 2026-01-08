@@ -32,7 +32,8 @@ llvm::Expected<std::unique_ptr<TestAsmPrinter>>
 TestAsmPrinter::create(const std::string &TripleStr, uint16_t DwarfVersion,
                        dwarf::DwarfFormat DwarfFormat) {
   std::string ErrorStr;
-  const Target *TheTarget = TargetRegistry::lookupTarget(TripleStr, ErrorStr);
+  Triple TT(TripleStr);
+  const Target *TheTarget = TargetRegistry::lookupTarget(TT, ErrorStr);
   if (!TheTarget)
     return std::unique_ptr<TestAsmPrinter>();
 

@@ -24,9 +24,9 @@
 ; NO-WARNING-NOT:  warning: triple-implied ABI conflicts with provided target-abi 'lp64d', using target-abi
 
 ;; Check that ILP32-on-LA64 and LP64-on-LA32 combinations are handled properly.
-; RUN: llc --mtriple=loongarch64 --target-abi=ilp32d --mattr=+d < %s 2>&1 \
+; RUN: llc --mtriple=loongarch64-linux-gnu --target-abi=ilp32d --mattr=+d < %s 2>&1 \
 ; RUN:   | FileCheck %s --check-prefixes=LP64D,32ON64
-; RUN: llc --mtriple=loongarch32 --target-abi=lp64d --mattr=+d < %s 2>&1 \
+; RUN: llc --mtriple=loongarch32-linux-gnu --target-abi=lp64d --mattr=+d < %s 2>&1 \
 ; RUN:   | FileCheck %s --check-prefixes=ILP32D,64ON32
 
 ; 32ON64: warning: 32-bit ABIs are not supported for 64-bit targets, ignoring and using triple-implied ABI
@@ -49,19 +49,12 @@
 
 ; LP64D-LP64F-NOF: warning: both target-abi and the triple-implied ABI are invalid, ignoring and using feature-implied ABI
 
-;; Check that triple-implied ABI are invalid, use feature-implied ABI
-; RUN: llc --mtriple=loongarch64 --mattr=-f < %s 2>&1 \
-; RUN:   | FileCheck %s --check-prefixes=LP64S,LP64D-NONE-NOF
-
-; LP64D-NONE-NOF: warning: the triple-implied ABI is invalid, ignoring and using feature-implied ABI
-
 define float @f(float %a) {
 ; ILP32D-LABEL: f:
 ; ILP32D:       # %bb.0:
-; ILP32D-NEXT:    addi.w $a0, $zero, 1
-; ILP32D-NEXT:    movgr2fr.w $fa1, $a0
-; ILP32D-NEXT:    ffint.s.w $fa1, $fa1
-; ILP32D-NEXT:    fadd.s $fa0, $fa0, $fa1
+; ILP32D-NEXT:    lu12i.w $a0, 260096
+; ILP32D-NEXT:    movgr2fr.w  $fa1, $a0
+; ILP32D-NEXT:    fadd.s  $fa0, $fa0, $fa1
 ; ILP32D-NEXT:    ret
 ;
 ; LP64D-LABEL: f:
@@ -77,11 +70,10 @@ define float @f(float %a) {
 ; LP64S-LP64D-NOD-LABEL: f:
 ; LP64S-LP64D-NOD:       # %bb.0:
 ; LP64S-LP64D-NOD-NEXT:    movgr2fr.w $fa0, $a0
-; LP64S-LP64D-NOD-NEXT:    addi.w $a0, $zero, 1
-; LP64S-LP64D-NOD-NEXT:    movgr2fr.w $fa1, $a0
-; LP64S-LP64D-NOD-NEXT:    ffint.s.w $fa1, $fa1
-; LP64S-LP64D-NOD-NEXT:    fadd.s $fa0, $fa0, $fa1
-; LP64S-LP64D-NOD-NEXT:    movfr2gr.s $a0, $fa0
+; LP64S-LP64D-NOD-NEXT:    lu12i.w $a0, 260096
+; LP64S-LP64D-NOD-NEXT:    movgr2fr.w  $fa1, $a0
+; LP64S-LP64D-NOD-NEXT:    fadd.s  $fa0, $fa0, $fa1
+; LP64S-LP64D-NOD-NEXT:    movfr2gr.s  $a0, $fa0
 ; LP64S-LP64D-NOD-NEXT:    ret
 ;
 ; LP64D-LP64F-NOF-LABEL: f:
@@ -98,10 +90,9 @@ define float @f(float %a) {
 define double @g(double %a) {
 ; ILP32D-LABEL: g:
 ; ILP32D:       # %bb.0:
-; ILP32D-NEXT:    addi.w $a0, $zero, 1
-; ILP32D-NEXT:    movgr2fr.w $fa1, $a0
-; ILP32D-NEXT:    ffint.s.w $fa1, $fa1
-; ILP32D-NEXT:    fcvt.d.s $fa1, $fa1
+; ILP32D-NEXT:    movgr2fr.w $fa1, $zero
+; ILP32D-NEXT:    lu12i.w $a0, 261888
+; ILP32D-NEXT:    movgr2frh.w $fa1, $a0
 ; ILP32D-NEXT:    fadd.d $fa0, $fa0, $fa1
 ; ILP32D-NEXT:    ret
 ;

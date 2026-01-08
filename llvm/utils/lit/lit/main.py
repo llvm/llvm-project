@@ -30,7 +30,7 @@ def main(builtin_params={}):
     lit_config = lit.LitConfig.LitConfig(
         progname=os.path.basename(sys.argv[0]),
         path=opts.path,
-        quiet=opts.quiet,
+        diagnostic_level=opts.diagnostic_level,
         useValgrind=opts.useValgrind,
         valgrindLeakCheck=opts.valgrindLeakCheck,
         valgrindArgs=opts.valgrindArgs,
@@ -43,6 +43,7 @@ def main(builtin_params={}):
         per_test_coverage=opts.per_test_coverage,
         gtest_sharding=opts.gtest_sharding,
         maxRetriesPerTest=opts.maxRetriesPerTest,
+        update_tests=opts.update_tests,
     )
 
     discovered_tests = lit.discovery.find_tests_for_inputs(
@@ -240,6 +241,8 @@ def mark_xfail(selected_tests, opts):
             t.xfails += "*"
         if test_file in opts.xfail_not or test_full_name in opts.xfail_not:
             t.xfail_not = True
+        if opts.exclude_xfail:
+            t.exclude_xfail = True
 
 
 def mark_excluded(discovered_tests, selected_tests):
@@ -326,12 +329,13 @@ def print_results(tests, elapsed, opts):
             sorted(tests_by_code[code], key=lambda t: t.getFullName()),
             code,
             opts.shown_codes,
+            opts.printPathRelativeCWD,
         )
 
-    print_summary(total_tests, tests_by_code, opts.quiet, elapsed)
+    print_summary(total_tests, tests_by_code, opts.terse_summary, elapsed)
 
 
-def print_group(tests, code, shown_codes):
+def print_group(tests, code, shown_codes, printPathRelativeCWD):
     if not tests:
         return
     if not code.isFailure and code not in shown_codes:
@@ -339,7 +343,7 @@ def print_group(tests, code, shown_codes):
     print("*" * 20)
     print("{} Tests ({}):".format(code.label, len(tests)))
     for test in tests:
-        print("  %s" % test.getFullName())
+        print("  %s" % test.getSummaryName(printPathRelativeCWD))
     sys.stdout.write("\n")
 
 

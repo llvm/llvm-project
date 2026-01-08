@@ -22,7 +22,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 17
 
-struct _LIBCPP_EXPORTED_FROM_ABI in_place_t {
+struct in_place_t {
   explicit in_place_t() = default;
 };
 inline constexpr in_place_t in_place{};

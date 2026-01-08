@@ -73,3 +73,26 @@ exit:
   %1 = select i1 %all.off, i32 1, i32 %0
   ret i32 %1
 }
+
+define i32 @select_vpinst_for_tail_folding(i8 %n) {
+; CHECK: LV: Checking a loop in 'select_vpinst_for_tail_folding'
+; CHECK: Cost of 1 for VF 2: EMIT vp<{{.+}}> = select vp<{{.+}}>, ir<%red.next>, ir<%red>
+; CHECK: Cost of 1 for VF 4: EMIT vp<{{.+}}> = select vp<{{.+}}>, ir<%red.next>, ir<%red>
+; CHECK: LV: Selecting VF: 4
+
+entry:
+  %c = icmp ne i8 %n, 0
+  %ext = zext i1 %c to i32
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %ext, %entry ], [ %iv.next, %loop ]
+  %red = phi i32 [ 0, %entry ], [ %red.next, %loop ]
+  %iv.next = add i32 %iv, 1
+  %red.next = mul i32 %red, %iv
+  %ec = icmp eq i32 %iv, 12
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i32 %red.next
+}

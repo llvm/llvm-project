@@ -17,6 +17,8 @@
 # FULL-NEXT: waveLimiter:     true
 # FULL-NEXT: hasSpilledSGPRs: false
 # FULL-NEXT: hasSpilledVGPRs: false
+# FULL-NEXT: numWaveDispatchSGPRs: 0
+# FULL-NEXT: numWaveDispatchVGPRs: 0
 # FULL-NEXT: scratchRSrcReg:  '$sgpr8_sgpr9_sgpr10_sgpr11'
 # FULL-NEXT: frameOffsetReg:  '$sgpr12'
 # FULL-NEXT: stackPtrOffsetReg:  '$sgpr13'
@@ -55,6 +57,8 @@
 # FULL-NEXT:  hasInitWholeWave: false
 # FULL-NEXT: dynamicVGPRBlockSize: 0
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
+# FULL-NEXT: numKernargPreloadSGPRs: 0
+# FULL-NEXT: isWholeWaveFunction: false
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -126,6 +130,8 @@ body:             |
 # FULL-NEXT: waveLimiter:     false
 # FULL-NEXT: hasSpilledSGPRs: false
 # FULL-NEXT: hasSpilledVGPRs: false
+# FULL-NEXT: numWaveDispatchSGPRs: 0
+# FULL-NEXT: numWaveDispatchVGPRs: 0
 # FULL-NEXT: scratchRSrcReg:  '$private_rsrc_reg'
 # FULL-NEXT: frameOffsetReg:  '$fp_reg'
 # FULL-NEXT: stackPtrOffsetReg:  '$sp_reg'
@@ -162,6 +168,8 @@ body:             |
 # FULL-NEXT: hasInitWholeWave: false
 # FULL-NEXT: dynamicVGPRBlockSize: 0
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
+# FULL-NEXT: numKernargPreloadSGPRs: 0
+# FULL-NEXT: isWholeWaveFunction: false
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -204,6 +212,8 @@ body:             |
 # FULL-NEXT: waveLimiter:     false
 # FULL-NEXT: hasSpilledSGPRs: false
 # FULL-NEXT: hasSpilledVGPRs: false
+# FULL-NEXT: numWaveDispatchSGPRs: 0
+# FULL-NEXT: numWaveDispatchVGPRs: 0
 # FULL-NEXT: scratchRSrcReg:  '$private_rsrc_reg'
 # FULL-NEXT: frameOffsetReg:  '$fp_reg'
 # FULL-NEXT: stackPtrOffsetReg:  '$sp_reg'
@@ -240,6 +250,8 @@ body:             |
 # FULL-NEXT: hasInitWholeWave: false
 # FULL-NEXT: dynamicVGPRBlockSize: 0
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
+# FULL-NEXT: numKernargPreloadSGPRs: 0
+# FULL-NEXT: isWholeWaveFunction: false
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -283,6 +295,8 @@ body:             |
 # FULL-NEXT: waveLimiter:     false
 # FULL-NEXT: hasSpilledSGPRs: false
 # FULL-NEXT: hasSpilledVGPRs: false
+# FULL-NEXT: numWaveDispatchSGPRs: 0
+# FULL-NEXT: numWaveDispatchVGPRs: 0
 # FULL-NEXT: scratchRSrcReg:  '$private_rsrc_reg'
 # FULL-NEXT: frameOffsetReg:  '$fp_reg'
 # FULL-NEXT: stackPtrOffsetReg:  '$sp_reg'
@@ -319,6 +333,8 @@ body:             |
 # FULL-NEXT: hasInitWholeWave: false
 # FULL-NEXT: dynamicVGPRBlockSize: 0
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
+# FULL-NEXT: numKernargPreloadSGPRs: 0
+# FULL-NEXT: isWholeWaveFunction: false
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:

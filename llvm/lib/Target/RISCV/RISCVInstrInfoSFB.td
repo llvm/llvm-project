@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasShortForwardBranchOpt], isSelect = 1,
+let Predicates = [HasShortForwardBranchIALU], isSelect = 1,
     Constraints = "$dst = $falsev", isCommutable = 1, Size = 8 in {
 // This instruction moves $truev to $dst when the condition is true. It will
 // be expanded to control flow in RISCVExpandPseudoInsts.
@@ -28,7 +28,7 @@ def PseudoCCMOVGPR : Pseudo<(outs GPR:$dst),
 
 // This should always expand to a branch+c.mv so the size is 6 or 4 if the
 // branch is compressible.
-let Predicates = [HasConditionalMoveFusion, NoShortForwardBranchOpt],
+let Predicates = [HasConditionalMoveFusion, NoShortForwardBranch],
     Constraints = "$dst = $falsev", isCommutable = 1, Size = 6 in {
 // This instruction moves $truev to $dst when the condition is true. It will
 // be expanded to control flow in RISCVExpandPseudoInsts.
@@ -44,160 +44,125 @@ def PseudoCCMOVGPRNoX0 : Pseudo<(outs GPRNoX0:$dst),
                          Sched<[]>;
 }
 
+class SFBALU_rr
+    : Pseudo<(outs GPR:$dst),
+             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev, GPR:$rs1,
+                  GPR:$rs2), []>,
+      Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU, ReadSFBALU,
+             ReadSFBALU]> {
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+  let Size = 8;
+  let Constraints = "$dst = $falsev";
+}
+
+class SFBALU_ri
+    : Pseudo<(outs GPR:$dst),
+             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev, GPR:$rs1,
+                  simm12_lo:$imm), []>,
+      Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU, ReadSFBALU]> {
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+  let Size = 8;
+  let Constraints = "$dst = $falsev";
+}
+
+class SFBLUI
+    : Pseudo<(outs GPR:$dst),
+             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev,
+                  uimm20_lui:$imm), []> {
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+  let Size = 8;
+  let Constraints = "$dst = $falsev";
+}
+
+class SFBShift_ri
+    : Pseudo<(outs GPR:$dst),
+             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev, GPR:$rs1,
+                  uimmlog2xlen:$imm), []>,
+      Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU, ReadSFBALU]> {
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+  let Size = 8;
+  let Constraints = "$dst = $falsev";
+}
+
+class SFBShiftW_ri
+    : Pseudo<(outs GPR:$dst),
+             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev, GPR:$rs1,
+                  uimm5:$imm), []>,
+      Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU, ReadSFBALU]> {
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+  let Size = 8;
+  let Constraints = "$dst = $falsev";
+}
+
 // Conditional binops, that updates update $dst to (op rs1, rs2) when condition
 // is true. Returns $falsev otherwise. Selected by optimizeSelect.
 // TODO: Can we use DefaultOperands on the regular binop to accomplish this more
 // like how ARM does predication?
-let Predicates = [HasShortForwardBranchOpt], hasSideEffects = 0,
-    mayLoad = 0, mayStore = 0, Size = 8, Constraints = "$dst = $falsev" in {
-def PseudoCCADD : Pseudo<(outs GPR:$dst),
-                         (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                          GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                  Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
-                         ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
-def PseudoCCSUB : Pseudo<(outs GPR:$dst),
-                         (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                          GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                  Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
-                         ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
-def PseudoCCSLL : Pseudo<(outs GPR:$dst),
-                         (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                          GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                  Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                         ReadSFBALU, ReadSFBALU]>;
-def PseudoCCSRL : Pseudo<(outs GPR:$dst),
-                         (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                          GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                  Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                         ReadSFBALU, ReadSFBALU]>;
-def PseudoCCSRA : Pseudo<(outs GPR:$dst),
-                         (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                          GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                  Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                         ReadSFBALU, ReadSFBALU]>;
-def PseudoCCAND : Pseudo<(outs GPR:$dst),
-                         (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                          GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                  Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
-                         ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
-def PseudoCCOR  : Pseudo<(outs GPR:$dst),
-                         (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                          GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                  Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
-                         ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
-def PseudoCCXOR : Pseudo<(outs GPR:$dst),
-                         (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                          GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                  Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
-                         ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
+let Predicates = [HasShortForwardBranchIALU] in {
+def PseudoCCADD : SFBALU_rr;
+def PseudoCCSUB : SFBALU_rr;
+def PseudoCCSLL : SFBALU_rr;
+def PseudoCCSRL : SFBALU_rr;
+def PseudoCCSRA : SFBALU_rr;
+def PseudoCCAND : SFBALU_rr;
+def PseudoCCOR  : SFBALU_rr;
+def PseudoCCXOR : SFBALU_rr;
 
-def PseudoCCADDI : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                           GPR:$falsev, GPR:$rs1, simm12:$rs2), []>,
-                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                          ReadSFBALU]>;
-def PseudoCCSLLI : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                           GPR:$falsev, GPR:$rs1, uimmlog2xlen:$shamt), []>,
-                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                          ReadSFBALU]>;
-def PseudoCCSRLI : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                           GPR:$falsev, GPR:$rs1, uimmlog2xlen:$shamt), []>,
-                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                          ReadSFBALU]>;
-def PseudoCCSRAI : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                           GPR:$falsev, GPR:$rs1, uimmlog2xlen:$shamt), []>,
-                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                          ReadSFBALU]>;
-def PseudoCCANDI : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                           GPR:$falsev, GPR:$rs1, simm12:$rs2), []>,
-                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                          ReadSFBALU]>;
-def PseudoCCORI  : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                           GPR:$falsev, GPR:$rs1, simm12:$rs2), []>,
-                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                          ReadSFBALU]>;
-def PseudoCCXORI : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                           GPR:$falsev, GPR:$rs1, simm12:$rs2), []>,
-                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                          ReadSFBALU]>;
+def PseudoCCADDI : SFBALU_ri;
+def PseudoCCANDI : SFBALU_ri;
+def PseudoCCORI  : SFBALU_ri;
+def PseudoCCXORI : SFBALU_ri;
+
+def PseudoCCLUI : SFBLUI;
+
+def PseudoCCSLLI : SFBShift_ri;
+def PseudoCCSRLI : SFBShift_ri;
+def PseudoCCSRAI : SFBShift_ri;
 
 // RV64I instructions
-def PseudoCCADDW : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
-                          ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
-def PseudoCCSUBW : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
-                          ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
-def PseudoCCSLLW : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                          ReadSFBALU, ReadSFBALU]>;
-def PseudoCCSRLW : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                          ReadSFBALU, ReadSFBALU]>;
-def PseudoCCSRAW : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                          ReadSFBALU, ReadSFBALU]>;
+def PseudoCCADDW : SFBALU_rr;
+def PseudoCCSUBW : SFBALU_rr;
+def PseudoCCSLLW : SFBALU_rr;
+def PseudoCCSRLW : SFBALU_rr;
+def PseudoCCSRAW : SFBALU_rr;
 
-def PseudoCCADDIW : Pseudo<(outs GPR:$dst),
-                           (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                            GPR:$falsev, GPR:$rs1, simm12:$rs2), []>,
-                    Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                           ReadSFBALU]>;
-def PseudoCCSLLIW : Pseudo<(outs GPR:$dst),
-                           (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                            GPR:$falsev, GPR:$rs1, uimm5:$shamt), []>,
-                    Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                           ReadSFBALU]>;
-def PseudoCCSRLIW : Pseudo<(outs GPR:$dst),
-                           (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                            GPR:$falsev, GPR:$rs1, uimm5:$shamt), []>,
-                    Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                           ReadSFBALU]>;
-def PseudoCCSRAIW : Pseudo<(outs GPR:$dst),
-                           (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                            GPR:$falsev, GPR:$rs1, uimm5:$shamt), []>,
-                    Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                           ReadSFBALU]>;
+def PseudoCCADDIW : SFBALU_ri;
+
+def PseudoCCSLLIW : SFBShiftW_ri;
+def PseudoCCSRLIW : SFBShiftW_ri;
+def PseudoCCSRAIW : SFBShiftW_ri;
 
 // Zbb/Zbkb instructions
-def PseudoCCANDN : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
-                          ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
-def PseudoCCORN : Pseudo<(outs GPR:$dst),
-                         (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                          GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                  Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
-                         ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
-def PseudoCCXNOR : Pseudo<(outs GPR:$dst),
-                          (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
-                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
-                          ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
+def PseudoCCANDN : SFBALU_rr;
+def PseudoCCORN  : SFBALU_rr;
+def PseudoCCXNOR : SFBALU_rr;
 }
 
-let Predicates = [HasShortForwardBranchOpt] in
+let Predicates = [HasShortForwardBranchIALU] in
 def : Pat<(XLenVT (abs GPR:$rs1)),
           (PseudoCCSUB (XLenVT GPR:$rs1), (XLenVT X0), /* COND_LT */ 2,
            (XLenVT GPR:$rs1), (XLenVT X0), (XLenVT GPR:$rs1))>;
-let Predicates = [HasShortForwardBranchOpt, IsRV64] in
+let Predicates = [HasShortForwardBranchIALU, IsRV64] in
 def : Pat<(sext_inreg (abs 33signbits_node:$rs1), i32),
           (PseudoCCSUBW (i64 GPR:$rs1), (i64 X0), /* COND_LT */ 2,
            (i64 GPR:$rs1), (i64 X0), (i64 GPR:$rs1))>;
+
+let Predicates = [HasShortForwardBranchIMinMax] in {
+def PseudoCCMAX : SFBALU_rr;
+def PseudoCCMIN : SFBALU_rr;
+def PseudoCCMAXU : SFBALU_rr;
+def PseudoCCMINU : SFBALU_rr;
+}
+
+let Predicates = [HasShortForwardBranchIMul] in
+def PseudoCCMUL : SFBALU_rr;

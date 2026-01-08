@@ -30,7 +30,6 @@
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_reference.h>
-#include <__type_traits/is_replaceable.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/is_trivially_constructible.h>
@@ -472,8 +471,6 @@ public:
       __conditional_t<__libcpp_is_trivially_relocatable<_Tp>::value && __libcpp_is_trivially_relocatable<_Err>::value,
                       expected,
                       void>;
-  using __replaceable _LIBCPP_NODEBUG =
-      __conditional_t<__is_replaceable_v<_Tp> && __is_replaceable_v<_Err>, expected, void>;
 
   template <class _Up>
   using rebind = expected<_Up, error_type>;
@@ -555,9 +552,10 @@ public:
           is_nothrow_constructible_v<_Tp, _Up> && is_nothrow_constructible_v<_Err, _OtherErr>) // strengthened
       : __base(__other.__has_val(), std::move(__other.__union())) {}
 
-  template <class _Up = _Tp>
+  template <class _Up = remove_cv_t<_Tp>>
     requires(!is_same_v<remove_cvref_t<_Up>, in_place_t> && !is_same_v<expected, remove_cvref_t<_Up>> &&
-             is_constructible_v<_Tp, _Up> && !__is_std_unexpected<remove_cvref_t<_Up>>::value &&
+             !is_same_v<remove_cvref_t<_Up>, unexpect_t> && is_constructible_v<_Tp, _Up> &&
+             !__is_std_unexpected<remove_cvref_t<_Up>>::value &&
              (!is_same_v<remove_cv_t<_Tp>, bool> || !__is_std_expected<remove_cvref_t<_Up>>::value))
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<_Up, _Tp>)
       expected(_Up&& __u) noexcept(is_nothrow_constructible_v<_Tp, _Up>) // strengthened
@@ -668,7 +666,7 @@ public:
     return *this;
   }
 
-  template <class _Up = _Tp>
+  template <class _Up = remove_cv_t<_Tp>>
   _LIBCPP_HIDE_FROM_ABI constexpr expected& operator=(_Up&& __v)
     requires(!is_same_v<expected, remove_cvref_t<_Up>> && !__is_std_unexpected<remove_cvref_t<_Up>>::value &&
              is_constructible_v<_Tp, _Up> && is_assignable_v<_Tp&, _Up> &&
@@ -886,14 +884,14 @@ public:
     return std::move(this->__unex());
   }
 
-  template <class _Up>
+  template <class _Up = remove_cv_t<_Tp>>
   _LIBCPP_HIDE_FROM_ABI constexpr _Tp value_or(_Up&& __v) const& {
     static_assert(is_copy_constructible_v<_Tp>, "value_type has to be copy constructible");
     static_assert(is_convertible_v<_Up, _Tp>, "argument has to be convertible to value_type");
     return this->__has_val() ? this->__val() : static_cast<_Tp>(std::forward<_Up>(__v));
   }
 
-  template <class _Up>
+  template <class _Up = remove_cv_t<_Tp>>
   _LIBCPP_HIDE_FROM_ABI constexpr _Tp value_or(_Up&& __v) && {
     static_assert(is_move_constructible_v<_Tp>, "value_type has to be move constructible");
     static_assert(is_convertible_v<_Up, _Tp>, "argument has to be convertible to value_type");

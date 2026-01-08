@@ -1,0 +1,53 @@
+// RUN: cir-opt %s -cir-to-llvm -o %t.cir
+
+!u8i = !cir.int<u, 8>
+
+module {
+
+// CHECK: llvm.func @__gxx_personality_v0(...) -> i32
+
+cir.func @inflight_exception() {
+  %exception_ptr, %type_id = cir.eh.inflight_exception
+  cir.return
+}
+
+// CHECK: llvm.func @inflight_exception() attributes {personality = @__gxx_personality_v0} {
+// CHECK:   %[[CONST_0:.*]] = llvm.mlir.zero : !llvm.ptr
+// CHECK:   %[[LP:.*]] = llvm.landingpad (catch %[[CONST_0]] : !llvm.ptr) : !llvm.struct<(ptr, i32)>
+// CHECK:   %[[EXCEPTION_PTR:.*]] = llvm.extractvalue %[[LP]][0] : !llvm.struct<(ptr, i32)> 
+// CHECK:   %[[TYPE_ID:.*]] = llvm.extractvalue %[[LP]][1] : !llvm.struct<(ptr, i32)> 
+// CHECK:   llvm.return
+// CHECK: }
+
+cir.func @inflight_exception_with_cleanup() {
+  %exception_ptr, %type_id = cir.eh.inflight_exception cleanup
+  cir.return
+}
+
+// CHECK: llvm.func @inflight_exception_with_cleanup() attributes {personality = @__gxx_personality_v0} {
+// CHECK:   %[[LP:.*]] = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+// CHECK:   %[[EXCEPTION_PTR:.*]] = llvm.extractvalue %[[LP]][0] : !llvm.struct<(ptr, i32)> 
+// CHECK:   %[[TYPE_ID:.*]] = llvm.extractvalue %[[LP]][1] : !llvm.struct<(ptr, i32)> 
+// CHECK:   llvm.return
+// CHECK: }
+
+
+cir.global "private" constant external @_ZTIi : !cir.ptr<!u8i>
+cir.global "private" constant external @_ZTIPKc : !cir.ptr<!u8i>
+
+cir.func @inflight_exception_with_catch_type_list() {
+  %exception_ptr, %type_id = cir.eh.inflight_exception [@_ZTIi, @_ZTIPKc]
+  cir.return
+}
+
+// CHECK: llvm.func @inflight_exception_with_catch_type_list() attributes {personality = @__gxx_personality_v0} {
+// CHECK:   %[[TI_1_ADDR:.*]] = llvm.mlir.addressof @_ZTIPKc : !llvm.ptr
+// CHECK:   %[[TI_2_ADDR:.*]] = llvm.mlir.addressof @_ZTIi : !llvm.ptr
+// CHECK:   %[[LP:.*]] = llvm.landingpad (catch %[[TI_2_ADDR]] : !llvm.ptr) (catch %[[TI_1_ADDR]] : !llvm.ptr) : !llvm.struct<(ptr, i32)>
+// CHECK:   %[[EXCEPTION_PTR:.*]] = llvm.extractvalue %[[LP]][0] : !llvm.struct<(ptr, i32)> 
+// CHECK:   %[[TYPE_ID:.*]] = llvm.extractvalue %[[LP]][1] : !llvm.struct<(ptr, i32)> 
+// CHECK:   llvm.return
+// CHECK: }
+
+
+}

@@ -55,6 +55,7 @@ struct LaunchSingleKernelTestBase : LaunchKernelTestBase {
 
 KERNEL_TEST(Foo, foo)
 KERNEL_TEST(NoArgs, noargs)
+KERNEL_TEST(Byte, byte)
 KERNEL_TEST(LocalMem, localmem)
 KERNEL_TEST(LocalMemReduction, localmem_reduction)
 KERNEL_TEST(LocalMemStatic, localmem_static)
@@ -91,10 +92,10 @@ TEST_P(olLaunchKernelFooTest, Success) {
     void *Mem;
   } Args{Mem};
 
-  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args),
-                                &LaunchArgs, nullptr));
+  ASSERT_SUCCESS(
+      olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args), &LaunchArgs));
 
-  ASSERT_SUCCESS(olWaitQueue(Queue));
+  ASSERT_SUCCESS(olSyncQueue(Queue));
 
   uint32_t *Data = (uint32_t *)Mem;
   for (uint32_t i = 0; i < 64; i++) {
@@ -104,11 +105,34 @@ TEST_P(olLaunchKernelFooTest, Success) {
   ASSERT_SUCCESS(olMemFree(Mem));
 }
 
+TEST_P(olLaunchKernelFooTest, SuccessThreaded) {
+  threadify([&](size_t) {
+    void *Mem;
+    ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
+                              LaunchArgs.GroupSize.x * sizeof(uint32_t), &Mem));
+    struct {
+      void *Mem;
+    } Args{Mem};
+
+    ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args),
+                                  &LaunchArgs));
+
+    ASSERT_SUCCESS(olSyncQueue(Queue));
+
+    uint32_t *Data = (uint32_t *)Mem;
+    for (uint32_t i = 0; i < 64; i++) {
+      ASSERT_EQ(Data[i], i);
+    }
+
+    ASSERT_SUCCESS(olMemFree(Mem));
+  });
+}
+
 TEST_P(olLaunchKernelNoArgsTest, Success) {
   ASSERT_SUCCESS(
-      olLaunchKernel(Queue, Device, Kernel, nullptr, 0, &LaunchArgs, nullptr));
+      olLaunchKernel(Queue, Device, Kernel, nullptr, 0, &LaunchArgs));
 
-  ASSERT_SUCCESS(olWaitQueue(Queue));
+  ASSERT_SUCCESS(olSyncQueue(Queue));
 }
 
 TEST_P(olLaunchKernelFooTest, SuccessSynchronous) {
@@ -121,7 +145,7 @@ TEST_P(olLaunchKernelFooTest, SuccessSynchronous) {
   } Args{Mem};
 
   ASSERT_SUCCESS(olLaunchKernel(nullptr, Device, Kernel, &Args, sizeof(Args),
-                                &LaunchArgs, nullptr));
+                                &LaunchArgs));
 
   uint32_t *Data = (uint32_t *)Mem;
   for (uint32_t i = 0; i < 64; i++) {
@@ -144,10 +168,10 @@ TEST_P(olLaunchKernelLocalMemTest, Success) {
     void *Mem;
   } Args{Mem};
 
-  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args),
-                                &LaunchArgs, nullptr));
+  ASSERT_SUCCESS(
+      olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args), &LaunchArgs));
 
-  ASSERT_SUCCESS(olWaitQueue(Queue));
+  ASSERT_SUCCESS(olSyncQueue(Queue));
 
   uint32_t *Data = (uint32_t *)Mem;
   for (uint32_t i = 0; i < LaunchArgs.GroupSize.x * LaunchArgs.NumGroups.x; i++)
@@ -167,10 +191,10 @@ TEST_P(olLaunchKernelLocalMemReductionTest, Success) {
     void *Mem;
   } Args{Mem};
 
-  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args),
-                                &LaunchArgs, nullptr));
+  ASSERT_SUCCESS(
+      olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args), &LaunchArgs));
 
-  ASSERT_SUCCESS(olWaitQueue(Queue));
+  ASSERT_SUCCESS(olSyncQueue(Queue));
 
   uint32_t *Data = (uint32_t *)Mem;
   for (uint32_t i = 0; i < LaunchArgs.NumGroups.x; i++)
@@ -190,10 +214,10 @@ TEST_P(olLaunchKernelLocalMemStaticTest, Success) {
     void *Mem;
   } Args{Mem};
 
-  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args),
-                                &LaunchArgs, nullptr));
+  ASSERT_SUCCESS(
+      olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args), &LaunchArgs));
 
-  ASSERT_SUCCESS(olWaitQueue(Queue));
+  ASSERT_SUCCESS(olSyncQueue(Queue));
 
   uint32_t *Data = (uint32_t *)Mem;
   for (uint32_t i = 0; i < LaunchArgs.NumGroups.x; i++)
@@ -210,12 +234,12 @@ TEST_P(olLaunchKernelGlobalTest, Success) {
     void *Mem;
   } Args{Mem};
 
-  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernels[0], nullptr, 0,
-                                &LaunchArgs, nullptr));
-  ASSERT_SUCCESS(olWaitQueue(Queue));
+  ASSERT_SUCCESS(
+      olLaunchKernel(Queue, Device, Kernels[0], nullptr, 0, &LaunchArgs));
+  ASSERT_SUCCESS(olSyncQueue(Queue));
   ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernels[1], &Args, sizeof(Args),
-                                &LaunchArgs, nullptr));
-  ASSERT_SUCCESS(olWaitQueue(Queue));
+                                &LaunchArgs));
+  ASSERT_SUCCESS(olSyncQueue(Queue));
 
   uint32_t *Data = (uint32_t *)Mem;
   for (uint32_t i = 0; i < 64; i++) {
@@ -229,9 +253,8 @@ TEST_P(olLaunchKernelGlobalTest, InvalidNotAKernel) {
   ol_symbol_handle_t Global = nullptr;
   ASSERT_SUCCESS(
       olGetSymbol(Program, "global", OL_SYMBOL_KIND_GLOBAL_VARIABLE, &Global));
-  ASSERT_ERROR(
-      OL_ERRC_SYMBOL_KIND,
-      olLaunchKernel(Queue, Device, Global, nullptr, 0, &LaunchArgs, nullptr));
+  ASSERT_ERROR(OL_ERRC_SYMBOL_KIND,
+               olLaunchKernel(Queue, Device, Global, nullptr, 0, &LaunchArgs));
 }
 
 TEST_P(olLaunchKernelGlobalCtorTest, Success) {
@@ -242,9 +265,9 @@ TEST_P(olLaunchKernelGlobalCtorTest, Success) {
     void *Mem;
   } Args{Mem};
 
-  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args),
-                                &LaunchArgs, nullptr));
-  ASSERT_SUCCESS(olWaitQueue(Queue));
+  ASSERT_SUCCESS(
+      olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args), &LaunchArgs));
+  ASSERT_SUCCESS(olSyncQueue(Queue));
 
   uint32_t *Data = (uint32_t *)Mem;
   for (uint32_t i = 0; i < 64; i++) {
@@ -259,6 +282,6 @@ TEST_P(olLaunchKernelGlobalDtorTest, Success) {
   // find/implement a way, update this test. For now we just check that nothing
   // crashes
   ASSERT_SUCCESS(
-      olLaunchKernel(Queue, Device, Kernel, nullptr, 0, &LaunchArgs, nullptr));
-  ASSERT_SUCCESS(olWaitQueue(Queue));
+      olLaunchKernel(Queue, Device, Kernel, nullptr, 0, &LaunchArgs));
+  ASSERT_SUCCESS(olSyncQueue(Queue));
 }

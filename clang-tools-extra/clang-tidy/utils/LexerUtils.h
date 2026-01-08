@@ -1,4 +1,4 @@
-//===--- LexerUtils.h - clang-tidy-------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_LEXER_UTILS_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_LEXER_UTILS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_LEXERUTILS_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_LEXERUTILS_H
 
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/TokenKinds.h"
@@ -48,7 +48,7 @@ SourceLocation findPreviousAnyTokenKind(SourceLocation Start,
   if (Start.isInvalid() || Start.isMacroID())
     return {};
   while (true) {
-    SourceLocation L = findPreviousTokenStart(Start, SM, LangOpts);
+    const SourceLocation L = findPreviousTokenStart(Start, SM, LangOpts);
     if (L.isInvalid() || L.isMacroID())
       return {};
 
@@ -76,7 +76,7 @@ SourceLocation findNextAnyTokenKind(SourceLocation Start,
     if (!CurrentToken)
       return {};
 
-    Token PotentialMatch = *CurrentToken;
+    const Token PotentialMatch = *CurrentToken;
     if (PotentialMatch.isOneOf(TK, TKs...))
       return PotentialMatch.getLocation();
 
@@ -130,4 +130,4 @@ SourceLocation getLocationForNoexceptSpecifier(const FunctionDecl *FuncDecl,
 } // namespace tidy::utils::lexer
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_LEXER_UTILS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_LEXERUTILS_H

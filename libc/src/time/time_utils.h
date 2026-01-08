@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_TIME_TIME_UTILS_H
 #define LLVM_LIBC_SRC_TIME_TIME_UTILS_H
 
+#include "hdr/stdint_proxy.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/struct_tm.h"
 #include "hdr/types/time_t.h"
@@ -18,8 +19,6 @@
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "time_constants.h"
-
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace time_utils {
@@ -94,11 +93,22 @@ LIBC_INLINE tm *gmtime_internal(const time_t *timer, tm *result) {
   return result;
 }
 
-// TODO: localtime is not yet implemented and a temporary solution is to
-//       use gmtime, https://github.com/llvm/llvm-project/issues/107597
+LIBC_INLINE tm *localtime_internal(const time_t *timer, tm *result) {
+  time_t seconds = *timer;
+  // Update the tm structure's year, month, day, etc. from seconds.
+  if (update_from_seconds(seconds, result) < 0) {
+    out_of_range();
+    return nullptr;
+  }
+
+  // TODO(zimirza): implement timezone database
+
+  return result;
+}
+
 LIBC_INLINE tm *localtime(const time_t *t_ptr) {
   static tm result;
-  return time_utils::gmtime_internal(t_ptr, &result);
+  return time_utils::localtime_internal(t_ptr, &result);
 }
 
 // Returns number of years from (1, year).

@@ -145,14 +145,14 @@ declare <4 x i32> @llvm.ppc.vsx.xvcmpgtsp(<4 x float>, <4 x float>)
 ; CHECK32-NEXT:       .align  4
 ; CHECK32-NEXT: [[L2_foo:.*]]:                               # %for.body
 ; CHECK32-NEXT:                                         # =>This Inner Loop Header: Depth=1
-; CHECK32-NEXT:       slwi r8, r7, 4
-; CHECK32-NEXT:       addic r7, r7, 1
-; CHECK32-NEXT:       addze r6, r6
+; CHECK32-NEXT:       slwi r8, r6, 4
+; CHECK32-NEXT:       addic r6, r6, 1
+; CHECK32-NEXT:       addze r7, r7
 ; CHECK32-NEXT:       lxvx vs2, r4, r8
 ; CHECK32-NEXT:       xvmaddmsp vs2, vs0, vs1
 ; CHECK32-NEXT:       stxvx vs2, r3, r8
-; CHECK32-NEXT:       xor r8, r7, r5
-; CHECK32-NEXT:       or. r8, r8, r6
+; CHECK32-NEXT:       xor r8, r6, r5
+; CHECK32-NEXT:       or. r8, r8, r7
 ; CHECK32-NEXT:       bne     cr0, [[L2_foo]]
 
 ; CHECK32:      .foo:

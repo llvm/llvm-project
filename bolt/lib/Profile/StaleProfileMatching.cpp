@@ -348,26 +348,10 @@ private:
       return It->second;
     };
 
-    auto matchPseudoProbeInfo = [&](const yaml::bolt::PseudoProbeInfo
-                                        &ProfileProbe,
-                                    uint32_t NodeId) {
-      for (uint64_t Index = 0; Index < 64; ++Index)
-        if (ProfileProbe.BlockMask & 1ull << Index)
-          ++FlowBlockMatchCount[matchProfileProbeToBlock(NodeId, Index + 1)];
-      for (const auto &ProfileProbes :
-           {ProfileProbe.BlockProbes, ProfileProbe.IndCallProbes,
-            ProfileProbe.CallProbes})
-        for (uint64_t ProfileProbe : ProfileProbes)
-          ++FlowBlockMatchCount[matchProfileProbeToBlock(NodeId, ProfileProbe)];
-    };
-
-    for (const yaml::bolt::PseudoProbeInfo &ProfileProbe : BlockPseudoProbes) {
-      if (!ProfileProbe.InlineTreeNodes.empty())
-        for (uint32_t ProfileInlineTreeNode : ProfileProbe.InlineTreeNodes)
-          matchPseudoProbeInfo(ProfileProbe, ProfileInlineTreeNode);
-      else
-        matchPseudoProbeInfo(ProfileProbe, ProfileProbe.InlineTreeIndex);
-    }
+    for (const yaml::bolt::PseudoProbeInfo &ProfileProbe : BlockPseudoProbes)
+      for (uint32_t Node : ProfileProbe.InlineTreeNodes)
+        for (uint64_t Probe : ProfileProbe.BlockProbes)
+          ++FlowBlockMatchCount[matchProfileProbeToBlock(Node, Probe)];
     uint32_t BestMatchCount = 0;
     uint32_t TotalMatchCount = 0;
     const FlowBlock *BestMatchBlock = nullptr;

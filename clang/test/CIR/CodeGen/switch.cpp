@@ -1183,3 +1183,90 @@ int nested_switch(int a) {
 // OGCG: [[IFEND10]]:
 // OGCG:   br label %[[EPILOG]]
 // OGCG: [[EPILOG]]:
+
+int sw_return_multi_cases(int x) {
+  switch (x) {
+  case 0:
+    return 0;
+  case 1:
+    return 1;
+  case 2:
+    return 2;
+  default:
+    return -1;
+  }
+}
+
+// CIR-LABEL: cir.func{{.*}} @_Z21sw_return_multi_casesi
+// CIR:       cir.switch (%{{.*}} : !s32i) {
+// CIR-NEXT:  cir.case(equal, [#cir.int<0> : !s32i]) {
+// CIR:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CIR:         cir.store{{.*}} %[[ZERO]], %{{.*}} : !s32i, !cir.ptr<!s32i>
+// CIR:         %[[RET0:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:    cir.return %[[RET0]] : !s32i
+// CIR-NEXT:  }
+// CIR-NEXT:  cir.case(equal, [#cir.int<1> : !s32i]) {
+// CIR:         %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CIR:         cir.store{{.*}} %[[ONE]], %{{.*}} : !s32i, !cir.ptr<!s32i>
+// CIR:         %[[RET1:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:    cir.return %[[RET1]] : !s32i
+// CIR-NEXT:  }
+// CIR-NEXT:  cir.case(equal, [#cir.int<2> : !s32i]) {
+// CIR:         %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
+// CIR:         cir.store{{.*}} %[[TWO]], %{{.*}} : !s32i, !cir.ptr<!s32i>
+// CIR:         %[[RET2:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:    cir.return %[[RET2]] : !s32i
+// CIR-NEXT:  }
+// CIR-NEXT:  cir.case(default, []) {
+// CIR:         %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CIR:         %[[NEG:.*]] = cir.unary(minus, %[[ONE]]) {{.*}} : !s32i, !s32i
+// CIR:         cir.store{{.*}} %[[NEG]], %{{.*}} : !s32i, !cir.ptr<!s32i>
+// CIR:         %[[RETDEF:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:    cir.return %[[RETDEF]] : !s32i
+// CIR-NEXT:  }
+// CIR-NEXT:  cir.yield
+
+// LLVM-LABEL: define{{.*}} i32 @_Z21sw_return_multi_casesi
+// LLVM:   switch i32 %{{.*}}, label %[[DEFAULT:.*]] [
+// LLVM-DAG:   i32 0, label %[[CASE0:.*]]
+// LLVM-DAG:   i32 1, label %[[CASE1:.*]]
+// LLVM-DAG:   i32 2, label %[[CASE2:.*]]
+// LLVM:   ]
+// LLVM: [[CASE0]]:
+// LLVM:   store i32 0, ptr %{{.*}}, align 4
+// LLVM:   %{{.*}} = load i32, ptr %{{.*}}, align 4
+// LLVM:   ret i32 %{{.*}}
+// LLVM: [[CASE1]]:
+// LLVM:   store i32 1, ptr %{{.*}}, align 4
+// LLVM:   %{{.*}} = load i32, ptr %{{.*}}, align 4
+// LLVM:   ret i32 %{{.*}}
+// LLVM: [[CASE2]]:
+// LLVM:   store i32 2, ptr %{{.*}}, align 4
+// LLVM:   %{{.*}} = load i32, ptr %{{.*}}, align 4
+// LLVM:   ret i32 %{{.*}}
+// LLVM: [[DEFAULT]]:
+// LLVM:   store i32 -1, ptr %{{.*}}, align 4
+// LLVM:   %{{.*}} = load i32, ptr %{{.*}}, align 4
+// LLVM:   ret i32 %{{.*}}
+
+// OGCG-LABEL: define{{.*}} i32 @_Z21sw_return_multi_casesi
+// OGCG: entry:
+// OGCG:   %[[RETVAL:.*]] = alloca i32, align 4
+// OGCG:   %[[X_ADDR:.*]] = alloca i32, align 4
+// OGCG:   %[[X_VAL:.*]] = load i32, ptr %[[X_ADDR]], align 4
+// OGCG:   switch i32 %[[X_VAL]], label %[[DEFAULT:.*]] [
+// OGCG-DAG:   i32 0, label %[[SW0:.*]]
+// OGCG-DAG:   i32 1, label %[[SW1:.*]]
+// OGCG-DAG:   i32 2, label %[[SW2:.*]]
+// OGCG:   ]
+// OGCG: [[SW0]]:
+// OGCG:   br label %[[RETURN:.*]]
+// OGCG: [[SW1]]:
+// OGCG:   br label %[[RETURN]]
+// OGCG: [[SW2]]:
+// OGCG:   br label %[[RETURN]]
+// OGCG: [[DEFAULT]]:
+// OGCG:   br label %[[RETURN]]
+// OGCG: [[RETURN]]:
+// OGCG:   %[[RETVAL_LOAD:.*]] = load i32, ptr %[[RETVAL]], align 4
+// OGCG:   ret i32 %[[RETVAL_LOAD]]

@@ -1,7 +1,7 @@
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: clang-doc --output=%t --format=json --executor=standalone %s
-// RUN: FileCheck %s < %t/nested.json --check-prefix=NESTED
-// RUN: FileCheck %s < %t/inner.json --check-prefix=INNER
+// RUN: FileCheck %s < %t/json/nested/index.json --check-prefix=NESTED
+// RUN: FileCheck %s < %t/json/nested/inner/index.json --check-prefix=INNER
 
 namespace nested {
   int Global;
@@ -12,6 +12,8 @@ namespace nested {
 
 // NESTED:       "Variables": [
 // NESTED-NEXT:    {
+// NESTED-NEXT:      "End": true,
+// NESTED-NEXT:      "InfoType": "variable",
 // NESTED-NEXT:      "IsStatic": false,
 // NESTED-NEXT:      "Location": {
 // NESTED-NEXT:        "Filename": "{{.*}}nested-namespace.cpp",
@@ -24,6 +26,8 @@ namespace nested {
 
 // INNER:       "Variables": [
 // INNER-NEXT:    {
+// INNER-NEXT:      "End": true,
+// INNER-NEXT:      "InfoType": "variable",
 // INNER-NEXT:      "IsStatic": false,
 // INNER-NEXT:      "Location": {
 // INNER-NEXT:        "Filename": "{{.*}}nested-namespace.cpp",

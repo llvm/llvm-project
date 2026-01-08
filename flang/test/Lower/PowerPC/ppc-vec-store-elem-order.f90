@@ -14,7 +14,7 @@ subroutine vec_st_test(arg1, arg2, arg3)
 ! LLVMIR: %[[arg1:.*]] = load <8 x i16>, ptr %0, align 16
 ! LLVMIR: %[[arg2:.*]] = load i32, ptr %1, align 4
 ! LLVMIR: %[[addr:.*]] = getelementptr i8, ptr %2, i32 %[[arg2]]
-! LLVMIR: %[[bc:.*]] = bitcast <8 x i16> %[[arg1]] to <4 x i32> 
+! LLVMIR: %[[bc:.*]] = bitcast <8 x i16> %[[arg1]] to <4 x i32>
 ! LLVMIR: %[[shf:.*]] = shufflevector <4 x i32> %[[bc]], <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ! LLVMIR:  call void @llvm.ppc.altivec.stvx(<4 x i32> %[[shf]], ptr %[[addr]])
 end subroutine vec_st_test
@@ -28,7 +28,7 @@ subroutine vec_ste_test(arg1, arg2, arg3)
   integer(4) :: arg2
   real(4) :: arg3
   call vec_ste(arg1, arg2, arg3)
-  
+
 ! LLVMIR: %[[arg1:.*]] = load <4 x float>, ptr %0, align 16
 ! LLVMIR: %[[arg2:.*]] = load i32, ptr %1, align 4
 ! LLVMIR: %[[addr]] = getelementptr i8, ptr %2, i32 %[[arg2]]

@@ -81,6 +81,7 @@ class DwarfCompileUnit final : public DwarfUnit {
 
   // List of abstract local scopes (either DISubprogram or DILexicalBlock).
   DenseMap<const DILocalScope *, DIE *> AbstractLocalScopeDIEs;
+  SmallPtrSet<const DISubprogram *, 8> FinalizedAbstractSubprograms;
 
   // List of inlined lexical block scopes that belong to subprograms within this
   // CU.
@@ -137,11 +138,27 @@ class DwarfCompileUnit final : public DwarfUnit {
     return DU->getAbstractEntities();
   }
 
+  auto &getFinalizedAbstractSubprograms() {
+    if (isDwoUnit() && !DD->shareAcrossDWOCUs())
+      return FinalizedAbstractSubprograms;
+    return DU->getFinalizedAbstractSubprograms();
+  }
+
   void finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) override;
 
   /// Add info for Wasm-global-based relocation.
   void addWasmRelocBaseGlobal(DIELoc *Loc, StringRef GlobalName,
                               uint64_t GlobalIndex);
+
+  /// Create context DIE for abstract subprogram.
+  /// \returns The context DIE and the compile unit where abstract
+  ///          DIE should be constructed.
+  std::pair<DIE *, DwarfCompileUnit *>
+  getOrCreateAbstractSubprogramContextDIE(const DISubprogram *SP);
+
+  /// Create new DIE for abstract subprogram.
+  DIE &createAbstractSubprogramDIE(const DISubprogram *SP, DIE *ContextDIE,
+                                   DwarfCompileUnit *ContextCU);
 
 public:
   DwarfCompileUnit(unsigned UID, const DICompileUnit *Node, AsmPrinter *A,
@@ -216,7 +233,8 @@ public:
   /// DW_AT_low_pc, DW_AT_high_pc and DW_AT_LLVM_stmt_sequence attributes.
   /// If there are global variables in this scope then create and insert DIEs
   /// for these variables.
-  DIE &updateSubprogramScopeDIE(const DISubprogram *SP, MCSymbol *LineTableSym);
+  DIE &updateSubprogramScopeDIE(const DISubprogram *SP, const Function &F,
+                                MCSymbol *LineTableSym);
 
   void constructScopeDIE(LexicalScope *Scope, DIE &ParentScopeDIE);
 
@@ -259,12 +277,18 @@ public:
   /// This instance of 'getOrCreateContextDIE()' can handle DILocalScope.
   DIE *getOrCreateContextDIE(const DIScope *Ty) override;
 
+  DIE *getOrCreateSubprogramDIE(const DISubprogram *SP, const Function *F,
+                                bool Minimal = false) override;
+
   /// Construct a DIE for this subprogram scope.
-  DIE &constructSubprogramScopeDIE(const DISubprogram *Sub, LexicalScope *Scope,
-                                   MCSymbol *LineTableSym);
+  DIE &constructSubprogramScopeDIE(const DISubprogram *Sub, const Function &F,
+                                   LexicalScope *Scope, MCSymbol *LineTableSym);
 
   DIE *createAndAddScopeChildren(LexicalScope *Scope, DIE &ScopeDIE);
 
+  /// Create an abstract subprogram DIE, that should later be populated
+  /// by \ref constructAbstractSubprogramScopeDIE.
+  DIE &getOrCreateAbstractSubprogramDIE(const DISubprogram *SP);
   void constructAbstractSubprogramScopeDIE(LexicalScope *Scope);
 
   /// Whether to use the GNU analog for a DWARF5 tag, attribute, or location
@@ -281,15 +305,17 @@ public:
   dwarf::LocationAtom getDwarf5OrGNULocationAtom(dwarf::LocationAtom Loc) const;
 
   /// Construct a call site entry DIE describing a call within \p Scope to a
-  /// callee described by \p CalleeSP.
+  /// callee described by \p CalleeSP and \p CalleeF.
   /// \p IsTail specifies whether the call is a tail call.
   /// \p PCAddr points to the PC value after the call instruction.
   /// \p CallAddr points to the PC value at the call instruction (or is null).
   /// \p CallReg is a register location for an indirect call. For direct calls
   /// the \p CallReg is set to 0.
   DIE &constructCallSiteEntryDIE(DIE &ScopeDIE, const DISubprogram *CalleeSP,
-                                 bool IsTail, const MCSymbol *PCAddr,
-                                 const MCSymbol *CallAddr, unsigned CallReg);
+                                 const Function *CalleeF, bool IsTail,
+                                 const MCSymbol *PCAddr,
+                                 const MCSymbol *CallAddr, unsigned CallReg,
+                                 DIType *AllocSiteTy);
   /// Construct call site parameter DIEs for the \p CallSiteDIE. The \p Params
   /// were collected by the \ref collectCallSiteParameters.
   /// Note: The order of parameters does not matter, since debuggers recognize

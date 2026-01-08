@@ -9,6 +9,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -99,7 +100,8 @@ void foo() {}
   ASSERT_TRUE(Invocation);
 
   CompilerInstance Instance(std::move(Invocation));
-  Instance.setDiagnostics(Diags.get());
+  Instance.createVirtualFileSystem(CIOpts.VFS);
+  Instance.setDiagnostics(Diags);
   Instance.getFrontendOpts().OutputFile = CacheBMIPath;
   GenerateReducedModuleInterfaceAction Action;
   ASSERT_TRUE(Instance.ExecuteAction(Action));

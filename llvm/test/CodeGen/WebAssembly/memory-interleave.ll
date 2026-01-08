@@ -1,0 +1,2699 @@
+; RUN: opt -mtriple=wasm32 -mattr=+simd128 -passes=loop-vectorize %s | llc -mtriple=wasm32 -mattr=+simd128 -asm-verbose=false -disable-wasm-fallthrough-return-opt | FileCheck %s
+
+target datalayout = "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-n32:64-S128-ni:1:10:20"
+
+%struct.TwoInts = type { i32, i32 }
+%struct.ThreeInts = type { i32, i32, i32 }
+%struct.FourInts = type { i32, i32, i32, i32 }
+%struct.TwoShorts = type { i16, i16 }
+%struct.ThreeShorts = type { i16, i16, i16 }
+%struct.FourShorts = type { i16, i16, i16, i16 }
+%struct.FiveShorts = type { i16, i16, i16, i16, i16 }
+%struct.TwoBytes = type { i8, i8 }
+%struct.ThreeBytes = type { i8, i8, i8 }
+%struct.FourBytes = type { i8, i8, i8, i8 }
+%struct.EightBytes = type { i8, i8, i8, i8, i8, i8, i8, i8 }
+%struct.TwoFloats = type { float, float }
+%struct.FourFloats = type { float, float, float, float }
+
+; CHECK-LABEL: two_ints_same_op:
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
+; CHECK: i32x4.add
+; CHECK: i8x16.shuffle  4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
+; CHECK: i8x16.shuffle  4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
+; CHECK: i32x4.add
+; CHECK: i8x16.shuffle  8, 9, 10, 11, 24, 25, 26, 27, 12, 13, 14, 15, 28, 29, 30, 31
+; CHECK: v128.store
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 16, 17, 18, 19, 4, 5, 6, 7, 20, 21, 22, 23
+; CHECK: v128.store
+define hidden void @two_ints_same_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
+  %5 = icmp eq i32 %3, 0
+  br i1 %5, label %6, label %7
+
+6:                                                ; preds = %7, %4
+  ret void
+
+7:                                                ; preds = %4, %7
+  %8 = phi i32 [ %21, %7 ], [ 0, %4 ]
+  %9 = getelementptr inbounds %struct.TwoInts, ptr %1, i32 %8
+  %10 = load i32, ptr %9, align 4
+  %11 = getelementptr inbounds %struct.TwoInts, ptr %2, i32 %8
+  %12 = load i32, ptr %11, align 4
+  %13 = add i32 %12, %10
+  %14 = getelementptr inbounds %struct.TwoInts, ptr %0, i32 %8
+  store i32 %13, ptr %14, align 4
+  %15 = getelementptr inbounds i8, ptr %9, i32 4
+  %16 = load i32, ptr %15, align 4
+  %17 = getelementptr inbounds i8, ptr %11, i32 4
+  %18 = load i32, ptr %17, align 4
+  %19 = add i32 %18, %16
+  %20 = getelementptr inbounds i8, ptr %14, i32 4
+  store i32 %19, ptr %20, align 4
+  %21 = add nuw i32 %8, 1
+  %22 = icmp eq i32 %21, %3
+  br i1 %22, label %6, label %7
+}
+
+; CHECK-LABEL: two_ints_vary_op:
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
+; CHECK: i32x4.add
+; CHECK: i8x16.shuffle  4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
+; CHECK: i8x16.shuffle  4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
+; CHECK: i32x4.sub
+; CHECK: i8x16.shuffle  8, 9, 10, 11, 24, 25, 26, 27, 12, 13, 14, 15, 28, 29, 30, 31
+; CHECK: v128.store
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 16, 17, 18, 19, 4, 5, 6, 7, 20, 21, 22, 23
+; CHECK: v128.store
+define hidden void @two_ints_vary_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
+  %5 = icmp eq i32 %3, 0
+  br i1 %5, label %6, label %7
+
+6:                                                ; preds = %7, %4
+  ret void
+
+7:                                                ; preds = %4, %7
+  %8 = phi i32 [ %21, %7 ], [ 0, %4 ]
+  %9 = getelementptr inbounds %struct.TwoInts, ptr %1, i32 %8
+  %10 = load i32, ptr %9, align 4
+  %11 = getelementptr inbounds %struct.TwoInts, ptr %2, i32 %8
+  %12 = load i32, ptr %11, align 4
+  %13 = add i32 %12, %10
+  %14 = getelementptr inbounds %struct.TwoInts, ptr %0, i32 %8
+  store i32 %13, ptr %14, align 4
+  %15 = getelementptr inbounds i8, ptr %9, i32 4
+  %16 = load i32, ptr %15, align 4
+  %17 = getelementptr inbounds i8, ptr %11, i32 4
+  %18 = load i32, ptr %17, align 4
+  %19 = sub i32 %16, %18
+  %20 = getelementptr inbounds i8, ptr %14, i32 4
+  store i32 %19, ptr %20, align 4
+  %21 = add nuw i32 %8, 1
+  %22 = icmp eq i32 %21, %3
+  br i1 %22, label %6, label %7
+}
+
+; CHECK-LABEL: three_ints:
+; CHECK: loop
+; CHECK-NOT: v128.load
+; CHECK: i32.load
+; CHECK: i32.load
+; CHECK: i32.add
+; CHECK: i32.store
+; CHECK: i32.load
+; CHECK: i32.load
+; CHECK: i32.add
+; CHECK: i32.store
+; CHECK: i32.load
+; CHECK: i32.load
+; CHECK: i32.add
+; CHECK: i32.store
+define hidden void @three_ints(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
+  %5 = icmp eq i32 %3, 0
+  br i1 %5, label %6, label %7
+
+6:                                                ; preds = %7, %4
+  ret void
+
+7:                                                ; preds = %4, %7
+  %8 = phi i32 [ %27, %7 ], [ 0, %4 ]
+  %9 = getelementptr inbounds %struct.ThreeInts, ptr %1, i32 %8
+  %10 = load i32, ptr %9, align 4
+  %11 = getelementptr inbounds %struct.ThreeInts, ptr %2, i32 %8
+  %12 = load i32, ptr %11, align 4
+  %13 = add nsw i32 %12, %10
+  %14 = getelementptr inbounds %struct.ThreeInts, ptr %0, i32 %8
+  store i32 %13, ptr %14, align 4
+  %15 = getelementptr inbounds i8, ptr %9, i32 4
+  %16 = load i32, ptr %15, align 4
+  %17 = getelementptr inbounds i8, ptr %11, i32 4
+  %18 = load i32, ptr %17, align 4
+  %19 = add nsw i32 %18, %16
+  %20 = getelementptr inbounds i8, ptr %14, i32 4
+  store i32 %19, ptr %20, align 4
+  %21 = getelementptr inbounds i8, ptr %9, i32 8
+  %22 = load i32, ptr %21, align 4
+  %23 = getelementptr inbounds i8, ptr %11, i32 8
+  %24 = load i32, ptr %23, align 4
+  %25 = add nsw i32 %24, %22
+  %26 = getelementptr inbounds i8, ptr %14, i32 8
+  store i32 %25, ptr %26, align 4
+  %27 = add nuw i32 %8, 1
+  %28 = icmp eq i32 %27, %3
+  br i1 %28, label %6, label %7
+}
+
+; CHECK-LABEL: three_shorts:
+; CHECK: loop
+; CHECK-NOT: v128.load
+; CHECK: i32.load16_u
+; CHECK: i32.load16_u
+; CHECK: i32.mul
+; CHECK: i32.store16
+; CHECK: i32.load16_u
+; CHECK: i32.load16_u
+; CHECK: i32.mul
+; CHECK: i32.store16
+; CHECK: i32.load16_u
+; CHECK: i32.load16_u
+; CHECK: i32.mul
+; CHECK: i32.store16
+define hidden void @three_shorts(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
+  %5 = icmp eq i32 %3, 0
+  br i1 %5, label %6, label %7
+
+6:                                                ; preds = %7, %4
+  ret void
+
+7:                                                ; preds = %4, %7
+  %8 = phi i32 [ %27, %7 ], [ 0, %4 ]
+  %9 = getelementptr inbounds %struct.ThreeShorts, ptr %1, i32 %8
+  %10 = load i16, ptr %9, align 2
+  %11 = getelementptr inbounds %struct.ThreeShorts, ptr %2, i32 %8
+  %12 = load i16, ptr %11, align 2
+  %13 = mul i16 %12, %10
+  %14 = getelementptr inbounds %struct.ThreeShorts, ptr %0, i32 %8
+  store i16 %13, ptr %14, align 2
+  %15 = getelementptr inbounds i8, ptr %9, i32 2
+  %16 = load i16, ptr %15, align 2
+  %17 = getelementptr inbounds i8, ptr %11, i32 2
+  %18 = load i16, ptr %17, align 2
+  %19 = mul i16 %18, %16
+  %20 = getelementptr inbounds i8, ptr %14, i32 2
+  store i16 %19, ptr %20, align 2
+  %21 = getelementptr inbounds i8, ptr %9, i32 4
+  %22 = load i16, ptr %21, align 2
+  %23 = getelementptr inbounds i8, ptr %11, i32 4
+  %24 = load i16, ptr %23, align 2
+  %25 = mul i16 %24, %22
+  %26 = getelementptr inbounds i8, ptr %14, i32 4
+  store i16 %25, ptr %26, align 2
+  %27 = add nuw i32 %8, 1
+  %28 = icmp eq i32 %27, %3
+  br i1 %28, label %6, label %7
+}
+
+; CHECK-LABEL: four_shorts_same_op:
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 1, 8, 9, 16, 17, 24, 25, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 1, 8, 9, 16, 17, 24, 25, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i16x8.sub
+; CHECK: i8x16.shuffle  2, 3, 10, 11, 18, 19, 26, 27, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i8x16.shuffle  2, 3, 10, 11, 18, 19, 26, 27, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i16x8.sub
+; CHECK: i8x16.shuffle  4, 5, 20, 21, 0, 1, 0, 1, 6, 7, 22, 23, 0, 1, 0, 1
+; CHECK: i8x16.shuffle  4, 5, 12, 13, 20, 21, 28, 29, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i8x16.shuffle  4, 5, 12, 13, 20, 21, 28, 29, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i16x8.sub
+; CHECK: i8x16.shuffle  6, 7, 14, 15, 22, 23, 30, 31, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i8x16.shuffle  6, 7, 14, 15, 22, 23, 30, 31, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i16x8.sub
+; CHECK: i8x16.shuffle  0, 1, 0, 1, 4, 5, 20, 21, 0, 1, 0, 1, 6, 7, 22, 23
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 20, 21, 22, 23, 8, 9, 10, 11, 28, 29, 30, 31
+; CHECK: v128.store
+; CHECK: i8x16.shuffle  0, 1, 16, 17, 0, 1, 0, 1, 2, 3, 18, 19, 0, 1, 0, 1
+; CHECK: i8x16.shuffle  0, 1, 0, 1, 0, 1, 16, 17, 0, 1, 0, 1, 2, 3, 18, 19
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 20, 21, 22, 23, 8, 9, 10, 11, 28, 29, 30, 31
+; CHECK: v128.store
+define hidden void @four_shorts_same_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
+  %5 = icmp eq i32 %3, 0
+  br i1 %5, label %6, label %7
+
+6:                                                ; preds = %7, %4
+  ret void
+
+7:                                                ; preds = %4, %7
+  %8 = phi i32 [ %33, %7 ], [ 0, %4 ]
+  %9 = getelementptr inbounds %struct.FourShorts, ptr %1, i32 %8
+  %10 = load i16, ptr %9, align 2
+  %11 = getelementptr inbounds %struct.FourShorts, ptr %2, i32 %8
+  %12 = load i16, ptr %11, align 2
+  %13 = sub i16 %10, %12
+  %14 = getelementptr inbounds %struct.FourShorts, ptr %0, i32 %8
+  store i16 %13, ptr %14, align 2
+  %15 = getelementptr inbounds i8, ptr %9, i32 2
+  %16 = load i16, ptr %15, align 2
+  %17 = getelementptr inbounds i8, ptr %11, i32 2
+  %18 = load i16, ptr %17, align 2
+  %19 = sub i16 %16, %18
+  %20 = getelementptr inbounds i8, ptr %14, i32 2
+  store i16 %19, ptr %20, align 2
+  %21 = getelementptr inbounds i8, ptr %9, i32 4
+  %22 = load i16, ptr %21, align 2
+  %23 = getelementptr inbounds i8, ptr %11, i32 4
+  %24 = load i16, ptr %23, align 2
+  %25 = sub i16 %22, %24
+  %26 = getelementptr inbounds i8, ptr %14, i32 4
+  store i16 %25, ptr %26, align 2
+  %27 = getelementptr inbounds i8, ptr %9, i32 6
+  %28 = load i16, ptr %27, align 2
+  %29 = getelementptr inbounds i8, ptr %11, i32 6
+  %30 = load i16, ptr %29, align 2
+  %31 = sub i16 %28, %30
+  %32 = getelementptr inbounds i8, ptr %14, i32 6
+  store i16 %31, ptr %32, align 2
+  %33 = add nuw i32 %8, 1
+  %34 = icmp eq i32 %33, %3
+  br i1 %34, label %6, label %7
+}
+
+; CHECK-LABEL: four_shorts_split_op:
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 1, 8, 9, 16, 17, 24, 25, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 1, 8, 9, 16, 17, 24, 25, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: v128.or
+; CHECK: i8x16.shuffle  2, 3, 10, 11, 18, 19, 26, 27, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i8x16.shuffle  2, 3, 10, 11, 18, 19, 26, 27, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: v128.or
+; CHECK: i8x16.shuffle  4, 5, 20, 21, 0, 1, 0, 1, 6, 7, 22, 23, 0, 1, 0, 1
+; CHECK: i8x16.shuffle  4, 5, 12, 13, 20, 21, 28, 29, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i8x16.shuffle  4, 5, 12, 13, 20, 21, 28, 29, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: v128.xor
+; CHECK: i8x16.shuffle  6, 7, 14, 15, 22, 23, 30, 31, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i8x16.shuffle  6, 7, 14, 15, 22, 23, 30, 31, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: v128.xor
+; CHECK: i8x16.shuffle  0, 1, 0, 1, 4, 5, 20, 21, 0, 1, 0, 1, 6, 7, 22, 23
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 20, 21, 22, 23, 8, 9, 10, 11, 28, 29, 30, 31
+; CHECK: v128.store
+; CHECK: i8x16.shuffle  0, 1, 16, 17, 0, 1, 0, 1, 2, 3, 18, 19, 0, 1, 0, 1
+; CHECK: i8x16.shuffle  0, 1, 0, 1, 0, 1, 16, 17, 0, 1, 0, 1, 2, 3, 18, 19
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 20, 21, 22, 23, 8, 9, 10, 11, 28, 29, 30, 31
+; CHECK: v128.store
+define hidden void @four_shorts_split_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
+  %5 = icmp eq i32 %3, 0
+  br i1 %5, label %6, label %7
+
+6:                                                ; preds = %7, %4
+  ret void
+
+7:                                                ; preds = %4, %7
+  %8 = phi i32 [ %33, %7 ], [ 0, %4 ]
+  %9 = getelementptr inbounds %struct.FourShorts, ptr %1, i32 %8
+  %10 = load i16, ptr %9, align 2
+  %11 = getelementptr inbounds %struct.FourShorts, ptr %2, i32 %8
+  %12 = load i16, ptr %11, align 2
+  %13 = or i16 %12, %10
+  %14 = getelementptr inbounds %struct.FourShorts, ptr %0, i32 %8
+  store i16 %13, ptr %14, align 2
+  %15 = getelementptr inbounds i8, ptr %9, i32 2
+  %16 = load i16, ptr %15, align 2
+  %17 = getelementptr inbounds i8, ptr %11, i32 2
+  %18 = load i16, ptr %17, align 2
+  %19 = or i16 %18, %16
+  %20 = getelementptr inbounds i8, ptr %14, i32 2
+  store i16 %19, ptr %20, align 2
+  %21 = getelementptr inbounds i8, ptr %9, i32 4
+  %22 = load i16, ptr %21, align 2
+  %23 = getelementptr inbounds i8, ptr %11, i32 4
+  %24 = load i16, ptr %23, align 2
+  %25 = xor i16 %24, %22
+  %26 = getelementptr inbounds i8, ptr %14, i32 4
+  store i16 %25, ptr %26, align 2
+  %27 = getelementptr inbounds i8, ptr %9, i32 6
+  %28 = load i16, ptr %27, align 2
+  %29 = getelementptr inbounds i8, ptr %11, i32 6
+  %30 = load i16, ptr %29, align 2
+  %31 = xor i16 %30, %28
+  %32 = getelementptr inbounds i8, ptr %14, i32 6
+  store i16 %31, ptr %32, align 2
+  %33 = add nuw i32 %8, 1
+  %34 = icmp eq i32 %33, %3
+  br i1 %34, label %6, label %7
+}
+
+; CHECK-LABEL: four_shorts_interleave_op:
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 1, 8, 9, 16, 17, 24, 25, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 1, 8, 9, 16, 17, 24, 25, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: v128.or
+; CHECK: i8x16.shuffle  2, 3, 10, 11, 18, 19, 26, 27, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i8x16.shuffle  2, 3, 10, 11, 18, 19, 26, 27, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: v128.xor
+; CHECK: i8x16.shuffle  4, 5, 20, 21, 0, 1, 0, 1, 6, 7, 22, 23, 0, 1, 0, 1
+; CHECK: i8x16.shuffle  4, 5, 12, 13, 20, 21, 28, 29, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i8x16.shuffle  4, 5, 12, 13, 20, 21, 28, 29, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: v128.or
+; CHECK: i8x16.shuffle  6, 7, 14, 15, 22, 23, 30, 31, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i8x16.shuffle  6, 7, 14, 15, 22, 23, 30, 31, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: v128.xor
+; CHECK: i8x16.shuffle  0, 1, 0, 1, 4, 5, 20, 21, 0, 1, 0, 1, 6, 7, 22, 23
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 20, 21, 22, 23, 8, 9, 10, 11, 28, 29, 30, 31
+; CHECK: v128.store
+; CHECK: i8x16.shuffle  0, 1, 16, 17, 0, 1, 0, 1, 2, 3, 18, 19, 0, 1, 0, 1
+; CHECK: i8x16.shuffle  0, 1, 0, 1, 0, 1, 16, 17, 0, 1, 0, 1, 2, 3, 18, 19
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 20, 21, 22, 23, 8, 9, 10, 11, 28, 29, 30, 31
+; CHECK: v128.store
+define hidden void @four_shorts_interleave_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
+  %5 = icmp eq i32 %3, 0
+  br i1 %5, label %6, label %7
+
+6:                                                ; preds = %7, %4
+  ret void
+
+7:                                                ; preds = %4, %7
+  %8 = phi i32 [ %33, %7 ], [ 0, %4 ]
+  %9 = getelementptr inbounds %struct.FourShorts, ptr %1, i32 %8
+  %10 = load i16, ptr %9, align 2
+  %11 = getelementptr inbounds %struct.FourShorts, ptr %2, i32 %8
+  %12 = load i16, ptr %11, align 2
+  %13 = or i16 %12, %10
+  %14 = getelementptr inbounds %struct.FourShorts, ptr %0, i32 %8
+  store i16 %13, ptr %14, align 2
+  %15 = getelementptr inbounds i8, ptr %9, i32 2
+  %16 = load i16, ptr %15, align 2
+  %17 = getelementptr inbounds i8, ptr %11, i32 2
+  %18 = load i16, ptr %17, align 2
+  %19 = xor i16 %18, %16
+  %20 = getelementptr inbounds i8, ptr %14, i32 2
+  store i16 %19, ptr %20, align 2
+  %21 = getelementptr inbounds i8, ptr %9, i32 4
+  %22 = load i16, ptr %21, align 2
+  %23 = getelementptr inbounds i8, ptr %11, i32 4
+  %24 = load i16, ptr %23, align 2
+  %25 = or i16 %24, %22
+  %26 = getelementptr inbounds i8, ptr %14, i32 4
+  store i16 %25, ptr %26, align 2
+  %27 = getelementptr inbounds i8, ptr %9, i32 6
+  %28 = load i16, ptr %27, align 2
+  %29 = getelementptr inbounds i8, ptr %11, i32 6
+  %30 = load i16, ptr %29, align 2
+  %31 = xor i16 %30, %28
+  %32 = getelementptr inbounds i8, ptr %14, i32 6
+  store i16 %31, ptr %32, align 2
+  %33 = add nuw i32 %8, 1
+  %34 = icmp eq i32 %33, %3
+  br i1 %34, label %6, label %7
+}
+
+; CHECK-LABEL: five_shorts:
+; CHECK: loop
+; CHECK-NOT: v128.load
+; CHECK: i32.load16_u
+; CHECK: i32.load16_u
+; CHECK: i32.sub
+; CHECK: i32.store16
+; CHECK: i32.load16_u
+; CHECK: i32.load16_u
+; CHECK: i32.sub
+; CHECK: i32.store16
+; CHECK: i32.load16_u
+; CHECK: i32.load16_u
+; CHECK: i32.sub
+; CHECK: i32.store16
+; CHECK: i32.load16_u
+; CHECK: i32.load16_u
+; CHECK: i32.sub
+; CHECK: i32.store16
+; CHECK: i32.load16_u
+; CHECK: i32.load16_u
+; CHECK: i32.sub
+; CHECK: i32.store16
+define hidden void @five_shorts(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
+  %5 = icmp eq i32 %3, 0
+  br i1 %5, label %6, label %7
+
+6:                                                ; preds = %7, %4
+  ret void
+
+7:                                                ; preds = %4, %7
+  %8 = phi i32 [ %39, %7 ], [ 0, %4 ]
+  %9 = getelementptr inbounds %struct.FiveShorts, ptr %1, i32 %8
+  %10 = load i16, ptr %9, align 1
+  %11 = getelementptr inbounds %struct.FiveShorts, ptr %2, i32 %8
+  %12 = load i16, ptr %11, align 1
+  %13 = sub i16 %10, %12
+  %14 = getelementptr inbounds %struct.FiveShorts, ptr %0, i32 %8
+  store i16 %13, ptr %14, align 1
+  %15 = getelementptr inbounds i16, ptr %9, i32 1
+  %16 = load i16, ptr %15, align 1
+  %17 = getelementptr inbounds i16, ptr %11, i32 1
+  %18 = load i16, ptr %17, align 1
+  %19 = sub i16 %16, %18
+  %20 = getelementptr inbounds i16, ptr %14, i32 1
+  store i16 %19, ptr %20, align 1
+  %21 = getelementptr inbounds i16, ptr %9, i32 2
+  %22 = load i16, ptr %21, align 1
+  %23 = getelementptr inbounds i16, ptr %11, i32 2
+  %24 = load i16, ptr %23, align 1
+  %25 = sub i16 %22, %24
+  %26 = getelementptr inbounds i16, ptr %14, i32 2
+  store i16 %25, ptr %26, align 1
+  %27 = getelementptr inbounds i16, ptr %9, i32 3
+  %28 = load i16, ptr %27, align 1
+  %29 = getelementptr inbounds i16, ptr %11, i32 3
+  %30 = load i16, ptr %29, align 1
+  %31 = sub i16 %28, %30
+  %32 = getelementptr inbounds i16, ptr %14, i32 3
+  store i16 %31, ptr %32, align 1
+  %33 = getelementptr inbounds i16, ptr %9, i32 4
+  %34 = load i16, ptr %33, align 1
+  %35 = getelementptr inbounds i16, ptr %11, i32 4
+  %36 = load i16, ptr %35, align 1
+  %37 = sub i16 %34, %36
+  %38 = getelementptr inbounds i16, ptr %14, i32 4
+  store i16 %37, ptr %38, align 1
+  %39 = add nuw i32 %8, 1
+  %40 = icmp eq i32 %39, %3
+  br i1 %40, label %6, label %7
+}
+
+; CHECK-LABEL: two_bytes_same_op:
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
+; CHECK: i16x8.extmul_high_i8x16_u
+; CHECK: i8x16.shuffle  1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31
+; CHECK: i8x16.shuffle  1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31
+; CHECK: i16x8.extmul_high_i8x16_u
+; CHECK: i8x16.shuffle  0, 16, 2, 18, 4, 20, 6, 22, 8, 24, 10, 26, 12, 28, 14, 30
+; CHECK: v128.store
+; CHECK: i16x8.extmul_low_i8x16_u
+; CHECK: i16x8.extmul_low_i8x16_u
+; CHECK: i8x16.shuffle  0, 16, 2, 18, 4, 20, 6, 22, 8, 24, 10, 26, 12, 28, 14, 30
+; CHECK: v128.store
+define hidden void @two_bytes_same_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
+  %5 = icmp eq i32 %3, 0
+  br i1 %5, label %6, label %7
+
+6:                                                ; preds = %7, %4
+  ret void
+
+7:                                                ; preds = %4, %7
+  %8 = phi i32 [ %21, %7 ], [ 0, %4 ]
+  %9 = getelementptr inbounds %struct.TwoBytes, ptr %1, i32 %8
+  %10 = load i8, ptr %9, align 1
+  %11 = getelementptr inbounds %struct.TwoBytes, ptr %2, i32 %8
+  %12 = load i8, ptr %11, align 1
+  %13 = mul i8 %12, %10
+  %14 = getelementptr inbounds %struct.TwoBytes, ptr %0, i32 %8
+  store i8 %13, ptr %14, align 1
+  %15 = getelementptr inbounds i8, ptr %9, i32 1
+  %16 = load i8, ptr %15, align 1
+  %17 = getelementptr inbounds i8, ptr %11, i32 1
+  %18 = load i8, ptr %17, align 1
+  %19 = mul i8 %18, %16
+  %20 = getelementptr inbounds i8, ptr %14, i32 1
+  store i8 %19, ptr %20, align 1
+  %21 = add nuw i32 %8, 1
+  %22 = icmp eq i32 %21, %3
+  br i1 %22, label %6, label %7
+}
+
+; CHECK-LABEL: two_bytes_vary_op:
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
+; CHECK: i16x8.extmul_high_i8x16_u
+; CHECK: i8x16.shuffle  1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31
+; CHECK: i8x16.shuffle  1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31
+; CHECK: i8x16.sub
+; CHECK: i8x16.shuffle  0, 24, 2, 25, 4, 26, 6, 27, 8, 28, 10, 29, 12, 30, 14, 31
+; CHECK: v128.store
+; CHECK: i16x8.extmul_low_i8x16_u
+; CHECK: i8x16.shuffle  0, 16, 2, 17, 4, 18, 6, 19, 8, 20, 10, 21, 12, 22, 14, 23
+; CHECK: v128.store
+define hidden void @two_bytes_vary_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
+  %5 = icmp eq i32 %3, 0
+  br i1 %5, label %6, label %7
+
+6:                                                ; preds = %7, %4
+  ret void
+
+7:                                                ; preds = %4, %7
+  %8 = phi i32 [ %21, %7 ], [ 0, %4 ]
+  %9 = getelementptr inbounds %struct.TwoBytes, ptr %1, i32 %8
+  %10 = load i8, ptr %9, align 1
+  %11 = getelementptr inbounds %struct.TwoBytes, ptr %2, i32 %8
+  %12 = load i8, ptr %11, align 1
+  %13 = mul i8 %12, %10
+  %14 = getelementptr inbounds %struct.TwoBytes, ptr %0, i32 %8
+  store i8 %13, ptr %14, align 1
+  %15 = getelementptr inbounds i8, ptr %9, i32 1
+  %16 = load i8, ptr %15, align 1
+  %17 = getelementptr inbounds i8, ptr %11, i32 1
+  %18 = load i8, ptr %17, align 1
+  %19 = sub i8 %16, %18
+  %20 = getelementptr inbounds i8, ptr %14, i32 1
+  store i8 %19, ptr %20, align 1
+  %21 = add nuw i32 %8, 1
+  %22 = icmp eq i32 %21, %3
+  br i1 %22, label %6, label %7
+}
+
+; CHECK-LABEL: three_bytes_same_op:
+; CHECK: loop
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.and
+; CHECK: i32.store8
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.and
+; CHECK: i32.store8
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.and
+; CHECK: i32.store8
+define hidden void @three_bytes_same_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
+  %5 = icmp eq i32 %3, 0
+  br i1 %5, label %6, label %7
+
+6:                                                ; preds = %7, %4
+  ret void
+
+7:                                                ; preds = %4, %7
+  %8 = phi i32 [ %27, %7 ], [ 0, %4 ]
+  %9 = getelementptr inbounds %struct.ThreeBytes, ptr %1, i32 %8
+  %10 = load i8, ptr %9, align 1
+  %11 = getelementptr inbounds %struct.ThreeBytes, ptr %2, i32 %8
+  %12 = load i8, ptr %11, align 1
+  %13 = and i8 %12, %10
+  %14 = getelementptr inbounds %struct.ThreeBytes, ptr %0, i32 %8
+  store i8 %13, ptr %14, align 1
+  %15 = getelementptr inbounds i8, ptr %9, i32 1
+  %16 = load i8, ptr %15, align 1
+  %17 = getelementptr inbounds i8, ptr %11, i32 1
+  %18 = load i8, ptr %17, align 1
+  %19 = and i8 %18, %16
+  %20 = getelementptr inbounds i8, ptr %14, i32 1
+  store i8 %19, ptr %20, align 1
+  %21 = getelementptr inbounds i8, ptr %9, i32 2
+  %22 = load i8, ptr %21, align 1
+  %23 = getelementptr inbounds i8, ptr %11, i32 2
+  %24 = load i8, ptr %23, align 1
+  %25 = and i8 %24, %22
+  %26 = getelementptr inbounds i8, ptr %14, i32 2
+  store i8 %25, ptr %26, align 1
+  %27 = add nuw i32 %8, 1
+  %28 = icmp eq i32 %27, %3
+  br i1 %28, label %6, label %7
+}
+
+; CHECK-LABEL: three_bytes_interleave_op:
+; CHECK: loop
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.add
+; CHECK: i32.store8
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.sub
+; CHECK: i32.store8
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.add
+; CHECK: i32.store8
+define hidden void @three_bytes_interleave_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
+  %5 = icmp eq i32 %3, 0
+  br i1 %5, label %6, label %7
+
+6:                                                ; preds = %7, %4
+  ret void
+
+7:                                                ; preds = %4, %7
+  %8 = phi i32 [ %27, %7 ], [ 0, %4 ]
+  %9 = getelementptr inbounds %struct.ThreeBytes, ptr %1, i32 %8
+  %10 = load i8, ptr %9, align 1
+  %11 = getelementptr inbounds %struct.ThreeBytes, ptr %2, i32 %8
+  %12 = load i8, ptr %11, align 1
+  %13 = add i8 %12, %10
+  %14 = getelementptr inbounds %struct.ThreeBytes, ptr %0, i32 %8
+  store i8 %13, ptr %14, align 1
+  %15 = getelementptr inbounds i8, ptr %9, i32 1
+  %16 = load i8, ptr %15, align 1
+  %17 = getelementptr inbounds i8, ptr %11, i32 1
+  %18 = load i8, ptr %17, align 1
+  %19 = sub i8 %16, %18
+  %20 = getelementptr inbounds i8, ptr %14, i32 1
+  store i8 %19, ptr %20, align 1
+  %21 = getelementptr inbounds i8, ptr %9, i32 2
+  %22 = load i8, ptr %21, align 1
+  %23 = getelementptr inbounds i8, ptr %11, i32 2
+  %24 = load i8, ptr %23, align 1
+  %25 = add i8 %24, %22
+  %26 = getelementptr inbounds i8, ptr %14, i32 2
+  store i8 %25, ptr %26, align 1
+  %27 = add nuw i32 %8, 1
+  %28 = icmp eq i32 %27, %3
+  br i1 %28, label %6, label %7
+}
+
+; CHECK-LABEL: four_bytes_same_op:
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: v128.and
+; CHECK: i8x16.shuffle  1, 5, 9, 13, 17, 21, 25, 29, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle  1, 5, 9, 13, 17, 21, 25, 29, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: v128.and
+; CHECK: i8x16.shuffle  4, 20, 0, 0, 5, 21, 0, 0, 6, 22, 0, 0, 7, 23, 0, 0
+; CHECK: i8x16.shuffle  2, 6, 10, 14, 18, 22, 26, 30, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle  2, 6, 10, 14, 18, 22, 26, 30, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: v128.and
+; CHECK: i8x16.shuffle  3, 7, 11, 15, 19, 23, 27, 31, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle  3, 7, 11, 15, 19, 23, 27, 31, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: v128.and
+; CHECK: i8x16.shuffle  0, 0, 4, 20, 0, 0, 5, 21, 0, 0, 6, 22, 0, 0, 7, 23
+; CHECK: i8x16.shuffle  0, 1, 18, 19, 4, 5, 22, 23, 8, 9, 26, 27, 12, 13, 30, 31
+; CHECK: v128.store
+; CHECK: i8x16.shuffle  0, 16, 0, 0, 1, 17, 0, 0, 2, 18, 0, 0, 3, 19, 0, 0
+; CHECK: i8x16.shuffle  0, 0, 0, 16, 0, 0, 1, 17, 0, 0, 2, 18, 0, 0, 3, 19
+; CHECK: i8x16.shuffle  0, 1, 18, 19, 4, 5, 22, 23, 8, 9, 26, 27, 12, 13, 30, 31
+; CHECK: v128.store
+define hidden void @four_bytes_same_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
+  %5 = icmp eq i32 %3, 0
+  br i1 %5, label %6, label %7
+
+6:                                                ; preds = %7, %4
+  ret void
+
+7:                                                ; preds = %4, %7
+  %8 = phi i32 [ %33, %7 ], [ 0, %4 ]
+  %9 = getelementptr inbounds %struct.FourBytes, ptr %1, i32 %8
+  %10 = load i8, ptr %9, align 1
+  %11 = getelementptr inbounds %struct.FourBytes, ptr %2, i32 %8
+  %12 = load i8, ptr %11, align 1
+  %13 = and i8 %12, %10
+  %14 = getelementptr inbounds %struct.FourBytes, ptr %0, i32 %8
+  store i8 %13, ptr %14, align 1
+  %15 = getelementptr inbounds i8, ptr %9, i32 1
+  %16 = load i8, ptr %15, align 1
+  %17 = getelementptr inbounds i8, ptr %11, i32 1
+  %18 = load i8, ptr %17, align 1
+  %19 = and i8 %18, %16
+  %20 = getelementptr inbounds i8, ptr %14, i32 1
+  store i8 %19, ptr %20, align 1
+  %21 = getelementptr inbounds i8, ptr %9, i32 2
+  %22 = load i8, ptr %21, align 1
+  %23 = getelementptr inbounds i8, ptr %11, i32 2
+  %24 = load i8, ptr %23, align 1
+  %25 = and i8 %24, %22
+  %26 = getelementptr inbounds i8, ptr %14, i32 2
+  store i8 %25, ptr %26, align 1
+  %27 = getelementptr inbounds i8, ptr %9, i32 3
+  %28 = load i8, ptr %27, align 1
+  %29 = getelementptr inbounds i8, ptr %11, i32 3
+  %30 = load i8, ptr %29, align 1
+  %31 = and i8 %30, %28
+  %32 = getelementptr inbounds i8, ptr %14, i32 3
+  store i8 %31, ptr %32, align 1
+  %33 = add nuw i32 %8, 1
+  %34 = icmp eq i32 %33, %3
+  br i1 %34, label %6, label %7
+}
+
+; CHECK-LABEL: four_bytes_split_op:
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extmul_low_i8x16_u
+; CHECK: i8x16.shuffle  1, 5, 9, 13, 17, 21, 25, 29, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle  1, 5, 9, 13, 17, 21, 25, 29, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extmul_low_i8x16_u
+; CHECK: i8x16.shuffle  0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
+; CHECK: i8x16.shuffle  2, 6, 10, 14, 18, 22, 26, 30, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle  2, 6, 10, 14, 18, 22, 26, 30, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.sub
+; CHECK: i8x16.shuffle  3, 7, 11, 15, 19, 23, 27, 31, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle  3, 7, 11, 15, 19, 23, 27, 31, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.sub
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 4, 5, 6, 7, 16, 17, 18, 19, 20, 21, 22, 23
+; CHECK: i8x16.shuffle  4, 12, 20, 28, 5, 13, 21, 29, 6, 14, 22, 30, 7, 15, 23, 31
+; CHECK: v128.store
+; CHECK: i8x16.shuffle  0, 8, 16, 24, 1, 9, 17, 25, 2, 10, 18, 26, 3, 11, 19, 27
+; CHECK: v128.store
+define hidden void @four_bytes_split_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
+  %5 = icmp eq i32 %3, 0
+  br i1 %5, label %6, label %7
+
+6:                                                ; preds = %7, %4
+  ret void
+
+7:                                                ; preds = %4, %7
+  %8 = phi i32 [ %33, %7 ], [ 0, %4 ]
+  %9 = getelementptr inbounds %struct.FourBytes, ptr %1, i32 %8
+  %10 = load i8, ptr %9, align 1
+  %11 = getelementptr inbounds %struct.FourBytes, ptr %2, i32 %8
+  %12 = load i8, ptr %11, align 1
+  %13 = mul i8 %12, %10
+  %14 = getelementptr inbounds %struct.FourBytes, ptr %0, i32 %8
+  store i8 %13, ptr %14, align 1
+  %15 = getelementptr inbounds i8, ptr %9, i32 1
+  %16 = load i8, ptr %15, align 1
+  %17 = getelementptr inbounds i8, ptr %11, i32 1
+  %18 = load i8, ptr %17, align 1
+  %19 = mul i8 %18, %16
+  %20 = getelementptr inbounds i8, ptr %14, i32 1
+  store i8 %19, ptr %20, align 1
+  %21 = getelementptr inbounds i8, ptr %9, i32 2
+  %22 = load i8, ptr %21, align 1
+  %23 = getelementptr inbounds i8, ptr %11, i32 2
+  %24 = load i8, ptr %23, align 1
+  %25 = sub i8 %22, %24
+  %26 = getelementptr inbounds i8, ptr %14, i32 2
+  store i8 %25, ptr %26, align 1
+  %27 = getelementptr inbounds i8, ptr %9, i32 3
+  %28 = load i8, ptr %27, align 1
+  %29 = getelementptr inbounds i8, ptr %11, i32 3
+  %30 = load i8, ptr %29, align 1
+  %31 = sub i8 %28, %30
+  %32 = getelementptr inbounds i8, ptr %14, i32 3
+  store i8 %31, ptr %32, align 1
+  %33 = add nuw i32 %8, 1
+  %34 = icmp eq i32 %33, %3
+  br i1 %34, label %6, label %7
+}
+
+; CHECK-LABEL: four_bytes_interleave_op:
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.add
+; CHECK: i8x16.shuffle  1, 5, 9, 13, 17, 21, 25, 29, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle  1, 5, 9, 13, 17, 21, 25, 29, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.sub
+; CHECK: i8x16.shuffle  4, 20, 0, 0, 5, 21, 0, 0, 6, 22, 0, 0, 7, 23, 0, 0
+; CHECK: i8x16.shuffle  2, 6, 10, 14, 18, 22, 26, 30, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle  2, 6, 10, 14, 18, 22, 26, 30, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.add
+; CHECK: i8x16.shuffle  3, 7, 11, 15, 19, 23, 27, 31, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle  3, 7, 11, 15, 19, 23, 27, 31, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.sub
+; CHECK: i8x16.shuffle  0, 0, 4, 20, 0, 0, 5, 21, 0, 0, 6, 22, 0, 0, 7, 23
+; CHECK: i8x16.shuffle  0, 1, 18, 19, 4, 5, 22, 23, 8, 9, 26, 27, 12, 13, 30, 31
+; CHECK: v128.store
+; CHECK: i8x16.shuffle  0, 16, 0, 0, 1, 17, 0, 0, 2, 18, 0, 0, 3, 19, 0, 0
+; CHECK: i8x16.shuffle  0, 0, 0, 16, 0, 0, 1, 17, 0, 0, 2, 18, 0, 0, 3, 19
+; CHECK: i8x16.shuffle  0, 1, 18, 19, 4, 5, 22, 23, 8, 9, 26, 27, 12, 13, 30, 31
+; CHECK: v128.store
+define hidden void @four_bytes_interleave_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
+  %5 = icmp eq i32 %3, 0
+  br i1 %5, label %6, label %7
+
+6:                                                ; preds = %7, %4
+  ret void
+
+7:                                                ; preds = %4, %7
+  %8 = phi i32 [ %33, %7 ], [ 0, %4 ]
+  %9 = getelementptr inbounds %struct.FourBytes, ptr %1, i32 %8
+  %10 = load i8, ptr %9, align 1
+  %11 = getelementptr inbounds %struct.FourBytes, ptr %2, i32 %8
+  %12 = load i8, ptr %11, align 1
+  %13 = add i8 %12, %10
+  %14 = getelementptr inbounds %struct.FourBytes, ptr %0, i32 %8
+  store i8 %13, ptr %14, align 1
+  %15 = getelementptr inbounds i8, ptr %9, i32 1
+  %16 = load i8, ptr %15, align 1
+  %17 = getelementptr inbounds i8, ptr %11, i32 1
+  %18 = load i8, ptr %17, align 1
+  %19 = sub i8 %16, %18
+  %20 = getelementptr inbounds i8, ptr %14, i32 1
+  store i8 %19, ptr %20, align 1
+  %21 = getelementptr inbounds i8, ptr %9, i32 2
+  %22 = load i8, ptr %21, align 1
+  %23 = getelementptr inbounds i8, ptr %11, i32 2
+  %24 = load i8, ptr %23, align 1
+  %25 = add i8 %24, %22
+  %26 = getelementptr inbounds i8, ptr %14, i32 2
+  store i8 %25, ptr %26, align 1
+  %27 = getelementptr inbounds i8, ptr %9, i32 3
+  %28 = load i8, ptr %27, align 1
+  %29 = getelementptr inbounds i8, ptr %11, i32 3
+  %30 = load i8, ptr %29, align 1
+  %31 = sub i8 %28, %30
+  %32 = getelementptr inbounds i8, ptr %14, i32 3
+  store i8 %31, ptr %32, align 1
+  %33 = add nuw i32 %8, 1
+  %34 = icmp eq i32 %33, %3
+  br i1 %34, label %6, label %7
+}
+
+; CHECK-LABEL: eight_bytes_same_op:
+; CHECK: loop
+; CHECK-NOT: v128.load
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.mul
+; CHECK: i32.store8
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.mul
+; CHECK: i32.store8
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.mul
+; CHECK: i32.store8
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.mul
+; CHECK: i32.store8
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.mul
+; CHECK: i32.store8
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.mul
+; CHECK: i32.store8
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.mul
+; CHECK: i32.store8
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.mul
+; CHECK: i32.store8
+define hidden void @eight_bytes_same_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
+  %5 = icmp eq i32 %3, 0
+  br i1 %5, label %6, label %7
+
+6:                                                ; preds = %7, %4
+  ret void
+
+7:                                                ; preds = %4, %7
+  %8 = phi i32 [ %57, %7 ], [ 0, %4 ]
+  %9 = getelementptr inbounds %struct.EightBytes, ptr %1, i32 %8
+  %10 = load i8, ptr %9, align 1
+  %11 = getelementptr inbounds %struct.EightBytes, ptr %2, i32 %8
+  %12 = load i8, ptr %11, align 1
+  %13 = mul i8 %12, %10
+  %14 = getelementptr inbounds %struct.EightBytes, ptr %0, i32 %8
+  store i8 %13, ptr %14, align 1
+  %15 = getelementptr inbounds i8, ptr %9, i32 1
+  %16 = load i8, ptr %15, align 1
+  %17 = getelementptr inbounds i8, ptr %11, i32 1
+  %18 = load i8, ptr %17, align 1
+  %19 = mul i8 %18, %16
+  %20 = getelementptr inbounds i8, ptr %14, i32 1
+  store i8 %19, ptr %20, align 1
+  %21 = getelementptr inbounds i8, ptr %9, i32 2
+  %22 = load i8, ptr %21, align 1
+  %23 = getelementptr inbounds i8, ptr %11, i32 2
+  %24 = load i8, ptr %23, align 1
+  %25 = mul i8 %24, %22
+  %26 = getelementptr inbounds i8, ptr %14, i32 2
+  store i8 %25, ptr %26, align 1
+  %27 = getelementptr inbounds i8, ptr %9, i32 3
+  %28 = load i8, ptr %27, align 1
+  %29 = getelementptr inbounds i8, ptr %11, i32 3
+  %30 = load i8, ptr %29, align 1
+  %31 = mul i8 %30, %28
+  %32 = getelementptr inbounds i8, ptr %14, i32 3
+  store i8 %31, ptr %32, align 1
+  %33 = getelementptr inbounds i8, ptr %9, i32 4
+  %34 = load i8, ptr %33, align 1
+  %35 = getelementptr inbounds i8, ptr %11, i32 4
+  %36 = load i8, ptr %35, align 1
+  %37 = mul i8 %36, %34
+  %38 = getelementptr inbounds i8, ptr %14, i32 4
+  store i8 %37, ptr %38, align 1
+  %39 = getelementptr inbounds i8, ptr %9, i32 5
+  %40 = load i8, ptr %39, align 1
+  %41 = getelementptr inbounds i8, ptr %11, i32 5
+  %42 = load i8, ptr %41, align 1
+  %43 = mul i8 %42, %40
+  %44 = getelementptr inbounds i8, ptr %14, i32 5
+  store i8 %43, ptr %44, align 1
+  %45 = getelementptr inbounds i8, ptr %9, i32 6
+  %46 = load i8, ptr %45, align 1
+  %47 = getelementptr inbounds i8, ptr %11, i32 6
+  %48 = load i8, ptr %47, align 1
+  %49 = mul i8 %48, %46
+  %50 = getelementptr inbounds i8, ptr %14, i32 6
+  store i8 %49, ptr %50, align 1
+  %51 = getelementptr inbounds i8, ptr %9, i32 7
+  %52 = load i8, ptr %51, align 1
+  %53 = getelementptr inbounds i8, ptr %11, i32 7
+  %54 = load i8, ptr %53, align 1
+  %55 = mul i8 %54, %52
+  %56 = getelementptr inbounds i8, ptr %14, i32 7
+  store i8 %55, ptr %56, align 1
+  %57 = add nuw i32 %8, 1
+  %58 = icmp eq i32 %57, %3
+  br i1 %58, label %6, label %7
+}
+
+; CHECK-LABEL: eight_bytes_split_op:
+; CHECK: loop
+; CHECK-NOT: v128.load
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.add
+; CHECK: i32.store8
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.add
+; CHECK: i32.store8
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.add
+; CHECK: i32.store8
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.add
+; CHECK: i32.store8
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.sub
+; CHECK: i32.store8
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.sub
+; CHECK: i32.store8
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.sub
+; CHECK: i32.store8
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.sub
+; CHECK: i32.store8
+define hidden void @eight_bytes_split_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
+  %5 = icmp eq i32 %3, 0
+  br i1 %5, label %6, label %7
+
+6:                                                ; preds = %7, %4
+  ret void
+
+7:                                                ; preds = %4, %7
+  %8 = phi i32 [ %57, %7 ], [ 0, %4 ]
+  %9 = getelementptr inbounds %struct.EightBytes, ptr %1, i32 %8
+  %10 = load i8, ptr %9, align 1
+  %11 = getelementptr inbounds %struct.EightBytes, ptr %2, i32 %8
+  %12 = load i8, ptr %11, align 1
+  %13 = add i8 %12, %10
+  %14 = getelementptr inbounds %struct.EightBytes, ptr %0, i32 %8
+  store i8 %13, ptr %14, align 1
+  %15 = getelementptr inbounds i8, ptr %9, i32 1
+  %16 = load i8, ptr %15, align 1
+  %17 = getelementptr inbounds i8, ptr %11, i32 1
+  %18 = load i8, ptr %17, align 1
+  %19 = add i8 %18, %16
+  %20 = getelementptr inbounds i8, ptr %14, i32 1
+  store i8 %19, ptr %20, align 1
+  %21 = getelementptr inbounds i8, ptr %9, i32 2
+  %22 = load i8, ptr %21, align 1
+  %23 = getelementptr inbounds i8, ptr %11, i32 2
+  %24 = load i8, ptr %23, align 1
+  %25 = add i8 %24, %22
+  %26 = getelementptr inbounds i8, ptr %14, i32 2
+  store i8 %25, ptr %26, align 1
+  %27 = getelementptr inbounds i8, ptr %9, i32 3
+  %28 = load i8, ptr %27, align 1
+  %29 = getelementptr inbounds i8, ptr %11, i32 3
+  %30 = load i8, ptr %29, align 1
+  %31 = add i8 %30, %28
+  %32 = getelementptr inbounds i8, ptr %14, i32 3
+  store i8 %31, ptr %32, align 1
+  %33 = getelementptr inbounds i8, ptr %9, i32 4
+  %34 = load i8, ptr %33, align 1
+  %35 = getelementptr inbounds i8, ptr %11, i32 4
+  %36 = load i8, ptr %35, align 1
+  %37 = sub i8 %34, %36
+  %38 = getelementptr inbounds i8, ptr %14, i32 4
+  store i8 %37, ptr %38, align 1
+  %39 = getelementptr inbounds i8, ptr %9, i32 5
+  %40 = load i8, ptr %39, align 1
+  %41 = getelementptr inbounds i8, ptr %11, i32 5
+  %42 = load i8, ptr %41, align 1
+  %43 = sub i8 %40, %42
+  %44 = getelementptr inbounds i8, ptr %14, i32 5
+  store i8 %43, ptr %44, align 1
+  %45 = getelementptr inbounds i8, ptr %9, i32 6
+  %46 = load i8, ptr %45, align 1
+  %47 = getelementptr inbounds i8, ptr %11, i32 6
+  %48 = load i8, ptr %47, align 1
+  %49 = sub i8 %46, %48
+  %50 = getelementptr inbounds i8, ptr %14, i32 6
+  store i8 %49, ptr %50, align 1
+  %51 = getelementptr inbounds i8, ptr %9, i32 7
+  %52 = load i8, ptr %51, align 1
+  %53 = getelementptr inbounds i8, ptr %11, i32 7
+  %54 = load i8, ptr %53, align 1
+  %55 = sub i8 %52, %54
+  %56 = getelementptr inbounds i8, ptr %14, i32 7
+  store i8 %55, ptr %56, align 1
+  %57 = add nuw i32 %8, 1
+  %58 = icmp eq i32 %57, %3
+  br i1 %58, label %6, label %7
+}
+
+; CHECK-LABEL: eight_bytes_interleave_op:
+; CHECK: loop
+; CHECK-NOT: v128.load
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.add
+; CHECK: i32.store8
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.sub
+; CHECK: i32.store8
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.add
+; CHECK: i32.store8
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.sub
+; CHECK: i32.store8
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.add
+; CHECK: i32.store8
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.sub
+; CHECK: i32.store8
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.add
+; CHECK: i32.store8
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.sub
+; CHECK: i32.store8
+define hidden void @eight_bytes_interleave_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
+  %5 = icmp eq i32 %3, 0
+  br i1 %5, label %6, label %7
+
+6:                                                ; preds = %7, %4
+  ret void
+
+7:                                                ; preds = %4, %7
+  %8 = phi i32 [ %57, %7 ], [ 0, %4 ]
+  %9 = getelementptr inbounds %struct.EightBytes, ptr %1, i32 %8
+  %10 = load i8, ptr %9, align 1
+  %11 = getelementptr inbounds %struct.EightBytes, ptr %2, i32 %8
+  %12 = load i8, ptr %11, align 1
+  %13 = add i8 %12, %10
+  %14 = getelementptr inbounds %struct.EightBytes, ptr %0, i32 %8
+  store i8 %13, ptr %14, align 1
+  %15 = getelementptr inbounds i8, ptr %9, i32 1
+  %16 = load i8, ptr %15, align 1
+  %17 = getelementptr inbounds i8, ptr %11, i32 1
+  %18 = load i8, ptr %17, align 1
+  %19 = sub i8 %16, %18
+  %20 = getelementptr inbounds i8, ptr %14, i32 1
+  store i8 %19, ptr %20, align 1
+  %21 = getelementptr inbounds i8, ptr %9, i32 2
+  %22 = load i8, ptr %21, align 1
+  %23 = getelementptr inbounds i8, ptr %11, i32 2
+  %24 = load i8, ptr %23, align 1
+  %25 = add i8 %24, %22
+  %26 = getelementptr inbounds i8, ptr %14, i32 2
+  store i8 %25, ptr %26, align 1
+  %27 = getelementptr inbounds i8, ptr %9, i32 3
+  %28 = load i8, ptr %27, align 1
+  %29 = getelementptr inbounds i8, ptr %11, i32 3
+  %30 = load i8, ptr %29, align 1
+  %31 = sub i8 %28, %30
+  %32 = getelementptr inbounds i8, ptr %14, i32 3
+  store i8 %31, ptr %32, align 1
+  %33 = getelementptr inbounds i8, ptr %9, i32 4
+  %34 = load i8, ptr %33, align 1
+  %35 = getelementptr inbounds i8, ptr %11, i32 4
+  %36 = load i8, ptr %35, align 1
+  %37 = add i8 %36, %34
+  %38 = getelementptr inbounds i8, ptr %14, i32 4
+  store i8 %37, ptr %38, align 1
+  %39 = getelementptr inbounds i8, ptr %9, i32 5
+  %40 = load i8, ptr %39, align 1
+  %41 = getelementptr inbounds i8, ptr %11, i32 5
+  %42 = load i8, ptr %41, align 1
+  %43 = sub i8 %40, %42
+  %44 = getelementptr inbounds i8, ptr %14, i32 5
+  store i8 %43, ptr %44, align 1
+  %45 = getelementptr inbounds i8, ptr %9, i32 6
+  %46 = load i8, ptr %45, align 1
+  %47 = getelementptr inbounds i8, ptr %11, i32 6
+  %48 = load i8, ptr %47, align 1
+  %49 = add i8 %48, %46
+  %50 = getelementptr inbounds i8, ptr %14, i32 6
+  store i8 %49, ptr %50, align 1
+  %51 = getelementptr inbounds i8, ptr %9, i32 7
+  %52 = load i8, ptr %51, align 1
+  %53 = getelementptr inbounds i8, ptr %11, i32 7
+  %54 = load i8, ptr %53, align 1
+  %55 = sub i8 %52, %54
+  %56 = getelementptr inbounds i8, ptr %14, i32 7
+  store i8 %55, ptr %56, align 1
+  %57 = add nuw i32 %8, 1
+  %58 = icmp eq i32 %57, %3
+  br i1 %58, label %6, label %7
+}
+
+; CHECK-LABEL: four_bytes_into_four_ints_same_op:
+; CHECK: loop
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.mul
+; CHECK: i32.load
+; CHECK: i32.add
+; CHECK: i32.store
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.mul
+; CHECK: i32.load
+; CHECK: i32.add
+; CHECK: i32.store
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.mul
+; CHECK: i32.load
+; CHECK: i32.add
+; CHECK: i32.store
+; CHECK: i32.load8_u
+; CHECK: i32.load8_u
+; CHECK: i32.mul
+; CHECK: i32.load
+; CHECK: i32.add
+; CHECK: i32.store
+define hidden void @four_bytes_into_four_ints_same_op(ptr noalias nocapture noundef %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
+  %5 = icmp eq i32 %3, 0
+  br i1 %5, label %6, label %7
+
+6:                                                ; preds = %7, %4
+  ret void
+
+7:                                                ; preds = %4, %7
+  %8 = phi i32 [ %49, %7 ], [ 0, %4 ]
+  %9 = getelementptr inbounds %struct.FourBytes, ptr %1, i32 %8
+  %10 = load i8, ptr %9, align 1
+  %11 = zext i8 %10 to i32
+  %12 = getelementptr inbounds %struct.FourBytes, ptr %2, i32 %8
+  %13 = load i8, ptr %12, align 1
+  %14 = zext i8 %13 to i32
+  %15 = mul nuw nsw i32 %14, %11
+  %16 = getelementptr inbounds %struct.FourInts, ptr %0, i32 %8
+  %17 = load i32, ptr %16, align 4
+  %18 = add nsw i32 %15, %17
+  store i32 %18, ptr %16, align 4
+  %19 = getelementptr inbounds i8, ptr %9, i32 1
+  %20 = load i8, ptr %19, align 1
+  %21 = zext i8 %20 to i32
+  %22 = getelementptr inbounds i8, ptr %12, i32 1
+  %23 = load i8, ptr %22, align 1
+  %24 = zext i8 %23 to i32
+  %25 = mul nuw nsw i32 %24, %21
+  %26 = getelementptr inbounds i8, ptr %16, i32 4
+  %27 = load i32, ptr %26, align 4
+  %28 = add nsw i32 %25, %27
+  store i32 %28, ptr %26, align 4
+  %29 = getelementptr inbounds i8, ptr %9, i32 2
+  %30 = load i8, ptr %29, align 1
+  %31 = zext i8 %30 to i32
+  %32 = getelementptr inbounds i8, ptr %12, i32 2
+  %33 = load i8, ptr %32, align 1
+  %34 = zext i8 %33 to i32
+  %35 = mul nuw nsw i32 %34, %31
+  %36 = getelementptr inbounds i8, ptr %16, i32 8
+  %37 = load i32, ptr %36, align 4
+  %38 = add nsw i32 %35, %37
+  store i32 %38, ptr %36, align 4
+  %39 = getelementptr inbounds i8, ptr %9, i32 3
+  %40 = load i8, ptr %39, align 1
+  %41 = zext i8 %40 to i32
+  %42 = getelementptr inbounds i8, ptr %12, i32 3
+  %43 = load i8, ptr %42, align 1
+  %44 = zext i8 %43 to i32
+  %45 = mul nuw nsw i32 %44, %41
+  %46 = getelementptr inbounds i8, ptr %16, i32 12
+  %47 = load i32, ptr %46, align 4
+  %48 = add nsw i32 %45, %47
+  store i32 %48, ptr %46, align 4
+  %49 = add nuw i32 %8, 1
+  %50 = icmp eq i32 %49, %3
+  br i1 %50, label %6, label %7
+}
+
+; CHECK-LABEL: four_bytes_into_four_ints_vary_op:
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 4, 8, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i32x4.extend_low_i16x8_u
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 4, 8, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i32x4.extend_low_i16x8_u
+; CHECK: i32x4.add
+; CHECK: i8x16.shuffle  1, 5, 9, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i32x4.extend_low_i16x8_u
+; CHECK: i8x16.shuffle  1, 5, 9, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i32x4.extend_low_i16x8_u
+; CHECK: i32x4.sub
+; CHECK: i8x16.shuffle  12, 13, 14, 15, 28, 29, 30, 31, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle  2, 6, 10, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i8x16.shuffle  2, 6, 10, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i32x4.extmul_low_i16x8_u
+; CHECK: v128.and
+; CHECK: i8x16.shuffle  3, 7, 11, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i32x4.extend_low_i16x8_u
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 0, 1, 2, 3, 12, 13, 14, 15, 28, 29, 30, 31
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; CHECK: v128.store
+; CHECK: i8x16.shuffle  8, 9, 10, 11, 24, 25, 26, 27, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 0, 1, 2, 3, 8, 9, 10, 11, 24, 25, 26, 27
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; CHECK: v128.store
+; CHECK: i8x16.shuffle  4, 5, 6, 7, 20, 21, 22, 23, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 6, 7, 20, 21, 22, 23
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; CHECK: v128.store
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 16, 17, 18, 19, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 16, 17, 18, 19
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; CHECK: v128.store
+define hidden void @four_bytes_into_four_ints_vary_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
+  %5 = icmp eq i32 %3, 0
+  br i1 %5, label %6, label %7
+
+6:                                                ; preds = %7, %4
+  ret void
+
+7:                                                ; preds = %4, %7
+  %8 = phi i32 [ %40, %7 ], [ 0, %4 ]
+  %9 = getelementptr inbounds %struct.FourBytes, ptr %1, i32 %8
+  %10 = load i8, ptr %9, align 1
+  %11 = zext i8 %10 to i32
+  %12 = getelementptr inbounds %struct.FourBytes, ptr %2, i32 %8
+  %13 = load i8, ptr %12, align 1
+  %14 = zext i8 %13 to i32
+  %15 = add nuw nsw i32 %14, %11
+  %16 = getelementptr inbounds %struct.FourInts, ptr %0, i32 %8
+  store i32 %15, ptr %16, align 4
+  %17 = getelementptr inbounds i8, ptr %9, i32 1
+  %18 = load i8, ptr %17, align 1
+  %19 = zext i8 %18 to i32
+  %20 = getelementptr inbounds i8, ptr %12, i32 1
+  %21 = load i8, ptr %20, align 1
+  %22 = zext i8 %21 to i32
+  %23 = sub nsw i32 %19, %22
+  %24 = getelementptr inbounds i8, ptr %16, i32 4
+  store i32 %23, ptr %24, align 4
+  %25 = getelementptr inbounds i8, ptr %9, i32 2
+  %26 = load i8, ptr %25, align 1
+  %27 = zext i8 %26 to i32
+  %28 = getelementptr inbounds i8, ptr %12, i32 2
+  %29 = load i8, ptr %28, align 1
+  %30 = zext i8 %29 to i32
+  %31 = mul nuw nsw i32 %30, %27
+  %32 = getelementptr inbounds i8, ptr %16, i32 8
+  store i32 %31, ptr %32, align 4
+  %33 = getelementptr inbounds i8, ptr %9, i32 3
+  %34 = load i8, ptr %33, align 1
+  %35 = getelementptr inbounds i8, ptr %12, i32 3
+  %36 = load i8, ptr %35, align 1
+  %37 = and i8 %36, %34
+  %38 = zext i8 %37 to i32
+  %39 = getelementptr inbounds i8, ptr %16, i32 12
+  store i32 %38, ptr %39, align 4
+  %40 = add nuw i32 %8, 1
+  %41 = icmp eq i32 %40, %3
+  br i1 %41, label %6, label %7
+}
+
+; CHECK-LABEL: scale_uv_row_down2:
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 1, 4, 5, 8, 9, 12, 13, 16, 17, 20, 21, 24, 25, 28, 29
+; CHECK: v128.store
+define hidden void @scale_uv_row_down2(ptr nocapture noundef readonly %0, i32 noundef %1, ptr nocapture noundef writeonly %2, i32 noundef %3) {
+  %5 = icmp sgt i32 %3, 0
+  br i1 %5, label %6, label %19
+
+6:                                                ; preds = %4, %6
+  %7 = phi i32 [ %17, %6 ], [ 0, %4 ]
+  %8 = phi ptr [ %15, %6 ], [ %0, %4 ]
+  %9 = phi ptr [ %16, %6 ], [ %2, %4 ]
+  %10 = getelementptr inbounds i8, ptr %8, i32 2
+  %11 = load i8, ptr %10, align 1
+  store i8 %11, ptr %9, align 1
+  %12 = getelementptr inbounds i8, ptr %8, i32 3
+  %13 = load i8, ptr %12, align 1
+  %14 = getelementptr inbounds i8, ptr %9, i32 1
+  store i8 %13, ptr %14, align 1
+  %15 = getelementptr inbounds i8, ptr %8, i32 4
+  %16 = getelementptr inbounds i8, ptr %9, i32 2
+  %17 = add nuw nsw i32 %7, 1
+  %18 = icmp eq i32 %17, %3
+  br i1 %18, label %19, label %6
+
+19:                                               ; preds = %6, %4
+  ret void
+}
+
+; CHECK-LABEL: scale_uv_row_down2_box:
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i8x16.shuffle  2, 6, 10, 14, 18, 22, 26, 30, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i16x8.add
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i16x8.add
+; CHECK: i8x16.shuffle  2, 6, 10, 14, 18, 22, 26, 30, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i16x8.add
+; CHECK: i16x8.add
+; CHECK: i16x8.shr_u
+; CHECK: i8x16.shuffle  1, 5, 9, 13, 17, 21, 25, 29, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i8x16.shuffle  3, 7, 11, 15, 19, 23, 27, 31, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i16x8.add
+; CHECK: i8x16.shuffle  1, 5, 9, 13, 17, 21, 25, 29, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i16x8.add
+; CHECK: i8x16.shuffle  3, 7, 11, 15, 19, 23, 27, 31, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_u
+; CHECK: i16x8.add
+; CHECK: i16x8.add
+; CHECK: i16x8.shr_u
+; CHECK: i8x16.shuffle  0, 16, 2, 18, 4, 20, 6, 22, 8, 24, 10, 26, 12, 28, 14, 30
+; CHECK: v128.store
+define hidden void @scale_uv_row_down2_box(ptr nocapture noundef readonly %0, i32 noundef %1, ptr nocapture noundef writeonly %2, i32 noundef %3) {
+  %5 = icmp sgt i32 %3, 0
+  br i1 %5, label %6, label %54
+
+6:                                                ; preds = %4
+  %7 = add nsw i32 %1, 2
+  %8 = add nsw i32 %1, 1
+  %9 = add nsw i32 %1, 3
+  br label %10
+
+10:                                               ; preds = %6, %10
+  %11 = phi i32 [ 0, %6 ], [ %52, %10 ]
+  %12 = phi ptr [ %0, %6 ], [ %50, %10 ]
+  %13 = phi ptr [ %2, %6 ], [ %51, %10 ]
+  %14 = load i8, ptr %12, align 1
+  %15 = zext i8 %14 to i16
+  %16 = getelementptr inbounds i8, ptr %12, i32 2
+  %17 = load i8, ptr %16, align 1
+  %18 = zext i8 %17 to i16
+  %19 = getelementptr inbounds i8, ptr %12, i32 %1
+  %20 = load i8, ptr %19, align 1
+  %21 = zext i8 %20 to i16
+  %22 = getelementptr inbounds i8, ptr %12, i32 %7
+  %23 = load i8, ptr %22, align 1
+  %24 = zext i8 %23 to i16
+  %25 = add nuw nsw i16 %15, 2
+  %26 = add nuw nsw i16 %25, %18
+  %27 = add nuw nsw i16 %26, %21
+  %28 = add nuw nsw i16 %27, %24
+  %29 = lshr i16 %28, 2
+  %30 = trunc nuw i16 %29 to i8
+  store i8 %30, ptr %13, align 1
+  %31 = getelementptr inbounds i8, ptr %12, i32 1
+  %32 = load i8, ptr %31, align 1
+  %33 = zext i8 %32 to i16
+  %34 = getelementptr inbounds i8, ptr %12, i32 3
+  %35 = load i8, ptr %34, align 1
+  %36 = zext i8 %35 to i16
+  %37 = getelementptr inbounds i8, ptr %12, i32 %8
+  %38 = load i8, ptr %37, align 1
+  %39 = zext i8 %38 to i16
+  %40 = getelementptr inbounds i8, ptr %12, i32 %9
+  %41 = load i8, ptr %40, align 1
+  %42 = zext i8 %41 to i16
+  %43 = add nuw nsw i16 %33, 2
+  %44 = add nuw nsw i16 %43, %36
+  %45 = add nuw nsw i16 %44, %39
+  %46 = add nuw nsw i16 %45, %42
+  %47 = lshr i16 %46, 2
+  %48 = trunc nuw i16 %47 to i8
+  %49 = getelementptr inbounds i8, ptr %13, i32 1
+  store i8 %48, ptr %49, align 1
+  %50 = getelementptr inbounds i8, ptr %12, i32 4
+  %51 = getelementptr inbounds i8, ptr %13, i32 2
+  %52 = add nuw nsw i32 %11, 1
+  %53 = icmp eq i32 %52, %3
+  br i1 %53, label %54, label %10
+
+54:                                               ; preds = %10, %4
+  ret void
+}
+
+; CHECK-LABEL: scale_uv_row_down2_linear:
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle  2, 6, 10, 14, 18, 22, 26, 30, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.avgr_u 
+; CHECK: i8x16.shuffle  1, 5, 9, 13, 17, 21, 25, 29, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.shuffle  3, 7, 11, 15, 19, 23, 27, 31, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i8x16.avgr_u 
+; CHECK: i8x16.shuffle  0, 16, 1, 17, 2, 18, 3, 19, 4, 20, 5, 21, 6, 22, 7, 23
+; CHECK: v128.store
+define hidden void @scale_uv_row_down2_linear(ptr nocapture noundef readonly %0, i32 noundef %1, ptr nocapture noundef writeonly %2, i32 noundef %3) {
+  %5 = icmp sgt i32 %3, 0
+  br i1 %5, label %6, label %34
+
+6:                                                ; preds = %4, %6
+  %7 = phi i32 [ %32, %6 ], [ 0, %4 ]
+  %8 = phi ptr [ %30, %6 ], [ %0, %4 ]
+  %9 = phi ptr [ %31, %6 ], [ %2, %4 ]
+  %10 = load i8, ptr %8, align 1
+  %11 = zext i8 %10 to i16
+  %12 = getelementptr inbounds i8, ptr %8, i32 2
+  %13 = load i8, ptr %12, align 1
+  %14 = zext i8 %13 to i16
+  %15 = add nuw nsw i16 %11, 1
+  %16 = add nuw nsw i16 %15, %14
+  %17 = lshr i16 %16, 1
+  %18 = trunc nuw i16 %17 to i8
+  store i8 %18, ptr %9, align 1
+  %19 = getelementptr inbounds i8, ptr %8, i32 1
+  %20 = load i8, ptr %19, align 1
+  %21 = zext i8 %20 to i16
+  %22 = getelementptr inbounds i8, ptr %8, i32 3
+  %23 = load i8, ptr %22, align 1
+  %24 = zext i8 %23 to i16
+  %25 = add nuw nsw i16 %21, 1
+  %26 = add nuw nsw i16 %25, %24
+  %27 = lshr i16 %26, 1
+  %28 = trunc nuw i16 %27 to i8
+  %29 = getelementptr inbounds i8, ptr %9, i32 1
+  store i8 %28, ptr %29, align 1
+  %30 = getelementptr inbounds i8, ptr %8, i32 4
+  %31 = getelementptr inbounds i8, ptr %9, i32 2
+  %32 = add nuw nsw i32 %7, 1
+  %33 = icmp eq i32 %32, %3
+  br i1 %33, label %34, label %6
+
+34:                                               ; preds = %6, %4
+  ret void
+}
+
+; CHECK-LABEL: two_floats_same_op:
+; CHECK-NOT: f32x4.mul
+define hidden void @two_floats_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp21.not = icmp eq i32 %N, 0
+  br i1 %cmp21.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.022 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.TwoFloats, ptr %a, i32 %i.022
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds nuw %struct.TwoFloats, ptr %b, i32 %i.022
+  %1 = load float, ptr %arrayidx1, align 4
+  %mul = fmul float %0, %1
+  %arrayidx3 = getelementptr inbounds nuw %struct.TwoFloats, ptr %res, i32 %i.022
+  store float %mul, ptr %arrayidx3, align 4
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %2 = load float, ptr %y, align 4
+  %y7 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %3 = load float, ptr %y7, align 4
+  %mul8 = fmul float %2, %3
+  %y10 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 4
+  store float %mul8, ptr %y10, align 4
+  %inc = add nuw i32 %i.022, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: two_floats_vary_op:
+; CHECK-NOT: f32x4
+define hidden void @two_floats_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp20.not = icmp eq i32 %N, 0
+  br i1 %cmp20.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.021 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.TwoFloats, ptr %a, i32 %i.021
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds nuw %struct.TwoFloats, ptr %b, i32 %i.021
+  %1 = load float, ptr %arrayidx1, align 4
+  %add = fadd float %0, %1
+  %arrayidx3 = getelementptr inbounds nuw %struct.TwoFloats, ptr %res, i32 %i.021
+  store float %add, ptr %arrayidx3, align 4
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %2 = load float, ptr %y, align 4
+  %y7 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %3 = load float, ptr %y7, align 4
+  %sub = fsub float %2, %3
+  %y9 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 4
+  store float %sub, ptr %y9, align 4
+  %inc = add nuw i32 %i.021, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: two_bytes_two_floats_same_op:
+; CHECK: loop
+; CHECK: v128.load64_zero
+; CHECK: i8x16.shuffle  0, 2, 4, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: v128.load64_zero
+; CHECK: i8x16.shuffle  0, 2, 4, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: f32x4.mul
+; CHECK: i8x16.shuffle  1, 3, 5, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: i8x16.shuffle  1, 3, 5, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s	
+; CHECK: f32x4.mul
+; CHECK: i8x16.shuffle  8, 9, 10, 11, 24, 25, 26, 27, 12, 13, 14, 15, 28, 29, 30, 31
+; CHECK: v128.store
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 16, 17, 18, 19, 4, 5, 6, 7, 20, 21, 22, 23
+; CHECK: v128.store
+define hidden void @two_bytes_two_floats_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp24.not = icmp eq i32 %N, 0
+  br i1 %cmp24.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.025 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.TwoBytes, ptr %a, i32 %i.025
+  %0 = load i8, ptr %arrayidx, align 1
+  %conv = sitofp i8 %0 to float
+  %arrayidx1 = getelementptr inbounds nuw %struct.TwoBytes, ptr %b, i32 %i.025
+  %1 = load i8, ptr %arrayidx1, align 1
+  %conv3 = sitofp i8 %1 to float
+  %mul = fmul float %conv, %conv3
+  %arrayidx4 = getelementptr inbounds nuw %struct.TwoFloats, ptr %res, i32 %i.025
+  store float %mul, ptr %arrayidx4, align 4
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 1
+  %2 = load i8, ptr %y, align 1
+  %conv7 = sitofp i8 %2 to float
+  %y9 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 1
+  %3 = load i8, ptr %y9, align 1
+  %conv10 = sitofp i8 %3 to float
+  %mul11 = fmul float %conv7, %conv10
+  %y13 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 4
+  store float %mul11, ptr %y13, align 4
+  %inc = add nuw i32 %i.025, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: two_bytes_two_floats_vary_op:
+; CHECK: v128.load64_zero
+; CHECK: i8x16.shuffle  0, 2, 4, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: v128.load64_zero
+; CHECK: i8x16.shuffle  0, 2, 4, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: f32x4.add
+; CHECK: i8x16.shuffle  1, 3, 5, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: i8x16.shuffle  1, 3, 5, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: f32x4.sub
+; CHECK: i8x16.shuffle  8, 9, 10, 11, 24, 25, 26, 27, 12, 13, 14, 15, 28, 29, 30, 31
+; CHECK: v128.store
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 16, 17, 18, 19, 4, 5, 6, 7, 20, 21, 22, 23
+; CHECK: v128.store
+define hidden void @two_bytes_two_floats_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp23.not = icmp eq i32 %N, 0
+  br i1 %cmp23.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.024 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.TwoBytes, ptr %a, i32 %i.024
+  %0 = load i8, ptr %arrayidx, align 1
+  %conv = sitofp i8 %0 to float
+  %arrayidx1 = getelementptr inbounds nuw %struct.TwoBytes, ptr %b, i32 %i.024
+  %1 = load i8, ptr %arrayidx1, align 1
+  %conv3 = sitofp i8 %1 to float
+  %add = fadd float %conv, %conv3
+  %arrayidx4 = getelementptr inbounds nuw %struct.TwoFloats, ptr %res, i32 %i.024
+  store float %add, ptr %arrayidx4, align 4
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 1
+  %2 = load i8, ptr %y, align 1
+  %conv7 = sitofp i8 %2 to float
+  %y9 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 1
+  %3 = load i8, ptr %y9, align 1
+  %conv10 = sitofp i8 %3 to float
+  %sub = fsub float %conv7, %conv10
+  %y12 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 4
+  store float %sub, ptr %y12, align 4
+  %inc = add nuw i32 %i.024, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: two_floats_two_bytes_same_op:
+; CHECK-NOT: v128.load
+define hidden void @two_floats_two_bytes_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp22.not = icmp eq i32 %N, 0
+  br i1 %cmp22.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.023 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.TwoFloats, ptr %a, i32 %i.023
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds nuw %struct.TwoFloats, ptr %b, i32 %i.023
+  %1 = load float, ptr %arrayidx1, align 4
+  %mul = fmul float %0, %1
+  %conv = fptosi float %mul to i8
+  %arrayidx3 = getelementptr inbounds nuw %struct.TwoBytes, ptr %res, i32 %i.023
+  store i8 %conv, ptr %arrayidx3, align 1
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %2 = load float, ptr %y, align 4
+  %y7 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %3 = load float, ptr %y7, align 4
+  %mul8 = fmul float %2, %3
+  %conv9 = fptosi float %mul8 to i8
+  %y11 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 1
+  store i8 %conv9, ptr %y11, align 1
+  %inc = add nuw i32 %i.023, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: two_floats_two_bytes_vary_op:
+; CHECK-NOT: v128.load
+define hidden void @two_floats_two_bytes_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp21.not = icmp eq i32 %N, 0
+  br i1 %cmp21.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.022 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.TwoFloats, ptr %a, i32 %i.022
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds nuw %struct.TwoFloats, ptr %b, i32 %i.022
+  %1 = load float, ptr %arrayidx1, align 4
+  %add = fadd float %0, %1
+  %conv = fptosi float %add to i8
+  %arrayidx3 = getelementptr inbounds nuw %struct.TwoBytes, ptr %res, i32 %i.022
+  store i8 %conv, ptr %arrayidx3, align 1
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %2 = load float, ptr %y, align 4
+  %y7 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %3 = load float, ptr %y7, align 4
+  %sub = fsub float %2, %3
+  %conv8 = fptosi float %sub to i8
+  %y10 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 1
+  store i8 %conv8, ptr %y10, align 1
+  %inc = add nuw i32 %i.022, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: two_shorts_two_floats_same_op:
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 1, 4, 5, 8, 9, 12, 13, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 1, 4, 5, 8, 9, 12, 13, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: f32x4.mul
+; CHECK: i8x16.shuffle  2, 3, 6, 7, 10, 11, 14, 15, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: i8x16.shuffle  2, 3, 6, 7, 10, 11, 14, 15, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: f32x4.mul
+; CHECK: i8x16.shuffle  8, 9, 10, 11, 24, 25, 26, 27, 12, 13, 14, 15, 28, 29, 30, 31
+; CHECK: v128.store
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 16, 17, 18, 19, 4, 5, 6, 7, 20, 21, 22, 23
+; CHECK: v128.store
+define hidden void @two_shorts_two_floats_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp24.not = icmp eq i32 %N, 0
+  br i1 %cmp24.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.025 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.TwoShorts, ptr %a, i32 %i.025
+  %0 = load i16, ptr %arrayidx, align 2
+  %conv = sitofp i16 %0 to float
+  %arrayidx1 = getelementptr inbounds nuw %struct.TwoShorts, ptr %b, i32 %i.025
+  %1 = load i16, ptr %arrayidx1, align 2
+  %conv3 = sitofp i16 %1 to float
+  %mul = fmul float %conv, %conv3
+  %arrayidx4 = getelementptr inbounds nuw %struct.TwoFloats, ptr %res, i32 %i.025
+  store float %mul, ptr %arrayidx4, align 4
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 2
+  %2 = load i16, ptr %y, align 2
+  %conv7 = sitofp i16 %2 to float
+  %y9 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 2
+  %3 = load i16, ptr %y9, align 2
+  %conv10 = sitofp i16 %3 to float
+  %mul11 = fmul float %conv7, %conv10
+  %y13 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 4
+  store float %mul11, ptr %y13, align 4
+  %inc = add nuw i32 %i.025, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: two_shorts_two_floats_vary_op:
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 1, 4, 5, 8, 9, 12, 13, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 1, 4, 5, 8, 9, 12, 13, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: f32x4.add
+; CHECK: i8x16.shuffle  2, 3, 6, 7, 10, 11, 14, 15, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: i8x16.shuffle  2, 3, 6, 7, 10, 11, 14, 15, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: f32x4.sub
+; CHECK: i8x16.shuffle  8, 9, 10, 11, 24, 25, 26, 27, 12, 13, 14, 15, 28, 29, 30, 31
+; CHECK: v128.store
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 16, 17, 18, 19, 4, 5, 6, 7, 20, 21, 22, 23
+; CHECK: v128.store
+define hidden void @two_shorts_two_floats_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp23.not = icmp eq i32 %N, 0
+  br i1 %cmp23.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.024 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.TwoShorts, ptr %a, i32 %i.024
+  %0 = load i16, ptr %arrayidx, align 2
+  %conv = sitofp i16 %0 to float
+  %arrayidx1 = getelementptr inbounds nuw %struct.TwoShorts, ptr %b, i32 %i.024
+  %1 = load i16, ptr %arrayidx1, align 2
+  %conv3 = sitofp i16 %1 to float
+  %add = fadd float %conv, %conv3
+  %arrayidx4 = getelementptr inbounds nuw %struct.TwoFloats, ptr %res, i32 %i.024
+  store float %add, ptr %arrayidx4, align 4
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 2
+  %2 = load i16, ptr %y, align 2
+  %conv7 = sitofp i16 %2 to float
+  %y9 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 2
+  %3 = load i16, ptr %y9, align 2
+  %conv10 = sitofp i16 %3 to float
+  %sub = fsub float %conv7, %conv10
+  %y12 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 4
+  store float %sub, ptr %y12, align 4
+  %inc = add nuw i32 %i.024, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: two_floats_two_shorts_same_op:
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
+; CHECK: f32x4.mul
+; CHECK: i32x4.trunc_sat_f32x4_s
+; CHECK: v128.const	65535, 65535, 65535, 65535
+; CHECK: v128.and
+; CHECK: i16x8.narrow_i32x4_u
+; CHECK: i8x16.shuffle	4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
+; CHECK: i8x16.shuffle	4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
+; CHECK: f32x4.mul
+; CHECK: i32x4.trunc_sat_f32x4_s
+; CHECK: v128.and
+; CHECK: i16x8.narrow_i32x4_u
+; CHECK: i8x16.shuffle	0, 1, 16, 17, 2, 3, 18, 19, 4, 5, 20, 21, 6, 7, 22, 23
+; CHECK: v128.store
+define hidden void @two_floats_two_shorts_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp22.not = icmp eq i32 %N, 0
+  br i1 %cmp22.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.023 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.TwoFloats, ptr %a, i32 %i.023
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds nuw %struct.TwoFloats, ptr %b, i32 %i.023
+  %1 = load float, ptr %arrayidx1, align 4
+  %mul = fmul float %0, %1
+  %conv = fptosi float %mul to i16
+  %arrayidx3 = getelementptr inbounds nuw %struct.TwoShorts, ptr %res, i32 %i.023
+  store i16 %conv, ptr %arrayidx3, align 2
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %2 = load float, ptr %y, align 4
+  %y7 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %3 = load float, ptr %y7, align 4
+  %mul8 = fmul float %2, %3
+  %conv9 = fptosi float %mul8 to i16
+  %y11 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 2
+  store i16 %conv9, ptr %y11, align 2
+  %inc = add nuw i32 %i.023, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: two_floats_two_shorts_vary_op:
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
+; CHECK: f32x4.add
+; CHECK: i32x4.trunc_sat_f32x4_s
+; CHECK: v128.const	65535, 65535, 65535, 65535
+; CHECK: v128.and
+; CHECK: i16x8.narrow_i32x4_u
+; CHECK: i8x16.shuffle	4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
+; CHECK: i8x16.shuffle	4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
+; CHECK: f32x4.sub
+; CHECK: i32x4.trunc_sat_f32x4_s
+; CHECK: v128.and
+; CHECK: i16x8.narrow_i32x4_u
+; CHECK: i8x16.shuffle	0, 1, 16, 17, 2, 3, 18, 19, 4, 5, 20, 21, 6, 7, 22, 23
+; CHECK: v128.store
+define hidden void @two_floats_two_shorts_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp21.not = icmp eq i32 %N, 0
+  br i1 %cmp21.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.022 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.TwoFloats, ptr %a, i32 %i.022
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds nuw %struct.TwoFloats, ptr %b, i32 %i.022
+  %1 = load float, ptr %arrayidx1, align 4
+  %add = fadd float %0, %1
+  %conv = fptosi float %add to i16
+  %arrayidx3 = getelementptr inbounds nuw %struct.TwoShorts, ptr %res, i32 %i.022
+  store i16 %conv, ptr %arrayidx3, align 2
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %2 = load float, ptr %y, align 4
+  %y7 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %3 = load float, ptr %y7, align 4
+  %sub = fsub float %2, %3
+  %conv8 = fptosi float %sub to i16
+  %y10 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 2
+  store i16 %conv8, ptr %y10, align 2
+  %inc = add nuw i32 %i.022, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: four_floats_same_op:
+; CHECK: loop
+; CHECK-NOT: v128.load
+define hidden void @four_floats_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp45.not = icmp eq i32 %N, 0
+  br i1 %cmp45.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.046 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.FourFloats, ptr %a, i32 %i.046
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds nuw %struct.FourFloats, ptr %b, i32 %i.046
+  %1 = load float, ptr %arrayidx1, align 4
+  %mul = fmul float %0, %1
+  %arrayidx3 = getelementptr inbounds nuw %struct.FourFloats, ptr %res, i32 %i.046
+  store float %mul, ptr %arrayidx3, align 4
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %2 = load float, ptr %y, align 4
+  %y7 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %3 = load float, ptr %y7, align 4
+  %mul8 = fmul float %2, %3
+  %y10 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 4
+  store float %mul8, ptr %y10, align 4
+  %z = getelementptr inbounds nuw i8, ptr %arrayidx, i32 8
+  %4 = load float, ptr %z, align 4
+  %z13 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 8
+  %5 = load float, ptr %z13, align 4
+  %mul14 = fmul float %4, %5
+  %z16 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 8
+  store float %mul14, ptr %z16, align 4
+  %w = getelementptr inbounds nuw i8, ptr %arrayidx, i32 12
+  %6 = load float, ptr %w, align 4
+  %w19 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 12
+  %7 = load float, ptr %w19, align 4
+  %mul20 = fmul float %6, %7
+  %w22 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 12
+  store float %mul20, ptr %w22, align 4
+  %inc = add nuw i32 %i.046, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: four_floats_vary_op:
+; CHECK-NOT: f32x4
+define hidden void @four_floats_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp42.not = icmp eq i32 %N, 0
+  br i1 %cmp42.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.043 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.FourFloats, ptr %a, i32 %i.043
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds nuw %struct.FourFloats, ptr %b, i32 %i.043
+  %1 = load float, ptr %arrayidx1, align 4
+  %add = fadd float %0, %1
+  %arrayidx3 = getelementptr inbounds nuw %struct.FourFloats, ptr %res, i32 %i.043
+  store float %add, ptr %arrayidx3, align 4
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %2 = load float, ptr %y, align 4
+  %y7 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %3 = load float, ptr %y7, align 4
+  %sub = fsub float %2, %3
+  %y9 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 4
+  store float %sub, ptr %y9, align 4
+  %z = getelementptr inbounds nuw i8, ptr %arrayidx, i32 8
+  %4 = load float, ptr %z, align 4
+  %z12 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 8
+  %5 = load float, ptr %z12, align 4
+  %mul = fmul float %4, %5
+  %z14 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 8
+  store float %mul, ptr %z14, align 4
+  %w = getelementptr inbounds nuw i8, ptr %arrayidx, i32 12
+  %6 = load float, ptr %w, align 4
+  %w17 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 12
+  %7 = load float, ptr %w17, align 4
+  %div = fdiv float %6, %7
+  %w19 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 12
+  store float %div, ptr %w19, align 4
+  %inc = add nuw i32 %i.043, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: four_bytes_four_floats_same_op:
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 4, 8, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 4, 8, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: f32x4.mul
+; CHECK: i8x16.shuffle  1, 5, 9, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: i8x16.shuffle  1, 5, 9, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: f32x4.mul
+; CHECK: i8x16.shuffle  12, 13, 14, 15, 28, 29, 30, 31, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle  2, 6, 10, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: i8x16.shuffle  2, 6, 10, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: f32x4.mul
+; CHECK: i8x16.shuffle  3, 7, 11, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: i8x16.shuffle  3, 7, 11, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: f32x4.mul
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 0, 1, 2, 3, 12, 13, 14, 15, 28, 29, 30, 31
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; CHECK: v128.store
+; CHECK: i8x16.shuffle  8, 9, 10, 11, 24, 25, 26, 27, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 0, 1, 2, 3, 8, 9, 10, 11, 24, 25, 26, 27
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; CHECK: v128.store
+; CHECK: i8x16.shuffle  4, 5, 6, 7, 20, 21, 22, 23, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 6, 7, 20, 21, 22, 23
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; CHECK: v128.store
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 16, 17, 18, 19, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 16, 17, 18, 19
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; CHECK: v128.store
+define hidden void @four_bytes_four_floats_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp52.not = icmp eq i32 %N, 0
+  br i1 %cmp52.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.053 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.FourBytes, ptr %a, i32 %i.053
+  %0 = load i8, ptr %arrayidx, align 1
+  %conv = sitofp i8 %0 to float
+  %arrayidx1 = getelementptr inbounds nuw %struct.FourBytes, ptr %b, i32 %i.053
+  %1 = load i8, ptr %arrayidx1, align 1
+  %conv3 = sitofp i8 %1 to float
+  %mul = fmul float %conv, %conv3
+  %arrayidx4 = getelementptr inbounds nuw %struct.FourFloats, ptr %res, i32 %i.053
+  store float %mul, ptr %arrayidx4, align 4
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 1
+  %2 = load i8, ptr %y, align 1
+  %conv7 = sitofp i8 %2 to float
+  %y9 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 1
+  %3 = load i8, ptr %y9, align 1
+  %conv10 = sitofp i8 %3 to float
+  %mul11 = fmul float %conv7, %conv10
+  %y13 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 4
+  store float %mul11, ptr %y13, align 4
+  %z = getelementptr inbounds nuw i8, ptr %arrayidx, i32 2
+  %4 = load i8, ptr %z, align 1
+  %conv15 = sitofp i8 %4 to float
+  %z17 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 2
+  %5 = load i8, ptr %z17, align 1
+  %conv18 = sitofp i8 %5 to float
+  %mul19 = fmul float %conv15, %conv18
+  %z21 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 8
+  store float %mul19, ptr %z21, align 4
+  %w = getelementptr inbounds nuw i8, ptr %arrayidx, i32 3
+  %6 = load i8, ptr %w, align 1
+  %conv23 = sitofp i8 %6 to float
+  %w25 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 3
+  %7 = load i8, ptr %w25, align 1
+  %conv26 = sitofp i8 %7 to float
+  %mul27 = fmul float %conv23, %conv26
+  %w29 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 12
+  store float %mul27, ptr %w29, align 4
+  %inc = add nuw i32 %i.053, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: four_bytes_four_floats_vary_op:
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 4, 8, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 4, 8, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: f32x4.mul
+; CHECK: i8x16.shuffle  1, 5, 9, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: i8x16.shuffle  1, 5, 9, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: f32x4.add
+; CHECK: i8x16.shuffle  12, 13, 14, 15, 28, 29, 30, 31, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle  2, 6, 10, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: i8x16.shuffle  2, 6, 10, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: f32x4.div
+; CHECK: i8x16.shuffle  3, 7, 11, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: i8x16.shuffle  3, 7, 11, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: f32x4.sub
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 0, 1, 2, 3, 12, 13, 14, 15, 28, 29, 30, 31
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; CHECK: v128.store
+; CHECK: i8x16.shuffle  8, 9, 10, 11, 24, 25, 26, 27, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 0, 1, 2, 3, 8, 9, 10, 11, 24, 25, 26, 27
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; CHECK: v128.store
+; CHECK: i8x16.shuffle  4, 5, 6, 7, 20, 21, 22, 23, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 6, 7, 20, 21, 22, 23
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; CHECK: v128.store
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 16, 17, 18, 19, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 16, 17, 18, 19
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; CHECK: v128.store
+define hidden void @four_bytes_four_floats_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp49.not = icmp eq i32 %N, 0
+  br i1 %cmp49.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.050 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.FourBytes, ptr %a, i32 %i.050
+  %0 = load i8, ptr %arrayidx, align 1
+  %conv = sitofp i8 %0 to float
+  %arrayidx1 = getelementptr inbounds nuw %struct.FourBytes, ptr %b, i32 %i.050
+  %1 = load i8, ptr %arrayidx1, align 1
+  %conv3 = sitofp i8 %1 to float
+  %mul = fmul float %conv, %conv3
+  %arrayidx4 = getelementptr inbounds nuw %struct.FourFloats, ptr %res, i32 %i.050
+  store float %mul, ptr %arrayidx4, align 4
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 1
+  %2 = load i8, ptr %y, align 1
+  %conv7 = sitofp i8 %2 to float
+  %y9 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 1
+  %3 = load i8, ptr %y9, align 1
+  %conv10 = sitofp i8 %3 to float
+  %add = fadd float %conv7, %conv10
+  %y12 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 4
+  store float %add, ptr %y12, align 4
+  %z = getelementptr inbounds nuw i8, ptr %arrayidx, i32 2
+  %4 = load i8, ptr %z, align 1
+  %conv14 = sitofp i8 %4 to float
+  %z16 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 2
+  %5 = load i8, ptr %z16, align 1
+  %conv17 = sitofp i8 %5 to float
+  %div = fdiv float %conv14, %conv17
+  %z19 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 8
+  store float %div, ptr %z19, align 4
+  %w = getelementptr inbounds nuw i8, ptr %arrayidx, i32 3
+  %6 = load i8, ptr %w, align 1
+  %conv21 = sitofp i8 %6 to float
+  %w23 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 3
+  %7 = load i8, ptr %w23, align 1
+  %conv24 = sitofp i8 %7 to float
+  %sub = fsub float %conv21, %conv24
+  %w26 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 12
+  store float %sub, ptr %w26, align 4
+  %inc = add nuw i32 %i.050, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: four_floats_four_bytes_same_op:
+; CHECK-NOT: v128.load
+define hidden void @four_floats_four_bytes_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp48.not = icmp eq i32 %N, 0
+  br i1 %cmp48.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.049 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.FourFloats, ptr %a, i32 %i.049
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds nuw %struct.FourFloats, ptr %b, i32 %i.049
+  %1 = load float, ptr %arrayidx1, align 4
+  %mul = fmul float %0, %1
+  %conv = fptosi float %mul to i8
+  %arrayidx3 = getelementptr inbounds nuw %struct.FourBytes, ptr %res, i32 %i.049
+  store i8 %conv, ptr %arrayidx3, align 1
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %2 = load float, ptr %y, align 4
+  %y7 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %3 = load float, ptr %y7, align 4
+  %mul8 = fmul float %2, %3
+  %conv9 = fptosi float %mul8 to i8
+  %y11 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 1
+  store i8 %conv9, ptr %y11, align 1
+  %z = getelementptr inbounds nuw i8, ptr %arrayidx, i32 8
+  %4 = load float, ptr %z, align 4
+  %z14 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 8
+  %5 = load float, ptr %z14, align 4
+  %mul15 = fmul float %4, %5
+  %conv16 = fptosi float %mul15 to i8
+  %z18 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 2
+  store i8 %conv16, ptr %z18, align 1
+  %w = getelementptr inbounds nuw i8, ptr %arrayidx, i32 12
+  %6 = load float, ptr %w, align 4
+  %w21 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 12
+  %7 = load float, ptr %w21, align 4
+  %mul22 = fmul float %6, %7
+  %conv23 = fptosi float %mul22 to i8
+  %w25 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 3
+  store i8 %conv23, ptr %w25, align 1
+  %inc = add nuw i32 %i.049, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: four_floats_four_bytes_vary_op:
+; CHECK-NOT: v128.load
+define hidden void @four_floats_four_bytes_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp45.not = icmp eq i32 %N, 0
+  br i1 %cmp45.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.046 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.FourFloats, ptr %a, i32 %i.046
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds nuw %struct.FourFloats, ptr %b, i32 %i.046
+  %1 = load float, ptr %arrayidx1, align 4
+  %mul = fmul float %0, %1
+  %conv = fptosi float %mul to i8
+  %arrayidx3 = getelementptr inbounds nuw %struct.FourBytes, ptr %res, i32 %i.046
+  store i8 %conv, ptr %arrayidx3, align 1
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %2 = load float, ptr %y, align 4
+  %y7 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %3 = load float, ptr %y7, align 4
+  %add = fadd float %2, %3
+  %conv8 = fptosi float %add to i8
+  %y10 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 1
+  store i8 %conv8, ptr %y10, align 1
+  %z = getelementptr inbounds nuw i8, ptr %arrayidx, i32 8
+  %4 = load float, ptr %z, align 4
+  %z13 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 8
+  %5 = load float, ptr %z13, align 4
+  %div = fdiv float %4, %5
+  %conv14 = fptosi float %div to i8
+  %z16 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 2
+  store i8 %conv14, ptr %z16, align 1
+  %w = getelementptr inbounds nuw i8, ptr %arrayidx, i32 12
+  %6 = load float, ptr %w, align 4
+  %w19 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 12
+  %7 = load float, ptr %w19, align 4
+  %sub = fsub float %6, %7
+  %conv20 = fptosi float %sub to i8
+  %w22 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 3
+  store i8 %conv20, ptr %w22, align 1
+  %inc = add nuw i32 %i.046, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: four_shorts_four_floats_same_op:
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 1, 8, 9, 16, 17, 24, 25, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 1, 8, 9, 16, 17, 24, 25, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: f32x4.mul
+; CHECK: i8x16.shuffle  2, 3, 10, 11, 18, 19, 26, 27, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: i8x16.shuffle  2, 3, 10, 11, 18, 19, 26, 27, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: f32x4.mul
+; CHECK: i8x16.shuffle  12, 13, 14, 15, 28, 29, 30, 31, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle  4, 5, 12, 13, 20, 21, 28, 29, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: i8x16.shuffle  4, 5, 12, 13, 20, 21, 28, 29, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: f32x4.mul
+; CHECK: i8x16.shuffle  6, 7, 14, 15, 22, 23, 30, 31, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: i8x16.shuffle  6, 7, 14, 15, 22, 23, 30, 31, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: f32x4.mul
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 0, 1, 2, 3, 12, 13, 14, 15, 28, 29, 30, 31
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; CHECK: v128.store
+; CHECK: i8x16.shuffle  8, 9, 10, 11, 24, 25, 26, 27, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 0, 1, 2, 3, 8, 9, 10, 11, 24, 25, 26, 27
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; CHECK: v128.store
+; CHECK: i8x16.shuffle  4, 5, 6, 7, 20, 21, 22, 23, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 6, 7, 20, 21, 22, 23
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; CHECK: v128.store
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 16, 17, 18, 19, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 16, 17, 18, 19
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; CHECK: v128.store
+define hidden void @four_shorts_four_floats_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp52.not = icmp eq i32 %N, 0
+  br i1 %cmp52.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.053 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.FourShorts, ptr %a, i32 %i.053
+  %0 = load i16, ptr %arrayidx, align 2
+  %conv = sitofp i16 %0 to float
+  %arrayidx1 = getelementptr inbounds nuw %struct.FourShorts, ptr %b, i32 %i.053
+  %1 = load i16, ptr %arrayidx1, align 2
+  %conv3 = sitofp i16 %1 to float
+  %mul = fmul float %conv, %conv3
+  %arrayidx4 = getelementptr inbounds nuw %struct.FourFloats, ptr %res, i32 %i.053
+  store float %mul, ptr %arrayidx4, align 4
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 2
+  %2 = load i16, ptr %y, align 2
+  %conv7 = sitofp i16 %2 to float
+  %y9 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 2
+  %3 = load i16, ptr %y9, align 2
+  %conv10 = sitofp i16 %3 to float
+  %mul11 = fmul float %conv7, %conv10
+  %y13 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 4
+  store float %mul11, ptr %y13, align 4
+  %z = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %4 = load i16, ptr %z, align 2
+  %conv15 = sitofp i16 %4 to float
+  %z17 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %5 = load i16, ptr %z17, align 2
+  %conv18 = sitofp i16 %5 to float
+  %mul19 = fmul float %conv15, %conv18
+  %z21 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 8
+  store float %mul19, ptr %z21, align 4
+  %w = getelementptr inbounds nuw i8, ptr %arrayidx, i32 6
+  %6 = load i16, ptr %w, align 2
+  %conv23 = sitofp i16 %6 to float
+  %w25 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 6
+  %7 = load i16, ptr %w25, align 2
+  %conv26 = sitofp i16 %7 to float
+  %mul27 = fmul float %conv23, %conv26
+  %w29 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 12
+  store float %mul27, ptr %w29, align 4
+  %inc = add nuw i32 %i.053, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: four_shorts_four_floats_vary_op:
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 1, 8, 9, 16, 17, 24, 25, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle  0, 1, 8, 9, 16, 17, 24, 25, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: f32x4.mul
+; CHECK: i8x16.shuffle  2, 3, 10, 11, 18, 19, 26, 27, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: i8x16.shuffle  2, 3, 10, 11, 18, 19, 26, 27, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: f32x4.add
+; CHECK: i8x16.shuffle  12, 13, 14, 15, 28, 29, 30, 31, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle  4, 5, 12, 13, 20, 21, 28, 29, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: i8x16.shuffle  4, 5, 12, 13, 20, 21, 28, 29, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: f32x4.div
+; CHECK: i8x16.shuffle  6, 7, 14, 15, 22, 23, 30, 31, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: i8x16.shuffle  6, 7, 14, 15, 22, 23, 30, 31, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: f32x4.convert_i32x4_s
+; CHECK: f32x4.sub
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 0, 1, 2, 3, 12, 13, 14, 15, 28, 29, 30, 31
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; CHECK: v128.store
+; CHECK: i8x16.shuffle  8, 9, 10, 11, 24, 25, 26, 27, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 0, 1, 2, 3, 8, 9, 10, 11, 24, 25, 26, 27
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; CHECK: v128.store
+; CHECK: i8x16.shuffle  4, 5, 6, 7, 20, 21, 22, 23, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 6, 7, 20, 21, 22, 23
+; CHECK: i8x16.shuffle  0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
+; CHECK: v128.store
+define hidden void @four_shorts_four_floats_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp49.not = icmp eq i32 %N, 0
+  br i1 %cmp49.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.050 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.FourShorts, ptr %a, i32 %i.050
+  %0 = load i16, ptr %arrayidx, align 2
+  %conv = sitofp i16 %0 to float
+  %arrayidx1 = getelementptr inbounds nuw %struct.FourShorts, ptr %b, i32 %i.050
+  %1 = load i16, ptr %arrayidx1, align 2
+  %conv3 = sitofp i16 %1 to float
+  %mul = fmul float %conv, %conv3
+  %arrayidx4 = getelementptr inbounds nuw %struct.FourFloats, ptr %res, i32 %i.050
+  store float %mul, ptr %arrayidx4, align 4
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 2
+  %2 = load i16, ptr %y, align 2
+  %conv7 = sitofp i16 %2 to float
+  %y9 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 2
+  %3 = load i16, ptr %y9, align 2
+  %conv10 = sitofp i16 %3 to float
+  %add = fadd float %conv7, %conv10
+  %y12 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 4
+  store float %add, ptr %y12, align 4
+  %z = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %4 = load i16, ptr %z, align 2
+  %conv14 = sitofp i16 %4 to float
+  %z16 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %5 = load i16, ptr %z16, align 2
+  %conv17 = sitofp i16 %5 to float
+  %div = fdiv float %conv14, %conv17
+  %z19 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 8
+  store float %div, ptr %z19, align 4
+  %w = getelementptr inbounds nuw i8, ptr %arrayidx, i32 6
+  %6 = load i16, ptr %w, align 2
+  %conv21 = sitofp i16 %6 to float
+  %w23 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 6
+  %7 = load i16, ptr %w23, align 2
+  %conv24 = sitofp i16 %7 to float
+  %sub = fsub float %conv21, %conv24
+  %w26 = getelementptr inbounds nuw i8, ptr %arrayidx4, i32 12
+  store float %sub, ptr %w26, align 4
+  %inc = add nuw i32 %i.050, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: four_floats_four_shorts_same_op:
+; CHECK-NOT: v128.load
+define hidden void @four_floats_four_shorts_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp48.not = icmp eq i32 %N, 0
+  br i1 %cmp48.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.049 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.FourFloats, ptr %a, i32 %i.049
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds nuw %struct.FourFloats, ptr %b, i32 %i.049
+  %1 = load float, ptr %arrayidx1, align 4
+  %mul = fmul float %0, %1
+  %conv = fptosi float %mul to i16
+  %arrayidx3 = getelementptr inbounds nuw %struct.FourShorts, ptr %res, i32 %i.049
+  store i16 %conv, ptr %arrayidx3, align 2
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %2 = load float, ptr %y, align 4
+  %y7 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %3 = load float, ptr %y7, align 4
+  %mul8 = fmul float %2, %3
+  %conv9 = fptosi float %mul8 to i16
+  %y11 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 2
+  store i16 %conv9, ptr %y11, align 2
+  %z = getelementptr inbounds nuw i8, ptr %arrayidx, i32 8
+  %4 = load float, ptr %z, align 4
+  %z14 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 8
+  %5 = load float, ptr %z14, align 4
+  %mul15 = fmul float %4, %5
+  %conv16 = fptosi float %mul15 to i16
+  %z18 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 4
+  store i16 %conv16, ptr %z18, align 2
+  %w = getelementptr inbounds nuw i8, ptr %arrayidx, i32 12
+  %6 = load float, ptr %w, align 4
+  %w21 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 12
+  %7 = load float, ptr %w21, align 4
+  %mul22 = fmul float %6, %7
+  %conv23 = fptosi float %mul22 to i16
+  %w25 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 6
+  store i16 %conv23, ptr %w25, align 2
+  %inc = add nuw i32 %i.049, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: four_floats_four_shorts_vary_op:
+; CHECK-NOT: v128.load
+define hidden void @four_floats_four_shorts_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
+entry:
+  %cmp45.not = icmp eq i32 %N, 0
+  br i1 %cmp45.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.046 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw %struct.FourFloats, ptr %a, i32 %i.046
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds nuw %struct.FourFloats, ptr %b, i32 %i.046
+  %1 = load float, ptr %arrayidx1, align 4
+  %mul = fmul float %0, %1
+  %conv = fptosi float %mul to i16
+  %arrayidx3 = getelementptr inbounds nuw %struct.FourShorts, ptr %res, i32 %i.046
+  store i16 %conv, ptr %arrayidx3, align 2
+  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %2 = load float, ptr %y, align 4
+  %y7 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %3 = load float, ptr %y7, align 4
+  %add = fadd float %2, %3
+  %conv8 = fptosi float %add to i16
+  %y10 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 2
+  store i16 %conv8, ptr %y10, align 2
+  %z = getelementptr inbounds nuw i8, ptr %arrayidx, i32 8
+  %4 = load float, ptr %z, align 4
+  %z13 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 8
+  %5 = load float, ptr %z13, align 4
+  %div = fdiv float %4, %5
+  %conv14 = fptosi float %div to i16
+  %z16 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 4
+  store i16 %conv14, ptr %z16, align 2
+  %w = getelementptr inbounds nuw i8, ptr %arrayidx, i32 12
+  %6 = load float, ptr %w, align 4
+  %w19 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 12
+  %7 = load float, ptr %w19, align 4
+  %sub = fsub float %6, %7
+  %conv20 = fptosi float %sub to i16
+  %w22 = getelementptr inbounds nuw i8, ptr %arrayidx3, i32 6
+  store i16 %conv20, ptr %w22, align 2
+  %inc = add nuw i32 %i.046, 1
+  %exitcond.not = icmp eq i32 %inc, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}

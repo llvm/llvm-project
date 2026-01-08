@@ -53,7 +53,7 @@ type of the *typedef* becomes a matrix type with the given dimensions and an
 element type of the former underlying type.
 
 If a declaration of a *typedef-name* has a ``matrix_type`` attribute, then all
-declaration of that *typedef-name* shall have a matrix_type attribute with the
+declarations of that *typedef-name* shall have a matrix_type attribute with the
 same element type, number of rows, and number of columns.
 
 Standard Conversions

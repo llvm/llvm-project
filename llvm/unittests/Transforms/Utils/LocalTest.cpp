@@ -183,7 +183,7 @@ TEST(Local, MergeBasicBlockIntoOnlyPred) {
   auto resetIR = [&]() {
     M = parseIR(C,
                 R"(
-      define i32 @f(i8* %str) {
+      define i32 @f(ptr %str) {
       entry:
         br label %bb2.i
       bb2.i:                                            ; preds = %bb4.i, %entry
@@ -411,7 +411,7 @@ TEST(Local, ConstantFoldTerminator) {
 
       define void @indirectbr() {
       entry:
-        indirectbr i8* blockaddress(@indirectbr, %bb0), [label %bb0, label %bb1]
+        indirectbr ptr blockaddress(@indirectbr, %bb0), [label %bb0, label %bb1]
       bb0:
         ret void
       bb1:
@@ -420,14 +420,14 @@ TEST(Local, ConstantFoldTerminator) {
 
       define void @indirectbr_repeated() {
       entry:
-        indirectbr i8* blockaddress(@indirectbr_repeated, %bb0), [label %bb0, label %bb0]
+        indirectbr ptr blockaddress(@indirectbr_repeated, %bb0), [label %bb0, label %bb0]
       bb0:
         ret void
       }
 
       define void @indirectbr_unreachable() {
       entry:
-        indirectbr i8* blockaddress(@indirectbr_unreachable, %bb0), [label %bb1]
+        indirectbr ptr blockaddress(@indirectbr_unreachable, %bb0), [label %bb1]
       bb0:
         ret void
       bb1:
@@ -673,20 +673,16 @@ TEST(Local, FindDbgRecords) {
   Function &Fun = *cast<Function>(M->getNamedValue("fun"));
   Value *Arg = Fun.getArg(0);
 
-  SmallVector<DbgVariableIntrinsic *> Users;
   SmallVector<DbgVariableRecord *> Records;
   // Arg (%a) is used twice by a single dbg_assign. Check findDbgUsers returns
   // only 1 pointer to it rather than 2.
-  findDbgUsers(Users, Arg, &Records);
-  EXPECT_EQ(Users.size(), 0u);
+  findDbgUsers(Arg, Records);
   EXPECT_EQ(Records.size(), 1u);
 
-  SmallVector<DbgValueInst *> Vals;
   Records.clear();
   // Arg (%a) is used twice by a single dbg_assign. Check findDbgValues returns
   // only 1 pointer to it rather than 2.
-  findDbgValues(Vals, Arg, &Records);
-  EXPECT_EQ(Vals.size(), 0u);
+  findDbgValues(Arg, Records);
   EXPECT_EQ(Records.size(), 1u);
 }
 
@@ -787,20 +783,16 @@ TEST(Local, ReplaceAllDbgUsesWith) {
   // Simulate i32* <-> i64* conversion.
   EXPECT_TRUE(replaceAllDbgUsesWith(D, C, C, DT));
 
-  SmallVector<DbgVariableIntrinsic *, 2> CDbgVals;
   SmallVector<DbgVariableRecord *, 2> CDbgRecords;
-  findDbgUsers(CDbgVals, &C, &CDbgRecords);
-  EXPECT_EQ(0U, CDbgVals.size());
+  findDbgUsers(&C, CDbgRecords);
   EXPECT_EQ(2U, CDbgRecords.size());
   EXPECT_TRUE(all_of(
       CDbgRecords, [](DbgVariableRecord *DVR) { return DVR->isDbgDeclare(); }));
 
   EXPECT_TRUE(replaceAllDbgUsesWith(C, D, D, DT));
 
-  SmallVector<DbgVariableIntrinsic *, 2> DDbgVals;
   SmallVector<DbgVariableRecord *, 2> DDbgRecords;
-  findDbgUsers(DDbgVals, &D, &DDbgRecords);
-  EXPECT_EQ(0U, DDbgVals.size());
+  findDbgUsers(&D, DDbgRecords);
   EXPECT_EQ(2U, DDbgRecords.size());
   EXPECT_TRUE(all_of(
       DDbgRecords, [](DbgVariableRecord *DVR) { return DVR->isDbgDeclare(); }));
@@ -824,10 +816,8 @@ TEST(Local, ReplaceAllDbgUsesWith) {
   EXPECT_EQ(BarrierDbgVal->getNumVariableLocationOps(), 1u);
   EXPECT_TRUE(BarrierDbgVal->isKillLocation());
 
-  SmallVector<DbgValueInst *, 1> BarrierDbgVals;
   SmallVector<DbgVariableRecord *, 8> BarrierDbgRecs;
-  findDbgValues(BarrierDbgVals, &F_, &BarrierDbgRecs);
-  EXPECT_EQ(0U, BarrierDbgVals.size());
+  findDbgValues(&F_, BarrierDbgRecs);
   EXPECT_EQ(0U, BarrierDbgRecs.size());
 
   // Simulate i32 -> i64 conversion to test sign-extension. Here are some
@@ -838,10 +828,8 @@ TEST(Local, ReplaceAllDbgUsesWith) {
   //  4-6) like (1-3), but with a fragment
   EXPECT_TRUE(replaceAllDbgUsesWith(B, A, A, DT));
 
-  SmallVector<DbgValueInst *, 8> BDbgVals;
   SmallVector<DbgVariableRecord *, 8> BDbgRecs;
-  findDbgValues(BDbgVals, &A, &BDbgRecs);
-  EXPECT_EQ(0U, BDbgVals.size());
+  findDbgValues(&A, BDbgRecs);
   EXPECT_EQ(6U, BDbgRecs.size());
 
   // Check that %a has a dbg.value with a DIExpression matching \p Ops.
@@ -936,7 +924,7 @@ TEST(Local, RemoveUnreachableBlocks) {
 
       declare i32 @__gxx_personality_v0(...)
 
-      define void @invoke_terminator() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+      define void @invoke_terminator() personality ptr @__gxx_personality_v0 {
       entry:
         br i1 undef, label %invoke.block, label %exit
 
@@ -954,8 +942,8 @@ TEST(Local, RemoveUnreachableBlocks) {
         unreachable
 
       lpad.block:
-        %lp = landingpad { i8*, i32 }
-                catch i8* null
+        %lp = landingpad { ptr, i32 }
+                catch ptr null
         br label %exit
 
       exit:
@@ -1068,6 +1056,14 @@ TEST(Local, SimplifyCFGWithNullAC) {
                           RequireAndPreserveDomTree ? &DTU : nullptr, Options));
 }
 
+TEST(LocalTest, TargetTypeInfoHasNoReplacementProperty) {
+  LLVMContext Ctx;
+  SmallVector<unsigned, 3> Ints = {};
+  auto *TT = llvm::TargetExtType::get(Ctx, "dx.RawBuffer", {}, Ints);
+
+  EXPECT_TRUE(TT->hasProperty(TargetExtType::Property::IsTokenLike));
+}
+
 TEST(Local, CanReplaceOperandWithVariable) {
   LLVMContext Ctx;
   Module M("test_module", Ctx);
@@ -1156,7 +1152,7 @@ TEST(Local, ExpressionForConstant) {
   IntegerType *Int1Ty = Type::getInt1Ty(Context);
   Expr = createExpression(ConstantInt::getTrue(Context), Int1Ty);
   EXPECT_NE(Expr, nullptr);
-  EXPECT_EQ(Expr->getElement(1), 18446744073709551615U);
+  EXPECT_EQ(Expr->getElement(1), 1U);
 
   Expr = createExpression(ConstantInt::getFalse(Context), Int1Ty);
   EXPECT_NE(Expr, nullptr);

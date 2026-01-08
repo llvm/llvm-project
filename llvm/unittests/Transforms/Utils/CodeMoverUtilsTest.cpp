@@ -75,21 +75,21 @@ TEST(CodeMoverUtils, IsControlFlowEquivalentSimpleTest) {
   //     i = 3;
   // }
   std::unique_ptr<Module> M =
-      parseIR(C, R"(define void @foo(i32* %i, i1 %cond1, i1 %cond2) {
+      parseIR(C, R"(define void @foo(ptr %i, i1 %cond1, i1 %cond2) {
                  entry:
                    br i1 %cond1, label %if.first, label %if.first.end
                  if.first:
-                   store i32 1, i32* %i, align 4
+                   store i32 1, ptr %i, align 4
                    br label %if.first.end
                  if.first.end:
                    br i1 %cond1, label %if.second, label %if.second.end
                  if.second:
-                   store i32 2, i32* %i, align 4
+                   store i32 2, ptr %i, align 4
                    br label %if.second.end
                  if.second.end:
                    br i1 %cond2, label %if.third, label %if.third.end
                  if.third:
-                   store i32 3, i32* %i, align 4
+                   store i32 3, ptr %i, align 4
                    br label %if.third.end
                  if.third.end:
                    ret void
@@ -136,51 +136,51 @@ TEST(CodeMoverUtils, IsControlFlowEquivalentOppositeCondTest) {
   //     i = 9;
   // }
   std::unique_ptr<Module> M =
-      parseIR(C, R"(define void @foo(i32* %i, i32 %X, i32 %Y) {
+      parseIR(C, R"(define void @foo(ptr %i, i32 %X, i32 %Y) {
                  entry:
                    %cmp1 = icmp ult i32 %X, %Y
                    br i1 %cmp1, label %if.first, label %if.first.end
                  if.first:
-                   store i32 1, i32* %i, align 4
+                   store i32 1, ptr %i, align 4
                    br label %if.first.end
                  if.first.end:
                    %cmp2 = icmp ugt i32 %Y, %X
                    br i1 %cmp2, label %if.second, label %if.second.end
                  if.second:
-                   store i32 2, i32* %i, align 4
+                   store i32 2, ptr %i, align 4
                    br label %if.second.end
                  if.second.end:
                    %cmp3 = icmp uge i32 %X, %Y
                    br i1 %cmp3, label %if.third, label %if.third.else
                  if.third:
-                   store i32 3, i32* %i, align 4
+                   store i32 3, ptr %i, align 4
                    br label %if.third.end
                  if.third.else:
-                   store i32 4, i32* %i, align 4
+                   store i32 4, ptr %i, align 4
                    br label %if.third.end
                  if.third.end:
                    %cmp4 = icmp eq i32 %X, %Y
                    br i1 %cmp4, label %if.fourth, label %if.fourth.end
                  if.fourth:
-                   store i32 5, i32* %i, align 4
+                   store i32 5, ptr %i, align 4
                    br label %if.fourth.end
                  if.fourth.end:
                    %cmp5 = icmp eq i32 %Y, %X
                    br i1 %cmp5, label %if.fifth, label %if.fifth.else
                  if.fifth:
-                   store i32 6, i32* %i, align 4
+                   store i32 6, ptr %i, align 4
                    br label %if.fifth.end
                  if.fifth.else:
-                   store i32 7, i32* %i, align 4
+                   store i32 7, ptr %i, align 4
                    br label %if.fifth.end
                  if.fifth.end:
                    %cmp6 = icmp ne i32 %X, %Y
                    br i1 %cmp6, label %if.sixth, label %if.sixth.else
                  if.sixth:
-                   store i32 8, i32* %i, align 4
+                   store i32 8, ptr %i, align 4
                    br label %if.sixth.end
                  if.sixth.else:
-                   store i32 9, i32* %i, align 4
+                   store i32 9, ptr %i, align 4
                    br label %if.sixth.end
                  if.sixth.end:
                    ret void
@@ -227,20 +227,20 @@ TEST(CodeMoverUtils, IsControlFlowEquivalentCondNestTest) {
   //       i = 2;
   // }
   std::unique_ptr<Module> M =
-      parseIR(C, R"(define void @foo(i32* %i, i1 %cond1, i1 %cond2) {
+      parseIR(C, R"(define void @foo(ptr %i, i1 %cond1, i1 %cond2) {
          entry:
            br i1 %cond1, label %if.outer.first, label %if.first.end
          if.outer.first:
            br i1 %cond2, label %if.inner.first, label %if.first.end
          if.inner.first:
-           store i32 1, i32* %i, align 4
+           store i32 1, ptr %i, align 4
            br label %if.first.end
          if.first.end:
            br i1 %cond2, label %if.outer.second, label %if.second.end
          if.outer.second:
            br i1 %cond1, label %if.inner.second, label %if.second.end
          if.inner.second:
-           store i32 2, i32* %i, align 4
+           store i32 2, ptr %i, align 4
            br label %if.second.end
          if.second.end:
            ret void
@@ -283,7 +283,7 @@ TEST(CodeMoverUtils, IsControlFlowEquivalentImbalanceTest) {
   //     i = 4;
   // }
   std::unique_ptr<Module> M =
-      parseIR(C, R"(define void @foo(i32* %i, i1 %cond1, i1 %cond2, i1 %cond3) {
+      parseIR(C, R"(define void @foo(ptr %i, i1 %cond1, i1 %cond2, i1 %cond3) {
          entry:
            br i1 %cond1, label %if.outer.first, label %if.first.end
          if.outer.first:
@@ -291,26 +291,26 @@ TEST(CodeMoverUtils, IsControlFlowEquivalentImbalanceTest) {
          if.middle.first:
            br i1 %cond3, label %if.inner.first, label %if.first.end
          if.inner.first:
-           store i32 1, i32* %i, align 4
+           store i32 1, ptr %i, align 4
            br label %if.first.end
          if.first.end:
            br i1 %cond2, label %if.outer.second, label %if.second.end
          if.outer.second:
            br i1 %cond3, label %if.inner.second, label %if.second.end
          if.inner.second:
-           store i32 2, i32* %i, align 4
+           store i32 2, ptr %i, align 4
            br label %if.second.end
          if.second.end:
            br i1 %cond1, label %if.outer.third, label %if.third.end
          if.outer.third:
            br i1 %cond1, label %if.inner.third, label %if.third.end
          if.inner.third:
-           store i32 3, i32* %i, align 4
+           store i32 3, ptr %i, align 4
            br label %if.third.end
          if.third.end:
            br i1 %cond1, label %if.fourth, label %if.fourth.end
          if.fourth:
-           store i32 4, i32* %i, align 4
+           store i32 4, ptr %i, align 4
            br label %if.fourth.end
          if.fourth.end:
            ret void
@@ -343,28 +343,28 @@ TEST(CodeMoverUtils, IsControlFlowEquivalentPointerTest) {
   //     i = 3;
   // }
   std::unique_ptr<Module> M =
-      parseIR(C, R"(define void @foo(i32* %i, i32* %cond) {
+      parseIR(C, R"(define void @foo(ptr %i, ptr %cond) {
                  entry:
-                   %0 = load i32, i32* %cond, align 4
+                   %0 = load i32, ptr %cond, align 4
                    %tobool1 = icmp ne i32 %0, 0
                    br i1 %tobool1, label %if.first, label %if.first.end
                  if.first:
-                   store i32 1, i32* %i, align 4
+                   store i32 1, ptr %i, align 4
                    br label %if.first.end
                  if.first.end:
-                   %1 = load i32, i32* %cond, align 4
+                   %1 = load i32, ptr %cond, align 4
                    %tobool2 = icmp ne i32 %1, 0
                    br i1 %tobool2, label %if.second, label %if.second.end
                  if.second:
-                   store i32 2, i32* %i, align 4
+                   store i32 2, ptr %i, align 4
                    br label %if.second.end
                  if.second.end:
-                   store i32 1, i32* %cond, align 4
-                   %2 = load i32, i32* %cond, align 4
+                   store i32 1, ptr %cond, align 4
+                   %2 = load i32, ptr %cond, align 4
                    %tobool3 = icmp ne i32 %2, 0
                    br i1 %tobool3, label %if.third, label %if.third.end
                  if.third:
-                   store i32 3, i32* %i, align 4
+                   store i32 3, ptr %i, align 4
                    br label %if.third.end
                  if.third.end:
                    ret void
@@ -450,7 +450,7 @@ TEST(CodeMoverUtils, IsSafeToMoveTest1) {
   //   }
   // }
   std::unique_ptr<Module> M = parseIR(
-      C, R"(define void @foo(i32* noalias %A, i32* noalias %B, i32* noalias %C
+      C, R"(define void @foo(ptr noalias %A, ptr noalias %B, ptr noalias %C
                            , i64 %N) {
          entry:
            %X = sdiv i64 1, %N
@@ -461,18 +461,18 @@ TEST(CodeMoverUtils, IsSafeToMoveTest1) {
            br i1 %cmp1, label %for.body, label %for.end
          for.body:
            %i = phi i64 [ 0, %entry ], [ %inc, %for.body ]
-           %arrayidx_A5 = getelementptr inbounds i32, i32* %A, i64 5
-           store i32 5, i32* %arrayidx_A5, align 4
-           %arrayidx_A = getelementptr inbounds i32, i32* %A, i64 %i
-           store i32 0, i32* %arrayidx_A, align 4
-           %load1 = load i32, i32* %arrayidx_A, align 4
-           %arrayidx_B = getelementptr inbounds i32, i32* %B, i64 %i
-           store i32 %load1, i32* %arrayidx_B, align 4
-           %load2 = load i32, i32* %arrayidx_A, align 4
-           %arrayidx_C = getelementptr inbounds i32, i32* %C, i64 %i
-           store i32 %load2, i32* %arrayidx_C, align 4
-           %arrayidx_A6 = getelementptr inbounds i32, i32* %A, i64 6
-           store i32 6, i32* %arrayidx_A6, align 4
+           %arrayidx_A5 = getelementptr inbounds i32, ptr %A, i64 5
+           store i32 5, ptr %arrayidx_A5, align 4
+           %arrayidx_A = getelementptr inbounds i32, ptr %A, i64 %i
+           store i32 0, ptr %arrayidx_A, align 4
+           %load1 = load i32, ptr %arrayidx_A, align 4
+           %arrayidx_B = getelementptr inbounds i32, ptr %B, i64 %i
+           store i32 %load1, ptr %arrayidx_B, align 4
+           %load2 = load i32, ptr %arrayidx_A, align 4
+           %arrayidx_C = getelementptr inbounds i32, ptr %C, i64 %i
+           store i32 %load2, ptr %arrayidx_C, align 4
+           %arrayidx_A6 = getelementptr inbounds i32, ptr %A, i64 6
+           store i32 6, ptr %arrayidx_A6, align 4
            %inc = add nsw i64 %i, 1
            %cmp = icmp slt i64 %inc, %N
            br i1 %cmp, label %for.body, label %for.end
@@ -686,19 +686,19 @@ TEST(CodeMoverUtils, IsSafeToMoveTest5) {
   LLVMContext C;
 
   std::unique_ptr<Module> M =
-      parseIR(C, R"(define void @dependence(i32* noalias %A, i32* noalias %B){
+      parseIR(C, R"(define void @dependence(ptr noalias %A, ptr noalias %B){
 entry:
-    store i32 0, i32* %A, align 4 ; storeA0
-    store i32 2, i32* %A, align 4 ; storeA1
-    %tmp0 = load i32, i32* %A, align 4 ; loadA0
-    store i32 1, i32* %B, align 4 ; storeB0
-    %tmp1 = load i32, i32* %A, align 4 ; loadA1
-    store i32 2, i32* %A, align 4 ; storeA2 
-    store i32 4, i32* %B, align 4 ; StoreB1 
-    %tmp2 = load i32, i32* %A, align 4 ; loadA2 
-    %tmp3 = load i32, i32* %A, align 4 ; loadA3 
-    %tmp4 = load i32, i32* %B, align 4 ; loadB2
-    %tmp5 = load i32, i32* %B, align 4 ; loadB3
+    store i32 0, ptr %A, align 4 ; storeA0
+    store i32 2, ptr %A, align 4 ; storeA1
+    %tmp0 = load i32, ptr %A, align 4 ; loadA0
+    store i32 1, ptr %B, align 4 ; storeB0
+    %tmp1 = load i32, ptr %A, align 4 ; loadA1
+    store i32 2, ptr %A, align 4 ; storeA2
+    store i32 4, ptr %B, align 4 ; StoreB1
+    %tmp2 = load i32, ptr %A, align 4 ; loadA2
+    %tmp3 = load i32, ptr %A, align 4 ; loadA3
+    %tmp4 = load i32, ptr %B, align 4 ; loadB2
+    %tmp5 = load i32, ptr %B, align 4 ; loadB3
     ret void
 })");
 
@@ -763,63 +763,63 @@ TEST(CodeMoverUtils, IsSafeToMoveTest6) {
   LLVMContext C;
 
   std::unique_ptr<Module> M = parseIR(
-      C, R"(define void @dependence(i1 %cond, i32* noalias %A, i32* noalias %B){
+      C, R"(define void @dependence(i1 %cond, ptr noalias %A, ptr noalias %B){
    entry:
         br i1 %cond, label %bb0, label %bb1
    bb0:
         br label %bb1
     bb1:
-        store i32 0, i32* %A, align 4 ; storeA0
+        store i32 0, ptr %A, align 4 ; storeA0
         br i1 %cond, label %bb2, label %bb3
     bb2:
         br label %bb3
     bb3:
-        store i32 2, i32* %A, align 4 ; storeA1
+        store i32 2, ptr %A, align 4 ; storeA1
         br i1 %cond, label %bb4, label %bb5
     bb4:
         br label %bb5
     bb5:
-        %tmp0 = load i32, i32* %A, align 4 ; loadA0
+        %tmp0 = load i32, ptr %A, align 4 ; loadA0
         br i1 %cond, label %bb6, label %bb7
     bb6:
         br label %bb7
     bb7:
-        store i32 1, i32* %B, align 4 ; storeB0
+        store i32 1, ptr %B, align 4 ; storeB0
         br i1 %cond, label %bb8, label %bb9
     bb8:
         br label %bb9
     bb9:
-        %tmp1 = load i32, i32* %A, align 4 ; loadA1
+        %tmp1 = load i32, ptr %A, align 4 ; loadA1
         br i1 %cond, label %bb10, label %bb11
     bb10:
         br label %bb11
     bb11:
-        store i32 2, i32* %A, align 4 ; storeA2
+        store i32 2, ptr %A, align 4 ; storeA2
         br i1 %cond, label %bb12, label %bb13
     bb12:
         br label %bb13
     bb13:
-        store i32 4, i32* %B, align 4 ; StoreB1
+        store i32 4, ptr %B, align 4 ; StoreB1
         br i1 %cond, label %bb14, label %bb15
     bb14:
         br label %bb15
     bb15:
-        %tmp2 = load i32, i32* %A, align 4 ; loadA2
+        %tmp2 = load i32, ptr %A, align 4 ; loadA2
         br i1 %cond, label %bb16, label %bb17
     bb16:
         br label %bb17
     bb17:
-        %tmp3 = load i32, i32* %A, align 4 ; loadA3
+        %tmp3 = load i32, ptr %A, align 4 ; loadA3
         br i1 %cond, label %bb18, label %bb19
     bb18:
         br label %bb19
     bb19:
-        %tmp4 = load i32, i32* %B, align 4 ; loadB2
+        %tmp4 = load i32, ptr %B, align 4 ; loadB2
         br i1 %cond, label %bb20, label %bb21
     bb20:
        br label %bb21
     bb21:
-       %tmp5 = load i32, i32* %B, align 4 ; loadB3
+       %tmp5 = load i32, ptr %B, align 4 ; loadB3
        ret void
    })");
   run(*M, "dependence",

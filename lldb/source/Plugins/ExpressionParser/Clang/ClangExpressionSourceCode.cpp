@@ -260,9 +260,8 @@ TokenVerifier::TokenVerifier(std::string body) {
 
   // Let's build the actual source code Clang needs and setup some utility
   // objects.
-  llvm::IntrusiveRefCntPtr<DiagnosticIDs> diag_ids(new DiagnosticIDs());
   DiagnosticOptions diags_opts;
-  DiagnosticsEngine diags(diag_ids, diags_opts);
+  DiagnosticsEngine diags(DiagnosticIDs::create(), diags_opts);
   clang::SourceManager SM(diags, file_mgr);
   auto buf = llvm::MemoryBuffer::getMemBuffer(body);
 
@@ -384,10 +383,11 @@ bool ClangExpressionSourceCode::GetText(
             block->CalculateSymbolContext(&sc);
 
             if (sc.comp_unit) {
-              StreamString error_stream;
-
-              decl_vendor->AddModulesForCompileUnit(
-                  *sc.comp_unit, modules_for_macros, error_stream);
+              if (auto err = decl_vendor->AddModulesForCompileUnit(
+                      *sc.comp_unit, modules_for_macros))
+                LLDB_LOG_ERROR(
+                    GetLog(LLDBLog::Expressions), std::move(err),
+                    "Error while loading hand-imported modules:\n{0}");
             }
           }
         }

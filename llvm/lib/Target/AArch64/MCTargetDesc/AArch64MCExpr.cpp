@@ -9,8 +9,6 @@
 #include "AArch64MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 

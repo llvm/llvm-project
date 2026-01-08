@@ -97,12 +97,15 @@ class kmp_stats_list;
 // OMPD_SKIP_HWLOC used in libompd/omp-icv.cpp to avoid OMPD depending on hwloc
 #if KMP_USE_HWLOC && KMP_AFFINITY_SUPPORTED && !defined(OMPD_SKIP_HWLOC)
 #include "hwloc.h"
+#define KMP_HWLOC_ENABLED 1
 #ifndef HWLOC_OBJ_NUMANODE
 #define HWLOC_OBJ_NUMANODE HWLOC_OBJ_NODE
 #endif
 #ifndef HWLOC_OBJ_PACKAGE
 #define HWLOC_OBJ_PACKAGE HWLOC_OBJ_SOCKET
 #endif
+#else
+#define KMP_HWLOC_ENABLED 0
 #endif
 
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
@@ -158,17 +161,6 @@ class kmp_stats_list;
 // free lists of limited size.
 #ifndef USE_FAST_MEMORY
 #define USE_FAST_MEMORY 3
-#endif
-
-#ifndef KMP_NESTED_HOT_TEAMS
-#define KMP_NESTED_HOT_TEAMS 0
-#define USE_NESTED_HOT_ARG(x)
-#else
-#if KMP_NESTED_HOT_TEAMS
-#define USE_NESTED_HOT_ARG(x) , x
-#else
-#define USE_NESTED_HOT_ARG(x)
-#endif
 #endif
 
 // Assume using BGET compare_exchange instruction instead of lock by default.
@@ -683,10 +675,10 @@ typedef BOOL (*kmp_SetThreadGroupAffinity_t)(HANDLE, const GROUP_AFFINITY *,
 extern kmp_SetThreadGroupAffinity_t __kmp_SetThreadGroupAffinity;
 #endif /* KMP_OS_WINDOWS */
 
-#if KMP_USE_HWLOC && !defined(OMPD_SKIP_HWLOC)
+#if KMP_HWLOC_ENABLED
 extern hwloc_topology_t __kmp_hwloc_topology;
 extern int __kmp_hwloc_error;
-#endif
+#endif // KMP_HWLOC_ENABLED
 
 extern size_t __kmp_affin_mask_size;
 #define KMP_AFFINITY_CAPABLE() (__kmp_affin_mask_size > 0)
@@ -795,10 +787,10 @@ public:
   static void destroy_api();
   enum api_type {
     NATIVE_OS
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
     ,
     HWLOC
-#endif
+#endif // KMP_HWLOC_ENABLED
   };
   virtual api_type get_api_type() const {
     KMP_ASSERT(0);
@@ -867,9 +859,9 @@ enum affinity_top_method {
   affinity_top_method_group,
 #endif /* KMP_GROUP_AFFINITY */
   affinity_top_method_flat,
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
   affinity_top_method_hwloc,
-#endif
+#endif // KMP_HWLOC_ENABLED
   affinity_top_method_default
 };
 
@@ -1136,9 +1128,9 @@ typedef struct kmp_allocator_t {
   omp_alloctrait_value_t target_access;
   omp_alloctrait_value_t atomic_scope;
   size_t part_size;
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
   omp_alloctrait_value_t membind;
-#endif
+#endif // KMP_HWLOC_ENABLED
 } kmp_allocator_t;
 
 extern omp_allocator_handle_t __kmpc_init_allocator(int gtid,
@@ -2098,12 +2090,12 @@ typedef struct dispatch_shared_info {
 #if KMP_USE_HIER_SCHED
   void *hier;
 #endif
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
   // When linking with libhwloc, the ORDERED EPCC test slows down on big
   // machines (> 48 cores). Performance analysis showed that a cache thrash
   // was occurring and this padding helps alleviate the problem.
   char padding[64];
-#endif
+#endif // KMP_HWLOC_ENABLED
 } dispatch_shared_info_t;
 
 typedef struct kmp_disp {
@@ -2715,7 +2707,8 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
   unsigned tasking_ser : 1;
   unsigned task_serial : 1;
   unsigned tasktype : 1;
-  unsigned reserved : 8;
+  unsigned reserved : 7;
+  unsigned transparent : 1;
   unsigned free_agent_eligible : 1;
   unsigned detachable : 1;
   unsigned priority_specified : 1;
@@ -2739,7 +2732,8 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
   unsigned detachable : 1; /* 1 == can detach */
   unsigned free_agent_eligible : 1; /* set if task can be executed by a
                                        free-agent thread */
-  unsigned reserved : 8; /* reserved for compiler use */
+  unsigned transparent : 1; /* transparent task support (compiler uses this) */
+  unsigned reserved : 7; /* reserved for compiler use */
 
   /* Library flags */ /* Total library flags must be 16 bits */
   unsigned tasktype : 1; /* task is either explicit(1) or implicit (0) */
@@ -2913,14 +2907,12 @@ typedef struct kmp_free_list {
   // sync list)
 } kmp_free_list_t;
 #endif
-#if KMP_NESTED_HOT_TEAMS
 // Hot teams array keeps hot teams and their sizes for given thread. Hot teams
 // are not put in teams pool, and they don't put threads in threads pool.
 typedef struct kmp_hot_team_ptr {
   kmp_team_p *hot_team; // pointer to hot_team of given nesting level
   kmp_int32 hot_team_nth; // number of threads allocated for the hot_team
 } kmp_hot_team_ptr_t;
-#endif
 typedef struct kmp_teams_size {
   kmp_int32 nteams; // number of teams in a league
   kmp_int32 nth; // number of threads in each team of the league
@@ -2995,9 +2987,7 @@ typedef struct KMP_ALIGN_CACHE kmp_base_info {
   int th_nt_sev; // error severity for strict modifier
   const char *th_nt_msg; // error message for strict modifier
   int th_set_nested_nth_sz;
-#if KMP_NESTED_HOT_TEAMS
   kmp_hot_team_ptr_t *th_hot_teams; /* array of hot teams */
-#endif
   kmp_proc_bind_t
       th_set_proc_bind; /* if != proc_bind_default, use request for next fork */
   kmp_teams_size_t
@@ -3553,10 +3543,8 @@ extern int __kmp_dflt_max_active_levels;
 extern bool __kmp_dflt_max_active_levels_set;
 extern int __kmp_dispatch_num_buffers; /* max possible dynamic loops in
                                           concurrent execution per team */
-#if KMP_NESTED_HOT_TEAMS
 extern int __kmp_hot_teams_mode;
 extern int __kmp_hot_teams_max_level;
-#endif
 
 #if KMP_MIC_SUPPORTED
 extern enum mic_type __kmp_mic_type;
@@ -4040,16 +4028,16 @@ extern void __kmp_suspend_uninitialize_thread(kmp_info_t *th);
 
 extern kmp_info_t *__kmp_allocate_thread(kmp_root_t *root, kmp_team_t *team,
                                          int tid);
-extern kmp_team_t *
-__kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
+extern kmp_team_t *__kmp_allocate_team(kmp_root_t *root, int new_nproc,
+                                       int max_nproc,
 #if OMPT_SUPPORT
-                    ompt_data_t ompt_parallel_data,
+                                       ompt_data_t ompt_parallel_data,
 #endif
-                    kmp_proc_bind_t proc_bind, kmp_internal_control_t *new_icvs,
-                    int argc USE_NESTED_HOT_ARG(kmp_info_t *thr));
+                                       kmp_proc_bind_t proc_bind,
+                                       kmp_internal_control_t *new_icvs,
+                                       int argc, kmp_info_t *thr);
 extern void __kmp_free_thread(kmp_info_t *);
-extern void __kmp_free_team(kmp_root_t *,
-                            kmp_team_t *USE_NESTED_HOT_ARG(kmp_info_t *));
+extern void __kmp_free_team(kmp_root_t *, kmp_team_t *, kmp_info_t *);
 extern kmp_team_t *__kmp_reap_team(kmp_team_t *);
 
 /* ------------------------------------------------------------------------ */
@@ -4637,6 +4625,13 @@ static inline int __kmp_adjust_gtid_for_hidden_helpers(int gtid) {
   }
   return adjusted_gtid;
 }
+
+#if ENABLE_LIBOMPTARGET
+// Pointers to callbacks registered by the offload library to be notified of
+// task progress.
+extern void (*kmp_target_sync_cb)(ident_t *loc_ref, int gtid,
+                                  void *current_task, void *event);
+#endif // ENABLE_LIBOMPTARGET
 
 // Support for error directive
 typedef enum kmp_severity_t {

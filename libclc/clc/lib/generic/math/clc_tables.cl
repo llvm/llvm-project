@@ -9,7 +9,7 @@
 #include <clc/internal/clc.h>
 #include <clc/math/tables.h>
 
-DECLARE_TABLE(float, LOG_INV_TBL_EP_HEAD, 129) = {
+__CLC_DECLARE_TABLE(float, LOG_INV_TBL_EP_HEAD, 129) = {
     0x1.000000p+1f, 0x1.fc0000p+0f, 0x1.f80000p+0f, 0x1.f40000p+0f,
     0x1.f00000p+0f, 0x1.ec0000p+0f, 0x1.e80000p+0f, 0x1.e40000p+0f,
     0x1.e00000p+0f, 0x1.de0000p+0f, 0x1.da0000p+0f, 0x1.d60000p+0f,
@@ -45,9 +45,9 @@ DECLARE_TABLE(float, LOG_INV_TBL_EP_HEAD, 129) = {
     0x1.000000p+0f,
 };
 
-CLC_TABLE_FUNCTION(float, LOG_INV_TBL_EP_HEAD, log_inv_tbl_ep_head);
+__CLC_TABLE_FUNCTION_VEC(float, LOG_INV_TBL_EP_HEAD, log_inv_tbl_ep_head);
 
-DECLARE_TABLE(float, LOG_INV_TBL_EP_TAIL, 129) = {
+__CLC_DECLARE_TABLE(float, LOG_INV_TBL_EP_TAIL, 129) = {
     0x0.000000p+0f,  0x1.fc07f0p-14f, 0x1.f81f82p-12f, 0x1.196792p-10f,
     0x1.f07c20p-10f, 0x1.80f660p-9f,  0x1.131ac0p-8f,  0x1.73ac90p-8f,
     0x1.e1e1e2p-8f,  0x1.75b8fep-10f, 0x1.cc0ed8p-9f,  0x1.7b654cp-8f,
@@ -82,9 +82,9 @@ DECLARE_TABLE(float, LOG_INV_TBL_EP_TAIL, 129) = {
     0x1.041042p-12f, 0x1.091b52p-8f,  0x1.020408p-14f, 0x1.010102p-8f,
     0x0.000000p+0f,
 };
-CLC_TABLE_FUNCTION(float, LOG_INV_TBL_EP_TAIL, log_inv_tbl_ep_tail);
+__CLC_TABLE_FUNCTION_VEC(float, LOG_INV_TBL_EP_TAIL, log_inv_tbl_ep_tail);
 
-DECLARE_TABLE(float, LOGE_TBL_LO, 129) = {
+__CLC_DECLARE_TABLE(float, LOGE_TBL_LO, 129) = {
     0x0.000000p+0f, 0x1.fe0000p-8f, 0x1.fc0000p-7f, 0x1.7b8000p-6f,
     0x1.f82000p-6f, 0x1.39e000p-5f, 0x1.774000p-5f, 0x1.b42000p-5f,
     0x1.f0a000p-5f, 0x1.164000p-4f, 0x1.340000p-4f, 0x1.51a000p-4f,
@@ -120,7 +120,7 @@ DECLARE_TABLE(float, LOGE_TBL_LO, 129) = {
     0x1.62e000p-1f,
 };
 
-DECLARE_TABLE(float, LOGE_TBL_HI, 129) = {
+__CLC_DECLARE_TABLE(float, LOGE_TBL_HI, 129) = {
     0x0.000000p+0f,  0x1.535882p-23f, 0x1.5161f8p-20f, 0x1.1b07d4p-18f,
     0x1.361cf0p-19f, 0x1.0f73fcp-18f, 0x1.63d8cap-19f, 0x1.bae232p-18f,
     0x1.86008ap-20f, 0x1.36eea2p-16f, 0x1.d7961ap-16f, 0x1.073f06p-16f,
@@ -156,10 +156,10 @@ DECLARE_TABLE(float, LOGE_TBL_HI, 129) = {
     0x1.0bfbe8p-15f,
 };
 
-CLC_TABLE_FUNCTION(float, LOGE_TBL_LO, loge_tbl_lo);
-CLC_TABLE_FUNCTION(float, LOGE_TBL_HI, loge_tbl_hi);
+__CLC_TABLE_FUNCTION_VEC(float, LOGE_TBL_LO, loge_tbl_lo);
+__CLC_TABLE_FUNCTION_VEC(float, LOGE_TBL_HI, loge_tbl_hi);
 
-DECLARE_TABLE(float, LOG_INV_TBL, 129) = {
+__CLC_DECLARE_TABLE(float, LOG_INV_TBL, 129) = {
     0x1.000000p+1f, 0x1.fc07f0p+0f, 0x1.f81f82p+0f, 0x1.f4465ap+0f,
     0x1.f07c20p+0f, 0x1.ecc07cp+0f, 0x1.e9131ap+0f, 0x1.e573acp+0f,
     0x1.e1e1e2p+0f, 0x1.de5d6ep+0f, 0x1.dae608p+0f, 0x1.d77b66p+0f,
@@ -195,143 +195,142 @@ DECLARE_TABLE(float, LOG_INV_TBL, 129) = {
     0x1.000000p+0f,
 };
 
-CLC_TABLE_FUNCTION(float, LOG_INV_TBL, log_inv_tbl);
+__CLC_TABLE_FUNCTION_VEC(float, LOG_INV_TBL, log_inv_tbl);
 
-DECLARE_TABLE(float2, LOG2_TBL, 129) = {
-    (float2)(0x0.000000p+0f, 0x0.000000p+0f),
-    (float2)(0x1.6f8000p-7f, 0x1.942dbap-17f),
-    (float2)(0x1.6e0000p-6f, 0x1.e5a170p-16f),
-    (float2)(0x1.118000p-5f, 0x1.347544p-15f),
-    (float2)(0x1.6b8000p-5f, 0x1.69bac6p-16f),
-    (float2)(0x1.c48000p-5f, 0x1.7eae42p-15f),
-    (float2)(0x1.0e8000p-4f, 0x1.9c4fd0p-15f),
-    (float2)(0x1.3a8000p-4f, 0x1.17ee92p-15f),
-    (float2)(0x1.660000p-4f, 0x1.fb7d64p-15f),
-    (float2)(0x1.918000p-4f, 0x1.42dc8cp-17f),
-    (float2)(0x1.bc8000p-4f, 0x1.0902b6p-18f),
-    (float2)(0x1.e70000p-4f, 0x1.7608bep-15f),
-    (float2)(0x1.088000p-3f, 0x1.162336p-13f),
-    (float2)(0x1.1d8000p-3f, 0x1.3465d4p-13f),
-    (float2)(0x1.328000p-3f, 0x1.74f13cp-14f),
-    (float2)(0x1.470000p-3f, 0x1.aa7e60p-13f),
-    (float2)(0x1.5c0000p-3f, 0x1.a39fbcp-19f),
-    (float2)(0x1.700000p-3f, 0x1.d0b53ap-13f),
-    (float2)(0x1.848000p-3f, 0x1.0af40ap-13f),
-    (float2)(0x1.988000p-3f, 0x1.b741dep-13f),
-    (float2)(0x1.ac8000p-3f, 0x1.d78b6cp-13f),
-    (float2)(0x1.c08000p-3f, 0x1.6db376p-13f),
-    (float2)(0x1.d48000p-3f, 0x1.ee4c32p-15f),
-    (float2)(0x1.e80000p-3f, 0x1.02f9d2p-13f),
-    (float2)(0x1.fb8000p-3f, 0x1.05ae40p-13f),
-    (float2)(0x1.078000p-2f, 0x1.0adbb0p-14f),
-    (float2)(0x1.110000p-2f, 0x1.83ed68p-13f),
-    (float2)(0x1.1a8000p-2f, 0x1.016ca4p-12f),
-    (float2)(0x1.240000p-2f, 0x1.01eac2p-12f),
-    (float2)(0x1.2d8000p-2f, 0x1.887e26p-13f),
-    (float2)(0x1.370000p-2f, 0x1.24cea4p-14f),
-    (float2)(0x1.400000p-2f, 0x1.918ec6p-12f),
-    (float2)(0x1.498000p-2f, 0x1.3c25e6p-13f),
-    (float2)(0x1.528000p-2f, 0x1.6f7f12p-12f),
-    (float2)(0x1.5c0000p-2f, 0x1.a39fbcp-18f),
-    (float2)(0x1.650000p-2f, 0x1.8fe466p-14f),
-    (float2)(0x1.6e0000p-2f, 0x1.10e6cep-13f),
-    (float2)(0x1.770000p-2f, 0x1.d2ba7ep-14f),
-    (float2)(0x1.800000p-2f, 0x1.4ac62cp-15f),
-    (float2)(0x1.888000p-2f, 0x1.a71cb8p-12f),
-    (float2)(0x1.918000p-2f, 0x1.dd448ep-13f),
-    (float2)(0x1.9a8000p-2f, 0x1.1c8f10p-21f),
-    (float2)(0x1.a30000p-2f, 0x1.bb053ep-13f),
-    (float2)(0x1.ab8000p-2f, 0x1.861e5ep-12f),
-    (float2)(0x1.b40000p-2f, 0x1.fafdcep-12f),
-    (float2)(0x1.bd0000p-2f, 0x1.e5d3cep-15f),
-    (float2)(0x1.c58000p-2f, 0x1.2fad28p-14f),
-    (float2)(0x1.ce0000p-2f, 0x1.492474p-15f),
-    (float2)(0x1.d60000p-2f, 0x1.d4f80cp-12f),
-    (float2)(0x1.de8000p-2f, 0x1.4ff510p-12f),
-    (float2)(0x1.e70000p-2f, 0x1.3550f2p-13f),
-    (float2)(0x1.ef0000p-2f, 0x1.b59ccap-12f),
-    (float2)(0x1.f78000p-2f, 0x1.42b464p-13f),
-    (float2)(0x1.ff8000p-2f, 0x1.5e66a0p-12f),
-    (float2)(0x1.038000p-1f, 0x1.f6a2e4p-11f),
-    (float2)(0x1.080000p-1f, 0x1.39e4fep-14f),
-    (float2)(0x1.0c0000p-1f, 0x1.0500d6p-13f),
-    (float2)(0x1.100000p-1f, 0x1.13b152p-13f),
-    (float2)(0x1.140000p-1f, 0x1.93f542p-14f),
-    (float2)(0x1.180000p-1f, 0x1.467b94p-16f),
-    (float2)(0x1.1b8000p-1f, 0x1.cc47a4p-11f),
-    (float2)(0x1.1f8000p-1f, 0x1.78f4c2p-11f),
-    (float2)(0x1.238000p-1f, 0x1.107508p-11f),
-    (float2)(0x1.278000p-1f, 0x1.2602c2p-12f),
-    (float2)(0x1.2b8000p-1f, 0x1.a39fbcp-20f),
-    (float2)(0x1.2f0000p-1f, 0x1.5a1d7ap-11f),
-    (float2)(0x1.330000p-1f, 0x1.3e355ap-12f),
-    (float2)(0x1.368000p-1f, 0x1.cffedap-11f),
-    (float2)(0x1.3a8000p-1f, 0x1.d9fd50p-12f),
-    (float2)(0x1.3e0000p-1f, 0x1.f64de6p-11f),
-    (float2)(0x1.420000p-1f, 0x1.d83f4cp-12f),
-    (float2)(0x1.458000p-1f, 0x1.cea628p-11f),
-    (float2)(0x1.498000p-1f, 0x1.3c25e6p-12f),
-    (float2)(0x1.4d0000p-1f, 0x1.5a96ccp-11f),
-    (float2)(0x1.510000p-1f, 0x1.18708ap-17f),
-    (float2)(0x1.548000p-1f, 0x1.374652p-12f),
-    (float2)(0x1.580000p-1f, 0x1.2089a6p-11f),
-    (float2)(0x1.5b8000p-1f, 0x1.93432cp-11f),
-    (float2)(0x1.5f0000p-1f, 0x1.f3fd06p-11f),
-    (float2)(0x1.630000p-1f, 0x1.0b8f54p-13f),
-    (float2)(0x1.668000p-1f, 0x1.004722p-12f),
-    (float2)(0x1.6a0000p-1f, 0x1.57cf2cp-12f),
-    (float2)(0x1.6d8000p-1f, 0x1.8cb53ap-12f),
-    (float2)(0x1.710000p-1f, 0x1.9f4d8ap-12f),
-    (float2)(0x1.748000p-1f, 0x1.8feb26p-12f),
-    (float2)(0x1.780000p-1f, 0x1.5edfeep-12f),
-    (float2)(0x1.7b8000p-1f, 0x1.0c7c9ap-12f),
-    (float2)(0x1.7f0000p-1f, 0x1.322182p-13f),
-    (float2)(0x1.828000p-1f, 0x1.3ab7cep-18f),
-    (float2)(0x1.858000p-1f, 0x1.a82c2cp-11f),
-    (float2)(0x1.890000p-1f, 0x1.3dd2c0p-11f),
-    (float2)(0x1.8c8000p-1f, 0x1.871da4p-12f),
-    (float2)(0x1.900000p-1f, 0x1.cc2c00p-14f),
-    (float2)(0x1.930000p-1f, 0x1.9fdb68p-11f),
-    (float2)(0x1.968000p-1f, 0x1.ed6956p-12f),
-    (float2)(0x1.9a0000p-1f, 0x1.f1a760p-14f),
-    (float2)(0x1.9d0000p-1f, 0x1.767f54p-11f),
-    (float2)(0x1.a08000p-1f, 0x1.3f6d26p-12f),
-    (float2)(0x1.a38000p-1f, 0x1.b9fce2p-11f),
-    (float2)(0x1.a70000p-1f, 0x1.8ae816p-12f),
-    (float2)(0x1.aa0000p-1f, 0x1.c23d60p-11f),
-    (float2)(0x1.ad8000p-1f, 0x1.60f388p-12f),
-    (float2)(0x1.b08000p-1f, 0x1.9049aep-11f),
-    (float2)(0x1.b40000p-1f, 0x1.8734a8p-13f),
-    (float2)(0x1.b70000p-1f, 0x1.2523d4p-11f),
-    (float2)(0x1.ba0000p-1f, 0x1.da6ce6p-11f),
-    (float2)(0x1.bd8000p-1f, 0x1.038e62p-12f),
-    (float2)(0x1.c08000p-1f, 0x1.1b511ep-11f),
-    (float2)(0x1.c38000p-1f, 0x1.a728b8p-11f),
-    (float2)(0x1.c70000p-1f, 0x1.2b5d22p-14f),
-    (float2)(0x1.ca0000p-1f, 0x1.2c6e54p-12f),
-    (float2)(0x1.cd0000p-1f, 0x1.f35064p-12f),
-    (float2)(0x1.d00000p-1f, 0x1.4fdb48p-11f),
-    (float2)(0x1.d30000p-1f, 0x1.98ec9ep-11f),
-    (float2)(0x1.d60000p-1f, 0x1.d4f80cp-11f),
-    (float2)(0x1.d98000p-1f, 0x1.0643d6p-17f),
-    (float2)(0x1.dc8000p-1f, 0x1.33567ep-14f),
-    (float2)(0x1.df8000p-1f, 0x1.e0410cp-14f),
-    (float2)(0x1.e28000p-1f, 0x1.142e0ep-13f),
-    (float2)(0x1.e58000p-1f, 0x1.063c88p-13f),
-    (float2)(0x1.e88000p-1f, 0x1.8d66c4p-14f),
-    (float2)(0x1.eb8000p-1f, 0x1.57e32ap-15f),
-    (float2)(0x1.ee0000p-1f, 0x1.ed1c6cp-11f),
-    (float2)(0x1.f10000p-1f, 0x1.b8a076p-11f),
-    (float2)(0x1.f40000p-1f, 0x1.7822f2p-11f),
-    (float2)(0x1.f70000p-1f, 0x1.2bbc3ap-11f),
-    (float2)(0x1.fa0000p-1f, 0x1.a708bap-12f),
-    (float2)(0x1.fd0000p-1f, 0x1.be4c7ep-13f),
-    (float2)(0x1.000000p+0f, 0x0.000000p+0f)
-};
+__CLC_DECLARE_TABLE(float2, LOG2_TBL,
+                    129) = {(float2)(0x0.000000p+0f, 0x0.000000p+0f),
+                            (float2)(0x1.6f8000p-7f, 0x1.942dbap-17f),
+                            (float2)(0x1.6e0000p-6f, 0x1.e5a170p-16f),
+                            (float2)(0x1.118000p-5f, 0x1.347544p-15f),
+                            (float2)(0x1.6b8000p-5f, 0x1.69bac6p-16f),
+                            (float2)(0x1.c48000p-5f, 0x1.7eae42p-15f),
+                            (float2)(0x1.0e8000p-4f, 0x1.9c4fd0p-15f),
+                            (float2)(0x1.3a8000p-4f, 0x1.17ee92p-15f),
+                            (float2)(0x1.660000p-4f, 0x1.fb7d64p-15f),
+                            (float2)(0x1.918000p-4f, 0x1.42dc8cp-17f),
+                            (float2)(0x1.bc8000p-4f, 0x1.0902b6p-18f),
+                            (float2)(0x1.e70000p-4f, 0x1.7608bep-15f),
+                            (float2)(0x1.088000p-3f, 0x1.162336p-13f),
+                            (float2)(0x1.1d8000p-3f, 0x1.3465d4p-13f),
+                            (float2)(0x1.328000p-3f, 0x1.74f13cp-14f),
+                            (float2)(0x1.470000p-3f, 0x1.aa7e60p-13f),
+                            (float2)(0x1.5c0000p-3f, 0x1.a39fbcp-19f),
+                            (float2)(0x1.700000p-3f, 0x1.d0b53ap-13f),
+                            (float2)(0x1.848000p-3f, 0x1.0af40ap-13f),
+                            (float2)(0x1.988000p-3f, 0x1.b741dep-13f),
+                            (float2)(0x1.ac8000p-3f, 0x1.d78b6cp-13f),
+                            (float2)(0x1.c08000p-3f, 0x1.6db376p-13f),
+                            (float2)(0x1.d48000p-3f, 0x1.ee4c32p-15f),
+                            (float2)(0x1.e80000p-3f, 0x1.02f9d2p-13f),
+                            (float2)(0x1.fb8000p-3f, 0x1.05ae40p-13f),
+                            (float2)(0x1.078000p-2f, 0x1.0adbb0p-14f),
+                            (float2)(0x1.110000p-2f, 0x1.83ed68p-13f),
+                            (float2)(0x1.1a8000p-2f, 0x1.016ca4p-12f),
+                            (float2)(0x1.240000p-2f, 0x1.01eac2p-12f),
+                            (float2)(0x1.2d8000p-2f, 0x1.887e26p-13f),
+                            (float2)(0x1.370000p-2f, 0x1.24cea4p-14f),
+                            (float2)(0x1.400000p-2f, 0x1.918ec6p-12f),
+                            (float2)(0x1.498000p-2f, 0x1.3c25e6p-13f),
+                            (float2)(0x1.528000p-2f, 0x1.6f7f12p-12f),
+                            (float2)(0x1.5c0000p-2f, 0x1.a39fbcp-18f),
+                            (float2)(0x1.650000p-2f, 0x1.8fe466p-14f),
+                            (float2)(0x1.6e0000p-2f, 0x1.10e6cep-13f),
+                            (float2)(0x1.770000p-2f, 0x1.d2ba7ep-14f),
+                            (float2)(0x1.800000p-2f, 0x1.4ac62cp-15f),
+                            (float2)(0x1.888000p-2f, 0x1.a71cb8p-12f),
+                            (float2)(0x1.918000p-2f, 0x1.dd448ep-13f),
+                            (float2)(0x1.9a8000p-2f, 0x1.1c8f10p-21f),
+                            (float2)(0x1.a30000p-2f, 0x1.bb053ep-13f),
+                            (float2)(0x1.ab8000p-2f, 0x1.861e5ep-12f),
+                            (float2)(0x1.b40000p-2f, 0x1.fafdcep-12f),
+                            (float2)(0x1.bd0000p-2f, 0x1.e5d3cep-15f),
+                            (float2)(0x1.c58000p-2f, 0x1.2fad28p-14f),
+                            (float2)(0x1.ce0000p-2f, 0x1.492474p-15f),
+                            (float2)(0x1.d60000p-2f, 0x1.d4f80cp-12f),
+                            (float2)(0x1.de8000p-2f, 0x1.4ff510p-12f),
+                            (float2)(0x1.e70000p-2f, 0x1.3550f2p-13f),
+                            (float2)(0x1.ef0000p-2f, 0x1.b59ccap-12f),
+                            (float2)(0x1.f78000p-2f, 0x1.42b464p-13f),
+                            (float2)(0x1.ff8000p-2f, 0x1.5e66a0p-12f),
+                            (float2)(0x1.038000p-1f, 0x1.f6a2e4p-11f),
+                            (float2)(0x1.080000p-1f, 0x1.39e4fep-14f),
+                            (float2)(0x1.0c0000p-1f, 0x1.0500d6p-13f),
+                            (float2)(0x1.100000p-1f, 0x1.13b152p-13f),
+                            (float2)(0x1.140000p-1f, 0x1.93f542p-14f),
+                            (float2)(0x1.180000p-1f, 0x1.467b94p-16f),
+                            (float2)(0x1.1b8000p-1f, 0x1.cc47a4p-11f),
+                            (float2)(0x1.1f8000p-1f, 0x1.78f4c2p-11f),
+                            (float2)(0x1.238000p-1f, 0x1.107508p-11f),
+                            (float2)(0x1.278000p-1f, 0x1.2602c2p-12f),
+                            (float2)(0x1.2b8000p-1f, 0x1.a39fbcp-20f),
+                            (float2)(0x1.2f0000p-1f, 0x1.5a1d7ap-11f),
+                            (float2)(0x1.330000p-1f, 0x1.3e355ap-12f),
+                            (float2)(0x1.368000p-1f, 0x1.cffedap-11f),
+                            (float2)(0x1.3a8000p-1f, 0x1.d9fd50p-12f),
+                            (float2)(0x1.3e0000p-1f, 0x1.f64de6p-11f),
+                            (float2)(0x1.420000p-1f, 0x1.d83f4cp-12f),
+                            (float2)(0x1.458000p-1f, 0x1.cea628p-11f),
+                            (float2)(0x1.498000p-1f, 0x1.3c25e6p-12f),
+                            (float2)(0x1.4d0000p-1f, 0x1.5a96ccp-11f),
+                            (float2)(0x1.510000p-1f, 0x1.18708ap-17f),
+                            (float2)(0x1.548000p-1f, 0x1.374652p-12f),
+                            (float2)(0x1.580000p-1f, 0x1.2089a6p-11f),
+                            (float2)(0x1.5b8000p-1f, 0x1.93432cp-11f),
+                            (float2)(0x1.5f0000p-1f, 0x1.f3fd06p-11f),
+                            (float2)(0x1.630000p-1f, 0x1.0b8f54p-13f),
+                            (float2)(0x1.668000p-1f, 0x1.004722p-12f),
+                            (float2)(0x1.6a0000p-1f, 0x1.57cf2cp-12f),
+                            (float2)(0x1.6d8000p-1f, 0x1.8cb53ap-12f),
+                            (float2)(0x1.710000p-1f, 0x1.9f4d8ap-12f),
+                            (float2)(0x1.748000p-1f, 0x1.8feb26p-12f),
+                            (float2)(0x1.780000p-1f, 0x1.5edfeep-12f),
+                            (float2)(0x1.7b8000p-1f, 0x1.0c7c9ap-12f),
+                            (float2)(0x1.7f0000p-1f, 0x1.322182p-13f),
+                            (float2)(0x1.828000p-1f, 0x1.3ab7cep-18f),
+                            (float2)(0x1.858000p-1f, 0x1.a82c2cp-11f),
+                            (float2)(0x1.890000p-1f, 0x1.3dd2c0p-11f),
+                            (float2)(0x1.8c8000p-1f, 0x1.871da4p-12f),
+                            (float2)(0x1.900000p-1f, 0x1.cc2c00p-14f),
+                            (float2)(0x1.930000p-1f, 0x1.9fdb68p-11f),
+                            (float2)(0x1.968000p-1f, 0x1.ed6956p-12f),
+                            (float2)(0x1.9a0000p-1f, 0x1.f1a760p-14f),
+                            (float2)(0x1.9d0000p-1f, 0x1.767f54p-11f),
+                            (float2)(0x1.a08000p-1f, 0x1.3f6d26p-12f),
+                            (float2)(0x1.a38000p-1f, 0x1.b9fce2p-11f),
+                            (float2)(0x1.a70000p-1f, 0x1.8ae816p-12f),
+                            (float2)(0x1.aa0000p-1f, 0x1.c23d60p-11f),
+                            (float2)(0x1.ad8000p-1f, 0x1.60f388p-12f),
+                            (float2)(0x1.b08000p-1f, 0x1.9049aep-11f),
+                            (float2)(0x1.b40000p-1f, 0x1.8734a8p-13f),
+                            (float2)(0x1.b70000p-1f, 0x1.2523d4p-11f),
+                            (float2)(0x1.ba0000p-1f, 0x1.da6ce6p-11f),
+                            (float2)(0x1.bd8000p-1f, 0x1.038e62p-12f),
+                            (float2)(0x1.c08000p-1f, 0x1.1b511ep-11f),
+                            (float2)(0x1.c38000p-1f, 0x1.a728b8p-11f),
+                            (float2)(0x1.c70000p-1f, 0x1.2b5d22p-14f),
+                            (float2)(0x1.ca0000p-1f, 0x1.2c6e54p-12f),
+                            (float2)(0x1.cd0000p-1f, 0x1.f35064p-12f),
+                            (float2)(0x1.d00000p-1f, 0x1.4fdb48p-11f),
+                            (float2)(0x1.d30000p-1f, 0x1.98ec9ep-11f),
+                            (float2)(0x1.d60000p-1f, 0x1.d4f80cp-11f),
+                            (float2)(0x1.d98000p-1f, 0x1.0643d6p-17f),
+                            (float2)(0x1.dc8000p-1f, 0x1.33567ep-14f),
+                            (float2)(0x1.df8000p-1f, 0x1.e0410cp-14f),
+                            (float2)(0x1.e28000p-1f, 0x1.142e0ep-13f),
+                            (float2)(0x1.e58000p-1f, 0x1.063c88p-13f),
+                            (float2)(0x1.e88000p-1f, 0x1.8d66c4p-14f),
+                            (float2)(0x1.eb8000p-1f, 0x1.57e32ap-15f),
+                            (float2)(0x1.ee0000p-1f, 0x1.ed1c6cp-11f),
+                            (float2)(0x1.f10000p-1f, 0x1.b8a076p-11f),
+                            (float2)(0x1.f40000p-1f, 0x1.7822f2p-11f),
+                            (float2)(0x1.f70000p-1f, 0x1.2bbc3ap-11f),
+                            (float2)(0x1.fa0000p-1f, 0x1.a708bap-12f),
+                            (float2)(0x1.fd0000p-1f, 0x1.be4c7ep-13f),
+                            (float2)(0x1.000000p+0f, 0x0.000000p+0f)};
 
-TABLE_FUNCTION(float2, LOG2_TBL, log2_tbl);
+__CLC_TABLE_FUNCTION(float2, LOG2_TBL, log2_tbl);
 
-DECLARE_TABLE(float2, LOG10_TBL, 129) = {
+__CLC_DECLARE_TABLE(float2, LOG10_TBL, 129) = {
     (float2)(0x0.000000p+0f, 0x0.000000p+0f),
     (float2)(0x1.ba8000p-9f, 0x1.f51c88p-19f),
     (float2)(0x1.b90000p-8f, 0x1.1da93ep-18f),
@@ -463,10 +462,9 @@ DECLARE_TABLE(float2, LOG10_TBL, 129) = {
     (float2)(0x1.340000p-2f, 0x1.04d426p-12f),
 };
 
-TABLE_FUNCTION(float2, LOG10_TBL, log10_tbl);
+__CLC_TABLE_FUNCTION(float2, LOG10_TBL, log10_tbl);
 
-
-DECLARE_TABLE(float, EXP_TBL, 65) = {
+__CLC_DECLARE_TABLE(float, EXP_TBL, 65) = {
     0x1.000000p+0f, 0x1.02c9a4p+0f, 0x1.059b0ep+0f, 0x1.087452p+0f,
     0x1.0b5586p+0f, 0x1.0e3ec4p+0f, 0x1.11301ep+0f, 0x1.1429aap+0f,
     0x1.172b84p+0f, 0x1.1a35bep+0f, 0x1.1d4874p+0f, 0x1.2063b8p+0f,
@@ -486,9 +484,9 @@ DECLARE_TABLE(float, EXP_TBL, 65) = {
     0x1.000000p+1f,
 };
 
-CLC_TABLE_FUNCTION(float, EXP_TBL, exp_tbl);
+__CLC_TABLE_FUNCTION_VEC(float, EXP_TBL, exp_tbl);
 
-DECLARE_TABLE(float, EXP_TBL_EP_HEAD, 65) = {
+__CLC_DECLARE_TABLE(float, EXP_TBL_EP_HEAD, 65) = {
     0x1.000000p+0f, 0x1.02c000p+0f, 0x1.058000p+0f, 0x1.084000p+0f,
     0x1.0b4000p+0f, 0x1.0e0000p+0f, 0x1.110000p+0f, 0x1.140000p+0f,
     0x1.170000p+0f, 0x1.1a0000p+0f, 0x1.1d4000p+0f, 0x1.204000p+0f,
@@ -508,9 +506,9 @@ DECLARE_TABLE(float, EXP_TBL_EP_HEAD, 65) = {
     0x1.000000p+1f,
 };
 
-CLC_TABLE_FUNCTION(float, EXP_TBL_EP_HEAD, exp_tbl_ep_head);
+__CLC_TABLE_FUNCTION_VEC(float, EXP_TBL_EP_HEAD, exp_tbl_ep_head);
 
-DECLARE_TABLE(float, EXP_TBL_EP_TAIL, 65) = {
+__CLC_DECLARE_TABLE(float, EXP_TBL_EP_TAIL, 65) = {
     0x0.000000p+0f,  0x1.347ceep-13f, 0x1.b0d314p-12f, 0x1.a28c3ap-11f,
     0x1.586cf8p-12f, 0x1.f61968p-11f, 0x1.80e808p-11f, 0x1.4d5754p-11f,
     0x1.5c1e3ep-11f, 0x1.adf5b6p-11f, 0x1.0e62d0p-13f, 0x1.1dc430p-11f,
@@ -530,9 +528,9 @@ DECLARE_TABLE(float, EXP_TBL_EP_TAIL, 65) = {
     0x0.000000p+0f,
 };
 
-CLC_TABLE_FUNCTION(float, EXP_TBL_EP_TAIL, exp_tbl_ep_tail);
+__CLC_TABLE_FUNCTION_VEC(float, EXP_TBL_EP_TAIL, exp_tbl_ep_tail);
 
-DECLARE_TABLE(float, CBRT_TBL_HEAD, 129) = {
+__CLC_DECLARE_TABLE(float, CBRT_TBL_HEAD, 129) = {
     0x1.000000p+0f, 0x1.008000p+0f, 0x1.014000p+0f, 0x1.01c000p+0f,
     0x1.028000p+0f, 0x1.034000p+0f, 0x1.03c000p+0f, 0x1.048000p+0f,
     0x1.050000p+0f, 0x1.05c000p+0f, 0x1.068000p+0f, 0x1.070000p+0f,
@@ -568,9 +566,9 @@ DECLARE_TABLE(float, CBRT_TBL_HEAD, 129) = {
     0x1.428000p+0f,
 };
 
-CLC_TABLE_FUNCTION(float, CBRT_TBL_HEAD, cbrt_tbl_head);
+__CLC_TABLE_FUNCTION_VEC(float, CBRT_TBL_HEAD, cbrt_tbl_head);
 
-DECLARE_TABLE(float, CBRT_TBL_TAIL, 129) = {
+__CLC_DECLARE_TABLE(float, CBRT_TBL_TAIL, 129) = {
     0x0.000000p+0f,  0x1.51cb0ap-11f, 0x1.39221ep-12f, 0x1.e06908p-11f,
     0x1.1d6978p-11f, 0x1.4ea1bep-13f, 0x1.833b8ep-11f, 0x1.587002p-12f,
     0x1.ceb290p-11f, 0x1.d57f34p-12f, 0x1.cc53acp-21f, 0x1.0fe098p-11f,
@@ -606,10 +604,10 @@ DECLARE_TABLE(float, CBRT_TBL_TAIL, 129) = {
     0x1.45f31ap-13f,
 };
 
-CLC_TABLE_FUNCTION(float, CBRT_TBL_TAIL, cbrt_tbl_tail);
+__CLC_TABLE_FUNCTION_VEC(float, CBRT_TBL_TAIL, cbrt_tbl_tail);
 
 // Tabulated values of sinh(i) and cosh(i) for i = 0,...,36.
-DECLARE_TABLE(float, SINHCOSH_TBL_HEAD, 37) = {
+__CLC_DECLARE_TABLE(float, SINHCOSH_TBL_HEAD, 37) = {
     0x0.000000p+0f,  0x1.2cd9fcp+0f,  0x1.d03cf6p+1f,  0x1.40926ep+3f,
     0x1.b4a380p+4f,  0x1.28d016p+6f,  0x1.936d22p+7f,  0x1.122876p+9f,
     0x1.749ea6p+10f, 0x1.fa7158p+11f, 0x1.5829dcp+13f, 0x1.d3c448p+14f,
@@ -622,9 +620,9 @@ DECLARE_TABLE(float, SINHCOSH_TBL_HEAD, 37) = {
     0x1.ea215ap+50f,
 };
 
-CLC_TABLE_FUNCTION(float, SINHCOSH_TBL_HEAD, sinhcosh_tbl_head);
+__CLC_TABLE_FUNCTION_VEC(float, SINHCOSH_TBL_HEAD, sinhcosh_tbl_head);
 
-DECLARE_TABLE(float, SINHCOSH_TBL_TAIL, 37) = {
+__CLC_DECLARE_TABLE(float, SINHCOSH_TBL_TAIL, 37) = {
     0x1.000000p+0f,  0x1.8b0756p+0f,  0x1.e18fa0p+1f,  0x1.422a4ap+3f,
     0x1.b4ee86p+4f,  0x1.28d6fcp+6f,  0x1.936e68p+7f,  0x1.122894p+9f,
     0x1.749eaap+10f, 0x1.fa7158p+11f, 0x1.5829dep+13f, 0x1.d3c448p+14f,
@@ -637,13 +635,13 @@ DECLARE_TABLE(float, SINHCOSH_TBL_TAIL, 37) = {
     0x1.ea215ap+50f,
 };
 
-CLC_TABLE_FUNCTION(float, SINHCOSH_TBL_TAIL, sinhcosh_tbl_tail);
+__CLC_TABLE_FUNCTION_VEC(float, SINHCOSH_TBL_TAIL, sinhcosh_tbl_tail);
 
 #ifdef cl_khr_fp64
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
-DECLARE_TABLE(double, LN_TBL_LO, 65) = {
+__CLC_DECLARE_TABLE(double, LN_TBL_LO, 65) = {
     0x0.0000000000000p+0, 0x1.fc0a800000000p-7, 0x1.f829800000000p-6,
     0x1.7745800000000p-5, 0x1.f0a3000000000p-5, 0x1.341d700000000p-4,
     0x1.6f0d200000000p-4, 0x1.a926d00000000p-4, 0x1.e270700000000p-4,
@@ -668,9 +666,9 @@ DECLARE_TABLE(double, LN_TBL_LO, 65) = {
     0x1.5ee02a0000000p-1, 0x1.62e42e0000000p-1,
 };
 
-CLC_TABLE_FUNCTION(double, LN_TBL_LO, ln_tbl_lo);
+__CLC_TABLE_FUNCTION_VEC(double, LN_TBL_LO, ln_tbl_lo);
 
-DECLARE_TABLE(double, LN_TBL_HI, 65) = {
+__CLC_DECLARE_TABLE(double, LN_TBL_HI, 65) = {
     0x0.0000000000000p+0,  0x1.61f807c79f3dbp-28, 0x1.873c1980267c8p-25,
     0x1.ec65b9f88c69ep-26, 0x1.8022c54cc2f99p-26, 0x1.2c37a3a125330p-25,
     0x1.15cad69737c93p-25, 0x1.d256ab1b285e9p-27, 0x1.b8abcb97a7aa2p-26,
@@ -695,14 +693,14 @@ DECLARE_TABLE(double, LN_TBL_HI, 65) = {
     0x1.2482ceae1ac12p-26, 0x1.efa39ef35793cp-25,
 };
 
-CLC_TABLE_FUNCTION(double, LN_TBL_HI, ln_tbl_hi);
+__CLC_TABLE_FUNCTION_VEC(double, LN_TBL_HI, ln_tbl_hi);
 
 // Arrays atan_jby256_head and atan_jby256_tail contain leading and trailing
 // parts respectively of precomputed values of atan(j/256), for j = 16, 17, ...,
 // 256. atan_jby256_head contains the first 21 bits of precision, and
 // atan_jby256_tail contains a further 53 bits precision.
 
-DECLARE_TABLE(double, ATAN_JBY256_TBL_HEAD, 241) = {
+__CLC_DECLARE_TABLE(double, ATAN_JBY256_TBL_HEAD, 241) = {
     0x1.ff55b00000000p-5, 0x1.0f99e00000000p-4, 0x1.1f86d00000000p-4,
     0x1.2f71900000000p-4, 0x1.3f59f00000000p-4, 0x1.4f3fd00000000p-4,
     0x1.5f23200000000p-4, 0x1.6f03b00000000p-4, 0x1.7ee1800000000p-4,
@@ -786,9 +784,9 @@ DECLARE_TABLE(double, ATAN_JBY256_TBL_HEAD, 241) = {
     0x1.921fb00000000p-1,
 };
 
-CLC_TABLE_FUNCTION(double, ATAN_JBY256_TBL_HEAD, atan_jby256_tbl_head);
+__CLC_TABLE_FUNCTION_VEC(double, ATAN_JBY256_TBL_HEAD, atan_jby256_tbl_head);
 
-DECLARE_TABLE(double, ATAN_JBY256_TBL_TAIL, 241) = {
+__CLC_DECLARE_TABLE(double, ATAN_JBY256_TBL_TAIL, 241) = {
     0x1.6e59fbd38db2cp-26, 0x1.4e3aa54dedf96p-25, 0x1.7e105ab1bda88p-25,
     0x1.8c5254d013fd0p-27, 0x1.cf8ab3ad62670p-29, 0x1.9dca4bec80468p-26,
     0x1.3f4b5ec98a8dap-26, 0x1.b9d49619d81fep-25, 0x1.3017887460934p-27,
@@ -872,9 +870,9 @@ DECLARE_TABLE(double, ATAN_JBY256_TBL_TAIL, 241) = {
     0x1.5110b4611a626p-23,
 };
 
-CLC_TABLE_FUNCTION(double, ATAN_JBY256_TBL_TAIL, atan_jby256_tbl_tail);
+__CLC_TABLE_FUNCTION_VEC(double, ATAN_JBY256_TBL_TAIL, atan_jby256_tbl_tail);
 
-DECLARE_TABLE(double, LOG_F_INV_TBL_HEAD, 258) = {
+__CLC_DECLARE_TABLE(double, LOG_F_INV_TBL_HEAD, 258) = {
     0x1.0000000000000p+1, 0x1.fe00000000000p+0, 0x1.fc00000000000p+0,
     0x1.fa00000000000p+0, 0x1.f800000000000p+0, 0x1.f600000000000p+0,
     0x1.f400000000000p+0, 0x1.f200000000000p+0, 0x1.f000000000000p+0,
@@ -963,9 +961,9 @@ DECLARE_TABLE(double, LOG_F_INV_TBL_HEAD, 258) = {
     0x1.0000000000000p+0, 0x1.0000000000000p+0,
 };
 
-CLC_TABLE_FUNCTION(double, LOG_F_INV_TBL_HEAD, log_f_inv_tbl_head);
+__CLC_TABLE_FUNCTION_VEC(double, LOG_F_INV_TBL_HEAD, log_f_inv_tbl_head);
 
-DECLARE_TABLE(double, LOG_F_INV_TBL_TAIL, 258) = {
+__CLC_DECLARE_TABLE(double, LOG_F_INV_TBL_TAIL, 258) = {
     0x0.0000000000000p+0,  0x1.fe01fe01fe020p-16, 0x1.fc07f01fc07f0p-14,
     0x1.1caa01fa11caap-12, 0x1.f81f81f81f820p-12, 0x1.8856506ddaba6p-11,
     0x1.196792909c560p-10, 0x1.7d9108c2ad433p-10, 0x1.f07c1f07c1f08p-10,
@@ -1054,9 +1052,9 @@ DECLARE_TABLE(double, LOG_F_INV_TBL_TAIL, 258) = {
     0x1.0080402010080p-9,  0x0.0000000000000p+0,
 };
 
-CLC_TABLE_FUNCTION(double, LOG_F_INV_TBL_TAIL, log_f_inv_tbl_tail);
+__CLC_TABLE_FUNCTION_VEC(double, LOG_F_INV_TBL_TAIL, log_f_inv_tbl_tail);
 
-DECLARE_TABLE(double, POWLOG_TBL_HEAD, 258) = {
+__CLC_DECLARE_TABLE(double, POWLOG_TBL_HEAD, 258) = {
     0x0.0000000000000p+0, 0x1.ff00aa0000000p-9, 0x1.fe02a60000000p-8,
     0x1.7dc4750000000p-7, 0x1.fc0a8b0000000p-7, 0x1.3cea440000000p-6,
     0x1.7b91b00000000p-6, 0x1.b9fc020000000p-6, 0x1.f829b00000000p-6,
@@ -1145,9 +1143,9 @@ DECLARE_TABLE(double, POWLOG_TBL_HEAD, 258) = {
     0x1.61e3ef0000000p-1, 0x1.62e42e0000000p-1, 0x0.0000000000000p+0,
 };
 
-CLC_TABLE_FUNCTION(double, POWLOG_TBL_HEAD, powlog_tbl_head);
+__CLC_TABLE_FUNCTION_VEC(double, POWLOG_TBL_HEAD, powlog_tbl_head);
 
-DECLARE_TABLE(double, POWLOG_TBL_TAIL, 258) = {
+__CLC_DECLARE_TABLE(double, POWLOG_TBL_TAIL, 258) = {
     0x0.0000000000000p+0,  0x1.5885e0250435ap-36, 0x1.620cf11f86ed2p-33,
     0x1.f0214edba4a25p-32, 0x1.f807c79f3db4ep-36, 0x1.a352ba779a52bp-33,
     0x1.f56c46aa49fd5p-32, 0x1.ebe465fef5196p-32, 0x1.cf0660099f1f8p-31,
@@ -1236,9 +1234,9 @@ DECLARE_TABLE(double, POWLOG_TBL_TAIL, 258) = {
     0x1.b48c8cd2f246cp-26, 0x1.efa39ef35793cp-25, 0x0.0000000000000p+0,
 };
 
-CLC_TABLE_FUNCTION(double, POWLOG_TBL_TAIL, powlog_tbl_tail);
+__CLC_TABLE_FUNCTION_VEC(double, POWLOG_TBL_TAIL, powlog_tbl_tail);
 
-DECLARE_TABLE(double, TWO_TO_JBY64_EP_HEAD, 64) = {
+__CLC_DECLARE_TABLE(double, TWO_TO_JBY64_EP_HEAD, 64) = {
     0x1.0000000000000p+0, 0x1.02c9a30000000p+0, 0x1.059b0d0000000p+0,
     0x1.0874510000000p+0, 0x1.0b55860000000p+0, 0x1.0e3ec30000000p+0,
     0x1.11301d0000000p+0, 0x1.1429aa0000000p+0, 0x1.172b830000000p+0,
@@ -1263,9 +1261,10 @@ DECLARE_TABLE(double, TWO_TO_JBY64_EP_HEAD, 64) = {
     0x1.fa7c180000000p+0,
 };
 
-CLC_TABLE_FUNCTION(double, TWO_TO_JBY64_EP_HEAD, two_to_jby64_ep_tbl_head);
+__CLC_TABLE_FUNCTION_VEC(double, TWO_TO_JBY64_EP_HEAD,
+                         two_to_jby64_ep_tbl_head);
 
-DECLARE_TABLE(double, TWO_TO_JBY64_EP_TAIL, 64) = {
+__CLC_DECLARE_TABLE(double, TWO_TO_JBY64_EP_TAIL, 64) = {
     0x0.0000000000000p+0,  0x1.cef00c1dcdef9p-25, 0x1.8ac2ba1d73e2ap-27,
     0x1.0eb37901186bep-25, 0x1.9f3121ec53172p-25, 0x1.69e8d10103a17p-27,
     0x1.25b50a4ebbf1ap-32, 0x1.d525bbf668203p-25, 0x1.8faa2f5b9bef9p-25,
@@ -1290,9 +1289,10 @@ DECLARE_TABLE(double, TWO_TO_JBY64_EP_TAIL, 64) = {
     0x1.9e90d82e90a7ep-28,
 };
 
-CLC_TABLE_FUNCTION(double, TWO_TO_JBY64_EP_TAIL, two_to_jby64_ep_tbl_tail);
+__CLC_TABLE_FUNCTION_VEC(double, TWO_TO_JBY64_EP_TAIL,
+                         two_to_jby64_ep_tbl_tail);
 
-DECLARE_TABLE(double, CBRT_INV_TBL, 257) = {
+__CLC_DECLARE_TABLE(double, CBRT_INV_TBL, 257) = {
     0x1.0000000000000p+1, 0x1.fe01fe01fe020p+0, 0x1.fc07f01fc07f0p+0,
     0x1.fa11caa01fa12p+0, 0x1.f81f81f81f820p+0, 0x1.f6310aca0dbb5p+0,
     0x1.f44659e4a4271p+0, 0x1.f25f644230ab5p+0, 0x1.f07c1f07c1f08p+0,
@@ -1381,9 +1381,9 @@ DECLARE_TABLE(double, CBRT_INV_TBL, 257) = {
     0x1.0080402010080p+0, 0x1.0000000000000p+0,
 };
 
-CLC_TABLE_FUNCTION(double, CBRT_INV_TBL, cbrt_inv_tbl);
+__CLC_TABLE_FUNCTION_VEC(double, CBRT_INV_TBL, cbrt_inv_tbl);
 
-DECLARE_TABLE(double, CBRT_DBL_TBL_HEAD, 257) = {
+__CLC_DECLARE_TABLE(double, CBRT_DBL_TBL_HEAD, 257) = {
     0x1.0000000000000p+0, 0x1.0055380000000p+0, 0x1.00aa390000000p+0,
     0x1.00ff010000000p+0, 0x1.0153920000000p+0, 0x1.01a7eb0000000p+0,
     0x1.01fc0d0000000p+0, 0x1.024ff80000000p+0, 0x1.02a3ad0000000p+0,
@@ -1472,9 +1472,9 @@ DECLARE_TABLE(double, CBRT_DBL_TBL_HEAD, 257) = {
     0x1.4254640000000p+0, 0x1.428a2f0000000p+0,
 };
 
-CLC_TABLE_FUNCTION(double, CBRT_DBL_TBL_HEAD, cbrt_dbl_tbl_head);
+__CLC_TABLE_FUNCTION_VEC(double, CBRT_DBL_TBL_HEAD, cbrt_dbl_tbl_head);
 
-DECLARE_TABLE(double, CBRT_DBL_TBL_TAIL, 257) = {
+__CLC_DECLARE_TABLE(double, CBRT_DBL_TBL_TAIL, 257) = {
     0x0.0000000000000p+0,  0x1.e6a24c81e4294p-25, 0x1.8548511e3a785p-26,
     0x1.4eb9336ec07f6p-25, 0x1.0ea64b8b750e1p-27, 0x1.61637cff8a53cp-27,
     0x1.0733bf7bd1943p-27, 0x1.666911345ccedp-26, 0x1.77b7a3f592f14p-27,
@@ -1563,23 +1563,23 @@ DECLARE_TABLE(double, CBRT_DBL_TBL_TAIL, 257) = {
     0x1.dc43f1ed210b4p-25, 0x1.31ae515c447bbp-25,
 };
 
-CLC_TABLE_FUNCTION(double, CBRT_DBL_TBL_TAIL, cbrt_dbl_tbl_tail);
+__CLC_TABLE_FUNCTION_VEC(double, CBRT_DBL_TBL_TAIL, cbrt_dbl_tbl_tail);
 
-DECLARE_TABLE(double, CBRT_REM_TBL_HEAD, 5) = {
+__CLC_DECLARE_TABLE(double, CBRT_REM_TBL_HEAD, 5) = {
     0x1.428a2f0000000p-1, 0x1.965fea0000000p-1, 0x1.0000000000000p+0,
     0x1.428a2f0000000p+0, 0x1.965fea0000000p+0,
 };
 
-CLC_TABLE_FUNCTION(double, CBRT_REM_TBL_HEAD, cbrt_rem_tbl_head);
+__CLC_TABLE_FUNCTION_VEC(double, CBRT_REM_TBL_HEAD, cbrt_rem_tbl_head);
 
-DECLARE_TABLE(double, CBRT_REM_TBL_TAIL, 5) = {
+__CLC_DECLARE_TABLE(double, CBRT_REM_TBL_TAIL, 5) = {
     0x1.31ae515c447bbp-26, 0x1.4f5b8f20ac166p-27, 0x0.0000000000000p+0,
     0x1.31ae515c447bbp-25, 0x1.4f5b8f20ac166p-26,
 };
 
-CLC_TABLE_FUNCTION(double, CBRT_REM_TBL_TAIL, cbrt_rem_tbl_tail);
+__CLC_TABLE_FUNCTION_VEC(double, CBRT_REM_TBL_TAIL, cbrt_rem_tbl_tail);
 
-DECLARE_TABLE(double, SINH_TBL_HEAD, 37) = {
+__CLC_DECLARE_TABLE(double, SINH_TBL_HEAD, 37) = {
     0x0.0000000000000p+0,  0x1.2cd9fc0000000p+0,  0x1.d03cf60000000p+1,
     0x1.40926e0000000p+3,  0x1.b4a3800000000p+4,  0x1.28d0160000000p+6,
     0x1.936d228000000p+7,  0x1.1228768000000p+9,  0x1.749ea50000000p+10,
@@ -1595,7 +1595,7 @@ DECLARE_TABLE(double, SINH_TBL_HEAD, 37) = {
     0x1.ea215a0000000p+50,
 };
 
-DECLARE_TABLE(double, SINH_TBL_TAIL, 37) = {
+__CLC_DECLARE_TABLE(double, SINH_TBL_TAIL, 37) = {
     0x0.0000000000000p+0,  0x1.13ae6096a0092p-26, 0x1.db70cfb79a640p-26,
     0x1.c2526b66dc067p-23, 0x1.b81b18647f380p-23, 0x1.bc1cdd1e1eb08p-20,
     0x1.d9f201534fb09p-19, 0x1.d1c064a4e9954p-18, 0x1.4eca65d06ea74p-18,
@@ -1611,7 +1611,7 @@ DECLARE_TABLE(double, SINH_TBL_TAIL, 37) = {
     0x1.d20d76744835cp+22,
 };
 
-DECLARE_TABLE(double, COSH_TBL_HEAD, 37) = {
+__CLC_DECLARE_TABLE(double, COSH_TBL_HEAD, 37) = {
     0x1.0000000000000p+0,  0x1.8b07550000000p+0,  0x1.e18fa08000000p+1,
     0x1.422a490000000p+3,  0x1.b4ee858000000p+4,  0x1.28d6fc8000000p+6,
     0x1.936e678000000p+7,  0x1.1228948000000p+9,  0x1.749eaa8000000p+10,
@@ -1627,7 +1627,7 @@ DECLARE_TABLE(double, COSH_TBL_HEAD, 37) = {
     0x1.ea215a0000000p+50,
 };
 
-DECLARE_TABLE(double, COSH_TBL_TAIL, 37) = {
+__CLC_DECLARE_TABLE(double, COSH_TBL_TAIL, 37) = {
     0x0.0000000000000p+0,  0x1.d9f5504c2bd28p-28, 0x1.7cb66f0a4c9fdp-25,
     0x1.f58617928e588p-23, 0x1.bc7d000c38d48p-25, 0x1.f7f9d4e329998p-21,
     0x1.6e6e464885269p-19, 0x1.ba3a8b946c154p-19, 0x1.3f4e76110d5a4p-18,
@@ -1643,12 +1643,12 @@ DECLARE_TABLE(double, COSH_TBL_TAIL, 37) = {
     0x1.d20d76744835cp+22,
 };
 
-CLC_TABLE_FUNCTION(double, SINH_TBL_HEAD, sinh_tbl_head);
-CLC_TABLE_FUNCTION(double, SINH_TBL_TAIL, sinh_tbl_tail);
-CLC_TABLE_FUNCTION(double, COSH_TBL_HEAD, cosh_tbl_head);
-CLC_TABLE_FUNCTION(double, COSH_TBL_TAIL, cosh_tbl_tail);
+__CLC_TABLE_FUNCTION_VEC(double, SINH_TBL_HEAD, sinh_tbl_head);
+__CLC_TABLE_FUNCTION_VEC(double, SINH_TBL_TAIL, sinh_tbl_tail);
+__CLC_TABLE_FUNCTION_VEC(double, COSH_TBL_HEAD, cosh_tbl_head);
+__CLC_TABLE_FUNCTION_VEC(double, COSH_TBL_TAIL, cosh_tbl_tail);
 
-DECLARE_TABLE(uchar, PIBITS_TBL, ) = {
+__CLC_DECLARE_TABLE(uchar, PIBITS_TBL, ) = {
     224, 241, 27,  193, 12,  88,  33,  116, 53,  126, 196, 126, 237, 175, 169,
     75,  74,  41,  222, 231, 28,  244, 236, 197, 151, 175, 31,  235, 158, 212,
     181, 168, 127, 121, 154, 253, 24,  61,  221, 38,  44,  159, 60,  251, 217,
@@ -1661,25 +1661,25 @@ DECLARE_TABLE(uchar, PIBITS_TBL, ) = {
     119, 211, 212, 71,  95,  157, 240, 167, 84,  16,  57,  185, 13,  230, 139,
     2,   0,   0,   0,   0,   0,   0,   0};
 
-_CLC_DEF _CLC_OVERLOAD ulong TABLE_MANGLE(pibits_tbl)(int idx) {
+_CLC_DEF _CLC_OVERLOAD ulong __CLC_TABLE_MANGLE(pibits_tbl)(int idx) {
   return *(__constant ulong *)(PIBITS_TBL + idx);
 }
-_CLC_DEF _CLC_OVERLOAD ulong2 TABLE_MANGLE(pibits_tbl)(int2 idx) {
+_CLC_DEF _CLC_OVERLOAD ulong2 __CLC_TABLE_MANGLE(pibits_tbl)(int2 idx) {
   return (ulong2){*(__constant ulong *)(PIBITS_TBL + idx.s0),
                   *(__constant ulong *)(PIBITS_TBL + idx.s1)};
 }
-_CLC_DEF _CLC_OVERLOAD ulong3 TABLE_MANGLE(pibits_tbl)(int3 idx) {
+_CLC_DEF _CLC_OVERLOAD ulong3 __CLC_TABLE_MANGLE(pibits_tbl)(int3 idx) {
   return (ulong3){*(__constant ulong *)(PIBITS_TBL + idx.s0),
                   *(__constant ulong *)(PIBITS_TBL + idx.s1),
                   *(__constant ulong *)(PIBITS_TBL + idx.s2)};
 }
-_CLC_DEF _CLC_OVERLOAD ulong4 TABLE_MANGLE(pibits_tbl)(int4 idx) {
+_CLC_DEF _CLC_OVERLOAD ulong4 __CLC_TABLE_MANGLE(pibits_tbl)(int4 idx) {
   return (ulong4){*(__constant ulong *)(PIBITS_TBL + idx.s0),
                   *(__constant ulong *)(PIBITS_TBL + idx.s1),
                   *(__constant ulong *)(PIBITS_TBL + idx.s2),
                   *(__constant ulong *)(PIBITS_TBL + idx.s3)};
 }
-_CLC_DEF _CLC_OVERLOAD ulong8 TABLE_MANGLE(pibits_tbl)(int8 idx) {
+_CLC_DEF _CLC_OVERLOAD ulong8 __CLC_TABLE_MANGLE(pibits_tbl)(int8 idx) {
   return (ulong8){*(__constant ulong *)(PIBITS_TBL + idx.s0),
                   *(__constant ulong *)(PIBITS_TBL + idx.s1),
                   *(__constant ulong *)(PIBITS_TBL + idx.s2),
@@ -1689,7 +1689,7 @@ _CLC_DEF _CLC_OVERLOAD ulong8 TABLE_MANGLE(pibits_tbl)(int8 idx) {
                   *(__constant ulong *)(PIBITS_TBL + idx.s6),
                   *(__constant ulong *)(PIBITS_TBL + idx.s7)};
 }
-_CLC_DEF _CLC_OVERLOAD ulong16 TABLE_MANGLE(pibits_tbl)(int16 idx) {
+_CLC_DEF _CLC_OVERLOAD ulong16 __CLC_TABLE_MANGLE(pibits_tbl)(int16 idx) {
   return (ulong16){*(__constant ulong *)(PIBITS_TBL + idx.s0),
                    *(__constant ulong *)(PIBITS_TBL + idx.s1),
                    *(__constant ulong *)(PIBITS_TBL + idx.s2),

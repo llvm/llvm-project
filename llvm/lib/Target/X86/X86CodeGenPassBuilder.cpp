@@ -10,6 +10,7 @@
 /// TODO: Port CodeGen passes to new pass manager.
 //===----------------------------------------------------------------------===//
 
+#include "X86.h"
 #include "X86ISelDAGToDAG.h"
 #include "X86TargetMachine.h"
 

@@ -32,7 +32,10 @@ template("tablegen") {
   config_name = "${target_name}_config"
   config(config_name) {
     visibility = [ ":$target_name" ]
-    include_dirs = [ target_gen_dir ]
+    include_dirs = [
+      target_gen_dir,
+      root_build_dir,
+    ]
   }
 
   compiled_action(target_name) {

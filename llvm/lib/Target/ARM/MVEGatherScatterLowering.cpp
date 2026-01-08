@@ -407,9 +407,9 @@ Instruction *MVEGatherScatterLowering::lowerGather(IntrinsicInst *I) {
   // Potentially optimising the addressing modes as we do so.
   auto *Ty = cast<FixedVectorType>(I->getType());
   Value *Ptr = I->getArgOperand(0);
-  Align Alignment = cast<ConstantInt>(I->getArgOperand(1))->getAlignValue();
-  Value *Mask = I->getArgOperand(2);
-  Value *PassThru = I->getArgOperand(3);
+  Align Alignment = I->getParamAlign(0).valueOrOne();
+  Value *Mask = I->getArgOperand(1);
+  Value *PassThru = I->getArgOperand(2);
 
   if (!isLegalTypeAndAlignment(Ty->getNumElements(), Ty->getScalarSizeInBits(),
                                Alignment))
@@ -458,7 +458,7 @@ Instruction *MVEGatherScatterLowering::tryCreateMaskedGatherBase(
   if (Ty->getNumElements() != 4 || Ty->getScalarSizeInBits() != 32)
     // Can't build an intrinsic for this
     return nullptr;
-  Value *Mask = I->getArgOperand(2);
+  Value *Mask = I->getArgOperand(1);
   if (match(Mask, m_One()))
     return Builder.CreateIntrinsic(Intrinsic::arm_mve_vldr_gather_base,
                                    {Ty, Ptr->getType()},
@@ -479,7 +479,7 @@ Instruction *MVEGatherScatterLowering::tryCreateMaskedGatherBaseWB(
   if (Ty->getNumElements() != 4 || Ty->getScalarSizeInBits() != 32)
     // Can't build an intrinsic for this
     return nullptr;
-  Value *Mask = I->getArgOperand(2);
+  Value *Mask = I->getArgOperand(1);
   if (match(Mask, m_One()))
     return Builder.CreateIntrinsic(Intrinsic::arm_mve_vldr_gather_base_wb,
                                    {Ty, Ptr->getType()},
@@ -552,7 +552,7 @@ Instruction *MVEGatherScatterLowering::tryCreateMaskedGatherOffset(
     return nullptr;
 
   Root = Extend;
-  Value *Mask = I->getArgOperand(2);
+  Value *Mask = I->getArgOperand(1);
   Instruction *Load = nullptr;
   if (!match(Mask, m_One()))
     Load = Builder.CreateIntrinsic(
@@ -584,7 +584,7 @@ Instruction *MVEGatherScatterLowering::lowerScatter(IntrinsicInst *I) {
   // Potentially optimising the addressing modes as we do so.
   Value *Input = I->getArgOperand(0);
   Value *Ptr = I->getArgOperand(1);
-  Align Alignment = cast<ConstantInt>(I->getArgOperand(2))->getAlignValue();
+  Align Alignment = I->getParamAlign(1).valueOrOne();
   auto *Ty = cast<FixedVectorType>(Input->getType());
 
   if (!isLegalTypeAndAlignment(Ty->getNumElements(), Ty->getScalarSizeInBits(),
@@ -622,7 +622,7 @@ Instruction *MVEGatherScatterLowering::tryCreateMaskedScatterBase(
     // Can't build an intrinsic for this
     return nullptr;
   }
-  Value *Mask = I->getArgOperand(3);
+  Value *Mask = I->getArgOperand(2);
   //  int_arm_mve_vstr_scatter_base(_predicated) addr, offset, data(, mask)
   LLVM_DEBUG(dbgs() << "masked scatters: storing to a vector of pointers\n");
   if (match(Mask, m_One()))
@@ -646,7 +646,7 @@ Instruction *MVEGatherScatterLowering::tryCreateMaskedScatterBaseWB(
   if (Ty->getNumElements() != 4 || Ty->getScalarSizeInBits() != 32)
     // Can't build an intrinsic for this
     return nullptr;
-  Value *Mask = I->getArgOperand(3);
+  Value *Mask = I->getArgOperand(2);
   if (match(Mask, m_One()))
     return Builder.CreateIntrinsic(Intrinsic::arm_mve_vstr_scatter_base_wb,
                                    {Ptr->getType(), Input->getType()},
@@ -662,7 +662,7 @@ Instruction *MVEGatherScatterLowering::tryCreateMaskedScatterOffset(
     IntrinsicInst *I, Value *Ptr, IRBuilder<> &Builder) {
   using namespace PatternMatch;
   Value *Input = I->getArgOperand(0);
-  Value *Mask = I->getArgOperand(3);
+  Value *Mask = I->getArgOperand(2);
   Type *InputTy = Input->getType();
   Type *MemoryTy = InputTy;
 

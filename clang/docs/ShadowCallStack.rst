@@ -61,7 +61,7 @@ The instrumentation makes use of the platform register ``x18`` on AArch64,
 ``x3`` (``gp``) on RISC-V with software shadow stack and ``ssp`` on RISC-V with
 hardware shadow stack, which needs `Zicfiss`_ and ``-fcf-protection=return``.
 Users can choose between the software and hardware based shadow stack
-implementation on RISC-V backend by passing ``-fsanitize=shadowcallstack``
+implementation on RISC-V backend by passing ``-fsanitize=shadow-call-stack``
 or ``Zicfiss`` with ``-fcf-protection=return``.
 For simplicity we will refer to this as the ``SCSReg``. On some platforms,
 ``SCSReg`` is reserved, and on others, it is designated as a scratch register.

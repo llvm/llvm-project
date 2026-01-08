@@ -1,4 +1,4 @@
-//===--- UseTransparentFunctorsCheck.cpp - clang-tidy----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -37,15 +37,13 @@ void UseTransparentFunctorsCheck::registerMatchers(MatchFinder *Finder) {
 
   // Non-transparent functor mentioned as a template parameter. FIXIT.
   Finder->addMatcher(
-      loc(qualType(
-              unless(elaboratedType()),
-              hasDeclaration(classTemplateSpecializationDecl(
-                  unless(hasAnyTemplateArgument(templateArgument(refersToType(
-                      qualType(pointsTo(qualType(isAnyCharacter()))))))),
-                  hasAnyTemplateArgument(
-                      templateArgument(refersToType(qualType(hasDeclaration(
-                                           TransparentFunctors))))
-                          .bind("Functor"))))))
+      loc(qualType(hasDeclaration(classTemplateSpecializationDecl(
+              unless(hasAnyTemplateArgument(templateArgument(refersToType(
+                  qualType(pointsTo(qualType(isAnyCharacter()))))))),
+              hasAnyTemplateArgument(
+                  templateArgument(refersToType(qualType(
+                                       hasDeclaration(TransparentFunctors))))
+                      .bind("Functor"))))))
           .bind("FunctorParentLoc"),
       this);
 
@@ -98,7 +96,7 @@ void UseTransparentFunctorsCheck::check(
         FunctorParentType->template_arguments()[ArgNum];
     if (Arg.getKind() != TemplateArgument::Type)
       continue;
-    QualType ParentArgType = Arg.getAsType();
+    const QualType ParentArgType = Arg.getAsType();
     if (ParentArgType->isRecordType() &&
         ParentArgType->getAsCXXRecordDecl() ==
             Functor->getAsType()->getAsCXXRecordDecl())
@@ -107,13 +105,13 @@ void UseTransparentFunctorsCheck::check(
   // Functor is a default template argument.
   if (ArgNum == FunctorParentType->template_arguments().size())
     return;
-  TemplateArgumentLoc FunctorLoc = FunctorParentLoc.getArgLoc(ArgNum);
+  const TemplateArgumentLoc FunctorLoc = FunctorParentLoc.getArgLoc(ArgNum);
   auto FunctorTypeLoc = getInnerTypeLocAs<TemplateSpecializationTypeLoc>(
       FunctorLoc.getTypeSourceInfo()->getTypeLoc());
   if (FunctorTypeLoc.isNull())
     return;
 
-  SourceLocation ReportLoc = FunctorLoc.getLocation();
+  const SourceLocation ReportLoc = FunctorLoc.getLocation();
   if (ReportLoc.isInvalid())
     return;
   diag(ReportLoc, Message) << FuncClass->getName()

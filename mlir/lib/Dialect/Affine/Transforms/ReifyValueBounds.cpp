@@ -51,10 +51,10 @@ OpFoldResult affine::materializeComputedBound(
            "expected dynamic dim");
     if (isa<RankedTensorType>(value.getType())) {
       // A tensor dimension is used: generate a tensor.dim.
-      operands.push_back(b.create<tensor::DimOp>(loc, value, *dim));
+      operands.push_back(tensor::DimOp::create(b, loc, value, *dim));
     } else if (isa<MemRefType>(value.getType())) {
       // A memref dimension is used: generate a memref.dim.
-      operands.push_back(b.create<memref::DimOp>(loc, value, *dim));
+      operands.push_back(memref::DimOp::create(b, loc, value, *dim));
     } else {
       llvm_unreachable("cannot generate DimOp for unsupported shaped type");
     }
@@ -76,7 +76,7 @@ OpFoldResult affine::materializeComputedBound(
         operands[expr.getPosition() + boundMap.getNumDims()]);
   // General case: build affine.apply op.
   return static_cast<OpFoldResult>(
-      b.create<affine::AffineApplyOp>(loc, boundMap, operands).getResult());
+      affine::AffineApplyOp::create(b, loc, boundMap, operands).getResult());
 }
 
 FailureOr<OpFoldResult> mlir::affine::reifyShapedValueDimBound(

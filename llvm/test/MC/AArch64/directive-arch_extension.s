@@ -186,10 +186,6 @@ sb
 msr SSBS, #1
 // CHECK: msr SSBS, #1
 
-.arch_extension tme
-tstart x0
-// CHECK: tstart x0
-
 .arch_extension fprcvt
 fcvtns s0, d1
 // CHECK: fcvtns s0, d1

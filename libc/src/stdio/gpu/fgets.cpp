@@ -9,11 +9,10 @@
 #include "src/stdio/fgets.h"
 
 #include "file.h"
+#include "hdr/stdint_proxy.h"
 #include "hdr/stdio_macros.h" // for EOF.
 #include "hdr/types/FILE.h"
 #include "src/__support/common.h"
-
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

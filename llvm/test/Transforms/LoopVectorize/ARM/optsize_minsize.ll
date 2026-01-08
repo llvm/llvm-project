@@ -17,97 +17,55 @@ target triple = "armv7a-none-eabi"
 define void @always_vectorize(ptr %p, i32 %x) {
 ; DEFAULT-LABEL: define void @always_vectorize(
 ; DEFAULT-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) {
-; DEFAULT-NEXT:  [[ENTRY:.*]]:
-; DEFAULT-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; DEFAULT-NEXT:  [[ENTRY:.*:]]
+; DEFAULT-NEXT:    br label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; DEFAULT:       [[VECTOR_BODY]]:
-; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 0
-; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
+; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[P]], align 4
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; DEFAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 0
-; DEFAULT-NEXT:    store <4 x i32> [[TMP3]], ptr [[TMP5]], align 4
+; DEFAULT-NEXT:    store <4 x i32> [[TMP3]], ptr [[P]], align 4
 ; DEFAULT-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
-; DEFAULT-NEXT:    br i1 true, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
-; DEFAULT:       [[SCALAR_PH]]:
-; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; DEFAULT-NEXT:    br label %[[FOR_BODY:.*]]
-; DEFAULT:       [[FOR_BODY]]:
-; DEFAULT-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; DEFAULT-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[INDVARS_IV]]
-; DEFAULT-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; DEFAULT-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP4]], [[X]]
-; DEFAULT-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX]], align 4
-; DEFAULT-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; DEFAULT-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4
-; DEFAULT-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; DEFAULT-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; DEFAULT:       [[FOR_COND_CLEANUP]]:
 ; DEFAULT-NEXT:    ret void
 ;
 ; OPTSIZE-LABEL: define void @always_vectorize(
 ; OPTSIZE-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; OPTSIZE-NEXT:  [[ENTRY:.*]]:
-; OPTSIZE-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; OPTSIZE-NEXT:  [[ENTRY:.*:]]
+; OPTSIZE-NEXT:    br label %[[VECTOR_PH:.*]]
 ; OPTSIZE:       [[VECTOR_PH]]:
 ; OPTSIZE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
 ; OPTSIZE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; OPTSIZE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; OPTSIZE:       [[VECTOR_BODY]]:
-; OPTSIZE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 0
-; OPTSIZE-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
+; OPTSIZE-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[P]], align 4
 ; OPTSIZE-NEXT:    [[TMP3:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; OPTSIZE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 0
-; OPTSIZE-NEXT:    store <4 x i32> [[TMP3]], ptr [[TMP5]], align 4
+; OPTSIZE-NEXT:    store <4 x i32> [[TMP3]], ptr [[P]], align 4
 ; OPTSIZE-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; OPTSIZE:       [[MIDDLE_BLOCK]]:
-; OPTSIZE-NEXT:    br i1 true, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
-; OPTSIZE:       [[SCALAR_PH]]:
-; OPTSIZE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; OPTSIZE-NEXT:    br label %[[FOR_BODY:.*]]
-; OPTSIZE:       [[FOR_BODY]]:
-; OPTSIZE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; OPTSIZE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[INDVARS_IV]]
-; OPTSIZE-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; OPTSIZE-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP4]], [[X]]
-; OPTSIZE-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX]], align 4
-; OPTSIZE-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; OPTSIZE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4
-; OPTSIZE-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; OPTSIZE-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; OPTSIZE:       [[FOR_COND_CLEANUP]]:
 ; OPTSIZE-NEXT:    ret void
 ;
 ; MINSIZE-LABEL: define void @always_vectorize(
 ; MINSIZE-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; MINSIZE-NEXT:  [[ENTRY:.*]]:
-; MINSIZE-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; MINSIZE-NEXT:  [[ENTRY:.*:]]
+; MINSIZE-NEXT:    br label %[[VECTOR_PH:.*]]
 ; MINSIZE:       [[VECTOR_PH]]:
 ; MINSIZE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
 ; MINSIZE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; MINSIZE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; MINSIZE:       [[VECTOR_BODY]]:
-; MINSIZE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 0
-; MINSIZE-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
+; MINSIZE-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[P]], align 4
 ; MINSIZE-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; MINSIZE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 0
-; MINSIZE-NEXT:    store <4 x i32> [[TMP2]], ptr [[TMP3]], align 4
+; MINSIZE-NEXT:    store <4 x i32> [[TMP2]], ptr [[P]], align 4
 ; MINSIZE-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; MINSIZE:       [[MIDDLE_BLOCK]]:
-; MINSIZE-NEXT:    br i1 true, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
-; MINSIZE:       [[SCALAR_PH]]:
-; MINSIZE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; MINSIZE-NEXT:    br label %[[FOR_BODY:.*]]
-; MINSIZE:       [[FOR_BODY]]:
-; MINSIZE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; MINSIZE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[INDVARS_IV]]
-; MINSIZE-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; MINSIZE-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP4]], [[X]]
-; MINSIZE-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX]], align 4
-; MINSIZE-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; MINSIZE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4
-; MINSIZE-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; MINSIZE-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; MINSIZE:       [[FOR_COND_CLEANUP]]:
 ; MINSIZE-NEXT:    ret void
 ;
@@ -145,13 +103,12 @@ define void @vectorize_without_optsize(ptr %p, i32 %x, i64 %n) {
 ; DEFAULT:       [[VECTOR_BODY]]:
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[TMP0]]
-; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
+; DEFAULT-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1]], [[BROADCAST_SPLAT]]
-; DEFAULT-NEXT:    store <4 x i32> [[TMP5]], ptr [[TMP2]], align 4
+; DEFAULT-NEXT:    store <4 x i32> [[TMP5]], ptr [[TMP1]], align 4
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 4
 ; DEFAULT-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; DEFAULT-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
 ; DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[CMP_N]], label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
@@ -166,7 +123,7 @@ define void @vectorize_without_optsize(ptr %p, i32 %x, i64 %n) {
 ; DEFAULT-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX]], align 4
 ; DEFAULT-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; DEFAULT-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
-; DEFAULT-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; DEFAULT:       [[FOR_COND_CLEANUP]]:
 ; DEFAULT-NEXT:    ret void
 ;
@@ -225,195 +182,22 @@ define void @tail_predicate_without_optsize(ptr %p, i8 %a, i8 %b, i8 %c, i32 %n)
 ; DEFAULT-LABEL: define void @tail_predicate_without_optsize(
 ; DEFAULT-SAME: ptr [[P:%.*]], i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]], i32 [[N:%.*]]) {
 ; DEFAULT-NEXT:  [[ENTRY:.*]]:
-; DEFAULT-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; DEFAULT:       [[VECTOR_PH]]:
-; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[A]], i64 0
-; DEFAULT-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT]], <16 x i8> poison, <16 x i32> zeroinitializer
-; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <16 x i8> poison, i8 [[B]], i64 0
-; DEFAULT-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT3]], <16 x i8> poison, <16 x i32> zeroinitializer
-; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <16 x i8> poison, i8 [[C]], i64 0
-; DEFAULT-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT5]], <16 x i8> poison, <16 x i32> zeroinitializer
-; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
-; DEFAULT:       [[VECTOR_BODY]]:
-; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE36:.*]] ]
-; DEFAULT-NEXT:    [[VEC_IND:%.*]] = phi <16 x i8> [ <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE36]] ]
-; DEFAULT-NEXT:    [[VEC_IND1:%.*]] = phi <16 x i8> [ <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT2:%.*]], %[[PRED_STORE_CONTINUE36]] ]
-; DEFAULT-NEXT:    [[TMP0:%.*]] = icmp ule <16 x i8> [[VEC_IND]], splat (i8 14)
-; DEFAULT-NEXT:    [[TMP1:%.*]] = mul <16 x i8> [[BROADCAST_SPLAT]], [[VEC_IND1]]
-; DEFAULT-NEXT:    [[TMP2:%.*]] = lshr <16 x i8> [[VEC_IND1]], splat (i8 1)
-; DEFAULT-NEXT:    [[TMP3:%.*]] = mul <16 x i8> [[TMP2]], [[BROADCAST_SPLAT4]]
-; DEFAULT-NEXT:    [[TMP4:%.*]] = add <16 x i8> [[TMP3]], [[TMP1]]
-; DEFAULT-NEXT:    [[TMP5:%.*]] = lshr <16 x i8> [[VEC_IND1]], splat (i8 2)
-; DEFAULT-NEXT:    [[TMP6:%.*]] = mul <16 x i8> [[TMP5]], [[BROADCAST_SPLAT6]]
-; DEFAULT-NEXT:    [[TMP7:%.*]] = add <16 x i8> [[TMP4]], [[TMP6]]
-; DEFAULT-NEXT:    [[TMP8:%.*]] = extractelement <16 x i1> [[TMP0]], i32 0
-; DEFAULT-NEXT:    br i1 [[TMP8]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; DEFAULT:       [[PRED_STORE_IF]]:
-; DEFAULT-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 0
-; DEFAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP9]]
-; DEFAULT-NEXT:    [[TMP11:%.*]] = extractelement <16 x i8> [[TMP7]], i32 0
-; DEFAULT-NEXT:    store i8 [[TMP11]], ptr [[TMP10]], align 1
-; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE]]
-; DEFAULT:       [[PRED_STORE_CONTINUE]]:
-; DEFAULT-NEXT:    [[TMP12:%.*]] = extractelement <16 x i1> [[TMP0]], i32 1
-; DEFAULT-NEXT:    br i1 [[TMP12]], label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]]
-; DEFAULT:       [[PRED_STORE_IF7]]:
-; DEFAULT-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 1
-; DEFAULT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP13]]
-; DEFAULT-NEXT:    [[TMP15:%.*]] = extractelement <16 x i8> [[TMP7]], i32 1
-; DEFAULT-NEXT:    store i8 [[TMP15]], ptr [[TMP14]], align 1
-; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE8]]
-; DEFAULT:       [[PRED_STORE_CONTINUE8]]:
-; DEFAULT-NEXT:    [[TMP16:%.*]] = extractelement <16 x i1> [[TMP0]], i32 2
-; DEFAULT-NEXT:    br i1 [[TMP16]], label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]]
-; DEFAULT:       [[PRED_STORE_IF9]]:
-; DEFAULT-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX]], 2
-; DEFAULT-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP17]]
-; DEFAULT-NEXT:    [[TMP19:%.*]] = extractelement <16 x i8> [[TMP7]], i32 2
-; DEFAULT-NEXT:    store i8 [[TMP19]], ptr [[TMP18]], align 1
-; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE10]]
-; DEFAULT:       [[PRED_STORE_CONTINUE10]]:
-; DEFAULT-NEXT:    [[TMP20:%.*]] = extractelement <16 x i1> [[TMP0]], i32 3
-; DEFAULT-NEXT:    br i1 [[TMP20]], label %[[PRED_STORE_IF11:.*]], label %[[PRED_STORE_CONTINUE12:.*]]
-; DEFAULT:       [[PRED_STORE_IF11]]:
-; DEFAULT-NEXT:    [[TMP21:%.*]] = add i64 [[INDEX]], 3
-; DEFAULT-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP21]]
-; DEFAULT-NEXT:    [[TMP23:%.*]] = extractelement <16 x i8> [[TMP7]], i32 3
-; DEFAULT-NEXT:    store i8 [[TMP23]], ptr [[TMP22]], align 1
-; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE12]]
-; DEFAULT:       [[PRED_STORE_CONTINUE12]]:
-; DEFAULT-NEXT:    [[TMP24:%.*]] = extractelement <16 x i1> [[TMP0]], i32 4
-; DEFAULT-NEXT:    br i1 [[TMP24]], label %[[PRED_STORE_IF13:.*]], label %[[PRED_STORE_CONTINUE14:.*]]
-; DEFAULT:       [[PRED_STORE_IF13]]:
-; DEFAULT-NEXT:    [[TMP25:%.*]] = add i64 [[INDEX]], 4
-; DEFAULT-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP25]]
-; DEFAULT-NEXT:    [[TMP27:%.*]] = extractelement <16 x i8> [[TMP7]], i32 4
-; DEFAULT-NEXT:    store i8 [[TMP27]], ptr [[TMP26]], align 1
-; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE14]]
-; DEFAULT:       [[PRED_STORE_CONTINUE14]]:
-; DEFAULT-NEXT:    [[TMP28:%.*]] = extractelement <16 x i1> [[TMP0]], i32 5
-; DEFAULT-NEXT:    br i1 [[TMP28]], label %[[PRED_STORE_IF15:.*]], label %[[PRED_STORE_CONTINUE16:.*]]
-; DEFAULT:       [[PRED_STORE_IF15]]:
-; DEFAULT-NEXT:    [[TMP29:%.*]] = add i64 [[INDEX]], 5
-; DEFAULT-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP29]]
-; DEFAULT-NEXT:    [[TMP31:%.*]] = extractelement <16 x i8> [[TMP7]], i32 5
-; DEFAULT-NEXT:    store i8 [[TMP31]], ptr [[TMP30]], align 1
-; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE16]]
-; DEFAULT:       [[PRED_STORE_CONTINUE16]]:
-; DEFAULT-NEXT:    [[TMP32:%.*]] = extractelement <16 x i1> [[TMP0]], i32 6
-; DEFAULT-NEXT:    br i1 [[TMP32]], label %[[PRED_STORE_IF17:.*]], label %[[PRED_STORE_CONTINUE18:.*]]
-; DEFAULT:       [[PRED_STORE_IF17]]:
-; DEFAULT-NEXT:    [[TMP33:%.*]] = add i64 [[INDEX]], 6
-; DEFAULT-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP33]]
-; DEFAULT-NEXT:    [[TMP35:%.*]] = extractelement <16 x i8> [[TMP7]], i32 6
-; DEFAULT-NEXT:    store i8 [[TMP35]], ptr [[TMP34]], align 1
-; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE18]]
-; DEFAULT:       [[PRED_STORE_CONTINUE18]]:
-; DEFAULT-NEXT:    [[TMP36:%.*]] = extractelement <16 x i1> [[TMP0]], i32 7
-; DEFAULT-NEXT:    br i1 [[TMP36]], label %[[PRED_STORE_IF19:.*]], label %[[PRED_STORE_CONTINUE20:.*]]
-; DEFAULT:       [[PRED_STORE_IF19]]:
-; DEFAULT-NEXT:    [[TMP37:%.*]] = add i64 [[INDEX]], 7
-; DEFAULT-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP37]]
-; DEFAULT-NEXT:    [[TMP39:%.*]] = extractelement <16 x i8> [[TMP7]], i32 7
-; DEFAULT-NEXT:    store i8 [[TMP39]], ptr [[TMP38]], align 1
-; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE20]]
-; DEFAULT:       [[PRED_STORE_CONTINUE20]]:
-; DEFAULT-NEXT:    [[TMP40:%.*]] = extractelement <16 x i1> [[TMP0]], i32 8
-; DEFAULT-NEXT:    br i1 [[TMP40]], label %[[PRED_STORE_IF21:.*]], label %[[PRED_STORE_CONTINUE22:.*]]
-; DEFAULT:       [[PRED_STORE_IF21]]:
-; DEFAULT-NEXT:    [[TMP41:%.*]] = add i64 [[INDEX]], 8
-; DEFAULT-NEXT:    [[TMP42:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP41]]
-; DEFAULT-NEXT:    [[TMP43:%.*]] = extractelement <16 x i8> [[TMP7]], i32 8
-; DEFAULT-NEXT:    store i8 [[TMP43]], ptr [[TMP42]], align 1
-; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE22]]
-; DEFAULT:       [[PRED_STORE_CONTINUE22]]:
-; DEFAULT-NEXT:    [[TMP44:%.*]] = extractelement <16 x i1> [[TMP0]], i32 9
-; DEFAULT-NEXT:    br i1 [[TMP44]], label %[[PRED_STORE_IF23:.*]], label %[[PRED_STORE_CONTINUE24:.*]]
-; DEFAULT:       [[PRED_STORE_IF23]]:
-; DEFAULT-NEXT:    [[TMP45:%.*]] = add i64 [[INDEX]], 9
-; DEFAULT-NEXT:    [[TMP46:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP45]]
-; DEFAULT-NEXT:    [[TMP47:%.*]] = extractelement <16 x i8> [[TMP7]], i32 9
-; DEFAULT-NEXT:    store i8 [[TMP47]], ptr [[TMP46]], align 1
-; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE24]]
-; DEFAULT:       [[PRED_STORE_CONTINUE24]]:
-; DEFAULT-NEXT:    [[TMP48:%.*]] = extractelement <16 x i1> [[TMP0]], i32 10
-; DEFAULT-NEXT:    br i1 [[TMP48]], label %[[PRED_STORE_IF25:.*]], label %[[PRED_STORE_CONTINUE26:.*]]
-; DEFAULT:       [[PRED_STORE_IF25]]:
-; DEFAULT-NEXT:    [[TMP49:%.*]] = add i64 [[INDEX]], 10
-; DEFAULT-NEXT:    [[TMP50:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP49]]
-; DEFAULT-NEXT:    [[TMP51:%.*]] = extractelement <16 x i8> [[TMP7]], i32 10
-; DEFAULT-NEXT:    store i8 [[TMP51]], ptr [[TMP50]], align 1
-; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE26]]
-; DEFAULT:       [[PRED_STORE_CONTINUE26]]:
-; DEFAULT-NEXT:    [[TMP52:%.*]] = extractelement <16 x i1> [[TMP0]], i32 11
-; DEFAULT-NEXT:    br i1 [[TMP52]], label %[[PRED_STORE_IF27:.*]], label %[[PRED_STORE_CONTINUE28:.*]]
-; DEFAULT:       [[PRED_STORE_IF27]]:
-; DEFAULT-NEXT:    [[TMP53:%.*]] = add i64 [[INDEX]], 11
-; DEFAULT-NEXT:    [[TMP54:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP53]]
-; DEFAULT-NEXT:    [[TMP55:%.*]] = extractelement <16 x i8> [[TMP7]], i32 11
-; DEFAULT-NEXT:    store i8 [[TMP55]], ptr [[TMP54]], align 1
-; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE28]]
-; DEFAULT:       [[PRED_STORE_CONTINUE28]]:
-; DEFAULT-NEXT:    [[TMP56:%.*]] = extractelement <16 x i1> [[TMP0]], i32 12
-; DEFAULT-NEXT:    br i1 [[TMP56]], label %[[PRED_STORE_IF29:.*]], label %[[PRED_STORE_CONTINUE30:.*]]
-; DEFAULT:       [[PRED_STORE_IF29]]:
-; DEFAULT-NEXT:    [[TMP57:%.*]] = add i64 [[INDEX]], 12
-; DEFAULT-NEXT:    [[TMP58:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP57]]
-; DEFAULT-NEXT:    [[TMP59:%.*]] = extractelement <16 x i8> [[TMP7]], i32 12
-; DEFAULT-NEXT:    store i8 [[TMP59]], ptr [[TMP58]], align 1
-; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE30]]
-; DEFAULT:       [[PRED_STORE_CONTINUE30]]:
-; DEFAULT-NEXT:    [[TMP60:%.*]] = extractelement <16 x i1> [[TMP0]], i32 13
-; DEFAULT-NEXT:    br i1 [[TMP60]], label %[[PRED_STORE_IF31:.*]], label %[[PRED_STORE_CONTINUE32:.*]]
-; DEFAULT:       [[PRED_STORE_IF31]]:
-; DEFAULT-NEXT:    [[TMP61:%.*]] = add i64 [[INDEX]], 13
-; DEFAULT-NEXT:    [[TMP62:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP61]]
-; DEFAULT-NEXT:    [[TMP63:%.*]] = extractelement <16 x i8> [[TMP7]], i32 13
-; DEFAULT-NEXT:    store i8 [[TMP63]], ptr [[TMP62]], align 1
-; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE32]]
-; DEFAULT:       [[PRED_STORE_CONTINUE32]]:
-; DEFAULT-NEXT:    [[TMP64:%.*]] = extractelement <16 x i1> [[TMP0]], i32 14
-; DEFAULT-NEXT:    br i1 [[TMP64]], label %[[PRED_STORE_IF33:.*]], label %[[PRED_STORE_CONTINUE34:.*]]
-; DEFAULT:       [[PRED_STORE_IF33]]:
-; DEFAULT-NEXT:    [[TMP65:%.*]] = add i64 [[INDEX]], 14
-; DEFAULT-NEXT:    [[TMP66:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP65]]
-; DEFAULT-NEXT:    [[TMP67:%.*]] = extractelement <16 x i8> [[TMP7]], i32 14
-; DEFAULT-NEXT:    store i8 [[TMP67]], ptr [[TMP66]], align 1
-; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE34]]
-; DEFAULT:       [[PRED_STORE_CONTINUE34]]:
-; DEFAULT-NEXT:    [[TMP68:%.*]] = extractelement <16 x i1> [[TMP0]], i32 15
-; DEFAULT-NEXT:    br i1 [[TMP68]], label %[[PRED_STORE_IF35:.*]], label %[[PRED_STORE_CONTINUE36]]
-; DEFAULT:       [[PRED_STORE_IF35]]:
-; DEFAULT-NEXT:    [[TMP69:%.*]] = add i64 [[INDEX]], 15
-; DEFAULT-NEXT:    [[TMP70:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP69]]
-; DEFAULT-NEXT:    [[TMP71:%.*]] = extractelement <16 x i8> [[TMP7]], i32 15
-; DEFAULT-NEXT:    store i8 [[TMP71]], ptr [[TMP70]], align 1
-; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE36]]
-; DEFAULT:       [[PRED_STORE_CONTINUE36]]:
-; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; DEFAULT-NEXT:    [[VEC_IND_NEXT]] = add <16 x i8> [[VEC_IND]], splat (i8 16)
-; DEFAULT-NEXT:    [[VEC_IND_NEXT2]] = add <16 x i8> [[VEC_IND1]], splat (i8 16)
-; DEFAULT-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
-; DEFAULT:       [[MIDDLE_BLOCK]]:
-; DEFAULT-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
-; DEFAULT:       [[SCALAR_PH]]:
-; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; DEFAULT-NEXT:    br label %[[FOR_BODY:.*]]
 ; DEFAULT:       [[FOR_BODY]]:
-; DEFAULT-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; DEFAULT-NEXT:    [[TMP72:%.*]] = trunc nuw nsw i64 [[INDVARS_IV]] to i8
-; DEFAULT-NEXT:    [[MUL:%.*]] = mul i8 [[A]], [[TMP72]]
-; DEFAULT-NEXT:    [[SHR:%.*]] = lshr i8 [[TMP72]], 1
+; DEFAULT-NEXT:    [[TMP69:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; DEFAULT-NEXT:    [[TMP0:%.*]] = trunc nuw nsw i64 [[TMP69]] to i8
+; DEFAULT-NEXT:    [[MUL:%.*]] = mul i8 [[A]], [[TMP0]]
+; DEFAULT-NEXT:    [[SHR:%.*]] = lshr i8 [[TMP0]], 1
 ; DEFAULT-NEXT:    [[MUL5:%.*]] = mul i8 [[SHR]], [[B]]
 ; DEFAULT-NEXT:    [[ADD:%.*]] = add i8 [[MUL5]], [[MUL]]
-; DEFAULT-NEXT:    [[SHR7:%.*]] = lshr i8 [[TMP72]], 2
+; DEFAULT-NEXT:    [[SHR7:%.*]] = lshr i8 [[TMP0]], 2
 ; DEFAULT-NEXT:    [[MUL9:%.*]] = mul i8 [[SHR7]], [[C]]
-; DEFAULT-NEXT:    [[ADD10:%.*]] = add i8 [[ADD]], [[MUL9]]
-; DEFAULT-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[INDVARS_IV]]
-; DEFAULT-NEXT:    store i8 [[ADD10]], ptr [[ARRAYIDX]], align 1
-; DEFAULT-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; DEFAULT-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 15
-; DEFAULT-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; DEFAULT-NEXT:    [[TMP71:%.*]] = add i8 [[ADD]], [[MUL9]]
+; DEFAULT-NEXT:    [[TMP70:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP69]]
+; DEFAULT-NEXT:    store i8 [[TMP71]], ptr [[TMP70]], align 1
+; DEFAULT-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[TMP69]], 1
+; DEFAULT-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 15
+; DEFAULT-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY]]
 ; DEFAULT:       [[FOR_COND_CLEANUP]]:
 ; DEFAULT-NEXT:    ret void
 ;
@@ -492,142 +276,79 @@ for.cond.cleanup:
 ; we don't account for the addressing mode difference.
 define void @dont_vectorize_with_minsize() {
 ; DEFAULT-LABEL: define void @dont_vectorize_with_minsize() {
-; DEFAULT-NEXT:  [[ENTRY:.*]]:
-; DEFAULT-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; DEFAULT-NEXT:  [[ENTRY:.*:]]
+; DEFAULT-NEXT:    br label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
 ; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; DEFAULT:       [[VECTOR_BODY]]:
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[TMP0]]
-; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
+; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[TMP0]]
-; DEFAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP4]], i32 0
-; DEFAULT-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP5]], align 4
+; DEFAULT-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4
 ; DEFAULT-NEXT:    [[TMP6:%.*]] = mul nsw <4 x i32> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; DEFAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw [1000 x i16], ptr @A, i64 0, i64 [[TMP0]]
-; DEFAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP9]], i32 0
-; DEFAULT-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i16>, ptr [[TMP10]], align 2
+; DEFAULT-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i16>, ptr [[TMP9]], align 2
 ; DEFAULT-NEXT:    [[TMP8:%.*]] = trunc <4 x i32> [[TMP6]] to <4 x i16>
 ; DEFAULT-NEXT:    [[TMP11:%.*]] = add <4 x i16> [[TMP8]], [[WIDE_LOAD2]]
-; DEFAULT-NEXT:    store <4 x i16> [[TMP11]], ptr [[TMP10]], align 2
+; DEFAULT-NEXT:    store <4 x i16> [[TMP11]], ptr [[TMP9]], align 2
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 4
 ; DEFAULT-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
-; DEFAULT-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
-; DEFAULT-NEXT:    br i1 true, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
-; DEFAULT:       [[SCALAR_PH]]:
-; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 64, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; DEFAULT-NEXT:    br label %[[FOR_BODY:.*]]
-; DEFAULT:       [[FOR_BODY]]:
-; DEFAULT-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; DEFAULT-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[INDVARS_IV]]
-; DEFAULT-NEXT:    [[BVAL:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; DEFAULT-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[INDVARS_IV]]
-; DEFAULT-NEXT:    [[CVAL:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
-; DEFAULT-NEXT:    [[MUL:%.*]] = mul nsw i32 [[BVAL]], [[CVAL]]
-; DEFAULT-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [1000 x i16], ptr @A, i64 0, i64 [[INDVARS_IV]]
-; DEFAULT-NEXT:    [[AVAL:%.*]] = load i16, ptr [[ARRAYIDX4]], align 2
-; DEFAULT-NEXT:    [[TRUNC:%.*]] = trunc i32 [[MUL]] to i16
-; DEFAULT-NEXT:    [[ADD:%.*]] = add i16 [[TRUNC]], [[AVAL]]
-; DEFAULT-NEXT:    store i16 [[ADD]], ptr [[ARRAYIDX4]], align 2
-; DEFAULT-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; DEFAULT-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 64
-; DEFAULT-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; DEFAULT-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; DEFAULT:       [[FOR_COND_CLEANUP]]:
 ; DEFAULT-NEXT:    ret void
 ;
 ; OPTSIZE-LABEL: define void @dont_vectorize_with_minsize(
 ; OPTSIZE-SAME: ) #[[ATTR0]] {
-; OPTSIZE-NEXT:  [[ENTRY:.*]]:
-; OPTSIZE-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; OPTSIZE-NEXT:  [[ENTRY:.*:]]
+; OPTSIZE-NEXT:    br label %[[VECTOR_PH:.*]]
 ; OPTSIZE:       [[VECTOR_PH]]:
 ; OPTSIZE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; OPTSIZE:       [[VECTOR_BODY]]:
 ; OPTSIZE-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; OPTSIZE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[TMP0]]
-; OPTSIZE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 0
-; OPTSIZE-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
+; OPTSIZE-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; OPTSIZE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[TMP0]]
-; OPTSIZE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP3]], i32 0
-; OPTSIZE-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4
+; OPTSIZE-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
 ; OPTSIZE-NEXT:    [[TMP5:%.*]] = mul nsw <4 x i32> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; OPTSIZE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [1000 x i16], ptr @A, i64 0, i64 [[TMP0]]
-; OPTSIZE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP6]], i32 0
-; OPTSIZE-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i16>, ptr [[TMP7]], align 2
+; OPTSIZE-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i16>, ptr [[TMP6]], align 2
 ; OPTSIZE-NEXT:    [[TMP8:%.*]] = trunc <4 x i32> [[TMP5]] to <4 x i16>
 ; OPTSIZE-NEXT:    [[TMP9:%.*]] = add <4 x i16> [[TMP8]], [[WIDE_LOAD2]]
-; OPTSIZE-NEXT:    store <4 x i16> [[TMP9]], ptr [[TMP7]], align 2
+; OPTSIZE-NEXT:    store <4 x i16> [[TMP9]], ptr [[TMP6]], align 2
 ; OPTSIZE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 4
 ; OPTSIZE-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
-; OPTSIZE-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; OPTSIZE-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; OPTSIZE:       [[MIDDLE_BLOCK]]:
-; OPTSIZE-NEXT:    br i1 true, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
-; OPTSIZE:       [[SCALAR_PH]]:
-; OPTSIZE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 64, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; OPTSIZE-NEXT:    br label %[[FOR_BODY:.*]]
-; OPTSIZE:       [[FOR_BODY]]:
-; OPTSIZE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; OPTSIZE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[INDVARS_IV]]
-; OPTSIZE-NEXT:    [[BVAL:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; OPTSIZE-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[INDVARS_IV]]
-; OPTSIZE-NEXT:    [[CVAL:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
-; OPTSIZE-NEXT:    [[MUL:%.*]] = mul nsw i32 [[BVAL]], [[CVAL]]
-; OPTSIZE-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [1000 x i16], ptr @A, i64 0, i64 [[INDVARS_IV]]
-; OPTSIZE-NEXT:    [[AVAL:%.*]] = load i16, ptr [[ARRAYIDX4]], align 2
-; OPTSIZE-NEXT:    [[TRUNC:%.*]] = trunc i32 [[MUL]] to i16
-; OPTSIZE-NEXT:    [[ADD:%.*]] = add i16 [[TRUNC]], [[AVAL]]
-; OPTSIZE-NEXT:    store i16 [[ADD]], ptr [[ARRAYIDX4]], align 2
-; OPTSIZE-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; OPTSIZE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 64
-; OPTSIZE-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; OPTSIZE-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; OPTSIZE:       [[FOR_COND_CLEANUP]]:
 ; OPTSIZE-NEXT:    ret void
 ;
 ; MINSIZE-LABEL: define void @dont_vectorize_with_minsize(
 ; MINSIZE-SAME: ) #[[ATTR0]] {
-; MINSIZE-NEXT:  [[ENTRY:.*]]:
-; MINSIZE-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; MINSIZE-NEXT:  [[ENTRY:.*:]]
+; MINSIZE-NEXT:    br label %[[VECTOR_PH:.*]]
 ; MINSIZE:       [[VECTOR_PH]]:
 ; MINSIZE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; MINSIZE:       [[VECTOR_BODY]]:
 ; MINSIZE-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; MINSIZE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[TMP0]]
-; MINSIZE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 0
-; MINSIZE-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP2]], align 4
+; MINSIZE-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP1]], align 4
 ; MINSIZE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[TMP0]]
-; MINSIZE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP3]], i32 0
-; MINSIZE-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i32>, ptr [[TMP4]], align 4
+; MINSIZE-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i32>, ptr [[TMP3]], align 4
 ; MINSIZE-NEXT:    [[TMP5:%.*]] = mul nsw <2 x i32> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; MINSIZE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [1000 x i16], ptr @A, i64 0, i64 [[TMP0]]
-; MINSIZE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP6]], i32 0
-; MINSIZE-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i16>, ptr [[TMP7]], align 2
+; MINSIZE-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i16>, ptr [[TMP6]], align 2
 ; MINSIZE-NEXT:    [[TMP8:%.*]] = trunc <2 x i32> [[TMP5]] to <2 x i16>
 ; MINSIZE-NEXT:    [[TMP9:%.*]] = add <2 x i16> [[TMP8]], [[WIDE_LOAD2]]
-; MINSIZE-NEXT:    store <2 x i16> [[TMP9]], ptr [[TMP7]], align 2
+; MINSIZE-NEXT:    store <2 x i16> [[TMP9]], ptr [[TMP6]], align 2
 ; MINSIZE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 2
 ; MINSIZE-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
-; MINSIZE-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; MINSIZE-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; MINSIZE:       [[MIDDLE_BLOCK]]:
-; MINSIZE-NEXT:    br i1 true, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
-; MINSIZE:       [[SCALAR_PH]]:
-; MINSIZE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 64, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; MINSIZE-NEXT:    br label %[[FOR_BODY:.*]]
-; MINSIZE:       [[FOR_BODY]]:
-; MINSIZE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; MINSIZE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[INDVARS_IV]]
-; MINSIZE-NEXT:    [[BVAL:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; MINSIZE-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[INDVARS_IV]]
-; MINSIZE-NEXT:    [[CVAL:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
-; MINSIZE-NEXT:    [[MUL:%.*]] = mul nsw i32 [[BVAL]], [[CVAL]]
-; MINSIZE-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [1000 x i16], ptr @A, i64 0, i64 [[INDVARS_IV]]
-; MINSIZE-NEXT:    [[AVAL:%.*]] = load i16, ptr [[ARRAYIDX4]], align 2
-; MINSIZE-NEXT:    [[TRUNC:%.*]] = trunc i32 [[MUL]] to i16
-; MINSIZE-NEXT:    [[ADD:%.*]] = add i16 [[TRUNC]], [[AVAL]]
-; MINSIZE-NEXT:    store i16 [[ADD]], ptr [[ARRAYIDX4]], align 2
-; MINSIZE-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; MINSIZE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 64
-; MINSIZE-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; MINSIZE-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; MINSIZE:       [[FOR_COND_CLEANUP]]:
 ; MINSIZE-NEXT:    ret void
 ;
@@ -661,142 +382,79 @@ for.cond.cleanup:
 ; FIXME: We currently use width 2 as the load/store cost is incorrect.
 define void @vectorization_forced() {
 ; DEFAULT-LABEL: define void @vectorization_forced() {
-; DEFAULT-NEXT:  [[ENTRY:.*]]:
-; DEFAULT-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; DEFAULT-NEXT:  [[ENTRY:.*:]]
+; DEFAULT-NEXT:    br label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
 ; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; DEFAULT:       [[VECTOR_BODY]]:
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[TMP0]]
-; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
+; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[TMP0]]
-; DEFAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP4]], i32 0
-; DEFAULT-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP5]], align 4
+; DEFAULT-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4
 ; DEFAULT-NEXT:    [[TMP6:%.*]] = mul nsw <4 x i32> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; DEFAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw [1000 x i16], ptr @A, i64 0, i64 [[TMP0]]
-; DEFAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP9]], i32 0
-; DEFAULT-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i16>, ptr [[TMP10]], align 2
+; DEFAULT-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i16>, ptr [[TMP9]], align 2
 ; DEFAULT-NEXT:    [[TMP8:%.*]] = trunc <4 x i32> [[TMP6]] to <4 x i16>
 ; DEFAULT-NEXT:    [[TMP11:%.*]] = add <4 x i16> [[TMP8]], [[WIDE_LOAD2]]
-; DEFAULT-NEXT:    store <4 x i16> [[TMP11]], ptr [[TMP10]], align 2
+; DEFAULT-NEXT:    store <4 x i16> [[TMP11]], ptr [[TMP9]], align 2
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 4
 ; DEFAULT-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
-; DEFAULT-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
-; DEFAULT-NEXT:    br i1 true, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
-; DEFAULT:       [[SCALAR_PH]]:
-; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 64, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; DEFAULT-NEXT:    br label %[[FOR_BODY:.*]]
-; DEFAULT:       [[FOR_BODY]]:
-; DEFAULT-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; DEFAULT-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[INDVARS_IV]]
-; DEFAULT-NEXT:    [[BVAL:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; DEFAULT-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[INDVARS_IV]]
-; DEFAULT-NEXT:    [[CVAL:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
-; DEFAULT-NEXT:    [[MUL:%.*]] = mul nsw i32 [[BVAL]], [[CVAL]]
-; DEFAULT-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [1000 x i16], ptr @A, i64 0, i64 [[INDVARS_IV]]
-; DEFAULT-NEXT:    [[AVAL:%.*]] = load i16, ptr [[ARRAYIDX4]], align 2
-; DEFAULT-NEXT:    [[TRUNC:%.*]] = trunc i32 [[MUL]] to i16
-; DEFAULT-NEXT:    [[ADD:%.*]] = add i16 [[TRUNC]], [[AVAL]]
-; DEFAULT-NEXT:    store i16 [[ADD]], ptr [[ARRAYIDX4]], align 2
-; DEFAULT-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; DEFAULT-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 64
-; DEFAULT-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; DEFAULT-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; DEFAULT:       [[FOR_COND_CLEANUP]]:
 ; DEFAULT-NEXT:    ret void
 ;
 ; OPTSIZE-LABEL: define void @vectorization_forced(
 ; OPTSIZE-SAME: ) #[[ATTR0]] {
-; OPTSIZE-NEXT:  [[ENTRY:.*]]:
-; OPTSIZE-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; OPTSIZE-NEXT:  [[ENTRY:.*:]]
+; OPTSIZE-NEXT:    br label %[[VECTOR_PH:.*]]
 ; OPTSIZE:       [[VECTOR_PH]]:
 ; OPTSIZE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; OPTSIZE:       [[VECTOR_BODY]]:
 ; OPTSIZE-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; OPTSIZE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[TMP0]]
-; OPTSIZE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 0
-; OPTSIZE-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
+; OPTSIZE-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; OPTSIZE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[TMP0]]
-; OPTSIZE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP3]], i32 0
-; OPTSIZE-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4
+; OPTSIZE-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
 ; OPTSIZE-NEXT:    [[TMP5:%.*]] = mul nsw <4 x i32> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; OPTSIZE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [1000 x i16], ptr @A, i64 0, i64 [[TMP0]]
-; OPTSIZE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP6]], i32 0
-; OPTSIZE-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i16>, ptr [[TMP7]], align 2
+; OPTSIZE-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i16>, ptr [[TMP6]], align 2
 ; OPTSIZE-NEXT:    [[TMP8:%.*]] = trunc <4 x i32> [[TMP5]] to <4 x i16>
 ; OPTSIZE-NEXT:    [[TMP9:%.*]] = add <4 x i16> [[TMP8]], [[WIDE_LOAD2]]
-; OPTSIZE-NEXT:    store <4 x i16> [[TMP9]], ptr [[TMP7]], align 2
+; OPTSIZE-NEXT:    store <4 x i16> [[TMP9]], ptr [[TMP6]], align 2
 ; OPTSIZE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 4
 ; OPTSIZE-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
-; OPTSIZE-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; OPTSIZE-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; OPTSIZE:       [[MIDDLE_BLOCK]]:
-; OPTSIZE-NEXT:    br i1 true, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
-; OPTSIZE:       [[SCALAR_PH]]:
-; OPTSIZE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 64, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; OPTSIZE-NEXT:    br label %[[FOR_BODY:.*]]
-; OPTSIZE:       [[FOR_BODY]]:
-; OPTSIZE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; OPTSIZE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[INDVARS_IV]]
-; OPTSIZE-NEXT:    [[BVAL:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; OPTSIZE-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[INDVARS_IV]]
-; OPTSIZE-NEXT:    [[CVAL:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
-; OPTSIZE-NEXT:    [[MUL:%.*]] = mul nsw i32 [[BVAL]], [[CVAL]]
-; OPTSIZE-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [1000 x i16], ptr @A, i64 0, i64 [[INDVARS_IV]]
-; OPTSIZE-NEXT:    [[AVAL:%.*]] = load i16, ptr [[ARRAYIDX4]], align 2
-; OPTSIZE-NEXT:    [[TRUNC:%.*]] = trunc i32 [[MUL]] to i16
-; OPTSIZE-NEXT:    [[ADD:%.*]] = add i16 [[TRUNC]], [[AVAL]]
-; OPTSIZE-NEXT:    store i16 [[ADD]], ptr [[ARRAYIDX4]], align 2
-; OPTSIZE-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; OPTSIZE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 64
-; OPTSIZE-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; OPTSIZE-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; OPTSIZE:       [[FOR_COND_CLEANUP]]:
 ; OPTSIZE-NEXT:    ret void
 ;
 ; MINSIZE-LABEL: define void @vectorization_forced(
 ; MINSIZE-SAME: ) #[[ATTR0]] {
-; MINSIZE-NEXT:  [[ENTRY:.*]]:
-; MINSIZE-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; MINSIZE-NEXT:  [[ENTRY:.*:]]
+; MINSIZE-NEXT:    br label %[[VECTOR_PH:.*]]
 ; MINSIZE:       [[VECTOR_PH]]:
 ; MINSIZE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; MINSIZE:       [[VECTOR_BODY]]:
 ; MINSIZE-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; MINSIZE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[TMP0]]
-; MINSIZE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 0
-; MINSIZE-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP2]], align 4
+; MINSIZE-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP1]], align 4
 ; MINSIZE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[TMP0]]
-; MINSIZE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP3]], i32 0
-; MINSIZE-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i32>, ptr [[TMP4]], align 4
+; MINSIZE-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i32>, ptr [[TMP3]], align 4
 ; MINSIZE-NEXT:    [[TMP5:%.*]] = mul nsw <2 x i32> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; MINSIZE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [1000 x i16], ptr @A, i64 0, i64 [[TMP0]]
-; MINSIZE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP6]], i32 0
-; MINSIZE-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i16>, ptr [[TMP7]], align 2
+; MINSIZE-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i16>, ptr [[TMP6]], align 2
 ; MINSIZE-NEXT:    [[TMP8:%.*]] = trunc <2 x i32> [[TMP5]] to <2 x i16>
 ; MINSIZE-NEXT:    [[TMP9:%.*]] = add <2 x i16> [[TMP8]], [[WIDE_LOAD2]]
-; MINSIZE-NEXT:    store <2 x i16> [[TMP9]], ptr [[TMP7]], align 2
+; MINSIZE-NEXT:    store <2 x i16> [[TMP9]], ptr [[TMP6]], align 2
 ; MINSIZE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 2
 ; MINSIZE-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
-; MINSIZE-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; MINSIZE-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; MINSIZE:       [[MIDDLE_BLOCK]]:
-; MINSIZE-NEXT:    br i1 true, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
-; MINSIZE:       [[SCALAR_PH]]:
-; MINSIZE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 64, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; MINSIZE-NEXT:    br label %[[FOR_BODY:.*]]
-; MINSIZE:       [[FOR_BODY]]:
-; MINSIZE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; MINSIZE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[INDVARS_IV]]
-; MINSIZE-NEXT:    [[BVAL:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; MINSIZE-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[INDVARS_IV]]
-; MINSIZE-NEXT:    [[CVAL:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
-; MINSIZE-NEXT:    [[MUL:%.*]] = mul nsw i32 [[BVAL]], [[CVAL]]
-; MINSIZE-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [1000 x i16], ptr @A, i64 0, i64 [[INDVARS_IV]]
-; MINSIZE-NEXT:    [[AVAL:%.*]] = load i16, ptr [[ARRAYIDX4]], align 2
-; MINSIZE-NEXT:    [[TRUNC:%.*]] = trunc i32 [[MUL]] to i16
-; MINSIZE-NEXT:    [[ADD:%.*]] = add i16 [[TRUNC]], [[AVAL]]
-; MINSIZE-NEXT:    store i16 [[ADD]], ptr [[ARRAYIDX4]], align 2
-; MINSIZE-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; MINSIZE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 64
-; MINSIZE-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; MINSIZE-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; MINSIZE:       [[FOR_COND_CLEANUP]]:
 ; MINSIZE-NEXT:    ret void
 ;

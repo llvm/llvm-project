@@ -1401,14 +1401,12 @@ void Intrinsic::emitBodyAsBuiltinCall() {
       if (LocalCK == ClassB || (T.isHalf() && !T.isScalarForMangling())) {
         CastToType.makeInteger(8, true);
         Arg = "__builtin_bit_cast(" + CastToType.str() + ", " + Arg + ")";
-      } else if (LocalCK == ClassI) {
-        if (CastToType.isInteger()) {
-          CastToType.makeSigned();
-          Arg = "__builtin_bit_cast(" + CastToType.str() + ", " + Arg + ")";
-        }
+      } else if (LocalCK == ClassI &&
+                 (CastToType.isInteger() || CastToType.isPoly())) {
+        CastToType.makeSigned();
+        Arg = "__builtin_bit_cast(" + CastToType.str() + ", " + Arg + ")";
       }
     }
-
     S += Arg + ", ";
   }
 
@@ -2235,13 +2233,10 @@ NeonEmitter::areRangeChecksCompatible(const ArrayRef<ImmCheck> ChecksA,
   // the same. The element types may differ as they will be resolved
   // per-intrinsic as overloaded types by SemaArm.cpp, though the vector sizes
   // are not and so must be the same.
-  bool compat =
-      std::equal(ChecksA.begin(), ChecksA.end(), ChecksB.begin(), ChecksB.end(),
-                 [](const auto &A, const auto &B) {
-                   return A.getImmArgIdx() == B.getImmArgIdx() &&
-                          A.getKind() == B.getKind() &&
-                          A.getVecSizeInBits() == B.getVecSizeInBits();
-                 });
+  bool compat = llvm::equal(ChecksA, ChecksB, [](const auto &A, const auto &B) {
+    return A.getImmArgIdx() == B.getImmArgIdx() && A.getKind() == B.getKind() &&
+           A.getVecSizeInBits() == B.getVecSizeInBits();
+  });
 
   return compat;
 }

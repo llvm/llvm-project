@@ -137,6 +137,22 @@ public:
   size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
                       Status &error) override;
 
+  /// Override of ReadMemoryRanges that uses MultiMemRead to optimize this
+  /// operation.
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
+  ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
+                   llvm::MutableArrayRef<uint8_t> buf) override;
+
+private:
+  llvm::Expected<StringExtractorGDBRemote>
+  SendMultiMemReadPacket(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges);
+
+  llvm::Expected<llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>>
+  ParseMultiMemReadPacket(llvm::StringRef response_str,
+                          llvm::MutableArrayRef<uint8_t> buffer,
+                          unsigned expected_num_ranges);
+
+public:
   Status
   WriteObjectFile(std::vector<ObjectFile::LoadableData> entries) override;
 
@@ -245,6 +261,8 @@ protected:
   friend class GDBRemoteRegisterContext;
 
   ProcessGDBRemote(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
+
+  virtual std::shared_ptr<ThreadGDBRemote> CreateThread(lldb::tid_t tid);
 
   bool SupportsMemoryTagging() override;
 

@@ -12,7 +12,7 @@
 
 ## Occasionally, we see the linker not generating $d symbols for long veneers
 ## causing BOLT to fail veneer elimination.
-# RUN: llvm-objcopy --remove-symbol-prefix=\$d %t.exe %t.no-marker.exe
+# RUN: llvm-objcopy --remove-symbol-prefix='$d' %t.exe %t.no-marker.exe
 # RUN: llvm-bolt %t.no-marker.exe -o %t.no-marker.bolt \
 # RUN:   2>&1 | FileCheck %s --check-prefix=CHECK-BOLT
 # RUN: llvm-objdump -d -j .text  %t.no-marker.bolt | \

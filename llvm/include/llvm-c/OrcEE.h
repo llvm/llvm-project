@@ -44,6 +44,14 @@ typedef void (*LLVMMemoryManagerNotifyTerminatingCallback)(void *CtxCtx);
  */
 
 /**
+ * Create a ObjectLinkingLayer instance using the standard JITLink
+ * InProcessMemoryManager for memory management.
+ */
+LLVM_C_ABI LLVMErrorRef
+LLVMOrcCreateObjectLinkingLayerWithInProcessMemoryManager(
+    LLVMOrcObjectLayerRef *Result, LLVMOrcExecutionSessionRef ES);
+
+/**
  * Create a RTDyldObjectLinkingLayer instance using the standard
  * SectionMemoryManager for memory management.
  */

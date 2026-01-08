@@ -1,29 +1,30 @@
 #include "TargetInfo.h"
 #include "ABIInfo.h"
+#include "CIRGenFunction.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
 
 bool clang::CIRGen::isEmptyRecordForLayout(const ASTContext &context,
                                            QualType t) {
-  const RecordType *rt = t->getAs<RecordType>();
-  if (!rt)
+  const auto *rd = t->getAsRecordDecl();
+  if (!rd)
     return false;
-
-  const RecordDecl *rd = rt->getDecl();
 
   // If this is a C++ record, check the bases first.
   if (const CXXRecordDecl *cxxrd = dyn_cast<CXXRecordDecl>(rd)) {
     if (cxxrd->isDynamicClass())
       return false;
 
-    for (const auto &I : cxxrd->bases())
-      if (!isEmptyRecordForLayout(context, I.getType()))
+    for (const auto &i : cxxrd->bases())
+      if (!isEmptyRecordForLayout(context, i.getType()))
         return false;
   }
 
-  for (const auto *I : rd->fields())
-    if (!isEmptyFieldForLayout(context, I))
+  for (const auto *i : rd->fields())
+    if (!isEmptyFieldForLayout(context, i))
       return false;
 
   return true;
@@ -69,4 +70,15 @@ bool TargetCIRGenInfo::isNoProtoCallVariadic(
   //   MIPS
   // For everything else, we just prefer false unless we opt out.
   return false;
+}
+
+mlir::Value TargetCIRGenInfo::performAddrSpaceCast(
+    CIRGenFunction &cgf, mlir::Value v, cir::TargetAddressSpaceAttr srcAddr,
+    mlir::Type destTy, bool isNonNull) const {
+  // Since target may map different address spaces in AST to the same address
+  // space, an address space conversion may end up as a bitcast.
+  if (cir::GlobalOp globalOp = v.getDefiningOp<cir::GlobalOp>())
+    cgf.cgm.errorNYI("Global op addrspace cast");
+  // Try to preserve the source's name to make IR more readable.
+  return cgf.getBuilder().createAddrSpaceCast(v, destTy);
 }

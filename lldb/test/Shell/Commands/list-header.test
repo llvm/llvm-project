@@ -3,11 +3,11 @@
 # XFAIL: target-windows
 
 ## Test that `list header.h:<line>` works correctly when header is available.
-## 
+##
 # RUN: split-file %s %t
 
-# RUN: %clang_host -g %t/main_with_inlined.cc %t/foo.cc -o %t/main_with_inlined.out
-# RUN: %clang_host -g %t/main_no_inlined.cc %t/foo.cc -o %t/main_no_inlined.out
+# RUN: %clangxx_host -g %t/main_with_inlined.cc %t/foo.cc -o %t/main_with_inlined.out
+# RUN: %clangxx_host -g %t/main_no_inlined.cc %t/foo.cc -o %t/main_no_inlined.out
 
 # RUN: %lldb %t/main_with_inlined.out -o "list foo.h:2" -o "exit" 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=CHECK-INLINED
@@ -19,7 +19,7 @@
 
 # CHECK-INLINED: 2      extern int* ptr;
 # CHECK-INLINED: 3   	void f(int x);
-# CHECK-INLINED: 4   	
+# CHECK-INLINED: 4
 # CHECK-INLINED: 5   	inline void g(int x) {
 # CHECK-INLINED: 6   	  *ptr = x; // should crash here
 # CHECK-INLINED: 7   	}

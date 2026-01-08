@@ -16,7 +16,9 @@
 #define LLVM_CODEGEN_ASMPRINTER_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/StaticDataProfileInfo.h"
@@ -86,6 +88,10 @@ namespace remarks {
 class RemarkStreamer;
 }
 
+namespace vfs {
+class FileSystem;
+}
+
 /// This class is intended to be used as a driving class for all asm writers.
 class LLVM_ABI AsmPrinter : public MachineFunctionPass {
 public:
@@ -103,6 +109,9 @@ public:
   /// contains the transient state for the current translation unit that we are
   /// generating (such as the current section etc).
   std::unique_ptr<MCStreamer> OutStreamer;
+
+  /// The VFS to resolve asm include directives.
+  IntrusiveRefCntPtr<vfs::FileSystem> VFS;
 
   /// The current machine function.
   MachineFunction *MF = nullptr;
@@ -135,12 +144,12 @@ public:
   /// default, this is equal to CurrentFnSym.
   MCSymbol *CurrentFnSymForSize = nullptr;
 
-  /// Vector of symbols marking the position of callsites in the current
+  /// Vector of symbols marking the end of the callsites in the current
   /// function, keyed by their containing basic block.
   /// The callsite symbols of each block are stored in the order they appear
   /// in that block.
   DenseMap<const MachineBasicBlock *, SmallVector<MCSymbol *, 1>>
-      CurrentFnCallsiteSymbols;
+      CurrentFnCallsiteEndSymbols;
 
   /// Provides the profile information for constants.
   const StaticDataProfileInfo *SDPI = nullptr;
@@ -189,6 +198,23 @@ private:
 
   /// Emit comments in assembly output if this is true.
   bool VerboseAsm;
+
+  /// Store symbols and type identifiers used to create callgraph section
+  /// entries related to a function.
+  struct FunctionCallGraphInfo {
+    /// Numeric type identifier used in callgraph section for indirect calls
+    /// and targets.
+    using CGTypeId = uint64_t;
+
+    /// Unique target type IDs.
+    SmallSetVector<CGTypeId, 4> IndirectCalleeTypeIDs;
+    /// Unique direct callees.
+    SmallSetVector<MCSymbol *, 4> DirectCallees;
+  };
+
+  enum CallGraphSectionFormatVersion : uint8_t {
+    V_0 = 0,
+  };
 
   /// Output stream for the stack usage file (i.e., .su file).
   std::unique_ptr<raw_fd_ostream> StackUsageStream;
@@ -302,9 +328,9 @@ public:
   /// to emit them as well, return the whole set.
   ArrayRef<MCSymbol *> getAddrLabelSymbolToEmit(const BasicBlock *BB);
 
-  /// Creates a new symbol to be used for the beginning of a callsite at the
-  /// specified basic block.
-  MCSymbol *createCallsiteSymbol(const MachineBasicBlock &MBB);
+  /// Creates a new symbol to be used for the end of a callsite at the specified
+  /// basic block.
+  MCSymbol *createCallsiteEndSymbol(const MachineBasicBlock &MBB);
 
   /// If the specified function has had any references to address-taken blocks
   /// generated, but the block got deleted, return the symbol now so we can
@@ -354,6 +380,14 @@ public:
   /// Returns a section suffix (hot or unlikely) for the constant if profiles
   /// are available. Returns empty string otherwise.
   StringRef getConstantSectionSuffix(const Constant *C) const;
+
+  /// If MI is an indirect call, add expected type IDs to indirect type ids
+  /// list. If MI is a direct call add the callee symbol to direct callsites
+  /// list of FuncCGInfo.
+  void handleCallsiteForCallgraph(
+      FunctionCallGraphInfo &FuncCGInfo,
+      const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
+      const MachineInstr &MI);
 
   //===------------------------------------------------------------------===//
   // XRay instrumentation implementation.
@@ -441,6 +475,9 @@ public:
 
   void emitKCFITrapEntry(const MachineFunction &MF, const MCSymbol *Symbol);
   virtual void emitKCFITypeId(const MachineFunction &MF);
+
+  void emitCallGraphSection(const MachineFunction &MF,
+                            FunctionCallGraphInfo &FuncCGInfo);
 
   void emitPseudoProbe(const MachineInstr &MI);
 

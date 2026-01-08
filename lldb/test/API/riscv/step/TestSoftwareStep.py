@@ -26,19 +26,26 @@ class TestSoftwareStep(TestBase):
             substrs=["stopped", "stop reason = instruction step into"],
         )
 
-        pc = cur_thread.GetFrameAtIndex(0).GetPC()
+        # Get the instruction we stopped at
+        pc = cur_thread.GetFrameAtIndex(0).GetPCAddress()
+        inst = target.ReadInstructions(pc, 1).GetInstructionAtIndex(0)
 
-        return pc - entry_pc
+        inst_mnemonic = inst.GetMnemonic(target)
+        inst_operands = inst.GetOperands(target)
+        if not inst_operands:
+            return inst_mnemonic
 
-    @skipIf(archs=no_match("^rv.*"))
+        return f"{inst_mnemonic} {inst_operands}"
+
+    @skipIf(archs=no_match("^riscv.*"))
     def test_cas(self):
         """
         This test verifies LLDB instruction step handling of a proper lr/sc pair.
         """
-        difference = self.do_sequence_test("main", "cas")
-        self.assertEqual(difference, 0x1A)
+        instruction = self.do_sequence_test("main", "cas")
+        self.assertEqual(instruction, "nop")
 
-    @skipIf(archs=no_match("^rv.*"))
+    @skipIf(archs=no_match("^riscv.*"))
     def test_branch_cas(self):
         """
         LLDB cannot predict the actual state of registers within a critical section (i.e., inside an atomic
@@ -51,29 +58,29 @@ class TestSoftwareStep(TestBase):
         test is nearly identical to the previous one, except for the branch condition, which is inverted and
         will result in a taken jump.
         """
-        difference = self.do_sequence_test("branch", "branch_cas")
-        self.assertEqual(difference, 0x1A)
+        instruction = self.do_sequence_test("branch", "branch_cas")
+        self.assertEqual(instruction, "ret")
 
-    @skipIf(archs=no_match("^rv.*"))
+    @skipIf(archs=no_match("^riscv.*"))
     def test_incomplete_sequence_without_lr(self):
         """
         This test verifies the behavior of a standalone sc instruction without a preceding lr. Since the sc
         lacks the required lr pairing, LLDB should treat it as a non-atomic store rather than part of an
         atomic sequence.
         """
-        difference = self.do_sequence_test(
+        instruction = self.do_sequence_test(
             "incomplete_sequence_without_lr", "incomplete_cas"
         )
-        self.assertEqual(difference, 0x4)
+        self.assertEqual(instruction, "and a5, a2, a4")
 
-    @skipIf(archs=no_match("^rv.*"))
+    @skipIf(archs=no_match("^riscv.*"))
     def test_incomplete_sequence_without_sc(self):
         """
         This test checks the behavior of a standalone lr instruction without a subsequent sc. Since the lr
         lacks its required sc counterpart, LLDB should treat it as a non-atomic load rather than part of an
         atomic sequence.
         """
-        difference = self.do_sequence_test(
+        instruction = self.do_sequence_test(
             "incomplete_sequence_without_sc", "incomplete_cas"
         )
-        self.assertEqual(difference, 0x4)
+        self.assertEqual(instruction, "and a5, a2, a4")

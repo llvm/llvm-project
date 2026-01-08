@@ -75,23 +75,16 @@ public:
   InfoWriter(InfoWriter &) = delete;
   ~InfoWriter() = default;
 
-  template <typename T> llvm::Error write(llvm::Expected<T> &&Val) {
-    if (Val)
-      return getInfo(Size, Target, SizeRet, *Val);
-    return Val.takeError();
+  template <typename T> llvm::Error write(T Val) {
+    return getInfo(Size, Target, SizeRet, Val);
   }
 
-  template <typename T>
-  llvm::Error writeArray(llvm::Expected<T> &&Val, size_t Elems) {
-    if (Val)
-      return getInfoArray(Elems, Size, Target, SizeRet, *Val);
-    return Val.takeError();
+  template <typename T> llvm::Error writeArray(T Val, size_t Elems) {
+    return getInfoArray(Elems, Size, Target, SizeRet, Val);
   }
 
-  llvm::Error writeString(llvm::Expected<llvm::StringRef> &&Val) {
-    if (Val)
-      return getInfoString(Size, Target, SizeRet, *Val);
-    return Val.takeError();
+  llvm::Error writeString(llvm::StringRef Val) {
+    return getInfoString(Size, Target, SizeRet, Val);
   }
 
 private:

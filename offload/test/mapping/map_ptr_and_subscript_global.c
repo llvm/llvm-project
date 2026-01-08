@@ -1,5 +1,7 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
 
+// REQUIRES: libc
+
 #include <omp.h>
 #include <stdio.h>
 

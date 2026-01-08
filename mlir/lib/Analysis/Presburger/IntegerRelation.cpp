@@ -21,10 +21,12 @@
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -441,6 +443,14 @@ void IntegerRelation::removeInequality(unsigned pos) {
   inequalities.removeRow(pos);
 }
 
+void IntegerRelation::removeConstraint(unsigned pos) {
+  if (pos >= getNumInequalities()) {
+    removeEquality(pos - getNumInequalities());
+  } else {
+    removeInequality(pos);
+  }
+}
+
 void IntegerRelation::removeEqualityRange(unsigned start, unsigned end) {
   if (start >= end)
     return;
@@ -716,7 +726,7 @@ bool IntegerRelation::isEmpty() const {
     // that aren't the intended use case for IntegerRelation. This is
     // needed since FM has a worst case exponential complexity in theory.
     if (tmpCst.getNumConstraints() >= kExplosionFactor * getNumVars()) {
-      LLVM_DEBUG(llvm::dbgs() << "FM constraint explosion detected\n");
+      LDBG() << "FM constraint explosion detected";
       return false;
     }
 
@@ -1111,15 +1121,29 @@ unsigned IntegerRelation::gaussianEliminateVars(unsigned posStart,
   return posLimit - posStart;
 }
 
+static std::optional<unsigned>
+findEqualityWithNonZeroAfterRow(IntegerRelation &rel, unsigned fromRow,
+                                unsigned colIdx) {
+  assert(fromRow < rel.getNumEqualities() && colIdx < rel.getNumCols() &&
+         "position out of bounds");
+  for (unsigned rowIdx = fromRow, e = rel.getNumEqualities(); rowIdx < e;
+       ++rowIdx) {
+    if (rel.atEq(rowIdx, colIdx) != 0)
+      return rowIdx;
+  }
+  return std::nullopt;
+}
+
 bool IntegerRelation::gaussianEliminate() {
   gcdTightenInequalities();
   unsigned firstVar = 0, vars = getNumVars();
   unsigned nowDone, eqs;
   std::optional<unsigned> pivotRow;
   for (nowDone = 0, eqs = getNumEqualities(); nowDone < eqs; ++nowDone) {
-    // Finds the first non-empty column.
+    // Finds the first non-empty column that we haven't dealt with.
     for (; firstVar < vars; ++firstVar) {
-      if ((pivotRow = findConstraintWithNonZeroAt(firstVar, /*isEq=*/true)))
+      if ((pivotRow =
+               findEqualityWithNonZeroAfterRow(*this, nowDone, firstVar)))
         break;
     }
     // The matrix has been normalized to row echelon form.
@@ -1142,6 +1166,10 @@ bool IntegerRelation::gaussianEliminate() {
       inequalities.normalizeRow(i);
     }
     gcdTightenInequalities();
+
+    // The column is finished. Tell the next iteration to start at the next
+    // column.
+    firstVar++;
   }
 
   // No redundant rows.
@@ -1500,12 +1528,13 @@ void IntegerRelation::addBound(BoundType type, ArrayRef<DynamicAPInt> expr,
 /// respect to a positive constant 'divisor'. Two constraints are added to the
 /// system to capture equivalence with the floordiv.
 ///      q = expr floordiv c    <=>   c*q <= expr <= c*q + c - 1.
-void IntegerRelation::addLocalFloorDiv(ArrayRef<DynamicAPInt> dividend,
-                                       const DynamicAPInt &divisor) {
+/// Returns the column position of the new local variable.
+unsigned IntegerRelation::addLocalFloorDiv(ArrayRef<DynamicAPInt> dividend,
+                                           const DynamicAPInt &divisor) {
   assert(dividend.size() == getNumCols() && "incorrect dividend size");
   assert(divisor > 0 && "positive divisor expected");
 
-  appendVar(VarKind::Local);
+  unsigned newVar = appendVar(VarKind::Local);
 
   SmallVector<DynamicAPInt, 8> dividendCopy(dividend);
   dividendCopy.insert(dividendCopy.end() - 1, DynamicAPInt(0));
@@ -1513,6 +1542,28 @@ void IntegerRelation::addLocalFloorDiv(ArrayRef<DynamicAPInt> dividend,
       getDivLowerBound(dividendCopy, divisor, dividendCopy.size() - 2));
   addInequality(
       getDivUpperBound(dividendCopy, divisor, dividendCopy.size() - 2));
+  return newVar;
+}
+
+unsigned IntegerRelation::addLocalModulo(ArrayRef<DynamicAPInt> exprs,
+                                         const DynamicAPInt &modulus) {
+  assert(exprs.size() == getNumCols() && "incorrect exprs size");
+  assert(modulus > 0 && "positive modulus expected");
+
+  /// Add a local variable for q = expr floordiv modulus
+  addLocalFloorDiv(exprs, modulus);
+
+  /// Add a local var to represent the result
+  auto resultIndex = appendVar(VarKind::Local);
+
+  SmallVector<DynamicAPInt, 8> exprsCopy(exprs);
+  /// Insert the two new locals before the constant
+  /// Add locals that correspond to `q` and `result` to compute
+  /// 0 = (expr - modulus * q) - result
+  exprsCopy.insert(exprsCopy.end() - 1,
+                   {DynamicAPInt(-modulus), DynamicAPInt(-1)});
+  addEquality(exprsCopy);
+  return resultIndex;
 }
 
 int IntegerRelation::findEqualityToConstant(unsigned pos, bool symbolic) const {
@@ -1700,12 +1751,64 @@ std::optional<DynamicAPInt> IntegerRelation::getConstantBoundOnDimSize(
   return minDiff;
 }
 
+void IntegerRelation::pruneOrthogonalConstraints(unsigned pos) {
+  llvm::DenseSet<unsigned> relatedCols({pos}), relatedRows;
+
+  // Early exit if constraints is empty.
+  unsigned numConstraints = getNumConstraints();
+  if (numConstraints == 0)
+    return;
+
+  llvm::SmallVector<unsigned> rowStack, colStack({pos});
+  // The following code performs a graph traversal, starting from the target
+  // variable, to identify all variables(recorded in relatedCols) and
+  // constraints (recorded in relatedRows) belonging to the same connected
+  // component.
+  while (!rowStack.empty() || !colStack.empty()) {
+    if (!rowStack.empty()) {
+      unsigned currentRow = rowStack.pop_back_val();
+      // Push all variable that accociated to this constraints to relatedCols
+      // and colStack.
+      for (unsigned colIndex = 0; colIndex < getNumVars(); ++colIndex) {
+        if (atConstraint(currentRow, colIndex) != 0 &&
+            relatedCols.insert(colIndex).second) {
+          colStack.push_back(colIndex);
+        }
+      }
+    } else {
+      unsigned currentCol = colStack.pop_back_val();
+      // Push all constraints that are associated with this variable to related
+      // rows and the row stack.
+      for (unsigned rowIndex = 0; rowIndex < numConstraints; ++rowIndex) {
+        if (atConstraint(rowIndex, currentCol) != 0 &&
+            relatedRows.insert(rowIndex).second) {
+          rowStack.push_back(rowIndex);
+        }
+      }
+    }
+  }
+
+  // Prune all constraints not related to target variable.
+  for (int constraintId = numConstraints - 1; constraintId >= 0;
+       --constraintId) {
+    if (!relatedRows.contains(constraintId))
+      removeConstraint((unsigned)constraintId);
+  }
+}
+
 template <bool isLower>
 std::optional<DynamicAPInt>
 IntegerRelation::computeConstantLowerOrUpperBound(unsigned pos) {
   assert(pos < getNumVars() && "invalid position");
   // Project to 'pos'.
+  // Prune orthogonal constraints to reduce unnecessary computations and
+  // accelerate the bound computation.
+  pruneOrthogonalConstraints(pos);
   projectOut(0, pos);
+
+  // After projecting out values, more orthogonal constraints may be exposed.
+  // Prune these orthogonal constraints again.
+  pruneOrthogonalConstraints(0);
   projectOut(1, getNumVars() - 1);
   // Check if there's an equality equating the '0'^th variable to a constant.
   int eqRowIdx = findEqualityToConstant(/*pos=*/0, /*symbolic=*/false);
@@ -1920,7 +2023,7 @@ void IntegerRelation::removeTrivialRedundancy() {
 // which can prove the existence of a solution if there is one.
 void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
                                               bool *isResultIntegerExact) {
-  LLVM_DEBUG(llvm::dbgs() << "FM input (eliminate pos " << pos << "):\n");
+  LDBG() << "FM input (eliminate pos " << pos << "):";
   LLVM_DEBUG(dump());
   assert(pos < getNumVars() && "invalid position");
   assert(hasConsistentState());
@@ -1932,7 +2035,7 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
       LogicalResult ret = gaussianEliminateVar(pos);
       (void)ret;
       assert(ret.succeeded() && "Gaussian elimination guaranteed to succeed");
-      LLVM_DEBUG(llvm::dbgs() << "FM output (through Gaussian elimination):\n");
+      LDBG() << "FM output (through Gaussian elimination):";
       LLVM_DEBUG(dump());
       return;
     }
@@ -1946,7 +2049,7 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
     // If it doesn't appear, just remove the column and return.
     // TODO: refactor removeColumns to use it from here.
     removeVar(pos);
-    LLVM_DEBUG(llvm::dbgs() << "FM output:\n");
+    LDBG() << "FM output:";
     LLVM_DEBUG(dump());
     return;
   }
@@ -2029,8 +2132,7 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
     }
   }
 
-  LLVM_DEBUG(llvm::dbgs() << "FM isResultIntegerExact: " << allLCMsAreOne
-                          << "\n");
+  LDBG() << "FM isResultIntegerExact: " << allLCMsAreOne;
   if (allLCMsAreOne && isResultIntegerExact)
     *isResultIntegerExact = true;
 
@@ -2067,7 +2169,7 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
   newRel.normalizeConstraintsByGCD();
   newRel.removeTrivialRedundancy();
   clearAndCopyFrom(newRel);
-  LLVM_DEBUG(llvm::dbgs() << "FM output:\n");
+  LDBG() << "FM output:";
   LLVM_DEBUG(dump());
 }
 
@@ -2242,11 +2344,11 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
     newLb[d] = lbFloorDivisor;
     newUb[d] = -lbFloorDivisor;
     // Copy over the symbolic part + constant term.
-    std::copy(minLb.begin(), minLb.end(), newLb.begin() + getNumDimVars());
+    llvm::copy(minLb, newLb.begin() + getNumDimVars());
     std::transform(newLb.begin() + getNumDimVars(), newLb.end(),
                    newLb.begin() + getNumDimVars(),
                    std::negate<DynamicAPInt>());
-    std::copy(maxUb.begin(), maxUb.end(), newUb.begin() + getNumDimVars());
+    llvm::copy(maxUb, newUb.begin() + getNumDimVars());
 
     boundingLbs.emplace_back(newLb);
     boundingUbs.emplace_back(newUb);

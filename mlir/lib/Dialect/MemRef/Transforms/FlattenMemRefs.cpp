@@ -40,8 +40,8 @@ using namespace mlir;
 static Value getValueFromOpFoldResult(OpBuilder &rewriter, Location loc,
                                       OpFoldResult in) {
   if (Attribute offsetAttr = dyn_cast<Attribute>(in)) {
-    return rewriter.create<arith::ConstantIndexOp>(
-        loc, cast<IntegerAttr>(offsetAttr).getInt());
+    return arith::ConstantIndexOp::create(
+        rewriter, loc, cast<IntegerAttr>(offsetAttr).getInt());
   }
   return cast<Value>(in);
 }
@@ -60,7 +60,7 @@ static std::pair<Value, Value> getFlattenMemrefAndOffset(OpBuilder &rewriter,
   }
 
   memref::ExtractStridedMetadataOp stridedMetadata =
-      rewriter.create<memref::ExtractStridedMetadataOp>(loc, source);
+      memref::ExtractStridedMetadataOp::create(rewriter, loc, source);
 
   auto typeBit = sourceType.getElementType().getIntOrFloatBitWidth();
   OpFoldResult linearizedIndices;
@@ -74,8 +74,8 @@ static std::pair<Value, Value> getFlattenMemrefAndOffset(OpBuilder &rewriter,
           getAsOpFoldResult(indices));
 
   return std::make_pair(
-      rewriter.create<memref::ReinterpretCastOp>(
-          loc, source,
+      memref::ReinterpretCastOp::create(
+          rewriter, loc, source,
           /* offset = */ linearizedInfo.linearizedOffset,
           /* shapes = */
           ArrayRef<OpFoldResult>{linearizedInfo.linearizedSize},
@@ -104,14 +104,14 @@ static Value getTargetMemref(Operation *op) {
                      vector::MaskedStoreOp, vector::TransferReadOp,
                      vector::TransferWriteOp>(
           [](auto op) { return op.getBase(); })
-      .Default([](auto) { return Value{}; });
+      .Default(nullptr);
 }
 
 template <typename T>
 static void castAllocResult(T oper, T newOper, Location loc,
                             PatternRewriter &rewriter) {
   memref::ExtractStridedMetadataOp stridedMetadata =
-      rewriter.create<memref::ExtractStridedMetadataOp>(loc, oper);
+      memref::ExtractStridedMetadataOp::create(rewriter, loc, oper);
   rewriter.replaceOpWithNewOp<memref::ReinterpretCastOp>(
       oper, cast<MemRefType>(oper.getType()), newOper,
       /*offset=*/rewriter.getIndexAttr(0),
@@ -125,63 +125,68 @@ static void replaceOp(T op, PatternRewriter &rewriter, Value flatMemref,
   Location loc = op->getLoc();
   llvm::TypeSwitch<Operation *>(op.getOperation())
       .template Case<memref::AllocOp>([&](auto oper) {
-        auto newAlloc = rewriter.create<memref::AllocOp>(
-            loc, cast<MemRefType>(flatMemref.getType()),
+        auto newAlloc = memref::AllocOp::create(
+            rewriter, loc, cast<MemRefType>(flatMemref.getType()),
             oper.getAlignmentAttr());
         castAllocResult(oper, newAlloc, loc, rewriter);
       })
       .template Case<memref::AllocaOp>([&](auto oper) {
-        auto newAlloca = rewriter.create<memref::AllocaOp>(
-            loc, cast<MemRefType>(flatMemref.getType()),
+        auto newAlloca = memref::AllocaOp::create(
+            rewriter, loc, cast<MemRefType>(flatMemref.getType()),
             oper.getAlignmentAttr());
         castAllocResult(oper, newAlloca, loc, rewriter);
       })
       .template Case<memref::LoadOp>([&](auto op) {
-        auto newLoad = rewriter.create<memref::LoadOp>(
-            loc, op->getResultTypes(), flatMemref, ValueRange{offset});
+        auto newLoad =
+            memref::LoadOp::create(rewriter, loc, op->getResultTypes(),
+                                   flatMemref, ValueRange{offset});
         newLoad->setAttrs(op->getAttrs());
         rewriter.replaceOp(op, newLoad.getResult());
       })
       .template Case<memref::StoreOp>([&](auto op) {
-        auto newStore = rewriter.create<memref::StoreOp>(
-            loc, op->getOperands().front(), flatMemref, ValueRange{offset});
+        auto newStore =
+            memref::StoreOp::create(rewriter, loc, op->getOperands().front(),
+                                    flatMemref, ValueRange{offset});
         newStore->setAttrs(op->getAttrs());
         rewriter.replaceOp(op, newStore);
       })
       .template Case<vector::LoadOp>([&](auto op) {
-        auto newLoad = rewriter.create<vector::LoadOp>(
-            loc, op->getResultTypes(), flatMemref, ValueRange{offset});
+        auto newLoad =
+            vector::LoadOp::create(rewriter, loc, op->getResultTypes(),
+                                   flatMemref, ValueRange{offset});
         newLoad->setAttrs(op->getAttrs());
         rewriter.replaceOp(op, newLoad.getResult());
       })
       .template Case<vector::StoreOp>([&](auto op) {
-        auto newStore = rewriter.create<vector::StoreOp>(
-            loc, op->getOperands().front(), flatMemref, ValueRange{offset});
+        auto newStore =
+            vector::StoreOp::create(rewriter, loc, op->getOperands().front(),
+                                    flatMemref, ValueRange{offset});
         newStore->setAttrs(op->getAttrs());
         rewriter.replaceOp(op, newStore);
       })
       .template Case<vector::MaskedLoadOp>([&](auto op) {
-        auto newMaskedLoad = rewriter.create<vector::MaskedLoadOp>(
-            loc, op.getType(), flatMemref, ValueRange{offset}, op.getMask(),
-            op.getPassThru());
+        auto newMaskedLoad = vector::MaskedLoadOp::create(
+            rewriter, loc, op.getType(), flatMemref, ValueRange{offset},
+            op.getMask(), op.getPassThru());
         newMaskedLoad->setAttrs(op->getAttrs());
         rewriter.replaceOp(op, newMaskedLoad.getResult());
       })
       .template Case<vector::MaskedStoreOp>([&](auto op) {
-        auto newMaskedStore = rewriter.create<vector::MaskedStoreOp>(
-            loc, flatMemref, ValueRange{offset}, op.getMask(),
+        auto newMaskedStore = vector::MaskedStoreOp::create(
+            rewriter, loc, flatMemref, ValueRange{offset}, op.getMask(),
             op.getValueToStore());
         newMaskedStore->setAttrs(op->getAttrs());
         rewriter.replaceOp(op, newMaskedStore);
       })
       .template Case<vector::TransferReadOp>([&](auto op) {
-        auto newTransferRead = rewriter.create<vector::TransferReadOp>(
-            loc, op.getType(), flatMemref, ValueRange{offset}, op.getPadding());
+        auto newTransferRead = vector::TransferReadOp::create(
+            rewriter, loc, op.getType(), flatMemref, ValueRange{offset},
+            op.getPadding());
         rewriter.replaceOp(op, newTransferRead.getResult());
       })
       .template Case<vector::TransferWriteOp>([&](auto op) {
-        auto newTransferWrite = rewriter.create<vector::TransferWriteOp>(
-            loc, op.getVector(), flatMemref, ValueRange{offset});
+        auto newTransferWrite = vector::TransferWriteOp::create(
+            rewriter, loc, op.getVector(), flatMemref, ValueRange{offset});
         rewriter.replaceOp(op, newTransferWrite);
       })
       .Default([&](auto op) {
@@ -266,16 +271,26 @@ struct FlattenMemrefsPass
 
 } // namespace
 
-void memref::populateFlattenMemrefsPatterns(RewritePatternSet &patterns) {
-  patterns.insert<MemRefRewritePattern<memref::LoadOp>,
-                  MemRefRewritePattern<memref::StoreOp>,
-                  MemRefRewritePattern<memref::AllocOp>,
-                  MemRefRewritePattern<memref::AllocaOp>,
-                  MemRefRewritePattern<vector::LoadOp>,
+void memref::populateFlattenVectorOpsOnMemrefPatterns(
+    RewritePatternSet &patterns) {
+  patterns.insert<MemRefRewritePattern<vector::LoadOp>,
                   MemRefRewritePattern<vector::StoreOp>,
                   MemRefRewritePattern<vector::TransferReadOp>,
                   MemRefRewritePattern<vector::TransferWriteOp>,
                   MemRefRewritePattern<vector::MaskedLoadOp>,
                   MemRefRewritePattern<vector::MaskedStoreOp>>(
       patterns.getContext());
+}
+
+void memref::populateFlattenMemrefOpsPatterns(RewritePatternSet &patterns) {
+  patterns.insert<MemRefRewritePattern<memref::LoadOp>,
+                  MemRefRewritePattern<memref::StoreOp>,
+                  MemRefRewritePattern<memref::AllocOp>,
+                  MemRefRewritePattern<memref::AllocaOp>>(
+      patterns.getContext());
+}
+
+void memref::populateFlattenMemrefsPatterns(RewritePatternSet &patterns) {
+  populateFlattenMemrefOpsPatterns(patterns);
+  populateFlattenVectorOpsOnMemrefPatterns(patterns);
 }

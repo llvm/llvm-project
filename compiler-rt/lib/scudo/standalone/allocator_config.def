@@ -54,6 +54,13 @@ BASE_REQUIRED_TEMPLATE_TYPE(SecondaryT)
 // Indicates possible support for Memory Tagging.
 BASE_OPTIONAL(const bool, MaySupportMemoryTagging, false)
 
+// Disable the quarantine code.
+BASE_OPTIONAL(const bool, QuarantineDisabled, false)
+
+// If set to true, malloc_usable_size returns the exact size of the allocation.
+// If set to false, return the total available size in the allocation.
+BASE_OPTIONAL(const bool, ExactUsableSize, true)
+
 // PRIMARY_REQUIRED_TYPE(NAME)
 //
 // SizeClassMap to use with the Primary.

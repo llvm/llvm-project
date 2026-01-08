@@ -195,7 +195,7 @@ public:
   static void bind(nb::module_ &m) {
     nb::class_<ConcreteIface> cls(m, ConcreteIface::pyClassName);
     cls.def(nb::init<nb::object, DefaultingPyMlirContext>(), nb::arg("object"),
-            nb::arg("context").none() = nb::none(), constructorDoc)
+            nb::arg("context") = nb::none(), constructorDoc)
         .def_prop_ro("operation", &PyConcreteOpInterface::getOperationObject,
                      operationDoc)
         .def_prop_ro("opview", &PyConcreteOpInterface::getOpView, opviewDoc);
@@ -212,22 +212,18 @@ public:
   /// Returns the operation instance from which this object was constructed.
   /// Throws a type error if this object was constructed from a subclass of
   /// OpView.
-  nb::object getOperationObject() {
-    if (operation == nullptr) {
+  nb::typed<nb::object, PyOperation> getOperationObject() {
+    if (operation == nullptr)
       throw nb::type_error("Cannot get an operation from a static interface");
-    }
-
     return operation->getRef().releaseObject();
   }
 
   /// Returns the opview of the operation instance from which this object was
   /// constructed. Throws a type error if this object was constructed form a
   /// subclass of OpView.
-  nb::object getOpView() {
-    if (operation == nullptr) {
+  nb::typed<nb::object, PyOpView> getOpView() {
+    if (operation == nullptr)
       throw nb::type_error("Cannot get an opview from a static interface");
-    }
-
     return operation->createOpView();
   }
 
@@ -303,12 +299,11 @@ public:
 
   static void bindDerived(ClassTy &cls) {
     cls.def("inferReturnTypes", &PyInferTypeOpInterface::inferReturnTypes,
-            nb::arg("operands").none() = nb::none(),
-            nb::arg("attributes").none() = nb::none(),
-            nb::arg("properties").none() = nb::none(),
-            nb::arg("regions").none() = nb::none(),
-            nb::arg("context").none() = nb::none(),
-            nb::arg("loc").none() = nb::none(), inferReturnTypesDoc);
+            nb::arg("operands") = nb::none(),
+            nb::arg("attributes") = nb::none(),
+            nb::arg("properties") = nb::none(), nb::arg("regions") = nb::none(),
+            nb::arg("context") = nb::none(), nb::arg("loc") = nb::none(),
+            inferReturnTypesDoc);
   }
 };
 
@@ -332,6 +327,7 @@ public:
         .def_prop_ro(
             "element_type",
             [](PyShapedTypeComponents &self) { return self.elementType; },
+            nb::sig("def element_type(self) -> Type"),
             "Returns the element type of the shaped type components.")
         .def_static(
             "get",
@@ -362,10 +358,9 @@ public:
             "Returns whether the given shaped type component is ranked.")
         .def_prop_ro(
             "rank",
-            [](PyShapedTypeComponents &self) -> nb::object {
-              if (!self.ranked) {
-                return nb::none();
-              }
+            [](PyShapedTypeComponents &self) -> std::optional<nb::int_> {
+              if (!self.ranked)
+                return {};
               return nb::int_(self.shape.size());
             },
             "Returns the rank of the given ranked shaped type components. If "
@@ -373,10 +368,9 @@ public:
             "returned.")
         .def_prop_ro(
             "shape",
-            [](PyShapedTypeComponents &self) -> nb::object {
-              if (!self.ranked) {
-                return nb::none();
-              }
+            [](PyShapedTypeComponents &self) -> std::optional<nb::list> {
+              if (!self.ranked)
+                return {};
               return nb::list(self.shape);
             },
             "Returns the shape of the ranked shaped type components as a list "
@@ -463,12 +457,10 @@ public:
   static void bindDerived(ClassTy &cls) {
     cls.def("inferReturnTypeComponents",
             &PyInferShapedTypeOpInterface::inferReturnTypeComponents,
-            nb::arg("operands").none() = nb::none(),
-            nb::arg("attributes").none() = nb::none(),
-            nb::arg("regions").none() = nb::none(),
-            nb::arg("properties").none() = nb::none(),
-            nb::arg("context").none() = nb::none(),
-            nb::arg("loc").none() = nb::none(), inferReturnTypeComponentsDoc);
+            nb::arg("operands") = nb::none(),
+            nb::arg("attributes") = nb::none(), nb::arg("regions") = nb::none(),
+            nb::arg("properties") = nb::none(), nb::arg("context") = nb::none(),
+            nb::arg("loc") = nb::none(), inferReturnTypeComponentsDoc);
   }
 };
 

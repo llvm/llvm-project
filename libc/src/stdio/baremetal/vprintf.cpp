@@ -7,10 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/vprintf.h"
+#include "src/__support/CPP/limits.h"
 #include "src/__support/OSUtil/io.h"
 #include "src/__support/arg_list.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/core_structs.h"
+#include "src/stdio/printf_core/error_mapper.h"
 #include "src/stdio/printf_core/printf_main.h"
 #include "src/stdio/printf_core/writer.h"
 
@@ -40,13 +43,25 @@ LLVM_LIBC_FUNCTION(int, vprintf,
       buffer, BUFF_SIZE, &stdout_write_hook, nullptr);
   printf_core::Writer<printf_core::WriteMode::FLUSH_TO_STREAM> writer(wb);
 
-  int retval = printf_core::printf_main(&writer, format, args);
+  auto retval = printf_core::printf_main(&writer, format, args);
+  if (!retval.has_value()) {
+    libc_errno = printf_core::internal_error_to_errno(retval.error());
+    return -1;
+  }
 
   int flushval = wb.overflow_write("");
-  if (flushval != printf_core::WRITE_OK)
-    retval = flushval;
+  if (flushval != printf_core::WRITE_OK) {
+    libc_errno = printf_core::internal_error_to_errno(-flushval);
+    return -1;
+  }
 
-  return retval;
+  if (retval.value() > static_cast<size_t>(cpp::numeric_limits<int>::max())) {
+    libc_errno =
+        printf_core::internal_error_to_errno(-printf_core::OVERFLOW_ERROR);
+    return -1;
+  }
+
+  return static_cast<int>(retval.value());
 }
 
 } // namespace LIBC_NAMESPACE_DECL

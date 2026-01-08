@@ -13,7 +13,7 @@ target triple = "aarch64--linux-android9001"
 define void @st1lane_16b(<16 x i8> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane_16b(
 ; CHECK-SAME: <16 x i8> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -21,7 +21,7 @@ define void @st1lane_16b(<16 x i8> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <16 x i8> [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <16 x i8> [[A]], i32 1
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    unreachable
@@ -42,7 +42,7 @@ define void @st1lane_16b(<16 x i8> %A, ptr %D) sanitize_memory {
 define void @st1lane0_16b(<16 x i8> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0_16b(
 ; CHECK-SAME: <16 x i8> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -50,7 +50,7 @@ define void @st1lane0_16b(<16 x i8> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <16 x i8> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <16 x i8> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -71,7 +71,7 @@ define void @st1lane0_16b(<16 x i8> %A, ptr %D) sanitize_memory {
 define void @st1lane0u_16b(<16 x i8> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0u_16b(
 ; CHECK-SAME: <16 x i8> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -79,7 +79,7 @@ define void @st1lane0u_16b(<16 x i8> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <16 x i8> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <16 x i8> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -100,8 +100,8 @@ define void @st1lane0u_16b(<16 x i8> %A, ptr %D) sanitize_memory {
 define void @st1lane_ro_16b(<16 x i8> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane_ro_16b(
 ; CHECK-SAME: <16 x i8> [[A:%.*]], ptr [[D:%.*]], i64 [[OFFSET:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
@@ -109,7 +109,7 @@ define void @st1lane_ro_16b(<16 x i8> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <16 x i8> [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <16 x i8> [[A]], i32 1
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -130,8 +130,8 @@ define void @st1lane_ro_16b(<16 x i8> %A, ptr %D, i64 %offset) sanitize_memory {
 define void @st1lane0_ro_16b(<16 x i8> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0_ro_16b(
 ; CHECK-SAME: <16 x i8> [[A:%.*]], ptr [[D:%.*]], i64 [[OFFSET:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
@@ -139,7 +139,7 @@ define void @st1lane0_ro_16b(<16 x i8> %A, ptr %D, i64 %offset) sanitize_memory 
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <16 x i8> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <16 x i8> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -160,7 +160,7 @@ define void @st1lane0_ro_16b(<16 x i8> %A, ptr %D, i64 %offset) sanitize_memory 
 define void @st1lane_8h(<8 x i16> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane_8h(
 ; CHECK-SAME: <8 x i16> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -168,7 +168,7 @@ define void @st1lane_8h(<8 x i16> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <8 x i16> [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <8 x i16> [[A]], i32 1
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -189,7 +189,7 @@ define void @st1lane_8h(<8 x i16> %A, ptr %D) sanitize_memory {
 define void @st1lane0_8h(<8 x i16> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0_8h(
 ; CHECK-SAME: <8 x i16> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -197,7 +197,7 @@ define void @st1lane0_8h(<8 x i16> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <8 x i16> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <8 x i16> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -218,7 +218,7 @@ define void @st1lane0_8h(<8 x i16> %A, ptr %D) sanitize_memory {
 define void @st1lane0u_8h(<8 x i16> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0u_8h(
 ; CHECK-SAME: <8 x i16> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -226,7 +226,7 @@ define void @st1lane0u_8h(<8 x i16> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <8 x i16> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <8 x i16> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -247,8 +247,8 @@ define void @st1lane0u_8h(<8 x i16> %A, ptr %D) sanitize_memory {
 define void @st1lane_ro_8h(<8 x i16> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane_ro_8h(
 ; CHECK-SAME: <8 x i16> [[A:%.*]], ptr [[D:%.*]], i64 [[OFFSET:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
@@ -256,7 +256,7 @@ define void @st1lane_ro_8h(<8 x i16> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <8 x i16> [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <8 x i16> [[A]], i32 1
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -277,8 +277,8 @@ define void @st1lane_ro_8h(<8 x i16> %A, ptr %D, i64 %offset) sanitize_memory {
 define void @st1lane0_ro_8h(<8 x i16> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0_ro_8h(
 ; CHECK-SAME: <8 x i16> [[A:%.*]], ptr [[D:%.*]], i64 [[OFFSET:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
@@ -286,7 +286,7 @@ define void @st1lane0_ro_8h(<8 x i16> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <8 x i16> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <8 x i16> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -307,7 +307,7 @@ define void @st1lane0_ro_8h(<8 x i16> %A, ptr %D, i64 %offset) sanitize_memory {
 define void @st1lane_4s(<4 x i32> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane_4s(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -315,7 +315,7 @@ define void @st1lane_4s(<4 x i32> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <4 x i32> [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <4 x i32> [[A]], i32 1
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -336,7 +336,7 @@ define void @st1lane_4s(<4 x i32> %A, ptr %D) sanitize_memory {
 define void @st1lane0_4s(<4 x i32> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0_4s(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -344,7 +344,7 @@ define void @st1lane0_4s(<4 x i32> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <4 x i32> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <4 x i32> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -365,7 +365,7 @@ define void @st1lane0_4s(<4 x i32> %A, ptr %D) sanitize_memory {
 define void @st1lane0u_4s(<4 x i32> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0u_4s(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -373,7 +373,7 @@ define void @st1lane0u_4s(<4 x i32> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <4 x i32> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <4 x i32> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -394,8 +394,8 @@ define void @st1lane0u_4s(<4 x i32> %A, ptr %D) sanitize_memory {
 define void @st1lane_ro_4s(<4 x i32> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane_ro_4s(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], ptr [[D:%.*]], i64 [[OFFSET:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
@@ -403,7 +403,7 @@ define void @st1lane_ro_4s(<4 x i32> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <4 x i32> [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <4 x i32> [[A]], i32 1
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -424,8 +424,8 @@ define void @st1lane_ro_4s(<4 x i32> %A, ptr %D, i64 %offset) sanitize_memory {
 define void @st1lane0_ro_4s(<4 x i32> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0_ro_4s(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], ptr [[D:%.*]], i64 [[OFFSET:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
@@ -433,7 +433,7 @@ define void @st1lane0_ro_4s(<4 x i32> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <4 x i32> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <4 x i32> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -454,7 +454,7 @@ define void @st1lane0_ro_4s(<4 x i32> %A, ptr %D, i64 %offset) sanitize_memory {
 define void @st1lane_4s_float(<4 x float> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane_4s_float(
 ; CHECK-SAME: <4 x float> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -462,7 +462,7 @@ define void @st1lane_4s_float(<4 x float> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <4 x i32> [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <4 x float> [[A]], i32 1
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -483,7 +483,7 @@ define void @st1lane_4s_float(<4 x float> %A, ptr %D) sanitize_memory {
 define void @st1lane0_4s_float(<4 x float> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0_4s_float(
 ; CHECK-SAME: <4 x float> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -491,7 +491,7 @@ define void @st1lane0_4s_float(<4 x float> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <4 x i32> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <4 x float> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -512,7 +512,7 @@ define void @st1lane0_4s_float(<4 x float> %A, ptr %D) sanitize_memory {
 define void @st1lane0u_4s_float(<4 x float> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0u_4s_float(
 ; CHECK-SAME: <4 x float> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -520,7 +520,7 @@ define void @st1lane0u_4s_float(<4 x float> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <4 x i32> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <4 x float> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -541,8 +541,8 @@ define void @st1lane0u_4s_float(<4 x float> %A, ptr %D) sanitize_memory {
 define void @st1lane_ro_4s_float(<4 x float> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane_ro_4s_float(
 ; CHECK-SAME: <4 x float> [[A:%.*]], ptr [[D:%.*]], i64 [[OFFSET:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
@@ -550,7 +550,7 @@ define void @st1lane_ro_4s_float(<4 x float> %A, ptr %D, i64 %offset) sanitize_m
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <4 x i32> [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <4 x float> [[A]], i32 1
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -571,8 +571,8 @@ define void @st1lane_ro_4s_float(<4 x float> %A, ptr %D, i64 %offset) sanitize_m
 define void @st1lane0_ro_4s_float(<4 x float> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0_ro_4s_float(
 ; CHECK-SAME: <4 x float> [[A:%.*]], ptr [[D:%.*]], i64 [[OFFSET:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
@@ -580,7 +580,7 @@ define void @st1lane0_ro_4s_float(<4 x float> %A, ptr %D, i64 %offset) sanitize_
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <4 x i32> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <4 x float> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -601,7 +601,7 @@ define void @st1lane0_ro_4s_float(<4 x float> %A, ptr %D, i64 %offset) sanitize_
 define void @st1lane_2d(<2 x i64> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane_2d(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -609,7 +609,7 @@ define void @st1lane_2d(<2 x i64> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <2 x i64> [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <2 x i64> [[A]], i32 1
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -630,7 +630,7 @@ define void @st1lane_2d(<2 x i64> %A, ptr %D) sanitize_memory {
 define void @st1lane0_2d(<2 x i64> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0_2d(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -638,7 +638,7 @@ define void @st1lane0_2d(<2 x i64> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <2 x i64> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <2 x i64> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -659,7 +659,7 @@ define void @st1lane0_2d(<2 x i64> %A, ptr %D) sanitize_memory {
 define void @st1lane0u_2d(<2 x i64> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0u_2d(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -667,7 +667,7 @@ define void @st1lane0u_2d(<2 x i64> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <2 x i64> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <2 x i64> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -688,8 +688,8 @@ define void @st1lane0u_2d(<2 x i64> %A, ptr %D) sanitize_memory {
 define void @st1lane_ro_2d(<2 x i64> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane_ro_2d(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], ptr [[D:%.*]], i64 [[OFFSET:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
@@ -697,7 +697,7 @@ define void @st1lane_ro_2d(<2 x i64> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <2 x i64> [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <2 x i64> [[A]], i32 1
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -718,8 +718,8 @@ define void @st1lane_ro_2d(<2 x i64> %A, ptr %D, i64 %offset) sanitize_memory {
 define void @st1lane0_ro_2d(<2 x i64> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0_ro_2d(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], ptr [[D:%.*]], i64 [[OFFSET:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
@@ -727,7 +727,7 @@ define void @st1lane0_ro_2d(<2 x i64> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <2 x i64> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <2 x i64> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -748,7 +748,7 @@ define void @st1lane0_ro_2d(<2 x i64> %A, ptr %D, i64 %offset) sanitize_memory {
 define void @st1lane_2d_double(<2 x double> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane_2d_double(
 ; CHECK-SAME: <2 x double> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -756,7 +756,7 @@ define void @st1lane_2d_double(<2 x double> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <2 x i64> [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <2 x double> [[A]], i32 1
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -777,7 +777,7 @@ define void @st1lane_2d_double(<2 x double> %A, ptr %D) sanitize_memory {
 define void @st1lane0_2d_double(<2 x double> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0_2d_double(
 ; CHECK-SAME: <2 x double> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -785,7 +785,7 @@ define void @st1lane0_2d_double(<2 x double> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <2 x i64> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <2 x double> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -806,7 +806,7 @@ define void @st1lane0_2d_double(<2 x double> %A, ptr %D) sanitize_memory {
 define void @st1lane0u_2d_double(<2 x double> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0u_2d_double(
 ; CHECK-SAME: <2 x double> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -814,7 +814,7 @@ define void @st1lane0u_2d_double(<2 x double> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <2 x i64> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <2 x double> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -835,8 +835,8 @@ define void @st1lane0u_2d_double(<2 x double> %A, ptr %D) sanitize_memory {
 define void @st1lane_ro_2d_double(<2 x double> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane_ro_2d_double(
 ; CHECK-SAME: <2 x double> [[A:%.*]], ptr [[D:%.*]], i64 [[OFFSET:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
@@ -844,7 +844,7 @@ define void @st1lane_ro_2d_double(<2 x double> %A, ptr %D, i64 %offset) sanitize
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <2 x i64> [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <2 x double> [[A]], i32 1
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -865,8 +865,8 @@ define void @st1lane_ro_2d_double(<2 x double> %A, ptr %D, i64 %offset) sanitize
 define void @st1lane0_ro_2d_double(<2 x double> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0_ro_2d_double(
 ; CHECK-SAME: <2 x double> [[A:%.*]], ptr [[D:%.*]], i64 [[OFFSET:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 24) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
@@ -874,7 +874,7 @@ define void @st1lane0_ro_2d_double(<2 x double> %A, ptr %D, i64 %offset) sanitiz
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <2 x i64> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <2 x double> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -895,7 +895,7 @@ define void @st1lane0_ro_2d_double(<2 x double> %A, ptr %D, i64 %offset) sanitiz
 define void @st1lane_8b(<8 x i8> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane_8b(
 ; CHECK-SAME: <8 x i8> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -903,7 +903,7 @@ define void @st1lane_8b(<8 x i8> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <8 x i8> [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <8 x i8> [[A]], i32 1
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -924,8 +924,8 @@ define void @st1lane_8b(<8 x i8> %A, ptr %D) sanitize_memory {
 define void @st1lane_ro_8b(<8 x i8> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane_ro_8b(
 ; CHECK-SAME: <8 x i8> [[A:%.*]], ptr [[D:%.*]], i64 [[OFFSET:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
@@ -933,7 +933,7 @@ define void @st1lane_ro_8b(<8 x i8> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <8 x i8> [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <8 x i8> [[A]], i32 1
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -954,8 +954,8 @@ define void @st1lane_ro_8b(<8 x i8> %A, ptr %D, i64 %offset) sanitize_memory {
 define void @st1lane0_ro_8b(<8 x i8> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0_ro_8b(
 ; CHECK-SAME: <8 x i8> [[A:%.*]], ptr [[D:%.*]], i64 [[OFFSET:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
@@ -963,7 +963,7 @@ define void @st1lane0_ro_8b(<8 x i8> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <8 x i8> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <8 x i8> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -984,7 +984,7 @@ define void @st1lane0_ro_8b(<8 x i8> %A, ptr %D, i64 %offset) sanitize_memory {
 define void @st1lane_4h(<4 x i16> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane_4h(
 ; CHECK-SAME: <4 x i16> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -992,7 +992,7 @@ define void @st1lane_4h(<4 x i16> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <4 x i16> [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <4 x i16> [[A]], i32 1
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1013,7 +1013,7 @@ define void @st1lane_4h(<4 x i16> %A, ptr %D) sanitize_memory {
 define void @st1lane0_4h(<4 x i16> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0_4h(
 ; CHECK-SAME: <4 x i16> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -1021,7 +1021,7 @@ define void @st1lane0_4h(<4 x i16> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <4 x i16> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <4 x i16> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1042,7 +1042,7 @@ define void @st1lane0_4h(<4 x i16> %A, ptr %D) sanitize_memory {
 define void @st1lane0u_4h(<4 x i16> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0u_4h(
 ; CHECK-SAME: <4 x i16> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -1050,7 +1050,7 @@ define void @st1lane0u_4h(<4 x i16> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <4 x i16> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <4 x i16> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1071,8 +1071,8 @@ define void @st1lane0u_4h(<4 x i16> %A, ptr %D) sanitize_memory {
 define void @st1lane_ro_4h(<4 x i16> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane_ro_4h(
 ; CHECK-SAME: <4 x i16> [[A:%.*]], ptr [[D:%.*]], i64 [[OFFSET:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
@@ -1080,7 +1080,7 @@ define void @st1lane_ro_4h(<4 x i16> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <4 x i16> [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <4 x i16> [[A]], i32 1
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1101,8 +1101,8 @@ define void @st1lane_ro_4h(<4 x i16> %A, ptr %D, i64 %offset) sanitize_memory {
 define void @st1lane0_ro_4h(<4 x i16> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0_ro_4h(
 ; CHECK-SAME: <4 x i16> [[A:%.*]], ptr [[D:%.*]], i64 [[OFFSET:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
@@ -1110,7 +1110,7 @@ define void @st1lane0_ro_4h(<4 x i16> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <4 x i16> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <4 x i16> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1131,7 +1131,7 @@ define void @st1lane0_ro_4h(<4 x i16> %A, ptr %D, i64 %offset) sanitize_memory {
 define void @st1lane_2s(<2 x i32> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane_2s(
 ; CHECK-SAME: <2 x i32> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -1139,7 +1139,7 @@ define void @st1lane_2s(<2 x i32> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <2 x i32> [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <2 x i32> [[A]], i32 1
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1160,7 +1160,7 @@ define void @st1lane_2s(<2 x i32> %A, ptr %D) sanitize_memory {
 define void @st1lane0_2s(<2 x i32> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0_2s(
 ; CHECK-SAME: <2 x i32> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -1168,7 +1168,7 @@ define void @st1lane0_2s(<2 x i32> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <2 x i32> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <2 x i32> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1189,7 +1189,7 @@ define void @st1lane0_2s(<2 x i32> %A, ptr %D) sanitize_memory {
 define void @st1lane0u_2s(<2 x i32> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0u_2s(
 ; CHECK-SAME: <2 x i32> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -1197,7 +1197,7 @@ define void @st1lane0u_2s(<2 x i32> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <2 x i32> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <2 x i32> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1218,8 +1218,8 @@ define void @st1lane0u_2s(<2 x i32> %A, ptr %D) sanitize_memory {
 define void @st1lane_ro_2s(<2 x i32> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane_ro_2s(
 ; CHECK-SAME: <2 x i32> [[A:%.*]], ptr [[D:%.*]], i64 [[OFFSET:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
@@ -1227,7 +1227,7 @@ define void @st1lane_ro_2s(<2 x i32> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <2 x i32> [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <2 x i32> [[A]], i32 1
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1248,8 +1248,8 @@ define void @st1lane_ro_2s(<2 x i32> %A, ptr %D, i64 %offset) sanitize_memory {
 define void @st1lane0_ro_2s(<2 x i32> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0_ro_2s(
 ; CHECK-SAME: <2 x i32> [[A:%.*]], ptr [[D:%.*]], i64 [[OFFSET:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
@@ -1257,7 +1257,7 @@ define void @st1lane0_ro_2s(<2 x i32> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <2 x i32> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <2 x i32> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1278,7 +1278,7 @@ define void @st1lane0_ro_2s(<2 x i32> %A, ptr %D, i64 %offset) sanitize_memory {
 define void @st1lane_2s_float(<2 x float> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane_2s_float(
 ; CHECK-SAME: <2 x float> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -1286,7 +1286,7 @@ define void @st1lane_2s_float(<2 x float> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <2 x i32> [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <2 x float> [[A]], i32 1
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1307,7 +1307,7 @@ define void @st1lane_2s_float(<2 x float> %A, ptr %D) sanitize_memory {
 define void @st1lane0_2s_float(<2 x float> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0_2s_float(
 ; CHECK-SAME: <2 x float> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -1315,7 +1315,7 @@ define void @st1lane0_2s_float(<2 x float> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <2 x i32> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <2 x float> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1336,7 +1336,7 @@ define void @st1lane0_2s_float(<2 x float> %A, ptr %D) sanitize_memory {
 define void @st1lane0u_2s_float(<2 x float> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0u_2s_float(
 ; CHECK-SAME: <2 x float> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -1344,7 +1344,7 @@ define void @st1lane0u_2s_float(<2 x float> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <2 x i32> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <2 x float> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1365,8 +1365,8 @@ define void @st1lane0u_2s_float(<2 x float> %A, ptr %D) sanitize_memory {
 define void @st1lane_ro_2s_float(<2 x float> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane_ro_2s_float(
 ; CHECK-SAME: <2 x float> [[A:%.*]], ptr [[D:%.*]], i64 [[OFFSET:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
@@ -1374,7 +1374,7 @@ define void @st1lane_ro_2s_float(<2 x float> %A, ptr %D, i64 %offset) sanitize_m
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <2 x i32> [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <2 x float> [[A]], i32 1
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1395,8 +1395,8 @@ define void @st1lane_ro_2s_float(<2 x float> %A, ptr %D, i64 %offset) sanitize_m
 define void @st1lane0_ro_2s_float(<2 x float> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0_ro_2s_float(
 ; CHECK-SAME: <2 x float> [[A:%.*]], ptr [[D:%.*]], i64 [[OFFSET:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
@@ -1404,7 +1404,7 @@ define void @st1lane0_ro_2s_float(<2 x float> %A, ptr %D, i64 %offset) sanitize_
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <2 x i32> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <2 x float> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1425,7 +1425,7 @@ define void @st1lane0_ro_2s_float(<2 x float> %A, ptr %D, i64 %offset) sanitize_
 define void @st1lane0_1d(<1 x i64> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0_1d(
 ; CHECK-SAME: <1 x i64> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <1 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -1433,7 +1433,7 @@ define void @st1lane0_1d(<1 x i64> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <1 x i64> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <1 x i64> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1454,7 +1454,7 @@ define void @st1lane0_1d(<1 x i64> %A, ptr %D) sanitize_memory {
 define void @st1lane0u_1d(<1 x i64> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0u_1d(
 ; CHECK-SAME: <1 x i64> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <1 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -1462,7 +1462,7 @@ define void @st1lane0u_1d(<1 x i64> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <1 x i64> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <1 x i64> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1483,8 +1483,8 @@ define void @st1lane0u_1d(<1 x i64> %A, ptr %D) sanitize_memory {
 define void @st1lane0_ro_1d(<1 x i64> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0_ro_1d(
 ; CHECK-SAME: <1 x i64> [[A:%.*]], ptr [[D:%.*]], i64 [[OFFSET:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <1 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
@@ -1492,7 +1492,7 @@ define void @st1lane0_ro_1d(<1 x i64> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <1 x i64> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <1 x i64> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1513,7 +1513,7 @@ define void @st1lane0_ro_1d(<1 x i64> %A, ptr %D, i64 %offset) sanitize_memory {
 define void @st1lane0_1d_double(<1 x double> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0_1d_double(
 ; CHECK-SAME: <1 x double> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <1 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -1521,7 +1521,7 @@ define void @st1lane0_1d_double(<1 x double> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <1 x i64> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <1 x double> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1542,7 +1542,7 @@ define void @st1lane0_1d_double(<1 x double> %A, ptr %D) sanitize_memory {
 define void @st1lane0u_1d_double(<1 x double> %A, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0u_1d_double(
 ; CHECK-SAME: <1 x double> [[A:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <1 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], 0
@@ -1550,7 +1550,7 @@ define void @st1lane0u_1d_double(<1 x double> %A, ptr %D) sanitize_memory {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <1 x i64> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <1 x double> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1571,8 +1571,8 @@ define void @st1lane0u_1d_double(<1 x double> %A, ptr %D) sanitize_memory {
 define void @st1lane0_ro_1d_double(<1 x double> %A, ptr %D, i64 %offset) sanitize_memory {
 ; CHECK-LABEL: define void @st1lane0_ro_1d_double(
 ; CHECK-SAME: <1 x double> [[A:%.*]], ptr [[D:%.*]], i64 [[OFFSET:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <1 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
@@ -1580,7 +1580,7 @@ define void @st1lane0_ro_1d_double(<1 x double> %A, ptr %D, i64 %offset) sanitiz
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <1 x i64> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP:%.*]] = extractelement <1 x double> [[A]], i32 0
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
 ; CHECK:       4:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1601,16 +1601,16 @@ define void @st1lane0_ro_1d_double(<1 x double> %A, ptr %D, i64 %offset) sanitiz
 define void @st2lane_16b(<16 x i8> %A, <16 x i8> %B, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st2lane_16b(
 ; CHECK-SAME: <16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[D]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
 ; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
 ; CHECK-NEXT:    call void @llvm.aarch64.neon.st2lane.v16i8.p0(<16 x i8> [[TMP2]], <16 x i8> [[TMP3]], i64 1, ptr [[TMP6]])
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1625,16 +1625,16 @@ define void @st2lane_16b(<16 x i8> %A, <16 x i8> %B, ptr %D) sanitize_memory {
 define void @st2lane_8h(<8 x i16> %A, <8 x i16> %B, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st2lane_8h(
 ; CHECK-SAME: <8 x i16> [[A:%.*]], <8 x i16> [[B:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[D]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
 ; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
 ; CHECK-NEXT:    call void @llvm.aarch64.neon.st2lane.v8i16.p0(<8 x i16> [[TMP2]], <8 x i16> [[TMP3]], i64 1, ptr [[TMP6]])
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1649,16 +1649,16 @@ define void @st2lane_8h(<8 x i16> %A, <8 x i16> %B, ptr %D) sanitize_memory {
 define void @st2lane_4s(<4 x i32> %A, <4 x i32> %B, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st2lane_4s(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[D]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
 ; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
 ; CHECK-NEXT:    call void @llvm.aarch64.neon.st2lane.v4i32.p0(<4 x i32> [[TMP2]], <4 x i32> [[TMP3]], i64 1, ptr [[TMP6]])
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1673,16 +1673,16 @@ define void @st2lane_4s(<4 x i32> %A, <4 x i32> %B, ptr %D) sanitize_memory {
 define void @st2lane_2d(<2 x i64> %A, <2 x i64> %B, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st2lane_2d(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[D]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 193514046488576
 ; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
 ; CHECK-NEXT:    call void @llvm.aarch64.neon.st2lane.v2i64.p0(<2 x i64> [[TMP2]], <2 x i64> [[TMP3]], i64 1, ptr [[TMP6]])
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; CHECK:       7:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1702,17 +1702,17 @@ declare void @llvm.aarch64.neon.st2lane.v2i64.p0(<2 x i64>, <2 x i64>, i64, ptr)
 define void @st3lane_16b(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st3lane_16b(
 ; CHECK-SAME: <16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]], <16 x i8> [[C:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[D]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    call void @llvm.aarch64.neon.st3lane.v16i8.p0(<16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[TMP4]], i64 1, ptr [[TMP7]])
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
 ; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1727,17 +1727,17 @@ define void @st3lane_16b(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, ptr %D) sanit
 define void @st3lane_8h(<8 x i16> %A, <8 x i16> %B, <8 x i16> %C, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st3lane_8h(
 ; CHECK-SAME: <8 x i16> [[A:%.*]], <8 x i16> [[B:%.*]], <8 x i16> [[C:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[D]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    call void @llvm.aarch64.neon.st3lane.v8i16.p0(<8 x i16> [[TMP2]], <8 x i16> [[TMP3]], <8 x i16> [[TMP4]], i64 1, ptr [[TMP7]])
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
 ; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1752,17 +1752,17 @@ define void @st3lane_8h(<8 x i16> %A, <8 x i16> %B, <8 x i16> %C, ptr %D) saniti
 define void @st3lane_4s(<4 x i32> %A, <4 x i32> %B, <4 x i32> %C, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st3lane_4s(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> [[C:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[D]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    call void @llvm.aarch64.neon.st3lane.v4i32.p0(<4 x i32> [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], i64 1, ptr [[TMP7]])
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
 ; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1777,17 +1777,17 @@ define void @st3lane_4s(<4 x i32> %A, <4 x i32> %B, <4 x i32> %C, ptr %D) saniti
 define void @st3lane_2d(<2 x i64> %A, <2 x i64> %B, <2 x i64> %C, ptr %D) sanitize_memory {
 ; CHECK-LABEL: define void @st3lane_2d(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], <2 x i64> [[C:%.*]], ptr [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[D]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 193514046488576
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    call void @llvm.aarch64.neon.st3lane.v2i64.p0(<2 x i64> [[TMP2]], <2 x i64> [[TMP3]], <2 x i64> [[TMP4]], i64 1, ptr [[TMP7]])
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
 ; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1807,18 +1807,18 @@ declare void @llvm.aarch64.neon.st3lane.v2i64.p0(<2 x i64>, <2 x i64>, <2 x i64>
 define void @st4lane_16b(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, ptr %E) sanitize_memory {
 ; CHECK-LABEL: define void @st4lane_16b(
 ; CHECK-SAME: <16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]], <16 x i8> [[C:%.*]], <16 x i8> [[D:%.*]], ptr [[E:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[E]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i64 [[TMP6]], 193514046488576
 ; CHECK-NEXT:    [[TMP8:%.*]] = inttoptr i64 [[TMP7]] to ptr
 ; CHECK-NEXT:    call void @llvm.aarch64.neon.st4lane.v16i8.p0(<16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[TMP4]], <16 x i8> [[TMP5]], i64 1, ptr [[TMP8]])
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF1]]
 ; CHECK:       9:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1833,18 +1833,18 @@ define void @st4lane_16b(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D,
 define void @st4lane_8h(<8 x i16> %A, <8 x i16> %B, <8 x i16> %C, <8 x i16> %D, ptr %E) sanitize_memory {
 ; CHECK-LABEL: define void @st4lane_8h(
 ; CHECK-SAME: <8 x i16> [[A:%.*]], <8 x i16> [[B:%.*]], <8 x i16> [[C:%.*]], <8 x i16> [[D:%.*]], ptr [[E:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = load <8 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load <8 x i16>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[E]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i64 [[TMP6]], 193514046488576
 ; CHECK-NEXT:    [[TMP8:%.*]] = inttoptr i64 [[TMP7]] to ptr
 ; CHECK-NEXT:    call void @llvm.aarch64.neon.st4lane.v8i16.p0(<8 x i16> [[TMP2]], <8 x i16> [[TMP3]], <8 x i16> [[TMP4]], <8 x i16> [[TMP5]], i64 1, ptr [[TMP8]])
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF1]]
 ; CHECK:       9:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1859,18 +1859,18 @@ define void @st4lane_8h(<8 x i16> %A, <8 x i16> %B, <8 x i16> %C, <8 x i16> %D, 
 define void @st4lane_4s(<4 x i32> %A, <4 x i32> %B, <4 x i32> %C, <4 x i32> %D, ptr %E) sanitize_memory {
 ; CHECK-LABEL: define void @st4lane_4s(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> [[C:%.*]], <4 x i32> [[D:%.*]], ptr [[E:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[E]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i64 [[TMP6]], 193514046488576
 ; CHECK-NEXT:    [[TMP8:%.*]] = inttoptr i64 [[TMP7]] to ptr
 ; CHECK-NEXT:    call void @llvm.aarch64.neon.st4lane.v4i32.p0(<4 x i32> [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> [[TMP5]], i64 1, ptr [[TMP8]])
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF1]]
 ; CHECK:       9:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1885,18 +1885,18 @@ define void @st4lane_4s(<4 x i32> %A, <4 x i32> %B, <4 x i32> %C, <4 x i32> %D, 
 define void @st4lane_2d(<2 x i64> %A, <2 x i64> %B, <2 x i64> %C, <2 x i64> %D, ptr %E) sanitize_memory {
 ; CHECK-LABEL: define void @st4lane_2d(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]], <2 x i64> [[C:%.*]], <2 x i64> [[D:%.*]], ptr [[E:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[E]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i64 [[TMP6]], 193514046488576
 ; CHECK-NEXT:    [[TMP8:%.*]] = inttoptr i64 [[TMP7]] to ptr
 ; CHECK-NEXT:    call void @llvm.aarch64.neon.st4lane.v2i64.p0(<2 x i64> [[TMP2]], <2 x i64> [[TMP3]], <2 x i64> [[TMP4]], <2 x i64> [[TMP5]], i64 1, ptr [[TMP8]])
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF1]]
 ; CHECK:       9:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -1913,5 +1913,5 @@ declare void @llvm.aarch64.neon.st4lane.v8i16.p0(<8 x i16>, <8 x i16>, <8 x i16>
 declare void @llvm.aarch64.neon.st4lane.v4i32.p0(<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, i64, ptr) nounwind readnone
 declare void @llvm.aarch64.neon.st4lane.v2i64.p0(<2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, i64, ptr) nounwind readnone
 ;.
-; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 1048575}
+; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
 ;.

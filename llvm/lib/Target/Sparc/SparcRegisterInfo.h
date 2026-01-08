@@ -19,8 +19,14 @@
 #include "SparcGenRegisterInfo.inc"
 
 namespace llvm {
+class SparcSubtarget;
+
 struct SparcRegisterInfo : public SparcGenRegisterInfo {
-  SparcRegisterInfo();
+private:
+  const bool Is64Bit;
+
+public:
+  explicit SparcRegisterInfo(const SparcSubtarget &STI);
 
   /// Code Generation virtual methods...
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
@@ -32,8 +38,7 @@ struct SparcRegisterInfo : public SparcGenRegisterInfo {
   BitVector getReservedRegs(const MachineFunction &MF) const override;
   bool isReservedReg(const MachineFunction &MF, MCRegister Reg) const;
 
-  const TargetRegisterClass *getPointerRegClass(const MachineFunction &MF,
-                                                unsigned Kind) const override;
+  const TargetRegisterClass *getPointerRegClass(unsigned Kind) const override;
 
   bool eliminateFrameIndex(MachineBasicBlock::iterator II,
                            int SPAdj, unsigned FIOperandNum,

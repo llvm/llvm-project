@@ -10,7 +10,6 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <optional>
@@ -121,7 +120,7 @@ SymbolTable::SymbolTable(Operation *symbolTableOp)
          "expected operation to have SymbolTable trait");
   assert(symbolTableOp->getNumRegions() == 1 &&
          "expected operation to have a single region");
-  assert(llvm::hasSingleElement(symbolTableOp->getRegion(0)) &&
+  assert(symbolTableOp->getRegion(0).hasOneBlock() &&
          "expected operation to have a single block");
 
   StringAttr symbolNameId = StringAttr::get(symbolTableOp->getContext(),
@@ -484,7 +483,7 @@ LogicalResult detail::verifySymbolTable(Operation *op) {
   if (op->getNumRegions() != 1)
     return op->emitOpError()
            << "Operations with a 'SymbolTable' must have exactly one region";
-  if (!llvm::hasSingleElement(op->getRegion(0)))
+  if (!op->getRegion(0).hasOneBlock())
     return op->emitOpError()
            << "Operations with a 'SymbolTable' must have exactly one block";
 

@@ -86,23 +86,23 @@ public:
   /// Adds register units covered by physical register \p Reg.
   void addReg(MCRegister Reg) {
     for (MCRegUnit Unit : TRI->regunits(Reg))
-      Units.set(Unit);
+      Units.set(static_cast<unsigned>(Unit));
   }
 
   /// Adds register units covered by physical register \p Reg that are
   /// part of the lanemask \p Mask.
   void addRegMasked(MCRegister Reg, LaneBitmask Mask) {
-    for (MCRegUnitMaskIterator Unit(Reg, TRI); Unit.isValid(); ++Unit) {
-      LaneBitmask UnitMask = (*Unit).second;
+    for (MCRegUnitMaskIterator I(Reg, TRI); I.isValid(); ++I) {
+      auto [Unit, UnitMask] = *I;
       if ((UnitMask & Mask).any())
-        Units.set((*Unit).first);
+        Units.set(static_cast<unsigned>(Unit));
     }
   }
 
   /// Removes all register units covered by physical register \p Reg.
   void removeReg(MCRegister Reg) {
     for (MCRegUnit Unit : TRI->regunits(Reg))
-      Units.reset(Unit);
+      Units.reset(static_cast<unsigned>(Unit));
   }
 
   /// Removes register units not preserved by the regmask \p RegMask.
@@ -116,7 +116,7 @@ public:
   /// Returns true if no part of physical register \p Reg is live.
   bool available(MCRegister Reg) const {
     for (MCRegUnit Unit : TRI->regunits(Reg)) {
-      if (Units.test(Unit))
+      if (Units.test(static_cast<unsigned>(Unit)))
         return false;
     }
     return true;

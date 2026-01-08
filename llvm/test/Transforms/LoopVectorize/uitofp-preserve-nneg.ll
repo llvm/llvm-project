@@ -4,7 +4,7 @@
 define void @uitofp_preserve_nneg(ptr %result, i32 %size, float %y) {
 ; CHECK-LABEL: @uitofp_preserve_nneg(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[FOR_BODY_PREHEADER4:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x float> poison, float [[Y:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT2]], <4 x float> poison, <4 x i32> zeroinitializer
@@ -16,27 +16,13 @@ define void @uitofp_preserve_nneg(ptr %result, i32 %size, float %y) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[TMP0]], [[BROADCAST_SPLAT3]]
 ; CHECK-NEXT:    [[INDEX:%.*]] = zext nneg i32 [[INDEX1]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[RESULT:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 0
-; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[TMP7]], align 4
+; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX1]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[FOR_BODY_PREHEADER4]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 256, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[FOR_BODY_PREHEADER4]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[CONV:%.*]] = uitofp nneg i32 [[TMP4]] to float
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul float [[CONV]], [[Y]]
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = zext nneg i32 [[TMP4]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[RESULT]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store float [[TMP5]], ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[TMP4]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], 256
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_EXIT]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       for.exit:
 ; CHECK-NEXT:    ret void
 ;

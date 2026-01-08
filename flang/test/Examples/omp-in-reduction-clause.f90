@@ -1,6 +1,6 @@
 ! REQUIRES: plugins, examples, shell
 
-! RUN: %flang_fc1 -load %llvmshlibdir/flangOmpReport.so -plugin flang-omp-report -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s
+! RUN: %flang_fc1 -load %llvmshlibdir/flangOmpReport%pluginext -plugin flang-omp-report -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s
 
 ! Check for IN_REDUCTION() clause on OpenMP constructs
 
@@ -15,7 +15,7 @@ subroutine omp_in_reduction_taskgroup()
         do i=1,10
             z = z * 5
         end do
-    !$omp end taskloop 
+    !$omp end taskloop
     !$omp end taskgroup
 end subroutine omp_in_reduction_taskgroup
 

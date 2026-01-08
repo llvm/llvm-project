@@ -13,6 +13,7 @@
 
 #include "OpGenHelpers.h"
 
+#include "mlir/Support/IndentedOstream.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Operator.h"
 #include "llvm/ADT/StringSet.h"
@@ -20,6 +21,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include <regex>
 
 using namespace mlir;
 using namespace mlir::tblgen;
@@ -36,14 +38,14 @@ from ._ods_common import _cext as _ods_cext
 from ._ods_common import (
     equally_sized_accessor as _ods_equally_sized_accessor,
     get_default_loc_context as _ods_get_default_loc_context,
-    get_op_result_or_op_results as _get_op_result_or_op_results,
     get_op_results_or_values as _get_op_results_or_values,
     segmented_accessor as _ods_segmented_accessor,
 )
 _ods_ir = _ods_cext.ir
+_ods_cext.globals.register_traceback_file_exclusion(__file__)
 
 import builtins
-from typing import Sequence as _Sequence, Union as _Union
+from typing import Sequence as _Sequence, Union as _Union, Optional as _Optional
 
 )Py";
 
@@ -61,10 +63,11 @@ from ._{0}_ops_gen import _Dialect
 
 /// Template for operation class:
 ///   {0} is the Python class name;
-///   {1} is the operation name.
+///   {1} is the operation name;
+///   {2} is the docstring for this operation.
 constexpr const char *opClassTemplate = R"Py(
 @_ods_cext.register_operation(_Dialect)
-class {0}(_ods_ir.OpView):
+class {0}(_ods_ir.OpView):{2}
   OPERATION_NAME = "{1}"
 )Py";
 
@@ -92,9 +95,10 @@ constexpr const char *opClassRegionSpecTemplate = R"Py(
 ///   {0} is the name of the accessor;
 ///   {1} is either 'operand' or 'result';
 ///   {2} is the position in the element list.
+///   {3} is the type hint.
 constexpr const char *opSingleTemplate = R"Py(
   @builtins.property
-  def {0}(self):
+  def {0}(self) -> {3}:
     return self.operation.{1}s[{2}]
 )Py";
 
@@ -103,11 +107,12 @@ constexpr const char *opSingleTemplate = R"Py(
 ///   {1} is either 'operand' or 'result';
 ///   {2} is the total number of element groups;
 ///   {3} is the position of the current group in the group list.
+///   {4} is the type hint.
 /// This works for both a single variadic group (non-negative length) and an
 /// single optional element (zero length if the element is absent).
 constexpr const char *opSingleAfterVariableTemplate = R"Py(
   @builtins.property
-  def {0}(self):
+  def {0}(self) -> {4}:
     _ods_variadic_group_length = len(self.operation.{1}s) - {2} + 1
     return self.operation.{1}s[{3} + _ods_variadic_group_length - 1]
 )Py";
@@ -117,12 +122,13 @@ constexpr const char *opSingleAfterVariableTemplate = R"Py(
 ///   {1} is either 'operand' or 'result';
 ///   {2} is the total number of element groups;
 ///   {3} is the position of the current group in the group list.
+///   {4} is the type hint.
 /// This works if we have only one variable-length group (and it's the optional
 /// operand/result): we can deduce it's absent if the `len(operation.{1}s)` is
 /// smaller than the total number of groups.
 constexpr const char *opOneOptionalTemplate = R"Py(
   @builtins.property
-  def {0}(self):
+  def {0}(self) -> _Optional[{4}]:
     return None if len(self.operation.{1}s) < {2} else self.operation.{1}s[{3}]
 )Py";
 
@@ -131,9 +137,10 @@ constexpr const char *opOneOptionalTemplate = R"Py(
 ///   {1} is either 'operand' or 'result';
 ///   {2} is the total number of element groups;
 ///   {3} is the position of the current group in the group list.
+///   {4} is the type hint.
 constexpr const char *opOneVariadicTemplate = R"Py(
   @builtins.property
-  def {0}(self):
+  def {0}(self) -> {4}:
     _ods_variadic_group_length = len(self.operation.{1}s) - {2} + 1
     return self.operation.{1}s[{3}:{3} + _ods_variadic_group_length]
 )Py";
@@ -145,9 +152,10 @@ constexpr const char *opOneVariadicTemplate = R"Py(
 ///   {3} is the total number of variadic groups;
 ///   {4} is the number of non-variadic groups preceding the current group;
 ///   {5} is the number of variadic groups preceding the current group.
+///   {6} is the type hint.
 constexpr const char *opVariadicEqualPrefixTemplate = R"Py(
   @builtins.property
-  def {0}(self):
+  def {0}(self) -> {6}:
     start, elements_per_group = _ods_equally_sized_accessor(self.operation.{1}s, {2}, {3}, {4}, {5}))Py";
 
 /// Second part of the template for equally-sized case, accessing a single
@@ -170,9 +178,10 @@ constexpr const char *opVariadicEqualVariadicTemplate = R"Py(
 ///   {2} is the position of the group in the group list;
 ///   {3} is a return suffix (expected [0] for single-element, empty for
 ///       variadic, and opVariadicSegmentOptionalTrailingTemplate for optional).
+///   {4} is the type hint.
 constexpr const char *opVariadicSegmentTemplate = R"Py(
   @builtins.property
-  def {0}(self):
+  def {0}(self) -> {4}:
     {1}_range = _ods_segmented_accessor(
          self.operation.{1}s,
          self.operation.attributes["{1}SegmentSizes"], {2})
@@ -188,18 +197,20 @@ constexpr const char *opVariadicSegmentOptionalTrailingTemplate =
 /// Template for an operation attribute getter:
 ///   {0} is the name of the attribute sanitized for Python;
 ///   {1} is the original name of the attribute.
+///   {2} is the type hint.
 constexpr const char *attributeGetterTemplate = R"Py(
   @builtins.property
-  def {0}(self):
+  def {0}(self) -> {2}:
     return self.operation.attributes["{1}"]
 )Py";
 
 /// Template for an optional operation attribute getter:
 ///   {0} is the name of the attribute sanitized for Python;
 ///   {1} is the original name of the attribute.
+///   {2} is the type hint.
 constexpr const char *optionalAttributeGetterTemplate = R"Py(
   @builtins.property
-  def {0}(self):
+  def {0}(self) -> _Optional[{2}]:
     if "{1}" not in self.operation.attributes:
       return None
     return self.operation.attributes["{1}"]
@@ -212,16 +223,17 @@ constexpr const char *optionalAttributeGetterTemplate = R"Py(
 ///    {1} is the original name of the attribute.
 constexpr const char *unitAttributeGetterTemplate = R"Py(
   @builtins.property
-  def {0}(self):
+  def {0}(self) -> bool:
     return "{1}" in self.operation.attributes
 )Py";
 
 /// Template for an operation attribute setter:
 ///    {0} is the name of the attribute sanitized for Python;
 ///    {1} is the original name of the attribute.
+///    {2} is the type hint.
 constexpr const char *attributeSetterTemplate = R"Py(
   @{0}.setter
-  def {0}(self, value):
+  def {0}(self, value: {2}):
     if value is None:
       raise ValueError("'None' not allowed as value for mandatory attributes")
     self.operation.attributes["{1}"] = value
@@ -231,9 +243,10 @@ constexpr const char *attributeSetterTemplate = R"Py(
 /// removes the attribute:
 ///    {0} is the name of the attribute sanitized for Python;
 ///    {1} is the original name of the attribute.
+///    {2} is the type hint.
 constexpr const char *optionalAttributeSetterTemplate = R"Py(
   @{0}.setter
-  def {0}(self, value):
+  def {0}(self, value: _Optional[{2}]):
     if value is not None:
       self.operation.attributes["{1}"] = value
     elif "{1}" in self.operation.attributes:
@@ -265,7 +278,7 @@ constexpr const char *attributeDeleterTemplate = R"Py(
 
 constexpr const char *regionAccessorTemplate = R"Py(
   @builtins.property
-  def {0}(self):
+  def {0}(self) -> {2}:
     return self.regions[{1}]
 )Py";
 
@@ -275,8 +288,9 @@ def {0}({2}) -> {4}:
 )Py";
 
 constexpr const char *valueBuilderVariadicTemplate = R"Py(
-def {0}({2}) -> {4}:
-  return _get_op_result_or_op_results({1}({3}))
+def {0}({2}) -> _Union[_ods_ir.OpResult, _ods_ir.OpResultList, {1}]:
+  op = {1}({3}); results = op.results
+  return results if len(results) > 1 else (results[0] if len(results) == 1 else op)
 )Py";
 
 static llvm::cl::OptionCategory
@@ -327,6 +341,22 @@ static std::string attrSizedTraitForKind(const char *kind) {
                  StringRef(kind).drop_front());
 }
 
+static StringRef getPythonType(StringRef cppType) {
+  return llvm::StringSwitch<StringRef>(cppType)
+      .Case("::mlir::MemRefType", "_ods_ir.MemRefType")
+      .Case("::mlir::UnrankedMemRefType", "_ods_ir.UnrankedMemRefType")
+      .Case("::mlir::RankedTensorType", "_ods_ir.RankedTensorType")
+      .Case("::mlir::UnrankedTensorType", "_ods_ir.UnrankedTensorType")
+      .Case("::mlir::VectorType", "_ods_ir.VectorType")
+      .Case("::mlir::IntegerType", "_ods_ir.IntegerType")
+      .Case("::mlir::FloatType", "_ods_ir.FloatType")
+      .Case("::mlir::IndexType", "_ods_ir.IndexType")
+      .Case("::mlir::ComplexType", "_ods_ir.ComplexType")
+      .Case("::mlir::TupleType", "_ods_ir.TupleType")
+      .Case("::mlir::NoneType", "_ods_ir.NoneType")
+      .Default(StringRef());
+}
+
 /// Emits accessors to "elements" of an Op definition. Currently, the supported
 /// elements are operands and results, indicated by `kind`, which must be either
 /// `operand` or `result` and is used verbatim in the emitted code.
@@ -356,15 +386,27 @@ static void emitElementAccessors(
         seenVariableLength = true;
       if (element.name.empty())
         continue;
+      std::string type = std::strcmp(kind, "operand") == 0 ? "_ods_ir.Value"
+                                                           : "_ods_ir.OpResult";
+      if (StringRef pythonType = getPythonType(element.constraint.getCppType());
+          !pythonType.empty())
+        type = llvm::formatv("{0}[{1}]", type, pythonType);
       if (element.isVariableLength()) {
-        os << formatv(element.isOptional() ? opOneOptionalTemplate
-                                           : opOneVariadicTemplate,
-                      sanitizeName(element.name), kind, numElements, i);
+        if (element.isOptional()) {
+          os << formatv(opOneOptionalTemplate, sanitizeName(element.name), kind,
+                        numElements, i, type);
+        } else {
+          type = std::strcmp(kind, "operand") == 0 ? "_ods_ir.OpOperandList"
+                                                   : "_ods_ir.OpResultList";
+          os << formatv(opOneVariadicTemplate, sanitizeName(element.name), kind,
+                        numElements, i, type);
+        }
       } else if (seenVariableLength) {
         os << formatv(opSingleAfterVariableTemplate, sanitizeName(element.name),
-                      kind, numElements, i);
+                      kind, numElements, i, type);
       } else {
-        os << formatv(opSingleTemplate, sanitizeName(element.name), kind, i);
+        os << formatv(opSingleTemplate, sanitizeName(element.name), kind, i,
+                      type);
       }
     }
     return;
@@ -387,9 +429,23 @@ static void emitElementAccessors(
     for (unsigned i = 0; i < numElements; ++i) {
       const NamedTypeConstraint &element = getElement(op, i);
       if (!element.name.empty()) {
+        std::string type;
+        if (element.isVariableLength()) {
+          type = std::strcmp(kind, "operand") == 0 ? "_ods_ir.OpOperandList"
+                                                   : "_ods_ir.OpResultList";
+        } else {
+          type = std::strcmp(kind, "operand") == 0 ? "_ods_ir.Value"
+                                                   : "_ods_ir.OpResult";
+        }
+        if (std::strcmp(type.c_str(), "_ods_ir.Value") == 0 ||
+            std::strcmp(type.c_str(), "_ods_ir.OpResult") == 0) {
+          StringRef pythonType = getPythonType(element.constraint.getCppType());
+          if (!pythonType.empty())
+            type += "[" + pythonType.str() + "]";
+        }
         os << formatv(opVariadicEqualPrefixTemplate, sanitizeName(element.name),
                       kind, numSimpleLength, numVariadicGroups,
-                      numPrecedingSimple, numPrecedingVariadic);
+                      numPrecedingSimple, numPrecedingVariadic, type);
         os << formatv(element.isVariableLength()
                           ? opVariadicEqualVariadicTemplate
                           : opVariadicEqualSimpleTemplate,
@@ -412,13 +468,29 @@ static void emitElementAccessors(
       if (element.name.empty())
         continue;
       std::string trailing;
-      if (!element.isVariableLength())
-        trailing = "[0]";
-      else if (element.isOptional())
-        trailing = std::string(
-            formatv(opVariadicSegmentOptionalTrailingTemplate, kind));
+      std::string type = std::strcmp(kind, "operand") == 0
+                             ? "_ods_ir.OpOperandList"
+                             : "_ods_ir.OpResultList";
+      if (!element.isVariableLength() || element.isOptional()) {
+        type = std::strcmp(kind, "operand") == 0 ? "_ods_ir.Value"
+                                                 : "_ods_ir.OpResult";
+        if (std::strcmp(type.c_str(), "_ods_ir.Value") == 0 ||
+            std::strcmp(type.c_str(), "_ods_ir.OpResult") == 0) {
+          StringRef pythonType = getPythonType(element.constraint.getCppType());
+          if (!pythonType.empty())
+            type += "[" + pythonType.str() + "]";
+        }
+        if (!element.isVariableLength()) {
+          trailing = "[0]";
+        } else if (element.isOptional()) {
+          type = "_Optional[" + type + "]";
+          trailing = std::string(
+              formatv(opVariadicSegmentOptionalTrailingTemplate, kind));
+        }
+      }
+
       os << formatv(opVariadicSegmentTemplate, sanitizeName(element.name), kind,
-                    i, trailing);
+                    i, trailing, type);
     }
     return;
   }
@@ -448,6 +520,72 @@ static void emitResultAccessors(const Operator &op, raw_ostream &os) {
                        getNumResults(op), getResult);
 }
 
+static std::string getPythonAttrName(mlir::tblgen::Attribute attr) {
+  auto storageTypeStr = attr.getStorageType();
+  if (storageTypeStr == "::mlir::AffineMapAttr")
+    return "AffineMapAttr";
+  if (storageTypeStr == "::mlir::ArrayAttr")
+    return "ArrayAttr";
+  if (storageTypeStr == "::mlir::BoolAttr")
+    return "BoolAttr";
+  if (storageTypeStr == "::mlir::DenseBoolArrayAttr")
+    return "DenseBoolArrayAttr";
+  if (storageTypeStr == "::mlir::DenseElementsAttr") {
+    llvm::StringSet<> superClasses;
+    for (const Record *sc : attr.getDef().getSuperClasses())
+      superClasses.insert(sc->getNameInitAsString());
+    if (superClasses.contains("FloatElementsAttr") ||
+        superClasses.contains("RankedFloatElementsAttr")) {
+      return "DenseFPElementsAttr";
+    }
+    return "DenseElementsAttr";
+  }
+  if (storageTypeStr == "::mlir::DenseF32ArrayAttr")
+    return "DenseF32ArrayAttr";
+  if (storageTypeStr == "::mlir::DenseF64ArrayAttr")
+    return "DenseF64ArrayAttr";
+  if (storageTypeStr == "::mlir::DenseFPElementsAttr")
+    return "DenseFPElementsAttr";
+  if (storageTypeStr == "::mlir::DenseI16ArrayAttr")
+    return "DenseI16ArrayAttr";
+  if (storageTypeStr == "::mlir::DenseI32ArrayAttr")
+    return "DenseI32ArrayAttr";
+  if (storageTypeStr == "::mlir::DenseI64ArrayAttr")
+    return "DenseI64ArrayAttr";
+  if (storageTypeStr == "::mlir::DenseI8ArrayAttr")
+    return "DenseI8ArrayAttr";
+  if (storageTypeStr == "::mlir::DenseIntElementsAttr")
+    return "DenseIntElementsAttr";
+  if (storageTypeStr == "::mlir::DenseResourceElementsAttr")
+    return "DenseResourceElementsAttr";
+  if (storageTypeStr == "::mlir::DictionaryAttr")
+    return "DictAttr";
+  if (storageTypeStr == "::mlir::FlatSymbolRefAttr")
+    return "FlatSymbolRefAttr";
+  if (storageTypeStr == "::mlir::FloatAttr")
+    return "FloatAttr";
+  if (storageTypeStr == "::mlir::IntegerAttr") {
+    if (attr.getAttrDefName().str() == "I1Attr")
+      return "BoolAttr";
+    return "IntegerAttr";
+  }
+  if (storageTypeStr == "::mlir::IntegerSetAttr")
+    return "IntegerSetAttr";
+  if (storageTypeStr == "::mlir::OpaqueAttr")
+    return "OpaqueAttr";
+  if (storageTypeStr == "::mlir::StridedLayoutAttr")
+    return "StridedLayoutAttr";
+  if (storageTypeStr == "::mlir::StringAttr")
+    return "StringAttr";
+  if (storageTypeStr == "::mlir::SymbolRefAttr")
+    return "SymbolRefAttr";
+  if (storageTypeStr == "::mlir::TypeAttr")
+    return "TypeAttr";
+  if (storageTypeStr == "::mlir::UnitAttr")
+    return "UnitAttr";
+  return "Attribute";
+}
+
 /// Emits accessors to Op attributes.
 static void emitAttributeAccessors(const Operator &op, raw_ostream &os) {
   for (const auto &namedAttr : op.getAttributes()) {
@@ -469,15 +607,18 @@ static void emitAttributeAccessors(const Operator &op, raw_ostream &os) {
       continue;
     }
 
+    std::string type = "_ods_ir." + getPythonAttrName(namedAttr.attr);
     if (namedAttr.attr.isOptional()) {
       os << formatv(optionalAttributeGetterTemplate, sanitizedName,
-                    namedAttr.name);
+                    namedAttr.name, type);
       os << formatv(optionalAttributeSetterTemplate, sanitizedName,
-                    namedAttr.name);
+                    namedAttr.name, type);
       os << formatv(attributeDeleterTemplate, sanitizedName, namedAttr.name);
     } else {
-      os << formatv(attributeGetterTemplate, sanitizedName, namedAttr.name);
-      os << formatv(attributeSetterTemplate, sanitizedName, namedAttr.name);
+      os << formatv(attributeGetterTemplate, sanitizedName, namedAttr.name,
+                    type);
+      os << formatv(attributeSetterTemplate, sanitizedName, namedAttr.name,
+                    type);
       // Non-optional attributes cannot be deleted.
     }
   }
@@ -491,7 +632,6 @@ static void emitAttributeAccessors(const Operator &op, raw_ostream &os) {
 constexpr const char *initTemplate = R"Py(
   def __init__(self, {0}):
     operands = []
-    results = []
     attributes = {{}
     regions = None
     {1}
@@ -737,18 +877,24 @@ populateBuilderLinesOperand(const Operator &op, ArrayRef<std::string> names,
   }
 }
 
-/// Python code template for deriving the operation result types from its
-/// attribute:
+/// Python code template of generating result types for
+/// FirstAttrDerivedResultType trait
 ///   - {0} is the name of the attribute from which to derive the types.
-constexpr const char *deriveTypeFromAttrTemplate =
-    R"Py(_ods_result_type_source_attr = attributes["{0}"]
-_ods_derived_result_type = (
+///   - {1} is the number of results.
+constexpr const char *firstAttrDerivedResultTypeTemplate =
+    R"Py(if results is None:
+  _ods_result_type_source_attr = attributes["{0}"]
+  _ods_derived_result_type = (
     _ods_ir.TypeAttr(_ods_result_type_source_attr).value
     if _ods_ir.TypeAttr.isinstance(_ods_result_type_source_attr) else
-    _ods_result_type_source_attr.type))Py";
+    _ods_result_type_source_attr.type)
+  results = [_ods_derived_result_type] * {1})Py";
 
-/// Python code template appending {0} type {1} times to the results list.
-constexpr const char *appendSameResultsTemplate = "results.extend([{0}] * {1})";
+/// Python code template of generating result types for
+/// SameOperandsAndResultType trait
+///   - {0} is the number of results.
+constexpr const char *sameOperandsAndResultTypeTemplate =
+    R"Py(if results is None: results = [operands[0].type] * {0})Py";
 
 /// Appends the given multiline string as individual strings into
 /// `builderLines`.
@@ -767,11 +913,10 @@ static void appendLineByLine(StringRef string,
 static void
 populateBuilderLinesResult(const Operator &op, ArrayRef<std::string> names,
                            SmallVectorImpl<std::string> &builderLines) {
-  bool sizedSegments = op.getTrait(attrSizedTraitForKind("result")) != nullptr;
-
   if (hasSameArgumentAndResultTypes(op)) {
-    builderLines.push_back(formatv(appendSameResultsTemplate,
-                                   "operands[0].type", op.getNumResults()));
+    appendLineByLine(
+        formatv(sameOperandsAndResultTypeTemplate, op.getNumResults()).str(),
+        builderLines);
     return;
   }
 
@@ -779,16 +924,18 @@ populateBuilderLinesResult(const Operator &op, ArrayRef<std::string> names,
     const NamedAttribute &firstAttr = op.getAttribute(0);
     assert(!firstAttr.name.empty() && "unexpected empty name for the attribute "
                                       "from which the type is derived");
-    appendLineByLine(formatv(deriveTypeFromAttrTemplate, firstAttr.name).str(),
+    appendLineByLine(formatv(firstAttrDerivedResultTypeTemplate, firstAttr.name,
+                             op.getNumResults())
+                         .str(),
                      builderLines);
-    builderLines.push_back(formatv(appendSameResultsTemplate,
-                                   "_ods_derived_result_type",
-                                   op.getNumResults()));
     return;
   }
 
   if (hasInferTypeInterface(op))
     return;
+
+  bool sizedSegments = op.getTrait(attrSizedTraitForKind("result")) != nullptr;
+  builderLines.push_back("results = []");
 
   // For each element, find or generate a name.
   for (int i = 0, e = op.getNumResults(); i < e; ++i) {
@@ -908,6 +1055,9 @@ static SmallVector<std::string> emitDefaultOpBuilder(const Operator &op,
       functionArgs.push_back(builderArgs[i]);
     }
   }
+  if (canInferType(op)) {
+    functionArgs.push_back("results=None");
+  }
   functionArgs.push_back("loc=None");
   functionArgs.push_back("ip=None");
 
@@ -917,8 +1067,7 @@ static SmallVector<std::string> emitDefaultOpBuilder(const Operator &op,
   initArgs.push_back("self._ODS_OPERAND_SEGMENTS");
   initArgs.push_back("self._ODS_RESULT_SEGMENTS");
   initArgs.push_back("attributes=attributes");
-  if (!hasInferTypeInterface(op))
-    initArgs.push_back("results=results");
+  initArgs.push_back("results=results");
   initArgs.push_back("operands=operands");
   initArgs.push_back("successors=_ods_successors");
   initArgs.push_back("regions=regions");
@@ -971,8 +1120,9 @@ static void emitRegionAccessors(const Operator &op, raw_ostream &os) {
     assert((!region.isVariadic() || en.index() == op.getNumRegions() - 1) &&
            "expected only the last region to be variadic");
     os << formatv(regionAccessorTemplate, sanitizeName(region.name),
-                  std::to_string(en.index()) +
-                      (region.isVariadic() ? ":" : ""));
+                  std::to_string(en.index()) + (region.isVariadic() ? ":" : ""),
+                  region.isVariadic() ? "_ods_ir.RegionSequence"
+                                      : "_ods_ir.Region");
   }
 }
 
@@ -1004,30 +1154,49 @@ static void emitValueBuilder(const Operator &op,
     nameWithoutDialect += "_";
   std::string params = llvm::join(valueBuilderParams, ", ");
   std::string args = llvm::join(opBuilderArgs, ", ");
-  const char *type =
-      (op.getNumResults() > 1
-           ? "_Sequence[_ods_ir.Value]"
-           : (op.getNumResults() > 0 ? "_ods_ir.Value" : "_ods_ir.Operation"));
-  if (op.getNumVariableLengthResults() > 0) {
+  if (op.getNumVariableLengthResults()) {
     os << formatv(valueBuilderVariadicTemplate, nameWithoutDialect,
-                  op.getCppClassName(), params, args, type);
+                  op.getCppClassName(), params, args);
   } else {
-    const char *results;
-    if (op.getNumResults() == 0) {
-      results = "";
-    } else if (op.getNumResults() == 1) {
-      results = ".result";
-    } else {
+    std::string type = op.getCppClassName().str();
+    const char *results = "";
+    if (op.getNumResults() > 1) {
+      type = "_ods_ir.OpResultList";
       results = ".results";
+    } else if (op.getNumResults() == 1) {
+      type = "_ods_ir.OpResult";
+      results = ".result";
     }
     os << formatv(valueBuilderTemplate, nameWithoutDialect,
                   op.getCppClassName(), params, args, type, results);
   }
 }
 
+/// Retrieve the description of the given op and generate a docstring for it.
+static std::string makeDocStringForOp(const Operator &op) {
+  if (!op.hasDescription())
+    return "";
+
+  auto desc = op.getDescription().rtrim(" \t").str();
+  // Replace all """ with \"\"\" to avoid early termination of the literal.
+  desc = std::regex_replace(desc, std::regex(R"(""")"), R"(\"\"\")");
+
+  std::string docString = "\n";
+  llvm::raw_string_ostream os(docString);
+  raw_indented_ostream identedOs(os);
+  os << R"(  r""")" << "\n";
+  identedOs.printReindented(desc, "  ");
+  if (!StringRef(desc).ends_with("\n"))
+    os << "\n";
+  os << R"(  """)" << "\n";
+
+  return docString;
+}
+
 /// Emits bindings for a specific Op to the given output stream.
 static void emitOpBindings(const Operator &op, raw_ostream &os) {
-  os << formatv(opClassTemplate, op.getCppClassName(), op.getOperationName());
+  os << formatv(opClassTemplate, op.getCppClassName(), op.getOperationName(),
+                makeDocStringForOp(op));
 
   // Sized segments.
   if (op.getTrait(attrSizedTraitForKind("operand")) != nullptr) {

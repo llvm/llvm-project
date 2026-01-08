@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "BitcodeReader.h"
-#include "llvm/ADT/IndexedMap.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
@@ -384,6 +383,8 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
     return decodeRecord(R, I->Path, Blob);
   case REFERENCE_FIELD:
     return decodeRecord(R, F, Blob);
+  case REFERENCE_FILE:
+    return decodeRecord(R, I->DocumentationFileName, Blob);
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "invalid field for Reference");

@@ -44,6 +44,7 @@ namespace {
 
 class AMDGPUWaitSGPRHazards {
 public:
+  const GCNSubtarget *ST;
   const SIInstrInfo *TII;
   const SIRegisterInfo *TRI;
   const MachineRegisterInfo *MRI;
@@ -54,7 +55,7 @@ public:
   bool CullSGPRHazardsAtMemWait;
   unsigned CullSGPRHazardsMemWaitThreshold;
 
-  AMDGPUWaitSGPRHazards() {}
+  AMDGPUWaitSGPRHazards() = default;
 
   // Return the numeric ID 0-127 for a given SGPR.
   static std::optional<unsigned> sgprNumber(Register Reg,
@@ -165,7 +166,7 @@ public:
   }
 
   unsigned mergeMasks(unsigned Mask1, unsigned Mask2) {
-    unsigned Mask = 0xffff;
+    unsigned Mask = AMDGPU::DepCtr::getDefaultDepCtrEncoding(*ST);
     Mask = AMDGPU::DepCtr::encodeFieldSaSdst(
         Mask, std::min(AMDGPU::DepCtr::decodeFieldSaSdst(Mask1),
                        AMDGPU::DepCtr::decodeFieldSaSdst(Mask2)));
@@ -387,7 +388,7 @@ public:
 
       // Apply wait
       if (Wait) {
-        unsigned Mask = 0xffff;
+        unsigned Mask = AMDGPU::DepCtr::getDefaultDepCtrEncoding(*ST);
         if (Wait & WA_VCC) {
           State.VCCHazard &= ~HazardState::VALU;
           Mask = AMDGPU::DepCtr::encodeFieldVaVcc(Mask, 0);
@@ -438,8 +439,8 @@ public:
   }
 
   bool run(MachineFunction &MF) {
-    const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-    if (!ST.hasVALUReadSGPRHazard())
+    ST = &MF.getSubtarget<GCNSubtarget>();
+    if (!ST->hasVALUReadSGPRHazard())
       return false;
 
     // Parse settings
@@ -467,10 +468,10 @@ public:
     if (!EnableSGPRHazardWaits)
       return false;
 
-    TII = ST.getInstrInfo();
-    TRI = ST.getRegisterInfo();
+    TII = ST->getInstrInfo();
+    TRI = ST->getRegisterInfo();
     MRI = &MF.getRegInfo();
-    DsNopCount = ST.isWave64() ? WAVE64_NOPS : WAVE32_NOPS;
+    DsNopCount = ST->isWave64() ? WAVE64_NOPS : WAVE32_NOPS;
 
     auto CallingConv = MF.getFunction().getCallingConv();
     if (!AMDGPU::isEntryFunctionCC(CallingConv) &&

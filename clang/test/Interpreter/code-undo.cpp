@@ -1,4 +1,3 @@
-// UNSUPPORTED: system-aix
 // RUN: cat %s | clang-repl | FileCheck %s
 extern "C" int printf(const char *, ...);
 int x1 = 0;

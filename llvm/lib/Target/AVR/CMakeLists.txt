@@ -29,11 +29,13 @@ add_llvm_target(AVRCodeGen
   AVRSubtarget.cpp
   AVRTargetMachine.cpp
   AVRTargetObjectFile.cpp
+  AVRTargetTransformInfo.cpp
 
   DEPENDS
   intrinsics_gen
 
   LINK_COMPONENTS
+  Analysis
   AVRDesc
   AVRInfo
   AsmPrinter
@@ -44,6 +46,8 @@ add_llvm_target(AVRCodeGen
   SelectionDAG
   Support
   Target
+  TargetParser
+  TransformUtils
 
   ADD_TO_COMPONENT
   AVR

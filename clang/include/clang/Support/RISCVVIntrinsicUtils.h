@@ -402,6 +402,7 @@ private:
   std::vector<int64_t> IntrinsicTypes;
   unsigned NF = 1;
   Policy PolicyAttrs;
+  unsigned TWiden = 0;
 
 public:
   RVVIntrinsic(llvm::StringRef Name, llvm::StringRef Suffix,
@@ -410,8 +411,8 @@ public:
                bool HasVL, PolicyScheme Scheme, bool SupportOverloading,
                bool HasBuiltinAlias, llvm::StringRef ManualCodegen,
                const RVVTypes &Types,
-               const std::vector<int64_t> &IntrinsicTypes,
-               unsigned NF, Policy PolicyAttrs, bool HasFRMRoundModeOp);
+               const std::vector<int64_t> &IntrinsicTypes, unsigned NF,
+               Policy PolicyAttrs, bool HasFRMRoundModeOp, unsigned TWiden);
   ~RVVIntrinsic() = default;
 
   RVVTypePtr getOutputType() const { return OutputType; }
@@ -435,6 +436,7 @@ public:
   llvm::StringRef getManualCodegen() const { return ManualCodegen; }
   PolicyScheme getPolicyScheme() const { return Scheme; }
   unsigned getNF() const { return NF; }
+  unsigned getTWiden() const { return TWiden; }
   const std::vector<int64_t> &getIntrinsicTypes() const {
     return IntrinsicTypes;
   }

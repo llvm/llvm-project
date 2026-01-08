@@ -134,12 +134,18 @@ static cl::opt<cl::boolOrDefault> DebugifyCheckAndStripAll(
 static cl::opt<RunOutliner> EnableMachineOutliner(
     "enable-machine-outliner", cl::desc("Enable the machine outliner"),
     cl::Hidden, cl::ValueOptional, cl::init(RunOutliner::TargetDefault),
-    cl::values(clEnumValN(RunOutliner::AlwaysOutline, "always",
-                          "Run on all functions guaranteed to be beneficial"),
-               clEnumValN(RunOutliner::NeverOutline, "never",
-                          "Disable all outlining"),
-               // Sentinel value for unspecified option.
-               clEnumValN(RunOutliner::AlwaysOutline, "", "")));
+    cl::values(
+        clEnumValN(RunOutliner::AlwaysOutline, "always",
+                   "Run on all functions guaranteed to be beneficial"),
+        clEnumValN(RunOutliner::OptimisticPGO, "optimistic-pgo",
+                   "Outline cold code only. If a code block does not have "
+                   "profile data, optimistically assume it is cold."),
+        clEnumValN(RunOutliner::ConservativePGO, "conservative-pgo",
+                   "Outline cold code only. If a code block does not have "
+                   "profile, data, conservatively assume it is hot."),
+        clEnumValN(RunOutliner::NeverOutline, "never", "Disable all outlining"),
+        // Sentinel value for unspecified option.
+        clEnumValN(RunOutliner::AlwaysOutline, "", "")));
 static cl::opt<bool> EnableGlobalMergeFunc(
     "enable-global-merge-func", cl::Hidden,
     cl::desc("Enable global merge functions that are based on hash function"));
@@ -266,6 +272,12 @@ static cl::opt<bool>
                     cl::desc("Split static data sections into hot and cold "
                              "sections using profile information"));
 
+cl::opt<bool> EmitBBHash(
+    "emit-bb-hash",
+    cl::desc(
+        "Emit the hash of basic block in the SHT_LLVM_BB_ADDR_MAP section."),
+    cl::init(false), cl::Optional);
+
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
 /// i.e. -disable-mypass=false has no effect.
@@ -388,8 +400,6 @@ struct InsertedPass {
 } // end anonymous namespace
 
 namespace llvm {
-
-extern cl::opt<bool> EnableFSDiscriminator;
 
 class PassConfigImpl {
 public:
@@ -1074,7 +1084,7 @@ bool TargetPassConfig::addISelPasses() {
   PM->add(createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
   addPass(createPreISelIntrinsicLoweringPass());
   addPass(createExpandLargeDivRemPass());
-  addPass(createExpandFpPass());
+  addPass(createExpandFpPass(getOptLevel()));
   addIRPasses();
   addCodeGenPrepare();
   addPassesToHandleExceptions();
@@ -1224,12 +1234,9 @@ void TargetPassConfig::addMachinePasses() {
   if (TM->Options.EnableMachineOutliner &&
       getOptLevel() != CodeGenOptLevel::None &&
       EnableMachineOutliner != RunOutliner::NeverOutline) {
-    bool RunOnAllFunctions =
-        (EnableMachineOutliner == RunOutliner::AlwaysOutline);
-    bool AddOutliner =
-        RunOnAllFunctions || TM->Options.SupportsDefaultOutlining;
-    if (AddOutliner)
-      addPass(createMachineOutlinerPass(RunOnAllFunctions));
+    if (EnableMachineOutliner != RunOutliner::TargetDefault ||
+        TM->Options.SupportsDefaultOutlining)
+      addPass(createMachineOutlinerPass(EnableMachineOutliner));
   }
 
   if (GCEmptyBlocks)
@@ -1278,6 +1285,8 @@ void TargetPassConfig::addMachinePasses() {
   // address map (or both).
   if (TM->getBBSectionsType() != llvm::BasicBlockSection::None ||
       TM->Options.BBAddrMap) {
+    if (EmitBBHash)
+      addPass(llvm::createMachineBlockHashInfoPass());
     if (TM->getBBSectionsType() == llvm::BasicBlockSection::List) {
       addPass(llvm::createBasicBlockSectionsProfileReaderWrapperPass(
           TM->getBBSectionsFuncListBuf()));

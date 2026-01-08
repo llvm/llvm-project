@@ -40,3 +40,11 @@ add_libc_fuzzer(
   DEPENDS
     libc.src.strings.bcmp
 )
+
+add_libc_fuzzer(
+  strlen_fuzz
+  SRCS
+    strlen_fuzz.cpp
+  DEPENDS
+    libc.src.string.strlen
+)

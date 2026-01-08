@@ -33,7 +33,7 @@ class MCSymbolGOFF : public MCSymbol {
 
 public:
   MCSymbolGOFF(const MCSymbolTableEntry *Name, bool IsTemporary)
-      : MCSymbol(SymbolKindGOFF, Name, IsTemporary) {}
+      : MCSymbol(Name, IsTemporary) {}
 
   void setLDAttributes(GOFF::LDAttr Attr) {
     modifyFlags(SF_LD, SF_LD);
@@ -47,8 +47,6 @@ public:
     AssociatedDataArea->RequiresNonZeroLength = true;
   }
   MCSectionGOFF *getADA() const { return ADA; }
-
-  static bool classof(const MCSymbol *S) { return S->isGOFF(); }
 };
 } // end namespace llvm
 

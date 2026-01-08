@@ -149,10 +149,10 @@ exit:
 ;;      for (int k = 0; k < 19; k++)
 ;;        b[i][j][k] = b[i][5][k + 1];
 ;;
-;; The direction vector of `b` is [= * <]. We cannot interchange all the loops.
+;; The direction vector of `b` is [= * *]. We cannot interchange all the loops.
 
 ; CHECK:      Dependency matrix before interchange:
-; CHECK-NEXT: = * <
+; CHECK-NEXT: = * *
 ; CHECK-NEXT: Processing InnerLoopId = 2 and OuterLoopId = 1
 ; CHECK-NEXT: Failed interchange InnerLoopId = 2 and OuterLoopId = 1 due to dependence
 ; CHECK-NEXT: Not interchanging loops. Cannot prove legality.

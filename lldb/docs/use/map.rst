@@ -1126,6 +1126,20 @@ Save binary memory data starting at ``0x1000`` and ending at ``0x2000`` to a fil
   (lldb) memory read --outfile /tmp/mem.bin --binary 0x1000 0x2000
   (lldb) me r -o /tmp/mem.bin -b 0x1000 0x2000
 
+
+Print information about memory regions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: shell
+
+  (gdb) info proc mappings
+
+.. code-block:: shell
+
+  (lldb) memory region --all
+  (lldb) me reg --all
+
+
 Get information about a specific heap allocation (macOS only)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

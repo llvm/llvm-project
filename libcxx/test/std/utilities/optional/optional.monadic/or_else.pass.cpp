@@ -62,6 +62,32 @@ constexpr bool test() {
       return std::optional<MoveOnly>{};
     });
   }
+#if TEST_STD_VER >= 26
+  {
+    int i = 2;
+    std::optional<int&> opt;
+    assert(opt.or_else([&] { return std::optional<int&>{i}; }) == i);
+    int j = 3;
+    opt   = j;
+    opt.or_else([] {
+      assert(false);
+      return std::optional<int&>{};
+    });
+    assert(opt == j);
+  }
+  {
+    int i = 2;
+    std::optional<int&> opt;
+    assert(std::move(opt).or_else([&] { return std::optional<int&>{i}; }) == i);
+    int j = 3;
+    opt   = j;
+    std::move(opt).or_else([] {
+      assert(false);
+      return std::optional<int&>{};
+    });
+    assert(opt == j);
+  }
+#endif
 
   return true;
 }

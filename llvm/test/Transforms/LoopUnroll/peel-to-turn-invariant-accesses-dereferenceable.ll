@@ -41,7 +41,7 @@ define i32 @peel_readonly_to_make_loads_derefenceable(ptr %ptr, i32 %N, ptr %inv
 ; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[SUM_NEXT]] = add i32 [[SUM]], [[LV]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    [[C_3:%.*]] = icmp ult i32 [[IV]], 1000
+; CHECK-NEXT:    [[C_3:%.*]] = icmp samesign ult i32 [[IV]], 1000
 ; CHECK-NEXT:    br i1 [[C_3]], label [[LOOP_HEADER]], label [[EXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    [[SUM_NEXT_LCSSA_PH:%.*]] = phi i32 [ [[SUM_NEXT]], [[LOOP_LATCH]] ]

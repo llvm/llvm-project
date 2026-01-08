@@ -9,17 +9,21 @@
 #ifndef _LIBCPP_SRC_INCLUDE_FROM_CHARS_FLOATING_POINT_H
 #define _LIBCPP_SRC_INCLUDE_FROM_CHARS_FLOATING_POINT_H
 
-// These headers are in the shared LLVM-libc header library.
-#include "shared/fp_bits.h"
-#include "shared/str_to_float.h"
-#include "shared/str_to_integer.h"
-
 #include <__assert>
 #include <__config>
 #include <cctype>
 #include <charconv>
 #include <concepts>
 #include <limits>
+
+// Make sure we use libc++'s assertion machinery within the shared code we use
+// from LLVM libc.
+#define LIBC_ASSERT(cond) _LIBCPP_ASSERT((cond), _LIBCPP_TOSTRING(cond))
+
+// These headers are in the shared LLVM-libc header library.
+#include "shared/fp_bits.h"
+#include "shared/str_to_float.h"
+#include "shared/str_to_integer.h"
 
 // Included for the _Floating_type_traits class
 #include "to_chars_floating_point.h"

@@ -1,4 +1,4 @@
-//===--- NewDeleteOverloadsCheck.h - clang-tidy----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_NEWDELETEOVERLOADS_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_NEWDELETEOVERLOADS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_NEWDELETEOVERLOADSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_NEWDELETEOVERLOADSCHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "llvm/ADT/SmallVector.h"
@@ -33,4 +33,4 @@ public:
 
 } // namespace clang::tidy::misc
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_NEWDELETEOVERLOADS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_NEWDELETEOVERLOADSCHECK_H

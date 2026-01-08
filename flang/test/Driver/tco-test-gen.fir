@@ -37,10 +37,10 @@ func.func @_QPtest(%arg0: !fir.ref<i32> {fir.bindc_name = "num"}, %arg1: !fir.re
 }
 
 // CHECK-LABEL:   llvm.func @_QPtest(
-// CHECK-SAME:      %[[ARG0:.*]]: !llvm.ptr {fir.bindc_name = "num", llvm.nocapture},
-// CHECK-SAME:      %[[ARG1:.*]]: !llvm.ptr {fir.bindc_name = "lb", llvm.nocapture},
-// CHECK-SAME:      %[[ARG2:.*]]: !llvm.ptr {fir.bindc_name = "ub", llvm.nocapture},
-// CHECK-SAME:      %[[ARG3:.*]]: !llvm.ptr {fir.bindc_name = "step", llvm.nocapture}) {
+// CHECK-SAME:      %[[ARG0:.*]]: !llvm.ptr {fir.bindc_name = "num", llvm.noalias, llvm.nocapture},
+// CHECK-SAME:      %[[ARG1:.*]]: !llvm.ptr {fir.bindc_name = "lb", llvm.noalias, llvm.nocapture},
+// CHECK-SAME:      %[[ARG2:.*]]: !llvm.ptr {fir.bindc_name = "ub", llvm.noalias, llvm.nocapture},
+// CHECK-SAME:      %[[ARG3:.*]]: !llvm.ptr {fir.bindc_name = "step", llvm.noalias, llvm.nocapture}) {
 
 // CMPLX:           %[[VAL_0:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CMPLX:           %[[VAL_1:.*]] = llvm.alloca %[[VAL_0]] x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr

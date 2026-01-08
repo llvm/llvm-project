@@ -70,6 +70,32 @@ static void DumpList(llvm::raw_ostream &os, const char *label, const T &list) {
   }
 }
 
+llvm::raw_ostream &operator<<(
+    llvm::raw_ostream &os, const WithOmpDeclarative &x) {
+  if (x.has_ompRequires() || x.has_ompAtomicDefaultMemOrder()) {
+    os << " OmpRequirements:(";
+    if (const common::OmpMemoryOrderType *admo{x.ompAtomicDefaultMemOrder()}) {
+      os << parser::ToLowerCaseLetters(llvm::omp::getOpenMPClauseName(
+                llvm::omp::Clause::OMPC_atomic_default_mem_order))
+         << '(' << parser::ToLowerCaseLetters(EnumToString(*admo)) << ')';
+      if (x.has_ompRequires()) {
+        os << ',';
+      }
+    }
+    if (const WithOmpDeclarative::RequiresClauses *reqs{x.ompRequires()}) {
+      size_t num{0}, size{reqs->count()};
+      reqs->IterateOverMembers([&](llvm::omp::Clause f) {
+        os << parser::ToLowerCaseLetters(llvm::omp::getOpenMPClauseName(f));
+        if (++num < size) {
+          os << ',';
+        }
+      });
+    }
+    os << ')';
+  }
+  return os;
+}
+
 void SubprogramDetails::set_moduleInterface(Symbol &symbol) {
   CHECK(!moduleInterface_);
   moduleInterface_ = &symbol;
@@ -150,6 +176,7 @@ llvm::raw_ostream &operator<<(
       os << x;
     }
   }
+  os << static_cast<const WithOmpDeclarative &>(x);
   return os;
 }
 
@@ -311,7 +338,8 @@ std::string DetailsToString(const Details &details) {
           [](const TypeParamDetails &) { return "TypeParam"; },
           [](const MiscDetails &) { return "Misc"; },
           [](const AssocEntityDetails &) { return "AssocEntity"; },
-          [](const UserReductionDetails &) { return "UserReductionDetails"; }},
+          [](const UserReductionDetails &) { return "UserReductionDetails"; },
+          [](const MapperDetails &) { return "MapperDetails"; }},
       details);
 }
 
@@ -330,8 +358,14 @@ bool Symbol::CanReplaceDetails(const Details &details) const {
         common::visitors{
             [](const UseErrorDetails &) { return true; },
             [&](const ObjectEntityDetails &) { return has<EntityDetails>(); },
-            [&](const ProcEntityDetails &) { return has<EntityDetails>(); },
+            [&](const ProcEntityDetails &x) { return has<EntityDetails>(); },
             [&](const SubprogramDetails &) {
+              if (const auto *oldProc{this->detailsIf<ProcEntityDetails>()}) {
+                // Can replace bare "EXTERNAL dummy" with explicit INTERFACE
+                return oldProc->isDummy() && !oldProc->procInterface() &&
+                    attrs().test(Attr::EXTERNAL) && !test(Flag::Function) &&
+                    !test(Flag::Subroutine);
+              }
               return has<SubprogramNameDetails>() || has<EntityDetails>();
             },
             [&](const DerivedTypeDetails &) {
@@ -342,12 +376,11 @@ bool Symbol::CanReplaceDetails(const Details &details) const {
               const auto *use{this->detailsIf<UseDetails>()};
               return use && use->symbol() == x.symbol();
             },
-            [&](const HostAssocDetails &) {
-              return this->has<HostAssocDetails>();
-            },
+            [&](const HostAssocDetails &) { return has<HostAssocDetails>(); },
             [&](const UserReductionDetails &) {
-              return this->has<UserReductionDetails>();
+              return has<UserReductionDetails>();
             },
+            [&](const MapperDetails &) { return has<MapperDetails>(); },
             [](const auto &) { return false; },
         },
         details);
@@ -576,7 +609,9 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
   common::visit( //
       common::visitors{
           [&](const UnknownDetails &) {},
-          [&](const MainProgramDetails &) {},
+          [&](const MainProgramDetails &x) {
+            os << static_cast<const WithOmpDeclarative &>(x);
+          },
           [&](const ModuleDetails &x) {
             if (x.isSubmodule()) {
               os << " (";
@@ -595,6 +630,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
             if (x.isDefaultPrivate()) {
               os << " isDefaultPrivate";
             }
+            os << static_cast<const WithOmpDeclarative &>(x);
           },
           [&](const SubprogramNameDetails &x) {
             os << ' ' << EnumToString(x.kind());
@@ -611,7 +647,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
               sep = ',';
             }
           },
-          [](const HostAssocDetails &) {},
+          [&os](const HostAssocDetails &x) { os << " => " << x.symbol(); },
           [&](const ProcBindingDetails &x) {
             os << " => " << x.symbol().name();
             DumpOptional(os, "passName", x.passName());
@@ -651,6 +687,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
               DumpType(os, type);
             }
           },
+          // Avoid recursive streaming for MapperDetails; nothing more to dump
+          [&](const MapperDetails &) {},
           [&](const auto &x) { os << x; },
       },
       details);
@@ -765,6 +803,11 @@ void DerivedTypeDetails::add_component(const Symbol &symbol) {
   componentNames_.push_back(symbol.name());
 }
 
+void DerivedTypeDetails::add_originalKindParameter(
+    SourceName name, const parser::Expr *expr) {
+  originalKindParameterMap_.emplace(name, expr);
+}
+
 const Symbol *DerivedTypeDetails::GetParentComponent(const Scope &scope) const {
   if (auto extends{GetParentComponentName()}) {
     if (auto iter{scope.find(*extends)}; iter != scope.cend()) {
@@ -861,8 +904,7 @@ std::string Symbol::OmpFlagToClauseName(Symbol::Flag ompFlag) {
   case Symbol::Flag::OmpMapTo:
   case Symbol::Flag::OmpMapFrom:
   case Symbol::Flag::OmpMapToFrom:
-  case Symbol::Flag::OmpMapAlloc:
-  case Symbol::Flag::OmpMapRelease:
+  case Symbol::Flag::OmpMapStorage:
   case Symbol::Flag::OmpMapDelete:
     clauseName = "MAP";
     break;

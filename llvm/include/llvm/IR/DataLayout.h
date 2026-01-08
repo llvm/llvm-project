@@ -77,12 +77,21 @@ public:
     uint32_t BitWidth;
     Align ABIAlign;
     Align PrefAlign;
+    /// The index bit width also defines the address size in this address space.
+    /// If the index width is less than the representation bit width, the
+    /// pointer is non-integral and bits beyond the index width could be used
+    /// for additional metadata (e.g. AMDGPU buffer fat pointers with bounds
+    /// and other flags or CHERI capabilities that contain bounds+permissions).
     uint32_t IndexBitWidth;
     /// Pointers in this address space don't have a well-defined bitwise
-    /// representation (e.g. may be relocated by a copying garbage collector).
-    /// Additionally, they may also be non-integral (i.e. containing additional
-    /// metadata such as bounds information/permissions).
-    bool IsNonIntegral;
+    /// representation (e.g. they may be relocated by a copying garbage
+    /// collector and thus have different addresses at different times).
+    bool HasUnstableRepresentation;
+    /// Pointers in this address space have additional state bits that are
+    /// located at a target-defined location when stored in memory. An example
+    /// of this would be CHERI capabilities where the validity bit is stored
+    /// separately from the pointer address+bounds information.
+    bool HasExternalState;
     LLVM_ABI bool operator==(const PointerSpec &Other) const;
   };
 
@@ -149,7 +158,7 @@ private:
   /// Sets or updates the specification for pointer in the given address space.
   void setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth, Align ABIAlign,
                       Align PrefAlign, uint32_t IndexBitWidth,
-                      bool IsNonIntegral);
+                      bool HasUnstableRepr, bool HasExternalState);
 
   /// Internal helper to get alignment for integer of given bitwidth.
   LLVM_ABI Align getIntegerAlignment(uint32_t BitWidth, bool abi_or_pref) const;
@@ -303,8 +312,6 @@ public:
     llvm_unreachable("invalid mangling mode");
   }
 
-  LLVM_ABI static const char *getManglingComponent(const Triple &T);
-
   /// Returns true if the specified type fits in a native integer type
   /// supported by the CPU.
   ///
@@ -357,19 +364,91 @@ public:
   /// \sa DataLayout::getAddressSizeInBits
   unsigned getAddressSize(unsigned AS) const { return getIndexSize(AS); }
 
-  /// Return the address spaces containing non-integral pointers.  Pointers in
-  /// this address space don't have a well-defined bitwise representation.
-  SmallVector<unsigned, 8> getNonIntegralAddressSpaces() const {
+  /// Return the address spaces with special pointer semantics (such as being
+  /// unstable or non-integral).
+  SmallVector<unsigned, 8> getNonStandardAddressSpaces() const {
     SmallVector<unsigned, 8> AddrSpaces;
     for (const PointerSpec &PS : PointerSpecs) {
-      if (PS.IsNonIntegral)
+      if (PS.HasUnstableRepresentation || PS.HasExternalState ||
+          PS.BitWidth != PS.IndexBitWidth)
         AddrSpaces.push_back(PS.AddrSpace);
     }
     return AddrSpaces;
   }
 
+  /// Returns whether this address space has a non-integral pointer
+  /// representation, i.e. the pointer is not just an integer address but some
+  /// other bitwise representation. When true, passes cannot assume that all
+  /// bits of the representation map directly to the allocation address.
+  /// NOTE: This also returns true for "unstable" pointers where the
+  /// representation may be just an address, but this value can change at any
+  /// given time (e.g. due to copying garbage collection).
+  /// Examples include AMDGPU buffer descriptors with a 128-bit fat pointer
+  /// and a 32-bit offset or CHERI capabilities that contain bounds, permissions
+  /// and an out-of-band validity bit.
+  ///
+  /// In general, more specialized functions such as mustNotIntroduceIntToPtr(),
+  /// mustNotIntroducePtrToInt(), or hasExternalState() should be
+  /// preferred over this one when reasoning about the behavior of IR
+  /// analysis/transforms.
+  /// TODO: should remove/deprecate this once all uses have migrated.
   bool isNonIntegralAddressSpace(unsigned AddrSpace) const {
-    return getPointerSpec(AddrSpace).IsNonIntegral;
+    const auto &PS = getPointerSpec(AddrSpace);
+    return PS.BitWidth != PS.IndexBitWidth || PS.HasUnstableRepresentation ||
+           PS.HasExternalState;
+  }
+
+  /// Returns whether this address space has an "unstable" pointer
+  /// representation. The bitwise pattern of such pointers is allowed to change
+  /// in a target-specific way. For example, this could be used for copying
+  /// garbage collection where the garbage collector could update the pointer
+  /// value as part of the collection sweep.
+  bool hasUnstableRepresentation(unsigned AddrSpace) const {
+    return getPointerSpec(AddrSpace).HasUnstableRepresentation;
+  }
+  bool hasUnstableRepresentation(Type *Ty) const {
+    auto *PTy = dyn_cast<PointerType>(Ty->getScalarType());
+    return PTy && hasUnstableRepresentation(PTy->getPointerAddressSpace());
+  }
+
+  /// Returns whether this address space has external state (implies having
+  /// a non-integral pointer representation).
+  /// These pointer types must be loaded and stored using appropriate
+  /// instructions and cannot use integer loads/stores as this would not
+  /// propagate the out-of-band state. An example of such a pointer type is a
+  /// CHERI capability that contain bounds, permissions and an out-of-band
+  /// validity bit that is invalidated whenever an integer/FP store is performed
+  /// to the associated memory location.
+  bool hasExternalState(unsigned AddrSpace) const {
+    return getPointerSpec(AddrSpace).HasExternalState;
+  }
+  bool hasExternalState(Type *Ty) const {
+    auto *PTy = dyn_cast<PointerType>(Ty->getScalarType());
+    return PTy && hasExternalState(PTy->getPointerAddressSpace());
+  }
+
+  /// Returns whether passes must avoid introducing `inttoptr` instructions
+  /// for this address space (unless they have target-specific knowledge).
+  ///
+  /// This is currently the case for non-integral pointer representations with
+  /// external state (hasExternalState()) since `inttoptr` cannot recreate the
+  /// external state bits.
+  /// New `inttoptr` instructions should also be avoided for "unstable" bitwise
+  /// representations (hasUnstableRepresentation()) unless the pass knows it is
+  /// within a critical section that retains the current representation.
+  bool mustNotIntroduceIntToPtr(unsigned AddrSpace) const {
+    return hasUnstableRepresentation(AddrSpace) || hasExternalState(AddrSpace);
+  }
+
+  /// Returns whether passes must avoid introducing `ptrtoint` instructions
+  /// for this address space (unless they have target-specific knowledge).
+  ///
+  /// This is currently the case for pointer address spaces that have an
+  /// "unstable" representation (hasUnstableRepresentation()) since the
+  /// bitwise pattern of such pointers could change unless the pass knows it is
+  /// within a critical section that retains the current representation.
+  bool mustNotIntroducePtrToInt(unsigned AddrSpace) const {
+    return hasUnstableRepresentation(AddrSpace);
   }
 
   bool isNonIntegralPointerType(PointerType *PT) const {
@@ -377,8 +456,18 @@ public:
   }
 
   bool isNonIntegralPointerType(Type *Ty) const {
-    auto *PTy = dyn_cast<PointerType>(Ty);
+    auto *PTy = dyn_cast<PointerType>(Ty->getScalarType());
     return PTy && isNonIntegralPointerType(PTy);
+  }
+
+  bool mustNotIntroducePtrToInt(Type *Ty) const {
+    auto *PTy = dyn_cast<PointerType>(Ty->getScalarType());
+    return PTy && mustNotIntroducePtrToInt(PTy->getPointerAddressSpace());
+  }
+
+  bool mustNotIntroduceIntToPtr(Type *Ty) const {
+    auto *PTy = dyn_cast<PointerType>(Ty->getScalarType());
+    return PTy && mustNotIntroduceIntToPtr(PTy->getPointerAddressSpace());
   }
 
   /// The size in bits of the pointer representation in a given address space.
@@ -501,10 +590,7 @@ public:
   ///
   /// This is the amount that alloca reserves for this type. For example,
   /// returns 12 or 16 for x86_fp80, depending on alignment.
-  TypeSize getTypeAllocSize(Type *Ty) const {
-    // Round up to the next alignment boundary.
-    return alignTo(getTypeStoreSize(Ty), getABITypeAlign(Ty).value());
-  }
+  LLVM_ABI TypeSize getTypeAllocSize(Type *Ty) const;
 
   /// Returns the offset in bits between successive objects of the
   /// specified type, including alignment padding; always a multiple of 8.

@@ -197,10 +197,8 @@ void SSAUpdater::RewriteUse(Use &U) {
 }
 
 void SSAUpdater::UpdateDebugValues(Instruction *I) {
-  SmallVector<DbgValueInst *, 4> DbgValues;
   SmallVector<DbgVariableRecord *, 4> DbgVariableRecords;
-  llvm::findDbgValues(DbgValues, I, &DbgVariableRecords);
-  assert(DbgValues.empty());
+  llvm::findDbgValues(I, DbgVariableRecords);
   for (auto &DVR : DbgVariableRecords) {
     if (DVR->getParent() == I->getParent())
       continue;

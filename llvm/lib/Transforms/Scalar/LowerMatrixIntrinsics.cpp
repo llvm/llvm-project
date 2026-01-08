@@ -21,7 +21,6 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -98,6 +97,12 @@ static cl::opt<MatrixLayoutTy> MatrixLayout(
 static cl::opt<bool> PrintAfterTransposeOpt("matrix-print-after-transpose-opt",
                                             cl::init(false));
 
+static cl::opt<unsigned> SplitMatmulRemainderOverThreshold(
+    "matrix-split-matmul-remainder-over-threshold", cl::Hidden,
+    cl::desc("Illegal remainder vectors over this size in bits should be split "
+             "in the inner loop of matmul"),
+    cl::init(0));
+
 /// Helper function to either return Scope, if it is a subprogram or the
 /// attached subprogram for a local scope.
 static DISubprogram *getSubprogram(DIScope *Scope) {
@@ -116,17 +121,15 @@ static bool isSplat(Value *V) {
 
 /// Match any mul operation (fp or integer).
 template <typename LTy, typename RTy>
-auto m_AnyMul(const LTy &L, const RTy &R) {
+static auto m_AnyMul(const LTy &L, const RTy &R) {
   return m_CombineOr(m_Mul(L, R), m_FMul(L, R));
 }
 
 /// Match any add operation (fp or integer).
 template <typename LTy, typename RTy>
-auto m_AnyAdd(const LTy &L, const RTy &R) {
+static auto m_AnyAdd(const LTy &L, const RTy &R) {
   return m_CombineOr(m_Add(L, R), m_FAdd(L, R));
 }
-
-namespace {
 
 // Given an element pointer \p BasePtr to the start of a (sub) matrix, compute
 // the start address of vector \p VecIdx with type (\p EltType x \p NumElements)
@@ -168,9 +171,9 @@ namespace {
 //         v_2_0 |v_2_1 |v_2_2 |v_2_3
 //         v_3_0 {v_3_1 {v_3_2  v_3_3
 //
-Value *computeVectorAddr(Value *BasePtr, Value *VecIdx, Value *Stride,
-                         unsigned NumElements, Type *EltType,
-                         IRBuilder<> &Builder) {
+static Value *computeVectorAddr(Value *BasePtr, Value *VecIdx, Value *Stride,
+                                unsigned NumElements, Type *EltType,
+                                IRBuilder<> &Builder) {
 
   assert((!isa<ConstantInt>(Stride) ||
           cast<ConstantInt>(Stride)->getZExtValue() >= NumElements) &&
@@ -242,9 +245,12 @@ raw_ostream &operator<<(raw_ostream &OS, ShapeInfo SI) {
 
 } // namespace
 
-static bool isUniformShape(Value *V) {
+static bool isShapePreserving(Value *V) {
   Instruction *I = dyn_cast<Instruction>(V);
   if (!I)
+    return true;
+
+  if (isa<SelectInst>(I))
     return true;
 
   if (I->isBinaryOp())
@@ -263,6 +269,7 @@ static bool isUniformShape(Value *V) {
     case llvm::Instruction::FPExt:
       return true;
     case llvm::Instruction::AddrSpaceCast:
+    case CastInst::PtrToAddr:
     case CastInst::PtrToInt:
     case CastInst::IntToPtr:
       return false;
@@ -296,6 +303,16 @@ static bool isUniformShape(Value *V) {
   }
 }
 
+/// Return an iterator over the operands of \p I that should share shape
+/// information with \p I.
+static iterator_range<Use *> getShapedOperandsForInst(Instruction *I) {
+  assert(isShapePreserving(I) &&
+         "Can't retrieve shaped operands for an instruction that does not "
+         "preserve shape information");
+  auto Ops = I->operands();
+  return isa<SelectInst>(I) ? drop_begin(Ops) : Ops;
+}
+
 /// Return the ShapeInfo for the result of \p I, it it can be determined.
 static std::optional<ShapeInfo>
 computeShapeInfoForInst(Instruction *I,
@@ -325,9 +342,8 @@ computeShapeInfoForInst(Instruction *I,
       return OpShape->second;
   }
 
-  if (isUniformShape(I) || isa<SelectInst>(I)) {
-    auto Ops = I->operands();
-    auto ShapedOps = isa<SelectInst>(I) ? drop_begin(Ops) : Ops;
+  if (isShapePreserving(I)) {
+    auto ShapedOps = getShapedOperandsForInst(I);
     // Find the first operand that has a known shape and use that.
     for (auto &Op : ShapedOps) {
       auto OpShape = ShapeMap.find(Op.get());
@@ -337,6 +353,8 @@ computeShapeInfoForInst(Instruction *I,
   }
   return std::nullopt;
 }
+
+namespace {
 
 /// LowerMatrixIntrinsics contains the methods used to lower matrix intrinsics.
 ///
@@ -371,7 +389,8 @@ class LowerMatrixIntrinsics {
   LoopInfo *LI = nullptr;
   OptimizationRemarkEmitter *ORE = nullptr;
 
-  /// Contains estimates of the number of operations (loads, stores, compute) required to lower a matrix operation.
+  /// Contains estimates of the number of operations (loads, stores, compute)
+  /// required to lower a matrix operation.
   struct OpInfoTy {
     /// Number of stores emitted to generate this matrix.
     unsigned NumStores = 0;
@@ -703,10 +722,9 @@ public:
       case Intrinsic::matrix_column_major_store:
         return true;
       default:
-        return isUniformShape(II);
+        break;
       }
-    return isUniformShape(V) || isa<StoreInst>(V) || isa<LoadInst>(V) ||
-           isa<SelectInst>(V);
+    return isShapePreserving(V) || isa<StoreInst>(V) || isa<LoadInst>(V);
   }
 
   /// Propagate the shape information of instructions to their users.
@@ -793,9 +811,8 @@ public:
       } else if (isa<StoreInst>(V)) {
         // Nothing to do.  We forward-propagated to this so we would just
         // backward propagate to an instruction with an already known shape.
-      } else if (isUniformShape(V) || isa<SelectInst>(V)) {
-        auto Ops = cast<Instruction>(V)->operands();
-        auto ShapedOps = isa<SelectInst>(V) ? drop_begin(Ops) : Ops;
+      } else if (isShapePreserving(V)) {
+        auto ShapedOps = getShapedOperandsForInst(cast<Instruction>(V));
         // Propagate to all operands.
         ShapeInfo Shape = ShapeMap[V];
         for (Use &U : ShapedOps) {
@@ -1208,7 +1225,7 @@ public:
     //
     // For verification, we keep track of where we changed uses to poison in
     // PoisonedInsts and then check that we in fact remove them.
-    SmallSet<Instruction *, 16> PoisonedInsts;
+    SmallPtrSet<Instruction *, 16> PoisonedInsts;
     for (auto *Inst : reverse(ToRemove)) {
       for (Use &U : llvm::make_early_inc_range(Inst->uses())) {
         if (auto *Poisoned = dyn_cast<Instruction>(U.getUser()))
@@ -1295,6 +1312,24 @@ public:
     return commonAlignment(InitialAlign, ElementSizeInBits / 8);
   }
 
+  IntegerType *getIndexType(Value *Ptr) const {
+    return cast<IntegerType>(DL.getIndexType(Ptr->getType()));
+  }
+
+  Value *getIndex(Value *Ptr, uint64_t V) const {
+    return ConstantInt::get(getIndexType(Ptr), V);
+  }
+
+  Value *castToIndexType(Value *Ptr, Value *V, IRBuilder<> &Builder) const {
+    assert(isa<IntegerType>(V->getType()) &&
+           "Attempted to cast non-integral type to integer index");
+    // In case the data layout's index type differs in width from the type of
+    // the value we're given, truncate or zero extend to the appropriate width.
+    // We zero extend here as indices are unsigned.
+    return Builder.CreateZExtOrTrunc(V, getIndexType(Ptr),
+                                     V->getName() + ".cast");
+  }
+
   /// Load a matrix with \p Shape starting at \p Ptr and using \p Stride between
   /// vectors.
   MatrixTy loadMatrix(Type *Ty, Value *Ptr, MaybeAlign MAlign, Value *Stride,
@@ -1304,6 +1339,7 @@ public:
     Type *VecTy = FixedVectorType::get(EltTy, Shape.getStride());
     Value *EltPtr = Ptr;
     MatrixTy Result;
+    Stride = castToIndexType(Ptr, Stride, Builder);
     for (unsigned I = 0, E = Shape.getNumVectors(); I < E; ++I) {
       Value *GEP = computeVectorAddr(
           EltPtr, Builder.getIntN(Stride->getType()->getScalarSizeInBits(), I),
@@ -1325,14 +1361,14 @@ public:
                       ShapeInfo ResultShape, Type *EltTy,
                       IRBuilder<> &Builder) {
     Value *Offset = Builder.CreateAdd(
-        Builder.CreateMul(J, Builder.getInt64(MatrixShape.getStride())), I);
+        Builder.CreateMul(J, getIndex(MatrixPtr, MatrixShape.getStride())), I);
 
     Value *TileStart = Builder.CreateGEP(EltTy, MatrixPtr, Offset);
     auto *TileTy = FixedVectorType::get(EltTy, ResultShape.NumRows *
                                                    ResultShape.NumColumns);
 
     return loadMatrix(TileTy, TileStart, Align,
-                      Builder.getInt64(MatrixShape.getStride()), IsVolatile,
+                      getIndex(MatrixPtr, MatrixShape.getStride()), IsVolatile,
                       ResultShape, Builder);
   }
 
@@ -1363,14 +1399,15 @@ public:
                    MaybeAlign MAlign, bool IsVolatile, ShapeInfo MatrixShape,
                    Value *I, Value *J, Type *EltTy, IRBuilder<> &Builder) {
     Value *Offset = Builder.CreateAdd(
-        Builder.CreateMul(J, Builder.getInt64(MatrixShape.getStride())), I);
+        Builder.CreateMul(J, getIndex(MatrixPtr, MatrixShape.getStride())), I);
 
     Value *TileStart = Builder.CreateGEP(EltTy, MatrixPtr, Offset);
     auto *TileTy = FixedVectorType::get(EltTy, StoreVal.getNumRows() *
                                                    StoreVal.getNumColumns());
 
     storeMatrix(TileTy, StoreVal, TileStart, MAlign,
-                Builder.getInt64(MatrixShape.getStride()), IsVolatile, Builder);
+                getIndex(MatrixPtr, MatrixShape.getStride()), IsVolatile,
+                Builder);
   }
 
   /// Store matrix \p StoreVal starting at \p Ptr and using \p Stride between
@@ -1380,6 +1417,7 @@ public:
                        IRBuilder<> &Builder) {
     auto *VType = cast<FixedVectorType>(Ty);
     Value *EltPtr = Ptr;
+    Stride = castToIndexType(Ptr, Stride, Builder);
     for (auto Vec : enumerate(StoreVal.vectors())) {
       Value *GEP = computeVectorAddr(
           EltPtr,
@@ -1698,6 +1736,31 @@ public:
     ToRemove.push_back(MatMul);
   }
 
+  /// Given \p Remainder iterations of the the matmul inner loop,
+  /// potentially lower \p Blocksize that is used for the underlying
+  /// vector.
+  unsigned capBlockSize(unsigned BlockSize, unsigned Remainder, Type *EltType) {
+    if (BlockSize <= Remainder)
+      return BlockSize;
+
+    // If the remainder is also a legal type just use it.
+    auto *VecTy = FixedVectorType::get(EltType, Remainder);
+    if (TTI.isTypeLegal(VecTy))
+      return Remainder;
+
+    // Similarly, if the vector is small enough that we don't want
+    // to split further.
+    if (VecTy->getPrimitiveSizeInBits() <= SplitMatmulRemainderOverThreshold)
+      return Remainder;
+
+    // Gradually lower the vectorization factor to cover the
+    // remainder.
+    do {
+      BlockSize /= 2;
+    } while (BlockSize > Remainder);
+    return BlockSize;
+  }
+
   /// Compute \p Result += \p A * \p B for input matrices with left-associating
   /// addition.
   ///
@@ -1735,10 +1798,8 @@ public:
         bool isSumZero = isa<ConstantAggregateZero>(Result.getColumn(J));
 
         for (unsigned I = 0; I < R; I += BlockSize) {
-          // Gradually lower the vectorization factor to cover the remainder.
-          while (I + BlockSize > R)
-            BlockSize /= 2;
-
+          // Lower block size to make sure we stay within bounds.
+          BlockSize = capBlockSize(BlockSize, R - I, Result.getElementType());
           Value *Sum = IsTiled ? Result.extractVector(I, J, BlockSize, Builder)
                                : nullptr;
           for (unsigned K = 0; K < M; ++K) {
@@ -1763,9 +1824,8 @@ public:
         unsigned BlockSize = VF;
         bool isSumZero = isa<ConstantAggregateZero>(Result.getRow(I));
         for (unsigned J = 0; J < C; J += BlockSize) {
-          // Gradually lower the vectorization factor to cover the remainder.
-          while (J + BlockSize > C)
-            BlockSize /= 2;
+          // Lower the vectorization factor to cover the remainder.
+          BlockSize = capBlockSize(BlockSize, C - J, Result.getElementType());
 
           Value *Sum = nullptr;
           for (unsigned K = 0; K < M; ++K) {
@@ -2011,18 +2071,17 @@ public:
             const unsigned TileM = std::min(M - K, unsigned(TileSize));
             MatrixTy A =
                 loadMatrix(APtr, LoadOp0->getAlign(), LoadOp0->isVolatile(),
-                           LShape, Builder.getInt64(I), Builder.getInt64(K),
+                           LShape, getIndex(APtr, I), getIndex(APtr, K),
                            {TileR, TileM}, EltType, Builder);
             MatrixTy B =
                 loadMatrix(BPtr, LoadOp1->getAlign(), LoadOp1->isVolatile(),
-                           RShape, Builder.getInt64(K), Builder.getInt64(J),
+                           RShape, getIndex(BPtr, K), getIndex(BPtr, J),
                            {TileM, TileC}, EltType, Builder);
             emitMatrixMultiply(Res, A, B, Builder, true, false,
                                getFastMathFlags(MatMul));
           }
           storeMatrix(Res, CPtr, Store->getAlign(), Store->isVolatile(), {R, M},
-                      Builder.getInt64(I), Builder.getInt64(J), EltType,
-                      Builder);
+                      getIndex(CPtr, I), getIndex(CPtr, J), EltType, Builder);
         }
     }
 
@@ -2166,7 +2225,7 @@ public:
 
         // If the loads don't alias the lifetime.end, it won't interfere with
         // fusion.
-        MemoryLocation EndLoc = MemoryLocation::getForArgument(End, 1, nullptr);
+        MemoryLocation EndLoc = MemoryLocation::getForArgument(End, 0, nullptr);
         if (!EndLoc.Ptr)
           continue;
         if (AA->isNoAlias(Load0Loc, EndLoc) && AA->isNoAlias(Load1Loc, EndLoc))
@@ -2254,15 +2313,14 @@ public:
   /// Lower load instructions.
   MatrixTy VisitLoad(LoadInst *Inst, const ShapeInfo &SI, Value *Ptr,
                      IRBuilder<> &Builder) {
-    return LowerLoad(Inst, Ptr, Inst->getAlign(),
-                     Builder.getInt64(SI.getStride()), Inst->isVolatile(), SI,
-                     Builder);
+    return LowerLoad(Inst, Ptr, Inst->getAlign(), getIndex(Ptr, SI.getStride()),
+                     Inst->isVolatile(), SI, Builder);
   }
 
   MatrixTy VisitStore(StoreInst *Inst, const ShapeInfo &SI, Value *StoredVal,
                       Value *Ptr, IRBuilder<> &Builder) {
     return LowerStore(Inst, StoredVal, Ptr, Inst->getAlign(),
-                      Builder.getInt64(SI.getStride()), Inst->isVolatile(), SI,
+                      getIndex(Ptr, SI.getStride()), Inst->isVolatile(), SI,
                       Builder);
   }
 

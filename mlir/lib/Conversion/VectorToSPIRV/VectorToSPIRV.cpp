@@ -22,7 +22,6 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Location.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -57,7 +56,7 @@ static int getNumBits(Type type) {
 namespace {
 
 struct VectorShapeCast final : public OpConversionPattern<vector::ShapeCastOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::ShapeCastOp shapeCastOp, OpAdaptor adaptor,
@@ -81,7 +80,7 @@ struct VectorShapeCast final : public OpConversionPattern<vector::ShapeCastOp> {
 
 struct VectorBitcastConvert final
     : public OpConversionPattern<vector::BitCastOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::BitCastOp bitcastOp, OpAdaptor adaptor,
@@ -114,7 +113,7 @@ struct VectorBitcastConvert final
 
 struct VectorBroadcastConvert final
     : public OpConversionPattern<vector::BroadcastOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::BroadcastOp castOp, OpAdaptor adaptor,
@@ -147,26 +146,26 @@ static Value sanitizeDynamicIndex(ConversionPatternRewriter &rewriter,
                                   Location loc, Value dynamicIndex,
                                   int64_t kPoisonIndex, unsigned vectorSize) {
   if (llvm::isPowerOf2_32(vectorSize)) {
-    Value inBoundsMask = rewriter.create<spirv::ConstantOp>(
-        loc, dynamicIndex.getType(),
+    Value inBoundsMask = spirv::ConstantOp::create(
+        rewriter, loc, dynamicIndex.getType(),
         rewriter.getIntegerAttr(dynamicIndex.getType(), vectorSize - 1));
-    return rewriter.create<spirv::BitwiseAndOp>(loc, dynamicIndex,
-                                                inBoundsMask);
+    return spirv::BitwiseAndOp::create(rewriter, loc, dynamicIndex,
+                                       inBoundsMask);
   }
-  Value poisonIndex = rewriter.create<spirv::ConstantOp>(
-      loc, dynamicIndex.getType(),
+  Value poisonIndex = spirv::ConstantOp::create(
+      rewriter, loc, dynamicIndex.getType(),
       rewriter.getIntegerAttr(dynamicIndex.getType(), kPoisonIndex));
   Value cmpResult =
-      rewriter.create<spirv::IEqualOp>(loc, dynamicIndex, poisonIndex);
-  return rewriter.create<spirv::SelectOp>(
-      loc, cmpResult,
+      spirv::IEqualOp::create(rewriter, loc, dynamicIndex, poisonIndex);
+  return spirv::SelectOp::create(
+      rewriter, loc, cmpResult,
       spirv::ConstantOp::getZero(dynamicIndex.getType(), loc, rewriter),
       dynamicIndex);
 }
 
 struct VectorExtractOpConvert final
     : public OpConversionPattern<vector::ExtractOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::ExtractOp extractOp, OpAdaptor adaptor,
@@ -175,8 +174,8 @@ struct VectorExtractOpConvert final
     if (!dstType)
       return failure();
 
-    if (isa<spirv::ScalarType>(adaptor.getVector().getType())) {
-      rewriter.replaceOp(extractOp, adaptor.getVector());
+    if (isa<spirv::ScalarType>(adaptor.getSource().getType())) {
+      rewriter.replaceOp(extractOp, adaptor.getSource());
       return success();
     }
 
@@ -187,7 +186,7 @@ struct VectorExtractOpConvert final
             extractOp,
             "Static use of poison index handled elsewhere (folded to poison)");
       rewriter.replaceOpWithNewOp<spirv::CompositeExtractOp>(
-          extractOp, dstType, adaptor.getVector(),
+          extractOp, dstType, adaptor.getSource(),
           rewriter.getI32ArrayAttr(id.value()));
     } else {
       Value sanitizedIndex = sanitizeDynamicIndex(
@@ -195,7 +194,7 @@ struct VectorExtractOpConvert final
           vector::ExtractOp::kPoisonIndex,
           extractOp.getSourceVectorType().getNumElements());
       rewriter.replaceOpWithNewOp<spirv::VectorExtractDynamicOp>(
-          extractOp, dstType, adaptor.getVector(), sanitizedIndex);
+          extractOp, dstType, adaptor.getSource(), sanitizedIndex);
     }
     return success();
   }
@@ -203,7 +202,7 @@ struct VectorExtractOpConvert final
 
 struct VectorExtractStridedSliceOpConvert final
     : public OpConversionPattern<vector::ExtractStridedSliceOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::ExtractStridedSliceOp extractOp, OpAdaptor adaptor,
@@ -240,7 +239,7 @@ struct VectorExtractStridedSliceOpConvert final
 
 template <class SPIRVFMAOp>
 struct VectorFmaOpConvert final : public OpConversionPattern<vector::FMAOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::FMAOp fmaOp, OpAdaptor adaptor,
@@ -256,7 +255,7 @@ struct VectorFmaOpConvert final : public OpConversionPattern<vector::FMAOp> {
 
 struct VectorFromElementsOpConvert final
     : public OpConversionPattern<vector::FromElementsOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::FromElementsOp op, OpAdaptor adaptor,
@@ -264,7 +263,7 @@ struct VectorFromElementsOpConvert final
     Type resultType = getTypeConverter()->convertType(op.getType());
     if (!resultType)
       return failure();
-    OperandRange elements = op.getElements();
+    ValueRange elements = adaptor.getElements();
     if (isa<spirv::ScalarType>(resultType)) {
       // In the case with a single scalar operand / single-element result,
       // pass through the scalar.
@@ -282,7 +281,7 @@ struct VectorFromElementsOpConvert final
 
 struct VectorInsertOpConvert final
     : public OpConversionPattern<vector::InsertOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::InsertOp insertOp, OpAdaptor adaptor,
@@ -321,66 +320,9 @@ struct VectorInsertOpConvert final
   }
 };
 
-struct VectorExtractElementOpConvert final
-    : public OpConversionPattern<vector::ExtractElementOp> {
-  using OpConversionPattern::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(vector::ExtractElementOp extractOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    Type resultType = getTypeConverter()->convertType(extractOp.getType());
-    if (!resultType)
-      return failure();
-
-    if (isa<spirv::ScalarType>(adaptor.getVector().getType())) {
-      rewriter.replaceOp(extractOp, adaptor.getVector());
-      return success();
-    }
-
-    APInt cstPos;
-    if (matchPattern(adaptor.getPosition(), m_ConstantInt(&cstPos)))
-      rewriter.replaceOpWithNewOp<spirv::CompositeExtractOp>(
-          extractOp, resultType, adaptor.getVector(),
-          rewriter.getI32ArrayAttr({static_cast<int>(cstPos.getSExtValue())}));
-    else
-      rewriter.replaceOpWithNewOp<spirv::VectorExtractDynamicOp>(
-          extractOp, resultType, adaptor.getVector(), adaptor.getPosition());
-    return success();
-  }
-};
-
-struct VectorInsertElementOpConvert final
-    : public OpConversionPattern<vector::InsertElementOp> {
-  using OpConversionPattern::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(vector::InsertElementOp insertOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    Type vectorType = getTypeConverter()->convertType(insertOp.getType());
-    if (!vectorType)
-      return failure();
-
-    if (isa<spirv::ScalarType>(vectorType)) {
-      rewriter.replaceOp(insertOp, adaptor.getSource());
-      return success();
-    }
-
-    APInt cstPos;
-    if (matchPattern(adaptor.getPosition(), m_ConstantInt(&cstPos)))
-      rewriter.replaceOpWithNewOp<spirv::CompositeInsertOp>(
-          insertOp, adaptor.getSource(), adaptor.getDest(),
-          cstPos.getSExtValue());
-    else
-      rewriter.replaceOpWithNewOp<spirv::VectorInsertDynamicOp>(
-          insertOp, vectorType, insertOp.getDest(), adaptor.getSource(),
-          adaptor.getPosition());
-    return success();
-  }
-};
-
 struct VectorInsertStridedSliceOpConvert final
     : public OpConversionPattern<vector::InsertStridedSliceOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::InsertStridedSliceOp insertOp, OpAdaptor adaptor,
@@ -427,8 +369,8 @@ static SmallVector<Value> extractAllElements(
   Location loc = reduceOp.getLoc();
 
   for (int i = 0; i < numElements; ++i) {
-    values.push_back(rewriter.create<spirv::CompositeExtractOp>(
-        loc, srcVectorType.getElementType(), adaptor.getVector(),
+    values.push_back(spirv::CompositeExtractOp::create(
+        rewriter, loc, srcVectorType.getElementType(), adaptor.getVector(),
         rewriter.getI32ArrayAttr({i})));
   }
   if (Value acc = adaptor.getAcc())
@@ -462,7 +404,7 @@ FailureOr<ReductionRewriteInfo> static getReductionInfo(
 template <typename SPIRVUMaxOp, typename SPIRVUMinOp, typename SPIRVSMaxOp,
           typename SPIRVSMinOp>
 struct VectorReductionPattern final : OpConversionPattern<vector::ReductionOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::ReductionOp reduceOp, OpAdaptor adaptor,
@@ -481,16 +423,16 @@ struct VectorReductionPattern final : OpConversionPattern<vector::ReductionOp> {
 #define INT_AND_FLOAT_CASE(kind, iop, fop)                                     \
   case vector::CombiningKind::kind:                                            \
     if (llvm::isa<IntegerType>(resultType)) {                                  \
-      result = rewriter.create<spirv::iop>(loc, resultType, result, next);     \
+      result = spirv::iop::create(rewriter, loc, resultType, result, next);    \
     } else {                                                                   \
       assert(llvm::isa<FloatType>(resultType));                                \
-      result = rewriter.create<spirv::fop>(loc, resultType, result, next);     \
+      result = spirv::fop::create(rewriter, loc, resultType, result, next);    \
     }                                                                          \
     break
 
 #define INT_OR_FLOAT_CASE(kind, fop)                                           \
   case vector::CombiningKind::kind:                                            \
-    result = rewriter.create<fop>(loc, resultType, result, next);              \
+    result = fop::create(rewriter, loc, resultType, result, next);             \
     break
 
         INT_AND_FLOAT_CASE(ADD, IAddOp, FAddOp);
@@ -519,7 +461,7 @@ struct VectorReductionPattern final : OpConversionPattern<vector::ReductionOp> {
 template <typename SPIRVFMaxOp, typename SPIRVFMinOp>
 struct VectorReductionFloatMinMax final
     : OpConversionPattern<vector::ReductionOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::ReductionOp reduceOp, OpAdaptor adaptor,
@@ -537,7 +479,7 @@ struct VectorReductionFloatMinMax final
 
 #define INT_OR_FLOAT_CASE(kind, fop)                                           \
   case vector::CombiningKind::kind:                                            \
-    result = rewriter.create<fop>(loc, resultType, result, next);              \
+    result = fop::create(rewriter, loc, resultType, result, next);             \
     break
 
         INT_OR_FLOAT_CASE(MAXIMUMF, SPIRVFMaxOp);
@@ -556,22 +498,27 @@ struct VectorReductionFloatMinMax final
   }
 };
 
-class VectorSplatPattern final : public OpConversionPattern<vector::SplatOp> {
+class VectorScalarBroadcastPattern final
+    : public OpConversionPattern<vector::BroadcastOp> {
 public:
-  using OpConversionPattern<vector::SplatOp>::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
-  matchAndRewrite(vector::SplatOp op, OpAdaptor adaptor,
+  matchAndRewrite(vector::BroadcastOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    if (isa<VectorType>(op.getSourceType())) {
+      return rewriter.notifyMatchFailure(
+          op, "only conversion of 'broadcast from scalar' is supported");
+    }
     Type dstType = getTypeConverter()->convertType(op.getType());
     if (!dstType)
       return failure();
     if (isa<spirv::ScalarType>(dstType)) {
-      rewriter.replaceOp(op, adaptor.getInput());
+      rewriter.replaceOp(op, adaptor.getSource());
     } else {
       auto dstVecType = cast<VectorType>(dstType);
       SmallVector<Value, 4> source(dstVecType.getNumElements(),
-                                   adaptor.getInput());
+                                   adaptor.getSource());
       rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(op, dstType,
                                                                source);
     }
@@ -581,7 +528,7 @@ public:
 
 struct VectorShuffleOpConvert final
     : public OpConversionPattern<vector::ShuffleOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::ShuffleOp shuffleOp, OpAdaptor adaptor,
@@ -613,8 +560,8 @@ struct VectorShuffleOpConvert final
     auto getElementAtIdx = [&rewriter, loc = shuffleOp.getLoc()](
                                Value scalarOrVec, int32_t idx) -> Value {
       if (auto vecTy = dyn_cast<VectorType>(scalarOrVec.getType()))
-        return rewriter.create<spirv::CompositeExtractOp>(loc, scalarOrVec,
-                                                          idx);
+        return spirv::CompositeExtractOp::create(rewriter, loc, scalarOrVec,
+                                                 idx);
 
       assert(idx == 0 && "Invalid scalar element index");
       return scalarOrVec;
@@ -647,7 +594,7 @@ struct VectorShuffleOpConvert final
 
 struct VectorInterleaveOpConvert final
     : public OpConversionPattern<vector::InterleaveOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::InterleaveOp interleaveOp, OpAdaptor adaptor,
@@ -688,7 +635,7 @@ struct VectorInterleaveOpConvert final
 
 struct VectorDeinterleaveOpConvert final
     : public OpConversionPattern<vector::DeinterleaveOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::DeinterleaveOp deinterleaveOp, OpAdaptor adaptor,
@@ -712,11 +659,13 @@ struct VectorDeinterleaveOpConvert final
     // We cannot use `spirv::VectorShuffleOp` directly in this case, and need to
     // use `spirv::CompositeExtractOp`.
     if (n == 2) {
-      auto elem0 = rewriter.create<spirv::CompositeExtractOp>(
-          loc, newResultType, sourceVector, rewriter.getI32ArrayAttr({0}));
+      auto elem0 = spirv::CompositeExtractOp::create(
+          rewriter, loc, newResultType, sourceVector,
+          rewriter.getI32ArrayAttr({0}));
 
-      auto elem1 = rewriter.create<spirv::CompositeExtractOp>(
-          loc, newResultType, sourceVector, rewriter.getI32ArrayAttr({1}));
+      auto elem1 = spirv::CompositeExtractOp::create(
+          rewriter, loc, newResultType, sourceVector,
+          rewriter.getI32ArrayAttr({1}));
 
       rewriter.replaceOp(deinterleaveOp, {elem0, elem1});
       return success();
@@ -733,12 +682,12 @@ struct VectorDeinterleaveOpConvert final
         llvm::map_to_vector(seqOdd, [](int i) { return i * 2 + 1; });
 
     // Create two SPIR-V shuffles.
-    auto shuffleEven = rewriter.create<spirv::VectorShuffleOp>(
-        loc, newResultType, sourceVector, sourceVector,
+    auto shuffleEven = spirv::VectorShuffleOp::create(
+        rewriter, loc, newResultType, sourceVector, sourceVector,
         rewriter.getI32ArrayAttr(indicesEven));
 
-    auto shuffleOdd = rewriter.create<spirv::VectorShuffleOp>(
-        loc, newResultType, sourceVector, sourceVector,
+    auto shuffleOdd = spirv::VectorShuffleOp::create(
+        rewriter, loc, newResultType, sourceVector, sourceVector,
         rewriter.getI32ArrayAttr(indicesOdd));
 
     rewriter.replaceOp(deinterleaveOp, {shuffleEven, shuffleOdd});
@@ -748,7 +697,7 @@ struct VectorDeinterleaveOpConvert final
 
 struct VectorLoadOpConverter final
     : public OpConversionPattern<vector::LoadOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::LoadOp loadOp, OpAdaptor adaptor,
@@ -774,18 +723,39 @@ struct VectorLoadOpConverter final
     // Use the converted vector type instead of original (single element vector
     // would get converted to scalar).
     auto spirvVectorType = typeConverter.convertType(vectorType);
+    if (!spirvVectorType)
+      return rewriter.notifyMatchFailure(loadOp, "unsupported vector type");
+
     auto vectorPtrType = spirv::PointerType::get(spirvVectorType, storageClass);
+
+    std::optional<uint64_t> alignment = loadOp.getAlignment();
+    if (alignment > std::numeric_limits<uint32_t>::max()) {
+      return rewriter.notifyMatchFailure(loadOp,
+                                         "invalid alignment requirement");
+    }
+
+    auto memoryAccess = spirv::MemoryAccess::None;
+    spirv::MemoryAccessAttr memoryAccessAttr;
+    IntegerAttr alignmentAttr;
+    if (alignment.has_value()) {
+      memoryAccess |= spirv::MemoryAccess::Aligned;
+      memoryAccessAttr =
+          spirv::MemoryAccessAttr::get(rewriter.getContext(), memoryAccess);
+      alignmentAttr = rewriter.getI32IntegerAttr(alignment.value());
+    }
 
     // For single element vectors, we don't need to bitcast the access chain to
     // the original vector type. Both is going to be the same, a pointer
     // to a scalar.
-    Value castedAccessChain = (vectorType.getNumElements() == 1)
-                                  ? accessChain
-                                  : rewriter.create<spirv::BitcastOp>(
-                                        loc, vectorPtrType, accessChain);
+    Value castedAccessChain =
+        (vectorType.getNumElements() == 1)
+            ? accessChain
+            : spirv::BitcastOp::create(rewriter, loc, vectorPtrType,
+                                       accessChain);
 
     rewriter.replaceOpWithNewOp<spirv::LoadOp>(loadOp, spirvVectorType,
-                                               castedAccessChain);
+                                               castedAccessChain,
+                                               memoryAccessAttr, alignmentAttr);
 
     return success();
   }
@@ -793,7 +763,7 @@ struct VectorLoadOpConverter final
 
 struct VectorStoreOpConverter final
     : public OpConversionPattern<vector::StoreOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::StoreOp storeOp, OpAdaptor adaptor,
@@ -814,6 +784,12 @@ struct VectorStoreOpConverter final
       return rewriter.notifyMatchFailure(
           storeOp, "failed to get memref element pointer");
 
+    std::optional<uint64_t> alignment = storeOp.getAlignment();
+    if (alignment > std::numeric_limits<uint32_t>::max()) {
+      return rewriter.notifyMatchFailure(storeOp,
+                                         "invalid alignment requirement");
+    }
+
     spirv::StorageClass storageClass = attr.getValue();
     auto vectorType = storeOp.getVectorType();
     auto vectorPtrType = spirv::PointerType::get(vectorType, storageClass);
@@ -821,13 +797,25 @@ struct VectorStoreOpConverter final
     // For single element vectors, we don't need to bitcast the access chain to
     // the original vector type. Both is going to be the same, a pointer
     // to a scalar.
-    Value castedAccessChain = (vectorType.getNumElements() == 1)
-                                  ? accessChain
-                                  : rewriter.create<spirv::BitcastOp>(
-                                        loc, vectorPtrType, accessChain);
+    Value castedAccessChain =
+        (vectorType.getNumElements() == 1)
+            ? accessChain
+            : spirv::BitcastOp::create(rewriter, loc, vectorPtrType,
+                                       accessChain);
 
-    rewriter.replaceOpWithNewOp<spirv::StoreOp>(storeOp, castedAccessChain,
-                                                adaptor.getValueToStore());
+    auto memoryAccess = spirv::MemoryAccess::None;
+    spirv::MemoryAccessAttr memoryAccessAttr;
+    IntegerAttr alignmentAttr;
+    if (alignment.has_value()) {
+      memoryAccess |= spirv::MemoryAccess::Aligned;
+      memoryAccessAttr =
+          spirv::MemoryAccessAttr::get(rewriter.getContext(), memoryAccess);
+      alignmentAttr = rewriter.getI32IntegerAttr(alignment.value());
+    }
+
+    rewriter.replaceOpWithNewOp<spirv::StoreOp>(
+        storeOp, castedAccessChain, adaptor.getValueToStore(), memoryAccessAttr,
+        alignmentAttr);
 
     return success();
   }
@@ -835,7 +823,7 @@ struct VectorStoreOpConverter final
 
 struct VectorReductionToIntDotProd final
     : OpRewritePattern<vector::ReductionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ReductionOp op,
                                 PatternRewriter &rewriter) const override {
@@ -905,10 +893,10 @@ private:
       auto v4i8Type = VectorType::get({4}, i8Type);
       Location loc = op.getLoc();
       Value zero = spirv::ConstantOp::getZero(i8Type, loc, rewriter);
-      lhsIn = rewriter.create<spirv::CompositeConstructOp>(
-          loc, v4i8Type, ValueRange{lhsIn, zero});
-      rhsIn = rewriter.create<spirv::CompositeConstructOp>(
-          loc, v4i8Type, ValueRange{rhsIn, zero});
+      lhsIn = spirv::CompositeConstructOp::create(rewriter, loc, v4i8Type,
+                                                  ValueRange{lhsIn, zero});
+      rhsIn = spirv::CompositeConstructOp::create(rewriter, loc, v4i8Type,
+                                                  ValueRange{rhsIn, zero});
     }
 
     // There's no variant of dot prod ops for unsigned LHS and signed RHS, so
@@ -930,7 +918,7 @@ private:
 
 struct VectorReductionToFPDotProd final
     : OpConversionPattern<vector::ReductionOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::ReductionOp op, OpAdaptor adaptor,
@@ -971,14 +959,14 @@ struct VectorReductionToFPDotProd final
       Attribute oneAttr =
           rewriter.getFloatAttr(vectorType.getElementType(), 1.0);
       oneAttr = SplatElementsAttr::get(vectorType, oneAttr);
-      rhs = rewriter.create<spirv::ConstantOp>(loc, vectorType, oneAttr);
+      rhs = spirv::ConstantOp::create(rewriter, loc, vectorType, oneAttr);
     }
     assert(lhs);
     assert(rhs);
 
-    Value res = rewriter.create<spirv::DotOp>(loc, resultType, lhs, rhs);
+    Value res = spirv::DotOp::create(rewriter, loc, resultType, lhs, rhs);
     if (acc)
-      res = rewriter.create<spirv::FAddOp>(loc, acc, res);
+      res = spirv::FAddOp::create(rewriter, loc, acc, res);
 
     rewriter.replaceOp(op, res);
     return success();
@@ -986,7 +974,7 @@ struct VectorReductionToFPDotProd final
 };
 
 struct VectorStepOpConvert final : OpConversionPattern<vector::StepOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::StepOp stepOp, OpAdaptor adaptor,
@@ -1013,7 +1001,8 @@ struct VectorStepOpConvert final : OpConversionPattern<vector::StepOp> {
     source.reserve(numElements);
     for (int64_t i = 0; i < numElements; ++i) {
       Attribute intAttr = rewriter.getIntegerAttr(intType, i);
-      Value constOp = rewriter.create<spirv::ConstantOp>(loc, intType, intAttr);
+      Value constOp =
+          spirv::ConstantOp::create(rewriter, loc, intType, intAttr);
       source.push_back(constOp);
     }
     rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(stepOp, dstType,
@@ -1024,7 +1013,7 @@ struct VectorStepOpConvert final : OpConversionPattern<vector::StepOp> {
 
 struct VectorToElementOpConvert final
     : OpConversionPattern<vector::ToElementsOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::ToElementsOp toElementsOp, OpAdaptor adaptor,
@@ -1056,8 +1045,8 @@ struct VectorToElementOpConvert final
       if (element.use_empty())
         continue;
 
-      Value result = rewriter.create<spirv::CompositeExtractOp>(
-          loc, elementType, adaptor.getSource(),
+      Value result = spirv::CompositeExtractOp::create(
+          rewriter, loc, elementType, adaptor.getSource(),
           rewriter.getI32ArrayAttr({static_cast<int32_t>(idx)}));
       results[idx] = result;
     }
@@ -1080,20 +1069,19 @@ struct VectorToElementOpConvert final
 void mlir::populateVectorToSPIRVPatterns(
     const SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns) {
   patterns.add<
-      VectorBitcastConvert, VectorBroadcastConvert,
-      VectorExtractElementOpConvert, VectorExtractOpConvert,
+      VectorBitcastConvert, VectorBroadcastConvert, VectorExtractOpConvert,
       VectorExtractStridedSliceOpConvert, VectorFmaOpConvert<spirv::GLFmaOp>,
       VectorFmaOpConvert<spirv::CLFmaOp>, VectorFromElementsOpConvert,
-      VectorToElementOpConvert, VectorInsertElementOpConvert,
-      VectorInsertOpConvert, VectorReductionPattern<GL_INT_MAX_MIN_OPS>,
+      VectorToElementOpConvert, VectorInsertOpConvert,
+      VectorReductionPattern<GL_INT_MAX_MIN_OPS>,
       VectorReductionPattern<CL_INT_MAX_MIN_OPS>,
       VectorReductionFloatMinMax<CL_FLOAT_MAX_MIN_OPS>,
       VectorReductionFloatMinMax<GL_FLOAT_MAX_MIN_OPS>, VectorShapeCast,
       VectorInsertStridedSliceOpConvert, VectorShuffleOpConvert,
       VectorInterleaveOpConvert, VectorDeinterleaveOpConvert,
-      VectorSplatPattern, VectorLoadOpConverter, VectorStoreOpConverter,
-      VectorStepOpConvert>(typeConverter, patterns.getContext(),
-                           PatternBenefit(1));
+      VectorScalarBroadcastPattern, VectorLoadOpConverter,
+      VectorStoreOpConverter, VectorStepOpConvert>(
+      typeConverter, patterns.getContext(), PatternBenefit(1));
 
   // Make sure that the more specialized dot product pattern has higher benefit
   // than the generic one that extracts all elements.

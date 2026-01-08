@@ -16,7 +16,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/WindowsError.h"
-#include <algorithm>
 #include <io.h>
 #include <signal.h>
 #include <stdio.h>
@@ -354,8 +353,8 @@ namespace llvm {
 /// Emulates hitting "retry" from an "abort, retry, ignore" CRT debug report
 /// dialog. "retry" raises an exception which ultimately triggers our stack
 /// dumper.
-static LLVM_ATTRIBUTE_UNUSED int
-AvoidMessageBoxHook(int ReportType, char *Message, int *Return) {
+[[maybe_unused]] static int AvoidMessageBoxHook(int ReportType, char *Message,
+                                                int *Return) {
   // Set *Return to the retry code for the return value of _CrtDbgReport:
   // http://msdn.microsoft.com/en-us/library/8hyw4sy7(v=vs.71).aspx
   // This may also trigger just-in-time debugging via DebugBreak().
@@ -421,8 +420,13 @@ bool sys::RemoveFileOnSignal(StringRef Filename, std::string *ErrMsg) {
     return true;
   }
 
-  if (FilesToRemove == NULL)
+  if (FilesToRemove == NULL) {
     FilesToRemove = new std::vector<std::string>;
+    std::atexit([]() {
+      delete FilesToRemove;
+      FilesToRemove = NULL;
+    });
+  }
 
   FilesToRemove->push_back(std::string(Filename));
 

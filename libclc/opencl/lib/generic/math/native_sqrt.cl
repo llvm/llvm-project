@@ -9,8 +9,8 @@
 #include <clc/math/clc_native_sqrt.h>
 #include <clc/opencl/math/native_sqrt.h>
 
-#define __FLOAT_ONLY
-#define FUNCTION native_sqrt
+#define __CLC_FLOAT_ONLY
+#define __CLC_FUNCTION native_sqrt
 #define __CLC_BODY <clc/shared/unary_def.inc>
 
 #include <clc/math/gentype.inc>

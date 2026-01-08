@@ -101,9 +101,9 @@ Assumed-rank dummies are also represented in the
 represent assumed-rank in procedure characteristics.
 
 ### Runtime Representation of Assumed-Ranks
-Assumed-ranks are implemented as CFI_cdesc_t (18.5.3) with the addition of an
-f18 specific addendum when required for the type. This is the usual f18
-descriptor, and no changes is required to represent assumed-ranks in this data
+Assumed-ranks are implemented as CFI_cdesc_t (18.5.3) with the addition of a
+Flang specific addendum when required for the type. This is the usual Flang
+descriptor, and no changes are required to represent assumed-ranks in this data
 structure. In fact, there is no difference between the runtime descriptor
 created for an assumed shape and the runtime descriptor created when the
 corresponding entity is passed as an assumed-rank.

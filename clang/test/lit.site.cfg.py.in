@@ -46,7 +46,6 @@ config.ppc_linux_default_ieeelongdouble = @PPC_LINUX_DEFAULT_IEEELONGDOUBLE@
 config.have_llvm_driver = @LLVM_TOOL_LLVM_DRIVER_BUILD@
 config.spirv_tools_tests = @LLVM_INCLUDE_SPIRV_TOOLS_TESTS@
 config.substitutions.append(("%llvm-version-major", "@LLVM_VERSION_MAJOR@"))
-config.has_key_instructions = @LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS@
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)

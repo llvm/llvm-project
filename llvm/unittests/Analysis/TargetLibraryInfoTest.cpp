@@ -64,7 +64,7 @@ TEST_F(TargetLibraryInfoTest, InvalidProto) {
   auto *StructTy = StructType::getTypeByName(Context, "foo");
   auto *InvalidFTy = FunctionType::get(StructTy, /*isVarArg=*/false);
 
-  for (unsigned FI = 0; FI != LibFunc::NumLibFuncs; ++FI) {
+  for (unsigned FI = LibFunc::Begin_LibFunc; FI != LibFunc::End_LibFunc; ++FI) {
     LibFunc LF = (LibFunc)FI;
     auto *F = cast<Function>(
         M->getOrInsertFunction(TLI.getName(LF), InvalidFTy).getCallee());
@@ -277,6 +277,12 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare x86_fp80 @logbl(x86_fp80)\n"
       "declare float @logf(float)\n"
       "declare x86_fp80 @logl(x86_fp80)\n"
+      "declare double @nextafter(double, double)\n"
+      "declare float @nextafterf(float, float)\n"
+      "declare x86_fp80 @nextafterl(x86_fp80, x86_fp80)\n"
+      "declare double @nexttoward(double, x86_fp80)\n"
+      "declare float @nexttowardf(float, x86_fp80)\n"
+      "declare x86_fp80 @nexttowardl(x86_fp80, x86_fp80)\n"
       "declare i8* @malloc(i64)\n"
       "declare i8* @memccpy(i8*, i8*, i32, i64)\n"
       "declare i8* @memchr(i8*, i32, i64)\n"
@@ -688,7 +694,7 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare i8* @__kmpc_alloc_shared(i64)\n"
       "declare void @__kmpc_free_shared(i8*, i64)\n");
 
-  for (unsigned FI = 0; FI != LibFunc::NumLibFuncs; ++FI) {
+  for (unsigned FI = LibFunc::Begin_LibFunc; FI != LibFunc::End_LibFunc; ++FI) {
     LibFunc LF = (LibFunc)FI;
     // Make sure everything is available; we're not testing target defaults.
     TLII.setAvailable(LF);

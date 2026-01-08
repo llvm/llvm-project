@@ -20,7 +20,6 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/MCXCOFFObjectWriter.h"
 #include "llvm/MC/StringTableBuilder.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -185,7 +184,7 @@ struct CsectSectionEntry : public SectionEntry {
       Group->clear();
   }
 
-  virtual ~CsectSectionEntry() = default;
+  ~CsectSectionEntry() override = default;
 };
 
 struct DwarfSectionEntry : public SectionEntry {
@@ -221,7 +220,7 @@ struct DwarfSectionEntry : public SectionEntry {
 
   DwarfSectionEntry(DwarfSectionEntry &&s) = default;
 
-  virtual ~DwarfSectionEntry() = default;
+  ~DwarfSectionEntry() override = default;
 };
 
 struct ExceptionTableEntry {
@@ -250,7 +249,7 @@ struct ExceptionSectionEntry : public SectionEntry {
     memcpy(Name, N.data(), N.size());
   }
 
-  virtual ~ExceptionSectionEntry() = default;
+  ~ExceptionSectionEntry() override = default;
 };
 
 struct CInfoSymInfo {
@@ -277,7 +276,7 @@ struct CInfoSymSectionEntry : public SectionEntry {
   std::unique_ptr<CInfoSymInfo> Entry;
 
   CInfoSymSectionEntry(StringRef N, int32_t Flags) : SectionEntry(N, Flags) {}
-  virtual ~CInfoSymSectionEntry() = default;
+  ~CInfoSymSectionEntry() override = default;
   void addEntry(std::unique_ptr<CInfoSymInfo> NewEntry) {
     Entry = std::move(NewEntry);
     Entry->Offset = sizeof(uint32_t);
@@ -550,13 +549,13 @@ CsectGroup &XCOFFWriter::getCsectGroup(const MCSectionXCOFF *MCSec) {
 
 static MCSectionXCOFF *getContainingCsect(const MCSymbolXCOFF *XSym) {
   if (XSym->isDefined())
-    return cast<MCSectionXCOFF>(XSym->getFragment()->getParent());
+    return static_cast<MCSectionXCOFF *>(XSym->getFragment()->getParent());
   return XSym->getRepresentedCsect();
 }
 
 void XCOFFWriter::executePostLayoutBinding() {
   for (const auto &S : *Asm) {
-    const auto *MCSec = cast<const MCSectionXCOFF>(&S);
+    auto *MCSec = static_cast<const MCSectionXCOFF *>(&S);
     assert(!SectionMap.contains(MCSec) && "Cannot add a section twice.");
 
     // If the name does not fit in the storage provided in the symbol table
@@ -591,7 +590,7 @@ void XCOFFWriter::executePostLayoutBinding() {
     if (S.isTemporary())
       continue;
 
-    const MCSymbolXCOFF *XSym = cast<MCSymbolXCOFF>(&S);
+    auto *XSym = static_cast<const MCSymbolXCOFF *>(&S);
     const MCSectionXCOFF *ContainingCsect = getContainingCsect(XSym);
 
     if (ContainingCsect->isDwarfSect())
@@ -690,7 +689,8 @@ void XCOFFWriter::recordRelocation(const MCFragment &F, const MCFixup &Fixup,
   std::tie(Type, SignAndSize) = TargetObjectWriter->getRelocTypeAndSignSize(
       Target, Fixup, Fixup.isPCRel());
 
-  const MCSectionXCOFF *SymASec = getContainingCsect(cast<MCSymbolXCOFF>(SymA));
+  const MCSectionXCOFF *SymASec =
+      getContainingCsect(static_cast<const MCSymbolXCOFF *>(SymA));
   assert(SectionMap.contains(SymASec) &&
          "Expected containing csect to exist in map.");
 
@@ -747,7 +747,7 @@ void XCOFFWriter::recordRelocation(const MCFragment &F, const MCFixup &Fixup,
       FixedValue = TOCEntryOffset;
     }
   } else if (Type == XCOFF::RelocationType::R_RBR) {
-    MCSectionXCOFF *ParentSec = cast<MCSectionXCOFF>(F.getParent());
+    auto *ParentSec = static_cast<MCSectionXCOFF *>(F.getParent());
     assert((SymASec->getMappingClass() == XCOFF::XMC_PR &&
             ParentSec->getMappingClass() == XCOFF::XMC_PR) &&
            "Only XMC_PR csect may have the R_RBR relocation.");
@@ -768,18 +768,18 @@ void XCOFFWriter::recordRelocation(const MCFragment &F, const MCFixup &Fixup,
   }
 
   XCOFFRelocation Reloc = {Index, FixupOffsetInCsect, SignAndSize, Type};
-  MCSectionXCOFF *RelocationSec = cast<MCSectionXCOFF>(F.getParent());
+  auto *RelocationSec = static_cast<MCSectionXCOFF *>(F.getParent());
   assert(SectionMap.contains(RelocationSec) &&
          "Expected containing csect to exist in map.");
   SectionMap[RelocationSec]->Relocations.push_back(Reloc);
 
-  const MCSymbol *const SymB = Target.getSubSym();
+  auto SymB = static_cast<const MCSymbolXCOFF *>(Target.getSubSym());
   if (!SymB)
     return;
   if (SymA == SymB)
     report_fatal_error("relocation for opposite term is not yet supported");
 
-  const MCSectionXCOFF *SymBSec = getContainingCsect(cast<MCSymbolXCOFF>(SymB));
+  const MCSectionXCOFF *SymBSec = getContainingCsect(SymB);
   assert(SectionMap.contains(SymBSec) &&
          "Expected containing csect to exist in map.");
   if (SymASec == SymBSec)

@@ -35,10 +35,10 @@ class X86InstrMappingEmitter {
   // to make the search more efficient
   std::map<uint64_t, std::vector<const CodeGenInstruction *>> CompressedInsts;
 
-  typedef std::pair<const CodeGenInstruction *, const CodeGenInstruction *>
-      Entry;
-  typedef std::map<StringRef, std::vector<const CodeGenInstruction *>>
-      PredicateInstMap;
+  using Entry =
+      std::pair<const CodeGenInstruction *, const CodeGenInstruction *>;
+  using PredicateInstMap =
+      std::map<StringRef, std::vector<const CodeGenInstruction *>>;
 
   // Hold all compressed instructions that need to check predicate
   PredicateInstMap PredicateInsts;
@@ -66,6 +66,7 @@ private:
   void printTable(ArrayRef<Entry> Table, StringRef Name, StringRef Macro,
                   raw_ostream &OS);
 };
+} // namespace
 
 void X86InstrMappingEmitter::printClassDef(raw_ostream &OS) {
   OS << "struct X86TableEntry {\n"
@@ -98,26 +99,15 @@ void X86InstrMappingEmitter::printTable(ArrayRef<Entry> Table, StringRef Name,
 
   // Print all entries added to the table
   for (const auto &Pair : Table)
-    OS << "  { X86::" << Pair.first->TheDef->getName()
-       << ", X86::" << Pair.second->TheDef->getName() << " },\n";
+    OS << "  { X86::" << Pair.first->getName()
+       << ", X86::" << Pair.second->getName() << " },\n";
 
   OS << "};\n\n";
 
   printMacroEnd(Macro, OS);
 }
 
-static uint8_t byteFromBitsInit(const BitsInit *B) {
-  unsigned N = B->getNumBits();
-  assert(N <= 8 && "Field is too large for uint8_t!");
-
-  uint8_t Value = 0;
-  for (unsigned I = 0; I != N; ++I) {
-    const BitInit *Bit = cast<BitInit>(B->getBit(I));
-    Value |= Bit->getValue() << I;
-  }
-  return Value;
-}
-
+namespace {
 class IsMatch {
   const CodeGenInstruction *OldInst;
 
@@ -158,6 +148,7 @@ public:
     return true;
   }
 };
+} // namespace
 
 static bool isInteresting(const Record *Rec) {
   // _REV instruction should not appear before encoding optimization
@@ -260,7 +251,7 @@ void X86InstrMappingEmitter::emitCompressEVEXTable(
      << "  default: return true;\n";
   for (const auto &[Key, Val] : PredicateInsts) {
     for (const auto &Inst : Val)
-      OS << "  case X86::" << Inst->TheDef->getName() << ":\n";
+      OS << "  case X86::" << Inst->getName() << ":\n";
     OS << "    return " << Key << ";\n";
   }
   OS << "  }\n";
@@ -380,7 +371,6 @@ void X86InstrMappingEmitter::run(raw_ostream &OS) {
   emitND2NonNDTable(Insts, OS);
   emitSSE2AVXTable(Insts, OS);
 }
-} // namespace
 
 static TableGen::Emitter::OptClass<X86InstrMappingEmitter>
     X("gen-x86-instr-mapping", "Generate X86 instruction mapping");

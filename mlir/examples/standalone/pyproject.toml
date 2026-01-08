@@ -1,0 +1,65 @@
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Copyright (c) 2025.
+
+[project]
+name = "standalone-python-bindings"
+dynamic = ["version"]
+requires-python = ">=3.8,<=3.14"
+dependencies = [
+    "numpy>=1.19.5, <=2.1.2",
+    "PyYAML>=5.4.0, <=6.0.1",
+    "ml_dtypes>=0.1.0, <=0.6.0; python_version<'3.13'",
+    "ml_dtypes>=0.5.0, <=0.6.0; python_version>='3.13'",
+]
+
+[project.urls]
+Homepage = "https://github.com/llvm/llvm-project"
+Discussions = "https://discourse.llvm.org/"
+"Issue Tracker" = "https://github.com/llvm/llvm-project/issues?q=is%3Aissue%20state%3Aopen%20label%3Amlir%3Apython%20"
+"Source Code" = "https://github.com/llvm/llvm-project/tree/main/mlir/python"
+
+[build-system]
+requires = [
+    "scikit-build-core>=0.10.7",
+    "typing_extensions>=4.12.2",
+    "nanobind>=2.9, <3.0",
+    "pybind11>=2.10.0, <=2.13.6",
+]
+build-backend = "scikit_build_core.build"
+
+[tool.scikit-build]
+# This is the minimum version of scikit-build-core.
+minimum-version = "0.10.7"
+# This pyproject.toml must be adjacent to the root CMakeLists.txt (wherever project(...) is specified).
+cmake.source-dir = "."
+# This is for installing/distributing the python bindings target and only the python bindings target.
+build.targets = ["StandalonePythonModules"]
+install.components = ["StandalonePythonModules"]
+
+[tool.scikit-build.cmake.define]
+# Optional
+CMAKE_C_COMPILER = { env = "CMAKE_C_COMPILER", default = "" }
+CMAKE_CXX_COMPILER = { env = "CMAKE_CXX_COMPILER", default = "" }
+CMAKE_C_COMPILER_LAUNCHER = { env = "CMAKE_C_COMPILER_LAUNCHER", default = "" }
+CMAKE_CXX_COMPILER_LAUNCHER = { env = "CMAKE_CXX_COMPILER_LAUNCHER", default = "" }
+CMAKE_GENERATOR = { env = "CMAKE_GENERATOR", default = "Ninja" }
+LLVM_USE_LINKER = { env = "LLVM_USE_LINKER", default = "" }
+# Optional but highly recommended (this makes the bindings compatible with other bindings packages
+# by preventing symbol collisions).
+CMAKE_VISIBILITY_INLINES_HIDDEN = "ON"
+CMAKE_C_VISIBILITY_PRESET = "hidden"
+CMAKE_CXX_VISIBILITY_PRESET = "hidden"
+
+# Non-optional (alternatively you could use CMAKE_PREFIX_PATH here).
+MLIR_DIR = { env = "MLIR_DIR", default = "" }
+# Non-optional
+CMAKE_BUILD_TYPE = { env = "CMAKE_BUILD_TYPE", default = "Release" }
+MLIR_ENABLE_BINDINGS_PYTHON = "ON"
+# Effectively non-optional (any downstream project should specify this).
+MLIR_PYTHON_PACKAGE_PREFIX = "mlir_standalone"
+# This specifies the directory in the install directory (i.e., /tmp/pip-wheel/platlib) where _mlir_libs, dialects, etc.
+# are installed. Thus, this will be the package location (and the name of the package) that pip assumes is
+# the root package.
+MLIR_BINDINGS_PYTHON_INSTALL_PREFIX = "mlir_standalone"

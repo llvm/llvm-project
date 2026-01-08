@@ -13,23 +13,25 @@
 #ifndef LLVM_LIB_TARGET_BPF_MCTARGETDESC_BPFMCASMINFO_H
 #define LLVM_LIB_TARGET_BPF_MCTARGETDESC_BPFMCASMINFO_H
 
-#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCAsmInfoELF.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 
-class BPFMCAsmInfo : public MCAsmInfo {
+class BPFMCAsmInfo : public MCAsmInfoELF {
 public:
   explicit BPFMCAsmInfo(const Triple &TT, const MCTargetOptions &Options) {
     if (TT.getArch() == Triple::bpfeb)
       IsLittleEndian = false;
 
     PrivateGlobalPrefix = ".L";
+    PrivateLabelPrefix = "L";
     WeakRefDirective = "\t.weak\t";
 
     UsesELFSectionDirectiveForBSS = true;
     HasSingleParameterDotFile = true;
     HasDotTypeDotSizeDirective = true;
+    HasIdentDirective = false;
 
     SupportsDebugInformation = true;
     ExceptionsType = ExceptionHandling::DwarfCFI;
@@ -45,6 +47,10 @@ public:
 
   void setDwarfUsesRelocationsAcrossSections(bool enable) {
     DwarfUsesRelocationsAcrossSections = enable;
+  }
+
+  MCSection *getStackSection(MCContext &Ctx, bool Exec) const override {
+    return nullptr;
   }
 };
 }

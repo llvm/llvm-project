@@ -1,4 +1,4 @@
-//===--- ReplaceDisallowCopyAndAssignMacroCheck.cpp - clang-tidy ----------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,7 +26,7 @@ public:
 
   void MacroExpands(const Token &MacroNameTok, const MacroDefinition &MD,
                     SourceRange Range, const MacroArgs *Args) override {
-    IdentifierInfo *Info = MacroNameTok.getIdentifierInfo();
+    const IdentifierInfo *Info = MacroNameTok.getIdentifierInfo();
     if (!Info || !Args || Args->getNumMacroArguments() != 1)
       return;
     if (Info->getName() != Check.getMacroName())
@@ -38,11 +38,11 @@ public:
       // For now we only support simple argument that don't need to be
       // pre-expanded.
       return;
-    clang::IdentifierInfo *ClassIdent = ClassNameTok->getIdentifierInfo();
+    const clang::IdentifierInfo *ClassIdent = ClassNameTok->getIdentifierInfo();
     if (!ClassIdent)
       return;
 
-    std::string Replacement = llvm::formatv(
+    const std::string Replacement = llvm::formatv(
         R"cpp({0}(const {0} &) = delete;
 const {0} &operator=(const {0} &) = delete{1})cpp",
         ClassIdent->getName(), shouldAppendSemi(Range) ? ";" : "");

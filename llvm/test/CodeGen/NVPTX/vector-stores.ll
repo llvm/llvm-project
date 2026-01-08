@@ -5,12 +5,13 @@
 define void @foo1(<2 x float> %val, ptr %ptr) {
 ; CHECK-LABEL: foo1(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [foo1_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [foo1_param_1];
-; CHECK-NEXT:    st.b64 [%rd2], %rd1;
+; CHECK-NEXT:    ld.param.v2.b32 {%r1, %r2}, [foo1_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [foo1_param_1];
+; CHECK-NEXT:    st.v2.b32 [%rd1], {%r1, %r2};
 ; CHECK-NEXT:    ret;
   store <2 x float> %val, ptr %ptr
   ret void
@@ -19,12 +20,13 @@ define void @foo1(<2 x float> %val, ptr %ptr) {
 define void @foo2(<4 x float> %val, ptr %ptr) {
 ; CHECK-LABEL: foo2(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [foo2_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [foo2_param_1];
-; CHECK-NEXT:    st.v2.b64 [%rd3], {%rd1, %rd2};
+; CHECK-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [foo2_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [foo2_param_1];
+; CHECK-NEXT:    st.v4.b32 [%rd1], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
   store <4 x float> %val, ptr %ptr
   ret void

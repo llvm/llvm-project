@@ -93,7 +93,7 @@ namespace {
 /// `spirv::AccessChainOp` operation.
 struct CombineChainedAccessChain final
     : OpRewritePattern<spirv::AccessChainOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(spirv::AccessChainOp accessChainOp,
                                 PatternRewriter &rewriter) const override {
@@ -128,7 +128,7 @@ void spirv::AccessChainOp::getCanonicalizationPatterns(
 // We are required to use CompositeConstructOp to create a constant struct as
 // they are not yet implemented as constant, hence we can not do so in a fold.
 struct IAddCarryFold final : OpRewritePattern<spirv::IAddCarryOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(spirv::IAddCarryOp op,
                                 PatternRewriter &rewriter) const override {
@@ -178,16 +178,16 @@ struct IAddCarryFold final : OpRewritePattern<spirv::IAddCarryOp> {
       return failure();
 
     Value addsVal =
-        rewriter.create<spirv::ConstantOp>(loc, constituentType, adds);
+        spirv::ConstantOp::create(rewriter, loc, constituentType, adds);
 
     Value carrysVal =
-        rewriter.create<spirv::ConstantOp>(loc, constituentType, carrys);
+        spirv::ConstantOp::create(rewriter, loc, constituentType, carrys);
 
     // Create empty struct
-    Value undef = rewriter.create<spirv::UndefOp>(loc, op.getType());
+    Value undef = spirv::UndefOp::create(rewriter, loc, op.getType());
     // Fill in adds at id 0
     Value intermediate =
-        rewriter.create<spirv::CompositeInsertOp>(loc, addsVal, undef, 0);
+        spirv::CompositeInsertOp::create(rewriter, loc, addsVal, undef, 0);
     // Fill in carrys at id 1
     rewriter.replaceOpWithNewOp<spirv::CompositeInsertOp>(op, carrysVal,
                                                           intermediate, 1);
@@ -260,16 +260,16 @@ struct MulExtendedFold final : OpRewritePattern<MulOp> {
       return failure();
 
     Value lowBitsVal =
-        rewriter.create<spirv::ConstantOp>(loc, constituentType, lowBits);
+        spirv::ConstantOp::create(rewriter, loc, constituentType, lowBits);
 
     Value highBitsVal =
-        rewriter.create<spirv::ConstantOp>(loc, constituentType, highBits);
+        spirv::ConstantOp::create(rewriter, loc, constituentType, highBits);
 
     // Create empty struct
-    Value undef = rewriter.create<spirv::UndefOp>(loc, op.getType());
+    Value undef = spirv::UndefOp::create(rewriter, loc, op.getType());
     // Fill in lowBits at id 0
     Value intermediate =
-        rewriter.create<spirv::CompositeInsertOp>(loc, lowBitsVal, undef, 0);
+        spirv::CompositeInsertOp::create(rewriter, loc, lowBitsVal, undef, 0);
     // Fill in highBits at id 1
     rewriter.replaceOpWithNewOp<spirv::CompositeInsertOp>(op, highBitsVal,
                                                           intermediate, 1);
@@ -284,7 +284,7 @@ void spirv::SMulExtendedOp::getCanonicalizationPatterns(
 }
 
 struct UMulExtendedOpXOne final : OpRewritePattern<spirv::UMulExtendedOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(spirv::UMulExtendedOp op,
                                 PatternRewriter &rewriter) const override {
@@ -326,7 +326,7 @@ void spirv::UMulExtendedOp::getCanonicalizationPatterns(
 // The transformation is only applied if one divisor is a multiple of the other.
 
 struct UModSimplification final : OpRewritePattern<spirv::UModOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(spirv::UModOp umodOp,
                                 PatternRewriter &rewriter) const override {
@@ -1271,7 +1271,7 @@ namespace {
 //                       +-------------+
 //
 struct ConvertSelectionOpToSelect final : OpRewritePattern<spirv::SelectionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(spirv::SelectionOp selectionOp,
                                 PatternRewriter &rewriter) const override {
@@ -1309,11 +1309,11 @@ struct ConvertSelectionOpToSelect final : OpRewritePattern<spirv::SelectionOp> {
     auto storeOpAttributes =
         cast<spirv::StoreOp>(trueBlock->front())->getAttrs();
 
-    auto selectOp = rewriter.create<spirv::SelectOp>(
-        selectionOp.getLoc(), trueValue.getType(),
+    auto selectOp = spirv::SelectOp::create(
+        rewriter, selectionOp.getLoc(), trueValue.getType(),
         brConditionalOp.getCondition(), trueValue, falseValue);
-    rewriter.create<spirv::StoreOp>(selectOp.getLoc(), ptrValue,
-                                    selectOp.getResult(), storeOpAttributes);
+    spirv::StoreOp::create(rewriter, selectOp.getLoc(), ptrValue,
+                           selectOp.getResult(), storeOpAttributes);
 
     // `spirv.mlir.selection` is not needed anymore.
     rewriter.eraseOp(op);

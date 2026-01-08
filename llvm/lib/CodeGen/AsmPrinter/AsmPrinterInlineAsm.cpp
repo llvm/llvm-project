@@ -36,6 +36,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
@@ -98,6 +99,7 @@ void AsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
   unsigned BufNum = addInlineAsmDiagBuffer(Str, LocMDNode);
   SourceMgr &SrcMgr = *MMI->getContext().getInlineSourceManager();
   SrcMgr.setIncludeDirs(MCOptions.IASSearchPaths);
+  SrcMgr.setVirtualFileSystem(VFS);
 
   std::unique_ptr<MCAsmParser> Parser(
       createMCAsmParser(SrcMgr, OutContext, *OutStreamer, *MAI, BufNum));

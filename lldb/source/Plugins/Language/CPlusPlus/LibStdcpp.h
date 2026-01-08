@@ -38,6 +38,10 @@ LibstdcppMapIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                              lldb::ValueObjectSP);
 
 SyntheticChildrenFrontEnd *
+LibStdcppSpanSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                      lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *
 LibStdcppTupleSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                        lldb::ValueObjectSP);
 
@@ -60,6 +64,9 @@ LibStdcppSharedPtrSyntheticFrontEndCreator(CXXSyntheticChildren *,
 SyntheticChildrenFrontEnd *
 LibStdcppUniquePtrSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                            lldb::ValueObjectSP);
+
+bool LibStdcppVariantSummaryProvider(ValueObject &valobj, Stream &stream,
+                                     const TypeSummaryOptions &options);
 
 } // namespace formatters
 } // namespace lldb_private

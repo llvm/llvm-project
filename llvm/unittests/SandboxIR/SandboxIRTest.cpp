@@ -1385,7 +1385,7 @@ define ptr @foo() {
   // Check get(), getKey(), getDiscriminator(), getAddrDiscriminator().
   auto *NewPtrAuth = sandboxir::ConstantPtrAuth::get(
       &F, PtrAuth->getKey(), PtrAuth->getDiscriminator(),
-      PtrAuth->getAddrDiscriminator());
+      PtrAuth->getAddrDiscriminator(), PtrAuth->getDeactivationSymbol());
   EXPECT_EQ(NewPtrAuth, PtrAuth);
   // Check hasAddressDiscriminator().
   EXPECT_EQ(PtrAuth->hasAddressDiscriminator(),

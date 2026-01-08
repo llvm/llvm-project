@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_FUTEX_WORD_H
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_FUTEX_WORD_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/macros/config.h"
-#include <stdint.h>
 #include <sys/syscall.h>
 namespace LIBC_NAMESPACE_DECL {
 

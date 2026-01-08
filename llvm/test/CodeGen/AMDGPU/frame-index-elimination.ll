@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI,MUBUF %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-MUBUF,MUBUF %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-promote-alloca,+enable-flat-scratch -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-FLATSCR %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -mattr=-promote-alloca < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI,MUBUF %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-promote-alloca < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-MUBUF,MUBUF %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-promote-alloca,+enable-flat-scratch < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-FLATSCR %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck --check-prefixes=GFX11-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck --check-prefixes=GFX11-FAKE16 %s
 
@@ -244,9 +244,9 @@ declare void @func(ptr addrspace(5) nocapture) #0
 
 ; GCN-LABEL: {{^}}undefined_stack_store_reg:
 ; GCN: s_and_saveexec_b64
-; MUBUF: buffer_store_dword v0, off, s[0:3], s33 offset:
-; MUBUF: buffer_store_dword v0, off, s[0:3], s33 offset:
-; MUBUF: buffer_store_dword v0, off, s[0:3], s33 offset:
+; MUBUF: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s33 offset:
+; MUBUF: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s33 offset:
+; MUBUF: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s33 offset:
 ; MUBUF: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s33 offset:
 ; FLATSCR: scratch_store_dword v0, off, s33 offset:
 ; FLATSCR: scratch_store_dword v0, off, s33 offset:
@@ -360,7 +360,8 @@ entry:
 ; s_add_i32.
 
 ; GCN-LABEL: {{^}}fi_sop2_s_add_u32_literal_error:
-; GCN: s_add_u32 [[ADD_LO:s[0-9]+]], 0, 0x2010
+; GCN: s_movk_i32 [[S_MOVK_I32_:s[0-9]+]], 0x1000
+; GCN: s_add_u32 [[ADD_LO:s[0-9]+]], 0x1010, [[S_MOVK_I32_]]
 ; GCN: s_addc_u32 [[ADD_HI:s[0-9]+]], s{{[0-9]+}}, 0
 define amdgpu_kernel void @fi_sop2_s_add_u32_literal_error() #0 {
 entry:

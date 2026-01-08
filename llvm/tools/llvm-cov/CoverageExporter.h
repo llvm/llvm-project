@@ -37,7 +37,7 @@ protected:
       : Coverage(CoverageMapping), Options(Options), OS(OS) {}
 
 public:
-  virtual ~CoverageExporter(){};
+  virtual ~CoverageExporter() = default;
 
   /// Render the CoverageMapping object.
   virtual void renderRoot(const CoverageFilters &IgnoreFilters) = 0;

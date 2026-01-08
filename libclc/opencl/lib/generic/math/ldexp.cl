@@ -9,8 +9,8 @@
 #include <clc/math/clc_ldexp.h>
 #include <clc/opencl/math/ldexp.h>
 
-#define FUNCTION ldexp
-#define __IMPL_FUNCTION(x) __clc_ldexp
+#define __CLC_FUNCTION ldexp
+#define __CLC_IMPL_FUNCTION(x) __clc_ldexp
 #define __CLC_BODY <clc/shared/binary_def_with_int_second_arg.inc>
 
 #include <clc/math/gentype.inc>

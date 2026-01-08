@@ -15,15 +15,34 @@
 
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 
+#define GET_SDNODE_ENUM
+#include "SystemZGenSDNodeInfo.inc"
+
 namespace llvm {
+namespace SystemZISD {
 
-class SystemZSelectionDAGInfo : public SelectionDAGTargetInfo {
+enum NodeType : unsigned {
+  // Set the condition code from a boolean value in operand 0.
+  // Operand 1 is a mask of all condition-code values that may result of this
+  // operation, operand 2 is a mask of condition-code values that may result
+  // if the boolean is true.
+  // Note that this operation is always optimized away, we will never
+  // generate any code for it.
+  GET_CCMASK = GENERATED_OPCODE_END,
+};
+
+// Return true if OPCODE is some kind of PC-relative address.
+inline bool isPCREL(unsigned Opcode) {
+  return Opcode == PCREL_WRAPPER || Opcode == PCREL_OFFSET;
+}
+
+} // namespace SystemZISD
+
+class SystemZSelectionDAGInfo : public SelectionDAGGenTargetInfo {
 public:
-  explicit SystemZSelectionDAGInfo() = default;
+  SystemZSelectionDAGInfo();
 
-  bool isTargetMemoryOpcode(unsigned Opcode) const override;
-
-  bool isTargetStrictFPOpcode(unsigned Opcode) const override;
+  const char *getTargetNodeName(unsigned Opcode) const override;
 
   SDValue EmitTargetCodeForMemcpy(SelectionDAG &DAG, const SDLoc &DL,
                                   SDValue Chain, SDValue Dst, SDValue Src,
@@ -41,8 +60,7 @@ public:
   std::pair<SDValue, SDValue>
   EmitTargetCodeForMemcmp(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
                           SDValue Src1, SDValue Src2, SDValue Size,
-                          MachinePointerInfo Op1PtrInfo,
-                          MachinePointerInfo Op2PtrInfo) const override;
+                          const CallInst *CI) const override;
 
   std::pair<SDValue, SDValue>
   EmitTargetCodeForMemchr(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
@@ -62,8 +80,7 @@ public:
 
   std::pair<SDValue, SDValue>
   EmitTargetCodeForStrlen(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
-                          SDValue Src,
-                          MachinePointerInfo SrcPtrInfo) const override;
+                          SDValue Src, const CallInst *CI) const override;
 
   std::pair<SDValue, SDValue>
   EmitTargetCodeForStrnlen(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,

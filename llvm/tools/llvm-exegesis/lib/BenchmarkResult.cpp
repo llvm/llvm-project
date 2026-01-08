@@ -21,9 +21,9 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 
-static constexpr const char kIntegerPrefix[] = "i_0x";
-static constexpr const char kDoublePrefix[] = "f_";
-static constexpr const char kInvalidOperand[] = "INVALID";
+static constexpr char kIntegerPrefix[] = "i_0x";
+static constexpr char kDoublePrefix[] = "f_";
+static constexpr char kInvalidOperand[] = "INVALID";
 
 namespace llvm {
 
@@ -202,7 +202,7 @@ struct CustomMappingTraits<std::map<exegesis::ValidationEvent, int64_t>> {
       Io.setError("Key is not a valid validation event");
       return;
     }
-    Io.mapRequired(KeyStr.str().c_str(), VI[*Key]);
+    Io.mapRequired(KeyStr, VI[*Key]);
   }
 
   static void output(IO &Io, std::map<exegesis::ValidationEvent, int64_t> &VI) {
@@ -245,8 +245,8 @@ template <> struct SequenceElementTraits<exegesis::RegisterValue> {
 };
 
 template <> struct ScalarTraits<exegesis::RegisterValue> {
-  static constexpr const unsigned kRadix = 16;
-  static constexpr const bool kSigned = false;
+  static constexpr unsigned kRadix = 16;
+  static constexpr bool kSigned = false;
 
   static void output(const exegesis::RegisterValue &RV, void *Ctx,
                      raw_ostream &Out) {

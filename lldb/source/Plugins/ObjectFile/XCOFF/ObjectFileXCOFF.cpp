@@ -94,7 +94,7 @@ bool ObjectFileXCOFF::CreateBinary() {
 
   Log *log = GetLog(LLDBLog::Object);
 
-  auto memory_ref = llvm::MemoryBufferRef(toStringRef(m_data.GetData()),
+  auto memory_ref = llvm::MemoryBufferRef(toStringRef(m_data_nsp->GetData()),
                                           m_file.GetFilename().GetStringRef());
   llvm::file_magic magic = llvm::identify_magic(memory_ref.getBuffer());
 

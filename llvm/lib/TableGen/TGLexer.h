@@ -19,7 +19,6 @@
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/SMLoc.h"
 #include <cassert>
-#include <memory>
 #include <set>
 #include <string>
 
@@ -150,6 +149,8 @@ enum TokKind {
   XGt,
   XSetDagOp,
   XGetDagOp,
+  XSetDagOpName,
+  XGetDagOpName,
   XExists,
   XListRemove,
   XToLower,
@@ -214,13 +215,9 @@ private:
 public:
   TGLexer(SourceMgr &SrcMgr, ArrayRef<std::string> Macros);
 
-  tgtok::TokKind Lex() {
-    return CurCode = LexToken(CurPtr == CurBuf.begin());
-  }
+  tgtok::TokKind Lex() { return CurCode = LexToken(CurPtr == CurBuf.begin()); }
 
-  const DependenciesSetTy &getDependencies() const {
-    return Dependencies;
-  }
+  const DependenciesSetTy &getDependencies() const { return Dependencies; }
 
   tgtok::TokKind getCode() const { return CurCode; }
 

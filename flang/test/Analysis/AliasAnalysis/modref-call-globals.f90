@@ -75,7 +75,7 @@ end subroutine
 subroutine test_common
   implicit none
   real :: test_var_x_common
-  common /comm/ test_var_x_common 
+  common /comm/ test_var_x_common
   call test_effect_external()
 end subroutine
 ! CHECK-LABEL: Testing : "_QPtest_common"

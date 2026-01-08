@@ -1866,7 +1866,7 @@ class SwitchInst : public SingleLLVMInstructionImpl<llvm::SwitchInst> {
   friend class Context; // For accessing the constructor in create*()
 
 public:
-  static constexpr const unsigned DefaultPseudoIndex =
+  static constexpr unsigned DefaultPseudoIndex =
       llvm::SwitchInst::DefaultPseudoIndex;
 
   LLVM_ABI static SwitchInst *create(Value *V, BasicBlock *Dest,
@@ -1884,22 +1884,96 @@ public:
     return cast<llvm::SwitchInst>(Val)->getNumCases();
   }
 
+  template <typename LLVMCaseItT, typename BlockT, typename ConstT>
+  class CaseItImpl;
+
+  // The template helps avoid code duplication for const and non-const
+  // CaseHandle variants.
+  template <typename LLVMCaseItT, typename BlockT, typename ConstT>
+  class CaseHandleImpl {
+    Context &Ctx;
+    // NOTE: We are not wrapping an LLVM CaseHande here because it is not
+    // default-constructible. Instead we are wrapping the LLVM CaseIt
+    // iterator, as we can always get an LLVM CaseHandle by de-referencing it.
+    LLVMCaseItT LLVMCaseIt;
+    template <typename T1, typename T2, typename T3> friend class CaseItImpl;
+
+  public:
+    CaseHandleImpl(Context &Ctx, LLVMCaseItT LLVMCaseIt)
+        : Ctx(Ctx), LLVMCaseIt(LLVMCaseIt) {}
+    ConstT *getCaseValue() const;
+    BlockT *getCaseSuccessor() const;
+    unsigned getCaseIndex() const {
+      const auto &LLVMCaseHandle = *LLVMCaseIt;
+      return LLVMCaseHandle.getCaseIndex();
+    }
+    unsigned getSuccessorIndex() const {
+      const auto &LLVMCaseHandle = *LLVMCaseIt;
+      return LLVMCaseHandle.getSuccessorIndex();
+    }
+  };
+
+  // The template helps avoid code duplication for const and non-const CaseIt
+  // variants.
+  template <typename LLVMCaseItT, typename BlockT, typename ConstT>
+  class CaseItImpl : public iterator_facade_base<
+                         CaseItImpl<LLVMCaseItT, BlockT, ConstT>,
+                         std::random_access_iterator_tag,
+                         const CaseHandleImpl<LLVMCaseItT, BlockT, ConstT>> {
+    CaseHandleImpl<LLVMCaseItT, BlockT, ConstT> CH;
+
+  public:
+    CaseItImpl(Context &Ctx, LLVMCaseItT It) : CH(Ctx, It) {}
+    CaseItImpl(SwitchInst *SI, ptrdiff_t CaseNum)
+        : CH(SI->getContext(), llvm::SwitchInst::CaseIt(
+                                   cast<llvm::SwitchInst>(SI->Val), CaseNum)) {}
+    CaseItImpl &operator+=(ptrdiff_t N) {
+      CH.LLVMCaseIt += N;
+      return *this;
+    }
+    CaseItImpl &operator-=(ptrdiff_t N) {
+      CH.LLVMCaseIt -= N;
+      return *this;
+    }
+    ptrdiff_t operator-(const CaseItImpl &Other) const {
+      return CH.LLVMCaseIt - Other.CH.LLVMCaseIt;
+    }
+    bool operator==(const CaseItImpl &Other) const {
+      return CH.LLVMCaseIt == Other.CH.LLVMCaseIt;
+    }
+    bool operator<(const CaseItImpl &Other) const {
+      return CH.LLVMCaseIt < Other.CH.LLVMCaseIt;
+    }
+    const CaseHandleImpl<LLVMCaseItT, BlockT, ConstT> &operator*() const {
+      return CH;
+    }
+  };
+
   using CaseHandle =
-      llvm::SwitchInst::CaseHandleImpl<SwitchInst, ConstantInt, BasicBlock>;
-  using ConstCaseHandle =
-      llvm::SwitchInst::CaseHandleImpl<const SwitchInst, const ConstantInt,
-                                       const BasicBlock>;
-  using CaseIt = llvm::SwitchInst::CaseIteratorImpl<CaseHandle>;
-  using ConstCaseIt = llvm::SwitchInst::CaseIteratorImpl<ConstCaseHandle>;
+      CaseHandleImpl<llvm::SwitchInst::CaseIt, BasicBlock, ConstantInt>;
+  using CaseIt = CaseItImpl<llvm::SwitchInst::CaseIt, BasicBlock, ConstantInt>;
+
+  using ConstCaseHandle = CaseHandleImpl<llvm::SwitchInst::ConstCaseIt,
+                                         const BasicBlock, const ConstantInt>;
+  using ConstCaseIt = CaseItImpl<llvm::SwitchInst::ConstCaseIt,
+                                 const BasicBlock, const ConstantInt>;
 
   /// Returns a read/write iterator that points to the first case in the
   /// SwitchInst.
-  CaseIt case_begin() { return CaseIt(this, 0); }
-  ConstCaseIt case_begin() const { return ConstCaseIt(this, 0); }
+  CaseIt case_begin() {
+    return CaseIt(Ctx, cast<llvm::SwitchInst>(Val)->case_begin());
+  }
+  ConstCaseIt case_begin() const {
+    return ConstCaseIt(Ctx, cast<llvm::SwitchInst>(Val)->case_begin());
+  }
   /// Returns a read/write iterator that points one past the last in the
   /// SwitchInst.
-  CaseIt case_end() { return CaseIt(this, getNumCases()); }
-  ConstCaseIt case_end() const { return ConstCaseIt(this, getNumCases()); }
+  CaseIt case_end() {
+    return CaseIt(Ctx, cast<llvm::SwitchInst>(Val)->case_end());
+  }
+  ConstCaseIt case_end() const {
+    return ConstCaseIt(Ctx, cast<llvm::SwitchInst>(Val)->case_end());
+  }
   /// Iteration adapter for range-for loops.
   iterator_range<CaseIt> cases() {
     return make_range(case_begin(), case_end());
@@ -1907,22 +1981,19 @@ public:
   iterator_range<ConstCaseIt> cases() const {
     return make_range(case_begin(), case_end());
   }
-  CaseIt case_default() { return CaseIt(this, DefaultPseudoIndex); }
+  CaseIt case_default() {
+    return CaseIt(Ctx, cast<llvm::SwitchInst>(Val)->case_default());
+  }
   ConstCaseIt case_default() const {
-    return ConstCaseIt(this, DefaultPseudoIndex);
+    return ConstCaseIt(Ctx, cast<llvm::SwitchInst>(Val)->case_default());
   }
   CaseIt findCaseValue(const ConstantInt *C) {
-    return CaseIt(
-        this,
-        const_cast<const SwitchInst *>(this)->findCaseValue(C)->getCaseIndex());
+    const llvm::ConstantInt *LLVMC = cast<llvm::ConstantInt>(C->Val);
+    return CaseIt(Ctx, cast<llvm::SwitchInst>(Val)->findCaseValue(LLVMC));
   }
   ConstCaseIt findCaseValue(const ConstantInt *C) const {
-    ConstCaseIt I = llvm::find_if(cases(), [C](const ConstCaseHandle &Case) {
-      return Case.getCaseValue() == C;
-    });
-    if (I != case_end())
-      return I;
-    return case_default();
+    const llvm::ConstantInt *LLVMC = cast<llvm::ConstantInt>(C->Val);
+    return ConstCaseIt(Ctx, cast<llvm::SwitchInst>(Val)->findCaseValue(LLVMC));
   }
   LLVM_ABI ConstantInt *findCaseDest(BasicBlock *BB);
 
@@ -2278,6 +2349,8 @@ class CastInst : public UnaryInstruction {
       return Opcode::FPToSI;
     case llvm::Instruction::FPExt:
       return Opcode::FPExt;
+    case llvm::Instruction::PtrToAddr:
+      return Opcode::PtrToAddr;
     case llvm::Instruction::PtrToInt:
       return Opcode::PtrToInt;
     case llvm::Instruction::IntToPtr:
@@ -2364,6 +2437,8 @@ class FPToUIInst final : public CastInstImpl<Instruction::Opcode::FPToUI> {};
 class FPToSIInst final : public CastInstImpl<Instruction::Opcode::FPToSI> {};
 class IntToPtrInst final : public CastInstImpl<Instruction::Opcode::IntToPtr> {
 };
+class PtrToAddrInst final
+    : public CastInstImpl<Instruction::Opcode::PtrToAddr> {};
 class PtrToIntInst final : public CastInstImpl<Instruction::Opcode::PtrToInt> {
 };
 class BitCastInst final : public CastInstImpl<Instruction::Opcode::BitCast> {};

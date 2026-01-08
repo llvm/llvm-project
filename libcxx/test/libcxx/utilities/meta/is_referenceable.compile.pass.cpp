@@ -14,8 +14,6 @@
 //    or a ref-qualifier, or a reference type.
 //
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <type_traits>
 #include <cassert>
 

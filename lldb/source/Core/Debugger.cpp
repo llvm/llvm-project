@@ -253,16 +253,18 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
       // Statusline setting changed. If we have a statusline instance, update it
       // now. Otherwise it will get created in the default event handler.
       std::lock_guard<std::mutex> guard(m_statusline_mutex);
-      if (StatuslineSupported())
+      if (StatuslineSupported()) {
         m_statusline.emplace(*this);
-      else
+        m_statusline->Enable(GetSelectedExecutionContextRef());
+      } else {
         m_statusline.reset();
+      }
     } else if (property_path ==
                    g_debugger_properties[ePropertyStatuslineFormat].name ||
                property_path ==
                    g_debugger_properties[ePropertySeparator].name) {
       // Statusline format changed. Redraw the statusline.
-      RedrawStatusline();
+      RedrawStatusline(std::nullopt);
     } else if (property_path ==
                g_debugger_properties[ePropertyUseSourceCache].name) {
       // use-source-cache changed. Wipe out the cache contents if it was
@@ -501,7 +503,7 @@ FormatEntity::Entry Debugger::GetStatuslineFormat() const {
 bool Debugger::SetStatuslineFormat(const FormatEntity::Entry &format) {
   constexpr uint32_t idx = ePropertyStatuslineFormat;
   bool ret = SetPropertyAtIndex(idx, format);
-  RedrawStatusline();
+  RedrawStatusline(std::nullopt);
   return ret;
 }
 
@@ -526,7 +528,7 @@ llvm::StringRef Debugger::GetDisabledAnsiSuffix() const {
 bool Debugger::SetSeparator(llvm::StringRef s) {
   constexpr uint32_t idx = ePropertySeparator;
   bool ret = SetPropertyAtIndex(idx, s);
-  RedrawStatusline();
+  RedrawStatusline(std::nullopt);
   return ret;
 }
 
@@ -963,7 +965,8 @@ llvm::StringRef Debugger::GetStaticBroadcasterClass() {
 Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
     : UserID(g_unique_id++),
       Properties(std::make_shared<OptionValueProperties>()),
-      m_input_file_sp(std::make_shared<NativeFile>(stdin, NativeFile::Unowned)),
+      m_input_file_sp(std::make_shared<NativeFile>(
+          stdin, File::eOpenOptionReadOnly, NativeFile::Unowned)),
       m_output_stream_sp(std::make_shared<LockableStreamFile>(
           stdout, NativeFile::Unowned, m_output_mutex)),
       m_error_stream_sp(std::make_shared<LockableStreamFile>(
@@ -1170,7 +1173,8 @@ Status Debugger::SetInputString(const char *data) {
     return result;
   }
 
-  SetInputFile((FileSP)std::make_shared<NativeFile>(commands_file, true));
+  SetInputFile((FileSP)std::make_shared<NativeFile>(
+      commands_file, File::eOpenOptionReadOnly, true));
   return result;
 }
 
@@ -1210,20 +1214,31 @@ void Debugger::RestoreInputTerminalState() {
   {
     std::lock_guard<std::mutex> guard(m_statusline_mutex);
     if (m_statusline)
-      m_statusline->Enable();
+      m_statusline->Enable(GetSelectedExecutionContext());
   }
 }
 
-void Debugger::RedrawStatusline(bool update) {
+void Debugger::RedrawStatusline(
+    std::optional<ExecutionContextRef> exe_ctx_ref) {
   std::lock_guard<std::mutex> guard(m_statusline_mutex);
-  if (m_statusline)
-    m_statusline->Redraw(update);
+
+  if (!m_statusline)
+    return;
+
+  m_statusline->Redraw(exe_ctx_ref);
 }
 
 ExecutionContext Debugger::GetSelectedExecutionContext() {
   bool adopt_selected = true;
   ExecutionContextRef exe_ctx_ref(GetSelectedTarget().get(), adopt_selected);
   return ExecutionContext(exe_ctx_ref);
+}
+
+ExecutionContextRef Debugger::GetSelectedExecutionContextRef() {
+  if (TargetSP selected_target_sp = GetSelectedTarget())
+    return ExecutionContextRef(selected_target_sp.get(),
+                               /*adopt_selected=*/true);
+  return ExecutionContextRef(m_dummy_target_sp.get(), /*adopt_selected=*/false);
 }
 
 void Debugger::DispatchInputInterrupt() {
@@ -1365,7 +1380,8 @@ void Debugger::AdoptTopIOHandlerFilesIfInvalid(FileSP &in,
       in = GetInputFileSP();
     // If there is nothing, use stdin
     if (!in)
-      in = std::make_shared<NativeFile>(stdin, NativeFile::Unowned);
+      in = std::make_shared<NativeFile>(stdin, File::eOpenOptionReadOnly,
+                                        NativeFile::Unowned);
   }
   // If no STDOUT has been set, then set it appropriately
   if (!out || !out->GetUnlockedFile().IsValid()) {
@@ -1941,8 +1957,7 @@ void Debugger::FlushProcessOutput(Process &process, bool flush_stdout,
 }
 
 // This function handles events that were broadcast by the process.
-void Debugger::HandleProcessEvent(const EventSP &event_sp) {
-  using namespace lldb;
+ProcessSP Debugger::HandleProcessEvent(const EventSP &event_sp) {
   const uint32_t event_type = event_sp->GetType();
   ProcessSP process_sp =
       (event_type == Process::eBroadcastBitStructuredData)
@@ -2024,23 +2039,24 @@ void Debugger::HandleProcessEvent(const EventSP &event_sp) {
     if (pop_process_io_handler)
       process_sp->PopProcessIOHandler();
   }
+  return process_sp;
 }
 
-void Debugger::HandleThreadEvent(const EventSP &event_sp) {
+ThreadSP Debugger::HandleThreadEvent(const EventSP &event_sp) {
   // At present the only thread event we handle is the Frame Changed event, and
   // all we do for that is just reprint the thread status for that thread.
-  using namespace lldb;
   const uint32_t event_type = event_sp->GetType();
   const bool stop_format = true;
+  ThreadSP thread_sp;
   if (event_type == Thread::eBroadcastBitStackChanged ||
       event_type == Thread::eBroadcastBitThreadSelected) {
-    ThreadSP thread_sp(
-        Thread::ThreadEventData::GetThreadFromEvent(event_sp.get()));
+    thread_sp = Thread::ThreadEventData::GetThreadFromEvent(event_sp.get());
     if (thread_sp) {
       thread_sp->GetStatus(*GetAsyncOutputStream(), 0, 1, 1, stop_format,
                            /*show_hidden*/ true);
     }
   }
+  return thread_sp;
 }
 
 bool Debugger::IsForwardingEvents() { return (bool)m_forward_listener_sp; }
@@ -2053,19 +2069,28 @@ void Debugger::CancelForwardEvents(const ListenerSP &listener_sp) {
   m_forward_listener_sp.reset();
 }
 
+bool Debugger::IsEscapeCodeCapableTTY() {
+  if (lldb::LockableStreamFileSP stream_sp = GetOutputStreamSP()) {
+    File &file = stream_sp->GetUnlockedFile();
+    return file.GetIsInteractive() && file.GetIsRealTerminal() &&
+           file.GetIsTerminalWithColors();
+  }
+  return false;
+}
+
 bool Debugger::StatuslineSupported() {
 // We have trouble with the contol codes on Windows, see
 // https://github.com/llvm/llvm-project/issues/134846.
 #ifndef _WIN32
-  if (GetShowStatusline()) {
-    if (lldb::LockableStreamFileSP stream_sp = GetOutputStreamSP()) {
-      File &file = stream_sp->GetUnlockedFile();
-      return file.GetIsInteractive() && file.GetIsRealTerminal() &&
-             file.GetIsTerminalWithColors();
-    }
-  }
-#endif
+  return GetShowStatusline() && IsEscapeCodeCapableTTY();
+#else
   return false;
+#endif
+}
+
+static bool RequiresFollowChildWorkaround(const Process &process) {
+  // FIXME: https://github.com/llvm/llvm-project/issues/160216
+  return process.GetFollowForkMode() == eFollowChild;
 }
 
 lldb::thread_result_t Debugger::DefaultEventHandler() {
@@ -2109,28 +2134,37 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
 
   if (StatuslineSupported()) {
     std::lock_guard<std::mutex> guard(m_statusline_mutex);
-    if (!m_statusline)
+    if (!m_statusline) {
       m_statusline.emplace(*this);
+      m_statusline->Enable(GetSelectedExecutionContextRef());
+    }
   }
 
   bool done = false;
   while (!done) {
     EventSP event_sp;
     if (listener_sp->GetEvent(event_sp, std::nullopt)) {
+      std::optional<ExecutionContextRef> exe_ctx_ref = std::nullopt;
       if (event_sp) {
         Broadcaster *broadcaster = event_sp->GetBroadcaster();
         if (broadcaster) {
           uint32_t event_type = event_sp->GetType();
           ConstString broadcaster_class(broadcaster->GetBroadcasterClass());
           if (broadcaster_class == broadcaster_class_process) {
-            HandleProcessEvent(event_sp);
+            if (ProcessSP process_sp = HandleProcessEvent(event_sp))
+              if (!RequiresFollowChildWorkaround(*process_sp))
+                exe_ctx_ref = ExecutionContextRef(process_sp.get(),
+                                                  /*adopt_selected=*/true);
           } else if (broadcaster_class == broadcaster_class_target) {
             if (Breakpoint::BreakpointEventData::GetEventDataFromEvent(
                     event_sp.get())) {
               HandleBreakpointEvent(event_sp);
             }
           } else if (broadcaster_class == broadcaster_class_thread) {
-            HandleThreadEvent(event_sp);
+            if (ThreadSP thread_sp = HandleThreadEvent(event_sp))
+              if (!RequiresFollowChildWorkaround(*thread_sp->GetProcess()))
+                exe_ctx_ref = ExecutionContextRef(thread_sp.get(),
+                                                  /*adopt_selected=*/true);
           } else if (broadcaster == m_command_interpreter_up.get()) {
             if (event_type &
                 CommandInterpreter::eBroadcastBitQuitCommandReceived) {
@@ -2168,7 +2202,7 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
         if (m_forward_listener_sp)
           m_forward_listener_sp->AddEvent(event_sp);
       }
-      RedrawStatusline();
+      RedrawStatusline(exe_ctx_ref);
     }
   }
 
@@ -2244,10 +2278,11 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
   ProgressReport progress_report{data->GetID(), data->GetCompleted(),
                                  data->GetTotal(), data->GetMessage()};
 
-  // Do some bookkeeping regardless of whether we're going to display
-  // progress reports.
   {
     std::lock_guard<std::mutex> guard(m_progress_reports_mutex);
+
+    // Do some bookkeeping regardless of whether we're going to display
+    // progress reports.
     auto it = llvm::find_if(m_progress_reports, [&](const auto &report) {
       return report.id == progress_report.id;
     });
@@ -2259,6 +2294,30 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
         *it = progress_report;
     } else {
       m_progress_reports.push_back(progress_report);
+    }
+
+    // Show progress using Operating System Command (OSC) sequences.
+    if (GetShowProgress() && IsEscapeCodeCapableTTY()) {
+      if (lldb::LockableStreamFileSP stream_sp = GetOutputStreamSP()) {
+
+        // Clear progress if this was the last progress event.
+        if (m_progress_reports.empty()) {
+          stream_sp->Lock() << OSC_PROGRESS_REMOVE;
+          return;
+        }
+
+        const ProgressReport &report = m_progress_reports.back();
+
+        // Show indeterminate progress.
+        if (report.total == UINT64_MAX) {
+          stream_sp->Lock() << OSC_PROGRESS_INDETERMINATE;
+          return;
+        }
+
+        // Compute and show the progress value (0-100).
+        const unsigned value = (report.completed / report.total) * 100;
+        stream_sp->Lock().Printf(OSC_PROGRESS_SHOW, value);
+      }
     }
   }
 }

@@ -412,10 +412,12 @@ PointerType *NoCFIValue::getType() const {
 }
 
 ConstantPtrAuth *ConstantPtrAuth::get(Constant *Ptr, ConstantInt *Key,
-                                      ConstantInt *Disc, Constant *AddrDisc) {
+                                      ConstantInt *Disc, Constant *AddrDisc,
+                                      Constant *DeactivationSymbol) {
   auto *LLVMC = llvm::ConstantPtrAuth::get(
       cast<llvm::Constant>(Ptr->Val), cast<llvm::ConstantInt>(Key->Val),
-      cast<llvm::ConstantInt>(Disc->Val), cast<llvm::Constant>(AddrDisc->Val));
+      cast<llvm::ConstantInt>(Disc->Val), cast<llvm::Constant>(AddrDisc->Val),
+      cast<llvm::Constant>(DeactivationSymbol->Val));
   return cast<ConstantPtrAuth>(Ptr->getContext().getOrCreateConstant(LLVMC));
 }
 
@@ -437,6 +439,11 @@ ConstantInt *ConstantPtrAuth::getDiscriminator() const {
 Constant *ConstantPtrAuth::getAddrDiscriminator() const {
   return Ctx.getOrCreateConstant(
       cast<llvm::ConstantPtrAuth>(Val)->getAddrDiscriminator());
+}
+
+Constant *ConstantPtrAuth::getDeactivationSymbol() const {
+  return Ctx.getOrCreateConstant(
+      cast<llvm::ConstantPtrAuth>(Val)->getDeactivationSymbol());
 }
 
 ConstantPtrAuth *ConstantPtrAuth::getWithSameSchema(Constant *Pointer) const {

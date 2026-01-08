@@ -619,6 +619,19 @@ TEST(StringRefTest, Hashing) {
             hash_value(StringRef("hello world").slice(1, -1)));
 }
 
+TEST(StringRefTest, getAutoSenseRadix) {
+  struct RadixPair {
+    const char *Str;
+    unsigned Expected;
+  } RadixNumbers[] = {{"123", 10}, {"1", 10}, {"0b1", 2}, {"01", 8}, {"0o1", 8},
+                      {"0x1", 16}, {"0", 10}, {"00", 8},  {"", 10}};
+  for (size_t i = 0; i < std::size(RadixNumbers); ++i) {
+    StringRef number = RadixNumbers[i].Str;
+    unsigned radix = getAutoSenseRadix(number);
+    EXPECT_EQ(radix, RadixNumbers[i].Expected);
+  }
+}
+
 struct UnsignedPair {
   const char *Str;
   uint64_t Expected;
@@ -1111,14 +1124,13 @@ TEST(StringRefTest, StringLiteral) {
   constexpr StringRef StringRefs[] = {"Foo", "Bar"};
   EXPECT_EQ(StringRef("Foo"), StringRefs[0]);
   EXPECT_EQ(3u, (std::integral_constant<size_t, StringRefs[0].size()>::value));
-  EXPECT_EQ(false,
-            (std::integral_constant<bool, StringRefs[0].empty()>::value));
+  EXPECT_EQ(false, (std::bool_constant<StringRefs[0].empty()>::value));
   EXPECT_EQ(StringRef("Bar"), StringRefs[1]);
 
   constexpr StringLiteral Strings[] = {"Foo", "Bar"};
   EXPECT_EQ(StringRef("Foo"), Strings[0]);
   EXPECT_EQ(3u, (std::integral_constant<size_t, Strings[0].size()>::value));
-  EXPECT_EQ(false, (std::integral_constant<bool, Strings[0].empty()>::value));
+  EXPECT_EQ(false, (std::bool_constant<Strings[0].empty()>::value));
   EXPECT_EQ(StringRef("Bar"), Strings[1]);
 }
 

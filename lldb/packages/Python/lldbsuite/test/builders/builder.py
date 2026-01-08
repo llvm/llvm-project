@@ -26,7 +26,7 @@ class Builder:
 
     def getTriple(self, arch):
         """Returns the triple for the given architecture or None."""
-        return None
+        return configuration.triple
 
     def getExtraMakeArgs(self):
         """
@@ -37,6 +37,9 @@ class Builder:
 
     def getArchCFlags(self, architecture):
         """Returns the ARCH_CFLAGS for the make system."""
+        triple = self.getTriple(architecture)
+        if triple:
+            return ["ARCH_CFLAGS=-target {}".format(triple)]
         return []
 
     def getMake(self, test_subdir, test_name):
@@ -255,6 +258,7 @@ class Builder:
             "gmodules": {"MAKE_DSYM": "NO", "MAKE_GMODULES": "YES"},
             "debug_names": {"MAKE_DEBUG_NAMES": "YES"},
             "dwp": {"MAKE_DSYM": "NO", "MAKE_DWP": "YES"},
+            "pdb": {"MAKE_PDB": "YES"},
         }
 
         # Collect all flags, with later options overriding earlier ones

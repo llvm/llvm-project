@@ -10,8 +10,3 @@ void test_tile_mmultf32ps(void) {
   _tile_mmultf32ps(1, 2, 3);
 }
 
-void test_tile_tmmultf32ps(void) {
-  // CHECK-LABEL: @test_tile_tmmultf32ps(
-  // CHECK: call void @llvm.x86.ttmmultf32ps(i8 1, i8 2, i8 3)
-  _tile_tmmultf32ps(1, 2, 3);
-}

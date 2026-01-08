@@ -9,12 +9,14 @@
 #include "DXILOpLowering.h"
 #include "DXILConstants.h"
 #include "DXILOpBuilder.h"
+#include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
@@ -23,6 +25,7 @@
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/Use.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -41,6 +44,7 @@ class OpLowerer {
   DXILResourceTypeMap &DRTM;
   const ModuleMetadataInfo &MMDI;
   SmallVector<CallInst *> CleanupCasts;
+  Function *CleanupNURI = nullptr;
 
 public:
   OpLowerer(Module &M, DXILResourceMap &DRM, DXILResourceTypeMap &DRTM,
@@ -194,6 +198,21 @@ public:
     CleanupCasts.clear();
   }
 
+  void cleanupNonUniformResourceIndexCalls() {
+    // Replace all NonUniformResourceIndex calls with their argument.
+    if (!CleanupNURI)
+      return;
+    for (User *U : make_early_inc_range(CleanupNURI->users())) {
+      CallInst *CI = dyn_cast<CallInst>(U);
+      if (!CI)
+        continue;
+      CI->replaceAllUsesWith(CI->getArgOperand(0));
+      CI->eraseFromParent();
+    }
+    CleanupNURI->eraseFromParent();
+    CleanupNURI = nullptr;
+  }
+
   // Remove the resource global associated with the handleFromBinding call
   // instruction and their uses as they aren't needed anymore.
   // TODO: We should verify that all the globals get removed.
@@ -219,7 +238,7 @@ public:
 
     removeResourceGlobals(CI);
 
-    auto *NameGlobal = dyn_cast<llvm::GlobalVariable>(CI->getArgOperand(5));
+    auto *NameGlobal = dyn_cast<llvm::GlobalVariable>(CI->getArgOperand(4));
 
     CI->replaceAllUsesWith(Replacement);
     CI->eraseFromParent();
@@ -228,10 +247,36 @@ public:
       NameGlobal->removeFromParent();
   }
 
+  bool hasNonUniformIndex(Value *IndexOp) {
+    if (isa<llvm::Constant>(IndexOp))
+      return false;
+
+    SmallVector<Value *> WorkList;
+    WorkList.push_back(IndexOp);
+
+    while (!WorkList.empty()) {
+      Value *V = WorkList.pop_back_val();
+      if (auto *CI = dyn_cast<CallInst>(V)) {
+        if (CI->getCalledFunction()->getIntrinsicID() ==
+            Intrinsic::dx_resource_nonuniformindex)
+          return true;
+      }
+      if (auto *U = llvm::dyn_cast<llvm::User>(V)) {
+        for (llvm::Value *Op : U->operands()) {
+          if (isa<llvm::Constant>(Op))
+            continue;
+          WorkList.push_back(Op);
+        }
+      }
+    }
+    return false;
+  }
+
   [[nodiscard]] bool lowerToCreateHandle(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
     Type *Int32Ty = IRB.getInt32Ty();
+    Type *Int1Ty = IRB.getInt1Ty();
 
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
@@ -248,10 +293,12 @@ public:
         IndexOp = IRB.CreateAdd(IndexOp,
                                 ConstantInt::get(Int32Ty, Binding.LowerBound));
 
+      bool HasNonUniformIndex =
+          (Binding.Size == 1) ? false : hasNonUniformIndex(IndexOp);
       std::array<Value *, 4> Args{
           ConstantInt::get(Int8Ty, llvm::to_underlying(RC)),
           ConstantInt::get(Int32Ty, Binding.RecordID), IndexOp,
-          CI->getArgOperand(4)};
+          ConstantInt::get(Int1Ty, HasNonUniformIndex)};
       Expected<CallInst *> OpCall =
           OpBuilder.tryCreateOp(OpCode::CreateHandle, Args, CI->getName());
       if (Error E = OpCall.takeError())
@@ -266,6 +313,7 @@ public:
   [[nodiscard]] bool lowerToBindAndAnnotateHandle(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int32Ty = IRB.getInt32Ty();
+    Type *Int1Ty = IRB.getInt1Ty();
 
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
@@ -294,7 +342,10 @@ public:
                                 : Binding.LowerBound + Binding.Size - 1;
       Constant *ResBind = OpBuilder.getResBind(Binding.LowerBound, UpperBound,
                                                Binding.Space, RC);
-      std::array<Value *, 3> BindArgs{ResBind, IndexOp, CI->getArgOperand(4)};
+      bool NonUniformIndex =
+          (Binding.Size == 1) ? false : hasNonUniformIndex(IndexOp);
+      Constant *NonUniformOp = ConstantInt::get(Int1Ty, NonUniformIndex);
+      std::array<Value *, 3> BindArgs{ResBind, IndexOp, NonUniformOp};
       Expected<CallInst *> OpBind = OpBuilder.tryCreateOp(
           OpCode::CreateHandleFromBinding, BindArgs, CI->getName());
       if (Error E = OpBind.takeError())
@@ -576,6 +627,28 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerGetDimensionsX(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int32Ty = IRB.getInt32Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Undef = UndefValue::get(Int32Ty);
+
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::GetDimensions, {Handle, Undef}, CI->getName(), Int32Ty);
+      if (Error E = OpCall.takeError())
+        return E;
+      Value *Dim = IRB.CreateExtractValue(*OpCall, 0);
+
+      CI->replaceAllUsesWith(Dim);
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
   [[nodiscard]] bool lowerGetPointer(Function &F) {
     // These should have already been handled in DXILResourceAccess, so we can
     // just clean up the dead prototype.
@@ -746,7 +819,7 @@ public:
     IRBuilder<> &IRB = OpBuilder.getIRB();
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
-      Value *Ptr = CI->getArgOperand(1);
+      Value *Ptr = CI->getArgOperand(0);
       assert(Ptr->getType()->isPointerTy() &&
              "Expected operand of lifetime intrinsic to be a pointer");
 
@@ -858,6 +931,11 @@ public:
       case Intrinsic::dx_resource_getpointer:
         HasErrors |= lowerGetPointer(F);
         break;
+      case Intrinsic::dx_resource_nonuniformindex:
+        assert(!CleanupNURI &&
+               "overloaded llvm.dx.resource.nonuniformindex intrinsics?");
+        CleanupNURI = &F;
+        break;
       case Intrinsic::dx_resource_load_typedbuffer:
         HasErrors |= lowerTypedBufferLoad(F, /*HasCheckBit=*/true);
         break;
@@ -877,6 +955,9 @@ public:
         break;
       case Intrinsic::dx_resource_updatecounter:
         HasErrors |= lowerUpdateCounter(F);
+        break;
+      case Intrinsic::dx_resource_getdimensions_x:
+        HasErrors |= lowerGetDimensionsX(F);
         break;
       case Intrinsic::ctpop:
         HasErrors |= lowerCtpopToCountBits(F);
@@ -898,8 +979,10 @@ public:
       }
       Updated = true;
     }
-    if (Updated && !HasErrors)
+    if (Updated && !HasErrors) {
       cleanupHandleCasts();
+      cleanupNonUniformResourceIndexCalls();
+    }
 
     return Updated;
   }
@@ -918,6 +1001,7 @@ PreservedAnalyses DXILOpLowering::run(Module &M, ModuleAnalysisManager &MAM) {
   PA.preserve<DXILResourceAnalysis>();
   PA.preserve<DXILMetadataAnalysis>();
   PA.preserve<ShaderFlagsAnalysis>();
+  PA.preserve<RootSignatureAnalysis>();
   return PA;
 }
 
@@ -945,6 +1029,7 @@ public:
     AU.addPreserved<DXILResourceWrapperPass>();
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
+    AU.addPreserved<RootSignatureAnalysisWrapper>();
   }
 };
 char DXILOpLoweringLegacy::ID = 0;

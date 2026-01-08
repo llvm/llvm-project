@@ -1,4 +1,4 @@
-; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as %s -disable-output 2>&1 | FileCheck %s
 
 define amdgpu_ps void @prefetch_data_sgpr_base_imm_len_local(ptr addrspace(3) inreg %ptr) {
 entry:

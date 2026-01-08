@@ -54,7 +54,7 @@ class VEAsmParser : public MCTargetAsmParser {
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
   bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
-  int parseRegisterName(MCRegister (*matchFn)(StringRef));
+  MCRegister parseRegisterName(MCRegister (*matchFn)(StringRef));
   ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                SMLoc &EndLoc) override;
   bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
@@ -169,7 +169,7 @@ private:
   };
 
   struct RegOp {
-    unsigned RegNum;
+    MCRegister Reg;
   };
 
   struct ImmOp {
@@ -177,8 +177,8 @@ private:
   };
 
   struct MemOp {
-    unsigned Base;
-    unsigned IndexReg;
+    MCRegister Base;
+    MCRegister IndexReg;
     const MCExpr *Index;
     const MCExpr *Offset;
   };
@@ -342,7 +342,7 @@ public:
 
   MCRegister getReg() const override {
     assert((Kind == k_Register) && "Invalid access!");
-    return Reg.RegNum;
+    return Reg.Reg;
   }
 
   const MCExpr *getImm() const {
@@ -350,14 +350,14 @@ public:
     return Imm.Val;
   }
 
-  unsigned getMemBase() const {
+  MCRegister getMemBase() const {
     assert((Kind == k_MemoryRegRegImm || Kind == k_MemoryRegImmImm ||
             Kind == k_MemoryRegImm) &&
            "Invalid access!");
     return Mem.Base;
   }
 
-  unsigned getMemIndexReg() const {
+  MCRegister getMemIndexReg() const {
     assert((Kind == k_MemoryRegRegImm || Kind == k_MemoryZeroRegImm) &&
            "Invalid access!");
     return Mem.IndexReg;
@@ -415,20 +415,21 @@ public:
       OS << "Token: " << getToken() << "\n";
       break;
     case k_Register:
-      OS << "Reg: #" << getReg() << "\n";
+      OS << "Reg: #" << getReg().id() << "\n";
       break;
     case k_Immediate:
       OS << "Imm: " << getImm() << "\n";
       break;
     case k_MemoryRegRegImm:
       assert(getMemOffset() != nullptr);
-      OS << "Mem: #" << getMemBase() << "+#" << getMemIndexReg() << "+";
+      OS << "Mem: #" << getMemBase().id() << "+#" << getMemIndexReg().id()
+         << "+";
       MAI.printExpr(OS, *getMemOffset());
       OS << "\n";
       break;
     case k_MemoryRegImmImm:
       assert(getMemIndex() != nullptr && getMemOffset() != nullptr);
-      OS << "Mem: #" << getMemBase() << "+";
+      OS << "Mem: #" << getMemBase().id() << "+";
       MAI.printExpr(OS, *getMemIndex());
       OS << "+";
       MAI.printExpr(OS, *getMemOffset());
@@ -436,7 +437,7 @@ public:
       break;
     case k_MemoryZeroRegImm:
       assert(getMemOffset() != nullptr);
-      OS << "Mem: 0+#" << getMemIndexReg() << "+";
+      OS << "Mem: 0+#" << getMemIndexReg().id() << "+";
       MAI.printExpr(OS, *getMemOffset());
       OS << "\n";
       break;
@@ -450,7 +451,7 @@ public:
       break;
     case k_MemoryRegImm:
       assert(getMemOffset() != nullptr);
-      OS << "Mem: #" << getMemBase() << "+";
+      OS << "Mem: #" << getMemBase().id() << "+";
       MAI.printExpr(OS, *getMemOffset());
       OS << "\n";
       break;
@@ -606,10 +607,10 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<VEOperand> CreateReg(unsigned RegNum, SMLoc S,
+  static std::unique_ptr<VEOperand> CreateReg(MCRegister Reg, SMLoc S,
                                               SMLoc E) {
     auto Op = std::make_unique<VEOperand>(k_Register);
-    Op->Reg.RegNum = RegNum;
+    Op->Reg.Reg = Reg;
     Op->StartLoc = S;
     Op->EndLoc = E;
     return Op;
@@ -653,38 +654,38 @@ public:
   }
 
   static bool MorphToI32Reg(VEOperand &Op) {
-    unsigned Reg = Op.getReg();
+    MCRegister Reg = Op.getReg();
     unsigned regIdx = Reg - VE::SX0;
     if (regIdx > 63)
       return false;
-    Op.Reg.RegNum = I32Regs[regIdx];
+    Op.Reg.Reg = I32Regs[regIdx];
     return true;
   }
 
   static bool MorphToF32Reg(VEOperand &Op) {
-    unsigned Reg = Op.getReg();
+    MCRegister Reg = Op.getReg();
     unsigned regIdx = Reg - VE::SX0;
     if (regIdx > 63)
       return false;
-    Op.Reg.RegNum = F32Regs[regIdx];
+    Op.Reg.Reg = F32Regs[regIdx];
     return true;
   }
 
   static bool MorphToF128Reg(VEOperand &Op) {
-    unsigned Reg = Op.getReg();
+    MCRegister Reg = Op.getReg();
     unsigned regIdx = Reg - VE::SX0;
     if (regIdx % 2 || regIdx > 63)
       return false;
-    Op.Reg.RegNum = F128Regs[regIdx / 2];
+    Op.Reg.Reg = F128Regs[regIdx / 2];
     return true;
   }
 
   static bool MorphToVM512Reg(VEOperand &Op) {
-    unsigned Reg = Op.getReg();
+    MCRegister Reg = Op.getReg();
     unsigned regIdx = Reg - VE::VM0;
     if (regIdx % 2 || regIdx > 15)
       return false;
-    Op.Reg.RegNum = VM512Regs[regIdx / 2];
+    Op.Reg.Reg = VM512Regs[regIdx / 2];
     return true;
   }
 
@@ -696,16 +697,16 @@ public:
     if (regIdx > 31 || MISCRegs[regIdx] == VE::NoRegister)
       return false;
     Op.Kind = k_Register;
-    Op.Reg.RegNum = MISCRegs[regIdx];
+    Op.Reg.Reg = MISCRegs[regIdx];
     return true;
   }
 
   static std::unique_ptr<VEOperand>
-  MorphToMEMri(unsigned Base, std::unique_ptr<VEOperand> Op) {
+  MorphToMEMri(MCRegister Base, std::unique_ptr<VEOperand> Op) {
     const MCExpr *Imm = Op->getImm();
     Op->Kind = k_MemoryRegImm;
     Op->Mem.Base = Base;
-    Op->Mem.IndexReg = 0;
+    Op->Mem.IndexReg = MCRegister();
     Op->Mem.Index = nullptr;
     Op->Mem.Offset = Imm;
     return Op;
@@ -715,15 +716,16 @@ public:
   MorphToMEMzi(std::unique_ptr<VEOperand> Op) {
     const MCExpr *Imm = Op->getImm();
     Op->Kind = k_MemoryZeroImm;
-    Op->Mem.Base = 0;
-    Op->Mem.IndexReg = 0;
+    Op->Mem.Base = MCRegister();
+    Op->Mem.IndexReg = MCRegister();
     Op->Mem.Index = nullptr;
     Op->Mem.Offset = Imm;
     return Op;
   }
 
   static std::unique_ptr<VEOperand>
-  MorphToMEMrri(unsigned Base, unsigned Index, std::unique_ptr<VEOperand> Op) {
+  MorphToMEMrri(MCRegister Base, MCRegister Index,
+                std::unique_ptr<VEOperand> Op) {
     const MCExpr *Imm = Op->getImm();
     Op->Kind = k_MemoryRegRegImm;
     Op->Mem.Base = Base;
@@ -734,22 +736,22 @@ public:
   }
 
   static std::unique_ptr<VEOperand>
-  MorphToMEMrii(unsigned Base, const MCExpr *Index,
+  MorphToMEMrii(MCRegister Base, const MCExpr *Index,
                 std::unique_ptr<VEOperand> Op) {
     const MCExpr *Imm = Op->getImm();
     Op->Kind = k_MemoryRegImmImm;
     Op->Mem.Base = Base;
-    Op->Mem.IndexReg = 0;
+    Op->Mem.IndexReg = MCRegister();
     Op->Mem.Index = Index;
     Op->Mem.Offset = Imm;
     return Op;
   }
 
   static std::unique_ptr<VEOperand>
-  MorphToMEMzri(unsigned Index, std::unique_ptr<VEOperand> Op) {
+  MorphToMEMzri(MCRegister Index, std::unique_ptr<VEOperand> Op) {
     const MCExpr *Imm = Op->getImm();
     Op->Kind = k_MemoryZeroRegImm;
-    Op->Mem.Base = 0;
+    Op->Mem.Base = MCRegister();
     Op->Mem.IndexReg = Index;
     Op->Mem.Index = nullptr;
     Op->Mem.Offset = Imm;
@@ -760,8 +762,8 @@ public:
   MorphToMEMzii(const MCExpr *Index, std::unique_ptr<VEOperand> Op) {
     const MCExpr *Imm = Op->getImm();
     Op->Kind = k_MemoryZeroImmImm;
-    Op->Mem.Base = 0;
-    Op->Mem.IndexReg = 0;
+    Op->Mem.Base = MCRegister();
+    Op->Mem.IndexReg = MCRegister();
     Op->Mem.Index = Index;
     Op->Mem.Offset = Imm;
     return Op;
@@ -815,14 +817,14 @@ bool VEAsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
 
 /// Parses a register name using a given matching function.
 /// Checks for lowercase or uppercase if necessary.
-int VEAsmParser::parseRegisterName(MCRegister (*matchFn)(StringRef)) {
+MCRegister VEAsmParser::parseRegisterName(MCRegister (*matchFn)(StringRef)) {
   StringRef Name = Parser.getTok().getString();
 
-  int RegNum = matchFn(Name);
+  MCRegister RegNum = matchFn(Name);
 
   // GCC supports case insensitive register names. All of the VE registers
   // are all lower case.
-  if (RegNum == VE::NoRegister) {
+  if (!RegNum) {
     RegNum = matchFn(Name.lower());
   }
 

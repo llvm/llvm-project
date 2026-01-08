@@ -20,6 +20,18 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 
+namespace {
+/// Check if we are inside a WHERE construct's masked expression region.
+/// Array constructors inside WHERE statements must be evaluated exactly once
+/// without mask control, similar to non-elemental function calls.
+
+static bool isInWhereMaskedExpression(fir::FirOpBuilder &builder) {
+  mlir::Operation *op = builder.getRegion().getParentOp();
+  return op && op->getParentOfType<hlfir::WhereOp>();
+}
+
+} // namespace
+
 // Array constructors are lowered with three different strategies.
 // All strategies are not possible with all array constructors.
 //
@@ -137,9 +149,9 @@ public:
                              mlir::Value stride) {
     if constexpr (!hasLoops)
       fir::emitFatalError(loc, "array constructor lowering is inconsistent");
-    auto loop = builder.create<fir::DoLoopOp>(loc, lower, upper, stride,
-                                              /*unordered=*/false,
-                                              /*finalCount=*/false);
+    auto loop = fir::DoLoopOp::create(builder, loc, lower, upper, stride,
+                                      /*unordered=*/false,
+                                      /*finalCount=*/false);
     builder.setInsertionPointToStart(loop.getBody());
     return loop.getInductionVar();
   }
@@ -213,15 +225,15 @@ public:
     assert(!elementalOp && "expected only one implied-do");
     mlir::Value one =
         builder.createIntegerConstant(loc, builder.getIndexType(), 1);
-    elementalOp = builder.create<hlfir::ElementalOp>(
-        loc, exprType, shape,
-        /*mold=*/nullptr, lengthParams, /*isUnordered=*/true);
+    elementalOp = hlfir::ElementalOp::create(builder, loc, exprType, shape,
+                                             /*mold=*/nullptr, lengthParams,
+                                             /*isUnordered=*/true);
     builder.setInsertionPointToStart(elementalOp.getBody());
     // implied-do-index = lower+((i-1)*stride)
-    mlir::Value diff = builder.create<mlir::arith::SubIOp>(
-        loc, elementalOp.getIndices()[0], one);
-    mlir::Value mul = builder.create<mlir::arith::MulIOp>(loc, diff, stride);
-    mlir::Value add = builder.create<mlir::arith::AddIOp>(loc, lower, mul);
+    mlir::Value diff = mlir::arith::SubIOp::create(
+        builder, loc, elementalOp.getIndices()[0], one);
+    mlir::Value mul = mlir::arith::MulIOp::create(builder, loc, diff, stride);
+    mlir::Value add = mlir::arith::AddIOp::create(builder, loc, lower, mul);
     return add;
   }
 
@@ -260,7 +272,7 @@ public:
     if (destroyOp)
       destroyOp->erase();
 
-    builder.create<hlfir::YieldElementOp>(loc, elementResult);
+    hlfir::YieldElementOp::create(builder, loc, elementResult);
   }
 
   // Override the default, because the context scope must be popped in
@@ -315,9 +327,8 @@ public:
       mlir::Value tempStorage = builder.createHeapTemporary(
           loc, declaredType, tempName, extents, lengths);
       mlir::Value shape = builder.genShape(loc, extents);
-      declare = builder.create<hlfir::DeclareOp>(
-          loc, tempStorage, tempName, shape, lengths,
-          /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
+      declare = hlfir::DeclareOp::create(builder, loc, tempStorage, tempName,
+                                         shape, lengths);
       initialBoxValue =
           builder.createBox(loc, boxType, declare->getOriginalBase(), shape,
                             /*slice=*/mlir::Value{}, lengths, /*tdesc=*/{});
@@ -347,7 +358,7 @@ public:
                                           /*slice=*/mlir::Value{}, emboxLengths,
                                           /*tdesc=*/{});
     }
-    builder.create<fir::StoreOp>(loc, initialBoxValue, allocatableTemp);
+    fir::StoreOp::create(builder, loc, initialBoxValue, allocatableTemp);
     arrayConstructorVector = fir::runtime::genInitArrayConstructorVector(
         loc, builder, allocatableTemp,
         builder.createBool(loc, missingLengthParameters));
@@ -369,7 +380,7 @@ public:
           loc, builder, value, arrayConstructorElementType);
       mlir::Value addr = fir::getBase(addrExv);
       if (mlir::isa<fir::BaseBoxType>(addr.getType()))
-        addr = builder.create<fir::BoxAddrOp>(loc, addr);
+        addr = fir::BoxAddrOp::create(builder, loc, addr);
       fir::runtime::genPushArrayConstructorSimpleScalar(
           loc, builder, arrayConstructorVector, addr);
       if (cleanUp)
@@ -389,9 +400,9 @@ public:
   mlir::Value startImpliedDo(mlir::Location loc, fir::FirOpBuilder &builder,
                              mlir::Value lower, mlir::Value upper,
                              mlir::Value stride) {
-    auto loop = builder.create<fir::DoLoopOp>(loc, lower, upper, stride,
-                                              /*unordered=*/false,
-                                              /*finalCount=*/false);
+    auto loop = fir::DoLoopOp::create(builder, loc, lower, upper, stride,
+                                      /*unordered=*/false,
+                                      /*finalCount=*/false);
     builder.setInsertionPointToStart(loop.getBody());
     return loop.getInductionVar();
   }
@@ -409,7 +420,7 @@ public:
     else
       temp = hlfir::derefPointersAndAllocatables(
           loc, builder, hlfir::Entity{allocatableTemp});
-    auto hlfirExpr = builder.create<hlfir::AsExprOp>(loc, temp, mustFree);
+    auto hlfirExpr = hlfir::AsExprOp::create(builder, loc, temp, mustFree);
     return hlfir::Entity{hlfirExpr};
   }
 
@@ -781,6 +792,41 @@ hlfir::EntityWithAttributes Fortran::lower::ArrayConstructorBuilder<T>::gen(
     const Fortran::evaluate::ArrayConstructor<T> &arrayCtorExpr,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+
+  // Array constructors inside a where-assignment-stmt must be executed
+  // exactly once without mask control, per Fortran 2023 section 10.2.3.2.
+  // Lower them in a special region so that this can be enforced when
+  // scheduling forall/where expression evaluations.
+  if (isInWhereMaskedExpression(builder) &&
+      !builder.getRegion().getParentOfType<hlfir::ExactlyOnceOp>()) {
+    Fortran::lower::StatementContext localStmtCtx;
+    mlir::Type bogusType = builder.getIndexType();
+    auto exactlyOnce = hlfir::ExactlyOnceOp::create(builder, loc, bogusType);
+    mlir::Block *block = builder.createBlock(&exactlyOnce.getBody());
+    builder.setInsertionPointToStart(block);
+
+    // Recursively generate the array constructor inside the exactly_once region
+    hlfir::EntityWithAttributes res = ArrayConstructorBuilder<T>::gen(
+        loc, converter, arrayCtorExpr, symMap, localStmtCtx);
+
+    auto yield = hlfir::YieldOp::create(builder, loc, res);
+    Fortran::lower::genCleanUpInRegionIfAny(loc, builder, yield.getCleanup(),
+                                            localStmtCtx);
+    builder.setInsertionPointAfter(exactlyOnce);
+    exactlyOnce->getResult(0).setType(res.getType());
+
+    if (hlfir::isFortranValue(exactlyOnce.getResult()))
+      return hlfir::EntityWithAttributes{exactlyOnce.getResult()};
+
+    // Create hlfir.declare for the result to satisfy
+    // hlfir::EntityWithAttributes requirements.
+    auto [exv, cleanup] = hlfir::translateToExtendedValue(
+        loc, builder, hlfir::Entity{exactlyOnce});
+    assert(!cleanup && "result is a variable");
+    return hlfir::genDeclare(loc, builder, exv, ".arrayctor.result",
+                             fir::FortranVariableFlagsAttr{});
+  }
+
   // Select the lowering strategy given the array constructor.
   auto arrayBuilder = selectArrayCtorLoweringStrategy(
       loc, converter, arrayCtorExpr, symMap, stmtCtx);
@@ -795,7 +841,7 @@ hlfir::EntityWithAttributes Fortran::lower::ArrayConstructorBuilder<T>::gen(
   // Insert the clean-up for the created hlfir.expr.
   fir::FirOpBuilder *bldr = &builder;
   stmtCtx.attachCleanup(
-      [=]() { bldr->create<hlfir::DestroyOp>(loc, hlfirExpr); });
+      [=]() { hlfir::DestroyOp::create(*bldr, loc, hlfirExpr); });
   return hlfir::EntityWithAttributes{hlfirExpr};
 }
 

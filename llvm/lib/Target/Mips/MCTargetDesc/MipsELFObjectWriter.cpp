@@ -17,7 +17,6 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -166,8 +165,8 @@ unsigned MipsELFObjectWriter::getRelocType(const MCFixup &Fixup,
   case Mips::S_GOTTPREL:
   case Mips::S_TPREL_HI:
   case Mips::S_TPREL_LO:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;
@@ -385,11 +384,12 @@ void MipsELFObjectWriter::sortRelocs(std::vector<ELFRelocationEntry> &Relocs) {
   if (hasRelocationAddend())
     return;
 
-  // Sort relocations by the address they are applied to.
-  llvm::sort(Relocs,
-             [](const ELFRelocationEntry &A, const ELFRelocationEntry &B) {
-               return A.Offset < B.Offset;
-             });
+  // Sort relocations by r_offset. There might be more than one at an offset
+  // with composed relocations or .reloc directives.
+  llvm::stable_sort(
+      Relocs, [](const ELFRelocationEntry &A, const ELFRelocationEntry &B) {
+        return A.Offset < B.Offset;
+      });
 
   // Place relocations in a list for reorder convenience. Hi16 contains the
   // iterators of high-part relocations.
@@ -449,6 +449,7 @@ bool MipsELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
            needsRelocateWithSymbol(V, (Type >> 8) & 0xff) ||
            needsRelocateWithSymbol(V, (Type >> 16) & 0xff);
 
+  auto *Sym = static_cast<const MCSymbolELF *>(V.getAddSym());
   switch (Type) {
   default:
     errs() << Type << "\n";
@@ -480,7 +481,7 @@ bool MipsELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
     // FIXME: It should be safe to return false for the STO_MIPS_MICROMIPS but
     //        we neglect to handle the adjustment to the LSB of the addend that
     //        it causes in applyFixup() and similar.
-    if (cast<MCSymbolELF>(V.getAddSym())->getOther() & ELF::STO_MIPS_MICROMIPS)
+    if (Sym->getOther() & ELF::STO_MIPS_MICROMIPS)
       return true;
     return false;
 
@@ -491,7 +492,7 @@ bool MipsELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
   case ELF::R_MIPS_16:
   case ELF::R_MIPS_32:
   case ELF::R_MIPS_GPREL32:
-    if (cast<MCSymbolELF>(V.getAddSym())->getOther() & ELF::STO_MIPS_MICROMIPS)
+    if (Sym->getOther() & ELF::STO_MIPS_MICROMIPS)
       return true;
     [[fallthrough]];
   case ELF::R_MIPS_26:

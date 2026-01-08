@@ -12,8 +12,8 @@
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -279,8 +279,8 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     AddRunTimeLibs(TC, TC.getDriver(), CmdArgs, Args);
   }
 
-  StringRef Linker =
-      Args.getLastArgValue(options::OPT_fuse_ld_EQ, CLANG_DEFAULT_LINKER);
+  StringRef Linker = Args.getLastArgValue(options::OPT_fuse_ld_EQ,
+                                          TC.getDriver().getPreferredLinker());
   if (Linker.empty())
     Linker = "link";
   // We need to translate 'lld' into 'lld-link'.

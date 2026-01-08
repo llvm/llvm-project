@@ -47,7 +47,7 @@ declare i32 @__gxx_personality_v0(...)
 ; CHECK-LABEL:	.Lfunc_end0:
 
 ; CHECK:		.section	.llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text.hot._Z3bazb
-; CHECK-NEXT:   .byte   3                       # version
+; CHECK-NEXT:   .byte   4                       # version
 ; CHECK-NEXT:   .byte   40                      # feature
 ; CHECK-NEXT:   .byte   2                       # number of basic block ranges
 ; CHECK-NEXT:	.quad	.Lfunc_begin0           # base address

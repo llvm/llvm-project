@@ -81,7 +81,8 @@ public:
   LockableStreamFile(StreamFile &stream_file, Mutex &mutex)
       : m_file_sp(stream_file.GetFileSP()), m_mutex(mutex) {}
   LockableStreamFile(FILE *fh, bool transfer_ownership, Mutex &mutex)
-      : m_file_sp(std::make_shared<NativeFile>(fh, transfer_ownership)),
+      : m_file_sp(std::make_shared<NativeFile>(fh, File::eOpenOptionWriteOnly,
+                                               transfer_ownership)),
         m_mutex(mutex) {}
   LockableStreamFile(std::shared_ptr<File> file_sp, Mutex &mutex)
       : m_file_sp(file_sp), m_mutex(mutex) {}

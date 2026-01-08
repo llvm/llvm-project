@@ -1,4 +1,4 @@
-//===---------- UsingInserter.cpp - clang-tidy ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,7 +19,7 @@ namespace clang::tidy::utils {
 using namespace ast_matchers;
 
 static StringRef getUnqualifiedName(StringRef QualifiedName) {
-  size_t LastSeparatorPos = QualifiedName.rfind("::");
+  const size_t LastSeparatorPos = QualifiedName.rfind("::");
   if (LastSeparatorPos == StringRef::npos)
     return QualifiedName;
   return QualifiedName.drop_front(LastSeparatorPos + 2);
@@ -30,7 +30,7 @@ UsingInserter::UsingInserter(const SourceManager &SourceMgr)
 
 std::optional<FixItHint> UsingInserter::createUsingDeclaration(
     ASTContext &Context, const Stmt &Statement, StringRef QualifiedName) {
-  StringRef UnqualifiedName = getUnqualifiedName(QualifiedName);
+  const StringRef UnqualifiedName = getUnqualifiedName(QualifiedName);
   const FunctionDecl *Function = getSurroundingFunction(Context, Statement);
   if (!Function)
     return std::nullopt;
@@ -38,7 +38,7 @@ std::optional<FixItHint> UsingInserter::createUsingDeclaration(
   if (AddedUsing.count(std::make_pair(Function, QualifiedName.str())) != 0)
     return std::nullopt;
 
-  SourceLocation InsertLoc = Lexer::getLocForEndOfToken(
+  const SourceLocation InsertLoc = Lexer::getLocForEndOfToken(
       Function->getBody()->getBeginLoc(), 0, SourceMgr, Context.getLangOpts());
 
   // Only use using declarations in the main file, not in includes.
@@ -47,7 +47,7 @@ std::optional<FixItHint> UsingInserter::createUsingDeclaration(
 
   // FIXME: This declaration could be masked. Investigate if
   // there is a way to avoid using Sema.
-  bool AlreadyHasUsingDecl =
+  const bool AlreadyHasUsingDecl =
       !match(stmt(hasAncestor(decl(has(usingDecl(hasAnyUsingShadowDecl(
                  hasTargetDecl(hasName(QualifiedName.str())))))))),
              Statement, Context)
@@ -58,15 +58,15 @@ std::optional<FixItHint> UsingInserter::createUsingDeclaration(
   }
   // Find conflicting declarations and references.
   auto ConflictingDecl = namedDecl(hasName(UnqualifiedName));
-  bool HasConflictingDeclaration =
+  const bool HasConflictingDeclaration =
       !match(findAll(ConflictingDecl), *Function, Context).empty();
-  bool HasConflictingDeclRef =
+  const bool HasConflictingDeclRef =
       !match(findAll(declRefExpr(to(ConflictingDecl))), *Function, Context)
            .empty();
   if (HasConflictingDeclaration || HasConflictingDeclRef)
     return std::nullopt;
 
-  std::string Declaration =
+  const std::string Declaration =
       (llvm::Twine("\nusing ") + QualifiedName + ";").str();
 
   AddedUsing.emplace(Function, QualifiedName.str());

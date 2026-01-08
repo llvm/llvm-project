@@ -58,7 +58,7 @@ public:
   ~MipsRegInfoRecord() override = default;
 
   void EmitMipsOptionRecord() override;
-  void SetPhysRegUsed(unsigned Reg, const MCRegisterInfo *MCRegInfo);
+  void SetPhysRegUsed(MCRegister Reg, const MCRegisterInfo *MCRegInfo);
 
 private:
   MipsELFStreamer *Streamer;

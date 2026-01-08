@@ -64,9 +64,10 @@ program test_vector
 
 !CHECK: OtherConstruct scope:
 !CHECK: omp_in size=12 offset=0: ObjectEntity type: TYPE(vector)
-!CHECK: omp_orig size=12 offset=12: ObjectEntity type: TYPE(vector)
-!CHECK: omp_out size=12 offset=24: ObjectEntity type: TYPE(vector)
-!CHECK: omp_priv size=12 offset=36: ObjectEntity type: TYPE(vector)
+!CHECK: omp_out size=12 offset=12: ObjectEntity type: TYPE(vector)
+!CHECK: OtherConstruct scope:
+!CHECK: omp_orig size=12 offset=0: ObjectEntity type: TYPE(vector)
+!CHECK: omp_priv size=12 offset=12: ObjectEntity type: TYPE(vector)
 
   v2 = Vector(0.0, 0.0, 0.0)
   v1 = Vector(1.0, 2.0, 3.0)

@@ -75,8 +75,8 @@ bool Lowerer::lower(Function &F) {
       case Intrinsic::coro_subfn_addr:
         lowerSubFn(Builder, cast<CoroSubFnInst>(II));
         break;
-      case Intrinsic::coro_end:
       case Intrinsic::coro_suspend_retcon:
+      case Intrinsic::coro_is_in_ramp:
         if (IsPrivateAndUnprocessed) {
           II->replaceAllUsesWith(PoisonValue::get(II->getType()));
         } else

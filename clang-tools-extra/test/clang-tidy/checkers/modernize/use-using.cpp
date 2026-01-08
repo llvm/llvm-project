@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-use-using %t -- -- -fno-delayed-template-parsing -I %S/Inputs/use-using/
+// RUN: %check_clang_tidy %s modernize-use-using %t -- -- -fno-delayed-template-parsing -isystem %S/Inputs/use-using/
 
 typedef int Type;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef' [modernize-use-using]

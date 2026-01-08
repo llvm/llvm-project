@@ -5,17 +5,23 @@ import sys
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.llvm_src_root = "@LLVM_SOURCE_DIR@"
 config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
+config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
+config.spirv_tools_tests = @LLVM_INCLUDE_SPIRV_TOOLS_TESTS@
 config.llvm_shlib_ext = "@SHLIBEXT@"
 config.llvm_shlib_dir = lit_config.substitute(path(r"@SHLIBDIR@"))
 config.python_executable = "@Python3_EXECUTABLE@"
 config.enable_assertions = @ENABLE_ASSERTIONS@
+config.expensive_checks = "@EXPENSIVE_CHECKS@"
 config.native_target = "@LLVM_NATIVE_ARCH@"
 config.host_os = "@HOST_OS@"
 config.host_cc = "@HOST_CC@"
 config.host_cxx = "@HOST_CXX@"
+config.host_c_compiler_launcher = "@CMAKE_C_COMPILER_LAUNCHER@"
+config.host_cxx_compiler_launcher = "@CMAKE_CXX_COMPILER_LAUNCHER@"
 config.enable_libcxx = "@LLVM_ENABLE_LIBCXX@"
 config.host_cmake = "@CMAKE_COMMAND@"
 config.host_cmake_generator = "@CMAKE_GENERATOR@"
+config.cmake_build_type = "@CMAKE_BUILD_TYPE@"
 config.llvm_use_linker = "@LLVM_USE_LINKER@"
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
 config.host_arch = "@HOST_ARCH@"
@@ -32,7 +38,9 @@ config.run_rocm_tests = @MLIR_ENABLE_ROCM_CONVERSIONS@
 config.enable_rocm_runner = @MLIR_ENABLE_ROCM_RUNNER@
 config.gpu_compilation_format = "@MLIR_GPU_COMPILATION_TEST_FORMAT@"
 config.rocm_test_chipset = "@ROCM_TEST_CHIPSET@"
+config.run_xevm_tests = @MLIR_ENABLE_XEVM_CONVERSIONS@
 config.enable_sycl_runner = @MLIR_ENABLE_SYCL_RUNNER@
+config.enable_levelzero_runner = @MLIR_ENABLE_LEVELZERO_RUNNER@
 config.enable_spirv_cpu_runner = @MLIR_ENABLE_SPIRV_CPU_RUNNER@
 config.enable_vulkan_runner = @MLIR_ENABLE_VULKAN_RUNNER@
 config.enable_bindings_python = @MLIR_ENABLE_BINDINGS_PYTHON@
@@ -41,7 +49,7 @@ config.mlir_run_amx_tests = @MLIR_RUN_AMX_TESTS@
 config.mlir_run_arm_sve_tests = @MLIR_RUN_ARM_SVE_TESTS@
 # This is a workaround for the fact that LIT's:
 #   %if <cond>
-# requires <cond> to be in the set of available features. 
+# requires <cond> to be in the set of available features.
 # TODO: Update LIT's TestRunner so that this is not required.
 if config.mlir_run_arm_sve_tests:
     config.available_features.add("mlir_arm_sve_tests")
@@ -53,6 +61,7 @@ config.mlir_run_cuda_sm80_tests = @MLIR_RUN_CUDA_SM80_TESTS@
 config.mlir_run_cuda_sm80_lt_tests = @MLIR_RUN_CUDA_SM80_LT_TESTS@
 config.mlir_run_cuda_sm90_tests = @MLIR_RUN_CUDA_SM90_TESTS@
 config.mlir_include_integration_tests = @MLIR_INCLUDE_INTEGRATION_TESTS@
+config.llvm_shared_libs_build = @BUILD_SHARED_LIBS@
 config.arm_emulator_executable = "@ARM_EMULATOR_EXECUTABLE@"
 # Some tests marked with 'UNSUPPORTED: target=aarch64{{.*}}' are still run when
 # configured with ARM_EMULATOR_EXECUTABLE and the default target is not aarch64.

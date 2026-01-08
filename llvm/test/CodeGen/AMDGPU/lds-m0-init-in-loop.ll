@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefix=GCN %s
 
 ; Make sure that m0 is not reinitialized in the loop.
 

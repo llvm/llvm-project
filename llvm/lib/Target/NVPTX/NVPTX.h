@@ -66,7 +66,6 @@ void initializeNVPTXCtorDtorLoweringLegacyPass(PassRegistry &);
 void initializeNVPTXLowerAggrCopiesPass(PassRegistry &);
 void initializeNVPTXLowerAllocaPass(PassRegistry &);
 void initializeNVPTXLowerUnreachablePass(PassRegistry &);
-void initializeNVPTXCtorDtorLoweringLegacyPass(PassRegistry &);
 void initializeNVPTXLowerArgsLegacyPassPass(PassRegistry &);
 void initializeNVPTXProxyRegErasurePass(PassRegistry &);
 void initializeNVPTXForwardParamsPassPass(PassRegistry &);
@@ -207,6 +206,7 @@ enum CvtMode {
   RM,
   RP,
   RNA,
+  RS,
 
   BASE_MASK = 0x0F,
   FTZ_FLAG = 0x10,

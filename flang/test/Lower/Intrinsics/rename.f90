@@ -9,9 +9,9 @@ subroutine test_rename(src, dst)
 
     call rename(src, dst)
     !CHECK:      %[[dstUnbox:.*]]:2 = fir.unboxchar %[[dummyDst]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-    !CHECK-NEXT: %[[dstDecl:.*]]:2 = hlfir.declare %[[dstUnbox]]#0 typeparams %[[dstUnbox]]#1 dummy_scope %0 {uniq_name = "_QFtest_renameEdst"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+    !CHECK-NEXT: %[[dstDecl:.*]]:2 = hlfir.declare %[[dstUnbox]]#0 typeparams %[[dstUnbox]]#1 dummy_scope %0 {{.*}} {uniq_name = "_QFtest_renameEdst"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
     !CHECK-NEXT: %[[srcUnbox:.*]]:2 = fir.unboxchar %[[dummySrc]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-    !CHECK-NEXT: %[[srcDecl:.*]]:2 = hlfir.declare %3#0 typeparams %[[srcUnbox]]#1 dummy_scope %0 {uniq_name = "_QFtest_renameEsrc"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+    !CHECK-NEXT: %[[srcDecl:.*]]:2 = hlfir.declare %3#0 typeparams %[[srcUnbox]]#1 dummy_scope %0 {{.*}} {uniq_name = "_QFtest_renameEsrc"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
     !CHECK-NEXT: %[[srcBox:.*]] = fir.embox %[[srcDecl]]#1 typeparams %[[srcUnbox]]#1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
     !CHECK-NEXT: %[[dstBox:.*]] = fir.embox %[[dstDecl]]#1 typeparams %[[dstUnbox]]#1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
     !CHECK-NEXT: %[[statusBox:.*]] = fir.absent !fir.box<none>
@@ -33,9 +33,9 @@ subroutine test_rename_status(src, dst)
 
     call rename(src, dst, status)
     !CHECK:      %[[dstUnbox:.*]]:2 = fir.unboxchar %[[dummyDst]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-    !CHECK-NEXT: %[[dstDecl:.*]]:2 = hlfir.declare %[[dstUnbox]]#0 typeparams %[[dstUnbox]]#1 dummy_scope %0 {uniq_name = "_QFtest_rename_statusEdst"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+    !CHECK-NEXT: %[[dstDecl:.*]]:2 = hlfir.declare %[[dstUnbox]]#0 typeparams %[[dstUnbox]]#1 dummy_scope %0 {{.*}} {uniq_name = "_QFtest_rename_statusEdst"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
     !CHECK-NEXT: %[[srcUnbox:.*]]:2 = fir.unboxchar %[[dummySrc]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-    !CHECK-NEXT: %[[srcDecl:.*]]:2 = hlfir.declare %3#0 typeparams %[[srcUnbox]]#1 dummy_scope %0 {uniq_name = "_QFtest_rename_statusEsrc"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+    !CHECK-NEXT: %[[srcDecl:.*]]:2 = hlfir.declare %3#0 typeparams %[[srcUnbox]]#1 dummy_scope %0 {{.*}} {uniq_name = "_QFtest_rename_statusEsrc"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
     !CHECK-NEXT: %[[statusAlloc:.*]] = fir.alloca i32 {bindc_name = "status", uniq_name = "_QFtest_rename_statusEstatus"}
     !CHECK-NEXT: %[[statusDecl:.*]]:2 = hlfir.declare %[[statusAlloc]] {uniq_name = "_QFtest_rename_statusEstatus"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     !CHECK-NEXT: %[[srcBox:.*]] = fir.embox %[[srcDecl]]#1 typeparams %[[srcUnbox]]#1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>

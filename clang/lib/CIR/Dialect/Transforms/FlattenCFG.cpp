@@ -26,6 +26,11 @@
 using namespace mlir;
 using namespace cir;
 
+namespace mlir {
+#define GEN_PASS_DEF_CIRFLATTENCFG
+#include "clang/CIR/Dialect/Passes.h.inc"
+} // namespace mlir
+
 namespace {
 
 /// Lowers operations with the terminator trait that have a single successor.
@@ -50,7 +55,7 @@ void walkRegionSkipping(
   });
 }
 
-struct CIRFlattenCFGPass : public CIRFlattenCFGBase<CIRFlattenCFGPass> {
+struct CIRFlattenCFGPass : public impl::CIRFlattenCFGBase<CIRFlattenCFGPass> {
 
   CIRFlattenCFGPass() = default;
   void runOnOperation() override;
@@ -100,8 +105,8 @@ struct CIRIfFlattening : public mlir::OpRewritePattern<cir::IfOp> {
     }
 
     rewriter.setInsertionPointToEnd(currentBlock);
-    rewriter.create<cir::BrCondOp>(loc, ifOp.getCondition(), thenBeforeBody,
-                                   elseBeforeBody);
+    cir::BrCondOp::create(rewriter, loc, ifOp.getCondition(), thenBeforeBody,
+                          elseBeforeBody);
 
     if (!emptyElse) {
       rewriter.setInsertionPointToEnd(elseAfterBody);
@@ -154,7 +159,7 @@ public:
     // Save stack and then branch into the body of the region.
     rewriter.setInsertionPointToEnd(currentBlock);
     assert(!cir::MissingFeatures::stackSaveOp());
-    rewriter.create<cir::BrOp>(loc, mlir::ValueRange(), beforeBody);
+    cir::BrOp::create(rewriter, loc, mlir::ValueRange(), beforeBody);
 
     // Replace the scopeop return with a branch that jumps out of the body.
     // Stack restore before leaving the body region.
@@ -195,26 +200,27 @@ public:
     cir::IntType sIntType = cir::IntType::get(op.getContext(), 32, true);
     cir::IntType uIntType = cir::IntType::get(op.getContext(), 32, false);
 
-    cir::ConstantOp rangeLength = rewriter.create<cir::ConstantOp>(
-        op.getLoc(), cir::IntAttr::get(sIntType, upperBound - lowerBound));
+    cir::ConstantOp rangeLength = cir::ConstantOp::create(
+        rewriter, op.getLoc(),
+        cir::IntAttr::get(sIntType, upperBound - lowerBound));
 
-    cir::ConstantOp lowerBoundValue = rewriter.create<cir::ConstantOp>(
-        op.getLoc(), cir::IntAttr::get(sIntType, lowerBound));
+    cir::ConstantOp lowerBoundValue = cir::ConstantOp::create(
+        rewriter, op.getLoc(), cir::IntAttr::get(sIntType, lowerBound));
     cir::BinOp diffValue =
-        rewriter.create<cir::BinOp>(op.getLoc(), sIntType, cir::BinOpKind::Sub,
-                                    op.getCondition(), lowerBoundValue);
+        cir::BinOp::create(rewriter, op.getLoc(), sIntType, cir::BinOpKind::Sub,
+                           op.getCondition(), lowerBoundValue);
 
     // Use unsigned comparison to check if the condition is in the range.
-    cir::CastOp uDiffValue = rewriter.create<cir::CastOp>(
-        op.getLoc(), uIntType, CastKind::integral, diffValue);
-    cir::CastOp uRangeLength = rewriter.create<cir::CastOp>(
-        op.getLoc(), uIntType, CastKind::integral, rangeLength);
+    cir::CastOp uDiffValue = cir::CastOp::create(
+        rewriter, op.getLoc(), uIntType, CastKind::integral, diffValue);
+    cir::CastOp uRangeLength = cir::CastOp::create(
+        rewriter, op.getLoc(), uIntType, CastKind::integral, rangeLength);
 
-    cir::CmpOp cmpResult = rewriter.create<cir::CmpOp>(
-        op.getLoc(), cir::BoolType::get(op.getContext()), cir::CmpOpKind::le,
-        uDiffValue, uRangeLength);
-    rewriter.create<cir::BrCondOp>(op.getLoc(), cmpResult, rangeDestination,
-                                   defaultDestination);
+    cir::CmpOp cmpResult = cir::CmpOp::create(
+        rewriter, op.getLoc(), cir::BoolType::get(op.getContext()),
+        cir::CmpOpKind::le, uDiffValue, uRangeLength);
+    cir::BrCondOp::create(rewriter, op.getLoc(), cmpResult, rangeDestination,
+                          defaultDestination);
     return resBlock;
   }
 
@@ -262,7 +268,7 @@ public:
         rewriteYieldOp(rewriter, switchYield, exitBlock);
 
       rewriter.setInsertionPointToEnd(originalBlock);
-      rewriter.create<cir::BrOp>(op.getLoc(), swopBlock);
+      cir::BrOp::create(rewriter, op.getLoc(), swopBlock);
     }
 
     // Allocate required data structures (disconsider default case in
@@ -331,8 +337,8 @@ public:
           mlir::Block *newBlock =
               rewriter.splitBlock(oldBlock, nextOp->getIterator());
           rewriter.setInsertionPointToEnd(oldBlock);
-          rewriter.create<cir::BrOp>(nextOp->getLoc(), mlir::ValueRange(),
-                                     newBlock);
+          cir::BrOp::create(rewriter, nextOp->getLoc(), mlir::ValueRange(),
+                            newBlock);
           rewriteYieldOp(rewriter, yieldOp, newBlock);
         }
       }
@@ -346,7 +352,7 @@ public:
 
       // Create a branch to the entry of the inlined region.
       rewriter.setInsertionPointToEnd(oldBlock);
-      rewriter.create<cir::BrOp>(caseOp.getLoc(), &entryBlock);
+      cir::BrOp::create(rewriter, caseOp.getLoc(), &entryBlock);
     }
 
     // Remove all cases since we've inlined the regions.
@@ -427,7 +433,7 @@ public:
 
     // Setup loop entry branch.
     rewriter.setInsertionPointToEnd(entry);
-    rewriter.create<cir::BrOp>(op.getLoc(), &op.getEntry().front());
+    cir::BrOp::create(rewriter, op.getLoc(), &op.getEntry().front());
 
     // Branch from condition region to body or exit.
     auto conditionOp = cast<cir::ConditionOp>(cond->getTerminator());
@@ -499,16 +505,25 @@ public:
       locs.push_back(loc);
     Block *continueBlock =
         rewriter.createBlock(remainingOpsBlock, op->getResultTypes(), locs);
-    rewriter.create<cir::BrOp>(loc, remainingOpsBlock);
+    cir::BrOp::create(rewriter, loc, remainingOpsBlock);
 
     Region &trueRegion = op.getTrueRegion();
     Block *trueBlock = &trueRegion.front();
     mlir::Operation *trueTerminator = trueRegion.back().getTerminator();
     rewriter.setInsertionPointToEnd(&trueRegion.back());
-    auto trueYieldOp = dyn_cast<cir::YieldOp>(trueTerminator);
 
-    rewriter.replaceOpWithNewOp<cir::BrOp>(trueYieldOp, trueYieldOp.getArgs(),
-                                           continueBlock);
+    // Handle both yield and unreachable terminators (throw expressions)
+    if (auto trueYieldOp = dyn_cast<cir::YieldOp>(trueTerminator)) {
+      rewriter.replaceOpWithNewOp<cir::BrOp>(trueYieldOp, trueYieldOp.getArgs(),
+                                             continueBlock);
+    } else if (isa<cir::UnreachableOp>(trueTerminator)) {
+      // Terminator is unreachable (e.g., from throw), just keep it
+    } else {
+      trueTerminator->emitError("unexpected terminator in ternary true region, "
+                                "expected yield or unreachable, got: ")
+          << trueTerminator->getName();
+      return mlir::failure();
+    }
     rewriter.inlineRegionBefore(trueRegion, continueBlock);
 
     Block *falseBlock = continueBlock;
@@ -517,13 +532,23 @@ public:
     falseBlock = &falseRegion.front();
     mlir::Operation *falseTerminator = falseRegion.back().getTerminator();
     rewriter.setInsertionPointToEnd(&falseRegion.back());
-    auto falseYieldOp = dyn_cast<cir::YieldOp>(falseTerminator);
-    rewriter.replaceOpWithNewOp<cir::BrOp>(falseYieldOp, falseYieldOp.getArgs(),
-                                           continueBlock);
+
+    // Handle both yield and unreachable terminators (throw expressions)
+    if (auto falseYieldOp = dyn_cast<cir::YieldOp>(falseTerminator)) {
+      rewriter.replaceOpWithNewOp<cir::BrOp>(
+          falseYieldOp, falseYieldOp.getArgs(), continueBlock);
+    } else if (isa<cir::UnreachableOp>(falseTerminator)) {
+      // Terminator is unreachable (e.g., from throw), just keep it
+    } else {
+      falseTerminator->emitError("unexpected terminator in ternary false "
+                                 "region, expected yield or unreachable, got: ")
+          << falseTerminator->getName();
+      return mlir::failure();
+    }
     rewriter.inlineRegionBefore(falseRegion, continueBlock);
 
     rewriter.setInsertionPointToEnd(condBlock);
-    rewriter.create<cir::BrCondOp>(loc, op.getCond(), trueBlock, falseBlock);
+    cir::BrCondOp::create(rewriter, loc, op.getCond(), trueBlock, falseBlock);
 
     rewriter.replaceOp(op, continueBlock->getArguments());
 
@@ -532,10 +557,102 @@ public:
   }
 };
 
+class CIRTryOpFlattening : public mlir::OpRewritePattern<cir::TryOp> {
+public:
+  using OpRewritePattern<cir::TryOp>::OpRewritePattern;
+
+  mlir::Block *buildTryBody(cir::TryOp tryOp,
+                            mlir::PatternRewriter &rewriter) const {
+    // Split the current block before the TryOp to create the inlining
+    // point.
+    mlir::Block *beforeTryScopeBlock = rewriter.getInsertionBlock();
+    mlir::Block *afterTry =
+        rewriter.splitBlock(beforeTryScopeBlock, rewriter.getInsertionPoint());
+
+    // Inline body region.
+    mlir::Block *beforeBody = &tryOp.getTryRegion().front();
+    rewriter.inlineRegionBefore(tryOp.getTryRegion(), afterTry);
+
+    // Branch into the body of the region.
+    rewriter.setInsertionPointToEnd(beforeTryScopeBlock);
+    cir::BrOp::create(rewriter, tryOp.getLoc(), mlir::ValueRange(), beforeBody);
+    return afterTry;
+  }
+
+  void buildHandlers(cir::TryOp tryOp, mlir::PatternRewriter &rewriter,
+                     mlir::Block *afterBody, mlir::Block *afterTry,
+                     SmallVectorImpl<cir::CallOp> &callsToRewrite,
+                     SmallVectorImpl<mlir::Block *> &landingPads) const {
+    // Replace the tryOp return with a branch that jumps out of the body.
+    rewriter.setInsertionPointToEnd(afterBody);
+
+    mlir::Block *beforeCatch = rewriter.getInsertionBlock();
+    rewriter.setInsertionPointToEnd(beforeCatch);
+
+    // Check if the terminator is a YieldOp because there could be another
+    // terminator, e.g. unreachable
+    if (auto tryBodyYield = dyn_cast<cir::YieldOp>(afterBody->getTerminator()))
+      rewriter.replaceOpWithNewOp<cir::BrOp>(tryBodyYield, afterTry);
+
+    mlir::ArrayAttr handlers = tryOp.getHandlerTypesAttr();
+    if (!handlers || handlers.empty())
+      return;
+
+    llvm_unreachable("TryOpFlattening buildHandlers with CallsOp is NYI");
+  }
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::TryOp tryOp,
+                  mlir::PatternRewriter &rewriter) const override {
+    mlir::OpBuilder::InsertionGuard guard(rewriter);
+    mlir::Block *afterBody = &tryOp.getTryRegion().back();
+
+    // Grab the collection of `cir.call exception`s to rewrite to
+    // `cir.try_call`.
+    llvm::SmallVector<cir::CallOp, 4> callsToRewrite;
+    tryOp.getTryRegion().walk([&](CallOp op) {
+      if (op.getNothrow())
+        return;
+
+      // Only grab calls within immediate closest TryOp scope.
+      if (op->getParentOfType<cir::TryOp>() != tryOp)
+        return;
+      callsToRewrite.push_back(op);
+    });
+
+    if (!callsToRewrite.empty())
+      llvm_unreachable(
+          "TryOpFlattening with try block that contains CallOps is NYI");
+
+    // Build try body.
+    mlir::Block *afterTry = buildTryBody(tryOp, rewriter);
+
+    // Build handlers.
+    llvm::SmallVector<mlir::Block *, 4> landingPads;
+    buildHandlers(tryOp, rewriter, afterBody, afterTry, callsToRewrite,
+                  landingPads);
+
+    rewriter.eraseOp(tryOp);
+
+    assert((landingPads.size() == callsToRewrite.size()) &&
+           "expected matching number of entries");
+
+    // Quick block cleanup: no indirection to the post try block.
+    auto brOp = dyn_cast<cir::BrOp>(afterTry->getTerminator());
+    if (brOp && brOp.getDest()->hasNoPredecessors()) {
+      mlir::Block *srcBlock = brOp.getDest();
+      rewriter.eraseOp(brOp);
+      rewriter.mergeBlocks(srcBlock, afterTry);
+    }
+
+    return mlir::success();
+  }
+};
+
 void populateFlattenCFGPatterns(RewritePatternSet &patterns) {
   patterns
       .add<CIRIfFlattening, CIRLoopOpInterfaceFlattening, CIRScopeOpFlattening,
-           CIRSwitchOpFlattening, CIRTernaryOpFlattening>(
+           CIRSwitchOpFlattening, CIRTernaryOpFlattening, CIRTryOpFlattening>(
           patterns.getContext());
 }
 
@@ -549,7 +666,7 @@ void CIRFlattenCFGPass::runOnOperation() {
     assert(!cir::MissingFeatures::ifOp());
     assert(!cir::MissingFeatures::switchOp());
     assert(!cir::MissingFeatures::tryOp());
-    if (isa<IfOp, ScopeOp, SwitchOp, LoopOpInterface, TernaryOp>(op))
+    if (isa<IfOp, ScopeOp, SwitchOp, LoopOpInterface, TernaryOp, TryOp>(op))
       ops.push_back(op);
   });
 

@@ -1,6 +1,11 @@
 // RUN: mlir-translate -no-implicit-module -test-spirv-roundtrip -split-input-file %s | FileCheck %s
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+// RUN: %if spirv-tools %{ rm -rf %t %}
+// RUN: %if spirv-tools %{ mkdir %t %}
+// RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
+// RUN: %if spirv-tools %{ spirv-val %t %}
+
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Linkage, Addresses, AtomicFloat32AddEXT], [SPV_EXT_shader_atomic_float_add]> {
   // CHECK-LABEL: @test_int_atomics
   spirv.func @test_int_atomics(%ptr: !spirv.ptr<i32, Workgroup>, %value: i32, %comparator: i32) -> i32 "None" {
     // CHECK: spirv.AtomicCompareExchangeWeak <Workgroup> <Release> <Acquire> %{{.*}}, %{{.*}}, %{{.*}} : !spirv.ptr<i32, Workgroup>

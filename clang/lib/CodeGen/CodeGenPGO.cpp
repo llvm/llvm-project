@@ -58,9 +58,10 @@ enum PGOHashVersion : unsigned {
   PGO_HASH_V1,
   PGO_HASH_V2,
   PGO_HASH_V3,
+  PGO_HASH_V4,
 
   // Keep this set to the latest hash version.
-  PGO_HASH_LATEST = PGO_HASH_V3
+  PGO_HASH_LATEST = PGO_HASH_V4
 };
 
 namespace {
@@ -152,7 +153,9 @@ static PGOHashVersion getPGOHashVersion(llvm::IndexedInstrProfReader *PGOReader,
     return PGO_HASH_V1;
   if (PGOReader->getVersion() <= 5)
     return PGO_HASH_V2;
-  return PGO_HASH_V3;
+  if (PGOReader->getVersion() <= 12)
+    return PGO_HASH_V3;
+  return PGO_HASH_V4;
 }
 
 /// A RecursiveASTVisitor that fills a map of statements to PGO counters.
@@ -972,7 +975,7 @@ void PGOHash::combine(HashType Type) {
   if (Count && Count % NumTypesPerWord == 0) {
     using namespace llvm::support;
     uint64_t Swapped =
-        endian::byte_swap<uint64_t, llvm::endianness::little>(Working);
+        endian::byte_swap<uint64_t>(Working, llvm::endianness::little);
     MD5.update(llvm::ArrayRef((uint8_t *)&Swapped, sizeof(Swapped)));
     Working = 0;
   }
@@ -999,7 +1002,7 @@ uint64_t PGOHash::finalize() {
     } else {
       using namespace llvm::support;
       uint64_t Swapped =
-          endian::byte_swap<uint64_t, llvm::endianness::little>(Working);
+          endian::byte_swap<uint64_t>(Working, llvm::endianness::little);
       MD5.update(llvm::ArrayRef((uint8_t *)&Swapped, sizeof(Swapped)));
     }
   }
@@ -1099,6 +1102,8 @@ void CodeGenPGO::mapRegionCounters(const Decl *D) {
   assert(Walker.NextCounter > 0 && "no entry counter mapped for decl");
   NumRegionCounters = Walker.NextCounter;
   FunctionHash = Walker.Hash.finalize();
+  if (HashVersion >= PGO_HASH_V4)
+    FunctionHash &= llvm::NamedInstrProfRecord::FUNC_HASH_MASK;
 }
 
 bool CodeGenPGO::skipRegionMappingForDecl(const Decl *D) {

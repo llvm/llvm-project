@@ -217,9 +217,13 @@ declare void @g.f1()
 ; CHECK: @g.sanitize_address_dyninit = global i32 0, sanitize_address_dyninit
 ; CHECK: @g.sanitize_multiple = global i32 0, sanitize_memtag, sanitize_address_dyninit
 
+@ds = external global i32
+
 ; ptrauth constant
 @auth_var = global ptr ptrauth (ptr @g1, i32 0, i64 65535, ptr null)
 ; CHECK: @auth_var = global ptr ptrauth (ptr @g1, i32 0, i64 65535)
+@auth_var.ds = global ptr ptrauth (ptr @g1, i32 0, i64 65535, ptr null, ptr @ds)
+; CHECK: @auth_var.ds = global ptr ptrauth (ptr @g1, i32 0, i64 65535, ptr null, ptr @ds)
 
 ;; Aliases
 ; Format: @<Name> = [Linkage] [Visibility] [DLLStorageClass] [ThreadLocal]
@@ -564,6 +568,10 @@ declare riscv_vls_cc(32768) void @riscv_vls_cc_32768()
 ; CHECK: declare riscv_vls_cc(32768) void @riscv_vls_cc_32768()
 declare riscv_vls_cc(65536) void @riscv_vls_cc_65536()
 ; CHECK: declare riscv_vls_cc(65536) void @riscv_vls_cc_65536()
+declare cc124 void @f.cc124(i1)
+; CHECK: declare amdgpu_gfx_whole_wave void @f.cc124(i1)
+declare amdgpu_gfx_whole_wave void @f.amdgpu_gfx_whole_wave(i1)
+; CHECK: declare amdgpu_gfx_whole_wave void @f.amdgpu_gfx_whole_wave(i1)
 declare cc1023 void @f.cc1023()
 ; CHECK: declare cc1023 void @f.cc1023()
 
@@ -1714,7 +1722,7 @@ exit:
   ; CHECK: select <2 x i1> <i1 true, i1 false>, <2 x i8> <i8 2, i8 3>, <2 x i8> <i8 3, i8 2>
 
   call void @f.nobuiltin() builtin
-  ; CHECK: call void @f.nobuiltin() #54
+  ; CHECK: call void @f.nobuiltin() #55
 
   call fastcc noalias ptr @f.noalias() noinline
   ; CHECK: call fastcc noalias ptr @f.noalias() #12
@@ -2147,6 +2155,9 @@ declare void @f.sanitize_realtime() sanitize_realtime
 declare void @f.sanitize_realtime_blocking() sanitize_realtime_blocking
 ; CHECK: declare void @f.sanitize_realtime_blocking() #53
 
+declare void @f.sanitize_alloc_token() sanitize_alloc_token
+; CHECK: declare void @f.sanitize_alloc_token() #54
+
 ; CHECK: declare nofpclass(snan) float @nofpclass_snan(float nofpclass(snan))
 declare nofpclass(snan) float @nofpclass_snan(float nofpclass(snan))
 
@@ -2280,7 +2291,8 @@ define float @nofpclass_callsites(float %arg, { float } %arg1) {
 ; CHECK: attributes #51 = { sanitize_numerical_stability }
 ; CHECK: attributes #52 = { sanitize_realtime }
 ; CHECK: attributes #53 = { sanitize_realtime_blocking }
-; CHECK: attributes #54 = { builtin }
+; CHECK: attributes #54 = { sanitize_alloc_token }
+; CHECK: attributes #55 = { builtin }
 
 ;; Metadata
 

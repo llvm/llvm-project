@@ -369,6 +369,19 @@ static GlobalVariable *getOrCreateRefVariable(
                          AddrOfOldGV, Twine("__ref_").concat(GV->getName()),
                          nullptr, GlobalVariable::NotThreadLocal);
 
+  // RefGV is created with isConstant = false, but we want to place RefGV into
+  // .rdata, not .data.  It is important that the GlobalVariable be mutable
+  // from the compiler's point of view, so that the optimizer does not remove
+  // the global variable entirely and replace all references to it with its
+  // initial value.
+  //
+  // When the Windows hot-patch loader applies a hot-patch, it maps the
+  // pages of .rdata as read/write so that it can set each __ref_* variable
+  // to point to the original variable in the base image. Afterward, pages in
+  // .rdata are remapped as read-only. This protects the __ref_* variables from
+  // being overwritten during execution.
+  RefGV->setSection(".rdata");
+
   // Create debug info for the replacement global variable.
   DataLayout Layout = M->getDataLayout();
   DIType *DebugType = DebugInfo.createPointerType(
@@ -447,8 +460,6 @@ static Value *rewriteGlobalVariablesInConstant(
 static bool searchConstantExprForGlobalVariables(
     Value *V, SmallDenseMap<GlobalVariable *, Value *> &GVLoadMap,
     SmallVector<GlobalVariableUse> &GVUses) {
-
-  SmallVector<Value *, 8> ReplacedOperands;
 
   if (GlobalVariable *GV = dyn_cast<GlobalVariable>(V)) {
     if (globalVariableNeedsRedirect(GV)) {

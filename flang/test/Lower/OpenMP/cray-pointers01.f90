@@ -1,5 +1,5 @@
 ! Test lowering of Cray pointee references.
-! RUN: flang -fc1 -emit-hlfir -fopenmp %s -o - 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - 2>&1 | FileCheck %s
 
 module test_host_assoc_cray_pointer
   ! CHECK-LABEL: fir.global @_QMtest_host_assoc_cray_pointerEivar : i64

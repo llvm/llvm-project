@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s readability-math-missing-parentheses %t
+// RUN: %check_clang_tidy %s readability-math-missing-parentheses %t
 
 #define MACRO_AND &
 #define MACRO_ADD +
@@ -123,7 +123,7 @@ void f(){
     //CHECK-MESSAGES: :[[@LINE+3]]:77: warning: '-' has higher precedence than '^'; add parentheses to explicitly specify the order of operations [readability-math-missing-parentheses]
     //CHECK-MESSAGES: :[[@LINE+2]]:94: warning: '/' has higher precedence than '-'; add parentheses to explicitly specify the order of operations [readability-math-missing-parentheses]
     //CHECK-FIXES: int q = (1 MACRO_ADD (2 MACRO_MULTIPLY 3)) MACRO_OR ((4 MACRO_AND 5) MACRO_XOR (6 MACRO_SUBTRACT (7 MACRO_DIVIDE 8)));
-    int q = 1 MACRO_ADD 2 MACRO_MULTIPLY 3 MACRO_OR 4 MACRO_AND 5 MACRO_XOR 6 MACRO_SUBTRACT 7 MACRO_DIVIDE 8; // No warning
+    int q = 1 MACRO_ADD 2 MACRO_MULTIPLY 3 MACRO_OR 4 MACRO_AND 5 MACRO_XOR 6 MACRO_SUBTRACT 7 MACRO_DIVIDE 8;
 
     //CHECK-MESSAGES: :[[@LINE+1]]:21: warning: '*' has higher precedence than '+'; add parentheses to explicitly specify the order of operations [readability-math-missing-parentheses]
     int r = FUN(0 + 1 * 2);

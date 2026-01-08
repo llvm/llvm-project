@@ -29,8 +29,7 @@ inline unsigned encodeSLEB128(int64_t Value, raw_ostream &OS,
     uint8_t Byte = Value & 0x7f;
     // NOTE: this assumes that this signed shift is an arithmetic right shift.
     Value >>= 7;
-    More = !((((Value == 0 ) && ((Byte & 0x40) == 0)) ||
-              ((Value == -1) && ((Byte & 0x40) != 0))));
+    More = Value != ((Byte & 0x40) ? -1 : 0);
     Count++;
     if (More || Count < PadTo)
       Byte |= 0x80; // Mark this byte to show that more bytes will follow.
@@ -58,8 +57,7 @@ inline unsigned encodeSLEB128(int64_t Value, uint8_t *p, unsigned PadTo = 0) {
     uint8_t Byte = Value & 0x7f;
     // NOTE: this assumes that this signed shift is an arithmetic right shift.
     Value >>= 7;
-    More = !((((Value == 0 ) && ((Byte & 0x40) == 0)) ||
-              ((Value == -1) && ((Byte & 0x40) != 0))));
+    More = Value != ((Byte & 0x40) ? -1 : 0);
     Count++;
     if (More || Count < PadTo)
       Byte |= 0x80; // Mark this byte to show that more bytes will follow.
@@ -219,6 +217,33 @@ inline int64_t decodeSLEB128AndInc(const uint8_t *&p, const uint8_t *end,
 
 inline uint64_t decodeULEB128AndIncUnsafe(const uint8_t *&p) {
   return decodeULEB128AndInc(p, nullptr);
+}
+
+/// Overwrite a ULEB128 value and keep the original length.
+inline uint64_t overwriteULEB128(uint8_t *bufLoc, uint64_t val) {
+  while (*bufLoc & 0x80) {
+    *bufLoc++ = 0x80 | (val & 0x7f);
+    val >>= 7;
+  }
+  *bufLoc = val;
+  return val;
+}
+
+enum class LEB128Sign { Unsigned, Signed };
+
+template <LEB128Sign Sign, typename T, typename U = char,
+          unsigned MaxLEB128SizeBytes = 16>
+inline void appendLEB128(SmallVectorImpl<U> &Buffer, T Value) {
+  static_assert(sizeof(U) == 1, "Expected buffer of bytes");
+  unsigned LEB128ValueSize;
+  U TmpBuffer[MaxLEB128SizeBytes];
+  if constexpr (Sign == LEB128Sign::Signed)
+    LEB128ValueSize =
+        encodeSLEB128(Value, reinterpret_cast<uint8_t *>(TmpBuffer));
+  else
+    LEB128ValueSize =
+        encodeULEB128(Value, reinterpret_cast<uint8_t *>(TmpBuffer));
+  Buffer.append(TmpBuffer, TmpBuffer + LEB128ValueSize);
 }
 
 /// Utility function to get the size of the ULEB128-encoded value.

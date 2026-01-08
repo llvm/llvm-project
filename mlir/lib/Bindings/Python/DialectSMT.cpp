@@ -24,23 +24,28 @@ using namespace mlir;
 using namespace mlir::python;
 using namespace mlir::python::nanobind_adaptors;
 
-void populateDialectSMTSubmodule(nanobind::module_ &m) {
+static void populateDialectSMTSubmodule(nanobind::module_ &m) {
 
-  auto smtBoolType = mlir_type_subclass(m, "BoolType", mlirSMTTypeIsABool)
-                         .def_classmethod(
-                             "get",
-                             [](const nb::object &, MlirContext context) {
-                               return mlirSMTTypeGetBool(context);
-                             },
-                             "cls"_a, "context"_a.none() = nb::none());
+  auto smtBoolType =
+      mlir_type_subclass(m, "BoolType", mlirSMTTypeIsABool)
+          .def_staticmethod(
+              "get",
+              [](MlirContext context) { return mlirSMTTypeGetBool(context); },
+              "context"_a = nb::none());
   auto smtBitVectorType =
       mlir_type_subclass(m, "BitVectorType", mlirSMTTypeIsABitVector)
-          .def_classmethod(
+          .def_staticmethod(
               "get",
-              [](const nb::object &, int32_t width, MlirContext context) {
+              [](int32_t width, MlirContext context) {
                 return mlirSMTTypeGetBitVector(context, width);
               },
-              "cls"_a, "width"_a, "context"_a.none() = nb::none());
+              "width"_a, "context"_a = nb::none());
+  auto smtIntType =
+      mlir_type_subclass(m, "IntType", mlirSMTTypeIsAInt)
+          .def_staticmethod(
+              "get",
+              [](MlirContext context) { return mlirSMTTypeGetInt(context); },
+              "context"_a = nb::none());
 
   auto exportSMTLIB = [](MlirOperation module, bool inlineSingleUseValues,
                          bool indentLetBody) {
