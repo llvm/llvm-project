@@ -489,6 +489,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForGOpcs({G_MUL}, Standard).Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}});
 
+  bool hasMulHi = ST->hasScalarMulHiInsts();
+  addRulesForGOpcs({G_UMULH, G_SMULH}, Standard)
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
+      .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}}, hasMulHi)
+      .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32}}, !hasMulHi);
+
   addRulesForGOpcs({G_XOR, G_OR, G_AND}, StandardB)
       .Any({{UniS1}, {{Sgpr32Trunc}, {Sgpr32AExt, Sgpr32AExt}}})
       .Any({{DivS1}, {{Vcc}, {Vcc, Vcc}}})
@@ -964,7 +970,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
            hasSALUFloat)
       .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}});
 
-  addRulesForGOpcs({G_FSUB}, Standard)
+  addRulesForGOpcs({G_FSUB, G_STRICT_FSUB}, Standard)
       .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
       .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
       .Uni(S16, {{Sgpr16}, {Sgpr16, Sgpr16}}, hasSALUFloat)

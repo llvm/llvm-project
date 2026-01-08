@@ -70,6 +70,26 @@ def Tosa_AddShapeOp : Tosa_ElementwiseShapeOp<"add_shape", [Pure]> {
 }
 
 //===----------------------------------------------------------------------===//
+// Operator: ConcatShape
+//===----------------------------------------------------------------------===//
+def Tosa_ConcatShapeOp : Tosa_ShapeOp<"concat_shape", [Pure]> {
+  let summary = "Concatenates a list of shapes.";
+
+  let description = [{
+    Concatenates a list of shapes into a new shape with length equal to the sum
+    of the lengths of the inputs.
+  }];
+
+  let arguments = (ins
+    Variadic<Tosa_Shape>:$input
+  );
+
+  let results = (outs Tosa_Shape:$output);
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // Operator: ConstShape
 //===----------------------------------------------------------------------===//
 def Tosa_ConstShapeOp : Tosa_ShapeOp<"const_shape", [ConstantLike, Pure]> {
@@ -97,6 +117,26 @@ def Tosa_ConstShapeOp : Tosa_ShapeOp<"const_shape", [ConstantLike, Pure]> {
 
   let hasVerifier = 1;
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: Dim
+//===----------------------------------------------------------------------===//
+def Tosa_DimOp : Tosa_ShapeOp<"dim", [Pure]> {
+  let summary = "Extract size of dimension from input tensor.";
+
+  let description = [{
+    Returns a length 1 shape_t of the size of the input tensor for the given axis.
+  }];
+
+  let arguments = (ins
+    Tosa_TensorAtLeast1D:$input1,
+    I32Attr:$axis
+  );
+
+  let results = (outs Tosa_Shape:$output);
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -151,6 +191,27 @@ def Tosa_MulShapeOp : Tosa_ElementwiseShapeOp<"mul_shape", [Pure]> {
   );
 
   let results = (outs Tosa_Shape:$output);
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: SliceShape
+//===----------------------------------------------------------------------===//
+def Tosa_SliceShapeOp : Tosa_ShapeOp<"slice_shape", [Pure]> {
+  let summary = "Extract slice of a shape.";
+
+  let description = [{
+    Extract a shape of size from input.
+  }];
+
+  let arguments = (ins
+    Tosa_Shape:$input,
+    Tosa_ScalarInt32Tensor:$start,
+    Tosa_ScalarInt32Tensor:$size
+  );
+
+  let results = (outs Tosa_Shape:$output);
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

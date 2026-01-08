@@ -990,8 +990,9 @@ mlir::scf::replaceAndCastForOpIterArg(RewriterBase &rewriter, scf::ForOp forOp,
 
 namespace {
 // Fold away ForOp iter arguments when:
-// 1) The argument's corresponding outer region iterators (inputs) are yielded.
-// 2) The iter arguments have no use and the corresponding (operation) results
+// 1) The op yields the iter arguments.
+// 2) The argument's corresponding outer region iterators (inputs) are yielded.
+// 3) The iter arguments have no use and the corresponding (operation) results
 // have no use.
 //
 // These arguments must be defined outside of the ForOp region and can just be
@@ -1000,7 +1001,7 @@ namespace {
 // The implementation uses `inlineBlockBefore` to steal the content of the
 // original ForOp and avoid cloning.
 struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
-  using Base::Base;
+  using OpRewritePattern<scf::ForOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(scf::ForOp forOp,
                                 PatternRewriter &rewriter) const final {
@@ -1029,11 +1030,12 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
                    forOp.getYieldedValues()   // iter yield
                    )) {
       // Forwarded is `true` when:
-      // 1) The region `iter` argument the corresponding input is yielded.
-      // 2) The region `iter` argument has no use, and the corresponding op
+      // 1) The region `iter` argument is yielded.
+      // 2) The region `iter` argument the corresponding input is yielded.
+      // 3) The region `iter` argument has no use, and the corresponding op
       // result has no use.
-      bool forwarded =
-          (init == yielded) || (arg.use_empty() && result.use_empty());
+      bool forwarded = (arg == yielded) || (init == yielded) ||
+                       (arg.use_empty() && result.use_empty());
       if (forwarded) {
         canonicalize = true;
         keepMask.push_back(false);
@@ -1131,7 +1133,7 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
 /// single-iteration loops with their bodies, and removes empty loops that
 /// iterate at least once and only return values defined outside of the loop.
 struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
-  using Base::Base;
+  using OpRewritePattern<ForOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(ForOp op,
                                 PatternRewriter &rewriter) const override {
@@ -1202,7 +1204,7 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
 ///   use_of(%1)
 /// ```
 struct ForOpTensorCastFolder : public OpRewritePattern<ForOp> {
-  using Base::Base;
+  using OpRewritePattern<ForOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(ForOp op,
                                 PatternRewriter &rewriter) const override {
@@ -1234,100 +1236,12 @@ struct ForOpTensorCastFolder : public OpRewritePattern<ForOp> {
   }
 };
 
-/// Rewriting pattern that folds away cycles in the yield of a scf.for op.
-///
-/// ```
-/// %res:2 = scf.for ... iter_args(%arg0 = %init, %arg1 = %init) {
-///   ...
-///   use %arg0, %arg1
-///   scf.yield %arg1, %arg0
-/// }
-/// return %res#0, %res#1
-/// ```
-///
-/// folds into:
-///
-/// ```
-/// scf.for ... iter_args() {
-///   ...
-///   use %init, %init
-///   scf.yield
-/// }
-/// return %init, %init
-/// ```
-struct ForOpYieldCyclesFolder : public OpRewritePattern<ForOp> {
-  using Base::Base;
-
-  LogicalResult matchAndRewrite(ForOp op,
-                                PatternRewriter &rewriter) const override {
-    ValueRange yieldedValues = op.getYieldedValues();
-    ValueRange initArgs = op.getInitArgs();
-    ValueRange results = op.getResults();
-    ValueRange regionIterArgs = op.getRegionIterArgs();
-    Block *body = op.getBody();
-
-    unsigned numYieldedValues = op.getNumRegionIterArgs();
-
-    bool changed = false;
-    SmallVector<unsigned> cycle;
-    llvm::SmallBitVector visited(numYieldedValues, false);
-
-    // Go through all possible start points for the cycle.
-    for (auto start : llvm::seq(numYieldedValues)) {
-      if (visited[start])
-        continue;
-
-      cycle.clear();
-      unsigned current = start;
-      bool validCycle = true;
-      Value initValue = initArgs[start];
-      // Go through yield -> block arg -> yield cycles and check if all values
-      // are always equal to the init.
-      while (!visited[current]) {
-        cycle.push_back(current);
-        visited[current] = true;
-
-        // Find whether this yield is from a region iter arg.
-        auto yieldedValue = yieldedValues[current];
-        if (auto arg = dyn_cast<BlockArgument>(yieldedValue);
-            !arg || arg.getOwner() != body) {
-          validCycle = false;
-          break;
-        }
-
-        // Next yield position.
-        current = cast<BlockArgument>(yieldedValue).getArgNumber() -
-                  op.getNumInductionVars();
-
-        // Check if next position has the same init value.
-        if (initArgs[current] != initValue) {
-          validCycle = false;
-          break;
-        }
-      }
-
-      // If we found a valid cycle (yielding own iter arg forms cycle of length
-      // 1), all values in it are always equal to initValue.
-      if (validCycle) {
-        changed = true;
-        for (unsigned idx : cycle) {
-          // This will leave region args and results dead so other
-          // canonicalization patterns can clean them up.
-          rewriter.replaceAllUsesWith(regionIterArgs[idx], initValue);
-          rewriter.replaceAllUsesWith(results[idx], initValue);
-        }
-      }
-    }
-    return success(changed);
-  }
-};
-
 } // namespace
 
 void ForOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
-  results.add<ForOpIterArgsFolder, SimplifyTrivialLoops, ForOpTensorCastFolder,
-              ForOpYieldCyclesFolder>(context);
+  results.add<ForOpIterArgsFolder, SimplifyTrivialLoops, ForOpTensorCastFolder>(
+      context);
 }
 
 std::optional<APInt> ForOp::getConstantStep() {
@@ -1849,89 +1763,58 @@ struct ForallOpIterArgsFolder : public OpRewritePattern<ForallOp> {
     //            ForallOp::getCombiningOps(iter_arg).
     //
     //         Based on the check we maintain the following :-
-    //         a. `resultToDelete` - i-th result of scf.forall that'll be
-    //            deleted.
-    //         b. `resultToReplace` - i-th result of the old scf.forall
-    //            whose uses will be replaced by the new scf.forall.
-    //         c. `newOuts` - the shared_outs' operand of the new scf.forall
-    //            corresponding to the i-th result with at least one use.
-    SetVector<OpResult> resultToDelete;
-    SmallVector<Value> resultToReplace;
+    //         a. op results, block arguments, outputs to delete
+    //         b. new outputs (i.e., outputs to retain)
+    SmallVector<Value> resultsToDelete;
+    SmallVector<Value> outsToDelete;
+    SmallVector<BlockArgument> blockArgsToDelete;
     SmallVector<Value> newOuts;
+    BitVector resultIndicesToDelete(forallOp.getNumResults(), false);
+    BitVector blockIndicesToDelete(forallOp.getBody()->getNumArguments(),
+                                   false);
     for (OpResult result : forallOp.getResults()) {
       OpOperand *opOperand = forallOp.getTiedOpOperand(result);
       BlockArgument blockArg = forallOp.getTiedBlockArgument(opOperand);
       if (result.use_empty() || forallOp.getCombiningOps(blockArg).empty()) {
-        resultToDelete.insert(result);
+        resultsToDelete.push_back(result);
+        outsToDelete.push_back(opOperand->get());
+        blockArgsToDelete.push_back(blockArg);
+        resultIndicesToDelete[result.getResultNumber()] = true;
+        blockIndicesToDelete[blockArg.getArgNumber()] = true;
       } else {
-        resultToReplace.push_back(result);
         newOuts.push_back(opOperand->get());
       }
     }
 
     // Return early if all results of scf.forall have at least one use and being
     // modified within the loop.
-    if (resultToDelete.empty())
+    if (resultsToDelete.empty())
       return failure();
 
-    // Step 2: For the the i-th result, do the following :-
-    //         a. Fetch the corresponding BlockArgument.
-    //         b. Look for store ops (currently tensor.parallel_insert_slice)
-    //            with the BlockArgument as its destination operand.
-    //         c. Remove the operations fetched in b.
-    for (OpResult result : resultToDelete) {
-      OpOperand *opOperand = forallOp.getTiedOpOperand(result);
-      BlockArgument blockArg = forallOp.getTiedBlockArgument(opOperand);
+    // Step 2: Erase combining ops and replace uses of deleted results and
+    //         block arguments with the corresponding outputs.
+    for (auto blockArg : blockArgsToDelete) {
       SmallVector<Operation *> combiningOps =
           forallOp.getCombiningOps(blockArg);
       for (Operation *combiningOp : combiningOps)
         rewriter.eraseOp(combiningOp);
     }
-
-    // Step 3. Create a new scf.forall op with the new shared_outs' operands
-    //         fetched earlier
-    auto newForallOp = scf::ForallOp::create(
-        rewriter, forallOp.getLoc(), forallOp.getMixedLowerBound(),
-        forallOp.getMixedUpperBound(), forallOp.getMixedStep(), newOuts,
-        forallOp.getMapping(),
-        /*bodyBuilderFn =*/[](OpBuilder &, Location, ValueRange) {});
-
-    // Step 4. Merge the block of the old scf.forall into the newly created
-    //         scf.forall using the new set of arguments.
-    Block *loopBody = forallOp.getBody();
-    Block *newLoopBody = newForallOp.getBody();
-    ArrayRef<BlockArgument> newBbArgs = newLoopBody->getArguments();
-    // Form initial new bbArg list with just the control operands of the new
-    // scf.forall op.
-    SmallVector<Value> newBlockArgs =
-        llvm::map_to_vector(newBbArgs.take_front(forallOp.getRank()),
-                            [](BlockArgument b) -> Value { return b; });
-    Block::BlockArgListType newSharedOutsArgs = newForallOp.getRegionOutArgs();
-    unsigned index = 0;
-    // Take the new corresponding bbArg if the old bbArg was used as a
-    // destination in the in_parallel op. For all other bbArgs, use the
-    // corresponding init_arg from the old scf.forall op.
-    for (OpResult result : forallOp.getResults()) {
-      if (resultToDelete.count(result)) {
-        newBlockArgs.push_back(forallOp.getTiedOpOperand(result)->get());
-      } else {
-        newBlockArgs.push_back(newSharedOutsArgs[index++]);
-      }
+    for (auto [blockArg, result, out] :
+         llvm::zip_equal(blockArgsToDelete, resultsToDelete, outsToDelete)) {
+      rewriter.replaceAllUsesWith(blockArg, out);
+      rewriter.replaceAllUsesWith(result, out);
     }
-    rewriter.mergeBlocks(loopBody, newLoopBody, newBlockArgs);
+    // TODO: There is no rewriter API for erasing block arguments.
+    rewriter.modifyOpInPlace(forallOp, [&]() {
+      forallOp.getBody()->eraseArguments(blockIndicesToDelete);
+    });
 
-    // Step 5. Replace the uses of result of old scf.forall with that of the new
-    //         scf.forall.
-    for (auto &&[oldResult, newResult] :
-         llvm::zip(resultToReplace, newForallOp->getResults()))
-      rewriter.replaceAllUsesWith(oldResult, newResult);
+    // Step 3. Create a new scf.forall op with only the shared_outs/results
+    //         that should be retained.
+    auto newForallOp = cast<scf::ForallOp>(
+        rewriter.eraseOpResults(forallOp, resultIndicesToDelete));
+    newForallOp.getOutputsMutable().assign(newOuts);
 
-    // Step 6. Replace the uses of those values that either has no use or are
-    //         not being modified within the loop with the corresponding
-    //         OpOperand.
-    for (OpResult oldResult : resultToDelete)
-      rewriter.replaceAllUsesWith(oldResult,
-                                  forallOp.getTiedOpOperand(oldResult)->get());
     return success();
   }
 };
@@ -2499,53 +2382,27 @@ namespace {
 struct RemoveUnusedResults : public OpRewritePattern<IfOp> {
   using OpRewritePattern<IfOp>::OpRewritePattern;
 
-  void transferBody(Block *source, Block *dest, ArrayRef<OpResult> usedResults,
-                    PatternRewriter &rewriter) const {
-    // Move all operations to the destination block.
-    rewriter.mergeBlocks(source, dest);
-    // Replace the yield op by one that returns only the used values.
-    auto yieldOp = cast<scf::YieldOp>(dest->getTerminator());
-    SmallVector<Value, 4> usedOperands;
-    llvm::transform(usedResults, std::back_inserter(usedOperands),
-                    [&](OpResult result) {
-                      return yieldOp.getOperand(result.getResultNumber());
-                    });
-    rewriter.modifyOpInPlace(yieldOp,
-                             [&]() { yieldOp->setOperands(usedOperands); });
-  }
-
   LogicalResult matchAndRewrite(IfOp op,
                                 PatternRewriter &rewriter) const override {
-    // Compute the list of used results.
-    SmallVector<OpResult, 4> usedResults;
-    llvm::copy_if(op.getResults(), std::back_inserter(usedResults),
-                  [](OpResult result) { return !result.use_empty(); });
+    // Compute the list of unused results.
+    BitVector toErase(op.getNumResults(), false);
+    for (auto [idx, result] : llvm::enumerate(op.getResults()))
+      if (result.use_empty())
+        toErase[idx] = true;
+    if (toErase.none())
+      return rewriter.notifyMatchFailure(op, "no results to erase");
 
-    // Replace the operation if only a subset of its results have uses.
-    if (usedResults.size() == op.getNumResults())
-      return failure();
+    // Erase results.
+    auto newOp = cast<scf::IfOp>(rewriter.eraseOpResults(op, toErase));
 
-    // Compute the result types of the replacement operation.
-    SmallVector<Type, 4> newTypes;
-    llvm::transform(usedResults, std::back_inserter(newTypes),
-                    [](OpResult result) { return result.getType(); });
+    // Erase operands.
+    rewriter.modifyOpInPlace(newOp.thenYield(), [&]() {
+      newOp.thenYield()->eraseOperands(toErase);
+    });
+    rewriter.modifyOpInPlace(newOp.elseYield(), [&]() {
+      newOp.elseYield()->eraseOperands(toErase);
+    });
 
-    // Create a replacement operation with empty then and else regions.
-    auto newOp =
-        IfOp::create(rewriter, op.getLoc(), newTypes, op.getCondition());
-    rewriter.createBlock(&newOp.getThenRegion());
-    rewriter.createBlock(&newOp.getElseRegion());
-
-    // Move the bodies and replace the terminators (note there is a then and
-    // an else region since the operation returns results).
-    transferBody(op.getBody(0), newOp.getBody(0), usedResults, rewriter);
-    transferBody(op.getBody(1), newOp.getBody(1), usedResults, rewriter);
-
-    // Replace the operation by the new one.
-    SmallVector<Value, 4> repResults(op.getNumResults());
-    for (const auto &en : llvm::enumerate(usedResults))
-      repResults[en.value().getResultNumber()] = newOp.getResult(en.index());
-    rewriter.replaceOp(op, repResults);
     return success();
   }
 };
@@ -4797,9 +4654,43 @@ struct FoldConstantCase : OpRewritePattern<scf::IndexSwitchOp> {
   }
 };
 
+/// Canonicalization patterns that folds away dead results of
+/// "scf.index_switch" ops.
+struct FoldUnusedIndexSwitchResults : OpRewritePattern<IndexSwitchOp> {
+  using OpRewritePattern<IndexSwitchOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(IndexSwitchOp op,
+                                PatternRewriter &rewriter) const override {
+    // Find dead results.
+    BitVector deadResults(op.getNumResults(), false);
+    for (auto [idx, result] : llvm::enumerate(op.getResults()))
+      if (result.use_empty())
+        deadResults[idx] = true;
+    if (!deadResults.any())
+      return rewriter.notifyMatchFailure(op, "no dead results to fold");
+
+    // Erase dead results.
+    auto newOp =
+        cast<scf::IndexSwitchOp>(rewriter.eraseOpResults(op, deadResults));
+
+    // Erase operands from yield ops.
+    auto updateCaseRegion = [&](Region &region) {
+      Operation *terminator = region.front().getTerminator();
+      assert(isa<YieldOp>(terminator) && "expected yield op");
+      rewriter.modifyOpInPlace(
+          terminator, [&]() { terminator->eraseOperands(deadResults); });
+    };
+    updateCaseRegion(newOp.getDefaultRegion());
+    for (Region &caseRegion : newOp.getCaseRegions())
+      updateCaseRegion(caseRegion);
+
+    return success();
+  }
+};
+
 void IndexSwitchOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                 MLIRContext *context) {
-  results.add<FoldConstantCase>(context);
+  results.add<FoldConstantCase, FoldUnusedIndexSwitchResults>(context);
 }
 
 //===----------------------------------------------------------------------===//

@@ -2430,19 +2430,23 @@ let Features = "avx512bw,avx512vl",
   def cvtb2mask256 : X86Builtin<"unsigned int(_Vector<32, char>)">;
 }
 
-let Features = "avx512bw,avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "avx512bw,avx512vl",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def cvtmask2b128 : X86Builtin<"_Vector<16, char>(unsigned short)">;
 }
 
-let Features = "avx512bw,avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+let Features = "avx512bw,avx512vl",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def cvtmask2b256 : X86Builtin<"_Vector<32, char>(unsigned int)">;
 }
 
-let Features = "avx512bw,avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "avx512bw,avx512vl",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def cvtmask2w128 : X86Builtin<"_Vector<8, short>(unsigned char)">;
 }
 
-let Features = "avx512bw,avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+let Features = "avx512bw,avx512vl",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def cvtmask2w256 : X86Builtin<"_Vector<16, short>(unsigned short)">;
 }
 
@@ -2456,19 +2460,23 @@ let Features = "avx512dq,avx512vl",
   def cvtd2mask256 : X86Builtin<"unsigned char(_Vector<8, int>)">;
 }
 
-let Features = "avx512dq,avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "avx512dq,avx512vl",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def cvtmask2d128 : X86Builtin<"_Vector<4, int>(unsigned char)">;
 }
 
-let Features = "avx512dq,avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+let Features = "avx512dq,avx512vl",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def cvtmask2d256 : X86Builtin<"_Vector<8, int>(unsigned char)">;
 }
 
-let Features = "avx512dq,avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "avx512dq,avx512vl",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def cvtmask2q128 : X86Builtin<"_Vector<2, long long int>(unsigned char)">;
 }
 
-let Features = "avx512dq,avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+let Features = "avx512dq,avx512vl",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def cvtmask2q256 : X86Builtin<"_Vector<4, long long int>(unsigned char)">;
 }
 
