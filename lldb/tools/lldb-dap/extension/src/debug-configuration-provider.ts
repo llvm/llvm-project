@@ -1,12 +1,12 @@
 import * as child_process from "child_process";
 import * as util from "util";
 import * as vscode from "vscode";
+import { AndroidConfigurationBuilder } from "./android/android-configuration-builder";
 import { createDebugAdapterExecutable } from "./debug-adapter-factory";
 import { LLDBDapServer } from "./lldb-dap-server";
 import { LogFilePathProvider } from "./logging";
 import { ErrorWithNotification } from "./ui/error-with-notification";
 import { ConfigureButton } from "./ui/show-error-message";
-import { AndroidConfigurationBuilder } from "./android/android-configuration-builder";
 
 const exec = util.promisify(child_process.execFile);
 
@@ -237,7 +237,10 @@ export class LLDBDapConfigurationProvider
         }
       }
 
-      if (debugConfiguration.androidComponent && debugConfiguration.request === "launch") {
+      if (
+        debugConfiguration.androidComponent &&
+        debugConfiguration.request === "launch"
+      ) {
         if (
           !debugConfiguration.launchCommands ||
           debugConfiguration.launchCommands.length === 0
@@ -245,37 +248,44 @@ export class LLDBDapConfigurationProvider
           if (!debugConfiguration.androidDeviceSerial) {
             debugConfiguration.androidDeviceSerial =
               await AndroidConfigurationBuilder.resolveDeviceSerial(
-                debugConfiguration.androidDevice
+                debugConfiguration.androidDevice,
               );
           }
-          this.logger.info(`Android device serial number: ${debugConfiguration.androidDeviceSerial}`);
+          this.logger.info(
+            `Android device serial number: ${debugConfiguration.androidDeviceSerial}`,
+          );
           if (!debugConfiguration.androidTargetArch) {
             debugConfiguration.androidTargetArch =
               await AndroidConfigurationBuilder.getTargetArch(
-                debugConfiguration.androidDeviceSerial
+                debugConfiguration.androidDeviceSerial,
               );
           }
-          this.logger.info(`Android target architecture: ${debugConfiguration.androidTargetArch}`);
+          this.logger.info(
+            `Android target architecture: ${debugConfiguration.androidTargetArch}`,
+          );
           if (!debugConfiguration.androidLldbServerPath) {
             if (!debugConfiguration.androidNDKPath) {
               debugConfiguration.androidNDKPath =
-                  await AndroidConfigurationBuilder.getDefaultNdkPath();
+                await AndroidConfigurationBuilder.getDefaultNdkPath();
             }
-            const ndkVersion = await AndroidConfigurationBuilder.checkNdkAndRetrieveVersion(
-              debugConfiguration.androidNDKPath
+            const ndkVersion =
+              await AndroidConfigurationBuilder.checkNdkAndRetrieveVersion(
+                debugConfiguration.androidNDKPath,
+              );
+            this.logger.info(
+              `Android NDK path: ${debugConfiguration.androidNDKPath}`,
             );
-            this.logger.info(`Android NDK path: ${debugConfiguration.androidNDKPath}`);
             this.logger.info(`Android NDK version: ${ndkVersion}`);
             debugConfiguration.androidLldbServerPath =
               await AndroidConfigurationBuilder.getLldbServerPath(
                 debugConfiguration.androidNDKPath,
-                debugConfiguration.androidTargetArch
+                debugConfiguration.androidTargetArch,
               );
           }
           debugConfiguration.launchCommands =
             AndroidConfigurationBuilder.getLldbLaunchCommands(
               debugConfiguration.androidDeviceSerial,
-              debugConfiguration.androidComponent
+              debugConfiguration.androidComponent,
             );
         }
       }

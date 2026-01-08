@@ -3,11 +3,11 @@ import * as fs from "node:fs/promises";
 import * as path from "path";
 import * as util from "util";
 import * as vscode from "vscode";
+import { AndroidSessionTracker } from "./android/android-session-tracker";
 import { LogFilePathProvider, LogType } from "./logging";
 import { ErrorWithNotification } from "./ui/error-with-notification";
 import { ConfigureButton, OpenSettingsButton } from "./ui/show-error-message";
 import { expandUser } from "./utils";
-import { AndroidSessionTracker } from "./android/android-session-tracker";
 
 const exec = util.promisify(child_process.execFile);
 
@@ -329,7 +329,10 @@ export class LLDBDapDescriptorFactory
       throw error;
     }
 
-    if (session.configuration.androidComponent && session.configuration.request === "launch") {
+    if (
+      session.configuration.androidComponent &&
+      session.configuration.request === "launch"
+    ) {
       this.logger.info(
         `Session "${session.name}" is an Android debug session for component ${session.configuration.androidComponent}.`,
       );
