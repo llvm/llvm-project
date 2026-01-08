@@ -101,7 +101,7 @@ public:
     return *this;
   }
 
-  bool joinable() const noexcept { return !pthread_equal(Thread, native_handle_type()); }
+  bool joinable() const noexcept { return get_id() != 0; }
 
   inline id get_id() const noexcept;
 
