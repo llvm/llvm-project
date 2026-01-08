@@ -882,7 +882,7 @@ void VPlanTransforms::handleEarlyExits(VPlan &Plan,
   // early exit destination.
   //
   // BEFORE:                  | AFTER:
-  // 			      |
+  //                          |
   //    entry                 |      entry
   //      |                   |        |
   //      v                   |        v
