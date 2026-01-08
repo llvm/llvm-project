@@ -1091,7 +1091,7 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
   Value *OldVal = PN->removeIncomingValue(BB, false);
   assert(OldVal && "No entry in PHI for Pred BB!");
 
-  // Maps BBPreds to defined values or nullptr (representing undefined values).
+  // Map BBPreds to defined values or nullptr (representing undefined values).
   IncomingValueMap IncomingValues;
 
   // We are merging two blocks - BB, and the block containing PN - and
