@@ -1692,7 +1692,7 @@ GenericWeakOrderingSummaryProvider(ValueObject &valobj, Stream &stream,
 static bool
 GenericStrongOrderingSummaryProvider(ValueObject &valobj, Stream &stream,
                                      const TypeSummaryOptions &options) {
-  if (IsMsvcStlSmartPointer(valobj))
+  if (IsMsvcStlOrdering(valobj))
     return MsvcStlStrongOrderingSummaryProvider(valobj, stream, options);
   return LibStdcppStrongOrderingSummaryProvider(valobj, stream, options);
 }
