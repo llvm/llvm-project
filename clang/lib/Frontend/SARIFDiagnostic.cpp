@@ -76,7 +76,7 @@ SARIFDiagnostic::~SARIFDiagnostic() {
       });
       Result.addRelatedLocations(Node.getRelatedLocations(*LangOptsPtr));
     });
-    Writer->appendResult(Result); // Write into Writer
+    Writer->appendResult(Result); // Write into Writer.
   }
   // clang-format on
 }
@@ -85,7 +85,6 @@ void SARIFDiagnostic::emitDiagnosticMessage(
     FullSourceLoc Loc, PresumedLoc PLoc, DiagnosticsEngine::Level Level,
     StringRef Message, ArrayRef<clang::CharSourceRange> Ranges,
     DiagOrStoredDiag Diag) {
-
   if (Level >= DiagnosticsEngine::Level::Warning) {
     Current =
         &Root; // If this is a top-level error/warning, repoint Current to Root.
