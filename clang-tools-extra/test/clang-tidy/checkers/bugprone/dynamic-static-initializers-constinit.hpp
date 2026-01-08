@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++20 %s bugprone-dynamic-static-initializers %t -- -- -fno-threadsafe-statics
+// RUN: %check_clang_tidy -std=c++20-or-later %s bugprone-dynamic-static-initializers %t -- -- -fno-threadsafe-statics -fno-delayed-template-parsing
 
 constexpr int const_func() { return 42; }
 
@@ -54,3 +54,6 @@ struct Separate {
   static constinit int s;
 };
 constinit int Separate::s = 100; // no warning
+
+extern int late_constinit;
+constinit int late_constinit = 42; // no warning
