@@ -24,7 +24,7 @@ attributes #1 = { "sample-profile-suffix-elision-policy"="selected" }
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
 !1 = !DIFile(filename: "test.c", directory: "")
 !2 = !{}
-!4 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, retainedNodes: !2)
+!4 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, retainedNodes: !2)
 !5 = !DISubroutineType(types: !2)
 !7 = !{i32 2, !"Dwarf Version", i32 4}
 !8 = !{i32 2, !"Debug Info Version", i32 3}
