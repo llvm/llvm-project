@@ -2226,8 +2226,9 @@ def FeatureISAVersion12_50 : FeatureSet<
   [FeatureAddressableLocalMemorySize327680])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
-  !listconcat(FeatureISAVersion12_50.Features,
-  [FeatureDPALU_DPP])>;
+  !listconcat(FeatureISAVersion12_50_Common.Features,
+  [FeatureAddressableLocalMemorySize327680,
+   FeatureDPALU_DPP])>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12.Features,
