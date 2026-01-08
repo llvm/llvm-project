@@ -205,6 +205,9 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmMultiLdSt(
   if (Opc != RISCV::LW && Opc != RISCV::SW)
     return false;
 
+  if (!FirstMI.hasOneMemOperand())
+    return false;
+
   if (!isMemOpAligned(FirstMI, Align(4)))
     return false;
 
@@ -250,6 +253,8 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmMultiLdSt(
     if (MI.getOpcode() != Opc)
       break;
     if (!TII->isLdStSafeToPair(MI, TRI))
+      break;
+    if (!MI.hasOneMemOperand())
       break;
     if (!isMemOpAligned(MI, Align(4)))
       break;
@@ -300,20 +305,19 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmMultiLdSt(
   // We only handle more than 2 here. Pairs are handled in
   // tryConvertToXqcilsmLdStPair.
   unsigned Len = Group.size();
-  if (Len <= 2)
-    return false;
-  if (!isUInt<5>(Len))
+  if (Len < 3 || Len > 31)
     return false;
 
   unsigned NewOpc;
   unsigned StartRegState;
-  bool AddImplicitRegs = false;
+  bool AddImplicitRegs = true;
 
   if (IsLoad) {
     NewOpc = RISCV::QC_LWMI;
     StartRegState = static_cast<unsigned>(RegState::Define);
-    AddImplicitRegs = true;
   } else {
+    assert(SMode != StoreMode::Unknown &&
+           "Group should be large enough to know the store mode");
     if (SMode == StoreMode::Setwmi) {
       NewOpc = RISCV::QC_SETWMI;
       // Kill if any of the individual stores killed the reg.
@@ -328,7 +332,6 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmMultiLdSt(
         return false;
       NewOpc = RISCV::QC_SWMI;
       StartRegState = getKillRegState(Group.front()->getOperand(0).isKill());
-      AddImplicitRegs = true;
     }
   }
 
@@ -396,6 +399,9 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmLdStPair(
   Register Base2 = SecondOp1.getReg();
 
   if (Base1 != Base2)
+    return false;
+
+  if (!First->hasOneMemOperand() || !Second->hasOneMemOperand())
     return false;
 
   if (!isMemOpAligned(*First, Align(4)) || !isMemOpAligned(*Second, Align(4)))
@@ -500,6 +506,9 @@ bool RISCVLoadStoreOpt::tryConvertToMIPSLdStPair(
     RequiredAlignment = Align(16);
     break;
   }
+
+  if (!First->hasOneMemOperand())
+    return false;
 
   if (!isMemOpAligned(*First, RequiredAlignment))
     return false;
