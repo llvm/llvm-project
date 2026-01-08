@@ -365,7 +365,7 @@ def Math_ClampFOp : Math_FloatTernaryOp<"clampf"> {
 
     The semantics of the operation are described by:
     ```
-      clampf(value, min, max) = maxf(minf(value, min), max)
+      clampf(value, min, max) = minf(maxf(value, min), max)
     ```
 
     Example:
