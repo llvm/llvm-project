@@ -117,6 +117,7 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
   ],
   "HasEnums": true,
   "HasParents": true,
+  "HasProtectedMembers": true,
   "HasPublicFunctions": true,
   "HasRecords": true,
   "HasVirtualParents": true,
