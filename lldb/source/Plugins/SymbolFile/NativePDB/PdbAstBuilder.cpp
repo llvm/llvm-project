@@ -164,7 +164,7 @@ static bool IsAnonymousNamespaceName(llvm::StringRef name) {
 PdbAstBuilder::PdbAstBuilder(TypeSystemClang &clang) : m_clang(clang) {}
 
 lldb_private::CompilerDeclContext PdbAstBuilder::GetTranslationUnitDecl() {
-  return ToCompilerDeclContext(*m_clang.GetTranslationUnitDecl());
+  return ToCompilerDeclContext(m_clang.GetTranslationUnitDecl());
 }
 
 std::pair<clang::DeclContext *, std::string>
@@ -278,7 +278,7 @@ clang::Decl *PdbAstBuilder::GetOrCreateSymbolForId(PdbCompilandSymId id) {
 std::optional<CompilerDecl>
 PdbAstBuilder::GetOrCreateDeclForUid(PdbSymUid uid) {
   if (clang::Decl *result = TryGetDecl(uid))
-    return ToCompilerDecl(*result);
+    return ToCompilerDecl(result);
 
   clang::Decl *result = nullptr;
   switch (uid.kind()) {
@@ -302,7 +302,7 @@ PdbAstBuilder::GetOrCreateDeclForUid(PdbSymUid uid) {
   if (!result)
     return std::nullopt;
   m_uid_to_decl[toOpaqueUid(uid)] = result;
-  return ToCompilerDecl(*result);
+  return ToCompilerDecl(result);
 }
 
 clang::DeclContext *
@@ -322,7 +322,7 @@ PdbAstBuilder::GetOrCreateClangDeclContextForUid(PdbSymUid uid) {
 }
 
 CompilerDeclContext PdbAstBuilder::GetOrCreateDeclContextForUid(PdbSymUid uid) {
-  return m_clang.CreateDeclContext(GetOrCreateClangDeclContextForUid(uid));
+  return ToCompilerDeclContext(GetOrCreateClangDeclContextForUid(uid));
 }
 
 std::pair<clang::DeclContext *, std::string>
@@ -426,7 +426,7 @@ clang::DeclContext *PdbAstBuilder::GetParentClangDeclContext(PdbSymUid uid) {
 }
 
 CompilerDeclContext PdbAstBuilder::GetParentDeclContext(PdbSymUid uid) {
-  return m_clang.CreateDeclContext(GetParentClangDeclContext(uid));
+  return ToCompilerDeclContext(GetParentClangDeclContext(uid));
 }
 
 bool PdbAstBuilder::CompleteType(CompilerType ct) {
@@ -755,7 +755,7 @@ PdbAstBuilder::GetOrCreateTypedefDecl(PdbGlobalSymId id) {
   std::string uname = std::string(DropNameScope(udt.Name));
 
   CompilerType ct = ToCompilerType(qt).CreateTypedef(
-      uname.c_str(), ToCompilerDeclContext(*scope), 0);
+      uname.c_str(), ToCompilerDeclContext(scope), 0);
   clang::TypedefNameDecl *tnd = m_clang.GetAsTypedefDecl(ct);
   DeclStatus status;
   status.resolved = true;
@@ -1461,8 +1461,8 @@ void PdbAstBuilder::ParseDeclsForContext(CompilerDeclContext context) {
   }
 }
 
-CompilerDecl PdbAstBuilder::ToCompilerDecl(clang::Decl &decl) {
-  return m_clang.GetCompilerDecl(&decl);
+CompilerDecl PdbAstBuilder::ToCompilerDecl(clang::Decl *decl) {
+  return m_clang.GetCompilerDecl(decl);
 }
 
 CompilerType PdbAstBuilder::ToCompilerType(clang::QualType qt) {
@@ -1474,8 +1474,8 @@ clang::QualType PdbAstBuilder::FromCompilerType(CompilerType ct) {
 }
 
 CompilerDeclContext
-PdbAstBuilder::ToCompilerDeclContext(clang::DeclContext &context) {
-  return m_clang.CreateDeclContext(&context);
+PdbAstBuilder::ToCompilerDeclContext(clang::DeclContext *context) {
+  return m_clang.CreateDeclContext(context);
 }
 
 clang::Decl * PdbAstBuilder::FromCompilerDecl(CompilerDecl decl) {
@@ -1512,11 +1512,11 @@ PdbAstBuilder::FindNamespaceDecl(CompilerDeclContext parent_ctx,
 
   for (clang::NamespaceDecl *namespace_decl : *set)
     if (namespace_decl->getName() == name)
-      return ToCompilerDeclContext(*namespace_decl);
+      return ToCompilerDeclContext(namespace_decl);
 
   for (clang::NamespaceDecl *namespace_decl : *set)
     if (namespace_decl->isAnonymousNamespace())
-      return FindNamespaceDecl(ToCompilerDeclContext(*namespace_decl), name);
+      return FindNamespaceDecl(ToCompilerDeclContext(namespace_decl), name);
 
   return {};
 }
