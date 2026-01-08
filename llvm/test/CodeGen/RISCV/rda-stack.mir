@@ -106,12 +106,12 @@ stack:
 body:             |
   ; CHECK-LABEL: Reaching definitions for for machine function: test3
   ; CHECK-NEXT: %bb.0:
-  ; CHECK-NEXT: $x10:{ }
+  ; CHECK-NEXT: $x10:{ livein }
   ; CHECK-NEXT: $x0:{ }
   ; CHECK-NEXT: 0: BEQ $x10, $x0, %bb.2
   ; CHECK-EMPTY: 
   ; CHECK-NEXT: %bb.1:
-  ; CHECK-NEXT: $x10:{ }
+  ; CHECK-NEXT: $x10:{ livein }
   ; CHECK-NEXT: 1: $x10 = ADDI $x10, 1
   ; CHECK-EMPTY: 
   ; CHECK-NEXT: $x10:{ 1 }
@@ -121,7 +121,7 @@ body:             |
   ; CHECK-NEXT: 3: PseudoBR %bb.3
   ; CHECK-EMPTY: 
   ; CHECK-NEXT: %bb.2:
-  ; CHECK-NEXT: $x10:{ }
+  ; CHECK-NEXT: $x10:{ livein }
   ; CHECK-NEXT: 4: $x10 = ADDI $x10, 2
   ; CHECK-EMPTY: 
   ; CHECK-NEXT: $x10:{ 4 }
@@ -170,19 +170,19 @@ stack:
 body:             |
   ; CHECK-LABEL: Reaching definitions for for machine function: test4
   ; CHECK-NEXT: %bb.0:
-  ; CHECK-NEXT: $x10:{ }
+  ; CHECK-NEXT: $x10:{ livein }
   ; CHECK-NEXT: %stack.0:{ }
   ; CHECK-NEXT: 0: SD $x10, %stack.0, 0 :: (store (s64))
   ; CHECK-EMPTY:
-  ; CHECK-NEXT: $x11:{ }
+  ; CHECK-NEXT: $x11:{ livein }
   ; CHECK-NEXT: %stack.0:{ 0 }
   ; CHECK-NEXT: 1: SD $x11, %stack.0, 0 :: (store (s64))
   ; CHECK-EMPTY:
-  ; CHECK-NEXT: $x10:{ }
+  ; CHECK-NEXT: $x10:{ livein }
   ; CHECK-NEXT: %stack.1:{ }
   ; CHECK-NEXT: 2: SD $x10, %stack.1, 0 :: (store (s64))
   ; CHECK-EMPTY:
-  ; CHECK-NEXT: $x11:{ }
+  ; CHECK-NEXT: $x11:{ livein }
   ; CHECK-NEXT: %stack.1:{ 2 }
   ; CHECK-NEXT: 3: SD $x11, %stack.1, 0 :: (store (s64))
   ; CHECK-EMPTY:

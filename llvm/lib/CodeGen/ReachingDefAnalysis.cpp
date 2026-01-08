@@ -323,7 +323,8 @@ void ReachingDefInfo::print(raw_ostream &OS) {
         } else
           continue;
         Defs.clear();
-        getGlobalReachingDefs(&MI, Reg, Defs);
+        bool HasLiveInPath = false;
+        getGlobalReachingDefs(&MI, Reg, Defs, HasLiveInPath);
         MO.print(OS, TRI);
         SmallVector<int, 0> Nums;
         for (MachineInstr *Def : Defs)
@@ -332,6 +333,8 @@ void ReachingDefInfo::print(raw_ostream &OS) {
         OS << ":{ ";
         for (int Num : Nums)
           OS << Num << " ";
+        if (HasLiveInPath)
+          OS << "livein ";
         OS << "}\n";
       }
       OS << InstToNumMap[&MI] << ": " << MI << "\n";
@@ -522,7 +525,9 @@ void ReachingDefInfo::getGlobalUses(MachineInstr *MI, Register Reg,
   getReachingLocalUses(MI, Reg, Uses);
 
   // Handle live-out values.
-  if (auto *LiveOut = getLocalLiveOutMIDef(MI->getParent(), Reg)) {
+  bool IsFunctionLiveIn = false;
+  if (auto *LiveOut =
+          getLocalLiveOutMIDef(MI->getParent(), Reg, IsFunctionLiveIn)) {
     if (LiveOut != MI)
       return;
 
@@ -540,24 +545,33 @@ void ReachingDefInfo::getGlobalUses(MachineInstr *MI, Register Reg,
 }
 
 void ReachingDefInfo::getGlobalReachingDefs(MachineInstr *MI, Register Reg,
-                                            InstSet &Defs) const {
-  if (auto *Def = getUniqueReachingMIDef(MI, Reg)) {
-    Defs.insert(Def);
+                                            InstSet &Defs,
+                                            bool &HasLiveInPath) const {
+  // If there's a local def before MI, return it.
+  int DefInstrId = getReachingDef(MI, Reg);
+  if (DefInstrId == -1) {
+    HasLiveInPath = true;
+    return;
+  }
+  if (DefInstrId >= 0) {
+    MachineInstr *LocalDef = getInstFromId(MI->getParent(), DefInstrId);
+    Defs.insert(LocalDef);
     return;
   }
 
   for (auto *MBB : MI->getParent()->predecessors())
-    getLiveOuts(MBB, Reg, Defs);
+    getLiveOuts(MBB, Reg, Defs, HasLiveInPath);
 }
 
 void ReachingDefInfo::getLiveOuts(MachineBasicBlock *MBB, Register Reg,
-                                  InstSet &Defs) const {
+                                  InstSet &Defs, bool &HasLiveInPath) const {
   SmallPtrSet<MachineBasicBlock*, 2> VisitedBBs;
-  getLiveOuts(MBB, Reg, Defs, VisitedBBs);
+  getLiveOuts(MBB, Reg, Defs, VisitedBBs, HasLiveInPath);
 }
 
 void ReachingDefInfo::getLiveOuts(MachineBasicBlock *MBB, Register Reg,
-                                  InstSet &Defs, BlockSet &VisitedBBs) const {
+                                  InstSet &Defs, BlockSet &VisitedBBs,
+                                  bool &HasLiveInPath) const {
   if (VisitedBBs.count(MBB))
     return;
 
@@ -567,11 +581,18 @@ void ReachingDefInfo::getLiveOuts(MachineBasicBlock *MBB, Register Reg,
   if (Reg.isPhysical() && LiveRegs.available(Reg))
     return;
 
-  if (auto *Def = getLocalLiveOutMIDef(MBB, Reg))
+  bool IsFunctionLiveIn = false;
+  auto *Def = getLocalLiveOutMIDef(MBB, Reg, IsFunctionLiveIn);
+  HasLiveInPath = IsFunctionLiveIn;
+  if (Def)
     Defs.insert(Def);
-  else
-    for (auto *Pred : MBB->predecessors())
-      getLiveOuts(Pred, Reg, Defs, VisitedBBs);
+  else {
+    for (auto *Pred : MBB->predecessors()) {
+      bool HasLiveInPathToPred = false;
+      getLiveOuts(Pred, Reg, Defs, VisitedBBs, HasLiveInPathToPred);
+      HasLiveInPath |= HasLiveInPathToPred;
+    }
+  }
 }
 
 MachineInstr *ReachingDefInfo::getUniqueReachingMIDef(MachineInstr *MI,
@@ -583,8 +604,9 @@ MachineInstr *ReachingDefInfo::getUniqueReachingMIDef(MachineInstr *MI,
 
   SmallPtrSet<MachineInstr*, 2> Incoming;
   MachineBasicBlock *Parent = MI->getParent();
+  bool HasLiveInPath = false;
   for (auto *Pred : Parent->predecessors())
-    getLiveOuts(Pred, Reg, Incoming);
+    getLiveOuts(Pred, Reg, Incoming, HasLiveInPath);
 
   // Check that we have a single incoming value and that it does not
   // come from the same block as MI - since it would mean that the def
@@ -633,7 +655,8 @@ bool ReachingDefInfo::isRegDefinedAfter(MachineInstr *MI, Register Reg) const {
       getReachingDef(MI, Reg) != getReachingDef(&*Last, Reg))
     return true;
 
-  if (auto *Def = getLocalLiveOutMIDef(MBB, Reg))
+  bool IsFunctionLiveIn = false;
+  if (auto *Def = getLocalLiveOutMIDef(MBB, Reg, IsFunctionLiveIn))
     return Def == getReachingLocalMIDef(MI, Reg);
 
   return false;
@@ -660,8 +683,9 @@ bool ReachingDefInfo::isReachingDefLiveOut(MachineInstr *MI,
   return true;
 }
 
-MachineInstr *ReachingDefInfo::getLocalLiveOutMIDef(MachineBasicBlock *MBB,
-                                                    Register Reg) const {
+MachineInstr *
+ReachingDefInfo::getLocalLiveOutMIDef(MachineBasicBlock *MBB, Register Reg,
+                                      bool &IsFunctionLiveIn) const {
   LiveRegUnits LiveRegs(*TRI);
   LiveRegs.addLiveOuts(*MBB);
   if (Reg.isPhysical() && LiveRegs.available(Reg))
@@ -683,6 +707,7 @@ MachineInstr *ReachingDefInfo::getLocalLiveOutMIDef(MachineBasicBlock *MBB,
   }
 
   int Def = getReachingDef(&*Last, Reg);
+  IsFunctionLiveIn = (Def == FunctionLiveInMarker);
   return Def < 0 ? nullptr : getInstFromId(MBB, Def);
 }
 
