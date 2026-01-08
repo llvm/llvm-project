@@ -358,6 +358,9 @@ static void RemoveFilesToRemove() {
 }
 
 void sys::CleanupOnSignal(uintptr_t Context) {
+  // Let's not interfere with stack trace symbolication and friends.
+  auto BypassSandbox = sandbox::scopedDisable();
+
   int Sig = (int)Context;
 
   if (llvm::is_contained(InfoSigs, Sig)) {
@@ -440,7 +443,12 @@ static void InfoSignalHandler(int Sig) {
     CurrentInfoFunction();
 }
 
-void llvm::sys::RunInterruptHandlers() { RemoveFilesToRemove(); }
+void sys::RunInterruptHandlers() {
+  // Let's not interfere with stack trace symbolication and friends.
+  auto BypassSandbox = sandbox::scopedDisable();
+
+  RemoveFilesToRemove();
+}
 
 void llvm::sys::SetInterruptFunction(void (*IF)()) {
   InterruptFunction.exchange(IF);
@@ -868,8 +876,7 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS, int Depth) {
         nwidth = strlen(name) - 1;
     }
 
-    if (nwidth > width)
-      width = nwidth;
+    width = std::max(nwidth, width);
   }
 
   for (int i = 0; i < depth; ++i) {
@@ -883,8 +890,7 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS, int Depth) {
     } else {
       const char *name = strrchr(dlinfo.dli_fname, '/');
       if (!name)
-        OS << format(" %-*s", width,
-                     static_cast<const char *>(dlinfo.dli_fname));
+        OS << format(" %-*s", width, dlinfo.dli_fname);
       else
         OS << format(" %-*s", width, name + 1);
     }

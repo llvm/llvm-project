@@ -13,10 +13,10 @@
 # RES_4_2: ; error decoding test.kd: kernel descriptor reserved bits in range (511:480) set
 # RES_4_2-NEXT: ; decoding failed region as bytes
 
-# RUN: yaml2obj %s -DGPU=GFX90A -DKD=00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003000000000000 \
-# RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=RES_456
-# RES_456: ; error decoding test.kd: kernel descriptor reserved bits in range (456:455) set
-# RES_456-NEXT: ; decoding failed region as bytes
+# RUN: yaml2obj %s -DGPU=GFX90A -DKD=00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006000000000000 \
+# RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=RES_457
+# RES_457: ; error decoding test.kd: kernel descriptor reserved bits in range (457:455) set
+# RES_457-NEXT: ; decoding failed region as bytes
 
 # RUN: yaml2obj %s -DGPU=GFX90A -DKD=0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c000000000000 \
 # RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=WF32

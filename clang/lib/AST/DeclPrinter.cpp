@@ -111,6 +111,7 @@ namespace {
     void VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D);
     void VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *TTP);
     void VisitNonTypeTemplateParmDecl(const NonTypeTemplateParmDecl *NTTP);
+    void VisitTemplateTemplateParmDecl(const TemplateTemplateParmDecl *);
     void VisitHLSLBufferDecl(HLSLBufferDecl *D);
 
     void VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D);
@@ -484,7 +485,7 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
       QualType BaseType = GetBaseType(CurDeclType);
       if (const auto *TT = dyn_cast_or_null<TagType>(BaseType);
           TT && TT->isTagOwned()) {
-        if (TT->getOriginalDecl() == Decls[0]) {
+        if (TT->getDecl() == Decls[0]) {
           Decls.push_back(*D);
           continue;
         }
@@ -1189,8 +1190,7 @@ void DeclPrinter::printTemplateParameters(const TemplateParameterList *Params,
     } else if (auto NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
       VisitNonTypeTemplateParmDecl(NTTP);
     } else if (auto TTPD = dyn_cast<TemplateTemplateParmDecl>(Param)) {
-      VisitTemplateDecl(TTPD);
-      // FIXME: print the default argument, if present.
+      VisitTemplateTemplateParmDecl(TTPD);
     }
   }
 
@@ -1894,7 +1894,7 @@ void DeclPrinter::VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *TTP) {
       Out << TTP->getDeclName();
   }
 
-  if (TTP->hasDefaultArgument()) {
+  if (TTP->hasDefaultArgument() && !TTP->defaultArgumentWasInherited()) {
     Out << " = ";
     TTP->getDefaultArgument().getArgument().print(Policy, Out,
                                                   /*IncludeType=*/false);
@@ -1909,9 +1909,19 @@ void DeclPrinter::VisitNonTypeTemplateParmDecl(
         Policy.CleanUglifiedParameters ? II->deuglifiedName() : II->getName();
   printDeclType(NTTP->getType(), Name, NTTP->isParameterPack());
 
-  if (NTTP->hasDefaultArgument()) {
+  if (NTTP->hasDefaultArgument() && !NTTP->defaultArgumentWasInherited()) {
     Out << " = ";
     NTTP->getDefaultArgument().getArgument().print(Policy, Out,
+                                                   /*IncludeType=*/false);
+  }
+}
+
+void DeclPrinter::VisitTemplateTemplateParmDecl(
+    const TemplateTemplateParmDecl *TTPD) {
+  VisitTemplateDecl(TTPD);
+  if (TTPD->hasDefaultArgument() && !TTPD->defaultArgumentWasInherited()) {
+    Out << " = ";
+    TTPD->getDefaultArgument().getArgument().print(Policy, Out,
                                                    /*IncludeType=*/false);
   }
 }

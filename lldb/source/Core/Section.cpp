@@ -153,6 +153,8 @@ const char *Section::GetTypeAsCString() const {
     return "lldb-formatters";
   case eSectionTypeSwiftModules:
     return "swift-modules";
+  case eSectionTypeWasmName:
+    return "wasm-name";
   case eSectionTypeOther:
     return "regular";
   }
@@ -415,6 +417,7 @@ bool Section::ContainsOnlyDebugInfo() const {
   case eSectionTypeCompactUnwind:
   case eSectionTypeGoSymtab:
   case eSectionTypeAbsoluteAddress:
+  case eSectionTypeWasmName:
   case eSectionTypeOther:
   // Used for "__dof_cache" in mach-o or ".debug" for COFF which isn't debug
   // information that we parse at all. This was causing system files with no
@@ -468,7 +471,13 @@ bool Section::ContainsOnlyDebugInfo() const {
   return false;
 }
 
+bool Section::IsGOTSection() const {
+  return GetObjectFile()->IsGOTSection(*this);
+}
+
 #pragma mark SectionList
+
+SectionList::SectionList(const SectionList &rhs) : m_sections(rhs.m_sections) {}
 
 SectionList &SectionList::operator=(const SectionList &rhs) {
   if (this != &rhs)
@@ -678,6 +687,33 @@ uint64_t SectionList::GetDebugInfoSize() const {
       debug_info_size += section->GetFileSize();
   }
   return debug_info_size;
+}
+
+SectionList SectionList::Merge(SectionList &lhs, SectionList &rhs,
+                               MergeCallback filter) {
+  SectionList output_list;
+
+  // Iterate through all the sections in lhs and see if we have matches in
+  // the rhs list.
+  for (const auto &lhs_section : lhs) {
+    auto rhs_section = rhs.FindSectionByName(lhs_section->GetName());
+    if (rhs_section)
+      output_list.AddSection(filter(lhs_section, rhs_section));
+    else
+      output_list.AddSection(lhs_section);
+  }
+
+  // Now that we've visited all possible duplicates, we can iterate over
+  // the rhs and take any values not in lhs.
+  for (const auto &rhs_section : rhs) {
+    auto lhs_section = lhs.FindSectionByName(rhs_section->GetName());
+    // Because we already visited everything overlapping between rhs
+    // and lhs, any section not in lhs is unique and can be output.
+    if (!lhs_section)
+      output_list.AddSection(rhs_section);
+  }
+
+  return output_list;
 }
 
 namespace llvm {

@@ -52,12 +52,14 @@ template <int LOG2_BASE>
 static RT_API_ATTRS bool EditBOZInput(
     IoStatementState &io, const DataEdit &edit, void *n, std::size_t bytes) {
   // Skip leading white space & zeroes
-  Fortran::common::optional<int> remaining{io.CueUpInput(edit)};
-  auto start{io.GetConnectionState().positionInRecord};
-  Fortran::common::optional<char32_t> next{io.NextInField(remaining, edit)};
+  common::optional<int> remaining{io.CueUpInput(edit)};
+  const ConnectionState &connection{io.GetConnectionState()};
+  auto leftTabLimit{connection.leftTabLimit.value_or(0)};
+  auto start{connection.positionInRecord - leftTabLimit};
+  common::optional<char32_t> next{io.NextInField(remaining, edit)};
   if (next.value_or('?') == '0') {
     do {
-      start = io.GetConnectionState().positionInRecord;
+      start = connection.positionInRecord - leftTabLimit;
       next = io.NextInField(remaining, edit);
     } while (next && *next == '0');
   }
@@ -110,7 +112,7 @@ static RT_API_ATTRS bool EditBOZInput(
   io.HandleAbsolutePosition(start);
   remaining.reset();
   // Make a second pass now that the digit count is known
-  std::memset(n, 0, bytes);
+  runtime::memset(n, 0, bytes);
   int increment{isHostLittleEndian ? -1 : 1};
   auto *data{reinterpret_cast<unsigned char *>(n) +
       (isHostLittleEndian ? significantBytes - 1 : bytes - significantBytes)};
@@ -154,8 +156,8 @@ static RT_API_ATTRS bool EditBOZInput(
 
 // Prepares input from a field, and returns the sign, if any, else '\0'.
 static RT_API_ATTRS char ScanNumericPrefix(IoStatementState &io,
-    const DataEdit &edit, Fortran::common::optional<char32_t> &next,
-    Fortran::common::optional<int> &remaining,
+    const DataEdit &edit, common::optional<char32_t> &next,
+    common::optional<int> &remaining,
     IoStatementState::FastAsciiField *fastField = nullptr) {
   remaining = io.CueUpInput(edit, fastField);
   next = io.NextInField(remaining, edit, fastField);
@@ -202,8 +204,8 @@ RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
         edit.descriptor);
     return false;
   }
-  Fortran::common::optional<int> remaining;
-  Fortran::common::optional<char32_t> next;
+  common::optional<int> remaining;
+  common::optional<char32_t> next;
   auto fastField{io.GetUpcomingFastAsciiField()};
   char sign{ScanNumericPrefix(io, edit, next, remaining, &fastField)};
   if (sign == '-' && !isSigned) {
@@ -283,18 +285,18 @@ RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
     auto shft{static_cast<int>(sizeof value - kind)};
     if (!isHostLittleEndian && shft >= 0) {
       auto shifted{value << (8 * shft)};
-      std::memcpy(n, &shifted, kind);
+      runtime::memcpy(n, &shifted, kind);
     } else {
-      std::memcpy(n, &value, kind); // a blank field means zero
+      runtime::memcpy(n, &value, kind); // a blank field means zero
     }
 #else
     auto shft{static_cast<int>(sizeof(value.low())) - kind};
     // For kind==8 (i.e. shft==0), the value is stored in low_ in big endian.
     if (!isHostLittleEndian && shft >= 0) {
       auto l{value.low() << (8 * shft)};
-      std::memcpy(n, &l, kind);
+      runtime::memcpy(n, &l, kind);
     } else {
-      std::memcpy(n, &value, kind); // a blank field means zero
+      runtime::memcpy(n, &value, kind); // a blank field means zero
     }
 #endif
     io.GotChar(fastField.got());
@@ -318,10 +320,10 @@ struct ScannedRealInput {
 };
 static RT_API_ATTRS ScannedRealInput ScanRealInput(
     char *buffer, int bufferSize, IoStatementState &io, const DataEdit &edit) {
-  Fortran::common::optional<int> remaining;
-  Fortran::common::optional<char32_t> next;
+  common::optional<int> remaining;
+  common::optional<char32_t> next;
   int got{0};
-  Fortran::common::optional<int> radixPointOffset;
+  common::optional<int> radixPointOffset;
   // The following lambda definition violates the conding style,
   // but cuda-11.8 nvcc hits an internal error with the brace initialization.
   auto Put = [&](char ch) -> void {
@@ -447,7 +449,9 @@ static RT_API_ATTRS ScannedRealInput ScanRealInput(
     }
     // In list-directed input, a bad exponent is not consumed.
     auto nextBeforeExponent{next};
-    auto startExponent{io.GetConnectionState().positionInRecord};
+    const ConnectionState &connection{io.GetConnectionState()};
+    auto leftTabLimit{connection.leftTabLimit.value_or(0)};
+    auto startExponent{connection.positionInRecord - leftTabLimit};
     bool hasGoodExponent{false};
     if (next) {
       if (isHexadecimal) {
@@ -534,7 +538,7 @@ static RT_API_ATTRS ScannedRealInput ScanRealInput(
       next = io.NextInField(remaining, edit);
     }
     if (!next || *next == ')') { // NextInField fails on separators like ')'
-      std::size_t byteCount{0};
+      std::size_t byteCount{1};
       if (!next) {
         next = io.GetCurrentChar(byteCount);
       }
@@ -663,6 +667,7 @@ static RT_API_ATTRS bool TryFastPathRealDecimalInput(
   *reinterpret_cast<decimal::BinaryFloatingPointNumber<PRECISION> *>(n) =
       converted.binary;
   io.HandleRelativePosition(p - str);
+  io.GotChar(p - str);
   // Set FP exception flags
   if (converted.flags != decimal::ConversionResultFlags::Exact) {
     RaiseFPExceptions(converted.flags);
@@ -937,8 +942,8 @@ RT_API_ATTRS bool EditLogicalInput(
         edit.descriptor);
     return false;
   }
-  Fortran::common::optional<int> remaining{io.CueUpInput(edit)};
-  Fortran::common::optional<char32_t> next{io.NextInField(remaining, edit)};
+  common::optional<int> remaining{io.CueUpInput(edit)};
+  common::optional<char32_t> next{io.NextInField(remaining, edit)};
   if (next && *next == '.') { // skip optional period
     next = io.NextInField(remaining, edit);
   }
@@ -1120,7 +1125,7 @@ RT_API_ATTRS bool EditCharacterInput(IoStatementState &io, const DataEdit &edit,
         --skipChars;
       } else {
         char32_t buffer{0};
-        std::memcpy(&buffer, input, chunkBytes);
+        runtime::memcpy(&buffer, input, chunkBytes);
         if ((sizeof *x == 1 && buffer > 0xff) ||
             (sizeof *x == 2 && buffer > 0xffff)) {
           *x++ = '?';
@@ -1147,7 +1152,7 @@ RT_API_ATTRS bool EditCharacterInput(IoStatementState &io, const DataEdit &edit,
         chunkBytes = std::min<std::size_t>(remainingChars, readyBytes);
         chunkBytes = std::min<std::size_t>(lengthChars, chunkBytes);
         chunkChars = chunkBytes;
-        std::memcpy(x, input, chunkBytes);
+        runtime::memcpy(x, input, chunkBytes);
         x += chunkBytes;
         lengthChars -= chunkChars;
       }

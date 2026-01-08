@@ -1,4 +1,4 @@
-// RUN: cir-opt %s | FileCheck %s
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
 !s32i = !cir.int<s, 32>
 
 cir.func @s0() {
@@ -21,7 +21,7 @@ cir.func @s0() {
   cir.return
 }
 
-// CHECK: cir.switch (%0 : !s32i) {
+// CHECK: cir.switch(%0 : !s32i) {
 // CHECK-NEXT: cir.case(default, [])  {
 // CHECK-NEXT:   cir.return
 // CHECK-NEXT: }
@@ -32,6 +32,36 @@ cir.func @s0() {
 // CHECK-NEXT:   cir.break
 // CHECK-NEXT: }
 // CHECK-NEXT: cir.case(equal, [#cir.int<5> : !s32i])  {
+// CHECK-NEXT:   cir.yield
+// CHECK-NEXT: }
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: }
+
+
+// Pretends that this is lowered from a C file and was tagged with allEnumCasesCovered = true
+cir.func @s1(%1 : !s32i) {
+  cir.switch (%1 : !s32i) all_enum_cases_covered {
+    cir.case (default, []) {
+      cir.return
+    }
+    cir.case (equal, [#cir.int<1> : !s32i]) {
+      cir.yield
+    }
+    cir.case (equal, [#cir.int<2> : !s32i]) {
+      cir.yield
+    }
+    cir.yield
+  } { }
+  cir.return
+} 
+// CHECK: cir.switch(%[[ARG:.*]] : !s32i) all_enum_cases_covered {
+// CHECK-NEXT: cir.case(default, []) {
+// CHECK-NEXT:   cir.return
+// CHECK-NEXT: }
+// CHECK-NEXT: cir.case(equal, [#cir.int<1> : !s32i]) {
+// CHECK-NEXT:   cir.yield
+// CHECK-NEXT: }
+// CHECK-NEXT: cir.case(equal, [#cir.int<2> : !s32i]) {
 // CHECK-NEXT:   cir.yield
 // CHECK-NEXT: }
 // CHECK-NEXT: cir.yield

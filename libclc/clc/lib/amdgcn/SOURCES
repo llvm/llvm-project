@@ -5,4 +5,6 @@ workitem/clc_get_global_offset.cl
 workitem/clc_get_global_size.cl
 workitem/clc_get_group_id.cl
 workitem/clc_get_local_id.cl
+workitem/clc_get_local_size.cl
+workitem/clc_get_max_sub_group_size.cl
 workitem/clc_get_work_dim.cl

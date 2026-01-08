@@ -10,7 +10,7 @@ define void @test() {
 ; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr i32, ptr null, i64 33
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX13]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr i32, ptr null, i64 60
-; CHECK-NEXT:    [[TMP8:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr null, i32 4, <8 x i1> <i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x i32> poison)
+; CHECK-NEXT:    [[TMP8:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr align 4 null, <8 x i1> <i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x i32> poison)
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x i32> [[TMP8]], <8 x i32> poison, <2 x i32> <i32 0, i32 7>
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[ARRAYIDX22]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[TMP2]], i32 2
@@ -71,7 +71,7 @@ define void @test1() {
 ; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr i32, ptr null, i64 33
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX13]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr i32, ptr null, i64 60
-; CHECK-NEXT:    [[TMP8:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr null, i32 4, <8 x i1> <i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x i32> poison)
+; CHECK-NEXT:    [[TMP8:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr align 4 null, <8 x i1> <i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x i32> poison)
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x i32> [[TMP8]], <8 x i32> poison, <2 x i32> <i32 0, i32 7>
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[ARRAYIDX22]], align 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> poison, i32 [[TMP2]], i32 2
@@ -134,7 +134,7 @@ define void @test_div() {
 ; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr i32, ptr null, i64 33
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX13]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr i32, ptr null, i64 60
-; CHECK-NEXT:    [[TMP8:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr null, i32 4, <8 x i1> <i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x i32> poison)
+; CHECK-NEXT:    [[TMP8:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr align 4 null, <8 x i1> <i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x i32> poison)
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP8]], <8 x i32> poison, <2 x i32> <i32 0, i32 7>
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[ARRAYIDX22]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[TMP2]], i32 2
@@ -195,7 +195,7 @@ define void @test_rem() {
 ; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr i32, ptr null, i64 33
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX13]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr i32, ptr null, i64 60
-; CHECK-NEXT:    [[TMP8:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr null, i32 4, <8 x i1> <i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x i32> poison)
+; CHECK-NEXT:    [[TMP8:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr align 4 null, <8 x i1> <i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x i32> poison)
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP8]], <8 x i32> poison, <2 x i32> <i32 0, i32 7>
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[ARRAYIDX22]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[TMP2]], i32 2

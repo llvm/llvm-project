@@ -14,8 +14,8 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/Diagnostics.h"
-#include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "mlir/Bindings/Python/Nanobind.h"
+#include "mlir/Bindings/Python/NanobindAdaptors.h"
 
 namespace nb = nanobind;
 
@@ -67,12 +67,20 @@ static void populateTransformInterpreterSubmodule(nb::module_ &m) {
         // root. This is awkward, but we don't have access to PyMlirContext
         // object here otherwise.
         nb::object obj = nb::cast(payloadRoot);
-        obj.attr("context").attr("_clear_live_operations_inside")(payloadRoot);
 
         MlirLogicalResult result = mlirTransformApplyNamedSequence(
             payloadRoot, transformRoot, transformModule, options.options);
-        if (mlirLogicalResultIsSuccess(result))
+        if (mlirLogicalResultIsSuccess(result)) {
+          // Even in cases of success, we might have diagnostics to report:
+          std::string msg;
+          if ((msg = scope.takeMessage()).size() > 0) {
+            fprintf(stderr,
+                    "Diagnostic generated while applying "
+                    "transform.named_sequence:\n%s",
+                    msg.data());
+          }
           return;
+        }
 
         throw nb::value_error(
             ("Failed to apply named transform sequence.\nDiagnostic message " +

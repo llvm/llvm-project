@@ -76,24 +76,62 @@ acc.loop {
 
 // -----
 
-// expected-error@+1 {{'acc.loop' op duplicate device_type found in gang attribute}}
+// expected-error@+1 {{'acc.loop' op duplicate device_type `none` found in gang attribute}}
 acc.loop {
   acc.yield
 } attributes {gang = [#acc.device_type<none>, #acc.device_type<none>]}
 
 // -----
 
-// expected-error@+1 {{'acc.loop' op duplicate device_type found in worker attribute}}
+// expected-error@+1 {{'acc.loop' op duplicate device_type `none` found in worker attribute}}
 acc.loop {
   acc.yield
 } attributes {worker = [#acc.device_type<none>, #acc.device_type<none>]}
 
 // -----
 
-// expected-error@+1 {{'acc.loop' op duplicate device_type found in vector attribute}}
+// expected-error@+1 {{'acc.loop' op duplicate device_type `none` found in vector attribute}}
 acc.loop {
   acc.yield
 } attributes {vector = [#acc.device_type<none>, #acc.device_type<none>]}
+
+// -----
+
+// expected-error@+1 {{'acc.loop' op duplicate device_type `nvidia` found in gang attribute}}
+acc.loop {
+  acc.yield
+} attributes {gang = [#acc.device_type<nvidia>, #acc.device_type<nvidia>]}
+
+// -----
+
+// expected-error@+1 {{'acc.loop' op duplicate device_type `none` found in collapseDeviceType attribute}}
+acc.loop {
+  acc.yield
+} attributes {collapse = [1, 1], collapseDeviceType = [#acc.device_type<none>, #acc.device_type<none>], independent = [#acc.device_type<none>]}
+
+// -----
+
+%i64value = arith.constant 1 : i64
+// expected-error@+1 {{'acc.loop' op duplicate device_type `none` found in workerNumOperandsDeviceType attribute}}
+acc.loop worker(%i64value: i64, %i64value: i64) {
+  acc.yield
+} attributes {workerNumOperandsDeviceType = [#acc.device_type<none>, #acc.device_type<none>], independent = [#acc.device_type<none>]}
+
+// -----
+
+%i64value = arith.constant 1 : i64
+// expected-error@+1 {{'acc.loop' op duplicate device_type `none` found in vectorOperandsDeviceType attribute}}
+acc.loop vector(%i64value: i64, %i64value: i64) {
+  acc.yield
+} attributes {vectorOperandsDeviceType = [#acc.device_type<none>, #acc.device_type<none>], independent = [#acc.device_type<none>]}
+
+// -----
+
+func.func @acc_routine_parallelism() -> () {
+  return
+}
+// expected-error@+1 {{only one of `gang`, `worker`, `vector`, `seq` can be present at the same time for device_type `nvidia`}}
+"acc.routine"() <{func_name = @acc_routine_parallelism, sym_name = "acc_routine_parallelism_rout", gang = [#acc.device_type<nvidia>], worker = [#acc.device_type<nvidia>]}> : () -> ()
 
 // -----
 
@@ -483,12 +521,12 @@ acc.loop gang({static=%i64Value: i64, ) control(%iv : i32) = (%1 : i32) to (%2 :
 
 // -----
 
-func.func @fct1(%0 : !llvm.ptr) -> () {
-  // expected-error@+1 {{expected symbol reference @privatization_i32 to point to a private declaration}}
-  acc.serial private(@privatization_i32 -> %0 : !llvm.ptr) {
-  }
-  return
-}
+%i1 = arith.constant 1 : i32
+%i2 = arith.constant 10 : i32
+// expected-error@+1 {{unstructured acc.loop must not have induction variables}}
+acc.loop control(%iv : i32) = (%i1 : i32) to (%i2 : i32) step (%i1 : i32) {
+  acc.yield
+} attributes {independent = [#acc.device_type<none>], unstructured}
 
 // -----
 
@@ -831,3 +869,90 @@ func.func @acc_loop_container() {
 %value = memref.alloc() : memref<f32>
 // expected-error @below {{invalid data clause modifiers: readonly}}
 %0 = acc.create varPtr(%value : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier readonly,zero,capture,always>}
+
+// -----
+
+func.func @fct1(%0 : !llvm.ptr) -> () {
+  // expected-error @below {{expected symbol reference @privatization_i32 to point to a private declaration}}
+  %priv = acc.private varPtr(%0 : !llvm.ptr) varType(i32) recipe(@privatization_i32) -> !llvm.ptr
+  return
+}
+
+// -----
+
+acc.private.recipe @privatization_i32 : !llvm.ptr init {
+^bb0(%arg0: !llvm.ptr):
+  %c1 = arith.constant 1 : i32
+  %c0 = arith.constant 0 : i32
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+  llvm.store %c0, %0 : i32, !llvm.ptr
+  acc.yield %0 : !llvm.ptr
+}
+
+func.func @fct1(%0 : !llvm.ptr) -> () {
+  %priv = acc.private varPtr(%0 : !llvm.ptr) varType(i32) recipe(@privatization_i32) -> !llvm.ptr
+  // expected-error @below {{expected firstprivate as defining op}}
+  acc.serial firstprivate(%priv : !llvm.ptr) {
+  }
+  return
+}
+
+// -----
+
+acc.private.recipe @privatization_i32 : !llvm.ptr init {
+^bb0(%arg0: !llvm.ptr):
+  %c1 = arith.constant 1 : i32
+  %c0 = arith.constant 0 : i32
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+  llvm.store %c0, %0 : i32, !llvm.ptr
+  acc.yield %0 : !llvm.ptr
+}
+
+func.func @fct1(%0 : !llvm.ptr) -> () {
+  %priv = acc.private varPtr(%0 : !llvm.ptr) varType(i32) recipe(@privatization_i32) -> !llvm.ptr
+  // expected-error @below {{op private operand appears more than once}}
+  acc.serial private(%priv, %priv : !llvm.ptr, !llvm.ptr) {
+  }
+  return
+}
+
+// -----
+
+func.func @fct1(%0 : !llvm.ptr) -> () {
+  // expected-error @below {{op recipe expected for private}}
+  %priv = acc.private varPtr(%0 : !llvm.ptr) varType(i32) -> !llvm.ptr
+  return
+}
+
+// -----
+
+func.func @fct1(%0 : !llvm.ptr) -> () {
+  // expected-error @below {{op recipe expected for firstprivate}}
+  %priv = acc.firstprivate varPtr(%0 : !llvm.ptr) varType(i32) -> !llvm.ptr
+  return
+}
+
+// -----
+
+func.func @fct1(%0 : !llvm.ptr) -> () {
+  // expected-error @below {{op recipe expected for reduction}}
+  %priv = acc.reduction varPtr(%0 : !llvm.ptr) varType(i32) -> !llvm.ptr
+  return
+}
+
+// -----
+
+func.func @verify_declare_enter(%arg0 : memref<i32>) {
+// expected-error @below {{expect valid declare data entry operation or acc.getdeviceptr as defining op}}
+  %0 = acc.declare_enter dataOperands(%arg0 : memref<i32>)
+  acc.declare_exit token(%0) dataOperands(%arg0 : memref<i32>)
+  return
+}
+
+func.func @verify_data(%arg0 : memref<i32>) {
+// expected-error @below {{expect data entry/exit operation or acc.getdeviceptr as defining op}}
+  acc.data dataOperands(%arg0 : memref<i32>) {
+    acc.terminator
+  }
+  return
+}

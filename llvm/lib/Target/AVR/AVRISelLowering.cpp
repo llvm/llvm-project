@@ -34,7 +34,7 @@ namespace llvm {
 
 AVRTargetLowering::AVRTargetLowering(const AVRTargetMachine &TM,
                                      const AVRSubtarget &STI)
-    : TargetLowering(TM), Subtarget(STI) {
+    : TargetLowering(TM, STI), Subtarget(STI) {
   // Set up the register classes.
   addRegisterClass(MVT::i8, &AVR::GPR8RegClass);
   addRegisterClass(MVT::i16, &AVR::DREGSRegClass);
@@ -505,10 +505,9 @@ SDValue AVRTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
   SDValue InChain = DAG.getEntryNode();
 
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
   for (SDValue const &Value : Op->op_values()) {
-    Entry.Node = Value;
-    Entry.Ty = Value.getValueType().getTypeForEVT(*DAG.getContext());
+    TargetLowering::ArgListEntry Entry(
+        Value, Value.getValueType().getTypeForEVT(*DAG.getContext()));
     Entry.IsSExt = IsSigned;
     Entry.IsZExt = !IsSigned;
     Args.push_back(Entry);

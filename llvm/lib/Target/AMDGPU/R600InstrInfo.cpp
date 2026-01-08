@@ -29,7 +29,7 @@ using namespace llvm;
 #include "R600GenInstrInfo.inc"
 
 R600InstrInfo::R600InstrInfo(const R600Subtarget &ST)
-  : R600GenInstrInfo(-1, -1), RI(), ST(ST) {}
+    : R600GenInstrInfo(ST, RI, -1, -1), RI(), ST(ST) {}
 
 bool R600InstrInfo::isVector(const MachineInstr &MI) const {
   return get(MI.getOpcode()).TSFlags & R600_InstFlag::VECTOR;
@@ -176,7 +176,7 @@ bool R600InstrInfo::usesVertexCache(unsigned Opcode) const {
 }
 
 bool R600InstrInfo::usesVertexCache(const MachineInstr &MI) const {
-  const MachineFunction *MF = MI.getParent()->getParent();
+  const MachineFunction *MF = MI.getMF();
   return !AMDGPU::isCompute(MF->getFunction().getCallingConv()) &&
          usesVertexCache(MI.getOpcode());
 }
@@ -186,7 +186,7 @@ bool R600InstrInfo::usesTextureCache(unsigned Opcode) const {
 }
 
 bool R600InstrInfo::usesTextureCache(const MachineInstr &MI) const {
-  const MachineFunction *MF = MI.getParent()->getParent();
+  const MachineFunction *MF = MI.getMF();
   return (AMDGPU::isCompute(MF->getFunction().getCallingConv()) &&
           usesVertexCache(MI.getOpcode())) ||
           usesTextureCache(MI.getOpcode());
@@ -948,7 +948,7 @@ bool R600InstrInfo::PredicateInstruction(MachineInstr &MI,
         .setReg(Pred[2].getReg());
     MI.getOperand(getOperandIdx(MI, R600::OpName::pred_sel_W))
         .setReg(Pred[2].getReg());
-    MachineInstrBuilder MIB(*MI.getParent()->getParent(), MI);
+    MachineInstrBuilder MIB(*MI.getMF(), MI);
     MIB.addReg(R600::PREDICATE_BIT, RegState::Implicit);
     return true;
   }
@@ -956,7 +956,7 @@ bool R600InstrInfo::PredicateInstruction(MachineInstr &MI,
   if (PIdx != -1) {
     MachineOperand &PMO = MI.getOperand(PIdx);
     PMO.setReg(Pred[2].getReg());
-    MachineInstrBuilder MIB(*MI.getParent()->getParent(), MI);
+    MachineInstrBuilder MIB(*MI.getMF(), MI);
     MIB.addReg(R600::PREDICATE_BIT, RegState::Implicit);
     return true;
   }

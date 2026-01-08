@@ -9,6 +9,7 @@
 #include "DiagTool.h"
 #include "DiagnosticNames.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"

@@ -16,7 +16,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
@@ -43,7 +42,7 @@ using Edge = std::pair<BasicBlock *, BasicBlock *>;
 static void partialOrderVisit(BasicBlock &Start,
                               std::function<bool(BasicBlock *)> Op) {
   PartialOrderingVisitor V(*Start.getParent());
-  V.partialOrderVisit(Start, Op);
+  V.partialOrderVisit(Start, std::move(Op));
 }
 
 // Returns the exact convergence region in the tree defined by `Node` for which
@@ -1114,7 +1113,7 @@ public:
 
   SPIRVStructurizer() : FunctionPass(ID) {}
 
-  virtual bool runOnFunction(Function &F) override {
+  bool runOnFunction(Function &F) override {
     bool Modified = false;
 
     // In LLVM, Switches are allowed to have several cases branching to the same

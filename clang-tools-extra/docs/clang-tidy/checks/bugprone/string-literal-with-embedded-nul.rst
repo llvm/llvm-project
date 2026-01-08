@@ -21,9 +21,9 @@ like this ``\0x42`` where the ``\0`` stands for the NUL character.
 Truncated literal
 -----------------
 
-String-like classes can manipulate strings with embedded NUL as they are keeping
-track of the bytes and the length. This is not the case for a ``char*``
-(NUL-terminated) string.
+String-like classes can manipulate strings with embedded NUL as they are
+keeping track of the bytes and the length. This is not the case for a
+``char*`` (NUL-terminated) string.
 
 A common mistake is to pass a string-literal with embedded NUL to a string
 constructor expecting a NUL-terminated string. The bytes after the first NUL

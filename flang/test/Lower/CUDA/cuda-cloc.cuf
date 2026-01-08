@@ -1,0 +1,19 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+module symbols
+  integer(4), device, target :: sdev(100)
+end module
+
+subroutine sub1
+  use iso_c_binding
+  use symbols
+  print*, c_loc(sdev)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub1()
+! CHECK: %[[ADDR:.*]] = fir.address_of(@_QMsymbolsEsdev) : !fir.ref<!fir.array<100xi32>>
+! CHECK: %[[EMBOX:.*]] = fir.embox %[[ADDR]](%{{.*}}) : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<100xi32>>
+! CHECK: %[[__ADDRESS:.*]] = fir.coordinate_of %{{.*}}, __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
+! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[EMBOX]] : (!fir.box<!fir.array<100xi32>>) -> !fir.ref<!fir.array<100xi32>>
+! CHECK: %[[CONV:.*]] = fir.convert %[[BOX_ADDR]] : (!fir.ref<!fir.array<100xi32>>) -> i64
+! CHECK: fir.store %[[CONV]] to %[[__ADDRESS]] : !fir.ref<i64>

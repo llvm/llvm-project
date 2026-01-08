@@ -54,7 +54,7 @@ protected:
   void UnregisterReadObject(IOObject::WaitableHandle handle) override;
   void UnregisterSignal(int signo, std::list<Callback>::iterator callback_it);
 
-  void Interrupt() override;
+  bool Interrupt() override;
 
 private:
   void ProcessReadObject(IOObject::WaitableHandle handle);

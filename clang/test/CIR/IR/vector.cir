@@ -1,4 +1,4 @@
-// RUN: cir-opt %s | FileCheck %s
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
 
 !s32i = !cir.int<s, 32>
 
@@ -23,6 +23,7 @@ cir.func @vec_int_test() {
   %0 = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a"]
   %1 = cir.alloca !cir.vector<3 x !s32i>, !cir.ptr<!cir.vector<3 x !s32i>>, ["b"]
   %2 = cir.alloca !cir.vector<2 x !s32i>, !cir.ptr<!cir.vector<2 x !s32i>>, ["c"]
+  %3 = cir.alloca !cir.vector<[1] x !s32i>, !cir.ptr<!cir.vector<[1] x !s32i>>, ["d"]
   cir.return
 }
 
@@ -30,6 +31,7 @@ cir.func @vec_int_test() {
 // CHECK:  %0 = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a"]
 // CHECK:  %1 = cir.alloca !cir.vector<3 x !s32i>, !cir.ptr<!cir.vector<3 x !s32i>>, ["b"]
 // CHECK:  %2 = cir.alloca !cir.vector<2 x !s32i>, !cir.ptr<!cir.vector<2 x !s32i>>, ["c"]
+// CHECK:  %3 = cir.alloca !cir.vector<[1] x !s32i>, !cir.ptr<!cir.vector<[1] x !s32i>>, ["d"]
 // CHECK:  cir.return
 // CHECK: }
 

@@ -113,7 +113,7 @@ public:
   virtual void EmitUnwindInfo(MCStreamer &Streamer, FrameInfo *FI,
                               bool HandlerData) const = 0;
 };
-}
-}
+} // namespace WinEH
+} // namespace llvm
 
 #endif

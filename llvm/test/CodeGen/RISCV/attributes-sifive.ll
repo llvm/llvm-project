@@ -1,5 +1,8 @@
 ;; Generate ELF attributes from llc.
 
+; RUN: llc -mtriple=riscv32 -mattr=+xsfvfwmaccqqq %s -o - | FileCheck --check-prefix=RV32XSFVFWMACCQQQ %s
+; RUN: llc -mtriple=riscv64 -mattr=+xsfvfwmaccqqq %s -o - | FileCheck --check-prefix=RV64XSFVFWMACCQQQ %s
+
 ; RUN: llc -mtriple=riscv32 -mattr=+xsfmm128t %s -o - | FileCheck --check-prefixes=CHECK,RV32XSFMM128T %s
 ; RUN: llc -mtriple=riscv32 -mattr=+xsfmm16t %s -o - | FileCheck --check-prefixes=CHECK,RV32XSFMM16T %s
 ; RUN: llc -mtriple=riscv32 -mattr=+xsfmm32a8i %s -o - | FileCheck --check-prefixes=CHECK,RV32XSFMM32A8I %s
@@ -22,6 +25,9 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+xsfmmbase %s -o - | FileCheck --check-prefixes=CHECK,RV64XSFMMBASE %s
 
 ; CHECK: .attribute 4, 16
+
+; RV32XSFVFWMACCQQQ: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvfbfmin1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0_xsfvfwmaccqqq1p0"
+; RV64XSFVFWMACCQQQ: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvfbfmin1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0_xsfvfwmaccqqq1p0"
 
 ; RV32XSFMM128T: .attribute 5, "rv32i2p1_zicsr2p0_zve32x1p0_zvl128b1p0_zvl256b1p0_zvl32b1p0_zvl512b1p0_zvl64b1p0_xsfmm128t0p6_xsfmmbase0p6"
 ; RV32XSFMM16T: .attribute 5, "rv32i2p1_zicsr2p0_zve32x1p0_zvl32b1p0_zvl64b1p0_xsfmm16t0p6_xsfmmbase0p6" 

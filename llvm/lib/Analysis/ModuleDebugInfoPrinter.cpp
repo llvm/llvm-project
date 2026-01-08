@@ -43,11 +43,19 @@ static void printModuleDebugInfo(raw_ostream &O, const Module *M,
   // filenames), so just print a few useful things.
   for (DICompileUnit *CU : Finder.compile_units()) {
     O << "Compile unit: ";
-    auto Lang = dwarf::LanguageString(CU->getSourceLanguage());
-    if (!Lang.empty())
-      O << Lang;
+
+    DISourceLanguageName Lang = CU->getSourceLanguage();
+    auto LangStr =
+        Lang.hasVersionedName()
+            ? dwarf::SourceLanguageNameString(
+                  static_cast<llvm::dwarf::SourceLanguageName>(Lang.getName()))
+            : dwarf::LanguageString(Lang.getName());
+
+    if (!LangStr.empty())
+      O << LangStr;
     else
-      O << "unknown-language(" << CU->getSourceLanguage() << ")";
+      O << "unknown-language(" << CU->getSourceLanguage().getName() << ")";
+
     printFile(O, CU->getFilename(), CU->getDirectory());
     O << '\n';
   }

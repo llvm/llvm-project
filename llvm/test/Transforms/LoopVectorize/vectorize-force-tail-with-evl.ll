@@ -37,12 +37,12 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; NO-VP-LABEL: @foo(
 ; NO-VP-NEXT:  entry:
 ; NO-VP-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP0]], 4
+; NO-VP-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP0]], 2
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], [[TMP8]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:
 ; NO-VP-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP14:%.*]] = mul nuw i64 [[TMP1]], 4
+; NO-VP-NEXT:    [[TMP14:%.*]] = shl nuw i64 [[TMP1]], 2
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP14]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label [[VECTOR_BODY:%.*]]

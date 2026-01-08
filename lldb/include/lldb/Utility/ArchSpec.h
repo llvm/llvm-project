@@ -327,6 +327,11 @@ public:
   ///  \return a boolean value.
   bool IsMIPS() const;
 
+  /// If NVPTX architecture return true.
+  ///
+  ///  \return a boolean value.
+  bool IsNVPTX() const;
+
   /// Returns a string representing current architecture as a target CPU for
   /// tools like compiler, disassembler etc.
   ///
@@ -564,6 +569,7 @@ protected:
 /// \return true if \a lhs is less than \a rhs
 bool operator<(const ArchSpec &lhs, const ArchSpec &rhs);
 bool operator==(const ArchSpec &lhs, const ArchSpec &rhs);
+bool operator!=(const ArchSpec &lhs, const ArchSpec &rhs);
 
 bool ParseMachCPUDashSubtypeTriple(llvm::StringRef triple_str, ArchSpec &arch);
 

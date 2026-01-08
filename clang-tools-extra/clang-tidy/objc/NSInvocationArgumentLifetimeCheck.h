@@ -1,4 +1,4 @@
-//===--- NSInvocationArgumentLifetimeCheck.h - clang-tidy -------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@ namespace clang::tidy::objc {
 /// argument object lifetimes.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/objc/nsinvocation-argument-lifetime.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/objc/nsinvocation-argument-lifetime.html
 class NSInvocationArgumentLifetimeCheck : public ClangTidyCheck {
 public:
   NSInvocationArgumentLifetimeCheck(StringRef Name, ClangTidyContext *Context)

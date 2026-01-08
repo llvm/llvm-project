@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -convert-gpu-to-nvvm='has-redux=1' -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -convert-gpu-to-nvvm='has-redux=1 allow-pattern-rollback=0' -split-input-file | FileCheck %s
 // RUN: mlir-opt %s -convert-gpu-to-nvvm='has-redux=1 allowed-dialects=func,arith,cf' -split-input-file | FileCheck %s
 // RUN: mlir-opt %s -convert-gpu-to-nvvm='has-redux=1 use-bare-ptr-memref-call-conv=1' -split-input-file | FileCheck %s --check-prefix=CHECK-BARE
 // RUN: mlir-opt %s -transform-interpreter | FileCheck %s
@@ -1109,3 +1110,84 @@ gpu.module @test_module_55 {
     func.return %result32, %result64 : f32, f64
   }
 }
+
+gpu.module @test_module_56 {
+  // CHECK: gpu.module @test_module_56
+
+  // CHECK-DAG: llvm.func @__nv_sincosf(f32, !llvm.ptr, !llvm.ptr)
+  // CHECK-DAG: llvm.func @__nv_sincos(f64, !llvm.ptr, !llvm.ptr)
+
+  // CHECK-LABEL: func @gpu_sincos
+  // CHECK-SAME: %[[ARG_f16:.*]]: f16, %[[ARG_f32:.*]]: f32, %[[ARG_f64:.*]]: f64
+  func.func @gpu_sincos(%arg_f16 : f16, %arg_f32 : f32, %arg_f64 : f64) -> (f16, f16, f32, f32, f64, f64) {
+    // CHECK-COUNT-6: llvm.alloca
+    // CHECK: %[[ARG_f16_ext:.*]] = llvm.fpext %[[ARG_f16]] : f16 to f32
+    // CHECK: llvm.call @__nv_sincosf(%[[ARG_f16_ext]], %{{.+}}, %{{.+}}) : (f32, !llvm.ptr, !llvm.ptr) -> ()
+    // CHECK-COUNT-2: llvm.fptrunc
+    // CHECK: llvm.call @__nv_sincosf(%[[ARG_f32]], %{{.+}}, %{{.+}}) : (f32, !llvm.ptr, !llvm.ptr) -> ()
+    // CHECK: llvm.call @__nv_sincos(%[[ARG_f64]], %{{.+}}, %{{.+}}) : (f64, !llvm.ptr, !llvm.ptr) -> ()
+    %sin16, %cos16 = math.sincos %arg_f16 : f16
+    %sin32, %cos32 = math.sincos %arg_f32 : f32
+    %sin64, %cos64 = math.sincos %arg_f64 : f64
+    func.return %sin16, %cos16, %sin32, %cos32, %sin64, %cos64 : f16, f16, f32, f32, f64, f64
+  }
+
+  // CHECK: llvm.func @__nv_fast_sincosf(f32, !llvm.ptr, !llvm.ptr)
+
+  // CHECK-LABEL: func @gpu_sincos_fastmath
+  // CHECK-SAME: %[[ARG_f16:.*]]: f16, %[[ARG_f32:.*]]: f32, %[[ARG_f64:.*]]: f64
+  func.func @gpu_sincos_fastmath(%arg_f16 : f16, %arg_f32 : f32, %arg_f64 : f64) -> (f16, f16, f32, f32, f64, f64) {
+    // CHECK-COUNT-6: llvm.alloca
+    // CHECK: %[[ARG_f16_ext:.*]] = llvm.fpext %[[ARG_f16]] : f16 to f32
+    // CHECK: llvm.call @__nv_fast_sincosf(%[[ARG_f16_ext]], %{{.+}}, %{{.+}}) : (f32, !llvm.ptr, !llvm.ptr) -> ()
+    // CHECK-COUNT-2: llvm.fptrunc
+    // CHECK: llvm.call @__nv_fast_sincosf(%[[ARG_f32]], %{{.+}}, %{{.+}}) : (f32, !llvm.ptr, !llvm.ptr) -> ()
+    // CHECK: llvm.call @__nv_sincos(%[[ARG_f64]], %{{.+}}, %{{.+}}) : (f64, !llvm.ptr, !llvm.ptr) -> ()
+    %sin16, %cos16 = math.sincos %arg_f16 fastmath<afn> : f16
+    %sin32, %cos32 = math.sincos %arg_f32 fastmath<afn> : f32
+    %sin64, %cos64 = math.sincos %arg_f64 fastmath<afn> : f64
+    func.return %sin16, %cos16, %sin32, %cos32, %sin64, %cos64 : f16, f16, f32, f32, f64, f64
+  }
+}
+
+// -----
+
+gpu.module @test_module_cluster_size {
+  // CHECK-LABEL: llvm.func @kernel_with_cluster_size()
+  // CHECK-SAME: nvvm.cluster_dim = array<i32: 8, 2, 4>
+  gpu.func @kernel_with_cluster_size() kernel attributes {known_cluster_size = array<i32: 8, 2, 4>} {
+    gpu.return
+  }
+}
+
+// -----
+
+gpu.module @test_module_cluster_block_ops {
+// CHECK-LABEL: llvm.func @kernel_with_cluster_size(
+// CHECK-SAME: %[[ARG0:.*]]: !llvm.ptr)
+// CHECK-SAME: gpu.known_cluster_size = array<i32: 8, 4, 2>
+  gpu.func @kernel_with_cluster_size(%arg0: !llvm.ptr) kernel attributes {known_cluster_size = array<i32: 8, 4, 2>} {
+    // CHECK: nvvm.read.ptx.sreg.cluster.ctaid.x range <i32, 0, 8> : i32
+    %0 = gpu.cluster_block_id x
+    // CHECK: nvvm.read.ptx.sreg.cluster.ctaid.y range <i32, 0, 4> : i32
+    %1 = gpu.cluster_block_id y
+    // CHECK: nvvm.read.ptx.sreg.cluster.ctaid.z range <i32, 0, 2> : i32
+    %2 = gpu.cluster_block_id z
+    // CHECK: nvvm.read.ptx.sreg.cluster.nctaid.x range <i32, 1, 9> : i32
+    %3 = gpu.cluster_dim_blocks x
+    // CHECK: nvvm.read.ptx.sreg.cluster.nctaid.y range <i32, 1, 5> : i32
+    %4 = gpu.cluster_dim_blocks y
+    // CHECK: nvvm.read.ptx.sreg.cluster.nctaid.z range <i32, 1, 3> : i32
+    %5 = gpu.cluster_dim_blocks z
+
+    %6 = arith.addi %0, %1 : index
+    %7 = arith.addi %6, %2 : index
+    %8 = arith.addi %7, %3 : index
+    %9 = arith.addi %8, %4 : index
+    %10 = arith.addi %9, %5 : index
+    %11 = arith.index_cast %10 : index to i64
+    llvm.store %11, %arg0 : i64, !llvm.ptr
+    gpu.return
+  }
+}
+

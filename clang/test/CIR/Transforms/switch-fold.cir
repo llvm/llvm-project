@@ -27,7 +27,7 @@ module {
     cir.return
   }
   //CHECK: cir.func @foldCascade
-  //CHECK:   cir.switch (%[[COND:.*]] : !s32i) {
+  //CHECK:   cir.switch(%[[COND:.*]] : !s32i) {
   //CHECK-NEXT:     cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i]) {
   //CHECK-NEXT:       %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
   //CHECK-NEXT:       cir.store %[[TWO]], %[[ARG0:.*]] : !s32i, !cir.ptr<!s32i>
@@ -66,7 +66,7 @@ module {
     cir.return
   }
   //CHECK: @foldCascade2
-  //CHECK:   cir.switch (%[[COND2:.*]] : !s32i) {
+  //CHECK:   cir.switch(%[[COND2:.*]] : !s32i) {
   //CHECK:     cir.case(anyof, [#cir.int<0> : !s32i, #cir.int<2> : !s32i, #cir.int<4> : !s32i]) {
   //CHECK:       cir.break
   //cehck:     }
@@ -106,7 +106,7 @@ module {
     cir.return
   }
   //CHECK: cir.func @foldCascade3
-  //CHECK:   cir.switch (%[[COND3:.*]] : !s32i) {
+  //CHECK:   cir.switch(%[[COND3:.*]] : !s32i) {
   //CHECK:     cir.case(anyof, [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i]) {
   //CHECK:       cir.break
   //CHECK:    }
@@ -142,7 +142,7 @@ module {
     cir.return
   }
   //CHECK: cir.func @foldCascadeWithDefault
-  //CHECK:   cir.switch (%[[COND:.*]] : !s32i) {
+  //CHECK:   cir.switch(%[[COND:.*]] : !s32i) {
   //CHECK:      cir.case(equal, [#cir.int<3> : !s32i]) {
   //CHECK:        cir.break
   //CHECK:      }
@@ -187,7 +187,7 @@ module {
     cir.return
   }
   //CHECK: cir.func @foldAllCascade
-  //CHECK:   cir.switch (%[[COND:.*]] : !s32i) {
+  //CHECK:   cir.switch(%[[COND:.*]] : !s32i) {
   //CHECK:     cir.case(anyof, [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i]) {
   //CHECK:       cir.yield
   //CHECK:     }

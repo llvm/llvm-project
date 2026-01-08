@@ -17,7 +17,7 @@ object files.  Tools include an assembler, disassembler, bitcode analyzer, and
 bitcode optimizer.  It also contains basic regression tests.
 
 C-like languages use the `Clang <https://clang.llvm.org/>`_ front end.  This
-component compiles C, C++, Objective C, and Objective C++ code into LLVM bitcode
+component compiles C, C++, Objective-C, and Objective-C++ code into LLVM bitcode
 -- and from there into object files, using LLVM.
 
 Other components include:
@@ -43,13 +43,13 @@ Getting the Source Code and Building LLVM
      ``git clone --depth 1 https://github.com/llvm/llvm-project.git``
 
    * You are likely not interested in the user branches in the repo (used for
-     stacked pull-requests and reverts), you can filter them from your
+     stacked pull requests and reverts), you can filter them from your
      `git fetch` (or `git pull`) with this configuration:
 
-.. code-block:: console
-
-  git config --add remote.origin.fetch '^refs/heads/users/*'
-  git config --add remote.origin.fetch '^refs/heads/revert-*'
+   .. code-block:: console
+   
+     git config --add remote.origin.fetch '^refs/heads/users/*'
+     git config --add remote.origin.fetch '^refs/heads/revert-*'
 
 #. Configure and build LLVM and Clang:
 
@@ -416,7 +416,7 @@ The first step is to get a recent GCC toolchain installed. The most common
 distribution on which users have struggled with the version requirements is
 Ubuntu Precise, 12.04 LTS. For this distribution, one easy option is to install
 the `toolchain testing PPA`_ and use it to install a modern GCC. There is
-a really nice discussions of this on the `ask ubuntu stack exchange`_ and a
+a really nice discussion of this on the `ask ubuntu stack exchange`_ and a
 `github gist`_ with updated commands. However, not all users can use PPAs and
 there are many other distributions, so it may be necessary (or just useful, if
 you're here you *are* doing compiler development after all) to build and install
@@ -471,7 +471,7 @@ binaries:
 
 If you fail to set rpath, most LLVM binaries will fail on startup with a message
 from the loader similar to ``libstdc++.so.6: version `GLIBCXX_3.4.20' not
-found``. This means you need to tweak the -rpath linker flag.
+found``. This means you need to tweak the ``-rpath`` linker flag.
 
 This method will add an absolute path to the rpath of all executables. That's
 fine for local development. If you want to distribute the binaries you build
@@ -479,11 +479,11 @@ so that they can run on older systems, copy ``libstdc++.so.6`` into the
 ``lib/`` directory.  All of LLVM's shipping binaries have an rpath pointing at
 ``$ORIGIN/../lib``, so they will find ``libstdc++.so.6`` there.  Non-distributed
 binaries don't have an rpath set and won't find ``libstdc++.so.6``. Pass
-``-DLLVM_LOCAL_RPATH="$HOME/toolchains/lib64"`` to cmake to add an absolute
+``-DLLVM_LOCAL_RPATH="$HOME/toolchains/lib64"`` to CMake to add an absolute
 path to ``libstdc++.so.6`` as above. Since these binaries are not distributed,
 having an absolute local path is fine for them.
 
-When you build Clang, you will need to give *it* access to modern C++
+When you build Clang, you will need to give *it* access to a modern C++
 standard library in order to use it as your new host in part of a bootstrap.
 There are two easy ways to do this, either build (and install) libc++ along
 with Clang and then use it with the ``-stdlib=libc++`` compile and link flag,
@@ -502,7 +502,7 @@ The remainder of this guide is meant to get you up and running with LLVM and to
 give you some basic information about the LLVM environment.
 
 The later sections of this guide describe the `general layout`_ of the LLVM
-source tree, a `simple example`_ using the LLVM tool chain, and `links`_ to find
+source tree, a `simple example`_ using the LLVM toolchain, and `links`_ to find
 more information about LLVM or to get help via e-mail.
 
 Terminology and Notation
@@ -592,7 +592,7 @@ Compiling the LLVM Suite Source Code
 ------------------------------------
 
 Unlike with autotools, with CMake your build type is defined at configuration.
-If you want to change your build type, you can re-run cmake with the following
+If you want to change your build type, you can re-run CMake with the following
 invocation:
 
    .. code-block:: console
@@ -782,7 +782,7 @@ Generates system build files.
 
 - BuildingAJIT: Examples of the `BuildingAJIT tutorial
   <https://llvm.org/docs/tutorial/BuildingAJIT1.html>`_ that shows how LLVM’s
-  ORC JIT APIs interact with other parts of LLVM. It also, teaches how to
+  ORC JIT APIs interact with other parts of LLVM. It also teaches how to
   recombine them to build a custom JIT that is suited to your use-case.
 
 ``llvm/include``
@@ -869,7 +869,7 @@ share code among the `tools`_.
 Contains bindings for the LLVM compiler infrastructure to allow
 programs written in languages other than C or C++ to take advantage of the LLVM
 infrastructure.
-LLVM project provides language bindings for OCaml and Python.
+The LLVM project provides language bindings for OCaml and Python.
 
 ``llvm/projects``
 -----------------
@@ -1028,8 +1028,8 @@ Example with clang
 
    .. note::
 
-     Clang works just like GCC by default.  The standard -S and -c arguments
-     work as usual (producing a native .s or .o file, respectively).
+     Clang works just like GCC by default.  The standard ``-S`` and ``-c`` arguments
+     work as usual (producing a native ``.s`` or ``.o`` file, respectively).
 
 #. Next, compile the C file into an LLVM bitcode file:
 
@@ -1037,7 +1037,7 @@ Example with clang
 
      % clang -O3 -emit-llvm hello.c -c -o hello.bc
 
-   The -emit-llvm option can be used with the -S or -c options to emit an LLVM
+   The ``-emit-llvm`` option can be used with the ``-S`` or ``-c`` options to emit an LLVM
    ``.ll`` or ``.bc`` file (respectively) for the code.  This allows you to use
    the `standard LLVM tools <CommandGuide/index.html>`_ on the bitcode file.
 
@@ -1094,7 +1094,7 @@ Questions <FAQ.html>`_ page.
 
 If you are having problems with limited memory and build time, please try
 building with ``ninja`` instead of ``make``. Please consider configuring the
-following options with cmake:
+following options with CMake:
 
  * ``-G Ninja``
 

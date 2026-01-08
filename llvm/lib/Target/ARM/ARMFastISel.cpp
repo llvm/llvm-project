@@ -86,7 +86,7 @@ namespace {
   // All possible address modes, plus some.
 class Address {
 public:
-  using BaseKind = enum { RegBase, FrameIndexBase };
+  enum BaseKind { RegBase, FrameIndexBase };
 
 private:
   BaseKind Kind = RegBase;
@@ -2504,6 +2504,7 @@ bool ARMFastISel::SelectCall(const Instruction *I,
   // Set all unused physreg defs as dead.
   static_cast<MachineInstr *>(MIB)->setPhysRegsDeadExcept(UsedRegs, TRI);
 
+  diagnoseDontCall(*CI);
   return true;
 }
 

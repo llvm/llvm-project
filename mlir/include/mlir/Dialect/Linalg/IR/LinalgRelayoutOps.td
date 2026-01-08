@@ -35,7 +35,8 @@ class Linalg_RelayoutOp<string mnemonic, list<Trait> traits = []> :
         DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
         DestinationStyleOpInterface, LinalgRelayoutOpInterface,
         ConditionallySpeculatable, NoMemoryEffect,
-        DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+        DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
+          "reifyResultShapes"]>,
         TypesMatchWith<"result type matches type of dest",
                    "dest", "result",
                    "$_self">])> {
@@ -57,7 +58,14 @@ class Linalg_RelayoutOp<string mnemonic, list<Trait> traits = []> :
     /// tile factors.
     DenseMap<int64_t, OpFoldResult> getDimAndTileMapping();
 
-    /// Return the tile sizes as OpFoldResult.
+    /// Return the tile sizes as OpFoldResult(s). Note, for Ops that simply
+    /// define constants (e.g. `arith.constant`), this method returns
+    /// Value/result of the Op (as opposed to the corresponding constant
+    /// Attribute). E.g., for:
+    ///   %size = arith.constant 1 : i32
+    /// it will return %size, not 1. This is intended - replacing an SSA value
+    /// with a constant attribute would require updating the corresponding dim
+    /// from dynamic to static.
     SmallVector<OpFoldResult> getMixedTiles();
 
     /// Return the tile sizes as `int64_t`. If a tile size is dynamic
@@ -104,7 +112,7 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
     within [0, n).
      - The tiled dimensions (of size `inner_tiles`) are added to the end of the
      result tensor in the order in which they appear, i.e.
-     `shape(result)[rank(result) + i] = inner_tiles[i]` for `0 <= i < k`.
+     `shape(result)[rank(source) + i] = inner_tiles[i]` for `0 <= i < k`.
      - The following relationship for the tiled dimensions holds:
      `shape(result)[inner_dims_pos[i]] = shape(source)[inner_dims_pos[i]] / inner_tiles[i]`,
      where (⌈/⌉ indicates CeilDiv).
@@ -238,6 +246,14 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
                                     ArrayRef<int64_t> outputShape,
                                     ArrayRef<int64_t> outerDimsPerm,
                                     ArrayRef<OpFoldResult> innerTiles);
+
+    // Same as above function but here dynamic dimensions are assumed
+    // to require padding.
+    static bool requirePaddingValueStrict(ArrayRef<int64_t> inputShape,
+                                          ArrayRef<int64_t> innerDimsPos,
+                                          ArrayRef<int64_t> outputShape,
+                                          ArrayRef<int64_t> outerDimsPerm,
+                                          ArrayRef<OpFoldResult> innerTiles);
 
     static Value createDestinationTensor(OpBuilder &b, Location loc,
         Value source, ArrayRef<OpFoldResult> innerTileSizes,

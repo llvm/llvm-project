@@ -11,43 +11,59 @@ define void @test_pr58564(i16 %a, i1 %c.1, ptr %dst) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i16 [[A:%.*]], -6
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
 ; CHECK:       entry.split.us:
+; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[ENTRY_SPLIT_US_SPLIT_US:%.*]], label [[ENTRY_SPLIT_US_SPLIT:%.*]]
+; CHECK:       entry.split.us.split.us:
+; CHECK-NEXT:    br label [[LOOP_1_HEADER_US_US:%.*]]
+; CHECK:       loop.1.header.us.us:
+; CHECK-NEXT:    br label [[LOOP_1_HEADER_SPLIT_US_US_US:%.*]]
+; CHECK:       loop.1.header.split.us.us.us:
+; CHECK-NEXT:    br label [[LOOP_1_HEADER_SPLIT_US_SPLIT_US_SPLIT_US_SPLIT_US:%.*]]
+; CHECK:       loop.1.header.split.us.split.us.split.us.split.us:
+; CHECK-NEXT:    br label [[LOOP_1_HEADER_SPLIT_US_SPLIT_US_SPLIT_US:%.*]]
+; CHECK:       entry.split.us.split:
 ; CHECK-NEXT:    br label [[LOOP_1_HEADER_US:%.*]]
 ; CHECK:       loop.1.header.us:
 ; CHECK-NEXT:    br label [[LOOP_1_HEADER_SPLIT_US_US:%.*]]
-; CHECK:       loop.4.header.us2:
+; CHECK:       loop.4.header.us5:
 ; CHECK-NEXT:    br label [[LOOP_5_US6:%.*]]
-; CHECK:       loop.5.us3:
+; CHECK:       loop.5.us6:
 ; CHECK-NEXT:    [[IV_US7:%.*]] = phi i16 [ 0, [[LOOP_4_HEADER_US5:%.*]] ], [ [[IV_NEXT_US9:%.*]], [[LOOP_5_US6]] ]
 ; CHECK-NEXT:    [[GEP_US8:%.*]] = getelementptr inbounds ptr, ptr [[DST:%.*]], i16 [[IV_US7]]
 ; CHECK-NEXT:    store ptr null, ptr [[GEP_US8]], align 8
 ; CHECK-NEXT:    [[IV_NEXT_US9]] = add nuw nsw i16 [[IV_US7]], 1
 ; CHECK-NEXT:    [[EC_US10:%.*]] = icmp ne i16 [[IV_US7]], 10000
-; CHECK-NEXT:    br i1 [[EC_US10]], label [[LOOP_5_US6]], label [[LOOP_4_LATCH_US8:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       loop.4.latch.us8:
+; CHECK-NEXT:    br i1 [[EC_US10]], label [[LOOP_5_US6]], label [[LOOP_4_LATCH_US11:%.*]]
+; CHECK:       loop.4.latch.us11:
 ; CHECK-NEXT:    br label [[LOOP_1_LATCH_US:%.*]]
 ; CHECK:       loop.1.latch.us:
-; CHECK-NEXT:    br label [[LOOP_1_HEADER_US]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br label [[LOOP_1_HEADER_US]]
 ; CHECK:       loop.4.header.preheader.us:
-; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[LOOP_4_HEADER_PREHEADER_SPLIT1_US_SPLIT_US:%.*]], label [[LOOP_4_HEADER_PREHEADER_SPLIT1_US9:%.*]]
+; CHECK-NEXT:    br i1 false, label [[LOOP_4_HEADER_PREHEADER_SPLIT4_US_SPLIT_US:%.*]], label [[LOOP_4_HEADER_PREHEADER_SPLIT4_US15:%.*]]
 ; CHECK:       loop.1.header.split.us.us:
 ; CHECK-NEXT:    br label [[LOOP_1_HEADER_SPLIT_US_SPLIT_US14:%.*]]
-; CHECK:       loop.2.header.us.us:
+; CHECK:       loop.2.header.us.us12:
 ; CHECK-NEXT:    br label [[LOOP_2_HEADER_SPLIT_US_US_US13:%.*]]
 ; CHECK:       loop.2.latch.us.us:
-; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP_1_HEADER_SPLIT_US_SPLIT_US14]], label [[LOOP_4_HEADER_PREHEADER_SPLIT_US_US:%.*]], !llvm.loop [[LOOP3:![0-9]+]]
-; CHECK:       loop.2.header.split.us.us.us:
+; CHECK-NEXT:    br i1 false, label [[LOOP_2_HEADER_US_US12:%.*]], label [[LOOP_4_HEADER_PREHEADER_SPLIT_US_US:%.*]]
+; CHECK:       loop.2.header.split.us.us.us13:
+; CHECK-NEXT:    br label [[LOOP_2_HEADER_SPLIT_US_SPLIT_US3_US:%.*]]
+; CHECK:       loop.3.header.us.us1.us:
 ; CHECK-NEXT:    br label [[LOOP_3_LATCH_US_US2_US:%.*]]
-; CHECK:       loop.3.header.us.us.us:
+; CHECK:       loop.3.latch.us.us2.us:
 ; CHECK-NEXT:    br label [[LOOP_2_LATCH_SPLIT_US_US_US:%.*]]
-; CHECK:       loop.3.latch.us.us.us:
-; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP_3_LATCH_US_US2_US]], label [[LOOP_2_LATCH_SPLIT_US_US_US1:%.*]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       loop.2.latch.split.us.us.us:
+; CHECK-NEXT:    br label [[LOOP_2_LATCH_US_US:%.*]]
+; CHECK:       loop.2.header.split.us.split.us3.us:
 ; CHECK-NEXT:    br label [[LOOP_3_HEADER_US_US1_US:%.*]]
 ; CHECK:       loop.4.header.preheader.split.us.us:
-; CHECK-NEXT:    br label [[LOOP_2_HEADER_US_US12:%.*]]
-; CHECK:       loop.4.header.preheader.split1.us9:
+; CHECK-NEXT:    br label [[LOOP_4_HEADER_PREHEADER_US:%.*]]
+; CHECK:       loop.1.header.split.us.split.us14:
+; CHECK-NEXT:    br label [[LOOP_2_HEADER_US_US12]]
+; CHECK:       loop.4.header.preheader.split4.us15:
 ; CHECK-NEXT:    br label [[LOOP_4_HEADER_US5]]
-; CHECK:       loop.4.header.preheader.split1.us.split.us:
+; CHECK:       loop.4.header.preheader.split4.us.split.us:
+; CHECK-NEXT:    br label [[LOOP_4_HEADER_PREHEADER_SPLIT4_US:%.*]]
+; CHECK:       loop.1.header.split.us.split.us.split.us:
 ; CHECK-NEXT:    br label [[LOOP_1_HEADER_SPLIT_US_SPLIT_US:%.*]]
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[LOOP_1_HEADER:%.*]]
@@ -55,20 +71,36 @@ define void @test_pr58564(i16 %a, i1 %c.1, ptr %dst) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i16 [[A]], -6
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[LOOP_1_HEADER_SPLIT_US:%.*]], label [[LOOP_1_HEADER_SPLIT:%.*]]
 ; CHECK:       loop.1.header.split.us:
+; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP_1_HEADER_SPLIT_US_SPLIT_US_SPLIT:%.*]], label [[LOOP_1_HEADER_SPLIT_US_SPLIT:%.*]]
+; CHECK:       loop.1.header.split.us.split.us.split:
+; CHECK-NEXT:    br label [[LOOP_1_HEADER_SPLIT_US_SPLIT_US]]
+; CHECK:       loop.1.header.split.us.split.us:
+; CHECK-NEXT:    br label [[LOOP_2_HEADER_US_US:%.*]]
+; CHECK:       loop.2.header.us.us:
+; CHECK-NEXT:    br label [[LOOP_2_HEADER_SPLIT_US_US_US:%.*]]
+; CHECK:       loop.2.header.split.us.us.us:
+; CHECK-NEXT:    br label [[LOOP_2_HEADER_SPLIT_US_SPLIT_US_SPLIT_US_SPLIT_US:%.*]]
+; CHECK:       loop.2.header.split.us.split.us.split.us.split.us:
+; CHECK-NEXT:    br label [[LOOP_2_HEADER_SPLIT_US_SPLIT_US_SPLIT_US:%.*]]
+; CHECK:       loop.1.header.split.us.split:
 ; CHECK-NEXT:    br label [[LOOP_2_HEADER_US:%.*]]
 ; CHECK:       loop.2.header.us:
 ; CHECK-NEXT:    br label [[LOOP_2_HEADER_SPLIT_US_US:%.*]]
 ; CHECK:       loop.2.latch.us:
-; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP_2_HEADER_US]], label [[LOOP_4_HEADER_PREHEADER_SPLIT_US:%.*]], !llvm.loop [[LOOP3]]
+; CHECK-NEXT:    br i1 false, label [[LOOP_2_HEADER_US]], label [[LOOP_4_HEADER_PREHEADER_SPLIT_US:%.*]]
 ; CHECK:       loop.2.header.split.us.us:
+; CHECK-NEXT:    br label [[LOOP_2_HEADER_SPLIT_US_SPLIT_US3:%.*]]
+; CHECK:       loop.3.header.us.us1:
 ; CHECK-NEXT:    br label [[LOOP_3_LATCH_US_US2:%.*]]
-; CHECK:       loop.3.header.us.us:
+; CHECK:       loop.3.latch.us.us2:
 ; CHECK-NEXT:    br label [[LOOP_2_LATCH_SPLIT_US_US:%.*]]
-; CHECK:       loop.3.latch.us.us:
-; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP_3_LATCH_US_US2]], label [[LOOP_2_LATCH_SPLIT_US_US1:%.*]], !llvm.loop [[LOOP4]]
 ; CHECK:       loop.2.latch.split.us.us:
+; CHECK-NEXT:    br label [[LOOP_2_LATCH_US:%.*]]
+; CHECK:       loop.2.header.split.us.split.us3:
 ; CHECK-NEXT:    br label [[LOOP_3_HEADER_US_US1:%.*]]
 ; CHECK:       loop.4.header.preheader.split.us:
+; CHECK-NEXT:    br label [[LOOP_4_HEADER_PREHEADER:%.*]]
+; CHECK:       loop.2.header.split.us.split.us.split.us:
 ; CHECK-NEXT:    br label [[LOOP_2_HEADER_SPLIT_US_SPLIT_US:%.*]]
 ; CHECK:       loop.1.header.split:
 ; CHECK-NEXT:    br label [[LOOP_2_HEADER:%.*]]
@@ -76,11 +108,21 @@ define void @test_pr58564(i16 %a, i1 %c.1, ptr %dst) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i16 [[A]], -6
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP_2_HEADER_SPLIT_US:%.*]], label [[LOOP_2_HEADER_SPLIT:%.*]]
 ; CHECK:       loop.2.header.split.us:
+; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP_2_HEADER_SPLIT_US_SPLIT_US_SPLIT:%.*]], label [[LOOP_2_HEADER_SPLIT_US_SPLIT:%.*]]
+; CHECK:       loop.2.header.split.us.split.us.split:
+; CHECK-NEXT:    br label [[LOOP_2_HEADER_SPLIT_US_SPLIT_US]]
+; CHECK:       loop.2.header.split.us.split.us:
+; CHECK-NEXT:    br label [[LOOP_3_HEADER_US_US:%.*]]
+; CHECK:       loop.3.header.us.us:
+; CHECK-NEXT:    br label [[LOOP_3_LATCH_US_US:%.*]]
+; CHECK:       loop.3.latch.us.us:
+; CHECK-NEXT:    br label [[LOOP_3_HEADER_US_US]]
+; CHECK:       loop.2.header.split.us.split:
 ; CHECK-NEXT:    br label [[LOOP_3_HEADER_US:%.*]]
 ; CHECK:       loop.3.header.us:
 ; CHECK-NEXT:    br label [[LOOP_3_LATCH_US:%.*]]
 ; CHECK:       loop.3.latch.us:
-; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP_3_HEADER_US]], label [[LOOP_2_LATCH_SPLIT_US:%.*]], !llvm.loop [[LOOP4]]
+; CHECK-NEXT:    br label [[LOOP_2_LATCH_SPLIT_US:%.*]]
 ; CHECK:       loop.2.latch.split.us:
 ; CHECK-NEXT:    br label [[LOOP_2_LATCH:%.*]]
 ; CHECK:       loop.2.header.split:
@@ -92,18 +134,18 @@ define void @test_pr58564(i16 %a, i1 %c.1, ptr %dst) {
 ; CHECK-NEXT:    call void @clobber()
 ; CHECK-NEXT:    br label [[LOOP_3_LATCH]]
 ; CHECK:       loop.3.latch:
-; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP_3_HEADER]], label [[LOOP_2_LATCH_SPLIT:%.*]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP_3_HEADER]], label [[LOOP_2_LATCH_SPLIT:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       loop.2.latch.split:
 ; CHECK-NEXT:    br label [[LOOP_2_LATCH]]
 ; CHECK:       loop.2.latch:
-; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP_2_HEADER]], label [[LOOP_4_HEADER_PREHEADER_SPLIT:%.*]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP_2_HEADER]], label [[LOOP_4_HEADER_PREHEADER_SPLIT:%.*]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       loop.4.header.preheader.split:
-; CHECK-NEXT:    br label [[LOOP_2_HEADER_SPLIT_US_SPLIT_US]]
+; CHECK-NEXT:    br label [[LOOP_4_HEADER_PREHEADER]]
 ; CHECK:       loop.4.header.preheader:
 ; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP_4_HEADER_PREHEADER_SPLIT4_US_SPLIT:%.*]], label [[LOOP_4_HEADER_PREHEADER_SPLIT4:%.*]]
-; CHECK:       loop.4.header.preheader.split1.us.split:
-; CHECK-NEXT:    br label [[LOOP_1_HEADER_SPLIT_US_SPLIT_US]]
-; CHECK:       loop.4.header.preheader.split1.us:
+; CHECK:       loop.4.header.preheader.split4.us.split:
+; CHECK-NEXT:    br label [[LOOP_4_HEADER_PREHEADER_SPLIT4_US]]
+; CHECK:       loop.4.header.preheader.split4.us:
 ; CHECK-NEXT:    br label [[LOOP_4_HEADER_US:%.*]]
 ; CHECK:       loop.4.header.us:
 ; CHECK-NEXT:    br label [[LOOP_5_US:%.*]]
@@ -116,7 +158,7 @@ define void @test_pr58564(i16 %a, i1 %c.1, ptr %dst) {
 ; CHECK-NEXT:    br i1 [[EC_US]], label [[LOOP_5_US]], label [[LOOP_4_LATCH_US:%.*]]
 ; CHECK:       loop.4.latch.us:
 ; CHECK-NEXT:    br label [[LOOP_4_HEADER_US]]
-; CHECK:       loop.4.header.preheader.split1:
+; CHECK:       loop.4.header.preheader.split4:
 ; CHECK-NEXT:    br label [[LOOP_4_HEADER:%.*]]
 ; CHECK:       loop.4.header:
 ; CHECK-NEXT:    br label [[LOOP_5:%.*]]
@@ -126,11 +168,11 @@ define void @test_pr58564(i16 %a, i1 %c.1, ptr %dst) {
 ; CHECK-NEXT:    store ptr null, ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i16 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ne i16 [[IV]], 10000
-; CHECK-NEXT:    br i1 [[EC]], label [[LOOP_5]], label [[LOOP_4_LATCH:%.*]], !llvm.loop [[LOOP0]]
+; CHECK-NEXT:    br i1 [[EC]], label [[LOOP_5]], label [[LOOP_4_LATCH:%.*]]
 ; CHECK:       loop.4.latch:
 ; CHECK-NEXT:    br label [[LOOP_1_LATCH:%.*]]
 ; CHECK:       loop.1.latch:
-; CHECK-NEXT:    br label [[LOOP_1_HEADER]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br label [[LOOP_1_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
 ;
 entry:
   br label %loop.1.header

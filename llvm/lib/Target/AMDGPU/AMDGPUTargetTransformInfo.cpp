@@ -22,6 +22,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
@@ -606,13 +607,15 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
   case ISD::FSUB:
     if (ST->hasPackedFP32Ops() && SLT == MVT::f32)
       NElts = (NElts + 1) / 2;
+    if (ST->hasBF16PackedInsts() && SLT == MVT::bf16)
+      NElts = (NElts + 1) / 2;
     if (SLT == MVT::f64)
       return LT.first * NElts * get64BitInstrCost(CostKind);
 
     if (ST->has16BitInsts() && SLT == MVT::f16)
       NElts = (NElts + 1) / 2;
 
-    if (SLT == MVT::f32 || SLT == MVT::f16)
+    if (SLT == MVT::f32 || SLT == MVT::f16 || SLT == MVT::bf16)
       return LT.first * NElts * getFullRateInstrCost();
     break;
   case ISD::FDIV:
@@ -745,7 +748,9 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
   MVT::SimpleValueType SLT = LT.second.getScalarType().SimpleTy;
 
-  if ((ST->hasVOP3PInsts() && (SLT == MVT::f16 || SLT == MVT::i16)) ||
+  if ((ST->hasVOP3PInsts() &&
+       (SLT == MVT::f16 || SLT == MVT::i16 ||
+        (SLT == MVT::bf16 && ST->hasBF16PackedInsts()))) ||
       (ST->hasPackedFP32Ops() && SLT == MVT::f32))
     NElts = (NElts + 1) / 2;
 
@@ -1003,6 +1008,15 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
              DstAS == AMDGPUAS::FLAT_ADDRESS &&
              ST->hasGloballyAddressableScratch();
     }
+    case Intrinsic::amdgcn_workitem_id_y:
+    case Intrinsic::amdgcn_workitem_id_z: {
+      const Function *F = Intrinsic->getFunction();
+      bool HasUniformYZ =
+          ST->hasWavefrontsEvenlySplittingXDim(*F, /*RequitezUniformYZ=*/true);
+      std::optional<unsigned> ThisDimSize = ST->getReqdWorkGroupSize(
+          *F, IID == Intrinsic::amdgcn_workitem_id_y ? 1 : 2);
+      return !HasUniformYZ && (!ThisDimSize || *ThisDimSize != 1);
+    }
     default:
       return AMDGPU::isIntrinsicSourceOfDivergence(IID);
     }
@@ -1049,28 +1063,31 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
   // packed into a same wave which gives 1 and 0 after the division by 64
   // respectively.
   //
-  // FIXME: limit it to 1D kernels only, although that shall be possible
-  // to perform this optimization is the size of the X dimension is a power
-  // of 2, we just do not currently have infrastructure to query it.
+  // The X dimension doesn't reset within a wave if either both the Y
+  // and Z dimensions are of length 1, or if the X dimension's required
+  // size is a power of 2. Note, however, if the X dimension's maximum
+  // size is a power of 2 < the wavefront size, division by the wavefront
+  // size is guaranteed to yield 0, so this is also a no-reset case.
+  bool XDimDoesntResetWithinWaves = false;
+  if (auto *I = dyn_cast<Instruction>(V)) {
+    const Function *F = I->getFunction();
+    XDimDoesntResetWithinWaves = ST->hasWavefrontsEvenlySplittingXDim(*F);
+  }
   using namespace llvm::PatternMatch;
   uint64_t C;
   if (match(V, m_LShr(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
                       m_ConstantInt(C))) ||
       match(V, m_AShr(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
                       m_ConstantInt(C)))) {
-    const Function *F = cast<Instruction>(V)->getFunction();
-    return C >= ST->getWavefrontSizeLog2() &&
-           ST->getMaxWorkitemID(*F, 1) == 0 && ST->getMaxWorkitemID(*F, 2) == 0;
+    return C >= ST->getWavefrontSizeLog2() && XDimDoesntResetWithinWaves;
   }
 
   Value *Mask;
   if (match(V, m_c_And(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
                        m_Value(Mask)))) {
-    const Function *F = cast<Instruction>(V)->getFunction();
-    const DataLayout &DL = F->getDataLayout();
     return computeKnownBits(Mask, DL).countMinTrailingZeros() >=
                ST->getWavefrontSizeLog2() &&
-           ST->getMaxWorkitemID(*F, 1) == 0 && ST->getMaxWorkitemID(*F, 2) == 0;
+           XDimDoesntResetWithinWaves;
   }
 
   const ExtractValueInst *ExtValue = dyn_cast<ExtractValueInst>(V);
@@ -1224,45 +1241,122 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       (ScalarSize == 16 || ScalarSize == 8)) {
     // Larger vector widths may require additional instructions, but are
     // typically cheaper than scalarized versions.
-    unsigned NumVectorElts = cast<FixedVectorType>(SrcTy)->getNumElements();
-    unsigned RequestedElts =
-        count_if(Mask, [](int MaskElt) { return MaskElt != -1; });
-    unsigned EltsPerReg = 32 / ScalarSize;
-    if (RequestedElts == 0)
-      return 0;
-    switch (Kind) {
-    case TTI::SK_Broadcast:
-    case TTI::SK_Reverse:
-    case TTI::SK_PermuteSingleSrc: {
-      // With op_sel VOP3P instructions freely can access the low half or high
-      // half of a register, so any swizzle of two elements is free.
-      if (ST->hasVOP3PInsts() && ScalarSize == 16 && NumVectorElts == 2)
+    //
+    // We assume that shuffling at a register granularity can be done for free.
+    // This is not true for vectors fed into memory instructions, but it is
+    // effectively true for all other shuffling. The emphasis of the logic here
+    // is to assist generic transform in cleaning up / canonicalizing those
+    // shuffles.
+
+    // With op_sel VOP3P instructions freely can access the low half or high
+    // half of a register, so any swizzle of two elements is free.
+    if (auto *SrcVecTy = dyn_cast<FixedVectorType>(SrcTy)) {
+      unsigned NumSrcElts = SrcVecTy->getNumElements();
+      if (ST->hasVOP3PInsts() && ScalarSize == 16 && NumSrcElts == 2 &&
+          (Kind == TTI::SK_Broadcast || Kind == TTI::SK_Reverse ||
+           Kind == TTI::SK_PermuteSingleSrc))
         return 0;
-      unsigned NumPerms = alignTo(RequestedElts, EltsPerReg) / EltsPerReg;
-      // SK_Broadcast just reuses the same mask
-      unsigned NumPermMasks = Kind == TTI::SK_Broadcast ? 1 : NumPerms;
-      return NumPerms + NumPermMasks;
-    }
-    case TTI::SK_ExtractSubvector:
-    case TTI::SK_InsertSubvector: {
-      // Even aligned accesses are free
-      if (!(Index % 2))
-        return 0;
-      // Insert/extract subvectors only require shifts / extract code to get the
-      // relevant bits
-      return alignTo(RequestedElts, EltsPerReg) / EltsPerReg;
-    }
-    case TTI::SK_PermuteTwoSrc:
-    case TTI::SK_Splice:
-    case TTI::SK_Select: {
-      unsigned NumPerms = alignTo(RequestedElts, EltsPerReg) / EltsPerReg;
-      // SK_Select just reuses the same mask
-      unsigned NumPermMasks = Kind == TTI::SK_Select ? 1 : NumPerms;
-      return NumPerms + NumPermMasks;
     }
 
+    unsigned EltsPerReg = 32 / ScalarSize;
+    switch (Kind) {
+    case TTI::SK_Broadcast:
+      // A single v_perm_b32 can be re-used for all destination registers.
+      return 1;
+    case TTI::SK_Reverse:
+      // One instruction per register.
+      if (auto *DstVecTy = dyn_cast<FixedVectorType>(DstTy))
+        return divideCeil(DstVecTy->getNumElements(), EltsPerReg);
+      return InstructionCost::getInvalid();
+    case TTI::SK_ExtractSubvector:
+      if (Index % EltsPerReg == 0)
+        return 0; // Shuffling at register granularity
+      if (auto *DstVecTy = dyn_cast<FixedVectorType>(DstTy))
+        return divideCeil(DstVecTy->getNumElements(), EltsPerReg);
+      return InstructionCost::getInvalid();
+    case TTI::SK_InsertSubvector: {
+      auto *DstVecTy = dyn_cast<FixedVectorType>(DstTy);
+      if (!DstVecTy)
+        return InstructionCost::getInvalid();
+      unsigned NumDstElts = DstVecTy->getNumElements();
+      unsigned NumInsertElts = cast<FixedVectorType>(SubTp)->getNumElements();
+      unsigned EndIndex = Index + NumInsertElts;
+      unsigned BeginSubIdx = Index % EltsPerReg;
+      unsigned EndSubIdx = EndIndex % EltsPerReg;
+      unsigned Cost = 0;
+
+      if (BeginSubIdx != 0) {
+        // Need to shift the inserted vector into place. The cost is the number
+        // of destination registers overlapped by the inserted vector.
+        Cost = divideCeil(EndIndex, EltsPerReg) - (Index / EltsPerReg);
+      }
+
+      // If the last register overlap is partial, there may be three source
+      // registers feeding into it; that takes an extra instruction.
+      if (EndIndex < NumDstElts && BeginSubIdx < EndSubIdx)
+        Cost += 1;
+
+      return Cost;
+    }
+    case TTI::SK_Splice: {
+      auto *DstVecTy = dyn_cast<FixedVectorType>(DstTy);
+      if (!DstVecTy)
+        return InstructionCost::getInvalid();
+      unsigned NumElts = DstVecTy->getNumElements();
+      assert(NumElts == cast<FixedVectorType>(SrcTy)->getNumElements());
+      // Determine the sub-region of the result vector that requires
+      // sub-register shuffles / mixing.
+      unsigned EltsFromLHS = NumElts - Index;
+      bool LHSIsAligned = (Index % EltsPerReg) == 0;
+      bool RHSIsAligned = (EltsFromLHS % EltsPerReg) == 0;
+      if (LHSIsAligned && RHSIsAligned)
+        return 0;
+      if (LHSIsAligned && !RHSIsAligned)
+        return divideCeil(NumElts, EltsPerReg) - (EltsFromLHS / EltsPerReg);
+      if (!LHSIsAligned && RHSIsAligned)
+        return divideCeil(EltsFromLHS, EltsPerReg);
+      return divideCeil(NumElts, EltsPerReg);
+    }
     default:
       break;
+    }
+
+    if (!Mask.empty()) {
+      unsigned NumSrcElts = cast<FixedVectorType>(SrcTy)->getNumElements();
+
+      // Generically estimate the cost by assuming that each destination
+      // register is derived from sources via v_perm_b32 instructions if it
+      // can't be copied as-is.
+      //
+      // For each destination register, derive the cost of obtaining it based
+      // on the number of source registers that feed into it.
+      unsigned Cost = 0;
+      for (unsigned DstIdx = 0; DstIdx < Mask.size(); DstIdx += EltsPerReg) {
+        SmallVector<int, 4> Regs;
+        bool Aligned = true;
+        for (unsigned I = 0; I < EltsPerReg && DstIdx + I < Mask.size(); ++I) {
+          int SrcIdx = Mask[DstIdx + I];
+          if (SrcIdx == -1)
+            continue;
+          int Reg;
+          if (SrcIdx < (int)NumSrcElts) {
+            Reg = SrcIdx / EltsPerReg;
+            if (SrcIdx % EltsPerReg != I)
+              Aligned = false;
+          } else {
+            Reg = NumSrcElts + (SrcIdx - NumSrcElts) / EltsPerReg;
+            if ((SrcIdx - NumSrcElts) % EltsPerReg != I)
+              Aligned = false;
+          }
+          if (!llvm::is_contained(Regs, Reg))
+            Regs.push_back(Reg);
+        }
+        if (Regs.size() >= 2)
+          Cost += Regs.size() - 1;
+        else if (!Aligned)
+          Cost += 1;
+      }
+      return Cost;
     }
   }
 
@@ -1556,4 +1650,15 @@ unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) const {
     }
   }
   return BaseT::getNumberOfParts(Tp);
+}
+
+InstructionUniformity
+GCNTTIImpl::getInstructionUniformity(const Value *V) const {
+  if (isAlwaysUniform(V))
+    return InstructionUniformity::AlwaysUniform;
+
+  if (isSourceOfDivergence(V))
+    return InstructionUniformity::NeverUniform;
+
+  return InstructionUniformity::Default;
 }

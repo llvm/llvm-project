@@ -9,26 +9,25 @@ from mlir import runtime as rt
 from tools import nvgpucompiler
 
 MLIR_DYNAMIC = -9223372036854775808
+DUMP_ONLY = os.getenv("MLIR_NVDSL_PRINT_IR") == "1"
 
 
 def const(value: int, ty=None):
     ty = T.index() if ty is None else ty
-    if isinstance(value, ir.Value) and (
-        value.type.isinstance(value.type) or T.bool().isinstance(value.type)
-    ):
+    if isinstance(value, ir.Value):
         return value
     return arith.constant(ty, value)
 
 
 def get_type_size(ty):
-    if ir.MemRefType.isinstance(ty):
+    if isinstance(ty, ir.MemRefType):
         size = get_type_size(ty.element_type)
         for sz in ty.shape:
             size *= sz
         return size
-    if ir.FloatType.isinstance(ty):
+    if isinstance(ty, ir.FloatType):
         return ir.FloatType(ty).width // 8
-    if ir.IntegerType.isinstance(ty):
+    if isinstance(ty, ir.IntegerType):
         return ir.IntegerType(ty).width // 8
     raise NotImplementedError(ty)
 
@@ -84,9 +83,7 @@ class Mbarriers:
                 self.mbar_group_op, txcount_op, self.id_op, predicate=predicate
             )
         else:
-            nvgpu.mbarrier_arrive(
-                ir.Type.parse("!nvgpu.mbarrier.token"), self.mbar_group_op, self.id_op
-            )
+            nvgpu.mbarrier_arrive(self.mbar_group_op, self.id_op)
 
     def try_wait(self, phase: bool = False, ticks: int = 10000000):
         ticks_op = const(ticks)
@@ -144,7 +141,9 @@ class TMA:
             device_ptr,
         )
         self.tma_descriptor = nvgpu.TmaCreateDescriptorOp(
-            tma_descriptor_ty, device_unranked_memref, map(const, self.tma_box_shape)
+            tma_descriptor_ty,
+            device_unranked_memref,
+            list(map(const, self.tma_box_shape)),
         )
         return self.tma_descriptor.result
 
@@ -156,7 +155,7 @@ class TMA:
             dest,
             mbarrier.mbar_group_op,
             self.tma_descriptor,
-            coordinates=map(const, coords),
+            coordinates=list(map(const, coords)),
             mbarId=mbarrier.id_op,
             predicate=predicate,
         )
@@ -310,13 +309,10 @@ class NVDSL:
             @functools.wraps(func)
             def wrapper(*args, **kwargs):
                 launch_op = gpu.LaunchOp(
-                    None,
-                    [],
-                    *map(const, grid),
-                    *map(const, block),
-                    dynamicSharedMemorySize=arith.constant(T.i32(), smem),
+                    grid_size=grid,
+                    block_size=block,
+                    dynamic_shared_memory_size=arith.constant(T.i32(), smem),
                 )
-                launch_op.body.blocks.append(*([T.index()] * 12))
                 with ir.InsertionPoint(launch_op.body.blocks[0]):
                     result = func(*args, **kwargs)
                     gpu.terminator()
@@ -334,26 +330,26 @@ class NVDSL:
 
             def saveIR(module):
                 """Save generated IR"""
-                if True:  # self.saveIR:
-                    # print(mlir_nvgpu_module)
-                    original_stdout = sys.stdout
-                    with open("nvdsl.mlir", "w") as f:
-                        sys.stdout = f
-                        print(module)
-                        sys.stdout = original_stdout
+                original_stdout = sys.stdout
+                with open("nvdsl.mlir", "w") as f:
+                    sys.stdout = f
+                    print(module)
+                    sys.stdout = original_stdout
 
             def _binary_op(lhs, rhs, op: str, predAtt="") -> "ArithValue":
                 """Generate MLIR's Arith dialects binary operations."""
                 rhs = const(rhs)
-                if arith._is_float_type(lhs.type) and arith._is_float_type(rhs.type):
+                if isinstance(lhs.type, ir.FloatType) and isinstance(
+                    rhs.type, ir.FloatType
+                ):
                     op += "F"
                     if op.startswith("Cmp"):
                         predicateAttr = getattr(arith, f"CmpFPredicate").__dict__[
                             predAtt
                         ]
-                elif arith._is_integer_like_type(
-                    lhs.type
-                ) and arith._is_integer_like_type(lhs.type):
+                elif isinstance(
+                    lhs.type, (ir.IntegerType, ir.IndexType)
+                ) and isinstance(lhs.type, (ir.IntegerType, ir.IndexType)):
                     if op == "Div" or op == "Rem":
                         op += "U"
                     op += "I"
@@ -429,6 +425,9 @@ class NVDSL:
 
                 # Save IR in a file
                 # saveIR(module)
+                if DUMP_ONLY:
+                    print(module)
+                    return 0
 
                 # Verify the module
                 module.operation.verify()

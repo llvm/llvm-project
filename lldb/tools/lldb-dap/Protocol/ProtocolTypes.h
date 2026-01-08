@@ -22,14 +22,17 @@
 
 #include "Protocol/DAPTypes.h"
 #include "lldb/lldb-defines.h"
+#include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/JSON.h"
 #include <cstdint>
 #include <optional>
 #include <string>
 
-#define LLDB_DAP_INVALID_VARRERF UINT64_MAX
+#define LLDB_DAP_INVALID_VAR_REF INT64_MAX
 #define LLDB_DAP_INVALID_SRC_REF 0
+#define LLDB_DAP_INVALID_VALUE_LOC 0
+#define LLDB_DAP_INVALID_STACK_FRAME_ID UINT64_MAX
 
 namespace lldb_dap::protocol {
 
@@ -108,6 +111,84 @@ enum ChecksumAlgorithm : unsigned {
 };
 bool fromJSON(const llvm::json::Value &, ChecksumAlgorithm &, llvm::json::Path);
 llvm::json::Value toJSON(const ChecksumAlgorithm &);
+
+/// Some predefined types for the CompletionItem. Please note that not all
+/// clients have specific icons for all of them.
+enum CompletionItemType : unsigned {
+  eCompletionItemTypeMethod,
+  eCompletionItemTypeFunction,
+  eCompletionItemTypeConstructor,
+  eCompletionItemTypeField,
+  eCompletionItemTypeVariable,
+  eCompletionItemTypeClass,
+  eCompletionItemTypeInterface,
+  eCompletionItemTypeModule,
+  eCompletionItemTypeProperty,
+  eCompletionItemTypeUnit,
+  eCompletionItemTypeValue,
+  eCompletionItemTypeEnum,
+  eCompletionItemTypeKeyword,
+  eCompletionItemTypeSnippet,
+  eCompletionItemTypeText,
+  eCompletionItemTypeColor,
+  eCompletionItemTypeFile,
+  eCompletionItemTypeReference,
+  eCompletionItemTypeCustomColor,
+};
+bool fromJSON(const llvm::json::Value &, CompletionItemType &,
+              llvm::json::Path);
+llvm::json::Value toJSON(const CompletionItemType &);
+
+/// `CompletionItems` are the suggestions returned from the `completions`
+/// request.
+struct CompletionItem {
+  /// The label of this completion item. By default this is also the text that
+  /// is inserted when selecting this completion.
+  std::string label;
+
+  /// If text is returned and not an empty string, then it is inserted instead
+  /// of the label.
+  std::string text;
+
+  /// A string that should be used when comparing this item with other items. If
+  /// not returned or an empty string, the `label` is used instead.
+  std::string sortText;
+
+  /// A human-readable string with additional information about this item, like
+  /// type or symbol information.
+  std::string detail;
+
+  /// The item's type. Typically the client uses this information to render the
+  /// item in the UI with an icon.
+  std::optional<CompletionItemType> type;
+
+  /// Start position (within the `text` attribute of the `completions`
+  /// request) where the completion text is added. The position is measured in
+  /// UTF-16 code units and the client capability `columnsStartAt1` determines
+  /// whether it is 0- or 1-based. If the start position is omitted the text
+  /// is added at the location specified by the `column` attribute of the
+  /// `completions` request.
+  int64_t start = 0;
+
+  /// Length determines how many characters are overwritten by the completion
+  /// text and it is measured in UTF-16 code units. If missing the value 0 is
+  /// assumed which results in the completion text being inserted.
+  int64_t length = 0;
+
+  /// Determines the start of the new selection after the text has been
+  /// inserted (or replaced). `selectionStart` is measured in UTF-16 code
+  /// units and must be in the range 0 and length of the completion text. If
+  /// omitted the selection starts at the end of the completion text.
+  int64_t selectionStart = 0;
+
+  /// Determines the length of the new selection after the text has been
+  /// inserted (or replaced) and it is measured in UTF-16 code units. The
+  /// selection can not extend beyond the bounds of the completion text. If
+  /// omitted the length is assumed to be 0.
+  int64_t selectionLength = 0;
+};
+bool fromJSON(const llvm::json::Value &, CompletionItem &, llvm::json::Path);
+llvm::json::Value toJSON(const CompletionItem &);
 
 /// Describes one or more type of breakpoint a BreakpointMode applies to. This
 /// is a non-exhaustive enumeration and may expand as future breakpoint types
@@ -242,8 +323,11 @@ enum AdapterFeature : unsigned {
   /// The debug adapter supports the `terminateDebuggee` attribute on the
   /// `disconnect` request.
   eAdapterFeatureTerminateDebuggee,
+  /// The debug adapter supports the `supportsModuleSymbols` request.
+  /// This request is a custom request of lldb-dap.
+  eAdapterFeatureSupportsModuleSymbolsRequest,
   eAdapterFeatureFirst = eAdapterFeatureANSIStyling,
-  eAdapterFeatureLast = eAdapterFeatureTerminateDebuggee,
+  eAdapterFeatureLast = eAdapterFeatureSupportsModuleSymbolsRequest,
 };
 bool fromJSON(const llvm::json::Value &, AdapterFeature &, llvm::json::Path);
 llvm::json::Value toJSON(const AdapterFeature &);
@@ -380,7 +464,7 @@ struct Scope {
   /// remains suspended. See 'Lifetime of Object References' in the Overview
   /// section for details.
   ////
-  uint64_t variablesReference = LLDB_DAP_INVALID_VARRERF;
+  uint64_t variablesReference = LLDB_DAP_INVALID_VAR_REF;
 
   /// The number of named variables in this scope.
   /// The client can use this information to present the variables in a paged UI
@@ -925,6 +1009,129 @@ struct Variable {
 };
 llvm::json::Value toJSON(const Variable &);
 bool fromJSON(const llvm::json::Value &, Variable &, llvm::json::Path);
+
+enum ExceptionBreakMode : unsigned {
+  eExceptionBreakModeNever,
+  eExceptionBreakModeAlways,
+  eExceptionBreakModeUnhandled,
+  eExceptionBreakModeUserUnhandled,
+};
+llvm::json::Value toJSON(ExceptionBreakMode);
+
+struct ExceptionDetails {
+  /// Message contained in the exception.
+  std::string message;
+
+  /// Short type name of the exception object.
+  std::string typeName;
+
+  /// Fully-qualified type name of the exception object.
+  std::string fullTypeName;
+
+  /// An expression that can be evaluated in the current scope to obtain the
+  /// exception object.
+  std::string evaluateName;
+
+  /// Stack trace at the time the exception was thrown.
+  std::string stackTrace;
+
+  /// Details of the exception contained by this exception, if any.
+  std::vector<ExceptionDetails> innerException;
+};
+llvm::json::Value toJSON(const ExceptionDetails &);
+
+struct CompileUnit {
+  /// Path of compile unit.
+  std::string compileUnitPath;
+};
+llvm::json::Value toJSON(const CompileUnit &);
+
+/// Provides formatting information for a stack frame.
+struct StackFrameFormat {
+  /// Displays parameters for the stack frame.
+  bool parameters = false;
+
+  /// Displays the types of parameters for the stack frame.
+  bool parameterTypes = false;
+
+  /// Displays the names of parameters for the stack frame.
+  bool parameterNames = false;
+
+  /// Displays the values of parameters for the stack frame.
+  bool parameterValues = false;
+
+  /// Displays the line number of the stack frame.
+  bool line = false;
+
+  /// Displays the module of the stack frame.
+  bool module = false;
+
+  /// Includes all stack frames, including those the debug adapter might
+  /// otherwise hide.
+  bool includeAll = false;
+};
+bool fromJSON(const llvm::json::Value &, StackFrameFormat &, llvm::json::Path);
+
+/// A Stackframe contains the source location.
+struct StackFrame {
+  enum PresentationHint : unsigned {
+    ePresentationHintNone,
+    ePresentationHintNormal,
+    ePresentationHintLabel,
+    ePresentationHintSubtle,
+  };
+
+  /// An identifier for the stack frame. It must be unique across all threads.
+  /// This id can be used to retrieve the scopes of the frame with the `scopes`
+  /// request or to restart the execution of a stack frame.
+  lldb::tid_t id = LLDB_DAP_INVALID_STACK_FRAME_ID;
+
+  /// The name of the stack frame, typically a method name.
+  std::string name;
+
+  /// The source of the frame.
+  std::optional<Source> source;
+
+  /// The line within the source of the frame. If the source attribute is
+  /// missing or doesn't exist, `line` is 0 and should be ignored by the client.
+  uint32_t line = LLDB_INVALID_LINE_NUMBER;
+
+  /// Start position of the range covered by the stack frame. It is measured in
+  /// UTF-16 code units and the client capability `columnsStartAt1` determines
+  /// whether it is 0- or 1-based. If attribute `source` is missing or doesn't
+  /// exist, `column` is 0 and should be ignored by the client.
+  uint32_t column = LLDB_INVALID_COLUMN_NUMBER;
+
+  /// The end line of the range covered by the stack frame.
+  uint32_t endLine = LLDB_INVALID_LINE_NUMBER;
+
+  /// End position of the range covered by the stack frame. It is measured in
+  /// UTF-16 code units and the client capability `columnsStartAt1` determines
+  /// whether it is 0- or 1-based.
+  uint32_t endColumn = LLDB_INVALID_COLUMN_NUMBER;
+
+  /// Indicates whether this frame can be restarted with the `restartFrame`
+  /// request. Clients should only use this if the debug adapter supports the
+  /// `restart` request and the corresponding capability `supportsRestartFrame`
+  /// is true. If a debug adapter has this capability, then `canRestart`
+  /// defaults to `true` if the property is absent.
+  bool canRestart = false;
+
+  /// A memory reference for the current instruction pointer in this frame.
+  lldb::addr_t instructionPointerReference = LLDB_INVALID_ADDRESS;
+
+  /// The module associated with this frame, if any.
+  std::optional<std::string> moduleId;
+
+  /// A hint for how to present this frame in the UI. A value of `label` can be
+  /// used to indicate that the frame is an artificial frame that is used as a
+  /// visual label or separator. A value of `subtle` can be used to change the
+  /// appearance of a frame in a 'subtle' way. Values: 'normal', 'label',
+  /// 'subtle'
+  PresentationHint presentationHint = ePresentationHintNone;
+};
+llvm::json::Value toJSON(const StackFrame::PresentationHint &);
+llvm::json::Value toJSON(const StackFrame &);
 
 } // namespace lldb_dap::protocol
 

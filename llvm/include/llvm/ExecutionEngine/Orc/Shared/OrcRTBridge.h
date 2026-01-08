@@ -25,12 +25,13 @@ namespace rt {
 
 LLVM_ABI extern const char *SimpleExecutorDylibManagerInstanceName;
 LLVM_ABI extern const char *SimpleExecutorDylibManagerOpenWrapperName;
-LLVM_ABI extern const char *SimpleExecutorDylibManagerLookupWrapperName;
+LLVM_ABI extern const char *SimpleExecutorDylibManagerResolveWrapperName;
 
 LLVM_ABI extern const char *SimpleExecutorMemoryManagerInstanceName;
 LLVM_ABI extern const char *SimpleExecutorMemoryManagerReserveWrapperName;
-LLVM_ABI extern const char *SimpleExecutorMemoryManagerFinalizeWrapperName;
-LLVM_ABI extern const char *SimpleExecutorMemoryManagerDeallocateWrapperName;
+LLVM_ABI extern const char *SimpleExecutorMemoryManagerInitializeWrapperName;
+LLVM_ABI extern const char *SimpleExecutorMemoryManagerDeinitializeWrapperName;
+LLVM_ABI extern const char *SimpleExecutorMemoryManagerReleaseWrapperName;
 
 LLVM_ABI extern const char *ExecutorSharedMemoryMapperServiceInstanceName;
 LLVM_ABI extern const char *ExecutorSharedMemoryMapperServiceReserveWrapperName;
@@ -58,6 +59,8 @@ LLVM_ABI extern const char *MemoryReadStringsWrapperName;
 LLVM_ABI extern const char *RegisterEHFrameSectionAllocActionName;
 LLVM_ABI extern const char *DeregisterEHFrameSectionAllocActionName;
 
+LLVM_ABI extern const char *RegisterJITLoaderGDBAllocActionName;
+
 LLVM_ABI extern const char *RunAsMainWrapperName;
 LLVM_ABI extern const char *RunAsVoidFunctionWrapperName;
 LLVM_ABI extern const char *RunAsIntFunctionWrapperName;
@@ -66,17 +69,19 @@ using SPSSimpleExecutorDylibManagerOpenSignature =
     shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
                                                  shared::SPSString, uint64_t);
 
-using SPSSimpleExecutorDylibManagerLookupSignature =
-    shared::SPSExpected<shared::SPSSequence<shared::SPSExecutorSymbolDef>>(
-        shared::SPSExecutorAddr, shared::SPSExecutorAddr,
-        shared::SPSRemoteSymbolLookupSet);
+using SPSSimpleExecutorDylibManagerResolveSignature = shared::SPSExpected<
+    shared::SPSSequence<shared::SPSOptional<shared::SPSExecutorSymbolDef>>>(
+    shared::SPSExecutorAddr, shared::SPSRemoteSymbolLookupSet);
 
 using SPSSimpleExecutorMemoryManagerReserveSignature =
     shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
                                                  uint64_t);
-using SPSSimpleExecutorMemoryManagerFinalizeSignature =
-    shared::SPSError(shared::SPSExecutorAddr, shared::SPSFinalizeRequest);
-using SPSSimpleExecutorMemoryManagerDeallocateSignature = shared::SPSError(
+using SPSSimpleExecutorMemoryManagerInitializeSignature =
+    shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
+                                                 shared::SPSFinalizeRequest);
+using SPSSimpleExecutorMemoryManagerDeinitializeSignature = shared::SPSError(
+    shared::SPSExecutorAddr, shared::SPSSequence<shared::SPSExecutorAddr>);
+using SPSSimpleExecutorMemoryManagerReleaseSignature = shared::SPSError(
     shared::SPSExecutorAddr, shared::SPSSequence<shared::SPSExecutorAddr>);
 
 // ExecutorSharedMemoryMapperService
@@ -92,6 +97,18 @@ using SPSExecutorSharedMemoryMapperServiceDeinitializeSignature =
     shared::SPSError(shared::SPSExecutorAddr,
                      shared::SPSSequence<shared::SPSExecutorAddr>);
 using SPSExecutorSharedMemoryMapperServiceReleaseSignature = shared::SPSError(
+    shared::SPSExecutorAddr, shared::SPSSequence<shared::SPSExecutorAddr>);
+
+// SimpleNativeMemoryMap APIs.
+using SPSSimpleRemoteMemoryMapReserveSignature =
+    shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
+                                                 uint64_t);
+using SPSSimpleRemoteMemoryMapInitializeSignature =
+    shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
+                                                 shared::SPSFinalizeRequest);
+using SPSSimpleRemoteMemoryMapDeinitializeSignature = shared::SPSError(
+    shared::SPSExecutorAddr, shared::SPSSequence<shared::SPSExecutorAddr>);
+using SPSSimpleRemoteMemoryMapReleaseSignature = shared::SPSError(
     shared::SPSExecutorAddr, shared::SPSSequence<shared::SPSExecutorAddr>);
 
 using SPSRunAsMainSignature = int64_t(shared::SPSExecutorAddr,

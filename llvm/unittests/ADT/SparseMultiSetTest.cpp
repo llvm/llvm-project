@@ -13,7 +13,7 @@ using namespace llvm;
 
 namespace {
 
-typedef SparseMultiSet<unsigned> USet;
+using USet = SparseMultiSet<unsigned>;
 
 // Empty set tests.
 TEST(SparseMultiSetTest, EmptySet) {
@@ -211,7 +211,7 @@ struct Alt {
 };
 
 TEST(SparseMultiSetTest, AltStructSet) {
-  typedef SparseMultiSet<Alt> ASet;
+  using ASet = SparseMultiSet<Alt>;
   ASet Set;
   Set.setUniverse(10);
   Set.insert(Alt(1005));

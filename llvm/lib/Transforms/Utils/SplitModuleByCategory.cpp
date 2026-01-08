@@ -12,7 +12,6 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -21,7 +20,6 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 
 #include <map>
-#include <string>
 #include <utility>
 
 using namespace llvm;

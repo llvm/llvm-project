@@ -114,7 +114,7 @@ mlir::getControlFlowPredecessors(Value value) {
     if (!regionOp)
       return std::nullopt;
     // Add the control flow predecessor operands to the work list.
-    RegionSuccessor region(regionOp->getResults());
+    RegionSuccessor region(regionOp, regionOp->getResults());
     SmallVector<Value> predecessorOperands = getRegionPredecessorOperands(
         regionOp, region, opResult.getResultNumber());
     return predecessorOperands;

@@ -204,10 +204,10 @@ public:
       : getTTI(GTTI), getIRSI(GIRSI), getORE(GORE) {
     
     // Check that the DenseMap implementation has not changed.
-    assert(DenseMapInfo<unsigned>::getEmptyKey() == (unsigned)-1 &&
-           "DenseMapInfo<unsigned>'s empty key isn't -1!");
-    assert(DenseMapInfo<unsigned>::getTombstoneKey() == (unsigned)-2 &&
-           "DenseMapInfo<unsigned>'s tombstone key isn't -2!");
+    static_assert(DenseMapInfo<unsigned>::getEmptyKey() ==
+                  static_cast<unsigned>(-1));
+    static_assert(DenseMapInfo<unsigned>::getTombstoneKey() ==
+                  static_cast<unsigned>(-2));
   }
   bool run(Module &M);
 

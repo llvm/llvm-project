@@ -375,16 +375,12 @@ bool LTOCodeGenerator::determineTarget() {
   if (TargetMach)
     return true;
 
-  TripleStr = MergedModule->getTargetTriple().str();
-  llvm::Triple Triple(TripleStr);
-  if (TripleStr.empty()) {
-    TripleStr = sys::getDefaultTargetTriple();
-    MergedModule->setTargetTriple(Triple);
-  }
+  if (MergedModule->getTargetTriple().empty())
+    MergedModule->setTargetTriple(Triple(sys::getDefaultTargetTriple()));
 
   // create target machine from info for merged modules
   std::string ErrMsg;
-  MArch = TargetRegistry::lookupTarget(TripleStr, ErrMsg);
+  MArch = TargetRegistry::lookupTarget(MergedModule->getTargetTriple(), ErrMsg);
   if (!MArch) {
     emitError(ErrMsg);
     return false;
@@ -393,10 +389,10 @@ bool LTOCodeGenerator::determineTarget() {
   // Construct LTOModule, hand over ownership of module and target. Use MAttr as
   // the default set of features.
   SubtargetFeatures Features(join(Config.MAttrs, ""));
-  Features.getDefaultSubtargetFeatures(Triple);
+  Features.getDefaultSubtargetFeatures(MergedModule->getTargetTriple());
   FeatureStr = Features.getString();
   if (Config.CPU.empty())
-    Config.CPU = lto::getThinLTODefaultCPU(Triple);
+    Config.CPU = lto::getThinLTODefaultCPU(MergedModule->getTargetTriple());
 
   // If data-sections is not explicitly set or unset, set data-sections by
   // default to match the behaviour of lld and gold plugin.
@@ -412,7 +408,7 @@ bool LTOCodeGenerator::determineTarget() {
 std::unique_ptr<TargetMachine> LTOCodeGenerator::createTargetMachine() {
   assert(MArch && "MArch is not set!");
   return std::unique_ptr<TargetMachine>(MArch->createTargetMachine(
-      Triple(TripleStr), Config.CPU, FeatureStr, Config.Options,
+      MergedModule->getTargetTriple(), Config.CPU, FeatureStr, Config.Options,
       Config.RelocModel, std::nullopt, Config.CGOptLevel));
 }
 
@@ -549,6 +545,7 @@ void LTOCodeGenerator::finishOptimizationRemarks() {
   if (DiagnosticOutputFile) {
     DiagnosticOutputFile->keep();
     // FIXME: LTOCodeGenerator dtor is not invoked on Darwin
+    DiagnosticOutputFile.finalize();
     DiagnosticOutputFile->os().flush();
   }
 }

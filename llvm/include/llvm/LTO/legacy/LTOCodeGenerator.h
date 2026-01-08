@@ -239,13 +239,12 @@ private:
   std::string FeatureStr;
   std::string NativeObjectPath;
   const Target *MArch = nullptr;
-  std::string TripleStr;
   lto_diagnostic_handler_t DiagHandler = nullptr;
   void *DiagContext = nullptr;
   bool ShouldInternalize = EnableLTOInternalization;
   bool ShouldEmbedUselists = false;
   bool ShouldRestoreGlobalsLinkage = false;
-  std::unique_ptr<ToolOutputFile> DiagnosticOutputFile;
+  LLVMRemarkFileHandle DiagnosticOutputFile;
   std::unique_ptr<ToolOutputFile> StatsFile = nullptr;
   std::string SaveIRBeforeOptPath;
 

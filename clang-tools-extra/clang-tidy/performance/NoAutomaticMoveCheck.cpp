@@ -1,4 +1,4 @@
-//===--- NoAutomaticMoveCheck.cpp - clang-tidy ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -36,7 +36,7 @@ void NoAutomaticMoveCheck::registerMatchers(MatchFinder *Finder) {
                   isConstQualified(),
                   hasCanonicalType(matchers::isExpensiveToCopy()),
                   unless(hasDeclaration(namedDecl(
-                      matchers::matchesAnyListedName(AllowedTypes)))))))
+                      matchers::matchesAnyListedRegexName(AllowedTypes)))))))
           .bind("vardecl");
 
   // A matcher for a `DstT::DstT(const Src&)` where DstT also has a

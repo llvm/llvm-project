@@ -23,23 +23,23 @@
 using namespace llvm;
 
 static void check(remarks::Format SerializerFormat,
-                  remarks::SerializerMode Mode, ArrayRef<remarks::Remark> Rs,
-                  StringRef ExpectedR, std::optional<StringRef> ExpectedMeta,
+                  ArrayRef<remarks::Remark> Rs, StringRef ExpectedR,
+                  std::optional<StringRef> ExpectedMeta,
                   std::optional<remarks::StringTable> StrTab = std::nullopt) {
   std::string Buf;
   raw_string_ostream OS(Buf);
   Expected<std::unique_ptr<remarks::RemarkSerializer>> MaybeS = [&] {
     if (StrTab)
-      return createRemarkSerializer(SerializerFormat, Mode, OS,
-                                    std::move(*StrTab));
+      return createRemarkSerializer(SerializerFormat, OS, std::move(*StrTab));
     else
-      return createRemarkSerializer(SerializerFormat, Mode, OS);
+      return createRemarkSerializer(SerializerFormat, OS);
   }();
   EXPECT_FALSE(errorToBool(MaybeS.takeError()));
   std::unique_ptr<remarks::RemarkSerializer> S = std::move(*MaybeS);
 
   for (const remarks::Remark &R : Rs)
     S->emit(R);
+  S->finalize();
   EXPECT_EQ(OS.str(), ExpectedR);
 
   if (ExpectedMeta) {
@@ -54,8 +54,7 @@ static void check(remarks::Format SerializerFormat,
 static void check(remarks::Format SerializerFormat, const remarks::Remark &R,
                   StringRef ExpectedR, StringRef ExpectedMeta,
                   std::optional<remarks::StringTable> StrTab = std::nullopt) {
-  return check(SerializerFormat, remarks::SerializerMode::Separate,
-               ArrayRef(&R, &R + 1), ExpectedR, ExpectedMeta,
+  return check(SerializerFormat, ArrayRef(&R, &R + 1), ExpectedR, ExpectedMeta,
                std::move(StrTab));
 }
 
@@ -63,8 +62,7 @@ static void
 checkStandalone(remarks::Format SerializerFormat, const remarks::Remark &R,
                 StringRef ExpectedR,
                 std::optional<remarks::StringTable> StrTab = std::nullopt) {
-  return check(SerializerFormat, remarks::SerializerMode::Standalone,
-               ArrayRef(&R, &R + 1), ExpectedR,
+  return check(SerializerFormat, ArrayRef(&R, &R + 1), ExpectedR,
                /*ExpectedMeta=*/std::nullopt, std::move(StrTab));
 }
 
@@ -164,4 +162,34 @@ TEST(YAMLRemarks, SerializerRemarkParsedStrTabStandaloneNoStrTab) {
                 "    DebugLoc:        { File: argpath, Line: 6, Column: 7 }\n"
                 "...\n"),
       std::move(PreFilledStrTab));
+}
+
+TEST(YAMLRemarks, SerializerRemarkStringRefOOBRead) {
+  remarks::Remark R;
+  R.RemarkType = remarks::Type::Missed;
+  R.PassName = StringRef("passAAAA", 4);
+  R.RemarkName = StringRef("nameAAAA", 4);
+  R.FunctionName = StringRef("funcAAAA", 4);
+  R.Loc = remarks::RemarkLocation{StringRef("pathAAAA", 4), 3, 4};
+  R.Hotness = 5;
+  R.Args.emplace_back();
+  R.Args.back().Key = StringRef("keyAAAA", 3);
+  R.Args.back().Val = StringRef("valueAAAA", 5);
+  R.Args.emplace_back();
+  R.Args.back().Key = StringRef("keydebugAAAA", 8);
+  R.Args.back().Val = StringRef("valuedebugAAAA", 10);
+  R.Args.back().Loc =
+      remarks::RemarkLocation{StringRef("argpathAAAA", 7), 6, 7};
+  checkStandalone(remarks::Format::YAML, R,
+                  "--- !Missed\n"
+                  "Pass:            pass\n"
+                  "Name:            name\n"
+                  "DebugLoc:        { File: path, Line: 3, Column: 4 }\n"
+                  "Function:        func\n"
+                  "Hotness:         5\n"
+                  "Args:\n"
+                  "  - key:             value\n"
+                  "  - keydebug:        valuedebug\n"
+                  "    DebugLoc:        { File: argpath, Line: 6, Column: 7 }\n"
+                  "...\n");
 }

@@ -46,11 +46,11 @@ Languages, Libraries, and Standards
 Most source code in LLVM and other LLVM projects using these coding standards
 is C++ code. There are some places where C code is used either due to
 environment restrictions, historical restrictions, or due to third-party source
-code imported into the tree. Generally, our preference is for standards
-conforming, modern, and portable C++ code as the implementation language of
+code imported into the tree. Generally, our preference is for
+standards-conforming, modern, and portable C++ code as the implementation language of
 choice.
 
-For automation, build-systems, and utility scripts, Python is preferred and
+For automation, build systems, and utility scripts, Python is preferred and
 is widely used in the LLVM repository already.
 
 C++ Standard Versions
@@ -77,6 +77,12 @@ Each toolchain provides a good reference for what it accepts:
 
 Additionally, there are compiler comparison tables of supported C++ features on
 `cppreference.com <https://en.cppreference.com/w/cpp/compiler_support/17>`_.
+
+To keep track with the evolution of the standard, newer C++ versions can be used
+to build LLVM. However, our support focuses on the minimum supported C++
+version and a very recent standard may not yet be supported, or only using the
+latest version of the supported toolchains and possibly not across all the
+subprojects.
 
 
 C++ Standard Library
@@ -236,7 +242,7 @@ Comment Formatting
 
 In general, prefer C++-style comments (``//`` for normal comments, ``///`` for
 ``doxygen`` documentation comments).  There are a few cases when it is
-useful to use C-style (``/* */``) comments however:
+useful to use C-style (``/* */``) comments, however:
 
 #. When writing C code to be compatible with C89.
 
@@ -263,7 +269,7 @@ useful to use C-style (``/* */``) comments however:
 Commenting out large blocks of code is discouraged, but if you really have to do
 this (for documentation purposes or as a suggestion for debug printing), use
 ``#if 0`` and ``#endif``. These nest properly and are better behaved in general
-than C style comments.
+than C-style comments.
 
 Doxygen Use in Documentation Comments
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -365,7 +371,7 @@ Clear diagnostic messages are important to help users identify and fix issues in
 their inputs. Use succinct but correct English prose that gives the user the
 context needed to understand what went wrong. Also, to match error message
 styles commonly produced by other tools, start the first sentence with a
-lower-case letter, and finish the last sentence without a period, if it would
+lowercase letter, and finish the last sentence without a period, if it would
 end in one otherwise. Sentences which end with different punctuation, such as
 "did you forget ';'?", should still do so.
 
@@ -703,7 +709,7 @@ uses a more moderate stance. Use ``auto`` if and only if it makes the code more
 readable or easier to maintain. Don't "almost always" use ``auto``, but do use
 ``auto`` with initializers like ``cast<Foo>(...)`` or other places where the
 type is already obvious from the context. Another time when ``auto`` works well
-for these purposes is when the type would have been abstracted away anyways,
+for these purposes is when the type would have been abstracted away anyway,
 often behind a container's typedef such as ``std::vector<T>::iterator``.
 
 Similarly, C++14 adds generic lambda expressions where parameter types can be
@@ -754,7 +760,7 @@ Beware of non-deterministic sorting order of equal elements
 elements is not guaranteed to be preserved. Thus using ``std::sort`` for a
 container having equal elements may result in non-deterministic behavior.
 To uncover such instances of non-determinism, LLVM has introduced a new
-llvm::sort wrapper function. For an EXPENSIVE_CHECKS build this will randomly
+``llvm::sort`` wrapper function. For an ``EXPENSIVE_CHECKS`` build this will randomly
 shuffle the container before sorting. Default to using ``llvm::sort`` instead
 of ``std::sort``.
 
@@ -829,7 +835,7 @@ prototyped function or method, you don't need it.  In fact, for most cases, you
 simply don't need the definition of a class. And not ``#include``\ing speeds up
 compilation.
 
-It is easy to try to go too overboard on this recommendation, however.  You
+It is easy to try to go overboard on this recommendation, however.  You
 **must** include all of the header files that you are using --- you can include
 them either directly or indirectly through another header file.  To make sure
 that you don't accidentally forget to include a header file in your module
@@ -854,24 +860,37 @@ your private interface remains private and undisturbed by outsiders.
     It's okay to put extra implementation methods in a public class itself. Just
     make them private (or protected) and all is well.
 
-Use Namespace Qualifiers to Implement Previously Declared Functions
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Use Namespace Qualifiers to Define Previously Declared Symbols
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-When providing an out of line implementation of a function in a source file, do
-not open namespace blocks in the source file. Instead, use namespace qualifiers
-to help ensure that your definition matches an existing declaration. Do this:
+When providing an out-of-line definition for various symbols (variables,
+functions, opaque classes) in a source file, do not open namespace blocks in the
+source file. Instead, use namespace qualifiers to help ensure that your
+definition matches an existing declaration. Do this:
 
 .. code-block:: c++
 
   // Foo.h
   namespace llvm {
+  extern int FooVal;
   int foo(const char *s);
-  }
+
+  namespace detail {
+  class FooImpl;
+  } // namespace detail
+  } // namespace llvm
 
   // Foo.cpp
   #include "Foo.h"
   using namespace llvm;
+
+  int llvm::FooVal;
+
   int llvm::foo(const char *s) {
+    // ...
+  }
+
+  class detail::FooImpl {
     // ...
   }
 
@@ -1154,7 +1173,7 @@ In general, names should be in camel case (e.g. ``TextFileReader`` and
 
 * **Function names** should be verb phrases (as they represent actions), and
   command-like function should be imperative.  The name should be camel case,
-  and start with a lower-case letter (e.g. ``openFile()`` or ``isFoo()``).
+  and start with a lowercase letter (e.g. ``openFile()`` or ``isFoo()``).
 
 * **Enum declarations** (e.g. ``enum Foo {...}``) are types, so they should
   follow the naming conventions for types.  A common use for enums is as a
@@ -1179,7 +1198,7 @@ In general, names should be in camel case (e.g. ``TextFileReader`` and
       };
 
 As an exception, classes that mimic STL classes can have member names in STL's
-style of lower-case words separated by underscores (e.g. ``begin()``,
+style of lowercase words separated by underscores (e.g. ``begin()``,
 ``push_back()``, and ``empty()``). Classes that provide multiple
 iterators should add a singular prefix to ``begin()`` and ``end()``
 (e.g. ``global_begin()`` and ``use_begin()``).
@@ -1417,7 +1436,7 @@ please write the loop in the first form and add a comment indicating that you
 did it intentionally.
 
 Why do we prefer the second form (when correct)?  Writing the loop in the first
-form has two problems. First it may be less efficient than evaluating it at the
+form has two problems. First, it may be less efficient than evaluating it at the
 start of the loop.  In this case, the cost is probably minor --- a few extra
 loads every time through the loop.  However, if the base expression is more
 complex, then the cost can rise quickly.  I've seen loops where the end
@@ -1673,29 +1692,29 @@ faraway places in the file to tell that the function is local:
 Don't Use Braces on Simple Single-Statement Bodies of if/else/loop Statements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-When writing the body of an ``if``, ``else``, or for/while loop statement, we
-prefer to omit the braces to avoid unnecessary line noise. However, braces
-should be used in cases where the omission of braces harms the readability and
-maintainability of the code.
+When writing the body of an ``if``, ``else``, or ``for``/``while`` loop
+statement, we aim to reduce unnecessary line noise.
 
-We consider that readability is harmed when omitting the brace in the presence
-of a single statement that is accompanied by a comment (assuming the comment
-can't be hoisted above the ``if`` or loop statement, see below).
+**Omit braces when:**
 
-Similarly, braces should be used when a single-statement body is complex enough
-that it becomes difficult to see where the block containing the following
-statement began. An ``if``/``else`` chain or a loop is considered a single
-statement for this rule, and this rule applies recursively.
+*   The body consists of a single **simple** statement.
+*   The single statement is not preceded by a comment.
+    (Hoist comments above the control statement if you can.)
+*   An ``else`` clause, if present, also meets the above criteria (single
+    simple statement, no associated comments).
 
-This list is not exhaustive. For example, readability is also harmed if an
-``if``/``else`` chain does not use braced bodies for either all or none of its
-members, or has complex conditionals, deep nesting, etc. The examples below
-intend to provide some guidelines.
+**Use braces in all other cases, including:**
 
-Maintainability is harmed if the body of an ``if`` ends with a (directly or
-indirectly) nested ``if`` statement with no ``else``. Braces on the outer ``if``
-would help to avoid running into a "dangling else" situation.
+*   Multi-statement bodies
+*   Single-statement bodies with non-hoistable comments
+*   Complex single-statement bodies (e.g., deep nesting, complex nested
+    loops)
+*   Inconsistent bracing within ``if``/``else if``/``else`` chains (if one
+    block requires braces, all must)
+*   ``if`` statements ending with a nested ``if`` lacking an ``else`` (to
+    prevent "dangling else")
 
+The examples below provide guidelines for these cases:
 
 .. code-block:: c++
 
@@ -1784,6 +1803,12 @@ would help to avoid running into a "dangling else" situation.
       markAsIgnored(D);
   }
 
+Use Unix line endings for files
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Use Unix line endings for all files. CRLF line endings are allowed as an
+exception for test files that intend to test CRLF handling or when the file
+format requires it (like ``.bat`` or ``.rc`` files).
 
 See Also
 ========

@@ -378,3 +378,14 @@ func.func @check_matrixC_dim(%arg0: vector<4x4xf16>, %arg1: vector<2x2xf16>, %ar
   %d = nvgpu.mma.sync (%arg0, %arg1, %arg2) {mmaShape = [16, 8, 16]} : (vector<4x4xf16>, vector<2x2xf16>, vector<4xf16>) -> vector<2x2xf16>
   return %d : vector<2x2xf16>
 }
+
+// -----
+
+!desc = !nvgpu.tensormap.descriptor<tensor = memref<32x8xi8,3>, swizzle=none, l2promo = none, oob = zero, interleave = none>
+!mbarrier = !nvgpu.mbarrier.group<memorySpace = #gpu.address_space<workgroup>>
+func.func @tma_last_dim_bytes(%desc: !desc, %buffer: memref<32x8xi8,3>, %mbarrier: !mbarrier) {
+  %c0 = arith.constant 0 : index
+  // expected-error @+1 {{the bytes in the last dimension of the tensor map must be a multiple of 16}}
+  nvgpu.tma.async.load %desc[%c0, %c0], %mbarrier[%c0] to %buffer : !desc, !mbarrier -> memref<32x8xi8,3>
+  return
+}

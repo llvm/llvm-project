@@ -168,9 +168,8 @@ define void @loop2(ptr %A, ptr %B, ptr %C, float %x) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd <4 x float> [[TMP7]], [[WIDE_LOAD11]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP2]], <4 x float> [[TMP6]], <4 x float> [[TMP10]]
 ; CHECK-NEXT:    [[PREDPHI12:%.*]] = select <4 x i1> [[TMP3]], <4 x float> [[TMP7]], <4 x float> [[TMP11]]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP8]], i64 16
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[TMP8]], align 4, !alias.scope [[META9]], !noalias [[META11]]
-; CHECK-NEXT:    store <4 x float> [[PREDPHI12]], ptr [[TMP12]], align 4, !alias.scope [[META9]], !noalias [[META11]]
+; CHECK-NEXT:    store <4 x float> [[PREDPHI12]], ptr [[TMP9]], align 4, !alias.scope [[META9]], !noalias [[META11]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10000
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[EXIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]

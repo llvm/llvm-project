@@ -34,7 +34,7 @@ cl::opt<bool> llvm::DisableGISelLegalityCheck(
     cl::desc("Don't verify that MIR is fully legal between GlobalISel passes"),
     cl::Hidden);
 
-cl::opt<bool> VerboseVerifyLegalizerInfo(
+static cl::opt<bool> VerboseVerifyLegalizerInfo(
     "verbose-gisel-verify-legalizer-info",
     cl::desc("Print more information to dbgs about GlobalISel legalizer rules "
              "being verified"),

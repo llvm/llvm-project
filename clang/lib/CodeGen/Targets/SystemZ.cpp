@@ -145,8 +145,8 @@ public:
 
 bool SystemZABIInfo::isPromotableIntegerTypeForABI(QualType Ty) const {
   // Treat an enum type as its underlying type.
-  if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+  if (const auto *ED = Ty->getAsEnumDecl())
+    Ty = ED->getIntegerType();
 
   // Promotable integer types are required to be promoted by the ABI.
   if (ABIInfo::isPromotableIntegerTypeForABI(Ty))
@@ -193,11 +193,11 @@ llvm::Type *SystemZABIInfo::getFPArgumentType(QualType Ty,
     case BuiltinType::Float16:
       if (Size == 16)
         return llvm::Type::getHalfTy(getVMContext());
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case BuiltinType::Float:
       if (Size == 32)
         return llvm::Type::getFloatTy(getVMContext());
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case BuiltinType::Double:
       return llvm::Type::getDoubleTy(getVMContext());
     default:
@@ -208,10 +208,8 @@ llvm::Type *SystemZABIInfo::getFPArgumentType(QualType Ty,
 }
 
 QualType SystemZABIInfo::GetSingleElementType(QualType Ty) const {
-  const RecordType *RT = Ty->getAs<RecordType>();
-
-  if (RT && RT->isStructureOrClassType()) {
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+  const auto *RD = Ty->getAsRecordDecl();
+  if (RD && RD->isStructureOrClass()) {
     QualType Found;
 
     // If this is a C++ record, check the bases first.
@@ -452,10 +450,9 @@ ABIArgInfo SystemZABIInfo::classifyArgumentType(QualType Ty) const {
                                    /*ByVal=*/false);
 
   // Handle small structures.
-  if (const RecordType *RT = Ty->getAs<RecordType>()) {
+  if (const auto *RD = Ty->getAsRecordDecl()) {
     // Structures with flexible arrays have variable length, so really
     // fail the size test above.
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
     if (RD->hasFlexibleArrayMember())
       return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                      /*ByVal=*/false);
@@ -525,8 +522,7 @@ bool SystemZTargetCodeGenInfo::isVectorTypeBased(const Type *Ty,
   if (Ty->isVectorType() && Ctx.getTypeSize(Ty) / 8 >= 16)
       return true;
 
-  if (const auto *RecordTy = Ty->getAs<RecordType>()) {
-    const RecordDecl *RD = RecordTy->getOriginalDecl()->getDefinitionOrSelf();
+  if (const auto *RD = Ty->getAsRecordDecl()) {
     if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD))
       if (CXXRD->hasDefinition())
         for (const auto &I : CXXRD->bases())

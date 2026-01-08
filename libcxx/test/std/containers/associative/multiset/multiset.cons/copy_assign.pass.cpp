@@ -68,7 +68,7 @@ template <class Alloc, class AllocatorInvariant = NoOp>
 void test_alloc(const Alloc& lhs_alloc                   = Alloc(),
                 const Alloc& rhs_alloc                   = Alloc(),
                 AllocatorInvariant check_alloc_invariant = NoOp()) {
-  {   // Test empty/non-empy multiset combinations
+  {   // Test empty/non-empty multiset combinations
     { // assign from a non-empty container into an empty one
       using Set = std::multiset<int, std::less<int>, Alloc>;
 
@@ -216,7 +216,7 @@ void test_alloc(const Alloc& lhs_alloc                   = Alloc(),
       assert(std::next(orig.begin(), 3) == orig.end());
     }
     check_alloc_invariant();
-    { // Make a somewhat larget multiset to exercise the algorithm a bit
+    { // Make a somewhat larger multiset to exercise the algorithm a bit
       using Set = std::multiset<int, std::less<int>, Alloc>;
 
       Set orig(rhs_alloc);

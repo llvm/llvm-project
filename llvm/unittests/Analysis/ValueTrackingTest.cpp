@@ -905,12 +905,12 @@ TEST(ValueTracking, propagatesPoison) {
       {true, "call i32 @llvm.umin.i32(i32 %x, i32 %y)", 0},
       {true, "call i32 @llvm.bitreverse.i32(i32 %x)", 0},
       {true, "call i32 @llvm.bswap.i32(i32 %x)", 0},
-      {false, "call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %shamt)", 0},
-      {false, "call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %shamt)", 1},
-      {false, "call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %shamt)", 2},
-      {false, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 0},
-      {false, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 1},
-      {false, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 2},
+      {true, "call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %shamt)", 0},
+      {true, "call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %shamt)", 1},
+      {true, "call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %shamt)", 2},
+      {true, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 0},
+      {true, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 1},
+      {true, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 2},
       {true, "call float @llvm.sqrt.f32(float %fx)", 0},
       {true, "call float @llvm.powi.f32.i32(float %fx, i32 %x)", 0},
       {true, "call float @llvm.sin.f32(float %fx)", 0},
@@ -1089,6 +1089,16 @@ TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison) {
     EXPECT_FALSE(isGuaranteedNotToBeUndefOrPoison(V3));
     EXPECT_FALSE(isGuaranteedNotToBePoison(V3));
   }
+}
+
+TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison_splat) {
+  parseAssembly(
+      "define <4 x i32> @test(i32 noundef %x) {\n"
+      "  %ins = insertelement <4 x i32> poison, i32 %x, i32 0\n"
+      "  %A = shufflevector <4 x i32> %ins, <4 x i32> poison, <4 x i32> zeroinitializer\n"
+      "  ret <4 x i32> %A\n"
+      "}");
+  EXPECT_TRUE(isGuaranteedNotToBeUndefOrPoison(A));
 }
 
 TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison_assume) {
@@ -2687,9 +2697,9 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsGEPWithRange) {
   parseAssembly(
       "define void @test(ptr %p) {\n"
       "  %A = load i64, ptr %p, !range !{i64 64, i64 65536}\n"
-      "  %APtr = inttoptr i64 %A to float*"
-      "  %APtrPlus512 = getelementptr float, float* %APtr, i32 128\n"
-      "  %c = icmp ugt float* %APtrPlus512, inttoptr (i32 523 to float*)\n"
+      "  %APtr = inttoptr i64 %A to ptr"
+      "  %APtrPlus512 = getelementptr float, ptr %APtr, i32 128\n"
+      "  %c = icmp ugt ptr %APtrPlus512, inttoptr (i32 523 to ptr)\n"
       "  call void @llvm.assume(i1 %c)\n"
       "  ret void\n"
       "}\n"
@@ -2720,9 +2730,9 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsGEPWithRangeNoOverlap) {
   parseAssembly(
       "define void @test(ptr %p) {\n"
       "  %A = load i64, ptr %p, !range !{i64 32, i64 64}\n"
-      "  %APtr = inttoptr i64 %A to float*"
-      "  %APtrPlus512 = getelementptr float, float* %APtr, i32 128\n"
-      "  %c = icmp ugt float* %APtrPlus512, inttoptr (i32 523 to float*)\n"
+      "  %APtr = inttoptr i64 %A to ptr"
+      "  %APtrPlus512 = getelementptr float, ptr %APtr, i32 128\n"
+      "  %c = icmp ugt ptr %APtrPlus512, inttoptr (i32 523 to ptr)\n"
       "  call void @llvm.assume(i1 %c)\n"
       "  ret void\n"
       "}\n"

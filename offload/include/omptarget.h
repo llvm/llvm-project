@@ -77,6 +77,9 @@ enum tgt_map_type {
   // the structured region
   // This is an OpenMP extension for the sake of OpenACC support.
   OMP_TGT_MAPTYPE_OMPX_HOLD = 0x2000,
+  // Attach pointer and pointee, after processing all other maps.
+  // Applicable to map-entering directives. Does not change ref-count.
+  OMP_TGT_MAPTYPE_ATTACH = 0x4000,
   // descriptor for non-contiguous target-update
   OMP_TGT_MAPTYPE_NON_CONTIG = 0x100000000000,
   // member of struct, member given by [16 MSBs] - 1
@@ -91,6 +94,8 @@ enum OpenMPOffloadingDeclareTargetFlags {
   OMP_DECLARE_TARGET_INDIRECT = 0x08,
   /// This is an entry corresponding to a requirement to be registered.
   OMP_REGISTER_REQUIRES = 0x10,
+  /// Mark the entry global as being an indirect vtable.
+  OMP_DECLARE_TARGET_INDIRECT_VTABLE = 0x20,
 };
 
 enum TargetAllocTy : int32_t {
@@ -98,13 +103,8 @@ enum TargetAllocTy : int32_t {
   TARGET_ALLOC_HOST,
   TARGET_ALLOC_SHARED,
   TARGET_ALLOC_DEFAULT,
-  /// The allocation will not block on other streams.
-  TARGET_ALLOC_DEVICE_NON_BLOCKING,
+  TARGET_ALLOC_LAST = TARGET_ALLOC_DEFAULT
 };
-
-inline KernelArgsTy CTorDTorKernelArgs = {
-    1,       0, nullptr,   nullptr,   nullptr,   nullptr, nullptr,
-    nullptr, 0, {0, 0, 0}, {1, 0, 0}, {1, 0, 0}, 0};
 
 struct DeviceTy;
 
@@ -273,10 +273,13 @@ extern "C" {
 void ompx_dump_mapping_tables(void);
 int omp_get_num_devices(void);
 int omp_get_device_num(void);
+int omp_get_device_from_uid(const char *DeviceUid);
+const char *omp_get_uid_from_device(int DeviceNum);
 int omp_get_initial_device(void);
 void *omp_target_alloc(size_t Size, int DeviceNum);
 void omp_target_free(void *DevicePtr, int DeviceNum);
 int omp_target_is_present(const void *Ptr, int DeviceNum);
+int omp_target_is_accessible(const void *Ptr, size_t Size, int DeviceNum);
 int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
                       size_t DstOffset, size_t SrcOffset, int DstDevice,
                       int SrcDevice);

@@ -15,6 +15,7 @@
 //   c. NDD (EVEX) -> non-NDD (legacy)
 //   d. NF_ND (EVEX) -> NF (EVEX)
 //   e. NonNF (EVEX) -> NF (EVEX)
+//   f. SETZUCCm (EVEX) -> SETCCm (legacy)
 //
 // Compression a, b and c can always reduce code size, with some exceptions
 // such as promoted 16-bit CRC32 which is as long as the legacy version.
@@ -42,9 +43,12 @@
 #include "X86Subtarget.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Pass.h"
 #include <atomic>
@@ -65,10 +69,10 @@ namespace {
 #define GET_X86_COMPRESS_EVEX_TABLE
 #include "X86GenInstrMapping.inc"
 
-class CompressEVEXPass : public MachineFunctionPass {
+class CompressEVEXLegacy : public MachineFunctionPass {
 public:
   static char ID;
-  CompressEVEXPass() : MachineFunctionPass(ID) {}
+  CompressEVEXLegacy() : MachineFunctionPass(ID) {}
   StringRef getPassName() const override { return COMP_EVEX_DESC; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -81,7 +85,7 @@ public:
 
 } // end anonymous namespace
 
-char CompressEVEXPass::ID = 0;
+char CompressEVEXLegacy::ID = 0;
 
 static bool usesExtendedRegister(const MachineInstr &MI) {
   auto isHiRegIdx = [](MCRegister Reg) {
@@ -174,7 +178,8 @@ static bool performCustomAdjustments(MachineInstr &MI, unsigned NewOpc) {
   return true;
 }
 
-static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
+static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
+                             const X86Subtarget &ST) {
   uint64_t TSFlags = MI.getDesc().TSFlags;
 
   // Check for EVEX instructions only.
@@ -215,14 +220,15 @@ static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
   //  memory form: broadcast
   //
   // APX:
-  //  MAP4: NDD
+  //  MAP4: NDD, ZU
   //
   // For AVX512 cases, EVEX prefix is needed in order to carry this information
   // thus preventing the transformation to VEX encoding.
   bool IsND = X86II::hasNewDataDest(TSFlags);
-  if (TSFlags & X86II::EVEX_B && !IsND)
-    return false;
   unsigned Opc = MI.getOpcode();
+  bool IsSetZUCCm = Opc == X86::SETZUCCm;
+  if (TSFlags & X86II::EVEX_B && !IsND && !IsSetZUCCm)
+    return false;
   // MOVBE*rr is special because it has semantic of NDD but not set EVEX_B.
   bool IsNDLike = IsND || Opc == X86::MOVBE32rr || Opc == X86::MOVBE64rr;
   bool IsRedundantNDD = IsNDLike ? IsRedundantNewDataDest(Opc) : false;
@@ -239,14 +245,14 @@ static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
     return I->NewOpc;
   };
 
-  // Redundant NDD ops cannot be safely compressed if either:
-  // - the legacy op would introduce a partial write that BreakFalseDeps
-  // identified as a potential stall, or
-  // - the op is writing to a subregister of a live register, i.e. the
-  // full (zeroed) result is used.
-  // Both cases are indicated by an implicit def of the superregister.
+  Register Dst = MI.getOperand(0).getReg();
   if (IsRedundantNDD) {
-    Register Dst = MI.getOperand(0).getReg();
+    // Redundant NDD ops cannot be safely compressed if either:
+    // - the legacy op would introduce a partial write that BreakFalseDeps
+    // identified as a potential stall, or
+    // - the op is writing to a subregister of a live register, i.e. the
+    // full (zeroed) result is used.
+    // Both cases are indicated by an implicit def of the superregister.
     if (Dst &&
         (X86::GR16RegClass.contains(Dst) || X86::GR8RegClass.contains(Dst))) {
       Register Super = getX86SubSuperRegister(Dst, 64);
@@ -260,6 +266,33 @@ static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
     if (!X86EnableAPXForRelocation)
       assert(!isAddMemInstrWithRelocation(MI) &&
              "Unexpected NDD instruction with relocation!");
+  } else if (Opc == X86::ADD32ri_ND || Opc == X86::ADD64ri32_ND ||
+             Opc == X86::ADD32rr_ND || Opc == X86::ADD64rr_ND) {
+    // Non-redundant NDD ADD can be compressed to LEA when:
+    // - No EGPR register used and
+    // - EFLAGS is dead.
+    if (!usesExtendedRegister(MI) &&
+        MI.registerDefIsDead(X86::EFLAGS, /*TRI=*/nullptr)) {
+      Register Src1 = MI.getOperand(1).getReg();
+      const MachineOperand &Src2 = MI.getOperand(2);
+      bool Is32BitReg = Opc == X86::ADD32ri_ND || Opc == X86::ADD32rr_ND;
+      const MCInstrDesc &NewDesc =
+          ST.getInstrInfo()->get(Is32BitReg ? X86::LEA64_32r : X86::LEA64r);
+      if (Is32BitReg)
+        Src1 = getX86SubSuperRegister(Src1, 64);
+      MachineInstrBuilder MIB = BuildMI(MBB, MI, MI.getDebugLoc(), NewDesc, Dst)
+                                    .addReg(Src1)
+                                    .addImm(1);
+      if (Opc == X86::ADD32ri_ND || Opc == X86::ADD64ri32_ND)
+        MIB.addReg(0).add(Src2);
+      else if (Is32BitReg)
+        MIB.addReg(getX86SubSuperRegister(Src2.getReg(), 64)).addImm(0);
+      else
+        MIB.add(Src2).addImm(0);
+      MIB.addReg(0);
+      MI.removeFromParent();
+      return true;
+    }
   }
 
   // NonNF -> NF only if it's not a compressible NDD instruction and eflags is
@@ -299,7 +332,7 @@ static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
   return true;
 }
 
-bool CompressEVEXPass::runOnMachineFunction(MachineFunction &MF) {
+static bool runOnMF(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "Start X86CompressEVEXPass\n";);
 #ifndef NDEBUG
   // Make sure the tables are sorted.
@@ -311,22 +344,38 @@ bool CompressEVEXPass::runOnMachineFunction(MachineFunction &MF) {
   }
 #endif
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
-  if (!ST.hasAVX512() && !ST.hasEGPR() && !ST.hasNDD())
+  if (!ST.hasAVX512() && !ST.hasEGPR() && !ST.hasNDD() && !ST.hasZU())
     return false;
 
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {
     // Traverse the basic block.
-    for (MachineInstr &MI : MBB)
-      Changed |= CompressEVEXImpl(MI, ST);
+    for (MachineInstr &MI : llvm::make_early_inc_range(MBB))
+      Changed |= CompressEVEXImpl(MI, MBB, ST);
   }
   LLVM_DEBUG(dbgs() << "End X86CompressEVEXPass\n";);
   return Changed;
 }
 
-INITIALIZE_PASS(CompressEVEXPass, COMP_EVEX_NAME, COMP_EVEX_DESC, false, false)
+INITIALIZE_PASS(CompressEVEXLegacy, COMP_EVEX_NAME, COMP_EVEX_DESC, false,
+                false)
 
-FunctionPass *llvm::createX86CompressEVEXPass() {
-  return new CompressEVEXPass();
+FunctionPass *llvm::createX86CompressEVEXLegacyPass() {
+  return new CompressEVEXLegacy();
+}
+
+bool CompressEVEXLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return runOnMF(MF);
+}
+
+PreservedAnalyses
+X86CompressEVEXPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  bool Changed = runOnMF(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

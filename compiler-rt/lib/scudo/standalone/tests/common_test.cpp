@@ -21,50 +21,74 @@
 
 namespace scudo {
 
-static void getResidentPages(void *BaseAddress, size_t TotalPages,
-                             size_t *ResidentPages) {
-  std::vector<unsigned char> Pages(TotalPages, 0);
-  ASSERT_EQ(
-      0, mincore(BaseAddress, TotalPages * getPageSizeCached(), Pages.data()))
-      << strerror(errno);
-  *ResidentPages = 0;
-  for (unsigned char Value : Pages) {
-    if (Value & 1) {
-      ++*ResidentPages;
-    }
-  }
+TEST(ScudoCommonTest, VerifyGetResidentPages) {
+  if (!SCUDO_LINUX)
+    GTEST_SKIP() << "Only valid on linux systems.";
+
+  constexpr uptr NumPages = 512;
+  const uptr SizeBytes = NumPages * getPageSizeCached();
+
+  MemMapT MemMap;
+  ASSERT_TRUE(MemMap.map(/*Addr=*/0U, SizeBytes, "ResidentMemorySize"));
+  ASSERT_NE(MemMap.getBase(), 0U);
+
+  // Only android seems to properly detect when single pages are touched.
+#if SCUDO_ANDROID
+  // Verify nothing should be mapped in right after the map is created.
+  EXPECT_EQ(0U, getResidentPages(MemMap.getBase(), SizeBytes));
+
+  // Touch a page.
+  u8 *Data = reinterpret_cast<u8 *>(MemMap.getBase());
+  Data[0] = 1;
+  EXPECT_EQ(1U, getResidentPages(MemMap.getBase(), SizeBytes));
+
+  // Touch a non-consective page.
+  Data[getPageSizeCached() * 2] = 1;
+  EXPECT_EQ(2U, getResidentPages(MemMap.getBase(), SizeBytes));
+
+  // Touch a page far enough that the function has to make multiple calls
+  // to mincore.
+  Data[getPageSizeCached() * 300] = 1;
+  EXPECT_EQ(3U, getResidentPages(MemMap.getBase(), SizeBytes));
+
+  // Touch another page in the same range to make sure the second
+  // read is working.
+  Data[getPageSizeCached() * 400] = 1;
+  EXPECT_EQ(4U, getResidentPages(MemMap.getBase(), SizeBytes));
+#endif
+
+  // Now write the whole thing.
+  memset(reinterpret_cast<void *>(MemMap.getBase()), 1, SizeBytes);
+  EXPECT_EQ(NumPages, getResidentPages(MemMap.getBase(), SizeBytes));
+
+  MemMap.unmap();
 }
 
-// Fuchsia needs getResidentPages implementation.
-TEST(ScudoCommonTest, SKIP_ON_FUCHSIA(ResidentMemorySize)) {
-  // Make sure to have the size of the map on a page boundary.
-  const uptr PageSize = getPageSizeCached();
-  const size_t NumPages = 1000;
-  const uptr SizeBytes = NumPages * PageSize;
+TEST(ScudoCommonTest, VerifyReleasePagesToOS) {
+  if (!SCUDO_LINUX)
+    GTEST_SKIP() << "Only valid on linux systems.";
+
+  constexpr uptr NumPages = 1000;
+  const uptr SizeBytes = NumPages * getPageSizeCached();
 
   MemMapT MemMap;
   ASSERT_TRUE(MemMap.map(/*Addr=*/0U, SizeBytes, "ResidentMemorySize"));
   ASSERT_NE(MemMap.getBase(), 0U);
 
   void *P = reinterpret_cast<void *>(MemMap.getBase());
-  size_t ResidentPages;
-  getResidentPages(P, NumPages, &ResidentPages);
-  EXPECT_EQ(0U, ResidentPages);
+  EXPECT_EQ(0U, getResidentPages(MemMap.getBase(), SizeBytes));
 
   // Make the entire map resident.
   memset(P, 1, SizeBytes);
-  getResidentPages(P, NumPages, &ResidentPages);
-  EXPECT_EQ(NumPages, ResidentPages);
+  EXPECT_EQ(NumPages, getResidentPages(MemMap.getBase(), SizeBytes));
 
   // Should release the memory to the kernel immediately.
   MemMap.releasePagesToOS(MemMap.getBase(), SizeBytes);
-  getResidentPages(P, NumPages, &ResidentPages);
-  EXPECT_EQ(0U, ResidentPages);
+  EXPECT_EQ(0U, getResidentPages(MemMap.getBase(), SizeBytes));
 
   // Make the entire map resident again.
   memset(P, 1, SizeBytes);
-  getResidentPages(P, NumPages, &ResidentPages);
-  EXPECT_EQ(NumPages, ResidentPages);
+  EXPECT_EQ(NumPages, getResidentPages(MemMap.getBase(), SizeBytes));
 
   MemMap.unmap();
 }

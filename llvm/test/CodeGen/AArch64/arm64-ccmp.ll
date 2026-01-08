@@ -430,12 +430,12 @@ declare i32 @foo()
 
 ; Test case distilled from 126.gcc.
 ; The phi in sw.bb.i.i gets multiple operands for the %entry predecessor.
-define void @build_modify_expr() nounwind ssp {
+define void @build_modify_expr(i32 %cond) nounwind ssp {
 ; CHECK-LABEL: build_modify_expr:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    ret
 entry:
-  switch i32 undef, label %sw.bb.i.i [
+  switch i32 %cond, label %sw.bb.i.i [
     i32 69, label %if.end85
     i32 70, label %if.end85
     i32 71, label %if.end85
@@ -632,11 +632,11 @@ define i64 @select_noccmp2(i64 %v1, i64 %v2, i64 %v3, i64 %r) {
 ; CHECK-SD-NEXT:    cmp x0, #0
 ; CHECK-SD-NEXT:    ccmp x0, #13, #0, pl
 ; CHECK-SD-NEXT:    cset w8, gt
+; CHECK-SD-NEXT:    csetm w9, gt
 ; CHECK-SD-NEXT:    cmp w8, #0
 ; CHECK-SD-NEXT:    csel x0, xzr, x3, ne
-; CHECK-SD-NEXT:    sbfx w8, w8, #0, #1
-; CHECK-SD-NEXT:    adrp x9, _g@PAGE
-; CHECK-SD-NEXT:    str w8, [x9, _g@PAGEOFF]
+; CHECK-SD-NEXT:    adrp x8, _g@PAGE
+; CHECK-SD-NEXT:    str w9, [x8, _g@PAGEOFF]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: select_noccmp2:

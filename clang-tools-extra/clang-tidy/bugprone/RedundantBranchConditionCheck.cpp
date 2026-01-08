@@ -1,4 +1,4 @@
-//===--- RedundantBranchConditionCheck.cpp - clang-tidy--------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,6 +8,7 @@
 
 #include "RedundantBranchConditionCheck.h"
 #include "../utils/Aliasing.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Analysis/Analyses/ExprMutationAnalyzer.h"
@@ -112,7 +113,7 @@ void RedundantBranchConditionCheck::check(
 
   if (isa<DeclRefExpr>(InnerIf->getCond()->IgnoreParenImpCasts()) ||
       (BinOpCond && BinOpCond->getOpcode() == BO_LOr)) {
-    SourceLocation IfBegin = InnerIf->getBeginLoc();
+    const SourceLocation IfBegin = InnerIf->getBeginLoc();
     const Stmt *Body = InnerIf->getThen();
     const Expr *OtherSide = nullptr;
     if (BinOpCond) {
@@ -132,11 +133,11 @@ void RedundantBranchConditionCheck::check(
 
     // If the other side has side effects then keep it.
     if (OtherSide && OtherSide->HasSideEffects(*Result.Context)) {
-      SourceLocation BeforeOtherSide =
+      const SourceLocation BeforeOtherSide =
           OtherSide->getBeginLoc().getLocWithOffset(-1);
-      SourceLocation AfterOtherSide =
-          Lexer::findNextToken(OtherSide->getEndLoc(), *Result.SourceManager,
-                               getLangOpts())
+      const SourceLocation AfterOtherSide =
+          utils::lexer::findNextTokenSkippingComments(
+              OtherSide->getEndLoc(), *Result.SourceManager, getLangOpts())
               ->getLocation();
       Diag << FixItHint::CreateRemoval(
                   CharSourceRange::getTokenRange(IfBegin, BeforeOtherSide))
@@ -161,14 +162,15 @@ void RedundantBranchConditionCheck::check(
     const auto *LeftDRE =
         dyn_cast<DeclRefExpr>(CondOp->getLHS()->IgnoreParenImpCasts());
     if (LeftDRE && LeftDRE->getDecl() == CondVar) {
-      SourceLocation BeforeRHS =
+      const SourceLocation BeforeRHS =
           CondOp->getRHS()->getBeginLoc().getLocWithOffset(-1);
       Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
           CondOp->getLHS()->getBeginLoc(), BeforeRHS));
     } else {
-      SourceLocation AfterLHS =
-          Lexer::findNextToken(CondOp->getLHS()->getEndLoc(),
-                               *Result.SourceManager, getLangOpts())
+      const SourceLocation AfterLHS =
+          utils::lexer::findNextTokenSkippingComments(
+              CondOp->getLHS()->getEndLoc(), *Result.SourceManager,
+              getLangOpts())
               ->getLocation();
       Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
           AfterLHS, CondOp->getRHS()->getEndLoc()));

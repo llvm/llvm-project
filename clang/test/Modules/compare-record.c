@@ -496,6 +496,7 @@ struct CompareAnonymousNestedStruct compareAnonymousNestedStruct;
 // expected-note@first-anonymous.h:* {{declaration of 'anonymousNestedStructField' does not match}}
 #elif defined(CASE3)
 struct CompareDeeplyNestedAnonymousUnionsAndStructs compareDeeplyNested;
-// expected-error-re@second-anonymous.h:* {{'CompareDeeplyNestedAnonymousUnionsAndStructs::(anonymous union)::(anonymous union)::(anonymous struct)::z' from module 'Second' is not present in definition of 'struct CompareDeeplyNestedAnonymousUnionsAndStructs::(anonymous at {{.*}})' in module 'First.Hidden'}}
+// expected-error-re@second-anonymous.h:* {{'CompareDeeplyNestedAnonymousUnionsAndStructs::(anonymous union)::(anonymous union)::(anonymous struct)::z' from module 'Second' is not present in definition of 'struct CompareDeeplyNestedAnonymousUnionsAndStructs::(anonymous union)::(anonymous union)::(anonymous at {{.*}})' in module 'First.Hidden'}}
+
 // expected-note@first-anonymous.h:* {{declaration of 'z' does not match}}
 #endif

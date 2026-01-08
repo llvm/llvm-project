@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+
+import argparse
+import os
+import subprocess
+import sys
+import tempfile
+
+# Unofficial list of directories required to build libc++. This is a best guess that should work
+# when checking out the monorepo at most commits, but it's technically not guaranteed to work
+# (especially for much older commits).
+LIBCXX_REQUIRED_DIRECTORIES = [
+    'libcxx',
+    'libcxxabi',
+    'llvm/cmake',
+    'llvm/utils/llvm-lit',
+    'llvm/utils/lit',
+    'runtimes',
+    'cmake',
+    'third-party/benchmark',
+    'libc'
+]
+
+def directory_path(string):
+    if os.path.isdir(string):
+        return string
+    else:
+        raise NotADirectoryError(string)
+
+def resolve_commit(git_repo, commit):
+    """
+    Resolve the full commit SHA from any tree-ish.
+    """
+    return subprocess.check_output(['git', '-C', git_repo, 'rev-parse', commit], text=True).strip()
+
+def checkout_subdirectories(git_repo, commit, paths, destination):
+    """
+    Produce a copy of the specified Git-tracked files/directories at the given commit.
+    The resulting files and directories at placed at the given location.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        tmpfile = os.path.join(tmp, 'archive.tar.gz')
+        git_archive = ['git', '-C', git_repo, 'archive', '--format', 'tar.gz', '--output', tmpfile, commit, '--'] + list(paths)
+        subprocess.check_call(git_archive)
+        os.makedirs(destination, exist_ok=True)
+        subprocess.check_call(['tar', '-x', '-z', '-f', tmpfile, '-C', destination])
+
+def build_libcxx(src_dir, build_dir, install_dir, cmake_options):
+    """
+    Build and install libc++ using the provided source, build and installation directories.
+    """
+    configure = ['cmake', '-S', os.path.join(src_dir, 'runtimes'), '-B', build_dir, '-G', 'Ninja']
+    configure += ['-D', 'LLVM_ENABLE_RUNTIMES=libcxx;libcxxabi']
+    configure += ['-D', f'CMAKE_INSTALL_PREFIX={install_dir}']
+    configure += ['-D', 'LIBCXXABI_USE_LLVM_UNWINDER=OFF']
+    configure += list(cmake_options)
+    subprocess.check_call(configure)
+
+    build = ['cmake', '--build', build_dir, '--target', 'install']
+    subprocess.check_call(build)
+
+def exists_in_commit(git_repo, commit, path):
+    """
+    Return whether the given path (file or directory) existed at the given commit.
+    """
+    cmd = ['git', '-C', git_repo, 'show', f'{commit}:{path}']
+    result = subprocess.call(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return result == 0
+
+def main(argv):
+    parser = argparse.ArgumentParser(
+        prog='build-at-commit',
+        description='Attempt to build libc++ at the specified commit. '
+                    'This script checks out libc++ at the given commit and does a best effort attempt '
+                    'to build it and install it to the specified location. This can be useful when '
+                    'performing bisections or historical analyses of libc++ behavior, performance, etc. '
+                    'This may not work for some commits, for example commits where the library is broken '
+                    'or much older commits when the build process was different from today\'s build process.')
+    parser.add_argument('--commit', type=str, required=True,
+        help='Commit to checkout and build.')
+    parser.add_argument('--install-dir', type=str, required=True,
+        help='Path to install the library at. This is equivalent to the `CMAKE_INSTALL_PREFIX` '
+             'used when building.')
+    parser.add_argument('cmake_options', nargs=argparse.REMAINDER,
+        help='Optional arguments passed to CMake when configuring the build. Should be provided last and '
+             'separated from other arguments with a `--`.')
+    parser.add_argument('--git-repo', type=directory_path, default=os.getcwd(),
+        help='Optional path to the Git repository to use. By default, the current working directory is used.')
+    parser.add_argument('--tmp-src-dir', type=str, required=False,
+        help='Optional path to use for the ephemeral source checkout used to perform the build. '
+             'By default, a temporary directory is used and it is cleaned up after the build. '
+             'If a custom directory is specified, it is not cleaned up automatically.')
+    parser.add_argument('--tmp-build-dir', type=str, required=False,
+        help='Optional path to use for the ephemeral build directory used during the build.'
+             'By default, a temporary directory is used and it is cleaned up after the build. '
+             'If a custom directory is specified, it is not cleaned up automatically.')
+    args = parser.parse_args(argv)
+
+    # Gather CMake options
+    cmake_options = []
+    if args.cmake_options is not None:
+        if args.cmake_options[0] != '--':
+            raise ArgumentError('For clarity, CMake options must be separated from other options by --')
+        cmake_options = args.cmake_options[1:]
+
+    # Figure out which directories to check out at the given commit. We avoid checking
+    # out the whole monorepo as an optimization.
+    sha = resolve_commit(args.git_repo, args.commit)
+    checkout_dirs = [d for d in LIBCXX_REQUIRED_DIRECTORIES if exists_in_commit(args.git_repo, sha, d)]
+
+    tempdirs = []
+    if args.tmp_src_dir is not None:
+        src_dir = args.tmp_src_dir
+    else:
+        tempdirs.append(tempfile.TemporaryDirectory())
+        src_dir = tempdirs[-1].name
+
+    if args.tmp_build_dir is not None:
+        build_dir = args.tmp_build_dir
+    else:
+        tempdirs.append(tempfile.TemporaryDirectory())
+        build_dir = tempdirs[-1].name
+
+    try:
+        checkout_subdirectories(args.git_repo, sha, checkout_dirs, src_dir)
+        build_libcxx(src_dir, build_dir, args.install_dir, cmake_options)
+    finally:
+        for d in tempdirs:
+            d.cleanup()
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

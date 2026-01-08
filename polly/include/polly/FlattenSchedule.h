@@ -15,20 +15,10 @@
 #ifndef POLLY_FLATTENSCHEDULE_H
 #define POLLY_FLATTENSCHEDULE_H
 
-namespace llvm {
-class PassRegistry;
-class Pass;
-class raw_ostream;
-} // namespace llvm
-
 namespace polly {
-llvm::Pass *createFlattenSchedulePass();
-llvm::Pass *createFlattenSchedulePrinterLegacyPass(llvm::raw_ostream &OS);
-} // namespace polly
+class Scop;
 
-namespace llvm {
-void initializeFlattenSchedulePass(llvm::PassRegistry &);
-void initializeFlattenSchedulePrinterLegacyPassPass(llvm::PassRegistry &);
-} // namespace llvm
+void runFlattenSchedulePass(Scop &S);
+} // namespace polly
 
 #endif /* POLLY_FLATTENSCHEDULE_H */

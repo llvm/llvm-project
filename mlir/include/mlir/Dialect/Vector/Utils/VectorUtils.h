@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -218,15 +219,20 @@ bool isLinearizableVector(VectorType type);
 
 /// Creates a TransferReadOp from `source`.
 ///
-/// The shape of the vector to read is specified via `inputVectorSizes`. If the
-/// shape of the output vector differs from the shape of the value being read,
-/// masking is used to avoid out-of-bounds accesses. Set
+/// If the shape of vector to read differs from the shape of the value being
+/// read, masking is used to avoid out-of-bounds accesses. Set
 /// `useInBoundsInsteadOfMasking` to `true` to use the "in_bounds" attribute
 /// instead of explicit masks.
 ///
 /// Note: all read offsets are set to 0.
 Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
-                             ArrayRef<int64_t> inputVectorSizes, Value padValue,
+                             const VectorType &vecToReadTy,
+                             std::optional<Value> padValue = std::nullopt,
+                             bool useInBoundsInsteadOfMasking = false);
+
+Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
+                             ArrayRef<int64_t> inputVectorSizes,
+                             std::optional<Value> padValue = std::nullopt,
                              bool useInBoundsInsteadOfMasking = false,
                              ArrayRef<bool> inputScalableVecDims = {});
 
@@ -238,6 +244,28 @@ Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
 ///      static sizes in `shape`.
 LogicalResult isValidMaskedInputVector(ArrayRef<int64_t> shape,
                                        ArrayRef<int64_t> inputVectorSizes);
+
+/// Generic utility for unrolling n-D vector operations to (n-1)-D operations.
+/// This handles the common pattern of:
+/// 1. Check if already 1-D. If so, return failure.
+/// 2. Check for scalable dimensions. If so, return failure.
+/// 3. Create poison initialized result.
+/// 4. Loop through the outermost dimension, execute the UnrollVectorOpFn to
+/// create sub vectors.
+/// 5. Insert the sub vectors back into the final vector.
+/// 6. Replace the original op with the new result.
+using UnrollVectorOpFn =
+    function_ref<Value(PatternRewriter &, Location, VectorType, int64_t)>;
+
+LogicalResult unrollVectorOp(Operation *op, PatternRewriter &rewriter,
+                             UnrollVectorOpFn unrollFn);
+
+/// Generic utility for unrolling values of type vector<NxAxBx...>
+/// to N values of type vector<AxBx...> using vector.extract. If the input
+/// is rank-1 or has leading scalable dimension, failure is returned.
+FailureOr<SmallVector<Value>> unrollVectorValue(TypedValue<VectorType>,
+                                                RewriterBase &);
+
 } // namespace vector
 
 /// Constructs a permutation map of invariant memref indices to vector

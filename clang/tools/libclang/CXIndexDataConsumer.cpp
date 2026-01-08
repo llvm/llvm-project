@@ -357,7 +357,7 @@ CXIndexDataConsumer::CXXBasesListInfo::CXXBasesListInfo(const CXXRecordDecl *D,
           TST = T->getAs<TemplateSpecializationType>()) {
       BaseD = TST->getTemplateName().getAsTemplateDecl();
     } else if (const RecordType *RT = T->getAs<RecordType>()) {
-      BaseD = RT->getOriginalDecl();
+      BaseD = RT->getDecl();
     }
 
     if (BaseD)
@@ -393,8 +393,6 @@ SourceLocation CXIndexDataConsumer::CXXBasesListInfo::getBaseLoc(
   // TypeLoc::getNameLoc()
   if (auto TTL = TL.getAs<DependentNameTypeLoc>())
     return TTL.getNameLoc();
-  if (auto TTL = TL.getAs<DependentTemplateSpecializationTypeLoc>())
-    return TTL.getTemplateNameLoc();
   if (auto TTL = TL.getAs<TemplateSpecializationTypeLoc>())
     return TTL.getTemplateNameLoc();
   if (auto TTL = TL.getAs<TagTypeLoc>())
@@ -1241,6 +1239,7 @@ static CXIdxEntityKind getEntityKindFromSymbolKind(SymbolKind K, SymbolLanguage 
   case SymbolKind::TemplateTypeParm:
   case SymbolKind::TemplateTemplateParm:
   case SymbolKind::NonTypeTemplateParm:
+  case SymbolKind::IncludeDirective:
     return CXIdxEntity_Unexposed;
 
   case SymbolKind::Enum: return CXIdxEntity_Enum;

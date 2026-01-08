@@ -63,26 +63,103 @@ DarwinSDKInfo::RelatedTargetVersionMapping::parseJSON(
       Min, Max, MinValue, MaximumDeploymentTarget, std::move(Mapping));
 }
 
-static llvm::Triple::OSType parseOS(const llvm::json::Object &Obj) {
+static DarwinSDKInfo::PlatformInfoStorageType
+parsePlatformInfos(const llvm::json::Object &Obj, VersionTuple Version) {
   // The CanonicalName is the Xcode platform followed by a version, e.g.
-  // macosx16.0.
-  auto CanonicalName = Obj.getString("CanonicalName");
-  if (!CanonicalName)
-    return llvm::Triple::UnknownOS;
-  size_t VersionStart = CanonicalName->find_first_of("0123456789");
-  StringRef XcodePlatform = CanonicalName->slice(0, VersionStart);
-  return llvm::StringSwitch<llvm::Triple::OSType>(XcodePlatform)
-      .Case("macosx", llvm::Triple::MacOSX)
-      .Case("iphoneos", llvm::Triple::IOS)
-      .Case("iphonesimulator", llvm::Triple::IOS)
-      .Case("appletvos", llvm::Triple::TvOS)
-      .Case("appletvsimulator", llvm::Triple::TvOS)
-      .Case("watchos", llvm::Triple::WatchOS)
-      .Case("watchsimulator", llvm::Triple::WatchOS)
-      .Case("xros", llvm::Triple::XROS)
-      .Case("xrsimulator", llvm::Triple::XROS)
-      .Case("driverkit", llvm::Triple::DriverKit)
-      .Default(llvm::Triple::UnknownOS);
+  // macosx15.0. The associated SDKPlatformInfo must be the first entry  in the
+  // returned PlatformInfoStorageType.
+  StringRef XcodePlatform;
+  if (auto CanonicalName = Obj.getString("CanonicalName")) {
+    size_t VersionStart = CanonicalName->find_first_of("0123456789");
+    XcodePlatform = CanonicalName->slice(0, VersionStart);
+  }
+
+  DarwinSDKInfo::PlatformInfoStorageType PlatformInfos;
+  auto SupportedTargets = Obj.getObject("SupportedTargets");
+  if (!SupportedTargets) {
+    // For older SDKs that don't have SupportedTargets, infer one from the Xcode
+    // platform.
+    if (XcodePlatform == "macosx") {
+      PlatformInfos.push_back({llvm::Triple::Apple, llvm::Triple::MacOSX,
+                               llvm::Triple::UnknownEnvironment,
+                               llvm::Triple::MachO, ""});
+    } else if (XcodePlatform == "iphoneos") {
+      PlatformInfos.push_back({llvm::Triple::Apple, llvm::Triple::IOS,
+                               llvm::Triple::UnknownEnvironment,
+                               llvm::Triple::MachO, ""});
+    } else if (XcodePlatform == "iphonesimulator") {
+      PlatformInfos.push_back({llvm::Triple::Apple, llvm::Triple::IOS,
+                               llvm::Triple::Simulator, llvm::Triple::MachO,
+                               ""});
+    } else if (XcodePlatform == "appletvos") {
+      PlatformInfos.push_back({llvm::Triple::Apple, llvm::Triple::TvOS,
+                               llvm::Triple::UnknownEnvironment,
+                               llvm::Triple::MachO, ""});
+    } else if (XcodePlatform == "appletvsimulator") {
+      PlatformInfos.push_back({llvm::Triple::Apple, llvm::Triple::TvOS,
+                               llvm::Triple::Simulator, llvm::Triple::MachO,
+                               ""});
+    } else if (XcodePlatform == "watchos") {
+      PlatformInfos.push_back({llvm::Triple::Apple, llvm::Triple::WatchOS,
+                               llvm::Triple::UnknownEnvironment,
+                               llvm::Triple::MachO, ""});
+    } else if (XcodePlatform == "watchsimulator") {
+      PlatformInfos.push_back({llvm::Triple::Apple, llvm::Triple::WatchOS,
+                               llvm::Triple::Simulator, llvm::Triple::MachO,
+                               ""});
+    } else if (XcodePlatform == "driverkit") {
+      PlatformInfos.push_back({llvm::Triple::Apple, llvm::Triple::DriverKit,
+                               llvm::Triple::UnknownEnvironment,
+                               llvm::Triple::MachO, "/System/DriverKit"});
+    } else {
+      llvm_unreachable("Unrecognized Xcode platform");
+    }
+    return PlatformInfos;
+  }
+
+  for (auto SupportedTargetPair : *SupportedTargets) {
+    llvm::json::Object *SupportedTarget =
+        SupportedTargetPair.getSecond().getAsObject();
+    auto Vendor = SupportedTarget->getString("LLVMTargetTripleVendor");
+    auto OS = SupportedTarget->getString("LLVMTargetTripleSys");
+    if (!Vendor || !OS)
+      continue;
+
+    StringRef Arch = llvm::Triple::getArchName(llvm::Triple::UnknownArch);
+    auto Environment =
+        SupportedTarget->getString("LLVMTargetTripleEnvironment");
+    llvm::Triple Triple;
+    if (Environment)
+      Triple = llvm::Triple(Arch, *Vendor, *OS, *Environment);
+    else
+      Triple = llvm::Triple(Arch, *Vendor, *OS);
+
+    StringRef PlatformOrVariant = SupportedTargetPair.getFirst();
+
+    StringRef EffectivePlatformPrefix;
+    // Ignore iosmac value if it exists.
+    if ((PlatformOrVariant != "iosmac") || (Version >= VersionTuple(99))) {
+      auto PlatformPrefix = SupportedTarget->getString("SystemPrefix");
+      if (PlatformPrefix) {
+        EffectivePlatformPrefix = *PlatformPrefix;
+      } else {
+        // Older SDKs don't have SystemPrefix in SupportedTargets, manually add
+        // their prefixes.
+        if ((Triple.getOS() == llvm::Triple::DriverKit) &&
+            (Version < VersionTuple(22, 1)))
+          EffectivePlatformPrefix = "/System/DriverKit";
+      }
+    }
+
+    DarwinSDKInfo::SDKPlatformInfo PlatformInfo(
+        Triple.getVendor(), Triple.getOS(), Triple.getEnvironment(),
+        Triple.getObjectFormat(), EffectivePlatformPrefix);
+    if (PlatformOrVariant == XcodePlatform)
+      PlatformInfos.insert(PlatformInfos.begin(), PlatformInfo);
+    else
+      PlatformInfos.push_back(PlatformInfo);
+  }
+  return PlatformInfos;
 }
 
 static std::optional<VersionTuple> getVersionKey(const llvm::json::Object &Obj,
@@ -105,7 +182,7 @@ DarwinSDKInfo::parseDarwinSDKSettingsJSON(const llvm::json::Object *Obj) {
       getVersionKey(*Obj, "MaximumDeploymentTarget");
   if (!MaximumDeploymentVersion)
     return std::nullopt;
-  llvm::Triple::OSType OS = parseOS(*Obj);
+  PlatformInfoStorageType PlatformInfos = parsePlatformInfos(*Obj, *Version);
   llvm::DenseMap<OSEnvPair::StorageType,
                  std::optional<RelatedTargetVersionMapping>>
       VersionMappings;
@@ -148,8 +225,8 @@ DarwinSDKInfo::parseDarwinSDKSettingsJSON(const llvm::json::Object *Obj) {
   }
 
   return DarwinSDKInfo(std::move(*Version),
-                       std::move(*MaximumDeploymentVersion), OS,
-                       std::move(VersionMappings));
+                       std::move(*MaximumDeploymentVersion),
+                       std::move(PlatformInfos), std::move(VersionMappings));
 }
 
 Expected<std::optional<DarwinSDKInfo>>

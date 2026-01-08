@@ -1906,7 +1906,7 @@ SuppressInlineDefensiveChecksVisitor::VisitNode(const ExplodedNode *Succ,
       if (!CurStmt->getBeginLoc().isMacroID())
         return nullptr;
 
-      CFGStmtMap *Map = CurLC->getAnalysisDeclContext()->getCFGStmtMap();
+      const CFGStmtMap *Map = CurLC->getAnalysisDeclContext()->getCFGStmtMap();
       CurTerminatorStmt = Map->getBlock(CurStmt)->getTerminatorStmt();
     } else {
       return nullptr;
@@ -1950,7 +1950,7 @@ class TrackControlDependencyCondBRVisitor final
     : public TrackingBugReporterVisitor {
   const ExplodedNode *Origin;
   ControlDependencyCalculator ControlDeps;
-  llvm::SmallSet<const CFGBlock *, 32> VisitedBlocks;
+  llvm::SmallPtrSet<const CFGBlock *, 32> VisitedBlocks;
 
 public:
   TrackControlDependencyCondBRVisitor(TrackerRef ParentTracker,
@@ -3253,9 +3253,6 @@ bool ConditionBRVisitor::printValue(const Expr *CondVarExpr, raw_ostream &Out,
 
   return true;
 }
-
-constexpr llvm::StringLiteral ConditionBRVisitor::GenericTrueMessage;
-constexpr llvm::StringLiteral ConditionBRVisitor::GenericFalseMessage;
 
 bool ConditionBRVisitor::isPieceMessageGeneric(
     const PathDiagnosticPiece *Piece) {

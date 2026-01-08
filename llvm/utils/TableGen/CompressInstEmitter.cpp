@@ -142,7 +142,8 @@ class CompressInstEmitter {
   void emitCompressInstEmitter(raw_ostream &OS, EmitterType EType);
   bool validateTypes(const Record *DagOpType, const Record *InstOpType,
                      bool IsSourceInst);
-  bool validateRegister(const Record *Reg, const Record *RegClass);
+  bool validateRegister(const Record *Reg, const Record *RegClass,
+                        ArrayRef<SMLoc> Loc);
   void checkDagOperandMapping(const Record *Rec,
                               const StringMap<ArgData> &DestOperands,
                               const DagInit *SourceDag, const DagInit *DestDag);
@@ -162,12 +163,13 @@ public:
 } // End anonymous namespace.
 
 bool CompressInstEmitter::validateRegister(const Record *Reg,
-                                           const Record *RegClass) {
+                                           const Record *RegClass,
+                                           ArrayRef<SMLoc> Loc) {
   assert(Reg->isSubClassOf("Register") && "Reg record should be a Register");
-  assert(RegClass->isSubClassOf("RegisterClass") &&
-         "RegClass record should be a RegisterClass");
-  const CodeGenRegisterClass &RC = Target.getRegisterClass(RegClass);
-  const CodeGenRegister *R = Target.getRegisterByName(Reg->getName().lower());
+  assert(RegClass->isSubClassOf("RegisterClassLike") &&
+         "RegClass record should be RegisterClassLike");
+  const CodeGenRegisterClass &RC = Target.getRegisterClass(RegClass, Loc);
+  const CodeGenRegister *R = Target.getRegBank().getReg(Reg);
   assert(R != nullptr && "Register not defined!!");
   return RC.contains(R);
 }
@@ -237,7 +239,7 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
       // Source instructions can have at most 1 tied operand.
       if (IsSourceInst && (OpNo - DAGOpNo > 1))
         PrintFatalError(Rec->getLoc(),
-                        "Input operands for Inst '" + Inst.TheDef->getName() +
+                        "Input operands for Inst '" + Inst.getName() +
                             "' and input Dag operand count mismatch");
 
       continue;
@@ -249,13 +251,13 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
         OpndRec = cast<DefInit>(Opnd.MIOperandInfo->getArg(SubOp))->getDef();
 
       if (DAGOpNo >= Dag->getNumArgs())
-        PrintFatalError(Rec->getLoc(), "Inst '" + Inst.TheDef->getName() +
+        PrintFatalError(Rec->getLoc(), "Inst '" + Inst.getName() +
                                            "' and Dag operand count mismatch");
 
       if (const auto *DI = dyn_cast<DefInit>(Dag->getArg(DAGOpNo))) {
         if (DI->getDef()->isSubClassOf("Register")) {
           // Check if the fixed register belongs to the Register class.
-          if (!validateRegister(DI->getDef(), OpndRec))
+          if (!validateRegister(DI->getDef(), OpndRec, Rec->getLoc()))
             PrintFatalError(Rec->getLoc(),
                             "Error in Dag '" + Dag->getAsString() +
                                 "'Register: '" + DI->getDef()->getName() +
@@ -328,7 +330,7 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
 
   // We shouldn't have extra Dag operands.
   if (DAGOpNo != Dag->getNumArgs())
-    PrintFatalError(Rec->getLoc(), "Inst '" + Inst.TheDef->getName() +
+    PrintFatalError(Rec->getLoc(), "Inst '" + Inst.getName() +
                                        "' and Dag operand count mismatch");
 }
 
@@ -590,8 +592,8 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
   llvm::stable_sort(CompressPatterns, [EType](const CompressPat &LHS,
                                               const CompressPat &RHS) {
     if (EType == EmitterType::Compress || EType == EmitterType::CheckCompress)
-      return (LHS.Source.TheDef->getName() < RHS.Source.TheDef->getName());
-    return (LHS.Dest.TheDef->getName() < RHS.Dest.TheDef->getName());
+      return LHS.Source.getName() < RHS.Source.getName();
+    return LHS.Dest.getName() < RHS.Dest.getName();
   });
 
   // A list of MCOperandPredicates for all operands in use, and the reverse map.
@@ -678,7 +680,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
         CompressOrCheck ? CompressPat.DestOperandMap
                         : CompressPat.SourceOperandMap;
 
-    CurOp = Source.TheDef->getName();
+    CurOp = Source.getName();
     // Check current and previous opcode to decide to continue or end a case.
     if (CurOp != PrevOp) {
       if (!PrevOp.empty()) {
@@ -768,7 +770,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
     CodeStream.indent(6) << "// " << Dest.AsmString << "\n";
     if (CompressOrUncompress)
       CodeStream.indent(6) << "OutInst.setOpcode(" << TargetName
-                           << "::" << Dest.TheDef->getName() << ");\n";
+                           << "::" << Dest.getName() << ");\n";
     OpNo = 0;
     for (const auto &DestOperand : Dest.Operands) {
       CodeStream.indent(6) << "// Operand: " << DestOperand.Name << "\n";

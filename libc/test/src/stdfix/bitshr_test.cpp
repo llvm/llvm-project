@@ -8,7 +8,7 @@
 
 #include "BitsFxTest.h"
 
-#include "llvm-libc-types/stdfix-types.h" // int_hr_t
+#include "llvm-libc-types/int_hr_t.h" // int_hr_t
 #include "src/stdfix/bitshr.h"
 
 LIST_BITSFX_TESTS(hr, short fract, int_hr_t, LIBC_NAMESPACE::bitshr);

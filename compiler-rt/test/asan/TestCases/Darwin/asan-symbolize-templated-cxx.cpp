@@ -1,4 +1,5 @@
 // UNSUPPORTED: ios
+// UNSUPPORTED: darwin
 // RUN: %clangxx_asan -O0 -g %s -o %t.executable
 // RUN: %env_asan_opts="symbolize=0" not %run %t.executable > %t_no_module_map.log 2>&1
 // RUN: %asan_symbolize --force-system-symbolizer < %t_no_module_map.log 2>&1 | FileCheck %s

@@ -29,9 +29,9 @@
 
 namespace llvm {
 
-AVRInstrInfo::AVRInstrInfo(AVRSubtarget &STI)
-    : AVRGenInstrInfo(AVR::ADJCALLSTACKDOWN, AVR::ADJCALLSTACKUP), RI(),
-      STI(STI) {}
+AVRInstrInfo::AVRInstrInfo(const AVRSubtarget &STI)
+    : AVRGenInstrInfo(STI, RI, AVR::ADJCALLSTACKDOWN, AVR::ADJCALLSTACKUP),
+      RI(), STI(STI) {}
 
 void AVRInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MI,
@@ -126,8 +126,7 @@ Register AVRInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 
 void AVRInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
-    bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg,
+    bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
     MachineInstr::MIFlag Flags) const {
   MachineFunction &MF = *MBB.getParent();
   AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
@@ -142,9 +141,9 @@ void AVRInstrInfo::storeRegToStackSlot(
       MFI.getObjectAlign(FrameIndex));
 
   unsigned Opcode = 0;
-  if (TRI->isTypeLegalForClass(*RC, MVT::i8)) {
+  if (RI.isTypeLegalForClass(*RC, MVT::i8)) {
     Opcode = AVR::STDPtrQRr;
-  } else if (TRI->isTypeLegalForClass(*RC, MVT::i16)) {
+  } else if (RI.isTypeLegalForClass(*RC, MVT::i16)) {
     Opcode = AVR::STDWPtrQRr;
   } else {
     llvm_unreachable("Cannot store this register into a stack slot!");
@@ -161,7 +160,6 @@ void AVRInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MI,
                                         Register DestReg, int FrameIndex,
                                         const TargetRegisterClass *RC,
-                                        const TargetRegisterInfo *TRI,
                                         Register VReg,
                                         MachineInstr::MIFlag Flags) const {
   MachineFunction &MF = *MBB.getParent();
@@ -173,9 +171,9 @@ void AVRInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       MFI.getObjectAlign(FrameIndex));
 
   unsigned Opcode = 0;
-  if (TRI->isTypeLegalForClass(*RC, MVT::i8)) {
+  if (TRI.isTypeLegalForClass(*RC, MVT::i8)) {
     Opcode = AVR::LDDRdPtrQ;
-  } else if (TRI->isTypeLegalForClass(*RC, MVT::i16)) {
+  } else if (TRI.isTypeLegalForClass(*RC, MVT::i16)) {
     // Opcode = AVR::LDDWRdPtrQ;
     //: FIXME: remove this once PR13375 gets fixed
     Opcode = AVR::LDDWRdYQ;

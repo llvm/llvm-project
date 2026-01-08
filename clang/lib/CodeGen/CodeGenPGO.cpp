@@ -16,6 +16,7 @@
 #include "CoverageMappingGen.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/CommandLine.h"
@@ -58,9 +59,10 @@ enum PGOHashVersion : unsigned {
   PGO_HASH_V1,
   PGO_HASH_V2,
   PGO_HASH_V3,
+  PGO_HASH_V4,
 
   // Keep this set to the latest hash version.
-  PGO_HASH_LATEST = PGO_HASH_V3
+  PGO_HASH_LATEST = PGO_HASH_V4
 };
 
 namespace {
@@ -152,7 +154,9 @@ static PGOHashVersion getPGOHashVersion(llvm::IndexedInstrProfReader *PGOReader,
     return PGO_HASH_V1;
   if (PGOReader->getVersion() <= 5)
     return PGO_HASH_V2;
-  return PGO_HASH_V3;
+  if (PGOReader->getVersion() <= 12)
+    return PGO_HASH_V3;
+  return PGO_HASH_V4;
 }
 
 /// A RecursiveASTVisitor that fills a map of statements to PGO counters.
@@ -290,23 +294,14 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
         if (LogOpStack.empty()) {
           /// Was the "split-nested" logical operator case encountered?
           if (SplitNestedLogicalOp) {
-            unsigned DiagID = Diag.getCustomDiagID(
-                DiagnosticsEngine::Warning,
-                "unsupported MC/DC boolean expression; "
-                "contains an operation with a nested boolean expression. "
-                "Expression will not be covered");
-            Diag.Report(S->getBeginLoc(), DiagID);
+            Diag.Report(S->getBeginLoc(), diag::warn_pgo_nested_boolean_expr);
             return true;
           }
 
           /// Was the maximum number of conditions encountered?
           if (NumCond > MCDCMaxCond) {
-            unsigned DiagID = Diag.getCustomDiagID(
-                DiagnosticsEngine::Warning,
-                "unsupported MC/DC boolean expression; "
-                "number of conditions (%0) exceeds max (%1). "
-                "Expression will not be covered");
-            Diag.Report(S->getBeginLoc(), DiagID) << NumCond << MCDCMaxCond;
+            Diag.Report(S->getBeginLoc(), diag::warn_pgo_condition_limit)
+                << NumCond << MCDCMaxCond;
             return true;
           }
 
@@ -972,7 +967,7 @@ void PGOHash::combine(HashType Type) {
   if (Count && Count % NumTypesPerWord == 0) {
     using namespace llvm::support;
     uint64_t Swapped =
-        endian::byte_swap<uint64_t, llvm::endianness::little>(Working);
+        endian::byte_swap<uint64_t>(Working, llvm::endianness::little);
     MD5.update(llvm::ArrayRef((uint8_t *)&Swapped, sizeof(Swapped)));
     Working = 0;
   }
@@ -999,7 +994,7 @@ uint64_t PGOHash::finalize() {
     } else {
       using namespace llvm::support;
       uint64_t Swapped =
-          endian::byte_swap<uint64_t, llvm::endianness::little>(Working);
+          endian::byte_swap<uint64_t>(Working, llvm::endianness::little);
       MD5.update(llvm::ArrayRef((uint8_t *)&Swapped, sizeof(Swapped)));
     }
   }
@@ -1099,6 +1094,8 @@ void CodeGenPGO::mapRegionCounters(const Decl *D) {
   assert(Walker.NextCounter > 0 && "no entry counter mapped for decl");
   NumRegionCounters = Walker.NextCounter;
   FunctionHash = Walker.Hash.finalize();
+  if (HashVersion >= PGO_HASH_V4)
+    FunctionHash &= llvm::NamedInstrProfRecord::FUNC_HASH_MASK;
 }
 
 bool CodeGenPGO::skipRegionMappingForDecl(const Decl *D) {

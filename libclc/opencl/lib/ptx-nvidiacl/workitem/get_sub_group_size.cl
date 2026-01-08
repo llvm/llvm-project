@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/workitem/get_sub_group_size.h>
 #include <clc/workitem/clc_get_sub_group_size.h>
 
 _CLC_OVERLOAD _CLC_DEF uint get_sub_group_size() {

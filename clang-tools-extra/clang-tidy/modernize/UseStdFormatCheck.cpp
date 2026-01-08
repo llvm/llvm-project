@@ -1,4 +1,4 @@
-//===--- UseStdFormatCheck.cpp - clang-tidy -------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,7 +23,7 @@ AST_MATCHER(StringLiteral, isOrdinary) { return Node.isOrdinary(); }
 
 UseStdFormatCheck::UseStdFormatCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      StrictMode(Options.getLocalOrGlobal("StrictMode", false)),
+      StrictMode(Options.get("StrictMode", false)),
       StrFormatLikeFunctions(utils::options::parseStringList(
           Options.get("StrFormatLikeFunctions", ""))),
       ReplacementFormatFunction(
@@ -50,7 +50,7 @@ void UseStdFormatCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       callExpr(argumentCountAtLeast(1),
                hasArgument(0, stringLiteral(isOrdinary())),
-               callee(functionDecl(matchers::matchesAnyListedName(
+               callee(functionDecl(matchers::matchesAnyListedRegexName(
                                        StrFormatLikeFunctions))
                           .bind("func_decl")))
           .bind("strformat"),
