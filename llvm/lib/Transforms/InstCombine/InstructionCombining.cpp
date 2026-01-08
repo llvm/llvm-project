@@ -4070,12 +4070,10 @@ Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
     return nullptr;
 
   KnownFPClass KnownClass;
-  Value *Simplified =
-      SimplifyDemandedUseFPClass(RetVal, ~ReturnClass, KnownClass, &RI);
-  if (!Simplified)
-    return nullptr;
+  if (SimplifyDemandedFPClass(&RI, 0, ~ReturnClass, KnownClass))
+    return &RI;
 
-  return ReturnInst::Create(RI.getContext(), Simplified);
+  return nullptr;
 }
 
 // WARNING: keep in sync with SimplifyCFGOpt::simplifyUnreachable()!

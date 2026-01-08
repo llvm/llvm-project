@@ -2524,12 +2524,12 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
   // Set up for call to createTask()
   builder.SetInsertPoint(taskStartBlock);
 
-  auto bodyCB = [&](InsertPointTy allocIP, InsertPointTy codegenIP,
-                    llvm::ArrayRef<InsertPointTy> deallocIPs) -> llvm::Error {
+  auto bodyCB = [&](InsertPointTy allocaIP,
+                    InsertPointTy codegenIP) -> llvm::Error {
     // Save the alloca insertion point on ModuleTranslation stack for use in
     // nested regions.
-    LLVM::ModuleTranslation::SaveStack<OpenMPAllocStackFrame> frame(
-        moduleTranslation, allocIP, deallocIPs);
+    LLVM::ModuleTranslation::SaveStack<OpenMPAllocaStackFrame> frame(
+        moduleTranslation, allocaIP);
 
     // translate the body of the task:
     builder.restoreIP(codegenIP);
@@ -2547,7 +2547,7 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
       llvm::IRBuilderBase::InsertPointGuard guard(builder);
       llvm::Type *llvmAllocType =
           moduleTranslation.convertType(privDecl.getType());
-      builder.SetInsertPoint(allocIP.getBlock()->getTerminator());
+      builder.SetInsertPoint(allocaIP.getBlock()->getTerminator());
       llvm::Value *llvmPrivateVar = builder.CreateAlloca(
           llvmAllocType, /*ArraySize=*/nullptr, "omp.private.alloc");
 
@@ -2596,8 +2596,9 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
 
     builder.SetInsertPoint(continuationBlockOrError.get()->getTerminator());
 
-    if (failed(cleanupPrivateVars(taskOp, builder, moduleTranslation,
-                                  taskOp.getLoc(), privateVarsInfo)))
+    if (failed(cleanupPrivateVars(builder, moduleTranslation, taskOp.getLoc(),
+                                  privateVarsInfo.llvmVars,
+                                  privateVarsInfo.privatizers)))
       return llvm::make_error<PreviouslyReportedError>();
 
     // Free heap allocated task context structure at the end of the task.
@@ -2633,6 +2634,283 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
 
   // Set the correct branch target for task cancellation
   popCancelFinalizationCB(cancelTerminators, ompBuilder, afterIP.get());
+
+  builder.restoreIP(*afterIP);
+  return success();
+}
+
+// Converts an OpenMP taskloop construct into LLVM IR using OpenMPIRBuilder.
+static LogicalResult
+convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
+                     LLVM::ModuleTranslation &moduleTranslation) {
+  using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
+  auto taskloopOp = cast<omp::TaskloopOp>(opInst);
+  if (failed(checkImplementationStatus(opInst)))
+    return failure();
+
+  // It stores the pointer of allocated firstprivate copies,
+  // which can be used later for freeing the allocated space.
+  SmallVector<llvm::Value *> llvmFirstPrivateVars;
+  PrivateVarsInfo privateVarsInfo(taskloopOp);
+  TaskContextStructManager taskStructMgr{builder, moduleTranslation,
+                                         privateVarsInfo.privatizers};
+
+  llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
+      findAllocaInsertPoint(builder, moduleTranslation);
+
+  assert(builder.GetInsertPoint() == builder.GetInsertBlock()->end());
+  llvm::BasicBlock *taskloopStartBlock = llvm::BasicBlock::Create(
+      builder.getContext(), "omp.taskloop.start",
+      /*Parent=*/builder.GetInsertBlock()->getParent());
+  llvm::Instruction *branchToTaskloopStartBlock =
+      builder.CreateBr(taskloopStartBlock);
+  builder.SetInsertPoint(branchToTaskloopStartBlock);
+
+  llvm::BasicBlock *copyBlock =
+      splitBB(builder, /*CreateBranch=*/true, "omp.private.copy");
+  llvm::BasicBlock *initBlock =
+      splitBB(builder, /*CreateBranch=*/true, "omp.private.init");
+
+  LLVM::ModuleTranslation::SaveStack<OpenMPAllocaStackFrame> frame(
+      moduleTranslation, allocaIP);
+
+  // Allocate and initialize private variables
+  builder.SetInsertPoint(initBlock->getTerminator());
+
+  // TODO: don't allocate if the loop has zero iterations.
+  taskStructMgr.generateTaskContextStruct();
+  taskStructMgr.createGEPsToPrivateVars();
+
+  llvmFirstPrivateVars.resize(privateVarsInfo.blockArgs.size());
+
+  for (auto [i, zip] : llvm::enumerate(llvm::zip_equal(
+           privateVarsInfo.privatizers, privateVarsInfo.mlirVars,
+           privateVarsInfo.blockArgs, taskStructMgr.getLLVMPrivateVarGEPs()))) {
+    auto [privDecl, mlirPrivVar, blockArg, llvmPrivateVarAlloc] = zip;
+    // To be handled inside the taskloop.
+    if (!privDecl.readsFromMold())
+      continue;
+    assert(llvmPrivateVarAlloc &&
+           "reads from mold so shouldn't have been skipped");
+
+    llvm::Expected<llvm::Value *> privateVarOrErr =
+        initPrivateVar(builder, moduleTranslation, privDecl, mlirPrivVar,
+                       blockArg, llvmPrivateVarAlloc, initBlock);
+    if (!privateVarOrErr)
+      return handleError(privateVarOrErr, *taskloopOp.getOperation());
+
+    llvmFirstPrivateVars[i] = privateVarOrErr.get();
+
+    llvm::IRBuilderBase::InsertPointGuard guard(builder);
+    builder.SetInsertPoint(builder.GetInsertBlock()->getTerminator());
+
+    if ((privateVarOrErr.get() != llvmPrivateVarAlloc) &&
+        !mlir::isa<LLVM::LLVMPointerType>(blockArg.getType())) {
+      builder.CreateStore(privateVarOrErr.get(), llvmPrivateVarAlloc);
+      // Load it so we have the value pointed to by the GEP
+      llvmPrivateVarAlloc = builder.CreateLoad(privateVarOrErr.get()->getType(),
+                                               llvmPrivateVarAlloc);
+    }
+    assert(llvmPrivateVarAlloc->getType() ==
+           moduleTranslation.convertType(blockArg.getType()));
+  }
+
+  // firstprivate copy region
+  setInsertPointForPossiblyEmptyBlock(builder, copyBlock);
+  if (failed(copyFirstPrivateVars(
+          taskloopOp, builder, moduleTranslation, privateVarsInfo.mlirVars,
+          taskStructMgr.getLLVMPrivateVarGEPs(), privateVarsInfo.privatizers,
+          taskloopOp.getPrivateNeedsBarrier())))
+    return llvm::failure();
+
+  // Set up inserttion point for call to createTaskloop()
+  builder.SetInsertPoint(taskloopStartBlock);
+
+  auto bodyCB = [&](InsertPointTy allocaIP,
+                    InsertPointTy codegenIP) -> llvm::Error {
+    // Save the alloca insertion point on ModuleTranslation stack for use in
+    // nested regions.
+    LLVM::ModuleTranslation::SaveStack<OpenMPAllocaStackFrame> frame(
+        moduleTranslation, allocaIP);
+
+    // translate the body of the taskloop:
+    builder.restoreIP(codegenIP);
+
+    llvm::BasicBlock *privInitBlock = nullptr;
+    privateVarsInfo.llvmVars.resize(privateVarsInfo.blockArgs.size());
+    for (auto [i, zip] : llvm::enumerate(llvm::zip_equal(
+             privateVarsInfo.blockArgs, privateVarsInfo.privatizers,
+             privateVarsInfo.mlirVars))) {
+      auto [blockArg, privDecl, mlirPrivVar] = zip;
+      // This is handled before the task executes
+      if (privDecl.readsFromMold())
+        continue;
+
+      llvm::IRBuilderBase::InsertPointGuard guard(builder);
+      llvm::Type *llvmAllocType =
+          moduleTranslation.convertType(privDecl.getType());
+      builder.SetInsertPoint(allocaIP.getBlock()->getTerminator());
+      llvm::Value *llvmPrivateVar = builder.CreateAlloca(
+          llvmAllocType, /*ArraySize=*/nullptr, "omp.private.alloc");
+
+      llvm::Expected<llvm::Value *> privateVarOrError =
+          initPrivateVar(builder, moduleTranslation, privDecl, mlirPrivVar,
+                         blockArg, llvmPrivateVar, privInitBlock);
+      if (!privateVarOrError)
+        return privateVarOrError.takeError();
+      moduleTranslation.mapValue(blockArg, privateVarOrError.get());
+      privateVarsInfo.llvmVars[i] = privateVarOrError.get();
+    }
+
+    taskStructMgr.createGEPsToPrivateVars();
+    for (auto [i, llvmPrivVar] :
+         llvm::enumerate(taskStructMgr.getLLVMPrivateVarGEPs())) {
+      if (!llvmPrivVar) {
+        assert(privateVarsInfo.llvmVars[i] &&
+               "This is added in the loop above");
+        continue;
+      }
+      privateVarsInfo.llvmVars[i] = llvmPrivVar;
+    }
+
+    // Find and map the addresses of each variable within the taskloop context
+    // structure
+    for (auto [blockArg, llvmPrivateVar, privateDecl] :
+         llvm::zip_equal(privateVarsInfo.blockArgs, privateVarsInfo.llvmVars,
+                         privateVarsInfo.privatizers)) {
+      // This was handled above.
+      if (!privateDecl.readsFromMold())
+        continue;
+      // Fix broken pass-by-value case for Fortran character boxes
+      if (!mlir::isa<LLVM::LLVMPointerType>(blockArg.getType())) {
+        llvmPrivateVar = builder.CreateLoad(
+            moduleTranslation.convertType(blockArg.getType()), llvmPrivateVar);
+      }
+      assert(llvmPrivateVar->getType() ==
+             moduleTranslation.convertType(blockArg.getType()));
+      moduleTranslation.mapValue(blockArg, llvmPrivateVar);
+    }
+
+    auto continuationBlockOrError =
+        convertOmpOpRegions(taskloopOp.getRegion(), "omp.taskloop.region",
+                            builder, moduleTranslation);
+
+    if (failed(handleError(continuationBlockOrError, opInst)))
+      return llvm::make_error<PreviouslyReportedError>();
+
+    builder.SetInsertPoint(continuationBlockOrError.get()->getTerminator());
+
+    // This is freeing the private variables as mapped inside of the task: these
+    // will be per-task private copies possibly after task duplication. This is
+    // handled transparently by how these are passed to the structure passed
+    // into the outlined function. When the task is duplicated, that structure
+    // is duplicated too.
+    if (failed(cleanupPrivateVars(builder, moduleTranslation,
+                                  taskloopOp.getLoc(), privateVarsInfo.llvmVars,
+                                  privateVarsInfo.privatizers)))
+      return llvm::make_error<PreviouslyReportedError>();
+    // Similarly, the task context structure freed inside the task is the
+    // per-task copy after task duplication.
+    taskStructMgr.freeStructPtr();
+
+    return llvm::Error::success();
+  };
+
+  // Taskloop divides into an appropriate number of tasks by repeatedly
+  // duplicating the original task. Each time this is done, the task context
+  // structure must be duplicated too.
+  auto taskDupCB = [&](InsertPointTy allocaIP, InsertPointTy codegenIP,
+                       llvm::Value *destPtr, llvm::Value *srcPtr)
+      -> llvm::Expected<llvm::IRBuilderBase::InsertPoint> {
+    llvm::IRBuilderBase::InsertPointGuard guard(builder);
+    builder.restoreIP(codegenIP);
+
+    llvm::Type *ptrTy =
+        builder.getPtrTy(srcPtr->getType()->getPointerAddressSpace());
+    llvm::Value *src =
+        builder.CreateLoad(ptrTy, srcPtr, "omp.taskloop.context.src");
+
+    TaskContextStructManager &srcStructMgr = taskStructMgr;
+    TaskContextStructManager destStructMgr(builder, moduleTranslation,
+                                           privateVarsInfo.privatizers);
+    destStructMgr.generateTaskContextStruct();
+    llvm::Value *dest = destStructMgr.getStructPtr();
+    dest->setName("omp.taskloop.context.dest");
+    builder.CreateStore(dest, destPtr);
+
+    llvm::SmallVector<llvm::Value *> srcGEPs =
+        srcStructMgr.createGEPsToPrivateVars(src);
+    llvm::SmallVector<llvm::Value *> destGEPs =
+        destStructMgr.createGEPsToPrivateVars(dest);
+
+    // Inline init regions.
+    for (auto [privDecl, mold, blockArg, llvmPrivateVarAlloc] :
+         llvm::zip_equal(privateVarsInfo.privatizers, srcGEPs,
+                         privateVarsInfo.blockArgs, destGEPs)) {
+      // To be handled inside task body.
+      if (!privDecl.readsFromMold())
+        continue;
+      assert(llvmPrivateVarAlloc &&
+             "reads from mold so shouldn't have been skipped");
+
+      llvm::Expected<llvm::Value *> privateVarOrErr =
+          initPrivateVar(builder, moduleTranslation, privDecl, mold, blockArg,
+                         llvmPrivateVarAlloc, builder.GetInsertBlock());
+      if (!privateVarOrErr)
+        return privateVarOrErr.takeError();
+
+      setInsertPointForPossiblyEmptyBlock(builder);
+
+      // TODO: this is a bit of a hack for Fortran character boxes.
+      // Character boxes are passed by value into the init region and then the
+      // initialized character box is yielded by value. Here we need to store
+      // the yielded value into the private allocation, and load the private
+      // allocation to match the type expected by region block arguments.
+      if ((privateVarOrErr.get() != llvmPrivateVarAlloc) &&
+          !mlir::isa<LLVM::LLVMPointerType>(blockArg.getType())) {
+        builder.CreateStore(privateVarOrErr.get(), llvmPrivateVarAlloc);
+        // Load it so we have the value pointed to by the GEP
+        llvmPrivateVarAlloc = builder.CreateLoad(
+            privateVarOrErr.get()->getType(), llvmPrivateVarAlloc);
+      }
+      assert(llvmPrivateVarAlloc->getType() ==
+             moduleTranslation.convertType(blockArg.getType()));
+
+      // Mapping blockArg -> llvmPrivateVarAlloc is done inside the body
+      // callback so that OpenMPIRBuilder doesn't try to pass each GEP address
+      // through a stack allocated structure.
+    }
+
+    if (failed(copyFirstPrivateVars(
+            &opInst, builder, moduleTranslation, srcGEPs, destGEPs,
+            privateVarsInfo.privatizers, taskloopOp.getPrivateNeedsBarrier())))
+      return llvm::make_error<PreviouslyReportedError>();
+
+    return builder.saveIP();
+  };
+
+  auto loopOp = cast<omp::LoopNestOp>(taskloopOp.getWrappedLoop());
+
+  auto loopInfo = [&]() -> llvm::Expected<llvm::CanonicalLoopInfo *> {
+    llvm::CanonicalLoopInfo *loopInfo = findCurrentLoopInfo(moduleTranslation);
+    return loopInfo;
+  };
+
+  llvm::OpenMPIRBuilder::TaskDupCallbackTy taskDupOrNull = nullptr;
+  if (!taskStructMgr.getLLVMPrivateVarGEPs().empty())
+    taskDupOrNull = taskDupCB;
+
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+  llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
+      moduleTranslation.getOpenMPBuilder()->createTaskloop(
+          ompLoc, allocaIP, bodyCB, loopInfo,
+          moduleTranslation.lookupValue(loopOp.getLoopLowerBounds()[0]),
+          moduleTranslation.lookupValue(loopOp.getLoopUpperBounds()[0]),
+          moduleTranslation.lookupValue(loopOp.getLoopSteps()[0]),
+          /*Tied=*/true, taskDupOrNull, taskStructMgr.getStructPtr());
+
+  if (failed(handleError(afterIP, opInst)))
+    return failure();
 
   builder.restoreIP(*afterIP);
   return success();
