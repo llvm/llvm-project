@@ -21,15 +21,25 @@ class TestFrameVarDILCast(TestBase):
 
         self.runCmd("settings set target.experimental.use-DIL true")
 
+        Is32Bit = False
+        if self.target().GetAddressByteSize() == 4:
+            Is32Bit = True
+
         # TestCastBUiltins
 
         self.expect_var_path("(int)1", value="1", type="int")
         self.expect_var_path("(long long)1", value="1", type="long long")
         self.expect_var_path("(unsigned long)1", value="1", type="unsigned long")
-        self.expect_var_path("(char*)1", value="0x0000000000000001", type="char *")
-        self.expect_var_path(
-            "(long long**)1", value="0x0000000000000001", type="long long **"
-        )
+        if Is32Bit:
+            self.expect_var_path("(char*)1", value="0x00000001", type="char *")
+            self.expect_var_path(
+                "(long long**)1", value="0x00000001", type="long long **"
+            )
+        else:
+            self.expect_var_path("(char*)1", value="0x0000000000000001", type="char *")
+            self.expect_var_path(
+                "(long long**)1", value="0x0000000000000001", type="long long **"
+            )
 
         self.expect(
             "frame variable '(long&*)1'",
@@ -125,9 +135,6 @@ class TestFrameVarDILCast(TestBase):
             error=True,
             substrs=["cast from pointer to smaller type 'char' loses information"],
         )
-        Is32Bit = False
-        if self.target().GetAddressByteSize() == 4:
-            Is32Bit = True
 
         if Is32Bit:
             self.expect_var_path("(int)arr", type="int")
