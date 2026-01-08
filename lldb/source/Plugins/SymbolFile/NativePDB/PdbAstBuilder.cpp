@@ -1010,7 +1010,8 @@ PdbAstBuilder::CreateFunctionDeclFromId(PdbTypeSymId func_tid,
     lldbassert(false && "Invalid function id type!");
   }
   clang::QualType func_qt = GetOrCreateType(func_ti);
-  if (func_qt.isNull() || !parent)
+  if (func_qt.isNull() || !parent ||
+      !llvm::isa<clang::FunctionProtoType>(func_qt))
     return nullptr;
   CompilerType func_ct = ToCompilerType(func_qt);
   uint32_t param_count =
