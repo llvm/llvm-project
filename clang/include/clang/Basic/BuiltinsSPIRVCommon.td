@@ -23,3 +23,4 @@ def length : SPIRVBuiltin<"void(...)", [NoThrow, Const]>;
 def smoothstep : SPIRVBuiltin<"void(...)", [NoThrow, Const, CustomTypeChecking]>;
 
 def subgroup_ballot : SPIRVBuiltin<"_ExtVector<4, uint32_t>(bool)", [NoThrow, Const]>;
+def subgroup_shuffle : SPIRVBuiltin<"void(...)", [NoThrow, Const, CustomTypeChecking]>;
