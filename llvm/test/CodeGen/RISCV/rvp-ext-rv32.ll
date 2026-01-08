@@ -64,6 +64,124 @@ define void @test_psub_b(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
   ret void
 }
 
+; Test bitwise operations for v2i16 (use scalar instructions)
+define void @test_and_h(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-LABEL: test_and_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    lw a2, 0(a2)
+; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i16>, ptr %a_ptr
+  %b = load <2 x i16>, ptr %b_ptr
+  %res = and <2 x i16> %a, %b
+  store <2 x i16> %res, ptr %ret_ptr
+  ret void
+}
+
+define void @test_or_h(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-LABEL: test_or_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    lw a2, 0(a2)
+; CHECK-NEXT:    or a1, a1, a2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i16>, ptr %a_ptr
+  %b = load <2 x i16>, ptr %b_ptr
+  %res = or <2 x i16> %a, %b
+  store <2 x i16> %res, ptr %ret_ptr
+  ret void
+}
+
+define void @test_xor_h(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-LABEL: test_xor_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    lw a2, 0(a2)
+; CHECK-NEXT:    xor a1, a1, a2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i16>, ptr %a_ptr
+  %b = load <2 x i16>, ptr %b_ptr
+  %res = xor <2 x i16> %a, %b
+  store <2 x i16> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test bitwise operations for v4i8 (use scalar instructions)
+define void @test_and_b(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-LABEL: test_and_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    lw a2, 0(a2)
+; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x i8>, ptr %a_ptr
+  %b = load <4 x i8>, ptr %b_ptr
+  %res = and <4 x i8> %a, %b
+  store <4 x i8> %res, ptr %ret_ptr
+  ret void
+}
+
+define void @test_or_b(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-LABEL: test_or_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    lw a2, 0(a2)
+; CHECK-NEXT:    or a1, a1, a2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x i8>, ptr %a_ptr
+  %b = load <4 x i8>, ptr %b_ptr
+  %res = or <4 x i8> %a, %b
+  store <4 x i8> %res, ptr %ret_ptr
+  ret void
+}
+
+define void @test_xor_b(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-LABEL: test_xor_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    lw a2, 0(a2)
+; CHECK-NEXT:    xor a1, a1, a2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x i8>, ptr %a_ptr
+  %b = load <4 x i8>, ptr %b_ptr
+  %res = xor <4 x i8> %a, %b
+  store <4 x i8> %res, ptr %ret_ptr
+  ret void
+}
+
+define void @test_not_h(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_not_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    not a1, a1
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i16>, ptr %a_ptr
+  %res = xor <2 x i16> %a, splat(i16 -1)
+  store <2 x i16> %res, ptr %ret_ptr
+  ret void
+}
+
+define void @test_not_b(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_not_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    not a1, a1
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x i8>, ptr %a_ptr
+  %res = xor <4 x i8> %a, splat(i8 -1)
+  store <4 x i8> %res, ptr %ret_ptr
+  ret void
+}
+
 ; Test saturating add operations for v2i16
 define void @test_psadd_h(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-LABEL: test_psadd_h:
