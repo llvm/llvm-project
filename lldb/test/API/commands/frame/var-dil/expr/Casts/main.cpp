@@ -8,6 +8,14 @@ typedef int myint;
 
 class Foo {};
 
+namespace inner {
+
+using mydouble = double;
+
+class Foo {};
+
+} // namespace inner
+
 } // namespace ns
 
 int main(int argc, char **argv) {
@@ -33,11 +41,23 @@ int main(int argc, char **argv) {
   ns::Foo ns_foo_;
   ns::Foo *ns_foo_ptr_ = &ns_foo_;
 
+  ns::inner::mydouble ns_inner_mydouble_ = 1.2;
+  ns::inner::Foo ns_inner_foo_;
+  ns::inner::Foo *ns_inner_foo_ptr_ = &ns_inner_foo_;
+
   float finf = std::numeric_limits<float>::infinity();
   float fnan = std::numeric_limits<float>::quiet_NaN();
   float fsnan = std::numeric_limits<float>::signaling_NaN();
   float fmax = std::numeric_limits<float>::max();
   float fdenorm = std::numeric_limits<float>::denorm_min();
+
+  struct InnerFoo {
+    int a;
+    int b;
+  };
+
+  InnerFoo ifoo;
+  (void)ifoo;
 
   int arr_1d[] = {1, 2, 3, 4};
   int arr_2d[2][3] = {{1, 2, 3}, {4, 5, 6}};
