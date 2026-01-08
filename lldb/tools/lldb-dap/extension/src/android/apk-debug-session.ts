@@ -1,5 +1,5 @@
 import { AdbClient } from "./adb-client";
-import Env from "./env";
+import { Ndk } from "./ndk";
 
 /**
  * This class controls the execution of an Android APK for debugging.
@@ -11,13 +11,17 @@ import Env from "./env";
 export class ApkDebugSession {
 
     private runningSession: SessionInfo | undefined;
+    readonly env: ApkDebugEnv | undefined;
     readonly deviceSerial: string | undefined;
     readonly componentName: string;
 
     /**
      * Component name is in the form "com.example.app/.MainActivity".
+     * If the env is undefined, a default one will be created when starting.
+     * If the deviceSerial is undefined, we expect that only one device is connected.
      */
-    constructor(deviceSerial: string | undefined, componentName: string) {
+    constructor(env: ApkDebugEnv | undefined, deviceSerial: string | undefined, componentName: string) {
+        this.env = env;
         this.deviceSerial = deviceSerial;
         this.componentName = componentName;
     }
@@ -39,6 +43,7 @@ export class ApkDebugSession {
     }
 
     /**
+     * Start the debug session.
      * `wfd` stays for "waiting for debugger".
      */
     async start(wfd: boolean) {
@@ -49,14 +54,14 @@ export class ApkDebugSession {
         } else {
             await adb.autoDetectDeviceSerial();
         }
-        const arch = (await adb.shellCommandToString("uname -m")).trim();
-        const lldbServerPath = await Env.getLldbServerPath(arch);
-        if (!lldbServerPath) {
-            throw new Error("Could not find LLDB server in Android NDK");
+        let env = this.env;
+        if (!env) {
+            const targetArch = (await adb.shellCommandToString("uname -m")).trim();
+            env = await this.createDefaultEnv(targetArch);
         }
         await this.stop();
         await this.cleanUpEarlierDebugSessions(adb, addId);
-        await this.installLldbServer(adb, addId, lldbServerPath);
+        await this.installLldbServer(adb, addId, env.lldbServerPath);
         await this.startApk(adb, this.componentName, wfd);
 
         const abortController = new AbortController();
@@ -199,9 +204,31 @@ export class ApkDebugSession {
             await new Promise(resolve => setTimeout(resolve, 100));
         }
     }
+
+    private async createDefaultEnv(targetArch: string): Promise<ApkDebugEnv> {
+        const ndkPath = await Ndk.getDefaultPath();
+        if (!ndkPath) {
+            throw new Error("NDK not found");
+        }
+        const ndkVersion = await Ndk.getVersion(ndkPath);
+        if (!ndkVersion) {
+            throw new Error(`Invalid NDK at path "${ndkPath}"`);
+        }
+        const lldbServerPath = await Ndk.getLldbServerPath(ndkPath, targetArch);
+        if (!lldbServerPath) {
+            throw new Error(`Could not find lldb-server in the NDK at path "${ndkPath}" for target architecture "${targetArch}"`);
+        }
+        return {
+            lldbServerPath,
+        };
+    }
 }
 
-type SessionInfo = {
+export interface ApkDebugEnv {
+    lldbServerPath: string; // path to the lldb-server executable on the host machine
+}
+
+interface SessionInfo {
     adb: AdbClient;
     addId: string;
     endPromise: Promise<void>;

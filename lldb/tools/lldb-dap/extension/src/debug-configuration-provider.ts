@@ -68,6 +68,11 @@ const configurations: Record<string, DefaultConfig> = {
   stopCommands: { type: "stringArray", default: [] },
   exitCommands: { type: "stringArray", default: [] },
   terminateCommands: { type: "stringArray", default: [] },
+
+  // Keys for Android debugging.
+  androidNDKPath: { type: "string", default: "" },
+  androidDevice: { type: "string", default: "" },
+  androidComponent: { type: "string", default: "" },
 };
 
 export function getDefaultConfigKey(
@@ -233,17 +238,45 @@ export class LLDBDapConfigurationProvider
       }
 
       if (debugConfiguration.androidComponent && debugConfiguration.request === "launch") {
-        // TODO: check ADB, connected devices and anything needed to run the android debug session
         if (
           !debugConfiguration.launchCommands ||
           debugConfiguration.launchCommands.length === 0
         ) {
           if (!debugConfiguration.androidDeviceSerial) {
-            debugConfiguration.androidDeviceSerial = await AndroidConfigurationBuilder.resolveDeviceSerial(debugConfiguration.androidDevice);
-            console.log(`Android device serial number: ${debugConfiguration.androidDeviceSerial}`);
+            debugConfiguration.androidDeviceSerial =
+              await AndroidConfigurationBuilder.resolveDeviceSerial(
+                debugConfiguration.androidDevice
+              );
+          }
+          this.logger.info(`Android device serial number: ${debugConfiguration.androidDeviceSerial}`);
+          if (!debugConfiguration.androidTargetArch) {
+            debugConfiguration.androidTargetArch =
+              await AndroidConfigurationBuilder.getTargetArch(
+                debugConfiguration.androidDeviceSerial
+              );
+          }
+          this.logger.info(`Android target architecture: ${debugConfiguration.androidTargetArch}`);
+          if (!debugConfiguration.androidLldbServerPath) {
+            if (!debugConfiguration.androidNDKPath) {
+              debugConfiguration.androidNDKPath =
+                  await AndroidConfigurationBuilder.getDefaultNdkPath();
+            }
+            const ndkVersion = await AndroidConfigurationBuilder.checkNdkAndRetrieveVersion(
+              debugConfiguration.androidNDKPath
+            );
+            this.logger.info(`Android NDK path: ${debugConfiguration.androidNDKPath}`);
+            this.logger.info(`Android NDK version: ${ndkVersion}`);
+            debugConfiguration.androidLldbServerPath =
+              await AndroidConfigurationBuilder.getLldbServerPath(
+                debugConfiguration.androidNDKPath,
+                debugConfiguration.androidTargetArch
+              );
           }
           debugConfiguration.launchCommands =
-            AndroidConfigurationBuilder.getLldbLaunchCommands(debugConfiguration.androidDeviceSerial, debugConfiguration.androidComponent);
+            AndroidConfigurationBuilder.getLldbLaunchCommands(
+              debugConfiguration.androidDeviceSerial,
+              debugConfiguration.androidComponent
+            );
         }
       }
 

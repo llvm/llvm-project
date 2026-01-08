@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { ApkDebugSession } from "./apk-debug-session";
+import { ApkDebugEnv, ApkDebugSession } from "./apk-debug-session";
 
 /**
  * This class is for tracking the Android APK debug session associated with the
@@ -21,9 +21,10 @@ export class AndroidSessionTracker {
     private apkDebugSession: ApkDebugSession;
 
     constructor(session: vscode.DebugSession) {
+        const env = { lldbServerPath: session.configuration.androidLldbServerPath };
         const deviceSerial = session.configuration.androidDeviceSerial;
         const componentName = session.configuration.androidComponent;
-        this.apkDebugSession = new ApkDebugSession(deviceSerial, componentName);
+        this.apkDebugSession = new ApkDebugSession(env, deviceSerial, componentName);
         AndroidSessionTracker.catalog.set(session, this);
     }
 
