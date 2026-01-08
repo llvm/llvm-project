@@ -15,6 +15,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/WindowsError.h"
 
 #include <optional>
 

@@ -105,7 +105,7 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
       CreateRunInTerminalCommFile();
   if (!comm_file_or_err)
     return comm_file_or_err.takeError();
-  FifoFile &comm_file = *comm_file_or_err.get();
+  std::shared_ptr<FifoFile> comm_file = *comm_file_or_err;
 
   RunInTerminalDebugAdapterCommChannel comm_channel(comm_file);
 
@@ -116,11 +116,12 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
 
   llvm::json::Object reverse_request = CreateRunInTerminalReverseRequest(
       arguments.configuration.program, arguments.args, arguments.env,
-      arguments.cwd, comm_file.m_path, debugger_pid, arguments.stdio,
+      arguments.cwd, comm_file->GetPath(), debugger_pid, arguments.stdio,
       arguments.console == protocol::eConsoleExternalTerminal);
   dap.SendReverseRequest<LogFailureResponseHandler>("runInTerminal",
                                                     std::move(reverse_request));
-  comm_file.Connect(); // we need to wait for the client to connect to the pipe.
+  comm_file
+      ->Connect(); // we need to wait for the client to connect to the pipe.
   if (llvm::Expected<lldb::pid_t> pid = comm_channel.GetLauncherPid())
     attach_info.SetProcessID(*pid);
   else

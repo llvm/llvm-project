@@ -320,22 +320,13 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
   HANDLE stdin_handle = GetStdHandle(STD_INPUT_HANDLE);
   HANDLE stdout_handle = GetStdHandle(STD_OUTPUT_HANDLE);
   HANDLE stderr_handle = GetStdHandle(STD_ERROR_HANDLE);
-  llvm::scope_exit close_handles([&] {
-    if (stdin_handle)
-      ::CloseHandle(stdin_handle);
-    if (stdout_handle)
-      ::CloseHandle(stdout_handle);
-    if (stderr_handle)
-      ::CloseHandle(stderr_handle);
-  });
 
-  auto attributelist_cleanup_or_err =
-      lldb_private::SetupProcThreadAttributeList(startupinfoex);
-  if (!attributelist_cleanup_or_err) {
+  auto attributelist_or_err =
+      lldb_private::ProcThreadAttributeList::Create(startupinfoex);
+  if (!attributelist_or_err) {
     return notifyError(comm_channel, "Could not open inherited handles",
-                       attributelist_cleanup_or_err.getError());
+                       attributelist_or_err.getError());
   }
-  auto attributelist_cleanup = std::move(*attributelist_cleanup_or_err);
 
   if (!stdio.empty()) {
     llvm::SmallVector<llvm::StringRef, 3> files;
@@ -349,6 +340,15 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
         files[1], STDOUT_FILENO);
     stderr_handle = lldb_private::ProcessLauncherWindows::GetStdioHandle(
         files[2], STDERR_FILENO);
+    // Only close the handles we created
+    llvm::scope_exit close_handles([&] {
+      if (stdin_handle)
+        CloseHandle(stdin_handle);
+      if (stdout_handle)
+        CloseHandle(stdout_handle);
+      if (stderr_handle)
+        CloseHandle(stderr_handle);
+    });
   }
   auto inherited_handles_or_err =
       lldb_private::ProcessLauncherWindows::GetInheritedHandles(
@@ -375,22 +375,35 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
   if (!result)
     return notifyError(comm_channel, "Failed to launch target process");
 
+  auto cleanupAndReturn = [&](llvm::Error err) -> llvm::Error {
+    if (pi.hProcess)
+      TerminateProcess(pi.hProcess, 1);
+    if (pi.hThread)
+      CloseHandle(pi.hThread);
+    if (pi.hProcess)
+      CloseHandle(pi.hProcess);
+    return err;
+  };
+
   // Notify the pid of the process to debug to the debugger. It will attach to
   // the newly created process.
   if (llvm::Error err = comm_channel.NotifyPid(pi.dwProcessId))
-    return err;
+    return cleanupAndReturn(std::move(err));
 
   if (llvm::Error err = comm_channel.WaitUntilDebugAdapterAttaches(
           std::chrono::milliseconds(timeout_in_ms)))
-    return err;
+    return cleanupAndReturn(std::move(err));
 
   // The debugger attached to the process. We can resume it.
   if (!ResumeThread(pi.hThread))
-    return notifyError(comm_channel, "Failed to resume the target process");
+    return cleanupAndReturn(
+        notifyError(comm_channel, "Failed to resume the target process"));
 
   // Wait for child to complete to match POSIX behavior.
   WaitForSingleObject(pi.hProcess, INFINITE);
-  ExitProcess(0); // TODO: Should we return the exit code of the process?
+  CloseHandle(pi.hThread);
+  CloseHandle(pi.hProcess);
+  return llvm::Error::success();
 #else
   if (!stdio.empty()) {
     constexpr size_t num_of_stdio = 3;

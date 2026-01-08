@@ -190,34 +190,9 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
             '"--launch-target" requires "--comm-file" to be specified', proc.stderr
         )
 
-    @skipIfWindows
     def test_FakeAttachedRunInTerminalLauncherWithInvalidProgram(self):
-        comm_file = os.path.join(self.getBuildDir(), "comm-file")
-        os.mkfifo(comm_file)
-
-        proc = subprocess.Popen(
-            [
-                self.lldbDAPExec,
-                "--comm-file",
-                comm_file,
-                "--launch-target",
-                "INVALIDPROGRAM",
-            ],
-            universal_newlines=True,
-            stderr=subprocess.PIPE,
-        )
-
-        self.read_pid_message(comm_file)
-        self.send_did_attach_message(comm_file)
-        self.assertIn("No such file or directory", self.read_error_message(comm_file))
-
-        _, stderr = proc.communicate()
-        self.assertIn("No such file or directory", stderr)
-
-    @skipUnlessWindows
-    def test_FakeAttachedRunInTerminalLauncherWithInvalidProgramWindows(self):
         with fifo(directory=self.getBuildDir()) as (comm_file, pipe):
-            subprocess.Popen(
+            proc = subprocess.Popen(
                 [
                     self.lldbDAPExec,
                     "--comm-file",
@@ -228,11 +203,19 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
                 universal_newlines=True,
                 stderr=subprocess.PIPE,
             )
+            if sys.platform == "win32":
+                _, stderr = proc.communicate()
+                self.assertIn("Failed to launch target process", stderr)
+            else:
+                self.read_pid_message(comm_file, pipe)
+                self.send_did_attach_message(comm_file, pipe)
+                self.assertIn(
+                    "No such file or directory",
+                    self.read_error_message(comm_file, pipe),
+                )
 
-            self.assertIn(
-                "Failed to launch target process",
-                self.read_error_message(comm_file, pipe),
-            )
+                _, stderr = proc.communicate()
+                self.assertIn("No such file or directory", stderr)
 
     def test_FakeAttachedRunInTerminalLauncherWithValidProgram(self):
         with fifo(directory=self.getBuildDir()) as (comm_file, pipe):
@@ -270,10 +253,21 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         stdout, _ = proc.communicate()
         self.assertIn("FOO=BAR", stdout)
 
-    @skipIfWindows
     def test_NonAttachedRunInTerminalLauncher(self):
-        comm_file = os.path.join(self.getBuildDir(), "comm-file")
-        os.mkfifo(comm_file)
+        with fifo(directory=self.getBuildDir()) as (comm_file, pipe):
+            proc = subprocess.Popen(
+                [
+                    self.lldbDAPExec,
+                    "--comm-file",
+                    comm_file,
+                    "--launch-target",
+                    "echo",
+                    "foo",
+                ],
+                universal_newlines=True,
+                stderr=subprocess.PIPE,
+                env={**os.environ, "LLDB_DAP_RIT_TIMEOUT_IN_MS": "1000"},
+            )
 
         proc = subprocess.Popen(
             [
