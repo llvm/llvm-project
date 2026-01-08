@@ -152,21 +152,6 @@ llvm::ErrorOr<std::wstring> GetFlattenedWindowsCommandStringW(const Args &args);
 
 llvm::ErrorOr<std::wstring>
 GetFlattenedWindowsCommandStringW(llvm::ArrayRef<const char *> args);
-
-/// Allocate and initialize a PROC_THREAD_ATTRIBUTE_LIST structure
-/// that can be used with CreateProcess to specify extended process creation
-/// attributes (such as inherited handles).
-///
-/// \param[in] startupinfoex The STARTUPINFOEXW structure whose lpAttributeList
-/// will
-///                          be initialized.
-///
-/// \return On success, returns a scope_exit cleanup object that will
-/// automatically
-///         delete and free the attribute list when it goes out of scope.
-///         On failure, returns the corresponding Windows error code.
-llvm::ErrorOr<llvm::scope_exit<std::function<void()>>>
-SetupProcThreadAttributeList(STARTUPINFOEXW &startupinfoex);
 }
 
 #endif
