@@ -28,6 +28,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/COFFImportFile.h"
+#include "llvm/Object/IRObjectFile.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -256,6 +257,24 @@ MemoryBufferRef LinkerDriver::takeBuffer(std::unique_ptr<MemoryBuffer> mb) {
   return mbref;
 }
 
+static InputFile *tryCreateFatLTOFile(COFFLinkerContext &ctx,
+                                      MemoryBufferRef mb, StringRef archiveName,
+                                      uint64_t offsetInArchive, bool lazy) {
+  if (ctx.config.fatLTOObjects) {
+    Expected<MemoryBufferRef> fatLTOData =
+        IRObjectFile::findBitcodeInMemBuffer(mb);
+
+    if (!errorToBool(fatLTOData.takeError())) {
+      return BitcodeFile::create(ctx, *fatLTOData, archiveName, offsetInArchive,
+                                 lazy);
+    }
+  }
+
+  InputFile *obj = ObjFile::create(ctx, mb, lazy);
+  obj->parentName = archiveName;
+  return obj;
+}
+
 void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
                              bool wholeArchive, bool lazy) {
   StringRef filename = mb->getBufferIdentifier();
@@ -289,7 +308,10 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
   case file_magic::bitcode:
     addFile(BitcodeFile::create(ctx, mbref, "", 0, lazy));
     break;
-  case file_magic::coff_object:
+  case file_magic::coff_object: {
+    addFile(tryCreateFatLTOFile(ctx, mbref, "", 0, lazy));
+    break;
+  }
   case file_magic::coff_import_library:
     addFile(ObjFile::create(ctx, mbref, lazy));
     break;
@@ -318,7 +340,26 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
   }
 }
 
-void LinkerDriver::enqueuePath(StringRef path, bool wholeArchive, bool lazy) {
+void LinkerDriver::handleReproFile(StringRef path, InputOpt inputOpt) {
+  if (!reproFile)
+    return;
+
+  *reproFile << '"';
+  if (inputOpt == InputOpt::DefaultLib)
+    *reproFile << "/defaultlib:";
+  else if (inputOpt == InputOpt::WholeArchive)
+    *reproFile << "/wholearchive:";
+
+  SmallString<128> absPath = path;
+  std::error_code ec = sys::fs::make_absolute(absPath);
+  if (ec)
+    Err(ctx) << "cannot find absolute path for reproFile for " << absPath
+             << ": " << ec.message();
+  sys::path::remove_dots(absPath, true);
+  *reproFile << absPath << "\"\n";
+}
+
+void LinkerDriver::enqueuePath(StringRef path, bool lazy, InputOpt inputOpt) {
   auto future = std::make_shared<std::future<MBErrPair>>(
       createFutureForFile(std::string(path)));
   std::string pathStr = std::string(path);
@@ -356,8 +397,11 @@ void LinkerDriver::enqueuePath(StringRef path, bool wholeArchive, bool lazy) {
         Err(ctx) << msg;
       else
         Err(ctx) << msg << "; did you mean '" << nearest << "'";
-    } else
-      ctx.driver.addBuffer(std::move(mb), wholeArchive, lazy);
+    } else {
+      handleReproFile(pathStr, inputOpt);
+      ctx.driver.addBuffer(std::move(mb), inputOpt == InputOpt::WholeArchive,
+                           lazy);
+    }
   });
 }
 
@@ -374,7 +418,8 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef mb, StringRef symName,
 
   InputFile *obj;
   if (magic == file_magic::coff_object) {
-    obj = ObjFile::create(ctx, mb);
+    obj = tryCreateFatLTOFile(ctx, mb, parentName, offsetInArchive,
+                              /*lazy=*/false);
   } else if (magic == file_magic::bitcode) {
     obj = BitcodeFile::create(ctx, mb, parentName, offsetInArchive,
                               /*lazy=*/false);
@@ -405,10 +450,9 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
                                         StringRef parentName) {
 
   auto reportBufferError = [=](Error &&e) {
-    StringRef childName =
-      CHECK(c.getName(),
-            "could not get child name for archive " + parentName +
-            " while loading symbol " + toCOFFString(ctx, sym));
+    StringRef childName = CHECK(
+        c.getName(), "could not get child name for archive " + parentName +
+                         " while loading symbol " + toCOFFString(ctx, sym));
     Fatal(ctx) << "could not get the buffer for the member defining symbol "
                << &sym << ": " << parentName << "(" << childName
                << "): " << std::move(e);
@@ -514,7 +558,7 @@ void LinkerDriver::parseDirectives(InputFile *file) {
       break;
     case OPT_defaultlib:
       if (std::optional<StringRef> path = findLibIfNew(arg->getValue()))
-        enqueuePath(*path, false, false);
+        enqueuePath(*path, false, InputOpt::DefaultLib);
       break;
     case OPT_entry:
       if (!arg->getValue()[0])
@@ -1615,6 +1659,15 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       }
     }
   }
+  // Handle /linkreprofullpathrsp
+  if (auto *arg = args.getLastArg(OPT_linkreprofullpathrsp)) {
+    std::error_code ec;
+    reproFile = std::make_unique<raw_fd_ostream>(arg->getValue(), ec);
+    if (ec) {
+      Err(ctx) << "cannot open " << arg->getValue() << ": " << ec.message();
+      reproFile.reset();
+    }
+  }
 
   if (!args.hasArg(OPT_INPUT, OPT_wholearchive_file)) {
     if (args.hasArg(OPT_deffile))
@@ -2129,6 +2182,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   config->dtltoCompilerArgs =
       args::getStrings(args, OPT_thinlto_remote_compiler_arg);
 
+  // Handle /fat-lto-objects
+  config->fatLTOObjects =
+      args.hasFlag(OPT_fat_lto_objects, OPT_fat_lto_objects_no, false);
+
   // Handle /dwodir
   config->dwoDir = args.getLastArgValue(OPT_dwodir);
 
@@ -2253,11 +2310,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         break;
       case OPT_wholearchive_file:
         if (std::optional<StringRef> path = findFileIfNew(arg->getValue()))
-          enqueuePath(*path, true, inLib);
+          enqueuePath(*path, inLib, InputOpt::WholeArchive);
         break;
       case OPT_INPUT:
         if (std::optional<StringRef> path = findFileIfNew(arg->getValue()))
-          enqueuePath(*path, isWholeArchive(*path), inLib);
+          enqueuePath(*path, inLib,
+                      isWholeArchive(*path) ? InputOpt::WholeArchive
+                                            : InputOpt::None);
         break;
       default:
         // Ignore other options.
@@ -2297,7 +2356,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // addWinSysRootLibSearchPaths(), which is why they are in a separate loop.
   for (auto *arg : args.filtered(OPT_defaultlib))
     if (std::optional<StringRef> path = findLibIfNew(arg->getValue()))
-      enqueuePath(*path, false, false);
+      enqueuePath(*path, false, InputOpt::DefaultLib);
   run();
   if (errorCount())
     return;
@@ -2862,6 +2921,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   rootTimer.stop();
   if (config->showTiming)
     ctx.rootTimer.print();
+
+  // Clean up /linkreprofullpathrsp file
+  reproFile.reset();
 
   if (config->timeTraceEnabled) {
     // Manually stop the topmost "COFF link" scope, since we're shutting down.

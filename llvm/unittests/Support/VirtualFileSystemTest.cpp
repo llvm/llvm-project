@@ -545,8 +545,7 @@ TEST(VirtualFileSystemTest, PhysicalFileSystemWorkingDirFailure) {
   ASSERT_EQ(sys::fs::current_path(PrevWD), std::error_code());
   ASSERT_EQ(sys::fs::createUniqueDirectory("d1", WD), std::error_code());
   ASSERT_EQ(sys::fs::set_current_path(WD), std::error_code());
-  auto Restore =
-      llvm::make_scope_exit([&] { sys::fs::set_current_path(PrevWD); });
+  llvm::scope_exit Restore([&] { sys::fs::set_current_path(PrevWD); });
 
   // Delete the working directory to create an error.
   if (sys::fs::remove_directories(WD, /*IgnoreErrors=*/false))
@@ -2726,6 +2725,33 @@ TEST_F(VFSFromYAMLTest, GetRealPath) {
   // Try a non-existing file.
   EXPECT_EQ(FS->getRealPath("/non_existing", RealPath),
             errc::no_such_file_or_directory);
+}
+
+TEST_F(VFSFromYAMLTest, ErrorMap) {
+  auto Lower = makeIntrusiveRefCnt<DummyFileSystem>();
+  Lower->addDirectory("/dir");
+  Lower->addRegularFile("/foo");
+  IntrusiveRefCntPtr<vfs::FileSystem> FS =
+      getFromYAMLString("{ 'use-external-names': false,\n"
+                        "  'case-sensitive': false,\n"
+                        "  'roots': [\n"
+                        "{\n"
+                        "  'type': 'directory',\n"
+                        "  'name': '/root',\n"
+                        "  'contents': [ {\n"
+                        "                  'type': 'file',\n"
+                        "                  'name': 'bar',\n"
+                        "                  'external-contents': '/foo'\n"
+                        "                }\n"
+                        "              ]\n"
+                        "}\n"
+                        "]\n"
+                        "}",
+                        Lower);
+  ASSERT_NE(FS.get(), nullptr);
+
+  // Lookup a file location that doesn't exist.
+  ASSERT_FALSE(FS->status("/root/bar/file"));
 }
 
 TEST_F(VFSFromYAMLTest, WorkingDirectory) {

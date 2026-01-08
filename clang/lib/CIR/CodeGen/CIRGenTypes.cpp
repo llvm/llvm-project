@@ -34,8 +34,10 @@ mlir::MLIRContext &CIRGenTypes::getMLIRContext() const {
 /// expanding the type because we're in a recursive context.
 bool CIRGenTypes::isFuncParamTypeConvertible(clang::QualType type) {
   // Some ABIs cannot have their member pointers represented in LLVM IR unless
-  // certain circumstances have been reached.
-  assert(!type->getAs<MemberPointerType>() && "NYI");
+  // certain circumstances have been reached, but in CIR we represent member
+  // pointer types abstractly at this point so they are always convertible.
+  if (type->getAs<MemberPointerType>())
+    return true;
 
   // If this isn't a tag type, we can convert it.
   const TagType *tagType = type->getAs<TagType>();
@@ -543,8 +545,8 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     if (mpt->isMemberDataPointer()) {
       resultType = cir::DataMemberType::get(memberTy, clsTy);
     } else {
-      assert(!cir::MissingFeatures::methodType());
-      cgm.errorNYI(SourceLocation(), "MethodType");
+      auto memberFuncTy = mlir::cast<cir::FuncType>(memberTy);
+      resultType = cir::MethodType::get(memberFuncTy, clsTy);
     }
     break;
   }
@@ -708,7 +710,7 @@ void CIRGenTypes::updateCompletedType(const TagDecl *td) {
   // If this is an enum being completed, then we flush all non-struct types
   // from the cache. This allows function types and other things that may be
   // derived from the enum to be recomputed.
-  if (const auto *ed = dyn_cast<EnumDecl>(td)) {
+  if ([[maybe_unused]] const auto *ed = dyn_cast<EnumDecl>(td)) {
     // Classic codegen clears the type cache if it contains an entry for this
     // enum type that doesn't use i32 as the underlying type, but I can't find
     // a test case that meets that condition. C++ doesn't allow forward

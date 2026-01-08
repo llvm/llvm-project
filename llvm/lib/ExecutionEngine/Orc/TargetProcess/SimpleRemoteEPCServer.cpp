@@ -62,7 +62,7 @@ StringMap<ExecutorAddr> SimpleRemoteEPCServer::defaultBootstrapSymbols() {
 Expected<SimpleRemoteEPCTransportClient::HandleMessageAction>
 SimpleRemoteEPCServer::handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
                                      ExecutorAddr TagAddr,
-                                     SimpleRemoteEPCArgBytesVector ArgBytes) {
+                                     shared::WrapperFunctionBuffer ArgBytes) {
 
   LLVM_DEBUG({
     dbgs() << "SimpleRemoteEPCServer::handleMessage: opc = ";
@@ -224,7 +224,7 @@ Error SimpleRemoteEPCServer::sendSetupMessage(
 
 Error SimpleRemoteEPCServer::handleResult(
     uint64_t SeqNo, ExecutorAddr TagAddr,
-    SimpleRemoteEPCArgBytesVector ArgBytes) {
+    shared::WrapperFunctionBuffer ArgBytes) {
   std::promise<shared::WrapperFunctionBuffer> *P = nullptr;
   {
     std::lock_guard<std::mutex> Lock(ServerStateMutex);
@@ -245,7 +245,7 @@ Error SimpleRemoteEPCServer::handleResult(
 
 void SimpleRemoteEPCServer::handleCallWrapper(
     uint64_t RemoteSeqNo, ExecutorAddr TagAddr,
-    SimpleRemoteEPCArgBytesVector ArgBytes) {
+    shared::WrapperFunctionBuffer ArgBytes) {
   D->dispatch([this, RemoteSeqNo, TagAddr, ArgBytes = std::move(ArgBytes)]() {
     using WrapperFnTy =
         shared::CWrapperFunctionBuffer (*)(const char *, size_t);

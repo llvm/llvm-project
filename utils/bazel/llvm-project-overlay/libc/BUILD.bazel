@@ -815,6 +815,7 @@ libc_support_library(
     name = "__support_blockstore",
     hdrs = ["src/__support/blockstore.h"],
     deps = [
+        ":__support_alloc_checker",
         ":__support_cpp_array",
         ":__support_cpp_new",
         ":__support_libc_assert",
@@ -1087,6 +1088,7 @@ libc_support_library(
     ],
     hdrs = ["src/__support/File/file.h"],
     deps = [
+        ":__support_alloc_checker",
         ":__support_cpp_new",
         ":__support_cpp_span",
         ":__support_error_or",
@@ -1100,6 +1102,16 @@ libc_support_library(
         ":hdr_stdio_overlay",
         ":string_memory_utils",
         ":types_off_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_alloc_checker",
+    hdrs = ["src/__support/alloc-checker.h"],
+    deps = [
+        ":__support_cpp_new",
+        ":__support_cpp_type_traits",
+        ":__support_macros_config",
     ],
 )
 
@@ -3076,6 +3088,21 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_expm1f",
+    hdrs = ["src/__support/math/expm1f.h"],
+    deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_rounding_mode",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":__support_math_common_constants",
+    ],
+)
+
+libc_support_library(
     name = "__support_range_reduction_double",
     hdrs = [
         "src/__support/math/range_reduction_double_common.h",
@@ -3810,14 +3837,7 @@ libc_math_function(
 libc_math_function(
     name = "expm1f",
     additional_deps = [
-        ":__support_fputil_fma",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_nearest_integer",
-        ":__support_fputil_polyeval",
-        ":__support_fputil_rounding_mode",
-        ":__support_macros_optimization",
-        ":__support_macros_properties_cpu_features",
-        ":__support_math_common_constants",
+        ":__support_math_expm1f",
     ],
 )
 

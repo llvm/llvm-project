@@ -552,3 +552,89 @@ class ScriptedFrameProviderTestCase(TestBase):
         frame3 = thread.GetFrameAtIndex(3)
         self.assertIsNotNone(frame3)
         self.assertIn("thread_func", frame3.GetFunctionName())
+
+    def test_valid_pc_no_module_frames(self):
+        """Test that frames with valid PC but no module display correctly in backtrace."""
+        self.build()
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, "Break here", lldb.SBFileSpec(self.source), only_one_thread=False
+        )
+
+        # Get original frame count.
+        original_frame_count = thread.GetNumFrames()
+        self.assertGreaterEqual(
+            original_frame_count, 2, "Should have at least 2 real frames"
+        )
+
+        # Import the provider.
+        script_path = os.path.join(self.getSourceDir(), "test_frame_providers.py")
+        self.runCmd("command script import " + script_path)
+
+        # Register the ValidPCNoModuleFrameProvider.
+        error = lldb.SBError()
+        provider_id = target.RegisterScriptedFrameProvider(
+            "test_frame_providers.ValidPCNoModuleFrameProvider",
+            lldb.SBStructuredData(),
+            error,
+        )
+        self.assertTrue(error.Success(), f"Failed to register provider: {error}")
+        self.assertNotEqual(provider_id, 0, "Provider ID should be non-zero")
+
+        # Verify we have 2 more frames (the synthetic frames).
+        new_frame_count = thread.GetNumFrames()
+        self.assertEqual(
+            new_frame_count,
+            original_frame_count + 2,
+            "Should have original frames + 2 synthetic frames",
+        )
+
+        # Verify first two frames have valid PCs and function names.
+        frame0 = thread.GetFrameAtIndex(0)
+        self.assertIsNotNone(frame0)
+        self.assertEqual(
+            frame0.GetFunctionName(),
+            "unknown_function_1",
+            "First frame should be unknown_function_1",
+        )
+        self.assertTrue(frame0.IsSynthetic(), "Frame should be marked as synthetic")
+        self.assertEqual(
+            frame0.GetPC(), 0x1234000, "First frame should have PC 0x1234000"
+        )
+
+        frame1 = thread.GetFrameAtIndex(1)
+        self.assertIsNotNone(frame1)
+        self.assertEqual(
+            frame1.GetFunctionName(),
+            "unknown_function_2",
+            "Second frame should be unknown_function_2",
+        )
+        self.assertTrue(frame1.IsSynthetic(), "Frame should be marked as synthetic")
+        self.assertEqual(
+            frame1.GetPC(), 0x5678000, "Second frame should have PC 0x5678000"
+        )
+
+        # Verify the frames display properly in backtrace.
+        # The backtrace should show the PC values without crashing or displaying
+        # invalid addresses like 0xffffffffffffffff.
+        self.runCmd("bt")
+        output = self.res.GetOutput()
+
+        # Should show function names.
+        self.assertIn("unknown_function_1", output)
+        self.assertIn("unknown_function_2", output)
+
+        # Should show PC addresses in hex format.
+        self.assertIn("1234000", output)
+        self.assertIn("5678000", output)
+
+        # Verify PC and function name are properly separated by space.
+        self.assertIn("1234000 unknown_function_1", output)
+        self.assertIn("5678000 unknown_function_2", output)
+
+        # Should NOT show invalid address.
+        self.assertNotIn("ffffff", output.lower())
+
+        # Verify frame 2 is the original real frame 0.
+        frame2 = thread.GetFrameAtIndex(2)
+        self.assertIsNotNone(frame2)
+        self.assertIn("thread_func", frame2.GetFunctionName())
