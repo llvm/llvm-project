@@ -125,12 +125,45 @@ llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
         "Failed to load incremental module", llvm::inconvertibleErrorCode());
   }
 
+  LoadedModules[BinaryFileName] = LoadedLibModule;
+
   return llvm::Error::success();
 }
 
 llvm::Error WasmIncrementalExecutor::removeModule(PartialTranslationUnit &PTU) {
-  return llvm::make_error<llvm::StringError>("Not implemented yet",
-                                             llvm::inconvertibleErrorCode());
+  std::string BinaryFileName = PTU.TheModule->getName().str() + ".wasm";
+
+  llvm::errs() << "[DEBUG] Entering removeModule() for: " << BinaryFileName << "\n";
+  llvm::errs() << "[DEBUG] Current Loaded Modules:\n";
+  for (const auto &entry : LoadedModules) {
+    llvm::errs() << "  -> " << entry.first << "\n";
+  }
+
+  auto It = LoadedModules.find(BinaryFileName);
+  if (It == LoadedModules.end()) {
+    llvm::errs() << "[ERROR] Module not found in LoadedModules!\n";
+    return llvm::make_error<llvm::StringError>(
+        "Module not found in loaded modules", llvm::inconvertibleErrorCode());
+  }
+
+  llvm::errs() << "[DEBUG] Unloading module: " << BinaryFileName << "\n";
+  // Attempt to unload the module
+
+  if (dlclose(It->second) != 0) {
+    llvm::errs() << "Failed to unload module: " << dlerror() << '\n';
+    return llvm::make_error<llvm::StringError>(
+        "Failed to unload module", llvm::inconvertibleErrorCode());
+  }
+
+  // Remove the module from tracking
+  LoadedModules.erase(It);
+
+  llvm::errs() << "[DEBUG] Remaining Loaded Modules:\n";
+  for (const auto &entry : LoadedModules) {
+    llvm::errs() << "  -> " << entry.first << "\n";
+  }
+
+  return llvm::Error::success();
 }
 
 llvm::Error WasmIncrementalExecutor::runCtors() const {
