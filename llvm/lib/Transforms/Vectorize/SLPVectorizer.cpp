@@ -7168,7 +7168,7 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
   }
 
   Type *StrideTy = DL->getIndexType(Ptr0->getType());
-  SPtrInfo.StrideVal = ConstantInt::get(StrideTy, StrideIntVal);
+  SPtrInfo.StrideVal = ConstantInt::getSigned(StrideTy, StrideIntVal);
   SPtrInfo.Ty = getWidenedType(NewScalarTy, VecSz);
   return true;
 }
@@ -20476,7 +20476,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         Value *NewStride =
             Builder.CreateIntCast(Stride, StrideTy, /*isSigned=*/true);
         StrideVal = Builder.CreateMul(
-            NewStride, ConstantInt::get(
+            NewStride, ConstantInt::getSigned(
                            StrideTy, (IsReverseOrder ? -1 : 1) *
                                          static_cast<int>(
                                              DL->getTypeAllocSize(ScalarTy))));
@@ -20558,7 +20558,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             Intrinsic::experimental_vp_strided_store,
             {VecTy, Ptr->getType(), StrideTy},
             {VecValue, Ptr,
-             ConstantInt::get(
+             ConstantInt::getSigned(
                  StrideTy, -static_cast<int>(DL->getTypeAllocSize(ScalarTy))),
              Builder.getAllOnesMask(VecTy->getElementCount()),
              Builder.getInt32(E->Scalars.size())});
