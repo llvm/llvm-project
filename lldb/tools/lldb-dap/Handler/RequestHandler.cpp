@@ -25,6 +25,9 @@
 #if !defined(_WIN32)
 #include <unistd.h>
 #endif
+#ifdef _WIN32
+#include "lldb/Host/windows/PosixApi.h"
+#endif
 
 #ifndef LLDB_DAP_README_URL
 #define LLDB_DAP_README_URL                                                    \
