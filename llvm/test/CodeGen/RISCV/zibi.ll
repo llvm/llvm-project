@@ -4,197 +4,187 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zibi -verify-machineinstrs < %s \
 ; RUN:     | FileCheck -check-prefixes=ZIBI,ZIBI-RV64 %s
 
-define void @test_bne_neg(ptr %b) nounwind {
+define i32 @test_bne_neg(i32 signext %a) nounwind {
 ; ZIBI-LABEL: test_bne_neg:
 ; ZIBI:       # %bb.0:
-; ZIBI-NEXT:    lw a1, 0(a0)
-; ZIBI-NEXT:    bnei a1, -1, .LBB0_2
-; ZIBI-NEXT:  # %bb.1: # %test2
-; ZIBI-NEXT:    lw zero, 0(a0)
-; ZIBI-NEXT:  .LBB0_2: # %end
+; ZIBI-NEXT:    bnei a0, -1, .LBB0_2
+; ZIBI-NEXT:  # %bb.1: # %f
+; ZIBI-NEXT:    li a0, 0
 ; ZIBI-NEXT:    ret
-  %val1 = load volatile i32, ptr %b
-  %tst1 = icmp ne i32 %val1, -1
-  br i1 %tst1, label %end, label %test2, !prof !0
-test2:
-  %val2 = load volatile i32, ptr %b
-  br label %end
-end:
-  ret void
+; ZIBI-NEXT:  .LBB0_2: # %t
+; ZIBI-NEXT:    li a0, 1
+; ZIBI-NEXT:    ret
+  %cmp = icmp ne i32 %a, -1
+  br i1 %cmp, label %t, label %f, !prof !0
+f:
+  ret i32 0
+t:
+  ret i32 1
 }
 
-define void @test_beq_neg(ptr %b) nounwind {
+define i32 @test_beq_neg(i32 signext %a) nounwind {
 ; ZIBI-LABEL: test_beq_neg:
 ; ZIBI:       # %bb.0:
-; ZIBI-NEXT:    lw a1, 0(a0)
-; ZIBI-NEXT:    beqi a1, -1, .LBB1_2
-; ZIBI-NEXT:  # %bb.1: # %test2
-; ZIBI-NEXT:    lw zero, 0(a0)
-; ZIBI-NEXT:  .LBB1_2: # %end
+; ZIBI-NEXT:    beqi a0, -1, .LBB1_2
+; ZIBI-NEXT:  # %bb.1: # %f
+; ZIBI-NEXT:    li a0, 0
 ; ZIBI-NEXT:    ret
-  %val1 = load volatile i32, ptr %b
-  %tst1 = icmp eq i32 %val1, -1
-  br i1 %tst1, label %end, label %test2, !prof !0
-test2:
-  %val2 = load volatile i32, ptr %b
-  br label %end
-end:
-  ret void
+; ZIBI-NEXT:  .LBB1_2: # %t
+; ZIBI-NEXT:    li a0, 1
+; ZIBI-NEXT:    ret
+  %cmp = icmp eq i32 %a, -1
+  br i1 %cmp, label %t, label %f, !prof !0
+f:
+  ret i32 0
+t:
+  ret i32 1
 }
 
-define void @test_bne_zero(ptr %b) nounwind {
+define i32 @test_bne_zero(i32 signext %a) nounwind {
 ; ZIBI-LABEL: test_bne_zero:
 ; ZIBI:       # %bb.0:
-; ZIBI-NEXT:    lw a1, 0(a0)
-; ZIBI-NEXT:    bnez a1, .LBB2_2
-; ZIBI-NEXT:  # %bb.1: # %test2
-; ZIBI-NEXT:    lw zero, 0(a0)
-; ZIBI-NEXT:  .LBB2_2: # %end
+; ZIBI-NEXT:    bnez a0, .LBB2_2
+; ZIBI-NEXT:  # %bb.1: # %f
 ; ZIBI-NEXT:    ret
-  %val1 = load volatile i32, ptr %b
-  %tst1 = icmp ne i32 %val1, 0
-  br i1 %tst1, label %end, label %test2, !prof !0
-test2:
-  %val2 = load volatile i32, ptr %b
-  br label %end
-end:
-  ret void
+; ZIBI-NEXT:  .LBB2_2: # %t
+; ZIBI-NEXT:    li a0, 1
+; ZIBI-NEXT:    ret
+  %cmp = icmp ne i32 %a, 0
+  br i1 %cmp, label %t, label %f, !prof !0
+f:
+  ret i32 0
+t:
+  ret i32 1
 }
 
-define void @test_beq_zero(ptr %b) nounwind {
+define i32 @test_beq_zero(i32 signext %a) nounwind {
 ; ZIBI-LABEL: test_beq_zero:
 ; ZIBI:       # %bb.0:
-; ZIBI-NEXT:    lw a1, 0(a0)
-; ZIBI-NEXT:    beqz a1, .LBB3_2
-; ZIBI-NEXT:  # %bb.1: # %test2
-; ZIBI-NEXT:    lw zero, 0(a0)
-; ZIBI-NEXT:  .LBB3_2: # %end
+; ZIBI-NEXT:    beqz a0, .LBB3_2
+; ZIBI-NEXT:  # %bb.1: # %f
+; ZIBI-NEXT:    li a0, 0
 ; ZIBI-NEXT:    ret
-  %val1 = load volatile i32, ptr %b
-  %tst1 = icmp eq i32 %val1, 0
-  br i1 %tst1, label %end, label %test2, !prof !0
-test2:
-  %val2 = load volatile i32, ptr %b
-  br label %end
-end:
-  ret void
+; ZIBI-NEXT:  .LBB3_2: # %t
+; ZIBI-NEXT:    li a0, 1
+; ZIBI-NEXT:    ret
+  %cmp = icmp eq i32 %a, 0
+  br i1 %cmp, label %t, label %f, !prof !0
+f:
+  ret i32 0
+t:
+  ret i32 1
 }
 
-define void @test_bne_1(ptr %b) nounwind {
+define i32 @test_bne_1(i32 signext %a) nounwind {
 ; ZIBI-LABEL: test_bne_1:
 ; ZIBI:       # %bb.0:
-; ZIBI-NEXT:    lw a1, 0(a0)
-; ZIBI-NEXT:    bnei a1, 1, .LBB4_2
-; ZIBI-NEXT:  # %bb.1: # %test2
-; ZIBI-NEXT:    lw zero, 0(a0)
-; ZIBI-NEXT:  .LBB4_2: # %end
+; ZIBI-NEXT:    bnei a0, 1, .LBB4_2
+; ZIBI-NEXT:  # %bb.1: # %f
+; ZIBI-NEXT:    li a0, 0
 ; ZIBI-NEXT:    ret
-  %val1 = load volatile i32, ptr %b
-  %tst1 = icmp ne i32 %val1, 1
-  br i1 %tst1, label %end, label %test2, !prof !0
-test2:
-  %val2 = load volatile i32, ptr %b
-  br label %end
-end:
-  ret void
+; ZIBI-NEXT:  .LBB4_2: # %t
+; ZIBI-NEXT:    li a0, 1
+; ZIBI-NEXT:    ret
+  %cmp = icmp ne i32 %a, 1
+  br i1 %cmp, label %t, label %f, !prof !0
+f:
+  ret i32 0
+t:
+  ret i32 1
 }
 
-define void @test_beq_1(ptr %b) nounwind {
+define i32 @test_beq_1(i32 signext %a) nounwind {
 ; ZIBI-LABEL: test_beq_1:
 ; ZIBI:       # %bb.0:
-; ZIBI-NEXT:    lw a1, 0(a0)
-; ZIBI-NEXT:    beqi a1, 1, .LBB5_2
-; ZIBI-NEXT:  # %bb.1: # %test2
-; ZIBI-NEXT:    lw zero, 0(a0)
-; ZIBI-NEXT:  .LBB5_2: # %end
+; ZIBI-NEXT:    beqi a0, 1, .LBB5_2
+; ZIBI-NEXT:  # %bb.1: # %f
+; ZIBI-NEXT:    li a0, 0
 ; ZIBI-NEXT:    ret
-  %val1 = load volatile i32, ptr %b
-  %tst1 = icmp eq i32 %val1, 1
-  br i1 %tst1, label %end, label %test2, !prof !0
-test2:
-  %val2 = load volatile i32, ptr %b
-  br label %end
-end:
-  ret void
+; ZIBI-NEXT:  .LBB5_2: # %t
+; ZIBI-NEXT:    li a0, 1
+; ZIBI-NEXT:    ret
+  %cmp = icmp eq i32 %a, 1
+  br i1 %cmp, label %t, label %f, !prof !0
+f:
+  ret i32 0
+t:
+  ret i32 1
 }
 
-define void @test_bne_31(ptr %b) nounwind {
+define i32 @test_bne_31(i32 signext %a) nounwind {
 ; ZIBI-LABEL: test_bne_31:
 ; ZIBI:       # %bb.0:
-; ZIBI-NEXT:    lw a1, 0(a0)
-; ZIBI-NEXT:    bnei a1, 31, .LBB6_2
-; ZIBI-NEXT:  # %bb.1: # %test2
-; ZIBI-NEXT:    lw zero, 0(a0)
-; ZIBI-NEXT:  .LBB6_2: # %end
+; ZIBI-NEXT:    bnei a0, 31, .LBB6_2
+; ZIBI-NEXT:  # %bb.1: # %f
+; ZIBI-NEXT:    li a0, 0
 ; ZIBI-NEXT:    ret
-  %val1 = load volatile i32, ptr %b
-  %tst1 = icmp ne i32 %val1, 31
-  br i1 %tst1, label %end, label %test2, !prof !0
-test2:
-  %val2 = load volatile i32, ptr %b
-  br label %end
-end:
-  ret void
+; ZIBI-NEXT:  .LBB6_2: # %t
+; ZIBI-NEXT:    li a0, 1
+; ZIBI-NEXT:    ret
+  %cmp = icmp ne i32 %a, 31
+  br i1 %cmp, label %t, label %f, !prof !0
+f:
+  ret i32 0
+t:
+  ret i32 1
 }
 
-define void @test_beq_31(ptr %b) nounwind {
+define i32 @test_beq_31(i32 signext %a) nounwind {
 ; ZIBI-LABEL: test_beq_31:
 ; ZIBI:       # %bb.0:
-; ZIBI-NEXT:    lw a1, 0(a0)
-; ZIBI-NEXT:    beqi a1, 31, .LBB7_2
-; ZIBI-NEXT:  # %bb.1: # %test2
-; ZIBI-NEXT:    lw zero, 0(a0)
-; ZIBI-NEXT:  .LBB7_2: # %end
+; ZIBI-NEXT:    beqi a0, 31, .LBB7_2
+; ZIBI-NEXT:  # %bb.1: # %f
+; ZIBI-NEXT:    li a0, 0
 ; ZIBI-NEXT:    ret
-  %val1 = load volatile i32, ptr %b
-  %tst1 = icmp eq i32 %val1, 31
-  br i1 %tst1, label %end, label %test2, !prof !0
-test2:
-  %val2 = load volatile i32, ptr %b
-  br label %end
-end:
-  ret void
+; ZIBI-NEXT:  .LBB7_2: # %t
+; ZIBI-NEXT:    li a0, 1
+; ZIBI-NEXT:    ret
+  %cmp = icmp eq i32 %a, 31
+  br i1 %cmp, label %t, label %f, !prof !0
+f:
+  ret i32 0
+t:
+  ret i32 1
 }
 
-define void @test_bne_32(ptr %b) nounwind {
+define i32 @test_bne_32(i32 signext %a) nounwind {
 ; ZIBI-LABEL: test_bne_32:
 ; ZIBI:       # %bb.0:
-; ZIBI-NEXT:    lw a1, 0(a0)
-; ZIBI-NEXT:    li a2, 32
-; ZIBI-NEXT:    bne a1, a2, .LBB8_2
-; ZIBI-NEXT:  # %bb.1: # %test2
-; ZIBI-NEXT:    lw zero, 0(a0)
-; ZIBI-NEXT:  .LBB8_2: # %end
+; ZIBI-NEXT:    li a1, 32
+; ZIBI-NEXT:    bne a0, a1, .LBB8_2
+; ZIBI-NEXT:  # %bb.1: # %f
+; ZIBI-NEXT:    li a0, 0
 ; ZIBI-NEXT:    ret
-  %val1 = load volatile i32, ptr %b
-  %tst1 = icmp ne i32 %val1, 32
-  br i1 %tst1, label %end, label %test2, !prof !0
-test2:
-  %val2 = load volatile i32, ptr %b
-  br label %end
-end:
-  ret void
+; ZIBI-NEXT:  .LBB8_2: # %t
+; ZIBI-NEXT:    li a0, 1
+; ZIBI-NEXT:    ret
+  %cmp = icmp ne i32 %a, 32
+  br i1 %cmp, label %t, label %f, !prof !0
+f:
+  ret i32 0
+t:
+  ret i32 1
 }
 
-define void @test_beq_32(ptr %b) nounwind {
+define i32 @test_beq_32(i32 signext %a) nounwind {
 ; ZIBI-LABEL: test_beq_32:
 ; ZIBI:       # %bb.0:
-; ZIBI-NEXT:    lw a1, 0(a0)
-; ZIBI-NEXT:    li a2, 32
-; ZIBI-NEXT:    beq a1, a2, .LBB9_2
-; ZIBI-NEXT:  # %bb.1: # %test2
-; ZIBI-NEXT:    lw zero, 0(a0)
-; ZIBI-NEXT:  .LBB9_2: # %end
+; ZIBI-NEXT:    li a1, 32
+; ZIBI-NEXT:    beq a0, a1, .LBB9_2
+; ZIBI-NEXT:  # %bb.1: # %f
+; ZIBI-NEXT:    li a0, 0
 ; ZIBI-NEXT:    ret
-  %val1 = load volatile i32, ptr %b
-  %tst1 = icmp eq i32 %val1, 32
-  br i1 %tst1, label %end, label %test2, !prof !0
-test2:
-  %val2 = load volatile i32, ptr %b
-  br label %end
-end:
-  ret void
+; ZIBI-NEXT:  .LBB9_2: # %t
+; ZIBI-NEXT:    li a0, 1
+; ZIBI-NEXT:    ret
+  %cmp = icmp eq i32 %a, 32
+  br i1 %cmp, label %t, label %f, !prof !0
+f:
+  ret i32 0
+t:
+  ret i32 1
 }
+
 !0 = !{!"branch_weights", i32 1, i32 99}
 
 define i32 @test_select_beq_neg(i32 %a, i32 %b, i32 %c) nounwind {
