@@ -18,7 +18,7 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
-static const char SpecialFunction[] = "SpecialFunction";
+static constexpr char SpecialFunction[] = "SpecialFunction";
 
 /// Finds all the named non-static fields of \p Record.
 static std::set<const FieldDecl *>

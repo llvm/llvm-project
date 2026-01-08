@@ -1507,8 +1507,11 @@ CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::duplicateContextIds(
     NewContextIds.insert(++LastContextId);
     OldToNewContextIds[OldId].insert(LastContextId);
     assert(ContextIdToAllocationType.count(OldId));
-    // The new context has the same allocation type as original.
+    // The new context has the same allocation type and size info as original.
     ContextIdToAllocationType[LastContextId] = ContextIdToAllocationType[OldId];
+    auto CSI = ContextIdToContextSizeInfos.find(OldId);
+    if (CSI != ContextIdToContextSizeInfos.end())
+      ContextIdToContextSizeInfos[LastContextId] = CSI->second;
     if (DotAllocContextIds.contains(OldId))
       DotAllocContextIds.insert(LastContextId);
   }
@@ -3408,6 +3411,11 @@ struct DOTGraphTraits<const CallsiteContextGraph<DerivedCCG, FuncTy, CallTy> *>
       assert(Func != G->NodeToCallingFunc.end());
       LabelString +=
           G->getLabel(Func->second, Node->Call.call(), Node->Call.cloneNo());
+      for (auto &MatchingCall : Node->MatchingCalls) {
+        LabelString += "\n";
+        LabelString += G->getLabel(Func->second, MatchingCall.call(),
+                                   MatchingCall.cloneNo());
+      }
     } else {
       LabelString += "null call";
       if (Node->Recursive)

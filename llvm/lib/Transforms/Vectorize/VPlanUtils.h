@@ -16,6 +16,7 @@ namespace llvm {
 class MemoryLocation;
 class ScalarEvolution;
 class SCEV;
+class PredicatedScalarEvolution;
 } // namespace llvm
 
 namespace llvm {
@@ -39,7 +40,8 @@ VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr);
 
 /// Return the SCEV expression for \p V. Returns SCEVCouldNotCompute if no
 /// SCEV expression could be constructed.
-const SCEV *getSCEVExprForVPValue(const VPValue *V, ScalarEvolution &SE,
+const SCEV *getSCEVExprForVPValue(const VPValue *V,
+                                  PredicatedScalarEvolution &PSE,
                                   const Loop *L = nullptr);
 
 /// Returns true if \p Addr is an address SCEV that can be passed to
@@ -172,8 +174,7 @@ public:
                             unsigned PredIdx = -1u, unsigned SuccIdx = -1u) {
     assert((From->getParent() == To->getParent()) &&
            "Can't connect two block with different parents");
-    assert((SuccIdx != -1u || From->getNumSuccessors() < 2) &&
-           "Blocks can't have more than two successors.");
+
     if (SuccIdx == -1u)
       From->appendSuccessor(To);
     else

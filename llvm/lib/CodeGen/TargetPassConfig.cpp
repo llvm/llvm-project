@@ -1246,7 +1246,7 @@ void TargetPassConfig::addMachinePasses() {
   }
 
   if (GCEmptyBlocks)
-    addPass(llvm::createGCEmptyBasicBlocksPass());
+    addPass(llvm::createGCEmptyBasicBlocksLegacyPass());
 
   if (EnableFSDiscriminator)
     addPass(createMIRAddFSDiscriminatorsPass(
@@ -1298,8 +1298,10 @@ void TargetPassConfig::addMachinePasses() {
           TM->getBBSectionsFuncListBuf()));
       if (BasicBlockSectionMatchInfer)
         addPass(llvm::createBasicBlockMatchingAndInferencePass());
-      else
+      else {
         addPass(llvm::createBasicBlockPathCloningPass());
+        addPass(llvm::createInsertCodePrefetchPass());
+      }
     }
     addPass(llvm::createBasicBlockSectionsPass());
   }
