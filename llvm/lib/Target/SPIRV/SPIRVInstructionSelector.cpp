@@ -3300,6 +3300,17 @@ bool SPIRVInstructionSelector::selectInsertVal(Register ResVReg,
 bool SPIRVInstructionSelector::selectExtractVal(Register ResVReg,
                                                 const SPIRVType *ResType,
                                                 MachineInstr &I) const {
+  Type *MaybeResTy = nullptr;
+  StringRef ResName;
+  if (GR.findValueAttrs(&I, MaybeResTy, ResName) &&
+      MaybeResTy != GR.getTypeForSPIRVType(ResType)) {
+    assert(!MaybeResTy ||
+           MaybeResTy->isAggregateType() &&
+               "Expected aggregate type for extractv instruction");
+    ResType = GR.getOrCreateSPIRVType(MaybeResTy, I,
+                                      SPIRV::AccessQualifier::ReadWrite, false);
+    GR.assignSPIRVTypeToVReg(ResType, ResVReg, *I.getMF());
+  }
   MachineBasicBlock &BB = *I.getParent();
   auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
                  .addDef(ResVReg)
@@ -3804,6 +3815,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformAll);
   case Intrinsic::spv_wave_any:
     return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformAny);
+  case Intrinsic::spv_wave_ballot:
+    return selectWaveOpInst(ResVReg, ResType, I,
+                            SPIRV::OpGroupNonUniformBallot);
   case Intrinsic::spv_wave_is_first_lane:
     return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformElect);
   case Intrinsic::spv_wave_reduce_umax:
