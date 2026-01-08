@@ -4666,6 +4666,67 @@ LogicalResult tosa::DimOp::verify() {
   return success();
 }
 
+LogicalResult tosa::ConcatShapeOp::verify() {
+  const tosa::shapeType outShapeType =
+      cast<tosa::shapeType>(getResult().getType());
+  const int64_t outputRank = outShapeType.getRank();
+  const Operation::operand_range inputList = getInput();
+  const int64_t inputsRank =
+      llvm::accumulate(inputList, 0, [](int64_t acc, const Value &input) {
+        const tosa::shapeType inShapeType =
+            cast<tosa::shapeType>(input.getType());
+        return acc + inShapeType.getRank();
+      });
+  if (outputRank != inputsRank)
+    return emitOpError("requires output shape rank to be equal to the sum of "
+                       "the input shape ranks (")
+           << inputsRank << "), got " << outputRank;
+
+  return success();
+}
+
+LogicalResult tosa::SliceShapeOp::verify() {
+  std::optional<int32_t> start;
+  DenseIntElementsAttr startAttr;
+  if (matchPattern(getStart(), m_Constant(&startAttr)))
+    start = startAttr.getValues<int32_t>()[0];
+  if (start && start.value() < 0)
+    return emitOpError("expected non-negative start index, got ")
+           << start.value();
+
+  std::optional<int32_t> size;
+  DenseIntElementsAttr sizeAttr;
+  if (matchPattern(getSize(), m_Constant(&sizeAttr)))
+    size = sizeAttr.getValues<int32_t>()[0];
+  if (size && size.value() <= 0)
+    return emitOpError("expected positive size, got ") << size.value();
+
+  if (!size)
+    return success();
+
+  const tosa::shapeType outShapeType =
+      cast<tosa::shapeType>(getResult().getType());
+  const int64_t outputRank = outShapeType.getRank();
+  if (outputRank != size)
+    return emitOpError(
+               "expected output type size to be equal to size attribute, got ")
+           << outputRank << " vs " << size.value();
+
+  if (!start)
+    return success();
+
+  const tosa::shapeType inShapeType =
+      cast<tosa::shapeType>(getInput().getType());
+  const int64_t inputRank = inShapeType.getRank();
+  const int64_t sliceSize = start.value() + size.value();
+  if (sliceSize > inputRank)
+    return emitOpError("expected start + size to be less than or equal to "
+                       "input shape rank (")
+           << inputRank << "), got " << sliceSize;
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // TOSA Attribute Definitions.
 //===----------------------------------------------------------------------===//
