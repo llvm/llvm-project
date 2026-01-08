@@ -12,10 +12,8 @@
 #include "test_allocator.h"
 #include <type_traits>
 #include <tuple>
-#include "test_macros.h"
 
 // Types that can be used to test copy/move operations
-#if TEST_STD_VER >= 23
 struct MutableCopy {
   int val;
   bool alloc_constructed{false};
@@ -344,5 +342,4 @@ struct TracedAssignment {
   }
 };
 
-#endif // TEST_STD_VER >= 23
 #endif

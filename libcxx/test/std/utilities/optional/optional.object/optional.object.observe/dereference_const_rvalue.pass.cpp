@@ -16,8 +16,10 @@
 #include <optional>
 #include <utility>
 
-#include "copy_move_types.h"
 #include "test_macros.h"
+#if TEST_STD_VER >= 26
+#  include "copy_move_types.h"
+#endif
 
 using std::optional;
 
