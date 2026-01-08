@@ -54,16 +54,17 @@
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/SHA256.h"
 #include "llvm/Support/TimeProfiler.h"
-#include "llvm/Support/CommandLine.h"
 #include <cstdint>
 #include <optional>
 using namespace clang;
 using namespace clang::CodeGen;
 
-static llvm::cl::opt<bool> DebugInfoMacroExpansionLoc(
-    "debug-info-macro-expansion-loc",
-    llvm::cl::desc("Use expansion location for debug info on macro params"),
-    llvm::cl::init(false));
+static SourceLocation getMacroDebugLoc(const CodeGenModule &CGM,
+                                       SourceLocation Loc) {
+  if (CGM.getCodeGenOpts().DebugInfoMacroExpansionLoc)
+    return Loc;
+  return CGM.getContext().getSourceManager().getFileLoc(Loc);
+}
 
 static uint32_t getTypeAlignIfRequired(const Type *Ty, const ASTContext &Ctx) {
   auto TI = Ctx.getTypeInfo(Ty);
@@ -351,10 +352,8 @@ void CGDebugInfo::setLocation(SourceLocation Loc) {
   if (Loc.isInvalid())
     return;
 
-  if (DebugInfoMacroExpansionLoc)
-    CurLoc = CGM.getContext().getSourceManager().getExpansionLoc(Loc);
-  else
-    CurLoc = CGM.getContext().getSourceManager().getFileLoc(Loc);
+  CurLoc = CGM.getContext().getSourceManager().getExpansionLoc(
+      getMacroDebugLoc(CGM, Loc));
 
   // If we've changed files in the middle of a lexical scope go ahead
   // and create a new lexical scope with file node if it's different
@@ -581,8 +580,7 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
     FileName = TheCU->getFile()->getFilename();
     CSInfo = TheCU->getFile()->getChecksum();
   } else {
-    PresumedLoc PLoc = SM.getPresumedLoc(
-        DebugInfoMacroExpansionLoc ? Loc : SM.getFileLoc(Loc));
+    PresumedLoc PLoc = SM.getPresumedLoc(getMacroDebugLoc(CGM, Loc));
     FileName = PLoc.getFilename();
 
     if (FileName.empty()) {
@@ -610,9 +608,7 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
       CSInfo.emplace(*CSKind, Checksum);
   }
   return createFile(FileName, CSInfo,
-                    getSource(SM, SM.getFileID(DebugInfoMacroExpansionLoc
-                                                   ? Loc
-                                                   : SM.getFileLoc(Loc))));
+                    getSource(SM, SM.getFileID(getMacroDebugLoc(CGM, Loc))));
 }
 
 llvm::DIFile *CGDebugInfo::createFile(
@@ -667,9 +663,7 @@ unsigned CGDebugInfo::getLineNumber(SourceLocation Loc) {
   if (Loc.isInvalid())
     return 0;
   SourceManager &SM = CGM.getContext().getSourceManager();
-  return SM
-      .getPresumedLoc(DebugInfoMacroExpansionLoc ? Loc : SM.getFileLoc(Loc))
-      .getLine();
+  return SM.getPresumedLoc(getMacroDebugLoc(CGM, Loc)).getLine();
 }
 
 unsigned CGDebugInfo::getColumnNumber(SourceLocation Loc, bool Force) {
@@ -682,8 +676,7 @@ unsigned CGDebugInfo::getColumnNumber(SourceLocation Loc, bool Force) {
     return 0;
   SourceManager &SM = CGM.getContext().getSourceManager();
   PresumedLoc PLoc = SM.getPresumedLoc(
-      Loc.isValid() ? (DebugInfoMacroExpansionLoc ? Loc : SM.getFileLoc(Loc))
-                    : CurLoc);
+      Loc.isValid() ? getMacroDebugLoc(CGM, Loc) : CurLoc);
   return PLoc.isValid() ? PLoc.getColumn() : 0;
 }
 
@@ -5030,7 +5023,7 @@ void CGDebugInfo::EmitLocation(CGBuilderTy &Builder, SourceLocation Loc) {
   setLocation(Loc);
 
   if (CurLoc.isInvalid() ||
-      (DebugInfoMacroExpansionLoc && CurLoc.isMacroID()) ||
+      (CGM.getCodeGenOpts().DebugInfoMacroExpansionLoc && CurLoc.isMacroID()) ||
       LexicalBlockStack.empty())
     return;
 
@@ -6299,8 +6292,7 @@ void CGDebugInfo::AddStringLiteralDebugInfo(llvm::GlobalVariable *GV,
                                             const StringLiteral *S) {
   SourceLocation Loc = S->getStrTokenLoc(0);
   SourceManager &SM = CGM.getContext().getSourceManager();
-  PresumedLoc PLoc =
-      SM.getPresumedLoc(DebugInfoMacroExpansionLoc ? Loc : SM.getFileLoc(Loc));
+  PresumedLoc PLoc = SM.getPresumedLoc(getMacroDebugLoc(CGM, Loc));
   if (!PLoc.isValid())
     return;
 

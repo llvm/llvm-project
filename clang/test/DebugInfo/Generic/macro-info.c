@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -debug-info-kind=standalone -emit-llvm -o - | FileCheck %s --check-prefix=NEW
-// RUN: %clang_cc1 %s -debug-info-kind=standalone -emit-llvm -mllvm -debug-info-macro-expansion-loc -o - | FileCheck %s --check-prefix=OLD
+// RUN: %clang_cc1 %s -debug-info-kind=standalone -emit-llvm -debug-info-macro-expansion-loc -o - | FileCheck %s --check-prefix=OLD
 
 #define GLOBAL(num) global## num
 #define DECL_GLOBAL(x) int x
