@@ -39,7 +39,7 @@ LIBC_INLINE static void inline_copy(const char *from, char *to) {
 // This implementation of bit_cast requires trivially-constructible To, to avoid
 // UB in the implementation.
 template <typename To, typename From>
-LIBC_INLINE constexpr cpp::enable_if_t<
+LIBC_INLINE static constexpr cpp::enable_if_t<
     (sizeof(To) == sizeof(From)) &&
         cpp::is_trivially_constructible<To>::value &&
         cpp::is_trivially_copyable<To>::value &&
