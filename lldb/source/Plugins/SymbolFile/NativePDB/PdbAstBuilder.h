@@ -81,9 +81,9 @@ public:
   bool CompleteTagDecl(clang::TagDecl &tag);
   bool CompleteType(CompilerType ct);
 
-  CompilerDecl ToCompilerDecl(clang::Decl &decl);
+  CompilerDecl ToCompilerDecl(clang::Decl *decl);
   CompilerType ToCompilerType(clang::QualType qt);
-  CompilerDeclContext ToCompilerDeclContext(clang::DeclContext &context);
+  CompilerDeclContext ToCompilerDeclContext(clang::DeclContext *context);
   clang::QualType FromCompilerType(CompilerType ct);
   clang::Decl *FromCompilerDecl(CompilerDecl decl);
   clang::DeclContext *FromCompilerDeclContext(CompilerDeclContext context);
