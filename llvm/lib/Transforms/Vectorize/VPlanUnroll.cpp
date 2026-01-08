@@ -68,7 +68,7 @@ class UnrollState {
   void unrollWidenInductionByUF(VPWidenInductionRecipe *IV,
                                 VPBasicBlock::iterator InsertPtForPhi);
 
-  VPValue *getConstantInt(unsigned Part) {
+  VPIRValue *getConstantInt(unsigned Part) {
     Type *CanIVIntTy = Plan.getVectorLoopRegion()->getCanonicalIVType();
     return Plan.getConstantInt(CanIVIntTy, Part);
   }
@@ -491,7 +491,7 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
     if (LaneDefs != Def2LaneDefs.end())
       return LaneDefs->second[Lane.getKnownLane()];
 
-    VPValue *Idx = Plan.getConstantInt(IdxTy, Lane.getKnownLane());
+    VPIRValue *Idx = Plan.getConstantInt(IdxTy, Lane.getKnownLane());
     return Builder.createNaryOp(Instruction::ExtractElement, {Op, Idx});
   }
 
@@ -527,7 +527,7 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
           cast<VPInstruction>(Op)->getOperand(Lane.getKnownLane()));
       continue;
     }
-    VPValue *Idx = Plan.getConstantInt(IdxTy, Lane.getKnownLane());
+    VPIRValue *Idx = Plan.getConstantInt(IdxTy, Lane.getKnownLane());
     VPValue *Ext = Builder.createNaryOp(Instruction::ExtractElement, {Op, Idx});
     NewOps.push_back(Ext);
   }

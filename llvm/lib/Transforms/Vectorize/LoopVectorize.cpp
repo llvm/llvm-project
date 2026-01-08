@@ -4074,9 +4074,10 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
         } else {
           auto *WidenCall = dyn_cast<VPWidenCallRecipe>(R);
           Function *CalledFn =
-              WidenCall ? WidenCall->getCalledScalarFunction()
-                        : cast<Function>(R->getOperand(R->getNumOperands() - 1)
-                                             ->getLiveInIRValue());
+              WidenCall
+                  ? WidenCall->getCalledScalarFunction()
+                  : cast<Function>(
+                        R->getOperand(R->getNumOperands() - 1)->getIRValue());
           Name = CalledFn->getName();
         }
         OS << " call to " << Name;
@@ -4276,7 +4277,7 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
           }
           case VPInstruction::ActiveLaneMask: {
             unsigned Multiplier =
-                cast<ConstantInt>(VPI->getOperand(2)->getLiveInIRValue())
+                cast<ConstantInt>(VPI->getOperand(2)->getIRValue())
                     ->getZExtValue();
             C += VPI->cost(VF * Multiplier, CostCtx);
             break;
@@ -7296,7 +7297,7 @@ static Value *getStartValueFromReductionResult(VPInstruction *RdxResult) {
          "RdxResult must be ComputeFindIVResult");
   VPValue *StartVPV = RdxResult->getOperand(1);
   match(StartVPV, m_Freeze(m_VPValue(StartVPV)));
-  return StartVPV->getLiveInIRValue();
+  return StartVPV->getIRValue();
 }
 
 // If \p EpiResumePhiR is resume VPPhi for a reduction when vectorizing the
@@ -7341,8 +7342,7 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
   } else
     MainResumeValue = EpiRedHeaderPhi->getStartValue()->getUnderlyingValue();
   if (RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind)) {
-    [[maybe_unused]] Value *StartV =
-        EpiRedResult->getOperand(1)->getLiveInIRValue();
+    [[maybe_unused]] Value *StartV = EpiRedResult->getOperand(1)->getIRValue();
     auto *Cmp = cast<ICmpInst>(MainResumeValue);
     assert(Cmp->getPredicate() == CmpInst::ICMP_NE &&
            "AnyOf expected to start with ICMP_NE");
@@ -7352,7 +7352,7 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
     MainResumeValue = Cmp->getOperand(0);
   } else if (RecurrenceDescriptor::isFindIVRecurrenceKind(Kind)) {
     Value *StartV = getStartValueFromReductionResult(EpiRedResult);
-    Value *SentinelV = EpiRedResult->getOperand(2)->getLiveInIRValue();
+    Value *SentinelV = EpiRedResult->getOperand(2)->getIRValue();
     using namespace llvm::PatternMatch;
     Value *Cmp, *OrigResumeV, *CmpOp;
     [[maybe_unused]] bool IsExpectedPattern =
@@ -7450,7 +7450,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   DenseMap<const SCEV *, Value *> ExpandedSCEVs =
       VPlanTransforms::expandSCEVs(BestVPlan, *PSE.getSE());
   if (!ILV.getTripCount()) {
-    ILV.setTripCount(BestVPlan.getTripCount()->getLiveInIRValue());
+    ILV.setTripCount(BestVPlan.getTripCount()->getIRValue());
   } else {
     assert(VectorizingEpilogue && "should only re-use the existing trip "
                                   "count during epilogue vectorization");
@@ -7903,7 +7903,7 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(VPInstruction *VPI) {
     if (CM.isPredicatedInst(I)) {
       SmallVector<VPValue *> Ops(VPI->operands());
       VPValue *Mask = getBlockInMask(Builder.getInsertBlock());
-      VPValue *One = Plan.getConstantInt(I->getType(), 1u);
+      VPIRValue *One = Plan.getConstantInt(I->getType(), 1u);
       auto *SafeRHS =
           Builder.createSelect(Mask, Ops[1], One, VPI->getDebugLoc());
       Ops[1] = SafeRHS;
@@ -8737,7 +8737,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     RecurKind RecurrenceKind = PhiR->getRecurrenceKind();
     if (RecurrenceDescriptor::isFindIVRecurrenceKind(RecurrenceKind)) {
       VPValue *Start = PhiR->getStartValue();
-      VPValue *Sentinel = Plan->getOrAddLiveIn(RdxDesc.getSentinelValue());
+      VPIRValue *Sentinel = Plan->getOrAddLiveIn(RdxDesc.getSentinelValue());
       FinalReductionResult =
           Builder.createNaryOp(VPInstruction::ComputeFindIVResult,
                                {PhiR, Start, Sentinel, NewExitingVPV}, ExitDL);
@@ -8845,13 +8845,13 @@ void LoopVectorizationPlanner::addReductionResultComputation(
          !RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
          !RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))) {
       VPBuilder PHBuilder(Plan->getVectorPreheader());
-      VPValue *Iden = Plan->getOrAddLiveIn(
+      VPIRValue *Iden = Plan->getOrAddLiveIn(
           getRecurrenceIdentity(RK, PhiTy, RdxDesc.getFastMathFlags()));
       // If the PHI is used by a partial reduction, set the scale factor.
       unsigned ScaleFactor =
           RecipeBuilder.getScalingForReduction(RdxDesc.getLoopExitInstr())
               .value_or(1);
-      auto *ScaleFactorVPV = Plan->getConstantInt(32, ScaleFactor);
+      VPIRValue *ScaleFactorVPV = Plan->getConstantInt(32, ScaleFactor);
       VPValue *StartV = PHBuilder.createNaryOp(
           VPInstruction::ReductionStartVector,
           {PhiR->getStartValue(), Iden, ScaleFactorVPV},
@@ -8936,7 +8936,7 @@ void VPDerivedIVRecipe::execute(VPTransformState &State) {
   Value *Step = State.get(getStepValue(), VPLane(0));
   Value *Index = State.get(getOperand(1), VPLane(0));
   Value *DerivedIV = emitTransformedIndex(
-      State.Builder, Index, getStartValue()->getLiveInIRValue(), Step, Kind,
+      State.Builder, Index, getStartValue()->getIRValue(), Step, Kind,
       cast_if_present<BinaryOperator>(FPBinOp));
   DerivedIV->setName(Name);
   State.set(this, DerivedIV, VPLane(0));
@@ -9285,7 +9285,7 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
       if (!VPI || VPI->getOpcode() != VPInstruction::ComputeFindIVResult)
         continue;
       VPValue *OrigStart = VPI->getOperand(1);
-      if (isGuaranteedNotToBeUndefOrPoison(OrigStart->getLiveInIRValue()))
+      if (isGuaranteedNotToBeUndefOrPoison(OrigStart->getIRValue()))
         continue;
       VPInstruction *Freeze =
           Builder.createNaryOp(Instruction::Freeze, {OrigStart}, {}, "fr");
@@ -9371,7 +9371,7 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
            "all incoming values must be 0");
     EPI.VectorTripCount = EPResumeVal->getOperand(0);
   }
-  VPValue *VPV = Plan.getOrAddLiveIn(EPResumeVal);
+  VPIRValue *VPV = Plan.getOrAddLiveIn(EPResumeVal);
   assert(all_of(IV->users(),
                 [](const VPUser *U) {
                   return isa<VPScalarIVStepsRecipe>(U) ||
@@ -9421,7 +9421,7 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
                     ->getIncomingValueForBlock(L->getLoopPreheader());
       RecurKind RK = ReductionPhi->getRecurrenceKind();
       if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) {
-        Value *StartV = RdxResult->getOperand(1)->getLiveInIRValue();
+        Value *StartV = RdxResult->getOperand(1)->getIRValue();
         // VPReductionPHIRecipes for AnyOf reductions expect a boolean as
         // start value; compare the final value from the main vector loop
         // to the start value.
@@ -9446,12 +9446,12 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
         Value *Cmp = Builder.CreateICmpEQ(ResumeV, ToFrozen[StartV]);
         if (auto *I = dyn_cast<Instruction>(Cmp))
           InstsToMove.push_back(I);
-        Value *Sentinel = RdxResult->getOperand(2)->getLiveInIRValue();
+        Value *Sentinel = RdxResult->getOperand(2)->getIRValue();
         ResumeV = Builder.CreateSelect(Cmp, Sentinel, ResumeV);
         if (auto *I = dyn_cast<Instruction>(ResumeV))
           InstsToMove.push_back(I);
       } else {
-        VPValue *StartVal = Plan.getOrAddLiveIn(ResumeV);
+        VPIRValue *StartVal = Plan.getOrAddLiveIn(ResumeV);
         auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
         if (auto *VPI = dyn_cast<VPInstruction>(PhiR->getStartValue())) {
           assert(VPI->getOpcode() == VPInstruction::ReductionStartVector &&
@@ -9469,7 +9469,7 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
       ResumeV = IndPhi->getIncomingValueForBlock(L->getLoopPreheader());
     }
     assert(ResumeV && "Must have a resume value");
-    VPValue *StartVal = Plan.getOrAddLiveIn(ResumeV);
+    VPIRValue *StartVal = Plan.getOrAddLiveIn(ResumeV);
     cast<VPHeaderPHIRecipe>(&R)->setStartValue(StartVal);
   }
 
@@ -9484,7 +9484,7 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
     auto *VPI = dyn_cast<VPInstruction>(&R);
     if (VPI && VPI->getOpcode() == Instruction::Freeze) {
       VPI->replaceAllUsesWith(Plan.getOrAddLiveIn(
-          ToFrozen.lookup(VPI->getOperand(0)->getLiveInIRValue())));
+          ToFrozen.lookup(VPI->getOperand(0)->getIRValue())));
       continue;
     }
 
@@ -9494,7 +9494,7 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
     auto *ExpandR = dyn_cast<VPExpandSCEVRecipe>(&R);
     if (!ExpandR)
       continue;
-    VPValue *ExpandedVal =
+    VPIRValue *ExpandedVal =
         Plan.getOrAddLiveIn(ExpandedSCEVs.lookup(ExpandR->getSCEV()));
     ExpandR->replaceAllUsesWith(ExpandedVal);
     if (Plan.getTripCount() == ExpandR)

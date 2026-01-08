@@ -171,7 +171,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenRecipe *R) {
   case Instruction::ExtractValue: {
     assert(R->getNumOperands() == 2 && "expected single level extractvalue");
     auto *StructTy = cast<StructType>(inferScalarType(R->getOperand(0)));
-    auto *CI = cast<ConstantInt>(R->getOperand(1)->getLiveInIRValue());
+    auto *CI = cast<ConstantInt>(R->getOperand(1)->getIRValue());
     return StructTy->getTypeAtIndex(CI->getZExtValue());
   }
   case Instruction::Select:
@@ -217,7 +217,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPReplicateRecipe *R) {
   switch (Opcode) {
   case Instruction::Call: {
     unsigned CallIdx = R->getNumOperands() - (R->isPredicated() ? 2 : 1);
-    return cast<Function>(R->getOperand(CallIdx)->getLiveInIRValue())
+    return cast<Function>(R->getOperand(CallIdx)->getIRValue())
         ->getReturnType();
   }
   case Instruction::Select: {

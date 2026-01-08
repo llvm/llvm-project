@@ -393,7 +393,7 @@ VPUnrollPartAccessor<PartOpIdx>::getUnrollPartOperand(const VPUser &U) const {
 template <unsigned PartOpIdx>
 unsigned VPUnrollPartAccessor<PartOpIdx>::getUnrollPart(const VPUser &U) const {
   if (auto *UnrollPartOp = getUnrollPartOperand(U))
-    return cast<ConstantInt>(UnrollPartOp->getLiveInIRValue())->getZExtValue();
+    return cast<ConstantInt>(UnrollPartOp->getIRValue())->getZExtValue();
   return 0;
 }
 
@@ -579,7 +579,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
                                Name);
 
     ElementCount EC = State.VF.multiplyCoefficientBy(
-        cast<ConstantInt>(getOperand(2)->getLiveInIRValue())->getZExtValue());
+        cast<ConstantInt>(getOperand(2)->getIRValue())->getZExtValue());
     auto *PredTy = VectorType::get(Builder.getInt1Ty(), EC);
     return Builder.CreateIntrinsic(Intrinsic::get_active_lane_mask,
                                    {PredTy, ScalarTC->getType()},
@@ -696,7 +696,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     // If this start vector is scaled then it should produce a vector with fewer
     // elements than the VF.
     ElementCount VF = State.VF.divideCoefficientBy(
-        cast<ConstantInt>(getOperand(2)->getLiveInIRValue())->getZExtValue());
+        cast<ConstantInt>(getOperand(2)->getIRValue())->getZExtValue());
     auto *Iden = Builder.CreateVectorSplat(VF, State.get(getOperand(1), true));
     return Builder.CreateInsertElement(Iden, State.get(getOperand(0), true),
                                        Builder.getInt32(0));
@@ -740,7 +740,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
                                       State.get(getOperand(3 + Part)));
 
     Value *Start = State.get(getOperand(1), true);
-    Value *Sentinel = getOperand(2)->getLiveInIRValue();
+    Value *Sentinel = getOperand(2)->getIRValue();
 
     // Reduce the vector to a scalar.
     bool IsFindLast = RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK);
@@ -1209,7 +1209,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   case VPInstruction::ActiveLaneMask: {
     Type *ArgTy = Ctx.Types.inferScalarType(getOperand(0));
     unsigned Multiplier =
-        cast<ConstantInt>(getOperand(2)->getLiveInIRValue())->getZExtValue();
+        cast<ConstantInt>(getOperand(2)->getIRValue())->getZExtValue();
     Type *RetTy = toVectorTy(Type::getInt1Ty(Ctx.LLVMCtx), VF * Multiplier);
     IntrinsicCostAttributes Attrs(Intrinsic::get_active_lane_mask, RetTy,
                                   {ArgTy, ArgTy});
@@ -2193,7 +2193,7 @@ void VPWidenRecipe::execute(VPTransformState &State) {
   case Instruction::ExtractValue: {
     assert(getNumOperands() == 2 && "expected single level extractvalue");
     Value *Op = State.get(getOperand(0));
-    auto *CI = cast<ConstantInt>(getOperand(1)->getLiveInIRValue());
+    auto *CI = cast<ConstantInt>(getOperand(1)->getIRValue());
     Value *Extract = Builder.CreateExtractValue(Op, CI->getZExtValue());
     State.set(this, Extract);
     break;
@@ -3259,7 +3259,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     return 0;
   case Instruction::Call: {
     auto *CalledFn =
-        cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
+        cast<Function>(getOperand(getNumOperands() - 1)->getIRValue());
 
     SmallVector<const VPValue *> ArgOps(drop_end(operands()));
     SmallVector<Type *, 4> Tys;
@@ -4353,7 +4353,7 @@ void VPWidenCanonicalIVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 void VPFirstOrderRecurrencePHIRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   // Create a vector from the initial value.
-  auto *VectorInit = getStartValue()->getLiveInIRValue();
+  auto *VectorInit = getStartValue()->getIRValue();
 
   Type *VecTy = State.VF.isScalar()
                     ? VectorInit->getType()

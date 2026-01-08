@@ -1731,9 +1731,8 @@ public:
       : VPRecipeWithIRFlags(VPDef::VPWidenCallSC, CallArguments, Flags, DL),
         VPIRMetadata(Metadata), Variant(Variant) {
     setUnderlyingValue(UV);
-    assert(
-        isa<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue()) &&
-        "last operand must be the called function");
+    assert(isa<Function>(getOperand(getNumOperands() - 1)->getIRValue()) &&
+           "last operand must be the called function");
   }
 
   ~VPWidenCallRecipe() override = default;
@@ -1753,7 +1752,7 @@ public:
                               VPCostContext &Ctx) const override;
 
   Function *getCalledScalarFunction() const {
-    return cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
+    return cast<Function>(getOperand(getNumOperands() - 1)->getIRValue());
   }
 
   operand_range args() { return drop_end(operands()); }
@@ -3103,7 +3102,8 @@ public:
     assert(Red->getRecurrenceKind() == RecurKind::Add &&
            "Expected an add reduction");
     assert(getNumOperands() >= 3 && "Expected at least three operands");
-    [[maybe_unused]] auto *SubConst = dyn_cast<ConstantInt>(getOperand(2)->getLiveInIRValue());
+    [[maybe_unused]] auto *SubConst =
+        dyn_cast<ConstantInt>(getOperand(2)->getIRValue());
     assert(SubConst && SubConst->getValue() == 0 &&
            Sub->getOpcode() == Instruction::Sub && "Expected a negating sub");
   }

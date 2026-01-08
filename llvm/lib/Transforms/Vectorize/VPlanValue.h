@@ -72,7 +72,7 @@ public:
   Value *getUnderlyingValue() const { return UnderlyingVal; }
 
   /// Return the underlying IR value for a VPIRValue.
-  Value *getLiveInIRValue() const;
+  Value *getIRValue() const;
 
   /// An enumeration for keeping track of the concrete subclass of VPValue that
   /// are actually instantiated.

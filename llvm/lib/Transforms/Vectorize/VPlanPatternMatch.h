@@ -863,7 +863,7 @@ struct IntrinsicID_match {
     auto MatchCalleeIntrinsic = [&](VPValue *CalleeOp) {
       if (!isa<VPIRValue>(CalleeOp))
         return false;
-      auto *F = cast<Function>(CalleeOp->getLiveInIRValue());
+      auto *F = cast<Function>(CalleeOp->getIRValue());
       return F->getIntrinsicID() == ID;
     };
     if (const auto *R = dyn_cast<VPReplicateRecipe>(V))

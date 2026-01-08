@@ -130,9 +130,7 @@ const VPRecipeBase *VPValue::getDefiningRecipe() const {
   return cast<VPRecipeBase>(DefValue->Def);
 }
 
-Value *VPValue::getLiveInIRValue() const {
-  return cast<VPIRValue>(this)->getValue();
-}
+Value *VPValue::getIRValue() const { return cast<VPIRValue>(this)->getValue(); }
 
 Type *VPIRValue::getType() const { return getUnderlyingValue()->getType(); }
 
@@ -296,7 +294,7 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   };
 
   if (!hasScalarValue(Def, {0})) {
-    Value *IRV = Def->getLiveInIRValue();
+    Value *IRV = Def->getIRValue();
     Value *B = GetBroadcastInstrs(IRV);
     set(Def, B);
     return B;
@@ -893,7 +891,7 @@ VPlan::~VPlan() {
     }
     delete VPB;
   }
-  for (VPValue *VPV : getLiveIns())
+  for (VPIRValue *VPV : getLiveIns())
     delete VPV;
   delete BackedgeTakenCount;
 }
@@ -1478,7 +1476,7 @@ void VPSlotTracker::assignNames(const VPlan &Plan) {
   assignName(&Plan.VectorTripCount);
   if (Plan.BackedgeTakenCount)
     assignName(Plan.BackedgeTakenCount);
-  for (VPValue *LI : Plan.getLiveIns())
+  for (VPIRValue *LI : Plan.getLiveIns())
     assignName(LI);
 
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<const VPBlockBase *>>
