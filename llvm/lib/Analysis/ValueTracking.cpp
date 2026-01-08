@@ -4795,7 +4795,8 @@ static void computeKnownFPClassFromCond(const Value *V, Value *Cond,
   const APInt *RHS;
   if (match(Cond, m_FCmp(Pred, m_Value(LHS), m_APFloat(CRHS)))) {
     auto [CmpVal, MaskIfTrue, MaskIfFalse] = fcmpImpliesClass(
-        Pred, *CxtI->getParent()->getParent(), LHS, *CRHS, LHS != V);
+        Pred, *cast<Instruction>(Cond)->getParent()->getParent(), LHS, *CRHS,
+        LHS != V);
     if (CmpVal == V)
       KnownFromContext.knownNot(~(CondIsTrue ? MaskIfTrue : MaskIfFalse));
   } else if (match(Cond, m_Intrinsic<Intrinsic::is_fpclass>(
