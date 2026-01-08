@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { ApkDebugEnv, ApkDebugSession } from "./apk-debug-session";
+import { ApkDebugEnv, ApkDebugSession } from "./core/apk-debug-session";
 
 /**
  * This class is for tracking the Android APK debug session associated with the

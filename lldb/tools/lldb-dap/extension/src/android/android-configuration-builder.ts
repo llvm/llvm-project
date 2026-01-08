@@ -1,8 +1,8 @@
 import { ErrorWithNotification } from "../ui/error-with-notification";
 import { ConfigureButton, OpenSettingsButton } from "../ui/show-error-message";
-import { AdbClient } from "./adb-client";
-import { ApkDebugSession } from "./apk-debug-session";
-import { Ndk } from "./ndk";
+import { AdbClient } from "./core/adb-client";
+import { ApkDebugSession } from "./core/apk-debug-session";
+import { Ndk } from "./core/ndk";
 
 export class AndroidConfigurationBuilder {
 
