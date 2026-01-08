@@ -1399,10 +1399,11 @@ private:
   /// This method will determine if there are additional basic blocks in the CFG
   /// between the exit of \p FC0 and the entry of \p FC1.
   /// If the two candidates are guarded loops, then it checks whether the
-  /// non-loop successor of the \p FC0 guard branch is the entry block of \p
-  /// FC1. If not, then the loops are not adjacent. If the two candidates are
-  /// not guarded loops, then it checks whether the exit block of \p FC0 is the
-  /// preheader of \p FC1.
+  /// exit block of the \p FC0 is the predecessor of the \p FC1 preheader. This
+  /// implicitly ensures that the non-loop successor of the \p FC0 guard branch
+  /// is the entry block of \p FC1. If not, then the loops are not adjacent. If
+  /// the two candidates are not guarded loops, then it checks whether the exit
+  /// block of \p FC0 is the preheader of \p FC1.
   /// Strictly means there is no predecessor for FC1 unless it is from FC0,
   /// i.e., FC0 dominates FC1.
   bool isStrictlyAdjacent(const FusionCandidate &FC0,
@@ -1410,7 +1411,7 @@ private:
     // If the successor of the guard branch is FC1, then the loops are adjacent
     if (FC0.GuardBranch)
       return DT.dominates(FC0.getEntryBlock(), FC1.getEntryBlock()) &&
-             FC0.getNonLoopBlock() == FC1.getEntryBlock();
+             FC0.ExitBlock->getSingleSuccessor() == FC1.getEntryBlock();
     else
       return FC0.ExitBlock == FC1.getEntryBlock();
   }
