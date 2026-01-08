@@ -710,6 +710,20 @@ define i8 @same_exit_block_use_loaded_value() {
 ; VF4IC4-NEXT:    [[TMP29:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD4]], [[WIDE_LOAD8]]
 ; VF4IC4-NEXT:    [[TMP11:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD5]], [[WIDE_LOAD9]]
 ; VF4IC4-NEXT:    [[TMP17:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD3]], [[WIDE_LOAD7]]
+; VF4IC4-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP17]], i1 false)
+; VF4IC4-NEXT:    [[TMP21:%.*]] = add i64 12, [[FIRST_ACTIVE_LANE]]
+; VF4IC4-NEXT:    [[FIRST_ACTIVE_LANE8:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP11]], i1 false)
+; VF4IC4-NEXT:    [[TMP22:%.*]] = add i64 8, [[FIRST_ACTIVE_LANE8]]
+; VF4IC4-NEXT:    [[TMP23:%.*]] = icmp ne i64 [[FIRST_ACTIVE_LANE8]], 4
+; VF4IC4-NEXT:    [[TMP24:%.*]] = select i1 [[TMP23]], i64 [[TMP22]], i64 [[TMP21]]
+; VF4IC4-NEXT:    [[FIRST_ACTIVE_LANE9:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP29]], i1 false)
+; VF4IC4-NEXT:    [[TMP25:%.*]] = add i64 4, [[FIRST_ACTIVE_LANE9]]
+; VF4IC4-NEXT:    [[TMP26:%.*]] = icmp ne i64 [[FIRST_ACTIVE_LANE9]], 4
+; VF4IC4-NEXT:    [[TMP27:%.*]] = select i1 [[TMP26]], i64 [[TMP25]], i64 [[TMP24]]
+; VF4IC4-NEXT:    [[FIRST_ACTIVE_LANE10:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP12]], i1 false)
+; VF4IC4-NEXT:    [[TMP28:%.*]] = add i64 0, [[FIRST_ACTIVE_LANE10]]
+; VF4IC4-NEXT:    [[TMP20:%.*]] = icmp ne i64 [[FIRST_ACTIVE_LANE10]], 4
+; VF4IC4-NEXT:    [[TMP8:%.*]] = select i1 [[TMP20]], i64 [[TMP28]], i64 [[TMP27]]
 ; VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; VF4IC4-NEXT:    [[TMP43:%.*]] = freeze <4 x i1> [[TMP12]]
 ; VF4IC4-NEXT:    [[TMP18:%.*]] = freeze <4 x i1> [[TMP29]]
@@ -726,20 +740,6 @@ define i8 @same_exit_block_use_loaded_value() {
 ; VF4IC4:       middle.block:
 ; VF4IC4-NEXT:    br label [[LOOP_END:%.*]]
 ; VF4IC4:       vector.early.exit:
-; VF4IC4-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP17]], i1 false)
-; VF4IC4-NEXT:    [[TMP20:%.*]] = add i64 12, [[FIRST_ACTIVE_LANE]]
-; VF4IC4-NEXT:    [[FIRST_ACTIVE_LANE8:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP11]], i1 false)
-; VF4IC4-NEXT:    [[TMP21:%.*]] = add i64 8, [[FIRST_ACTIVE_LANE8]]
-; VF4IC4-NEXT:    [[TMP22:%.*]] = icmp ne i64 [[FIRST_ACTIVE_LANE8]], 4
-; VF4IC4-NEXT:    [[TMP23:%.*]] = select i1 [[TMP22]], i64 [[TMP21]], i64 [[TMP20]]
-; VF4IC4-NEXT:    [[FIRST_ACTIVE_LANE9:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP29]], i1 false)
-; VF4IC4-NEXT:    [[TMP24:%.*]] = add i64 4, [[FIRST_ACTIVE_LANE9]]
-; VF4IC4-NEXT:    [[TMP25:%.*]] = icmp ne i64 [[FIRST_ACTIVE_LANE9]], 4
-; VF4IC4-NEXT:    [[TMP26:%.*]] = select i1 [[TMP25]], i64 [[TMP24]], i64 [[TMP23]]
-; VF4IC4-NEXT:    [[FIRST_ACTIVE_LANE1:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP12]], i1 false)
-; VF4IC4-NEXT:    [[TMP27:%.*]] = add i64 0, [[FIRST_ACTIVE_LANE1]]
-; VF4IC4-NEXT:    [[TMP28:%.*]] = icmp ne i64 [[FIRST_ACTIVE_LANE1]], 4
-; VF4IC4-NEXT:    [[TMP8:%.*]] = select i1 [[TMP28]], i64 [[TMP27]], i64 [[TMP26]]
 ; VF4IC4-NEXT:    [[EARLY_EXIT_VALUE:%.*]] = extractelement <4 x i8> [[WIDE_LOAD2]], i64 [[TMP8]]
 ; VF4IC4-NEXT:    [[TMP31:%.*]] = sub i64 [[TMP8]], 4
 ; VF4IC4-NEXT:    [[TMP32:%.*]] = extractelement <4 x i8> [[WIDE_LOAD4]], i64 [[TMP31]]
@@ -836,6 +836,20 @@ define i8 @same_exit_block_reverse_use_loaded_value() {
 ; VF4IC4-NEXT:    [[TMP19:%.*]] = icmp ne <4 x i8> [[REVERSE2]], [[REVERSE10]]
 ; VF4IC4-NEXT:    [[TMP20:%.*]] = icmp ne <4 x i8> [[REVERSE4]], [[REVERSE12]]
 ; VF4IC4-NEXT:    [[TMP37:%.*]] = icmp ne <4 x i8> [[REVERSE7]], [[REVERSE15]]
+; VF4IC4-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP37]], i1 false)
+; VF4IC4-NEXT:    [[TMP31:%.*]] = add i64 12, [[FIRST_ACTIVE_LANE]]
+; VF4IC4-NEXT:    [[FIRST_ACTIVE_LANE15:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP20]], i1 false)
+; VF4IC4-NEXT:    [[TMP32:%.*]] = add i64 8, [[FIRST_ACTIVE_LANE15]]
+; VF4IC4-NEXT:    [[TMP33:%.*]] = icmp ne i64 [[FIRST_ACTIVE_LANE15]], 4
+; VF4IC4-NEXT:    [[TMP34:%.*]] = select i1 [[TMP33]], i64 [[TMP32]], i64 [[TMP31]]
+; VF4IC4-NEXT:    [[FIRST_ACTIVE_LANE16:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP19]], i1 false)
+; VF4IC4-NEXT:    [[TMP35:%.*]] = add i64 4, [[FIRST_ACTIVE_LANE16]]
+; VF4IC4-NEXT:    [[TMP27:%.*]] = icmp ne i64 [[FIRST_ACTIVE_LANE16]], 4
+; VF4IC4-NEXT:    [[TMP28:%.*]] = select i1 [[TMP27]], i64 [[TMP35]], i64 [[TMP34]]
+; VF4IC4-NEXT:    [[FIRST_ACTIVE_LANE17:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP21]], i1 false)
+; VF4IC4-NEXT:    [[TMP29:%.*]] = add i64 0, [[FIRST_ACTIVE_LANE17]]
+; VF4IC4-NEXT:    [[TMP30:%.*]] = icmp ne i64 [[FIRST_ACTIVE_LANE17]], 4
+; VF4IC4-NEXT:    [[TMP10:%.*]] = select i1 [[TMP30]], i64 [[TMP29]], i64 [[TMP28]]
 ; VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; VF4IC4-NEXT:    [[TMP54:%.*]] = freeze <4 x i1> [[TMP21]]
 ; VF4IC4-NEXT:    [[TMP22:%.*]] = freeze <4 x i1> [[TMP19]]
@@ -852,20 +866,6 @@ define i8 @same_exit_block_reverse_use_loaded_value() {
 ; VF4IC4:       middle.block:
 ; VF4IC4-NEXT:    br label [[SCALAR_PH:%.*]]
 ; VF4IC4:       vector.early.exit:
-; VF4IC4-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP37]], i1 false)
-; VF4IC4-NEXT:    [[TMP28:%.*]] = add i64 12, [[FIRST_ACTIVE_LANE]]
-; VF4IC4-NEXT:    [[FIRST_ACTIVE_LANE15:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP20]], i1 false)
-; VF4IC4-NEXT:    [[TMP29:%.*]] = add i64 8, [[FIRST_ACTIVE_LANE15]]
-; VF4IC4-NEXT:    [[TMP30:%.*]] = icmp ne i64 [[FIRST_ACTIVE_LANE15]], 4
-; VF4IC4-NEXT:    [[TMP31:%.*]] = select i1 [[TMP30]], i64 [[TMP29]], i64 [[TMP28]]
-; VF4IC4-NEXT:    [[FIRST_ACTIVE_LANE16:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP19]], i1 false)
-; VF4IC4-NEXT:    [[TMP32:%.*]] = add i64 4, [[FIRST_ACTIVE_LANE16]]
-; VF4IC4-NEXT:    [[TMP33:%.*]] = icmp ne i64 [[FIRST_ACTIVE_LANE16]], 4
-; VF4IC4-NEXT:    [[TMP34:%.*]] = select i1 [[TMP33]], i64 [[TMP32]], i64 [[TMP31]]
-; VF4IC4-NEXT:    [[FIRST_ACTIVE_LANE1:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP21]], i1 false)
-; VF4IC4-NEXT:    [[TMP35:%.*]] = add i64 0, [[FIRST_ACTIVE_LANE1]]
-; VF4IC4-NEXT:    [[TMP36:%.*]] = icmp ne i64 [[FIRST_ACTIVE_LANE1]], 4
-; VF4IC4-NEXT:    [[TMP10:%.*]] = select i1 [[TMP36]], i64 [[TMP35]], i64 [[TMP34]]
 ; VF4IC4-NEXT:    [[EARLY_EXIT_VALUE:%.*]] = extractelement <4 x i8> [[REVERSE6]], i64 [[TMP10]]
 ; VF4IC4-NEXT:    [[TMP39:%.*]] = sub i64 [[TMP10]], 4
 ; VF4IC4-NEXT:    [[TMP40:%.*]] = extractelement <4 x i8> [[REVERSE2]], i64 [[TMP39]]

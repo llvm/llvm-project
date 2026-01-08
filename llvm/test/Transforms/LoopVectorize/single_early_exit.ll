@@ -676,23 +676,22 @@ define i8 @predicate_exit_block_successors(ptr %p0) {
 ; CHECK:       pred.load.continue6:
 ; CHECK-NEXT:    [[TMP21:%.*]] = phi <4 x i8> [ [[TMP15]], [[PRED_LOAD_CONTINUE4]] ], [ [[TMP20]], [[PRED_LOAD_IF5]] ]
 ; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i1> [[TMP3]], i32 3
-; CHECK-NEXT:    br i1 [[TMP22]], label [[PRED_LOAD_IF7:%.*]], label [[PRED_LOAD_CONTINUE8]]
+; CHECK-NEXT:    br i1 [[TMP22]], label [[PRED_LOAD_IF7:%.*]], label [[PRED_LOAD_CONTINUE9:%.*]]
 ; CHECK:       pred.load.if7:
 ; CHECK-NEXT:    [[TMP23:%.*]] = add i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i8, ptr [[P0]], i64 [[TMP23]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = load i8, ptr [[TMP24]], align 1
 ; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x i8> [[TMP21]], i8 [[TMP25]], i32 3
-; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE8]]
+; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE9]]
 ; CHECK:       pred.load.continue8:
 ; CHECK-NEXT:    [[TMP27:%.*]] = phi <4 x i8> [ [[TMP21]], [[PRED_LOAD_CONTINUE6]] ], [ [[TMP26]], [[PRED_LOAD_IF7]] ]
 ; CHECK-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX1]], 4
 ; CHECK-NEXT:    [[TMP28:%.*]] = freeze <4 x i1> [[TMP2]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP28]])
 ; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT9]], 64
-; CHECK-NEXT:    [[TMP31:%.*]] = or i1 [[TMP29]], [[TMP30]]
-; CHECK-NEXT:    br i1 [[TMP31]], label [[MIDDLE_SPLIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
-; CHECK:       middle.split:
-; CHECK-NEXT:    br i1 [[TMP29]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK-NEXT:    br i1 [[TMP29]], label [[VECTOR_EARLY_EXIT:%.*]], label [[PRED_LOAD_CONTINUE8]]
+; CHECK:       loop.inc.0.cond.1:
+; CHECK-NEXT:    br i1 [[TMP30]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <4 x i8> [[TMP27]], i32 3
 ; CHECK-NEXT:    br label [[LOOP_END1:%.*]]
