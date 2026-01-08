@@ -218,6 +218,7 @@ defset list<DXILOpClass> OpClasses = {
   def waveAllOp : DXILOpClass;
   def waveAllTrue : DXILOpClass;
   def waveAnyTrue : DXILOpClass;
+  def waveBallot : DXILOpClass;
   def waveGetLaneCount : DXILOpClass;
   def waveGetLaneIndex : DXILOpClass;
   def waveIsFirstLane : DXILOpClass;
