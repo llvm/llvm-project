@@ -169,3 +169,13 @@
 // UNUSED_OPT-NOT: warning:
 // UNUSED_OPT: warning: -Wl,-ObjC: 'linker' input unused
 // UNUSED_OPT-NOT: warning:
+
+// -E with caching
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache %clang -target x86_64-apple-darwin10 -E %s -### 2>&1 | FileCheck %s -check-prefix=CLANG_E -DPREFIX=%t
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache %clang -target x86_64-unknown-linux-gnu -E %s -### 2>&1 | FileCheck %s -check-prefix=CLANG_E -DPREFIX=%t
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache %clang -target 86_64-unknown-windows-msvc -E %s -### 2>&1 | FileCheck %s -check-prefix=CLANG_E -DPREFIX=%t
+
+// CLANG_E: "-cc1depscan" "-fdepscan=auto"
+// CLANG_E: "-fcas-path" "[[PREFIX]]/cas"
+// CLANG_E: "-greproducible"
+// CLANG_E: "{{.*}}clang{{.*}}" "-cc1" "@{{.*}}.rsp" "-o" "-"
