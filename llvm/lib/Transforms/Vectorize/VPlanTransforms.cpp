@@ -3194,6 +3194,7 @@ void VPlanTransforms::addExplicitVectorLength(
   AVLPhi->addOperand(NextAVL);
 
   fixupVFUsersForEVL(Plan, *VPEVL);
+  removeDeadRecipes(Plan);
 
   // Replace all uses of VPCanonicalIVPHIRecipe by
   // VPEVLBasedIVPHIRecipe except for the canonical IV increment.
