@@ -2488,8 +2488,9 @@ OpFoldResult cir::UnaryOp::fold(FoldAdaptor adaptor) {
         val.flipAllBits();
         return cir::IntAttr::get(getType(), val);
       }
-      assert(mlir::isa<cir::BoolType>(srcConst.getType()));
-      return cir::BoolAttr::get(getContext(), !srcConst.getBoolValue());
+      if (mlir::isa<cir::BoolType>(srcConst.getType()))
+        return cir::BoolAttr::get(getContext(), !srcConst.getBoolValue());
+      break;
     case cir::UnaryOpKind::Plus:
       return srcConst.getResult();
     case cir::UnaryOpKind::Minus:
@@ -2503,8 +2504,9 @@ OpFoldResult cir::UnaryOp::fold(FoldAdaptor adaptor) {
         val.negate();
         return cir::IntAttr::get(getType(), val);
       }
-      assert(mlir::isa<cir::BoolType>(srcConst.getType()));
-      return srcConst.getResult();
+      if (mlir::isa<cir::BoolType>(srcConst.getType()))
+        return srcConst.getResult();
+      break;
     default:
       return {};
     }
