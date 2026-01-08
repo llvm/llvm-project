@@ -100,12 +100,12 @@ void test_reference_extension() {
   assert(T::alive == 0);
   assert(T::destroyed == 1);
 
-#if 0 // optional<T&&> is not permitted.
+#  if 0 // optional<T&&> is not permitted.
   {
     static_assert(!std::is_copy_constructible<std::optional<T&&>>::value, "");
     static_assert(!std::is_copy_constructible<std::optional<T const&&>>::value, "");
   }
-#endif
+#  endif
 }
 #endif
 

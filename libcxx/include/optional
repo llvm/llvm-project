@@ -552,18 +552,7 @@ struct __optional_storage_base<_Tp, true> {
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __swap(__optional_storage_base& __rhs) noexcept {
-    if (this->has_value() == __rhs.has_value()) {
-      if (this->has_value())
-        std::swap(__value_, __rhs.__value_);
-    } else {
-      if (this->has_value()) {
-        __rhs.__construct(this->__get());
-        reset();
-      } else {
-        this->__construct(__rhs.__get());
-        __rhs.reset();
-      }
-    }
+    std::swap(__value_, __rhs.__value_);
   }
 };
 
