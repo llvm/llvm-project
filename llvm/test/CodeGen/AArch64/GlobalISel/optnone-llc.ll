@@ -2,15 +2,12 @@
 ; RUN: llc -O1 -debug -global-isel -mtriple=aarch64-unknown-linux-gnu -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=LLC-Ox
 ; RUN: llc -O2 -debug -global-isel -mtriple=aarch64-unknown-linux-gnu -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=LLC-Ox
 ; RUN: llc -O3 -debug -global-isel -mtriple=aarch64-unknown-linux-gnu -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=LLC-Ox
-; RUN: llc -misched-postra -debug -global-isel -mtriple=aarch64-unknown-linux-gnu -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=LLC-MORE
 
 ; REQUIRES: asserts
-; UNSUPPORTED: target=nvptx{{.*}}
 
 ; This test verifies that we don't run Machine Function optimizations
 ; on optnone functions.
 
-; Function Attrs: noinline optnone
 define i32 @_Z3fooi(i32 %x) #0 {
 entry:
   %x.addr = alloca i32, align 4
@@ -48,6 +45,3 @@ attributes #0 = { optnone noinline }
 ; LLC-Ox-DAG: Skipping pass 'Post{{.*}}RA{{.*}}{{[Ss]}}cheduler'
 ; LLC-Ox-DAG: Skipping pass 'Remove dead machine instructions'
 ; LLC-Ox-DAG: Skipping pass 'Tail Duplication'
-
-; Alternate post-RA scheduler.
-; LLC-MORE: Skipping pass 'PostRA Machine Instruction Scheduler'

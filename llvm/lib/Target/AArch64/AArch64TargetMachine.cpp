@@ -728,9 +728,9 @@ void AArch64PassConfig::addCodeGenPrepare() {
 }
 
 bool AArch64PassConfig::useGlobalISelFor(const Function &F) const {
-  if (!getAArch64TargetMachine().useGlobalISelForOptNoneOnly())
-    return true;
-  return F.hasOptNone();
+  if (getAArch64TargetMachine().useGlobalISelForOptNoneOnly())
+    return F.hasOptNone();
+  return true;
 }
 
 bool AArch64PassConfig::addInstSelector() {

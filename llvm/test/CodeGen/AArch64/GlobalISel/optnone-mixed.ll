@@ -5,7 +5,6 @@
 ; Check both an optnone function and a non-optnone function to ensure that only
 ; the optnone functions is routed through GlobalISel
 
-; Function Attrs: noinline nounwind optnone uwtable
 define i32 @optnone_fn(i32 %a) #0 {
 entry:
   %add = add nsw i32 %a, 1
