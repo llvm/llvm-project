@@ -6,7 +6,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x64_bf16(<16 x bfloat> %A, <32 x bfl
 ; GFX1250-LABEL: test_swmmac_f32_16x16x64_bf16:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    global_load_b32 v32, v[32:33], off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_swmmac_f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 index_key:1
@@ -18,7 +17,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x64_bf16(<16 x bfloat> %A, <32 x bfl
 ; GISEL-LABEL: test_swmmac_f32_16x16x64_bf16:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    global_load_b32 v32, v[32:33], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    v_swmmac_f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 index_key:1
@@ -39,7 +37,6 @@ define amdgpu_ps void @test_swmmac_bf16_16x16x64_bf16(<16 x bfloat> %A, <32 x bf
 ; GFX1250-LABEL: test_swmmac_bf16_16x16x64_bf16:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    global_load_b32 v28, v[28:29], off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_swmmac_bf16_16x16x64_bf16 v[24:27], v[0:7], v[8:23], v28 index_key:1
@@ -49,7 +46,6 @@ define amdgpu_ps void @test_swmmac_bf16_16x16x64_bf16(<16 x bfloat> %A, <32 x bf
 ; GISEL-LABEL: test_swmmac_bf16_16x16x64_bf16:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    global_load_b32 v28, v[28:29], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    v_swmmac_bf16_16x16x64_bf16 v[24:27], v[0:7], v[8:23], v28 index_key:1
@@ -68,7 +64,6 @@ define amdgpu_ps void @test_swmmac_bf16f32_16x16x64_bf16(<16 x bfloat> %A, <32 x
 ; GFX1250-LABEL: test_swmmac_bf16f32_16x16x64_bf16:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    global_load_b32 v32, v[32:33], off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_swmmac_bf16f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 index_key:1
@@ -80,7 +75,6 @@ define amdgpu_ps void @test_swmmac_bf16f32_16x16x64_bf16(<16 x bfloat> %A, <32 x
 ; GISEL-LABEL: test_swmmac_bf16f32_16x16x64_bf16:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    global_load_b32 v32, v[32:33], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    v_swmmac_bf16f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 index_key:1
@@ -101,7 +95,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x128_fp8_fp8_i32_index(<8 x i32> %A,
 ; GFX1250-LABEL: test_swmmac_f32_16x16x128_fp8_fp8_i32_index:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    global_load_b64 v[32:33], v[32:33], off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_swmmac_f32_16x16x128_fp8_fp8 v[24:31], v[0:7], v[8:23], v[32:33] index_key:1
@@ -114,7 +107,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x128_fp8_fp8_i32_index(<8 x i32> %A,
 ; GISEL-LABEL: test_swmmac_f32_16x16x128_fp8_fp8_i32_index:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    global_load_b64 v[32:33], v[32:33], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    v_swmmac_f32_16x16x128_fp8_fp8 v[24:31], v[0:7], v[8:23], v[32:33] index_key:1
@@ -137,7 +129,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x128_fp8_fp8_i64_index(<8 x i32> %A,
 ; GFX1250-LABEL: test_swmmac_f32_16x16x128_fp8_fp8_i64_index:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    global_load_b64 v[32:33], v[32:33], off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_swmmac_f32_16x16x128_fp8_fp8 v[24:31], v[0:7], v[8:23], v[32:33] index_key:1
@@ -150,7 +141,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x128_fp8_fp8_i64_index(<8 x i32> %A,
 ; GISEL-LABEL: test_swmmac_f32_16x16x128_fp8_fp8_i64_index:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    global_load_b64 v[32:33], v[32:33], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    v_swmmac_f32_16x16x128_fp8_fp8 v[24:31], v[0:7], v[8:23], v[32:33] index_key:1
@@ -172,7 +162,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x128_fp8_bf8_i32_index(<8 x i32> %A,
 ; GFX1250-LABEL: test_swmmac_f32_16x16x128_fp8_bf8_i32_index:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    global_load_b64 v[32:33], v[32:33], off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_swmmac_f32_16x16x128_fp8_bf8 v[24:31], v[0:7], v[8:23], v[32:33] index_key:1
@@ -185,7 +174,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x128_fp8_bf8_i32_index(<8 x i32> %A,
 ; GISEL-LABEL: test_swmmac_f32_16x16x128_fp8_bf8_i32_index:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    global_load_b64 v[32:33], v[32:33], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    v_swmmac_f32_16x16x128_fp8_bf8 v[24:31], v[0:7], v[8:23], v[32:33] index_key:1
@@ -208,7 +196,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x128_fp8_bf8_i64_index(<8 x i32> %A,
 ; GFX1250-LABEL: test_swmmac_f32_16x16x128_fp8_bf8_i64_index:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    global_load_b64 v[32:33], v[32:33], off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_swmmac_f32_16x16x128_fp8_bf8 v[24:31], v[0:7], v[8:23], v[32:33] index_key:1
@@ -221,7 +208,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x128_fp8_bf8_i64_index(<8 x i32> %A,
 ; GISEL-LABEL: test_swmmac_f32_16x16x128_fp8_bf8_i64_index:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    global_load_b64 v[32:33], v[32:33], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    v_swmmac_f32_16x16x128_fp8_bf8 v[24:31], v[0:7], v[8:23], v[32:33] index_key:1
@@ -243,7 +229,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x128_bf8_fp8_i32_index(<8 x i32> %A,
 ; GFX1250-LABEL: test_swmmac_f32_16x16x128_bf8_fp8_i32_index:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    global_load_b64 v[32:33], v[32:33], off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_swmmac_f32_16x16x128_bf8_fp8 v[24:31], v[0:7], v[8:23], v[32:33] index_key:1
@@ -256,7 +241,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x128_bf8_fp8_i32_index(<8 x i32> %A,
 ; GISEL-LABEL: test_swmmac_f32_16x16x128_bf8_fp8_i32_index:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    global_load_b64 v[32:33], v[32:33], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    v_swmmac_f32_16x16x128_bf8_fp8 v[24:31], v[0:7], v[8:23], v[32:33] index_key:1
@@ -279,7 +263,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x128_bf8_fp8_i64_index(<8 x i32> %A,
 ; GFX1250-LABEL: test_swmmac_f32_16x16x128_bf8_fp8_i64_index:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    global_load_b64 v[32:33], v[32:33], off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_swmmac_f32_16x16x128_bf8_fp8 v[24:31], v[0:7], v[8:23], v[32:33] index_key:1
@@ -292,7 +275,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x128_bf8_fp8_i64_index(<8 x i32> %A,
 ; GISEL-LABEL: test_swmmac_f32_16x16x128_bf8_fp8_i64_index:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    global_load_b64 v[32:33], v[32:33], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    v_swmmac_f32_16x16x128_bf8_fp8 v[24:31], v[0:7], v[8:23], v[32:33] index_key:1
@@ -314,7 +296,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x128_bf8_bf8_i32_index(<8 x i32> %A,
 ; GFX1250-LABEL: test_swmmac_f32_16x16x128_bf8_bf8_i32_index:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    global_load_b64 v[32:33], v[32:33], off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_swmmac_f32_16x16x128_bf8_bf8 v[24:31], v[0:7], v[8:23], v[32:33] index_key:1
@@ -327,7 +308,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x128_bf8_bf8_i32_index(<8 x i32> %A,
 ; GISEL-LABEL: test_swmmac_f32_16x16x128_bf8_bf8_i32_index:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    global_load_b64 v[32:33], v[32:33], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    v_swmmac_f32_16x16x128_bf8_bf8 v[24:31], v[0:7], v[8:23], v[32:33] index_key:1
@@ -350,7 +330,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x128_bf8_bf8_i64_index(<8 x i32> %A,
 ; GFX1250-LABEL: test_swmmac_f32_16x16x128_bf8_bf8_i64_index:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    global_load_b64 v[32:33], v[32:33], off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_swmmac_f32_16x16x128_bf8_bf8 v[24:31], v[0:7], v[8:23], v[32:33] index_key:1
@@ -363,7 +342,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x128_bf8_bf8_i64_index(<8 x i32> %A,
 ; GISEL-LABEL: test_swmmac_f32_16x16x128_bf8_bf8_i64_index:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    global_load_b64 v[32:33], v[32:33], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    v_swmmac_f32_16x16x128_bf8_bf8 v[24:31], v[0:7], v[8:23], v[32:33] index_key:1
@@ -385,7 +363,6 @@ define amdgpu_ps void @test_swmmac_f16_16x16x128_fp8_fp8_i32_index(<8 x i32> %A,
 ; GFX1250-LABEL: test_swmmac_f16_16x16x128_fp8_fp8_i32_index:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    global_load_b64 v[28:29], v[28:29], off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_swmmac_f16_16x16x128_fp8_fp8 v[24:27], v[0:7], v[8:23], v[28:29] index_key:1
@@ -396,7 +373,6 @@ define amdgpu_ps void @test_swmmac_f16_16x16x128_fp8_fp8_i32_index(<8 x i32> %A,
 ; GISEL-LABEL: test_swmmac_f16_16x16x128_fp8_fp8_i32_index:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    global_load_b64 v[28:29], v[28:29], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    v_swmmac_f16_16x16x128_fp8_fp8 v[24:27], v[0:7], v[8:23], v[28:29] index_key:1
@@ -417,7 +393,6 @@ define amdgpu_ps void @test_swmmac_f16_16x16x128_fp8_fp8_i64_index(<8 x i32> %A,
 ; GFX1250-LABEL: test_swmmac_f16_16x16x128_fp8_fp8_i64_index:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    global_load_b64 v[28:29], v[28:29], off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_swmmac_f16_16x16x128_fp8_fp8 v[24:27], v[0:7], v[8:23], v[28:29] index_key:1
@@ -428,7 +403,6 @@ define amdgpu_ps void @test_swmmac_f16_16x16x128_fp8_fp8_i64_index(<8 x i32> %A,
 ; GISEL-LABEL: test_swmmac_f16_16x16x128_fp8_fp8_i64_index:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    global_load_b64 v[28:29], v[28:29], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    v_swmmac_f16_16x16x128_fp8_fp8 v[24:27], v[0:7], v[8:23], v[28:29] index_key:1
@@ -448,7 +422,6 @@ define amdgpu_ps void @test_swmmac_f16_16x16x128_fp8_bf8_i32_index(<8 x i32> %A,
 ; GFX1250-LABEL: test_swmmac_f16_16x16x128_fp8_bf8_i32_index:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    global_load_b64 v[28:29], v[28:29], off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_swmmac_f16_16x16x128_fp8_bf8 v[24:27], v[0:7], v[8:23], v[28:29] index_key:1
@@ -459,7 +432,6 @@ define amdgpu_ps void @test_swmmac_f16_16x16x128_fp8_bf8_i32_index(<8 x i32> %A,
 ; GISEL-LABEL: test_swmmac_f16_16x16x128_fp8_bf8_i32_index:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    global_load_b64 v[28:29], v[28:29], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    v_swmmac_f16_16x16x128_fp8_bf8 v[24:27], v[0:7], v[8:23], v[28:29] index_key:1
@@ -480,7 +452,6 @@ define amdgpu_ps void @test_swmmac_f16_16x16x128_fp8_bf8_i64_index(<8 x i32> %A,
 ; GFX1250-LABEL: test_swmmac_f16_16x16x128_fp8_bf8_i64_index:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    global_load_b64 v[28:29], v[28:29], off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_swmmac_f16_16x16x128_fp8_bf8 v[24:27], v[0:7], v[8:23], v[28:29] index_key:1
@@ -491,7 +462,6 @@ define amdgpu_ps void @test_swmmac_f16_16x16x128_fp8_bf8_i64_index(<8 x i32> %A,
 ; GISEL-LABEL: test_swmmac_f16_16x16x128_fp8_bf8_i64_index:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    global_load_b64 v[28:29], v[28:29], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    v_swmmac_f16_16x16x128_fp8_bf8 v[24:27], v[0:7], v[8:23], v[28:29] index_key:1
@@ -511,7 +481,6 @@ define amdgpu_ps void @test_swmmac_f16_16x16x128_bf8_fp8_i32_index(<8 x i32> %A,
 ; GFX1250-LABEL: test_swmmac_f16_16x16x128_bf8_fp8_i32_index:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    global_load_b64 v[28:29], v[28:29], off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_swmmac_f16_16x16x128_bf8_fp8 v[24:27], v[0:7], v[8:23], v[28:29] index_key:1
@@ -522,7 +491,6 @@ define amdgpu_ps void @test_swmmac_f16_16x16x128_bf8_fp8_i32_index(<8 x i32> %A,
 ; GISEL-LABEL: test_swmmac_f16_16x16x128_bf8_fp8_i32_index:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    global_load_b64 v[28:29], v[28:29], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    v_swmmac_f16_16x16x128_bf8_fp8 v[24:27], v[0:7], v[8:23], v[28:29] index_key:1
@@ -543,7 +511,6 @@ define amdgpu_ps void @test_swmmac_f16_16x16x128_bf8_fp8_i64_index(<8 x i32> %A,
 ; GFX1250-LABEL: test_swmmac_f16_16x16x128_bf8_fp8_i64_index:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    global_load_b64 v[28:29], v[28:29], off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_swmmac_f16_16x16x128_bf8_fp8 v[24:27], v[0:7], v[8:23], v[28:29] index_key:1
@@ -554,7 +521,6 @@ define amdgpu_ps void @test_swmmac_f16_16x16x128_bf8_fp8_i64_index(<8 x i32> %A,
 ; GISEL-LABEL: test_swmmac_f16_16x16x128_bf8_fp8_i64_index:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    global_load_b64 v[28:29], v[28:29], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    v_swmmac_f16_16x16x128_bf8_fp8 v[24:27], v[0:7], v[8:23], v[28:29] index_key:1
@@ -574,7 +540,6 @@ define amdgpu_ps void @test_swmmac_f16_16x16x128_bf8_bf8_i32_index(<8 x i32> %A,
 ; GFX1250-LABEL: test_swmmac_f16_16x16x128_bf8_bf8_i32_index:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    global_load_b64 v[28:29], v[28:29], off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_swmmac_f16_16x16x128_bf8_bf8 v[24:27], v[0:7], v[8:23], v[28:29] index_key:1
@@ -585,7 +550,6 @@ define amdgpu_ps void @test_swmmac_f16_16x16x128_bf8_bf8_i32_index(<8 x i32> %A,
 ; GISEL-LABEL: test_swmmac_f16_16x16x128_bf8_bf8_i32_index:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    global_load_b64 v[28:29], v[28:29], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    v_swmmac_f16_16x16x128_bf8_bf8 v[24:27], v[0:7], v[8:23], v[28:29] index_key:1
@@ -606,7 +570,6 @@ define amdgpu_ps void @test_swmmac_f16_16x16x128_bf8_bf8_i64_index(<8 x i32> %A,
 ; GFX1250-LABEL: test_swmmac_f16_16x16x128_bf8_bf8_i64_index:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    global_load_b64 v[28:29], v[28:29], off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_swmmac_f16_16x16x128_bf8_bf8 v[24:27], v[0:7], v[8:23], v[28:29] index_key:1
@@ -617,7 +580,6 @@ define amdgpu_ps void @test_swmmac_f16_16x16x128_bf8_bf8_i64_index(<8 x i32> %A,
 ; GISEL-LABEL: test_swmmac_f16_16x16x128_bf8_bf8_i64_index:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    global_load_b64 v[28:29], v[28:29], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    v_swmmac_f16_16x16x128_bf8_bf8 v[24:27], v[0:7], v[8:23], v[28:29] index_key:1
@@ -637,7 +599,6 @@ define amdgpu_ps void @test_swmmac_i32_16x16x128_iu8_i32_index(<8 x i32> %A, <16
 ; GFX1250-LABEL: test_swmmac_i32_16x16x128_iu8_i32_index:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    global_load_b64 v[32:33], v[32:33], off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_swmmac_i32_16x16x128_iu8 v[24:31], v[0:7], v[8:23], v[32:33] index_key:1
@@ -650,7 +611,6 @@ define amdgpu_ps void @test_swmmac_i32_16x16x128_iu8_i32_index(<8 x i32> %A, <16
 ; GISEL-LABEL: test_swmmac_i32_16x16x128_iu8_i32_index:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    global_load_b64 v[32:33], v[32:33], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    v_swmmac_i32_16x16x128_iu8 v[24:31], v[0:7], v[8:23], v[32:33] index_key:1
@@ -673,7 +633,6 @@ define amdgpu_ps void @test_swmmac_i32_16x16x128_iu8_i64_index(<8 x i32> %A, <16
 ; GFX1250-LABEL: test_swmmac_i32_16x16x128_iu8_i64_index:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    global_load_b64 v[32:33], v[32:33], off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_swmmac_i32_16x16x128_iu8 v[24:31], v[0:7], v[8:23], v[32:33] index_key:1
@@ -686,7 +645,6 @@ define amdgpu_ps void @test_swmmac_i32_16x16x128_iu8_i64_index(<8 x i32> %A, <16
 ; GISEL-LABEL: test_swmmac_i32_16x16x128_iu8_i64_index:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    global_load_b64 v[32:33], v[32:33], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    v_swmmac_i32_16x16x128_iu8 v[24:31], v[0:7], v[8:23], v[32:33] index_key:1
@@ -708,7 +666,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x64_f16(<16 x half> %A, <32 x half> 
 ; GFX1250-LABEL: test_swmmac_f32_16x16x64_f16:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    global_load_b32 v32, v[32:33], off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_swmmac_f32_16x16x64_f16 v[24:31], v[0:7], v[8:23], v32 index_key:1
@@ -720,7 +677,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x64_f16(<16 x half> %A, <32 x half> 
 ; GISEL-LABEL: test_swmmac_f32_16x16x64_f16:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    global_load_b32 v32, v[32:33], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    v_swmmac_f32_16x16x64_f16 v[24:31], v[0:7], v[8:23], v32 index_key:1
@@ -741,7 +697,6 @@ define amdgpu_ps void @test_swmmac_f16_16x16x64_f16(<16 x half> %A, <32 x half> 
 ; GFX1250-LABEL: test_swmmac_f16_16x16x64_f16:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    global_load_b32 v28, v[28:29], off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_swmmac_f16_16x16x64_f16 v[24:27], v[0:7], v[8:23], v28 index_key:1
@@ -751,7 +706,6 @@ define amdgpu_ps void @test_swmmac_f16_16x16x64_f16(<16 x half> %A, <32 x half> 
 ; GISEL-LABEL: test_swmmac_f16_16x16x64_f16:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    global_load_b32 v28, v[28:29], off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    v_swmmac_f16_16x16x64_f16 v[24:27], v[0:7], v[8:23], v28 index_key:1

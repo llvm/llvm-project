@@ -6,7 +6,6 @@ define amdgpu_ps float @global_load_b32_idxprom(ptr addrspace(1) align 4 inreg %
 ; GCN-LABEL: global_load_b32_idxprom:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    global_load_b32 v0, v0, s[0:1] scale_offset
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
@@ -21,7 +20,6 @@ define amdgpu_ps float @global_load_b32_idx32(ptr addrspace(1) align 4 inreg %p,
 ; GCN-LABEL: global_load_b32_idx32:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    global_load_b32 v0, v0, s[0:1] scale_offset
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
@@ -35,7 +33,6 @@ define amdgpu_ps float @global_load_b32_idxprom_wrong_stride(ptr addrspace(1) al
 ; GCN-LABEL: global_load_b32_idxprom_wrong_stride:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GCN-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 3, s[0:1]
@@ -53,7 +50,6 @@ define amdgpu_ps float @global_load_b16_idxprom_ioffset(ptr addrspace(1) align 4
 ; GCN-LABEL: global_load_b16_idxprom_ioffset:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    global_load_u16 v0, v0, s[0:1] offset:32 scale_offset
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
@@ -71,7 +67,6 @@ define amdgpu_ps <2 x float> @global_load_b64_idxprom(ptr addrspace(1) align 4 i
 ; GCN-LABEL: global_load_b64_idxprom:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    global_load_b64 v[0:1], v0, s[0:1] scale_offset
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
@@ -86,7 +81,6 @@ define amdgpu_ps <3 x float> @global_load_b96_idxprom(ptr addrspace(1) align 4 i
 ; GCN-LABEL: global_load_b96_idxprom:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    global_load_b96 v[0:2], v0, s[0:1] scale_offset
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
@@ -101,7 +95,6 @@ define amdgpu_ps <3 x float> @global_load_b96_idxpromi_ioffset(ptr addrspace(1) 
 ; GCN-LABEL: global_load_b96_idxpromi_ioffset:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    global_load_b96 v[0:2], v0, s[0:1] offset:192 scale_offset
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
@@ -117,7 +110,6 @@ define amdgpu_ps <4 x float> @global_load_b128_idxprom(ptr addrspace(1) align 4 
 ; GCN-LABEL: global_load_b128_idxprom:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    global_load_b128 v[0:3], v0, s[0:1] scale_offset
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
@@ -132,7 +124,6 @@ define amdgpu_ps float @global_load_b32_idxprom_range(ptr addrspace(1) align 4 i
 ; GCN-LABEL: global_load_b32_idxprom_range:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    global_load_b32 v0, v[0:1], off
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    global_load_b32 v0, v0, s[0:1] scale_offset
@@ -150,7 +141,6 @@ define amdgpu_ps float @global_load_b32_idxprom_range_ioffset(ptr addrspace(1) a
 ; GCN-LABEL: global_load_b32_idxprom_range_ioffset:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    global_load_b32 v0, v[0:1], off
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    global_load_b32 v0, v0, s[0:1] offset:64 scale_offset
@@ -171,7 +161,6 @@ define amdgpu_ps float @global_load_b8_idxprom_range_ioffset(ptr addrspace(1) al
 ; GCN-LABEL: global_load_b8_idxprom_range_ioffset:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    global_load_b32 v0, v[0:1], off
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    global_load_u8 v0, v0, s[0:1] offset:16
@@ -192,7 +181,6 @@ define amdgpu_ps float @global_load_b16_idxprom_range(ptr addrspace(1) align 4 i
 ; GCN-LABEL: global_load_b16_idxprom_range:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    global_load_b32 v0, v[0:1], off
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    global_load_u16 v0, v0, s[0:1] scale_offset
@@ -212,7 +200,6 @@ define amdgpu_ps float @global_load_b16_idxprom_range_ioffset(ptr addrspace(1) a
 ; GCN-LABEL: global_load_b16_idxprom_range_ioffset:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    global_load_b32 v0, v[0:1], off
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    global_load_u16 v0, v0, s[0:1] offset:32 scale_offset
@@ -233,7 +220,6 @@ define amdgpu_ps <2 x float> @global_load_b64_idxprom_range(ptr addrspace(1) ali
 ; GCN-LABEL: global_load_b64_idxprom_range:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    global_load_b32 v0, v[0:1], off
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    global_load_b64 v[0:1], v0, s[0:1] scale_offset
@@ -251,7 +237,6 @@ define amdgpu_ps <3 x float> @global_load_b96_idxprom_range(ptr addrspace(1) ali
 ; GCN-LABEL: global_load_b96_idxprom_range:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    global_load_b32 v0, v[0:1], off
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    global_load_b96 v[0:2], v0, s[0:1] scale_offset
@@ -269,7 +254,6 @@ define amdgpu_ps <3 x float> @global_load_b96_idxprom_range_ioffset(ptr addrspac
 ; GCN-LABEL: global_load_b96_idxprom_range_ioffset:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    global_load_b32 v0, v[0:1], off
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    global_load_b96 v[0:2], v0, s[0:1] offset:192 scale_offset
@@ -288,7 +272,6 @@ define amdgpu_ps <4 x float> @global_load_b128_idxprom_range(ptr addrspace(1) al
 ; GCN-LABEL: global_load_b128_idxprom_range:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    global_load_b32 v0, v[0:1], off
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    global_load_b128 v[0:3], v0, s[0:1] scale_offset
@@ -306,7 +289,6 @@ define amdgpu_ps void @global_store_b32_idxprom(ptr addrspace(1) align 4 inreg %
 ; GCN-LABEL: global_store_b32_idxprom:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 1.0
 ; GCN-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
 ; GCN-NEXT:    s_endpgm
@@ -321,7 +303,6 @@ define amdgpu_ps void @global_store_b16_idxprom(ptr addrspace(1) align 2 inreg %
 ; GCN-LABEL: global_store_b16_idxprom:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 1
 ; GCN-NEXT:    global_store_b16 v0, v1, s[0:1] scale_offset
 ; GCN-NEXT:    s_endpgm
@@ -336,7 +317,6 @@ define amdgpu_ps void @global_store_b64_idxprom(ptr addrspace(1) align 4 inreg %
 ; GCN-LABEL: global_store_b64_idxprom:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    v_mov_b64_e32 v[2:3], 1.0
 ; GCN-NEXT:    global_store_b64 v0, v[2:3], s[0:1] scale_offset
 ; GCN-NEXT:    s_endpgm
@@ -351,7 +331,6 @@ define amdgpu_ps void @global_atomicrmw_b32_idxprom(ptr addrspace(1) align 4 inr
 ; GCN-LABEL: global_atomicrmw_b32_idxprom:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 1
 ; GCN-NEXT:    global_atomic_add_u32 v0, v1, s[0:1] scale_offset scope:SCOPE_SYS
 ; GCN-NEXT:    s_endpgm
@@ -366,7 +345,6 @@ define amdgpu_ps <2 x float> @global_atomicrmw_b64_rtn_idxprom(ptr addrspace(1) 
 ; GCN-LABEL: global_atomicrmw_b64_rtn_idxprom:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GCN-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GCN-NEXT:    v_mov_b64_e32 v[2:3], 1
 ; GCN-NEXT:    global_atomic_add_u64 v[0:1], v0, v[2:3], s[0:1] scale_offset th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GCN-NEXT:    s_wait_loadcnt 0x0

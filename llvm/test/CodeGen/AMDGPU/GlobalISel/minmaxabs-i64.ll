@@ -133,7 +133,6 @@ define amdgpu_ps i64 @test_umin_i64_s(i64 inreg %a, i64 inreg %b) {
 ; CHECK-LABEL: test_umin_i64_s:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; CHECK-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    v_min_u64 v[0:1], s[0:1], s[2:3]
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
@@ -147,7 +146,6 @@ define amdgpu_ps i64 @test_umax_i64_s(i64 inreg %a, i64 inreg %b) {
 ; CHECK-LABEL: test_umax_i64_s:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; CHECK-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    v_max_u64 v[0:1], s[0:1], s[2:3]
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
@@ -161,7 +159,6 @@ define amdgpu_ps i64 @test_smin_i64_s(i64 inreg %a, i64 inreg %b) {
 ; CHECK-LABEL: test_smin_i64_s:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; CHECK-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    v_min_i64 v[0:1], s[0:1], s[2:3]
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
@@ -175,7 +172,6 @@ define amdgpu_ps i64 @test_smax_i64_s(i64 inreg %a, i64 inreg %b) {
 ; CHECK-LABEL: test_smax_i64_s:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; CHECK-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    v_max_i64 v[0:1], s[0:1], s[2:3]
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
@@ -189,7 +185,6 @@ define amdgpu_ps i64 @test_abs_i64_s(i64 inreg %a) {
 ; CHECK-LABEL: test_abs_i64_s:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; CHECK-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    s_ashr_i32 s2, s1, 31
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_mov_b32 s3, s2

@@ -18,7 +18,6 @@ define amdgpu_ps void @prefetch_data_sgpr(ptr addrspace(4) inreg %ptr) {
 ; GFX1250-LABEL: prefetch_data_sgpr:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
@@ -26,7 +25,6 @@ define amdgpu_ps void @prefetch_data_sgpr(ptr addrspace(4) inreg %ptr) {
 ; GFX1250-SPREFETCH-LABEL: prefetch_data_sgpr:
 ; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
 ; GFX1250-SPREFETCH-NEXT:    s_endpgm
 ;
@@ -47,7 +45,6 @@ define amdgpu_ps void @prefetch_data_sgpr_offset(ptr addrspace(4) inreg %ptr) {
 ; GFX1250-LABEL: prefetch_data_sgpr_offset:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] offset:512 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
@@ -55,7 +52,6 @@ define amdgpu_ps void @prefetch_data_sgpr_offset(ptr addrspace(4) inreg %ptr) {
 ; GFX1250-SPREFETCH-LABEL: prefetch_data_sgpr_offset:
 ; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-NEXT:    s_prefetch_data s[0:1], 0x200, null, 0
 ; GFX1250-SPREFETCH-NEXT:    s_endpgm
 ;
@@ -79,7 +75,6 @@ define amdgpu_ps void @prefetch_data_sgpr_max_offset(ptr addrspace(4) inreg %ptr
 ; GFX1250-LABEL: prefetch_data_sgpr_max_offset:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] offset:8388607 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
@@ -87,7 +82,6 @@ define amdgpu_ps void @prefetch_data_sgpr_max_offset(ptr addrspace(4) inreg %ptr
 ; GFX1250-SPREFETCH-LABEL: prefetch_data_sgpr_max_offset:
 ; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-NEXT:    s_prefetch_data s[0:1], 0x7fffff, null, 0
 ; GFX1250-SPREFETCH-NEXT:    s_endpgm
 ;
@@ -109,7 +103,6 @@ define amdgpu_ps void @prefetch_data_sgpr_min_offset(ptr addrspace(4) inreg %ptr
 ; GFX1250-LABEL: prefetch_data_sgpr_min_offset:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] offset:-8388608 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
@@ -117,7 +110,6 @@ define amdgpu_ps void @prefetch_data_sgpr_min_offset(ptr addrspace(4) inreg %ptr
 ; GFX1250-SPREFETCH-SDAG-LABEL: prefetch_data_sgpr_min_offset:
 ; GFX1250-SPREFETCH-SDAG:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-SDAG-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-SDAG-NEXT:    s_mov_b64 s[2:3], 0xffffffffff800000
 ; GFX1250-SPREFETCH-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-SPREFETCH-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
@@ -140,7 +132,6 @@ define amdgpu_ps void @prefetch_data_sgpr_min_offset(ptr addrspace(4) inreg %ptr
 ; GFX1250-SPREFETCH-GISEL-LABEL: prefetch_data_sgpr_min_offset:
 ; GFX1250-SPREFETCH-GISEL:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-GISEL-NEXT:    s_add_co_u32 s0, s0, 0xff800000
 ; GFX1250-SPREFETCH-GISEL-NEXT:    s_add_co_ci_u32 s1, s1, -1
 ; GFX1250-SPREFETCH-GISEL-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
@@ -162,7 +153,6 @@ define amdgpu_ps void @prefetch_data_sgpr_too_large_offset(ptr addrspace(4) inre
 ; GFX1250-LABEL: prefetch_data_sgpr_too_large_offset:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0x800000
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
@@ -170,7 +160,6 @@ define amdgpu_ps void @prefetch_data_sgpr_too_large_offset(ptr addrspace(4) inre
 ; GFX1250-SPREFETCH-SDAG-LABEL: prefetch_data_sgpr_too_large_offset:
 ; GFX1250-SPREFETCH-SDAG:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-SDAG-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0x800000
 ; GFX1250-SPREFETCH-SDAG-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
 ; GFX1250-SPREFETCH-SDAG-NEXT:    s_endpgm
@@ -188,7 +177,6 @@ define amdgpu_ps void @prefetch_data_sgpr_too_large_offset(ptr addrspace(4) inre
 ; GFX1250-SPREFETCH-GISEL-LABEL: prefetch_data_sgpr_too_large_offset:
 ; GFX1250-SPREFETCH-GISEL:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-GISEL-NEXT:    s_add_co_u32 s0, s0, 0x800000
 ; GFX1250-SPREFETCH-GISEL-NEXT:    s_add_co_ci_u32 s1, s1, 0
 ; GFX1250-SPREFETCH-GISEL-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
@@ -212,14 +200,12 @@ define amdgpu_ps void @prefetch_data_vgpr_global(ptr addrspace(1) %ptr) {
 ; GFX1250-LABEL: prefetch_data_vgpr_global:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    global_prefetch_b8 v[0:1], off scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1250-SPREFETCH-LABEL: prefetch_data_vgpr_global:
 ; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-NEXT:    global_prefetch_b8 v[0:1], off scope:SCOPE_SYS
 ; GFX1250-SPREFETCH-NEXT:    s_endpgm
 ;
@@ -239,14 +225,12 @@ define amdgpu_ps void @prefetch_data_vgpr_flat(ptr %ptr) {
 ; GFX1250-LABEL: prefetch_data_vgpr_flat:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    flat_prefetch_b8 v[0:1] scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1250-SPREFETCH-LABEL: prefetch_data_vgpr_flat:
 ; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-NEXT:    flat_prefetch_b8 v[0:1] scope:SCOPE_SYS
 ; GFX1250-SPREFETCH-NEXT:    s_endpgm
 ;
@@ -266,14 +250,12 @@ define amdgpu_ps void @prefetch_data_sgpr_vgpr_offset_global(ptr addrspace(1) in
 ; GFX1250-LABEL: prefetch_data_sgpr_vgpr_offset_global:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1250-SPREFETCH-LABEL: prefetch_data_sgpr_vgpr_offset_global:
 ; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SYS
 ; GFX1250-SPREFETCH-NEXT:    s_endpgm
 ;
@@ -300,14 +282,12 @@ define amdgpu_ps void @prefetch_data_sgpr_vgpr_offset_flat(ptr inreg %ptr, i32 %
 ; GFX1250-LABEL: prefetch_data_sgpr_vgpr_offset_flat:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    flat_prefetch_b8 v0, s[0:1] offset:128 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1250-SPREFETCH-LABEL: prefetch_data_sgpr_vgpr_offset_flat:
 ; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-NEXT:    flat_prefetch_b8 v0, s[0:1] offset:128 scope:SCOPE_SYS
 ; GFX1250-SPREFETCH-NEXT:    s_endpgm
 ;
@@ -337,13 +317,11 @@ define amdgpu_ps void @prefetch_data_lds(ptr addrspace(3) inreg %ptr) {
 ; GFX1250-LABEL: prefetch_data_lds:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1250-SPREFETCH-LABEL: prefetch_data_lds:
 ; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-NEXT:    s_endpgm
 ;
 ; NOSPREFETCH-LABEL: prefetch_data_lds:
@@ -362,13 +340,11 @@ define amdgpu_ps void @prefetch_data_scratch(ptr addrspace(5) inreg %ptr) {
 ; GFX1250-LABEL: prefetch_data_scratch:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1250-SPREFETCH-LABEL: prefetch_data_scratch:
 ; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-NEXT:    s_endpgm
 ;
 ; NOSPREFETCH-LABEL: prefetch_data_scratch:
@@ -389,7 +365,6 @@ define amdgpu_ps void @prefetch_data_sgpr_flat(ptr inreg %ptr) {
 ; GFX1250-LABEL: prefetch_data_sgpr_flat:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    flat_prefetch_b8 v0, s[0:1] scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
@@ -397,7 +372,6 @@ define amdgpu_ps void @prefetch_data_sgpr_flat(ptr inreg %ptr) {
 ; GFX1250-SPREFETCH-LABEL: prefetch_data_sgpr_flat:
 ; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
 ; GFX1250-SPREFETCH-NEXT:    s_endpgm
 ;
@@ -418,7 +392,6 @@ define amdgpu_ps void @prefetch_data_sgpr_global(ptr addrspace(1) inreg %ptr) {
 ; GFX1250-LABEL: prefetch_data_sgpr_global:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
@@ -426,7 +399,6 @@ define amdgpu_ps void @prefetch_data_sgpr_global(ptr addrspace(1) inreg %ptr) {
 ; GFX1250-SPREFETCH-LABEL: prefetch_data_sgpr_global:
 ; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
 ; GFX1250-SPREFETCH-NEXT:    s_endpgm
 ;
@@ -447,13 +419,11 @@ define amdgpu_ps void @prefetch_data_sgpr_constant_32bit(ptr addrspace(6) inreg 
 ; GFX1250-LABEL: prefetch_data_sgpr_constant_32bit:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1250-SPREFETCH-LABEL: prefetch_data_sgpr_constant_32bit:
 ; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-NEXT:    s_mov_b32 s1, 0
 ; GFX1250-SPREFETCH-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
 ; GFX1250-SPREFETCH-NEXT:    s_endpgm
@@ -478,13 +448,11 @@ define amdgpu_ps void @prefetch_inst_sgpr(ptr addrspace(4) inreg %ptr) {
 ; GFX1250-LABEL: prefetch_inst_sgpr:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1250-SPREFETCH-LABEL: prefetch_inst_sgpr:
 ; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-NEXT:    s_prefetch_inst s[0:1], 0x0, null, 0
 ; GFX1250-SPREFETCH-NEXT:    s_endpgm
 ;
@@ -505,13 +473,11 @@ define amdgpu_ps void @prefetch_inst_sgpr_offset(ptr addrspace(4) inreg %ptr) {
 ; GFX1250-LABEL: prefetch_inst_sgpr_offset:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1250-SPREFETCH-LABEL: prefetch_inst_sgpr_offset:
 ; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-NEXT:    s_prefetch_inst s[0:1], 0x80, null, 0
 ; GFX1250-SPREFETCH-NEXT:    s_endpgm
 ;
@@ -535,13 +501,11 @@ define amdgpu_ps void @prefetch_inst_sgpr_max_offset(ptr addrspace(4) inreg %ptr
 ; GFX1250-LABEL: prefetch_inst_sgpr_max_offset:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1250-SPREFETCH-LABEL: prefetch_inst_sgpr_max_offset:
 ; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-NEXT:    s_prefetch_inst s[0:1], 0x7fffff, null, 0
 ; GFX1250-SPREFETCH-NEXT:    s_endpgm
 ;
@@ -563,13 +527,11 @@ define amdgpu_ps void @prefetch_inst_sgpr_min_offset(ptr addrspace(4) inreg %ptr
 ; GFX1250-LABEL: prefetch_inst_sgpr_min_offset:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1250-SPREFETCH-SDAG-LABEL: prefetch_inst_sgpr_min_offset:
 ; GFX1250-SPREFETCH-SDAG:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-SDAG-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-SDAG-NEXT:    s_mov_b64 s[2:3], 0xffffffffff800000
 ; GFX1250-SPREFETCH-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-SPREFETCH-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
@@ -592,7 +554,6 @@ define amdgpu_ps void @prefetch_inst_sgpr_min_offset(ptr addrspace(4) inreg %ptr
 ; GFX1250-SPREFETCH-GISEL-LABEL: prefetch_inst_sgpr_min_offset:
 ; GFX1250-SPREFETCH-GISEL:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-GISEL-NEXT:    s_add_co_u32 s0, s0, 0xff800000
 ; GFX1250-SPREFETCH-GISEL-NEXT:    s_add_co_ci_u32 s1, s1, -1
 ; GFX1250-SPREFETCH-GISEL-NEXT:    s_prefetch_inst s[0:1], 0x0, null, 0
@@ -614,13 +575,11 @@ define amdgpu_ps void @prefetch_inst_sgpr_too_large_offset(ptr addrspace(4) inre
 ; GFX1250-LABEL: prefetch_inst_sgpr_too_large_offset:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1250-SPREFETCH-SDAG-LABEL: prefetch_inst_sgpr_too_large_offset:
 ; GFX1250-SPREFETCH-SDAG:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-SDAG-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0x800000
 ; GFX1250-SPREFETCH-SDAG-NEXT:    s_prefetch_inst s[0:1], 0x0, null, 0
 ; GFX1250-SPREFETCH-SDAG-NEXT:    s_endpgm
@@ -638,7 +597,6 @@ define amdgpu_ps void @prefetch_inst_sgpr_too_large_offset(ptr addrspace(4) inre
 ; GFX1250-SPREFETCH-GISEL-LABEL: prefetch_inst_sgpr_too_large_offset:
 ; GFX1250-SPREFETCH-GISEL:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-GISEL-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-GISEL-NEXT:    s_add_co_u32 s0, s0, 0x800000
 ; GFX1250-SPREFETCH-GISEL-NEXT:    s_add_co_ci_u32 s1, s1, 0
 ; GFX1250-SPREFETCH-GISEL-NEXT:    s_prefetch_inst s[0:1], 0x0, null, 0
@@ -662,14 +620,12 @@ define amdgpu_ps void @prefetch_data_vgpr_flat_dev(ptr %ptr) {
 ; GFX1250-LABEL: prefetch_data_vgpr_flat_dev:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    flat_prefetch_b8 v[0:1] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1250-SPREFETCH-LABEL: prefetch_data_vgpr_flat_dev:
 ; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-NEXT:    flat_prefetch_b8 v[0:1] scope:SCOPE_DEV
 ; GFX1250-SPREFETCH-NEXT:    s_endpgm
 ;
@@ -689,14 +645,12 @@ define amdgpu_ps void @prefetch_data_vgpr_flat_se(ptr %ptr) {
 ; GFX1250-LABEL: prefetch_data_vgpr_flat_se:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    flat_prefetch_b8 v[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1250-SPREFETCH-LABEL: prefetch_data_vgpr_flat_se:
 ; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-NEXT:    flat_prefetch_b8 v[0:1] scope:SCOPE_SE
 ; GFX1250-SPREFETCH-NEXT:    s_endpgm
 ;
@@ -716,21 +670,18 @@ define amdgpu_ps void @prefetch_data_vgpr_flat_cu(ptr %ptr) {
 ; GL2-ONLY-LABEL: prefetch_data_vgpr_flat_cu:
 ; GL2-ONLY:       ; %bb.0: ; %entry
 ; GL2-ONLY-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GL2-ONLY-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GL2-ONLY-NEXT:    flat_prefetch_b8 v[0:1] scope:SCOPE_SE
 ; GL2-ONLY-NEXT:    s_endpgm
 ;
 ; GFX1250-SPREFETCH-LABEL: prefetch_data_vgpr_flat_cu:
 ; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-NEXT:    flat_prefetch_b8 v[0:1] scope:SCOPE_SE
 ; GFX1250-SPREFETCH-NEXT:    s_endpgm
 ;
 ; SAFE-CU-LABEL: prefetch_data_vgpr_flat_cu:
 ; SAFE-CU:       ; %bb.0: ; %entry
 ; SAFE-CU-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; SAFE-CU-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SAFE-CU-NEXT:    flat_prefetch_b8 v[0:1]
 ; SAFE-CU-NEXT:    s_endpgm
 ;
@@ -752,14 +703,12 @@ define amdgpu_ps void @prefetch_data_vgpr_flat_offset(ptr %ptr) {
 ; GFX1250-LABEL: prefetch_data_vgpr_flat_offset:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    flat_prefetch_b8 v[0:1] offset:512 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1250-SPREFETCH-LABEL: prefetch_data_vgpr_flat_offset:
 ; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-NEXT:    flat_prefetch_b8 v[0:1] offset:512 scope:SCOPE_SYS
 ; GFX1250-SPREFETCH-NEXT:    s_endpgm
 ;
@@ -780,14 +729,12 @@ define amdgpu_ps void @prefetch_data_vgpr_global_offset(ptr addrspace(1) %ptr) {
 ; GFX1250-LABEL: prefetch_data_vgpr_global_offset:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    global_prefetch_b8 v[0:1], off offset:512 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1250-SPREFETCH-LABEL: prefetch_data_vgpr_global_offset:
 ; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-NEXT:    global_prefetch_b8 v[0:1], off offset:512 scope:SCOPE_SYS
 ; GFX1250-SPREFETCH-NEXT:    s_endpgm
 ;
@@ -808,14 +755,12 @@ define amdgpu_ps void @prefetch_data_vgpr_global_saddr(ptr addrspace(1) inreg %p
 ; GFX1250-LABEL: prefetch_data_vgpr_global_saddr:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1250-SPREFETCH-LABEL: prefetch_data_vgpr_global_saddr:
 ; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SYS
 ; GFX1250-SPREFETCH-NEXT:    s_endpgm
 ;
@@ -836,14 +781,12 @@ define amdgpu_ps void @prefetch_data_vgpr_global_saddr_offset(ptr addrspace(1) i
 ; GFX1250-LABEL: prefetch_data_vgpr_global_saddr_offset:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] offset:128 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1250-SPREFETCH-LABEL: prefetch_data_vgpr_global_saddr_offset:
 ; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-NEXT:    global_prefetch_b8 v0, s[0:1] offset:128 scope:SCOPE_SYS
 ; GFX1250-SPREFETCH-NEXT:    s_endpgm
 ;
@@ -867,13 +810,11 @@ define amdgpu_ps void @prefetch_inst_vgpr_global(ptr addrspace(1) %ptr) {
 ; GFX1250-LABEL: prefetch_inst_vgpr_global:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1250-SPREFETCH-LABEL: prefetch_inst_vgpr_global:
 ; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-NEXT:    s_endpgm
 ;
 ; NOSPREFETCH-LABEL: prefetch_inst_vgpr_global:
@@ -892,13 +833,11 @@ define amdgpu_ps void @prefetch_inst_vgpr_flat(ptr %ptr) {
 ; GFX1250-LABEL: prefetch_inst_vgpr_flat:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1250-SPREFETCH-LABEL: prefetch_inst_vgpr_flat:
 ; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-NEXT:    s_endpgm
 ;
 ; NOSPREFETCH-LABEL: prefetch_inst_vgpr_flat:
@@ -919,7 +858,6 @@ define amdgpu_ps void @prefetch_data_sgpr_flat_force_vector(ptr inreg %ptr) {
 ; GFX1250-LABEL: prefetch_data_sgpr_flat_force_vector:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    flat_prefetch_b8 v0, s[0:1] scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
@@ -927,7 +865,6 @@ define amdgpu_ps void @prefetch_data_sgpr_flat_force_vector(ptr inreg %ptr) {
 ; GFX1250-SPREFETCH-LABEL: prefetch_data_sgpr_flat_force_vector:
 ; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-SPREFETCH-NEXT:    flat_prefetch_b8 v0, s[0:1] scope:SCOPE_SYS
 ; GFX1250-SPREFETCH-NEXT:    s_endpgm
@@ -949,7 +886,6 @@ define amdgpu_ps void @prefetch_data_sgpr_global_force_vector(ptr addrspace(1) i
 ; GFX1250-LABEL: prefetch_data_sgpr_global_force_vector:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
@@ -957,7 +893,6 @@ define amdgpu_ps void @prefetch_data_sgpr_global_force_vector(ptr addrspace(1) i
 ; GFX1250-SPREFETCH-LABEL: prefetch_data_sgpr_global_force_vector:
 ; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-SPREFETCH-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SYS
 ; GFX1250-SPREFETCH-NEXT:    s_endpgm
@@ -979,7 +914,6 @@ define amdgpu_ps void @prefetch_data_sgpr_global_saddr_force_vector(ptr addrspac
 ; GFX1250-LABEL: prefetch_data_sgpr_global_saddr_force_vector:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] offset:1024 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
@@ -987,7 +921,6 @@ define amdgpu_ps void @prefetch_data_sgpr_global_saddr_force_vector(ptr addrspac
 ; GFX1250-SPREFETCH-LABEL: prefetch_data_sgpr_global_saddr_force_vector:
 ; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
 ; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SPREFETCH-NEXT:    s_set_vgpr_msb 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SPREFETCH-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-SPREFETCH-NEXT:    global_prefetch_b8 v0, s[0:1] offset:1024 scope:SCOPE_SYS
 ; GFX1250-SPREFETCH-NEXT:    s_endpgm
