@@ -65,6 +65,8 @@
     "compile": "tsc -p ./",
     "publish": "vsce publish",
     "pretest": "npm run compile",
+    "preunittest": "npm run pretest",
+    "unittest": "mocha --ui tdd ./out/test/unit",
     "test": "vscode-test",
     "vscode-uninstall": "code --uninstall-extension llvm-vs-code-extensions.lldb-dap",
     "vscode-install": "code --install-extension ./out/lldb-dap.vsix"
