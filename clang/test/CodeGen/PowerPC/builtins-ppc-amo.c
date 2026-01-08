@@ -41,6 +41,46 @@ void test_unsigned_ldat(unsigned long int *ptr, unsigned long int value, unsigne
   unsigned long int res = __builtin_amo_ldat(ptr, value, 3);
   *resp = res;
 }
+
+// CHECK-LABEL: define dso_local void @test_signed_lwat(
+// CHECK-SAME: ptr noundef [[PTR:%.*]], i32 noundef signext [[VALUE:%.*]], ptr noundef writeonly captures(none) initializes((0, 4)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.ppc.amo.lwat(ptr [[PTR]], i32 [[VALUE]], i32 5)
+// CHECK-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    ret void
+//
+// AIX-LABEL: define void @test_signed_lwat(
+// AIX-SAME: ptr noundef [[PTR:%.*]], i32 noundef signext [[VALUE:%.*]], ptr noundef writeonly captures(none) initializes((0, 4)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-NEXT:  [[ENTRY:.*:]]
+// AIX-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.ppc.amo.lwat(ptr [[PTR]], i32 [[VALUE]], i32 5)
+// AIX-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA2]]
+// AIX-NEXT:    ret void
+//
+void test_signed_lwat(int *ptr, int value, int * resp) {
+  int res = __builtin_amo_lwat_s(ptr, value, 5);
+  *resp = res;
+}
+
+
+// CHECK-LABEL: define dso_local void @test_signed_ldat(
+// CHECK-SAME: ptr noundef [[PTR:%.*]], i64 noundef [[VALUE:%.*]], ptr noundef writeonly captures(none) initializes((0, 8)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.ppc.amo.ldat(ptr [[PTR]], i64 [[VALUE]], i32 8)
+// CHECK-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA6]]
+// CHECK-NEXT:    ret void
+//
+// AIX-LABEL: define void @test_signed_ldat(
+// AIX-SAME: ptr noundef [[PTR:%.*]], i64 noundef [[VALUE:%.*]], ptr noundef writeonly captures(none) initializes((0, 8)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-NEXT:  [[ENTRY:.*:]]
+// AIX-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.ppc.amo.ldat(ptr [[PTR]], i64 [[VALUE]], i32 8)
+// AIX-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA6]]
+// AIX-NEXT:    ret void
+//
+void test_signed_ldat(long int *ptr, long int value, long int * resp) {
+  long int res = __builtin_amo_ldat_s(ptr, value, 8);
+  *resp = res;
+}
+
 //.
 // CHECK: [[INT_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
 // CHECK: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}
