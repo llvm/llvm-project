@@ -1036,7 +1036,8 @@ public:
             enable_if_t<_And<_IsNotSame<__remove_cvref_t<_Up>, optional>,
                              _Or<_IsNotSame<__remove_cvref_t<_Up>, _Tp>, _Not<is_scalar<_Tp>>>,
                              is_constructible<_Tp, _Up>,
-                             is_assignable<_Tp&, _Up>, is_object<_Tp>>::value,
+                             is_assignable<_Tp&, _Up>,
+                             is_object<_Tp>>::value,
                         int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 optional& operator=(_Up&& __v) {
     if (this->has_value())
