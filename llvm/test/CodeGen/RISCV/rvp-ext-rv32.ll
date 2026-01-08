@@ -1236,3 +1236,57 @@ define void @test_pmulhsu_h_commuted(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
   store <2 x i16> %res, ptr %ret_ptr
   ret void
 }
+
+; Test packed multiply low for v2i16
+define void @test_pmul_h(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-RV32-LABEL: test_pmul_h:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    lw a1, 0(a1)
+; CHECK-RV32-NEXT:    lw a2, 0(a2)
+; CHECK-RV32-NEXT:    pwmul.h a2, a1, a2
+; CHECK-RV32-NEXT:    pnsrli.h a1, a2, 0
+; CHECK-RV32-NEXT:    sw a1, 0(a0)
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: test_pmul_h:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    lw a1, 0(a1)
+; CHECK-RV64-NEXT:    lw a2, 0(a2)
+; CHECK-RV64-NEXT:    pmul.w.h11 a3, a1, a2
+; CHECK-RV64-NEXT:    pmul.w.h00 a1, a1, a2
+; CHECK-RV64-NEXT:    ppaire.h a1, a1, a3
+; CHECK-RV64-NEXT:    sw a1, 0(a0)
+; CHECK-RV64-NEXT:    ret
+  %a = load <2 x i16>, ptr %a_ptr
+  %b = load <2 x i16>, ptr %b_ptr
+  %res = mul <2 x i16> %a, %b
+  store <2 x i16> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test packed multiply low for v4i8
+define void @test_pmul_b(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-RV32-LABEL: test_pmul_b:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    lw a1, 0(a1)
+; CHECK-RV32-NEXT:    lw a2, 0(a2)
+; CHECK-RV32-NEXT:    pwmul.b a2, a1, a2
+; CHECK-RV32-NEXT:    pnsrli.b a1, a2, 0
+; CHECK-RV32-NEXT:    sw a1, 0(a0)
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: test_pmul_b:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    lw a1, 0(a1)
+; CHECK-RV64-NEXT:    lw a2, 0(a2)
+; CHECK-RV64-NEXT:    pmul.h.b11 a3, a1, a2
+; CHECK-RV64-NEXT:    pmul.h.b00 a1, a1, a2
+; CHECK-RV64-NEXT:    ppaire.b a1, a1, a3
+; CHECK-RV64-NEXT:    sw a1, 0(a0)
+; CHECK-RV64-NEXT:    ret
+  %a = load <4 x i8>, ptr %a_ptr
+  %b = load <4 x i8>, ptr %b_ptr
+  %res = mul <4 x i8> %a, %b
+  store <4 x i8> %res, ptr %ret_ptr
+  ret void
+}
