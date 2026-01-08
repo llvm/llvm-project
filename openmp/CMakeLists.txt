@@ -12,16 +12,16 @@ list(INSERT CMAKE_MODULE_PATH 0
 # Must go below project(..)
 include(GNUInstallDirs)
 
-  set(LLVM_TREE_AVAILABLE False)
+set(LLVM_TREE_AVAILABLE False)
 
-  # Usually <llvm-project>/runtimes/CMakeLists.txt sets LLVM_TREE_AVAILABLE and
-  # we assume it is not available otherwise. The exception is that we are in an
-  # LLVM_ENABLE_PROJECTS=openmp build, the LLVM tree is actually available.
-  # Note that this build mode has been deprecated.
-  # See https://github.com/llvm/llvm-project/issues/124014
-  if (NOT LLVM_RUNTIMES_BUILD AND "openmp" IN_LIST LLVM_ENABLE_PROJECTS)
-    set(LLVM_TREE_AVAILABLE True)
-  endif ()
+# Usually <llvm-project>/runtimes/CMakeLists.txt sets LLVM_TREE_AVAILABLE and
+# we assume it is not available otherwise. The exception is that we are in an
+# LLVM_ENABLE_PROJECTS=openmp build, the LLVM tree is actually available.
+# Note that this build mode has been deprecated.
+# See https://github.com/llvm/llvm-project/issues/124014
+if (NOT LLVM_RUNTIMES_BUILD AND "openmp" IN_LIST LLVM_ENABLE_PROJECTS)
+  set(LLVM_TREE_AVAILABLE True)
+endif ()
 
 set(OPENMP_ENABLE_WERROR ${LLVM_ENABLE_WERROR})
 
@@ -35,11 +35,11 @@ else()
 endif()
 
 if (NOT MSVC)
-    set(OPENMP_TEST_C_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang)
-    set(OPENMP_TEST_CXX_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang++)
+  set(OPENMP_TEST_C_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang)
+  set(OPENMP_TEST_CXX_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang++)
 else()
-    set(OPENMP_TEST_C_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang.exe)
-    set(OPENMP_TEST_CXX_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang++.exe)
+  set(OPENMP_TEST_C_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang.exe)
+  set(OPENMP_TEST_CXX_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang++.exe)
 endif()
 
 # Set fortran test compiler if flang is found
@@ -54,7 +54,6 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED NO)
 set(CMAKE_CXX_EXTENSIONS NO)
-
 
 # Check and set up common compiler flags.
 include(config-ix)
@@ -120,8 +119,8 @@ else()
   endif()
 
   # Propagate OMPT support to offload
-set(LIBOMP_HAVE_OMPT_SUPPORT ${LIBOMP_HAVE_OMPT_SUPPORT} PARENT_SCOPE)
-set(LIBOMP_OMP_TOOLS_INCLUDE_DIR ${LIBOMP_OMP_TOOLS_INCLUDE_DIR} PARENT_SCOPE)
+  set(LIBOMP_HAVE_OMPT_SUPPORT ${LIBOMP_HAVE_OMPT_SUPPORT} PARENT_SCOPE)
+  set(LIBOMP_OMP_TOOLS_INCLUDE_DIR ${LIBOMP_OMP_TOOLS_INCLUDE_DIR} PARENT_SCOPE)
 
   option(OPENMP_MSVC_NAME_SCHEME "Build dll with MSVC naming scheme." OFF)
 

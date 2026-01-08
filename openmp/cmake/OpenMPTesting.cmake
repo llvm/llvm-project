@@ -1,12 +1,12 @@
 # Keep track if we have all dependencies.
 set(ENABLE_CHECK_TARGETS TRUE)
 
-if (NOT TARGET "FileCheck")
+if (TARGET FileCheck)
+  set(OPENMP_FILECHECK_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/FileCheck)
+else()
   message(STATUS "Cannot find 'FileCheck'.")
   message(WARNING "The check targets will not be available!")
   set(ENABLE_CHECK_TARGETS FALSE)
-else()
-  set(OPENMP_FILECHECK_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/FileCheck)
 endif()
 set(OPENMP_NOT_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/not)
 
@@ -54,7 +54,6 @@ function(set_test_compiler_information dir)
     set(OPENMP_TEST_COMPILER_VERSION_MAJOR_MINOR "${majorminor}" PARENT_SCOPE)
   endif()
 endfunction()
-
 
 # Set the information that we know.
 set(OPENMP_TEST_COMPILER_ID "Clang")
