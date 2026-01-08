@@ -138,6 +138,8 @@ This feature uses a hybrid approach:
 1.  **Symbolizable Data:** Data with external or local linkage (tracked by the symbol table) is partitioned based on data access profiles collected via instrumentation (`PR <https://github.com/llvm/llvm-project/pull/142884>`_) or hardware performance counters (e.g., Intel PEBS events such as ``MEM_INST_RETIRED.ALL_LOADS``).
 2.  **Module-Internal Data:** Data not tracked by the symbol table (e.g., jump tables, constant pools, internal globals) has its hotness inferred from standard PGO code execution profiles.
 
+.. FIXME: Update this with Clang driver option -fpartition-static-data-sections and how it works with -profile-use and lld.
+
 To enable this feature, pass the following flags to the compiler:
 
 *   ``-memprof-annotate-static-data-type={none, readonly, readwrite}``
