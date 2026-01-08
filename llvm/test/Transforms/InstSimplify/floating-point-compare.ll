@@ -220,7 +220,7 @@ define i1 @orderedLessZeroTree(float,float,float,float) {
   ret i1 %uge
 }
 
-define i1 @orderedLessZero_fdiv(float %x) {
+define i1 @orderedLessZero_fdiv(float noundef %x) {
 ; CHECK-LABEL: @orderedLessZero_fdiv(
 ; CHECK-NEXT:    ret i1 true
 ;

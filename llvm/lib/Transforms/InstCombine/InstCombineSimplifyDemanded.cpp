@@ -2033,45 +2033,16 @@ static Constant *getFPClassConstant(Type *Ty, FPClassTest Mask,
   }
 }
 
-Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
+Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                                     FPClassTest DemandedMask,
                                                     KnownFPClass &Known,
                                                     Instruction *CxtI,
                                                     unsigned Depth) {
   assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
-  Type *VTy = V->getType();
-
   assert(Known == KnownFPClass() && "expected uninitialized state");
+  assert(I->hasOneUse() && "wrong version called");
 
-  if (DemandedMask == fcNone)
-    return isa<UndefValue>(V) ? nullptr : PoisonValue::get(VTy);
-
-  if (Depth == MaxAnalysisRecursionDepth)
-    return nullptr;
-
-  Instruction *I = dyn_cast<Instruction>(V);
-  if (!I) {
-    // Handle constants and arguments
-    Known = computeKnownFPClass(V, fcAllFlags, CxtI, Depth + 1);
-
-    FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
-    if (ValidResults == fcNone)
-      return isa<UndefValue>(V) ? nullptr : PoisonValue::get(VTy);
-
-    // Do not try to replace values which are already constants (unless we are
-    // folding to poison). Doing so could promote poison elements to non-poison
-    // constants.
-    if (isa<Constant>(V))
-      return nullptr;
-
-    Value *FoldedToConst = getFPClassConstant(VTy, ValidResults);
-    return FoldedToConst == V ? nullptr : FoldedToConst;
-  }
-
-  if (!I->hasOneUse()) {
-    Known = computeKnownFPClass(V, DemandedMask, CxtI, Depth + 1);
-    return nullptr;
-  }
+  Type *VTy = I->getType();
 
   FastMathFlags FMF;
   if (auto *FPOp = dyn_cast<FPMathOperator>(I)) {
@@ -2589,8 +2560,12 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
     if (KnownRHS.isKnownNever(DemandedMask))
       return I->getOperand(1);
 
-    // TODO: Recognize clamping patterns
-    Known = KnownLHS | KnownRHS;
+    const SimplifyQuery &SQ = getSimplifyQuery();
+    adjustKnownFPClassForSelectArm(KnownLHS, I->getOperand(0), I->getOperand(1),
+                                   /*Invert=*/false, SQ, Depth);
+    adjustKnownFPClassForSelectArm(KnownRHS, I->getOperand(0), I->getOperand(2),
+                                   /*Invert=*/true, SQ, Depth);
+    Known = KnownLHS.intersectWith(KnownRHS);
     break;
   }
   case Instruction::ExtractElement: {
@@ -2628,13 +2603,74 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
   return getFPClassConstant(VTy, DemandedMask & Known.KnownFPClasses);
 }
 
+/// Helper routine of SimplifyDemandedUseFPClass. It computes Known
+/// floating-point classes. It also tries to handle simplifications that can be
+/// done based on DemandedMask, but without modifying the Instruction.
+Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
+    Instruction *I, FPClassTest DemandedMask, KnownFPClass &Known,
+    Instruction *CxtI, unsigned Depth) {
+  Known = computeKnownFPClass(I, DemandedMask, CxtI, Depth + 1);
+  return getFPClassConstant(I->getType(), DemandedMask & Known.KnownFPClasses);
+}
+
 bool InstCombinerImpl::SimplifyDemandedFPClass(Instruction *I, unsigned OpNo,
                                                FPClassTest DemandedMask,
                                                KnownFPClass &Known,
                                                unsigned Depth) {
   Use &U = I->getOperandUse(OpNo);
-  Value *NewVal =
-      SimplifyDemandedUseFPClass(U.get(), DemandedMask, Known, I, Depth);
+  Value *V = U.get();
+  Type *VTy = V->getType();
+
+  if (DemandedMask == fcNone) {
+    if (isa<UndefValue>(V))
+      return false;
+    replaceUse(U, PoisonValue::get(VTy));
+    return true;
+  }
+
+  // Handle constant
+  Instruction *VInst = dyn_cast<Instruction>(V);
+  if (!VInst) {
+    // Handle constants and arguments
+    Known = computeKnownFPClass(V, fcAllFlags, I, Depth);
+
+    FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
+    if (ValidResults == fcNone) {
+      if (isa<UndefValue>(V))
+        return false;
+      replaceUse(U, PoisonValue::get(VTy));
+      return true;
+    }
+
+    // Do not try to replace values which are already constants (unless we are
+    // folding to poison). Doing so could promote poison elements to non-poison
+    // constants.
+    if (isa<Constant>(V))
+      return false;
+
+    Value *FoldedToConst = getFPClassConstant(VTy, ValidResults);
+    if (!FoldedToConst || FoldedToConst == V)
+      return false;
+
+    replaceUse(U, FoldedToConst);
+    return true;
+  }
+
+  if (Depth == MaxAnalysisRecursionDepth)
+    return false;
+
+  Value *NewVal;
+
+  if (VInst->hasOneUse()) {
+    // If the instruction has one use, we can directly simplify it.
+    NewVal = SimplifyDemandedUseFPClass(VInst, DemandedMask, Known, I, Depth);
+  } else {
+    // If there are multiple uses of this instruction, then we can simplify
+    // VInst to some other value, but not modify the instruction.
+    NewVal = SimplifyMultipleUseDemandedFPClass(VInst, DemandedMask, Known, I,
+                                                Depth);
+  }
+
   if (!NewVal)
     return false;
   if (Instruction *OpInst = dyn_cast<Instruction>(U))

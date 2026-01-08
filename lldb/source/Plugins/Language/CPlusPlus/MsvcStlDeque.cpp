@@ -111,13 +111,6 @@ lldb_private::formatters::MsvcStlDequeSyntheticFrontEnd::Update() {
   if (!block_size.IsValid())
     return lldb::eRefetch;
 
-  auto element_type = deque_type.GetTypeTemplateArgument(0);
-  if (!element_type)
-    return lldb::eRefetch;
-  auto element_size = element_type.GetByteSize(nullptr);
-  if (!element_size)
-    return lldb::eRefetch;
-
   auto offset_sp = storage_sp->GetChildMemberWithName("_Myoff");
   auto map_size_sp = storage_sp->GetChildMemberWithName("_Mapsize");
   auto map_sp = storage_sp->GetChildMemberWithName("_Map");
@@ -136,6 +129,17 @@ lldb_private::formatters::MsvcStlDequeSyntheticFrontEnd::Update() {
 
   uint64_t size = size_sp->GetValueAsUnsigned(0, &ok);
   if (!ok)
+    return lldb::eRefetch;
+
+  auto element_type = deque_type.GetTypeTemplateArgument(0);
+  if (!element_type) {
+    // PDB doesn't have the template type, so use the type of _Map (T**).
+    element_type = map_sp->GetCompilerType().GetPointeeType().GetPointeeType();
+    if (!element_type)
+      return lldb::eRefetch;
+  }
+  auto element_size = element_type.GetByteSize(nullptr);
+  if (!element_size)
     return lldb::eRefetch;
 
   m_map = map_sp.get();
