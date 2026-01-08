@@ -4535,24 +4535,10 @@ void InterfaceVisitor::CheckGenericProcedures(Symbol &generic) {
   ResolveSpecificsInGeneric(generic, true);
   auto &details{generic.get<GenericDetails>()};
   if (auto *proc{details.CheckSpecific()}) {
-    // Use the source location that is not in a module file for the warning,
-    // with the generic interface location being the default if both the
-    // interface and the procedure are in module files.
-    // If both the generic interface and procedure are not in module files,
-    // compare their locations and use the one that appears later in the
-    // source file.
-    SourceName at;
-    bool procInMod{context().IsInModuleFile(proc->name())};
-    bool genInMod{context().IsInModuleFile(generic.name())};
-    if ((!genInMod && procInMod) || (genInMod && procInMod)) {
-      at = generic.name();
-    } else if (!procInMod && genInMod) {
-      at = proc->name();
-    } else {
-      at = proc->name().begin() > generic.name().begin() ? proc->name()
-                                                         : generic.name();
-    }
-    context().Warn(common::UsageWarning::HomonymousSpecific, at,
+    context().Warn(common::UsageWarning::HomonymousSpecific,
+        context().allCookedSources().Precedes(generic.name(), proc->name())
+            ? proc->name()
+            : generic.name(),
         "'%s' should not be the name of both a generic interface and a procedure unless it is a specific procedure of the generic"_warn_en_US,
         generic.name());
   }
