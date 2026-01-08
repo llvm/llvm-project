@@ -99,7 +99,7 @@ llvm.func @wsloop_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
      omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
        omp.yield
      }
-  }
+  } {linear_var_types = []}
   llvm.return
 }
 
@@ -112,8 +112,6 @@ llvm.func @simd_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
      omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
        omp.yield
      }
-  }
+  } {linear_var_types = []}
   llvm.return
 }
-
-

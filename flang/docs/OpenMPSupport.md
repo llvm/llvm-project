@@ -59,7 +59,7 @@ Note : No distinction is made between the support in Parser/Semantics, MLIR, Low
 | teams distribute parallel loop construct                   | Y      | |
 | target teams distribute parallel loop construct            | Y      | |
 | teams distribute parallel loop simd construct              | P      | Implicit linearization is skipped if iv is a pointer or allocatable |
-| target teams distribute parallel loop simd construct       | P      | linear clause is not supported |
+| target teams distribute parallel loop simd construct       | P      | Implicit linearization is completely skipped |
 
 ## Extensions
 ### ATOMIC construct
