@@ -1754,7 +1754,8 @@ createWriteOrMaskedWrite(OpBuilder &builder, Location loc, Value vecToStore,
     for (int64_t idx = 0; idx < vecToStoreRank; idx++) {
       auto value =
           getValueOrCreateConstantIndexOp(builder, loc, destSizes[diff + idx]);
-      auto neg = arith::SubIOp::create(builder, loc, value, writeIndices[idx]);
+      auto neg =
+          builder.createOrFold<arith::SubIOp>(loc, value, writeIndices[idx]);
       maskSizes.push_back(OpFoldResult(neg));
     }
   }
