@@ -7,6 +7,16 @@ add_header_library(
 )
 
 add_header_library(
+  stdrng
+  HDRS
+    stdrng.h
+  DEPENDS
+    .vector_storage
+    libc.src.__support.wctype.conversion.utils.slice
+    libc.src.__support.wctype.conversion.utils.utils
+)
+
+add_header_library(
   vec128_storage
   HDRS
     vec128_storage.h
