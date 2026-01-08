@@ -1506,6 +1506,23 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 lldb_private::formatters::StdlibCoroutineHandleSummaryProvider,
                 "libstdc++ std::coroutine_handle summary provider",
                 libstdcpp_std_coroutine_handle_regex, stl_summary_flags, true);
+
+  AddCXXSummary(
+      cpp_category_sp,
+      lldb_private::formatters::LibStdcppPartialOrderingSummaryProvider,
+      "libstdc++ std::partial_ordering summary provider",
+      "std::partial_ordering", eTypeOptionHideChildren | eTypeOptionHideValue,
+      false);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibStdcppWeakOrderingSummaryProvider,
+                "libstdc++ std::weak_ordering summary provider",
+                "std::weak_ordering",
+                eTypeOptionHideChildren | eTypeOptionHideValue, false);
+  AddCXXSummary(
+      cpp_category_sp,
+      lldb_private::formatters::LibStdcppStrongOrderingSummaryProvider,
+      "libstdc++ std::strong_ordering summary provider", "std::strong_ordering",
+      eTypeOptionHideChildren | eTypeOptionHideValue, false);
 }
 
 static lldb_private::SyntheticChildrenFrontEnd *
