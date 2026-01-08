@@ -453,6 +453,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnTwoConds:
   case VPInstruction::ComputeReductionResult:
+  case VPInstruction::FinalIVValue:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
   case VPInstruction::PtrAdd:
@@ -1324,6 +1325,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::ExplicitVectorLength:
+  case VPInstruction::FinalIVValue:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::LastActiveLane:
   case VPInstruction::FirstOrderRecurrenceSplice:
@@ -1386,6 +1388,8 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::ComputeAnyOfResult:
   case VPInstruction::ComputeFindIVResult:
     return Op == getOperand(1);
+  case VPInstruction::FinalIVValue:
+    return Op == getOperand(0);
   case VPInstruction::ExtractLane:
     return Op == getOperand(0);
   };
@@ -1482,6 +1486,9 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ExtractPenultimateElement:
     O << "extract-penultimate-element";
+    break;
+  case VPInstruction::FinalIVValue:
+    O << "final-iv-value";
     break;
   case VPInstruction::ComputeAnyOfResult:
     O << "compute-anyof-result";

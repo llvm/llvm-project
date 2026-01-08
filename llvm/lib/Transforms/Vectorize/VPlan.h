@@ -1139,7 +1139,10 @@ public:
     ResumeForEpilogue,
     /// Returns the value for vscale.
     VScale,
-    OpsEnd = VScale,
+    /// Compute the final induction value after vectorization. Takes the wide
+    /// induction recipe and the backedge value as operands.
+    FinalIVValue,
+    OpsEnd = FinalIVValue,
   };
 
   /// Returns true if this VPInstruction generates scalar values for all lanes.

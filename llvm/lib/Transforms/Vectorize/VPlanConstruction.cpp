@@ -700,6 +700,23 @@ void VPlanTransforms::createHeaderPhiRecipes(
     VPHeaderPHIRecipe *HeaderPhiR = CreateHeaderPhiRecipe(PhiR);
     HeaderPhiR->insertBefore(PhiR);
     PhiR->replaceAllUsesWith(HeaderPhiR);
+    if (isa<VPWidenIntOrFpInductionRecipe>(HeaderPhiR)) {
+      for (VPUser *U : PhiR->getOperand(1)->users()) {
+        if (!match(U, m_ExtractLastPart(m_VPValue())))
+          continue;
+        auto *ExtractLastPart = cast<VPInstruction>(U);
+        if (!match(ExtractLastPart->getSingleUser(),
+                   m_ExtractLastLane(m_VPValue())))
+          continue;
+        auto *ExtractLastLane =
+            cast<VPInstruction>(ExtractLastPart->getSingleUser());
+        VPBuilder Builder(ExtractLastLane);
+        ExtractLastLane->replaceAllUsesWith(Builder.createNaryOp(
+            VPInstruction::FinalIVValue, {HeaderPhiR, PhiR->getOperand(1)}));
+        ExtractLastLane->eraseFromParent();
+        ExtractLastPart->eraseFromParent();
+      }
+    }
     PhiR->eraseFromParent();
   }
 }
