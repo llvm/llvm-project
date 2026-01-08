@@ -1240,6 +1240,27 @@ LogicalResult cir::ScopeOp::verify() {
   return success();
 }
 
+LogicalResult cir::ScopeOp::fold(FoldAdaptor /*adaptor*/,
+                                 SmallVectorImpl<OpFoldResult> &results) {
+  // Only fold "trivial" scopes: a single block containing only a `cir.yield`.
+  if (!getRegion().hasOneBlock())
+    return failure();
+  Block &block = getRegion().front();
+  if (block.getOperations().size() != 1)
+    return failure();
+
+  auto yield = dyn_cast<cir::YieldOp>(block.front());
+  if (!yield)
+    return failure();
+
+  // Only fold when the scope produces a value.
+  if (getNumResults() != 1 || yield.getNumOperands() != 1)
+    return failure();
+
+  results.push_back(yield.getOperand(0));
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // BrOp
 //===----------------------------------------------------------------------===//
@@ -2536,7 +2557,6 @@ LogicalResult cir::GetMemberOp::verify() {
 
   return mlir::success();
 }
-
 //===----------------------------------------------------------------------===//
 // VecCreateOp
 //===----------------------------------------------------------------------===//

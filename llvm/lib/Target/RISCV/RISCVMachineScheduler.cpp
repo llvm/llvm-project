@@ -13,17 +13,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "riscv-prera-sched-strategy"
 
-static cl::opt<bool> EnableVTypeSchedHeuristic(
-    "riscv-enable-vtype-sched-heuristic", cl::init(false), cl::Hidden,
-    cl::desc("Enable scheduling RVV instructions based on vtype heuristic "
-             "(pick instruction with compatible vtype first)"));
-
-bool RISCVPreRAMachineSchedStrategy::enableVTypeSchedHeuristic() const {
-  if (EnableVTypeSchedHeuristic.getNumOccurrences() > 0)
-    return EnableVTypeSchedHeuristic;
-  return ST->enableVTypeSchedHeuristic();
-}
-
 RISCV::VSETVLIInfo
 RISCVPreRAMachineSchedStrategy::getVSETVLIInfo(const MachineInstr *MI) const {
   unsigned TSFlags = MI->getDesc().TSFlags;
@@ -183,7 +172,7 @@ bool RISCVPreRAMachineSchedStrategy::tryCandidate(SchedCandidate &Cand,
 
   // TODO: We should not use `CandReason::Cluster` here, but is there a
   // mechanism to extend this enum?
-  if (enableVTypeSchedHeuristic() &&
+  if (ST->enableVTypeSchedHeuristic() &&
       tryVType(getVSETVLIInfo(TryCand.SU->getInstr()),
                getVSETVLIInfo(Cand.SU->getInstr()), TryCand, Cand, Cluster))
     return TryCand.Reason != NoCand;
@@ -203,7 +192,7 @@ void RISCVPreRAMachineSchedStrategy::leaveMBB() {
 
 void RISCVPreRAMachineSchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
   GenericScheduler::schedNode(SU, IsTopNode);
-  if (enableVTypeSchedHeuristic()) {
+  if (ST->enableVTypeSchedHeuristic()) {
     MachineInstr *MI = SU->getInstr();
     const RISCV::VSETVLIInfo &Info = getVSETVLIInfo(MI);
     if (Info.isValid()) {

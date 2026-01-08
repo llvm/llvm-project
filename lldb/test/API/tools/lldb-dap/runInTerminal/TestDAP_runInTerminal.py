@@ -105,7 +105,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
             console="integratedTerminal",
             args=["foobar"],
             env=["FOO=bar"],
-            expectFailure=True,
+            waitForResponse=True,
         )
         self.assertFalse(response["success"])
         self.assertIn(

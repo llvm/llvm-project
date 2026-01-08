@@ -1323,6 +1323,15 @@ defm SHL : SHIFT<"shl.b", shl>;
 defm SRA : SHIFT<"shr.s", sra>;
 defm SRL : SHIFT<"shr.u", srl>;
 
+// Shift with clamping semantics - these have defined behavior for shift amounts
+// >= BitWidth (returning 0 for logical shifts). Used to optimize guarded shift
+// patterns like `shift >= 32 ? 0 : x >> shift`.
+def shl_clamp : SDNode<"NVPTXISD::SHL_CLAMP", SDTIntShiftOp, []>;
+def srl_clamp : SDNode<"NVPTXISD::SRL_CLAMP", SDTIntShiftOp, []>;
+
+defm SHL_CLAMP : SHIFT<"shl.b", shl_clamp>;
+defm SRL_CLAMP : SHIFT<"shr.u", srl_clamp>;
+
 // Bit-reverse
 foreach t = [I64RT, I32RT] in
   def BREV_ # t.PtxType :

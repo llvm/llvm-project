@@ -25,6 +25,18 @@
     multiple Python implementations, setting this explicitly to the preferred
     `python3` executable is strongly recommended.
 
+*   **`CMAKE_C_VISIBILITY_PRESET`**: `STRING`
+*   **`CMAKE_CXX_VISIBILITY_PRESET`**: `STRING`
+*   **`CMAKE_VISIBILITY_INLINES_HIDDEN`**: `BOOL`
+
+    It is **highly** recommended these are set to `hidden`, `hidden`, and `ON` (respectively) if the final built package
+    is intended to be used in a context/use-case where multiple bindings packages will be used simultaneously
+    (i.e., multiple bindings packages loaded in the same Python interpreter session). Failing to do so can lead
+    to incorrect/ambiguous symbol resolution; the symptom of this is an `LLVM ERROR` like:
+    ```
+    LLVM ERROR: ... unregistered/uninitialized dialect/type/pass ...`
+    ```
+
 ### Recommended development practices
 
 It is recommended to use a Python virtual environment. Many ways exist for this,

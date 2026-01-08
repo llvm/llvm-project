@@ -57,9 +57,8 @@ static EditGenerator rewrite(RangeSelector Call, RangeSelector Builder) {
     };
     std::optional<Token> LessToken =
         clang::Lexer::findNextToken(Begin, SM, LangOpts);
-    while (LessToken && LessToken->getKind() != clang::tok::less) {
+    while (LessToken && LessToken->getKind() != clang::tok::less)
       LessToken = NextToken(LessToken);
-    }
     if (!LessToken) {
       return llvm::make_error<llvm::StringError>(llvm::errc::invalid_argument,
                                                  "missing '<' token");

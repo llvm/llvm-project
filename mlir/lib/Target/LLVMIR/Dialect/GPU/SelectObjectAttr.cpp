@@ -428,7 +428,7 @@ llvm::LaunchKernel::createKernelLaunch(mlir::gpu::LaunchFuncOp op,
   // a stream to make a synchronous kernel launch.
   Value *stream = nullptr;
   // Sync & destroy the stream, for synchronous launches.
-  auto destroyStream = make_scope_exit([&]() {
+  llvm::scope_exit destroyStream([&]() {
     builder.CreateCall(getStreamSyncFn(), {stream});
     builder.CreateCall(getStreamDestroyFn(), {stream});
   });

@@ -5,7 +5,6 @@
 // RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512f -target-feature +avx512vl -emit-llvm -o %t.ll -Wall -Werror -Wsign-conversion
 // RUN: FileCheck --check-prefixes=OGCG --input-file=%t.ll %s
 
-
 #include <immintrin.h>
 
 __m128d test_mm_mmask_i64gather_pd(__m128d __v1_old, __mmask8 __mask, __m128i __index, void const *__addr) {
@@ -200,10 +199,34 @@ __m256i test_mm256_mask_i32gather_epi32(__m256i __v1_old, __mmask8 __mask, __m25
   return _mm256_mmask_i32gather_epi32(__v1_old, __mask, __index, __addr, 2); 
 }
 
+__m256 test_mm256_insertf32x4(__m256 __A, __m128 __B) {
+  // CIR-LABEL: test_mm256_insertf32x4
+  // CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<8 x !cir.float>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<8> : !s32i, #cir.int<9> : !s32i, #cir.int<10> : !s32i, #cir.int<11> : !s32i] : !cir.vector<8 x !cir.float>
+
+  // LLVM-LABEL: @test_mm256_insertf32x4
+  // LLVM: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+
+  // OGCG-LABEL: @test_mm256_insertf32x4
+  // OGCG: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+  return _mm256_insertf32x4(__A, __B, 1);
+}
+
+__m256i test_mm256_inserti32x4(__m256i __A, __m128i __B) {
+  // CIR-LABEL: test_mm256_inserti32x4
+  // CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<8 x !s32i>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<8> : !s32i, #cir.int<9> : !s32i, #cir.int<10> : !s32i, #cir.int<11> : !s32i] : !cir.vector<8 x !s32i>
+
+  // LLVM-LABEL: @test_mm256_inserti32x4
+  // LLVM: shufflevector <8 x i32> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+
+  // OGCG-LABEL: @test_mm256_inserti32x4
+  // OGCG: shufflevector <8 x i32> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+  return _mm256_inserti32x4(__A, __B, 1);
+}
+
 __m128d test_mm_mask_expand_pd(__m128d __W, __mmask8 __U, __m128d __A) {
   // CIR-LABEL: _mm_mask_expand_pd
-  // CIR: %[[MASK:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
-  // CIR: %[[SHUF:.*]] = cir.vec.shuffle(%[[MASK]], %[[MASK]] : !cir.vector<8 x !cir.int<u, 1>>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i] : !cir.vector<2 x !cir.int<u, 1>>
+  // CIR: %[[MASK:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: %[[SHUF:.*]] = cir.vec.shuffle(%[[MASK]], %[[MASK]] : !cir.vector<8 x !cir.int<s, 1>>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i] : !cir.vector<2 x !cir.int<s, 1>>
 
   // LLVM-LABEL: test_mm_mask_expand_pd
   // LLVM: %[[BC:.*]] = bitcast i8 %{{.*}} to <8 x i1>
@@ -218,8 +241,8 @@ __m128d test_mm_mask_expand_pd(__m128d __W, __mmask8 __U, __m128d __A) {
 
 __m128d test_mm_maskz_expand_pd(__mmask8 __U, __m128d __A) {
   // CIR-LABEL: _mm_maskz_expand_pd
-  // CIR: %[[MASK:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
-  // CIR: %[[SHUF:.*]] = cir.vec.shuffle(%[[MASK]], %[[MASK]] : !cir.vector<8 x !cir.int<u, 1>>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i] : !cir.vector<2 x !cir.int<u, 1>>
+  // CIR: %[[MASK:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: %[[SHUF:.*]] = cir.vec.shuffle(%[[MASK]], %[[MASK]] : !cir.vector<8 x !cir.int<s, 1>>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i] : !cir.vector<2 x !cir.int<s, 1>>
 
   // LLVM-LABEL: test_mm_maskz_expand_pd
   // LLVM: %[[BC:.*]] = bitcast i8 %{{.*}} to <8 x i1>
@@ -231,4 +254,3 @@ __m128d test_mm_maskz_expand_pd(__mmask8 __U, __m128d __A) {
 
   return _mm_maskz_expand_pd(__U,__A);
 }
-

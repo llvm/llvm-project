@@ -2,9 +2,7 @@
 
 ; CHECK-SPIRV-NOT: OpCapability ExpectAssumeKHR
 ; CHECK-SPIRV-NOT: OpExtension "SPV_KHR_expect_assume"
-; CHECK-SPIRV:     OpName %[[#COMPARE:]] "cmp"
-; CHECK-SPIRV:     %[[#COMPARE]] = OpINotEqual %[[#]] %[[#]] %[[#]]
-; CHECK-SPIRV-NOT: OpAssumeTrueKHR %[[#COMPARE]]
+; CHECK-SPIRV-NOT: OpAssumeTrueKHR
 
 %class.anon = type { i8 }
 

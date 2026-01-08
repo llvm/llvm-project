@@ -2817,8 +2817,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   }
 
   for (const Arg *A : Args) {
-    auto CheckMathErrnoForVecLib =
-        llvm::make_scope_exit([&, MathErrnoBeforeArg = MathErrno] {
+    llvm::scope_exit CheckMathErrnoForVecLib(
+        [&, MathErrnoBeforeArg = MathErrno] {
           if (NoMathErrnoWasImpliedByVecLib && !MathErrnoBeforeArg && MathErrno)
             ArgThatEnabledMathErrnoAfterVecLib = A;
         });
@@ -3699,6 +3699,7 @@ static void RenderOpenCLOptions(const ArgList &Args, ArgStringList &CmdArgs,
 static void RenderHLSLOptions(const ArgList &Args, ArgStringList &CmdArgs,
                               types::ID InputType) {
   const unsigned ForwardedArguments[] = {
+      options::OPT_hlsl_all_resources_bound,
       options::OPT_dxil_validator_version,
       options::OPT_res_may_alias,
       options::OPT_D,

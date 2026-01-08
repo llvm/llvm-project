@@ -26,8 +26,6 @@ class RISCVPreRAMachineSchedStrategy : public GenericScheduler {
   RISCV::VSETVLIInfo TopVType;
   RISCV::VSETVLIInfo BottomVType;
 
-  bool enableVTypeSchedHeuristic() const;
-
   RISCV::VSETVLIInfo getVSETVLIInfo(const MachineInstr *MI) const;
   bool tryVType(RISCV::VSETVLIInfo TryVType, RISCV::VSETVLIInfo CandVtype,
                 SchedCandidate &TryCand, SchedCandidate &Cand,

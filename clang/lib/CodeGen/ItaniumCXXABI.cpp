@@ -1627,7 +1627,7 @@ llvm::Value *ItaniumCXXABI::EmitTypeid(CodeGenFunction &CGF,
     // Load the type info.
     Value = CGF.Builder.CreateCall(
         CGM.getIntrinsic(llvm::Intrinsic::load_relative, {CGM.Int32Ty}),
-        {Value, llvm::ConstantInt::get(CGM.Int32Ty, -4)});
+        {Value, llvm::ConstantInt::getSigned(CGM.Int32Ty, -4)});
   } else {
     // Load the type info.
     Value =

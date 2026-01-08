@@ -45,8 +45,6 @@ class RISCVTuneInfo {
 
   // The direction of PostRA scheduling.
   code PostRASchedDirection = TopDown;
-
-  bit EnableVTypeSchedHeuristic = 0;
 }
 
 def RISCVTuneInfoTable : GenericTable {
@@ -60,7 +58,7 @@ def RISCVTuneInfoTable : GenericTable {
                 "MaxStoresPerMemcpyOptSize", "MaxStoresPerMemcpy",
                 "MaxStoresPerMemmoveOptSize", "MaxStoresPerMemmove",
                 "MaxLoadsPerMemcmpOptSize", "MaxLoadsPerMemcmp",
-                "PostRASchedDirection", "EnableVTypeSchedHeuristic"];
+                "PostRASchedDirection"];
 }
 
 def getRISCVTuneInfo : SearchIndex {

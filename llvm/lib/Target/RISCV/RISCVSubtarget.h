@@ -70,8 +70,6 @@ struct RISCVTuneInfo {
 
   // The direction of PostRA scheduling.
   MISched::Direction PostRASchedDirection;
-
-  bool EnableVTypeSchedHeuristic;
 };
 
 #define GET_RISCVTuneInfoTable_DECL
@@ -98,6 +96,8 @@ private:
 
   RISCVProcFamilyEnum RISCVProcFamily = Others;
   RISCVVRGatherCostModelEnum RISCVVRGatherCostModel = Quadratic;
+
+  bool IsLittleEndian = true;
 
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER) \
   bool ATTRIBUTE = DEFAULT;
@@ -222,6 +222,7 @@ public:
   }
 
   bool is64Bit() const { return IsRV64; }
+  bool isLittleEndian() const { return IsLittleEndian; }
   MVT getXLenVT() const {
     return is64Bit() ? MVT::i64 : MVT::i32;
   }
@@ -330,7 +331,7 @@ public:
     }
   }
 
-  bool enablePExtCodeGen() const;
+  bool enablePExtSIMDCodeGen() const;
 
   // Returns VLEN divided by DLEN. Where DLEN is the datapath width of the
   // vector hardware implementation which may be less than VLEN.
@@ -433,10 +434,6 @@ public:
 
   MISched::Direction getPostRASchedDirection() const {
     return TuneInfo->PostRASchedDirection;
-  }
-
-  bool enableVTypeSchedHeuristic() const {
-    return TuneInfo->EnableVTypeSchedHeuristic;
   }
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,

@@ -1352,7 +1352,7 @@ public:
   using ErrorReporter = unique_function<void(Error)>;
 
   /// Send a result to the remote.
-  using SendResultFunction = unique_function<void(shared::WrapperFunctionResult)>;
+  using SendResultFunction = unique_function<void(shared::WrapperFunctionBuffer)>;
 
   /// An asynchronous wrapper-function callable from the executor via
   /// jit-dispatch.
@@ -1584,7 +1584,7 @@ public:
   /// The wrapper function should be callable as:
   ///
   /// \code{.cpp}
-  ///   CWrapperFunctionResult fn(uint8_t *Data, uint64_t Size);
+  ///   CWrapperFunctionBuffer fn(uint8_t *Data, uint64_t Size);
   /// \endcode{.cpp}
   void callWrapperAsync(ExecutorAddr WrapperFnAddr,
                         ExecutorProcessControl::IncomingWFRHandler OnComplete,
@@ -1614,9 +1614,9 @@ public:
   /// callable as:
   ///
   /// \code{.cpp}
-  ///   CWrapperFunctionResult fn(uint8_t *Data, uint64_t Size);
+  ///   CWrapperFunctionBuffer fn(uint8_t *Data, uint64_t Size);
   /// \endcode{.cpp}
-  shared::WrapperFunctionResult callWrapper(ExecutorAddr WrapperFnAddr,
+  shared::WrapperFunctionBuffer callWrapper(ExecutorAddr WrapperFnAddr,
                                             ArrayRef<char> ArgBuffer) {
     return EPC->callWrapper(WrapperFnAddr, ArgBuffer);
   }
@@ -1692,7 +1692,7 @@ public:
   /// to incoming jit-dispatch requests from the executor.
   LLVM_ABI void runJITDispatchHandler(SendResultFunction SendResult,
                                       ExecutorAddr HandlerFnTagAddr,
-                                      ArrayRef<char> ArgBuffer);
+                                      shared::WrapperFunctionBuffer ArgBytes);
 
   /// Dump the state of all the JITDylibs in this session.
   LLVM_ABI void dump(raw_ostream &OS);

@@ -317,7 +317,12 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   // Type Invariant Extension, a capability extension that is independent
   // of the data type, meaning any compatible type can be used. No type
   // constraint for those operations.
+  POPULATE_PROFILE_INFO_SKIP(AddShape)
   POPULATE_PROFILE_INFO_SKIP(ConstShape)
+  POPULATE_PROFILE_INFO_SKIP(DivCeilShape)
+  POPULATE_PROFILE_INFO_SKIP(DivFloorShape)
+  POPULATE_PROFILE_INFO_SKIP(MulShape)
+  POPULATE_PROFILE_INFO_SKIP(SubShape)
   POPULATE_PROFILE_INFO_SKIP(Yield)
   POPULATE_PROFILE_INFO_SKIP(If)
   POPULATE_PROFILE_INFO_SKIP(While)

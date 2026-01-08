@@ -1,13 +1,13 @@
 ; RUN: llc -mtriple=riscv64 -mcpu=spacemit-x60 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefix=DEFAULT
 ; RUN: llc -mtriple=riscv64 -mcpu=spacemit-x60 -misched-prera-direction=bottomup \
-; RUN:   -riscv-enable-vtype-sched-heuristic -verify-machineinstrs < %s \
+; RUN:   -mattr=+enable-vtype-sched-heuristic -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefix=VTYPE-SCHED-BOTTOMUP
 ; RUN: llc -mtriple=riscv64 -mcpu=spacemit-x60 -misched-prera-direction=topdown \
-; RUN:   -riscv-enable-vtype-sched-heuristic -verify-machineinstrs < %s \
+; RUN:   -mattr=+enable-vtype-sched-heuristic -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefix=VTYPE-SCHED-TOPDOWN
 ; RUN: llc -mtriple=riscv64 -mcpu=spacemit-x60 -misched-prera-direction=bidirectional \
-; RUN:   -riscv-enable-vtype-sched-heuristic -verify-machineinstrs < %s \
+; RUN:   -mattr=+enable-vtype-sched-heuristic -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefix=VTYPE-SCHED-BIDIRECTIONAL
 
 define void @test0(i16 %0, i16 %1, i16 %2, i16 %3, i16 %4, i16 %5, i16 %6, ptr %7, ptr %8, ptr %9, ptr %10, ptr %11, i32 %12) {
@@ -18,7 +18,7 @@ define void @test0(i16 %0, i16 %1, i16 %2, i16 %3, i16 %4, i16 %5, i16 %6, ptr %
 ; VTYPE-SCHED-BOTTOMUP-COUNT-15: vset
 
 ; VTYPE-SCHED-TOPDOWN-LABEL: test0:
-; VTYPE-SCHED-TOPDOWN-COUNT-19: vset
+; VTYPE-SCHED-TOPDOWN-COUNT-18: vset
 
 ; VTYPE-SCHED-BIDIRECTIONAL-LABEL: test0:
 ; VTYPE-SCHED-BIDIRECTIONAL-15: vset
