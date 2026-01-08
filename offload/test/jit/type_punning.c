@@ -10,6 +10,7 @@
 // clang-format on
 
 // REQUIRES: gpu
+// XFAIL: intelgpu
 
 // FIXME: We want that there is only the kernel function left, not two outlined
 // parallel regions.

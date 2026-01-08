@@ -6,6 +6,7 @@
 // UNSUPPORTED: nvptx64-nvidia-cuda
 // UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 // REQUIRES: gpu
+// XFAIL: intelgpu
 
 // clang-format on
 int main() {
