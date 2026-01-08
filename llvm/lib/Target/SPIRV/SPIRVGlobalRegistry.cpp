@@ -1020,12 +1020,6 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeFunction(
     const FunctionType *Ty, SPIRVType *RetType,
     const SmallVectorImpl<SPIRVType *> &ArgTypes,
     MachineIRBuilder &MIRBuilder) {
-  if (Ty->isVarArg()) {
-    Function &Fn = MIRBuilder.getMF().getFunction();
-    Ty->getContext().diagnose(DiagnosticInfoUnsupported(
-        Fn, "SPIR-V does not support variadic functions",
-        MIRBuilder.getDebugLoc()));
-  }
   return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpTypeFunction)
                    .addDef(createTypeVReg(MIRBuilder))
