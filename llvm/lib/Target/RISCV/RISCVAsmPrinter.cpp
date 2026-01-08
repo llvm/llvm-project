@@ -549,6 +549,8 @@ void RISCVAsmPrinter::emitSled(const MachineInstr *MI, SledKind Kind) {
 }
 
 void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
+  assert(OutStreamer->getTargetStreamer() &&
+         "target streamer is uninitialized");
   RISCVTargetStreamer &RTS =
       static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
   if (const MDString *ModuleTargetABI =

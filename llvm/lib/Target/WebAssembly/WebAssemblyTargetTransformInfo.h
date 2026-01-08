@@ -103,6 +103,9 @@ public:
   bool isProfitableToSinkOperands(Instruction *I,
                                   SmallVectorImpl<Use *> &Ops) const override;
 
+  std::optional<Instruction *>
+  instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const override;
+
   /// @}
 };
 

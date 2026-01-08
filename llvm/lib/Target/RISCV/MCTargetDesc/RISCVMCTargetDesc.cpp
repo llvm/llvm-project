@@ -119,7 +119,7 @@ createRISCVObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
   const Triple &TT = STI.getTargetTriple();
   if (TT.isOSBinFormatELF())
     return new RISCVTargetELFStreamer(S, STI);
-  return nullptr;
+  return new RISCVTargetStreamer(S);
 }
 
 static MCStreamer *

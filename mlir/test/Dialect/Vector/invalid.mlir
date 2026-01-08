@@ -223,6 +223,14 @@ func.func @outerproduct_non_vector_operand(%arg0: f32) {
 
 // -----
 
+func.func @outerproduct_invalid_kind_attr(%arg0 : vector<[4]xf32>, %arg1 : vector<[8]xf32>) {
+  // expected-error@+1 {{expected 'kind' attribute of type CombiningKind (e.g. 'vector.kind<add>')}}
+  %0 = vector.outerproduct %arg0, %arg1 {kind = "invalid"} : vector<[4]xf32>, vector<[8]xf32>
+  return
+}
+
+// -----
+
 func.func @outerproduct_operand_1(%arg0: vector<4xf32>, %arg1: vector<4x8xf32>) {
   // expected-error@+1 {{expected 1-d vector for operand #1}}
   %1 = vector.outerproduct %arg1, %arg1 : vector<4x8xf32>, vector<4x8xf32>
@@ -990,6 +998,27 @@ func.func @contract_missing_iterator_types(%arg0: vector<1x2xi32>, %arg1: vector
   // expected-error@+1 {{'vector.contract' expected "iterator_types" array attribute}}
   %0 = vector.contract {} %arg0, %arg1, %arg2 : vector<1x2xi32>, vector<2xi32> into vector<1xi32>
   return %0 : vector<1xi32>
+}
+
+// -----
+
+#contraction_accesses = [
+        affine_map<(i, j, k) -> (i, k)>,
+        affine_map<(i, j, k) -> (k, j)>,
+        affine_map<(i, j, k) -> (i, j)>
+      ]
+#contraction_trait = {
+        kind = "invalid",
+        indexing_maps = #contraction_accesses,
+        iterator_types = ["parallel", "parallel", "reduction"]
+      }
+func.func @contraction_invalid_kind(%arg0: vector<4x3xf32>,
+                                    %arg1: vector<3x7xf32>,
+                                    %arg2: vector<4x7xf32>) {
+  // expected-error@+1 {{expected 'kind' attribute of type CombiningKind (e.g. 'vector.kind<add>')}}
+  %0 = vector.contract #contraction_trait %arg0, %arg1, %arg2
+    : vector<4x3xf32>, vector<3x7xf32> into vector<4x7xf32>
+  return
 }
 
 // -----
