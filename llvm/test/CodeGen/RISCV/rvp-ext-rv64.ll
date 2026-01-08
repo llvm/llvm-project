@@ -1325,3 +1325,57 @@ define void @test_pmulhsu_w_commuted(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
   store <2 x i32> %res, ptr %ret_ptr
   ret void
 }
+
+; Test packed multiply low for v4i16
+define void @test_pmul_h(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-LABEL: test_pmul_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    ld a2, 0(a2)
+; CHECK-NEXT:    pmul.w.h11 a3, a1, a2
+; CHECK-NEXT:    pmul.w.h00 a1, a1, a2
+; CHECK-NEXT:    ppaire.h a1, a1, a3
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x i16>, ptr %a_ptr
+  %b = load <4 x i16>, ptr %b_ptr
+  %res = mul <4 x i16> %a, %b
+  store <4 x i16> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test packed multiply low for v8i8
+define void @test_pmul_b(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-LABEL: test_pmul_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    ld a2, 0(a2)
+; CHECK-NEXT:    pmul.h.b11 a3, a1, a2
+; CHECK-NEXT:    pmul.h.b00 a1, a1, a2
+; CHECK-NEXT:    ppaire.b a1, a1, a3
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <8 x i8>, ptr %a_ptr
+  %b = load <8 x i8>, ptr %b_ptr
+  %res = mul <8 x i8> %a, %b
+  store <8 x i8> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test packed multiply low for v2i32
+define void @test_pmul_w(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-LABEL: test_pmul_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    ld a2, 0(a2)
+; CHECK-NEXT:    mul.w11 a3, a1, a2
+; CHECK-NEXT:    mul.w00 a1, a1, a2
+; CHECK-NEXT:    pack a1, a1, a3
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i32>, ptr %a_ptr
+  %b = load <2 x i32>, ptr %b_ptr
+  %res = mul <2 x i32> %a, %b
+  store <2 x i32> %res, ptr %ret_ptr
+  ret void
+}

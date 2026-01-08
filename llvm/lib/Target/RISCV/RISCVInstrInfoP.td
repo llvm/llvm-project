@@ -1601,6 +1601,12 @@ let Predicates = [HasStdExtP] in {
 let Predicates = [HasStdExtP, IsRV32] in {
   def : PatGprGpr<sshlsat, SSHA>;
 
+  // 8/16-bit multiply low patterns
+  def: Pat<(v4i8 (mul GPR:$rs1, GPR:$rs2)),
+           (PNSRLI_B (PWMUL_B GPR:$rs1, GPR:$rs2), 0)>;
+  def: Pat<(v2i16 (mul GPR:$rs1, GPR:$rs2)),
+           (PNSRLI_H (PWMUL_H GPR:$rs1, GPR:$rs2), 0)>;
+
   // Load/Store patterns
   def : StPat<store, SW, GPR, v4i8>;
   def : StPat<store, SW, GPR, v2i16>;
@@ -1647,6 +1653,14 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def: Pat<(v2i32 (mulhs GPR:$rs1, GPR:$rs2)), (PMULH_W GPR:$rs1, GPR:$rs2)>;
   def: Pat<(v2i32 (mulhu GPR:$rs1, GPR:$rs2)), (PMULHU_W GPR:$rs1, GPR:$rs2)>;
   def: Pat<(v2i32 (riscv_pmulhsu GPR:$rs1, GPR:$rs2)), (PMULHSU_W GPR:$rs1, GPR:$rs2)>;
+
+  // 8/16/32-bit multiply low patterns
+  def: Pat<(v8i8 (mul GPR:$rs1, GPR:$rs2)),
+           (PPAIRE_B (PMUL_H_B00 GPR:$rs1, GPR:$rs2), (PMUL_H_B11 GPR:$rs1, GPR:$rs2))>;
+  def: Pat<(v4i16 (mul GPR:$rs1, GPR:$rs2)),
+           (PPAIRE_H (PMUL_W_H00 GPR:$rs1, GPR:$rs2), (PMUL_W_H11 GPR:$rs1, GPR:$rs2))>;
+  def: Pat<(v2i32 (mul GPR:$rs1, GPR:$rs2)),
+           (PACK (MUL_W00 GPR:$rs1, GPR:$rs2), (MUL_W11 GPR:$rs1, GPR:$rs2))>;
 
   // 32-bit logical shift left/right
   def: Pat<(v2i32 (shl GPR:$rs1, (v2i32 (splat_vector (XLenVT GPR:$rs2))))),
