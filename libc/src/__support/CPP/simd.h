@@ -325,18 +325,8 @@ LIBC_INLINE constexpr static T gather(simd<bool, simd_size_v<T>> mask, Idx idx,
                                       const void *base, bool aligned = false) {
   if (aligned)
     base = __builtin_assume_aligned(base, alignof(T));
-#if defined(LIBC_TARGET_CPU_HAS_GATHER)
   return __builtin_masked_gather(
       mask, idx, reinterpret_cast<const simd_element_type_t<T> *>(base));
-#else
-  T result;
-  for (size_t i = 0; i < simd_size_v<T>; ++i) {
-    if (mask[i])
-      result[i] =
-          *(reinterpret_cast<const simd_element_type_t<T> *>(base) + idx[i]);
-  }
-  return result;
-#endif
 }
 template <typename T, typename Idx, internal::enable_if_simd_t<T> = 0>
 LIBC_INLINE constexpr static void scatter(simd<bool, simd_size_v<T>> mask,
