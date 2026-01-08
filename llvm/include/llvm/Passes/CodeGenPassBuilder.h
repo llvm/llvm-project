@@ -1253,7 +1253,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
   addMachineFunctionPass(RenameIndependentSubregsPass(), PMW);
 
   // PreRA instruction scheduling.
-  addMachineFunctionPass(MachineSchedulerPass(&TM), PMW, RequireMBFI);
+  addMachineFunctionPass(MachineSchedulerPass(&TM, RequireMBFI), PMW);
 
   if (auto E = derived().addRegAssignmentOptimized(PMW)) {
     // addRegAssignmentOptimized did not add a reg alloc pass, so do nothing.

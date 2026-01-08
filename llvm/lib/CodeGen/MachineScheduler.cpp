@@ -208,6 +208,10 @@ cl::opt<bool> llvm::VerifyScheduling(
     "verify-misched", cl::Hidden,
     cl::desc("Verify machine instrs before and after machine scheduling"));
 
+cl::opt<bool> llvm::RequireMBFILegacySched(
+    "require-mbfi-legacy-sched", cl::Hidden,
+    cl::desc("Require MachineBlocFrequencyInfo for legacy scheduling pass"));
+
 #ifndef NDEBUG
 cl::opt<bool> llvm::ViewMISchedDAGs(
     "view-misched-dags", cl::Hidden,
@@ -382,10 +386,9 @@ namespace {
 /// MachineScheduler runs after coalescing and before register allocation.
 class MachineSchedulerLegacy : public MachineFunctionPass {
   MachineSchedulerImpl Impl;
-  bool UseMBFI;
 
 public:
-  MachineSchedulerLegacy(bool UMBFI = false);
+  MachineSchedulerLegacy();
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction&) override;
 
@@ -421,9 +424,8 @@ INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass);
 INITIALIZE_PASS_END(MachineSchedulerLegacy, DEBUG_TYPE,
                     "Machine Instruction Scheduler", false, false)
 
-MachineSchedulerLegacy::MachineSchedulerLegacy(bool UMBFI)
+MachineSchedulerLegacy::MachineSchedulerLegacy()
     : MachineFunctionPass(ID) {
-  UseMBFI = UMBFI;
   initializeMachineSchedulerLegacyPass(*PassRegistry::getPassRegistry());
 }
 

@@ -1627,6 +1627,8 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   if (TM->getOptLevel() > CodeGenOptLevel::Less)
     insertPass(&MachineSchedulerID, &SIFormMemoryClausesID);
 
+  // Have the pre-RA machine scheduler require MachineBlockFrequencyInfo.
+  RequireMBFILegacySched = true;
   TargetPassConfig::addOptimizedRegAlloc();
 }
 
