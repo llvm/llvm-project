@@ -510,10 +510,8 @@ LibStdcppExtractOrderingValue(ValueObject &valobj) {
 bool lldb_private::formatters::LibStdcppPartialOrderingSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   std::optional<int64_t> value = LibStdcppExtractOrderingValue(valobj);
-  if (!value) {
-    stream << "Summary Unavailable";
-    return true;
-  }
+  if (!value)
+    return false;
   switch (*value) {
   case -1:
     stream << "less";
@@ -537,10 +535,8 @@ bool lldb_private::formatters::LibStdcppPartialOrderingSummaryProvider(
 bool lldb_private::formatters::LibStdcppWeakOrderingSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   std::optional<int64_t> value = LibStdcppExtractOrderingValue(valobj);
-  if (!value) {
-    stream << "Summary Unavailable";
-    return true;
-  }
+  if (!value)
+    return false;
   switch (*value) {
   case -1:
     stream << "less";
@@ -560,10 +556,8 @@ bool lldb_private::formatters::LibStdcppWeakOrderingSummaryProvider(
 bool lldb_private::formatters::LibStdcppStrongOrderingSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   std::optional<int64_t> value = LibStdcppExtractOrderingValue(valobj);
-  if (!value) {
-    stream << "Summary Unavailable";
-    return true;
-  }
+  if (!value)
+    return false;
   switch (*value) {
   case -1:
     stream << "less";
