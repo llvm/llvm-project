@@ -1664,7 +1664,8 @@ extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
          "__bolt_instr_setup: failed to mmap page for metadata!");
 
   GlobalAlloc = new (GlobalMetadataStorage) BumpPtrAllocator;
-  // Conservatively reserve 100MiB
+  // The max memory size can be set by -instrumentation-max-size, the default
+  // is 100MiB.
   GlobalAlloc->setMaxSize(__bolt_instr_max_size);
   GlobalAlloc->setShared(Shared);
   GlobalWriteProfileMutex = new (*GlobalAlloc, 0) Mutex();
