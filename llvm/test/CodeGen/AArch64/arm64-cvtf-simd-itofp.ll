@@ -51,8 +51,7 @@ define half @scvtf_bitcast_f32_to_f16(float %f) nounwind {
 ;
 ; CHECK-SME-LABEL: scvtf_bitcast_f32_to_f16:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    ptrue p0.s
-; CHECK-SME-NEXT:    scvtf z0.h, p0/m, z0.s
+; CHECK-SME-NEXT:    scvtf h0, s0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: scvtf_bitcast_f32_to_f16:
@@ -75,8 +74,7 @@ define half @ucvtf_bitcast_f32_to_f16(float %f) nounwind {
 ;
 ; CHECK-SME-LABEL: ucvtf_bitcast_f32_to_f16:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    ptrue p0.s
-; CHECK-SME-NEXT:    ucvtf z0.h, p0/m, z0.s
+; CHECK-SME-NEXT:    ucvtf h0, s0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: ucvtf_bitcast_f32_to_f16:
@@ -99,8 +97,7 @@ define float @scvtf_bitcast_f64_to_f32(double %d) nounwind {
 ;
 ; CHECK-SME-LABEL: scvtf_bitcast_f64_to_f32:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    ptrue p0.d
-; CHECK-SME-NEXT:    scvtf z0.s, p0/m, z0.d
+; CHECK-SME-NEXT:    scvtf s0, d0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: scvtf_bitcast_f64_to_f32:
@@ -123,8 +120,7 @@ define float @ucvtf_bitcast_f64_to_f32(double %d) nounwind {
 ;
 ; CHECK-SME-LABEL: ucvtf_bitcast_f64_to_f32:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    ptrue p0.d
-; CHECK-SME-NEXT:    ucvtf z0.s, p0/m, z0.d
+; CHECK-SME-NEXT:    ucvtf s0, d0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: ucvtf_bitcast_f64_to_f32:
@@ -147,8 +143,7 @@ define half @scvtf_bitcast_f64_to_f16(double %d) nounwind {
 ;
 ; CHECK-SME-LABEL: scvtf_bitcast_f64_to_f16:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    ptrue p0.d
-; CHECK-SME-NEXT:    scvtf z0.h, p0/m, z0.d
+; CHECK-SME-NEXT:    scvtf h0, d0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: scvtf_bitcast_f64_to_f16:
@@ -171,8 +166,7 @@ define half @ucvtf_bitcast_f64_to_f16(double %d) nounwind {
 ;
 ; CHECK-SME-LABEL: ucvtf_bitcast_f64_to_f16:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    ptrue p0.d
-; CHECK-SME-NEXT:    ucvtf z0.h, p0/m, z0.d
+; CHECK-SME-NEXT:    ucvtf h0, d0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: ucvtf_bitcast_f64_to_f16:
@@ -195,8 +189,7 @@ define float @scvtf_bitcast_f32_to_f32(float %f) nounwind {
 ;
 ; CHECK-SME-LABEL: scvtf_bitcast_f32_to_f32:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    ptrue p0.s
-; CHECK-SME-NEXT:    scvtf z0.s, p0/m, z0.s
+; CHECK-SME-NEXT:    scvtf s0, s0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: scvtf_bitcast_f32_to_f32:
@@ -219,8 +212,7 @@ define float @ucvtf_bitcast_f32_to_f32(float %f) nounwind {
 ;
 ; CHECK-SME-LABEL: ucvtf_bitcast_f32_to_f32:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    ptrue p0.s
-; CHECK-SME-NEXT:    ucvtf z0.s, p0/m, z0.s
+; CHECK-SME-NEXT:    ucvtf s0, s0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: ucvtf_bitcast_f32_to_f32:
@@ -243,8 +235,7 @@ define double @scvtf_bitcast_f64_to_f64(double %d) nounwind {
 ;
 ; CHECK-SME-LABEL: scvtf_bitcast_f64_to_f64:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    ptrue p0.d
-; CHECK-SME-NEXT:    scvtf z0.d, p0/m, z0.d
+; CHECK-SME-NEXT:    scvtf d0, d0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: scvtf_bitcast_f64_to_f64:
@@ -267,8 +258,7 @@ define double @ucvtf_bitcast_f64_to_f64(double %d) nounwind {
 ;
 ; CHECK-SME-LABEL: ucvtf_bitcast_f64_to_f64:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    ptrue p0.d
-; CHECK-SME-NEXT:    ucvtf z0.d, p0/m, z0.d
+; CHECK-SME-NEXT:    ucvtf d0, d0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: ucvtf_bitcast_f64_to_f64:

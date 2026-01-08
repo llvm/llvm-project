@@ -36,8 +36,7 @@ define float @test_fptosi_f16_i32_simd(half %a)  {
 ;
 ; CHECK-SME-LABEL: test_fptosi_f16_i32_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    ptrue p0.s
-; CHECK-SME-NEXT:    fcvtzs z0.s, p0/m, z0.h
+; CHECK-SME-NEXT:    fcvtzs s0, h0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: test_fptosi_f16_i32_simd:
@@ -66,8 +65,7 @@ define double @test_fptosi_f16_i64_simd(half %a)  {
 ;
 ; CHECK-SME-LABEL: test_fptosi_f16_i64_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    ptrue p0.d
-; CHECK-SME-NEXT:    fcvtzs z0.d, p0/m, z0.h
+; CHECK-SME-NEXT:    fcvtzs d0, h0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: test_fptosi_f16_i64_simd:
@@ -122,8 +120,7 @@ define double @test_fptosi_f32_i64_simd(float %a)  {
 ;
 ; CHECK-SME-LABEL: test_fptosi_f32_i64_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    ptrue p0.d
-; CHECK-SME-NEXT:    fcvtzs z0.d, p0/m, z0.s
+; CHECK-SME-NEXT:    fcvtzs d0, s0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: test_fptosi_f32_i64_simd:
@@ -151,8 +148,7 @@ define double @test_fptosi_f64_i64_simd(double %a)  {
 ;
 ; CHECK-SME-LABEL: test_fptosi_f64_i64_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    ptrue p0.d
-; CHECK-SME-NEXT:    fcvtzs z0.d, p0/m, z0.d
+; CHECK-SME-NEXT:    fcvtzs d0, d0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: test_fptosi_f64_i64_simd:
@@ -181,8 +177,7 @@ define float @test_fptosi_f32_i32_simd(float %a)  {
 ;
 ; CHECK-SME-LABEL: test_fptosi_f32_i32_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    ptrue p0.s
-; CHECK-SME-NEXT:    fcvtzs z0.s, p0/m, z0.s
+; CHECK-SME-NEXT:    fcvtzs s0, s0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: test_fptosi_f32_i32_simd:
@@ -211,8 +206,7 @@ define float @test_fptoui_f16_i32_simd(half %a)  {
 ;
 ; CHECK-SME-LABEL: test_fptoui_f16_i32_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    ptrue p0.s
-; CHECK-SME-NEXT:    fcvtzu z0.s, p0/m, z0.h
+; CHECK-SME-NEXT:    fcvtzu s0, h0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: test_fptoui_f16_i32_simd:
@@ -241,8 +235,7 @@ define double @test_fptoui_f16_i64_simd(half %a)  {
 ;
 ; CHECK-SME-LABEL: test_fptoui_f16_i64_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    ptrue p0.d
-; CHECK-SME-NEXT:    fcvtzu z0.d, p0/m, z0.h
+; CHECK-SME-NEXT:    fcvtzu d0, h0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: test_fptoui_f16_i64_simd:
@@ -297,8 +290,7 @@ define double @test_fptoui_f32_i64_simd(float %a)  {
 ;
 ; CHECK-SME-LABEL: test_fptoui_f32_i64_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    ptrue p0.d
-; CHECK-SME-NEXT:    fcvtzu z0.d, p0/m, z0.s
+; CHECK-SME-NEXT:    fcvtzu d0, s0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: test_fptoui_f32_i64_simd:
@@ -326,8 +318,7 @@ define double @test_fptoui_f64_i64_simd(double %a)  {
 ;
 ; CHECK-SME-LABEL: test_fptoui_f64_i64_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    ptrue p0.d
-; CHECK-SME-NEXT:    fcvtzu z0.d, p0/m, z0.d
+; CHECK-SME-NEXT:    fcvtzu d0, d0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: test_fptoui_f64_i64_simd:
@@ -356,8 +347,7 @@ define float @test_fptoui_f32_i32_simd(float %a)  {
 ;
 ; CHECK-SME-LABEL: test_fptoui_f32_i32_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    ptrue p0.s
-; CHECK-SME-NEXT:    fcvtzu z0.s, p0/m, z0.s
+; CHECK-SME-NEXT:    fcvtzu s0, s0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: test_fptoui_f32_i32_simd:
@@ -706,9 +696,7 @@ define double @fcvtas_ds_round_simd(float %a) {
 ;
 ; CHECK-SME-LABEL: fcvtas_ds_round_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    frinta s0, s0
-; CHECK-SME-NEXT:    ptrue p0.d
-; CHECK-SME-NEXT:    fcvtzs z0.d, p0/m, z0.s
+; CHECK-SME-NEXT:    fcvtas d0, s0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtas_ds_round_simd:
@@ -764,9 +752,7 @@ define float @fcvtas_ss_round_simd(float %a) {
 ;
 ; CHECK-SME-LABEL: fcvtas_ss_round_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    frinta s0, s0
-; CHECK-SME-NEXT:    ptrue p0.s
-; CHECK-SME-NEXT:    fcvtzs z0.s, p0/m, z0.s
+; CHECK-SME-NEXT:    fcvtas s0, s0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtas_ss_round_simd:
@@ -795,9 +781,7 @@ define double @fcvtas_dd_round_simd(double %a) {
 ;
 ; CHECK-SME-LABEL: fcvtas_dd_round_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    frinta d0, d0
-; CHECK-SME-NEXT:    ptrue p0.d
-; CHECK-SME-NEXT:    fcvtzs z0.d, p0/m, z0.d
+; CHECK-SME-NEXT:    fcvtas d0, d0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtas_dd_round_simd:
@@ -828,9 +812,7 @@ define double @fcvtau_ds_round_simd(float %a) {
 ;
 ; CHECK-SME-LABEL: fcvtau_ds_round_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    frinta s0, s0
-; CHECK-SME-NEXT:    ptrue p0.d
-; CHECK-SME-NEXT:    fcvtzu z0.d, p0/m, z0.s
+; CHECK-SME-NEXT:    fcvtau d0, s0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtau_ds_round_simd:
@@ -886,9 +868,7 @@ define float @fcvtau_ss_round_simd(float %a) {
 ;
 ; CHECK-SME-LABEL: fcvtau_ss_round_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    frinta s0, s0
-; CHECK-SME-NEXT:    ptrue p0.s
-; CHECK-SME-NEXT:    fcvtzs z0.s, p0/m, z0.s
+; CHECK-SME-NEXT:    fcvtas s0, s0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtau_ss_round_simd:
@@ -917,9 +897,7 @@ define double @fcvtau_dd_round_simd(double %a) {
 ;
 ; CHECK-SME-LABEL: fcvtau_dd_round_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    frinta d0, d0
-; CHECK-SME-NEXT:    ptrue p0.d
-; CHECK-SME-NEXT:    fcvtzs z0.d, p0/m, z0.d
+; CHECK-SME-NEXT:    fcvtas d0, d0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtau_dd_round_simd:
@@ -1192,9 +1170,7 @@ define double @fcvtms_ds_round_simd(float %a) {
 ;
 ; CHECK-SME-LABEL: fcvtms_ds_round_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    frintm s0, s0
-; CHECK-SME-NEXT:    ptrue p0.d
-; CHECK-SME-NEXT:    fcvtzs z0.d, p0/m, z0.s
+; CHECK-SME-NEXT:    fcvtms d0, s0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtms_ds_round_simd:
@@ -1250,9 +1226,7 @@ define float @fcvtms_ss_round_simd(float %a) {
 ;
 ; CHECK-SME-LABEL: fcvtms_ss_round_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    frintm s0, s0
-; CHECK-SME-NEXT:    ptrue p0.s
-; CHECK-SME-NEXT:    fcvtzs z0.s, p0/m, z0.s
+; CHECK-SME-NEXT:    fcvtms s0, s0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtms_ss_round_simd:
@@ -1281,9 +1255,7 @@ define double @fcvtms_dd_round_simd(double %a) {
 ;
 ; CHECK-SME-LABEL: fcvtms_dd_round_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    frintm d0, d0
-; CHECK-SME-NEXT:    ptrue p0.d
-; CHECK-SME-NEXT:    fcvtzs z0.d, p0/m, z0.d
+; CHECK-SME-NEXT:    fcvtms d0, d0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtms_dd_round_simd:
@@ -1315,9 +1287,7 @@ define double @fcvtmu_ds_round_simd(float %a) {
 ;
 ; CHECK-SME-LABEL: fcvtmu_ds_round_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    frintm s0, s0
-; CHECK-SME-NEXT:    ptrue p0.d
-; CHECK-SME-NEXT:    fcvtzu z0.d, p0/m, z0.s
+; CHECK-SME-NEXT:    fcvtmu d0, s0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtmu_ds_round_simd:
@@ -1373,9 +1343,7 @@ define float @fcvtmu_ss_round_simd(float %a) {
 ;
 ; CHECK-SME-LABEL: fcvtmu_ss_round_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    frintm s0, s0
-; CHECK-SME-NEXT:    ptrue p0.s
-; CHECK-SME-NEXT:    fcvtzs z0.s, p0/m, z0.s
+; CHECK-SME-NEXT:    fcvtms s0, s0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtmu_ss_round_simd:
@@ -1404,9 +1372,7 @@ define double @fcvtmu_dd_round_simd(double %a) {
 ;
 ; CHECK-SME-LABEL: fcvtmu_dd_round_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    frintm d0, d0
-; CHECK-SME-NEXT:    ptrue p0.d
-; CHECK-SME-NEXT:    fcvtzs z0.d, p0/m, z0.d
+; CHECK-SME-NEXT:    fcvtms d0, d0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtmu_dd_round_simd:
@@ -1437,9 +1403,7 @@ define double @fcvtps_ds_round_simd(float %a) {
 ;
 ; CHECK-SME-LABEL: fcvtps_ds_round_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    frintp s0, s0
-; CHECK-SME-NEXT:    ptrue p0.d
-; CHECK-SME-NEXT:    fcvtzs z0.d, p0/m, z0.s
+; CHECK-SME-NEXT:    fcvtps d0, s0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtps_ds_round_simd:
@@ -1495,9 +1459,7 @@ define float @fcvtps_ss_round_simd(float %a) {
 ;
 ; CHECK-SME-LABEL: fcvtps_ss_round_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    frintp s0, s0
-; CHECK-SME-NEXT:    ptrue p0.s
-; CHECK-SME-NEXT:    fcvtzs z0.s, p0/m, z0.s
+; CHECK-SME-NEXT:    fcvtps s0, s0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtps_ss_round_simd:
@@ -1526,9 +1488,7 @@ define double @fcvtps_dd_round_simd(double %a) {
 ;
 ; CHECK-SME-LABEL: fcvtps_dd_round_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    frintp d0, d0
-; CHECK-SME-NEXT:    ptrue p0.d
-; CHECK-SME-NEXT:    fcvtzs z0.d, p0/m, z0.d
+; CHECK-SME-NEXT:    fcvtps d0, d0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtps_dd_round_simd:
@@ -1559,9 +1519,7 @@ define double @fcvtpu_ds_round_simd(float %a) {
 ;
 ; CHECK-SME-LABEL: fcvtpu_ds_round_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    frintp s0, s0
-; CHECK-SME-NEXT:    ptrue p0.d
-; CHECK-SME-NEXT:    fcvtzu z0.d, p0/m, z0.s
+; CHECK-SME-NEXT:    fcvtpu d0, s0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtpu_ds_round_simd:
@@ -1617,9 +1575,7 @@ define float @fcvtpu_ss_round_simd(float %a) {
 ;
 ; CHECK-SME-LABEL: fcvtpu_ss_round_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    frintp s0, s0
-; CHECK-SME-NEXT:    ptrue p0.s
-; CHECK-SME-NEXT:    fcvtzs z0.s, p0/m, z0.s
+; CHECK-SME-NEXT:    fcvtps s0, s0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtpu_ss_round_simd:
@@ -1648,9 +1604,7 @@ define double @fcvtpu_dd_round_simd(double %a) {
 ;
 ; CHECK-SME-LABEL: fcvtpu_dd_round_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    frintp d0, d0
-; CHECK-SME-NEXT:    ptrue p0.d
-; CHECK-SME-NEXT:    fcvtzs z0.d, p0/m, z0.d
+; CHECK-SME-NEXT:    fcvtps d0, d0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtpu_dd_round_simd:
@@ -1681,9 +1635,7 @@ define double @fcvtzs_ds_round_simd(float %a) {
 ;
 ; CHECK-SME-LABEL: fcvtzs_ds_round_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    frintz s0, s0
-; CHECK-SME-NEXT:    ptrue p0.d
-; CHECK-SME-NEXT:    fcvtzs z0.d, p0/m, z0.s
+; CHECK-SME-NEXT:    fcvtzs d0, s0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtzs_ds_round_simd:
@@ -1739,9 +1691,7 @@ define float @fcvtzs_ss_round_simd(float %a) {
 ;
 ; CHECK-SME-LABEL: fcvtzs_ss_round_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    frintz s0, s0
-; CHECK-SME-NEXT:    ptrue p0.s
-; CHECK-SME-NEXT:    fcvtzs z0.s, p0/m, z0.s
+; CHECK-SME-NEXT:    fcvtzs s0, s0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtzs_ss_round_simd:
@@ -1770,9 +1720,7 @@ define double @fcvtzs_dd_round_simd(double %a) {
 ;
 ; CHECK-SME-LABEL: fcvtzs_dd_round_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    frintz d0, d0
-; CHECK-SME-NEXT:    ptrue p0.d
-; CHECK-SME-NEXT:    fcvtzs z0.d, p0/m, z0.d
+; CHECK-SME-NEXT:    fcvtzs d0, d0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtzs_dd_round_simd:
@@ -1802,9 +1750,7 @@ define double @fcvtzu_ds_round_simd(float %a) {
 ;
 ; CHECK-SME-LABEL: fcvtzu_ds_round_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    frintz s0, s0
-; CHECK-SME-NEXT:    ptrue p0.d
-; CHECK-SME-NEXT:    fcvtzu z0.d, p0/m, z0.s
+; CHECK-SME-NEXT:    fcvtzu d0, s0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtzu_ds_round_simd:
@@ -1860,9 +1806,7 @@ define float @fcvtzu_ss_round_simd(float %a) {
 ;
 ; CHECK-SME-LABEL: fcvtzu_ss_round_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    frintz s0, s0
-; CHECK-SME-NEXT:    ptrue p0.s
-; CHECK-SME-NEXT:    fcvtzs z0.s, p0/m, z0.s
+; CHECK-SME-NEXT:    fcvtzs s0, s0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtzu_ss_round_simd:
@@ -1891,9 +1835,7 @@ define double @fcvtzu_dd_round_simd(double %a) {
 ;
 ; CHECK-SME-LABEL: fcvtzu_dd_round_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    frintz d0, d0
-; CHECK-SME-NEXT:    ptrue p0.d
-; CHECK-SME-NEXT:    fcvtzs z0.d, p0/m, z0.d
+; CHECK-SME-NEXT:    fcvtzs d0, d0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtzu_dd_round_simd:
