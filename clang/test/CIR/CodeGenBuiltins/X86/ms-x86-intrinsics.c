@@ -15,13 +15,11 @@ unsigned __int64 __shiftleft128(unsigned __int64 low, unsigned __int64 high,
 unsigned __int64 __shiftright128(unsigned __int64 low, unsigned __int64 high,
                                  unsigned char shift);
 
-unsigned __int64 test_shiftleft128(unsigned __int64 l, unsigned __int64 h,
-                                   unsigned char d) {
-                                     // CIR-LABEL: cir.func{{.*}}@test_shiftleft128
-                                     // CIR: (%[[L:[^,]+]]: !u64i{{.*}}, %[[H:[^,]+]]: !u64i{{.*}}, %[[D:[^,]+]]: !u8i{{.*}})
-                                     // CIR: %[[D_LOAD:[^ ]+]] = cir.load {{.*}} %{{[^ ]+}} : !cir.ptr<!u8i>, !u8i
-                                     // CIR: %[[D_CAST:[^ ]+]] = cir.cast integral %[[D_LOAD]] : !u8i -> !u64i
-                                     // CIR: %{{[^ ]+}} = cir.call_llvm_intrinsic "fshl" {{.*}} : (!u64i, !u64i, !u64i) -> !u64i
+// CIR-LABEL: cir.func{{.*}}@test_shiftleft128
+// CIR: (%[[L:[^,]+]]: !u64i{{.*}}, %[[H:[^,]+]]: !u64i{{.*}}, %[[D:[^,]+]]: !u8i{{.*}})
+// CIR: %[[D_LOAD:[^ ]+]] = cir.load {{.*}} %{{[^ ]+}} : !cir.ptr<!u8i>, !u8i
+// CIR: %[[D_CAST:[^ ]+]] = cir.cast integral %[[D_LOAD]] : !u8i -> !u64i
+// CIR: %{{[^ ]+}} = cir.call_llvm_intrinsic "fshl" {{.*}} : (!u64i, !u64i, !u64i) -> !u64i
 // CIR: cir.return
 
 // LLVM-LABEL: define dso_local i64 @test_shiftleft128(i64 %0, i64 %1, i8 %2)
@@ -34,13 +32,13 @@ unsigned __int64 test_shiftleft128(unsigned __int64 l, unsigned __int64 h,
 // OGCG-NEXT: [[TMP0:%.*]] = zext i8 %d to i64
 // OGCG-NEXT: [[TMP1:%.*]] = tail call i64 @llvm.fshl.i64(i64 %h, i64 %l, i64 [[TMP0]])
 // OGCG-NEXT: ret i64 [[TMP1]]
-return __shiftleft128(l, h, d);
+unsigned __int64 test_shiftleft128(unsigned __int64 l, unsigned __int64 h,
+                                   unsigned char d) {
+  return __shiftleft128(l, h, d);
 }
 
-unsigned __int64 test_shiftright128(unsigned __int64 l, unsigned __int64 h,
-                                    unsigned char d) {
-                                      // CIR-LABEL: cir.func{{.*}}@test_shiftright128
-                                      // CIR: (%[[L:[^,]+]]: !u64i{{.*}}, %[[H:[^,]+]]: !u64i{{.*}}, %[[D:[^,]+]]: !u8i{{.*}})
+// CIR-LABEL: cir.func{{.*}}@test_shiftright128
+// CIR: (%[[L:[^,]+]]: !u64i{{.*}}, %[[H:[^,]+]]: !u64i{{.*}}, %[[D:[^,]+]]: !u8i{{.*}})
 // CIR: %[[D_LOAD:[^ ]+]] = cir.load {{.*}} %{{[^ ]+}} : !cir.ptr<!u8i>, !u8i
 // CIR: %[[D_CAST:[^ ]+]] = cir.cast integral %[[D_LOAD]] : !u8i -> !u64i
 // CIR: %{{[^ ]+}} = cir.call_llvm_intrinsic "fshr" {{.*}} : (!u64i, !u64i, !u64i) -> !u64i
@@ -56,5 +54,7 @@ unsigned __int64 test_shiftright128(unsigned __int64 l, unsigned __int64 h,
 // OGCG-NEXT: [[TMP0:%.*]] = zext i8 %d to i64
 // OGCG-NEXT: [[TMP1:%.*]] = tail call i64 @llvm.fshr.i64(i64 %h, i64 %l, i64 [[TMP0]])
 // OGCG-NEXT: ret i64 [[TMP1]]
-return __shiftright128(l, h, d);
+unsigned __int64 test_shiftright128(unsigned __int64 l, unsigned __int64 h,
+                                    unsigned char d) {
+  return __shiftright128(l, h, d);
 }

@@ -2277,7 +2277,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     std::swap(ops[0], ops[1]);
 
     // Zero-extend shift amount to i64 if needed
-    auto amtTy = mlir::dyn_cast<cir::IntType>(ops[2].getType());
+    auto amtTy = mlir::cast<cir::IntType>(ops[2].getType());
     auto i64Ty = builder.getUInt64Ty();
 
     if (amtTy != i64Ty) {
