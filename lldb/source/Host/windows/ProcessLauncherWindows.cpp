@@ -83,7 +83,7 @@ llvm::ErrorOr<std::wstring> GetFlattenedWindowsCommandStringW(char *args[]) {
 
   return llvm::sys::flattenWindowsCommandLine(args_ref);
 }
-}
+} // namespace lldb_private
 
 llvm::ErrorOr<ProcThreadAttributeList>
 ProcThreadAttributeList::Create(STARTUPINFOEXW &startupinfoex) {
