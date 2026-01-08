@@ -649,13 +649,6 @@ def ForallOp : SCF_Op<"forall", [
 
     /// Returns true if the mapping specified for this forall op is linear.
     bool usesLinearMapping();
-
-    /// RegionBranchOpInterface
-
-    OperandRange getEntrySuccessorOperands(RegionSuccessor successor) {
-      return getInits();
-    }
-
   }];
 }
 
@@ -667,6 +660,7 @@ def InParallelOp : SCF_Op<"forall.in_parallel", [
        Pure,
        Terminator,
        DeclareOpInterfaceMethods<InParallelOpInterface>,
+       ReturnLike,
        HasParent<"ForallOp">,
       ] # GraphRegionNoTerminator.traits> {
   let summary = "terminates a `forall` block";
