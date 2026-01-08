@@ -7,4 +7,4 @@
 // RUN: sed -e "s:%S::g" -e "s:%t.o::g" %t.json > %t.final.json
 // RUN: diff -u %S/Inputs/json.c.json %t.final.json
 
-// REQUIRES: shell
+// UNSUPPORTED: system-windows

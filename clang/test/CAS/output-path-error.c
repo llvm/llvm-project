@@ -1,6 +1,6 @@
 // Check that fatal errors from cache-related output paths show up.
 
-// REQUIRES: shell
+// UNSUPPORTED: system-windows
 
 // RUN: rm -rf %t && mkdir -p %t
 

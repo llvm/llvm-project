@@ -1,4 +1,4 @@
-// REQUIRES: shell
+// UNSUPPORTED: system-windows
 
 // RUN: rm -rf %t && mkdir %t
 // RUN: echo "#!/bin/sh"              > %t/clang

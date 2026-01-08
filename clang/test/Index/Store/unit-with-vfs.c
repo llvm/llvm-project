@@ -1,5 +1,5 @@
 // RUN: sed -e "s:INPUT_DIR:%S/Inputs:g" -e "s:OUT_DIR:%t:g" %S/Inputs/overlay.yaml > %t.yaml
-// REQUIRES: shell
+// UNSUPPORTED: system-windows
 
 #include "using-overlay.h"
 

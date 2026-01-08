@@ -6,7 +6,6 @@
 
 // Needs 'shell' for touch and 'system-darwin' for calling through to the
 // linker.
-// REQUIRES: shell
 // REQUIRES: system-darwin
 
 // RUN: rm -rf %t

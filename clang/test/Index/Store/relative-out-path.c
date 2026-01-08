@@ -1,5 +1,5 @@
 // Needs 'find'.
-// REQUIRES: shell
+// UNSUPPORTED: system-windows
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t
