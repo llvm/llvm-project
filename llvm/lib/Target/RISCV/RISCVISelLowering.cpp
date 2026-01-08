@@ -16704,7 +16704,10 @@ static SDValue reduceANDOfAtomicLoad(SDNode *N,
 // hidden by the intermediate shift. Detect that case and commute the
 // shift/and in order to enable load narrowing.
 static SDValue combineNarrowableShiftedLoad(SDNode *N, SelectionDAG &DAG) {
-  // (and (shl (load ...), ShiftAmt), Mask)
+  EVT VT = N->getValueType(0);
+  if (!VT.isScalarInteger())
+    return SDValue();
+
   using namespace SDPatternMatch;
   SDValue LoadNode;
   APInt MaskVal, ShiftVal;
@@ -16716,7 +16719,6 @@ static SDValue combineNarrowableShiftedLoad(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
   }
 
-  EVT VT = N->getValueType(0);
   uint64_t ShiftAmt = ShiftVal.getZExtValue();
 
   if (ShiftAmt >= VT.getSizeInBits())
