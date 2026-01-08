@@ -45,8 +45,8 @@ void StaticDefinitionInAnonymousNamespaceCheck::check(
   while (Loc < Def->getSourceRange().getEnd() &&
          !Lexer::getRawToken(Loc, Tok, *Result.SourceManager, getLangOpts(),
                              true)) {
-    SourceRange TokenRange(Tok.getLocation(), Tok.getEndLoc());
-    StringRef SourceText =
+    const SourceRange TokenRange(Tok.getLocation(), Tok.getEndLoc());
+    const StringRef SourceText =
         Lexer::getSourceText(CharSourceRange::getTokenRange(TokenRange),
                              *Result.SourceManager, getLangOpts());
     if (SourceText == "static") {

@@ -76,7 +76,7 @@ define void @switch_default_to_latch_common_dest(ptr %start, ptr %end) {
 ; FORCED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; FORCED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
-; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i32 4
+; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i64 4
 ; FORCED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[NEXT_GEP]], align 1
 ; FORCED-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i64>, ptr [[TMP8]], align 1
 ; FORCED-NEXT:    [[TMP9:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 -12)
@@ -214,7 +214,7 @@ define void @switch_default_to_latch_common_dest_using_branches(ptr %start, ptr 
 ; FORCED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; FORCED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
-; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i32 4
+; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i64 4
 ; FORCED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[NEXT_GEP]], align 1
 ; FORCED-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i64>, ptr [[TMP8]], align 1
 ; FORCED-NEXT:    [[TMP9:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 -12)
@@ -337,7 +337,7 @@ define void @switch_all_dests_distinct(ptr %start, ptr %end) {
 ; FORCED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; FORCED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
-; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i32 4
+; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i64 4
 ; FORCED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[NEXT_GEP]], align 1
 ; FORCED-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i64>, ptr [[TMP8]], align 1
 ; FORCED-NEXT:    [[TMP9:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 -12)
@@ -527,7 +527,7 @@ define void @switch_all_dests_distinct_variant_using_branches(ptr %start, ptr %e
 ; FORCED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; FORCED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
-; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i32 4
+; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i64 4
 ; FORCED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[NEXT_GEP]], align 1
 ; FORCED-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i64>, ptr [[TMP8]], align 1
 ; FORCED-NEXT:    [[TMP9:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 -12)
@@ -687,7 +687,7 @@ define void @switch_multiple_common_dests(ptr %start, ptr %end) {
 ; FORCED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; FORCED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
-; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i32 4
+; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i64 4
 ; FORCED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[NEXT_GEP]], align 1
 ; FORCED-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i64>, ptr [[TMP8]], align 1
 ; FORCED-NEXT:    [[TMP23:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 -12)
@@ -836,7 +836,7 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; FORCED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; FORCED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
-; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i32 4
+; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i64 4
 ; FORCED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[NEXT_GEP]], align 1
 ; FORCED-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i64>, ptr [[TMP8]], align 1
 ; FORCED-NEXT:    [[TMP15:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 -12)
@@ -1014,7 +1014,7 @@ define void @switch_under_br_default_common_dest_with_case(ptr %start, ptr %end,
 ; FORCED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; FORCED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
-; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i32 4
+; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i64 4
 ; FORCED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[NEXT_GEP]], align 1
 ; FORCED-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i64>, ptr [[TMP8]], align 1
 ; FORCED-NEXT:    [[TMP9:%.*]] = icmp ule <4 x i64> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
@@ -1167,7 +1167,7 @@ define void @br_under_switch_default_common_dest_with_case(ptr %start, ptr %end,
 ; FORCED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; FORCED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
-; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i32 4
+; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i64 4
 ; FORCED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[NEXT_GEP]], align 1
 ; FORCED-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i64>, ptr [[TMP8]], align 1
 ; FORCED-NEXT:    [[TMP9:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 -12)
@@ -1319,7 +1319,7 @@ define void @large_number_of_cases(ptr %start, ptr %end) {
 ; FORCED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; FORCED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
 ; FORCED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
-; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i32 4
+; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i64 4
 ; FORCED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[NEXT_GEP]], align 1
 ; FORCED-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i64>, ptr [[TMP8]], align 1
 ; FORCED-NEXT:    [[TMP9:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 1)

@@ -79,9 +79,12 @@ enum RISCVMachineCombinerPattern : unsigned {
 };
 
 class RISCVInstrInfo : public RISCVGenInstrInfo {
+  const RISCVRegisterInfo RegInfo;
 
 public:
   explicit RISCVInstrInfo(const RISCVSubtarget &STI);
+
+  const RISCVRegisterInfo &getRegisterInfo() const { return RegInfo; }
 
   MCInst getNop() const override;
 
@@ -113,13 +116,13 @@ public:
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
       bool IsKill, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+
+      Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register DstReg,
-      int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      int FrameIndex, const TargetRegisterClass *RC, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   using TargetInstrInfo::foldMemoryOperandImpl;
@@ -129,6 +132,11 @@ public:
                                       int FrameIndex,
                                       LiveIntervals *LIS = nullptr,
                                       VirtRegMap *VRM = nullptr) const override;
+
+  MachineInstr *foldMemoryOperandImpl(
+      MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
+      MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
+      LiveIntervals *LIS = nullptr) const override;
 
   // Materializes the given integer Val into DstReg.
   void movImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
@@ -320,6 +328,10 @@ public:
   analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;
 
   bool isHighLatencyDef(int Opc) const override;
+
+  /// Return true if \p MI is a COPY to a vector register of a specific \p LMul,
+  /// or any kind of vector registers when \p LMul is zero.
+  bool isVRegCopy(const MachineInstr *MI, unsigned LMul = 0) const;
 
   /// Return true if pairing the given load or store may be paired with another.
   static bool isPairableLdStInstOpc(unsigned Opc);

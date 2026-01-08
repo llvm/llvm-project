@@ -15,6 +15,8 @@
 #include "lldb/Utility/UriParser.h"
 #include "lldb/ValueObject/ValueObject.h"
 
+#include "llvm/ADT/DenseMap.h"
+
 #include "AdbClient.h"
 #include "PlatformAndroid.h"
 #include "PlatformAndroidRemoteGDBServer.h"
@@ -479,136 +481,90 @@ std::string PlatformAndroid::GetRunAs() {
   return run_as.str();
 }
 
-// Helper function to populate process status information from
-// /proc/[pid]/status
-void PlatformAndroid::PopulateProcessStatusInfo(
-    lldb::pid_t pid, ProcessInstanceInfo &process_info) {
-  // Read /proc/[pid]/status to get parent PID, UIDs, and GIDs
-  Status error;
-  AdbClientUP status_adb = GetAdbClient(error);
-  if (error.Fail())
+static bool NeedsCmdlineSupplement(const ProcessInstanceInfo &proc_info) {
+  llvm::StringRef name =
+      proc_info.GetExecutableFile().GetFilename().GetStringRef();
+  return name.contains("app_process") || name.contains("zygote");
+}
+
+// Fetch /proc/PID/cmdline for processes to get actual package names.
+// Android apps often show as "zygote" or "app_process" without this.
+static void SupplementWithCmdlineInfo(ProcessInstanceInfoList &proc_infos,
+                                      AdbClient *adb) {
+  if (proc_infos.empty())
     return;
 
-  std::string status_output;
-  StreamString status_cmd;
-  status_cmd.Printf(
-      "cat /proc/%llu/status 2>/dev/null | grep -E '^(PPid|Uid|Gid):'",
-      static_cast<unsigned long long>(pid));
-  Status status_error =
-      status_adb->Shell(status_cmd.GetData(), seconds(5), &status_output);
+  llvm::DenseMap<lldb::pid_t, ProcessInstanceInfo *> pid_map;
+  std::string pid_list;
+  for (auto &proc_info : proc_infos) {
+    if (NeedsCmdlineSupplement(proc_info)) {
+      lldb::pid_t pid = proc_info.GetProcessID();
+      pid_map[pid] = &proc_info;
+      if (!pid_list.empty())
+        pid_list += " ";
+      pid_list += std::to_string(pid);
+    }
+  }
 
-  if (status_error.Fail() || status_output.empty())
+  if (pid_list.empty())
     return;
 
-  llvm::SmallVector<llvm::StringRef, 16> lines;
-  llvm::StringRef(status_output).split(lines, '\n');
+  Log *log = GetLog(LLDBLog::Platform);
+
+  // Use xargs -P to parallelize cmdline fetching (up to 8 concurrent reads)
+  StreamString cmd;
+  cmd.Printf(
+      "echo '%s' | xargs -n 1 -P 8 sh -c "
+      "'echo \"$1:$(cat /proc/$1/cmdline 2>/dev/null | tr \"\\0\" \" \")\"' sh",
+      pid_list.c_str());
+
+  std::string cmdline_output;
+  Status error = adb->Shell(cmd.GetData(), seconds(5), &cmdline_output);
+
+  if (error.Fail() || cmdline_output.empty())
+    return;
+
+  llvm::SmallVector<llvm::StringRef, 256> lines;
+  llvm::StringRef(cmdline_output).split(lines, '\n', -1, false);
 
   for (llvm::StringRef line : lines) {
     line = line.trim();
-    if (line.starts_with("PPid:")) {
-      llvm::StringRef ppid_str = line.substr(5).trim();
-      lldb::pid_t ppid;
-      if (llvm::to_integer(ppid_str, ppid))
-        process_info.SetParentProcessID(ppid);
-    } else if (line.starts_with("Uid:")) {
-      llvm::SmallVector<llvm::StringRef, 4> uid_parts;
-      line.substr(4).trim().split(uid_parts, '\t', -1, false);
-      if (uid_parts.size() >= 2) {
-        uint32_t uid, euid;
-        if (llvm::to_integer(uid_parts[0].trim(), uid))
-          process_info.SetUserID(uid);
-        if (llvm::to_integer(uid_parts[1].trim(), euid))
-          process_info.SetEffectiveUserID(euid);
+    auto [pid_str, cmdline] = line.split(':');
+    if (pid_str.empty() || cmdline.empty())
+      continue;
+
+    cmdline = cmdline.trim();
+
+    lldb::pid_t pid;
+    if (!llvm::to_integer(pid_str, pid) || cmdline.empty())
+      continue;
+
+    auto it = pid_map.find(pid);
+    if (it == pid_map.end())
+      continue;
+
+    ProcessInstanceInfo *proc_info = it->second;
+    llvm::SmallVector<llvm::StringRef, 16> args;
+    cmdline.split(args, ' ', -1, false);
+
+    if (!args.empty()) {
+      proc_info->GetExecutableFile().SetFile(args[0], FileSpec::Style::posix);
+
+      if (args.size() > 1) {
+        Args process_args;
+        for (size_t i = 1; i < args.size(); ++i) {
+          if (!args[i].empty())
+            process_args.AppendArgument(args[i]);
+        }
+        proc_info->SetArguments(process_args, false);
       }
-    } else if (line.starts_with("Gid:")) {
-      llvm::SmallVector<llvm::StringRef, 4> gid_parts;
-      line.substr(4).trim().split(gid_parts, '\t', -1, false);
-      if (gid_parts.size() >= 2) {
-        uint32_t gid, egid;
-        if (llvm::to_integer(gid_parts[0].trim(), gid))
-          process_info.SetGroupID(gid);
-        if (llvm::to_integer(gid_parts[1].trim(), egid))
-          process_info.SetEffectiveGroupID(egid);
-      }
+
+      LLDB_LOGF(log,
+                "PlatformAndroid::%s supplemented PID %llu with cmdline: %s",
+                __FUNCTION__, static_cast<unsigned long long>(pid),
+                cmdline.str().c_str());
     }
   }
-}
-
-// Helper function to populate command line arguments from /proc/[pid]/cmdline
-void PlatformAndroid::PopulateProcessCommandLine(
-    lldb::pid_t pid, ProcessInstanceInfo &process_info) {
-  // Read /proc/[pid]/cmdline to get command line arguments
-  Status error;
-  AdbClientUP cmdline_adb = GetAdbClient(error);
-  if (error.Fail())
-    return;
-
-  std::string cmdline_output;
-  StreamString cmdline_cmd;
-  cmdline_cmd.Printf("cat /proc/%llu/cmdline 2>/dev/null | tr '\\000' ' '",
-                     static_cast<unsigned long long>(pid));
-  Status cmdline_error =
-      cmdline_adb->Shell(cmdline_cmd.GetData(), seconds(5), &cmdline_output);
-
-  if (cmdline_error.Fail() || cmdline_output.empty())
-    return;
-
-  cmdline_output = llvm::StringRef(cmdline_output).trim().str();
-  if (cmdline_output.empty())
-    return;
-
-  llvm::SmallVector<llvm::StringRef, 16> args;
-  llvm::StringRef(cmdline_output).split(args, ' ', -1, false);
-  if (args.empty())
-    return;
-
-  process_info.SetArg0(args[0]);
-  Args process_args;
-  for (size_t i = 1; i < args.size(); i++) {
-    if (!args[i].empty())
-      process_args.AppendArgument(args[i]);
-  }
-  process_info.SetArguments(process_args, false);
-}
-
-// Helper function to populate architecture from /proc/[pid]/exe
-void PlatformAndroid::PopulateProcessArchitecture(
-    lldb::pid_t pid, ProcessInstanceInfo &process_info) {
-  // Read /proc/[pid]/exe to get executable path for architecture detection
-  Status error;
-  AdbClientUP exe_adb = GetAdbClient(error);
-  if (error.Fail())
-    return;
-
-  std::string exe_output;
-  StreamString exe_cmd;
-  exe_cmd.Printf("readlink /proc/%llu/exe 2>/dev/null",
-                 static_cast<unsigned long long>(pid));
-  Status exe_error = exe_adb->Shell(exe_cmd.GetData(), seconds(5), &exe_output);
-
-  if (exe_error.Fail() || exe_output.empty())
-    return;
-
-  exe_output = llvm::StringRef(exe_output).trim().str();
-
-  // Determine architecture from exe path
-  ArchSpec arch;
-  if (exe_output.find("64") != std::string::npos ||
-      exe_output.find("arm64") != std::string::npos ||
-      exe_output.find("aarch64") != std::string::npos) {
-    arch.SetTriple("aarch64-unknown-linux-android");
-  } else if (exe_output.find("x86_64") != std::string::npos) {
-    arch.SetTriple("x86_64-unknown-linux-android");
-  } else if (exe_output.find("x86") != std::string::npos ||
-             exe_output.find("i686") != std::string::npos) {
-    arch.SetTriple("i686-unknown-linux-android");
-  } else {
-    // Default to armv7 for 32-bit ARM (most common on Android)
-    arch.SetTriple("armv7-unknown-linux-android");
-  }
-
-  if (arch.IsValid())
-    process_info.SetArchitecture(arch);
 }
 
 uint32_t
@@ -616,109 +572,39 @@ PlatformAndroid::FindProcesses(const ProcessInstanceInfoMatch &match_info,
                                ProcessInstanceInfoList &proc_infos) {
   proc_infos.clear();
 
-  // When LLDB is running natively on an Android device (IsHost() == true),
-  // use the parent class's standard Linux /proc enumeration. IsHost() is only
-  // true when compiled for Android (#if defined(__ANDROID__)), so calling
-  // PlatformLinux methods is safe (Android is Linux-based).
   if (IsHost())
     return PlatformLinux::FindProcesses(match_info, proc_infos);
 
-  // Remote Android platform: implement process name lookup using 'pidof' over
-  // adb.
-
-  // LLDB stores the search name in GetExecutableFile() (even though it's
-  // actually a process name like "com.android.chrome" rather than an
-  // executable path). If no search name is provided, we can't use
-  // 'pidof', so return early with no results.
-  const ProcessInstanceInfo &match_process_info = match_info.GetProcessInfo();
-  if (!match_process_info.GetExecutableFile() ||
-      match_info.GetNameMatchType() == NameMatch::Ignore) {
-    return 0;
-  }
-
-  // Extract the process name to search for (typically an Android package name
-  // like "com.example.app" or binary name like "app_process64")
-  std::string process_name = match_process_info.GetExecutableFile().GetPath();
-  if (process_name.empty())
+  if (!m_remote_platform_sp)
     return 0;
 
-  // Use adb to find the process by name
-  Status error;
-  AdbClientUP adb(GetAdbClient(error));
-  if (error.Fail()) {
-    Log *log = GetLog(LLDBLog::Platform);
-    LLDB_LOGF(log, "PlatformAndroid::%s failed to get ADB client: %s",
-              __FUNCTION__, error.AsCString());
-    return 0;
-  }
+  // Android-specific process name handling:
+  // Apps spawned from zygote initially appear as "app_process" or "zygote"
+  // in the process list, but their actual package names (e.g.,
+  // "com.example.app") are only available in /proc/PID/cmdline. To support
+  // name-based matching, we must first fetch cmdline info for all processes,
+  // then apply the original name filter.
+  ProcessInstanceInfoMatch broad_match_info = match_info;
+  broad_match_info.SetNameMatchType(NameMatch::Ignore);
 
-  // Use 'pidof' command to get PIDs for the process name.
-  // Quote the process name to handle special characters (spaces, etc.)
-  std::string pidof_output;
-  StreamString command;
-  command.Printf("pidof '%s'", process_name.c_str());
-  error = adb->Shell(command.GetData(), seconds(5), &pidof_output);
+  ProcessInstanceInfoList all_procs;
+  uint32_t count =
+      m_remote_platform_sp->FindProcesses(broad_match_info, all_procs);
 
-  if (error.Fail()) {
-    Log *log = GetLog(LLDBLog::Platform);
-    LLDB_LOG(log, "PlatformAndroid::{} 'pidof {}' failed: {}", __FUNCTION__,
-             process_name.c_str(), error.AsCString());
-    return 0;
-  }
+  if (count > 0) {
+    Status error;
+    AdbClientUP adb(GetAdbClient(error));
+    if (error.Success())
+      SupplementWithCmdlineInfo(all_procs, adb.get());
 
-  // Parse PIDs from pidof output.
-  // Note: pidof can return multiple PIDs (space-separated) if multiple
-  // instances of the same executable are running.
-  pidof_output = llvm::StringRef(pidof_output).trim().str();
-  if (pidof_output.empty()) {
-    Log *log = GetLog(LLDBLog::Platform);
-    LLDB_LOGF(log, "PlatformAndroid::%s no process found with name '%s'",
-              __FUNCTION__, process_name.c_str());
-    return 0;
-  }
-
-  // Split the output by whitespace to handle multiple PIDs
-  llvm::SmallVector<llvm::StringRef, 8> pid_strings;
-  llvm::StringRef(pidof_output).split(pid_strings, ' ', -1, false);
-
-  Log *log = GetLog(LLDBLog::Platform);
-
-  // Process each PID and gather information
-  uint32_t num_matches = 0;
-  for (llvm::StringRef pid_str : pid_strings) {
-    pid_str = pid_str.trim();
-    if (pid_str.empty())
-      continue;
-
-    lldb::pid_t pid;
-    if (!llvm::to_integer(pid_str, pid)) {
-      LLDB_LOGF(log, "PlatformAndroid::%s failed to parse PID from: '%s'",
-                __FUNCTION__, pid_str.str().c_str());
-      continue;
-    }
-
-    ProcessInstanceInfo process_info;
-    process_info.SetProcessID(pid);
-    process_info.GetExecutableFile().SetFile(process_name,
-                                             FileSpec::Style::posix);
-
-    // Populate additional process information
-    PopulateProcessStatusInfo(pid, process_info);
-    PopulateProcessCommandLine(pid, process_info);
-    PopulateProcessArchitecture(pid, process_info);
-
-    // Check if this process matches the criteria
-    if (match_info.Matches(process_info)) {
-      proc_infos.push_back(process_info);
-      num_matches++;
-
-      LLDB_LOGF(log, "PlatformAndroid::%s found process '%s' with PID %llu",
-                __FUNCTION__, process_name.c_str(),
-                static_cast<unsigned long long>(pid));
+    // Apply the original name matching against supplemented process info.
+    for (auto &proc_info : all_procs) {
+      if (match_info.Matches(proc_info))
+        proc_infos.push_back(proc_info);
     }
   }
 
-  return num_matches;
+  return proc_infos.size();
 }
 
 std::unique_ptr<AdbSyncService> PlatformAndroid::GetSyncService(Status &error) {

@@ -127,13 +127,43 @@ public:
 
     virtual ~Cleanup() = default;
 
+    /// Generation flags.
+    class Flags {
+      enum {
+        F_IsForEH = 0x1,
+        F_IsNormalCleanupKind = 0x2,
+        F_IsEHCleanupKind = 0x4,
+        F_HasExitSwitch = 0x8,
+      };
+      unsigned flags = 0;
+
+    public:
+      Flags() = default;
+
+      /// isForEH - true if the current emission is for an EH cleanup.
+      bool isForEHCleanup() const { return flags & F_IsForEH; }
+      bool isForNormalCleanup() const { return !isForEHCleanup(); }
+      void setIsForEHCleanup() { flags |= F_IsForEH; }
+
+      bool isNormalCleanupKind() const { return flags & F_IsNormalCleanupKind; }
+      void setIsNormalCleanupKind() { flags |= F_IsNormalCleanupKind; }
+
+      /// isEHCleanupKind - true if the cleanup was pushed as an EH
+      /// cleanup.
+      bool isEHCleanupKind() const { return flags & F_IsEHCleanupKind; }
+      void setIsEHCleanupKind() { flags |= F_IsEHCleanupKind; }
+
+      bool hasExitSwitch() const { return flags & F_HasExitSwitch; }
+      void setHasExitSwitch() { flags |= F_HasExitSwitch; }
+    };
+
     /// Emit the cleanup.  For normal cleanups, this is run in the
     /// same EH context as when the cleanup was pushed, i.e. the
     /// immediately-enclosing context of the cleanup scope.  For
     /// EH cleanups, this is run in a terminate context.
     ///
     // \param flags cleanup kind.
-    virtual void emit(CIRGenFunction &cgf) = 0;
+    virtual void emit(CIRGenFunction &cgf, Flags flags) = 0;
   };
 
 private:
@@ -154,6 +184,9 @@ private:
 
   /// The innermost normal cleanup on the stack.
   stable_iterator innermostNormalCleanup = stable_end();
+
+  /// The innermost EH scope on the stack.
+  stable_iterator innermostEHScope = stable_end();
 
   /// The CGF this Stack belong to
   CIRGenFunction *cgf = nullptr;
@@ -214,6 +247,8 @@ public:
   /// Determines whether the exception-scopes stack is empty.
   bool empty() const { return startOfData == endOfBuffer; }
 
+  bool requiresCatchOrCleanup() const;
+
   /// Determines whether there are any normal cleanups on the stack.
   bool hasNormalCleanups() const {
     return innermostNormalCleanup != stable_end();
@@ -226,12 +261,17 @@ public:
   }
   stable_iterator getInnermostActiveNormalCleanup() const;
 
+  stable_iterator getInnermostEHScope() const { return innermostEHScope; }
+
   /// An unstable reference to a scope-stack depth.  Invalidated by
   /// pushes but not pops.
   class iterator;
 
   /// Returns an iterator pointing to the innermost EH scope.
   iterator begin() const;
+
+  /// Returns an iterator pointing to the outermost EH scope.
+  iterator end() const;
 
   /// Create a stable reference to the top of the EH stack.  The
   /// returned reference is valid until that scope is popped off the

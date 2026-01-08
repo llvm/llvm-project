@@ -5,8 +5,8 @@
 ! RUN: %flang -### -c --target=x86_64 -mlarge-data-threshold=32768 %s 2>&1 | FileCheck %s --check-prefix=NO-MCMODEL
 ! RUN: %flang -### -c --target=x86_64 -mcmodel=small -mlarge-data-threshold=32768 %s 2>&1 | FileCheck %s --check-prefix=NO-MCMODEL
 ! RUN: not %flang -### -c --target=aarch64 -mcmodel=small -mlarge-data-threshold=32768 %s 2>&1 | FileCheck %s --check-prefix=NOT-SUPPORTED
-  
-  
+
+
 ! CHECK: "{{.*}}flang" "-fc1"
 ! CHECK-SAME: "-mlarge-data-threshold=32768"
 ! CHECK-59000: "{{.*}}flang" "-fc1"

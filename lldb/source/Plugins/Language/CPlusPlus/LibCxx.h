@@ -194,10 +194,6 @@ SyntheticChildrenFrontEnd *
 LibCxxUnorderedMapIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                                    lldb::ValueObjectSP);
 
-SyntheticChildrenFrontEnd *
-LibcxxInitializerListSyntheticFrontEndCreator(CXXSyntheticChildren *,
-                                              lldb::ValueObjectSP);
-
 SyntheticChildrenFrontEnd *LibcxxQueueFrontEndCreator(CXXSyntheticChildren *,
                                                       lldb::ValueObjectSP);
 

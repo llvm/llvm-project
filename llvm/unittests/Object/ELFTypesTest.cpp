@@ -32,7 +32,7 @@ template <class ELFT> struct NoteTestData {
     Nhdr->n_type = Type;
 
     auto NameOffset = Data.begin() + sizeof(*Nhdr);
-    std::copy(Name.begin(), Name.end(), NameOffset);
+    llvm::copy(Name, NameOffset);
 
     auto DescOffset =
         Data.begin() + alignTo(sizeof(*Nhdr) + Nhdr->n_namesz, Align);

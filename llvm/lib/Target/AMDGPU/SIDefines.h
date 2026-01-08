@@ -523,6 +523,7 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_HW_ID1 = 23,
   ID_HW_ID2 = 24,
   ID_POPS_PACKER = 25,
+  ID_SCHED_MODE = 26,
   ID_PERF_SNAPSHOT_DATA_gfx11 = 27,
   ID_IB_STS2 = 28,
   ID_SHADER_CYCLES = 29,
@@ -581,11 +582,11 @@ enum ModeRegisterMasks : uint32_t {
   CSP_MASK = 0x7u << 29, // Bits 29..31
 
   // GFX1250
-  DST_VGPR_MSB = 1 << 12,
-  SRC0_VGPR_MSB = 1 << 13,
-  SRC1_VGPR_MSB = 1 << 14,
-  SRC2_VGPR_MSB = 1 << 15,
-  VGPR_MSB_MASK = 0xf << 12, // Bits 12..15
+  DST_VGPR_MSB = 0x3 << 12,
+  SRC0_VGPR_MSB = 0x3 << 14,
+  SRC1_VGPR_MSB = 0x3 << 16,
+  SRC2_VGPR_MSB = 0x3 << 18,
+  VGPR_MSB_MASK = 0xff << 12, // Bits 12..19
 
   REPLAY_MODE = 1 << 25,
   FLAT_SCRATCH_IS_NV = 1 << 26,

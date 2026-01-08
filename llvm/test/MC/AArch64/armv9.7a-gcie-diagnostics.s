@@ -16,3 +16,7 @@ gicr x3, foo
 
 gic cdaff
 // CHECK-ERROR: error: specified gic op requires a register
+
+gic cdeoi, x3
+// CHECK-ERROR: error: specified gic op does not use a register
+

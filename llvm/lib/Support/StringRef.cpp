@@ -17,11 +17,6 @@
 
 using namespace llvm;
 
-// MSVC emits references to this into the translation units which reference it.
-#ifndef _MSC_VER
-constexpr size_t StringRef::npos;
-#endif
-
 // strncasecmp() is not available on non-POSIX systems, so define an
 // alternative function here.
 static int ascii_strncasecmp(StringRef LHS, StringRef RHS) {

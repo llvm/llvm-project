@@ -463,10 +463,9 @@ def XeVM_PrefetchOp
 
 def XeVM_BlockPrefetch2dOp
     : XeVM_Op<"blockprefetch2d">,
-      Arguments<(ins Arg<LLVM_AnyPointer, "", [MemRead]>:$ptr, I32:$base_width,
-          I32:$base_height, I32:$base_pitch, I32:$x, I32:$y,
-          I32Attr:$elem_size_in_bits, I32Attr:$tile_width, I32Attr:$tile_height,
-          I32Attr:$v_blocks,
+      Arguments<(ins LLVM_AnyPointer:$ptr, I32:$base_width, I32:$base_height,
+          I32:$base_pitch, I32:$x, I32:$y, I32Attr:$elem_size_in_bits,
+          I32Attr:$tile_width, I32Attr:$tile_height, I32Attr:$v_blocks,
           OptionalAttr<XeVM_LoadCacheControlAttr>:$cache_control)> {
 
   let summary = "2D block prefetch";

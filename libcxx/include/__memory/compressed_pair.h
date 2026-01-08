@@ -67,7 +67,7 @@ inline const size_t __compressed_pair_alignment<_Tp&> = _LIBCPP_ALIGNOF(void*);
 
 template <class _ToPad>
 inline const bool __is_reference_or_unpadded_object =
-    (is_empty<_ToPad>::value && !__libcpp_is_final<_ToPad>::value) || sizeof(_ToPad) == __datasizeof_v<_ToPad>;
+    (is_empty<_ToPad>::value && !__is_final_v<_ToPad>) || sizeof(_ToPad) == __datasizeof_v<_ToPad>;
 
 template <class _Tp>
 inline const bool __is_reference_or_unpadded_object<_Tp&> = true;

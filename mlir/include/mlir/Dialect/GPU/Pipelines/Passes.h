@@ -58,6 +58,10 @@ struct GPUToNVVMPipelineOptions
           "Whether to use the bareptr calling convention on the host (warning "
           "this should be false until the GPU layering is fixed)"),
       llvm::cl::init(false)};
+  PassOptions::Option<bool> allowPatternRollback{
+      *this, "allow-pattern-rollback",
+      llvm::cl::desc("Allow pattern rollback during dialect conversion"),
+      llvm::cl::init(true)};
 };
 
 // Options for the gpu to xevm pipeline.

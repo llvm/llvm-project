@@ -312,7 +312,6 @@ Status ABIWindows_x86_64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   Thread *thread = frame_sp->GetThread().get();
 
   bool is_signed;
-  uint32_t count;
   bool is_complex;
 
   RegisterContext *reg_ctx = thread->GetRegisterContext().get();
@@ -342,7 +341,7 @@ Status ABIWindows_x86_64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
           "We don't support returning longer than 64 bit "
           "integer values at present.");
     }
-  } else if (compiler_type.IsFloatingPointType(count, is_complex)) {
+  } else if (compiler_type.IsFloatingPointType(is_complex)) {
     if (is_complex)
       error = Status::FromErrorString(
           "We don't support returning complex values at present");
@@ -558,7 +557,6 @@ static bool FlattenAggregateType(
   for (uint32_t idx = 0; idx < num_children; ++idx) {
     std::string name;
     bool is_signed;
-    uint32_t count;
     bool is_complex;
 
     uint64_t field_bit_offset = 0;
@@ -582,7 +580,7 @@ static bool FlattenAggregateType(
     const uint32_t field_type_flags = field_compiler_type.GetTypeInfo();
     if (field_compiler_type.IsIntegerOrEnumerationType(is_signed) ||
         field_compiler_type.IsPointerType() ||
-        field_compiler_type.IsFloatingPointType(count, is_complex)) {
+        field_compiler_type.IsFloatingPointType(is_complex)) {
       aggregate_field_offsets.push_back(field_byte_offset);
       aggregate_compiler_types.push_back(field_compiler_type);
     } else if (field_type_flags & eTypeHasChildren) {
@@ -672,7 +670,6 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectImpl(
     for (uint32_t idx = 0; idx < num_children; idx++) {
       bool is_signed;
       bool is_complex;
-      uint32_t count;
 
       CompilerType field_compiler_type = aggregate_compiler_types[idx];
       uint32_t field_byte_width =
@@ -691,7 +688,7 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectImpl(
       uint32_t copy_from_offset = 0;
       if (field_compiler_type.IsIntegerOrEnumerationType(is_signed) ||
           field_compiler_type.IsPointerType() ||
-          field_compiler_type.IsFloatingPointType(count, is_complex)) {
+          field_compiler_type.IsFloatingPointType(is_complex)) {
         copy_from_extractor = &rax_data;
         copy_from_offset = used_bytes;
         used_bytes += field_byte_width;

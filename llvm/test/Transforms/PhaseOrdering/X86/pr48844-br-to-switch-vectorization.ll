@@ -46,6 +46,7 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; AVX2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 124
 ; AVX2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[BB12_PREHEADER11:%.*]], label [[VECTOR_PH:%.*]]
 ; AVX2:       vector.ph:
+; AVX2-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[TMP3]], 24
 ; AVX2-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP3]], 9223372036854775776
 ; AVX2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX2:       vector.body:
@@ -79,7 +80,6 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; AVX2-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; AVX2-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; AVX2:       middle.block:
-; AVX2-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[TMP3]], 24
 ; AVX2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; AVX2-NEXT:    br i1 [[CMP_N]], label [[EXIT]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; AVX2:       vec.epilog.iter.check:
@@ -90,6 +90,8 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; AVX2:       vec.epilog.ph:
 ; AVX2-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; AVX2-NEXT:    [[N_VEC10:%.*]] = and i64 [[TMP3]], 9223372036854775800
+; AVX2-NEXT:    [[TMP21:%.*]] = shl i64 [[N_VEC10]], 2
+; AVX2-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP21]]
 ; AVX2-NEXT:    br label [[BB12:%.*]]
 ; AVX2:       vec.epilog.vector.body:
 ; AVX2-NEXT:    [[INDEX12:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[BB12_PREHEADER11]] ], [ [[INDEX_NEXT16:%.*]], [[BB12]] ]
@@ -104,8 +106,6 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; AVX2-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT16]], [[N_VEC10]]
 ; AVX2-NEXT:    br i1 [[TMP25]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[BB12]], !llvm.loop [[LOOP4:![0-9]+]]
 ; AVX2:       vec.epilog.middle.block:
-; AVX2-NEXT:    [[TMP27:%.*]] = shl i64 [[N_VEC10]], 2
-; AVX2-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP27]]
 ; AVX2-NEXT:    [[CMP_N17:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC10]]
 ; AVX2-NEXT:    br i1 [[CMP_N17]], label [[EXIT]], label [[BB12_PREHEADER1]]
 ; AVX2:       bb12.preheader:

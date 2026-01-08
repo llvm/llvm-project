@@ -481,3 +481,15 @@ define void @dominance_not_in_program_order(ptr addrspace(7) inreg %arg) {
   %lsr.iv11 = phi ptr addrspace(7) [ %arg, %.loopexit ], [ %arg, %.preheader15 ]
   br label %.loopexit
 }
+
+;; iree-org/iree#22551 - crash on something that reduces to the below non-canonical select.
+define ptr addrspace(7) @noncanonical_const_cond(ptr addrspace(7) %x) {
+; CHECK-LABEL: define { ptr addrspace(8), i32 } @noncanonical_const_cond
+; CHECK-SAME: ({ ptr addrspace(8), i32 } [[RET:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[X_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[RET]], 0
+; CHECK-NEXT:    [[X_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[RET]], 1
+; CHECK-NEXT:    ret { ptr addrspace(8), i32 } [[RET]]
+;
+  %ret = select i1 false, ptr addrspace(7) %x, ptr addrspace(7) %x
+  ret ptr addrspace(7) %ret
+}

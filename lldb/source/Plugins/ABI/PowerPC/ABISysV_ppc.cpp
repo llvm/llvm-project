@@ -426,7 +426,6 @@ Status ABISysV_ppc::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   Thread *thread = frame_sp->GetThread().get();
 
   bool is_signed;
-  uint32_t count;
   bool is_complex;
 
   RegisterContext *reg_ctx = thread->GetRegisterContext().get();
@@ -454,7 +453,7 @@ Status ABISysV_ppc::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
           "We don't support returning longer than 64 bit "
           "integer values at present.");
     }
-  } else if (compiler_type.IsFloatingPointType(count, is_complex)) {
+  } else if (compiler_type.IsFloatingPointType(is_complex)) {
     if (is_complex)
       error = Status::FromErrorString(
           "We don't support returning complex values at present");
@@ -695,7 +694,6 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectImpl(
         uint64_t field_bit_offset = 0;
         bool is_signed;
         bool is_complex;
-        uint32_t count;
 
         CompilerType field_compiler_type = return_compiler_type.GetFieldAtIndex(
             idx, name, &field_bit_offset, nullptr, nullptr);
@@ -741,7 +739,7 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectImpl(
             // return a nullptr return value object.
             return return_valobj_sp;
           }
-        } else if (field_compiler_type.IsFloatingPointType(count, is_complex)) {
+        } else if (field_compiler_type.IsFloatingPointType(is_complex)) {
           // Structs with long doubles are always passed in memory.
           if (*field_bit_width == 128) {
             is_memory = true;

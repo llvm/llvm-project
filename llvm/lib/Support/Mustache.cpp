@@ -10,7 +10,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cctype>
-#include <optional>
 #include <sstream>
 
 #define DEBUG_TYPE "mustache"
@@ -34,6 +33,31 @@ static bool isContextFalsey(const json::Value *V) {
   return isFalsey(*V);
 }
 
+static void splitAndTrim(StringRef Str, SmallVectorImpl<StringRef> &Tokens) {
+  size_t CurrentPos = 0;
+  while (CurrentPos < Str.size()) {
+    // Find the next delimiter.
+    size_t DelimiterPos = Str.find('.', CurrentPos);
+
+    // If no delimiter is found, process the rest of the string.
+    if (DelimiterPos == StringRef::npos)
+      DelimiterPos = Str.size();
+
+    // Get the current part, which may have whitespace.
+    StringRef Part = Str.slice(CurrentPos, DelimiterPos);
+
+    // Manually trim the part without creating a new string object.
+    size_t Start = Part.find_first_not_of(" \t\r\n");
+    if (Start != StringRef::npos) {
+      size_t End = Part.find_last_not_of(" \t\r\n");
+      Tokens.push_back(Part.slice(Start, End + 1));
+    }
+
+    // Move past the delimiter for the next iteration.
+    CurrentPos = DelimiterPos + 1;
+  }
+}
+
 static Accessor splitMustacheString(StringRef Str, MustacheContext &Ctx) {
   // We split the mustache string into an accessor.
   // For example:
@@ -46,18 +70,12 @@ static Accessor splitMustacheString(StringRef Str, MustacheContext &Ctx) {
     // It's a literal, so it doesn't need to be saved.
     Tokens.push_back(".");
   } else {
-    while (!Str.empty()) {
-      StringRef Part;
-      std::tie(Part, Str) = Str.split('.');
-      // Each part of the accessor needs to be saved to the arena
-      // to ensure it has a stable address.
-      Tokens.push_back(Ctx.Saver.save(Part.trim()));
-    }
+    splitAndTrim(Str, Tokens);
   }
   // Now, allocate memory for the array of StringRefs in the arena.
   StringRef *ArenaTokens = Ctx.Allocator.Allocate<StringRef>(Tokens.size());
   // Copy the StringRefs from the stack vector to the arena.
-  std::copy(Tokens.begin(), Tokens.end(), ArenaTokens);
+  llvm::copy(Tokens, ArenaTokens);
   // Return an ArrayRef pointing to the stable arena memory.
   return ArrayRef<StringRef>(ArenaTokens, Tokens.size());
 }
@@ -368,141 +386,99 @@ struct Tag {
   llvm_unreachable("Unknown json::Value::Kind");
 }
 
-static Tag findNextTag(StringRef Template, size_t StartPos, StringRef Open,
-                       StringRef Close) {
-  const StringLiteral TripleOpen("{{{");
-  const StringLiteral TripleClose("}}}");
-
-  size_t NormalOpenPos = Template.find(Open, StartPos);
-  size_t TripleOpenPos = Template.find(TripleOpen, StartPos);
-
-  Tag Result;
-
-  // Determine which tag comes first.
-  if (TripleOpenPos != StringRef::npos &&
-      (NormalOpenPos == StringRef::npos || TripleOpenPos <= NormalOpenPos)) {
-    // Found a triple mustache tag.
-    size_t EndPos =
-        Template.find(TripleClose, TripleOpenPos + TripleOpen.size());
-    if (EndPos == StringRef::npos)
-      return Result; // No closing tag found.
-
-    Result.TagKind = Tag::Kind::Triple;
-    Result.StartPosition = TripleOpenPos;
-    size_t ContentStart = TripleOpenPos + TripleOpen.size();
-    Result.Content = Template.substr(ContentStart, EndPos - ContentStart);
-    Result.FullMatch = Template.substr(
-        TripleOpenPos, (EndPos + TripleClose.size()) - TripleOpenPos);
-  } else if (NormalOpenPos != StringRef::npos) {
-    // Found a normal mustache tag.
-    size_t EndPos = Template.find(Close, NormalOpenPos + Open.size());
-    if (EndPos == StringRef::npos)
-      return Result; // No closing tag found.
-
-    Result.TagKind = Tag::Kind::Normal;
-    Result.StartPosition = NormalOpenPos;
-    size_t ContentStart = NormalOpenPos + Open.size();
-    Result.Content = Template.substr(ContentStart, EndPos - ContentStart);
-    Result.FullMatch =
-        Template.substr(NormalOpenPos, (EndPos + Close.size()) - NormalOpenPos);
-  }
-
-  return Result;
-}
-
-static std::optional<std::pair<StringRef, StringRef>>
-processTag(const Tag &T, SmallVectorImpl<Token> &Tokens, MustacheContext &Ctx) {
-  LLVM_DEBUG(dbgs() << "[Tag] " << T.FullMatch << ", Content: " << T.Content
-                    << ", Kind: " << tagKindToString(T.TagKind) << "\n");
-  if (T.TagKind == Tag::Kind::Triple) {
-    Tokens.emplace_back(T.FullMatch, Ctx.Saver.save("&" + T.Content), '&', Ctx);
-    return std::nullopt;
-  }
-  StringRef Interpolated = T.Content;
-  if (!Interpolated.trim().starts_with("=")) {
-    char Front = Interpolated.empty() ? ' ' : Interpolated.trim().front();
-    Tokens.emplace_back(T.FullMatch, Interpolated, Front, Ctx);
-    return std::nullopt;
-  }
-  Tokens.emplace_back(T.FullMatch, Interpolated, '=', Ctx);
-  StringRef DelimSpec = Interpolated.trim();
-  DelimSpec = DelimSpec.drop_front(1);
-  DelimSpec = DelimSpec.take_until([](char C) { return C == '='; });
-  DelimSpec = DelimSpec.trim();
-
-  std::pair<StringRef, StringRef> Ret = DelimSpec.split(' ');
-  LLVM_DEBUG(dbgs() << "[Set Delimiter] NewOpen: " << Ret.first
-                    << ", NewClose: " << Ret.second << "\n");
-  return Ret;
-}
-
 // Simple tokenizer that splits the template into tokens.
-// The mustache spec allows {{{ }}} to unescape variables,
-// but we don't support that here. An unescape variable
-// is represented only by {{& variable}}.
 static SmallVector<Token> tokenize(StringRef Template, MustacheContext &Ctx) {
   LLVM_DEBUG(dbgs() << "[Tokenize Template] \"" << Template << "\"\n");
   SmallVector<Token> Tokens;
   SmallString<8> Open("{{");
   SmallString<8> Close("}}");
-  size_t Start = 0;
+  size_t Cursor = 0;
+  size_t TextStart = 0;
 
-  while (Start < Template.size()) {
-    LLVM_DEBUG(dbgs() << "[Tokenize Loop] Start:" << Start << ", Open:'" << Open
-                      << "', Close:'" << Close << "'\n");
-    Tag T = findNextTag(Template, Start, Open, Close);
+  const StringLiteral TripleOpen("{{{");
+  const StringLiteral TripleClose("}}}");
 
-    if (T.TagKind == Tag::Kind::None) {
-      // No more tags, the rest is text.
-      Tokens.emplace_back(Template.substr(Start));
+  while (Cursor < Template.size()) {
+    StringRef TemplateSuffix = Template.substr(Cursor);
+    StringRef TagOpen, TagClose;
+    Tag::Kind Kind;
+
+    // Determine which tag we've encountered.
+    if (TemplateSuffix.starts_with(TripleOpen)) {
+      Kind = Tag::Kind::Triple;
+      TagOpen = TripleOpen;
+      TagClose = TripleClose;
+    } else if (TemplateSuffix.starts_with(Open)) {
+      Kind = Tag::Kind::Normal;
+      TagOpen = Open;
+      TagClose = Close;
+    } else {
+      // Not at a tag, continue scanning.
+      ++Cursor;
+      continue;
+    }
+
+    // Found a tag, first add the preceding text.
+    if (Cursor > TextStart)
+      Tokens.emplace_back(Template.slice(TextStart, Cursor));
+
+    // Find the closing tag.
+    size_t EndPos = Template.find(TagClose, Cursor + TagOpen.size());
+    if (EndPos == StringRef::npos) {
+      // No closing tag, the rest is text.
+      Tokens.emplace_back(Template.substr(Cursor));
+      TextStart = Cursor = Template.size();
       break;
     }
 
-    // Add the text before the tag.
-    if (T.StartPosition > Start) {
-      StringRef Text = Template.substr(Start, T.StartPosition - Start);
-      Tokens.emplace_back(Text);
+    // Extract tag content and full match.
+    size_t ContentStart = Cursor + TagOpen.size();
+    StringRef Content = Template.substr(ContentStart, EndPos - ContentStart);
+    StringRef FullMatch =
+        Template.substr(Cursor, (EndPos + TagClose.size()) - Cursor);
+
+    // Process the tag (inlined logic from processTag).
+    LLVM_DEBUG(dbgs() << "[Tag] " << FullMatch << ", Content: " << Content
+                      << ", Kind: " << tagKindToString(Kind) << "\n");
+    if (Kind == Tag::Kind::Triple) {
+      Tokens.emplace_back(FullMatch, Ctx.Saver.save("&" + Content), '&', Ctx);
+    } else { // Normal Tag
+      StringRef Interpolated = Content;
+      if (!Interpolated.trim().starts_with("=")) {
+        char Front = Interpolated.empty() ? ' ' : Interpolated.trim().front();
+        Tokens.emplace_back(FullMatch, Interpolated, Front, Ctx);
+      } else { // Set Delimiter
+        Tokens.emplace_back(FullMatch, Interpolated, '=', Ctx);
+        StringRef DelimSpec = Interpolated.trim();
+        DelimSpec = DelimSpec.drop_front(1);
+        DelimSpec = DelimSpec.take_until([](char C) { return C == '='; });
+        DelimSpec = DelimSpec.trim();
+
+        auto [NewOpen, NewClose] = DelimSpec.split(' ');
+        LLVM_DEBUG(dbgs() << "[Set Delimiter] NewOpen: " << NewOpen
+                          << ", NewClose: " << NewClose << "\n");
+        Open = NewOpen;
+        Close = NewClose;
+      }
     }
 
-    if (auto NewDelims = processTag(T, Tokens, Ctx)) {
-      std::tie(Open, Close) = *NewDelims;
-    }
-
-    // Move past the tag.
-    Start = T.StartPosition + T.FullMatch.size();
+    // Move past the tag for the next iteration.
+    Cursor += FullMatch.size();
+    TextStart = Cursor;
   }
 
-  // Fix up white spaces for:
-  //   - open sections
-  //   - inverted sections
-  //   - close sections
-  //   - comments
-  //
-  // This loop attempts to find standalone tokens and tries to trim out
-  // the surrounding whitespace.
-  // For example:
-  // if you have the template string
-  //  {{#section}} \n Example \n{{/section}}
-  // The output should would be
-  // For example:
-  //  \n Example \n
+  // Add any remaining text after the last tag.
+  if (TextStart < Template.size())
+    Tokens.emplace_back(Template.substr(TextStart));
+
+  // Fix up white spaces for standalone tags.
   size_t LastIdx = Tokens.size() - 1;
   for (size_t Idx = 0, End = Tokens.size(); Idx < End; ++Idx) {
     Token &CurrentToken = Tokens[Idx];
     Token::Type CurrentType = CurrentToken.getType();
-    // Check if token type requires cleanup.
-    bool RequiresCleanUp = requiresCleanUp(CurrentType);
-
-    if (!RequiresCleanUp)
+    if (!requiresCleanUp(CurrentType))
       continue;
 
-    // We adjust the token body if there's no text behind or ahead.
-    // A token is considered to have no text ahead if the right of the previous
-    // token is a newline followed by spaces.
-    // A token is considered to have no text behind if the left of the next
-    // token is spaces followed by a newline.
-    // eg.
-    //  "Line 1\n {{#section}} \n Line 2 \n {{/section}} \n Line 3"
     bool HasTextBehind = hasTextBehind(Idx, Tokens);
     bool HasTextAhead = hasTextAhead(Idx, Tokens);
 
@@ -622,9 +598,16 @@ void Parser::parseSection(ASTNode *Parent, ASTNode::Type Ty,
   size_t Start = CurrentPtr;
   parseMustache(CurrentNode);
   const size_t End = CurrentPtr - 1;
+
+  size_t RawBodySize = 0;
+  for (size_t I = Start; I < End; ++I)
+    RawBodySize += Tokens[I].RawBody.size();
+
   SmallString<128> RawBody;
-  for (std::size_t I = Start; I < End; I++)
+  RawBody.reserve(RawBodySize);
+  for (std::size_t I = Start; I < End; ++I)
     RawBody += Tokens[I].RawBody;
+
   CurrentNode->setRawBody(Ctx.Saver.save(StringRef(RawBody)));
   Parent->addChild(CurrentNode);
 }

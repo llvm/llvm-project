@@ -44,8 +44,7 @@ struct TestXeGPUUnrollingPatterns
   }
 
   TestXeGPUUnrollingPatterns() = default;
-  TestXeGPUUnrollingPatterns(const TestXeGPUUnrollingPatterns &pass)
-      : PassWrapper(pass) {}
+  TestXeGPUUnrollingPatterns(const TestXeGPUUnrollingPatterns &pass) = default;
 
   void runOnOperation() override {
     MLIRContext *ctx = &getContext();
@@ -184,7 +183,7 @@ class TestStepOpPattern : public OpConversionPattern<vector::StepOp> {
   matchAndRewrite(vector::StepOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
-    auto layoutName = xegpu::getLayoutName(op->getResult(0));
+    auto layoutName = xegpu::getTemporaryLayoutName(op->getResult(0));
     auto sliceAttr = op->getAttrOfType<xegpu::SliceAttr>(layoutName);
     if (!sliceAttr || sliceAttr.getRank() != 1)
       return failure();
@@ -200,7 +199,8 @@ class TestStepOpPattern : public OpConversionPattern<vector::StepOp> {
 
     Value sgId =
         gpu::SubgroupIdOp::create(rewriter, loc, /*upper_bound=*/nullptr);
-    auto maybeOffsets = sliceAttr.getOffsets(rewriter, loc, sgId, wgShape);
+    auto maybeOffsets =
+        sliceAttr.computeDistributedCoords(rewriter, loc, sgId, wgShape);
     if (failed(maybeOffsets))
       return failure();
 
@@ -297,8 +297,7 @@ struct TestXeGPULayoutInterface
   }
 
   TestXeGPULayoutInterface() = default;
-  TestXeGPULayoutInterface(const TestXeGPULayoutInterface &pass)
-      : PassWrapper(pass) {}
+  TestXeGPULayoutInterface(const TestXeGPULayoutInterface &pass) = default;
 
   void runOnOperation() override {
     MLIRContext *ctx = &getContext();
@@ -323,7 +322,7 @@ struct TestXeGPULayoutInterface
 
     target.addDynamicallyLegalOp<vector::StepOp>(
         [&](vector::StepOp op) -> bool {
-          auto layoutName = xegpu::getLayoutName(op->getResult(0));
+          auto layoutName = xegpu::getTemporaryLayoutName(op->getResult(0));
           auto sliceAttr = op->getAttrOfType<xegpu::SliceAttr>(layoutName);
           return isLegal(sliceAttr);
         });

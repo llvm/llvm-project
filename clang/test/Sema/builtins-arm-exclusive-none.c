@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple armv6m -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple thumbv6m -fsyntax-only -verify %s
 
 // Armv6-M does not support exclusive loads/stores at all, so all uses of
 // __builtin_arm_ldrex[d] and __builtin_arm_strex[d] is forbidden.

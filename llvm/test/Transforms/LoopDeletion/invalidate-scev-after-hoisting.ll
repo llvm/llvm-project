@@ -84,13 +84,13 @@ define i32 @scev_invalidation_after_deleting(ptr %src) {
 ; CHECK:       inner.2.preheader:
 ; CHECK-NEXT:    br label [[INNER_3_PH:%.*]]
 ; CHECK:       inner.3.ph:
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 0 to i32
 ; CHECK-NEXT:    br label [[INNER_3:%.*]]
 ; CHECK:       inner.3:
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[SRC:%.*]], align 4
 ; CHECK-NEXT:    br i1 false, label [[OUTER_LATCH]], label [[INNER_3]]
 ; CHECK:       outer.latch:
 ; CHECK-NEXT:    [[L_LCSSA:%.*]] = phi i32 [ [[L]], [[INNER_3]] ]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 0 to i32
 ; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nsw i32 [[L_LCSSA]], [[TRUNC]]
 ; CHECK-NEXT:    br label [[OUTER_HEADER]]
 ;

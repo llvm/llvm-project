@@ -814,6 +814,7 @@ def lookupBTIByName : SearchIndex {
   let Key = ["Name"];
 }
 
+def : BTI<"r",  0b000>;
 def : BTI<"c",  0b010>;
 def : BTI<"j",  0b100>;
 def : BTI<"jc", 0b110>;
@@ -832,6 +833,23 @@ class CMHPriorityHint<string name, bits<1> encoding> : SearchableTable {
 }
 
 def : CMHPriorityHint<"ph", 0b1>;
+
+
+//===----------------------------------------------------------------------===//
+// TIndex instruction options.
+//===----------------------------------------------------------------------===//
+
+class TIndex<string name, bits<1> encoding> : SearchableTable {
+  let SearchableFields = ["Name", "Encoding"];
+  let EnumValueField = "Encoding";
+
+  string Name = name;
+  bits<1> Encoding;
+  let Encoding = encoding;
+}
+
+def : TIndex<"nb", 0b1>;
+
 
 //===----------------------------------------------------------------------===//
 // TLBI (translation lookaside buffer invalidate) instruction options.
@@ -2584,14 +2602,14 @@ foreach n=0-15 in {
 //===----------------------------------------------------------------------===//
 
 // GIC
-class GIC<string name, bits<3> op1, bits<4> crn, bits<4> crm, bits<3> op2> {
+class GIC<string name, bits<3> op1, bits<4> crn, bits<4> crm, bits<3> op2, bit needsreg = 1> {
   string Name = name;
   bits<14> Encoding;
   let Encoding{13-11} = op1;
   let Encoding{10-7} = crn;
   let Encoding{6-3} = crm;
   let Encoding{2-0} = op2;
-  bit NeedsReg = 1;
+  bit NeedsReg = needsreg;
   string RequiresStr = [{ {AArch64::FeatureGCIE} }];
 }
 
@@ -2668,12 +2686,12 @@ def : GSB<"ack",      0b000, 0b1100, 0b0000, 0b001>;
 def : GICR<"cdia",    0b000, 0b1100, 0b0011, 0b000>;
 def : GICR<"cdnmia",  0b000, 0b1100, 0b0011, 0b001>;
 
-//                    Op1    CRn     CRm     Op2
+//                    Op1    CRn     CRm     Op2,   needsreg
 def : GIC<"cdaff",    0b000, 0b1100, 0b0001, 0b011>;
 def : GIC<"cddi",     0b000, 0b1100, 0b0010, 0b000>;
 def : GIC<"cddis",    0b000, 0b1100, 0b0001, 0b000>;
 def : GIC<"cden",     0b000, 0b1100, 0b0001, 0b001>;
-def : GIC<"cdeoi",    0b000, 0b1100, 0b0001, 0b111>;
+def : GIC<"cdeoi",    0b000, 0b1100, 0b0001, 0b111, 0>;
 def : GIC<"cdhm",     0b000, 0b1100, 0b0010, 0b001>;
 def : GIC<"cdpend",   0b000, 0b1100, 0b0001, 0b100>;
 def : GIC<"cdpri",    0b000, 0b1100, 0b0001, 0b010>;
@@ -2694,3 +2712,161 @@ def : GIC<"ldhm",     0b110, 0b1100, 0b0010, 0b001>;
 def : GIC<"ldpend",   0b110, 0b1100, 0b0001, 0b100>;
 def : GIC<"ldpri",    0b110, 0b1100, 0b0001, 0b010>;
 def : GIC<"ldrcfg",   0b110, 0b1100, 0b0001, 0b101>;
+
+
+// Stage 1 Permission Overlays Extension 2 (FEAT_S1POE2).
+//                                  Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"DPOTBR0_EL1",       0b11, 0b000, 0b0010, 0b0000, 0b110>;
+def : RWSysReg<"DPOTBR0_EL12",      0b11, 0b101, 0b0010, 0b0000, 0b110>;
+def : RWSysReg<"DPOTBR1_EL1",       0b11, 0b000, 0b0010, 0b0000, 0b111>;
+def : RWSysReg<"DPOTBR1_EL12",      0b11, 0b101, 0b0010, 0b0000, 0b111>;
+def : RWSysReg<"DPOTBR0_EL2",       0b11, 0b100, 0b0010, 0b0000, 0b110>;
+def : RWSysReg<"DPOTBR1_EL2",       0b11, 0b100, 0b0010, 0b0000, 0b111>;
+def : RWSysReg<"DPOTBR0_EL3",       0b11, 0b110, 0b0010, 0b0000, 0b110>;
+
+//                                  Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"IRTBRU_EL1",        0b11, 0b000, 0b0010, 0b0000, 0b100>;
+def : RWSysReg<"IRTBRU_EL12",       0b11, 0b101, 0b0010, 0b0000, 0b100>;
+def : RWSysReg<"IRTBRP_EL1",        0b11, 0b000, 0b0010, 0b0000, 0b101>;
+def : RWSysReg<"IRTBRP_EL12",       0b11, 0b101, 0b0010, 0b0000, 0b101>;
+def : RWSysReg<"IRTBRU_EL2",        0b11, 0b100, 0b0010, 0b0000, 0b100>;
+def : RWSysReg<"IRTBRP_EL2",        0b11, 0b100, 0b0010, 0b0000, 0b101>;
+def : RWSysReg<"IRTBRP_EL3",        0b11, 0b110, 0b0010, 0b0000, 0b101>;
+
+//                                  Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"TTTBRU_EL1",        0b11, 0b000, 0b1010, 0b0010, 0b110>;
+def : RWSysReg<"TTTBRU_EL12",       0b11, 0b101, 0b1010, 0b0010, 0b110>;
+def : RWSysReg<"TTTBRP_EL1",        0b11, 0b000, 0b1010, 0b0010, 0b111>;
+def : RWSysReg<"TTTBRP_EL12",       0b11, 0b101, 0b1010, 0b0010, 0b111>;
+def : RWSysReg<"TTTBRU_EL2",        0b11, 0b100, 0b1010, 0b0010, 0b110>;
+def : RWSysReg<"TTTBRP_EL2",        0b11, 0b100, 0b1010, 0b0010, 0b111>;
+def : RWSysReg<"TTTBRP_EL3",        0b11, 0b110, 0b1010, 0b0010, 0b111>;
+
+foreach n = 0-15 in {
+  defvar nb = !cast<bits<4>>(n);
+  //                                Op0   Op1    CRn     CRm            Op2
+  def : RWSysReg<"FGDTP"#n#"_EL1",  0b11, 0b000, 0b0011, {0b001,nb{3}}, nb{2-0}>;
+  def : RWSysReg<"FGDTP"#n#"_EL2",  0b11, 0b100, 0b0011, {0b001,nb{3}}, nb{2-0}>;
+  def : RWSysReg<"FGDTP"#n#"_EL12", 0b11, 0b101, 0b0011, {0b001,nb{3}}, nb{2-0}>;
+  def : RWSysReg<"FGDTP"#n#"_EL3",  0b11, 0b110, 0b0011, {0b001,nb{3}}, nb{2-0}>;
+
+  def : RWSysReg<"FGDTU"#n#"_EL1",  0b11, 0b000, 0b0011, {0b010,nb{3}}, nb{2-0}>;
+  def : RWSysReg<"FGDTU"#n#"_EL2",  0b11, 0b100, 0b0011, {0b010,nb{3}}, nb{2-0}>;
+  def : RWSysReg<"FGDTU"#n#"_EL12", 0b11, 0b101, 0b0011, {0b010,nb{3}}, nb{2-0}>;
+}
+
+//                                  Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"LDSTT_EL1",         0b11, 0b000, 0b0010, 0b0001, 0b111>;
+def : RWSysReg<"LDSTT_EL12",        0b11, 0b101, 0b0010, 0b0001, 0b111>;
+def : RWSysReg<"LDSTT_EL2",         0b11, 0b100, 0b0010, 0b0001, 0b111>;
+
+//                                  Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"TINDEX_EL0",        0b11, 0b011, 0b0100, 0b0000, 0b011>;
+def : RWSysReg<"TINDEX_EL1",        0b11, 0b000, 0b0100, 0b0000, 0b011>;
+def : RWSysReg<"TINDEX_EL2",        0b11, 0b100, 0b0100, 0b0000, 0b011>;
+def : RWSysReg<"TINDEX_EL12",       0b11, 0b101, 0b0100, 0b0000, 0b011>;
+def : RWSysReg<"TINDEX_EL3",        0b11, 0b110, 0b0100, 0b0000, 0b011>;
+
+//                                  Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"STINDEX_EL1",       0b11, 0b000, 0b0100, 0b0000, 0b010>;
+def : RWSysReg<"STINDEX_EL2",       0b11, 0b100, 0b0100, 0b0000, 0b010>;
+def : RWSysReg<"STINDEX_EL12",      0b11, 0b101, 0b0100, 0b0000, 0b010>;
+def : RWSysReg<"STINDEX_EL3",       0b11, 0b110, 0b0100, 0b0000, 0b010>;
+
+//                                  Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"TPIDR3_EL0",        0b11, 0b011, 0b1101, 0b0000, 0b000>;
+def : RWSysReg<"TPIDR3_EL1",        0b11, 0b000, 0b1101, 0b0000, 0b000>;
+def : RWSysReg<"TPIDR3_EL12",       0b11, 0b101, 0b1101, 0b0000, 0b000>;
+def : RWSysReg<"TPIDR3_EL2",        0b11, 0b100, 0b1101, 0b0000, 0b000>;
+def : RWSysReg<"TPIDR3_EL3",        0b11, 0b110, 0b1101, 0b0000, 0b000>;
+
+//                                  Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"VNCCR_EL2",         0b11, 0b100, 0b0010, 0b0010, 0b001>;
+
+//                                  Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"DPOCR_EL0",         0b11, 0b011, 0b0100, 0b0101, 0b010>;
+
+foreach n = 0-15 in {
+  defvar nb = !cast<bits<4>>(n);
+  //                                 Op0   Op1    CRn      CRm           Op2
+  def : RWSysReg<"AFGDTP"#n#"_EL1",  0b11, 0b000, 0b0011, {0b011,nb{3}}, nb{2-0}>;
+  def : RWSysReg<"AFGDTU"#n#"_EL1",  0b11, 0b000, 0b0011, {0b100,nb{3}}, nb{2-0}>;
+  def : RWSysReg<"AFGDTP"#n#"_EL2",  0b11, 0b100, 0b0011, {0b011,nb{3}}, nb{2-0}>;
+  def : RWSysReg<"AFGDTU"#n#"_EL2",  0b11, 0b100, 0b0011, {0b100,nb{3}}, nb{2-0}>;
+  def : RWSysReg<"AFGDTP"#n#"_EL12", 0b11, 0b101, 0b0011, {0b011,nb{3}}, nb{2-0}>;
+  def : RWSysReg<"AFGDTU"#n#"_EL12", 0b11, 0b101, 0b0011, {0b100,nb{3}}, nb{2-0}>;
+  def : RWSysReg<"AFGDTP"#n#"_EL3",  0b11, 0b110, 0b0011, {0b011,nb{3}}, nb{2-0}>;
+}
+
+// Extra S1POE2 Hypervisor Configuration Registers
+//                                  Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"HCRMASK_EL2",       0b11, 0b100, 0b0001, 0b0101, 0b110>;
+def : RWSysReg<"HCRXMASK_EL2",      0b11, 0b100, 0b0001, 0b0101, 0b111>;
+def : RWSysReg<"NVHCR_EL2",         0b11, 0b100, 0b0001, 0b0101, 0b000>;
+def : RWSysReg<"NVHCRX_EL2",        0b11, 0b100, 0b0001, 0b0101, 0b001>;
+def : RWSysReg<"NVHCRMASK_EL2",     0b11, 0b100, 0b0001, 0b0101, 0b100>;
+def : RWSysReg<"NVHCRXMASK_EL2",    0b11, 0b100, 0b0001, 0b0101, 0b101>;
+
+// S1POE2 Thread private state extension (FEAT_TPS/TPSP).
+foreach n = 0-1 in {
+  defvar nb = !cast<bits<1>>(n);
+  //                                Op0   Op1    CRn     CRm     Op2
+  def : RWSysReg<"TPMIN"#n#"_EL0",  0b11, 0b011, 0b0010, 0b0010, {0b1,nb,0}>;
+  def : RWSysReg<"TPMAX"#n#"_EL0",  0b11, 0b011, 0b0010, 0b0010, {0b1,nb,1}>;
+  def : RWSysReg<"TPMIN"#n#"_EL1",  0b11, 0b000, 0b0010, 0b0010, {0b1,nb,0}>;
+  def : RWSysReg<"TPMAX"#n#"_EL1",  0b11, 0b000, 0b0010, 0b0010, {0b1,nb,1}>;
+  def : RWSysReg<"TPMIN"#n#"_EL2",  0b11, 0b100, 0b0010, 0b0010, {0b1,nb,0}>;
+  def : RWSysReg<"TPMAX"#n#"_EL2",  0b11, 0b100, 0b0010, 0b0010, {0b1,nb,1}>;
+  def : RWSysReg<"TPMIN"#n#"_EL12", 0b11, 0b101, 0b0010, 0b0010, {0b1,nb,0}>;
+  def : RWSysReg<"TPMAX"#n#"_EL12", 0b11, 0b101, 0b0010, 0b0010, {0b1,nb,1}>;
+}
+
+class PLBIEntry<bits<3> op1, bits<4> crn, bits<4> crm, bits<3> op2, string name,
+                bit needsreg, bit optionalreg> {
+  string Name = name;
+  bits<14> Encoding;
+  let Encoding{13-11} = op1;
+  let Encoding{10-7} = crn;
+  let Encoding{6-3} = crm;
+  let Encoding{2-0} = op2;
+  bit NeedsReg = needsreg;
+  bit OptionalReg = optionalreg;
+  string RequiresStr = [{ {AArch64::FeatureS1POE2} }];
+}
+
+def PLBITable : GenericTable {
+  let FilterClass = "PLBIEntry";
+  let CppTypeName = "PLBI";
+  let Fields = ["Name", "Encoding", "NeedsReg", "OptionalReg", "RequiresStr"];
+
+  let PrimaryKey = ["Encoding"];
+  let PrimaryKeyName = "lookupPLBIByEncoding";
+}
+
+def lookupPLBIByName : SearchIndex {
+  let Table = PLBITable;
+  let Key = ["Name"];
+}
+
+multiclass PLBI<string name, bits<3> op1, bits<4> crn, bits<3> op2,
+                bit needsreg, bit optreg> {
+  // Entries containing "IS" or "OS" allow optional regs when +tlbid enabled
+  def : PLBIEntry<op1, crn, 0b0111, op2, name,         needsreg, 0>;
+  def : PLBIEntry<op1, crn, 0b0011, op2, name#"IS",    needsreg, optreg>;
+  def : PLBIEntry<op1, crn, 0b0001, op2, name#"OS",    needsreg, optreg>;
+  def : PLBIEntry<op1, crn, 0b1111, op2, name#"NXS",   needsreg, 0>;
+  def : PLBIEntry<op1, crn, 0b1011, op2, name#"ISNXS", needsreg, optreg>;
+  def : PLBIEntry<op1, crn, 0b1001, op2, name#"OSNXS", needsreg, optreg>;
+}
+
+// CRm defines above six variants of each instruction. It is omitted here.
+//                     Op1    CRn     Op2    nr optreg
+defm : PLBI<"ALLE3",   0b110, 0b1010, 0b000, 0, 0>;
+defm : PLBI<"ALLE2",   0b100, 0b1010, 0b000, 0, 1>;
+defm : PLBI<"ALLE1",   0b100, 0b1010, 0b100, 0, 1>;
+defm : PLBI<"VMALLE1", 0b000, 0b1010, 0b000, 0, 1>;
+defm : PLBI<"ASIDE1",  0b000, 0b1010, 0b010, 1, 0>;
+defm : PLBI<"PERME3",  0b110, 0b1010, 0b001, 1, 0>;
+defm : PLBI<"PERME2",  0b100, 0b1010, 0b001, 1, 0>;
+defm : PLBI<"PERME1",  0b000, 0b1010, 0b001, 1, 0>;
+defm : PLBI<"PERMAE1", 0b000, 0b1010, 0b011, 1, 0>;

@@ -72,7 +72,11 @@ const parser::OmpObject *GetArgumentObject(const parser::OmpArgument &argument);
 bool IsCommonBlock(const Symbol &sym);
 bool IsExtendedListItem(const Symbol &sym);
 bool IsVariableListItem(const Symbol &sym);
+bool IsTypeParamInquiry(const Symbol &sym);
+bool IsStructureComponent(const Symbol &sym);
 bool IsVarOrFunctionRef(const MaybeExpr &expr);
+
+bool IsWholeAssumedSizeArray(const parser::OmpObject &object);
 
 bool IsMapEnteringType(parser::OmpMapType::Value type);
 bool IsMapExitingType(parser::OmpMapType::Value type);
@@ -95,8 +99,8 @@ const SomeExpr *HasStorageOverlap(
     const SomeExpr &base, llvm::ArrayRef<SomeExpr> exprs);
 bool IsAssignment(const parser::ActionStmt *x);
 bool IsPointerAssignment(const evaluate::Assignment &x);
-const parser::Block &GetInnermostExecPart(const parser::Block &block);
-bool IsStrictlyStructuredBlock(const parser::Block &block);
+
+MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp);
 } // namespace omp
 } // namespace Fortran::semantics
 

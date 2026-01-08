@@ -140,8 +140,8 @@ Instruction *InstCombinerImpl::scalarizePHI(ExtractElementInst &EI,
     Value *Elt = EI.getIndexOperand();
     // If the operand is the PHI induction variable:
     if (PHIInVal == PHIUser) {
-      // Scalarize the binary operation. Its first operand is the
-      // scalar PHI, and the second operand is extracted from the other
+      // Scalarize the binary operation. One operand is the
+      // scalar PHI, and the other is extracted from the other
       // vector operand.
       BinaryOperator *B0 = cast<BinaryOperator>(PHIUser);
       unsigned opId = (B0->getOperand(0) == PN) ? 1 : 0;
@@ -149,9 +149,14 @@ Instruction *InstCombinerImpl::scalarizePHI(ExtractElementInst &EI,
           ExtractElementInst::Create(B0->getOperand(opId), Elt,
                                      B0->getOperand(opId)->getName() + ".Elt"),
           B0->getIterator());
-      Value *newPHIUser = InsertNewInstWith(
-          BinaryOperator::CreateWithCopiedFlags(B0->getOpcode(),
-                                                scalarPHI, Op, B0), B0->getIterator());
+      // Preserve operand order for binary operation to preserve semantics of
+      // non-commutative operations.
+      Value *FirstOp = (B0->getOperand(0) == PN) ? scalarPHI : Op;
+      Value *SecondOp = (B0->getOperand(0) == PN) ? Op : scalarPHI;
+      Value *newPHIUser =
+          InsertNewInstWith(BinaryOperator::CreateWithCopiedFlags(
+                                B0->getOpcode(), FirstOp, SecondOp, B0),
+                            B0->getIterator());
       scalarPHI->addIncoming(newPHIUser, inBB);
     } else {
       // Scalarize PHI input:
@@ -439,11 +444,12 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
         unsigned BitWidth = Ty->getIntegerBitWidth();
         Value *Idx;
         // Return index when its value does not exceed the allowed limit
-        // for the element type of the vector, otherwise return undefined.
+        // for the element type of the vector.
+        // TODO: Truncate out-of-range values.
         if (IndexC->getValue().getActiveBits() <= BitWidth)
           Idx = ConstantInt::get(Ty, IndexC->getValue().zextOrTrunc(BitWidth));
         else
-          Idx = PoisonValue::get(Ty);
+          return nullptr;
         return replaceInstUsesWith(EI, Idx);
       }
     }

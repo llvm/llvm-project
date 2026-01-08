@@ -21,6 +21,10 @@ include "flang/Optimizer/Dialect/FIRAttr.td"
 class mif_Op<string mnemonic, list<Trait> traits>
     : Op<MIFDialect, mnemonic, traits>;
 
+class region_Op<string mnemonic, list<Trait> traits = []>
+    : mif_Op<mnemonic, !listconcat(traits, [RecursivelySpeculatable,
+                                            RecursiveMemoryEffects])> {}
+
 //===----------------------------------------------------------------------===//
 // Initialization and Finalization
 //===----------------------------------------------------------------------===//
@@ -174,6 +178,18 @@ def mif_SyncMemoryOp : mif_Op<"sync_memory", [AttrSizedOperandSegments]> {
   }];
 }
 
+def mif_SyncTeamOp : mif_Op<"sync_team", [AttrSizedOperandSegments]> {
+  let summary = "Performs a synchronization of the team, identified by `team`";
+
+  let arguments = (ins AnyRefOrBoxType:$team, Optional<AnyReferenceLike>:$stat,
+      Optional<AnyRefOrBoxType>:$errmsg);
+  let assemblyFormat = [{
+    $team (`stat` $stat^ )?
+    (`errmsg` $errmsg^ )? 
+    attr-dict `:` functional-type(operands, results)
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // Collective Operations
 //===----------------------------------------------------------------------===//
@@ -262,6 +278,150 @@ def mif_CoSumOp
     (`stat` $stat^ )?
     (`errmsg` $errmsg^ )? 
     attr-dict `:` `(` type(operands) `)`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Teams
+//===----------------------------------------------------------------------===//
+
+def mif_FormTeamOp : mif_Op<"form_team", [AttrSizedOperandSegments]> {
+  let summary =
+      "Create a set of sibling teams whose parent team is the current team.";
+  let description = [{
+    Create a new team for each unique `team_number` value specified.
+    Each executing image will belong to the team whose `team_number` is equal 
+    to the value of team-number on that image, and `team_var` becomes defined
+    with a value that identifies that team.
+
+    If `new_index` is specified, the image index of the executing image will take
+    this index in its new team. Otherwise, the new image index is processor 
+    dependent.
+
+    Arguments: 
+      - `team_number`: Shall be a positive integer.
+      - `team_var` : Shall be a variable of type TEAM_TYPE from the intrinsic
+        module ISO_FORTRAN_ENV.
+      - `new_index`(optional): Shall be an integer that correspond to the index that
+        the calling image will have in the new team.
+  }];
+
+  let arguments = (ins AnyIntegerType:$team_number,
+      Arg<fir_BoxType, "", [MemWrite]>:$team_var,
+      Optional<AnyIntegerType>:$new_index,
+      Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
+      Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
+
+  let assemblyFormat = [{
+    `team_number` $team_number `team_var` $team_var
+    (`new_index` $new_index^ )?
+    (`stat` $stat^ )?
+    (`errmsg` $errmsg^ )?
+    attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+def mif_EndTeamOp : mif_Op<"end_team", [AttrSizedOperandSegments, Terminator,
+                                        ParentOneOf<["ChangeTeamOp"]>]> {
+  let summary = "Changes the current team to the parent team.";
+  let description = [{
+    The END TEAM operation completes the CHANGE TEAM construct and 
+    restores the current team to the team that was current before 
+    the CHANGE TEAM construct. 
+  }];
+
+  let arguments = (ins Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
+      Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
+  let builders = [OpBuilder<(ins), [{ /* do nothing */ }]>];
+
+  let assemblyFormat = [{
+    (`stat` $stat^ )? (`errmsg` $errmsg^ )?
+    attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// NOTE: The CHANGE TEAM region will take a coarray association list in
+// argument. However, coarray management and coarray alias creation are not
+// yet supported by the dialect. The argument is therefore not yet supported by
+// this operation and will be added later.
+//===----------------------------------------------------------------------===//
+def mif_ChangeTeamOp
+    : region_Op<"change_team", [AttrSizedOperandSegments,
+                                SingleBlockImplicitTerminator<"EndTeamOp">]> {
+  let summary = "Changes the current team.";
+  let description = [{
+    The CHANGE TEAM construct changes the current team to the specified new
+    team, which must be a child team of the current team.  
+
+    ```
+      mif.change_team %team {
+        %x = fir.convert %i : (index) -> i32
+        ...
+        mif.end_team
+      }
+  }];
+
+  let arguments = (ins AnyRefOrBoxType:$team,
+      Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
+      Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
+  let regions = (region SizedRegion<1>:$region);
+
+  let skipDefaultBuilders = 1;
+  let builders =
+      [OpBuilder<(ins "mlir::Value":$team,
+           CArg<"bool", "true">:$ensureTermination,
+           CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>,
+       OpBuilder<(ins "mlir::Value":$team, "mlir::Value":$stat,
+           "mlir::Value":$errmsg, CArg<"bool", "true">:$ensureTermination,
+           CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
+
+  let extraClassDeclaration = [{
+    /// Get the body of the CHANGE TEAM construct 
+    mlir::Block *getBody() { return &getRegion().front(); }
+  }];
+
+  let assemblyFormat = [{
+    $team (`stat` $stat^)?
+    (`errmsg` $errmsg^)?
+    attr-dict `:` `(` type(operands) `)`
+    custom<ChangeTeamOpBody>($region)
+  }];
+}
+
+def mif_GetTeamOp : mif_Op<"get_team", []> {
+  let summary = "Get the team value for the current or ancestor team.";
+  let description = [{
+    This operation gets the team value for the current or an ancestor team.
+    `level`(optional): If provided, must equal one of the following constants : 
+    `INITIAL_TEAM`, `PARENT_TEAM` or `CURRENT_TEAM` from the module ISO_FORTRAN_ENV.
+    If `level` isn't present or has the value `CURRENT_TEAM` the returned
+    value is the current team.     
+  }];
+
+  let arguments = (ins Optional<AnyIntegerType>:$level);
+  let results = (outs fir_BoxType:$team);
+
+  let assemblyFormat = [{
+    (`level` $level^ )?
+    attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+def mif_TeamNumberOp : mif_Op<"team_number", []> {
+  let summary = "Get the team number";
+  let description = [{
+    Argument: `team` is optional and shall be a scalar of type TEAM_TYPE from 
+    module ISO_FORTRAN_ENV and the value identifies the current or an ancestor team. 
+    If `team` is absent, the team specified is the current team.
+  }];
+
+  let arguments = (ins Optional<AnyRefOrBoxType>:$team);
+  let results = (outs I64);
+
+  let assemblyFormat = [{
+    (`team` $team^ )?
+    attr-dict `:` functional-type(operands, results)
   }];
 }
 

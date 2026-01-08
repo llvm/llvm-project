@@ -12,6 +12,7 @@
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DarwinSDKInfo.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
@@ -25,7 +26,6 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Frontend/TextDiagnostic.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
@@ -115,6 +115,7 @@ class ClangExpressionParser::LLDBPreprocessorCallbacks : public PPCallbacks {
   ClangModulesDeclVendor &m_decl_vendor;
   ClangPersistentVariables &m_persistent_vars;
   clang::SourceManager &m_source_mgr;
+  /// Accumulates error messages across all moduleImport calls.
   StreamString m_error_stream;
   bool m_has_errors = false;
 
@@ -140,11 +141,12 @@ public:
       module.path.push_back(
           ConstString(component.getIdentifierInfo()->getName()));
 
-    StreamString error_stream;
-
     ClangModulesDeclVendor::ModuleVector exported_modules;
-    if (!m_decl_vendor.AddModule(module, &exported_modules, m_error_stream))
+    if (auto err = m_decl_vendor.AddModule(module, &exported_modules)) {
       m_has_errors = true;
+      m_error_stream.PutCString(llvm::toString(std::move(err)));
+      m_error_stream.PutChar('\n');
+    }
 
     for (ClangModulesDeclVendor::ModuleID module : exported_modules)
       m_persistent_vars.AddHandLoadedClangModule(module);
@@ -169,9 +171,9 @@ public:
       : m_options(opts), m_filename(filename) {
     m_options.ShowPresumedLoc = true;
     m_options.ShowLevel = false;
-    m_os = std::make_shared<llvm::raw_string_ostream>(m_output);
+    m_os = std::make_unique<llvm::raw_string_ostream>(m_output);
     m_passthrough =
-        std::make_shared<clang::TextDiagnosticPrinter>(*m_os, m_options);
+        std::make_unique<clang::TextDiagnosticPrinter>(*m_os, m_options);
   }
 
   void ResetManager(DiagnosticManager *manager = nullptr) {
@@ -313,11 +315,11 @@ public:
 private:
   DiagnosticManager *m_manager = nullptr;
   DiagnosticOptions m_options;
-  std::shared_ptr<clang::TextDiagnosticPrinter> m_passthrough;
-  /// Output stream of m_passthrough.
-  std::shared_ptr<llvm::raw_string_ostream> m_os;
   /// Output string filled by m_os.
   std::string m_output;
+  /// Output stream of m_passthrough.
+  std::unique_ptr<llvm::raw_string_ostream> m_os;
+  std::unique_ptr<clang::TextDiagnosticPrinter> m_passthrough;
   StringRef m_filename;
 };
 
@@ -605,15 +607,21 @@ static void SetupLangOpts(CompilerInstance &compiler,
     lang_opts.CPlusPlus11 = true;
     compiler.getHeaderSearchOpts().UseLibcxx = true;
     [[fallthrough]];
-  case lldb::eLanguageTypeC_plus_plus_03:
+  case lldb::eLanguageTypeC_plus_plus_03: {
     lang_opts.CPlusPlus = true;
     if (process_sp
         // We're stopped in a frame without debug-info. The user probably
         // intends to make global queries (which should include Objective-C).
-        && !(frame_sp && frame_sp->HasDebugInformation()))
+        && !(frame_sp && frame_sp->HasDebugInformation())) {
       lang_opts.ObjC =
           process_sp->GetLanguageRuntime(lldb::eLanguageTypeObjC) != nullptr;
-    break;
+      if (lang_opts.ObjC) {
+        language_for_note = lldb::eLanguageTypeObjC_plus_plus;
+        language_fallback_reason = "Possibly stopped inside system library, so "
+                                   "speculatively enabled Objective-C. ";
+      }
+    }
+  } break;
   case lldb::eLanguageTypeObjC_plus_plus:
   case lldb::eLanguageTypeUnknown:
   default:
@@ -1502,7 +1510,7 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
     LLDB_LOGF(log, "%s - Current expression language is %s\n", __FUNCTION__,
               lang.GetDescription().data());
     lldb::ProcessSP process_sp = exe_ctx.GetProcessSP();
-    if (process_sp && lang != lldb::eLanguageTypeUnknown) {
+    if (process_sp && lang) {
       auto runtime = process_sp->GetLanguageRuntime(lang.AsLanguageType());
       if (runtime)
         runtime->GetIRPasses(custom_passes);

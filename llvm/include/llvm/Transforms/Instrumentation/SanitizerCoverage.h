@@ -33,7 +33,7 @@ class FileSystem;
 /// appends globals to llvm.compiler.used.
 class SanitizerCoveragePass : public PassInfoMixin<SanitizerCoveragePass> {
 public:
-  explicit SanitizerCoveragePass(
+  LLVM_ABI explicit SanitizerCoveragePass(
       SanitizerCoverageOptions Options = SanitizerCoverageOptions(),
       IntrusiveRefCntPtr<vfs::FileSystem> VFS = nullptr,
       const std::vector<std::string> &AllowlistFiles = {},

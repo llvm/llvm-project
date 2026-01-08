@@ -32,6 +32,7 @@
 #include <type_traits>
 #include <string_view>
 #include <cassert>
+#include <utility>
 
 // On Windows, the append function converts all inputs (pointers, iterators)
 // to an intermediate path object, causing allocations in cases where no

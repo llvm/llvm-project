@@ -11,31 +11,6 @@ from lldbsuite.test.lldbtest import line_number
 
 @skipIfBuildType(["debug"])
 class TestDAP_restart_console(lldbdap_testcase.DAPTestCaseBase):
-    def verify_stopped_on_entry(self, stopped_events: List[Dict[str, Any]]):
-        seen_stopped_event = 0
-        for stopped_event in stopped_events:
-            body = stopped_event.get("body")
-            if body is None:
-                continue
-
-            reason = body.get("reason")
-            if reason is None:
-                continue
-
-            self.assertNotEqual(
-                reason,
-                "breakpoint",
-                'verify stop after restart isn\'t "main" breakpoint',
-            )
-            if reason == "entry":
-                seen_stopped_event += 1
-
-        self.assertEqual(
-            seen_stopped_event,
-            1,
-            f"expect only one stopped entry event in {stopped_events}",
-        )
-
     @skipIfAsan
     @skipIfWindows
     @skipIf(oslist=["linux"], archs=["arm$"])  # Always times out on buildbot
@@ -97,12 +72,7 @@ class TestDAP_restart_console(lldbdap_testcase.DAPTestCaseBase):
         [bp_main] = self.set_function_breakpoints(["main"])
 
         self.dap_server.request_configurationDone()
-        stopped_threads = list(self.dap_server.thread_stop_reasons.values())
-        # We should be stopped at the entry point.
-        self.assertEqual(
-            len(stopped_threads), 1, "Expected the main thread to be stopped on entry."
-        )
-        self.assertEqual(stopped_threads[0]["reason"], "entry")
+        self.verify_stop_on_entry()
 
         # Then, if we continue, we should hit the breakpoint at main.
         self.dap_server.request_continue()
@@ -111,12 +81,7 @@ class TestDAP_restart_console(lldbdap_testcase.DAPTestCaseBase):
         # Restart and check that we still get a stopped event before reaching
         # main.
         self.dap_server.request_restart()
-        stopped_threads = list(self.dap_server.thread_stop_reasons.values())
-        # We should be stopped at the entry point.
-        self.assertEqual(
-            len(stopped_threads), 1, "Expected the main thread to be stopped on entry."
-        )
-        self.assertEqual(stopped_threads[0]["reason"], "entry")
+        self.verify_stop_on_entry()
 
         # continue to main
         self.dap_server.request_continue()

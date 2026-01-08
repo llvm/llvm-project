@@ -11,138 +11,145 @@
 // <optional>
 
 // template <class... Args>
-//   constexpr explicit optional(in_place_t, Args&&... args);
+//   constexpr explicit optional(in_place_t, Args&&... args);   // only for the primary template
+// template <class Arg>
+//   constexpr explicit optional(in_place_t, Arg arg);          // since C++26, only for optional<T&>
 
+#include <cassert>
 #include <optional>
 #include <type_traits>
-#include <cassert>
 
 #include "test_macros.h"
 
-using std::optional;
-using std::in_place_t;
 using std::in_place;
+using std::in_place_t;
+using std::optional;
 
-class X
-{
-    int i_;
-    int j_ = 0;
+class X {
+  int i_;
+  int j_ = 0;
+
 public:
-    X() : i_(0) {}
-    X(int i) : i_(i) {}
-    X(int i, int j) : i_(i), j_(j) {}
+  X() : i_(0) {}
+  X(int i) : i_(i) {}
+  X(int i, int j) : i_(i), j_(j) {}
 
-    ~X() {}
+  ~X() {}
 
-    friend bool operator==(const X& x, const X& y)
-        {return x.i_ == y.i_ && x.j_ == y.j_;}
+  friend bool operator==(const X& x, const X& y) { return x.i_ == y.i_ && x.j_ == y.j_; }
 };
 
-class Y
-{
-    int i_;
-    int j_ = 0;
-public:
-    constexpr Y() : i_(0) {}
-    constexpr Y(int i) : i_(i) {}
-    constexpr Y(int i, int j) : i_(i), j_(j) {}
+class Y {
+  int i_;
+  int j_ = 0;
 
-    friend constexpr bool operator==(const Y& x, const Y& y)
-        {return x.i_ == y.i_ && x.j_ == y.j_;}
+public:
+  constexpr Y() : i_(0) {}
+  constexpr Y(int i) : i_(i) {}
+  constexpr Y(int i, int j) : i_(i), j_(j) {}
+
+  friend constexpr bool operator==(const Y& x, const Y& y) { return x.i_ == y.i_ && x.j_ == y.j_; }
 };
 
-class Z
-{
+class Z {
 public:
-    Z(int) {TEST_THROW(6);}
+  Z(int) { TEST_THROW(6); }
 };
 
+#if TEST_STD_VER >= 26
+static_assert(!std::is_constructible_v<optional<const int&>, in_place_t>);
+static_assert(std::is_constructible_v<optional<const int&>, in_place_t, int&>);
+static_assert(std::is_constructible_v<optional<const int&>, in_place_t, const int&>);
+static_assert(!std::is_constructible_v<optional<const int&>, in_place_t, int>);
+static_assert(!std::is_constructible_v<optional<const int&>, in_place_t, const int>);
+static_assert(!std::is_constructible_v<optional<const int&>, in_place_t, long&>);
+static_assert(!std::is_constructible_v<optional<const int&>, in_place_t, const long&>);
 
-int main(int, char**)
-{
-    {
-        constexpr optional<int> opt(in_place, 5);
-        static_assert(static_cast<bool>(opt) == true, "");
-        static_assert(*opt == 5, "");
+// Test that initilization in std::optional<std::initializer_list<T>&>{in_place, il} selects the (in_place_t, Arg&&)
+// constructor.
+// Otherwise, the created optional would store a dangling reference.
+constexpr bool test_ref_initializer_list() {
+  std::initializer_list<int> il{4, 2};
+  optional<std::initializer_list<int>&> opt{in_place, il};
 
-        struct test_constexpr_ctor
-            : public optional<int>
-        {
-            constexpr test_constexpr_ctor(in_place_t, int i)
-                : optional<int>(in_place, i) {}
-        };
+  auto il2 = opt.value();
+  assert(il2.begin() == il.begin());
+  assert(il2.size() == il.size());
 
-    }
-    {
-        optional<const int> opt(in_place, 5);
-        assert(*opt == 5);
-    }
-    {
-        const optional<X> opt(in_place);
-        assert(static_cast<bool>(opt) == true);
-        assert(*opt == X());
-    }
-    {
-        const optional<X> opt(in_place, 5);
-        assert(static_cast<bool>(opt) == true);
-        assert(*opt == X(5));
-    }
-    {
-        const optional<X> opt(in_place, 5, 4);
-        assert(static_cast<bool>(opt) == true);
-        assert(*opt == X(5, 4));
-    }
-    {
-        constexpr optional<Y> opt(in_place);
-        static_assert(static_cast<bool>(opt) == true, "");
-        static_assert(*opt == Y(), "");
+  return true;
+}
+#endif
 
-        struct test_constexpr_ctor
-            : public optional<Y>
-        {
-            constexpr test_constexpr_ctor(in_place_t)
-                : optional<Y>(in_place) {}
-        };
+int main(int, char**) {
+  {
+    constexpr optional<int> opt(in_place, 5);
+    static_assert(static_cast<bool>(opt) == true, "");
+    static_assert(*opt == 5, "");
 
-    }
-    {
-        constexpr optional<Y> opt(in_place, 5);
-        static_assert(static_cast<bool>(opt) == true, "");
-        static_assert(*opt == Y(5), "");
+    struct test_constexpr_ctor : public optional<int> {
+      constexpr test_constexpr_ctor(in_place_t, int i) : optional<int>(in_place, i) {}
+    };
+  }
+  {
+    optional<const int> opt(in_place, 5);
+    assert(*opt == 5);
+  }
+  {
+    const optional<X> opt(in_place);
+    assert(static_cast<bool>(opt) == true);
+    assert(*opt == X());
+  }
+  {
+    const optional<X> opt(in_place, 5);
+    assert(static_cast<bool>(opt) == true);
+    assert(*opt == X(5));
+  }
+  {
+    const optional<X> opt(in_place, 5, 4);
+    assert(static_cast<bool>(opt) == true);
+    assert(*opt == X(5, 4));
+  }
+  {
+    constexpr optional<Y> opt(in_place);
+    static_assert(static_cast<bool>(opt) == true, "");
+    static_assert(*opt == Y(), "");
 
-        struct test_constexpr_ctor
-            : public optional<Y>
-        {
-            constexpr test_constexpr_ctor(in_place_t, int i)
-                : optional<Y>(in_place, i) {}
-        };
+    struct test_constexpr_ctor : public optional<Y> {
+      constexpr test_constexpr_ctor(in_place_t) : optional<Y>(in_place) {}
+    };
+  }
+  {
+    constexpr optional<Y> opt(in_place, 5);
+    static_assert(static_cast<bool>(opt) == true, "");
+    static_assert(*opt == Y(5), "");
 
-    }
-    {
-        constexpr optional<Y> opt(in_place, 5, 4);
-        static_assert(static_cast<bool>(opt) == true, "");
-        static_assert(*opt == Y(5, 4), "");
+    struct test_constexpr_ctor : public optional<Y> {
+      constexpr test_constexpr_ctor(in_place_t, int i) : optional<Y>(in_place, i) {}
+    };
+  }
+  {
+    constexpr optional<Y> opt(in_place, 5, 4);
+    static_assert(static_cast<bool>(opt) == true, "");
+    static_assert(*opt == Y(5, 4), "");
 
-        struct test_constexpr_ctor
-            : public optional<Y>
-        {
-            constexpr test_constexpr_ctor(in_place_t, int i, int j)
-                : optional<Y>(in_place, i, j) {}
-        };
-
-    }
+    struct test_constexpr_ctor : public optional<Y> {
+      constexpr test_constexpr_ctor(in_place_t, int i, int j) : optional<Y>(in_place, i, j) {}
+    };
+  }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    {
-        try
-        {
-            const optional<Z> opt(in_place, 1);
-            assert(false);
-        }
-        catch (int i)
-        {
-            assert(i == 6);
-        }
+  {
+    try {
+      const optional<Z> opt(in_place, 1);
+      assert(false);
+    } catch (int i) {
+      assert(i == 6);
     }
+  }
+#endif
+
+#if TEST_STD_VER >= 26
+  test_ref_initializer_list();
+  static_assert(test_ref_initializer_list());
 #endif
 
   return 0;

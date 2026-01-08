@@ -572,7 +572,7 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
       if (Function.getBinaryContext().isAArch64()) {
         // Support for pointer authentication:
         // We need to annotate instructions that modify the RA State, to work
-        // out the state of each instruction in MarkRAStates Pass.
+        // out the state of each instruction in PointerAuthCFIAnalyzer Pass.
         if (Offset != 0)
           Function.setInstModifiesRAState(DW_CFA_remember_state, Offset);
       }
@@ -583,7 +583,7 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
       if (Function.getBinaryContext().isAArch64()) {
         // Support for pointer authentication:
         // We need to annotate instructions that modify the RA State, to work
-        // out the state of each instruction in MarkRAStates Pass.
+        // out the state of each instruction in PointerAuthCFIAnalyzer Pass.
         if (Offset != 0)
           Function.setInstModifiesRAState(DW_CFA_restore_state, Offset);
       }
@@ -652,7 +652,7 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
         // BasicBlocks, which changes during optimizations. Instead of adding
         // OpNegateRAState CFIs, an annotation is added to the instruction, to
         // mark that the instruction modifies the RA State. The actual state for
-        // instructions are worked out in MarkRAStates based on these
+        // instructions are worked out in PointerAuthCFIAnalyzer based on these
         // annotations.
         if (Offset != 0)
           Function.setInstModifiesRAState(DW_CFA_AARCH64_negate_ra_state,
@@ -660,7 +660,7 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
         else
           // We cannot Annotate an instruction at Offset == 0.
           // Instead, we save the initial (Signed) state, and push it to
-          // MarkRAStates' RAStateStack.
+          // PointerAuthCFIAnalyzer's RAStateStack.
           Function.setInitialRAState(true);
         break;
       }

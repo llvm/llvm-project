@@ -244,7 +244,7 @@ Build the LLVM Suite:
 * The Fibonacci project is a sample program that uses the JIT. Modify the
   project's debugging properties to provide a numeric command-line argument
   or run it from the command line.  The program will print the
-  corresponding fibonacci value.
+  corresponding Fibonacci value.
 
 
 Links

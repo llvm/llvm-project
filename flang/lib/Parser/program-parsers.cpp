@@ -201,6 +201,9 @@ TYPE_CONTEXT_PARSER("specification construct"_en_US,
         construct<SpecificationConstruct>(
             indirect(openaccDeclarativeConstruct)),
         construct<SpecificationConstruct>(indirect(openmpDeclarativeConstruct)),
+        construct<SpecificationConstruct>(
+            indirect(openmpMisplacedEndDirective)),
+        construct<SpecificationConstruct>(indirect(openmpInvalidDirective)),
         construct<SpecificationConstruct>(indirect(compilerDirective))))
 
 // R513 other-specification-stmt ->

@@ -71,6 +71,9 @@ def TernaryBitwiseINTEL : BuiltinGroup;
 def Block2DLoadStore : BuiltinGroup;
 def Pipe : BuiltinGroup;
 def PredicatedLoadStore : BuiltinGroup;
+def ArbitraryPrecisionFixedPoint : BuiltinGroup;
+def BlockingPipes : BuiltinGroup;
+def ImageChannelDataTypes : BuiltinGroup;
 
 //===----------------------------------------------------------------------===//
 // Class defining a demangled builtin record. The information in the record
@@ -1174,7 +1177,24 @@ defm : DemangledNativeBuiltin<"clock_read_sub_group", OpenCL_std, KernelClock, 0
 defm : DemangledNativeBuiltin<"clock_read_hilo_device", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
 defm : DemangledNativeBuiltin<"clock_read_hilo_work_group", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
 defm : DemangledNativeBuiltin<"clock_read_hilo_sub_group", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
+
+//SPV_ALTERA_blocking_pipes
+defm : DemangledNativeBuiltin<"__spirv_WritePipeBlockingINTEL", OpenCL_std, BlockingPipes, 0, 0, OpWritePipeBlockingALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ReadPipeBlockingINTEL", OpenCL_std, BlockingPipes, 0, 0, OpReadPipeBlockingALTERA>;
 defm : DemangledNativeBuiltin<"__spirv_ReadClockKHR", OpenCL_std, KernelClock, 1, 1, OpReadClockKHR>;
+
+//SPV_ALTERA_arbitrary_precision_fixed_point
+defm : DemangledNativeBuiltin<"__spirv_FixedSqrtINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedSqrtALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedRecipINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedRecipALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedRsqrtINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedRsqrtALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedSinINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedSinALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedCosINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedCosALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedSinCosINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedSinCosALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedSinPiINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedSinPiALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedCosPiINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedCosPiALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedSinCosPiINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedSinCosPiALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedLogINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedLogALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedExpINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedExpALTERA>;
 
 //===----------------------------------------------------------------------===//
 // Class defining an atomic instruction on floating-point numbers.
@@ -1475,6 +1495,7 @@ defm : DemangledImageQueryBuiltin<"get_image_array_size", OpenCL_std, 3>;
 
 defm : DemangledNativeBuiltin<"get_image_num_samples", OpenCL_std, ImageMiscQuery, 1, 1, OpImageQuerySamples>;
 defm : DemangledNativeBuiltin<"get_image_num_mip_levels", OpenCL_std, ImageMiscQuery, 1, 1, OpImageQueryLevels>;
+defm : DemangledNativeBuiltin<"get_image_channel_data_type", OpenCL_std, ImageChannelDataTypes, 1, 1, OpImageQueryFormat>;
 
 //===----------------------------------------------------------------------===//
 // Class defining a "convert_destType<_sat><_roundingMode>" call record for

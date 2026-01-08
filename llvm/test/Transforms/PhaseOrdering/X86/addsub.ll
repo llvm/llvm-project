@@ -502,11 +502,9 @@ define void @add_aggregate_store(<2 x float> %a0, <2 x float> %a1, <2 x float> %
 ; PR58139
 define <2 x double> @_mm_complexmult_pd_naive(<2 x double> %a, <2 x double> %b) {
 ; SSE-LABEL: @_mm_complexmult_pd_naive(
-; SSE-NEXT:    [[B1:%.*]] = extractelement <2 x double> [[B:%.*]], i64 1
-; SSE-NEXT:    [[TMP1:%.*]] = fneg double [[B1]]
 ; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[A:%.*]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
-; SSE-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[B]], <2 x double> poison, <2 x i32> <i32 poison, i32 0>
-; SSE-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[TMP1]], i64 0
+; SSE-NEXT:    [[TMP3:%.*]] = fneg <2 x double> [[B:%.*]]
+; SSE-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> [[B]], <2 x i32> <i32 1, i32 2>
 ; SSE-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP2]], [[TMP4]]
 ; SSE-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[A]], <2 x double> poison, <2 x i32> zeroinitializer
 ; SSE-NEXT:    [[TMP7:%.*]] = tail call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP6]], <2 x double> [[B]], <2 x double> [[TMP5]])

@@ -578,10 +578,10 @@ define <2 x i64> @combine_vec_sdiv_by_pow2b_v2i64(<2 x i64> %x) {
 ; CHECK-SD-NEXT:    adrp x8, .LCPI21_1
 ; CHECK-SD-NEXT:    ushl v1.2d, v1.2d, v2.2d
 ; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI21_1]
-; CHECK-SD-NEXT:    adrp x8, .LCPI21_2
+; CHECK-SD-NEXT:    mov x8, #-1 // =0xffffffffffffffff
 ; CHECK-SD-NEXT:    add v1.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    sshl v1.2d, v1.2d, v2.2d
-; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI21_2]
+; CHECK-SD-NEXT:    fmov d2, x8
 ; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-SD-NEXT:    ret
 ;
@@ -613,20 +613,20 @@ define <4 x i64> @combine_vec_sdiv_by_pow2b_v4i64(<4 x i64> %x) {
 ; CHECK-SD-NEXT:    adrp x8, .LCPI22_0
 ; CHECK-SD-NEXT:    cmlt v2.2d, v0.2d, #0
 ; CHECK-SD-NEXT:    ldr q3, [x8, :lo12:.LCPI22_0]
-; CHECK-SD-NEXT:    adrp x8, .LCPI22_3
-; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI22_3]
+; CHECK-SD-NEXT:    adrp x8, .LCPI22_2
+; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI22_2]
 ; CHECK-SD-NEXT:    adrp x8, .LCPI22_1
 ; CHECK-SD-NEXT:    ushl v2.2d, v2.2d, v3.2d
 ; CHECK-SD-NEXT:    cmlt v3.2d, v1.2d, #0
 ; CHECK-SD-NEXT:    add v2.2d, v0.2d, v2.2d
 ; CHECK-SD-NEXT:    ushl v3.2d, v3.2d, v4.2d
 ; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI22_1]
-; CHECK-SD-NEXT:    adrp x8, .LCPI22_2
+; CHECK-SD-NEXT:    mov x8, #-1 // =0xffffffffffffffff
 ; CHECK-SD-NEXT:    sshl v2.2d, v2.2d, v4.2d
-; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI22_2]
+; CHECK-SD-NEXT:    fmov d4, x8
 ; CHECK-SD-NEXT:    add v1.2d, v1.2d, v3.2d
-; CHECK-SD-NEXT:    adrp x8, .LCPI22_4
-; CHECK-SD-NEXT:    ldr q3, [x8, :lo12:.LCPI22_4]
+; CHECK-SD-NEXT:    adrp x8, .LCPI22_3
+; CHECK-SD-NEXT:    ldr q3, [x8, :lo12:.LCPI22_3]
 ; CHECK-SD-NEXT:    bif v0.16b, v2.16b, v4.16b
 ; CHECK-SD-NEXT:    sshl v1.2d, v1.2d, v3.2d
 ; CHECK-SD-NEXT:    ret
@@ -670,26 +670,26 @@ define <8 x i64> @combine_vec_sdiv_by_pow2b_v8i64(<8 x i64> %x) {
 ; CHECK-SD-NEXT:    cmlt v4.2d, v0.2d, #0
 ; CHECK-SD-NEXT:    cmlt v6.2d, v2.2d, #0
 ; CHECK-SD-NEXT:    ldr q5, [x8, :lo12:.LCPI23_0]
-; CHECK-SD-NEXT:    adrp x8, .LCPI23_3
+; CHECK-SD-NEXT:    adrp x8, .LCPI23_2
 ; CHECK-SD-NEXT:    cmlt v7.2d, v3.2d, #0
-; CHECK-SD-NEXT:    ldr q16, [x8, :lo12:.LCPI23_3]
+; CHECK-SD-NEXT:    ldr q16, [x8, :lo12:.LCPI23_2]
 ; CHECK-SD-NEXT:    adrp x8, .LCPI23_1
 ; CHECK-SD-NEXT:    ushl v4.2d, v4.2d, v5.2d
 ; CHECK-SD-NEXT:    ushl v5.2d, v6.2d, v5.2d
 ; CHECK-SD-NEXT:    cmlt v6.2d, v1.2d, #0
 ; CHECK-SD-NEXT:    ldr q17, [x8, :lo12:.LCPI23_1]
 ; CHECK-SD-NEXT:    ushl v7.2d, v7.2d, v16.2d
-; CHECK-SD-NEXT:    adrp x8, .LCPI23_2
+; CHECK-SD-NEXT:    mov x8, #-1 // =0xffffffffffffffff
 ; CHECK-SD-NEXT:    add v4.2d, v0.2d, v4.2d
 ; CHECK-SD-NEXT:    add v5.2d, v2.2d, v5.2d
 ; CHECK-SD-NEXT:    ushl v6.2d, v6.2d, v16.2d
-; CHECK-SD-NEXT:    ldr q16, [x8, :lo12:.LCPI23_2]
-; CHECK-SD-NEXT:    adrp x8, .LCPI23_4
+; CHECK-SD-NEXT:    fmov d16, x8
+; CHECK-SD-NEXT:    adrp x8, .LCPI23_3
 ; CHECK-SD-NEXT:    add v3.2d, v3.2d, v7.2d
 ; CHECK-SD-NEXT:    sshl v4.2d, v4.2d, v17.2d
 ; CHECK-SD-NEXT:    sshl v5.2d, v5.2d, v17.2d
 ; CHECK-SD-NEXT:    add v1.2d, v1.2d, v6.2d
-; CHECK-SD-NEXT:    ldr q6, [x8, :lo12:.LCPI23_4]
+; CHECK-SD-NEXT:    ldr q6, [x8, :lo12:.LCPI23_3]
 ; CHECK-SD-NEXT:    bif v0.16b, v4.16b, v16.16b
 ; CHECK-SD-NEXT:    bif v2.16b, v5.16b, v16.16b
 ; CHECK-SD-NEXT:    sshl v1.2d, v1.2d, v6.2d
@@ -920,13 +920,13 @@ define <4 x i32> @non_splat_minus_one_divisor_2(<4 x i32> %A) {
 ; CHECK-SD-NEXT:    adrp x8, .LCPI27_1
 ; CHECK-SD-NEXT:    ushl v1.4s, v1.4s, v2.4s
 ; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI27_1]
+; CHECK-SD-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECK-SD-NEXT:    dup v3.2s, w8
 ; CHECK-SD-NEXT:    adrp x8, .LCPI27_2
 ; CHECK-SD-NEXT:    add v1.4s, v0.4s, v1.4s
 ; CHECK-SD-NEXT:    sshl v1.4s, v1.4s, v2.4s
 ; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI27_2]
-; CHECK-SD-NEXT:    adrp x8, .LCPI27_3
-; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI27_3]
+; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v3.16b
 ; CHECK-SD-NEXT:    neg v1.4s, v0.4s
 ; CHECK-SD-NEXT:    bit v0.16b, v1.16b, v2.16b
 ; CHECK-SD-NEXT:    ret
@@ -1493,13 +1493,12 @@ define i5 @combine_i5_sdiv_const7(i5 %x) {
 ; CHECK-SD-LABEL: combine_i5_sdiv_const7:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-SD-NEXT:    mov x8, #-56173 // =0xffffffffffff2493
-; CHECK-SD-NEXT:    sbfx x9, x0, #0, #5
-; CHECK-SD-NEXT:    movk x8, #37449, lsl #16
-; CHECK-SD-NEXT:    smull x8, w9, w8
-; CHECK-SD-NEXT:    lsl w9, w0, #27
-; CHECK-SD-NEXT:    lsr x8, x8, #32
-; CHECK-SD-NEXT:    add w8, w8, w9, asr #27
+; CHECK-SD-NEXT:    sbfx x8, x0, #0, #5
+; CHECK-SD-NEXT:    mov x9, #-56173 // =0xffffffffffff2493
+; CHECK-SD-NEXT:    movk x9, #37449, lsl #16
+; CHECK-SD-NEXT:    smull x8, w8, w9
+; CHECK-SD-NEXT:    sbfx w9, w0, #0, #5
+; CHECK-SD-NEXT:    add x8, x9, x8, lsr #32
 ; CHECK-SD-NEXT:    asr w9, w8, #2
 ; CHECK-SD-NEXT:    add w0, w9, w8, lsr #31
 ; CHECK-SD-NEXT:    ret
@@ -1646,10 +1645,10 @@ define i32 @combine_i32_sdiv_const7(i32 %x) {
 ; CHECK-SD-LABEL: combine_i32_sdiv_const7:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    mov w8, #9363 // =0x2493
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    movk w8, #37449, lsl #16
 ; CHECK-SD-NEXT:    smull x8, w0, w8
-; CHECK-SD-NEXT:    lsr x8, x8, #32
-; CHECK-SD-NEXT:    add w8, w8, w0
+; CHECK-SD-NEXT:    add x8, x0, x8, lsr #32
 ; CHECK-SD-NEXT:    asr w9, w8, #2
 ; CHECK-SD-NEXT:    add w0, w9, w8, lsr #31
 ; CHECK-SD-NEXT:    ret
@@ -1657,10 +1656,10 @@ define i32 @combine_i32_sdiv_const7(i32 %x) {
 ; CHECK-GI-LABEL: combine_i32_sdiv_const7:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #9363 // =0x2493
+; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-GI-NEXT:    movk w8, #37449, lsl #16
 ; CHECK-GI-NEXT:    smull x8, w0, w8
-; CHECK-GI-NEXT:    asr x8, x8, #32
-; CHECK-GI-NEXT:    add w8, w8, w0
+; CHECK-GI-NEXT:    add x8, x0, x8, asr #32
 ; CHECK-GI-NEXT:    asr w8, w8, #2
 ; CHECK-GI-NEXT:    add w0, w8, w8, lsr #31
 ; CHECK-GI-NEXT:    ret
@@ -1674,8 +1673,9 @@ define i32 @combine_i32_sdiv_const100(i32 %x) {
 ; CHECK-SD-NEXT:    mov w8, #34079 // =0x851f
 ; CHECK-SD-NEXT:    movk w8, #20971, lsl #16
 ; CHECK-SD-NEXT:    smull x8, w0, w8
-; CHECK-SD-NEXT:    asr x8, x8, #37
-; CHECK-SD-NEXT:    add w0, w8, w8, lsr #31
+; CHECK-SD-NEXT:    asr x9, x8, #37
+; CHECK-SD-NEXT:    add x0, x9, x8, lsr #63
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: combine_i32_sdiv_const100:

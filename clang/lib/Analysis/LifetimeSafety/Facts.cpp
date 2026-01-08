@@ -20,7 +20,7 @@ void Fact::dump(llvm::raw_ostream &OS, const LoanManager &,
 void IssueFact::dump(llvm::raw_ostream &OS, const LoanManager &LM,
                      const OriginManager &OM) const {
   OS << "Issue (";
-  LM.getLoan(getLoanID()).dump(OS);
+  LM.getLoan(getLoanID())->dump(OS);
   OS << ", ToOrigin: ";
   OM.dump(getOriginID(), OS);
   OS << ")\n";
@@ -29,31 +29,40 @@ void IssueFact::dump(llvm::raw_ostream &OS, const LoanManager &LM,
 void ExpireFact::dump(llvm::raw_ostream &OS, const LoanManager &LM,
                       const OriginManager &) const {
   OS << "Expire (";
-  LM.getLoan(getLoanID()).dump(OS);
+  LM.getLoan(getLoanID())->dump(OS);
   OS << ")\n";
 }
 
 void OriginFlowFact::dump(llvm::raw_ostream &OS, const LoanManager &,
                           const OriginManager &OM) const {
-  OS << "OriginFlow (Dest: ";
+  OS << "OriginFlow: \n";
+  OS << "\tDest: ";
   OM.dump(getDestOriginID(), OS);
-  OS << ", Src: ";
+  OS << "\n";
+  OS << "\tSrc:  ";
   OM.dump(getSrcOriginID(), OS);
   OS << (getKillDest() ? "" : ", Merge");
-  OS << ")\n";
+  OS << "\n";
 }
 
-void ReturnOfOriginFact::dump(llvm::raw_ostream &OS, const LoanManager &,
-                              const OriginManager &OM) const {
-  OS << "ReturnOfOrigin (";
-  OM.dump(getReturnedOriginID(), OS);
+void OriginEscapesFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                             const OriginManager &OM) const {
+  OS << "OriginEscapes (";
+  OM.dump(getEscapedOriginID(), OS);
   OS << ")\n";
 }
 
 void UseFact::dump(llvm::raw_ostream &OS, const LoanManager &,
                    const OriginManager &OM) const {
   OS << "Use (";
-  OM.dump(getUsedOrigin(OM), OS);
+  size_t NumUsedOrigins = getUsedOrigins()->getLength();
+  size_t I = 0;
+  for (const OriginList *Cur = getUsedOrigins(); Cur;
+       Cur = Cur->peelOuterOrigin(), ++I) {
+    OM.dump(Cur->getOuterOriginID(), OS);
+    if (I < NumUsedOrigins - 1)
+      OS << ", ";
+  }
   OS << ", " << (isWritten() ? "Write" : "Read") << ")\n";
 }
 
@@ -64,12 +73,11 @@ void TestPointFact::dump(llvm::raw_ostream &OS, const LoanManager &,
 
 llvm::StringMap<ProgramPoint> FactManager::getTestPoints() const {
   llvm::StringMap<ProgramPoint> AnnotationToPointMap;
-  for (const CFGBlock *Block : BlockToFactsMap.keys()) {
-    for (const Fact *F : getFacts(Block)) {
+  for (const auto &BlockFacts : BlockToFacts) {
+    for (const Fact *F : BlockFacts) {
       if (const auto *TPF = F->getAs<TestPointFact>()) {
         StringRef PointName = TPF->getAnnotation();
-        assert(AnnotationToPointMap.find(PointName) ==
-                   AnnotationToPointMap.end() &&
+        assert(!AnnotationToPointMap.contains(PointName) &&
                "more than one test points with the same name");
         AnnotationToPointMap[PointName] = F;
       }
@@ -88,15 +96,22 @@ void FactManager::dump(const CFG &Cfg, AnalysisDeclContext &AC) const {
   // Print blocks in the order as they appear in code for a stable ordering.
   for (const CFGBlock *B : *AC.getAnalysis<PostOrderCFGView>()) {
     llvm::dbgs() << "  Block B" << B->getBlockID() << ":\n";
-    auto It = BlockToFactsMap.find(B);
-    if (It != BlockToFactsMap.end()) {
-      for (const Fact *F : It->second) {
-        llvm::dbgs() << "    ";
-        F->dump(llvm::dbgs(), LoanMgr, OriginMgr);
-      }
+    for (const Fact *F : getFacts(B)) {
+      llvm::dbgs() << "    ";
+      F->dump(llvm::dbgs(), LoanMgr, OriginMgr);
     }
     llvm::dbgs() << "  End of Block\n";
   }
+}
+
+llvm::ArrayRef<const Fact *>
+FactManager::getBlockContaining(ProgramPoint P) const {
+  for (const auto &BlockToFactsVec : BlockToFacts) {
+    for (const Fact *F : BlockToFactsVec)
+      if (F == P)
+        return BlockToFactsVec;
+  }
+  return {};
 }
 
 } // namespace clang::lifetimes::internal

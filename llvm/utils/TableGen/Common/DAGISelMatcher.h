@@ -86,7 +86,6 @@ public:
 
     // Node creation/emisssion.
     EmitInteger,          // Create a TargetConstant
-    EmitStringInteger,    // Create a TargetConstant from a string.
     EmitRegister,         // Create a register.
     EmitConvertToTarget,  // Convert a imm/fpimm to target imm/fpimm
     EmitMergeInputChains, // Merge together a chains for an input.
@@ -105,7 +104,7 @@ protected:
   Matcher(KindTy K) : Kind(K) {}
 
 public:
-  virtual ~Matcher() {}
+  virtual ~Matcher() = default;
 
   unsigned getSize() const { return Size; }
   void setSize(unsigned sz) { Size = sz; }
@@ -517,14 +516,14 @@ private:
 /// CheckTypeMatcher - This checks to see if the current node has the
 /// specified type at the specified result, if not it fails to match.
 class CheckTypeMatcher : public Matcher {
-  MVT::SimpleValueType Type;
+  MVT Type;
   unsigned ResNo;
 
 public:
-  CheckTypeMatcher(MVT::SimpleValueType type, unsigned resno)
+  CheckTypeMatcher(MVT type, unsigned resno)
       : Matcher(CheckType), Type(type), ResNo(resno) {}
 
-  MVT::SimpleValueType getType() const { return Type; }
+  MVT getType() const { return Type; }
   unsigned getResNo() const { return ResNo; }
 
   static bool classof(const Matcher *N) { return N->getKind() == CheckType; }
@@ -542,11 +541,10 @@ private:
 /// then the match fails.  This is semantically equivalent to a Scope node where
 /// every child does a CheckType, but is much faster.
 class SwitchTypeMatcher : public Matcher {
-  SmallVector<std::pair<MVT::SimpleValueType, Matcher *>, 8> Cases;
+  SmallVector<std::pair<MVT, Matcher *>, 8> Cases;
 
 public:
-  SwitchTypeMatcher(
-      SmallVectorImpl<std::pair<MVT::SimpleValueType, Matcher *>> &&cases)
+  SwitchTypeMatcher(SmallVectorImpl<std::pair<MVT, Matcher *>> &&cases)
       : Matcher(SwitchType), Cases(std::move(cases)) {}
   ~SwitchTypeMatcher() override;
 
@@ -554,7 +552,7 @@ public:
 
   unsigned getNumCases() const { return Cases.size(); }
 
-  MVT::SimpleValueType getCaseType(unsigned i) const { return Cases[i].first; }
+  MVT getCaseType(unsigned i) const { return Cases[i].first; }
   Matcher *getCaseMatcher(unsigned i) { return Cases[i].second; }
   const Matcher *getCaseMatcher(unsigned i) const { return Cases[i].second; }
 
@@ -567,14 +565,14 @@ private:
 /// specified type, if not it fails to match.
 class CheckChildTypeMatcher : public Matcher {
   unsigned ChildNo;
-  MVT::SimpleValueType Type;
+  MVT Type;
 
 public:
-  CheckChildTypeMatcher(unsigned childno, MVT::SimpleValueType type)
+  CheckChildTypeMatcher(unsigned childno, MVT type)
       : Matcher(CheckChildType), ChildNo(childno), Type(type) {}
 
   unsigned getChildNo() const { return ChildNo; }
-  MVT::SimpleValueType getType() const { return Type; }
+  MVT getType() const { return Type; }
 
   static bool classof(const Matcher *N) {
     return N->getKind() == CheckChildType;
@@ -684,13 +682,12 @@ private:
 /// CheckValueTypeMatcher - This checks to see if the current node is a
 /// VTSDNode with the specified type, if not it fails to match.
 class CheckValueTypeMatcher : public Matcher {
-  MVT::SimpleValueType VT;
+  MVT VT;
 
 public:
-  CheckValueTypeMatcher(MVT::SimpleValueType SimpleVT)
-      : Matcher(CheckValueType), VT(SimpleVT) {}
+  CheckValueTypeMatcher(MVT SimpleVT) : Matcher(CheckValueType), VT(SimpleVT) {}
 
-  MVT::SimpleValueType getVT() const { return VT; }
+  MVT getVT() const { return VT; }
 
   static bool classof(const Matcher *N) {
     return N->getKind() == CheckValueType;
@@ -831,19 +828,25 @@ private:
 
 /// EmitIntegerMatcher - This creates a new TargetConstant.
 class EmitIntegerMatcher : public Matcher {
+  // Optional string to give the value a symbolic name for readability.
+  std::string Str;
   int64_t Val;
-  MVT::SimpleValueType VT;
+  MVT VT;
 
   unsigned ResultNo;
 
 public:
-  EmitIntegerMatcher(int64_t val, MVT::SimpleValueType vt, unsigned resultNo)
+  EmitIntegerMatcher(int64_t val, MVT vt, unsigned resultNo)
       : Matcher(EmitInteger),
         Val(SignExtend64(val, MVT(vt).getFixedSizeInBits())), VT(vt),
         ResultNo(resultNo) {}
+  EmitIntegerMatcher(const std::string &str, int64_t val, MVT vt,
+                     unsigned resultNo)
+      : Matcher(EmitInteger), Str(str), Val(val), VT(vt), ResultNo(resultNo) {}
 
+  const std::string &getString() const { return Str; }
   int64_t getValue() const { return Val; }
-  MVT::SimpleValueType getVT() const { return VT; }
+  MVT getVT() const { return VT; }
   unsigned getResultNo() const { return ResultNo; }
 
   static bool classof(const Matcher *N) { return N->getKind() == EmitInteger; }
@@ -852,36 +855,8 @@ private:
   void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<EmitIntegerMatcher>(M)->Val == Val &&
-           cast<EmitIntegerMatcher>(M)->VT == VT;
-  }
-};
-
-/// EmitStringIntegerMatcher - A target constant whose value is represented
-/// by a string.
-class EmitStringIntegerMatcher : public Matcher {
-  std::string Val;
-  MVT::SimpleValueType VT;
-
-  unsigned ResultNo;
-
-public:
-  EmitStringIntegerMatcher(const std::string &val, MVT::SimpleValueType vt,
-                           unsigned resultNo)
-      : Matcher(EmitStringInteger), Val(val), VT(vt), ResultNo(resultNo) {}
-
-  const std::string &getValue() const { return Val; }
-  MVT::SimpleValueType getVT() const { return VT; }
-  unsigned getResultNo() const { return ResultNo; }
-
-  static bool classof(const Matcher *N) {
-    return N->getKind() == EmitStringInteger;
-  }
-
-private:
-  void printImpl(raw_ostream &OS, indent Indent) const override;
-  bool isEqualImpl(const Matcher *M) const override {
-    return cast<EmitStringIntegerMatcher>(M)->Val == Val &&
-           cast<EmitStringIntegerMatcher>(M)->VT == VT;
+           cast<EmitIntegerMatcher>(M)->VT == VT &&
+           cast<EmitIntegerMatcher>(M)->Str == Str;
   }
 };
 
@@ -890,17 +865,16 @@ class EmitRegisterMatcher : public Matcher {
   /// Reg - The def for the register that we're emitting.  If this is null, then
   /// this is a reference to zero_reg.
   const CodeGenRegister *Reg;
-  MVT::SimpleValueType VT;
+  MVT VT;
 
   unsigned ResultNo;
 
 public:
-  EmitRegisterMatcher(const CodeGenRegister *reg, MVT::SimpleValueType vt,
-                      unsigned resultNo)
+  EmitRegisterMatcher(const CodeGenRegister *reg, MVT vt, unsigned resultNo)
       : Matcher(EmitRegister), Reg(reg), VT(vt), ResultNo(resultNo) {}
 
   const CodeGenRegister *getReg() const { return Reg; }
-  MVT::SimpleValueType getVT() const { return VT; }
+  MVT getVT() const { return VT; }
   unsigned getResultNo() const { return ResultNo; }
 
   static bool classof(const Matcher *N) { return N->getKind() == EmitRegister; }
@@ -1028,7 +1002,7 @@ private:
 /// MorphNodeTo.
 class EmitNodeMatcherCommon : public Matcher {
   const CodeGenInstruction &CGI;
-  const SmallVector<MVT::SimpleValueType, 3> VTs;
+  const SmallVector<MVT, 3> VTs;
   const SmallVector<unsigned, 6> Operands;
   bool HasChain, HasInGlue, HasOutGlue, HasMemRefs;
 
@@ -1038,8 +1012,7 @@ class EmitNodeMatcherCommon : public Matcher {
   int NumFixedArityOperands;
 
 public:
-  EmitNodeMatcherCommon(const CodeGenInstruction &cgi,
-                        ArrayRef<MVT::SimpleValueType> vts,
+  EmitNodeMatcherCommon(const CodeGenInstruction &cgi, ArrayRef<MVT> vts,
                         ArrayRef<unsigned> operands, bool hasChain,
                         bool hasInGlue, bool hasOutGlue, bool hasmemrefs,
                         int numfixedarityoperands, bool isMorphNodeTo)
@@ -1051,7 +1024,7 @@ public:
   const CodeGenInstruction &getInstruction() const { return CGI; }
 
   unsigned getNumVTs() const { return VTs.size(); }
-  MVT::SimpleValueType getVT(unsigned i) const {
+  MVT getVT(unsigned i) const {
     assert(i < VTs.size());
     return VTs[i];
   }
@@ -1062,7 +1035,7 @@ public:
     return Operands[i];
   }
 
-  const SmallVectorImpl<MVT::SimpleValueType> &getVTList() const { return VTs; }
+  const SmallVectorImpl<MVT> &getVTList() const { return VTs; }
   const SmallVectorImpl<unsigned> &getOperandList() const { return Operands; }
 
   bool hasChain() const { return HasChain; }
@@ -1086,8 +1059,7 @@ class EmitNodeMatcher : public EmitNodeMatcherCommon {
   unsigned FirstResultSlot;
 
 public:
-  EmitNodeMatcher(const CodeGenInstruction &cgi,
-                  ArrayRef<MVT::SimpleValueType> vts,
+  EmitNodeMatcher(const CodeGenInstruction &cgi, ArrayRef<MVT> vts,
                   ArrayRef<unsigned> operands, bool hasChain, bool hasInGlue,
                   bool hasOutGlue, bool hasmemrefs, int numfixedarityoperands,
                   unsigned firstresultslot)
@@ -1106,8 +1078,7 @@ class MorphNodeToMatcher : public EmitNodeMatcherCommon {
   const PatternToMatch &Pattern;
 
 public:
-  MorphNodeToMatcher(const CodeGenInstruction &cgi,
-                     ArrayRef<MVT::SimpleValueType> vts,
+  MorphNodeToMatcher(const CodeGenInstruction &cgi, ArrayRef<MVT> vts,
                      ArrayRef<unsigned> operands, bool hasChain, bool hasInGlue,
                      bool hasOutGlue, bool hasmemrefs,
                      int numfixedarityoperands, const PatternToMatch &pattern)

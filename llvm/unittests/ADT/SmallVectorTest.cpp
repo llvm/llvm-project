@@ -159,7 +159,7 @@ int Constructable::numCopyAssignmentCalls;
 int Constructable::numMoveAssignmentCalls;
 
 struct NonCopyable {
-  NonCopyable() {}
+  NonCopyable() = default;
   NonCopyable(NonCopyable &&) {}
   NonCopyable &operator=(NonCopyable &&) { return *this; }
 private:
@@ -226,13 +226,10 @@ protected:
   VectorT otherVector;
 };
 
-
-typedef ::testing::Types<SmallVector<Constructable, 0>,
-                         SmallVector<Constructable, 1>,
-                         SmallVector<Constructable, 2>,
-                         SmallVector<Constructable, 4>,
-                         SmallVector<Constructable, 5>
-                         > SmallVectorTestTypes;
+using SmallVectorTestTypes = ::testing::Types<
+    SmallVector<Constructable, 0>, SmallVector<Constructable, 1>,
+    SmallVector<Constructable, 2>, SmallVector<Constructable, 4>,
+    SmallVector<Constructable, 5>>;
 TYPED_TEST_SUITE(SmallVectorTest, SmallVectorTestTypes, );
 
 // Constructor test.
@@ -537,11 +534,11 @@ TYPED_TEST(SmallVectorTest, AppendNonIterTest) {
 }
 
 struct output_iterator {
-  typedef std::output_iterator_tag iterator_category;
-  typedef int value_type;
-  typedef int difference_type;
-  typedef value_type *pointer;
-  typedef value_type &reference;
+  using iterator_category = std::output_iterator_tag;
+  using value_type = int;
+  using difference_type = int;
+  using pointer = value_type *;
+  using reference = value_type &;
   operator int() { return 2; }
   operator Constructable() { return 7; }
 };
@@ -896,7 +893,7 @@ protected:
   VectorT2 otherVector;
 };
 
-typedef ::testing::Types<
+using DualSmallVectorTestTypes = ::testing::Types<
     // Small mode -> Small mode.
     std::pair<SmallVector<Constructable, 4>, SmallVector<Constructable, 4>>,
     // Small mode -> Big mode.
@@ -904,8 +901,7 @@ typedef ::testing::Types<
     // Big mode -> Small mode.
     std::pair<SmallVector<Constructable, 2>, SmallVector<Constructable, 4>>,
     // Big mode -> Big mode.
-    std::pair<SmallVector<Constructable, 2>, SmallVector<Constructable, 2>>
-  > DualSmallVectorTestTypes;
+    std::pair<SmallVector<Constructable, 2>, SmallVector<Constructable, 2>>>;
 
 TYPED_TEST_SUITE(DualSmallVectorsTest, DualSmallVectorTestTypes, );
 

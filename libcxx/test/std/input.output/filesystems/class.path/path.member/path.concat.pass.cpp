@@ -39,6 +39,7 @@
 #include <string>
 #include <string_view>
 #include <cassert>
+#include <utility>
 
 // On Windows, charset conversions cause allocations in the path class in
 // cases where no allocations are done on other platforms.

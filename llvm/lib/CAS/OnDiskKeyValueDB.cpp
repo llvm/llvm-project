@@ -20,6 +20,7 @@
 #include "llvm/CAS/OnDiskKeyValueDB.h"
 #include "OnDiskCommon.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/CAS/UnifiedOnDiskCache.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Errc.h"
@@ -53,15 +54,21 @@ Expected<std::optional<ArrayRef<char>>>
 OnDiskKeyValueDB::get(ArrayRef<uint8_t> Key) {
   // Check the result cache.
   OnDiskTrieRawHashMap::ConstOnDiskPtr ActionP = Cache.find(Key);
-  if (!ActionP)
+  if (ActionP) {
+    assert(isAddrAligned(Align(8), ActionP->Data.data()));
+    return ActionP->Data;
+  }
+  if (!UnifiedCache || !UnifiedCache->UpstreamKVDB)
     return std::nullopt;
-  assert(isAddrAligned(Align(8), ActionP->Data.data()));
-  return ActionP->Data;
+
+  // Try to fault in from upstream.
+  return UnifiedCache->faultInFromUpstreamKV(Key);
 }
 
 Expected<std::unique_ptr<OnDiskKeyValueDB>>
 OnDiskKeyValueDB::open(StringRef Path, StringRef HashName, unsigned KeySize,
-                       StringRef ValueName, size_t ValueSize) {
+                       StringRef ValueName, size_t ValueSize,
+                       UnifiedOnDiskCache *Cache) {
   if (std::error_code EC = sys::fs::create_directories(Path))
     return createFileError(Path, EC);
 
@@ -87,10 +94,14 @@ OnDiskKeyValueDB::open(StringRef Path, StringRef HashName, unsigned KeySize,
     return std::move(E);
 
   return std::unique_ptr<OnDiskKeyValueDB>(
-      new OnDiskKeyValueDB(ValueSize, std::move(*ActionCache)));
+      new OnDiskKeyValueDB(ValueSize, std::move(*ActionCache), Cache));
 }
 
 Error OnDiskKeyValueDB::validate(CheckValueT CheckValue) const {
+  if (UnifiedCache && UnifiedCache->UpstreamKVDB) {
+    if (auto E = UnifiedCache->UpstreamKVDB->validate(CheckValue))
+      return E;
+  }
   return Cache.validate(
       [&](FileOffset Offset,
           OnDiskTrieRawHashMap::ConstValueProxy Record) -> Error {

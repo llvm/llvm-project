@@ -97,6 +97,8 @@ private:
   RISCVProcFamilyEnum RISCVProcFamily = Others;
   RISCVVRGatherCostModelEnum RISCVVRGatherCostModel = Quadratic;
 
+  bool IsLittleEndian = true;
+
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER) \
   bool ATTRIBUTE = DEFAULT;
 #include "RISCVGenSubtargetInfo.inc"
@@ -112,7 +114,6 @@ private:
 
   RISCVFrameLowering FrameLowering;
   RISCVInstrInfo InstrInfo;
-  RISCVRegisterInfo RegInfo;
   RISCVTargetLowering TLInfo;
 
   /// Initializes using the passed in CPU and feature strings so that we can
@@ -140,7 +141,7 @@ public:
   }
   const RISCVInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const RISCVRegisterInfo *getRegisterInfo() const override {
-    return &RegInfo;
+    return &InstrInfo.getRegisterInfo();
   }
   const RISCVTargetLowering *getTargetLowering() const override {
     return &TLInfo;
@@ -187,7 +188,7 @@ public:
   }
 
   bool hasCLZLike() const {
-    return HasStdExtZbb || HasStdExtP || HasVendorXTHeadBb ||
+    return HasStdExtZbb || HasVendorXTHeadBb ||
            (HasVendorXCVbitmanip && !IsRV64);
   }
   bool hasCTZLike() const {
@@ -197,7 +198,7 @@ public:
     return HasStdExtZbb || (HasVendorXCVbitmanip && !IsRV64);
   }
   bool hasREV8Like() const {
-    return HasStdExtZbb || HasStdExtZbkb || HasStdExtP || HasVendorXTHeadBb;
+    return HasStdExtZbb || HasStdExtZbkb || HasVendorXTHeadBb;
   }
 
   bool hasBEXTILike() const { return HasStdExtZbs || HasVendorXTHeadBs; }
@@ -209,7 +210,7 @@ public:
   bool hasConditionalMoveFusion() const {
     // Do we support fusing a branch+mv or branch+c.mv as a conditional move.
     return (hasConditionalCompressedMoveFusion() && hasStdExtZca()) ||
-           hasShortForwardBranchOpt();
+           hasShortForwardBranchIALU();
   }
 
   bool hasShlAdd(int64_t ShAmt) const {
@@ -221,6 +222,7 @@ public:
   }
 
   bool is64Bit() const { return IsRV64; }
+  bool isLittleEndian() const { return IsLittleEndian; }
   MVT getXLenVT() const {
     return is64Bit() ? MVT::i64 : MVT::i32;
   }
@@ -238,6 +240,13 @@ public:
 
     return 0;
   }
+
+  Align getZilsdAlign() const {
+    return Align(enableUnalignedScalarMem() ? 1
+                 : allowZilsd4ByteAlign()   ? 4
+                                            : 8);
+  }
+
   unsigned getELen() const {
     assert(hasVInstructions() && "Expected V extension");
     return hasVInstructionsI64() ? 64 : 32;
@@ -321,6 +330,8 @@ public:
       llvm_unreachable("Unexpected NF");
     }
   }
+
+  bool enablePExtSIMDCodeGen() const;
 
   // Returns VLEN divided by DLEN. Where DLEN is the datapath width of the
   // vector hardware implementation which may be less than VLEN.

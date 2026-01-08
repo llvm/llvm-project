@@ -11,6 +11,7 @@
 #define _LIBCPP___TREE
 
 #include <__algorithm/min.h>
+#include <__algorithm/specialized_algorithms.h>
 #include <__assert>
 #include <__config>
 #include <__fwd/pair.h>
@@ -36,6 +37,7 @@
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/make_transparent.h>
 #include <__type_traits/remove_const.h>
+#include <__type_traits/remove_cvref.h>
 #include <__utility/forward.h>
 #include <__utility/lazy_synth_three_way_comparator.h>
 #include <__utility/move.h>
@@ -656,6 +658,53 @@ struct __generic_container_node_destructor<__tree_node<_Tp, _VoidPtr>, _Alloc> :
 };
 #endif
 
+// Do an in-order traversal of the tree until `__break` returns true. Takes the root node of the tree.
+template <class _Reference, class _Break, class _NodePtr, class _Func, class _Proj>
+#ifndef _LIBCPP_COMPILER_GCC // This function is recursive, so GCC complains about always_inline.
+_LIBCPP_HIDE_FROM_ABI
+#endif
+bool __tree_iterate_from_root(_Break __break, _NodePtr __root, _Func& __func, _Proj& __proj) {
+  if (__root->__left_) {
+    if (std::__tree_iterate_from_root<_Reference>(__break, static_cast<_NodePtr>(__root->__left_), __func, __proj))
+      return true;
+  }
+  if (__break(__root))
+    return true;
+  std::__invoke(__func, std::__invoke(__proj, static_cast<_Reference>(__root->__get_value())));
+  if (__root->__right_)
+    return std::__tree_iterate_from_root<_Reference>(__break, static_cast<_NodePtr>(__root->__right_), __func, __proj);
+  return false;
+}
+
+// Do an in-order traversal of the tree from __first to __last.
+template <class _NodeIter, class _Func, class _Proj>
+_LIBCPP_HIDE_FROM_ABI void
+__tree_iterate_subrange(_NodeIter __first_it, _NodeIter __last_it, _Func& __func, _Proj& __proj) {
+  using _NodePtr   = typename _NodeIter::__node_pointer;
+  using _Reference = typename _NodeIter::reference;
+
+  auto __first = __first_it.__ptr_;
+  auto __last  = __last_it.__ptr_;
+
+  while (true) {
+    if (__first == __last)
+      return;
+    const auto __nfirst = static_cast<_NodePtr>(__first);
+    std::__invoke(__func, std::__invoke(__proj, static_cast<_Reference>(__nfirst->__get_value())));
+    if (__nfirst->__right_) {
+      if (std::__tree_iterate_from_root<_Reference>(
+              [&](_NodePtr __node) -> bool { return __node == __last; },
+              static_cast<_NodePtr>(__nfirst->__right_),
+              __func,
+              __proj))
+        return;
+    }
+    while (!std::__tree_is_left_child(static_cast<_NodePtr>(__first)))
+      __first = static_cast<_NodePtr>(__first)->__parent_;
+    __first = static_cast<_NodePtr>(__first)->__parent_;
+  }
+}
+
 template <class _Tp, class _NodePtr, class _DiffType>
 class __tree_iterator {
   using _NodeTypes _LIBCPP_NODEBUG = __tree_node_types<_NodePtr>;
@@ -715,7 +764,27 @@ private:
   friend class __tree;
   template <class, class, class>
   friend class __tree_const_iterator;
+
+  template <class _NodeIter, class _Func, class _Proj>
+  friend void __tree_iterate_subrange(_NodeIter, _NodeIter, _Func&, _Proj&);
 };
+
+#ifndef _LIBCPP_CXX03_LANG
+// This also handles {multi,}set::iterator, since they're just aliases to __tree::iterator
+template <class _Tp, class _NodePtr, class _DiffType>
+struct __specialized_algorithm<
+    _Algorithm::__for_each,
+    __iterator_pair<__tree_iterator<_Tp, _NodePtr, _DiffType>, __tree_iterator<_Tp, _NodePtr, _DiffType>>> {
+  static const bool __has_algorithm = true;
+
+  using __iterator _LIBCPP_NODEBUG = __tree_iterator<_Tp, _NodePtr, _DiffType>;
+
+  template <class _Func, class _Proj>
+  _LIBCPP_HIDE_FROM_ABI static void operator()(__iterator __first, __iterator __last, _Func& __func, _Proj& __proj) {
+    std::__tree_iterate_subrange(__first, __last, __func, __proj);
+  }
+};
+#endif
 
 template <class _Tp, class _NodePtr, class _DiffType>
 class __tree_const_iterator {
@@ -780,7 +849,27 @@ private:
 
   template <class, class, class>
   friend class __tree;
+
+  template <class _NodeIter, class _Func, class _Proj>
+  friend void __tree_iterate_subrange(_NodeIter, _NodeIter, _Func&, _Proj&);
 };
+
+#ifndef _LIBCPP_CXX03_LANG
+// This also handles {multi,}set::const_iterator, since they're just aliases to __tree::iterator
+template <class _Tp, class _NodePtr, class _DiffType>
+struct __specialized_algorithm<
+    _Algorithm::__for_each,
+    __iterator_pair<__tree_const_iterator<_Tp, _NodePtr, _DiffType>, __tree_const_iterator<_Tp, _NodePtr, _DiffType>>> {
+  static const bool __has_algorithm = true;
+
+  using __iterator _LIBCPP_NODEBUG = __tree_const_iterator<_Tp, _NodePtr, _DiffType>;
+
+  template <class _Func, class _Proj>
+  _LIBCPP_HIDE_FROM_ABI static void operator()(__iterator __first, __iterator __last, _Func& __func, _Proj& __proj) {
+    std::__tree_iterate_subrange(__first, __last, __func, __proj);
+  }
+};
+#endif
 
 template <class _Tp, class _Compare>
 #ifndef _LIBCPP_CXX03_LANG
@@ -817,8 +906,6 @@ public:
 
   using __end_node_t _LIBCPP_NODEBUG       = __tree_end_node<__node_base_pointer>;
   using __end_node_pointer _LIBCPP_NODEBUG = __rebind_pointer_t<__void_pointer, __end_node_t>;
-
-  using __parent_pointer _LIBCPP_NODEBUG = __end_node_pointer; // TODO: Remove this once the uses in <map> are removed
 
   using __node_allocator _LIBCPP_NODEBUG = __rebind_alloc<__alloc_traits, __node>;
   using __node_traits _LIBCPP_NODEBUG    = allocator_traits<__node_allocator>;
@@ -887,11 +974,21 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI __tree(const __tree& __t);
+
+  _LIBCPP_HIDE_FROM_ABI __tree(const __tree& __other, const allocator_type& __alloc)
+      : __begin_node_(__end_node()), __node_alloc_(__alloc), __size_(0), __value_comp_(__other.value_comp()) {
+    if (__other.size() == 0)
+      return;
+
+    *__root_ptr()       = static_cast<__node_base_pointer>(__copy_construct_tree(__other.__root()));
+    __root()->__parent_ = __end_node();
+    __begin_node_       = static_cast<__end_node_pointer>(std::__tree_min(__end_node()->__left_));
+    __size_             = __other.size();
+  }
+
   _LIBCPP_HIDE_FROM_ABI __tree& operator=(const __tree& __t);
   template <class _ForwardIterator>
   _LIBCPP_HIDE_FROM_ABI void __assign_unique(_ForwardIterator __first, _ForwardIterator __last);
-  template <class _InputIterator>
-  _LIBCPP_HIDE_FROM_ABI void __assign_multi(_InputIterator __first, _InputIterator __last);
   _LIBCPP_HIDE_FROM_ABI __tree(__tree&& __t) _NOEXCEPT_(
       is_nothrow_move_constructible<__node_allocator>::value&& is_nothrow_move_constructible<value_compare>::value);
   _LIBCPP_HIDE_FROM_ABI __tree(__tree&& __t, const allocator_type& __a);
@@ -995,27 +1092,6 @@ public:
         std::forward<_Args>(__args)...);
   }
 
-  template <class _ValueT = _Tp, __enable_if_t<__is_tree_value_type_v<_ValueT>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI void
-  __insert_unique_from_orphaned_node(const_iterator __p, __get_node_value_type_t<_Tp>&& __value) {
-    __emplace_hint_unique(__p, const_cast<key_type&&>(__value.first), std::move(__value.second));
-  }
-
-  template <class _ValueT = _Tp, __enable_if_t<!__is_tree_value_type_v<_ValueT>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI void __insert_unique_from_orphaned_node(const_iterator __p, _Tp&& __value) {
-    __emplace_hint_unique(__p, std::move(__value));
-  }
-
-  template <class _ValueT = _Tp, __enable_if_t<__is_tree_value_type_v<_ValueT>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI void __insert_multi_from_orphaned_node(const_iterator __p, value_type&& __value) {
-    __emplace_hint_multi(__p, const_cast<key_type&&>(__value.first), std::move(__value.second));
-  }
-
-  template <class _ValueT = _Tp, __enable_if_t<!__is_tree_value_type_v<_ValueT>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI void __insert_multi_from_orphaned_node(const_iterator __p, _Tp&& __value) {
-    __emplace_hint_multi(__p, std::move(__value));
-  }
-
   template <class _InIter, class _Sent>
   _LIBCPP_HIDE_FROM_ABI void __insert_range_multi(_InIter __first, _Sent __last) {
     if (__first == __last)
@@ -1044,11 +1120,6 @@ public:
       }
     }
   }
-
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __node_assign_unique(const value_type& __v, __node_pointer __dest);
-
-  _LIBCPP_HIDE_FROM_ABI iterator __node_insert_multi(__node_pointer __nd);
-  _LIBCPP_HIDE_FROM_ABI iterator __node_insert_multi(const_iterator __p, __node_pointer __nd);
 
   template <class _InIter, class _Sent>
   _LIBCPP_HIDE_FROM_ABI void __insert_range_unique(_InIter __first, _Sent __last) {
@@ -1320,43 +1391,6 @@ private:
     __lhs = std::forward<_From>(__rhs);
   }
 
-  struct _DetachedTreeCache {
-    _LIBCPP_HIDE_FROM_ABI explicit _DetachedTreeCache(__tree* __t) _NOEXCEPT
-        : __t_(__t),
-          __cache_root_(__detach_from_tree(__t)) {
-      __advance();
-    }
-
-    _LIBCPP_HIDE_FROM_ABI __node_pointer __get() const _NOEXCEPT { return __cache_elem_; }
-
-    _LIBCPP_HIDE_FROM_ABI void __advance() _NOEXCEPT {
-      __cache_elem_ = __cache_root_;
-      if (__cache_root_) {
-        __cache_root_ = __detach_next(__cache_root_);
-      }
-    }
-
-    _LIBCPP_HIDE_FROM_ABI ~_DetachedTreeCache() {
-      __t_->destroy(__cache_elem_);
-      if (__cache_root_) {
-        while (__cache_root_->__parent_ != nullptr)
-          __cache_root_ = static_cast<__node_pointer>(__cache_root_->__parent_);
-        __t_->destroy(__cache_root_);
-      }
-    }
-
-    _DetachedTreeCache(_DetachedTreeCache const&)            = delete;
-    _DetachedTreeCache& operator=(_DetachedTreeCache const&) = delete;
-
-  private:
-    _LIBCPP_HIDE_FROM_ABI static __node_pointer __detach_from_tree(__tree* __t) _NOEXCEPT;
-    _LIBCPP_HIDE_FROM_ABI static __node_pointer __detach_next(__node_pointer) _NOEXCEPT;
-
-    __tree* __t_;
-    __node_pointer __cache_root_;
-    __node_pointer __cache_elem_;
-  };
-
   class __tree_deleter {
     __node_allocator& __alloc_;
 
@@ -1388,19 +1422,19 @@ private:
   // copy the exact structure 1:1. Since this is for copy construction _only_ we know that we get a correct tree. If we
   // didn't get a correct tree, the invariants of __tree are broken and we have a much bigger problem than an improperly
   // balanced tree.
+  template <class _NodeConstructor>
 #ifdef _LIBCPP_COMPILER_CLANG_BASED // FIXME: GCC complains about not being able to always_inline a recursive function
   _LIBCPP_HIDE_FROM_ABI
 #endif
-  __node_pointer
-  __copy_construct_tree(__node_pointer __src) {
+  __node_pointer __construct_from_tree(__node_pointer __src, _NodeConstructor __construct) {
     if (!__src)
       return nullptr;
 
-    __node_holder __new_node = __construct_node(__src->__get_value());
+    __node_holder __new_node = __construct(__src->__get_value());
 
     unique_ptr<__node, __tree_deleter> __left(
-        __copy_construct_tree(static_cast<__node_pointer>(__src->__left_)), __node_alloc_);
-    __node_pointer __right = __copy_construct_tree(static_cast<__node_pointer>(__src->__right_));
+        __construct_from_tree(static_cast<__node_pointer>(__src->__left_), __construct), __node_alloc_);
+    __node_pointer __right = __construct_from_tree(static_cast<__node_pointer>(__src->__right_), __construct);
 
     __node_pointer __new_node_ptr = __new_node.release();
 
@@ -1414,88 +1448,105 @@ private:
     return __new_node_ptr;
   }
 
+  _LIBCPP_HIDE_FROM_ABI __node_pointer __copy_construct_tree(__node_pointer __src) {
+    return __construct_from_tree(__src, [this](const value_type& __val) { return __construct_node(__val); });
+  }
+
+  template <class _ValueT = _Tp, __enable_if_t<__is_tree_value_type_v<_ValueT>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI __node_pointer __move_construct_tree(__node_pointer __src) {
+    return __construct_from_tree(__src, [this](value_type& __val) {
+      return __construct_node(const_cast<key_type&&>(__val.first), std::move(__val.second));
+    });
+  }
+
+  template <class _ValueT = _Tp, __enable_if_t<!__is_tree_value_type_v<_ValueT>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI __node_pointer __move_construct_tree(__node_pointer __src) {
+    return __construct_from_tree(__src, [this](value_type& __val) { return __construct_node(std::move(__val)); });
+  }
+
+  template <class _Assignment, class _ConstructionAlg>
   // This copy assignment will always produce a correct red-black-tree assuming the incoming tree is correct, since our
   // own tree is a red-black-tree and the incoming tree is a red-black-tree. The invariants of a red-black-tree are
   // temporarily not met until all of the incoming red-black tree is copied.
 #ifdef _LIBCPP_COMPILER_CLANG_BASED // FIXME: GCC complains about not being able to always_inline a recursive function
   _LIBCPP_HIDE_FROM_ABI
 #endif
-  __node_pointer
-  __copy_assign_tree(__node_pointer __dest, __node_pointer __src) {
+  __node_pointer __assign_from_tree(
+      __node_pointer __dest, __node_pointer __src, _Assignment __assign, _ConstructionAlg __construct_subtree) {
     if (!__src) {
       destroy(__dest);
       return nullptr;
     }
 
-    __assign_value(__dest->__get_value(), __src->__get_value());
+    __assign(__dest->__get_value(), __src->__get_value());
     __dest->__is_black_ = __src->__is_black_;
 
     // If we already have a left node in the destination tree, reuse it and copy-assign recursively
     if (__dest->__left_) {
-      __dest->__left_ = static_cast<__node_base_pointer>(__copy_assign_tree(
-          static_cast<__node_pointer>(__dest->__left_), static_cast<__node_pointer>(__src->__left_)));
+      __dest->__left_ = static_cast<__node_base_pointer>(__assign_from_tree(
+          static_cast<__node_pointer>(__dest->__left_),
+          static_cast<__node_pointer>(__src->__left_),
+          __assign,
+          __construct_subtree));
 
       // Otherwise, we must create new nodes; copy-construct from here on
     } else if (__src->__left_) {
-      auto __new_left       = __copy_construct_tree(static_cast<__node_pointer>(__src->__left_));
+      auto __new_left       = __construct_subtree(static_cast<__node_pointer>(__src->__left_));
       __dest->__left_       = static_cast<__node_base_pointer>(__new_left);
       __new_left->__parent_ = static_cast<__end_node_pointer>(__dest);
     }
 
     // Identical to the left case above, just for the right nodes
     if (__dest->__right_) {
-      __dest->__right_ = static_cast<__node_base_pointer>(__copy_assign_tree(
-          static_cast<__node_pointer>(__dest->__right_), static_cast<__node_pointer>(__src->__right_)));
+      __dest->__right_ = static_cast<__node_base_pointer>(__assign_from_tree(
+          static_cast<__node_pointer>(__dest->__right_),
+          static_cast<__node_pointer>(__src->__right_),
+          __assign,
+          __construct_subtree));
     } else if (__src->__right_) {
-      auto __new_right       = __copy_construct_tree(static_cast<__node_pointer>(__src->__right_));
+      auto __new_right       = __construct_subtree(static_cast<__node_pointer>(__src->__right_));
       __dest->__right_       = static_cast<__node_base_pointer>(__new_right);
       __new_right->__parent_ = static_cast<__end_node_pointer>(__dest);
     }
 
     return __dest;
   }
+
+  _LIBCPP_HIDE_FROM_ABI __node_pointer __copy_assign_tree(__node_pointer __dest, __node_pointer __src) {
+    return __assign_from_tree(
+        __dest,
+        __src,
+        [](value_type& __lhs, const value_type& __rhs) { __assign_value(__lhs, __rhs); },
+        [this](__node_pointer __nd) { return __copy_construct_tree(__nd); });
+  }
+
+  _LIBCPP_HIDE_FROM_ABI __node_pointer __move_assign_tree(__node_pointer __dest, __node_pointer __src) {
+    return __assign_from_tree(
+        __dest,
+        __src,
+        [](value_type& __lhs, value_type& __rhs) { __assign_value(__lhs, std::move(__rhs)); },
+        [this](__node_pointer __nd) { return __move_construct_tree(__nd); });
+  }
+
+  friend struct __specialized_algorithm<_Algorithm::__for_each, __single_range<__tree> >;
 };
 
-// Precondition:  __size_ != 0
+#if _LIBCPP_STD_VER >= 14
 template <class _Tp, class _Compare, class _Allocator>
-typename __tree<_Tp, _Compare, _Allocator>::__node_pointer
-__tree<_Tp, _Compare, _Allocator>::_DetachedTreeCache::__detach_from_tree(__tree* __t) _NOEXCEPT {
-  __node_pointer __cache                = static_cast<__node_pointer>(__t->__begin_node_);
-  __t->__begin_node_                    = __t->__end_node();
-  __t->__end_node()->__left_->__parent_ = nullptr;
-  __t->__end_node()->__left_            = nullptr;
-  __t->__size_                          = 0;
-  // __cache->__left_ == nullptr
-  if (__cache->__right_ != nullptr)
-    __cache = static_cast<__node_pointer>(__cache->__right_);
-  // __cache->__left_ == nullptr
-  // __cache->__right_ == nullptr
-  return __cache;
-}
+struct __specialized_algorithm<_Algorithm::__for_each, __single_range<__tree<_Tp, _Compare, _Allocator> > > {
+  static const bool __has_algorithm = true;
 
-// Precondition:  __cache != nullptr
-//    __cache->left_ == nullptr
-//    __cache->right_ == nullptr
-//    This is no longer a red-black tree
-template <class _Tp, class _Compare, class _Allocator>
-typename __tree<_Tp, _Compare, _Allocator>::__node_pointer
-__tree<_Tp, _Compare, _Allocator>::_DetachedTreeCache::__detach_next(__node_pointer __cache) _NOEXCEPT {
-  if (__cache->__parent_ == nullptr)
-    return nullptr;
-  if (std::__tree_is_left_child(static_cast<__node_base_pointer>(__cache))) {
-    __cache->__parent_->__left_ = nullptr;
-    __cache                     = static_cast<__node_pointer>(__cache->__parent_);
-    if (__cache->__right_ == nullptr)
-      return __cache;
-    return static_cast<__node_pointer>(std::__tree_leaf(__cache->__right_));
+  using __node_pointer _LIBCPP_NODEBUG = typename __tree<_Tp, _Compare, _Allocator>::__node_pointer;
+
+  template <class _Tree, class _Func, class _Proj>
+  _LIBCPP_HIDE_FROM_ABI static auto operator()(_Tree&& __range, _Func __func, _Proj __proj) {
+    if (__range.size() != 0)
+      std::__tree_iterate_from_root<__copy_cvref_t<_Tree, typename __remove_cvref_t<_Tree>::value_type>>(
+          [](__node_pointer) { return false; }, __range.__root(), __func, __proj);
+    return std::make_pair(__range.end(), std::move(__func));
   }
-  // __cache is right child
-  __cache->__parent_unsafe()->__right_ = nullptr;
-  __cache                              = static_cast<__node_pointer>(__cache->__parent_);
-  if (__cache->__left_ == nullptr)
-    return __cache;
-  return static_cast<__node_pointer>(std::__tree_leaf(__cache->__left_));
-}
+};
+#endif
 
 template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>& __tree<_Tp, _Compare, _Allocator>::operator=(const __tree& __t) {
@@ -1517,46 +1568,6 @@ __tree<_Tp, _Compare, _Allocator>& __tree<_Tp, _Compare, _Allocator>::operator=(
   __size_ = __t.size();
 
   return *this;
-}
-
-template <class _Tp, class _Compare, class _Allocator>
-template <class _ForwardIterator>
-void __tree<_Tp, _Compare, _Allocator>::__assign_unique(_ForwardIterator __first, _ForwardIterator __last) {
-  using _ITraits     = iterator_traits<_ForwardIterator>;
-  using _ItValueType = typename _ITraits::value_type;
-  static_assert(
-      is_same<_ItValueType, value_type>::value, "__assign_unique may only be called with the containers value type");
-  static_assert(
-      __has_forward_iterator_category<_ForwardIterator>::value, "__assign_unique requires a forward iterator");
-  if (__size_ != 0) {
-    _DetachedTreeCache __cache(this);
-    for (; __cache.__get() != nullptr && __first != __last; ++__first) {
-      if (__node_assign_unique(*__first, __cache.__get()).second)
-        __cache.__advance();
-    }
-  }
-  for (; __first != __last; ++__first)
-    __emplace_unique(*__first);
-}
-
-template <class _Tp, class _Compare, class _Allocator>
-template <class _InputIterator>
-void __tree<_Tp, _Compare, _Allocator>::__assign_multi(_InputIterator __first, _InputIterator __last) {
-  using _ITraits     = iterator_traits<_InputIterator>;
-  using _ItValueType = typename _ITraits::value_type;
-  static_assert(
-      is_same<_ItValueType, value_type>::value, "__assign_multi may only be called with the containers value_type");
-  if (__size_ != 0) {
-    _DetachedTreeCache __cache(this);
-    for (; __cache.__get() && __first != __last; ++__first) {
-      __assign_value(__cache.__get()->__get_value(), *__first);
-      __node_insert_multi(__cache.__get());
-      __cache.__advance();
-    }
-  }
-  const_iterator __e = end();
-  for (; __first != __last; ++__first)
-    __emplace_hint_multi(__e, *__first);
 }
 
 template <class _Tp, class _Compare, class _Allocator>
@@ -1594,21 +1605,26 @@ __tree<_Tp, _Compare, _Allocator>::__tree(__tree&& __t) _NOEXCEPT_(
 
 template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>::__tree(__tree&& __t, const allocator_type& __a)
-    : __node_alloc_(__node_allocator(__a)), __size_(0), __value_comp_(std::move(__t.value_comp())) {
+    : __begin_node_(__end_node()),
+      __node_alloc_(__node_allocator(__a)),
+      __size_(0),
+      __value_comp_(std::move(__t.value_comp())) {
+  if (__t.size() == 0)
+    return;
   if (__a == __t.__alloc()) {
-    if (__t.__size_ == 0)
-      __begin_node_ = __end_node();
-    else {
-      __begin_node_                    = __t.__begin_node_;
-      __end_node()->__left_            = __t.__end_node()->__left_;
-      __end_node()->__left_->__parent_ = static_cast<__end_node_pointer>(__end_node());
-      __size_                          = __t.__size_;
-      __t.__begin_node_                = __t.__end_node();
-      __t.__end_node()->__left_        = nullptr;
-      __t.__size_                      = 0;
-    }
+    __begin_node_                    = __t.__begin_node_;
+    __end_node()->__left_            = __t.__end_node()->__left_;
+    __end_node()->__left_->__parent_ = static_cast<__end_node_pointer>(__end_node());
+    __size_                          = __t.__size_;
+    __t.__begin_node_                = __t.__end_node();
+    __t.__end_node()->__left_        = nullptr;
+    __t.__size_                      = 0;
   } else {
-    __begin_node_ = __end_node();
+    *__root_ptr()       = static_cast<__node_base_pointer>(__move_construct_tree(__t.__root()));
+    __root()->__parent_ = __end_node();
+    __begin_node_       = static_cast<__end_node_pointer>(std::__tree_min(__end_node()->__left_));
+    __size_             = __t.size();
+    __t.clear(); // Ensure that __t is in a valid state after moving out the keys
   }
 }
 
@@ -1633,22 +1649,21 @@ void __tree<_Tp, _Compare, _Allocator>::__move_assign(__tree& __t, true_type)
 
 template <class _Tp, class _Compare, class _Allocator>
 void __tree<_Tp, _Compare, _Allocator>::__move_assign(__tree& __t, false_type) {
-  if (__node_alloc() == __t.__node_alloc())
+  if (__node_alloc() == __t.__node_alloc()) {
     __move_assign(__t, true_type());
-  else {
-    value_comp()       = std::move(__t.value_comp());
-    const_iterator __e = end();
+  } else {
+    value_comp() = std::move(__t.value_comp());
     if (__size_ != 0) {
-      _DetachedTreeCache __cache(this);
-      while (__cache.__get() != nullptr && __t.__size_ != 0) {
-        __assign_value(__cache.__get()->__get_value(), std::move(__t.remove(__t.begin())->__get_value()));
-        __node_insert_multi(__cache.__get());
-        __cache.__advance();
-      }
+      *__root_ptr() = static_cast<__node_base_pointer>(__move_assign_tree(__root(), __t.__root()));
+    } else {
+      *__root_ptr() = static_cast<__node_base_pointer>(__move_construct_tree(__t.__root()));
+      if (__root())
+        __root()->__parent_ = __end_node();
     }
-    while (__t.__size_ != 0) {
-      __insert_multi_from_orphaned_node(__e, std::move(__t.remove(__t.begin())->__get_value()));
-    }
+    __begin_node_ =
+        __end_node()->__left_ ? static_cast<__end_node_pointer>(std::__tree_min(__end_node()->__left_)) : __end_node();
+    __size_ = __t.size();
+    __t.clear(); // Ensure that __t is in a valid state after moving out the keys
   }
 }
 
@@ -1906,39 +1921,6 @@ __tree<_Tp, _Compare, _Allocator>::__emplace_hint_multi(const_iterator __p, _Arg
   __node_base_pointer& __child = __find_leaf(__p, __parent, __h->__get_value());
   __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
   return iterator(static_cast<__node_pointer>(__h.release()));
-}
-
-template <class _Tp, class _Compare, class _Allocator>
-pair<typename __tree<_Tp, _Compare, _Allocator>::iterator, bool>
-__tree<_Tp, _Compare, _Allocator>::__node_assign_unique(const value_type& __v, __node_pointer __nd) {
-  auto [__parent, __child] = __find_equal(__v);
-  __node_pointer __r       = static_cast<__node_pointer>(__child);
-  bool __inserted          = false;
-  if (__child == nullptr) {
-    __assign_value(__nd->__get_value(), __v);
-    __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__nd));
-    __r        = __nd;
-    __inserted = true;
-  }
-  return pair<iterator, bool>(iterator(__r), __inserted);
-}
-
-template <class _Tp, class _Compare, class _Allocator>
-typename __tree<_Tp, _Compare, _Allocator>::iterator
-__tree<_Tp, _Compare, _Allocator>::__node_insert_multi(__node_pointer __nd) {
-  __end_node_pointer __parent;
-  __node_base_pointer& __child = __find_leaf_high(__parent, __nd->__get_value());
-  __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__nd));
-  return iterator(__nd);
-}
-
-template <class _Tp, class _Compare, class _Allocator>
-typename __tree<_Tp, _Compare, _Allocator>::iterator
-__tree<_Tp, _Compare, _Allocator>::__node_insert_multi(const_iterator __p, __node_pointer __nd) {
-  __end_node_pointer __parent;
-  __node_base_pointer& __child = __find_leaf(__p, __parent, __nd->__get_value());
-  __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__nd));
-  return iterator(__nd);
 }
 
 template <class _Tp, class _Compare, class _Allocator>

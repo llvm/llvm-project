@@ -17,10 +17,10 @@
 // LWG 198 was superseded by LWG 2360
 //    http://www.open-std.org/jtc1/sc22/wg21/docs/lwg-defects.html#2360
 
-
+#include <cassert>
 #include <iterator>
 #include <list>
-#include <cassert>
+#include <type_traits>
 
 #include "test_macros.h"
 

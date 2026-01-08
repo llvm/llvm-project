@@ -66,7 +66,7 @@ void SuspiciousIncludePPCallbacks::InclusionDirective(
   if (!Check.IgnoredRegexString.empty() && Check.IgnoredRegex.match(FileName))
     return;
 
-  SourceLocation DiagLoc = FilenameRange.getBegin().getLocWithOffset(1);
+  const SourceLocation DiagLoc = FilenameRange.getBegin().getLocWithOffset(1);
 
   const std::optional<StringRef> IFE =
       utils::getFileExtension(FileName, Check.ImplementationFileExtensions);
@@ -81,7 +81,7 @@ void SuspiciousIncludePPCallbacks::InclusionDirective(
     llvm::sys::path::replace_extension(GuessedFileName,
                                        (!HFE.empty() ? "." : "") + HFE);
 
-    OptionalFileEntryRef File =
+    const OptionalFileEntryRef File =
         PP->LookupFile(DiagLoc, GuessedFileName, IsAngled, nullptr, nullptr,
                        nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
     if (File) {

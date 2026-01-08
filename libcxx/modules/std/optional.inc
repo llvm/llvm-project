@@ -13,8 +13,9 @@ export namespace std {
 #if _LIBCPP_STD_VER >= 26
   // [optional.iterators], iterator support
   namespace ranges {
+    using std::ranges::enable_borrowed_range;
     using std::ranges::enable_view;
-  }
+  } // namespace ranges
 #endif
   // [optional.nullopt], no-value state indicator
   using std::nullopt;

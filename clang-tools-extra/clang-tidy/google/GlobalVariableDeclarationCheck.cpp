@@ -30,7 +30,7 @@ static FixItHint generateFixItHint(const VarDecl *Decl, bool IsConst) {
     return {};
   }
 
-  char FC = Decl->getName()[0];
+  const char FC = Decl->getName()[0];
   if (!llvm::isAlpha(FC) || Decl->getName().size() == 1) {
     // No fix available if first character is not alphabetical character, or it
     // is a single-character variable, since it is difficult to determine the
@@ -38,7 +38,7 @@ static FixItHint generateFixItHint(const VarDecl *Decl, bool IsConst) {
     // their own.
     return {};
   }
-  char SC = Decl->getName()[1];
+  const char SC = Decl->getName()[1];
   if ((FC == 'k' || FC == 'g') && !llvm::isAlpha(SC)) {
     // No fix available if the prefix is correct but the second character is
     // not alphabetical, since it is difficult to determine the proper fix in

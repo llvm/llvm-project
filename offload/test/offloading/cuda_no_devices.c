@@ -5,6 +5,7 @@
 // RUN: %libomptarget-compile-generic
 // RUN: env CUDA_VISIBLE_DEVICES= \
 // RUN:   %libomptarget-run-generic 2>&1 | %fcheck-generic
+// XFAIL: intelgpu
 
 #include <stdio.h>
 

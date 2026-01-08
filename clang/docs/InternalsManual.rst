@@ -667,7 +667,7 @@ Command Line Interface
 ----------------------
 
 The command line interface of the Clang ``-cc1`` frontend is defined alongside
-the driver options in ``clang/Driver/Options.td``. The information making up an
+the driver options in ``clang/Options/Options.td``. The information making up an
 option definition includes its prefix and name (for example ``-std=``), form and
 position of the option value, help text, aliases and more. Each option may
 belong to a certain group and can be marked with zero or more flags. Options
@@ -712,7 +712,7 @@ variable for the option value:
     }
 
 Next, declare the command line interface of the option in the tablegen file
-``clang/include/clang/Driver/Options.td``. This is done by instantiating the
+``clang/include/clang/Options/Options.td``. This is done by instantiating the
 ``Option`` class (defined in ``llvm/include/llvm/Option/OptParser.td``). The
 instance is typically created through one of the helper classes that encode the
 acceptable ways to specify the option value on the command line:
@@ -906,7 +906,7 @@ command line:
                                   SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,          \
                                   IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER,      \
                                   MERGER, TABLE_INDEX)
-  #include "clang/Driver/Options.inc"
+  #include "clang/Options/Options.inc"
   #undef LANG_OPTION_WITH_MARSHALLING
 
     // ...
@@ -925,7 +925,7 @@ command line:
     GENERATE_OPTION_WITH_MARSHALLING(                                            \
         Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
         IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
-  #include "clang/Driver/Options.inc"
+  #include "clang/Options/Options.inc"
   #undef LANG_OPTION_WITH_MARSHALLING
 
     // ...
@@ -2351,7 +2351,7 @@ different "from" contexts; in this case, they have to share the associated
 errors of the "to" context.
 
 When an error happens, that propagates through the call stack, through all the
-dependant nodes. However, in case of dependency cycles, this is not enough,
+dependent nodes. However, in case of dependency cycles, this is not enough,
 because we strive to mark the erroneous nodes so clients can act upon. In those
 cases, we have to keep track of the errors for those nodes which are
 intermediate nodes of a cycle.

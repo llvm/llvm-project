@@ -882,10 +882,7 @@ IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
   NG->copyAttributesFrom(SrcGV);
   forceRenaming(NG, SrcGV->getName());
 
-  Mapper.scheduleMapAppendingVariable(
-      *NG,
-      (DstGV && !DstGV->isDeclaration()) ? DstGV->getInitializer() : nullptr,
-      IsOldStructor, SrcElements);
+  Mapper.scheduleMapAppendingVariable(*NG, DstGV, IsOldStructor, SrcElements);
 
   // Replace any uses of the two global variables with uses of the new
   // global.

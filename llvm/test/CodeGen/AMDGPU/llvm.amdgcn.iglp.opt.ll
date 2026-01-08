@@ -294,17 +294,17 @@ define amdgpu_kernel void @test_iglp_opt_asm_sideeffect(ptr addrspace(3) noalias
 ; GCN-NEXT:    ; iglp_opt mask(0x00000000)
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_add_u32_e32 v1, s0, v0
-; GCN-NEXT:    ds_read_b32 v1, v1
+; GCN-NEXT:    ds_read_b32 v2, v1
 ; GCN-NEXT:    v_add_u32_e32 v0, s1, v0
-; GCN-NEXT:    v_mov_b32_e32 v2, s0
+; GCN-NEXT:    v_mov_b32_e32 v1, s0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    ds_write_b32 v0, v1
+; GCN-NEXT:    ds_write_b32 v0, v2
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ds_read_b32 v0, v2 offset:256
-; GCN-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-NEXT:    ds_read_b32 v1, v1 offset:256
+; GCN-NEXT:    v_mov_b32_e32 v0, s1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    ds_write_b32 v1, v0 offset:256
+; GCN-NEXT:    ds_write_b32 v0, v1 offset:256
 ; GCN-NEXT:    s_endpgm
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()

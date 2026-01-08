@@ -589,9 +589,9 @@ struct FwdRegParamInfo {
 
 /// Register worklist for finding call site values.
 using FwdRegWorklist = MapVector<uint64_t, SmallVector<FwdRegParamInfo, 2>>;
-/// Container for the set of registers known to be clobbered on the path to a
-/// call site.
-using ClobberedRegSet = SmallSet<Register, 16>;
+/// Container for the set of register units known to be clobbered on the path
+/// to a call site.
+using ClobberedRegUnitSet = SmallSet<MCRegUnit, 16>;
 
 /// Append the expression \p Addition to \p Original and return the result.
 static const DIExpression *combineDIExpressions(const DIExpression *Original,
@@ -663,7 +663,7 @@ static void addToFwdRegWorklist(FwdRegWorklist &Worklist, unsigned Reg,
 static void interpretValues(const MachineInstr *CurMI,
                             FwdRegWorklist &ForwardedRegWorklist,
                             ParamSet &Params,
-                            ClobberedRegSet &ClobberedRegUnits) {
+                            ClobberedRegUnitSet &ClobberedRegUnits) {
 
   const MachineFunction *MF = CurMI->getMF();
   const DIExpression *EmptyExpr =
@@ -695,7 +695,7 @@ static void interpretValues(const MachineInstr *CurMI,
 
   // If the MI is an instruction defining one or more parameters' forwarding
   // registers, add those defines.
-  ClobberedRegSet NewClobberedRegUnits;
+  ClobberedRegUnitSet NewClobberedRegUnits;
   auto getForwardingRegsDefinedByMI = [&](const MachineInstr &MI,
                                           SmallSetVector<unsigned, 4> &Defs) {
     if (MI.isDebugInstr())
@@ -778,7 +778,7 @@ static void interpretValues(const MachineInstr *CurMI,
 static bool interpretNextInstr(const MachineInstr *CurMI,
                                FwdRegWorklist &ForwardedRegWorklist,
                                ParamSet &Params,
-                               ClobberedRegSet &ClobberedRegUnits) {
+                               ClobberedRegUnitSet &ClobberedRegUnits) {
   // Skip bundle headers.
   if (CurMI->isBundle())
     return true;
@@ -848,7 +848,7 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
   bool ShouldTryEmitEntryVals = MBB->getIterator() == MF->begin();
 
   // Search for a loading value in forwarding registers inside call delay slot.
-  ClobberedRegSet ClobberedRegUnits;
+  ClobberedRegUnitSet ClobberedRegUnits;
   if (CallMI->hasDelaySlot()) {
     auto Suc = std::next(CallMI->getIterator());
     // Only one-instruction delay slot is supported.
@@ -942,25 +942,27 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
       DIType *AllocSiteTy = dyn_cast_or_null<DIType>(MI.getHeapAllocMarker());
 
       // If this is a direct call, find the callee's subprogram.
-      // In the case of an indirect call find the register that holds
-      // the callee.
+      // In the case of an indirect call find the register or memory location
+      // that holds the callee address.
       const MachineOperand &CalleeOp = TII->getCalleeOperand(MI);
       bool PhysRegCalleeOperand =
           CalleeOp.isReg() && CalleeOp.getReg().isPhysical();
-      // Hack: WebAssembly CALL instructions have MCInstrDesc that does not
-      // describe the call target operand.
-      if (CalleeOp.getOperandNo() < MI.getDesc().operands().size()) {
-        const MCOperandInfo &MCOI =
-            MI.getDesc().operands()[CalleeOp.getOperandNo()];
-        PhysRegCalleeOperand =
-            PhysRegCalleeOperand && MCOI.OperandType == MCOI::OPERAND_REGISTER;
-      }
-
-      unsigned CallReg = 0;
+      MachineLocation CallTarget{0};
+      int64_t Offset = 0;
       const DISubprogram *CalleeSP = nullptr;
       const Function *CalleeDecl = nullptr;
       if (PhysRegCalleeOperand) {
-        CallReg = CalleeOp.getReg(); // might be zero
+        bool Scalable = false;
+        const MachineOperand *BaseOp = nullptr;
+        const TargetRegisterInfo &TRI =
+            *Asm->MF->getSubtarget().getRegisterInfo();
+        if (TII->getMemOperandWithOffset(MI, BaseOp, Offset, Scalable, &TRI)) {
+          if (BaseOp && BaseOp->isReg() && !Scalable)
+            CallTarget = MachineLocation(BaseOp->getReg(), /*Indirect*/ true);
+        }
+
+        if (!CallTarget.isIndirect())
+          CallTarget = MachineLocation(CalleeOp.getReg()); // Might be zero.
       } else if (CalleeOp.isGlobal()) {
         CalleeDecl = dyn_cast<Function>(CalleeOp.getGlobal());
         if (CalleeDecl)
@@ -969,7 +971,8 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
 
       // Omit DIE if we can't tell where the call goes *and* we don't want to
       // add metadata to it.
-      if (CalleeSP == nullptr && CallReg == 0 && AllocSiteTy == nullptr)
+      if (CalleeSP == nullptr && CallTarget.getReg() == 0 &&
+          AllocSiteTy == nullptr)
         continue;
 
       // TODO: Omit call site entries for runtime calls (objc_msgSend, etc).
@@ -997,16 +1000,18 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
 
       assert((IsTail || PCAddr) && "Non-tail call without return PC");
 
-      LLVM_DEBUG(dbgs() << "CallSiteEntry: " << MF.getName() << " -> "
-                        << (CalleeDecl ? CalleeDecl->getName()
-                                       : StringRef(MF.getSubtarget()
-                                                       .getRegisterInfo()
-                                                       ->getName(CallReg)))
-                        << (IsTail ? " [IsTail]" : "") << "\n");
+      LLVM_DEBUG(
+          dbgs() << "CallSiteEntry: " << MF.getName() << " -> "
+                 << (CalleeDecl
+                         ? CalleeDecl->getName()
+                         : StringRef(
+                               MF.getSubtarget().getRegisterInfo()->getName(
+                                   CallTarget.getReg())))
+                 << (IsTail ? " [IsTail]" : "") << "\n");
 
-      DIE &CallSiteDIE =
-          CU.constructCallSiteEntryDIE(ScopeDIE, CalleeSP, CalleeDecl, IsTail,
-                                       PCAddr, CallAddr, CallReg, AllocSiteTy);
+      DIE &CallSiteDIE = CU.constructCallSiteEntryDIE(
+          ScopeDIE, CalleeSP, CalleeDecl, IsTail, PCAddr, CallAddr, CallTarget,
+          Offset, AllocSiteTy);
 
       // Optionally emit call-site-param debug info.
       if (emitDebugEntryValues()) {
@@ -1544,18 +1549,8 @@ void DwarfDebug::ensureAbstractEntityIsCreatedIfScoped(DwarfCompileUnit &CU,
 }
 
 static const DILocalScope *getRetainedNodeScope(const MDNode *N) {
-  const DIScope *S;
-  if (const auto *LV = dyn_cast<DILocalVariable>(N))
-    S = LV->getScope();
-  else if (const auto *L = dyn_cast<DILabel>(N))
-    S = L->getScope();
-  else if (const auto *IE = dyn_cast<DIImportedEntity>(N))
-    S = IE->getScope();
-  else
-    llvm_unreachable("Unexpected retained node!");
-
   // Ensure the scope is not a DILexicalBlockFile.
-  return cast<DILocalScope>(S)->getNonLexicalBlockFileScope();
+  return DISubprogram::getRetainedNodeScope(N)->getNonLexicalBlockFileScope();
 }
 
 // Collect variable information from side table maintained by MF.
@@ -2221,6 +2216,11 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     PrevInstLoc = DL;
 }
 
+// Returns the position where we should place prologue_end, potentially nullptr,
+// which means "no good place to put prologue_end". Returns true in the second
+// return value if there are no setup instructions in this function at all,
+// meaning we should not emit a start-of-function linetable entry, because it
+// would be zero-lengthed.
 static std::pair<const MachineInstr *, bool>
 findPrologueEndLoc(const MachineFunction *MF) {
   // First known non-DBG_VALUE and non-frame setup location marks
@@ -2228,6 +2228,7 @@ findPrologueEndLoc(const MachineFunction *MF) {
   const auto &TII = *MF->getSubtarget().getInstrInfo();
   const MachineInstr *NonTrivialInst = nullptr;
   const Function &F = MF->getFunction();
+  DISubprogram *SP = const_cast<DISubprogram *>(F.getSubprogram());
 
   // Some instructions may be inserted into prologue after this function. Must
   // keep prologue for these cases.
@@ -2313,6 +2314,26 @@ findPrologueEndLoc(const MachineFunction *MF) {
       auto FoundInst = ExamineInst(*CurInst);
       if (FoundInst)
         return *FoundInst;
+    }
+
+    // In very rare scenarios function calls can have line zero, and we
+    // shouldn't step over such a call while trying to reach prologue_end. In
+    // these extraordinary conditions, force the call to have the scope line
+    // and put prologue_end there. This isn't ideal, but signals that the call
+    // is where execution in the function starts, and is less catastrophic than
+    // stepping over the call.
+    if (CurInst->isCall()) {
+      if (const DILocation *Loc = CurInst->getDebugLoc().get();
+          Loc && Loc->getLine() == 0) {
+        // Create and assign the scope-line position.
+        unsigned ScopeLine = SP->getScopeLine();
+        DILocation *ScopeLineDILoc =
+            DILocation::get(SP->getContext(), ScopeLine, 0, SP);
+        const_cast<MachineInstr *>(&*CurInst)->setDebugLoc(ScopeLineDILoc);
+
+        // Consider this position to be where prologue_end is placed.
+        return std::make_pair(&*CurInst, false);
+      }
     }
 
     // Try to continue searching, but use a backup-location if substantive
@@ -3291,14 +3312,12 @@ static MCSymbol *emitLoclistsTableHeader(AsmPrinter *Asm,
 }
 
 template <typename Ranges, typename PayloadEmitter>
-static void emitRangeList(
-    DwarfDebug &DD, AsmPrinter *Asm, MCSymbol *Sym, const Ranges &R,
-    const DwarfCompileUnit &CU, unsigned BaseAddressx, unsigned OffsetPair,
-    unsigned StartxLength, unsigned EndOfList,
-    StringRef (*StringifyEnum)(unsigned),
-    bool ShouldUseBaseAddress,
-    PayloadEmitter EmitPayload) {
-
+static void
+emitRangeList(DwarfDebug &DD, AsmPrinter *Asm, MCSymbol *Sym, const Ranges &R,
+              const DwarfCompileUnit &CU, unsigned BaseAddressx,
+              unsigned OffsetPair, unsigned StartxLength, unsigned StartxEndx,
+              unsigned EndOfList, StringRef (*StringifyEnum)(unsigned),
+              bool ShouldUseBaseAddress, PayloadEmitter EmitPayload) {
   auto Size = Asm->MAI->getCodePointerSize();
   bool UseDwarf5 = DD.getDwarfVersion() >= 5;
 
@@ -3317,7 +3336,8 @@ static void emitRangeList(
   bool BaseIsSet = false;
   for (const auto &P : SectionRanges) {
     auto *Base = CUBase;
-    if ((Asm->TM.getTargetTriple().isNVPTX() && DD.tuneForGDB())) {
+    if ((Asm->TM.getTargetTriple().isNVPTX() && DD.tuneForGDB()) ||
+        (DD.useSplitDwarf() && UseDwarf5 && P.first->isLinkerRelaxable())) {
       // PTX does not support subtracting labels from the code section in the
       // debug_loc section.  To work around this, the NVPTX backend needs the
       // compile unit to have no low_pc in order to have a zero base_address
@@ -3373,12 +3393,27 @@ static void emitRangeList(
           Asm->emitLabelDifference(End, Base, Size);
         }
       } else if (UseDwarf5) {
-        Asm->OutStreamer->AddComment(StringifyEnum(StartxLength));
-        Asm->emitInt8(StartxLength);
-        Asm->OutStreamer->AddComment("  start index");
-        Asm->emitULEB128(DD.getAddressPool().getIndex(Begin));
-        Asm->OutStreamer->AddComment("  length");
-        Asm->emitLabelDifferenceAsULEB128(End, Begin);
+        // NOTE: We can't use absoluteSymbolDiff here instead of
+        // isRangeRelaxable. While isRangeRelaxable only checks that the offset
+        // between labels won't change at link time (which is exactly what we
+        // need), absoluteSymbolDiff also requires that the offset remain
+        // unchanged at assembly time, imposing a much stricter condition.
+        // Consequently, this would lead to less optimal debug info emission.
+        if (DD.useSplitDwarf() && llvm::isRangeRelaxable(Begin, End)) {
+          Asm->OutStreamer->AddComment(StringifyEnum(StartxEndx));
+          Asm->emitInt8(StartxEndx);
+          Asm->OutStreamer->AddComment("  start index");
+          Asm->emitULEB128(DD.getAddressPool().getIndex(Begin));
+          Asm->OutStreamer->AddComment("  end index");
+          Asm->emitULEB128(DD.getAddressPool().getIndex(End));
+        } else {
+          Asm->OutStreamer->AddComment(StringifyEnum(StartxLength));
+          Asm->emitInt8(StartxLength);
+          Asm->OutStreamer->AddComment("  start index");
+          Asm->emitULEB128(DD.getAddressPool().getIndex(Begin));
+          Asm->OutStreamer->AddComment("  length");
+          Asm->emitLabelDifferenceAsULEB128(End, Begin);
+        }
       } else {
         Asm->OutStreamer->emitSymbolValue(Begin, Size);
         Asm->OutStreamer->emitSymbolValue(End, Size);
@@ -3399,14 +3434,14 @@ static void emitRangeList(
 
 // Handles emission of both debug_loclist / debug_loclist.dwo
 static void emitLocList(DwarfDebug &DD, AsmPrinter *Asm, const DebugLocStream::List &List) {
-  emitRangeList(DD, Asm, List.Label, DD.getDebugLocs().getEntries(List),
-                *List.CU, dwarf::DW_LLE_base_addressx,
-                dwarf::DW_LLE_offset_pair, dwarf::DW_LLE_startx_length,
-                dwarf::DW_LLE_end_of_list, llvm::dwarf::LocListEncodingString,
-                /* ShouldUseBaseAddress */ true,
-                [&](const DebugLocStream::Entry &E) {
-                  DD.emitDebugLocEntryLocation(E, List.CU);
-                });
+  emitRangeList(
+      DD, Asm, List.Label, DD.getDebugLocs().getEntries(List), *List.CU,
+      dwarf::DW_LLE_base_addressx, dwarf::DW_LLE_offset_pair,
+      dwarf::DW_LLE_startx_length, dwarf::DW_LLE_startx_endx,
+      dwarf::DW_LLE_end_of_list, llvm::dwarf::LocListEncodingString,
+      /* ShouldUseBaseAddress */ true, [&](const DebugLocStream::Entry &E) {
+        DD.emitDebugLocEntryLocation(E, List.CU);
+      });
 }
 
 void DwarfDebug::emitDebugLocImpl(MCSection *Sec) {
@@ -3628,8 +3663,8 @@ static void emitRangeList(DwarfDebug &DD, AsmPrinter *Asm,
                           const RangeSpanList &List) {
   emitRangeList(DD, Asm, List.Label, List.Ranges, *List.CU,
                 dwarf::DW_RLE_base_addressx, dwarf::DW_RLE_offset_pair,
-                dwarf::DW_RLE_startx_length, dwarf::DW_RLE_end_of_list,
-                llvm::dwarf::RangeListEncodingString,
+                dwarf::DW_RLE_startx_length, dwarf::DW_RLE_startx_endx,
+                dwarf::DW_RLE_end_of_list, llvm::dwarf::RangeListEncodingString,
                 List.CU->getCUNode()->getRangesBaseAddress() ||
                     DD.getDwarfVersion() >= 5,
                 [](auto) {});
