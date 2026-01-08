@@ -3812,6 +3812,8 @@ public:
 
   VPValue *getStepValue() const { return getOperand(1); }
 
+  VPValue *getVFValue() const { return getOperand(2); }
+
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&

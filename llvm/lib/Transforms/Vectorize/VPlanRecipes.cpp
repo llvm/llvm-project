@@ -2434,9 +2434,9 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
     EndLane = StartLane + 1;
   }
   Value *StartIdx0;
-  if (getNumOperands() == 3) {
+  if (getNumOperands() == 3)
     StartIdx0 = getSignedIntOrFpConstant(BaseIVTy, 0);
-  } else
+  else
     StartIdx0 = State.get(getOperand(3), true);
 
   for (unsigned Lane = StartLane; Lane < EndLane; ++Lane) {

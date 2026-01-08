@@ -128,29 +128,27 @@ public:
 
 void UnrollState::addStartIndexForScalarSteps(VPScalarIVStepsRecipe *Steps,
                                               unsigned Part) {
-  if (Part == 0) {
-    Steps->addOperand(getConstantInt(Part));
+  if (Part == 0)
     return;
-  }
 
   VPBuilder Builder(Steps);
   Type *BaseIVTy = TypeInfo.inferScalarType(Steps->getOperand(0));
   Type *IntStepTy =
       IntegerType::get(BaseIVTy->getContext(), BaseIVTy->getScalarSizeInBits());
-  VPValue *StartIdx0 = Steps->getOperand(2);
-  StartIdx0 = Builder.createOverflowingOp(
+  VPValue *StartIndex = Steps->getVFValue();
+  StartIndex = Builder.createOverflowingOp(
       Instruction::Mul,
-      {StartIdx0,
-       Plan.getConstantInt(TypeInfo.inferScalarType(StartIdx0), Part)});
-  StartIdx0 = Builder.createScalarSExtOrTrunc(
-      StartIdx0, IntStepTy, TypeInfo.inferScalarType(StartIdx0),
+      {StartIndex,
+       Plan.getConstantInt(TypeInfo.inferScalarType(StartIndex), Part)});
+  StartIndex = Builder.createScalarSExtOrTrunc(
+      StartIndex, IntStepTy, TypeInfo.inferScalarType(StartIndex),
       DebugLoc::getUnknown());
 
   if (BaseIVTy->isFloatingPointTy())
-    StartIdx0 = Builder.createScalarCast(Instruction::SIToFP, StartIdx0,
-                                         BaseIVTy, DebugLoc::getUnknown());
+    StartIndex = Builder.createScalarCast(Instruction::SIToFP, StartIndex,
+                                          BaseIVTy, DebugLoc::getUnknown());
 
-  Steps->addOperand(StartIdx0);
+  Steps->addOperand(StartIndex);
 }
 
 void UnrollState::unrollReplicateRegionByUF(VPRegionBlock *VPR) {
