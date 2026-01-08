@@ -32,6 +32,8 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/HashBuilder.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/LongestCommonSequence.h"
 #include <map>
 #include <set>
@@ -88,9 +90,24 @@ static cl::opt<unsigned> MinMatchedColdBytePercent(
     "memprof-matching-cold-threshold", cl::init(100), cl::Hidden,
     cl::desc("Min percent of cold bytes matched to hint allocation cold"));
 
-static cl::opt<bool> AnnotateStaticDataSectionPrefix(
-    "memprof-annotate-static-data-prefix", cl::init(false), cl::Hidden,
-    cl::desc("If true, annotate the static data section prefix"));
+enum class AnnotateDataType {
+  None,
+  ReadOnly,
+  ReadWrite,
+};
+static cl::opt<enum AnnotateDataType> AnnotateStaticDataType(
+    "memprof-annotate-static-data-type",
+    cl::values(
+        clEnumValN(AnnotateDataType::None, "none",
+                   "Do not annotate static data sections in this pass"),
+        clEnumValN(AnnotateDataType::ReadOnly, "readonly",
+                   "Annotate read-only static data sections (i.e., .rodata and "
+                   ".data.rel.ro)"),
+        clEnumValN(AnnotateDataType::ReadWrite, "readwrite",
+                   "Annotate both read-only (i.e., .rodata and .data.rel.ro) "
+                   "and read-write (.data and .bss) static data sections")),
+    cl::init(AnnotateDataType::None), cl::Hidden,
+    cl::desc("Specify the type of static data sections to annotate"));
 
 // Matching statistics
 STATISTIC(NumOfMemProfMissing, "Number of functions without memory profile.");
@@ -231,6 +248,20 @@ static void HandleUnsupportedAnnotationKinds(GlobalVariable &GVar,
   }
   LLVM_DEBUG(dbgs() << "Skip annotation for " << GVar.getName() << " due to "
                     << Reason << ".\n");
+}
+
+// Returns true if the global variable GV should be annotated based on
+// AnnotateStaticDataType and its section kind.
+static bool ShouldAnnotateStaticDataSection(const GlobalVariable &GV,
+                                            const TargetMachine &TM) {
+  SectionKind Kind = TargetLoweringObjectFile::getKindForGlobal(&GV, TM);
+  const bool IsReadOnlyData = Kind.isReadOnly() || Kind.isReadOnlyWithRel();
+  if (AnnotateStaticDataType == AnnotateDataType::ReadOnly) {
+    return IsReadOnlyData;
+  }
+  assert(AnnotateStaticDataType == AnnotateDataType::ReadWrite &&
+         "Unknown static data annotation type");
+  return IsReadOnlyData || Kind.isData() || Kind.isBSS();
 }
 
 // Structure for tracking info about matched allocation contexts for use with
@@ -797,9 +828,9 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
   }
 }
 
-MemProfUsePass::MemProfUsePass(std::string MemoryProfileFile,
+MemProfUsePass::MemProfUsePass(std::string MemoryProfileFile, TargetMachine *TM,
                                IntrusiveRefCntPtr<vfs::FileSystem> FS)
-    : MemoryProfileFileName(MemoryProfileFile), FS(FS) {
+    : MemoryProfileFileName(MemoryProfileFile), TM(TM), FS(FS) {
   if (!FS)
     this->FS = vfs::getRealFileSystem();
 }
@@ -905,7 +936,7 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
 
 bool MemProfUsePass::annotateGlobalVariables(
     Module &M, const memprof::DataAccessProfData *DataAccessProf) {
-  if (!AnnotateStaticDataSectionPrefix || M.globals().empty())
+  if (AnnotateStaticDataType == AnnotateDataType::None || M.globals().empty())
     return false;
 
   if (!DataAccessProf) {
@@ -913,7 +944,7 @@ bool MemProfUsePass::annotateGlobalVariables(
     M.getContext().diagnose(DiagnosticInfoPGOProfile(
         MemoryProfileFileName.data(),
         StringRef("Data access profiles not found in memprof. Ignore "
-                  "-memprof-annotate-static-data-prefix."),
+                  "-memprof-annotate-static-data-type."),
         DS_Warning));
     return false;
   }
@@ -931,6 +962,12 @@ bool MemProfUsePass::annotateGlobalVariables(
     auto Kind = llvm::memprof::getAnnotationKind(GVar);
     if (Kind != llvm::memprof::AnnotationKind::AnnotationOK) {
       HandleUnsupportedAnnotationKinds(GVar, Kind);
+      continue;
+    }
+
+    if (!ShouldAnnotateStaticDataSection(GVar, *TM)) {
+      LLVM_DEBUG(dbgs() << "Skip annotating global variable " << GVar.getName()
+                        << "\n");
       continue;
     }
 

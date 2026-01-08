@@ -24,6 +24,7 @@ namespace llvm {
 class IndexedInstrProfReader;
 class Module;
 class TargetLibraryInfo;
+class TargetMachine;
 
 namespace vfs {
 class FileSystem;
@@ -32,7 +33,7 @@ class FileSystem;
 class MemProfUsePass : public PassInfoMixin<MemProfUsePass> {
 public:
   LLVM_ABI explicit MemProfUsePass(
-      std::string MemoryProfileFile,
+      std::string MemoryProfileFile, TargetMachine *TM,
       IntrusiveRefCntPtr<vfs::FileSystem> FS = nullptr);
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
@@ -43,6 +44,7 @@ private:
   annotateGlobalVariables(Module &M,
                           const memprof::DataAccessProfData *DataAccessProf);
   std::string MemoryProfileFileName;
+  TargetMachine *TM;
   IntrusiveRefCntPtr<vfs::FileSystem> FS;
 };
 
