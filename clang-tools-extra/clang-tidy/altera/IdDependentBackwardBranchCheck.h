@@ -39,9 +39,9 @@ private:
     std::string Message;
   };
   // Stores the locations where ID-dependent variables are created.
-  std::map<const VarDecl *, IdDependencyRecord> IdDepVarsMap;
+  llvm::DenseMap<const VarDecl *, IdDependencyRecord> IdDepVarsMap;
   // Stores the locations where ID-dependent fields are created.
-  std::map<const FieldDecl *, IdDependencyRecord> IdDepFieldsMap;
+  llvm::DenseMap<const FieldDecl *, IdDependencyRecord> IdDepFieldsMap;
   /// Returns an IdDependencyRecord if the Expression contains an ID-dependent
   /// variable, returns a nullptr otherwise.
   const IdDependencyRecord *hasIdDepVar(const Expr *Expression);

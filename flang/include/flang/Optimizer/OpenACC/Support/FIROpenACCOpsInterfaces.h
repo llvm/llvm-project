@@ -86,6 +86,14 @@ struct OutlineRematerializationModel
     : public mlir::acc::OutlineRematerializationOpInterface::ExternalModel<
           OutlineRematerializationModel<Op>, Op> {};
 
+/// External model for OffloadRegionOpInterface.
+/// This interface marks operations whose regions are targets for offloading
+/// and outlining.
+template <typename Op>
+struct OffloadRegionModel
+    : public mlir::acc::OffloadRegionOpInterface::ExternalModel<
+          OffloadRegionModel<Op>, Op> {};
+
 } // namespace fir::acc
 
 #endif // FLANG_OPTIMIZER_OPENACC_FIROPENACC_OPS_INTERFACES_H_
