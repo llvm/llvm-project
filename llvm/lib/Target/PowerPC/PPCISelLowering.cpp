@@ -11234,14 +11234,14 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     unsigned Opcode;
     unsigned Subx;
     if (HiLo == 0) {
-      Opcode = PPC::DMXXINSTDMR512;
+      Opcode = PPCISD::INST512;
       Subx = PPC::sub_wacc_lo;
     } else {
-      Opcode = PPC::DMXXINSTDMR512_HI;
+      Opcode = PPCISD::INST512HI;
       Subx = PPC::sub_wacc_hi;
     }
-    SDValue Ops[] = {Op.getOperand(2), Op.getOperand(3)};
-    SDValue Wacc = SDValue(DAG.getMachineNode(Opcode, dl, MVT::v512i1, Ops), 0);
+    SDValue Wacc = DAG.getNode(Opcode, dl, MVT::v512i1, Op.getOperand(2),
+                               Op.getOperand(3));
     SDValue SubReg = DAG.getTargetConstant(Subx, dl, MVT::i32);
     return SDValue(DAG.getMachineNode(PPC::INSERT_SUBREG, dl, MVT::v1024i1,
                                       Op.getOperand(1), Wacc, SubReg),
@@ -11271,9 +11271,8 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
     SDValue SubReg = DAG.getTargetConstant(Subx, dl, MVT::i32);
     SDValue P = DAG.getTargetConstant(IdxVal, dl, MVT::i32);
-    SDValue Ops[] = {Op.getOperand(2), P};
-    SDValue DMRRowp = SDValue(
-        DAG.getMachineNode(PPC::DMXXINSTDMR256, dl, MVT::v256i1, Ops), 0);
+    SDValue DMRRowp =
+        DAG.getNode(PPCISD::INST256, dl, MVT::v256i1, Op.getOperand(2), P);
     return SDValue(DAG.getMachineNode(PPC::INSERT_SUBREG, dl, MVT::v1024i1,
                                       Op.getOperand(1), DMRRowp, SubReg),
                    0);
@@ -12012,13 +12011,11 @@ SDValue PPCTargetLowering::LowerDMFVectorLoad(SDValue Op,
   }
 
   SDValue TF = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, LoadChains);
-  SDValue Lo(DAG.getMachineNode(PPC::DMXXINSTDMR512, dl, MVT::v512i1, Loads[0],
-                                Loads[1]),
-             0);
+  SDValue Lo =
+      DAG.getNode(PPCISD::INST512, dl, MVT::v512i1, Loads[0], Loads[1]);
   SDValue LoSub = DAG.getTargetConstant(PPC::sub_wacc_lo, dl, MVT::i32);
-  SDValue Hi(DAG.getMachineNode(PPC::DMXXINSTDMR512_HI, dl, MVT::v512i1,
-                                Loads[2], Loads[3]),
-             0);
+  SDValue Hi =
+      DAG.getNode(PPCISD::INST512HI, dl, MVT::v512i1, Loads[2], Loads[3]);
   SDValue HiSub = DAG.getTargetConstant(PPC::sub_wacc_hi, dl, MVT::i32);
   SDValue RC = DAG.getTargetConstant(PPC::DMRRCRegClassID, dl, MVT::i32);
   const SDValue Ops[] = {RC, Lo, LoSub, Hi, HiSub};
@@ -12032,12 +12029,10 @@ SDValue PPCTargetLowering::LowerDMFVectorLoad(SDValue Op,
 
   // Handle Loads for V2048i1 which represents a dmr pair.
   SDValue DmrPValue;
-  SDValue Dmr1Lo(DAG.getMachineNode(PPC::DMXXINSTDMR512, dl, MVT::v512i1,
-                                    Loads[4], Loads[5]),
-                 0);
-  SDValue Dmr1Hi(DAG.getMachineNode(PPC::DMXXINSTDMR512_HI, dl, MVT::v512i1,
-                                    Loads[6], Loads[7]),
-                 0);
+  SDValue Dmr1Lo =
+      DAG.getNode(PPCISD::INST512, dl, MVT::v512i1, Loads[4], Loads[5]);
+  SDValue Dmr1Hi =
+      DAG.getNode(PPCISD::INST512HI, dl, MVT::v512i1, Loads[6], Loads[7]);
   const SDValue Dmr1Ops[] = {RC, Dmr1Lo, LoSub, Dmr1Hi, HiSub};
   SDValue Dmr1Value = SDValue(
       DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v1024i1, Dmr1Ops), 0);
@@ -12057,13 +12052,11 @@ SDValue PPCTargetLowering::LowerDMFVectorLoad(SDValue Op,
 SDValue PPCTargetLowering::DMFInsert1024(const SmallVectorImpl<SDValue> &Pairs,
                                          const SDLoc &dl,
                                          SelectionDAG &DAG) const {
-  SDValue Lo(DAG.getMachineNode(PPC::DMXXINSTDMR512, dl, MVT::v512i1, Pairs[0],
-                                Pairs[1]),
-             0);
+  SDValue Lo =
+      DAG.getNode(PPCISD::INST512, dl, MVT::v512i1, Pairs[0], Pairs[1]);
   SDValue LoSub = DAG.getTargetConstant(PPC::sub_wacc_lo, dl, MVT::i32);
-  SDValue Hi(DAG.getMachineNode(PPC::DMXXINSTDMR512_HI, dl, MVT::v512i1,
-                                Pairs[2], Pairs[3]),
-             0);
+  SDValue Hi =
+      DAG.getNode(PPCISD::INST512HI, dl, MVT::v512i1, Pairs[2], Pairs[3]);
   SDValue HiSub = DAG.getTargetConstant(PPC::sub_wacc_hi, dl, MVT::i32);
   SDValue RC = DAG.getTargetConstant(PPC::DMRRCRegClassID, dl, MVT::i32);
 
