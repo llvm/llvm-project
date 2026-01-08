@@ -140,13 +140,18 @@ This feature uses a hybrid approach:
 
 To enable this feature, pass the following flags to the compiler:
 
-*   ``-memprof-annotate-static-data-prefix``: Enables annotation of global variables in IR.
+*   ``-memprof-annotate-static-data-type={none, readonly, readwrite}``
+    : Specifies which types of static data sections to annotate. Options are:
+
+    *   ``none``: Do not annotate static data sections.
+    *   ``readonly``: Annotate read-only static data sections (i.e., ``.rodata``, ``.data.rel.ro``).
+    *   ``readwrite``: Annotate both read-only (i.e., ``.rodata``, ``.data.rel.ro``) and read-write static data sections (i.e., ``.data``, ``.bss``).
 *   ``-split-static-data``: Enables partitioning of other data (like jump tables) in the backend.
 *   ``-Wl,-z,keep-data-section-prefix``: Instructs the linker (LLD) to group hot and cold data sections together.
 
 .. code-block:: bash
 
-    clang++ -fmemory-profile-use=memprof.memprofdata -mllvm -memprof-annotate-static-data-prefix -mllvm -split-static-data -fuse-ld=lld -Wl,-z,keep-data-section-prefix -O2 source.cpp -o optimized_app
+    clang++ -fmemory-profile-use=memprof.memprofdata -mllvm -memprof-annotate-static-data-type=readonly -mllvm -split-static-data -fuse-ld=lld -Wl,-z,keep-data-section-prefix -O2 source.cpp -o optimized_app
 
 The optimized layout clusters hot static data, improving dTLB and cache efficiency.
 
