@@ -546,6 +546,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::SHL, ISD::SRL, ISD::SRA}, VTs, Custom);
     setOperationAction(ISD::BITCAST, VTs, Custom);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, VTs, Custom);
+    setOperationAction({ISD::SDIV, ISD::UDIV, ISD::SREM, ISD::UREM,
+                        ISD::SDIVREM, ISD::UDIVREM},
+                       VTs, Expand);
   }
 
   if (Subtarget.hasStdExtZfbfmin()) {
