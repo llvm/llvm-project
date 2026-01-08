@@ -186,7 +186,7 @@ jobs:
           steps.docs-changed-subprojects.outputs.openmp_any_changed == 'true' ||
           steps.docs-changed-subprojects.outputs.workflow_any_changed == 'true'
         run: |
-          cmake -B openmp-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_RUNTIMES="openmp" -DLLVM_ENABLE_SPHINX=ON ./runtimes
+          cmake -B openmp-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_RUNTIMES="openmp" -DLLVM_ENABLE_SPHINX=ON -DLLVM_INCLUDE_TESTS=OFF ./runtimes
           TZ=UTC ninja -C openmp-build docs-openmp-html
           mkdir built-docs/openmp
           cp -r openmp-build/openmp/docs/* built-docs/openmp/
