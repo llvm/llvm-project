@@ -1,7 +1,7 @@
 
 #include <iostream>
 
-int my_next() {
+int next() {
   static int i = 0;
   std::cout << "incrementing " << i << std::endl;
   return ++i;
@@ -10,6 +10,6 @@ int my_next() {
 int main() {
   int i = 0;
   while (i < 5)
-    i = my_next();
+    i = next();
   return 0;
 }
