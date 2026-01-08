@@ -19,10 +19,16 @@
 #include "lldb/API/SBEnvironment.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/raw_ostream.h"
 #include <mutex>
 
 #if !defined(_WIN32)
 #include <unistd.h>
+#endif
+
+#ifndef LLDB_DAP_README_URL
+#define LLDB_DAP_README_URL                                                    \
+  "https://lldb.llvm.org/use/lldbdap.html#debug-console"
 #endif
 
 using namespace lldb_dap::protocol;
@@ -257,9 +263,47 @@ llvm::Error BaseRequestHandler::LaunchProcess(
 }
 
 void BaseRequestHandler::PrintWelcomeMessage() const {
+  std::string message;
+  llvm::raw_string_ostream OS(message);
+
 #ifdef LLDB_DAP_WELCOME_MESSAGE
   dap.SendOutput(eOutputCategoryConsole, LLDB_DAP_WELCOME_MESSAGE);
 #endif
+
+  // Trying to provide a brief but helpful welcome message for users to better
+  // understand how the debug console repl works.
+  OS << "To get started with the debug console try ";
+  switch (dap.repl_mode) {
+  case ReplMode::Auto:
+    OS << "\"<variable>\", \"<lldb-cmd>\" or \"help [<lldb-cmd>]\"\r\n";
+    break;
+  case ReplMode::Command:
+    OS << "\"<lldb-cmd>\" or \"help [<lldb-cmd>]\".\r\n";
+    break;
+  case ReplMode::Variable:
+    OS << "\"<variable>\" or \"" << dap.configuration.commandEscapePrefix
+       << "help [<lldb-cmd>]\".\r\n";
+    break;
+  }
+
+  OS << "For more information visit " LLDB_DAP_README_URL ".\r\n";
+
+  dap.SendOutput(OutputType::Console, message);
+}
+
+void BaseRequestHandler::PrintIntroductionMessage() const {
+  std::string msg;
+  llvm::raw_string_ostream os(msg);
+  if (dap.target && dap.target.GetExecutable()) {
+    std::string path = GetSBFileSpecPath(dap.target.GetExecutable());
+    os << llvm::formatv("Executable binary set to '{0}' ({1}).\r\n", path,
+                        dap.target.GetTriple());
+  }
+  if (dap.target.GetProcess()) {
+    os << llvm::formatv("Attached to process {0}.\r\n",
+                        dap.target.GetProcess().GetProcessID());
+  }
+  dap.SendOutput(OutputType::Console, msg);
 }
 
 bool BaseRequestHandler::HasInstructionGranularity(
