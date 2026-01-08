@@ -275,6 +275,8 @@ public:
   const std::string_view getName() const { return DeviceName; }
   const char *getNameCStr() const { return DeviceName.c_str(); }
 
+  const char *getArchCStr() const;
+
   const std::string_view getZeId() const { return zeId; }
   const char *getZeIdCStr() const { return zeId.c_str(); }
 
