@@ -29595,7 +29595,6 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
                                       SelectionDAG &DAG) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT VT = Op.getValueType();
-
   SDValue X = Op.getOperand(0);
   SDValue Y = Op.getOperand(1);
   SDLoc DL(Op);
@@ -29752,9 +29751,9 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
     bool IsFakeVector = !VT.isVector();
     MVT LogicVT = VT.getSimpleVT();
     if (IsFakeVector)
-      LogicVT = (VT == MVT::f64)   ? MVT::v2f64
-                : (VT == MVT::f32) ? MVT::v4f32
-                                   : MVT::v8f16;
+      LogicVT = VT == MVT::f64   ? MVT::v2f64
+                : VT == MVT::f32 ? MVT::v4f32
+                                 : MVT::v8f16;
 
     // We take the sign bit from the first operand and combine it with the
     // output sign bit (see below). Right now, if ShouldHandleZeros is true, the
