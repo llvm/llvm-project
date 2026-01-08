@@ -159,7 +159,7 @@ entry:
 ; Negative Test Cases (Operands Could be NaN)
 
 define <4 x float> @test_sse_max_ps_unknown(<4 x i32> %x, <4 x float> %y) {
-; CHECK-LABEL: define <4 x float> @test_sse_max_ps_nan(
+; CHECK-LABEL: define <4 x float> @test_sse_max_ps_unknown(
 ; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x float> [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CVT:%.*]] = sitofp <4 x i32> [[X]] to <4 x float>
@@ -174,7 +174,7 @@ entry:
 
 
 define <4 x float> @test_sse_max_ps_both_unknown(<4 x float> %x, <4 x float> %y) {
-; CHECK-LABEL: define <4 x float> @test_sse_max_ps_both_nan(
+; CHECK-LABEL: define <4 x float> @test_sse_max_ps_both_unknown(
 ; CHECK-SAME: <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[MAX:%.*]] = tail call noundef <4 x float> @llvm.x86.sse.max.ps(<4 x float> [[X]], <4 x float> [[Y]])
