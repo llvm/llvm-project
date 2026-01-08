@@ -2902,11 +2902,14 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
              TheLoop->isLoopInvariant(cast<StoreInst>(I)->getValueOperand()));
   }
   case Instruction::UDiv:
-  case Instruction::SDiv:
-  case Instruction::SRem:
   case Instruction::URem:
     // If the divisor is loop-invariant no predication is needed.
     return !Legal->isInvariant(I->getOperand(1));
+  case Instruction::SDiv:
+  case Instruction::SRem:
+    // Conservative for now, since masked-off lanes may be poison and could
+    // trigger signed overflow.
+    return true;
   }
 }
 
@@ -5195,21 +5198,15 @@ InstructionCost LoopVectorizationCostModel::expectedCost(ElementCount VF) {
   return Cost;
 }
 
-/// Gets Address Access SCEV after verifying that the access pattern
-/// is loop invariant except the induction variable dependence.
+/// Gets the address access SCEV for Ptr, if it should be used for cost modeling
+/// according to isAddressSCEVForCost.
 ///
 /// This SCEV can be sent to the Target in order to estimate the address
 /// calculation cost.
 static const SCEV *getAddressAccessSCEV(
               Value *Ptr,
-              LoopVectorizationLegality *Legal,
               PredicatedScalarEvolution &PSE,
               const Loop *TheLoop) {
-
-  auto *Gep = dyn_cast<GetElementPtrInst>(Ptr);
-  if (!Gep)
-    return nullptr;
-
   const SCEV *Addr = PSE.getSCEV(Ptr);
   return vputils::isAddressSCEVForCost(Addr, *PSE.getSE(), TheLoop) ? Addr
                                                                     : nullptr;
@@ -5234,7 +5231,7 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
 
   // Figure out whether the access is strided and get the stride value
   // if it's known in compile time
-  const SCEV *PtrSCEV = getAddressAccessSCEV(Ptr, Legal, PSE, TheLoop);
+  const SCEV *PtrSCEV = getAddressAccessSCEV(Ptr, PSE, TheLoop);
 
   // Get the cost of the scalar memory instruction and address computation.
   InstructionCost Cost = VF.getFixedValue() * TTI.getAddressComputationCost(
@@ -7274,6 +7271,25 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   return BestFactor;
 }
 
+/// Search \p Start's users for a recipe satisfying \p Pred, looking through
+/// recipes with definitions.
+template <typename PredT>
+static VPRecipeBase *findRecipe(VPValue *Start, PredT Pred) {
+  SetVector<VPValue *> Worklist;
+  Worklist.insert(Start);
+  for (unsigned I = 0; I != Worklist.size(); ++I) {
+    VPValue *Cur = Worklist[I];
+    auto *R = Cur->getDefiningRecipe();
+    if (Pred(R))
+      return R;
+    for (VPUser *U : Cur->users()) {
+      for (VPValue *V : cast<VPRecipeBase>(U)->definedValues())
+        Worklist.insert(V);
+    }
+  }
+  return nullptr;
+}
+
 static Value *getStartValueFromReductionResult(VPInstruction *RdxResult) {
   using namespace VPlanPatternMatch;
   assert(RdxResult->getOpcode() == VPInstruction::ComputeFindIVResult &&
@@ -7301,8 +7317,20 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
        EpiRedResult->getOpcode() != VPInstruction::ComputeFindIVResult))
     return;
 
-  auto *EpiRedHeaderPhi =
-      cast<VPReductionPHIRecipe>(EpiRedResult->getOperand(0));
+  // Find the reduction phi by searching users of the backedge value.
+  VPValue *BackedgeVal =
+      EpiRedResult->getOperand(EpiRedResult->getNumOperands() - 1);
+  auto *EpiRedHeaderPhi = cast_if_present<VPReductionPHIRecipe>(
+      findRecipe(BackedgeVal, IsaPred<VPReductionPHIRecipe>));
+  if (!EpiRedHeaderPhi) {
+    match(BackedgeVal,
+          VPlanPatternMatch::m_Select(VPlanPatternMatch::m_VPValue(),
+                                      VPlanPatternMatch::m_VPValue(BackedgeVal),
+                                      VPlanPatternMatch::m_VPValue()));
+    EpiRedHeaderPhi = cast<VPReductionPHIRecipe>(
+        findRecipe(BackedgeVal, IsaPred<VPReductionPHIRecipe>));
+  }
+
   RecurKind Kind = EpiRedHeaderPhi->getRecurrenceKind();
   Value *MainResumeValue;
   if (auto *VPI = dyn_cast<VPInstruction>(EpiRedHeaderPhi->getStartValue())) {
@@ -7421,11 +7449,12 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // making any changes to the CFG.
   DenseMap<const SCEV *, Value *> ExpandedSCEVs =
       VPlanTransforms::expandSCEVs(BestVPlan, *PSE.getSE());
-  if (!ILV.getTripCount())
+  if (!ILV.getTripCount()) {
     ILV.setTripCount(BestVPlan.getTripCount()->getLiveInIRValue());
-  else
+  } else {
     assert(VectorizingEpilogue && "should only re-use the existing trip "
                                   "count during epilogue vectorization");
+  }
 
   // Perform the actual loop transformation.
   VPTransformState State(&TTI, BestVF, LI, DT, ILV.AC, ILV.Builder, &BestVPlan,
@@ -7744,7 +7773,7 @@ VPRecipeBuilder::tryToOptimizeInductionTruncate(VPInstruction *VPI,
   auto *WidenIV = cast<VPWidenIntOrFpInductionRecipe>(
       VPI->getOperand(0)->getDefiningRecipe());
   PHINode *Phi = WidenIV->getPHINode();
-  VPValue *Start = WidenIV->getStartValue();
+  VPIRValue *Start = WidenIV->getStartValue();
   const InductionDescriptor &IndDesc = WidenIV->getInductionDescriptor();
 
   // It is always safe to copy over the NoWrap and FastMath flags. In
@@ -9367,14 +9396,27 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
     Value *ResumeV = nullptr;
     // TODO: Move setting of resume values to prepareToExecute.
     if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {
-      auto *RdxResult =
-          cast<VPInstruction>(*find_if(ReductionPhi->users(), [](VPUser *U) {
-            auto *VPI = dyn_cast<VPInstruction>(U);
-            return VPI &&
-                   (VPI->getOpcode() == VPInstruction::ComputeAnyOfResult ||
-                    VPI->getOpcode() == VPInstruction::ComputeReductionResult ||
-                    VPI->getOpcode() == VPInstruction::ComputeFindIVResult);
-          }));
+      // Find the reduction result by searching users of the phi or its backedge
+      // value.
+      auto IsReductionResult = [](VPRecipeBase *R) {
+        auto *VPI = dyn_cast<VPInstruction>(R);
+        return VPI &&
+               (VPI->getOpcode() == VPInstruction::ComputeAnyOfResult ||
+                VPI->getOpcode() == VPInstruction::ComputeReductionResult ||
+                VPI->getOpcode() == VPInstruction::ComputeFindIVResult);
+      };
+      auto *RdxResult = cast<VPInstruction>(
+          findRecipe(ReductionPhi->getBackedgeValue(), IsReductionResult));
+      assert(
+          (is_contained(RdxResult->operands(),
+                        ReductionPhi->getBackedgeValue()) ||
+           (isa<VPWidenCastRecipe>(ReductionPhi->getBackedgeValue()) &&
+            is_contained(RdxResult->operands(), ReductionPhi->getBackedgeValue()
+                                                    ->getDefiningRecipe()
+                                                    ->getOperand(0))) ||
+           RdxResult->getOpcode() == VPInstruction::ComputeFindIVResult) &&
+          "expected to find reduction result via backedge");
+
       ResumeV = cast<PHINode>(ReductionPhi->getUnderlyingInstr())
                     ->getIncomingValueForBlock(L->getLoopPreheader());
       RecurKind RK = ReductionPhi->getRecurrenceKind();

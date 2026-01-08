@@ -36,6 +36,7 @@
 #include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/Unicode.h"
 #include "llvm/Support/UnicodeCharRanges.h"
+
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -45,7 +46,7 @@
 #include <optional>
 #include <string>
 
-#ifdef __SSE4_2__
+#if defined(__i386__) || defined(__x86_64__)
 #include <nmmintrin.h>
 #endif
 
@@ -1919,10 +1920,21 @@ bool Lexer::LexUnicodeIdentifierStart(Token &Result, uint32_t C,
   return true;
 }
 
-static const char *
-fastParseASCIIIdentifier(const char *CurPtr,
-                         [[maybe_unused]] const char *BufferEnd) {
-#ifdef __SSE4_2__
+static const char *fastParseASCIIIdentifierScalar(const char *CurPtr) {
+  unsigned char C = *CurPtr;
+  while (isAsciiIdentifierContinue(C))
+    C = *++CurPtr;
+  return CurPtr;
+}
+
+// Fast path for lexing ASCII identifiers using SSE4.2 instructions.
+// Only enabled on x86/x86_64 when building with a compiler that supports
+// the 'target' attribute, which is used for runtime dispatch. Otherwise, we
+// fall back to the scalar implementation.
+#if (defined(__i386__) || defined(__x86_64__)) && defined(__has_attribute) &&  \
+    __has_attribute(target) && !defined(_MSC_VER)
+__attribute__((target("sse4.2"))) static const char *
+fastParseASCIIIdentifierSSE42(const char *CurPtr, const char *BufferEnd) {
   alignas(16) static constexpr char AsciiIdentifierRange[16] = {
       '_', '_', 'A', 'Z', 'a', 'z', '0', '9',
   };
@@ -1942,12 +1954,20 @@ fastParseASCIIIdentifier(const char *CurPtr,
       continue;
     return CurPtr;
   }
-#endif
 
-  unsigned char C = *CurPtr;
-  while (isAsciiIdentifierContinue(C))
-    C = *++CurPtr;
-  return CurPtr;
+  return fastParseASCIIIdentifierScalar(CurPtr);
+}
+
+__attribute__((target("sse4.2"))) static const char *
+fastParseASCIIIdentifier(const char *CurPtr, const char *BufferEnd) {
+  return fastParseASCIIIdentifierSSE42(CurPtr, BufferEnd);
+}
+
+__attribute__((target("default")))
+#endif
+static const char *fastParseASCIIIdentifier(const char *CurPtr,
+                                            const char *BufferEnd) {
+  return fastParseASCIIIdentifierScalar(CurPtr);
 }
 
 bool Lexer::LexIdentifierContinue(Token &Result, const char *CurPtr) {
