@@ -271,9 +271,13 @@ static bool isMergePassthruOpcode(unsigned Opc) {
   case AArch64ISD::FFLOOR_MERGE_PASSTHRU:
   case AArch64ISD::FNEARBYINT_MERGE_PASSTHRU:
   case AArch64ISD::FRINT_MERGE_PASSTHRU:
+  case AArch64ISD::FRINT32_MERGE_PASSTHRU:
+  case AArch64ISD::FRINT64_MERGE_PASSTHRU:
   case AArch64ISD::FROUND_MERGE_PASSTHRU:
   case AArch64ISD::FROUNDEVEN_MERGE_PASSTHRU:
   case AArch64ISD::FTRUNC_MERGE_PASSTHRU:
+  case AArch64ISD::FTRUNC32_MERGE_PASSTHRU:
+  case AArch64ISD::FTRUNC64_MERGE_PASSTHRU:
   case AArch64ISD::FP_ROUND_MERGE_PASSTHRU:
   case AArch64ISD::FP_EXTEND_MERGE_PASSTHRU:
   case AArch64ISD::SINT_TO_FP_MERGE_PASSTHRU:
@@ -6610,6 +6614,14 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_sve_frintx:
     return DAG.getNode(AArch64ISD::FRINT_MERGE_PASSTHRU, DL, Op.getValueType(),
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
+  case Intrinsic::aarch64_sve_frint32x:
+    return DAG.getNode(AArch64ISD::FRINT32_MERGE_PASSTHRU, DL,
+                       Op.getValueType(), Op.getOperand(2), Op.getOperand(3),
+                       Op.getOperand(1));
+  case Intrinsic::aarch64_sve_frint64x:
+    return DAG.getNode(AArch64ISD::FRINT64_MERGE_PASSTHRU, DL,
+                       Op.getValueType(), Op.getOperand(2), Op.getOperand(3),
+                       Op.getOperand(1));
   case Intrinsic::aarch64_sve_frinta:
     return DAG.getNode(AArch64ISD::FROUND_MERGE_PASSTHRU, DL, Op.getValueType(),
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
@@ -6620,6 +6632,14 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_sve_frintz:
     return DAG.getNode(AArch64ISD::FTRUNC_MERGE_PASSTHRU, DL, Op.getValueType(),
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
+  case Intrinsic::aarch64_sve_frint32z:
+    return DAG.getNode(AArch64ISD::FTRUNC32_MERGE_PASSTHRU, DL,
+                       Op.getValueType(), Op.getOperand(2), Op.getOperand(3),
+                       Op.getOperand(1));
+  case Intrinsic::aarch64_sve_frint64z:
+    return DAG.getNode(AArch64ISD::FTRUNC64_MERGE_PASSTHRU, DL,
+                       Op.getValueType(), Op.getOperand(2), Op.getOperand(3),
+                       Op.getOperand(1));
   case Intrinsic::aarch64_sve_ucvtf:
     return DAG.getNode(AArch64ISD::UINT_TO_FP_MERGE_PASSTHRU, DL,
                        Op.getValueType(), Op.getOperand(2), Op.getOperand(3),
