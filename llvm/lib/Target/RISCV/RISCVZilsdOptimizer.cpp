@@ -306,12 +306,6 @@ bool RISCVPreAllocZilsdOpt::rescheduleOps(
     const MachineOperand &OffsetOp = MI0->getOperand(2);
     assert((BaseOp.isReg() || BaseOp.isFI()) &&
            "Base register should be register or frame index");
-    unsigned BaseReg;
-    bool BaseIsReg = BaseOp.isReg();
-    if (BaseIsReg)
-      BaseReg = BaseOp.getReg().id();
-    else
-      BaseReg = BaseOp.getIndex();
 
     // At this point, MI0 and MI1 are:
     //    1. both either LW or SW.
@@ -371,10 +365,10 @@ bool RISCVPreAllocZilsdOpt::rescheduleOps(
       LLVM_DEBUG(dbgs() << "Formed SD: " << *MIB << "\n");
     }
 
-    if (BaseIsReg)
-      MIB = MIB.addReg(BaseReg);
+    if (BaseOp.isReg())
+      MIB = MIB.addReg(BaseOp.getReg());
     else
-      MIB = MIB.addFrameIndex(BaseReg);
+      MIB = MIB.addFrameIndex(BaseOp.getIndex());
     MIB = MIB.add(OffsetOp);
 
     // Copy memory operands
@@ -478,21 +472,20 @@ bool RISCVPreAllocZilsdOpt::rescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
 
       bool IsLd = (MI.getOpcode() == RISCV::LW);
       const MachineOperand &BaseOp = MI.getOperand(1);
-      unsigned BaseReg;
-      bool BaseIsReg = BaseOp.isReg();
-      if (BaseIsReg)
-        BaseReg = BaseOp.getReg().id();
+      unsigned Base;
+      if (BaseOp.isReg())
+        Base = BaseOp.getReg().id();
       else
-        BaseReg = BaseOp.getIndex();
+        Base = BaseOp.getIndex();
       bool StopHere = false;
 
       // Lambda to find or add base register entries
       auto FindBases = [&](Base2InstMap &Base2Ops, BaseVec &Bases) {
-        auto [BI, Inserted] = Base2Ops.try_emplace({BaseReg, Offset.first});
+        auto [BI, Inserted] = Base2Ops.try_emplace({Base, Offset.first});
         if (Inserted) {
           // First time seeing this base register
           BI->second.push_back(&MI);
-          Bases.push_back({BaseReg, Offset.first});
+          Bases.push_back({Base, Offset.first});
           return;
         }
         // Check if we've seen this exact base+offset before
