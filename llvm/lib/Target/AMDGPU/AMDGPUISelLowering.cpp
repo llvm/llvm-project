@@ -532,20 +532,28 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   for (MVT VT : VectorIntTypes) {
     // Expand the following operations for the current type by default.
-    setOperationAction({ISD::ADD,        ISD::AND,          ISD::FP_TO_SINT,
-                        ISD::FP_TO_UINT, ISD::MUL,          ISD::MULHU,
-                        ISD::MULHS,      ISD::OR,           ISD::SHL,
-                        ISD::SRA,        ISD::SRL,          ISD::ROTL,
-                        ISD::ROTR,       ISD::SUB,          ISD::SINT_TO_FP,
-                        ISD::UINT_TO_FP, ISD::SDIV,         ISD::UDIV,
-                        ISD::SREM,       ISD::UREM,         ISD::SMUL_LOHI,
-                        ISD::UMUL_LOHI,  ISD::SDIVREM,      ISD::UDIVREM,
-                        ISD::SELECT,     ISD::VSELECT,      ISD::SELECT_CC,
-                        ISD::XOR,        ISD::BSWAP,        ISD::CTPOP,
-                        ISD::CTTZ,       ISD::CTLZ,         ISD::VECTOR_SHUFFLE,
-                        ISD::SETCC,      ISD::ADDRSPACECAST,ISD::FP_TO_SINT_SAT,
-                        ISD::FP_TO_UINT_SAT},
+    // clang-format off
+    setOperationAction({ISD::ADD,            ISD::AND,
+                        ISD::FP_TO_SINT,     ISD::FP_TO_UINT,
+                        ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT,
+                        ISD::MUL,            ISD::MULHU,
+                        ISD::MULHS,          ISD::OR,
+                        ISD::SHL,            ISD::SRA,
+                        ISD::SRL,            ISD::ROTL,
+                        ISD::ROTR,           ISD::SUB,
+                        ISD::SINT_TO_FP,     ISD::UINT_TO_FP,
+                        ISD::SDIV,           ISD::UDIV,
+                        ISD::SREM,           ISD::UREM,
+                        ISD::SMUL_LOHI,      ISD::UMUL_LOHI,
+                        ISD::SDIVREM,        ISD::UDIVREM,
+                        ISD::SELECT,         ISD::VSELECT,
+                        ISD::SELECT_CC,      ISD::XOR,
+                        ISD::BSWAP,          ISD::CTPOP,
+                        ISD::CTTZ,           ISD::CTLZ,
+                        ISD::VECTOR_SHUFFLE, ISD::SETCC,
+                        ISD::ADDRSPACECAST},
                        VT, Expand);
+    // clang-format on
   }
 
   static const MVT::SimpleValueType FloatVectorTypes[] = {

@@ -1188,6 +1188,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
        .scalarize(0)
        .lower();
 
+  // clang-format off
   auto &FPToISat = getActionDefinitionsBuilder({G_FPTOSI_SAT, G_FPTOUI_SAT})
     .legalFor({{S32, S32}, {S32, S64}})
     .narrowScalarFor({{S64, S16}}, changeTo(0, S32));
@@ -1196,6 +1197,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
        .widenScalarToNextPow2(0, 32)
        .scalarize(0)
        .lower();
+  // clang-format on
 
   getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
       .clampScalar(0, S16, S64)
