@@ -900,6 +900,12 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_popcountg:
     return emitBuiltinBitOp<cir::BitPopcountOp>(*this, e);
 
+  case Builtin::BI__builtin_unpredictable: {
+    if (cgm.getCodeGenOpts().OptimizationLevel != 0)
+      assert(!cir::MissingFeatures::insertBuiltinUnpredictable());
+    return RValue::get(emitScalarExpr(e->getArg(0)));
+  }
+
   case Builtin::BI__builtin_expect:
   case Builtin::BI__builtin_expect_with_probability: {
     mlir::Value argValue = emitScalarExpr(e->getArg(0));
