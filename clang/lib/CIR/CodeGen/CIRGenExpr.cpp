@@ -2145,8 +2145,7 @@ RValue CIRGenFunction::convertTempToRValue(Address addr, clang::QualType type,
   case cir::TEK_Complex:
     return RValue::getComplex(emitLoadOfComplex(lvalue, loc));
   case cir::TEK_Aggregate:
-    cgm.errorNYI(loc, "convertTempToRValue: aggregate type");
-    return RValue::get(nullptr);
+    return lvalue.asAggregateRValue();
   case cir::TEK_Scalar:
     return RValue::get(emitLoadOfScalar(lvalue, loc));
   }
