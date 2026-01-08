@@ -1521,8 +1521,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   // Simplify extract-lane(%lane_num, %scalar_val) -> %scalar_val.
   // After unrolling, extract-lane may be used to extract values from multiple
   // scalar sources. Only simplify when extracting from a single scalar source.
-  if (Def->getNumOperands() == 2 &&
-      match(Def, m_ExtractLane(m_VPValue(), m_VPValue(A))) &&
+  if (match(Def, m_ExtractLane(m_VPValue(), m_VPValue(A))) &&
       vputils::isSingleScalar(A)) {
     return Def->replaceAllUsesWith(A);
   }
