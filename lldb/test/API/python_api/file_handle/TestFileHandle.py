@@ -680,6 +680,7 @@ class FileHandleTestCase(lldbtest.TestBase):
             lines = [x for x in f.read().strip().split() if x != "7"]
             self.assertEqual(lines, ["foobar"])
 
+    @skipIfWindows
     def test_stdout_file_interactive(self):
         """Ensure when we read stdin from a file, outputs from python goes to the right I/O stream."""
         with open(self.in_filename, "w") as f:
