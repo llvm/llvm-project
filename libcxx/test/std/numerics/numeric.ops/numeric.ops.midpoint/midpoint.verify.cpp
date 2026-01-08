@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// REQUIRES: std-at-least-c++20
+
 // <numeric>
 
 // template <class _Tp>
@@ -18,22 +19,20 @@
 
 #include "test_macros.h"
 
-int func1 () { return 1; }
-int func2 () { return 2; }
+int func1() { return 1; }
+int func2() { return 2; }
 
 struct Incomplete;
-Incomplete *ip = nullptr;
-void       *vp = nullptr;
+Incomplete* ip = nullptr;
+void* vp       = nullptr;
 
-int main(int, char**)
-{
-    (void) std::midpoint(false, true);  // expected-error {{no matching function for call to 'midpoint'}}
+void test() {
+  // expected-error@+1 {{no matching function for call to 'midpoint'}}
+  (void)std::midpoint(false, true);
 
-//  A couple of odd pointer types that should fail
-    (void) std::midpoint(nullptr, nullptr);  // expected-error {{no matching function for call to 'midpoint'}}
-    (void) std::midpoint(func1, func2);      // expected-error {{no matching function for call to 'midpoint'}}
-    (void) std::midpoint(ip, ip);            // expected-error {{no matching function for call to 'midpoint'}}
-    (void) std::midpoint(vp, vp);            // expected-error {{no matching function for call to 'midpoint'}}
-
-    return 0;
+  //  A couple of odd pointer types that should fail
+  (void)std::midpoint(nullptr, nullptr); // expected-error {{no matching function for call to 'midpoint'}}
+  (void)std::midpoint(func1, func2);     // expected-error {{no matching function for call to 'midpoint'}}
+  (void)std::midpoint(ip, ip);           // expected-error {{no matching function for call to 'midpoint'}}
+  (void)std::midpoint(vp, vp);           // expected-error {{no matching function for call to 'midpoint'}}
 }
