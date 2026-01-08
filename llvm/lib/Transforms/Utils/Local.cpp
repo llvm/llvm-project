@@ -935,7 +935,6 @@ static Value *selectIncomingValueForBlock(Value *OldVal, BasicBlock *BB,
     return OldVal;
   }
 
-  // IncomingValueMap::const_iterator It = IncomingValues.find(BB);
   if (It != IncomingValues.end() && It->second)
     return It->second;
 
