@@ -35,6 +35,12 @@ static cl::opt<bool> NoF32x2("nvptx-no-f32x2", cl::Hidden,
                                       "f32x2 instructions and registers."),
                              cl::init(false));
 
+// FullSmVersion encoding helpers: SM * 10 + suffix offset
+// (0 = base, 2 = 'f', 3 = 'a').
+static constexpr unsigned SM(unsigned Version) { return Version * 10; }
+static constexpr unsigned SMF(unsigned Version) { return SM(Version) + 2; }
+static constexpr unsigned SMA(unsigned Version) { return SM(Version) + 3; }
+
 // Pin the vtable to this file.
 void NVPTXSubtarget::anchor() {}
 
@@ -128,7 +134,7 @@ NVPTXSubtarget &NVPTXSubtarget::initializeSubtargetDependencies(StringRef CPU,
     PTXVersion = MinPTX;
   } else if (PTXVersion < MinPTX) {
     // User explicitly requested an insufficient PTX version.
-    report_fatal_error(formatv(
+    reportFatalUsageError(formatv(
         "PTX version {0}.{1} does not support target '{2}'. "
         "Minimum required PTX version is {3}.{4}. "
         "Either remove the PTX version to use the default, "
