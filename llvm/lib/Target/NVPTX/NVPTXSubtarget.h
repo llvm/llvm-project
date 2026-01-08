@@ -31,10 +31,7 @@ namespace llvm {
 
 // FullSmVersion encoding: SM * 10 + ArchSuffixOffset
 // ArchSuffixOffset: 0 (base), 2 ('f'), 3 ('a')
-// e.g. SM(100)=1000 (sm_100), SMF(100)=1002 (sm_100f), SMA(100)=1003 (sm_100a)
-inline constexpr unsigned SM(unsigned Version) { return Version * 10; }
-inline constexpr unsigned SMF(unsigned Version) { return SM(Version) + 2; }
-inline constexpr unsigned SMA(unsigned Version) { return SM(Version) + 3; }
+// e.g. sm_100 -> 1000, sm_100f -> 1002, sm_100a -> 1003
 
 class NVPTXSubtarget : public NVPTXGenSubtargetInfo {
   virtual void anchor();
@@ -45,7 +42,7 @@ class NVPTXSubtarget : public NVPTXGenSubtargetInfo {
 
   // FullSmVersion encoding: SM * 10 + ArchSuffixOffset
   // ArchSuffixOffset: 0 (base), 2 ('f'), 3 ('a')
-  // e.g. SM(30) == 300, SMA(90) == 903, SMF(100) == 1002
+  // e.g. sm_30 -> 300, sm_90a -> 903, sm_100f -> 1002
   unsigned int FullSmVersion;
 
   // SM version x.y is represented as 10*x+y, e.g. 3.1 == 31. Derived from
