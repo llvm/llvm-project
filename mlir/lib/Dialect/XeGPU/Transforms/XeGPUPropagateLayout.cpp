@@ -420,6 +420,10 @@ private:
                         ArrayRef<LayoutInfoLattice *> operands,
                         ArrayRef<const LayoutInfoLattice *> results);
 
+  void visitStoreMatrixOp(xegpu::StoreMatrixOp store,
+                          ArrayRef<LayoutInfoLattice *> operands,
+                          ArrayRef<const LayoutInfoLattice *> results);
+
   bool hasParamsOfLayoutKind(xegpu::DistributeLayoutAttr anchorLayout);
 
 public:
@@ -492,6 +496,9 @@ LogicalResult LayoutInfoPropagation::visitOperation(
       })
       .Case<vector::ShapeCastOp>([&](auto shapeCastOp) {
         visitShapeCastOp(shapeCastOp, operands, results);
+      })
+      .Case<xegpu::StoreMatrixOp>([&](auto storeMatrixOp) {
+        visitStoreMatrixOp(storeMatrixOp, operands, results);
       })
       // All other ops.
       .Default([&](Operation *op) {
@@ -1258,6 +1265,28 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   propagateIfChanged(operands[2], operands[2]->meet(maskLayout));
   if (storeScatter.getOffsets())
     propagateIfChanged(operands[3], operands[3]->meet(maskLayout));
+}
+
+void LayoutInfoPropagation::visitStoreMatrixOp(
+    xegpu::StoreMatrixOp storeMatrix, ArrayRef<LayoutInfoLattice *> operands,
+    ArrayRef<const LayoutInfoLattice *> results) {
+  Value operand = storeMatrix.getData();
+  unsigned index =
+      std::distance(storeMatrix.operand_begin(),
+                    llvm::find(storeMatrix->getOperands(), operand));
+
+  auto uArch = getUArch(getChipStr(storeMatrix).value_or(""));
+  const int subgroupSize = uArch->getSubgroupSize();
+  SmallVector<int> instData = {1, 8};
+  LayoutInfo layout;
+  if (layoutKind == LayoutKind::InstData)
+    layout =
+        LayoutInfo(xegpu::LayoutAttr::get(storeMatrix.getContext(), instData));
+  else
+    layout =
+        getDefaultSIMTLayoutInfo(storeMatrix->getContext(), 2, subgroupSize);
+
+  propagateIfChanged(operands[index], operands[index]->meet(layout));
 }
 
 namespace {
