@@ -7311,7 +7311,6 @@ def fno_sycl : Flag<["-"], "fno-sycl">,
   HelpText<"Disable SYCL C++ extensions">;
 def nolibsycl : Flag<["-"], "nolibsycl">,
                 Flags<[NoXarchOption]>,
-                Visibility<[ClangOption, CLOption]>,
                 HelpText<"Do not link SYCL runtime library">;
 def fsycl_device_only : Flag<["-"], "fsycl-device-only">,
   Alias<offload_device_only>, HelpText<"Compile SYCL code for device only">;
