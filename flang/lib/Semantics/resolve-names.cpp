@@ -6534,6 +6534,9 @@ void DeclarationVisitor::Post(const parser::DerivedTypeStmt &x) {
   if (!paramNames.empty()) {
     set_inPDTDefinition(true);
   }
+  // Clear the attributes so that the attributes of the derived type
+  // (ABSTRACT, PUBLIC/PRIVATE, &c.) don't apply to the type's parameters.
+  EndAttrs(), BeginAttrs();
   if (auto *details{symbol.detailsIf<DerivedTypeDetails>()}) {
     for (const auto &name : paramNames) {
       if (Symbol * symbol{MakeTypeSymbol(name, TypeParamDetails{})}) {
