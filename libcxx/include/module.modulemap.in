@@ -2006,6 +2006,13 @@ module std [system] {
     export std.iterator.reverse_iterator
   }
 
+  module spanstream {
+    module fwd { header "__fwd/spanstream.h" }
+
+    header "spanstream"
+    export *
+  }
+
   module sstream {
     module fwd { header "__fwd/sstream.h" }
 
