@@ -3,9 +3,6 @@
 
 ; swizzle with a constant operand should be optimized to a shufflevector.
 
-declare <16 x i8> @llvm.wasm.swizzle(<16 x i8>, <16 x i8>)
-declare <16 x i8> @llvm.wasm.relaxed.swizzle(<16 x i8>, <16 x i8>)
-
 ; Identity swizzle pattern
 define <16 x i8> @swizzle_identity(<16 x i8> %v) {
 ; CHECK-LABEL: define <16 x i8> @swizzle_identity(
@@ -53,8 +50,8 @@ define <16 x i8> @swizzle_non_constant(<16 x i8> %v, <16 x i8> %mask) {
 define <16 x i8> @swizzle_out_of_bounds_1(<16 x i8> %v) {
 ; CHECK-LABEL: define <16 x i8> @swizzle_out_of_bounds_1(
 ; CHECK-SAME: <16 x i8> [[V:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = insertelement <16 x i8> [[V]], i8 0, i64 15
-; CHECK-NEXT:    ret <16 x i8> [[RESULT]]
+; CHECK-NEXT:    [[RESULT1:%.*]] = insertelement <16 x i8> [[V]], i8 0, i64 15
+; CHECK-NEXT:    ret <16 x i8> [[RESULT1]]
 ;
   %result = tail call <16 x i8> @llvm.wasm.swizzle(<16 x i8> %v, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 16>)
   ret <16 x i8> %result
