@@ -22,7 +22,8 @@ class TestComputeProjects(unittest.TestCase):
             "check-bolt check-clang check-clang-tools check-flang check-lld check-lldb check-llvm check-mlir check-polly",
         )
         self.assertEqual(
-            env_variables["runtimes_to_build"], "libcxx;libcxxabi;libunwind"
+            env_variables["runtimes_to_build"],
+            "libcxx;libcxxabi;libunwind;offload;openmp",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
@@ -83,14 +84,15 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["projects_to_build"],
-            "clang;clang-tools-extra;lld;lldb;llvm",
+            "clang;clang-tools-extra;flang;lld;lldb;llvm",
         )
         self.assertEqual(
             env_variables["project_check_targets"],
             "check-clang check-clang-tools check-lldb",
         )
         self.assertEqual(
-            env_variables["runtimes_to_build"], "compiler-rt;libcxx;libcxxabi;libunwind"
+            env_variables["runtimes_to_build"],
+            "compiler-rt;libcxx;libcxxabi;libunwind;offload;openmp",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
@@ -158,14 +160,15 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["projects_to_build"],
-            "clang;clang-tools-extra;lld;lldb;llvm;mlir",
+            "clang;clang-tools-extra;flang;lld;lldb;llvm;mlir",
         )
         self.assertEqual(
             env_variables["project_check_targets"],
             "check-clang check-clang-cir check-clang-tools check-lldb",
         )
         self.assertEqual(
-            env_variables["runtimes_to_build"], "compiler-rt;libcxx;libcxxabi;libunwind"
+            env_variables["runtimes_to_build"],
+            "compiler-rt;libcxx;libcxxabi;libunwind;offload;openmp",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
@@ -293,7 +296,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["runtimes_to_build"],
-            "compiler-rt;flang-rt;libc;libclc;libcxx;libcxxabi;libunwind",
+            "compiler-rt;flang-rt;libc;libclc;libcxx;libcxxabi;libunwind;offload;openmp",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
@@ -367,7 +370,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["runtimes_to_build"],
-            "compiler-rt;flang-rt;libc;libclc;libcxx;libcxxabi;libunwind",
+            "compiler-rt;flang-rt;libc;libclc;libcxx;libcxxabi;libunwind;offload;openmp",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
@@ -402,7 +405,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["runtimes_to_build"],
-            "compiler-rt;flang-rt;libc;libclc;libcxx;libcxxabi;libunwind",
+            "compiler-rt;flang-rt;libc;libclc;libcxx;libcxxabi;libunwind;offload;openmp",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
@@ -426,7 +429,8 @@ class TestComputeProjects(unittest.TestCase):
             "check-bolt check-clang check-clang-tools check-flang check-lit check-lld check-lldb check-llvm check-mlir check-polly",
         )
         self.assertEqual(
-            env_variables["runtimes_to_build"], "libcxx;libcxxabi;libunwind"
+            env_variables["runtimes_to_build"],
+            "libcxx;libcxxabi;libunwind;offload;openmp",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
