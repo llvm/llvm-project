@@ -15,7 +15,6 @@
 #include "mlir/Support/IndentedOstream.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Interfaces.h"
-#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -127,16 +126,6 @@ static void emitInterfaceMethodsDef(const DialectInterface &interface,
   }
 }
 
-static void emitInterfaceAliasDeclarations(const DialectInterface &interface,
-                                           raw_ostream &os) {
-  raw_indented_ostream ios(os);
-  ios.indent(2);
-
-  for (auto &alias : interface.getAliasDeclarations()) {
-    ios << "using " << alias.getKey() << " = " << alias.getValue() << ";\n";
-  }
-}
-
 void DialectInterfaceGenerator::emitInterfaceDecl(
     const DialectInterface &interface) {
   llvm::NamespaceEmitter ns(os, interface.getCppNamespace());
@@ -151,9 +140,16 @@ void DialectInterfaceGenerator::emitInterfaceDecl(
       "  {0}(::mlir::Dialect *dialect) : Base(dialect) {{}\n",
       interface.getName());
 
-  emitInterfaceAliasDeclarations(interface, os);
-
   emitInterfaceMethodsDef(interface, os);
+
+  // Emit any extra declarations.
+  if (std::optional<StringRef> extraDecls =
+          interface.getExtraClassDeclaration()) {
+    raw_indented_ostream ios(os);
+    ios.indent(2);
+    ios.printReindented(extraDecls.value());
+    ios << "\n";
+  }
 
   os << "};\n";
 }

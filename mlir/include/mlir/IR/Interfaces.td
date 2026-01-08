@@ -85,11 +85,6 @@ class StaticInterfaceMethod<string desc, string retTy, string methodName,
     : InterfaceMethod<desc, retTy, methodName, args, methodBody,
                       defaultImplementation>;
 
-// This class represents a pure virtual interface method.
-class PureVirtualInterfaceMethod<string desc, string retTy, string methodName,
-                            dag args = (ins)>
-    : InterfaceMethod<desc, retTy, methodName, args>;
-
 // This class represents a interface method declaration.
 class InterfaceMethodDeclaration<string desc, string retTy, string methodName,
                             dag args = (ins)>
@@ -157,17 +152,9 @@ class TypeInterface<string name, list<Interface> baseInterfaces = []>
 			!if(!empty(cppNamespace),"", cppNamespace # "::") # name
     >;
 
-// AliasDeclaration represents an Alias Declaration in a Dialect Interface.
-class AliasDeclaration<string alias, string typeId> {
-  string name = alias;
-  string aliased = typeId;
-}
-
 // DialectInterface represents a Dialect Interface.
 class DialectInterface<string name, list<Interface> baseInterfaces = []>
-  : Interface<name, baseInterfaces>, OpInterfaceTrait<name> {
-  list<AliasDeclaration> aliasDeclarations = [];
-}
+  : Interface<name, baseInterfaces>, OpInterfaceTrait<name>;
 
 
 // Whether to declare the interface methods in the user entity's header. This

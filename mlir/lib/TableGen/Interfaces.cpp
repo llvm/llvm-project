@@ -222,15 +222,3 @@ bool TypeInterface::classof(const Interface *interface) {
 bool DialectInterface::classof(const Interface *interface) {
   return interface->getDef().isSubClassOf("DialectInterface");
 }
-
-// Return the interfaces extra class declaration code.
-llvm::StringMap<StringRef> DialectInterface::getAliasDeclarations() const {
-  llvm::StringMap<StringRef> aliasDeclarations;
-
-  for (auto &aliasDef : getDef().getValueAsListOfDefs("aliasDeclarations")) {
-    auto alias = aliasDef->getValueAsString("name");
-    auto typeId = aliasDef->getValueAsString("aliased");
-    aliasDeclarations[alias] = typeId;
-  }
-  return aliasDeclarations;
-}

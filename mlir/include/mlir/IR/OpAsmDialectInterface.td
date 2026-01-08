@@ -8,7 +8,9 @@ def OpAsmDialectInterface : DialectInterface<"OpAsmDialectInterface"> {
     Dialect OpAsm interface
   }];
   let cppNamespace = "::mlir";
-  let aliasDeclarations = [AliasDeclaration<"AliasResult", "OpAsmAliasResult">];
+  let extraClassDeclaration = [{
+    using AliasResult = OpAsmAliasResult;
+  }];
 
   let methods = [
     InterfaceMethod<[{
@@ -17,16 +19,16 @@ def OpAsmDialectInterface : DialectInterface<"OpAsmDialectInterface"> {
         the symbol when printing textual IR. These aliases must not contain `.` or
         end with a numeric digit ([0-9]+).
       }],
-      "AliasResult", "getAlias",
+      "OpAsmAliasResult", "getAlias",
       (ins "::mlir::Attribute":$attr, "::llvm::raw_ostream &":$os),
       [{
-        return AliasResult::NoAlias;
+        return OpAsmAliasResult::NoAlias;
       }]
     >,
-    InterfaceMethod<[{}], "AliasResult", "getAlias",
+    InterfaceMethod<[{}], "OpAsmAliasResult", "getAlias",
       (ins "::mlir::Type":$type, "::llvm::raw_ostream &":$os),
       [{
-        return AliasResult::NoAlias;
+        return OpAsmAliasResult::NoAlias;
       }]
     >,
     InterfaceMethod<[{

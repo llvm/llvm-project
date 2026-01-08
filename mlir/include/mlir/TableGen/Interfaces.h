@@ -165,9 +165,6 @@ struct TypeInterface : public Interface {
 struct DialectInterface : public Interface {
   using Interface::Interface;
 
-  // Return alias declarations
-  llvm::StringMap<StringRef> getAliasDeclarations() const;
-
   static bool classof(const Interface *interface);
 };
 

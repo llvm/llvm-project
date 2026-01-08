@@ -51,24 +51,25 @@ def WithDefaultMethodInterface : DialectInterface<"WithDefaultMethodInterface"> 
 // DECL-NEXT:   return true;
 // DECL-NEXT:   }
 
-def OnlyDeclarationInterface : DialectInterface<"OnlyDeclarationInterface"> {
+def OnlyDeclarationInterfaceWithExtraDecls : DialectInterface<"OnlyDeclarationInterfaceWithExtraDecls"> {
   let description = [{
     This is an example dialect interface with only declarations.
   }];
 
   let cppNamespace = "::mlir::example";
 
-  let aliasDeclarations = [
-      AliasDeclaration<"FirstAlias", "unsigned">];
-
   let methods = [
       InterfaceMethodDeclaration<
-        "a method declaration", "FirstAlias", "exampleMethodDeclaration", 
+        "a method declaration", "void", "exampleMethodDeclaration", 
         (ins "::mlir::Type":$type)
       >
   ];
+
+  let extraClassDeclaration = [{
+    using DeclType = int;
+  }];
 }
 
-// DECL:   class OnlyDeclarationInterface : public {{.*}}DialectInterface::Base<OnlyDeclarationInterface>
-// DECL:   using FirstAlias = unsigned;
-// DECL:   virtual FirstAlias exampleMethodDeclaration(::mlir::Type type) const;
+// DECL:   class OnlyDeclarationInterfaceWithExtraDecls : public {{.*}}DialectInterface::Base<OnlyDeclarationInterfaceWithExtraDecls>
+// DECL:   virtual void exampleMethodDeclaration(::mlir::Type type) const;
+// DECL:   using DeclType = int;
