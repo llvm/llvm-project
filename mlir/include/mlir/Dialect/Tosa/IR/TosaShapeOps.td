@@ -176,6 +176,24 @@ def Tosa_DivFloorShapeOp : Tosa_ElementwiseShapeOp<"div_floor_shape", [Pure]> {
 }
 
 //===----------------------------------------------------------------------===//
+// Operator: ModShape
+//===----------------------------------------------------------------------===//
+def Tosa_ModShapeOp : Tosa_ElementwiseShapeOp<"mod_shape", [Pure]> {
+  let summary = "Elementwise modulo of shapes.";
+
+  let description = [{
+    Elementwise modulo of input1 divided by input2.
+  }];
+
+  let arguments = (ins
+    Tosa_Shape:$input1,
+    Tosa_Shape:$input2
+  );
+
+  let results = (outs Tosa_Shape:$output);
+}
+
+//===----------------------------------------------------------------------===//
 // Operator: MulShape
 //===----------------------------------------------------------------------===//
 def Tosa_MulShapeOp : Tosa_ElementwiseShapeOp<"mul_shape", [Pure]> {
