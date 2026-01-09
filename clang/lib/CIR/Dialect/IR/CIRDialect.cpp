@@ -705,8 +705,6 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
   if (getSrc().getType() == getType()) {
     switch (getKind()) {
     case cir::CastKind::integral: {
-      // TODO: for sign differences, it's possible in certain conditions to
-      // create a new attribute that's capable of representing the source.
       llvm::SmallVector<mlir::OpFoldResult, 1> foldResults;
       auto foldOrder = getSrc().getDefiningOp()->fold(foldResults);
       if (foldOrder.succeeded() && mlir::isa<mlir::Attribute>(foldResults[0]))
@@ -723,7 +721,36 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
       return {};
     }
   }
-  return tryFoldCastChain(*this);
+
+  // Handle cases where a chain of casts cancel out.
+  Value result = tryFoldCastChain(*this);
+  if (result)
+    return result;
+
+  // Handle simple constant casts.
+  if (auto srcConst = getSrc().getDefiningOp<cir::ConstantOp>()) {
+    switch (getKind()) {
+    case cir::CastKind::integral: {
+      mlir::Type srcTy = getSrc().getType();
+      // Don't try to fold vector casts for now.
+      assert(mlir::isa<cir::VectorType>(srcTy) ==
+             mlir::isa<cir::VectorType>(getType()));
+      if (mlir::isa<cir::VectorType>(srcTy))
+        break;
+
+      auto srcIntTy = mlir::cast<cir::IntType>(srcTy);
+      auto dstIntTy = mlir::cast<cir::IntType>(getType());
+      APInt newVal =
+          srcIntTy.isSigned()
+              ? srcConst.getIntValue().sextOrTrunc(dstIntTy.getWidth())
+              : srcConst.getIntValue().zextOrTrunc(dstIntTy.getWidth());
+      return cir::IntAttr::get(dstIntTy, newVal);
+    }
+    default:
+      break;
+    }
+  }
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
@@ -1237,6 +1264,27 @@ LogicalResult cir::ScopeOp::verify() {
   if (lastBlock.empty() || !lastBlock.mightHaveTerminator() ||
       !lastBlock.getTerminator()->hasTrait<OpTrait::IsTerminator>())
     return emitOpError() << "last block of cir.scope must be terminated";
+  return success();
+}
+
+LogicalResult cir::ScopeOp::fold(FoldAdaptor /*adaptor*/,
+                                 SmallVectorImpl<OpFoldResult> &results) {
+  // Only fold "trivial" scopes: a single block containing only a `cir.yield`.
+  if (!getRegion().hasOneBlock())
+    return failure();
+  Block &block = getRegion().front();
+  if (block.getOperations().size() != 1)
+    return failure();
+
+  auto yield = dyn_cast<cir::YieldOp>(block.front());
+  if (!yield)
+    return failure();
+
+  // Only fold when the scope produces a value.
+  if (getNumResults() != 1 || yield.getNumOperands() != 1)
+    return failure();
+
+  results.push_back(yield.getOperand(0));
   return success();
 }
 
@@ -1910,6 +1958,19 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     hasAlias = true;
   }
 
+  mlir::StringAttr personalityNameAttr = getPersonalityAttrName(state.name);
+  if (parser.parseOptionalKeyword("personality").succeeded()) {
+    if (parser.parseLParen().failed())
+      return failure();
+    mlir::StringAttr personalityAttr;
+    if (parser.parseOptionalSymbolName(personalityAttr).failed())
+      return failure();
+    state.addAttribute(personalityNameAttr,
+                       FlatSymbolRefAttr::get(personalityAttr));
+    if (parser.parseRParen().failed())
+      return failure();
+  }
+
   auto parseGlobalDtorCtor =
       [&](StringRef keyword,
           llvm::function_ref<void(std::optional<int> prio)> createAttr)
@@ -2108,6 +2169,12 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   if (std::optional<StringRef> aliaseeName = getAliasee()) {
     p << " alias(";
     p.printSymbolName(*aliaseeName);
+    p << ")";
+  }
+
+  if (std::optional<StringRef> personalityName = getPersonality()) {
+    p << " personality(";
+    p.printSymbolName(*personalityName);
     p << ")";
   }
 
@@ -2515,6 +2582,22 @@ LogicalResult cir::GetMemberOp::verify() {
   if (recordTy.getMembers()[getIndex()] != getType().getPointee())
     return emitError() << "member type mismatch";
 
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// ExtractMemberOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::ExtractMemberOp::verify() {
+  auto recordTy = mlir::cast<cir::RecordType>(getRecord().getType());
+  if (recordTy.getKind() == cir::RecordType::Union)
+    return emitError()
+           << "cir.extract_member currently does not support unions";
+  if (recordTy.getMembers().size() <= getIndex())
+    return emitError() << "member index out of bounds";
+  if (recordTy.getMembers()[getIndex()] != getType())
+    return emitError() << "member type mismatch";
   return mlir::success();
 }
 
@@ -3467,6 +3550,19 @@ static mlir::ParseResult parseTryHandlerRegions(
 
   handlerTypes = parser.getBuilder().getArrayAttr(catcherAttrs);
   return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// EhTypeIdOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+cir::EhTypeIdOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  Operation *op = symbolTable.lookupNearestSymbolFrom(*this, getTypeSymAttr());
+  if (!isa_and_nonnull<GlobalOp>(op))
+    return emitOpError("'")
+           << getTypeSym() << "' does not reference a valid cir.global";
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

@@ -1,6 +1,6 @@
 ! RUN: %flang_fc1 -fopenmp -fdebug-dump-symbols %s | FileCheck %s
 
-! Test symbols generated in block constructs in the 
+! Test symbols generated in block constructs in the
 ! presence of `default(...)` clause
 
 program sample
@@ -10,7 +10,7 @@ program sample
     !CHECK: x size=4 offset=0: ObjectEntity type: INTEGER(4)
     !CHECK: y size=4 offset=4: ObjectEntity type: INTEGER(4)
     !CHECK: z size=4 offset=8: ObjectEntity type: INTEGER(4)
-    integer x, y, z, w, k, a 
+    integer x, y, z, w, k, a
     !$omp parallel  firstprivate(x) private(y) shared(w) default(private)
         !CHECK: OtherConstruct scope: size=0 alignment=1
         !CHECK: a (OmpPrivate): HostAssoc
@@ -29,7 +29,7 @@ program sample
                 !CHECK: OtherConstruct scope: size=0 alignment=1
                 a = 10
            !$omp end parallel
-        !$omp end parallel 
+        !$omp end parallel
 
         !$omp parallel default(firstprivate) shared(y) private(w)
             !CHECK: OtherConstruct scope: size=0 alignment=1
@@ -37,9 +37,9 @@ program sample
             !CHECK: w (OmpPrivate, OmpExplicit): HostAssoc
             !CHECK: z (OmpFirstPrivate): HostAssoc
             y = 30
-            w = 40 
-            z = 50 
+            w = 40
+            z = 50
             k = 40
         !$omp end parallel
-    !$omp end parallel  
+    !$omp end parallel
 end program sample

@@ -4,7 +4,7 @@
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64-none-linux-gnu"
 
-  define void @ham() gc "statepoint-example" personality i32* ()* @baz {
+  define void @ham() gc "statepoint-example" personality ptr @baz {
   bb:
     switch i32 undef, label %bb4 [
       i32 2050, label %bb1
@@ -12,16 +12,16 @@
     ]
 
   bb1:                                              ; preds = %bb
-    %tmp = call token (i64, i32, void (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 2882400000, i32 0, void (i32)* nonnull elementtype(void (i32)) @wombat, i32 1, i32 0, i32 10, i32 0, i32 0) [ "deopt"(), "gc-live"() ]
+    %tmp = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr nonnull elementtype(void (i32)) @wombat, i32 1, i32 0, i32 10, i32 0, i32 0) [ "deopt"(), "gc-live"() ]
     unreachable
 
   bb2:                                              ; preds = %bb
-    %tmp3 = call token (i64, i32, void (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 2882400000, i32 0, void (i32)* nonnull elementtype(void (i32)) @wombat, i32 1, i32 0, i32 10, i32 0, i32 0) [ "deopt"(), "gc-live"() ]
+    %tmp3 = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr nonnull elementtype(void (i32)) @wombat, i32 1, i32 0, i32 10, i32 0, i32 0) [ "deopt"(), "gc-live"() ]
     unreachable
 
   bb4:                                              ; preds = %bb
-    %tmp5 = call token (i64, i32, i8 addrspace(1)* (i8 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i8p1i8f(i64 2882400000, i32 0, i8 addrspace(1)* (i8 addrspace(1)*)* elementtype(i8 addrspace(1)* (i8 addrspace(1)*)) undef, i32 1, i32 0, i8 addrspace(1)* nonnull undef, i32 0, i32 0) [ "deopt"(), "gc-live"() ]
-    %tmp10 = call token (i64, i32, i8 addrspace(1)* (i8 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i8p1i8f(i64 2, i32 4, i8 addrspace(1)* (i8 addrspace(1)*)* nonnull elementtype(i8 addrspace(1)* (i8 addrspace(1)*)) @barney, i32 1, i32 0, i8 addrspace(1)* nonnull undef, i32 0, i32 0) [ "deopt"(), "gc-live"() ]
+    %tmp5 = call token (i64, i32, ptr addrspace(1) (ptr addrspace(1))*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr addrspace(1) (ptr addrspace(1))* elementtype(ptr addrspace(1) (ptr addrspace(1))) undef, i32 1, i32 0, ptr addrspace(1) nonnull undef, i32 0, i32 0) [ "deopt"(), "gc-live"() ]
+    %tmp10 = call token (i64, i32, ptr addrspace(1) (ptr addrspace(1))*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2, i32 4, ptr addrspace(1) (ptr addrspace(1))* nonnull elementtype(ptr addrspace(1) (ptr addrspace(1))) @barney, i32 1, i32 0, ptr addrspace(1) nonnull undef, i32 0, i32 0) [ "deopt"(), "gc-live"() ]
     br i1 undef, label %bb40, label %bb24
 
   bb24:                                             ; preds = %bb4
@@ -32,30 +32,30 @@
     ]
 
   bb25:                                             ; preds = %bb24
-    %tmp26 = call token (i64, i32, i8 addrspace(1)* (i8 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i8p1i8f(i64 2, i32 4, i8 addrspace(1)* (i8 addrspace(1)*)* nonnull elementtype(i8 addrspace(1)* (i8 addrspace(1)*)) @wobble, i32 1, i32 0, i8 addrspace(1)* nonnull undef, i32 0, i32 0) [ "deopt"(), "gc-live"(i8 addrspace(1)* null) ]
-    %tmp27 = call align 8 i8 addrspace(1)* @llvm.experimental.gc.result.p1i8(token %tmp26)
-    %tmp28 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp26, i32 0, i32 0) ; (null, null)
+    %tmp26 = call token (i64, i32, ptr addrspace(1) (ptr addrspace(1))*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2, i32 4, ptr addrspace(1) (ptr addrspace(1))* nonnull elementtype(ptr addrspace(1) (ptr addrspace(1))) @wobble, i32 1, i32 0, ptr addrspace(1) nonnull undef, i32 0, i32 0) [ "deopt"(), "gc-live"(ptr addrspace(1) null) ]
+    %tmp27 = call align 8 ptr addrspace(1) @llvm.experimental.gc.result.p1(token %tmp26)
+    %tmp28 = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %tmp26, i32 0, i32 0) ; (null, null)
     br label %bb36
 
   bb29:                                             ; preds = %bb24
-    %tmp30 = call token (i64, i32, i8 addrspace(1)* (i8 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i8p1i8f(i64 2, i32 4, i8 addrspace(1)* (i8 addrspace(1)*)* nonnull elementtype(i8 addrspace(1)* (i8 addrspace(1)*)) @bar, i32 1, i32 0, i8 addrspace(1)* nonnull undef, i32 0, i32 0) [ "deopt"(), "gc-live"() ]
+    %tmp30 = call token (i64, i32, ptr addrspace(1) (ptr addrspace(1))*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2, i32 4, ptr addrspace(1) (ptr addrspace(1))* nonnull elementtype(ptr addrspace(1) (ptr addrspace(1))) @bar, i32 1, i32 0, ptr addrspace(1) nonnull undef, i32 0, i32 0) [ "deopt"(), "gc-live"() ]
     br label %bb36
 
   bb31:                                             ; preds = %bb24
-    %tmp32 = call token (i64, i32, void (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 2882400000, i32 0, void (i32)* nonnull elementtype(void (i32)) @wombat, i32 1, i32 0, i32 10, i32 0, i32 0) [ "deopt"(), "gc-live"() ]
+    %tmp32 = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr nonnull elementtype(void (i32)) @wombat, i32 1, i32 0, i32 10, i32 0, i32 0) [ "deopt"(), "gc-live"() ]
     unreachable
 
   bb35:                                             ; preds = %bb24
     unreachable
 
   bb36:                                             ; preds = %bb29, %bb25
-    %tmp37 = phi i8 addrspace(1)* [ undef, %bb29 ], [ %tmp28, %bb25 ]
-    %tmp38 = phi i8 addrspace(1)* [ undef, %bb29 ], [ %tmp27, %bb25 ]
-    %tmp39 = icmp eq i8 addrspace(1)* %tmp38, null
+    %tmp37 = phi ptr addrspace(1) [ undef, %bb29 ], [ %tmp28, %bb25 ]
+    %tmp38 = phi ptr addrspace(1) [ undef, %bb29 ], [ %tmp27, %bb25 ]
+    %tmp39 = icmp eq ptr addrspace(1) %tmp38, null
     br i1 %tmp39, label %bb51, label %bb42
 
   bb40:                                             ; preds = %bb4
-    %tmp41 = call token (i64, i32, void (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 2882400000, i32 0, void (i32)* nonnull elementtype(void (i32)) @wombat, i32 1, i32 0, i32 10, i32 0, i32 0) [ "deopt"(), "gc-live"() ]
+    %tmp41 = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr nonnull elementtype(void (i32)) @wombat, i32 1, i32 0, i32 10, i32 0, i32 0) [ "deopt"(), "gc-live"() ]
     unreachable
 
   bb42:                                             ; preds = %bb36
@@ -64,35 +64,33 @@
     br i1 %or.cond, label %bb49, label %bb47
 
   bb47:                                             ; preds = %bb42
-    %tmp48 = call token (i64, i32, void (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 2882400000, i32 0, void (i32)* nonnull elementtype(void (i32)) @wombat, i32 1, i32 0, i32 14, i32 0, i32 0) [ "deopt"(i8 addrspace(1)* %tmp37, i8 addrspace(1)* %tmp38), "gc-live"() ]
+    %tmp48 = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr nonnull elementtype(void (i32)) @wombat, i32 1, i32 0, i32 14, i32 0, i32 0) [ "deopt"(ptr addrspace(1) %tmp37, ptr addrspace(1) %tmp38), "gc-live"() ]
     unreachable
 
   bb49:                                             ; preds = %bb42
-    %tmp50 = call token (i64, i32, void (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 2882400000, i32 0, void (i32)* nonnull elementtype(void (i32)) @wombat, i32 1, i32 0, i32 10, i32 0, i32 0) [ "deopt"(i8 addrspace(1)* %tmp37, i8 addrspace(1)* %tmp38, i8 addrspace(1)* %tmp38), "gc-live"() ]
+    %tmp50 = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr nonnull elementtype(void (i32)) @wombat, i32 1, i32 0, i32 10, i32 0, i32 0) [ "deopt"(ptr addrspace(1) %tmp37, ptr addrspace(1) %tmp38, ptr addrspace(1) %tmp38), "gc-live"() ]
     unreachable
 
   bb51:                                             ; preds = %bb36
-    %tmp52 = call token (i64, i32, void (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 2882400000, i32 0, void (i32)* nonnull elementtype(void (i32)) @wombat, i32 1, i32 0, i32 24, i32 0, i32 0) [ "deopt"(i8 addrspace(1)* %tmp37), "gc-live"() ]
+    %tmp52 = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr nonnull elementtype(void (i32)) @wombat, i32 1, i32 0, i32 24, i32 0, i32 0) [ "deopt"(ptr addrspace(1) %tmp37), "gc-live"() ]
     unreachable
   }
 
-  declare i32* @baz()
+  declare ptr @baz()
 
-  declare i8 addrspace(1)* @barney(i8 addrspace(1)*)
+  declare ptr addrspace(1) @barney(ptr addrspace(1))
 
-  declare i8 addrspace(1)* @wobble(i8 addrspace(1)*)
+  declare ptr addrspace(1) @wobble(ptr addrspace(1))
 
-  declare i8 addrspace(1)* @bar(i8 addrspace(1)*)
+  declare ptr addrspace(1) @bar(ptr addrspace(1))
 
-  declare i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32 immarg, i32 immarg) #0
+  declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32 immarg, i32 immarg) #0
 
-  declare i8 addrspace(1)* @llvm.experimental.gc.result.p1i8(token) #0
+  declare ptr addrspace(1) @llvm.experimental.gc.result.p1(token) #0
 
   declare void @wombat(i32)
 
-  declare token @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 immarg, i32 immarg, void (i32)*, i32 immarg, i32 immarg, ...)
-
-  declare token @llvm.experimental.gc.statepoint.p0f_p1i8p1i8f(i64 immarg, i32 immarg, i8 addrspace(1)* (i8 addrspace(1)*)*, i32 immarg, i32 immarg, ...)
+  declare token @llvm.experimental.gc.statepoint.p0(i64 immarg, i32 immarg, ptr, i32 immarg, i32 immarg, ...)
 
   attributes #0 = { nounwind readnone }
 

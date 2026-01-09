@@ -520,6 +520,23 @@ void capture_copy_in_lambda(CheckedObj& checked) {
   });
 }
 
+struct TemplateFunctionCallsLambda {
+  void ref() const;
+  void deref() const;
+
+  RefCountable* obj();
+
+  template <typename T>
+  RefPtr<T> method(T* t) {
+    auto ret = ([&]() -> RefPtr<T> {
+      if constexpr (T::isEncodable)
+        return t;
+      return obj() ? t : nullptr;
+    })();
+    return ret;
+  }
+};
+
 class Iterator {
 public:
   Iterator(void* array, unsigned long sizeOfElement, unsigned int index);

@@ -16,16 +16,16 @@
 
 declare void @f();
 
-define void @f1(i64 %lhs, i64 %rhs, i64* %addr) !prof !15 {
+define void @f1(i64 %lhs, i64 %rhs, ptr %addr) !prof !15 {
   %sum = add i64 %lhs, %rhs
   call void @f();
-  store i64 %sum, i64* %addr
+  store i64 %sum, ptr %addr
   ret void
 }
 
-define void @f2(i64 %lhs, i64 %rhs, i64* %addr) !prof !16 {
+define void @f2(i64 %lhs, i64 %rhs, ptr %addr) !prof !16 {
   %sum = add i64 %lhs, %rhs
-  store i64 %sum, i64* %addr
+  store i64 %sum, ptr %addr
   ret void
 }
 

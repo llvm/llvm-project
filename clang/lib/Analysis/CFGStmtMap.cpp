@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/DenseMap.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CFGStmtMap.h"
@@ -19,73 +18,39 @@
 
 using namespace clang;
 
-typedef llvm::DenseMap<const Stmt*, CFGBlock*> SMap;
-static SMap *AsMap(void *m) { return (SMap*) m; }
-
-CFGStmtMap::~CFGStmtMap() { delete AsMap(M); }
-
-CFGBlock *CFGStmtMap::getBlock(Stmt *S) {
-  SMap *SM = AsMap(M);
-  Stmt *X = S;
+const CFGBlock *CFGStmtMap::getBlock(const Stmt *S) const {
+  const Stmt *X = S;
 
   // If 'S' isn't in the map, walk the ParentMap to see if one of its ancestors
   // is in the map.
   while (X) {
-    SMap::iterator I = SM->find(X);
-    if (I != SM->end()) {
-      CFGBlock *B = I->second;
-      // Memoize this lookup.
-      if (X != S)
-        (*SM)[X] = B;
-      return B;
-    }
-
+    auto I = M.find(X);
+    if (I != M.end())
+      return I->second;
     X = PM->getParentIgnoreParens(X);
   }
 
   return nullptr;
 }
 
-static void Accumulate(SMap &SM, CFGBlock *B) {
-  // First walk the block-level expressions.
-  for (CFGBlock::iterator I = B->begin(), E = B->end(); I != E; ++I) {
-    const CFGElement &CE = *I;
-    std::optional<CFGStmt> CS = CE.getAs<CFGStmt>();
-    if (!CS)
-      continue;
-
-    CFGBlock *&Entry = SM[CS->getStmt()];
-    // If 'Entry' is already initialized (e.g., a terminator was already),
-    // skip.
-    if (Entry)
-      continue;
-
-    Entry = B;
-
-  }
-
-  // Look at the label of the block.
-  if (Stmt *Label = B->getLabel())
-    SM[Label] = B;
-
-  // Finally, look at the terminator.  If the terminator was already added
-  // because it is a block-level expression in another block, overwrite
-  // that mapping.
-  if (Stmt *Term = B->getTerminatorStmt())
-    SM[Term] = B;
-}
-
-CFGStmtMap *CFGStmtMap::Build(CFG *C, ParentMap *PM) {
-  if (!C || !PM)
-    return nullptr;
-
-  SMap *SM = new SMap();
-
+CFGStmtMap::CFGStmtMap(const CFG &C, const ParentMap &PM) : PM(&PM) {
   // Walk all blocks, accumulating the block-level expressions, labels,
   // and terminators.
-  for (CFGBlock *BB : *C)
-    Accumulate(*SM, BB);
+  for (const CFGBlock *B : C) {
+    // First walk the block-level expressions.
+    for (const CFGElement &CE : *B) {
+      if (std::optional<CFGStmt> CS = CE.getAs<CFGStmt>())
+        M.try_emplace(CS->getStmt(), B);
+    }
 
-  return new CFGStmtMap(PM, SM);
+    // Look at the label of the block.
+    if (const Stmt *Label = B->getLabel())
+      M[Label] = B;
+
+    // Finally, look at the terminator.  If the terminator was already added
+    // because it is a block-level expression in another block, overwrite
+    // that mapping.
+    if (const Stmt *Term = B->getTerminatorStmt())
+      M[Term] = B;
+  }
 }
-
