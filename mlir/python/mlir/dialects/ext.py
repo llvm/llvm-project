@@ -48,7 +48,7 @@ class ConstraintLoweringContext:
         elif origin and issubclass(origin, ir.Attribute):
             attr = origin.get(*get_args(type_))
             return irdl.is_(attr)
-        elif origin is UnionType:
+        elif origin is UnionType or origin is Union:
             return irdl.any_of(self.lower(arg) for arg in get_args(type_))
         elif type_ is Any or isinstance(type_, TypeVar):
             return irdl.any()
@@ -106,19 +106,27 @@ def normalize_value_range(
     return value_range
 
 
+def match_optional(type_):
+    origin = get_origin(type_)
+    args = get_args(type_)
+    if (
+        (origin is Union or origin is UnionType)
+        and len(args) == 2
+        and type(None) in args
+    ):
+        return args[0] if args[1] is type(None) else args[1]
+
+    return None
+
+
 class Operation(ir.OpView):
     @staticmethod
     def convert_type_to_field_def(type_) -> FieldDef:
         variadicity = Variadicity.single
-        origin = get_origin(type_)
-        if (
-            origin is Union
-            and len(get_args(type_)) == 2
-            and get_args(type_)[1] is type(None)
-        ):
+        if inner := match_optional(type_):
             variadicity = Variadicity.optional
-            type_ = get_args(type_)[0]
-        elif origin is Sequence:
+            type_ = inner
+        elif get_origin(type_) is Sequence:
             variadicity = Variadicity.variadic
             type_ = get_args(type_)[0]
 
