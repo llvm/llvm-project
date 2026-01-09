@@ -165,6 +165,11 @@ we don't make any guarantees. If you would like your compiler and/or platform
 to be formally supported and listed here, please work with the libc++ team to set
 up testing for your configuration.
 
+.. _HeaderSupportPolicy:
+
+Libc++ maintains backwards compatibility with programs compiled against older
+versions of the headers. The library can currently be configured by vendors to
+support headers from LLVM 2.8 or any later major release.
 
 C++ Standards Conformance
 =========================
