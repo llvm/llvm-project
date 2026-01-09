@@ -708,6 +708,7 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_RANKS(ConcatShape);
   CHECK_RANKS(DivCeilShape);
   CHECK_RANKS(DivFloorShape);
+  CHECK_RANKS(ModShape);
   CHECK_RANKS(MulShape);
   CHECK_RANKS(SliceShape);
   CHECK_RANKS(SubShape);

@@ -1719,3 +1719,13 @@ func.func @test_concat_shape_invalid_list_size() {
                          ) -> !tosa.shape<0>
   return
 }
+
+// -----
+
+func.func @test_mod_shape_invalid_rank() -> !tosa.shape<9> {
+  %a = tosa.const_shape {values = dense<[1, 2, 3, 4, 5, 6, 7, 8, 9]> : tensor<9xindex>} : () -> !tosa.shape<9>
+  %b = tosa.const_shape {values = dense<[1, 2, 3, 4, 5, 6, 7, 8, 9]> : tensor<9xindex>} : () -> !tosa.shape<9>
+  // expected-error@+1 {{'tosa.mod_shape' op failed shape type level check: '!tosa.shape<9>' exceeds MAX_RANK}}
+  %c = tosa.mod_shape %a, %b : (!tosa.shape<9>, !tosa.shape<9>) -> !tosa.shape<9>
+  return %c : !tosa.shape<9>
+}

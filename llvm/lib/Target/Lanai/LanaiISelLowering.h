@@ -69,6 +69,8 @@ public:
                                      const SelectionDAG &DAG,
                                      unsigned Depth = 0) const override;
 
+  bool softPromoteHalfType() const override { return true; }
+
 private:
   SDValue LowerCCCCallTo(SDValue Chain, SDValue Callee,
                          CallingConv::ID CallConv, bool IsVarArg,
