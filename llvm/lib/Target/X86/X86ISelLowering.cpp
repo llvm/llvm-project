@@ -483,13 +483,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
   setOperationAction(ISD::READCYCLECOUNTER , MVT::i64  , Custom);
 
-  if (Subtarget.hasPCLMUL() && Subtarget.is64Bit()) {
-    setOperationAction(ISD::CLMUL, MVT::i64, Custom);
-    setOperationAction(ISD::CLMUL, MVT::i32, Custom);
-    setOperationAction(ISD::CLMUL, MVT::i16, Custom);
-    setOperationAction(ISD::CLMUL, MVT::i8, Custom);
-  }
-
   if (!Subtarget.hasMOVBE())
     setOperationAction(ISD::BSWAP          , MVT::i16  , Expand);
 
@@ -1161,6 +1154,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::AND, MVT::i128, Custom);
     setOperationAction(ISD::OR, MVT::i128, Custom);
     setOperationAction(ISD::XOR, MVT::i128, Custom);
+
+    if (Subtarget.hasPCLMUL() && Subtarget.is64Bit()) {
+      setOperationAction(ISD::CLMUL, MVT::i64, Custom);
+      setOperationAction(ISD::CLMUL, MVT::i32, Custom);
+      setOperationAction(ISD::CLMUL, MVT::i16, Custom);
+      setOperationAction(ISD::CLMUL, MVT::i8, Custom);
+    }
 
     for (auto VT : { MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64 }) {
       setOperationAction(ISD::SMAX, VT, VT == MVT::v8i16 ? Legal : Custom);
@@ -33091,16 +33091,23 @@ static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
 
 static SDValue LowerCLMUL(SDValue Op, const X86Subtarget &Subtarget,
                           SelectionDAG &DAG) {
+  assert(Subtarget.hasPCLMUL() && "PCLMUL required for CLMUL lowering");
+
+  // Can't use vector registers if soft-float or NoImplicitFloat.
+  bool NoImplicitFloatOps =
+      DAG.getMachineFunction().getFunction().hasFnAttribute(
+          Attribute::NoImplicitFloat);
+  if (Subtarget.useSoftFloat() || NoImplicitFloatOps)
+    return SDValue();
+
   SDLoc DL(Op);
   MVT VT = Op.getSimpleValueType();
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
 
-  assert(Subtarget.hasPCLMUL() && "PCLMUL required for CLMUL lowering");
-
   if (VT != MVT::i64) {
-    LHS = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, LHS);
-    RHS = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, RHS);
+    LHS = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, LHS);
+    RHS = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, RHS);
   }
 
   SDValue Vec1 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i64, LHS);
