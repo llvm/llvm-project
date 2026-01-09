@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
+#include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/MathToXeVM/MathToXeVM.h"
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
@@ -113,6 +114,7 @@ void buildPostGPUCommonPassPipeline(
   pm.addPass(createLowerAffinePass());
   pm.addPass(createConvertVectorToLLVMPass());
   pm.addPass(createConvertToLLVMPass());
+  pm.addNestedPass<gpu::GPUModuleOp>(createConvertXeVMToLLVMPass());
   pm.addPass(createReconcileUnrealizedCastsPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());

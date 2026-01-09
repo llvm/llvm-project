@@ -8,7 +8,6 @@
 
 #include "mlir/Conversion/XeVMToLLVM/XeVMToLLVM.h"
 
-#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -882,28 +881,6 @@ struct ConvertXeVMToLLVMPass
 } // namespace
 
 //===----------------------------------------------------------------------===//
-// ConvertToLLVMPatternInterface implementation
-//===----------------------------------------------------------------------===//
-
-namespace {
-/// Implement the interface to convert XeVM to LLVM.
-struct XeVMToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
-  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
-  void loadDependentDialects(MLIRContext *context) const final {
-    context->loadDialect<LLVM::LLVMDialect>();
-  }
-
-  /// Hook for derived dialect interface to provide conversion patterns
-  /// and mark dialect legal for the conversion target.
-  void populateConvertToLLVMConversionPatterns(
-      ConversionTarget &target, LLVMTypeConverter &typeConverter,
-      RewritePatternSet &patterns) const final {
-    populateXeVMToLLVMConversionPatterns(target, patterns);
-  }
-};
-} // namespace
-
-//===----------------------------------------------------------------------===//
 // Pattern Population
 //===----------------------------------------------------------------------===//
 
@@ -938,8 +915,3 @@ void ::mlir::populateXeVMToLLVMConversionPatterns(ConversionTarget &target,
       patterns.getContext());
 }
 
-void ::mlir::registerConvertXeVMToLLVMInterface(DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, XeVMDialect *dialect) {
-    dialect->addInterfaces<XeVMToLLVMDialectInterface>();
-  });
-}
