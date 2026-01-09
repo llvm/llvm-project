@@ -42,6 +42,12 @@ COFF Improvements
   (`#165529 <https://github.com/llvm/llvm-project/pull/165529>`_)
 * ``/linkreprofullpathrsp`` prints the full path to each object passed to the link line to a file.
   (`#174971 <https://github.com/llvm/llvm-project/pull/165449>`_)
+* ``-prefetch-inputs`` can improve link times by asynchronously loading input files in RAM.
+  This will dampen the effect of input file I/O latency on link times.
+  However this flag can have an adverse effect when linking a large number of inputs files, or if all
+  inputs do not fit in RAM at once. For those cases, linking might be a bit slower since the inputs
+  will be streamed into RAM upfront, only to be evicted later by swapping.
+  (`#169224 <https://github.com/llvm/llvm-project/pull/169224>`_)
 
 MinGW Improvements
 ------------------

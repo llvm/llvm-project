@@ -226,3 +226,51 @@ entry:
   store i64 %b, ptr %add.ptr, align 8
   ret void
 }
+
+define void @fold_frame_idx(i32 %val1, i32 %val2, ptr nocapture %p) nounwind {
+; SLOW-LABEL: fold_frame_idx:
+; SLOW:       # %bb.0: # %entry
+; SLOW-NEXT:    addi sp, sp, -400
+; SLOW-NEXT:    sw a0, 40(sp)
+; SLOW-NEXT:    sw a1, 44(sp)
+; SLOW-NEXT:    addi sp, sp, 400
+; SLOW-NEXT:    ret
+;
+; FAST-LABEL: fold_frame_idx:
+; FAST:       # %bb.0: # %entry
+; FAST-NEXT:    addi sp, sp, -400
+; FAST-NEXT:    sd a0, 40(sp)
+; FAST-NEXT:    addi sp, sp, 400
+; FAST-NEXT:    ret
+;
+; 4BYTEALIGN-LABEL: fold_frame_idx:
+; 4BYTEALIGN:       # %bb.0: # %entry
+; 4BYTEALIGN-NEXT:    addi sp, sp, -400
+; 4BYTEALIGN-NEXT:    sd a0, 40(sp)
+; 4BYTEALIGN-NEXT:    addi sp, sp, 400
+; 4BYTEALIGN-NEXT:    ret
+entry:
+  %local = alloca [100 x i32]
+  %local.ptr = getelementptr inbounds i32, ptr %local, i64 10
+  %local1.ptr = getelementptr inbounds i32, ptr %local, i64 11
+  store i32 %val1, ptr %local.ptr, align 4
+  store i32 %val2, ptr %local1.ptr, align 4
+  ret void
+}
+
+define void @dont_fold_frame_idx(ptr nocapture %p, i32 %val1, i32 %val2) nounwind {
+; CHECK-LABEL: dont_fold_frame_idx:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi sp, sp, -400
+; CHECK-NEXT:    sw a1, 40(sp)
+; CHECK-NEXT:    sw a2, 44(sp)
+; CHECK-NEXT:    addi sp, sp, 400
+; CHECK-NEXT:    ret
+entry:
+  %local = alloca [100 x i32]
+  %local.ptr = getelementptr inbounds i32, ptr %local, i64 10
+  %local1.ptr = getelementptr inbounds i32, ptr %local, i64 11
+  store i32 %val1, ptr %local.ptr, align 4
+  store i32 %val2, ptr %local1.ptr, align 4
+  ret void
+}

@@ -3,11 +3,8 @@
 // RUN: %libomptarget-compilexx-generic && %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefix=DEFAULT
 
 // UNSUPPORTED: aarch64-unknown-linux-gnu 
-// UNSUPPORTED: aarch64-unknown-linux-gnu-LTO 
 // UNSUPPORTED: x86_64-unknown-linux-gnu 
-// UNSUPPORTED: x86_64-unknown-linux-gnu-LTO 
 // UNSUPPORTED: s390x-ibm-linux-gnu 
-// UNSUPPORTED: s390x-ibm-linux-gnu-LTO
 // XFAIL: intelgpu
 // clang-format on
 

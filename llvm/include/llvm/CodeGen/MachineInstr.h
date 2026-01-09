@@ -123,8 +123,9 @@ public:
     NoUSWrap = 1 << 20,      // Instruction supports geps
                              // no unsigned signed wrap.
     SameSign = 1 << 21,      // Both operands have the same sign.
-    InBounds = 1 << 22       // Pointer arithmetic remains inbounds.
+    InBounds = 1 << 22,      // Pointer arithmetic remains inbounds.
                              // Implies NoUSWrap.
+    LRSplit = 1 << 23        // Instruction for live range split.
   };
 
 private:
