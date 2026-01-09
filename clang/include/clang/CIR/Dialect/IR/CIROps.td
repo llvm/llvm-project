@@ -5906,29 +5906,28 @@ def CIR_CpuIdOp : CIR_Op<"cpuid"> {
     The `cir.cpuid` operation retrieves different types of CPU information and
     stores it in an array of 4 integers.
 
-    This operation takes 3 arguments: `basePtr`, a pointer to an array of 4
-    integers; `funcID`, an integer determining what type of information to be
+    This operation takes 3 arguments: `cpu_info`, a pointer to an array of 4
+    integers; `function_id`, an integer determining what type of information to be
     retrieved (for instance, basic information, processor information and
-    features, or cache/TLB information); and `subFuncId`, an integer that adds
+    features, or cache/TLB information); and `sub_function_id`, an integer that adds
     more detail about what information is requested.
 
     As a result, the array of 4 integers is filled with the requested information.
 
-    Note that, since arrays usually decay to pointers, `basePtr` is expected to be
-    just a pointer to integer. Extra verifications are done at the verifier.
-
     Example:
 
     ```mlir
-    cir.cpuid %basePtr, %funcId, %subFuncId : (!cir.ptr<!s32i>, !s32i, !s32i)
+    cir.cpuid %cpui_info, %function_id, %sub_function_id : (!cir.ptr<!s32i>, !s32i, !s32i)
     ```
   }];
 
   let arguments =
-      (ins Arg<CIR_PointerType, "array address", [MemWrite]>:$basePtr,
-          CIR_SInt32:$funcId, CIR_SInt32:$subFuncId);
+      (ins Arg<CIR_PtrToType<CIR_SInt32>, "array address", [MemWrite]>:$cpu_info,
+          CIR_SInt32:$function_id, CIR_SInt32:$sub_function_id);
 
-  let hasVerifier = 1;
+  let assemblyFormat = [{
+    $cpu_info`,` $function_id`,` $sub_function_id `:` functional-type(operands, results) attr-dict
+  }];
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD

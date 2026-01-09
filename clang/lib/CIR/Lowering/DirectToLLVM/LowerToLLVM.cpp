@@ -4293,13 +4293,16 @@ mlir::LogicalResult CIRToLLVMCpuIdOpLowering::matchAndRewrite(
   mlir::Type cpuidRetTy = mlir::LLVM::LLVMStructType::getLiteral(
       rewriter.getContext(), {i32Ty, i32Ty, i32Ty, i32Ty});
 
-  mlir::Value funcId = adaptor.getFuncId();
-  mlir::Value subFuncId = adaptor.getSubFuncId();
+  mlir::Value funcId = adaptor.getFunctionId();
+  mlir::Value subFuncId = adaptor.getSubFunctionId();
   std::array<mlir::Value, 2> operands{funcId, subFuncId};
 
   StringRef asmString, constraints;
-  if (const llvm::Triple &triple = lowerMod->getTarget().getTriple();
-      triple.getArch() == llvm::Triple::x86) {
+  mlir::ModuleOp module = op->getParentOfType<mlir::ModuleOp>();
+  llvm::Triple triple(mlir::cast<mlir::StringAttr>(
+                          module->getAttr(cir::CIRDialect::getTripleAttrName()))
+                          .getValue());
+  if (triple.getArch() == llvm::Triple::x86) {
     asmString = "cpuid";
     constraints = "={ax},={bx},={cx},={dx},{ax},{cx}";
   } else {
@@ -4322,7 +4325,7 @@ mlir::LogicalResult CIRToLLVMCpuIdOpLowering::matchAndRewrite(
           /*operand_attrs=*/mlir::ArrayAttr{})
           .getResult(0);
 
-  mlir::Value basePtr = adaptor.getBasePtr();
+  mlir::Value basePtr = adaptor.getCpuInfo();
 
   mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
   unsigned alignment = layout.getTypeABIAlignment(i32Ty);

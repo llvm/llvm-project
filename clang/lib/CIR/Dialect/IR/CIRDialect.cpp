@@ -3566,31 +3566,6 @@ cir::EhTypeIdOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 }
 
 //===----------------------------------------------------------------------===//
-// CpuIdOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult cir::CpuIdOp::verify() {
-  auto basePtrTy = mlir::dyn_cast<cir::PointerType>(getBasePtr().getType());
-  if (!basePtrTy)
-    return mlir::failure();
-
-  mlir::Type type = basePtrTy.getPointee();
-
-  // basePtr points to an array of size at least 4
-  auto arrayTy = mlir::dyn_cast<cir::ArrayType>(type);
-  if (arrayTy && (arrayTy.getSize() < 4))
-    return emitOpError()
-           << "base pointer must point to an array of size at least 4";
-
-  // Array decay: basePtr points to !s32i
-  auto intTy = mlir::dyn_cast<cir::IntType>(type);
-  if (!intTy || !intTy.isSigned() || intTy.getWidth() != 32)
-    return emitOpError() << "base pointer must point to an array of !s32i";
-
-  return mlir::success();
-}
-
-//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
