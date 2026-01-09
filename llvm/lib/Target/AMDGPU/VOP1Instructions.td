@@ -616,14 +616,14 @@ let SubtargetPredicate = isGFX9Plus in {
 
   let isReMaterializable = 1 in
   defm V_SAT_PK_U8_I16    : VOP1Inst_t16<"v_sat_pk_u8_i16", VOP_I16_I32>;
-
-  let mayRaiseFPException = 0 in {
-  defm V_CVT_NORM_I16_F16 : VOP1Inst_t16_with_profiles <"v_cvt_norm_i16_f16",
-      VOP_I16_F16_SPECIAL_OMOD, VOP_I16_F16_SPECIAL_OMOD_t16, VOP_I16_F16_SPECIAL_OMOD_fake16>;
-  defm V_CVT_NORM_U16_F16 : VOP1Inst_t16_with_profiles <"v_cvt_norm_u16_f16",
-      VOP_I16_F16_SPECIAL_OMOD, VOP_I16_F16_SPECIAL_OMOD_t16, VOP_I16_F16_SPECIAL_OMOD_fake16>;
-  } // End mayRaiseFPException = 0
 } // End SubtargetPredicate = isGFX9Plus
+
+let mayRaiseFPException = 0, SubtargetPredicate = HasCvtNormInsts in {
+defm V_CVT_NORM_I16_F16 : VOP1Inst_t16_with_profiles <"v_cvt_norm_i16_f16",
+    VOP_I16_F16_SPECIAL_OMOD, VOP_I16_F16_SPECIAL_OMOD_t16, VOP_I16_F16_SPECIAL_OMOD_fake16>;
+defm V_CVT_NORM_U16_F16 : VOP1Inst_t16_with_profiles <"v_cvt_norm_u16_f16",
+    VOP_I16_F16_SPECIAL_OMOD, VOP_I16_F16_SPECIAL_OMOD_t16, VOP_I16_F16_SPECIAL_OMOD_fake16>;
+} // End mayRaiseFPException = 0, SubtargetPredicate = HasCvtNormInsts
 
 let SubtargetPredicate = isGFX9Only in {
   defm V_SCREEN_PARTITION_4SE_B32 : VOP1Inst <"v_screen_partition_4se_b32", VOP_I32_I32>;

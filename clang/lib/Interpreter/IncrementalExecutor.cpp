@@ -19,7 +19,6 @@
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupport.h"
-#include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
@@ -47,8 +46,7 @@
 
 // Force linking some of the runtimes that helps attaching to a debugger.
 LLVM_ATTRIBUTE_USED void linkComponents() {
-  llvm::errs() << (void *)&llvm_orc_registerJITLoaderGDBWrapper
-               << (void *)&llvm_orc_registerJITLoaderGDBAllocAction;
+  llvm::errs() << (void *)&llvm_orc_registerJITLoaderGDBAllocAction;
 }
 
 namespace clang {

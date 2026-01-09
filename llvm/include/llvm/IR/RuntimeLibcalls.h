@@ -80,7 +80,7 @@ public:
 
   RuntimeLibcallsInfo() = default;
 
-  explicit RuntimeLibcallsInfo(
+  LLVM_ABI explicit RuntimeLibcallsInfo(
       const Triple &TT,
       ExceptionHandling ExceptionModel = ExceptionHandling::None,
       FloatABI::ABIType FloatABI = FloatABI::Default,
@@ -89,8 +89,8 @@ public:
 
   explicit RuntimeLibcallsInfo(const Module &M);
 
-  bool invalidate(Module &M, const PreservedAnalyses &PA,
-                  ModuleAnalysisManager::Invalidator &);
+  LLVM_ABI bool invalidate(Module &M, const PreservedAnalyses &PA,
+                           ModuleAnalysisManager::Invalidator &);
 
   /// Get the libcall routine name for the specified libcall implementation.
   static StringRef getLibcallImplName(RTLIB::LibcallImpl CallImpl) {
@@ -209,6 +209,16 @@ private:
       return !TT.isOSVersionLT(7, 0);
     // Any other darwin such as WatchOS/TvOS is new enough.
     return true;
+  }
+
+  static bool darwinHasMemsetPattern(const Triple &TT) {
+    // memset_pattern{4,8,16} is only available on iOS 3.0 and Mac OS X 10.5 and
+    // later. All versions of watchOS support it.
+    if (TT.isMacOSX())
+      return !TT.isMacOSXVersionLT(10, 5);
+    if (TT.isiOS())
+      return !TT.isOSVersionLT(3, 0);
+    return TT.isWatchOS();
   }
 
   static bool hasAEABILibcalls(const Triple &TT) {

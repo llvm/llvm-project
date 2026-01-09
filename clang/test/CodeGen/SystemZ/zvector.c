@@ -298,10 +298,10 @@ void test_postinc(void) {
 // CHECK-NEXT:    [[DEC7:%.*]] = add <2 x i64> [[TMP7]], splat (i64 -1)
 // CHECK-NEXT:    store volatile <2 x i64> [[DEC7]], ptr @ul2, align 8
 // CHECK-NEXT:    [[TMP8:%.*]] = load volatile <1 x i128>, ptr @slll2, align 8
-// CHECK-NEXT:    [[DEC8:%.*]] = add <1 x i128> [[TMP8]], splat (i128 18446744073709551615)
+// CHECK-NEXT:    [[DEC8:%.*]] = add <1 x i128> [[TMP8]], splat (i128 -1)
 // CHECK-NEXT:    store volatile <1 x i128> [[DEC8]], ptr @slll2, align 8
 // CHECK-NEXT:    [[TMP9:%.*]] = load volatile <1 x i128>, ptr @ulll2, align 8
-// CHECK-NEXT:    [[DEC9:%.*]] = add <1 x i128> [[TMP9]], splat (i128 18446744073709551615)
+// CHECK-NEXT:    [[DEC9:%.*]] = add <1 x i128> [[TMP9]], splat (i128 -1)
 // CHECK-NEXT:    store volatile <1 x i128> [[DEC9]], ptr @ulll2, align 8
 // CHECK-NEXT:    [[TMP10:%.*]] = load volatile <2 x double>, ptr @fd2, align 8
 // CHECK-NEXT:    [[DEC10:%.*]] = fadd <2 x double> [[TMP10]], splat (double -1.000000e+00)
@@ -356,10 +356,10 @@ void test_predec(void) {
 // CHECK-NEXT:    [[DEC7:%.*]] = add <2 x i64> [[TMP7]], splat (i64 -1)
 // CHECK-NEXT:    store volatile <2 x i64> [[DEC7]], ptr @ul2, align 8
 // CHECK-NEXT:    [[TMP8:%.*]] = load volatile <1 x i128>, ptr @slll2, align 8
-// CHECK-NEXT:    [[DEC8:%.*]] = add <1 x i128> [[TMP8]], splat (i128 18446744073709551615)
+// CHECK-NEXT:    [[DEC8:%.*]] = add <1 x i128> [[TMP8]], splat (i128 -1)
 // CHECK-NEXT:    store volatile <1 x i128> [[DEC8]], ptr @slll2, align 8
 // CHECK-NEXT:    [[TMP9:%.*]] = load volatile <1 x i128>, ptr @ulll2, align 8
-// CHECK-NEXT:    [[DEC9:%.*]] = add <1 x i128> [[TMP9]], splat (i128 18446744073709551615)
+// CHECK-NEXT:    [[DEC9:%.*]] = add <1 x i128> [[TMP9]], splat (i128 -1)
 // CHECK-NEXT:    store volatile <1 x i128> [[DEC9]], ptr @ulll2, align 8
 // CHECK-NEXT:    [[TMP10:%.*]] = load volatile <2 x double>, ptr @fd2, align 8
 // CHECK-NEXT:    [[DEC10:%.*]] = fadd <2 x double> [[TMP10]], splat (double -1.000000e+00)

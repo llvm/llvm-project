@@ -57,12 +57,28 @@ static bool isPtrInAddrSpace(mlir::Value ptr, NVVMMemorySpace targetAS) {
   return ptrTy.getAddressSpace() == static_cast<unsigned>(targetAS);
 }
 
+static bool isPtrInGenericSpace(mlir::Value ptr) {
+  return isPtrInAddrSpace(ptr, NVVMMemorySpace::Generic);
+}
+
 static bool isPtrInSharedCTASpace(mlir::Value ptr) {
   return isPtrInAddrSpace(ptr, NVVMMemorySpace::Shared);
 }
 
+static bool isPtrInSharedClusterSpace(mlir::Value ptr) {
+  return isPtrInAddrSpace(ptr, NVVMMemorySpace::SharedCluster);
+}
+
+static llvm::Value *castPtrToAddrSpace(llvm::IRBuilderBase &builder,
+                                       llvm::Value *ptr,
+                                       NVVMMemorySpace targetAS) {
+  unsigned AS = static_cast<unsigned>(targetAS);
+  return builder.CreateAddrSpaceCast(
+      ptr, llvm::PointerType::get(builder.getContext(), AS));
+}
+
 // Helper method to convert CtaGroupKind in NVVM Dialect to CtaGroupKind in LLVM
-static constexpr llvm::nvvm::CTAGroupKind
+static llvm::nvvm::CTAGroupKind
 getNVVMCtaGroupKind(NVVM::CTAGroupKind ctaGroup) {
   switch (ctaGroup) {
   case NVVM::CTAGroupKind::CTA_1:
@@ -233,6 +249,75 @@ LogicalResult CpAsyncBulkGlobalToSharedClusterOp::verify() {
   return success();
 }
 
+static LogicalResult verifyMBarrierArriveLikeOp(Operation *op, Value addr,
+                                                NVVM::MemScopeKind scope,
+                                                Value retVal = nullptr) {
+  if (scope != NVVM::MemScopeKind::CTA && scope != NVVM::MemScopeKind::CLUSTER)
+    return op->emitError("mbarrier scope must be either CTA or Cluster");
+
+  bool isSharedCluster = isPtrInSharedClusterSpace(addr);
+  bool hasRetValue = static_cast<bool>(retVal);
+  if (isSharedCluster && hasRetValue)
+    return op->emitError(
+        "mbarrier in shared_cluster space cannot return any value");
+
+  return success();
+}
+
+LogicalResult MBarrierArriveOp::verify() {
+  return verifyMBarrierArriveLikeOp(getOperation(), getAddr(), getScope(),
+                                    getRes());
+}
+
+LogicalResult MBarrierArriveDropOp::verify() {
+  return verifyMBarrierArriveLikeOp(getOperation(), getAddr(), getScope(),
+                                    getRes());
+}
+
+LogicalResult MBarrierArriveExpectTxOp::verify() {
+  // The inline-ptx version of this Op does not support all features.
+  // With predicate, this Op lowers to inline-ptx. So, verify and
+  // error-out if there are unsupported features.
+  if (getPredicate()) {
+    if (getScope() != NVVM::MemScopeKind::CTA)
+      return emitError("mbarrier scope must be CTA when using predicate");
+
+    if (isPtrInSharedClusterSpace(getAddr()))
+      return emitError("mbarrier in shared_cluster space is not supported when "
+                       "using predicate");
+
+    if (getRes())
+      return emitError("return-value is not supported when using predicate");
+
+    if (getRelaxed() == true)
+      return emitError("mbarrier with relaxed semantics is not supported when "
+                       "using predicate");
+  }
+  return verifyMBarrierArriveLikeOp(getOperation(), getAddr(), getScope(),
+                                    getRes());
+}
+
+LogicalResult MBarrierArriveDropExpectTxOp::verify() {
+  return verifyMBarrierArriveLikeOp(getOperation(), getAddr(), getScope(),
+                                    getRes());
+}
+
+LogicalResult MBarrierExpectTxOp::verify() {
+  return verifyMBarrierArriveLikeOp(getOperation(), getAddr(), getScope());
+}
+
+LogicalResult MBarrierCompleteTxOp::verify() {
+  return verifyMBarrierArriveLikeOp(getOperation(), getAddr(), getScope());
+}
+
+LogicalResult MBarrierTestWaitOp::verify() {
+  return verifyMBarrierArriveLikeOp(getOperation(), getAddr(), getScope());
+}
+
+LogicalResult MBarrierTryWaitOp::verify() {
+  return verifyMBarrierArriveLikeOp(getOperation(), getAddr(), getScope());
+}
+
 LogicalResult ConvertFloatToTF32Op::verify() {
   using RndMode = NVVM::FPRoundingMode;
   switch (getRnd()) {
@@ -336,7 +421,7 @@ LogicalResult ConvertBF16x2ToF8x2Op::verify() {
                                    "bf16x2 to f8x2.";
 
   auto rnd = getRnd();
-  if (!(rnd == RndMode::RZ || rnd == RndMode::RP))
+  if (rnd != RndMode::RZ && rnd != RndMode::RP)
     return emitOpError("Only RZ and RP rounding modes are supported for "
                        "conversions from bf16x2 to f8x2.");
 
@@ -399,22 +484,71 @@ LogicalResult ConvertF4x2ToF16x2Op::verify() {
   return success();
 }
 
+LogicalResult PermuteOp::verify() {
+  using Mode = NVVM::PermuteMode;
+  bool hasHi = static_cast<bool>(getHi());
+
+  switch (getMode()) {
+  case Mode::DEFAULT:
+  case Mode::F4E:
+  case Mode::B4E:
+    if (!hasHi)
+      return emitError("mode '")
+             << stringifyPermuteMode(getMode()) << "' requires 'hi' operand.";
+    break;
+  case Mode::RC8:
+  case Mode::ECL:
+  case Mode::ECR:
+  case Mode::RC16:
+    if (hasHi)
+      return emitError("mode '") << stringifyPermuteMode(getMode())
+                                 << "' does not accept 'hi' operand.";
+    break;
+  }
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // Stochastic Rounding Conversion Ops
 //===----------------------------------------------------------------------===//
 
-LogicalResult ConvertF32x2ToF16x2Op::verify() {
-  if (getRnd() != FPRoundingMode::RS)
-    return emitOpError("Only RS rounding mode is supported for "
-                       "conversions from f32x2 to f16x2.");
+static LogicalResult verifyConvertF32x2ToFP16x2Op(Twine dstType,
+                                                  FPRoundingMode rnd,
+                                                  bool hasRandomBits,
+                                                  Operation *op) {
+  static constexpr FPRoundingMode validRndModes[] = {
+      FPRoundingMode::RN, FPRoundingMode::RZ, FPRoundingMode::RS};
+
+  if (!llvm::is_contained(validRndModes, rnd)) {
+    return op->emitOpError(
+               "Only RN, RZ, and RS rounding modes are supported for "
+               "conversions from f32x2 to ")
+           << dstType << ".";
+  }
+
+  if (rnd == FPRoundingMode::RS) {
+    if (!hasRandomBits) {
+      return op->emitOpError("random_bits is required for RS rounding mode.");
+    }
+  } else {
+    if (hasRandomBits) {
+      return op->emitOpError(
+          "random_bits not supported for RN and RZ rounding modes.");
+    }
+  }
+
   return success();
 }
 
+LogicalResult ConvertF32x2ToF16x2Op::verify() {
+  return verifyConvertF32x2ToFP16x2Op("f16x2", getRnd(),
+                                      getRandomBits() ? true : false, *this);
+}
+
 LogicalResult ConvertF32x2ToBF16x2Op::verify() {
-  if (getRnd() != FPRoundingMode::RS)
-    return emitOpError("Only RS rounding mode is supported for "
-                       "conversions from f32x2 to bf16x2.");
-  return success();
+  return verifyConvertF32x2ToFP16x2Op("bf16x2", getRnd(),
+                                      getRandomBits() ? true : false, *this);
 }
 
 LogicalResult ConvertF32x4ToF8x4Op::verify() {
@@ -537,18 +671,18 @@ MMATypes MmaOp::resultPtxType() {
 
 void MmaOp::print(OpAsmPrinter &p) {
   SmallVector<Type, 4> regTypes;
-  struct OperandFragment {
+  struct MMAOperandFragment {
     StringRef operandName;
     StringRef ptxTypeAttr;
     SmallVector<Value, 4> regs;
-    explicit OperandFragment(StringRef name, StringRef ptxTypeName)
+    explicit MMAOperandFragment(StringRef name, StringRef ptxTypeName)
         : operandName(name), ptxTypeAttr(ptxTypeName) {}
   };
 
-  std::array<OperandFragment, 3> frags{
-      OperandFragment("A", getMultiplicandAPtxTypeAttrName()),
-      OperandFragment("B", getMultiplicandBPtxTypeAttrName()),
-      OperandFragment("C", "")};
+  std::array<MMAOperandFragment, 3> frags{
+      MMAOperandFragment("A", getMultiplicandAPtxTypeAttrName()),
+      MMAOperandFragment("B", getMultiplicandBPtxTypeAttrName()),
+      MMAOperandFragment("C", "")};
   SmallVector<StringRef, 4> ignoreAttrNames{
       mlir::NVVM::MmaOp::getOperandSegmentSizeAttr()};
 
@@ -563,13 +697,13 @@ void MmaOp::print(OpAsmPrinter &p) {
         regTypes.push_back(this->getOperand(operandIdx).getType());
       }
     }
-    std::optional<MMATypes> inferredType =
-        inferOperandMMAType(regTypes.back(), /*isAccumulator=*/fragIdx >= 2);
+    std::optional<MMATypes> inferredType = MmaOp::inferOperandMMAType(
+        regTypes.back(), /*isAccumulator=*/fragIdx >= 2);
     if (inferredType)
       ignoreAttrNames.push_back(frag.ptxTypeAttr);
   }
 
-  auto printMmaOperand = [&](const OperandFragment &frag) -> void {
+  auto printMmaOperand = [&](const MMAOperandFragment &frag) -> void {
     p << " " << frag.operandName;
     p << "[";
     p.printOperands(frag.regs);
@@ -650,20 +784,20 @@ void MmaOp::build(OpBuilder &builder, OperationState &result, Type resultType,
 //   attr-dict : (type($operandA[0]), type($operandB[0]), type($operandC[0]))
 //     `->` type($res)
 ParseResult MmaOp::parse(OpAsmParser &parser, OperationState &result) {
-  struct OperandFragment {
+  struct MMAOperandFragment {
     std::optional<MMATypes> elemtype;
     SmallVector<OpAsmParser::UnresolvedOperand, 4> regs;
     SmallVector<Type> regTypes;
   };
 
   Builder &builder = parser.getBuilder();
-  std::array<OperandFragment, 4> frags;
+  std::array<MMAOperandFragment, 4> frags;
 
   NamedAttrList namedAttributes;
 
   // A helper to parse the operand segments.
   auto parseMmaOperand = [&](StringRef operandName,
-                             OperandFragment &frag) -> LogicalResult {
+                             MMAOperandFragment &frag) -> LogicalResult {
     if (parser.parseKeyword(operandName).failed())
       return failure();
     if (parser
@@ -951,6 +1085,1125 @@ LogicalResult MmaOp::verify() {
   }
 
   return success();
+}
+
+MMATypes MmaSpOp::accumPtxType() {
+  std::optional<mlir::NVVM::MMATypes> val = MmaOp::inferOperandMMAType(
+      getODSOperands(2).getTypes().front(), /*isAccumulator=*/true);
+  assert(val.has_value() && "accumulator PTX type should always be inferrable");
+  return val.value();
+}
+
+MMATypes MmaSpOp::resultPtxType() {
+  std::optional<mlir::NVVM::MMATypes> val =
+      MmaOp::inferOperandMMAType(getResult().getType(), /*isAccumulator=*/true);
+  assert(val.has_value() && "result PTX type should always be inferrable");
+  return val.value();
+}
+
+mlir::NVVM::IDArgPair
+MmaSpOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                               llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::MmaSpOp>(op);
+
+  // Get operands
+  llvm::SmallVector<llvm::Value *> args;
+  for (mlir::Value v : thisOp.getOperands())
+    args.push_back(mt.lookupValue(v));
+
+  // Get intrinsic ID using the existing getIntrinsicID method
+  auto intId = MmaSpOp::getIntrinsicID(
+      thisOp.getShape().getM(), thisOp.getShape().getN(),
+      thisOp.getShape().getK(), thisOp.getIntOverflowBehavior(),
+      thisOp.getOrderedMetadata(), thisOp.getKind(),
+      *thisOp.getMultiplicandAPtxType(), *thisOp.getMultiplicandBPtxType(),
+      thisOp.accumPtxType(), thisOp.resultPtxType());
+
+  return {intId, args};
+}
+
+void MmaSpOp::print(OpAsmPrinter &p) {
+  SmallVector<Type, 4> regTypes;
+  struct MMAOperandFragment {
+    StringRef operandName;
+    StringRef ptxTypeAttr;
+    SmallVector<Value, 4> regs;
+    explicit MMAOperandFragment(StringRef name, StringRef ptxTypeName)
+        : operandName(name), ptxTypeAttr(ptxTypeName) {}
+  };
+
+  std::array<MMAOperandFragment, 5> frags{
+      MMAOperandFragment("A", getMultiplicandAPtxTypeAttrName()),
+      MMAOperandFragment("B", getMultiplicandBPtxTypeAttrName()),
+      MMAOperandFragment("C", ""), MMAOperandFragment("sparseMetadata", ""),
+      MMAOperandFragment("selector", "")};
+  SmallVector<StringRef, 4> ignoreAttrNames{
+      mlir::NVVM::MmaSpOp::getOperandSegmentSizeAttr()};
+
+  // Handle variadic operands A, B, C
+  for (unsigned fragIdx = 0; fragIdx < 3; fragIdx++) {
+    auto &frag = frags[fragIdx];
+    auto varOperandSpec = getODSOperandIndexAndLength(fragIdx);
+    for (auto operandIdx = varOperandSpec.first;
+         operandIdx < varOperandSpec.first + varOperandSpec.second;
+         operandIdx++) {
+      frag.regs.push_back(this->getOperand(operandIdx));
+      if (operandIdx == varOperandSpec.first) {
+        regTypes.push_back(this->getOperand(operandIdx).getType());
+      }
+    }
+    std::optional<MMATypes> inferredType = MmaOp::inferOperandMMAType(
+        regTypes.back(), /*isAccumulator=*/fragIdx >= 2);
+    if (inferredType)
+      ignoreAttrNames.push_back(frag.ptxTypeAttr);
+  }
+
+  // Handle sparse metadata and selector (single operands)
+  frags[3].regs.push_back(getSparseMetadata());
+  frags[4].regs.push_back(getSparsitySelector());
+
+  auto printMmaSpOperand = [&](const MMAOperandFragment &frag) -> void {
+    p << " " << frag.operandName;
+    p << "[";
+    p.printOperands(frag.regs);
+    p << "]";
+  };
+
+  for (const auto &frag : frags)
+    printMmaSpOperand(frag);
+
+  p.printOptionalAttrDict((*this)->getAttrs(), ignoreAttrNames);
+  p << " : ";
+  p << "(";
+  for (int i = 0; i < 3; ++i) {
+    p << regTypes[i];
+    if (i < 2)
+      p << ", ";
+  }
+  p << ") -> " << getResult().getType();
+}
+
+void MmaSpOp::build(
+    OpBuilder &builder, OperationState &result, Type resultType,
+    ValueRange operandA, ValueRange operandB, ValueRange operandC,
+    Value sparseMetadata, Value sparsitySelector, ArrayRef<int64_t> shape,
+    std::optional<MMAIntOverflow> intOverflow,
+    std::optional<std::array<MMATypes, 2>> multiplicandPtxTypes) {
+
+  assert(shape.size() == 3 && "expected shape to have size 3 (m, n, k)");
+  MLIRContext *ctx = builder.getContext();
+  result.addAttribute(
+      "shape", builder.getAttr<MMAShapeAttr>(shape[0], shape[1], shape[2]));
+
+  result.addOperands(operandA);
+  result.addOperands(operandB);
+  result.addOperands(operandC);
+  result.addOperands(sparseMetadata);
+  result.addOperands(sparsitySelector);
+
+  if (multiplicandPtxTypes) {
+    result.addAttribute("multiplicandAPtxType",
+                        MMATypesAttr::get(ctx, (*multiplicandPtxTypes)[0]));
+    result.addAttribute("multiplicandBPtxType",
+                        MMATypesAttr::get(ctx, (*multiplicandPtxTypes)[1]));
+  } else {
+    if (auto res = MmaOp::inferOperandMMAType(operandA[0].getType(), false))
+      result.addAttribute("multiplicandAPtxType", MMATypesAttr::get(ctx, *res));
+    if (auto res = MmaOp::inferOperandMMAType(operandB[0].getType(), false))
+      result.addAttribute("multiplicandBPtxType", MMATypesAttr::get(ctx, *res));
+  }
+
+  if (intOverflow.has_value())
+    result.addAttribute("intOverflowBehavior",
+                        MMAIntOverflowAttr::get(ctx, *intOverflow));
+
+  result.addTypes(resultType);
+  result.addAttribute(
+      MmaSpOp::getOperandSegmentSizeAttr(),
+      builder.getDenseI32ArrayAttr({static_cast<int32_t>(operandA.size()),
+                                    static_cast<int32_t>(operandB.size()),
+                                    static_cast<int32_t>(operandC.size()), 1,
+                                    1})); // sparseMetadata and sparsitySelector
+}
+
+ParseResult MmaSpOp::parse(OpAsmParser &parser, OperationState &result) {
+  struct MMAOperandFragment {
+    std::optional<MMATypes> elemtype;
+    SmallVector<OpAsmParser::UnresolvedOperand, 4> regs;
+    SmallVector<Type> regTypes;
+  };
+
+  Builder &builder = parser.getBuilder();
+  std::array<MMAOperandFragment, 6> frags; // A, B, C, sparseMetadata, selector
+
+  NamedAttrList namedAttributes;
+
+  // A helper to parse the operand segments.
+  auto parseMmaSpOperand = [&](StringRef operandName,
+                               MMAOperandFragment &frag) -> LogicalResult {
+    if (parser.parseKeyword(operandName).failed())
+      return failure();
+    if (parser
+            .parseOperandList(frag.regs, OpAsmParser::Delimiter::OptionalSquare)
+            .failed())
+      return failure();
+    return success();
+  };
+
+  // Parse the operand segments.
+  if (parseMmaSpOperand("A", frags[0]).failed())
+    return failure();
+  if (parseMmaSpOperand("B", frags[1]).failed())
+    return failure();
+  if (parseMmaSpOperand("C", frags[2]).failed())
+    return failure();
+  if (parseMmaSpOperand("sparseMetadata", frags[3]).failed())
+    return failure();
+  if (parseMmaSpOperand("selector", frags[4]).failed())
+    return failure();
+
+  if (parser.parseOptionalAttrDict(namedAttributes).failed())
+    return failure();
+
+  // Parse the type specification and resolve operands.
+  SmallVector<Type, 3> operandTypes;
+  if (failed(parser.parseColon()))
+    return failure();
+  if (failed(parser.parseLParen()))
+    return failure();
+  if (failed(parser.parseTypeList(operandTypes)))
+    return failure();
+  if (failed(parser.parseRParen()))
+    return failure();
+  if (operandTypes.size() != 3)
+    return parser.emitError(
+        parser.getNameLoc(),
+        "expected one type for each operand segment but got " +
+            Twine(operandTypes.size()) + " types");
+  for (const auto &iter : llvm::enumerate(operandTypes)) {
+    auto &frag = frags[iter.index()];
+    frag.regTypes.resize(frag.regs.size(), iter.value());
+    if (failed(parser.resolveOperands(frag.regs, frag.regTypes,
+                                      parser.getNameLoc(), result.operands)))
+      return failure();
+    frag.elemtype =
+        MmaOp::inferOperandMMAType(frag.regTypes[0],
+                                   /*isAccumulator*/ iter.index() >= 2);
+  }
+
+  Type resultType;
+  if (parser.parseArrow() || parser.parseType(resultType))
+    return failure();
+  frags[5].elemtype =
+      MmaOp::inferOperandMMAType(resultType, /*isAccumulator*/ true);
+
+  // Resolve sparse metadata and selector (assume i32 type)
+  Type i32Type = builder.getIntegerType(32);
+  if (parser
+          .resolveOperands(frags[3].regs, i32Type, parser.getCurrentLocation(),
+                           result.operands)
+          .failed())
+    return failure();
+  if (parser
+          .resolveOperands(frags[4].regs, i32Type, parser.getCurrentLocation(),
+                           result.operands)
+          .failed())
+    return failure();
+
+  std::array<StringRef, 2> names{"multiplicandAPtxType",
+                                 "multiplicandBPtxType"};
+  for (unsigned idx = 0; idx < names.size(); idx++) {
+    const auto &frag = frags[idx];
+    std::optional<NamedAttribute> attr = namedAttributes.getNamed(names[idx]);
+    if (!frag.elemtype.has_value() && !attr.has_value()) {
+      return parser.emitError(
+          parser.getNameLoc(),
+          "attribute " + names[idx] +
+              " is not provided explicitly and cannot be inferred");
+    }
+    if (!attr.has_value())
+      result.addAttribute(
+          names[idx], MMATypesAttr::get(parser.getContext(), *frag.elemtype));
+  }
+
+  result.addTypes(resultType);
+  if (!namedAttributes.empty())
+    result.addAttributes(namedAttributes);
+  result.addAttribute(MmaSpOp::getOperandSegmentSizeAttr(),
+                      builder.getDenseI32ArrayAttr({
+                          static_cast<int32_t>(frags[0].regs.size()),
+                          static_cast<int32_t>(frags[1].regs.size()),
+                          static_cast<int32_t>(frags[2].regs.size()),
+                          1, // sparseMetadata
+                          1  // sparsitySelector
+                      }));
+  return success();
+}
+
+LogicalResult MmaSpOp::verify() {
+  MLIRContext *context = getContext();
+  auto f16Ty = Float16Type::get(context);
+  auto i32Ty = IntegerType::get(context, 32);
+  auto f16x2Ty = VectorType::get(2, f16Ty);
+  auto f32Ty = Float32Type::get(context);
+  auto f16x2x4StructTy = LLVM::LLVMStructType::getLiteral(
+      context, {f16x2Ty, f16x2Ty, f16x2Ty, f16x2Ty});
+
+  auto s32x4StructTy =
+      LLVM::LLVMStructType::getLiteral(context, {i32Ty, i32Ty, i32Ty, i32Ty});
+  auto f32x8StructTy =
+      LLVM::LLVMStructType::getLiteral(context, SmallVector<Type>(8, f32Ty));
+  auto f16x2x2StructTy =
+      LLVM::LLVMStructType::getLiteral(context, {f16x2Ty, f16x2Ty});
+  auto f32x4StructTy =
+      LLVM::LLVMStructType::getLiteral(context, {f32Ty, f32Ty, f32Ty, f32Ty});
+  auto s32x2StructTy =
+      LLVM::LLVMStructType::getLiteral(context, {i32Ty, i32Ty});
+
+  std::array<int64_t, 3> mmaShape{getShapeAttr().getM(), getShapeAttr().getN(),
+                                  getShapeAttr().getK()};
+
+  // These variables define the set of allowed data types for matrices A, B, C,
+  // and result.
+  using AllowedShapes = SmallVector<std::array<int64_t, 3>, 2>;
+  using AllowedTypes = SmallVector<SmallVector<Type, 4>, 2>;
+  AllowedShapes allowedShapes;
+  AllowedTypes expectedA;
+  AllowedTypes expectedB;
+  AllowedTypes expectedC;
+  SmallVector<Type> expectedResult;
+
+  // When M = 16, we just need to calculate the number of 8xk tiles, where
+  // k is a factor that depends on the data type.
+  if (mmaShape[0] == 16) {
+    int64_t kFactor;
+    Type multiplicandFragType;
+    switch (*getMultiplicandAPtxType()) {
+    case MMATypes::tf32:
+      kFactor = 4;
+      multiplicandFragType = i32Ty;
+      expectedResult.push_back(LLVM::LLVMStructType::getLiteral(
+          context, {f32Ty, f32Ty, f32Ty, f32Ty}));
+      // Sparse MMA supports m16n8k8 and m16n8k16 for tf32
+      allowedShapes.push_back({16, 8, 8});
+      allowedShapes.push_back({16, 8, 16});
+      break;
+    case MMATypes::bf16:
+      kFactor = 8;
+      multiplicandFragType = i32Ty;
+      expectedResult.push_back(LLVM::LLVMStructType::getLiteral(
+          context, {f32Ty, f32Ty, f32Ty, f32Ty}));
+      // Sparse MMA supports m16n8k16 and m16n8k32 for bf16
+      allowedShapes.push_back({16, 8, 16});
+      allowedShapes.push_back({16, 8, 32});
+      break;
+    case MMATypes::f16:
+      kFactor = 8;
+      multiplicandFragType = f16x2Ty;
+      expectedResult.push_back(f16x2x2StructTy);
+      expectedResult.push_back(f32x4StructTy);
+      // Sparse MMA supports m16n8k16 and m16n8k32 for f16
+      allowedShapes.push_back({16, 8, 16});
+      allowedShapes.push_back({16, 8, 32});
+      break;
+    case MMATypes::s4:
+    case MMATypes::u4:
+      kFactor = 32;
+      // Sparse MMA supports m16n8k64 and m16n8k128 for s4/u4
+      allowedShapes.push_back({16, 8, 64});
+      allowedShapes.push_back({16, 8, 128});
+      break;
+    case MMATypes::s8:
+    case MMATypes::u8:
+      kFactor = 16;
+      // Sparse MMA supports m16n8k32 and m16n8k64 for s8/u8
+      allowedShapes.push_back({16, 8, 32});
+      allowedShapes.push_back({16, 8, 64});
+      break;
+    case MMATypes::e4m3:
+    case MMATypes::e5m2:
+    case MMATypes::e3m2:
+    case MMATypes::e2m3:
+    case MMATypes::e2m1:
+      kFactor = 32;
+      multiplicandFragType = i32Ty;
+      expectedResult.push_back(f16x2x2StructTy);
+      expectedResult.push_back(f32x4StructTy);
+      // Sparse MMA supports m16n8k64 for FP8 types
+      allowedShapes.push_back({16, 8, 64});
+      break;
+    default:
+      return emitError("invalid shape or multiplicand type: " +
+                       stringifyEnum(getMultiplicandAPtxType().value()));
+    }
+
+    if (isIntegerPtxType(getMultiplicandAPtxType().value())) {
+      expectedResult.push_back(s32x4StructTy);
+      expectedC.emplace_back(4, i32Ty);
+      multiplicandFragType = i32Ty;
+    } else if (*getMultiplicandAPtxType() >= MMATypes::e4m3 &&
+               *getMultiplicandAPtxType() <= MMATypes::e2m1) {
+      // FP8 types
+      expectedC.emplace_back(2, f16x2Ty);
+      expectedC.emplace_back(4, f32Ty);
+    } else {
+      expectedC.emplace_back(2, f16x2Ty);
+      expectedC.emplace_back(4, f32Ty);
+    }
+
+    // For sparse MMA, A operand is compressed (2:4 sparsity means half the
+    // elements)
+    int64_t unitA = (mmaShape[0] / 8) * (mmaShape[2] / kFactor) / 2;
+    int64_t unitB = (mmaShape[1] / 8) * (mmaShape[2] / kFactor);
+    expectedA.emplace_back(unitA, multiplicandFragType);
+    expectedB.emplace_back(unitB, multiplicandFragType);
+
+    if (resultPtxType() != accumPtxType())
+      return emitOpError("ctype does not match dtype");
+  }
+
+  // In the M=8 case, there is only 1 possible case per data type.
+  if (mmaShape[0] == 8) {
+    if (*getMultiplicandAPtxType() == MMATypes::f16) {
+      expectedA.emplace_back(2, f16x2Ty);
+      expectedB.emplace_back(2, f16x2Ty);
+      expectedResult.push_back(f16x2x4StructTy);
+      expectedResult.push_back(f32x8StructTy);
+      expectedC.emplace_back(4, f16x2Ty);
+      expectedC.emplace_back(8, f32Ty);
+      allowedShapes.push_back({8, 8, 4});
+    }
+    if (*getMultiplicandAPtxType() == MMATypes::f64) {
+      Type f64Ty = Float64Type::get(context);
+      expectedA.emplace_back(1, f64Ty);
+      expectedB.emplace_back(1, f64Ty);
+      expectedC.emplace_back(2, f64Ty);
+      expectedResult.emplace_back(LLVM::LLVMStructType::getLiteral(
+          context, SmallVector<Type>(2, f64Ty)));
+      allowedShapes.push_back({8, 8, 4});
+    }
+    if (isIntegerPtxType(getMultiplicandAPtxType().value())) {
+      expectedA.push_back({i32Ty});
+      expectedB.push_back({i32Ty});
+      expectedC.push_back({i32Ty, i32Ty});
+      expectedResult.push_back(s32x2StructTy);
+      if (isInt4PtxType(getMultiplicandAPtxType().value()))
+        allowedShapes.push_back({8, 8, 32});
+      if (isInt8PtxType(getMultiplicandAPtxType().value()))
+        allowedShapes.push_back({8, 8, 16});
+    }
+  }
+
+  std::string errorMessage;
+  llvm::raw_string_ostream errorStream(errorMessage);
+
+  // Check that we matched an existing shape/dtype combination.
+  if (expectedA.empty() || expectedB.empty() || expectedC.empty() ||
+      !llvm::is_contained(allowedShapes, mmaShape)) {
+    errorStream << "unimplemented variant for MMA shape <";
+    llvm::interleaveComma(mmaShape, errorStream);
+    errorStream << ">";
+    return emitOpError(errorMessage);
+  }
+
+  // Verify the operand types for segments of A, B, and C operands.
+  std::array<StringRef, 3> operandNames{"A", "B", "C"};
+  for (const auto &iter : llvm::enumerate(
+           SmallVector<AllowedTypes, 3>{expectedA, expectedB, expectedC})) {
+    auto spec = this->getODSOperandIndexAndLength(iter.index());
+    SmallVector<Type, 4> operandTySeg(operand_type_begin() + spec.first,
+                                      operand_type_begin() + spec.first +
+                                          spec.second);
+    bool match = llvm::is_contained(iter.value(), operandTySeg);
+
+    if (!match) {
+      errorStream << "Could not match types for the "
+                  << operandNames[iter.index()]
+                  << " operands; expected one of ";
+      for (const auto &x : iter.value()) {
+        errorStream << x.size() << "x" << x[0] << " ";
+      }
+      errorStream << "but got ";
+      llvm::interleaveComma(operandTySeg, errorStream);
+      return emitOpError(errorMessage);
+    }
+  }
+
+  // Check the result type
+  if (!llvm::any_of(expectedResult, [&](Type expectedResultType) {
+        return expectedResultType == getResult().getType();
+      })) {
+    errorStream
+        << "Could not match allowed types for the result; expected one of ";
+    llvm::interleaveComma(expectedResult, errorStream);
+    errorStream << " but got " << getResult().getType();
+    return emitOpError(errorMessage);
+  }
+
+  // Ensure int4/int8 MMA variants specify the accum overflow behavior
+  // attribute.
+  if (isInt4PtxType(*getMultiplicandAPtxType()) ||
+      isInt8PtxType(*getMultiplicandAPtxType())) {
+    if (!getIntOverflowBehavior())
+      return emitOpError("op requires " +
+                         getIntOverflowBehaviorAttrName().strref() +
+                         " attribute");
+  }
+
+  // Validate sparse metadata type (should be i32)
+  if (!getSparseMetadata().getType().isInteger(32)) {
+    return emitOpError() << "sparse metadata must be i32 type";
+  }
+
+  // Validate sparsity selector type (should be i32)
+  if (!getSparsitySelector().getType().isInteger(32)) {
+    return emitOpError() << "sparsity selector must be i32 type";
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// MMA Block Scale Operations - Shared Helpers
+//===----------------------------------------------------------------------===//
+
+namespace {
+// Shared structure for MMA operand fragments (A, B, C)
+struct MMAOperandFragment {
+  StringRef operandName;
+  StringRef ptxTypeAttr;
+  SmallVector<Value, 4> regs;
+  explicit MMAOperandFragment(StringRef name, StringRef ptxTypeName)
+      : operandName(name), ptxTypeAttr(ptxTypeName) {}
+};
+} // namespace
+
+// Helper to print operand list in the format: name[operands]
+static void printOperandList(OpAsmPrinter &p, StringRef name,
+                             ArrayRef<Value> operands) {
+  p << " " << name << "[";
+  p.printOperands(operands);
+  p << "]";
+}
+
+// Helper to parse operand list in the format: name[operands]
+static LogicalResult
+parseMmaOperand(OpAsmParser &parser, StringRef operandName,
+                SmallVectorImpl<OpAsmParser::UnresolvedOperand> &regs) {
+  if (parser.parseKeyword(operandName).failed())
+    return failure();
+  if (parser.parseOperandList(regs, OpAsmParser::Delimiter::OptionalSquare)
+          .failed())
+    return failure();
+  return success();
+}
+
+// Helper to process operand fragments and determine which attributes can be
+// inferred
+template <typename Op>
+static void
+processOperandFragments(Op &op, std::array<MMAOperandFragment, 3> &frags,
+                        SmallVectorImpl<Type> &regTypes,
+                        SmallVectorImpl<StringRef> &ignoreAttrNames) {
+  for (unsigned fragIdx = 0; fragIdx < frags.size(); fragIdx++) {
+    auto &frag = frags[fragIdx];
+    auto varOperandSpec = op.getODSOperandIndexAndLength(fragIdx);
+    for (auto operandIdx = varOperandSpec.first;
+         operandIdx < varOperandSpec.first + varOperandSpec.second;
+         operandIdx++) {
+      frag.regs.push_back(op.getOperand(operandIdx));
+      if (fragIdx == 0 && operandIdx == varOperandSpec.first) {
+        regTypes.push_back(op.getOperand(operandIdx).getType());
+      }
+    }
+    if (fragIdx < 2) {
+      regTypes.push_back(frag.regs[0].getType());
+    }
+    std::optional<MMATypes> inferredType =
+        MmaOp::inferOperandMMAType(regTypes.back(),
+                                   /*isAccumulator=*/fragIdx >= 2);
+    if (inferredType)
+      ignoreAttrNames.push_back(frag.ptxTypeAttr);
+  }
+}
+
+// Helper to parse type signature: (A_type, B_type, C_type)
+static LogicalResult
+parseMmaTypeSignature(OpAsmParser &parser,
+                      SmallVectorImpl<Type> &operandTypes) {
+  if (parser.parseColon().failed() || parser.parseLParen().failed())
+    return failure();
+
+  auto typeParser = [&]() {
+    Type ty;
+    if (parser.parseType(ty).failed())
+      return failure();
+    operandTypes.push_back(ty);
+    return success();
+  };
+  if (parser.parseCommaSeparatedList(typeParser))
+    return failure();
+
+  if (operandTypes.size() != 3)
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected exactly 3 types");
+
+  return parser.parseRParen();
+}
+
+// Helper to infer and set multiplicand PTX type attributes
+static void
+inferAndSetMultiplicandTypes(MLIRContext *ctx, NamedAttrList &attrs,
+                             const SmallVectorImpl<Type> &operandTypes) {
+  if (!attrs.get("multiplicandAPtxType")) {
+    if (auto inferredType =
+            MmaOp::inferOperandMMAType(operandTypes[0], false)) {
+      attrs.set("multiplicandAPtxType", MMATypesAttr::get(ctx, *inferredType));
+    }
+  }
+  if (!attrs.get("multiplicandBPtxType")) {
+    if (auto inferredType =
+            MmaOp::inferOperandMMAType(operandTypes[1], false)) {
+      attrs.set("multiplicandBPtxType", MMATypesAttr::get(ctx, *inferredType));
+    }
+  }
+}
+
+// Helper to add common block scale properties
+template <typename OpType>
+static void addBlockScaleProperties(OpBuilder &builder, OperationState &result,
+                                    ArrayRef<int64_t> shape,
+                                    ScaleVecSize scaleVecSize,
+                                    BlockScaleFormat blockScaleFormat,
+                                    MMABlockScaleKind kind) {
+  MLIRContext *ctx = builder.getContext();
+  auto &properties = result.getOrAddProperties<typename OpType::Properties>();
+  properties.setShape(
+      builder.getAttr<MMAShapeAttr>(shape[0], shape[1], shape[2]));
+  properties.setScaleVecSize(ScaleVecSizeAttr::get(ctx, scaleVecSize));
+  properties.setBlockScaleFormat(
+      BlockScaleFormatAttr::get(ctx, blockScaleFormat));
+  properties.setKind(MMABlockScaleKindAttr::get(ctx, kind));
+}
+
+// Helper to infer and add multiplicand PTX types to builder
+static void addInferredMultiplicandTypes(
+    MLIRContext *ctx, OperationState &result, ValueRange operandA,
+    ValueRange operandB,
+    std::optional<std::array<MMATypes, 2>> multiplicandPtxTypes) {
+  if (multiplicandPtxTypes) {
+    result.addAttribute("multiplicandAPtxType",
+                        MMATypesAttr::get(ctx, (*multiplicandPtxTypes)[0]));
+    result.addAttribute("multiplicandBPtxType",
+                        MMATypesAttr::get(ctx, (*multiplicandPtxTypes)[1]));
+  } else {
+    if (auto res = MmaOp::inferOperandMMAType(operandA[0].getType(), false))
+      result.addAttribute("multiplicandAPtxType", MMATypesAttr::get(ctx, *res));
+    if (auto res = MmaOp::inferOperandMMAType(operandB[0].getType(), false))
+      result.addAttribute("multiplicandBPtxType", MMATypesAttr::get(ctx, *res));
+  }
+}
+
+// Template helper for common accumPtxType/resultPtxType implementation
+template <typename OpTy>
+static MMATypes inferPtxTypeFromResult(OpTy op) {
+  return *MmaOp::inferOperandMMAType(
+      cast<LLVM::LLVMStructType>(op.getRes().getType()).getBody()[0],
+      /*isAccumulator=*/true);
+}
+
+//===----------------------------------------------------------------------===//
+// MmaBlockScaleOp
+//===----------------------------------------------------------------------===//
+
+void MmaBlockScaleOp::print(OpAsmPrinter &p) {
+  SmallVector<Type, 4> regTypes;
+  std::array<MMAOperandFragment, 3> frags{
+      MMAOperandFragment("A", getMultiplicandAPtxTypeAttrName()),
+      MMAOperandFragment("B", getMultiplicandBPtxTypeAttrName()),
+      MMAOperandFragment("C", "")};
+  SmallVector<StringRef, 4> ignoreAttrNames{
+      mlir::NVVM::MmaBlockScaleOp::getOperandSegmentSizeAttr()};
+
+  processOperandFragments(*this, frags, regTypes, ignoreAttrNames);
+
+  // Print A, B, C operands
+  for (const auto &frag : frags)
+    printOperandList(p, frag.operandName, frag.regs);
+
+  // Print scale operands
+  printOperandList(p, "scaleA",
+                   {getScaleAData(), getByteIdA(), getThreadIdA()});
+  printOperandList(p, "scaleB",
+                   {getScaleBData(), getByteIdB(), getThreadIdB()});
+
+  p.printOptionalAttrDict(this->getOperation()->getAttrs(), ignoreAttrNames);
+
+  // Print type signature
+  p << " : (";
+  llvm::interleaveComma(SmallVector<Type, 3>{frags[0].regs[0].getType(),
+                                             frags[1].regs[0].getType(),
+                                             frags[2].regs[0].getType()},
+                        p);
+  p << ")";
+  p.printArrowTypeList(TypeRange{this->getRes().getType()});
+}
+
+ParseResult MmaBlockScaleOp::parse(OpAsmParser &parser,
+                                   OperationState &result) {
+  struct LocalOperandFragment {
+    std::optional<MMATypes> elemtype;
+    SmallVector<OpAsmParser::UnresolvedOperand, 4> regs;
+  };
+
+  Builder &builder = parser.getBuilder();
+  std::array<LocalOperandFragment, 3> frags;
+  NamedAttrList namedAttributes;
+
+  // Parse A[...] B[...] C[...]
+  if (parseMmaOperand(parser, "A", frags[0].regs).failed() ||
+      parseMmaOperand(parser, "B", frags[1].regs).failed() ||
+      parseMmaOperand(parser, "C", frags[2].regs).failed())
+    return failure();
+
+  // Parse scale operands: scaleA[...] scaleB[...]
+  SmallVector<OpAsmParser::UnresolvedOperand, 3> scaleAOperands, scaleBOperands;
+  if (parseMmaOperand(parser, "scaleA", scaleAOperands).failed() ||
+      parseMmaOperand(parser, "scaleB", scaleBOperands).failed())
+    return failure();
+
+  if (parser.parseOptionalAttrDict(namedAttributes).failed())
+    return failure();
+
+  // Parse type signature
+  SmallVector<Type, 3> operandTypes;
+  if (parseMmaTypeSignature(parser, operandTypes).failed())
+    return failure();
+
+  // Parse result type
+  SmallVector<Type, 1> resultTypes;
+  if (parser.parseArrowTypeList(resultTypes).failed())
+    return failure();
+
+  // Infer element types and resolve operands
+  for (const auto &[idx, frag] : llvm::enumerate(frags)) {
+    frag.elemtype = MmaOp::inferOperandMMAType(operandTypes[idx],
+                                               /*isAccumulator=*/idx >= 2);
+    if (parser
+            .resolveOperands(frag.regs, operandTypes[idx], parser.getNameLoc(),
+                             result.operands)
+            .failed())
+      return failure();
+  }
+
+  // Resolve scale operands
+  SmallVector<Type, 3> scaleTypes = {builder.getI32Type(), builder.getI16Type(),
+                                     builder.getI16Type()};
+  if (parser
+          .resolveOperands(scaleAOperands, scaleTypes, parser.getNameLoc(),
+                           result.operands)
+          .failed() ||
+      parser
+          .resolveOperands(scaleBOperands, scaleTypes, parser.getNameLoc(),
+                           result.operands)
+          .failed())
+    return failure();
+
+  // Add attributes
+  result.addAttributes(namedAttributes);
+  inferAndSetMultiplicandTypes(parser.getContext(), result.attributes,
+                               operandTypes);
+
+  result.addTypes(resultTypes);
+  result.addAttribute(MmaBlockScaleOp::getOperandSegmentSizeAttr(),
+                      builder.getDenseI32ArrayAttr({
+                          static_cast<int32_t>(frags[0].regs.size()),
+                          static_cast<int32_t>(frags[1].regs.size()),
+                          static_cast<int32_t>(frags[2].regs.size()),
+                          1, // scaleAData
+                          1, // byteIdA
+                          1, // threadIdA
+                          1, // scaleBData
+                          1, // byteIdB
+                          1  // threadIdB
+                      }));
+  return success();
+}
+
+void MmaBlockScaleOp::build(
+    OpBuilder &builder, OperationState &result, Type resultType,
+    ValueRange operandA, ValueRange operandB, ValueRange operandC,
+    Value scaleAData, Value byteIdA, Value threadIdA, Value scaleBData,
+    Value byteIdB, Value threadIdB, ArrayRef<int64_t> shape,
+    std::optional<std::array<MMATypes, 2>> multiplicandPtxTypes,
+    ScaleVecSize scaleVecSize, BlockScaleFormat blockScaleFormat,
+    MMABlockScaleKind kind) {
+  assert(shape.size() == 3 && "expected shape to have size 3 (m, n, k)");
+
+  addBlockScaleProperties<MmaBlockScaleOp>(builder, result, shape, scaleVecSize,
+                                           blockScaleFormat, kind);
+
+  result.addOperands(operandA);
+  result.addOperands(operandB);
+  result.addOperands(operandC);
+  result.addOperands(
+      {scaleAData, byteIdA, threadIdA, scaleBData, byteIdB, threadIdB});
+
+  addInferredMultiplicandTypes(builder.getContext(), result, operandA, operandB,
+                               multiplicandPtxTypes);
+
+  result.addTypes(resultType);
+  result.addAttribute(MmaBlockScaleOp::getOperandSegmentSizeAttr(),
+                      builder.getDenseI32ArrayAttr({
+                          static_cast<int32_t>(operandA.size()),
+                          static_cast<int32_t>(operandB.size()),
+                          static_cast<int32_t>(operandC.size()),
+                          1, // scaleAData
+                          1, // byteIdA
+                          1, // threadIdA
+                          1, // scaleBData
+                          1, // byteIdB
+                          1  // threadIdB
+                      }));
+}
+
+NVVM::IDArgPair MmaBlockScaleOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto curOp = cast<NVVM::MmaBlockScaleOp>(op);
+
+  SmallVector<llvm::Value *> args;
+  // Add A, B, C operands
+  for (Value operand : curOp.getOperandA())
+    args.push_back(mt.lookupValue(operand));
+  for (Value operand : curOp.getOperandB())
+    args.push_back(mt.lookupValue(operand));
+  for (Value operand : curOp.getOperandC())
+    args.push_back(mt.lookupValue(operand));
+
+  // Add scale operands
+  args.push_back(mt.lookupValue(curOp.getScaleAData()));
+  args.push_back(mt.lookupValue(curOp.getByteIdA()));
+  args.push_back(mt.lookupValue(curOp.getThreadIdA()));
+  args.push_back(mt.lookupValue(curOp.getScaleBData()));
+  args.push_back(mt.lookupValue(curOp.getByteIdB()));
+  args.push_back(mt.lookupValue(curOp.getThreadIdB()));
+
+  unsigned intId = MmaBlockScaleOp::getIntrinsicID(
+      curOp.getShape().getM(), curOp.getShape().getN(), curOp.getShape().getK(),
+      *curOp.getMultiplicandAPtxType(), *curOp.getMultiplicandBPtxType(),
+      inferPtxTypeFromResult(curOp), curOp.getScaleVecSize(),
+      curOp.getBlockScaleFormat(), curOp.getKind());
+
+  return {intId, args};
+}
+
+LogicalResult MmaBlockScaleOp::verify() {
+  LogicalResult result = success();
+  int m = getShape().getM();
+  int n = getShape().getN();
+  int k = getShape().getK();
+
+  if (m == 16 && n == 8 && k == 64) {
+    if (getMultiplicandAPtxType() != NVVM::MMATypes::e2m1 ||
+        getMultiplicandBPtxType() != NVVM::MMATypes::e2m1)
+      result = emitOpError(
+          "unsupported MMATypes attribute for mma.m16n8k64.(mxf4nvf4|mxf4)");
+    if (getKind() == NVVM::MMABlockScaleKind::MXF4) {
+      if (getScaleVecSize() != NVVM::ScaleVecSize::X2)
+        result = emitOpError(
+            "unsupported ScaleVecSize attribute for mma.m16n8k64.mxf4");
+      if (getBlockScaleFormat() != NVVM::BlockScaleFormat::UE8M0)
+        result = emitOpError(
+            "unsupported BlockScaleFormat attribute for mma.m16n8k64.mxf4");
+    } else if (getKind() == NVVM::MMABlockScaleKind::MXF4NVF4) {
+      if (!((getScaleVecSize() == NVVM::ScaleVecSize::X2 &&
+             getBlockScaleFormat() == NVVM::BlockScaleFormat::UE8M0) ||
+            (getScaleVecSize() == NVVM::ScaleVecSize::X4 &&
+             getBlockScaleFormat() == NVVM::BlockScaleFormat::UE4M3)))
+        result = emitOpError("unsupported ScaleVecSize and BlockScaleFormat "
+                             "attributes for mma.m16n8k64.mxf4nvf4");
+    } else {
+      result = emitOpError("unsupported Kind attribute for mma.m16n8k64");
+    }
+  } else if (m == 16 && n == 8 && k == 32) {
+    if (!(getKind() == NVVM::MMABlockScaleKind::MXF8F6F4 &&
+          getScaleVecSize() == NVVM::ScaleVecSize::X1 &&
+          getBlockScaleFormat() == NVVM::BlockScaleFormat::UE8M0))
+      result =
+          emitOpError("unsupported Kind, ScaleVecSize and BlockScaleFormat "
+                      "attributes for mma.m16n8k32");
+  } else {
+    result = emitOpError("unsupported Geom for mma with block scaling");
+  }
+  return result;
+}
+
+//===----------------------------------------------------------------------===//
+// MmaSpBlockScaleOp
+//===----------------------------------------------------------------------===//
+
+void MmaSpBlockScaleOp::print(OpAsmPrinter &p) {
+  SmallVector<Type, 4> regTypes;
+  std::array<MMAOperandFragment, 3> frags{
+      MMAOperandFragment("A", getMultiplicandAPtxTypeAttrName()),
+      MMAOperandFragment("B", getMultiplicandBPtxTypeAttrName()),
+      MMAOperandFragment("C", "")};
+  SmallVector<StringRef, 4> ignoreAttrNames{
+      mlir::NVVM::MmaSpBlockScaleOp::getOperandSegmentSizeAttr()};
+
+  processOperandFragments(*this, frags, regTypes, ignoreAttrNames);
+
+  // Print A, B, C operands
+  for (const auto &frag : frags)
+    printOperandList(p, frag.operandName, frag.regs);
+
+  // Print sparse-specific operands
+  printOperandList(p, "sparseMetadata", {getSparseMetadata()});
+  printOperandList(p, "selector", {getSparsitySelector()});
+
+  // Print scale operands
+  printOperandList(p, "scaleA",
+                   {getScaleAData(), getByteIdA(), getThreadIdA()});
+  printOperandList(p, "scaleB",
+                   {getScaleBData(), getByteIdB(), getThreadIdB()});
+
+  p.printOptionalAttrDict(this->getOperation()->getAttrs(), ignoreAttrNames);
+
+  // Print type signature
+  p << " : (";
+  llvm::interleaveComma(SmallVector<Type, 3>{frags[0].regs[0].getType(),
+                                             frags[1].regs[0].getType(),
+                                             frags[2].regs[0].getType()},
+                        p);
+  p << ")";
+  p.printArrowTypeList(TypeRange{this->getRes().getType()});
+}
+
+ParseResult MmaSpBlockScaleOp::parse(OpAsmParser &parser,
+                                     OperationState &result) {
+  struct LocalOperandFragment {
+    std::optional<MMATypes> elemtype;
+    SmallVector<OpAsmParser::UnresolvedOperand, 4> regs;
+  };
+
+  Builder &builder = parser.getBuilder();
+  std::array<LocalOperandFragment, 3> frags;
+  NamedAttrList namedAttributes;
+
+  // Parse A[...] B[...] C[...]
+  if (parseMmaOperand(parser, "A", frags[0].regs).failed() ||
+      parseMmaOperand(parser, "B", frags[1].regs).failed() ||
+      parseMmaOperand(parser, "C", frags[2].regs).failed())
+    return failure();
+
+  // Parse sparse-specific operands
+  SmallVector<OpAsmParser::UnresolvedOperand, 1> metadataOperands,
+      selectorOperands;
+  if (parseMmaOperand(parser, "sparseMetadata", metadataOperands).failed() ||
+      parseMmaOperand(parser, "selector", selectorOperands).failed())
+    return failure();
+
+  // Parse scale operands
+  SmallVector<OpAsmParser::UnresolvedOperand, 3> scaleAOperands, scaleBOperands;
+  if (parseMmaOperand(parser, "scaleA", scaleAOperands).failed() ||
+      parseMmaOperand(parser, "scaleB", scaleBOperands).failed())
+    return failure();
+
+  if (parser.parseOptionalAttrDict(namedAttributes).failed())
+    return failure();
+
+  // Parse type signature
+  SmallVector<Type, 3> operandTypes;
+  if (parseMmaTypeSignature(parser, operandTypes).failed())
+    return failure();
+
+  // Parse result type
+  SmallVector<Type, 1> resultTypes;
+  if (parser.parseArrowTypeList(resultTypes).failed())
+    return failure();
+
+  // Infer element types and resolve operands
+  for (const auto &[idx, frag] : llvm::enumerate(frags)) {
+    frag.elemtype = MmaOp::inferOperandMMAType(operandTypes[idx],
+                                               /*isAccumulator=*/idx >= 2);
+    if (parser
+            .resolveOperands(frag.regs, operandTypes[idx], parser.getNameLoc(),
+                             result.operands)
+            .failed())
+      return failure();
+  }
+
+  // Resolve sparse metadata and selector
+  Type i32Type = builder.getI32Type();
+  if (parser
+          .resolveOperands(metadataOperands, i32Type, parser.getNameLoc(),
+                           result.operands)
+          .failed() ||
+      parser
+          .resolveOperands(selectorOperands, i32Type, parser.getNameLoc(),
+                           result.operands)
+          .failed())
+    return failure();
+
+  // Resolve scale operands
+  SmallVector<Type, 3> scaleTypes = {i32Type, builder.getI16Type(),
+                                     builder.getI16Type()};
+  if (parser
+          .resolveOperands(scaleAOperands, scaleTypes, parser.getNameLoc(),
+                           result.operands)
+          .failed() ||
+      parser
+          .resolveOperands(scaleBOperands, scaleTypes, parser.getNameLoc(),
+                           result.operands)
+          .failed())
+    return failure();
+
+  // Add attributes
+  result.addAttributes(namedAttributes);
+  inferAndSetMultiplicandTypes(parser.getContext(), result.attributes,
+                               operandTypes);
+
+  // orderedMetadata is mandatory
+  if (!result.attributes.get("orderedMetadata"))
+    result.addAttribute("orderedMetadata", builder.getUnitAttr());
+
+  result.addTypes(resultTypes);
+  result.addAttribute(MmaSpBlockScaleOp::getOperandSegmentSizeAttr(),
+                      builder.getDenseI32ArrayAttr({
+                          static_cast<int32_t>(frags[0].regs.size()),
+                          static_cast<int32_t>(frags[1].regs.size()),
+                          static_cast<int32_t>(frags[2].regs.size()),
+                          1, // sparseMetadata
+                          1, // sparsitySelector
+                          1, // scaleAData
+                          1, // byteIdA
+                          1, // threadIdA
+                          1, // scaleBData
+                          1, // byteIdB
+                          1  // threadIdB
+                      }));
+  return success();
+}
+
+void MmaSpBlockScaleOp::build(
+    OpBuilder &builder, OperationState &result, Type resultType,
+    ValueRange operandA, ValueRange operandB, ValueRange operandC,
+    Value sparseMetadata, Value sparsitySelector, Value scaleAData,
+    Value byteIdA, Value threadIdA, Value scaleBData, Value byteIdB,
+    Value threadIdB, ArrayRef<int64_t> shape,
+    std::optional<std::array<MMATypes, 2>> multiplicandPtxTypes,
+    ScaleVecSize scaleVecSize, BlockScaleFormat blockScaleFormat,
+    MMABlockScaleKind kind) {
+  assert(shape.size() == 3 && "expected shape to have size 3 (m, n, k)");
+
+  addBlockScaleProperties<MmaSpBlockScaleOp>(
+      builder, result, shape, scaleVecSize, blockScaleFormat, kind);
+  result.addAttribute("orderedMetadata", builder.getUnitAttr());
+
+  result.addOperands(operandA);
+  result.addOperands(operandB);
+  result.addOperands(operandC);
+  result.addOperands({sparseMetadata, sparsitySelector, scaleAData, byteIdA,
+                      threadIdA, scaleBData, byteIdB, threadIdB});
+
+  addInferredMultiplicandTypes(builder.getContext(), result, operandA, operandB,
+                               multiplicandPtxTypes);
+
+  result.addTypes(resultType);
+  result.addAttribute(MmaSpBlockScaleOp::getOperandSegmentSizeAttr(),
+                      builder.getDenseI32ArrayAttr({
+                          static_cast<int32_t>(operandA.size()),
+                          static_cast<int32_t>(operandB.size()),
+                          static_cast<int32_t>(operandC.size()),
+                          1, // sparseMetadata
+                          1, // sparsitySelector
+                          1, // scaleAData
+                          1, // byteIdA
+                          1, // threadIdA
+                          1, // scaleBData
+                          1, // byteIdB
+                          1  // threadIdB
+                      }));
+}
+
+NVVM::IDArgPair MmaSpBlockScaleOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto curOp = cast<NVVM::MmaSpBlockScaleOp>(op);
+
+  SmallVector<llvm::Value *> args;
+  // Add A, B, C operands
+  for (Value operand : curOp.getOperandA())
+    args.push_back(mt.lookupValue(operand));
+  for (Value operand : curOp.getOperandB())
+    args.push_back(mt.lookupValue(operand));
+  for (Value operand : curOp.getOperandC())
+    args.push_back(mt.lookupValue(operand));
+
+  // Add sparse metadata and selector
+  args.push_back(mt.lookupValue(curOp.getSparseMetadata()));
+  args.push_back(mt.lookupValue(curOp.getSparsitySelector()));
+
+  // Add scale operands
+  args.push_back(mt.lookupValue(curOp.getScaleAData()));
+  args.push_back(mt.lookupValue(curOp.getByteIdA()));
+  args.push_back(mt.lookupValue(curOp.getThreadIdA()));
+  args.push_back(mt.lookupValue(curOp.getScaleBData()));
+  args.push_back(mt.lookupValue(curOp.getByteIdB()));
+  args.push_back(mt.lookupValue(curOp.getThreadIdB()));
+
+  unsigned intId = MmaSpBlockScaleOp::getIntrinsicID(
+      curOp.getShape().getM(), curOp.getShape().getN(), curOp.getShape().getK(),
+      *curOp.getMultiplicandAPtxType(), *curOp.getMultiplicandBPtxType(),
+      inferPtxTypeFromResult(curOp), curOp.getScaleVecSize(),
+      curOp.getBlockScaleFormat(), curOp.getKind());
+
+  return {intId, args};
+}
+
+LogicalResult MmaSpBlockScaleOp::verify() {
+  // Check that orderedMetadata is present
+  if (!getOrderedMetadata()) {
+    return emitOpError("'orderedMetadata' attribute is mandatory");
+  }
+
+  LogicalResult result = success();
+  int m = getShape().getM();
+  int n = getShape().getN();
+  int k = getShape().getK();
+
+  if (m == 16 && n == 8 && k == 128) {
+    if (getMultiplicandAPtxType() != NVVM::MMATypes::e2m1 ||
+        getMultiplicandBPtxType() != NVVM::MMATypes::e2m1)
+      result = emitOpError(
+          "unsupported MMATypes attribute for mma.m16n8k128.(mxf4nvf4|mxf4)");
+    if (getKind() == NVVM::MMABlockScaleKind::MXF4) {
+      if (getScaleVecSize() != NVVM::ScaleVecSize::X2)
+        result = emitOpError(
+            "unsupported ScaleVecSize attribute for mma.m16n8k128.mxf4");
+      if (getBlockScaleFormat() != NVVM::BlockScaleFormat::UE8M0)
+        result = emitOpError(
+            "unsupported BlockScaleFormat attribute for mma.m16n8k128.mxf4");
+    } else if (getKind() == NVVM::MMABlockScaleKind::MXF4NVF4) {
+      if (!((getScaleVecSize() == NVVM::ScaleVecSize::X2 &&
+             getBlockScaleFormat() == NVVM::BlockScaleFormat::UE8M0) ||
+            (getScaleVecSize() == NVVM::ScaleVecSize::X4 &&
+             getBlockScaleFormat() == NVVM::BlockScaleFormat::UE4M3)))
+        result = emitOpError("unsupported ScaleVecSize and BlockScaleFormat "
+                             "attributes for mma.m16n8k128.mxf4nvf4");
+    } else {
+      result = emitOpError("unsupported Kind attribute for mma.m16n8k128");
+    }
+  } else if (m == 16 && n == 8 && k == 64) {
+    if (!(getKind() == NVVM::MMABlockScaleKind::MXF8F6F4 &&
+          getScaleVecSize() == NVVM::ScaleVecSize::X1 &&
+          getBlockScaleFormat() == NVVM::BlockScaleFormat::UE8M0))
+      result =
+          emitOpError("unsupported Kind, ScaleVecSize and BlockScaleFormat "
+                      "attributes for mma.m16n8k64");
+  } else {
+    result = emitOpError("unsupported Geom for sparse mma with block scaling");
+  }
+  return result;
 }
 
 LogicalResult ShflOp::verify() {
@@ -1488,6 +2741,13 @@ bool NVVM::WgmmaMmaAsyncOp::getAsmValues(
   return true; // Has manual mapping
 }
 
+LogicalResult NVVM::FenceSyncRestrictOp::verify() {
+  if (getOrder() != NVVM::MemOrderKind::ACQUIRE &&
+      getOrder() != NVVM::MemOrderKind::RELEASE)
+    return emitOpError("only acquire and release semantics are supported");
+  return success();
+}
+
 LogicalResult NVVM::FenceProxyOp::verify() {
   if (getKind() == NVVM::ProxyKind::TENSORMAP)
     return emitOpError() << "tensormap proxy is not a supported proxy kind";
@@ -1510,7 +2770,6 @@ LogicalResult NVVM::FenceProxyAcquireOp::verify() {
   if (getToProxy() != NVVM::ProxyKind::TENSORMAP)
     return emitOpError("uni-directional proxies only support tensormap "
                        "for to_proxy attribute");
-
   return success();
 }
 
@@ -1522,7 +2781,19 @@ LogicalResult NVVM::FenceProxyReleaseOp::verify() {
   if (getToProxy() != NVVM::ProxyKind::TENSORMAP)
     return emitOpError("uni-directional proxies only support tensormap "
                        "for to_proxy attribute");
+  return success();
+}
 
+LogicalResult NVVM::FenceProxySyncRestrictOp::verify() {
+  if (getOrder() != NVVM::MemOrderKind::ACQUIRE &&
+      getOrder() != NVVM::MemOrderKind::RELEASE)
+    return emitOpError("only acquire and release semantics are supported");
+
+  if (getFromProxy() != NVVM::ProxyKind::GENERIC)
+    return emitOpError("only generic is support for from_proxy attribute");
+
+  if (getToProxy() != NVVM::ProxyKind::async)
+    return emitOpError("only async is supported for to_proxy attribute");
   return success();
 }
 
@@ -1822,30 +3093,48 @@ mlir::NVVM::IDArgPair NVVM::BarrierOp::getIntrinsicIDAndArgs(
                                ? mt.lookupValue(thisOp.getBarrierId())
                                : builder.getInt32(0);
   llvm::Intrinsic::ID id;
-  llvm::SmallVector<llvm::Value *> args;
+  llvm::SmallVector<llvm::Value *> args = {barrierId};
   if (thisOp.getNumberOfThreads()) {
     id = llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count;
-    args.push_back(barrierId);
     args.push_back(mt.lookupValue(thisOp.getNumberOfThreads()));
   } else if (thisOp.getReductionOp()) {
     switch (*thisOp.getReductionOp()) {
     case NVVM::BarrierReduction::AND:
-      id = llvm::Intrinsic::nvvm_barrier0_and;
+      id = llvm::Intrinsic::nvvm_barrier_cta_red_and_aligned_all;
       break;
     case NVVM::BarrierReduction::OR:
-      id = llvm::Intrinsic::nvvm_barrier0_or;
+      id = llvm::Intrinsic::nvvm_barrier_cta_red_or_aligned_all;
       break;
     case NVVM::BarrierReduction::POPC:
-      id = llvm::Intrinsic::nvvm_barrier0_popc;
+      id = llvm::Intrinsic::nvvm_barrier_cta_red_popc_aligned_all;
       break;
     }
-    args.push_back(mt.lookupValue(thisOp.getReductionPredicate()));
+    args.push_back(builder.CreateICmpNE(
+        mt.lookupValue(thisOp.getReductionPredicate()), builder.getInt32(0)));
   } else {
     id = llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all;
-    args.push_back(barrierId);
   }
 
   return {id, std::move(args)};
+}
+
+mlir::NVVM::IDArgPair
+PMEventOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                                 llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::PMEventOp>(op);
+  llvm::Type *i16Ty = llvm::Type::getInt16Ty(mt.getLLVMContext());
+
+  // With event-id, mask is generated as (1 << event-id)
+  llvm::Value *maskVal;
+  if (auto eventAttr = thisOp.getEventIdAttr()) {
+    uint16_t mask = static_cast<uint16_t>(1u << eventAttr.getInt());
+    maskVal = llvm::ConstantInt::get(i16Ty, mask);
+  } else {
+    maskVal =
+        llvm::ConstantInt::get(i16Ty, thisOp.getMaskedEventIdAttr().getValue());
+  }
+
+  return {llvm::Intrinsic::nvvm_pm_event_mask, {maskVal}};
 }
 
 mlir::NVVM::IDArgPair MBarrierInitOp::getIntrinsicIDAndArgs(
@@ -1874,15 +3163,219 @@ mlir::NVVM::IDArgPair MBarrierInvalOp::getIntrinsicIDAndArgs(
   return {id, {mt.lookupValue(thisOp.getAddr())}};
 }
 
+mlir::NVVM::IDArgPair MBarrierExpectTxOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::MBarrierExpectTxOp>(op);
+
+  bool isClusterSpace = isPtrInSharedClusterSpace(thisOp.getAddr());
+  bool isClusterScope = thisOp.getScope() == NVVM::MemScopeKind::CLUSTER;
+  // bit-0: Space
+  // bit-1: Scope
+  size_t index = ((isClusterScope ? 1 : 0) << 1) | (isClusterSpace ? 1 : 0);
+
+  static constexpr llvm::Intrinsic::ID IDs[] = {
+      llvm::Intrinsic::nvvm_mbarrier_expect_tx_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_expect_tx_scope_cta_space_cluster,
+      llvm::Intrinsic::nvvm_mbarrier_expect_tx_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_expect_tx_scope_cluster_space_cluster};
+
+  // Fill the Intrinsic Args
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getAddr()));
+  args.push_back(mt.lookupValue(thisOp.getTxcount()));
+
+  return {IDs[index], std::move(args)};
+}
+
+mlir::NVVM::IDArgPair MBarrierCompleteTxOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::MBarrierCompleteTxOp>(op);
+
+  bool isClusterSpace = isPtrInSharedClusterSpace(thisOp.getAddr());
+  bool isClusterScope = thisOp.getScope() == NVVM::MemScopeKind::CLUSTER;
+  // bit-0: Space
+  // bit-1: Scope
+  size_t index = ((isClusterScope ? 1 : 0) << 1) | (isClusterSpace ? 1 : 0);
+
+  static constexpr llvm::Intrinsic::ID IDs[] = {
+      llvm::Intrinsic::nvvm_mbarrier_complete_tx_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_complete_tx_scope_cta_space_cluster,
+      llvm::Intrinsic::nvvm_mbarrier_complete_tx_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_complete_tx_scope_cluster_space_cluster};
+
+  // Fill the Intrinsic Args
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getAddr()));
+  args.push_back(mt.lookupValue(thisOp.getTxcount()));
+
+  return {IDs[index], std::move(args)};
+}
+
 mlir::NVVM::IDArgPair MBarrierArriveOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::MBarrierArriveOp>(op);
-  bool isShared = isPtrInSharedCTASpace(thisOp.getAddr());
-  llvm::Intrinsic::ID id = isShared
-                               ? llvm::Intrinsic::nvvm_mbarrier_arrive_shared
-                               : llvm::Intrinsic::nvvm_mbarrier_arrive;
 
-  return {id, {mt.lookupValue(thisOp.getAddr())}};
+  bool isClusterSpace = isPtrInSharedClusterSpace(thisOp.getAddr());
+  bool isClusterScope = thisOp.getScope() == NVVM::MemScopeKind::CLUSTER;
+  // bit-0: Space
+  // bit-1: Scope
+  size_t index = ((isClusterScope ? 1 : 0) << 1) | (isClusterSpace ? 1 : 0);
+
+  static constexpr llvm::Intrinsic::ID IDs[] = {
+      llvm::Intrinsic::nvvm_mbarrier_arrive_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_scope_cta_space_cluster,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_scope_cluster_space_cluster};
+  static constexpr llvm::Intrinsic::ID relaxedIDs[] = {
+      llvm::Intrinsic::nvvm_mbarrier_arrive_relaxed_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_relaxed_scope_cta_space_cluster,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_relaxed_scope_cluster_space_cta,
+      llvm::Intrinsic::
+          nvvm_mbarrier_arrive_relaxed_scope_cluster_space_cluster};
+  auto id = thisOp.getRelaxed() ? relaxedIDs[index] : IDs[index];
+
+  // Tidy-up the Intrinsic Args
+  bool needCast = isPtrInGenericSpace(thisOp.getAddr());
+  llvm::Value *mbar = mt.lookupValue(thisOp.getAddr());
+  if (needCast)
+    mbar = castPtrToAddrSpace(builder, mbar, NVVMMemorySpace::Shared);
+
+  // We have the most basic mbarrier.arrive supported on sm_80.
+  // It supports: Space=cta, scope=cta, No relaxed, No explicit count.
+  // So, only for this combination use the legacy intrinsic.
+  bool hasCount = static_cast<bool>(thisOp.getCount());
+  if (!hasCount &&
+      (id == llvm::Intrinsic::nvvm_mbarrier_arrive_scope_cta_space_cta))
+    return {llvm::Intrinsic::nvvm_mbarrier_arrive_shared, {mbar}};
+
+  // When count is not explicitly specified, the default is 1.
+  llvm::LLVMContext &ctx = mt.getLLVMContext();
+  llvm::Value *count =
+      hasCount ? mt.lookupValue(thisOp.getCount())
+               : llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx), 1);
+  return {id, {mbar, count}};
+}
+
+mlir::NVVM::IDArgPair MBarrierArriveDropOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::MBarrierArriveDropOp>(op);
+
+  bool isClusterSpace = isPtrInSharedClusterSpace(thisOp.getAddr());
+  bool isClusterScope = thisOp.getScope() == NVVM::MemScopeKind::CLUSTER;
+  // bit-0: Space
+  // bit-1: Scope
+  size_t index = ((isClusterScope ? 1 : 0) << 1) | (isClusterSpace ? 1 : 0);
+
+  static constexpr llvm::Intrinsic::ID IDs[] = {
+      llvm::Intrinsic::nvvm_mbarrier_arrive_drop_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_drop_scope_cta_space_cluster,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_drop_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_drop_scope_cluster_space_cluster};
+  static constexpr llvm::Intrinsic::ID relaxedIDs[] = {
+      llvm::Intrinsic::nvvm_mbarrier_arrive_drop_relaxed_scope_cta_space_cta,
+      llvm::Intrinsic::
+          nvvm_mbarrier_arrive_drop_relaxed_scope_cta_space_cluster,
+      llvm::Intrinsic::
+          nvvm_mbarrier_arrive_drop_relaxed_scope_cluster_space_cta,
+      llvm::Intrinsic::
+          nvvm_mbarrier_arrive_drop_relaxed_scope_cluster_space_cluster};
+  auto id = thisOp.getRelaxed() ? relaxedIDs[index] : IDs[index];
+
+  // Tidy-up the Intrinsic Args
+  bool needCast = isPtrInGenericSpace(thisOp.getAddr());
+  llvm::Value *mbar = mt.lookupValue(thisOp.getAddr());
+  if (needCast)
+    mbar = castPtrToAddrSpace(builder, mbar, NVVMMemorySpace::Shared);
+
+  // When count is not explicitly specified, the default is 1.
+  llvm::LLVMContext &ctx = mt.getLLVMContext();
+  bool hasCount = static_cast<bool>(thisOp.getCount());
+  llvm::Value *count =
+      hasCount ? mt.lookupValue(thisOp.getCount())
+               : llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx), 1);
+
+  return {id, {mbar, count}};
+}
+
+bool MBarrierArriveExpectTxOp::getAsmValues(
+    RewriterBase &rewriter,
+    llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>>
+        &asmValues) {
+  // Add all the operands but not the attrs to the asmValues list.
+  // The attrs here are used to generate the right variants for
+  // intrinsics-lowering. So, we ignore them while generating inline-PTX.
+  for (auto val : getOperands())
+    asmValues.push_back({val, mlir::NVVM::PTXRegisterMod::Read});
+
+  return false;
+}
+
+mlir::NVVM::IDArgPair MBarrierArriveExpectTxOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::MBarrierArriveExpectTxOp>(op);
+
+  bool isClusterSpace = isPtrInSharedClusterSpace(thisOp.getAddr());
+  bool isClusterScope = thisOp.getScope() == NVVM::MemScopeKind::CLUSTER;
+  // bit-0: Space
+  // bit-1: Scope
+  size_t index = ((isClusterScope ? 1 : 0) << 1) | (isClusterSpace ? 1 : 0);
+
+  // clang-format off
+  static constexpr llvm::Intrinsic::ID IDs[] = {
+      llvm::Intrinsic::nvvm_mbarrier_arrive_expect_tx_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_expect_tx_scope_cta_space_cluster,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_expect_tx_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_expect_tx_scope_cluster_space_cluster};
+  static constexpr llvm::Intrinsic::ID relaxedIDs[] = {
+      llvm::Intrinsic::nvvm_mbarrier_arrive_expect_tx_relaxed_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_expect_tx_relaxed_scope_cta_space_cluster,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_expect_tx_relaxed_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_expect_tx_relaxed_scope_cluster_space_cluster};
+  // clang-format on
+  auto id = thisOp.getRelaxed() ? relaxedIDs[index] : IDs[index];
+
+  // Tidy-up the Intrinsic Args
+  llvm::Value *txcount = mt.lookupValue(thisOp.getTxcount());
+  llvm::Value *mbar = mt.lookupValue(thisOp.getAddr());
+  bool needCast = isPtrInGenericSpace(thisOp.getAddr());
+  if (needCast)
+    mbar = castPtrToAddrSpace(builder, mbar, NVVMMemorySpace::Shared);
+
+  return {id, {mbar, txcount}};
+}
+
+mlir::NVVM::IDArgPair MBarrierArriveDropExpectTxOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::MBarrierArriveDropExpectTxOp>(op);
+
+  bool isClusterSpace = isPtrInSharedClusterSpace(thisOp.getAddr());
+  bool isClusterScope = thisOp.getScope() == NVVM::MemScopeKind::CLUSTER;
+  // bit-0: Space
+  // bit-1: Scope
+  size_t index = ((isClusterScope ? 1 : 0) << 1) | (isClusterSpace ? 1 : 0);
+
+  // clang-format off
+  static constexpr llvm::Intrinsic::ID IDs[] = {
+      llvm::Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_scope_cta_space_cluster,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_scope_cluster_space_cluster};
+  static constexpr llvm::Intrinsic::ID relaxedIDs[] = {
+      llvm::Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_relaxed_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_relaxed_scope_cta_space_cluster,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_relaxed_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_relaxed_scope_cluster_space_cluster};
+  // clang-format on
+  auto id = thisOp.getRelaxed() ? relaxedIDs[index] : IDs[index];
+
+  // Tidy-up the Intrinsic Args
+  llvm::Value *txcount = mt.lookupValue(thisOp.getTxcount());
+  llvm::Value *mbar = mt.lookupValue(thisOp.getAddr());
+  bool needCast = isPtrInGenericSpace(thisOp.getAddr());
+  if (needCast)
+    mbar = castPtrToAddrSpace(builder, mbar, NVVMMemorySpace::Shared);
+
+  return {id, {mbar, txcount}};
 }
 
 mlir::NVVM::IDArgPair MBarrierArriveNocompleteOp::getIntrinsicIDAndArgs(
@@ -1900,17 +3393,100 @@ mlir::NVVM::IDArgPair MBarrierArriveNocompleteOp::getIntrinsicIDAndArgs(
   return {id, std::move(args)};
 }
 
-mlir::NVVM::IDArgPair MBarrierTestWaitOp::getIntrinsicIDAndArgs(
+mlir::NVVM::IDArgPair MBarrierArriveDropNocompleteOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
-  auto thisOp = cast<NVVM::MBarrierTestWaitOp>(op);
+  auto thisOp = cast<NVVM::MBarrierArriveDropNocompleteOp>(op);
   bool isShared = isPtrInSharedCTASpace(thisOp.getAddr());
-  llvm::Intrinsic::ID id = isShared
-                               ? llvm::Intrinsic::nvvm_mbarrier_test_wait_shared
-                               : llvm::Intrinsic::nvvm_mbarrier_test_wait;
+  llvm::Intrinsic::ID id =
+      isShared ? llvm::Intrinsic::nvvm_mbarrier_arrive_drop_noComplete_shared
+               : llvm::Intrinsic::nvvm_mbarrier_arrive_drop_noComplete;
   // Fill the Intrinsic Args
   llvm::SmallVector<llvm::Value *> args;
   args.push_back(mt.lookupValue(thisOp.getAddr()));
-  args.push_back(mt.lookupValue(thisOp.getState()));
+  args.push_back(mt.lookupValue(thisOp.getCount()));
+
+  return {id, std::move(args)};
+}
+
+mlir::NVVM::IDArgPair MBarrierTestWaitOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::MBarrierTestWaitOp>(op);
+  bool isPhaseParity = thisOp.getStateOrPhase().getType().isInteger(32);
+  bool isClusterScope = thisOp.getScope() == NVVM::MemScopeKind::CLUSTER;
+  // bit-0: isPhaseParity
+  // bit-1: Scope
+  size_t index = ((isClusterScope ? 1 : 0) << 1) | (isPhaseParity ? 1 : 0);
+
+  // clang-format off
+  static constexpr llvm::Intrinsic::ID IDs[] = {
+      llvm::Intrinsic::nvvm_mbarrier_test_wait_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_test_wait_parity_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_test_wait_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_test_wait_parity_scope_cluster_space_cta};
+  static constexpr llvm::Intrinsic::ID relaxedIDs[] = {
+      llvm::Intrinsic::nvvm_mbarrier_test_wait_relaxed_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_test_wait_parity_relaxed_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_test_wait_relaxed_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_test_wait_parity_relaxed_scope_cluster_space_cta};
+  // clang-format on
+  auto id = thisOp.getRelaxed() ? relaxedIDs[index] : IDs[index];
+
+  // Tidy-up the Intrinsic Args
+  llvm::Value *mbar = mt.lookupValue(thisOp.getAddr());
+  llvm::Value *input = mt.lookupValue(thisOp.getStateOrPhase());
+  bool needCast = isPtrInGenericSpace(thisOp.getAddr());
+  if (needCast)
+    mbar = castPtrToAddrSpace(builder, mbar, NVVMMemorySpace::Shared);
+
+  return {id, {mbar, input}};
+}
+
+mlir::NVVM::IDArgPair MBarrierTryWaitOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::MBarrierTryWaitOp>(op);
+  bool isPhaseParity = thisOp.getStateOrPhase().getType().isInteger(32);
+  bool isClusterScope = thisOp.getScope() == NVVM::MemScopeKind::CLUSTER;
+  bool hasTicks = static_cast<bool>(thisOp.getTicks());
+  // bit-0: isPhaseParity
+  // bit-1: Scope
+  // bit-2: hasTicks
+  size_t index = ((hasTicks ? 1 : 0) << 2) | ((isClusterScope ? 1 : 0) << 1) |
+                 (isPhaseParity ? 1 : 0);
+
+  // clang-format off
+  static constexpr llvm::Intrinsic::ID IDs[] = {
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_tl_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_tl_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_tl_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_tl_scope_cluster_space_cta};
+  static constexpr llvm::Intrinsic::ID relaxedIDs[] = {
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_relaxed_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_relaxed_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_relaxed_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_relaxed_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_tl_relaxed_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_tl_relaxed_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_tl_relaxed_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_tl_relaxed_scope_cluster_space_cta};
+  // clang-format on
+  auto id = thisOp.getRelaxed() ? relaxedIDs[index] : IDs[index];
+
+  // Tidy-up the mbarrier pointer
+  llvm::Value *mbar = mt.lookupValue(thisOp.getAddr());
+  bool needCast = isPtrInGenericSpace(thisOp.getAddr());
+  if (needCast)
+    mbar = castPtrToAddrSpace(builder, mbar, NVVMMemorySpace::Shared);
+
+  // Fill the Intrinsic Args
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mbar);
+  args.push_back(mt.lookupValue(thisOp.getStateOrPhase()));
+  if (hasTicks)
+    args.push_back(mt.lookupValue(thisOp.getTicks()));
 
   return {id, std::move(args)};
 }
@@ -2740,30 +4316,100 @@ Tcgen05CommitOp::getIntrinsicIDAndArgs(Operation &op,
     return TCGEN05_CP_2CTA(shape_mc, , is_2cta);                               \
   }()
 
-llvm::Intrinsic::ID ConvertF32x2ToF16x2Op::getIntrinsicID() {
-  bool hasRelu = getRelu();
-  bool hasSatFinite = (getSat() == NVVM::SaturationMode::SATFINITE);
+NVVM::IDArgPair
+ConvertF32x2ToF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF16x2Op &op,
+                                             LLVM::ModuleTranslation &mt,
+                                             llvm::IRBuilderBase &builder) {
+  static constexpr llvm::Intrinsic::ID rndRNIds[] = {
+      llvm::Intrinsic::nvvm_ff2f16x2_rn,
+      llvm::Intrinsic::nvvm_ff2f16x2_rn_relu,
+      llvm::Intrinsic::nvvm_ff2f16x2_rn_satfinite,
+      llvm::Intrinsic::nvvm_ff2f16x2_rn_relu_satfinite,
+  };
+  static constexpr llvm::Intrinsic::ID rndRZIds[] = {
+      llvm::Intrinsic::nvvm_ff2f16x2_rz,
+      llvm::Intrinsic::nvvm_ff2f16x2_rz_relu,
+      llvm::Intrinsic::nvvm_ff2f16x2_rz_satfinite,
+      llvm::Intrinsic::nvvm_ff2f16x2_rz_relu_satfinite,
+  };
+  static constexpr llvm::Intrinsic::ID rndRSIds[] = {
+      llvm::Intrinsic::nvvm_ff2f16x2_rs,
+      llvm::Intrinsic::nvvm_ff2f16x2_rs_relu,
+      llvm::Intrinsic::nvvm_ff2f16x2_rs_satfinite,
+      llvm::Intrinsic::nvvm_ff2f16x2_rs_relu_satfinite,
+  };
 
-  if (hasRelu && hasSatFinite)
-    return llvm::Intrinsic::nvvm_ff2f16x2_rs_relu_satfinite;
-  if (hasRelu)
-    return llvm::Intrinsic::nvvm_ff2f16x2_rs_relu;
-  if (hasSatFinite)
-    return llvm::Intrinsic::nvvm_ff2f16x2_rs_satfinite;
-  return llvm::Intrinsic::nvvm_ff2f16x2_rs;
+  unsigned hasRelu = op.getRelu() ? 1 : 0;
+  unsigned hasSatFinite =
+      (op.getSat() == NVVM::SaturationMode::SATFINITE) ? 1 : 0;
+  // idx: bit-0 - relu
+  //      bit-1 - satfinite
+  unsigned idx = (hasSatFinite << 1) | hasRelu;
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(op.getSrcHi()));
+  args.push_back(mt.lookupValue(op.getSrcLo()));
+  if (op.getRandomBits())
+    args.push_back(mt.lookupValue(op.getRandomBits()));
+
+  switch (op.getRnd()) {
+  case FPRoundingMode::RN:
+    return {rndRNIds[idx], std::move(args)};
+  case FPRoundingMode::RZ:
+    return {rndRZIds[idx], std::move(args)};
+  case FPRoundingMode::RS:
+    return {rndRSIds[idx], std::move(args)};
+  default:
+    llvm_unreachable("Invalid rounding mode for ConvertF32x2ToF16x2Op");
+  }
 }
 
-llvm::Intrinsic::ID ConvertF32x2ToBF16x2Op::getIntrinsicID() {
-  bool hasRelu = getRelu();
-  bool hasSatFinite = (getSat() == NVVM::SaturationMode::SATFINITE);
+NVVM::IDArgPair
+ConvertF32x2ToBF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToBF16x2Op &op,
+                                              LLVM::ModuleTranslation &mt,
+                                              llvm::IRBuilderBase &builder) {
+  static constexpr llvm::Intrinsic::ID rndRNIds[] = {
+      llvm::Intrinsic::nvvm_ff2bf16x2_rn,
+      llvm::Intrinsic::nvvm_ff2bf16x2_rn_relu,
+      llvm::Intrinsic::nvvm_ff2bf16x2_rn_satfinite,
+      llvm::Intrinsic::nvvm_ff2bf16x2_rn_relu_satfinite,
+  };
+  static constexpr llvm::Intrinsic::ID rndRZIds[] = {
+      llvm::Intrinsic::nvvm_ff2bf16x2_rz,
+      llvm::Intrinsic::nvvm_ff2bf16x2_rz_relu,
+      llvm::Intrinsic::nvvm_ff2bf16x2_rz_satfinite,
+      llvm::Intrinsic::nvvm_ff2bf16x2_rz_relu_satfinite,
+  };
+  static constexpr llvm::Intrinsic::ID rndRSIds[] = {
+      llvm::Intrinsic::nvvm_ff2bf16x2_rs,
+      llvm::Intrinsic::nvvm_ff2bf16x2_rs_relu,
+      llvm::Intrinsic::nvvm_ff2bf16x2_rs_satfinite,
+      llvm::Intrinsic::nvvm_ff2bf16x2_rs_relu_satfinite,
+  };
 
-  if (hasRelu && hasSatFinite)
-    return llvm::Intrinsic::nvvm_ff2bf16x2_rs_relu_satfinite;
-  if (hasRelu)
-    return llvm::Intrinsic::nvvm_ff2bf16x2_rs_relu;
-  if (hasSatFinite)
-    return llvm::Intrinsic::nvvm_ff2bf16x2_rs_satfinite;
-  return llvm::Intrinsic::nvvm_ff2bf16x2_rs;
+  unsigned hasRelu = op.getRelu() ? 1 : 0;
+  unsigned hasSatFinite =
+      (op.getSat() == NVVM::SaturationMode::SATFINITE) ? 1 : 0;
+  // idx: bit-0 - relu
+  //      bit-1 - satfinite
+  unsigned idx = (hasSatFinite << 1) | hasRelu;
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(op.getSrcHi()));
+  args.push_back(mt.lookupValue(op.getSrcLo()));
+  if (op.getRandomBits())
+    args.push_back(mt.lookupValue(op.getRandomBits()));
+
+  switch (op.getRnd()) {
+  case FPRoundingMode::RN:
+    return {rndRNIds[idx], std::move(args)};
+  case FPRoundingMode::RZ:
+    return {rndRZIds[idx], std::move(args)};
+  case FPRoundingMode::RS:
+    return {rndRSIds[idx], std::move(args)};
+  default:
+    llvm_unreachable("Invalid rounding mode for ConvertF32x2ToBF16x2Op");
+  }
 }
 
 llvm::Intrinsic::ID ConvertF32x4ToF8x4Op::getIntrinsicID() {
@@ -3102,6 +4748,31 @@ NVVM::IDArgPair ClusterLaunchControlQueryCancelOp::getIntrinsicIDAndArgs(
     break;
   }
   return {intrinsicID, args};
+}
+
+mlir::NVVM::IDArgPair
+PermuteOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                                 llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::PermuteOp>(op);
+  NVVM::PermuteMode mode = thisOp.getMode();
+
+  static constexpr llvm::Intrinsic::ID IDs[] = {
+      llvm::Intrinsic::nvvm_prmt,     llvm::Intrinsic::nvvm_prmt_f4e,
+      llvm::Intrinsic::nvvm_prmt_b4e, llvm::Intrinsic::nvvm_prmt_rc8,
+      llvm::Intrinsic::nvvm_prmt_ecl, llvm::Intrinsic::nvvm_prmt_ecr,
+      llvm::Intrinsic::nvvm_prmt_rc16};
+
+  unsigned modeIndex = static_cast<unsigned>(mode);
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getLo()));
+
+  // Only first 3 modes (Default, f4e, b4e) need the hi operand.
+  if (modeIndex < 3)
+    args.push_back(mt.lookupValue(thisOp.getHi()));
+
+  args.push_back(mt.lookupValue(thisOp.getSelector()));
+
+  return {IDs[modeIndex], args};
 }
 
 //===----------------------------------------------------------------------===//
@@ -3470,7 +5141,7 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
   auto kind = thisOp.getKind();
   auto blockScale = thisOp.getBlockScale();
   llvm::Intrinsic::ID ID = [&]() {
-    if (kind == NVVM::Tcgen05MMABlockScaleKind::MXF8F6F4) {
+    if (kind == NVVM::MMABlockScaleKind::MXF8F6F4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
         return isATensor ? llvm::Intrinsic::
                                nvvm_tcgen05_mma_tensor_mxf8f6f4_block_scale
@@ -3483,7 +5154,7 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
                    : llvm::Intrinsic::
                          nvvm_tcgen05_mma_shared_mxf8f6f4_block_scale_block32;
       }
-    } else if (kind == NVVM::Tcgen05MMABlockScaleKind::MXF4) {
+    } else if (kind == NVVM::MMABlockScaleKind::MXF4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
         return isATensor
                    ? llvm::Intrinsic::nvvm_tcgen05_mma_tensor_mxf4_block_scale
@@ -3494,7 +5165,7 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
                          : llvm::Intrinsic::
                                nvvm_tcgen05_mma_shared_mxf4_block_scale_block32;
       }
-    } else if (kind == NVVM::Tcgen05MMABlockScaleKind::MXF4NVF4) {
+    } else if (kind == NVVM::MMABlockScaleKind::MXF4NVF4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK32) {
         return isATensor
                    ? llvm::Intrinsic::
@@ -3516,18 +5187,16 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
   return {ID, args};
 }
 
-static LogicalResult
-verifyTcgen05MMABlockScaleOp(NVVM::Tcgen05MMACollectorOp collectorOp,
-                             NVVM::Tcgen05MMABlockScaleKind kind,
-                             NVVM::Tcgen05MMABlockScale blockScale,
-                             Location loc) {
+static LogicalResult verifyTcgen05MMABlockScaleOp(
+    NVVM::Tcgen05MMACollectorOp collectorOp, NVVM::MMABlockScaleKind kind,
+    NVVM::Tcgen05MMABlockScale blockScale, Location loc) {
 
   if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT &&
-      kind == Tcgen05MMABlockScaleKind::MXF4NVF4)
+      kind == MMABlockScaleKind::MXF4NVF4)
     return emitError(loc, "mxf4nvf4 requires block scale attribute");
 
   if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK16 &&
-      kind != Tcgen05MMABlockScaleKind::MXF4NVF4)
+      kind != MMABlockScaleKind::MXF4NVF4)
     return emitError(loc,
                      llvm::formatv("{} kind does not support block16 attribute",
                                    stringifyEnum(kind)));
@@ -3570,7 +5239,7 @@ mlir::NVVM::IDArgPair Tcgen05MMASparseBlockScaleOp::getIntrinsicIDAndArgs(
   auto kind = thisOp.getKind();
   auto blockScale = thisOp.getBlockScale();
   llvm::Intrinsic::ID ID = [&]() {
-    if (kind == NVVM::Tcgen05MMABlockScaleKind::MXF8F6F4) {
+    if (kind == NVVM::MMABlockScaleKind::MXF8F6F4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
         return isATensor ? llvm::Intrinsic::
                                nvvm_tcgen05_mma_sp_tensor_mxf8f6f4_block_scale
@@ -3583,7 +5252,7 @@ mlir::NVVM::IDArgPair Tcgen05MMASparseBlockScaleOp::getIntrinsicIDAndArgs(
                    : llvm::Intrinsic::
                          nvvm_tcgen05_mma_sp_shared_mxf8f6f4_block_scale_block32;
       }
-    } else if (kind == NVVM::Tcgen05MMABlockScaleKind::MXF4) {
+    } else if (kind == NVVM::MMABlockScaleKind::MXF4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
         return isATensor ? llvm::Intrinsic::
                                nvvm_tcgen05_mma_sp_tensor_mxf4_block_scale
@@ -3596,7 +5265,7 @@ mlir::NVVM::IDArgPair Tcgen05MMASparseBlockScaleOp::getIntrinsicIDAndArgs(
                    : llvm::Intrinsic::
                          nvvm_tcgen05_mma_sp_shared_mxf4_block_scale_block32;
       }
-    } else if (kind == NVVM::Tcgen05MMABlockScaleKind::MXF4NVF4) {
+    } else if (kind == NVVM::MMABlockScaleKind::MXF4NVF4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK32) {
         return isATensor
                    ? llvm::Intrinsic::
@@ -3906,16 +5575,20 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
                      "Minimum NVVM target SM version is sm_20");
   }
 
-  gpuModuleOp->walk([&](Operation *op) {
-    if (auto reqOp = llvm::dyn_cast<NVVM::RequiresSMInterface>(op)) {
-      const NVVMCheckSMVersion requirement = reqOp.getRequiredMinSMVersion();
-      if (!requirement.isCompatibleWith(targetSMVersion)) {
-        op->emitOpError() << "is not supported on " << getChip();
-        return WalkResult::interrupt();
-      }
-    }
-    return WalkResult::advance();
-  });
+  if (gpuModuleOp
+          ->walk([&](Operation *op) {
+            if (auto reqOp = llvm::dyn_cast<NVVM::RequiresSMInterface>(op)) {
+              const NVVMCheckSMVersion requirement =
+                  reqOp.getRequiredMinSMVersion();
+              if (!requirement.isCompatibleWith(targetSMVersion)) {
+                op->emitOpError() << "is not supported on " << getChip();
+                return WalkResult::interrupt();
+              }
+            }
+            return WalkResult::advance();
+          })
+          .wasInterrupted())
+    return failure();
 
   return success();
 }

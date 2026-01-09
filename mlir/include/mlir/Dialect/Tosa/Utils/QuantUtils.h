@@ -88,6 +88,8 @@ TypeAttr buildQTypeAttrFromMinMax(OpBuilder builder, Type inputDType,
                                   IntegerAttr quantBits, int filterQuantDim,
                                   bool isSigned, BoolAttr narrowRange);
 
+Type getStorageElementTypeFromQuantized(quant::QuantizedType quantizedType);
+
 } // namespace tosa
 } // namespace mlir
 

@@ -51,8 +51,8 @@ using namespace llvm;
 
 ARMAsmPrinter::ARMAsmPrinter(TargetMachine &TM,
                              std::unique_ptr<MCStreamer> Streamer)
-    : AsmPrinter(TM, std::move(Streamer), ID), Subtarget(nullptr), AFI(nullptr),
-      MCP(nullptr), InConstantPool(false), OptimizationGoals(-1) {}
+    : AsmPrinter(TM, std::move(Streamer), ID), AFI(nullptr), MCP(nullptr),
+      InConstantPool(false), OptimizationGoals(-1) {}
 
 const ARMBaseTargetMachine &ARMAsmPrinter::getTM() const {
   return static_cast<const ARMBaseTargetMachine &>(TM);
@@ -103,6 +103,35 @@ void ARMAsmPrinter::emitXXStructor(const DataLayout &DL, const Constant *CV) {
   OutStreamer->emitValue(E, Size);
 }
 
+// An alias to a cmse entry function should also emit a `__acle_se_` symbol.
+void ARMAsmPrinter::emitCMSEVeneerAlias(const GlobalAlias &GA) {
+  const Function *BaseFn = dyn_cast_or_null<Function>(GA.getAliaseeObject());
+  if (!BaseFn || !BaseFn->hasFnAttribute("cmse_nonsecure_entry"))
+    return;
+
+  MCSymbol *AliasSym = getSymbol(&GA);
+  MCSymbol *FnSym = getSymbol(BaseFn);
+
+  MCSymbol *SEAliasSym =
+      OutContext.getOrCreateSymbol(Twine("__acle_se_") + AliasSym->getName());
+  MCSymbol *SEBaseSym =
+      OutContext.getOrCreateSymbol(Twine("__acle_se_") + FnSym->getName());
+
+  // Mirror alias linkage/visibility onto the veneer-alias symbol.
+  emitLinkage(&GA, SEAliasSym);
+  OutStreamer->emitSymbolAttribute(SEAliasSym, MCSA_ELF_TypeFunction);
+  emitVisibility(SEAliasSym, GA.getVisibility());
+
+  // emit "__acle_se_<alias> = __acle_se_<aliasee>"
+  const MCExpr *SEExpr = MCSymbolRefExpr::create(SEBaseSym, OutContext);
+  OutStreamer->emitAssignment(SEAliasSym, SEExpr);
+}
+
+void ARMAsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
+  AsmPrinter::emitGlobalAlias(M, GA);
+  emitCMSEVeneerAlias(GA);
+}
+
 void ARMAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   if (PromotedGlobals.count(GV))
     // The global was promoted into a constant pool. It should not be emitted.
@@ -116,7 +145,6 @@ void ARMAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   AFI = MF.getInfo<ARMFunctionInfo>();
   MCP = MF.getConstantPool();
-  Subtarget = &MF.getSubtarget<ARMSubtarget>();
 
   SetupMachineFunction(MF);
   const Function &F = MF.getFunction();
@@ -154,7 +182,7 @@ bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   else if (OptimizationGoals != (int)OptimizationGoal) // conflicting goals
     OptimizationGoals = 0;
 
-  if (Subtarget->isTargetCOFF()) {
+  if (TM.getTargetTriple().isOSBinFormatCOFF()) {
     bool Local = F.hasLocalLinkage();
     COFF::SymbolStorageClass Scl =
         Local ? COFF::IMAGE_SYM_CLASS_STATIC : COFF::IMAGE_SYM_CLASS_EXTERNAL;
@@ -260,8 +288,8 @@ void ARMAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
     break;
   }
   case MachineOperand::MO_ConstantPoolIndex:
-    if (Subtarget->genExecuteOnly())
-      llvm_unreachable("execute-only should not generate constant pools");
+    assert(!MF->getSubtarget<ARMSubtarget>().genExecuteOnly() &&
+           "execute-only should not generate constant pools");
     GetCPISymbol(MO.getIndex())->print(O, MAI);
     break;
   }
@@ -1048,7 +1076,8 @@ void ARMAsmPrinter::emitJumpTableAddrs(const MachineInstr *MI) {
     //    .word (LBB1 - LJTI_0_0)
     const MCExpr *Expr = MCSymbolRefExpr::create(MBB->getSymbol(), OutContext);
 
-    if (isPositionIndependent() || Subtarget->isROPI())
+    const ARMSubtarget &STI = MF->getSubtarget<ARMSubtarget>();
+    if (isPositionIndependent() || STI.isROPI())
       Expr = MCBinaryExpr::createSub(Expr, MCSymbolRefExpr::create(JTISymbol,
                                                                    OutContext),
                                      OutContext);
@@ -1097,7 +1126,8 @@ void ARMAsmPrinter::emitJumpTableTBInst(const MachineInstr *MI,
   const MachineOperand &MO1 = MI->getOperand(1);
   unsigned JTI = MO1.getIndex();
 
-  if (Subtarget->isThumb1Only())
+  const ARMSubtarget &STI = MF->getSubtarget<ARMSubtarget>();
+  if (STI.isThumb1Only())
     emitAlignment(Align(4));
 
   MCSymbol *JTISymbol = GetARMJTIPICJumpTableLabel(JTI);
@@ -1905,6 +1935,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
   ARM_MC::verifyInstructionPredicates(MI->getOpcode(),
                                       getSubtargetInfo().getFeatureBits());
 
+  const ARMSubtarget &STI = MF->getSubtarget<ARMSubtarget>();
   const DataLayout &DL = getDataLayout();
   MCTargetStreamer &TS = *OutStreamer->getTargetStreamer();
   ARMTargetStreamer &ATS = static_cast<ARMTargetStreamer &>(TS);
@@ -1916,8 +1947,8 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
 
   // Emit unwinding stuff for frame-related instructions
-  if (Subtarget->isTargetEHABICompatible() &&
-       MI->getFlag(MachineInstr::FrameSetup))
+  if (TM.getTargetTriple().isTargetEHABICompatible() &&
+      MI->getFlag(MachineInstr::FrameSetup))
     EmitUnwindingInstruction(MI);
 
   // Do any auto-generated pseudo lowerings.
@@ -1983,14 +2014,13 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
       // Add 's' bit operand (always reg0 for this)
       .addReg(0));
 
-    assert(Subtarget->hasV4TOps());
-    EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::BX)
-      .addReg(MI->getOperand(0).getReg()));
+    assert(STI.hasV4TOps() && "Expected V4TOps for BX call");
+    EmitToStreamer(*OutStreamer,
+                   MCInstBuilder(ARM::BX).addReg(MI->getOperand(0).getReg()));
     return;
   }
   case ARM::tBX_CALL: {
-    if (Subtarget->hasV5TOps())
-      llvm_unreachable("Expected BLX to be selected for v5t+");
+    assert(!STI.hasV5TOps() && "Expected BLX to be selected for v5t+");
 
     // On ARM v4t, when doing a call from thumb mode, we need to ensure
     // that the saved lr has its LSB set correctly (the arch doesn't
@@ -2279,8 +2309,8 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
   }
   case ARM::CONSTPOOL_ENTRY: {
-    if (Subtarget->genExecuteOnly())
-      llvm_unreachable("execute-only should not generate constant pools");
+    assert(!STI.genExecuteOnly() &&
+           "execute-only should not generate constant pools");
 
     /// CONSTPOOL_ENTRY - This instruction represents a floating constant pool
     /// in the function.  The first operand is the ID# for this instruction, the
@@ -2486,7 +2516,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case ARM::TRAP: {
     // Non-Darwin binutils don't yet support the "trap" mnemonic.
     // FIXME: Remove this special case when they do.
-    if (!Subtarget->isTargetMachO()) {
+    if (!TM.getTargetTriple().isOSBinFormatMachO()) {
       uint32_t Val = 0xe7ffdefeUL;
       OutStreamer->AddComment("trap");
       ATS.emitInst(Val);
@@ -2497,7 +2527,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case ARM::tTRAP: {
     // Non-Darwin binutils don't yet support the "trap" mnemonic.
     // FIXME: Remove this special case when they do.
-    if (!Subtarget->isTargetMachO()) {
+    if (!TM.getTargetTriple().isOSBinFormatMachO()) {
       uint16_t Val = 0xdefe;
       OutStreamer->AddComment("trap");
       ATS.emitInst(Val, 'n');
@@ -2657,9 +2687,6 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
       .addImm(ARMCC::AL)
       .addReg(0));
 
-    const MachineFunction &MF = *MI->getParent()->getParent();
-    const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
-
     if (STI.isTargetDarwin() || STI.isTargetWindows()) {
       // These platforms always use the same frame register
       EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::LDRi12)
@@ -2688,7 +2715,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
         .addReg(0));
     }
 
-    assert(Subtarget->hasV4TOps());
+    assert(STI.hasV4TOps());
     EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::BX)
       .addReg(ScratchReg)
       // Predicate.
@@ -2704,9 +2731,6 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // bx $scratch
     Register SrcReg = MI->getOperand(0).getReg();
     Register ScratchReg = MI->getOperand(1).getReg();
-
-    const MachineFunction &MF = *MI->getParent()->getParent();
-    const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
 
     EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tLDRi)
       .addReg(ScratchReg)

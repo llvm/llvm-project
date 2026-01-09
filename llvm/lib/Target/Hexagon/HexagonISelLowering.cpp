@@ -1504,8 +1504,8 @@ HexagonTargetLowering::LowerGlobalTLSAddress(SDValue Op,
 
 HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
                                              const HexagonSubtarget &ST)
-    : TargetLowering(TM), HTM(static_cast<const HexagonTargetMachine&>(TM)),
-      Subtarget(ST) {
+    : TargetLowering(TM, ST),
+      HTM(static_cast<const HexagonTargetMachine &>(TM)), Subtarget(ST) {
   auto &HRI = *Subtarget.getRegisterInfo();
 
   setPrefLoopAlignment(Align(16));
@@ -1661,12 +1661,12 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     for (MVT VT : MVT::integer_valuetypes())
       setOperationAction(IntExpOp, VT, Expand);
   }
-
-  for (unsigned FPExpOp :
-       {ISD::FDIV, ISD::FREM, ISD::FSQRT, ISD::FSIN, ISD::FCOS, ISD::FSINCOS,
-        ISD::FPOW, ISD::FCOPYSIGN}) {
-    for (MVT VT : MVT::fp_valuetypes())
+  for (MVT VT : MVT::fp_valuetypes()) {
+    for (unsigned FPExpOp : {ISD::FDIV, ISD::FSQRT, ISD::FSIN, ISD::FCOS,
+                             ISD::FSINCOS, ISD::FPOW, ISD::FCOPYSIGN})
       setOperationAction(FPExpOp, VT, Expand);
+
+    setOperationAction(ISD::FREM, VT, LibCall);
   }
 
   // No extending loads from i32.
@@ -1677,6 +1677,8 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   }
   // Turn FP truncstore into trunc + store.
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);
+  setTruncStoreAction(MVT::f32, MVT::bf16, Expand);
+  setTruncStoreAction(MVT::f64, MVT::bf16, Expand);
   // Turn FP extload into load/fpextend.
   for (MVT VT : MVT::fp_valuetypes())
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::f32, Expand);
@@ -1872,9 +1874,15 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
   setOperationAction(ISD::FP_TO_FP16, MVT::f32, Expand);
   setOperationAction(ISD::FP_TO_FP16, MVT::f64, Expand);
+  setOperationAction(ISD::BF16_TO_FP, MVT::f32, Expand);
+  setOperationAction(ISD::BF16_TO_FP, MVT::f64, Expand);
+  setOperationAction(ISD::FP_TO_BF16, MVT::f64, Expand);
 
   setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::bf16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::bf16, Expand);
+
   setTruncStoreAction(MVT::f32, MVT::f16, Expand);
   setTruncStoreAction(MVT::f64, MVT::f16, Expand);
 
@@ -1912,66 +1920,6 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     initializeHVXLowering();
 
   computeRegisterProperties(&HRI);
-}
-
-const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
-  switch ((HexagonISD::NodeType)Opcode) {
-  case HexagonISD::ADDC:          return "HexagonISD::ADDC";
-  case HexagonISD::SUBC:          return "HexagonISD::SUBC";
-  case HexagonISD::ALLOCA:        return "HexagonISD::ALLOCA";
-  case HexagonISD::AT_GOT:        return "HexagonISD::AT_GOT";
-  case HexagonISD::AT_PCREL:      return "HexagonISD::AT_PCREL";
-  case HexagonISD::BARRIER:       return "HexagonISD::BARRIER";
-  case HexagonISD::CALL:          return "HexagonISD::CALL";
-  case HexagonISD::CALLnr:        return "HexagonISD::CALLnr";
-  case HexagonISD::CALLR:         return "HexagonISD::CALLR";
-  case HexagonISD::COMBINE:       return "HexagonISD::COMBINE";
-  case HexagonISD::CONST32_GP:    return "HexagonISD::CONST32_GP";
-  case HexagonISD::CONST32:       return "HexagonISD::CONST32";
-  case HexagonISD::CP:            return "HexagonISD::CP";
-  case HexagonISD::DCFETCH:       return "HexagonISD::DCFETCH";
-  case HexagonISD::EH_RETURN:     return "HexagonISD::EH_RETURN";
-  case HexagonISD::TSTBIT:        return "HexagonISD::TSTBIT";
-  case HexagonISD::EXTRACTU:      return "HexagonISD::EXTRACTU";
-  case HexagonISD::INSERT:        return "HexagonISD::INSERT";
-  case HexagonISD::JT:            return "HexagonISD::JT";
-  case HexagonISD::RET_GLUE:      return "HexagonISD::RET_GLUE";
-  case HexagonISD::TC_RETURN:     return "HexagonISD::TC_RETURN";
-  case HexagonISD::VASL:          return "HexagonISD::VASL";
-  case HexagonISD::VASR:          return "HexagonISD::VASR";
-  case HexagonISD::VLSR:          return "HexagonISD::VLSR";
-  case HexagonISD::MFSHL:         return "HexagonISD::MFSHL";
-  case HexagonISD::MFSHR:         return "HexagonISD::MFSHR";
-  case HexagonISD::SSAT:          return "HexagonISD::SSAT";
-  case HexagonISD::USAT:          return "HexagonISD::USAT";
-  case HexagonISD::SMUL_LOHI:     return "HexagonISD::SMUL_LOHI";
-  case HexagonISD::UMUL_LOHI:     return "HexagonISD::UMUL_LOHI";
-  case HexagonISD::USMUL_LOHI:    return "HexagonISD::USMUL_LOHI";
-  case HexagonISD::VEXTRACTW:     return "HexagonISD::VEXTRACTW";
-  case HexagonISD::VINSERTW0:     return "HexagonISD::VINSERTW0";
-  case HexagonISD::VROR:          return "HexagonISD::VROR";
-  case HexagonISD::READCYCLE:     return "HexagonISD::READCYCLE";
-  case HexagonISD::READTIMER:     return "HexagonISD::READTIMER";
-  case HexagonISD::THREAD_POINTER:
-    return "HexagonISD::THREAD_POINTER";
-  case HexagonISD::PTRUE:         return "HexagonISD::PTRUE";
-  case HexagonISD::PFALSE:        return "HexagonISD::PFALSE";
-  case HexagonISD::D2P:           return "HexagonISD::D2P";
-  case HexagonISD::P2D:           return "HexagonISD::P2D";
-  case HexagonISD::V2Q:           return "HexagonISD::V2Q";
-  case HexagonISD::Q2V:           return "HexagonISD::Q2V";
-  case HexagonISD::QCAT:          return "HexagonISD::QCAT";
-  case HexagonISD::QTRUE:         return "HexagonISD::QTRUE";
-  case HexagonISD::QFALSE:        return "HexagonISD::QFALSE";
-  case HexagonISD::TL_EXTEND:     return "HexagonISD::TL_EXTEND";
-  case HexagonISD::TL_TRUNCATE:   return "HexagonISD::TL_TRUNCATE";
-  case HexagonISD::TYPECAST:      return "HexagonISD::TYPECAST";
-  case HexagonISD::VALIGN:        return "HexagonISD::VALIGN";
-  case HexagonISD::VALIGNADDR:    return "HexagonISD::VALIGNADDR";
-  case HexagonISD::ISEL:          return "HexagonISD::ISEL";
-  case HexagonISD::OP_END:        break;
-  }
-  return nullptr;
 }
 
 bool
@@ -2107,7 +2055,7 @@ static Value *getUnderLyingObjectForBrevLdIntr(Value *V) {
 /// true and store the intrinsic information into the IntrinsicInfo that was
 /// passed to the function.
 bool HexagonTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                               const CallInst &I,
+                                               const CallBase &I,
                                                MachineFunction &MF,
                                                unsigned Intrinsic) const {
   switch (Intrinsic) {
@@ -2519,7 +2467,7 @@ HexagonTargetLowering::getBuildVectorConstInts(ArrayRef<SDValue> Values,
     // Make sure to always cast to IntTy.
     if (auto *CN = dyn_cast<ConstantSDNode>(V.getNode())) {
       const ConstantInt *CI = CN->getConstantIntValue();
-      Consts[i] = ConstantInt::get(IntTy, CI->getValue().getSExtValue());
+      Consts[i] = ConstantInt::getSigned(IntTy, CI->getValue().getSExtValue());
     } else if (auto *CN = dyn_cast<ConstantFPSDNode>(V.getNode())) {
       const ConstantFP *CF = CN->getConstantFPValue();
       APInt A = CF->getValueAPF().bitcastToAPInt();
@@ -3368,8 +3316,6 @@ HexagonTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     default:
 #ifndef NDEBUG
       Op.getNode()->dumpr(&DAG);
-      if (Opc > HexagonISD::OP_BEGIN && Opc < HexagonISD::OP_END)
-        errs() << "Error: check for a non-legal type in this operation\n";
 #endif
       llvm_unreachable("Should not custom lower this!");
 

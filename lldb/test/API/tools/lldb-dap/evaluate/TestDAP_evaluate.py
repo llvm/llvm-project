@@ -27,8 +27,11 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         want_varref=False,
         want_memref=True,
         want_locref=False,
+        is_hex=None,
     ):
-        resp = self.dap_server.request_evaluate(expression, context=self.context)
+        resp = self.dap_server.request_evaluate(
+            expression, context=self.context, is_hex=is_hex
+        )
         self.assertTrue(
             resp["success"], f"Failed to evaluate expression {expression!r}"
         )
@@ -132,6 +135,12 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         if context == "repl":
             self.assertEvaluate("", "21", want_type="int")
             self.assertEvaluate("", "21", want_type="int")
+        self.assertEvaluate("static_int", "0x0000002a", want_type="int", is_hex=True)
+        self.assertEvaluate(
+            "non_static_int", "0x0000002b", want_type="int", is_hex=True
+        )
+        self.assertEvaluate("struct1.foo", "0x0000000f", want_type="int", is_hex=True)
+        self.assertEvaluate("struct2->foo", "0x00000010", want_type="int", is_hex=True)
         self.assertEvaluate("static_int", "42", want_type="int")
         self.assertEvaluate("non_static_int", "43", want_type="int")
         self.assertEvaluate("struct1.foo", "15", want_type="int")
@@ -159,11 +168,7 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         else:
             self.assertEvaluate(
                 "struct1",
-                (
-                    re.escape("{foo:15}")
-                    if enableAutoVariableSummaries
-                    else "my_struct @ 0x"
-                ),
+                (re.escape("{foo:15}") if enableAutoVariableSummaries else "my_struct"),
                 want_varref=True,
             )
             self.assertEvaluate(
@@ -234,11 +239,7 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         else:
             self.assertEvaluate(
                 "struct1",
-                (
-                    re.escape("{foo:15}")
-                    if enableAutoVariableSummaries
-                    else "my_struct @ 0x"
-                ),
+                (re.escape("{foo:15}") if enableAutoVariableSummaries else "my_struct"),
                 want_type="my_struct",
                 want_varref=True,
             )

@@ -29,6 +29,8 @@ public:
   MVT getPointerTy(const DataLayout &DL, uint32_t AS = 0) const override;
   MVT getPointerMemTy(const DataLayout &DL, uint32_t AS = 0) const override;
 
+  bool softPromoteHalfType() const override { return true; }
+
 private:
   /// Keep a pointer to the WebAssemblySubtarget around so that we can make the
   /// right decision when generating code for different targets.
@@ -58,7 +60,7 @@ private:
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;
-  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallInst &I,
+  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
                           MachineFunction &MF,
                           unsigned Intrinsic) const override;
 

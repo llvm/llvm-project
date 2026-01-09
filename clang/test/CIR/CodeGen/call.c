@@ -130,7 +130,7 @@ int f12(void) {
 // OGCG:         %{{.+}} = call i32 @f10(i32 noundef 1) #[[ATTR0:.+]]
 // OGCG-NEXT:    %{{.+}} = call i32 @f11(i32 noundef 2) #[[ATTR1:.+]]
 
-// LLVM: attributes #[[ATTR0]] = { nounwind willreturn memory(read, errnomem: none) }
+// LLVM: attributes #[[ATTR0]] = { nounwind willreturn memory(read) }
 // LLVM: attributes #[[ATTR1]] = { nounwind willreturn memory(none) }
 
 // OGCG: attributes #[[ATTR0]] = { nounwind willreturn memory(read) }

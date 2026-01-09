@@ -67,6 +67,11 @@ static auto typeWithNameIn(const std::vector<StringRef> &Names) {
       hasCanonicalType(hasDeclaration(namedDecl(hasAnyName(Names)))));
 }
 
+static auto functionWithNameIn(const std::vector<StringRef> &Names) {
+  auto Call = callExpr(callee(functionDecl(hasAnyName(Names))));
+  return anyOf(expr(cxxBindTemporaryExpr(has(Call))), expr(Call));
+}
+
 CoroutineHostileRAIICheck::CoroutineHostileRAIICheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
@@ -83,9 +88,8 @@ void CoroutineHostileRAIICheck::registerMatchers(MatchFinder *Finder) {
                                     hasAttr(attr::Kind::ScopedLockable)))))
                             .bind("scoped-lockable");
   auto OtherRAII = varDecl(typeWithNameIn(RAIITypesList)).bind("raii");
-  auto AllowedSuspend = awaitable(
-      anyOf(typeWithNameIn(AllowedAwaitablesList),
-            callExpr(callee(functionDecl(hasAnyName(AllowedCallees))))));
+  auto AllowedSuspend = awaitable(anyOf(typeWithNameIn(AllowedAwaitablesList),
+                                        functionWithNameIn(AllowedCallees)));
   Finder->addMatcher(
       expr(anyOf(coawaitExpr(unless(AllowedSuspend)), coyieldExpr()),
            forEachPrevStmt(
@@ -113,9 +117,9 @@ void CoroutineHostileRAIICheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "RAIITypesList",
                 utils::options::serializeStringList(RAIITypesList));
-  Options.store(Opts, "SafeAwaitableList",
+  Options.store(Opts, "AllowedAwaitablesList",
                 utils::options::serializeStringList(AllowedAwaitablesList));
-  Options.store(Opts, "SafeCallees",
+  Options.store(Opts, "AllowedCallees",
                 utils::options::serializeStringList(AllowedCallees));
 }
 } // namespace clang::tidy::misc

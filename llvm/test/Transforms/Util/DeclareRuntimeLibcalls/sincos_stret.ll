@@ -16,8 +16,8 @@
 ; SRET: declare void @__sincos_stret(ptr sret({ double, double }) align 4, double) [[SINCOS_ATTRS:#[0-9]+]]
 ; SRET: declare void @__sincosf_stret(ptr sret({ float, float }) align 4, float) [[SINCOS_ATTRS:#[0-9]+]]
 
-; CHECK: attributes [[SINCOS_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
-; SRET: attributes [[SINCOS_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }
+; CHECK: attributes [[SINCOS_ATTRS]] = { mustprogress nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
+; SRET: attributes [[SINCOS_ATTRS]] = { mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }
 
 ; NONE-NOT: __sincos_stret
 ; NONE-NOT: __sincosf_stret

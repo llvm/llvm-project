@@ -642,8 +642,14 @@ struct LoopInterchange {
 
     unsigned LoopNestDepth = LoopList.size();
 
-    LLVM_DEBUG(dbgs() << "Processing LoopList of size = " << LoopNestDepth
-                      << "\n");
+    LLVM_DEBUG({
+      dbgs() << "Processing LoopList of size = " << LoopNestDepth
+             << " containing the following loops:\n";
+      for (auto *L : LoopList) {
+        dbgs() << "  - ";
+        L->print(dbgs());
+      }
+    });
 
     CharMatrix DependencyMatrix;
     Loop *OuterMostLoop = *(LoopList.begin());
@@ -659,7 +665,8 @@ struct LoopInterchange {
     // Get the Outermost loop exit.
     BasicBlock *LoopNestExit = OuterMostLoop->getExitBlock();
     if (!LoopNestExit) {
-      LLVM_DEBUG(dbgs() << "OuterMostLoop needs an unique exit block");
+      LLVM_DEBUG(dbgs() << "OuterMostLoop '" << OuterMostLoop->getName()
+                        << "' needs an unique exit block");
       return false;
     }
 
@@ -695,14 +702,20 @@ struct LoopInterchange {
                       << " and OuterLoopId = " << OuterLoopId << "\n");
     LoopInterchangeLegality LIL(OuterLoop, InnerLoop, SE, ORE);
     if (!LIL.canInterchangeLoops(InnerLoopId, OuterLoopId, DependencyMatrix)) {
-      LLVM_DEBUG(dbgs() << "Not interchanging loops. Cannot prove legality.\n");
+      LLVM_DEBUG(dbgs() << "Cannot prove legality, not interchanging loops '"
+                        << OuterLoop->getName() << "' and '"
+                        << InnerLoop->getName() << "'\n");
       return false;
     }
-    LLVM_DEBUG(dbgs() << "Loops are legal to interchange\n");
+    LLVM_DEBUG(dbgs() << "Loops '" << OuterLoop->getName() << "' and '"
+                      << InnerLoop->getName()
+                      << "' are legal to interchange\n");
     LoopInterchangeProfitability LIP(OuterLoop, InnerLoop, SE, ORE);
     if (!LIP.isProfitable(InnerLoop, OuterLoop, InnerLoopId, OuterLoopId,
                           DependencyMatrix, CCM)) {
-      LLVM_DEBUG(dbgs() << "Interchanging loops not profitable.\n");
+      LLVM_DEBUG(dbgs() << "Interchanging loops '" << OuterLoop->getName()
+                        << "' and '" << InnerLoop->getName()
+                        << "' not profitable.\n");
       return false;
     }
 
@@ -715,7 +728,9 @@ struct LoopInterchange {
 
     LoopInterchangeTransform LIT(OuterLoop, InnerLoop, SE, LI, DT, LIL);
     LIT.transform(LIL.getHasNoWrapReductions());
-    LLVM_DEBUG(dbgs() << "Loops interchanged.\n");
+    LLVM_DEBUG(dbgs() << "Loops interchanged: outer loop '"
+                      << OuterLoop->getName() << "' and inner loop '"
+                      << InnerLoop->getName() << "'\n");
     LoopsInterchanged++;
 
     llvm::formLCSSARecursively(*OuterLoop, *DT, LI, SE);
@@ -745,7 +760,9 @@ bool LoopInterchangeLegality::tightlyNested(Loop *OuterLoop, Loop *InnerLoop) {
   BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
   BasicBlock *OuterLoopLatch = OuterLoop->getLoopLatch();
 
-  LLVM_DEBUG(dbgs() << "Checking if loops are tightly nested\n");
+  LLVM_DEBUG(dbgs() << "Checking if loops '" << OuterLoop->getName()
+                    << "' and '" << InnerLoop->getName()
+                    << "' are tightly nested\n");
 
   // A perfectly nested loop will not have any branch in between the outer and
   // inner block i.e. outer header will branch to either inner preheader and
@@ -1462,6 +1479,24 @@ std::optional<bool> LoopInterchangeProfitability::isProfitableForVectorization(
 bool LoopInterchangeProfitability::isProfitable(
     const Loop *InnerLoop, const Loop *OuterLoop, unsigned InnerLoopId,
     unsigned OuterLoopId, CharMatrix &DepMatrix, CacheCostManager &CCM) {
+  // Do not consider loops with a backedge that isn't taken, e.g. an
+  // unconditional branch true/false, as candidates for interchange.
+  // TODO: when interchange is forced, we should probably also allow
+  // interchange for these loops, and thus this logic should be moved just
+  // below the cost-model ignore check below. But this check is done first
+  // to avoid the issue in #163954.
+  const SCEV *InnerBTC = SE->getBackedgeTakenCount(InnerLoop);
+  const SCEV *OuterBTC = SE->getBackedgeTakenCount(OuterLoop);
+  if (InnerBTC && InnerBTC->isZero()) {
+    LLVM_DEBUG(dbgs() << "Inner loop back-edge isn't taken, rejecting "
+                         "single iteration loop\n");
+    return false;
+  }
+  if (OuterBTC && OuterBTC->isZero()) {
+    LLVM_DEBUG(dbgs() << "Outer loop back-edge isn't taken, rejecting "
+                         "single iteration loop\n");
+    return false;
+  }
 
   // Return true if interchange is forced and the cost-model ignored.
   if (Profitabilities.size() == 1 && Profitabilities[0] == RuleTy::Ignore)

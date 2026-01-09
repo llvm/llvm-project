@@ -1417,6 +1417,12 @@ public:
     return isX86VectorCallAggregateSmallEnough(NumMembers);
   }
 
+  ABIArgInfo classifyArgForArm64ECVarArg(QualType Ty) const override {
+    unsigned FreeSSERegs = 0;
+    return classify(Ty, FreeSSERegs, /*IsReturnType=*/false,
+                    /*IsVectorCall=*/false, /*IsRegCall=*/false);
+  }
+
 private:
   ABIArgInfo classify(QualType Ty, unsigned &FreeSSERegs, bool IsReturnType,
                       bool IsVectorCall, bool IsRegCall) const;

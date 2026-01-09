@@ -20,14 +20,14 @@ private:
   class DirectResultSender {
   public:
     virtual ~DirectResultSender() {}
-    virtual void send(orc_rt_SessionRef Session,
+    virtual void send(orc_rt_SessionRef S,
                       orc_rt::WrapperFunctionBuffer ResultBytes) = 0;
-    static void send(orc_rt_SessionRef Session, uint64_t CallId,
+    static void send(orc_rt_SessionRef S, uint64_t CallId,
                      orc_rt_WrapperFunctionBuffer ResultBytes) {
       std::unique_ptr<DirectResultSender>(
           reinterpret_cast<DirectResultSender *>(
               static_cast<uintptr_t>(CallId)))
-          ->send(Session, ResultBytes);
+          ->send(S, ResultBytes);
     }
   };
 
@@ -35,9 +35,9 @@ private:
   class DirectResultSenderImpl : public DirectResultSender {
   public:
     DirectResultSenderImpl(ImplFn &&Fn) : Fn(std::forward<ImplFn>(Fn)) {}
-    void send(orc_rt_SessionRef Session,
+    void send(orc_rt_SessionRef S,
               orc_rt::WrapperFunctionBuffer ResultBytes) override {
-      Fn(Session, std::move(ResultBytes));
+      Fn(std::move(ResultBytes));
     }
 
   private:
@@ -52,21 +52,19 @@ private:
   }
 
 public:
-  DirectCaller(orc_rt_SessionRef Session, orc_rt_WrapperFunction Fn)
-      : Session(Session), Fn(Fn) {}
+  DirectCaller(orc_rt_SessionRef S, orc_rt_WrapperFunction Fn) : S(S), Fn(Fn) {}
 
   template <typename HandleResultFn>
   void operator()(HandleResultFn &&HandleResult,
                   orc_rt::WrapperFunctionBuffer ArgBytes) {
     auto DR =
         makeDirectResultSender(std::forward<HandleResultFn>(HandleResult));
-    Fn(Session,
-       static_cast<uint64_t>(reinterpret_cast<uintptr_t>(DR.release())),
+    Fn(S, static_cast<uint64_t>(reinterpret_cast<uintptr_t>(DR.release())),
        DirectResultSender::send, ArgBytes.release());
   }
 
 private:
-  orc_rt_SessionRef Session;
+  orc_rt_SessionRef S;
   orc_rt_WrapperFunction Fn;
 };
 

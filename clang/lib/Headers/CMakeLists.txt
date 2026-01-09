@@ -24,6 +24,7 @@ set(core_files
   stdcountof.h
   stdckdint.h
   stddef.h
+  stddefer.h
   __stddef_header_macro.h
   __stddef_max_align_t.h
   __stddef_null.h
@@ -119,6 +120,7 @@ set(opencl_files
 
 set(ppc_files
   altivec.h
+  amo.h
   )
 
 set(ppc_htm_files

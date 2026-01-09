@@ -21,10 +21,10 @@ using namespace orc_rt;
 
 namespace {
 
-class CustomError : public RTTIExtends<CustomError, ErrorInfoBase> {
+class CustomError : public ErrorExtends<CustomError, ErrorInfoBase> {
 public:
   CustomError(int Info) : Info(Info) {}
-  std::string toString() const override {
+  std::string toString() const noexcept override {
     return "CustomError (" + std::to_string(Info) + ")";
   }
   int getInfo() const { return Info; }
@@ -33,13 +33,13 @@ protected:
   int Info;
 };
 
-class CustomSubError : public RTTIExtends<CustomSubError, CustomError> {
+class CustomSubError : public ErrorExtends<CustomSubError, CustomError> {
 public:
   CustomSubError(int Info, std::string ExtraInfo)
-      : RTTIExtends<CustomSubError, CustomError>(Info),
+      : ErrorExtends<CustomSubError, CustomError>(Info),
         ExtraInfo(std::move(ExtraInfo)) {}
 
-  std::string toString() const override {
+  std::string toString() const noexcept override {
     return "CustomSubError (" + std::to_string(Info) + ", " + ExtraInfo + ")";
   }
   const std::string &getExtraInfo() const { return ExtraInfo; }
@@ -255,6 +255,15 @@ TEST(ErrorTest, ErrorAsOutParameterUnchecked) {
       },
       "Error must be checked prior to destruction")
       << "ErrorAsOutParameter did not clear the checked flag on destruction.";
+}
+
+// Test that we can construct an ErrorAsOutParameter from an Error&.
+TEST(ErrorTest, ErrorAsOutParameterRefConstructor) {
+  Error E = Error::success();
+  {
+    ErrorAsOutParameter _(E); // construct with Error&.
+  }
+  (void)!!E;
 }
 
 // Check 'Error::isA<T>' method handling.

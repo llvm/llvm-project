@@ -147,10 +147,10 @@ private:
   llvm::Expected<StringExtractorGDBRemote>
   SendMultiMemReadPacket(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges);
 
-  llvm::Expected<llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>>
-  ParseMultiMemReadPacket(llvm::StringRef response_str,
-                          llvm::MutableArrayRef<uint8_t> buffer,
-                          unsigned expected_num_ranges);
+  llvm::Error ParseMultiMemReadPacket(
+      llvm::StringRef response_str, llvm::MutableArrayRef<uint8_t> buffer,
+      unsigned expected_num_ranges,
+      llvm::SmallVectorImpl<llvm::MutableArrayRef<uint8_t>> &memory_regions);
 
 public:
   Status
@@ -416,7 +416,7 @@ protected:
   void AddRemoteRegisters(std::vector<DynamicRegisterInfo::Register> &registers,
                           const ArchSpec &arch_to_use);
   // Query remote GDBServer for register information
-  bool GetGDBServerRegisterInfo(ArchSpec &arch);
+  llvm::Error GetGDBServerRegisterInfo(ArchSpec &arch);
 
   lldb::ModuleSP LoadModuleAtAddress(const FileSpec &file,
                                      lldb::addr_t link_map,

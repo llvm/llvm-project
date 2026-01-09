@@ -495,27 +495,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_HAS_ALIGNED_ALLOCATION 1
 #  endif
 
-// It is not yet possible to use aligned_alloc() on all Apple platforms since
-// 10.15 was the first version to ship an implementation of aligned_alloc().
-#  if defined(__APPLE__)
-#    if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) &&                                                     \
-         __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101500) ||                                                    \
-        (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) &&                                                    \
-         __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 130000) ||                                                   \
-        (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) &&                                                     \
-         __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 60000) ||                                                     \
-        (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ < 130000)
-#      define _LIBCPP_HAS_C11_ALIGNED_ALLOC 0
-#    else
-#      define _LIBCPP_HAS_C11_ALIGNED_ALLOC 1
-#    endif
-#  elif defined(__ANDROID__) && __ANDROID_API__ < 28
-// Android only provides aligned_alloc when targeting API 28 or higher.
-#    define _LIBCPP_HAS_C11_ALIGNED_ALLOC 0
-#  else
-#    define _LIBCPP_HAS_C11_ALIGNED_ALLOC 1
-#  endif
-
 #  if defined(__APPLE__) || defined(__FreeBSD__)
 #    define _LIBCPP_WCTYPE_IS_MASK
 #  endif
@@ -544,6 +523,15 @@ typedef __char32_t char32_t;
 #  else
 #    define _LIBCPP_DEPRECATED
 #    define _LIBCPP_DEPRECATED_(m)
+#  endif
+
+// FIXME: using `#warning` causes diagnostics from system headers which include deprecated headers. This can only be
+// enabled again once https://github.com/llvm/llvm-project/pull/168041 (or a similar feature) has landed, since that
+// allows suppression in system headers.
+#  if defined(__DEPRECATED) && __DEPRECATED && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS) && 0
+#    define _LIBCPP_DIAGNOSE_DEPRECATED_HEADERS 1
+#  else
+#    define _LIBCPP_DIAGNOSE_DEPRECATED_HEADERS 0
 #  endif
 
 #  if !defined(_LIBCPP_CXX03_LANG)
@@ -669,18 +657,10 @@ typedef __char32_t char32_t;
 #    endif // _LIBCPP_HAS_THREAD_API
 #  endif   // _LIBCPP_HAS_THREADS
 
-#  if _LIBCPP_HAS_THREAD_API_PTHREAD
-#    if defined(__ANDROID__) && __ANDROID_API__ >= 30
-#      define _LIBCPP_HAS_COND_CLOCKWAIT 1
-#    elif defined(_LIBCPP_GLIBC_PREREQ)
-#      if _LIBCPP_GLIBC_PREREQ(2, 30)
-#        define _LIBCPP_HAS_COND_CLOCKWAIT 1
-#      else
-#        define _LIBCPP_HAS_COND_CLOCKWAIT 0
-#      endif
-#    else
-#      define _LIBCPP_HAS_COND_CLOCKWAIT 0
-#    endif
+#  if !_LIBCPP_HAS_THREAD_API_PTHREAD
+#    define _LIBCPP_HAS_COND_CLOCKWAIT 0
+#  elif (defined(__ANDROID__) && __ANDROID_API__ >= 30) || _LIBCPP_GLIBC_PREREQ(2, 30)
+#    define _LIBCPP_HAS_COND_CLOCKWAIT 1
 #  else
 #    define _LIBCPP_HAS_COND_CLOCKWAIT 0
 #  endif
@@ -759,8 +739,8 @@ typedef __char32_t char32_t;
 #    endif
 #  endif
 
-#  if __has_attribute(__no_thread_safety_analysis__)
-#    define _LIBCPP_NO_THREAD_SAFETY_ANALYSIS __attribute__((__no_thread_safety_analysis__))
+#  if __has_cpp_attribute(_Clang::__no_thread_safety_analysis__)
+#    define _LIBCPP_NO_THREAD_SAFETY_ANALYSIS [[_Clang::__no_thread_safety_analysis__]]
 #  else
 #    define _LIBCPP_NO_THREAD_SAFETY_ANALYSIS
 #  endif
@@ -846,12 +826,8 @@ typedef __char32_t char32_t;
 // the latter depends on internal GNU libc details that are not appropriate
 // to depend on here, so any declarations present when __cpp_char8_t is not
 // defined are ignored.
-#  if defined(_LIBCPP_GLIBC_PREREQ)
-#    if _LIBCPP_GLIBC_PREREQ(2, 36) && defined(__cpp_char8_t)
-#      define _LIBCPP_HAS_C8RTOMB_MBRTOC8 1
-#    else
-#      define _LIBCPP_HAS_C8RTOMB_MBRTOC8 0
-#    endif
+#  if _LIBCPP_GLIBC_PREREQ(2, 36) && defined(__cpp_char8_t)
+#    define _LIBCPP_HAS_C8RTOMB_MBRTOC8 1
 #  else
 #    define _LIBCPP_HAS_C8RTOMB_MBRTOC8 0
 #  endif

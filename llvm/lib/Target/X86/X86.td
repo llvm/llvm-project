@@ -485,6 +485,9 @@ def TuningSlowSHLD : SubtargetFeature<"slow-shld", "IsSHLDSlow", "true",
 def TuningSlowPMULLD : SubtargetFeature<"slow-pmulld", "IsPMULLDSlow", "true",
                                         "PMULLD instruction is slow (compared to PMULLW/PMULHW and PMULUDQ)">;
 
+def TuningSlowPMULLQ : SubtargetFeature<"slow-pmullq", "IsPMULLQSlow", "true",
+                                        "PMULLQ instruction is slow">;
+
 def TuningSlowPMADDWD : SubtargetFeature<"slow-pmaddwd", "IsPMADDWDSlow",
                                           "true",
                                           "PMADDWD is slower than PMULLD">;
@@ -772,6 +775,10 @@ def TuningUseGLMDivSqrtCosts
 def TuningBranchHint: SubtargetFeature<"branch-hint", "HasBranchHint", "true",
                                         "Target has branch hint feature">;
 
+def TuningPreferLegacySetCC
+    : SubtargetFeature<"prefer-legacy-setcc", "PreferLegacySetCC", "true",
+                       "Prefer to emit legacy SetCC.">;
+
 //===----------------------------------------------------------------------===//
 // X86 CPU Families
 // TODO: Remove these - use general tuning features to determine codegen.
@@ -794,6 +801,8 @@ include "X86RegisterBanks.td"
 include "X86Schedule.td"
 include "X86InstrInfo.td"
 include "X86SchedPredicates.td"
+
+defm : RemapAllTargetPseudoPointerOperands<x86_ptr_rc>;
 
 def X86InstrInfo : InstrInfo;
 
@@ -1063,7 +1072,8 @@ def ProcessorFeatures {
                                       TuningNoDomainDelayMov,
                                       TuningNoDomainDelayShuffle,
                                       TuningNoDomainDelayBlend,
-                                      TuningFastImmVectorShift];
+                                      TuningFastImmVectorShift,
+                                      TuningSlowPMULLQ];
   list<SubtargetFeature> CNLFeatures =
     !listconcat(SKLFeatures, CNLAdditionalFeatures);
 
@@ -1092,7 +1102,8 @@ def ProcessorFeatures {
                                       TuningNoDomainDelayMov,
                                       TuningNoDomainDelayShuffle,
                                       TuningNoDomainDelayBlend,
-                                      TuningFastImmVectorShift];
+                                      TuningFastImmVectorShift,
+                                      TuningSlowPMULLQ];
   list<SubtargetFeature> ICLFeatures =
     !listconcat(CNLFeatures, ICLAdditionalFeatures);
 
@@ -1289,7 +1300,8 @@ def ProcessorFeatures {
                                                   FeatureWAITPKG];
   list<SubtargetFeature> ADLAdditionalTuning = [TuningPERMFalseDeps,
                                                 TuningPreferMovmskOverVTest,
-                                                TuningFastImmVectorShift];
+                                                TuningFastImmVectorShift,
+                                                TuningSlowPMULLQ];
   list<SubtargetFeature> ADLRemoveTuning = [TuningPOPCNTFalseDeps];
   list<SubtargetFeature> ADLTuning =
       !listremove(!listconcat(SKLTuning, ADLAdditionalTuning), ADLRemoveTuning);
@@ -2082,3 +2094,8 @@ def X86 : Target {
 //===----------------------------------------------------------------------===//
 
 include "X86PfmCounters.td"
+
+//===----------------------------------------------------------------------===//
+// Global Isel Combiner
+//===----------------------------------------------------------------------===//
+include "X86Combine.td"

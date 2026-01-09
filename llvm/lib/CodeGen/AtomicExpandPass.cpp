@@ -345,21 +345,13 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
     if (FenceOrdering != AtomicOrdering::Monotonic) {
       MadeChange |= bracketInstWithFences(I, FenceOrdering);
     }
-  } else if (I->hasAtomicStore() &&
-             TLI->shouldInsertTrailingFenceForAtomicStore(I)) {
-    auto FenceOrdering = AtomicOrdering::Monotonic;
-    if (SI)
-      FenceOrdering = SI->getOrdering();
-    else if (RMWI)
-      FenceOrdering = RMWI->getOrdering();
-    else if (CASI && TLI->shouldExpandAtomicCmpXchgInIR(CASI) !=
-                         TargetLoweringBase::AtomicExpansionKind::LLSC)
-      // LLSC is handled in expandAtomicCmpXchg().
-      FenceOrdering = CASI->getSuccessOrdering();
-
+  } else if (TLI->shouldInsertTrailingSeqCstFenceForAtomicStore(I) &&
+             !(CASI && TLI->shouldExpandAtomicCmpXchgInIR(CASI) ==
+                           TargetLoweringBase::AtomicExpansionKind::LLSC)) {
+    // CmpXchg LLSC is handled in expandAtomicCmpXchg().
     IRBuilder Builder(I);
-    if (auto TrailingFence =
-            TLI->emitTrailingFence(Builder, I, FenceOrdering)) {
+    if (auto TrailingFence = TLI->emitTrailingFence(
+            Builder, I, AtomicOrdering::SequentiallyConsistent)) {
       TrailingFence->moveAfter(I);
       MadeChange = true;
     }
@@ -853,8 +845,8 @@ static PartwordMaskValues createMaskInstrs(IRBuilderBase &Builder,
   if (AddrAlign < MinWordSize) {
     PMV.AlignedAddr = Builder.CreateIntrinsic(
         Intrinsic::ptrmask, {PtrTy, IntTy},
-        {Addr, ConstantInt::get(IntTy, ~(uint64_t)(MinWordSize - 1))}, nullptr,
-        "AlignedAddr");
+        {Addr, ConstantInt::getSigned(IntTy, ~(uint64_t)(MinWordSize - 1))},
+        nullptr, "AlignedAddr");
 
     Value *AddrInt = Builder.CreatePtrToInt(Addr, IntTy);
     PtrLSB = Builder.CreateAnd(AddrInt, MinWordSize - 1, "PtrLSB");
@@ -1512,7 +1504,7 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   // necessary.
   Builder.SetInsertPoint(SuccessBB);
   if (ShouldInsertFencesForAtomic ||
-      TLI->shouldInsertTrailingFenceForAtomicStore(CI))
+      TLI->shouldInsertTrailingSeqCstFenceForAtomicStore(CI))
     TLI->emitTrailingFence(Builder, CI, SuccessOrder);
   Builder.CreateBr(ExitBB);
 

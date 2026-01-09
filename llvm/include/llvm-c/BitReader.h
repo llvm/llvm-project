@@ -19,6 +19,7 @@
 #ifndef LLVM_C_BITREADER_H
 #define LLVM_C_BITREADER_H
 
+#include "llvm-c/Deprecated.h"
 #include "llvm-c/ExternC.h"
 #include "llvm-c/Types.h"
 #include "llvm-c/Visibility.h"
@@ -37,14 +38,19 @@ LLVM_C_EXTERN_C_BEGIN
    Optionally returns a human-readable error message via OutMessage.
 
    This is deprecated. Use LLVMParseBitcode2. */
-LLVM_C_ABI LLVMBool LLVMParseBitcode(LLVMMemoryBufferRef MemBuf,
-                                     LLVMModuleRef *OutModule,
-                                     char **OutMessage);
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMBool LLVMParseBitcode(LLVMMemoryBufferRef MemBuf,
+                              LLVMModuleRef *OutModule, char **OutMessage),
+    "Use of the global context is deprecated, use LLVMParseBitcodeInContext2 "
+    "instead");
 
 /* Builds a module from the bitcode in the specified memory buffer, returning a
    reference to the module via the OutModule parameter. Returns 0 on success. */
-LLVM_C_ABI LLVMBool LLVMParseBitcode2(LLVMMemoryBufferRef MemBuf,
-                                      LLVMModuleRef *OutModule);
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMBool LLVMParseBitcode2(LLVMMemoryBufferRef MemBuf,
+                               LLVMModuleRef *OutModule),
+    "Use of the global context is deprecated, use LLVMParseBitcodeInContext2 "
+    "instead");
 
 /* This is deprecated. Use LLVMParseBitcodeInContext2. */
 LLVM_C_ABI LLVMBool LLVMParseBitcodeInContext(LLVMContextRef ContextRef,
@@ -77,12 +83,17 @@ LLVM_C_ABI LLVMBool LLVMGetBitcodeModuleInContext2(LLVMContextRef ContextRef,
                                                    LLVMModuleRef *OutM);
 
 /* This is deprecated. Use LLVMGetBitcodeModule2. */
-LLVM_C_ABI LLVMBool LLVMGetBitcodeModule(LLVMMemoryBufferRef MemBuf,
-                                         LLVMModuleRef *OutM,
-                                         char **OutMessage);
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMBool LLVMGetBitcodeModule(LLVMMemoryBufferRef MemBuf,
+                                  LLVMModuleRef *OutM, char **OutMessage),
+    "Use of the global context is deprecated, use "
+    "LLVMGetBitcodeModuleInContext2 instead");
 
-LLVM_C_ABI LLVMBool LLVMGetBitcodeModule2(LLVMMemoryBufferRef MemBuf,
-                                          LLVMModuleRef *OutM);
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMBool LLVMGetBitcodeModule2(LLVMMemoryBufferRef MemBuf,
+                                   LLVMModuleRef *OutM),
+    "Use of the global context is deprecated, use "
+    "LLVMGetBitcodeModuleInContext2 instead");
 
 /**
  * @}

@@ -73,7 +73,7 @@ int tblgen_main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   cl::ParseCommandLineOptions(argc, argv);
 
-  std::function<MultiFileTableGenMainFn> MainFn = nullptr;
+  MultiFileTableGenMainFn MainFn = nullptr;
   return TableGenMain(argv[0], MainFn);
 }
 

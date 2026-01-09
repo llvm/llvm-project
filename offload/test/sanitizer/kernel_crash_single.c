@@ -15,6 +15,7 @@
 // UNSUPPORTED: x86_64-unknown-linux-gnu-LTO
 // UNSUPPORTED: s390x-ibm-linux-gnu
 // UNSUPPORTED: s390x-ibm-linux-gnu-LTO
+// XFAIL: intelgpu
 
 #include <omp.h>
 
@@ -26,10 +27,10 @@ int main(void) {
   }
 }
 // TRACE: Display kernel launch trace
-// TRACE: Kernel {{.*}} (__omp_offloading_{{.*}}_main_l23)
+// TRACE: Kernel {{.*}} (__omp_offloading_{{.*}}_main_l24)
 // TRACE:     launchKernel
 // NDEBG:     main
-// DEBUG:     main {{.*}}kernel_crash_single.c:23
+// DEBUG:     main {{.*}}kernel_crash_single.c:24
 //
 // CHECK: Display only launched kernel:
-// CHECK: Kernel {{.*}} (__omp_offloading_{{.*}}_main_l23)
+// CHECK: Kernel {{.*}} (__omp_offloading_{{.*}}_main_l24)

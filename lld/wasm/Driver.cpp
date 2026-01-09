@@ -1105,7 +1105,7 @@ static void processStubLibraries() {
       // the names of the stub imports
       for (auto [name, deps]: stub_file->symbolDependencies) {
         auto* sym = symtab->find(name);
-        if (sym && sym->isUndefined()) {
+        if (sym && sym->isUndefined() && sym->isUsedInRegularObj) {
           depsAdded |= addStubSymbolDeps(stub_file, sym, deps);
         } else {
           if (sym && sym->traced)
@@ -1173,9 +1173,10 @@ struct WrappedSymbol {
   Symbol *wrap;
 };
 
-static Symbol *addUndefined(StringRef name) {
+static Symbol *addUndefined(StringRef name,
+                            const WasmSignature *signature = nullptr) {
   return symtab->addUndefinedFunction(name, std::nullopt, std::nullopt,
-                                      WASM_SYMBOL_UNDEFINED, nullptr, nullptr,
+                                      WASM_SYMBOL_UNDEFINED, nullptr, signature,
                                       false);
 }
 
@@ -1198,7 +1199,8 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
       continue;
 
     Symbol *real = addUndefined(saver().save("__real_" + name));
-    Symbol *wrap = addUndefined(saver().save("__wrap_" + name));
+    Symbol *wrap =
+        addUndefined(saver().save("__wrap_" + name), sym->getSignature());
     v.push_back({sym, real, wrap});
 
     // We want to tell LTO not to inline symbols to be overwritten

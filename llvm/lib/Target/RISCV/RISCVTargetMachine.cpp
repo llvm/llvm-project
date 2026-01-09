@@ -123,7 +123,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVLateBranchOptPass(*PR);
   initializeRISCVMakeCompressibleOptPass(*PR);
   initializeRISCVGatherScatterLoweringPass(*PR);
-  initializeRISCVCodeGenPreparePass(*PR);
+  initializeRISCVCodeGenPrepareLegacyPassPass(*PR);
   initializeRISCVPostRAExpandPseudoPass(*PR);
   initializeRISCVMergeBaseOffsetOptPass(*PR);
   initializeRISCVOptWInstrsPass(*PR);
@@ -141,6 +141,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVPushPopOptPass(*PR);
   initializeRISCVIndirectBranchTrackingPass(*PR);
   initializeRISCVLoadStoreOptPass(*PR);
+  initializeRISCVPreAllocZilsdOptPass(*PR);
   initializeRISCVExpandAtomicPseudoPass(*PR);
   initializeRISCVRedundantCopyEliminationPass(*PR);
   initializeRISCVAsmPrinterPass(*PR);
@@ -149,6 +150,12 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
+}
+
+static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
+  if (TT.isOSBinFormatMachO())
+    return std::make_unique<RISCVMachOTargetObjectFile>();
+  return std::make_unique<RISCVELFTargetObjectFile>();
 }
 
 RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
@@ -161,7 +168,7 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
           T, TT.computeDataLayout(Options.MCOptions.getABIName()), TT, CPU, FS,
           Options, getEffectiveRelocModel(RM),
           getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      TLOF(std::make_unique<RISCVELFTargetObjectFile>()) {
+      TLOF(createTLOF(TT)) {
   initAsmInfo();
 
   // RISC-V supports the MachineOutliner.
@@ -461,7 +468,7 @@ void RISCVPassConfig::addIRPasses() {
 
     addPass(createRISCVGatherScatterLoweringPass());
     addPass(createInterleavedAccessPass());
-    addPass(createRISCVCodeGenPreparePass());
+    addPass(createRISCVCodeGenPrepareLegacyPass());
   }
 
   TargetPassConfig::addIRPasses();
@@ -604,6 +611,8 @@ void RISCVPassConfig::addPreRegAlloc() {
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     addPass(createRISCVMergeBaseOffsetOptPass());
     addPass(createRISCVVLOptimizerPass());
+    // Add Zilsd pre-allocation load/store optimization
+    addPass(createRISCVPreAllocZilsdOptPass());
   }
 
   addPass(createRISCVInsertReadWriteCSRPass());
@@ -636,6 +645,9 @@ bool RISCVPassConfig::addILPOpts() {
 }
 
 void RISCVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+#define GET_PASS_REGISTRY "RISCVPassRegistry.def"
+#include "llvm/Passes/TargetPassRegistry.inc"
+
   PB.registerLateLoopOptimizationsEPCallback([=](LoopPassManager &LPM,
                                                  OptimizationLevel Level) {
     if (Level != OptimizationLevel::O0)

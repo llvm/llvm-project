@@ -1185,10 +1185,10 @@ define i32 @useLEAForPrologue(i32 %d, i32 %a, i8 %c) #3 {
 ; ENABLE-NEXT:    .p2align 4
 ; ENABLE-NEXT:  LBB14_2: ## %for.body
 ; ENABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
-; ENABLE-NEXT:    movl %esi, %eax
+; ENABLE-NEXT:    cmpl %esi, %edi
+; ENABLE-NEXT:    setl %al
 ; ENABLE-NEXT:    xorl %esi, %esi
-; ENABLE-NEXT:    cmpl %eax, %edi
-; ENABLE-NEXT:    setl %sil
+; ENABLE-NEXT:    movb %al, %sil
 ; ENABLE-NEXT:    incb %dl
 ; ENABLE-NEXT:    cmpb $45, %dl
 ; ENABLE-NEXT:    jl LBB14_2
@@ -1220,10 +1220,10 @@ define i32 @useLEAForPrologue(i32 %d, i32 %a, i8 %c) #3 {
 ; DISABLE-NEXT:    .p2align 4
 ; DISABLE-NEXT:  LBB14_2: ## %for.body
 ; DISABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
-; DISABLE-NEXT:    movl %esi, %eax
+; DISABLE-NEXT:    cmpl %esi, %edi
+; DISABLE-NEXT:    setl %al
 ; DISABLE-NEXT:    xorl %esi, %esi
-; DISABLE-NEXT:    cmpl %eax, %edi
-; DISABLE-NEXT:    setl %sil
+; DISABLE-NEXT:    movb %al, %sil
 ; DISABLE-NEXT:    incb %dl
 ; DISABLE-NEXT:    cmpb $45, %dl
 ; DISABLE-NEXT:    jl LBB14_2
