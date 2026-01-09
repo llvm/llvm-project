@@ -1267,9 +1267,12 @@ bool SBValue::GetDescription(SBStream &description) {
 }
 
 static DumpValueObjectOptions
-GetDumpOptions(lldb::DescriptionLevel description_level) {
+GetDumpOptions(lldb::DescriptionLevel description_level,
+               lldb::DynamicValueType dyn, bool use_synthetic) {
   DumpValueObjectOptions options;
   switch (description_level) {
+  case eDescriptionLevelInitial:
+    return options;
   case eDescriptionLevelBrief:
     options.SetAllowOnelinerMode(true);
     options.SetHideRootName(true);
@@ -1282,6 +1285,8 @@ GetDumpOptions(lldb::DescriptionLevel description_level) {
   default:
     break;
   }
+  options.SetUseDynamicType(dyn);
+  options.SetUseSyntheticValue(use_synthetic);
   return options;
 }
 
@@ -1294,11 +1299,9 @@ bool SBValue::GetDescription(SBStream &description,
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp) {
-    DumpValueObjectOptions options = GetDumpOptions(description_level);
-    if (description_level != eDescriptionLevelInitial) {
-      options.SetUseDynamicType(m_opaque_sp->GetUseDynamic());
-      options.SetUseSyntheticValue(m_opaque_sp->GetUseSynthetic());
-    }
+    const DumpValueObjectOptions options =
+        GetDumpOptions(description_level, m_opaque_sp->GetUseDynamic(),
+                       m_opaque_sp->GetUseSynthetic());
     if (llvm::Error error = value_sp->Dump(strm, options)) {
       strm << "error: " << toString(std::move(error));
       return false;
