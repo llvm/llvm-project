@@ -23,6 +23,9 @@ namespace lldb_dap {
 protocol::Scope CreateScope(const eScopeKind kind, int64_t variablesReference,
                             int64_t namedVariables, bool expensive) {
   protocol::Scope scope;
+  scope.variablesReference = variablesReference;
+  scope.namedVariables = namedVariables;
+  scope.expensive = expensive;
 
   // TODO: Support "arguments" and "return value" scope.
   // At the moment lldb-dap includes the arguments and return_value  into the
@@ -45,16 +48,12 @@ protocol::Scope CreateScope(const eScopeKind kind, int64_t variablesReference,
     break;
   }
 
-  scope.variablesReference = variablesReference;
-  scope.namedVariables = namedVariables;
-  scope.expensive = expensive;
-
   return scope;
 }
 
 lldb::SBValueList *Variables::GetTopLevelScope(int64_t variablesReference) {
   auto iter = m_scope_kinds.find(variablesReference);
-  if (iter == m_scope_kinds.end()) 
+  if (iter == m_scope_kinds.end())
     return nullptr;
 
   eScopeKind scope_kind = iter->second.first;
@@ -62,7 +61,7 @@ lldb::SBValueList *Variables::GetTopLevelScope(int64_t variablesReference) {
 
   auto frame_iter = m_frames.find(dap_frame_id);
   if (frame_iter == m_frames.end())
-return nullptr;
+    return nullptr;
 
   return frame_iter->second.GetScope(scope_kind);
 }
