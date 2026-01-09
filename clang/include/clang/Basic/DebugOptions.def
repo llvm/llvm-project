@@ -101,6 +101,7 @@ ENUM_DEBUGOPT(DebugInfo, DebugInfoKind, 4,
 DEBUGOPT(MacroDebugInfo, 1, 0, Compatible)
 
 /// Whether to use expansion location for debug info.
+/// TODO: #175249: Remove once testing is complete for sample pgo users.
 DEBUGOPT(DebugInfoMacroExpansionLoc, 1, 0, Compatible)
 
 /// Tune the debug info for this debugger.
