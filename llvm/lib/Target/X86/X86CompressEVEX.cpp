@@ -301,14 +301,9 @@ static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
     return false;
 
   // Check if MaskReg is used in any other basic blocks
-  for (MachineOperand &UseMO : MRI->use_operands(MaskReg)) {
-    MachineInstr *UseMI = UseMO.getParent();
-    MachineBasicBlock *UseMBB = UseMI->getParent();
-
-    // If the use is in a different block, we cannot safely compress
-    if (UseMBB != &MBB)
+  for (const MachineOperand &MO : MRI->use_operands(MaskReg))
+    if (MO.getParent()->getParent() != &MBB)
       return false;
-  }
 
   // Apply the transformation
   KMovMI->setDesc(TII->get(MovMskOpc));
