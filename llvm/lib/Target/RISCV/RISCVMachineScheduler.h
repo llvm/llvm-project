@@ -23,13 +23,13 @@ namespace llvm {
 class RISCVPreRAMachineSchedStrategy : public GenericScheduler {
   const RISCVSubtarget *ST;
   RISCV::RISCVVSETVLIInfoAnalysis VIA;
-  RISCV::VSETVLIInfo TopVType;
-  RISCV::VSETVLIInfo BottomVType;
+  RISCV::VSETVLIInfo TopInfo;
+  RISCV::VSETVLIInfo BottomInfo;
 
   RISCV::VSETVLIInfo getVSETVLIInfo(const MachineInstr *MI) const;
-  bool tryVType(RISCV::VSETVLIInfo TryVType, RISCV::VSETVLIInfo CandVtype,
-                SchedCandidate &TryCand, SchedCandidate &Cand,
-                CandReason Reason) const;
+  bool tryVSETVLIInfo(RISCV::VSETVLIInfo TryInfo, RISCV::VSETVLIInfo CandInfo,
+                      SchedCandidate &TryCand, SchedCandidate &Cand,
+                      CandReason Reason) const;
 
 public:
   RISCVPreRAMachineSchedStrategy(const MachineSchedContext *C)

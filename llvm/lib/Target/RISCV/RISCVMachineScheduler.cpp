@@ -21,11 +21,11 @@ RISCVPreRAMachineSchedStrategy::getVSETVLIInfo(const MachineInstr *MI) const {
   return VIA.computeInfoForInstr(*MI);
 }
 
-bool RISCVPreRAMachineSchedStrategy::tryVType(RISCV::VSETVLIInfo TryVType,
-                                              RISCV::VSETVLIInfo CandVtype,
-                                              SchedCandidate &TryCand,
-                                              SchedCandidate &Cand,
-                                              CandReason Reason) const {
+bool RISCVPreRAMachineSchedStrategy::tryVSETVLIInfo(RISCV::VSETVLIInfo TryInfo,
+                                                    RISCV::VSETVLIInfo CandInfo,
+                                                    SchedCandidate &TryCand,
+                                                    SchedCandidate &Cand,
+                                                    CandReason Reason) const {
   // Do not compare the vsetvli info changes between top and bottom
   // boundary.
   if (Cand.AtTop != TryCand.AtTop)
@@ -34,23 +34,23 @@ bool RISCVPreRAMachineSchedStrategy::tryVType(RISCV::VSETVLIInfo TryVType,
   // Try Cand first.
   // We prefer the top node as it is straightforward from the perspective of
   // vsetvli dataflow.
-  if (CandVtype.isValid() && TopVType.isValid() && Cand.AtTop &&
-      CandVtype == TopVType)
+  if (CandInfo.isValid() && TopInfo.isValid() && Cand.AtTop &&
+      CandInfo == TopInfo)
     return true;
 
-  if (CandVtype.isValid() && BottomVType.isValid() && !Cand.AtTop &&
-      CandVtype == BottomVType)
+  if (CandInfo.isValid() && BottomInfo.isValid() && !Cand.AtTop &&
+      CandInfo == BottomInfo)
     return true;
 
   // Then try TryCand.
-  if (TryVType.isValid() && TopVType.isValid() && TryCand.AtTop &&
-      TryVType == TopVType) {
+  if (TryInfo.isValid() && TopInfo.isValid() && TryCand.AtTop &&
+      TryInfo == TopInfo) {
     TryCand.Reason = Reason;
     return true;
   }
 
-  if (TryVType.isValid() && BottomVType.isValid() && !TryCand.AtTop &&
-      TryVType == BottomVType) {
+  if (TryInfo.isValid() && BottomInfo.isValid() && !TryCand.AtTop &&
+      TryInfo == BottomInfo) {
     TryCand.Reason = Reason;
     return true;
   }
@@ -173,21 +173,22 @@ bool RISCVPreRAMachineSchedStrategy::tryCandidate(SchedCandidate &Cand,
   // TODO: We should not use `CandReason::Cluster` here, but is there a
   // mechanism to extend this enum?
   if (ST->enableVsetvliSchedHeuristic() &&
-      tryVType(getVSETVLIInfo(TryCand.SU->getInstr()),
-               getVSETVLIInfo(Cand.SU->getInstr()), TryCand, Cand, Cluster))
+      tryVSETVLIInfo(getVSETVLIInfo(TryCand.SU->getInstr()),
+                     getVSETVLIInfo(Cand.SU->getInstr()), TryCand, Cand,
+                     Cluster))
     return TryCand.Reason != NoCand;
 
   return TryCand.Reason != NoCand;
 }
 
 void RISCVPreRAMachineSchedStrategy::enterMBB(MachineBasicBlock *MBB) {
-  TopVType = RISCV::VSETVLIInfo();
-  BottomVType = RISCV::VSETVLIInfo();
+  TopInfo = RISCV::VSETVLIInfo();
+  BottomInfo = RISCV::VSETVLIInfo();
 }
 
 void RISCVPreRAMachineSchedStrategy::leaveMBB() {
-  TopVType = RISCV::VSETVLIInfo();
-  BottomVType = RISCV::VSETVLIInfo();
+  TopInfo = RISCV::VSETVLIInfo();
+  BottomInfo = RISCV::VSETVLIInfo();
 }
 
 void RISCVPreRAMachineSchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
@@ -197,9 +198,9 @@ void RISCVPreRAMachineSchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
     const RISCV::VSETVLIInfo &Info = getVSETVLIInfo(MI);
     if (Info.isValid()) {
       if (IsTopNode)
-        TopVType = Info;
+        TopInfo = Info;
       else
-        BottomVType = Info;
+        BottomInfo = Info;
       LLVM_DEBUG({
         dbgs() << "Previous scheduled Unit: \n";
         dbgs() << "  IsTop: " << IsTopNode << "\n";
