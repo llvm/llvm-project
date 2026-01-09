@@ -3556,7 +3556,7 @@ static SDValue performMulCombine(SDNode *N,
   // We don't natively support v16i8 or v8i8 mul, but we do support v8i16. So,
   // extend them to v8i16. Only do this before legalization in case a narrow
   // vector is widened and may be simplified later.
-  if (!DCI.isBeforeLegalize() || (VT != MVT::v8i8 && VT != MVT::v16i8))
+  if (VT != MVT::v8i8 && VT != MVT::v16i8)
     return SDValue();
 
   SDLoc DL(N);
