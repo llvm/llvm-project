@@ -11,6 +11,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/TargetParser/Host.h"
@@ -211,7 +212,10 @@ static Distro::DistroType GetDistro(llvm::vfs::FileSystem &VFS,
     return Distro::UnknownDistro;
 
   // True if we're backed by a real file system.
-  const bool onRealFS = (llvm::vfs::getRealFileSystem() == &VFS);
+  const bool onRealFS = [&] {
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+    return llvm::vfs::getRealFileSystem() == &VFS;
+  }();
 
   // If the host is not running Linux, and we're backed by a real file
   // system, no need to check the distro. This is the case where someone
