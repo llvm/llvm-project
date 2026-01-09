@@ -1999,9 +1999,6 @@ defvar SecurityCheckCookieIfWinMSVC =
     LibcallImpls<(add __security_check_cookie, __security_cookie),
                  isWindowsMSVCOrItaniumEnvironment>;
 
-defvar __chkstk_IfWinMSVC =
-    LibcallImpls<(add __chkstk), isWindowsMSVCEnvironment>;
-
 defvar LibmHasSinCosF32 = LibcallImpls<(add sincosf), hasSinCos>;
 defvar LibmHasSinCosF64 =  LibcallImpls<(add sincos), hasSinCos>;
 defvar LibmHasSinCosF80 = LibcallImpls<(add sincosl_f80), hasSinCos>;
@@ -2161,7 +2158,7 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
        DefaultLibmExp10,
        DefaultStackProtector,
        SecurityCheckCookieIfWinMSVC,
-       __chkstk_IfWinMSVC,
+       LibcallImpls<(add __chkstk), isOSWindows>,
        SMEABI_LibCalls_PreserveMost_From_X0,
        SMEABI_LibCalls_PreserveMost_From_X1,
        SMEABI_LibCalls_PreserveMost_From_X2)

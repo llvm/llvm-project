@@ -1,0 +1,43 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!u8i = !cir.int<u, 8>
+!u32i = !cir.int<u, 32>
+!rec_S = !cir.record<struct "S" {!u8i, !u32i}>
+
+module  {
+  cir.func @struct_extract_member_invalid_element_type() {
+    %0 = cir.const #cir.const_record<{#cir.int<1> : !u8i, #cir.int<3> : !u32i}> : !rec_S
+	// expected-error @below {{member type mismatch}}
+    %1 = cir.extract_member %0[1] : !rec_S -> !u8i
+    cir.return
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!u32i = !cir.int<u, 32>
+!rec_S = !cir.record<struct "S" {!u8i, !u32i}>
+
+module  {
+  cir.func @struct_extract_member_invalid_index_value() {
+    %0 = cir.const #cir.const_record<{#cir.int<1> : !u8i, #cir.int<3> : !u32i}> : !rec_S
+	// expected-error @below {{member index out of bounds}}
+    %1 = cir.extract_member %0[2] : !rec_S -> !u8i
+    cir.return
+  }
+}
+
+// -----
+
+!u32i = !cir.int<u, 32>
+!rec_U = !cir.record<union "U" {!u32i}>
+
+module  {
+  cir.func @extract_member_invalid_for_union() {
+    %0 = cir.const #cir.const_record<{#cir.int<1> : !u32i}> : !rec_U
+	// expected-error @below {{cir.extract_member currently does not support unions}}
+    %1 = cir.extract_member %0[2] : !rec_U -> !u32i
+    cir.return
+  }
+}

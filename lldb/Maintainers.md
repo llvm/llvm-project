@@ -23,7 +23,7 @@ Jason Molenda
 jmolenda@apple.com (email), [jasonmolenda](https://github.com/jasonmolenda) (GitHub), [jasonmolenda](https://discourse.llvm.org/u/jasonmolenda) (Discourse), jasonmolenda (Discord)
 
 David Spickett
-david.spickett@linaro.org (email), [DavidSpickett](https://github.com/DavidSpickett) (GitHub), [DavidSpickett](https://discourse.llvm.org/u/DavidSpickett) (Discourse), davidspickett (Discord)
+david.spickett@arm.com (email), [DavidSpickett](https://github.com/DavidSpickett) (GitHub), [DavidSpickett](https://discourse.llvm.org/u/DavidSpickett) (Discourse), davidspickett (Discord)
 
 #### Breakpoint
 
@@ -147,7 +147,7 @@ gclayton@fb.com (email), [clayborg](https://github.com/clayborg) (GitHub), [clay
 #### ELF
 
 David Spickett
-david.spickett@linaro.org (email), [DavidSpickett](https://github.com/DavidSpickett) (GitHub), [DavidSpickett](https://discourse.llvm.org/u/DavidSpickett) (Discourse), davidspickett (Discord)
+david.spickett@arm.com (email), [DavidSpickett](https://github.com/DavidSpickett) (GitHub), [DavidSpickett](https://discourse.llvm.org/u/DavidSpickett) (Discourse), davidspickett (Discord)
 
 Pavel Labath
 pavel@labath.sk (email), [labath](https://github.com/labath) (GitHub), [labath](https://discourse.llvm.org/u/labath) (Discourse)
@@ -201,12 +201,18 @@ Pavel Labath
 pavel@labath.sk (email), [labath](https://github.com/labath) (GitHub), [labath](https://discourse.llvm.org/u/labath) (Discourse)
 
 David Spickett
-david.spickett@linaro.org (email), [DavidSpickett](https://github.com/DavidSpickett) (GitHub), [DavidSpickett](https://discourse.llvm.org/u/DavidSpickett) (Discourse), davidspickett (Discord)
+david.spickett@arm.com (email), [DavidSpickett](https://github.com/DavidSpickett) (GitHub), [DavidSpickett](https://discourse.llvm.org/u/DavidSpickett) (Discourse), davidspickett (Discord)
 
 #### Windows
 
 Omair Javaid
 omair.javaid@linaro.org (email), [omjavaid](https://github.com/omjavaid) (GitHub), [omjavaid](https://discourse.llvm.org/u/omjavaid) (Discourse), omjavaid#9902 (Discord)
+
+Charles Zablit
+c_zablit@apple.com (email), [charles-zablit](https://github.com/charles-zablit) (GitHub), [charles-zablit](https://discourse.llvm.org/u/charles-zablit/) (Discourse)
+
+Nerixyz
+nerixdev@outlook.de (email), [Nerixyz](https://github.com/Nerixyz) (GitHub), [Nerixyz](https://discourse.llvm.org/u/Nerixyz/) (Discourse)
 
 ### Tools
 
@@ -220,7 +226,7 @@ jmolenda@apple.com (email), [jasonmolenda](https://github.com/jasonmolenda) (Git
 #### lldb-server
 
 David Spickett
-david.spickett@linaro.org (email), [DavidSpickett](https://github.com/DavidSpickett) (GitHub), [DavidSpickett](https://discourse.llvm.org/u/DavidSpickett) (Discourse), davidspickett (Discord)
+david.spickett@arm.com (email), [DavidSpickett](https://github.com/DavidSpickett) (GitHub), [DavidSpickett](https://discourse.llvm.org/u/DavidSpickett) (Discourse), davidspickett (Discord)
 
 Pavel Labath
 pavel@labath.sk (email), [labath](https://github.com/labath) (GitHub), [labath](https://discourse.llvm.org/u/labath) (Discourse)

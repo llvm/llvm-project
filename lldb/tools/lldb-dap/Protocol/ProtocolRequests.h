@@ -31,6 +31,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace lldb_dap::protocol {
@@ -1254,6 +1255,56 @@ struct TestGetTargetBreakpointsResponseBody {
   std::vector<Breakpoint> breakpoints;
 };
 llvm::json::Value toJSON(const TestGetTargetBreakpointsResponseBody &);
+
+/// Arguments for `restart` request.
+struct RestartArguments {
+  /// The latest version of the `launch` or `attach` configuration.
+  std::variant<std::monostate, LaunchRequestArguments, AttachRequestArguments>
+      arguments = std::monostate{};
+};
+bool fromJSON(const llvm::json::Value &, RestartArguments &, llvm::json::Path);
+
+/// Response to `restart` request. This is just an acknowledgement, so no body
+/// field is required.
+using RestartResponse = VoidResponse;
+
+/// Arguments for `stackTrace` request.
+struct StackTraceArguments {
+  /// Retrieve the stacktrace for this thread.
+  lldb::tid_t threadId = LLDB_INVALID_THREAD_ID;
+
+  /// The index of the first frame to return; if omitted frames start at 0.
+  uint32_t startFrame = 0;
+
+  /// The maximum number of frames to return. If levels is not specified or 0,
+  /// all frames are returned.
+  uint32_t levels = 0;
+
+  /// Specifies details on how to format the returned `StackFrame.name`. The
+  /// debug adapter may format requested details in any way that would make
+  /// sense to a developer. The attribute is only honored by a debug adapter if
+  /// the corresponding capability `supportsValueFormattingOptions` is true.
+  std::optional<StackFrameFormat> format;
+};
+bool fromJSON(const llvm::json::Value &, StackTraceArguments &,
+              llvm::json::Path);
+
+/// Response to `stackTrace` request.
+struct StackTraceResponseBody {
+  /// The frames of the stack frame. If the array has length zero, there are no
+  /// stack frames available.
+  /// This means that there is no location information available.
+  std::vector<StackFrame> stackFrames;
+
+  /// The total number of frames available in the stack. If omitted or if
+  /// `totalFrames` is larger than the available frames, a client is expected to
+  /// request frames until a request returns less frames than requested (which
+  /// indicates the end of the stack). Returning monotonically increasing
+  /// `totalFrames` values for subsequent requests can be used to enforce paging
+  /// in the client.
+  uint32_t totalFrames = 0;
+};
+llvm::json::Value toJSON(const StackTraceResponseBody &);
 
 } // namespace lldb_dap::protocol
 

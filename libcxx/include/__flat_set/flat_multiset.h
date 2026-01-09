@@ -449,6 +449,15 @@ public:
     __append_sort_merge</*WasSorted = */ false>(std::forward<_Range>(__range));
   }
 
+  template <_ContainerCompatibleRange<value_type> _Range>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void insert_range(sorted_equivalent_t, _Range&& __range) {
+    if constexpr (ranges::sized_range<_Range>) {
+      __reserve(ranges::size(__range));
+    }
+
+    __append_sort_merge</*WasSorted = */ true>(std::forward<_Range>(__range));
+  }
+
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void insert(initializer_list<value_type> __il) {
     insert(__il.begin(), __il.end());
   }
@@ -505,13 +514,15 @@ public:
     return iterator(std::move(__key_it));
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void swap(flat_multiset& __y) noexcept {
-    // warning: The spec has unconditional noexcept, which means that
-    // if any of the following functions throw an exception,
-    // std::terminate will be called
-    // This is discussed in P3567, which hasn't been voted on yet.
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
+  swap(flat_multiset& __y) noexcept(is_nothrow_swappable_v<container_type> && is_nothrow_swappable_v<key_compare>) {
+    auto __on_failure = std::__make_exception_guard([&]() noexcept {
+      clear() /* noexcept */;
+      __y.clear() /* noexcept */;
+    });
     ranges::swap(__compare_, __y.__compare_);
     ranges::swap(__keys_, __y.__keys_);
+    __on_failure.__complete();
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void clear() noexcept { __keys_.clear(); }
@@ -646,7 +657,7 @@ public:
   }
 
   friend _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
-  swap(flat_multiset& __x, flat_multiset& __y) noexcept {
+  swap(flat_multiset& __x, flat_multiset& __y) noexcept(noexcept(__x.swap(__y))) {
     __x.swap(__y);
   }
 
@@ -660,7 +671,7 @@ private:
       ranges::sort(__keys_.begin() + __old_size, __keys_.end(), __compare_);
     } else {
       _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
-          ranges::is_sorted(__keys_ | ranges::views::drop(__old_size)), "Key container is not sorted");
+          ranges::is_sorted(__keys_ | ranges::views::drop(__old_size), __compare_), "Key container is not sorted");
     }
     ranges::inplace_merge(__keys_.begin(), __keys_.begin() + __old_size, __keys_.end(), __compare_);
     __on_failure.__complete();
