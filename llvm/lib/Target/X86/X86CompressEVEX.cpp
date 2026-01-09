@@ -229,6 +229,7 @@ static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
                                     SmallVectorImpl<MachineInstr *> &ToErase) {
   const X86InstrInfo *TII = ST.getInstrInfo();
   const TargetRegisterInfo *TRI = ST.getRegisterInfo();
+  MachineRegisterInfo *MRI = &MBB.getParent()->getRegInfo();
 
   unsigned Opc = MI.getOpcode();
   if (Opc != X86::VPMOVD2MZ128kr && Opc != X86::VPMOVD2MZ256kr &&
@@ -298,6 +299,16 @@ static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
 
   if (!KMovMI)
     return false;
+
+  // Check if MaskReg is used in any other basic blocks
+  for (MachineOperand &UseMO : MRI->use_operands(MaskReg)) {
+    MachineInstr *UseMI = UseMO.getParent();
+    MachineBasicBlock *UseMBB = UseMI->getParent();
+
+    // If the use is in a different block, we cannot safely compress
+    if (UseMBB != &MBB)
+      return false;
+  }
 
   // Apply the transformation
   KMovMI->setDesc(TII->get(MovMskOpc));
