@@ -65,6 +65,9 @@ class AMDGPULowerVGPREncoding {
   using ModeType = PackedVector<unsigned, BitsPerField,
                                 std::bitset<BitsPerField * NumFields>>;
 
+  static constexpr unsigned VGPRMSBShift =
+      llvm::countr_zero_constexpr<unsigned>(AMDGPU::Hwreg::DST_VGPR_MSB);
+
   class ModeTy : public ModeType {
   public:
     // bitset constructor will set all bits to zero
@@ -151,6 +154,10 @@ private:
   /// the current mode. \returns true if the instruction was modified or a
   /// new one was inserted.
   bool handleSetregMode(MachineInstr &MI);
+
+  /// Update bits[12:19] of the imm operand in S_SETREG_IMM32_B32 to contain
+  /// the VGPR MSB mode value. \returns true if the immediate was changed.
+  bool updateSetregModeImm(MachineInstr &MI, int64_t ModeValue);
 };
 
 bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode, ModeTy Mask,
@@ -168,12 +175,19 @@ bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode, ModeTy Mask,
     CurrentMode |= NewMode;
     CurrentMask |= Mask;
 
-    MachineOperand &Op = MostRecentModeSet->getOperand(0);
+    // Update MostRecentModeSet with the new mode. It can be either
+    // S_SET_VGPR_MSB or S_SETREG_IMM32_B32 (with Size <= 12).
+    if (MostRecentModeSet->getOpcode() == AMDGPU::S_SET_VGPR_MSB) {
+      MachineOperand &Op = MostRecentModeSet->getOperand(0);
+      // Carry old mode bits from the existing instruction.
+      int64_t OldModeBits = Op.getImm() & (ModeMask << ModeWidth);
+      Op.setImm(CurrentMode | OldModeBits);
+    } else {
+      assert(MostRecentModeSet->getOpcode() == AMDGPU::S_SETREG_IMM32_B32 &&
+             "unexpected MostRecentModeSet opcode");
+      updateSetregModeImm(*MostRecentModeSet, CurrentMode);
+    }
 
-    // Carry old mode bits from the existing instruction.
-    int64_t OldModeBits = Op.getImm() & (ModeMask << ModeWidth);
-
-    Op.setImm(CurrentMode | OldModeBits);
     return true;
   }
 
@@ -323,11 +337,23 @@ AMDGPULowerVGPREncoding::handleCoissue(MachineBasicBlock::instr_iterator I) {
   return Prev;
 }
 
+bool AMDGPULowerVGPREncoding::updateSetregModeImm(MachineInstr &MI,
+                                                  int64_t ModeValue) {
+  assert(MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32);
+
+  MachineOperand *ImmOp = TII->getNamedOperand(MI, AMDGPU::OpName::imm);
+  int64_t OldImm = ImmOp->getImm();
+  int64_t NewImm =
+      (OldImm & ~AMDGPU::Hwreg::VGPR_MSB_MASK) | (ModeValue << VGPRMSBShift);
+  ImmOp->setImm(NewImm);
+  return NewImm != OldImm;
+}
+
 bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
   using namespace AMDGPU::Hwreg;
 
   assert(MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32 &&
-         "only handle S_SETREG_IMM32_B32 currently");
+         "only S_SETREG_IMM32_B32 needs to be handled");
 
   MachineOperand *SIMM16Op = TII->getNamedOperand(MI, AMDGPU::OpName::simm16);
   assert(SIMM16Op && "SIMM16Op must be present");
@@ -337,41 +363,38 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
   if (HwRegId != ID_MODE)
     return false;
 
-  // On certain HW, `s_setreg_imm32_b32` always writes `imm32[12:19]` to
-  // `mode[12:19]` regardless of the offset or mask. We must ensure the correct
-  // VGPR MSBs are preserved.
-  constexpr unsigned VGPRMSBShift =
-      llvm::countr_zero_constexpr<unsigned>(DST_VGPR_MSB);
-  constexpr unsigned VGPRMSBExtractMask = VGPR_MSB_MASK >> VGPRMSBShift;
-
   int64_t ModeValue = static_cast<int64_t>(CurrentMode);
-  MachineOperand *ImmOp = TII->getNamedOperand(MI, AMDGPU::OpName::imm);
-  assert(ImmOp && "ImmOp must be present");
-  int64_t OldImm = ImmOp->getImm();
 
-  // Case 1: Size <= 12 - the original instruction uses `imm32[0:Size-1]`, so
-  // `imm32[12:19]` is unused. Safe to set `imm32[12:19]` to the correct VGPR
+  // Case 1: Size <= 12 - the original instruction uses imm32[0:Size-1], so
+  // imm32[12:19] is unused. Safe to set imm32[12:19] to the correct VGPR
   // MSBs.
   if (Size <= VGPRMSBShift) {
-    int64_t NewImm = OldImm | (ModeValue << VGPRMSBShift);
-    ImmOp->setImm(NewImm);
-    return NewImm != OldImm;
+    // This instruction now acts as MostRecentModeSet so it can be updated if
+    // CurrentMode changes via piggybacking.
+    MostRecentModeSet = &MI;
+    return updateSetregModeImm(MI, ModeValue);
   }
 
   // Case 2: Size > 12 - the original instruction uses bits beyond 11, so we
-  // cannot arbitrarily modify `imm32[12:19]`. Check if it already matches VGPR
+  // cannot arbitrarily modify imm32[12:19]. Check if it already matches VGPR
   // MSBs.
-  int64_t Imm12_19 = (OldImm >> VGPRMSBShift) & VGPRMSBExtractMask;
-  if (Imm12_19 == ModeValue) {
-    // Already correct, no modification needed.
+  MachineOperand *ImmOp = TII->getNamedOperand(MI, AMDGPU::OpName::imm);
+  assert(ImmOp && "ImmOp must be present");
+  if (((ImmOp->getImm() & VGPR_MSB_MASK) >> VGPRMSBShift) == ModeValue) {
+    // Already correct, but we must invalidate MostRecentModeSet because this
+    // instruction will overwrite mode[12:19]. We can't update this instruction
+    // via piggybacking (bits[12:19] are meaningful), so if CurrentMode changes,
+    // a new s_set_vgpr_msb will be inserted after this instruction.
+    MostRecentModeSet = nullptr;
     return false;
   }
 
-  // `imm32[12:19]` doesn't match VGPR MSBs - insert `s_set_vgpr_msb` after
+  // imm32[12:19] doesn't match VGPR MSBs - insert s_set_vgpr_msb after
   // the original instruction to restore the correct value.
   MachineBasicBlock::iterator InsertPt = std::next(MI.getIterator());
-  BuildMI(*MBB, InsertPt, MI.getDebugLoc(), TII->get(AMDGPU::S_SET_VGPR_MSB))
-      .addImm(ModeValue);
+  MostRecentModeSet = BuildMI(*MBB, InsertPt, MI.getDebugLoc(),
+                              TII->get(AMDGPU::S_SET_VGPR_MSB))
+                          .addImm(ModeValue);
   return true;
 }
 
