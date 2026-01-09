@@ -12,7 +12,7 @@
 
 // class unordered_map
 
-// template <typename K>
+// template <class K>
 // size_type erase(K&& k);
 
 #include <unordered_map>

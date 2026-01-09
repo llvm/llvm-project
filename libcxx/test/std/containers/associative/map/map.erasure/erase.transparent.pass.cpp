@@ -12,11 +12,11 @@
 
 // class map
 
-//    template<typename K>
+//    template<class K>
 //        size_type erase(K&& k) const;        // C++23
 
 #include <map>
-#include "test_transparent_associative.hpp"
+#include "test_transparent_associative.h"
 
 int main(int, char**) {
   test_transparent_erase<std::map<StoredType<int>, int, transparent_comparator_base>>({{1, 0}, {2, 0}, {4, 0}, {5, 0}});
