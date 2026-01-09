@@ -955,7 +955,8 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
     };
     // SwiftASTContext hardcodes the members of protocols as raw
     // pointers. Remote Mirrors reports them as UnknownObject instead.
-    if (hide_existentials && ts.IsExistentialType(m_type.GetOpaqueQualType())) {
+    if (hide_existentials &&
+        ts.IsExistentialType(m_type.GetOpaqueQualType(), &m_exe_ctx)) {
       auto get_info = [&]() -> llvm::Expected<ChildInfo> {
         ChildInfo child;
         child.byte_size = field.TI.getSize();
@@ -1019,7 +1020,7 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
         return fields.size();
       for (unsigned i = 0; i < fields.size(); ++i)
         if (!visit_only || *visit_only == i) {
-          tuple = ts.GetTupleElement(m_type.GetOpaqueQualType(), i);
+          tuple = ts.GetTupleElement(m_type.GetOpaqueQualType(), i, &m_exe_ctx);
           auto result = visit_field_info(fields[i], tuple,
                                          /*hide_existentials=*/true,
                                          /*is_enum=*/false);
@@ -2337,7 +2338,8 @@ bool SwiftLanguageRuntime::IsValidErrorValue(ValueObject &in_value) {
   auto tss = var_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
   if (!tss)
     return false;
-  if (!tss->IsErrorType(var_type.GetOpaqueQualType()))
+  ExecutionContext exe_ctx = in_value.GetExecutionContextRef().Lock(true);
+  if (!tss->IsErrorType(var_type.GetOpaqueQualType(), &exe_ctx))
     return false;
 
   unsigned index = SwiftASTContext::ProtocolInfo::error_instance_index;
@@ -2840,14 +2842,16 @@ SwiftLanguageRuntime::BindGenericTypeParameters(StackFrame &stack_frame,
     return llvm::joinErrors(
         llvm::createStringError("cannot bind generic parameters"),
         type_ref_or_err.takeError());
+  auto &type_ref = *type_ref_or_err;
 
   // Apply the substitutions.
   auto bound_type_ref_or_err = reflection_ctx->ApplySubstitutions(
-      *type_ref_or_err, substitutions, ts.GetDescriptorFinder());
+      type_ref, substitutions, ts.GetDescriptorFinder());
   if (!bound_type_ref_or_err)
     return bound_type_ref_or_err.takeError();
+  auto &bound_type_ref = *bound_type_ref_or_err;
 
-  NodePointer node = bound_type_ref_or_err->getDemangling(dem);
+  NodePointer node = bound_type_ref.getDemangling(dem);
 
   // Import the type into the scratch context. Subsequent conversions
   // to Swift types must be performed in the scratch context, since
@@ -3590,7 +3594,7 @@ SwiftLanguageRuntime::GetSwiftRuntimeTypeInfo(
   auto &ts = *ts_or_err->get();
 
   // Resolve all type aliases.
-  type = type.GetCanonicalType();
+  type = ts.GetCanonicalType(type, &exe_ctx);
   if (!type)  {
     // FIXME: We could print a better error message if
     // GetCanonicalType() returned an Expected.

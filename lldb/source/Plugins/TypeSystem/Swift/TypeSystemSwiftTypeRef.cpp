@@ -1037,8 +1037,6 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
   };
 
   TypeResults results;
-
-
   std::vector<CompilerContext> decl_context;
   BuildDeclContext(node, decl_context);
   if (decl_context.size() &&
@@ -1400,13 +1398,14 @@ bool TypeSystemSwiftTypeRef::ContainsBoundGenericType(
 
 std::optional<TypeSystemSwift::TupleElement>
 TypeSystemSwiftTypeRef::GetTupleElement(lldb::opaque_compiler_type_t type,
-                                        size_t idx) {
+                                        size_t idx,
+                                        const ExecutionContext *exe_ctx) {
   TupleElement result;
   using namespace swift::Demangle;
   Demangler dem;
   auto flavor = SwiftLanguageRuntime::GetManglingFlavor(AsMangledName(type));
-  NodePointer node =
-      TypeSystemSwiftTypeRef::DemangleCanonicalOutermostType(dem, type);
+  NodePointer node = TypeSystemSwiftTypeRef::DemangleCanonicalOutermostType(
+      dem, type, exe_ctx);
   if (!node || node->getKind() != Node::Kind::Tuple)
     return {};
   if (node->getNumChildren() < idx)
@@ -3232,15 +3231,17 @@ TypeSystemSwiftTypeRef::RemangleAsType(swift::Demangle::Demangler &dem,
 }
 
 swift::Demangle::NodePointer TypeSystemSwiftTypeRef::DemangleCanonicalType(
-    swift::Demangle::Demangler &dem, lldb::opaque_compiler_type_t opaque_type) {
+    swift::Demangle::Demangler &dem, lldb::opaque_compiler_type_t opaque_type,
+    const ExecutionContext *exe_ctx) {
   using namespace swift::Demangle;
-  CompilerType type = GetCanonicalType(opaque_type);
+  CompilerType type = GetCanonicalType(opaque_type, exe_ctx);
   return GetDemangledType(dem, type.GetMangledTypeName().GetStringRef());
 }
 
 swift::Demangle::NodePointer
 TypeSystemSwiftTypeRef::DemangleCanonicalOutermostType(
-    swift::Demangle::Demangler &dem, lldb::opaque_compiler_type_t type) {
+    swift::Demangle::Demangler &dem, lldb::opaque_compiler_type_t type,
+    const ExecutionContext *exe_ctx) {
   using namespace swift::Demangle;
   const auto *mangled_name = AsMangledName(type);
   auto flavor = SwiftLanguageRuntime::GetManglingFlavor(mangled_name);
@@ -3249,13 +3250,18 @@ TypeSystemSwiftTypeRef::DemangleCanonicalOutermostType(
   if (!node)
     return nullptr;
   NodePointer canonical = Canonicalize(dem, node, flavor);
-  if (canonical &&
+  if (exe_ctx && canonical &&
       canonical->getKind() == swift::Demangle::Node::Kind::TypeAlias) {
     // If this is a typealias defined in the expression evaluator,
     // then we don't have debug info to resolve it from.
     CompilerType ast_type =
-        ReconstructType({weak_from_this(), type}, nullptr).GetCanonicalType();
-    return GetDemangledType(dem, ast_type.GetMangledTypeName());
+        ReconstructType({weak_from_this(), type}, exe_ctx).GetCanonicalType();
+
+    canonical = GetDemangledType(dem, ast_type.GetMangledTypeName());
+    if (canonical &&
+        canonical->getKind() == swift::Demangle::Node::Kind::TypeAlias)
+      return nullptr;
+    DiagnoseSwiftASTContextFallback(__FUNCTION__, type);
   }
   return canonical;
 }
@@ -3734,15 +3740,40 @@ TypeSystemSwiftTypeRef::GetArrayElementType(opaque_compiler_type_t type,
 
 CompilerType
 TypeSystemSwiftTypeRef::GetCanonicalType(opaque_compiler_type_t type) {
+  return GetCanonicalType(type, (const ExecutionContext *)nullptr);
+}
+
+CompilerType
+TypeSystemSwiftTypeRef::GetCanonicalType(CompilerType type,
+                                         const ExecutionContext *exe_ctx) {
+  if (auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>())
+    return ts->GetCanonicalType(type.GetOpaqueQualType(), exe_ctx);
+
+  return type.GetCanonicalType();
+}
+
+CompilerType
+TypeSystemSwiftTypeRef::GetCanonicalType(lldb::opaque_compiler_type_t type,
+                                         ExecutionContextScope *exe_scope) {
+  ExecutionContext exe_ctx;
+  if (exe_scope)
+    exe_scope->CalculateExecutionContext(exe_ctx);
+
+  return GetCanonicalType(type, exe_scope ? &exe_ctx : nullptr);
+}
+
+CompilerType
+TypeSystemSwiftTypeRef::GetCanonicalType(opaque_compiler_type_t type,
+                                         const ExecutionContext *exe_ctx) {
   auto impl = [&]() {
     using namespace swift::Demangle;
     Demangler dem;
     NodePointer canonical = GetCanonicalDemangleTree(dem, AsMangledName(type));
-    if (ContainsUnresolvedTypeAlias(canonical)) {
+    if (exe_ctx && ContainsUnresolvedTypeAlias(canonical)) {
       // If this is a typealias defined in the expression evaluator,
       // then we don't have debug info to resolve it from.
       CompilerType ast_type =
-        ReconstructType({weak_from_this(), type}, nullptr).GetCanonicalType();
+          ReconstructType({weak_from_this(), type}, exe_ctx).GetCanonicalType();
       LLDB_LOG(GetLog(LLDBLog::Types),
                "Cannot resolve type alias in type \"{0}\"",
                AsMangledName(type));
@@ -3761,9 +3792,10 @@ TypeSystemSwiftTypeRef::GetCanonicalType(opaque_compiler_type_t type) {
     ConstString mangled(mangling.result());
     return GetTypeFromMangledTypename(mangled);
   };
-  VALIDATE_AND_RETURN(impl, GetCanonicalType, type, g_no_exe_ctx,
-                      (ReconstructType(type)));
+  VALIDATE_AND_RETURN(impl, GetCanonicalType, type, exe_ctx,
+                      (ReconstructType(type, exe_ctx)));
 }
+
 int TypeSystemSwiftTypeRef::GetFunctionArgumentCount(
     opaque_compiler_type_t type) {
   auto impl = [&]() -> int { return GetNumberOfFunctionArguments(type); };
@@ -3994,7 +4026,8 @@ TypeSystemSwiftTypeRef::GetByteStride(opaque_compiler_type_t type,
   auto impl = [&]() -> std::optional<uint64_t> {
     if (auto *runtime =
             SwiftLanguageRuntime::Get(exe_scope->CalculateProcess())) {
-      if (auto stride = runtime->GetByteStride(GetCanonicalType(type)))
+      if (auto stride =
+              runtime->GetByteStride(GetCanonicalType(type, exe_scope)))
         return stride;
     }
     // Runtime failed, fallback to SwiftASTContext.
@@ -4103,8 +4136,9 @@ TypeSystemSwiftTypeRef::GetNumChildren(opaque_compiler_type_t type,
       if (auto *exe_scope = exe_ctx->GetBestExecutionContextScope())
         if (auto *runtime =
                 SwiftLanguageRuntime::Get(exe_scope->CalculateProcess()))
-          return runtime->GetNumChildren(GetCanonicalType(type), exe_scope,
-                                         true, omit_empty_base_classes);
+          return runtime->GetNumChildren(GetCanonicalType(type, exe_ctx),
+                                         exe_scope, true,
+                                         omit_empty_base_classes);
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "incomplete type information");
   };
@@ -4141,7 +4175,7 @@ uint32_t TypeSystemSwiftTypeRef::GetNumFields(opaque_compiler_type_t type,
     if (exe_ctx)
       if (auto *runtime = SwiftLanguageRuntime::Get(exe_ctx->GetProcessSP())) {
         auto num_fields_or_err =
-            runtime->GetNumFields(GetCanonicalType(type), exe_ctx);
+            runtime->GetNumFields(GetCanonicalType(type, exe_ctx), exe_ctx);
         if (num_fields_or_err)
           return *num_fields_or_err;
         LLDB_LOG_ERROR(GetLog(LLDBLog::Types), num_fields_or_err.takeError(),
@@ -4296,7 +4330,7 @@ TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
       if (auto *runtime =
               SwiftLanguageRuntime::Get(exe_scope->CalculateProcess())) {
         auto result = runtime->GetChildCompilerTypeAtIndex(
-            GetCanonicalType(type), idx, transparent_pointers,
+            GetCanonicalType(type, exe_ctx), idx, transparent_pointers,
             omit_empty_base_classes, ignore_array_bounds, child_name,
             child_byte_size, child_byte_offset, child_bitfield_bit_size,
             child_bitfield_bit_offset, child_is_base_class,
@@ -4423,8 +4457,8 @@ size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
     if (auto *runtime =
             SwiftLanguageRuntime::Get(exe_scope->CalculateProcess())) {
       auto found_numidx = runtime->GetIndexOfChildMemberWithName(
-          GetCanonicalType(type), name, exe_ctx, omit_empty_base_classes, true,
-          child_indexes);
+          GetCanonicalType(type, exe_ctx), name, exe_ctx,
+          omit_empty_base_classes, true, child_indexes);
       // Only use the SwiftASTContext fallback if there was an
       // error. If the runtime had complete type info and couldn't
       // find a result, don't waste time retrying.
@@ -4567,7 +4601,7 @@ bool TypeSystemSwiftTypeRef::IsMeaninglessWithoutDynamicResolution(
     using namespace swift::Demangle;
     Demangler dem;
     auto *node = DemangleCanonicalType(dem, type);
-    return ContainsGenericTypeParameter(node) && !IsFunctionType(type);
+    return node && ContainsGenericTypeParameter(node) && !IsFunctionType(type);
   };
   VALIDATE_AND_RETURN(impl, IsMeaninglessWithoutDynamicResolution, type,
                       g_no_exe_ctx, (ReconstructType(type)));
@@ -4642,10 +4676,10 @@ bool TypeSystemSwiftTypeRef::IsImportedType(opaque_compiler_type_t type,
 }
 
 bool TypeSystemSwiftTypeRef::IsExistentialType(
-    lldb::opaque_compiler_type_t type) {
+    lldb::opaque_compiler_type_t type, const ExecutionContext *exe_ctx) {
   using namespace swift::Demangle;
   Demangler dem;
-  NodePointer node = DemangleCanonicalOutermostType(dem, type);
+  NodePointer node = DemangleCanonicalOutermostType(dem, type, exe_ctx);
   if (!node || node->getNumChildren() != 1)
     return false;
   switch (node->getKind()) {
@@ -4668,11 +4702,13 @@ CompilerType TypeSystemSwiftTypeRef::GetRawPointerType() {
   return RemangleAsType(dem, node, GetManglingFlavor());
 }
 
-bool TypeSystemSwiftTypeRef::IsErrorType(opaque_compiler_type_t type) {
+bool TypeSystemSwiftTypeRef::IsErrorType(opaque_compiler_type_t type,
+                                         const ExecutionContext *exe_ctx) {
   auto impl = [&]() -> bool {
     using namespace swift::Demangle;
     Demangler dem;
-    NodePointer protocol_list = DemangleCanonicalOutermostType(dem, type);
+    NodePointer protocol_list =
+        DemangleCanonicalOutermostType(dem, type, exe_ctx);
     if (protocol_list && protocol_list->getKind() == Node::Kind::ProtocolList)
       for (auto type_list : *protocol_list)
         if (type_list && type_list->getKind() == Node::Kind::TypeList)
@@ -4691,8 +4727,8 @@ bool TypeSystemSwiftTypeRef::IsErrorType(opaque_compiler_type_t type) {
                 }
     return false;
   };
-  VALIDATE_AND_RETURN(impl, IsErrorType, type, g_no_exe_ctx,
-                      (ReconstructType(type)));
+  VALIDATE_AND_RETURN(impl, IsErrorType, type, exe_ctx,
+                      (ReconstructType(type, exe_ctx), exe_ctx));
 }
 
 CompilerType TypeSystemSwiftTypeRef::GetErrorType() {
@@ -4824,9 +4860,13 @@ TypeSystemSwiftTypeRef::GetInstanceType(opaque_compiler_type_t type,
     using namespace swift::Demangle;
     auto mangled_name = AsMangledName(type);
     auto flavor = SwiftLanguageRuntime::GetManglingFlavor(mangled_name);
+    ExecutionContext exe_ctx;
+    if (exe_scope)
+      exe_scope->CalculateExecutionContext(exe_ctx);
 
     Demangler dem;
-    NodePointer node = DemangleCanonicalType(dem, type);
+    NodePointer node =
+        DemangleCanonicalType(dem, type, exe_scope ? &exe_ctx : nullptr);
 
     if (!node || ContainsUnresolvedTypeAlias(node)) {
       // If we couldn't resolve all type aliases, we might be in a REPL session
@@ -5124,9 +5164,13 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
   auto flavor = SwiftLanguageRuntime::GetManglingFlavor(mangled_name);
 
   auto impl = [&]() -> bool {
+    ExecutionContext exe_ctx;
+    if (exe_scope)
+      exe_scope->CalculateExecutionContext(exe_ctx);
     using namespace swift::Demangle;
-    Demangler dem;    
-    auto *node = DemangleCanonicalType(dem, type);
+    Demangler dem;
+    auto *node =
+        DemangleCanonicalType(dem, type, exe_scope ? &exe_ctx : nullptr);
     if (!node)
       return false;
     switch (node->getKind()) {
@@ -5288,9 +5332,13 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
   {
     // If this is a typealias defined in the expression evaluator,
     // then we don't have debug info to resolve it from.
+    ExecutionContext exe_ctx;
+    if (exe_scope)
+      exe_scope->CalculateExecutionContext(exe_ctx);
     using namespace swift::Demangle;
     Demangler dem;
-    auto *node = DemangleCanonicalType(dem, type);
+    auto *node =
+        DemangleCanonicalType(dem, type, exe_scope ? &exe_ctx : nullptr);
     bool unresolved_typealias = false;
     CollectTypeInfo(dem, node, flavor, unresolved_typealias);
     if (!node || unresolved_typealias) {
