@@ -99,26 +99,22 @@ std::string mangle(StringRef baseName, ArrayRef<Type> types,
 static int32_t getL1CacheControl(LoadCacheControl cc) {
   int32_t control = 0;
   switch (cc) {
-  case LoadCacheControl::L1UC_L2UC_L3UC:
-  case LoadCacheControl::L1UC_L2UC_L3C:
-  case LoadCacheControl::L1UC_L2C_L3UC:
-  case LoadCacheControl::L1UC_L2C_L3C:
-    control = 1;
-    break;
   case LoadCacheControl::L1C_L2UC_L3UC:
   case LoadCacheControl::L1C_L2UC_L3C:
   case LoadCacheControl::L1C_L2C_L3UC:
   case LoadCacheControl::L1C_L2C_L3C:
-    control = 2;
+    control = 1;
     break;
   case LoadCacheControl::L1S_L2UC_L3UC:
   case LoadCacheControl::L1S_L2UC_L3C:
   case LoadCacheControl::L1S_L2C_L3UC:
   case LoadCacheControl::L1S_L2C_L3C:
-    control = 3;
+    control = 2;
     break;
   case LoadCacheControl::INVALIDATE_READ:
-    control = 4;
+    control = 3;
+    break;
+  default:
     break;
   }
   return control;
@@ -127,16 +123,15 @@ static int32_t getL1CacheControl(LoadCacheControl cc) {
 static int32_t getL1CacheControl(StoreCacheControl cc) {
   int32_t control = 0;
   switch (cc) {
-  case StoreCacheControl::L1UC_L2UC_L3UC:
-  case StoreCacheControl::L1UC_L2UC_L3WB:
-  case StoreCacheControl::L1UC_L2WB_L3UC:
-  case StoreCacheControl::L1UC_L2WB_L3WB:
-    control = 1;
-    break;
   case StoreCacheControl::L1WT_L2UC_L3UC:
   case StoreCacheControl::L1WT_L2UC_L3WB:
   case StoreCacheControl::L1WT_L2WB_L3UC:
   case StoreCacheControl::L1WT_L2WB_L3WB:
+    control = 1;
+    break;
+  case StoreCacheControl::L1WB_L2UC_L3UC:
+  case StoreCacheControl::L1WB_L2WB_L3UC:
+  case StoreCacheControl::L1WB_L2UC_L3WB:
     control = 2;
     break;
   case StoreCacheControl::L1S_L2UC_L3UC:
@@ -145,10 +140,7 @@ static int32_t getL1CacheControl(StoreCacheControl cc) {
   case StoreCacheControl::L1S_L2WB_L3WB:
     control = 3;
     break;
-  case StoreCacheControl::L1WB_L2UC_L3UC:
-  case StoreCacheControl::L1WB_L2WB_L3UC:
-  case StoreCacheControl::L1WB_L2UC_L3WB:
-    control = 4;
+  default:
     break;
   }
   return control;
@@ -157,24 +149,18 @@ static int32_t getL1CacheControl(StoreCacheControl cc) {
 static int32_t getL3CacheControl(LoadCacheControl cc) {
   int32_t control = 0;
   switch (cc) {
-  case LoadCacheControl::L1UC_L2UC_L3UC:
-  case LoadCacheControl::L1UC_L2C_L3UC:
-  case LoadCacheControl::L1C_L2UC_L3UC:
-  case LoadCacheControl::L1C_L2C_L3UC:
-  case LoadCacheControl::L1S_L2UC_L3UC:
-  case LoadCacheControl::L1S_L2C_L3UC:
-    control = 1;
-    break;
   case LoadCacheControl::L1UC_L2UC_L3C:
   case LoadCacheControl::L1UC_L2C_L3C:
   case LoadCacheControl::L1C_L2UC_L3C:
   case LoadCacheControl::L1C_L2C_L3C:
   case LoadCacheControl::L1S_L2UC_L3C:
   case LoadCacheControl::L1S_L2C_L3C:
-    control = 2;
+    control = 1;
     break;
   case LoadCacheControl::INVALIDATE_READ:
-    control = 4;
+    control = 3;
+    break;
+  default:
     break;
   }
   return control;
@@ -183,16 +169,6 @@ static int32_t getL3CacheControl(LoadCacheControl cc) {
 static int32_t getL3CacheControl(StoreCacheControl cc) {
   int32_t control = 0;
   switch (cc) {
-  case StoreCacheControl::L1UC_L2UC_L3UC:
-  case StoreCacheControl::L1UC_L2WB_L3UC:
-  case StoreCacheControl::L1WT_L2UC_L3UC:
-  case StoreCacheControl::L1WT_L2WB_L3UC:
-  case StoreCacheControl::L1S_L2UC_L3UC:
-  case StoreCacheControl::L1S_L2WB_L3UC:
-  case StoreCacheControl::L1WB_L2UC_L3UC:
-  case StoreCacheControl::L1WB_L2WB_L3UC:
-    control = 1;
-    break;
   case StoreCacheControl::L1UC_L2UC_L3WB:
   case StoreCacheControl::L1UC_L2WB_L3WB:
   case StoreCacheControl::L1WT_L2UC_L3WB:
@@ -201,6 +177,8 @@ static int32_t getL3CacheControl(StoreCacheControl cc) {
   case StoreCacheControl::L1S_L2WB_L3WB:
   case StoreCacheControl::L1WB_L2UC_L3WB:
     control = 2;
+    break;
+  default:
     break;
   }
   return control;
@@ -265,7 +243,7 @@ static std::optional<ArrayAttr>
 getCacheControlMetadata(ConversionPatternRewriter &rewriter, OpType op) {
   if (!getCacheControl(op))
     return {};
-  constexpr int32_t decorationCacheControlArity{4};
+  constexpr int32_t decorationCacheControlArity{3};
   constexpr int32_t loadCacheControlKey{6442};
   constexpr int32_t storeCacheControlKey{6443};
   constexpr bool isLoad = std::is_same_v<OpType, BlockLoad2dOp> ||
@@ -275,9 +253,9 @@ getCacheControlMetadata(ConversionPatternRewriter &rewriter, OpType op) {
                           std::is_same_v<OpType, PrefetchOp>;
   const int32_t controlKey{isLoad ? loadCacheControlKey : storeCacheControlKey};
   SmallVector<int32_t, decorationCacheControlArity> decorationsL1{
-      controlKey, 0, getL1CacheControl<OpType>(op), 0};
+      controlKey, 0, getL1CacheControl<OpType>(op)};
   SmallVector<int32_t, decorationCacheControlArity> decorationsL3{
-      controlKey, 1, getL3CacheControl<OpType>(op), 0};
+      controlKey, 1, getL3CacheControl<OpType>(op)};
   auto arrayAttrL1 = rewriter.getI32ArrayAttr(decorationsL1);
   auto arrayAttrL3 = rewriter.getI32ArrayAttr(decorationsL3);
 
@@ -445,7 +423,16 @@ class PrefetchToOCLPattern : public OpConversionPattern<PrefetchOp> {
     const std::string fnName{"_Z8prefetchPU3AS1Kcm"};
     Value one =
         LLVM::ConstantOp::create(rewriter, loc, rewriter.getI64Type(), 1);
-    SmallVector<Value> args{op.getPtr(), one};
+    Value ptrOp = op.getPtr();
+    // Create getelementptr op to attach cache control metadata
+    // element type doesn't matter here as we use zero index, so use i32
+    LLVM::GEPOp gep = LLVM::GEPOp::create(rewriter, loc, ptrOp.getType(),
+                                          rewriter.getI32Type(), ptrOp,
+                                          ArrayRef<LLVM::GEPArg>{0});
+    if (std::optional<ArrayAttr> optCacheControls =
+            getCacheControlMetadata(rewriter, op))
+      gep->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
+    SmallVector<Value> args{gep, one};
     SmallVector<Type> argTypes;
     for (auto arg : args)
       argTypes.push_back(arg.getType());
@@ -459,12 +446,9 @@ class PrefetchToOCLPattern : public OpConversionPattern<PrefetchOp> {
         /*targetMem1=*/LLVM::ModRefInfo::NoModRef);
     funcAttr.memEffectsAttr = memAttr;
 
-    LLVM::CallOp call = createDeviceFunctionCall(
-        rewriter, fnName, LLVM::LLVMVoidType::get(rewriter.getContext()),
-        argTypes, args, {}, funcAttr, op.getOperation());
-    if (std::optional<ArrayAttr> optCacheControls =
-            getCacheControlMetadata(rewriter, op))
-      call->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
+    createDeviceFunctionCall(rewriter, fnName,
+                             LLVM::LLVMVoidType::get(rewriter.getContext()),
+                             argTypes, args, {}, funcAttr, op.getOperation());
     rewriter.eraseOp(op);
     return success();
   }
@@ -548,7 +532,16 @@ class LoadStorePrefetchToOCLPattern : public OpConversionPattern<OpType> {
         rewriter, loc, VectorType::get(2, i32Type), byteCoord, op.getX(), zero);
     byteCoord = LLVM::InsertElementOp::create(
         rewriter, loc, VectorType::get(2, i32Type), byteCoord, op.getY(), one);
-    SmallVector<Value> args{op.getPtr(), op.getBaseWidth(), op.getBaseHeight(),
+    Value ptrOp = op.getPtr();
+    // Create getelementptr op to attach cache control metadata
+    // element type doesn't matter here as we use zero index, so use i32
+    LLVM::GEPOp gep =
+        LLVM::GEPOp::create(rewriter, loc, ptrOp.getType(), i32Type, ptrOp,
+                            ArrayRef<LLVM::GEPArg>{0});
+    if (std::optional<ArrayAttr> optCacheControls =
+            getCacheControlMetadata(rewriter, op))
+      gep->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
+    SmallVector<Value> args{gep, op.getBaseWidth(), op.getBaseHeight(),
                             op.getBasePitch(), byteCoord};
     SmallVector<Type> retTypes;
     Value spvLoadDstPtr;
@@ -624,10 +617,6 @@ class LoadStorePrefetchToOCLPattern : public OpConversionPattern<OpType> {
     LLVM::CallOp call = createDeviceFunctionCall(
         rewriter, funcName, LLVM::LLVMVoidType::get(rewriter.getContext()),
         argTypes, args, paramAttrs, funcAttr, op.getOperation());
-    if (std::optional<ArrayAttr> optCacheControls =
-            getCacheControlMetadata(rewriter, op)) {
-      call->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
-    }
     if constexpr (isLoad)
       rewriter.replaceOp(
           op, LLVM::LoadOp::create(rewriter, loc, vecType, spvLoadDstPtr));
@@ -672,8 +661,17 @@ class BlockLoadStore1DToOCLPattern : public OpConversionPattern<OpType> {
     // arg1 - only if store : vector to store
     // Prepare arguments
     SmallVector<Value, 2> args{};
-    args.push_back(op.getPtr());
-    argTypes.push_back(op.getPtr().getType());
+    Value ptrOp = op.getPtr();
+    // Create getelementptr op to attach cache control metadata
+    // element type doesn't matter here as we use zero index, so use i32
+    LLVM::GEPOp gep = LLVM::GEPOp::create(
+        rewriter, op.getLoc(), ptrOp.getType(), rewriter.getI32Type(), ptrOp,
+        ArrayRef<LLVM::GEPArg>{0});
+    if (std::optional<ArrayAttr> optCacheControls =
+            getCacheControlMetadata(rewriter, op))
+      gep->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
+    args.push_back(gep);
+    argTypes.push_back(gep.getType());
     isUnsigned.push_back(true);
     Type retType;
     if constexpr (isStore) {
@@ -695,10 +693,6 @@ class BlockLoadStore1DToOCLPattern : public OpConversionPattern<OpType> {
     LLVM::CallOp call =
         createDeviceFunctionCall(rewriter, funcName, retType, argTypes, args,
                                  {}, funcAttr, op.getOperation());
-    if (std::optional<ArrayAttr> optCacheControls =
-            getCacheControlMetadata(rewriter, op)) {
-      call->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
-    }
     if constexpr (isStore)
       rewriter.eraseOp(op);
     else
@@ -715,10 +709,20 @@ class LLVMLoadStoreToOCLPattern : public OpConversionPattern<OpType> {
                   ConversionPatternRewriter &rewriter) const override {
     if (!op->hasAttr("cache_control"))
       return failure();
-    std::optional<ArrayAttr> optCacheControls =
-        getCacheControlMetadata(rewriter, op);
-    op->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
-    op->removeAttr("cache_control");
+    constexpr bool isStore = std::is_same_v<OpType, LLVM::StoreOp>;
+    Value ptrOp = op.getAddr();
+    // Create getelementptr op to attach cache control metadata
+    // element type doesn't matter here as we use zero index, so use i32
+    LLVM::GEPOp gep = LLVM::GEPOp::create(
+        rewriter, op.getLoc(), ptrOp.getType(), rewriter.getI32Type(), ptrOp,
+        ArrayRef<LLVM::GEPArg>{0});
+    if (std::optional<ArrayAttr> optCacheControls =
+            getCacheControlMetadata(rewriter, op))
+      gep->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
+    if constexpr (isStore)
+      rewriter.replaceOpWithNewOp<LLVM::StoreOp>(op, op.getValue(), gep);
+    else
+      rewriter.replaceOpWithNewOp<LLVM::LoadOp>(op, op.getType(), gep);
     return success();
   }
 };
