@@ -5418,7 +5418,7 @@ static bool isInStreamingCallSiteRegion(MachineBasicBlock &MBB,
 static bool mustAvoidNeonAtMBBI(const AArch64Subtarget &Subtarget,
                                 MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator I) {
-  return isInStreamingCallSiteRegion(MBB, I) && !Subtarget.hasSMEFA64();
+  return !Subtarget.hasSMEFA64() && isInStreamingCallSiteRegion(MBB, I);
 }
 
 void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
