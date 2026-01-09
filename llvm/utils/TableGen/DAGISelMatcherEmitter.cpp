@@ -437,12 +437,15 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
     const ScopeMatcher *SM = cast<ScopeMatcher>(N);
     unsigned StartIdx = CurrentIdx;
 
+    OS << "OPC_Scope";
+    if (!OmitComments)
+      OS << " /*" << SM->getNumChildren() << " children */";
+    OS << ", ";
+    ++CurrentIdx;
+
     // Emit all of the children.
     for (unsigned i = 0, e = SM->getNumChildren(); i != e; ++i) {
-      if (i == 0) {
-        OS << "OPC_Scope, ";
-        ++CurrentIdx;
-      } else {
+      if (i != 0) {
         if (!OmitComments) {
           OS << "/*" << format_decimal(CurrentIdx, IndexWidth) << "*/";
           OS.indent(Indent) << "/*Scope*/ ";
@@ -451,20 +454,17 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
         }
       }
 
-      unsigned ChildSize = SM->getChild(i)->getSize();
-      unsigned VBRSize = EmitVBRValue(ChildSize, OS);
-      if (!OmitComments) {
-        OS << " /*->" << CurrentIdx + VBRSize + ChildSize << "*/";
-        if (i == 0)
-          OS << " // " << SM->getNumChildren() << " children in Scope";
-      }
+      const Matcher *Child = SM->getChild(i);
+      unsigned ChildSize = Child->getSize();
+      CurrentIdx += EmitVBRValue(ChildSize, OS);
+      if (!OmitComments)
+        OS << " // ->" << CurrentIdx + ChildSize;
       OS << '\n';
 
-      ChildSize = EmitMatcherList(SM->getChild(i), Indent + 1,
-                                  CurrentIdx + VBRSize, OS);
-      assert(ChildSize == SM->getChild(i)->getSize() &&
+      ChildSize = EmitMatcherList(Child, Indent + 1, CurrentIdx, OS);
+      assert(ChildSize == Child->getSize() &&
              "Emitted child size does not match calculated size");
-      CurrentIdx += VBRSize + ChildSize;
+      CurrentIdx += ChildSize;
     }
 
     // Emit a zero as a sentinel indicating end of 'Scope'.
