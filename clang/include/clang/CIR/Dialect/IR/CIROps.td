@@ -5960,4 +5960,45 @@ def CIR_BlockAddressOp : CIR_Op<"block_address", [Pure]> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// CpuIdOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CpuIdOp : CIR_Op<"cpuid"> {
+  let summary = "Get information about the CPU";
+  let description = [{
+    The `cir.cpuid` operation retrieves different types of CPU information and
+    stores it in an array of 4 integers.
+
+    This operation takes 3 arguments: `cpu_info`, a pointer to an array of 4
+    integers; `function_id`, an integer determining what type of information to
+    be retrieved (for instance, basic information, processor information and
+    features, or cache/TLB information); and `sub_function_id`, an integer that
+    adds more detail about what information is requested.
+
+    As a result, the array of 4 integers is filled with the requested
+    information.
+
+    Example:
+
+    ```mlir
+    cir.cpuid %cpui_info, %function_id, %sub_function_id : (!cir.ptr<!s32i>,
+        !s32i, !s32i)
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PtrToType<CIR_SInt32>, "array address", [MemWrite]>:$cpu_info,
+    CIR_SInt32:$function_id,
+    CIR_SInt32:$sub_function_id
+  );
+
+  let assemblyFormat = [{
+    $cpu_info`,` $function_id`,` $sub_function_id `:`
+        qualified(type($cpu_info)) `,`
+        type($function_id) `,`
+        type($sub_function_id) attr-dict
+    }];
+}
+
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD
