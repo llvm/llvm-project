@@ -24,7 +24,7 @@ _Pragma("omp begin declare variant match(device = {arch(spirv64)})");
 // TODO : Uncomment once SPIR-V backend can handle address space conversions
 #define __gpu_private __attribute__((address_space(0)))
 #define __gpu_constant /*__attribute__((address_space(2)))*/
-#define __gpu_local /*__attribute__((address_space(3)))*/
+#define __gpu_local    /*__attribute__((address_space(3)))*/
 #define __gpu_global __attribute__((address_space(1)))
 #define __gpu_generic __attribute__((address_space(4)))
 
@@ -63,7 +63,6 @@ uint32_t __spirv_AtomicIAdd(uint32_t *, int, int, uint32_t);
 void __spirv_AtomicStore(int32_t *, int, int, int);
 int32_t __spirv_AtomicLoad(int32_t *, int, int);
 int32_t __spirv_AtomicCompareExchange(int32_t *, int, int, int, int, int);
-
 
 // Returns the number of workgroups in the 'x' dimension of the grid.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_blocks_x(void) {
