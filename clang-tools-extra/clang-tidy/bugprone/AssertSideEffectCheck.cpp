@@ -34,9 +34,8 @@ AST_MATCHER_P2(Expr, hasSideEffect, bool, CheckFunctionCalls,
            OC == UO_PreDec;
   }
 
-  if (const auto *Op = dyn_cast<BinaryOperator>(E)) {
+  if (const auto *Op = dyn_cast<BinaryOperator>(E))
     return Op->isAssignmentOp();
-  }
 
   if (const auto *OpCallExpr = dyn_cast<CXXOperatorCallExpr>(E)) {
     if (const auto *MethodDecl =

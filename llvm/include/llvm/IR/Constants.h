@@ -65,10 +65,10 @@ class ConstantData : public Constant {
 protected:
   explicit ConstantData(Type *Ty, ValueTy VT) : Constant(Ty, VT, AllocMarker) {}
 
-  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
+  void *operator new(size_t S) { return ::operator new(S); }
 
 public:
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { ::operator delete(Ptr); }
 
   ConstantData(const ConstantData &) = delete;
 
@@ -112,27 +112,35 @@ public:
 
   /// If Ty is a vector type, return a Constant with a splat of the given
   /// value. Otherwise return a ConstantInt for the given value.
-  LLVM_ABI static Constant *get(Type *Ty, uint64_t V, bool IsSigned = false);
+  /// \param ImplicitTrunc Whether to allow implicit truncation of the value.
+  // TODO: Make ImplicitTrunc default to false.
+  LLVM_ABI static Constant *get(Type *Ty, uint64_t V, bool IsSigned = false,
+                                bool ImplicitTrunc = true);
 
   /// Return a ConstantInt with the specified integer value for the specified
   /// type. If the type is wider than 64 bits, the value will be zero-extended
   /// to fit the type, unless IsSigned is true, in which case the value will
   /// be interpreted as a 64-bit signed integer and sign-extended to fit
   /// the type.
-  /// Get a ConstantInt for a specific value.
+  /// \param ImplicitTrunc Whether to allow implicit truncation of the value.
+  // TODO: Make ImplicitTrunc default to false.
   LLVM_ABI static ConstantInt *get(IntegerType *Ty, uint64_t V,
-                                   bool IsSigned = false);
+                                   bool IsSigned = false,
+                                   bool ImplicitTrunc = true);
 
   /// Return a ConstantInt with the specified value for the specified type. The
-  /// value V will be canonicalized to a an unsigned APInt. Accessing it with
+  /// value V will be canonicalized to an unsigned APInt. Accessing it with
   /// either getSExtValue() or getZExtValue() will yield a correctly sized and
   /// signed value for the type Ty.
   /// Get a ConstantInt for a specific signed value.
-  static ConstantInt *getSigned(IntegerType *Ty, int64_t V) {
-    return get(Ty, V, true);
+  /// \param ImplicitTrunc Whether to allow implicit truncation of the value.
+  // TODO: Make ImplicitTrunc default to false.
+  static ConstantInt *getSigned(IntegerType *Ty, int64_t V,
+                                bool ImplicitTrunc = true) {
+    return get(Ty, V, /*IsSigned=*/true, ImplicitTrunc);
   }
-  static Constant *getSigned(Type *Ty, int64_t V) {
-    return get(Ty, V, true);
+  static Constant *getSigned(Type *Ty, int64_t V, bool ImplicitTrunc = true) {
+    return get(Ty, V, /*IsSigned=*/true, ImplicitTrunc);
   }
 
   /// Return a ConstantInt with the specified value and an implied Type. The

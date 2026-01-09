@@ -43,6 +43,8 @@ public:
 
   std::string GetDescription(llvm::StringRef class_name) override;
 
+  std::optional<uint32_t> GetPriority(llvm::StringRef class_name) override;
+
   StructuredData::ObjectSP GetFrameAtIndex(uint32_t index) override;
 
   static void Initialize();

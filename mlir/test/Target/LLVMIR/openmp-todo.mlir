@@ -212,17 +212,6 @@ llvm.func @target_in_reduction(%x : !llvm.ptr) {
 
 // -----
 
-llvm.func @target_is_device_ptr(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause is_device_ptr in omp.target operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target is_device_ptr(%x : !llvm.ptr) {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 llvm.func @target_enter_data_depend(%x: !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause depend in omp.target_enter_data operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target_enter_data}}

@@ -97,15 +97,15 @@ def testTypeIsInstance():
     t1 = Type.parse("i32", ctx)
     t2 = Type.parse("f32", ctx)
     # CHECK: True
-    print(IntegerType.isinstance(t1))
+    print(isinstance(t1, IntegerType))
     # CHECK: False
-    print(F32Type.isinstance(t1))
+    print(isinstance(t1, F32Type))
     # CHECK: False
-    print(FloatType.isinstance(t1))
+    print(isinstance(t1, FloatType))
     # CHECK: True
-    print(F32Type.isinstance(t2))
+    print(isinstance(t2, F32Type))
     # CHECK: True
-    print(FloatType.isinstance(t2))
+    print(isinstance(t2, FloatType))
 
 
 # CHECK-LABEL: TEST: testFloatTypeSubclasses
@@ -227,6 +227,20 @@ def testIntegerType():
         print("signed:", IntegerType.get_signed(8))
         # CHECK: unsigned: ui64
         print("unsigned:", IntegerType.get_unsigned(64))
+        # CHECK: signless: i8
+        print("signless:", IntegerType.get(8))
+        # CHECK: signless: i16
+        print("signless:", IntegerType.get(16, IntegerType.SIGNLESS))
+        # CHECK: signed: si8
+        print("signed:", IntegerType.get(8, IntegerType.SIGNED))
+        # CHECK: unsigned: ui64
+        print("unsigned:", IntegerType.get(64, IntegerType.UNSIGNED))
+        # CHECK: SIGNLESS
+        print(IntegerType.get(8).signedness)
+        # CHECK: SIGNED
+        print(IntegerType.get(8, IntegerType.SIGNED).signedness)
+        # CHECK: UNSIGNED
+        print(IntegerType.get(8, IntegerType.UNSIGNED).signedness)
 
 
 # CHECK-LABEL: TEST: testIndexType

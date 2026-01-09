@@ -3,5 +3,5 @@
 consteval void gh122096() {}
 
 constexpr void cxf() {}
-// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: function 'cxf'
+// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: function 'cxf' can be made static or moved into an anonymous namespace to enforce internal linkage
 // CHECK-FIXES: static constexpr void cxf() {}

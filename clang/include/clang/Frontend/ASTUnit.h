@@ -476,6 +476,11 @@ public:
     return *LangOpts;
   }
 
+  const CodeGenOptions &getCodeGenOpts() const {
+    assert(CodeGenOpts && "ASTUnit does not have codegen options");
+    return *CodeGenOpts;
+  }
+
   const HeaderSearchOptions &getHeaderSearchOpts() const {
     assert(HSOpts && "ASTUnit does not have header search options");
     return *HSOpts;

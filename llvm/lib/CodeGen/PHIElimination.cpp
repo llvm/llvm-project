@@ -201,6 +201,7 @@ INITIALIZE_PASS_END(PHIElimination, DEBUG_TYPE,
 
 void PHIElimination::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addUsedIfAvailable<LiveVariablesWrapperPass>();
+  AU.addUsedIfAvailable<MachineLoopInfoWrapperPass>();
   AU.addPreserved<LiveVariablesWrapperPass>();
   AU.addPreserved<SlotIndexesWrapperPass>();
   AU.addPreserved<LiveIntervalsWrapperPass>();

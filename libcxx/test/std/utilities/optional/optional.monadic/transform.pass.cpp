@@ -171,8 +171,8 @@ struct NonConst {
 constexpr void test_sfinae() {
   std::optional<NonConst> opt{};
   auto l = [](auto&& x) { return x.non_const(); };
-  opt.transform(l);
-  std::move(opt).transform(l);
+  (void)opt.transform(l);
+  (void)std::move(opt).transform(l);
 }
 
 constexpr bool test() {
@@ -186,18 +186,18 @@ constexpr bool test() {
     return 0;
   };
 
-  opt.transform(never_called);
-  std::move(opt).transform(never_called);
-  copt.transform(never_called);
-  std::move(copt).transform(never_called);
+  (void)opt.transform(never_called);
+  (void)std::move(opt).transform(never_called);
+  (void)copt.transform(never_called);
+  (void)std::move(copt).transform(never_called);
 
   std::optional<NoCopy> nc;
   const auto& cnc = nc;
-  std::move(nc).transform(NoCopy{});
-  std::move(cnc).transform(NoCopy{});
+  (void)std::move(nc).transform(NoCopy{});
+  (void)std::move(cnc).transform(NoCopy{});
 
-  std::move(nc).transform(NoMove{});
-  std::move(cnc).transform(NoMove{});
+  (void)std::move(nc).transform(NoMove{});
+  (void)std::move(cnc).transform(NoMove{});
 
   return true;
 }

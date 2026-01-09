@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-
 // check that <vector> functions are marked [[nodiscard]]
 
 #include <type_traits>
@@ -44,11 +42,11 @@ void test_non_vector_bool() {
 }
 
 void instantiate() {
-  test<std::vector<int>>();
-  test<const std::vector<int>>();
-  test<std::vector<bool>>();
-  test<const std::vector<bool>>();
+  test<std::vector<int> >();
+  test<const std::vector<int> >();
+  test<std::vector<bool> >();
+  test<const std::vector<bool> >();
 
-  test_non_vector_bool<std::vector<int>>();
-  test_non_vector_bool<const std::vector<int>>();
+  test_non_vector_bool<std::vector<int> >();
+  test_non_vector_bool<const std::vector<int> >();
 }

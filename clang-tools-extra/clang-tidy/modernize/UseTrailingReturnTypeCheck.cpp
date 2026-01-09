@@ -140,9 +140,9 @@ AST_MATCHER(LambdaExpr, hasExplicitResultType) {
 
 } // namespace
 
-constexpr llvm::StringLiteral ErrorMessageOnFunction =
+constexpr StringRef ErrorMessageOnFunction =
     "use a trailing return type for this function";
-constexpr llvm::StringLiteral ErrorMessageOnLambda =
+constexpr StringRef ErrorMessageOnLambda =
     "use a trailing return type for this lambda";
 
 static SourceLocation expandIfMacroId(SourceLocation Loc,

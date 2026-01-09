@@ -2276,3 +2276,31 @@ define i32 @mulor_demand(i32 signext %x, i32 signext %y) nounwind {
   %mul2 = mul i32 %or, 380141568
   ret i32 %mul2
 }
+
+define i64 @mul_add_bitcast(i64 %x) {
+; RV32I-LABEL: mul_add_bitcast:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a0, 0
+; RV32I-NEXT:    li a1, 0
+; RV32I-NEXT:    ret
+;
+; RV32IM-LABEL: mul_add_bitcast:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    li a0, 0
+; RV32IM-NEXT:    li a1, 0
+; RV32IM-NEXT:    ret
+;
+; RV64I-LABEL: mul_add_bitcast:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a0, 0
+; RV64I-NEXT:    ret
+;
+; RV64IM-LABEL: mul_add_bitcast:
+; RV64IM:       # %bb.0:
+; RV64IM-NEXT:    li a0, 0
+; RV64IM-NEXT:    ret
+  %add = add i64 %x, 1
+  %bitcast = bitcast <2 x i32> zeroinitializer to i64
+  %mul = mul i64 %add, %bitcast
+  ret i64 %mul
+}

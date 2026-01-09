@@ -146,7 +146,6 @@ interesting areas to contribute to lldb.
    :maxdepth: 1
    :caption: Scripting LLDB
 
-   use/python
    use/python-reference
    Python API <python_api>
    Python Extensions <python_extensions>

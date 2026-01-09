@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/async/wait_group_events.h>
-#include <clc/opencl/synchronization/barrier.h>
+#include <clc/opencl/opencl-base.h>
 
 _CLC_DEF _CLC_OVERLOAD void wait_group_events(int num_events,
                                               event_t *event_list) {

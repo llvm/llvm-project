@@ -48,12 +48,14 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/ModuleSummaryIndexYAML.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
@@ -802,7 +804,9 @@ Value *LowerTypeTestsModule::lowerTypeTestCall(Metadata *TypeId, CallInst *CI,
         return createBitSetTest(ThenB, TIL, BitOffset);
       }
 
-  IRBuilder<> ThenB(SplitBlockAndInsertIfThen(OffsetInRange, CI, false));
+  MDBuilder MDB(M.getContext());
+  IRBuilder<> ThenB(SplitBlockAndInsertIfThen(OffsetInRange, CI, false,
+                                              MDB.createLikelyBranchWeights()));
 
   // Now that we know that the offset is in range and aligned, load the
   // appropriate bit from the bitset.

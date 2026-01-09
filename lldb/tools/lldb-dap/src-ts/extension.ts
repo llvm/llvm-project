@@ -1,18 +1,17 @@
-import * as path from "path";
 import * as vscode from "vscode";
 
 import { LLDBDapDescriptorFactory } from "./debug-adapter-factory";
-import { DisposableContext } from "./disposable-context";
-import { LaunchUriHandler } from "./uri-launch-handler";
 import { LLDBDapConfigurationProvider } from "./debug-configuration-provider";
-import { LLDBDapServer } from "./lldb-dap-server";
 import { DebugSessionTracker } from "./debug-session-tracker";
-import {
-  ModulesDataProvider,
-  ModuleProperty,
-} from "./ui/modules-data-provider";
+import { DisposableContext } from "./disposable-context";
+import { LLDBDapServer } from "./lldb-dap-server";
 import { LogFilePathProvider } from "./logging";
+import {
+  ModuleProperty,
+  ModulesDataProvider,
+} from "./ui/modules-data-provider";
 import { SymbolsProvider } from "./ui/symbols-provider";
+import { LaunchUriHandler } from "./uri-launch-handler";
 
 /**
  * This class represents the extension and manages its life cycle. Other extensions
@@ -54,10 +53,12 @@ export class LLDBDapExtension extends DisposableContext {
       vscode.window.registerUriHandler(new LaunchUriHandler()),
     );
 
-    this.pushSubscription(vscode.commands.registerCommand(
-      "lldb-dap.modules.copyProperty",
-      (node: ModuleProperty) => vscode.env.clipboard.writeText(node.value),
-    ));
+    this.pushSubscription(
+      vscode.commands.registerCommand(
+        "lldb-dap.modules.copyProperty",
+        (node: ModuleProperty) => vscode.env.clipboard.writeText(node.value),
+      ),
+    );
 
     this.pushSubscription(new SymbolsProvider(sessionTracker, context));
   }
@@ -67,7 +68,9 @@ export class LLDBDapExtension extends DisposableContext {
  * This is the entry point when initialized by VS Code.
  */
 export async function activate(context: vscode.ExtensionContext) {
-  const outputChannel = vscode.window.createOutputChannel("LLDB-DAP", { log: true });
+  const outputChannel = vscode.window.createOutputChannel("LLDB-DAP", {
+    log: true,
+  });
   outputChannel.info("LLDB-DAP extension activating...");
   const logFilePath = new LogFilePathProvider(context, outputChannel);
   context.subscriptions.push(
