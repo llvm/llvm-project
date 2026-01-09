@@ -773,9 +773,7 @@ static bool isNullTermPointer(const Expr *Ptr, ASTContext &Ctx) {
   }
 
   // Functions known to return properly null terminated strings.
-  static const llvm::StringSet<> NullTermFunctions = {
-    "strerror"
-  };
+  static const llvm::StringSet<> NullTermFunctions = {"strerror"};
   if (auto *CE = dyn_cast<CallExpr>(Ptr->IgnoreParenImpCasts())) {
     const FunctionDecl *F = CE->getDirectCallee();
     if (F && F->getIdentifier() && NullTermFunctions.contains(F->getName()))
