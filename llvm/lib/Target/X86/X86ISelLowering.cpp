@@ -483,6 +483,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
   setOperationAction(ISD::READCYCLECOUNTER , MVT::i64  , Custom);
 
+  if (Subtarget.hasPCLMUL() && Subtarget.is64Bit()) {
+    setOperationAction(ISD::CLMUL, MVT::i64, Custom);
+    setOperationAction(ISD::CLMUL, MVT::i32, Custom);
+    setOperationAction(ISD::CLMUL, MVT::i16, Custom);
+    setOperationAction(ISD::CLMUL, MVT::i8, Custom);
+  }
+
   if (!Subtarget.hasMOVBE())
     setOperationAction(ISD::BSWAP          , MVT::i16  , Expand);
 
@@ -33082,6 +33089,33 @@ static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
   return DAG.getNode(ISD::OR, DL, VT, Lo, Hi);
 }
 
+static SDValue LowerCLMUL(SDValue Op, const X86Subtarget &Subtarget,
+                          SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+
+  assert(Subtarget.hasPCLMUL() && "PCLMUL required for CLMUL lowering");
+
+  if (VT != MVT::i64) {
+    LHS = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, LHS);
+    RHS = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, RHS);
+  }
+
+  SDValue Vec1 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i64, LHS);
+  SDValue Vec2 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i64, RHS);
+  SDValue Result = DAG.getNode(X86ISD::PCLMULQDQ, DL, MVT::v2i64, Vec1, Vec2,
+                               DAG.getTargetConstant(0, DL, MVT::i8));
+  Result = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Result,
+                       DAG.getVectorIdxConstant(0, DL));
+
+  if (VT != MVT::i64)
+    Result = DAG.getNode(ISD::TRUNCATE, DL, VT, Result);
+
+  return Result;
+}
+
 static SDValue LowerPARITY(SDValue Op, const X86Subtarget &Subtarget,
                            SelectionDAG &DAG) {
   SDLoc DL(Op);
@@ -33830,6 +33864,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ATOMIC_LOAD_AND:    return lowerAtomicArith(Op, DAG, Subtarget);
   case ISD::ATOMIC_STORE:       return LowerATOMIC_STORE(Op, DAG, Subtarget);
   case ISD::BITREVERSE:         return LowerBITREVERSE(Op, Subtarget, DAG);
+  case ISD::CLMUL:              return LowerCLMUL(Op, Subtarget, DAG);
   case ISD::PARITY:             return LowerPARITY(Op, Subtarget, DAG);
   case ISD::BUILD_VECTOR:       return LowerBUILD_VECTOR(Op, DAG);
   case ISD::CONCAT_VECTORS:     return LowerCONCAT_VECTORS(Op, Subtarget, DAG);
@@ -35628,6 +35663,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(GF2P8MULB)
   NODE_NAME_CASE(GF2P8AFFINEQB)
   NODE_NAME_CASE(GF2P8AFFINEINVQB)
+  NODE_NAME_CASE(PCLMULQDQ)
   NODE_NAME_CASE(NT_CALL)
   NODE_NAME_CASE(NT_BRIND)
   NODE_NAME_CASE(UMWAIT)
