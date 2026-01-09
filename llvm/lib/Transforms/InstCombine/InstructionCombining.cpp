@@ -1783,7 +1783,7 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
                                                 bool FoldWithMultiUse,
                                                 bool SimplifyBothArms) {
   // Don't modify shared select instructions unless set FoldWithMultiUse
-  if (!SI->hasOneUse() && !FoldWithMultiUse)
+  if (!SI->hasOneUser() && !FoldWithMultiUse)
     return nullptr;
 
   Value *TV = SI->getTrueValue();
