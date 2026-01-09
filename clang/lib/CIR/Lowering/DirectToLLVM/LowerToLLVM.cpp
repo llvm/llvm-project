@@ -4298,10 +4298,11 @@ mlir::LogicalResult CIRToLLVMCpuIdOpLowering::matchAndRewrite(
   std::array<mlir::Value, 2> operands{funcId, subFuncId};
 
   StringRef asmString, constraints;
-  mlir::ModuleOp module = op->getParentOfType<mlir::ModuleOp>();
-  llvm::Triple triple(mlir::cast<mlir::StringAttr>(
-                          module->getAttr(cir::CIRDialect::getTripleAttrName()))
-                          .getValue());
+  mlir::ModuleOp moduleOp = op->getParentOfType<mlir::ModuleOp>();
+  llvm::Triple triple(
+      mlir::cast<mlir::StringAttr>(
+          moduleOp->getAttr(cir::CIRDialect::getTripleAttrName()))
+          .getValue());
   if (triple.getArch() == llvm::Triple::x86) {
     asmString = "cpuid";
     constraints = "={ax},={bx},={cx},={dx},{ax},{cx}";

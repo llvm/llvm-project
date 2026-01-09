@@ -17,7 +17,7 @@ void test__cpuid_with_cpu_info_as_pointer(int cpuInfo[4], int functionId) {
     // CIR: [[CPU_INFO_PTR:%.*]] = cir.load align(8)
     // CIR: [[FUNCTION_ID:%.*]] = cir.load align(4)
     // CIR: [[SUB_FUNCTION_ID:%.*]] = cir.const #cir.int<0> : !s32i
-    // CIR: cir.cpuid [[CPU_INFO_PTR]], [[FUNCTION_ID]], [[SUB_FUNCTION_ID]] : (!cir.ptr<!s32i>, !s32i, !s32i) -> ()
+    // CIR: cir.cpuid [[CPU_INFO_PTR]], [[FUNCTION_ID]], [[SUB_FUNCTION_ID]] : !cir.ptr<!s32i>, !s32i, !s32i
 
     // LLVM-LABEL: __cpuid_with_cpu_info_as_pointer
     // LLVM: [[CPU_INFO_PTR:%.*]] = load ptr
@@ -63,7 +63,7 @@ void test__cpuid_with_cpu_info_as_array(int functionId) {
     // CIR: [[CPU_INFO:%.*]] = cir.cast array_to_ptrdecay
     // CIR: [[FUNCTION_ID:%.*]] = cir.load align(4)
     // CIR: [[SUB_FUNCTION_ID:%.*]] = cir.const #cir.int<0> : !s32i
-    // CIR: cir.cpuid [[CPU_INFO_PTR]], [[FUNCTION_ID]], [[SUB_FUNCTION_ID]] : (!cir.ptr<!s32i>, !s32i, !s32i) -> ()
+    // CIR: cir.cpuid [[CPU_INFO_PTR]], [[FUNCTION_ID]], [[SUB_FUNCTION_ID]] : !cir.ptr<!s32i>, !s32i, !s32i
 
     // LLVM-LABEL: _cpuid_with_cpu_info_as_array
     // LLVM: [[CPU_INFO_PTR:%.*]] = getelementptr i32, ptr
@@ -107,7 +107,7 @@ void test__cpuidex(int cpuInfo[4], int functionId, int subFunctionId) {
     // CIR: [[CPU_INFO_PTR:%.*]] = cir.load align(8)
     // CIR: [[FUNCTION_ID:%.*]] = cir.load align(4)
     // CIR: [[SUB_FUNCTION_ID:%.*]] = cir.load align(4)
-    // CIR: cir.cpuid [[CPU_INFO_PTR]], [[FUNCTION_ID]], [[SUB_FUNCTION_ID]] : (!cir.ptr<!s32i>, !s32i, !s32i) -> ()
+    // CIR: cir.cpuid [[CPU_INFO_PTR]], [[FUNCTION_ID]], [[SUB_FUNCTION_ID]] : !cir.ptr<!s32i>, !s32i, !s32i
 
     // LLVM-LABEL: __cpuidex
     // LLVM: [[CPU_INFO_PTR:%.*]] = load ptr
