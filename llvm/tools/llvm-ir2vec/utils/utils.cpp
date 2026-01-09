@@ -352,7 +352,7 @@ void MIR2VecTool::writeEntitiesToStream(raw_ostream &OS) const {
 void MIR2VecTool::writeEmbeddingsToStream(const Module &M, raw_ostream &OS,
                                           EmbeddingLevel Level) const {
   if (!Vocab) {
-    errs() << "Error: Vocabulary not initialized.\n";
+    WithColor::error(errs(), ToolName) << "Vocabulary not initialized.\n";
     return;
   }
 
@@ -370,7 +370,7 @@ void MIR2VecTool::writeEmbeddingsToStream(const Module &M, raw_ostream &OS,
 void MIR2VecTool::writeEmbeddingsToStream(MachineFunction &MF, raw_ostream &OS,
                                           EmbeddingLevel Level) const {
   if (!Vocab) {
-    errs() << "Error: Vocabulary not initialized.\n";
+    WithColor::error(errs(), ToolName) << "Vocabulary not initialized.\n";
     return;
   }
 
