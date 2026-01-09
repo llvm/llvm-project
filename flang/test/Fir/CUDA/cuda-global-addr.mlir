@@ -95,6 +95,33 @@ func.func @_QQmain() attributes {fir.bindc_name = "test"} {
 // -----
 
 // Check that we do not introduce call to _FortranACUFGetDeviceAddress when the
+// address_of is inside an acc.parallel region (OffloadRegionOpInterface).
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>} {
+fir.global @_QMmod1Eadev_acc {data_attr = #cuf.cuda<device>} : !fir.array<10xi32> {
+  %0 = fir.zero_bits !fir.array<10xi32>
+  fir.has_value %0 : !fir.array<10xi32>
+}
+func.func @_QQmain_acc() attributes {fir.bindc_name = "test_acc"} {
+  acc.parallel {
+    %c10 = arith.constant 10 : index
+    %1 = fir.shape %c10 : (index) -> !fir.shape<1>
+    %3 = fir.address_of(@_QMmod1Eadev_acc) : !fir.ref<!fir.array<10xi32>>
+    %4 = fir.declare %3(%1) {data_attr = #cuf.cuda<device>, uniq_name = "_QMmod1Eadev_acc"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xi32>>
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @_QQmain_acc()
+// CHECK: acc.parallel
+// CHECK-NOT: fir.call {{.*}}GetDeviceAddress
+
+}
+
+// -----
+
+// Check that we do not introduce call to _FortranACUFGetDeviceAddress when the
 // value has no user.
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>} {
