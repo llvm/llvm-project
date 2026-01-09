@@ -73,8 +73,7 @@ using namespace llvm;
 using namespace llvm::sys;
 
 InitLLVM::InitLLVM(int &Argc, const char **&Argv,
-                   bool InstallPipeSignalExitHandler,
-                   bool IsClangDriver) {
+                   bool InstallPipeSignalExitHandler, bool IsClangDriver) {
 #ifndef NDEBUG
   static std::atomic<bool> Initialized{false};
   assert(!Initialized && "InitLLVM was already initialized!");

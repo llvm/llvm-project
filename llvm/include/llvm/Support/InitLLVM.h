@@ -39,7 +39,7 @@ public:
                     bool InstallPipeSignalExitHandler = true,
                     bool IsClandDriver = false);
   InitLLVM(int &Argc, char **&Argv, bool InstallPipeSignalExitHandler = true,
-                    bool IsClangDriver = false)
+           bool IsClangDriver = false)
       : InitLLVM(Argc, const_cast<const char **&>(Argv),
                  InstallPipeSignalExitHandler, IsClangDriver) {}
 
