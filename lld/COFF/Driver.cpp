@@ -2278,7 +2278,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     config->incremental = false;
   }
 
-  // Handle -prefetch-inputs
   if (args.hasFlag(OPT_prefetch_inputs, OPT_prefetch_inputs_no, false))
     config->prefetchInputs = true;
 
