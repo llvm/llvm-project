@@ -1264,6 +1264,12 @@ def Feature1024AddressableVGPRs : SubtargetFeature<"1024-addressable-vgprs",
   "Has 1024 addressable VGPRs"
 >;
 
+def FeatureSetregVGPRMSBFixup : SubtargetFeature<"setreg-vgpr-msb-fixup",
+  "HasSetregVGPRMSBFixup",
+  "true",
+  "S_SETREG to MODE clobbers VGPR MSB bits, requires fixup"
+>;
+
 def FeatureWaitXcnt : SubtargetFeature<"wait-xcnt",
   "HasWaitXcnt",
   "true",
@@ -2223,7 +2229,8 @@ def FeatureISAVersion12_50_Common : FeatureSet<
 
 def FeatureISAVersion12_50 : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
-  [FeatureAddressableLocalMemorySize327680])>;
+  [FeatureAddressableLocalMemorySize327680,
+   FeatureSetregVGPRMSBFixup])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
