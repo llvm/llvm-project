@@ -2415,6 +2415,12 @@ def fmemory_profile_use_EQ : Joined<["-"], "fmemory-profile-use=">,
 // modes.
 let Visibility = [ClangOption, CC1Option, CLOption] in {
 
+defm restrict_experimental: BoolFOption<"restrict-experimental",
+  CodeGenOpts<"RestrictExperimental">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option], "Disable">,
+  BothFlags<[], [ClangOption, CC1Option], " restrict experimental support.">>;
+
 def fsanitize_EQ : CommaJoined<["-"], "fsanitize=">, Group<f_clang_Group>,
                    MetaVarName<"<check>">,
                    HelpText<"Turn on runtime checks for various forms of undefined "

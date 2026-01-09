@@ -581,10 +581,66 @@ Address CodeGenFunction::EmitCompoundStmt(const CompoundStmt &S, bool GetLast,
   return EmitCompoundStmtWithoutScope(S, GetLast, AggSlot);
 }
 
+/// Generates unique encoding for compound statement scopes.
+///
+/// This function creates a hierarchical encoding scheme for lexical scopes
+/// to uniquely identify each compound statement's position in the AST.
+/// The encoding follows a pattern where:
+/// - The root scope (function body) is encoded as "1"
+/// - Child scopes append "0" followed by '1' characters representing
+///   the child's position among its siblings
+///
+/// Example scope hierarchy and encodings:
+///   Function foo body: "1"
+///     First child block: "10"
+///       First nested block: "100"
+///       Second nested block: "1001"
+///     Second child block: "101"
+///       First nested block: "1010"
+///
+///
+/// This encoding scheme ensures:
+///   1. Uniqueness: Each scope in the function has a distinct encoding
+///   2. Hierarchy: Parent-child relationships are preserved in the encoding
+///   3. Stability: The encoding doesn't change if unrelated scopes are added
+///
+/// The encoding is stored in ScopeCodes stack and used by
+/// ConstructMetodataForScope to generate unique names for restrict metadata.
+/// This prevents conflicts when the same variable name appears in different
+/// scopes.
+///
+void CodeGenFunction::EmitUniqueEncoding(const CompoundStmt &S) {
+  if (!IsRestrictExperimentalSupportEnabled())
+    return;
+  llvm::SmallString<32> CurCode;
+
+  if (ScopeCodes.empty()) {
+    CurCode = "1";
+  } else {
+    const CompoundStmt *Parent = ScopeCodes.back().second;
+    unsigned ChildIndex = ScopeChildCount[Parent]++;
+    CurCode = ScopeCodes.back().first;
+    CurCode += "0";
+    CurCode.append(ChildIndex, '1');
+  }
+
+  ScopeCodes.emplace_back(CurCode, &S);
+}
+
+void CodeGenFunction::FreeNodeUniqueEncoding() {
+
+  if (!IsRestrictExperimentalSupportEnabled())
+    return;
+  assert(!ScopeCodes.empty());
+  ScopeCodes.pop_back();
+}
+
 Address
 CodeGenFunction::EmitCompoundStmtWithoutScope(const CompoundStmt &S,
                                               bool GetLast,
                                               AggValueSlot AggSlot) {
+
+  EmitUniqueEncoding(S);
 
   for (CompoundStmt::const_body_iterator I = S.body_begin(),
                                          E = S.body_end() - GetLast;
@@ -627,6 +683,7 @@ CodeGenFunction::EmitCompoundStmtWithoutScope(const CompoundStmt &S,
                        /*IsInit*/ false);
     }
   }
+  FreeNodeUniqueEncoding();
 
   return RetAlloca;
 }

@@ -742,6 +742,10 @@ public:
            DefaultVisiblityExportMapping::All;
   }
 
+  bool IsCLanguageOnly() const {
+    return ((C99 || C11 || C17 || C23 || C2y) && !ObjC && !OpenMP);
+  }
+
   bool hasGlobalAllocationFunctionVisibility() const {
     return getGlobalAllocationFunctionVisibility() !=
            VisibilityForcedKinds::Source;

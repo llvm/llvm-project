@@ -1476,6 +1476,127 @@ static bool shouldExtendLifetime(const ASTContext &Context,
   return true;
 }
 
+/// Adds metadata for restrict-qualified pointers at any nesting level.
+///
+/// This function processes pointer types recursively to generate metadata
+/// for restrict-qualified pointers. The metadata encodes which pointer levels
+/// are restrict qualified and assigns unique identifiers to each restrict
+/// qualification level.
+///
+/// For example, consider the type `int * restrict * restrict` in foo():
+///   - First level: pointer to restrict pointer (gets unique code 1)
+///   - Second level: restrict pointer to int (gets another unique code 1)
+///
+/// The metadata structure is attached to the alloca instruction and consists
+/// of:
+///   1. Full variable name (function name + scope encoding)
+///   2. List of restrict codes for each pointer level:
+///      - Non-zero: unique identifier for restrict-qualified pointer
+///      - Zero: non-restrict qualified pointer at that level
+///
+/// For example, consider function `foo` with variable declarations:
+///   void foo() {
+///     int * restrict p1;       // Single-level restrict pointer
+///     int * restrict *p2;      // restrict at first level, non-restrict at
+///     second int * restrict * restrict p3;  // restrict at both levels
+///   }
+///
+/// Generated metadata would be:
+///   p1: !{!"foo_1", !{1}}          // One restrict level, code 1
+///   p2: !{!"foo_1", !{2, 0}}       // First level restrict (1), second
+///   non-restrict (0) p3: !{!"foo_1", !{3, 1}}       // First level restrict
+///   (1), second restrict (2)
+///
+/// The unique codes allow distinguishing different restrict pointers at the
+/// same nesting level within the same function and scope.
+///
+void CodeGenFunction::AddPointerMetodataForRestrict(RawAddress AllocaAddr,
+                                                    QualType Ty,
+                                                    llvm::StringRef FullName) {
+  auto *AllocaInst = cast<llvm::AllocaInst>(AllocaAddr.getPointer());
+
+  unsigned RestictNesting = 0;
+
+  llvm::SmallVector<llvm::Metadata *, 8> RestrictMDs;
+  llvm::LLVMContext &Ctx = AllocaInst->getContext();
+
+  while (const PointerType *PT = Ty->getAs<PointerType>()) {
+    if (Ty.isRestrictQualified()) {
+      if (RestictNesting >= RestrictCodes.size())
+        RestrictCodes.push_back(1);
+      unsigned Code = RestrictCodes[RestictNesting];
+      llvm::Constant *C =
+          llvm::ConstantInt::get(llvm::Type::getInt64Ty(Ctx), Code);
+      RestrictMDs.push_back(llvm::ConstantAsMetadata::get(C));
+      RestrictCodes[RestictNesting]++;
+    } else {
+      if (PT->getPointeeType()->getAs<RecordType>())
+        AddMetodataForRestrict(AllocaAddr, PT->getPointeeType(), FullName);
+      llvm::Constant *C =
+          llvm::ConstantInt::get(llvm::Type::getInt64Ty(Ctx), 0);
+      RestrictMDs.push_back(llvm::ConstantAsMetadata::get(C));
+    }
+    RestictNesting++;
+    Ty = PT->getPointeeType();
+  }
+  llvm::MDNode *RestrictList = llvm::MDNode::get(Ctx, RestrictMDs);
+  llvm::MDString *NameMD = llvm::MDString::get(Ctx, FullName.str());
+  llvm::MDNode *Node = llvm::MDNode::get(Ctx, {NameMD, RestrictList});
+  AllocaInst->setMetadata(llvm::LLVMContext::MD_scope, Node);
+}
+
+bool CodeGenFunction::IsRestrictExperimentalSupportEnabled() const {
+  return (getLangOpts().IsCLanguageOnly() &&
+          (CGM.getCodeGenOpts().RestrictExperimental));
+}
+
+/// Constructs metadata for variables in the current lexical scope.
+///
+/// This function builds a unique name for each variable by combining the
+/// function name with the current scope encoding, then delegates to
+/// AddMetodataForRestrict to generate actual restrict metadata.
+///
+/// Example with nested scopes in function `foo`:
+///   void foo() {           // Scope encoding: "1"
+///     int *a;              // Full name: foo_1
+///     {                    // Scope encoding: "10"
+///       int *b;            // Full name: foo_10
+///       {                  // Scope encoding: "100"
+///         int *c;          // Full name: foo_100
+///       }
+///     }
+///     {                    // Scope encoding: "101"
+///       int *d;            // Full name: foo_101
+///     }
+///   }
+///
+/// The scope encoding follows a hierarchical pattern:
+///   - Function body: "1"
+///   - First child scope: "10"
+///   - Second child scope: "101"
+///   - Child of "10": "100"
+///
+/// This ensures each variable gets a unique identifier even
+/// if they have the same name in different scopes.
+///
+void CodeGenFunction::ConstructMetodataForScope(RawAddress AllocaAddr,
+                                                QualType Ty,
+                                                llvm::StringRef CurScopeCode) {
+  assert(CurFuncDecl != nullptr);
+
+  llvm::SmallString<32> FullName(
+      CurFuncDecl->getAsFunction()->getNameAsString().append("_"));
+  FullName.append(CurScopeCode);
+  AddMetodataForRestrict(AllocaAddr, Ty, FullName.str());
+}
+
+void CodeGenFunction::AddMetodataForRestrict(RawAddress AllocaAddr, QualType Ty,
+                                             llvm::StringRef FullName) {
+  if (!IsRestrictExperimentalSupportEnabled() || !Ty->getAs<PointerType>())
+    return;
+  AddPointerMetodataForRestrict(AllocaAddr, Ty, FullName);
+}
+
 /// EmitAutoVarAlloca - Emit the alloca and debug information for a
 /// local variable.  Does not emit initialization or destruction.
 CodeGenFunction::AutoVarEmission
@@ -1603,6 +1724,11 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       address = CreateTempAlloca(allocaTy, Ty.getAddressSpace(),
                                  allocaAlignment, D.getName(),
                                  /*ArraySize=*/nullptr, &AllocaAddr);
+
+      if (IsRestrictExperimentalSupportEnabled()) {
+        llvm::StringRef CurScopeCode = ScopeCodes.back().first;
+        ConstructMetodataForScope(AllocaAddr, Ty, CurScopeCode);
+      }
 
       // Don't emit lifetime markers for MSVC catch parameters. The lifetime of
       // the catch parameter starts in the catchpad instruction, and we can't
@@ -2700,8 +2826,11 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
     // For truly ABI indirect arguments -- those that are not `byval` -- store
     // the address of the argument on the stack to preserve debug information.
     ABIArgInfo ArgInfo = CurFnInfo->arguments()[ArgNo - 1].info;
-    if (ArgInfo.isIndirect())
+    if (ArgInfo.isIndirect()) {
       UseIndirectDebugAddress = !ArgInfo.getIndirectByVal();
+      if (IsRestrictExperimentalSupportEnabled())
+        ConstructMetodataForScope(AllocaPtr, Ty);
+    }
     if (UseIndirectDebugAddress) {
       auto PtrTy = getContext().getPointerType(Ty);
       AllocaPtr = CreateMemTemp(PtrTy, getContext().getTypeAlignInChars(PtrTy),
@@ -2750,6 +2879,8 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
       // Otherwise, create a temporary to hold the value.
       DeclPtr = CreateMemTemp(Ty, getContext().getDeclAlign(&D),
                               D.getName() + ".addr", &AllocaPtr);
+      if (IsRestrictExperimentalSupportEnabled())
+        ConstructMetodataForScope(AllocaPtr, Ty);
     }
     DoStore = true;
   }
