@@ -58,7 +58,7 @@ void NonZeroEnumToBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
                hasSourceExpression(
                    expr(hasType(qualType(hasCanonicalType(hasDeclaration(
                             enumDecl(isCompleteAndHasNoZeroValue(),
-                                     unless(matchers::matchesAnyListedName(
+                                     unless(matchers::matchesAnyListedRegexName(
                                          EnumIgnoreList)))
                                 .bind("enum"))))),
                         unless(declRefExpr(to(enumConstantDecl()))),

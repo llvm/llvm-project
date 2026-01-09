@@ -2979,6 +2979,10 @@ static void handleSentinelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                                    : Ty->castAs<BlockPointerType>()
                                          ->getPointeeType()
                                          ->castAs<FunctionType>();
+      if (isa<FunctionNoProtoType>(FT)) {
+        S.Diag(AL.getLoc(), diag::warn_attribute_sentinel_named_arguments);
+        return;
+      }
       if (!cast<FunctionProtoType>(FT)->isVariadic()) {
         int m = Ty->isFunctionPointerType() ? 0 : 1;
         S.Diag(AL.getLoc(), diag::warn_attribute_sentinel_not_variadic) << m;
@@ -3510,10 +3514,12 @@ static void handleTargetClonesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     if (S.ARM().checkTargetClonesAttr(Params, Locations, NewParams))
       return;
   } else if (S.Context.getTargetInfo().getTriple().isRISCV()) {
-    if (S.RISCV().checkTargetClonesAttr(Params, Locations, NewParams))
+    if (S.RISCV().checkTargetClonesAttr(Params, Locations, NewParams,
+                                        AL.getLoc()))
       return;
   } else if (S.Context.getTargetInfo().getTriple().isX86()) {
-    if (S.X86().checkTargetClonesAttr(Params, Locations, NewParams))
+    if (S.X86().checkTargetClonesAttr(Params, Locations, NewParams,
+                                      AL.getLoc()))
       return;
   }
   Params.clear();

@@ -156,6 +156,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK:         %[[VAL_8:.*]] = load i32, ptr %[[VAL_7]], align 4
 // CHECK:         %[[VAL_9:.*]] = icmp slt i32 %[[VAL_8]], 10
 // CHECK:         %[[VAL_10:.*]] = load i32, ptr %[[VAL_6]], align 4
+// CHECK:         %[[DEV_I64_BEGIN:.*]] = sext i32 %[[VAL_10:.*]] to i64
 // CHECK:         br label %[[VAL_11:.*]]
 // CHECK:       entry:                                            ; preds = %[[VAL_12:.*]]
 // CHECK:         br i1 %[[VAL_9]], label %[[VAL_13:.*]], label %[[VAL_14:.*]]
@@ -176,7 +177,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK:         store ptr null, ptr %[[VAL_22]], align 8
 // CHECK:         %[[VAL_23:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_3]], i32 0, i32 0
 // CHECK:         %[[VAL_24:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_4]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_begin_mapper(ptr @3, i64 -1, i32 2, ptr %[[VAL_23]], ptr %[[VAL_24]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
+// CHECK:         call void @__tgt_target_data_begin_mapper(ptr @3, i64 %[[DEV_I64_BEGIN]], i32 2, ptr %[[VAL_23]], ptr %[[VAL_24]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
 // CHECK:         br label %[[VAL_25:.*]]
 // CHECK:       omp_if.else:                                      ; preds = %[[VAL_11]]
 // CHECK:         br label %[[VAL_25]]
@@ -184,6 +185,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK:         %[[VAL_26:.*]] = load i32, ptr %[[VAL_7]], align 4
 // CHECK:         %[[VAL_27:.*]] = icmp sgt i32 %[[VAL_26]], 10
 // CHECK:         %[[VAL_28:.*]] = load i32, ptr %[[VAL_6]], align 4
+// CHECK:         %[[DEV_I64_END:.*]] = sext i32 %[[VAL_28]] to i64
 // CHECK:         br i1 %[[VAL_27]], label %[[VAL_29:.*]], label %[[VAL_30:.*]]
 // CHECK:       omp_if.then2:                                     ; preds = %[[VAL_25]]
 // CHECK:         %[[ARR_OFFSET3:.*]] = getelementptr inbounds [1024 x i32], ptr %[[VAL_16]], i64 0, i64 0
@@ -202,7 +204,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK:         store ptr null, ptr %[[VAL_36]], align 8
 // CHECK:         %[[VAL_37:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         %[[VAL_38:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_end_mapper(ptr @3, i64 -1, i32 2, ptr %[[VAL_37]], ptr %[[VAL_38]], ptr @.offload_sizes.1, ptr @.offload_maptypes.2, ptr @.offload_mapnames.3, ptr null)
+// CHECK:         call void @__tgt_target_data_end_mapper(ptr @3, i64 %[[DEV_I64_END]], i32 2, ptr %[[VAL_37]], ptr %[[VAL_38]], ptr @.offload_sizes.1, ptr @.offload_maptypes.2, ptr @.offload_mapnames.3, ptr null)
 // CHECK:         br label %[[VAL_39:.*]]
 // CHECK:       omp_if.else8:                                     ; preds = %[[VAL_25]]
 // CHECK:         br label %[[VAL_39]]

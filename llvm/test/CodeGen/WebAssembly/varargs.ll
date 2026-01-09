@@ -1,5 +1,8 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix=EMSCRIPTEN
-; RUN: llc < %s -mtriple wasm32-unknown-unknown -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -verify-machineinstrs | FileCheck %s  --check-prefix=CHECK --check-prefix=UNKNOWN
+; RUN: llc < %s -mtriple wasm32-unknown-emscripten -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -verify-machineinstrs | FileCheck %s -DPTR=32 --check-prefix=CHECK --check-prefix=EMSCRIPTEN
+; RUN: llc < %s -mtriple wasm32-unknown-unknown -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -verify-machineinstrs | FileCheck %s -DPTR=32 --check-prefix=CHECK --check-prefix=UNKNOWN
+
+; RUN: llc < %s -mtriple wasm64-unknown-emscripten -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -verify-machineinstrs | FileCheck %s -DPTR=64 --check-prefix=CHECK --check-prefix=EMSCRIPTEN
+; RUN: llc < %s -mtriple wasm64-unknown-unknown -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -verify-machineinstrs | FileCheck %s -DPTR=64 --check-prefix=CHECK --check-prefix=UNKNOWN
 
 ; Test varargs constructs.
 
@@ -9,12 +12,12 @@ target triple = "wasm32-unknown-emscripten"
 
 ; TODO: Test va_start.
 ; CHECK-LABEL: start:
-; CHECK-NEXT: .functype start (i32, i32) -> ()
+; CHECK-NEXT: .functype start (i[[PTR]], i[[PTR]]) -> ()
 ; CHECK-NOT: __stack_pointer
 define void @start(ptr %ap, ...) {
 entry:
 ; Store the second argument (the hidden vararg buffer pointer) into ap
-; CHECK: i32.store 0($0), $1
+; CHECK: i[[PTR]].store 0($0), $1
   call void @llvm.va_start(ptr %ap)
   ret void
 }
@@ -22,7 +25,7 @@ entry:
 ; Test va_end.
 
 ; CHECK-LABEL: end:
-; CHECK-NEXT: .functype end (i32) -> (){{$}}
+; CHECK-NEXT: .functype end (i[[PTR]]) -> (){{$}}
 ; CHECK-NEXT: return{{$}}
 define void @end(ptr %ap) {
 entry:
@@ -33,9 +36,9 @@ entry:
 ; Test va_copy.
 
 ; CHECK-LABEL: copy:
-; CHECK-NEXT: .functype copy (i32, i32) -> (){{$}}
-; CHECK-NEXT: i32.load  $push0=, 0($1){{$}}
-; CHECK-NEXT: i32.store 0($0), $pop0{{$}}
+; CHECK-NEXT: .functype copy (i[[PTR]], i[[PTR]]) -> (){{$}}
+; CHECK-NEXT: i[[PTR]].load  $push0=, 0($1){{$}}
+; CHECK-NEXT: i[[PTR]].store 0($0), $pop0{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @copy(ptr %ap, ptr %bp) {
 entry:
@@ -46,14 +49,14 @@ entry:
 ; Test va_arg with an i8 argument.
 
 ; CHECK-LABEL: arg_i8:
-; CHECK-NEXT: .functype arg_i8 (i32) -> (i32){{$}}
-; CHECK-NEXT: i32.load   $push[[NUM0:[0-9]+]]=, 0($0){{$}}
-; CHECK-NEXT: local.tee  $push[[NUM1:[0-9]+]]=, $1=, $pop[[NUM0]]{{$}}
-; CHECK-NEXT: i32.const  $push[[NUM2:[0-9]+]]=, 4{{$}}
-; CHECK-NEXT: i32.add    $push[[NUM3:[0-9]+]]=, $pop[[NUM1]], $pop[[NUM2]]{{$}}
-; CHECK-NEXT: i32.store  0($0), $pop[[NUM3]]{{$}}
-; CHECK-NEXT: i32.load   $push[[NUM4:[0-9]+]]=, 0($1){{$}}
-; CHECK-NEXT: return     $pop[[NUM4]]{{$}}
+; CHECK-NEXT: .functype arg_i8 (i[[PTR]]) -> (i32){{$}}
+; CHECK-NEXT: i[[PTR]].load   $push[[NUM0:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: local.tee       $push[[NUM1:[0-9]+]]=, $1=, $pop[[NUM0]]{{$}}
+; CHECK-NEXT: i[[PTR]].const  $push[[NUM2:[0-9]+]]=, 4{{$}}
+; CHECK-NEXT: i[[PTR]].add    $push[[NUM3:[0-9]+]]=, $pop[[NUM1]], $pop[[NUM2]]{{$}}
+; CHECK-NEXT: i[[PTR]].store  0($0), $pop[[NUM3]]{{$}}
+; CHECK-NEXT: i32.load        $push[[NUM4:[0-9]+]]=, 0($1){{$}}
+; CHECK-NEXT: return          $pop[[NUM4]]{{$}}
 define i8 @arg_i8(ptr %ap) {
 entry:
   %t = va_arg ptr %ap, i8
@@ -63,18 +66,18 @@ entry:
 ; Test va_arg with an i32 argument.
 
 ; CHECK-LABEL: arg_i32:
-; CHECK-NEXT: .functype arg_i32 (i32) -> (i32){{$}}
-; CHECK-NEXT: i32.load   $push[[NUM0:[0-9]+]]=, 0($0){{$}}
-; CHECK-NEXT: i32.const  $push[[NUM1:[0-9]+]]=, 3{{$}}
-; CHECK-NEXT: i32.add    $push[[NUM2:[0-9]+]]=, $pop[[NUM0]], $pop[[NUM1]]{{$}}
-; CHECK-NEXT: i32.const  $push[[NUM3:[0-9]+]]=, -4{{$}}
-; CHECK-NEXT: i32.and    $push[[NUM4:[0-9]+]]=, $pop[[NUM2]], $pop[[NUM3]]{{$}}
-; CHECK-NEXT: local.tee  $push[[NUM5:[0-9]+]]=, $1=, $pop[[NUM4]]{{$}}
-; CHECK-NEXT: i32.const  $push[[NUM6:[0-9]+]]=, 4{{$}}
-; CHECK-NEXT: i32.add    $push[[NUM7:[0-9]+]]=, $pop[[NUM5]], $pop[[NUM6]]{{$}}
-; CHECK-NEXT: i32.store  0($0), $pop[[NUM7]]{{$}}
-; CHECK-NEXT: i32.load   $push[[NUM8:[0-9]+]]=, 0($1){{$}}
-; CHECK-NEXT: return     $pop[[NUM8]]{{$}}
+; CHECK-NEXT: .functype arg_i32 (i[[PTR]]) -> (i32){{$}}
+; CHECK-NEXT: i[[PTR]].load   $push[[NUM0:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: i[[PTR]].const  $push[[NUM1:[0-9]+]]=, 3{{$}}
+; CHECK-NEXT: i[[PTR]].add    $push[[NUM2:[0-9]+]]=, $pop[[NUM0]], $pop[[NUM1]]{{$}}
+; CHECK-NEXT: i[[PTR]].const  $push[[NUM3:[0-9]+]]=, -4{{$}}
+; CHECK-NEXT: i[[PTR]].and    $push[[NUM4:[0-9]+]]=, $pop[[NUM2]], $pop[[NUM3]]{{$}}
+; CHECK-NEXT: local.tee       $push[[NUM5:[0-9]+]]=, $1=, $pop[[NUM4]]{{$}}
+; CHECK-NEXT: i[[PTR]].const  $push[[NUM6:[0-9]+]]=, 4{{$}}
+; CHECK-NEXT: i[[PTR]].add    $push[[NUM7:[0-9]+]]=, $pop[[NUM5]], $pop[[NUM6]]{{$}}
+; CHECK-NEXT: i[[PTR]].store  0($0), $pop[[NUM7]]{{$}}
+; CHECK-NEXT: i32.load        $push[[NUM8:[0-9]+]]=, 0($1){{$}}
+; CHECK-NEXT: return          $pop[[NUM8]]{{$}}
 define i32 @arg_i32(ptr %ap) {
 entry:
   %t = va_arg ptr %ap, i32
@@ -84,8 +87,8 @@ entry:
 ; Test va_arg with an i128 argument.
 
 ; CHECK-LABEL: arg_i128:
-; CHECK-NEXT: .functype arg_i128 (i32, i32) -> (){{$}}
-; CHECK: i32.and
+; CHECK-NEXT: .functype arg_i128 (i[[PTR]], i[[PTR]]) -> (){{$}}
+; CHECK: i[[PTR]].and
 ; CHECK: i64.load
 ; CHECK: i64.load
 ; CHECK: return{{$}}
@@ -100,7 +103,7 @@ entry:
 declare void @callee(...)
 
 ; CHECK-LABEL: caller_none:
-; CHECK:      i32.const $push0=, 0
+; CHECK:      i[[PTR]].const $push0=, 0
 ; CHECK-NEXT: call callee, $pop0
 ; CHECK-NEXT: return{{$}}
 define void @caller_none() {
@@ -123,7 +126,7 @@ define void @caller_some() {
 
 ; Test a va_start call in a non-entry block
 ; CHECK-LABEL: startbb:
-; CHECK: .functype startbb (i32, i32, i32) -> ()
+; CHECK: .functype startbb (i32, i[[PTR]], i[[PTR]]) -> ()
 define void @startbb(i1 %cond, ptr %ap, ...) {
 entry:
   br i1 %cond, label %bb0, label %bb1
@@ -131,7 +134,7 @@ bb0:
   ret void
 bb1:
 ; Store the second argument (the hidden vararg buffer pointer) into ap
-; CHECK: i32.store 0($1), $2
+; CHECK: i[[PTR]].store 0($1), $2
   call void @llvm.va_start(ptr %ap)
   ret void
 }
@@ -143,7 +146,7 @@ declare void @callee_with_nonlegal_fixed(fp128, ...) nounwind
 ; CHECK-LABEL: call_nonlegal_fixed:
 ; CHECK: i64.const       $push[[L0:[0-9]+]]=, 0
 ; CHECK: i64.const       $push[[L1:[0-9]+]]=, 0
-; CHECK: i32.const       $push[[L2:[0-9]+]]=, 0
+; CHECK: i[[PTR]].const  $push[[L2:[0-9]+]]=, 0
 ; CHECK: call            callee_with_nonlegal_fixed, $pop[[L0]], $pop[[L1]], $pop[[L2]]{{$}}
 define void @call_nonlegal_fixed() nounwind {
   call void (fp128, ...) @callee_with_nonlegal_fixed(fp128 0xL00000000000000000000000000000000)
@@ -153,7 +156,7 @@ define void @call_nonlegal_fixed() nounwind {
 ; Test a definition a varargs function with a non-legal fixed argument.
 
 ; CHECK-LABEL: nonlegal_fixed:
-; CHECK-NEXT: .functype nonlegal_fixed (i64, i64, i32) -> (){{$}}
+; CHECK-NEXT: .functype nonlegal_fixed (i64, i64, i[[PTR]]) -> (){{$}}
 define void @nonlegal_fixed(fp128 %x, ...) nounwind {
   ret void
 }
@@ -163,12 +166,12 @@ define void @nonlegal_fixed(fp128 %x, ...) nounwind {
 
 ; EMSCRIPTEN-LABEL: call_fp128_alignment:
 ; EMSCRIPTEN:      global.get      $push5=, __stack_pointer
-; EMSCRIPTEN-NEXT: i32.const       $push6=, 32
-; EMSCRIPTEN-NEXT: i32.sub         $push10=, $pop5, $pop6
+; EMSCRIPTEN-NEXT: i[[PTR]].const  $push6=, 32
+; EMSCRIPTEN-NEXT: i[[PTR]].sub    $push10=, $pop5, $pop6
 ; EMSCRIPTEN-NEXT: local.tee       $push9=, $1=, $pop10
 ; EMSCRIPTEN-NEXT: global.set      __stack_pointer, $pop9
-; EMSCRIPTEN-NEXT: i32.const       $push0=, 16
-; EMSCRIPTEN-NEXT: i32.add         $push1=, $1, $pop0
+; EMSCRIPTEN-NEXT: i[[PTR]].const  $push0=, 16
+; EMSCRIPTEN-NEXT: i[[PTR]].add    $push1=, $1, $pop0
 ; EMSCRIPTEN-NEXT: i64.const       $push2=, -9223372036854775808
 ; EMSCRIPTEN-NEXT: i64.store       0($pop1), $pop2
 ; EMSCRIPTEN-NEXT: i64.const       $push3=, 1
@@ -180,16 +183,16 @@ define void @nonlegal_fixed(fp128 %x, ...) nounwind {
 ; Alignment of fp128 is a current disagreement between emscripten and others.
 ; UNKNOWN-LABEL: call_fp128_alignment:
 ; UNKNOWN:      global.get      $push7=, __stack_pointer
-; UNKNOWN-NEXT: i32.const       $push8=, 32
-; UNKNOWN-NEXT: i32.sub         $push12=, $pop7, $pop8
+; UNKNOWN-NEXT: i[[PTR]].const  $push8=, 32
+; UNKNOWN-NEXT: i[[PTR]].sub    $push12=, $pop7, $pop8
 ; UNKNOWN-NEXT: local.tee       $push11=, $1=, $pop12
 ; UNKNOWN-NEXT: global.set      __stack_pointer, $pop11
-; UNKNOWN-NEXT: i32.const       $push0=, 24
-; UNKNOWN-NEXT: i32.add         $push1=, $1, $pop0
+; UNKNOWN-NEXT: i[[PTR]].const  $push0=, 24
+; UNKNOWN-NEXT: i[[PTR]].add    $push1=, $1, $pop0
 ; UNKNOWN-NEXT: i64.const       $push2=, -9223372036854775808
 ; UNKNOWN-NEXT: i64.store       0($pop1), $pop2
-; UNKNOWN-NEXT: i32.const       $push3=, 16
-; UNKNOWN-NEXT: i32.add         $push4=, $1, $pop3
+; UNKNOWN-NEXT: i[[PTR]].const  $push3=, 16
+; UNKNOWN-NEXT: i[[PTR]].add    $push4=, $1, $pop3
 ; UNKNOWN-NEXT: i64.const       $push5=, 1
 ; UNKNOWN-NEXT: i64.store       0($pop4), $pop5
 ; UNKNOWN-NEXT: i32.const       $push6=, 7
