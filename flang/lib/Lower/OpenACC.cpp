@@ -4903,23 +4903,10 @@ genCacheBounds(Fortran::lower::AbstractConverter &converter,
     if (triplet) {
       asFortran << ':';
 
-      // OpenACC spec requires at least one of lower or upper bound to be
-      // specified: arr(lower:upper), arr(lower:), or arr(:upper).
-      // arr(:) with both bounds missing is not allowed.
       Fortran::semantics::MaybeExpr lowerExpr =
           Fortran::evaluate::AsGenericExpr(triplet->lower());
       Fortran::semantics::MaybeExpr upperExpr =
           Fortran::evaluate::AsGenericExpr(triplet->upper());
-
-      if (!lowerExpr && !upperExpr)
-        llvm::report_fatal_error("OpenACC cache directive requires at least "
-                                 "one bound to be specified for array section");
-
-      // OpenACC cache only supports unit stride (default or explicit 1).
-      auto strideVal = Fortran::evaluate::ToInt64(triplet->stride());
-      if (!strideVal || *strideVal != 1)
-        llvm::report_fatal_error("OpenACC cache directive does not support "
-                                 "strided array sections");
 
       // Compute lower bound (use array lb if not specified).
       mlir::Value lb = lowerExpr ? genIndex(lowerExpr) : arrayLb;
