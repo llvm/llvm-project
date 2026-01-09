@@ -261,9 +261,10 @@ private:
 
   std::vector<std::pair<Token, const MacroInfo *>> Macros;
   llvm::StringMap<const FileEntry *> Files;
-  std::map<const IdentifierInfo *, std::pair<SourceLocation, SourceLocation>>
+  llvm::DenseMap<const IdentifierInfo *,
+                 std::pair<SourceLocation, SourceLocation>>
       Ifndefs;
-  std::map<SourceLocation, SourceLocation> EndIfs;
+  llvm::DenseMap<SourceLocation, SourceLocation> EndIfs;
 
   Preprocessor *PP;
   HeaderGuardCheck *Check;

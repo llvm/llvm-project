@@ -1410,6 +1410,15 @@ func.func @test_mul_shape() -> !tosa.shape<4> {
 }
 
 // -----
+// CHECK-LABEL: test_mod_shape
+func.func @test_mod_shape() -> !tosa.shape<4> {
+  %a = tosa.const_shape {values = dense<[9, 12, 10, 5]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %b = tosa.const_shape {values = dense<[2, 5, 3, 4]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %c = tosa.mod_shape %a, %b : (!tosa.shape<4>, !tosa.shape<4>) -> !tosa.shape<4>
+  return %c : !tosa.shape<4>
+}
+
+// -----
 // CHECK-LABEL: test_div_ceil_shape
 func.func @test_div_ceil_shape() -> !tosa.shape<4> {
   %a = tosa.const_shape {values = dense<[5, 7, 10, 1]> : tensor<4xindex>} : () -> !tosa.shape<4>
@@ -1470,4 +1479,22 @@ func.func @test_slice_shape_dynamic(%arg0: tensor<1xi32>, %arg1: tensor<1xi32>) 
   %0 = tosa.const_shape {values = dense<[4, 5, 6, 7, 8, 9]> : tensor<6xindex>} : () -> !tosa.shape<6>
   %3 = tosa.slice_shape %0, %arg0, %arg1 : (!tosa.shape<6>, tensor<1xi32>, tensor<1xi32>) -> !tosa.shape<3>
   return %3 : !tosa.shape<3>
+}
+
+// -----
+// CHECK-LABEL: test_max_shape
+func.func @test_max_shape() -> !tosa.shape<4> {
+  %a = tosa.const_shape {values = dense<[5, 7, 10, 1]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %b = tosa.const_shape {values = dense<[2, 3, 4, 3]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %c = tosa.max_shape %a, %b : (!tosa.shape<4>, !tosa.shape<4>) -> !tosa.shape<4>
+  return %c : !tosa.shape<4>
+}
+
+// -----
+// CHECK-LABEL: test_min_shape
+func.func @test_min_shape() -> !tosa.shape<4> {
+  %a = tosa.const_shape {values = dense<[5, 7, 10, 1]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %b = tosa.const_shape {values = dense<[2, 3, 4, 3]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %c = tosa.min_shape %a, %b : (!tosa.shape<4>, !tosa.shape<4>) -> !tosa.shape<4>
+  return %c : !tosa.shape<4>
 }

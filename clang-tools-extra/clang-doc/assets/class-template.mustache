@@ -63,22 +63,22 @@
                         </details>
                     </li>
                     {{/HasPublicFunctions}}
-                    {{#ProtectedFunction}}
+                    {{#HasProtectedFunctions}}
                     <li>
                         <details open>
                             <summary class="sidebar-section">
-                                <a class="sidebar-item" href="#ProtectedFunction">Protected Method</a>
+                                <a class="sidebar-item" href="#ProtectedMethods">Protected Methods</a>
                             </summary>
                             <ul>
-                                {{#Obj}}
+                                {{#ProtectedFunctions}}
                                 <li class="sidebar-item-container">
-                                    <a class="sidebar-item" href="#{{ID}}">{{Name}}</a>
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
                                 </li>
-                                {{/Obj}}
+                                {{/ProtectedFunctions}}
                             </ul>
                         </details>
                     </li>
-                    {{/ProtectedFunction}}
+                    {{/HasProtectedFunctions}}
                     {{#HasEnums}}
                     <li>
                         <details open>
@@ -198,18 +198,16 @@
                     {{/PublicFunctions}}
                 </section>
                 {{/PublicFunctions}}
-                {{#ProtectedFunction}}
-                <li class="sidebar-section">
-                    <a class="sidebar-item" href="#ProtectedFunction">Protected Method</a>
-                </li>
-                <ul>
-                    {{#Obj}}
-                    <li class="sidebar-item-container">
-                        <a class="sidebar-item" href="#{{ID}}">{{Name}}</a>
-                    </li>
-                    {{/Obj}}
-                </ul>
-                {{/ProtectedFunction}}
+                {{#HasProtectedFunctions}}
+                <section id="ProtectedMethods" class="section-container">
+                    <h2>Protected Methods</h2>
+                    <div>
+                        {{#ProtectedFunctions}}
+                        {{>FunctionPartial}}
+                        {{/ProtectedFunctions}}
+                    </div>
+                </section>
+                {{/HasProtectedFunctions}}
                 {{#HasEnums}}
                 <section id="Enums" class="section-container">
                     <h2>Enumerations</h2>

@@ -79,8 +79,6 @@ void ParamPackFunction(T... args);
 
 // HTML:        <pre><code class="language-cpp code-clang-doc">template &lt;class... T&gt;</code></pre>
 // HTML-NEXT:      <pre><code class="language-cpp code-clang-doc">void ParamPackFunction (T... args)</code></pre>
-// COM:            FIXME: Omit defined line if not defined, or emit declaration line.
-// HTML-NEXT:      <p>Defined at line of file </p>
 // HTML-NEXT:  </div>
 
 template <typename T, int U = 1>
