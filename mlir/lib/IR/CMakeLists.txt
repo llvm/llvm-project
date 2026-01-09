@@ -70,7 +70,6 @@ add_mlir_library(MLIRIR
   MLIRSymbolInterfacesIncGen
   MLIRTensorEncodingIncGen
   MLIROpAsmDialectInterfaceIncGen
-  MLIRQuantizationInterfaceIncGen
 
   LINK_LIBS PUBLIC
   MLIRSupport

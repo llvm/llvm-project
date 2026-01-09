@@ -1,5 +1,4 @@
-//===- QuantStorageTypeInterface.h - Quantzation Interfaces --------*- C++
-//-*-===//
+//===- QuantStorageTypeInterface.h - Quantzation Interfaces -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,10 +11,9 @@
 
 #include "mlir/IR/Types.h"
 
-// Forward declarations for the types we need in the implementation
-namespace mlir {
-class IntegerType;
-} // namespace mlir
+//===----------------------------------------------------------------------===//
+// Tablegen Interface Declarations
+//===----------------------------------------------------------------------===//
 
 #include "mlir/IR/QuantStorageTypeInterface.h.inc"
 

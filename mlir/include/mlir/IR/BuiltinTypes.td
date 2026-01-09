@@ -81,17 +81,19 @@ def Builtin_Complex : Builtin_Type<"Complex", "complex"> {
 
 // Base class for Builtin dialect float types.
 class Builtin_FloatType<string name, string mnemonic,
+                        list<Trait> traits = [],
                         list<string> declaredInterfaceMethods = []>
-    : Builtin_Type<name, mnemonic, /*traits=*/[
-        DeclareTypeInterfaceMethods<
+    : Builtin_Type<name, mnemonic, /*traits=*/
+        traits # [DeclareTypeInterfaceMethods<
             FloatTypeInterface,
             ["getFloatSemantics"] # declaredInterfaceMethods>]> {
 }
 
 // Float types that are cached in MLIRContext.
 class Builtin_CachedFloatType<string name, string mnemonic,
+                              list<Trait> traits = [],
                               list<string> declaredInterfaceMethods = []>
-    : Builtin_FloatType<name, mnemonic, declaredInterfaceMethods> {
+    : Builtin_FloatType<name, mnemonic, traits, declaredInterfaceMethods> {
   let extraClassDeclaration = [{
     static }] # name # [{Type get(MLIRContext *context);
   }];
@@ -102,7 +104,7 @@ class Builtin_CachedFloatType<string name, string mnemonic,
 //===----------------------------------------------------------------------===//
 
 def Builtin_Float8E5M2 : Builtin_FloatType<"Float8E5M2", "f8E5M2", 
-                                   ["QuantStorageTypeInterface"]> {
+                                   [QuantStorageTypeInterface]> {
   let summary = "8-bit floating point with 2 bit mantissa";
   let description = [{
     An 8-bit floating point type with 1 sign bit, 5 bits exponent and 2 bits
@@ -173,7 +175,7 @@ def Builtin_Float8E4M3 : Builtin_FloatType<"Float8E4M3", "f8E4M3"> {
 //===----------------------------------------------------------------------===//
 
 def Builtin_Float8E4M3FN : Builtin_FloatType<"Float8E4M3FN", "f8E4M3FN", 
-                                   ["QuantStorageTypeInterface"]> {
+                                   [QuantStorageTypeInterface]> {
   let summary = "8-bit floating point with 3 bit mantissa";
   let description = [{
     An 8-bit floating point type with 1 sign bit, 4 bits exponent and 3 bits
@@ -313,7 +315,8 @@ def Builtin_Float8E3M4 : Builtin_FloatType<"Float8E3M4", "f8E3M4"> {
 // Float4E2M1FNType
 //===----------------------------------------------------------------------===//
 
-def Builtin_Float4E2M1FN : Builtin_FloatType<"Float4E2M1FN", "f4E2M1FN"> {
+def Builtin_Float4E2M1FN : Builtin_FloatType<"Float4E2M1FN", "f4E2M1FN",
+                                   [QuantStorageTypeInterface]> {
   let summary = "4-bit floating point with 2-bit exponent and 1-bit mantissa";
   let description = [{
     An 4-bit floating point type with 1 sign bit, 2 bits exponent and 1 bit
@@ -328,6 +331,34 @@ def Builtin_Float4E2M1FN : Builtin_FloatType<"Float4E2M1FN", "f4E2M1FN"> {
 
     Open Compute Project (OCP) microscaling formats (MX) specification:
     https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf
+  }];
+
+  let extraClassDeclaration = [{
+    /// QuantStorageTypeInterface method implementations
+    /// Whether the storage type should default to signed when used in quantization.
+    bool shouldDefaultToSigned() const { return true; }
+    /// Get the bit width of this 4-bit floating point type.
+    unsigned getStorageWidth() const { return 4; }
+    
+    /// Get default maximum value for this 4-bit floating point type.
+    int64_t getDefaultMaximum(bool isSigned) const { return 6; }
+    /// Get default minimum value for this 4-bit floating point type.
+    int64_t getDefaultMinimum(bool isSigned) const { return -getDefaultMaximum(isSigned); }
+    
+    /// Get the storage type as a string.
+    std::string getStorageType(bool isSigned) const { return "f4E2M1FN"; }
+
+    /// Check if this 4-bit floating point type uses packed representation.
+    bool isPacked() const { return true; }
+
+    /// Get the logical bit width per value for this 4-bit floating point type.
+    unsigned getLogicalBitWidth() const { return 4; }
+
+    /// Get the number of logical elements that fit in one byte for this 4-bit floating point type.
+    unsigned getElementsPerByte() const { return 2; }
+
+    /// Get the preferred alignment in bytes for this 4-bit floating point type.
+    std::optional<unsigned> getPreferredAlignmentBytes() const { return std::nullopt; }
   }];
 }
 
@@ -404,7 +435,7 @@ def Builtin_Float8E8M0FNU : Builtin_FloatType<"Float8E8M0FNU", "f8E8M0FNU"> {
 //===----------------------------------------------------------------------===//
 
 def Builtin_BFloat16 : Builtin_CachedFloatType<"BFloat16", "bf16",
-    /*declaredInterfaceMethods=*/["scaleElementBitwidth"]> {
+    /*traits=*/[], /*declaredInterfaceMethods=*/["scaleElementBitwidth"]> {
   let summary = "bfloat16 floating-point type";
 }
 
@@ -413,7 +444,7 @@ def Builtin_BFloat16 : Builtin_CachedFloatType<"BFloat16", "bf16",
 //===----------------------------------------------------------------------===//
 
 def Builtin_Float16 : Builtin_CachedFloatType<"Float16", "f16",
-    /*declaredInterfaceMethods=*/["scaleElementBitwidth"]> {
+    /*traits=*/[], /*declaredInterfaceMethods=*/["scaleElementBitwidth"]> {
   let summary = "16-bit floating-point type";
 }
 
@@ -430,7 +461,7 @@ def Builtin_FloatTF32 : Builtin_CachedFloatType<"FloatTF32", "tf32"> {
 //===----------------------------------------------------------------------===//
 
 def Builtin_Float32 : Builtin_CachedFloatType<"Float32", "f32",
-    /*declaredInterfaceMethods=*/["scaleElementBitwidth"]> {
+    /*traits=*/[], /*declaredInterfaceMethods=*/["scaleElementBitwidth"]> {
   let summary = "32-bit floating-point type";
 }
 
