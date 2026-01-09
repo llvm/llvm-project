@@ -2392,9 +2392,8 @@ nb::object PyOpAttributeMap::getWithDefaultNamed(const std::string &key,
                                                  nb::object defaultValue) {
   MlirAttribute attr =
       mlirOperationGetAttributeByName(operation->get(), toMlirStringRef(key));
-  if (mlirAttributeIsNull(attr)) {
+  if (mlirAttributeIsNull(attr))
     return defaultValue;
-  }
   return PyAttribute(operation->getContext(), attr).maybeDownCast();
 }
 
