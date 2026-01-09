@@ -46,6 +46,8 @@ struct EncodingAttr : PyConcreteAttribute<EncodingAttr> {
   static constexpr IsAFunctionTy isaFunction =
       mlirAttributeIsASparseTensorEncodingAttr;
   static constexpr const char *pyClassName = "EncodingAttr";
+  static inline const MlirStringRef name =
+      mlirSparseTensorEncodingAttrGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
@@ -121,21 +123,25 @@ struct EncodingAttr : PyConcreteAttribute<EncodingAttr> {
     c.def_prop_ro("pos_width", mlirSparseTensorEncodingAttrGetPosWidth);
     c.def_prop_ro("crd_width", mlirSparseTensorEncodingAttrGetCrdWidth);
 
-    c.def_prop_ro(
-        "explicit_val", [](EncodingAttr &self) -> std::optional<PyAttribute> {
-          MlirAttribute ret = mlirSparseTensorEncodingAttrGetExplicitVal(self);
-          if (mlirAttributeIsNull(ret))
-            return {};
-          return PyAttribute(self.getContext(), ret);
-        });
+    c.def_prop_ro("explicit_val",
+                  [](EncodingAttr &self)
+                      -> std::optional<nb::typed<nb::object, PyAttribute>> {
+                    MlirAttribute ret =
+                        mlirSparseTensorEncodingAttrGetExplicitVal(self);
+                    if (mlirAttributeIsNull(ret))
+                      return {};
+                    return PyAttribute(self.getContext(), ret).maybeDownCast();
+                  });
 
-    c.def_prop_ro(
-        "implicit_val", [](EncodingAttr &self) -> std::optional<PyAttribute> {
-          MlirAttribute ret = mlirSparseTensorEncodingAttrGetImplicitVal(self);
-          if (mlirAttributeIsNull(ret))
-            return {};
-          return PyAttribute(self.getContext(), ret);
-        });
+    c.def_prop_ro("implicit_val",
+                  [](EncodingAttr &self)
+                      -> std::optional<nb::typed<nb::object, PyAttribute>> {
+                    MlirAttribute ret =
+                        mlirSparseTensorEncodingAttrGetImplicitVal(self);
+                    if (mlirAttributeIsNull(ret))
+                      return {};
+                    return PyAttribute(self.getContext(), ret).maybeDownCast();
+                  });
 
     c.def_prop_ro("structured_n", [](const EncodingAttr &self) -> unsigned {
       const int lvlRank = mlirSparseTensorEncodingGetLvlRank(self);

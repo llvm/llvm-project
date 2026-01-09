@@ -240,7 +240,7 @@ Expected<MappedFileRegionArena> MappedFileRegionArena::create(
             sys::fs::resize_file_sparse(MainFile->FD, Capacity))
       return createFileError(Result.Path, EC);
     if (Result.Logger)
-      Result.Logger->log_MappedFileRegionArena_resizeFile(
+      Result.Logger->logMappedFileRegionArenaResizeFile(
           Result.Path, FileSize->Size, Capacity);
   }
 
@@ -306,7 +306,7 @@ void MappedFileRegionArena::destroyImpl() {
       (void)sys::fs::resize_file(*FD, Size);
       (void)unlockFileThreadSafe(*SharedLockFD);
       if (Logger)
-        Logger->log_MappedFileRegionArena_resizeFile(Path, Capacity, Size);
+        Logger->logMappedFileRegionArenaResizeFile(Path, Capacity, Size);
     }
   }
 
@@ -323,7 +323,7 @@ void MappedFileRegionArena::destroyImpl() {
   Close(SharedLockFD);
 
   if (Logger)
-    Logger->log_MappedFileRegionArena_close(Path);
+    Logger->logMappedFileRegionArenaClose(Path);
 }
 
 void MappedFileRegionArena::initializeHeader(uint64_t HeaderOffset) {
@@ -340,8 +340,8 @@ void MappedFileRegionArena::initializeHeader(uint64_t HeaderOffset) {
     assert(ExistingValue >= HeaderEndOffset &&
            "Expected 0, or past the end of the header itself");
   if (Logger)
-    Logger->log_MappedFileRegionArena_create(Path, *FD, data(), capacity(),
-                                             size());
+    Logger->logMappedFileRegionArenaCreate(Path, *FD, data(), capacity(),
+                                           size());
 }
 
 static Error createAllocatorOutOfSpaceError() {
@@ -364,8 +364,7 @@ Expected<int64_t> MappedFileRegionArena::allocateOffset(uint64_t AllocSize) {
       (void)H->BumpPtr.exchange(OldEnd);
 
     if (Logger)
-      Logger->log_MappedFileRegionArena_oom(Path, capacity(), OldEnd,
-                                            AllocSize);
+      Logger->logMappedFileRegionArenaOom(Path, capacity(), OldEnd, AllocSize);
 
     return createAllocatorOutOfSpaceError();
   }
@@ -389,7 +388,7 @@ Expected<int64_t> MappedFileRegionArena::allocateOffset(uint64_t AllocSize) {
   }
 
   if (Logger)
-    Logger->log_MappedFileRegionArena_allocate(data(), OldEnd, AllocSize);
+    Logger->logMappedFileRegionArenaAllocate(data(), OldEnd, AllocSize);
 
   return OldEnd;
 }

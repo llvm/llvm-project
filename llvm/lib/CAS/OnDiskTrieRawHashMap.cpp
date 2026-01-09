@@ -140,9 +140,9 @@ public:
     SubtrieSlotValue SaveExpected(Expected);
     bool Result = Slots[I].compare_exchange_strong(Expected.Offset, New.Offset);
     if (Logger)
-      Logger->log_compare_exchange_strong(Region->data(), getOffset().Offset, I,
-                                          SaveExpected.Offset, New.Offset,
-                                          Expected.Offset);
+      Logger->logSubtrieHandleCmpXchg(Region->data(), getOffset().Offset, I,
+                                      SaveExpected.Offset, New.Offset,
+                                      Expected.Offset);
     return Result;
   }
 
@@ -362,8 +362,8 @@ Expected<SubtrieHandle> SubtrieHandle::create(MappedFileRegionArena &Alloc,
     new (I) SlotT(0);
 
   if (Logger)
-    Logger->log_SubtrieHandle_create(Alloc.data(), S.getOffset().Offset,
-                                     StartBit, NumBits);
+    Logger->logSubtrieHandleCreate(Alloc.data(), S.getOffset().Offset, StartBit,
+                                   NumBits);
   return S;
 }
 
@@ -460,7 +460,7 @@ TrieRawHashMapHandle::createRecord(MappedFileRegionArena &Alloc,
   llvm::copy(Hash, const_cast<uint8_t *>(Record.Proxy.Hash.begin()));
 
   if (Logger)
-    Logger->log_HashMappedTrieHandle_createRecord(
+    Logger->logHashMappedTrieHandleCreateRecord(
         Alloc.data(), Record.Offset.getRawOffset(), Hash);
 
   return Record;

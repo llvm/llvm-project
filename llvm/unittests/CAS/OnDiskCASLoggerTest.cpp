@@ -33,22 +33,22 @@ static void writeToLog(OnDiskCASLogger *Logger, int NumOpens, int NumEntries) {
   void *Region = &Logger;
 
   for (int J = 0; J < NumOpens; ++J) {
-    Logger->log_MappedFileRegionArena_create(Path, 0, Region, 100, 7);
-    Logger->log_MappedFileRegionArena_resizeFile(Path, 7, 100);
-    Logger->log_MappedFileRegionArena_allocate(Region, 0, 50);
-    Logger->log_MappedFileRegionArena_oom(Path, 100, 51, 50);
+    Logger->logMappedFileRegionArenaCreate(Path, 0, Region, 100, 7);
+    Logger->logMappedFileRegionArenaResizeFile(Path, 7, 100);
+    Logger->logMappedFileRegionArenaAllocate(Region, 0, 50);
+    Logger->logMappedFileRegionArenaOom(Path, 100, 51, 50);
     for (int K = 0; K < NumEntries; ++K) {
-      Logger->log_MappedFileRegionArena_allocate(Region, K, 10);
-      Logger->log_HashMappedTrieHandle_createRecord(Region, K, Hash);
-      Logger->log_MappedFileRegionArena_allocate(Region, K, 20);
-      Logger->log_SubtrieHandle_create(Region, K, 1, 2);
-      Logger->log_compare_exchange_strong(Region, K, J, -3, -1, -2);
+      Logger->logMappedFileRegionArenaAllocate(Region, K, 10);
+      Logger->logHashMappedTrieHandleCreateRecord(Region, K, Hash);
+      Logger->logMappedFileRegionArenaAllocate(Region, K, 20);
+      Logger->logSubtrieHandleCreate(Region, K, 1, 2);
+      Logger->logSubtrieHandleCmpXchg(Region, K, J, -3, -1, -2);
     }
-    Logger->log_TempFile_create(Path);
-    Logger->log_TempFile_keep(Path, Path, std::error_code());
-    Logger->log_TempFile_remove(Path, std::error_code());
-    Logger->log_MappedFileRegionArena_close(Path);
-    Logger->log_UnifiedOnDiskCache_collectGarbage(Path);
+    Logger->logTempFileCreate(Path);
+    Logger->logTempFileKeep(Path, Path, std::error_code());
+    Logger->logTempFileRemove(Path, std::error_code());
+    Logger->logMappedFileRegionArenaClose(Path);
+    Logger->logUnifiedOnDiskCacheCollectGarbage(Path);
   }
 }
 

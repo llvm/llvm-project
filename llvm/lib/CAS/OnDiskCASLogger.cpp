@@ -138,11 +138,10 @@ static void formatTrieOffset(raw_ostream &OS, int64_t Off) {
   OS << format_hex(Off, 0);
 }
 
-void OnDiskCASLogger::log_compare_exchange_strong(void *Region, TrieOffset Trie,
-                                                  size_t SlotI,
-                                                  TrieOffset Expected,
-                                                  TrieOffset New,
-                                                  TrieOffset Previous) {
+void OnDiskCASLogger::logSubtrieHandleCmpXchg(void *Region, TrieOffset Trie,
+                                              size_t SlotI, TrieOffset Expected,
+                                              TrieOffset New,
+                                              TrieOffset Previous) {
   TextLogLine Log(OS);
   Log << "cmpxcgh subtrie region=" << Region << " offset=";
   formatTrieOffset(Log, Trie);
@@ -154,16 +153,16 @@ void OnDiskCASLogger::log_compare_exchange_strong(void *Region, TrieOffset Trie,
   formatTrieOffset(Log, Previous);
 }
 
-void OnDiskCASLogger::log_SubtrieHandle_create(void *Region, TrieOffset Trie,
-                                               uint32_t StartBit,
-                                               uint32_t NumBits) {
+void OnDiskCASLogger::logSubtrieHandleCreate(void *Region, TrieOffset Trie,
+                                             uint32_t StartBit,
+                                             uint32_t NumBits) {
   TextLogLine Log(OS);
   Log << "create subtrie region=" << Region << " offset=";
   formatTrieOffset(Log, Trie);
   Log << " start-bit=" << StartBit << " num-bits=" << NumBits;
 }
 
-void OnDiskCASLogger::log_HashMappedTrieHandle_createRecord(
+void OnDiskCASLogger::logHashMappedTrieHandleCreateRecord(
     void *Region, TrieOffset Off, ArrayRef<uint8_t> Hash) {
   TextLogLine Log(OS);
   Log << "create record region=" << Region << " offset=";
@@ -171,18 +170,18 @@ void OnDiskCASLogger::log_HashMappedTrieHandle_createRecord(
   Log << " hash=" << format_bytes(Hash, std::nullopt, 32, 32);
 }
 
-void OnDiskCASLogger::log_MappedFileRegionArena_resizeFile(StringRef Path,
-                                                           size_t Before,
-                                                           size_t After) {
+void OnDiskCASLogger::logMappedFileRegionArenaResizeFile(StringRef Path,
+                                                         size_t Before,
+                                                         size_t After) {
   TextLogLine Log(OS);
   Log << "resize mapped file '" << Path << "' from=" << Before
       << " to=" << After;
 }
 
-void OnDiskCASLogger::log_MappedFileRegionArena_create(StringRef Path, int FD,
-                                                       void *Region,
-                                                       size_t Capacity,
-                                                       size_t Size) {
+void OnDiskCASLogger::logMappedFileRegionArenaCreate(StringRef Path, int FD,
+                                                     void *Region,
+                                                     size_t Capacity,
+                                                     size_t Size) {
   sys::fs::file_status Stat;
   std::error_code EC = status(FD, Stat);
 
@@ -194,21 +193,20 @@ void OnDiskCASLogger::log_MappedFileRegionArena_create(StringRef Path, int FD,
   Log << " size=" << Size << " capacity=" << Capacity;
 }
 
-void OnDiskCASLogger::log_MappedFileRegionArena_oom(StringRef Path,
-                                                    size_t Capacity,
-                                                    size_t Size,
-                                                    size_t AllocSize) {
+void OnDiskCASLogger::logMappedFileRegionArenaOom(StringRef Path,
+                                                  size_t Capacity, size_t Size,
+                                                  size_t AllocSize) {
   TextLogLine Log(OS);
   Log << "oom '" << Path << "' old-size=" << Size << " capacity=" << Capacity
       << "alloc-size=" << AllocSize;
 }
-void OnDiskCASLogger::log_MappedFileRegionArena_close(StringRef Path) {
+void OnDiskCASLogger::logMappedFileRegionArenaClose(StringRef Path) {
   TextLogLine Log(OS);
   Log << "close mmap '" << Path << "'";
 }
-void OnDiskCASLogger::log_MappedFileRegionArena_allocate(void *Region,
-                                                         TrieOffset Off,
-                                                         size_t Size) {
+void OnDiskCASLogger::logMappedFileRegionArenaAllocate(void *Region,
+                                                       TrieOffset Off,
+                                                       size_t Size) {
   if (!LogAllocations)
     return;
   TextLogLine Log(OS);
@@ -217,12 +215,12 @@ void OnDiskCASLogger::log_MappedFileRegionArena_allocate(void *Region,
   Log << " size=" << Size;
 }
 
-void OnDiskCASLogger::log_UnifiedOnDiskCache_collectGarbage(StringRef Path) {
+void OnDiskCASLogger::logUnifiedOnDiskCacheCollectGarbage(StringRef Path) {
   TextLogLine Log(OS);
   Log << "collect garbage '" << Path << "'";
 }
 
-void OnDiskCASLogger::log_UnifiedOnDiskCache_validateIfNeeded(
+void OnDiskCASLogger::logUnifiedOnDiskCacheValidateIfNeeded(
     StringRef Path, uint64_t BootTime, uint64_t ValidationTime, bool CheckHash,
     bool AllowRecovery, bool Force, std::optional<StringRef> LLVMCas,
     StringRef ValidationError, bool Skipped, bool Recovered) {
@@ -241,21 +239,20 @@ void OnDiskCASLogger::log_UnifiedOnDiskCache_validateIfNeeded(
     Log << " data was invalid " << ValidationError;
 }
 
-void OnDiskCASLogger::log_TempFile_create(StringRef Name) {
+void OnDiskCASLogger::logTempFileCreate(StringRef Name) {
   TextLogLine Log(OS);
   Log << "standalone file create '" << Name << "'";
 }
 
-void OnDiskCASLogger::log_TempFile_keep(StringRef TmpName, StringRef Name,
-                                        std::error_code EC) {
+void OnDiskCASLogger::logTempFileKeep(StringRef TmpName, StringRef Name,
+                                      std::error_code EC) {
   TextLogLine Log(OS);
   Log << "standalone file rename '" << TmpName << "' to '" << Name << "'";
   if (EC)
     Log << " error: " << EC.message();
 }
 
-void OnDiskCASLogger::log_TempFile_remove(StringRef TmpName,
-                                          std::error_code EC) {
+void OnDiskCASLogger::logTempFileRemove(StringRef TmpName, std::error_code EC) {
   TextLogLine Log(OS);
   Log << "standalone file remove '" << TmpName << "'";
   if (EC)

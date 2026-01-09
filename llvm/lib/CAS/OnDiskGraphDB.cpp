@@ -577,7 +577,7 @@ Error TempFile::discard() {
   if (!TmpName.empty()) {
     std::error_code EC = sys::fs::remove(TmpName);
     if (Logger)
-      Logger->log_TempFile_remove(TmpName, EC);
+      Logger->logTempFileRemove(TmpName, EC);
     if (EC)
       return errorCodeToError(EC);
   }
@@ -593,7 +593,7 @@ Error TempFile::keep(const Twine &Name) {
   std::error_code RenameEC = sys::fs::rename(TmpName, Name);
 
   if (Logger)
-    Logger->log_TempFile_keep(TmpName, Name.str(), RenameEC);
+    Logger->logTempFileKeep(TmpName, Name.str(), RenameEC);
 
   if (!RenameEC)
     TmpName = "";
@@ -614,7 +614,7 @@ Expected<TempFile> TempFile::create(const Twine &Model,
     return errorCodeToError(EC);
 
   if (Logger)
-    Logger->log_TempFile_create(ResultPath);
+    Logger->logTempFileCreate(ResultPath);
 
   TempFile Ret(ResultPath, FD, Logger);
   return std::move(Ret);

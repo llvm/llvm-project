@@ -320,7 +320,7 @@ Expected<ValidationResult> UnifiedOnDiskCache::validateIfNeeded(
   llvm::scope_exit Log([&] {
     if (!Logger)
       return;
-    Logger->log_UnifiedOnDiskCache_validateIfNeeded(
+    Logger->logUnifiedOnDiskCacheValidateIfNeeded(
         RootPath, BootTime, ValidationBootTime, CheckHash, AllowRecovery,
         ForceValidation, LLVMCasBinaryPath, LogValidationError, Skipped,
         Recovered);
@@ -530,10 +530,10 @@ bool UnifiedOnDiskCache::hasExceededSizeLimit() const {
     return false;
 
   // If the hard limit is beyond 85%, declare above limit and request clean up.
-  unsigned CurrentPrecent =
+  unsigned CurrentPercent =
       std::max(PrimaryGraphDB->getHardStorageLimitUtilization(),
                PrimaryKVDB->getHardStorageLimitUtilization());
-  if (CurrentPrecent > 85)
+  if (CurrentPercent > 85)
     return true;
 
   // We allow each of the directories in the chain to reach up to half the
@@ -616,7 +616,7 @@ Error UnifiedOnDiskCache::collectGarbage(StringRef Path,
   for (StringRef UnusedSubDir : *DBDirs) {
     sys::path::append(PathBuf, UnusedSubDir);
     if (Logger)
-      Logger->log_UnifiedOnDiskCache_collectGarbage(PathBuf);
+      Logger->logUnifiedOnDiskCacheCollectGarbage(PathBuf);
     if (std::error_code EC = sys::fs::remove_directories(PathBuf))
       return createFileError(PathBuf, EC);
     sys::path::remove_filename(PathBuf);
