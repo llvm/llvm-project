@@ -54,9 +54,8 @@ protocol::Scope CreateScope(const eScopeKind kind, int64_t variablesReference,
 
 lldb::SBValueList *Variables::GetTopLevelScope(int64_t variablesReference) {
   auto iter = m_scope_kinds.find(variablesReference);
-  if (iter == m_scope_kinds.end()) {
+  if (iter == m_scope_kinds.end()) 
     return nullptr;
-  }
 
   eScopeKind scope_kind = iter->second.first;
   uint64_t dap_frame_id = iter->second.second;
