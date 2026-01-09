@@ -144,14 +144,19 @@ static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
   if (isa<ParmVarDecl>(D)) {
     if (D->getType()->isReferenceType()) {
       if (S.inConstantContext() && S.getLangOpts().CPlusPlus &&
-          !S.getLangOpts().CPlusPlus11)
+          !S.getLangOpts().CPlusPlus11) {
         diagnoseNonConstVariable(S, OpPC, D);
-      return false;
+        return false;
+      }
     }
 
     const SourceInfo &Loc = S.Current->getSource(OpPC);
-    if (S.getLangOpts().CPlusPlus11) {
-      S.FFDiag(Loc, diag::note_constexpr_function_param_value_unknown) << D;
+    if (S.getLangOpts().CPlusPlus23) {
+      S.FFDiag(Loc, diag::note_constexpr_access_unknown_variable, 1)
+          << AK_Read << D;
+      S.Note(D->getLocation(), diag::note_declared_at) << D->getSourceRange();
+    } else if (S.getLangOpts().CPlusPlus11) {
+      S.FFDiag(Loc, diag::note_constexpr_function_param_value_unknown, 1) << D;
       S.Note(D->getLocation(), diag::note_declared_at) << D->getSourceRange();
     } else {
       S.FFDiag(Loc);
