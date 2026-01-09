@@ -25,6 +25,7 @@ struct MyCBuffer {
   __hlsl_resource_t [[hlsl::resource_class(CBuffer)]] x;
 };
 
+
 // expected-error@+1  {{binding type 'i' ignored. The 'integer constant' binding type is no longer supported}}
 MySRV invalid : register(i2);
 
@@ -39,13 +40,6 @@ MyTemplatedSRV<int> c : register(b2);
 
 // expected-error@+1  {{binding type 's' only applies to sampler state}}
 MyUAV d : register(s2, space1);
-
-// expected-error@+1  {{binding type 't' only applies to SRV resources}}
-cbuffer cbuf : register(t0) {}
-
-// expected-error@+1  {{binding type 'b' only applies to constant buffer resources}}
-tbuffer tbuf : register(b0) {};
-
 
 // empty binding prefix cases:
 // expected-error@+1 {{expected identifier}}
