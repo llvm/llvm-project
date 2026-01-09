@@ -7804,10 +7804,17 @@ PPCTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   SDValue Glue;
   SmallVector<SDValue, 4> RetOps(1, Chain);
 
+  MachineFunction &MF = DAG.getMachineFunction();
+  bool ShouldDisableCalleeSavedRegister =
+      MF.getFunction().hasFnAttribute("preserve_all");
+
   // Copy the result values into the output registers.
   for (unsigned i = 0, RealResIdx = 0; i != RVLocs.size(); ++i, ++RealResIdx) {
     CCValAssign &VA = RVLocs[i];
     assert(VA.isRegLoc() && "Can only return in registers!");
+
+    if (ShouldDisableCalleeSavedRegister)
+      MF.getRegInfo().disableCalleeSavedRegister(VA.getLocReg());
 
     SDValue Arg = OutVals[RealResIdx];
 

@@ -343,6 +343,90 @@ def CSR_PPC64_R2_Altivec : CalleeSavedRegs<(add CSR_PPC64_Altivec, X2)>;
 
 def CSR_NoRegs : CalleeSavedRegs<(add)>;
 
+def CSR_PPC32_PreserveMost : CalleeSavedRegs<(add R0, (sequence "R%u", 3, 31),
+                                 (sequence "CR%u", 0, 7))>;
+
+def CSR_PPC32_PreserveMost_NonVoid
+    : CalleeSavedRegs<(sub CSR_PPC32_PreserveMost, R3)>;
+
+def CSR_PPC32_PreserveAll
+    : CalleeSavedRegs<(add CSR_PPC32_PreserveMost, (sequence "F%u", 0, 31))>;
+
+def CSR_PPC32_PreserveAll_Unknown
+    : CalleeSavedRegs<(sub CSR_PPC32_PreserveAll, R3, R4, F1)>;
+
+def CSR_PPC32_PreserveAll_NonVoid
+    : CalleeSavedRegs<(sub CSR_PPC32_PreserveAll, R3)>;
+
+def CSR_PPC32_PreserveAll_NonVoid_64
+    : CalleeSavedRegs<(sub CSR_PPC32_PreserveAll_NonVoid, R4)>;
+
+def CSR_PPC32_PreserveAll_NonVoid_Float
+    : CalleeSavedRegs<(sub CSR_PPC32_PreserveAll, F1)>;
+
+def CSR_PPC32_PreserveAll_Altivec
+    : CalleeSavedRegs<(add CSR_PPC32_PreserveAll, (sequence "V%u", 0, 31))>;
+
+def CSR_PPC32_PreserveAll_Altivec_Unknown
+    : CalleeSavedRegs<(sub CSR_PPC32_PreserveAll_Altivec, R3, R4, F1, V2)>;
+
+def CSR_PPC32_PreserveAll_Altivec_NonVoid
+    : CalleeSavedRegs<(sub CSR_PPC32_PreserveAll_Altivec, R3)>;
+
+def CSR_PPC32_PreserveAll_Altivec_NonVoid_64
+    : CalleeSavedRegs<(sub CSR_PPC32_PreserveAll_Altivec_NonVoid, R4)>;
+
+def CSR_PPC32_PreserveAll_Altivec_NonVoid_Vec
+    : CalleeSavedRegs<(sub CSR_PPC32_PreserveAll_Altivec, V2)>;
+
+def CSR_PPC32_PreserveAll_Altivec_NonVoid_Float
+    : CalleeSavedRegs<(sub CSR_PPC32_PreserveAll_Altivec, F1)>;
+
+def CSR_PPC32_PreserveAll_SPE
+    : CalleeSavedRegs<(add CSR_PPC32_PreserveMost, (sequence "S%u", 3, 31))>;
+
+def CSR_PPC32_PreserveAll_SPE_NonVoid
+    : CalleeSavedRegs<(sub CSR_PPC32_PreserveAll_SPE, R3, S3)>;
+
+def CSR_PPC64_PreserveMost : CalleeSavedRegs<(add X0, (sequence "X%u", 3, 31),
+                                 (sequence "CR%u", 0, 7))>;
+
+def CSR_PPC64_PreserveMost_NonVoid
+    : CalleeSavedRegs<(sub CSR_PPC64_PreserveMost, X3)>;
+
+def CSR_PPC64_PreserveAll
+    : CalleeSavedRegs<(add CSR_PPC64_PreserveMost, (sequence "F%u", 0, 31))>;
+
+def CSR_PPC64_PreserveAll_Unknown
+    : CalleeSavedRegs<(sub CSR_PPC64_PreserveAll, X3, X4, F1)>;
+
+def CSR_PPC64_PreserveAll_NonVoid
+    : CalleeSavedRegs<(sub CSR_PPC64_PreserveAll, X3)>;
+
+def CSR_PPC64_PreserveAll_NonVoid_Float
+    : CalleeSavedRegs<(sub CSR_PPC64_PreserveAll, F1)>;
+
+def CSR_PPC64_PreserveAll_NonVoid_128
+    : CalleeSavedRegs<(sub CSR_PPC64_PreserveAll_NonVoid, X4)>;
+
+def CSR_PPC64_PreserveAll_Altivec
+    : CalleeSavedRegs<(add CSR_PPC64_PreserveAll, (sequence "V%u", 0, 31))>;
+
+def CSR_PPC64_PreserveAll_Altivec_NonVoid
+    : CalleeSavedRegs<(sub CSR_PPC64_PreserveAll_Altivec, X3)>;
+
+def CSR_PPC64_PreserveAll_Altivec_Unknown
+    : CalleeSavedRegs<(sub CSR_PPC64_PreserveAll_Altivec, X3, X4, F1, V2)>;
+
+def CSR_PPC64_PreserveAll_Altivec_NonVoid_Float
+    : CalleeSavedRegs<(sub CSR_PPC64_PreserveAll_Altivec, F1)>;
+
+def CSR_PPC64_PreserveAll_Altivec_NonVoid_Vec
+    : CalleeSavedRegs<(sub CSR_PPC64_PreserveAll_Altivec, V2)>;
+
+def CSR_PPC64_PreserveAll_Altivec_NonVoid_128
+    : CalleeSavedRegs<(sub CSR_PPC64_PreserveAll_Altivec_NonVoid, X4)>;
+
 // coldcc calling convection marks most registers as non-volatile.
 // Do not include r1 since the stack pointer is never considered a CSR.
 // Do not include r2, since it is the TOC register and is added depending

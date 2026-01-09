@@ -6584,7 +6584,7 @@ in the future.
 def PreserveAllDocs : Documentation {
   let Category = DocCatCallingConvs;
   let Content = [{
-On X86-64 and AArch64 targets, this attribute changes the calling convention of
+On X86-64, AArch64, and PowerPC targets, this attribute changes the calling convention of
 a function. The ``preserve_all`` calling convention attempts to make the code
 in the caller even less intrusive than the ``preserve_most`` calling convention.
 This calling convention also behaves identical to the ``C`` calling convention
@@ -6599,9 +6599,12 @@ returned in callee-saved registers.
   R11. R11 can be used as a scratch register. Furthermore it also preserves
   all floating-point registers (XMMs/YMMs).
 
-- On AArch64 the callee preserve all general purpose registers, except X0-X8 and
+- On AArch64 the callee preserves all general purpose registers, except X0-X8 and
   X16-X18. Furthermore it also preserves lower 128 bits of V8-V31 SIMD - floating
   point registers.
+
+- On PowerPC the callee preserves all general purpose registers, except R1 and R2.
+  Furthermore it also preserves all floating-point and vector registers.
 
 The idea behind this convention is to support calls to runtime functions
 that don't need to call out to any other functions.
