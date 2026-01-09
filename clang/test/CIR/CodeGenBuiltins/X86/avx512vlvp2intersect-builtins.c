@@ -51,12 +51,12 @@ void test_mm256_2intersect_epi64(__m256i a, __m256i b, __mmask8 *m0, __mmask8 *m
   // CIR: %[[RES:.*]] = cir.call_llvm_intrinsic "x86.avx512.vp2intersect.q.256" %{{.*}}, %{{.*}} : (!cir.vector<4 x !s64i>, !cir.vector<4 x !s64i>) -> !rec_anon_struct1
   // CIR: %[[VAL1:.*]] = cir.extract_member %[[RES]][0] : !rec_anon_struct1 -> !cir.vector<4 x !cir.bool>
   // CIR: %[[ZERO1:.*]] = cir.const #cir.zero : !cir.vector<4 x !cir.bool>
-  // CIR: %[[SHUF1:.*]] = cir.vec.shuffle(%[[VAL1]], %[[ZERO1]] : !cir.vector<4 x !cir.bool>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i] : !cir.vector<8 x !cir.bool>
+  // CIR: %[[SHUF1:.*]] = cir.vec.shuffle(%[[VAL1]], %[[ZERO1]] : !cir.vector<4 x !cir.bool>) [#cir.int<0> : !s64i, #cir.int<1> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<4> : !s64i, #cir.int<5> : !s64i, #cir.int<6> : !s64i, #cir.int<7> : !s64i] : !cir.vector<8 x !cir.bool>
   // CIR: %[[CAST1:.*]] = cir.cast bitcast %[[SHUF1]] : !cir.vector<8 x !cir.bool> -> !u8i
   // CIR: cir.store align(1) %[[CAST1]], %{{.*}} : !u8i, !cir.ptr<!u8i>
   // CIR: %[[VAL2:.*]] = cir.extract_member %[[RES]][1] : !rec_anon_struct1 -> !cir.vector<4 x !cir.bool>
   // CIR: %[[ZERO2:.*]] = cir.const #cir.zero : !cir.vector<4 x !cir.bool>
-  // CIR: %[[SHUF2:.*]] = cir.vec.shuffle(%[[VAL2]], %[[ZERO2]] : !cir.vector<4 x !cir.bool>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i] : !cir.vector<8 x !cir.bool>
+  // CIR: %[[SHUF2:.*]] = cir.vec.shuffle(%[[VAL2]], %[[ZERO2]] : !cir.vector<4 x !cir.bool>) [#cir.int<0> : !s64i, #cir.int<1> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<4> : !s64i, #cir.int<5> : !s64i, #cir.int<6> : !s64i, #cir.int<7> : !s64i] : !cir.vector<8 x !cir.bool>
   // CIR: %[[CAST2:.*]] = cir.cast bitcast %[[SHUF2]] : !cir.vector<8 x !cir.bool> -> !u8i
   // CIR: cir.store align(1) %[[CAST2]], %{{.*}} : !u8i, !cir.ptr<!u8i>
 
@@ -89,12 +89,12 @@ void test_mm_2intersect_epi32(__m128i a, __m128i b, __mmask8 *m0, __mmask8 *m1) 
   // CIR: %[[RES:.*]] = cir.call_llvm_intrinsic "x86.avx512.vp2intersect.d.128" %{{.*}}, %{{.*}} : (!cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>) -> !rec_anon_struct1
   // CIR: %[[VAL1:.*]] = cir.extract_member %[[RES]][0] : !rec_anon_struct1 -> !cir.vector<4 x !cir.bool>
   // CIR: %[[ZERO1:.*]] = cir.const #cir.zero : !cir.vector<4 x !cir.bool>
-  // CIR: %[[SHUF1:.*]] = cir.vec.shuffle(%[[VAL1]], %[[ZERO1]] : !cir.vector<4 x !cir.bool>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i] : !cir.vector<8 x !cir.bool>
+  // CIR: %[[SHUF1:.*]] = cir.vec.shuffle(%[[VAL1]], %[[ZERO1]] : !cir.vector<4 x !cir.bool>) [#cir.int<0> : !s64i, #cir.int<1> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<4> : !s64i, #cir.int<5> : !s64i, #cir.int<6> : !s64i, #cir.int<7> : !s64i] : !cir.vector<8 x !cir.bool>
   // CIR: %[[CAST1:.*]] = cir.cast bitcast %[[SHUF1]] : !cir.vector<8 x !cir.bool> -> !u8i
   // CIR: cir.store align(1) %[[CAST1]], %{{.*}} : !u8i, !cir.ptr<!u8i>
   // CIR: %[[VAL2:.*]] = cir.extract_member %[[RES]][1] : !rec_anon_struct1 -> !cir.vector<4 x !cir.bool>
   // CIR: %[[ZERO2:.*]] = cir.const #cir.zero : !cir.vector<4 x !cir.bool>
-  // CIR: %[[SHUF2:.*]] = cir.vec.shuffle(%[[VAL2]], %[[ZERO2]] : !cir.vector<4 x !cir.bool>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i] : !cir.vector<8 x !cir.bool>
+  // CIR: %[[SHUF2:.*]] = cir.vec.shuffle(%[[VAL2]], %[[ZERO2]] : !cir.vector<4 x !cir.bool>) [#cir.int<0> : !s64i, #cir.int<1> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<4> : !s64i, #cir.int<5> : !s64i, #cir.int<6> : !s64i, #cir.int<7> : !s64i] : !cir.vector<8 x !cir.bool>
   // CIR: %[[CAST2:.*]] = cir.cast bitcast %[[SHUF2]] : !cir.vector<8 x !cir.bool> -> !u8i
   // CIR: cir.store align(1) %[[CAST2]], %{{.*}} : !u8i, !cir.ptr<!u8i>
 
@@ -127,12 +127,12 @@ void test_mm_2intersect_epi64(__m128i a, __m128i b, __mmask8 *m0, __mmask8 *m1) 
   // CIR: %[[RES:.*]] = cir.call_llvm_intrinsic "x86.avx512.vp2intersect.q.128" %{{.*}}, %{{.*}} : (!cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>) -> !rec_anon_struct2
   // CIR: %[[VAL1:.*]] = cir.extract_member %[[RES]][0] : !rec_anon_struct2 -> !cir.vector<2 x !cir.bool>
   // CIR: %[[ZERO1:.*]] = cir.const #cir.zero : !cir.vector<2 x !cir.bool>
-  // CIR: %[[SHUF1:.*]] = cir.vec.shuffle(%[[VAL1]], %[[ZERO1]] : !cir.vector<2 x !cir.bool>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i] : !cir.vector<8 x !cir.bool>
+  // CIR: %[[SHUF1:.*]] = cir.vec.shuffle(%[[VAL1]], %[[ZERO1]] : !cir.vector<2 x !cir.bool>) [#cir.int<0> : !s64i, #cir.int<1> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i] : !cir.vector<8 x !cir.bool>
   // CIR: %[[CAST1:.*]] = cir.cast bitcast %[[SHUF1]] : !cir.vector<8 x !cir.bool> -> !u8i
   // CIR: cir.store align(1) %[[CAST1]], %{{.*}} : !u8i, !cir.ptr<!u8i>
   // CIR: %[[VAL2:.*]] = cir.extract_member %[[RES]][1] : !rec_anon_struct2 -> !cir.vector<2 x !cir.bool>
   // CIR: %[[ZERO2:.*]] = cir.const #cir.zero : !cir.vector<2 x !cir.bool>
-  // CIR: %[[SHUF2:.*]] = cir.vec.shuffle(%[[VAL2]], %[[ZERO2]] : !cir.vector<2 x !cir.bool>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i] : !cir.vector<8 x !cir.bool>
+  // CIR: %[[SHUF2:.*]] = cir.vec.shuffle(%[[VAL2]], %[[ZERO2]] : !cir.vector<2 x !cir.bool>) [#cir.int<0> : !s64i, #cir.int<1> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i] : !cir.vector<8 x !cir.bool>
   // CIR: %[[CAST2:.*]] = cir.cast bitcast %[[SHUF2]] : !cir.vector<8 x !cir.bool> -> !u8i
   // CIR: cir.store align(1) %[[CAST2]], %{{.*}} : !u8i, !cir.ptr<!u8i>
 
@@ -150,6 +150,12 @@ void test_mm_2intersect_epi64(__m128i a, __m128i b, __mmask8 *m0, __mmask8 *m1) 
   // OGCG-LABEL: test_mm_2intersect_epi64
   // OGCG: %[[RES:.*]] = call { <2 x i1>, <2 x i1> } @llvm.x86.avx512.vp2intersect.q.128(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   // OGCG: %[[VAL1:.*]] = extractvalue { <2 x i1>, <2 x i1> } %{{.*}}, 0
+  // OGCG: %[[SHUF1:.*]] = shufflevector <2 x i1> %[[VAL1]], <2 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
+  // OGCG: %[[CAST1:.*]] = bitcast <8 x i1> %[[SHUF1]] to i8
+  // OGCG: store i8 %[[CAST1]], ptr %{{.*}}, align 1
   // OGCG: %[[VAL2:.*]] = extractvalue { <2 x i1>, <2 x i1> } %{{.*}}, 1
+  // OGCG: %[[SHUF2:.*]] = shufflevector <2 x i1> %[[VAL2]], <2 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
+  // OGCG: %[[CAST2:.*]] = bitcast <8 x i1> %[[SHUF2]] to i8
+  // OGCG: store i8 %[[CAST2]], ptr %{{.*}}, align 1
   _mm_2intersect_epi64(a, b, m0, m1);
 }
