@@ -952,8 +952,8 @@ static Value *selectIncomingValueForBlock(Value *OldVal, BasicBlock *BB,
 /// \param BBPreds The list of all predecessor blocks to initialize with Undef.
 /// \param IncomingValues [out] The map from block to value for this phi.
 static void gatherIncomingValuesToPhi(PHINode *PN,
-                                      IncomingValueMap &IncomingValues,
-                                      const PredBlockVector &BBPreds) {
+                                      const PredBlockVector &BBPreds,
+                                      IncomingValueMap &IncomingValues) {
   for (BasicBlock *Pred : BBPreds)
     IncomingValues[Pred] = nullptr;
 
@@ -964,9 +964,8 @@ static void gatherIncomingValuesToPhi(PHINode *PN,
 
     BasicBlock *BB = PN->getIncomingBlock(i);
     auto It = IncomingValues.find(BB);
-    if (It != IncomingValues.end()) {
+    if (It != IncomingValues.end())
       It->second = V;
-    }
   }
 }
 
@@ -985,9 +984,8 @@ static void replaceUndefValuesInPhi(PHINode *PN,
 
     BasicBlock *BB = PN->getIncomingBlock(i);
     IncomingValueMap::const_iterator It = IncomingValues.find(BB);
-    if (It == IncomingValues.end()) {
+    if (It == IncomingValues.end())
       continue;
-    }
 
     // Keep track of undef/poison incoming values. Those must match, so we fix
     // them up below if needed.
@@ -1103,7 +1101,7 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
   // values flowing into PN, we want to rewrite those values to be
   // consistent with the non-undef values.
 
-  gatherIncomingValuesToPhi(PN, IncomingValues, BBPreds);
+  gatherIncomingValuesToPhi(PN, BBPreds, IncomingValues);
 
   // If this incoming value is one of the PHI nodes in BB, the new entries
   // in the PHI node are the entries from the old PHI.
