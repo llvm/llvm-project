@@ -20,6 +20,7 @@ module iso_c_binding
     c_null_ptr => __builtin_c_null_ptr, &
     c_ptr => __builtin_c_ptr, &
     c_sizeof => sizeof, &
+    f_c_string => __builtin_f_c_string, &
     operator(==), operator(/=)
 
   implicit none
@@ -136,15 +137,6 @@ module iso_c_binding
     c_uint_least32_t = c_uint32_t, &
     c_uint_least64_t = c_uint64_t, &
     c_uint_least128_t = c_uint128_t
-
-  ! Implemented in submodule
-  interface f_c_string
-    module function f_c_string(string, asis) result(res)
-      character(kind=c_char, len=*), intent(in) :: string
-      logical, optional, intent(in) :: asis
-      character(kind=c_char, len=:), allocatable :: res
-    end function f_c_string
-  end interface
 
  contains
 
