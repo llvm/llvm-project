@@ -2665,7 +2665,6 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
 
   if (!wsloopOp.getLinearVars().empty()) {
     auto linearVarTypes = wsloopOp.getLinearVarTypes().value();
-
     for (mlir::Attribute linearVarType : linearVarTypes)
       linearClauseProcessor.registerType(moduleTranslation, linearVarType);
 
@@ -3000,7 +2999,6 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
 
   if (!simdOp.getLinearVars().empty()) {
     auto linearVarTypes = simdOp.getLinearVarTypes().value();
-
     for (mlir::Attribute linearVarType : linearVarTypes)
       linearClauseProcessor.registerType(moduleTranslation, linearVarType);
     for (auto [idx, linearVar] : llvm::enumerate(simdOp.getLinearVars())) {
