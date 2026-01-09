@@ -99,7 +99,7 @@ class CFIInstrInserter : public MachineFunctionPass {
       unsigned Reg;
       // CFA offset
       int64_t Offset;
-    }
+    };
 
   public:
     CSRSavedLocation() {}
