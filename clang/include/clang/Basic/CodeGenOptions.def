@@ -120,6 +120,8 @@ CODEGENOPT(StackSizeSection  , 1, 0, Benign) ///< Set when -fstack-size-section 
 ///< Set when -femit-compact-unwind-non-canonical is enabled.
 CODEGENOPT(EmitCompactUnwindNonCanonical, 1, 0, Benign)
 
+CODEGENOPT(EmitSFrameUnwind, 1, 0, Benign) ///< Set when -sframe is enabled.
+
 ///< Set when -fxray-always-emit-customevents is enabled.
 CODEGENOPT(XRayAlwaysEmitCustomEvents , 1, 0, Benign)
 
@@ -195,6 +197,7 @@ CODEGENOPT(DisableBlockSignatureString, 1, 0, Benign) ///< Set when -fdisable-bl
 CODEGENOPT(HIPSaveKernelArgName, 1, 0, Benign) ///< Set when -fhip-kernel-arg-name is enabled.
 CODEGENOPT(UniqueInternalLinkageNames, 1, 0, Benign) ///< Internal Linkage symbols get unique names.
 CODEGENOPT(SplitMachineFunctions, 1, 0, Benign) ///< Split machine functions using profile information.
+CODEGENOPT(PartitionStaticDataSections, 1, 0, Benign) /// < Partition static data sections using profile information.
 CODEGENOPT(PPCUseFullRegisterNames, 1, 0, Benign) ///< Print full register names in assembly
 CODEGENOPT(X86RelaxRelocations, 1, 1, Benign) ///< -Wa,-mrelax-relocations={yes,no}
 CODEGENOPT(X86Sse2Avx        , 1, 0, Benign)   ///< -Wa,-msse2avx

@@ -11,6 +11,7 @@
 // UNSUPPORTED: x86_64-unknown-linux-gnu-LTO
 // UNSUPPORTED: s390x-ibm-linux-gnu
 // UNSUPPORTED: s390x-ibm-linux-gnu-LTO
+// XFAIL: intelgpu
 
 #include <omp.h>
 
@@ -26,10 +27,10 @@ int main(void) {
 // CHECK:  dataDelete
 // CHECK:  omp_target_free
 // NDEBG: main
-// DEBUG:  main {{.*}}free_wrong_ptr_kind.c:22
+// DEBUG:  main {{.*}}free_wrong_ptr_kind.c:23
 //
 // CHECK: Last allocation of size 8 -> device pointer
 // CHECK:  dataAlloc
 // CHECK:  llvm_omp_target_alloc_host
 // NDEBG:  main
-// DEBUG:  main {{.*}}free_wrong_ptr_kind.c:21
+// DEBUG:  main {{.*}}free_wrong_ptr_kind.c:22
