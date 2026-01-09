@@ -320,7 +320,7 @@ void initLock(omp_lock_t *Lock) { unsetLock(Lock); }
 void destroyLock(omp_lock_t *Lock) { unsetLock(Lock); }
 void setLock(omp_lock_t *Lock) {
   int32_t *lock_ptr = (int32_t *)Lock;
-  while(__spirv_AtomicCompareExchange(
+  while (__spirv_AtomicCompareExchange(
       lock_ptr, Scope_t::CrossDevice,
       0x200 | MemorySemantics_t::SequentiallyConsistent,
       0x200 | MemorySemantics_t::SequentiallyConsistent, 1, 0)) {
