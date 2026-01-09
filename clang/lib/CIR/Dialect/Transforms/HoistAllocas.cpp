@@ -62,11 +62,10 @@ static bool hasStoreToAllocaInWhileCond(cir::AllocaOp alloca) {
   //   }
   //
   // Note that %x.slot is emitted outside the cir.while operation.  When
-  // hoisting such an alloca operation, one // must remove the "const" flag from
-  // it, otherwise LLVM lowering code will
-  // mistakenly attach invariant group metadata to the load and store operations
-  // in the while body, indicating that all loads and stores across all
-  // iterations of the loop are constant.
+  // hoisting such an alloca operation, one must remove the "const" flag from
+  // it, otherwise LLVM lowering code will mistakenly attach invariant group
+  // metadata to the load and store operations in the while body, indicating
+  // that all loads and stores across all iterations of the loop are constant.
 
   for (mlir::Operation *user : alloca->getUsers()) {
     auto store = mlir::dyn_cast<cir::StoreOp>(user);
@@ -148,7 +147,7 @@ static void processConstAlloca(cir::AllocaOp alloca) {
   // The cir.invariant_group operation attaches fresh invariant information to
   // the operand pointer and yields a pointer with the fresh invariant
   // information. Upon each loop iteration, the old invariant information is
-  // disgarded, and new invariant information is attached, thus the correct
+  // discarded, and new invariant information is attached, thus the correct
   // semantics are retained. During LLVM lowering, the cir.invariant_group
   // operation will eventually become an intrinsic call to
   // @llvm.launder.invariant.group.

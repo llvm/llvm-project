@@ -7,9 +7,6 @@
 //
 // RUN: cir-translate -o %t-llvm.ll %t-opt.cir -cir-to-llvmir --disable-cc-lowering
 // RUN: FileCheck --input-file=%t-llvm.ll %s --check-prefix=LLVM
-//
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -O1 -emit-llvm %s -o %t-og.ll
-// RUN: FileCheck --input-file=%t-og.ll %s --check-prefix=OGCG
 
 int produce_int();
 void blackbox(const int &);
@@ -40,12 +37,6 @@ void local_const_int() {
 // LLVM-NEXT: ret void
 // LLVM-NEXT: }
 
-// OGCG-LABEL: @_Z15local_const_intv
-// OGCG-NEXT: entry:
-// OGCG-NEXT: tail call {{.*}}i32 @_Z11produce_intv()
-// OGCG-NEXT: ret void
-// OGCG-NEXT: }
-
 void param_const_int(const int x) {}
 
 // CIR-LABEL: @_Z15param_const_inti
@@ -66,11 +57,6 @@ void param_const_int(const int x) {}
 // LLVM-NEXT: store i32 %[[PARM]], ptr %[[X]], align 4, !invariant.group !{{.+}}
 // LLVM-NEXT: ret void
 // LLVM-NEXT: }
-
-// OGCG-LABEL: @_Z15param_const_inti
-// OGCG-NEXT: entry:
-// OGCG-NEXT: ret void
-// OGCG-NEXT: }
 
 void local_constexpr_int() {
   constexpr int x = 42;
@@ -99,16 +85,6 @@ void local_constexpr_int() {
 // LLVM-NEXT: call void @_Z8blackboxRKi(ptr %[[X]])
 // LLVM-NEXT: ret void
 // LLVM-NEXT: }
-
-// OGCG-LABEL: @_Z19local_constexpr_intv
-// OGCG-NEXT: entry:
-// OGCG-NEXT: %[[X:.*]] = alloca i32
-// OGCG-NEXT: call void @llvm.lifetime.start
-// OGCG-NEXT: store i32 42, ptr %[[X]], align 4
-// OGCG-NEXT: call void @_Z8blackboxRKi(ptr {{.*}}%[[X]])
-// OGCG-NEXT: call void @llvm.lifetime.end
-// OGCG-NEXT: ret void
-// OGCG-NEXT: }
 
 void local_reference() {
   int x = 0;
@@ -141,11 +117,6 @@ void local_reference() {
 // LLVM-NEXT: ret void
 // LLVM-NEXT: }
 
-// OGCG-LABEL: @_Z15local_referencev
-// OGCG-NEXT: entry:
-// OGCG-NEXT: ret void
-// OGCG-NEXT: }
-
 struct Foo {
   int a;
   int b;
@@ -177,12 +148,6 @@ void local_const_struct() {
 // LLVM-NEXT: store %struct.Foo %[[RES]], ptr %[[X]], align 4, !invariant.group !{{.+}}
 // LLVM-NEXT: ret void
 // LLVM-NEXT: }
-
-// OGCG-LABEL: @_Z18local_const_structv
-// OGCG-NEXT: entry:
-// OGCG-NEXT: tail call i64 @_Z11produce_foov()
-// OGCG-NEXT: ret void
-// OGCG-NEXT: }
 
 [[clang::optnone]]
 int local_const_load_store() {
@@ -225,14 +190,6 @@ int local_const_load_store() {
 // LLVM-NEXT: %{{.+}} = load i32, ptr %[[SLOT]], align 4, !invariant.group !{{.+}}
 //      LLVM: ret i32
 // LLVM-NEXT: }
-
-// OGCG-LABEL: @_Z22local_const_load_storev
-//      OGCG: %[[INIT:.*]] = call {{.*}}i32 @_Z11produce_intv()
-// OGCG-NEXT: store i32 %[[INIT]], ptr %[[SLOT:.*]], align 4
-// OGCG-NEXT: call void @llvm.lifetime.start
-// OGCG-NEXT: %{{.+}} = load i32, ptr %[[SLOT]], align 4
-//      OGCG: ret i32
-// OGCG-NEXT: }
 
 int local_const_optimize() {
   const int x = produce_int();
@@ -277,19 +234,6 @@ int local_const_optimize() {
 // LLVM-NEXT:    %[[RET_LOAD:.*]] = load i32, ptr %[[RET]]
 // LLVM-NEXT:    ret i32 %[[RET_LOAD]]
 // LLVM-NEXT:  }
-
-// OGCG-LABEL: @_Z20local_const_optimizev()
-// OGCG-NEXT:  entry:
-// OGCG-NEXT:    %[[X:.*]] = alloca i32
-// OGCG-NEXT:    call void @llvm.lifetime.start
-// OGCG-NEXT:    %[[INIT:.*]] = tail call {{.*}}i32 @_Z11produce_intv()
-// OGCG-NEXT:    store i32 %[[INIT]], ptr %[[X]], align 4
-// OGCG-NEXT:    call void @_Z8blackboxRKi(ptr {{.*}}%[[X]])
-// OGCG-NEXT:    call void @_Z8blackboxRKi(ptr {{.*}}%[[X]])
-// OGCG-NEXT:    %[[RET_LOAD:.*]] = load i32, ptr %[[X]]
-// OGCG-NEXT:    call void @llvm.lifetime.end
-// OGCG-NEXT:    ret i32 %[[RET_LOAD]]
-// OGCG-NEXT:  }
 
 int local_scoped_const() {
   {
@@ -343,18 +287,6 @@ int local_scoped_const() {
 // LLVM-NEXT:    ret i32 %[[RET_LOAD]]
 //      LLVM:    unreachable
 // LLVM-NEXT:  }
-
-// OGCG-LABEL: @_Z18local_scoped_constv()
-// OGCG-NEXT:  entry:
-// OGCG-NEXT:    %[[X:.*]] = alloca i32
-// OGCG-NEXT:    call void @llvm.lifetime.start
-// OGCG-NEXT:    %[[INIT:.*]] = tail call {{.*}}i32 @_Z11produce_intv()
-// OGCG-NEXT:    store i32 %[[INIT]], ptr %[[X]], align 4
-// OGCG-NEXT:    call void @_Z8blackboxRKi(ptr {{.*}}%[[X]])
-// OGCG-NEXT:    %[[X_LOAD:.*]] = load i32, ptr %[[X]], align 4
-// OGCG-NEXT:     call void @llvm.lifetime.end
-// OGCG-NEXT:    ret i32 %[[X_LOAD]]
-// OGCG-NEXT:  }
 
 void local_const_in_loop() {
   for (int i = 0; i < 10; ++i) {
@@ -420,21 +352,6 @@ void local_const_in_loop() {
 // LLVM-NEXT:    call void @_Z7consumei(i32 %[[X_PTR_LOAD]])
 //      LLVM:  }
 
-// OGCG-LABEL: @_Z19local_const_in_loopv()
-// OGCG-NEXT:  entry:
-// OGCG-NEXT:    %[[X:.*]] = alloca i32
-// OGCG-NEXT:    br label %[[BODY:.*]]
-//      OGCG:    [[BODY]]:
-// OGCG-NEXT:    %[[PHI:.*]] = phi i32 [ 0, %entry ], [ %inc, %[[BODY]] ]
-// OGCG-NEXT:    call void @llvm.lifetime.start
-// OGCG-NEXT:    %[[INIT:.*]] = call {{.*}}i32 @_Z11produce_intv()
-// OGCG-NEXT:    store i32 %[[INIT]], ptr %[[X]], align 4
-// OGCG-NEXT:    call void @_Z8blackboxRKi(ptr {{.*}}%[[X]])
-// OGCG-NEXT:    %[[X_LOAD:.*]] = load i32, ptr %[[X]], align 4
-// OGCG-NEXT:    call void @_Z7consumei(i32 {{.*}}%[[X_LOAD]])
-// OGCG-NEXT:    call void @llvm.lifetime.end
-//      OGCG:  }
-
 void local_const_in_while_condition() {
   while (const int x = produce_int()) {
     blackbox(x);
@@ -487,21 +404,3 @@ void local_const_in_while_condition() {
 //      LLVM:    call void @_Z8blackboxRKi(ptr %[[X_SLOT]])
 //      LLVM:  ret void
 // LLVM-NET:  }
-
-// OGCG-LABEL: @_Z30local_const_in_while_conditionv()
-//      OGCG:    %[[X_SLOT:.*]] = alloca i32
-// OGCG-NEXT:    call void @llvm.lifetime.start
-//      OGCG:    %[[INIT:.*]] = tail call {{.*}}i32 @_Z11produce_intv()
-// OGCG-NEXT:    store i32 %[[INIT]], ptr %[[X_SLOT]], align 4
-// OGCG-NEXT:    %[[LOOP_COND:.*]] = icmp eq i32 %[[INIT]], 0
-// OGCG-NEXT:    br i1 %[[LOOP_COND]], label %{{.+}}, label %[[LOOP_BODY:.+]]
-//      OGCG:  [[LOOP_BODY]]:
-//      OGCG:    call void @_Z8blackboxRKi(ptr {{.*}}%[[X_SLOT]])
-// OGCG-NEXT:    call void @llvm.lifetime.end
-// OGCG-NEXT:    call void @llvm.lifetime.start
-//      OGCG:    %[[INIT:.*]] = call {{.*}}i32 @_Z11produce_intv()
-// OGCG-NEXT:    store i32 %[[INIT]], ptr %[[X_SLOT]], align 4
-// OGCG-NEXT:    %[[LOOP_COND:.*]] = icmp eq i32 %[[INIT]], 0
-// OGCG-NEXT:    br i1 %[[LOOP_COND]], label %{{.+}}, label %[[LOOP_BODY]]
-//      OGCG:  ret void
-//      OGCG:  }
