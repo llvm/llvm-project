@@ -12,11 +12,11 @@
 
 // class multiset
 
-//    template<typename K>
+//    template<class K>
 //        size_type erase(K&& k) const;        // C++23
 
 #include <set>
-#include "test_transparent_associative.hpp"
+#include "test_transparent_associative.h"
 
 int main(int, char**) {
   test_transparent_erase<std::multiset<StoredType<int>, transparent_comparator_base>>({1, 2, 4, 5});

@@ -12,7 +12,7 @@
 
 // class unordered_map
 
-// template <typename K>
+// template <class K>
 // node_type extract(K&& k);
 
 #include <unordered_map>

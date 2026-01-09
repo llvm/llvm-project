@@ -12,11 +12,11 @@
 
 // class multimap
 
-//    template<typename K>
+//    template<class K>
 //        node_type extract(K&& k) const;        // C++23
 
 #include <map>
-#include "test_transparent_associative.hpp"
+#include "test_transparent_associative.h"
 
 int main(int, char**) {
   test_transparent_extract<std::multimap<StoredType<int>, int, transparent_comparator_base>>({{1, 0}, {2, 0}, {4, 0}});
