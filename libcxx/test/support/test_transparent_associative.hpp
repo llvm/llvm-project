@@ -16,6 +16,7 @@
 #if TEST_STD_VER >= 23
 
 #  include <concepts>
+#  include <type_traits>
 
 template <typename T>
 struct StoredType;
