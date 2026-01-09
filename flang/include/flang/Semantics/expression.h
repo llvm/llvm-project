@@ -26,6 +26,7 @@
 #include "flang/Support/Fortran.h"
 #include <map>
 #include <optional>
+#include <stack>
 #include <type_traits>
 #include <variant>
 
@@ -428,6 +429,7 @@ private:
   bool inDataStmtConstant_{false};
   bool inStmtFunctionDefinition_{false};
   bool iterativelyAnalyzingSubexpressions_{false};
+  bool inDeadCode_{false};
   friend class ArgumentAnalyzer;
 };
 
@@ -541,6 +543,8 @@ public:
     --whereDepth_;
     exprAnalyzer_.set_inWhereBody(InWhereBody());
   }
+
+  bool Pre(const parser::IfConstruct &);
 
   bool Pre(const parser::ComponentDefStmt &) {
     inComponentDefStmt_ = true;

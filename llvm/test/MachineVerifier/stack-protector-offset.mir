@@ -21,7 +21,7 @@ body:             |
 ...
 
 ;--- lower.mir
-# CHECK: *** Bad machine code: Stack protector is not the top-most object on the stack ***
+# CHECK: Bad machine code: Stack protector is not the top-most object on the stack
 ---
 name:            lower
 frameInfo:
@@ -35,7 +35,7 @@ body:             |
 ...
 
 ;--- overlap.mir
-# CHECK: *** Bad machine code: Stack protector overlaps with another stack object ***
+# CHECK: Bad machine code: Stack protector overlaps with another stack object
 ---
 name:            overlap
 frameInfo:
@@ -49,7 +49,7 @@ body:             |
 ...
 
 ;--- higher.mir
-# CHECK: *** Bad machine code: Stack protector is not the top-most object on the stack ***
+# CHECK: Bad machine code: Stack protector is not the top-most object on the stack
 ---
 name:            higher
 frameInfo:
