@@ -428,3 +428,49 @@ subroutine test_cache_nonunit_lb()
 ! CHECK: acc.yield
 ! CHECK-NEXT: } attributes {{{.*}}unstructured}
 end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_cache_use_after_region()
+subroutine test_cache_use_after_region()
+  integer, parameter :: n = 10
+  real, dimension(n) :: a, b
+  integer :: i
+
+  !$acc loop
+  do i = 1, n
+    !$acc cache(b)
+    a(i) = b(i)
+  end do
+
+  ! Use b after the cache region - should use original variable
+  a(1) = b(1) + 1.0
+
+! CHECK: acc.loop
+! CHECK: acc.cache varPtr(%[[B_VAR:.*]] : !fir.ref<!fir.array<10xf32>>)
+! CHECK: acc.yield
+! CHECK: }
+! After loop: uses original b, not cached version
+! CHECK: %[[B_ORIG:.*]] = hlfir.designate %{{.*}}#0 (%{{.*}})
+! CHECK: fir.load %[[B_ORIG]]
+! CHECK: arith.addf
+! CHECK: hlfir.assign
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_cache_in_regular_loop()
+subroutine test_cache_in_regular_loop()
+  integer, parameter :: n = 10
+  real, dimension(n) :: a, b
+  integer :: i
+
+  ! Cache in regular DO loop (not acc loop)
+  do i = 1, n
+    !$acc cache(b(i))
+    a(i) = b(i)
+  end do
+
+! CHECK: fir.do_loop
+! CHECK: acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) bounds(%{{.*}})
+! CHECK: hlfir.declare
+! CHECK: hlfir.designate
+! CHECK: fir.load
+! CHECK: hlfir.assign
+end subroutine
