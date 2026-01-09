@@ -514,7 +514,14 @@ static StringRef getNodeName(const RecordDecl &Node,
     return Node.getName();
   }
   Scratch.clear();
-  return ("(anonymous " + Node.getKindName() + ")").toStringRef(Scratch);
+
+  llvm::raw_svector_ostream OS(Scratch);
+
+  PrintingPolicy Copy(Node.getASTContext().getPrintingPolicy());
+  Copy.AnonymousTagLocations = false;
+  Node.printName(OS, Copy);
+
+  return OS.str();
 }
 
 static StringRef getNodeName(const NamespaceDecl &Node,

@@ -158,6 +158,7 @@ public:
   void addPreRegAlloc(PassManagerWrapper &PMW) const;
   void addOptimizedRegAlloc(PassManagerWrapper &PMW) const;
   void addPreSched2(PassManagerWrapper &PMW) const;
+  void addPostBBSections(PassManagerWrapper &PMW) const;
 
   /// Check if a pass is enabled given \p Opt option. The option always
   /// overrides defaults if explicitly used. Otherwise its default will be used
@@ -2097,8 +2098,8 @@ AMDGPUCodeGenPassBuilder::AMDGPUCodeGenPassBuilder(
   // Exceptions and StackMaps are not supported, so these passes will never do
   // anything.
   // Garbage collection is not supported.
-  disablePass<StackMapLivenessPass, FuncletLayoutPass,
-              ShadowStackGCLoweringPass>();
+  disablePass<StackMapLivenessPass, FuncletLayoutPass, PatchableFunctionPass,
+              ShadowStackGCLoweringPass, GCLoweringPass>();
 }
 
 void AMDGPUCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
@@ -2403,6 +2404,13 @@ void AMDGPUCodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) const {
   if (TM.getOptLevel() > CodeGenOptLevel::None)
     addMachineFunctionPass(SIShrinkInstructionsPass(), PMW);
   addMachineFunctionPass(SIPostRABundlerPass(), PMW);
+}
+
+void AMDGPUCodeGenPassBuilder::addPostBBSections(
+    PassManagerWrapper &PMW) const {
+  // We run this later to avoid passes like livedebugvalues and BBSections
+  // having to deal with the apparent multi-entry functions we may generate.
+  addMachineFunctionPass(AMDGPUPreloadKernArgPrologPass(), PMW);
 }
 
 void AMDGPUCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {

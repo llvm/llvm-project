@@ -2704,7 +2704,7 @@ void SelectionDAGISel::Select_PATCHPOINT(SDNode *N) {
 
 /// GetVBR - decode a vbr encoding whose top bit is set.
 LLVM_ATTRIBUTE_ALWAYS_INLINE static uint64_t
-GetVBR(uint64_t Val, const unsigned char *MatcherTable, unsigned &Idx) {
+GetVBR(uint64_t Val, const uint8_t *MatcherTable, unsigned &Idx) {
   assert(Val >= 128 && "Not a VBR");
   Val &= 127;  // Remove first vbr bit.
 
@@ -2719,10 +2719,27 @@ GetVBR(uint64_t Val, const unsigned char *MatcherTable, unsigned &Idx) {
   return Val;
 }
 
+LLVM_ATTRIBUTE_ALWAYS_INLINE static int64_t
+GetSignedVBR(const unsigned char *MatcherTable, unsigned &Idx) {
+  int64_t Val = 0;
+  unsigned Shift = 0;
+  uint64_t NextBits;
+  do {
+    NextBits = MatcherTable[Idx++];
+    Val |= (NextBits & 127) << Shift;
+    Shift += 7;
+  } while (NextBits & 128);
+
+  if (Shift < 64 && (NextBits & 0x40))
+    Val |= UINT64_MAX << Shift;
+
+  return Val;
+}
+
 /// getSimpleVT - Decode a value in MatcherTable, if it's a VBR encoded value,
 /// use GetVBR to decode it.
 LLVM_ATTRIBUTE_ALWAYS_INLINE static MVT::SimpleValueType
-getSimpleVT(const unsigned char *MatcherTable, unsigned &MatcherIndex) {
+getSimpleVT(const uint8_t *MatcherTable, unsigned &MatcherIndex) {
   unsigned SimpleVT = MatcherTable[MatcherIndex++];
   if (SimpleVT & 128)
     SimpleVT = GetVBR(SimpleVT, MatcherTable, MatcherIndex);
@@ -2926,7 +2943,7 @@ MorphNode(SDNode *Node, unsigned TargetOpc, SDVTList VTList,
 
 /// CheckSame - Implements OP_CheckSame.
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
-CheckSame(const unsigned char *MatcherTable, unsigned &MatcherIndex, SDValue N,
+CheckSame(const uint8_t *MatcherTable, unsigned &MatcherIndex, SDValue N,
           const SmallVectorImpl<std::pair<SDValue, SDNode *>> &RecordedNodes) {
   // Accept if it is exactly the same as a previously recorded node.
   unsigned RecNo = MatcherTable[MatcherIndex++];
@@ -2936,7 +2953,7 @@ CheckSame(const unsigned char *MatcherTable, unsigned &MatcherIndex, SDValue N,
 
 /// CheckChildSame - Implements OP_CheckChildXSame.
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool CheckChildSame(
-    const unsigned char *MatcherTable, unsigned &MatcherIndex, SDValue N,
+    const uint8_t *MatcherTable, unsigned &MatcherIndex, SDValue N,
     const SmallVectorImpl<std::pair<SDValue, SDNode *>> &RecordedNodes,
     unsigned ChildNo) {
   if (ChildNo >= N.getNumOperands())
@@ -2947,7 +2964,7 @@ LLVM_ATTRIBUTE_ALWAYS_INLINE static bool CheckChildSame(
 
 /// CheckPatternPredicate - Implements OP_CheckPatternPredicate.
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
-CheckPatternPredicate(unsigned Opcode, const unsigned char *MatcherTable,
+CheckPatternPredicate(unsigned Opcode, const uint8_t *MatcherTable,
                       unsigned &MatcherIndex, const SelectionDAGISel &SDISel) {
   bool TwoBytePredNo =
       Opcode == SelectionDAGISel::OPC_CheckPatternPredicateTwoByte;
@@ -2962,7 +2979,7 @@ CheckPatternPredicate(unsigned Opcode, const unsigned char *MatcherTable,
 
 /// CheckNodePredicate - Implements OP_CheckNodePredicate.
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
-CheckNodePredicate(unsigned Opcode, const unsigned char *MatcherTable,
+CheckNodePredicate(unsigned Opcode, const uint8_t *MatcherTable,
                    unsigned &MatcherIndex, const SelectionDAGISel &SDISel,
                    SDValue Op) {
   unsigned PredNo = Opcode == SelectionDAGISel::OPC_CheckPredicate
@@ -2972,8 +2989,7 @@ CheckNodePredicate(unsigned Opcode, const unsigned char *MatcherTable,
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
-CheckOpcode(const unsigned char *MatcherTable, unsigned &MatcherIndex,
-            SDNode *N) {
+CheckOpcode(const uint8_t *MatcherTable, unsigned &MatcherIndex, SDNode *N) {
   uint16_t Opc = MatcherTable[MatcherIndex++];
   Opc |= static_cast<uint16_t>(MatcherTable[MatcherIndex++]) << 8;
   return N->getOpcode() == Opc;
@@ -2999,14 +3015,13 @@ CheckChildType(MVT::SimpleValueType VT, SDValue N, const TargetLowering *TLI,
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
-CheckCondCode(const unsigned char *MatcherTable, unsigned &MatcherIndex,
-              SDValue N) {
+CheckCondCode(const uint8_t *MatcherTable, unsigned &MatcherIndex, SDValue N) {
   return cast<CondCodeSDNode>(N)->get() ==
          static_cast<ISD::CondCode>(MatcherTable[MatcherIndex++]);
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
-CheckChild2CondCode(const unsigned char *MatcherTable, unsigned &MatcherIndex,
+CheckChild2CondCode(const uint8_t *MatcherTable, unsigned &MatcherIndex,
                     SDValue N) {
   if (2 >= N.getNumOperands())
     return false;
@@ -3014,8 +3029,8 @@ CheckChild2CondCode(const unsigned char *MatcherTable, unsigned &MatcherIndex,
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
-CheckValueType(const unsigned char *MatcherTable, unsigned &MatcherIndex,
-               SDValue N, const TargetLowering *TLI, const DataLayout &DL) {
+CheckValueType(const uint8_t *MatcherTable, unsigned &MatcherIndex, SDValue N,
+               const TargetLowering *TLI, const DataLayout &DL) {
   MVT::SimpleValueType VT = getSimpleVT(MatcherTable, MatcherIndex);
   if (cast<VTSDNode>(N)->getVT() == VT)
     return true;
@@ -3024,32 +3039,16 @@ CheckValueType(const unsigned char *MatcherTable, unsigned &MatcherIndex,
   return VT == MVT::iPTR && cast<VTSDNode>(N)->getVT() == TLI->getPointerTy(DL);
 }
 
-// Bit 0 stores the sign of the immediate. The upper bits contain the magnitude
-// shifted left by 1.
-static uint64_t decodeSignRotatedValue(uint64_t V) {
-  if ((V & 1) == 0)
-    return V >> 1;
-  if (V != 1)
-    return -(V >> 1);
-  // There is no such thing as -0 with integers.  "-0" really means MININT.
-  return 1ULL << 63;
-}
-
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
-CheckInteger(const unsigned char *MatcherTable, unsigned &MatcherIndex,
-             SDValue N) {
-  int64_t Val = MatcherTable[MatcherIndex++];
-  if (Val & 128)
-    Val = GetVBR(Val, MatcherTable, MatcherIndex);
-
-  Val = decodeSignRotatedValue(Val);
+CheckInteger(const uint8_t *MatcherTable, unsigned &MatcherIndex, SDValue N) {
+  int64_t Val = GetSignedVBR(MatcherTable, MatcherIndex);
 
   ConstantSDNode *C = dyn_cast<ConstantSDNode>(N);
   return C && C->getAPIntValue().trySExtValue() == Val;
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
-CheckChildInteger(const unsigned char *MatcherTable, unsigned &MatcherIndex,
+CheckChildInteger(const uint8_t *MatcherTable, unsigned &MatcherIndex,
                   SDValue N, unsigned ChildNo) {
   if (ChildNo >= N.getNumOperands())
     return false;  // Match fails if out of range child #.
@@ -3057,8 +3056,8 @@ CheckChildInteger(const unsigned char *MatcherTable, unsigned &MatcherIndex,
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
-CheckAndImm(const unsigned char *MatcherTable, unsigned &MatcherIndex,
-            SDValue N, const SelectionDAGISel &SDISel) {
+CheckAndImm(const uint8_t *MatcherTable, unsigned &MatcherIndex, SDValue N,
+            const SelectionDAGISel &SDISel) {
   int64_t Val = MatcherTable[MatcherIndex++];
   if (Val & 128)
     Val = GetVBR(Val, MatcherTable, MatcherIndex);
@@ -3070,7 +3069,7 @@ CheckAndImm(const unsigned char *MatcherTable, unsigned &MatcherIndex,
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
-CheckOrImm(const unsigned char *MatcherTable, unsigned &MatcherIndex, SDValue N,
+CheckOrImm(const uint8_t *MatcherTable, unsigned &MatcherIndex, SDValue N,
            const SelectionDAGISel &SDISel) {
   int64_t Val = MatcherTable[MatcherIndex++];
   if (Val & 128)
@@ -3088,11 +3087,10 @@ CheckOrImm(const unsigned char *MatcherTable, unsigned &MatcherIndex, SDValue N,
 /// known to pass, set Result=false and return the MatcherIndex to continue
 /// with.  If the current predicate is unknown, set Result=false and return the
 /// MatcherIndex to continue with.
-static unsigned IsPredicateKnownToFail(const unsigned char *Table,
-                                       unsigned Index, SDValue N,
-                                       bool &Result,
-                                       const SelectionDAGISel &SDISel,
-                  SmallVectorImpl<std::pair<SDValue, SDNode*>> &RecordedNodes) {
+static unsigned IsPredicateKnownToFail(
+    const uint8_t *Table, unsigned Index, SDValue N, bool &Result,
+    const SelectionDAGISel &SDISel,
+    SmallVectorImpl<std::pair<SDValue, SDNode *>> &RecordedNodes) {
   unsigned Opcode = Table[Index++];
   switch (Opcode) {
   default:
@@ -3297,7 +3295,7 @@ public:
 } // end anonymous namespace
 
 void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
-                                        const unsigned char *MatcherTable,
+                                        const uint8_t *MatcherTable,
                                         unsigned TableSize) {
   // FIXME: Should these even be selected?  Handle these cases in the caller?
   switch (NodeToMatch->getOpcode()) {
@@ -3703,7 +3701,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
 
     case OPC_CheckType:
     case OPC_CheckTypeI32:
-    case OPC_CheckTypeI64:
+    case OPC_CheckTypeI64: {
       MVT::SimpleValueType VT;
       switch (Opcode) {
       case OPC_CheckTypeI32:
@@ -3719,6 +3717,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       if (!::CheckType(VT, N, TLI, CurDAG->getDataLayout()))
         break;
       continue;
+    }
 
     case OPC_CheckTypeRes: {
       unsigned Res = MatcherTable[MatcherIndex++];
@@ -3901,9 +3900,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     case OPC_EmitIntegerI8:
     case OPC_EmitIntegerI16:
     case OPC_EmitIntegerI32:
-    case OPC_EmitIntegerI64:
-    case OPC_EmitStringInteger:
-    case OPC_EmitStringIntegerI32: {
+    case OPC_EmitIntegerI64: {
       MVT::SimpleValueType VT;
       switch (Opcode) {
       case OPC_EmitIntegerI8:
@@ -3913,7 +3910,6 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         VT = MVT::i16;
         break;
       case OPC_EmitIntegerI32:
-      case OPC_EmitStringIntegerI32:
         VT = MVT::i32;
         break;
       case OPC_EmitIntegerI64:
@@ -3923,11 +3919,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         VT = getSimpleVT(MatcherTable, MatcherIndex);
         break;
       }
-      int64_t Val = MatcherTable[MatcherIndex++];
-      if (Val & 128)
-        Val = GetVBR(Val, MatcherTable, MatcherIndex);
-      if (Opcode >= OPC_EmitInteger && Opcode <= OPC_EmitIntegerI64)
-        Val = decodeSignRotatedValue(Val);
+      int64_t Val = GetSignedVBR(MatcherTable, MatcherIndex);
       RecordedNodes.emplace_back(
           CurDAG->getSignedConstant(Val, SDLoc(NodeToMatch), VT,
                                     /*isTarget=*/true),
@@ -4419,8 +4411,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       // formed.
       MatchScope &LastScope = MatchScopes.back();
       RecordedNodes.resize(LastScope.NumRecordedNodes);
-      NodeStack.clear();
-      NodeStack.append(LastScope.NodeStack.begin(), LastScope.NodeStack.end());
+      NodeStack.assign(LastScope.NodeStack.begin(), LastScope.NodeStack.end());
       N = NodeStack.back();
 
       if (LastScope.NumMatchedMemRefs != MatchedMemRefs.size())

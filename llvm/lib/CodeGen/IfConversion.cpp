@@ -940,7 +940,7 @@ bool IfConverter::ValidForkedDiamond(
     FalseReversed = true;
     reverseBranchCondition(FalseBBI);
   }
-  auto UnReverseOnExit = make_scope_exit([&]() {
+  llvm::scope_exit UnReverseOnExit([&]() {
     if (FalseReversed)
       reverseBranchCondition(FalseBBI);
   });
