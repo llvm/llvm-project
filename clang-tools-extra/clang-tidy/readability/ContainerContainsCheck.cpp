@@ -47,57 +47,67 @@ void ContainerContainsCheck::registerMatchers(MatchFinder *Finder) {
   const auto StringNpos = anyOf(declRefExpr(to(varDecl(hasName("npos")))),
                                 memberExpr(member(hasName("npos"))));
 
-  auto AddSimpleMatcher = [&](const auto &Matcher) {
-    Finder->addMatcher(traverse(TK_IgnoreUnlessSpelledInSource, Matcher), this);
-  };
-
   // Find membership tests which use `count()`.
-  Finder->addMatcher(implicitCastExpr(hasImplicitDestinationType(booleanType()),
-                                      hasSourceExpression(CountCall))
+  Finder->addMatcher(
+      traverse(TK_AsIs,
+               implicitCastExpr(hasImplicitDestinationType(booleanType()),
+                                hasSourceExpression(CountCall))
+                   .bind("positiveComparison")),
+      this);
+  Finder->addMatcher(
+      binaryOperation(hasOperatorName("!="), hasOperands(CountCall, Literal0))
+          .bind("positiveComparison"),
+      this);
+  Finder->addMatcher(
+      binaryOperation(hasLHS(CountCall), hasOperatorName(">"), hasRHS(Literal0))
+          .bind("positiveComparison"),
+      this);
+  Finder->addMatcher(
+      binaryOperation(hasLHS(Literal0), hasOperatorName("<"), hasRHS(CountCall))
+          .bind("positiveComparison"),
+      this);
+  Finder->addMatcher(binaryOperation(hasLHS(CountCall), hasOperatorName(">="),
+                                     hasRHS(Literal1))
                          .bind("positiveComparison"),
                      this);
-  AddSimpleMatcher(
-      binaryOperation(hasOperatorName("!="), hasOperands(CountCall, Literal0))
-          .bind("positiveComparison"));
-  AddSimpleMatcher(
-      binaryOperation(hasLHS(CountCall), hasOperatorName(">"), hasRHS(Literal0))
-          .bind("positiveComparison"));
-  AddSimpleMatcher(
-      binaryOperation(hasLHS(Literal0), hasOperatorName("<"), hasRHS(CountCall))
-          .bind("positiveComparison"));
-  AddSimpleMatcher(binaryOperation(hasLHS(CountCall), hasOperatorName(">="),
-                                   hasRHS(Literal1))
-                       .bind("positiveComparison"));
-  AddSimpleMatcher(binaryOperation(hasLHS(Literal1), hasOperatorName("<="),
-                                   hasRHS(CountCall))
-                       .bind("positiveComparison"));
+  Finder->addMatcher(binaryOperation(hasLHS(Literal1), hasOperatorName("<="),
+                                     hasRHS(CountCall))
+                         .bind("positiveComparison"),
+                     this);
 
   // Find inverted membership tests which use `count()`.
-  AddSimpleMatcher(
+  Finder->addMatcher(
       binaryOperation(hasOperatorName("=="), hasOperands(CountCall, Literal0))
-          .bind("negativeComparison"));
-  AddSimpleMatcher(binaryOperation(hasLHS(CountCall), hasOperatorName("<="),
-                                   hasRHS(Literal0))
-                       .bind("negativeComparison"));
-  AddSimpleMatcher(binaryOperation(hasLHS(Literal0), hasOperatorName(">="),
-                                   hasRHS(CountCall))
-                       .bind("negativeComparison"));
-  AddSimpleMatcher(
+          .bind("negativeComparison"),
+      this);
+  Finder->addMatcher(binaryOperation(hasLHS(CountCall), hasOperatorName("<="),
+                                     hasRHS(Literal0))
+                         .bind("negativeComparison"),
+                     this);
+  Finder->addMatcher(binaryOperation(hasLHS(Literal0), hasOperatorName(">="),
+                                     hasRHS(CountCall))
+                         .bind("negativeComparison"),
+                     this);
+  Finder->addMatcher(
       binaryOperation(hasLHS(CountCall), hasOperatorName("<"), hasRHS(Literal1))
-          .bind("negativeComparison"));
-  AddSimpleMatcher(
+          .bind("negativeComparison"),
+      this);
+  Finder->addMatcher(
       binaryOperation(hasLHS(Literal1), hasOperatorName(">"), hasRHS(CountCall))
-          .bind("negativeComparison"));
+          .bind("negativeComparison"),
+      this);
 
   // Find membership tests based on `find() == end()` or `find() == npos`.
-  AddSimpleMatcher(
+  Finder->addMatcher(
       binaryOperation(hasOperatorName("!="),
                       hasOperands(FindCall, anyOf(EndCall, StringNpos)))
-          .bind("positiveComparison"));
-  AddSimpleMatcher(
+          .bind("positiveComparison"),
+      this);
+  Finder->addMatcher(
       binaryOperation(hasOperatorName("=="),
                       hasOperands(FindCall, anyOf(EndCall, StringNpos)))
-          .bind("negativeComparison"));
+          .bind("negativeComparison"),
+      this);
 }
 
 void ContainerContainsCheck::check(const MatchFinder::MatchResult &Result) {
