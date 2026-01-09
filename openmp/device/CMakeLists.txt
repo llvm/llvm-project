@@ -7,6 +7,15 @@ if(LLVM_VERSION_MAJOR AND NOT (CMAKE_CXX_COMPILER_ID MATCHES "[Cc]lang" AND
                       " is not 'Clang ${req_ver}'.")
 endif()
 
+option(OFFLOAD_ENABLE_EMISSARY_APIS "Enable build of GPU Emissary APIs" ON)
+if(OFFLOAD_ENABLE_EMISSARY_APIS)
+  add_definitions(-DOFFLOAD_ENABLE_EMISSARY_APIS)
+  set(emissary_sources
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/EmissaryFortrt.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/EmissaryPrint.cpp
+  )
+endif()
+
 set(src_files
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Allocator.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Configuration.cpp
@@ -23,6 +32,7 @@ set(src_files
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Tasking.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/DeviceUtils.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Workshare.cpp
+  ${emissary_sources}
 )
 
 list(APPEND compile_options -flto)

@@ -7,6 +7,15 @@ tablegen(OFFLOAD include/OffloadErrcodes.inc -gen-errcodes -I ${CMAKE_CURRENT_SO
 tablegen(OFFLOAD include/OffloadInfo.inc -gen-info -I ${CMAKE_CURRENT_SOURCE_DIR}/../../liboffload/API)
 add_public_tablegen_target(PluginErrcodes)
 
+if(OFFLOAD_ENABLE_EMISSARY_APIS)
+  set(emissary_sources
+    src/Emissary.cpp
+    src/EmissaryFortrt.cpp
+    src/EmissaryPrint.cpp
+  )
+  set(emissary_headers ${CMAKE_CURRENT_SOURCE_DIR}/../../../openmp/device/include)
+endif()
+
 # NOTE: Don't try to build `PluginInterface` using `add_llvm_library` because we
 # don't want to export `PluginInterface` while `add_llvm_library` requires that.
 add_library(PluginCommon OBJECT
@@ -16,6 +25,7 @@ add_library(PluginCommon OBJECT
   src/RPC.cpp
   src/OffloadError.cpp
   src/Utils/ELF.cpp
+  ${emissary_sources}
 )
 add_dependencies(PluginCommon intrinsics_gen PluginErrcodes)
 
@@ -34,6 +44,10 @@ endif()
 # Include the RPC server from the `libc` project.
 include(FindLibcCommonUtils)
 target_link_libraries(PluginCommon PRIVATE llvm-libc-common-utilities)
+if(OFFLOAD_ENABLE_EMISSARY_APIS)
+  target_link_libraries(PluginCommon PRIVATE flang_rt.runtime
+    -L${CMAKE_BINARY_DIR}/../../lib -L${CMAKE_INSTALL_PREFIX}/lib)
+endif()
 
 # Define the TARGET_NAME and DEBUG_PREFIX.
 target_compile_definitions(PluginCommon PRIVATE
@@ -50,6 +64,7 @@ target_include_directories(PluginCommon PUBLIC
   ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
   ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
   ${LIBOMPTARGET_INCLUDE_DIR}
+  ${emissary_headers}
 )
 
 set_target_properties(PluginCommon PROPERTIES POSITION_INDEPENDENT_CODE ON)

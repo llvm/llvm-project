@@ -6829,6 +6829,17 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
       StaticOperator = true;
   }
 
+  // Replace calls to _emissary_exec found in emissary device stubs with calls
+  // to either __llvm_emissary_rpc or __llvm_emissary_rpc_dm. Before the call
+  // EmitEmissaryExec generates code to allocate an arg buffer and to fill the
+  // arg buffer.
+  if ((CGM.getTriple().isAMDGCN() || CGM.getTriple().isNVPTX()) && FnType &&
+      dyn_cast<FunctionProtoType>(FnType) &&
+      dyn_cast<FunctionProtoType>(FnType)->isVariadic() &&
+      (E->getDirectCallee()->getNameAsString() == "_emissary_exec") &&
+      CGM.getLangOpts().OpenMP)
+    return EmitEmissaryExec(E);
+
   auto Arguments = E->arguments();
   if (StaticOperator) {
     // If we're calling a static operator, we need to emit the object argument
