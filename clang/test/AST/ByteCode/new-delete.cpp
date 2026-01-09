@@ -14,6 +14,9 @@ constexpr int *Global = new int(12); // both-error {{must be initialized by a co
 static_assert(*(new int(12)) == 12); // both-error {{not an integral constant expression}} \
                                      // both-note {{allocation performed here was not deallocated}}
 
+static_assert((delete[] (new int[3] + 1), true)); // both-error {{not an integral constant expression}} \
+                                                  // both-note {{delete of pointer to subobject '&{*new int[3]#0}[1]'}}
+
 
 constexpr int a() {
   new int(12); // both-note {{allocation performed here was not deallocated}}
