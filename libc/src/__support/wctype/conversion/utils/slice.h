@@ -51,11 +51,11 @@ template <typename T> struct Slice : public cpp::span<T> {
   LIBC_INLINE constexpr Slice &operator=(Slice<T> &&n) = default;
 
   LIBC_INLINE constexpr Slice &operator=(const cpp::span<T> &n) {
-    this->operator=(n);
+    cpp::span<T>::operator=(n);
     return *this;
   }
   LIBC_INLINE constexpr Slice &operator=(cpp::span<T> &&n) {
-    this->operator=(n);
+    cpp::span<T>::operator=(n);
     return *this;
   }
 
