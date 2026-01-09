@@ -73,7 +73,8 @@ using namespace llvm;
 using namespace llvm::sys;
 
 InitLLVM::InitLLVM(int &Argc, const char **&Argv,
-                   bool InstallPipeSignalExitHandler) {
+                   bool InstallPipeSignalExitHandler,
+                   bool IsClangDriver) {
 #ifndef NDEBUG
   static std::atomic<bool> Initialized{false};
   assert(!Initialized && "InitLLVM was already initialized!");
@@ -81,7 +82,7 @@ InitLLVM::InitLLVM(int &Argc, const char **&Argv,
 #endif
 
   // Bring stdin/stdout/stderr into a known state.
-  sys::AddSignalHandler(CleanupStdHandles, nullptr);
+  sys::AddSignalHandler(CleanupStdHandles, nullptr, IsClangDriver);
 
   if (InstallPipeSignalExitHandler)
     // The pipe signal handler must be installed before any other handlers are

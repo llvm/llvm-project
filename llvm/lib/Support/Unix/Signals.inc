@@ -86,6 +86,7 @@ using namespace llvm;
 
 static void SignalHandler(int Sig, siginfo_t *Info, void *);
 static void InfoSignalHandler(int Sig); // defined below.
+static void InfoSignalHandlerTerminate(int Sig); // defined below.
 
 using SignalHandlerFunctionType = void (*)();
 /// The function to call if ctrl-c is pressed.
@@ -292,7 +293,7 @@ static void CreateSigAltStack() {
 static void CreateSigAltStack() {}
 #endif
 
-static void RegisterHandlers() { // Not signal-safe.
+static void RegisterHandlers(bool IsClangDriver = false) { // Not signal-safe.
   // The mutex prevents other threads from registering handlers while we're
   // doing it. We also have to protect the handlers and their count because
   // a signal handler could fire while we're registering handlers.
@@ -321,7 +322,12 @@ static void RegisterHandlers() { // Not signal-safe.
       NewHandler.sa_flags = SA_NODEFER | SA_RESETHAND | SA_ONSTACK | SA_SIGINFO;
       break;
     case SignalKind::IsInfo:
-      NewHandler.sa_handler = InfoSignalHandler;
+      if (IsClangDriver)
+        // If it is the Clang driver the signal handler resignal itself to
+        // terminate after handling the signal.
+        NewHandler.sa_handler = InfoSignalHandlerTerminate;
+      else
+        NewHandler.sa_handler = InfoSignalHandler;
       NewHandler.sa_flags = SA_ONSTACK;
       break;
     }
@@ -443,6 +449,10 @@ static void InfoSignalHandler(int Sig) {
   SaveAndRestore SaveErrnoDuringASignalHandler(errno);
   if (SignalHandlerFunctionType CurrentInfoFunction = InfoSignalFunction)
     CurrentInfoFunction();
+}
+
+static void InfoSignalHandlerTerminate(int Sig) {
+  InfoSignalHandler(Sig);
 
   if (Sig == SIGUSR1) {
     sys::unregisterHandlers();
@@ -496,9 +506,10 @@ void llvm::sys::DontRemoveFileOnSignal(StringRef Filename) {
 /// handler can have a cookie passed to it to identify what instance of the
 /// handler it is.
 void llvm::sys::AddSignalHandler(sys::SignalHandlerCallback FnPtr,
-                                 void *Cookie) { // Signal-safe.
+                                 void *Cookie, bool IsClangDriver) {
+                                 // Signal-safe.
   insertSignalHandler(FnPtr, Cookie);
-  RegisterHandlers();
+  RegisterHandlers(IsClangDriver);
 }
 
 #if ENABLE_BACKTRACES && defined(HAVE_BACKTRACE) &&                            \
