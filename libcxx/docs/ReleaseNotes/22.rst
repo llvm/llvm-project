@@ -91,6 +91,7 @@ Improvements and New Features
 - There have also been performance improvements in other library facilities:
 
   - ``vector<bool>::reserve()``: 2x
+  - ``deque::append_range``: 3.4x
   - ``num_get::do_get`` integral overloads: 2.8x
   - Some reallocations are now avoided in ``std::filesystem::path::lexically_relative``: 1.7x
   - ``ofstream::write`` passes large strings to system calls directly instead of copying them in chunks into a buffer
