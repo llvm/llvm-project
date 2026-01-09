@@ -27,7 +27,7 @@ protocol::Scope CreateScope(const eScopeKind kind, int64_t variablesReference,
   // TODO: Support "arguments" and "return value" scope.
   // At the moment lldb-dap includes the arguments and return_value  into the
   // "locals" scope.
-  // vscode only expands the first non-expensive scope, this causes friction
+  // VS Code only expands the first non-expensive scope. This causes friction
   // if we add the arguments above the local scope, as the locals scope will not
   // be expanded if we enter a function with arguments. It becomes more
   // annoying when the scope has arguments, return_value and locals.
