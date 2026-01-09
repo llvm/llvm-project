@@ -82,6 +82,8 @@ struct Variables {
 private:
   /// Variable_reference start index of permanent expandable variable.
   static constexpr int64_t PermanentVariableStartIndex = (1ll << 32);
+
+  int64_t m_next_permanent_var_ref{PermanentVariableStartIndex};
   int64_t m_next_temporary_var_ref{VARREF_FIRST_VAR_IDX};
 
   // Variable Reference,                 dap_frame_id
@@ -100,7 +102,6 @@ private:
   std::map<uint64_t,
            std::tuple<lldb::SBValueList, lldb::SBValueList, lldb::SBValueList>>
       m_frames;
-  int64_t m_next_permanent_var_ref{PermanentVariableStartIndex};
 };
 
 } // namespace lldb_dap
