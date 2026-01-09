@@ -38,9 +38,10 @@ enum ImplicitArgumentPositions {
 #define AMDGPU_ATTRIBUTE(Name, Str) Name = 1 << Name##_POS,
 
 enum ImplicitArgumentMask {
-  NOT_IMPLICIT_INPUT = 0,
+  UNKNOWN_INTRINSIC = 0,
 #include "AMDGPUAttributes.def"
-  ALL_ARGUMENT_MASK = (1 << LAST_ARG_POS) - 1
+  ALL_ARGUMENT_MASK = (1 << LAST_ARG_POS) - 1,
+  NOT_IMPLICIT_INPUT
 };
 
 #define AMDGPU_ATTRIBUTE(Name, Str) {Name, Str},
@@ -115,7 +116,7 @@ intrinsicToAttrMask(Intrinsic::ID ID, bool &NonKernelOnly, bool &NeedsImplicit,
     NeedsImplicit = (CodeObjectVersion >= AMDGPU::AMDHSA_COV5);
     return QUEUE_PTR;
   default:
-    return NOT_IMPLICIT_INPUT;
+    return UNKNOWN_INTRINSIC;
   }
 }
 
@@ -138,6 +139,26 @@ static bool hasSanitizerAttributes(const Function &F) {
          F.hasFnAttribute(Attribute::SanitizeMemory) ||
          F.hasFnAttribute(Attribute::SanitizeHWAddress) ||
          F.hasFnAttribute(Attribute::SanitizeMemTag);
+}
+
+/// Returns true if F looks like a leaf-style trap intrinsic that cannot
+/// possibly callback into user code.
+static bool isTrapLikeLeafIntrinsic(const Function &F) {
+  if (!F.isIntrinsic())
+    return false;
+
+  // If we already know this intrinsic is nocallback, there is nothing left to
+  // classify.
+  if (F.hasFnAttribute(Attribute::NoCallback))
+    return true;
+
+  if (!F.hasFnAttribute(Attribute::NoReturn))
+    return false;
+
+  if (F.doesNotAccessMemory())
+    return true;
+
+  return F.onlyAccessesInaccessibleMemory();
 }
 
 namespace {
@@ -525,6 +546,22 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
       ImplicitArgumentMask AttrMask =
           intrinsicToAttrMask(IID, NonKernelOnly, NeedsImplicit,
                               HasApertureRegs, SupportsGetDoorbellID, COV);
+
+      if (AttrMask == UNKNOWN_INTRINSIC) {
+        // Assume not-nocallback intrinsics may invoke a function which accesses
+        // implicit arguments.
+        //
+        // FIXME: This isn't really the correct check. We want to ensure it
+        // isn't calling any function that may use implicit arguments regardless
+        // of whether it's internal to the module or not.
+        //
+        // TODO: Ignoring callsite attributes.
+        if (!isTrapLikeLeafIntrinsic(*Callee) &&
+            !Callee->hasFnAttribute(Attribute::NoCallback))
+          return indicatePessimisticFixpoint();
+        continue;
+      }
+
       if (AttrMask != NOT_IMPLICIT_INPUT) {
         if ((IsNonEntryFunc || !NonKernelOnly))
           removeAssumedBits(AttrMask);
@@ -1345,10 +1382,22 @@ struct AAAMDGPUMinAGPRAlloc
 
         return true;
       }
-      default:
+      case Intrinsic::debugtrap:
+        // llvm.debugtrap currently lacks the attributes required for
+        // isTrapLikeLeafIntrinsic, so kept explicitly whitelisted.
+        return true;
+      default: {
         // Some intrinsics may use AGPRs, but if we have a choice, we are not
         // required to use AGPRs.
-        return true;
+
+        if (const Function *CalledFunc = CB.getCalledFunction())
+          if (isTrapLikeLeafIntrinsic(*CalledFunc))
+            return true;
+
+        // Assume !nocallback intrinsics may call a function which requires
+        // AGPRs.
+        return CB.hasFnAttr(Attribute::NoCallback);
+      }
       }
 
       // TODO: Handle callsite attributes
@@ -1584,7 +1633,7 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
   AC.DefaultInitializeLiveInternals = false;
   AC.IndirectCalleeSpecializationCallback =
       [](Attributor &A, const AbstractAttribute &AA, CallBase &CB,
-         Function &Callee, unsigned NumAssumedCallees) {
+            Function &Callee, unsigned NumAssumedCallees) {
         return !AMDGPU::isEntryFunctionCC(Callee.getCallingConv()) &&
                (NumAssumedCallees <= IndirectCallSpecializationThreshold);
       };
