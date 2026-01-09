@@ -33,9 +33,8 @@ public:
   lldb::addr_t GetOpcodeLoadAddress(lldb::addr_t load_addr,
                                     AddressClass addr_class) const override;
 
-  bool
-  IsValidBreakpointInstruction(llvm::ArrayRef<uint8_t> reference,
-                               llvm::ArrayRef<uint8_t> observed) const override;
+  bool IsValidTrapInstruction(llvm::ArrayRef<uint8_t> reference,
+                              llvm::ArrayRef<uint8_t> observed) const override;
 
 private:
   Instruction *GetInstructionAtAddress(Target &target,

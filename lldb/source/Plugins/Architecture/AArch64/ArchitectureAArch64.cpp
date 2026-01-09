@@ -144,7 +144,7 @@ bool ArchitectureAArch64::ReconfigureRegisterInfo(DynamicRegisterInfo &reg_info,
   return true;
 }
 
-bool ArchitectureAArch64::IsValidBreakpointInstruction(
+bool ArchitectureAArch64::IsValidTrapInstruction(
     llvm::ArrayRef<uint8_t> reference, llvm::ArrayRef<uint8_t> observed) const {
   if (reference.size() < 4 || observed.size() < 4)
     return false;

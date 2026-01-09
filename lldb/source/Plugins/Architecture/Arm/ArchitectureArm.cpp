@@ -339,7 +339,7 @@ UnwindPlanSP ArchitectureArm::GetArchitectureUnwindPlan(
   return new_plan;
 }
 
-bool ArchitectureArm::IsValidBreakpointInstruction(
+bool ArchitectureArm::IsValidTrapInstruction(
     llvm::ArrayRef<uint8_t> reference, llvm::ArrayRef<uint8_t> observed) const {
   if (reference.size() > observed.size())
     return false;

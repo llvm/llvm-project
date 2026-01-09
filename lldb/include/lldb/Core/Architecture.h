@@ -145,9 +145,8 @@ public:
   /// of valid byte sequences. If the observed byte sequence is shorter
   /// than the reference then they are considered not to match, even if
   /// the initial bytes would match.
-  virtual bool
-  IsValidBreakpointInstruction(llvm::ArrayRef<uint8_t> reference,
-                               llvm::ArrayRef<uint8_t> observed) const {
+  virtual bool IsValidTrapInstruction(llvm::ArrayRef<uint8_t> reference,
+                                      llvm::ArrayRef<uint8_t> observed) const {
     if (reference.size() > observed.size())
       return false;
     return !std::memcmp(reference.data(), observed.data(), reference.size());

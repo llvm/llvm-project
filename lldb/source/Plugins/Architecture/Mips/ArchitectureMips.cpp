@@ -232,7 +232,7 @@ Instruction *ArchitectureMips::GetInstructionAtAddress(
   return nullptr;
 }
 
-bool ArchitectureMips::IsValidBreakpointInstruction(
+bool ArchitectureMips::IsValidTrapInstruction(
     llvm::ArrayRef<uint8_t> reference, llvm::ArrayRef<uint8_t> observed) const {
   // The middle twenty bits of BREAK can be anything, so zero them
   uint32_t mask = 0xFC00003F;

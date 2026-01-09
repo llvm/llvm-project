@@ -1186,7 +1186,7 @@ public:
 
     if (auto *arch_plugin = target.GetArchitecturePlugin();
         arch_plugin &&
-        arch_plugin->IsValidBreakpointInstruction(
+        arch_plugin->IsValidTrapInstruction(
             platform_opcode,
             llvm::ArrayRef<uint8_t>(bytes_at_pc.data(), bytes_at_pc.size()))) {
       LLDB_LOG(log, "stepping over breakpoint in debuggee to new pc: {}",

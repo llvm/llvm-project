@@ -39,9 +39,8 @@ public:
                                DataExtractor &reg_data,
                                RegisterContext &reg_context) const override;
 
-  bool
-  IsValidBreakpointInstruction(llvm::ArrayRef<uint8_t> reference,
-                               llvm::ArrayRef<uint8_t> observed) const override;
+  bool IsValidTrapInstruction(llvm::ArrayRef<uint8_t> reference,
+                              llvm::ArrayRef<uint8_t> observed) const override;
 
 private:
   static std::unique_ptr<Architecture> Create(const ArchSpec &arch);
