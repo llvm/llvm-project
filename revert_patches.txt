@@ -1,5 +1,3 @@
 ---
-needs downstream work
-[mlir][OpenMP] Translation support for taskloop construct (#174386)
-[mlir][OpenMP] Fix sanitizer error in buildTaskLikeBodyGenCallback  (#174983)
+...
 ---
