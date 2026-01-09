@@ -62,8 +62,7 @@ subroutine parallel_do
 !CHECK: %{{.*}} = arith.constant 1 : i32
 !CHECK: %[[IV_STEP:.*]] = arith.constant 1 : i32
 !CHECK: omp.wsloop {
-!CHECK: omp.simd linear(%[[X]]#0 = %[[LINEAR_STEP]] : !fir.ref<i32>, %[[I]]#0 = %[[IV_STEP]] : !fir.ref<i32>)
-!private(@_QFparallel_doEi_private_i32 %[[I]]#0 -> %arg0 : !fir.ref<i32>) {
+!CHECK: omp.simd linear(%[[X]]#0 = %[[LINEAR_STEP]] : !fir.ref<i32>, %[[I]]#0 = %[[IV_STEP]] : !fir.ref<i32>) private(@_QFparallel_doEi_private_i32 %[[I]]#0 -> %arg0 : !fir.ref<i32>) {
     integer :: x
     !$omp parallel do simd linear(x:2)
     do i = 1, N
@@ -80,8 +79,7 @@ subroutine teams_distribute
 !CHECK: {{.*}} = arith.constant 1 : i32
 !CHECK: %[[IV_STEP:.*]] = arith.constant 1 : i32
 !CHECK: omp.distribute {
-!CHECK: omp.simd linear(%[[X]]#0 = %[[LINEAR_STEP]] : !fir.ref<i32>, %[[I]]#0 = %[[IV_STEP]] : !fir.ref<i32>)
-!private(@_QFteams_distributeEi_private_i32 %[[I]]#0 -> %arg0 : !fir.ref<i32>) {
+!CHECK: omp.simd linear(%[[X]]#0 = %[[LINEAR_STEP]] : !fir.ref<i32>, %[[I]]#0 = %[[IV_STEP]] : !fir.ref<i32>) private(@_QFteams_distributeEi_private_i32 %[[I]]#0 -> %arg0 : !fir.ref<i32>) {
     integer :: x
     !$omp teams distribute simd linear(x)
     do i = 1, N
