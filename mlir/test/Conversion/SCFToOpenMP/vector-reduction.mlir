@@ -1,9 +1,16 @@
 // RUN: mlir-opt %s --convert-scf-to-openmp | FileCheck %s
 
-// CHECK-LABEL: omp.declare_reduction @__scf_reduction : vector<2xi1> init
-// CHECK-NEXT:  ^bb0(%arg0: vector<2xi1>):
-// CHECK-NEXT:    %[[CONST:.*]] = llvm.mlir.constant(dense<true> : vector<2xi1>) : vector<2xi1>
-// CHECK-NEXT:    omp.yield(%[[CONST]] : vector<2xi1>)
+// CHECK-LABEL: omp.declare_reduction @__scf_reduction : vector<2xi1>
+// CHECK: init {
+// CHECK:   %[[INIT:.*]] = llvm.mlir.constant(dense<true> : vector<2xi1>) : vector<2xi1>
+// CHECK:   omp.yield(%[[INIT]] : vector<2xi1>)
+// CHECK: }
+// CHECK: combiner {
+// CHECK: ^bb0(%[[ARG0:.*]]: vector<2xi1>, %[[ARG1:.*]]: vector<2xi1>):
+// CHECK:   %[[RES:.*]] = arith.andi %[[ARG0]], %[[ARG1]] : vector<2xi1>
+// CHECK:   omp.yield(%[[RES]] : vector<2xi1>)
+// CHECK: }
+// CHECK-NOT: atomic
 
 func.func @vector_and_reduction() {
   %v_mask = vector.constant_mask [1] : vector<2xi1>
