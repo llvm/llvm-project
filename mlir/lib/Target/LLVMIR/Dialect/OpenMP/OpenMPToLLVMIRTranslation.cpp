@@ -329,22 +329,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (op.getBare())
       result = todo("ompx_bare");
   };
-  auto checkCancelDirective = [&todo](auto op, LogicalResult &result) {
-    omp::ClauseCancellationConstructType cancelledDirective =
-        op.getCancelDirective();
-    // Cancelling a taskloop is not yet supported because we don't yet have LLVM
-    // IR conversion for taskloop
-    if (cancelledDirective == omp::ClauseCancellationConstructType::Taskgroup) {
-      Operation *parent = op->getParentOp();
-      while (parent) {
-        if (parent->getDialect() == op->getDialect())
-          break;
-        parent = parent->getParentOp();
-      }
-      if (isa_and_nonnull<omp::TaskloopOp>(parent))
-        result = todo("cancel directive inside of taskloop");
-    }
-  };
   auto checkCollapse = [&todo](auto op, LogicalResult &result) {
     if (op.getCollapseNumLoops() > 1)
       result = todo("collapse");
@@ -395,10 +379,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
 
   LogicalResult result = success();
   llvm::TypeSwitch<Operation &>(op)
-      .Case([&](omp::CancelOp op) { checkCancelDirective(op, result); })
-      .Case([&](omp::CancellationPointOp op) {
-        checkCancelDirective(op, result);
-      })
       .Case([&](omp::DistributeOp op) {
         checkAllocate(op, result);
         checkOrder(op, result);
@@ -2836,6 +2816,16 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
   if (taskStructMgr.getStructPtr())
     taskDupOrNull = taskDupCB;
 
+  llvm::OpenMPIRBuilder &ompBuilder = *moduleTranslation.getOpenMPBuilder();
+  SmallVector<llvm::BranchInst *> cancelTerminators;
+  // The directive to match here is OMPD_taskgroup because it is the
+  // taskgroup which is canceled. This is handled here because it is the
+  // task's cleanup block which should be branched to. It doesn't depend upon
+  // nogroup because even in that case the taskloop might still be inside an
+  // explicit taskgroup.
+  pushCancelFinalizationCB(cancelTerminators, builder, ompBuilder, taskloopOp,
+                           llvm::omp::Directive::OMPD_taskgroup);
+
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createTaskloop(
@@ -2851,6 +2841,8 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
 
   if (failed(handleError(afterIP, opInst)))
     return failure();
+
+  popCancelFinalizationCB(cancelTerminators, ompBuilder, afterIP.get());
 
   builder.restoreIP(*afterIP);
   return success();
