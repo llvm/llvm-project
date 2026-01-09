@@ -172,3 +172,73 @@ class IRInterpreterTestCase(TestBase):
         self.assertEqual(short_val.GetValueAsSigned(), -1)
         long_val = target.EvaluateExpression("(long) " + short_val.GetName())
         self.assertEqual(long_val.GetValueAsSigned(), -1)
+
+    def test_fpconv(self):
+        self.build_and_run()
+
+        interp_options = lldb.SBExpressionOptions()
+        interp_options.SetLanguage(lldb.eLanguageTypeC_plus_plus)
+        interp_options.SetAllowJIT(False)
+
+        jit_options = lldb.SBExpressionOptions()
+        jit_options.SetLanguage(lldb.eLanguageTypeC_plus_plus)
+        jit_options.SetAllowJIT(True)
+
+        set_up_expressions = [
+            "int $i = 3",
+            "int $n = -3",
+            "unsigned $u = 5",
+            "long $l = -7",
+            "float $f = 9.0625",
+            "double $d = 13.75",
+            "float $nf = -11.25",
+        ]
+
+        expressions = [
+            "$i + $f",
+            "$d - $n",
+            "$u + $f",
+            "$u + $d",
+            "(int)$d",
+            "(int)$f",
+            "(long)$d",
+            "(short)$f",
+            "(long)$nf",
+            "(unsigned short)$f",
+            "(unsigned)$d",
+            "(unsigned long)$d",
+            "(float)$d",
+            "(double)$f",
+            "(double)$nf",
+        ]
+
+        for expression in set_up_expressions:
+            self.frame().EvaluateExpression(expression, interp_options)
+
+        func_call = "(int)getpid()"
+        if lldbplatformutil.getPlatform() == "windows":
+            func_call = "(int)GetCurrentProcessId()"
+
+        for expression in expressions:
+            interp_expression = expression
+            jit_expression = func_call + "; " + expression
+
+            interp_result = (
+                self.frame()
+                .EvaluateExpression(interp_expression, interp_options)
+            )
+            jit_result = (
+                self.frame()
+                .EvaluateExpression(jit_expression, jit_options)
+            )
+
+            self.assertEqual(
+                interp_result.GetValue(),
+                jit_result.GetValue(),
+                "Values match for " + expression,
+            )
+            self.assertEqual(
+                interp_result.GetTypeName(),
+                jit_result.GetTypeName(),
+                "Types match for " + expression,
+            )
