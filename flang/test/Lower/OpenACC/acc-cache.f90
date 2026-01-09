@@ -430,6 +430,7 @@ subroutine test_cache_nonunit_lb()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_cache_use_after_region()
+! CHECK: %[[B_VAR:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtest_cache_use_after_regionEb"}
 subroutine test_cache_use_after_region()
   integer, parameter :: n = 10
   real, dimension(n) :: a, b
@@ -445,17 +446,52 @@ subroutine test_cache_use_after_region()
   a(1) = b(1) + 1.0
 
 ! CHECK: acc.loop
-! CHECK: acc.cache varPtr(%[[B_VAR:.*]] : !fir.ref<!fir.array<10xf32>>)
+! CHECK: acc.cache varPtr(%[[B_VAR]]#0 : !fir.ref<!fir.array<10xf32>>)
 ! CHECK: acc.yield
 ! CHECK: }
 ! After loop: uses original b, not cached version
-! CHECK: %[[B_ORIG:.*]] = hlfir.designate %{{.*}}#0 (%{{.*}})
+! CHECK: %[[B_ORIG:.*]] = hlfir.designate %[[B_VAR]]#0 (%{{.*}})
 ! CHECK: fir.load %[[B_ORIG]]
 ! CHECK: arith.addf
 ! CHECK: hlfir.assign
 end subroutine
 
+
+! CHECK-LABEL: func.func @_QPtest_cache_nested_scope()
+! CHECK: %[[B_VAR:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtest_cache_nested_scopeEb"}
+subroutine test_cache_nested_scope()
+  integer, parameter :: n = 10
+  real, dimension(n) :: a, b, c
+  integer :: i, j
+
+  !$acc loop
+  do i = 1, n
+    !$acc loop
+    do j = 1, n
+      !$acc cache(b(j))
+      c(j) = b(j)
+    end do
+    ! Use b(i) in outer loop - should use original, not inner cache
+    a(i) = b(i)
+  end do
+
+! Outer acc.loop
+! CHECK: acc.loop
+! Inner acc.loop with cache
+! CHECK: acc.loop
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%[[B_VAR]]#0 : !fir.ref<!fir.array<10xf32>>) bounds(%{{.*}})
+! CHECK: %[[CACHE_DECL:.*]]:2 = hlfir.declare %[[CACHE]]
+! CHECK: hlfir.designate %[[CACHE_DECL]]#0
+! CHECK: acc.yield
+! CHECK: }
+! After inner loop: uses original b, not cached
+! CHECK: hlfir.designate %[[B_VAR]]#0
+! CHECK: acc.yield
+end subroutine
+
+
 ! CHECK-LABEL: func.func @_QPtest_cache_in_regular_loop()
+! CHECK: %[[B_VAR:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtest_cache_in_regular_loopEb"}
 subroutine test_cache_in_regular_loop()
   integer, parameter :: n = 10
   real, dimension(n) :: a, b
@@ -468,9 +504,9 @@ subroutine test_cache_in_regular_loop()
   end do
 
 ! CHECK: fir.do_loop
-! CHECK: acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) bounds(%{{.*}})
-! CHECK: hlfir.declare
-! CHECK: hlfir.designate
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%[[B_VAR]]#0 : !fir.ref<!fir.array<10xf32>>) bounds(%{{.*}})
+! CHECK: %[[CACHE_DECL:.*]]:2 = hlfir.declare %[[CACHE]]
+! CHECK: hlfir.designate %[[CACHE_DECL]]#0
 ! CHECK: fir.load
 ! CHECK: hlfir.assign
 end subroutine
