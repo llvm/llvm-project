@@ -450,9 +450,9 @@ static unsigned emitMVT(MVT VT, raw_ostream &OS) {
   return EmitVBRValue(VT.SimpleTy, OS);
 }
 
-
-unsigned MatcherTableEmitter::emitValueTypeByHwMode(const ValueTypeByHwMode &VTBH,
-                                      raw_ostream &OS) {
+unsigned
+MatcherTableEmitter::emitValueTypeByHwMode(const ValueTypeByHwMode &VTBH,
+                                           raw_ostream &OS) {
   if (!OmitComments)
     OS << "/*" << VTBH << "*/";
   return EmitVBRValue(getValueTypeID(VTBH), OS);
