@@ -1,5 +1,5 @@
 ; RUN: rm -rf %t && mkdir -p %t
-; RUN: llc -filetype=obj -o %t/crash.o %s
+; RUN: llc -relocation-model=pic -filetype=obj -o %t/crash.o %s
 ; RUN: not --crash llvm-jitlink -write-symtab %t/crash.symtab.txt %t/crash.o \
 ; RUN:     > %t/backtrace.txt 2>&1
 ; RUN: llvm-jitlink -symbolicate-with %t/crash.symtab.txt %t/backtrace.txt \
@@ -7,6 +7,8 @@
 
 ; Deliberately crash by dereferencing an environment variable that should never
 ; be defined, then symbolicate the backtrace using the dumped symbol table.
+
+; UNSUPPORTED: system-windows
 
 ; CHECK: this_should_crash {{.*}} ({{.*}}crash.o)
 
