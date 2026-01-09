@@ -930,6 +930,14 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniS128}, {{Sgpr128}, {SgprPtr128}}})
       .Any({{DivS128}, {{Vgpr128}, {VgprPtr128}}});
 
+  // FIXME: Update llvm/test/CodeGen/AMDGPU/ptrmask.ll to use GlobalISel.
+  // Currently crashes on P8 (buffer resource) tests due to legalizer issue.
+  addRulesForGOpcs({G_PTRMASK})
+      .Any({{UniP1}, {{SgprP1}, {SgprP1, Sgpr64}}})
+      .Any({{DivP1}, {{VgprP1}, {VgprP1, Vgpr64}}})
+      .Any({{UniP3}, {{SgprP3}, {SgprP3, Sgpr32}}})
+      .Any({{DivP3}, {{VgprP3}, {VgprP3, Vgpr32}}});
+
   addRulesForGOpcs({G_ABS}, Standard).Uni(S16, {{Sgpr32Trunc}, {Sgpr32SExt}});
 
   addRulesForGOpcs({G_BITREVERSE}, Standard)
