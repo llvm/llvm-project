@@ -101,8 +101,8 @@ template <typename T> LIBC_INLINE static constexpr T wrapping_add(T a, T b) {
 
   while (b != 0) {
     T carry = a & b;
-    a = a ^ b;
-    b = carry << 1;
+    a = static_cast<T>(a ^ b);
+    b = static_cast<T>(carry << 1);
   }
   return a;
 }
@@ -115,9 +115,9 @@ template <typename T> LIBC_INLINE static constexpr T wrapping_mul(T a, T b) {
 
   while (b != 0) {
     if (b & 1) {
-      result = result + a;
+      result = static_cast<T>(result + a);
     }
-    a = a << 1;
+    a = static_cast<T>(a << 1);
     b = static_cast<cpp::make_unsigned_t<T>>(b) >> 1;
   }
 
@@ -145,7 +145,7 @@ LIBC_INLINE static constexpr T rotate_right(T number, size_t rotation) {
 
   constexpr size_t BITS = cpp::numeric_limits<T>::digits;
   rotation %= BITS;
-  return (number >> rotation) | (number << (BITS - rotation));
+  return static_cast<T>((number >> rotation) | (number << (BITS - rotation)));
 }
 
 // Converts a 32-bit unsigned integer to an array of 4 little-endian bytes
@@ -171,40 +171,36 @@ LIBC_INLINE static constexpr To ptr_bit_cast(From *from) {
   return to;
 }
 
-// Sorts an array using merge sort algorithm
 template <typename T, size_t N>
 LIBC_INLINE static constexpr auto array_sort(cpp::array<T, N> &arr) {
-  if constexpr (N <= 1)
+  if constexpr (N <= 1) {
     return arr; // base case
+  } else {
+    constexpr size_t MID = N / 2;
 
-  constexpr size_t MID = N / 2;
+    cpp::array<T, MID> left{};
+    cpp::array<T, N - MID> right{};
 
-  // Split array into left and right halves
-  cpp::array<T, MID> left{};
-  cpp::array<T, N - MID> right{};
+    for (size_t i = 0; i < MID; ++i)
+      left[i] = arr[i];
+    for (size_t i = MID; i < N; ++i)
+      right[i - MID] = arr[i];
 
-  for (size_t i = 0; i < MID; ++i)
-    left[i] = arr[i];
-  for (size_t i = MID; i < N; ++i)
-    right[i - MID] = arr[i];
+    left = array_sort(left);
+    right = array_sort(right);
 
-  // Recursively sort each half
-  left = array_sort(left);
-  right = array_sort(right);
+    cpp::array<T, N> result{};
+    size_t li = 0, ri = 0, ki = 0;
 
-  // Merge halves
-  cpp::array<T, N> result{};
-  size_t li = 0, ri = 0, ki = 0;
+    while (li < MID && ri < N - MID)
+      result[ki++] = (left[li] <= right[ri]) ? left[li++] : right[ri++];
+    while (li < MID)
+      result[ki++] = left[li++];
+    while (ri < N - MID)
+      result[ki++] = right[ri++];
 
-  while (li < MID && ri < N - MID) {
-    result[ki++] = (left[li] <= right[ri]) ? left[li++] : right[ri++];
+    return result;
   }
-  while (li < MID)
-    result[ki++] = left[li++];
-  while (ri < N - MID)
-    result[ki++] = right[ri++];
-
-  return result;
 }
 
 struct Range {
