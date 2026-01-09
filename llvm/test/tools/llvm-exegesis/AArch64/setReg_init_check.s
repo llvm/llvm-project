@@ -105,8 +105,6 @@ RUN: FileCheck %s --check-prefix=WSEQPAIR-ASM < %t.s
 WSEQPAIR-ASM:         <foo>:
 WSEQPAIR-ASM:         mov     w{{[0-9]+}}, #0x0
 WSEQPAIR-ASM-NEXT:    mov     w{{[0-9]+}}, #0x0
-WSEQPAIR-ASM-NEXT:    mov     w{{[0-9]+}}, #0x0
-WSEQPAIR-ASM-NEXT:    mov     w{{[0-9]+}}, #0x0
 WSEQPAIR-ASM:         casp    w{{[0-9]+}}, w{{[0-9]+}}, w{{[0-9]+}}, w{{[0-9]+}}, [x{{[0-9]+}}]
 
 ## XSeqPair Register Class Initialization Testcase
@@ -115,8 +113,6 @@ RUN: llvm-objdump -d %d > %t.s
 RUN: FileCheck %s --check-prefix=XSEQPAIR-ASM < %t.s
 XSEQPAIR-ASM:         <foo>:
 XSEQPAIR-ASM:         mov     x{{[0-9]+}}, #0x{{[0-9]+}}
-XSEQPAIR-ASM-NEXT:    mov     x{{[0-9]+}}, #0x{{[0-9]+}}
-XSEQPAIR-ASM-NEXT:    mov     x{{[0-9]+}}, #0x{{[0-9]+}}
 XSEQPAIR-ASM-NEXT:    mov     x{{[0-9]+}}, #0x{{[0-9]+}}
 XSEQPAIR-ASM:         casp    x{{[0-9]+}}, x{{[0-9]+}}, x{{[0-9]+}}, x{{[0-9]+}}, [x{{[0-9]+}}]
 
