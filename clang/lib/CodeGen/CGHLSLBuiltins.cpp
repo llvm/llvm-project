@@ -164,25 +164,23 @@ static Value *handleHlslWaveActiveBallot(const CallExpr *E,
                                          CodeGenFunction *CGF) {
   Value *Cond = CGF->EmitScalarExpr(E->getArg(0));
   llvm::Type *I32 = CGF->Int32Ty;
-  llvm::StructType *RetTy = llvm::StructType::get(I32, I32, I32, I32);
 
   if (CGF->CGM.getTarget().getTriple().isDXIL()) {
-    // dx.op.waveActiveBallot(opcode, i1)
-    return CGF->Builder.CreateIntrinsic(RetTy, Intrinsic::dx_wave_ballot,
-                                        {Cond}, nullptr, "wave.active.ballot");
+    return CGF->EmitRuntimeCall(
+        CGF->CGM.getIntrinsic(Intrinsic::dx_wave_ballot, {I32}), Cond);
   }
 
   if (CGF->CGM.getTarget().getTriple().isSPIRV()) {
-    // spv.wave.ballot(i1) -> <4 x i32>, then bitcast to struct
     llvm::Type *VecTy = llvm::FixedVectorType::get(I32, 4);
-    return CGF->Builder.CreateIntrinsic(VecTy, Intrinsic::spv_wave_ballot,
-                                        {Cond}, nullptr, "spv.wave.ballot");
+
+    return CGF->EmitRuntimeCall(
+        CGF->CGM.getIntrinsic(Intrinsic::spv_wave_ballot), Cond);
   }
 
   CGF->CGM.Error(E->getExprLoc(),
-                 "waveActiveBallot is not supported for this target");
+                 "WaveActiveBallot is not supported for this target");
 
-  return llvm::UndefValue::get(RetTy);
+  return llvm::PoisonValue::get(llvm::FixedVectorType::get(I32, 4));
 }
 
 static Value *handleElementwiseF16ToF32(CodeGenFunction &CGF,
