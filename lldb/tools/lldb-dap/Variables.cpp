@@ -62,9 +62,8 @@ lldb::SBValueList *Variables::GetTopLevelScope(int64_t variablesReference) {
   uint64_t dap_frame_id = iter->second.second;
 
   auto frame_iter = m_frames.find(dap_frame_id);
-  if (frame_iter == m_frames.end()) {
-    return nullptr;
-  }
+  if (frame_iter == m_frames.end())
+return nullptr;
 
   return frame_iter->second.GetScope(scope_kind);
 }
