@@ -1940,9 +1940,7 @@ public:
   /// to replace a call to llvm.memset. The value is set by the target at the
   /// performance threshold for such a replacement. If OptSize is true,
   /// return the limit for functions that have OptSize attribute.
-  unsigned getMaxStoresPerMemset(bool OptSize) const {
-    return OptSize ? MaxStoresPerMemsetOptSize : MaxStoresPerMemset;
-  }
+  unsigned getMaxStoresPerMemset(bool OptSize) const;
 
   /// Get maximum # of store operations permitted for llvm.memcpy
   ///
@@ -1950,9 +1948,7 @@ public:
   /// to replace a call to llvm.memcpy. The value is set by the target at the
   /// performance threshold for such a replacement. If OptSize is true,
   /// return the limit for functions that have OptSize attribute.
-  unsigned getMaxStoresPerMemcpy(bool OptSize) const {
-    return OptSize ? MaxStoresPerMemcpyOptSize : MaxStoresPerMemcpy;
-  }
+  unsigned getMaxStoresPerMemcpy(bool OptSize) const;
 
   /// \brief Get maximum # of store operations to be glued together
   ///
@@ -1979,9 +1975,7 @@ public:
   /// to replace a call to llvm.memmove. The value is set by the target at the
   /// performance threshold for such a replacement. If OptSize is true,
   /// return the limit for functions that have OptSize attribute.
-  unsigned getMaxStoresPerMemmove(bool OptSize) const {
-    return OptSize ? MaxStoresPerMemmoveOptSize : MaxStoresPerMemmove;
-  }
+  unsigned getMaxStoresPerMemmove(bool OptSize) const;
 
   /// Determine if the target supports unaligned memory accesses.
   ///

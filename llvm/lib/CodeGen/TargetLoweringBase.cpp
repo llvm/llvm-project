@@ -95,6 +95,24 @@ static cl::opt<unsigned> MinimumBitTestCmpsOverride(
     cl::desc("Set minimum of largest number of comparisons "
              "to use bit test for switch."));
 
+static cl::opt<unsigned> MaxStoresPerMemsetOverride(
+    "max-store-memset", cl::init(0), cl::Hidden,
+    cl::desc("Override target's MaxStoresPerMemset and "
+             "MaxStoresPerMemsetOptSize. "
+             "Set to 0 to use the target default."));
+
+static cl::opt<unsigned> MaxStoresPerMemcpyOverride(
+    "max-store-memcpy", cl::init(0), cl::Hidden,
+    cl::desc("Override target's MaxStoresPerMemcpy and "
+             "MaxStoresPerMemcpyOptSize. "
+             "Set to 0 to use the target default."));
+
+static cl::opt<unsigned> MaxStoresPerMemmoveOverride(
+    "max-store-memmove", cl::init(0), cl::Hidden,
+    cl::desc("Override target's MaxStoresPerMemmove and "
+             "MaxStoresPerMemmoveOptSize. "
+             "Set to 0 to use the target default."));
+
 // FIXME: This option is only to test if the strict fp operation processed
 // correctly by preventing mutating strict fp operation to normal fp operation
 // during development. When the backend supports strict float operation, this
@@ -2114,6 +2132,27 @@ bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
   EVT VT = getApproximateEVTForLLT(Ty, Context);
   return allowsMemoryAccess(Context, DL, VT, MMO.getAddrSpace(), MMO.getAlign(),
                             MMO.getFlags(), Fast);
+}
+
+unsigned TargetLoweringBase::getMaxStoresPerMemset(bool OptSize) const {
+  if (MaxStoresPerMemsetOverride > 0)
+    return MaxStoresPerMemsetOverride;
+
+  return OptSize ? MaxStoresPerMemsetOptSize : MaxStoresPerMemset;
+}
+
+unsigned TargetLoweringBase::getMaxStoresPerMemcpy(bool OptSize) const {
+  if (MaxStoresPerMemcpyOverride > 0)
+    return MaxStoresPerMemcpyOverride;
+
+  return OptSize ? MaxStoresPerMemcpyOptSize : MaxStoresPerMemcpy;
+}
+
+unsigned TargetLoweringBase::getMaxStoresPerMemmove(bool OptSize) const {
+  if (MaxStoresPerMemmoveOverride > 0)
+    return MaxStoresPerMemmoveOverride;
+
+  return OptSize ? MaxStoresPerMemmoveOptSize : MaxStoresPerMemmove;
 }
 
 //===----------------------------------------------------------------------===//
