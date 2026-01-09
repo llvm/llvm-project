@@ -3500,7 +3500,6 @@ def WasmSystemLibrary
       (add DefaultRuntimeLibcallImpls, Int128RTLibcalls,
            CompilerRTOnlyInt64Libcalls, CompilerRTOnlyInt128Libcalls,
            exp10f, exp10,
-           _Unwind_CallPersonality,
            emscripten_return_address,
            LibcallImpls<(add __small_printf,
                              __small_sprintf,
