@@ -18,7 +18,8 @@ define i8 @test_no_update(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[TOBOOL223_NOT:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL223_NOT]], label [[LOR_RHS224:%.*]], label [[LOR_END230:%.*]]
 ; CHECK:       lor.rhs224:
-; CHECK-NEXT:    store i8 0, ptr null, align 1
+; CHECK-NEXT:    [[TMP:%.*]] = alloca i8, align 1
+; CHECK-NEXT:    store i8 0, ptr [[TMP]], align 1
 ; CHECK-NEXT:    br label [[LOR_END230]]
 ; CHECK:       lor.end230:
 ; CHECK-NEXT:    br i1 true, label [[FOR_INC456_1:%.*]], label [[LBL_629]]
@@ -43,7 +44,8 @@ if.end:                                           ; preds = %lbl_629, %if.then
   br i1 %tobool223.not, label %lor.rhs224, label %lor.end230
 
 lor.rhs224:                                       ; preds = %if.end
-  store i8 0, ptr null, align 1
+  %tmp = alloca i8, align 1
+  store i8 0, ptr %tmp, align 1
   br label %lor.end230
 
 lor.end230:                                       ; preds = %lor.rhs224, %if.end
