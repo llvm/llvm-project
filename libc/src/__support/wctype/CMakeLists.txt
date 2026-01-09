@@ -1,3 +1,5 @@
+add_subdirectory(conversion)
+
 add_header_library(
   wctype_classification_utils
   HDRS
