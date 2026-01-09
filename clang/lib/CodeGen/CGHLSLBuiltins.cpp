@@ -170,10 +170,9 @@ static Value *handleHlslWaveActiveBallot(const CallExpr *E,
         CGF->CGM.getIntrinsic(Intrinsic::dx_wave_ballot, {I32}), Cond);
   }
 
-  if (CGF->CGM.getTarget().getTriple().isSPIRV()) {
+  if (CGF->CGM.getTarget().getTriple().isSPIRV())
     return CGF->EmitRuntimeCall(
         CGF->CGM.getIntrinsic(Intrinsic::spv_wave_ballot), Cond);
-  }
 
   CGF->CGM.Error(E->getExprLoc(),
                  "WaveActiveBallot is not supported for this target");
