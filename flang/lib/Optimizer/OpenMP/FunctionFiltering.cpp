@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
@@ -101,6 +102,29 @@ public:
       }
       return WalkResult::advance();
     });
+
+    if (op.getIsGPU())
+      op->walk<WalkOrder::PreOrder>([&](omp::DeclareReductionOp redOp) {
+        if (redOp.symbolKnownUseEmpty(op))
+          return WalkResult::advance();
+
+        if (!redOp.getByrefElementType())
+          return WalkResult::advance();
+
+        auto seqTy =
+            mlir::dyn_cast<fir::SequenceType>(*redOp.getByrefElementType());
+
+        bool isByRefReductionSupported =
+            !seqTy || !fir::sequenceWithNonConstantShape(seqTy);
+
+        if (!isByRefReductionSupported) {
+          TODO(redOp.getLoc(),
+               "Reduction of dynamically-shaped arrays are not supported yet "
+               "on the GPU.");
+        }
+
+        return WalkResult::advance();
+      });
   }
 };
 } // namespace
