@@ -745,10 +745,10 @@ inline _LIBCPP_HIDE_FROM_ABI void basic_ios<_CharT, _Traits>::set_rdbuf(basic_st
   ios_base::set_rdbuf(__sb);
 }
 
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ios<char>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI basic_ios<char>;
 
 #    if _LIBCPP_HAS_WIDE_CHARACTERS
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ios<wchar_t>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI basic_ios<wchar_t>;
 #    endif
 
 _LIBCPP_HIDE_FROM_ABI inline ios_base& boolalpha(ios_base& __str) {

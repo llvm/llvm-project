@@ -36,7 +36,6 @@ AttributeMacros: [
                   '_LIBCPP_DIAGNOSE_NULLPTR_IF',
                   '_LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION',
                   '_LIBCPP_EXPORTED_FROM_ABI',
-                  '_LIBCPP_EXTERN_TEMPLATE_TYPE_VIS',
                   '_LIBCPP_FALLTHROUGH',
                   '_LIBCPP_HIDDEN',
                   '_LIBCPP_HIDE_FROM_ABI_AFTER_V1',

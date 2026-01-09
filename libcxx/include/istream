@@ -1399,11 +1399,11 @@ operator>>(basic_istream<_CharT, _Traits>& __is, bitset<_Size>& __x) {
   return __is;
 }
 
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_istream<char>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI basic_istream<char>;
 #    if _LIBCPP_HAS_WIDE_CHARACTERS
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_istream<wchar_t>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI basic_istream<wchar_t>;
 #    endif
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_iostream<char>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI basic_iostream<char>;
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -667,9 +667,9 @@ basic_ostream<char, _Traits>& operator<<(basic_ostream<char, _Traits>&, const ch
 
 #  endif // _LIBCPP_STD_VER >= 20
 
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ostream<char>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI basic_ostream<char>;
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ostream<wchar_t>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI basic_ostream<wchar_t>;
 #  endif
 
 _LIBCPP_END_NAMESPACE_STD
