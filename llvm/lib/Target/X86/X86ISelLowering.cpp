@@ -62364,13 +62364,28 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
     return;
   }
   case 'i': {
-    // Literal immediates are always ok.
+    // Literal immediates are ok if they fit into a 64-bit register.
     if (auto *CST = dyn_cast<ConstantSDNode>(Op)) {
-      bool IsBool = CST->getConstantIntValue()->getBitWidth() == 1;
+      SDLoc DL(Op);
+      unsigned BitWidth = CST->getConstantIntValue()->getBitWidth();
+      if (BitWidth > 64) {
+        // Check if the value would fit into 64 bit by either treating the
+        // value as an unsigned integer (active bits <= 64) or a signed
+        // integer (significant bits <= 64).
+        const APInt &CSTAPInt = CST->getAPIntValue();
+        if (CSTAPInt.getActiveBits() > 64 && CSTAPInt.getSignificantBits() > 64)
+          DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+              DAG.getMachineFunction().getFunction(),
+              "unsupported size for integer operand",
+              DiagnosticLocation(DL.getDebugLoc()), DS_Error));
+        Result = DAG.getSignedTargetConstant(
+            CSTAPInt.trunc(64).getLimitedValue(), DL, MVT::i64);
+        break;
+      }
+      bool IsBool = BitWidth == 1;
       BooleanContent BCont = getBooleanContents(MVT::i64);
       ISD::NodeType ExtOpc = IsBool ? getExtendForContent(BCont)
                                     : ISD::SIGN_EXTEND;
-      SDLoc DL(Op);
       Result =
           ExtOpc == ISD::ZERO_EXTEND
               ? DAG.getTargetConstant(CST->getZExtValue(), DL, MVT::i64)
