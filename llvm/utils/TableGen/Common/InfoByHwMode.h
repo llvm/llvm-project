@@ -28,6 +28,7 @@
 namespace llvm {
 
 class CodeGenRegBank;
+class CodeGenRegister;
 class CodeGenRegisterClass;
 class Record;
 class raw_ostream;
@@ -254,9 +255,18 @@ struct EncodingInfoByHwMode : public InfoByHwMode<const Record *> {
 
 struct RegClassByHwMode : public InfoByHwMode<const CodeGenRegisterClass *> {
 public:
-  RegClassByHwMode(const Record *R, const CodeGenHwModes &CGH,
-                   const CodeGenRegBank &RegBank);
+  RegClassByHwMode(const Record *R, const CodeGenRegBank &RegBank);
   RegClassByHwMode() = default;
+};
+
+struct RegisterByHwMode : public InfoByHwMode<const CodeGenRegister *> {
+  RegisterByHwMode(const Record *R, CodeGenRegBank &RegBank);
+  RegisterByHwMode() = default;
+  // TODO: Should probably emit this register selection code somewhere shared
+  // instead of emitting it every time.
+  raw_ostream &generateResolverLambda(raw_ostream &OS,
+                                      const CodeGenHwModes &CGH,
+                                      unsigned Indent) const;
 };
 
 } // namespace llvm

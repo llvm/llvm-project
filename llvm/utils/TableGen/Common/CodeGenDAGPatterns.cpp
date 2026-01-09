@@ -1801,7 +1801,7 @@ static TypeSetByHwMode getTypeForRegClassByHwMode(const CodeGenTarget &T,
                                                   const Record *R,
                                                   ArrayRef<SMLoc> Loc) {
   TypeSetByHwMode TypeSet;
-  RegClassByHwMode Helper(R, T.getHwModes(), T.getRegBank());
+  RegClassByHwMode Helper(R, T.getRegBank());
 
   for (auto [ModeID, RegClass] : Helper) {
     ArrayRef<ValueTypeByHwMode> RegClassVTs = RegClass->getValueTypes();

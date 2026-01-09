@@ -675,6 +675,10 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
                                          NextRecordedOperandNo));
       ResultOps.push_back(NextRecordedOperandNo++);
       return;
+    } else if (Def->isSubClassOf("RegisterByHwMode")) {
+      PrintFatalError(Def->getLoc() /* TODO: N.getLoc() */,
+                      "RegisterByHwMode in SelectionDAG patterns "
+                      "not yet supported!");
     }
 
     if (Def->getName() == "zero_reg") {
