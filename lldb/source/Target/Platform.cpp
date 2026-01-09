@@ -2058,7 +2058,7 @@ llvm::ArrayRef<uint8_t> Platform::SoftwareTrapOpcodeBytes(const ArchSpec &arch,
   } break;
   // The default case should not match against anything, so return a nullptr
   default: {
-    trap_opcode = llvm::ArrayRef<uint8_t>(nullptr, 0);
+    trap_opcode = llvm::ArrayRef<uint8_t>{}};
   };
   }
   return trap_opcode;
