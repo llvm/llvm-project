@@ -58,6 +58,7 @@ def ResPropsTy : DXILOpParamType;
 def SplitDoubleTy : DXILOpParamType;
 def BinaryWithCarryTy : DXILOpParamType;
 def DimensionsTy : DXILOpParamType;
+def Fouri32s : DXILOpParamType;
 
 class DXILOpClass;
 
@@ -212,13 +213,12 @@ defset list<DXILOpClass> OpClasses = {
   def unpack4x8 : DXILOpClass;
   def viewID : DXILOpClass;
   def waveActiveAllEqual : DXILOpClass;
-  def waveActiveBallot : DXILOpClass;
   def waveActiveBit : DXILOpClass;
   def waveActiveOp : DXILOpClass;
   def waveAllOp : DXILOpClass;
   def waveAllTrue : DXILOpClass;
   def waveAnyTrue : DXILOpClass;
-  def waveBallot : DXILOpClass;
+  def waveActiveBallot : DXILOpClass;
   def waveGetLaneCount : DXILOpClass;
   def waveGetLaneIndex : DXILOpClass;
   def waveIsFirstLane : DXILOpClass;
@@ -1072,11 +1072,11 @@ def WaveReadLaneAt : DXILOp<117, waveReadLaneAt> {
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
-def WaveActiveBallot : DXILOp<118, waveBallot> {
+def WaveActiveBallot : DXILOp<116, waveActiveBallot> {
   let Doc = "returns uint4 containing a bitmask of the evaluation of the boolean expression for all active lanes in the current wave.";
   let intrinsics = [IntrinSelect<int_dx_wave_ballot>];
   let arguments = [Int1Ty];
-  let result = OverloadTy;
+  let result = Fouri32s;
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 

@@ -160,6 +160,31 @@ static Value *handleHlslSplitdouble(const CallExpr *E, CodeGenFunction *CGF) {
   return LastInst;
 }
 
+static Value *handleHlslWaveActiveBallot(const CallExpr *E,
+                                         CodeGenFunction *CGF) {
+  Value *Cond = CGF->EmitScalarExpr(E->getArg(0));
+  llvm::Type *I32 = CGF->Int32Ty;
+  llvm::StructType *RetTy = llvm::StructType::get(I32, I32, I32, I32);
+
+  if (CGF->CGM.getTarget().getTriple().isDXIL()) {
+    // dx.op.waveActiveBallot(opcode, i1)
+    return CGF->Builder.CreateIntrinsic(RetTy, Intrinsic::dx_wave_ballot,
+                                        {Cond}, nullptr, "wave.active.ballot");
+  }
+
+  if (CGF->CGM.getTarget().getTriple().isSPIRV()) {
+    // spv.wave.ballot(i1) -> <4 x i32>, then bitcast to struct
+    llvm::Type *VecTy = llvm::FixedVectorType::get(I32, 4);
+    return CGF->Builder.CreateIntrinsic(VecTy, Intrinsic::spv_wave_ballot,
+                                        {Cond}, nullptr, "spv.wave.ballot");
+  }
+
+  CGF->CGM.Error(E->getExprLoc(),
+                 "waveActiveBallot is not supported for this target");
+
+  return llvm::UndefValue::get(RetTy);
+}
+
 static Value *handleElementwiseF16ToF32(CodeGenFunction &CGF,
                                         const CallExpr *E) {
   Value *Op0 = CGF.EmitScalarExpr(E->getArg(0));
@@ -834,9 +859,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     assert(Op->getType()->isIntegerTy(1) &&
            "Intrinsic WaveActiveBallot operand must be a bool");
 
-    Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveActiveBallotIntrinsic();
-    return EmitRuntimeCall(
-        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID), {Op});
+    return handleHlslWaveActiveBallot(E, this);
   }
   case Builtin::BI__builtin_hlsl_wave_active_count_bits: {
     Value *OpExpr = EmitScalarExpr(E->getArg(0));

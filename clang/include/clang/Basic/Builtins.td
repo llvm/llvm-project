@@ -5058,7 +5058,7 @@ def HLSLWaveActiveAnyTrue : LangBuiltin<"HLSL_LANG"> {
 def HLSLWaveActiveBallot : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_active_ballot"];
   let Attributes = [NoThrow, Const];
-  let Prototype = "_ExtVector<4, unsigned int>(bool)";
+  let Prototype = "void(bool)";
 }
 
 def HLSLWaveActiveCountBits : LangBuiltin<"HLSL_LANG"> {
