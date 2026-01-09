@@ -34,7 +34,7 @@ using namespace clang::cross_tu;
 using namespace clang::tooling;
 
 static cl::OptionCategory
-    ClangExtDefMapGenCategory("clang-extdefmapgen options");
+    ClangExtDefMapGenCategory("clang-extdef-mapping options");
 
 class MapExtDefNamesConsumer : public ASTConsumer {
 public:
@@ -123,7 +123,7 @@ static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 
 static IntrusiveRefCntPtr<DiagnosticsEngine> Diags;
 
-IntrusiveRefCntPtr<DiagnosticsEngine>
+static IntrusiveRefCntPtr<DiagnosticsEngine>
 GetDiagnosticsEngine(DiagnosticOptions &DiagOpts) {
   if (Diags) {
     // Call reset to make sure we don't mix errors
@@ -133,7 +133,7 @@ GetDiagnosticsEngine(DiagnosticOptions &DiagOpts) {
 
   TextDiagnosticPrinter *DiagClient =
       new TextDiagnosticPrinter(llvm::errs(), DiagOpts);
-  DiagClient->setPrefix("clang-extdef-mappping");
+  DiagClient->setPrefix("clang-extdef-mapping");
 
   auto DiagEngine = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(
       DiagnosticIDs::create(), DiagOpts, DiagClient);
