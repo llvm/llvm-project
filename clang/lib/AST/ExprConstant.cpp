@@ -14455,13 +14455,9 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       const auto A0 = AElem.getFloat();
       const auto B0 = BElem.getFloat();
 
-      const auto CR = A0.compare(B0);
-      const FPCompareFlags CF{/*IsUnordered=*/CR == llvm::APFloatBase::cmpUnordered,
-                       /*IsEq=*/CR == CmpResult::cmpEqual,
-                       /*IsGt=*/CR == CmpResult::cmpGreaterThan,
-                       /*IsLt=*/CR == CmpResult::cmpLessThan};
+      const auto CompareResult = A0.compare(B0);
 
-      const auto ComparisonResult = MatchesPredicate(ImmZExt, CF);
+      const auto ComparisonResult = MatchesPredicate(ImmZExt, CompareResult);
       const llvm::APFloat True(-1.0);
       const llvm::APFloat False(0.0);
 

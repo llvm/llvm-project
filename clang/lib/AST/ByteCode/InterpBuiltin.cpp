@@ -4143,12 +4143,8 @@ static bool interp__builtin_x86_cmp(InterpState &S, CodePtr OpPC,
     llvm::APFloat AElement = VectorA.elem<Floating>(i).getAPFloat();
     llvm::APFloat BElement = VectorB.elem<Floating>(i).getAPFloat();
 
-    auto CR = AElement.compare(BElement);
-    const FPCompareFlags CF{/*IsUnordered=*/CR == llvm::APFloatBase::cmpUnordered,
-                     /*IsEq=*/CR == llvm::APFloatBase::cmpEqual,
-                     /*IsGt=*/CR == llvm::APFloatBase::cmpGreaterThan,
-                     /*IsLt=*/CR == llvm::APFloatBase::cmpLessThan};
-    const auto ComparisonResult = MatchesPredicate(ImmZExt, CF);
+    auto CompareResult = AElement.compare(BElement);
+    const auto ComparisonResult = MatchesPredicate(ImmZExt, CompareResult);
 
     const llvm::APFloat True(-1.0);
     const llvm::APFloat False(0.0);
