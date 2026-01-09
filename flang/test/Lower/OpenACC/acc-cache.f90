@@ -456,7 +456,6 @@ subroutine test_cache_use_after_region()
 ! CHECK: hlfir.assign
 end subroutine
 
-
 ! CHECK-LABEL: func.func @_QPtest_cache_nested_scope()
 ! CHECK: %[[B_VAR:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtest_cache_nested_scopeEb"}
 subroutine test_cache_nested_scope()
@@ -488,7 +487,6 @@ subroutine test_cache_nested_scope()
 ! CHECK: hlfir.designate %[[B_VAR]]#0
 ! CHECK: acc.yield
 end subroutine
-
 
 ! CHECK-LABEL: func.func @_QPtest_cache_in_regular_loop()
 ! CHECK: %[[B_VAR:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtest_cache_in_regular_loopEb"}
