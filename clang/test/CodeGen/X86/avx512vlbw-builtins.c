@@ -794,6 +794,149 @@ TEST_CONSTEXPR(_mm_cmpgt_epu16_mask(
     ((__m128i)(__v8hu){150, 39532, 62935, 34670, 57126, 9790, 21078, 3593})
 ) == (__mmask8)0xe3);
 
+//cmpeq
+TEST_CONSTEXPR(_mm_cmpeq_epi32_mask(
+    ((__m128i)(__v4qs){ 0x0302010a, 0x07061420, 0x0b0a0908, 0xc80e0d0c }),
+    ((__m128i)(__v4qs){ 0x0302010a, 0x63636363, 0x63636363, 0xc80e0d0c })
+)==(__mmask8)0x09u);
+
+//cmpneq
+TEST_CONSTEXPR(_mm_cmpneq_epi32_mask(
+    ((__m128i)(__v4qs){ 0x0302010a, 0x07061420, 0x0b0a0908, 0xc80e0d0c }),
+    ((__m128i)(__v4qs){ 0x0302010a, 0x63636363, 0x63636363, 0xc80e0d0c })
+)==(__mmask8)0x06u);
+
+//cmpgt
+TEST_CONSTEXPR(_mm_cmpgt_epi32_mask(
+    ((__m128i)(__v4qs){ 0x0302010a, 0x64646464, 0x0b0a0908, 0xc80e0d0c }),
+    ((__m128i)(__v4qs){ 0x0302010a, 0x63636363, 0x63636363, 0xc80e0d0c })
+)==(__mmask8)0x02u);
+
+//cmpge
+TEST_CONSTEXPR(_mm_cmpge_epi32_mask(
+    ((__m128i)(__v4qs){ 0x0302010a, 0x64646464, 0x0b0a0908, 0xc80e0d0c }),
+    ((__m128i)(__v4qs){ 0x0302010a, 0x63636363, 0x63636363, 0xc80e0d0c })
+)==(__mmask8)0x0bu);
+
+//cmplt
+TEST_CONSTEXPR(_mm_cmplt_epi32_mask(
+    ((__m128i)(__v4qs){ 0x0302010a, 0x64646464, 0x0b0a0908, 0xc80e0d0c }),
+    ((__m128i)(__v4qs){ 0x0302010a, 0x63636363, 0x63636363, 0xc80e0d0c })
+)==(__mmask8)0x04u);
+
+//cmpeq
+TEST_CONSTEXPR(_mm_cmpeq_epu32_mask(
+    ((__m128i)(__v4su){ 0x0302010a, 0x07061420, 0x0b0a0908, 0xc80e0d0c }),
+    ((__m128i)(__v4su){ 0x0302010a, 0x63636363, 0x63636363, 0xc80e0d0c })
+)==(__mmask8)0x09u);
+
+//cmpneq
+TEST_CONSTEXPR(_mm_cmpneq_epu32_mask(
+    ((__m128i)(__v4su){ 0x0302010a, 0x07061420, 0x0b0a0908, 0xc80e0d0c }),
+    ((__m128i)(__v4su){ 0x0302010a, 0x63636363, 0x63636363, 0xc80e0d0c })
+)==(__mmask8)0x06u);
+
+//cmpgt
+TEST_CONSTEXPR(_mm_cmpgt_epu32_mask(
+    ((__m128i)(__v4su){ 0x0302010a, 0x64646464, 0x0b0a0908, 0xc80e0d0c }),
+    ((__m128i)(__v4su){ 0x0302010a, 0x63636363, 0x63636363, 0xc80e0d0c })
+)==(__mmask8)0x0au);
+
+//cmpge
+TEST_CONSTEXPR(_mm_cmpge_epu32_mask(
+    ((__m128i)(__v4su){ 0x0302010a, 0x64646464, 0x0b0a0908, 0xc80e0d0c }),
+    ((__m128i)(__v4su){ 0x0302010a, 0x63636363, 0x63636363, 0xc80e0d0c })
+)==(__mmask8)0x0bu);
+
+//cmplt
+TEST_CONSTEXPR(_mm_cmplt_epu32_mask(
+    ((__m128i)(__v4su){ 0x0302010a, 0x64646464, 0x0b0a0908, 0xc80e0d0c }),
+    ((__m128i)(__v4su){ 0x0302010a, 0x63636363, 0x63636363, 0xc80e0d0c })
+)==(__mmask8)0x04u);
+
+//cmple
+TEST_CONSTEXPR(_mm_cmple_epu32_mask(
+    ((__m128i)(__v4su){ 0x0302010a, 0x64646464, 0x0b0a0908, 0xc80e0d0c }),
+    ((__m128i)(__v4su){ 0x0302010a, 0x63636363, 0x63636363, 0xc80e0d0c })
+)==(__mmask8)0x05u);
+
+//cmple
+TEST_CONSTEXPR(_mm_cmple_epi32_mask(
+    ((__m128i)(__v4qs){ 0x0302010a, 0x64646464, 0x0b0a0908, 0xc80e0d0c }),
+    ((__m128i)(__v4qs){ 0x0302010a, 0x63636363, 0x63636363, 0xc80e0d0c })
+)==(__mmask8)0x0du);
+
+//cmpeq
+TEST_CONSTEXPR(_mm_cmpeq_epi64_mask(
+    ((__m128i)(__v2di){ 0x0706142003020106ll, 0xc80e0d0c0b0a0908ll }),
+    ((__m128i)(__v2di){ 0x0706142003020106ll, 0x6363636363636363ll })
+)==(__mmask8)0x01u);
+
+//cmpneq
+TEST_CONSTEXPR(_mm_cmpneq_epi64_mask(
+    ((__m128i)(__v2di){ 0x0706142003020106ll, 0xc80e0d0c0b0a0908ll }),
+    ((__m128i)(__v2di){ 0x0706142003020106ll, 0x6363636363636363ll })
+)==(__mmask8)0x02u);
+
+//cmpgt
+TEST_CONSTEXPR(_mm_cmpgt_epi64_mask(
+    ((__m128i)(__v2qi){ 0x0706142003020106ll, 0xc80e0d0c0b0a0908ll }),
+    ((__m128i)(__v2qi){ 0x0706142003020106ll, 0x6363636363636363ll })
+)==(__mmask8)0x00u);
+
+//cmpge
+TEST_CONSTEXPR(_mm_cmpge_epi64_mask(
+    ((__m128i)(__v2qi){ 0x0706142003020106ll, 0xc80e0d0c0b0a0908ll }),
+    ((__m128i)(__v2qi){ 0x0706142003020106ll, 0x6363636363636363ll })
+)==(__mmask8)0x01u);
+
+//cmplt
+TEST_CONSTEXPR(_mm_cmplt_epi64_mask(
+    ((__m128i)(__v2qi){ 0x0706142003020106ll, 0xc80e0d0c0b0a0908ll }),
+    ((__m128i)(__v2qi){ 0x0706142003020106ll, 0x6363636363636363ll })
+)==(__mmask8)0x02u);
+
+//cmple
+TEST_CONSTEXPR(_mm_cmple_epi64_mask(
+    ((__m128i)(__v2qi){ 0x0706142003020106ll, 0xc80e0d0c0b0a0908ll }),
+    ((__m128i)(__v2qi){ 0x0706142003020106ll, 0x6363636363636363ll })
+)==(__mmask8)0x03u);
+
+//cmpeq
+TEST_CONSTEXPR(_mm_cmpeq_epu64_mask(
+    ((__m128i)(__v2qu){ 0x0706142003020106ull, 0xc80e0d0c0b0a0908ull }),
+    ((__m128i)(__v2qu){ 0x0706142003020106ull, 0x6363636363636363ull })
+)==(__mmask8)0x01u);
+
+//cmpneq
+TEST_CONSTEXPR(_mm_cmpneq_epu64_mask(
+    ((__m128i)(__v2qu){ 0x0706142003020106ull, 0xc80e0d0c0b0a0908ull }),
+    ((__m128i)(__v2qu){ 0x0706142003020106ull, 0x6363636363636363ull })
+)==(__mmask8)0x02u);
+
+//cmpgt
+TEST_CONSTEXPR(_mm_cmpgt_epu64_mask(
+    ((__m128i)(__v2qu){ 0x0706142003020106ull, 0xc80e0d0c0b0a0908ull }),
+    ((__m128i)(__v2qu){ 0x0706142003020106ull, 0x6363636363636363ull })
+)==(__mmask8)0x02u);
+
+//cmpge
+TEST_CONSTEXPR(_mm_cmpge_epu64_mask(
+    ((__m128i)(__v2qu){ 0x0706142003020106ull, 0xc80e0d0c0b0a0908ull }),
+    ((__m128i)(__v2qu){ 0x0706142003020106ull, 0x6363636363636363ull })
+)==(__mmask8)0x03u);
+
+//cmplt
+TEST_CONSTEXPR(_mm_cmplt_epu64_mask(
+    ((__m128i)(__v2qu){ 0x0706142003020106ull, 0xc80e0d0c0b0a0908ull }),
+    ((__m128i)(__v2qu){ 0x0706142003020106ull, 0x6363636363636363ull })
+)==(__mmask8)0x00u);
+
+//cmple
+TEST_CONSTEXPR(_mm_cmple_epu64_mask(
+    ((__m128i)(__v2qu){ 0x0706142003020106ull, 0xc80e0d0c0b0a0908ull }),
+    ((__m128i)(__v2qu){ 0x0706142003020106ull, 0x6363636363636363ull })
+)==(__mmask8)0x01u);
 
 
 // tests for _mm256_cmp*_mask
@@ -951,6 +1094,150 @@ TEST_CONSTEXPR(_mm256_cmple_epu16_mask(
     ((__m256i)(__v16qu){ 10,1,2,3,4,20,6,7, 8,9,10,11,12,13,14,200 }),
     ((__m256i)(__v16qu){ 10,99,99,99,99,20,99,99, 99,99,99,99,99,99,99,200 })
 )==(__mmask16)0xffffu);
+
+//cmpeq
+TEST_CONSTEXPR(_mm256_cmpeq_epu32_mask(
+    ((__m256i)(__v8qu){ 0x0302010a, 0x07061420, 0x0b0a0908, 0xc80e0d0c }),
+    ((__m256i)(__v8qu){ 0x0302010a, 0x63636363, 0x63636363, 0xc80e0d0c })
+)==(__mmask8)0x09u);
+
+//cmpneq
+TEST_CONSTEXPR(_mm256_cmpneq_epu32_mask(
+    ((__m256i)(__v8qu){ 0x0302010a, 0x07061420, 0x0b0a0908, 0xc80e0d0c }),
+    ((__m256i)(__v8qu){ 0x0302010a, 0x63636363, 0x63636363, 0xc80e0d0c })
+)==(__mmask8)0xf6u);
+
+//cmpgt
+TEST_CONSTEXPR(_mm256_cmpgt_epu32_mask(
+    ((__m256i)(__v8qu){ 0x0302010a, 0x64646464, 0x0b0a0908, 0xc80e0d0c }),
+    ((__m256i)(__v8qu){ 0x0302010a, 0x63636363, 0x63636363, 0xc80e0d0c })
+)==(__mmask8)0x02u);
+
+//cmpge
+TEST_CONSTEXPR(_mm256_cmpge_epu32_mask(
+    ((__m256i)(__v8qu){ 0x0302010a, 0x64646464, 0x0b0a0908, 0xc80e0d0c }),
+    ((__m256i)(__v8qu){ 0x0302010a, 0x63636363, 0x63636363, 0xc80e0d0c })
+)==(__mmask8)0x0bu);
+
+//cmplt
+TEST_CONSTEXPR(_mm256_cmplt_epu32_mask(
+    ((__m256i)(__v8qu){ 0x0302010a, 0x64646464, 0x0b0a0908, 0xc80e0d0c }),
+    ((__m256i)(__v8qu){ 0x0302010a, 0x63636363, 0x63636363, 0xc80e0d0c })
+)==(__mmask8)0xf4u);
+
+//cmple
+TEST_CONSTEXPR(_mm256_cmple_epu32_mask(
+    ((__m256i)(__v8qu){ 0x0302010a, 0x64646464, 0x0b0a0908, 0xc80e0d0c }),
+    ((__m256i)(__v8qu){ 0x0302010a, 0x63636363, 0x63636363, 0xc80e0d0c })
+)==(__mmask8)0xfdu);
+
+//cmpeq
+TEST_CONSTEXPR(_mm256_cmpeq_epi32_mask(
+    ((__m256i)(__v8qs){ 0x0302010a, 0x07061420, 0x0b0a0908, 0xc80e0d0c }),
+    ((__m256i)(__v8qs){ 0x0302010a, 0x63636363, 0x63636363, 0xc80e0d0c })
+)==(__mmask8)0x09u);
+
+//cmpneq
+TEST_CONSTEXPR(_mm256_cmpneq_epi32_mask(
+    ((__m256i)(__v8qs){ 0x0302010a, 0x07061420, 0x0b0a0908, 0xc80e0d0c }),
+    ((__m256i)(__v8qs){ 0x0302010a, 0x63636363, 0x63636363, 0xc80e0d0c })
+)==(__mmask8)0xf6u);
+
+//cmpgt
+TEST_CONSTEXPR(_mm256_cmpgt_epi32_mask(
+    ((__m256i)(__v8qs){ 0x0302010a, 0x64646464, 0x0b0a0908, 0xc80e0d0c }),
+    ((__m256i)(__v8qs){ 0x0302010a, 0x63636363, 0x63636363, 0xc80e0d0c })
+)==(__mmask8)0x02u);
+
+//cmpge
+TEST_CONSTEXPR(_mm256_cmpge_epi32_mask(
+    ((__m256i)(__v8qs){ 0x0302010a, 0x64646464, 0x0b0a0908, 0xc80e0d0c }),
+    ((__m256i)(__v8qs){ 0x0302010a, 0x63636363, 0x63636363, 0xc80e0d0c })
+)==(__mmask8)0x0bu);
+
+//cmplt
+TEST_CONSTEXPR(_mm256_cmplt_epi32_mask(
+    ((__m256i)(__v8qs){ 0x0302010a, 0x64646464, 0x0b0a0908, 0xc80e0d0c }),
+    ((__m256i)(__v8qs){ 0x0302010a, 0x63636363, 0x63636363, 0xc80e0d0c })
+)==(__mmask8)0xf4u);
+
+//cmple
+TEST_CONSTEXPR(_mm256_cmple_epi32_mask(
+    ((__m256i)(__v8qs){ 0x0302010a, 0x64646464, 0x0b0a0908, 0xc80e0d0c }),
+    ((__m256i)(__v8qs){ 0x0302010a, 0x63636363, 0x63636363, 0xc80e0d0c })
+)==(__mmask8)0xfdu);
+
+//cmpeq
+TEST_CONSTEXPR(_mm256_cmpeq_epi64_mask(
+    ((__m256i)(__v4qs){ 0x0706142003020106ll, 0xc80e0d0c0b0a0908ll, 0x0000000000000000ll, 0x0000000000000000ll }),
+    ((__m256i)(__v4qs){ 0x0706142003020106ll, 0x6363636363636363ll, 0x0000000000000000ll, 0x0000000000000000ll })
+)==(__mmask8)0x0cu);
+
+//cmpneq
+TEST_CONSTEXPR(_mm256_cmpneq_epi64_mask(
+    ((__m256i)(__v4qs){ 0x0706142003020106ll, 0xc80e0d0c0b0a0908ll, 0x0000000000000000ll, 0x0000000000000000ll }),
+    ((__m256i)(__v4qs){ 0x0706142003020106ll, 0x6363636363636363ll, 0x0000000000000000ll, 0x0000000000000000ll })
+)==(__mmask8)0x02u);
+
+//cmpgt
+TEST_CONSTEXPR(_mm256_cmpgt_epi64_mask(
+    ((__m256i)(__v4qs){ 0x0706142003020106ll, 0xc80e0d0c0b0a0908ll, 0x0000000000000000ll, 0x0000000000000000ll }),
+    ((__m256i)(__v4qs){ 0x0706142003020106ll, 0x6363636363636363ll, 0x0000000000000000ll, 0x0000000000000000ll })
+)==(__mmask8)0x00u);
+
+//cmpge
+TEST_CONSTEXPR(_mm256_cmpge_epi64_mask(
+    ((__m256i)(__v4qs){ 0x0706142003020106ll, 0xc80e0d0c0b0a0908ll, 0x0000000000000000ll, 0x0000000000000000ll }),
+    ((__m256i)(__v4qs){ 0x0706142003020106ll, 0x6363636363636363ll, 0x0000000000000000ll, 0x0000000000000000ll })
+)==(__mmask8)0x0cu);
+
+//cmplt
+TEST_CONSTEXPR(_mm256_cmplt_epi64_mask(
+    ((__m256i)(__v4qs){ 0x0706142003020106ll, 0xc80e0d0c0b0a0908ll, 0x0000000000000000ll, 0x0000000000000000ll }),
+    ((__m256i)(__v4qs){ 0x0706142003020106ll, 0x6363636363636363ll, 0x0000000000000000ll, 0x0000000000000000ll })
+)==(__mmask8)0x02u);
+
+//cmple
+TEST_CONSTEXPR(_mm256_cmple_epi64_mask(
+    ((__m256i)(__v4qs){ 0x0706142003020106ll, 0xc80e0d0c0b0a0908ll, 0x0000000000000000ll, 0x0000000000000000ll }),
+    ((__m256i)(__v4qs){ 0x0706142003020106ll, 0x6363636363636363ll, 0x0000000000000000ll, 0x0000000000000000ll })
+)==(__mmask8)0x0eu);
+
+//cmpeq
+TEST_CONSTEXPR(_mm256_cmpeq_epu64_mask(
+    ((__m256i)(__v4qu){ 0x0706142003020106ull, 0xc80e0d0c0b0a0908ull, 0x0000000000000000ull, 0x0000000000000000ull }),
+    ((__m256i)(__v4qu){ 0x0706142003020106ull, 0x6363636363636363ull, 0x0000000000000000ull, 0x0000000000000000ull })
+)==(__mmask8)0x0cu);
+
+//cmpneq
+TEST_CONSTEXPR(_mm256_cmpneq_epu64_mask(
+    ((__m256i)(__v4qu){ 0x0706142003020106ull, 0xc80e0d0c0b0a0908ull, 0x0000000000000000ull, 0x0000000000000000ull }),
+    ((__m256i)(__v4qu){ 0x0706142003020106ull, 0x6363636363636363ull, 0x0000000000000000ull, 0x0000000000000000ull })
+)==(__mmask8)0x02u);
+
+//cmpgt
+TEST_CONSTEXPR(_mm256_cmpgt_epu64_mask(
+    ((__m256i)(__v4qu){ 0x0706142003020106ull, 0xc80e0d0c0b0a0908ull, 0x0000000000000000ull, 0x0000000000000000ull }),
+    ((__m256i)(__v4qu){ 0x0706142003020106ull, 0x6363636363636363ull, 0x0000000000000000ull, 0x0000000000000000ull })
+)==(__mmask8)0x02u);
+
+//cmpge
+TEST_CONSTEXPR(_mm256_cmpge_epu64_mask(
+    ((__m256i)(__v4qu){ 0x0706142003020106ull, 0xc80e0d0c0b0a0908ull, 0x0000000000000000ull, 0x0000000000000000ull }),
+    ((__m256i)(__v4qu){ 0x0706142003020106ull, 0x6363636363636363ull, 0x0000000000000000ull, 0x0000000000000000ull })
+)==(__mmask8)0x0eu);
+
+//cmplt
+TEST_CONSTEXPR(_mm256_cmplt_epu64_mask(
+    ((__m256i)(__v4qu){ 0x0706142003020106ull, 0xc80e0d0c0b0a0908ull, 0x0000000000000000ull, 0x0000000000000000ull }),
+    ((__m256i)(__v4qu){ 0x0706142003020106ull, 0x6363636363636363ull, 0x0000000000000000ull, 0x0000000000000000ull })
+)==(__mmask8)0x00u);
+
+//cmple
+TEST_CONSTEXPR(_mm256_cmple_epu64_mask(
+    ((__m256i)(__v4qu){ 0x0706142003020106ull, 0xc80e0d0c0b0a0908ull, 0x0000000000000000ull, 0x0000000000000000ull }),
+    ((__m256i)(__v4qu){ 0x0706142003020106ull, 0x6363636363636363ull, 0x0000000000000000ull, 0x0000000000000000ull })
+)==(__mmask8)0x0cu);
 
 __mmask16 test_mm_mask_cmp_epi8_mask(__mmask16 __u, __m128i __a, __m128i __b) {
   // CHECK-LABEL: test_mm_mask_cmp_epi8_mask
