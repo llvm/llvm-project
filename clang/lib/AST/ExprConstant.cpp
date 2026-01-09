@@ -12233,139 +12233,6 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
   auto BuiltinOp = E->getBuiltinCallee();
   switch (BuiltinOp) {
-
-    case X86::BI__builtin_ia32_cmppd:
-    case X86::BI__builtin_ia32_cmppd256: {
-    using CmpResult = llvm::APFloatBase::cmpResult;
-
-    const Expr *A = E->getArg(0);
-    const Expr *B = E->getArg(1);
-    const Expr *Imm = E->getArg(2);
-
-    APValue AV, BV;
-    APSInt ImmVal;
-    if (!EvaluateVector(A, AV, Info) || !EvaluateVector(B, BV, Info))
-      return false;
-    if (!EvaluateInteger(Imm, ImmVal, Info))
-      return false;
-    unsigned Lanes = AV.getVectorLength();
-    if (Lanes == 0 || BV.getVectorLength() != Lanes)
-      return false;
-
-    QualType RetTy = E->getType();
-    const auto *VT = RetTy->getAs<VectorType>();
-    if (!VT)
-      return false;
-    bool IsF64 =
-        VT->getElementType()->isSpecificBuiltinType(BuiltinType::Double);
-    const bool IsScalar = (BuiltinOp == X86::BI__builtin_ia32_cmpss) ||
-                          (BuiltinOp == X86::BI__builtin_ia32_cmpsd);
-    const uint32_t imm = ImmVal.getZExtValue();
-
-    // Return true if immediate and the comparison result (between operand a and b) are matching
-    auto evalCmpImm = [](uint32_t imm,
-                         llvm::APFloatBase::cmpResult cmp) -> bool {
-      bool isUnordered = (cmp == llvm::APFloatBase::cmpUnordered);
-      bool isEq = (cmp == CmpResult::cmpEqual);
-      bool isGt = (cmp == CmpResult::cmpGreaterThan);
-      bool isLt = (cmp == CmpResult::cmpLessThan);
-      bool result = false;
-
-      switch (imm & 0x1F) {
-      case 0x00: /* _CMP_EQ_OQ */
-      case 0x10: /* _CMP_EQ_OS */
-        result = isEq && !isUnordered;
-        break;
-      case 0x01: /* _CMP_LT_OS */
-      case 0x11: /* _CMP_LT_OQ */
-        result = isLt && !isUnordered;
-        break;
-      case 0x02: /* _CMP_LE_OS */
-      case 0x12: /* _CMP_LE_OQ */
-        result = !isGt && !isUnordered;
-        break;
-      case 0x03: /* _CMP_UNORD_Q */
-      case 0x13: /* _CMP_UNORD_S */
-        result = isUnordered;
-        break;
-      case 0x04: /* _CMP_NEQ_UQ */
-      case 0x14: /* _CMP_NEQ_US */
-        result = !isEq || isUnordered;
-        break;
-      case 0x05: /* _CMP_NLT_US */
-      case 0x15: /* _CMP_NLT_UQ */
-        result = !isLt || isUnordered;
-        break;
-      case 0x06: /* _CMP_NLE_US */
-      case 0x16: /* _CMP_NLE_UQ */
-        result = isGt || isUnordered;
-        break;
-      case 0x07: /* _CMP_ORD_Q */
-      case 0x17: /* _CMP_ORD_S */
-        result = !isUnordered;
-        break;
-      case 0x08: /* _CMP_EQ_UQ */
-      case 0x18: /* _CMP_EQ_US */
-        result = isEq || isUnordered;
-        break;
-      case 0x09: /* _CMP_NGE_US */
-      case 0x19: /* _CMP_NGE_UQ */
-        result = isLt || isUnordered;
-        break;
-      case 0x0a: /* _CMP_NGT_US */
-      case 0x1a: /* _CMP_NGT_UQ */
-        result = !isGt || isUnordered;
-        break;
-      case 0x0b: /* _CMP_FALSE_OQ */
-      case 0x1b: /* _CMP_FALSE_OS */
-        result = false;
-        break;
-      case 0x0c: /* _CMP_NEQ_OQ */
-      case 0x1c: /* _CMP_NEQ_OS */
-        result = !isEq && !isUnordered;
-        break;
-      case 0x0d: /* _CMP_GE_OS */
-      case 0x1d: /* _CMP_GE_OQ */
-        result = !isLt && !isUnordered;
-        break;
-      case 0x0e: /* _CMP_GT_OS */
-      case 0x1e: /* _CMP_GT_OQ */
-        result = isGt && !isUnordered;
-        break;
-      case 0x0f: /* _CMP_TRUE_UQ */
-      case 0x1f: /* _CMP_TRUE_US */
-        result = true;
-        break;
-      }
-      return result;
-    };
-
-    std::vector<APValue> results;
-    for (unsigned i = 0; i < Lanes; ++i) {
-      auto AElem = AV.getVectorElt(i);
-      auto BElem = BV.getVectorElt(i);
-      
-        llvm::APFloat A0 = AElem.getFloat();
-        llvm::APFloat B0 = BElem.getFloat();
-
-        // harus suport multiple operands
-
-        llvm::APFloat::cmpResult CR = A0.compare(B0);
-        auto ComparisonResult = evalCmpImm(imm, CR);
-
-        llvm::APFloat True(-1.0);
-        llvm::APFloat False(0.0);
-
-        if (ComparisonResult)
-          results.push_back(APValue(True));
-        else
-          results.push_back(APValue(False));
-    }
-
-    // construct result
-    APValue retVal(results.data(), results.size());
-    return Success(retVal, E);
-  }
   default:
     return false;
   case Builtin::BI__builtin_elementwise_popcount:
@@ -14549,6 +14416,63 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
             }))
       return false;
     return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_cmppd:
+  case X86::BI__builtin_ia32_cmppd256: {
+    using CmpResult = llvm::APFloatBase::cmpResult;
+
+    const Expr *A = E->getArg(0);
+    const Expr *B = E->getArg(1);
+    const Expr *Imm = E->getArg(2);
+
+    APValue AV, BV;
+    APSInt ImmVal;
+    if (!EvaluateVector(A, AV, Info) || !EvaluateVector(B, BV, Info))
+      return false;
+    if (!EvaluateInteger(Imm, ImmVal, Info))
+      return false;
+
+    const auto NumLanes = AV.getVectorLength();
+    if (NumLanes == 0 || BV.getVectorLength() != NumLanes)
+      return false;
+
+    const auto RetTy = E->getType();
+    const auto *VT = RetTy->getAs<VectorType>();
+    if (!VT)
+      return false;
+
+    const bool IsF64 =
+        VT->getElementType()->isSpecificBuiltinType(BuiltinType::Double);
+    const bool IsScalar = (BuiltinOp == X86::BI__builtin_ia32_cmpss) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpsd);
+    const uint32_t ImmZExt = ImmVal.getZExtValue();
+
+    std::vector<APValue> results;
+    for (unsigned i = 0; i < NumLanes; ++i) {
+      const auto AElem = AV.getVectorElt(i);
+      const auto BElem = BV.getVectorElt(i);
+
+      const auto A0 = AElem.getFloat();
+      const auto B0 = BElem.getFloat();
+
+      const auto CR = A0.compare(B0);
+      const FPCompareFlags CF{/*IsUnordered=*/CR == llvm::APFloatBase::cmpUnordered,
+                       /*IsEq=*/CR == CmpResult::cmpEqual,
+                       /*IsGt=*/CR == CmpResult::cmpGreaterThan,
+                       /*IsLt=*/CR == CmpResult::cmpLessThan};
+
+      const auto ComparisonResult = MatchesPredicate(ImmZExt, CF);
+      const llvm::APFloat True(-1.0);
+      const llvm::APFloat False(0.0);
+
+      if (ComparisonResult)
+        results.push_back(APValue(True));
+      else
+        results.push_back(APValue(False));
+    }
+
+    const APValue retVal(results.data(), results.size());
+    return Success(retVal, E);
   }
   }
 }

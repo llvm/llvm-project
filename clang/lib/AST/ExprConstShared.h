@@ -21,14 +21,78 @@ namespace llvm {
 class APFloat;
 class APSInt;
 class APInt;
-}
+} // namespace llvm
+
 namespace clang {
 class QualType;
 class LangOptions;
 class ASTContext;
 class CharUnits;
 class Expr;
+
+struct FPCompareFlags {
+  bool IsUnordered;
+  bool IsEq;
+  bool IsGt;
+  bool IsLt;
+};
+
+// Return true if immediate and the comparison flags are matching
+static bool MatchesPredicate(const uint32_t Imm, const FPCompareFlags &F) {
+  switch (Imm & 0x1F) {
+  case 0x00: /* _CMP_EQ_OQ */
+  case 0x10: /* _CMP_EQ_OS */
+    return F.IsEq && !F.IsUnordered;
+  case 0x01: /* _CMP_LT_OS */
+  case 0x11: /* _CMP_LT_OQ */
+    return F.IsLt && !F.IsUnordered;
+  case 0x02: /* _CMP_LE_OS */
+  case 0x12: /* _CMP_LE_OQ */
+    return !F.IsGt && !F.IsUnordered;
+  case 0x03: /* _CMP_UNORD_Q */
+  case 0x13: /* _CMP_UNORD_S */
+    return F.IsUnordered;
+  case 0x04: /* _CMP_NEQ_UQ */
+  case 0x14: /* _CMP_NEQ_US */
+    return !F.IsEq || F.IsUnordered;
+  case 0x05: /* _CMP_NLT_US */
+  case 0x15: /* _CMP_NLT_UQ */
+    return !F.IsLt || F.IsUnordered;
+  case 0x06: /* _CMP_NLE_US */
+  case 0x16: /* _CMP_NLE_UQ */
+    return F.IsGt || F.IsUnordered;
+  case 0x07: /* _CMP_ORD_Q */
+  case 0x17: /* _CMP_ORD_S */
+    return !F.IsUnordered;
+  case 0x08: /* _CMP_EQ_UQ */
+  case 0x18: /* _CMP_EQ_US */
+    return F.IsEq || F.IsUnordered;
+  case 0x09: /* _CMP_NGE_US */
+  case 0x19: /* _CMP_NGE_UQ */
+    return F.IsLt || F.IsUnordered;
+  case 0x0a: /* _CMP_NGT_US */
+  case 0x1a: /* _CMP_NGT_UQ */
+    return !F.IsGt || F.IsUnordered;
+  case 0x0b: /* _CMP_FALSE_OQ */
+  case 0x1b: /* _CMP_FALSE_OS */
+    return false;
+  case 0x0c: /* _CMP_NEQ_OQ */
+  case 0x1c: /* _CMP_NEQ_OS */
+    return !F.IsEq && !F.IsUnordered;
+  case 0x0d: /* _CMP_GE_OS */
+  case 0x1d: /* _CMP_GE_OQ */
+    return !F.IsLt && !F.IsUnordered;
+  case 0x0e: /* _CMP_GT_OS */
+  case 0x1e: /* _CMP_GT_OQ */
+    return F.IsGt && !F.IsUnordered;
+  case 0x0f: /* _CMP_TRUE_UQ */
+  case 0x1f: /* _CMP_TRUE_US */
+    return true;
+  }
+  return false;
+};
 } // namespace clang
+
 using namespace clang;
 /// Values returned by __builtin_classify_type, chosen to match the values
 /// produced by GCC's builtin.

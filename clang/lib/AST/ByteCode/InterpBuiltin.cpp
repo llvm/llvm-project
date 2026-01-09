@@ -4122,111 +4122,36 @@ static bool interp__builtin_ia32_gfni_mul(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_x86_cmp(InterpState &S, CodePtr OpPC,
                                     const InterpFrame *Frame,
                                     const CallExpr *Call, unsigned ID) {
-  llvm::APSInt ImmAPS =
+  const auto ImmAPS =
       popToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)));
-  uint32_t imm = ImmAPS.getZExtValue();
+  const uint32_t ImmZExt = ImmAPS.getZExtValue();
   const Pointer &VectorB = S.Stk.pop<Pointer>();
   const Pointer &VectorA = S.Stk.pop<Pointer>();
   Pointer &Dst = S.Stk.peek<Pointer>();
 
-  bool isScalar = (ID == X86::BI__builtin_ia32_cmpss) ||
-                  (ID == X86::BI__builtin_ia32_cmpsd);
-  bool isF64 = (ID == X86::BI__builtin_ia32_cmppd) ||
-               (ID == X86::BI__builtin_ia32_cmpsd) ||
-               (ID == X86::BI__builtin_ia32_cmppd256);
+  const bool IsScalar = (ID == X86::BI__builtin_ia32_cmpss) ||
+                        (ID == X86::BI__builtin_ia32_cmpsd);
+  const bool IsF64 = (ID == X86::BI__builtin_ia32_cmppd) ||
+                     (ID == X86::BI__builtin_ia32_cmpsd) ||
+                     (ID == X86::BI__builtin_ia32_cmppd256);
 
-  int NumberOfLaneA = VectorA.getNumElems();
-  int NumberOfLaneB = VectorB.getNumElems();
-  if (NumberOfLaneA != NumberOfLaneB)
+  const auto NumLanes = VectorA.getNumElems();
+  if (NumLanes != VectorB.getNumElems())
     return false;
 
-  // Return true if immediate and the comparison result (between operand a and b) are matching
-  auto evalCmpImm = [&](uint32_t imm, llvm::APFloatBase::cmpResult cmp) -> bool {
-    using CmpResult = llvm::APFloatBase::cmpResult;
-
-    bool result = false;
-    bool isUnordered = (cmp == llvm::APFloatBase::cmpUnordered);
-    bool isEq = (cmp == CmpResult::cmpEqual);
-    bool isGt = (cmp == CmpResult::cmpGreaterThan);
-    bool isLt = (cmp == CmpResult::cmpLessThan);
-
-    switch (imm & 0x1F) {
-    case 0x00: /* _CMP_EQ_OQ */
-    case 0x10: /* _CMP_EQ_OS */
-      result = isEq && !isUnordered;
-      break;
-    case 0x01: /* _CMP_LT_OS */
-    case 0x11: /* _CMP_LT_OQ */
-      result = isLt && !isUnordered;
-      break;
-    case 0x02: /* _CMP_LE_OS */
-    case 0x12: /* _CMP_LE_OQ */
-      result = !isGt && !isUnordered;
-      break;
-    case 0x03: /* _CMP_UNORD_Q */
-    case 0x13: /* _CMP_UNORD_S */
-      result = isUnordered;
-      break;
-    case 0x04: /* _CMP_NEQ_UQ */
-    case 0x14: /* _CMP_NEQ_US */
-      result = !isEq || isUnordered;
-      break;
-    case 0x05: /* _CMP_NLT_US */
-    case 0x15: /* _CMP_NLT_UQ */
-      result = !isLt || isUnordered;
-      break;
-    case 0x06: /* _CMP_NLE_US */
-    case 0x16: /* _CMP_NLE_UQ */
-      result = isGt || isUnordered;
-      break;
-    case 0x07: /* _CMP_ORD_Q */
-    case 0x17: /* _CMP_ORD_S */
-      result = !isUnordered;
-      break;
-    case 0x08: /* _CMP_EQ_UQ */
-    case 0x18: /* _CMP_EQ_US */
-      result = isEq || isUnordered;
-      break;
-    case 0x09: /* _CMP_NGE_US */
-    case 0x19: /* _CMP_NGE_UQ */
-      result = isLt || isUnordered;
-      break;
-    case 0x0a: /* _CMP_NGT_US */
-    case 0x1a: /* _CMP_NGT_UQ */
-      result = !isGt || isUnordered;
-      break;
-    case 0x0b: /* _CMP_FALSE_OQ */
-    case 0x1b: /* _CMP_FALSE_OS */
-      result = false;
-      break;
-    case 0x0c: /* _CMP_NEQ_OQ */
-    case 0x1c: /* _CMP_NEQ_OS */
-      result = !isEq && !isUnordered;
-      break;
-    case 0x0d: /* _CMP_GE_OS */
-    case 0x1d: /* _CMP_GE_OQ */
-      result = !isLt && !isUnordered;
-      break;
-    case 0x0e: /* _CMP_GT_OS */
-    case 0x1e: /* _CMP_GT_OQ */
-      result = isGt && !isUnordered;
-      break;
-    case 0x0f: /* _CMP_TRUE_UQ */
-    case 0x1f: /* _CMP_TRUE_US */
-      result = true;
-      break;
-    }
-    return result;
-  };
-
-  for (int i = 0; i < NumberOfLaneA; ++i) {
+  for (unsigned int i = 0; i < NumLanes; ++i) {
     llvm::APFloat AElement = VectorA.elem<Floating>(i).getAPFloat();
     llvm::APFloat BElement = VectorB.elem<Floating>(i).getAPFloat();
-    auto CR = AElement.compare(BElement);
-    auto ComparisonResult = evalCmpImm(imm, CR);
 
-    llvm::APFloat True(-1.0);
-    llvm::APFloat False(0.0);
+    auto CR = AElement.compare(BElement);
+    const FPCompareFlags CF{/*IsUnordered=*/CR == llvm::APFloatBase::cmpUnordered,
+                     /*IsEq=*/CR == llvm::APFloatBase::cmpEqual,
+                     /*IsGt=*/CR == llvm::APFloatBase::cmpGreaterThan,
+                     /*IsLt=*/CR == llvm::APFloatBase::cmpLessThan};
+    const auto ComparisonResult = MatchesPredicate(ImmZExt, CF);
+
+    const llvm::APFloat True(-1.0);
+    const llvm::APFloat False(0.0);
     if (ComparisonResult)
       Dst.elem<Floating>(i) = Floating(True);
     else
