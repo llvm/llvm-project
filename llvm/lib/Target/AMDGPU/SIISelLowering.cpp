@@ -5801,13 +5801,12 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
 
         // Take negation of input for SUB reduction
         unsigned srcMod =
-            Opc == AMDGPU::V_SUB_F32_e64 || Opc == AMDGPU::V_SUB_F16_e64 ? 1
-                                                                         : 0;
-        unsigned MulOpc =
-            is32BitOpc ? AMDGPU::V_MUL_F32_e64
-            : ST.getGeneration() == AMDGPUSubtarget::Generation::GFX12
-                ? AMDGPU::V_MUL_F64_e64_gfx12
-                : AMDGPU::V_MUL_F64_e64;
+            Opc == AMDGPU::V_SUB_F32_e64 || Opc == AMDGPU::V_SUB_F16_e64
+                ? SISrcMods::NEG
+                : SISrcMods::NONE;
+        unsigned MulOpc = is32BitOpc    ? AMDGPU::V_MUL_F32_e64
+                          : IsGFX12Plus ? AMDGPU::V_MUL_F64_e64_gfx12
+                                        : AMDGPU::V_MUL_F64_e64;
         auto DestVregInst = BuildMI(BB, MI, DL, TII->get(MulOpc),
                                     DstVreg)
                                 .addImm(srcMod) // src0 modifier
@@ -6043,7 +6042,8 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
             MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
         BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::COPY), AccumulatorVReg)
             .addReg(Accumulator->getOperand(0).getReg());
-        unsigned Modifier = Opc == AMDGPU::V_SUB_F16_e64 ? 1 : 0;
+        unsigned Modifier =
+            Opc == AMDGPU::V_SUB_F16_e64 ? SISrcMods::NEG : SISrcMods::NONE;
         Opc = Opc == AMDGPU::V_SUB_F16_e64 ? AMDGPU::V_ADD_F64_e64 : Opc;
         auto DstVregInst = BuildMI(*ComputeLoop, I, DL, TII->get(Opc), DstVreg)
                                .addImm(Modifier) // src0 modifiers
