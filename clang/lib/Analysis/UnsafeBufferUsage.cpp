@@ -773,7 +773,7 @@ static bool isNullTermPointer(const Expr *Ptr, ASTContext &Ctx) {
   }
   if (auto *CE = dyn_cast<CallExpr>(Ptr->IgnoreParenImpCasts())) {
     const FunctionDecl *F = CE->getDirectCallee();
-    if (F && F->getName() == "strerror")
+    if (F && F->getIdentifier() && F->getName() == "strerror")
       return true;
   }
   return false;
