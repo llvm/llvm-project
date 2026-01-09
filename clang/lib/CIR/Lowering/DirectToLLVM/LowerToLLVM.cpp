@@ -1708,6 +1708,24 @@ mlir::LogicalResult CIRToLLVMAddrOfReturnAddrOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+static unsigned getOptimizationLevel(mlir::ModuleOp mod) {
+  if (auto optInfo = mlir::cast_if_present<cir::OptInfoAttr>(
+          mod->getAttr(cir::CIRDialect::getOptInfoAttrName())))
+    return optInfo.getLevel();
+  return 0;
+}
+
+static bool isLoadOrStoreInvariantGroup(mlir::ModuleOp mod, mlir::Value addr) {
+  if (getOptimizationLevel(mod) < 1)
+    return false;
+
+  if (auto addrAllocaOp =
+          mlir::dyn_cast_if_present<cir::AllocaOp>(addr.getDefiningOp()))
+    return addrAllocaOp.getConstant();
+
+  return mlir::isa_and_present<cir::InvariantGroupOp>(addr.getDefiningOp());
+}
+
 mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
     cir::LoadOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -1727,8 +1745,10 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
   mlir::LLVM::LoadOp newLoad = mlir::LLVM::LoadOp::create(
       rewriter, op->getLoc(), llvmTy, adaptor.getAddr(), alignment,
       op.getIsVolatile(), /*isNonTemporal=*/false,
-      /*isInvariant=*/false, /*isInvariantGroup=*/false, ordering,
-      syncScope.value_or(llvm::StringRef()));
+      /*isInvariant=*/false,
+      isLoadOrStoreInvariantGroup(op->getParentOfType<mlir::ModuleOp>(),
+                                  op.getAddr()),
+      ordering, syncScope.value_or(llvm::StringRef()));
 
   // Convert adapted result to its original type if needed.
   mlir::Value result =
@@ -1753,6 +1773,7 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
   // Convert adapted value to its memory type if needed.
   mlir::Value value = emitToMemory(rewriter, dataLayout,
                                    op.getValue().getType(), adaptor.getValue());
+
   // TODO: nontemporal.
   assert(!cir::MissingFeatures::opLoadStoreNontemporal());
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
@@ -1761,8 +1782,10 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
   mlir::LLVM::StoreOp storeOp = mlir::LLVM::StoreOp::create(
       rewriter, op->getLoc(), value, adaptor.getAddr(), alignment,
       op.getIsVolatile(),
-      /*isNonTemporal=*/false, /*isInvariantGroup=*/false, memorder,
-      syncScope.value_or(llvm::StringRef()));
+      /*isNonTemporal=*/false,
+      isLoadOrStoreInvariantGroup(op->getParentOfType<mlir::ModuleOp>(),
+                                  op.getAddr()),
+      memorder, syncScope.value_or(llvm::StringRef()));
   rewriter.replaceOp(op, storeOp);
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
   return mlir::LogicalResult::success();
@@ -4282,6 +4305,18 @@ mlir::LogicalResult CIRToLLVMAwaitOpLowering::matchAndRewrite(
     cir::AwaitOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   return mlir::failure();
+}
+
+mlir::LogicalResult CIRToLLVMInvariantGroupOpLowering::matchAndRewrite(
+    cir::InvariantGroupOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  if (getOptimizationLevel(op->getParentOfType<mlir::ModuleOp>()) < 1)
+    rewriter.replaceOp(op, adaptor.getPtr());
+  else
+    rewriter.replaceOpWithNewOp<mlir::LLVM::LaunderInvariantGroupOp>(
+        op, adaptor.getPtr());
+
+  return mlir::success();
 }
 
 std::unique_ptr<mlir::Pass> createConvertCIRToLLVMPass() {

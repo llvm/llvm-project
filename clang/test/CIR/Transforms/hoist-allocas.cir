@@ -3,7 +3,7 @@
 !s32i = !cir.int<s, 32>
 #true = #cir.bool<true> : !cir.bool
 
-module {
+module attributes {cir.opt_info = #cir.opt_info<level = 3, size = 0>} {
   cir.func @l1() {
     cir.scope {
       %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
@@ -93,15 +93,16 @@ module {
     cir.return
   }
   // CHECK:      cir.func{{.*}} @l3
-  // CHECK-NEXT:   %[[I:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+  // CHECK-NEXT:   %[[I:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init, const] {alignment = 4 : i64}
   // CHECK-NEXT:   cir.scope {
   // CHECK-NEXT:     cir.for : cond {
   // CHECK-NEXT:       %[[TRUE:.*]] = cir.const #true
   // CHECK-NEXT:       cir.condition(%[[TRUE]])
   // CHECK-NEXT:     } body {
   // CHECK-NEXT:       cir.scope {
+  // CHECK-NEXT:         %[[INV:.*]] = cir.invariant_group %[[I]] : !cir.ptr<!s32i>
   // CHECK-NEXT:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-  // CHECK-NEXT:         cir.store %[[ZERO]], %[[I]] : !s32i, !cir.ptr<!s32i>
+  // CHECK-NEXT:         cir.store %[[ZERO]], %[[INV]] : !s32i, !cir.ptr<!s32i>
   // CHECK-NEXT:       }
   // CHECK-NEXT:       cir.yield
   // CHECK-NEXT:     } step {
@@ -110,4 +111,42 @@ module {
   // CHECK-NEXT:   }
   // CHECK-NEXT:   cir.return
   // CHECK-NEXT: }
+
+  cir.func @l4() {
+    cir.scope {
+      %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init, const] {alignment = 4 : i64}
+      cir.while {
+        %1 = cir.const #cir.int<5> : !s32i
+        cir.store align(4) %1, %0 : !s32i, !cir.ptr<!s32i>
+        %2 = cir.load align(4) %0 : !cir.ptr<!s32i>, !s32i
+        %3 = cir.cast int_to_bool %2 : !s32i -> !cir.bool
+        cir.condition(%3)
+      } do {
+        cir.scope {
+          cir.call @l1() : () -> ()
+        }
+        cir.yield
+      }
+    }
+    cir.return
+  }
+
+  // CHECK: cir.func @l4() {
+  // CHECK-NEXT:  %[[X:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init] {alignment = 4 : i64}
+  // CHECK-NEXT:  cir.scope {
+  // CHECK-NEXT:    cir.while {
+  // CHECK-NEXT:      %[[FIVE:.*]] = cir.const #cir.int<5> : !s32i
+  // CHECK-NEXT:      cir.store align(4) %[[FIVE]], %[[X]] : !s32i, !cir.ptr<!s32i>
+  // CHECK-NEXT:      %[[LOAD:.*]] = cir.load align(4) %[[X]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT:      %[[COND:.*]] = cir.cast int_to_bool %[[LOAD]] : !s32i -> !cir.bool
+  // CHECK-NEXT:      cir.condition(%[[COND]])
+  // CHECK-NEXT:    } do {
+  // CHECK-NEXT:      cir.scope {
+  // CHECK-NEXT:        cir.call @l1() : () -> ()
+  // CHECK-NEXT:      }
+  // CHECK-NEXT:      cir.yield
+  // CHECK-NEXT:    }
+  // CHECK-NEXT:  }
+  // CHECK-NEXT:  cir.return
+  // CHECK-NEXT:}
 }
