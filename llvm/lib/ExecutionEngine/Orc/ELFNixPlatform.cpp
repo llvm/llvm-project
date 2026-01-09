@@ -988,6 +988,7 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::fixTLVSectionsAndEdges(
     jitlink::LinkGraph &G, JITDylib &JD) {
   auto TLSGetAddrSymbolName = G.intern("__tls_get_addr");
   auto TLSDescResolveSymbolName = G.intern("__tlsdesc_resolver");
+  auto TLSGetOffsetSymbolName = G.intern("__tls_get_offset");
   for (auto *Sym : G.external_symbols()) {
     if (Sym->getName() == TLSGetAddrSymbolName) {
       auto TLSGetAddr =
@@ -996,6 +997,10 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::fixTLVSectionsAndEdges(
     } else if (Sym->getName() == TLSDescResolveSymbolName) {
       auto TLSGetAddr =
           MP.getExecutionSession().intern("___orc_rt_elfnix_tlsdesc_resolver");
+      Sym->setName(std::move(TLSGetAddr));
+    } else if (Sym->getName() == TLSGetOffsetSymbolName) {
+      auto TLSGetAddr =
+          MP.getExecutionSession().intern("___orc_rt_elfnix_tls_get_offset");
       Sym->setName(std::move(TLSGetAddr));
     }
   }

@@ -62,6 +62,8 @@ def VMaskOp : RegisterOperand<VMV0> {
   let PrintMethod = "printVMaskReg";
   let EncoderMethod = "getVMaskReg";
   let DecoderMethod = "decodeVMaskReg";
+  let OperandNamespace = "RISCVOp";
+  let OperandType = "OPERAND_VMASK";
 }
 
 def VMaskCarryInOp : RegisterOperand<VMV0> {
@@ -1840,3 +1842,6 @@ let Predicates = [HasVInstructionsI64, IsRV64] in {
 
 include "RISCVInstrInfoVPseudos.td"
 include "RISCVInstrInfoZvfbf.td"
+// Include the non-intrinsic ISel patterns
+include "RISCVInstrInfoVVLPatterns.td"
+include "RISCVInstrInfoVSDPatterns.td"

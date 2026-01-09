@@ -8,13 +8,11 @@ define void @test(ptr %quat, float %call13) {
 ; CHECK-SAME: ptr [[QUAT:%.*]], float [[CALL13:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CALL121:%.*]] = load volatile float, ptr null, align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = call float @llvm.fmuladd.f32(float [[CALL13]], float 0.000000e+00, float 0.000000e+00)
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fmuladd.f32(float [[CALL121]], float 0.000000e+00, float 0.000000e+00)
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd float [[TMP1]], 0.000000e+00
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[CALL13]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> poison, float [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> [[TMP5]], float [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[CALL13]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[TMP0]], float [[CALL121]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP1]], <2 x float> zeroinitializer, <2 x float> zeroinitializer)
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x float> [[TMP2]], <float 0.000000e+00, float -0.000000e+00>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP4]], <2 x float> zeroinitializer, <2 x float> [[TMP6]])
 ; CHECK-NEXT:    store <2 x float> [[TMP7]], ptr [[QUAT]], align 4
 ; CHECK-NEXT:    ret void

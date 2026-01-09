@@ -279,7 +279,7 @@ public:
   ///
   /// Returns \p nullopt if the object is not stored in this CAS.
   LLVM_ABI_FOR_TEST std::optional<ObjectID>
-  getExistingReference(ArrayRef<uint8_t> Digest);
+  getExistingReference(ArrayRef<uint8_t> Digest, bool CheckUpstream = true);
 
   /// Check whether the object associated with \p Ref is stored in the CAS.
   /// Note that this function will fault-in according to the policy.
@@ -287,8 +287,21 @@ public:
 
   /// Check whether the object associated with \p Ref is stored in the CAS.
   /// Note that this function does not fault-in.
-  bool containsObject(ObjectID Ref) const {
-    return containsObject(Ref, /*CheckUpstream=*/true);
+  bool containsObject(ObjectID Ref, bool CheckUpstream = true) const {
+    auto Presence = getObjectPresence(Ref, CheckUpstream);
+    if (!Presence) {
+      consumeError(Presence.takeError());
+      return false;
+    }
+    switch (*Presence) {
+    case ObjectPresence::Missing:
+      return false;
+    case ObjectPresence::InPrimaryDB:
+      return true;
+    case ObjectPresence::OnlyInUpstreamDB:
+      return true;
+    }
+    llvm_unreachable("Unknown ObjectPresence enum");
   }
 
   /// \returns the data part of the provided object handle.
@@ -369,24 +382,6 @@ private:
   /// Check if object exists and if it is on upstream only.
   LLVM_ABI_FOR_TEST Expected<ObjectPresence>
   getObjectPresence(ObjectID Ref, bool CheckUpstream) const;
-
-  /// \returns true if object can be found in database.
-  bool containsObject(ObjectID Ref, bool CheckUpstream) const {
-    auto Presence = getObjectPresence(Ref, CheckUpstream);
-    if (!Presence) {
-      consumeError(Presence.takeError());
-      return false;
-    }
-    switch (*Presence) {
-    case ObjectPresence::Missing:
-      return false;
-    case ObjectPresence::InPrimaryDB:
-      return true;
-    case ObjectPresence::OnlyInUpstreamDB:
-      return true;
-    }
-    llvm_unreachable("Unknown ObjectPresence enum");
-  }
 
   /// When \p load is called for a node that doesn't exist, this function tries
   /// to load it from the upstream store and copy it to the primary one.

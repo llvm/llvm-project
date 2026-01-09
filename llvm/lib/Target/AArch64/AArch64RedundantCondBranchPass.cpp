@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
+#include "AArch64InstrInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -44,51 +45,6 @@ char AArch64RedundantCondBranch::ID = 0;
 INITIALIZE_PASS(AArch64RedundantCondBranch, "aarch64-redundantcondbranch",
                 "AArch64 Redundant Conditional Branch Elimination pass", false,
                 false)
-
-static bool optimizeTerminators(MachineBasicBlock *MBB,
-                                const TargetInstrInfo &TII) {
-  for (MachineInstr &MI : make_early_inc_range(MBB->terminators())) {
-    unsigned Opc = MI.getOpcode();
-    switch (Opc) {
-    case AArch64::CBZW:
-    case AArch64::CBZX:
-    case AArch64::TBZW:
-    case AArch64::TBZX:
-      // CBZ/TBZ with WZR/XZR -> unconditional B
-      if (MI.getOperand(0).getReg() == AArch64::WZR ||
-          MI.getOperand(0).getReg() == AArch64::XZR) {
-        LLVM_DEBUG(dbgs() << "Removing redundant branch: " << MI);
-        MachineBasicBlock *Target = TII.getBranchDestBlock(MI);
-        SmallVector<MachineBasicBlock *> Succs(MBB->successors());
-        for (auto *S : Succs)
-          if (S != Target)
-            MBB->removeSuccessor(S);
-        DebugLoc DL = MI.getDebugLoc();
-        while (MBB->rbegin() != &MI)
-          MBB->rbegin()->eraseFromParent();
-        MI.eraseFromParent();
-        BuildMI(MBB, DL, TII.get(AArch64::B)).addMBB(Target);
-        return true;
-      }
-      break;
-    case AArch64::CBNZW:
-    case AArch64::CBNZX:
-    case AArch64::TBNZW:
-    case AArch64::TBNZX:
-      // CBNZ/TBNZ with WZR/XZR -> never taken, remove branch and successor
-      if (MI.getOperand(0).getReg() == AArch64::WZR ||
-          MI.getOperand(0).getReg() == AArch64::XZR) {
-        LLVM_DEBUG(dbgs() << "Removing redundant branch: " << MI);
-        MachineBasicBlock *Target = TII.getBranchDestBlock(MI);
-        MI.getParent()->removeSuccessor(Target);
-        MI.eraseFromParent();
-        return true;
-      }
-      break;
-    }
-  }
-  return false;
-}
 
 bool AArch64RedundantCondBranch::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))

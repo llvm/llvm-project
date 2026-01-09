@@ -3334,7 +3334,7 @@ as follows:
 ``A<address space>``
     Specifies the address space of objects created by '``alloca``'.
     Defaults to the default address space of 0.
-``p[<flags>][<as>]:<size>:<abi>[:<pref>[:<idx>]]``
+``p[<flags>][<as>][(<name>)]:<size>:<abi>[:<pref>[:<idx>]]``
     This specifies the properties of a pointer in address space ``as``.
     The ``<size>`` parameter specifies the size of the bitwise representation.
     For :ref:`non-integral pointers <nointptrtype>` the representation size may
@@ -3353,7 +3353,11 @@ as follows:
     The optional ``<flags>`` are used to specify properties of pointers in this
     address space: the character ``u`` marks pointers as having an unstable
     representation, and ``e`` marks pointers having external state. See
-    :ref:`Non-Integral Pointer Types <nointptrtype>`.
+    :ref:`Non-Integral Pointer Types <nointptrtype>`. The ``<name>`` is an
+    optional name of that address space, surrounded by ``(`` and ``)``. If the
+    name is specified, it must be unique to that address space and cannot be
+    ``A``, ``G``, or ``P`` which are pre-defined names used to denote alloca,
+    global, and program address space respectively.
 
 ``i<size>:<abi>[:<pref>]``
     This specifies the alignment for an integer type of a given bit
@@ -8672,6 +8676,23 @@ denoting if the type contains a pointer.
   call ptr @malloc(i64 64), !alloc_token !0
 
   !0 = !{!"<type-name>", i1 <contains-pointer>}
+
+'``stack-protector``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``stack-protector`` metadata may be attached to alloca instructions.  An
+alloca instruction with this metadata and value `i32 0` will be skipped when
+deciding whether a given function requires a stack protector.  The function
+may still use a stack protector, if other criteria determine it needs one.
+
+The metadata contains an integer, where a 0 value opts the given alloca out
+of requiring a stack protector.
+
+.. code-block:: none
+
+   %a = alloca [1000 x i8], align 1, !stack-protector !0
+
+  !0 = !{i32 0}
 
 Module Flags Metadata
 =====================
@@ -16289,6 +16310,13 @@ Semantics:
 This function returns the first value raised to the second power with an
 unspecified sequence of rounding operations.
 
+Note that the `powi` function is unusual in that NaN inputs can lead to non-NaN
+results, and this depends on the kind of NaN (quiet vs signaling). Due to how
+:ref:`LLVM treats NaN values <floatnan>` in non-constrained functions, the
+function may non-deterministically treat signaling NaNs as quiet NaNs. For
+example, `powi(QNaN, 0)` returns `1.0`, and `powi(SNaN, 0)` may
+non-deterministically return `1.0` or a NaN.
+
 .. _t_llvm_sin:
 
 '``llvm.sin.*``' Intrinsic
@@ -16850,6 +16878,13 @@ trapping or setting ``errno``.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
+
+Note that the `pow` function is unusual in that NaN inputs can lead to non-NaN
+results, and this depends on the kind of NaN (quiet vs signaling). Due to how
+:ref:`LLVM treats NaN values <floatnan>` in non-constrained functions, the
+function may non-deterministically treat signaling NaNs as quiet NaNs. For
+example, `pow(QNaN, 0.0)` returns `1.0`, and `pow(SNaN, 0.0)` may
+non-deterministically return `1.0` or a NaN.
 
 .. _int_exp:
 
@@ -18352,8 +18387,6 @@ then the result is the size in bits of the type of ``src`` if
 ``is_zero_poison == 0`` and ``poison`` otherwise. For example,
 ``llvm.cttz(2) = 1``.
 
-.. _int_overflow:
-
 .. _int_fshl:
 
 '``llvm.fshl.*``' Intrinsic
@@ -18449,6 +18482,57 @@ Example:
       %r = call i8 @llvm.fshr.i8(i8 255, i8 0, i8 15)  ; %r = i8: 254 (0b11111110)
       %r = call i8 @llvm.fshr.i8(i8 15, i8 15, i8 11)  ; %r = i8: 225 (0b11100001)
       %r = call i8 @llvm.fshr.i8(i8 0, i8 255, i8 8)   ; %r = i8: 255 (0b11111111)
+
+.. _int_clmul:
+
+'``llvm.clmul.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.clmul`` on any integer
+or vectors of integer elements.
+
+::
+
+      declare i16 @llvm.clmul.i16(i16 %a, i16 %b)
+      declare i32 @llvm.clmul.i32(i32 %a, i32 %b)
+      declare i64 @llvm.clmul.i64(i64 %a, i64 %b)
+      declare <4 x i32> @llvm.clmul.v4i32(<4 x i32> %a, <4 x i32> %b)
+
+Overview:
+"""""""""
+
+The '``llvm.clmul``' family of intrinsic functions performs carry-less
+multiplication, or XOR multiplication, on the two arguments, and returns
+the low-bits.
+
+Arguments:
+""""""""""
+
+The arguments may be any integer type or vector of integer type. Both
+arguments and result must have the same type.
+
+Semantics:
+""""""""""
+
+The '``llvm.clmul``' intrinsic computes carry-less multiply of its arguments,
+which is the result of applying the standard multiplication algorithm, where
+all of the additions are replaced with XORs, and returns the low-bits.
+The vector variants operate lane-wise.
+
+Example:
+""""""""
+
+.. code-block:: llvm
+
+      %r = call i4 @llvm.clmul.i4(i4 1, i4 2)    ; %r = 2
+      %r = call i4 @llvm.clmul.i4(i4 5, i4 6)    ; %r = 14
+      %r = call i4 @llvm.clmul.i4(i4 -4, i4 2)   ; %r = -8
+      %r = call i4 @llvm.clmul.i4(i4 -4, i4 -5)  ; %r = 4
+
+.. _int_overflow:
 
 Arithmetic with Overflow Intrinsics
 -----------------------------------
@@ -20729,8 +20813,8 @@ Arguments:
 All arguments must be vectors of the same type whereby their logical
 concatenation matches the result type.
 
-'``llvm.vector.splice``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.vector.splice.left``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -20738,21 +20822,15 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <2 x double> @llvm.vector.splice.v2f64(<2 x double> %vec1, <2 x double> %vec2, i32 %imm)
-      declare <vscale x 4 x i32> @llvm.vector.splice.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %imm)
+      declare <2 x double> @llvm.vector.splice.left.v2f64(<2 x double> %vec1, <2 x double> %vec2, i32 %imm)
+      declare <vscale x 4 x i32> @llvm.vector.splice.left.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %imm)
 
 Overview:
 """""""""
 
-The '``llvm.vector.splice.*``' intrinsics construct a vector by
-concatenating elements from the first input vector with elements of the second
-input vector, returning a vector of the same type as the input vectors. The
-signed immediate, modulo the number of elements in the vector, is the index
-into the first vector from which to extract the result value. This means
-conceptually that for a positive immediate, a vector is extracted from
-``concat(%vec1, %vec2)`` starting at index ``imm``, whereas for a negative
-immediate, it extracts ``-imm`` trailing elements from the first vector, and
-the remaining elements from ``%vec2``.
+The '``llvm.vector.splice.left.*``' intrinsics construct a vector by
+concatenating two vectors together, shifting the elements left by ``imm``, and
+extracting the lower half.
 
 These intrinsics work for both fixed and scalable vectors. While this intrinsic
 supports all vector types the recommended way to express this operation for
@@ -20763,18 +20841,61 @@ For example:
 
 .. code-block:: text
 
- llvm.vector.splice(<A,B,C,D>, <E,F,G,H>, 1);  ==> <B, C, D, E> index
- llvm.vector.splice(<A,B,C,D>, <E,F,G,H>, -3); ==> <B, C, D, E> trailing elements
+ llvm.vector.splice.left(<A,B,C,D>, <E,F,G,H>, 1);
+                     ==> <A,B,C,D,E,F,G,H>
+                     ==> <B,C,D,E,F,G,H,_>
+                     ==> <B,C,D,E>
 
 
 Arguments:
 """"""""""
 
-The first two operands are vectors with the same type. The start index is imm
-modulo the runtime number of elements in the source vector. For a fixed-width
-vector <N x eltty>, imm is a signed integer constant in the range
--N <= imm < N. For a scalable vector <vscale x N x eltty>, imm is a signed
-integer constant in the range -X <= imm < X where X=vscale_range_min * N.
+The first two operands are vectors with the same type. For a fixed-width vector
+<N x eltty>, imm is an unsigned integer constant in the range 0 <= imm < N. For
+a scalable vector <vscale x N x eltty>, imm is an unsigned integer constant in
+the range 0 <= imm < X where X=vscale_range_min * N.
+
+'``llvm.vector.splice.right``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <2 x double> @llvm.vector.splice.right.v2f64(<2 x double> %vec1, <2 x double> %vec2, i32 %imm)
+      declare <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %imm)
+
+Overview:
+"""""""""
+
+The '``llvm.vector.splice.right.*``' intrinsics construct a vector by
+concatenating two vectors together, shifting the elements right by ``imm``, and
+extracting the upper half.
+
+These intrinsics work for both fixed and scalable vectors. While this intrinsic
+supports all vector types the recommended way to express this operation for
+fixed-width vectors is still to use a shufflevector, as that may allow for more
+optimization opportunities.
+
+For example:
+
+.. code-block:: text
+
+ llvm.vector.splice.right(<A,B,C,D>, <E,F,G,H>, 1);
+                      ==> <A,B,C,D,E,F,G,H>
+                      ==> <_,A,B,C,D,E,F,G>
+                      ==>         <D,E,F,G>
+
+
+Arguments:
+""""""""""
+
+The first two operands are vectors with the same type. For a fixed-width vector
+<N x eltty>, imm is an unsigned integer constant in the range 0 <= imm <= N. For
+a scalable vector <vscale x N x eltty>, imm is an unsigned integer constant in
+the range 0 <= imm <= X where X=vscale_range_min * N.
 
 '``llvm.stepvector``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -20793,7 +20914,7 @@ of integers whose elements contain a linear sequence of values starting from 0
 with a step of 1. This intrinsic can only be used for vectors with integer
 elements that are at least 8 bits in size. If the sequence value exceeds
 the allowed limit for the element type then the result for that lane is
-a poison value.
+truncated.
 
 These intrinsics work for both fixed and scalable vectors. While this intrinsic
 supports all vector types, the recommended way to express this operation for
@@ -24430,7 +24551,7 @@ Examples:
 .. _int_loop_dependence_war_mask:
 
 '``llvm.loop.dependence.war.mask.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -24469,11 +24590,12 @@ Semantics:
 The intrinsic returns ``poison`` if the distance between ``%prtA`` and ``%ptrB``
 is smaller than ``VF * %elementsize`` and either ``%ptrA + VF * %elementSize``
 or ``%ptrB + VF * %elementSize`` wrap.
+
 The element of the result mask is active when loading from %ptrA then storing to
 %ptrB is safe and doesn't result in a write-after-read hazard, meaning that:
 
 * (ptrB - ptrA) <= 0 (guarantees that all lanes are loaded before any stores), or
-* (ptrB - ptrA) >= elementSize * lane (guarantees that this lane is loaded
+* elementSize * lane < (ptrB - ptrA) (guarantees that this lane is loaded
   before the store to the same address)
 
 Examples:
@@ -24486,10 +24608,37 @@ Examples:
       [...]
       call @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %vecA, ptr align 4 %ptrB, <4 x i1> %loop.dependence.mask)
 
+      ; For the above example, consider the following cases:
+      ;
+      ; 1. ptrA >= ptrB
+      ;
+      ;   load =      <0,1,2,3>     ; uint32_t load = array[i+2];
+      ;  store =  <0,1,2,3>         ; array[i] = store;
+      ;
+      ; This results in an all-true mask, as the load always occurs before the
+      ; store, so it does not depend on any values to be stored.
+      ;
+      ; 2. ptrB - ptrA = 2 * elementSize:
+      ;
+      ;   load =  <0,1,2,3>         ; uint32_t load = array[i];
+      ;  store =      <0,1,2,3>     ; array[i+2] = store;
+      ;
+      ; This results in a mask with the first two lanes active. This is because
+      ; we can only read two lanes before we would read values that have yet to
+      ; be written.
+      ;
+      ; 3. ptrB - ptrA = 4 * elementSize
+      ;
+      ;   load =  <0,1,2,3>         ; uint32_t load = array[i];
+      ;  store =          <0,1,2,3> ; array[i+4] = store;
+      ;
+      ; This results in an all-true mask, as the store is a full vector ahead
+      ; of the load, so all values will be written before any lane is read.
+
 .. _int_loop_dependence_raw_mask:
 
 '``llvm.loop.dependence.raw.mask.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -24533,10 +24682,11 @@ Semantics:
 The intrinsic returns ``poison`` if the distance between ``%prtA`` and ``%ptrB``
 is smaller than ``VF * %elementsize`` and either ``%ptrA + VF * %elementSize``
 or ``%ptrB + VF * %elementSize`` wrap.
+
 The element of the result mask is active when storing to %ptrA then loading from
 %ptrB is safe and doesn't result in aliasing, meaning that:
 
-* abs(ptrB - ptrA) >= elementSize * lane (guarantees that the store of this lane
+* elementSize * lane < abs(ptrB - ptrA) (guarantees that the store of this lane
   occurs before loading from this address), or
 * ptrA == ptrB (doesn't introduce any new hazards that weren't in the scalar
   code)
@@ -24550,6 +24700,32 @@ Examples:
       call @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %vecA, ptr align 4 %ptrA, <4 x i1> %loop.dependence.mask)
       [...]
       %vecB = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(ptr align 4 %ptrB, <4 x i1> %loop.dependence.mask, <4 x i32> poison)
+
+      ; For the above example, consider the following cases:
+      ;
+      ; 1. ptrA == ptrB
+      ;
+      ;  store = <0,1,2,3>       ; array[i] = store;
+      ;   load = <0,1,2,3>       ; uint32_t load = array[i];
+      ;
+      ; This results in a all-true mask. There is no conflict.
+      ;
+      ; 2. ptrB - ptrA = 2 * elementSize
+      ;
+      ;  store =  <0,1,2,3>      ; array[i] = store;
+      ;   load =      <0,1,2,3>  ; uint32_t load = array[i+2];
+      ;
+      ; This results in a mask with the first two lanes active. In this case,
+      ; only two lanes can be written without overwriting values yet to be read.
+      ;
+      ; 3. ptrB - ptrA = -2 * elementSize
+      ;
+      ;  store =      <0,1,2,3>  ; array[i+2] = store;
+      ;   load =  <0,1,2,3>      ; uint32_t load = array[i];
+      ;
+      ; This also results in a mask with the first two lanes active. This is
+      ; because if any more lanes were active the load would be dependent on the
+      ; completion of the store.
 
 .. _int_experimental_vp_splice:
 

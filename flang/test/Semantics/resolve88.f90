@@ -21,7 +21,7 @@ module m
   end type testCoArrayType
 
   ! C747 If a coarray-spec appears, the component shall not be of type C_PTR or
-  ! C_FUNPTR from the intrinsic module ISO_C_BINDING (18.2), or of type 
+  ! C_FUNPTR from the intrinsic module ISO_C_BINDING (18.2), or of type
   ! TEAM_TYPE from the intrinsic module ISO_FORTRAN_ENV (16.10.2).
 
   type goodCoarrayType

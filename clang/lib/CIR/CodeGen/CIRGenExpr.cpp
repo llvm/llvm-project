@@ -683,6 +683,29 @@ RValue CIRGenFunction::emitLoadOfExtVectorElementLValue(LValue lv) {
   return RValue::get(resultVec);
 }
 
+LValue
+CIRGenFunction::emitPointerToDataMemberBinaryExpr(const BinaryOperator *e) {
+  assert((e->getOpcode() == BO_PtrMemD || e->getOpcode() == BO_PtrMemI) &&
+         "unexpected binary operator opcode");
+
+  Address baseAddr = Address::invalid();
+  if (e->getOpcode() == BO_PtrMemD)
+    baseAddr = emitLValue(e->getLHS()).getAddress();
+  else
+    baseAddr = emitPointerWithAlignment(e->getLHS());
+
+  const auto *memberPtrTy = e->getRHS()->getType()->castAs<MemberPointerType>();
+
+  mlir::Value memberPtr = emitScalarExpr(e->getRHS());
+
+  LValueBaseInfo baseInfo;
+  assert(!cir::MissingFeatures::opTBAA());
+  Address memberAddr = emitCXXMemberDataPointerAddress(e, baseAddr, memberPtr,
+                                                       memberPtrTy, &baseInfo);
+
+  return makeAddrLValue(memberAddr, memberPtrTy->getPointeeType(), baseInfo);
+}
+
 /// Generates lvalue for partial ext_vector access.
 Address CIRGenFunction::emitExtVectorElementLValue(LValue lv,
                                                    mlir::Location loc) {
@@ -1762,10 +1785,8 @@ LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
     return emitLValue(e->getRHS());
   }
 
-  if (e->getOpcode() == BO_PtrMemD || e->getOpcode() == BO_PtrMemI) {
-    cgm.errorNYI(e->getSourceRange(), "member pointers");
-    return {};
-  }
+  if (e->getOpcode() == BO_PtrMemD || e->getOpcode() == BO_PtrMemI)
+    return emitPointerToDataMemberBinaryExpr(e);
 
   assert(e->getOpcode() == BO_Assign && "unexpected binary l-value");
 
@@ -2124,8 +2145,7 @@ RValue CIRGenFunction::convertTempToRValue(Address addr, clang::QualType type,
   case cir::TEK_Complex:
     return RValue::getComplex(emitLoadOfComplex(lvalue, loc));
   case cir::TEK_Aggregate:
-    cgm.errorNYI(loc, "convertTempToRValue: aggregate type");
-    return RValue::get(nullptr);
+    return lvalue.asAggregateRValue();
   case cir::TEK_Scalar:
     return RValue::get(emitLoadOfScalar(lvalue, loc));
   }

@@ -99,6 +99,10 @@ void eliminateVectorMasks(IRRewriter &rewriter, FunctionOpInterface function,
   if (!vscaleRange)
     return;
 
+  // Early exit for functions without a body.
+  if (function.isExternal())
+    return;
+
   OpBuilder::InsertionGuard g(rewriter);
 
   // Build worklist so we can safely insert new ops in

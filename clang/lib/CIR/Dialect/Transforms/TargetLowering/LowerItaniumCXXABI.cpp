@@ -39,9 +39,18 @@ public:
   lowerDataMemberType(cir::DataMemberType type,
                       const mlir::TypeConverter &typeConverter) const override;
 
+  mlir::Type
+  lowerMethodType(cir::MethodType type,
+                  const mlir::TypeConverter &typeConverter) const override;
+
   mlir::TypedAttr lowerDataMemberConstant(
       cir::DataMemberAttr attr, const mlir::DataLayout &layout,
       const mlir::TypeConverter &typeConverter) const override;
+
+  mlir::Operation *
+  lowerGetRuntimeMember(cir::GetRuntimeMemberOp op, mlir::Type loweredResultTy,
+                        mlir::Value loweredAddr, mlir::Value loweredMember,
+                        mlir::OpBuilder &builder) const override;
 };
 
 } // namespace
@@ -66,6 +75,27 @@ mlir::Type LowerItaniumCXXABI::lowerDataMemberType(
   return getPtrDiffCIRTy(lm);
 }
 
+mlir::Type LowerItaniumCXXABI::lowerMethodType(
+    cir::MethodType type, const mlir::TypeConverter &typeConverter) const {
+  // Itanium C++ ABI 2.3.2:
+  //    In all representations, the basic ABI properties of member function
+  //    pointer types are those of the following class, where fnptr_t is the
+  //    appropriate function-pointer type for a member function of this type:
+  //
+  //    struct {
+  //      fnptr_t ptr;
+  //      ptrdiff_t adj;
+  //    };
+
+  cir::IntType ptrdiffCIRTy = getPtrDiffCIRTy(lm);
+
+  // Note that clang CodeGen emits struct{ptrdiff_t, ptrdiff_t} for member
+  // function pointers. Let's follow this approach.
+  return cir::RecordType::get(type.getContext(), {ptrdiffCIRTy, ptrdiffCIRTy},
+                              /*packed=*/false, /*padded=*/false,
+                              cir::RecordType::Struct);
+}
+
 mlir::TypedAttr LowerItaniumCXXABI::lowerDataMemberConstant(
     cir::DataMemberAttr attr, const mlir::DataLayout &layout,
     const mlir::TypeConverter &typeConverter) const {
@@ -85,6 +115,22 @@ mlir::TypedAttr LowerItaniumCXXABI::lowerDataMemberConstant(
 
   mlir::Type abiTy = lowerDataMemberType(attr.getType(), typeConverter);
   return cir::IntAttr::get(abiTy, memberOffset);
+}
+
+mlir::Operation *LowerItaniumCXXABI::lowerGetRuntimeMember(
+    cir::GetRuntimeMemberOp op, mlir::Type loweredResultTy,
+    mlir::Value loweredAddr, mlir::Value loweredMember,
+    mlir::OpBuilder &builder) const {
+  auto byteTy = cir::IntType::get(op.getContext(), 8, true);
+  auto bytePtrTy = cir::PointerType::get(
+      byteTy,
+      mlir::cast<cir::PointerType>(op.getAddr().getType()).getAddrSpace());
+  auto objectBytesPtr = cir::CastOp::create(
+      builder, op.getLoc(), bytePtrTy, cir::CastKind::bitcast, op.getAddr());
+  auto memberBytesPtr = cir::PtrStrideOp::create(
+      builder, op.getLoc(), bytePtrTy, objectBytesPtr, loweredMember);
+  return cir::CastOp::create(builder, op.getLoc(), op.getType(),
+                             cir::CastKind::bitcast, memberBytesPtr);
 }
 
 } // namespace cir

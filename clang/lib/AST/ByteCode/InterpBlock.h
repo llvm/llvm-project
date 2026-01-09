@@ -122,6 +122,14 @@ public:
   }
   template <typename T> T &deref() { return *reinterpret_cast<T *>(data()); }
 
+  template <typename T> T &getBlockDesc() {
+    assert(sizeof(T) == getDescriptor()->getMetadataSize());
+    return *reinterpret_cast<T *>(rawData());
+  }
+  template <typename T> const T &getBlockDesc() const {
+    return const_cast<Block *>(this)->getBlockDesc<T>();
+  }
+
   /// Invokes the constructor.
   void invokeCtor() {
     assert(!IsInitialized);

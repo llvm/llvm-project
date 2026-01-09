@@ -38,8 +38,7 @@ using testing::Not;
 // not. See https://github.com/llvm/llvm-project/issues/168891.
 #if 0
 TEST(SignalsTest, PrintsSymbolizerMarkup) {
-  auto Exit =
-      make_scope_exit([]() { unsetenv("LLVM_ENABLE_SYMBOLIZER_MARKUP"); });
+  scope_exit Exit([]() { unsetenv("LLVM_ENABLE_SYMBOLIZER_MARKUP"); });
   setenv("LLVM_ENABLE_SYMBOLIZER_MARKUP", "1", 1);
   std::string Res;
   raw_string_ostream RawStream(Res);
@@ -59,7 +58,7 @@ TEST(SignalsTest, PrintsSymbolizerMarkup) {
 #endif
 
 TEST(SignalsTest, SymbolizerMarkupDisabled) {
-  auto Exit = make_scope_exit([]() { unsetenv("LLVM_DISABLE_SYMBOLIZATION"); });
+  scope_exit Exit([]() { unsetenv("LLVM_DISABLE_SYMBOLIZATION"); });
   setenv("LLVM_DISABLE_SYMBOLIZATION", "1", 1);
   std::string Res;
   raw_string_ostream RawStream(Res);
