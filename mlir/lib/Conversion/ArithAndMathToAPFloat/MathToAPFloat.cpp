@@ -130,16 +130,10 @@ struct FmaOpToAPFloatConversion final : OpRewritePattern<math::FmaOp> {
 
   LogicalResult matchAndRewrite(math::FmaOp op,
                                 PatternRewriter &rewriter) const override {
+    if (failed(checkPreconditions(rewriter, op)))
+      return failure();
     // Cast operands to 64-bit integers.
     auto floatTy = cast<FloatType>(op.getResult().getType());
-    if (!floatTy)
-      return rewriter.notifyMatchFailure(op,
-                                         "only scalar FloatTypes supported");
-    if (floatTy.getIntOrFloatBitWidth() > 64) {
-      return rewriter.notifyMatchFailure(op,
-                                         "bitwidth > 64 bits is not supported");
-    }
-
     auto i32Type = IntegerType::get(symTable->getContext(), 32);
     auto i64Type = IntegerType::get(symTable->getContext(), 64);
     FailureOr<FuncOp> fn = lookupOrCreateFnDecl(
@@ -150,8 +144,52 @@ struct FmaOpToAPFloatConversion final : OpRewritePattern<math::FmaOp> {
     Location loc = op.getLoc();
     rewriter.setInsertionPoint(op);
 
-    auto intWType = rewriter.getIntegerType(floatTy.getWidth());
-    auto int64Type = rewriter.getI64Type();
+    IntegerType intWType = rewriter.getIntegerType(floatTy.getWidth());
+    IntegerType int64Type = rewriter.getI64Type();
+
+    auto scalarFMA = [&rewriter, &loc, &floatTy, &fn, &intWType](
+                         Value operand, Value multiplicand, Value addend) {
+      // Call APFloat function.
+      Value semValue = getAPFloatSemanticsValue(rewriter, loc, floatTy);
+      SmallVector<Value> params = {semValue, operand, multiplicand, addend};
+      auto resultOp =
+          func::CallOp::create(rewriter, loc, TypeRange(rewriter.getI64Type()),
+                               SymbolRefAttr::get(*fn), params);
+
+      // Truncate result to the original width.
+      auto trunc = arith::TruncIOp::create(rewriter, loc, intWType,
+                                           resultOp->getResult(0));
+      return arith::BitcastOp::create(rewriter, loc, floatTy, trunc);
+    };
+
+    if (VectorType vecTy1 = dyn_cast<VectorType>(op.getA().getType())) {
+      // Sanity check: Operand types must match.
+      assert(vecTy1 == dyn_cast<VectorType>(op.getB().getType()) &&
+             "expected same vector types");
+      assert(vecTy1 == dyn_cast<VectorType>(op.getC().getType()) &&
+             "expected same vector types");
+      // Prepare scalar operands.
+      ResultRange scalarOperands =
+          vector::ToElementsOp::create(rewriter, loc, op.getA())->getResults();
+      ResultRange scalarMultiplicands =
+          vector::ToElementsOp::create(rewriter, loc, op.getB())->getResults();
+      ResultRange scalarAddends =
+          vector::ToElementsOp::create(rewriter, loc, op.getC())->getResults();
+      // Call the function for each pair of scalar operands.
+      SmallVector<Value> results;
+      for (auto [operand, multiplicand, addend] : llvm::zip_equal(
+               scalarOperands, scalarMultiplicands, scalarAddends)) {
+        results.push_back(scalarFMA(operand, multiplicand, addend));
+      }
+      // Package the results into a vector.
+      auto fromElements = vector::FromElementsOp::create(
+          rewriter, loc,
+          vecTy1.cloneWith(/*shape=*/std::nullopt, results.front().getType()),
+          results);
+      rewriter.replaceOp(op, fromElements);
+      return success();
+    }
+
     Value operand = arith::ExtUIOp::create(
         rewriter, loc, int64Type,
         arith::BitcastOp::create(rewriter, loc, intWType, op.getA()));
@@ -161,18 +199,8 @@ struct FmaOpToAPFloatConversion final : OpRewritePattern<math::FmaOp> {
     Value addend = arith::ExtUIOp::create(
         rewriter, loc, int64Type,
         arith::BitcastOp::create(rewriter, loc, intWType, op.getC()));
-
-    // Call APFloat function.
-    Value semValue = getAPFloatSemanticsValue(rewriter, loc, floatTy);
-    SmallVector<Value> params = {semValue, operand, multiplicand, addend};
-    auto resultOp =
-        func::CallOp::create(rewriter, loc, TypeRange(rewriter.getI64Type()),
-                             SymbolRefAttr::get(*fn), params);
-
-    // Truncate result to the original width.
-    Value truncatedBits = arith::TruncIOp::create(rewriter, loc, intWType,
-                                                  resultOp->getResult(0));
-    rewriter.replaceOpWithNewOp<arith::BitcastOp>(op, floatTy, truncatedBits);
+    Value repl = scalarFMA(operand, multiplicand, addend);
+    rewriter.replaceOp(op, repl);
     return success();
   }
 
