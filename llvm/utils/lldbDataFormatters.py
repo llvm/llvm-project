@@ -369,7 +369,10 @@ class PointerUnionSynthProvider:
         data = lldb.SBData()
         data.SetDataFromUInt64Array([pointer.GetValueAsUnsigned()])
 
-        self.pointer_valobj = self.valobj.CreateValueFromData("Pointer", data, active_type)
+        self.pointer_valobj = self.valobj.CreateValueFromData(
+            "Pointer", data, active_type
+        )
+
 
 def DenseMapSummary(valobj: lldb.SBValue, _) -> str:
     raw_value = valobj.GetNonSyntheticValue()
