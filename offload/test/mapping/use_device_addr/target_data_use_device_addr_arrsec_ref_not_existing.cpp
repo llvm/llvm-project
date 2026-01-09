@@ -6,15 +6,6 @@
 // Test for various cases of use_device_addr on an array-section on a reference.
 // The corresponding data is not previously mapped.
 
-// Note that this tests for the current behavior wherein if a lookup fails,
-// the runtime returns nullptr, instead of the original host-address.
-// That was compatible with OpenMP 5.0, where it was a user error if
-// corresponding storage didn't exist, but with 5.1+, the runtime needs to
-// return the host address, as it needs to assume that the host-address is
-// device-accessible, as the user has guaranteed it.
-// Once the runtime returns the original host-address when the lookup fails, the
-// test will need to be updated.
-
 int g_ptee;
 int &g = g_ptee;
 
@@ -35,15 +26,13 @@ struct S {
     int **original_paa02 = &paa[0][2];
 
 // (A) No corresponding map, lookup should fail.
-// EXPECTED: A: 1 1 1
-// CHECK:    A: 1 1 0
-// FIXME: ph is not being privatized in the region.
+// CHECK:    A: 1 1 1
 #pragma omp target data use_device_addr(ph[3 : 4])
     {
       int *mapped_ptr_ph3 =
           (int *)omp_get_mapped_ptr(original_ph3, omp_get_default_device());
       printf("A: %d %d %d\n", mapped_ptr_ph3 == nullptr,
-             mapped_ptr_ph3 != original_ph3, &ph[3] == (int *)nullptr + 3);
+             mapped_ptr_ph3 != original_ph3, &ph[3] == original_ph3);
     }
 
 // (B) use_device_addr/map: different operands, same base-pointer.
@@ -61,15 +50,13 @@ struct S {
 
 // (C) use_device_addr/map: different base-pointers.
 // No corresponding storage, lookup should fail.
-// EXPECTED: C: 1 1 1
-// CHECK:    C: 1 1 0
-// FIXME: ph is not being privatized in the region.
+// CHECK:    C: 1 1 1
 #pragma omp target data map(ph) use_device_addr(ph[3 : 4])
     {
       int *mapped_ptr_ph3 =
           (int *)omp_get_mapped_ptr(original_ph3, omp_get_default_device());
       printf("C: %d %d %d\n", mapped_ptr_ph3 == nullptr,
-             mapped_ptr_ph3 != original_ph3, &ph[3] == (int *)nullptr + 3);
+             mapped_ptr_ph3 != original_ph3, &ph[3] == original_ph3);
     }
 
 // (D) use_device_addr/map: one of two maps with matching base-pointer.
@@ -93,8 +80,7 @@ struct S {
       int **mapped_ptr_paa02 =
           (int **)omp_get_mapped_ptr(original_paa02, omp_get_default_device());
       printf("E: %d %d %d\n", mapped_ptr_paa02 == nullptr,
-             mapped_ptr_paa02 != original_paa02,
-             &paa[0][2] == (int **)nullptr + 2);
+             mapped_ptr_paa02 != original_paa02, &paa[0][2] == original_paa02);
     }
 
 // (F) use_device_addr/map: different operands, same base-array.
@@ -123,7 +109,7 @@ struct S {
     }
 
     int *original_paa020 = &paa[0][2][0];
-    int **original_paa0 = (int **)&paa[0];
+    void *original_paa0 = &paa[0];
 
 // (H) use_device_addr/map: different base-pointers.
 // No corresponding storage for use_device_addr opnd, lookup should fail.
@@ -135,7 +121,7 @@ struct S {
       int **mapped_ptr_paa0 =
           (int **)omp_get_mapped_ptr(original_paa0, omp_get_default_device());
       printf("H: %d %d %d\n", mapped_ptr_paa020 != nullptr,
-             mapped_ptr_paa0 == nullptr, &paa[0] == nullptr);
+             mapped_ptr_paa0 == nullptr, &paa[0] == original_paa0);
     }
 
 // (I) use_device_addr/map: one map with different, one with same base-ptr.
