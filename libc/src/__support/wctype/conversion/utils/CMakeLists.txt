@@ -1,4 +1,13 @@
 add_header_library(
+  enumerate
+  HDRS
+    enumerate.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.utility
+)
+
+add_header_library(
   slice
   HDRS
     slice.h
