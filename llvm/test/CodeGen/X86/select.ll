@@ -2202,14 +2202,14 @@ define i32 @select_uaddo_common_op1(i32 %a, i32 %b, i32 %c, i1 %cond) {
 define i56 @select_undef_rhs(i64 %x, i1 %cmp) {
 ; GENERIC-LABEL: select_undef_rhs:
 ; GENERIC:       ## %bb.0:
-; GENERIC-NEXT:    movq %rdi, %rax
+; GENERIC-NEXT:    movabsq $281474976710655, %rax ## imm = 0xFFFFFFFFFFFF
+; GENERIC-NEXT:    andq %rdi, %rax
 ; GENERIC-NEXT:    retq
 ;
 ; ATOM-LABEL: select_undef_rhs:
 ; ATOM:       ## %bb.0:
-; ATOM-NEXT:    movq %rdi, %rax
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
+; ATOM-NEXT:    movabsq $281474976710655, %rax ## imm = 0xFFFFFFFFFFFF
+; ATOM-NEXT:    andq %rdi, %rax
 ; ATOM-NEXT:    nop
 ; ATOM-NEXT:    nop
 ; ATOM-NEXT:    nop
@@ -2219,11 +2219,13 @@ define i56 @select_undef_rhs(i64 %x, i1 %cmp) {
 ; ATHLON-LABEL: select_undef_rhs:
 ; ATHLON:       ## %bb.0:
 ; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; ATHLON-NEXT:    movzwl %cx, %edx
 ; ATHLON-NEXT:    retl
 ;
 ; MCU-LABEL: select_undef_rhs:
 ; MCU:       # %bb.0:
+; MCU-NEXT:    movzwl %dx, %edx
 ; MCU-NEXT:    retl
   %trunc = trunc nuw i64 %x to i48
   %sel = select i1 %cmp, i48 %trunc, i48 undef
@@ -2234,14 +2236,14 @@ define i56 @select_undef_rhs(i64 %x, i1 %cmp) {
 define i56 @select_undef_lhs(i64 %x, i1 %cmp) {
 ; GENERIC-LABEL: select_undef_lhs:
 ; GENERIC:       ## %bb.0:
-; GENERIC-NEXT:    movq %rdi, %rax
+; GENERIC-NEXT:    movabsq $281474976710655, %rax ## imm = 0xFFFFFFFFFFFF
+; GENERIC-NEXT:    andq %rdi, %rax
 ; GENERIC-NEXT:    retq
 ;
 ; ATOM-LABEL: select_undef_lhs:
 ; ATOM:       ## %bb.0:
-; ATOM-NEXT:    movq %rdi, %rax
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
+; ATOM-NEXT:    movabsq $281474976710655, %rax ## imm = 0xFFFFFFFFFFFF
+; ATOM-NEXT:    andq %rdi, %rax
 ; ATOM-NEXT:    nop
 ; ATOM-NEXT:    nop
 ; ATOM-NEXT:    nop
@@ -2251,11 +2253,13 @@ define i56 @select_undef_lhs(i64 %x, i1 %cmp) {
 ; ATHLON-LABEL: select_undef_lhs:
 ; ATHLON:       ## %bb.0:
 ; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; ATHLON-NEXT:    movzwl %cx, %edx
 ; ATHLON-NEXT:    retl
 ;
 ; MCU-LABEL: select_undef_lhs:
 ; MCU:       # %bb.0:
+; MCU-NEXT:    movzwl %dx, %edx
 ; MCU-NEXT:    retl
   %trunc = trunc nuw i64 %x to i48
   %sel = select i1 %cmp, i48 undef, i48 %trunc
