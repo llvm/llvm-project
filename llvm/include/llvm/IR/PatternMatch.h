@@ -46,15 +46,15 @@
 namespace llvm {
 namespace PatternMatch {
 
-template <typename Val, typename Pattern> bool match(Val V, const Pattern &P) {
+template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
   return P.match(V);
 }
 
 /// A match functor that can be used as a UnaryPredicate in functional
 /// algorithms like all_of.
-template <typename Val = const Value *, typename Pattern>
+template <typename Val = const Value, typename Pattern>
 auto match_fn(const Pattern &P) {
-  return bind_last(P, match<Val, Pattern>);
+  return bind_back<match<Val, Pattern>>(P);
 }
 
 template <typename Pattern> bool match(ArrayRef<int> Mask, const Pattern &P) {

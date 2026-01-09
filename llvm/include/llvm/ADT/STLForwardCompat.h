@@ -17,6 +17,7 @@
 #ifndef LLVM_ADT_STLFORWARDCOMPAT_H
 #define LLVM_ADT_STLFORWARDCOMPAT_H
 
+#include <functional>
 #include <optional>
 #include <tuple>
 #include <type_traits>
@@ -186,5 +187,37 @@ struct from_range_t {
 };
 inline constexpr from_range_t from_range{};
 } // namespace llvm
+
+//===----------------------------------------------------------------------===//
+//     Features from C++26
+//===----------------------------------------------------------------------===//
+
+template <auto Fn, typename... BindArgsT>
+constexpr auto
+bind_front(BindArgsT &&...BindArgs) { // NOLINT(readability-identifier-naming)
+  using FnT = decltype(Fn);
+
+  if constexpr (std::is_pointer_v<FnT> or std::is_member_pointer_v<FnT>)
+    static_assert(Fn != nullptr);
+
+  return [&BindArgs...](auto &&...CallArgs) {
+    return std::invoke(Fn, std::forward<BindArgsT>(BindArgs)...,
+                       std::forward<decltype(CallArgs)>(CallArgs)...);
+  };
+}
+
+template <auto Fn, typename... BindArgsT>
+constexpr auto
+bind_back(BindArgsT &&...BindArgs) { // NOLINT(readability-identifier-naming)
+  using FnT = decltype(Fn);
+
+  if constexpr (std::is_pointer_v<FnT> or std::is_member_pointer_v<FnT>)
+    static_assert(Fn != nullptr);
+
+  return [&BindArgs...](auto &&...CallArgs) {
+    return std::invoke(Fn, std::forward<decltype(CallArgs)>(CallArgs)...,
+                       std::forward<BindArgsT>(BindArgs)...);
+  };
+}
 
 #endif // LLVM_ADT_STLFORWARDCOMPAT_H

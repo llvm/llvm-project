@@ -19,8 +19,15 @@
 
 namespace llvm::VPlanPatternMatch {
 
-template <typename Val, typename Pattern> bool match(Val V, const Pattern &P) {
+template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
   return P.match(V);
+}
+
+/// A match functor that can be used as a UnaryPredicate in functional
+/// algorithms like all_of.
+template <typename Val, typename Pattern>
+constexpr auto match_fn(const Pattern &P) {
+  return bind_back<match<Val, Pattern>>(P);
 }
 
 template <typename Pattern> bool match(VPUser *U, const Pattern &P) {
@@ -28,15 +35,13 @@ template <typename Pattern> bool match(VPUser *U, const Pattern &P) {
   return R && match(R, P);
 }
 
-template <typename Pattern> bool match(VPSingleDefRecipe *R, const Pattern &P) {
-  return P.match(static_cast<const VPRecipeBase *>(R));
+/// Match functor for VPUser.
+template <typename Pattern> constexpr auto match_fn(const Pattern &P) {
+  return bind_back<match<Pattern>>(P);
 }
 
-/// A match functor that can be used as a UnaryPredicate in functional
-/// algorithms like all_of.
-template <typename Val = VPUser *, typename Pattern>
-auto match_fn(const Pattern &P) {
-  return bind_last<Pattern, decltype(match<Val, Pattern>)>(P, match);
+template <typename Pattern> bool match(VPSingleDefRecipe *R, const Pattern &P) {
+  return P.match(static_cast<const VPRecipeBase *>(R));
 }
 
 template <typename Class> struct class_match {
