@@ -6199,7 +6199,7 @@ private:
         eval.isConstruct() && Fortran::lower::isInOpenACCLoop(*builder);
     if (needsAccScope)
       localSymbols.pushScope();
-    auto popAccScope = llvm::make_scope_exit([&]() {
+    llvm::scope_exit popAccScope([&]() {
       if (needsAccScope)
         localSymbols.popScope();
     });
