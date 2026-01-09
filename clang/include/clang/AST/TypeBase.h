@@ -2287,7 +2287,7 @@ protected:
     Last = PtrdiffT
   };
 
-  class PresefinedSugarTypeBitfields {
+  class PredefinedSugarTypeBitfields {
     friend class PredefinedSugarType;
 
     LLVM_PREFERRED_TYPE(TypeBitfields)
@@ -2349,7 +2349,7 @@ protected:
     /* TO_UPSTREAM(BoundsSafety) ON */
     DynamicRangePointerTypeBitfields DynamicRangePointerTypeBits;
     /* TO_UPSTREAM(BoundsSafety) OFF */
-    PresefinedSugarTypeBitfields PredefinedSugarTypeBits;
+    PredefinedSugarTypeBitfields PredefinedSugarTypeBits;
   };
 
 private:
