@@ -37,29 +37,6 @@ struct _Unwind_LandingPadContext {
 // function
 thread_local struct _Unwind_LandingPadContext __wasm_lpad_context;
 
-/// Calls to this function is in landing pads in compiler-generated user code.
-/// In other EH schemes, stack unwinding is done by libunwind library, which
-/// calls the personality function for each each frame it lands. On the other
-/// hand, WebAssembly stack unwinding process is performed by a VM, and the
-/// personality function cannot be called from there. So the compiler inserts
-/// a call to this function in landing pads in the user code, which in turn
-/// calls the personality function.
-_Unwind_Reason_Code _Unwind_CallPersonality(void *exception_ptr) {
-  struct _Unwind_Exception *exception_object =
-      (struct _Unwind_Exception *)exception_ptr;
-  _LIBUNWIND_TRACE_API("_Unwind_CallPersonality(exception_object=%p)",
-                       (void *)exception_object);
-
-  // Reset the selector.
-  __wasm_lpad_context.selector = 0;
-
-  // Call personality function. Wasm does not have two-phase unwinding, so we
-  // only do the cleanup phase.
-  return __gxx_personality_wasm0(
-      1, _UA_SEARCH_PHASE, exception_object->exception_class, exception_object,
-      (struct _Unwind_Context *)&__wasm_lpad_context);
-}
-
 /// Called by __cxa_throw.
 _LIBUNWIND_EXPORT _Unwind_Reason_Code
 _Unwind_RaiseException(_Unwind_Exception *exception_object) {

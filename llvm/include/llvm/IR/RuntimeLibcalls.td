@@ -1833,9 +1833,6 @@ defset list<RuntimeLibcallImpl> SjLjExceptionHandlingLibcalls = {
   def _Unwind_SjLj_Unregister : RuntimeLibcallImpl<UNWIND_UNREGISTER>;
 }
 
-// Only used on wasm?
-def _Unwind_CallPersonality : RuntimeLibcallImpl<UNWIND_CALL_PERSONALITY>;
-
 // Used on OpenBSD
 def __stack_smash_handler : RuntimeLibcallImpl<STACK_SMASH_HANDLER>;
 
