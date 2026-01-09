@@ -438,11 +438,6 @@ AMDGPULowerKernelAttributesPass::run(Function &F, FunctionAnalysisManager &AM) {
     }
   }
 
-  PreservedAnalyses PA = PreservedAnalyses::all();
-  if (Changed) {
-    // The call graph is unchanged after this pass.
-    PA = PreservedAnalyses::none();
-    PA.preserveSet<CFGAnalyses>();
-  }
-  return PA;
+  return !Changed ? PreservedAnalyses::all()
+                  : PreservedAnalyses::none().preserveSet<CFGAnalyses>();
 }
