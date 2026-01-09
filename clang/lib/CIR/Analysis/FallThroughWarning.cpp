@@ -283,19 +283,7 @@ void FallThroughWarningPass::checkFallThroughForFuncBody(
     else
       returnsVoid = fd->getReturnType()->isVoidType();
     hasNoReturn = fd->isNoReturn() || fd->hasAttr<InferredNoReturnAttr>();
-  } else if (const auto *md = dyn_cast<ObjCMethodDecl>(d)) {
-    returnsVoid = md->getReturnType()->isVoidType();
-    hasNoReturn = md->hasAttr<NoReturnAttr>();
-  } else if (isa<BlockDecl>(d)) {
-    if (const FunctionType *ft =
-            blockType->getPointeeType()->getAs<FunctionType>()) {
-      if (ft->getReturnType()->isVoidType())
-        returnsVoid = true;
-      if (ft->getNoReturnAttr())
-        hasNoReturn = true;
-    }
   }
-
   // Short circuit for compilation speed.
   if (cd.checkDiagnostics(diags, returnsVoid, hasNoReturn))
     return;
