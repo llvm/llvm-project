@@ -142,8 +142,9 @@ public:
   ///  - 17.4p5 (The rounding modes)
   ///  - 17.6p1 (Halting)
   void checkForFPEnvironmentCalls(const parser::CallStmt &callStmt) {
+    const auto &call = std::get<parser::Call>(callStmt.t);
     const auto *callName = std::get_if<parser::Name>(
-        &std::get<parser::ProcedureDesignator>(callStmt.call.t).u);
+        &std::get<parser::ProcedureDesignator>(call.t).u);
     if (!callName)
       return;
     const Fortran::semantics::Symbol &procSym = callName->symbol->GetUltimate();
@@ -919,8 +920,9 @@ private:
           // Action statements (except IO statements)
           [&](const parser::CallStmt &s) {
             // Look for alternate return specifiers.
+            const auto &call = std::get<parser::Call>(s.t);
             const auto &args =
-                std::get<std::list<parser::ActualArgSpec>>(s.call.t);
+                std::get<std::list<parser::ActualArgSpec>>(call.t);
             for (const auto &arg : args) {
               const auto &actual = std::get<parser::ActualArg>(arg.t);
               if (const auto *altReturn =

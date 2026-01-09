@@ -1101,8 +1101,8 @@ static void CheckIfArgIsDoVar(const evaluate::ActualArgument &arg,
 // messages.
 void DoForallChecker::Leave(const parser::CallStmt &callStmt) {
   if (const auto &typedCall{callStmt.typedCall}) {
-    const auto &parsedArgs{
-        std::get<std::list<parser::ActualArgSpec>>(callStmt.call.t)};
+    const auto &call{std::get<parser::Call>(callStmt.t)};
+    const auto &parsedArgs{std::get<std::list<parser::ActualArgSpec>>(call.t)};
     auto parsedArgIter{parsedArgs.begin()};
     const evaluate::ActualArguments &checkedArgs{typedCall->arguments()};
     for (const auto &checkedOptionalArg : checkedArgs) {

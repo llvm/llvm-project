@@ -433,38 +433,6 @@ struct ParseTreeVisitorLookupScope {
         x, mutator);
   }
 
-  template <typename V> static void Walk(const CallStmt &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.source, visitor);
-      Walk(x.call, visitor);
-      Walk(x.chevrons, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename M> static void Walk(CallStmt &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.source, mutator);
-      Walk(x.call, mutator);
-      Walk(x.chevrons, mutator);
-      mutator.Post(x);
-    }
-  }
-  template <typename V> static void Walk(const PartRef &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.name, visitor);
-      Walk(x.subscripts, visitor);
-      Walk(x.imageSelector, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename M> static void Walk(PartRef &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.name, mutator);
-      Walk(x.subscripts, mutator);
-      Walk(x.imageSelector, mutator);
-      mutator.Post(x);
-    }
-  }
   template <typename V> static void Walk(const ReadStmt &x, V &visitor) {
     if (visitor.Pre(x)) {
       Walk(x.iounit, visitor);
@@ -484,35 +452,6 @@ struct ParseTreeVisitorLookupScope {
     }
   }
   template <typename V>
-  static void Walk(const RealLiteralConstant &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.real, visitor);
-      Walk(x.kind, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename M> static void Walk(RealLiteralConstant &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.real, mutator);
-      Walk(x.kind, mutator);
-      mutator.Post(x);
-    }
-  }
-  template <typename V>
-  static void Walk(const RealLiteralConstant::Real &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.source, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename M>
-  static void Walk(RealLiteralConstant::Real &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.source, mutator);
-      mutator.Post(x);
-    }
-  }
-  template <typename V>
   static void Walk(const StructureComponent &x, V &visitor) {
     if (visitor.Pre(x)) {
       Walk(x.base, visitor);
@@ -524,55 +463,6 @@ struct ParseTreeVisitorLookupScope {
     if (mutator.Pre(x)) {
       Walk(x.base, mutator);
       Walk(x.component, mutator);
-      mutator.Post(x);
-    }
-  }
-  template <typename V> static void Walk(const Suffix &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.binding, visitor);
-      Walk(x.resultName, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename M> static void Walk(Suffix &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.binding, mutator);
-      Walk(x.resultName, mutator);
-      mutator.Post(x);
-    }
-  }
-  template <typename V>
-  static void Walk(const TypeBoundProcedureStmt::WithInterface &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.interfaceName, visitor);
-      Walk(x.attributes, visitor);
-      Walk(x.bindingNames, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename M>
-  static void Walk(TypeBoundProcedureStmt::WithInterface &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.interfaceName, mutator);
-      Walk(x.attributes, mutator);
-      Walk(x.bindingNames, mutator);
-      mutator.Post(x);
-    }
-  }
-  template <typename V>
-  static void Walk(
-      const TypeBoundProcedureStmt::WithoutInterface &x, V &visitor) {
-    if (visitor.Pre(x)) {
-      Walk(x.attributes, visitor);
-      Walk(x.declarations, visitor);
-      visitor.Post(x);
-    }
-  }
-  template <typename M>
-  static void Walk(TypeBoundProcedureStmt::WithoutInterface &x, M &mutator) {
-    if (mutator.Pre(x)) {
-      Walk(x.attributes, mutator);
-      Walk(x.declarations, mutator);
       mutator.Post(x);
     }
   }
