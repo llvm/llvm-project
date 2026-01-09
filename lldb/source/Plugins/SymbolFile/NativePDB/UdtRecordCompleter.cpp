@@ -253,7 +253,7 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
     return Error::success();
 
   std::string name = nested.Name.str();
-  ct.CreateTypedef(name.c_str(), m_ast_builder.ToCompilerDeclContext(*decl_ctx),
+  ct.CreateTypedef(name.c_str(), m_ast_builder.ToCompilerDeclContext(decl_ctx),
                    0);
   return Error::success();
 }
