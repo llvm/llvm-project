@@ -1613,7 +1613,7 @@ def QC_EXTMask : ImmLeaf<XLenVT, [{
 let Predicates = [HasVendorXqcibm, IsRV32] in {
 def : Pat<(sext_inreg (i32 GPR:$rs1), i1), (QC_EXT GPR:$rs1, 1, 0)>;
 
-// Prefer qc.extu to andi for the following cases since the former can be compressed
+// Prefer qc.extu to andi for masks with the lower 6-11 bits set.
 let AddedComplexity = 1 in
 def : Pat<(i32 (and GPRNoX0:$rs, QC_EXTMask:$mask)),
           (QC_EXTU GPRNoX0:$rs, QC_EXTMask:$mask, 0)>;
