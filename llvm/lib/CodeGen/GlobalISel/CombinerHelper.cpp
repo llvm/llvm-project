@@ -8525,11 +8525,16 @@ bool CombinerHelper::matchCtls(MachineInstr &CtlzMI,
   Register Src = CtlzMI.getOperand(1).getReg();
 
   LLT Ty = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
 
   if (!(Ty.isValid() && Ty.isScalar()))
     return false;
 
-  LegalityQuery Query = {TargetOpcode::G_CTLS, {Ty, MRI.getType(Src)}};
+  if (!LI)
+    return false;
+
+  SmallVector<LLT, 2> QueryTypes = {Ty, SrcTy};
+  LegalityQuery Query(TargetOpcode::G_CTLS, QueryTypes);
 
   switch (LI->getAction(Query).Action) {
   default:
