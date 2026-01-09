@@ -1159,8 +1159,8 @@ public:
 
   virtual bool isVectorShiftByScalarCheap(Type *Ty) const { return false; }
 
-  virtual bool isSafeToCastIntPtrWithAS(unsigned AddrUnchangedLeadingBit,
-                                        unsigned SrcAS, unsigned DstAS) const {
+  virtual bool isSafeToCastIntPtrWithAS(unsigned AddrChangedLSB, unsigned SrcAS,
+                                        unsigned DstAS) const {
     return false;
   }
 

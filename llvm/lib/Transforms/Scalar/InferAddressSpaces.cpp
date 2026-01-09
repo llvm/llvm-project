@@ -402,6 +402,22 @@ SmallVector<Value *, 2> InferAddressSpacesImpl::getPointerOperands(
   }
 }
 
+static unsigned computeKnownChangedLSB(const Operator *LogicOp,
+                                       const Value *Mask, const DataLayout &DL,
+                                       AssumptionCache *AC,
+                                       const DominatorTree *DT) {
+  KnownBits Known = computeKnownBits(Mask, DL, AC, nullptr, DT);
+  switch (LogicOp->getOpcode()) {
+  case Instruction::Xor:
+  case Instruction::Or:
+    return Known.getBitWidth() - Known.countMinLeadingZeros();
+  case Instruction::And:
+    return Known.getBitWidth() - Known.countMinLeadingOnes();
+  default:
+    return -1;
+  }
+}
+
 bool InferAddressSpacesImpl::isSafeToCastPtrIntPair(
     const Operator *I2P, const DataLayout &DL) const {
   assert(I2P->getOpcode() == Instruction::IntToPtr);
@@ -411,12 +427,17 @@ bool InferAddressSpacesImpl::isSafeToCastPtrIntPair(
   if (I2P->getType()->isVectorTy())
     return false;
 
-  auto *Xor = dyn_cast<Operator>(I2P->getOperand(0));
-  if (!Xor || Xor->getOpcode() != Instruction::Xor)
+  auto *LogicOP = dyn_cast<Operator>(I2P->getOperand(0));
+  if (!LogicOP)
     return false;
 
-  auto *LHS = Xor->getOperand(0);
-  auto *Mask = Xor->getOperand(1);
+  if (LogicOP->getOpcode() != Instruction::Xor &&
+      LogicOP->getOpcode() != Instruction::Or &&
+      LogicOP->getOpcode() != Instruction::And)
+    return false;
+
+  auto *LHS = LogicOP->getOperand(0);
+  auto *Mask = LogicOP->getOperand(1);
   auto *P2I = dyn_cast<Operator>(LHS);
   if (!P2I || P2I->getOpcode() != Instruction::PtrToInt)
     std::swap(LHS, Mask);
@@ -428,11 +449,10 @@ bool InferAddressSpacesImpl::isSafeToCastPtrIntPair(
   if (!ASCast || ASCast->getOpcode() != Instruction::AddrSpaceCast)
     return false;
 
-  KnownBits Known = computeKnownBits(Mask, DL, &AC, nullptr, DT);
   unsigned SrcAS = I2P->getType()->getPointerAddressSpace();
   unsigned DstAS = ASCast->getOperand(0)->getType()->getPointerAddressSpace();
-  unsigned AddrUnchangedLeadingBit = Known.Zero.countLeadingOnes();
-  if (TTI->isSafeToCastIntPtrWithAS(AddrUnchangedLeadingBit, SrcAS, DstAS)) {
+  unsigned AddrChangedLSB = computeKnownChangedLSB(LogicOP, Mask, DL, &AC, DT);
+  if (TTI->isSafeToCastIntPtrWithAS(AddrChangedLSB, SrcAS, DstAS)) {
     PtrIntCastPairs[I2P] = P2I->getOperand(0);
     return true;
   }

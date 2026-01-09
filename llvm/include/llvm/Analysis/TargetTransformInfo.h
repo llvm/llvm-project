@@ -1951,7 +1951,7 @@ public:
   ///   %b = xor i64 7, %a
   ///   %gp2 = inttoptr i64 %b to ptr
   ///   store i16 0, ptr %gp2, align 2
-  LLVM_ABI bool isSafeToCastIntPtrWithAS(unsigned AddrUnchangedLeadingBit,
+  LLVM_ABI bool isSafeToCastIntPtrWithAS(unsigned AddrChangedLSB,
                                          unsigned SrcAS, unsigned DstAS) const;
 
   struct VPLegalization {

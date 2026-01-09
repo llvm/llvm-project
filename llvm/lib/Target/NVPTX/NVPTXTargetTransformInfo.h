@@ -180,8 +180,8 @@ public:
     }
   }
 
-  bool isSafeToCastIntPtrWithAS(unsigned AddrUnchangedLeadingBit,
-                                unsigned SrcAS, unsigned DstAS) const override {
+  bool isSafeToCastIntPtrWithAS(unsigned AddrChangedLSB, unsigned SrcAS,
+                                unsigned DstAS) const override {
     if (SrcAS != llvm::ADDRESS_SPACE_GENERIC)
       return false;
     if (DstAS != llvm::ADDRESS_SPACE_GLOBAL &&
@@ -190,7 +190,7 @@ public:
 
     // Address change within 4K size does not change the original address space
     // and is safe to perform address cast form SrcAS to DstAS.
-    if (AddrUnchangedLeadingBit >= 52)
+    if (AddrChangedLSB <= 12)
       return true;
 
     return false;

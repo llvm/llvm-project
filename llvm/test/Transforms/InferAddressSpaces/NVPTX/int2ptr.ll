@@ -6,21 +6,21 @@ define void @test_smem_fail(ptr addrspace(3) %sp) {
 ; CHECK-SAME: ptr addrspace(3) [[SP:%.*]]) {
 ; CHECK-NEXT:    [[GP:%.*]] = addrspacecast ptr addrspace(3) [[SP]] to ptr
 ; CHECK-NEXT:    [[A:%.*]] = ptrtoint ptr [[GP]] to i64
-; CHECK-NEXT:    [[B:%.*]] = xor i64 8191, [[A]]
+; CHECK-NEXT:    [[B:%.*]] = xor i64 4096, [[A]]
 ; CHECK-NEXT:    [[GP2:%.*]] = inttoptr i64 [[B]] to ptr
 ; CHECK-NEXT:    store i16 0, ptr [[GP2]], align 2
 ; CHECK-NEXT:    ret void
 ;
   %gp = addrspacecast ptr addrspace(3) %sp to ptr
   %a = ptrtoint ptr %gp to i64
-  %b = xor i64 8191, %a
+  %b = xor i64 4096, %a
   %gp2 = inttoptr i64 %b to ptr
   store i16 0, ptr %gp2, align 2
   ret void
 }
 
-define void @test_smem(ptr addrspace(3) %sp) {
-; CHECK-LABEL: define void @test_smem(
+define void @test_xor_smem(ptr addrspace(3) %sp) {
+; CHECK-LABEL: define void @test_xor_smem(
 ; CHECK-SAME: ptr addrspace(3) [[SP:%.*]]) {
 ; CHECK-NEXT:    [[GP:%.*]] = addrspacecast ptr addrspace(3) [[SP]] to ptr
 ; CHECK-NEXT:    [[A:%.*]] = ptrtoint ptr [[GP]] to i64
@@ -32,6 +32,96 @@ define void @test_smem(ptr addrspace(3) %sp) {
   %gp = addrspacecast ptr addrspace(3) %sp to ptr
   %a = ptrtoint ptr %gp to i64
   %b = xor i64 4095, %a
+  %gp2 = inttoptr i64 %b to ptr
+  store i16 0, ptr %gp2, align 2
+  ret void
+}
+
+define void @test_xor_smem2(ptr addrspace(3) %sp) {
+; CHECK-LABEL: define void @test_xor_smem2(
+; CHECK-SAME: ptr addrspace(3) [[SP:%.*]]) {
+; CHECK-NEXT:    [[GP:%.*]] = addrspacecast ptr addrspace(3) [[SP]] to ptr
+; CHECK-NEXT:    [[A:%.*]] = ptrtoint ptr [[GP]] to i64
+; CHECK-NEXT:    [[B:%.*]] = xor i64 [[A]], 4095
+; CHECK-NEXT:    [[GP2:%.*]] = inttoptr i64 [[B]] to ptr addrspace(3)
+; CHECK-NEXT:    store i16 0, ptr addrspace(3) [[GP2]], align 2
+; CHECK-NEXT:    ret void
+;
+  %gp = addrspacecast ptr addrspace(3) %sp to ptr
+  %a = ptrtoint ptr %gp to i64
+  %b = xor i64 %a, 4095
+  %gp2 = inttoptr i64 %b to ptr
+  store i16 0, ptr %gp2, align 2
+  ret void
+}
+
+define void @test_or_smem(ptr addrspace(3) %sp) {
+; CHECK-LABEL: define void @test_or_smem(
+; CHECK-SAME: ptr addrspace(3) [[SP:%.*]]) {
+; CHECK-NEXT:    [[GP:%.*]] = addrspacecast ptr addrspace(3) [[SP]] to ptr
+; CHECK-NEXT:    [[A:%.*]] = ptrtoint ptr [[GP]] to i64
+; CHECK-NEXT:    [[B:%.*]] = or i64 4095, [[A]]
+; CHECK-NEXT:    [[GP2:%.*]] = inttoptr i64 [[B]] to ptr addrspace(3)
+; CHECK-NEXT:    store i16 0, ptr addrspace(3) [[GP2]], align 2
+; CHECK-NEXT:    ret void
+;
+  %gp = addrspacecast ptr addrspace(3) %sp to ptr
+  %a = ptrtoint ptr %gp to i64
+  %b = or i64 4095, %a
+  %gp2 = inttoptr i64 %b to ptr
+  store i16 0, ptr %gp2, align 2
+  ret void
+}
+
+define void @test_or_smem2(ptr addrspace(3) %sp) {
+; CHECK-LABEL: define void @test_or_smem2(
+; CHECK-SAME: ptr addrspace(3) [[SP:%.*]]) {
+; CHECK-NEXT:    [[GP:%.*]] = addrspacecast ptr addrspace(3) [[SP]] to ptr
+; CHECK-NEXT:    [[A:%.*]] = ptrtoint ptr [[GP]] to i64
+; CHECK-NEXT:    [[B:%.*]] = or i64 4096, [[A]]
+; CHECK-NEXT:    [[GP2:%.*]] = inttoptr i64 [[B]] to ptr
+; CHECK-NEXT:    store i16 0, ptr [[GP2]], align 2
+; CHECK-NEXT:    ret void
+;
+  %gp = addrspacecast ptr addrspace(3) %sp to ptr
+  %a = ptrtoint ptr %gp to i64
+  %b = or i64 4096, %a
+  %gp2 = inttoptr i64 %b to ptr
+  store i16 0, ptr %gp2, align 2
+  ret void
+}
+
+define void @test_and_smem(ptr addrspace(3) %sp) {
+; CHECK-LABEL: define void @test_and_smem(
+; CHECK-SAME: ptr addrspace(3) [[SP:%.*]]) {
+; CHECK-NEXT:    [[GP:%.*]] = addrspacecast ptr addrspace(3) [[SP]] to ptr
+; CHECK-NEXT:    [[A:%.*]] = ptrtoint ptr [[GP]] to i64
+; CHECK-NEXT:    [[B:%.*]] = and i64 [[A]], -4096
+; CHECK-NEXT:    [[GP2:%.*]] = inttoptr i64 [[B]] to ptr addrspace(3)
+; CHECK-NEXT:    store i16 0, ptr addrspace(3) [[GP2]], align 2
+; CHECK-NEXT:    ret void
+;
+  %gp = addrspacecast ptr addrspace(3) %sp to ptr
+  %a = ptrtoint ptr %gp to i64
+  %b = and i64 %a, -4096
+  %gp2 = inttoptr i64 %b to ptr
+  store i16 0, ptr %gp2, align 2
+  ret void
+}
+
+define void @test_and_smem_fail(ptr addrspace(3) %sp) {
+; CHECK-LABEL: define void @test_and_smem_fail(
+; CHECK-SAME: ptr addrspace(3) [[SP:%.*]]) {
+; CHECK-NEXT:    [[GP:%.*]] = addrspacecast ptr addrspace(3) [[SP]] to ptr
+; CHECK-NEXT:    [[A:%.*]] = ptrtoint ptr [[GP]] to i64
+; CHECK-NEXT:    [[B:%.*]] = and i64 [[A]], -4097
+; CHECK-NEXT:    [[GP2:%.*]] = inttoptr i64 [[B]] to ptr
+; CHECK-NEXT:    store i16 0, ptr [[GP2]], align 2
+; CHECK-NEXT:    ret void
+;
+  %gp = addrspacecast ptr addrspace(3) %sp to ptr
+  %a = ptrtoint ptr %gp to i64
+  %b = and i64 %a, -4097
   %gp2 = inttoptr i64 %b to ptr
   store i16 0, ptr %gp2, align 2
   ret void
