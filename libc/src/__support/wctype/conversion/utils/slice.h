@@ -103,7 +103,8 @@ template <typename T> struct Slice : public cpp::span<T> {
     }
   }
 
-  LIBC_INLINE constexpr Slice<T> range(size_t start, size_t end) const {
+  LIBC_INLINE constexpr Slice<T> slice_form_range(size_t start,
+                                                  size_t end) const {
     LIBC_ASSERT(start <= end && end <= this->size());
     return Slice<T>(this->data() + start, end - start);
   }
