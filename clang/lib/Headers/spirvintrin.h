@@ -30,38 +30,9 @@ _Pragma("omp begin declare variant match(device = {arch(spirv64)})");
 // Attribute to declare a function as a kernel.
 #define __gpu_kernel __attribute__((device_kernel, visibility("protected")))
 
-typedef enum {
-  CrossDevice = 0,
-  Device = 1,
-  Workgroup = 2,
-  Subgroup = 3,
-  Invocation = 4
-} Scope_t;
-
-typedef enum {
-  Relaxed = 0x0,
-  Acquire = 0x2,
-  Release = 0x4,
-  AcquireRelease = 0x8,
-  SequentiallyConsistent = 0x10
-} MemorySemantics_t;
-
-const uint32_t ProgramAS = 9;
-
 #ifdef __cplusplus
 template <typename... Args> int __spirv_ocl_printf(Args...);
 #endif
-
-// Synchronization
-void __spirv_ControlBarrier(uint32_t execution_scope, uint32_t memory_scope,
-                            uint32_t semantics);
-void __spirv_MemoryBarrier(uint32_t memory_scope, uint32_t semantics);
-
-// Atomic
-uint32_t __spirv_AtomicIAdd(uint32_t *, int, int, uint32_t);
-void __spirv_AtomicStore(int32_t *, int, int, int);
-int32_t __spirv_AtomicLoad(int32_t *, int, int);
-int32_t __spirv_AtomicCompareExchange(int32_t *, int, int, int, int, int);
 
 // Returns the number of workgroups in the 'x' dimension of the grid.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_blocks_x(void) {

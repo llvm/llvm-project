@@ -260,70 +260,48 @@ void setCriticalLock(omp_lock_t *Lock) { setLock(Lock); }
 
 #if defined(__SPIRV__)
 
-MemorySemantics_t convertOrderingType(atomic::OrderingTy Ordering) {
-  switch (Ordering) {
-  default:
-    __builtin_unreachable();
-  case atomic::relaxed:
-    return MemorySemantics_t::Relaxed;
-  case atomic::acquire:
-    return MemorySemantics_t::Acquire;
-  case atomic::release:
-    return MemorySemantics_t::Release;
-  case atomic::acq_rel:
-    return MemorySemantics_t::AcquireRelease;
-  case atomic::seq_cst:
-    return MemorySemantics_t::SequentiallyConsistent;
-  }
-}
 uint32_t atomicInc(uint32_t *Address, uint32_t Val, atomic::OrderingTy Ordering,
                    atomic::MemScopeTy MemScope) {
-  return __spirv_AtomicIAdd(Address, (int)MemScope,
-                            convertOrderingType(Ordering), Val);
+  return atomic::add(Address, Val, Ordering);
 }
 
 void namedBarrierInit() {} // TODO
 void namedBarrier() {}     // TODO
 void fenceTeam(atomic::OrderingTy Ordering) {
-  return __spirv_MemoryBarrier(Scope_t::Workgroup,
-                               0x100 | convertOrderingType(Ordering));
-}
-void fenceKernel(atomic::OrderingTy Ordering) {
-  return __spirv_MemoryBarrier(Scope_t::Device,
-                               0x200 | convertOrderingType(Ordering));
-}
-void fenceSystem(atomic::OrderingTy Ordering) {
-  return __spirv_MemoryBarrier(Scope_t::CrossDevice,
-                               0x200 | convertOrderingType(Ordering));
+  return __scoped_atomic_thread_fence(Ordering, atomic::workgroup);
 }
 
-void syncWarp(__kmpc_impl_lanemask_t) {
-  __spirv_ControlBarrier(Scope_t::Subgroup, Scope_t::Subgroup,
-                         0x80 | MemorySemantics_t::SequentiallyConsistent);
+void fenceKernel(atomic::OrderingTy Ordering) {
+  return __scoped_atomic_thread_fence(Ordering, atomic::device);
+}
+
+void fenceSystem(atomic::OrderingTy Ordering) {
+  return __scoped_atomic_thread_fence(Ordering, atomic::system);
+}
+
+void syncWarp(__kmpc_impl_lanemask_t mask) {
+  __gpu_sync_lane(mask);
 }
 void syncThreads(atomic::OrderingTy Ordering) {
-  __spirv_ControlBarrier(Scope_t::Workgroup, Scope_t::Workgroup,
-                         0x100 | convertOrderingType(Ordering));
+  __gpu_sync_threads();
 }
 void unsetLock(omp_lock_t *Lock) {
-  __spirv_AtomicStore((int32_t *)Lock, Scope_t::CrossDevice,
-                      0x200 | MemorySemantics_t::SequentiallyConsistent, 0);
+  atomic::store((int32_t *)Lock, 0, atomic::seq_cst);
 }
 int testLock(omp_lock_t *Lock) {
-  int32_t *lock_ptr = (int32_t *)Lock;
-  return __spirv_AtomicCompareExchange(
-      lock_ptr, Scope_t::CrossDevice,
-      0x200 | MemorySemantics_t::SequentiallyConsistent,
-      0x200 | MemorySemantics_t::SequentiallyConsistent, 1, 0);
+  return atomic::add((int32_t *)Lock, 0, atomic::seq_cst);
 }
 void initLock(omp_lock_t *Lock) { unsetLock(Lock); }
 void destroyLock(omp_lock_t *Lock) { unsetLock(Lock); }
 void setLock(omp_lock_t *Lock) {
   int32_t *lock_ptr = (int32_t *)Lock;
-  while (__spirv_AtomicCompareExchange(
-      lock_ptr, Scope_t::CrossDevice,
-      0x200 | MemorySemantics_t::SequentiallyConsistent,
-      0x200 | MemorySemantics_t::SequentiallyConsistent, 1, 0)) {
+  bool acquired = false;
+  int32_t expected;
+  while (!acquired) {
+    expected = 0;
+    if (expected == atomic::load(lock_ptr, atomic::seq_cst))
+      acquired =
+          atomic::cas(lock_ptr, expected, 1, atomic::seq_cst, atomic::seq_cst);
   }
 }
 

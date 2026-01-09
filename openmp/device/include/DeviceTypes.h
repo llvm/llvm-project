@@ -132,6 +132,7 @@ struct IdentTy {
 using __kmpc_impl_lanemask_t = LaneMaskTy;
 
 #ifdef __SPIRV__
+const uint32_t ProgramAS = 9;
 using FnPtrTy = __attribute__((address_space(ProgramAS))) void *;
 #else
 using FnPtrTy = void *;

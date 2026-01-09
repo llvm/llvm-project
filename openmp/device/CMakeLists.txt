@@ -28,9 +28,9 @@ set(src_files
 if(NOT "${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^spirv" AND
    NOT "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^spirv")
   list(APPEND compile_options -flto)
-  list(APPEND compile_options -fvisibility=hidden)
-  list(APPEND compile_options -Wno-unknown-cuda-version)
 endif()
+list(APPEND compile_options -fvisibility=hidden)
+list(APPEND compile_options -Wno-unknown-cuda-version)
 list(APPEND compile_options -nogpulib)
 list(APPEND compile_options -nostdlibinc)
 list(APPEND compile_options -fno-rtti)

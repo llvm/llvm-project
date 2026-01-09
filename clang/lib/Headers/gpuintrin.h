@@ -18,7 +18,7 @@
 #define __GPUINTRIN_H
 
 #if !defined(_DEFAULT_FN_ATTRS)
-#if defined(__HIP__) || defined(__CUDA__) || defined(__SPIRV__)
+#if defined(__HIP__) || defined(__CUDA__)
 #define _DEFAULT_FN_ATTRS __attribute__((device))
 #else
 #define _DEFAULT_FN_ATTRS
