@@ -176,6 +176,60 @@ def Tosa_DivFloorShapeOp : Tosa_ElementwiseShapeOp<"div_floor_shape", [Pure]> {
 }
 
 //===----------------------------------------------------------------------===//
+// Operator: MaxShape
+//===----------------------------------------------------------------------===//
+def Tosa_MaxShapeOp : Tosa_ElementwiseShapeOp<"max_shape", [Pure]> {
+  let summary = "Elementwise maximum of shapes.";
+
+  let description = [{
+      Elementwise maximum of input1 and input2.
+  }];
+
+  let arguments = (ins
+    Tosa_Shape:$input1,
+    Tosa_Shape:$input2
+  );
+
+  let results = (outs Tosa_Shape:$output);
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: MinShape
+//===----------------------------------------------------------------------===//
+def Tosa_MinShapeOp : Tosa_ElementwiseShapeOp<"min_shape", [Pure]> {
+  let summary = "Elementwise minimum of shapes.";
+
+  let description = [{
+      Elementwise minimum of input1 and input2.
+  }];
+
+  let arguments = (ins
+    Tosa_Shape:$input1,
+    Tosa_Shape:$input2
+  );
+
+  let results = (outs Tosa_Shape:$output);
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: ModShape
+//===----------------------------------------------------------------------===//
+def Tosa_ModShapeOp : Tosa_ElementwiseShapeOp<"mod_shape", [Pure]> {
+  let summary = "Elementwise modulo of shapes.";
+
+  let description = [{
+    Elementwise modulo of input1 divided by input2.
+  }];
+
+  let arguments = (ins
+    Tosa_Shape:$input1,
+    Tosa_Shape:$input2
+  );
+
+  let results = (outs Tosa_Shape:$output);
+}
+
+//===----------------------------------------------------------------------===//
 // Operator: MulShape
 //===----------------------------------------------------------------------===//
 def Tosa_MulShapeOp : Tosa_ElementwiseShapeOp<"mul_shape", [Pure]> {
