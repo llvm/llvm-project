@@ -5,3 +5,25 @@ add_header_library(
   DEPENDS
     libc.src.__support.wctype.conversion.utils.utils
 )
+
+add_header_library(
+  vec128_storage
+  HDRS
+    vec128_storage.h
+  DEPENDS
+    libc.src.__support.CPP.array
+    libc.src.__support.wctype.conversion.utils.slice
+)
+
+add_object_library(
+  vector_storage
+  HDRS
+    imm.h
+    vec256_storage.h
+    vec512_storage.h
+  SRCS
+    vec512_storage.cpp
+    vec256_storage.cpp
+  DEPENDS
+    .vec128_storage
+)
