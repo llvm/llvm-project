@@ -2076,10 +2076,11 @@ MaybeExpr ArrayConstructorContext::ToExpr() {
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayConstructor &array) {
   const parser::AcSpec &acSpec{array.v};
+  const auto &[type, values]{acSpec.t};
   bool hadAnyFatalError{context_.AnyFatalError()};
   ArrayConstructorContext acContext{
-      *this, AnalyzeTypeSpec(acSpec.type, GetFoldingContext())};
-  for (const parser::AcValue &value : acSpec.values) {
+      *this, AnalyzeTypeSpec(type, GetFoldingContext())};
+  for (const parser::AcValue &value : values) {
     acContext.Add(value);
   }
   if (!hadAnyFatalError && context_.AnyFatalError()) {
