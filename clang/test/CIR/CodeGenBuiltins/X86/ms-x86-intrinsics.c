@@ -26,10 +26,11 @@ unsigned __int64 __shiftright128(unsigned __int64 low, unsigned __int64 high,
 // LLVM-NEXT: [[TMP1:%.*]] = zext i8 %[[ARG2]] to i64
 // LLVM-NEXT: [[TMP2:%.*]] = tail call i64 @llvm.fshl.i64(i64 %[[ARG1]], i64 %[[ARG0]], i64 [[TMP1]])
 
-// OGCG-LABEL: define {{.*}} i64 @test_shiftleft128(i64 noundef %l, i64 noundef %h, i8 noundef zeroext %d)
+// OGCG-LABEL: define {{.*}} i64 @test_shiftleft128
+// OGCG-SAME: (i64 {{.*}} %[[ARG0:.*]], i64 {{.*}} %[[ARG1:.*]], i8 {{.*}} %[[ARG2:.*]])
 // OGCG-NEXT: entry:
-// OGCG-NEXT: [[TMP0:%.*]] = zext i8 %d to i64
-// OGCG-NEXT: [[TMP1:%.*]] = tail call i64 @llvm.fshl.i64(i64 %h, i64 %l, i64 [[TMP0]])
+// OGCG-NEXT: [[TMP0:%.*]] = zext i8 %[[ARG2]] to i64
+// OGCG-NEXT: [[TMP1:%.*]] = tail call i64 @llvm.fshl.i64(i64 %[[ARG1]], i64 %[[ARG0]], i64 [[TMP0]])
 // OGCG-NEXT: ret i64 [[TMP1]]
 unsigned __int64 test_shiftleft128(unsigned __int64 l, unsigned __int64 h,
                                    unsigned char d) {
@@ -47,10 +48,11 @@ unsigned __int64 test_shiftleft128(unsigned __int64 l, unsigned __int64 h,
 // LLVM-NEXT: [[TMP1:%.*]] = zext i8 %[[ARG2]] to i64
 // LLVM-NEXT: [[TMP2:%.*]] = tail call i64 @llvm.fshr.i64(i64 %[[ARG1]], i64 %[[ARG0]], i64 [[TMP1]])
 
-// OGCG-LABEL: define {{.*}} i64 @test_shiftright128(i64 noundef %l, i64 noundef %h, i8 noundef zeroext %d)
+// OGCG-LABEL: define {{.*}} i64 @test_shiftright128
+// OGCG-SAME: (i64 {{.*}} %[[ARG0:.*]], i64 {{.*}} %[[ARG1:.*]], i8 {{.*}} %[[ARG2:.*]])
 // OGCG-NEXT: entry:
-// OGCG-NEXT: [[TMP0:%.*]] = zext i8 %d to i64
-// OGCG-NEXT: [[TMP1:%.*]] = tail call i64 @llvm.fshr.i64(i64 %h, i64 %l, i64 [[TMP0]])
+// OGCG-NEXT: [[TMP0:%.*]] = zext i8 %[[ARG2]] to i64
+// OGCG-NEXT: [[TMP1:%.*]] = tail call i64 @llvm.fshr.i64(i64 %[[ARG1]], i64 %[[ARG0]], i64 [[TMP0]])
 // OGCG-NEXT: ret i64 [[TMP1]]
 unsigned __int64 test_shiftright128(unsigned __int64 l, unsigned __int64 h,
                                     unsigned char d) {
