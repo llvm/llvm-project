@@ -2012,6 +2012,10 @@ The AMDGPU backend supports the following LLVM IR attributes.
 
                                                       This is only relevant on targets with cluster support.
 
+     "amdgpu-expert-scheduling-mode" true/false.      Enable expert scheduling mode 2 for this function. This is a hardware execution
+                                                      mode introduced in GFX12.
+
+                                                      This is only relevant on GFX12+.
 
      ================================================ ==========================================================
 
