@@ -85,6 +85,9 @@ Changes to building LLVM
 Changes to TableGen
 -------------------
 
+* The `!getop` and `!setop` bang operators have been removed in favor of
+  `!getdagop` and `!setdagop`.
+
 Changes to Interprocedural Optimizations
 ----------------------------------------
 
