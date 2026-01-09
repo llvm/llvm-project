@@ -183,9 +183,8 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__CUDA_ARCH__", llvm::Twine(ArchID));
 
     if (IsNVIDIAAcceleratedOffloadArch(GPU))
-      Builder.defineMacro("__CUDA_ARCH_FEAT_SM" + llvm::Twine(ArchID / 10) +
-                              "_ALL",
-                          "1");
+      Builder.defineMacro(
+          "__CUDA_ARCH_FEAT_SM" + llvm::Twine(ArchID / 10) + "_ALL", "1");
   }
 }
 
