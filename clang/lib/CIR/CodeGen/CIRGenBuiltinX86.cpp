@@ -2268,9 +2268,6 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   }
   case X86::BI__shiftleft128:
   case X86::BI__shiftright128: {
-    // Determine if left or right shift
-    bool isRight = (builtinID == X86::BI__shiftright128);
-
     // Flip low/high ops and zero-extend amount to matching type.
     // shiftleft128(Low, High, Amt) -> fshl(High, Low, Amt)
     // shiftright128(Low, High, Amt) -> fshr(High, Low, Amt)
@@ -2278,14 +2275,16 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
 
     // Zero-extend shift amount to i64 if needed
     auto amtTy = mlir::cast<cir::IntType>(ops[2].getType());
-    auto i64Ty = builder.getUInt64Ty();
+    cir::IntType i64Ty = builder.getUInt64Ty();
 
-    if (amtTy != i64Ty) {
+    if (amtTy != i64Ty)
       ops[2] = builder.createIntCast(ops[2], i64Ty);
-    }
 
-    return emitX86FunnelShift(builder, getLoc(expr->getExprLoc()), ops[0],
-                              ops[1], ops[2], isRight);
+    const StringRef intrinsicName =
+        (builtinID == X86::BI__shiftleft128) ? "fshl" : "fshr";
+    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
+                               intrinsicName, i64Ty,
+                               mlir::ValueRange{ops[0], ops[1], ops[2]});
   }
   case X86::BI_ReadWriteBarrier:
   case X86::BI_ReadBarrier:
