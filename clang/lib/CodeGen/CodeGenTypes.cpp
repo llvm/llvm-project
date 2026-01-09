@@ -186,11 +186,8 @@ llvm::Type *CodeGenTypes::convertTypeForLoadStore(QualType T,
     // ConvertTypeForMem(T) which would return an ArrayType instead.
     const Type *Ty = Context.getCanonicalType(T).getTypePtr();
     const ConstantMatrixType *MT = cast<ConstantMatrixType>(Ty);
-    llvm::Type *IRElemTy = ConvertType(MT->getElementType());
-    if (Context.getLangOpts().HLSL && T->isConstantMatrixBoolType())
-      IRElemTy = ConvertTypeForMem(Context.BoolTy);
-    return llvm::FixedVectorType::get(IRElemTy,
-                                      MT->getNumRows() * MT->getNumColumns());
+    llvm::Type *IRElemTy = ConvertTypeForMem(MT->getElementType());
+    return llvm::FixedVectorType::get(IRElemTy, MT->getNumElementsFlattened());
   }
 
   if (T->isExtVectorBoolType())
