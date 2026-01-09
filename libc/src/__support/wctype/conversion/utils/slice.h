@@ -82,7 +82,7 @@ template <typename T> struct Slice : public cpp::span<T> {
       return cpp::unexpected<size_t>(0);
     }
 
-    auto base = 0;
+    size_t base = 0;
 
     while (size > 1) {
       auto half = size / 2;
