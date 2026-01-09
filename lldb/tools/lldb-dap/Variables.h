@@ -60,7 +60,8 @@ struct FrameScopes {
     case eScopeKind::Registers:
       return &registers;
     }
-    return nullptr;
+
+    llvm_unreachable("unknown scope kind");
   }
 };
 
