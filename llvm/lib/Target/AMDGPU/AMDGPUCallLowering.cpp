@@ -430,9 +430,10 @@ void AMDGPUCallLowering::lowerParameter(MachineIRBuilder &B, ArgInfo &OrigArg,
     lowerParameterPtr(PtrReg, B, Offset + FieldOffsets[Idx]);
 
     LLT ArgTy = getLLTForType(*SplitArg.Ty, DL);
-    if (SplitArg.Flags[0].isPointer()) {
+    PointerType *OrigPtrTy = dyn_cast<PointerType>(OrigArg.Ty->getScalarType());
+    if (OrigPtrTy) {
       // Compensate for losing pointeriness in splitValueTypes.
-      LLT PtrTy = LLT::pointer(SplitArg.Flags[0].getPointerAddrSpace(),
+      LLT PtrTy = LLT::pointer(OrigPtrTy->getPointerAddressSpace(),
                                ArgTy.getScalarSizeInBits());
       ArgTy = ArgTy.isVector() ? LLT::vector(ArgTy.getElementCount(), PtrTy)
                                : PtrTy;
