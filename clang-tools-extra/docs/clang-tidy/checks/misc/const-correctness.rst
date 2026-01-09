@@ -60,8 +60,8 @@ Limitations
 
 The check does not run on `C` code.
 
-The check will not analyze templated variables and template functions or
-variables that are instantiation dependent. Different instantiations can result
+The check will not analyze templated variables, template functions or variables
+that are instantiation dependent. Different instantiations can result
 in different ``const`` correctness properties and in general it is not
 possible to find all instantiations of a template. The template might
 be used differently in an independent translation unit.
