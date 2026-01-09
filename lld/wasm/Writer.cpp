@@ -1024,7 +1024,7 @@ static StringRef getOutputDataSegmentName(const InputChunk &seg) {
 OutputSegment *Writer::createOutputSegment(StringRef name) {
   LLVM_DEBUG(dbgs() << "new segment: " << name << "\n");
   OutputSegment *s = make<OutputSegment>(name);
-  if (ctx.arg.sharedMemory)
+  if (ctx.arg.isMultithreaded())
     s->initFlags = WASM_DATA_SEGMENT_IS_PASSIVE;
   if (!ctx.arg.relocatable && name.starts_with(".bss"))
     s->isBss = true;
@@ -1158,14 +1158,14 @@ void Writer::createSyntheticInitFunctions() {
         "__wasm_init_memory", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(nullSignature, "__wasm_init_memory"));
     ctx.sym.initMemory->markLive();
-    if (ctx.arg.sharedMemory) {
+    if (ctx.arg.isMultithreaded()) {
       // This global is assigned during  __wasm_init_memory in the shared memory
       // case.
       ctx.sym.tlsBase->markLive();
     }
   }
 
-  if (ctx.arg.sharedMemory) {
+  if (ctx.arg.isMultithreaded()) {
     if (out.globalSec->needsTLSRelocations()) {
       ctx.sym.applyGlobalTLSRelocs = symtab->addSyntheticFunction(
           "__wasm_apply_global_tls_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
@@ -1416,7 +1416,7 @@ void Writer::createInitMemoryFunction() {
       if (needsPassiveInitialization(s) && !s->isBss) {
         // The TLS region should not be dropped since its is needed
         // during the initialization of each thread (__wasm_init_tls).
-        if (ctx.arg.sharedMemory && s->isTLS())
+        if (ctx.arg.isMultithreaded() && s->isTLS())
           continue;
         // data.drop instruction
         writeU8(os, WASM_OPCODE_MISC_PREFIX, "bulk-memory prefix");
@@ -1626,6 +1626,8 @@ void Writer::createInitTLSFunction() {
       writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
       writeUleb128(os, 0, "local index");
 
+      // On WASIP3, we call `context.set 1` to set the TLS base,
+      // otherwise, we set the `__tls_base` global.
       if (ctx.arg.isWasip3) {
         writeU8(os, WASM_OPCODE_CALL, "call");
         writeUleb128(os, ctx.sym.contextSet1->getFunctionIndex(),

@@ -50,6 +50,8 @@ enum class BuildIdKind { None, Fast, Sha1, Hexstring, Uuid };
 // and such fields have the same name as the corresponding options.
 // Most fields are initialized by the driver.
 struct Config {
+  bool isMultithreaded() const { return sharedMemory || isWasip3; }
+
   bool allowMultipleDefinition;
   bool bsymbolic;
   bool checkFeatures;

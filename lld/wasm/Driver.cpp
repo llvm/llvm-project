@@ -986,7 +986,7 @@ static void createSyntheticSymbols() {
     ctx.sym.stackPointer->markLive();
   }
 
-  if (ctx.arg.sharedMemory || ctx.arg.isWasip3) {
+  if (ctx.arg.isMultithreaded()) {
     // TLS symbols are all hidden/dso-local
     auto tls_base_name = ctx.arg.isWasip3 ? "__init_tls_base" : "__tls_base";
     ctx.sym.tlsBase = createGlobalVariable(tls_base_name, true,
@@ -999,16 +999,21 @@ static void createSyntheticSymbols() {
         "__wasm_init_tls", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(is64 ? i64ArgSignature : i32ArgSignature,
                                 "__wasm_init_tls"));
-    static WasmSignature contextSet1Signature{{}, {ValType::I32}};
-    ctx.sym.contextSet1 = createUndefinedFunction(
-        "__wasm_component_model_builtin_context_set_1", "[context-set-1]",
-        "$root", &contextSet1Signature);
-    ctx.sym.contextSet1->markLive();
-    static WasmSignature contextGet1Signature{{ValType::I32}, {}};
-    ctx.sym.contextGet1 = createUndefinedFunction(
-        "__wasm_component_model_builtin_context_get_1", "[context-get-1]",
-        "$root", &contextGet1Signature);
-    ctx.sym.contextGet1->markLive();
+    if (ctx.arg.isWasip3) {
+      ctx.sym.tlsBase->markLive();
+      ctx.sym.tlsSize->markLive();
+      ctx.sym.tlsAlign->markLive();
+      static WasmSignature contextSet1Signature{{}, {ValType::I32}};
+      ctx.sym.contextSet1 = createUndefinedFunction(
+          "__wasm_component_model_builtin_context_set_1", "[context-set-1]",
+          "$root", &contextSet1Signature);
+      ctx.sym.contextSet1->markLive();
+      static WasmSignature contextGet1Signature{{ValType::I32}, {}};
+      ctx.sym.contextGet1 = createUndefinedFunction(
+          "__wasm_component_model_builtin_context_get_1", "[context-get-1]",
+          "$root", &contextGet1Signature);
+      ctx.sym.contextGet1->markLive();
+    }
   }
 }
 

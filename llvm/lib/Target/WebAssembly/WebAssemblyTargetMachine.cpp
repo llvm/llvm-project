@@ -260,7 +260,8 @@ class CoalesceFeaturesAndStripAtomics final : public ModulePass {
   // Take the union of all features used in the module and use it for each
   // function individually, since having multiple feature sets in one module
   // currently does not make sense for WebAssembly. If atomics are not enabled,
-  // also strip atomic operations and thread local storage.
+  // also strip atomic operations and thread local storage, unless the target
+  // is WASIP3, which can use TLS without atomics due to cooperative threading.
   static char ID;
   WebAssemblyTargetMachine *WasmTM;
 
@@ -279,17 +280,25 @@ public:
     bool StrippedAtomics = false;
     bool StrippedTLS = false;
 
-    if (!Features[WebAssembly::FeatureAtomics]) {
-      StrippedAtomics = stripAtomics(M);
-      StrippedTLS = stripThreadLocals(M);
-    } else if (!Features[WebAssembly::FeatureBulkMemory]) {
-      StrippedTLS |= stripThreadLocals(M);
-    }
+    if (WasmTM->getTargetTriple().getOSName() == "wasip3") {
+      // WASIP3 allows TLS without atomics, so don't strip TLS even if
+      // atomics are disabled.
+      if (!Features[WebAssembly::FeatureAtomics]) {
+        StrippedAtomics = stripAtomics(M);
+      }
+    } else {
+      if (!Features[WebAssembly::FeatureAtomics]) {
+        StrippedAtomics = stripAtomics(M);
+        StrippedTLS = stripThreadLocals(M);
+      } else if (!Features[WebAssembly::FeatureBulkMemory]) {
+        StrippedTLS |= stripThreadLocals(M);
+      }
 
-    if (StrippedAtomics && !StrippedTLS)
-      stripThreadLocals(M);
-    else if (StrippedTLS && !StrippedAtomics)
-      stripAtomics(M);
+      if (StrippedAtomics && !StrippedTLS)
+        stripThreadLocals(M);
+      else if (StrippedTLS && !StrippedAtomics)
+        stripAtomics(M);
+    }
 
     recordFeatures(M, Features, StrippedAtomics || StrippedTLS);
 
@@ -404,7 +413,7 @@ private:
     // Code compiled without atomics or bulk-memory may have had its atomics or
     // thread-local data lowered to nonatomic operations or non-thread-local
     // data. In that case, we mark the pseudo-feature "shared-mem" as disallowed
-    // to tell the linker that it would be unsafe to allow this code ot be used
+    // to tell the linker that it would be unsafe to allow this code to be used
     // in a module with shared memory.
     if (Stripped) {
       M.addModuleFlag(Module::ModFlagBehavior::Error, "wasm-feature-shared-mem",
