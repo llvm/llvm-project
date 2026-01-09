@@ -204,7 +204,7 @@ private:
   std::pair<Thunk *, bool> getSyntheticLandingPad(Defined &d, int64_t a);
 
   ThunkSection *addThunkSection(OutputSection *os, InputSectionDescription *,
-                                uint64_t off);
+                                uint64_t off, bool isPrefix = false);
 
   bool normalizeExistingThunk(Relocation &rel, uint64_t src);
 
