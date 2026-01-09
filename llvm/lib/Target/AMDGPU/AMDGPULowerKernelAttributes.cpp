@@ -430,12 +430,13 @@ AMDGPULowerKernelAttributesPass::run(Function &F, FunctionAnalysisManager &AM) {
   if (!BasePtr) // ImplicitArgPtr/DispatchPtr not used.
     return PreservedAnalyses::all();
 
+  bool Changed = false;
   for (Instruction &I : instructions(F)) {
     if (CallInst *CI = dyn_cast<CallInst>(&I)) {
       if (CI->getCalledFunction() == BasePtr)
-        processUse(CI, IsV5OrAbove);
+        Changed |= processUse(CI, IsV5OrAbove);
     }
   }
 
-  return PreservedAnalyses::all();
+  return !Changed ? PreservedAnalyses::all() : PreservedAnalyses::none();
 }
