@@ -66,10 +66,12 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/WasmEHFuncInfo.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/InitializePasses.h"
@@ -99,6 +101,11 @@ class WasmEHPrepareImpl {
   Function *CatchF = nullptr;       // wasm.catch() intrinsic
   Function *GetSelectorF = nullptr; // wasm.get.ehselector() intrinsic
   FunctionCallee PersonalityF = nullptr;
+
+  IntegerType *Int32Ty = nullptr;
+  IntegerType *Int64Ty = nullptr;
+  PointerType *PtrTy = nullptr;
+  IntegerType *IntPtrTy = nullptr;
 
   bool prepareThrows(Function &F);
   bool prepareEHPads(Function &F);
@@ -131,14 +138,14 @@ public:
 PreservedAnalyses WasmEHPreparePass::run(Function &F,
                                          FunctionAnalysisManager &) {
   auto &Context = F.getContext();
-  auto *I32Ty = Type::getInt32Ty(Context);
+  const DataLayout &DL = F.getParent()->getDataLayout();
   auto *I64Ty = Type::getInt64Ty(Context);
   auto *PtrTy = PointerType::get(Context, 0);
-  auto *LPadContextTy =
-      StructType::get(I32Ty /*lpad_index*/, PtrTy /*lsda*/, I32Ty /*selector*/);
-  auto *UnwindExceptionTy =
-      StructType::get(I64Ty /* exception_class*/, PtrTy /* exception_cleanup */,
-                      I32Ty /* private_1 */, I32Ty /* private_2 */);
+  auto *IntPtrTy = DL.getIntPtrType(Context, /*AddressSpace=*/0);
+  auto *LPadContextTy = StructType::get(IntPtrTy /*lpad_index*/, PtrTy /*lsda*/,
+                                        IntPtrTy /*selector*/);
+  auto *UnwindExceptionTy = StructType::get(I64Ty /* exception_class*/,
+                                            PtrTy /* exception_cleanup */);
   WasmEHPrepareImpl P(LPadContextTy, UnwindExceptionTy);
   bool Changed = P.runOnFunction(F);
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses ::all();
@@ -154,16 +161,16 @@ FunctionPass *llvm::createWasmEHPass() { return new WasmEHPrepare(); }
 
 bool WasmEHPrepare::doInitialization(Module &M) {
   IRBuilder<> IRB(M.getContext());
-  auto *I32Ty = IRB.getInt32Ty();
+  const DataLayout &DL = M.getDataLayout();
   auto *I64Ty = IRB.getInt64Ty();
   auto *PtrTy = IRB.getPtrTy();
-  P.LPadContextTy = StructType::get(I32Ty, // lpad_index
-                                    PtrTy, // lsda
-                                    I32Ty  // selector
+  auto *IntPtrTy = DL.getIntPtrType(M.getContext(), /*AddressSpace=*/0);
+  P.LPadContextTy = StructType::get(IntPtrTy, // lpad_index
+                                    PtrTy,    // lsda
+                                    IntPtrTy  // selector
   );
-  P.UnwindExceptionTy = StructType::get(I64Ty, /* exception_class*/
-                                        PtrTy  /* exception_cleanup */
-  );
+  P.UnwindExceptionTy = StructType::get(I64Ty /* exception_class*/,
+                                        PtrTy /* exception_cleanup */);
   return false;
 }
 
@@ -239,8 +246,7 @@ bool WasmEHPrepareImpl::prepareEHPads(Function &F) {
 
   if (!isScopedEHPersonality(Personality)) {
     report_fatal_error("Function '" + F.getName() +
-                       "' does not have a correct Wasm personality function "
-                       "'__gxx_personality_wasm0'");
+                       "' does not have a supported Wasm personality function");
   }
   assert(F.hasPersonalityFn() && "Personality function not found");
 
@@ -275,11 +281,15 @@ bool WasmEHPrepareImpl::prepareEHPads(Function &F) {
   // instruction selection.
   CatchF = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::wasm_catch);
 
-  auto *I32Ty = IRB.getInt32Ty();
-  auto *I64Ty = IRB.getInt64Ty();
-  auto *PtrTy = IRB.getPtrTy();
-  auto *PersPrototype =
-      FunctionType::get(I32Ty, {I32Ty, I32Ty, I64Ty, PtrTy, PtrTy}, false);
+  auto DL = F.getParent()->getDataLayout();
+
+  Int32Ty = IRB.getInt32Ty();
+  Int64Ty = IRB.getInt64Ty();
+  PtrTy = IRB.getPtrTy();
+  IntPtrTy = DL.getIntPtrType(M.getContext(), /*AddressSpace=*/0);
+
+  auto *PersPrototype = FunctionType::get(
+      Int32Ty, {Int32Ty, Int32Ty, Int64Ty, PtrTy, PtrTy}, false);
   PersonalityF =
       M.getOrInsertFunction(getEHPersonalityName(Personality), PersPrototype);
 
@@ -366,7 +376,7 @@ void WasmEHPrepareImpl::prepareEHPad(BasicBlock *BB, bool NeedPersonality,
   IRB.CreateStore(IRB.CreateCall(LSDAF), LSDAField);
 
   // Pseudocode: __wasm_lpad_context.selector = 0;
-  IRB.CreateStore(IRB.getInt32(0), SelectorField);
+  IRB.CreateStore(ConstantInt::get(IntPtrTy, 0), SelectorField);
 
   // Pseudocode: &exn->exception_class
   auto *ExceptionClassPtr = IRB.CreateConstInBoundsGEP2_32(
