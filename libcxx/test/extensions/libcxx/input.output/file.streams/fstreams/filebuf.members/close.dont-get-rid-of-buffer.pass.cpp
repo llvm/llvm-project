@@ -10,6 +10,8 @@
 // built library) from https://github.com/llvm/llvm-project/pull/168947.
 // UNSUPPORTED: using-built-library-before-llvm-22
 
+// UNSUPPORTED: no-localization, no-filesystem
+
 // <fstream>
 
 // basic_filebuf<charT,traits>* close();
