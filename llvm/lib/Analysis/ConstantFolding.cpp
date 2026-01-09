@@ -4288,7 +4288,7 @@ static Constant *ConstantFoldFixedVectorCall(
     }
     for (unsigned I = 0; I < Result.size(); I++) {
       int64_t IAdd = (int64_t)MulVector[I * 2] + (int64_t)MulVector[I * 2 + 1];
-      Result[I] = ConstantInt::get(Ty, IAdd);
+      Result[I] = ConstantInt::getSigned(Ty, IAdd, /*ImplicitTrunc=*/true);
     }
 
     return ConstantVector::get(Result);
