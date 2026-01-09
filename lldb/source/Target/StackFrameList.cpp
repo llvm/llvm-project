@@ -947,17 +947,17 @@ bool StackFrameList::IsPreviousFrameHidden(lldb_private::StackFrame &frame) {
   return frame_sp->IsHidden();
 }
 
-std::wstring StackFrameList::FrameMarker(lldb::StackFrameSP frame_sp,
-                                         lldb::StackFrameSP selected_frame_sp) {
+std::string StackFrameList::FrameMarker(lldb::StackFrameSP frame_sp,
+                                        lldb::StackFrameSP selected_frame_sp) {
   if (frame_sp == selected_frame_sp)
-    return Terminal::SupportsUnicode() ? L" * " : L"* ";
+    return Terminal::SupportsUnicode() ? u8" * " : u8"* ";
   else if (!Terminal::SupportsUnicode())
-    return L"  ";
+    return u8"  ";
   else if (IsPreviousFrameHidden(*frame_sp))
-    return L"﹉ ";
+    return u8"﹉ ";
   else if (IsNextFrameHidden(*frame_sp))
-    return L"﹍ ";
-  return L"   ";
+    return u8"﹍ ";
+  return u8"   ";
 }
 
 size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
@@ -983,7 +983,7 @@ size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
   StackFrameSP selected_frame_sp =
       m_thread.GetSelectedFrame(DoNoSelectMostRelevantFrame);
   std::string buffer;
-  std::wstring marker;
+  std::string marker;
   for (frame_idx = first_frame; frame_idx < last_frame; ++frame_idx) {
     frame_sp = GetFrameAtIndex(frame_idx);
     if (!frame_sp)
@@ -1006,11 +1006,9 @@ size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
             m_thread.GetID(), num_frames_displayed))
       break;
 
-    std::string marker_utf8;
-    llvm::convertWideToUTF8(marker, marker_utf8);
     if (!frame_sp->GetStatus(strm, show_frame_info,
                              num_frames_with_source > (first_frame - frame_idx),
-                             show_unique, marker_utf8))
+                             show_unique, marker))
       break;
     ++num_frames_displayed;
   }
