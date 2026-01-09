@@ -191,6 +191,7 @@ template <class T, class Allocator, class Predicate>
 #  include <__algorithm/min.h>
 #  include <__algorithm/move.h>
 #  include <__algorithm/move_backward.h>
+#  include <__algorithm/ranges_copy_n.h>
 #  include <__algorithm/remove.h>
 #  include <__algorithm/remove_if.h>
 #  include <__assert>
@@ -698,8 +699,16 @@ public:
       __assign_with_size_random_access(ranges::begin(__range), __n);
 
     } else if constexpr (ranges::forward_range<_Range> || ranges::sized_range<_Range>) {
-      auto __n = static_cast<size_type>(ranges::distance(__range));
-      __assign_with_size(ranges::begin(__range), __n);
+      auto __n     = ranges::distance(__range);
+      auto __first = ranges::begin(__range);
+
+      auto __result = std::ranges::copy_n(std::move(__first), std::min<size_t>(__n, size()), begin());
+
+      if (static_cast<size_type>(__n) > size()) {
+        __append_with_size(std::move(__result.in), __n - size());
+      } else {
+        __erase_to_end(__result.out);
+      }
 
     } else {
       __assign_with_sentinel(ranges::begin(__range), ranges::end(__range));
@@ -815,7 +824,11 @@ public:
 
   template <_ContainerCompatibleRange<_Tp> _Range>
   _LIBCPP_HIDE_FROM_ABI void append_range(_Range&& __range) {
-    insert_range(end(), std::forward<_Range>(__range));
+    if constexpr (ranges::forward_range<_Range> || ranges::sized_range<_Range>) {
+      __append_with_size(ranges::begin(__range), ranges::distance(__range));
+    } else {
+      __append_with_sentinel(ranges::begin(__range), ranges::end(__range));
+    }
   }
 #    endif
 
@@ -1201,7 +1214,7 @@ private:
 
   template <class _RandomAccessIterator>
   _LIBCPP_HIDE_FROM_ABI void __assign_with_size_random_access(_RandomAccessIterator __f, difference_type __n);
-  template <class _Iterator>
+  template <class _AlgPolicy, class _Iterator>
   _LIBCPP_HIDE_FROM_ABI void __assign_with_size(_Iterator __f, difference_type __n);
 
   template <class _Iterator, class _Sentinel>
@@ -1459,24 +1472,6 @@ deque<_Tp, _Allocator>::__assign_with_size_random_access(_RandomAccessIterator _
     __append_with_size(__l, __n - size());
   } else
     __erase_to_end(std::copy_n(__f, __n, begin()));
-}
-
-template <class _Tp, class _Allocator>
-template <class _Iterator>
-_LIBCPP_HIDE_FROM_ABI void deque<_Tp, _Allocator>::__assign_with_size(_Iterator __f, difference_type __n) {
-  if (static_cast<size_type>(__n) > size()) {
-    auto __added_size = __n - size();
-
-    auto __i = begin();
-    for (auto __count = size(); __count != 0; --__count) {
-      *__i++ = *__f++;
-    }
-
-    __append_with_size(__f, __added_size);
-
-  } else {
-    __erase_to_end(std::copy_n(__f, __n, begin()));
-  }
 }
 
 template <class _Tp, class _Allocator>
@@ -1803,7 +1798,7 @@ template <class _Iterator>
 _LIBCPP_HIDE_FROM_ABI typename deque<_Tp, _Allocator>::iterator
 deque<_Tp, _Allocator>::__insert_with_size(const_iterator __p, _Iterator __f, size_type __n) {
   __split_buffer<value_type, allocator_type> __buf(__n, 0, __alloc());
-  __buf.__construct_at_end_with_size(__f, __n);
+  __buf.__construct_at_end_with_size(std::move(__f), __n);
   typedef typename __split_buffer<value_type, allocator_type>::iterator __fwd;
   return insert(__p, move_iterator<__fwd>(__buf.begin()), move_iterator<__fwd>(__buf.end()));
 }
