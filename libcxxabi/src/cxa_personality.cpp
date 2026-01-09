@@ -1021,7 +1021,7 @@ static inline void get_landing_pad(__cxa_catch_temp_type &dest,
 }
 
 #ifdef __WASM_EXCEPTIONS__
-_Unwind_Reason_Code __gxx_personality_wasm0
+_Unwind_Reason_Code __gxx_wasm_personality_v0
 #elif defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)
 static _Unwind_Reason_Code __gxx_personality_imp
 #else
