@@ -763,7 +763,7 @@ namespace Limits {
     return n;
   }
   static_assert(dynarray<char>(5, 0) == 'f');
-
+  static_assert(dynarray<char>(5, 4) == 0);
 
 #if __LP64__
   template <typename T>
