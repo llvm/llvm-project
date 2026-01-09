@@ -4166,7 +4166,8 @@ LogicalResult CancellationPointOp::verify() {
                          << "inside a sections region";
   }
   if ((cct == ClauseCancellationConstructType::Taskgroup) &&
-      !mlir::isa<omp::TaskOp>(structuralParent)) {
+      (!mlir::isa<omp::TaskOp>(structuralParent) &&
+       !mlir::isa<omp::TaskloopOp>(structuralParent->getParentOp()))) {
     return emitOpError() << "cancellation point taskgroup must appear "
                          << "inside a task region";
   }
