@@ -1633,7 +1633,7 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
   AC.DefaultInitializeLiveInternals = false;
   AC.IndirectCalleeSpecializationCallback =
       [](Attributor &A, const AbstractAttribute &AA, CallBase &CB,
-            Function &Callee, unsigned NumAssumedCallees) {
+         Function &Callee, unsigned NumAssumedCallees) {
         return !AMDGPU::isEntryFunctionCC(Callee.getCallingConv()) &&
                (NumAssumedCallees <= IndirectCallSpecializationThreshold);
       };
