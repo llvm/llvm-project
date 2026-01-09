@@ -46,7 +46,8 @@ Symbol::Symbol(uint32_t symID, llvm::StringRef name, SymbolType type,
       m_demangled_is_synthesized(false),
       m_contains_linker_annotations(contains_linker_annotations),
       m_is_weak(false), m_type(type), m_mangled(name),
-      m_addr_range(section_sp, offset, size), m_flags(flags) {}
+      m_addr_range(section_sp, offset, size), m_reexport_info(),
+      m_flags(flags) {}
 
 Symbol::Symbol(uint32_t symID, const Mangled &mangled, SymbolType type,
                bool external, bool is_debug, bool is_trampoline,
@@ -61,7 +62,7 @@ Symbol::Symbol(uint32_t symID, const Mangled &mangled, SymbolType type,
       m_demangled_is_synthesized(false),
       m_contains_linker_annotations(contains_linker_annotations),
       m_is_weak(false), m_type(type), m_mangled(mangled), m_addr_range(range),
-      m_flags(flags) {}
+      m_reexport_info(), m_flags(flags) {}
 
 Symbol::Symbol(const Symbol &rhs)
     : SymbolContextScope(rhs), m_uid(rhs.m_uid), m_type_data(rhs.m_type_data),
@@ -73,7 +74,10 @@ Symbol::Symbol(const Symbol &rhs)
       m_demangled_is_synthesized(rhs.m_demangled_is_synthesized),
       m_contains_linker_annotations(rhs.m_contains_linker_annotations),
       m_is_weak(rhs.m_is_weak), m_type(rhs.m_type), m_mangled(rhs.m_mangled),
-      m_addr_range(rhs.m_addr_range), m_flags(rhs.m_flags) {}
+      m_addr_range(rhs.m_addr_range), m_reexport_info(), m_flags(rhs.m_flags) {
+  if (rhs.m_reexport_info)
+    m_reexport_info = std::make_unique<ReExportInfo>(*rhs.m_reexport_info);
+}
 
 const Symbol &Symbol::operator=(const Symbol &rhs) {
   if (this != &rhs) {
@@ -93,6 +97,8 @@ const Symbol &Symbol::operator=(const Symbol &rhs) {
     m_type = rhs.m_type;
     m_mangled = rhs.m_mangled;
     m_addr_range = rhs.m_addr_range;
+    if (rhs.m_reexport_info)
+      m_reexport_info = std::make_unique<ReExportInfo>(*rhs.m_reexport_info);
     m_flags = rhs.m_flags;
   }
   return *this;
@@ -171,47 +177,35 @@ ConstString Symbol::GetDisplayName() const {
 }
 
 ConstString Symbol::GetReExportedSymbolName() const {
-  if (m_type == eSymbolTypeReExported) {
-    // For eSymbolTypeReExported, the "const char *" from a ConstString is used
-    // as the offset in the address range base address. We can then make this
-    // back into a string that is the re-exported name.
-    intptr_t str_ptr = m_addr_range.GetBaseAddress().GetOffset();
-    if (str_ptr != 0)
-      return ConstString((const char *)str_ptr);
-    else
-      return GetName();
-  }
-  return ConstString();
+  if (!m_reexport_info)
+    return ConstString();
+
+  return m_reexport_info->name;
 }
 
 FileSpec Symbol::GetReExportedSymbolSharedLibrary() const {
-  if (m_type == eSymbolTypeReExported) {
-    // For eSymbolTypeReExported, the "const char *" from a ConstString is used
-    // as the offset in the address range base address. We can then make this
-    // back into a string that is the re-exported name.
-    intptr_t str_ptr = m_addr_range.GetByteSize();
-    if (str_ptr != 0)
-      return FileSpec((const char *)str_ptr);
-  }
-  return FileSpec();
+  if (!m_reexport_info)
+    return FileSpec();
+
+  return m_reexport_info->library;
 }
 
 void Symbol::SetReExportedSymbolName(ConstString name) {
   SetType(eSymbolTypeReExported);
-  // For eSymbolTypeReExported, the "const char *" from a ConstString is used
-  // as the offset in the address range base address.
-  m_addr_range.GetBaseAddress().SetOffset((uintptr_t)name.GetCString());
+  if (!m_reexport_info)
+    m_reexport_info = std::make_unique<ReExportInfo>();
+  m_reexport_info->name = name;
 }
 
 bool Symbol::SetReExportedSymbolSharedLibrary(const FileSpec &fspec) {
-  if (m_type == eSymbolTypeReExported) {
-    // For eSymbolTypeReExported, the "const char *" from a ConstString is used
-    // as the offset in the address range base address.
-    m_addr_range.SetByteSize(
-        (uintptr_t)ConstString(fspec.GetPath().c_str()).GetCString());
-    return true;
-  }
-  return false;
+  if (m_type != eSymbolTypeReExported)
+    return false;
+
+  if (!m_reexport_info)
+    m_reexport_info = std::make_unique<ReExportInfo>();
+
+  m_reexport_info->library = fspec;
+  return true;
 }
 
 uint32_t Symbol::GetSiblingIndex() const {
@@ -292,12 +286,12 @@ void Symbol::Dump(Stream *s, Target *target, uint32_t index,
         "                                                         0x%8.8x %s",
         m_flags, name.AsCString(""));
 
-    ConstString reexport_name = GetReExportedSymbolName();
-    intptr_t shlib = m_addr_range.GetByteSize();
+    const FileSpec &shlib = GetReExportedSymbolSharedLibrary();
     if (shlib)
-      s->Printf(" -> %s`%s\n", (const char *)shlib, reexport_name.GetCString());
+      s->Printf(" -> %s`%s\n", shlib.GetPath().c_str(),
+                GetReExportedSymbolName().GetCString());
     else
-      s->Printf(" -> %s\n", reexport_name.GetCString());
+      s->Printf(" -> %s\n", GetReExportedSymbolName().GetCString());
   } else {
     const char *format =
         m_size_is_sibling
@@ -431,7 +425,7 @@ void Symbol::DumpSymbolContext(Stream *s) {
 lldb::addr_t Symbol::GetByteSize() const { return m_addr_range.GetByteSize(); }
 
 Symbol *Symbol::ResolveReExportedSymbolInModuleSpec(
-    Target &target, ConstString &reexport_name, ModuleSpec &module_spec,
+    Target &target, ConstString reexport_name, ModuleSpec &module_spec,
     ModuleList &seen_modules) const {
   ModuleSP module_sp;
   if (module_spec.GetFileSpec()) {

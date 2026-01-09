@@ -13,6 +13,7 @@
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/SymbolContextScope.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-enumerations.h"
@@ -312,11 +313,16 @@ protected:
   // modules we've already seen to make sure we don't get caught in a cycle.
 
   Symbol *ResolveReExportedSymbolInModuleSpec(
-      Target &target, ConstString &reexport_name,
+      Target &target, ConstString reexport_name,
       lldb_private::ModuleSpec &module_spec,
       lldb_private::ModuleList &seen_modules) const;
 
   void SynthesizeNameIfNeeded() const;
+
+  struct ReExportInfo {
+    ConstString name;
+    FileSpec library;
+  };
 
   uint32_t m_uid =
       UINT32_MAX;           // User ID (usually the original symbol table index)
@@ -347,6 +353,9 @@ protected:
   AddressRange m_addr_range; // Contains the value, or the section offset
                              // address when the value is an address in a
                              // section, and the size (if any)
+  /// Stores re-export information if this symbol is of type
+  /// eSymbolTypeReExported.
+  std::unique_ptr<ReExportInfo> m_reexport_info;
   uint32_t m_flags = 0; // A copy of the flags from the original symbol table,
                         // the ObjectFile plug-in can interpret these
 };
