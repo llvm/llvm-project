@@ -5414,6 +5414,13 @@ static bool isInStreamingCallSiteRegion(MachineBasicBlock &MBB,
   return false;
 }
 
+/// Returns true if in a streaming call site region without SME-FA64.
+static bool mustAvoidNeonAtMBBI(const AArch64Subtarget &Subtarget,
+                                MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator I) {
+  return isInStreamingCallSiteRegion(MBB, I) && !Subtarget.hasSMEFA64();
+}
+
 void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator I,
                                    const DebugLoc &DL, Register DestReg,
@@ -5704,7 +5711,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     // With +sme-fa64, NEON is legal in streaming mode so we can use it.
     if ((Subtarget.isSVEorStreamingSVEAvailable() &&
          !Subtarget.isNeonAvailable()) ||
-        (!Subtarget.hasSMEFA64() && isInStreamingCallSiteRegion(MBB, I))) {
+        mustAvoidNeonAtMBBI(Subtarget, MBB, I)) {
       BuildMI(MBB, I, DL, get(AArch64::ORR_ZZZ))
           .addReg(AArch64::Z0 + (DestReg - AArch64::Q0), RegState::Define)
           .addReg(AArch64::Z0 + (SrcReg - AArch64::Q0))
@@ -5735,7 +5742,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     if (Subtarget.hasZeroCycleRegMoveFPR128() &&
         !Subtarget.hasZeroCycleRegMoveFPR64() &&
         !Subtarget.hasZeroCycleRegMoveFPR32() && Subtarget.isNeonAvailable() &&
-        (!isInStreamingCallSiteRegion(MBB, I) || Subtarget.hasSMEFA64())) {
+        !mustAvoidNeonAtMBBI(Subtarget, MBB, I)) {
       MCRegister DestRegQ = RI.getMatchingSuperReg(DestReg, AArch64::dsub,
                                                    &AArch64::FPR128RegClass);
       MCRegister SrcRegQ = RI.getMatchingSuperReg(SrcReg, AArch64::dsub,
@@ -5763,7 +5770,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     if (Subtarget.hasZeroCycleRegMoveFPR128() &&
         !Subtarget.hasZeroCycleRegMoveFPR64() &&
         !Subtarget.hasZeroCycleRegMoveFPR32() && Subtarget.isNeonAvailable() &&
-        (!isInStreamingCallSiteRegion(MBB, I) || Subtarget.hasSMEFA64())) {
+        !mustAvoidNeonAtMBBI(Subtarget, MBB, I)) {
       MCRegister DestRegQ = RI.getMatchingSuperReg(DestReg, AArch64::ssub,
                                                    &AArch64::FPR128RegClass);
       MCRegister SrcRegQ = RI.getMatchingSuperReg(SrcReg, AArch64::ssub,
@@ -5805,7 +5812,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     if (Subtarget.hasZeroCycleRegMoveFPR128() &&
         !Subtarget.hasZeroCycleRegMoveFPR64() &&
         !Subtarget.hasZeroCycleRegMoveFPR32() && Subtarget.isNeonAvailable() &&
-        (!isInStreamingCallSiteRegion(MBB, I) || Subtarget.hasSMEFA64())) {
+        !mustAvoidNeonAtMBBI(Subtarget, MBB, I)) {
       MCRegister DestRegQ = RI.getMatchingSuperReg(DestReg, AArch64::hsub,
                                                    &AArch64::FPR128RegClass);
       MCRegister SrcRegQ = RI.getMatchingSuperReg(SrcReg, AArch64::hsub,
@@ -5847,7 +5854,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     if (Subtarget.hasZeroCycleRegMoveFPR128() &&
         !Subtarget.hasZeroCycleRegMoveFPR64() &&
         !Subtarget.hasZeroCycleRegMoveFPR64() && Subtarget.isNeonAvailable() &&
-        (!isInStreamingCallSiteRegion(MBB, I) || Subtarget.hasSMEFA64())) {
+        !mustAvoidNeonAtMBBI(Subtarget, MBB, I)) {
       MCRegister DestRegQ = RI.getMatchingSuperReg(DestReg, AArch64::bsub,
                                                    &AArch64::FPR128RegClass);
       MCRegister SrcRegQ = RI.getMatchingSuperReg(SrcReg, AArch64::bsub,
