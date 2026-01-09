@@ -27,10 +27,10 @@ int main(void) {
 // CHECK:  dataDelete
 // CHECK:  llvm_omp_target_free_host
 // NDEBG: main
-// DEBUG:  main {{.*}}free_wrong_ptr_kind.cpp:26
+// DEBUG:  main {{.*}}free_wrong_ptr_kind.cpp:[[@LINE-7]]
 //
 // CHECK: Last allocation of size 8 -> device pointer
 // CHECK:  dataAlloc
 // CHECK:  llvm_omp_target_alloc_shared
 // NDEBG:  main
-// DEBUG:  main {{.*}}free_wrong_ptr_kind.cpp:25
+// DEBUG:  main {{.*}}free_wrong_ptr_kind.cpp:[[@LINE-14]]
