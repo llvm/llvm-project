@@ -2212,9 +2212,9 @@ public:
   /// Returns the start value of the induction.
   VPIRValue *getStartValue() const { return cast<VPIRValue>(getOperand(0)); }
 
-  VPValue *getSplatVFValue() {
-    // If the recipe has been unrolled return the VPValue for the induction
-    // increment.
+  /// If the recipe has been unrolled, return the VPValue for the induction
+  /// increment, otherwise return null.
+  VPValue *getSplatVFValue() const {
     return isUnrolled() ? getOperand(getNumOperands() - 2) : nullptr;
   }
 

@@ -168,6 +168,22 @@ func.func @test_dim(%arg0: tensor<1x2x3x4xi32>) -> !tosa.shape<1> {
 }
 
 // -----
+// CHECK-LABEL: test_exp2_shape
+func.func @test_exp2_shape() -> !tosa.shape<4> {
+  %a = tosa.const_shape {values = dense<[5, 7, 10, 1]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %b = tosa.exp2_shape %a : (!tosa.shape<4>) -> !tosa.shape<4>
+  return %b : !tosa.shape<4>
+}
+
+// -----
+// CHECK-LABEL: test_log2_ceil_shape
+func.func @test_log2_ceil_shape() -> !tosa.shape<4> {
+  %a = tosa.const_shape {values = dense<[5, 7, 10, 1]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %b = tosa.log2_ceil_shape %a : (!tosa.shape<4>) -> !tosa.shape<4>
+  return %b : !tosa.shape<4>
+}
+
+// -----
 
 // CHECK-LABEL: test_mod_shape
 func.func @test_mod_shape() -> !tosa.shape<3> {

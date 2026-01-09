@@ -34,6 +34,21 @@ cbuffer D : register(b 2, space3) {}
 // expected-error@+1 {{expected <numeric_constant>}}
 cbuffer E : register(u-1) {};
 
+// expected-error@+1 {{expected <numeric_constant>}}
+cbuffer F : register(u) {}; 
+
+// expected-error@+1 {{binding type 'u' only applies to UAV resources}}
+cbuffer G : register(u13) {}; 
+
+// expected-error@+1 {{binding type 'c' only applies to numeric variables in the global scope}}
+cbuffer H : register(c0) {};
+
+// expected-error@+1  {{binding type 't' only applies to SRV resources}}
+cbuffer I : register(t0) {}
+
+// expected-error@+1  {{binding type 'b' only applies to constant buffer resources}}
+tbuffer J : register(b0) {};
+
 // expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
 static MyTemplatedSRV<float> U : register(u5);
 

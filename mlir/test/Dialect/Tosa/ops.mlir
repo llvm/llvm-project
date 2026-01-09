@@ -1482,6 +1482,30 @@ func.func @test_slice_shape_dynamic(%arg0: tensor<1xi32>, %arg1: tensor<1xi32>) 
 }
 
 // -----
+// CHECK-LABEL: test_exp2_shape
+func.func @test_exp2_shape() -> !tosa.shape<4> {
+  %a = tosa.const_shape {values = dense<[5, 7, 10, 1]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %b = tosa.exp2_shape %a : (!tosa.shape<4>) -> !tosa.shape<4>
+  return %b : !tosa.shape<4>
+}
+
+// -----
+// CHECK-LABEL: test_log2_ceil_shape
+func.func @test_log2_ceil_shape() -> !tosa.shape<4> {
+  %a = tosa.const_shape {values = dense<[5, 7, 10, 1]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %b = tosa.log2_ceil_shape %a : (!tosa.shape<4>) -> !tosa.shape<4>
+  return %b : !tosa.shape<4>
+}
+
+// -----
+// CHECK-LABEL: test_log2_floor_shape
+func.func @test_log2_floor_shape() -> !tosa.shape<4> {
+  %a = tosa.const_shape {values = dense<[5, 7, 10, 1]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %b = tosa.log2_floor_shape %a : (!tosa.shape<4>) -> !tosa.shape<4>
+  return %b : !tosa.shape<4>
+}
+
+// -----
 // CHECK-LABEL: test_max_shape
 func.func @test_max_shape() -> !tosa.shape<4> {
   %a = tosa.const_shape {values = dense<[5, 7, 10, 1]> : tensor<4xindex>} : () -> !tosa.shape<4>
