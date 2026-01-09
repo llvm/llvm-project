@@ -2117,10 +2117,14 @@ private:
 
   ExprResult ParseUnevaluatedStringInAttribute(const IdentifierInfo &AttrName);
 
-  bool
-  ParseAttributeArgumentList(const clang::IdentifierInfo &AttrName,
-                             SmallVectorImpl<Expr *> &Exprs,
-                             ParsedAttributeArgumentsProperties ArgsProperties);
+  /// Parses a comma-delimited list of arguments of an attribute \p AttrName,
+  /// filling \p Exprs. \p ArgsProperties specifies which of the arguments
+  /// should be parsed as unevaluated string literals. \p Arg is the number
+  /// of arguments parsed before calling / this function (the index of the
+  /// argument to be parsed next).
+  bool ParseAttributeArgumentList(
+      const IdentifierInfo &AttrName, SmallVectorImpl<Expr *> &Exprs,
+      ParsedAttributeArgumentsProperties ArgsProperties, unsigned Arg);
 
   /// Parses syntax-generic attribute arguments for attributes which are
   /// known to the implementation, and adds them to the given ParsedAttributes
