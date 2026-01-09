@@ -27,8 +27,12 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
     def spawn_and_wait(self, program, delay):
         time.sleep(delay)
         proc = self.spawn(program=program)
-        # Wait for either the process to exit or the event to be set
+        start_time = time.time()
+        # Wait for either the process to exit or the event to be set.
         while proc.poll() is None and not self.spawn_event.is_set():
+            elapsed = time.time() - start_time
+            if elapsed >= self.DEFAULT_TIMEOUT:
+                break
             time.sleep(0.1)
         proc.kill()
         proc.wait()
