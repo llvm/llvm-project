@@ -15,6 +15,7 @@
 #include "AMDGPU.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Constants.h"
@@ -438,5 +439,13 @@ AMDGPULowerKernelAttributesPass::run(Function &F, FunctionAnalysisManager &AM) {
     }
   }
 
-  return !Changed ? PreservedAnalyses::all() : PreservedAnalyses::none();
+  PreservedAnalyses PA = PreservedAnalyses::all();
+  if (Changed) {
+    // The call graph is unchanged after this pass.
+    PA = PreservedAnalyses::none();
+    PA.preserveSet<AllAnalysesOn<LazyCallGraph::SCC>>();
+    PA.preserve<LazyCallGraphAnalysis>();
+    PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  }
+  return PA;
 }
