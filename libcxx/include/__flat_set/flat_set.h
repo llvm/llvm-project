@@ -688,7 +688,8 @@ private:
   // is no invariant state to preserve
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __sort_and_unique() {
     ranges::sort(__keys_, __compare_);
-    auto __dup_start = std::__unchecked_unique<_RangeAlgPolicy>(__keys_, __key_not_less(__compare_)).begin();
+    auto __dup_start = std::__unchecked_unique<_RangeAlgPolicy>(
+        __keys_.begin(), __keys_.end(), __key_not_less(__compare_)).begin();
     __keys_.erase(__dup_start, __keys_.end());
   }
 
@@ -706,7 +707,8 @@ private:
       }
       ranges::inplace_merge(__keys_.begin(), __keys_.begin() + __old_size, __keys_.end(), __compare_);
 
-      auto __dup_start = std::__unchecked_unique<_RangeAlgPolicy>(__keys_, __key_not_less(__compare_)).begin();
+      auto __dup_start = std::__unchecked_unique<_RangeAlgPolicy>(
+          __keys_.begin(), __keys_.end(), __key_not_less(__compare_)).begin();
       __keys_.erase(__dup_start, __keys_.end());
     }
     __on_failure.__complete();
