@@ -416,10 +416,17 @@ PlatformRemoteGDBServer::DebugProcess(ProcessLaunchInfo &launch_info,
         error = Status::FromErrorStringWithFormat(
             "unable to launch a GDB server on '%s'", GetHostname());
       } else {
-        // The darwin always currently uses the GDB remote debugger plug-in
-        // so even when debugging locally we are debugging remotely!
+        // By default, we always use the GDB remote debugger plug-in.
+        // Even when debugging locally, we are debugging remotely.
+        llvm::StringRef process_plugin = "gdb-remote";
+
+        // However, if a process plugin is specified by the attach info, we
+        // should honor it.
+        if (!launch_info.GetProcessPluginName().empty())
+          process_plugin = launch_info.GetProcessPluginName();
+
         process_sp = target.CreateProcess(launch_info.GetListener(),
-                                          "gdb-remote", nullptr, true);
+                                          process_plugin, nullptr, true);
 
         if (process_sp) {
           process_sp->HijackProcessEvents(launch_info.GetHijackListener());
