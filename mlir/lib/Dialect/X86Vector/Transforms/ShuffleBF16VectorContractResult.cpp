@@ -26,6 +26,32 @@ using namespace mlir;
 using namespace mlir::vector;
 using namespace mlir::x86vector;
 
+// Shuffle the output of BF16 type flat layout vector.contract operations
+//
+// For example:
+// ```
+//   %1 = vector.load -> vector<1x1xbf16>
+//   %2 = vector.load from memref (%m1) -> vector<1x8xbf16>
+//   %3 = vector.load from memref (%m1) -> vector<1x8xbf16>
+//   %4 = vector.contract %1, %2, %arg0 ->  vector<1x8xf32>
+//   %5 = vector.contract %1, %3, %arg1 ->  vector<1x8xf32>
+//   vector.store %4, %m1
+//   vector.store %5, %m1
+// ```
+// to
+// ```
+//   %1 = vector.load -> vector<1x1xbf16>
+//   %2 = vector.load from memref (%m1) -> vector<1x8xbf16>
+//   %3 = vector.load from memref (%m1) -> vector<1x8xbf16>
+//   %4 = vector.shuffle %arg0, %arg1 [0, 8, 1, 9, 2, 10, 3, 11]
+//   %5 = vector.shuffle %arg0, %arg1 [4, 12, 5, 13, 6, 14, 7, 15]
+//   %6 = vector.contract %1, %2, %4 ->  vector<1x8xf32>
+//   %7 = vector.contract %1, %3, %5 ->  vector<1x8xf32>
+//   %8 = vector.shuffle %6, %7 [0, 8, 1, 9, 2, 10, 3, 11]
+//   %9 = vector.shuffle %6, %7 [4, 12, 5, 13, 6, 14, 7, 15]
+//   vector.store %8, %m1
+//   vector.store %9, %m1
+//```
 struct ShuffleBF16VectorContractResult
     : public OpRewritePattern<vector::ContractionOp> {
   using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
@@ -85,22 +111,15 @@ struct ShuffleBF16VectorContractResult
     llvm::copy_if(rhsShape, std::back_inserter(nonUnitDimRhs),
                   [](int64_t dim) { return dim != 1; });
 
-    if ((nonUnitDimValue == 16) && (nonUnitDimLhs.size() - 1) > 0 &&
-        (nonUnitDimRhs.size() - 1) > 0)
-      return rewriter.notifyMatchFailure(contractOp,
-                                         "Excepts unit dimensions for either "
-                                         "LHS or RHS shape.");
-    if (nonUnitDimValue == 8 && nonUnitDimLhs.size() > 0 &&
-        nonUnitDimRhs.size() > 0)
-      return rewriter.notifyMatchFailure(contractOp,
-                                         "Excepts unit dimensions for either "
-                                         "LHS or RHS shape.");
-
     vector::ContractionOp pairContractOp;
-    bool rhsHasMultipleNonUnitDims = nonUnitDimValue == 16
-                                         ? (nonUnitDimRhs.size() - 1) > 0
-                                         : nonUnitDimRhs.size() > 0;
+    bool rhsHasMultipleNonUnitDims =
+        nonUnitDimRhs.size() > nonUnitDimLhs.size();
 
+    // Get the pair vector.contract operation. The pair is decided on:
+    //  (1) - the unitDim operand Lhs or Rhs should be same,
+    //  (2) - the defining source memref should be same for nonUnitDim
+    //  operation, (3) - the nonUnit dim offset difference between the
+    //  vector.contracts should be 8.
     Operation *nextOp = contractOp;
     while ((nextOp = nextOp->getNextNode())) {
       auto contOp = dyn_cast<vector::ContractionOp>(nextOp);
@@ -116,26 +135,50 @@ struct ShuffleBF16VectorContractResult
     }
 
     if (!pairContractOp)
-      return failure();
+      return rewriter.notifyMatchFailure(
+          contractOp, "Coudn't find pair contract operation for shuffling");
 
+    // Trace back to the load or transfer_read operations of the contract
+    // accumulators.
     Operation *accReadOp0 =
         traceToVectorReadLikeParentOperation(contractOp.getAcc());
     Operation *accReadOp1 =
         traceToVectorReadLikeParentOperation(pairContractOp.getAcc());
 
+    // Iterate dowm to find the users of contact operations until it is store or
+    // transfer_write.
     Operation *resultWriteOp0 =
         traceToVectorWriteLikeUserOperation(contractOp.getResult());
     Operation *resultWriteOp1 =
         traceToVectorWriteLikeUserOperation(pairContractOp.getResult());
 
     if (!accReadOp0 || !accReadOp1)
-      return failure();
+      return rewriter.notifyMatchFailure(
+          contractOp,
+          "Operands doesn't have load or transfer_read as it's parent op");
 
     if (!resultWriteOp0 || !resultWriteOp1)
-      return failure();
+      return rewriter.notifyMatchFailure(
+          contractOp, "The use of contract operations are neither vector.store "
+                      "or transfer_write");
 
+    if (contractOp->getBlock() == accReadOp1->getBlock() &&
+        contractOp->isBeforeInBlock(accReadOp1))
+      return rewriter.notifyMatchFailure(
+          contractOp, "The load/read operation of pair contract operation is "
+                      "after the contractOp");
+
+    if (pairContractOp->getBlock() == resultWriteOp0->getBlock() &&
+        resultWriteOp0->isBeforeInBlock(pairContractOp))
+      return rewriter.notifyMatchFailure(
+          contractOp, "The store/write operation of contract operation is "
+                      "before the pair contract operation");
+
+    // Shuffle the accumulators of the contract operations.
     shuffleAfterReadLikeOp(rewriter, accReadOp0, accReadOp1, contractOp,
                            pairContractOp, nonUnitDimValue, accTy);
+
+    // Shuffle the output of contract operations before it's use.
     shuffleBeforeWriteLikeOp(rewriter, resultWriteOp0, resultWriteOp1,
                              nonUnitDimValue, accTy);
 
