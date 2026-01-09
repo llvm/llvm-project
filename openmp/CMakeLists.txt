@@ -158,8 +158,8 @@ else()
 endif()
 
 # Use the current compiler target to determine the appropriate runtime to build.
-if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx" OR
-   "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgcn|^nvptx")
+if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx|^spirv64" OR
+   "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgcn|^nvptx|^spirv64")
   add_subdirectory(device)
 else()
   add_subdirectory(module)
