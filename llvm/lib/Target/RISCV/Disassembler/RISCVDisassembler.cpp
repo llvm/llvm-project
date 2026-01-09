@@ -836,9 +836,12 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   if (Result != MCDisassembler::Fail)
     return Result;
 
-  // If bits [4:2] are 0b111 this might be a 48-bit or larger instruction.
-  if ((Bytes[0] & 0b1'1100) != 0b1'1100)
+  // If bits [4:2] are 0b111 this might be a 48-bit or larger instruction,
+  // otherwise assume it's an unknown 32-bit instruction.
+  if ((Bytes[0] & 0b1'1100) != 0b1'1100) {
+    Size = Bytes.size() >= 4 ? 4 : 0;
     return MCDisassembler::Fail;
+  }
 
   // 48-bit instructions are encoded as 0bxx011111.
   if ((Bytes[0] & 0b11'1111) == 0b01'1111)
