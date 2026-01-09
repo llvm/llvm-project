@@ -2406,7 +2406,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
   }
   Value *TaskDupFn = *TaskDupFnOrErr;
 
-  OI->PostOutlineCB = [this, Ident, LBVal, UBVal, StepVal, Untied,
+    OI->PostOutlineCB = [this, Ident, LBVal, UBVal, StepVal, Untied,
                       TaskloopAllocaBB, CLI, Loc, TaskDupFn, ToBeDeleted,
                       IfCond, GrainSize, NoGroup, Sched, FakeLB, FakeUB,
                       FakeStep, Final, Mergeable,

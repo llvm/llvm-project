@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Validate if TOSA dialect input matchs with the specification for given
+// Validate if TOSA dialect input matches with the specification for given
 // requirements.
 //
 //===----------------------------------------------------------------------===//
@@ -708,6 +708,8 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_RANKS(ConcatShape);
   CHECK_RANKS(DivCeilShape);
   CHECK_RANKS(DivFloorShape);
+  CHECK_RANKS(MaxShape);
+  CHECK_RANKS(MinShape);
   CHECK_RANKS(ModShape);
   CHECK_RANKS(MulShape);
   CHECK_RANKS(SliceShape);

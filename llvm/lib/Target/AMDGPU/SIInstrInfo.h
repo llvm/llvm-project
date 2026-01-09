@@ -1595,6 +1595,8 @@ public:
   bool isBasicBlockPrologue(const MachineInstr &MI,
                             Register Reg = Register()) const override;
 
+  bool canAddToBBProlog(const MachineInstr &MI) const;
+
   MachineInstr *createPHIDestinationCopy(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator InsPt,
                                          const DebugLoc &DL, Register Src,
