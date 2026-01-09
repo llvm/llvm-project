@@ -253,6 +253,8 @@ private:
       const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG &DAG) const;
 
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
+
+  bool softPromoteHalfType() const override { return true; }
 };
 } // namespace llvm
 
