@@ -337,14 +337,28 @@ AMDGPULowerVGPREncoding::handleCoissue(MachineBasicBlock::instr_iterator I) {
   return Prev;
 }
 
+/// Convert mode value from S_SET_VGPR_MSB format to MODE register format.
+/// S_SET_VGPR_MSB uses: (src0[0-1], src1[2-3], src2[4-5], dst[6-7])
+/// MODE register uses:  (dst[0-1], src0[2-3], src1[4-5], src2[6-7])
+static int64_t convertModeToSetregFormat(int64_t Mode) {
+  unsigned Src0 = (Mode >> 0) & 0x3;
+  unsigned Src1 = (Mode >> 2) & 0x3;
+  unsigned Src2 = (Mode >> 4) & 0x3;
+  unsigned Dst = (Mode >> 6) & 0x3;
+  return (Dst << 0) | (Src0 << 2) | (Src1 << 4) | (Src2 << 6);
+}
+
 bool AMDGPULowerVGPREncoding::updateSetregModeImm(MachineInstr &MI,
                                                   int64_t ModeValue) {
   assert(MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32);
 
+  // Convert from S_SET_VGPR_MSB format to MODE register format
+  int64_t SetregMode = convertModeToSetregFormat(ModeValue);
+
   MachineOperand *ImmOp = TII->getNamedOperand(MI, AMDGPU::OpName::imm);
   int64_t OldImm = ImmOp->getImm();
   int64_t NewImm =
-      (OldImm & ~AMDGPU::Hwreg::VGPR_MSB_MASK) | (ModeValue << VGPRMSBShift);
+      (OldImm & ~AMDGPU::Hwreg::VGPR_MSB_MASK) | (SetregMode << VGPRMSBShift);
   ImmOp->setImm(NewImm);
   return NewImm != OldImm;
 }
@@ -377,10 +391,13 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
 
   // Case 2: Size > 12 - the original instruction uses bits beyond 11, so we
   // cannot arbitrarily modify imm32[12:19]. Check if it already matches VGPR
-  // MSBs.
+  // MSBs. Note: imm32[12:19] is in MODE register format, while ModeValue is
+  // in S_SET_VGPR_MSB format, so we need to convert before comparing.
   MachineOperand *ImmOp = TII->getNamedOperand(MI, AMDGPU::OpName::imm);
   assert(ImmOp && "ImmOp must be present");
-  if (((ImmOp->getImm() & VGPR_MSB_MASK) >> VGPRMSBShift) == ModeValue) {
+  int64_t ImmBits12To19 = (ImmOp->getImm() & VGPR_MSB_MASK) >> VGPRMSBShift;
+  int64_t SetregModeValue = convertModeToSetregFormat(ModeValue);
+  if (ImmBits12To19 == SetregModeValue) {
     // Already correct, but we must invalidate MostRecentModeSet because this
     // instruction will overwrite mode[12:19]. We can't update this instruction
     // via piggybacking (bits[12:19] are meaningful), so if CurrentMode changes,
