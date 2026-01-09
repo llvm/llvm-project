@@ -8743,8 +8743,9 @@ void BoUpSLP::buildReorderableOperands(
         continue;
       if (UserTE->getOpcode() == Instruction::InsertElement && I == 0)
         continue;
-      if (UserTE->getOpcode() == Instruction::Store &&
-          UserTE->State == TreeEntry::Vectorize && I == 1)
+      if (UserTE->getOpcode() == Instruction::Store && I == 1 &&
+          (UserTE->State == TreeEntry::Vectorize ||
+           UserTE->State == TreeEntry::StridedVectorize))
         continue;
       if (UserTE->getOpcode() == Instruction::Load &&
           (UserTE->State == TreeEntry::Vectorize ||
@@ -10648,8 +10649,14 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
         Ptr0 = PointerOps[CurrentOrder.front()];
         PtrN = PointerOps[CurrentOrder.back()];
       }
+      Align CommonAlignment = computeCommonAlignment<StoreInst>(VL0);
+
       std::optional<int64_t> Dist =
           getPointersDiff(ScalarTy, Ptr0, ScalarTy, PtrN, *DL, *SE);
+      if (analyzeConstantStrideCandidate(PointerOps, ScalarTy, CommonAlignment,
+                                         CurrentOrder, *Dist, Ptr0, PtrN,
+                                         SPtrInfo))
+        return TreeEntry::StridedVectorize;
       // Check that the sorted pointer operands are consecutive.
       if (static_cast<uint64_t>(*Dist) == VL.size() - 1)
         return TreeEntry::Vectorize;
@@ -12294,6 +12301,19 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       return;
     }
     case Instruction::Store: {
+      if (State == TreeEntry::StridedVectorize) {
+        TreeEntry *TE =
+            newTreeEntry(VL, TreeEntry::StridedVectorize, Bundle, S,
+                         UserTreeIdx, ReuseShuffleIndices, CurrentOrder);
+        TreeEntryToStridedPtrInfoMap[TE] = SPtrInfo;
+        LLVM_DEBUG(
+            dbgs() << "SLP: added a new TreeEntry (strided StoreInst).\n";
+            TE->dump());
+        TE->setOperands(Operands);
+        buildTreeRec(TE->getOperand(0), Depth + 1, {TE, 0});
+        return;
+      }
+
       bool Consecutive = CurrentOrder.empty();
       if (!Consecutive)
         fixupOrderingIndices(CurrentOrder);
@@ -20556,12 +20576,21 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         }
         Align CommonAlignment = computeCommonAlignment<StoreInst>(E->Scalars);
         Type *StrideTy = DL->getIndexType(SI->getPointerOperandType());
+        Value *NewStride;
+        if (TreeEntryToStridedPtrInfoMap.contains(E)) {
+          Value *Stride = TreeEntryToStridedPtrInfoMap[E].StrideVal;
+          NewStride =
+              Builder.CreateIntCast(Stride, StrideTy, /*isSigned=*/true);
+        } else
+          NewStride = ConstantInt::getSigned(StrideTy, -1);
+        Value *StrideVal = Builder.CreateMul(
+            NewStride,
+            ConstantInt::getSigned(
+                StrideTy, static_cast<int>(DL->getTypeAllocSize(ScalarTy))));
         auto *Inst = Builder.CreateIntrinsic(
             Intrinsic::experimental_vp_strided_store,
             {VecTy, Ptr->getType(), StrideTy},
-            {VecValue, Ptr,
-             ConstantInt::getSigned(
-                 StrideTy, -static_cast<int>(DL->getTypeAllocSize(ScalarTy))),
+            {VecValue, Ptr, StrideVal,
              Builder.getAllOnesMask(VecTy->getElementCount()),
              Builder.getInt32(E->Scalars.size())});
         Inst->addParamAttr(
@@ -23886,8 +23915,11 @@ bool SLPVectorizerPass::vectorizeStores(
   bool Changed = false;
 
   auto TryToVectorize = [&](const RelatedStoreInsts::DistToInstMap &StoreSeq) {
-    auto VectorizeOperands = [&](BoUpSLP::ValueList Operands) -> void {
+    auto VectorizeOperands = [&](BoUpSLP::ValueList &Operands,
+                                 bool Strided) -> void {
       if (Operands.size() <= 1 ||
+          (Operands.size() == 2 &&
+           Strided) || // Any 2 elements can be formed into strided load
           !Visited
                .insert({Operands.front(),
                         cast<StoreInst>(Operands.front())->getValueOperand(),
@@ -24160,10 +24192,44 @@ bool SLPVectorizerPass::vectorizeStores(
         if (Idx != StoreSeq.size() - 1)
           continue;
       }
-      VectorizeOperands(Operands);
+      VectorizeOperands(Operands, /*Strided=*/false);
 
       Operands.clear();
       Operands.push_back(Stores[InstIdx]);
+      PrevDist = Dist;
+    }
+
+    Operands.clear();
+    int64_t PrevStride = -1;
+    PrevDist = -1;
+    StoreInst *PrevStore = nullptr;
+    for (auto [Idx, Data] : enumerate(StoreSeq)) {
+      auto &[Dist, InstIdx] = Data;
+      if (R.isDeleted(Stores[InstIdx])) {
+        if (Idx == StoreSeq.size() - 1)
+          VectorizeOperands(Operands, /*Strided=*/true);
+        continue;
+      }
+      if (PrevStride == -1 || (Dist - PrevDist == PrevStride)) {
+        Operands.push_back(Stores[InstIdx]);
+        PrevStore = Stores[InstIdx];
+        PrevStride = Dist - PrevDist;
+        PrevDist = Dist;
+        if (Idx != StoreSeq.size() - 1)
+          continue;
+      }
+      if (PrevStride != 1)
+        VectorizeOperands(Operands, /*Strided=*/true);
+
+      Operands.clear();
+      if (!R.isDeleted(PrevStore)) {
+        Operands.push_back(PrevStore);
+        PrevStride = Dist - PrevDist;
+      } else {
+        PrevStride = -1;
+      }
+      Operands.push_back(Stores[InstIdx]);
+      PrevStore = Stores[InstIdx];
       PrevDist = Dist;
     }
   };
