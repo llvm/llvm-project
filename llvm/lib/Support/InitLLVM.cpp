@@ -81,7 +81,11 @@ InitLLVM::InitLLVM(int &Argc, const char **&Argv,
 #endif
 
   // Bring stdin/stdout/stderr into a known state.
+#ifdef _WIN32
+  sys::AddSignalHandler(CleanupStdHandles, nullptr);
+#else
   sys::AddSignalHandler(CleanupStdHandles, nullptr, IsClangDriver);
+#endif
 
   if (InstallPipeSignalExitHandler)
     // The pipe signal handler must be installed before any other handlers are
