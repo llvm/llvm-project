@@ -167,7 +167,7 @@ jobs:
 
       - name: Build therock-archives and therock-dist
         run: |
-          cmake --build build --target therock-archives therock-dist -- -k 0
+          cmake --build build --target therock-archives therock-dist -- -j32
 
       - name: Test Packaging
         if: ${{ github.event.repository.name == 'TheRock' }}
