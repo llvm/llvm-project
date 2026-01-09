@@ -186,17 +186,17 @@ void test_non_transparent_equal_range(Container c) {
 
 template <class Container>
 void test_transparent_erase(Container c) {
+  static_assert(
+      std::same_as<
+          typename Container::size_type,
+          std::invoke_result_t<decltype(&Container::template erase<SearchedType<int>>), Container, SearchedType<int>>>);
+
   int conversions = 0;
 
   assert(c.erase(SearchedType<int>(1, &conversions)) != 0);
   assert(c.erase(SearchedType<int>(2, &conversions)) != 0);
   assert(c.erase(SearchedType<int>(3, &conversions)) == 0);
   assert(conversions == 0);
-
-  c.erase(c.begin());
-  c.erase(c.cbegin());
-
-  assert(c.empty());
 }
 
 template <class Container>
@@ -210,25 +210,47 @@ void test_non_transparent_erase(Container c) {
   assert(conversions == 3);
 }
 
+template <typename NodeHandle>
+concept node_handle_has_key = requires(NodeHandle nh) {
+  { nh.key() };
+};
+
+template <class T, class Container>
+void test_single_extract(SearchedType<T> key, Container& c) {
+  auto node_handle = c.extract(key);
+
+  assert(!node_handle.empty());
+
+  if constexpr (node_handle_has_key<typename Container::node_type>) {
+    assert(node_handle.key() == key);
+  } else {
+    assert(node_handle.value() == key);
+  }
+}
+
 template <class Container>
 void test_transparent_extract(Container c) {
+  static_assert(std::same_as< typename Container::node_type,
+                              std::invoke_result_t<decltype(&Container::template extract<SearchedType<int>>),
+                                                   Container,
+                                                   SearchedType<int>>>);
+
   int conversions = 0;
-  assert(!c.extract(SearchedType<int>(1, &conversions)).empty());
-  assert(!c.extract(SearchedType<int>(2, &conversions)).empty());
+
+  test_single_extract(SearchedType<int>(1, &conversions), c);
+  test_single_extract(SearchedType<int>(2, &conversions), c);
+
   assert(c.extract(SearchedType<int>(3, &conversions)).empty());
   assert(conversions == 0);
-
-  assert(!c.extract(c.cbegin()).empty());
-  assert(c.empty());
 }
 
 template <class Container>
 void test_non_transparent_extract(Container c) {
   int conversions = 0;
-  assert(!c.extract(SearchedType<int>(1, &conversions)).empty());
-  assert(conversions == 1);
-  assert(!c.extract(SearchedType<int>(2, &conversions)).empty());
-  assert(conversions == 2);
+
+  test_single_extract(SearchedType<int>(1, &conversions), c);
+  test_single_extract(SearchedType<int>(2, &conversions), c);
+
   assert(c.extract(SearchedType<int>(3, &conversions)).empty());
   assert(conversions == 3);
 }
