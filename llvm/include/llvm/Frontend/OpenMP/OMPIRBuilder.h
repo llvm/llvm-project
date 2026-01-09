@@ -1481,7 +1481,7 @@ public:
   ///                                bound, step} values in the task data.
   LLVM_ABI InsertPointOrErrorTy createTaskloop(
       const LocationDescription &Loc, InsertPointTy AllocaIP,
-      BodyGenCallbackTy BodyGenCB,
+      ArrayRef<InsertPointTy> DeallocIPs, BodyGenCallbackTy BodyGenCB,
       llvm::function_ref<llvm::Expected<llvm::CanonicalLoopInfo *>()> LoopInfo,
       Value *LBVal, Value *UBVal, Value *StepVal, bool Tied = true,
       TaskDupCallbackTy DupCB = nullptr,

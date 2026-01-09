@@ -2498,13 +2498,13 @@ using TaskLikeBodyGenCallbackTy = std::function<llvm::Error(
 /// taskloop).
 template <typename T>
 static TaskLikeBodyGenCallbackTy buildTaskLikeBodyGenCallback(
-    T opInst, Region &region, StringRef regionName,
+    T &opInst, Region &region, StringRef regionName,
     llvm::IRBuilderBase &builder, LLVM::ModuleTranslation &moduleTranslation,
     PrivateVarsInfo &privateVarsInfo, TaskContextStructManager &taskStructMgr) {
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
-  return [&, regionName](InsertPointTy allocaIP,
-                         InsertPointTy codegenIP, 
-                    llvm::ArrayRef<InsertPointTy> deallocIPs) -> llvm::Error {
+  return [&,
+          regionName](InsertPointTy allocaIP, InsertPointTy codegenIP,
+                      llvm::ArrayRef<InsertPointTy> deallocIPs) -> llvm::Error {
     // Save the alloca insertion point on ModuleTranslation stack for use in
     // nested regions.
     LLVM::ModuleTranslation::SaveStack<OpenMPAllocStackFrame> frame(
@@ -2755,8 +2755,9 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
   TaskContextStructManager taskStructMgr{builder, moduleTranslation,
                                          privateVarsInfo.privatizers};
 
+  llvm::SmallVector<InsertPointTy> deallocIPs;
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
-      findAllocInsertPoints(builder, moduleTranslation);
+      findAllocInsertPoints(builder, moduleTranslation, &deallocIPs);
 
   assert(builder.GetInsertPoint() == builder.GetInsertBlock()->end());
   llvm::BasicBlock *taskloopStartBlock = llvm::BasicBlock::Create(
@@ -2772,7 +2773,7 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
       splitBB(builder, /*CreateBranch=*/true, "omp.private.init");
 
   LLVM::ModuleTranslation::SaveStack<OpenMPAllocStackFrame> frame(
-      moduleTranslation, allocaIP);
+      moduleTranslation, allocaIP, deallocIPs);
 
   // Allocate and initialize private variables
   builder.SetInsertPoint(initBlock->getTerminator());
@@ -2917,7 +2918,7 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createTaskloop(
-          ompLoc, allocaIP, bodyCB, loopInfo,
+          ompLoc, allocaIP, deallocIPs, bodyCB, loopInfo,
           moduleTranslation.lookupValue(loopOp.getLoopLowerBounds()[0]),
           moduleTranslation.lookupValue(loopOp.getLoopUpperBounds()[0]),
           moduleTranslation.lookupValue(loopOp.getLoopSteps()[0]),
