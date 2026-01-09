@@ -82,6 +82,15 @@ let Attributes = [Const, NoThrow, RequiredVectorWidth<128>] in {
     }
   }
 
+  foreach Op = ["min", "max"] in {
+    let Features = "sse" in {
+      def Op#ss : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>)">;
+    }
+    let Features = "sse2" in {
+      def Op#sd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>)">;
+    }
+  }
+
   let Features = "sse" in {
     def cmpps : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>, _Constant char)">;
     def cmpss : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>, _Constant char)">;
@@ -150,9 +159,7 @@ let Features = "sse", Header = "xmmintrin.h", Attributes = [NoThrow, RequireDecl
 let Features = "sse", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def shufps : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>, _Constant int)">;
   def minps : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>)">;
-  def minss : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>)">;
   def maxps : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>)">;
-  def maxss : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>)">;
 }
 
 let Features = "sse", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
@@ -242,9 +249,7 @@ let Features = "sse2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWi
   def shufpd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>, _Constant int)">;
 
   def minpd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>)">;
-  def minsd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>)">;
   def maxpd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>)">;
-  def maxsd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>)">;
 
   def psllwi128 : X86Builtin<"_Vector<8, short>(_Vector<8, short>, int)">;
   def pslldi128 : X86Builtin<"_Vector<4, int>(_Vector<4, int>, int)">;
@@ -3413,9 +3418,6 @@ let Features = "avx512fp16", Attributes = [NoThrow, Const, RequiredVectorWidth<1
   def divsh_round_mask : X86Builtin<"_Vector<8, _Float16>(_Vector<8, _Float16>, _Vector<8, _Float16>, _Vector<8, _Float16>, unsigned char, _Constant int)">;
   def mulsh_round_mask : X86Builtin<"_Vector<8, _Float16>(_Vector<8, _Float16>, _Vector<8, _Float16>, _Vector<8, _Float16>, unsigned char, _Constant int)">;
   def subsh_round_mask : X86Builtin<"_Vector<8, _Float16>(_Vector<8, _Float16>, _Vector<8, _Float16>, _Vector<8, _Float16>, unsigned char, _Constant int)">;
-}
-
-let Features = "avx512fp16", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def maxsh_round_mask : X86Builtin<"_Vector<8, _Float16>(_Vector<8, _Float16>, _Vector<8, _Float16>, _Vector<8, _Float16>, unsigned char, _Constant int)">;
   def minsh_round_mask : X86Builtin<"_Vector<8, _Float16>(_Vector<8, _Float16>, _Vector<8, _Float16>, _Vector<8, _Float16>, unsigned char, _Constant int)">;
 }
