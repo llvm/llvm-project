@@ -161,12 +161,7 @@ static Attribute getSplatOrScalarAttr(Type type, Attribute val) {
 /// Returns an attribute with the minimum (if `min` is set) or the maximum value
 /// (otherwise) for the given float type.
 static Attribute minMaxValueForFloat(Type type, bool min) {
-  // If the type is a vector, we need to find the neutral value for the
-  // underlying element type and then create a splat attribute.
-  Type elType = type;
-  if (auto vecType = dyn_cast<VectorType>(type))
-    elType = vecType.getElementType();
-
+  Type elType = getElementTypeOrSelf(type);
   auto fltType = cast<FloatType>(elType);
   auto val = llvm::APFloat::getLargest(fltSemanticsForType(fltType), min);
 
@@ -177,11 +172,7 @@ static Attribute minMaxValueForFloat(Type type, bool min) {
 /// the maximum value (otherwise) for the given integer type, regardless of its
 /// signedness semantics (only the width is considered).
 static Attribute minMaxValueForSignedInt(Type type, bool min) {
-  // Extract scalar element type to handle vector reductions.
-  Type elType = type;
-  if (auto vecType = dyn_cast<VectorType>(type))
-    elType = vecType.getElementType();
-
+  Type elType = getElementTypeOrSelf(type);
   auto intType = cast<IntegerType>(elType);
   unsigned bitwidth = intType.getWidth();
   auto val = min ? llvm::APInt::getSignedMinValue(bitwidth)
@@ -194,11 +185,7 @@ static Attribute minMaxValueForSignedInt(Type type, bool min) {
 /// the maximum value (otherwise) for the given integer type, regardless of its
 /// signedness semantics (only the width is considered).
 static Attribute minMaxValueForUnsignedInt(Type type, bool min) {
-  // Extract scalar element type to handle vector reductions.
-  Type elType = type;
-  if (auto vecType = dyn_cast<VectorType>(type))
-    elType = vecType.getElementType();
-
+  Type elType = getElementTypeOrSelf(type);
   auto intType = cast<IntegerType>(elType);
   unsigned bitwidth = intType.getWidth();
   auto val =
@@ -266,12 +253,10 @@ static omp::DeclareReductionOp addAtomicRMW(OpBuilder &builder,
   return decl;
 }
 
-/// Returns true if the type is supported by llvm.atomicrmw. 
+/// Returns true if the type is supported by llvm.atomicrmw.
 /// LLVM IR currently does not support atomic operations on vector types.
 /// See LLVM Language Reference Manual on 'atomicrmw'.
-static bool supportsAtomic(Type type) {
-  return !isa<VectorType>(type);
-}
+static bool supportsAtomic(Type type) { return !isa<VectorType>(type); }
 
 /// Creates an OpenMP reduction declaration that corresponds to the given SCF
 /// reduction and returns it. Recognizes common reductions in order to identify
@@ -299,9 +284,7 @@ static omp::DeclareReductionOp declareReduction(PatternRewriter &builder,
   Block &reduction = reduce.getReductions()[reductionIndex].front();
 
   // Handle scalar element type extraction for vector bitwidth safety.
-  Type elType = type;
-  if (auto vecType = dyn_cast<VectorType>(type))
-    elType = vecType.getElementType();
+  Type elType = getElementTypeOrSelf(type);
 
   // Arithmetic Reductions
   if (matchSimpleReduction<arith::AddFOp, LLVM::FAddOp>(reduction)) {
@@ -350,55 +333,68 @@ static omp::DeclareReductionOp declareReduction(PatternRewriter &builder,
   // TODO: add atomic region using cmpxchg (which needs atomic load to be
   // available as an op).
   if (matchSimpleReduction<arith::MulFOp, LLVM::FMulOp>(reduction)) {
-    return createDecl(builder, symbolTable, reduce, reductionIndex,
-                      getSplatOrScalarAttr(type, builder.getFloatAttr(elType, 1.0)));
+    return createDecl(
+        builder, symbolTable, reduce, reductionIndex,
+        getSplatOrScalarAttr(type, builder.getFloatAttr(elType, 1.0)));
   }
 
   if (matchSimpleReduction<arith::MulIOp, LLVM::MulOp>(reduction)) {
-    return createDecl(builder, symbolTable, reduce, reductionIndex,
-                      getSplatOrScalarAttr(type, builder.getIntegerAttr(elType, 1)));
+    return createDecl(
+        builder, symbolTable, reduce, reductionIndex,
+        getSplatOrScalarAttr(type, builder.getIntegerAttr(elType, 1)));
   }
 
   // Match select-based min/max reductions.
   bool isMin;
-  if (matchSelectReduction<arith::CmpFOp, arith::SelectOp>(
+  // Floating Point Min/Max
+  if (matchSelectReduction<arith::CmpFOp, arith::SelectOp,
+                           arith::CmpFPredicate>(
           reduction, {arith::CmpFPredicate::OLT, arith::CmpFPredicate::OLE},
           {arith::CmpFPredicate::OGT, arith::CmpFPredicate::OGE}, isMin) ||
-      matchSelectReduction<LLVM::FCmpOp, LLVM::SelectOp>(
-          reduction, {LLVM::FCmpPredicate::olt, LLVM::FCmpPredicate::ole},
-          {LLVM::FCmpPredicate::ogt, LLVM::FCmpPredicate::oge}, isMin)) {
+      matchSelectReduction<arith::CmpFOp, arith::SelectOp,
+                           arith::CmpFPredicate>(
+          reduction, {arith::CmpFPredicate::OGT, arith::CmpFPredicate::OGE},
+          {arith::CmpFPredicate::OLT, arith::CmpFPredicate::OLE}, isMin)) {
     return createDecl(builder, symbolTable, reduce, reductionIndex,
                       minMaxValueForFloat(type, !isMin));
   }
-  if (matchSelectReduction<arith::CmpIOp, arith::SelectOp>(
+
+  // Integer Min/Max
+  if (matchSelectReduction<arith::CmpIOp, arith::SelectOp,
+                           arith::CmpIPredicate>(
           reduction, {arith::CmpIPredicate::slt, arith::CmpIPredicate::sle},
           {arith::CmpIPredicate::sgt, arith::CmpIPredicate::sge}, isMin) ||
-      matchSelectReduction<LLVM::ICmpOp, LLVM::SelectOp>(
-          reduction, {LLVM::ICmpPredicate::slt, LLVM::ICmpPredicate::sle},
-          {LLVM::ICmpPredicate::sgt, LLVM::ICmpPredicate::sge}, isMin)) {
+      matchSelectReduction<arith::CmpIOp, arith::SelectOp,
+                           arith::CmpIPredicate>(
+          reduction, {arith::CmpIPredicate::sgt, arith::CmpIPredicate::sge},
+          {arith::CmpIPredicate::slt, arith::CmpIPredicate::sle}, isMin)) {
     omp::DeclareReductionOp decl =
         createDecl(builder, symbolTable, reduce, reductionIndex,
-                           minMaxValueForSignedInt(type, !isMin));
-    return supportsAtomic(type)
-               ? addAtomicRMW(builder,
-                              isMin ? LLVM::AtomicBinOp::min : LLVM::AtomicBinOp::max,
-                              decl, reduce, reductionIndex)
-               : decl;
+                   minMaxValueForSignedInt(type, !isMin));
+    return supportsAtomic(type) ? addAtomicRMW(builder,
+                                               isMin ? LLVM::AtomicBinOp::min
+                                                     : LLVM::AtomicBinOp::max,
+                                               decl, reduce, reductionIndex)
+                                : decl;
   }
-  if (matchSelectReduction<arith::CmpIOp, arith::SelectOp>(
+
+  // Unsigned Integer Min/Max
+  if (matchSelectReduction<arith::CmpIOp, arith::SelectOp,
+                           arith::CmpIPredicate>(
           reduction, {arith::CmpIPredicate::ult, arith::CmpIPredicate::ule},
           {arith::CmpIPredicate::ugt, arith::CmpIPredicate::uge}, isMin) ||
-      matchSelectReduction<LLVM::ICmpOp, LLVM::SelectOp>(
-          reduction, {LLVM::ICmpPredicate::ugt, LLVM::ICmpPredicate::ule},
-          {LLVM::ICmpPredicate::ugt, LLVM::ICmpPredicate::uge}, isMin)) {
+      matchSelectReduction<arith::CmpIOp, arith::SelectOp,
+                           arith::CmpIPredicate>(
+          reduction, {arith::CmpIPredicate::ugt, arith::CmpIPredicate::uge},
+          {arith::CmpIPredicate::ult, arith::CmpIPredicate::ule}, isMin)) {
     omp::DeclareReductionOp decl =
         createDecl(builder, symbolTable, reduce, reductionIndex,
-                           minMaxValueForUnsignedInt(type, !isMin));
-    return supportsAtomic(type)
-               ? addAtomicRMW(builder,
-                              isMin ? LLVM::AtomicBinOp::umin : LLVM::AtomicBinOp::umax,
-                              decl, reduce, reductionIndex)
-               : decl;
+                   minMaxValueForUnsignedInt(type, !isMin));
+    return supportsAtomic(type) ? addAtomicRMW(builder,
+                                               isMin ? LLVM::AtomicBinOp::umin
+                                                     : LLVM::AtomicBinOp::umax,
+                                               decl, reduce, reductionIndex)
+                                : decl;
   }
 
   return nullptr;
@@ -480,7 +476,7 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
         Operation *cloneOp = builder.clone(op, mapper);
         if (auto yieldOp = dyn_cast<omp::YieldOp>(*cloneOp)) {
           assert(yieldOp && yieldOp.getResults().size() == 1 &&
-                    "expect YieldOp in reduction region to return one result");
+                 "expect YieldOp in reduction region to return one result");
           Value redVal = yieldOp.getResults()[0];
           LLVM::StoreOp::create(rewriter, loc, redVal, pvtRedVar);
           rewriter.eraseOp(yieldOp);
