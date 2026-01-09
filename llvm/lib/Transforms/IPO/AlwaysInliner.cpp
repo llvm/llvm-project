@@ -19,6 +19,7 @@
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -145,7 +146,8 @@ static bool inlineHistoryIncludes(
   return false;
 }
 
-bool flattenFunction(Function &F, InlinerHelper &IH) {
+bool flattenFunction(Function &F, InlinerHelper &IH,
+                     function_ref<TargetTransformInfo &(Function &)> GetTTI) {
   SmallVector<std::pair<CallBase *, int>, 16> Worklist;
   SmallVector<std::pair<Function *, int>, 16> InlineHistory;
   OptimizationRemarkEmitter ORE(&F);
@@ -186,6 +188,19 @@ bool flattenFunction(Function &F, InlinerHelper &IH) {
       continue;
     }
 
+    if (!IH.canInline(*Callee))
+      continue;
+
+    // Use TTI to check for target-specific hard inlining restrictions.
+    // This includes checks like:
+    // - Cannot inline streaming callee into non-streaming caller
+    // - Cannot inline functions that create new ZA/ZT0 state
+    // For flatten, we respect the user's intent to inline as much as possible,
+    // but these are fundamental ABI violations that cannot be worked around.
+    TargetTransformInfo &TTI = GetTTI(F);
+    if (!TTI.areInlineCompatible(&F, Callee))
+      continue;
+
     if (IH.tryInline(*CB, "flatten attribute")) {
       Changed = true;
       IH.addToMaybeInlinedFunctions(*Callee);
@@ -200,7 +215,8 @@ bool AlwaysInlineImpl(
     Module &M, bool InsertLifetime, ProfileSummaryInfo &PSI,
     FunctionAnalysisManager *FAM,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
-    function_ref<AAResults &(Function &)> GetAAR) {
+    function_ref<AAResults &(Function &)> GetAAR,
+    function_ref<TargetTransformInfo &(Function &)> GetTTI) {
   SmallSetVector<CallBase *, 16> Calls;
   InlinerHelper IH(M, PSI, FAM, GetAssumptionCache, GetAAR, InsertLifetime);
   SmallVector<Function *, 4> NeedFlattening;
@@ -229,8 +245,12 @@ bool AlwaysInlineImpl(
       Changed |= IH.tryInline(*CB, "always inline attribute");
     }
   }
+
+  // Only call flattenFunction (which uses TTI) if there are functions to
+  // flatten. This ensures TTI analysis is not requested at -O0 when there are
+  // no flatten functions, avoiding any overhead.
   for (Function *F : NeedFlattening)
-    Changed |= flattenFunction(*F, IH);
+    Changed |= flattenFunction(*F, IH, GetTTI);
 
   Changed |= IH.postInlinerCleanup();
   return Changed;
@@ -255,9 +275,12 @@ struct AlwaysInlinerLegacyPass : public ModulePass {
     auto GetAssumptionCache = [&](Function &F) -> AssumptionCache & {
       return getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
     };
+    auto GetTTI = [&](Function &F) -> TargetTransformInfo & {
+      return getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+    };
 
     return AlwaysInlineImpl(M, InsertLifetime, PSI, /*FAM=*/nullptr,
-                            GetAssumptionCache, GetAAR);
+                            GetAssumptionCache, GetAAR, GetTTI);
   }
 
   static char ID; // Pass identification, replacement for typeid
@@ -266,6 +289,7 @@ struct AlwaysInlinerLegacyPass : public ModulePass {
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<AAResultsWrapperPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
+    AU.addRequired<TargetTransformInfoWrapperPass>();
   }
 };
 
@@ -277,6 +301,7 @@ INITIALIZE_PASS_BEGIN(AlwaysInlinerLegacyPass, "always-inline",
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(AlwaysInlinerLegacyPass, "always-inline",
                     "Inliner for always_inline functions", false, false)
 
@@ -294,10 +319,13 @@ PreservedAnalyses AlwaysInlinerPass::run(Module &M,
   auto GetAAR = [&](Function &F) -> AAResults & {
     return FAM.getResult<AAManager>(F);
   };
+  auto GetTTI = [&](Function &F) -> TargetTransformInfo & {
+    return FAM.getResult<TargetIRAnalysis>(F);
+  };
   auto &PSI = MAM.getResult<ProfileSummaryAnalysis>(M);
 
   bool Changed = AlwaysInlineImpl(M, InsertLifetime, PSI, &FAM,
-                                  GetAssumptionCache, GetAAR);
+                                  GetAssumptionCache, GetAAR, GetTTI);
   if (!Changed)
     return PreservedAnalyses::all();
 

@@ -57,6 +57,21 @@ define i32 @test_declaration() flatten {
   ret i32 %r
 }
 
+; Inlined callee that calls a declaration - the declaration should remain after flattening.
+define internal i32 @calls_external() {
+  %r = call i32 @external_func()
+  ret i32 %r
+}
+
+define i32 @test_inline_then_declaration() flatten {
+; CHECK-LABEL: @test_inline_then_declaration(
+; CHECK-NOT: call i32 @calls_external()
+; CHECK: call i32 @external_func()
+; CHECK: ret i32
+  %r = call i32 @calls_external()
+  ret i32 %r
+}
+
 ; Indirect calls are not inlined.
 define internal i32 @target_func() {
   ret i32 99
