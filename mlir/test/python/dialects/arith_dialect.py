@@ -37,6 +37,18 @@ def testFastMathFlags():
             print(r)
 
 
+# CHECK-LABEL: TEST: testFastMathFlagsFast
+@run
+def testFastMathFlagsFast():
+    with Context() as ctx, Location.unknown():
+        module = Module.create()
+        with InsertionPoint(module.body):
+            a = arith.ConstantOp(value=42.42, result=F32Type.get())
+            r = arith.AddFOp(a, a, fastmath=arith.FastMathFlags.fast)
+            # CHECK: %0 = arith.addf %cst, %cst fastmath<fast> : f32
+            print(r)
+
+
 # CHECK-LABEL: TEST: testArithValue
 @run
 def testArithValue():

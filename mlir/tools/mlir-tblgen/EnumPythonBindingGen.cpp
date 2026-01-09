@@ -77,9 +77,9 @@ static void emitEnumClass(EnumInfo enumInfo, raw_ostream &os) {
     os << formatv("            return \"{0}\"\n", enumCase.getStr());
   }
   if (enumInfo.isBitEnum())
-  os << formatv("        if len(self) > 1:\n"
-                "            return \"{0}\".join(map(str, self))\n",
-                enumInfo.getDef().getValueAsString("separator"));
+    os << formatv("        if len(self) > 1:\n"
+                  "            return \"{0}\".join(map(str, self))\n",
+                  enumInfo.getDef().getValueAsString("separator"));
   os << formatv("        raise ValueError(\"Unknown {0} enum entry.\")\n\n\n",
                 enumInfo.getEnumClassName());
   os << "\n";
