@@ -2226,6 +2226,11 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (SimplifyDemandedFPClass(I, 0, llvm::inverse_fabs(DemandedMask), Known,
                                   Depth + 1))
         return I;
+
+      if (Known.SignBit == false ||
+          ((DemandedMask & fcNan) == fcNone && Known.isKnownNever(fcNegative)))
+        return CI->getArgOperand(0);
+
       Known.fabs();
       break;
     case Intrinsic::arithmetic_fence:
