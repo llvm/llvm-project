@@ -1,6 +1,7 @@
 ; RUN: rm -rf %t && mkdir -p %t
 ; RUN: llc -relocation-model=pic -filetype=obj -o %t/crash.o %s
-; RUN: not --crash llvm-jitlink -write-symtab %t/crash.symtab.txt %t/crash.o \
+; RUN: not --crash llvm-jitlink -debugger-support=false \
+; RUN:     -write-symtab %t/crash.symtab.txt %t/crash.o \
 ; RUN:     > %t/backtrace.txt 2>&1
 ; RUN: llvm-jitlink -symbolicate-with %t/crash.symtab.txt %t/backtrace.txt \
 ; RUN:     | FileCheck %s
