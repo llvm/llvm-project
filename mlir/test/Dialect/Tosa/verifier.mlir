@@ -1325,3 +1325,13 @@ func.func @test_slice_shape_incorrect_output_size() -> !tosa.shape<4> {
   %slice = tosa.slice_shape %shape, %start, %size : (!tosa.shape<6>, tensor<1xi32>, tensor<1xi32>) -> !tosa.shape<4>
   return %slice : !tosa.shape<4>
 }
+
+// -----
+
+func.func @test_mod_shape_input1_input2_rank_mismatch() -> !tosa.shape<6> {
+  %a = tosa.const_shape {values = dense<[1, 2, 3, 4, 5, 6]> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %b = tosa.const_shape {values = dense<[1, 2, 3, 4, 5]> : tensor<5xindex>} : () -> !tosa.shape<5>
+  // expected-error@+1 {{'tosa.mod_shape' op operands don't have matching ranks}}
+  %c = tosa.mod_shape %a, %b : (!tosa.shape<6>, !tosa.shape<5>) -> !tosa.shape<6>
+  return %c : !tosa.shape<6>
+}
