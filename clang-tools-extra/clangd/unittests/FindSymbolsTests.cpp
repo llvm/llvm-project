@@ -35,6 +35,8 @@ MATCHER_P(withName, N, "") { return arg.name == N; }
 MATCHER_P(withKind, Kind, "") { return arg.kind == Kind; }
 MATCHER_P(withDetail, Detail, "") { return arg.detail == Detail; }
 MATCHER_P(symRange, Range, "") { return arg.range == Range; }
+MATCHER_P(withSymbolTag, Tag, "") { return llvm::is_contained(arg.tags, Tag); }
+
 
 // GMock helpers for matching DocumentSymbol.
 MATCHER_P(symNameRange, Range, "") { return arg.selectionRange == Range; }
@@ -1129,6 +1131,28 @@ TEST(DocumentSymbolsTest, PragmaMarkGroupsNoNesting) {
               UnorderedElementsAre(withName("Helpers"), withName("helpA"),
                                    withName("(unnamed group)"),
                                    withName("Core"), withName("coreMethod")));
+}
+
+TEST(DocumentSymbolsTest, SymbolTags) {
+  TestTU TU;
+  Annotations Main(R"(
+      class A {
+        virtual void f() const = 0;
+      };
+    )");
+
+  TU.Code = Main.code().str();
+  auto Symbols = getSymbols(TU.build());
+  EXPECT_THAT(
+      Symbols,
+      ElementsAre(AllOf(
+          withName("A"), withSymbolTag(SymbolTag::Abstract),
+          withSymbolTag(SymbolTag::Definition),
+          children(AllOf(withName("f"), withSymbolTag(SymbolTag::ReadOnly),
+                         withSymbolTag(SymbolTag::Virtual),
+                         withSymbolTag(SymbolTag::Abstract),
+                         withSymbolTag(SymbolTag::Declaration),
+                         withSymbolTag(SymbolTag::Private))))));
 }
 
 } // namespace

@@ -8,6 +8,7 @@
 
 #include "AST.h"
 
+#include "SemanticHighlighting.h"
 #include "SourceCode.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTTypeTraits.h"
@@ -191,100 +192,6 @@ bool isExplicitTemplateSpecialization(const NamedDecl *D) {
 bool isImplementationDetail(const Decl *D) {
   return !isSpelledInSource(D->getLocation(),
                             D->getASTContext().getSourceManager());
-}
-
-// Whether T is const in a loose sense - is a variable with this type readonly?
-bool isConst(QualType T) {
-  if (T.isNull())
-    return false;
-  T = T.getNonReferenceType();
-  if (T.isConstQualified())
-    return true;
-  if (const auto *AT = T->getAsArrayTypeUnsafe())
-    return isConst(AT->getElementType());
-  if (isConst(T->getPointeeType()))
-    return true;
-  return false;
-}
-
-bool isConst(const Decl *D) {
-  if (llvm::isa<EnumConstantDecl>(D) || llvm::isa<NonTypeTemplateParmDecl>(D))
-    return true;
-  if (llvm::isa<FieldDecl>(D) || llvm::isa<VarDecl>(D) ||
-      llvm::isa<MSPropertyDecl>(D) || llvm::isa<BindingDecl>(D)) {
-    if (isConst(llvm::cast<ValueDecl>(D)->getType()))
-      return true;
-  }
-  if (const auto *OCPD = llvm::dyn_cast<ObjCPropertyDecl>(D)) {
-    if (OCPD->isReadOnly())
-      return true;
-  }
-  if (const auto *MPD = llvm::dyn_cast<MSPropertyDecl>(D)) {
-    if (!MPD->hasSetter())
-      return true;
-  }
-  if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D)) {
-    if (CMD->isConst())
-      return true;
-  }
-  if (const auto *FD = llvm::dyn_cast<FunctionDecl>(D))
-    return isConst(FD->getReturnType());
-  return false;
-}
-
-bool isStatic(const Decl *D) {
-  if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D))
-    return CMD->isStatic();
-  if (const VarDecl *VD = llvm::dyn_cast<VarDecl>(D))
-    return VD->isStaticDataMember() || VD->isStaticLocal();
-  if (const auto *OPD = llvm::dyn_cast<ObjCPropertyDecl>(D))
-    return OPD->isClassProperty();
-  if (const auto *OMD = llvm::dyn_cast<ObjCMethodDecl>(D))
-    return OMD->isClassMethod();
-  if (const auto *FD = llvm::dyn_cast<FunctionDecl>(D))
-    return FD->isStatic();
-  return false;
-}
-
-bool isAbstract(const Decl *D) {
-  if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D))
-    return CMD->isPureVirtual();
-  if (const auto *CRD = llvm::dyn_cast<CXXRecordDecl>(D))
-    return CRD->hasDefinition() && CRD->isAbstract();
-  return false;
-}
-
-bool isVirtual(const Decl *D) {
-  if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D))
-    return CMD->isVirtual();
-  return false;
-}
-
-bool isFinal(const Decl *D) {
-  if (const auto *CRD = dyn_cast<CXXMethodDecl>(D))
-    return CRD->hasAttr<FinalAttr>();
-
-  if (const auto *CRD = dyn_cast<CXXRecordDecl>(D))
-    return CRD->hasAttr<FinalAttr>();
-
-  return false;
-}
-
-bool isUniqueDefinition(const NamedDecl *Decl) {
-  if (auto *Func = dyn_cast<FunctionDecl>(Decl))
-    return Func->isThisDeclarationADefinition();
-  if (auto *Klass = dyn_cast<CXXRecordDecl>(Decl))
-    return Klass->isThisDeclarationADefinition();
-  if (auto *Iface = dyn_cast<ObjCInterfaceDecl>(Decl))
-    return Iface->isThisDeclarationADefinition();
-  if (auto *Proto = dyn_cast<ObjCProtocolDecl>(Decl))
-    return Proto->isThisDeclarationADefinition();
-  if (auto *Var = dyn_cast<VarDecl>(Decl))
-    return Var->isThisDeclarationADefinition();
-  return isa<TemplateTypeParmDecl>(Decl) ||
-         isa<NonTypeTemplateParmDecl>(Decl) ||
-         isa<TemplateTemplateParmDecl>(Decl) || isa<ObjCCategoryDecl>(Decl) ||
-         isa<ObjCImplDecl>(Decl);
 }
 
 SourceLocation nameLocation(const clang::Decl &D, const SourceManager &SM) {
@@ -1208,5 +1115,47 @@ searchConstructorsInForwardingFunction(const FunctionDecl *FD) {
   return Result;
 }
 
+SymbolTags computeSymbolTags(const NamedDecl &ND) {
+  SymbolTags result = 0;
+
+  if (ND.isDeprecated())
+    result |= 1 << static_cast<unsigned>(SymbolTag::Deprecated);
+
+  if (isConst(&ND))
+    result |= 1 << static_cast<unsigned>(SymbolTag::ReadOnly);
+
+  if (isStatic(&ND))
+    result |= 1 << static_cast<unsigned>(SymbolTag::Static);
+
+  if (isVirtual(&ND))
+    result |= 1 << static_cast<unsigned>(SymbolTag::Virtual);
+
+  if (isAbstract(&ND))
+    result |= 1 << static_cast<unsigned>(SymbolTag::Abstract);
+
+  if (isFinal(&ND))
+    result |= 1 << static_cast<unsigned>(SymbolTag::Final);
+
+  if (isUniqueDefinition(&ND))
+    result |= 1 << static_cast<unsigned>(SymbolTag::Definition);
+  else if (!isa<UnresolvedUsingValueDecl>(ND))
+    result |= 1 << static_cast<unsigned>(SymbolTag::Declaration);
+
+  switch (ND.getAccess()) {
+  case AS_public:
+    result |= 1 << static_cast<unsigned>(SymbolTag::Public);
+    break;
+  case AS_protected:
+    result |= 1 << static_cast<unsigned>(SymbolTag::Protected);
+    break;
+  case AS_private:
+    result |= 1 << static_cast<unsigned>(SymbolTag::Private);
+    break;
+  default:
+    break;
+  }
+
+  return result;
+}
 } // namespace clangd
 } // namespace clang

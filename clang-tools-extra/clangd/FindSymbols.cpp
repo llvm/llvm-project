@@ -31,44 +31,41 @@ namespace clang {
 namespace clangd {
 
 std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND) {
+  const auto SymbolTags = computeSymbolTags(ND);
   std::vector<SymbolTag> Tags;
 
-  if (ND.isDeprecated())
+  if (SymbolTags & 1 << static_cast<unsigned>(SymbolTag::Deprecated))
     Tags.push_back(SymbolTag::Deprecated);
 
-  if (isConst(&ND))
+  if (SymbolTags & 1 << static_cast<unsigned>(SymbolTag::ReadOnly))
     Tags.push_back(SymbolTag::ReadOnly);
 
-  if (isStatic(&ND))
+  if (SymbolTags & 1 << static_cast<unsigned>(SymbolTag::Static))
     Tags.push_back(SymbolTag::Static);
 
-  if (isVirtual(&ND))
+  if (SymbolTags & 1 << static_cast<unsigned>(SymbolTag::Virtual))
     Tags.push_back(SymbolTag::Virtual);
 
-  if (isAbstract(&ND))
+  if (SymbolTags & 1 << static_cast<unsigned>(SymbolTag::Abstract))
     Tags.push_back(SymbolTag::Abstract);
 
-  if (isFinal(&ND))
+  if (SymbolTags & 1 << static_cast<unsigned>(SymbolTag::Final))
     Tags.push_back(SymbolTag::Final);
 
-  if (isUniqueDefinition(&ND))
+  if (SymbolTags & 1 << static_cast<unsigned>(SymbolTag::Definition))
     Tags.push_back(SymbolTag::Definition);
-  else if (!isa<UnresolvedUsingValueDecl>(ND))
+
+  if (SymbolTags & 1 << static_cast<unsigned>(SymbolTag::Declaration))
     Tags.push_back(SymbolTag::Declaration);
 
-  switch (ND.getAccess()) {
-  case AS_public:
-    Tags.push_back(SymbolTag::Public);
-    break;
-  case AS_protected:
+   if (SymbolTags & 1 << static_cast<unsigned>(SymbolTag::Public))
+     Tags.push_back(SymbolTag::Public);
+
+  if (SymbolTags & 1 << static_cast<unsigned>(SymbolTag::Protected))
     Tags.push_back(SymbolTag::Protected);
-    break;
-  case AS_private:
+
+  if (SymbolTags & 1 << static_cast<unsigned>(SymbolTag::Private))
     Tags.push_back(SymbolTag::Private);
-    break;
-  default:
-    break;
-  }
 
   return Tags;
 }
