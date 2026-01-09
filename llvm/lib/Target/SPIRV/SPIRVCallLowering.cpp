@@ -308,7 +308,7 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
         auto DerefBytes = static_cast<unsigned>(Arg.getDereferenceableBytes());
         if (DerefBytes != 0)
           buildOpDecorate(VRegs[i][0], MIRBuilder,
-                          SPIRV::Decoration::MaxByteOffset, {DerefBytes});
+                          SPIRV::Decoration::MaxByteOffset, {DerefBytes - 1});
       }
       if (Arg.hasAttribute(Attribute::Alignment) && !ST->isShader()) {
         auto Alignment = static_cast<unsigned>(
