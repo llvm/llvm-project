@@ -1,7 +1,8 @@
-# RUN: not --crash llc -mtriple=arm64 -verify-machineinstrs -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=aarch64 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: aarch64-registered-target
+
 ---
-name:            test_uniform
+name: test_uniform
 body: |
   bb.0:
     %src:_(<2 x s64>) = G_IMPLICIT_DEF
@@ -9,5 +10,4 @@ body: |
 
     ; CHECK: Shifts and rotates require operands to be either all scalars or all vectors
     %rotr:_(<2 x s64>) = G_ROTR %src, %amt
-
 ...

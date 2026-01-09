@@ -156,7 +156,7 @@ define i32 @red_zext_mul_by_256(ptr %start, ptr %end) {
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[NEXT_GEP]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = mul <16 x i32> [[TMP3]], splat (i32 256)
+; CHECK-NEXT:    [[TMP4:%.*]] = shl <16 x i32> [[TMP3]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP5]] = add <16 x i32> [[VEC_PHI]], [[TMP4]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -290,7 +290,7 @@ define i32 @red_sext_mul_by_128(ptr %start, ptr %end) {
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[NEXT_GEP]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = mul <16 x i32> [[TMP3]], splat (i32 128)
+; CHECK-NEXT:    [[TMP4:%.*]] = shl <16 x i32> [[TMP3]], splat (i32 7)
 ; CHECK-NEXT:    [[TMP5]] = add <16 x i32> [[VEC_PHI]], [[TMP4]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -423,7 +423,7 @@ define i32 @red_sext_mul_by_256(ptr %start, ptr %end) {
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[NEXT_GEP]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = mul <16 x i32> [[TMP3]], splat (i32 256)
+; CHECK-NEXT:    [[TMP4:%.*]] = shl <16 x i32> [[TMP3]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP5]] = add <16 x i32> [[VEC_PHI]], [[TMP4]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

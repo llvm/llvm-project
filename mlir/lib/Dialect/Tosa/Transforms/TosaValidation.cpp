@@ -129,6 +129,15 @@ static LogicalResult checkConstantOperandNegate(Operation *op,
   return success();
 }
 
+static LogicalResult checkConstantOperandSilceShape(Operation *op,
+                                                    const TargetEnv &env) {
+  if (!env.allows(Extension::dynamic) && isa<tosa::SliceShapeOp>(op)) {
+    // Check 'start' and 'size'
+    return checkConstantOperands(op, {1, 2});
+  }
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // TOSA Validation Pass.
 //===----------------------------------------------------------------------===//
@@ -177,6 +186,7 @@ private:
     constCheckers.emplace_back(checkConstantOperandMatMul);
     constCheckers.emplace_back(checkConstantOperandAvgPool2d);
     constCheckers.emplace_back(checkConstantOperandNegate);
+    constCheckers.emplace_back(checkConstantOperandSilceShape);
   }
 
   LogicalResult levelCheckKernel(Operation *op, int32_t v,
@@ -481,6 +491,8 @@ private:
         return failure();
       }
     }
+    if (auto concat_shape = dyn_cast<tosa::ConcatShapeOp>(op))
+      return levelCheckListSize(op, concat_shape.getInput().size(), "input");
     return success();
   }
 
@@ -693,9 +705,11 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
 
   // Shape Operators
   CHECK_RANKS(AddShape);
+  CHECK_RANKS(ConcatShape);
   CHECK_RANKS(DivCeilShape);
   CHECK_RANKS(DivFloorShape);
   CHECK_RANKS(MulShape);
+  CHECK_RANKS(SliceShape);
   CHECK_RANKS(SubShape);
 
 #undef CHECK_RANKS_AND_SIZES
@@ -1264,16 +1278,16 @@ bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
 
 void TosaValidation::runOnOperation() {
   ModuleOp modOp = getOperation();
+  TosaDialect *tosaDialect = getContext().getLoadedDialect<TosaDialect>();
+  if (!tosaDialect)
+    return;
+
   const TargetEnvAttr targetEnvAttr = lookupTargetEnvOrDefault(modOp);
   const auto maybeTargetEnv =
       tosa::TargetEnv::createTargetEnvFromAttr(targetEnvAttr, modOp.getLoc());
   if (failed(maybeTargetEnv))
     return signalPassFailure();
   targetEnv = *maybeTargetEnv;
-
-  TosaDialect *tosaDialect = getContext().getLoadedDialect<TosaDialect>();
-  if (!tosaDialect)
-    return;
 
   modOp.walk([&](Operation *op) {
     if (op->getDialect() != tosaDialect)
