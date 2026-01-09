@@ -5864,6 +5864,10 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
           .addReg(SrcReg)
           .addReg(FF1Reg);
       if (isFPOp) {
+        bool IsMinMaxOpc =
+            Opc == AMDGPU::V_MIN_F32_e64 || Opc == AMDGPU::V_MAX_F32_e64;
+        bool NeedsNANCanonicalization =
+            IsMinMaxOpc && (IsIEEEMode || IsGFX12Plus);
         Register LaneValVreg =
             MRI.createVirtualRegister(MRI.getRegClass(SrcReg));
         Register DstVreg = MRI.createVirtualRegister(MRI.getRegClass(SrcReg));
@@ -5871,9 +5875,26 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
         BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::V_MOV_B32_e32),
                 LaneValVreg)
             .addReg(LaneValueReg);
+        Register AccumulatorReg = Accumulator->getOperand(0).getReg();
+        if (NeedsNANCanonicalization) {
+          auto CanonicalizeForNaN = [&](Register Src,
+                                        MachineBasicBlock *MBB) -> Register {
+            Register Dst = MRI.createVirtualRegister(MRI.getRegClass(SrcReg));
+            BuildMI(*MBB, I, DL, TII->get(AMDGPU::V_MAX_F32_e64), Dst)
+                .addImm(0) // src0 modifiers
+                .addReg(Src)
+                .addImm(0) // src1 modifiers
+                .addReg(Src)
+                .addImm(0)  // clamp
+                .addImm(0); // omod
+            return Dst;
+          };
+          LaneValVreg = CanonicalizeForNaN(LaneValVreg, ComputeLoop);
+          AccumulatorReg = CanonicalizeForNaN(AccumulatorReg, ComputeLoop);
+        }
         BuildMI(*ComputeLoop, I, DL, TII->get(Opc), DstVreg)
             .addImm(0) // src0 modifier
-            .addReg(Accumulator->getOperand(0).getReg())
+            .addReg(AccumulatorReg)
             .addImm(0) // src1 modifier
             .addReg(LaneValVreg)
             .addImm(0)  // clamp
