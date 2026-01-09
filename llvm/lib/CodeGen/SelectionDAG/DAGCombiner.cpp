@@ -18038,18 +18038,6 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
             N0, DAG, LegalOperations, ForCodeSize))
       return DAG.getNode(ISD::FSUB, DL, VT, N1, NegN0);
 
-  // fold (fadd A, Splat(fneg(B))) -> (fsub A, Splat(B))
-  // TODO: move ISD::SPLAT_VECTOR handling inside getCheaperNegatedExpression
-  if (N1.getOpcode() == ISD::SPLAT_VECTOR) {
-    SDValue SplatN0 = N1->getOperand(0);
-    if (SDValue NegN0 = TLI.getCheaperNegatedExpression(
-            SplatN0, DAG, LegalOperations, ForCodeSize)) {
-      SDValue Splat =
-          DAG.getNode(ISD::SPLAT_VECTOR, DL, VT, SplatN0->getOperand(0));
-      return DAG.getNode(ISD::FSUB, DL, VT, N0, Splat);
-    }
-  }
-
   auto isFMulNegTwo = [](SDValue FMul) {
     if (!FMul.hasOneUse() || FMul.getOpcode() != ISD::FMUL)
       return false;
@@ -18289,18 +18277,6 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
   if (SDValue NegN1 =
           TLI.getNegatedExpression(N1, DAG, LegalOperations, ForCodeSize))
     return DAG.getNode(ISD::FADD, DL, VT, N0, NegN1);
-
-  // fold (fsub A, Splat(fneg(B))) -> (fadd A, Splat(B))
-  // TODO: move ISD::SPLAT_VECTOR handling inside getCheaperNegatedExpression
-  if (N1.getOpcode() == ISD::SPLAT_VECTOR) {
-    SDValue SplatN0 = N1->getOperand(0);
-    if (SDValue NegN0 = TLI.getCheaperNegatedExpression(
-            SplatN0, DAG, LegalOperations, ForCodeSize)) {
-      SDValue Splat =
-          DAG.getNode(ISD::SPLAT_VECTOR, DL, VT, SplatN0->getOperand(0));
-      return DAG.getNode(ISD::FADD, DL, VT, N0, Splat);
-    }
-  }
 
   // FSUB -> FMA combines:
   if (SDValue Fused = visitFSUBForFMACombine<EmptyMatchContext>(N)) {

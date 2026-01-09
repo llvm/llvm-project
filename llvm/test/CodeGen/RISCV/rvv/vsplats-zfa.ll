@@ -80,8 +80,8 @@ define <vscale x 8 x float> @vfnmadd(<vscale x 8 x float> %va, <vscale x 8 x flo
   ret <vscale x 8 x float> %vd
 }
 
-define <vscale x 8 x float> @vfsub_vf_nxv8f32(<vscale x 8 x float> %va) {
-; CHECK-LABEL: vfsub_vf_nxv8f32:
+define <vscale x 8 x float> @vfadd_vf_neg(<vscale x 8 x float> %va) {
+; CHECK-LABEL: vfadd_vf_neg:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fli.s fa5, 2.0
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
@@ -92,13 +92,36 @@ define <vscale x 8 x float> @vfsub_vf_nxv8f32(<vscale x 8 x float> %va) {
 }
 
 
-define <vscale x 8 x float> @vfsub_vf(<vscale x 8 x float> %va) {
-; CHECK-LABEL: vfsub_vf:
+define <vscale x 8 x float> @vfsub_vf_neg(<vscale x 8 x float> %va) {
+; CHECK-LABEL: vfsub_vf_neg:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fli.s fa5, 2.0
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfadd.vf v8, v8, fa5
 ; CHECK-NEXT:    ret
   %vd = fsub <vscale x 8 x float> %va, splat (float -2.000000e+00)
+  ret <vscale x 8 x float> %vd
+}
+
+
+define <vscale x 8 x float> @vfsub_vf(<vscale x 8 x float> %va) {
+; CHECK-LABEL: vfsub_vf:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa5, 2.0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vfsub.vf v8, v8, fa5
+; CHECK-NEXT:    ret
+  %vd = fsub <vscale x 8 x float> %va, splat (float 2.000000e+00)
+  ret <vscale x 8 x float> %vd
+}
+
+define <vscale x 8 x float> @vfadd_vf(<vscale x 8 x float> %va) {
+; CHECK-LABEL: vfadd_vf:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa5, 2.0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vfadd.vf v8, v8, fa5
+; CHECK-NEXT:    ret
+  %vd = fadd <vscale x 8 x float> %va, splat (float 2.000000e+00)
   ret <vscale x 8 x float> %vd
 }
