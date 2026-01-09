@@ -10,6 +10,14 @@
 #include <clc/math/clc_fma.h>
 #include <clc/math/clc_ldexp.h>
 
+#define __CLC_FUNCTION __clc_sqrt
+
+#define __CLC_FLOAT_ONLY
+#define __CLC_IMPL_FUNCTION(x) __builtin_elementwise_sqrt
+#define __CLC_BODY <clc/shared/unary_def.inc>
+#include <clc/math/gentype.inc>
+#undef __CLC_IMPL_FUNCTION
+
 #ifdef cl_khr_fp64
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
@@ -43,8 +51,18 @@ _CLC_OVERLOAD _CLC_DEF double __clc_sqrt(double x) {
 }
 
 #define __CLC_DOUBLE_ONLY
-#define __CLC_FUNCTION __clc_sqrt
 #define __CLC_BODY <clc/shared/unary_def_scalarize.inc>
 #include <clc/math/gentype.inc>
+#undef __CLC_IMPL_FUNCTION
 
-#endif
+#endif // cl_khr_fp64
+
+#ifdef cl_khr_fp16
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
+#define __CLC_HALF_ONLY
+#define __CLC_IMPL_FUNCTION(x) __builtin_elementwise_sqrt
+#define __CLC_BODY <clc/shared/unary_def.inc>
+#include <clc/math/gentype.inc>
+
+#endif // cl_khr_fp16
