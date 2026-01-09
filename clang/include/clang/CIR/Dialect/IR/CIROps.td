@@ -4202,6 +4202,7 @@ def CIR_BaseDataMemberOp : CIR_Op<"base_data_member", [Pure]> {
 
   let hasVerifier = 1;
   let hasLLVMLowering = false;
+  let hasCXXABILowering = true;  
 }
 
 def CIR_DerivedDataMemberOp : CIR_Op<"derived_data_member", [Pure]> {
@@ -4226,6 +4227,7 @@ def CIR_DerivedDataMemberOp : CIR_Op<"derived_data_member", [Pure]> {
 
   let hasVerifier = 1;
   let hasLLVMLowering = false;
+  let hasCXXABILowering = true;  
 }
 
 //===----------------------------------------------------------------------===//
