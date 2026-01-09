@@ -1882,8 +1882,8 @@ ObjCMethodDecl *Sema::getCurMethodDecl() {
   return dyn_cast<ObjCMethodDecl>(DC);
 }
 
-NamedDecl *Sema::getCurFunctionOrMethodDecl() const {
-  DeclContext *DC = getFunctionLevelDeclContext();
+NamedDecl *Sema::getCurFunctionOrMethodDecl(bool AllowLambda) const {
+  DeclContext *DC = getFunctionLevelDeclContext(AllowLambda);
   if (isa<ObjCMethodDecl>(DC) || isa<FunctionDecl>(DC))
     return cast<NamedDecl>(DC);
   return nullptr;
