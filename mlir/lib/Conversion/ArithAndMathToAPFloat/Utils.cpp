@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Utils.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -67,19 +68,40 @@ Value mlir::forEachScalarValue(
       results);
 }
 
-LogicalResult mlir::checkPreconditions(RewriterBase &rewriter, Operation *op) {
+LogicalResult mlir::checkPreconditions(RewriterBase &rewriter, Operation *op,
+                                       ArrayRef<Type> sourceTypes) {
   for (Value value : llvm::concat<Value>(op->getOperands(), op->getResults())) {
     Type type = value.getType();
-    if (auto vecTy = dyn_cast<VectorType>(type)) {
+    if (auto vecTy = dyn_cast<VectorType>(type))
       type = vecTy.getElementType();
-    }
     if (!type.isIntOrFloat()) {
       return rewriter.notifyMatchFailure(
           op, "only integers and floats (or vectors thereof) are supported");
     }
-    if (type.getIntOrFloatBitWidth() > 64)
+    if (type.getIntOrFloatBitWidth() > 64) {
       return rewriter.notifyMatchFailure(op,
                                          "bitwidth > 64 bits is not supported");
+    }
+    if (!sourceTypes.empty() && !llvm::is_contained(sourceTypes, type))
+      return rewriter.notifyMatchFailure(op, "unsupported source type");
   }
   return success();
+}
+
+FailureOr<SmallVector<Type>>
+mlir::parseSourceTypes(SmallVector<std::string> sourceTypeStrs,
+                       MLIRContext *ctx) {
+  SmallVector<Type> sourceTypes;
+  for (StringRef sourceTypeStr : sourceTypeStrs) {
+    std::optional<FloatType> maybeSourceType =
+        arith::parseFloatType(ctx, sourceTypeStr);
+    if (!maybeSourceType) {
+      emitError(UnknownLoc::get(ctx), "could not map source type '" +
+                                          sourceTypeStr +
+                                          "' to a known floating-point type");
+      return failure();
+    }
+    sourceTypes.push_back(*maybeSourceType);
+  }
+  return sourceTypes;
 }

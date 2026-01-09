@@ -11,6 +11,8 @@
 
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Pass/Pass.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace mlir {
 class Value;
@@ -31,8 +33,11 @@ Value forEachScalarValue(mlir::RewriterBase &rewriter, Location loc,
 /// Check preconditions for the conversion:
 /// 1. All operands / results must be integers or floats (or vectors thereof).
 /// 2. The bitwidth of the operands / results must be <= 64.
-LogicalResult checkPreconditions(RewriterBase &rewriter, Operation *op);
+LogicalResult checkPreconditions(RewriterBase &rewriter, Operation *op,
+                                 ArrayRef<Type> sourceTypes);
 
+FailureOr<SmallVector<Type>>
+parseSourceTypes(SmallVector<std::string> sourceTypeStrs, MLIRContext *ctx);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_ARITHANDMATHTOAPFLOAT_UTILS_H_

@@ -9,6 +9,7 @@
 #ifndef MLIR_CONVERSION_ARITHANDMATHTOAPFLOAT_ARITHTOAPFLOAT_H
 #define MLIR_CONVERSION_ARITHANDMATHTOAPFLOAT_ARITHTOAPFLOAT_H
 
+#include "llvm/ADT/SmallVector.h"
 #include <memory>
 
 namespace mlir {
