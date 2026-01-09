@@ -983,7 +983,7 @@ void SeparateConstOffsetFromGEP::lowerToSingleIndexGEPs(
 
   // Create a GEP with the constant offset index.
   if (AccumulativeByteOffset != 0) {
-    Value *Offset = ConstantInt::get(PtrIndexTy, AccumulativeByteOffset);
+    Value *Offset = ConstantInt::getSigned(PtrIndexTy, AccumulativeByteOffset);
     ResultPtr = Builder.CreatePtrAdd(ResultPtr, Offset, "uglygep");
   } else
     isSwapCandidate = false;
