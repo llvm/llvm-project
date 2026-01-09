@@ -29,6 +29,9 @@ class TUSummaryBuilder;
 bool isTUSummaryExtractorRegistered(const SummaryName &Name);
 
 /// Try to instantiate a TUSummaryExtractor with a given name.
+/// This might return null if the construction of the desired TUSummaryExtractor
+/// failed.
+/// It's a fatal error if there is no extractor registered with the name.
 std::unique_ptr<ASTConsumer> makeTUSummaryExtractor(const SummaryName &Name,
                                                     TUSummaryBuilder &Builder);
 
