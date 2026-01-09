@@ -6,14 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Quant/IR/Quant.h"
-#include "mlir/Dialect/Quant/IR/QuantTypes.h"
-#include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Diagnostics.h"
-#include "llvm/ADT/Sequence.h"
+#include "mlir/IR/QuantStorageTypeInterface.h"
 
 using namespace mlir;
-using namespace mlir::detail;
 
 //===----------------------------------------------------------------------===//
 /// Tablegen Interface Definitions
