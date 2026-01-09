@@ -38,8 +38,8 @@ void test(SBDebugger &dbg, vector<string> args) {
   SBFileSpecList module_list;
   module_list.Append(main_module);
 
-  SBBreakpoint breakpoint =
-      target.BreakpointCreateByName("next", module_list, SBFileSpecList());
+  SBBreakpoint breakpoint = target.BreakpointCreateByName(
+      "next", eFunctionNameTypeFull, module_list, SBFileSpecList());
   if (!breakpoint.IsValid()) throw Exception("invalid breakpoint");
 
   if(breakpoint.GetNumLocations() != 1) throw Exception("unexpected amount of breakpoint locations");
