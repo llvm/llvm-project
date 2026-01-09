@@ -47,7 +47,7 @@ COFF Improvements
   However this flag can have an adverse effect when linking a large number of inputs files, or if all
   inputs do not fit in RAM at once. For those cases, linking might be a bit slower since the inputs
   will be streamed into RAM upfront, only to be evicted later by swapping.
-  (`#169224 https://github.com/llvm/llvm-project/pull/169224`_)
+  (`#169224 <https://github.com/llvm/llvm-project/pull/169224>`_)
 
 MinGW Improvements
 ------------------
