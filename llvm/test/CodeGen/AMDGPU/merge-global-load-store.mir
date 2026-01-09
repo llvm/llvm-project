@@ -605,7 +605,7 @@ body:             |
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:areg_64_align2 = REG_SEQUENCE [[DEF1]], %subreg.sub0, [[DEF2]], %subreg.sub1
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:areg_64_align2 = REG_SEQUENCE killed [[DEF1]], %subreg.sub0, killed [[DEF2]], %subreg.sub1
     ; GCN-NEXT: GLOBAL_STORE_DWORDX2 [[DEF]], killed [[REG_SEQUENCE]], 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(1) poison`, align 4, addrspace 1)
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:agpr_32 = IMPLICIT_DEF
