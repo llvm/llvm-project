@@ -14,6 +14,7 @@
 #include "lldb/API/SBValueList.h"
 #include "llvm/ADT/DenseMap.h"
 #include <map>
+#include <optional>
 #include <utility>
 
 namespace lldb_dap {
