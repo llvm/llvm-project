@@ -312,8 +312,8 @@ void unsetLock(omp_lock_t *Lock) {
 int testLock(omp_lock_t *Lock) {
   int32_t *lock_ptr = (int32_t *)Lock;
   return __spirv_AtomicCompareExchange(
-      lock_ptr, Scope_t::CrossDevice, 
-      0x200 | MemorySemantics_t::SequentiallyConsistent, 
+      lock_ptr, Scope_t::CrossDevice,
+      0x200 | MemorySemantics_t::SequentiallyConsistent,
       0x200 | MemorySemantics_t::SequentiallyConsistent, 1, 0);
 }
 void initLock(omp_lock_t *Lock) { unsetLock(Lock); }
@@ -321,9 +321,10 @@ void destroyLock(omp_lock_t *Lock) { unsetLock(Lock); }
 void setLock(omp_lock_t *Lock) {
   int32_t *lock_ptr = (int32_t *)Lock;
   while(__spirv_AtomicCompareExchange(
-      lock_ptr, Scope_t::CrossDevice, 
-      0x200 | MemorySemantics_t::SequentiallyConsistent, 
-      0x200 | MemorySemantics_t::SequentiallyConsistent, 1, 0)){}
+      lock_ptr, Scope_t::CrossDevice,
+      0x200 | MemorySemantics_t::SequentiallyConsistent,
+      0x200 | MemorySemantics_t::SequentiallyConsistent, 1, 0)){
+  }
 }
 
 void unsetCriticalLock(omp_lock_t *Lock) { unsetLock(Lock); }

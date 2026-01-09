@@ -81,7 +81,6 @@ void __spirv_AtomicStore(int32_t *, int, int, int);
 int32_t __spirv_AtomicLoad(int32_t *, int, int);
 int32_t __spirv_AtomicCompareExchange(int32_t *, int, int, int, int, int);
 
-
 // Returns the number of blocks in the 'x' dimension.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_blocks_x(void) {
   return __spirv_BuiltInNumWorkgroups(0);
@@ -151,7 +150,7 @@ _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_lanes(void) {
 _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_lane_id(void) {
   return __spirv_BuiltInSubgroupLocalInvocationId;
 }
- 
+
 // Returns the bit-mask of active threads in the current warp.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t __gpu_lane_mask(void) {
   uint32_t Size = __gpu_num_lanes();
@@ -203,7 +202,6 @@ _DEFAULT_FN_ATTRS static __inline__ uint64_t
 __gpu_match_all_u32(uint64_t __lane_mask, uint32_t __x) {
   return __gpu_match_all_u32_impl(__lane_mask, __x);
 }
-
 
 // Returns the current lane mask if every lane contains __x.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
