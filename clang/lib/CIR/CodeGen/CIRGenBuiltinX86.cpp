@@ -264,15 +264,15 @@ static mlir::Value emitX86MaskTest(CIRGenBuilderTy &builder, mlir::Location loc,
                              mlir::ValueRange{lhsVec, rhsVec});
 }
 
-// TODO: The cgf parameter should be removed when all the NYI cases are
-// implemented.
-static std::optional<mlir::Value>
-emitX86MaskedCompareResult(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
-                           mlir::Value cmp, unsigned numElts,
-                           mlir::Value maskIn, mlir::Location loc) {
+static mlir::Value emitX86MaskedCompareResult(CIRGenBuilderTy &builder,
+                                              mlir::Value cmp, unsigned numElts,
+                                              mlir::Value maskIn,
+                                              mlir::Location loc) {
   if (maskIn) {
-    cgf.cgm.errorNYI(loc, "emitX86MaskedCompareResult");
-    return {};
+    auto c = mlir::dyn_cast_or_null<cir::ConstantOp>(maskIn.getDefiningOp());
+    if (!c || !c.isAllOnesValue())
+      cmp = builder.createAnd(loc, cmp,
+                              getMaskVecValue(builder, loc, maskIn, numElts));
   }
   if (numElts < 8) {
     llvm::SmallVector<mlir::Attribute> indices;
@@ -340,7 +340,7 @@ emitX86MaskedCompare(CIRGenFunction &cgf, CIRGenBuilderTy &builder, unsigned cc,
   if (ops.size() == 4)
     maskIn = ops[3];
 
-  return emitX86MaskedCompareResult(cgf, builder, cmp, numElts, maskIn, loc);
+  return emitX86MaskedCompareResult(builder, cmp, numElts, maskIn, loc);
 }
 
 // TODO: The cgf parameter should be removed when all the NYI cases are
@@ -540,31 +540,6 @@ static mlir::Value emitX86vpcom(CIRGenBuilderTy &builder, mlir::Location loc,
   }
 
   return builder.createVecCompare(loc, pred, op0, op1);
-}
-
-static mlir::Value emitX86MaskedCompareResult(CIRGenBuilderTy &builder,
-                                              mlir::Location loc,
-                                              mlir::Value cmp, unsigned numElts,
-                                              mlir::Value maskIn) {
-  if (maskIn) {
-    auto c = mlir::dyn_cast_or_null<cir::ConstantOp>(maskIn.getDefiningOp());
-    if (!c || !c.isAllOnesValue())
-      cmp = builder.createAnd(loc, cmp,
-                              getMaskVecValue(builder, loc, maskIn, numElts));
-  }
-
-  if (numElts < 8) {
-    llvm::SmallVector<mlir::Attribute, 8> indices;
-    mlir::Type i32Ty = builder.getSInt32Ty();
-    for (unsigned i = 0; i != numElts; ++i)
-      indices.push_back(cir::IntAttr::get(i32Ty, i));
-    for (unsigned i = numElts; i != 8; ++i)
-      indices.push_back(cir::IntAttr::get(i32Ty, i % numElts + numElts));
-    cmp = builder.createVecShuffle(
-        loc, cmp, builder.getNullValue(cmp.getType(), loc), indices);
-  }
-
-  return builder.createBitcast(cmp, builder.getUIntNTy(std::max(numElts, 8U)));
 }
 
 std::optional<mlir::Value>
@@ -1908,13 +1883,13 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
                             resRecord, mlir::ValueRange{ops[0], ops[1]});
     mlir::Value result =
         cir::ExtractMemberOp::create(builder, loc, resVector, call, 0);
-    result = emitX86MaskedCompareResult(builder, loc, result, numElts, nullptr);
+    result = emitX86MaskedCompareResult(builder, result, numElts, nullptr, loc);
     Address addr = Address(
         ops[2], clang::CharUnits::fromQuantity(std::max(1U, numElts / 8)));
     builder.createStore(loc, result, addr);
 
     result = cir::ExtractMemberOp::create(builder, loc, resVector, call, 1);
-    result = emitX86MaskedCompareResult(builder, loc, result, numElts, nullptr);
+    result = emitX86MaskedCompareResult(builder, result, numElts, nullptr, loc);
     addr = Address(ops[3],
                    clang::CharUnits::fromQuantity(std::max(1U, numElts / 8)));
     builder.createStore(loc, result, addr);
