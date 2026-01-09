@@ -70,6 +70,26 @@ def Tosa_AddShapeOp : Tosa_ElementwiseShapeOp<"add_shape", [Pure]> {
 }
 
 //===----------------------------------------------------------------------===//
+// Operator: ConcatShape
+//===----------------------------------------------------------------------===//
+def Tosa_ConcatShapeOp : Tosa_ShapeOp<"concat_shape", [Pure]> {
+  let summary = "Concatenates a list of shapes.";
+
+  let description = [{
+    Concatenates a list of shapes into a new shape with length equal to the sum
+    of the lengths of the inputs.
+  }];
+
+  let arguments = (ins
+    Variadic<Tosa_Shape>:$input
+  );
+
+  let results = (outs Tosa_Shape:$output);
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // Operator: ConstShape
 //===----------------------------------------------------------------------===//
 def Tosa_ConstShapeOp : Tosa_ShapeOp<"const_shape", [ConstantLike, Pure]> {
@@ -156,6 +176,60 @@ def Tosa_DivFloorShapeOp : Tosa_ElementwiseShapeOp<"div_floor_shape", [Pure]> {
 }
 
 //===----------------------------------------------------------------------===//
+// Operator: MaxShape
+//===----------------------------------------------------------------------===//
+def Tosa_MaxShapeOp : Tosa_ElementwiseShapeOp<"max_shape", [Pure]> {
+  let summary = "Elementwise maximum of shapes.";
+
+  let description = [{
+      Elementwise maximum of input1 and input2.
+  }];
+
+  let arguments = (ins
+    Tosa_Shape:$input1,
+    Tosa_Shape:$input2
+  );
+
+  let results = (outs Tosa_Shape:$output);
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: MinShape
+//===----------------------------------------------------------------------===//
+def Tosa_MinShapeOp : Tosa_ElementwiseShapeOp<"min_shape", [Pure]> {
+  let summary = "Elementwise minimum of shapes.";
+
+  let description = [{
+      Elementwise minimum of input1 and input2.
+  }];
+
+  let arguments = (ins
+    Tosa_Shape:$input1,
+    Tosa_Shape:$input2
+  );
+
+  let results = (outs Tosa_Shape:$output);
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: ModShape
+//===----------------------------------------------------------------------===//
+def Tosa_ModShapeOp : Tosa_ElementwiseShapeOp<"mod_shape", [Pure]> {
+  let summary = "Elementwise modulo of shapes.";
+
+  let description = [{
+    Elementwise modulo of input1 divided by input2.
+  }];
+
+  let arguments = (ins
+    Tosa_Shape:$input1,
+    Tosa_Shape:$input2
+  );
+
+  let results = (outs Tosa_Shape:$output);
+}
+
+//===----------------------------------------------------------------------===//
 // Operator: MulShape
 //===----------------------------------------------------------------------===//
 def Tosa_MulShapeOp : Tosa_ElementwiseShapeOp<"mul_shape", [Pure]> {
@@ -171,6 +245,27 @@ def Tosa_MulShapeOp : Tosa_ElementwiseShapeOp<"mul_shape", [Pure]> {
   );
 
   let results = (outs Tosa_Shape:$output);
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: SliceShape
+//===----------------------------------------------------------------------===//
+def Tosa_SliceShapeOp : Tosa_ShapeOp<"slice_shape", [Pure]> {
+  let summary = "Extract slice of a shape.";
+
+  let description = [{
+    Extract a shape of size from input.
+  }];
+
+  let arguments = (ins
+    Tosa_Shape:$input,
+    Tosa_ScalarInt32Tensor:$start,
+    Tosa_ScalarInt32Tensor:$size
+  );
+
+  let results = (outs Tosa_Shape:$output);
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

@@ -144,14 +144,19 @@ static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
   if (isa<ParmVarDecl>(D)) {
     if (D->getType()->isReferenceType()) {
       if (S.inConstantContext() && S.getLangOpts().CPlusPlus &&
-          !S.getLangOpts().CPlusPlus11)
+          !S.getLangOpts().CPlusPlus11) {
         diagnoseNonConstVariable(S, OpPC, D);
-      return false;
+        return false;
+      }
     }
 
     const SourceInfo &Loc = S.Current->getSource(OpPC);
-    if (S.getLangOpts().CPlusPlus11) {
-      S.FFDiag(Loc, diag::note_constexpr_function_param_value_unknown) << D;
+    if (S.getLangOpts().CPlusPlus23) {
+      S.FFDiag(Loc, diag::note_constexpr_access_unknown_variable, 1)
+          << AK_Read << D;
+      S.Note(D->getLocation(), diag::note_declared_at) << D->getSourceRange();
+    } else if (S.getLangOpts().CPlusPlus11) {
+      S.FFDiag(Loc, diag::note_constexpr_function_param_value_unknown, 1) << D;
       S.Note(D->getLocation(), diag::note_declared_at) << D->getSourceRange();
     } else {
       S.FFDiag(Loc);
@@ -326,12 +331,13 @@ bool CheckBCPResult(InterpState &S, const Pointer &Ptr) {
 }
 
 bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                 AccessKinds AK) {
+                 AccessKinds AK, bool WillActivate) {
   if (Ptr.isActive())
     return true;
 
   assert(Ptr.inUnion());
 
+  // Find the outermost union.
   Pointer U = Ptr.getBase();
   Pointer C = Ptr;
   while (!U.isRoot() && !U.isActive()) {
@@ -346,6 +352,7 @@ bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     U = U.getBase();
   }
   assert(C.isField());
+  assert(C.getBase() == U);
 
   // Consider:
   // union U {
@@ -361,6 +368,25 @@ bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   // handle this.
   if (!U.getFieldDesc()->isUnion())
     return true;
+
+  // When we will activate Ptr, check that none of the unions in its path have a
+  // non-trivial default constructor.
+  if (WillActivate) {
+    bool Fails = false;
+    Pointer It = Ptr;
+    while (!It.isRoot() && !It.isActive()) {
+      if (const Record *R = It.getRecord(); R && R->isUnion()) {
+        if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(R->getDecl());
+            CXXRD && !CXXRD->hasTrivialDefaultConstructor()) {
+          Fails = true;
+          break;
+        }
+      }
+      It = It.getBase();
+    }
+    if (!Fails)
+      return true;
+  }
 
   // Get the inactive field descriptor.
   assert(!C.isActive());
@@ -890,7 +916,7 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
   if (!CheckRange(S, OpPC, Ptr, AK_Assign))
     return false;
-  if (!WillBeActivated && !CheckActive(S, OpPC, Ptr, AK_Assign))
+  if (!CheckActive(S, OpPC, Ptr, AK_Assign, WillBeActivated))
     return false;
   if (!CheckGlobal(S, OpPC, Ptr))
     return false;

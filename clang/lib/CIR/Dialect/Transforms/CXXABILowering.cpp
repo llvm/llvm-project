@@ -31,38 +31,9 @@ namespace mlir {
 
 namespace {
 
-template <typename Op>
-class CIROpCXXABILoweringPattern : public mlir::OpConversionPattern<Op> {
-protected:
-  mlir::DataLayout *dataLayout;
-  cir::LowerModule *lowerModule;
-
-public:
-  CIROpCXXABILoweringPattern(mlir::MLIRContext *context,
-                             const mlir::TypeConverter &typeConverter,
-                             mlir::DataLayout &dataLayout,
-                             cir::LowerModule &lowerModule)
-      : mlir::OpConversionPattern<Op>(typeConverter, context),
-        dataLayout(&dataLayout), lowerModule(&lowerModule) {}
-};
-
-// TODO(cir): Use TableGen to generate these patterns.
-#define CIR_CXXABI_LOWERING_PATTERN(name, operation)                           \
-  struct name : CIROpCXXABILoweringPattern<operation> {                        \
-    using CIROpCXXABILoweringPattern<operation>::CIROpCXXABILoweringPattern;   \
-                                                                               \
-    mlir::LogicalResult                                                        \
-    matchAndRewrite(operation op, OpAdaptor adaptor,                           \
-                    mlir::ConversionPatternRewriter &rewriter) const override; \
-  }
-
-CIR_CXXABI_LOWERING_PATTERN(CIRAllocaOpABILowering, cir::AllocaOp);
-CIR_CXXABI_LOWERING_PATTERN(CIRConstantOpABILowering, cir::ConstantOp);
-CIR_CXXABI_LOWERING_PATTERN(CIRFuncOpABILowering, cir::FuncOp);
-CIR_CXXABI_LOWERING_PATTERN(CIRGetRuntimeMemberOpABILowering,
-                            cir::GetRuntimeMemberOp);
-CIR_CXXABI_LOWERING_PATTERN(CIRGlobalOpABILowering, cir::GlobalOp);
-#undef CIR_CXXABI_LOWERING_PATTERN
+#define GET_ABI_LOWERING_PATTERNS
+#include "clang/CIR/Dialect/IR/CIRLowering.inc"
+#undef GET_ABI_LOWERING_PATTERNS
 
 struct CXXABILoweringPass
     : public impl::CXXABILoweringBase<CXXABILoweringPass> {
@@ -346,13 +317,9 @@ void CXXABILoweringPass::runOnOperation() {
   patterns.add<CIRGenericCXXABILoweringPattern>(patterns.getContext(),
                                                 typeConverter);
   patterns.add<
-      // clang-format off
-      CIRAllocaOpABILowering,
-      CIRConstantOpABILowering,
-      CIRFuncOpABILowering,
-      CIRGetRuntimeMemberOpABILowering,
-      CIRGlobalOpABILowering
-      // clang-format on
+#define GET_ABI_LOWERING_PATTERNS_LIST
+#include "clang/CIR/Dialect/IR/CIRLowering.inc"
+#undef GET_ABI_LOWERING_PATTERNS_LIST
       >(patterns.getContext(), typeConverter, dataLayout, *lowerModule);
 
   mlir::ConversionTarget target(*ctx);

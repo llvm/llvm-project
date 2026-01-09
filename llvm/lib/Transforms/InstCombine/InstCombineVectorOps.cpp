@@ -594,7 +594,15 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
       // Canonicalize extractelement(cast) -> cast(extractelement).
       // Bitcasts can change the number of vector elements, and they cost
       // nothing.
-      if (CI->hasOneUse() && (CI->getOpcode() != Instruction::BitCast)) {
+      // If the CI has only one use, but that use is inside a loop, this
+      // canonicalization is not profitable because it would turn a vector
+      // operation into scalar operations inside the loop. Apply the transform
+      // when:
+      //  - the index is constant and CI has one use, or
+      //  - the CI and EI are in the same basic block, so the cast won't be sunk
+      //    into a loop.
+      if (CI->hasOneUse() && (CI->getOpcode() != Instruction::BitCast) &&
+          (EI.getParent() == CI->getParent() || isa<ConstantInt>(Index))) {
         Value *EE = Builder.CreateExtractElement(CI->getOperand(0), Index);
         return CastInst::Create(CI->getOpcode(), EE, EI.getType());
       }
