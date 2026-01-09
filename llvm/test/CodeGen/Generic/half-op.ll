@@ -25,7 +25,7 @@
 ; RUN: %if mips-registered-target        %{ llc %s -o - -mtriple=mips64-unknown-linux-gnuabi64   | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
 ; RUN: %if mips-registered-target        %{ llc %s -o - -mtriple=mips64el-unknown-linux-gnuabi64 | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
 ; RUN: %if mips-registered-target        %{ llc %s -o - -mtriple=mipsel-unknown-linux-gnu        | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
-; RUN: %if msp430-registered-target      %{ llc %s -o - -mtriple=msp430-none-elf                 | FileCheck %s --check-prefixes=ALL,BAD-NEG-ABS,BAD-COPYSIGN,BAD-FMA %}
+; RUN: %if msp430-registered-target      %{ llc %s -o - -mtriple=msp430-none-elf                 | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
 ; RUN: %if nvptx-registered-target       %{ llc %s -o - -mtriple=nvptx64-nvidia-cuda             | FileCheck %s --check-prefixes=NOCRASH %}
 ; RUN: %if powerpc-registered-target     %{ llc %s -o - -mtriple=powerpc-unknown-linux-gnu       | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
 ; RUN: %if powerpc-registered-target     %{ llc %s -o - -mtriple=powerpc64-unknown-linux-gnu     | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
