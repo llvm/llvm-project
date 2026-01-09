@@ -28,6 +28,7 @@ class LangOptions;
 class ASTContext;
 class CharUnits;
 class Expr;
+class FunctionDecl;
 } // namespace clang
 using namespace clang;
 /// Values returned by __builtin_classify_type, chosen to match the values
@@ -83,5 +84,8 @@ uint8_t GFNIAffine(uint8_t XByte, const llvm::APInt &AQword,
                    const llvm::APSInt &Imm, bool Inverse = false);
 llvm::APSInt NormalizeRotateAmount(const llvm::APSInt &Value,
                                    const llvm::APSInt &Amount);
+
+/// Whether we can instantiate FD during constant evaluation
+bool FunctionDefinitionCanBeLazilyInstantiated(const FunctionDecl *FD);
 
 #endif

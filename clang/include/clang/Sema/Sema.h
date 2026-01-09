@@ -910,8 +910,8 @@ public:
   /// initialized but before it parses anything.
   void Initialize();
 
-  void RegisterSemaProxy();
-  void UnregisterSemaProxy();
+  void registerSemaProxy();
+  void unregisterSemaProxy();
 
   /// This virtual key function only exists to limit the emission of debug info
   /// describing the Sema class. GCC and Clang only emit debug info for a class

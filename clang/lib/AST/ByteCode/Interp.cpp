@@ -1634,13 +1634,13 @@ static void compileFunction(InterpState &S, const Function *Func,
   // when the specialization is referenced in a context that requires a function
   // definition to exist or if the existence of the definition affects the
   // semantics of the program.
-  if (!Fn->isDefined() && Fn->isImplicitlyInstantiable() && Fn->isConstexpr() &&
+  if (FunctionDefinitionCanBeLazilyInstantiated(Func->getDecl()) &&
       S.inConstantContext() && !S.PerformingTrialEvaluation &&
       !S.checkingPotentialConstantExpression()) {
     SemaProxy *SP = S.getASTContext().getSemaProxy();
     if (!SP)
       return;
-    SP->InstantiateFunctionDefinition(S.Current->getLocation(OpPC),
+    SP->instantiateFunctionDefinition(S.Current->getLocation(OpPC),
                                       const_cast<FunctionDecl *>(Fn));
   }
   Fn = Fn->getDefinition();

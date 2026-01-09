@@ -624,14 +624,14 @@ Sema::~Sema() {
   SemaPPCallbackHandler->reset();
 }
 
-void Sema::RegisterSemaProxy() {
+void Sema::registerSemaProxy() {
   // Let the AST context rely on Sema for
   // AST mutation features that require semantic analysis
   // (lazy instantiation, reflection, etc).
   Context.setSemaProxy(getSemaProxyImplementation(*this));
 }
 
-void Sema::UnregisterSemaProxy() { Context.setSemaProxy({}); }
+void Sema::unregisterSemaProxy() { Context.setSemaProxy({}); }
 
 void Sema::runWithSufficientStackSpace(SourceLocation Loc,
                                        llvm::function_ref<void()> Fn) {
@@ -2982,7 +2982,7 @@ private:
 
 public:
   SemaProxyImplementation(Sema &SemaRef) : SemaRef(SemaRef) {}
-  void InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
+  void instantiateFunctionDefinition(SourceLocation PointOfInstantiation,
                                      FunctionDecl *Function) override {
     SemaRef.InstantiateFunctionDefinition(
         PointOfInstantiation, Function, /*Recursive=*/true,

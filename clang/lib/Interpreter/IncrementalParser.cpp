@@ -42,11 +42,11 @@ IncrementalParser::IncrementalParser(CompilerInstance &Instance,
     External->StartTranslationUnit(Consumer);
 
   P->Initialize();
-  S.RegisterSemaProxy();
+  S.registerSemaProxy();
 }
 
 IncrementalParser::~IncrementalParser() {
-  S.UnregisterSemaProxy();
+  S.unregisterSemaProxy();
   P.reset();
 }
 

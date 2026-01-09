@@ -6963,8 +6963,14 @@ static bool handleTrivialCopy(EvalInfo &Info, const ParmVarDecl *Param,
       CopyObjectRepresentation);
 }
 
-static void InstantiateFunctionBeforeCall(const FunctionDecl *FD,
-                                          EvalInfo &Info, SourceLocation Loc) {
+bool FunctionDefinitionCanBeLazilyInstantiated(const FunctionDecl *FD) {
+  return !FD->isDefined() && FD->isImplicitlyInstantiable() &&
+         FD->isConstexpr();
+}
+
+static void TryInstantiateFunctionBeforeCall(const FunctionDecl *FD,
+                                             EvalInfo &Info,
+                                             SourceLocation Loc) {
 
   // [C++26] [temp.inst] p5
   // [...] the function template specialization is implicitly instantiated
@@ -6972,16 +6978,15 @@ static void InstantiateFunctionBeforeCall(const FunctionDecl *FD,
   // definition to exist or if the existence of the definition affects the
   // semantics of the program.
 
-  if (!FD->isDefined() && FD->isImplicitlyInstantiable() && FD->isConstexpr() &&
-      Info.InConstantContext && !Info.PerformingTrialEvaluation &&
+  if (FunctionDefinitionCanBeLazilyInstantiated(FD) && Info.InConstantContext &&
+      !Info.PerformingTrialEvaluation &&
       !Info.checkingPotentialConstantExpression()) {
 
     SemaProxy *SP = Info.getASTContext().getSemaProxy();
     // Try to instantiate the definition if Sema is available
     // (i.e during the initial parse of the TU).
-    if (SP) {
-      SP->InstantiateFunctionDefinition(Loc, const_cast<FunctionDecl *>(FD));
-    }
+    if (SP)
+      SP->instantiateFunctionDefinition(Loc, const_cast<FunctionDecl *>(FD));
   }
 }
 
@@ -7378,7 +7383,7 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceRange CallRange,
   if (!Info.CheckCallLimit(CallRange.getBegin()))
     return false;
 
-  InstantiateFunctionBeforeCall(DD, Info, CallRange.getBegin());
+  TryInstantiateFunctionBeforeCall(DD, Info, CallRange.getBegin());
 
   const FunctionDecl *Definition = nullptr;
   const Stmt *Body = DD->getBody(Definition);
@@ -8847,7 +8852,7 @@ public:
 
     SourceLocation Loc = E->getExprLoc();
 
-    InstantiateFunctionBeforeCall(FD, Info, Loc);
+    TryInstantiateFunctionBeforeCall(FD, Info, Loc);
 
     const FunctionDecl *Definition = nullptr;
     const Stmt *Body = FD->getBody(Definition);
@@ -11369,7 +11374,7 @@ bool RecordExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E,
     return handleDefaultInitValue(T, Result);
   }
 
-  InstantiateFunctionBeforeCall(FD, Info, E->getBeginLoc());
+  TryInstantiateFunctionBeforeCall(FD, Info, E->getBeginLoc());
 
   const FunctionDecl *Definition = nullptr;
   const Stmt *Body = FD->getBody(Definition);
@@ -11412,7 +11417,7 @@ bool RecordExprEvaluator::VisitCXXInheritedCtorInitExpr(
   if (FD->isInvalidDecl() || FD->getParent()->isInvalidDecl())
     return false;
 
-  InstantiateFunctionBeforeCall(FD, Info, E->getBeginLoc());
+  TryInstantiateFunctionBeforeCall(FD, Info, E->getBeginLoc());
   const FunctionDecl *Definition = nullptr;
   const Stmt *Body = FD->getBody(Definition);
 

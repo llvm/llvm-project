@@ -222,7 +222,7 @@ struct SemaProxy {
   virtual ~SemaProxy() = default;
 
   virtual void
-  InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
+  instantiateFunctionDefinition(SourceLocation PointOfInstantiation,
                                 FunctionDecl *Function) = 0;
 };
 
