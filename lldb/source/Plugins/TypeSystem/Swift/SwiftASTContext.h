@@ -647,7 +647,8 @@ public:
   static bool IsGenericType(const CompilerType &compiler_type);
 
   /// Whether this is the Swift error type.
-  bool IsErrorType(lldb::opaque_compiler_type_t type) override;
+  bool IsErrorType(lldb::opaque_compiler_type_t type,
+                   const ExecutionContext *exe_ctx) override;
 
   struct ProtocolInfo {
     uint32_t m_num_protocols;

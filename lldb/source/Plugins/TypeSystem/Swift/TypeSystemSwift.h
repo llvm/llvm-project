@@ -144,7 +144,8 @@ public:
 
   virtual bool IsImportedType(lldb::opaque_compiler_type_t type,
                               CompilerType *original_type) = 0;
-  virtual bool IsErrorType(lldb::opaque_compiler_type_t type) = 0;
+  virtual bool IsErrorType(lldb::opaque_compiler_type_t type,
+                           const ExecutionContext *exe_ctx) = 0;
   virtual CompilerType GetErrorType() = 0;
   virtual CompilerType GetWeakReferent(lldb::opaque_compiler_type_t type) {
     return {};

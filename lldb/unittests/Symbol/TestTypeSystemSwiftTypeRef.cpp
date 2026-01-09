@@ -515,12 +515,19 @@ TEST_F(TestTypeSystemSwiftTypeRef, Tuple) {
                       b.Node(Node::Kind::TupleElementName, "z"), b.IntType())));
     CompilerType t = GetCompilerType(b.Mangle(n));
     lldb::opaque_compiler_type_t o = t.GetOpaqueQualType();
-    ASSERT_EQ(m_swift_ts->GetTupleElement(o, 0)->element_name.GetStringRef(), "x");
-    ASSERT_EQ(m_swift_ts->GetTupleElement(o, 1)->element_name.GetStringRef(), "1");
-    ASSERT_EQ(m_swift_ts->GetTupleElement(o, 2)->element_name.GetStringRef(), "z");
+    ASSERT_EQ(
+        m_swift_ts->GetTupleElement(o, 0, nullptr)->element_name.GetStringRef(),
+        "x");
+    ASSERT_EQ(
+        m_swift_ts->GetTupleElement(o, 1, nullptr)->element_name.GetStringRef(),
+        "1");
+    ASSERT_EQ(
+        m_swift_ts->GetTupleElement(o, 2, nullptr)->element_name.GetStringRef(),
+        "z");
     CompilerType int_type =
         GetCompilerType(b.Mangle(b.GlobalTypeMangling(b.IntType())));
-    ASSERT_EQ(m_swift_ts->GetTupleElement(o, 2)->element_type, int_type);
+    ASSERT_EQ(m_swift_ts->GetTupleElement(o, 2, nullptr)->element_type,
+              int_type);
   }
 }
 

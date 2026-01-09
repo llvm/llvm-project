@@ -6054,7 +6054,8 @@ BindGenericTypeParameters(CompilerType type, ExecutionContextScope *exe_scope) {
   return type;
 }
 
-bool SwiftASTContext::IsErrorType(opaque_compiler_type_t type) {
+bool SwiftASTContext::IsErrorType(opaque_compiler_type_t type,
+                                  const ExecutionContext *exe_ctx) {
   VALID_OR_RETURN_CHECK_TYPE(type, false);
   ProtocolInfo protocol_info;
   if (GetProtocolTypeInfo({weak_from_this(), type}, protocol_info))

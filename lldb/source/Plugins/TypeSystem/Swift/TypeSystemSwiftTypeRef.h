@@ -193,6 +193,14 @@ public:
   CompilerType GetArrayElementType(lldb::opaque_compiler_type_t type,
                                    ExecutionContextScope *exe_scope) override;
   CompilerType GetCanonicalType(lldb::opaque_compiler_type_t type) override;
+  CompilerType GetCanonicalType(lldb::opaque_compiler_type_t type,
+                                const ExecutionContext *exe_ctx);
+  CompilerType GetCanonicalType(lldb::opaque_compiler_type_t type,
+                                ExecutionContextScope *exe_scope);
+
+  static CompilerType GetCanonicalType(CompilerType GetCanonicalType,
+                                       const ExecutionContext *exe_ctx);
+
   int GetFunctionArgumentCount(lldb::opaque_compiler_type_t type) override;
   CompilerType GetFunctionArgumentTypeAtIndex(lldb::opaque_compiler_type_t type,
                                               size_t idx) override;
@@ -315,7 +323,8 @@ public:
   /// builtins (int <-> Swift.Int) as Clang types.
   CompilerType GetAsClangTypeOrNull(lldb::opaque_compiler_type_t type,
                                     bool *is_imported = nullptr);
-  bool IsErrorType(lldb::opaque_compiler_type_t type) override;
+  bool IsErrorType(lldb::opaque_compiler_type_t type,
+                   const ExecutionContext *exe_ctx) override;
   CompilerType GetErrorType() override;
   CompilerType GetWeakReferent(lldb::opaque_compiler_type_t type) override;
   CompilerType GetReferentType(lldb::opaque_compiler_type_t type) override;
@@ -343,8 +352,9 @@ public:
       lldb::opaque_compiler_type_t type) override;
 
   /// Return the nth tuple element's type and name, if it has one.
-  std::optional<TupleElement>
-  GetTupleElement(lldb::opaque_compiler_type_t type, size_t idx);
+  std::optional<TupleElement> GetTupleElement(lldb::opaque_compiler_type_t type,
+                                              size_t idx,
+                                              const ExecutionContext *exe_ctx);
 
   /// Returns true if the compiler type is a Builtin (belongs to the "Builtin
   /// module").
@@ -368,7 +378,8 @@ public:
   /// Get the Swift raw pointer type.
   CompilerType GetRawPointerType();
   /// Determine whether \p type is a protocol.
-  bool IsExistentialType(lldb::opaque_compiler_type_t type);
+  bool IsExistentialType(lldb::opaque_compiler_type_t type,
+                         const ExecutionContext *exe_ctx);
   bool IsBoundGenericAliasType(lldb::opaque_compiler_type_t type);
   bool ContainsBoundGenericType(lldb::opaque_compiler_type_t type);
 
@@ -500,7 +511,8 @@ protected:
   /// \return the child of Type or a nullptr.
   swift::Demangle::NodePointer
   DemangleCanonicalType(swift::Demangle::Demangler &dem,
-                        lldb::opaque_compiler_type_t type);
+                        lldb::opaque_compiler_type_t type,
+                        const ExecutionContext *exe_ctx = nullptr);
 
   /// Demangle the mangled name of \p type after canonicalizing its
   /// outermost type node and drill into the
@@ -509,7 +521,8 @@ protected:
   /// \return the child of Type or a nullptr.
   swift::Demangle::NodePointer
   DemangleCanonicalOutermostType(swift::Demangle::Demangler &dem,
-                                 lldb::opaque_compiler_type_t type);
+                                 lldb::opaque_compiler_type_t type,
+                                 const ExecutionContext *exe_ctx = nullptr);
 
   /// Desugar to this node and if it is a type alias resolve it by
   /// looking up its type in the debug info.
