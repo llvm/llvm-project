@@ -1318,6 +1318,7 @@ private:
 
   LLVM_ABI void unmapImpl();
   LLVM_ABI void dontNeedImpl();
+  LLVM_ABI void willNeedImpl();
 
   LLVM_ABI std::error_code init(sys::fs::file_t FD, uint64_t Offset,
                                 mapmode Mode);
@@ -1349,6 +1350,7 @@ public:
     copyFrom(mapped_file_region());
   }
   void dontNeed() { dontNeedImpl(); }
+  void willNeed() { willNeedImpl(); }
 
   LLVM_ABI size_t size() const;
   LLVM_ABI char *data() const;
