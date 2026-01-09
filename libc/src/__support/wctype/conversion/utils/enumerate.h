@@ -10,9 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_WCTYPE_CONVERSION_UTILS_ENUMERATE_H
 
 #include "hdr/types/size_t.h"
-#include "src/__support/CPP/tuple.h"
 #include "src/__support/CPP/utility/forward.h"
-#include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -33,7 +31,11 @@ template <typename Iterable> struct Enumerate {
     decltype(iterable.begin()) it;
 
     LIBC_INLINE constexpr auto operator*() const {
-      return cpp::tuple<size_t, decltype(*it)>(index, *it);
+      struct EnumeratedValue {
+        size_t index;
+        decltype(*it) value;
+      };
+      return EnumeratedValue{index, *it};
     }
 
     LIBC_INLINE constexpr Iterator &operator++() {

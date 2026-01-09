@@ -4,9 +4,7 @@ add_header_library(
     enumerate.h
   DEPENDS
     libc.hdr.types.size_t
-    libc.src.__support.CPP.tuple
-    libc.src.__support.CPP.utility.forward
-    libc.src.__support.common
+    libc.src.__support.CPP.utility
 )
 
 add_header_library(
