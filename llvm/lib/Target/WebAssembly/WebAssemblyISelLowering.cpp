@@ -139,7 +139,11 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     // Expand floating-point library function operators.
     for (auto Op : {ISD::FSIN, ISD::FCOS, ISD::FSINCOS, ISD::FPOW, ISD::FMA})
       setOperationAction(Op, T, Expand);
-    setOperationAction(ISD::FREM, T, LibCall);
+    // Expand vector FREM, but use a libcall rather than an expansion for scalar
+    if (MVT(T).isVector())
+      setOperationAction(ISD::FREM, T, Expand);
+    else
+      setOperationAction(ISD::FREM, T, LibCall);
     // Note supported floating-point library function operators that otherwise
     // default to expand.
     for (auto Op : {ISD::FCEIL, ISD::FFLOOR, ISD::FTRUNC, ISD::FNEARBYINT,
