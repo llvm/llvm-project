@@ -59,6 +59,21 @@ template <typename T> struct Slice : public cpp::span<T> {
     return *this;
   }
 
+  // Binary searches this slice with a comparator function.
+  //
+  // The comparator function should return an order code that indicates whether
+  // its argument is `Less`, `Equal` or `Greater` the desired target.
+  // If the slice is not sorted or if the comparator function does not
+  // implement an order consistent with the sort order of the underlying
+  // slice, the returned result is unspecified and meaningless.
+  //
+  // If the value is found then `cpp::expected<size_t>` is returned,
+  // containing the index of the matching element. If there are multiple
+  // matches, then any one of the matches could be returned. The index is chosen
+  // deterministically.
+  // If the value is not found then `cpp::unexpected<size_t>` is returned,
+  // containing the index where a matching element could be inserted while
+  // maintaining sorted order.
   template <typename Fn>
   LIBC_INLINE constexpr cpp::expected<size_t, size_t>
   binary_search_by(Fn func) const {
