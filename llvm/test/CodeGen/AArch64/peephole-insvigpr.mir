@@ -41,11 +41,6 @@
     ret void
   }
 
-  define void @insert_vec_from_gpr64_zero_high(i64 %v, ptr %dst) {
-  entry:
-    ret void
-  }
-
   attributes #0 = { nocallback nofree nosync nounwind willreturn memory(none) }
 
 ...
@@ -524,52 +519,6 @@ body:             |
     %13:fpr128 = INSERT_SUBREG %14, killed %11, %subreg.dsub
     %16:fpr32 = COPY %13.ssub
     STRSui killed %16, %0, 0 :: (store (s32) into %ir.hist)
-    RET_ReallyLR
-
----
-name:            insert_vec_from_gpr64_zero_high
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr64common, preferred-register: '' }
-  - { id: 1, class: gpr64common, preferred-register: '' }
-  - { id: 2, class: fpr64, preferred-register: '' }
-  - { id: 3, class: fpr128, preferred-register: '' }
-  - { id: 4, class: fpr128, preferred-register: '' }
-  - { id: 5, class: fpr64, preferred-register: '' }
-  - { id: 6, class: fpr128, preferred-register: '' }
-  - { id: 7, class: fpr128, preferred-register: '' }
-  - { id: 8, class: fpr128, preferred-register: '' }
-liveins:
-  - { reg: '$x0', virtual-reg: '%0' }
-  - { reg: '$x1', virtual-reg: '%1' }
-body:             |
-  bb.0.entry:
-    liveins: $x0, $x1
-
-    ; CHECK-LABEL: name: insert_vec_from_gpr64_zero_high
-    ; CHECK: liveins: $x0, $x1
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[PTR:%[0-9]+]]:gpr64common = COPY $x0
-    ; CHECK-NEXT: [[VAL:%[0-9]+]]:gpr64common = COPY $x1
-    ; CHECK-NEXT: [[GPR:%[0-9]+]]:gpr64 = COPY [[VAL]]
-    ; CHECK-NEXT: [[FMOV:%[0-9]+]]:fpr64 = FMOVXDr killed [[GPR]]
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_LOW:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[FMOV]], %subreg.dsub
-    ; CHECK-NEXT: [[MOVID:%[0-9]+]]:fpr64 = MOVID 0
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_ZERO:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], killed [[MOVID]], %subreg.dsub
-    ; CHECK-NEXT: STRQui killed [[INSERT_LOW]], [[PTR]], 0 :: (store (s128) into %ir.dst, align 8)
-    ; CHECK-NEXT: RET_ReallyLR
-    %0:gpr64common = COPY $x0
-    %1:gpr64common = COPY $x1
-    %2:fpr64 = COPY %1
-    %4:fpr128 = IMPLICIT_DEF
-    %3:fpr128 = INSERT_SUBREG %4, %2, %subreg.dsub
-    %5:fpr64 = MOVID 0
-    %7:fpr128 = IMPLICIT_DEF
-    %6:fpr128 = INSERT_SUBREG %7, killed %5, %subreg.dsub
-    %8:fpr128 = INSvi64lane %3, 1, killed %6, 0
-    STRQui killed %8, %0, 0 :: (store (s128) into %ir.dst, align 8)
     RET_ReallyLR
 
 ...

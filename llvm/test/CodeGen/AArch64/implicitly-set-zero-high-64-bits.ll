@@ -95,7 +95,10 @@ entry:
 define <2 x double> @fadd(double noundef %x, double noundef %y) {
 ; CHECK-LABEL: fadd:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    fadd d0, d0, d1
+; CHECK-NEXT:    mov v2.d[0], v0.d[0]
+; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %add = fadd double %x, %y

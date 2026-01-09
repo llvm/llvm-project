@@ -520,3 +520,20 @@ namespace InactiveLocalsInConditionalOp {
 
 }
 #endif
+
+namespace UnknownParams {
+  class X {
+  public:
+    constexpr operator bool(){ return true; }
+  };
+  int foo(X x) {
+    static_assert(x);
+    return 1;
+  }
+
+  int foo2(X &x) { // all20-note {{declared here}}
+    static_assert(x); // all20-error {{not an integral constant expression}} \
+                      // all20-note {{function parameter 'x' with unknown value cannot be used in a constant expression}}
+    return 1;
+  }
+}

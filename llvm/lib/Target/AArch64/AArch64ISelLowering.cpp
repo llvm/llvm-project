@@ -16035,39 +16035,6 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     }
   }
 
-  // 128-bit NEON vectors: writing to the 64-bit low half with
-  // DUP/SCALAR_TO_VECTOR already zeroes the other 64 bits, so if the low half
-  // is a splat and the upper half is zero/undef we can materialise just that
-  // low half.
-  if (VT.isFixedLengthVector() && VT.getSizeInBits() == 128) {
-    EVT LaneVT = VT.getVectorElementType();
-    const unsigned HalfElts = NumElts >> 1;
-    SDValue FirstVal = Op.getOperand(0);
-
-    auto IsZero = [&](SDValue V) {
-      return isNullConstant(V) || isNullFPConstant(V);
-    };
-
-    if (llvm::all_of(llvm::seq<unsigned>(0, NumElts), [&](unsigned I) {
-          SDValue Vi = Op.getOperand(I);
-          return I < HalfElts ? (Vi == FirstVal) : IsZero(Vi);
-        })) {
-      EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
-
-      SDValue HiZero = LaneVT.isInteger() ? DAG.getConstant(0, DL, HalfVT)
-                                          : DAG.getConstantFP(0.0, DL, HalfVT);
-
-      SDValue LoHalf =
-          LaneVT.getSizeInBits() == 64
-              // 64-bit lanes lower to an FMOV via SCALAR_TO_VECTOR.
-              ? DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, HalfVT, FirstVal)
-              // Smaller lanes need DUP to splat the whole low half.
-              : DAG.getNode(AArch64ISD::DUP, DL, HalfVT, FirstVal);
-
-      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, LoHalf, HiZero);
-    }
-  }
-
   // Use DUP for non-constant splats. For f32 constant splats, reduce to
   // i32 and try again.
   if (usesOnlyOneValue) {

@@ -318,7 +318,10 @@ define <4 x float> @test_insert_2_f32_undef_zero(float %a) {
 define <2 x double> @test_insert_v2f64_undef_insert1(double %a) {
 ; CHECK-LABEL: test_insert_v2f64_undef_insert1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d0, d0
+; CHECK-NEXT:    movi.2d v1, #0000000000000000
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    mov.d v1[0], v0[0]
+; CHECK-NEXT:    mov.16b v0, v1
 ; CHECK-NEXT:    ret
   %v.0 = insertelement <2 x double > <double undef, double 0.000000e+00>, double %a, i32 0
   ret <2 x double> %v.0
