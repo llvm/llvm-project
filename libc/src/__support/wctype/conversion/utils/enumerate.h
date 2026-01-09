@@ -11,6 +11,7 @@
 
 #include "hdr/types/size_t.h"
 #include "src/__support/CPP/tuple.h"
+#include "src/__support/CPP/utility/forward.h"
 #include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -22,7 +23,10 @@ namespace conversion_utils {
 namespace {
 
 template <typename Iterable> struct Enumerate {
-  Iterable &iterable;
+  Iterable iterable;
+
+  LIBC_INLINE constexpr Enumerate(Iterable &&iter)
+      : iterable(cpp::forward<Iterable>(iter)) {}
 
   struct Iterator {
     size_t index;
@@ -51,14 +55,9 @@ template <typename Iterable> struct Enumerate {
 } // namespace
 
 template <typename Iterable>
-LIBC_INLINE static constexpr Enumerate<Iterable> enumerate(Iterable &iterable) {
-  return Enumerate<Iterable>{iterable};
-}
-
-template <typename Iterable>
 LIBC_INLINE static constexpr Enumerate<Iterable>
 enumerate(Iterable &&iterable) {
-  return Enumerate<Iterable>{iterable};
+  return Enumerate<Iterable>(cpp::forward<Iterable>(iterable));
 }
 
 } // namespace conversion_utils

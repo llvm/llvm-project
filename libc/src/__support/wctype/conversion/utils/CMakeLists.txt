@@ -5,6 +5,7 @@ add_header_library(
   DEPENDS
     libc.hdr.types.size_t
     libc.src.__support.CPP.tuple
+    libc.src.__support.CPP.utility.forward
     libc.src.__support.common
 )
 
