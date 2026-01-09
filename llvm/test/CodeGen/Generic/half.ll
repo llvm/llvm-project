@@ -38,7 +38,7 @@
 ; RUN: %if sparc-registered-target       %{ llc %s -o - -mtriple=sparc64-unknown-linux-gnu       | FileCheck %s --check-prefixes=ALL,CHECK %}
 ; RUN: %if spirv-registered-target       %{ llc %s -o - -mtriple=spirv-unknown-unknown           | FileCheck %s --check-prefixes=NOCRASH   %}
 ; RUN: %if systemz-registered-target     %{ llc %s -o - -mtriple=s390x-unknown-linux-gnu         | FileCheck %s --check-prefixes=ALL,CHECK %}
-; RUN: %if ve-registered-target          %{ llc %s -o - -mtriple=ve-unknown-unknown              | FileCheck %s --check-prefixes=ALL,BAD   %}
+; RUN: %if ve-registered-target          %{ llc %s -o - -mtriple=ve-unknown-unknown              | FileCheck %s --check-prefixes=ALL,CHECK %}
 ; RUN: %if webassembly-registered-target %{ llc %s -o - -mtriple=wasm32-unknown-unknown          | FileCheck %s --check-prefixes=ALL,CHECK %}
 ; RUN: %if x86-registered-target         %{ llc %s -o - -mtriple=i686-unknown-linux-gnu          | FileCheck %s --check-prefixes=ALL,CHECK %}
 ; RUN: %if x86-registered-target         %{ llc %s -o - -mtriple=x86_64-pc-windows-msvc          | FileCheck %s --check-prefixes=ALL,CHECK %}
