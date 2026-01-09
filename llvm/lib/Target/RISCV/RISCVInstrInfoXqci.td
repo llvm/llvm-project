@@ -1598,16 +1598,25 @@ def : SelectQCbi<SETULT, uimm16nonzero, Select_GPRNoX0_Using_CC_UImm16NonZero_QC
 def : SelectQCbi<SETUGE, uimm16nonzero, Select_GPRNoX0_Using_CC_UImm16NonZero_QC>;
 } // let Predicates = [HasVendorXqcibi, IsRV32]
 
+def QC_EXTXForm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(llvm::countr_zero(N->getZExtValue() + 1),
+                                   SDLoc(N), N->getValueType(0));
+}]>;
+
+def QC_EXTMask : ImmLeaf<XLenVT, [{
+  if (!isMask_64(Imm))
+    return false;
+
+  return Imm >= 63 && Imm <= 2047;
+}], QC_EXTXForm>;
+
 let Predicates = [HasVendorXqcibm, IsRV32] in {
 def : Pat<(sext_inreg (i32 GPR:$rs1), i1), (QC_EXT GPR:$rs1, 1, 0)>;
 
-// Prefer qc.extu to andi for the following cases since the former can be compressed
-def : Pat<(i32 (and GPRNoX0:$rs, 63)), (QC_EXTU GPRNoX0:$rs, 6, 0)>;
-def : Pat<(i32 (and GPRNoX0:$rs, 127)), (QC_EXTU GPRNoX0:$rs, 7, 0)>;
-def : Pat<(i32 (and GPRNoX0:$rs, 255)), (QC_EXTU GPRNoX0:$rs, 8, 0)>;
-def : Pat<(i32 (and GPRNoX0:$rs, 511)), (QC_EXTU GPRNoX0:$rs, 9, 0)>;
-def : Pat<(i32 (and GPRNoX0:$rs, 1023)), (QC_EXTU GPRNoX0:$rs, 10, 0)>;
-def : Pat<(i32 (and GPRNoX0:$rs, 2047)), (QC_EXTU GPRNoX0:$rs, 11, 0)>;
+// Prefer qc.extu to andi for masks with the lower 6-11 bits set.
+let AddedComplexity = 1 in
+def : Pat<(i32 (and GPRNoX0:$rs, QC_EXTMask:$mask)),
+          (QC_EXTU GPRNoX0:$rs, QC_EXTMask:$mask, 0)>;
 
 def : Pat<(i32 (bitreverse GPRNoX0:$rs1)), (QC_BREV32 GPRNoX0:$rs1)>;
 
