@@ -5923,10 +5923,11 @@ def CIR_CpuIdOp : CIR_Op<"cpuid"> {
     ```
   }];
 
-  let arguments =
-      (ins Arg<CIR_PtrToType<CIR_SInt32>, "array address",
-          [MemWrite]>:$cpu_info, CIR_SInt32:$function_id,
-          CIR_SInt32:$sub_function_id);
+  let arguments = (ins
+    Arg<CIR_PtrToType<CIR_SInt32>, "array address", [MemWrite]>:$cpu_info,
+    CIR_SInt32:$function_id,
+    CIR_SInt32:$sub_function_id
+  );
 
   let assemblyFormat = [{
     $cpu_info`,` $function_id`,` $sub_function_id `:`

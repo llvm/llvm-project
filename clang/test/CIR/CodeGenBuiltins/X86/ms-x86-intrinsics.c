@@ -23,36 +23,36 @@ void test__cpuid_with_cpu_info_as_pointer(int cpuInfo[4], int functionId) {
     // LLVM: [[CPU_INFO_PTR:%.*]] = load ptr
     // LLVM: [[FUNCTION_ID:%.*]] = load i32
     // LLVM: [[ASM_RESULTS:%.*]] = call { i32, i32, i32, i32 } asm "{{.*}}cpuid{{.*}}", "={ax},=r,={cx},={dx},0,2"(i32 [[FUNCTION_ID]], i32 0)
-    // LLVM-DAG: [[RESULT_0:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 0
-    // LLVM-DAG: [[RESULT_1:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 1
-    // LLVM-DAG: [[RESULT_2:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 2
-    // LLVM-DAG: [[RESULT_3:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 3
-    // LLVM-DAG: [[ADDR_PTR_0:%.*]] = getelementptr i32, ptr [[CPU_INFO_PTR]], i64 0
-    // LLVM-DAG: [[ADDR_PTR_1:%.*]] = getelementptr i32, ptr [[CPU_INFO_PTR]], i64 1
-    // LLVM-DAG: [[ADDR_PTR_2:%.*]] = getelementptr i32, ptr [[CPU_INFO_PTR]], i64 2
-    // LLVM-DAG: [[ADDR_PTR_3:%.*]] = getelementptr i32, ptr [[CPU_INFO_PTR]], i64 3
-    // LLVM-DAG: store i32 [[RESULT_0]], ptr [[ADDR_PTR_0]], align 4
-    // LLVM-DAG: store i32 [[RESULT_1]], ptr [[ADDR_PTR_1]], align 4
-    // LLVM-DAG: store i32 [[RESULT_2]], ptr [[ADDR_PTR_2]], align 4
-    // LLVM-DAG: store i32 [[RESULT_3]], ptr [[ADDR_PTR_3]], align 4
+    // LLVM: [[RESULT_0:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 0
+    // LLVM: [[ADDR_PTR_0:%.*]] = getelementptr i32, ptr [[CPU_INFO_PTR]], i64 0
+    // LLVM: store i32 [[RESULT_0]], ptr [[ADDR_PTR_0]], align 4
+    // LLVM: [[RESULT_1:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 1
+    // LLVM: [[ADDR_PTR_1:%.*]] = getelementptr i32, ptr [[CPU_INFO_PTR]], i64 1
+    // LLVM: store i32 [[RESULT_1]], ptr [[ADDR_PTR_1]], align 4
+    // LLVM: [[RESULT_2:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 2
+    // LLVM: [[ADDR_PTR_2:%.*]] = getelementptr i32, ptr [[CPU_INFO_PTR]], i64 2
+    // LLVM: store i32 [[RESULT_2]], ptr [[ADDR_PTR_2]], align 4
+    // LLVM: [[RESULT_3:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 3
+    // LLVM: [[ADDR_PTR_3:%.*]] = getelementptr i32, ptr [[CPU_INFO_PTR]], i64 3
+    // LLVM: store i32 [[RESULT_3]], ptr [[ADDR_PTR_3]], align 4
 
     // OGCG-LABEL: __cpuid_with_cpu_info_as_pointer
     // OGCG: [[FUNCTION_ID:%.*]] = load i32
     // OGCG: [[FUNCTION_ID_ARG:%.*]] = load i32
     // OGCG: [[ASM_RESULTS:%.*]] = call { i32, i32, i32, i32 } asm "{{.*}}cpuid{{.*}}", "={ax},=r,={cx},={dx},0,2"(i32 [[FUNCTION_ID_ARG]], i32 0)
     // OGCG: [[CPU_INFO_PTR:%.*]] = load ptr
-    // OGCG-DAG: [[RESULT_0:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 0
-    // OGCG-DAG: [[RESULT_1:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 1
-    // OGCG-DAG: [[RESULT_2:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 2
-    // OGCG-DAG: [[RESULT_3:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 3
-    // OGCG-DAG: [[ADDR_PTR_0:%.*]] = getelementptr inbounds i32, ptr [[CPU_INFO_PTR]], i32 0
-    // OGCG-DAG: [[ADDR_PTR_1:%.*]] = getelementptr inbounds i32, ptr [[CPU_INFO_PTR]], i32 1
-    // OGCG-DAG: [[ADDR_PTR_2:%.*]] = getelementptr inbounds i32, ptr [[CPU_INFO_PTR]], i32 2
-    // OGCG-DAG: [[ADDR_PTR_3:%.*]] = getelementptr inbounds i32, ptr [[CPU_INFO_PTR]], i32 3
-    // OGCG-DAG: store i32 [[RESULT_0]], ptr [[ADDR_PTR_0]], align 4
-    // OGCG-DAG: store i32 [[RESULT_1]], ptr [[ADDR_PTR_1]], align 4
-    // OGCG-DAG: store i32 [[RESULT_2]], ptr [[ADDR_PTR_2]], align 4
-    // OGCG-DAG: store i32 [[RESULT_3]], ptr [[ADDR_PTR_3]], align 4
+    // OGCG: [[RESULT_0:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 0
+    // OGCG: [[ADDR_PTR_0:%.*]] = getelementptr inbounds i32, ptr [[CPU_INFO_PTR]], i32 0
+    // OGCG: store i32 [[RESULT_0]], ptr [[ADDR_PTR_0]], align 4
+    // OGCG: [[RESULT_1:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 1
+    // OGCG: [[ADDR_PTR_1:%.*]] = getelementptr inbounds i32, ptr [[CPU_INFO_PTR]], i32 1
+    // OGCG: store i32 [[RESULT_1]], ptr [[ADDR_PTR_1]], align 4
+    // OGCG: [[RESULT_2:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 2
+    // OGCG: [[ADDR_PTR_2:%.*]] = getelementptr inbounds i32, ptr [[CPU_INFO_PTR]], i32 2
+    // OGCG: store i32 [[RESULT_2]], ptr [[ADDR_PTR_2]], align 4
+    // OGCG: [[RESULT_3:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 3
+    // OGCG: [[ADDR_PTR_3:%.*]] = getelementptr inbounds i32, ptr [[CPU_INFO_PTR]], i32 3
+    // OGCG: store i32 [[RESULT_3]], ptr [[ADDR_PTR_3]], align 4
 }
 
 void test__cpuid_with_cpu_info_as_array(int functionId) {
@@ -69,36 +69,36 @@ void test__cpuid_with_cpu_info_as_array(int functionId) {
     // LLVM: [[CPU_INFO_PTR:%.*]] = getelementptr i32, ptr
     // LLVM: [[FUNCTION_ID:%.*]] = load i32
     // LLVM: [[ASM_RESULTS:%.*]] = call { i32, i32, i32, i32 } asm "{{.*}}cpuid{{.*}}", "={ax},=r,={cx},={dx},0,2"(i32 [[FUNCTION_ID]], i32 0)
-    // LLVM-DAG: [[RESULT_0:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 0
-    // LLVM-DAG: [[RESULT_1:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 1
-    // LLVM-DAG: [[RESULT_2:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 2
-    // LLVM-DAG: [[RESULT_3:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 3
-    // LLVM-DAG: [[ADDR_PTR_0:%.*]] = getelementptr i32, ptr [[CPU_INFO_PTR]], i64 0
-    // LLVM-DAG: [[ADDR_PTR_1:%.*]] = getelementptr i32, ptr [[CPU_INFO_PTR]], i64 1
-    // LLVM-DAG: [[ADDR_PTR_2:%.*]] = getelementptr i32, ptr [[CPU_INFO_PTR]], i64 2
-    // LLVM-DAG: [[ADDR_PTR_3:%.*]] = getelementptr i32, ptr [[CPU_INFO_PTR]], i64 3
-    // LLVM-DAG: store i32 [[RESULT_0]], ptr [[ADDR_PTR_0]], align 4
-    // LLVM-DAG: store i32 [[RESULT_1]], ptr [[ADDR_PTR_1]], align 4
-    // LLVM-DAG: store i32 [[RESULT_2]], ptr [[ADDR_PTR_2]], align 4
-    // LLVM-DAG: store i32 [[RESULT_3]], ptr [[ADDR_PTR_3]], align 4
+    // LLVM: [[RESULT_0:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 0
+    // LLVM: [[ADDR_PTR_0:%.*]] = getelementptr i32, ptr [[CPU_INFO_PTR]], i64 0
+    // LLVM: store i32 [[RESULT_0]], ptr [[ADDR_PTR_0]], align 4
+    // LLVM: [[RESULT_1:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 1
+    // LLVM: [[ADDR_PTR_1:%.*]] = getelementptr i32, ptr [[CPU_INFO_PTR]], i64 1
+    // LLVM: store i32 [[RESULT_1]], ptr [[ADDR_PTR_1]], align 4
+    // LLVM: [[RESULT_2:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 2
+    // LLVM: [[ADDR_PTR_2:%.*]] = getelementptr i32, ptr [[CPU_INFO_PTR]], i64 2
+    // LLVM: store i32 [[RESULT_2]], ptr [[ADDR_PTR_2]], align 4
+    // LLVM: [[RESULT_3:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 3
+    // LLVM: [[ADDR_PTR_3:%.*]] = getelementptr i32, ptr [[CPU_INFO_PTR]], i64 3
+    // LLVM: store i32 [[RESULT_3]], ptr [[ADDR_PTR_3]], align 4
 
     // OGCG-LABEL: _cpuid_with_cpu_info_as_array
     // OGCG: [[FUNCTION_ID:%.*]] = load i32
     // OGCG: [[FUNCTION_ID_ARG:%.*]] = load i32
     // OGCG: [[ASM_RESULTS:%.*]] = call { i32, i32, i32, i32 } asm "{{.*}}cpuid{{.*}}", "={ax},=r,={cx},={dx},0,2"(i32 [[FUNCTION_ID_ARG]], i32 0)
     // OGCG: [[CPU_INFO_PTR:%.*]] = getelementptr inbounds [4 x i32], ptr
-    // OGCG-DAG: [[RESULT_0:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 0
-    // OGCG-DAG: [[RESULT_1:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 1
-    // OGCG-DAG: [[RESULT_2:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 2
-    // OGCG-DAG: [[RESULT_3:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 3
-    // OGCG-DAG: [[ADDR_PTR_0:%.*]] = getelementptr inbounds i32, ptr [[CPU_INFO_PTR]], i32 0
-    // OGCG-DAG: [[ADDR_PTR_1:%.*]] = getelementptr inbounds i32, ptr [[CPU_INFO_PTR]], i32 1
-    // OGCG-DAG: [[ADDR_PTR_2:%.*]] = getelementptr inbounds i32, ptr [[CPU_INFO_PTR]], i32 2
-    // OGCG-DAG: [[ADDR_PTR_3:%.*]] = getelementptr inbounds i32, ptr [[CPU_INFO_PTR]], i32 3
-    // OGCG-DAG: store i32 [[RESULT_0]], ptr [[ADDR_PTR_0]], align 4
-    // OGCG-DAG: store i32 [[RESULT_1]], ptr [[ADDR_PTR_1]], align 4
-    // OGCG-DAG: store i32 [[RESULT_2]], ptr [[ADDR_PTR_2]], align 4
-    // OGCG-DAG: store i32 [[RESULT_3]], ptr [[ADDR_PTR_3]], align 4
+    // OGCG: [[RESULT_0:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 0
+    // OGCG: [[ADDR_PTR_0:%.*]] = getelementptr inbounds i32, ptr [[CPU_INFO_PTR]], i32 0
+    // OGCG: store i32 [[RESULT_0]], ptr [[ADDR_PTR_0]], align 4
+    // OGCG: [[RESULT_1:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 1
+    // OGCG: [[ADDR_PTR_1:%.*]] = getelementptr inbounds i32, ptr [[CPU_INFO_PTR]], i32 1
+    // OGCG: store i32 [[RESULT_1]], ptr [[ADDR_PTR_1]], align 4
+    // OGCG: [[RESULT_2:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 2
+    // OGCG: [[ADDR_PTR_2:%.*]] = getelementptr inbounds i32, ptr [[CPU_INFO_PTR]], i32 2
+    // OGCG: store i32 [[RESULT_2]], ptr [[ADDR_PTR_2]], align 4
+    // OGCG: [[RESULT_3:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 3
+    // OGCG: [[ADDR_PTR_3:%.*]] = getelementptr inbounds i32, ptr [[CPU_INFO_PTR]], i32 3
+    // OGCG: store i32 [[RESULT_3]], ptr [[ADDR_PTR_3]], align 4
 }
 void test__cpuidex(int cpuInfo[4], int functionId, int subFunctionId) {
     __cpuidex(cpuInfo, functionId, subFunctionId);
@@ -114,18 +114,18 @@ void test__cpuidex(int cpuInfo[4], int functionId, int subFunctionId) {
     // LLVM: [[FUNCTION_ID:%.*]] = load i32
     // LLVM: [[SUB_FUNCTION_ID:%.*]] = load i32
     // LLVM: [[ASM_RESULTS:%.*]] = call { i32, i32, i32, i32 } asm "{{.*}}cpuid{{.*}}", "={ax},=r,={cx},={dx},0,2"(i32 [[FUNCTION_ID]], i32 [[SUB_FUNCTION_ID]])
-    // LLVM-DAG: [[RESULT_0:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 0
-    // LLVM-DAG: [[RESULT_1:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 1
-    // LLVM-DAG: [[RESULT_2:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 2
-    // LLVM-DAG: [[RESULT_3:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 3
-    // LLVM-DAG: [[ADDR_PTR_0:%.*]] = getelementptr i32, ptr [[CPU_INFO_PTR]], i64 0
-    // LLVM-DAG: [[ADDR_PTR_1:%.*]] = getelementptr i32, ptr [[CPU_INFO_PTR]], i64 1
-    // LLVM-DAG: [[ADDR_PTR_2:%.*]] = getelementptr i32, ptr [[CPU_INFO_PTR]], i64 2
-    // LLVM-DAG: [[ADDR_PTR_3:%.*]] = getelementptr i32, ptr [[CPU_INFO_PTR]], i64 3
-    // LLVM-DAG: store i32 [[RESULT_0]], ptr [[ADDR_PTR_0]], align 4
-    // LLVM-DAG: store i32 [[RESULT_1]], ptr [[ADDR_PTR_1]], align 4
-    // LLVM-DAG: store i32 [[RESULT_2]], ptr [[ADDR_PTR_2]], align 4
-    // LLVM-DAG: store i32 [[RESULT_3]], ptr [[ADDR_PTR_3]], align 4
+    // LLVM: [[RESULT_0:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 0
+    // LLVM: [[ADDR_PTR_0:%.*]] = getelementptr i32, ptr [[CPU_INFO_PTR]], i64 0
+    // LLVM: store i32 [[RESULT_0]], ptr [[ADDR_PTR_0]], align 4
+    // LLVM: [[RESULT_1:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 1
+    // LLVM: [[ADDR_PTR_1:%.*]] = getelementptr i32, ptr [[CPU_INFO_PTR]], i64 1
+    // LLVM: store i32 [[RESULT_1]], ptr [[ADDR_PTR_1]], align 4
+    // LLVM: [[RESULT_2:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 2
+    // LLVM: [[ADDR_PTR_2:%.*]] = getelementptr i32, ptr [[CPU_INFO_PTR]], i64 2
+    // LLVM: store i32 [[RESULT_2]], ptr [[ADDR_PTR_2]], align 4
+    // LLVM: [[RESULT_3:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 3
+    // LLVM: [[ADDR_PTR_3:%.*]] = getelementptr i32, ptr [[CPU_INFO_PTR]], i64 3
+    // LLVM: store i32 [[RESULT_3]], ptr [[ADDR_PTR_3]], align 4
 
     // OGCG-LABEL: __cpuidex
     // OGCG: [[FUNCTION_ID:%.*]] = load i32
@@ -134,16 +134,16 @@ void test__cpuidex(int cpuInfo[4], int functionId, int subFunctionId) {
     // OGCG: [[SUB_FUNCTION_ID_ARG:%.*]] = load i32
     // OGCG: [[ASM_RESULTS:%.*]] = call { i32, i32, i32, i32 } asm "{{.*}}cpuid{{.*}}", "={ax},=r,={cx},={dx},0,2"(i32 [[FUNCTION_ID_ARG]], i32 [[SUB_FUNCTION_ID_ARG]])
     // OGCG: [[CPU_INFO_PTR:%.*]] = load ptr
-    // OGCG-DAG: [[RESULT_0:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 0
-    // OGCG-DAG: [[RESULT_1:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 1
-    // OGCG-DAG: [[RESULT_2:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 2
-    // OGCG-DAG: [[RESULT_3:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 3
-    // OGCG-DAG: [[ADDR_PTR_0:%.*]] = getelementptr inbounds i32, ptr [[CPU_INFO_PTR]], i32 0
-    // OGCG-DAG: [[ADDR_PTR_1:%.*]] = getelementptr inbounds i32, ptr [[CPU_INFO_PTR]], i32 1
-    // OGCG-DAG: [[ADDR_PTR_2:%.*]] = getelementptr inbounds i32, ptr [[CPU_INFO_PTR]], i32 2
-    // OGCG-DAG: [[ADDR_PTR_3:%.*]] = getelementptr inbounds i32, ptr [[CPU_INFO_PTR]], i32 3
-    // OGCG-DAG: store i32 [[RESULT_0]], ptr [[ADDR_PTR_0]], align 4
-    // OGCG-DAG: store i32 [[RESULT_1]], ptr [[ADDR_PTR_1]], align 4
-    // OGCG-DAG: store i32 [[RESULT_2]], ptr [[ADDR_PTR_2]], align 4
-    // OGCG-DAG: store i32 [[RESULT_3]], ptr [[ADDR_PTR_3]], align 4
+    // OGCG: [[RESULT_0:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 0
+    // OGCG: [[ADDR_PTR_0:%.*]] = getelementptr inbounds i32, ptr [[CPU_INFO_PTR]], i32 0
+    // OGCG: store i32 [[RESULT_0]], ptr [[ADDR_PTR_0]], align 4
+    // OGCG: [[RESULT_1:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 1
+    // OGCG: [[ADDR_PTR_1:%.*]] = getelementptr inbounds i32, ptr [[CPU_INFO_PTR]], i32 1
+    // OGCG: store i32 [[RESULT_1]], ptr [[ADDR_PTR_1]], align 4
+    // OGCG: [[RESULT_2:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 2
+    // OGCG: [[ADDR_PTR_2:%.*]] = getelementptr inbounds i32, ptr [[CPU_INFO_PTR]], i32 2
+    // OGCG: store i32 [[RESULT_2]], ptr [[ADDR_PTR_2]], align 4
+    // OGCG: [[RESULT_3:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 3
+    // OGCG: [[ADDR_PTR_3:%.*]] = getelementptr inbounds i32, ptr [[CPU_INFO_PTR]], i32 3
+    // OGCG: store i32 [[RESULT_3]], ptr [[ADDR_PTR_3]], align 4
 }

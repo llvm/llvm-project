@@ -4293,9 +4293,8 @@ mlir::LogicalResult CIRToLLVMCpuIdOpLowering::matchAndRewrite(
   mlir::Type cpuidRetTy = mlir::LLVM::LLVMStructType::getLiteral(
       rewriter.getContext(), {i32Ty, i32Ty, i32Ty, i32Ty});
 
-  mlir::Value funcId = adaptor.getFunctionId();
-  mlir::Value subFuncId = adaptor.getSubFunctionId();
-  std::array<mlir::Value, 2> operands{funcId, subFuncId};
+  mlir::Value functionId = adaptor.getFunctionId();
+  mlir::Value subFunctionId = adaptor.getSubFunctionId();
 
   StringRef asmString, constraints;
   mlir::ModuleOp moduleOp = op->getParentOfType<mlir::ModuleOp>();
@@ -4316,7 +4315,7 @@ mlir::LogicalResult CIRToLLVMCpuIdOpLowering::matchAndRewrite(
 
   mlir::Value inlineAsm =
       mlir::LLVM::InlineAsmOp::create(
-          rewriter, op.getLoc(), cpuidRetTy, mlir::ValueRange(operands),
+          rewriter, op.getLoc(), cpuidRetTy, {functionId, subFunctionId},
           rewriter.getStringAttr(asmString),
           rewriter.getStringAttr(constraints),
           /*has_side_effects=*/mlir::UnitAttr{},
