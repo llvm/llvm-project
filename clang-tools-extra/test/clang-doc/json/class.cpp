@@ -335,7 +335,6 @@ private:
 // HTML-NEXT:     <div>
 // HTML-NEXT:         <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-NEXT:                 <pre><code class="language-cpp code-clang-doc">int protectedMethod ()</code></pre>
-// HTML-NEXT:                 <p>Defined at line  of file </p>
 // HTML-NEXT:         </div>
 // HTML-NEXT:     </div>
 // HTML-NEXT: </section>
