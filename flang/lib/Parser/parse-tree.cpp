@@ -22,7 +22,8 @@ namespace Fortran::parser {
 
 // R867
 ImportStmt::ImportStmt(common::ImportKind &&k, std::list<Name> &&n)
-    : kind{k}, names(std::move(n)) {
+    : t(k, std::move(n)) {
+  const auto &[kind, names]{t};
   CHECK(kind == common::ImportKind::Default ||
       kind == common::ImportKind::Only || names.empty());
 }
@@ -30,8 +31,8 @@ ImportStmt::ImportStmt(common::ImportKind &&k, std::list<Name> &&n)
 // R873
 CommonStmt::CommonStmt(std::optional<Name> &&name,
     std::list<CommonBlockObject> &&objects, std::list<Block> &&others) {
-  blocks.emplace_front(std::move(name), std::move(objects));
-  blocks.splice(blocks.end(), std::move(others));
+  v.emplace_front(std::move(name), std::move(objects));
+  v.splice(v.end(), std::move(others));
 }
 
 // R901 designator
