@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,20 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef BENCHMARK_VARIANT_BENCHMARKS_H
-#define BENCHMARK_VARIANT_BENCHMARKS_H
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 #include <array>
-#include <cstddef>
-#include <tuple>
-#include <type_traits>
 #include <variant>
 
 #include "benchmark/benchmark.h"
-
 #include "GenerateInput.h"
-
-namespace VariantBenchmarks {
 
 template <std::size_t I>
 struct S {
@@ -50,6 +42,14 @@ static void BM_Visit(benchmark::State& state) {
   }
 }
 
-} // namespace VariantBenchmarks
+BENCHMARK(BM_Visit<1, 1>)->Name("std::variant<1-alt>::visit() (1 variant)");
+BENCHMARK(BM_Visit<1, 8>)->Name("std::variant<8-alts>::visit() (1 variant)");
+BENCHMARK(BM_Visit<1, 100>)->Name("std::variant<100-alts>::visit() (1 variant)");
+BENCHMARK(BM_Visit<2, 1>)->Name("std::variant<1-alt>::visit() (2 variants)");
+BENCHMARK(BM_Visit<2, 8>)->Name("std::variant<8-alts>::visit() (2 variants)");
+BENCHMARK(BM_Visit<2, 50>)->Name("std::variant<50-alts>::visit() (2 variants)");
+BENCHMARK(BM_Visit<3, 1>)->Name("std::variant<1-alt>::visit() (3 variants)");
+BENCHMARK(BM_Visit<3, 8>)->Name("std::variant<8-alts>::visit() (3 variants)");
+BENCHMARK(BM_Visit<3, 20>)->Name("std::variant<20-alts>::visit() (3 variants)");
 
-#endif // BENCHMARK_VARIANT_BENCHMARKS_H
+BENCHMARK_MAIN();
