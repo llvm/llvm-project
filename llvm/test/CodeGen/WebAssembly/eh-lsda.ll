@@ -66,7 +66,10 @@ try.cont:                                         ; preds = %entry, %catch.start
 
 ; CHECK-LABEL: test1:
 ; In static linking, we load GCC_except_table as a constant directly.
-; NOPIC:      i[[PTR]].const  $push[[CONTEXT:.*]]=, {{[48]}}
+; NOPIC:      i[[PTR]].const  $push[[SELECTOR_OFF:.*]]=, {{(8|16)}}
+; NOPIC-NEXT: i[[PTR]].const       $push[[SELECTOR:.*]]=, 0
+; NOPIC-NEXT: i[[PTR]].store  __wasm_lpad_context($pop[[SELECTOR_OFF]]), $pop[[SELECTOR]]
+; NOPIC-NEXT: i[[PTR]].const  $push[[CONTEXT:.*]]=, {{[48]}}
 ; NOPIC-NEXT: i[[PTR]].const  $push[[EXCEPT_TABLE:.*]]=, GCC_except_table1
 ; NOPIC-NEXT: i[[PTR]].store  __wasm_lpad_context($pop[[CONTEXT]]), $pop[[EXCEPT_TABLE]]
 

@@ -46,7 +46,10 @@ catch.start:                                      ; preds = %catch.dispatch
 ; CHECK-NEXT:   store i32 0, ptr @__wasm_lpad_context
 ; CHECK-NEXT:   %[[LSDA:.*]] = call ptr @llvm.wasm.lsda()
 ; CHECK-NEXT:   store ptr %[[LSDA]], ptr getelementptr inbounds ({ i32, ptr, i32 }, ptr @__wasm_lpad_context, i32 0, i32 1)
-; CHECK-NEXT:   call i32 @_Unwind_CallPersonality(ptr %[[EXN]]) {{.*}} [ "funclet"(token %[[CATCHPAD]]) ]
+; CHECK-NEXT:   store i32 0, ptr getelementptr inbounds ({ i32, ptr, i32 }, ptr @__wasm_lpad_context, i32 0, i32 2), align 4
+; CHECK-NEXT:   %exception_class_gep = getelementptr inbounds { i64, ptr }, ptr %[[EXN]], i32 0, i32 0
+; CHECK-NEXT:   %[[CLASS:.*]] = load i64, ptr %exception_class_gep, align 8
+; CHECK-NEXT:   %{{.*}} = call i32 @__gxx_wasm_personality_v0(i32 1, i32 1, i64 %[[CLASS]], ptr %[[EXN]], ptr @__wasm_lpad_context) #{{.*}} [ "funclet"(token %[[CATCHPAD]]) ]
 ; CHECK-NEXT:   %[[SELECTOR:.*]] = load i32, ptr getelementptr inbounds ({ i32, ptr, i32 }, ptr @__wasm_lpad_context, i32 0, i32 2)
 ; CHECK:   icmp eq i32 %[[SELECTOR]]
 
@@ -103,7 +106,7 @@ catch.start:                                      ; preds = %catch.dispatch
 ; CHECK-NOT:   call void @llvm.wasm.landingpad.index
 ; CHECK-NOT:   store {{.*}} @__wasm_lpad_context
 ; CHECK-NOT:   call ptr @llvm.wasm.lsda()
-; CHECK-NOT:   call i32 @_Unwind_CallPersonality
+; CHECK-NOT:   call i32 @__gxx_wasm_personality_v0
 ; CHECK-NOT:   load {{.*}} @__wasm_lpad_context
 
 try.cont:                                         ; preds = %entry, %catch.start
@@ -277,4 +280,4 @@ attributes #1 = { noreturn }
 
 ; CHECK-DAG: declare void @llvm.wasm.landingpad.index(token, i32 immarg)
 ; CHECK-DAG: declare ptr @llvm.wasm.lsda()
-; CHECK-DAG: declare i32 @_Unwind_CallPersonality(ptr)
+; CHECK-DAG: declare i32 @__gxx_wasm_personality_v0(...)

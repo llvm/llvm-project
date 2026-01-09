@@ -35,7 +35,11 @@ define void @throw(ptr %p) {
 ; CHECK:     catch     $[[EXN:[0-9]+]]=, __cpp_exception
 ; CHECK:       global.set  __stack_pointer
 ; CHECK:       i32.store __wasm_lpad_context
-; CHECK:       call       $drop=, _Unwind_CallPersonality, $[[EXN]]
+; CHECK:       i32.const  $push[[ACTION:[0-9]+]]=, 1
+; CHECK:       i32.const  $push[[PHASE:[0-9]+]]=, 1
+; CHECK:       i64.load   $push[[EH_CLASS:[0-9]+]]=, 0($[[EXN]])
+; CHECK:       i32.const  $push[[LPAD_CTX:[0-9]+]]=, __wasm_lpad_context
+; CHECK:       call    $drop=, __gxx_wasm_personality_v0, $pop[[ACTION]], $pop[[PHASE]], $pop[[EH_CLASS]], $0, $pop[[LPAD_CTX]]
 ; CHECK:       block
 ; CHECK:         br_if     0
 ; CHECK:         call      $drop=, __cxa_begin_catch

@@ -47,7 +47,16 @@ define void @throw(ptr %p) {
 ; CHECK:   local.get  0
 ; CHECK:   global.set  __stack_pointer
 ; CHECK:   i32.store  __wasm_lpad_context
-; CHECK:   call  _Unwind_CallPersonality
+
+; CHECK:   i32.const 1
+; CHECK:   i32.const 1
+; CHECK:   local.get 1
+; CHECK:   i64.load 0
+; CHECK:   local.get 1
+; CHECK:   i32.const __wasm_lpad_context
+; CHECK:   call  __gxx_wasm_personality_v0
+; CHECK:   drop
+
 ; CHECK:   block
 ; CHECK:     br_if     0
 ; CHECK:     call  __cxa_begin_catch

@@ -35,7 +35,7 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK:   local.set  2
 ; CHECK:   local.set  1
 ; CHECK:   local.get  0
-; CHECK:   call  _Unwind_CallPersonality
+; CHECK:   call  __gxx_wasm_personality_v0
 ; CHECK:   block
 ; CHECK:     br_if     0                                 # 0: down to label[[L2:[0-9]+]]
 ; CHECK:     call  __cxa_begin_catch
@@ -111,7 +111,7 @@ try.cont:                                         ; preds = %catch, %catch2, %en
 ; CHECK:         br        2                                      # 2: down to label[[L1:[0-9]+]]
 ; CHECK:       end_try_table
 ; CHECK:     end_block                                            # label[[L0]]:
-; CHECK:     call  _Unwind_CallPersonality
+; CHECK:     call  __gxx_wasm_personality_v0
 ; CHECK:     block
 ; CHECK:       block
 ; CHECK:         br_if     0                                      # 0: down to label[[L2:[0-9]+]]
@@ -124,7 +124,7 @@ try.cont:                                         ; preds = %catch, %catch2, %en
 ; CHECK:                 br        5                              # 5: down to label[[L5:[0-9]+]]
 ; CHECK:               end_try_table
 ; CHECK:             end_block                                    # label[[L4]]:
-; CHECK:             call  _Unwind_CallPersonality
+; CHECK:             call  __gxx_wasm_personality_v0
 ; CHECK:             block
 ; CHECK:               block
 ; CHECK:                 br_if     0                              # 0: down to label[[L6:[0-9]+]]
@@ -750,7 +750,7 @@ try.cont:                                         ; preds = %catch.start0
 ; NOSORT:     end_block                                      # label[[L0]]:
 ; NOSORT:     call  __cxa_begin_catch
 ; NOSORT:     call  __cxa_end_catch
-; NOSORT:   end_block                                        # label74:
+; NOSORT:   end_block
 ; NOSORT:   return
 ; NOSORT: end_block                                          # label[[L1]]:
 ; NOSORT: throw_ref
@@ -1507,7 +1507,7 @@ unreachable:                                      ; preds = %rethrow, %entry
 }
 
 ; Check if the unwind destination mismatch stats are correct
-; NOSORT: 23 wasm-cfg-stackify    - Number of call unwind mismatches found
+; NOSORT: 30 wasm-cfg-stackify    - Number of call unwind mismatches found
 ; NOSORT:  4 wasm-cfg-stackify    - Number of catch unwind mismatches found
 
 declare void @foo()

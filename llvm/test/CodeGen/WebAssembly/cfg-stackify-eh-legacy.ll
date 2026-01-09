@@ -100,23 +100,23 @@ try.cont:                                         ; preds = %catch, %catch2, %en
 ; CHECK: catch
 ; CHECK:   block
 ; CHECK:     block
-; CHECK:       br_if     0, {{.*}}                     # 0: down to label[[L0:[0-9+]]]
+; CHECK:       br_if     0, {{.*}}                     # 0: down to label[[L0:[0-9]+]]
 ; CHECK:       call  $drop=, __cxa_begin_catch, $0
 ; CHECK:       try
 ; CHECK:         try
 ; CHECK:           call  foo
-; CHECK:           br        3                         # 3: down to label[[L1:[0-9+]]]
+; CHECK:           br        3                         # 3: down to label[[L1:[0-9]+]]
 ; CHECK:         catch
 ; CHECK:           block
 ; CHECK:             block
-; CHECK:               br_if     0, {{.*}}             # 0: down to label[[L2:[0-9+]]]
+; CHECK:               br_if     0, {{.*}}             # 0: down to label[[L2:[0-9]+]]
 ; CHECK:               call  $drop=, __cxa_begin_catch
 ; CHECK:               try
 ; CHECK:                 call  foo
-; CHECK:                 br        2                   # 2: down to label[[L3:[0-9+]]]
+; CHECK:                 br        2                   # 2: down to label[[L3:[0-9]+]]
 ; CHECK:               catch_all
 ; CHECK:                 call  __cxa_end_catch
-; CHECK:                 rethrow   0                   # down to catch[[L4:[0-9+]]]
+; CHECK:                 rethrow   0                   # down to catch[[L4:[0-9]+]]
 ; CHECK:               end_try
 ; CHECK:             end_block                         # label[[L2]]:
 ; CHECK:             rethrow   1                       # down to catch[[L4]]
@@ -1736,7 +1736,7 @@ unreachable:                                      ; preds = %rethrow, %entry
 }
 
 ; Check if the unwind destination mismatch stats are correct
-; NOSORT: 24 wasm-cfg-stackify    - Number of call unwind mismatches found
+; NOSORT: 32 wasm-cfg-stackify    - Number of call unwind mismatches found
 ; NOSORT:  5 wasm-cfg-stackify    - Number of catch unwind mismatches found
 
 declare void @foo()
