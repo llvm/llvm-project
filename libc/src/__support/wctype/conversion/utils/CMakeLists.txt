@@ -11,9 +11,9 @@ add_header_library(
 )
 
 add_header_library(
-  utils
+  shared_utils
   HDRS
-    utils.h
+    shared_utils.h
   DEPENDS
     .slice
     libc.hdr.stdint_proxy
