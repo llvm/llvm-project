@@ -2270,6 +2270,9 @@ void TaskContextStructManager::generateTaskContextStruct() {
     privateVarTypes.push_back(moduleTranslation.convertType(mlirType));
   }
 
+  if (privateVarTypes.empty())
+    return;
+
   structTy = llvm::StructType::get(moduleTranslation.getLLVMContext(),
                                    privateVarTypes);
 
@@ -2307,10 +2310,10 @@ SmallVector<llvm::Value *> TaskContextStructManager::createGEPsToPrivateVars(
 }
 
 void TaskContextStructManager::createGEPsToPrivateVars() {
-  if (!structPtr) {
+  if (!structPtr)
     assert(privateVarTypes.empty());
-    return;
-  }
+  // Still need to run createGEPsToPrivateVars to populate llvmPrivateVarGEPs
+  // with null values for skipped private decls
 
   llvmPrivateVarGEPs = createGEPsToPrivateVars(structPtr);
 }
@@ -2830,7 +2833,7 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
   }
 
   llvm::OpenMPIRBuilder::TaskDupCallbackTy taskDupOrNull = nullptr;
-  if (!taskStructMgr.getLLVMPrivateVarGEPs().empty())
+  if (taskStructMgr.getStructPtr())
     taskDupOrNull = taskDupCB;
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
