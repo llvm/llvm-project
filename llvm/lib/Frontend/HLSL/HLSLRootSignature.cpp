@@ -12,6 +12,7 @@
 
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "llvm/Support/DXILABI.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 namespace llvm {
@@ -208,11 +209,7 @@ raw_ostream &operator<<(raw_ostream &OS, const RootElement &Element) {
 }
 
 void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements) {
-  OS << " RootElements{";
-  ListSeparator LS;
-  for (const RootElement &Element : Elements)
-    OS << LS << Element;
-  OS << "}";
+  OS << " RootElements" << interleaved(Elements, ", ", "{", "}");
 }
 
 } // namespace rootsig

@@ -23,11 +23,11 @@
 
 using namespace llvm;
 
-void llvm::dumpBytes(ArrayRef<uint8_t> bytes, raw_ostream &OS) {
-  static const char hex_rep[] = "0123456789abcdef";
+void llvm::dumpBytes(ArrayRef<uint8_t> Bytes, raw_ostream &OS) {
+  static const char HexRep[] = "0123456789abcdef";
   ListSeparator LS(" ");
-  for (char i : bytes)
-    OS << LS << hex_rep[(i & 0xF0) >> 4] << hex_rep[i & 0xF];
+  for (char Byte : Bytes)
+    OS << LS << HexRep[(Byte & 0xF0) >> 4] << HexRep[Byte & 0xF];
 }
 
 MCInstPrinter::~MCInstPrinter() = default;
