@@ -10,9 +10,6 @@
 // RUN: not llvm-tblgen -DERROR9 %s 2>&1 | FileCheck --check-prefix=ERROR9 %s
 // RUN: not llvm-tblgen -DERROR10 %s 2>&1 | FileCheck --check-prefix=ERROR10 %s
 
-// !setop and !getop are deprecated in favor of !setdagop and !getdagop.
-// Two tests retain the old names just to be sure they are still supported.
-
 class Base;
 class OtherBase;
 
@@ -31,13 +28,13 @@ def test {
   dag named = (foo:$root 1, 2:$a, $b);
 
   // CHECK: dag replaceWithBar = (bar 1, 2:$a, ?:$b);
-  dag replaceWithBar = !setop(orig, bar);
+  dag replaceWithBar = !setdagop(orig, bar);
 
   // CHECK: dag replaceWithBaz = (qux 1, 2:$a, ?:$b);
   dag replaceWithBaz = !setdagop(orig, qux);
 
   // CHECK: Base getopWithCast = foo;
-  Base getopWithCast = !getop<Base>(orig);
+  Base getopWithCast = !getdagop<Base>(orig);
 
   // CHECK: dag getopToSetop = (foo "hello", ?:$world);
   dag getopToSetop = !setdagop(another, !getdagop(orig));
