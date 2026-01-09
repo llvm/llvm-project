@@ -25365,7 +25365,7 @@ bool RISCVTargetLowering::isMulAddWithConstProfitable(SDValue AddNode,
 bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(
     EVT VT, unsigned AddrSpace, Align Alignment, MachineMemOperand::Flags Flags,
     unsigned *Fast) const {
-  if (!VT.isVector()) {
+  if (!VT.isVector() || Subtarget.enablePExtSIMDCodeGen()) {
     if (Fast)
       *Fast = Subtarget.enableUnalignedScalarMem();
     return Subtarget.enableUnalignedScalarMem();

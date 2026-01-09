@@ -50,7 +50,7 @@ namespace {
 
 // A map of uniqued case statements. The key is the body of the case statement
 // and the value is a list of cases which share the same body.
-using CaseMapT = std::map<std::string, std::vector<std::string>>;
+using CaseMapT = std::map<std::string, std::vector<unsigned>>;
 
 class CodeEmitterGen {
   const RecordKeeper &RK;
@@ -219,11 +219,15 @@ bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
   return true;
 }
 
-static void emitCaseMap(raw_ostream &O, const CaseMapT &CaseMap) {
+static void emitCaseMap(raw_ostream &O, const CaseMapT &CaseMap,
+                        function_ref<void(raw_ostream &, unsigned)> PrintCase) {
   for (const auto &[CaseBody, Cases] : CaseMap) {
     ListSeparator LS("\n");
-    for (const auto &Case : Cases)
-      O << LS << "    case " << Case << ":";
+    for (unsigned Case : Cases) {
+      O << LS << "    case ";
+      PrintCase(O, Case);
+      O << ":";
+    }
     O << " {\n";
     O << CaseBody;
     O << "      break;\n"
@@ -284,18 +288,20 @@ CodeEmitterGen::getInstructionCases(const Record *R) {
     CaseMapT CaseMap, BitOffsetCaseMap;
     std::string ModeCase, ModeBitOffsetCase;
 
+    auto PrintHWMode = [](raw_ostream &O, unsigned Mode) { O << Mode; };
+
     for (auto &[ModeId, Encoding] : EBM) {
       ModeCase.clear();
       ModeBitOffsetCase.clear();
       addInstructionCasesForEncoding(R, Encoding, ModeCase, ModeBitOffsetCase);
-      CaseMap[ModeCase].push_back(utostr(ModeId));
-      BitOffsetCaseMap[ModeBitOffsetCase].push_back(utostr(ModeId));
+      CaseMap[ModeCase].push_back(ModeId);
+      BitOffsetCaseMap[ModeBitOffsetCase].push_back(ModeId);
     }
 
     raw_string_ostream CaseOS(Case);
     raw_string_ostream BitOffsetCaseOS(BitOffsetCase);
-    emitCaseMap(CaseOS, CaseMap);
-    emitCaseMap(BitOffsetCaseOS, BitOffsetCaseMap);
+    emitCaseMap(CaseOS, CaseMap, PrintHWMode);
+    emitCaseMap(BitOffsetCaseOS, BitOffsetCaseMap, PrintHWMode);
 
     Append("      }\n");
     return {std::move(Case), std::move(BitOffsetCase)};
@@ -463,16 +469,19 @@ void CodeEmitterGen::run(raw_ostream &O) {
   CaseMapT CaseMap, BitOffsetCaseMap;
 
   // Construct all cases statement for each opcode
-  for (const CodeGenInstruction *CGI : EncodedInstructions) {
+  for (auto [Index, CGI] : enumerate(EncodedInstructions)) {
     const Record *R = CGI->TheDef;
-    std::string InstName =
-        (R->getValueAsString("Namespace") + "::" + R->getName()).str();
-    std::string Case, BitOffsetCase;
-    std::tie(Case, BitOffsetCase) = getInstructionCases(R);
+    auto [Case, BitOffsetCase] = getInstructionCases(R);
 
-    CaseMap[Case].push_back(InstName);
-    BitOffsetCaseMap[BitOffsetCase].push_back(std::move(InstName));
+    CaseMap[Case].push_back(Index);
+    BitOffsetCaseMap[BitOffsetCase].push_back(Index);
   }
+
+  auto PrintInstName = [&](raw_ostream &OS, unsigned Index) {
+    const CodeGenInstruction *CGI = EncodedInstructions[Index];
+    const Record *R = CGI->TheDef;
+    OS << R->getValueAsString("Namespace") << "::" << R->getName();
+  };
 
   unsigned FirstSupportedOpcode = EncodedInstructions.front()->EnumVal;
   O << "  constexpr unsigned FirstSupportedOpcode = " << FirstSupportedOpcode
@@ -502,7 +511,7 @@ void CodeEmitterGen::run(raw_ostream &O) {
   }
 
   // Emit each case statement
-  emitCaseMap(O, CaseMap);
+  emitCaseMap(O, CaseMap, PrintInstName);
 
   // Default case: unhandled opcode.
   O << "  default:\n"
@@ -521,7 +530,7 @@ void CodeEmitterGen::run(raw_ostream &O) {
     << "    unsigned OpNum,\n"
     << "    const MCSubtargetInfo &STI) const {\n"
     << "  switch (MI.getOpcode()) {\n";
-  emitCaseMap(O, BitOffsetCaseMap);
+  emitCaseMap(O, BitOffsetCaseMap, PrintInstName);
   O << "  default:\n"
     << "    reportUnsupportedInst(MI);\n"
     << "  }\n"
