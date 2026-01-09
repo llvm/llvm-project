@@ -546,6 +546,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::SHL, ISD::SRL, ISD::SRA}, VTs, Custom);
     setOperationAction(ISD::BITCAST, VTs, Custom);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, VTs, Custom);
+    setOperationAction({ISD::SDIV, ISD::UDIV, ISD::SREM, ISD::UREM,
+                        ISD::SDIVREM, ISD::UDIVREM},
+                       VTs, Expand);
   }
 
   if (Subtarget.hasStdExtZfbfmin()) {
@@ -1833,7 +1836,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
          ISD::MUL,          ISD::SDIV,         ISD::UDIV,
          ISD::SREM,         ISD::UREM,         ISD::INSERT_VECTOR_ELT,
          ISD::ABS,          ISD::CTPOP,        ISD::VECTOR_SHUFFLE,
-         ISD::VSELECT,      ISD::VECREDUCE_ADD});
+         ISD::FMA,          ISD::VSELECT,      ISD::VECREDUCE_ADD});
 
   if (Subtarget.hasVendorXTHeadMemPair())
     setTargetDAGCombine({ISD::LOAD, ISD::STORE});
@@ -16701,7 +16704,10 @@ static SDValue reduceANDOfAtomicLoad(SDNode *N,
 // hidden by the intermediate shift. Detect that case and commute the
 // shift/and in order to enable load narrowing.
 static SDValue combineNarrowableShiftedLoad(SDNode *N, SelectionDAG &DAG) {
-  // (and (shl (load ...), ShiftAmt), Mask)
+  EVT VT = N->getValueType(0);
+  if (!VT.isScalarInteger())
+    return SDValue();
+
   using namespace SDPatternMatch;
   SDValue LoadNode;
   APInt MaskVal, ShiftVal;
@@ -16713,7 +16719,6 @@ static SDValue combineNarrowableShiftedLoad(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
   }
 
-  EVT VT = N->getValueType(0);
   uint64_t ShiftAmt = ShiftVal.getZExtValue();
 
   if (ShiftAmt >= VT.getSizeInBits())
@@ -21072,6 +21077,22 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
       return V;
     return SDValue();
+  }
+  case ISD::FMA: {
+    SDValue N0 = N->getOperand(0);
+    SDValue N1 = N->getOperand(1);
+    if (N0.getOpcode() != ISD::SPLAT_VECTOR)
+      std::swap(N0, N1);
+    if (N0.getOpcode() != ISD::SPLAT_VECTOR)
+      return SDValue();
+    SDValue SplatN0 = N0.getOperand(0);
+    if (SplatN0.getOpcode() != ISD::FNEG || !SplatN0.hasOneUse())
+      return SDValue();
+    EVT VT = N->getValueType(0);
+    SDValue Splat =
+        DAG.getNode(ISD::SPLAT_VECTOR, DL, VT, SplatN0.getOperand(0));
+    SDValue Fneg = DAG.getNode(ISD::FNEG, DL, VT, Splat);
+    return DAG.getNode(ISD::FMA, DL, VT, Fneg, N1, N->getOperand(2));
   }
   case ISD::SETCC:
     return performSETCCCombine(N, DCI, Subtarget);

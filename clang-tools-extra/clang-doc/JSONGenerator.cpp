@@ -628,7 +628,7 @@ static void serializeInfo(const RecordInfo &I, json::Object &Obj,
     if (!PubFunctionsArrayRef.empty())
       insertArray(Obj, PubFunctionsArray, "PublicFunctions");
     if (!ProtFunctionsArrayRef.empty())
-      Obj["ProtectedFunctions"] = ProtFunctionsArray;
+      insertArray(Obj, ProtFunctionsArray, "ProtectedFunctions");
   }
 
   if (!I.Members.empty()) {
@@ -657,7 +657,7 @@ static void serializeInfo(const RecordInfo &I, json::Object &Obj,
     if (!PubMembersArrayRef.empty())
       insertArray(Obj, PublicMembersArray, "PublicMembers");
     if (!ProtMembersArrayRef.empty())
-      Obj["ProtectedMembers"] = ProtectedMembersArray;
+      insertArray(Obj, ProtectedMembersArray, "ProtectedMembers");
     if (!PrivateMembersArrayRef.empty())
       insertArray(Obj, PrivateMembersArray, "PrivateMembers");
   }

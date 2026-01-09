@@ -1,3 +1,4 @@
+// I
 //===-- X86ISelLowering.cpp - X86 DAG Lowering Implementation -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -717,8 +718,16 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FCANONICALIZE, MVT::f16, Custom);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Custom);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Custom);
+
+    setOperationAction(ISD::LLROUND, MVT::f16, Expand);
+    setOperationAction(ISD::LROUND, MVT::f16, Expand);
     setOperationAction(ISD::LRINT, MVT::f16, Expand);
     setOperationAction(ISD::LLRINT, MVT::f16, Expand);
+
+    setOperationAction(ISD::STRICT_LLROUND, MVT::f16, Promote);
+    setOperationAction(ISD::STRICT_LROUND, MVT::f16, Promote);
+    setOperationAction(ISD::STRICT_LRINT, MVT::f16, Promote);
+    setOperationAction(ISD::STRICT_LLRINT, MVT::f16, Promote);
 
     // Lower this to MOVMSK plus an AND.
     setOperationAction(ISD::FGETSIGN, MVT::i64, Custom);
@@ -59221,11 +59230,19 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       bool AllConstants = true;
       bool AllSubs = true;
       unsigned VecSize = VT.getSizeInBits();
-      SDValue BC0 = peekThroughBitcasts(SubOps[0].getOperand(Op));
-      if (isa<LoadSDNode>(BC0) && all_of(SubOps, [&](SDValue SubOp) {
-            return BC0 == peekThroughBitcasts(SubOp.getOperand(Op));
-          }))
-        return true;
+      SDValue SubOp0 = SubOps[0].getOperand(Op);
+      if (all_of(SubOps, [&](SDValue SubOp) {
+            return SubOp0 == SubOp.getOperand(Op);
+          })) {
+        SDValue Src = SubOp0;
+        while (Src.getOpcode() == ISD::BITCAST ||
+               Src.getOpcode() == ISD::EXTRACT_SUBVECTOR)
+          Src = Src.getOperand(0);
+        if (ISD::isNormalLoad(Src.getNode()) ||
+            Src.getOpcode() == X86ISD::VBROADCAST_LOAD ||
+            Src.getOpcode() == X86ISD::SUBV_BROADCAST_LOAD)
+          return true;
+      }
       SmallVector<SDValue> Subs;
       for (unsigned I = 0, E = SubOps.size(); I != E; ++I) {
         Subs.push_back(SubOps[I].getOperand(Op));
