@@ -2056,11 +2056,9 @@ llvm::ArrayRef<uint8_t> Platform::SoftwareTrapOpcodeBytes(const ArchSpec &arch,
     static const uint8_t g_wasm_opcode[] = {0x00};
     trap_opcode = llvm::ArrayRef<uint8_t>(g_wasm_opcode, sizeof(g_wasm_opcode));
   } break;
-  // The default case should not match against anything, so return a zero
-  // size array.
+  // The default case should not match against anything, so return a nullptr
   default: {
-    static const uint8_t g_no_opcode[] = {};
-    trap_opcode = llvm::ArrayRef<uint8_t>(g_no_opcode, 0);
+    trap_opcode = llvm::ArrayRef<uint8_t>(nullptr, 0);
   };
   }
   return trap_opcode;
