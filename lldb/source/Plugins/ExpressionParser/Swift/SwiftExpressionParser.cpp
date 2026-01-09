@@ -747,7 +747,7 @@ static void ResolveSpecialNames(
 
     resolved_names.insert(name_cs);
 
-    LLDB_LOG(log, "Resolving special name {0}");
+    LLDB_LOG(log, "Resolving special name {0}", name_cs);
 
     lldb::ExpressionVariableSP expr_var_sp =
         persistent_state->GetVariable(name_cs);
