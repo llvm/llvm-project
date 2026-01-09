@@ -1,4 +1,4 @@
-//===-- Implementation of getc for baremetal -------------------*- C++ -*-===//
+//===-- Implementation of fflush for baremetal -----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdio/getc.h"
-#include "src/stdio/fgetc.h"
+#include "src/stdio/fflush.h"
 
 #include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, getc, (::FILE * stream)) { return fgetc(stream); }
+// Baremetal uses unbuffered I/O, so there is nothing to flush.
+LLVM_LIBC_FUNCTION(int, fflush, (::FILE * /* stream */)) { return 0; }
 
 } // namespace LIBC_NAMESPACE_DECL
