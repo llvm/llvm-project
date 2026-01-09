@@ -10815,14 +10815,14 @@ SDValue SelectionDAG::getSetFPEnv(SDValue Chain, const SDLoc &dl, SDValue Ptr,
 
 SDValue SelectionDAG::simplifySelect(SDValue Cond, SDValue T, SDValue F) {
   // select undef, T, F --> T (if T is a constant), otherwise F
-  // select, ?, undef, F --> F
-  // select, ?, T, undef --> T
+  // select, ?, undef, F --> freeze(F)
+  // select, ?, T, undef --> freeze(T)
   if (Cond.isUndef())
     return isConstantValueOfAnyType(T) ? T : F;
   if (T.isUndef())
-    return isGuaranteedNotToBePoison(F) ? F : getFreeze(F);
+    return getFreeze(F);
   if (F.isUndef())
-    return isGuaranteedNotToBePoison(T) ? T : getFreeze(T);
+    return getFreeze(T);
 
   // select true, T, F --> T
   // select false, T, F --> F
