@@ -350,7 +350,7 @@ struct ConvertGetGlobal final
       auto arrayTy = emitc::ArrayType::get({1}, globalType);
       auto ptrArrayTy = emitc::PointerType::get(arrayTy);
       auto casted =
-          rewriter.create<emitc::CastOp>(loc, ptrArrayTy, addrOf.getResult());
+          emitc::CastOp::create(rewriter,loc, ptrArrayTy, addrOf.getResult());
       rewriter.replaceOp(op, casted.getResult());
       return success();
     }

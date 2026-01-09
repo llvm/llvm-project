@@ -93,11 +93,11 @@ func.func @opaque_types(%arg0: !emitc.opaque<"bool">, %arg1: !emitc.opaque<"char
 func.func @apply() -> !emitc.ptr<i32> {
   // CHECK-NEXT: int32_t [[V1:[^ ]*]];
   %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
-  // CHECK-NEXT: int32_t* [[V2:[^ ]*]] = &[[V1]]
+  // CHECK-NEXT: int32_t* [[V2:[^ ]*]] = &[[V1]];
   %1 = emitc.apply "&"(%0) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
   // CHECK-NEXT: int32_t [[V3:[^ ]*]];
   %2 = "emitc.variable"() {value = #emitc.opaque<"">} : () -> !emitc.lvalue<i32>
-  // CHECK-NEXT: int32_t [[V4:[^ ]+]] = *[[V2]]
+  // CHECK-NEXT: int32_t [[V4:[^ ]+]] = *[[V2]];
   %3 = emitc.apply "*"(%1) : (!emitc.ptr<i32>) -> i32
   // CHECK-NEXT: [[V3]] = [[V4]];
   emitc.assign %3 : i32 to %2 : !emitc.lvalue<i32>
