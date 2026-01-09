@@ -7027,8 +7027,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           &Call, Op);
 
     StringRef Scope = MDStr->getString();
-    Check(Scope == "" || Scope == "agent" || Scope == "workgroup" ||
-              Scope == "wavefront",
+    Check(Scope == "" || Scope == "agent" || Scope == "cluster" ||
+              Scope == "workgroup" || Scope == "wavefront",
           "'" + Scope +
               "' is not a valid scope for global load/store intrinsics",
           &Call, Op);

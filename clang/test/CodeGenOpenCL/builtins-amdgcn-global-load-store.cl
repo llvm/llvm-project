@@ -2,6 +2,8 @@
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx950         -emit-llvm -o - %s | FileCheck %s -check-prefixes=GFX,GFX950
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx9-4-generic -emit-llvm -o - %s | FileCheck %s -check-prefixes=GFX,GFX9_4_GENERIC
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1250        -emit-llvm -o - %s | FileCheck %s -check-prefixes=GFX,GFX1250
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx12-generic  -emit-llvm -o - %s | FileCheck %s -check-prefixes=GFX,GFX12_GENERIC
 
 typedef __attribute__((__vector_size__(4 * sizeof(unsigned int)))) unsigned int v4u32;
 typedef v4u32 __global *global_ptr_to_v4u32;
@@ -11,7 +13,7 @@ typedef v4u32 __global *global_ptr_to_v4u32;
 //------------------------------------------------------------------------------
 // GFX-LABEL: @test_amdgcn_global_store_b128_00(
 // GFX-NEXT:  entry:
-// GFX-NEXT:    tail call void @llvm.amdgcn.global.store.b128(ptr addrspace(1) [[PTR:%.*]], <4 x i32> [[DATA:%.*]], metadata [[META4:![0-9]+]])
+// GFX-NEXT:    tail call void @llvm.amdgcn.global.store.b128(ptr addrspace(1) [[PTR:%.*]], <4 x i32> [[DATA:%.*]], metadata [[META8:![0-9]+]])
 // GFX-NEXT:    ret void
 //
 void test_amdgcn_global_store_b128_00(global_ptr_to_v4u32 ptr, v4u32 data) {
@@ -20,16 +22,25 @@ void test_amdgcn_global_store_b128_00(global_ptr_to_v4u32 ptr, v4u32 data) {
 
 // GFX-LABEL: @test_amdgcn_global_store_b128_01(
 // GFX-NEXT:  entry:
-// GFX-NEXT:    tail call void @llvm.amdgcn.global.store.b128(ptr addrspace(1) [[PTR:%.*]], <4 x i32> [[DATA:%.*]], metadata [[META5:![0-9]+]])
+// GFX-NEXT:    tail call void @llvm.amdgcn.global.store.b128(ptr addrspace(1) [[PTR:%.*]], <4 x i32> [[DATA:%.*]], metadata [[META9:![0-9]+]])
 // GFX-NEXT:    ret void
 //
 void test_amdgcn_global_store_b128_01(global_ptr_to_v4u32 ptr, v4u32 data) {
   __builtin_amdgcn_global_store_b128(ptr, data, "workgroup");
 }
 
+// GFX-LABEL: @test_amdgcn_global_store_b128_cluster(
+// GFX-NEXT:  entry:
+// GFX-NEXT:    tail call void @llvm.amdgcn.global.store.b128(ptr addrspace(1) [[PTR:%.*]], <4 x i32> [[DATA:%.*]], metadata [[META10:![0-9]+]])
+// GFX-NEXT:    ret void
+//
+void test_amdgcn_global_store_b128_cluster(global_ptr_to_v4u32 ptr, v4u32 data) {
+  __builtin_amdgcn_global_store_b128(ptr, data, "cluster");
+}
+
 // GFX-LABEL: @test_amdgcn_global_store_b128_10(
 // GFX-NEXT:  entry:
-// GFX-NEXT:    tail call void @llvm.amdgcn.global.store.b128(ptr addrspace(1) [[PTR:%.*]], <4 x i32> [[DATA:%.*]], metadata [[META6:![0-9]+]])
+// GFX-NEXT:    tail call void @llvm.amdgcn.global.store.b128(ptr addrspace(1) [[PTR:%.*]], <4 x i32> [[DATA:%.*]], metadata [[META11:![0-9]+]])
 // GFX-NEXT:    ret void
 //
 void test_amdgcn_global_store_b128_10(global_ptr_to_v4u32 ptr, v4u32 data) {
@@ -38,7 +49,7 @@ void test_amdgcn_global_store_b128_10(global_ptr_to_v4u32 ptr, v4u32 data) {
 
 // GFX-LABEL: @test_amdgcn_global_store_b128_11(
 // GFX-NEXT:  entry:
-// GFX-NEXT:    tail call void @llvm.amdgcn.global.store.b128(ptr addrspace(1) [[PTR:%.*]], <4 x i32> [[DATA:%.*]], metadata [[META7:![0-9]+]])
+// GFX-NEXT:    tail call void @llvm.amdgcn.global.store.b128(ptr addrspace(1) [[PTR:%.*]], <4 x i32> [[DATA:%.*]], metadata [[META12:![0-9]+]])
 // GFX-NEXT:    ret void
 //
 void test_amdgcn_global_store_b128_11(global_ptr_to_v4u32 ptr, v4u32 data) {
@@ -50,7 +61,7 @@ void test_amdgcn_global_store_b128_11(global_ptr_to_v4u32 ptr, v4u32 data) {
 //------------------------------------------------------------------------------
 // GFX-LABEL: @test_amdgcn_global_load_b128_00(
 // GFX-NEXT:  entry:
-// GFX-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) [[PTR:%.*]], metadata [[META4]])
+// GFX-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) [[PTR:%.*]], metadata [[META8]])
 // GFX-NEXT:    ret <4 x i32> [[TMP0]]
 //
 v4u32 test_amdgcn_global_load_b128_00(global_ptr_to_v4u32 ptr) {
@@ -59,16 +70,25 @@ v4u32 test_amdgcn_global_load_b128_00(global_ptr_to_v4u32 ptr) {
 
 // GFX-LABEL: @test_amdgcn_global_load_b128_01(
 // GFX-NEXT:  entry:
-// GFX-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) [[PTR:%.*]], metadata [[META5]])
+// GFX-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) [[PTR:%.*]], metadata [[META9]])
 // GFX-NEXT:    ret <4 x i32> [[TMP0]]
 //
 v4u32 test_amdgcn_global_load_b128_01(global_ptr_to_v4u32 ptr) {
   return __builtin_amdgcn_global_load_b128(ptr, "workgroup");
 }
 
+// GFX-LABEL: @test_amdgcn_global_load_b128_cluster(
+// GFX-NEXT:  entry:
+// GFX-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) [[PTR:%.*]], metadata [[META10]])
+// GFX-NEXT:    ret <4 x i32> [[TMP0]]
+//
+v4u32 test_amdgcn_global_load_b128_cluster(global_ptr_to_v4u32 ptr) {
+  return __builtin_amdgcn_global_load_b128(ptr, "cluster");
+}
+
 // GFX-LABEL: @test_amdgcn_global_load_b128_10(
 // GFX-NEXT:  entry:
-// GFX-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) [[PTR:%.*]], metadata [[META6]])
+// GFX-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) [[PTR:%.*]], metadata [[META11]])
 // GFX-NEXT:    ret <4 x i32> [[TMP0]]
 //
 v4u32 test_amdgcn_global_load_b128_10(global_ptr_to_v4u32 ptr) {
@@ -77,23 +97,39 @@ v4u32 test_amdgcn_global_load_b128_10(global_ptr_to_v4u32 ptr) {
 
 // GFX-LABEL: @test_amdgcn_global_load_b128_11(
 // GFX-NEXT:  entry:
-// GFX-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) [[PTR:%.*]], metadata [[META7]])
+// GFX-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.global.load.b128(ptr addrspace(1) [[PTR:%.*]], metadata [[META12]])
 // GFX-NEXT:    ret <4 x i32> [[TMP0]]
 //
 v4u32 test_amdgcn_global_load_b128_11(global_ptr_to_v4u32 ptr) {
   return __builtin_amdgcn_global_load_b128(ptr, "");
 }
 //.
-// GFX950: [[META4]] = !{!"wavefront"}
-// GFX950: [[META5]] = !{!"workgroup"}
-// GFX950: [[META6]] = !{!"agent"}
-// GFX950: [[META7]] = !{!""}
+// GFX950: [[META8]] = !{!"wavefront"}
+// GFX950: [[META9]] = !{!"workgroup"}
+// GFX950: [[META10]] = !{!"cluster"}
+// GFX950: [[META11]] = !{!"agent"}
+// GFX950: [[META12]] = !{!""}
 //.
-// GFX9_4_GENERIC: [[META4]] = !{!"wavefront"}
-// GFX9_4_GENERIC: [[META5]] = !{!"workgroup"}
-// GFX9_4_GENERIC: [[META6]] = !{!"agent"}
-// GFX9_4_GENERIC: [[META7]] = !{!""}
+// GFX9_4_GENERIC: [[META8]] = !{!"wavefront"}
+// GFX9_4_GENERIC: [[META9]] = !{!"workgroup"}
+// GFX9_4_GENERIC: [[META10]] = !{!"cluster"}
+// GFX9_4_GENERIC: [[META11]] = !{!"agent"}
+// GFX9_4_GENERIC: [[META12]] = !{!""}
+//.
+// GFX1250: [[META8]] = !{!"wavefront"}
+// GFX1250: [[META9]] = !{!"workgroup"}
+// GFX1250: [[META10]] = !{!"cluster"}
+// GFX1250: [[META11]] = !{!"agent"}
+// GFX1250: [[META12]] = !{!""}
+//.
+// GFX12_GENERIC: [[META8]] = !{!"wavefront"}
+// GFX12_GENERIC: [[META9]] = !{!"workgroup"}
+// GFX12_GENERIC: [[META10]] = !{!"cluster"}
+// GFX12_GENERIC: [[META11]] = !{!"agent"}
+// GFX12_GENERIC: [[META12]] = !{!""}
 //.
 //// NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+// GFX1250: {{.*}}
+// GFX12_GENERIC: {{.*}}
 // GFX950: {{.*}}
 // GFX9_4_GENERIC: {{.*}}
