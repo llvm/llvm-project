@@ -48,6 +48,7 @@
 #include "SIInstrInfo.h"
 #include "llvm/ADT/PackedVector.h"
 #include "llvm/ADT/bit.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
 
@@ -340,12 +341,10 @@ AMDGPULowerVGPREncoding::handleCoissue(MachineBasicBlock::instr_iterator I) {
 /// Convert mode value from S_SET_VGPR_MSB format to MODE register format.
 /// S_SET_VGPR_MSB uses: (src0[0-1], src1[2-3], src2[4-5], dst[6-7])
 /// MODE register uses:  (dst[0-1], src0[2-3], src1[4-5], src2[6-7])
+/// This is a left rotation by 2 bits on an 8-bit value.
 static int64_t convertModeToSetregFormat(int64_t Mode) {
-  unsigned Src0 = (Mode >> 0) & 0x3;
-  unsigned Src1 = (Mode >> 2) & 0x3;
-  unsigned Src2 = (Mode >> 4) & 0x3;
-  unsigned Dst = (Mode >> 6) & 0x3;
-  return (Dst << 0) | (Src0 << 2) | (Src1 << 4) | (Src2 << 6);
+  assert(isUInt<8>(Mode) && "Mode expected to be 8-bit");
+  return llvm::rotl<uint8_t>(static_cast<uint8_t>(Mode), /*R=*/2);
 }
 
 bool AMDGPULowerVGPREncoding::updateSetregModeImm(MachineInstr &MI,
