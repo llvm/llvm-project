@@ -8,8 +8,7 @@
 ; CHECK: %[[#TYPE_VEC:]] = OpTypeVector %[[#TYPE_FLOAT]] 4
 ; CHECK: OpFmaKHR %[[#TYPE_FLOAT]] %[[#]]
 ; CHECK: OpFmaKHR %[[#TYPE_VEC]] %[[#]]
-; TODO: Fix translation for OCL builtin.
-; CHECKx: OpFmaKHR %[[#TYPE_FLOAT]] %[[#]]
+; CHECK: OpFmaKHR %[[#TYPE_FLOAT]] %[[#]]
 
 ; CHECK-NO-EXT-NOT: OpCapability FmaKHR
 ; CHECK-NO-EXT-NOT: OpExtension "SPV_KHR_fma"
