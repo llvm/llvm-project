@@ -21,10 +21,9 @@ _Pragma("omp begin declare target device_type(nohost)");
 _Pragma("omp begin declare variant match(device = {arch(spirv64)})");
 
 // Type aliases to the address spaces used by the SPIR-V backend.
-// TODO : Uncomment once SPIR-V backend can handle address space conversions
 #define __gpu_private __attribute__((address_space(0)))
-#define __gpu_constant /*__attribute__((address_space(2)))*/
-#define __gpu_local    /*__attribute__((address_space(3)))*/
+#define __gpu_constant __attribute__((address_space(2)))
+#define __gpu_local    __attribute__((address_space(3)))
 #define __gpu_global __attribute__((address_space(1)))
 #define __gpu_generic __attribute__((address_space(4)))
 
