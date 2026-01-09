@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___FLAT_MAP_FLAT_MAP_H
 #define _LIBCPP___FLAT_MAP_FLAT_MAP_H
 
+#include <__algorithm/iterator_operations.h>
 #include <__algorithm/lexicographical_compare_three_way.h>
 #include <__algorithm/lower_bound.h>
 #include <__algorithm/min.h>
