@@ -290,9 +290,13 @@ def AArch64frintp_mt : SDNode<"AArch64ISD::FCEIL_MERGE_PASSTHRU", SDT_AArch64Ari
 def AArch64frintm_mt : SDNode<"AArch64ISD::FFLOOR_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64frinti_mt : SDNode<"AArch64ISD::FNEARBYINT_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64frintx_mt : SDNode<"AArch64ISD::FRINT_MERGE_PASSTHRU", SDT_AArch64Arith>;
+def AArch64frint32x_mt : SDNode<"AArch64ISD::FRINT32_MERGE_PASSTHRU", SDT_AArch64Arith>;
+def AArch64frint64x_mt : SDNode<"AArch64ISD::FRINT64_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64frinta_mt : SDNode<"AArch64ISD::FROUND_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64frintn_mt : SDNode<"AArch64ISD::FROUNDEVEN_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64frintz_mt : SDNode<"AArch64ISD::FTRUNC_MERGE_PASSTHRU", SDT_AArch64Arith>;
+def AArch64frint32z_mt : SDNode<"AArch64ISD::FTRUNC32_MERGE_PASSTHRU", SDT_AArch64Arith>;
+def AArch64frint64z_mt : SDNode<"AArch64ISD::FTRUNC64_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64fsqrt_mt  : SDNode<"AArch64ISD::FSQRT_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64frecpx_mt : SDNode<"AArch64ISD::FRECPX_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64rbit_mt   : SDNode<"AArch64ISD::BITREVERSE_MERGE_PASSTHRU", SDT_AArch64Arith>;
@@ -4611,15 +4615,15 @@ let Predicates = [HasSVE2p2_or_SME2p2] in {
 
   // Floating point round to integral fp value in integer size range
   // Merging
-  defm FRINT32Z_ZPmZ : sve_fp_2op_p_zd_frint<0b00, "frint32z">;
-  defm FRINT32X_ZPmZ : sve_fp_2op_p_zd_frint<0b01, "frint32x">;
-  defm FRINT64X_ZPmZ : sve_fp_2op_p_zd_frint<0b10, "frint64z">;
-  defm FRINT64Z_ZPmZ : sve_fp_2op_p_zd_frint<0b11, "frint64x">;
+  defm FRINT32Z_ZPmZ : sve_fp_2op_p_zd_frint<0b00, "frint32z", AArch64frint32z_mt>;
+  defm FRINT32X_ZPmZ : sve_fp_2op_p_zd_frint<0b01, "frint32x", AArch64frint32x_mt>;
+  defm FRINT64Z_ZPmZ : sve_fp_2op_p_zd_frint<0b10, "frint64z", AArch64frint64z_mt>;
+  defm FRINT64X_ZPmZ : sve_fp_2op_p_zd_frint<0b11, "frint64x", AArch64frint64x_mt>;
   // Zeroing
-  defm FRINT32Z_ZPzZ : sve_fp_z2op_p_zd_frint<0b00, "frint32z">;
-  defm FRINT32X_ZPzZ : sve_fp_z2op_p_zd_frint<0b01, "frint32x">;
-  defm FRINT64Z_ZPzZ : sve_fp_z2op_p_zd_frint<0b10, "frint64z">;
-  defm FRINT64X_ZPzZ : sve_fp_z2op_p_zd_frint<0b11, "frint64x">;
+  defm FRINT32Z_ZPzZ : sve_fp_z2op_p_zd_frint<0b00, "frint32z", AArch64frint32z_mt>;
+  defm FRINT32X_ZPzZ : sve_fp_z2op_p_zd_frint<0b01, "frint32x", AArch64frint32x_mt>;
+  defm FRINT64Z_ZPzZ : sve_fp_z2op_p_zd_frint<0b10, "frint64z", AArch64frint64z_mt>;
+  defm FRINT64X_ZPzZ : sve_fp_z2op_p_zd_frint<0b11, "frint64x", AArch64frint64x_mt>;
 
   // Floating-point round to integral fp value, zeroing predicate
   defm FRINTN_ZPzZ : sve_fp_z2op_p_zd_hsd<0b00000, "frintn", AArch64frintn_mt>;

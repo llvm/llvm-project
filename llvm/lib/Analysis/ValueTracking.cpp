@@ -4795,7 +4795,8 @@ static void computeKnownFPClassFromCond(const Value *V, Value *Cond,
   const APInt *RHS;
   if (match(Cond, m_FCmp(Pred, m_Value(LHS), m_APFloat(CRHS)))) {
     auto [CmpVal, MaskIfTrue, MaskIfFalse] = fcmpImpliesClass(
-        Pred, *CxtI->getParent()->getParent(), LHS, *CRHS, LHS != V);
+        Pred, *cast<Instruction>(Cond)->getParent()->getParent(), LHS, *CRHS,
+        LHS != V);
     if (CmpVal == V)
       KnownFromContext.knownNot(~(CondIsTrue ? MaskIfTrue : MaskIfFalse));
   } else if (match(Cond, m_Intrinsic<Intrinsic::is_fpclass>(
@@ -4865,6 +4866,17 @@ static KnownFPClass computeKnownFPClassFromContext(const Value *V,
   }
 
   return KnownFromContext;
+}
+
+void llvm::adjustKnownFPClassForSelectArm(KnownFPClass &Known, Value *Cond,
+                                          Value *Arm, bool Invert,
+                                          const SimplifyQuery &SQ,
+                                          unsigned Depth) {
+  computeKnownFPClassFromCond(Arm, Cond,
+                              /*CondIsTrue=*/!Invert, SQ.CxtI, Known,
+                              Depth + 1);
+  // TODO: Do we need to check isGuaranteedNotToBeUndef, like the KnownBits
+  // case?
 }
 
 void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
@@ -5039,55 +5051,18 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     break;
   }
   case Instruction::Select: {
-    Value *Cond = Op->getOperand(0);
-    Value *LHS = Op->getOperand(1);
-    Value *RHS = Op->getOperand(2);
-
-    FPClassTest FilterLHS = fcAllFlags;
-    FPClassTest FilterRHS = fcAllFlags;
-
-    Value *TestedValue = nullptr;
-    FPClassTest MaskIfTrue = fcAllFlags;
-    FPClassTest MaskIfFalse = fcAllFlags;
-    uint64_t ClassVal = 0;
-    const Function *F = cast<Instruction>(Op)->getFunction();
-    CmpPredicate Pred;
-    Value *CmpLHS, *CmpRHS;
-    if (F && match(Cond, m_FCmp(Pred, m_Value(CmpLHS), m_Value(CmpRHS)))) {
-      // If the select filters out a value based on the class, it no longer
-      // participates in the class of the result
-
-      // TODO: In some degenerate cases we can infer something if we try again
-      // without looking through sign operations.
-      bool LookThroughFAbsFNeg = CmpLHS != LHS && CmpLHS != RHS;
-      std::tie(TestedValue, MaskIfTrue, MaskIfFalse) =
-          fcmpImpliesClass(Pred, *F, CmpLHS, CmpRHS, LookThroughFAbsFNeg);
-    } else if (match(Cond,
-                     m_Intrinsic<Intrinsic::is_fpclass>(
-                         m_Value(TestedValue), m_ConstantInt(ClassVal)))) {
-      FPClassTest TestedMask = static_cast<FPClassTest>(ClassVal);
-      MaskIfTrue = TestedMask;
-      MaskIfFalse = ~TestedMask;
-    }
-
-    if (TestedValue == LHS) {
-      // match !isnan(x) ? x : y
-      FilterLHS = MaskIfTrue;
-    } else if (TestedValue == RHS) { // && IsExactClass
-      // match !isnan(x) ? y : x
-      FilterRHS = MaskIfFalse;
-    }
-
-    KnownFPClass Known2;
-    computeKnownFPClass(LHS, DemandedElts, InterestedClasses & FilterLHS, Known,
-                        Q, Depth + 1);
-    Known.KnownFPClasses &= FilterLHS;
-
-    computeKnownFPClass(RHS, DemandedElts, InterestedClasses & FilterRHS,
-                        Known2, Q, Depth + 1);
-    Known2.KnownFPClasses &= FilterRHS;
-
-    Known |= Known2;
+    auto ComputeForArm = [&](Value *Arm, bool Invert) {
+      KnownFPClass Res;
+      computeKnownFPClass(Arm, DemandedElts, InterestedClasses, Res, Q,
+                          Depth + 1);
+      adjustKnownFPClassForSelectArm(Res, Op->getOperand(0), Arm, Invert, Q,
+                                     Depth);
+      return Res;
+    };
+    // Only known if known in both the LHS and RHS.
+    Known =
+        ComputeForArm(Op->getOperand(1), /*Invert=*/false)
+            .intersectWith(ComputeForArm(Op->getOperand(2), /*Invert=*/true));
     break;
   }
   case Instruction::Call: {
@@ -5667,7 +5642,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   }
   case Instruction::FDiv:
   case Instruction::FRem: {
-    if (Op->getOperand(0) == Op->getOperand(1)) {
+    if (Op->getOperand(0) == Op->getOperand(1) &&
+        isGuaranteedNotToBeUndef(Op->getOperand(0), Q.AC, Q.CxtI, Q.DT)) {
       // TODO: Could filter out snan if we inspect the operand
       if (Op->getOpcode() == Instruction::FDiv) {
         // X / X is always exactly 1.0 or a NaN.
