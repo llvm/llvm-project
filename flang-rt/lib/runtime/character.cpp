@@ -159,7 +159,7 @@ template <typename CHAR, bool ADJUSTR>
 static RT_API_ATTRS void AdjustLRHelper(Descriptor &result,
     const Descriptor &string, const Terminator &terminator) {
   int rank{string.rank()};
-  SubscriptValue ub[maxRank], stringAt[maxRank];
+  SubscriptValue ub[maxRank]{}, stringAt[maxRank];
   SubscriptValue elements{1};
   for (int j{0}; j < rank; ++j) {
     ub[j] = string.GetDimension(j).Extent();
@@ -215,7 +215,7 @@ template <typename INT, typename CHAR>
 static RT_API_ATTRS void LenTrim(Descriptor &result, const Descriptor &string,
     const Terminator &terminator) {
   int rank{string.rank()};
-  SubscriptValue ub[maxRank], stringAt[maxRank];
+  SubscriptValue ub[maxRank]{}, stringAt[maxRank];
   SubscriptValue elements{1};
   for (int j{0}; j < rank; ++j) {
     ub[j] = string.GetDimension(j).Extent();
