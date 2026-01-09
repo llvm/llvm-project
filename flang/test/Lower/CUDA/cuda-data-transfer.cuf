@@ -589,7 +589,7 @@ end subroutine
 ! CHECK: hlfir.assign 
 ! CHECK-NOT: cuf.data_transfer
 
-! Test that assigment with onlt managed variables on both rhs and lhs is done
+! Test that assigment with only managed variables on both rhs and lhs is done
 ! on the host.
 
 subroutine sub31()
