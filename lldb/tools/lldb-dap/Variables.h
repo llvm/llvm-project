@@ -20,7 +20,7 @@
 
 namespace lldb_dap {
 
-enum ScopeKind { Locals, Globals, Registers };
+enum eScopeKind { Locals, Globals, Registers };
 /// Creates a `protocol::Scope` struct.
 ///
 /// \param[in] kind
@@ -37,11 +37,11 @@ enum ScopeKind { Locals, Globals, Registers };
 ///
 /// \return
 ///     A `protocol::Scope`
-protocol::Scope CreateScope(const ScopeKind kind, int64_t variablesReference,
+protocol::Scope CreateScope(const eScopeKind kind, int64_t variablesReference,
                             int64_t namedVariables, bool expensive);
 
 struct ScopeData {
-  ScopeKind kind;
+  eScopeKind kind;
   lldb::SBValueList scope;
 };
 
@@ -61,7 +61,7 @@ struct Variables {
   lldb::SBValue GetVariable(int64_t var_ref) const;
 
   lldb::SBValueList *GetScope(const uint64_t dap_frame_id,
-                              const ScopeKind kind);
+                              const eScopeKind kind);
 
   /// Insert a new \p variable.
   /// \return variableReference assigned to this expandable variable.
@@ -87,7 +87,7 @@ private:
   int64_t m_next_temporary_var_ref{VARREF_FIRST_VAR_IDX};
 
   // Variable Reference,                 dap_frame_id
-  std::map<int64_t, std::pair<ScopeKind, uint64_t>> m_scope_kinds;
+  std::map<int64_t, std::pair<eScopeKind, uint64_t>> m_scope_kinds;
 
   /// Variables that are alive in this stop state.
   /// Will be cleared when debuggee resumes.
