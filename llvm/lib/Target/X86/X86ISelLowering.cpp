@@ -33093,11 +33093,8 @@ static SDValue LowerCLMUL(SDValue Op, const X86Subtarget &Subtarget,
                           SelectionDAG &DAG) {
   assert(Subtarget.hasPCLMUL() && "PCLMUL required for CLMUL lowering");
 
-  // Can't use vector registers if soft-float or NoImplicitFloat.
-  bool NoImplicitFloatOps =
-      DAG.getMachineFunction().getFunction().hasFnAttribute(
-          Attribute::NoImplicitFloat);
-  if (Subtarget.useSoftFloat() || NoImplicitFloatOps)
+  if (DAG.getMachineFunction().getFunction().hasFnAttribute(
+          Attribute::NoImplicitFloat))
     return SDValue();
 
   SDLoc DL(Op);
