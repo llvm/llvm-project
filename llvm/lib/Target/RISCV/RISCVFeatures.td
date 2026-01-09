@@ -1843,9 +1843,9 @@ def TuneDisableLatencySchedHeuristic
     : SubtargetFeature<"disable-latency-sched-heuristic", "DisableLatencySchedHeuristic", "true",
                        "Disable latency scheduling heuristic">;
 
-def TuneEnableVTypeSchedHeuristic
-    : SubtargetFeature<"enable-vtype-sched-heuristic", "EnableVTypeSchedHeuristic", "true",
-                       "Enable vtype-based scheduling heuristic">;
+def TuneEnableVsetvliSchedHeuristic
+    : SubtargetFeature<"enable-vsetvli-sched-heuristic", "EnableVsetvliSchedHeuristic", "true",
+                       "Enable vsetvli-based scheduling heuristic">;
 
 def TunePredictableSelectIsExpensive
     : SubtargetFeature<"predictable-select-expensive", "PredictableSelectIsExpensive", "true",

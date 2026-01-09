@@ -26,14 +26,14 @@ bool RISCVPreRAMachineSchedStrategy::tryVType(RISCV::VSETVLIInfo TryVType,
                                               SchedCandidate &TryCand,
                                               SchedCandidate &Cand,
                                               CandReason Reason) const {
-  // Do not compare the vtype changes between top and bottom
+  // Do not compare the vsetvli info changes between top and bottom
   // boundary.
   if (Cand.AtTop != TryCand.AtTop)
     return false;
 
   // Try Cand first.
   // We prefer the top node as it is straightforward from the perspective of
-  // vtype dataflow.
+  // vsetvli dataflow.
   if (CandVtype.isValid() && TopVType.isValid() && Cand.AtTop &&
       CandVtype == TopVType)
     return true;
@@ -172,7 +172,7 @@ bool RISCVPreRAMachineSchedStrategy::tryCandidate(SchedCandidate &Cand,
 
   // TODO: We should not use `CandReason::Cluster` here, but is there a
   // mechanism to extend this enum?
-  if (ST->enableVTypeSchedHeuristic() &&
+  if (ST->enableVsetvliSchedHeuristic() &&
       tryVType(getVSETVLIInfo(TryCand.SU->getInstr()),
                getVSETVLIInfo(Cand.SU->getInstr()), TryCand, Cand, Cluster))
     return TryCand.Reason != NoCand;
@@ -192,7 +192,7 @@ void RISCVPreRAMachineSchedStrategy::leaveMBB() {
 
 void RISCVPreRAMachineSchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
   GenericScheduler::schedNode(SU, IsTopNode);
-  if (ST->enableVTypeSchedHeuristic()) {
+  if (ST->enableVsetvliSchedHeuristic()) {
     MachineInstr *MI = SU->getInstr();
     const RISCV::VSETVLIInfo &Info = getVSETVLIInfo(MI);
     if (Info.isValid()) {
