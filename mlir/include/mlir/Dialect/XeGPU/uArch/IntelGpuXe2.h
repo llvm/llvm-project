@@ -222,7 +222,7 @@ struct StoreScatterInstruction : public Instruction {
     return B->getInstructionKind() == InstructionKind::StoreScatter;
   }
 
-  int32_t getMaxBitSize() const { return 128; }
+  int32_t getMaxLaneLoadStoreBitSize() const { return 128; }
 };
 
 struct LoadGatherInstruction : public Instruction {
@@ -232,7 +232,7 @@ struct LoadGatherInstruction : public Instruction {
     return B->getInstructionKind() == InstructionKind::LoadGather;
   }
 
-  int32_t getMaxBitSize() const { return 128; }
+  int32_t getMaxLaneLoadStoreBitSize() const { return 128; }
 };
 
 //===----------------------------------------------------------------------===//

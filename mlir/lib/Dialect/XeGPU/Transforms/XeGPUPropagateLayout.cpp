@@ -1172,7 +1172,7 @@ void LayoutInfoPropagation::visitLoadGatherOp(
     // Check if value inst_data complies with uArch
     if (!instDataIncoming.empty()) {
       const int maxElemsPerInst =
-          uArchInstruction->getMaxBitSize() /
+          uArchInstruction->getMaxLaneLoadStoreBitSize() /
           payloadTy.getElementType().getIntOrFloatBitWidth();
 
       // Each lane loads either one element
@@ -1207,8 +1207,12 @@ void LayoutInfoPropagation::visitLoadGatherOp(
     loadLayout = valueLayout;
     load.setLayoutAttr(dyn_cast<xegpu::DistributeLayoutAttr>(loadLayout.get()));
   }
-  // Mask operand should have 1D default layout.
-  maskLayout = getDefaultSIMTLayoutInfo(load->getContext(), 1, subgroupSize);
+
+  if (layoutKind == LayoutKind::InstData)
+    maskLayout =
+        LayoutInfo(xegpu::LayoutAttr::get(load->getContext(), {subgroupSize}));
+  else if (layoutKind == LayoutKind::Lane)
+    maskLayout = getDefaultSIMTLayoutInfo(load->getContext(), 1, subgroupSize);
 
   // Propagate the new layout to the tensor descriptor operand.
   if (isa<xegpu::TensorDescType>(load.getSourceType()))
@@ -1265,7 +1269,7 @@ void LayoutInfoPropagation::visitStoreScatterOp(
           dyn_cast<xegpu::uArch::LoadGatherInstruction>(
               uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
       const int maxElemsPerInst =
-          uArchInstruction->getMaxBitSize() /
+          uArchInstruction->getMaxLaneLoadStoreBitSize() /
           payloadTy.getElementType().getIntOrFloatBitWidth();
 
       const int subgroupSize = uArch->getSubgroupSize();
@@ -1295,8 +1299,13 @@ void LayoutInfoPropagation::visitStoreScatterOp(
         dyn_cast<xegpu::DistributeLayoutAttr>(payloadLayout.get()));
   }
 
-  maskLayout =
-      getDefaultSIMTLayoutInfo(storeScatter->getContext(), 1, subgroupSize);
+  if (layoutKind == LayoutKind::InstData)
+    maskLayout = LayoutInfo(
+        xegpu::LayoutAttr::get(storeScatter->getContext(), {subgroupSize}));
+  else if (layoutKind == LayoutKind::Lane)
+    maskLayout =
+        getDefaultSIMTLayoutInfo(storeScatter->getContext(), 1, subgroupSize);
+
   // Propagate the payload operand layout
   propagateIfChanged(operands[0], operands[0]->meet(payloadLayout));
   // Propagate the destination (if tdesc) operand layout

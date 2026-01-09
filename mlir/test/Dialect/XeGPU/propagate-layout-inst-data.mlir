@@ -138,8 +138,8 @@ gpu.module @test_kernel {
 gpu.module @test {
 // CHECK-LABEL: func.func @scatter_ops_chunksize(
 // CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<256xf16>) {
-// CHECK: %{{.*}} = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<true> : vector<16xi1>
-// CHECK: %{{.*}} = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<12> : vector<16xindex>
+// CHECK: %{{.*}} = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [16]>} dense<true> : vector<16xi1>
+// CHECK: %{{.*}} = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [16]>} dense<12> : vector<16xindex>
 // CHECK: %{{.*}} = xegpu.load %[[ARG0]][%{{.*}}], %{{.*}} <{chunk_size = 8 : i64, layout = #xegpu.layout<inst_data = [16, 8]>}>
 // CHECK-SAME: memref<256xf16>, vector<16xindex>, vector<16xi1> -> vector<16x8xf16>
 // CHECK: xegpu.store %0, %[[ARG0]][%{{.*}}], %{{.*}} <{chunk_size = 8 : i64, layout = #xegpu.layout<inst_data = [16, 8]>}> : vector<16x8xf16>, memref<256xf16>, vector<16xindex>, vector<16xi1>
@@ -171,8 +171,8 @@ func.func @store_matrix(%arg0: !xegpu.mem_desc<16x64xf16>) {
 gpu.module @test {
 // CHECK-LABEL: func.func @scatter_ops_chunksize_excessive(
 // CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<1024xf32>) {
-// CHECK: %{{.*}} = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<true> : vector<16xi1>
-// CHECK: %{{.*}} = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<12> : vector<16xindex>
+// CHECK: %{{.*}} = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [16]>} dense<true> : vector<16xi1>
+// CHECK: %{{.*}} = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [16]>} dense<12> : vector<16xindex>
 // CHECK: %{{.*}} = xegpu.load %[[ARG0]][%{{.*}}], %{{.*}} <{chunk_size = 16 : i64, layout = #xegpu.layout<inst_data = [16, 4]>}> :
 // CHECK-SAME: memref<1024xf32>, vector<16xindex>, vector<16xi1> -> vector<16x16xf32>
 // CHECK: xegpu.store %0, %[[ARG0]][%{{.*}}], %{{.*}} <{chunk_size = 16 : i64, layout = #xegpu.layout<inst_data = [16, 4]>}> :
@@ -191,20 +191,20 @@ func.func @scatter_ops_chunksize_excessive(%src: memref<1024xf32>) {
 // -----
 
 gpu.module @test {
-// CHECK-LABEL: func.func @scatter_ops_chunksize_excessive_slice(
+// CHECK-LABEL: func.func @scatter_ops_chunksize_excessive_anchor(
 // CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<1024xf32>) {
-// CHECK: %{{.*}} = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<true> : vector<16xi1>
-// CHECK: %{{.*}} = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<12> : vector<16xindex>
-// CHECK: %{{.*}} = xegpu.load %[[ARG0]][%{{.*}}], %{{.*}} <{chunk_size = 16 : i64, layout = #xegpu.slice<#xegpu.layout<inst_data = [1, 16, 4]>, dims = [0]>}> :
+// CHECK: %{{.*}} = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [16]>} dense<true> : vector<16xi1>
+// CHECK: %{{.*}} = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [16]>} dense<12> : vector<16xindex>
+// CHECK: %{{.*}} = xegpu.load %[[ARG0]][%{{.*}}], %{{.*}} <{chunk_size = 16 : i64, layout = #xegpu.layout<inst_data = [16, 4]>}> :
 // CHECK-SAME: memref<1024xf32>, vector<16xindex>, vector<16xi1> -> vector<16x16xf32>
-// CHECK: xegpu.store %0, %[[ARG0]][%{{.*}}], %{{.*}} <{chunk_size = 16 : i64, layout = #xegpu.slice<#xegpu.layout<inst_data = [1, 16, 16]>, dims = [0]>}> :
+// CHECK: xegpu.store %0, %[[ARG0]][%{{.*}}], %{{.*}} <{chunk_size = 16 : i64, layout = #xegpu.layout<inst_data = [16, 16]>}> :
 // CHECK-SAME: vector<16x16xf32>, memref<1024xf32>, vector<16xindex>, vector<16xi1>
-func.func @scatter_ops_chunksize_excessive_slice(%src: memref<1024xf32>) {
+func.func @scatter_ops_chunksize_excessive_anchor(%src: memref<1024xf32>) {
   %1 = arith.constant dense<1>: vector<16xi1>
   %offset = arith.constant dense<12> : vector<16xindex>
   %3 = xegpu.load %src[%offset], %1 <{chunk_size=16}>
       : memref<1024xf32>, vector<16xindex>, vector<16xi1> -> vector<16x16xf32>
-  xegpu.store %3, %src[%offset], %1 <{chunk_size=16, layout = #xegpu.slice<#xegpu.layout<inst_data = [1, 16, 16]>, dims = [0]>}>
+  xegpu.store %3, %src[%offset], %1 <{chunk_size=16, layout = #xegpu.layout<inst_data = [16, 16]>}>
       : vector<16x16xf32>, memref<1024xf32>, vector<16xindex>, vector<16xi1>
   return
 }
