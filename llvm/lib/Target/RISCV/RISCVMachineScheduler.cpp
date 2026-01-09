@@ -31,26 +31,29 @@ bool RISCVPreRAMachineSchedStrategy::tryVSETVLIInfo(RISCV::VSETVLIInfo TryInfo,
   if (Cand.AtTop != TryCand.AtTop)
     return false;
 
+  auto IsCompatible = [&](RISCV::VSETVLIInfo FirstInfo,
+                          RISCV::VSETVLIInfo SecondInfo) {
+    return FirstInfo.isValid() && SecondInfo.isValid() &&
+           FirstInfo.isCompatible(RISCV::DemandedFields::all(), SecondInfo,
+                                  Context->LIS);
+  };
+
   // Try Cand first.
   // We prefer the top node as it is straightforward from the perspective of
   // vsetvli dataflow.
-  if (CandInfo.isValid() && TopInfo.isValid() && Cand.AtTop &&
-      CandInfo == TopInfo)
+  if (Cand.AtTop && IsCompatible(CandInfo, TopInfo))
     return true;
 
-  if (CandInfo.isValid() && BottomInfo.isValid() && !Cand.AtTop &&
-      CandInfo == BottomInfo)
+  if (!Cand.AtTop && IsCompatible(CandInfo, BottomInfo))
     return true;
 
   // Then try TryCand.
-  if (TryInfo.isValid() && TopInfo.isValid() && TryCand.AtTop &&
-      TryInfo == TopInfo) {
+  if (TryCand.AtTop && IsCompatible(TryInfo, TopInfo)) {
     TryCand.Reason = Reason;
     return true;
   }
 
-  if (TryInfo.isValid() && BottomInfo.isValid() && !TryCand.AtTop &&
-      TryInfo == BottomInfo) {
+  if (!TryCand.AtTop && IsCompatible(TryInfo, BottomInfo)) {
     TryCand.Reason = Reason;
     return true;
   }
