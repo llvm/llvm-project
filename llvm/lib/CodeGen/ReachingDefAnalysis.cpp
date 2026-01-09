@@ -663,18 +663,18 @@ MachineInstr *ReachingDefInfo::getLocalLiveOutMIDef(MachineBasicBlock *MBB,
   if (Last == MBB->end())
     return nullptr;
 
+  // Check if Last is the definition
   if (Reg.isStack()) {
     int FrameIndex = Reg.stackSlotIndex();
     if (isFIDef(*Last, FrameIndex, TII))
       return &*Last;
+  } else {
+    for (auto &MO : Last->operands())
+      if (isValidRegDefOf(MO, Reg, TRI))
+        return &*Last;
   }
 
   int Def = getReachingDef(&*Last, Reg);
-
-  for (auto &MO : Last->operands())
-    if (isValidRegDefOf(MO, Reg, TRI))
-      return &*Last;
-
   return Def < 0 ? nullptr : getInstFromId(MBB, Def);
 }
 
