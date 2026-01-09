@@ -4458,6 +4458,38 @@ LogicalResult WorkdistributeOp::verify() {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// Declare simd [7.7]
+//===----------------------------------------------------------------------===//
+
+void DeclareSimdOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                          const DeclareSimdOperands &clauses) {
+  MLIRContext *ctx = odsBuilder.getContext();
+  DeclareSimdOp::build(odsBuilder, odsState, clauses.alignedVars,
+                       makeArrayAttr(ctx, clauses.alignments),
+                       clauses.linearVars, clauses.linearStepVars,
+                       clauses.linearVarTypes, clauses.simdlen);
+}
+
+LogicalResult DeclareSimdOp::verify() {
+  // Must be nested inside a function-like op
+  auto func = (*this)->getParentOfType<mlir::FunctionOpInterface>();
+  if (!func)
+    return emitOpError()
+           << "'omp.declare_simd' must be nested inside a function";
+
+  // omp.declare_simd must appear in the entry block of the enclosing function
+  Block &entry = func.getFunctionBody().front();
+  if (getOperation()->getBlock() != &entry)
+    return emitError()
+           << "must appear in the entry block of the enclosing function";
+
+  if (verifyAlignedClause(*this, getAlignments(), getAlignedVars()).failed())
+    return failure();
+
+  return success();
+}
+
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/OpenMP/OpenMPOpsAttributes.cpp.inc"
 
