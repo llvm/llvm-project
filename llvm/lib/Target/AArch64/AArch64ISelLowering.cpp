@@ -1853,22 +1853,28 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         !Subtarget->isNonStreamingSVEorSME2Available()) {
       for (MVT VT : {MVT::nxv2bf16, MVT::nxv4bf16, MVT::nxv8bf16}) {
         MVT PromotedVT = VT.changeVectorElementType(MVT::f32);
-        setOperationPromotedToType(ISD::FADD, VT, PromotedVT);
         setOperationPromotedToType(ISD::FMA, VT, PromotedVT);
         setOperationPromotedToType(ISD::FMAXIMUM, VT, PromotedVT);
         setOperationPromotedToType(ISD::FMAXNUM, VT, PromotedVT);
         setOperationPromotedToType(ISD::FMINIMUM, VT, PromotedVT);
         setOperationPromotedToType(ISD::FMINNUM, VT, PromotedVT);
-        setOperationPromotedToType(ISD::FSUB, VT, PromotedVT);
 
-        if (VT != MVT::nxv2bf16 && Subtarget->hasBF16())
+        if (VT != MVT::nxv2bf16 && Subtarget->hasBF16()) {
           setOperationAction(ISD::FMUL, VT, Custom);
-        else
+          setOperationAction(ISD::FADD, VT, Custom);
+          setOperationAction(ISD::FSUB, VT, Custom);
+        } else {
           setOperationPromotedToType(ISD::FMUL, VT, PromotedVT);
+          setOperationPromotedToType(ISD::FADD, VT, PromotedVT);
+          setOperationPromotedToType(ISD::FSUB, VT, PromotedVT);
+        }
       }
 
-      if (Subtarget->hasBF16() && Subtarget->isNeonAvailable())
+      if (Subtarget->hasBF16() && Subtarget->isNeonAvailable()) {
         setOperationAction(ISD::FMUL, MVT::v8bf16, Custom);
+        setOperationAction(ISD::FADD, MVT::v8bf16, Custom);
+        setOperationAction(ISD::FSUB, MVT::v8bf16, Custom);
+      }
     }
 
     setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i8, Custom);
@@ -7816,17 +7822,21 @@ SDValue AArch64TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
                      EndOfTrmp);
 }
 
-SDValue AArch64TargetLowering::LowerFMUL(SDValue Op, SelectionDAG &DAG) const {
+SDValue
+AArch64TargetLowering::LowerBFloatArithToBFMLAL(SDValue Op,
+                                                SelectionDAG &DAG) const {
   SDLoc DL(Op);
+  unsigned Opcode = Op.getOpcode();
   EVT VT = Op.getValueType();
-  if (VT.getScalarType() != MVT::bf16 ||
+  if ((Opcode != ISD::FADD && Opcode != ISD::FSUB && Opcode != ISD::FMUL) ||
+      VT.getScalarType() != MVT::bf16 ||
       (Subtarget->hasSVEB16B16() &&
        Subtarget->isNonStreamingSVEorSME2Available()))
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMUL_PRED);
+    return SDValue();
 
-  assert(Subtarget->hasBF16() && "Expected +bf16 for custom FMUL lowering");
+  assert(Subtarget->hasBF16() && "Expected +bf16 for custom FMUL/ADD lowering");
   assert((VT == MVT::nxv4bf16 || VT == MVT::nxv8bf16 || VT == MVT::v8bf16) &&
-         "Unexpected FMUL VT");
+         "Unexpected FMUL/ADD VT");
 
   auto MakeGetIntrinsic = [&](Intrinsic::ID IID) {
     return [&, IID](EVT VT, auto... Ops) {
@@ -7860,16 +7870,41 @@ SDValue AArch64TargetLowering::LowerFMUL(SDValue Op, SelectionDAG &DAG) const {
                                     : Intrinsic::aarch64_neon_bfmlalt);
 
   EVT AccVT = UseSVEBFMLAL ? MVT::nxv4f32 : MVT::v4f32;
-  bool IgnoreZeroSign =
-      Op->getFlags().hasNoSignedZeros() || DAG.canIgnoreSignBitOfZero(Op);
-  SDValue Zero = DAG.getConstantFP(IgnoreZeroSign ? +0.0F : -0.0F, DL, AccVT);
   SDValue Pg = getPredicateForVector(DAG, DL, AccVT);
+  SDValue BottomAcc, TopAcc, LHS, RHS;
 
-  // Lower bf16 FMUL as a pair (VT == [nx]v8bf16) of BFMLAL top/bottom
-  // instructions. These result in two f32 vectors, which can be converted back
-  // to bf16 with FCVT and FCVTNT.
-  SDValue LHS = Op.getOperand(0);
-  SDValue RHS = Op.getOperand(1);
+  if (Opcode == ISD::FMUL) {
+    bool IgnoreZeroSign =
+        Op->getFlags().hasNoSignedZeros() || DAG.canIgnoreSignBitOfZero(Op);
+    // Set both accumulators to zero.
+    BottomAcc = TopAcc =
+        DAG.getConstantFP(IgnoreZeroSign ? +0.0F : -0.0F, DL, AccVT);
+    // Lower bf16 FMUL as a pair (VT == [nx]v8bf16) of BFMLAL top/bottom
+    // instructions. These result in two f32 vectors, which can be converted
+    // back to bf16 with FCVT and FCVTNT.
+    LHS = Op.getOperand(0);
+    RHS = Op.getOperand(1);
+  } else if (Opcode == ISD::FADD || Opcode == ISD::FSUB) {
+    // Lower FADD/SUB by extending the LHS to be used as the accumulator, and
+    // multiplying the RHS by 1.0F (or -1.0F for FSUB).
+    if (VT.getVectorMinNumElements() > 4) {
+      SDValue Zero = DAG.getConstantFP(+0.0, DL, VT);
+      // Note: This extends the even/odd lanes to f32. TRN1/2 is used as the
+      // zero is likely cheap/hoisted and can be used to extend the odd lanes.
+      BottomAcc = DAG.getNode(
+          AArch64ISD::NVCAST, DL, AccVT,
+          DAG.getNode(AArch64ISD::TRN1, DL, VT, Zero, Op.getOperand(0)));
+      TopAcc = DAG.getNode(
+          AArch64ISD::NVCAST, DL, AccVT,
+          DAG.getNode(AArch64ISD::TRN2, DL, VT, Zero, Op.getOperand(0)));
+    } else {
+      BottomAcc = DAG.getNode(ISD::FP_EXTEND, DL, AccVT, Op.getOperand(0));
+    }
+    LHS = Op.getOperand(1);
+    RHS = DAG.getConstantFP(Opcode == ISD::FSUB ? -1.0F : 1.0F, DL, VT);
+  } else {
+    llvm_unreachable("Unexpected operation");
+  }
 
   // All SVE intrinsics expect to operate on full bf16 vector types.
   if (UseSVEBFMLAL) {
@@ -7877,14 +7912,15 @@ SDValue AArch64TargetLowering::LowerFMUL(SDValue Op, SelectionDAG &DAG) const {
     RHS = Reinterpret(RHS, MVT::nxv8bf16);
   }
 
-  SDValue BottomF32 = Reinterpret(BFMLALB(AccVT, Zero, LHS, RHS), MVT::nxv4f32);
+  SDValue BottomF32 =
+      Reinterpret(BFMLALB(AccVT, BottomAcc, LHS, RHS), MVT::nxv4f32);
   SDValue BottomBF16 =
       FCVT(MVT::nxv8bf16, DAG.getPOISON(MVT::nxv8bf16), Pg, BottomF32);
   // Note: nxv4bf16 only uses even lanes.
   if (VT == MVT::nxv4bf16)
     return Reinterpret(BottomBF16, VT);
 
-  SDValue TopF32 = Reinterpret(BFMLALT(AccVT, Zero, LHS, RHS), MVT::nxv4f32);
+  SDValue TopF32 = Reinterpret(BFMLALT(AccVT, TopAcc, LHS, RHS), MVT::nxv4f32);
   SDValue TopBF16 = FCVTNT(MVT::nxv8bf16, BottomBF16, Pg, TopF32);
   return Reinterpret(TopBF16, VT);
 }
@@ -7933,6 +7969,9 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
                                               SelectionDAG &DAG) const {
   LLVM_DEBUG(dbgs() << "Custom lowering: ");
   LLVM_DEBUG(Op.dump());
+
+  if (SDValue Result = LowerBFloatArithToBFMLAL(Op, DAG))
+    return Result;
 
   switch (Op.getOpcode()) {
   default:
@@ -8003,7 +8042,7 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::FSUB:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FSUB_PRED);
   case ISD::FMUL:
-    return LowerFMUL(Op, DAG);
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMUL_PRED);
   case ISD::FMA:
     return LowerFMA(Op, DAG);
   case ISD::FDIV:

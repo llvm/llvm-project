@@ -66,10 +66,10 @@ define <vscale x 2 x bfloat> @fadd_nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 
 define <vscale x 4 x bfloat> @fadd_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b) {
 ; NOB16B16-LABEL: fadd_nxv4bf16:
 ; NOB16B16:       // %bb.0:
-; NOB16B16-NEXT:    lsl z1.s, z1.s, #16
+; NOB16B16-NEXT:    fmov z2.h, #1.87500000
 ; NOB16B16-NEXT:    lsl z0.s, z0.s, #16
 ; NOB16B16-NEXT:    ptrue p0.s
-; NOB16B16-NEXT:    fadd z0.s, z0.s, z1.s
+; NOB16B16-NEXT:    bfmlalb z0.s, z1.h, z2.h
 ; NOB16B16-NEXT:    bfcvt z0.h, p0/m, z0.s
 ; NOB16B16-NEXT:    ret
 ;
@@ -83,28 +83,36 @@ define <vscale x 4 x bfloat> @fadd_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 
 }
 
 define <vscale x 8 x bfloat> @fadd_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
-; NOB16B16-LABEL: fadd_nxv8bf16:
-; NOB16B16:       // %bb.0:
-; NOB16B16-NEXT:    uunpkhi z2.s, z1.h
-; NOB16B16-NEXT:    uunpkhi z3.s, z0.h
-; NOB16B16-NEXT:    uunpklo z1.s, z1.h
-; NOB16B16-NEXT:    uunpklo z0.s, z0.h
-; NOB16B16-NEXT:    ptrue p0.s
-; NOB16B16-NEXT:    lsl z2.s, z2.s, #16
-; NOB16B16-NEXT:    lsl z3.s, z3.s, #16
-; NOB16B16-NEXT:    lsl z1.s, z1.s, #16
-; NOB16B16-NEXT:    lsl z0.s, z0.s, #16
-; NOB16B16-NEXT:    fadd z2.s, z3.s, z2.s
-; NOB16B16-NEXT:    fadd z0.s, z0.s, z1.s
-; NOB16B16-NEXT:    bfcvt z1.h, p0/m, z2.s
-; NOB16B16-NEXT:    bfcvt z0.h, p0/m, z0.s
-; NOB16B16-NEXT:    uzp1 z0.h, z0.h, z1.h
-; NOB16B16-NEXT:    ret
+; NOB16B16-NONSTREAMING-LABEL: fadd_nxv8bf16:
+; NOB16B16-NONSTREAMING:       // %bb.0:
+; NOB16B16-NONSTREAMING-NEXT:    movi v2.2d, #0000000000000000
+; NOB16B16-NONSTREAMING-NEXT:    fmov z3.h, #1.87500000
+; NOB16B16-NONSTREAMING-NEXT:    ptrue p0.s
+; NOB16B16-NONSTREAMING-NEXT:    trn1 z4.h, z2.h, z0.h
+; NOB16B16-NONSTREAMING-NEXT:    trn2 z2.h, z2.h, z0.h
+; NOB16B16-NONSTREAMING-NEXT:    bfmlalb z4.s, z1.h, z3.h
+; NOB16B16-NONSTREAMING-NEXT:    bfmlalt z2.s, z1.h, z3.h
+; NOB16B16-NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z4.s
+; NOB16B16-NONSTREAMING-NEXT:    bfcvtnt z0.h, p0/m, z2.s
+; NOB16B16-NONSTREAMING-NEXT:    ret
 ;
 ; B16B16-LABEL: fadd_nxv8bf16:
 ; B16B16:       // %bb.0:
 ; B16B16-NEXT:    bfadd z0.h, z0.h, z1.h
 ; B16B16-NEXT:    ret
+;
+; NOB16B16-STREAMING-LABEL: fadd_nxv8bf16:
+; NOB16B16-STREAMING:       // %bb.0:
+; NOB16B16-STREAMING-NEXT:    mov z2.h, #0 // =0x0
+; NOB16B16-STREAMING-NEXT:    fmov z3.h, #1.87500000
+; NOB16B16-STREAMING-NEXT:    ptrue p0.s
+; NOB16B16-STREAMING-NEXT:    trn1 z4.h, z2.h, z0.h
+; NOB16B16-STREAMING-NEXT:    trn2 z2.h, z2.h, z0.h
+; NOB16B16-STREAMING-NEXT:    bfmlalb z4.s, z1.h, z3.h
+; NOB16B16-STREAMING-NEXT:    bfmlalt z2.s, z1.h, z3.h
+; NOB16B16-STREAMING-NEXT:    bfcvt z0.h, p0/m, z4.s
+; NOB16B16-STREAMING-NEXT:    bfcvtnt z0.h, p0/m, z2.s
+; NOB16B16-STREAMING-NEXT:    ret
   %res = fadd <vscale x 8 x bfloat> %a, %b
   ret <vscale x 8 x bfloat> %res
 }
@@ -717,10 +725,10 @@ define <vscale x 2 x bfloat> @fsub_nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 
 define <vscale x 4 x bfloat> @fsub_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b) {
 ; NOB16B16-LABEL: fsub_nxv4bf16:
 ; NOB16B16:       // %bb.0:
-; NOB16B16-NEXT:    lsl z1.s, z1.s, #16
+; NOB16B16-NEXT:    fmov z2.h, #-1.87500000
 ; NOB16B16-NEXT:    lsl z0.s, z0.s, #16
 ; NOB16B16-NEXT:    ptrue p0.s
-; NOB16B16-NEXT:    fsub z0.s, z0.s, z1.s
+; NOB16B16-NEXT:    bfmlalb z0.s, z1.h, z2.h
 ; NOB16B16-NEXT:    bfcvt z0.h, p0/m, z0.s
 ; NOB16B16-NEXT:    ret
 ;
@@ -734,28 +742,36 @@ define <vscale x 4 x bfloat> @fsub_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 
 }
 
 define <vscale x 8 x bfloat> @fsub_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
-; NOB16B16-LABEL: fsub_nxv8bf16:
-; NOB16B16:       // %bb.0:
-; NOB16B16-NEXT:    uunpkhi z2.s, z1.h
-; NOB16B16-NEXT:    uunpkhi z3.s, z0.h
-; NOB16B16-NEXT:    uunpklo z1.s, z1.h
-; NOB16B16-NEXT:    uunpklo z0.s, z0.h
-; NOB16B16-NEXT:    ptrue p0.s
-; NOB16B16-NEXT:    lsl z2.s, z2.s, #16
-; NOB16B16-NEXT:    lsl z3.s, z3.s, #16
-; NOB16B16-NEXT:    lsl z1.s, z1.s, #16
-; NOB16B16-NEXT:    lsl z0.s, z0.s, #16
-; NOB16B16-NEXT:    fsub z2.s, z3.s, z2.s
-; NOB16B16-NEXT:    fsub z0.s, z0.s, z1.s
-; NOB16B16-NEXT:    bfcvt z1.h, p0/m, z2.s
-; NOB16B16-NEXT:    bfcvt z0.h, p0/m, z0.s
-; NOB16B16-NEXT:    uzp1 z0.h, z0.h, z1.h
-; NOB16B16-NEXT:    ret
+; NOB16B16-NONSTREAMING-LABEL: fsub_nxv8bf16:
+; NOB16B16-NONSTREAMING:       // %bb.0:
+; NOB16B16-NONSTREAMING-NEXT:    movi v2.2d, #0000000000000000
+; NOB16B16-NONSTREAMING-NEXT:    fmov z3.h, #-1.87500000
+; NOB16B16-NONSTREAMING-NEXT:    ptrue p0.s
+; NOB16B16-NONSTREAMING-NEXT:    trn1 z4.h, z2.h, z0.h
+; NOB16B16-NONSTREAMING-NEXT:    trn2 z2.h, z2.h, z0.h
+; NOB16B16-NONSTREAMING-NEXT:    bfmlalb z4.s, z1.h, z3.h
+; NOB16B16-NONSTREAMING-NEXT:    bfmlalt z2.s, z1.h, z3.h
+; NOB16B16-NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z4.s
+; NOB16B16-NONSTREAMING-NEXT:    bfcvtnt z0.h, p0/m, z2.s
+; NOB16B16-NONSTREAMING-NEXT:    ret
 ;
 ; B16B16-LABEL: fsub_nxv8bf16:
 ; B16B16:       // %bb.0:
 ; B16B16-NEXT:    bfsub z0.h, z0.h, z1.h
 ; B16B16-NEXT:    ret
+;
+; NOB16B16-STREAMING-LABEL: fsub_nxv8bf16:
+; NOB16B16-STREAMING:       // %bb.0:
+; NOB16B16-STREAMING-NEXT:    mov z2.h, #0 // =0x0
+; NOB16B16-STREAMING-NEXT:    fmov z3.h, #-1.87500000
+; NOB16B16-STREAMING-NEXT:    ptrue p0.s
+; NOB16B16-STREAMING-NEXT:    trn1 z4.h, z2.h, z0.h
+; NOB16B16-STREAMING-NEXT:    trn2 z2.h, z2.h, z0.h
+; NOB16B16-STREAMING-NEXT:    bfmlalb z4.s, z1.h, z3.h
+; NOB16B16-STREAMING-NEXT:    bfmlalt z2.s, z1.h, z3.h
+; NOB16B16-STREAMING-NEXT:    bfcvt z0.h, p0/m, z4.s
+; NOB16B16-STREAMING-NEXT:    bfcvtnt z0.h, p0/m, z2.s
+; NOB16B16-STREAMING-NEXT:    ret
   %res = fsub <vscale x 8 x bfloat> %a, %b
   ret <vscale x 8 x bfloat> %res
 }
