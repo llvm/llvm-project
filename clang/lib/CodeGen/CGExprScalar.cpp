@@ -3333,7 +3333,10 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
       value = EmitOverflowCheckedBinOp(createBinOpInfoFromIncDec(
           E, value, isInc, E->getFPFeaturesInEffect(CGF.getLangOpts())));
     } else {
-      llvm::Value *amt = llvm::ConstantInt::get(value->getType(), amount, true);
+      // Treat positive amount as unsigned to support inc of i1 (needed for
+      // unsigned _BitInt(1)).
+      llvm::Value *amt =
+          llvm::ConstantInt::get(value->getType(), amount, !isInc);
       value = Builder.CreateAdd(value, amt, isInc ? "inc" : "dec");
     }
 
