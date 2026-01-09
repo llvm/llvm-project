@@ -690,9 +690,9 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
 
   case Matcher::CheckType: {
     const ValueTypeByHwMode &VTBH = cast<CheckTypeMatcher>(N)->getType();
-    if (cast<CheckTypeMatcher>(N)->getResNo() == 0) {
-      if (VTBH.isSimple()) {
-        MVT VT = VTBH.getSimple();
+    if (VTBH.isSimple()) {
+      MVT VT = VTBH.getSimple();
+      if (cast<CheckTypeMatcher>(N)->getResNo() == 0) {
         switch (VT.SimpleTy) {
         case MVT::i32:
         case MVT::i64:
@@ -704,14 +704,8 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
           OS << '\n';
           return NumBytes + 1;
         }
-      } else {
-        OS << "OPC_CheckTypeByHwMode, ";
-        unsigned NumBytes = emitValueTypeByHwMode(VTBH, OS);
-        OS << '\n';
-        return NumBytes + 1;
       }
-    }
-    if (VTBH.isSimple()) {
+
       OS << "OPC_CheckTypeRes, " << cast<CheckTypeMatcher>(N)->getResNo()
          << ", ";
       unsigned NumBytes =
@@ -719,11 +713,18 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       OS << '\n';
       return NumBytes + 2;
     }
-    OS << "OPC_CheckTypeResByHwMode, " << cast<CheckTypeMatcher>(N)->getResNo()
-       << ", ";
-    unsigned NumBytes = emitValueTypeByHwMode(VTBH, OS);
+
+    unsigned OpSize = 1;
+    if (cast<CheckTypeMatcher>(N)->getResNo() == 0) {
+      OS << "OPC_CheckTypeByHwMode, ";
+    } else {
+      OS << "OPC_CheckTypeResByHwMode, " << cast<CheckTypeMatcher>(N)->getResNo()
+         << ", ";
+      OpSize += 1;
+    }
+    OpSize += emitValueTypeByHwMode(VTBH, OS);
     OS << '\n';
-    return NumBytes + 2;
+    return OpSize;
   }
 
   case Matcher::CheckChildType: {
