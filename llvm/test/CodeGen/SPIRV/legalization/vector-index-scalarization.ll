@@ -124,7 +124,7 @@ define void @test_undef() #0 {
   %idx = load i32, ptr addrspace(10) @idx
   %val = load i32, ptr addrspace(10) @val
   %idx64 = zext i32 %idx to i64
-  %inserted = insertelement <6 x i32> undef, i32 %val, i64 %idx64
+  %inserted = insertelement <6 x i32> poison, i32 %val, i64 %idx64
   %extracted = extractelement <6 x i32> %inserted, i64 0
   store i32 %extracted, ptr addrspace(10) @out
   ret void
