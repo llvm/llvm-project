@@ -12,8 +12,8 @@
 ; RUN: %if arm-registered-target         %{ llc %s -o - -mtriple=thumbv7em-none-eabi             | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
 ; RUN: %if avr-registered-target         %{ llc %s -o - -mtriple=avr-none                        | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
 ; FIXME: BPF has a compiler error
-; RUN: %if csky-registered-target        %{ llc %s -o - -mtriple=csky-unknown-linux-gnuabiv2     | FileCheck %s --check-prefixes=ALL,BAD-NEG-ABS,BAD-COPYSIGN,BAD-FMA %}
-; RUN: %if csky-registered-target        %{ llc %s -o - -mtriple=csky-unknown-linux-gnuabiv2 -mcpu=ck860fv -mattr=+hard-float | FileCheck %s --check-prefixes=ALL,BAD-NEG-ABS,BAD-COPYSIGN,BAD-FMA %}
+; RUN: %if csky-registered-target        %{ llc %s -o - -mtriple=csky-unknown-linux-gnuabiv2     | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
+; RUN: %if csky-registered-target        %{ llc %s -o - -mtriple=csky-unknown-linux-gnuabiv2 -mcpu=ck860fv -mattr=+hard-float | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
 ; FIXME: directx has a compiler error
 ; RUN: %if hexagon-registered-target     %{ llc %s -o - -mtriple=hexagon-unknown-linux-musl      | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
 ; RUN: %if lanai-registered-target       %{ llc %s -o - -mtriple=lanai-unknown-unknown           | FileCheck %s --check-prefixes=ALL,CHECK-NEG-ABS,CHECK-COPYSIGN,CHECK-FMA %}
