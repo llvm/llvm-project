@@ -1117,7 +1117,7 @@ void Pattern::AddBackrefToRegEx(unsigned BackrefNum) {
   if (BackrefNum >= 1 && BackrefNum <= 9)
     Backref = std::string("\\") + std::string(1, '0' + BackrefNum);
   else
-    Backref = std::string("\\g<") + std::to_string(BackrefNum) + '>';
+    Backref = std::string("\\g{") + std::to_string(BackrefNum) + '}';
 
   RegExStr += Backref;
 }

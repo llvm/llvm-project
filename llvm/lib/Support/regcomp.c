@@ -508,17 +508,17 @@ static void p_ere_exp(struct parse *p) {
       backrefnum = c - '0';
     } else if (c == 'g') {
       /* Support back-references with index greater 9.
-       * These look like that: \g<n>.
+       * These look like that: \g{n}
        * Extract the number inside the brackets.
        */
-      MUSTEAT('<', REG_BADRPT);
+      MUSTEAT('{', REG_BADRPT);
 
       backrefnum = 0;
-      while (MORE() && isdigit(PEEK()) && PEEK() != '>') {
+      while (MORE() && isdigit(PEEK()) && PEEK() != '}') {
         c = GETNEXT();
         backrefnum = backrefnum * 10 + c - '0';
       }
-      MUSTEAT('>', REG_BADRPT);
+      MUSTEAT('}', REG_BADRPT);
     } else {
       /* Other chars are simply themselves when escaped with a backslash.
        */
