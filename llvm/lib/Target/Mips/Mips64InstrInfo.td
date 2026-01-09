@@ -770,6 +770,9 @@ let AdditionalPredicates = [NotInMicroMips] in {
                 ISA_MIPS3, GPR_64, SYM_64;
 }
 
+def : MipsPat<(MipsGPRel tglobaladdr:$in),
+              (DADDiu ZERO_64, tglobaladdr:$in)>, ISA_MIPS3, ABI_N64;
+
 // gp_rel relocs
 def : MipsPat<(add GPR64:$gp, (MipsGPRel tglobaladdr:$in)),
               (DADDiu GPR64:$gp, tglobaladdr:$in)>, ISA_MIPS3, ABI_N64;

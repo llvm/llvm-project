@@ -156,8 +156,6 @@ main_body:
   ret void
 }
 
-; There are 8 pseudo registers defined to track LDS DMA dependencies.
-
 define amdgpu_kernel void @buffer_load_lds_dword_10_arrays(<4 x i32> %rsrc, i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6, i32 %i7, i32 %i8, i32 %i9, ptr addrspace(1) %out) {
 ; GFX9-LABEL: buffer_load_lds_dword_10_arrays:
 ; GFX9:       ; %bb.0: ; %main_body
@@ -223,8 +221,10 @@ define amdgpu_kernel void @buffer_load_lds_dword_10_arrays(<4 x i32> %rsrc, i32 
 ; GFX9-NEXT:    s_waitcnt vmcnt(2)
 ; GFX9-NEXT:    ds_read_b32 v7, v9 offset:1792
 ; GFX9-NEXT:    ; wave barrier
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    ds_read_b32 v8, v9 offset:2048
 ; GFX9-NEXT:    ; wave barrier
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ds_read_b32 v9, v9 offset:2304
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_store_dwordx4 v10, v[0:3], s[0:1]
@@ -288,8 +288,10 @@ define amdgpu_kernel void @buffer_load_lds_dword_10_arrays(<4 x i32> %rsrc, i32 
 ; GFX10-NEXT:    s_waitcnt vmcnt(2)
 ; GFX10-NEXT:    ds_read_b32 v7, v9 offset:1792
 ; GFX10-NEXT:    ; wave barrier
+; GFX10-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10-NEXT:    ds_read_b32 v8, v9 offset:2048
 ; GFX10-NEXT:    ; wave barrier
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ds_read_b32 v9, v9 offset:2304
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    global_store_dwordx4 v10, v[0:3], s[0:1]

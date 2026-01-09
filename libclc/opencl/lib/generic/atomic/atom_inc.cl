@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/atomic/clc_atomic_inc.h>
-#include <clc/opencl/atomic/atom_inc.h>
 
 // Non-volatile overloads are for backward compatibility with OpenCL 1.0.
 

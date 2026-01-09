@@ -295,7 +295,7 @@ static void createNewAliasScopesFromNoAliasParameter(
 
   // Scope exit block to make it impossible to forget to get rid of the
   // intrinsics.
-  auto exit = llvm::make_scope_exit([&] {
+  llvm::scope_exit exit([&] {
     for (LLVM::SSACopyOp ssaCopyOp : ssaCopies) {
       ssaCopyOp.replaceAllUsesWith(ssaCopyOp.getOperand());
       ssaCopyOp->erase();

@@ -1436,6 +1436,21 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::Int16);
     else if (BitWidth == 8)
       Reqs.addCapability(SPIRV::Capability::Int8);
+    else if (BitWidth == 4 &&
+             ST.canUseExtension(SPIRV::Extension::SPV_INTEL_int4)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_int4);
+      Reqs.addCapability(SPIRV::Capability::Int4TypeINTEL);
+    } else if (BitWidth != 32) {
+      if (!ST.canUseExtension(
+              SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers))
+        reportFatalUsageError(
+            "OpTypeInt type with a width other than 8, 16, 32 or 64 bits "
+            "requires the following SPIR-V extension: "
+            "SPV_ALTERA_arbitrary_precision_integers");
+      Reqs.addExtension(
+          SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers);
+      Reqs.addCapability(SPIRV::Capability::ArbitraryPrecisionIntegersALTERA);
+    }
     break;
   }
   case SPIRV::OpDot: {
@@ -1635,6 +1650,48 @@ void addInstrRequirements(const MachineInstr &MI,
     }
     break;
   }
+  case SPIRV::OpImageQueryFormat: {
+    Register ResultReg = MI.getOperand(0).getReg();
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    static const unsigned CompareOps[] = {
+        SPIRV::OpIEqual,       SPIRV::OpINotEqual,
+        SPIRV::OpUGreaterThan, SPIRV::OpUGreaterThanEqual,
+        SPIRV::OpULessThan,    SPIRV::OpULessThanEqual,
+        SPIRV::OpSGreaterThan, SPIRV::OpSGreaterThanEqual,
+        SPIRV::OpSLessThan,    SPIRV::OpSLessThanEqual};
+
+    auto CheckAndAddExtension = [&](int64_t ImmVal) {
+      if (ImmVal == 4323 || ImmVal == 4324) {
+        if (ST.canUseExtension(SPIRV::Extension::SPV_EXT_image_raw10_raw12))
+          Reqs.addExtension(SPIRV::Extension::SPV_EXT_image_raw10_raw12);
+        else
+          report_fatal_error("This requires the "
+                             "SPV_EXT_image_raw10_raw12 extension");
+      }
+    };
+
+    for (MachineInstr &UseInst : MRI.use_instructions(ResultReg)) {
+      unsigned Opc = UseInst.getOpcode();
+
+      if (Opc == SPIRV::OpSwitch) {
+        for (const MachineOperand &Op : UseInst.operands())
+          if (Op.isImm())
+            CheckAndAddExtension(Op.getImm());
+      } else if (llvm::is_contained(CompareOps, Opc)) {
+        for (unsigned i = 1; i < UseInst.getNumOperands(); ++i) {
+          Register UseReg = UseInst.getOperand(i).getReg();
+          MachineInstr *ConstInst = MRI.getVRegDef(UseReg);
+          if (ConstInst && ConstInst->getOpcode() == SPIRV::OpConstantI) {
+            int64_t ImmVal = ConstInst->getOperand(2).getImm();
+            if (ImmVal)
+              CheckAndAddExtension(ImmVal);
+          }
+        }
+      }
+    }
+    break;
+  }
+
   case SPIRV::OpGroupNonUniformShuffle:
   case SPIRV::OpGroupNonUniformShuffleXor:
     Reqs.addCapability(SPIRV::Capability::GroupNonUniformShuffle);
@@ -2212,7 +2269,9 @@ void addInstrRequirements(const MachineInstr &MI,
     break;
   }
   case SPIRV::OpDPdxCoarse:
-  case SPIRV::OpDPdyCoarse: {
+  case SPIRV::OpDPdyCoarse:
+  case SPIRV::OpDPdxFine:
+  case SPIRV::OpDPdyFine: {
     Reqs.addCapability(SPIRV::Capability::DerivativeControl);
     break;
   }

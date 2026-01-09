@@ -48,6 +48,10 @@ using namespace llvm;
 
 namespace {
 
+// A map of uniqued case statements. The key is the body of the case statement
+// and the value is a list of cases which share the same body.
+using CaseMapT = std::map<std::string, std::vector<std::string>>;
+
 class CodeEmitterGen {
   const RecordKeeper &RK;
   CodeGenTarget Target;
@@ -72,9 +76,6 @@ private:
   void emitInstructionBaseValues(
       raw_ostream &O, ArrayRef<const CodeGenInstruction *> NumberedInstructions,
       unsigned HwMode = DefaultMode);
-  void
-  emitCaseMap(raw_ostream &O,
-              const std::map<std::string, std::vector<std::string>> &CaseMap);
   unsigned BitWidth = 0u;
   bool UseAPInt = false;
 };
@@ -218,6 +219,18 @@ bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
   return true;
 }
 
+static void emitCaseMap(raw_ostream &O, const CaseMapT &CaseMap) {
+  for (const auto &[CaseBody, Cases] : CaseMap) {
+    ListSeparator LS("\n");
+    for (const auto &Case : Cases)
+      O << LS << "    case " << Case << ":";
+    O << " {\n";
+    O << CaseBody;
+    O << "      break;\n"
+      << "    }\n";
+  }
+}
+
 std::pair<std::string, std::string>
 CodeEmitterGen::getInstructionCases(const Record *R) {
   std::string Case, BitOffsetCase;
@@ -264,12 +277,26 @@ CodeEmitterGen::getInstructionCases(const Record *R) {
 
     Append("      switch (HwMode) {\n");
     Append("      default: llvm_unreachable(\"Unhandled HwMode\");\n");
+
+    // Attempt to unique the per-hw-mode encoding case statements. This helps
+    // reduce the code size if 2 or more hw-modes share the same encoding for
+    // the fields of the instruction.
+    CaseMapT CaseMap, BitOffsetCaseMap;
+    std::string ModeCase, ModeBitOffsetCase;
+
     for (auto &[ModeId, Encoding] : EBM) {
-      Append("      case " + itostr(ModeId) + ": {\n");
-      addInstructionCasesForEncoding(R, Encoding, Case, BitOffsetCase);
-      Append("      break;\n");
-      Append("      }\n");
+      ModeCase.clear();
+      ModeBitOffsetCase.clear();
+      addInstructionCasesForEncoding(R, Encoding, ModeCase, ModeBitOffsetCase);
+      CaseMap[ModeCase].push_back(utostr(ModeId));
+      BitOffsetCaseMap[ModeBitOffsetCase].push_back(utostr(ModeId));
     }
+
+    raw_string_ostream CaseOS(Case);
+    raw_string_ostream BitOffsetCaseOS(BitOffsetCase);
+    emitCaseMap(CaseOS, CaseMap);
+    emitCaseMap(BitOffsetCaseOS, BitOffsetCaseMap);
+
     Append("      }\n");
     return {std::move(Case), std::move(BitOffsetCase)};
   }
@@ -368,24 +395,6 @@ void CodeEmitterGen::emitInstructionBaseValues(
   O << "  };\n";
 }
 
-void CodeEmitterGen::emitCaseMap(
-    raw_ostream &O,
-    const std::map<std::string, std::vector<std::string>> &CaseMap) {
-  for (const auto &[Case, InstList] : CaseMap) {
-    bool First = true;
-    for (const auto &Inst : InstList) {
-      if (!First)
-        O << "\n";
-      O << "    case " << Inst << ":";
-      First = false;
-    }
-    O << " {\n";
-    O << Case;
-    O << "      break;\n"
-      << "    }\n";
-  }
-}
-
 CodeEmitterGen::CodeEmitterGen(const RecordKeeper &RK)
     : RK(RK), Target(RK), CGH(Target.getHwModes()) {
   // For little-endian instruction bit encodings, reverse the bit order.
@@ -451,8 +460,7 @@ void CodeEmitterGen::run(raw_ostream &O) {
   }
 
   // Map to accumulate all the cases.
-  std::map<std::string, std::vector<std::string>> CaseMap;
-  std::map<std::string, std::vector<std::string>> BitOffsetCaseMap;
+  CaseMapT CaseMap, BitOffsetCaseMap;
 
   // Construct all cases statement for each opcode
   for (const CodeGenInstruction *CGI : EncodedInstructions) {

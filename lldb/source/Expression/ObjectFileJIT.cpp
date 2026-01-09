@@ -41,7 +41,7 @@ void ObjectFileJIT::Terminate() {
 }
 
 ObjectFile *ObjectFileJIT::CreateInstance(const lldb::ModuleSP &module_sp,
-                                          DataBufferSP data_sp,
+                                          DataExtractorSP extractor_sp,
                                           lldb::offset_t data_offset,
                                           const FileSpec *file,
                                           lldb::offset_t file_offset,
@@ -70,7 +70,8 @@ size_t ObjectFileJIT::GetModuleSpecifications(
 
 ObjectFileJIT::ObjectFileJIT(const lldb::ModuleSP &module_sp,
                              const ObjectFileJITDelegateSP &delegate_sp)
-    : ObjectFile(module_sp, nullptr, 0, 0, DataBufferSP(), 0), m_delegate_wp() {
+    : ObjectFile(module_sp, nullptr, 0, 0, DataExtractorSP(), 0),
+      m_delegate_wp() {
   if (delegate_sp) {
     m_delegate_wp = delegate_sp;
     m_data_nsp->SetByteOrder(delegate_sp->GetByteOrder());

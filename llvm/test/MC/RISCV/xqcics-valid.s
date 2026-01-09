@@ -1,13 +1,13 @@
 # Xqcics - Qualcomm uC Conditional Select Extension
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcics -M no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xqcics -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcics < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqcics -M no-aliases --no-print-imm-hex -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xqcics < %s \
+# RUN:     | llvm-objdump --mattr=+xqcics -M no-aliases --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcics -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xqcics -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcics < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqcics --no-print-imm-hex -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xqcics < %s \
+# RUN:     | llvm-objdump --mattr=+xqcics --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
 # CHECK-INST: qc.selecteqi    s1, 5, tp, gp
