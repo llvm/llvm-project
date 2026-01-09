@@ -24,6 +24,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/YAMLParser.h"
@@ -620,29 +621,12 @@ CrossTranslationUnitContext::ASTLoader::loadFromSource(
   auto Diags = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(DiagID, *DiagOpts,
                                                             DiagClient);
 
+  // This runs the driver which isn't expected to be free of sandbox violations.
+  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
   return CreateASTUnitFromCommandLine(
       CommandLineArgs.begin(), (CommandLineArgs.end()),
       CI.getPCHContainerOperations(), DiagOpts, Diags,
-      CI.getHeaderSearchOpts().ResourceDir,
-      /*StorePreamblesInMemory=*/false,
-      /*PreambleStoragePath=*/StringRef(),
-      /*OnlyLocalDecls=*/false,
-      /*CaptureDiagnostics=*/CaptureDiagsKind::None,
-      /*RemappedFiles=*/{},
-      /*RemappedFilesKeepOriginalName=*/true,
-      /*PrecompilePreambleAfterNParses=*/0,
-      /*TUKind=*/TU_Complete,
-      /*CacheCodeCompletionResults=*/false,
-      /*IncludeBriefCommentsInCodeCompletion=*/false,
-      /*AllowPCHWithCompilerErrors=*/false,
-      /*SkipFunctionBodies=*/SkipFunctionBodiesScope::None,
-      /*SingleFileParse=*/false,
-      /*UserFilesAreVolatile=*/false,
-      /*ForSerialization=*/false,
-      /*RetainExcludedConditionalBlocks=*/false,
-      /*ModuleFormat=*/std::nullopt,
-      /*ErrAST=*/nullptr,
-      /*VFS=*/CI.getVirtualFileSystemPtr());
+      CI.getHeaderSearchOpts().ResourceDir);
 }
 
 llvm::Expected<InvocationListTy>
