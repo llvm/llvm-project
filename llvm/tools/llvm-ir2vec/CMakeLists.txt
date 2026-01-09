@@ -17,18 +17,8 @@ set(LLVM_LINK_COMPONENTS
   TargetParser
   )
 
-# Static utility library
-add_library(emb_utils STATIC utils/utils.cpp)
-
-target_include_directories(emb_utils 
-  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/utils
-  PRIVATE ${LLVM_INCLUDE_DIRS}
-)
-
-target_link_libraries(emb_utils PRIVATE
-  LLVMAnalysis LLVMCore LLVMSupport LLVMIRReader 
-  LLVMAsmParser LLVMPasses LLVMDemangle
-)
+# Add the utils subdirectory for the library
+add_subdirectory(utils)
 
 # Main executable
 add_llvm_tool(llvm-ir2vec
@@ -36,6 +26,7 @@ add_llvm_tool(llvm-ir2vec
   
   DEPENDS
   intrinsics_gen
-  )
+)
 
+target_include_directories(llvm-ir2vec PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/utils)
 target_link_libraries(llvm-ir2vec PRIVATE emb_utils)
