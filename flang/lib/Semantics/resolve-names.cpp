@@ -4540,8 +4540,9 @@ void InterfaceVisitor::CheckGenericProcedures(Symbol &generic) {
   auto &details{generic.get<GenericDetails>()};
   if (auto *proc{details.CheckSpecific()}) {
     context().Warn(common::UsageWarning::HomonymousSpecific,
-        proc->name().begin() > generic.name().begin() ? proc->name()
-                                                      : generic.name(),
+        context().allCookedSources().Precedes(generic.name(), proc->name())
+            ? proc->name()
+            : generic.name(),
         "'%s' should not be the name of both a generic interface and a procedure unless it is a specific procedure of the generic"_warn_en_US,
         generic.name());
   }
