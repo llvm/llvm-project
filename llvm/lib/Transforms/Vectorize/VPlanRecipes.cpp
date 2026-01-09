@@ -2346,9 +2346,8 @@ InstructionCost VPHeaderPHIRecipe::computeCost(ElementCount VF,
 
 /// A helper function that returns an integer or floating-point constant with
 /// value C.
-static Constant *getSignedIntOrFpConstant(Type *Ty, int64_t C) {
-  return Ty->isIntegerTy() ? ConstantInt::getSigned(Ty, C)
-                           : ConstantFP::get(Ty, C);
+static Constant *getUnsignedIntOrFpConstant(Type *Ty, uint64_t C) {
+  return Ty->isIntegerTy() ? ConstantInt::get(Ty, C) : ConstantFP::get(Ty, C);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2453,7 +2452,7 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
 
   for (unsigned Lane = StartLane; Lane < EndLane; ++Lane) {
     Value *StartIdx = Builder.CreateBinOp(
-        AddOp, StartIdx0, getSignedIntOrFpConstant(BaseIVTy, Lane));
+        AddOp, StartIdx0, getUnsignedIntOrFpConstant(BaseIVTy, Lane));
     // The step returned by `createStepForVF` is a runtime-evaluated value
     // when VF is scalable. Otherwise, it should be folded into a Constant.
     assert((State.VF.isScalable() || isa<Constant>(StartIdx)) &&
