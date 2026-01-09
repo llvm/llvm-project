@@ -1943,7 +1943,7 @@ __tree<_Tp, _Compare, _Allocator>::__node_handle_insert_unique(_NodeHandle&& __n
   if (__nh.empty())
     return _InsertReturnType{end(), false, _NodeHandle()};
 
-  __node_pointer __ptr     = __nh.__ptr_;
+  __node_pointer __ptr = __nh.__ptr_;
   auto [__parent, __child] = __find_equal(__ptr->__get_value());
   if (__child != nullptr)
     return _InsertReturnType{iterator(static_cast<__node_pointer>(__child)), false, std::move(__nh)};
