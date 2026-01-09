@@ -508,3 +508,55 @@ subroutine test_cache_in_regular_loop()
 ! CHECK: fir.load
 ! CHECK: hlfir.assign
 end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_cache_in_if
+! CHECK: %[[B_VAR:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFtest_cache_in_ifEb"}
+subroutine test_cache_in_if(a, b, cache)
+  integer, parameter :: n = 10
+  real, dimension(n) :: a, b
+  logical :: cache
+  integer :: i
+
+  !$acc loop
+  do i = 1, n
+    if (cache) then
+      !$acc cache(b)
+    end if
+    a(i) = b(i)
+  end do
+
+! CHECK: acc.loop
+! CHECK: fir.if
+! CHECK: acc.cache varPtr(%[[B_VAR]]#0 : !fir.ref<!fir.array<10xf32>>)
+! CHECK: }
+! After IF: uses original b, not cached version
+! CHECK: hlfir.designate %[[B_VAR]]#0
+! CHECK: acc.yield
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_cache_in_nested_do
+! CHECK: %[[B_VAR:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtest_cache_in_nested_doEb"}
+subroutine test_cache_in_nested_do()
+  integer, parameter :: n = 1000, m = 100, l = 100
+  real, dimension(n, m, l) :: a, b
+  integer :: i, j
+
+  !$acc loop
+  do i = 1, n
+    do j = 1, m, 2
+      !$acc cache(b(i,m,j))
+    end do
+
+    do j = 1, m, 2
+      a(i, m, :) = b(i, m, :)
+    end do
+  end do
+
+! CHECK: acc.loop
+! First inner DO loop with cache
+! CHECK: fir.do_loop
+! CHECK: acc.cache varPtr(%[[B_VAR]]#0 : !fir.ref<!fir.array<1000x100x100xf32>>) bounds
+! Second inner DO loop: uses original b, not cached version
+! CHECK: fir.do_loop
+! CHECK: hlfir.designate %[[B_VAR]]#0
+end subroutine

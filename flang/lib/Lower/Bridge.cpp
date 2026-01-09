@@ -6193,6 +6193,17 @@ private:
                           ? eval.getFirstNestedEvaluation().block
                           : eval.block);
 
+    // Add scope for constructs inside acc.loop to properly contain symbol
+    // bindings (e.g., from cache directive) within the construct.
+    bool needsAccScope =
+        eval.isConstruct() && Fortran::lower::isInOpenACCLoop(*builder);
+    if (needsAccScope)
+      localSymbols.pushScope();
+    auto popAccScope = llvm::make_scope_exit([&]() {
+      if (needsAccScope)
+        localSymbols.popScope();
+    });
+
     // Generate evaluation specific code. Even nop calls should usually reach
     // here in case they start a new block or require generation of a generic
     // end-of-block branch. An alternative is to add special case code
