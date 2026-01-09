@@ -69,6 +69,8 @@ if config.enable_profcheck:
     config.excludes.append("Instrumentation")
     # profiling doesn't work quite well on GPU, excluding
     config.excludes.append("AMDGPU")
+    # these passes aren't hooked up to the pass pipeline:
+    config.excludes.append("IRCE")
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
