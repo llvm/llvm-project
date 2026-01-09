@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -109,6 +110,8 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
                                      /*Size=*/3, /*DefaultVal=*/0);
 
   if (!HasReqdWorkGroupSize && !HasUniformWorkGroupSize &&
+      !Intrinsic::getDeclarationIfExists(CI->getModule(),
+                                         Intrinsic::amdgcn_dispatch_ptr) &&
       none_of(MaxNumWorkgroups, [](unsigned X) { return X != 0; }))
     return false;
 
@@ -319,6 +322,49 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
             MadeChange = true;
           }
         }
+      }
+    }
+  }
+
+  // Upgrade the old method of calculating the block size using the grid size.
+  // We pattern match any case where the implicit argument group size is the
+  // divisor to a dispatch packet grid size read of the same dimension.
+  if (IsV5OrAbove) {
+    for (int I = 0; I < 3; I++) {
+      Value *GroupSize = GroupSizes[I];
+      if (!GroupSize || !GroupSize->getType()->isIntegerTy(16))
+        continue;
+
+      for (User *U : GroupSize->users()) {
+        Instruction *Inst = cast<Instruction>(U);
+        if (isa<ZExtInst>(Inst) && !Inst->use_empty())
+          Inst = cast<Instruction>(*Inst->user_begin());
+
+        using namespace llvm::PatternMatch;
+        if (!match(
+                Inst,
+                m_UDiv(m_ZExtOrSelf(m_Load(m_GEP(
+                           m_Intrinsic<Intrinsic::amdgcn_dispatch_ptr>(),
+                           m_SpecificInt(GRID_SIZE_X + I * sizeof(uint32_t))))),
+                       m_Value())))
+          continue;
+
+        IRBuilder<> Builder(Inst);
+
+        Value *GEP = Builder.CreateInBoundsGEP(
+            Builder.getInt8Ty(), CI,
+            {ConstantInt::get(Type::getInt64Ty(CI->getContext()),
+                              HIDDEN_BLOCK_COUNT_X + I * sizeof(uint32_t))});
+        Instruction *BlockCount = Builder.CreateLoad(Builder.getInt32Ty(), GEP);
+        BlockCount->setMetadata(LLVMContext::MD_invariant_load,
+                                MDNode::get(CI->getContext(), {}));
+        BlockCount->setMetadata(LLVMContext::MD_noundef,
+                                MDNode::get(CI->getContext(), {}));
+
+        Value *BlockCountExt = Builder.CreateZExt(BlockCount, Inst->getType());
+        Inst->replaceAllUsesWith(BlockCountExt);
+        Inst->eraseFromParent();
+        MadeChange = true;
       }
     }
   }
