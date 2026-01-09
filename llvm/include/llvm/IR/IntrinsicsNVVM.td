@@ -2717,8 +2717,8 @@ foreach kind = ["mxf4", "mxf4nvf4", "mxf8f6f4"] in {
 // LDMATRIX
 class NVVM_LDMATRIX<WMMA_REGS Frag, int Transposed>
   : Intrinsic<Frag.regs, [llvm_anyptr_ty],
-              [IntrReadMem, IntrArgMemOnly, IntrNoCallback, ReadOnly<ArgIndex<0>>,
-               NoCapture<ArgIndex<0>>],
+              [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrConvergent,
+               ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>],
               LDMATRIX_NAME<Frag, Transposed>.intr_name>;
 
 foreach transposed = [0, 1] in {
@@ -2734,7 +2734,7 @@ foreach transposed = [0, 1] in {
 class NVVM_STMATRIX<WMMA_REGS Frag, int Transposed>
   : Intrinsic<[],
           !listconcat([llvm_anyptr_ty], Frag.regs),
-          [IntrWriteMem, IntrArgMemOnly, IntrNoCallback,
+          [IntrWriteMem, IntrArgMemOnly, IntrNoCallback, IntrConvergent,
            WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>],
           STMATRIX_NAME<Frag, Transposed>.intr_name>;
 
