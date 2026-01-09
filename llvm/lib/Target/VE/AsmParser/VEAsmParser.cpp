@@ -694,7 +694,7 @@ public:
     if (!ConstExpr)
       return false;
     unsigned regIdx = ConstExpr->getValue();
-    if (regIdx > 31 || MISCRegs[regIdx] == VE::NoRegister)
+    if (regIdx >= std::size(MISCRegs) || MISCRegs[regIdx] == VE::NoRegister)
       return false;
     Op.Kind = k_Register;
     Op.Reg.Reg = MISCRegs[regIdx];

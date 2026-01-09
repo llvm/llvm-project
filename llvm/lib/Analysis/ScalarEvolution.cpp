@@ -485,7 +485,10 @@ const SCEV *ScalarEvolution::getConstant(const APInt &Val) {
 const SCEV *
 ScalarEvolution::getConstant(Type *Ty, uint64_t V, bool isSigned) {
   IntegerType *ITy = cast<IntegerType>(getEffectiveSCEVType(Ty));
-  return getConstant(ConstantInt::get(ITy, V, isSigned));
+  // TODO: Avoid implicit trunc?
+  // See https://github.com/llvm/llvm-project/issues/112510.
+  return getConstant(
+      ConstantInt::get(ITy, V, isSigned, /*ImplicitTrunc=*/true));
 }
 
 const SCEV *ScalarEvolution::getVScale(Type *Ty) {
@@ -3490,11 +3493,9 @@ const SCEV *ScalarEvolution::getUDivExpr(const SCEV *LHS,
           }
           /// Get a canonical UDivExpr for a recurrence.
           /// {X,+,N}/C => {Y,+,N}/C where Y=X-(X%N). Safe when C%N=0.
-          // We can currently only fold X%N if X is constant.
-          const SCEVConstant *StartC = dyn_cast<SCEVConstant>(AR->getStart());
-          if (StartC && !DivInt.urem(StepInt)) {
-            const APInt &StartInt = StartC->getAPInt();
-            const APInt &StartRem = StartInt.urem(StepInt);
+          const APInt *StartRem;
+          if (!DivInt.urem(StepInt) && match(getURemExpr(AR->getStart(), Step),
+                                             m_scev_APInt(StartRem))) {
             bool NoWrap =
                 getZeroExtendExpr(AR, ExtTy) ==
                 getAddRecExpr(getZeroExtendExpr(AR->getStart(), ExtTy),
@@ -3507,10 +3508,15 @@ const SCEV *ScalarEvolution::getUDivExpr(const SCEV *LHS,
             // all offsets in [[(X - X%N), X).
             bool CanFoldWithWrap = StepInt.ule(DivInt) && // N <= C
                                    StepInt.isPowerOf2() && DivInt.isPowerOf2();
-            if (StartRem != 0 && (NoWrap || CanFoldWithWrap)) {
-              const SCEV *NewLHS = getAddRecExpr(
-                  getConstant(StartInt - StartRem), Step, AR->getLoop(),
-                  NoWrap ? SCEV::FlagNW : SCEV::FlagAnyWrap);
+            // Only fold if the subtraction can be folded in the start
+            // expression.
+            const SCEV *NewStart =
+                getMinusSCEV(AR->getStart(), getConstant(*StartRem));
+            if (*StartRem != 0 && (NoWrap || CanFoldWithWrap) &&
+                !isa<SCEVAddExpr>(NewStart)) {
+              const SCEV *NewLHS =
+                  getAddRecExpr(NewStart, Step, AR->getLoop(),
+                                NoWrap ? SCEV::FlagNW : SCEV::FlagAnyWrap);
               if (LHS != NewLHS) {
                 LHS = NewLHS;
 
@@ -6771,6 +6777,15 @@ const ConstantRange &ScalarEvolution::getRangeRef(
   }
   case scAddExpr: {
     const SCEVAddExpr *Add = cast<SCEVAddExpr>(S);
+    // Check if this is a URem pattern: A - (A / B) * B, which is always < B.
+    const SCEV *URemLHS = nullptr, *URemRHS = nullptr;
+    if (SignHint == ScalarEvolution::HINT_RANGE_UNSIGNED &&
+        match(S, m_scev_URem(m_SCEV(URemLHS), m_SCEV(URemRHS), *this))) {
+      ConstantRange LHSRange = getRangeRef(URemLHS, SignHint, Depth + 1);
+      ConstantRange RHSRange = getRangeRef(URemRHS, SignHint, Depth + 1);
+      ConservativeResult =
+          ConservativeResult.intersectWith(LHSRange.urem(RHSRange), RangeType);
+    }
     ConstantRange X = getRangeRef(Add->getOperand(0), SignHint, Depth + 1);
     unsigned WrapType = OBO::AnyWrap;
     if (Add->hasNoSignedWrap())
@@ -11876,8 +11891,8 @@ bool ScalarEvolution::isImpliedCond(CmpPredicate Pred, const SCEV *LHS,
   if (!PendingLoopPredicates.insert(FoundCondValue).second)
     return false;
 
-  auto ClearOnExit =
-      make_scope_exit([&]() { PendingLoopPredicates.erase(FoundCondValue); });
+  llvm::scope_exit ClearOnExit(
+      [&]() { PendingLoopPredicates.erase(FoundCondValue); });
 
   // Recursively handle And and Or conditions.
   const Value *Op0, *Op1;
@@ -12424,7 +12439,7 @@ bool ScalarEvolution::isImpliedViaMerge(CmpPredicate Pred, const SCEV *LHS,
                                         const SCEV *FoundRHS, unsigned Depth) {
   const PHINode *LPhi = nullptr, *RPhi = nullptr;
 
-  auto ClearOnExit = make_scope_exit([&]() {
+  llvm::scope_exit ClearOnExit([&]() {
     if (LPhi) {
       bool Erased = PendingMerges.erase(LPhi);
       assert(Erased && "Failed to erase LPhi!");
@@ -13692,11 +13707,8 @@ SCEVAddRecExpr::getPostIncExpr(ScalarEvolution &SE) const {
 
 // Return true when S contains at least an undef value.
 bool ScalarEvolution::containsUndefs(const SCEV *S) const {
-  return SCEVExprContains(S, [](const SCEV *S) {
-    if (const auto *SU = dyn_cast<SCEVUnknown>(S))
-      return isa<UndefValue>(SU->getValue());
-    return false;
-  });
+  return SCEVExprContains(
+      S, [](const SCEV *S) { return match(S, m_scev_UndefOrPoison()); });
 }
 
 // Return true when S contains a value that is a nullptr.
@@ -15266,6 +15278,10 @@ void ScalarEvolution::registerUser(const SCEV *User,
 
 const SCEV *PredicatedScalarEvolution::getSCEV(Value *V) {
   const SCEV *Expr = SE.getSCEV(V);
+  return getPredicatedSCEV(Expr);
+}
+
+const SCEV *PredicatedScalarEvolution::getPredicatedSCEV(const SCEV *Expr) {
   RewriteEntry &Entry = RewriteMap[Expr];
 
   // If we already have an entry and the version matches, return it.

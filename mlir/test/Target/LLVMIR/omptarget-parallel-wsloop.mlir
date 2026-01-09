@@ -26,10 +26,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
   }
 
 }
-// CHECK:      call void @__kmpc_parallel_51(ptr addrspacecast
+// CHECK:      call void @__kmpc_parallel_60(ptr addrspacecast
 // CHECK-SAME:  (ptr addrspace(1) @[[GLOB:[0-9]+]] to ptr),
 // CHECK-SAME:  i32 %[[THREAD_NUM:.*]], i32 1, i32 -1, i32 -1,
-// CHECK-SAME:  ptr @[[PARALLEL_FUNC:.*]], ptr null, ptr %[[PARALLEL_ARGS:.*]], i64 1)
+// CHECK-SAME:  ptr @[[PARALLEL_FUNC:.*]], ptr null, ptr %[[PARALLEL_ARGS:.*]], i64 1, i32 0)
 
 // CHECK:      define internal void @[[PARALLEL_FUNC]]
 // CHECK-SAME:  (ptr noalias noundef %[[TID_ADDR:.*]], ptr noalias noundef %[[ZERO_ADDR:.*]],

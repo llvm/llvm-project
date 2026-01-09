@@ -1,13 +1,13 @@
 # Xqcia - Qualcomm uC Arithmetic Extesnsion
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcia -M no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xqcia -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcia < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqcia -M no-aliases --no-print-imm-hex -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xqcia < %s \
+# RUN:     | llvm-objdump --mattr=+xqcia -M no-aliases --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcia -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xqcia -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcia < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqcia --no-print-imm-hex -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xqcia < %s \
+# RUN:     | llvm-objdump --mattr=+xqcia --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
 # CHECK-INST: qc.shlsat    a0, gp, a7

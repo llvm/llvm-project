@@ -67,6 +67,19 @@
 ; CHECK-NEXT: .xword [[FUNC]]@FUNCINIT
 @disc = constant ptr ptrauth (ptr @dsolocal, i32 2, i64 0, ptr @disc), align 8
 
+; CHECK: disc65536:
+; CHECK-NEXT: [[PLACE:.*]]:
+; CHECK-NEXT: .section .text.startup
+; CHECK-NEXT: [[FUNC:.*]]:
+; CHECK-NEXT: adrp x0, dsolocal
+; CHECK-NEXT: add x0, x0, :lo12:dsolocal
+; CHECK-NEXT: adrp x1, [[PLACE]]+65536
+; CHECK-NEXT: add x1, x1, :lo12:[[PLACE]]+65536
+; CHECK-NEXT: b __emupac_pacda
+; CHECK-NEXT: .section .rodata
+; CHECK-NEXT: .xword [[FUNC]]@FUNCINIT
+@disc65536 = constant ptr ptrauth (ptr @dsolocal, i32 2, i64 65536, ptr @disc), align 8
+
 @global = external global i8
 
 ; CHECK: globalref:
@@ -93,3 +106,24 @@
 ; CHECK-NEXT: .section .rodata
 ; CHECK-NEXT: .xword [[FUNC]]@FUNCINIT
 @globalref8 = constant ptr ptrauth (ptr getelementptr (i8, ptr @global, i64 8), i32 2, i64 5, ptr null), align 8
+
+; CHECK: globalref16777216:
+; CHECK-NEXT: [[PLACE:.*]]:
+; CHECK-NEXT: .section .text.startup
+; CHECK-NEXT: [[FUNC:.*]]:
+; CHECK-NEXT: adrp x0, :got:global
+; CHECK-NEXT: ldr x0, [x0, :got_lo12:global]
+; CHECK-NEXT: mov x16, #0
+; CHECK-NEXT: movk x16, #256, lsl #16
+; CHECK-NEXT: add x0, x0, x16
+; CHECK-NEXT: mov x1, #5
+; CHECK-NEXT: b __emupac_pacda
+; CHECK-NEXT: .section .rodata
+; CHECK-NEXT: .xword [[FUNC]]@FUNCINIT
+@globalref16777216 = constant ptr ptrauth (ptr getelementptr (i8, ptr @global, i64 16777216), i32 2, i64 5, ptr null), align 8
+
+$comdat = comdat any
+@comdat = constant ptr ptrauth (ptr null, i32 2, i64 1, ptr null), align 8, comdat
+; CHECK: comdat:
+; CHECK-NEXT: [[PLACE:.*]]:
+; CHECK-NEXT: .section	.text.startup,"axG",@progbits,comdat,comdat

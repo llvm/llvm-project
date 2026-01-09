@@ -36,12 +36,12 @@ define void @loadf32_byte(i32 %offset) {
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0_0(
           i32 0, i32 0, i32 1, i32 0, ptr null)
 
-  ; CHECK: [[DATA:%.*]] = call %dx.types.ResRet.f32 @dx.op.rawBufferLoad.f32(i32 139, %dx.types.Handle %{{.*}}, i32 %offset, i32 0, i8 1, i32 4)
+  ; CHECK: [[DATA:%.*]] = call %dx.types.ResRet.f32 @dx.op.rawBufferLoad.f32(i32 139, %dx.types.Handle %{{.*}}, i32 %offset, i32 undef, i8 1, i32 4)
   %load = call {float, i1}
       @llvm.dx.resource.load.rawbuffer.f32.tdx.RawBuffer_i8_0_0_0t(
           target("dx.RawBuffer", i8, 0, 0, 0) %buffer,
           i32 %offset,
-          i32 0)
+          i32 poison)
   %data = extractvalue {float, i1} %load, 0
 
   ; CHECK: [[VAL:%.*]] = extractvalue %dx.types.ResRet.f32 [[DATA]], 0
@@ -85,12 +85,12 @@ define void @loadv4f32_byte(i32 %offset) {
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0_0(
           i32 0, i32 0, i32 1, i32 0, ptr null)
 
-  ; CHECK: [[DATA:%.*]] = call %dx.types.ResRet.f32 @dx.op.rawBufferLoad.f32(i32 139, %dx.types.Handle %{{.*}}, i32 %offset, i32 0, i8 15, i32 4)
+  ; CHECK: [[DATA:%.*]] = call %dx.types.ResRet.f32 @dx.op.rawBufferLoad.f32(i32 139, %dx.types.Handle %{{.*}}, i32 %offset, i32 undef, i8 15, i32 4)
   %load = call {<4 x float>, i1}
       @llvm.dx.resource.load.rawbuffer.f32.tdx.RawBuffer_i8_0_0_0t(
           target("dx.RawBuffer", i8, 0, 0, 0) %buffer,
           i32 %offset,
-          i32 0)
+          i32 poison)
   %data = extractvalue {<4 x float>, i1} %load, 0
 
   ; CHECK: extractvalue %dx.types.ResRet.f32 [[DATA]], 0
@@ -212,9 +212,9 @@ define void @loadv4f64_byte(i32 %offset) {
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0_0(
           i32 0, i32 0, i32 1, i32 0, ptr null)
 
-  ; CHECK: [[DATA:%.*]] = call %dx.types.ResRet.f64 @dx.op.rawBufferLoad.f64(i32 139, %dx.types.Handle %{{.*}}, i32 %offset, i32 0, i8 15, i32 8)
+  ; CHECK: [[DATA:%.*]] = call %dx.types.ResRet.f64 @dx.op.rawBufferLoad.f64(i32 139, %dx.types.Handle %{{.*}}, i32 %offset, i32 undef, i8 15, i32 8)
   %load = call {<4 x double>, i1} @llvm.dx.resource.load.rawbuffer.v4i64(
-      target("dx.RawBuffer", i8, 0, 0, 0) %buffer, i32 %offset, i32 0)
+      target("dx.RawBuffer", i8, 0, 0, 0) %buffer, i32 %offset, i32 poison)
   %data = extractvalue {<4 x double>, i1} %load, 0
 
   ; CHECK: extractvalue %dx.types.ResRet.f64 [[DATA]], 0

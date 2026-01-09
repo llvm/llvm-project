@@ -99,14 +99,18 @@ using FileFrameClass = FileFrame<ExternalFileUnit>;
 #else // defined(RT_USE_PSEUDO_FILE_UNIT)
 using OpenFileClass = PseudoOpenFile;
 // Use not so big buffer for the pseudo file unit frame.
-using FileFrameClass = FileFrame<ExternalFileUnit, 1024>;
+using FileFrameClass = FileFrame<ExternalFileUnit, 256>;
 #endif // defined(RT_USE_PSEUDO_FILE_UNIT)
 
 class ExternalFileUnit : public ConnectionState,
                          public OpenFileClass,
                          public FileFrameClass {
 public:
+#ifdef RT_USE_PSEUDO_FILE_UNIT
+  static constexpr int maxAsyncIds{64};
+#else
   static constexpr int maxAsyncIds{64 * 16};
+#endif
 
   explicit RT_API_ATTRS ExternalFileUnit(int unitNumber)
       : unitNumber_{unitNumber} {

@@ -69,7 +69,7 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT: Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.body:
-; CHECK-NEXT:   vp<[[VPTR2:%.]]> = vector-pointer ir<%A>, ir<1>
+; CHECK-NEXT:   vp<[[VPTR2:%.]]> = vector-pointer ir<%A>, ir<8>
 ; CHECK-NEXT:   WIDEN ir<%l> = load ir<%A>
 ; CHECK-NEXT:   WIDEN ir<%l>.1 = load vp<[[VPTR2]]>
 ; CHECK-NEXT:   WIDEN ir<%add> = add nsw ir<%l>, ir<10>
