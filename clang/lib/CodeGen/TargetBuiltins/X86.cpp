@@ -3194,9 +3194,8 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
 
     Builder.SetInsertPoint(Error);
     for (int i = 0; i != 8; ++i) {
-      Value *Out = Builder.CreateExtractValue(Call, i + 1);
-      Constant *Zero = llvm::Constant::getNullValue(Out->getType());
-      Value *Ptr = Builder.CreateConstGEP1_32(Out->getType(), Ops[0], i);
+      Constant *Zero = llvm::Constant::getNullValue(Ty);
+      Value *Ptr = Builder.CreateConstGEP1_32(Ty, Ops[0], i);
       Builder.CreateAlignedStore(Zero, Ptr, Align(16));
     }
     Builder.CreateBr(End);
