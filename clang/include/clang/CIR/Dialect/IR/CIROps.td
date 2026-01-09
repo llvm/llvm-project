@@ -79,6 +79,8 @@ class LLVMLoweringInfo {
 
 class CIR_Op<string mnemonic, list<Trait> traits = []> :
     Op<CIR_Dialect, mnemonic, traits>, LLVMLoweringInfo {
+  // Should we generate an ABI lowering pattern for this op?
+  bit hasCXXABILowering = false;
   // Should we generate an LLVM lowering pattern for this op?
   bit hasLLVMLowering = true;
   // Is the LLVM lowering pattern for this operation recursive?
@@ -451,6 +453,7 @@ def CIR_ConstantOp : CIR_Op<"const", [
 
   let hasFolder = 1;
 
+  let hasCXXABILowering = true;
   let isLLVMLoweringRecursive = true;
 }
 
@@ -571,6 +574,8 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
     `]`
     ($annotations^)? attr-dict
   }];
+
+  let hasCXXABILowering = true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2251,6 +2256,8 @@ def CIR_GlobalOp : CIR_Op<"global", [
 
   let hasVerifier = 1;
 
+  let hasCXXABILowering = true;
+
   let isLLVMLoweringRecursive = true;
   let extraLLVMLoweringPatternDecl = [{
     mlir::LogicalResult matchAndRewriteRegionInitializedGlobal(
@@ -3008,6 +3015,8 @@ def CIR_FuncOp : CIR_Op<"func", [
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
+
+  let hasCXXABILowering = true;
 
   let extraLLVMLoweringPatternDecl = [{
     static mlir::StringRef getLinkageAttrNameString() { return "linkage"; }
@@ -3785,6 +3794,7 @@ def CIR_GetRuntimeMemberOp : CIR_Op<"get_runtime_member"> {
 
   let hasVerifier = 1;
 
+  let hasCXXABILowering = true;
   let hasLLVMLowering = false;
 }
 
