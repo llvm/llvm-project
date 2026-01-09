@@ -59,7 +59,18 @@ let Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<64>], Features 
 
 // SSE intrinsics
 let Attributes = [Const, NoThrow, RequiredVectorWidth<128>] in {
-  foreach Cmp = ["eq", "lt", "le", "gt", "ge", "neq"] in {
+  foreach Op = ["min", "max"] in {
+    let Features = "sse" in {
+      def Op#ss : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>)">;
+    }
+    let Features = "sse2" in {
+      def Op#sd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>)">;
+    }
+  }
+}
+
+let Attributes = [Const, Constexpr, NoThrow, RequiredVectorWidth<128>] in {
+    foreach Cmp = ["eq", "lt", "le", "gt", "ge", "neq"] in {
     let Features = "sse" in {
       def comi#Cmp : X86Builtin<"int(_Vector<4, float>, _Vector<4, float>)">;
       def ucomi#Cmp : X86Builtin<"int(_Vector<4, float>, _Vector<4, float>)">;
@@ -79,15 +90,6 @@ let Attributes = [Const, NoThrow, RequiredVectorWidth<128>] in {
     let Features = "sse2" in {
       def Cmp#pd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>)">;
       def Cmp#sd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>)">;
-    }
-  }
-
-  foreach Op = ["min", "max"] in {
-    let Features = "sse" in {
-      def Op#ss : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>)">;
-    }
-    let Features = "sse2" in {
-      def Op#sd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>)">;
     }
   }
 
@@ -475,10 +477,13 @@ let Features = "avx", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWid
   def cvtpd2ps256 : X86Builtin<"_Vector<4, float>(_Vector<4, double>)">;
 }
 
-let Features = "avx", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def dpps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>, _Constant char)">;
+let Features = "avx", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def cmppd256 : X86Builtin<"_Vector<4, double>(_Vector<4, double>, _Vector<4, double>, _Constant char)">;
   def cmpps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>, _Constant char)">;
+}
+
+let Features = "avx", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+  def dpps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>, _Constant char)">;
   def cvtps2dq256 : X86Builtin<"_Vector<8, int>(_Vector<8, float>)">;
   def cvttpd2dq256 : X86Builtin<"_Vector<4, int>(_Vector<4, double>)">;
   def cvtpd2dq256 : X86Builtin<"_Vector<4, int>(_Vector<4, double>)">;

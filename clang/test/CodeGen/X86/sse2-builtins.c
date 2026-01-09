@@ -208,48 +208,132 @@ __m128d test_mm_cmp_pd_eq_oq(__m128d a, __m128d b) {
   // CHECK: fcmp oeq <2 x double> %{{.*}}, %{{.*}}
   return _mm_cmp_pd(a, b, _CMP_EQ_OQ);
 }
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +2.0}), ((__m128d){+2.0, +3.0}), _CMP_EQ_OQ), 0.0, 0.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+2.0, +3.0}), ((__m128d){+2.0, +3.0}), _CMP_EQ_OQ), -1.0, -1.0));
 
 __m128d test_mm_cmp_pd_lt_os(__m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_cmp_pd_lt_os
   // CHECK: fcmp olt <2 x double> %{{.*}}, %{{.*}}
   return _mm_cmp_pd(a, b, _CMP_LT_OS);
 }
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +2.0}), ((__m128d){+2.0, +3.0}), _CMP_LT_OS), -1.0, -1.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +5.0}), ((__m128d){+2.0, +3.0}), _CMP_LT_OS), -1.0, 0.0));
 
 __m128d test_mm_cmp_pd_le_os(__m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_cmp_pd_le_os
   // CHECK: fcmp ole <2 x double> %{{.*}}, %{{.*}}
   return _mm_cmp_pd(a, b, _CMP_LE_OS);
 }
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +5.0}), ((__m128d){+2.0, +3.0}), _CMP_LE_OS), -1.0, 0.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+2.0, +3.0}), ((__m128d){+2.0, +3.0}), _CMP_LE_OS), -1.0, -1.0));
 
 __m128d test_mm_cmp_pd_unord_q(__m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_cmp_pd_unord_q
   // CHECK: fcmp uno <2 x double> %{{.*}}, %{{.*}}
   return _mm_cmp_pd(a, b, _CMP_UNORD_Q);
 }
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +2.0}), ((__m128d){+2.0, +3.0}), _CMP_UNORD_Q), 0.0, 0.0));
 
 __m128d test_mm_cmp_pd_neq_uq(__m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_cmp_pd_neq_uq
   // CHECK: fcmp une <2 x double> %{{.*}}, %{{.*}}
   return _mm_cmp_pd(a, b, _CMP_NEQ_UQ);
 }
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +3.0}), ((__m128d){+2.0, +3.0}), _CMP_NEQ_UQ), -1.0, 0.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +2.0}), ((__m128d){+2.0, +3.0}), _CMP_NEQ_UQ), -1.0, -1.0));
 
 __m128d test_mm_cmp_pd_nlt_us(__m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_cmp_pd_nlt_us
   // CHECK: fcmp uge <2 x double> %{{.*}}, %{{.*}}
   return _mm_cmp_pd(a, b, _CMP_NLT_US);
 }
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+3.0, +4.0}), ((__m128d){+2.0, +3.0}), _CMP_NLT_US), -1.0, -1.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +2.0}), ((__m128d){+2.0, +3.0}), _CMP_NLT_US), 0.0, 0.0));
 
 __m128d test_mm_cmp_pd_nle_us(__m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_cmp_pd_nle_us
   // CHECK: fcmp ugt <2 x double> %{{.*}}, %{{.*}}
   return _mm_cmp_pd(a, b, _CMP_NLE_US);
 }
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+3.0, +4.0}), ((__m128d){+2.0, +3.0}), _CMP_NLE_US), -1.0, -1.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +2.0}), ((__m128d){+2.0, +3.0}), _CMP_NLE_US), 0.0, 0.0));
 
 __m128d test_mm_cmp_pd_ord_q(__m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_cmp_pd_ord_q
   // CHECK: fcmp ord <2 x double> %{{.*}}, %{{.*}}
   return _mm_cmp_pd(a, b, _CMP_ORD_Q);
 }
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +2.0}), ((__m128d){+2.0, +3.0}), _CMP_ORD_Q), -1.0, -1.0));
+
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+2.0, +3.0}), ((__m128d){+2.0, +3.0}), _CMP_EQ_UQ), -1.0, -1.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +2.0}), ((__m128d){+2.0, +3.0}), _CMP_EQ_UQ), 0.0, 0.0));
+
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +1.0}), ((__m128d){+2.0, +3.0}), _CMP_NGE_US), -1.0, -1.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+3.0, +4.0}), ((__m128d){+2.0, +3.0}), _CMP_NGE_US), 0.0, 0.0));
+
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +1.0}), ((__m128d){+2.0, +3.0}), _CMP_NGT_US), -1.0, -1.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+3.0, +4.0}), ((__m128d){+2.0, +3.0}), _CMP_NGT_US), 0.0, 0.0));
+
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +1.0}), ((__m128d){+2.0, +3.0}), _CMP_FALSE_OQ), 0.0, 0.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +1.0}), ((__m128d){+1.0, +1.0}), _CMP_FALSE_OQ), 0.0, 0.0));
+
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +3.0}), ((__m128d){+2.0, +3.0}), _CMP_NEQ_OQ), -1.0, 0.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +2.0}), ((__m128d){+2.0, +3.0}), _CMP_NEQ_OQ), -1.0, -1.0));
+
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+3.0, +4.0}), ((__m128d){+2.0, +3.0}), _CMP_GE_OS), -1.0, -1.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +2.0}), ((__m128d){+2.0, +3.0}), _CMP_GE_OS), 0.0, 0.0));
+
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+3.0, +4.0}), ((__m128d){+2.0, +3.0}), _CMP_GT_OS), -1.0, -1.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +2.0}), ((__m128d){+2.0, +3.0}), _CMP_GT_OS), 0.0, 0.0));
+
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +1.0}), ((__m128d){+2.0, +3.0}), _CMP_TRUE_UQ), -1.0, -1.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +1.0}), ((__m128d){+1.0, +1.0}), _CMP_TRUE_UQ), -1.0, -1.0));
+
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+2.0, +3.0}), ((__m128d){+2.0, +3.0}), _CMP_EQ_OS), -1.0, -1.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +2.0}), ((__m128d){+2.0, +3.0}), _CMP_EQ_OS), 0.0, 0.0));
+
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +1.0}), ((__m128d){+2.0, +3.0}), _CMP_LT_OQ), -1.0, -1.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+3.0, +4.0}), ((__m128d){+2.0, +3.0}), _CMP_LT_OQ), 0.0, 0.0));
+
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +1.0}), ((__m128d){+2.0, +3.0}), _CMP_LE_OQ), -1.0, -1.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+3.0, +4.0}), ((__m128d){+2.0, +3.0}), _CMP_LE_OQ), 0.0, 0.0));
+
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +2.0}), ((__m128d){+2.0, +3.0}), _CMP_UNORD_S), 0.0, 0.0));
+
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +3.0}), ((__m128d){+2.0, +3.0}), _CMP_NEQ_US), -1.0, 0.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +2.0}), ((__m128d){+2.0, +3.0}), _CMP_NEQ_US), -1.0, -1.0));
+
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+3.0, +4.0}), ((__m128d){+2.0, +3.0}), _CMP_NLT_UQ), -1.0, -1.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +2.0}), ((__m128d){+2.0, +3.0}), _CMP_NLT_UQ), 0.0, 0.0));
+
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+3.0, +4.0}), ((__m128d){+2.0, +3.0}), _CMP_NLE_UQ), -1.0, -1.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +2.0}), ((__m128d){+2.0, +3.0}), _CMP_NLE_UQ), 0.0, 0.0));
+
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +2.0}), ((__m128d){+2.0, +3.0}), _CMP_ORD_S), -1.0, -1.0));
+
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+2.0, +3.0}), ((__m128d){+2.0, +3.0}), _CMP_EQ_US), -1.0, -1.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +2.0}), ((__m128d){+2.0, +3.0}), _CMP_EQ_US), 0.0, 0.0));
+
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +1.0}), ((__m128d){+2.0, +3.0}), _CMP_NGE_UQ), -1.0, -1.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+3.0, +4.0}), ((__m128d){+2.0, +3.0}), _CMP_NGE_UQ), 0.0, 0.0));
+
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +1.0}), ((__m128d){+2.0, +3.0}), _CMP_NGT_UQ), -1.0, -1.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+3.0, +4.0}), ((__m128d){+2.0, +3.0}), _CMP_NGT_UQ), 0.0, 0.0));
+
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +1.0}), ((__m128d){+2.0, +3.0}), _CMP_FALSE_OS), 0.0, 0.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +1.0}), ((__m128d){+1.0, +1.0}), _CMP_FALSE_OS), 0.0, 0.0));
+
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +3.0}), ((__m128d){+2.0, +3.0}), _CMP_NEQ_OS), -1.0, 0.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +2.0}), ((__m128d){+2.0, +3.0}), _CMP_NEQ_OS), -1.0, -1.0));
+
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+3.0, +4.0}), ((__m128d){+2.0, +3.0}), _CMP_GE_OQ), -1.0, -1.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +2.0}), ((__m128d){+2.0, +3.0}), _CMP_GE_OQ), 0.0, 0.0));
+
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+3.0, +4.0}), ((__m128d){+2.0, +3.0}), _CMP_GT_OQ), -1.0, -1.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +2.0}), ((__m128d){+2.0, +3.0}), _CMP_GT_OQ), 0.0, 0.0));
+
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +1.0}), ((__m128d){+2.0, +3.0}), _CMP_TRUE_US), -1.0, -1.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +1.0}), ((__m128d){+1.0, +1.0}), _CMP_TRUE_US), -1.0, -1.0));
 
 __m128d test_mm_cmp_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmp_sd
