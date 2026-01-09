@@ -4155,6 +4155,7 @@ static void RenderObjCOptions(const ToolChain &TC, const Driver &D,
           << "-fobjc-direct-precondition-thunk" << Runtime.getAsString();
     }
   }
+
   // When ObjectiveC legacy runtime is in effect on MacOSX, turn on the option
   // to do Array/Dictionary subscripting by default.
   if (Arch == llvm::Triple::x86 && T.isMacOSX() &&
