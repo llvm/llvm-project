@@ -315,3 +315,136 @@ define i32 @shlsat_i32(i32 %a, i32 %b) {
  %sshlsat = tail call i32 @llvm.sshl.sat.i32(i32 %a,i32 %b)
  ret i32 %sshlsat
 }
+
+define i8 @sadd_i8(i8 %x, i8 %y) {
+; CHECK-LABEL: sadd_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a1, a1, 24
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    sadd a0, a0, a1
+; CHECK-NEXT:    srai a0, a0, 24
+; CHECK-NEXT:    ret
+  %a = call i8 @llvm.sadd.sat.i8(i8 %x, i8 %y)
+  ret i8 %a
+}
+
+define i16 @sadd_i16(i16 %x, i16 %y) {
+; CHECK-LABEL: sadd_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a1, a1, 16
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    sadd a0, a0, a1
+; CHECK-NEXT:    srai a0, a0, 16
+; CHECK-NEXT:    ret
+  %a = call i16 @llvm.sadd.sat.i16(i16 %x, i16 %y)
+  ret i16 %a
+}
+
+define i32 @sadd_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: sadd_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sadd a0, a0, a1
+; CHECK-NEXT:    ret
+  %a = call i32 @llvm.sadd.sat.i32(i32 %x, i32 %y)
+  ret i32 %a
+}
+
+define i8 @ssub_i8(i8 %x, i8 %y) {
+; CHECK-LABEL: ssub_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a1, a1, 24
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    ssub a0, a0, a1
+; CHECK-NEXT:    srai a0, a0, 24
+; CHECK-NEXT:    ret
+  %a = call i8 @llvm.ssub.sat.i8(i8 %x, i8 %y)
+  ret i8 %a
+}
+
+define i16 @ssub_i16(i16 %x, i16 %y) {
+; CHECK-LABEL: ssub_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a1, a1, 16
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    ssub a0, a0, a1
+; CHECK-NEXT:    srai a0, a0, 16
+; CHECK-NEXT:    ret
+  %a = call i16 @llvm.ssub.sat.i16(i16 %x, i16 %y)
+  ret i16 %a
+}
+
+define i32 @ssub_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: ssub_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ssub a0, a0, a1
+; CHECK-NEXT:    ret
+  %a = call i32 @llvm.ssub.sat.i32(i32 %x, i32 %y)
+  ret i32 %a
+}
+
+define i8 @uadd_i8(i8 %x, i8 %y) {
+; CHECK-LABEL: uadd_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    zext.b a1, a1
+; CHECK-NEXT:    zext.b a0, a0
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    li a1, 255
+; CHECK-NEXT:    minu a0, a0, a1
+; CHECK-NEXT:    ret
+  %a = call i8 @llvm.uadd.sat.i8(i8 %x, i8 %y)
+  ret i8 %a
+}
+
+define i16 @uadd_i16(i16 %x, i16 %y) {
+; CHECK-LABEL: uadd_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    zext.h a1, a1
+; CHECK-NEXT:    zext.h a0, a0
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    lui a1, 16
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    minu a0, a0, a1
+; CHECK-NEXT:    ret
+  %a = call i16 @llvm.uadd.sat.i16(i16 %x, i16 %y)
+  ret i16 %a
+}
+
+define i32 @uadd_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: uadd_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    saddu a0, a0, a1
+; CHECK-NEXT:    ret
+  %a = call i32 @llvm.uadd.sat.i32(i32 %x, i32 %y)
+  ret i32 %a
+}
+
+define i8 @usub_i8(i8 %x, i8 %y) {
+; CHECK-LABEL: usub_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    zext.b a1, a1
+; CHECK-NEXT:    zext.b a0, a0
+; CHECK-NEXT:    ssubu a0, a0, a1
+; CHECK-NEXT:    ret
+  %a = call i8 @llvm.usub.sat.i8(i8 %x, i8 %y)
+  ret i8 %a
+}
+
+define i16 @usub_i16(i16 %x, i16 %y) {
+; CHECK-LABEL: usub_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    zext.h a1, a1
+; CHECK-NEXT:    zext.h a0, a0
+; CHECK-NEXT:    ssubu a0, a0, a1
+; CHECK-NEXT:    ret
+  %a = call i16 @llvm.usub.sat.i16(i16 %x, i16 %y)
+  ret i16 %a
+}
+
+define i32 @usub_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: usub_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ssubu a0, a0, a1
+; CHECK-NEXT:    ret
+  %a = call i32 @llvm.usub.sat.i32(i32 %x, i32 %y)
+  ret i32 %a
+}

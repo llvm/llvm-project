@@ -425,6 +425,12 @@ void MatcherTableEmitter::EmitPatternMatchTable(raw_ostream &OS) {
 }
 
 static unsigned emitMVT(MVT VT, raw_ostream &OS) {
+  // Print the MVT directly if it doesn't require a VBR.
+  if (VT.SimpleTy <= 127) {
+    OS << getEnumName(VT) << ',';
+    return 1;
+  }
+
   if (!OmitComments)
     OS << "/*" << getEnumName(VT) << "*/";
   return EmitVBRValue(VT.SimpleTy, OS);
