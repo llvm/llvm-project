@@ -33,6 +33,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DivisionByConstantInfo.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -8545,57 +8546,23 @@ bool CombinerHelper::matchCtls(MachineInstr &CtlzMI,
     break;
   }
 
-  const MachineInstr *RhsMI = MRI.getVRegDef(Src);
-  if (!RhsMI)
-    return false;
-
-  bool NeedAdd = true;
   //  Src = or(shl(V, 1), 1) -> Src=V; NeedAdd = False
-  if (auto *OrOp = dyn_cast<GOr>(RhsMI)) {
-    Register ShlReg = OrOp->getLHSReg();
-
-    auto MaybeOne = getIConstantVRegSExtVal(OrOp->getRHSReg(), MRI);
-    if (!MaybeOne || MaybeOne.value() != 1)
-      return false;
-
-    MachineInstr *ShlMI = MRI.getVRegDef(ShlReg);
-    auto *Shl = dyn_cast<GShl>(ShlMI);
-
-    if (!Shl || !MRI.hasOneNonDBGUse(ShlReg))
-      return false;
-
-    auto ShAmt = getIConstantVRegSExtVal(Shl->getShiftReg(), MRI);
-    if (!ShAmt || ShAmt.value() != 1)
-      return false;
-
+  Register V;
+  bool NeedAdd = true;
+  if (mi_match(Src, MRI,
+               m_OneUse(m_GOr(m_OneUse(m_GShl(m_Reg(V), m_SpecificICst(1))),
+                              m_SpecificICst(1))))) {
     NeedAdd = false;
-    Src = Shl->getSrcReg();
+    Src = V;
   }
-
-  if (!MRI.hasOneNonDBGUse(Src))
-    return false;
-
-  //  (xor x, (ashr x, bitwidth-1))
-  auto *Xor = dyn_cast<GXor>(MRI.getVRegDef(Src));
-  if (!Xor || !MRI.hasOneNonDBGUse(Src))
-    return false;
-
-  Register X = Xor->getLHSReg();
-  Register AshrReg = Xor->getRHSReg();
-
-  MachineInstr *AshrMI = MRI.getVRegDef(AshrReg);
-  if (!AshrMI || AshrMI->getOpcode() != TargetOpcode::G_ASHR ||
-      !MRI.hasOneNonDBGUse(AshrReg))
-    return false;
 
   unsigned BitWidth = Ty.getScalarSizeInBits();
 
-  auto ShAmt = getIConstantVRegSExtVal(AshrMI->getOperand(2).getReg(), MRI);
-  if (!ShAmt || ShAmt.value() != BitWidth - 1)
-    return false;
-
-  Register MaybeX = AshrMI->getOperand(1).getReg();
-  if (MaybeX != X)
+  Register X;
+  if (!mi_match(Src, MRI,
+                m_OneUse(m_GXor(m_Reg(X), m_OneUse(m_GAShr(
+                                              m_DeferredReg(X),
+                                              m_SpecificICst(BitWidth - 1)))))))
     return false;
 
   MatchInfo = [=](MachineIRBuilder &B) {
