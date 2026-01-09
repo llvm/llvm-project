@@ -73,7 +73,7 @@ void Variables::Clear() {
   m_referencedvariables.clear();
   m_scope_kinds.clear();
   m_frames.clear();
-  m_next_temporary_var_ref = VARREF_FIRST_VAR_IDX;
+  m_next_temporary_var_ref = TemporaryVariableStartIndex;
 }
 
 int64_t Variables::GetNewVariableReference(bool is_permanent) {

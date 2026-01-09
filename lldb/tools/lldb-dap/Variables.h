@@ -16,8 +16,6 @@
 #include <map>
 #include <utility>
 
-#define VARREF_FIRST_VAR_IDX (int64_t)1
-
 namespace lldb_dap {
 
 enum eScopeKind { Locals, Globals, Registers };
@@ -100,11 +98,14 @@ struct Variables {
   void Clear();
 
 private:
-  /// Variable_reference start index of permanent expandable variable.
+  /// Variable reference start index of temporary variables.
+  static constexpr int64_t TemporaryVariableStartIndex = 1;
+
+  /// Variable reference start index of permanent expandable variable.
   static constexpr int64_t PermanentVariableStartIndex = (1ll << 32);
 
   int64_t m_next_permanent_var_ref{PermanentVariableStartIndex};
-  int64_t m_next_temporary_var_ref{VARREF_FIRST_VAR_IDX};
+  int64_t m_next_temporary_var_ref{TemporaryVariableStartIndex};
 
   // Variable Reference,                 dap_frame_id
   std::map<int64_t, std::pair<eScopeKind, uint64_t>> m_scope_kinds;
