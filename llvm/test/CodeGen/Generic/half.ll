@@ -15,7 +15,7 @@
 ; RUN: %if avr-registered-target         %{ llc %s -o - -mtriple=avr-none                        | FileCheck %s --check-prefixes=ALL,CHECK %}
 ; RUN: %if bpf-registered-target         %{ llc %s -o - -mtriple=bpfel                           | FileCheck %s --check-prefixes=ALL,CHECK %}
 ; RUN: %if csky-registered-target        %{ llc %s -o - -mtriple=csky-unknown-linux-gnuabiv2     | FileCheck %s --check-prefixes=ALL,CHECK %}
-; RUN: %if csky-registered-target        %{ llc %s -o - -mtriple=csky-unknown-linux-gnuabiv2 -mcpu=ck860fv -mattr=+hard-float | FileCheck %s --check-prefixes=ALL,BAD %}
+; RUN: %if csky-registered-target        %{ llc %s -o - -mtriple=csky-unknown-linux-gnuabiv2 -mcpu=ck860fv -mattr=+hard-float | FileCheck %s --check-prefixes=ALL,CHECK %}
 ; RUN: %if directx-registered-target     %{ llc %s -o - -mtriple=dxil-pc-shadermodel6.3-library  | FileCheck %s --check-prefixes=NOCRASH %}
 ; RUN: %if hexagon-registered-target     %{ llc %s -o - -mtriple=hexagon-unknown-linux-musl      | FileCheck %s --check-prefixes=ALL,CHECK %}
 ; RUN: %if lanai-registered-target       %{ llc %s -o - -mtriple=lanai-unknown-unknown           | FileCheck %s --check-prefixes=ALL,CHECK %}
