@@ -51,6 +51,7 @@ MODULE_ALIAS_ANALYSIS("globals-aa", GlobalsAA())
 #ifndef MODULE_PASS
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
+MODULE_PASS("scopes2aliasscopemetadata", Scopes2AliasScopeMetadataPass())
 MODULE_PASS("always-inline", AlwaysInlinerPass())
 MODULE_PASS("annotation2metadata", Annotation2MetadataPass())
 MODULE_PASS("assign-guid", AssignGUIDPass())
