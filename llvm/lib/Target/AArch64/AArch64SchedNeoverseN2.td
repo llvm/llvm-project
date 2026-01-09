@@ -682,7 +682,7 @@ def N2Write_Arith : SchedWriteVariant<[
                       SchedVar<IsCheapLSL,  [N2Write_1c_1I]>,
                       SchedVar<NoSchedPred, [N2Write_2c_1M]>]>;
 
-def N2Write_ArithF : SchedWriteVariant<[
+def N2Write_ArithI : SchedWriteVariant<[
                       SchedVar<IsCheapLSL,  [N2Write_1c_1I_1Flg]>,
                       SchedVar<NoSchedPred, [N2Write_2c_1M_1Flg]>]>;
 
@@ -730,7 +730,7 @@ def : SchedAlias<WriteIEReg, N2Write_2c_1M>;
 // Arithmetic, flagset, LSL shift, shift <= 4
 // Arithmetic, LSR/ASR/ROR shift or LSL shift > 4
 def : SchedAlias<WriteISReg, N2Write_Arith>;
-def : InstRW<[N2Write_ArithF],
+def : InstRW<[N2Write_ArithI],
              (instregex "^(ADD|SUB)S[WX]rs$")>;
 
 // Arithmetic, flagset, extend
