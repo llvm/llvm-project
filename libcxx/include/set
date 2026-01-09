@@ -134,7 +134,7 @@ public:
     iterator  erase(const_iterator position);
     iterator  erase(iterator position);  // C++14
     size_type erase(const key_type& k);
-    template <typename K>
+    template <class K>
       size_type erase(K&& k); // C++23
     iterator  erase(const_iterator first, const_iterator last);
 
@@ -386,7 +386,7 @@ public:
     iterator  erase(iterator position);  // C++14
     size_type erase(const key_type& k);
     iterator  erase(const_iterator first, const_iterator last);
-    template <typename K>
+    template <class K>
       size_type erase(K&& k); // C++23
 
     void clear() noexcept;
