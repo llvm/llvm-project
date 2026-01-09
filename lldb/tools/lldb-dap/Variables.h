@@ -45,6 +45,26 @@ struct ScopeData {
   lldb::SBValueList scope;
 };
 
+/// Stores the three scope variable lists for a single stack frame.
+struct FrameScopes {
+  lldb::SBValueList locals;
+  lldb::SBValueList globals;
+  lldb::SBValueList registers;
+
+  /// Returns a pointer to the scope corresponding to the given kind.
+  lldb::SBValueList *GetScope(eScopeKind kind) {
+    switch (kind) {
+    case eScopeKind::Locals:
+      return &locals;
+    case eScopeKind::Globals:
+      return &globals;
+    case eScopeKind::Registers:
+      return &registers;
+    }
+    return nullptr;
+  }
+};
+
 struct Variables {
   /// Check if \p var_ref points to a variable that should persist for the
   /// entire duration of the debug session, e.g. repl expandable variables
@@ -98,10 +118,8 @@ private:
   llvm::DenseMap<int64_t, lldb::SBValue> m_referencedpermanent_variables;
 
   /// Key = dap_frame_id (encodes both thread index ID and frame ID)
-  /// Value = (locals, globals, registers) scopes
-  std::map<uint64_t,
-           std::tuple<lldb::SBValueList, lldb::SBValueList, lldb::SBValueList>>
-      m_frames;
+  /// Value = scopes for the frame (locals, globals, registers)
+  std::map<uint64_t, FrameScopes> m_frames;
 };
 
 } // namespace lldb_dap

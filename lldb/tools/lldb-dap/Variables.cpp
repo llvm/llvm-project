@@ -10,6 +10,7 @@
 #include "JSONUtils.h"
 #include "Protocol/ProtocolTypes.h"
 #include "lldb/API/SBFrame.h"
+#include "lldb/API/SBValue.h"
 #include "lldb/API/SBValueList.h"
 #include <cstdint>
 #include <optional>
@@ -65,16 +66,7 @@ lldb::SBValueList *Variables::GetTopLevelScope(int64_t variablesReference) {
     return nullptr;
   }
 
-  switch (scope_kind) {
-  case lldb_dap::eScopeKind::Locals:
-    return &std::get<0>(frame_iter->second);
-  case lldb_dap::eScopeKind::Globals:
-    return &std::get<1>(frame_iter->second);
-  case lldb_dap::eScopeKind::Registers:
-    return &std::get<2>(frame_iter->second);
-  }
-
-  return nullptr;
+  return frame_iter->second.GetScope(scope_kind);
 }
 
 void Variables::Clear() {
@@ -171,40 +163,25 @@ Variables::GetScopeKind(const int64_t variablesReference) {
 
   ScopeData scope_data = ScopeData();
   scope_data.kind = scope_kind_iter->second.first;
+  lldb::SBValueList *scope = scope_iter->second.GetScope(scope_data.kind);
 
-  switch (scope_kind_iter->second.first) {
-  case lldb_dap::eScopeKind::Locals:
-    scope_data.scope = std::get<0>(scope_iter->second);
-    return scope_data;
-  case lldb_dap::eScopeKind::Globals:
-    scope_data.scope = std::get<1>(scope_iter->second);
-    return scope_data;
-  case lldb_dap::eScopeKind::Registers:
-    scope_data.scope = std::get<2>(scope_iter->second);
-    return scope_data;
+  if (scope == nullptr) {
+    return std::nullopt;
   }
 
-  return std::nullopt;
+  scope_data.scope = *scope;
+  return scope_data;
 }
 
 lldb::SBValueList *Variables::GetScope(const uint64_t dap_frame_id,
                                        const eScopeKind kind) {
 
   auto frame = m_frames.find(dap_frame_id);
-  if (m_frames.find(dap_frame_id) == m_frames.end()) {
+  if (frame == m_frames.end()) {
     return nullptr;
   }
 
-  switch (kind) {
-  case eScopeKind::Locals:
-    return &std::get<0>(frame->second);
-  case eScopeKind::Globals:
-    return &std::get<1>(frame->second);
-  case eScopeKind::Registers:
-    return &std::get<2>(frame->second);
-  }
-
-  return nullptr;
+  return frame->second.GetScope(kind);
 }
 
 std::vector<protocol::Scope> Variables::ReadyFrame(const uint64_t dap_frame_id,
@@ -224,8 +201,8 @@ std::vector<protocol::Scope> Variables::ReadyFrame(const uint64_t dap_frame_id,
 
     auto registers = frame.GetRegisters();
 
-    m_frames.insert(std::make_pair(
-        dap_frame_id, std::make_tuple(locals, globals, registers)));
+    m_frames.insert(
+        std::make_pair(dap_frame_id, FrameScopes{locals, globals, registers}));
   }
 
   std::vector<protocol::Scope> scopes = {};
