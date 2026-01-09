@@ -36,20 +36,21 @@
 namespace mlir {
 namespace python {
 namespace MLIR_BINDINGS_PYTHON_DOMAIN {
-
+class DefaultingPyLocation;
+class DefaultingPyMlirContext;
 class PyBlock;
+class PyBlockArgument;
 class PyDiagnostic;
 class PyDiagnosticHandler;
 class PyInsertionPoint;
 class PyLocation;
-class DefaultingPyLocation;
 class PyMlirContext;
-class DefaultingPyMlirContext;
 class PyModule;
+class PyOpResult;
 class PyOperation;
 class PyOperationBase;
-class PyType;
 class PySymbolTable;
+class PyType;
 class PyValue;
 
 /// Wrapper for the global LLVM debugging flag.
@@ -1188,7 +1189,9 @@ public:
   /// Gets a capsule wrapping the void* within the MlirValue.
   nanobind::object getCapsule();
 
-  nanobind::typed<nanobind::object, PyValue> maybeDownCast();
+  nanobind::typed<nanobind::object,
+                  std::variant<PyBlockArgument, PyOpResult, PyValue>>
+  maybeDownCast();
 
   /// Creates a PyValue from the MlirValue wrapped by a capsule. Ownership of
   /// the underlying MlirValue is still tied to the owning operation.

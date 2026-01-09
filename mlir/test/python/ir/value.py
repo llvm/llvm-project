@@ -347,13 +347,6 @@ def testValueCasters():
         def __str__(self):
             return super().__str__().replace(Value.__name__, NOPResult.__name__)
 
-    class NOPValue(Value):
-        def __init__(self, v):
-            super().__init__(v)
-
-        def __str__(self):
-            return super().__str__().replace(Value.__name__, NOPValue.__name__)
-
     class NOPBlockArg(BlockArgument):
         def __init__(self, v):
             super().__init__(v)
@@ -362,14 +355,12 @@ def testValueCasters():
             return super().__str__().replace(Value.__name__, NOPBlockArg.__name__)
 
     @register_value_caster(IntegerType.static_typeid)
-    def cast_int(v) -> Value:
+    def cast_int(v) -> NOPResult | NOPBlockArg:
         print("in caster", v.__class__.__name__)
         if isinstance(v, OpResult):
             return NOPResult(v)
         if isinstance(v, BlockArgument):
             return NOPBlockArg(v)
-        elif isinstance(v, Value):
-            return NOPValue(v)
 
     ctx = Context()
     ctx.allow_unregistered_dialects = True
@@ -400,12 +391,15 @@ def testValueCasters():
             # CHECK: "custom.op2"(%0#0, %0#1) : (i32, i32) -> ()
             print(op1)
 
-            # CHECK: in caster Value
-            # CHECK: operand 0 NOPValue(%0:2 = "custom.op1"() : () -> (i32, i32))
+            # CHECK: in caster OpResult
+            # CHECK: operand 0 NOPResult(%0:2 = "custom.op1"() : () -> (i32, i32))
             print("operand 0", op1.operands[0])
-            # CHECK: in caster Value
-            # CHECK: operand 1 NOPValue(%0:2 = "custom.op1"() : () -> (i32, i32))
+            assert isinstance(op1.operands[0], Value)
+            assert isinstance(op1.operands[0], OpResult)
+            # CHECK: in caster OpResult
+            # CHECK: operand 1 NOPResult(%0:2 = "custom.op1"() : () -> (i32, i32))
             print("operand 1", op1.operands[1])
+            assert isinstance(op1.operands[1], OpResult)
 
             # CHECK: in caster BlockArgument
             # CHECK: in caster BlockArgument
