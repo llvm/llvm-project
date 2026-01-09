@@ -47,7 +47,7 @@ typedef enum {
   SequentiallyConsistent = 0x10
 } MemorySemantics_t;
 
-constexpr uint32_t ProgramAS = 9;
+const uint32_t ProgramAS = 9;
 
 #ifdef __cplusplus
 template <typename... Args> int __spirv_ocl_printf(Args...);
