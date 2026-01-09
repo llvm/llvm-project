@@ -724,8 +724,8 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
     if (cast<CheckTypeMatcher>(N)->getResNo() == 0) {
       OS << "OPC_CheckTypeByHwMode, ";
     } else {
-      OS << "OPC_CheckTypeResByHwMode, " << cast<CheckTypeMatcher>(N)->getResNo()
-         << ", ";
+      OS << "OPC_CheckTypeResByHwMode, "
+         << cast<CheckTypeMatcher>(N)->getResNo() << ", ";
       OpSize += 1;
     }
     OpSize += emitValueTypeByHwMode(VTBH, OS);
