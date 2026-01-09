@@ -29,7 +29,8 @@ struct KnownFPClass {
   /// definitely set or false if the sign bit is definitely unset.
   std::optional<bool> SignBit;
 
-  KnownFPClass() = default;
+  KnownFPClass(FPClassTest Known = fcAllFlags, std::optional<bool> Sign = {})
+      : KnownFPClasses(Known), SignBit(Sign) {}
   KnownFPClass(const APFloat &C);
 
   bool operator==(KnownFPClass Other) const {
@@ -135,6 +136,11 @@ struct KnownFPClass {
     return isKnownNever(fcPositive) && isKnownNeverLogicalNegZero(Mode);
   }
 
+  KnownFPClass intersectWith(const KnownFPClass &RHS) {
+    return KnownFPClass(~(~KnownFPClasses & ~RHS.KnownFPClasses),
+                        SignBit == RHS.SignBit ? SignBit : std::nullopt);
+  }
+
   KnownFPClass &operator|=(const KnownFPClass &RHS) {
     KnownFPClasses = KnownFPClasses | RHS.KnownFPClasses;
 
@@ -174,6 +180,20 @@ struct KnownFPClass {
 
     signBitMustBeZero();
   }
+
+  // Enum of min/max intrinsics to avoid dependency on IR.
+  enum class MinMaxKind {
+    minimum,
+    maximum,
+    minimumnum,
+    maximumnum,
+    minnum,
+    maxnum
+  };
+
+  LLVM_ABI static KnownFPClass
+  minMaxLike(const KnownFPClass &LHS, const KnownFPClass &RHS, MinMaxKind Kind,
+             DenormalMode DenormMode = DenormalMode::getDynamic());
 
   /// Apply the canonicalize intrinsic to this value. This is essentially a
   /// stronger form of propagateCanonicalizingSrc.
@@ -264,6 +284,10 @@ struct KnownFPClass {
   /// information.
   LLVM_ABI void propagateCanonicalizingSrc(const KnownFPClass &Src,
                                            DenormalMode Mode);
+
+  /// Propagate known class for log/log2/log10
+  static LLVM_ABI KnownFPClass
+  log(const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
 
   void resetAll() { *this = KnownFPClass(); }
 };
