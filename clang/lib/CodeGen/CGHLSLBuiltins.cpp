@@ -174,10 +174,8 @@ static Value *handleHlslWaveActiveBallot(const CallExpr *E,
     return CGF->EmitRuntimeCall(
         CGF->CGM.getIntrinsic(Intrinsic::spv_wave_ballot), Cond);
 
-  CGF->CGM.Error(E->getExprLoc(),
-                 "WaveActiveBallot is not supported for this target");
-
-  return llvm::PoisonValue::get(llvm::FixedVectorType::get(I32, 4));
+  llvm_unreachable(
+      "WaveActiveBallot is only supported for DXIL and SPIRV targets");
 }
 
 static Value *handleElementwiseF16ToF32(CodeGenFunction &CGF,
