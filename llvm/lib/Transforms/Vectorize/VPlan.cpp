@@ -116,16 +116,12 @@ void VPRecipeBase::dump() const {
 
 VPRecipeBase *VPValue::getDefiningRecipe() {
   auto *DefValue = dyn_cast<VPRecipeValue>(this);
-  if (!DefValue)
-    return nullptr;
-  return DefValue->Def;
+  return DefValue ? DefValue->Def : nullptr;
 }
 
 const VPRecipeBase *VPValue::getDefiningRecipe() const {
   auto *DefValue = dyn_cast<VPRecipeValue>(this);
-  if (!DefValue)
-    return nullptr;
-  return DefValue->Def;
+  return DefValue ? DefValue->Def : nullptr;
 }
 
 Value *VPValue::getLiveInIRValue() const {

@@ -377,12 +377,13 @@ public:
 };
 
 /// VPRecipeBase is a base class modeling a sequence of one or more output IR
-/// instructions. VPRecipeBase owns the VPValues it defines and is responsible
-/// for deleting its defined values. Single-value recipes must inherit from
-/// VPSingleDefRecipe instead of inheriting from both VPRecipeBase and VPValue
-/// separately.
+/// instructions. VPRecipeBase owns the VPValues it defines through VPDef
+/// and is responsible for deleting its defined values. Single-value recipes
+/// must inherit from VPSingleDefRecipe instead of inheriting from both
+/// VPRecipeBase and VPValue separately.
 class LLVM_ABI_FOR_TEST VPRecipeBase
     : public ilist_node_with_parent<VPRecipeBase, VPBasicBlock>,
+      public VPDef,
       public VPUser {
   friend VPBasicBlock;
   friend class VPBlockUtils;
@@ -393,12 +394,6 @@ class LLVM_ABI_FOR_TEST VPRecipeBase
 
   /// The debug location for the recipe.
   DebugLoc DL;
-
-  /// Subclass identifier (for isa/dyn_cast).
-  const unsigned char SubclassID;
-
-  /// The VPValues defined by this VPRecipeBase.
-  TinyPtrVector<VPRecipeValue *> DefinedValues;
 
   /// Add \p V as a defined value by this VPRecipeBase.
   void addDefinedValue(VPRecipeValue *V) {
@@ -473,9 +468,9 @@ public:
 
   VPRecipeBase(const unsigned char SC, ArrayRef<VPValue *> Operands,
                DebugLoc DL = DebugLoc::getUnknown())
-      : VPUser(Operands), DL(DL), SubclassID(SC) {}
+      : VPDef(SC), VPUser(Operands), DL(DL) {}
 
-  virtual ~VPRecipeBase() {
+  ~VPRecipeBase() override {
     for (VPRecipeValue *D : to_vector(DefinedValues)) {
       assert(
           D->Def == this &&
@@ -486,41 +481,10 @@ public:
     }
   }
 
-  /// Returns the only VPValue defined by the VPRecipeBase. Can only be called
-  /// for VPRecipeBases with a single defined value.
-  VPValue *getVPSingleValue() {
-    assert(DefinedValues.size() == 1 && "must have exactly one defined value");
-    assert(DefinedValues[0] && "defined value must be non-null");
-    return DefinedValues[0];
-  }
-  const VPValue *getVPSingleValue() const {
-    assert(DefinedValues.size() == 1 && "must have exactly one defined value");
-    assert(DefinedValues[0] && "defined value must be non-null");
-    return DefinedValues[0];
-  }
-
-  /// Returns the VPValue with index \p I defined by the VPRecipeBase.
-  VPValue *getVPValue(unsigned I) {
-    assert(DefinedValues[I] && "defined value must be non-null");
-    return DefinedValues[I];
-  }
-  const VPValue *getVPValue(unsigned I) const {
-    assert(DefinedValues[I] && "defined value must be non-null");
-    return DefinedValues[I];
-  }
-
-  /// Returns an ArrayRef of the values defined by the VPRecipeBase.
-  ArrayRef<VPRecipeValue *> definedValues() { return DefinedValues; }
-  /// Returns an ArrayRef of the values defined by the VPRecipeBase.
-  ArrayRef<VPRecipeValue *> definedValues() const { return DefinedValues; }
-
-  /// Returns the number of values defined by the VPRecipeBase.
-  unsigned getNumDefinedValues() const { return DefinedValues.size(); }
-
   /// \return an ID for the concrete type of this object.
   /// This is used to implement the classof checks. This should not be used
   /// for any other purpose, as the values may change as LLVM evolves.
-  unsigned getVPRecipeID() const { return SubclassID; }
+  unsigned getVPRecipeID() const { return getVPDefID(); }
 
   /// Clone the current recipe.
   virtual VPRecipeBase *clone() = 0;
@@ -572,6 +536,11 @@ public:
   iplist<VPRecipeBase>::iterator eraseFromParent();
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
+  static inline bool classof(const VPDef *D) {
+    // All VPDefs are also VPRecipeBases.
+    return true;
+  }
+
   static inline bool classof(const VPUser *U) { return true; }
 
   /// Returns true if the recipe may have side-effects.
@@ -606,7 +575,7 @@ public:
 
   /// Print the recipe, delegating to printRecipe().
   void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const;
+             VPSlotTracker &SlotTracker) const override final;
 #endif
 
 protected:

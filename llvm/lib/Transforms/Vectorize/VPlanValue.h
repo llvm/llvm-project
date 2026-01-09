@@ -10,9 +10,9 @@
 /// This file contains the declarations of the entities induced by Vectorization
 /// Plans, e.g. the instructions the VPlan intends to generate if executed.
 /// VPlan models the following entities:
-/// VPValue   VPUser   VPRecipeBase
-///    |        |         |
-///   VPInstruction ------+
+/// VPValue   VPUser   VPDef
+///    |        |        |
+///   VPInstruction -----+
 /// These are documented in docs/VectorizationPlan.rst.
 ///
 //===----------------------------------------------------------------------===//
@@ -33,6 +33,7 @@ class raw_ostream;
 class Type;
 class Value;
 class VPSlotTracker;
+class VPDef;
 class VPUser;
 class VPRecipeBase;
 class VPPhiAccessors;
@@ -41,6 +42,7 @@ class VPPhiAccessors;
 /// data flow into, within and out of the VPlan. VPValues can stand for live-ins
 /// coming from the input IR, symbolic values and values defined by recipes.
 class LLVM_ABI_FOR_TEST VPValue {
+  friend class VPDef;
   friend class VPlan;
   friend struct VPIRValue;
   friend struct VPSymbolicValue;
@@ -206,6 +208,7 @@ struct VPSymbolicValue : public VPValue {
 /// A VPValue defined by a recipe that produces one or more values.
 class VPRecipeValue : public VPValue {
   friend class VPValue;
+  friend class VPDef;
   friend class VPRecipeBase;
   /// Pointer to the VPRecipeBase that defines this VPValue.
   VPRecipeBase *Def;
@@ -318,6 +321,71 @@ public:
            "Op must be an operand of the recipe");
     return false;
   }
+};
+
+/// This class augments a recipe with a set of VPValues defined by the recipe.
+/// It allows recipes to define zero, one or multiple VPValues. A VPDef owns
+/// the VPValues it defines and is responsible for deleting its defined values.
+/// Single-value VPDefs that also inherit from VPValue must make sure to inherit
+/// from VPDef before VPValue.
+class VPDef {
+  friend class VPRecipeBase;
+
+  /// Subclass identifier (for isa/dyn_cast).
+  const unsigned char SubclassID;
+
+  /// The VPValues defined by this VPDef.
+  TinyPtrVector<VPRecipeValue *> DefinedValues;
+
+public:
+  VPDef(const unsigned char SC) : SubclassID(SC) {}
+
+  virtual ~VPDef() = default;
+
+  /// Returns the only VPValue defined by the VPDef. Can only be called for
+  /// VPDefs with a single defined value.
+  VPValue *getVPSingleValue() {
+    assert(DefinedValues.size() == 1 && "must have exactly one defined value");
+    assert(DefinedValues[0] && "defined value must be non-null");
+    return DefinedValues[0];
+  }
+  const VPValue *getVPSingleValue() const {
+    assert(DefinedValues.size() == 1 && "must have exactly one defined value");
+    assert(DefinedValues[0] && "defined value must be non-null");
+    return DefinedValues[0];
+  }
+
+  /// Returns the VPValue with index \p I defined by the VPDef.
+  VPValue *getVPValue(unsigned I) {
+    assert(DefinedValues[I] && "defined value must be non-null");
+    return DefinedValues[I];
+  }
+  const VPValue *getVPValue(unsigned I) const {
+    assert(DefinedValues[I] && "defined value must be non-null");
+    return DefinedValues[I];
+  }
+
+  /// Returns an ArrayRef of the values defined by the VPDef.
+  ArrayRef<VPRecipeValue *> definedValues() { return DefinedValues; }
+  /// Returns an ArrayRef of the values defined by the VPDef.
+  ArrayRef<VPRecipeValue *> definedValues() const { return DefinedValues; }
+
+  /// Returns the number of values defined by the VPDef.
+  unsigned getNumDefinedValues() const { return DefinedValues.size(); }
+
+  /// \return an ID for the concrete type of this object.
+  /// This is used to implement the classof checks. This should not be used
+  /// for any other purpose, as the values may change as LLVM evolves.
+  unsigned getVPDefID() const { return SubclassID; }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Dump the VPDef to stderr (for debugging).
+  LLVM_ABI_FOR_TEST void dump() const;
+
+  /// Each concrete VPDef prints itself.
+  virtual void print(raw_ostream &O, const Twine &Indent,
+                     VPSlotTracker &SlotTracker) const = 0;
+#endif
 };
 
 } // namespace llvm
