@@ -22,7 +22,7 @@ _Pragma("omp begin declare variant match(device = {arch(spirv64)})");
 
 // Type aliases to the address spaces used by the SPIR-V backend.
 //
-#define __gpu_private  __attribute__((address_space(0)))
+#define __gpu_private __attribute__((address_space(0)))
 #define __gpu_constant
 #define __gpu_local
 #define __gpu_global __attribute__((address_space(1)))
@@ -153,7 +153,7 @@ _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_lane_id(void) {
 }
  
 // Returns the bit-mask of active threads in the current warp.
-_DEFAULT_FN_ATTRS static __inline__ uint64_t __gpu_lane_mask(void) { 
+_DEFAULT_FN_ATTRS static __inline__ uint64_t __gpu_lane_mask(void) {
   uint32_t Size = __gpu_num_lanes();
   return ((uint64_t)1 << Size) - (uint64_t)1;
 }
@@ -170,13 +170,13 @@ _DEFAULT_FN_ATTRS static __inline__ uint64_t __gpu_ballot(uint64_t __lane_mask,
 }
 // Waits for all the threads in the block to converge and issues a fence.
 _DEFAULT_FN_ATTRS static __inline__ void __gpu_sync_threads(void) {
-   __spirv_ControlBarrier(Scope_t::Workgroup, Scope_t::Workgroup,
-                          0x100 | MemorySemantics_t::SequentiallyConsistent);
+  __spirv_ControlBarrier(Scope_t::Workgroup, Scope_t::Workgroup,
+                         0x100 | MemorySemantics_t::SequentiallyConsistent);
 }
 // Waits for all threads in the warp to reconverge for independent scheduling.
 _DEFAULT_FN_ATTRS static __inline__ void __gpu_sync_lane(uint64_t __lane_mask) {
-   __spirv_ControlBarrier(Scope_t::Subgroup, Scope_t::Subgroup,
-                          0x80 | MemorySemantics_t::SequentiallyConsistent);
+  __spirv_ControlBarrier(Scope_t::Subgroup, Scope_t::Subgroup,
+                         0x80 | MemorySemantics_t::SequentiallyConsistent);
 }
 // Shuffles the the lanes inside the warp according to the given index.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t
@@ -215,16 +215,11 @@ __gpu_match_all_u64(uint64_t __lane_mask, uint64_t __x) {
 _DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_local(void *ptr) {
   return false; // TODO
 }
-// Returns true if the flat pointer points to 'local' memory.
-_DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_private(void *ptr) {
-  return false; // TODO
-}
+
 // Terminates execution of the calling thread.
-_DEFAULT_FN_ATTRS [[noreturn]] static __inline__ void __gpu_exit(void) {
-}
+_DEFAULT_FN_ATTRS [[noreturn]] static __inline__ void __gpu_exit(void) {}
 // Suspend the thread briefly to assist the scheduler during busy loops.
-_DEFAULT_FN_ATTRS static __inline__ void __gpu_thread_suspend(void) {
-}
+_DEFAULT_FN_ATTRS static __inline__ void __gpu_thread_suspend(void) {}
 
 _Pragma("omp end declare variant");
 _Pragma("omp end declare target");

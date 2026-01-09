@@ -293,7 +293,8 @@ void fenceKernel(atomic::OrderingTy Ordering) {
                                0x200 | convertOrderingType(Ordering));
 }
 void fenceSystem(atomic::OrderingTy Ordering) {
-  return __spirv_MemoryBarrier(Scope_t::CrossDevice, 0x200 | convertOrderingType(Ordering));
+  return __spirv_MemoryBarrier(Scope_t::CrossDevice,
+                               0x200 | convertOrderingType(Ordering));
 }
 
 void syncWarp(__kmpc_impl_lanemask_t) {
@@ -305,29 +306,28 @@ void syncThreads(atomic::OrderingTy Ordering) {
                          0x100 | convertOrderingType(Ordering));
 }
 void unsetLock(omp_lock_t *Lock) {
-  __spirv_AtomicStore((int32_t *)Lock, Scope_t::CrossDevice, 0x200 | MemorySemantics_t::SequentiallyConsistent, 0);
+  __spirv_AtomicStore((int32_t *)Lock, Scope_t::CrossDevice,
+                      0x200 | MemorySemantics_t::SequentiallyConsistent, 0);
 }
 int testLock(omp_lock_t *Lock) {
   int32_t *lock_ptr = (int32_t *)Lock;
-  return __spirv_AtomicCompareExchange(lock_ptr, Scope_t::CrossDevice, 
-            0x200 | MemorySemantics_t::SequentiallyConsistent, 
-            0x200 | MemorySemantics_t::SequentiallyConsistent, 1, 0);
+  return __spirv_AtomicCompareExchange(
+      lock_ptr, Scope_t::CrossDevice, 
+      0x200 | MemorySemantics_t::SequentiallyConsistent, 
+      0x200 | MemorySemantics_t::SequentiallyConsistent, 1, 0);
 }
 void initLock(omp_lock_t *Lock) { unsetLock(Lock); }
 void destroyLock(omp_lock_t *Lock) { unsetLock(Lock); }
 void setLock(omp_lock_t *Lock) {
   int32_t *lock_ptr = (int32_t *)Lock;
-  while(__spirv_AtomicCompareExchange(lock_ptr, Scope_t::CrossDevice, 
-            0x200 | MemorySemantics_t::SequentiallyConsistent, 
-            0x200 | MemorySemantics_t::SequentiallyConsistent, 1, 0)){}
+  while(__spirv_AtomicCompareExchange(
+      lock_ptr, Scope_t::CrossDevice, 
+      0x200 | MemorySemantics_t::SequentiallyConsistent, 
+      0x200 | MemorySemantics_t::SequentiallyConsistent, 1, 0)){}
 }
 
-void unsetCriticalLock(omp_lock_t *Lock) {
-  unsetLock(Lock);
-}
-void setCriticalLock(omp_lock_t *Lock) {
-  setLock(Lock);
-}
+void unsetCriticalLock(omp_lock_t *Lock) { unsetLock(Lock); }
+void setCriticalLock(omp_lock_t *Lock) { setLock(Lock); }
 void syncThreadsAligned(atomic::OrderingTy Ordering) { syncThreads(Ordering); }
 #endif
 
