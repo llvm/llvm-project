@@ -1730,15 +1730,6 @@ func.func @test_exp2_shape_invalid_rank() -> !tosa.shape<7> {
 
 // -----
 
-func.func @test_exp2_shape_invalid_shape() -> !tosa.shape<4> {
-  %0 = tosa.const_shape {values = dense<[1, 2, 3, 32]> : tensor<4xindex>} : () -> !tosa.shape<4>
-  // expected-error@+1 {{'tosa.exp2_shape' op failed level check: shape < MAX_LOG2_SIZE}}
-  %1 = tosa.exp2_shape %0 : (!tosa.shape<4>) -> !tosa.shape<4>
-  return %1 : !tosa.shape<4>
-}
-
-// -----
-
 func.func @test_log2_floor_shape_invalid_rank() -> !tosa.shape<7> {
   %0 = tosa.const_shape {values = dense<[1, 2, 3, 4, 5, 6, 7]> : tensor<7xindex>} : () -> !tosa.shape<7>
   // expected-error@+1 {{'tosa.log2_floor_shape' op failed shape type level check: '!tosa.shape<7>' exceeds MAX_RANK}}
