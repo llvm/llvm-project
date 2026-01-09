@@ -99,7 +99,7 @@ class CFIInstrInserter : public MachineFunctionPass {
       unsigned Reg;
       // CFA offset
       int64_t Offset;
-    } U;
+    }
 
   public:
     CSRSavedLocation() {}
@@ -107,14 +107,14 @@ class CFIInstrInserter : public MachineFunctionPass {
     static CSRSavedLocation createCFAOffset(int64_t Offset) {
       CSRSavedLocation Loc;
       Loc.K = Kind::CFAOffset;
-      Loc.U.Offset = Offset;
+      Loc.Offset = Offset;
       return Loc;
     }
 
     static CSRSavedLocation createRegister(unsigned Reg) {
       CSRSavedLocation Loc;
       Loc.K = Kind::Register;
-      Loc.U.Reg = Reg;
+      Loc.Reg = Reg;
       return Loc;
     }
 
@@ -122,12 +122,12 @@ class CFIInstrInserter : public MachineFunctionPass {
 
     unsigned getRegister() const {
       assert(K == Kind::Register);
-      return U.Reg;
+      return Reg;
     }
 
     int64_t getOffset() const {
       assert(K == Kind::CFAOffset);
-      return U.Offset;
+      return Offset;
     }
 
     bool operator==(const CSRSavedLocation &RHS) const {
