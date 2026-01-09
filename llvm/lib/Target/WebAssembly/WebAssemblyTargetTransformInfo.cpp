@@ -57,14 +57,14 @@ InstructionCost WebAssemblyTTIImpl::getArithmeticInstrCost(
 
   if (ST->hasSIMD128()) {
     static const CostTblEntry ArithCostTbl[]{
-      // extmul + (maybe awkward) shuffle
-      {ISD::MUL, MVT::v8i8, 4},
-      // 2x extmul + (okay) shuffle
-      {ISD::MUL, MVT::v16i8, 4},
-      // extmul
-      {ISD::MUL, MVT::v4i16, 1},
-      // extmul
-      {ISD::MUL, MVT::v2i32, 1},
+        // extmul + (maybe awkward) shuffle
+        {ISD::MUL, MVT::v8i8, 4},
+        // 2x extmul + (okay) shuffle
+        {ISD::MUL, MVT::v16i8, 4},
+        // extmul
+        {ISD::MUL, MVT::v4i16, 1},
+        // extmul
+        {ISD::MUL, MVT::v2i32, 1},
     };
     EVT DstVT = TLI->getValueType(DL, Ty);
     if (DstVT.isSimple()) {
