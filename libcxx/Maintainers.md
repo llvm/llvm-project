@@ -55,3 +55,24 @@ dalg24@gmail.com (email), [dalg24](https://github.com/dalg24) (GitHub)
 
 Hui Xie
 hui.xie1990@gmail.com (email), [huixie90](https://github.com/huixie90) (GitHub)
+
+### PSTL
+
+Nikolas Klauser
+nikolasklauser@berlin.de (email), [philnik777](https://github.com/philnik777) (GitHub)
+
+Louis Dionne
+ldionne.2@gmail.com (email), [ldionne](https://github.com/ldionne) (GitHub)
+
+### CI
+
+Louis Dionne
+ldionne.2@gmail.com (email), [ldionne](https://github.com/ldionne) (GitHub)
+
+Nikolas Klauser
+nikolasklauser@berlin.de (email), [philnik777](https://github.com/philnik777) (GitHub)
+
+### CMake
+
+Louis Dionne
+ldionne.2@gmail.com (email), [ldionne](https://github.com/ldionne) (GitHub)
