@@ -598,7 +598,9 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_not_fn                               202306L
 # undef  __cpp_lib_optional
 # define __cpp_lib_optional                             202506L
-# define __cpp_lib_optional_range_support               202406L
+# if _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
+#   define __cpp_lib_optional_range_support             202406L
+# endif
 # undef  __cpp_lib_out_ptr
 # define __cpp_lib_out_ptr                              202311L
 // # define __cpp_lib_philox_engine                        202406L
