@@ -297,8 +297,7 @@ private:
   // Level check shape lengths of all operands and results of an operation that
   // are tosa.shape type.
   template <typename T>
-  LogicalResult levelCheckShapeLens(T tosaOp) {
-    // auto op = tosaOp.getOperation();
+  LogicalResult levelCheckShapeLengths(T tosaOp) {
     for (const auto &v : tosaOp.getOperands()) {
       if (failed(levelCheckShapeLength(tosaOp, v.getType(), "operand")))
         return failure();
@@ -614,7 +613,7 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
 
 #define CHECK_SHAPE_LEN(tosaOp)                                                \
   if (isa<tosa::tosaOp##Op>(op)) {                                             \
-    if (failed(levelCheckShapeLens(cast<tosa::tosaOp##Op>(op))))               \
+    if (failed(levelCheckShapeLengths(cast<tosa::tosaOp##Op>(op))))            \
       return failure();                                                        \
   }
 
