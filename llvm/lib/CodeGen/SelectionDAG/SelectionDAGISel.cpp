@@ -2751,16 +2751,12 @@ getSimpleVT(const uint8_t *MatcherTable, unsigned &MatcherIndex) {
   return static_cast<MVT::SimpleValueType>(SimpleVT);
 }
 
-/// getSimpleVT - Decode a value in MatcherTable, if it's a VBR encoded value,
-/// use GetVBR to decode it.
+/// Decode a HwMode VT in MatcherTable by calling getValueTypeForHwMode.
 LLVM_ATTRIBUTE_ALWAYS_INLINE static MVT
 getHwModeVT(const uint8_t *MatcherTable, unsigned &MatcherIndex,
             const SelectionDAGISel &SDISel) {
   unsigned Index = MatcherTable[MatcherIndex++];
-  if (Index & 128)
-    Index = GetVBR(Index, MatcherTable, MatcherIndex);
-
-  return SDISel.getValueTypeByHwMode(Index);
+  return SDISel.getValueTypeForHwMode(Index);
 }
 
 void SelectionDAGISel::Select_JUMP_TABLE_DEBUG_INFO(SDNode *N) {

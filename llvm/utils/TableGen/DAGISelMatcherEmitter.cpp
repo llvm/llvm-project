@@ -219,8 +219,13 @@ private:
 
   unsigned getValueTypeID(const ValueTypeByHwMode &VT) {
     unsigned &Entry = ValueTypeMap[VT];
-    if (Entry == 0)
+    if (Entry == 0) {
       Entry = ValueTypeMap.size();
+      if (Entry > 256)
+        report_fatal_error(
+            "More ValueType by HwMode than fit in a 8-bit index");
+    }
+
     return Entry - 1;
   }
 
@@ -455,7 +460,8 @@ MatcherTableEmitter::emitValueTypeByHwMode(const ValueTypeByHwMode &VTBH,
                                            raw_ostream &OS) {
   if (!OmitComments)
     OS << "/*" << VTBH << "*/";
-  return EmitVBRValue(getValueTypeID(VTBH), OS);
+  OS << getValueTypeID(VTBH) << ',';
+  return 1;
 }
 /// EmitMatcher - Emit bytes for the specified matcher and return
 /// the number of bytes emitted.
@@ -1347,7 +1353,7 @@ void MatcherTableEmitter::EmitValueTypeFunction(raw_ostream &OS) {
   if (ValueTypeMap.empty())
     return;
 
-  BeginEmitFunction(OS, "MVT", "getValueTypeByHwMode(unsigned Index) const",
+  BeginEmitFunction(OS, "MVT", "getValueTypeForHwMode(unsigned Index) const",
                     /*AddOverride=*/true);
   OS << "{\n";
 

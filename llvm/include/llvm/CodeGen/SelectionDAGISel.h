@@ -466,7 +466,7 @@ public:
     llvm_unreachable("Tblgen should generate this!");
   }
 
-  virtual MVT getValueTypeByHwMode(unsigned Index) const {
+  virtual MVT getValueTypeForHwMode(unsigned Index) const {
     llvm_unreachable("Tblgen should generate the implementation of this!");
   }
 
