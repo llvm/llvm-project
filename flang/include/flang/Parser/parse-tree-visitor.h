@@ -59,16 +59,10 @@ struct ParseTreeVisitorLookupScope {
     }
   }
 
-  template <typename A, typename V>
-  static void WalkSource(const A &x, V &visitor) {
+  template <typename A, typename VM>
+  static void WalkSource(A &x, VM &visitorOrMutator) {
     if constexpr (HasSource<A>::value) {
-      Walk(x.source, visitor);
-    }
-  }
-  template <typename A, typename M>
-  static void WalkSource(A &x, M &mutator) {
-    if constexpr (HasSource<A>::value) {
-      Walk(x.source, mutator);
+      Walk(x.source, visitorOrMutator);
     }
   }
 
