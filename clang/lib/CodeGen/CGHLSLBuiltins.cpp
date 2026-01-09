@@ -171,8 +171,6 @@ static Value *handleHlslWaveActiveBallot(const CallExpr *E,
   }
 
   if (CGF->CGM.getTarget().getTriple().isSPIRV()) {
-    llvm::Type *VecTy = llvm::FixedVectorType::get(I32, 4);
-
     return CGF->EmitRuntimeCall(
         CGF->CGM.getIntrinsic(Intrinsic::spv_wave_ballot), Cond);
   }
