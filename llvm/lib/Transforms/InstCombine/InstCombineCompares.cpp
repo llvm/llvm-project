@@ -2668,6 +2668,8 @@ Instruction *InstCombinerImpl::foldICmpSRemConstant(ICmpInst &Cmp,
     const APInt *DivisorC;
     if (!match(SRem->getOperand(1), m_APInt(DivisorC)))
       return nullptr;
+    if (DivisorC->isZero())
+      return nullptr;
 
     APInt NormalizedC = C;
     if (Pred == ICmpInst::ICMP_ULT) {
@@ -2677,8 +2679,6 @@ Instruction *InstCombinerImpl::foldICmpSRemConstant(ICmpInst &Cmp,
     }
     if (C.isNegative())
       NormalizedC.flipAllBits();
-    assert(!DivisorC->isZero() &&
-           "srem X, 0 should have been simplified already.");
     if (!NormalizedC.uge(DivisorC->abs() - 1))
       return nullptr;
 
