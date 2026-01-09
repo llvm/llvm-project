@@ -104,12 +104,12 @@
 # UNKNOWN22:         warning: unknown22a.o:(.riscv.attributes): invalid tag 0x16 at offset 0x10
 
 # HDR:      Name              Type             Address          Off    Size   ES Flg Lk Inf Al
-# HDR:      .riscv.attributes RISCV_ATTRIBUTES 0000000000000000 000158 000068 00      0   0  1{{$}}
+# HDR:      .riscv.attributes RISCV_ATTRIBUTES 0000000000000000 000120 000068 00      0   0  1{{$}}
 
 # HDR:      Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
-# HDR:      LOAD           0x000000 0x0000000000010000 0x0000000000010000 0x000158 0x000158 R   0x1000
+# HDR:      LOAD           0x000000 0x0000000000010000 0x0000000000010000 0x000120 0x000120 R   0x1000
 # HDR-NEXT: GNU_STACK      0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 RW  0
-# HDR-NEXT: ATTRIBUTES     0x000158 0x0000000000000000 0x0000000000000000 0x000068 0x000068 R   0x1{{$}}
+# HDR-NEXT: ATTRIBUTES     0x000120 0x0000000000000000 0x0000000000000000 0x000068 0x000068 R   0x1{{$}}
 
 # CHECK:      BuildAttributes {
 # CHECK-NEXT:   FormatVersion: 0x41

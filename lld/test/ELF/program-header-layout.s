@@ -37,8 +37,8 @@ _start:
 # CHECK-NEXT:     Offset: 0x40
 # CHECK-NEXT:     VirtualAddress: 0x200040
 # CHECK-NEXT:     PhysicalAddress: 0x200040
-# CHECK-NEXT:     FileSize: 280
-# CHECK-NEXT:     MemSize: 280
+# CHECK-NEXT:     FileSize: 224
+# CHECK-NEXT:     MemSize: 224
 # CHECK-NEXT:     Flags [ (0x4)
 # CHECK-NEXT:       PF_R (0x4)
 # CHECK-NEXT:     ]

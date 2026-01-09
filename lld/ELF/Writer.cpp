@@ -337,6 +337,11 @@ template <class ELFT> void Writer<ELFT>::run() {
   // we know the size of the sections.
   for (Partition &part : ctx.partitions)
     removeEmptyPTLoad(ctx, part.phdrs);
+  // We calculated the size of the program header table in `finalizeSections`,
+  // but we may have just changed the number of headers in `removeEmptyPTLoad`,
+  // so we can save bytes by recalculating the header size before assigning
+  // offsets.
+  ctx.out.programHeaders->size = sizeof(Elf_Phdr) * ctx.mainPart->phdrs.size();
 
   if (!ctx.arg.oFormatBinary)
     assignFileOffsets();
