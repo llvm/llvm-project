@@ -1,33 +1,32 @@
 # RUN: %PYTHON %s 2>&1 | FileCheck %s
 
 from mlir.ir import *
-from mlir.dialects.irdl import dsl as irdsl
-from mlir.dialects import arith
+from mlir.dialects import ext, arith
+from typing import Any, Optional, Sequence
 import sys
 
 
 def run(f):
-    print("\nTEST:", f.__name__, file=sys.stderr)
+    print("\nTEST:", f.__name__)
     f()
 
 
 # CHECK: TEST: testMyInt
 @run
 def testMyInt():
-    class MyInt(irdsl.Dialect, name="myint"):
+    class MyInt(ext.Dialect, name="myint"):
         pass
 
-    iattr = irdsl.BaseName("#builtin.integer")
-    i32 = irdsl.Is[IntegerType.get_signless](32)
+    i32 = IntegerType[32]
 
     class ConstantOp(MyInt.Operation, name="constant"):
-        value = irdsl.Attribute(iattr)
-        cst = irdsl.Result(i32)
+        value: IntegerAttr
+        cst: OpResult[i32]
 
     class AddOp(MyInt.Operation, name="add"):
-        lhs = irdsl.Operand(i32)
-        rhs = irdsl.Operand(i32)
-        res = irdsl.Result(i32)
+        lhs: OpOperand[i32]
+        rhs: OpOperand[i32]
+        res: OpResult[i32]
 
     # CHECK: irdl.dialect @myint {
     # CHECK:   irdl.operation @constant {
@@ -90,60 +89,55 @@ def testMyInt():
         print(ConstantOp.__init__.__signature__)
 
 
+# CHECK: TEST: testIRDSL
 @run
 def testIRDSL():
-    class Test(irdsl.Dialect, name="irdsl_test"):
+    class Test(ext.Dialect, name="irdsl_test"):
         pass
 
-    i32 = irdsl.Is[IntegerType.get_signless](32)
-    i64 = irdsl.Is[IntegerType.get_signless](64)
-    i32or64 = i32 | i64
-    any = irdsl.Any()
-    f32 = irdsl.Is[F32Type]
-    iattr = irdsl.BaseName("#builtin.integer")
-    fattr = irdsl.BaseName("#builtin.float")
+    i32 = IntegerType[32]
 
     class ConstraintOp(Test.Operation, name="constraint"):
-        a = irdsl.Operand(i32or64)
-        b = irdsl.Operand(any)
-        c = irdsl.Operand(f32 | i32)
-        d = irdsl.Operand(any)
-        x = irdsl.Attribute(iattr)
-        y = irdsl.Attribute(fattr)
+        a: OpOperand[i32 | IntegerType[64]]
+        b: OpOperand[Any]
+        c: OpOperand[F32Type[()] | i32]
+        d: OpOperand[Any]
+        x: IntegerAttr
+        y: FloatAttr
 
     class OptionalOp(Test.Operation, name="optional"):
-        a = irdsl.Operand(i32)
-        b = irdsl.Operand(i32, irdsl.Variadicity.optional)
-        out1 = irdsl.Result(i32)
-        out2 = irdsl.Result(i32, irdsl.Variadicity.optional)
-        out3 = irdsl.Result(i32)
+        a: OpOperand[i32]
+        b: Optional[OpOperand[i32]]
+        out1: OpResult[i32]
+        out2: Optional[OpResult[i32]]
+        out3: OpResult[i32]
 
     class Optional2Op(Test.Operation, name="optional2"):
-        a = irdsl.Operand(i32, irdsl.Variadicity.optional)
-        b = irdsl.Result(i32, irdsl.Variadicity.optional)
+        a: Optional[OpOperand[i32]]
+        b: Optional[OpResult[i32]]
 
     class VariadicOp(Test.Operation, name="variadic"):
-        a = irdsl.Operand(i32)
-        b = irdsl.Operand(i32, irdsl.Variadicity.optional)
-        c = irdsl.Operand(i32, irdsl.Variadicity.variadic)
-        out1 = irdsl.Result(i32, irdsl.Variadicity.variadic)
-        out2 = irdsl.Result(i32, irdsl.Variadicity.variadic)
-        out3 = irdsl.Result(i32, irdsl.Variadicity.optional)
-        out4 = irdsl.Result(i32)
+        a: OpOperand[i32]
+        b: Optional[OpOperand[i32]]
+        c: Sequence[OpOperand[i32]]
+        out1: Sequence[OpResult[i32]]
+        out2: Sequence[OpResult[i32]]
+        out3: Optional[OpResult[i32]]
+        out4: OpResult[i32]
 
     class Variadic2Op(Test.Operation, name="variadic2"):
-        a = irdsl.Operand(i32, irdsl.Variadicity.variadic)
-        b = irdsl.Result(i32, irdsl.Variadicity.variadic)
+        a: Sequence[OpOperand[i32]]
+        b: Sequence[OpResult[i32]]
 
     class MixedOpBase(Test.Operation):
-        out = irdsl.Result(i32)
-        in1 = irdsl.Operand(i32)
+        out: OpResult[i32]
+        in1: OpOperand[i32]
 
     class MixedOp(MixedOpBase, name="mixed"):
-        in2 = irdsl.Attribute(iattr)
-        in3 = irdsl.Operand(i32, irdsl.Variadicity.optional)
-        in4 = irdsl.Attribute(iattr)
-        in5 = irdsl.Operand(i32)
+        in2: IntegerAttr
+        in3: Optional[OpOperand[i32]]
+        in4: IntegerAttr
+        in5: OpOperand[i32]
 
     # CHECK: irdl.dialect @irdsl_test {
     # CHECK:   irdl.operation @constraint {

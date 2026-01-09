@@ -30,6 +30,7 @@ declare_mlir_python_sources(MLIRPythonSources.Core.Python
     passmanager.py
     rewrite.py
     dialects/_ods_common.py
+    dialects/ext.py
 )
 
 declare_mlir_python_sources(MLIRPythonSources.Core.Python.Extras
@@ -513,9 +514,7 @@ declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/IRDLOps.td
-  SOURCES
-    dialects/irdl/__init__.py
-    dialects/irdl/dsl.py
+  SOURCES dialects/irdl.py
   DIALECT_NAME irdl
   GEN_ENUM_BINDINGS
 )

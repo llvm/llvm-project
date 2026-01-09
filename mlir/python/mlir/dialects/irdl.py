@@ -2,14 +2,13 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-from .._irdl_ops_gen import *
-from .._irdl_ops_gen import _Dialect
-from .._irdl_enum_gen import *
-from ..._mlir_libs._mlirDialectsIRDL import *
-from ...ir import register_attribute_builder
-from .._ods_common import _cext as _ods_cext
+from ._irdl_ops_gen import *
+from ._irdl_ops_gen import _Dialect
+from ._irdl_enum_gen import *
+from .._mlir_libs._mlirDialectsIRDL import *
+from ..ir import register_attribute_builder
+from ._ods_common import _cext as _ods_cext
 from typing import Union, Sequence
-from . import dsl
 
 _ods_ir = _ods_cext.ir
 

@@ -2,43 +2,29 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-from typing import Dict, List, Union, Callable, Tuple, ClassVar
+from typing import (
+    Dict,
+    List,
+    Union,
+    Tuple,
+    Any,
+    TypeVar,
+    get_origin,
+    get_args,
+)
+from collections.abc import Sequence
 from dataclasses import dataclass
 from inspect import Parameter, Signature
-from types import SimpleNamespace
-from abc import ABC, abstractmethod
-from contextlib import nullcontext
-from ...dialects import irdl
-from .._ods_common import _cext, segmented_accessor
-from . import Variadicity
+from types import UnionType
+from . import irdl
+from ._ods_common import _cext, segmented_accessor
+from .irdl import Variadicity
 
 ir = _cext.ir
 
 __all__ = [
-    "Variadicity",
-    "Is",
-    "AnyOf",
-    "AllOf",
-    "Any",
-    "BaseName",
-    "BaseRef",
-    "Operand",
-    "Result",
-    "Attribute",
     "Dialect",
 ]
-
-
-class ConstraintExpr(ABC):
-    @abstractmethod
-    def _lower(self, ctx: "ConstraintLoweringContext") -> ir.Value:
-        pass
-
-    def __or__(self, other: "ConstraintExpr") -> "ConstraintExpr":
-        return AnyOf(self, other)
-
-    def __and__(self, other: "ConstraintExpr") -> "ConstraintExpr":
-        return AllOf(self, other)
 
 
 class ConstraintLoweringContext:
@@ -46,80 +32,32 @@ class ConstraintLoweringContext:
         # Cache so that the same ConstraintExpr instance reuses its SSA value.
         self._cache: Dict[int, ir.Value] = {}
 
-    def lower(self, expr: ConstraintExpr) -> ir.Value:
-        key = id(expr)
+    def lower(self, type_) -> ir.Value:
+        key = id(type_)
         if key in self._cache:
             return self._cache[key]
-        v = expr._lower(self)
+        v = self._lower(type_)
         self._cache[key] = v
         return v
 
+    def _lower(self, type_) -> ir.Value:
+        origin = get_origin(type_)
+        if origin and issubclass(origin, ir.Type):
+            t = origin.get(*get_args(type_))
+            return irdl.is_(ir.TypeAttr.get(t))
+        elif origin and issubclass(origin, ir.Attribute):
+            attr = origin.get(*get_args(type_))
+            return irdl.is_(attr)
+        elif origin is UnionType:
+            return irdl.any_of(self.lower(arg) for arg in get_args(type_))
+        elif type_ is Any or isinstance(type_, TypeVar):
+            return irdl.any()
+        elif issubclass(type_, ir.Type):
+            return irdl.base(base_name=f"!{type_.type_name}")
+        elif issubclass(type_, ir.Attribute):
+            return irdl.base(base_name=f"#{type_.attr_name}")
 
-class Is(ConstraintExpr):
-    def __init__(self, val: Callable[..., Union[ir.Attribute, ir.Type]]):
-        self.val = val
-        self.args = []
-        self.kwargs = {}
-
-    def __call__(self, *args, **kwargs) -> "Is":
-        self.args.extend(args)
-        self.kwargs.update(kwargs)
-        return self
-
-    def __class_getitem__(
-        cls, val: Callable[..., Union[ir.Attribute, ir.Type]]
-    ) -> "Is":
-        return cls(val)
-
-    def _lower(self, ctx: ConstraintLoweringContext) -> ir.Value:
-        # for most attributes and types, they are created via `.get` method,
-        # here we can just omit the `.get` suffix for convenience
-        if isinstance(self.val, type) and hasattr(self.val, "get"):
-            self.val = self.val.get
-
-        val = self.val(*self.args, **self.kwargs)
-
-        if isinstance(val, ir.Type):
-            val = ir.TypeAttr.get(val)
-
-        return irdl.is_(val)
-
-
-class AnyOf(ConstraintExpr):
-    def __init__(self, *exprs: ConstraintExpr):
-        self.exprs = exprs
-
-    def _lower(self, ctx: ConstraintLoweringContext) -> ir.Value:
-        return irdl.any_of(ctx.lower(expr) for expr in self.exprs)
-
-
-class AllOf(ConstraintExpr):
-    def __init__(self, *exprs: ConstraintExpr):
-        self.exprs = exprs
-
-    def _lower(self, ctx: ConstraintLoweringContext) -> ir.Value:
-        return irdl.all_of(ctx.lower(expr) for expr in self.exprs)
-
-
-class Any(ConstraintExpr):
-    def _lower(self, ctx: ConstraintLoweringContext) -> ir.Value:
-        return irdl.any()
-
-
-class BaseName(ConstraintExpr):
-    def __init__(self, name: str):
-        self.name = name
-
-    def _lower(self, ctx: ConstraintLoweringContext) -> ir.Value:
-        return irdl.base(base_name=self.name)
-
-
-class BaseRef(ConstraintExpr):
-    def __init__(self, ref):
-        self.ref = ref
-
-    def _lower(self, ctx: ConstraintLoweringContext) -> ir.Value:
-        return irdl.base(base_ref=self.ref)
+        raise TypeError(f"unsupported type in constraints: {type_}")
 
 
 class FieldDef:
@@ -127,29 +65,33 @@ class FieldDef:
 
 
 @dataclass
-class Operand(FieldDef):
-    constraint: ConstraintExpr
-    variadicity: Variadicity = Variadicity.single
+class OperandDef(FieldDef):
+    constraint: Any
+    variadicity: Variadicity
 
 
 @dataclass
-class Result(FieldDef):
-    constraint: ConstraintExpr
-    variadicity: Variadicity = Variadicity.single
+class ResultDef(FieldDef):
+    constraint: Any
+    variadicity: Variadicity
 
 
 @dataclass
-class Attribute(FieldDef):
-    constraint: ConstraintExpr
-    variadicity: ClassVar[Variadicity] = Variadicity.single
+class AttributeDef(FieldDef):
+    constraint: Any
+    variadicity: Variadicity
+
+    def __post_init__(self):
+        if self.variadicity != Variadicity.single:
+            raise ValueError("optional attribute is not supported in IRDL")
 
 
 def partition_fields(
     fields: List[FieldDef],
-) -> Tuple[List[Operand], List[Attribute], List[Result]]:
-    operands = [i for i in fields if isinstance(i, Operand)]
-    attrs = [i for i in fields if isinstance(i, Attribute)]
-    results = [i for i in fields if isinstance(i, Result)]
+) -> Tuple[List[OperandDef], List[AttributeDef], List[ResultDef]]:
+    operands = [i for i in fields if isinstance(i, OperandDef)]
+    attrs = [i for i in fields if isinstance(i, AttributeDef)]
+    results = [i for i in fields if isinstance(i, ResultDef)]
     return operands, attrs, results
 
 
@@ -165,6 +107,30 @@ def normalize_value_range(
 
 
 class Operation(ir.OpView):
+    @staticmethod
+    def convert_type_to_field_def(type_) -> FieldDef:
+        variadicity = Variadicity.single
+        origin = get_origin(type_)
+        if (
+            origin is Union
+            and len(get_args(type_)) == 2
+            and get_args(type_)[1] is type(None)
+        ):
+            variadicity = Variadicity.optional
+            type_ = get_args(type_)[0]
+        elif origin is Sequence:
+            variadicity = Variadicity.variadic
+            type_ = get_args(type_)[0]
+
+        origin = get_origin(type_)
+        if origin is ir.OpOperand:
+            return OperandDef(get_args(type_)[0], variadicity)
+        elif origin is ir.OpResult:
+            return ResultDef(get_args(type_)[0], variadicity)
+        elif issubclass(origin or type_, ir.Attribute):
+            return AttributeDef(type_, variadicity)
+        raise TypeError(f"unsupported type in operation definition: {type_}")
+
     @classmethod
     def __init_subclass__(cls, *, name: str = None, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -175,10 +141,10 @@ class Operation(ir.OpView):
         for base in cls.__bases__:
             if hasattr(base, "_fields"):
                 fields.extend(base._fields)
-        for key, value in cls.__dict__.items():
-            if isinstance(value, FieldDef):
-                setattr(value, "name", key)
-                fields.append(value)
+        for key, value in cls.__annotations__.items():
+            field = Operation.convert_type_to_field_def(value)
+            setattr(field, "name", key)
+            fields.append(field)
 
         # for subclasses without "name" parameter,
         # just treat them as normal classes
@@ -209,7 +175,7 @@ class Operation(ir.OpView):
 
     @staticmethod
     def _generate_segments(
-        operands_or_results: List[Union[Operand, Result]],
+        operands_or_results: List[Union[OperandDef, ResultDef]],
     ) -> List[int]:
         if any(i.variadicity != Variadicity.single for i in operands_or_results):
             return [
@@ -222,8 +188,8 @@ class Operation(ir.OpView):
     def _generate_init_signature(fields: List[FieldDef]) -> Signature:
         # results are placed at the beginning of the parameter list,
         # but operands and attributes can appear in any relative order.
-        args = [i for i in fields if isinstance(i, Result)] + [
-            i for i in fields if not isinstance(i, Result)
+        args = [i for i in fields if isinstance(i, ResultDef)] + [
+            i for i in fields if not isinstance(i, ResultDef)
         ]
         positional_args = [
             i.name for i in args if i.variadicity != Variadicity.optional
@@ -292,7 +258,7 @@ class Operation(ir.OpView):
         cls._ODS_RESULT_SEGMENTS = result_segments
 
     @classmethod
-    def _generate_attr_properties(cls, attrs: List[Attribute]) -> None:
+    def _generate_attr_properties(cls, attrs: List[AttributeDef]) -> None:
         for attr in attrs:
             setattr(
                 cls,
@@ -301,7 +267,7 @@ class Operation(ir.OpView):
             )
 
     @classmethod
-    def _generate_operand_properties(cls, operands: List[Operand]) -> None:
+    def _generate_operand_properties(cls, operands: List[OperandDef]) -> None:
         for i, operand in enumerate(operands):
             if cls._ODS_OPERAND_SEGMENTS:
 
@@ -318,7 +284,7 @@ class Operation(ir.OpView):
                 setattr(cls, operand.name, property(lambda self, i=i: self.operands[i]))
 
     @classmethod
-    def _generate_result_properties(cls, results: List[Result]) -> None:
+    def _generate_result_properties(cls, results: List[ResultDef]) -> None:
         for i, result in enumerate(results):
             if cls._ODS_RESULT_SEGMENTS:
 
@@ -393,6 +359,7 @@ class Dialect(ir.Dialect):
             raise RuntimeError(f"Dialect {cls.name} is already loaded.")
 
         mlir_module = cls._emit_module()
+        print(mlir_module)
         irdl.load_dialects(mlir_module)
 
         _cext.register_dialect(cls)
