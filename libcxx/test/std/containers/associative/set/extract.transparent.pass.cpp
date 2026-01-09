@@ -12,11 +12,11 @@
 
 // class set
 
-//    template<typename K>
+//    template<class K>
 //        node_type extract(K&& k) const;        // C++23
 
 #include <set>
-#include "test_transparent_associative.hpp"
+#include "test_transparent_associative.h"
 
 int main(int, char**) {
   test_transparent_extract<std::set<StoredType<int>, transparent_comparator_base>>({1, 2, 4});
