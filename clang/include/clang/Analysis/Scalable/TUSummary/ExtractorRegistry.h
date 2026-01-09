@@ -7,6 +7,10 @@
 //===----------------------------------------------------------------------===//
 //
 // Registry for TUSummaryExtractors, and some helper functions.
+// To register some custom extractor, insert this code:
+//
+//   static TUSummaryExtractorRegistry::Add<MyExtractor>
+//     X("MyExtractor", "My awesome extractor");
 //
 //===----------------------------------------------------------------------===//
 
