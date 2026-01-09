@@ -503,7 +503,7 @@ static void printStorageType(QuantizedType type, DialectAsmPrinter &out) {
   auto quantStorageTypeInterface =
       llvm::dyn_cast<QuantStorageTypeInterface>(type.getStorageType());
 
-  out << quantStorageTypeInterface.getStorageType(type.isSigned());
+  out << quantStorageTypeInterface.getStorageTypeName(type.isSigned());
 
   // storageTypeMin and storageTypeMax if not default.
   if (type.hasStorageTypeBounds()) {

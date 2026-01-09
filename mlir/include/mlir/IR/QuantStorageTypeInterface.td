@@ -38,7 +38,7 @@ def QuantStorageTypeInterface : TypeInterface<"QuantStorageTypeInterface"> {
     InterfaceMethod<[{
       Get the storage type as a string.
     }],
-    "std::string", "getStorageType", (ins "bool":$isSigned)>,
+    "std::string", "getStorageTypeName", (ins "bool":$isSigned)>,
 
     InterfaceMethod<[{
       Check if the storage type uses packed representation.

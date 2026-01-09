@@ -134,7 +134,7 @@ def Builtin_Float8E5M2 : Builtin_FloatType<"Float8E5M2", "f8E5M2",
     int64_t getDefaultMinimum(bool isSigned) const { return -getDefaultMaximum(isSigned); }
     
     /// Get the storage type as a string.
-    std::string getStorageType(bool isSigned) const { return "f8E5M2"; }
+    std::string getStorageTypeName(bool isSigned) const { return "f8E5M2"; }
 
     /// Check if this 8-bit floating point type uses packed representation.
     bool isPacked() const { return false; }
@@ -206,7 +206,7 @@ def Builtin_Float8E4M3FN : Builtin_FloatType<"Float8E4M3FN", "f8E4M3FN",
     int64_t getDefaultMinimum(bool isSigned) const { return -getDefaultMaximum(isSigned); }
     
     /// Get the storage type as a string.
-    std::string getStorageType(bool isSigned) const { return "f8E4M3FN"; }
+    std::string getStorageTypeName(bool isSigned) const { return "f8E4M3FN"; }
 
     /// Check if this 8-bit floating point type uses packed representation.
     bool isPacked() const { return false; }
@@ -346,7 +346,7 @@ def Builtin_Float4E2M1FN : Builtin_FloatType<"Float4E2M1FN", "f4E2M1FN",
     int64_t getDefaultMinimum(bool isSigned) const { return -getDefaultMaximum(isSigned); }
     
     /// Get the storage type as a string.
-    std::string getStorageType(bool isSigned) const { return "f4E2M1FN"; }
+    std::string getStorageTypeName(bool isSigned) const { return "f4E2M1FN"; }
 
     /// Check if this 4-bit floating point type uses packed representation.
     bool isPacked() const { return true; }
@@ -672,7 +672,7 @@ def Builtin_Integer : Builtin_Type<"Integer", "integer",
     }
 
     /// Get the storage type as a string.
-    std::string getStorageType(bool isSigned) const {
+    std::string getStorageTypeName(bool isSigned) const {
       return (isSigned ? "i" : "u") + std::to_string(getWidth());
     }
 
