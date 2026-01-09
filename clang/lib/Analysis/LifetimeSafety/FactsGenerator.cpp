@@ -232,13 +232,23 @@ void FactsGenerator::VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
 }
 
 void FactsGenerator::VisitUnaryOperator(const UnaryOperator *UO) {
-  if (UO->getOpcode() == UO_AddrOf) {
+  switch (UO->getOpcode()) {
+  case UO_AddrOf: {
     const Expr *SubExpr = UO->getSubExpr();
     // The origin of an address-of expression (e.g., &x) is the origin of
     // its sub-expression (x). This fact will cause the dataflow analysis
     // to propagate any loans held by the sub-expression's origin to the
     // origin of this UnaryOperator expression.
     killAndFlowOrigin(*UO, *SubExpr);
+    return;
+  }
+  case UO_Deref: {
+    const Expr *SubExpr = UO->getSubExpr();
+    killAndFlowOrigin(*UO, *SubExpr);
+    return;
+  }
+  default:
+    return;
   }
 }
 
@@ -401,11 +411,14 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
         Method && Method->isInstance()) {
       if (I == 0)
         // For the 'this' argument, the attribute is on the method itself.
-        return implicitObjectParamIsLifetimeBound(Method);
+        return implicitObjectParamIsLifetimeBound(Method) ||
+               shouldTrackImplicitObjectArg(Method);
       if ((I - 1) < Method->getNumParams())
         // For explicit arguments, find the corresponding parameter
         // declaration.
         PVD = Method->getParamDecl(I - 1);
+    } else if (I == 0 && shouldTrackFirstArgument(CanonicalFD)) {
+      return true;
     } else if (I < CanonicalFD->getNumParams()) {
       // For free functions or static methods.
       PVD = CanonicalFD->getParamDecl(I);

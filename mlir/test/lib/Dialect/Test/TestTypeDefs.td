@@ -477,4 +477,9 @@ def TestBaseBody : Test_Type<"TestBaseBody",
   let mnemonic = "test_base_body";
 }
 
+def TestTypeNewlineAndIndent : Test_Type<"TestTypeNewlineAndIndent"> {
+  let mnemonic = "newline_and_indent";
+  let hasCustomAssemblyFormat = 1;
+}
+
 #endif // TEST_TYPEDEFS

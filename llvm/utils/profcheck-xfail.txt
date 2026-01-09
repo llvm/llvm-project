@@ -313,7 +313,6 @@ Transforms/InstCombine/select-of-symmetric-selects.ll
 Transforms/InstCombine/select-select.ll
 Transforms/InstCombine/shift.ll
 Transforms/InstCombine/simplify-demanded-fpclass.ll
-Transforms/InstCombine/simplify-demanded-fpclass-exp.ll
 Transforms/InstCombine/sink-not-into-another-hand-of-logical-and.ll
 Transforms/InstCombine/sink-not-into-another-hand-of-logical-or.ll
 Transforms/InstCombine/sink-not-into-logical-and.ll
@@ -501,6 +500,7 @@ Transforms/MergeFunc/inttoptr.ll
 Transforms/MergeFunc/linkonce.ll
 Transforms/MergeFunc/linkonce_odr.ll
 Transforms/MergeFunc/merge-block-address.ll
+Transforms/MergeFunc/merge-calling-conv.ll
 Transforms/MergeFunc/merge-fp-intrinsics.ll
 Transforms/MergeFunc/mergefunc-preserve-nonnull.ll
 Transforms/MergeFunc/mergefunc-preserve-vfe-intrinsics.ll
@@ -536,9 +536,6 @@ Transforms/OpenMP/spmdization_indirect.ll
 Transforms/OpenMP/spmdization.ll
 Transforms/OpenMP/spmdization_no_guarding_two_reaching_kernels.ll
 Transforms/OpenMP/spmdization_remarks.ll
-Transforms/PGOProfile/comdat.ll
-Transforms/PGOProfile/memop_profile_funclet_wasm.ll
-Transforms/PGOProfile/X86/macho.ll
 Transforms/PhaseOrdering/AArch64/constraint-elimination-placement.ll
 Transforms/PhaseOrdering/AArch64/globals-aa-required-for-vectorization.ll
 Transforms/PhaseOrdering/AArch64/hoist-load-from-vector-loop.ll
