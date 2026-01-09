@@ -37,7 +37,8 @@ void test__cpuid_with_cpu_info_as_pointer(int cpuInfo[4], int functionId) {
 
 // OGCG-LABEL: __cpuid_with_cpu_info_as_pointer
 // OGCG: [[FUNCTION_ID:%.*]] = load i32
-// OGCG: [[ASM_RESULTS:%.*]] = call { i32, i32, i32, i32 } asm "{{.*}}cpuid{{.*}}", "={ax},=r,={cx},={dx},0,2"(i32 [[FUNCTION_ID]], i32 0)
+// OGCG: [[FUNCTION_ID_ARG:%.*]] = load i32
+// OGCG: [[ASM_RESULTS:%.*]] = call { i32, i32, i32, i32 } asm "{{.*}}cpuid{{.*}}", "={ax},=r,={cx},={dx},0,2"(i32 [[FUNCTION_ID_ARG]], i32 0)
 // OGCG: [[CPU_INFO_PTR:%.*]] = load ptr
 // OGCG-DAG: [[RESULT_0:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 0
 // OGCG-DAG: [[RESULT_1:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 1
@@ -81,8 +82,9 @@ void test__cpuid_with_cpu_info_as_array(int functionId) {
 
 // OGCG-LABEL: _cpuid_with_cpu_info_as_array
 // OGCG: [[FUNCTION_ID:%.*]] = load i32
-// OGCG: [[ASM_RESULTS:%.*]] = call { i32, i32, i32, i32 } asm "{{.*}}cpuid{{.*}}", "={ax},=r,={cx},={dx},0,2"(i32 [[FUNCTION_ID]], i32 0)
-// OGCG: [[CPU_INFO_PTR:%.*]] = load ptr
+// OGCG: [[FUNCTION_ID_ARG:%.*]] = load i32
+// OGCG: [[ASM_RESULTS:%.*]] = call { i32, i32, i32, i32 } asm "{{.*}}cpuid{{.*}}", "={ax},=r,={cx},={dx},0,2"(i32 [[FUNCTION_ID_ARG]], i32 0)
+// OGCG: [[CPU_INFO_PTR:%.*]] = getelementptr inbounds [4 x i32], ptr
 // OGCG-DAG: [[RESULT_0:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 0
 // OGCG-DAG: [[RESULT_1:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 1
 // OGCG-DAG: [[RESULT_2:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 2
@@ -128,7 +130,9 @@ void test__cpuidex(int cpuInfo[4], int functionId, int subFunctionId) {
 // OGCG-LABEL: __cpuidex
 // OGCG: [[FUNCTION_ID:%.*]] = load i32
 // OGCG: [[SUB_FUNCTION_ID:%.*]] = load i32
-// OGCG: [[ASM_RESULTS:%.*]] = call { i32, i32, i32, i32 } asm "{{.*}}cpuid{{.*}}", "={ax},=r,={cx},={dx},0,2"(i32 [[FUNCTION_ID]], i32 [[SUB_FUNCTION_ID]])
+// OGCG: [[FUNCTION_ID_ARG:%.*]] = load i32
+// OGCG: [[SUB_FUNCTION_ID_ARG:%.*]] = load i32
+// OGCG: [[ASM_RESULTS:%.*]] = call { i32, i32, i32, i32 } asm "{{.*}}cpuid{{.*}}", "={ax},=r,={cx},={dx},0,2"(i32 [[FUNCTION_ID_ARG]], i32 [[SUB_FUNCTION_ID_ARG]])
 // OGCG: [[CPU_INFO_PTR:%.*]] = load ptr
 // OGCG-DAG: [[RESULT_0:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 0
 // OGCG-DAG: [[RESULT_1:%.*]] = extractvalue { i32, i32, i32, i32 } [[ASM_RESULTS]], 1
