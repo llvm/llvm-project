@@ -951,21 +951,21 @@ static Value *selectIncomingValueForBlock(Value *OldVal, BasicBlock *BB,
 /// \param PN The phi we are collecting the map for.
 /// \param BBPreds The list of all predecessor blocks to initialize with Undef.
 /// \param IncomingValues [out] The map from block to value for this phi.
-static void gatherIncomingValuesToPhi(llvm::PHINode *PN,
+static void gatherIncomingValuesToPhi(PHINode *PN,
                                       IncomingValueMap &IncomingValues,
                                       const PredBlockVector &BBPreds) {
-  for (llvm::BasicBlock *Pred : BBPreds) {
+  for (BasicBlock *Pred : BBPreds)
     IncomingValues[Pred] = nullptr;
-  }
 
   for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
-    llvm::Value *V = PN->getIncomingValue(i);
-    if (llvm::isa<llvm::UndefValue>(V))
+    Value *V = PN->getIncomingValue(i);
+    if (isa<UndefValue>(V))
       continue;
 
-    llvm::BasicBlock *BB = PN->getIncomingBlock(i);
-    if (IncomingValues.count(BB)) {
-      IncomingValues[BB] = V;
+    BasicBlock *BB = PN->getIncomingBlock(i);
+    auto It = IncomingValues.find(BB);
+    if (It != IncomingValues.end()) {
+      It->second = V;
     }
   }
 }
