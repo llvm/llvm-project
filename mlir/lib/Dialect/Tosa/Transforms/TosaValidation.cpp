@@ -298,7 +298,7 @@ private:
   // are tosa.shape type.
   template <typename T>
   LogicalResult levelCheckShapeLengths(T tosaOp) {
-    for (const auto &v : tosaOp.getOperands()) {
+    for (const auto &v : tosaOp->getOperands()) {
       if (failed(levelCheckShapeLength(tosaOp, v.getType(), "operand")))
         return failure();
     }
