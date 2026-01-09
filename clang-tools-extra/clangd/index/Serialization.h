@@ -35,8 +35,9 @@ namespace clang {
 namespace clangd {
 
 enum class IndexFileFormat {
-  RIFF, // Versioned binary format, suitable for production use.
-  YAML, // Human-readable format, suitable for experiments and debugging.
+  RIFF,      // Versioned binary format, suitable for production use.
+  YAML,      // Human-readable format, suitable for experiments and debugging.
+  BACKGROUND // Background index format, suitable for language server use.
 };
 
 // Holds the contents of an index file that was read.
