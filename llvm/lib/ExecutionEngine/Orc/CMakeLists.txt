@@ -8,7 +8,6 @@ endif()
 
 add_llvm_component_library(LLVMOrcJIT
   AbsoluteSymbols.cpp
-  BacktraceTools.cpp
   COFF.cpp
   COFFVCRuntimeSupport.cpp
   COFFPlatform.cpp
