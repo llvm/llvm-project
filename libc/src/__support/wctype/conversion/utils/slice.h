@@ -39,7 +39,7 @@ template <typename T> struct Slice : public cpp::span<T> {
       : cpp::span<T>(ptr, len) {}
 
   template <typename U, size_t N>
-  LIBC_INLINE constexpr Slice<U>(cpp::array<U, N> &arr) : cpp::span<T>(arr) {}
+  LIBC_INLINE constexpr Slice(cpp::array<U, N> &arr) : cpp::span<T>(arr) {}
 
   LIBC_INLINE constexpr Slice(const Slice<T> &) = default;
   LIBC_INLINE constexpr Slice(Slice<T> &&) = default;
