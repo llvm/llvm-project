@@ -72,7 +72,7 @@ typedef uint cl_mem_fence_flags;
 typedef struct {int a;} ndrange_t;
 
 // Enable extensions that are enabled in opencl-c-base.h.
-#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
+#if (defined(__OPENCL_CPP_VERSION__) || defined(__OPENCL_C_VERSION__))
 #define __opencl_c_device_enqueue 1
 #define __opencl_c_generic_address_space 1
 #define cl_khr_subgroup_extended_types 1
@@ -299,14 +299,14 @@ kernel void basic_image_writeonly(write_only image1d_buffer_t image_write_only_i
 
   int4 i4;
   write_imagef(image3dwo, i4, i, f4);
-#if __OPENCL_C_VERSION__ <= CL_VERSION_1_2 && !defined(__OPENCL_CPP_VERSION__)
+#if !defined(__OPENCL_C_VERSION__) && !defined(__OPENCL_CPP_VERSION__)
   // expected-error@-2{{no matching function for call to 'write_imagef'}}
 #endif
 }
 
 kernel void basic_subgroup(global uint *out) {
   out[0] = get_sub_group_size();
-#if __OPENCL_C_VERSION__ <= CL_VERSION_1_2 && !defined(__OPENCL_CPP_VERSION__)
+#if !defined(__OPENCL_C_VERSION__) && !defined(__OPENCL_CPP_VERSION__)
   // expected-error@-2{{use of undeclared identifier 'get_sub_group_size'}}
 #endif
 
@@ -321,7 +321,7 @@ kernel void extended_subgroup(global uint4 *out, global int *scalar, global char
   scalar[0] = sub_group_non_uniform_scan_inclusive_or(3);
   scalar[1] = sub_group_clustered_reduce_logical_xor(2, 4);
   *c2 = sub_group_broadcast(*c2, 2);
-#if __OPENCL_C_VERSION__ < CL_VERSION_2_0 && !defined(__OPENCL_CPP_VERSION__)
+#if !defined(__OPENCL_C_VERSION__) && !defined(__OPENCL_CPP_VERSION__)
   // expected-error@-5{{use of undeclared identifier 'get_sub_group_eq_mask'}}
   // expected-error@-5{{use of undeclared identifier 'sub_group_non_uniform_scan_inclusive_or'}}
   // expected-error@-5{{use of undeclared identifier 'sub_group_clustered_reduce_logical_xor'}}
