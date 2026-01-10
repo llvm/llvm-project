@@ -1618,8 +1618,8 @@ define <vscale x 8 x i32> @vwadd_vx_splat_sext_i1(<vscale x 8 x i1> %va, i16 %b)
 ; RV64-NEXT:    vmv.v.x v8, a0
 ; RV64-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
 ; RV64-NEXT:    vmv.v.x v12, a0
-; RV64-NEXT:    li a0, 1
-; RV64-NEXT:    vwsub.vx v8, v12, a0, v0.t
+; RV64-NEXT:    li a0, -1
+; RV64-NEXT:    vwadd.vx v8, v12, a0, v0.t
 ; RV64-NEXT:    ret
   %sb = sext i16 %b to i32
   %head = insertelement <vscale x 8 x i32> poison, i32 %sb, i32 0
