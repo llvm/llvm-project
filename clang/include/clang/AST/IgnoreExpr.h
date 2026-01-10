@@ -124,6 +124,14 @@ inline Expr *IgnoreElidableImplicitConstructorSingleStep(Expr *E) {
   return E;
 }
 
+inline Expr *IgnoreUOpLNotSingleStep(Expr *E) {
+  if (auto *UO = dyn_cast<UnaryOperator>(E)) {
+    if (UO->getOpcode() == UO_LNot)
+      return UO->getSubExpr();
+  }
+  return E;
+}
+
 inline Expr *IgnoreImplicitAsWrittenSingleStep(Expr *E) {
   if (auto *ICE = dyn_cast<ImplicitCastExpr>(E))
     return ICE->getSubExprAsWritten();
