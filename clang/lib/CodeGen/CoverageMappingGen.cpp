@@ -801,6 +801,12 @@ public:
   /// Return the LHS Decision ([0,0] if not set).
   const mcdc::ConditionIDs &back() const { return DecisionStack.back(); }
 
+  void swapConds() {
+    if (DecisionStack.empty())
+      return;
+
+    std::swap(DecisionStack.back()[false], DecisionStack.back()[true]);
+  }
   /// Push the binary operator statement to track the nest level and assign IDs
   /// to the operator's LHS and RHS.  The RHS may be a larger subtree that is
   /// broken up on successive levels.
@@ -886,7 +892,12 @@ struct CounterCoverageMappingBuilder
   /// The map of statements to count values.
   llvm::DenseMap<const Stmt *, CounterPair> &CounterMap;
 
+  /// Used to expand an allocatd SkipCnt to Expression with known counters.
+  /// Key: SkipCnt
+  /// Val: Subtract Expression
   CounterExpressionBuilder::SubstMap MapToExpand;
+
+  /// Index and number for additional counters for SkipCnt.
   unsigned NextCounterNum;
 
   MCDC::State &MCDCState;
@@ -2173,10 +2184,8 @@ struct CounterCoverageMappingBuilder
 
     // Update the state for CodeGenPGO
     assert(MCDCState.DecisionByStmt.contains(E));
-    MCDCState.DecisionByStmt[E] = {
-        MCDCState.BitmapBits, // Top
-        std::move(Builder.Indices),
-    };
+    MCDCState.DecisionByStmt[E].update(MCDCState.BitmapBits, // Top
+                                       std::move(Builder.Indices));
 
     auto DecisionParams = mcdc::DecisionParameters{
         MCDCState.BitmapBits += NumTVs, // Tail
@@ -2211,6 +2220,12 @@ struct CounterCoverageMappingBuilder
             SM.isInSystemHeader(SM.getSpellingLoc(E->getOperatorLoc())) &&
             SM.isInSystemHeader(SM.getSpellingLoc(E->getBeginLoc())) &&
             SM.isInSystemHeader(SM.getSpellingLoc(E->getEndLoc())));
+  }
+
+  void VisitUnaryLNot(const UnaryOperator *E) {
+    MCDCBuilder.swapConds();
+    Visit(E->getSubExpr());
+    MCDCBuilder.swapConds();
   }
 
   void VisitBinLAnd(const BinaryOperator *E) {
