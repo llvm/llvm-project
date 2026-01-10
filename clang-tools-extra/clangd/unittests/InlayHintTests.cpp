@@ -1733,19 +1733,6 @@ TEST(TypeHints, SubstTemplateParameterAliases) {
 
 TEST(DesignatorHints, Basic) {
   assertDesignatorHints(R"cpp(
-    struct Point {
-      int x;
-      int y;
-    };
-    void bar() {
-      Point p{$x[[41]], $y[[42]]};
-    }
-  )cpp",
-                        ExpectedHint{".x=", "x"}, ExpectedHint{".y=", "y"});
-}
-
-TEST(DesignatorHints, BasicArray) {
-  assertDesignatorHints(R"cpp(
     struct S { int x, y, z; };
     S s {$x[[1]], $y[[2+2]]};
 
@@ -1821,7 +1808,7 @@ TEST(DesignatorHints, NoCrash) {
                         ExpectedHint{".b=", "b"});
 }
 
-TEST(DesignatorHints, BasicParenInit) {
+TEST(DesignatorHints, ParenInit) {
   assertDesignatorHints(R"cpp(
     struct S { 
       int x;
@@ -1834,7 +1821,7 @@ TEST(DesignatorHints, BasicParenInit) {
                         ExpectedHint{".z=", "z"});
 }
 
-TEST(DesignatorHints, BasicParenInitDerived) {
+TEST(DesignatorHints, ParenInitDerived) {
   assertDesignatorHints(R"cpp(
     struct S1 {
       int a;
