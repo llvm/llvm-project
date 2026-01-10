@@ -18,8 +18,8 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-#include "log_range_reduction.h"
 #include "src/__support/math/common_constants.h"
+#include "src/__support/math/log_range_reduction.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
