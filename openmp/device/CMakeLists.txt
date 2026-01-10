@@ -84,7 +84,7 @@ if(NOT "${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^spirv" AND
                   "-flto" "-r" "-nostdlib" "-Wl,--lto-emit-llvm")
 else()
   target_link_options(libompdevice PRIVATE
-                  "-nostdlib" "-emit-llvm" "-Wl")
+                  "-nostdlib" "-emit-llvm")
 endif()
 
 if(LLVM_DEFAULT_TARGET_TRIPLE)
