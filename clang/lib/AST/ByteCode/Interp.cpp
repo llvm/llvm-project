@@ -137,7 +137,7 @@ static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
 static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
                                 const ValueDecl *D) {
   // This function tries pretty hard to produce a good diagnostic. Just skip
-  // tha if nobody will see it anyway.
+  // that if nobody will see it anyway.
   if (!S.diagnosing())
     return false;
 
@@ -151,7 +151,7 @@ static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
     }
 
     const SourceInfo &Loc = S.Current->getSource(OpPC);
-    if (S.getLangOpts().CPlusPlus23) {
+    if (S.getLangOpts().CPlusPlus23 && D->getType()->isReferenceType()) {
       S.FFDiag(Loc, diag::note_constexpr_access_unknown_variable, 1)
           << AK_Read << D;
       S.Note(D->getLocation(), diag::note_declared_at) << D->getSourceRange();

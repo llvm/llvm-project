@@ -252,8 +252,9 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     }
 
     if (const Expr *E = dyn_cast<Expr>(S)) {
-      const BinaryOperator *BinOp = dyn_cast<BinaryOperator>(E->IgnoreParens());
-      if (BinOp && BinOp->isLogicalOp()) {
+      if (const auto *BinOp =
+              dyn_cast<BinaryOperator>(CodeGenFunction::stripCond(E));
+          BinOp && BinOp->isLogicalOp()) {
         /// Check for "split-nested" logical operators. This happens when a new
         /// boolean expression logical-op nest is encountered within an existing
         /// boolean expression, separated by a non-logical operator.  For
@@ -285,7 +286,8 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
       return true;
 
     if (const Expr *E = dyn_cast<Expr>(S)) {
-      const BinaryOperator *BinOp = dyn_cast<BinaryOperator>(E->IgnoreParens());
+      const BinaryOperator *BinOp =
+          dyn_cast<BinaryOperator>(CodeGenFunction::stripCond(E));
       if (BinOp && BinOp->isLogicalOp()) {
         assert(LogOpStack.back() == BinOp);
         LogOpStack.pop_back();
@@ -306,7 +308,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
           }
 
           // Otherwise, allocate the Decision.
-          MCDCState.DecisionByStmt[BinOp].BitmapIdx = 0;
+          MCDCState.DecisionByStmt[BinOp].ID = MCDCState.DecisionByStmt.size();
         }
         return true;
       }
@@ -1137,7 +1139,7 @@ void CodeGenPGO::emitCounterRegionMapping(const Decl *D) {
 
   // Scan max(FalseCnt) and update NumRegionCounters.
   unsigned MaxNumCounters = NumRegionCounters;
-  for (const auto [_, V] : *RegionCounterMap) {
+  for (const auto &[_, V] : *RegionCounterMap) {
     assert((!V.Executed.hasValue() || MaxNumCounters > V.Executed) &&
            "TrueCnt should not be reassigned");
     if (V.Skipped.hasValue())
