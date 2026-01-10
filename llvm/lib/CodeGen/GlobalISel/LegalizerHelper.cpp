@@ -7570,7 +7570,7 @@ LegalizerHelper::narrowScalarCTLS(MachineInstr &MI, unsigned TypeIdx,
   auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
   unsigned NarrowSize = NarrowTy.getSizeInBits();
 
-  if (!(SrcTy.isScalar() && SrcTy.getSizeInBits() == 2 * NarrowSize))
+  if (!SrcTy.isScalar() || SrcTy.getSizeInBits() != 2 * NarrowSize)
     return UnableToLegalize;
 
   MachineIRBuilder &B = MIRBuilder;
