@@ -1828,6 +1828,7 @@ def CIR_CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
   }];
 
   let isLLVMLoweringRecursive = true;
+  let hasCXXABILowering = true;
 }
 
 //===----------------------------------------------------------------------===//
