@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "DAGISelMatcher.h"
 #include "Basic/SDNodeProperties.h"
 #include "Common/CodeGenDAGPatterns.h"
 #include "Common/CodeGenInstruction.h"
 #include "Common/CodeGenRegisters.h"
 #include "Common/CodeGenTarget.h"
-#include "Common/DAGISelMatcher.h"
 #include "Common/InfoByHwMode.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
