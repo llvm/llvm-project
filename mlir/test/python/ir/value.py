@@ -340,6 +340,24 @@ def testValueSetType():
 # CHECK-LABEL: TEST: testValueCasters
 @run
 def testValueCasters():
+    # check before registering casters
+    ctx = Context()
+    ctx.allow_unregistered_dialects = True
+    with Location.unknown(ctx):
+        i32 = IntegerType.get_signless(32)
+        module = Module.create()
+        with InsertionPoint(module.body):
+            value = Operation.create("custom.op0", results=[i32]).result
+            # CHECK: value OpResult(%0 = "custom.op0"() : () -> i32)
+            print("value", value)
+
+            @func.FuncOp.from_py_func(i32, i32)
+            def reduction(arg0, arg1):
+                # CHECK: arg0 BlockArgument(<block argument> of type 'i32' at index: 0)
+                print("arg0", arg0)
+                # CHECK: arg1 BlockArgument(<block argument> of type 'i32' at index: 1)
+                print("arg1", arg1)
+
     class NOPResult(OpResult):
         def __init__(self, v):
             super().__init__(v)
@@ -407,6 +425,7 @@ def testValueCasters():
             # CHECK: in caster BlockArgument
             @func.FuncOp.from_py_func(i32, i32)
             def reduction(arg0, arg1):
+                print("arg0", arg0)
                 # CHECK: as func arg 0 NOPBlockArg
                 print("as func arg", arg0.arg_number, arg0.__class__.__name__)
                 # CHECK: as func arg 1 NOPBlockArg
