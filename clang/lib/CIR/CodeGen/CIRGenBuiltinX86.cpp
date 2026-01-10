@@ -26,7 +26,6 @@
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <cstdint>
 #include <string>
 
 using namespace clang;
