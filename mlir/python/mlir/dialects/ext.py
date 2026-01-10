@@ -19,6 +19,7 @@ from types import UnionType
 from . import irdl
 from ._ods_common import _cext, segmented_accessor
 from .irdl import Variadicity
+from ..passmanager import PassManager
 
 ir = _cext.ir
 
@@ -29,15 +30,16 @@ __all__ = [
 
 class ConstraintLoweringContext:
     def __init__(self):
-        # Cache so that the same ConstraintExpr instance reuses its SSA value.
-        self._cache: Dict[int, ir.Value] = {}
+        self._cache: Dict[str, ir.Value] = {}
 
     def lower(self, type_) -> ir.Value:
-        key = id(type_)
-        if key in self._cache:
-            return self._cache[key]
-        v = self._lower(type_)
-        self._cache[key] = v
+        if type(type_) is TypeVar:
+            if type_.__name__ in self._cache:
+                return self._cache[type_.__name__]
+            v = self._lower(type_.__bound__ or Any)
+            self._cache[type_.__name__] = v
+        else:
+            v = self._lower(type_)
         return v
 
     def _lower(self, type_) -> ir.Value:
@@ -367,7 +369,11 @@ class Dialect(ir.Dialect):
             raise RuntimeError(f"Dialect {cls.name} is already loaded.")
 
         mlir_module = cls._emit_module()
-        print(mlir_module)
+
+        pm = PassManager()
+        pm.add('canonicalize, cse')
+        pm.run(mlir_module.operation)
+
         irdl.load_dialects(mlir_module)
 
         _cext.register_dialect(cls)

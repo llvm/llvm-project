@@ -147,10 +147,11 @@ def testIRDSL():
     # CHECK:     %3 = irdl.any
     # CHECK:     %4 = irdl.is f32
     # CHECK:     %5 = irdl.any_of(%4, %0)
-    # CHECK:     irdl.operands(a: %2, b: %3, c: %5, d: %3)
-    # CHECK:     %6 = irdl.base "#builtin.integer"
-    # CHECK:     %7 = irdl.base "#builtin.float"
-    # CHECK:     irdl.attributes {"x" = %6, "y" = %7}
+    # CHECK:     %6 = irdl.any
+    # CHECK:     irdl.operands(a: %2, b: %3, c: %5, d: %6)
+    # CHECK:     %7 = irdl.base "#builtin.integer"
+    # CHECK:     %8 = irdl.base "#builtin.float"
+    # CHECK:     irdl.attributes {"x" = %7, "y" = %8}
     # CHECK:   }
     # CHECK:   irdl.operation @optional {
     # CHECK:     %0 = irdl.is i32
@@ -176,7 +177,8 @@ def testIRDSL():
     # CHECK:     %0 = irdl.is i32
     # CHECK:     irdl.operands(in1: %0, in3: optional %0, in5: %0)
     # CHECK:     %1 = irdl.base "#builtin.integer"
-    # CHECK:     irdl.attributes {"in2" = %1, "in4" = %1}
+    # CHECK:     %2 = irdl.base "#builtin.integer"
+    # CHECK:     irdl.attributes {"in2" = %1, "in4" = %2}
     # CHECK:     irdl.results(out: %0)
     # CHECK:   }
     # CHECK: }
