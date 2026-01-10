@@ -114,6 +114,21 @@ cc_library(
     ],
 )
 
+filegroup(
+    name = "fuzzer_installed_hdrs",
+    srcs = glob(["include/fuzzer/*.h"]),
+)
+
+filegroup(
+    name = "profile_installed_hdrs",
+    srcs = glob(["include/profile/*.h"]),
+)
+
+filegroup(
+    name = "sanitizer_installed_hdrs",
+    srcs = glob(["include/sanitizer/*.h"]),
+)
+
 BUILTINS_CRTBEGIN_SRCS = ["lib/builtins/crtbegin.c"]
 
 filegroup(
