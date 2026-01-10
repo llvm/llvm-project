@@ -14,11 +14,11 @@
 ; RUN:   -o - %s -verify-machineinstrs \
 ; RUN:   | FileCheck --check-prefix=QCI-PUSH-POP %s
 
-; RUN: llc -mtriple riscv32-unknown-elf -mattr=+xqciint,+experimental-xqccmp \
+; RUN: llc -mtriple riscv32-unknown-elf -mattr=+xqciint,+xqccmp \
 ; RUN:   -o - %s -verify-machineinstrs \
 ; RUN:   | FileCheck --check-prefix=QCI-QCCMP-PUSH-POP %s
 
-; RUN: llc -mtriple riscv32-unknown-elf -mattr=+xqciint,+experimental-xqccmp \
+; RUN: llc -mtriple riscv32-unknown-elf -mattr=+xqciint,+xqccmp \
 ; RUN:   -o - %s -verify-machineinstrs  -frame-pointer=all \
 ; RUN:   | FileCheck --check-prefix=QCI-QCCMP-PUSH-POP-FP %s
 
