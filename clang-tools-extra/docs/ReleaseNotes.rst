@@ -96,6 +96,9 @@ Improvements to clangd
 Inlay hints
 ^^^^^^^^^^^
 
+- ``clangd`` now shows designator hints for aggregate initialization of structures 
+  with parentheses-list initialization (``CXXParenListInitExpr``) syntax. 
+
 Diagnostics
 ^^^^^^^^^^^
 
