@@ -6157,9 +6157,9 @@ float APFloat::convertToFloat() const {
 
 bool APFloatBase::isValidArbitraryFPFormat(StringRef Format) {
   static constexpr StringLiteral ValidFormats[] = {
-      "Float8E5M2",   "Float8E5M2FNUZ", "Float8E4M3",       "Float8E4M3FN",
-      "Float8E4M3FNUZ", "Float8E4M3B11FNUZ", "Float8E3M4",   "Float8E8M0FNU",
-      "Float6E3M2FN", "Float6E2M3FN",   "Float4E2M1FN"};
+      "Float8E5M2",     "Float8E5M2FNUZ",    "Float8E4M3",  "Float8E4M3FN",
+      "Float8E4M3FNUZ", "Float8E4M3B11FNUZ", "Float8E3M4",  "Float8E8M0FNU",
+      "Float6E3M2FN",   "Float6E2M3FN",      "Float4E2M1FN"};
   return llvm::is_contained(ValidFormats, Format);
 }
 
