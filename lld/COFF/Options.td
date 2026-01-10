@@ -75,6 +75,9 @@ def link : F<"link">, HelpText<"Ignored for compatibility">;
 def linkrepro : Joined<["/", "-", "/?", "-?"], "linkrepro:">,
     MetaVarName<"directory">,
     HelpText<"Write repro.tar containing inputs and command to reproduce link">;
+def linkreprofullpathrsp : Joined<["/", "-", "/?", "-?"], "linkreprofullpathrsp:">,
+    MetaVarName<"directory">,
+    HelpText<"Write .rsp file containing inputs used to link with full paths">;
 def lldignoreenv : F<"lldignoreenv">,
     HelpText<"Ignore environment variables like %LIB%">;
 def lldltocache : P<"lldltocache",
@@ -350,6 +353,11 @@ defm build_id: B<
 
 def incl_glob : Joined<["/", "-", "/?", "-?"], "includeglob:">,
     HelpText<"Force symbol to be added to symbol table as undefined one using a glob pattern">;
+
+defm prefetch_inputs : B<"prefetch-inputs",
+                         "Request the OS to prefetch input files as early as "
+                         "possible, to improve link times",
+                         "Do not prefetch input files (default)">;
 
 // Flags for debugging
 def lldmap : F<"lldmap">;
