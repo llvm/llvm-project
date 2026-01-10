@@ -96,7 +96,7 @@ jobs:
     - name: Collect Variables
       id: vars
       env:
-        LLVM_VERSION_FROM_SOURCE: ${{ format('{0}.{1}.{2}', steps.version-from-source.outputs.major, steps.version-from-source.outputs.minor, steps.version-from-source.outputs.patch) }}
+        LLVM_VERSION_FROM_SOURCE: ${{ steps.version-from-source.outputs.full-no-suffix }}
       shell: bash
       # In order for the test-release.sh script to run correctly, the LLVM
       # source needs to be at the following location relative to the build dir:
