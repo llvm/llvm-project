@@ -3685,34 +3685,42 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
       QualType InitType = Init->getType();
       size_t StaticInitElems = 0;
       const Expr *DynamicInit = nullptr;
+      OptPrimType ElemT;
+
       if (const ConstantArrayType *CAT =
               Ctx.getASTContext().getAsConstantArrayType(InitType)) {
         StaticInitElems = CAT->getZExtSize();
+        // Initialize the first S element from the initializer.
         if (!this->visitInitializer(Init))
           return false;
 
-        if (const auto *ILE = dyn_cast<InitListExpr>(Init);
-            ILE && ILE->hasArrayFiller())
-          DynamicInit = ILE->getArrayFiller();
+        if (const auto *ILE = dyn_cast<InitListExpr>(Init)) {
+          if (ILE->hasArrayFiller())
+            DynamicInit = ILE->getArrayFiller();
+          else if (isa<StringLiteral>(ILE->getInit(0)))
+            ElemT = classifyPrim(CAT->getElementType());
+        }
       }
 
       // The initializer initializes a certain number of elements, S.
       // However, the complete number of elements, N, might be larger than that.
       // In this case, we need to get an initializer for the remaining elements.
-      // There are to cases:
+      // There are three cases:
       //   1) For the form 'new Struct[n];', the initializer is a
       //      CXXConstructExpr and its type is an IncompleteArrayType.
       //   2) For the form 'new Struct[n]{1,2,3}', the initializer is an
       //      InitListExpr and the initializer for the remaining elements
       //      is the array filler.
+      //   3) StringLiterals don't have an array filler, so we need to zero
+      //      the remaining elements.
 
-      if (DynamicInit || InitType->isIncompleteArrayType()) {
+      if (DynamicInit || ElemT || InitType->isIncompleteArrayType()) {
         const Function *CtorFunc = nullptr;
         if (const auto *CE = dyn_cast<CXXConstructExpr>(Init)) {
           CtorFunc = getFunction(CE->getConstructor());
           if (!CtorFunc)
             return false;
-        } else if (!DynamicInit)
+        } else if (!DynamicInit && !ElemT)
           DynamicInit = Init;
 
         LabelTy EndLabel = this->getLabel();
@@ -3778,6 +3786,13 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
             if (!this->emitPopPtr(E))
               return false;
           }
+        } else if (ElemT) {
+          if (!this->visitZeroInitializer(
+                  *ElemT, InitType->getAsArrayTypeUnsafe()->getElementType(),
+                  Init))
+            return false;
+          if (!this->emitStorePop(*ElemT, E))
+            return false;
         } else {
           assert(CtorFunc);
           if (!this->emitCall(CtorFunc, 0, E))
@@ -5570,7 +5585,8 @@ bool Compiler<Emitter>::maybeEmitDeferredVarInit(const VarDecl *VD) {
 static bool hasTrivialDefaultCtorParent(const FieldDecl *FD) {
   assert(FD);
   assert(FD->getParent()->isUnion());
-  const auto *CXXRD = dyn_cast<CXXRecordDecl>(FD->getParent());
+  const CXXRecordDecl *CXXRD =
+      FD->getType()->getBaseElementTypeUnsafe()->getAsCXXRecordDecl();
   return !CXXRD || CXXRD->hasTrivialDefaultConstructor();
 }
 
@@ -6792,13 +6808,17 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
       return false;
     return DiscardResult ? this->emitPop(*T, E) : this->emitComp(*T, E);
   case UO_Real: // __real x
-    assert(T);
+    if (!T)
+      return false;
     return this->delegate(SubExpr);
   case UO_Imag: { // __imag x
-    assert(T);
+    if (!T)
+      return false;
     if (!this->discard(SubExpr))
       return false;
-    return this->visitZeroInitializer(*T, SubExpr->getType(), SubExpr);
+    return DiscardResult
+               ? true
+               : this->visitZeroInitializer(*T, SubExpr->getType(), SubExpr);
   }
   case UO_Extension:
     return this->delegate(SubExpr);
@@ -7071,6 +7091,10 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
 
       return this->emitGetPtrParam(It->second.Offset, E);
     }
+
+    if (!Ctx.getLangOpts().CPlusPlus23 && IsReference)
+      return this->emitInvalidDeclRef(cast<DeclRefExpr>(E),
+                                      /*InitializerFailed=*/false, E);
   }
   // Local variables.
   if (auto It = Locals.find(D); It != Locals.end()) {

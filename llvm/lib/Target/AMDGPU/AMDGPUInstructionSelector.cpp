@@ -3915,6 +3915,9 @@ bool AMDGPUInstructionSelector::selectWaveShuffleIntrin(
   if (DstTy != LLT::scalar(32))
     return false;
 
+  if (!Subtarget->supportsBPermute())
+    return false;
+
   // If we can bpermute across the whole wave, then just do that
   if (Subtarget->supportsWaveWideBPermute()) {
     Register ShiftIdxReg = MRI->createVirtualRegister(DstRC);

@@ -113,12 +113,16 @@ static CallInst *InsertTrap(BuilderTy &IRB, bool DebugTrapBB,
   if (!DebugTrapBB)
     return IRB.CreateIntrinsic(Intrinsic::trap, {});
 
-  return IRB.CreateIntrinsic(
-      Intrinsic::ubsantrap,
-      ConstantInt::get(IRB.getInt8Ty(),
-                       GuardKind.has_value()
-                           ? GuardKind.value()
-                           : IRB.GetInsertBlock()->getParent()->size()));
+  uint64_t ImmArg = GuardKind.has_value()
+                        ? GuardKind.value()
+                        : IRB.GetInsertBlock()->getParent()->size();
+  // Ensure we constrain ImmArg to fitting within a 8-but unsigned integer to
+  // prevent overflow.
+  if (ImmArg > 255)
+    ImmArg = 255;
+
+  return IRB.CreateIntrinsic(Intrinsic::ubsantrap,
+                             ConstantInt::get(IRB.getInt8Ty(), ImmArg));
 }
 
 static CallInst *InsertCall(BuilderTy &IRB, bool MayReturn, StringRef Name) {

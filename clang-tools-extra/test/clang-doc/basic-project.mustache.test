@@ -30,6 +30,9 @@ HTML-SHAPE:                 </li>
 HTML-SHAPE:             </ul>
 HTML-SHAPE:         </div>
 HTML-SHAPE:     </div>
+HTML-SHAPE:     <div class="navbar-breadcrumb-container">
+HTML-SHAPE:         <a href="./index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
+HTML-SHAPE:     </div>
 HTML-SHAPE: </nav>
 HTML-SHAPE: <main>
 HTML-SHAPE:     <div class="container">
@@ -136,6 +139,9 @@ HTML-CALC:                     <a href="../index.html" class="navbar__link">Home
 HTML-CALC:                 </li>
 HTML-CALC:             </ul>
 HTML-CALC:         </div>
+HTML-CALC:     </div>
+HTML-CALC:     <div class="navbar-breadcrumb-container">
+HTML-CALC:         <a href="./index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
 HTML-CALC:     </div>
 HTML-CALC: </nav>
 HTML-CALC: <main>
@@ -348,6 +354,9 @@ HTML-RECTANGLE:                 </li>
 HTML-RECTANGLE:             </ul>
 HTML-RECTANGLE:         </div>
 HTML-RECTANGLE:     </div>
+HTML-RECTANGLE:     <div class="navbar-breadcrumb-container">
+HTML-RECTANGLE:         <a href="./index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
+HTML-RECTANGLE:     </div>
 HTML-RECTANGLE: </nav>
 HTML-RECTANGLE: <main>
 HTML-RECTANGLE:     <div class="container">
@@ -458,6 +467,9 @@ HTML-CIRCLE:                     <a href="../index.html" class="navbar__link">Ho
 HTML-CIRCLE:                 </li>
 HTML-CIRCLE:             </ul>
 HTML-CIRCLE:         </div>
+HTML-CIRCLE:     </div>
+HTML-CIRCLE:     <div class="navbar-breadcrumb-container">
+HTML-CIRCLE:         <a href="./index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
 HTML-CIRCLE:     </div>
 HTML-CIRCLE: </nav>
 HTML-CIRCLE: <main>

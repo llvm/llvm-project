@@ -109,6 +109,14 @@ Value *CodeGenFunction::EmitSPIRVBuiltinExpr(unsigned BuiltinID,
     Call->addRetAttr(llvm::Attribute::AttrKind::NoUndef);
     return Call;
   }
+  case SPIRV::BI__builtin_spirv_subgroup_shuffle: {
+    Value *X = EmitScalarExpr(E->getArg(0));
+    Value *Y = EmitScalarExpr(E->getArg(1));
+    assert(E->getArg(1)->getType()->hasIntegerRepresentation());
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/getTypes().ConvertType(E->getArg(0)->getType()),
+        Intrinsic::spv_wave_readlane, {X, Y}, nullptr, "spv.shuffle");
+  }
   case SPIRV::BI__builtin_spirv_num_workgroups:
     return Builder.CreateIntrinsic(
         /*ReturnType=*/getTypes().ConvertType(E->getType()),
