@@ -14,8 +14,18 @@ define float @ret_fmul_f32(float %arg0, float %arg1) {
   ret float %fmul
 }
 
-define float @ret_fmul_square_f32(float %arg) {
-; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_fmul_square_f32(
+define float @ret_fmul_square_f32(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(ninf nzero nsub nnorm) float @ret_fmul_square_f32(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG]], [[ARG]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg, %arg
+  ret float %fmul
+}
+
+define float @ret_fmul_square_f32_maybe_undef(float %arg) {
+; CHECK-LABEL: define float @ret_fmul_square_f32_maybe_undef(
 ; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG]], [[ARG]]
 ; CHECK-NEXT:    ret float [[FMUL]]
