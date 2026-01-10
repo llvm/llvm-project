@@ -1570,6 +1570,14 @@ public:
         [](DerivedTy &self) -> nanobind::typed<nanobind::object, DerivedTy> {
           return self.maybeDownCast();
         });
+    cls.def("__str__", [](PyValue &self) {
+      PyPrintAccumulator printAccum;
+      printAccum.parts.append(std::string(DerivedTy::pyClassName) + "(");
+      mlirValuePrint(self.get(), printAccum.getCallback(),
+                     printAccum.getUserData());
+      printAccum.parts.append(")");
+      return printAccum.join();
+    });
 
     if (DerivedTy::getTypeIdFunction) {
       PyGlobals::get().registerValueCaster(
