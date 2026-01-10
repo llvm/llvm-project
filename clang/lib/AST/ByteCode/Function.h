@@ -240,13 +240,14 @@ private:
   /// Sets the code of a function.
   void setCode(FunctionDeclTy Source, unsigned NewFrameSize,
                llvm::SmallVector<std::byte> &&NewCode, SourceMap &&NewSrcMap,
-               llvm::SmallVector<Scope, 2> &&NewScopes, bool NewHasBody) {
+               llvm::SmallVector<Scope, 2> &&NewScopes, bool NewHasBody,
+               bool NewIsValid) {
     this->Source = Source;
     FrameSize = NewFrameSize;
     Code = std::move(NewCode);
     SrcMap = std::move(NewSrcMap);
     Scopes = std::move(NewScopes);
-    IsValid = true;
+    IsValid = NewIsValid;
     HasBody = NewHasBody;
   }
 

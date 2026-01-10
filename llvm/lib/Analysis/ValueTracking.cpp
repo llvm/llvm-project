@@ -5708,6 +5708,14 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           (KnownLHS.isKnownNever(fcNegative) &&
            KnownRHS.isKnownNever(fcPositive)))
         Known.knownNot(fcPositive);
+
+      // 0 / x => 0 or nan
+      if (KnownLHS.isKnownAlways(fcZero))
+        Known.knownNot(fcSubnormal | fcNormal | fcInf);
+
+      // x / 0 => nan or inf
+      if (KnownRHS.isKnownAlways(fcZero))
+        Known.knownNot(fcFinite);
     } else {
       // Inf REM x and x REM 0 produce NaN.
       if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
