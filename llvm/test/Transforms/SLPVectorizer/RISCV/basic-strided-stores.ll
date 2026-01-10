@@ -543,3 +543,43 @@ define void @overlap2(ptr %pl, ptr %ps) {
 
   ret void
 }
+
+define void @reorder(ptr %pl, ptr %ps) {
+  %gep_l0 = getelementptr i8, ptr %pl, i64 0
+  %gep_l1 = getelementptr i8, ptr %pl, i64 1
+  %gep_l2 = getelementptr i8, ptr %pl, i64 2
+  %gep_l3 = getelementptr i8, ptr %pl, i64 3
+  %gep_l4 = getelementptr i8, ptr %pl, i64 4
+  %gep_l5 = getelementptr i8, ptr %pl, i64 5
+  %gep_l6 = getelementptr i8, ptr %pl, i64 6
+  %gep_l7 = getelementptr i8, ptr %pl, i64 7
+
+  %load0  = load i8, ptr %gep_l0
+  %load1  = load i8, ptr %gep_l1
+  %load2  = load i8, ptr %gep_l2
+  %load3  = load i8, ptr %gep_l3
+  %load4  = load i8, ptr %gep_l4
+  %load5  = load i8, ptr %gep_l5
+  %load6  = load i8, ptr %gep_l6
+  %load7  = load i8, ptr %gep_l7
+
+  %gep_s0 = getelementptr i8, ptr %ps, i64 0
+  %gep_s1 = getelementptr i8, ptr %ps, i64 2
+  %gep_s2 = getelementptr i8, ptr %ps, i64 4
+  %gep_s3 = getelementptr i8, ptr %ps, i64 6
+  %gep_s4 = getelementptr i8, ptr %ps, i64 8
+  %gep_s5 = getelementptr i8, ptr %ps, i64 10
+  %gep_s6 = getelementptr i8, ptr %ps, i64 12
+  %gep_s7 = getelementptr i8, ptr %ps, i64 14
+
+  store i8 %load0, ptr %gep_s0
+  store i8 %load1, ptr %gep_s1
+  store i8 %load2, ptr %gep_s6
+  store i8 %load3, ptr %gep_s3
+  store i8 %load4, ptr %gep_s4
+  store i8 %load5, ptr %gep_s5
+  store i8 %load6, ptr %gep_s2
+  store i8 %load7, ptr %gep_s7
+
+  ret void
+}
