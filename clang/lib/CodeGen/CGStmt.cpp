@@ -1247,7 +1247,7 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
   if (EmitBoolCondBranch) {
     uint64_t BackedgeCount = getProfileCount(S.getBody()) - ParentCount;
     auto *I = Builder.CreateCondBr(
-        BoolCondVal, LoopBody, LoopExit.getBlock(),
+        BoolCondVal, LoopBody, LoopFalse,
         createProfileWeightsForLoop(S.getCond(), BackedgeCount));
 
     // Key Instructions: Emit the condition and branch as separate source
