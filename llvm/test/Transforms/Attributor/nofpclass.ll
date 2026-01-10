@@ -3630,10 +3630,10 @@ define float @fadd_double_no_zero__output_only_is_dynamic(float noundef nofpclas
 }
 
 ; Implies return must be 0
-define float @assume_select_condition_not_nan(float %arg) {
+define float @assume_select_condition_not_nan(float noundef %arg) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(inaccessiblemem: write)
-; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) float @assume_select_condition_not_nan
-; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR19:[0-9]+]] {
+; CHECK-LABEL: define noundef nofpclass(inf nzero sub norm) float @assume_select_condition_not_nan
+; CHECK-SAME: (float noundef [[ARG:%.*]]) #[[ATTR19:[0-9]+]] {
 ; CHECK-NEXT:    [[UNO:%.*]] = fcmp ord float [[ARG]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[UNO]]) #[[ATTR22]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[UNO]], float 0.000000e+00, float [[ARG]]
@@ -3662,10 +3662,10 @@ define float @assume_load(ptr %ptr) {
 }
 
 ; FIXME: Why is this not working?
-define float @assume_returned_arg(float %arg) {
+define float @assume_returned_arg(float noundef %arg) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(inaccessiblemem: write)
-; CHECK-LABEL: define float @assume_returned_arg
-; CHECK-SAME: (float returned [[ARG:%.*]]) #[[ATTR19]] {
+; CHECK-LABEL: define noundef float @assume_returned_arg
+; CHECK-SAME: (float noundef returned [[ARG:%.*]]) #[[ATTR19]] {
 ; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord float [[ARG]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[ORD]]) #[[ATTR22]]
 ; CHECK-NEXT:    ret float [[ARG]]
