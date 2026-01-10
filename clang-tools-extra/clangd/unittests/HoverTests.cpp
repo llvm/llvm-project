@@ -118,6 +118,76 @@ TEST(Hover, Structured) {
              {{"auto"}, std::string("y"), std::nullopt},
          };
        }},
+      {R"cpp(
+          template<typename T1, typename T2>
+          concept C = requires () { true; };
+
+          // Best foo ever.
+          template<C<int> T>
+          void [[fo^o]](T x) {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "Best foo ever.";
+         HI.Definition = "template <C<int> T> void foo(T x)";
+         HI.ReturnType = "void";
+         HI.Type = "void (T)";
+         HI.TemplateParameters = {
+             {{"class"}, std::string("T"), std::nullopt},
+         };
+         HI.Parameters = {
+             {{"T"}, std::string("x"), std::nullopt},
+         };
+       }},
+      {R"cpp(
+          template<typename T1, typename T2>
+          concept C = requires () { true; };
+
+          // Best foo ever.
+          void [[fo^o]](C<int> auto x) {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "Best foo ever.";
+         HI.Definition = "void foo(C<int> auto x)";
+         HI.ReturnType = "void";
+         HI.Type = "void (C<int> auto)";
+         HI.TemplateParameters = {
+             {{"class"}, std::string("x:auto"), std::nullopt},
+         };
+         HI.Parameters = {
+             {{"C<int> auto"}, std::string("x"), std::nullopt},
+         };
+       }},
+      {R"cpp(
+          template<typename T1, typename T2>
+          concept C = requires () { true; };
+
+          // Best foo ever.
+          template<C<int> T>
+          void [[fo^o]](T x, C<int> auto y) {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "Best foo ever.";
+         HI.Definition = "template <C<int> T> void foo(T x, C<int> auto y)";
+         HI.ReturnType = "void";
+         HI.Type = "void (T, C<int> auto)";
+         HI.TemplateParameters = {
+             {{"class"}, std::string("T"), std::nullopt},
+             {{"class"}, std::string("y:auto"), std::nullopt},
+         };
+         HI.Parameters = {
+             {{"T"}, std::string("x"), std::nullopt},
+             {{"C<int> auto"}, std::string("y"), std::nullopt},
+         };
+       }},
       // Inside namespace
       {R"cpp(
           namespace ns1 { namespace ns2 {
