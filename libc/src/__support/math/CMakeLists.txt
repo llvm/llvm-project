@@ -604,6 +604,16 @@ add_header_library(
 )
 
 add_header_library(
+  ilogbf128
+  HDRS
+    ilogbf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.include.llvm-libc-types.float128
+)
+
+add_header_library(
   inv_trigf_utils
   HDRS
     inv_trigf_utils.h
