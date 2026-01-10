@@ -297,11 +297,16 @@ void RecordType::complete(ArrayRef<Type> members, bool packed, bool padded) {
 Type RecordType::getLargestMember(const ::mlir::DataLayout &dataLayout) const {
   assert(isUnion() && "Only call getLargestMember on unions");
   llvm::ArrayRef<Type> members = getMembers();
+  if (members.empty())
+    return {};
+
   // If the union is padded, we need to ignore the last member,
   // which is the padding.
+  auto endIt = getPadded() ? std::prev(members.end()) : members.end();
+  if (endIt == members.begin())
+    return {};
   return *std::max_element(
-      members.begin(), getPadded() ? members.end() - 1 : members.end(),
-      [&](Type lhs, Type rhs) {
+      members.begin(), endIt, [&](Type lhs, Type rhs) {
         return dataLayout.getTypeABIAlignment(lhs) <
                    dataLayout.getTypeABIAlignment(rhs) ||
                (dataLayout.getTypeABIAlignment(lhs) ==
@@ -732,6 +737,33 @@ FuncType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
     return emitError()
            << "!cir.func cannot have an explicit 'void' return type";
   return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// MethodType Definitions
+//===----------------------------------------------------------------------===//
+
+static mlir::Type getMethodLayoutType(mlir::MLIRContext *ctx) {
+  // With Itanium ABI, member function pointers have the same layout as the
+  // following struct: struct { fnptr_t, ptrdiff_t }, where fnptr_t is a
+  // function pointer type.
+  // TODO: consider member function pointer layout in other ABIs
+  auto voidPtrTy = cir::PointerType::get(cir::VoidType::get(ctx));
+  mlir::Type fields[2]{voidPtrTy, voidPtrTy};
+  return cir::RecordType::get(ctx, fields, /*packed=*/false,
+                              /*padded=*/false, cir::RecordType::Struct);
+}
+
+llvm::TypeSize
+MethodType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
+                              mlir::DataLayoutEntryListRef params) const {
+  return dataLayout.getTypeSizeInBits(getMethodLayoutType(getContext()));
+}
+
+uint64_t
+MethodType::getABIAlignment(const mlir::DataLayout &dataLayout,
+                            mlir::DataLayoutEntryListRef params) const {
+  return dataLayout.getTypeSizeInBits(getMethodLayoutType(getContext()));
 }
 
 //===----------------------------------------------------------------------===//

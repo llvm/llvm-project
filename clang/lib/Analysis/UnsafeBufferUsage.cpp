@@ -29,7 +29,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstddef>
@@ -756,6 +755,9 @@ static const Expr *tryConstantFoldConditionalExpr(const Expr *E,
 // A pointer type expression is known to be null-terminated, if it has the
 // form: E.c_str(), for any expression E of `std::string` type.
 static bool isNullTermPointer(const Expr *Ptr, ASTContext &Ctx) {
+  // Strip CXXDefaultArgExpr before check:
+  if (const auto *DefaultArgE = dyn_cast<CXXDefaultArgExpr>(Ptr))
+    Ptr = DefaultArgE->getExpr();
   Ptr = tryConstantFoldConditionalExpr(Ptr, Ctx);
   if (isa<clang::StringLiteral>(Ptr->IgnoreParenImpCasts()))
     return true;
@@ -768,6 +770,14 @@ static bool isNullTermPointer(const Expr *Ptr, ASTContext &Ctx) {
     if (MD && RD && RD->isInStdNamespace() && MD->getIdentifier())
       if (MD->getName() == "c_str" && RD->getName() == "basic_string")
         return true;
+  }
+
+  // Functions known to return properly null terminated strings.
+  static const llvm::StringSet<> NullTermFunctions = {"strerror"};
+  if (auto *CE = dyn_cast<CallExpr>(Ptr->IgnoreParenImpCasts())) {
+    const FunctionDecl *F = CE->getDirectCallee();
+    if (F && F->getIdentifier() && NullTermFunctions.contains(F->getName()))
+      return true;
   }
   return false;
 }
@@ -2221,17 +2231,41 @@ public:
         });
     const Expr *UnsafeArg;
 
-    if (AnyAttr && !IsPrintf &&
-        (CE->getNumArgs() >= static_cast<unsigned>(Attr->getFirstArg()))) {
-      // for scanf-like functions, any format argument is considered unsafe:
+    if (!AnyAttr)
+      return false;
+
+    // FormatAttribute indexes are 1-based:
+    unsigned FmtIdx = Attr->getFormatIdx() - 1;
+    std::optional<unsigned> FmtArgIdx = Attr->getFirstArg() - 1;
+
+    if (isa<CXXMemberCallExpr>(CE)) {
+      // For CXX member calls, attribute parameters are specified as if there is
+      // an implicit "this".  The implicit "this" is invisible through CallExpr
+      // `CE`. (What makes it even less ergonomic is that the
+      //  implicit "this" is visible through CallExpr `CE` for CXX operator
+      //  calls!)
+      --FmtIdx;
+      --*FmtArgIdx;
+    } else if (CE->getStmtClass() != Stmt::CallExprClass &&
+               !isa<CXXOperatorCallExpr>(CE))
+      return false; // Ignore unsupported CallExpr subclasses
+    if (*FmtArgIdx >= CE->getNumArgs())
+      // Format arguments are allowed to be absent when variadic parameter is
+      // used.  So we need to check if those arguments exist. Moreover, when
+      // variadic parameter is NOT used, `Attr->getFirstArg()` could be an
+      // out-of-bound value. E.g.,
+      // clang does not complain about `__attribute__((__format__(__printf__, 2,
+      // 99))) void f(int, char *);`.
+      FmtArgIdx = std::nullopt;
+
+    if (AnyAttr && !IsPrintf && FmtArgIdx) {
+      // For scanf-like functions, any format argument is considered unsafe:
       Result.addNode(Tag, DynTypedNode::create(*CE));
       return true;
     }
+    // For printf-like functions:
     if (AnyAttr && libc_func_matchers::hasUnsafeFormatOrSArg(
-                       Ctx, CE, UnsafeArg,
-                       // FormatAttribute indexes are 1-based:
-                       /* FmtIdx= */ Attr->getFormatIdx() - 1,
-                       /* FmtArgIdx= */ Attr->getFirstArg() - 1)) {
+                       Ctx, CE, UnsafeArg, FmtIdx, FmtArgIdx)) {
       Result.addNode(Tag, DynTypedNode::create(*CE));
       Result.addNode(UnsafeStringTag, DynTypedNode::create(*UnsafeArg));
       return true;
@@ -3638,7 +3672,7 @@ static bool hasConflictingOverload(const FunctionDecl *FD) {
 //   1. Add the `[[clang::unsafe_buffer_usage]]` attribute to each declaration
 //   of 'F';
 //   2. Create a declaration of "NewF" next to each declaration of `F`;
-//   3. Create a definition of "F" (as its' original definition is now belongs
+//   3. Create a definition of "F" (as its original definition is now belongs
 //      to "NewF") next to its original definition.  The body of the creating
 //      definition calls to "NewF".
 //
@@ -4170,7 +4204,7 @@ getFixIts(FixableGadgetSets &FixablesForAllVars, const FixitStrategy &S,
   }
 
   // `FixItsForVariable` now contains only variables that can be
-  // fixed. A variable can be fixed if its' declaration and all Fixables
+  // fixed. A variable can be fixed if its declaration and all Fixables
   // associated to it can all be fixed.
 
   // To further remove from `FixItsForVariable` variables whose group mates
