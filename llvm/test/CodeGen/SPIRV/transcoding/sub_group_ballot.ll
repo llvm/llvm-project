@@ -861,36 +861,36 @@ declare dso_local spir_func double @_Z25sub_group_broadcast_firstd(double) local
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBallotFindMSB %[[#int]] %[[#ScopeSubgroup]] %[[#ballot2]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testBallotOperations(i32 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testBallotOperations(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func <4 x i32> @_Z16sub_group_balloti(i32 0)
   %r2 = tail call spir_func <4 x i32> @__spirv_GroupNonUniformBallot(i32 3, i1 false)
   %3 = tail call spir_func i32 @_Z24sub_group_inverse_ballotDv4_j(<4 x i32> %2)
   %r3 = tail call spir_func i1 @__spirv_GroupNonUniformInverseBallot(i32 3, <4 x i32> %r2)
-  store i32 %3, i32 addrspace(1)* %0, align 4
+  store i32 %3, ptr addrspace(1) %0, align 4
   %4 = tail call spir_func i32 @_Z28sub_group_ballot_bit_extractDv4_jj(<4 x i32> %2, i32 0)
   %r4 = tail call spir_func i32 @__spirv_GroupNonUniformBallotBitExtract(i32 3, <4 x i32> %r2, i32 0)
-  %5 = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 1
-  store i32 %4, i32 addrspace(1)* %5, align 4
+  %5 = getelementptr inbounds i32, ptr addrspace(1) %0, i64 1
+  store i32 %4, ptr addrspace(1) %5, align 4
   %6 = tail call spir_func i32 @_Z26sub_group_ballot_bit_countDv4_j(<4 x i32> %2)
   %r6 = tail call spir_func i32 @__spirv_GroupNonUniformBallotBitCount(i32 3, i32 0, <4 x i32> %r2)
-  %7 = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 2
-  store i32 %6, i32 addrspace(1)* %7, align 4
+  %7 = getelementptr inbounds i32, ptr addrspace(1) %0, i64 2
+  store i32 %6, ptr addrspace(1) %7, align 4
   %8 = tail call spir_func i32 @_Z31sub_group_ballot_inclusive_scanDv4_j(<4 x i32> %2)
   %r8 = tail call spir_func i32 @__spirv_GroupNonUniformBallotBitCount(i32 3, i32 1, <4 x i32> %r2)
-  %9 = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 3
-  store i32 %8, i32 addrspace(1)* %9, align 4
+  %9 = getelementptr inbounds i32, ptr addrspace(1) %0, i64 3
+  store i32 %8, ptr addrspace(1) %9, align 4
   %10 = tail call spir_func i32 @_Z31sub_group_ballot_exclusive_scanDv4_j(<4 x i32> %2)
   %r10 = tail call spir_func i32 @__spirv_GroupNonUniformBallotBitCount(i32 3, i32 2, <4 x i32> %r2)
-  %11 = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 4
-  store i32 %10, i32 addrspace(1)* %11, align 4
+  %11 = getelementptr inbounds i32, ptr addrspace(1) %0, i64 4
+  store i32 %10, ptr addrspace(1) %11, align 4
   %12 = tail call spir_func i32 @_Z25sub_group_ballot_find_lsbDv4_j(<4 x i32> %2)
   %r12 = tail call spir_func i32 @__spirv_GroupNonUniformBallotFindLSB(i32 3, <4 x i32> %r2)
-  %13 = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 5
-  store i32 %12, i32 addrspace(1)* %13, align 4
+  %13 = getelementptr inbounds i32, ptr addrspace(1) %0, i64 5
+  store i32 %12, ptr addrspace(1) %13, align 4
   %14 = tail call spir_func i32 @_Z25sub_group_ballot_find_msbDv4_j(<4 x i32> %2)
   %r14 = tail call spir_func i32 @__spirv_GroupNonUniformBallotFindMSB(i32 3, <4 x i32> %r2)
-  %15 = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 6
-  store i32 %14, i32 addrspace(1)* %15, align 4
+  %15 = getelementptr inbounds i32, ptr addrspace(1) %0, i64 6
+  store i32 %14, ptr addrspace(1) %15, align 4
   ret void
 }
 
@@ -924,21 +924,21 @@ declare dso_local spir_func i32 @__spirv_GroupNonUniformBallotFindMSB(i32, <4 x 
 ; CHECK-SPIRV: %[[#]] = OpLoad %[[#int4]] %[[#ltMask]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testSubgroupMasks(<4 x i32> addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testSubgroupMasks(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func <4 x i32> @_Z21get_sub_group_eq_maskv()
-  store <4 x i32> %2, <4 x i32> addrspace(1)* %0, align 16
+  store <4 x i32> %2, ptr addrspace(1) %0, align 16
   %3 = tail call spir_func <4 x i32> @_Z21get_sub_group_ge_maskv()
-  %4 = getelementptr inbounds <4 x i32>, <4 x i32> addrspace(1)* %0, i64 1
-  store <4 x i32> %3, <4 x i32> addrspace(1)* %4, align 16
+  %4 = getelementptr inbounds <4 x i32>, ptr addrspace(1) %0, i64 1
+  store <4 x i32> %3, ptr addrspace(1) %4, align 16
   %5 = tail call spir_func <4 x i32> @_Z21get_sub_group_gt_maskv()
-  %6 = getelementptr inbounds <4 x i32>, <4 x i32> addrspace(1)* %0, i64 2
-  store <4 x i32> %5, <4 x i32> addrspace(1)* %6, align 16
+  %6 = getelementptr inbounds <4 x i32>, ptr addrspace(1) %0, i64 2
+  store <4 x i32> %5, ptr addrspace(1) %6, align 16
   %7 = tail call spir_func <4 x i32> @_Z21get_sub_group_le_maskv()
-  %8 = getelementptr inbounds <4 x i32>, <4 x i32> addrspace(1)* %0, i64 3
-  store <4 x i32> %7, <4 x i32> addrspace(1)* %8, align 16
+  %8 = getelementptr inbounds <4 x i32>, ptr addrspace(1) %0, i64 3
+  store <4 x i32> %7, ptr addrspace(1) %8, align 16
   %9 = tail call spir_func <4 x i32> @_Z21get_sub_group_lt_maskv()
-  %10 = getelementptr inbounds <4 x i32>, <4 x i32> addrspace(1)* %0, i64 4
-  store <4 x i32> %9, <4 x i32> addrspace(1)* %10, align 16
+  %10 = getelementptr inbounds <4 x i32>, ptr addrspace(1) %0, i64 4
+  store <4 x i32> %9, ptr addrspace(1) %10, align 16
   ret void
 }
 

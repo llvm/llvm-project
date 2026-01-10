@@ -142,10 +142,10 @@ public:
   void Post(const Star &) { Put('*'); } // R701 &c.
   void Post(const TypeParamValue::Deferred &) { Put(':'); } // R701
   void Unparse(const DeclarationTypeSpec::Type &x) { // R703
-    Word("TYPE("), Walk(x.derived), Put(')');
+    Word("TYPE("), Walk(x.v), Put(')');
   }
   void Unparse(const DeclarationTypeSpec::Class &x) {
-    Word("CLASS("), Walk(x.derived), Put(')');
+    Word("CLASS("), Walk(x.v), Put(')');
   }
   void Post(const DeclarationTypeSpec::ClassStar &) { Word("CLASS(*)"); }
   void Post(const DeclarationTypeSpec::TypeStar &) { Word("TYPE(*)"); }
@@ -204,8 +204,11 @@ public:
     Put('('), Walk(x.t, ","), Put(')');
   }
   void Unparse(const CharSelector::LengthAndKind &x) { // R721
-    Put('('), Word("KIND="), Walk(x.kind);
-    Walk(", LEN=", x.length), Put(')');
+    Put('(');
+    Word("KIND=");
+    Walk(std::get<ScalarIntConstantExpr>(x.t));
+    Walk(", LEN=", std::get<std::optional<TypeParamValue>>(x.t));
+    Put(')');
   }
   void Unparse(const LengthSelector &x) { // R722
     common::visit(common::visitors{
@@ -430,7 +433,8 @@ public:
     Put('['), Walk(x.v), Put(']');
   }
   void Unparse(const AcSpec &x) { // R770
-    Walk(x.type, "::"), Walk(x.values, ", ");
+    Walk(std::get<std::optional<TypeSpec>>(x.t), "::");
+    Walk(std::get<std::list<AcValue>>(x.t), ", ");
   }
   template <typename A, typename B> void Unparse(const LoopBounds<A, B> &x) {
     Walk(x.name), Put('='), Walk(x.lower), Put(','), Walk(x.upper);
@@ -723,14 +727,15 @@ public:
     }
   }
   void Unparse(const ImportStmt &x) { // R867
+    const auto &[kind, names]{x.t};
     Word("IMPORT");
-    switch (x.kind) {
+    switch (kind) {
     case common::ImportKind::Default:
-      Walk(" :: ", x.names, ", ");
+      Walk(" :: ", names, ", ");
       break;
     case common::ImportKind::Only:
       Put(", "), Word("ONLY: ");
-      Walk(x.names, ", ");
+      Walk(names, ", ");
       break;
     case common::ImportKind::None:
       Word(", NONE");
@@ -757,7 +762,7 @@ public:
   }
   void Unparse(const CommonStmt &x) { // R873
     Word("COMMON ");
-    Walk(x.blocks);
+    Walk(x.v);
   }
   void Unparse(const CommonBlockObject &x) { // R874
     Walk(std::get<Name>(x.t));
@@ -1103,7 +1108,8 @@ public:
         x.u);
   }
   void Unparse(const CaseValueRange::Range &x) { // R1146
-    Walk(x.lower), Put(':'), Walk(x.upper);
+    const auto &[lower, upper]{x.t};
+    Walk(lower), Put(':'), Walk(upper);
   }
   void Unparse(const SelectRankStmt &x) { // R1149
     Walk(std::get<0>(x.t), ": ");
