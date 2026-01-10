@@ -3193,6 +3193,18 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_sin",
+    hdrs = ["src/__support/math/sin.h"],
+    deps = [
+        ":__support_fputil_multiply_add",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":__support_range_reduction_double",
+        ":__support_sincos_eval",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_sinhfcoshf_utils",
     hdrs = ["src/__support/math/sinhfcoshf_utils.h"],
     deps = [
@@ -4748,11 +4760,7 @@ libc_math_function(name = "setpayloadsigf16")
 libc_math_function(
     name = "sin",
     additional_deps = [
-        ":__support_fputil_multiply_add",
-        ":__support_macros_optimization",
-        ":__support_macros_properties_cpu_features",
-        ":__support_range_reduction_double",
-        ":__support_sincos_eval",
+        ":__support_math_sin",
     ],
 )
 
