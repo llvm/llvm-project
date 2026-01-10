@@ -370,6 +370,15 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
 
   Generic_GCC::AddMultiarchPaths(D, SysRoot, OSLibDir, Paths);
 
+  // Add -L/path/to/sycl/lib when -fsycl is specified or when libsycl.so is
+  // available. The -lsycl option is added implicitly by -fsycl and links
+  // against the SYCL runtime library (libsycl.so), which is located in this
+  // directory.
+  if (StringRef(D.Dir).starts_with(SysRoot) &&
+      (Args.hasArg(options::OPT_fsycl) ||
+       D.getVFS().exists(D.Dir + "/../lib/libsycl.so")))
+    addPathIfExists(D, D.Dir + "/../lib", Paths);
+
   addPathIfExists(D, concat(SysRoot, "/lib"), Paths);
   addPathIfExists(D, concat(SysRoot, "/usr/lib"), Paths);
 }
