@@ -374,6 +374,7 @@ def IIT_V2048 : IIT_Vec<2048, 52>;
 def IIT_V4096 : IIT_Vec<4096, 53>;
 // Constrained type encoding for overloaded intrinsics.
 def IIT_ANYTYPE : IIT_Base<93>;
+def IIT_NONETYPE : IIT_Base<94>;
 }
 
 defvar IIT_all_FixedTypes = !filter(iit, IIT_all,
@@ -463,6 +464,23 @@ class AnyTypeOf<list<LLVMType> allowed_types> : LLVMAnyType<Any> {
     [IIT_ARG.Number, EncAnyType<ArgCode>.ret],
     [IIT_ANYTYPE.Number, !size(allowed_types)],
     !foldl([]<int>, allowed_types, accum, ty,
+      !listconcat(accum, ty.Sig))
+  );
+}
+
+// NoneTypeOf: Exclude specific types from overloaded type (inverse of AnyTypeOf).
+// Encoding follows the pattern: [IIT_ARG, EncAny, IIT_NONETYPE, count, type_sigs...].
+class NoneTypeOf<list<LLVMType> excluded_types> : LLVMAnyType<Any> {
+  list<LLVMType> ExcludedTypes = excluded_types;
+  
+  // Validation: specifying maximal 255 number of excluded types.
+  assert !le(!size(excluded_types), 255),
+         "NoneTypeOf cannot exceed 255 excluded types";
+  
+  let Sig = !listconcat(
+    [IIT_ARG.Number, EncAnyType<ArgCode>.ret],
+    [IIT_NONETYPE.Number, !size(excluded_types)],
+    !foldl([]<int>, excluded_types, accum, ty,
       !listconcat(accum, ty.Sig))
   );
 }

@@ -183,6 +183,7 @@ namespace Intrinsic {
       AArch64Svcount,
       ArgumentTypeConstraint, // For AnyTypeOf - marks constrained argument
                               // types.
+      ArgumentTypeExclusion,  // For NoneTypeOf - marks excluded argument types.
     } Kind;
 
     union {
@@ -237,6 +238,12 @@ namespace Intrinsic {
     // For ArgumentTypeConstraint: get number of allowed types.
     unsigned getArgumentNumConstraints() const {
       assert(Kind == ArgumentTypeConstraint);
+      return Argument_NumConstraints;
+    }
+
+    // For ArgumentTypeExclusion: get number of excluded types.
+    unsigned getArgumentNumExclusions() const {
+      assert(Kind == ArgumentTypeExclusion);
       return Argument_NumConstraints;
     }
 
