@@ -2249,10 +2249,8 @@ struct CounterCoverageMappingBuilder
 
     // Update the state for CodeGenPGO
     assert(MCDCState.DecisionByStmt.contains(E));
-    MCDCState.DecisionByStmt[E] = {
-        MCDCState.BitmapBits, // Top
-        std::move(Builder.Indices),
-    };
+    MCDCState.DecisionByStmt[E].update(MCDCState.BitmapBits, // Top
+                                       std::move(Builder.Indices));
 
     auto DecisionParams = mcdc::DecisionParameters{
         MCDCState.BitmapBits += NumTVs, // Tail
