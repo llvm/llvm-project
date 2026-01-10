@@ -1185,8 +1185,8 @@ mlir.dialects.<dialect-namespace>` in Python.
 Dialect attributes and types are provided in Python as subclasses of the
 `mlir.ir.Attribute` and `mlir.ir.Type` classes, respectively. Bindings APIs for
 attributes and types must connect to the relevant C APIs for building and
-inspection, which must be provided first. Bindings for `Attribute` and `Type`
-subclasses can be defined using exactly the same way patterns implemented in the “core” extension:
+inspection, which must be provided first. Bindings for downstream/dialect `Attribute` and `Type`
+subclasses can be defined using exactly the same patterns as in the “core” extension:
 
 ```c++
 #include "mlir/Bindings/Python/IRCore.h"
