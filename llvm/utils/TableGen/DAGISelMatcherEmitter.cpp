@@ -10,12 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DAGISelMatcher.h"
 #include "Basic/SDNodeProperties.h"
 #include "Common/CodeGenDAGPatterns.h"
 #include "Common/CodeGenInstruction.h"
 #include "Common/CodeGenRegisters.h"
 #include "Common/CodeGenTarget.h"
+#include "DAGISelMatcher.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
