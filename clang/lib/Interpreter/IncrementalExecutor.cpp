@@ -69,9 +69,8 @@ IncrementalExecutor::createDefaultJITBuilder(
 
 IncrementalExecutor::IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
                                          llvm::orc::LLJITBuilder &JITBuilder,
-                                         Interpreter::JITConfig Config,
                                          llvm::Error &Err)
-    : TSCtx(TSC), OutOfProcessChildPid(Config.ExecutorPID) {
+    : TSCtx(TSC) {
   using namespace llvm::orc;
   llvm::ErrorAsOutParameter EAO(&Err);
 
