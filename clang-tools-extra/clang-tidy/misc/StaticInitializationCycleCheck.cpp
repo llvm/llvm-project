@@ -31,7 +31,7 @@ bool isUnusedValue(const DeclRefExpr *DRE, ASTContext &ACtx) {
     if (const Expr *E = Parents[0].get<Expr>()) {
       if (E->isIntegerConstantExpr(ACtx))
         return true;
-      if (ParentBO = dyn_cast<BinaryOperator>(E))
+      if ((ParentBO = dyn_cast<BinaryOperator>(E)))
         break;
     }
     Parents = PMC.getParents(Parents[0]);

@@ -163,7 +163,9 @@ template <class T>
 T S<T>::f1() {
   return A;
 }
+
+void f(S<int> *) {}
 }
-// CHECK-NOTES: :[[@LINE-7]]:12: warning: Static variable initialization cycle detected involving 'A'
-// CHECK-NOTES: :[[@LINE-4]]:10: note: Value of 'A' may be used to compute result of 'f1'
-// CHECK-NOTES: :[[@LINE-9]]:16: note: Result of 'f1' may be used to initialize variable 'A' here
+// CHECK-NOTES: :[[@LINE-9]]:12: warning: Static variable initialization cycle detected involving 'A'
+// CHECK-NOTES: :[[@LINE-6]]:10: note: Value of 'A' may be used to compute result of 'f1'
+// CHECK-NOTES: :[[@LINE-11]]:16: note: Result of 'f1' may be used to initialize variable 'A' here
