@@ -1,6 +1,8 @@
 set(LIBC_INCLUDE_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(LIBC_INCLUDE_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
+include(LLVMLibCHeaderRules)
+
 function(add_proxy_header_library target_name)
   cmake_parse_arguments(
     "ADD_PROXY_HEADER"

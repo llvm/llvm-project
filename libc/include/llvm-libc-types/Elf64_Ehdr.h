@@ -14,6 +14,7 @@
 #include "Elf64_Off.h"
 #include "Elf64_Word.h"
 
+// NOTE: This macro is also defined in Elf32_Ehdr.h.
 #define EI_NIDENT 16
 
 typedef struct {
