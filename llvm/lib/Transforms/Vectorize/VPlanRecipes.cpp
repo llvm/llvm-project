@@ -3196,11 +3196,12 @@ static bool isUsedByLoadStoreAddress(const VPUser *V) {
 
     // Skip blends that use V only through a compare by checking if any incoming
     // value was already visited.
+    VPValue *SelTrue, *SelFalse;
     if (isa_and_nonnull<PHINode>(Cur->getUnderlyingValue()) &&
-        isa<VPInstruction>(Cur) &&
-        cast<VPInstruction>(Cur)->getOpcode() == Instruction::Select &&
-        !Seen.contains(Cur->getOperand(1)->getDefiningRecipe()) &&
-        !Seen.contains(Cur->getOperand(2)->getDefiningRecipe()))
+        match(Cur, m_VPInstruction<Instruction::Select>(
+                       m_VPValue(), m_VPValue(SelTrue), m_VPValue(SelFalse))) &&
+        !Seen.contains(SelTrue->getDefiningRecipe()) &&
+        !Seen.contains(SelFalse->getDefiningRecipe()))
       continue;
 
     for (VPUser *U : Cur->users()) {

@@ -7042,7 +7042,7 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
     }
   }
 
-  DenseMap<PHINode *, unsigned> PHISelects;
+  SmallDenseMap<PHINode *, unsigned> PHISelects;
   DenseSet<Instruction *> SeenInstrs;
   auto Iter = vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
@@ -7117,8 +7117,7 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
         // Keep track of how many select VPInstructions (not replicates) are
         // used for a phi.
         if (auto *PHI = dyn_cast<PHINode>(UI)) {
-          if (match(&R, m_VPInstruction<Instruction::Select>(
-                            m_VPValue(), m_VPValue(), m_VPValue()))) {
+          if (match(&R, m_VPInstruction<Instruction::Select>())) {
             // The legacy cost model costs non-header phis with a scalar VF or
             // that only use one lane as a phi.
             if (VF.isScalar() ||
