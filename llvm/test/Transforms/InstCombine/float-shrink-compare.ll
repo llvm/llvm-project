@@ -465,11 +465,8 @@ define i1 @test18(float %x, float %y, float %z) {
 
 define i1 @test_fminimum_num(float %x, float %y, float %z) {
 ; CHECK-LABEL: @test_fminimum_num(
-; CHECK-NEXT:    [[TMP1:%.*]] = fpext float [[X:%.*]] to double
-; CHECK-NEXT:    [[TMP2:%.*]] = fpext float [[Y:%.*]] to double
-; CHECK-NEXT:    [[TMP3:%.*]] = call double @fminimum_num(double [[TMP1]], double [[TMP2]]) #[[ATTR3:[0-9]+]]
-; CHECK-NEXT:    [[TMP4:%.*]] = fpext float [[Z:%.*]] to double
-; CHECK-NEXT:    [[TMP5:%.*]] = fcmp oeq double [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[FMINIMUM_NUMF:%.*]] = call float @llvm.minimumnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    [[TMP5:%.*]] = fcmp oeq float [[FMINIMUM_NUMF]], [[Z:%.*]]
 ; CHECK-NEXT:    ret i1 [[TMP5]]
 ;
   %1 = fpext float %x to double
@@ -482,11 +479,8 @@ define i1 @test_fminimum_num(float %x, float %y, float %z) {
 
 define i1 @test_fmaximum_num(float %x, float %y, float %z) {
 ; CHECK-LABEL: @test_fmaximum_num(
-; CHECK-NEXT:    [[TMP1:%.*]] = fpext float [[X:%.*]] to double
-; CHECK-NEXT:    [[TMP2:%.*]] = fpext float [[Y:%.*]] to double
-; CHECK-NEXT:    [[TMP3:%.*]] = call double @fmaximum_num(double [[TMP1]], double [[TMP2]]) #[[ATTR3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = fpext float [[Z:%.*]] to double
-; CHECK-NEXT:    [[TMP5:%.*]] = fcmp oeq double [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[FMAXIMUM_NUMF:%.*]] = call float @llvm.maximumnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    [[TMP5:%.*]] = fcmp oeq float [[FMAXIMUM_NUMF]], [[Z:%.*]]
 ; CHECK-NEXT:    ret i1 [[TMP5]]
 ;
   %1 = fpext float %x to double

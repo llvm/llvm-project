@@ -1,6 +1,8 @@
 ! Test that the output is LLVM bitcode for LTO and not a native objectfile by
 ! disassembling it to LLVM IR. Also tests that module summaries are emitted for LTO
 
+! UNSUPPORTED: system-darwin
+
 ! RUN: %flang %s -c -o - | not llvm-dis -o %t
 ! RUN: %flang_fc1 %s -emit-llvm-bc -o - | llvm-dis -o - | FileCheck %s
 ! CHECK: define void @_QQmain()

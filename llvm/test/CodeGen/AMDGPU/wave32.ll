@@ -2558,7 +2558,7 @@ define amdgpu_kernel void @fcmp64(float %n, float %s) {
 ; GFX1032-NEXT:    s_and_saveexec_b32 s2, s1
 ; GFX1032-NEXT:    s_xor_b32 s1, exec_lo, s2
 ; GFX1032-NEXT:  ; %bb.1: ; %frem.else
-; GFX1032-NEXT:    v_bfi_b32 v1, 0x7fffffff, 0, v0
+; GFX1032-NEXT:    v_and_b32_e32 v1, 0x80000000, v0
 ; GFX1032-NEXT:    v_cmp_eq_f32_e64 vcc_lo, v0, |s0|
 ; GFX1032-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc_lo
 ; GFX1032-NEXT:    ; implicit-def: $vgpr0
@@ -2650,7 +2650,7 @@ define amdgpu_kernel void @fcmp64(float %n, float %s) {
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[2:3], s[0:1]
 ; GFX1064-NEXT:    s_xor_b64 s[0:1], exec, s[2:3]
 ; GFX1064-NEXT:  ; %bb.1: ; %frem.else
-; GFX1064-NEXT:    v_bfi_b32 v1, 0x7fffffff, 0, v0
+; GFX1064-NEXT:    v_and_b32_e32 v1, 0x80000000, v0
 ; GFX1064-NEXT:    v_cmp_eq_f32_e64 vcc, v0, |s6|
 ; GFX1064-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc
 ; GFX1064-NEXT:    ; implicit-def: $vgpr0
@@ -2864,7 +2864,7 @@ define amdgpu_kernel void @fcmp32(float %n, float %s) {
 ; GFX1032-NEXT:    s_and_saveexec_b32 s2, s1
 ; GFX1032-NEXT:    s_xor_b32 s1, exec_lo, s2
 ; GFX1032-NEXT:  ; %bb.1: ; %frem.else
-; GFX1032-NEXT:    v_bfi_b32 v1, 0x7fffffff, 0, v0
+; GFX1032-NEXT:    v_and_b32_e32 v1, 0x80000000, v0
 ; GFX1032-NEXT:    v_cmp_eq_f32_e64 vcc_lo, v0, |s0|
 ; GFX1032-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc_lo
 ; GFX1032-NEXT:    ; implicit-def: $vgpr0
@@ -2956,7 +2956,7 @@ define amdgpu_kernel void @fcmp32(float %n, float %s) {
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[2:3], s[0:1]
 ; GFX1064-NEXT:    s_xor_b64 s[0:1], exec, s[2:3]
 ; GFX1064-NEXT:  ; %bb.1: ; %frem.else
-; GFX1064-NEXT:    v_bfi_b32 v1, 0x7fffffff, 0, v0
+; GFX1064-NEXT:    v_and_b32_e32 v1, 0x80000000, v0
 ; GFX1064-NEXT:    v_cmp_eq_f32_e64 vcc, v0, |s6|
 ; GFX1064-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc
 ; GFX1064-NEXT:    ; implicit-def: $vgpr0

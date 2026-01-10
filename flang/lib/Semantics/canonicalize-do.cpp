@@ -92,8 +92,12 @@ public:
                 [&](common::Indirection<OpenMPConstruct> &construct) {
                   // If the body of the OpenMP construct ends with a label,
                   // treat the label as ending the construct itself.
-                  CanonicalizeIfMatch(
-                      block, stack, i, omp::GetFinalLabel(construct.value()));
+                  OpenMPConstruct &omp{construct.value()};
+                  if (CanonicalizeIfMatch(
+                          block, stack, i, omp::GetFinalLabel(omp))) {
+                    MarkOpenMPConstruct(
+                        omp, OmpDirectiveSpecification::Flag::CrossesLabelDo);
+                  }
                 },
             },
             executableConstruct->u);
@@ -103,12 +107,12 @@ public:
 
 private:
   template <typename T>
-  void CanonicalizeIfMatch(Block &originalBlock, std::vector<LabelInfo> &stack,
+  bool CanonicalizeIfMatch(Block &originalBlock, std::vector<LabelInfo> &stack,
       Block::iterator &i, Statement<T> &statement) {
-    CanonicalizeIfMatch(originalBlock, stack, i, statement.label);
+    return CanonicalizeIfMatch(originalBlock, stack, i, statement.label);
   }
 
-  void CanonicalizeIfMatch(Block &originalBlock, std::vector<LabelInfo> &stack,
+  bool CanonicalizeIfMatch(Block &originalBlock, std::vector<LabelInfo> &stack,
       Block::iterator &i, std::optional<Label> label) {
     if (!stack.empty() && label && stack.back().label == *label) {
       auto currentLabel{stack.back().label};
@@ -141,7 +145,26 @@ private:
         stack.pop_back();
       } while (!stack.empty() && stack.back().label == currentLabel);
       i = --next;
+      return true;
+    } else {
+      return false;
     }
+  }
+
+  void MarkOpenMPConstruct(
+      OpenMPConstruct &omp, OmpDirectiveSpecification::Flag flag) {
+    common::visit(
+        [&](const auto &s) {
+          using S = std::decay_t<decltype(s)>;
+          if constexpr (std::is_base_of_v<OmpBlockConstruct, S> ||
+              std::is_same_v<OpenMPLoopConstruct, S>) {
+            const OmpDirectiveSpecification &beginSpec{s.BeginDir()};
+            auto &flags{
+                std::get<OmpDirectiveSpecification::Flags>(beginSpec.t)};
+            const_cast<OmpDirectiveSpecification::Flags &>(flags).set(flag);
+          }
+        },
+        omp.u);
   }
 };
 

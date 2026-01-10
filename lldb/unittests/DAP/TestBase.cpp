@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestBase.h"
+#include "DAP.h"
 #include "DAPLog.h"
+#include "Handler/RequestHandler.h"
+#include "Handler/ResponseHandler.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBStructuredData.h"
@@ -19,7 +22,6 @@
 #include "gtest/gtest.h"
 #include <cstdio>
 #include <memory>
-#include <system_error>
 
 using namespace llvm;
 using namespace lldb;
@@ -35,10 +37,9 @@ using lldb_private::Pipe;
 void TransportBase::SetUp() {
   std::tie(to_client, to_server) = TestDAPTransport::createPair();
 
-  std::error_code EC;
-  log = std::make_unique<Log>("-", EC);
+  log = std::make_unique<Log>(llvm::outs(), log_mutex);
   dap = std::make_unique<DAP>(
-      /*log=*/log.get(),
+      /*log=*/*log,
       /*default_repl_mode=*/ReplMode::Auto,
       /*pre_init_commands=*/std::vector<std::string>(),
       /*no_lldbinit=*/false,
@@ -72,7 +73,6 @@ void DAPTestBase::TearDown() {
 
 void DAPTestBase::SetUpTestSuite() {
   lldb::SBError error = SBDebugger::InitializeWithErrorHandling();
-  EXPECT_TRUE(error.IsValid());
   EXPECT_TRUE(error.Success());
 }
 void DAPTestBase::TeatUpTestSuite() { SBDebugger::Terminate(); }

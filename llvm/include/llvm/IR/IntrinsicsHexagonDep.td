@@ -491,6 +491,20 @@ class Hexagon_custom_v32i32v128i1_v32i32v32i32v128i1_Intrinsic_128B<
        [llvm_v32i32_ty,llvm_v128i1_ty], [llvm_v32i32_ty,llvm_v32i32_ty,llvm_v128i1_ty],
        intr_properties>;
 
+// tag : V6_vaddcarryo
+class Hexagon_custom_v16i32v64i1_v16i32v16i32_Intrinsic<
+      list<IntrinsicProperty> intr_properties = [IntrNoMem]>
+  : Hexagon_NonGCC_Intrinsic<
+       [llvm_v16i32_ty,llvm_v64i1_ty], [llvm_v16i32_ty,llvm_v16i32_ty],
+       intr_properties>;
+
+// tag : V6_vaddcarryo
+class Hexagon_custom_v32i32v128i1_v32i32v32i32_Intrinsic_128B<
+      list<IntrinsicProperty> intr_properties = [IntrNoMem]>
+  : Hexagon_NonGCC_Intrinsic<
+       [llvm_v32i32_ty,llvm_v128i1_ty], [llvm_v32i32_ty,llvm_v32i32_ty],
+       intr_properties>;
+
 // tag : V6_vaddcarrysat
 class Hexagon_v16i32_v16i32v16i32v64i1_Intrinsic<string GCCIntSuffix,
       list<IntrinsicProperty> intr_properties = [IntrNoMem]>

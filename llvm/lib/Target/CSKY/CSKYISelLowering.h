@@ -159,6 +159,8 @@ private:
                               SDValue C) const override;
   bool isCheapToSpeculateCttz(Type *Ty) const override;
   bool isCheapToSpeculateCtlz(Type *Ty) const override;
+
+  bool softPromoteHalfType() const override { return true; }
 };
 
 } // namespace llvm

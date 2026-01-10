@@ -62,3 +62,45 @@ define i64 @ptrtoaddr(ptr %ptr) {
   %v5 = and i64 %v3, 2
   ret i64 %v5
 }
+
+define i64 @redundant_mask(ptr %ptr) {
+; CHECK-LABEL: define i64 @redundant_mask(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[PTR]], align 4
+; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[PTR]] to i64
+; CHECK-NEXT:    [[MASK:%.*]] = and i64 [[INT]], -4
+; CHECK-NEXT:    ret i64 [[INT]]
+;
+  %load = load i32, ptr %ptr, align 4
+  %int = ptrtoint ptr %ptr to i64
+  %mask = and i64 %int, -4
+  ret i64 %mask
+}
+
+define i64 @redundant_mask2(ptr %ptr) {
+; CHECK-LABEL: define i64 @redundant_mask2(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[PTR]], align 4
+; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[PTR]] to i64
+; CHECK-NEXT:    [[MASK:%.*]] = and i64 [[INT]], -3
+; CHECK-NEXT:    ret i64 [[INT]]
+;
+  %load = load i32, ptr %ptr, align 4
+  %int = ptrtoint ptr %ptr to i64
+  %mask = and i64 %int, -3
+  ret i64 %mask
+}
+
+define i64 @not_redundant_mask(ptr %ptr) {
+; CHECK-LABEL: define i64 @not_redundant_mask(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[PTR]], align 4
+; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[PTR]] to i64
+; CHECK-NEXT:    [[MASK:%.*]] = and i64 [[INT]], -5
+; CHECK-NEXT:    ret i64 [[MASK]]
+;
+  %load = load i32, ptr %ptr, align 4
+  %int = ptrtoint ptr %ptr to i64
+  %mask = and i64 %int, -5
+  ret i64 %mask
+}

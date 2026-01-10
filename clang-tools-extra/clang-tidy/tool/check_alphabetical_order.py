@@ -126,9 +126,9 @@ def _scan_bullet_blocks(lines: Sequence[str], start: int, end: int) -> ScannedBl
     return ScannedBlocks(blocks_with_pos, i)
 
 
-def read_text(path: str) -> List[str]:
+def read_text(path: str) -> str:
     with io.open(path, "r", encoding="utf-8") as f:
-        return f.read().splitlines(True)
+        return f.read()
 
 
 def write_text(path: str, content: str) -> None:
@@ -352,7 +352,8 @@ def _emit_duplicate_report(lines: Sequence[str], title: str) -> Optional[str]:
     if not (dups_detail := find_duplicate_entries(lines, title)):
         return None
     out: List[str] = []
-    out.append(f"Error: Duplicate entries in '{title}':\n")
+    out.append(f"Error: Duplicate entries in '{title}'.\n")
+    out.append("\nPlease merge these entries into a single bullet point.\n")
     for key, occs in dups_detail:
         out.append(f"\n-- Duplicate: {key}\n")
         for start_idx, block in occs:
@@ -364,14 +365,16 @@ def _emit_duplicate_report(lines: Sequence[str], title: str) -> Optional[str]:
 
 
 def process_release_notes(out_path: str, rn_doc: str) -> int:
-    lines = read_text(rn_doc)
+    text = read_text(rn_doc)
+    lines = text.splitlines(True)
     normalized = normalize_release_notes(lines)
     write_text(out_path, normalized)
 
     # Prefer reporting ordering issues first; let diff fail the test.
-    if "".join(lines) != normalized:
+    if text != normalized:
         sys.stderr.write(
-            "Note: 'ReleaseNotes.rst' is not normalized; Please fix ordering first.\n"
+            "\nEntries in 'clang-tools-extra/docs/ReleaseNotes.rst' are not alphabetically sorted.\n"
+            "Fix the ordering by applying diff printed below.\n\n"
         )
         return 0
 
@@ -383,8 +386,15 @@ def process_release_notes(out_path: str, rn_doc: str) -> int:
 
 
 def process_checks_list(out_path: str, list_doc: str) -> int:
-    lines = read_text(list_doc)
-    normalized = normalize_list_rst("".join(lines))
+    text = read_text(list_doc)
+    normalized = normalize_list_rst(text)
+
+    if text != normalized:
+        sys.stderr.write(
+            "\nChecks in 'clang-tools-extra/docs/clang-tidy/checks/list.rst' csv-table are not alphabetically sorted.\n"
+            "Fix the ordering by applying diff printed below.\n\n"
+        )
+
     write_text(out_path, normalized)
     return 0
 

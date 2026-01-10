@@ -265,7 +265,7 @@ define float @clamp_only_denormal_or_zero(float %arg) {
 }
 
 define float @clamp_inf_to_fabs(float %arg) {
-; CHECK-LABEL: define float @clamp_inf_to_fabs
+; CHECK-LABEL: define nofpclass(ninf) float @clamp_inf_to_fabs
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[FABS]], 0x7FF0000000000000
@@ -279,7 +279,7 @@ define float @clamp_inf_to_fabs(float %arg) {
 }
 
 define float @not_clamp_inf_to_fabs(float %arg) {
-; CHECK-LABEL: define float @not_clamp_inf_to_fabs
+; CHECK-LABEL: define nofpclass(nzero nsub nnorm) float @not_clamp_inf_to_fabs
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float [[ARG]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[FABS]], 0x7FF0000000000000

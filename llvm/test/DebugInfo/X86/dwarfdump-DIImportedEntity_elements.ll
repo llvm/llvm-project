@@ -13,9 +13,9 @@
 ; CHECK:   DW_TAG_subprogram
 ; CHECK:     DW_AT_name      ("use_renamed")
 ; CHECK:     DW_TAG_imported_module
-; CHECK:       DW_AT_import ([[MYMOD]])
+; CHECK:       DW_AT_import ([[MYMOD]] "mymod")
 ; CHECK:       DW_TAG_imported_declaration
-; CHECK:         DW_AT_import ([[VAR1]])
+; CHECK:         DW_AT_import ([[VAR1]] "var1")
 ; CHECK:         DW_AT_name        ("var4")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -240,11 +240,15 @@ static Value *convertStrToInt(CallInst *CI, StringRef &Str, Value *EndPtr,
     B.CreateStore(StrEnd, EndPtr);
   }
 
-  if (Negate)
+  if (Negate) {
     // Unsigned negation doesn't overflow.
     Result = -Result;
+    // For unsigned numbers, discard sign bits.
+    if (!AsSigned)
+      Result &= maxUIntN(NBits);
+  }
 
-  return ConstantInt::get(RetTy, Result);
+  return ConstantInt::get(RetTy, Result, AsSigned);
 }
 
 static bool isOnlyUsedInComparisonWithZero(Value *V) {
@@ -2543,6 +2547,30 @@ Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilderBase &B) {
                                                 CI->getArgOperand(1), FMF));
 }
 
+Value *LibCallSimplifier::optimizeFMinimumnumFMaximumnum(CallInst *CI,
+                                                         IRBuilderBase &B) {
+  Module *M = CI->getModule();
+
+  // If we can shrink the call to a float function rather than a double
+  // function, do that first.
+  Function *Callee = CI->getCalledFunction();
+  StringRef Name = Callee->getName();
+  if ((Name == "fminimum_num" || Name == "fmaximum_num") &&
+      hasFloatVersion(M, Name))
+    if (Value *Ret = optimizeBinaryDoubleFP(CI, B, TLI))
+      return Ret;
+
+  // The new fminimum_num/fmaximum_num functions, unlike fmin/fmax, *are*
+  // sensitive to the sign of zero, so we don't change the fast-math flags like
+  // we did for those.
+
+  Intrinsic::ID IID = Callee->getName().starts_with("fminimum_num")
+                          ? Intrinsic::minimumnum
+                          : Intrinsic::maximumnum;
+  return copyFlags(*CI, B.CreateBinaryIntrinsic(IID, CI->getArgOperand(0),
+                                                CI->getArgOperand(1), CI));
+}
+
 Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
   Function *LogFn = Log->getCalledFunction();
   StringRef LogNm = LogFn->getName();
@@ -4123,6 +4151,13 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_fmax:
   case LibFunc_fmaxl:
     return optimizeFMinFMax(CI, Builder);
+  case LibFunc_fminimum_numf:
+  case LibFunc_fminimum_num:
+  case LibFunc_fminimum_numl:
+  case LibFunc_fmaximum_numf:
+  case LibFunc_fmaximum_num:
+  case LibFunc_fmaximum_numl:
+    return optimizeFMinimumnumFMaximumnum(CI, Builder);
   case LibFunc_cabs:
   case LibFunc_cabsf:
   case LibFunc_cabsl:

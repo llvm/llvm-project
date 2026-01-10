@@ -69,12 +69,12 @@ declare i32 @__gxx_personality_v0(...)
 ; CHECK-LABEL:	.Lfunc_end0:
 
 ; CHECK: 	.section	.llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text._Z3bazb{{$}}
-; CHECK-NEXT:	.byte	4		# version
-; BASIC-NEXT:	.byte	32		# feature
-; PGO-ALL-NEXT:	.byte	39		# feature
-; FEC-ONLY-NEXT:.byte	33		# feature
-; BBF-ONLY-NEXT:.byte	34		# feature
-; BRP-ONLY-NEXT:.byte	36		# feature
+; CHECK-NEXT:	.byte	5		# version
+; BASIC-NEXT:	.short	32		# feature
+; PGO-ALL-NEXT:	.short	39		# feature
+; FEC-ONLY-NEXT:.short	33		# feature
+; BBF-ONLY-NEXT:.short	34		# feature
+; BRP-ONLY-NEXT:.short	36		# feature
 ; CHECK-NEXT:	.quad	.Lfunc_begin0	# function address
 ; CHECK-NEXT:	.byte	6		# number of basic blocks
 ; CHECK-NEXT:	.byte	0		# BB id
@@ -146,7 +146,7 @@ declare i32 @__gxx_personality_v0(...)
 ; PGO-BRP-NEXT:	.byte	5		# successor BB ID
 ; PGO-BRP-NEXT:	.ascii	"\200\200\200\200\b"	# successor branch probability
 
-; SKIP-BB-ENTRIES:      .byte	49                              # feature
+; SKIP-BB-ENTRIES:      .short  49                              # feature
 ; SKIP-BB-ENTRIES-NEXT:	.quad	.Lfunc_begin0                   # function address
 ; SKIP-BB-ENTRIES-NEXT:	.byte	6                               # number of basic blocks
 ; SKIP-BB-ENTRIES-NEXT:	.byte	100                             # function entry count
