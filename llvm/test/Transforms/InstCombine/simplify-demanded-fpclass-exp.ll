@@ -518,6 +518,51 @@ define nofpclass(nan inf nnorm sub zero) float @posnormal_result_demands_negnorm
   ret float %exp
 }
 
+define nofpclass(inf zero sub norm) float @ret_only_nan__exp2(float %x) {
+; CHECK-LABEL: define nofpclass(inf zero sub norm) float @ret_only_nan__exp2(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    ret float 0x7FF8000000000000
+;
+  %exp = call float @llvm.exp2.f32(float %x)
+  ret float %exp
+}
+
+define nofpclass(qnan inf zero sub norm) float @ret_only_snan__exp2(float %x) {
+; CHECK-LABEL: define nofpclass(qnan inf zero sub norm) float @ret_only_snan__exp2(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    ret float poison
+;
+  %exp = call float @llvm.exp2.f32(float %x)
+  ret float %exp
+}
+
+define nofpclass(snan inf zero sub norm) float @ret_only_qnan__exp2(float %x) {
+; CHECK-LABEL: define nofpclass(snan inf zero sub norm) float @ret_only_qnan__exp2(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    ret float 0x7FF8000000000000
+;
+  %exp = call float @llvm.exp2.f32(float %x)
+  ret float %exp
+}
+
+define nofpclass(inf zero sub norm) <2 x float> @ret_only_nan__exp2_vec(<2 x float> %x) {
+; CHECK-LABEL: define nofpclass(inf zero sub norm) <2 x float> @ret_only_nan__exp2_vec(
+; CHECK-SAME: <2 x float> [[X:%.*]]) {
+; CHECK-NEXT:    ret <2 x float> splat (float 0x7FF8000000000000)
+;
+  %exp = call <2 x float> @llvm.exp2.v2f32(<2 x float> %x)
+  ret <2 x float> %exp
+}
+
+define nofpclass(inf zero sub norm) <2 x float> @ret_only_nan__exp2_vec_partially_defined(<2 x float> %x) {
+; CHECK-LABEL: define nofpclass(inf zero sub norm) <2 x float> @ret_only_nan__exp2_vec_partially_defined(
+; CHECK-SAME: <2 x float> [[X:%.*]]) {
+; CHECK-NEXT:    ret <2 x float> splat (float 0x7FF8000000000000)
+;
+  %exp = call <2 x float> @llvm.exp2.v2f32(<2 x float> <float 0x7ff8000000000000, float poison>)
+  ret <2 x float> %exp
+}
+
 !0 = !{!"function_entry_count", i64 1000}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
