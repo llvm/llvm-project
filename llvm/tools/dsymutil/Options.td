@@ -110,9 +110,9 @@ def update: F<"update">,
   Group<grp_general>;
 
 def allow_section_header_offset_overflow : F<"allow-section-header-offset-overflow">,
-  HelpText<"Allow emitting a section offset (32-bit) that, when applied, would exceed the Mach-O 4GB limit. "
-           "This leverages the fact that the offset can be computed as a 64-bit value if the sections are ordered (always the case for dsymutil). "
-           "Note that this generates an invalid Mach-O and requires explicit support by the tools that will need to consume it.">,
+  HelpText<"Allow emitting a 32-bit section offset that, when applied, may exceed the Mach-O 4 GB limit. "
+           "This leverages the fact that the offset can be computed as a 64-bit value when sections are ordered (which is always the case for dsymutil). "
+           "Note that this produces an invalid Mach-O and requires explicit support from the tools that consume it.">,
   Group<grp_general>;
 
 def: Flag<["-"], "u">,
