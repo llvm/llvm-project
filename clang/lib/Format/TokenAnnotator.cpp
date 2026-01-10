@@ -3758,9 +3758,6 @@ static FormatToken *getFunctionName(const AnnotatedLine &Line,
     while (auto *Next = skipNameQualifier(Tok))
       Tok = Next;
 
-    if (!Tok)
-      return nullptr;
-
     // Skip the `~` if a destructor name.
     if (Tok->is(tok::tilde)) {
       Tok = Tok->Next;
