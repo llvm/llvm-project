@@ -42,7 +42,7 @@ define i32 @test1(i32 %num) {
 ; CHECK-NEXT:    br i1 [[CMP_EXIT]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.inc.jt2:
 ; CHECK-NEXT:    [[COUNT4:%.*]] = phi i32 [ [[COUNT1]], [[SEL_SI_UNFOLD_FALSE_JT2]] ], [ [[COUNT2]], [[CASE1]] ]
-; CHECK-NEXT:    [[STATE_NEXT_JT2]] = phi i32 [ 2, [[CASE1]] ], [ [[DOTSI_UNFOLD_PHI_JT2]], [[SEL_SI_UNFOLD_FALSE_JT2]] ]
+; CHECK-NEXT:    [[STATE_NEXT_JT2]] = phi i32 [ [[DOTSI_UNFOLD_PHI_JT2]], [[SEL_SI_UNFOLD_FALSE_JT2]] ], [ 2, [[CASE1]] ]
 ; CHECK-NEXT:    [[INC_JT2]] = add nsw i32 [[COUNT4]], 1
 ; CHECK-NEXT:    [[CMP_EXIT_JT2:%.*]] = icmp slt i32 [[INC_JT2]], [[NUM]]
 ; CHECK-NEXT:    br i1 [[CMP_EXIT_JT2]], label [[FOR_BODY_JT2]], label [[FOR_END]]
@@ -112,7 +112,7 @@ define i32 @test2(i32 %init) {
 ; CHECK-NEXT:    [[STATE_1_JT2:%.*]] = phi i32 [ [[STATE_1_BE_SI_UNFOLD_PHI_JT2]], [[STATE_1_BE2_SI_UNFOLD_FALSE_JT2:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP_2_JT2:%.*]]
 ; CHECK:       loop.1.jt1:
-; CHECK-NEXT:    [[STATE_1_JT1:%.*]] = phi i32 [ 1, [[LOOP_1_BACKEDGE]] ], [ 1, [[LOOP_1_BACKEDGE_JT2]] ], [ 1, [[LOOP_1_BACKEDGE_JT4]] ]
+; CHECK-NEXT:    [[STATE_1_JT1:%.*]] = phi i32 [ 1, [[LOOP_1_BACKEDGE_JT4]] ], [ 1, [[LOOP_1_BACKEDGE]] ], [ 1, [[LOOP_1_BACKEDGE_JT2]] ]
 ; CHECK-NEXT:    br label [[LOOP_2_JT1:%.*]]
 ; CHECK:       loop.2:
 ; CHECK-NEXT:    [[STATE_2:%.*]] = phi i32 [ [[STATE_1]], [[LOOP_1]] ], [ poison, [[LOOP_2_BACKEDGE:%.*]] ]
@@ -145,7 +145,7 @@ define i32 @test2(i32 %init) {
 ; CHECK-NEXT:    [[STATE_JT0:%.*]] = phi i32 [ [[STATE_2_JT0]], [[LOOP_2_JT0:%.*]] ]
 ; CHECK-NEXT:    br label [[CASE0]]
 ; CHECK:       loop.3.jt3:
-; CHECK-NEXT:    [[STATE_JT3:%.*]] = phi i32 [ 3, [[CASE2]] ], [ [[STATE_2_JT3]], [[LOOP_2_JT3:%.*]] ]
+; CHECK-NEXT:    [[STATE_JT3:%.*]] = phi i32 [ [[STATE_2_JT3]], [[LOOP_2_JT3:%.*]] ], [ 3, [[CASE2]] ]
 ; CHECK-NEXT:    br label [[CASE3]]
 ; CHECK:       loop.3.jt4:
 ; CHECK-NEXT:    [[STATE_JT4:%.*]] = phi i32 [ [[STATE_2_JT4]], [[LOOP_2_JT4]] ]
@@ -338,8 +338,8 @@ define void @pr106083_invalidBBarg_fold(i1 %cmp1, i1 %cmp2, i1 %not, ptr %d) !pr
 ; CHECK-NEXT:    [[_3_JT1:%.*]] = phi i32 [ [[DOTSI_UNFOLD_PHI2_JT1]], [[SEL_SI_UNFOLD_FALSE_JT1]] ]
 ; CHECK-NEXT:    br label [[BB8]]
 ; CHECK:       BB7.jt0:
-; CHECK-NEXT:    [[D_PROMOTED4_JT0:%.*]] = phi i16 [ 0, [[BB1]] ], [ 1, [[SPEC_SELECT_SI_UNFOLD_FALSE_JT0]] ], [ 1, [[BB7]] ]
-; CHECK-NEXT:    [[_3_JT0:%.*]] = phi i32 [ 0, [[BB1]] ], [ [[DOTSI_UNFOLD_PHI_JT0]], [[SPEC_SELECT_SI_UNFOLD_FALSE_JT0]] ], [ [[DOTSI_UNFOLD_PHI1]], [[BB7]] ]
+; CHECK-NEXT:    [[D_PROMOTED4_JT0:%.*]] = phi i16 [ 0, [[BB1]] ], [ 1, [[BB7]] ], [ 1, [[SPEC_SELECT_SI_UNFOLD_FALSE_JT0]] ]
+; CHECK-NEXT:    [[_3_JT0:%.*]] = phi i32 [ 0, [[BB1]] ], [ [[DOTSI_UNFOLD_PHI1]], [[BB7]] ], [ [[DOTSI_UNFOLD_PHI_JT0]], [[SPEC_SELECT_SI_UNFOLD_FALSE_JT0]] ]
 ; CHECK-NEXT:    br label [[BB1]]
 ; CHECK:       BB1.backedge:
 ; CHECK-NEXT:    br label [[BB1]]
@@ -409,7 +409,7 @@ define void @pr106083_select_dead_uses(i1 %cmp1, i1 %not, ptr %p) {
 ; CHECK-NEXT:    [[_2_JT1:%.*]] = phi i32 [ [[DOTSI_UNFOLD_PHI2_JT1]], [[SPEC_SELECT_SI_UNFOLD_FALSE_JT1]] ]
 ; CHECK-NEXT:    br label [[DOTLOOPEXIT6]]
 ; CHECK:       select.unfold.jt0:
-; CHECK-NEXT:    [[_2_JT0:%.*]] = phi i32 [ 0, [[DOTLOOPEXIT6]] ], [ [[DOTSI_UNFOLD_PHI_JT0]], [[SPEC_SELECT7_SI_UNFOLD_FALSE_JT0]] ], [ [[DOTSI_UNFOLD_PHI1]], [[SELECT_UNFOLD]] ]
+; CHECK-NEXT:    [[_2_JT0:%.*]] = phi i32 [ 0, [[DOTLOOPEXIT6]] ], [ [[DOTSI_UNFOLD_PHI1]], [[SELECT_UNFOLD]] ], [ [[DOTSI_UNFOLD_PHI_JT0]], [[SPEC_SELECT7_SI_UNFOLD_FALSE_JT0]] ]
 ; CHECK-NEXT:    br label [[DOTPREHEADER_PREHEADER]]
 ; CHECK:       .preheader.preheader:
 ; CHECK-NEXT:    ret void
