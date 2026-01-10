@@ -1,4 +1,4 @@
-//===-- Half-precision e^x - 1 function -----------------------------------===//
+//===-- Shared sin function -------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,10 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/expm1f16.h"
-#include "src/__support/math/expm1f16.h"
+#ifndef LLVM_LIBC_SHARED_MATH_SIN_H
+#define LLVM_LIBC_SHARED_MATH_SIN_H
+
+#include "shared/libc_common.h"
+#include "src/__support/math/sin.h"
 
 namespace LIBC_NAMESPACE_DECL {
-LLVM_LIBC_FUNCTION(float16, expm1f16, (float16 x)) { return math::expm1f16(x); }
+namespace shared {
 
+using math::sin;
+
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_SIN_H
