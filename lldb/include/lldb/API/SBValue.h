@@ -320,6 +320,9 @@ public:
 
   bool GetDescription(lldb::SBStream &description);
 
+  bool GetDescription(lldb::SBStream &description,
+                      lldb::DescriptionLevel description_level);
+
   bool GetExpressionPath(lldb::SBStream &description);
 
   bool GetExpressionPath(lldb::SBStream &description,
