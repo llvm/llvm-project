@@ -96,13 +96,9 @@ add_object_library(
     do_start.h
   DEPENDS
     libc.config.app_h
+    libc.hdr.elf_proxy
     libc.hdr.link_macros
     libc.hdr.stdint_proxy
-    libc.hdr.types.Elf32_Phdr
-    libc.hdr.types.Elf64_Phdr
-    libc.hdr.types.Elf32_Dyn
-    libc.hdr.types.Elf64_Dyn
-    libc.include.elf
     libc.include.sys_mman
     libc.include.sys_syscall
     libc.src.__support.OSUtil.linux.auxv

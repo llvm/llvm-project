@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "src/__support/OSUtil/linux/vdso.h"
+#include "hdr/elf_proxy.h"
 #include "hdr/link_macros.h"
 #include "hdr/sys_auxv_macros.h"
 #include "src/__support/CPP/array.h"
@@ -14,8 +15,6 @@
 #include "src/__support/OSUtil/linux/auxv.h"
 #include "src/__support/threads/callonce.h"
 #include "src/__support/threads/linux/futex_word.h"
-
-#include <elf.h>
 
 // TODO: This is a temporary workaround to avoid including elf.h
 // Include our own headers for ElfW and friends once we have them.
