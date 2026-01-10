@@ -1514,23 +1514,13 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_selectss_128:
   case X86::BI__builtin_ia32_selectsd_128: {
     mlir::Location loc = getLoc(expr->getExprLoc());
-
-    // Extract scalar elements from vector operands
-    mlir::Value scalar1 = ops[1];
-    mlir::Value scalar2 = ops[2];
-    if (auto vecTy = mlir::dyn_cast<cir::VectorType>(ops[1].getType()))
-      scalar1 = builder.createExtractElement(loc, ops[1], uint64_t(0));
-    if (auto vecTy = mlir::dyn_cast<cir::VectorType>(ops[2].getType()))
-      scalar2 = builder.createExtractElement(loc, ops[2], uint64_t(0));
-
+    mlir::Value scalar1 =
+        builder.createExtractElement(loc, ops[1], uint64_t(0));
+    mlir::Value scalar2 =
+        builder.createExtractElement(loc, ops[2], uint64_t(0));
     mlir::Value result =
         emitX86ScalarSelect(builder, loc, ops[0], scalar1, scalar2);
-
-    // If the original operand was a vector, insert the result back
-    if (mlir::isa<cir::VectorType>(ops[1].getType()))
-      result = builder.createInsertElement(loc, ops[1], result, uint64_t(0));
-
-    return result;
+    return builder.createInsertElement(loc, ops[1], result, uint64_t(0));
   }
   case X86::BI__builtin_ia32_cmpb128_mask:
   case X86::BI__builtin_ia32_cmpb256_mask:
