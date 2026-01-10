@@ -36,21 +36,20 @@
 namespace mlir {
 namespace python {
 namespace MLIR_BINDINGS_PYTHON_DOMAIN {
-class DefaultingPyLocation;
-class DefaultingPyMlirContext;
+
 class PyBlock;
-class PyBlockArgument;
 class PyDiagnostic;
 class PyDiagnosticHandler;
 class PyInsertionPoint;
 class PyLocation;
+class DefaultingPyLocation;
 class PyMlirContext;
+class DefaultingPyMlirContext;
 class PyModule;
-class PyOpResult;
 class PyOperation;
 class PyOperationBase;
-class PySymbolTable;
 class PyType;
+class PySymbolTable;
 class PyValue;
 
 /// Wrapper for the global LLVM debugging flag.
@@ -1171,6 +1170,8 @@ public:
 /// value. For block argument values, this is the operation that contains the
 /// block to which the value is an argument (blocks cannot be detached in Python
 /// bindings so such operation always exists).
+class PyBlockArgument;
+class PyOpResult;
 class MLIR_PYTHON_API_EXPORTED PyValue {
 public:
   // The virtual here is "load bearing" in that it enables RTTI
