@@ -2309,7 +2309,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
       KnownFPClass::MinMaxKind OpKind;
 
-      if (IID == Intrinsic::maximum) {
+      switch (IID) {
+      case Intrinsic::maximum: {
         OpKind = KnownFPClass::MinMaxKind::maximum;
 
         // If at least one operand is known to be positive and the other
@@ -2331,7 +2332,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         if (KnownRHS.isKnownAlways(fcPosInf | fcNan) &&
             KnownLHS.isKnownNever(fcNan))
           return CI->getArgOperand(1);
-      } else if (IID == Intrinsic::minimum) {
+
+        break;
+      }
+      case Intrinsic::minimum: {
         OpKind = KnownFPClass::MinMaxKind::minimum;
 
         // If one operand is known to be negative, and the other positive, the
@@ -2353,7 +2357,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         if (KnownRHS.isKnownAlways(fcNegInf | fcNan) &&
             KnownLHS.isKnownNever(fcNan))
           return CI->getArgOperand(1);
-      } else if (IID == Intrinsic::maximumnum) {
+
+        break;
+      }
+      case Intrinsic::maximumnum: {
         OpKind = KnownFPClass::MinMaxKind::maximumnum;
 
         // If at least one operand is known to be positive and the other
@@ -2374,7 +2381,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         if (KnownRHS.isKnownAlways(fcNegInf | fcNan) &&
             KnownLHS.isKnownNever(fcNan))
           return CI->getArgOperand(0);
-      } else if (IID == Intrinsic::minimumnum) {
+
+        break;
+      }
+      case Intrinsic::minimumnum: {
         OpKind = KnownFPClass::MinMaxKind::minimumnum;
 
         // If at least one operand is known to be negative and the other
@@ -2395,8 +2405,12 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         if (KnownRHS.isKnownAlways(fcPosInf | fcNan) &&
             KnownLHS.isKnownNever(fcNan))
           return CI->getArgOperand(0);
-      } else
+
+        break;
+      }
+      default:
         llvm_unreachable("not a min/max intrinsic");
+      }
 
       Type *EltTy = VTy->getScalarType();
       DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
