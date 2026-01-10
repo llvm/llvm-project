@@ -408,9 +408,12 @@ Changes in existing checks
   expansions.
 
 - Improved :doc:`bugprone-dynamic-static-initializers
-  <clang-tidy/checks/bugprone/dynamic-static-initializers>` check by
-  avoiding false positives for ``constexpr`` variables whose
-  initializers are value-dependent.
+  <clang-tidy/checks/bugprone/dynamic-static-initializers>` check:
+
+  - Avoided false positives for ``constexpr`` variables whose initializers
+    are value-dependent.
+
+  - Added support for C++20 ``constinit`` variables.
 
 - Improved :doc:`bugprone-easily-swappable-parameters
   <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
