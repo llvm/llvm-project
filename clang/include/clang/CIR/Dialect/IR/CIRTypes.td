@@ -552,6 +552,34 @@ def CIR_FuncType : CIR_Type<"Func", "func"> {
 }
 
 //===----------------------------------------------------------------------===//
+// MethodType
+//===----------------------------------------------------------------------===//
+
+def CIR_MethodType : CIR_Type<"Method", "method",
+    [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]> {
+  let summary = "CIR type that represents C++ pointer-to-member-function type";
+  let description = [{
+    `cir.method` models the pointer-to-member-function type in C++. The layout
+    of this type is ABI-dependent.
+  }];
+
+  let parameters = (ins "cir::FuncType":$member_func_ty,
+                        "cir::RecordType":$class_ty);
+
+  let builders = [
+    TypeBuilderWithInferredContext<(ins
+      "cir::FuncType":$member_func_ty, "cir::RecordType":$class_ty
+    ), [{
+      return $_get(member_func_ty.getContext(), member_func_ty, class_ty);
+    }]>,
+  ];
+
+  let assemblyFormat = [{
+    `<` qualified($member_func_ty) `in` $class_ty `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Void type
 //===----------------------------------------------------------------------===//
 
@@ -732,7 +760,7 @@ def CIRRecordType : Type<
 def CIR_AnyType : AnyTypeOf<[
   CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_IntType,
   CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_RecordType,
-  CIR_ComplexType, CIR_VPtrType, CIR_DataMemberType
+  CIR_ComplexType, CIR_VPtrType, CIR_DataMemberType, CIR_MethodType
 ]>;
 
 #endif // CLANG_CIR_DIALECT_IR_CIRTYPES_TD

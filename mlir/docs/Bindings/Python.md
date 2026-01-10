@@ -8,7 +8,7 @@
 
 ### Pre-requisites
 
-*   A relatively recent Python3 installation
+*   A [non-EOL](https://devguide.python.org/versions/) Python3 installation
 *   Installation of Python dependencies as specified in
     `mlir/python/requirements.txt`
 
@@ -36,6 +36,13 @@
     ```
     LLVM ERROR: ... unregistered/uninitialized dialect/type/pass ...`
     ```
+
+*   **`MLIR_BINDINGS_PYTHON_NB_DOMAIN`**: `STRING`
+
+    nanobind (and MLIR) domain within which extensions will be compiled. 
+    This determines whether this package will share nanobind types with other bindings packages. 
+    Expected to be unique per project (and per specific set of bindings, for projects with multiple bindings packages).
+    Can also be passed explicitly to `add_mlir_python_modules`.
 
 ### Recommended development practices
 
@@ -537,9 +544,9 @@ attribute = <...>
 type = <...>
 
 # No need to handle errors here.
-if ConcreteAttr.isinstance(attribute):
+if isinstance(attribute, ConcreteAttr):
   concrete_attr = ConcreteAttr(attribute)
-if ConcreteType.isinstance(type):
+if isinstance(type, ConcreteType):
   concrete_type = ConcreteType(type)
 ```
 

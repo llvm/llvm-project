@@ -12,7 +12,7 @@
 ; CHECK-SPIRV:     %[[#]] = OpImageQuerySizeLod %[[#]] %[[#ArrayVarID]]
 ; CHECK-SPIRV-NOT: %[[#]] = OpExtInst %[[#]] %[[#]] get_image_array_size
 
-define spir_kernel void @test_image1d(i32 addrspace(1)* nocapture %sizes, target("spirv.Image", void, 0, 0, 0, 0, 0, 0, 0) %img, target("spirv.Image", void, 5, 0, 0, 0, 0, 0, 0) %buffer, target("spirv.Image", void, 0, 0, 1, 0, 0, 0, 0) %array) {
+define spir_kernel void @test_image1d(ptr addrspace(1) nocapture %sizes, target("spirv.Image", void, 0, 0, 0, 0, 0, 0, 0) %img, target("spirv.Image", void, 5, 0, 0, 0, 0, 0, 0) %buffer, target("spirv.Image", void, 0, 0, 1, 0, 0, 0, 0) %array) {
   %1 = tail call spir_func i32 @_Z15get_image_width14ocl_image1d_ro(target("spirv.Image", void, 0, 0, 0, 0, 0, 0, 0) %img)
   %2 = tail call spir_func i32 @_Z15get_image_width21ocl_image1d_buffer_ro(target("spirv.Image", void, 5, 0, 0, 0, 0, 0, 0) %buffer)
   %3 = tail call spir_func i32 @_Z15get_image_width20ocl_image1d_array_ro(target("spirv.Image", void, 0, 0, 1, 0, 0, 0, 0) %array)
@@ -21,7 +21,7 @@ define spir_kernel void @test_image1d(i32 addrspace(1)* nocapture %sizes, target
   %6 = add nsw i32 %2, %1
   %7 = add nsw i32 %6, %3
   %8 = add nsw i32 %7, %5
-  store i32 %8, i32 addrspace(1)* %sizes, align 4
+  store i32 %8, ptr addrspace(1) %sizes, align 4
   ret void
 }
 
@@ -33,7 +33,7 @@ declare spir_func i32 @_Z15get_image_width20ocl_image1d_array_ro(target("spirv.I
 
 declare spir_func i64 @_Z20get_image_array_size20ocl_image1d_array_ro(target("spirv.Image", void, 0, 0, 1, 0, 0, 0, 0))
 
-define spir_kernel void @test_image2d(i32 addrspace(1)* nocapture %sizes, target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0) %img, target("spirv.Image", void, 1, 1, 0, 0, 0, 0, 0) %img_depth, target("spirv.Image", void, 1, 0, 1, 0, 0, 0, 0) %array, target("spirv.Image", void, 1, 1, 1, 0, 0, 0, 0) %array_depth) {
+define spir_kernel void @test_image2d(ptr addrspace(1) nocapture %sizes, target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0) %img, target("spirv.Image", void, 1, 1, 0, 0, 0, 0, 0) %img_depth, target("spirv.Image", void, 1, 0, 1, 0, 0, 0, 0) %array, target("spirv.Image", void, 1, 1, 1, 0, 0, 0, 0) %array_depth) {
   %1 = tail call spir_func i32 @_Z15get_image_width14ocl_image2d_ro(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0) %img)
   %2 = tail call spir_func i32 @_Z16get_image_height14ocl_image2d_ro(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0) %img)
   %3 = tail call spir_func <2 x i32> @_Z13get_image_dim14ocl_image2d_ro(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0) %img)
@@ -54,7 +54,7 @@ define spir_kernel void @test_image2d(i32 addrspace(1)* nocapture %sizes, target
   %18 = add nsw i32 %16, %17
   %19 = extractelement <2 x i32> %8, i32 1
   %20 = add nsw i32 %18, %19
-  store i32 %20, i32 addrspace(1)* %sizes, align 4
+  store i32 %20, ptr addrspace(1) %sizes, align 4
   ret void
 }
 
@@ -72,7 +72,7 @@ declare spir_func i64 @_Z20get_image_array_size20ocl_image2d_array_ro(target("sp
 
 declare spir_func <2 x i32> @_Z13get_image_dim20ocl_image2d_array_ro(target("spirv.Image", void, 1, 0, 1, 0, 0, 0, 0))
 
-define spir_kernel void @test_image3d(i32 addrspace(1)* nocapture %sizes, target("spirv.Image", void, 2, 0, 0, 0, 0, 0, 0) %img) {
+define spir_kernel void @test_image3d(ptr addrspace(1) nocapture %sizes, target("spirv.Image", void, 2, 0, 0, 0, 0, 0, 0) %img) {
   %1 = tail call spir_func i32 @_Z15get_image_width14ocl_image3d_ro(target("spirv.Image", void, 2, 0, 0, 0, 0, 0, 0) %img)
   %2 = tail call spir_func i32 @_Z16get_image_height14ocl_image3d_ro(target("spirv.Image", void, 2, 0, 0, 0, 0, 0, 0) %img)
   %3 = tail call spir_func i32 @_Z15get_image_depth14ocl_image3d_ro(target("spirv.Image", void, 2, 0, 0, 0, 0, 0, 0) %img)
@@ -87,7 +87,7 @@ define spir_kernel void @test_image3d(i32 addrspace(1)* nocapture %sizes, target
   %12 = add nsw i32 %10, %11
   %13 = extractelement <4 x i32> %4, i32 3
   %14 = add nsw i32 %12, %13
-  store i32 %14, i32 addrspace(1)* %sizes, align 4
+  store i32 %14, ptr addrspace(1) %sizes, align 4
   ret void
 }
 
@@ -99,14 +99,14 @@ declare spir_func i32 @_Z15get_image_depth14ocl_image3d_ro(target("spirv.Image",
 
 declare spir_func <4 x i32> @_Z13get_image_dim14ocl_image3d_ro(target("spirv.Image", void, 2, 0, 0, 0, 0, 0, 0))
 
-define spir_kernel void @test_image2d_array_depth_t(i32 addrspace(1)* nocapture %sizes, target("spirv.Image", void, 1, 1, 1, 0, 0, 0, 0) %array) {
+define spir_kernel void @test_image2d_array_depth_t(ptr addrspace(1) nocapture %sizes, target("spirv.Image", void, 1, 1, 1, 0, 0, 0, 0) %array) {
   %1 = tail call spir_func i32 @_Z15get_image_width26ocl_image2d_array_depth_ro(target("spirv.Image", void, 1, 1, 1, 0, 0, 0, 0) %array)
   %2 = tail call spir_func i32 @_Z16get_image_height26ocl_image2d_array_depth_ro(target("spirv.Image", void, 1, 1, 1, 0, 0, 0, 0) %array)
   %3 = tail call spir_func i64 @_Z20get_image_array_size26ocl_image2d_array_depth_ro(target("spirv.Image", void, 1, 1, 1, 0, 0, 0, 0) %array)
   %4 = trunc i64 %3 to i32
   %5 = add nsw i32 %2, %1
   %6 = add nsw i32 %5, %4
-  store i32 %5, i32 addrspace(1)* %sizes, align 4
+  store i32 %5, ptr addrspace(1) %sizes, align 4
   ret void
 }
 
