@@ -2283,26 +2283,36 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       break;
     }
     case Intrinsic::maximum:
-    case Intrinsic::minimum: {
-      KnownFPClass KnownLHS, KnownRHS;
+    case Intrinsic::minimum:
+    case Intrinsic::maximumnum:
+    case Intrinsic::minimumnum: {
+      const bool PropagateNaN =
+          IID == Intrinsic::maximum || IID == Intrinsic::minimum;
 
       // We can't tell much based on the demanded result without inspecting the
       // operands (e.g., a known-positive result could have been clamped), but
       // we can still prune known-nan inputs.
-      FPClassTest SrcDemandedMask = DemandedMask | ~fcNan;
+      FPClassTest SrcDemandedMask =
+          PropagateNaN ? DemandedMask | ~fcNan : fcAllFlags;
 
+      KnownFPClass KnownLHS, KnownRHS;
       if (SimplifyDemandedFPClass(CI, 1, SrcDemandedMask, KnownRHS,
                                   Depth + 1) ||
           SimplifyDemandedFPClass(CI, 0, SrcDemandedMask, KnownLHS, Depth + 1))
         return I;
 
       /// Propagate nnan-ness to simplify edge case checks.
-      if ((DemandedMask & fcNan) == fcNone) {
+      if (PropagateNaN && (DemandedMask & fcNan) == fcNone) {
         KnownLHS.knownNot(fcNan);
         KnownRHS.knownNot(fcNan);
       }
 
-      if (IID == Intrinsic::maximum) {
+      KnownFPClass::MinMaxKind OpKind;
+
+      switch (IID) {
+      case Intrinsic::maximum: {
+        OpKind = KnownFPClass::MinMaxKind::maximum;
+
         // If at least one operand is known to be positive and the other
         // negative, the result must be the positive (unless the other operand
         // may be propagating a nan).
@@ -2322,7 +2332,12 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         if (KnownRHS.isKnownAlways(fcPosInf | fcNan) &&
             KnownLHS.isKnownNever(fcNan))
           return CI->getArgOperand(1);
-      } else {
+
+        break;
+      }
+      case Intrinsic::minimum: {
+        OpKind = KnownFPClass::MinMaxKind::minimum;
+
         // If one operand is known to be negative, and the other positive, the
         // result must be the negative (unless the other operand may be
         // propagating a nan).
@@ -2342,15 +2357,64 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         if (KnownRHS.isKnownAlways(fcNegInf | fcNan) &&
             KnownLHS.isKnownNever(fcNan))
           return CI->getArgOperand(1);
+
+        break;
+      }
+      case Intrinsic::maximumnum: {
+        OpKind = KnownFPClass::MinMaxKind::maximumnum;
+
+        // If at least one operand is known to be positive and the other
+        // negative, the result must be the positive.
+        if (KnownLHS.isKnownNever(fcNegative | fcNan) &&
+            KnownRHS.isKnownNever(fcPositive))
+          return CI->getArgOperand(0);
+
+        if (KnownRHS.isKnownNever(fcNegative | fcNan) &&
+            KnownLHS.isKnownNever(fcPositive))
+          return CI->getArgOperand(1);
+
+        // If one value must be ninf or nan, the other value must be returned
+        if (KnownLHS.isKnownAlways(fcNegInf | fcNan) &&
+            KnownRHS.isKnownNever(fcNan))
+          return CI->getArgOperand(1);
+
+        if (KnownRHS.isKnownAlways(fcNegInf | fcNan) &&
+            KnownLHS.isKnownNever(fcNan))
+          return CI->getArgOperand(0);
+
+        break;
+      }
+      case Intrinsic::minimumnum: {
+        OpKind = KnownFPClass::MinMaxKind::minimumnum;
+
+        // If at least one operand is known to be negative and the other
+        // positive, the result must be the negative
+        if (KnownLHS.isKnownNever(fcPositive | fcNan) &&
+            KnownRHS.isKnownNever(fcNegative))
+          return CI->getArgOperand(0);
+
+        if (KnownRHS.isKnownNever(fcPositive | fcNan) &&
+            KnownLHS.isKnownNever(fcNegative))
+          return CI->getArgOperand(1);
+
+        // If one value must be pinf or nan, the other value must be returned
+        if (KnownLHS.isKnownAlways(fcPosInf | fcNan) &&
+            KnownRHS.isKnownNever(fcNan))
+          return CI->getArgOperand(1);
+
+        if (KnownRHS.isKnownAlways(fcPosInf | fcNan) &&
+            KnownLHS.isKnownNever(fcNan))
+          return CI->getArgOperand(0);
+
+        break;
+      }
+      default:
+        llvm_unreachable("not a min/max intrinsic");
       }
 
       Type *EltTy = VTy->getScalarType();
       DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
-      Known = KnownFPClass::minMaxLike(KnownLHS, KnownRHS,
-                                       IID == Intrinsic::maximum
-                                           ? KnownFPClass::MinMaxKind::maximum
-                                           : KnownFPClass::MinMaxKind::minimum,
-                                       Mode);
+      Known = KnownFPClass::minMaxLike(KnownLHS, KnownRHS, OpKind, Mode);
 
       FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
 
@@ -2364,7 +2428,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
       // TODO: Add NSZ flag if we know the result will not be sensitive on the
       // sign of 0.
-      if (!FPOp->hasNoNaNs() && (ValidResults & fcNan) == fcNone) {
+      if (!FPOp->hasNoNaNs() &&
+          ((PropagateNaN && (ValidResults & fcNan) == fcNone) ||
+           (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN()))) {
         CI->dropUBImplyingAttrsAndMetadata();
         CI->setHasNoNaNs(true);
         ChangedFlags = true;
