@@ -69,7 +69,7 @@ _LIBUNWIND_EXPORT void _Unwind_SetGR(struct _Unwind_Context *context, int index,
 
 /// Called by personality handler to get instruction pointer.
 _LIBUNWIND_EXPORT uintptr_t _Unwind_GetIP(struct _Unwind_Context *context) {
-  // The result will be used as an 1-based index after decrementing 1, so we
+  // The result will be used as a 1-based index after decrementing 1, so we
   // increment 2 here
   uintptr_t result =
       ((struct _Unwind_LandingPadContext *)context)->lpad_index + 2;

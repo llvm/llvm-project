@@ -7,7 +7,7 @@
 ; multiple loads / multiplies / adds in the vector body.
 
 
-define void @test_interleave_reduction(i32*** %arg, double** %arg1) {
+define void @test_interleave_reduction(ptr %arg, ptr %arg1) {
 ; A320-LABEL: define void @test_interleave_reduction(
 ; A320-SAME: ptr [[ARG:%.*]], ptr [[ARG1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; A320-NEXT:  [[ENTRY:.*:]]
@@ -99,16 +99,16 @@ define void @test_interleave_reduction(i32*** %arg, double** %arg1) {
 ; A320-NEXT:    br label %[[OUTER]]
 ;
 entry:
-  %tpm15 = load i32**, i32*** %arg, align 8
-  %tpm19 = load double*, double** %arg1, align 8
+  %tpm15 = load ptr, ptr %arg, align 8
+  %tpm19 = load ptr, ptr %arg1, align 8
   br label %outer
 
 outer:                                            ; preds = %inner, %entry
   %tpm26 = add i64 0, 1
   %tpm10 = alloca i32, align 8
   %tpm27 = getelementptr inbounds i32, ptr %tpm10, i64 %tpm26
-  %tpm28 = getelementptr inbounds i32*, ptr %tpm15, i64 0
-  %tpm29 = load i32*, ptr %tpm28, align 8
+  %tpm28 = getelementptr inbounds ptr, ptr %tpm15, i64 0
+  %tpm29 = load ptr, ptr %tpm28, align 8
   %tpm17 = alloca double, align 8
   %tpm32 = getelementptr inbounds double, ptr %tpm17, i64 %tpm26
   br label %inner
@@ -144,7 +144,7 @@ exit.inner:                                       ; preds = %inner
 ;    duplicated loads and adds.
 ;===---------------------------------------------------------------------===;
 
-define double @sum_reduction(double* nocapture readonly %a, i64 %n) {
+define double @sum_reduction(ptr nocapture readonly %a, i64 %n) {
 ; A320-LABEL: define double @sum_reduction(
 ; A320-SAME: ptr readonly captures(none) [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; A320-NEXT:  [[ENTRY:.*]]:
@@ -225,7 +225,7 @@ exit:
 ;    have multiple pairs of loads and fmuls/fadds.
 ;===---------------------------------------------------------------------===;
 
-define double @dot_product(double* nocapture readonly %a, double* nocapture readonly %b, i64 %n) {
+define double @dot_product(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 %n) {
 ; A320-LABEL: define double @dot_product(
 ; A320-SAME: ptr readonly captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; A320-NEXT:  [[ENTRY:.*]]:

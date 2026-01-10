@@ -793,7 +793,7 @@ private:
 public:
   // construct/destroy:
   _LIBCPP_HIDE_FROM_ABI valarray() : __begin_(nullptr), __end_(nullptr) {}
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 explicit valarray(size_t __n);
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 explicit valarray(size_t __n);
   _LIBCPP_HIDE_FROM_ABI valarray(const value_type& __x, size_t __n);
   valarray(const value_type* __p, size_t __n);
   valarray(const valarray& __v);
@@ -805,7 +805,7 @@ public:
   valarray(const gslice_array<value_type>& __ga);
   valarray(const mask_array<value_type>& __ma);
   valarray(const indirect_array<value_type>& __ia);
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 ~valarray();
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 ~valarray();
 
   // assignment:
   valarray& operator=(const valarray& __v);
