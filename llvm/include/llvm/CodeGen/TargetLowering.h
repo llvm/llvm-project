@@ -1937,9 +1937,7 @@ public:
   /// to replace a call to llvm.memset. The value is set by the target at the
   /// performance threshold for such a replacement. If OptSize is true,
   /// return the limit for functions that have OptSize attribute.
-  unsigned getMaxStoresPerMemset(bool OptSize) const {
-    return OptSize ? MaxStoresPerMemsetOptSize : MaxStoresPerMemset;
-  }
+  unsigned getMaxStoresPerMemset(bool OptSize) const;
 
   /// Get maximum # of store operations permitted for llvm.memcpy
   ///
@@ -1947,9 +1945,7 @@ public:
   /// to replace a call to llvm.memcpy. The value is set by the target at the
   /// performance threshold for such a replacement. If OptSize is true,
   /// return the limit for functions that have OptSize attribute.
-  unsigned getMaxStoresPerMemcpy(bool OptSize) const {
-    return OptSize ? MaxStoresPerMemcpyOptSize : MaxStoresPerMemcpy;
-  }
+  unsigned getMaxStoresPerMemcpy(bool OptSize) const;
 
   /// \brief Get maximum # of store operations to be glued together
   ///
@@ -1976,9 +1972,7 @@ public:
   /// to replace a call to llvm.memmove. The value is set by the target at the
   /// performance threshold for such a replacement. If OptSize is true,
   /// return the limit for functions that have OptSize attribute.
-  unsigned getMaxStoresPerMemmove(bool OptSize) const {
-    return OptSize ? MaxStoresPerMemmoveOptSize : MaxStoresPerMemmove;
-  }
+  unsigned getMaxStoresPerMemmove(bool OptSize) const;
 
   /// Determine if the target supports unaligned memory accesses.
   ///
@@ -2220,13 +2214,13 @@ public:
   }
 
   /// Returns the size in bits of the maximum div/rem the backend supports.
-  /// Larger operations will be expanded by ExpandLargeDivRem.
+  /// Larger operations will be expanded by ExpandIRInsts.
   unsigned getMaxDivRemBitWidthSupported() const {
     return MaxDivRemBitWidthSupported;
   }
 
   /// Returns the size in bits of the maximum fp to/from int conversion the
-  /// backend supports. Larger operations will be expanded by ExpandFp.
+  /// backend supports. Larger operations will be expanded by ExpandIRInsts.
   unsigned getMaxLargeFPConvertBitWidthSupported() const {
     return MaxLargeFPConvertBitWidthSupported;
   }
@@ -2886,13 +2880,13 @@ protected:
   }
 
   /// Set the size in bits of the maximum div/rem the backend supports.
-  /// Larger operations will be expanded by ExpandLargeDivRem.
+  /// Larger operations will be expanded by ExpandIRInsts.
   void setMaxDivRemBitWidthSupported(unsigned SizeInBits) {
     MaxDivRemBitWidthSupported = SizeInBits;
   }
 
   /// Set the size in bits of the maximum fp to/from int conversion the backend
-  /// supports. Larger operations will be expanded by ExpandFp.
+  /// supports. Larger operations will be expanded by ExpandIRInsts.
   void setMaxLargeFPConvertBitWidthSupported(unsigned SizeInBits) {
     MaxLargeFPConvertBitWidthSupported = SizeInBits;
   }
@@ -3743,12 +3737,12 @@ private:
   unsigned MaxAtomicSizeInBitsSupported;
 
   /// Size in bits of the maximum div/rem size the backend supports.
-  /// Larger operations will be expanded by ExpandLargeDivRem.
+  /// Larger operations will be expanded by ExpandIRInsts.
   unsigned MaxDivRemBitWidthSupported;
 
   /// Size in bits of the maximum fp to/from int conversion size the
   /// backend supports. Larger operations will be expanded by
-  /// ExpandFp.
+  /// ExpandIRInsts.
   unsigned MaxLargeFPConvertBitWidthSupported;
 
   /// Size in bits of the minimum cmpxchg or ll/sc operation the
@@ -5487,6 +5481,11 @@ public:
   /// \param N Node to expand
   /// \returns The expansion if successful, SDValue() otherwise
   SDValue expandFunnelShift(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand carryless multiply.
+  /// \param N Node to expand
+  /// \returns The expansion if successful, SDValue() otherwise
+  SDValue expandCLMUL(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand rotations.
   /// \param N Node to expand

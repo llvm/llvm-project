@@ -75,6 +75,62 @@ static Value *getMaskVecValue(CodeGenFunction &CGF, Value *Mask,
   return MaskVec;
 }
 
+/// Emit rounding for the value \p X according to the rounding \p
+/// RoundingControl based on bits 0 and 1.
+static Value *emitX86RoundImmediate(CodeGenFunction &CGF, Value *X,
+                                    unsigned RoundingControl) {
+  unsigned RoundingMask = 0b11;
+  unsigned RoundingMode = RoundingControl & RoundingMask;
+
+  Intrinsic::ID ID = Intrinsic::not_intrinsic;
+  LLVMContext &Ctx = CGF.CGM.getLLVMContext();
+  if (CGF.Builder.getIsFPConstrained()) {
+
+    Value *ExceptMode =
+        MetadataAsValue::get(Ctx, MDString::get(Ctx, "fpexcept.ignore"));
+
+    switch (RoundingMode) {
+    case 0b00:
+      ID = Intrinsic::experimental_constrained_roundeven;
+      break;
+    case 0b01:
+      ID = Intrinsic::experimental_constrained_floor;
+      break;
+    case 0b10:
+      ID = Intrinsic::experimental_constrained_ceil;
+      break;
+    case 0b11:
+      ID = Intrinsic::experimental_constrained_trunc;
+      break;
+    default:
+      llvm_unreachable("Invalid rounding mode");
+    }
+
+    Function *F = CGF.CGM.getIntrinsic(ID, X->getType());
+    return CGF.Builder.CreateCall(F, {X, ExceptMode});
+  }
+
+  switch (RoundingMode) {
+  case 0b00:
+    ID = Intrinsic::roundeven;
+    break;
+  case 0b01:
+    ID = Intrinsic::floor;
+    break;
+  case 0b10:
+    ID = Intrinsic::ceil;
+    break;
+  case 0b11:
+    ID = Intrinsic::trunc;
+    break;
+  default:
+    llvm_unreachable("Invalid rounding mode");
+  }
+
+  Function *F = CGF.CGM.getIntrinsic(ID, X->getType());
+  return CGF.Builder.CreateCall(F, {X});
+}
+
 static Value *EmitX86MaskedStore(CodeGenFunction &CGF, ArrayRef<Value *> Ops,
                                  Align Alignment) {
   Value *Ptr = Ops[0];
@@ -839,6 +895,76 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Builder.CreateDefaultAlignedStore(Builder.CreateExtractValue(Call, 1),
                                       Ops[0]);
     return Builder.CreateExtractValue(Call, 0);
+  }
+  case X86::BI__builtin_ia32_roundps:
+  case X86::BI__builtin_ia32_roundpd:
+  case X86::BI__builtin_ia32_roundps256:
+  case X86::BI__builtin_ia32_roundpd256: {
+    unsigned M = cast<ConstantInt>(Ops[1])->getZExtValue();
+    unsigned MXCSRMask = 0b100;
+    unsigned FRoundNoExcMask = 0b1000;
+    unsigned UseMXCSR = MXCSRMask & M;
+    unsigned FRoundNoExc = FRoundNoExcMask & M;
+
+    if (UseMXCSR || !FRoundNoExc) {
+
+      Intrinsic::ID ID = Intrinsic::not_intrinsic;
+
+      switch (BuiltinID) {
+      case X86::BI__builtin_ia32_roundps:
+        ID = Intrinsic::x86_sse41_round_ps;
+        break;
+      case X86::BI__builtin_ia32_roundps256:
+        ID = Intrinsic::x86_avx_round_ps_256;
+        break;
+      case X86::BI__builtin_ia32_roundpd:
+        ID = Intrinsic::x86_sse41_round_pd;
+        break;
+      case X86::BI__builtin_ia32_roundpd256:
+        ID = Intrinsic::x86_avx_round_pd_256;
+        break;
+      default:
+        llvm_unreachable("must return from switch");
+      }
+
+      Function *F = CGM.getIntrinsic(ID);
+      return Builder.CreateCall(F, Ops);
+    }
+
+    return emitX86RoundImmediate(*this, Ops[0], M);
+  }
+  case X86::BI__builtin_ia32_roundss:
+  case X86::BI__builtin_ia32_roundsd: {
+    unsigned M = cast<ConstantInt>(Ops[2])->getZExtValue();
+    unsigned MXCSRMask = 0b100;
+    unsigned FRoundNoExcMask = 0b1000;
+    unsigned UseMXCSR = MXCSRMask & M;
+    unsigned FRoundNoExc = FRoundNoExcMask & M;
+
+    if (UseMXCSR || !FRoundNoExc) {
+
+      Intrinsic::ID ID = Intrinsic::not_intrinsic;
+
+      switch (BuiltinID) {
+      case X86::BI__builtin_ia32_roundss:
+        ID = Intrinsic::x86_sse41_round_ss;
+        break;
+      case X86::BI__builtin_ia32_roundsd:
+        ID = Intrinsic::x86_sse41_round_sd;
+        break;
+      default:
+        llvm_unreachable("must return from switch");
+      }
+
+      Function *F = CGM.getIntrinsic(ID);
+      return Builder.CreateCall(F, Ops);
+    }
+
+    Value *Idx = Builder.getInt32(0);
+    Value *ValAt0 = Builder.CreateExtractElement(Ops[1], Idx);
+    Value *RoundedAt0 = emitX86RoundImmediate(*this, ValAt0, M);
+
+    return Builder.CreateInsertElement(Ops[0], RoundedAt0, Idx);
   }
   case X86::BI__builtin_ia32_lzcnt_u16:
   case X86::BI__builtin_ia32_lzcnt_u32:

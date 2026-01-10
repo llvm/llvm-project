@@ -11,7 +11,7 @@ Each entry should contain at least the (N), (E) and (D) fields.
 N: Linaro Toolchain Working Group
 E: linaro-toolchain@lists.linaro.org
 D: Arm platforms and picolibc
-G: DavidSpickett, omjavaid, ceseo
+G: omjavaid, ceseo, antmox
 
 N: LLVM on Power
 E: powerllvm@ca.ibm.com
