@@ -6156,12 +6156,11 @@ float APFloat::convertToFloat() const {
 }
 
 bool APFloatBase::isValidArbitraryFPFormat(StringRef Format) {
-  return Format == "Float8E5M2" || Format == "Float8E5M2FNUZ" ||
-         Format == "Float8E4M3" || Format == "Float8E4M3FN" ||
-         Format == "Float8E4M3FNUZ" || Format == "Float8E4M3B11FNUZ" ||
-         Format == "Float8E3M4" || Format == "Float8E8M0FNU" ||
-         Format == "Float6E3M2FN" || Format == "Float6E2M3FN" ||
-         Format == "Float4E2M1FN";
+  static constexpr StringLiteral ValidFormats[] = {
+      "Float8E5M2",   "Float8E5M2FNUZ", "Float8E4M3",       "Float8E4M3FN",
+      "Float8E4M3FNUZ", "Float8E4M3B11FNUZ", "Float8E3M4",   "Float8E8M0FNU",
+      "Float6E3M2FN", "Float6E2M3FN",   "Float4E2M1FN"};
+  return llvm::is_contained(ValidFormats, Format);
 }
 
 APFloat::Storage::~Storage() {
