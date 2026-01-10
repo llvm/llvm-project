@@ -325,7 +325,8 @@ public:
                        (isTargetAddressSpace(A) &&
                         toTargetAddressSpace(A) == /*Generic=*/4)) &&
                       isTargetAddressSpace(B) &&
-                      toTargetAddressSpace(B) <= /*Generic=*/4);
+                      (toTargetAddressSpace(B) <= /*Generic=*/4 &&
+                       toTargetAddressSpace(B) != /*Constant=*/2));
   }
 
   void getTargetDefines(const LangOptions &Opts,
