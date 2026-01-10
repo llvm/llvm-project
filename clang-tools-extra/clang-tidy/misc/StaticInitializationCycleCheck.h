@@ -15,7 +15,7 @@ namespace clang {
 
 namespace tidy::misc {
 
-/// Finds
+/// Finds cyclical initialization of static variables.
 ///
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/misc/static-initialization-cycle.html
