@@ -21,3 +21,4 @@ using math::ffma;
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SHARED_MATH_FFMA_H
+
