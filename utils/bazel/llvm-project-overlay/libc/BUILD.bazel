@@ -2805,6 +2805,14 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_ffma",
+    hdrs = ["src/__support/math/ffma.h"],
+    deps = [
+        ":__support_fputil_fma",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_frexpf128",
     hdrs = ["src/__support/math/frexpf128.h"],
     deps = [
@@ -3971,7 +3979,7 @@ libc_math_function(name = "fdivf128")
 libc_math_function(
     name = "ffma",
     additional_deps = [
-        ":__support_fputil_fma",
+        ":__support_math_ffma",
     ],
 )
 
