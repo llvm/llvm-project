@@ -5669,17 +5669,13 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                         fcNan | fcInf | fcZero | fcNegative, KnownRHS, Q,
                         Depth + 1);
 
-    bool KnowSomethingUseful =
-        KnownRHS.isKnownNeverNaN() || KnownRHS.isKnownNever(fcNegative);
+    bool KnowSomethingUseful = KnownRHS.isKnownNeverNaN() ||
+                               KnownRHS.isKnownNever(fcNegative) ||
+                               KnownRHS.isKnownNever(fcPositive);
 
     if (KnowSomethingUseful || WantPositive) {
-      const FPClassTest InterestedLHS =
-          WantPositive ? fcAllFlags
-                       : fcNan | fcInf | fcZero | fcSubnormal | fcNegative;
-
-      computeKnownFPClass(Op->getOperand(0), DemandedElts,
-                          InterestedClasses & InterestedLHS, KnownLHS, Q,
-                          Depth + 1);
+      computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
+                          Q, Depth + 1);
     }
 
     const Function *F = cast<Instruction>(Op)->getFunction();
@@ -5698,10 +5694,20 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         Known.knownNot(fcNan);
       }
 
+      // xor sign bit.
       // X / -0.0 is -Inf (or NaN).
       // +X / +X is +X
-      if (KnownLHS.isKnownNever(fcNegative) && KnownRHS.isKnownNever(fcNegative))
+      if ((KnownLHS.isKnownNever(fcNegative) &&
+           KnownRHS.isKnownNever(fcNegative)) ||
+          (KnownLHS.isKnownNever(fcPositive) &&
+           KnownRHS.isKnownNever(fcPositive)))
         Known.knownNot(fcNegative);
+
+      if ((KnownLHS.isKnownNever(fcPositive) &&
+           KnownRHS.isKnownNever(fcNegative)) ||
+          (KnownLHS.isKnownNever(fcNegative) &&
+           KnownRHS.isKnownNever(fcPositive)))
+        Known.knownNot(fcPositive);
     } else {
       // Inf REM x and x REM 0 produce NaN.
       if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
