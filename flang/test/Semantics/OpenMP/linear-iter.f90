@@ -32,8 +32,8 @@ SUBROUTINE LINEAR_BAD(N)
   !$omp target
   !$omp teams
   !ERROR: Variable 'j' not allowed in LINEAR clause, only loop iterator can be specified in LINEAR clause of a construct combined with DISTRIBUTE
-  !ERROR: List item 'b' in LINEAR clause must be a scalar variable
   !ERROR: Variable 'b' not allowed in LINEAR clause, only loop iterator can be specified in LINEAR clause of a construct combined with DISTRIBUTE
+  !ERROR: List item 'b' in LINEAR clause must be a scalar variable
   !$omp distribute parallel do simd linear(j) linear(b)
   do i = 1, N
      a = 3.14
