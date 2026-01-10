@@ -46,7 +46,6 @@ class IncrementalExecutor {
   using CtorDtorIterator = llvm::orc::CtorDtorIterator;
   std::unique_ptr<llvm::orc::LLJIT> Jit;
   llvm::orc::ThreadSafeContext &TSCtx;
-  uint32_t OutOfProcessChildPid = -1;
 
   llvm::DenseMap<const PartialTranslationUnit *, llvm::orc::ResourceTrackerSP>
       ResourceTrackers;
@@ -58,8 +57,7 @@ public:
   enum SymbolNameKind { IRName, LinkerName };
 
   IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
-                      llvm::orc::LLJITBuilder &JITBuilder,
-                      Interpreter::JITConfig Config, llvm::Error &Err);
+                      llvm::orc::LLJITBuilder &JITBuilder, llvm::Error &Err);
   virtual ~IncrementalExecutor();
 
   virtual llvm::Error addModule(PartialTranslationUnit &PTU);
@@ -70,8 +68,6 @@ public:
   getSymbolAddress(llvm::StringRef Name, SymbolNameKind NameKind) const;
 
   llvm::orc::LLJIT &GetExecutionEngine() { return *Jit; }
-
-  uint32_t getOutOfProcessChildPid() const { return OutOfProcessChildPid; }
 
   static llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
   createDefaultJITBuilder(llvm::orc::JITTargetMachineBuilder JTMB);

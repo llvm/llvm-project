@@ -65,45 +65,6 @@ public:
   }
 };
 
-struct OutOfProcInterpreter : public Interpreter {
-  OutOfProcInterpreter(
-      std::unique_ptr<CompilerInstance> CI, llvm::Error &ErrOut,
-      std::unique_ptr<clang::ASTConsumer> Consumer,
-      std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder = nullptr)
-      : Interpreter(std::move(CI), ErrOut, std::move(JITBuilder),
-                    std::move(Consumer)) {}
-};
-
-TEST_F(InterpreterExtensionsTest, FindRuntimeInterface) {
-// FIXME : WebAssembly doesn't currently support Jit (see
-// https: // github.com/llvm/llvm-project/pull/150977#discussion_r2237521095).
-// so this check of HostSupportsJIT has been skipped
-// over until support is added, and HostSupportsJIT can return true.
-#ifndef __EMSCRIPTEN__
-  if (!HostSupportsJIT())
-    GTEST_SKIP();
-#endif
-  clang::IncrementalCompilerBuilder CB;
-  llvm::Error ErrOut = llvm::Error::success();
-  auto CI = cantFail(CB.CreateCpp());
-  // Do not attach the default consumer which is specialized for in-process.
-  class NoopConsumer : public ASTConsumer {};
-  std::unique_ptr<ASTConsumer> C = std::make_unique<NoopConsumer>();
-  OutOfProcInterpreter I(std::move(CI), ErrOut, std::move(C),
-                         /*JITBuilder=*/nullptr);
-  cantFail(std::move(ErrOut));
-  cantFail(I.Parse("int a = 1; a"));
-  cantFail(I.Parse("int b = 2; b"));
-  cantFail(I.Parse("int c = 3; c"));
-
-  // Make sure no clang::Value logic is attached by the Interpreter.
-  Value V1;
-  llvm::cantFail(I.ParseAndExecute("int x = 42;"));
-  llvm::cantFail(I.ParseAndExecute("x", &V1));
-  EXPECT_FALSE(V1.isValid());
-  EXPECT_FALSE(V1.hasValue());
-}
-
 class CustomJBInterpreter : public Interpreter {
   using CustomJITBuilderCreatorFunction =
       std::function<llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>()>;
