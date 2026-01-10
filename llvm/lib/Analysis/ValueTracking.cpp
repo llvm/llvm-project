@@ -5642,9 +5642,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   }
   case Instruction::FDiv:
   case Instruction::FRem: {
+    const bool WantNan = (InterestedClasses & fcNan) != fcNone;
+
     if (Op->getOperand(0) == Op->getOperand(1) &&
         isGuaranteedNotToBeUndef(Op->getOperand(0), Q.AC, Q.CxtI, Q.DT)) {
-      // TODO: Could filter out snan if we inspect the operand
       if (Op->getOpcode() == Instruction::FDiv) {
         // X / X is always exactly 1.0 or a NaN.
         Known.KnownFPClasses = fcNan | fcPosNormal;
@@ -5653,10 +5654,27 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         Known.KnownFPClasses = fcNan | fcZero;
       }
 
+      if (!WantNan)
+        break;
+
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(Op->getOperand(0), DemandedElts,
+                          fcNan | fcInf | fcZero | fcSubnormal, KnownSrc, Q,
+                          Depth + 1);
+      const Function *F = cast<Instruction>(Op)->getFunction();
+      const fltSemantics &FltSem =
+          Op->getType()->getScalarType()->getFltSemantics();
+
+      if (KnownSrc.isKnownNeverInfOrNaN() &&
+          KnownSrc.isKnownNeverLogicalZero(F ? F->getDenormalMode(FltSem)
+                                             : DenormalMode::getDynamic()))
+        Known.knownNot(fcNan);
+      else if (KnownSrc.isKnownNever(fcSNan))
+        Known.knownNot(fcSNan);
+
       break;
     }
 
-    const bool WantNan = (InterestedClasses & fcNan) != fcNone;
     const bool WantNegative = (InterestedClasses & fcNegative) != fcNone;
     const bool WantPositive =
         Opc == Instruction::FRem && (InterestedClasses & fcPositive) != fcNone;
@@ -5708,6 +5726,14 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           (KnownLHS.isKnownNever(fcNegative) &&
            KnownRHS.isKnownNever(fcPositive)))
         Known.knownNot(fcPositive);
+
+      // 0 / x => 0 or nan
+      if (KnownLHS.isKnownAlways(fcZero))
+        Known.knownNot(fcSubnormal | fcNormal | fcInf);
+
+      // x / 0 => nan or inf
+      if (KnownRHS.isKnownAlways(fcZero))
+        Known.knownNot(fcFinite);
     } else {
       // Inf REM x and x REM 0 produce NaN.
       if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
