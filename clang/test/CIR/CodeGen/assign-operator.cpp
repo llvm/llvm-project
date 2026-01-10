@@ -16,9 +16,8 @@ void a() {
 // CIR: cir.func {{.*}} @_ZN1xaSEi(!cir.ptr<!rec_x>, !s32i)
 // CIR: cir.func{{.*}} @_Z1av()
 // CIR:   %[[A_ADDR:.*]] = cir.alloca !rec_x, !cir.ptr<!rec_x>, ["a"]
-// CIR:   %[[ONE:.*]] = cir.const #cir.int<1> : !u32i
-// CIR:   %[[ONE_CAST:.*]] = cir.cast integral %[[ONE]] : !u32i -> !s32i
-// CIR:   %[[RET:.*]] = cir.call @_ZN1xaSEi(%[[A_ADDR]], %[[ONE_CAST]]) : (!cir.ptr<!rec_x>, !s32i) -> !s32i
+// CIR:   %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CIR:   %[[RET:.*]] = cir.call @_ZN1xaSEi(%[[A_ADDR]], %[[ONE]]) : (!cir.ptr<!rec_x>, !s32i) -> !s32i
 
 // LLVM: define{{.*}} @_Z1av(){{.*}}
 // OGCG: define{{.*}} @_Z1av()
