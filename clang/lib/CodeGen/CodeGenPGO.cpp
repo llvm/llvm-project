@@ -306,7 +306,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
           }
 
           // Otherwise, allocate the Decision.
-          MCDCState.DecisionByStmt[BinOp].BitmapIdx = 0;
+          MCDCState.DecisionByStmt[BinOp].ID = MCDCState.DecisionByStmt.size();
         }
         return true;
       }
@@ -1137,7 +1137,7 @@ void CodeGenPGO::emitCounterRegionMapping(const Decl *D) {
 
   // Scan max(FalseCnt) and update NumRegionCounters.
   unsigned MaxNumCounters = NumRegionCounters;
-  for (const auto [_, V] : *RegionCounterMap) {
+  for (const auto &[_, V] : *RegionCounterMap) {
     assert((!V.Executed.hasValue() || MaxNumCounters > V.Executed) &&
            "TrueCnt should not be reassigned");
     if (V.Skipped.hasValue())
