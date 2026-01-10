@@ -1661,14 +1661,13 @@ void SCCPInstVisitor::visitSelectInst(SelectInst &I) {
 
 // Handle Unary Operators.
 void SCCPInstVisitor::visitUnaryOperator(Instruction &I) {
-  ValueLatticeElement V0State = getValueState(I.getOperand(0));
-
   ValueLatticeElement &IV = ValueState[&I];
   // resolvedUndefsIn might mark I as overdefined. Bail out, even if we would
   // discover a concrete value later.
   if (IV.isOverdefined())
     return (void)markOverdefined(&I);
 
+  ValueLatticeElement V0State = getValueState(I.getOperand(0));
   // If something is unknown/undef, wait for it to resolve.
   if (V0State.isUnknownOrUndef())
     return;
@@ -1687,13 +1686,13 @@ void SCCPInstVisitor::visitFreezeInst(FreezeInst &I) {
   if (I.getType()->isStructTy())
     return (void)markOverdefined(&I);
 
-  ValueLatticeElement V0State = getValueState(I.getOperand(0));
   ValueLatticeElement &IV = ValueState[&I];
   // resolvedUndefsIn might mark I as overdefined. Bail out, even if we would
   // discover a concrete value later.
   if (IV.isOverdefined())
     return (void)markOverdefined(&I);
 
+  ValueLatticeElement V0State = getValueState(I.getOperand(0));
   // If something is unknown/undef, wait for it to resolve.
   if (V0State.isUnknownOrUndef())
     return;
