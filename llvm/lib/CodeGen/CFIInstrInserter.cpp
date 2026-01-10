@@ -88,19 +88,61 @@ class CFIInstrInserter : public MachineFunctionPass {
 #define INVALID_REG UINT_MAX
 #define INVALID_OFFSET INT_MAX
   /// contains the location where CSR register is saved.
-  struct CSRSavedLocation {
-    CSRSavedLocation(std::optional<unsigned> R, std::optional<int> O)
-        : Reg(R), Offset(O) {
-      assert((Reg.has_value() ^ Offset.has_value()) &&
-             "Register and offset can not both be valid");
+  class CSRSavedLocation {
+  public:
+    enum Kind { Invalid, Register, CFAOffset };
+    Kind K = Invalid;
+
+  private:
+    union {
+      // Dwarf register number
+      unsigned Reg;
+      // CFA offset
+      int64_t Offset;
+    };
+
+  public:
+    CSRSavedLocation() {}
+
+    static CSRSavedLocation createCFAOffset(int64_t Offset) {
+      CSRSavedLocation Loc;
+      Loc.K = Kind::CFAOffset;
+      Loc.Offset = Offset;
+      return Loc;
     }
-    std::optional<unsigned> Reg;
-    std::optional<int> Offset;
+
+    static CSRSavedLocation createRegister(unsigned Reg) {
+      CSRSavedLocation Loc;
+      Loc.K = Kind::Register;
+      Loc.Reg = Reg;
+      return Loc;
+    }
+
+    bool isValid() const { return K != Kind::Invalid; }
+
+    unsigned getRegister() const {
+      assert(K == Kind::Register);
+      return Reg;
+    }
+
+    int64_t getOffset() const {
+      assert(K == Kind::CFAOffset);
+      return Offset;
+    }
 
     bool operator==(const CSRSavedLocation &RHS) const {
-      return Reg == RHS.Reg && Offset == RHS.Offset;
+      if (K != RHS.K)
+        return false;
+      switch (K) {
+      case Kind::Invalid:
+        return true;
+      case Kind::Register:
+        return getRegister() == RHS.getRegister();
+      case Kind::CFAOffset:
+        return getOffset() == RHS.getOffset();
+      }
+      llvm_unreachable("Unknown CSRSavedLocation Kind!");
     }
-
     bool operator!=(const CSRSavedLocation &RHS) const {
       return !(*this == RHS);
     }
@@ -277,13 +319,19 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
       case MCCFIInstruction::OpValOffset:
         break;
       }
-      if (CSRReg || CSROffset) {
-        CSRSavedLocation Loc(CSRReg, CSROffset);
-        auto [It, Inserted] = CSRLocMap.insert({CFI.getRegister(), Loc});
-        if (!Inserted && It->second != Loc) {
+      assert((!CSRReg.has_value() || !CSROffset.has_value()) &&
+             "A register can only be at an offset from CFA or in another "
+             "register, but not both!");
+      CSRSavedLocation CSRLoc;
+      if (CSRReg)
+        CSRLoc = CSRSavedLocation::createRegister(*CSRReg);
+      else if (CSROffset)
+        CSRLoc = CSRSavedLocation::createCFAOffset(*CSROffset);
+      if (CSRLoc.isValid()) {
+        auto [It, Inserted] = CSRLocMap.insert({CFI.getRegister(), CSRLoc});
+        if (!Inserted && It->second != CSRLoc)
           reportFatalInternalError(
               "Different saved locations for the same CSR");
-        }
         CSRSaved.set(CFI.getRegister());
       }
     }
@@ -403,14 +451,19 @@ bool CFIInstrInserter::insertCFIInstrs(MachineFunction &MF) {
       assert(it != CSRLocMap.end() && "Reg should have an entry in CSRLocMap");
       unsigned CFIIndex;
       CSRSavedLocation RO = it->second;
-      if (!RO.Reg && RO.Offset) {
+      switch (RO.K) {
+      case CSRSavedLocation::CFAOffset: {
         CFIIndex = MF.addFrameInst(
-            MCCFIInstruction::createOffset(nullptr, Reg, *RO.Offset));
-      } else {
-        assert((RO.Reg && !RO.Offset) &&
-               "Reg and Offset cannot both be valid/invalid");
+            MCCFIInstruction::createOffset(nullptr, Reg, RO.getOffset()));
+        break;
+      }
+      case CSRSavedLocation::Register: {
         CFIIndex = MF.addFrameInst(
-            MCCFIInstruction::createRegister(nullptr, Reg, *RO.Reg));
+            MCCFIInstruction::createRegister(nullptr, Reg, RO.getRegister()));
+        break;
+      }
+      default:
+        llvm_unreachable("Invalid CSRSavedLocation!");
       }
       BuildMI(*MBBInfo.MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex);
