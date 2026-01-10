@@ -268,7 +268,7 @@ struct VPlanTransforms {
 
   /// Optimize recipes which use an EVL based header mask to a VP intrinsic:
   ///
-  /// %mask = icmp step-vector, EVL
+  /// %mask = icmp ult step-vector, EVL
   /// %load = load %ptr, %mask
   /// -->
   /// %load = vp.load %ptr, EVL

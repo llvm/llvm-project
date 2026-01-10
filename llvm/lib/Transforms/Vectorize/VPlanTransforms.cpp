@@ -2983,11 +2983,12 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
 /// The transforms here need to preserve the original semantics.
 void VPlanTransforms::optimizeEVLMasks(VPlan &Plan) {
   // Find the EVL-based header mask if it exists: icmp ult step-vector, EVL
-  VPInstruction *HeaderMask = nullptr;
+  VPValue *HeaderMask = nullptr, *EVL = nullptr;
   for (VPRecipeBase &R : *Plan.getVectorLoopRegion()->getEntryBasicBlock()) {
-    if (match(&R, m_ICmp(m_VPInstruction<VPInstruction::StepVector>(),
-                         m_EVL(m_VPValue())))) {
-      HeaderMask = cast<VPInstruction>(&R);
+    if (match(&R, m_SpecificICmp(CmpInst::ICMP_ULT, m_StepVector(),
+                                 m_VPValue(EVL))) &&
+        match(EVL, m_EVL(m_VPValue()))) {
+      HeaderMask = R.getVPSingleValue();
       break;
     }
   }
@@ -2995,7 +2996,6 @@ void VPlanTransforms::optimizeEVLMasks(VPlan &Plan) {
     return;
 
   VPTypeAnalysis TypeInfo(Plan);
-  VPValue *EVL = HeaderMask->getOperand(1);
 
   for (VPUser *U : collectUsersRecursively(HeaderMask)) {
     VPRecipeBase *R = cast<VPRecipeBase>(U);
