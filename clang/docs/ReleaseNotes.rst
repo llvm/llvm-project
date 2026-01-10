@@ -1018,6 +1018,10 @@ WebAssembly Support
 
 - Fix a bug so that ``__has_attribute(musttail)`` is no longer true when WebAssembly's tail-call is not enabled. (#GH163256)
 
+- The `wasm32-wasi` target has been renamed to `wasm32-wasip1`. The old
+  option is still recognized, though by default will emit a deprecation
+  warning.
+
 AVR Support
 ^^^^^^^^^^^
 
@@ -1242,6 +1246,8 @@ OpenMP Support
 - Added parsing and semantic analysis support for ``need_device_ptr`` modifier
   to accept an optional fallback argument (``fb_nullify`` or ``fb_preserve``)
   with OpenMP >= 61.
+- ``use_device_ptr`` and ``use_device_addr`` now preserve the original host
+  address when lookup fails.
 
 Improvements
 ^^^^^^^^^^^^
