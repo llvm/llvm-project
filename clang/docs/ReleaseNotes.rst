@@ -140,6 +140,12 @@ ABI Changes in This Version
 ---------------------------
 - Fix AArch64 argument passing for C++ empty classes with large explicitly specified alignment.
 
+AST Potentially Breaking Changes
+--------------------------------
+- Abbreviated function templates and generic lambdas now have a valid begin source location.
+  The begin source location of abbreviated function templates is the begin source location of the templated function.
+  The begin source location of generic lambdas is the begin source location of the lambda introducer ``[...]``.
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 - How nested name specifiers are dumped and printed changes, keeping track of clang AST changes.
