@@ -422,7 +422,8 @@ def testValueCasters():
     try:
 
         @register_value_caster(IntegerType.static_typeid)
-        def dont_cast_int_shouldnt_register(v): ...
+        def dont_cast_int_shouldnt_register(v):
+            ...
 
     except RuntimeError as e:
         # CHECK: Value caster is already registered: {{.*}}cast_int
