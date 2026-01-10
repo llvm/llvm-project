@@ -699,6 +699,32 @@ public:
     return InstantiatedFunction->getParamDecl(ParamIdx);
   }
 
+  bool VisitCXXParenListInitExpr(CXXParenListInitExpr *E) {
+    if (!Cfg.InlayHints.Designators)
+      return true;
+
+    if (const auto *CXXRecord = E->getType()->getAsCXXRecordDecl()) {
+      const auto &InitExprs = E->getUserSpecifiedInitExprs();
+
+      if (InitExprs.size() <= CXXRecord->getNumBases())
+        return true;
+
+      // Inherited members are first, skip hinting them for now.
+      // FIXME: '.base=' or 'base:' hint?
+      const auto &MemberInitExprs =
+          InitExprs.drop_front(CXXRecord->getNumBases());
+
+      // Then the fields in this record
+      for (const auto &[InitExpr, Field] :
+           llvm::zip(MemberInitExprs, CXXRecord->fields())) {
+        addDesignatorHint(InitExpr->getSourceRange(),
+                          "." + Field->getName().str());
+      }
+    }
+
+    return true;
+  }
+
   bool VisitInitListExpr(InitListExpr *Syn) {
     // We receive the syntactic form here (shouldVisitImplicitCode() is false).
     // This is the one we will ultimately attach designators to.
