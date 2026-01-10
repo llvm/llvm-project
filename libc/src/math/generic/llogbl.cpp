@@ -7,14 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/llogbl.h"
-#include "src/__support/FPUtil/ManipulationFunctions.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(long, llogbl, (long double x)) {
-  return fputil::intlogb<long>(x);
-}
+// Export the public C symbol by wrapping the inline constexpr definition.
+// This maintains binary compatibility with the shipped libc while allowing
+// callers to evaluate llogbl at compile time or have it inlined.
+LLVM_LIBC_FUNCTION(long, llogbl, (long double x)) { return llogbl(x); }
 
 } // namespace LIBC_NAMESPACE_DECL

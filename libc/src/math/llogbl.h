@@ -9,12 +9,17 @@
 #ifndef LLVM_LIBC_SRC_MATH_LLOGBL_H
 #define LLVM_LIBC_SRC_MATH_LLOGBL_H
 
+#include "src/__support/FPUtil/ManipulationFunctions.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-long llogbl(long double x);
+// Inline constexpr implementation: extract the unbiased exponent of a long double
+// by delegating to the existing constexpr template fputil::intlogb<long>.
+LIBC_INLINE constexpr long llogbl(long double x) {
+  return fputil::intlogb<long>(x);
+}
 
 } // namespace LIBC_NAMESPACE_DECL
 
