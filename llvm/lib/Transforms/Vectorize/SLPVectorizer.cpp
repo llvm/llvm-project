@@ -9159,7 +9159,6 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
         Data.first->reorderOperands(Mask);
       if (!isa<InsertElementInst, StoreInst>(Data.first->getMainOp()) ||
           IsNotProfitableAltCodeNode(*Data.first) ||
-          Data.first->State == TreeEntry::StridedVectorize ||
           Data.first->State == TreeEntry::CompressVectorize) {
         reorderScalars(Data.first->Scalars, Mask);
         reorderOrder(Data.first->ReorderIndices, MaskOrder,
