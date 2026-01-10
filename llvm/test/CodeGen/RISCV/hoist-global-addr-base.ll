@@ -113,8 +113,7 @@ define ptr @big_offset_neg_addi() nounwind {
 ;
 ; RV32XQCI-LABEL: big_offset_neg_addi:
 ; RV32XQCI:       # %bb.0:
-; RV32XQCI-NEXT:    qc.e.li a0, g
-; RV32XQCI-NEXT:    qc.e.addi a0, a0, 73568
+; RV32XQCI-NEXT:    qc.e.li a0, g+73568
 ; RV32XQCI-NEXT:    ret
 ;
 ; RV64-LABEL: big_offset_neg_addi:
@@ -140,8 +139,7 @@ define ptr @big_offset_lui_tail() nounwind {
 ;
 ; RV32XQCI-LABEL: big_offset_lui_tail:
 ; RV32XQCI:       # %bb.0:
-; RV32XQCI-NEXT:    qc.e.li a0, g
-; RV32XQCI-NEXT:    qc.e.addi a0, a0, 524288
+; RV32XQCI-NEXT:    qc.e.li a0, g+524288
 ; RV32XQCI-NEXT:    ret
 ;
 ; RV64-LABEL: big_offset_lui_tail:
@@ -161,8 +159,7 @@ define ptr @big_offset_neg_lui_tail() {
 ;
 ; RV32XQCI-LABEL: big_offset_neg_lui_tail:
 ; RV32XQCI:       # %bb.0:
-; RV32XQCI-NEXT:    qc.e.li a0, bar
-; RV32XQCI-NEXT:    qc.e.addi a0, a0, -8192
+; RV32XQCI-NEXT:    qc.e.li a0, bar-8192
 ; RV32XQCI-NEXT:    ret
 ;
 ; RV64-LABEL: big_offset_neg_lui_tail:
@@ -182,8 +179,7 @@ define dso_local ptr @big_offset_one_use() local_unnamed_addr nounwind {
 ;
 ; RV32XQCI-LABEL: big_offset_one_use:
 ; RV32XQCI:       # %bb.0: # %entry
-; RV32XQCI-NEXT:    qc.e.li a0, s
-; RV32XQCI-NEXT:    qc.e.addi a0, a0, 16572
+; RV32XQCI-NEXT:    qc.e.li a0, s+16572
 ; RV32XQCI-NEXT:    ret
 ;
 ; RV64-LABEL: big_offset_one_use:
@@ -204,8 +200,7 @@ define dso_local ptr @small_offset_one_use() local_unnamed_addr nounwind {
 ;
 ; RV32XQCI-LABEL: small_offset_one_use:
 ; RV32XQCI:       # %bb.0: # %entry
-; RV32XQCI-NEXT:    qc.e.li a0, s
-; RV32XQCI-NEXT:    addi a0, a0, 160
+; RV32XQCI-NEXT:    qc.e.li a0, s+160
 ; RV32XQCI-NEXT:    ret
 ;
 ; RV64-LABEL: small_offset_one_use:
@@ -282,8 +277,8 @@ define dso_local i32 @load_half() nounwind {
 ;
 ; RV32XQCI-LABEL: load_half:
 ; RV32XQCI:       # %bb.0: # %entry
-; RV32XQCI-NEXT:    qc.e.li a0, foo
-; RV32XQCI-NEXT:    lhu a0, 8(a0)
+; RV32XQCI-NEXT:    qc.e.li a0, foo+8
+; RV32XQCI-NEXT:    lhu a0, 0(a0)
 ; RV32XQCI-NEXT:    li a1, 140
 ; RV32XQCI-NEXT:    bne a0, a1, .LBB8_2
 ; RV32XQCI-NEXT:  # %bb.1: # %if.end
@@ -332,9 +327,9 @@ define dso_local void @one_store() local_unnamed_addr nounwind {
 ;
 ; RV32XQCI-LABEL: one_store:
 ; RV32XQCI:       # %bb.0: # %entry
-; RV32XQCI-NEXT:    qc.e.li a0, s
+; RV32XQCI-NEXT:    qc.e.li a0, s+160
 ; RV32XQCI-NEXT:    li a1, 10
-; RV32XQCI-NEXT:    sw a1, 160(a0)
+; RV32XQCI-NEXT:    sw a1, 0(a0)
 ; RV32XQCI-NEXT:    ret
 ;
 ; RV64-LABEL: one_store:
@@ -357,8 +352,7 @@ define ptr @neg_offset() {
 ;
 ; RV32XQCI-LABEL: neg_offset:
 ; RV32XQCI:       # %bb.0:
-; RV32XQCI-NEXT:    qc.e.li a0, bar
-; RV32XQCI-NEXT:    qc.e.addi a0, a0, -8191
+; RV32XQCI-NEXT:    qc.e.li a0, bar-8191
 ; RV32XQCI-NEXT:    ret
 ;
 ; RV64-LABEL: neg_offset:
@@ -404,8 +398,7 @@ define ptr @offset_addi_addi() {
 ;
 ; RV32XQCI-LABEL: offset_addi_addi:
 ; RV32XQCI:       # %bb.0:
-; RV32XQCI-NEXT:    qc.e.li a0, bar
-; RV32XQCI-NEXT:    qc.e.addi a0, a0, 3211
+; RV32XQCI-NEXT:    qc.e.li a0, bar+3211
 ; RV32XQCI-NEXT:    ret
 ;
 ; RV64-LABEL: offset_addi_addi:
@@ -425,8 +418,7 @@ define ptr @offset_addi_addi_neg() {
 ;
 ; RV32XQCI-LABEL: offset_addi_addi_neg:
 ; RV32XQCI:       # %bb.0:
-; RV32XQCI-NEXT:    qc.e.li a0, bar
-; RV32XQCI-NEXT:    qc.e.addi a0, a0, -4000
+; RV32XQCI-NEXT:    qc.e.li a0, bar-4000
 ; RV32XQCI-NEXT:    ret
 ;
 ; RV64-LABEL: offset_addi_addi_neg:
@@ -447,8 +439,7 @@ define ptr @offset_sh2add() {
 ;
 ; RV32XQCI-LABEL: offset_sh2add:
 ; RV32XQCI:       # %bb.0:
-; RV32XQCI-NEXT:    qc.e.li a0, bar
-; RV32XQCI-NEXT:    qc.e.addi a0, a0, 6424
+; RV32XQCI-NEXT:    qc.e.li a0, bar+6424
 ; RV32XQCI-NEXT:    ret
 ;
 ; RV64-LABEL: offset_sh2add:
@@ -469,8 +460,7 @@ define ptr @offset_sh3add() {
 ;
 ; RV32XQCI-LABEL: offset_sh3add:
 ; RV32XQCI:       # %bb.0:
-; RV32XQCI-NEXT:    qc.e.li a0, bar
-; RV32XQCI-NEXT:    qc.e.addi a0, a0, 12848
+; RV32XQCI-NEXT:    qc.e.li a0, bar+12848
 ; RV32XQCI-NEXT:    ret
 ;
 ; RV64-LABEL: offset_sh3add:
@@ -492,10 +482,10 @@ define dso_local void @read_modify_write() local_unnamed_addr nounwind {
 ;
 ; RV32XQCI-LABEL: read_modify_write:
 ; RV32XQCI:       # %bb.0: # %entry
-; RV32XQCI-NEXT:    qc.e.li a0, s
-; RV32XQCI-NEXT:    lw a1, 160(a0)
+; RV32XQCI-NEXT:    qc.e.li a0, s+160
+; RV32XQCI-NEXT:    lw a1, 0(a0)
 ; RV32XQCI-NEXT:    addi a1, a1, 10
-; RV32XQCI-NEXT:    sw a1, 160(a0)
+; RV32XQCI-NEXT:    sw a1, 0(a0)
 ; RV32XQCI-NEXT:    ret
 ;
 ; RV64-LABEL: read_modify_write:
@@ -526,12 +516,12 @@ define dso_local void @rmw_with_control_flow() nounwind {
 ;
 ; RV32XQCI-LABEL: rmw_with_control_flow:
 ; RV32XQCI:       # %bb.0: # %entry
-; RV32XQCI-NEXT:    qc.e.li a0, s
-; RV32XQCI-NEXT:    lw a1, 164(a0)
+; RV32XQCI-NEXT:    qc.e.li a0, s+164
+; RV32XQCI-NEXT:    lw a1, 0(a0)
 ; RV32XQCI-NEXT:    blez a1, .LBB17_2
 ; RV32XQCI-NEXT:  # %bb.1: # %if.then
 ; RV32XQCI-NEXT:    li a1, 10
-; RV32XQCI-NEXT:    sw a1, 164(a0)
+; RV32XQCI-NEXT:    sw a1, 0(a0)
 ; RV32XQCI-NEXT:  .LBB17_2: # %if.end
 ; RV32XQCI-NEXT:    ret
 ;
@@ -597,10 +587,9 @@ define void @store_addi_addi() {
 ;
 ; RV32XQCI-LABEL: store_addi_addi:
 ; RV32XQCI:       # %bb.0:
-; RV32XQCI-NEXT:    qc.e.li a0, bar
-; RV32XQCI-NEXT:    addi a0, a0, 2047
+; RV32XQCI-NEXT:    qc.e.li a0, bar+3211
 ; RV32XQCI-NEXT:    li a1, 10
-; RV32XQCI-NEXT:    sb a1, 1164(a0)
+; RV32XQCI-NEXT:    sb a1, 0(a0)
 ; RV32XQCI-NEXT:    ret
 ;
 ; RV64-LABEL: store_addi_addi:
@@ -623,10 +612,9 @@ define void @store_addi_addi_neg() {
 ;
 ; RV32XQCI-LABEL: store_addi_addi_neg:
 ; RV32XQCI:       # %bb.0:
-; RV32XQCI-NEXT:    qc.e.li a0, bar
-; RV32XQCI-NEXT:    addi a0, a0, -2048
+; RV32XQCI-NEXT:    qc.e.li a0, bar-4000
 ; RV32XQCI-NEXT:    li a1, 10
-; RV32XQCI-NEXT:    sb a1, -1952(a0)
+; RV32XQCI-NEXT:    sb a1, 0(a0)
 ; RV32XQCI-NEXT:    ret
 ;
 ; RV64-LABEL: store_addi_addi_neg:
@@ -650,11 +638,9 @@ define void @store_sh2add() {
 ;
 ; RV32XQCI-LABEL: store_sh2add:
 ; RV32XQCI:       # %bb.0:
-; RV32XQCI-NEXT:    lui a0, 2
-; RV32XQCI-NEXT:    qc.e.li a1, bar
-; RV32XQCI-NEXT:    add a0, a0, a1
+; RV32XQCI-NEXT:    qc.e.li a0, bar+6424
 ; RV32XQCI-NEXT:    li a1, 10
-; RV32XQCI-NEXT:    sb a1, -1768(a0)
+; RV32XQCI-NEXT:    sb a1, 0(a0)
 ; RV32XQCI-NEXT:    ret
 ;
 ; RV64-LABEL: store_sh2add:
@@ -678,11 +664,9 @@ define void @store_sh3add() {
 ;
 ; RV32XQCI-LABEL: store_sh3add:
 ; RV32XQCI:       # %bb.0:
-; RV32XQCI-NEXT:    lui a0, 3
-; RV32XQCI-NEXT:    qc.e.li a1, bar
-; RV32XQCI-NEXT:    add a0, a0, a1
+; RV32XQCI-NEXT:    qc.e.li a0, bar+12848
 ; RV32XQCI-NEXT:    li a1, 10
-; RV32XQCI-NEXT:    sb a1, 560(a0)
+; RV32XQCI-NEXT:    sb a1, 0(a0)
 ; RV32XQCI-NEXT:    ret
 ;
 ; RV64-LABEL: store_sh3add:
@@ -706,11 +690,10 @@ define dso_local void @rmw_addi_addi() nounwind {
 ;
 ; RV32XQCI-LABEL: rmw_addi_addi:
 ; RV32XQCI:       # %bb.0: # %entry
-; RV32XQCI-NEXT:    qc.e.li a0, bar
-; RV32XQCI-NEXT:    addi a0, a0, 2047
-; RV32XQCI-NEXT:    lbu a1, 1164(a0)
+; RV32XQCI-NEXT:    qc.e.li a0, bar+3211
+; RV32XQCI-NEXT:    lbu a1, 0(a0)
 ; RV32XQCI-NEXT:    addi a1, a1, 10
-; RV32XQCI-NEXT:    sb a1, 1164(a0)
+; RV32XQCI-NEXT:    sb a1, 0(a0)
 ; RV32XQCI-NEXT:    ret
 ;
 ; RV64-LABEL: rmw_addi_addi:
