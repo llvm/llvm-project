@@ -112,6 +112,9 @@ void test_amdgcn_wmma_i32_16x16x64_iu8(global v8i* out, v8i a, v8i b, v8i c, int
   *out = __builtin_amdgcn_wmma_i32_16x16x64_iu8(0, a, mod, b, c, false, false); // expected-error {{'__builtin_amdgcn_wmma_i32_16x16x64_iu8' must be a constant integer}}
   *out = __builtin_amdgcn_wmma_i32_16x16x64_iu8(0, a, 0, b, c, mod, false); // expected-error {{'__builtin_amdgcn_wmma_i32_16x16x64_iu8' must be a constant integer}}
   *out = __builtin_amdgcn_wmma_i32_16x16x64_iu8(0, a, 0, b, c, false, mod); // expected-error {{'__builtin_amdgcn_wmma_i32_16x16x64_iu8' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_i32_16x16x64_iu8(0, a, 0, b, c, false, true, 32.0f); // expected-error {{integer constant expression must have integer type, not 'double'}}
+  *out = __builtin_amdgcn_wmma_i32_16x16x64_iu8(0, a, 0, b, c, false, true, mod); // expected-error {{expression is not an integer constant expression}}
+  *out = __builtin_amdgcn_wmma_i32_16x16x64_iu8(0, a, 0, b, c, false, true, true, 32.0f); // expected-error {{too many arguments to function call, expected at most 8, have 9}}
 }
 
 void test_amdgcn_wmma_f32_16x16x128_f8f6f4(global v8f* out, v16i a, v16i b, v8f c, int mod)
@@ -286,6 +289,9 @@ void test_amdgcn_swmmac_i32_16x16x128_iu8(global v8i* out, v8i a, v16i b, v8i c,
   *out = __builtin_amdgcn_swmmac_i32_16x16x128_iu8(0, a, mod, b, c, index, false, false); // expected-error {{'__builtin_amdgcn_swmmac_i32_16x16x128_iu8' must be a constant integer}}
   *out = __builtin_amdgcn_swmmac_i32_16x16x128_iu8(0, a, 0, b, c, index, mod, false); // expected-error {{'__builtin_amdgcn_swmmac_i32_16x16x128_iu8' must be a constant integer}}
   *out = __builtin_amdgcn_swmmac_i32_16x16x128_iu8(0, a, 0, b, c, index, false, mod); // expected-error {{'__builtin_amdgcn_swmmac_i32_16x16x128_iu8' must be a constant integer}}
+  *out = __builtin_amdgcn_swmmac_i32_16x16x128_iu8(0, a, 0, b, c, index, false, true, 32.0f); // expected-error {{integer constant expression must have integer type, not 'double'}}
+  *out = __builtin_amdgcn_swmmac_i32_16x16x128_iu8(0, a, 0, b, c, index, false, true, mod); // expected-error {{expression is not an integer constant expression}}
+  *out = __builtin_amdgcn_swmmac_i32_16x16x128_iu8(0, a, 0, b, c, index, false, true, true, 32.0f); // expected-error {{too many arguments to function call, expected at most 9, have 10}}
 }
 
 void test_amdgcn_swmmac_f32_16x16x64_f16(global v8f* out, v16h a, v32h b, v8f c, int index, int mod)
