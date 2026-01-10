@@ -62384,8 +62384,8 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
       }
       bool IsBool = BitWidth == 1;
       BooleanContent BCont = getBooleanContents(MVT::i64);
-      ISD::NodeType ExtOpc = IsBool ? getExtendForContent(BCont)
-                                    : ISD::SIGN_EXTEND;
+      ISD::NodeType ExtOpc =
+          IsBool ? getExtendForContent(BCont) : ISD::SIGN_EXTEND;
       Result =
           ExtOpc == ISD::ZERO_EXTEND
               ? DAG.getTargetConstant(CST->getZExtValue(), DL, MVT::i64)
