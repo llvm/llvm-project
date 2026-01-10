@@ -2388,8 +2388,8 @@ PyOpAttributeMap::dunderGetItemNamed(const std::string &name) {
   return PyAttribute(operation->getContext(), attr).maybeDownCast();
 }
 
-nb::object PyOpAttributeMap::getWithDefaultNamed(const std::string &key,
-                                                 nb::object defaultValue) {
+nb::typed<nb::object, std::optional<PyAttribute>>
+PyOpAttributeMap::getWithDefaultNamed(const std::string &key, nb::object defaultValue) {
   MlirAttribute attr =
       mlirOperationGetAttributeByName(operation->get(), toMlirStringRef(key));
   if (mlirAttributeIsNull(attr))

@@ -1782,8 +1782,8 @@ public:
 
   PyNamedAttribute dunderGetItemIndexed(intptr_t index);
 
-  nanobind::object getWithDefaultNamed(const std::string &key,
-                                       nanobind::object defaultValue);
+  nanobind::typed<nanobind::object, std::optional<PyAttribute>>
+  getWithDefaultNamed(const std::string &key, nanobind::object defaultValue);
 
   void dunderSetItem(const std::string &name, const PyAttribute &attr);
 
