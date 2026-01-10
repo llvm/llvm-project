@@ -351,8 +351,6 @@ std::optional<APInt> constantTripCount(
       return std::nullopt;
     APSInt lbCst(maybeLbCst->first, /*isUnsigned=*/!isSigned);
     APSInt ubCst(maybeUbCst->first, /*isUnsigned=*/!isSigned);
-    if (!maybeUbCst)
-      return std::nullopt;
     if (ubCst <= lbCst) {
       LDBG() << "constantTripCount is 0 because ub <= lb (" << lbCst << "("
              << lbCst.getBitWidth() << ") <= " << ubCst << "("
@@ -385,9 +383,9 @@ std::optional<APInt> constantTripCount(
     return std::nullopt;
   }
   auto &stepCst = maybeStepCst->first;
-  llvm::APInt tripCount = diff.sdiv(stepCst);
-  llvm::APInt r = diff.srem(stepCst);
-  if (!r.isZero())
+  llvm::APInt tripCount = isSigned ? diff.sdiv(stepCst) : diff.udiv(stepCst);
+  llvm::APInt remainder = isSigned ? diff.srem(stepCst) : diff.urem(stepCst);
+  if (!remainder.isZero())
     tripCount = tripCount + 1;
   LDBG() << "constantTripCount found: " << tripCount;
   return tripCount;
