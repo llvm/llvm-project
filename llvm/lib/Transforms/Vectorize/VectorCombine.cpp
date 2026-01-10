@@ -55,9 +55,9 @@ STATISTIC(NumScalarOps, "Number of scalar unary + binary ops formed");
 STATISTIC(NumScalarCmp, "Number of scalar compares formed");
 STATISTIC(NumScalarIntrinsic, "Number of scalar intrinsic calls formed");
 
-static cl::opt<bool> DisableVectorCombine(
-    "disable-vector-combine", cl::init(false), cl::Hidden,
-    cl::desc("Disable all vector combine transforms"));
+static cl::opt<bool>
+    DisableVectorCombine("disable-vector-combine", cl::init(false), cl::Hidden,
+                         cl::desc("Disable all vector combine transforms"));
 
 static cl::opt<bool> DisableBinopExtractShuffle(
     "disable-binop-extract-shuffle", cl::init(false), cl::Hidden,
@@ -1211,8 +1211,7 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   InstructionCost OldCost = 2 * SplatCost + VectorOpCost;
 
   // Determine scalar opcode
-  std::optional<unsigned> FunctionalOpcode =
-      VPI.getFunctionalOpcode();
+  std::optional<unsigned> FunctionalOpcode = VPI.getFunctionalOpcode();
   std::optional<Intrinsic::ID> ScalarIntrID = std::nullopt;
   if (!FunctionalOpcode) {
     ScalarIntrID = VPI.getFunctionalIntrinsicID();
@@ -1235,8 +1234,7 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
       (SplatCost * !Op0->hasOneUse()) + (SplatCost * !Op1->hasOneUse());
   InstructionCost NewCost = ScalarOpCost + SplatCost + CostToKeepSplats;
 
-  LLVM_DEBUG(dbgs() << "Found a VP Intrinsic to scalarize: " << VPI
-                    << "\n");
+  LLVM_DEBUG(dbgs() << "Found a VP Intrinsic to scalarize: " << VPI << "\n");
   LLVM_DEBUG(dbgs() << "Cost of Intrinsic: " << OldCost
                     << ", Cost of scalarizing:" << NewCost << "\n");
 
@@ -2330,10 +2328,12 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
   }
 
   unsigned NumOpElts = Op0Ty->getNumElements();
-  bool IsIdentity0 = ShuffleDstTy == Op0Ty &&
+  bool IsIdentity0 =
+      ShuffleDstTy == Op0Ty &&
       all_of(NewMask0, [NumOpElts](int M) { return M < (int)NumOpElts; }) &&
       ShuffleVectorInst::isIdentityMask(NewMask0, NumOpElts);
-  bool IsIdentity1 = ShuffleDstTy == Op1Ty &&
+  bool IsIdentity1 =
+      ShuffleDstTy == Op1Ty &&
       all_of(NewMask1, [NumOpElts](int M) { return M < (int)NumOpElts; }) &&
       ShuffleVectorInst::isIdentityMask(NewMask1, NumOpElts);
 
@@ -3204,7 +3204,7 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
 bool VectorCombine::foldPermuteOfIntrinsic(Instruction &I) {
   Value *V0;
   ArrayRef<int> Mask;
-  if (!match(&I, m_Shuffle(m_OneUse(m_Value(V0)), m_Undef(), m_Mask(Mask))))
+  if (!match(&I, m_Shuffle(m_Value(V0), m_Undef(), m_Mask(Mask))))
     return false;
 
   auto *II0 = dyn_cast<IntrinsicInst>(V0);
@@ -3226,8 +3226,10 @@ bool VectorCombine::foldPermuteOfIntrinsic(Instruction &I) {
     return false;
 
   // Cost analysis
+  InstructionCost IntrinsicCost =
+      TTI.getIntrinsicInstrCost(IntrinsicCostAttributes(IID, *II0), CostKind);
   InstructionCost OldCost =
-      TTI.getIntrinsicInstrCost(IntrinsicCostAttributes(IID, *II0), CostKind) +
+      IntrinsicCost +
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, ShuffleDstTy,
                          IntrinsicSrcTy, Mask, CostKind, 0, nullptr, {V0}, &I);
 
@@ -3248,6 +3250,11 @@ bool VectorCombine::foldPermuteOfIntrinsic(Instruction &I) {
   }
   IntrinsicCostAttributes NewAttr(IID, ShuffleDstTy, NewArgsTy);
   NewCost += TTI.getIntrinsicInstrCost(NewAttr, CostKind);
+
+  // If the intrinsic has multiple uses, we need to account for the cost of
+  // keeping the original intrinsic around.
+  if (!II0->hasOneUse())
+    NewCost += IntrinsicCost;
 
   LLVM_DEBUG(dbgs() << "Found a permute of intrinsic: " << I << "\n  OldCost: "
                     << OldCost << " vs NewCost: " << NewCost << "\n");
