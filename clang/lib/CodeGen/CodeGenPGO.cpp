@@ -1135,6 +1135,16 @@ void CodeGenPGO::emitCounterRegionMapping(const Decl *D) {
   if (CoverageMapping.empty())
     return;
 
+  // Scan max(FalseCnt) and update NumRegionCounters.
+  unsigned MaxNumCounters = NumRegionCounters;
+  for (const auto [_, V] : *RegionCounterMap) {
+    assert((!V.Executed.hasValue() || MaxNumCounters > V.Executed) &&
+           "TrueCnt should not be reassigned");
+    if (V.Skipped.hasValue())
+      MaxNumCounters = std::max(MaxNumCounters, V.Skipped + 1);
+  }
+  NumRegionCounters = MaxNumCounters;
+
   CGM.getCoverageMapping()->addFunctionMappingRecord(
       FuncNameVar, FuncName, FunctionHash, CoverageMapping);
 }
@@ -1195,11 +1205,21 @@ std::pair<bool, bool> CodeGenPGO::getIsCounterPair(const Stmt *S) const {
 }
 
 void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
+                                           bool UseSkipPath, bool UseBoth,
                                            llvm::Value *StepV) {
-  if (!RegionCounterMap || !Builder.GetInsertBlock())
+  if (!RegionCounterMap)
     return;
 
-  unsigned Counter = (*RegionCounterMap)[S].Executed;
+  // Allocate S in the Map regardless of emission.
+  const auto &TheCounterPair = (*RegionCounterMap)[S];
+
+  if (!Builder.GetInsertBlock())
+    return;
+
+  const CounterPair::ValueOpt &Counter =
+      (UseSkipPath ? TheCounterPair.Skipped : TheCounterPair.Executed);
+  if (!Counter.hasValue())
+    return;
 
   // Make sure that pointer to global is passed in with zero addrspace
   // This is relevant during GPU profiling
@@ -1510,13 +1530,15 @@ CodeGenFunction::createProfileWeightsForLoop(const Stmt *Cond,
                               std::max(*CondCount, LoopCount) - LoopCount);
 }
 
-void CodeGenFunction::incrementProfileCounter(const Stmt *S,
+void CodeGenFunction::incrementProfileCounter(CounterForIncrement ExecSkip,
+                                              const Stmt *S, bool UseBoth,
                                               llvm::Value *StepV) {
   if (CGM.getCodeGenOpts().hasProfileClangInstr() &&
       !CurFn->hasFnAttribute(llvm::Attribute::NoProfile) &&
       !CurFn->hasFnAttribute(llvm::Attribute::SkipProfile)) {
     auto AL = ApplyDebugLocation::CreateArtificial(*this);
-    PGO->emitCounterSetOrIncrement(Builder, S, StepV);
+    PGO->emitCounterSetOrIncrement(Builder, S, (ExecSkip == UseSkipPath),
+                                   UseBoth, StepV);
   }
   PGO->setCurrentStmt(S);
 }

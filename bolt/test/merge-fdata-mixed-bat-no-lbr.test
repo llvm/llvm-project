@@ -10,7 +10,7 @@
 #--- a.fdata
 boltedcollection
 no_lbr
-main 1
+1 main 1
 #--- b.fdata
 no_lbr
-main 1
+1 main 1

@@ -489,6 +489,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForGOpcs({G_MUL}, Standard).Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}});
 
+  bool hasMulHi = ST->hasScalarMulHiInsts();
+  addRulesForGOpcs({G_UMULH, G_SMULH}, Standard)
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
+      .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}}, hasMulHi)
+      .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32}}, !hasMulHi);
+
   addRulesForGOpcs({G_XOR, G_OR, G_AND}, StandardB)
       .Any({{UniS1}, {{Sgpr32Trunc}, {Sgpr32AExt, Sgpr32AExt}}})
       .Any({{DivS1}, {{Vcc}, {Vcc, Vcc}}})
@@ -924,6 +930,14 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniS128}, {{Sgpr128}, {SgprPtr128}}})
       .Any({{DivS128}, {{Vgpr128}, {VgprPtr128}}});
 
+  // FIXME: Update llvm/test/CodeGen/AMDGPU/ptrmask.ll to use GlobalISel.
+  // Currently crashes on P8 (buffer resource) tests due to legalizer issue.
+  addRulesForGOpcs({G_PTRMASK})
+      .Any({{UniP1}, {{SgprP1}, {SgprP1, Sgpr64}}})
+      .Any({{DivP1}, {{VgprP1}, {VgprP1, Vgpr64}}})
+      .Any({{UniP3}, {{SgprP3}, {SgprP3, Sgpr32}}})
+      .Any({{DivP3}, {{VgprP3}, {VgprP3, Vgpr32}}});
+
   addRulesForGOpcs({G_ABS}, Standard).Uni(S16, {{Sgpr32Trunc}, {Sgpr32SExt}});
 
   addRulesForGOpcs({G_BITREVERSE}, Standard)
@@ -978,6 +992,14 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32}});
 
+  addRulesForGOpcs({G_FLDEXP}, Standard)
+      .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32}})
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
+      .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16}})
+      .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
+      .Uni(S64, {{UniInVgprS64}, {Vgpr64, Vgpr32}})
+      .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr32}});
+
   addRulesForGOpcs({G_FMA}, Standard)
       .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16, Vgpr16}})
       .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32}})
@@ -1017,6 +1039,18 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S64, {{Vgpr64}, {Vgpr64}})
       .Uni(V2S16, {{UniInVgprV2S16}, {VgprV2S16}}, !hasSALUFloat)
       .Uni(V2S16, {{SgprV2S16}, {SgprV2S16}, ScalarizeToS16}, hasSALUFloat)
+      .Div(V2S16, {{VgprV2S16}, {VgprV2S16}})
+      .Any({{UniV2S32}, {{UniInVgprV2S32}, {VgprV2S32}}})
+      .Any({{DivV2S32}, {{VgprV2S32}, {VgprV2S32}}});
+
+  addRulesForGOpcs({G_FCANONICALIZE}, Standard)
+      .Uni(S32, {{UniInVgprS32}, {Vgpr32}})
+      .Div(S32, {{Vgpr32}, {Vgpr32}})
+      .Uni(S16, {{UniInVgprS16}, {Vgpr16}})
+      .Div(S16, {{Vgpr16}, {Vgpr16}})
+      .Uni(S64, {{UniInVgprS64}, {Vgpr64}})
+      .Div(S64, {{Vgpr64}, {Vgpr64}})
+      .Uni(V2S16, {{UniInVgprV2S16}, {VgprV2S16}})
       .Div(V2S16, {{VgprV2S16}, {VgprV2S16}})
       .Any({{UniV2S32}, {{UniInVgprV2S32}, {VgprV2S32}}})
       .Any({{DivV2S32}, {{VgprV2S32}, {VgprV2S32}}});
