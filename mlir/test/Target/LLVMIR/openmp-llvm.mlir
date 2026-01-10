@@ -769,6 +769,70 @@ llvm.func @simd_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 
 // -----
 
+// Test linear clause with mismatched types (i32 step, i64 variable)
+// This is a regression test for issue #173332
+llvm.func @simd_linear_i64_var_i32_step(%lb : i32, %ub : i32, %x : !llvm.ptr) {
+  %step = llvm.mlir.constant(1 : i32) : i32
+
+// CHECK-LABEL: @simd_linear_i64_var_i32_step
+
+// CHECK: %[[LINEAR_VAR:.*]] = alloca i64
+// CHECK: %[[LINEAR_RESULT:.*]] = alloca i64
+
+// CHECK: omp_loop.preheader:
+// CHECK: %[[LOAD:.*]] = load i64, ptr {{.*}}
+// CHECK: store i64 %[[LOAD]], ptr %[[LINEAR_VAR]]
+
+// CHECK: omp_loop.body:
+// Verify type conversions: iv (i32) is extended to i64 before multiplication
+// CHECK: %[[IV_I64:.*]] = sext i32 %omp_loop.iv to i64
+// CHECK: %[[LOAD:.*]] = load i64, ptr %[[LINEAR_VAR]], {{.*}}!llvm.access.group
+// Verify multiplication and addition use consistent i64 types
+// CHECK: %[[MUL:.*]] = mul i64 %[[IV_I64]], {{.*}}
+// CHECK: %[[ADD:.*]] = add i64 %[[LOAD]], %[[MUL]]
+// CHECK: store i64 %[[ADD]], ptr %[[LINEAR_RESULT]], {{.*}}!llvm.access.group
+  omp.simd linear(%x = %step : !llvm.ptr) {
+    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  } {linear_var_types = [i64]}
+  llvm.return
+}
+
+// -----
+
+// Test linear clause with floating-point variable and i32 step
+// This tests the floating-point path in updateLinearVar
+llvm.func @simd_linear_f64_var_i32_step(%lb : i32, %ub : i32, %x : !llvm.ptr) {
+  %step = llvm.mlir.constant(1 : i32) : i32
+
+// CHECK-LABEL: @simd_linear_f64_var_i32_step
+
+// CHECK: %[[LINEAR_VAR:.*]] = alloca double
+// CHECK: %[[LINEAR_RESULT:.*]] = alloca double
+
+// CHECK: omp_loop.preheader:
+// CHECK: %[[LOAD:.*]] = load double, ptr {{.*}}
+// CHECK: store double %[[LOAD]], ptr %[[LINEAR_VAR]]
+
+// CHECK: omp_loop.body:
+// Verify integer multiplication, load, and conversion to float
+// CHECK: mul i32 %omp_loop.iv
+// CHECK: %[[MUL_INT:.*]] = mul i32 %omp_loop.iv, {{.*}}
+// CHECK-NEXT: %[[LOAD:.*]] = load double, ptr %[[LINEAR_VAR]], {{.*}}!llvm.access.group
+// CHECK-NEXT: %[[MUL_FP:.*]] = sitofp i32 %[[MUL_INT]] to double
+// CHECK-NEXT: %[[ADD:.*]] = fadd double %[[LOAD]], %[[MUL_FP]]
+// CHECK-NEXT: store double %[[ADD]], ptr %[[LINEAR_RESULT]], {{.*}}!llvm.access.group
+  omp.simd linear(%x = %step : !llvm.ptr) {
+    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  } {linear_var_types = [f64]}
+  llvm.return
+}
+
+// -----
+
 // CHECK-LABEL: @simd_simple_multiple
 llvm.func @simd_simple_multiple(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 : i64, %ub2 : i64, %step2 : i64, %arg0: !llvm.ptr, %arg1: !llvm.ptr) {
   omp.simd {
@@ -3449,12 +3513,16 @@ llvm.func @distribute_wsloop(%lb : i32, %ub : i32, %step : i32) {
 // CHECK:         call void{{.*}}@__kmpc_fork_call({{.*}}, ptr @[[OUTLINED_PARALLEL:.*]],
 
 // CHECK:       define internal void @[[OUTLINED_PARALLEL]]
-// CHECK:       distribute.alloca:
+// CHECK:       omp.par.entry:
+// CHECK:         %[[TID_LOCAL:.*]] = alloca i32, align 4
 // CHECK:         %[[LASTITER:.*]] = alloca i32
 // CHECK:         %[[LB:.*]] = alloca i32
 // CHECK:         %[[UB:.*]] = alloca i32
 // CHECK:         %[[STRIDE:.*]] = alloca i32
-// CHECK:         br label %[[AFTER_ALLOCA:.*]]
+// CHECK:         %[[DIST_UB:.*]] = alloca i32
+
+// CHECK:       distribute.alloca:
+// CHECK-NEXT:    br label %[[AFTER_ALLOCA:.*]]
 
 // CHECK:       [[AFTER_ALLOCA]]:
 // CHECK:         br label %[[DISTRIBUTE_BODY:.*]]
@@ -3475,7 +3543,6 @@ llvm.func @distribute_wsloop(%lb : i32, %ub : i32, %step : i32) {
 // CHECK:         store i32 %[[TRIPCOUNT]], ptr %[[UB]]
 // CHECK:         store i32 1, ptr %[[STRIDE]]
 // CHECK:         %[[TID:.*]] = call i32 @__kmpc_global_thread_num({{.*}})
-// CHECK:         %[[DIST_UB:.*]] = alloca i32
 // CHECK:         call void @__kmpc_dist_for_static_init_{{.*}}(ptr @{{.*}}, i32 %[[TID]], i32 34, ptr %[[LASTITER]], ptr %[[LB]], ptr %[[UB]], ptr %[[DIST_UB]], ptr %[[STRIDE]], i32 1, i32 0)
 
 // -----

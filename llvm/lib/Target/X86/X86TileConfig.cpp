@@ -170,7 +170,14 @@ bool X86TileConfig::runOnMachineFunction(MachineFunction &MF) {
                    "Cannot initialize with different shapes");
             continue;
           }
-          Imm = DefMI.getOperand(1).getImm();
+          if (DefMI.getOperand(1).isImm()) {
+            Imm = DefMI.getOperand(1).getImm();
+          } else {
+            assert(DefMI.getOpcode() == X86::MOV32r0 &&
+                   "The opcode is assumed to be MOV32r0 if the operand is not "
+                   "immediate.");
+            Imm = 0;
+          }
 
           NewMI = addFrameReference(
                       BuildMI(MF.front(), ++ConstMI->getIterator(), DL,

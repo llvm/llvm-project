@@ -804,15 +804,15 @@ class ROCDL_WMMA_ModsAll_Diff_IntrOp<string mnemonic, Type AB, Type C, Type D> :
   }];
 }
 
-class ROCDL_WMMA_ModsAB_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<mnemonic,
+class ROCDL_WMMA_ModsABClamp_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<mnemonic,
     [0], [1], [], 1, 0, 0, 0, [0, 2, 5, 6, 7], ["signA", "signB", "reuseA","reuseB", "clamp"]>,
-  Arguments<(ins 
+  Arguments<(ins
              DefaultValuedAttr<I1Attr, "0">:$signA,
              LLVM_ScalarOrVectorOf<AB>:$a,
              DefaultValuedAttr<I1Attr, "0">:$signB,
              LLVM_ScalarOrVectorOf<AB>:$b,
-             LLVM_ScalarOrVectorOf<CD>:$c, 
-             DefaultValuedAttr<I1Attr, "0">:$reuseA, 
+             LLVM_ScalarOrVectorOf<CD>:$c,
+             DefaultValuedAttr<I1Attr, "0">:$reuseA,
              DefaultValuedAttr<I1Attr, "0">:$reuseB,
              DefaultValuedAttr<I1Attr, "0">:$clamp)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
@@ -907,7 +907,7 @@ def ROCDL_wmma_f16_16x16x128_fp8_fp8 : ROCDL_WMMA_ModsC_IntrOp<"wmma.f16.16x16x1
 def ROCDL_wmma_f16_16x16x128_fp8_bf8 : ROCDL_WMMA_ModsC_IntrOp<"wmma.f16.16x16x128.fp8_bf8", AnyInteger, F16>;
 def ROCDL_wmma_f16_16x16x128_bf8_fp8 : ROCDL_WMMA_ModsC_IntrOp<"wmma.f16.16x16x128.bf8_fp8", AnyInteger, F16>;
 def ROCDL_wmma_f16_16x16x128_bf8_bf8 : ROCDL_WMMA_ModsC_IntrOp<"wmma.f16.16x16x128.bf8_bf8", AnyInteger, F16>;
-def ROCDL_wmma_i32_16x16x64_iu8 : ROCDL_WMMA_ModsAB_IntrOp<"wmma.i32.16x16x64.iu8", AnyInteger, AnyInteger>;
+def ROCDL_wmma_i32_16x16x64_iu8 : ROCDL_WMMA_ModsABClamp_IntrOp<"wmma.i32.16x16x64.iu8", AnyInteger, AnyInteger>;
 
 // Scaled wmma intrinsics (available from gfx1250)
 def ROCDL_wmma_scale_f32_16x16x128_f8f6f4   : ROCDL_WMMA_Scale_IntrOp<"wmma.scale.f32.16x16x128.f8f6f4", AnyInteger, F32, I32>;
@@ -1064,12 +1064,12 @@ foreach bitsVal = [8, 32, 64, 128] in {
 foreach bitsVal = [8, 32, 64, 128] in {
   defvar bitsStr = "b" # !cast<string>(bitsVal);
   def ROCDL_ClusterLoadAsyncToLDS # !toupper(bitsStr) # Op :
-    ROCDL_IntrOp<"cluster.load.async.to.lds." # bitsStr, [], [], [], 0, 0, 1, 0, [2, 3, 4], ["offset", "cpol", "mask"]> {
+    ROCDL_IntrOp<"cluster.load.async.to.lds." # bitsStr, [], [], [], 0, 0, 1, 0, [2, 3], ["offset", "cpol"]> {
     dag args = (ins Arg<ROCDLGlobalBuffer, "", [MemRead]>:$globalPtr,
                    Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
                    I32Attr:$offset,
                    I32Attr:$cpol,
-                   I32Attr:$mask);
+                   I32:$mask);
     let arguments = !con(args, baseArgs);
     let assemblyFormat = [{
       $globalPtr `,`  $ldsPtr `,` $offset `,` $cpol `,` $mask

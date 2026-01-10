@@ -18,7 +18,6 @@
 #include "lld/Common/Strings.h"
 #include "lld/Common/TargetOptionsCommandFlags.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
-#include "llvm/DTLTO/DTLTO.h"
 #include "llvm/LTO/Config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/Caching.h"

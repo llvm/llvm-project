@@ -18,7 +18,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
-#include "llvm/DTLTO/DTLTO.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/LTO/Config.h"
 #include "llvm/LTO/LTO.h"

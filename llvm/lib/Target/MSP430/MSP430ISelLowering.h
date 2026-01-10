@@ -129,6 +129,8 @@ namespace llvm {
                                     SDValue &Offset,
                                     ISD::MemIndexedMode &AM,
                                     SelectionDAG &DAG) const override;
+
+    bool softPromoteHalfType() const override { return true; }
   };
 } // namespace llvm
 

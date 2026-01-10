@@ -906,6 +906,18 @@ void RISCVISAInfo::updateImplication() {
     }
   }
 
+  if (!Exts.count("zce") && Exts.count("zca") && Exts.count("zcb") &&
+      Exts.count("zcmp") && Exts.count("zcmt")) {
+    bool ShouldAddZce = false;
+    if (XLen == 32) {
+      ShouldAddZce = !Exts.count("f") || Exts.count("zcf");
+    } else if (XLen == 64) {
+      ShouldAddZce = true;
+    }
+    if (ShouldAddZce)
+      Exts["zce"] = *findDefaultVersion("zce");
+  }
+
   // Handle I/E after implications have been resolved, in case either
   // of them was implied by another extension.
   bool HasE = Exts.count("e") != 0;
