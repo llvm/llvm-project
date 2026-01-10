@@ -595,7 +595,7 @@ add_header_library(
 )
 
 add_header_library(
-  ffma.h
+  ffma
   HDRS
     ffma.h
   DEPENDS
