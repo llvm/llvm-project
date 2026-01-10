@@ -64,5 +64,6 @@
 #include "math/ldexpf16.h"
 #include "math/rsqrtf.h"
 #include "math/rsqrtf16.h"
+#include "math/log.h"
 
 #endif // LLVM_LIBC_SHARED_MATH_H

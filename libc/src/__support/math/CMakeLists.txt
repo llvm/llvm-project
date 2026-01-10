@@ -1008,3 +1008,20 @@ add_header_library(
     .exp10f_utils
     libc.src.__support.FPUtil.multiply_add
 )
+
+add_header_library(
+  log 
+  HDRS
+    log.h
+  DEPENDS
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.integer_literals
+    libc.src.__support.macros.optimization
+    libc.src.__support.math.common_constants
+    .log_range_reduction
+)
