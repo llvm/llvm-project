@@ -1,0 +1,1 @@
+void in_clang();

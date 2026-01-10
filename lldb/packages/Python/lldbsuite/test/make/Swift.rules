@@ -31,7 +31,8 @@ ifeq "$(findstring -target,$(SWIFTFLAGS))" ""
   SWIFTFLAGS += $(TARGET_SWIFTFLAGS)
 endif
 
-ifneq "$(SWIFT_ENABLE_EXPLICIT_MODULES)" ""
+SWIFT_ENABLE_EXPLICIT_MODULES ?= NO
+ifneq "$(SWIFT_ENABLE_EXPLICIT_MODULES)" "NO"
 SWIFTFLAGS += -explicit-module-build
 endif
 
