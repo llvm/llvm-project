@@ -69,3 +69,12 @@ subroutine test_multiple_scalars_valid()
     scalar3 = j
   end do
 end subroutine
+
+! Valid case - declare simd with REF modifier allows arrays
+subroutine test_declare_simd_ref_array_valid(arr)
+  implicit none
+  integer, intent(in) :: arr(:)
+  
+  !$omp declare simd linear(ref(arr))
+  ! No error expected - REF modifier allows assumed-shape arrays
+end subroutine
