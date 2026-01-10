@@ -545,6 +545,15 @@ define void @overlap2(ptr %pl, ptr %ps) {
 }
 
 define void @reorder(ptr %pl, ptr %ps) {
+; CHECK-LABEL: define void @reorder(
+; CHECK-SAME: ptr [[PL:%.*]], ptr [[PS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[GEP_L0:%.*]] = getelementptr i8, ptr [[PL]], i64 0
+; CHECK-NEXT:    [[GEP_S0:%.*]] = getelementptr i8, ptr [[PS]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[GEP_L0]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> poison, <8 x i32> <i32 0, i32 1, i32 6, i32 3, i32 4, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v8i8.p0.i64(<8 x i8> [[TMP2]], ptr align 1 [[GEP_S0]], i64 2, <8 x i1> splat (i1 true), i32 8)
+; CHECK-NEXT:    ret void
+;
   %gep_l0 = getelementptr i8, ptr %pl, i64 0
   %gep_l1 = getelementptr i8, ptr %pl, i64 1
   %gep_l2 = getelementptr i8, ptr %pl, i64 2
