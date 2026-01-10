@@ -144,6 +144,32 @@ Miscellaneous
 Improvements to clang-doc
 -------------------------
 
+- Use the Mustache HTML generator as the default HTML option.
+
+- Document concepts, typedefs, aliases, public class members, nested records, 
+  nested namespaces, global functions, global variables, protected methods and
+  members and friends in HTML.
+
+- Document ``throws`` comments in HTML.
+
+- Add definition location for classes in HTML.
+
+- Show class template declaration in HTML.
+
+- Add a top-level index page in HTML. This page lists the top-level namespaces
+  and serves as the documentation's root URL.
+
+- Add a ``Home`` button to the navigation bar which replaces non-useful buttons.
+  This new button links to the top-level index page.
+
+- Add a breadcrumb navigation bar to the navbar. This helps navigate through a
+  documented entity's context.
+
+- If a filename is too long, then the name will be truncated and the documented
+  entity's USR will be concatenated to guarantee its uniqueness.
+
+- Revert the flat directory structure to a nested directory structure.
+
 Improvements to clang-query
 ---------------------------
 
@@ -382,9 +408,12 @@ Changes in existing checks
   expansions.
 
 - Improved :doc:`bugprone-dynamic-static-initializers
-  <clang-tidy/checks/bugprone/dynamic-static-initializers>` check by
-  avoiding false positives for ``constexpr`` variables whose
-  initializers are value-dependent.
+  <clang-tidy/checks/bugprone/dynamic-static-initializers>` check:
+
+  - Avoided false positives for ``constexpr`` variables whose initializers
+    are value-dependent.
+
+  - Added support for C++20 ``constinit`` variables.
 
 - Improved :doc:`bugprone-easily-swappable-parameters
   <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
