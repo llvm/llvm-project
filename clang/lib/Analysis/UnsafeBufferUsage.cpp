@@ -1696,6 +1696,14 @@ static bool isNullTermPointer(const Expr *Ptr, ASTContext &Ctx) {
   if (auto *VTT = Ptr->getType().getTypePtr()->getAs<ValueTerminatedType>()) {
     return VTT->getTerminatorValue(Ctx).isZero();
   }
+
+  // Functions known to return properly null terminated strings.
+  static const llvm::StringSet<> NullTermFunctions = {"strerror"};
+  if (auto *CE = dyn_cast<CallExpr>(Ptr->IgnoreParenImpCasts())) {
+    const FunctionDecl *F = CE->getDirectCallee();
+    if (F && F->getIdentifier() && NullTermFunctions.contains(F->getName()))
+      return true;
+  }
   return false;
 }
 
