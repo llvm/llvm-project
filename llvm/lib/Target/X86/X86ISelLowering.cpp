@@ -31301,14 +31301,14 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     Amt = DAG.getBitcast(VT, Amt);
 
     if (Opc == ISD::SHL || Opc == ISD::SRL) {
-      if (MinLZ < 2) {
+      if (MinLZ < 1) {
         // r = VSELECT(r, shift(r, 4), a);
         SDValue M = DAG.getNode(Opc, dl, VT, R, DAG.getConstant(4, dl, VT));
         R = SignBitSelect(VT, Amt, M, R);
         // a += a
         Amt = DAG.getNode(ISD::ADD, dl, VT, Amt, Amt);
       }
-      if (MinLZ < 1) {
+      if (MinLZ < 2) {
         // r = VSELECT(r, shift(r, 2), a);
         SDValue M = DAG.getNode(Opc, dl, VT, R, DAG.getConstant(2, dl, VT));
         R = SignBitSelect(VT, Amt, M, R);
@@ -31335,7 +31335,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       RHi = DAG.getBitcast(ExtVT, RHi);
 
       SDValue MLo, MHi;
-      if (MinLZ < 2) {
+      if (MinLZ < 1) {
         // r = VSELECT(r, shift(r, 4), a);
         MLo = getTargetVShiftByConstNode(X86OpcI, dl, ExtVT, RLo, 4, DAG);
         MHi = getTargetVShiftByConstNode(X86OpcI, dl, ExtVT, RHi, 4, DAG);
@@ -31345,7 +31345,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
         ALo = DAG.getNode(ISD::ADD, dl, ExtVT, ALo, ALo);
         AHi = DAG.getNode(ISD::ADD, dl, ExtVT, AHi, AHi);
       }
-      if (MinLZ < 1) {
+      if (MinLZ < 2) {
         // r = VSELECT(r, shift(r, 2), a);
         MLo = getTargetVShiftByConstNode(X86OpcI, dl, ExtVT, RLo, 2, DAG);
         MHi = getTargetVShiftByConstNode(X86OpcI, dl, ExtVT, RHi, 2, DAG);
