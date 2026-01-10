@@ -1,4 +1,3 @@
-
 //===-- Proxy for Elf32_Vernaux -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.

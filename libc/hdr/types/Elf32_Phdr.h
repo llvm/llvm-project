@@ -1,4 +1,3 @@
-
 //===-- Proxy for Elf32_Phdr ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
