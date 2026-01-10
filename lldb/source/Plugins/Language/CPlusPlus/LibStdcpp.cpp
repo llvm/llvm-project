@@ -494,3 +494,82 @@ bool formatters::LibStdcppVariantSummaryProvider(
   stream << " Active Type = " << active_type.GetDisplayTypeName() << " ";
   return true;
 }
+
+static std::optional<int64_t>
+LibStdcppExtractOrderingValue(ValueObject &valobj) {
+  lldb::ValueObjectSP value_sp = valobj.GetChildMemberWithName("_M_value");
+  if (!value_sp)
+    return std::nullopt;
+  bool success;
+  int64_t value = value_sp->GetValueAsSigned(0, &success);
+  if (!success)
+    return std::nullopt;
+  return value;
+}
+
+bool lldb_private::formatters::LibStdcppPartialOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  std::optional<int64_t> value = LibStdcppExtractOrderingValue(valobj);
+  if (!value)
+    return false;
+  switch (*value) {
+  case -1:
+    stream << "less";
+    break;
+  case 0:
+    stream << "equivalent";
+    break;
+  case 1:
+    stream << "greater";
+    break;
+  case -128:
+  case 2:
+    stream << "unordered";
+    break;
+  default:
+    return false;
+  }
+  return true;
+}
+
+bool lldb_private::formatters::LibStdcppWeakOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  std::optional<int64_t> value = LibStdcppExtractOrderingValue(valobj);
+  if (!value)
+    return false;
+  switch (*value) {
+  case -1:
+    stream << "less";
+    break;
+  case 0:
+    stream << "equivalent";
+    break;
+  case 1:
+    stream << "greater";
+    break;
+  default:
+    return false;
+  }
+  return true;
+}
+
+bool lldb_private::formatters::LibStdcppStrongOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  std::optional<int64_t> value = LibStdcppExtractOrderingValue(valobj);
+  if (!value)
+    return false;
+  switch (*value) {
+  case -1:
+    stream << "less";
+    break;
+  case 0:
+    stream << "equal";
+    break;
+  case 1:
+    stream << "greater";
+    break;
+  default:
+    return false;
+  }
+  return true;
+}

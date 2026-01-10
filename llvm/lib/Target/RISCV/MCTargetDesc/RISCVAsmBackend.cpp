@@ -823,9 +823,10 @@ static bool relaxableFixupNeedsRelocation(const MCFixupKind Kind) {
   default:
     break;
   case RISCV::fixup_riscv_rvc_jump:
+  case RISCV::fixup_riscv_branch:
   case RISCV::fixup_riscv_rvc_branch:
+  case RISCV::fixup_riscv_qc_e_branch:
   case RISCV::fixup_riscv_rvc_imm:
-  case RISCV::fixup_riscv_jal:
     return false;
   }
   return true;
