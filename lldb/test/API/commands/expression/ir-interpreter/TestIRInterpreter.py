@@ -223,14 +223,10 @@ class IRInterpreterTestCase(TestBase):
             interp_expression = expression
             jit_expression = func_call + "; " + expression
 
-            interp_result = (
-                self.frame()
-                .EvaluateExpression(interp_expression, interp_options)
+            interp_result = self.frame().EvaluateExpression(
+                interp_expression, interp_options
             )
-            jit_result = (
-                self.frame()
-                .EvaluateExpression(jit_expression, jit_options)
-            )
+            jit_result = self.frame().EvaluateExpression(jit_expression, jit_options)
 
             self.assertEqual(
                 interp_result.GetValue(),
