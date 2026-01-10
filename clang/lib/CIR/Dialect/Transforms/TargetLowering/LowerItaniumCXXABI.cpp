@@ -59,6 +59,10 @@ public:
   mlir::Value lowerDerivedDataMember(cir::DerivedDataMemberOp op,
                                      mlir::Value loweredSrc,
                                      mlir::OpBuilder &builder) const override;
+
+  mlir::Value lowerDataMemberCmp(cir::CmpOp op, mlir::Value loweredLhs,
+                                 mlir::Value loweredRhs,
+                                 mlir::OpBuilder &builder) const override;
 };
 
 } // namespace
@@ -183,6 +187,14 @@ LowerItaniumCXXABI::lowerDerivedDataMember(cir::DerivedDataMemberOp op,
                                            mlir::OpBuilder &builder) const {
   return lowerDataMemberCast(op, loweredSrc, op.getOffset().getSExtValue(),
                              /*isDerivedToBase=*/false, builder);
+}
+
+mlir::Value
+LowerItaniumCXXABI::lowerDataMemberCmp(cir::CmpOp op, mlir::Value loweredLhs,
+                                       mlir::Value loweredRhs,
+                                       mlir::OpBuilder &builder) const {
+  return cir::CmpOp::create(builder, op.getLoc(), op.getKind(), loweredLhs,
+                            loweredRhs);
 }
 
 } // namespace cir
