@@ -262,7 +262,16 @@ void setCriticalLock(omp_lock_t *Lock) { setLock(Lock); }
 
 uint32_t atomicInc(uint32_t *Address, uint32_t Val, atomic::OrderingTy Ordering,
                    atomic::MemScopeTy MemScope) {
-  return atomic::add(Address, Val, Ordering);
+  uint32_t old;
+  while (true) {
+    old = atomic::load(Address, Ordering, MemScope);
+    if (old >= Val) {
+      if (atomic::cas(Address, old, 0, Ordering, Ordering))
+        break;
+    } else if (atomic::cas(Address, old, old + 1, Ordering, Ordering))
+      break;
+  }
+  return old;
 }
 
 void namedBarrierInit() {} // TODO
@@ -279,12 +288,8 @@ void fenceSystem(atomic::OrderingTy Ordering) {
   return __scoped_atomic_thread_fence(Ordering, atomic::system);
 }
 
-void syncWarp(__kmpc_impl_lanemask_t mask) {
-  __gpu_sync_lane(mask);
-}
-void syncThreads(atomic::OrderingTy Ordering) {
-  __gpu_sync_threads();
-}
+void syncWarp(__kmpc_impl_lanemask_t mask) { __gpu_sync_lane(mask); }
+void syncThreads(atomic::OrderingTy Ordering) { __gpu_sync_threads(); }
 void unsetLock(omp_lock_t *Lock) {
   atomic::store((int32_t *)Lock, 0, atomic::seq_cst);
 }
