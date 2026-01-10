@@ -30,10 +30,6 @@ _Pragma("omp begin declare variant match(device = {arch(spirv64)})");
 // Attribute to declare a function as a kernel.
 #define __gpu_kernel __attribute__((device_kernel, visibility("protected")))
 
-#ifdef __cplusplus
-template <typename... Args> int __spirv_ocl_printf(Args...);
-#endif
-
 // Returns the number of workgroups in the 'x' dimension of the grid.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_blocks_x(void) {
   return __builtin_spirv_num_workgroups(0);

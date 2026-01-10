@@ -266,7 +266,7 @@ uint32_t atomicInc(uint32_t *Address, uint32_t Val, atomic::OrderingTy Ordering,
   while (true) {
     old = atomic::load(Address, Ordering, MemScope);
     if (old >= Val) {
-      if (atomic::cas(Address, old, 0, Ordering, Ordering))
+      if (atomic::cas(Address, old, 0u, Ordering, Ordering))
         break;
     } else if (atomic::cas(Address, old, old + 1, Ordering, Ordering))
       break;
