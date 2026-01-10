@@ -39,6 +39,10 @@ public:
   lowerDataMemberType(cir::DataMemberType type,
                       const mlir::TypeConverter &typeConverter) const override;
 
+  mlir::Type
+  lowerMethodType(cir::MethodType type,
+                  const mlir::TypeConverter &typeConverter) const override;
+
   mlir::TypedAttr lowerDataMemberConstant(
       cir::DataMemberAttr attr, const mlir::DataLayout &layout,
       const mlir::TypeConverter &typeConverter) const override;
@@ -47,6 +51,14 @@ public:
   lowerGetRuntimeMember(cir::GetRuntimeMemberOp op, mlir::Type loweredResultTy,
                         mlir::Value loweredAddr, mlir::Value loweredMember,
                         mlir::OpBuilder &builder) const override;
+
+  mlir::Value lowerBaseDataMember(cir::BaseDataMemberOp op,
+                                  mlir::Value loweredSrc,
+                                  mlir::OpBuilder &builder) const override;
+
+  mlir::Value lowerDerivedDataMember(cir::DerivedDataMemberOp op,
+                                     mlir::Value loweredSrc,
+                                     mlir::OpBuilder &builder) const override;
 };
 
 } // namespace
@@ -69,6 +81,27 @@ mlir::Type LowerItaniumCXXABI::lowerDataMemberType(
   //   A data member pointer is represented as the data member's offset in bytes
   //   from the address point of an object of the base type, as a ptrdiff_t.
   return getPtrDiffCIRTy(lm);
+}
+
+mlir::Type LowerItaniumCXXABI::lowerMethodType(
+    cir::MethodType type, const mlir::TypeConverter &typeConverter) const {
+  // Itanium C++ ABI 2.3.2:
+  //    In all representations, the basic ABI properties of member function
+  //    pointer types are those of the following class, where fnptr_t is the
+  //    appropriate function-pointer type for a member function of this type:
+  //
+  //    struct {
+  //      fnptr_t ptr;
+  //      ptrdiff_t adj;
+  //    };
+
+  cir::IntType ptrdiffCIRTy = getPtrDiffCIRTy(lm);
+
+  // Note that clang CodeGen emits struct{ptrdiff_t, ptrdiff_t} for member
+  // function pointers. Let's follow this approach.
+  return cir::RecordType::get(type.getContext(), {ptrdiffCIRTy, ptrdiffCIRTy},
+                              /*packed=*/false, /*padded=*/false,
+                              cir::RecordType::Struct);
 }
 
 mlir::TypedAttr LowerItaniumCXXABI::lowerDataMemberConstant(
@@ -106,6 +139,50 @@ mlir::Operation *LowerItaniumCXXABI::lowerGetRuntimeMember(
       builder, op.getLoc(), bytePtrTy, objectBytesPtr, loweredMember);
   return cir::CastOp::create(builder, op.getLoc(), op.getType(),
                              cir::CastKind::bitcast, memberBytesPtr);
+}
+
+static mlir::Value lowerDataMemberCast(mlir::Operation *op,
+                                       mlir::Value loweredSrc,
+                                       std::int64_t offset,
+                                       bool isDerivedToBase,
+                                       mlir::OpBuilder &builder) {
+  if (offset == 0)
+    return loweredSrc;
+  mlir::Location loc = op->getLoc();
+  mlir::Type ty = loweredSrc.getType();
+
+  auto getConstantInt = [&](int64_t value) -> cir::ConstantOp {
+    return cir::ConstantOp::create(builder, loc, cir::IntAttr::get(ty, value));
+  };
+
+  cir::ConstantOp nullValue = getConstantInt(-1);
+  auto isNull = cir::CmpOp::create(builder, loc, cir::CmpOpKind::eq, loweredSrc,
+                                   nullValue);
+
+  cir::ConstantOp offsetValue = getConstantInt(offset);
+  auto binOpKind = isDerivedToBase ? cir::BinOpKind::Sub : cir::BinOpKind::Add;
+  cir::BinOp adjustedPtr =
+      cir::BinOp::create(builder, loc, ty, binOpKind, loweredSrc, offsetValue);
+  adjustedPtr.setNoSignedWrap(true);
+
+  return cir::SelectOp::create(builder, loc, ty, isNull, loweredSrc,
+                               adjustedPtr);
+}
+
+mlir::Value
+LowerItaniumCXXABI::lowerBaseDataMember(cir::BaseDataMemberOp op,
+                                        mlir::Value loweredSrc,
+                                        mlir::OpBuilder &builder) const {
+  return lowerDataMemberCast(op, loweredSrc, op.getOffset().getSExtValue(),
+                             /*isDerivedToBase=*/true, builder);
+}
+
+mlir::Value
+LowerItaniumCXXABI::lowerDerivedDataMember(cir::DerivedDataMemberOp op,
+                                           mlir::Value loweredSrc,
+                                           mlir::OpBuilder &builder) const {
+  return lowerDataMemberCast(op, loweredSrc, op.getOffset().getSExtValue(),
+                             /*isDerivedToBase=*/false, builder);
 }
 
 } // namespace cir
