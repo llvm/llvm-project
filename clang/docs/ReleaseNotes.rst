@@ -764,6 +764,10 @@ WebAssembly Support
 
 - Fix a bug so that ``__has_attribute(musttail)`` is no longer true when WebAssembly's tail-call is not enabled. (#GH163256)
 
+- The `wasm32-wasi` target has been renamed to `wasm32-wasip1`. The old
+  option is still recognized, though by default will emit a deprecation
+  warning.
+
 AVR Support
 ^^^^^^^^^^^
 
