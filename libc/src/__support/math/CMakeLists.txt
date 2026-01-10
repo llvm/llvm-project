@@ -1024,3 +1024,19 @@ add_header_library(
     .exp10f_utils
     libc.src.__support.FPUtil.multiply_add
 )
+
+add_header_library(
+  sin
+  HDRS
+    sin.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.errno.errno
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.math.range_reduction_double
+    libc.src.__support.math.sincos_eval
+    libc.src.__support.macros.optimization
+)
