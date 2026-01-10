@@ -18,6 +18,7 @@
 #include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -248,6 +249,11 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
         if (NoAliasMD)
           MD.setMetadata(LLVMContext::MD_noalias, NoAliasMD);
       }
+
+      // Preserve vplan.widen metadata for testing VPlan transforms.
+      unsigned VPlanWidenKind = Inst->getContext().getMDKindID("vplan.widen");
+      if (MDNode *WidenMD = Inst->getMetadata(VPlanWidenKind))
+        MD.setMetadata(VPlanWidenKind, WidenMD);
 
       // Translate LLVM-IR operands into VPValue operands and set them in the
       // new VPInstruction.
@@ -1559,4 +1565,46 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     FindIVRdxResult->setOperand(0, FinalIVSelect);
   }
   return true;
+}
+
+void VPlanTransforms::widenFromMetadata(VPlan &Plan,
+                                        const TargetLibraryInfo *TLI) {
+  unsigned VPlanWidenKind = Plan.getContext().getMDKindID("vplan.widen");
+  VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
+
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
+      VectorRegion);
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *VPI = dyn_cast<VPInstruction>(&R);
+      if (!VPI)
+        continue;
+
+      MDNode *MD = VPI->getMetadata(VPlanWidenKind);
+      if (!MD || MD->getNumOperands() == 0)
+        continue;
+
+      auto *KindMD = dyn_cast<MDString>(MD->getOperand(0));
+      if (!KindMD)
+        continue;
+
+      StringRef Kind = KindMD->getString();
+      VPRecipeBase *NewR = nullptr;
+      if (Kind == "widen") {
+        NewR = new VPWidenRecipe(*VPI->getUnderlyingInstr(), VPI->operands(),
+                                 *VPI, *VPI, VPI->getDebugLoc());
+      } else if (Kind == "replicate") {
+        NewR = new VPReplicateRecipe(VPI->getUnderlyingInstr(), VPI->operands(),
+                                     /*IsSingleScalar=*/false,
+                                     /*Mask=*/nullptr, *VPI, *VPI,
+                                     VPI->getDebugLoc());
+      } else {
+        continue;
+      }
+
+      NewR->insertBefore(VPI);
+      VPI->replaceAllUsesWith(NewR->getVPSingleValue());
+      VPI->eraseFromParent();
+    }
+  }
 }

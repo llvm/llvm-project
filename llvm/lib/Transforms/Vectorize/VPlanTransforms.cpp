@@ -5387,3 +5387,62 @@ void VPlanTransforms::addExitUsersForFirstOrderRecurrences(VPlan &Plan,
     }
   }
 }
+
+namespace {
+/// Uniform signature for test transforms.
+using TestTransformFn = void (*)(VPlan &, const TargetLibraryInfo *);
+
+/// Entry for a VPlan test transform.
+struct TestTransformEntry {
+  StringLiteral Name;
+  TestTransformFn Fn;
+};
+
+} // namespace
+
+// Wrappers to adapt different function signatures to uniform TestTransformFn.
+template <void (*Fn)(VPlan &)>
+static void wrapTransform(VPlan &P, const TargetLibraryInfo *) {
+  Fn(P);
+}
+
+template <bool (*Fn)(VPlan &)>
+static void wrapTransform(VPlan &P, const TargetLibraryInfo *) {
+  Fn(P);
+}
+
+static const TestTransformEntry TestTransforms[] = {
+    {"simplify-recipes", wrapTransform<VPlanTransforms::simplifyRecipes>},
+    {"remove-dead-recipes", wrapTransform<VPlanTransforms::removeDeadRecipes>},
+    {"simplify-blends", wrapTransform<simplifyBlends>},
+    {"merge-blocks", wrapTransform<mergeBlocksIntoPredecessors>},
+    {"licm", wrapTransform<licm>},
+    {"cse", wrapTransform<VPlanTransforms::cse>},
+    {"optimize", wrapTransform<VPlanTransforms::optimize>},
+    {"widen-from-metadata", VPlanTransforms::widenFromMetadata},
+};
+
+static const TestTransformEntry *getTestTransform(StringRef Name) {
+  for (const auto &E : TestTransforms)
+    if (E.Name == Name)
+      return &E;
+  return nullptr;
+}
+
+void VPlanTransforms::runTestTransforms(VPlan &Plan, StringRef Pipeline,
+                                        const TargetLibraryInfo *TLI) {
+  SmallVector<StringRef> Passes;
+  Pipeline.split(Passes, ',');
+
+  for (StringRef PassName : Passes) {
+    PassName = PassName.trim();
+    if (PassName == "print") {
+      dbgs() << "VPlan:\n" << Plan << "\n";
+      continue;
+    }
+    const TestTransformEntry *E = getTestTransform(PassName);
+    if (!E)
+      report_fatal_error("Unknown VPlan test transform: " + PassName);
+    E->Fn(Plan, TLI);
+  }
+}

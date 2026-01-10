@@ -440,6 +440,17 @@ struct VPlanTransforms {
   /// users in the original exit block using the VPIRInstruction wrapping to the
   /// LCSSA phi.
   static void addExitUsersForFirstOrderRecurrences(VPlan &Plan, VFRange &Range);
+
+  /// Run test transforms specified by comma-separated \p Pipeline names.
+  /// For testing VPlan transforms in isolation.
+  LLVM_ABI_FOR_TEST static void runTestTransforms(VPlan &Plan,
+                                                  StringRef Pipeline,
+                                                  const TargetLibraryInfo *TLI);
+
+  /// Convert VPInstructions to recipes based on !vplan.widen metadata.
+  /// For testing recipe-level transforms without full legality analysis.
+  LLVM_ABI_FOR_TEST static void widenFromMetadata(VPlan &Plan,
+                                                  const TargetLibraryInfo *TLI);
 };
 
 } // namespace llvm

@@ -377,6 +377,12 @@ static cl::opt<bool> VPlanBuildStressTest(
         "out right after the build (stress test the VPlan H-CFG construction "
         "in the VPlan-native vectorization path)."));
 
+static cl::opt<std::string> VPlanTestTransform(
+    "vplan-test-transform", cl::init(""), cl::Hidden,
+    cl::desc(
+        "Build VPlan and run specified transform(s) for testing. "
+        "Comma-separated list. Example: 'widen-from-metadata,simplify,print'"));
+
 cl::opt<bool> llvm::EnableLoopInterleaving(
     "interleave-loops", cl::init(true), cl::Hidden,
     cl::desc("Enable loop interleaving in Loop vectorization passes"));
@@ -9754,6 +9760,19 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   }
 
   PredicatedScalarEvolution PSE(*SE, *L);
+
+  // VPlan test transform mode: build minimal VPlan and run requested
+  // transforms.
+  if (!VPlanTestTransform.empty()) {
+    auto Plan = VPlanTransforms::buildVPlan0(
+        L, *LI, Type::getInt64Ty(F->getContext()), DebugLoc(), PSE);
+    VPlanTransforms::handleEarlyExits(*Plan, /*HasUncountableExit=*/false);
+    VPlanTransforms::addMiddleCheck(*Plan, /*RequiresScalarEpilogueCheck=*/true,
+                                    /*TailFolded=*/false);
+    VPlanTransforms::createLoopRegions(*Plan);
+    VPlanTransforms::runTestTransforms(*Plan, VPlanTestTransform, TLI);
+    return false;
+  }
 
   // Query this against the original loop and save it here because the profile
   // of the original loop header may change as the transformation happens.
