@@ -7,7 +7,7 @@ module {
   // CHECK:         %[[SIZE:.*]] = llvm.mlir.constant(1 : i64) : i64
   // CHECK-NEXT:    %{{.*}} = llvm.alloca %[[SIZE]] x i32 : (i64) -> !llvm.ptr
   cir.func @alloca_no_align() {
-    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["var_name"]
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["var_name"] {alignment = 0 : i64}
     cir.return
   }
 }
