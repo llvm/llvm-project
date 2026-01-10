@@ -25,17 +25,14 @@ set(src_files
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Workshare.cpp
 )
 
-if(NOT "${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^spirv" AND
-   NOT "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^spirv")
-  list(APPEND compile_options -flto)
-endif()
+list(APPEND compile_options -flto)
 list(APPEND compile_options -fvisibility=hidden)
-list(APPEND compile_options -Wno-unknown-cuda-version)
 list(APPEND compile_options -nogpulib)
 list(APPEND compile_options -nostdlibinc)
 list(APPEND compile_options -fno-rtti)
 list(APPEND compile_options -fno-exceptions)
 list(APPEND compile_options -fconvergent-functions)
+list(APPEND compile_options -Wno-unknown-cuda-version)
 
 if(LLVM_DEFAULT_TARGET_TRIPLE)
   list(APPEND compile_options --target=${LLVM_DEFAULT_TARGET_TRIPLE})
@@ -59,7 +56,6 @@ elseif("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx" OR
 elseif("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^spirv64" OR
        "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^spirv64")
   set(target_name "spirv") 
-  list(APPEND compile_options -emit-llvm -c)
 endif()
 
 # Trick to combine these into a bitcode file via the linker's LTO pass.
