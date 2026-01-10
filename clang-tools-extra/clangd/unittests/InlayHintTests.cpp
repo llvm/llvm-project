@@ -1839,7 +1839,7 @@ TEST(DesignatorHints, ParenInitDerived) {
                         ExpectedHint{".c=", "c"}, ExpectedHint{".d=", "d"});
 }
 
-TEST(DesignatorHints, BasicParenInitTemplate) {
+TEST(DesignatorHints, ParenInitTemplate) {
   assertDesignatorHints(R"cpp(
     template <typename T>
     struct S1 {
