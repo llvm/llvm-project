@@ -24,30 +24,14 @@ define <4 x i32> @gather_avx_dd_128(<4 x i32> %indices, i8 %maskbits, ptr nounde
 define <4 x i32> @gather_portable_dd_128(<4 x i32> %indices, i8 %maskbits, ptr noundef readonly %data) nounwind {
 ; AVX2-LABEL: gather_portable_dd_128:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    movl %edi, %eax
-; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    negl %eax
-; AVX2-NEXT:    vmovd %eax, %xmm1
-; AVX2-NEXT:    movl %edi, %eax
-; AVX2-NEXT:    shrb %al
-; AVX2-NEXT:    movzbl %al, %eax
-; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    negl %eax
-; AVX2-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
-; AVX2-NEXT:    movl %edi, %eax
-; AVX2-NEXT:    shrb $2, %al
-; AVX2-NEXT:    movzbl %al, %eax
-; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    negl %eax
-; AVX2-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; AVX2-NEXT:    andb $8, %dil
-; AVX2-NEXT:    shrb $3, %dil
-; AVX2-NEXT:    movzbl %dil, %eax
-; AVX2-NEXT:    negl %eax
-; AVX2-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
-; AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX2-NEXT:    vmovd %edi, %xmm0
+; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [1,2,4,8]
+; AVX2-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm2
 ; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpgatherqd %xmm1, (%rsi,%ymm2,4), %xmm0
+; AVX2-NEXT:    vpgatherqd %xmm2, (%rsi,%ymm1,4), %xmm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
   %m4 = trunc i8 %maskbits to i4
@@ -79,58 +63,20 @@ define <8 x i32> @gather_avx_dd_256(<8 x i32> %indices, i8 %maskbits, ptr nounde
 define <8 x i32> @gather_portable_dd_256(<8 x i32> %indices, i8 %maskbits, ptr noundef readonly %data) nounwind {
 ; AVX2-LABEL: gather_portable_dd_256:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    movl %edi, %eax
-; AVX2-NEXT:    shrb $3, %al
-; AVX2-NEXT:    movzbl %al, %eax
-; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    negl %eax
-; AVX2-NEXT:    movl %edi, %ecx
-; AVX2-NEXT:    shrb $2, %cl
-; AVX2-NEXT:    movzbl %cl, %ecx
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    negl %ecx
-; AVX2-NEXT:    movl %edi, %edx
-; AVX2-NEXT:    shrb %dl
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    negl %edx
-; AVX2-NEXT:    movl %edi, %r8d
-; AVX2-NEXT:    andl $1, %r8d
-; AVX2-NEXT:    negl %r8d
-; AVX2-NEXT:    movl %edi, %r9d
-; AVX2-NEXT:    shrb $7, %r9b
-; AVX2-NEXT:    movzbl %r9b, %r9d
-; AVX2-NEXT:    negl %r9d
-; AVX2-NEXT:    movl %edi, %r10d
-; AVX2-NEXT:    shrb $6, %r10b
-; AVX2-NEXT:    movzbl %r10b, %r10d
-; AVX2-NEXT:    andl $1, %r10d
-; AVX2-NEXT:    negl %r10d
-; AVX2-NEXT:    movl %edi, %r11d
-; AVX2-NEXT:    shrb $5, %r11b
-; AVX2-NEXT:    movzbl %r11b, %r11d
-; AVX2-NEXT:    andl $1, %r11d
-; AVX2-NEXT:    negl %r11d
-; AVX2-NEXT:    shrb $4, %dil
-; AVX2-NEXT:    movzbl %dil, %edi
-; AVX2-NEXT:    andl $1, %edi
-; AVX2-NEXT:    negl %edi
 ; AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; AVX2-NEXT:    vmovd %edi, %xmm2
-; AVX2-NEXT:    vpinsrd $1, %r11d, %xmm2, %xmm2
-; AVX2-NEXT:    vpinsrd $2, %r10d, %xmm2, %xmm2
-; AVX2-NEXT:    vpinsrd $3, %r9d, %xmm2, %xmm2
-; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX2-NEXT:    vpbroadcastd %xmm2, %ymm2
+; AVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = [1,2,4,8,16,32,64,128]
+; AVX2-NEXT:    vpand %ymm3, %ymm2, %ymm2
+; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm2, %ymm2
+; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
 ; AVX2-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX2-NEXT:    vpgatherqd %xmm2, (%rsi,%ymm0,4), %xmm4
-; AVX2-NEXT:    vmovd %r8d, %xmm0
-; AVX2-NEXT:    vpinsrd $1, %edx, %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrd $2, %ecx, %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
-; AVX2-NEXT:    vpgatherqd %xmm0, (%rsi,%ymm1,4), %xmm3
-; AVX2-NEXT:    vinserti128 $1, %xmm4, %ymm3, %ymm0
+; AVX2-NEXT:    vpxor %xmm5, %xmm5, %xmm5
+; AVX2-NEXT:    vpgatherqd %xmm3, (%rsi,%ymm0,4), %xmm5
+; AVX2-NEXT:    vpgatherqd %xmm2, (%rsi,%ymm1,4), %xmm4
+; AVX2-NEXT:    vinserti128 $1, %xmm5, %ymm4, %ymm0
 ; AVX2-NEXT:    retq
   %m  = bitcast i8 %maskbits to <8 x i1>
   %idx64 = zext <8 x i32> %indices to <8 x i64>
@@ -207,30 +153,14 @@ define <4 x i32> @gather_avx_qd_256(<4 x i32> %indices, i8 %maskbits, ptr nounde
 define <4 x i32> @gather_portable_qd_256(<4 x i32> %indices, i8 %maskbits, ptr noundef readonly %data) nounwind {
 ; AVX2-LABEL: gather_portable_qd_256:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    movl %edi, %eax
-; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    negl %eax
-; AVX2-NEXT:    vmovd %eax, %xmm1
-; AVX2-NEXT:    movl %edi, %eax
-; AVX2-NEXT:    shrb %al
-; AVX2-NEXT:    movzbl %al, %eax
-; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    negl %eax
-; AVX2-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
-; AVX2-NEXT:    movl %edi, %eax
-; AVX2-NEXT:    shrb $2, %al
-; AVX2-NEXT:    movzbl %al, %eax
-; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    negl %eax
-; AVX2-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; AVX2-NEXT:    andb $8, %dil
-; AVX2-NEXT:    shrb $3, %dil
-; AVX2-NEXT:    movzbl %dil, %eax
-; AVX2-NEXT:    negl %eax
-; AVX2-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
-; AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX2-NEXT:    vmovd %edi, %xmm0
+; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [1,2,4,8]
+; AVX2-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm2
 ; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpgatherqd %xmm1, (%rsi,%ymm2,4), %xmm0
+; AVX2-NEXT:    vpgatherqd %xmm2, (%rsi,%ymm1,4), %xmm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
   %m4 = trunc i8 %maskbits to i4
@@ -308,33 +238,14 @@ define <4 x i64> @gather_avx_dq_256(<4 x i32> %indices, i8 %maskbits, ptr nounde
 define <4 x i64> @gather_portable_dq_256(<4 x i32> %indices, i8 %maskbits, ptr noundef readonly %data) nounwind {
 ; AVX2-LABEL: gather_portable_dq_256:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    movl %edi, %eax
-; AVX2-NEXT:    andb $8, %al
-; AVX2-NEXT:    shrb $3, %al
-; AVX2-NEXT:    movzbl %al, %eax
-; AVX2-NEXT:    negq %rax
-; AVX2-NEXT:    vmovq %rax, %xmm1
-; AVX2-NEXT:    movl %edi, %eax
-; AVX2-NEXT:    shrb $2, %al
-; AVX2-NEXT:    movzbl %al, %eax
-; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    negq %rax
-; AVX2-NEXT:    vmovq %rax, %xmm2
-; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX2-NEXT:    movl %edi, %eax
-; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    negq %rax
-; AVX2-NEXT:    vmovq %rax, %xmm2
-; AVX2-NEXT:    shrb %dil
-; AVX2-NEXT:    movzbl %dil, %eax
-; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    negq %rax
-; AVX2-NEXT:    vmovq %rax, %xmm3
-; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX2-NEXT:    vmovd %edi, %xmm0
+; AVX2-NEXT:    vpbroadcastd %xmm0, %ymm0
+; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [1,2,4,8]
+; AVX2-NEXT:    vpand %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqq %ymm2, %ymm0, %ymm2
 ; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpgatherqq %ymm1, (%rsi,%ymm2,8), %ymm0
+; AVX2-NEXT:    vpgatherqq %ymm2, (%rsi,%ymm1,8), %ymm0
 ; AVX2-NEXT:    retq
   %m4 = trunc i8 %maskbits to i4
   %m  = bitcast i4 %m4 to <4 x i1>
@@ -413,33 +324,14 @@ define <4 x i64> @gather_avx_qq_256(<4 x i32> %indices, i8 %maskbits, ptr nounde
 define <4 x i64> @gather_portable_qq_256(<4 x i32> %indices, i8 %maskbits, ptr noundef readonly %data) nounwind {
 ; AVX2-LABEL: gather_portable_qq_256:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    movl %edi, %eax
-; AVX2-NEXT:    andb $8, %al
-; AVX2-NEXT:    shrb $3, %al
-; AVX2-NEXT:    movzbl %al, %eax
-; AVX2-NEXT:    negq %rax
-; AVX2-NEXT:    vmovq %rax, %xmm1
-; AVX2-NEXT:    movl %edi, %eax
-; AVX2-NEXT:    shrb $2, %al
-; AVX2-NEXT:    movzbl %al, %eax
-; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    negq %rax
-; AVX2-NEXT:    vmovq %rax, %xmm2
-; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX2-NEXT:    movl %edi, %eax
-; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    negq %rax
-; AVX2-NEXT:    vmovq %rax, %xmm2
-; AVX2-NEXT:    shrb %dil
-; AVX2-NEXT:    movzbl %dil, %eax
-; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    negq %rax
-; AVX2-NEXT:    vmovq %rax, %xmm3
-; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX2-NEXT:    vmovd %edi, %xmm0
+; AVX2-NEXT:    vpbroadcastd %xmm0, %ymm0
+; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [1,2,4,8]
+; AVX2-NEXT:    vpand %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqq %ymm2, %ymm0, %ymm2
 ; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpgatherqq %ymm1, (%rsi,%ymm2,8), %ymm0
+; AVX2-NEXT:    vpgatherqq %ymm2, (%rsi,%ymm1,8), %ymm0
 ; AVX2-NEXT:    retq
   %m4 = trunc i8 %maskbits to i4
   %m  = bitcast i4 %m4 to <4 x i1>

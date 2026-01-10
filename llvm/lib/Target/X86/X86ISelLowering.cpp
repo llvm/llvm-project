@@ -57403,6 +57403,9 @@ static SDValue rebuildGatherScatter(SelectionDAG &DAG,
                                     SDValue Mask = SDValue()) {
   SDLoc DL(GorS);
 
+  if (!Mask.getNode())
+    Mask = GorS->getMask();
+
   if (auto *Gather = dyn_cast<MaskedGatherSDNode>(GorS)) {
     SDValue Ops[] = {
         Gather->getChain(), Gather->getPassThru(), Mask, Base, Index, Scale};
@@ -57423,7 +57426,8 @@ static SDValue rebuildGatherScatter(SelectionDAG &DAG,
 }
 
 static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
-                                    TargetLowering::DAGCombinerInfo &DCI) {
+                                    TargetLowering::DAGCombinerInfo &DCI,
+                                    const X86Subtarget &Subtarget) {
   SDLoc DL(N);
   auto *GorS = cast<MaskedGatherScatterSDNode>(N);
   SDValue Index = GorS->getIndex();
@@ -57557,6 +57561,61 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
 
   // With vector masks we only demand the upper bit of the mask.
   SDValue Mask = GorS->getMask();
+
+  // When the target does not have avx512 (which has special mask registers),
+  // replace a mask that looks like:
+  //
+  //   t9: v4i1 = bitcast t8
+  //
+  // With one that looks like:
+  //
+  //  t25: i32 = zero_extend t8
+  //  t26: v4i32 = X86ISD::VBROADCAST t25
+  //  t32: v4i32 = and t26, t31
+  //  t33: v4i32 = X86ISD::PCMPEQ t32, t31
+  //
+  // The t31 vector has the values 1 << 0, 1 << 1, 1 << 2, etc.
+  //
+  // The default expansion from an integer to a mask vector generates a lot more
+  // instructions.
+  if (DCI.isBeforeLegalize() && !Subtarget.hasAVX512()) {
+    EVT MaskVT = Mask.getValueType();
+
+    if (MaskVT.isVector() && MaskVT.getVectorElementType() == MVT::i1 &&
+        Mask.getOpcode() == ISD::BITCAST) {
+
+      SDValue Bits = Mask.getOperand(0);
+      if (Bits.getValueType().isScalarInteger()) {
+        unsigned NumElts = MaskVT.getVectorNumElements();
+        if (NumElts == 4 || NumElts == 8) {
+
+          EVT ValueVT = N->getValueType(0);
+          EVT IntMaskVT = ValueVT.changeVectorElementTypeToInteger();
+
+          MVT MaskVecVT = IntMaskVT.getSimpleVT();
+          MVT MaskEltVT = MaskVecVT.getVectorElementType();
+
+          SDValue BitsElt = DAG.getZExtOrTrunc(Bits, DL, MaskEltVT);
+          SDValue Bc = DAG.getNode(X86ISD::VBROADCAST, DL, MaskVecVT, BitsElt);
+
+          SmallVector<SDValue, 8> Lanes;
+          Lanes.reserve(NumElts);
+          for (unsigned i = 0; i < NumElts; ++i) {
+            uint64_t Bit = 1ull << i;
+            Lanes.push_back(DAG.getConstant(Bit, DL, MaskEltVT));
+          }
+
+          SDValue LaneBits = DAG.getBuildVector(MaskVecVT, DL, Lanes);
+          SDValue And = DAG.getNode(ISD::AND, DL, MaskVecVT, Bc, LaneBits);
+          SDValue NewMask =
+              DAG.getNode(X86ISD::PCMPEQ, DL, MaskVecVT, And, LaneBits);
+
+          return rebuildGatherScatter(DAG, GorS, Index, Base, Scale, NewMask);
+        }
+      }
+    }
+  }
+
   if (Mask.getScalarValueSizeInBits() != 1) {
     APInt DemandedMask(APInt::getSignMask(Mask.getScalarValueSizeInBits()));
     if (TLI.SimplifyDemandedBits(Mask, DemandedMask, DCI)) {
@@ -61701,7 +61760,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::MGATHER:
   case X86ISD::MSCATTER:    return combineX86GatherScatter(N, DAG, DCI);
   case ISD::MGATHER:
-  case ISD::MSCATTER:       return combineGatherScatter(N, DAG, DCI);
+  case ISD::MSCATTER:       return combineGatherScatter(N, DAG, DCI, Subtarget);
   case X86ISD::PCMPEQ:
   case X86ISD::PCMPGT:      return combineVectorCompare(N, DAG, Subtarget);
   case X86ISD::PMULDQ:
