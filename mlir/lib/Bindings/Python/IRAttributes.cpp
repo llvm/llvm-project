@@ -226,8 +226,10 @@ PyArrayAttribute::PyArrayAttributeIterator::dunderNext() {
   // TODO: Throw is an inefficient way to stop iteration.
   if (PyArrayAttribute::PyArrayAttributeIterator::nextIndex >=
       mlirArrayAttrGetNumElements(
-          PyArrayAttribute::PyArrayAttributeIterator::attr.get()))
-    throw nb::stop_iteration();
+          PyArrayAttribute::PyArrayAttributeIterator::attr.get())) {
+    PyErr_SetNone(PyExc_StopIteration);
+    return nb::object();
+  }
   return PyAttribute(
              this->PyArrayAttribute::PyArrayAttributeIterator::attr
                  .getContext(),

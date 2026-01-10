@@ -1374,7 +1374,7 @@ public:
 
   PyRegionIterator &dunderIter() { return *this; }
 
-  PyRegion dunderNext();
+  nanobind::typed<nanobind::object, PyRegion> dunderNext();
 
   static void bind(nanobind::module_ &m);
 
@@ -1417,7 +1417,7 @@ public:
 
   PyBlockIterator &dunderIter() { return *this; }
 
-  PyBlock dunderNext();
+  nanobind::typed<nanobind::object, PyBlock> dunderNext();
 
   static void bind(nanobind::module_ &m);
 
@@ -1508,7 +1508,7 @@ public:
 
   PyOpOperandIterator &dunderIter() { return *this; }
 
-  PyOpOperand dunderNext();
+  nanobind::typed<nanobind::object, PyOpOperand> dunderNext();
 
   static void bind(nanobind::module_ &m);
 
