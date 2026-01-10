@@ -1,4 +1,4 @@
-//===-- Implementation of dfmal function ----------------------------------===//
+//===-- Implementation headre for dfmal       -----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/dfmal.h"
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_DFMAL_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_DFMAL_H
+
+#include "src/__support/FPUtil/FMA.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/math/dfmal.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(double, dfmal,
-                   (long double x, long double y, long double z)) {
-  return math::dfmal(x, y, z);
+namespace math {
+
+LIBC_INLINE static double dfmal(long double x, long double y, long double z) {
+
+  return fputil::fma<double>(x, y, z);
 }
 
+} // namespace math
 } // namespace LIBC_NAMESPACE_DECL
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_DFMAL_H
