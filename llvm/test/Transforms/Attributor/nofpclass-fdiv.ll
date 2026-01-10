@@ -909,7 +909,7 @@ define float @ret_fdiv_both_signs_positive_or_nan(float %lhs, float %rhs) {
 
 ; Result must be positive or nan
 define float @ret_fdiv_both_signs_negative_or_nan(float %lhs, float %rhs) {
-; CHECK-LABEL: define float @ret_fdiv_both_signs_negative_or_nan
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_fdiv_both_signs_negative_or_nan
 ; CHECK-SAME: (float [[LHS:%.*]], float [[RHS:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[LHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[LHS]]) #[[ATTR6]]
 ; CHECK-NEXT:    [[RHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[RHS]]) #[[ATTR6]]
@@ -928,7 +928,7 @@ define float @ret_fdiv_both_signs_negative_or_nan(float %lhs, float %rhs) {
 
 ; Result must be negative or nan
 define float @ret_fdiv_lhs_negative_rhs_positive(float %lhs, float %rhs) {
-; CHECK-LABEL: define float @ret_fdiv_lhs_negative_rhs_positive
+; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) float @ret_fdiv_lhs_negative_rhs_positive
 ; CHECK-SAME: (float [[LHS:%.*]], float [[RHS:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[LHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[LHS]]) #[[ATTR6]]
 ; CHECK-NEXT:    [[RHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[RHS]]) #[[ATTR6]]
@@ -945,7 +945,7 @@ define float @ret_fdiv_lhs_negative_rhs_positive(float %lhs, float %rhs) {
 
 ; Result must be negative or nan
 define float @ret_fdiv_rhs_negative_lhs_positive(float %lhs, float %rhs) {
-; CHECK-LABEL: define float @ret_fdiv_rhs_negative_lhs_positive
+; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) float @ret_fdiv_rhs_negative_lhs_positive
 ; CHECK-SAME: (float [[LHS:%.*]], float [[RHS:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[LHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[LHS]]) #[[ATTR6]]
 ; CHECK-NEXT:    [[RHS_FABS:%.*]] = call float @llvm.fabs.f32(float [[RHS]]) #[[ATTR6]]
