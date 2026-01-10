@@ -371,7 +371,7 @@ class Dialect(ir.Dialect):
         mlir_module = cls._emit_module()
 
         pm = PassManager()
-        pm.add('canonicalize, cse')
+        pm.add("canonicalize, cse")
         pm.run(mlir_module.operation)
 
         irdl.load_dialects(mlir_module)
