@@ -285,7 +285,7 @@ public:
         // Canonicalization of values changes live-in set.
         // Rerun the algorithm until convergence.
         bool changes = false;
-        int iteration = 0;
+        [[maybe_unused]] int iteration = 0;
         do {
           LLVM_DEBUG(llvm::dbgs() << "\tIteration " << iteration++ << "\n");
           changes = canonicalizeLiveInValues(op->getRegion(0), accSupport);

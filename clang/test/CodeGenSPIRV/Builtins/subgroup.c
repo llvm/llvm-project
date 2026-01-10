@@ -7,9 +7,17 @@ typedef bool _Bool;
 #endif
 typedef unsigned __attribute__((ext_vector_type(4))) int4;
 
-// CHECK: @{{.*}}test_subgroup_shuffle{{.*}}(
+// CHECK: @{{.*}}test_subgroup_ballot{{.*}}(
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    tail call <4 x i32> @llvm.spv.wave.ballot(i1 %i)
-[[clang::sycl_external]] int4 test_subgroup_shuffle(_Bool i) {
+[[clang::sycl_external]] int4 test_subgroup_ballot(_Bool i) {
     return __builtin_spirv_subgroup_ballot(i);
+}
+
+// CHECK: @{{.*}}test_subgroup_shuffle{{.*}}(
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    tail call float @llvm.spv.wave.readlane.f32(float %f, i32 %i)
+//
+[[clang::sycl_external]] float test_subgroup_shuffle(float f, int i) {
+    return __builtin_spirv_subgroup_shuffle(f, i);
 }
