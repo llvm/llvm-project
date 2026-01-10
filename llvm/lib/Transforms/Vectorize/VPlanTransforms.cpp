@@ -2997,7 +2997,6 @@ void VPlanTransforms::optimizeEVLMasks(VPlan &Plan) {
 
   VPTypeAnalysis TypeInfo(Plan);
   SmallVector<VPRecipeBase *> OldRecipes;
-
   for (VPUser *U : collectUsersRecursively(HeaderMask)) {
     VPRecipeBase *R = cast<VPRecipeBase>(U);
     if (auto *NewR = optimizeMaskToEVL(HeaderMask, *R, TypeInfo, *EVL)) {
@@ -3011,7 +3010,6 @@ void VPlanTransforms::optimizeEVLMasks(VPlan &Plan) {
   // Erase recipes at the end so we don't invalidate TypeInfo.
   for (VPRecipeBase *OldR : OldRecipes)
     OldR->eraseFromParent();
-  // Clean up any recipes now made dead.
   removeDeadRecipes(Plan);
 }
 
