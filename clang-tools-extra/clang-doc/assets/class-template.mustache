@@ -9,7 +9,9 @@
 <html lang="en-US">
 {{>HeadPartial}}
 <body>
-    {{>NavbarPartial}}
+    <header>
+        {{>NavbarPartial}}
+    </header>
     <main>
         <div class="container">
             <div class="sidebar">
@@ -63,22 +65,22 @@
                         </details>
                     </li>
                     {{/HasPublicFunctions}}
-                    {{#ProtectedFunction}}
+                    {{#HasProtectedFunctions}}
                     <li>
                         <details open>
                             <summary class="sidebar-section">
-                                <a class="sidebar-item" href="#ProtectedFunction">Protected Method</a>
+                                <a class="sidebar-item" href="#ProtectedMethods">Protected Methods</a>
                             </summary>
                             <ul>
-                                {{#Obj}}
+                                {{#ProtectedFunctions}}
                                 <li class="sidebar-item-container">
-                                    <a class="sidebar-item" href="#{{ID}}">{{Name}}</a>
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
                                 </li>
-                                {{/Obj}}
+                                {{/ProtectedFunctions}}
                             </ul>
                         </details>
                     </li>
-                    {{/ProtectedFunction}}
+                    {{/HasProtectedFunctions}}
                     {{#HasEnums}}
                     <li>
                         <details open>
@@ -153,7 +155,9 @@
                     {{/Template}}
                     <div class="hero__title">
                         <h1 class="hero__title-large">{{TagType}} {{Name}}</h1>
-                        <p>Defined at line {{Location.LineNumber}} of file {{Location.Filename}}</p>
+                        {{#Location}}
+                        <p>Defined at line {{LineNumber}} of file {{^FileURL}}{{Filename}}{{/FileURL}}{{#FileURL}}<a href="{{FileURL}}">{{Filename}}</a>{{/FileURL}}</p>
+                        {{/Location}}
                         {{#Description}}
                         <div class="doc-card">
                             {{>Comments}}
@@ -198,18 +202,16 @@
                     {{/PublicFunctions}}
                 </section>
                 {{/PublicFunctions}}
-                {{#ProtectedFunction}}
-                <li class="sidebar-section">
-                    <a class="sidebar-item" href="#ProtectedFunction">Protected Method</a>
-                </li>
-                <ul>
-                    {{#Obj}}
-                    <li class="sidebar-item-container">
-                        <a class="sidebar-item" href="#{{ID}}">{{Name}}</a>
-                    </li>
-                    {{/Obj}}
-                </ul>
-                {{/ProtectedFunction}}
+                {{#HasProtectedFunctions}}
+                <section id="ProtectedMethods" class="section-container">
+                    <h2>Protected Methods</h2>
+                    <div>
+                        {{#ProtectedFunctions}}
+                        {{>FunctionPartial}}
+                        {{/ProtectedFunctions}}
+                    </div>
+                </section>
+                {{/HasProtectedFunctions}}
                 {{#HasEnums}}
                 <section id="Enums" class="section-container">
                     <h2>Enumerations</h2>
