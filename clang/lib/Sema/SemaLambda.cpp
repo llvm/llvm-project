@@ -235,7 +235,7 @@ getGenericLambdaTemplateParameterList(LambdaScopeInfo *LSI, Sema &SemaRef) {
   if (!LSI->GLTemplateParameterList && !LSI->TemplateParams.empty()) {
     LSI->GLTemplateParameterList = TemplateParameterList::Create(
         SemaRef.Context,
-        /*Template kw loc*/ LSI->IntroducerRange.getBegin(),
+        /*Begin loc of the lambda expression*/ LSI->IntroducerRange.getBegin(),
         /*L angle loc*/ LSI->ExplicitTemplateParamsRange.getBegin(),
         LSI->TemplateParams,
         /*R angle loc*/ LSI->ExplicitTemplateParamsRange.getEnd(),
