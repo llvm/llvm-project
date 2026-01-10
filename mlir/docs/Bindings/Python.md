@@ -1183,19 +1183,66 @@ mlir.dialects.<dialect-namespace>` in Python.
 ### Attributes and Types
 
 Dialect attributes and types are provided in Python as subclasses of the
-`mlir.ir.Attribute` and `mlir.ir.Type` classes, respectively. Python APIs for
+`mlir.ir.Attribute` and `mlir.ir.Type` classes, respectively. Bindings APIs for
 attributes and types must connect to the relevant C APIs for building and
-inspection, which must be provided first. Bindings for `Attribute` and `Type`
-subclasses can be defined using
-[`include/mlir/Bindings/Python/PybindAdaptors.h`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/PybindAdaptors.h)
-or
-[`include/mlir/Bindings/Python/NanobindAdaptors.h`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/NanobindAdaptors.h)
-utilities that mimic pybind11/nanobind APIs for defining functions and
-properties. These bindings are to be included in a separate module. The
-utilities also provide automatic casting between C API handles `MlirAttribute`
-and `MlirType` and their Python counterparts so that the C API handles can be
-used directly in binding implementations. The methods and properties provided by
-the bindings should follow the principles discussed above.
+inspection, which must be provided first. Bindings for downstream/dialect `Attribute` and `Type`
+subclasses can be defined using exactly the same patterns as in the “core” extension:
+
+```c++
+#include "mlir/Bindings/Python/IRCore.h"
+#include "mlir/Bindings/Python/IRTypes.h"
+
+using namespace mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN;
+
+struct PyTestType : PyConcreteType<PyTestType> {
+  // Required
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsAPythonTestTestType;
+  // Optional but recommended
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirPythonTestTestTypeGetTypeID;
+  static constexpr const char *pyClassName = "TestType";
+  using Base::Base;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static("get",
+      [](DefaultingPyMlirContext context) {
+        return PyTestType(context->getRef(), mlirPythonTestTestTypeGet(context.get()->get()));
+      },
+      nb::arg("context").none() = nb::none());
+  }
+};
+
+class PyTestAttr : public PyConcreteAttribute<PyTestAttr> {
+public:
+  // Required
+  static constexpr IsAFunctionTy isaFunction =
+      mlirAttributeIsAPythonTestTestAttribute;
+  static constexpr const char *pyClassName = "TestAttr";
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirPythonTestTestAttributeGetTypeID;
+  using Base::Base;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+      "get",
+      [](DefaultingPyMlirContext context) {
+        return PyTestAttr(context->getRef(), mlirPythonTestTestAttributeGet(context.get()->get()));
+      },
+      nb::arg("context").none() = nb::none());
+  }
+};
+
+NB_MODULE(_mlirPythonTestNanobind, m) {
+  PyTestAttr::bind(m);
+  PyTestType::bind(m);
+}
+```
+
+See [`mlir/test/python/lib/PythonTestModuleNanobind.cpp`] for more examples.
+
+**Note**: if you are defining such types/attributes in a downstream project, it is critical you define 
+`MLIR_BINDINGS_PYTHON_NB_DOMAIN` (which is used to determine `MLIR_BINDINGS_PYTHON_DOMAIN`) such that it is unique to
+your project and for every set of bindings built/distributed by your project. See **CMake variables** above.
 
 The attribute and type bindings for a dialect can be located in
 `lib/Bindings/Python/Dialect<Name>.cpp` and should be compiled into a separate
