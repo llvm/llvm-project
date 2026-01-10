@@ -147,26 +147,30 @@ int main(int argc, const char **argv) {
   llvm::SmallVector<std::pair<int, const clang::driver::Command *>, 4>
       failingCommands;
 
-  for (const auto &job : c->getJobs()) {
-    const auto *cmd = llvm::dyn_cast<clang::driver::Command>(&job);
-    if (!cmd)
+// Reject assembly files as flang does not support assembling
+if (c) {
+  for (const llvm::opt::Arg *arg : c->getInputArgs()) {
+    if (arg->getOption().getKind() != llvm::opt::Option::InputClass)
       continue;
+
+    llvm::StringRef filename(arg->getValue());
+
+    // Determine file type from extension
+    clang::driver::types::ID type =
+        clang::driver::types::lookupTypeForExtension(
+            filename.rsplit('.').second);
+
+    if (type == clang::driver::types::TY_Asm ||
+        type == clang::driver::types::TY_PP_Asm) {
       
-    for (const clang::driver::InputInfo &inputInfo : cmd->getInputInfos()) {
-      clang::driver::types::ID type = inputInfo.getType();
-      
-      if (type == clang::driver::types::TY_Asm ||
-          type == clang::driver::types::TY_PP_Asm) {
-        
-        diags.Report(diags.getCustomDiagID(
-            clang::DiagnosticsEngine::Error,
-            "flang does not accept assembly code"))
-            << inputInfo.getAsString();
-            
-        return 1;
-      }
+      diags.Report(diags.getCustomDiagID(
+          clang::DiagnosticsEngine::Error,
+          "flang does not support assembly files as input: '%0'"))
+          << filename;
+      return 1;
     }
   }
+}
 
   // Set the environment variable, FLANG_COMPILER_OPTIONS_STRING, to contain all
   // the compiler options. This is intended for the frontend driver,
