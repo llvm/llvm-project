@@ -1039,7 +1039,7 @@ add_header_library(
     libc.src.__support.integer_literals
     libc.src.__support.macros.optimization
     libc.src.__support.math.common_constants
-    .log_range_reduction
+    libc.src.math.generic.log_range_reduction
 )
 
 add_header_library(

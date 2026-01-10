@@ -2883,7 +2883,7 @@ libc_support_library(
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":__support_math_common_constants",
-        ":log_range_reduction",
+        ":math_generic_log_range_reduction",
     ],
 )
 

@@ -1,7 +1,6 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_LOG_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_LOG_H
 
-#include "log_range_reduction.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -13,6 +12,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/math/common_constants.h"
+#include "src/math/generic/log_range_reduction.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -710,6 +710,7 @@ constexpr Float128 BIG_COEFFS[3]{
 
 // Reuse the output of the fast pass range reduction.
 // -2^-8 <= m_x < 2^-7
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 LIBC_INLINE double log_accurate(int e_x, int index, double m_x) {
 
   Float128 e_x_f128(static_cast<float>(e_x));
@@ -729,6 +730,7 @@ LIBC_INLINE double log_accurate(int e_x, int index, double m_x) {
 
   return static_cast<double>(r);
 }
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LIBC_INLINE double log(double x) {
   using FPBits_t = typename fputil::FPBits<double>;
