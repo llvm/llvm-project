@@ -85,6 +85,9 @@ Changes to building LLVM
 Changes to TableGen
 -------------------
 
+* The `!getop` and `!setop` bang operators have been removed in favor of
+  `!getdagop` and `!setdagop`.
+
 Changes to Interprocedural Optimizations
 ----------------------------------------
 
@@ -167,6 +170,10 @@ Changes to the WebAssembly Backend
 
 * `half` now uses a soft float lowering, which resolves various precision and
   bitcast issues.
+
+- The `wasm32-wasi` target has been renamed to `wasm32-wasip1`. The old
+  option is still recognized, though by default will emit a deprecation
+  warning.
 
 Changes to the Windows Target
 -----------------------------

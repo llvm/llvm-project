@@ -2411,6 +2411,7 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   const llvm::Triple &Triple = C.getDefaultToolChain().getTriple();
   bool IsELF = Triple.isOSBinFormatELF();
   bool Crel = false, ExperimentalCrel = false;
+  bool SFrame = false, ExperimentalSFrame = false;
   bool ImplicitMapSyms = false;
   bool UseRelaxRelocations = C.getDefaultToolChain().useRelaxRelocations();
   bool UseNoExecStack = false;
@@ -2626,6 +2627,10 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
                                   llvm::codegenoptions::DebugInfoConstructor,
                                   DwarfVersion, llvm::DebuggerKind::Default);
         }
+      } else if (Value == "--gsframe") {
+        SFrame = true;
+      } else if (Value == "--allow-experimental-sframe") {
+        ExperimentalSFrame = true;
       } else if (Value.starts_with("-mcpu") || Value.starts_with("-mfpu") ||
                  Value.starts_with("-mhwdiv") || Value.starts_with("-march")) {
         // Do nothing, we'll validate it later.
@@ -2677,6 +2682,17 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
     } else {
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << "-Wa,--crel" << D.getTargetTriple();
+    }
+  }
+  if (SFrame) {
+    if (Triple.isOSBinFormatELF() && Triple.isX86()) {
+      if (!ExperimentalSFrame)
+        D.Diag(diag::err_drv_experimental_sframe);
+      else
+        CmdArgs.push_back("--gsframe");
+    } else {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << "-Wa,--gsframe" << D.getTargetTriple();
     }
   }
   if (ImplicitMapSyms)
@@ -5974,6 +5990,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-funwind-tables=2");
   else if (UnwindTables)
      CmdArgs.push_back("-funwind-tables=1");
+
+  // Sframe unwind tables are independent of the other types. Although also
+  // defined for aarch64, only x86_64 support is implemented at the moment.
+  if (Arg *A = Args.getLastArg(options::OPT_gsframe)) {
+    if (Triple.isOSBinFormatELF() && Triple.isX86())
+      CmdArgs.push_back("--gsframe");
+    else
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getOption().getName() << TripleStr;
+  }
 
   // Prepare `-aux-target-cpu` and `-aux-target-feature` unless
   // `--gpu-use-aux-triple-only` is specified.
