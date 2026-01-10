@@ -593,8 +593,8 @@ bool AsmPrinter::doInitialization(Module &M) {
     bool EmitCodeView = M.getCodeViewFlag();
     // On Windows targets, emit minimal CodeView compiler info even when debug
     // info is disabled.
-    if ((Target.isOSWindows() && M.getNamedMetadata("llvm.dbg.cu")) ||
-        (Target.isUEFI() && EmitCodeView))
+    if ((Target.isOSWindows() || (Target.isUEFI() && EmitCodeView)) &&
+        M.getNamedMetadata("llvm.dbg.cu"))
       Handlers.push_back(std::make_unique<CodeViewDebug>(this));
     if (!EmitCodeView || M.getDwarfVersion()) {
       if (hasDebugInfo()) {
@@ -2010,7 +2010,33 @@ void AsmPrinter::emitFunctionBody() {
     // Print a label for the basic block.
     emitBasicBlockStart(MBB);
     DenseMap<StringRef, unsigned> MnemonicCounts;
+
+    // Helper to emit a symbol for the prefetch target associated with the given
+    // callsite index in the current MBB.
+    auto EmitPrefetchTargetSymbol = [&](unsigned CallsiteIndex) {
+      MCSymbol *PrefetchTargetSymbol = OutContext.getOrCreateSymbol(
+          Twine("__llvm_prefetch_target_") + MF->getName() + Twine("_") +
+          Twine(MBB.getBBID()->BaseID) + Twine("_") +
+          Twine(static_cast<unsigned>(CallsiteIndex)));
+      // If the function is weak-linkage it may be replaced by a strong
+      // version, in which case the prefetch targets should also be replaced.
+      OutStreamer->emitSymbolAttribute(
+          PrefetchTargetSymbol,
+          MF->getFunction().isWeakForLinker() ? MCSA_Weak : MCSA_Global);
+      OutStreamer->emitLabel(PrefetchTargetSymbol);
+    };
+    SmallVector<unsigned> PrefetchTargets =
+        MBB.getPrefetchTargetCallsiteIndexes();
+    auto PrefetchTargetIt = PrefetchTargets.begin();
+    unsigned LastCallsiteIndex = 0;
+
     for (auto &MI : MBB) {
+      if (PrefetchTargetIt != PrefetchTargets.end() &&
+          *PrefetchTargetIt == LastCallsiteIndex) {
+        EmitPrefetchTargetSymbol(*PrefetchTargetIt);
+        ++PrefetchTargetIt;
+      }
+
       // Print the assembly for the instruction.
       if (!MI.isPosition() && !MI.isImplicitDef() && !MI.isKill() &&
           !MI.isDebugInstr()) {
@@ -2148,8 +2174,11 @@ void AsmPrinter::emitFunctionBody() {
         break;
       }
 
-      if (MI.isCall() && MF->getTarget().Options.BBAddrMap)
-        OutStreamer->emitLabel(createCallsiteEndSymbol(MBB));
+      if (MI.isCall()) {
+        if (MF->getTarget().Options.BBAddrMap)
+          OutStreamer->emitLabel(createCallsiteEndSymbol(MBB));
+        LastCallsiteIndex++;
+      }
 
       if (TM.Options.EmitCallGraphSection && MI.isCall())
         handleCallsiteForCallgraph(FuncCGInfo, CallSitesInfoMap, MI);
@@ -2160,6 +2189,12 @@ void AsmPrinter::emitFunctionBody() {
 
       for (auto &Handler : Handlers)
         Handler->endInstruction();
+    }
+    // Emit the last prefetch target in case the last instruction was a call.
+    if (PrefetchTargetIt != PrefetchTargets.end() &&
+        *PrefetchTargetIt == LastCallsiteIndex) {
+      EmitPrefetchTargetSymbol(*PrefetchTargetIt);
+      ++PrefetchTargetIt;
     }
 
     // We must emit temporary symbol for the end of this basic block, if either

@@ -27,6 +27,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/Basic/Builtins.h"
@@ -1789,12 +1790,13 @@ bool CodeGenFunction::ConstantFoldsToSimpleInteger(const Expr *Cond,
 
 /// Strip parentheses and simplistic logical-NOT operators.
 const Expr *CodeGenFunction::stripCond(const Expr *C) {
-  while (const UnaryOperator *Op = dyn_cast<UnaryOperator>(C->IgnoreParens())) {
-    if (Op->getOpcode() != UO_LNot)
-      break;
-    C = Op->getSubExpr();
+  while (true) {
+    const Expr *SC =
+        IgnoreExprNodes(C, IgnoreParensSingleStep, IgnoreUOpLNotSingleStep);
+    if (C == SC)
+      return SC;
+    C = SC;
   }
-  return C->IgnoreParens();
 }
 
 /// Determine whether the given condition is an instrumentable condition

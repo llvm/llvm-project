@@ -1632,7 +1632,7 @@ void SIWholeQuadMode::lowerInitExec(MachineInstr &MI) {
   }
 
   // Insert instruction sequence at block beginning (before vector operations).
-  const DebugLoc DL = MI.getDebugLoc();
+  const DebugLoc &DL = MI.getDebugLoc();
   const unsigned WavefrontSize = ST->getWavefrontSize();
   const unsigned Mask = (WavefrontSize << 1) - 1;
   Register CountReg = MRI->createVirtualRegister(&AMDGPU::SGPR_32RegClass);

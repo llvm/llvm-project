@@ -135,7 +135,7 @@ public:
 
     Result(Result &&Arg) : FAM(std::move(Arg.FAM)) {
       // We have to null out the analysis manager in the moved-from state
-      // because we are taking ownership of the responsibilty to clear the
+      // because we are taking ownership of the responsibility to clear the
       // analysis state.
       Arg.FAM = nullptr;
     }
@@ -143,7 +143,7 @@ public:
     Result &operator=(Result &&RHS) {
       FAM = RHS.FAM;
       // We have to null out the analysis manager in the moved-from state
-      // because we are taking ownership of the responsibilty to clear the
+      // because we are taking ownership of the responsibility to clear the
       // analysis state.
       RHS.FAM = nullptr;
       return *this;
