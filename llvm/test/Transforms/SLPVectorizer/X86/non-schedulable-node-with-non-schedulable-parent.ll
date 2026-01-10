@@ -12,12 +12,9 @@ define float @test() {
 ; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    br label %[[BB8:.*]]
 ; CHECK:       [[BB6]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[FADD2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <2 x i32> <i32 poison, i32 3>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> [[TMP3]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> <float poison, float 0.000000e+00, float poison, float poison>, float [[LOAD]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP5]], float [[FADD2]], i32 2
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP1]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
 ; CHECK-NEXT:    [[TMP8:%.*]] = fdiv <4 x float> [[TMP7]], <float 1.000000e+00, float 1.000000e+00, float 0.000000e+00, float 0.000000e+00>
 ; CHECK-NEXT:    br label %[[BB8]]
 ; CHECK:       [[BB8]]:

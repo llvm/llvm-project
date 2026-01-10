@@ -2243,6 +2243,40 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     return builder.getNullDataMemberPtr(ty, cgf.getLoc(subExpr->getExprLoc()));
   }
 
+  case CK_BaseToDerivedMemberPointer:
+  case CK_DerivedToBaseMemberPointer: {
+    mlir::Value src = Visit(subExpr);
+
+    assert(!cir::MissingFeatures::memberFuncPtrAuthInfo());
+
+    QualType derivedTy =
+        kind == CK_DerivedToBaseMemberPointer ? subExpr->getType() : destTy;
+    const auto *mpType = derivedTy->castAs<MemberPointerType>();
+    NestedNameSpecifier qualifier = mpType->getQualifier();
+    assert(qualifier && "member pointer without class qualifier");
+    const Type *qualifierType = qualifier.getAsType();
+    assert(qualifierType && "member pointer qualifier is not a type");
+    const CXXRecordDecl *derivedClass = qualifierType->getAsCXXRecordDecl();
+    CharUnits offset =
+        cgf.cgm.computeNonVirtualBaseClassOffset(derivedClass, ce->path());
+
+    mlir::Location loc = cgf.getLoc(subExpr->getExprLoc());
+    mlir::Type resultTy = cgf.convertType(destTy);
+    mlir::IntegerAttr offsetAttr = builder.getIndexAttr(offset.getQuantity());
+
+    if (subExpr->getType()->isMemberFunctionPointerType()) {
+      cgf.cgm.errorNYI(subExpr->getSourceRange(),
+                       "VisitCastExpr: member function pointer");
+      return {};
+    }
+
+    if (kind == CK_BaseToDerivedMemberPointer)
+      return cir::DerivedDataMemberOp::create(builder, loc, resultTy, src,
+                                              offsetAttr);
+    return cir::BaseDataMemberOp::create(builder, loc, resultTy, src,
+                                         offsetAttr);
+  }
+
   case CK_LValueToRValue:
     assert(cgf.getContext().hasSameUnqualifiedType(subExpr->getType(), destTy));
     assert(subExpr->isGLValue() && "lvalue-to-rvalue applied to r-value!");

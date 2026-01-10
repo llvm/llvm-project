@@ -1949,7 +1949,15 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     return emitX86Select(builder, loc, ops[2], res, ops[1]);
   }
   case X86::BI__cpuid:
-  case X86::BI__cpuidex:
+  case X86::BI__cpuidex: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    mlir::Value subFuncId = builtinID == X86::BI__cpuidex
+                                ? ops[2]
+                                : builder.getConstInt(loc, sInt32Ty, 0);
+    cir::CpuIdOp::create(builder, loc, /*cpuInfo=*/ops[0],
+                         /*functionId=*/ops[1], /*subFunctionId=*/subFuncId);
+    return mlir::Value{};
+  }
   case X86::BI__emul:
   case X86::BI__emulu:
   case X86::BI__mulh:
