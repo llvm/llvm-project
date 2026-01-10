@@ -2389,7 +2389,7 @@ PyOpAttributeMap::dunderGetItemNamed(const std::string &name) {
 }
 
 nb::typed<nb::object, std::optional<PyAttribute>>
-PyOpAttributeMap::getWithDefaultNamed(const std::string &key, nb::object defaultValue) {
+PyOpAttributeMap::get(const std::string &key, nb::object defaultValue) {
   MlirAttribute attr =
       mlirOperationGetAttributeByName(operation->get(), toMlirStringRef(key));
   if (mlirAttributeIsNull(attr))
@@ -2459,7 +2459,7 @@ void PyOpAttributeMap::bind(nb::module_ &m) {
            "Sets an attribute with the given name.")
       .def("__delitem__", &PyOpAttributeMap::dunderDelItem, "name"_a,
            "Deletes an attribute with the given name.")
-      .def("get", &PyOpAttributeMap::getWithDefaultNamed, nb::arg("key"),
+      .def("get", &PyOpAttributeMap::get, nb::arg("key"),
            nb::arg("default") = nb::none(),
            "Gets an attribute by name or the default value, if it does not "
            "exist.")
