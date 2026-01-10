@@ -2608,7 +2608,6 @@ void VPlanTransforms::truncateToMinimalBitwidths(
         ProcessedIter->second = NewOp;
         R.setOperand(Idx, NewOp);
       }
-
     }
   }
 }
@@ -2996,6 +2995,7 @@ void VPlanTransforms::optimizeEVLMasks(VPlan &Plan) {
     return;
 
   VPTypeAnalysis TypeInfo(Plan);
+  SmallVector<VPRecipeBase *> OldRecipes;
 
   for (VPUser *U : collectUsersRecursively(HeaderMask)) {
     VPRecipeBase *R = cast<VPRecipeBase>(U);
@@ -3004,11 +3004,13 @@ void VPlanTransforms::optimizeEVLMasks(VPlan &Plan) {
       for (auto [Old, New] :
            zip_equal(R->definedValues(), NewR->definedValues()))
         Old->replaceAllUsesWith(New);
-      // Erase dead stores, the rest will be removed by removeDeadRecipes.
-      if (R->getNumDefinedValues() == 0)
-        R->eraseFromParent();
+      OldRecipes.push_back(R);
     }
   }
+  // Erase recipes at the end so we don't invalidate TypeInfo.
+  for (VPRecipeBase *OldR : OldRecipes)
+    OldR->eraseFromParent();
+  // Clean up any recipes now made dead.
   removeDeadRecipes(Plan);
 }
 
