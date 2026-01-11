@@ -94,8 +94,6 @@ public:
     return ShiftLegalizationStrategy::LowerToLibcall;
   }
 
-  bool softPromoteHalfType() const override { return true; }
-
 private:
   SDValue getAVRCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC, SDValue &AVRcc,
                     SelectionDAG &DAG, SDLoc dl) const;

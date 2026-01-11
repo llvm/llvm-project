@@ -263,8 +263,6 @@ private:
       CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,
       const SmallVectorImpl<CCValAssign> &ArgLocs) const;
 
-  bool softPromoteHalfType() const override { return true; }
-
   bool
   splitValueIntoRegisterParts(SelectionDAG &DAG, const SDLoc &DL, SDValue Val,
                               SDValue *Parts, unsigned NumParts, MVT PartVT,

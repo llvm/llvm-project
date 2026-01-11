@@ -41,6 +41,7 @@ public:
                                  const SystemZSubtarget &STI);
 
   bool useSoftFloat() const override;
+  bool softPromoteHalfType() const override { return false; }
 
   // Override TargetLowering.
   MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override {
