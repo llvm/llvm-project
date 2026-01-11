@@ -52,7 +52,7 @@ collectVariableUses(const clang::Stmt *S, const clang::VarDecl *Var,
   if (!S || !Var)
     return;
 
-  llvm::SmallPtrSet<const clang::DeclRefExpr *, 16> DREs =
+  const llvm::SmallPtrSet<const clang::DeclRefExpr *, 16> DREs =
       clang::tidy::utils::decl_ref_expr::allDeclRefExprs(*Var, *S,
                                                          Var->getASTContext());
 

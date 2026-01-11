@@ -36,8 +36,8 @@ void test_same_scope() {
 }
 
 // Variable can be moved to while loop body
-// TODO: This is a false positive. Correcting this will require
-//       loop semantic comprehension and var lifetime analysis.
+// FIXME: This is a false positive. Correcting this will require
+//        loop semantic comprehension and var lifetime analysis.
 void test_while_loop() {
   int counter = 0;
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'counter' can be declared in a smaller scope
@@ -104,10 +104,10 @@ void test_switch_multiple_cases(int value) {
 
 // Variable with complex initialization can be moved
 void test_complex_init() {
-  int complex = (5 + 3) * 2;
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'complex' can be declared in a smaller scope
+  int cmplx_expr = (5 + 3) * 2;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'cmplx_expr' can be declared in a smaller scope
   if (true) {
-    int doubled = complex * 2;
+    int doubled = cmplx_expr * 2;
   }
 }
 
@@ -191,4 +191,16 @@ void test_lambda() {
     return captured * 2;
   };
   lambda();
+}
+
+// Variable set from function call, used in if clause
+// FIXME: This is a false positive because we cannot know if
+//        func() has side effects or not (since not visible).
+int func();
+void test_function_call() {
+  int i = func();
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'i' can be declared in a smaller scope
+  if (true) {
+    i = 0;
+  }
 }
