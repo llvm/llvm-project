@@ -2133,6 +2133,14 @@ static void computeKnownBitsFromOperator(const Operator *I,
           Known.One.clearAllBits();
         break;
       }
+      case Intrinsic::vector_reduce_add: {
+        auto *VecTy = dyn_cast<FixedVectorType>(I->getOperand(0)->getType());
+        if (!VecTy)
+          break;
+        computeKnownBits(I->getOperand(0), Known, Q, Depth + 1);
+        Known = Known.reduceAdd(VecTy->getNumElements());
+        break;
+      }
       case Intrinsic::umin:
         computeKnownBits(I->getOperand(0), DemandedElts, Known, Q, Depth + 1);
         computeKnownBits(I->getOperand(1), DemandedElts, Known2, Q, Depth + 1);
