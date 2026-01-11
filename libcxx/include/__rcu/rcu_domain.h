@@ -13,6 +13,9 @@
 #include <__config>
 
 #include <__atomic/atomic.h>
+#include <__rcu/rcu_list.h>
+
+// todo replace with internal headers
 #include <atomic>
 #include <cstdint>
 #include <map>
@@ -44,6 +47,8 @@ class __thread_local_owner {
     lock_guard<std::mutex> __lg(__mtx_);
     __owned_instances_.emplace_back(__obj);
   }
+
+  // todo: deregister on thread exit?
 
 public:
   __thread_local_owner()                       = default;
@@ -99,19 +104,32 @@ struct __reader_states {
 };
 
 class rcu_domain {
+  // todo optimize the layout
+
   __reader_states __reader_states_;
 
   // only the highest bit is used for the phase.
   std::atomic<__reader_states::__state_type> __global_reader_phase_{};
 
   // only one thread is allowed to update concurrently
-  std::mutex __reclamation_mutex_; // todo this is not noexcept
+  std::mutex __grace_period_mutex_; // todo this is not noexcept
 
-  std::atomic<bool> __waiting_flag_ = false;
+  std::atomic<bool> __grace_period_waiting_flag_ = false;
+
+  // todo: maybe use a lock-free queue
+  std::mutex __retire_queue_mutex_; // todo this is not noexcept
+  __rcu_singly_list_view __retired_callback_queue_;
+
+  // these two queues do not need extra synchronization
+  // as they are always processed under the grace period mutex
+  __rcu_singly_list_view __callbacks_phase_1_;
+  __rcu_singly_list_view __callbacks_phase_2_;
 
   rcu_domain() = default;
 
   friend struct __rcu_domain_access;
+  template <class, class>
+  friend class rcu_obj_base;
 
   // todo put globals in dylib
   static rcu_domain& __rcu_default_domain() noexcept {
@@ -119,32 +137,58 @@ class rcu_domain {
     return __default_domain;
   }
 
+  template <class Callback>
+  void __retire_callback(Callback&& __cb) noexcept {
+    auto* __node        = new __rcu_node();
+    __node->__callback_ = std::forward<Callback>(__cb);
+    std::unique_lock __lk(__retire_queue_mutex_);
+    __retired_callback_queue_.__push_back(__node);
+  }
+
   void __synchronize() noexcept {
     __cxx_atomic_thread_fence(memory_order_seq_cst);
-    std::unique_lock __lk(__reclamation_mutex_);
-    std::printf("rcu_domain::__synchronize() going through phase 1\n");
-    __update_phase_and_wait();
-    __barrier();
-    std::printf("rcu_domain::__synchronize() going through phase 2\n");
-    __update_phase_and_wait();
+    std::unique_lock __lk(__grace_period_mutex_);
+    //std::printf("rcu_domain::__synchronize() going through phase 1\n");
+    auto __ready_callbacks = __update_phase_and_wait();
+
+    // Invoke the ready callbacks outside of the grace period mutex
     __lk.unlock();
+    __ready_callbacks.__for_each([](auto* __node) { __node->__callback_(); });
+    __lk.lock();
+
+    __barrier();
+    //std::printf("rcu_domain::__synchronize() going through phase 2\n");
+    __ready_callbacks = __update_phase_and_wait();
+
+    // Invoke the ready callbacks outside of the grace period mutex
+    __lk.unlock();
+    __ready_callbacks.__for_each([](auto* __node) { __node->__callback_(); });
     __cxx_atomic_thread_fence(memory_order_seq_cst);
   }
 
-  void __update_phase_and_wait() noexcept {
+  __rcu_singly_list_view __update_phase_and_wait() noexcept {
+    std::unique_lock __retire_lk(__retire_queue_mutex_);
+    __callbacks_phase_1_.__splice_back(__retired_callback_queue_);
+    __retire_lk.unlock();
+
     // Flip the global phase
     auto __old_phase =
         __global_reader_phase_.fetch_xor(__reader_states::__grace_period_phase_mask, std::memory_order_relaxed);
     auto __new_phase = __old_phase ^ __reader_states::__grace_period_phase_mask;
-    std::printf("rcu_domain::__update_phase_and_wait() new phase: 0x%04x\n", __new_phase);
+    //std::printf("rcu_domain::__update_phase_and_wait() new phase: 0x%04x\n", __new_phase);
 
     __barrier();
     // Wait for all threads to quiesce in the old phase
     while (__any_reader_in_ongoing_grace_period(__new_phase)) {
-      __waiting_flag_.store(true, std::memory_order_relaxed);
-      __waiting_flag_.wait(true, std::memory_order_relaxed);
+      __grace_period_waiting_flag_.store(true, std::memory_order_relaxed);
+      __grace_period_waiting_flag_.wait(true, std::memory_order_relaxed);
     }
-    __waiting_flag_.store(false, std::memory_order_relaxed);
+    __grace_period_waiting_flag_.store(false, std::memory_order_relaxed);
+
+    __rcu_singly_list_view __ready_callbacks;
+    __ready_callbacks.__splice_back(__callbacks_phase_2_);
+    __callbacks_phase_2_.__splice_back(__callbacks_phase_1_);
+    return __ready_callbacks;
   }
 
   bool __any_reader_in_ongoing_grace_period(__reader_states::__state_type __global_phase) noexcept {
@@ -206,10 +250,11 @@ public:
     // Decrement the nest level.
     auto __old_state = __current_thread_state_ref.fetch_sub(1, memory_order_relaxed);
 
-    if (__reader_states::__get_reader_nest_level(__old_state) == 1 && __waiting_flag_.load(memory_order_relaxed)) {
+    if (__reader_states::__get_reader_nest_level(__old_state) == 1 &&
+        __grace_period_waiting_flag_.load(memory_order_relaxed)) {
       // Transitioning to quiescent state, wake up waiters.
-      __waiting_flag_.store(false, std::memory_order_relaxed);
-      __waiting_flag_.notify_all();
+      __grace_period_waiting_flag_.store(false, std::memory_order_relaxed);
+      __grace_period_waiting_flag_.notify_all();
     }
   }
 };
@@ -228,6 +273,7 @@ inline void rcu_synchronize(rcu_domain& __dom = rcu_default_domain()) noexcept {
 }
 
 void rcu_barrier(rcu_domain& dom = rcu_default_domain()) noexcept;
+
 template <class T, class D = default_delete<T>>
 void rcu_retire(T* p, D d = D(), rcu_domain& dom = rcu_default_domain());
 
