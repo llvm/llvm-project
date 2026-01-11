@@ -255,6 +255,42 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       /*defaultImplementation=*/[{
         return type.isIndex();
       }]
+    >,
+    InterfaceMethod<[{
+        Update the loop lower bounds. Returns failure if the loop doesn't
+        support updating bounds or if the number of bounds doesn't match.
+      }],
+      /*retTy=*/"::mlir::LogicalResult",
+      /*methodName=*/"setLoopLowerBounds",
+      /*args=*/(ins "::llvm::ArrayRef<::mlir::OpFoldResult>":$bounds),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::failure();
+      }]
+    >,
+    InterfaceMethod<[{
+        Update the loop upper bounds. Returns failure if the loop doesn't
+        support updating bounds or if the number of bounds doesn't match.
+      }],
+      /*retTy=*/"::mlir::LogicalResult",
+      /*methodName=*/"setLoopUpperBounds",
+      /*args=*/(ins "::llvm::ArrayRef<::mlir::OpFoldResult>":$bounds),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::failure();
+      }]
+    >,
+    InterfaceMethod<[{
+        Update the loop steps. Returns failure if the loop doesn't support
+        updating steps or if the number of steps doesn't match.
+      }],
+      /*retTy=*/"::mlir::LogicalResult",
+      /*methodName=*/"setLoopSteps",
+      /*args=*/(ins "::llvm::ArrayRef<::mlir::OpFoldResult>":$steps),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::failure();
+      }]
     >
   ];
 
