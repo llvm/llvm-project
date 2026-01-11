@@ -108,7 +108,8 @@ public:
     if (__rel_time == chrono::duration<_Rep, _Period>::zero())
       return try_acquire();
     auto const __poll_fn = [this]() { return try_acquire(); };
-    return std::__libcpp_thread_poll_with_backoff(__poll_fn, __libcpp_timed_backoff_policy(), __rel_time);
+    return std::__libcpp_thread_poll_with_backoff(__poll_fn, __libcpp_timed_backoff_policy(), __rel_time) ==
+           __poll_with_backoff_results::__poll_success;
   }
   _LIBCPP_HIDE_FROM_ABI bool try_acquire() {
     auto __old = __a_.load(memory_order_relaxed);

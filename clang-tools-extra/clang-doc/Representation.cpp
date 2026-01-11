@@ -254,6 +254,7 @@ bool FriendInfo::mergeable(const FriendInfo &Other) {
 void FriendInfo::merge(FriendInfo &&Other) {
   assert(mergeable(Other));
   Ref.merge(std::move(Other.Ref));
+  SymbolInfo::merge(std::move(Other));
 }
 
 void Info::mergeBase(Info &&Other) {
@@ -272,6 +273,10 @@ void Info::mergeBase(Info &&Other) {
   llvm::sort(Description);
   auto Last = llvm::unique(Description);
   Description.erase(Last, Description.end());
+  if (ParentUSR == EmptySID)
+    ParentUSR = Other.ParentUSR;
+  if (DocumentationFileName.empty())
+    DocumentationFileName = Other.DocumentationFileName;
 }
 
 bool Info::mergeable(const Info &Other) {

@@ -237,15 +237,6 @@ raw_ostream &operator<<(raw_ostream &OS, const TypeSetByHwMode &T);
 struct TypeInfer {
   TypeInfer(TreePattern &T) : TP(T) {}
 
-  bool isConcrete(const TypeSetByHwMode &VTS, bool AllowEmpty) const {
-    return VTS.isValueTypeByHwMode(AllowEmpty);
-  }
-  ValueTypeByHwMode getConcrete(const TypeSetByHwMode &VTS,
-                                bool AllowEmpty) const {
-    assert(VTS.isValueTypeByHwMode(AllowEmpty));
-    return VTS.getValueTypeByHwMode();
-  }
-
   /// The protocol in the following functions (Merge*, force*, Enforce*,
   /// expand*) is to return "true" if a change has been made, "false"
   /// otherwise.

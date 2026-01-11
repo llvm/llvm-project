@@ -281,6 +281,47 @@ TEST(KnownBitsTest, SignBitUnknown) {
   EXPECT_TRUE(Known.isSignUnknown());
 }
 
+TEST(KnownBitsTest, SignPredicatesExhaustive) {
+  for (unsigned Bits : {1, 4}) {
+    ForeachKnownBits(Bits, [&](const KnownBits &Known) {
+      if (Known.hasConflict())
+        return;
+
+      bool AllNegative = true;
+      bool AllNonNegative = true;
+      bool AllStrictlyPositive = true;
+      bool AllNonPositive = true;
+      bool AllNonZero = true;
+
+      ForeachNumInKnownBits(Known, [&](const APInt &N) {
+        AllNegative &= N.isNegative();
+        AllNonNegative &= N.isNonNegative();
+        AllStrictlyPositive &= N.isStrictlyPositive();
+        AllNonPositive &= N.isNonPositive();
+        AllNonZero &= !N.isZero();
+      });
+
+      // isNegative() is optimal: returns true iff sign bit is known one.
+      EXPECT_EQ(AllNegative, Known.isNegative())
+          << "isNegative: Known = " << Known;
+      // isNonNegative() is optimal: returns true iff sign bit is known zero.
+      EXPECT_EQ(AllNonNegative, Known.isNonNegative())
+          << "isNonNegative: Known = " << Known;
+      // isStrictlyPositive() is optimal: returns true iff sign bit is known
+      // zero and at least one other bit is known one.
+      EXPECT_EQ(AllStrictlyPositive, Known.isStrictlyPositive())
+          << "isStrictlyPositive: Known = " << Known;
+      // isNonPositive() is optimal: returns true iff (sign bit is known one)
+      // or (known to be zero).
+      EXPECT_EQ(AllNonPositive, Known.isNonPositive())
+          << "isNonPositive: Known = " << Known;
+      // isNonZero() is optimal: returns true iff at least one bit is known one.
+      EXPECT_EQ(AllNonZero, Known.isNonZero())
+          << "isNonZero: Known = " << Known;
+    });
+  }
+}
+
 TEST(KnownBitsTest, BinaryExhaustive) {
   testBinaryOpExhaustive(
       "and",
