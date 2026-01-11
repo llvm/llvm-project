@@ -905,12 +905,12 @@ TEST(ValueTracking, propagatesPoison) {
       {true, "call i32 @llvm.umin.i32(i32 %x, i32 %y)", 0},
       {true, "call i32 @llvm.bitreverse.i32(i32 %x)", 0},
       {true, "call i32 @llvm.bswap.i32(i32 %x)", 0},
-      {false, "call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %shamt)", 0},
-      {false, "call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %shamt)", 1},
-      {false, "call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %shamt)", 2},
-      {false, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 0},
-      {false, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 1},
-      {false, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 2},
+      {true, "call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %shamt)", 0},
+      {true, "call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %shamt)", 1},
+      {true, "call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %shamt)", 2},
+      {true, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 0},
+      {true, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 1},
+      {true, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 2},
       {true, "call float @llvm.sqrt.f32(float %fx)", 0},
       {true, "call float @llvm.powi.f32.i32(float %fx, i32 %x)", 0},
       {true, "call float @llvm.sin.f32(float %fx)", 0},
@@ -1655,7 +1655,7 @@ TEST_F(ComputeKnownFPClassTest, FSub) {
 
 TEST_F(ComputeKnownFPClassTest, FMul) {
   parseAssembly(
-      "define float @test(float nofpclass(nan inf) %nnan.ninf0, float nofpclass(nan inf) %nnan.ninf1, float nofpclass(nan) %nnan, float nofpclass(qnan) %no.qnan, float %unknown) {\n"
+      "define float @test(float noundef nofpclass(nan inf) %nnan.ninf0, float noundef nofpclass(nan inf) %nnan.ninf1, float noundef nofpclass(nan) %nnan, float noundef nofpclass(qnan) %no.qnan, float noundef %unknown) {\n"
       "  %A = fmul float %nnan.ninf0, %nnan.ninf1"
       "  %A2 = fmul float %nnan.ninf0, %nnan"
       "  %A3 = fmul float %nnan, %nnan.ninf0"
@@ -1672,7 +1672,7 @@ TEST_F(ComputeKnownFPClassTest, FMul) {
 
 TEST_F(ComputeKnownFPClassTest, FMulNoZero) {
   parseAssembly(
-      "define float @test(float nofpclass(zero) %no.zero, float nofpclass(zero nan) %no.zero.nan0, float nofpclass(zero nan) %no.zero.nan1, float nofpclass(nzero nan) %no.negzero.nan, float nofpclass(pzero nan) %no.poszero.nan, float nofpclass(inf nan) %no.inf.nan, float nofpclass(inf) %no.inf, float nofpclass(nan) %no.nan) {\n"
+      "define float @test(float noundef nofpclass(zero) %no.zero, float noundef nofpclass(zero nan) %no.zero.nan0, float noundef nofpclass(zero nan) %no.zero.nan1, float noundef nofpclass(nzero nan) %no.negzero.nan, float noundef nofpclass(pzero nan) %no.poszero.nan, float noundef nofpclass(inf nan) %no.inf.nan, float noundef nofpclass(inf) %no.inf, float noundef nofpclass(nan) %no.nan) {\n"
       "  %A = fmul float %no.zero.nan0, %no.zero.nan1"
       "  %A2 = fmul float %no.zero, %no.zero"
       "  %A3 = fmul float %no.poszero.nan, %no.zero.nan0"
