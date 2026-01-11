@@ -1,6 +1,6 @@
 // Check that cray pointers might alias with everything.
 
-// RUN: fir-opt %s -funsafe-cray-pointers -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis))' -mlir-disable-threading 2>&1 | FileCheck %s
+// RUN: fir-opt %s -unsafe-cray-pointers -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis))' -mlir-disable-threading 2>&1 | FileCheck %s
 // RUN: fir-opt %s -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis))' -mlir-disable-threading 2>&1 | FileCheck --check-prefix=DEFAULT %s
 
 // Fortran source:
