@@ -4672,6 +4672,12 @@ defm split_machine_functions: BoolFOption<"split-machine-functions",
   NegFlag<SetFalse, [], [ClangOption], "Disable">,
   BothFlags<[], [ClangOption], " late function splitting using profile information (x86 and aarch64 ELF)">>;
 
+defm partition_static_data_sections: BoolFOption<"partition-static-data-sections",
+  CodeGenOpts<"PartitionStaticDataSections">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+  BothFlags<[], [ClangOption], " partition static data sections using profile information (x86 and aarch64 ELF)">>;
+
 defm strict_return : BoolFOption<"strict-return",
   CodeGenOpts<"StrictReturn">, DefaultTrue,
   NegFlag<SetFalse, [], [ClangOption, CC1Option],
@@ -7806,6 +7812,10 @@ let Visibility = [CC1Option, CC1AsOption] in {
 def debug_info_macro : Flag<["-"], "debug-info-macro">,
   HelpText<"Emit macro debug information">,
   MarshallingInfoFlag<CodeGenOpts<"MacroDebugInfo">>;
+def debug_info_macro_expansion_loc
+    : Flag<["-"], "debug-info-macro-expansion-loc">,
+      HelpText<"Use expansion location for debug info for multi line macros">,
+      MarshallingInfoFlag<CodeGenOpts<"DebugInfoMacroExpansionLoc">>;
 def default_function_attr : Separate<["-"], "default-function-attr">,
   HelpText<"Apply given attribute to all functions">,
   MarshallingInfoStringVector<CodeGenOpts<"DefaultFunctionAttrs">>;
@@ -7834,6 +7844,11 @@ def massembler_fatal_warnings : Flag<["-"], "massembler-fatal-warnings">,
 def crel : Flag<["--"], "crel">,
   HelpText<"Enable CREL relocation format (ELF only)">,
   MarshallingInfoFlag<CodeGenOpts<"Crel">>;
+// The leading 'g' is misleading. This is an unwind tables option, not
+// a debug option. But uses this name for gnu compatibility.
+def gsframe : Flag<["--"], "gsframe">,
+              HelpText<"Generate .sframe unwind sections (ELF only)">,
+              MarshallingInfoFlag<CodeGenOpts<"EmitSFrameUnwind">>;
 def mmapsyms_implicit : Flag<["-"], "mmapsyms=implicit">,
   HelpText<"Allow mapping symbol at section beginning to be implicit, "
     "lowering number of mapping symbols at the expense of some "
