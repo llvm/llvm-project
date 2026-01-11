@@ -102,6 +102,15 @@ static std::string getExecutorPath() {
   return ExecutorPath.str().str();
 }
 
+class OutOfProcessInterpreterTest : public InterpreterTestBase {
+protected:
+  static bool HostSupportsOutOfProcessJIT() {
+    if (!InterpreterTestBase::HostSupportsJIT())
+      return false;
+    return !getExecutorPath().empty();
+  }
+};
+
 struct OutOfProcessInterpreterInfo {
   std::string OrcRuntimePath;
   std::unique_ptr<Interpreter> Interpreter;
@@ -162,8 +171,8 @@ static size_t DeclsSize(TranslationUnitDecl *PTUDecl) {
   return std::distance(PTUDecl->decls().begin(), PTUDecl->decls().end());
 }
 
-TEST_F(InterpreterTestBase, SanityWithRemoteExecution) {
-  if (!HostSupportsJIT())
+TEST_F(OutOfProcessInterpreterTest, SanityWithRemoteExecution) {
+  if (!HostSupportsOutOfProcessJIT())
     GTEST_SKIP();
 
   auto io_ctx = std::make_shared<IOContext>();
@@ -173,11 +182,6 @@ TEST_F(InterpreterTestBase, SanityWithRemoteExecution) {
       createInterpreterWithRemoteExecution(io_ctx);
   Interpreter *Interp = Info.Interpreter.get();
   ASSERT_TRUE(Interp);
-
-  std::string ExecutorPath = getExecutorPath();
-  if (!llvm::sys::fs::exists(Info.OrcRuntimePath) ||
-      !llvm::sys::fs::exists(ExecutorPath))
-    GTEST_SKIP();
 
   using PTU = PartialTranslationUnit;
   PTU &R1(cantFail(Interp->Parse("void g(); void g() {}")));
@@ -192,8 +196,8 @@ TEST_F(InterpreterTestBase, SanityWithRemoteExecution) {
   EXPECT_NE(std::string::npos, captured_stdout.find("CustomizeFork executed"));
 }
 
-TEST_F(InterpreterTestBase, FindRuntimeInterface) {
-  if (!HostSupportsJIT())
+TEST_F(OutOfProcessInterpreterTest, FindRuntimeInterface) {
+  if (!HostSupportsOutOfProcessJIT())
     GTEST_SKIP();
 
   // make a fresh io context for this test

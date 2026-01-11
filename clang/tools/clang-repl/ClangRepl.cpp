@@ -288,6 +288,8 @@ int main(int argc, const char **argv) {
     return 0;
   }
 
+  ExitOnErr(sanitizeOopArguments(argv[0]));
+
   clang::IncrementalCompilerBuilder CB;
   CB.SetCompilerArgs(ClangArgv);
 
@@ -319,8 +321,6 @@ int main(int argc, const char **argv) {
 
     DeviceCI = ExitOnErr(CB.CreateCudaDevice());
   }
-
-  ExitOnErr(sanitizeOopArguments(argv[0]));
 
   // FIXME: Investigate if we could use runToolOnCodeWithArgs from tooling. It
   // can replace the boilerplate code for creation of the compiler instance.
