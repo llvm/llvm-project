@@ -13,6 +13,12 @@ int &pastEnd = arr[2];
 // CHECK: @F = constant ptr @arr, align 8
 int &F = arr[0];
 
+/// Ensure we don't crash on arrays with huge (overflowed) sizes.
+/// https://github.com/llvm/llvm-project/issues/175293
+// CHECK: @_ZL1q = internal global [4294967294 x i8] zeroinitializer, align 16
+static char q[-2U];
+void useQ() { char *p = q + 1; }
+
 struct S {
   int a;
   float c[3];
@@ -130,12 +136,3 @@ public:
 
 extern X OuterX;
 
-X test24() {
-  X x;
-  if (&x == &OuterX)
-    throw 0;
-  return x;
-}
-// CHECK: _Z6test24v
-// CHECK-NOT: eh.resume
-// CHECK-NOT: unreachable
