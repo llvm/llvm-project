@@ -281,3 +281,15 @@ template<typename> struct T {};
 
 T<B> b;
 }
+
+struct MyView {};
+
+namespace std::ranges {
+
+template<> constexpr bool enable_view<MyView> = true;
+
+} // namespace std::ranges
+
+struct MyOtherView {};
+
+template<> constexpr bool std::ranges::enable_view<MyOtherView> = true;

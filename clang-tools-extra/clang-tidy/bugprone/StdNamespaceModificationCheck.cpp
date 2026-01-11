@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "StdNamespaceModificationCheck.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/ASTMatchers/ASTMatchersInternal.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 
-using namespace clang;
 using namespace clang::ast_matchers;
+
+namespace clang::tidy::bugprone {
 
 namespace {
 
@@ -34,9 +34,9 @@ AST_POLYMORPHIC_MATCHER_P(
                              Builder) != Args.end();
 }
 
-} // namespace
+AST_MATCHER(Decl, isRedecl) { return !Node.isFirstDecl(); }
 
-namespace clang::tidy::bugprone {
+} // namespace
 
 void StdNamespaceModificationCheck::registerMatchers(MatchFinder *Finder) {
   auto HasStdParent =
@@ -76,7 +76,8 @@ void StdNamespaceModificationCheck::registerMatchers(MatchFinder *Finder) {
   auto BadNonTemplateSpecializationDecl =
       decl(unless(anyOf(functionDecl(isExplicitTemplateSpecialization()),
                         varDecl(isExplicitTemplateSpecialization()),
-                        cxxRecordDecl(isExplicitTemplateSpecialization()))),
+                        cxxRecordDecl(isExplicitTemplateSpecialization()),
+                        namespaceDecl(isRedecl()))),
            HasStdParent);
   auto BadClassTemplateSpec = classTemplateSpecializationDecl(
       HasNoProgramDefinedTemplateArgument, HasStdParent);
@@ -96,7 +97,6 @@ void StdNamespaceModificationCheck::registerMatchers(MatchFinder *Finder) {
                          .bind("decl"),
                      this);
 }
-} // namespace clang::tidy::bugprone
 
 static const NamespaceDecl *getTopLevelLexicalNamespaceDecl(const Decl *D) {
   const NamespaceDecl *LastNS = nullptr;
@@ -108,7 +108,7 @@ static const NamespaceDecl *getTopLevelLexicalNamespaceDecl(const Decl *D) {
   return LastNS;
 }
 
-void clang::tidy::bugprone::StdNamespaceModificationCheck::check(
+void StdNamespaceModificationCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *D = Result.Nodes.getNodeAs<Decl>("decl");
   const auto *NS = Result.Nodes.getNodeAs<NamespaceDecl>("nmspc");
@@ -127,3 +127,5 @@ void clang::tidy::bugprone::StdNamespaceModificationCheck::check(
         << LexNS;
   }
 }
+
+} // namespace clang::tidy::bugprone
