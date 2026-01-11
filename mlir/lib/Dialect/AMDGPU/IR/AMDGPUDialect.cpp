@@ -773,19 +773,15 @@ LogicalResult PermlaneSwapOp::verify() {
   return success();
 }
 
-namespace {
-
 /// Remove amdgpu.lds_barrier after amdgpu.lds_barrier.
-LogicalResult eraseRedundantLDSBarrierOps(LDSBarrierOp op,
-                                          PatternRewriter &rewriter) {
+static LogicalResult eraseRedundantLDSBarrierOps(LDSBarrierOp op,
+                                                 PatternRewriter &rewriter) {
   if (isa_and_nonnull<LDSBarrierOp>(op->getNextNode())) {
     rewriter.eraseOp(op);
     return success();
   }
   return failure();
 }
-
-} // namespace
 
 void LDSBarrierOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                MLIRContext *context) {
