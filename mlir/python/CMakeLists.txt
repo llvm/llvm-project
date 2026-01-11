@@ -45,7 +45,6 @@ declare_mlir_python_sources(MLIRPythonSources.ExecutionEngine
   ADD_TO_PARENT MLIRPythonSources
   SOURCES
     execution_engine.py
-    _mlir_libs/_mlirExecutionEngine.pyi
   SOURCES_GLOB
     runtime/*.py
 )
@@ -216,7 +215,6 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/TransformOps.td
   SOURCES
     dialects/transform/__init__.py
-    _mlir_libs/_mlir/dialects/transform/__init__.pyi
   DIALECT_NAME transform
   GEN_ENUM_BINDINGS_TD_FILE
     "../../include/mlir/Dialect/Transform/IR/TransformAttrs.td"
@@ -406,8 +404,7 @@ declare_mlir_python_sources(
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   GEN_ENUM_BINDINGS
   SOURCES
-    dialects/quant.py
-    _mlir_libs/_mlir/dialects/quant.pyi)
+    dialects/quant.py)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -423,7 +420,6 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/PDLOps.td
   SOURCES
     dialects/pdl.py
-    _mlir_libs/_mlir/dialects/pdl.pyi
   DIALECT_NAME pdl)
 
 declare_mlir_dialect_python_bindings(
@@ -882,7 +878,53 @@ add_mlir_python_common_capi_library(MLIRPythonCAPI
 
 _flatten_mlir_python_targets(mlir_python_sources_deps MLIRPythonSources)
 
+function(mlir_generate_dialect_extension_type_stubs ext_target)
+  get_target_property(_extension_srcs ${ext_target} INTERFACE_SOURCES)
+  get_target_property(_module_name ${ext_target} mlir_python_EXTENSION_MODULE_NAME)
+  mlir_generate_type_stubs(
+    # This is the FQN path because dialect modules import _mlir when loaded. See above.
+    MODULE_NAME ${MLIR_PYTHON_PACKAGE_PREFIX}._mlir_libs.${_module_name}
+    DEPENDS_TARGETS
+      # You need both _mlir and ${_module_name} because dialect modules import _mlir when loaded
+      # (so _mlir needs to be built before calling stubgen).
+      MLIRPythonModules.extension._mlir.dso
+      MLIRPythonModules.extension.${_module_name}.dso
+      # You need this one so that ir.py "built" because mlir._mlir_libs.__init__.py import mlir.ir in _site_initialize.
+      MLIRPythonModules.sources.MLIRPythonSources.Core.Python
+    OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/type_stubs/_mlir_libs/nonfixup"
+    OUTPUTS ${_module_name}.pyi
+    DEPENDS_TARGET_SRC_DEPS "${_extension_srcs}"
+    IMPORT_PATHS "${MLIRPythonModules_ROOT_PREFIX}/.."
+  )
+  list(APPEND _mlir_typestub_gen_targets ${NB_STUBGEN_CUSTOM_TARGET})
+  set(_mlir_typestub_gen_targets ${_mlir_typestub_gen_targets} PARENT_SCOPE)
+  set(INPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/type_stubs/_mlir_libs/nonfixup/${_module_name}.pyi")
+  set(OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/type_stubs/_mlir_libs/${_module_name}.pyi")
+  add_custom_target(${NB_STUBGEN_CUSTOM_TARGET}.fixup
+    BYPRODUCTS ${OUTPUT_PATH}
+    COMMAND ${CMAKE_COMMAND}
+            -DINPUT_FILE=${INPUT_PATH}
+            -DOUTPUT_FILE=${OUTPUT_PATH}
+            -DMLIR_PYTHON_PACKAGE_PREFIX=${MLIR_PYTHON_PACKAGE_PREFIX}
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/replace_text.cmake"
+    DEPENDS "${INPUT_PATH}" "${CMAKE_CURRENT_SOURCE_DIR}/replace_text.cmake"
+    COMMENT "Replacing strings in ${_module_name}.pyi at build time"
+    VERBATIM
+  )
+  list(APPEND _mlir_typestub_gen_targets ${NB_STUBGEN_CUSTOM_TARGET}.fixup)
+  declare_mlir_python_sources(
+    ${ext_target}.type_stub_gen
+    ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}/type_stubs"
+    ADD_TO_PARENT MLIRPythonSources.Dialects
+    SOURCES _mlir_libs/${_module_name}.pyi
+  )
+  list(APPEND mlir_python_sources_deps ${ext_target}.type_stub_gen)
+  set(mlir_python_sources_deps ${mlir_python_sources_deps} PARENT_SCOPE)
+endfunction()
+
 if(MLIR_PYTHON_STUBGEN_ENABLED)
+  set(_mlir_typestub_gen_targets)
+
   # _mlir stubgen
   # Note: All this needs to come before add_mlir_python_modules(MLIRPythonModules so that the install targets for the
   # generated type stubs get created.
@@ -924,7 +966,7 @@ if(MLIR_PYTHON_STUBGEN_ENABLED)
     DEPENDS_TARGET_SRC_DEPS "${_core_extension_srcs}"
     IMPORT_PATHS "${MLIRPythonModules_ROOT_PREFIX}/_mlir_libs"
   )
-  set(_mlir_typestub_gen_target "${NB_STUBGEN_CUSTOM_TARGET}")
+  list(APPEND _mlir_typestub_gen_targets ${NB_STUBGEN_CUSTOM_TARGET})
 
   list(TRANSFORM _core_type_stub_sources PREPEND "_mlir_libs/")
   # Note, we do not do ADD_TO_PARENT here so that the type stubs are not associated (as mlir_DEPENDS) with
@@ -937,32 +979,23 @@ if(MLIR_PYTHON_STUBGEN_ENABLED)
   )
   list(APPEND mlir_python_sources_deps MLIRPythonExtension.Core.type_stub_gen)
 
+  mlir_generate_dialect_extension_type_stubs(MLIRPythonExtension.Dialects.Linalg.Nanobind)
+  mlir_generate_dialect_extension_type_stubs(MLIRPythonExtension.Dialects.GPU.Nanobind)
+  mlir_generate_dialect_extension_type_stubs(MLIRPythonExtension.Dialects.Quant.Nanobind)
+  mlir_generate_dialect_extension_type_stubs(MLIRPythonExtension.Dialects.NVGPU.Nanobind)
+  mlir_generate_dialect_extension_type_stubs(MLIRPythonExtension.Dialects.PDL.Nanobind)
+  mlir_generate_dialect_extension_type_stubs(MLIRPythonExtension.Dialects.SparseTensor.Nanobind)
+  mlir_generate_dialect_extension_type_stubs(MLIRPythonExtension.Dialects.Transform.Nanobind)
+  mlir_generate_dialect_extension_type_stubs(MLIRPythonExtension.Dialects.IRDL.Nanobind)
+  mlir_generate_dialect_extension_type_stubs(MLIRPythonExtension.ExecutionEngine)
+  mlir_generate_dialect_extension_type_stubs(MLIRPythonExtension.Dialects.SMT.Nanobind)
+  mlir_generate_dialect_extension_type_stubs(MLIRPythonExtension.TransformInterpreter)
+  mlir_generate_dialect_extension_type_stubs(MLIRPythonExtension.Dialects.AMDGPU.Nanobind)
+
   # _mlirPythonTestNanobind stubgen
 
   if(MLIR_INCLUDE_TESTS)
-    get_target_property(_test_extension_srcs MLIRPythonTestSources.PythonTestExtensionNanobind INTERFACE_SOURCES)
-    mlir_generate_type_stubs(
-      # This is the FQN path because dialect modules import _mlir when loaded. See above.
-      MODULE_NAME mlir._mlir_libs._mlirPythonTestNanobind
-      DEPENDS_TARGETS
-        # You need both _mlir and _mlirPythonTestNanobind because dialect modules import _mlir when loaded
-        # (so _mlir needs to be built before calling stubgen).
-        MLIRPythonModules.extension._mlir.dso
-        MLIRPythonModules.extension._mlirPythonTestNanobind.dso
-        # You need this one so that ir.py "built" because mlir._mlir_libs.__init__.py import mlir.ir in _site_initialize.
-        MLIRPythonModules.sources.MLIRPythonSources.Core.Python
-      OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/type_stubs/_mlir_libs"
-      OUTPUTS _mlirPythonTestNanobind.pyi
-      DEPENDS_TARGET_SRC_DEPS "${_test_extension_srcs}"
-      IMPORT_PATHS "${MLIRPythonModules_ROOT_PREFIX}/.."
-    )
-    set(_mlirPythonTestNanobind_typestub_gen_target "${NB_STUBGEN_CUSTOM_TARGET}")
-    declare_mlir_python_sources(
-      MLIRPythonTestSources.PythonTestExtensionNanobind.type_stub_gen
-      ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}/type_stubs"
-      ADD_TO_PARENT MLIRPythonTestSources.Dialects
-      SOURCES _mlir_libs/_mlirPythonTestNanobind.pyi
-    )
+    mlir_generate_dialect_extension_type_stubs(MLIRPythonTestSources.PythonTestExtensionNanobind)
   endif()
 endif()
 
@@ -994,8 +1027,5 @@ add_mlir_python_modules(MLIRPythonModules
     MLIRPythonCAPI
 )
 if(MLIR_PYTHON_STUBGEN_ENABLED)
-  add_dependencies(MLIRPythonModules "${_mlir_typestub_gen_target}")
-  if(MLIR_INCLUDE_TESTS)
-    add_dependencies(MLIRPythonModules "${_mlirPythonTestNanobind_typestub_gen_target}")
-  endif()
+  add_dependencies(MLIRPythonModules ${_mlir_typestub_gen_targets})
 endif()
