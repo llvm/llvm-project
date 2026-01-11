@@ -3711,7 +3711,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(Tmp1);
     break;
   }
-  case ISD::VECTOR_SPLICE: {
+  case ISD::VECTOR_SPLICE_LEFT:
+  case ISD::VECTOR_SPLICE_RIGHT: {
     Results.push_back(TLI.expandVectorSplice(Node, DAG));
     break;
   }
@@ -5414,6 +5415,10 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
       Node->getOpcode() == ISD::STRICT_SINT_TO_FP ||
       Node->getOpcode() == ISD::STRICT_FSETCC ||
       Node->getOpcode() == ISD::STRICT_FSETCCS ||
+      Node->getOpcode() == ISD::STRICT_LRINT ||
+      Node->getOpcode() == ISD::STRICT_LLRINT ||
+      Node->getOpcode() == ISD::STRICT_LROUND ||
+      Node->getOpcode() == ISD::STRICT_LLROUND ||
       Node->getOpcode() == ISD::VP_REDUCE_FADD ||
       Node->getOpcode() == ISD::VP_REDUCE_FMUL ||
       Node->getOpcode() == ISD::VP_REDUCE_FMAX ||
@@ -5651,10 +5656,11 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Results.push_back(Tmp1);
     break;
   }
-  case ISD::VECTOR_SPLICE: {
+  case ISD::VECTOR_SPLICE_LEFT:
+  case ISD::VECTOR_SPLICE_RIGHT: {
     Tmp1 = DAG.getNode(ISD::ANY_EXTEND, dl, NVT, Node->getOperand(0));
     Tmp2 = DAG.getNode(ISD::ANY_EXTEND, dl, NVT, Node->getOperand(1));
-    Tmp3 = DAG.getNode(ISD::VECTOR_SPLICE, dl, NVT, Tmp1, Tmp2,
+    Tmp3 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1, Tmp2,
                        Node->getOperand(2));
     Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp3));
     break;
@@ -5958,6 +5964,25 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
                         DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)});
     Results.push_back(Tmp3);
     Results.push_back(Tmp3.getValue(1));
+    break;
+  case ISD::LLROUND:
+  case ISD::LROUND:
+  case ISD::LRINT:
+  case ISD::LLRINT:
+    Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(0));
+    Tmp2 = DAG.getNode(Node->getOpcode(), dl, Node->getValueType(0), Tmp1);
+    Results.push_back(Tmp2);
+    break;
+  case ISD::STRICT_LLROUND:
+  case ISD::STRICT_LROUND:
+  case ISD::STRICT_LRINT:
+  case ISD::STRICT_LLRINT:
+    Tmp1 = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, {NVT, MVT::Other},
+                       {Node->getOperand(0), Node->getOperand(1)});
+    Tmp2 = DAG.getNode(Node->getOpcode(), dl, {NVT, MVT::Other},
+                       {Tmp1.getValue(1), Tmp1});
+    Results.push_back(Tmp2);
+    Results.push_back(Tmp2.getValue(1));
     break;
   case ISD::BUILD_VECTOR: {
     MVT EltVT = OVT.getVectorElementType();

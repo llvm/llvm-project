@@ -29,3 +29,7 @@ MlirType mlirNVGPUTensorMapDescriptorTypeGet(MlirContext ctx,
       TensorMapSwizzleKind(swizzle), TensorMapL2PromoKind(l2promo),
       TensorMapOOBKind(oobFill), TensorMapInterleaveKind(interleave)));
 }
+
+MlirStringRef mlirNVGPUTensorMapDescriptorTypeGetName(void) {
+  return wrap(nvgpu::TensorMapDescriptorType::name);
+}
