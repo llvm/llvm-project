@@ -1244,12 +1244,33 @@ struct FoldEmptyTensorWithCastOp : public OpRewritePattern<CastOp> {
   }
 };
 
+template <typename T>
+struct FoldEmptyTensorWithCollapseExpandOp : public OpRewritePattern<T> {
+  using OpRewritePattern<T>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(T op,
+                                PatternRewriter &rewriter) const override {
+    auto producer = op.getSrc().template getDefiningOp<EmptyOp>();
+    if (!producer)
+      return failure();
+    if (!producer.getType().hasStaticShape())
+      return failure();
+
+    auto resultType = cast<RankedTensorType>(op.getResultType());
+    rewriter.replaceOpWithNewOp<EmptyOp>(op, resultType.getShape(),
+                                         resultType.getElementType());
+    return success();
+  }
+};
+
 } // namespace
 
 void EmptyOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                           MLIRContext *context) {
   results.add<FoldEmptyTensorWithCastOp, FoldEmptyTensorWithDimOp,
-              ReplaceEmptyTensorStaticShapeDims>(context);
+              ReplaceEmptyTensorStaticShapeDims,
+              FoldEmptyTensorWithCollapseExpandOp<CollapseShapeOp>,
+              FoldEmptyTensorWithCollapseExpandOp<ExpandShapeOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//

@@ -389,9 +389,9 @@ func.func @fold_linalg_index_memref(%0: memref<1x?xi32>, %1: memref<1x?xi32>) {
 func.func @fold_fill_reshape() -> tensor<6x4xf32> {
   %zero = arith.constant 0.0 : f32
   %empty = tensor.empty() : tensor<1x2x3x4xf32>
-  // CHECK:      %[[COLLAPSE:.+]] = tensor.collapse_shape
+  // CHECK:      %[[COLLAPSED_EMPTY:.+]] = tensor.empty()
   // CHECK-NEXT: %[[FILL:.+]] = linalg.fill ins(%cst : f32)
-  // CHECK-SAME:   outs(%[[COLLAPSE]] : tensor<6x4xf32>)
+  // CHECK-SAME:   outs(%[[COLLAPSED_EMPTY]] : tensor<6x4xf32>)
   %fill = linalg.fill ins(%zero : f32) outs(%empty : tensor<1x2x3x4xf32>) -> tensor<1x2x3x4xf32>
   %reshape = tensor.collapse_shape %fill [[0, 1, 2], [3]]
       : tensor<1x2x3x4xf32> into tensor<6x4xf32>
@@ -512,7 +512,7 @@ func.func @fold_self_copy(%0 : memref<4x16xf32>) {
 // -----
 
 // CHECK-LABEL: func @no_fold_fill_like_memref
-//  CHECK-NEXT:   linalg.generic 
+//  CHECK-NEXT:   linalg.generic
 func.func @no_fold_fill_like_memref(%in_out : memref<4x16xf32>, %fill_val : f32) {
   linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                    affine_map<(d0, d1) -> (d0, d1)>],
@@ -528,7 +528,7 @@ func.func @no_fold_fill_like_memref(%in_out : memref<4x16xf32>, %fill_val : f32)
 // -----
 
 // CHECK-LABEL: func @no_fold_fill_like_tensor
-//  CHECK-NEXT:   linalg.generic 
+//  CHECK-NEXT:   linalg.generic
 func.func @no_fold_fill_like_tensor(%in_out : tensor<4x16xf32>, %fill_val : f32) -> tensor<4x16xf32> {
   %result = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                    affine_map<(d0, d1) -> (d0, d1)>],
