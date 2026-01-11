@@ -234,36 +234,36 @@ include "Common/RegClassByHwModeCommon.td"
 
 
 
-// ISEL-GISEL: GIM_Try, /*On fail goto*//*Label 3*/ GIMT_Encode4(148),
+// ISEL-GISEL: GIM_Try, /*On fail goto*//*Label 3*/ GIMT_Encode4(152),
 // ISEL-GISEL-NEXT:   GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s64,
 // ISEL-GISEL-NEXT:   GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
 // ISEL-GISEL-NEXT:   GIM_CheckMemorySizeEqualToLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
 // ISEL-GISEL-NEXT:   GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::XRegsRegClassID),
-// ISEL-GISEL-NEXT:   GIM_Try, /*On fail goto*//*Label 4*/ GIMT_Encode4(101),
+// ISEL-GISEL-NEXT:   GIM_Try, /*On fail goto*//*Label 4*/ GIMT_Encode4(105),
 // ISEL-GISEL-NEXT:     GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/32,
 
 // FIXME: This should be a direct check for regbank, not have an incorrect class
 
 // ISEL-GISEL-NEXT:     GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::PtrRegs32RegClassID),
-// ISEL-GISEL-NEXT:     GIM_Try, /*On fail goto*//*Label 5*/ GIMT_Encode4(85), // Rule ID 1 //
+// ISEL-GISEL-NEXT:     GIM_Try, /*On fail goto*//*Label 5*/ GIMT_Encode4(89), // Rule ID 1 //
 // ISEL-GISEL-NEXT:       GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode1),
 // ISEL-GISEL-NEXT:       // (ld:{ *:[i64] } PtrRegOperand:{ *:[i32] }:$src)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (MY_LOAD:{ *:[i64] } ?:{ *:[i32] }:$src)
 // ISEL-GISEL-NEXT:       GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MY_LOAD),
 // ISEL-GISEL-NEXT:       GIR_RootConstrainSelectedInstOperands,
 // ISEL-GISEL-NEXT:       // GIR_Coverage, 1,
 // ISEL-GISEL-NEXT:       GIR_Done,
-// ISEL-GISEL-NEXT:     // Label 5: @85
-// ISEL-GISEL-NEXT:     GIM_Try, /*On fail goto*//*Label 6*/ GIMT_Encode4(100), // Rule ID 2 //
+// ISEL-GISEL-NEXT:     // Label 5: @89
+// ISEL-GISEL-NEXT:     GIM_Try, /*On fail goto*//*Label 6*/ GIMT_Encode4(104), // Rule ID 2 //
 // ISEL-GISEL-NEXT:       GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode2),
 // ISEL-GISEL-NEXT:       // (ld:{ *:[i64] } PtrRegOperand:{ *:[i32] }:$src)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (MY_LOAD:{ *:[i64] } ?:{ *:[i32] }:$src)
 // ISEL-GISEL-NEXT:       GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MY_LOAD),
 // ISEL-GISEL-NEXT:       GIR_RootConstrainSelectedInstOperands,
 // ISEL-GISEL-NEXT:       // GIR_Coverage, 2,
 // ISEL-GISEL-NEXT:       GIR_Done,
-// ISEL-GISEL-NEXT:     // Label 6: @100
+// ISEL-GISEL-NEXT:     // Label 6: @104
 // ISEL-GISEL-NEXT:     GIM_Reject,
-// ISEL-GISEL-NEXT:   // Label 4: @101
-// ISEL-GISEL-NEXT:   GIM_Try, /*On fail goto*//*Label 7*/ GIMT_Encode4(124), // Rule ID 3 //
+// ISEL-GISEL-NEXT:   // Label 4: @105
+// ISEL-GISEL-NEXT:   GIM_Try, /*On fail goto*//*Label 7*/ GIMT_Encode4(128), // Rule ID 3 //
 // ISEL-GISEL-NEXT:     GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode0),
 // ISEL-GISEL-NEXT:     // MIs[0] src
 // ISEL-GISEL-NEXT:     GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/64,
@@ -273,8 +273,8 @@ include "Common/RegClassByHwModeCommon.td"
 // ISEL-GISEL-NEXT:     GIR_RootConstrainSelectedInstOperands,
 // ISEL-GISEL-NEXT:     // GIR_Coverage, 3,
 // ISEL-GISEL-NEXT:     GIR_Done,
-// ISEL-GISEL-NEXT:   // Label 7: @124
-// ISEL-GISEL-NEXT:   GIM_Try, /*On fail goto*//*Label 8*/ GIMT_Encode4(147), // Rule ID 4 //
+// ISEL-GISEL-NEXT:   // Label 7: @128
+// ISEL-GISEL-NEXT:   GIM_Try, /*On fail goto*//*Label 8*/ GIMT_Encode4(151), // Rule ID 4 //
 // ISEL-GISEL-NEXT:     GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode3),
 // ISEL-GISEL-NEXT:     // MIs[0] src
 // ISEL-GISEL-NEXT:     GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/32,
@@ -284,12 +284,12 @@ include "Common/RegClassByHwModeCommon.td"
 // ISEL-GISEL-NEXT:     GIR_RootConstrainSelectedInstOperands,
 // ISEL-GISEL-NEXT:     // GIR_Coverage, 4,
 // ISEL-GISEL-NEXT:     GIR_Done,
-// ISEL-GISEL-NEXT:   // Label 8: @147
+// ISEL-GISEL-NEXT:   // Label 8: @151
 // ISEL-GISEL-NEXT:   GIM_Reject,
-// ISEL-GISEL-NEXT: // Label 3: @148
+// ISEL-GISEL-NEXT: // Label 3: @152
 // ISEL-GISEL-NEXT: GIM_Reject,
-// ISEL-GISEL-NEXT: // Label 1: @149
-// ISEL-GISEL-NEXT: GIM_Try, /*On fail goto*//*Label 9*/ GIMT_Encode4(186), // Rule ID 0 //
+// ISEL-GISEL-NEXT: // Label 1: @153
+// ISEL-GISEL-NEXT: GIM_Try, /*On fail goto*//*Label 9*/ GIMT_Encode4(190), // Rule ID 0 //
 // ISEL-GISEL-NEXT:   GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode0),
 // ISEL-GISEL-NEXT:   GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s64,
 // ISEL-GISEL-NEXT:   GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,

@@ -15,10 +15,10 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f -fast-isel=0 -global-isel=1 -global-isel-abort=1 | FileCheck %s --check-prefixes AVX,GLOBAL-AVX
 
 define double @fpext_float_to_double(float %f) {
-; X86-LABEL: fpext_float_to_double:
-; X86:       # %bb.0:
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    retl
+; FASTSDAG-X86-LABEL: fpext_float_to_double:
+; FASTSDAG-X86:       # %bb.0:
+; FASTSDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FASTSDAG-X86-NEXT:    retl
 ;
 ; SSE-LABEL: fpext_float_to_double:
 ; SSE:       # %bb.0:
@@ -29,6 +29,17 @@ define double @fpext_float_to_double(float %f) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
+;
+; GLOBAL-X86-LABEL: fpext_float_to_double:
+; GLOBAL-X86:       # %bb.0:
+; GLOBAL-X86-NEXT:    pushl %eax
+; GLOBAL-X86-NEXT:    .cfi_def_cfa_offset 8
+; GLOBAL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GLOBAL-X86-NEXT:    movl %eax, (%esp)
+; GLOBAL-X86-NEXT:    flds (%esp)
+; GLOBAL-X86-NEXT:    popl %eax
+; GLOBAL-X86-NEXT:    .cfi_def_cfa_offset 4
+; GLOBAL-X86-NEXT:    retl
   %1 = fpext float %f to double
   ret double %1
 }
@@ -136,16 +147,16 @@ define x86_fp80 @fpext_double_to_x86_fp80(double %d) {
 }
 
 define float @fptrunc_double_to_float(double %d) {
-; FASTSDAG-X86-LABEL: fptrunc_double_to_float:
-; FASTSDAG-X86:       # %bb.0:
-; FASTSDAG-X86-NEXT:    pushl %eax
-; FASTSDAG-X86-NEXT:    .cfi_def_cfa_offset 8
-; FASTSDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
-; FASTSDAG-X86-NEXT:    fstps (%esp)
-; FASTSDAG-X86-NEXT:    flds (%esp)
-; FASTSDAG-X86-NEXT:    popl %eax
-; FASTSDAG-X86-NEXT:    .cfi_def_cfa_offset 4
-; FASTSDAG-X86-NEXT:    retl
+; X86-LABEL: fptrunc_double_to_float:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; X86-NEXT:    fstps (%esp)
+; X86-NEXT:    flds (%esp)
+; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    retl
 ;
 ; SSE-LABEL: fptrunc_double_to_float:
 ; SSE:       # %bb.0:
@@ -156,21 +167,6 @@ define float @fptrunc_double_to_float(double %d) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
-;
-; GLOBAL-X86-LABEL: fptrunc_double_to_float:
-; GLOBAL-X86:       # %bb.0:
-; GLOBAL-X86-NEXT:    pushl %eax
-; GLOBAL-X86-NEXT:    .cfi_def_cfa_offset 8
-; GLOBAL-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; GLOBAL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; GLOBAL-X86-NEXT:    movl 4(%eax), %eax
-; GLOBAL-X86-NEXT:    movl %esp, %edx
-; GLOBAL-X86-NEXT:    movl %ecx, (%esp)
-; GLOBAL-X86-NEXT:    movl %eax, 4(%edx)
-; GLOBAL-X86-NEXT:    flds (%esp)
-; GLOBAL-X86-NEXT:    popl %eax
-; GLOBAL-X86-NEXT:    .cfi_def_cfa_offset 4
-; GLOBAL-X86-NEXT:    retl
   %1 = fptrunc double %d to float
   ret float %1
 }

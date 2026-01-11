@@ -339,15 +339,9 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
     Action.legalForTypesWithMemDesc({{s8, p0, s8, 1},
                                      {s16, p0, s16, 1},
                                      {s32, p0, s32, 1},
+                                     {s80, p0, s80, 1},
                                      {p0, p0, p0, 1},
                                      {v4s8, p0, v4s8, 1}});
-
-    if (UseX87)
-      Action.legalForTypesWithMemDesc({{s80, p0, s32, 1},
-                                       {s80, p0, s64, 1},
-                                       {s32, p0, s80, 1},
-                                       {s64, p0, s80, 1},
-                                       {s80, p0, s80, 1}});
     if (Is64Bit)
       Action.legalForTypesWithMemDesc(
           {{s64, p0, s64, 1}, {v2s32, p0, v2s32, 1}});
@@ -398,6 +392,12 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       Action.legalForTypesWithMemDesc(
           {{s64, p0, s8, 1}, {s64, p0, s16, 1}, {s64, p0, s32, 1}});
     // TODO - SSE41/AVX2/AVX512F/AVX512BW vector extensions
+  }
+
+  for (unsigned Op : {G_FPEXTLOAD, G_FPTRUNCSTORE}) {
+    auto &Action = getActionDefinitionsBuilder(Op);
+    Action.legalForTypesWithMemDesc(
+        UseX87, {{s80, p0, s32, 1}, {s80, p0, s64, 1}, {s64, p0, s32, 1}});
   }
 
   // sext, zext, and anyext
