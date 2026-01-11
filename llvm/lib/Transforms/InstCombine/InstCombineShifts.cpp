@@ -777,10 +777,9 @@ Value *InstCombinerImpl::getShiftedValue(Value *V, unsigned NumBits,
     return InsertNewInstWith(And, I->getIterator());
   }
   case Instruction::Add: {
-    Value *LHS = getShiftedValue(I->getOperand(0), NumBits, isLeftShift);
-    Value *RHS = getShiftedValue(I->getOperand(1), NumBits, isLeftShift);
-    bool HasNSW = cast<BinaryOperator>(I)->hasNoSignedWrap();
-    return Builder.CreateAdd(LHS, RHS, I->getName(), /*HasNUW=*/false, HasNSW);
+    I->setOperand(0, getShiftedValue(I->getOperand(0), NumBits, isLeftShift));
+    I->setOperand(1, getShiftedValue(I->getOperand(1), NumBits, isLeftShift));
+    return I;
   }
   }
 }
