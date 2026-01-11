@@ -592,7 +592,8 @@ Changes in existing checks
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to correctly match
   when the format string is converted to a different type by an implicit
-  constructor call.
+  constructor call, and fixed a crash when an argument is part of a macro
+  expansion.
 
 - Improved :doc:`modernize-use-std-print
   <clang-tidy/checks/modernize/use-std-print>` check to correctly match
