@@ -17,6 +17,7 @@
 
 #include "test_macros.h"
 #include "type_algorithms.h"
+
 #include "types.h"
 
 template <typename T>
