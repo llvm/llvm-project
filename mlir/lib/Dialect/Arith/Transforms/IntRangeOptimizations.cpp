@@ -564,17 +564,22 @@ struct NarrowLoopBounds final : OpInterfaceRewritePattern<LoopLikeOpInterface> {
 
         // Additional check: ensure indVar + step doesn't overflow.
         // During loop increment, we compute iv_next = iv_current + step in the
-        // narrowed type. If this overflows, the loop behavior becomes incorrect.
-        // We must check both signed and unsigned ranges since we don't know
-        // whether the loop semantics treat values as signed or unsigned.
+        // narrowed type. If this overflows, the loop behavior becomes
+        // incorrect. We must check both signed and unsigned ranges since we
+        // don't know whether the loop semantics treat values as signed or
+        // unsigned.
         unsigned srcWidth = lbRange.smin().getBitWidth();
         unsigned removedWidth = srcWidth - targetBitwidth;
 
         // Check that max(indVar) + step fits in the target type.
-        APInt indVarPlusStepSmin = indVarRange.smin().sadd_sat(stepRange.smin());
-        APInt indVarPlusStepSmax = indVarRange.smax().sadd_sat(stepRange.smax());
-        APInt indVarPlusStepUmin = indVarRange.umin().uadd_sat(stepRange.umin());
-        APInt indVarPlusStepUmax = indVarRange.umax().uadd_sat(stepRange.umax());
+        APInt indVarPlusStepSmin =
+            indVarRange.smin().sadd_sat(stepRange.smin());
+        APInt indVarPlusStepSmax =
+            indVarRange.smax().sadd_sat(stepRange.smax());
+        APInt indVarPlusStepUmin =
+            indVarRange.umin().uadd_sat(stepRange.umin());
+        APInt indVarPlusStepUmax =
+            indVarRange.umax().uadd_sat(stepRange.umax());
 
         bool indVarPlusStepFitsSigned =
             indVarPlusStepSmin.getNumSignBits() >= (removedWidth + 1) &&
