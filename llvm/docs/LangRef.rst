@@ -1846,10 +1846,10 @@ Currently, only the following parameter attributes are defined:
     This attribute indicates that the memory pointed to by the argument is dead
     upon function return, both upon normal return and if the calls unwinds, meaning
     that the caller will not depend on its contents. Stores that would be observable
-    either on the return path or on the unwind path may be elided. The number of
-    bytes known to be dead can optionally be provided in parentheses. It is legal
+    either on the return path or on the unwind path may be elided. A number of
+    bytes known to be dead may optionally be provided in parentheses. It is legal
     for the number of bytes to be less than the size of the pointee type. If a number
-    of bytes is not specified, all memory rechable through the pointer is marked as
+    of bytes is not specified, all memory reachable through the pointer is marked as
     dead on return.
 
     Specifically, the behavior is as-if any memory written through the pointer
@@ -1859,9 +1859,8 @@ Currently, only the following parameter attributes are defined:
 
     This attribute does not imply aliasing properties. For pointer arguments that
     do not alias other memory locations, ``noalias`` attribute may be used in
-    conjunction. Conversely, this attribute always implies ``dead_on_unwind``. If
-    a number of bytes is specified, then only those bytes are implied to be
-    ``dead_on_unwind``.
+    conjunction. Conversely, this attribute always implies ``dead_on_unwind``. When
+    a byte count is specified, ``dead_on_unwind`` is implied only for that range.
 
     This attribute cannot be applied to return values.
 

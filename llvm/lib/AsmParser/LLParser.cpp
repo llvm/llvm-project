@@ -1616,7 +1616,8 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
   }
   case Attribute::DeadOnReturn: {
     std::optional<uint64_t> Bytes;
-    if (parseOptionalAttrBytes(lltok::kw_dead_on_return, Bytes))
+    if (parseOptionalAttrBytes(lltok::kw_dead_on_return, Bytes,
+                               /*ErrorNoBytes=*/false))
       return true;
     if (Bytes.has_value()) {
       B.addDeadOnReturnAttr(DeadOnReturnInfo(Bytes.value()));

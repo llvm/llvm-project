@@ -321,7 +321,7 @@ namespace llvm {
     bool parseOptionalCodeModel(CodeModel::Model &model);
     bool parseOptionalAttrBytes(lltok::Kind AttrKind,
                                 std::optional<uint64_t> &Bytes,
-                                bool ErrorNoBytes = false);
+                                bool ErrorNoBytes = true);
     bool parseOptionalUWTableKind(UWTableKind &Kind);
     bool parseAllocKind(AllocFnKind &Kind);
     std::optional<MemoryEffects> parseMemoryAttr();
