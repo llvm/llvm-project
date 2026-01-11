@@ -20,9 +20,27 @@ namespace python {
 namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 namespace linalg {
 
-struct PyLinalgContractionDimensions : MlirLinalgContractionDimensions {};
+struct PyLinalgContractionDimensions : MlirLinalgContractionDimensions {
+  PyLinalgContractionDimensions(const MlirLinalgContractionDimensions &dims) {
+    batch = dims.batch;
+    m = dims.m;
+    n = dims.n;
+    k = dims.k;
+  }
+};
 
-struct PyLinalgConvolutionDimensions : MlirLinalgConvolutionDimensions {};
+struct PyLinalgConvolutionDimensions : MlirLinalgConvolutionDimensions {
+  PyLinalgConvolutionDimensions(const MlirLinalgConvolutionDimensions &dims) {
+    batch = dims.batch;
+    outputImage = dims.outputImage;
+    outputChannel = dims.outputChannel;
+    filterLoop = dims.filterLoop;
+    inputChannel = dims.inputChannel;
+    depth = dims.depth;
+    strides = dims.strides;
+    dilations = dims.dilations;
+  }
+};
 
 static std::optional<PyLinalgContractionDimensions>
 InferContractionDimensions(PyOperationBase &op) {
@@ -35,7 +53,7 @@ InferContractionDimensions(PyOperationBase &op) {
       mlirAttributeIsNull(dims.n) && mlirAttributeIsNull(dims.k)) {
     return std::nullopt;
   }
-  return PyLinalgContractionDimensions{dims.batch, dims.m, dims.n, dims.k};
+  return dims;
 }
 
 static std::optional<PyLinalgConvolutionDimensions>
@@ -55,9 +73,7 @@ InferConvolutionDimensions(PyOperationBase &op) {
     return std::nullopt;
   }
 
-  return PyLinalgConvolutionDimensions{
-      dims.batch,        dims.outputImage, dims.outputChannel, dims.filterLoop,
-      dims.inputChannel, dims.depth,       dims.strides,       dims.dilations};
+  return dims;
 }
 
 static void populateDialectLinalgSubmodule(nb::module_ m) {
@@ -114,8 +130,7 @@ static void populateDialectLinalgSubmodule(nb::module_ m) {
             mlirAttributeIsNull(dims.n) && mlirAttributeIsNull(dims.k)) {
           return std::nullopt;
         }
-        return PyLinalgContractionDimensions{dims.batch, dims.m, dims.n,
-                                             dims.k};
+        return dims;
       },
       "Infers contraction dimensions (batch/m/n/k) from a list of affine "
       "maps.",
