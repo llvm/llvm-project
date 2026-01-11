@@ -6,7 +6,7 @@
 // UNSUPPORTED: i386-target-arch, internal_symbolizer
 
 // Does not link.
-// UNSUPPORTED: darwin
+// UNSUPPORTED: darwin,target={{.*solaris.*}}
 
 #include <signal.h>
 #include <stdio.h>
