@@ -2535,7 +2535,7 @@ def : GCNPat <
 >;
 
 class Ext32Pat <SDNode ext> : GCNPat <
-  (i32 (ext i1:$src0)),
+  (i32 (ext i1:$src0)), 
   (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
                      /*src1mod*/(i32 0), /*src1*/(i32 1), i1:$src0)
 >;
@@ -3045,6 +3045,11 @@ def : GCNPat <
 >;
 
 def : GCNPat <
+  (i64 (UniformUnaryFrag<zext> i1:$src)),
+  (S_AND_B64 $src, (i64 1))
+>;
+
+def : GCNPat <
   (i1 (or i1:$src0, i1:$src1)),
   (S_OR_B64 $src0, $src1)
 >;
@@ -3081,6 +3086,11 @@ let WaveSizePredicate = isWave32 in {
 def : GCNPat <
   (i1 (and i1:$src0, i1:$src1)),
   (S_AND_B32 $src0, $src1)
+>;
+
+def : GCNPat <
+  (i32 (UniformUnaryFrag<zext> i1:$src)),
+  (S_AND_B32 $src, (i32 1))
 >;
 
 def : GCNPat <
