@@ -333,6 +333,7 @@ KnownFPClass KnownFPClass::log(const KnownFPClass &KnownSrc,
 KnownFPClass KnownFPClass::sqrt(const KnownFPClass &KnownSrc,
                                 DenormalMode Mode) {
   KnownFPClass Known;
+  Known.knownNot(fcPosSubnormal);
 
   if (KnownSrc.isKnownNeverPosInfinity())
     Known.knownNot(fcPosInf);
