@@ -5511,8 +5511,8 @@ CompilerType TypeSystemClang::GetBuiltinTypeByName(ConstString name) {
   StringRef name_ref = name.GetStringRef();
   // We compile the regex only the type name fulfills certain
   // necessary conditions. Otherwise we do not bother.
-  if (!name_ref.empty() && name_ref[0] == '_' ||
-      name_ref.size() >= 10 && name_ref[9] == '_') {
+  if ((!name_ref.empty() && name_ref[0] == '_') ||
+      (name_ref.size() >= 10 && name_ref[9] == '_')) {
     llvm::Regex re("^(unsigned )?_BitInt\\((.*)\\)$");
     llvm::SmallVector<llvm::StringRef, 3> matches;
     bool is_bitint = re.match(name_ref, &matches);
