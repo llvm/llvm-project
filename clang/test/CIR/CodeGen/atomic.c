@@ -16,7 +16,7 @@ void f1(void) {
 // CIR:       }
 
 // LLVM-LABEL: @f1
-// LLVM:         %[[SLOT:.+]] = allocai32, i64 1, align 4
+// LLVM:         %[[SLOT:.+]] = alloca i32, i64 1, align 4
 // LLVM-NEXT:    store i32 42, ptr %[[SLOT]], align 4
 // LLVM:       }
 
