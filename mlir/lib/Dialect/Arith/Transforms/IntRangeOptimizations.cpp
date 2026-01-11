@@ -486,6 +486,10 @@ struct NarrowLoopBounds final : OpInterfaceRewritePattern<LoopLikeOpInterface> {
 
   LogicalResult matchAndRewrite(LoopLikeOpInterface loopLike,
                                 PatternRewriter &rewriter) const override {
+    // Skip ops where bounds narrowing previously failed.
+    if (loopLike->hasAttr("arith.bounds_narrowing_failed"))
+      return failure();
+
     auto inductionVars = loopLike.getLoopInductionVars();
     if (!inductionVars.has_value() || inductionVars->empty())
       return rewriter.notifyMatchFailure(loopLike, "no induction variables");
@@ -606,12 +610,21 @@ struct NarrowLoopBounds final : OpInterfaceRewritePattern<LoopLikeOpInterface> {
       origTypes.push_back(indVar.getType());
     }
 
+    // Attempt to update bounds and induction variable types.
+    // If this fails, mark the op so we don't try again.
+    bool updateFailed = false;
     rewriter.modifyOpInPlace(loopLike, [&]() {
       // Update the loop bounds and steps.
       if (failed(loopLike.setLoopLowerBounds(newLowerBounds)) ||
           failed(loopLike.setLoopUpperBounds(newUpperBounds)) ||
-          failed(loopLike.setLoopSteps(newSteps)))
-        llvm_unreachable("Failed to update loop bounds/steps");
+          failed(loopLike.setLoopSteps(newSteps))) {
+        // Mark op to prevent future attempts. IR was modified (attribute
+        // added), so we must return success() from the pattern.
+        loopLike->setAttr("arith.bounds_narrowing_failed",
+                          rewriter.getUnitAttr());
+        updateFailed = true;
+        return;
+      }
 
       // Update induction variable types.
       for (auto [idx, typeAndCast] : narrowings) {
@@ -623,6 +636,9 @@ struct NarrowLoopBounds final : OpInterfaceRewritePattern<LoopLikeOpInterface> {
         blockArg.setType(targetType);
       }
     });
+
+    if (updateFailed)
+      return success();
 
     // Insert casts back to original type for uses.
     for (auto [narrowingIdx, narrowingInfo] : llvm::enumerate(narrowings)) {
