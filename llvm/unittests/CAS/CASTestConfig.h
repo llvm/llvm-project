@@ -15,6 +15,11 @@
 #include "gtest/gtest.h"
 #include <memory>
 
+#ifdef _WIN32
+#include "llvm/Support/VersionTuple.h"
+#include "llvm/Support/Windows/WindowsSupport.h"
+#endif
+
 namespace llvm::unittest::cas {
 class MockEnv {
   void anchor();
@@ -68,6 +73,11 @@ protected:
   }
 
   void SetUp() override {
+#ifdef _WIN32
+    // Temporarily disable CAS tests on pre windows 11 OS.
+    if (llvm::GetWindowsOSVersion() < llvm::VersionTuple(10, 0, 0, 22000))
+      GTEST_SKIP() << "CAS tests skipped on older windows version";
+#endif
     NextCASIndex = 0;
     setMaxOnDiskCASMappingSize();
   }

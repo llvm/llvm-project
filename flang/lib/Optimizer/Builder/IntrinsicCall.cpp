@@ -499,6 +499,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"dim", asValue},
        {"mask", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"irand",
+     &I::genIrand,
+     {{{"i", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"is_contiguous",
      &I::genIsContiguous,
      {{{"array", asBox}}},
@@ -625,6 +629,10 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genPutenv,
      {{{"str", asAddr}, {"status", asAddr, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"rand",
+     &I::genRand,
+     {{{"i", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"random_init",
      &I::genRandomInit,
      {{{"repeatable", asValue}, {"image_distinct", asValue}}},
@@ -719,6 +727,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"shifta", &I::genShiftA},
     {"shiftl", &I::genShift<mlir::arith::ShLIOp>},
     {"shiftr", &I::genShift<mlir::arith::ShRUIOp>},
+    {"show_descriptor",
+     &I::genShowDescriptor,
+     {{{"d", asBox}}},
+     /*isElemental=*/false},
     {"sign", &I::genSign},
     {"signal",
      &I::genSignalSubroutine,
@@ -6158,6 +6170,20 @@ IntrinsicLibrary::genIparity(mlir::Type resultType,
                       "IPARITY", resultType, args);
 }
 
+// IRAND
+fir::ExtendedValue
+IntrinsicLibrary::genIrand(mlir::Type resultType,
+                           llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  mlir::Value i =
+      isStaticallyPresent(args[0])
+          ? fir::getBase(args[0])
+          : fir::AbsentOp::create(builder, loc,
+                                  builder.getRefType(builder.getI32Type()))
+                .getResult();
+  return fir::runtime::genIrand(builder, loc, i);
+}
+
 // IS_CONTIGUOUS
 fir::ExtendedValue
 IntrinsicLibrary::genIsContiguous(mlir::Type resultType,
@@ -7184,6 +7210,19 @@ IntrinsicLibrary::genPutenv(std::optional<mlir::Type> resultType,
   return {};
 }
 
+// RAND
+fir::ExtendedValue
+IntrinsicLibrary::genRand(mlir::Type, llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  mlir::Value i =
+      isStaticallyPresent(args[0])
+          ? fir::getBase(args[0])
+          : fir::AbsentOp::create(builder, loc,
+                                  builder.getRefType(builder.getI32Type()))
+                .getResult();
+  return fir::runtime::genRand(builder, loc, i);
+}
+
 // RANDOM_INIT
 void IntrinsicLibrary::genRandomInit(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 2);
@@ -7847,6 +7886,16 @@ mlir::Value IntrinsicLibrary::genShiftA(mlir::Type resultType,
   if (resultType.isUnsignedInteger())
     return builder.createConvert(loc, resultType, result);
   return result;
+}
+
+void IntrinsicLibrary::genShowDescriptor(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1 && "expected single argument for show_descriptor");
+  const mlir::Value descriptor = fir::getBase(args[0]);
+
+  assert(fir::isa_box_type(descriptor.getType()) &&
+         "argument must have been lowered to box type");
+  fir::runtime::genShowDescriptor(builder, loc, descriptor);
 }
 
 // SIGNAL

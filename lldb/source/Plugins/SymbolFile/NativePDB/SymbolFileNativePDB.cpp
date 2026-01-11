@@ -86,6 +86,40 @@ static lldb::LanguageType TranslateLanguage(PDB_Lang lang) {
   }
 }
 
+static std::optional<std::string>
+findMatchingPDBFilePath(llvm::StringRef original_pdb_path,
+                        llvm::StringRef exe_path) {
+  const FileSystem &fs = FileSystem::Instance();
+
+  if (fs.Exists(original_pdb_path))
+    return std::string(original_pdb_path);
+
+  const auto exe_dir = FileSpec(exe_path).CopyByRemovingLastPathComponent();
+  // While the exe_path uses the native style, the exe might be compiled on a
+  // different OS, so try to guess the style used.
+  const FileSpec original_pdb_spec(original_pdb_path,
+                                   FileSpec::GuessPathStyle(original_pdb_path)
+                                       .value_or(FileSpec::Style::native));
+  const llvm::StringRef pdb_filename = original_pdb_spec.GetFilename();
+
+  // If the file doesn't exist, perhaps the path specified at build time
+  // doesn't match the PDB's current location, so check the location of the
+  // executable.
+  const FileSpec local_pdb = exe_dir.CopyByAppendingPathComponent(pdb_filename);
+  if (fs.Exists(local_pdb))
+    return local_pdb.GetPath();
+
+  // Otherwise, search for one in target.debug-file-search-paths
+  FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
+  for (const FileSpec &search_dir : search_paths) {
+    FileSpec pdb_path = search_dir.CopyByAppendingPathComponent(pdb_filename);
+    if (fs.Exists(pdb_path))
+      return pdb_path.GetPath();
+  }
+
+  return std::nullopt;
+}
+
 static std::unique_ptr<PDBFile>
 loadMatchingPDBFile(std::string exe_path, llvm::BumpPtrAllocator &allocator) {
   // Try to find a matching PDB for an EXE.
@@ -113,17 +147,14 @@ loadMatchingPDBFile(std::string exe_path, llvm::BumpPtrAllocator &allocator) {
     return nullptr;
   }
 
-  // If the file doesn't exist, perhaps the path specified at build time
-  // doesn't match the PDB's current location, so check the location of the
-  // executable.
-  if (!FileSystem::Instance().Exists(pdb_file)) {
-    const auto exe_dir = FileSpec(exe_path).CopyByRemovingLastPathComponent();
-    const auto pdb_name = FileSpec(pdb_file).GetFilename().GetCString();
-    pdb_file = exe_dir.CopyByAppendingPathComponent(pdb_name).GetPathAsConstString().GetStringRef();
-  }
+  std::optional<std::string> resolved_pdb_path =
+      findMatchingPDBFilePath(pdb_file, exe_path);
+  if (!resolved_pdb_path)
+    return nullptr;
 
   // If the file is not a PDB or if it doesn't have a matching GUID, fail.
-  auto pdb = ObjectFilePDB::loadPDBFile(std::string(pdb_file), allocator);
+  auto pdb =
+      ObjectFilePDB::loadPDBFile(*std::move(resolved_pdb_path), allocator);
   if (!pdb)
     return nullptr;
 
@@ -137,6 +168,9 @@ loadMatchingPDBFile(std::string exe_path, llvm::BumpPtrAllocator &allocator) {
 
   if (expected_info->getGuid() != guid)
     return nullptr;
+
+  LLDB_LOG(GetLog(LLDBLog::Symbols), "Loading {0} for {1}", pdb->getFilePath(),
+           exe_path);
   return pdb;
 }
 
@@ -889,11 +923,11 @@ TypeSP SymbolFileNativePDB::CreateAndCacheType(PdbTypeSymId type_id) {
     return nullptr;
 
   PdbAstBuilder* ast_builder = ts->GetNativePDBParser();
-  clang::QualType qt = ast_builder->GetOrCreateType(best_decl_id);
-  if (qt.isNull())
+  CompilerType ct = ast_builder->GetOrCreateType(best_decl_id);
+  if (!ct)
     return nullptr;
 
-  TypeSP result = CreateType(best_decl_id, ast_builder->ToCompilerType(qt));
+  TypeSP result = CreateType(best_decl_id, ct);
   if (!result)
     return nullptr;
 
@@ -1093,10 +1127,7 @@ void SymbolFileNativePDB::ParseDeclsForContext(
   if (!ts_or_err)
     return;
   PdbAstBuilder* ast_builder = ts_or_err->GetNativePDBParser();
-  clang::DeclContext *context = ast_builder->FromCompilerDeclContext(decl_ctx);
-  if (!context)
-    return;
-  ast_builder->ParseDeclsForContext(*context);
+  ast_builder->ParseDeclsForContext(decl_ctx);
 }
 
 lldb::CompUnitSP SymbolFileNativePDB::ParseCompileUnitAtIndex(uint32_t index) {
@@ -2412,12 +2443,7 @@ SymbolFileNativePDB::GetDeclContextForUID(lldb::user_id_t uid) {
     return {};
 
   PdbAstBuilder *ast_builder = ts->GetNativePDBParser();
-  clang::DeclContext *context =
-      ast_builder->GetOrCreateDeclContextForUid(PdbSymUid(uid));
-  if (!context)
-    return {};
-
-  return ast_builder->ToCompilerDeclContext(*context);
+  return ast_builder->GetOrCreateDeclContextForUid(PdbSymUid(uid));
 }
 
 CompilerDeclContext
@@ -2430,10 +2456,7 @@ SymbolFileNativePDB::GetDeclContextContainingUID(lldb::user_id_t uid) {
     return {};
 
   PdbAstBuilder *ast_builder = ts->GetNativePDBParser();
-  clang::DeclContext *context = ast_builder->GetParentDeclContext(PdbSymUid(uid));
-  if (!context)
-    return CompilerDeclContext();
-  return ast_builder->ToCompilerDeclContext(*context);
+  return ast_builder->GetParentDeclContext(PdbSymUid(uid));
 }
 
 Type *SymbolFileNativePDB::ResolveTypeUID(lldb::user_id_t type_uid) {
@@ -2467,19 +2490,11 @@ SymbolFileNativePDB::GetDynamicArrayInfoForUID(
 
 bool SymbolFileNativePDB::CompleteType(CompilerType &compiler_type) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  auto clang_type_system = compiler_type.GetTypeSystem<TypeSystemClang>();
-  if (!clang_type_system)
+  auto ts = compiler_type.GetTypeSystem();
+  if (!ts || !ts->GetNativePDBParser())
     return false;
 
-  PdbAstBuilder *ast_builder =
-      static_cast<PdbAstBuilder *>(clang_type_system->GetNativePDBParser());
-  if (ast_builder &&
-      ast_builder->GetClangASTImporter().CanImport(compiler_type))
-    return ast_builder->GetClangASTImporter().CompleteType(compiler_type);
-  clang::QualType qt =
-      clang::QualType::getFromOpaquePtr(compiler_type.GetOpaqueQualType());
-
-  return ast_builder->CompleteType(qt);
+  return ts->GetNativePDBParser()->CompleteType(compiler_type);
 }
 
 void SymbolFileNativePDB::GetTypes(lldb_private::SymbolContextScope *sc_scope,
@@ -2505,17 +2520,7 @@ SymbolFileNativePDB::FindNamespace(ConstString name,
   if (!ast_builder)
     return {};
 
-  clang::DeclContext *decl_context = nullptr;
-  if (parent_decl_ctx)
-    decl_context = static_cast<clang::DeclContext *>(
-        parent_decl_ctx.GetOpaqueDeclContext());
-
-  auto *namespace_decl =
-      ast_builder->FindNamespaceDecl(decl_context, name.GetStringRef());
-  if (!namespace_decl)
-    return CompilerDeclContext();
-
-  return clang->CreateDeclContext(namespace_decl);
+  return ast_builder->FindNamespaceDecl(parent_decl_ctx, name.GetStringRef());
 }
 
 llvm::Expected<lldb::TypeSystemSP>

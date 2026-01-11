@@ -1517,18 +1517,9 @@ define i1 @pr84831(i64 %arg) {
 define void @pr169691(ptr %p0, i64 %implicit, i1 zeroext %carry) {
 ; CHECK-LABEL: pr169691:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    addq %rsi, %rax
-; CHECK-NEXT:    setb %cl
-; CHECK-NEXT:    movl %edx, %edx
-; CHECK-NEXT:    addq %rax, %rdx
-; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    orb %cl, %al
-; CHECK-NEXT:    movq %rdx, (%rdi)
-; CHECK-NEXT:    addq 8(%rdi), %rsi
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    addq %rsi, %rax
-; CHECK-NEXT:    movq %rax, 8(%rdi)
+; CHECK-NEXT:    addb $-1, %dl
+; CHECK-NEXT:    adcq %rsi, (%rdi)
+; CHECK-NEXT:    adcq %rsi, 8(%rdi)
 ; CHECK-NEXT:    retq
   %a0 = load i64, ptr %p0, align 8
   %uaddo0 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a0, i64 %implicit)

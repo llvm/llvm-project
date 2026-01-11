@@ -1468,7 +1468,7 @@ bool SemaObjC::isCFError(RecordDecl *RD) {
   // declared with "objc_bridge_mutable", so look for either one of the two
   // attributes.
   if (RD->getTagKind() == TagTypeKind::Struct) {
-    IdentifierInfo *bridgedType = nullptr;
+    const IdentifierInfo *bridgedType = nullptr;
     if (auto bridgeAttr = RD->getAttr<ObjCBridgeAttr>())
       bridgedType = bridgeAttr->getBridgedType();
     else if (auto bridgeAttr = RD->getAttr<ObjCBridgeMutableAttr>())

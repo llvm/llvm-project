@@ -514,7 +514,14 @@ static StringRef getNodeName(const RecordDecl &Node,
     return Node.getName();
   }
   Scratch.clear();
-  return ("(anonymous " + Node.getKindName() + ")").toStringRef(Scratch);
+
+  llvm::raw_svector_ostream OS(Scratch);
+
+  PrintingPolicy Copy(Node.getASTContext().getPrintingPolicy());
+  Copy.AnonymousTagLocations = false;
+  Node.printName(OS, Copy);
+
+  return OS.str();
 }
 
 static StringRef getNodeName(const NamespaceDecl &Node,
@@ -654,9 +661,9 @@ bool HasNameMatcher::matchesNodeFullSlow(const NamedDecl &Node) const {
 
     PrintingPolicy Policy = Node.getASTContext().getPrintingPolicy();
     Policy.SuppressUnwrittenScope = SkipUnwritten;
-    Policy.SuppressInlineNamespace =
+    Policy.SuppressInlineNamespace = llvm::to_underlying(
         SkipUnwritten ? PrintingPolicy::SuppressInlineNamespaceMode::All
-                      : PrintingPolicy::SuppressInlineNamespaceMode::None;
+                      : PrintingPolicy::SuppressInlineNamespaceMode::None);
     Node.printQualifiedName(OS, Policy);
 
     const StringRef FullName = OS.str();
@@ -807,6 +814,7 @@ const internal::VariadicDynCastAllOfMatcher<TypeLoc, PointerTypeLoc>
     pointerTypeLoc;
 const internal::VariadicDynCastAllOfMatcher<TypeLoc, ReferenceTypeLoc>
     referenceTypeLoc;
+const internal::VariadicDynCastAllOfMatcher<TypeLoc, ArrayTypeLoc> arrayTypeLoc;
 const internal::VariadicDynCastAllOfMatcher<TypeLoc,
                                             TemplateSpecializationTypeLoc>
     templateSpecializationTypeLoc;

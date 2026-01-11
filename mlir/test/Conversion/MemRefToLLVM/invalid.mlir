@@ -40,3 +40,15 @@ func.func @issue_70160() {
   memref.store %0, %alloc1[] : memref<i32>
   func.return
 }
+
+
+// -----
+
+func.func @test_atomic_exch(%arg0: memref<?xi32>, %idx: index, %value: i32) {
+  // expected-error @+1 {{result not defined in region}}
+  %1 = memref.generic_atomic_rmw %arg0[%idx] : memref<?xi32> {
+  ^bb0(%arg3: i32):
+    memref.atomic_yield %value : i32
+  }
+  func.return
+}

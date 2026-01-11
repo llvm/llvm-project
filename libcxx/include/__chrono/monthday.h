@@ -15,6 +15,8 @@
 #include <__chrono/month.h>
 #include <__compare/ordering.h>
 #include <__config>
+#include <__cstddef/size_t.h>
+#include <__functional/hash.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -125,6 +127,24 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr month_day_last operator/(last_spec, int _
 }
 
 } // namespace chrono
+
+#  if _LIBCPP_STD_VER >= 26
+
+template <>
+struct hash<chrono::month_day> {
+  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::month_day& __md) noexcept {
+    return std::__hash_combine(hash<chrono::month>{}(__md.month()), hash<chrono::day>{}(__md.day()));
+  }
+};
+
+template <>
+struct hash<chrono::month_day_last> {
+  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::month_day_last& __mdl) noexcept {
+    return hash<chrono::month>{}(__mdl.month());
+  }
+};
+
+#  endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_END_NAMESPACE_STD
 

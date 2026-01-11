@@ -178,6 +178,8 @@ bool AArch64ExpandPseudo::expandMOVImm(MachineBasicBlock &MBB,
                 .addImm(I->Op2));
       }
       break;
+    case AArch64::EONXrs:
+    case AArch64::EORXrs:
     case AArch64::ORRWrs:
     case AArch64::ORRXrs: {
       Register DstReg = MI.getOperand(0).getReg();
@@ -1717,6 +1719,7 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
    }
    case AArch64::InOutZAUsePseudo:
    case AArch64::RequiresZASavePseudo:
+   case AArch64::RequiresZT0SavePseudo:
    case AArch64::SMEStateAllocPseudo:
    case AArch64::COALESCER_BARRIER_FPR16:
    case AArch64::COALESCER_BARRIER_FPR32:

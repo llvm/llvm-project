@@ -9,6 +9,7 @@
 #include "RedundantCastingCheck.h"
 #include "../utils/FixItHintUtils.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 
@@ -29,7 +30,7 @@ static bool areTypesEqual(QualType S, QualType D) {
   const QualType PtrD = D->getPointeeType();
 
   if (!PtrS.isNull() && !PtrD.isNull())
-    return areTypesEqual(PtrS, PtrD);
+    return areTypesEqual(PtrS.IgnoreParens(), PtrD.IgnoreParens());
 
   const DeducedType *DT = S->getContainedDeducedType();
   if (DT && DT->isDeduced())
@@ -76,17 +77,14 @@ static bool areBinaryOperatorOperandsTypesEqualToOperatorResultType(
 
 static const Decl *getSourceExprDecl(const Expr *SourceExpr) {
   const Expr *CleanSourceExpr = SourceExpr->IgnoreParenImpCasts();
-  if (const auto *E = dyn_cast<DeclRefExpr>(CleanSourceExpr)) {
+  if (const auto *E = dyn_cast<DeclRefExpr>(CleanSourceExpr))
     return E->getDecl();
-  }
 
-  if (const auto *E = dyn_cast<CallExpr>(CleanSourceExpr)) {
+  if (const auto *E = dyn_cast<CallExpr>(CleanSourceExpr))
     return E->getCalleeDecl();
-  }
 
-  if (const auto *E = dyn_cast<MemberExpr>(CleanSourceExpr)) {
+  if (const auto *E = dyn_cast<MemberExpr>(CleanSourceExpr))
     return E->getMemberDecl();
-  }
   return nullptr;
 }
 

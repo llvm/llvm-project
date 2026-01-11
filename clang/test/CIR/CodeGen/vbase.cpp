@@ -128,7 +128,7 @@ void ppp() { B b; }
 // OGCG:   ret void
 
 // Constructor for B
-// CIR: cir.func comdat linkonce_odr @_ZN1BC1Ev(%arg0: !cir.ptr<!rec_B>
+// CIR: cir.func {{.*}} @_ZN1BC1Ev(%arg0: !cir.ptr<!rec_B>
 // CIR:   %[[THIS_ADDR:.*]] = cir.alloca !cir.ptr<!rec_B>, !cir.ptr<!cir.ptr<!rec_B>>, ["this", init]
 // CIR:   cir.store %arg0, %[[THIS_ADDR]] : !cir.ptr<!rec_B>, !cir.ptr<!cir.ptr<!rec_B>>
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]] : !cir.ptr<!cir.ptr<!rec_B>>, !cir.ptr<!rec_B>
