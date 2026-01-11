@@ -2676,7 +2676,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
           KnownSrc.isKnownAlways(fcPosZero | fcPosSubnormal))
         return ConstantFP::getZero(VTy);
 
-      if ((IID == Intrinsic::trunc || IsRoundNearest) &&
+      if ((IID == Intrinsic::trunc || IID == Intrinsic::ceil ||
+           IsRoundNearest) &&
           KnownSrc.isKnownAlways(fcNegZero | fcNegSubnormal))
         return ConstantFP::getZero(VTy, true);
 

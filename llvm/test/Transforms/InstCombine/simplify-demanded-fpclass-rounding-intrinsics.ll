@@ -592,8 +592,7 @@ define nofpclass(snan) float @source_known_psub_or_pzero__ceil(float nofpclass(n
 define nofpclass(snan) float @source_known_nsub_or_nzero__ceil(float nofpclass(nan inf norm psub pzero) %nsub.or.nzero) {
 ; CHECK-LABEL: define nofpclass(snan) float @source_known_nsub_or_nzero__ceil(
 ; CHECK-SAME: float nofpclass(nan inf pzero psub norm) [[NSUB_OR_NZERO:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.ceil.f32(float [[NSUB_OR_NZERO]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float -0.000000e+00
 ;
   %result = call float @llvm.ceil.f32(float %nsub.or.nzero)
   ret float %result
