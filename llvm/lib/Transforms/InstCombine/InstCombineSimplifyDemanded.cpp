@@ -2649,10 +2649,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
       // Zero results imply valid subnormal sources.
       if (DemandedMask & fcNegZero)
-        DemandedSrcMask |= fcNegSubnormal;
+        DemandedSrcMask |= fcNegSubnormal | fcNegNormal;
 
       if (DemandedMask & fcPosZero)
-        DemandedSrcMask |= fcPosSubnormal;
+        DemandedSrcMask |= fcPosSubnormal | fcPosNormal;
 
       KnownFPClass KnownSrc;
       if (SimplifyDemandedFPClass(CI, 0, DemandedSrcMask, KnownSrc, Depth + 1))
