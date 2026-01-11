@@ -1000,6 +1000,12 @@ void Preprocessor::Lex(Token &Result) {
 
   --LexLevel;
 
+  // Destroy any lexers that were deferred while we were in nested Lex calls.
+  // This must happen after decrementing LexLevel but before any other
+  // processing that might re-enter Lex.
+  if (LexLevel == 0 && !PendingDestroyLexers.empty())
+    PendingDestroyLexers.clear();
+
   if ((LexLevel == 0 || PreprocessToken) &&
       !Result.getFlag(Token::IsReinjected)) {
     if (LexLevel == 0)

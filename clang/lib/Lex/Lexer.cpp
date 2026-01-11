@@ -4035,24 +4035,16 @@ LexStart:
     // Notify MIOpt that we read a non-whitespace/non-comment token.
     MIOpt.ReadToken();
 
-    // The reason for saving and using these members here is that EOF may be
-    // encountered in LexIdentifierContinue and current Lexer might be
-    // destructed in HandleEndOfFile, If the code after LexIdentifierContinue
-    // try to access LangOps in this Lexer, it will hit undefined behavior.
-    //
-    // FIXME: we introduce a new mechanism to delay the destruction of CurLexer,
-    // at least until the current Lexer::Lex function ends.
-    bool isCPlusPlusModules = LangOpts.CPlusPlusModules;
-    bool lexingRawMode = LexingRawMode;
-    bool is_PragmaLexer = Is_PragmaLexer;
-    bool parsingPreprocessorDirective = ParsingPreprocessorDirective;
-    auto *ThePP = PP;
+    // LexIdentifierContinue may trigger HandleEndOfFile which would
+    // normally destroy this Lexer. However, the Preprocessor now defers
+    // lexer destruction until the Lex call stack unwinds (LexLevel == 0),
+    // so it's safe to access member variables after this call returns.
     bool returnedToken = LexIdentifierContinue(Result, CurPtr);
 
-    if (returnedToken && !lexingRawMode && !is_PragmaLexer &&
-        !parsingPreprocessorDirective && isCPlusPlusModules &&
+    if (returnedToken && !LexingRawMode && !Is_PragmaLexer &&
+        !ParsingPreprocessorDirective && LangOpts.CPlusPlusModules &&
         Result.isModuleContextualKeyword() &&
-        ThePP->HandleModuleContextualKeyword(Result, TokAtPhysicalStartOfLine))
+        PP->HandleModuleContextualKeyword(Result, TokAtPhysicalStartOfLine))
       goto HandleDirective;
     return returnedToken;
   }
