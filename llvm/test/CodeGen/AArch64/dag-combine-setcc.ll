@@ -334,10 +334,9 @@ entry:
 define i16 @combine_setcc_slt_add_nsw(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: combine_setcc_slt_add_nsw:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    adrp x8, .LCPI20_0
+; CHECK-NEXT:    cmgt v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI20_0]
-; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    zip1 v0.16b, v0.16b, v1.16b
@@ -353,10 +352,9 @@ define i16 @combine_setcc_slt_add_nsw(<16 x i8> %a, <16 x i8> %b) {
 define i16 @combine_setcc_sgt_add_nsw(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: combine_setcc_sgt_add_nsw:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    adrp x8, .LCPI21_0
+; CHECK-NEXT:    cmgt v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI21_0]
-; CHECK-NEXT:    cmgt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    zip1 v0.16b, v0.16b, v1.16b
@@ -372,10 +370,9 @@ define i16 @combine_setcc_sgt_add_nsw(<16 x i8> %a, <16 x i8> %b) {
 define i16 @combine_setcc_sle_add_nsw(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: combine_setcc_sle_add_nsw:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    adrp x8, .LCPI22_0
+; CHECK-NEXT:    cmge v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI22_0]
-; CHECK-NEXT:    cmle v0.16b, v0.16b, #0
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    zip1 v0.16b, v0.16b, v1.16b
@@ -390,10 +387,9 @@ define i16 @combine_setcc_sle_add_nsw(<16 x i8> %a, <16 x i8> %b) {
 define i16 @combine_setcc_sge_add_nsw(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: combine_setcc_sge_add_nsw:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    adrp x8, .LCPI23_0
+; CHECK-NEXT:    cmge v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI23_0]
-; CHECK-NEXT:    cmge v0.16b, v0.16b, #0
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    zip1 v0.16b, v0.16b, v1.16b

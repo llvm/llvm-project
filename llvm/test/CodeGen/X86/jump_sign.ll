@@ -203,7 +203,7 @@ define i32 @func_n(i32 %x, i32 %y) nounwind {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    cmpl %ecx, %eax
-; CHECK-NEXT:    cmovsl %ecx, %eax
+; CHECK-NEXT:    cmovll %ecx, %eax
 ; CHECK-NEXT:    retl
   %sub = sub nsw i32 %x, %y
   %cmp = icmp slt i32 %sub, 0

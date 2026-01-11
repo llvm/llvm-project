@@ -142,8 +142,11 @@ exit:
 ; ...and again with SLT.
 define i32 @f8(i32 %a, i32 %b, ptr %dest) {
 ; CHECK-LABEL: f8:
-; CHECK: s %r2, 0(%r4)
-; CHECK-NEXT: blr %r14
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    l %r1, 0(%r4)
+; CHECK-NEXT:    lr %r0, %r2
+; CHECK-NEXT:    sr %r2, %r1
+; CHECK-NEXT:    crbl %r0, %r1, 0(%r14)
 entry:
   %cur = load i32, ptr %dest
   %res = sub nsw i32 %a, %cur
