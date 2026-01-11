@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MATH_GENERIC_LOG_RANGE_REDUCTION_H
-#define LLVM_LIBC_SRC_MATH_GENERIC_LOG_RANGE_REDUCTION_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_LOG_RANGE_REDUCTION_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_LOG_RANGE_REDUCTION_H
 
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/macros/config.h"
@@ -15,6 +15,9 @@
 #include "src/__support/uint128.h"
 
 namespace LIBC_NAMESPACE_DECL {
+
+namespace math {
+namespace log_range_reduction_internal {
 
 // Struct to store -log*(r) for 4 range reduction steps.
 struct LogRR {
@@ -88,7 +91,8 @@ log_range_reduction(double m_x, const LogRR &log_table,
                               MType({static_cast<uint64_t>(vv4),
                                      static_cast<uint64_t>(vv4 >> 64)}));
 }
-
+} // namespace log_range_reduction_internal
+} // namespace math
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_MATH_GENERIC_LOG_RANGE_REDUCTION_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_LOG_RANGE_REDUCTION_H
