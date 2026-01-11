@@ -473,10 +473,9 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case Instruction::Select:
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::ComputeAnyOfResult:
+  case VPInstruction::ComputeFindIVResult:
   case VPInstruction::ReductionStartVector:
     return 3;
-  case VPInstruction::ComputeFindIVResult:
-    return 4;
   case Instruction::Call:
   case Instruction::GetElementPtr:
   case Instruction::PHI:
@@ -726,20 +725,14 @@ Value *VPInstruction::generate(VPTransformState &State) {
                                 State.get(getOperand(1), VPLane(0)), OrigPhi);
   }
   case VPInstruction::ComputeFindIVResult: {
-    // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
-    // and will be removed by breaking up the recipe further.
-    auto *PhiR = cast<VPReductionPHIRecipe>(getOperand(0));
-    // Get its reduction variable descriptor.
-    RecurKind RK = PhiR->getRecurrenceKind();
+    RecurKind RK = getRecurKind();
     assert(RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
            "Unexpected reduction kind");
-    assert(!PhiR->isInLoop() &&
-           "In-loop FindLastIV reduction is not supported yet");
 
-    // The recipe's operands are the reduction phi, the start value, the
-    // sentinel value, followed by one operand for each part of the reduction.
-    unsigned UF = getNumOperands() - 3;
-    Value *ReducedPartRdx = State.get(getOperand(3));
+    // The recipe's operands are the start value, the sentinel value, followed
+    // by one operand for each part of the reduction.
+    unsigned UF = getNumOperands() - 2;
+    Value *ReducedPartRdx = State.get(getOperand(2));
     RecurKind MinMaxKind;
     bool IsSigned = RecurrenceDescriptor::isSignedRecurrenceKind(RK);
     if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK))
@@ -748,10 +741,10 @@ Value *VPInstruction::generate(VPTransformState &State) {
       MinMaxKind = IsSigned ? RecurKind::SMin : RecurKind::UMin;
     for (unsigned Part = 1; Part < UF; ++Part)
       ReducedPartRdx = createMinMaxOp(Builder, MinMaxKind, ReducedPartRdx,
-                                      State.get(getOperand(3 + Part)));
+                                      State.get(getOperand(2 + Part)));
 
-    Value *Start = State.get(getOperand(1), true);
-    Value *Sentinel = getOperand(2)->getLiveInIRValue();
+    Value *Start = State.get(getOperand(0), true);
+    Value *Sentinel = getOperand(1)->getLiveInIRValue();
 
     // Reduce the vector to a scalar.
     bool IsFindLast = RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK);
@@ -1391,8 +1384,9 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
     // WidePtrAdd supports scalar and vector base addresses.
     return false;
   case VPInstruction::ComputeAnyOfResult:
-  case VPInstruction::ComputeFindIVResult:
     return Op == getOperand(1);
+  case VPInstruction::ComputeFindIVResult:
+    return Op == getOperand(0);
   case VPInstruction::ExtractLane:
     return Op == getOperand(0);
   };
@@ -2095,7 +2089,8 @@ bool VPIRFlags::flagsValidForOpcode(unsigned Opcode) const {
   case OperationType::Cmp:
     return Opcode == Instruction::FCmp || Opcode == Instruction::ICmp;
   case OperationType::ReductionOp:
-    return Opcode == VPInstruction::ComputeReductionResult;
+    return Opcode == VPInstruction::ComputeReductionResult ||
+           Opcode == VPInstruction::ComputeFindIVResult;
   case OperationType::Other:
     return true;
   }
@@ -2150,8 +2145,24 @@ void VPIRFlags::printFlags(raw_ostream &O) const {
     break;
   case OperationType::ReductionOp: {
     RecurKind RK = getRecurKind();
-    O << " ("
-      << Instruction::getOpcodeName(RecurrenceDescriptor::getOpcode(RK));
+    O << " (";
+    switch (RK) {
+    case RecurKind::FindLastIVUMax:
+      O << "find-last-iv-umax";
+      break;
+    case RecurKind::FindLastIVSMax:
+      O << "find-last-iv-smax";
+      break;
+    case RecurKind::FindFirstIVUMin:
+      O << "find-first-iv-umin";
+      break;
+    case RecurKind::FindFirstIVSMin:
+      O << "find-first-iv-smin";
+      break;
+    default:
+      O << Instruction::getOpcodeName(RecurrenceDescriptor::getOpcode(RK));
+      break;
+    }
     if (isReductionInLoop())
       O << ", in-loop";
     if (isReductionOrdered())

@@ -1421,7 +1421,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     // For example, this transforms
     // vp<%min.result> = compute-reduction-result ir<%min.val>,
     //                                            ir<%min.val.next>
-    // vp<%find.iv.result = compute-find-iv-result ir<%min.idx>, ir<0>,
+    // vp<%find.iv.result = compute-find-iv-result ir<0>,
     //                                             SENTINEL, vp<%min.idx.next>
     //
     // into:
@@ -1429,10 +1429,11 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     // vp<min.result> = compute-reduction-result ir<%min.val>, ir<%min.val.next>
     // vp<%final.min.cmp> = icmp eq ir<%min.val.next>, vp<min.result>
     // vp<%final.iv> = select vp<%final.min.cmp>, ir<%min.idx.next>, SENTINEL
-    // vp<%find.iv.result> = compute-find-iv-result ir<%min.idx>, ir<0>,
+    // vp<%find.iv.result> = compute-find-iv-result ir<0>,
     //                                             SENTINEL, vp<%final.iv>
     VPInstruction *FindIVResult =
-        findUserOf<VPInstruction::ComputeFindIVResult>(FindIVPhiR);
+        findUserOf<VPInstruction::ComputeFindIVResult>(
+            FindIVPhiR->getBackedgeValue());
     assert(FindIVResult->getParent() == MinMaxResult->getParent() &&
            "both results must be computed in the same block");
     MinMaxResult->moveBefore(*FindIVResult->getParent(),
@@ -1442,11 +1443,11 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     VPValue *MinMaxExiting = MinMaxResult->getOperand(0);
     auto *FinalMinMaxCmp =
         B.createICmp(CmpInst::ICMP_EQ, MinMaxExiting, MinMaxResult);
-    VPValue *Sentinel = FindIVResult->getOperand(2);
-    VPValue *LastIVExiting = FindIVResult->getOperand(3);
+    VPValue *Sentinel = FindIVResult->getOperand(1);
+    VPValue *LastIVExiting = FindIVResult->getOperand(2);
     auto *FinalIVSelect =
         B.createSelect(FinalMinMaxCmp, LastIVExiting, Sentinel);
-    FindIVResult->setOperand(3, FinalIVSelect);
+    FindIVResult->setOperand(2, FinalIVSelect);
   }
   return true;
 }
