@@ -270,53 +270,96 @@ IncrementalExecutorBuilder::create(llvm::orc::ThreadSafeContext &TSC,
   return std::move(Executor);
 }
 
-llvm::Error
-IncrementalExecutorBuilder::UpdateOrcRuntimePath(const driver::Compilation &C) {
+llvm::Error IncrementalExecutorBuilder::UpdateOrcRuntimePath(
+    const clang::driver::Compilation &C) {
   if (!IsOutOfProcess)
     return llvm::Error::success();
 
-  const std::array<const char *, 3> OrcRTLibNames = {
-      "liborc_rt.a", "liborc_rt_osx.a", "liborc_rt-x86_64.a"};
+  static constexpr std::array<const char *, 3> OrcRTLibNames = {
+      "liborc_rt.a",
+      "liborc_rt_osx.a",
+      "liborc_rt-x86_64.a",
+  };
 
   auto findInDir = [&](llvm::StringRef Base) -> std::optional<std::string> {
+    if (Base.empty() || !llvm::sys::fs::exists(Base))
+      return std::nullopt;
     for (const char *LibName : OrcRTLibNames) {
-      llvm::SmallString<256> CandidatePath(Base);
-      llvm::sys::path::append(CandidatePath, LibName);
-      if (llvm::sys::fs::exists(CandidatePath))
-        return std::string(CandidatePath.str());
+      llvm::SmallString<256> Candidate(Base);
+      llvm::sys::path::append(Candidate, LibName);
+      if (llvm::sys::fs::exists(Candidate))
+        return std::string(Candidate.str());
     }
     return std::nullopt;
   };
 
-  const driver::ToolChain &TC = C.getDefaultToolChain();
-  std::string SearchedPaths;
-  if (std::optional<std::string> CompilerRTPath = TC.getCompilerRTPath()) {
-    if (auto Found = findInDir(*CompilerRTPath)) {
-      OrcRuntimePath = *Found;
-      return llvm::Error::success();
+  const clang::driver::Driver &D = C.getDriver();
+  const clang::driver::ToolChain &TC = C.getDefaultToolChain();
+  llvm::SmallVector<std::string, 8> triedPaths;
+
+  llvm::SmallString<256> Resource(D.ResourceDir);
+  if (llvm::sys::fs::exists(Resource)) {
+    // Ask the ToolChain for its runtime paths first (most authoritative).
+    for (auto RuntimePath :
+         {TC.getRuntimePath(), std::make_optional(TC.getCompilerRTPath())}) {
+      if (RuntimePath) {
+        if (auto Found = findInDir(*RuntimePath)) {
+          OrcRuntimePath = *Found;
+          return llvm::Error::success();
+        }
+        triedPaths.emplace_back(*RuntimePath);
+      }
     }
-    SearchedPaths += *CompilerRTPath;
+
+    // Check ResourceDir and ResourceDir/lib
+    for (auto P : {Resource.str().str(), (Resource + "/lib").str()}) {
+      if (auto F = findInDir(P)) {
+        OrcRuntimePath = *F;
+        return llvm::Error::success();
+      }
+      triedPaths.emplace_back(P);
+    }
   } else {
-    return llvm::make_error<llvm::StringError>("CompilerRT path not found",
-                                               std::error_code());
+    // The binary was misplaced. Generic Backward Search (Climbing the tree)
+    // This allows unit tests in tools/clang/unittests to find the real lib/
+    llvm::SmallString<256> Cursor = Resource;
+    // ResourceDir-derived locations
+    llvm::StringRef Version = llvm::sys::path::filename(Resource);
+    llvm::StringRef OSName = TC.getOSLibName();
+    while (llvm::sys::path::has_parent_path(Cursor)) {
+      Cursor = llvm::sys::path::parent_path(Cursor).str();
+      // At each level, try standard relative layouts
+      for (auto Rel :
+           {(llvm::Twine("lib/clang/") + Version + "/lib/" + OSName).str(),
+            (llvm::Twine("lib/clang/") + Version + "/lib").str(),
+            (llvm::Twine("lib/") + OSName).str(), std::string("lib/clang")}) {
+        llvm::SmallString<256> Candidate = Cursor;
+        llvm::sys::path::append(Candidate, Rel);
+        if (auto F = findInDir(Candidate)) {
+          OrcRuntimePath = *F;
+          return llvm::Error::success();
+        }
+        triedPaths.emplace_back(std::string(Candidate.str()));
+      }
+      // Stop if we hit the root or go too far (safety check)
+      if (triedPaths.size() > 32)
+        break;
+    }
   }
 
-  if (std::optional<std::string> ResourceDir = TC.getRuntimePath()) {
-    if (auto Found = findInDir(*ResourceDir)) {
-      OrcRuntimePath = *Found;
-      return llvm::Error::success();
-    }
-    if (!SearchedPaths.empty())
-      SearchedPaths += "; ";
-    SearchedPaths += *ResourceDir;
-  } else {
-    return llvm::make_error<llvm::StringError>("ResourceDir path not found",
-                                               std::error_code());
+  // Build a helpful error string if everything failed.
+  std::string Joined;
+  for (size_t i = 0; i < triedPaths.size(); ++i) {
+    if (i)
+      Joined += ", ";
+    Joined += triedPaths[i];
   }
+  if (Joined.empty())
+    Joined = "<no candidate paths available>";
 
   return llvm::make_error<llvm::StringError>(
-      llvm::Twine("OrcRuntime library not found in: ") + SearchedPaths,
-      std::error_code());
+      llvm::formatv("OrcRuntime library not found in: {0}", Joined).str(),
+      llvm::inconvertibleErrorCode());
 }
 
 Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
