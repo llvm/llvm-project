@@ -35,7 +35,7 @@ void range_for() {
   // CHECK-FIXES: int *const p_local2[2] = {nullptr, nullptr};
   for (const auto *p_local3 : p_local2) {
   // CHECK-MESSAGES: [[@LINE-1]]:8: warning: variable 'p_local3' of type 'const int *' can be declared 'const'
-  // CHECK-FIXES: for (const auto *const p_local3 : p_local2)
+  // CHECK-FIXES: for (const auto *const p_local3 : p_local2) {
   }
 }
 
@@ -64,7 +64,7 @@ void EmitProtocolMethodList(T &&Methods) {
   SmallVector<const int *> np_local0;
   for (const auto *I : Methods) {
   // CHECK-MESSAGES: [[@LINE-1]]:8: warning: variable 'I' of type 'const int *' can be declared 'const'
-  // CHECK-FIXES: for (const auto *const I : Methods)
+  // CHECK-FIXES: for (const auto *const I : Methods) {
     if (I == nullptr)
       np_local0.push_back(I);
   }

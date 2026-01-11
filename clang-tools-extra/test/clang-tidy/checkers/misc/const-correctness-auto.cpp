@@ -16,5 +16,5 @@ void auto_types_ignored() {
   auto auto_i = 0;
   auto& auto_ref = auto_i;
   auto auto_lambda = [] {};
-  auto *auto_ptr = nullptr;
+  auto *auto_ptr = static_cast<void *>(nullptr);
 }
