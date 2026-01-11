@@ -1026,6 +1026,16 @@ add_header_library(
 )
 
 add_header_library(
+  log_range_reduction
+  HDRS
+    log_range_reduction.h
+  DEPENDS
+    libc.src.__support.fputil.dyadic_float
+    libc.src.__support.math.common_constants
+    libc.src.__support.uint128
+)
+
+add_header_library(
   log 
   HDRS
     log.h
