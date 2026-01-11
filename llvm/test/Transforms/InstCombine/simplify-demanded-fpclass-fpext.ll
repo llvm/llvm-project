@@ -46,8 +46,7 @@ define nofpclass(inf norm sub zero snan) float @ret_only_qnan__fpext(half %x) {
 define nofpclass(inf norm sub zero) float @ret_only_nan__fpext(half %x) {
 ; CHECK-LABEL: define nofpclass(inf zero sub norm) float @ret_only_nan__fpext(
 ; CHECK-SAME: half [[X:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fpext half [[X]] to float
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %result = fpext half %x to float
   ret float %result
@@ -114,8 +113,7 @@ define nofpclass(nan) float @ret_no_nan__fpext__select_nan_or_unknown(i1 %cond, 
 ; CHECK-LABEL: define nofpclass(nan) float @ret_no_nan__fpext__select_nan_or_unknown(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[NAN:%.*]] = call half @returns_nan_f16()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NAN]], half [[UNKNOWN]]
-; CHECK-NEXT:    [[RESULT:%.*]] = fpext half [[SELECT]] to float
+; CHECK-NEXT:    [[RESULT:%.*]] = fpext half [[UNKNOWN]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %nan = call half @returns_nan_f16()
@@ -129,8 +127,7 @@ define nofpclass(pinf) float @ret_no_pinf__fpext__select_pinf_or_unknown(i1 %con
 ; CHECK-LABEL: define nofpclass(pinf) float @ret_no_pinf__fpext__select_pinf_or_unknown(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[PINF:%.*]] = call half @returns_pinf_f16()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[PINF]], half [[UNKNOWN]]
-; CHECK-NEXT:    [[RESULT:%.*]] = fpext half [[SELECT]] to float
+; CHECK-NEXT:    [[RESULT:%.*]] = fpext half [[UNKNOWN]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %pinf = call half @returns_pinf_f16()
@@ -144,8 +141,7 @@ define nofpclass(ninf) float @ret_no_ninf__fpext__select_ninf_or_unknown(i1 %con
 ; CHECK-LABEL: define nofpclass(ninf) float @ret_no_ninf__fpext__select_ninf_or_unknown(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[NINF:%.*]] = call half @returns_ninf_f16()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NINF]], half [[UNKNOWN]]
-; CHECK-NEXT:    [[RESULT:%.*]] = fpext half [[SELECT]] to float
+; CHECK-NEXT:    [[RESULT:%.*]] = fpext half [[UNKNOWN]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %ninf = call half @returns_ninf_f16()
@@ -159,8 +155,7 @@ define nofpclass(inf) float @ret_no_inf__fpext__select_inf_or_unknown(i1 %cond, 
 ; CHECK-LABEL: define nofpclass(inf) float @ret_no_inf__fpext__select_inf_or_unknown(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[INF:%.*]] = call half @returns_inf_f16()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[INF]], half [[UNKNOWN]]
-; CHECK-NEXT:    [[RESULT:%.*]] = fpext half [[SELECT]] to float
+; CHECK-NEXT:    [[RESULT:%.*]] = fpext half [[UNKNOWN]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %inf = call half @returns_inf_f16()
@@ -174,8 +169,7 @@ define nofpclass(nan inf) float @ret_no_inf_no_nan__fpext__select_inf_or_nan_or_
 ; CHECK-LABEL: define nofpclass(nan inf) float @ret_no_inf_no_nan__fpext__select_inf_or_nan_or_unknown(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[INF_OR_NAN:%.*]] = call half @returns_inf_or_nan_f16()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[INF_OR_NAN]], half [[UNKNOWN]]
-; CHECK-NEXT:    [[RESULT:%.*]] = fpext half [[SELECT]] to float
+; CHECK-NEXT:    [[RESULT:%.*]] = fpext half [[UNKNOWN]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %inf.or.nan = call half @returns_inf_or_nan_f16()
@@ -237,8 +231,7 @@ define nofpclass(pinf pnorm psub pzero) float @ret_no_positive__fpext__select_po
 ; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) float @ret_no_positive__fpext__select_positive_or_unknown(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[POSITIVE:%.*]] = call half @returns_positive_f16()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[POSITIVE]], half [[UNKNOWN]]
-; CHECK-NEXT:    [[RESULT:%.*]] = fpext half [[SELECT]] to float
+; CHECK-NEXT:    [[RESULT:%.*]] = fpext half [[UNKNOWN]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %positive = call half @returns_positive_f16()
@@ -267,8 +260,7 @@ define nofpclass(nan pinf pnorm psub pzero) float @ret_no_positive_no_nan__fpext
 ; CHECK-LABEL: define nofpclass(nan pinf pzero psub pnorm) float @ret_no_positive_no_nan__fpext__select_positive_nan_or_unknown(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[POSITIVE_OR_NAN:%.*]] = call half @returns_positive_or_nan_f16()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[POSITIVE_OR_NAN]], half [[UNKNOWN]]
-; CHECK-NEXT:    [[RESULT:%.*]] = fpext half [[SELECT]] to float
+; CHECK-NEXT:    [[RESULT:%.*]] = fpext half [[UNKNOWN]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %positive.or.nan = call half @returns_positive_or_nan_f16()
@@ -282,8 +274,7 @@ define nofpclass(ninf nnorm nsub nzero) float @ret_no_negative__fpext__select_ne
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_no_negative__fpext__select_negative_or_unknown(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[NEGATIVE:%.*]] = call half @returns_negative_f16()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NEGATIVE]], half [[UNKNOWN]]
-; CHECK-NEXT:    [[RESULT:%.*]] = fpext half [[SELECT]] to float
+; CHECK-NEXT:    [[RESULT:%.*]] = fpext half [[UNKNOWN]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %negative = call half @returns_negative_f16()
@@ -312,8 +303,7 @@ define nofpclass(nan ninf nnorm nsub nzero) float @ret_no_negative_no_nan__fpext
 ; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @ret_no_negative_no_nan__fpext__select_negative_nan_or_unknown(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[NEGATIVE_OR_NAN:%.*]] = call half @returns_negative_or_nan_f16()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NEGATIVE_OR_NAN]], half [[UNKNOWN]]
-; CHECK-NEXT:    [[RESULT:%.*]] = fpext half [[SELECT]] to float
+; CHECK-NEXT:    [[RESULT:%.*]] = fpext half [[UNKNOWN]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %negative.or.nan = call half @returns_negative_or_nan_f16()
@@ -447,8 +437,7 @@ define nofpclass(nzero) float @ret_no_nzero__fpext__select_nzero_or_unknown(i1 %
 ; CHECK-LABEL: define nofpclass(nzero) float @ret_no_nzero__fpext__select_nzero_or_unknown(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[NZERO:%.*]] = call half @returns_nzero_f16()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[NZERO]], half [[UNKNOWN]]
-; CHECK-NEXT:    [[RESULT:%.*]] = fpext half [[SELECT]] to float
+; CHECK-NEXT:    [[RESULT:%.*]] = fpext half [[UNKNOWN]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %nzero = call half @returns_nzero_f16()
@@ -461,8 +450,7 @@ define nofpclass(pzero) float @ret_no_pzero__fpext__select_pzero_or_unknown(i1 %
 ; CHECK-LABEL: define nofpclass(pzero) float @ret_no_pzero__fpext__select_pzero_or_unknown(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[PZERO:%.*]] = call half @returns_pzero_f16()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[PZERO]], half [[UNKNOWN]]
-; CHECK-NEXT:    [[RESULT:%.*]] = fpext half [[SELECT]] to float
+; CHECK-NEXT:    [[RESULT:%.*]] = fpext half [[UNKNOWN]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %pzero = call half @returns_pzero_f16()
@@ -475,8 +463,7 @@ define nofpclass(zero) float @ret_no_zero__fpext__select_zero_or_unknown(i1 %con
 ; CHECK-LABEL: define nofpclass(zero) float @ret_no_zero__fpext__select_zero_or_unknown(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[ZERO:%.*]] = call half @returns_zero_f16()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[ZERO]], half [[UNKNOWN]]
-; CHECK-NEXT:    [[RESULT:%.*]] = fpext half [[SELECT]] to float
+; CHECK-NEXT:    [[RESULT:%.*]] = fpext half [[UNKNOWN]] to float
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %zero = call half @returns_zero_f16()
