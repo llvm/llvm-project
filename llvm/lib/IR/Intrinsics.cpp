@@ -386,12 +386,12 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
   case IIT_EXCEPT: {
     unsigned NumCombos = Infos[NextElt++];
     unsigned ComboSize = Infos[NextElt++];
-    
+
     OutputTable.push_back(IITDescriptor::getExcept(NumCombos, ComboSize));
-    
+
     for (unsigned i = 0; i < NumCombos * ComboSize; ++i)
       DecodeIITType(NextElt, Infos, Info, OutputTable);
-    
+
     return;
   }
   case IIT_EXTEND_ARG: {
@@ -708,7 +708,8 @@ skipDescriptorsForSingleType(ArrayRef<Intrinsic::IITDescriptor> &Infos) {
 
 // Skip Except constraint descriptors.
 static void skipExceptDescriptors(ArrayRef<Intrinsic::IITDescriptor> &Infos) {
-  if (Infos.empty() || Infos[0].Kind != Intrinsic::IITDescriptor::ExceptConstraint)
+  if (Infos.empty() ||
+      Infos[0].Kind != Intrinsic::IITDescriptor::ExceptConstraint)
     return;
 
   auto [NumCombos, ComboSize] = Infos[0].getExceptInfo();
@@ -1386,10 +1387,9 @@ checkAndConsumeConstraintBlock(Type *Ty, ConstraintKind Kind,
 }
 
 // Verify the Struct return types.
-static bool
-verifyIntrinsicStructOutputTypes(Type *RetTy,
-                                 ArrayRef<Intrinsic::IITDescriptor> &Infos,
-                                 std::string &ErrMsg, SmallVector<Type *, 4> &ResolvedTypes) {
+static bool verifyIntrinsicStructOutputTypes(
+    Type *RetTy, ArrayRef<Intrinsic::IITDescriptor> &Infos, std::string &ErrMsg,
+    SmallVector<Type *, 4> &ResolvedTypes) {
   using namespace Intrinsic;
 
   auto *STy = dyn_cast<StructType>(RetTy);
@@ -1419,13 +1419,15 @@ verifyIntrinsicStructOutputTypes(Type *RetTy,
           Infos[0].Kind == IITDescriptor::ArgumentTypeConstraint) {
         if (!checkAndConsumeConstraintBlock(
                 ElemTy, ConstraintKind::Allowed, Infos,
-                Twine("Return type struct element ") + Twine(ElemIdx), ErrMsg, ResolvedTypes))
+                Twine("Return type struct element ") + Twine(ElemIdx), ErrMsg,
+                ResolvedTypes))
           return false;
       } else if (!Infos.empty() &&
                  Infos[0].Kind == IITDescriptor::ArgumentTypeExclusion) {
         if (!checkAndConsumeConstraintBlock(
                 ElemTy, ConstraintKind::Excluded, Infos,
-                Twine("Return type struct element ") + Twine(ElemIdx), ErrMsg, ResolvedTypes))
+                Twine("Return type struct element ") + Twine(ElemIdx), ErrMsg,
+                ResolvedTypes))
           return false;
       }
     } else
@@ -1436,10 +1438,9 @@ verifyIntrinsicStructOutputTypes(Type *RetTy,
 }
 
 // Verify the non struct return types.
-static bool
-verifyIntrinsicNonStructOutputTypes(Type *RetTy,
-                                    ArrayRef<Intrinsic::IITDescriptor> &Infos,
-                                    std::string &ErrMsg, SmallVector<Type *, 4> &ResolvedTypes) {
+static bool verifyIntrinsicNonStructOutputTypes(
+    Type *RetTy, ArrayRef<Intrinsic::IITDescriptor> &Infos, std::string &ErrMsg,
+    SmallVector<Type *, 4> &ResolvedTypes) {
   using namespace Intrinsic;
 
   if (Infos.empty())
@@ -1471,19 +1472,23 @@ verifyIntrinsicNonStructOutputTypes(Type *RetTy,
 static bool
 verifyIntrinsicOutputTypes(Intrinsic::ID id, FunctionType *FTy,
                            ArrayRef<Intrinsic::IITDescriptor> &Infos,
-                           std::string &ErrMsg, SmallVector<Type *, 4> &ResolvedTypes) {
+                           std::string &ErrMsg,
+                           SmallVector<Type *, 4> &ResolvedTypes) {
 
   Type *RetTy = FTy->getReturnType();
   if (RetTy->isStructTy())
-    return verifyIntrinsicStructOutputTypes(RetTy, Infos, ErrMsg, ResolvedTypes);
+    return verifyIntrinsicStructOutputTypes(RetTy, Infos, ErrMsg,
+                                            ResolvedTypes);
 
-  return verifyIntrinsicNonStructOutputTypes(RetTy, Infos, ErrMsg, ResolvedTypes);
+  return verifyIntrinsicNonStructOutputTypes(RetTy, Infos, ErrMsg,
+                                             ResolvedTypes);
 }
 
 // Verify the input parameters.
 static bool verifyIntrinsicInputTypes(Intrinsic::ID id, FunctionType *FTy,
                                       ArrayRef<Intrinsic::IITDescriptor> &Infos,
-                                      std::string &ErrMsg, SmallVector<Type *, 4> &ResolvedTypes) {
+                                      std::string &ErrMsg,
+                                      SmallVector<Type *, 4> &ResolvedTypes) {
   using namespace Intrinsic;
 
   SmallVector<Type *, 4> ArgTys;
@@ -1523,11 +1528,9 @@ static bool verifyIntrinsicInputTypes(Intrinsic::ID id, FunctionType *FTy,
 }
 
 // Verify Except constraints.
-static bool 
-verifyExceptConstraints(ArrayRef<Intrinsic::IITDescriptor> &Infos,
-                        const SmallVector<Type *, 4> &ResolvedTypes,
-                        LLVMContext &Context,
-                        std::string &ErrMsg) {
+static bool verifyExceptConstraints(ArrayRef<Intrinsic::IITDescriptor> &Infos,
+                                    const SmallVector<Type *, 4> &ResolvedTypes,
+                                    LLVMContext &Context, std::string &ErrMsg) {
   using namespace Intrinsic;
 
   if (Infos.empty() || Infos[0].Kind != IITDescriptor::ExceptConstraint)
@@ -1537,7 +1540,7 @@ verifyExceptConstraints(ArrayRef<Intrinsic::IITDescriptor> &Infos,
   Infos = Infos.slice(1);
 
   if (ResolvedTypes.size() != ComboSize) {
-    ErrMsg = "Internal error: Except constraint expects " + 
+    ErrMsg = "Internal error: Except constraint expects " +
              std::to_string(ComboSize) + " resolved types but got " +
              std::to_string(ResolvedTypes.size());
     return false;
@@ -1546,13 +1549,13 @@ verifyExceptConstraints(ArrayRef<Intrinsic::IITDescriptor> &Infos,
   for (unsigned ComboIdx = 0; ComboIdx < NumCombos; ++ComboIdx) {
     SmallVector<Type *, 4> ExcludedCombo;
     ExcludedCombo.reserve(ComboSize);
-    
+
     for (unsigned TypeIdx = 0; TypeIdx < ComboSize; ++TypeIdx) {
       SmallVector<Type *, 4> Unused;
       Type *Ty = DecodeFixedType(Infos, Unused, Context);
       if (!Ty) {
         ErrMsg = "Failed to decode Except excluded type at combination " +
-                 std::to_string(ComboIdx) + ", position " + 
+                 std::to_string(ComboIdx) + ", position " +
                  std::to_string(TypeIdx);
         return false;
       }
@@ -1576,8 +1579,8 @@ verifyExceptConstraints(ArrayRef<Intrinsic::IITDescriptor> &Infos,
       }
       ComboStr += ")";
 
-      ErrMsg = "Type combination " + ComboStr +
-               " is excluded by Except constraint";
+      ErrMsg =
+          "Type combination " + ComboStr + " is excluded by Except constraint";
       return false;
     }
   }
@@ -1604,7 +1607,7 @@ bool Intrinsic::verifyIntrinsicTypeConstraints(ID id, FunctionType *FTy,
   bool HasConstraints = false;
   for (const auto &D : Infos) {
     if (D.Kind == IITDescriptor::ArgumentTypeConstraint ||
-        D.Kind == IITDescriptor::ArgumentTypeExclusion  ||
+        D.Kind == IITDescriptor::ArgumentTypeExclusion ||
         D.Kind == IITDescriptor::ExceptConstraint) {
       HasConstraints = true;
       break;
@@ -1630,7 +1633,7 @@ bool Intrinsic::verifyIntrinsicTypeConstraints(ID id, FunctionType *FTy,
 bool Intrinsic::matchIntrinsicVarArg(
     bool isVarArg, ArrayRef<Intrinsic::IITDescriptor> &Infos) {
 
-  // Skip Except descriptors - they are constraint descriptors, not part of the signature.
+  // Skip Except descriptors.
   skipExceptDescriptors(Infos);
 
   // If there are no descriptors left, then it can't be a vararg.

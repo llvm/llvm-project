@@ -277,9 +277,8 @@ namespace Intrinsic {
     static IITDescriptor getExcept(unsigned NumCombos, unsigned ComboSize) {
       assert(NumCombos <= 0xFFFF && "NumCombos exceeds 16 bits");
       assert(ComboSize <= 0xFFFF && "ComboSize exceeds 16 bits");
-      return get(ExceptConstraint, 
-                static_cast<unsigned short>(NumCombos),
-                static_cast<unsigned short>(ComboSize));
+      return get(ExceptConstraint, static_cast<unsigned short>(NumCombos),
+                 static_cast<unsigned short>(ComboSize));
     }
   };
 
