@@ -546,11 +546,19 @@ public:
     return TypePromoteInteger;
   }
 
-  // Return true if the half type should be promoted using soft promotion rules
-  // where each operation is promoted to f32 individually, then converted to
-  // fp16. The default behavior is to promote chains of operations, keeping
-  // intermediate results in f32 precision and range.
-  virtual bool softPromoteHalfType() const { return false; }
+  /// Warning: this option is problem-prone and tends to introduce
+  /// float miscompilations:
+  ///
+  /// - https://github.com/llvm/llvm-project/issues/97975
+  /// - https://github.com/llvm/llvm-project/issues/97981
+  ///
+  /// It should not be overridden to `false` except for special cases.
+  ///
+  /// Return true if the half type should be promoted using soft promotion rules
+  /// where each operation is promoted to f32 individually, then converted to
+  /// fp16. The default behavior is to promote chains of operations, keeping
+  /// intermediate results in f32 precision and range.
+  virtual bool softPromoteHalfType() const { return true; }
 
   // Return true if, for soft-promoted half, the half type should be passed to
   // and returned from functions as f32. The default behavior is to pass as

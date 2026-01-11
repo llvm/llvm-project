@@ -490,8 +490,6 @@ class VectorType;
         ComplexDeinterleavingRotation Rotation, Value *InputA, Value *InputB,
         Value *Accumulator = nullptr) const override;
 
-    bool softPromoteHalfType() const override { return true; }
-
     bool useFPRegsForHalfType() const override { return true; }
 
   protected:
