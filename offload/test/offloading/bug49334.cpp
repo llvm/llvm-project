@@ -8,6 +8,7 @@
 // REQUIRES: gpu
 // UNSUPPORTED: nvidiagpu
 // UNSUPPORTED: amdgpu
+// XFAIL: intelgpu
 
 #include <cassert>
 #include <cmath>

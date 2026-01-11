@@ -32,4 +32,17 @@ void test() {
   std::saturate_cast<signed int>(49); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif // TEST_STD_VER >= 26
   // clang-format on
+
+#if TEST_STD_VER >= 20
+  {
+    int arr[]{94, 82, 49};
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::midpoint(94, 82);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::midpoint(arr, arr + 2);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::midpoint(94.0, 82.0);
+  }
+#endif
 }

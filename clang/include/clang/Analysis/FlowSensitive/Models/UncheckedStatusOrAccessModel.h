@@ -13,6 +13,7 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/CFGMatchSwitch.h"
+#include "clang/Analysis/FlowSensitive/CachedConstAccessorsLattice.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/MatchSwitch.h"
@@ -36,6 +37,7 @@ clang::ast_matchers::DeclarationMatcher statusClass();
 // Match declaration of `absl::internal_statusor::OperatorBase`.
 clang::ast_matchers::DeclarationMatcher statusOrOperatorBaseClass();
 clang::ast_matchers::TypeMatcher statusOrType();
+clang::ast_matchers::TypeMatcher statusType();
 
 // Get RecordStorageLocation for the `Status` contained in the `StatusOr`
 RecordStorageLocation &locForStatus(RecordStorageLocation &StatusOrLoc);
@@ -69,7 +71,8 @@ struct UncheckedStatusOrAccessModelOptions {};
 
 // Dataflow analysis that discovers unsafe uses of StatusOr values.
 class UncheckedStatusOrAccessModel
-    : public DataflowAnalysis<UncheckedStatusOrAccessModel, NoopLattice> {
+    : public DataflowAnalysis<UncheckedStatusOrAccessModel,
+                              CachedConstAccessorsLattice<NoopLattice>> {
 public:
   explicit UncheckedStatusOrAccessModel(ASTContext &Ctx, Environment &Env);
 

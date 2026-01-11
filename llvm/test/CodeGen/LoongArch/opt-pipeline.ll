@@ -17,9 +17,11 @@
 
 ; LAXX-LABEL: Pass Arguments:
 ; LAXX-NEXT: Target Library Information
+; LAXX-NEXT: Runtime Library Function Analysis
 ; LAXX-NEXT: Target Pass Configuration
 ; LAXX-NEXT: Machine Module Information
 ; LAXX-NEXT: Target Transform Information
+; LAXX-NEXT: Library Function Lowering Analysis
 ; LAXX-NEXT: Assumption Cache Tracker
 ; LAXX-NEXT: Type-Based Alias Analysis
 ; LAXX-NEXT: Scoped NoAlias Alias Analysis
@@ -31,8 +33,7 @@
 ; LAXX-NEXT:   ModulePass Manager
 ; LAXX-NEXT:     Pre-ISel Intrinsic Lowering
 ; LAXX-NEXT:     FunctionPass Manager
-; LAXX-NEXT:       Expand large div/rem
-; LAXX-NEXT:       Expand fp
+; LAXX-NEXT:       Expand IR instructions
 ; LAXX-NEXT:       Expand Atomic instructions
 ; LAXX-NEXT:       Module Verifier
 ; LAXX-NEXT:       Dominator Tree Construction

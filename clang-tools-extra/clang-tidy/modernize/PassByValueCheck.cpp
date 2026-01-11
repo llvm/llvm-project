@@ -65,12 +65,11 @@ AST_MATCHER_P(CXXRecordDecl, isMoveConstructibleInBoundCXXRecordDecl, StringRef,
        &Node](const ast_matchers::internal::BoundNodesMap &Nodes) -> bool {
         const auto *BoundClass =
             Nodes.getNode(this->RecordDeclID).get<CXXRecordDecl>();
-        for (const CXXConstructorDecl *Ctor : Node.ctors()) {
+        for (const CXXConstructorDecl *Ctor : Node.ctors())
           if (Ctor->isMoveConstructor() && !Ctor->isDeleted() &&
               (Ctor->getAccess() == AS_public ||
                (BoundClass && isFirstFriendOfSecond(BoundClass, &Node))))
             return false;
-        }
         return true;
       });
 }
@@ -196,11 +195,7 @@ static bool hasRValueOverload(const CXXConstructorDecl *Ctor,
     return true;
   };
 
-  for (const auto *Candidate : Record->ctors()) {
-    if (IsRValueOverload(Candidate))
-      return true;
-  }
-  return false;
+  return llvm::any_of(Record->ctors(), IsRValueOverload);
 }
 
 /// Find all references to \p ParamDecl across all of the

@@ -412,6 +412,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__aarch64__");
   }
 
+  if (getTriple().isLFI())
+    Builder.defineMacro("__LFI__");
+
   // Inline assembly supports AArch64 flag outputs.
   Builder.defineMacro("__GCC_ASM_FLAG_OUTPUTS__");
 
@@ -1212,7 +1215,7 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasD128 = false;
   }
 
-  setDataLayout();
+  resetDataLayout();
 
   if (HasNoFP) {
     FPU &= ~FPUMode;
@@ -1628,21 +1631,6 @@ AArch64leTargetInfo::AArch64leTargetInfo(const llvm::Triple &Triple,
                                          const TargetOptions &Opts)
     : AArch64TargetInfo(Triple, Opts) {}
 
-void AArch64leTargetInfo::setDataLayout() {
-  if (getTriple().isOSBinFormatMachO()) {
-    if(getTriple().isArch32Bit())
-      resetDataLayout("e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-"
-                      "i128:128-n32:64-S128-Fn32",
-                      "_");
-    else
-      resetDataLayout("e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-"
-                      "n32:64-S128-Fn32",
-                      "_");
-  } else
-    resetDataLayout("e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-"
-                    "i64:64-i128:128-n32:64-S128-Fn32");
-}
-
 void AArch64leTargetInfo::getTargetDefines(const LangOptions &Opts,
                                            MacroBuilder &Builder) const {
   Builder.defineMacro("__AARCH64EL__");
@@ -1661,12 +1649,6 @@ void AArch64beTargetInfo::getTargetDefines(const LangOptions &Opts,
   AArch64TargetInfo::getTargetDefines(Opts, Builder);
 }
 
-void AArch64beTargetInfo::setDataLayout() {
-  assert(!getTriple().isOSBinFormatMachO());
-  resetDataLayout("E-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-"
-                  "i64:64-i128:128-n32:64-S128-Fn32");
-}
-
 WindowsARM64TargetInfo::WindowsARM64TargetInfo(const llvm::Triple &Triple,
                                                const TargetOptions &Opts)
     : WindowsTargetInfo<AArch64leTargetInfo>(Triple, Opts), Triple(Triple) {
@@ -1683,15 +1665,6 @@ WindowsARM64TargetInfo::WindowsARM64TargetInfo(const llvm::Triple &Triple,
   SizeType = UnsignedLongLong;
   PtrDiffType = SignedLongLong;
   IntPtrType = SignedLongLong;
-}
-
-void WindowsARM64TargetInfo::setDataLayout() {
-  resetDataLayout(Triple.isOSBinFormatMachO()
-                      ? "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:"
-                        "128-n32:64-S128-Fn32"
-                      : "e-m:w-p270:32:32-p271:32:32-p272:64:64-p:64:64-i32:32-"
-                        "i64:64-i128:128-n32:64-S128-Fn32",
-                  Triple.isOSBinFormatMachO() ? "_" : "");
 }
 
 TargetInfo::BuiltinVaListKind

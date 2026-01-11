@@ -11,6 +11,7 @@ set(LLVM_LINK_COMPONENTS
   MC
   Object
   Passes
+  Plugins
   Support
   Target
   TargetParser

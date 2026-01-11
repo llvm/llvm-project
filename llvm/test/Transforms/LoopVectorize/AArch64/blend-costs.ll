@@ -458,6 +458,93 @@ loop.latch:
 exit:
   ret void
 }
+
+; Make sure that we don't trigger a legacy cost model mismatch when a blend only
+; has its first lane used.
+define void @only_first_lane_used(i1 %c, ptr noalias %p1, ptr noalias %p2, ptr noalias %q) #0 {
+; CHECK-LABEL: define void @only_first_lane_used(
+; CHECK-SAME: i1 [[C:%.*]], ptr noalias [[P1:%.*]], ptr noalias [[P2:%.*]], ptr noalias [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE6:.*]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], -1
+; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; CHECK:       [[PRED_STORE_IF]]:
+; CHECK-NEXT:    store i32 0, ptr [[Q]], align 4
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; CHECK:       [[PRED_STORE_CONTINUE]]:
+; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
+; CHECK:       [[PRED_STORE_IF1]]:
+; CHECK-NEXT:    store i32 0, ptr [[Q]], align 4
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
+; CHECK:       [[PRED_STORE_CONTINUE2]]:
+; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
+; CHECK:       [[PRED_STORE_IF3]]:
+; CHECK-NEXT:    store i32 0, ptr [[Q]], align 4
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
+; CHECK:       [[PRED_STORE_CONTINUE4]]:
+; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6]]
+; CHECK:       [[PRED_STORE_IF5]]:
+; CHECK-NEXT:    store i32 0, ptr [[Q]], align 4
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
+; CHECK:       [[PRED_STORE_CONTINUE6]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[P1]], i64 [[TMP4]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <4 x double> [[WIDE_LOAD]], splat (double 1.000000e+00)
+; CHECK-NEXT:    store <4 x double> [[TMP2]], ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr double, ptr [[P2]], i64 [[TMP4]]
+; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x double>, ptr [[TMP3]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd <4 x double> [[WIDE_LOAD7]], splat (double 1.000000e+00)
+; CHECK-NEXT:    store <4 x double> [[TMP6]], ptr [[TMP3]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  br i1 %c, label %bar, label %foo
+
+foo:
+  %foo.res = add i64 %iv, -1
+  br label %latch
+
+bar:
+  %bar.res = add i64 %iv, -1
+  store i32 0, ptr %q
+  br label %latch
+
+latch:
+  %phi = phi i64 [ %foo.res, %foo ], [ %bar.res, %bar ]
+
+  %gep1 = getelementptr double, ptr %p1, i64 %phi
+  %load1 = load double, ptr %gep1
+  %fadd1 = fadd double %load1, 1.0
+  store double %fadd1, ptr %gep1
+
+  %gep2 = getelementptr double, ptr %p2, i64 %phi
+  %load2 = load double, ptr %gep2
+  %fadd2 = fadd double %load2, 1.0
+  store double %fadd2, ptr %gep2
+
+  %iv.next = add i64 %iv, 1
+  %ec = icmp ult i64 %iv.next, 1024
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+attributes #0 = { "target-cpu"="neoverse-v2" }
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
@@ -465,4 +552,5 @@ exit:
 ; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
+; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
 ;.

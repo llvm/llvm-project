@@ -97,6 +97,10 @@ public:
     return getConstPtrAttr(t, 0);
   }
 
+  mlir::TypedAttr getNullDataMemberAttr(cir::DataMemberType ty) {
+    return cir::DataMemberAttr::get(ty);
+  }
+
   mlir::TypedAttr getZeroInitAttr(mlir::Type ty) {
     if (mlir::isa<cir::IntType>(ty))
       return cir::IntAttr::get(ty, 0);
@@ -112,6 +116,8 @@ public:
       return getConstNullPtrAttr(ptrTy);
     if (auto recordTy = mlir::dyn_cast<cir::RecordType>(ty))
       return cir::ZeroAttr::get(recordTy);
+    if (auto dataMemberTy = mlir::dyn_cast<cir::DataMemberType>(ty))
+      return getNullDataMemberAttr(dataMemberTy);
     if (mlir::isa<cir::BoolType>(ty)) {
       return getFalseAttr();
     }
@@ -205,7 +211,8 @@ public:
                          bool isVolatile = false, uint64_t alignment = 0) {
     mlir::IntegerAttr alignmentAttr = getAlignmentAttr(alignment);
     return cir::LoadOp::create(*this, loc, ptr, /*isDeref=*/false, isVolatile,
-                               alignmentAttr, cir::MemOrderAttr{});
+                               alignmentAttr, cir::SyncScopeKindAttr{},
+                               cir::MemOrderAttr{});
   }
 
   mlir::Value createAlignedLoad(mlir::Location loc, mlir::Value ptr,
@@ -308,14 +315,16 @@ public:
     return cir::GlobalViewAttr::get(type, symbol, indices);
   }
 
-  mlir::Value createGetGlobal(mlir::Location loc, cir::GlobalOp global) {
+  mlir::Value createGetGlobal(mlir::Location loc, cir::GlobalOp global,
+                              bool threadLocal = false) {
     assert(!cir::MissingFeatures::addressSpace());
-    return cir::GetGlobalOp::create(
-        *this, loc, getPointerTo(global.getSymType()), global.getSymName());
+    return cir::GetGlobalOp::create(*this, loc,
+                                    getPointerTo(global.getSymType()),
+                                    global.getSymNameAttr(), threadLocal);
   }
 
-  mlir::Value createGetGlobal(cir::GlobalOp global) {
-    return createGetGlobal(global.getLoc(), global);
+  mlir::Value createGetGlobal(cir::GlobalOp global, bool threadLocal = false) {
+    return createGetGlobal(global.getLoc(), global, threadLocal);
   }
 
   /// Create a copy with inferred length.
@@ -327,8 +336,23 @@ public:
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, mlir::Value dst,
                            bool isVolatile = false,
                            mlir::IntegerAttr align = {},
+                           cir::SyncScopeKindAttr scope = {},
                            cir::MemOrderAttr order = {}) {
-    return cir::StoreOp::create(*this, loc, val, dst, isVolatile, align, order);
+    return cir::StoreOp::create(*this, loc, val, dst, isVolatile, align, scope,
+                                order);
+  }
+
+  /// Emit a load from an boolean flag variable.
+  cir::LoadOp createFlagLoad(mlir::Location loc, mlir::Value addr) {
+    mlir::Type boolTy = getBoolTy();
+    if (boolTy != mlir::cast<cir::PointerType>(addr.getType()).getPointee())
+      addr = createPtrBitcast(addr, boolTy);
+    return createLoad(loc, addr, /*isVolatile=*/false, /*alignment=*/1);
+  }
+
+  cir::StoreOp createFlagStore(mlir::Location loc, bool val, mlir::Value dst) {
+    mlir::Value flag = getBool(val, loc);
+    return CIRBaseBuilderTy::createStore(loc, flag, dst);
   }
 
   [[nodiscard]] cir::GlobalOp createGlobal(mlir::ModuleOp mlirModule,
@@ -353,7 +377,7 @@ public:
     auto addr = createAlloca(loc, getPointerTo(type), type, {}, alignmentAttr);
     return cir::LoadOp::create(*this, loc, addr, /*isDeref=*/false,
                                /*isVolatile=*/false, alignmentAttr,
-                               /*mem_order=*/{});
+                               /*sync_scope=*/{}, /*mem_order=*/{});
   }
 
   cir::PtrStrideOp createPtrStride(mlir::Location loc, mlir::Value base,
@@ -570,7 +594,7 @@ public:
 
   cir::CmpOp createCompare(mlir::Location loc, cir::CmpOpKind kind,
                            mlir::Value lhs, mlir::Value rhs) {
-    return cir::CmpOp::create(*this, loc, getBoolTy(), kind, lhs, rhs);
+    return cir::CmpOp::create(*this, loc, kind, lhs, rhs);
   }
 
   cir::VecCmpOp createVecCompare(mlir::Location loc, cir::CmpOpKind kind,
@@ -579,7 +603,7 @@ public:
     IntType integralTy =
         getSIntNTy(getCIRIntOrFloatBitWidth(vecCast.getElementType()));
     VectorType integralVecTy =
-        VectorType::get(context, integralTy, vecCast.getSize());
+        cir::VectorType::get(integralTy, vecCast.getSize());
     return cir::VecCmpOp::create(*this, loc, integralVecTy, kind, lhs, rhs);
   }
 

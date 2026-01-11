@@ -392,3 +392,16 @@ void plainComplex(void) {
   _Complex cd; // all-warning {{_Complex double}}
   cd = *(_Complex *)&(struct { double r, i; }){0.0, 0.0}; // all-warning {{_Complex double}}
 }
+
+/// This test results in an ImplicitValueInitExpr with DiscardResult set.
+struct M{
+  char c;
+};
+typedef struct S64 {
+  struct M m;
+  char a[64];
+} I64;
+
+_Static_assert((((I64){}, 1)), ""); // all-warning {{left operand of comma operator has no effect}} \
+                                    // pedantic-warning {{use of an empty initializer is a C23 extension}} \
+                                    // pedantic-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}

@@ -8,28 +8,23 @@ define i16 @test() {
 ; X86-NEXT:    [[A:%.*]] = getelementptr [1000 x i64], ptr null, i64 0, i64 5
 ; X86-NEXT:    [[A1:%.*]] = getelementptr [1000 x i64], ptr null, i64 0, i64 6
 ; X86-NEXT:    [[A2:%.*]] = getelementptr [1000 x i64], ptr null, i64 0, i64 7
-; X86-NEXT:    [[A3:%.*]] = getelementptr [1000 x i64], ptr null, i64 0, i64 8
 ; X86-NEXT:    br label [[WHILE:%.*]]
 ; X86:       while:
 ; X86-NEXT:    [[PH:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[OP_RDX1:%.*]], [[WHILE]] ]
 ; X86-NEXT:    [[TMP0:%.*]] = load i64, ptr null, align 8
+; X86-NEXT:    [[TMP2:%.*]] = load i64, ptr [[A1]], align 16
 ; X86-NEXT:    [[TMP1:%.*]] = load i64, ptr null, align 8
-; X86-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr [[A2]], align 8
-; X86-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr [[A]], align 8
-; X86-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> poison, <2 x i32> <i32 1, i32 0>
-; X86-NEXT:    [[TMP5:%.*]] = load <2 x i64>, ptr [[A1]], align 16
-; X86-NEXT:    [[TMP6:%.*]] = load i64, ptr [[A3]], align 16
-; X86-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i64> [[TMP2]], <2 x i64> poison, <8 x i32> <i32 poison, i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; X86-NEXT:    [[TMP8:%.*]] = insertelement <8 x i64> [[TMP7]], i64 [[TMP1]], i32 0
-; X86-NEXT:    [[TMP9:%.*]] = insertelement <8 x i64> [[TMP8]], i64 [[TMP0]], i32 3
-; X86-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i64> [[TMP4]], <2 x i64> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; X86-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i64> [[TMP9]], <8 x i64> [[TMP10]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 6, i32 7>
+; X86-NEXT:    [[TMP5:%.*]] = load <2 x i64>, ptr [[A2]], align 8
+; X86-NEXT:    [[TMP4:%.*]] = load <4 x i64>, ptr [[A]], align 8
+; X86-NEXT:    [[TMP9:%.*]] = insertelement <8 x i64> poison, i64 [[TMP0]], i32 2
+; X86-NEXT:    [[TMP6:%.*]] = insertelement <8 x i64> [[TMP9]], i64 [[TMP2]], i32 3
+; X86-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; X86-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i64> [[TMP6]], <8 x i64> [[TMP7]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; X86-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; X86-NEXT:    [[TMP13:%.*]] = shufflevector <8 x i64> [[TMP11]], <8 x i64> [[TMP12]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
-; X86-NEXT:    [[TMP14:%.*]] = shufflevector <8 x i64> [[TMP13]], <8 x i64> zeroinitializer, <8 x i32> <i32 0, i32 8, i32 8, i32 3, i32 4, i32 5, i32 6, i32 8>
+; X86-NEXT:    [[TMP10:%.*]] = shufflevector <8 x i64> [[TMP8]], <8 x i64> [[TMP12]], <8 x i32> <i32 8, i32 9, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; X86-NEXT:    [[TMP14:%.*]] = shufflevector <8 x i64> [[TMP10]], <8 x i64> zeroinitializer, <8 x i32> <i32 8, i32 8, i32 2, i32 3, i32 4, i32 5, i32 8, i32 8>
 ; X86-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vector.reduce.xor.v8i64(<8 x i64> [[TMP14]])
-; X86-NEXT:    [[OP_RDX:%.*]] = xor i64 [[TMP15]], [[TMP6]]
-; X86-NEXT:    [[OP_RDX1]] = xor i64 [[OP_RDX]], [[TMP6]]
+; X86-NEXT:    [[OP_RDX1]] = xor i64 [[TMP1]], [[TMP15]]
 ; X86-NEXT:    br label [[WHILE]]
 ;
 ; AARCH64-LABEL: @test(

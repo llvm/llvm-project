@@ -56,7 +56,7 @@ constexpr void test_one() {
   i                            = m.begin(); // move-assignment
   typename M::const_iterator k = i;         // converting constructor
   assert(i == k);                           // comparison
-  for (int j = 1; j <= 4; ++j, ++i) {       // pre-increment
+  for (int j = 1; j <= 4; ++j, (void)++i) { // pre-increment
     assert(*i == j);                        // operator*
   }
   assert(i == m.end());

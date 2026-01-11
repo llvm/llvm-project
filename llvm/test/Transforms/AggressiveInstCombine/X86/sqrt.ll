@@ -54,7 +54,7 @@ define float @sqrt_call_nnan_f32_nobuiltin(float %x) {
   ret float %sqrt
 }
 
-define float @sqrt_call_f32_squared(float %x) {
+define float @sqrt_call_f32_squared(float noundef %x) {
 ; CHECK-LABEL: @sqrt_call_f32_squared(
 ; CHECK-NEXT:    [[X2:%.*]] = fmul float [[X:%.*]], [[X]]
 ; CHECK-NEXT:    [[SQRT1:%.*]] = call float @llvm.sqrt.f32(float [[X2]])

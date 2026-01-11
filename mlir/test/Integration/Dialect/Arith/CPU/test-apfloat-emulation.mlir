@@ -1,4 +1,4 @@
-// REQUIRES: system-linux
+// REQUIRES: system-linux || system-darwin
 // TODO: Run only on Linux until we figure out how to build
 // mlir_apfloat_wrappers in a platform-independent way.
 
@@ -42,6 +42,18 @@ func.func @entry() {
   // CHECK-NEXT: 2.25
   %cvt = arith.truncf %b2 : f32 to f8E4M3FN
   vector.print %cvt : f8E4M3FN
+
+  // CHECK-NEXT: -2.25
+  %negated = arith.negf %cvt : f8E4M3FN
+  vector.print %negated : f8E4M3FN
+
+  // CHECK-NEXT: -2.25
+  %min = arith.minimumf %cvt, %negated : f8E4M3FN
+  vector.print %min : f8E4M3FN
+
+  // CHECK-NEXT: 1
+  %cmp1 = arith.cmpf "olt", %cvt, %c1 : f8E4M3FN
+  vector.print %cmp1 : i1
 
   // CHECK-NEXT: 1
   // Bit pattern: 01, interpreted as signed integer: 1

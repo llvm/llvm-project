@@ -37,7 +37,7 @@ public:
   virtual RelType getDynRel(RelType type) const { return 0; }
   virtual void writeGotPltHeader(uint8_t *buf) const {}
   virtual void writeGotHeader(uint8_t *buf) const {}
-  virtual void writeGotPlt(uint8_t *buf, const Symbol &s) const {};
+  virtual void writeGotPlt(uint8_t *buf, const Symbol &s) const {}
   virtual void writeIgotPlt(uint8_t *buf, const Symbol &s) const {}
   virtual int64_t getImplicitAddend(const uint8_t *buf, RelType type) const;
   virtual int getTlsGdRelaxSkip(RelType type) const { return 1; }

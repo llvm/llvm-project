@@ -219,11 +219,7 @@ struct pair
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
   pair(piecewise_construct_t __pc, tuple<_Args1...> __first_args, tuple<_Args2...> __second_args) noexcept(
       is_nothrow_constructible<first_type, _Args1...>::value && is_nothrow_constructible<second_type, _Args2...>::value)
-      : pair(__pc,
-             __first_args,
-             __second_args,
-             __make_index_sequence<sizeof...(_Args1)>(),
-             __make_index_sequence<sizeof...(_Args2)>()) {}
+      : pair(__pc, __first_args, __second_args, __index_sequence_for<_Args1...>(), __index_sequence_for<_Args2...>()) {}
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair&
   operator=(__conditional_t<is_copy_assignable<first_type>::value && is_copy_assignable<second_type>::value,
@@ -543,8 +539,8 @@ swap(const pair<_T1, _T2>& __x, const pair<_T1, _T2>& __y) noexcept(noexcept(__x
 #endif
 
 template <class _T1, class _T2>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<__unwrap_ref_decay_t<_T1>, __unwrap_ref_decay_t<_T2> >
-make_pair(_T1&& __t1, _T2&& __t2) {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
+pair<__unwrap_ref_decay_t<_T1>, __unwrap_ref_decay_t<_T2> > make_pair(_T1&& __t1, _T2&& __t2) {
   return pair<__unwrap_ref_decay_t<_T1>, __unwrap_ref_decay_t<_T2> >(std::forward<_T1>(__t1), std::forward<_T2>(__t2));
 }
 
@@ -616,67 +612,71 @@ struct __get_pair<1> {
 };
 
 template <size_t _Ip, class _T1, class _T2>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 typename tuple_element<_Ip, pair<_T1, _T2> >::type&
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
+typename tuple_element<_Ip, pair<_T1, _T2> >::type&
 get(pair<_T1, _T2>& __p) _NOEXCEPT {
   return __get_pair<_Ip>::get(__p);
 }
 
 template <size_t _Ip, class _T1, class _T2>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const typename tuple_element<_Ip, pair<_T1, _T2> >::type&
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI
+_LIBCPP_CONSTEXPR_SINCE_CXX14 const typename tuple_element<_Ip, pair<_T1, _T2> >::type&
 get(const pair<_T1, _T2>& __p) _NOEXCEPT {
   return __get_pair<_Ip>::get(__p);
 }
 
 template <size_t _Ip, class _T1, class _T2>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 typename tuple_element<_Ip, pair<_T1, _T2> >::type&&
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
+typename tuple_element<_Ip, pair<_T1, _T2> >::type&&
 get(pair<_T1, _T2>&& __p) _NOEXCEPT {
   return __get_pair<_Ip>::get(std::move(__p));
 }
 
 template <size_t _Ip, class _T1, class _T2>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const typename tuple_element<_Ip, pair<_T1, _T2> >::type&&
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI
+_LIBCPP_CONSTEXPR_SINCE_CXX14 const typename tuple_element<_Ip, pair<_T1, _T2> >::type&&
 get(const pair<_T1, _T2>&& __p) _NOEXCEPT {
   return __get_pair<_Ip>::get(std::move(__p));
 }
 
 #if _LIBCPP_STD_VER >= 14
 template <class _T1, class _T2>
-inline _LIBCPP_HIDE_FROM_ABI constexpr _T1& get(pair<_T1, _T2>& __p) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI constexpr _T1& get(pair<_T1, _T2>& __p) _NOEXCEPT {
   return __p.first;
 }
 
 template <class _T1, class _T2>
-inline _LIBCPP_HIDE_FROM_ABI constexpr _T1 const& get(pair<_T1, _T2> const& __p) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI constexpr _T1 const& get(pair<_T1, _T2> const& __p) _NOEXCEPT {
   return __p.first;
 }
 
 template <class _T1, class _T2>
-inline _LIBCPP_HIDE_FROM_ABI constexpr _T1&& get(pair<_T1, _T2>&& __p) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI constexpr _T1&& get(pair<_T1, _T2>&& __p) _NOEXCEPT {
   return std::forward<_T1&&>(__p.first);
 }
 
 template <class _T1, class _T2>
-inline _LIBCPP_HIDE_FROM_ABI constexpr _T1 const&& get(pair<_T1, _T2> const&& __p) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI constexpr _T1 const&& get(pair<_T1, _T2> const&& __p) _NOEXCEPT {
   return std::forward<_T1 const&&>(__p.first);
 }
 
 template <class _T2, class _T1>
-inline _LIBCPP_HIDE_FROM_ABI constexpr _T2& get(pair<_T1, _T2>& __p) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI constexpr _T2& get(pair<_T1, _T2>& __p) _NOEXCEPT {
   return __p.second;
 }
 
 template <class _T2, class _T1>
-inline _LIBCPP_HIDE_FROM_ABI constexpr _T2 const& get(pair<_T1, _T2> const& __p) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI constexpr _T2 const& get(pair<_T1, _T2> const& __p) _NOEXCEPT {
   return __p.second;
 }
 
 template <class _T2, class _T1>
-inline _LIBCPP_HIDE_FROM_ABI constexpr _T2&& get(pair<_T1, _T2>&& __p) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI constexpr _T2&& get(pair<_T1, _T2>&& __p) _NOEXCEPT {
   return std::forward<_T2&&>(__p.second);
 }
 
 template <class _T2, class _T1>
-inline _LIBCPP_HIDE_FROM_ABI constexpr _T2 const&& get(pair<_T1, _T2> const&& __p) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI constexpr _T2 const&& get(pair<_T1, _T2> const&& __p) _NOEXCEPT {
   return std::forward<_T2 const&&>(__p.second);
 }
 

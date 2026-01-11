@@ -1353,3 +1353,48 @@ define <32 x double> @vpmerge_vf_v32f64(double %a, <32 x double> %vb, <32 x i1> 
   %v = call <32 x double> @llvm.vp.merge.v32f64(<32 x i1> %m, <32 x double> %va, <32 x double> %vb, i32 %evl)
   ret <32 x double> %v
 }
+
+define <4 x i32> @splat_v4i32(i32 %x, i32 zeroext %evl) {
+; CHECK-LABEL: splat_v4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    ret
+  %head = insertelement <4 x i32> poison, i32 %x, i32 0
+  %splat = shufflevector <4 x i32> %head, <4 x i32> poison, <4 x i32> zeroinitializer
+  %v = call <4 x i32> @llvm.vp.merge(<4 x i1> splat (i1 true), <4 x i32> %splat, <4 x i32> poison, i32 %evl)
+  ret <4 x i32> %v
+}
+
+define <4 x float> @splat_v4f32(float %x, i32 zeroext %evl) {
+; CHECK-LABEL: splat_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vfmv.v.f v8, fa0
+; CHECK-NEXT:    ret
+  %head = insertelement <4 x float> poison, float %x, i32 0
+  %splat = shufflevector <4 x float> %head, <4 x float> poison, <4 x i32> zeroinitializer
+  %v = call <4 x float> @llvm.vp.merge(<4 x i1> splat (i1 true), <4 x float> %splat, <4 x float> poison, i32 %evl)
+  ret <4 x float> %v
+}
+
+define <4 x i32> @splat_v4i32_const(i32 zeroext %evl) {
+; CHECK-LABEL: splat_v4i32_const:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 1
+; CHECK-NEXT:    ret
+  %v = call <4 x i32> @llvm.vp.merge(<4 x i1> splat (i1 true), <4 x i32> splat (i32 1), <4 x i32> poison, i32 %evl)
+  ret <4 x i32> %v
+}
+
+define <4 x float> @splat_v4f32_const(i32 zeroext %evl) {
+; CHECK-LABEL: splat_v4f32_const:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 270976
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.v.x v8, a1
+; CHECK-NEXT:    ret
+  %v = call <4 x float> @llvm.vp.merge(<4 x i1> splat (i1 true), <4 x float> splat (float 42.0), <4 x float> poison, i32 %evl)
+  ret <4 x float> %v
+}
