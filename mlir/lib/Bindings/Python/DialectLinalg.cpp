@@ -35,7 +35,7 @@ InferContractionDimensions(PyOperationBase &op) {
       mlirAttributeIsNull(dims.n) && mlirAttributeIsNull(dims.k)) {
     return std::nullopt;
   }
-  return PyLinalgContractionDimensions{dims.batch, dims.m, dims.k, dims.n};
+  return PyLinalgContractionDimensions{dims.batch, dims.m, dims.n, dims.k};
 }
 
 static std::optional<PyLinalgConvolutionDimensions>
@@ -114,8 +114,8 @@ static void populateDialectLinalgSubmodule(nb::module_ m) {
             mlirAttributeIsNull(dims.n) && mlirAttributeIsNull(dims.k)) {
           return std::nullopt;
         }
-        return PyLinalgContractionDimensions{dims.batch, dims.m, dims.k,
-                                             dims.n};
+        return PyLinalgContractionDimensions{dims.batch, dims.m, dims.n,
+                                             dims.k};
       },
       "Infers contraction dimensions (batch/m/n/k) from a list of affine "
       "maps.",
@@ -165,7 +165,7 @@ static void populateDialectLinalgSubmodule(nb::module_ m) {
 
   m.def(
       "get_indexing_maps",
-      [](PyOperationBase &op) -> std::optional<PyAttribute> {
+      [](PyOperationBase &op) -> std::optional<PyArrayAttribute> {
         MlirAttribute attr =
             mlirLinalgGetIndexingMapsAttribute(op.getOperation());
         if (mlirAttributeIsNull(attr))
@@ -182,5 +182,6 @@ static void populateDialectLinalgSubmodule(nb::module_ m) {
 NB_MODULE(_mlirDialectsLinalg, m) {
   m.doc() = "MLIR Linalg dialect.";
 
-  mlir::python::mlir::linalg::populateDialectLinalgSubmodule(m);
+  mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::linalg::
+      populateDialectLinalgSubmodule(m);
 }
