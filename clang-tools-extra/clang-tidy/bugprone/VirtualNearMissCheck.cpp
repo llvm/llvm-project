@@ -193,7 +193,7 @@ bool VirtualNearMissCheck::isPossibleToBeOverridden(
 bool VirtualNearMissCheck::isOverriddenByDerivedClass(
     const CXXMethodDecl *BaseMD, const CXXRecordDecl *DerivedRD) {
   const std::pair Key(BaseMD, DerivedRD);
-  auto Iter = OverriddenMap.find(Key);
+  const auto Iter = OverriddenMap.find(Key);
   if (Iter != OverriddenMap.end())
     return Iter->second;
 
@@ -244,12 +244,12 @@ void VirtualNearMissCheck::check(const MatchFinder::MatchResult &Result) {
         if (EditDistance > 0 && EditDistance <= EditDistanceThreshold) {
           if (checkOverrideWithoutName(Context, BaseMD, DerivedMD)) {
             // A "virtual near miss" is found.
-            auto Range = CharSourceRange::getTokenRange(
+            const auto Range = CharSourceRange::getTokenRange(
                 SourceRange(DerivedMD->getLocation()));
 
             const bool ApplyFix = !BaseMD->isTemplateInstantiation() &&
                                   !DerivedMD->isTemplateInstantiation();
-            auto Diag =
+            const auto Diag =
                 diag(DerivedMD->getBeginLoc(),
                      "method '%0' has a similar name and the same signature as "
                      "virtual method '%1'; did you mean to override it?")

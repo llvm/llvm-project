@@ -286,7 +286,7 @@ void MacroToEnumCallbacks::checkName(const Token &MacroNameTok) {
 
 void MacroToEnumCallbacks::rememberExpressionName(const Token &Tok) {
   const std::string Id = getTokenName(Tok).str();
-  auto Pos = llvm::lower_bound(ExpressionNames, Id);
+  const auto Pos = llvm::lower_bound(ExpressionNames, Id);
   if (Pos == ExpressionNames.end() || *Pos != Id)
     ExpressionNames.insert(Pos, Id);
 }
@@ -366,13 +366,14 @@ void MacroToEnumCallbacks::MacroUndefined(const Token &MacroNameTok,
                                           const MacroDirective *Undef) {
   rememberExpressionName(MacroNameTok);
 
-  auto MatchesToken = [&MacroNameTok](const EnumMacro &Macro) {
+  const auto MatchesToken = [&MacroNameTok](const EnumMacro &Macro) {
     return getTokenName(Macro.Name) == getTokenName(MacroNameTok);
   };
 
-  auto *It = llvm::find_if(Enums, [MatchesToken](const MacroList &MacroList) {
-    return llvm::any_of(MacroList, MatchesToken);
-  });
+  const auto *It =
+      llvm::find_if(Enums, [MatchesToken](const MacroList &MacroList) {
+        return llvm::any_of(MacroList, MatchesToken);
+      });
   if (It != Enums.end())
     Enums.erase(It);
 
@@ -517,7 +518,7 @@ void MacroToEnumCheck::registerPPCallbacks(const SourceManager &SM,
 
 void MacroToEnumCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
   using namespace ast_matchers;
-  auto TopLevelDecl = hasParent(translationUnitDecl());
+  const auto TopLevelDecl = hasParent(translationUnitDecl());
   Finder->addMatcher(decl(TopLevelDecl).bind("top"), this);
 }
 

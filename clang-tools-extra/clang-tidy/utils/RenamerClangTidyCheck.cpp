@@ -160,7 +160,7 @@ static NameLookup findDeclInBases(const CXXRecordDecl &Parent,
     }
     if (!Record)
       continue;
-    if (auto Search =
+    if (const auto Search =
             findDeclInBases(*Record, DeclName, AggressiveTemplateLookup)) {
       if (*Search) {
         if (Found)
@@ -496,7 +496,7 @@ void RenamerClangTidyCheck::addUsage(const NamedDecl *Decl,
   if (!Failure.shouldFix())
     return;
   const IdentifierTable &Idents = FailureDecl->getASTContext().Idents;
-  auto CheckNewIdentifier = Idents.find(Failure.Info.Fixup);
+  const auto CheckNewIdentifier = Idents.find(Failure.Info.Fixup);
   if (CheckNewIdentifier != Idents.end()) {
     const IdentifierInfo *Ident = CheckNewIdentifier->second;
     if (Ident->isKeyword(getLangOpts()))
@@ -546,7 +546,7 @@ void RenamerClangTidyCheck::expandMacro(const Token &MacroNameTok,
   const StringRef Name = MacroNameTok.getIdentifierInfo()->getName();
   const NamingCheckId ID(MI->getDefinitionLoc(), Name);
 
-  auto Failure = NamingCheckFailures.find(ID);
+  const auto Failure = NamingCheckFailures.find(ID);
   if (Failure == NamingCheckFailures.end())
     return;
 

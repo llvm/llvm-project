@@ -56,7 +56,7 @@ void UnusedUsingDeclsCheck::registerMatchers(MatchFinder *Finder) {
   if (utils::isFileExtension(getCurrentMainFile(), HeaderFileExtensions))
     return;
   Finder->addMatcher(usingDecl(isExpansionInMainFile()).bind("using"), this);
-  auto DeclMatcher = hasDeclaration(namedDecl().bind("used"));
+  const auto DeclMatcher = hasDeclaration(namedDecl().bind("used"));
   Finder->addMatcher(loc(templateSpecializationType(DeclMatcher)), this);
   Finder->addMatcher(loc(deducedTemplateSpecializationType(
                          refsToTemplatedDecl(namedDecl().bind("used")))),
@@ -75,7 +75,8 @@ void UnusedUsingDeclsCheck::registerMatchers(MatchFinder *Finder) {
   // Cases where we can identify the UsingShadowDecl directly, rather than
   // just its target.
   // FIXME: cover more cases in this way, as the AST supports it.
-  auto ThroughShadowMatcher = throughUsingDecl(namedDecl().bind("usedShadow"));
+  const auto ThroughShadowMatcher =
+      throughUsingDecl(namedDecl().bind("usedShadow"));
   Finder->addMatcher(declRefExpr(ThroughShadowMatcher), this);
   Finder->addMatcher(loc(usingType(ThroughShadowMatcher)), this);
 }
@@ -118,7 +119,7 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   // Mark a corresponding using declaration as used.
-  auto RemoveNamedDecl = [&](const NamedDecl *Used) {
+  const auto RemoveNamedDecl = [&](const NamedDecl *Used) {
     removeFromFoundDecls(Used);
     // Also remove variants of Used.
     if (const auto *FD = dyn_cast<FunctionDecl>(Used)) {
@@ -156,7 +157,7 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
     }
 
     if (Used->getKind() == TemplateArgument::Type) {
-      if (auto *RD = Used->getAsType()->getAsCXXRecordDecl())
+      if (const auto *RD = Used->getAsType()->getAsCXXRecordDecl())
         removeFromFoundDecls(RD);
       return;
     }

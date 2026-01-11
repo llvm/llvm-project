@@ -77,13 +77,13 @@ std::optional<TraversalKind> EmptyCatchCheck::getCheckTraversalKind() const {
 }
 
 void EmptyCatchCheck::registerMatchers(MatchFinder *Finder) {
-  auto AllowedNamedExceptionDecl = namedDecl(
+  const auto AllowedNamedExceptionDecl = namedDecl(
       matchers::matchesAnyListedRegexName(AllowEmptyCatchForExceptions));
   auto AllowedNamedExceptionTypes =
       qualType(anyOf(hasDeclaration(AllowedNamedExceptionDecl),
                      references(AllowedNamedExceptionDecl),
                      pointsTo(AllowedNamedExceptionDecl)));
-  auto IgnoredExceptionType =
+  const auto IgnoredExceptionType =
       qualType(anyOf(AllowedNamedExceptionTypes,
                      hasCanonicalType(AllowedNamedExceptionTypes)));
 

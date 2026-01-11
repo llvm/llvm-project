@@ -82,7 +82,7 @@ void UseNodiscardCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UseNodiscardCheck::registerMatchers(MatchFinder *Finder) {
-  auto FunctionObj =
+  const auto FunctionObj =
       cxxRecordDecl(hasAnyName("::std::function", "::boost::function"));
 
   // Find all non-void const methods which have not already been marked to
@@ -118,8 +118,8 @@ void UseNodiscardCheck::check(const MatchFinder::MatchResult &Result) {
 
   ASTContext &Context = *Result.Context;
 
-  auto Diag = diag(RetLoc, "function %0 should be marked %1")
-              << MatchedDecl << NoDiscardMacro;
+  const auto Diag = diag(RetLoc, "function %0 should be marked %1")
+                    << MatchedDecl << NoDiscardMacro;
 
   // Check for the existence of the keyword being used as the ``[[nodiscard]]``.
   if (!doesNoDiscardMacroExist(Context, NoDiscardMacro))

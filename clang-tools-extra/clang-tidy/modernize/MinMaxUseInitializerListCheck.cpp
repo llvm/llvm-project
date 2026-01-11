@@ -220,9 +220,9 @@ void MinMaxUseInitializerListCheck::storeOptions(
 }
 
 void MinMaxUseInitializerListCheck::registerMatchers(MatchFinder *Finder) {
-  auto CreateMatcher = [](const StringRef FunctionName) {
-    auto FuncDecl = functionDecl(hasName(FunctionName));
-    auto Expression = callExpr(callee(FuncDecl));
+  const auto CreateMatcher = [](const StringRef FunctionName) {
+    const auto FuncDecl = functionDecl(hasName(FunctionName));
+    const auto Expression = callExpr(callee(FuncDecl));
 
     return callExpr(callee(FuncDecl),
                     anyOf(hasArgument(0, Expression),

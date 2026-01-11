@@ -65,7 +65,7 @@ findLocksInCompoundStmt(const CompoundStmt *Block,
   llvm::SmallVector<llvm::SmallVector<const VarDecl *>> LockGuardGroups;
   llvm::SmallVector<const VarDecl *> CurrentLockGuardGroup;
 
-  auto AddAndClearCurrentGroup = [&]() {
+  const auto AddAndClearCurrentGroup = [&]() {
     if (!CurrentLockGuardGroup.empty()) {
       LockGuardGroups.push_back(CurrentLockGuardGroup);
       CurrentLockGuardGroup.clear();
@@ -208,7 +208,7 @@ void UseScopedLockCheck::check(const MatchFinder::MatchResult &Result) {
 
 void UseScopedLockCheck::diagOnSingleLock(
     const VarDecl *LockGuard, const MatchFinder::MatchResult &Result) {
-  auto Diag = diag(LockGuard->getBeginLoc(), UseScopedLockMessage);
+  const auto Diag = diag(LockGuard->getBeginLoc(), UseScopedLockMessage);
 
   const SourceRange LockGuardTypeRange =
       getLockGuardRange(LockGuard->getTypeSourceInfo());
@@ -278,7 +278,7 @@ void UseScopedLockCheck::diagOnSourceInfo(
   const TypeLoc TL = LockGuardSourceInfo->getTypeLoc();
 
   if (const auto TTL = TL.getAs<TemplateSpecializationTypeLoc>()) {
-    auto Diag = diag(TTL.getBeginLoc(), UseScopedLockMessage);
+    const auto Diag = diag(TTL.getBeginLoc(), UseScopedLockMessage);
 
     const SourceRange LockGuardRange =
         getLockGuardNameRange(LockGuardSourceInfo);

@@ -51,12 +51,12 @@ OptionalValueConversionCheck::getCheckTraversalKind() const {
 }
 
 void OptionalValueConversionCheck::registerMatchers(MatchFinder *Finder) {
-  auto BindOptionalType = qualType(hasCleanType(
+  const auto BindOptionalType = qualType(hasCleanType(
       qualType(hasDeclaration(namedDecl(
                    matchers::matchesAnyListedRegexName(OptionalTypes))))
           .bind("optional-type")));
 
-  auto EqualsBoundOptionalType =
+  const auto EqualsBoundOptionalType =
       qualType(hasCleanType(equalsBoundNode("optional-type")));
 
   auto OptionalDerefMatcherImpl = callExpr(
@@ -75,7 +75,7 @@ void OptionalValueConversionCheck::registerMatchers(MatchFinder *Finder) {
   auto StdMoveCallMatcher =
       callExpr(argumentCountIs(1), callee(functionDecl(hasName("::std::move"))),
                hasArgument(0, ignoringImpCasts(OptionalDerefMatcherImpl)));
-  auto OptionalDerefMatcher =
+  const auto OptionalDerefMatcher =
       ignoringImpCasts(anyOf(OptionalDerefMatcherImpl, StdMoveCallMatcher));
 
   Finder->addMatcher(
@@ -145,7 +145,7 @@ void OptionalValueConversionCheck::check(
         utils::lexer::getPreviousToken(CallExpr->getExprLoc(),
                                        *Result.SourceManager, getLangOpts())
             .getLocation();
-    auto Diag =
+    const auto Diag =
         diag(CallExpr->getExprLoc(),
              "remove call to %0 to silence this warning", DiagnosticIDs::Note);
     Diag << CallExpr->getMethodDecl()

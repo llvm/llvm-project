@@ -64,7 +64,7 @@ void ProTypeCstyleCastCheck::check(const MatchFinder::MatchResult &Result) {
               MatchedCast->getRParenLoc().getLocWithOffset(-1)),
           *Result.SourceManager, getLangOpts());
 
-      auto DiagBuilder = diag(
+      const auto DiagBuilder = diag(
           MatchedCast->getBeginLoc(),
           "do not use C-style cast to downcast from a base to a derived class; "
           "use dynamic_cast instead");
@@ -79,7 +79,7 @@ void ProTypeCstyleCastCheck::check(const MatchFinder::MatchResult &Result) {
                                        *Result.SourceManager, getLangOpts()),
             ")");
       }
-      auto ParenRange = CharSourceRange::getTokenRange(
+      const auto ParenRange = CharSourceRange::getTokenRange(
           MatchedCast->getLParenLoc(), MatchedCast->getRParenLoc());
       DiagBuilder << FixItHint::CreateReplacement(ParenRange, CastText);
     } else {

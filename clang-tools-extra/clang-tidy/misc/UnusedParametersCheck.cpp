@@ -144,7 +144,8 @@ void UnusedParametersCheck::warnOnUnusedParameter(
   // Don't bother to diagnose invalid parameters as being unused.
   if (Param->isInvalidDecl())
     return;
-  auto MyDiag = diag(Param->getLocation(), "parameter %0 is unused") << Param;
+  const auto MyDiag = diag(Param->getLocation(), "parameter %0 is unused")
+                      << Param;
 
   if (!Indexer)
     Indexer = std::make_unique<IndexerVisitor>(*Result.Context);

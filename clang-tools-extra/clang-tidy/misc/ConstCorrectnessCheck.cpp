@@ -175,7 +175,7 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
       VC = VariableCategory::Pointer;
   }
 
-  auto CheckValue = [&]() {
+  const auto CheckValue = [&]() {
     // The scope is only registered if the analysis shall be run.
     registerScope(LocalScope, Result.Context);
 
@@ -183,9 +183,9 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
     if (ScopesCache[LocalScope]->isMutated(Variable))
       return;
 
-    auto Diag = diag(Variable->getBeginLoc(),
-                     "variable %0 of type %1 can be declared 'const'")
-                << Variable << VT;
+    const auto Diag = diag(Variable->getBeginLoc(),
+                           "variable %0 of type %1 can be declared 'const'")
+                      << Variable << VT;
     if (IsNormalVariableInTemplate)
       TemplateDiagnosticsCache.insert(Variable->getBeginLoc());
     if (!CanBeFixIt)
@@ -215,12 +215,12 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
     }
   };
 
-  auto CheckPointee = [&]() {
+  const auto CheckPointee = [&]() {
     assert(VC == VariableCategory::Pointer);
     registerScope(LocalScope, Result.Context);
     if (ScopesCache[LocalScope]->isPointeeMutated(Variable))
       return;
-    auto Diag =
+    const auto Diag =
         diag(Variable->getBeginLoc(),
              "pointee of variable %0 of type %1 can be declared 'const'")
         << Variable << VT;

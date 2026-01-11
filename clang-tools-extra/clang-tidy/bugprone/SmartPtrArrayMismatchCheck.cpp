@@ -54,11 +54,11 @@ void SmartPtrArrayMismatchCheck::registerMatchers(MatchFinder *Finder) {
   // For both shared and unique pointers, we need to find constructor with
   // exactly one parameter that has the pointer type. Other constructors are
   // not applicable for this check.
-  auto FindConstructor =
+  const auto FindConstructor =
       cxxConstructorDecl(ofClass(getSmartPointerClassMatcher()),
                          parameterCountIs(1), isExplicit())
           .bind(ConstructorN);
-  auto FindConstructExpr =
+  const auto FindConstructExpr =
       cxxConstructExpr(
           hasDeclaration(FindConstructor), argumentCountIs(1),
           hasArgument(0,
@@ -81,15 +81,16 @@ void SmartPtrArrayMismatchCheck::check(const MatchFinder::MatchResult &Result) {
   const DeclaratorDecl *VarOrField =
       getConstructedVarOrField(FoundConstructExpr, Ctx);
 
-  auto D = diag(FoundNewExpr->getBeginLoc(),
-                "%0 pointer to non-array is initialized with array")
-           << SmartPointerName;
+  const auto D = diag(FoundNewExpr->getBeginLoc(),
+                      "%0 pointer to non-array is initialized with array")
+                 << SmartPointerName;
   D << FoundNewExpr->getSourceRange();
 
   if (VarOrField) {
-    auto TSTypeLoc = VarOrField->getTypeSourceInfo()
-                         ->getTypeLoc()
-                         .getAsAdjusted<clang::TemplateSpecializationTypeLoc>();
+    const auto TSTypeLoc =
+        VarOrField->getTypeSourceInfo()
+            ->getTypeLoc()
+            .getAsAdjusted<clang::TemplateSpecializationTypeLoc>();
     assert(TSTypeLoc.getNumArgs() >= 1 &&
            "Matched type should have at least 1 template argument.");
 

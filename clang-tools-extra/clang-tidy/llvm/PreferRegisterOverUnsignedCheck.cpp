@@ -14,7 +14,7 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::llvm_check {
 
 void PreferRegisterOverUnsignedCheck::registerMatchers(MatchFinder *Finder) {
-  auto RegisterClassMatch = hasType(
+  const auto RegisterClassMatch = hasType(
       cxxRecordDecl(hasName("::llvm::Register")).bind("registerClassDecl"));
 
   Finder->addMatcher(

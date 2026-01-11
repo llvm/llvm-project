@@ -47,7 +47,7 @@ void ContainerContainsCheck::registerMatchers(MatchFinder *Finder) {
   const auto StringNpos = anyOf(declRefExpr(to(varDecl(hasName("npos")))),
                                 memberExpr(member(hasName("npos"))));
 
-  auto AddSimpleMatcher = [&](const auto &Matcher) {
+  const auto AddSimpleMatcher = [&](const auto &Matcher) {
     Finder->addMatcher(traverse(TK_IgnoreUnlessSpelledInSource, Matcher), this);
   };
 
@@ -116,8 +116,8 @@ void ContainerContainsCheck::check(const MatchFinder::MatchResult &Result) {
   const Expr *SearchExpr = Call->getArg(0)->IgnoreParenImpCasts();
 
   // Diagnose the issue.
-  auto Diag = diag(Call->getExprLoc(), "use '%0' to check for membership")
-              << ContainsFunName;
+  const auto Diag = diag(Call->getExprLoc(), "use '%0' to check for membership")
+                    << ContainsFunName;
 
   // Don't fix it if it's in a macro invocation. Leave fixing it to the user.
   const SourceLocation FuncCallLoc = Comparison->getEndLoc();

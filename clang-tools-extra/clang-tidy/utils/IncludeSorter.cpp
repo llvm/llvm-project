@@ -161,7 +161,7 @@ IncludeSorter::createIncludeInsertion(StringRef FileName, bool IsAngled) {
         SourceMgr->getLocForStartOfFile(CurrentFileID), IncludeStmt);
   }
 
-  auto IncludeKind =
+  const auto IncludeKind =
       determineIncludeKind(CanonicalFile, FileName, IsAngled, Style);
 
   if (!IncludeBucket[IncludeKind].empty()) {

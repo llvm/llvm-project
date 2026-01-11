@@ -111,10 +111,10 @@ void ImplicitWideningOfMultiplicationResultCheck::handleImplicitCastExpr(
       << Ty << E->getType();
 
   {
-    auto Diag = diag(E->getBeginLoc(),
-                     "make conversion explicit to silence this warning",
-                     DiagnosticIDs::Note)
-                << E->getSourceRange();
+    const auto Diag = diag(E->getBeginLoc(),
+                           "make conversion explicit to silence this warning",
+                           DiagnosticIDs::Note)
+                      << E->getSourceRange();
     const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
         E->getEndLoc(), 0, *Result->SourceManager, getLangOpts());
     if (ShouldUseCXXStaticCast)
@@ -146,9 +146,10 @@ void ImplicitWideningOfMultiplicationResultCheck::handleImplicitCastExpr(
   }
 
   {
-    auto Diag = diag(E->getBeginLoc(), "perform multiplication in a wider type",
-                     DiagnosticIDs::Note)
-                << LHS->getSourceRange();
+    const auto Diag =
+        diag(E->getBeginLoc(), "perform multiplication in a wider type",
+             DiagnosticIDs::Note)
+        << LHS->getSourceRange();
 
     if (ShouldUseCXXStaticCast)
       Diag << FixItHint::CreateInsertion(LHS->getBeginLoc(),
@@ -224,10 +225,10 @@ void ImplicitWideningOfMultiplicationResultCheck::handlePointerOffsetting(
       << IndexExprType << TyAsString;
 
   {
-    auto Diag = diag(IndexExpr->getBeginLoc(),
-                     "make conversion explicit to silence this warning",
-                     DiagnosticIDs::Note)
-                << IndexExpr->getSourceRange();
+    const auto Diag = diag(IndexExpr->getBeginLoc(),
+                           "make conversion explicit to silence this warning",
+                           DiagnosticIDs::Note)
+                      << IndexExpr->getSourceRange();
     const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
         IndexExpr->getEndLoc(), 0, *Result->SourceManager, getLangOpts());
     if (ShouldUseCXXStaticCast)
@@ -243,7 +244,7 @@ void ImplicitWideningOfMultiplicationResultCheck::handlePointerOffsetting(
   }
 
   {
-    auto Diag =
+    const auto Diag =
         diag(IndexExpr->getBeginLoc(), "perform multiplication in a wider type",
              DiagnosticIDs::Note)
         << LHS->getSourceRange();

@@ -15,10 +15,10 @@ namespace clang::tidy::bugprone {
 
 void NondeterministicPointerIterationOrderCheck::registerMatchers(
     MatchFinder *Finder) {
-  auto LoopVariable = varDecl(hasType(
+  const auto LoopVariable = varDecl(hasType(
       qualType(hasCanonicalType(anyOf(referenceType(), pointerType())))));
 
-  auto RangeInit = declRefExpr(to(varDecl(
+  const auto RangeInit = declRefExpr(to(varDecl(
       hasType(recordDecl(hasAnyName("std::unordered_set", "std::unordered_map",
                                     "std::unordered_multiset",
                                     "std::unordered_multimap"))

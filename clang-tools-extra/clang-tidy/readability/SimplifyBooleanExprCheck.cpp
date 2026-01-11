@@ -56,7 +56,7 @@ static std::pair<BinaryOperatorKind, BinaryOperatorKind> Opposites[] = {
 
 static StringRef negatedOperator(const BinaryOperator *BinOp) {
   const BinaryOperatorKind Opcode = BinOp->getOpcode();
-  for (auto NegatableOp : Opposites) {
+  for (const auto NegatableOp : Opposites) {
     if (Opcode == NegatableOp.first)
       return BinaryOperator::getOpcodeStr(NegatableOp.second);
     if (Opcode == NegatableOp.second)
@@ -70,7 +70,7 @@ static std::pair<OverloadedOperatorKind, StringRef> OperatorNames[] = {
     {OO_GreaterEqual, ">="}, {OO_Greater, ">"},       {OO_LessEqual, "<="}};
 
 static StringRef getOperatorName(OverloadedOperatorKind OpKind) {
-  for (auto Name : OperatorNames)
+  for (const auto Name : OperatorNames)
     if (Name.first == OpKind)
       return Name.second;
 
@@ -84,7 +84,7 @@ static std::pair<OverloadedOperatorKind, OverloadedOperatorKind>
 
 static StringRef negatedOperator(const CXXOperatorCallExpr *OpCall) {
   const OverloadedOperatorKind Opcode = OpCall->getOperator();
-  for (auto NegatableOp : OppositeOverloads) {
+  for (const auto NegatableOp : OppositeOverloads) {
     if (Opcode == NegatableOp.first)
       return getOperatorName(NegatableOp.second);
     if (Opcode == NegatableOp.second)
@@ -394,8 +394,8 @@ public:
          */
         Expr *Var = nullptr;
         SourceLocation Loc;
-        auto VarBoolAssignmentMatcher = [&Var,
-                                         &Loc](const Stmt *S) -> DeclAndBool {
+        const auto VarBoolAssignmentMatcher =
+            [&Var, &Loc](const Stmt *S) -> DeclAndBool {
           const auto *BO = dyn_cast<BinaryOperator>(S);
           if (!BO || BO->getOpcode() != BO_Assign)
             return {};
@@ -411,7 +411,7 @@ public:
           }
           if (auto *DRE = dyn_cast<DeclRefExpr>(IgnImp))
             return {DRE->getDecl(), *RightasBool};
-          if (auto *ME = dyn_cast<MemberExpr>(IgnImp))
+          if (const auto *ME = dyn_cast<MemberExpr>(IgnImp))
             return {ME->getMemberDecl(), *RightasBool};
           return {};
         };
@@ -637,8 +637,9 @@ void SimplifyBooleanExprCheck::reportBinOp(const ASTContext &Context,
 
   const bool BoolValue = Bool->getValue();
 
-  auto ReplaceWithExpression = [this, &Context, LHS, RHS,
-                                Bool](const Expr *ReplaceWith, bool Negated) {
+  const auto ReplaceWithExpression = [this, &Context, LHS, RHS,
+                                      Bool](const Expr *ReplaceWith,
+                                            bool Negated) {
     const std::string Replacement =
         replacementExpression(Context, Negated, ReplaceWith);
     const SourceRange Range(LHS->getBeginLoc(), RHS->getEndLoc());
@@ -966,7 +967,7 @@ bool SimplifyBooleanExprCheck::reportDeMorgan(const ASTContext &Context,
   assert(Inner);
   assert(Inner->isLogicalOp());
 
-  auto Diag =
+  const auto Diag =
       diag(Outer->getBeginLoc(),
            "boolean expression can be simplified by DeMorgan's theorem");
   Diag << Outer->getSourceRange();

@@ -651,7 +651,7 @@ void AvoidBindCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl = Result.Nodes.getNodeAs<CallExpr>("bind");
 
   LambdaProperties LP = getLambdaProperties(Result);
-  auto Diag =
+  const auto Diag =
       diag(MatchedDecl->getBeginLoc(),
            formatv("prefer a lambda to {0}::bind", LP.BindNamespace).str());
   if (!LP.IsFixitSupported)

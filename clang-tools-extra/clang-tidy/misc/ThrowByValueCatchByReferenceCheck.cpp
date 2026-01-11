@@ -68,7 +68,7 @@ void ThrowByValueCatchByReferenceCheck::diagnoseThrowLocations(
   auto *SubExpr = ThrowExpr->getSubExpr();
   if (!SubExpr)
     return;
-  auto QualType = SubExpr->getType();
+  const auto QualType = SubExpr->getType();
   if (QualType->isPointerType()) {
     // The code is throwing a pointer.
     // In case it is string literal, it is safe and we return.
@@ -110,7 +110,7 @@ void ThrowByValueCatchByReferenceCheck::diagnoseThrowLocations(
       // If we have a copy / move construction, we emit a diagnosis message if
       // the object that we copy construct from is neither a function parameter
       // nor a variable declared in a catch statement
-      auto ArgIter =
+      const auto ArgIter =
           ConstructorCall
               ->arg_begin(); // there's only one for copy constructors
       auto *CurrentSubExpr = (*ArgIter)->IgnoreImpCasts();
@@ -131,10 +131,10 @@ void ThrowByValueCatchByReferenceCheck::diagnoseCatchLocations(
     const CXXCatchStmt *CatchStmt, ASTContext &Context) {
   if (!CatchStmt)
     return;
-  auto CaughtType = CatchStmt->getCaughtType();
+  const auto CaughtType = CatchStmt->getCaughtType();
   if (CaughtType.isNull())
     return;
-  auto *VarDecl = CatchStmt->getExceptionDecl();
+  const auto *VarDecl = CatchStmt->getExceptionDecl();
   if (const auto *PT = CaughtType.getCanonicalType()->getAs<PointerType>()) {
     const char *DiagMsgCatchReference =
         "catch handler catches a pointer value; "

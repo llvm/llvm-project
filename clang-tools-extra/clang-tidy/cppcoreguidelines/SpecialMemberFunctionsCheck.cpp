@@ -125,7 +125,7 @@ void SpecialMemberFunctionsCheck::check(
   ClassDefId ID(MatchedDecl->getLocation(),
                 std::string(MatchedDecl->getName()));
 
-  auto StoreMember = [this, &ID](SpecialMemberFunctionData Data) {
+  const auto StoreMember = [this, &ID](SpecialMemberFunctionData Data) {
     llvm::SmallVectorImpl<SpecialMemberFunctionData> &Members =
         ClassWithSpecialMembers[ID];
     if (!llvm::is_contained(Members, Data))
@@ -179,14 +179,14 @@ void SpecialMemberFunctionsCheck::checkForMissingMembers(
     });
   };
 
-  auto IsDeleted = [&](SpecialMemberFunctionKind Kind) {
+  const auto IsDeleted = [&](SpecialMemberFunctionKind Kind) {
     return llvm::any_of(DefinedMembers, [Kind](const auto &Data) {
       return Data.FunctionKind == Kind && Data.IsDeleted;
     });
   };
 
-  auto RequireMembers = [&](SpecialMemberFunctionKind Kind1,
-                            SpecialMemberFunctionKind Kind2) {
+  const auto RequireMembers = [&](SpecialMemberFunctionKind Kind1,
+                                  SpecialMemberFunctionKind Kind2) {
     if (AllowImplicitlyDeletedCopyOrMove && HasImplicitDeletedMember(Kind1) &&
         HasImplicitDeletedMember(Kind2))
       return;

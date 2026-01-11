@@ -87,9 +87,10 @@ void CopyConstructorInitCheck::check(const MatchFinder::MatchResult &Result) {
   if (!HasRelevantBaseInit)
     return;
 
-  auto Diag = diag(Ctor->getLocation(),
-                   "calling a base constructor other than the copy constructor")
-              << SafeFixIts;
+  const auto Diag =
+      diag(Ctor->getLocation(),
+           "calling a base constructor other than the copy constructor")
+      << SafeFixIts;
 
   if (FixItInitList.empty() || ParamName.empty() || ShouldNotDoFixit)
     return;

@@ -103,7 +103,7 @@ void InitVariablesCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   if (InitializationString) {
-    auto Diagnostic =
+    const auto Diagnostic =
         diag(MatchedDecl->getLocation(), "variable %0 is not initialized")
         << MatchedDecl;
     if (*InitializationString != nullptr)

@@ -117,7 +117,7 @@ void UseRangesCheck::registerMatchers(MatchFinder *Finder) {
   Replacers.clear();
   llvm::DenseSet<Replacer *> SeenRepl;
   for (auto I = Replaces.begin(), E = Replaces.end(); I != E; ++I) {
-    auto Replacer = I->getValue();
+    const auto Replacer = I->getValue();
     if (!SeenRepl.insert(Replacer.get()).second)
       continue;
     Replacers.push_back(Replacer);

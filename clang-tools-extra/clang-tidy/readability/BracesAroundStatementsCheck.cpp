@@ -158,8 +158,8 @@ bool BracesAroundStatementsCheck::checkStmt(
         BraceInsertionHints.resultingCompoundLineExtent(*Result.SourceManager) <
             ShortStatementLines)
       return false;
-    auto Diag = diag(BraceInsertionHints.DiagnosticPos,
-                     "statement should be inside braces");
+    const auto Diag = diag(BraceInsertionHints.DiagnosticPos,
+                           "statement should be inside braces");
     if (BraceInsertionHints.offersFixIts())
       Diag << BraceInsertionHints.openingBraceFixIt()
            << BraceInsertionHints.closingBraceFixIt();

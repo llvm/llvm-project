@@ -83,7 +83,7 @@ getNewSuffix(llvm::StringRef OldSuffix,
   if (NewSuffixes.empty())
     return OldSuffix.upper();
   // Else, find matching suffix, case-*insensitive*ly.
-  auto NewSuffix =
+  const auto NewSuffix =
       llvm::find_if(NewSuffixes, [OldSuffix](StringRef PotentialNewSuffix) {
         return OldSuffix.equals_insensitive(PotentialNewSuffix);
       });
@@ -213,9 +213,10 @@ bool UppercaseLiteralSuffixCheck::checkBoundMatch(
           *Literal, NewSuffixes, *Result.SourceManager, getLangOpts())) {
     if (Details->LiteralLocation.getBegin().isMacroID() && IgnoreMacros)
       return true;
-    auto Complaint = diag(Details->LiteralLocation.getBegin(),
-                          "%0 literal has suffix '%1', which is not uppercase")
-                     << LiteralType::Name << Details->OldSuffix;
+    const auto Complaint =
+        diag(Details->LiteralLocation.getBegin(),
+             "%0 literal has suffix '%1', which is not uppercase")
+        << LiteralType::Name << Details->OldSuffix;
     if (Details->FixIt) // Similarly, a fix-it is not always possible.
       Complaint << *(Details->FixIt);
   }

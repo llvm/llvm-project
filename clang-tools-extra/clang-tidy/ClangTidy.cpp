@@ -130,8 +130,9 @@ public:
         Level = DiagnosticsEngine::Error;
         WarningsAsErrors++;
       }
-      auto Diag = Diags.Report(Loc, Diags.getCustomDiagID(Level, "%0 [%1]"))
-                  << Message.Message << Name;
+      const auto Diag =
+          Diags.Report(Loc, Diags.getCustomDiagID(Level, "%0 [%1]"))
+          << Message.Message << Name;
       for (const FileByteRange &FBR : Error.Message.Ranges)
         Diag << getRange(FBR);
       // FIXME: explore options to support interactive fix selection.
@@ -183,7 +184,7 @@ public:
       }
       reportFix(Diag, Error.Message.Fix);
     }
-    for (auto Fix : FixLocations) {
+    for (const auto Fix : FixLocations) {
       Diags.Report(Fix.first, Fix.second ? diag::note_fixit_applied
                                          : diag::note_fixit_failed);
     }
@@ -284,7 +285,7 @@ private:
   void reportNote(const tooling::DiagnosticMessage &Message) {
     const SourceLocation Loc =
         getLocation(Message.FilePath, Message.FileOffset);
-    auto Diag =
+    const auto Diag =
         Diags.Report(Loc, Diags.getCustomDiagID(DiagnosticsEngine::Note, "%0"))
         << Message.Message;
     for (const FileByteRange &FBR : Message.Ranges)
@@ -355,7 +356,7 @@ ClangTidyASTConsumerFactory::ClangTidyASTConsumerFactory(
 #endif
   for (const ClangTidyModuleRegistry::entry E :
        ClangTidyModuleRegistry::entries()) {
-    std::unique_ptr<ClangTidyModule> Module = E.instantiate();
+    const std::unique_ptr<ClangTidyModule> Module = E.instantiate();
     Module->addCheckFactories(*CheckFactories);
   }
 }
@@ -458,7 +459,7 @@ ClangTidyASTConsumerFactory::createASTConsumer(
     PP->addPPCallbacks(std::move(ModuleExpander));
   }
 
-  for (auto &Check : Checks) {
+  for (const auto &Check : Checks) {
     Check->registerMatchers(&*Finder);
     Check->registerPPCallbacks(*SM, PP, ModuleExpanderPP);
   }

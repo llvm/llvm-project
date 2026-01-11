@@ -25,12 +25,12 @@ makeCharacterLiteral(const StringLiteral *Literal) {
     Literal->outputString(OS);
   }
   // Now replace the " with '.
-  auto OpenPos = Result.find_first_of('"');
+  const auto OpenPos = Result.find_first_of('"');
   if (OpenPos == std::string::npos)
     return std::nullopt;
   Result[OpenPos] = '\'';
 
-  auto ClosePos = Result.find_last_of('"');
+  const auto ClosePos = Result.find_last_of('"');
   if (ClosePos == std::string::npos)
     return std::nullopt;
   Result[ClosePos] = '\'';

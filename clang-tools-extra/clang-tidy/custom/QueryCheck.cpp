@@ -104,12 +104,12 @@ QueryCheck::QueryCheck(llvm::StringRef Name,
                        ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context) {
   for (const ClangTidyOptions::CustomCheckDiag &D : V.Diags) {
-    auto DiagnosticIdIt =
+    const auto DiagnosticIdIt =
         Diags
             .try_emplace(D.Level.value_or(DiagnosticIDs::Warning),
                          llvm::StringMap<llvm::SmallVector<std::string>>{})
             .first;
-    auto DiagMessageIt =
+    const auto DiagMessageIt =
         DiagnosticIdIt->getSecond()
             .try_emplace(D.BindName, llvm::SmallVector<std::string>{})
             .first;
@@ -124,8 +124,9 @@ void QueryCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void QueryCheck::check(const MatchFinder::MatchResult &Result) {
-  auto Emit = [this](const DiagMaps &DiagMaps, const std::string &BindName,
-                     const DynTypedNode &Node, DiagnosticIDs::Level Level) {
+  const auto Emit = [this](
+                        const DiagMaps &DiagMaps, const std::string &BindName,
+                        const DynTypedNode &Node, DiagnosticIDs::Level Level) {
     const DiagMaps::const_iterator DiagMapIt = DiagMaps.find(Level);
     if (DiagMapIt == DiagMaps.end())
       return;

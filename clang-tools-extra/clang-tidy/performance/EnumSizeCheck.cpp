@@ -117,7 +117,7 @@ void EnumSizeCheck::check(const MatchFinder::MatchResult &Result) {
       MinV = std::max<std::uint64_t>(MinV, InitVal.abs().getZExtValue());
   }
 
-  auto NewType = getNewType(Size, MinV, MaxV);
+  const auto NewType = getNewType(Size, MinV, MaxV);
   if (!NewType.first || Size <= NewType.second)
     return;
 

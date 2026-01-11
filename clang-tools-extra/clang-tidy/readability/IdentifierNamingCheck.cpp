@@ -264,7 +264,7 @@ IdentifierNamingCheck::FileStyle IdentifierNamingCheck::getFileStyleFromOptions(
     const size_t StyleSize = StyleNames[I].size();
     StyleString.assign({StyleNames[I], "HungarianPrefix"});
 
-    auto HPTOpt =
+    const auto HPTOpt =
         Options.get<IdentifierNamingCheck::HungarianPrefixType>(StyleString);
     if (HPTOpt && !HungarianNotation.checkOptionValid(I))
       configurationDiag("invalid identifier naming option '%0'") << StyleString;
@@ -305,7 +305,7 @@ std::string IdentifierNamingCheck::HungarianNotation::getDeclTypeName(
     return {};
 
   // Get type text of variable declarations.
-  auto &SM = VD->getASTContext().getSourceManager();
+  const auto &SM = VD->getASTContext().getSourceManager();
   const char *Begin = SM.getCharacterData(VD->getBeginLoc());
   const char *End = SM.getCharacterData(VD->getEndLoc());
   intptr_t StrLen = End - Begin;
@@ -404,7 +404,7 @@ IdentifierNamingCheck::IdentifierNamingCheck(StringRef Name,
     : RenamerClangTidyCheck(Name, Context), Context(Context),
       GetConfigPerFile(Options.get("GetConfigPerFile", true)),
       IgnoreFailedSplit(Options.get("IgnoreFailedSplit", false)) {
-  auto IterAndInserted = NamingStylesCache.try_emplace(
+  const auto IterAndInserted = NamingStylesCache.try_emplace(
       llvm::sys::path::parent_path(Context->getCurrentFile()),
       getFileStyleFromOptions(Options));
   assert(IterAndInserted.second && "Couldn't insert Style");
@@ -432,7 +432,7 @@ bool IdentifierNamingCheck::HungarianNotation::isOptionEnabled(
   if (OptionKey.empty())
     return false;
 
-  auto Iter = StrMap.find(OptionKey);
+  const auto Iter = StrMap.find(OptionKey);
   if (Iter == StrMap.end())
     return false;
 
@@ -1034,7 +1034,7 @@ bool IdentifierNamingCheck::isParamInMainLikeFunction(
   if (!FDecl->getDeclName().isIdentifier())
     return false;
   enum MainType { None, Main, WMain };
-  auto IsCharPtrPtr = [](QualType QType) -> MainType {
+  const auto IsCharPtrPtr = [](QualType QType) -> MainType {
     if (QType.isNull())
       return None;
     if (QType = QType->getPointeeType(), QType.isNull())
@@ -1047,7 +1047,7 @@ bool IdentifierNamingCheck::isParamInMainLikeFunction(
       return WMain;
     return None;
   };
-  auto IsIntType = [](QualType QType) {
+  const auto IsIntType = [](QualType QType) {
     if (QType.isNull())
       return false;
     if (const auto *Builtin =
@@ -1415,7 +1415,7 @@ IdentifierNamingCheck::getDiagInfo(const NamingCheckId &ID,
 }
 
 StringRef IdentifierNamingCheck::getRealFileName(StringRef FileName) const {
-  auto Iter = RealFileNameCache.try_emplace(FileName);
+  const auto Iter = RealFileNameCache.try_emplace(FileName);
   SmallString<256U> &RealFileName = Iter.first->getValue();
   if (!Iter.second)
     return RealFileName;
@@ -1430,21 +1430,21 @@ IdentifierNamingCheck::getStyleForFile(StringRef FileName) const {
 
   const StringRef RealFileName = getRealFileName(FileName);
   const StringRef Parent = llvm::sys::path::parent_path(RealFileName);
-  auto Iter = NamingStylesCache.find(Parent);
+  const auto Iter = NamingStylesCache.find(Parent);
   if (Iter != NamingStylesCache.end())
     return Iter->getValue();
 
   const llvm::StringRef CheckName = getID();
   ClangTidyOptions Options = Context->getOptionsForFile(RealFileName);
   if (Options.Checks && GlobList(*Options.Checks).contains(CheckName)) {
-    auto It = NamingStylesCache.try_emplace(
+    const auto It = NamingStylesCache.try_emplace(
         Parent,
         getFileStyleFromOptions({CheckName, Options.CheckOptions, Context}));
     assert(It.second);
     return It.first->getValue();
   }
   // Default construction gives an empty style.
-  auto It = NamingStylesCache.try_emplace(Parent);
+  const auto It = NamingStylesCache.try_emplace(Parent);
   assert(It.second);
   return It.first->getValue();
 }

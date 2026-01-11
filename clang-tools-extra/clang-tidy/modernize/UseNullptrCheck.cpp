@@ -56,7 +56,7 @@ makeCastSequenceMatcher(llvm::ArrayRef<StringRef> NameList) {
       unless(hasImplicitDestinationType(
           qualType(matchers::matchesAnyListedTypeName(NameList)))));
 
-  auto IsOrHasDescendant = [](const auto &InnerMatcher) {
+  const auto IsOrHasDescendant = [](const auto &InnerMatcher) {
     return anyOf(InnerMatcher, hasDescendant(InnerMatcher));
   };
 

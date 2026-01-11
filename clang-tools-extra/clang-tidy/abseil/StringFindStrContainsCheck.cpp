@@ -42,15 +42,15 @@ static constexpr char DefaultAbseilStringsMatchHeader[] =
 static transformer::RewriteRuleWith<std::string>
 makeRewriteRule(ArrayRef<StringRef> StringLikeClassNames,
                 StringRef AbseilStringsMatchHeader) {
-  auto StringLikeClass = cxxRecordDecl(hasAnyName(StringLikeClassNames));
-  auto StringType =
+  const auto StringLikeClass = cxxRecordDecl(hasAnyName(StringLikeClassNames));
+  const auto StringType =
       hasUnqualifiedDesugaredType(recordType(hasDeclaration(StringLikeClass)));
-  auto CharStarType =
+  const auto CharStarType =
       hasUnqualifiedDesugaredType(pointerType(pointee(isAnyCharacter())));
-  auto CharType = hasUnqualifiedDesugaredType(isCharType());
-  auto StringNpos = declRefExpr(
+  const auto CharType = hasUnqualifiedDesugaredType(isCharType());
+  const auto StringNpos = declRefExpr(
       to(varDecl(hasName("npos"), hasDeclContext(StringLikeClass))));
-  auto StringFind = cxxMemberCallExpr(
+  const auto StringFind = cxxMemberCallExpr(
       callee(cxxMethodDecl(
           hasName("find"), parameterCountIs(2),
           hasParameter(

@@ -110,9 +110,9 @@ void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
       hasParent(lambdaExpr(forCallable(equalsBoundNode("func")),
                            anyOf(CapturedInCaptureList, CapturedInBody)))));
 
-  auto ToParam = hasAnyParameter(parmVarDecl(equalsBoundNode("param")));
+  const auto ToParam = hasAnyParameter(parmVarDecl(equalsBoundNode("param")));
 
-  auto ForwardCallMatcher = callExpr(
+  const auto ForwardCallMatcher = callExpr(
       callExpr().bind("call"), argumentCountIs(1),
       hasArgument(0, declRefExpr(to(varDecl().bind("var")))),
       forCallable(

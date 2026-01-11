@@ -48,7 +48,7 @@ static std::string createReplacementText(const LambdaExpr *Lambda) {
   std::string Replacement;
   llvm::raw_string_ostream Stream(Replacement);
 
-  auto AppendName = [&](llvm::StringRef Name) {
+  const auto AppendName = [&](llvm::StringRef Name) {
     if (!Replacement.empty())
       Stream << ", ";
     if (Lambda->getCaptureDefault() == LCD_ByRef && Name != "this")
@@ -81,10 +81,10 @@ void MisleadingCaptureDefaultByValueCheck::check(
     const bool IsThisImplicitlyCaptured = std::any_of(
         Lambda->implicit_capture_begin(), Lambda->implicit_capture_end(),
         [](const LambdaCapture &Capture) { return Capture.capturesThis(); });
-    auto Diag = diag(Lambda->getCaptureDefaultLoc(),
-                     "lambdas that %select{|implicitly }0capture 'this' "
-                     "should not specify a by-value capture default")
-                << IsThisImplicitlyCaptured;
+    const auto Diag = diag(Lambda->getCaptureDefaultLoc(),
+                           "lambdas that %select{|implicitly }0capture 'this' "
+                           "should not specify a by-value capture default")
+                      << IsThisImplicitlyCaptured;
 
     const std::string ReplacementText = createReplacementText(Lambda);
     const SourceLocation DefaultCaptureEnd =

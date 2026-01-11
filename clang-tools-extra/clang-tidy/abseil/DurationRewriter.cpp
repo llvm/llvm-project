@@ -111,7 +111,7 @@ llvm::StringRef getTimeInverseForScale(DurationScale Scale) {
 
 /// Returns `true` if `Node` is a value which evaluates to a literal `0`.
 bool isLiteralZero(const MatchFinder::MatchResult &Result, const Expr &Node) {
-  auto ZeroMatcher =
+  const auto ZeroMatcher =
       anyOf(integerLiteral(equals(0)), floatLiteral(equals(0.0)));
 
   // Check to see if we're using a zero directly.
@@ -196,7 +196,7 @@ std::optional<DurationScale> getScaleForDurationInverse(llvm::StringRef Name) {
        {"ToDoubleNanoseconds", DurationScale::Nanoseconds},
        {"ToInt64Nanoseconds", DurationScale::Nanoseconds}});
 
-  auto ScaleIter = ScaleMap.find(Name);
+  const auto ScaleIter = ScaleMap.find(Name);
   if (ScaleIter == ScaleMap.end())
     return std::nullopt;
 
@@ -212,7 +212,7 @@ std::optional<DurationScale> getScaleForTimeInverse(llvm::StringRef Name) {
        {"ToUnixMicros", DurationScale::Microseconds},
        {"ToUnixNanos", DurationScale::Nanoseconds}});
 
-  auto ScaleIter = ScaleMap.find(Name);
+  const auto ScaleIter = ScaleMap.find(Name);
   if (ScaleIter == ScaleMap.end())
     return std::nullopt;
 

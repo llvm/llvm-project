@@ -28,8 +28,9 @@ static std::optional<const char *> getReplacementType(StringRef Type) {
 }
 
 void DeprecatedIosBaseAliasesCheck::registerMatchers(MatchFinder *Finder) {
-  auto IoStateDecl = typedefDecl(hasAnyName(DeprecatedTypes)).bind("TypeDecl");
-  auto IoStateType = typedefType(hasDeclaration(IoStateDecl));
+  const auto IoStateDecl =
+      typedefDecl(hasAnyName(DeprecatedTypes)).bind("TypeDecl");
+  const auto IoStateType = typedefType(hasDeclaration(IoStateDecl));
 
   Finder->addMatcher(typeLoc(loc(IoStateType)).bind("TypeLoc"), this);
 }
@@ -43,7 +44,7 @@ void DeprecatedIosBaseAliasesCheck::check(
   auto Replacement = getReplacementType(TypeName);
 
   TypeLoc TL = *Result.Nodes.getNodeAs<TypeLoc>("TypeLoc");
-  if (auto QTL = TL.getAs<QualifiedTypeLoc>())
+  if (const auto QTL = TL.getAs<QualifiedTypeLoc>())
     TL = QTL.getUnqualifiedLoc();
 
   SourceLocation IoStateLoc = TL.castAs<TypedefTypeLoc>().getNameLoc();
@@ -60,9 +61,10 @@ void DeprecatedIosBaseAliasesCheck::check(
 
   if (Replacement) {
     const char *FixName = *Replacement;
-    auto Builder = diag(IoStateLoc, "'std::ios_base::%0' is deprecated; use "
-                                    "'std::ios_base::%1' instead")
-                   << TypeName << FixName;
+    const auto Builder =
+        diag(IoStateLoc, "'std::ios_base::%0' is deprecated; use "
+                         "'std::ios_base::%1' instead")
+        << TypeName << FixName;
 
     if (Fix)
       Builder << FixItHint::CreateReplacement(SourceRange(IoStateLoc, EndLoc),

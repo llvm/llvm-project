@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
   auto ErrorOrBuffer = MemoryBuffer::getFile(argv[1], true);
   if (!ErrorOrBuffer)
     return 1;
-  std::unique_ptr<MemoryBuffer> Buffer = std::move(ErrorOrBuffer.get());
+  const std::unique_ptr<MemoryBuffer> Buffer = std::move(ErrorOrBuffer.get());
   StringRef Content = Buffer->getBuffer();
   Content = Content.drop_until([](char C) { return C == '#'; });
   SmallVector<StringRef> Lines;
@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
     Os << "  { ";
     Os << Values.first;
     Os << ", {";
-    for (auto CP : Values.second)
+    for (const auto CP : Values.second)
       Os << CP << ", ";
 
     Os << "}},\n";

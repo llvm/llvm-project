@@ -39,7 +39,7 @@ void SuspiciousSemicolonCheck::check(const MatchFinder::MatchResult &Result) {
   ASTContext &Ctxt = *Result.Context;
   auto Token = utils::lexer::getPreviousToken(LocStart, Ctxt.getSourceManager(),
                                               Ctxt.getLangOpts());
-  auto &SM = *Result.SourceManager;
+  const auto &SM = *Result.SourceManager;
   const unsigned SemicolonLine = SM.getSpellingLineNumber(LocStart);
 
   const auto *Statement = Result.Nodes.getNodeAs<Stmt>("stmt");

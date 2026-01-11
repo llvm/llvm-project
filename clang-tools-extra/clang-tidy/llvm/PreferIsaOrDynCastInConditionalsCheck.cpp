@@ -22,7 +22,7 @@ AST_MATCHER(Expr, isMacroID) { return Node.getExprLoc().isMacroID(); }
 
 void PreferIsaOrDynCastInConditionalsCheck::registerMatchers(
     MatchFinder *Finder) {
-  auto AnyCalleeName = [](ArrayRef<StringRef> CalleeName) {
+  const auto AnyCalleeName = [](ArrayRef<StringRef> CalleeName) {
     return allOf(unless(isMacroID()), unless(cxxMemberCallExpr()),
                  callee(expr(ignoringImpCasts(
                      declRefExpr(to(namedDecl(hasAnyName(CalleeName))),
@@ -33,13 +33,13 @@ void PreferIsaOrDynCastInConditionalsCheck::registerMatchers(
   auto CondExpr = hasCondition(implicitCastExpr(
       has(callExpr(AnyCalleeName({"cast", "dyn_cast"})).bind("cond"))));
 
-  auto CondExprOrCondVar =
+  const auto CondExprOrCondVar =
       anyOf(hasConditionVariableStatement(containsDeclaration(
                 0, varDecl(hasInitializer(callExpr(AnyCalleeName({"cast"}))))
                        .bind("var"))),
             CondExpr);
 
-  auto CallWithBindedArg =
+  const auto CallWithBindedArg =
       callExpr(
           AnyCalleeName(
               {"isa", "cast", "cast_or_null", "dyn_cast", "dyn_cast_or_null"}),
@@ -93,7 +93,7 @@ void PreferIsaOrDynCastInConditionalsCheck::check(
     assert(RHS && "RHS is null");
     assert(Arg && "Arg is null");
 
-    auto GetText = [&](SourceRange R) {
+    const auto GetText = [&](SourceRange R) {
       return Lexer::getSourceText(CharSourceRange::getTokenRange(R),
                                   *Result.SourceManager, getLangOpts());
     };

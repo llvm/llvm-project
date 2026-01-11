@@ -247,8 +247,9 @@ void UseStartsEndsWithCheck::check(const MatchFinder::MatchResult &Result) {
       CharSourceRange::getTokenRange(SearchExpr->getSourceRange()),
       *Result.SourceManager, Result.Context->getLangOpts());
 
-  auto Diagnostic = diag(FindExpr->getExprLoc(), "use %0 instead of %1")
-                    << ReplacementFunction->getName() << FindFun->getName();
+  const auto Diagnostic = diag(FindExpr->getExprLoc(), "use %0 instead of %1")
+                          << ReplacementFunction->getName()
+                          << FindFun->getName();
 
   // Remove everything before the function call.
   Diagnostic << FixItHint::CreateRemoval(CharSourceRange::getCharRange(

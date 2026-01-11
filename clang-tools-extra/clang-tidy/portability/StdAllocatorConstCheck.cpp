@@ -15,13 +15,13 @@ namespace clang::tidy::portability {
 
 void StdAllocatorConstCheck::registerMatchers(MatchFinder *Finder) {
   // Match std::allocator<const T>.
-  auto AllocatorConst = qualType(hasCanonicalType(
+  const auto AllocatorConst = qualType(hasCanonicalType(
       recordType(hasDeclaration(classTemplateSpecializationDecl(
           hasName("::std::allocator"),
           hasTemplateArgument(0,
                               refersToType(qualType(isConstQualified()))))))));
 
-  auto HasContainerName =
+  const auto HasContainerName =
       hasAnyName("::std::vector", "::std::deque", "::std::list",
                  "::std::multiset", "::std::set", "::std::unordered_multiset",
                  "::std::unordered_set", "::absl::flat_hash_set");

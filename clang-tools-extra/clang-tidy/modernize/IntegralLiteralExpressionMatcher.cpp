@@ -277,7 +277,7 @@ bool IntegralLiteralExpressionMatcher::conditionalExpr() {
 }
 
 bool IntegralLiteralExpressionMatcher::commaExpr() {
-  auto NonTerminal = [this] { return conditionalExpr(); };
+  const auto NonTerminal = [this] { return conditionalExpr(); };
   if (CommaAllowed)
     return nonTerminalChainedExpr<tok::TokenKind::comma>(NonTerminal);
   return nonTerminalChainedExpr(NonTerminal, [](Token) { return false; });

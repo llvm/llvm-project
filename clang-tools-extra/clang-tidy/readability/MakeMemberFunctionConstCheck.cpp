@@ -244,7 +244,7 @@ static SourceLocation getConstInsertionPoint(const CXXMethodDecl *M) {
   if (!TSI)
     return {};
 
-  auto FTL = TSI->getTypeLoc().IgnoreParens().getAs<FunctionTypeLoc>();
+  const auto FTL = TSI->getTypeLoc().IgnoreParens().getAs<FunctionTypeLoc>();
   if (!FTL)
     return {};
 
@@ -257,10 +257,11 @@ void MakeMemberFunctionConstCheck::check(
 
   const auto *Declaration = Definition->getCanonicalDecl();
 
-  auto Diag = diag(Definition->getLocation(), "method %0 can be made const")
-              << Definition
-              << FixItHint::CreateInsertion(getConstInsertionPoint(Definition),
-                                            " const");
+  const auto Diag =
+      diag(Definition->getLocation(), "method %0 can be made const")
+      << Definition
+      << FixItHint::CreateInsertion(getConstInsertionPoint(Definition),
+                                    " const");
   if (Declaration != Definition) {
     Diag << FixItHint::CreateInsertion(getConstInsertionPoint(Declaration),
                                        " const");

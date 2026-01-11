@@ -28,7 +28,7 @@ void ReturnBracedInitListCheck::registerMatchers(MatchFinder *Finder) {
                                        "::std::deque", "::std::forward_list",
                                        "::std::list"))));
 
-  auto ConstructExpr =
+  const auto ConstructExpr =
       cxxConstructExpr(
           unless(anyOf(
               // Skip explicit constructor.
@@ -66,8 +66,9 @@ void ReturnBracedInitListCheck::check(const MatchFinder::MatchResult &Result) {
   if (ReturnType != ConstructType)
     return;
 
-  auto Diag = diag(Loc, "avoid repeating the return type from the "
-                        "declaration; use a braced initializer list instead");
+  const auto Diag =
+      diag(Loc, "avoid repeating the return type from the "
+                "declaration; use a braced initializer list instead");
 
   const SourceRange CallParensRange =
       MatchedConstructExpr->getParenOrBraceRange();

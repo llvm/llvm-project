@@ -47,7 +47,7 @@ static EditGenerator rewrite(RangeSelector Call, RangeSelector Builder) {
 
     // This will try to extract the template argument as written so that the
     // rewritten code looks closest to original.
-    auto NextToken = [&](std::optional<Token> CurrentToken) {
+    const auto NextToken = [&](std::optional<Token> CurrentToken) {
       if (!CurrentToken)
         return CurrentToken;
       if (CurrentToken->is(clang::tok::eof))
@@ -92,7 +92,7 @@ static EditGenerator rewrite(RangeSelector Call, RangeSelector Builder) {
       return BuilderRange.takeError();
 
     // Helper for concatting below.
-    auto GetText = [&](const CharSourceRange &Range) {
+    const auto GetText = [&](const CharSourceRange &Range) {
       return clang::Lexer::getSourceText(Range, SM, LangOpts);
     };
 
@@ -120,7 +120,8 @@ static RewriteRuleWith<std::string> useNewMlirOpBuilderCheckRule() {
   const Stencil Message = cat("use 'OpType::create(builder, ...)' instead of "
                               "'builder.create<OpType>(...)'");
   // Match a create call on an OpBuilder.
-  auto BuilderType = cxxRecordDecl(isSameOrDerivedFrom("::mlir::OpBuilder"));
+  const auto BuilderType =
+      cxxRecordDecl(isSameOrDerivedFrom("::mlir::OpBuilder"));
   const ast_matchers::internal::Matcher<Stmt> Base =
       cxxMemberCallExpr(
           on(expr(anyOf(hasType(BuilderType), hasType(pointsTo(BuilderType))))

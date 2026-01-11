@@ -87,7 +87,7 @@ IdDependentBackwardBranchCheck::hasIdDepVar(const Expr *Expression) {
         dyn_cast_if_present<VarDecl>(Declaration->getDecl());
     if (!CheckVariable)
       return nullptr;
-    auto FoundVariable = IdDepVarsMap.find(CheckVariable);
+    const auto FoundVariable = IdDepVarsMap.find(CheckVariable);
     if (FoundVariable == IdDepVarsMap.end())
       return nullptr;
     return &(FoundVariable->second);
@@ -109,7 +109,7 @@ IdDependentBackwardBranchCheck::hasIdDepField(const Expr *Expression) {
         dyn_cast_if_present<FieldDecl>(MemberExpression->getMemberDecl());
     if (!CheckField)
       return nullptr;
-    auto FoundField = IdDepFieldsMap.find(CheckField);
+    const auto FoundField = IdDepFieldsMap.find(CheckField);
     if (FoundField == IdDepFieldsMap.end())
       return nullptr;
     return &(FoundField->second);

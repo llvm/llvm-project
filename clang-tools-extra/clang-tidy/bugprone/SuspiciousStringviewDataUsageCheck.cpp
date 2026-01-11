@@ -43,16 +43,16 @@ SuspiciousStringviewDataUsageCheck::getCheckTraversalKind() const {
 }
 
 void SuspiciousStringviewDataUsageCheck::registerMatchers(MatchFinder *Finder) {
-  auto AncestorCall = anyOf(
+  const auto AncestorCall = anyOf(
       cxxConstructExpr(), callExpr(unless(cxxOperatorCallExpr())), lambdaExpr(),
       initListExpr(
           hasType(qualType(hasCanonicalType(hasDeclaration(recordDecl()))))));
 
-  auto DataMethod = cxxMethodDecl(
+  const auto DataMethod = cxxMethodDecl(
       hasName("data"),
       ofClass(matchers::matchesAnyListedRegexName(StringViewTypes)));
 
-  auto SizeCall = cxxMemberCallExpr(
+  const auto SizeCall = cxxMemberCallExpr(
       callee(cxxMethodDecl(hasAnyName("size", "length"))),
       on(ignoringParenImpCasts(
           matchers::isStatementIdenticalToBoundNode("self"))));

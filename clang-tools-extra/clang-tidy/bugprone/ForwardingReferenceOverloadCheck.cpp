@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 namespace {
 // Check if the given type is related to std::enable_if.
 AST_MATCHER(QualType, isEnableIf) {
-  auto CheckTemplate = [](const TemplateSpecializationType *Spec) {
+  const auto CheckTemplate = [](const TemplateSpecializationType *Spec) {
     if (!Spec)
       return false;
 
@@ -58,7 +58,7 @@ AST_MATCHER(TemplateDecl, hasAssociatedConstraints) {
 } // namespace
 
 void ForwardingReferenceOverloadCheck::registerMatchers(MatchFinder *Finder) {
-  auto ForwardingRefParm =
+  const auto ForwardingRefParm =
       parmVarDecl(
           hasType(qualType(rValueReferenceType(),
                            references(templateTypeParmType(hasDeclaration(

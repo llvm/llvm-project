@@ -109,7 +109,7 @@ void ExplicitConstructorCheck::check(const MatchFinder::MatchResult &Result) {
       Ctor->getParamDecl(0)->getType().getNonReferenceType());
   if (ExplicitSpec.isExplicit() &&
       (Ctor->isCopyOrMoveConstructor() || TakesInitializerList)) {
-    auto IsKwExplicit = [](const Token &Tok) {
+    const auto IsKwExplicit = [](const Token &Tok) {
       return Tok.is(tok::raw_identifier) &&
              Tok.getRawIdentifier() == "explicit";
     };
@@ -124,9 +124,9 @@ void ExplicitConstructorCheck::check(const MatchFinder::MatchResult &Result) {
     else
       ConstructorDescription = "initializer-list";
 
-    auto Diag = diag(Ctor->getLocation(),
-                     "%0 constructor should not be declared explicit")
-                << ConstructorDescription;
+    const auto Diag = diag(Ctor->getLocation(),
+                           "%0 constructor should not be declared explicit")
+                      << ConstructorDescription;
     if (ExplicitTokenRange.isValid()) {
       Diag << FixItHint::CreateRemoval(
           CharSourceRange::getCharRange(ExplicitTokenRange));
@@ -150,7 +150,7 @@ void ExplicitConstructorCheck::check(const MatchFinder::MatchResult &Result) {
   const bool SingleArgument =
       Ctor->getNumParams() == 1 && !Ctor->getParamDecl(0)->isParameterPack();
   const SourceLocation Loc = Ctor->getLocation();
-  auto Diag =
+  const auto Diag =
       diag(Loc, ExplicitExpr ? WithExpressionWarningMessage
                              : NoExpressionWarningMessage)
       << (SingleArgument

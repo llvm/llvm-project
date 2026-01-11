@@ -17,7 +17,7 @@ namespace clang::tidy::readability {
 
 static const IfStmt *getPrecedingIf(const SourceManager &SM,
                                     ASTContext *Context, const IfStmt *If) {
-  auto Parents = Context->getParents(*If);
+  const auto Parents = Context->getParents(*If);
   if (Parents.size() != 1)
     return nullptr;
   if (const auto *PrecedingIf = Parents[0].get<IfStmt>()) {
