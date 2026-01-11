@@ -40,38 +40,38 @@
 
 #include "ScopeReductionCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "../utils/DeclRefExprUtils.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::misc {
 
-// TODO: Try using utils::decl_ref_expr::allDeclRefExprs here.
-static void
-collectVariableUses(const Stmt *S, const VarDecl *Var,
-                    llvm::SmallVector<const DeclRefExpr *, 8> &Uses) {
-  if (!S)
+static void collectVariableUses(const clang::Stmt *S, const clang::VarDecl *Var,
+                                llvm::SmallVector<const clang::DeclRefExpr *, 8> &Uses) {
+  if (!S || !Var)
     return;
 
-  if (const auto *DRE = dyn_cast<DeclRefExpr>(S)) {
-    if (DRE->getDecl() == Var)
-      Uses.push_back(DRE);
-  }
+  llvm::SmallPtrSet<const clang::DeclRefExpr *, 16> DREs =
+      clang::tidy::utils::decl_ref_expr::allDeclRefExprs(*Var, *S, Var->getASTContext());
 
-  for (const Stmt *Child : S->children())
-    collectVariableUses(Child, Var, Uses);
+  // Copy the results into the provided SmallVector
+  Uses.clear();
+  Uses.append(DREs.begin(), DREs.end());
 }
 
 void ScopeReductionCheck::registerMatchers(MatchFinder *Finder) {
   // TODO: Try adding unless(hasParent(declStmt(hasParent(forStmt( to matcher
   //       to simplify check code.
-  Finder->addMatcher(varDecl(hasLocalStorage()).bind("var"), this);
+
+  // Match on varDecls that are part of a function
+  Finder->addMatcher(varDecl(hasLocalStorage(), hasAncestor(functionDecl())).bind("var"), this);
 }
 
 void ScopeReductionCheck::check(
     const ast_matchers::MatchFinder::MatchResult &Result) {
   const auto *Var = Result.Nodes.getNodeAs<VarDecl>("var");
-  if (!Var)
-    return;
+
+  assert(Var);
 
   // Step 1: Filter out variables declared in for-loop initializations
   // These variables are already in their optimal scope and shouldn't be
@@ -94,10 +94,8 @@ void ScopeReductionCheck::check(
     }
   }
 
-  // auto *Context = Result.Context;
-  auto *Function = dyn_cast<FunctionDecl>(Var->getDeclContext());
-  if (!Function || !Function->hasBody())
-    return;
+  const auto *Function = dyn_cast<FunctionDecl>(Var->getDeclContext());
+  assert(Function);
 
   // Step 2: Collect all uses of this variable within the function
   llvm::SmallVector<const DeclRefExpr *, 8> Uses;
@@ -217,7 +215,7 @@ void ScopeReductionCheck::check(
         diag(Var->getLocation(),
              "variable '%0' can be declared in a smaller scope")
             << Var->getName();
-        return; // early exit
+        return;
       }
     }
   }
@@ -225,6 +223,7 @@ void ScopeReductionCheck::check(
   // Step 7: Alternative analysis - check for for-loop initialization
   // opportunity This only runs if the compound statement analysis didn't find a
   // smaller scope Only check local variables, not parameters
+  // TODO: ParmVarDecls maybe excluded for all analysis.
   if (!isa<ParmVarDecl>(Var)) {
     const ForStmt *CommonForLoop = nullptr;
     bool AllUsesInSameForLoop = true;

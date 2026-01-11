@@ -4,8 +4,8 @@ misc-scope-reduction
 ====================
 
 Detects local variables in functions whose scopes can be minimized. This check
-covers guidelines described by SEI DCL19-C, MISRA C++:2008 Rule 3-4-1, and MISRA
-C:2012 Rule 8-9.
+covers guidelines described by SEI DCL19-C, MISRA C++:2008 Rule 3-4-1, and
+MISRA C:2012 Rule 8-9.
 
 Examples:
 
