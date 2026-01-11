@@ -39,20 +39,22 @@
 // declaration while still encompassing all it's uses.
 
 #include "ScopeReductionCheck.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "../utils/DeclRefExprUtils.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::misc {
 
-static void collectVariableUses(const clang::Stmt *S, const clang::VarDecl *Var,
-                                llvm::SmallVector<const clang::DeclRefExpr *, 8> &Uses) {
+static void
+collectVariableUses(const clang::Stmt *S, const clang::VarDecl *Var,
+                    llvm::SmallVector<const clang::DeclRefExpr *, 8> &Uses) {
   if (!S || !Var)
     return;
 
   llvm::SmallPtrSet<const clang::DeclRefExpr *, 16> DREs =
-      clang::tidy::utils::decl_ref_expr::allDeclRefExprs(*Var, *S, Var->getASTContext());
+      clang::tidy::utils::decl_ref_expr::allDeclRefExprs(*Var, *S,
+                                                         Var->getASTContext());
 
   // Copy the results into the provided SmallVector
   Uses.clear();
@@ -64,7 +66,9 @@ void ScopeReductionCheck::registerMatchers(MatchFinder *Finder) {
   //       to simplify check code.
 
   // Match on varDecls that are part of a function
-  Finder->addMatcher(varDecl(hasLocalStorage(), hasAncestor(functionDecl())).bind("var"), this);
+  Finder->addMatcher(
+      varDecl(hasLocalStorage(), hasAncestor(functionDecl())).bind("var"),
+      this);
 }
 
 void ScopeReductionCheck::check(
