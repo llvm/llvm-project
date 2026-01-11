@@ -40,8 +40,7 @@ namespace llvm {
       // are considered extended value types.
       INVALID_SIMPLE_VALUE_TYPE = 0,
 
-#define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) \
-    Ty = n,
+#define GET_VT_ATTR(Ty, sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) Ty,
 #define GET_VT_RANGES
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_ATTR
@@ -187,7 +186,7 @@ namespace llvm {
     /// Return true if this is an overloaded type for TableGen.
     bool isOverloaded() const {
       switch (SimpleTy) {
-#define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) \
+#define GET_VT_ATTR(Ty, sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)    \
     case Ty:                                                                   \
       return Any;
 #include "llvm/CodeGen/GenVT.inc"
@@ -270,7 +269,7 @@ namespace llvm {
     MVT getVectorElementType() const {
       assert(SimpleTy >= FIRST_VALUETYPE && SimpleTy <= LAST_VALUETYPE);
       static constexpr SimpleValueType EltTyTable[] = {
-#define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) \
+#define GET_VT_ATTR(Ty, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)    \
     EltTy,
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_ATTR
@@ -284,7 +283,7 @@ namespace llvm {
     unsigned getVectorMinNumElements() const {
       assert(SimpleTy >= FIRST_VALUETYPE && SimpleTy <= LAST_VALUETYPE);
       static constexpr uint16_t NElemTable[] = {
-#define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) \
+#define GET_VT_ATTR(Ty, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)    \
     NElem,
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_ATTR
@@ -314,7 +313,7 @@ namespace llvm {
     /// base size.
     TypeSize getSizeInBits() const {
       static constexpr TypeSize SizeTable[] = {
-#define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) \
+#define GET_VT_ATTR(Ty, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)    \
     TypeSize(Sz, Sc || Tup || Ty == aarch64svcount /* FIXME: Not in the td.    \
                                                     */),
 #include "llvm/CodeGen/GenVT.inc"
@@ -437,7 +436,7 @@ namespace llvm {
     }
 
     static MVT getFloatingPointVT(unsigned BitWidth) {
-#define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) \
+#define GET_VT_ATTR(Ty, sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)    \
     if (FP == 3 && sz == BitWidth)                                             \
       return Ty;
 #include "llvm/CodeGen/GenVT.inc"
@@ -447,7 +446,7 @@ namespace llvm {
     }
 
     static MVT getIntegerVT(unsigned BitWidth) {
-#define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) \
+#define GET_VT_ATTR(Ty, sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)    \
     if (Int == 3 && sz == BitWidth)                                            \
       return Ty;
 #include "llvm/CodeGen/GenVT.inc"
@@ -477,7 +476,7 @@ namespace llvm {
     }
 
     static MVT getRISCVVectorTupleVT(unsigned Sz, unsigned NFields) {
-#define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc, Tup, NF, nElem, EltTy) \
+#define GET_VT_ATTR(Ty, sz, Any, Int, FP, Vec, Sc, Tup, NF, nElem, EltTy)    \
     if (Tup && sz == Sz && NF == NFields)                                      \
       return Ty;
 #include "llvm/CodeGen/GenVT.inc"
@@ -491,8 +490,7 @@ namespace llvm {
       assert(isRISCVVectorTuple() && SimpleTy >= FIRST_VALUETYPE &&
              SimpleTy <= LAST_VALUETYPE);
       static constexpr uint8_t NFTable[] = {
-#define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) \
-    NF,
+#define GET_VT_ATTR(Ty, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) NF,
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_ATTR
       };

@@ -18,30 +18,34 @@
 #include "llvm/Support/Debug.h"
 #include <optional>
 
+using namespace clang::ast_matchers;
+
+namespace clang::tidy::bugprone {
+
 namespace optutils = clang::tidy::utils::options;
 
 /// The default value for the MinimumLength check option.
 static constexpr std::size_t DefaultMinimumLength = 2;
 
 /// The default value for ignored parameter names.
-static constexpr llvm::StringLiteral DefaultIgnoredParameterNames = "\"\";"
-                                                                    "iterator;"
-                                                                    "Iterator;"
-                                                                    "begin;"
-                                                                    "Begin;"
-                                                                    "end;"
-                                                                    "End;"
-                                                                    "first;"
-                                                                    "First;"
-                                                                    "last;"
-                                                                    "Last;"
-                                                                    "lhs;"
-                                                                    "LHS;"
-                                                                    "rhs;"
-                                                                    "RHS";
+static constexpr StringRef DefaultIgnoredParameterNames = "\"\";"
+                                                          "iterator;"
+                                                          "Iterator;"
+                                                          "begin;"
+                                                          "Begin;"
+                                                          "end;"
+                                                          "End;"
+                                                          "first;"
+                                                          "First;"
+                                                          "last;"
+                                                          "Last;"
+                                                          "lhs;"
+                                                          "LHS;"
+                                                          "rhs;"
+                                                          "RHS";
 
 /// The default value for ignored parameter type suffixes.
-static constexpr llvm::StringLiteral DefaultIgnoredParameterTypeSuffixes =
+static constexpr StringRef DefaultIgnoredParameterTypeSuffixes =
     "bool;"
     "Bool;"
     "_Bool;"
@@ -87,10 +91,6 @@ static constexpr bool DefaultSuppressParametersUsedTogether = true;
 static constexpr std::size_t
     DefaultNamePrefixSuffixSilenceDissimilarityTreshold = 1;
 
-using namespace clang::ast_matchers;
-
-namespace clang::tidy::bugprone {
-
 using TheCheck = EasilySwappableParametersCheck;
 
 namespace filter {
@@ -105,6 +105,8 @@ static bool prefixSuffixCoverUnderThreshold(std::size_t Threshold,
 } // namespace filter
 
 namespace model {
+
+namespace {
 
 /// The language features involved in allowing the mix between two parameters.
 enum class MixFlags : unsigned char {
@@ -129,6 +131,9 @@ enum class MixFlags : unsigned char {
 
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue =*/ImplicitConversion)
 };
+
+} // namespace
+
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 /// Returns whether the SearchedFlag is turned on in the Data.
@@ -178,6 +183,8 @@ static inline std::string formatMixFlags(MixFlags F) {
 }
 
 #endif // NDEBUG
+
+namespace {
 
 /// The results of the steps of an Implicit Conversion Sequence is saved in
 /// an instance of this record.
@@ -564,6 +571,8 @@ enum class ImplicitConversionModellingMode : unsigned char {
   /// standard conversion sequence.
   OneWaySingleStandardOnly
 };
+
+} // namespace
 
 static MixData
 isLRefEquallyBindingToType(const TheCheck &Check,
@@ -1589,12 +1598,12 @@ static bool lazyMapOfSetsIntersectionExists(const MapTy &Map, const ElemTy &E1,
   if (E1Iterator == Map.end() || E2Iterator == Map.end())
     return false;
 
-  for (const auto &E1SetElem : E1Iterator->second)
-    if (E2Iterator->second.contains(E1SetElem))
-      return true;
-
-  return false;
+  return llvm::any_of(E1Iterator->second, [&E2Iterator](const auto &E1SetElem) {
+    return E2Iterator->second.contains(E1SetElem);
+  });
 }
+
+namespace {
 
 /// Implements the heuristic that marks two parameters related if there is
 /// a usage for both in the same strict expression subtree. A strict
@@ -1756,6 +1765,8 @@ public:
            llvm::is_contained(ReturnedParams, Param2);
   }
 };
+
+} // namespace
 
 } // namespace relatedness_heuristic
 
@@ -1952,7 +1963,7 @@ static inline bool needsToPrintTypeInDiagnostic(const model::Mix &M) {
 /// Returns whether a particular Mix between the two parameters should have
 /// implicit conversions elaborated.
 static inline bool needsToElaborateImplicitConversion(const model::Mix &M) {
-  return hasFlag(M.flags(), model::MixFlags::ImplicitConversion);
+  return model::hasFlag(M.flags(), model::MixFlags::ImplicitConversion);
 }
 
 namespace {

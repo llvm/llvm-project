@@ -60,12 +60,9 @@ int main() {
 add_compiler_rt_component(profile)
 
 set(PROFILE_SOURCES
-  GCDAProfiling.c
   InstrProfiling.c
   InstrProfilingInternal.c
-  InstrProfilingValue.c
   InstrProfilingBuffer.c
-  InstrProfilingFile.c
   InstrProfilingMerge.c
   InstrProfilingMergeFile.c
   InstrProfilingNameVar.c
@@ -77,9 +74,25 @@ set(PROFILE_SOURCES
   InstrProfilingPlatformLinux.c
   InstrProfilingPlatformOther.c
   InstrProfilingPlatformWindows.c
-  InstrProfilingRuntime.cpp
-  InstrProfilingUtil.c
   )
+
+if (NOT COMPILER_RT_PROFILE_BAREMETAL)
+  # For baremetal, exclude the following:
+  # - Anything that contains filesystem operations (InstrProfilingFile.c,
+  #   InstrProfilingUtils.c)
+  # - Initialization, because it isn't necesary without the filesystem bits
+  #   on ELF targets (InstrProfilingRuntime.cpp).
+  # - Value profiling, because it requires malloc (InstrProfilingValue.c).
+  #   This could be optional if someone needs it.
+  # - GCDA profiling, which is unrelated (GCDAProfiling.c)
+  list(APPEND PROFILE_SOURCES
+    GCDAProfiling.c
+    InstrProfilingFile.c
+    InstrProfilingRuntime.cpp
+    InstrProfilingUtil.c
+    InstrProfilingValue.c
+    )
+endif()
 
 set(PROFILE_HEADERS
   InstrProfiling.h
@@ -133,6 +146,12 @@ if(COMPILER_RT_TARGET_HAS_UNAME)
  set(EXTRA_FLAGS
      ${EXTRA_FLAGS}
      -DCOMPILER_RT_HAS_UNAME=1)
+endif()
+
+if(COMPILER_RT_PROFILE_BAREMETAL)
+ set(EXTRA_FLAGS
+     ${EXTRA_FLAGS}
+     -DCOMPILER_RT_PROFILE_BAREMETAL=1)
 endif()
 
 if(MSVC)

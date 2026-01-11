@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/workitem/get_local_id.h>
 #include <clc/workitem/clc_get_local_id.h>
 
 _CLC_DEF _CLC_OVERLOAD size_t get_local_id(uint dim) {

@@ -7,13 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "DanglingHandleCheck.h"
-#include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
-using namespace clang::tidy::matchers;
 
 namespace clang::tidy::bugprone {
 
@@ -31,7 +29,6 @@ handleFrom(const ast_matchers::internal::Matcher<RecordDecl> &IsAHandle,
 
 static ast_matchers::internal::Matcher<Stmt> handleFromTemporaryValue(
     const ast_matchers::internal::Matcher<RecordDecl> &IsAHandle) {
-
   const auto TemporaryExpr = anyOf(
       cxxBindTemporaryExpr(),
       cxxFunctionalCastExpr(

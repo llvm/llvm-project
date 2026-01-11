@@ -169,9 +169,7 @@ LIBC_INLINE static void handle_printf(rpc::Server::Port &port,
     if (!format[lane])
       continue;
 
-    printf_core::WriteBuffer<
-        printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>
-        wb(nullptr, 0);
+    printf_core::DropOverflowBuffer wb(nullptr, 0);
     printf_core::Writer writer(wb);
 
     internal::DummyArgList<packed> printf_args;
@@ -198,9 +196,7 @@ LIBC_INLINE static void handle_printf(rpc::Server::Port &port,
     if (!format[lane])
       continue;
 
-    printf_core::WriteBuffer<
-        printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>
-        wb(nullptr, 0);
+    printf_core::DropOverflowBuffer wb(nullptr, 0);
     printf_core::Writer writer(wb);
 
     internal::StructArgList<packed> printf_args(args[lane], args_sizes[lane]);
@@ -262,9 +258,7 @@ LIBC_INLINE static void handle_printf(rpc::Server::Port &port,
       continue;
 
     char *buffer = temp_storage.alloc(buffer_size[lane]);
-    printf_core::WriteBuffer<
-        printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>
-        wb(buffer, buffer_size[lane]);
+    printf_core::DropOverflowBuffer wb(buffer, buffer_size[lane]);
     printf_core::Writer writer(wb);
 
     internal::StructArgList<packed> printf_args(args[lane], args_sizes[lane]);

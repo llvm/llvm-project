@@ -5,6 +5,7 @@
 *   return a + b + c + d + e + f;
 * }*/
 	.file	"regs_fp_params.c"
+	.att_syntax
 	.text
 	.globl	regs_fp_params                  # -- Begin function regs_fp_params
 	.p2align	4

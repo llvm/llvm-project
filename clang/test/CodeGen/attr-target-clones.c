@@ -125,6 +125,35 @@ void __attribute__((target_clones("default, arch=ivybridge"))) unused(void) {}
 // WINDOWS: musttail call void @unused.arch_ivybridge.0
 // WINDOWS: musttail call void @unused.default.1
 
+int __attribute__((target_clones("sse4.2, default"))) inherited(void);
+int inherited(void) { return 0; }
+// LINUX: define {{.*}}i32 @inherited.sse4.2.0()
+// LINUX: define {{.*}}i32 @inherited.default.1()
+// LINUX: define weak_odr ptr @inherited.resolver() #[[ATTR_RESOLVER]] comdat
+// LINUX: ret ptr @inherited.sse4.2.0
+// LINUX: ret ptr @inherited.default.1
+
+// DARWIN: define {{.*}}i32 @inherited.sse4.2.0()
+// DARWIN: define {{.*}}i32 @inherited.default.1()
+// DARWIN: define weak_odr ptr @inherited.resolver() #[[ATTR_RESOLVER]] {
+// DARWIN: ret ptr @inherited.sse4.2.0
+// DARWIN: ret ptr @inherited.default.1
+
+// WINDOWS: define dso_local i32 @inherited.sse4.2.0()
+// WINDOWS: define dso_local i32 @inherited.default.1()
+// WINDOWS: define weak_odr dso_local i32 @inherited() #[[ATTR_RESOLVER]] comdat
+// WINDOWS: musttail call i32 @inherited.sse4.2.0
+// WINDOWS: musttail call i32 @inherited.default.1
+
+int test_inherited(void) {
+  // LINUX: define {{.*}}i32 @test_inherited() #[[DEF:[0-9]+]]
+  // DARWIN: define {{.*}}i32 @test_inherited() #[[DEF:[0-9]+]]
+  // WINDOWS: define dso_local i32 @test_inherited() #[[DEF:[0-9]+]]
+  return inherited();
+  // LINUX: call i32 @inherited()
+  // DARWIN: call i32 @inherited()
+  // WINDOWS: call i32 @inherited()
+}
 
 inline int __attribute__((target_clones("arch=sandybridge,default,sse4.2")))
 foo_inline(void) { return 0; }

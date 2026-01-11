@@ -14,7 +14,6 @@
 #ifndef BOLT_CORE_MCPLUSBUILDER_H
 #define BOLT_CORE_MCPLUSBUILDER_H
 
-#include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/MCPlus.h"
 #include "bolt/Core/Relocation.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -64,6 +63,14 @@ enum class IndirectBranchType : char {
   POSSIBLE_FIXED_BRANCH,   /// Possibly an indirect branch to a fixed location.
   POSSIBLE_PIC_FIXED_BRANCH, /// Possibly an indirect jump to a fixed entry in a
                              /// PIC jump table.
+};
+
+/// Enum used for readability when describing different BTI instruction
+/// variants. The variant is encoded as an immediate of the instruction in LLVM.
+enum BTIKind {
+  C, /// Accepting calls, and jumps using x16/x17.
+  J, /// Accepting jumps.
+  JC /// Accepting both.
 };
 
 class MCPlusBuilder {
@@ -630,6 +637,12 @@ public:
   virtual bool isPAuthAndRet(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
+  }
+
+  /// Generate the matching pointer authentication instruction from a fused
+  /// pauth-and-return instruction.
+  virtual void createMatchingAuth(const MCInst &AuthAndRet, MCInst &Auth) {
+    llvm_unreachable("not implemented");
   }
 
   /// Returns the register used as a return address. Returns std::nullopt if
@@ -1863,6 +1876,37 @@ public:
     llvm_unreachable("not implemented");
   }
 
+  /// Check if an Instruction is a BTI landing pad with the required properties.
+  /// Takes both explicit and implicit BTIs into account.
+  virtual bool isBTILandingPad(MCInst &Inst, BTIKind BTI) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  /// Check if an Instruction is an implicit BTI c landing pad.
+  virtual bool isImplicitBTIC(MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  /// Create a BTI landing pad instruction.
+  virtual void createBTI(MCInst &Inst, BTIKind BTI) const {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Checks if the indirect call / jump is accepted by the landing pad at the
+  /// start of the target BasicBlock.
+  virtual bool isCallCoveredByBTI(MCInst &Call, MCInst &Pad) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  /// Inserts a BTI landing pad to the start of the BB, that matches the
+  /// indirect call inst used to call the BB.
+  virtual void insertBTI(BinaryBasicBlock &BB, MCInst &Call) const {
+    llvm_unreachable("not implemented");
+  }
+
   /// Store \p Target absolute address to \p RegName
   virtual InstructionListType materializeAddress(const MCSymbol *Target,
                                                  MCContext *Ctx,
@@ -1997,7 +2041,7 @@ public:
   /// targets).
   virtual std::optional<uint64_t>
   findMemcpySizeInBytes(const BinaryBasicBlock &BB,
-                        BinaryBasicBlock::iterator CallInst) const {
+                        InstructionListType::iterator CallInst) const {
     return std::nullopt;
   }
 

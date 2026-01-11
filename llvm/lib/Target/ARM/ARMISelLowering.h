@@ -315,8 +315,7 @@ class VectorType;
     bool isFPImmLegal(const APFloat &Imm, EVT VT,
                       bool ForCodeSize = false) const override;
 
-    bool getTgtMemIntrinsic(IntrinsicInfo &Info,
-                            const CallInst &I,
+    bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
                             MachineFunction &MF,
                             unsigned Intrinsic) const override;
 
@@ -490,8 +489,6 @@ class VectorType;
         IRBuilderBase &B, ComplexDeinterleavingOperation OperationType,
         ComplexDeinterleavingRotation Rotation, Value *InputA, Value *InputB,
         Value *Accumulator = nullptr) const override;
-
-    bool softPromoteHalfType() const override { return true; }
 
     bool useFPRegsForHalfType() const override { return true; }
 

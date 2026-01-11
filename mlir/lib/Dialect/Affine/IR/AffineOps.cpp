@@ -5421,7 +5421,7 @@ struct DropLinearizeUnitComponentsIfDisjointOrZero final
       return rewriter.notifyMatchFailure(op,
                                          "no unit basis entries to replace");
 
-    if (newIndices.size() == 0) {
+    if (newIndices.empty()) {
       rewriter.replaceOpWithNewOp<arith::ConstantIndexOp>(op, 0);
       return success();
     }

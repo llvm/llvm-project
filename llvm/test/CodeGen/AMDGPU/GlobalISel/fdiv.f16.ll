@@ -174,7 +174,7 @@ define half @v_fdiv_f16(half %a, half %b) {
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v2, v1
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v3, v0
 ; GFX11-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_mul_f32_e32 v3, v3, v2
 ; GFX11-NEXT:    v_fma_mix_f32 v4, -v1, v3, v0 op_sel_hi:[1,0,1]
 ; GFX11-NEXT:    v_fmac_f32_e32 v3, v4, v2
@@ -218,7 +218,7 @@ define half @v_fdiv_f16_afn(half %a, half %b) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_rcp_f16_e32 v1, v1
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_mul_f16_e32 v0, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv afn half %a, %b
@@ -384,7 +384,7 @@ define half @v_fdiv_f16_ulp25(half %a, half %b) {
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v2, v1
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v3, v0
 ; GFX11-NEXT:    v_rcp_f32_e32 v2, v2
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_mul_f32_e32 v3, v3, v2
 ; GFX11-NEXT:    v_fma_mix_f32 v4, -v1, v3, v0 op_sel_hi:[1,0,1]
 ; GFX11-NEXT:    v_fmac_f32_e32 v3, v4, v2
@@ -672,7 +672,7 @@ define half @v_fdiv_f16_afn_ulp25(half %a, half %b) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_rcp_f16_e32 v1, v1
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_mul_f16_e32 v0, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv afn half %a, %b
@@ -739,7 +739,7 @@ define half @v_fdiv_f16_arcp_ulp25(half %a, half %b) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_rcp_f16_e32 v1, v1
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_mul_f16_e32 v0, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv arcp half %a, %b
@@ -1041,7 +1041,7 @@ define <2 x half> @v_fdiv_v2f16(<2 x half> %a, <2 x half> %b) {
 ; GFX11-NEXT:    v_rcp_f32_e32 v3, v3
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v7, v5
 ; GFX11-NEXT:    v_rcp_f32_e32 v4, v4
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_dual_mul_f32 v6, v6, v3 :: v_dual_mul_f32 v7, v7, v4
 ; GFX11-NEXT:    v_fma_mix_f32 v8, -v1, v6, v0 op_sel_hi:[1,0,1]
 ; GFX11-NEXT:    v_fma_mix_f32 v9, -v1, v7, v0 op_sel:[1,0,1] op_sel_hi:[1,0,1]
@@ -1115,7 +1115,7 @@ define <2 x half> @v_fdiv_v2f16_afn(<2 x half> %a, <2 x half> %b) {
 ; GFX11-NEXT:    v_rcp_f16_e32 v1, v1
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
 ; GFX11-NEXT:    v_rcp_f16_e32 v2, v2
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_mul_f16_e32 v0, v0, v1
 ; GFX11-NEXT:    v_mul_f16_e32 v1, v3, v2
 ; GFX11-NEXT:    v_pack_b32_f16 v0, v0, v1
@@ -1419,7 +1419,7 @@ define <2 x half> @v_fdiv_v2f16_ulp25(<2 x half> %a, <2 x half> %b) {
 ; GFX11-NEXT:    v_rcp_f32_e32 v3, v3
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v7, v5
 ; GFX11-NEXT:    v_rcp_f32_e32 v4, v4
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_dual_mul_f32 v6, v6, v3 :: v_dual_mul_f32 v7, v7, v4
 ; GFX11-NEXT:    v_fma_mix_f32 v8, -v1, v6, v0 op_sel_hi:[1,0,1]
 ; GFX11-NEXT:    v_fma_mix_f32 v9, -v1, v7, v0 op_sel:[1,0,1] op_sel_hi:[1,0,1]
@@ -1700,7 +1700,7 @@ define <2 x half> @v_rcp_v2f16(<2 x half> %x) {
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v3, v1
 ; GFX11-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX11-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_fma_mix_f32 v5, -v0, v2, v4 op_sel_hi:[1,0,0]
 ; GFX11-NEXT:    v_fma_mix_f32 v6, -v0, v3, v4 op_sel:[1,0,0] op_sel_hi:[1,0,0]
 ; GFX11-NEXT:    v_fma_f32 v5, v5, v2, v2
@@ -1981,7 +1981,7 @@ define <2 x half> @v_neg_rcp_v2f16(<2 x half> %x) {
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v3, v1
 ; GFX11-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX11-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_fma_mix_f32 v5, v0, v2, v4 op_sel_hi:[1,0,0]
 ; GFX11-NEXT:    v_fma_mix_f32 v6, v0, v3, v4 op_sel:[1,0,0] op_sel_hi:[1,0,0]
 ; GFX11-NEXT:    v_fma_f32 v5, v5, v2, -v2
@@ -2277,7 +2277,7 @@ define <2 x half> @v_rcp_v2f16_fabs(<2 x half> %x) {
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v4, v2
 ; GFX11-NEXT:    v_rcp_f32_e32 v4, v4
 ; GFX11-NEXT:    v_mov_b32_e32 v5, 1.0
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_fma_mix_f32 v7, -|v0|, v4, v5 op_sel:[1,0,0] op_sel_hi:[1,0,0]
 ; GFX11-NEXT:    v_fma_f32 v7, v7, v4, v4
 ; GFX11-NEXT:    v_fma_mix_f32 v0, -|v0|, v7, v5 op_sel:[1,0,0] op_sel_hi:[1,0,0]
@@ -2288,7 +2288,7 @@ define <2 x half> @v_rcp_v2f16_fabs(<2 x half> %x) {
 ; GFX11-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX11-NEXT:    v_rcp_f32_e32 v3, v3
 ; GFX11-NEXT:    v_div_fixup_f16 v0, v0, v2, 1.0
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_fma_mix_f32 v6, -v1, v3, v5 op_sel_hi:[1,0,0]
 ; GFX11-NEXT:    v_fma_f32 v6, v6, v3, v3
 ; GFX11-NEXT:    v_fma_mix_f32 v8, -v1, v6, v5 op_sel_hi:[1,0,0]
@@ -2579,7 +2579,7 @@ define <2 x half> @v_neg_rcp_v2f16_fabs(<2 x half> %x) {
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v4, v2
 ; GFX11-NEXT:    v_rcp_f32_e32 v4, v4
 ; GFX11-NEXT:    v_mov_b32_e32 v5, -1.0
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_fma_mix_f32 v7, |v0|, v4, v5 op_sel:[1,0,0] op_sel_hi:[1,0,0]
 ; GFX11-NEXT:    v_fma_f32 v7, v7, v4, -v4
 ; GFX11-NEXT:    v_fma_mix_f32 v0, -|v0|, v7, v5 op_sel:[1,0,0] op_sel_hi:[1,0,0]
@@ -2590,7 +2590,7 @@ define <2 x half> @v_neg_rcp_v2f16_fabs(<2 x half> %x) {
 ; GFX11-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX11-NEXT:    v_rcp_f32_e32 v3, v3
 ; GFX11-NEXT:    v_div_fixup_f16 v0, v0, v2, -1.0
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_fma_mix_f32 v6, v1, v3, v5 op_sel_hi:[1,0,0]
 ; GFX11-NEXT:    v_fma_f32 v6, v6, v3, -v3
 ; GFX11-NEXT:    v_fma_mix_f32 v8, -v1, v6, v5 op_sel_hi:[1,0,0]
@@ -2704,7 +2704,7 @@ define <2 x half> @v_rcp_v2f16_arcp(<2 x half> %x) {
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX11-NEXT:    v_rcp_f16_e32 v0, v0
 ; GFX11-NEXT:    v_rcp_f16_e32 v1, v1
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_pack_b32_f16 v0, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv arcp <2 x half> <half 1.0, half 1.0>, %x
@@ -2753,7 +2753,7 @@ define <2 x half> @v_rcp_v2f16_arcp_afn(<2 x half> %x) {
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX11-NEXT:    v_rcp_f16_e32 v0, v0
 ; GFX11-NEXT:    v_rcp_f16_e32 v1, v1
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_pack_b32_f16 v0, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv arcp afn <2 x half> <half 1.0, half 1.0>, %x
@@ -3020,7 +3020,7 @@ define <2 x half> @v_rcp_v2f16_ulp25(<2 x half> %x) {
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v3, v1
 ; GFX11-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX11-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_fma_mix_f32 v5, -v0, v2, v4 op_sel_hi:[1,0,0]
 ; GFX11-NEXT:    v_fma_mix_f32 v6, -v0, v3, v4 op_sel:[1,0,0] op_sel_hi:[1,0,0]
 ; GFX11-NEXT:    v_fma_f32 v5, v5, v2, v2
@@ -3094,7 +3094,7 @@ define <2 x half> @v_fdiv_v2f16_afn_ulp25(<2 x half> %a, <2 x half> %b) {
 ; GFX11-NEXT:    v_rcp_f16_e32 v1, v1
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
 ; GFX11-NEXT:    v_rcp_f16_e32 v2, v2
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_mul_f16_e32 v0, v0, v1
 ; GFX11-NEXT:    v_mul_f16_e32 v1, v3, v2
 ; GFX11-NEXT:    v_pack_b32_f16 v0, v0, v1
@@ -3212,7 +3212,7 @@ define <2 x half> @v_fdiv_v2f16_arcp_ulp25(<2 x half> %a, <2 x half> %b) {
 ; GFX11-NEXT:    v_rcp_f16_e32 v1, v1
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
 ; GFX11-NEXT:    v_rcp_f16_e32 v2, v2
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_mul_f16_e32 v0, v0, v1
 ; GFX11-NEXT:    v_mul_f16_e32 v1, v3, v2
 ; GFX11-NEXT:    v_pack_b32_f16 v0, v0, v1
@@ -3274,7 +3274,7 @@ define <2 x half> @v_fdiv_v2f16_arcp_afn_ulp25(<2 x half> %a, <2 x half> %b) {
 ; GFX11-NEXT:    v_rcp_f16_e32 v1, v1
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
 ; GFX11-NEXT:    v_rcp_f16_e32 v2, v2
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_mul_f16_e32 v0, v0, v1
 ; GFX11-NEXT:    v_mul_f16_e32 v1, v3, v2
 ; GFX11-NEXT:    v_pack_b32_f16 v0, v0, v1
@@ -3445,7 +3445,7 @@ define amdgpu_ps i16 @s_fdiv_f16(i16 inreg %a.arg, i16 inreg %b.arg) {
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v0, s1
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v1, s0
 ; GFX11-NEXT:    v_rcp_f32_e32 v0, v0
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_mul_f32_e32 v1, v1, v0
 ; GFX11-NEXT:    v_fma_mix_f32 v2, -s1, v1, s0 op_sel_hi:[1,0,1]
 ; GFX11-NEXT:    v_fmac_f32_e32 v1, v2, v0
@@ -3523,7 +3523,7 @@ define amdgpu_ps i16 @s_fdiv_f16_arcp(i16 inreg %a.arg, i16 inreg %b.arg) {
 ; GFX11-LABEL: s_fdiv_f16_arcp:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_rcp_f16_e32 v0, s1
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_mul_f16_e32 v0, s0, v0
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -3562,7 +3562,7 @@ define amdgpu_ps i16 @s_fdiv_f16_afn(i16 inreg %a.arg, i16 inreg %b.arg) {
 ; GFX11-LABEL: s_fdiv_f16_afn:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_rcp_f16_e32 v0, s1
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_mul_f16_e32 v0, s0, v0
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -3883,7 +3883,7 @@ define amdgpu_ps i32 @s_fdiv_v2f16(i32 inreg %a.arg, i32 inreg %b.arg) {
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v3, s3
 ; GFX11-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX11-NEXT:    v_rcp_f32_e32 v1, v1
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_dual_mul_f32 v2, v2, v0 :: v_dual_mul_f32 v3, v3, v1
 ; GFX11-NEXT:    v_fma_mix_f32 v4, -s1, v2, s0 op_sel_hi:[1,0,1]
 ; GFX11-NEXT:    v_fma_mix_f32 v5, -s2, v3, s3 op_sel_hi:[1,0,1]
@@ -3963,7 +3963,7 @@ define amdgpu_ps i16 @s_rcp_f16(i16 inreg %a.arg) {
 ; GFX11-LABEL: s_rcp_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_rcp_f16_e32 v0, s0
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
   %a = bitcast i16 %a.arg to half
@@ -4027,7 +4027,7 @@ define amdgpu_ps i16 @s_neg_rcp_f16(i16 inreg %a.arg) {
 ; GFX11-LABEL: s_neg_rcp_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_rcp_f16_e64 v0, -s0
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
   %a = bitcast i16 %a.arg to half
@@ -4097,7 +4097,7 @@ define amdgpu_ps i16 @s_rsq_f16(i16 inreg %a.arg) {
 ; GFX11-LABEL: s_rsq_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_rsq_f16_e32 v0, s0
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
   %a = bitcast i16 %a.arg to half
@@ -4384,12 +4384,12 @@ define amdgpu_ps i32 @s_rsq_v2f16(i32 inreg %a.arg) {
 ; GFX11-NEXT:    v_sqrt_f16_e32 v0, s0
 ; GFX11-NEXT:    v_sqrt_f16_e32 v1, s1
 ; GFX11-NEXT:    v_mov_b32_e32 v4, -1.0
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v2, v0
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v3, v1
 ; GFX11-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX11-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_fma_mix_f32 v5, v0, v2, v4 op_sel_hi:[1,0,0]
 ; GFX11-NEXT:    v_fma_mix_f32 v6, v1, v3, v4 op_sel_hi:[1,0,0]
 ; GFX11-NEXT:    v_fma_f32 v5, v5, v2, -v2
@@ -4540,7 +4540,7 @@ define half @v_neg_rsq_f16(half %a) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_rcp_f16_e64 v0, -v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call contract half @llvm.sqrt.f16(half %a)
@@ -4615,7 +4615,7 @@ define { half, half } @v_rsq_f16_multi_use(half %a) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_sqrt_f16_e32 v2, v0
 ; GFX11-NEXT:    v_rsq_f16_e32 v1, v0
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call contract half @llvm.sqrt.f16(half %a)
@@ -4689,7 +4689,7 @@ define half @v_rsq_f16_missing_contract0(half %a) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_rcp_f16_e32 v0, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call half @llvm.sqrt.f16(half %a)
@@ -4761,7 +4761,7 @@ define half @v_rsq_f16_missing_contract1(half %a) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_rcp_f16_e32 v0, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call contract half @llvm.sqrt.f16(half %a)
@@ -4833,7 +4833,7 @@ define half @v_neg_rsq_f16_missing_contract0(half %a) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_rcp_f16_e64 v0, -v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call half @llvm.sqrt.f16(half %a)
@@ -4905,7 +4905,7 @@ define half @v_neg_rsq_f16_missing_contract1(half %a) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_rcp_f16_e64 v0, -v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call contract half @llvm.sqrt.f16(half %a)
@@ -4977,7 +4977,7 @@ define half @v_neg_rsq_f16_fabs(half %a) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_sqrt_f16_e64 v0, |v0|
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_rcp_f16_e64 v0, -v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %a.fabs = call half @llvm.fabs.f16(half %a)
@@ -5112,7 +5112,7 @@ define half @v_neg_rsq_f16_arcp(half %a) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_rcp_f16_e64 v0, -v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call contract half @llvm.sqrt.f16(half %a)
@@ -5178,7 +5178,7 @@ define half @v_rsq_f16_afn_nocontract(half %a) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_sqrt_f16_e32 v0, v0
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_rcp_f16_e32 v0, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call half @llvm.sqrt.f16(half %a)
@@ -5452,12 +5452,12 @@ define <2 x half> @v_rsq_v2f16(<2 x half> %a) {
 ; GFX11-NEXT:    v_sqrt_f16_e32 v0, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v4, 1.0
 ; GFX11-NEXT:    v_sqrt_f16_e32 v1, v1
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v2, v0
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v3, v1
 ; GFX11-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX11-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_fma_mix_f32 v5, -v0, v2, v4 op_sel_hi:[1,0,0]
 ; GFX11-NEXT:    v_fma_mix_f32 v6, -v1, v3, v4 op_sel_hi:[1,0,0]
 ; GFX11-NEXT:    v_fma_f32 v5, v5, v2, v2
@@ -5745,12 +5745,12 @@ define <2 x half> @v_neg_rsq_v2f16(<2 x half> %a) {
 ; GFX11-NEXT:    v_sqrt_f16_e32 v0, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v4, -1.0
 ; GFX11-NEXT:    v_sqrt_f16_e32 v1, v1
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v2, v0
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v3, v1
 ; GFX11-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX11-NEXT:    v_rcp_f32_e32 v3, v3
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_fma_mix_f32 v5, v0, v2, v4 op_sel_hi:[1,0,0]
 ; GFX11-NEXT:    v_fma_mix_f32 v6, v1, v3, v4 op_sel_hi:[1,0,0]
 ; GFX11-NEXT:    v_fma_f32 v5, v5, v2, -v2
