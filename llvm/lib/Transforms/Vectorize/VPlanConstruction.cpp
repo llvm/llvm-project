@@ -1230,12 +1230,22 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
 
     // If we exit early due to NaNs, compute the final reduction result based on
     // the reduction phi at the beginning of the last vector iteration.
+    VPValue *BackedgeVal = RedPhiR->getBackedgeValue();
     auto *RdxResult =
-        findUserOf<VPInstruction::ComputeReductionResult>(RedPhiR);
+        findUserOf<VPInstruction::ComputeReductionResult>(BackedgeVal);
+
+    // Look through selects inserted for tail folding.
+    if (!RdxResult) {
+      auto *SelR = cast<VPSingleDefRecipe>(
+          *find_if(BackedgeVal->users(),
+                   [PhiR = RedPhiR](VPUser *U) { return U != PhiR; }));
+      RdxResult = findUserOf<VPInstruction::ComputeReductionResult>(SelR);
+      assert(RdxResult && "must find a ComputeReductionResult");
+    }
 
     auto *NewSel = MiddleBuilder.createSelect(AnyNaNLane, RedPhiR,
-                                              RdxResult->getOperand(1));
-    RdxResult->setOperand(1, NewSel);
+                                              RdxResult->getOperand(0));
+    RdxResult->setOperand(0, NewSel);
     assert(!RdxResults.contains(RdxResult) && "RdxResult already used");
     RdxResults.insert(RdxResult);
   }
@@ -1364,18 +1374,17 @@ static bool handleFirstArgMinOrMax(VPlan &Plan,
   //
   // The original reductions need adjusting:
   // For example, this transforms two independent constructs
-  // vp<%min.result> = compute-reduction-result ir<%min.val>, ir<%min.val.next>
+  // vp<%min.result> = compute-reduction-result ir<%min.val.next>
   // vp<%find.iv.result> = compute-find-iv-result ir<%min.idx>, ir<0>,
   //                                              ir<Sentinel>,
   //                                              vp<%min.idx.next>
   //
   // into:
-  //  vp<%min.result> = compute-reduction-result ir<%min.val>, ir<%min.val.next>
+  //  vp<%min.result> = compute-reduction-result ir<%min.val.next>
   //  vp<%final.min.cmp> = icmp eq ir<%min.val.next>, vp<%min.result>
   //  vp<%final.min.idx> = select vp<%final.min.cmp>, ir<%min.idx.next>,
   //                              ir<MaxUInt>
-  //  vp<%final.can.iv> = compute-reduction-result ir<%min.idx>,
-  //                                                 vp<%final.min.idx>
+  //  vp<%final.can.iv> = compute-reduction-result vp<%final.min.idx>
   //  vp<%scaled.result.iv> = DERIVED-IV ir<20> + vp<%final.can.iv> *
   //                                                        ir<1>
   //  vp<%always.false> = icmp eq vp<%min.result>, ir<%sentinel.min.start>
@@ -1383,14 +1392,15 @@ static bool handleFirstArgMinOrMax(VPlan &Plan,
   //                             vp<%scaled.result.iv>
 
   VPBuilder Builder(FindLastIVResult);
-  VPValue *MinOrMaxExiting = MinOrMaxResult->getOperand(1);
+  VPValue *MinOrMaxExiting = MinOrMaxResult->getOperand(0);
   auto *FinalMinOrMaxCmp =
       Builder.createICmp(CmpInst::ICMP_EQ, MinOrMaxExiting, MinOrMaxResult);
   VPValue *LastIVExiting = FindLastIVResult->getOperand(3);
   auto *FinalIVSelect =
       Builder.createSelect(FinalMinOrMaxCmp, LastIVExiting, MaxIV);
+  VPIRFlags RdxFlags(RecurKind::UMin, false, false, FastMathFlags());
   VPSingleDefRecipe *FinalCanIV = Builder.createNaryOp(
-      VPInstruction::ComputeReductionResult, {FirstIdxPhiR, FinalIVSelect}, {},
+      VPInstruction::ComputeReductionResult, {FinalIVSelect}, RdxFlags,
       FindLastIVResult->getDebugLoc());
 
   // If we used a new wide canonical IV convert the reduction result back to the
@@ -1414,6 +1424,7 @@ static bool handleFirstArgMinOrMax(VPlan &Plan,
       AlwaysFalse, FindLastIVResult->getOperand(1), FinalCanIV);
   FindLastIVPhiR->replaceAllUsesWith(FirstIdxPhiR);
   FindLastIVResult->replaceAllUsesWith(FinalIV);
+  FindLastIVPhiR->eraseFromParent();
   return true;
 }
 
@@ -1429,10 +1440,10 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
 
     // MinOrMaxPhiR has users outside the reduction cycle in the loop. Check if
     // the only other user is a FindLastIV reduction. MinOrMaxPhiR must have
-    // exactly 3 users: 1) the min/max operation, the compare of a FindLastIV
-    // reduction and ComputeReductionResult. The comparison must compare
-    // MinOrMaxPhiR against the min/max operand used for the min/max reduction
-    // and only be used by the select of the FindLastIV reduction.
+    // exactly 2 users: 1) the min/max operation and the compare of a FindLastIV
+    // reduction. The comparison must compare MinOrMaxPhiR against the min/max
+    // operand used for the min/max reduction and only be used by the select of
+    // the FindLastIV reduction.
     RecurKind RdxKind = MinOrMaxPhiR->getRecurrenceKind();
     assert(
         RecurrenceDescriptor::isIntMinMaxRecurrenceKind(RdxKind) &&
@@ -1469,20 +1480,17 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     if (MinMaxOpValue != CmpOpB)
       Pred = CmpInst::getSwappedPredicate(Pred);
 
-    // MinOrMaxPhiR must have exactly 3 users:
+    // MinOrMaxPhiR must have exactly 2 users:
     // * MinMaxOp,
-    // * Cmp (that's part of a FindLastIV chain),
-    // * ComputeReductionResult.
-    if (MinOrMaxPhiR->getNumUsers() != 3)
+    // * Cmp (that's part of a FindLastIV chain).
+    if (MinOrMaxPhiR->getNumUsers() != 2)
       return false;
 
     VPInstruction *MinOrMaxResult =
-        findUserOf<VPInstruction::ComputeReductionResult>(MinOrMaxPhiR);
+        findUserOf<VPInstruction::ComputeReductionResult>(MinMaxOp);
     assert(is_contained(MinOrMaxPhiR->users(), MinMaxOp) &&
            "one user must be MinMaxOp");
-    assert(MinOrMaxResult && "MinOrMaxResult must be a user of MinOrMaxPhiR");
-    assert(is_contained(MinMaxOp->users(), MinOrMaxResult) &&
-           "MinOrMaxResult must be a user of MinMaxOp (and of MinOrMaxPhiR)");
+    assert(MinOrMaxResult && "MinOrMaxResult must be a user of MinMaxOp");
 
     // Cmp must be used by the select of a FindLastIV chain.
     VPValue *Sel = dyn_cast<VPSingleDefRecipe>(Cmp->getSingleUser());
@@ -1556,10 +1564,9 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     //     correspond to the lanes matching the min/max reduction result.
     //
     // For example, this transforms
-    // vp<%min.result> = compute-reduction-result ir<%min.val>,
-    //                                            ir<%min.val.next>
-    // vp<%find.iv.result = compute-find-iv-result ir<%min.idx>, ir<0>,
-    //                                             SENTINEL, vp<%min.idx.next>
+    // vp<%min.result> = compute-reduction-result ir<%min.val.next>
+    // vp<%find.iv.result = compute-find-iv-result ir<0>, SENTINEL,
+    //                                             vp<%min.idx.next>
     //
     // into:
     //
@@ -1576,7 +1583,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
                                FindIVResult->getIterator());
 
     VPBuilder B(FindIVResult);
-    VPValue *MinMaxExiting = MinOrMaxResult->getOperand(1);
+    VPValue *MinMaxExiting = MinOrMaxResult->getOperand(0);
     auto *FinalMinMaxCmp =
         B.createICmp(CmpInst::ICMP_EQ, MinMaxExiting, MinOrMaxResult);
     VPValue *Sentinel = FindIVResult->getOperand(2);
