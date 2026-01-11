@@ -57,7 +57,8 @@ public:
   matchAndRewrite(mlir::Operation *op, llvm::ArrayRef<mlir::Value> operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     // Do not match on operations that have dedicated ABI lowering rewrite rules
-    if (llvm::isa<cir::AllocaOp, cir::ConstantOp, cir::FuncOp,
+    if (llvm::isa<cir::AllocaOp, cir::BaseDataMemberOp, cir::ConstantOp,
+                  cir::CmpOp, cir::DerivedDataMemberOp, cir::FuncOp,
                   cir::GetRuntimeMemberOp, cir::GlobalOp>(op))
       return mlir::failure();
 
@@ -145,6 +146,21 @@ mlir::LogicalResult CIRConstantOpABILowering::matchAndRewrite(
   llvm_unreachable("constant operand is not an CXXABI-dependent type");
 }
 
+mlir::LogicalResult CIRCmpOpABILowering::matchAndRewrite(
+    cir::CmpOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type type = op.getLhs().getType();
+  assert((mlir::isa<cir::DataMemberType>(type)) &&
+         "input to cmp in ABI lowering must be a data member");
+
+  assert(!cir::MissingFeatures::methodType());
+  mlir::Value loweredResult = lowerModule->getCXXABI().lowerDataMemberCmp(
+      op, adaptor.getLhs(), adaptor.getRhs(), rewriter);
+
+  rewriter.replaceOp(op, loweredResult);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRFuncOpABILowering::matchAndRewrite(
     cir::FuncOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -206,6 +222,24 @@ mlir::LogicalResult CIRGlobalOpABILowering::matchAndRewrite(
   newOp.setInitialValueAttr(loweredInit);
   newOp.setSymType(loweredTy);
   rewriter.replaceOp(op, newOp);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRBaseDataMemberOpABILowering::matchAndRewrite(
+    cir::BaseDataMemberOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Value loweredResult = lowerModule->getCXXABI().lowerBaseDataMember(
+      op, adaptor.getSrc(), rewriter);
+  rewriter.replaceOp(op, loweredResult);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRDerivedDataMemberOpABILowering::matchAndRewrite(
+    cir::DerivedDataMemberOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Value loweredResult = lowerModule->getCXXABI().lowerDerivedDataMember(
+      op, adaptor.getSrc(), rewriter);
+  rewriter.replaceOp(op, loweredResult);
   return mlir::success();
 }
 
