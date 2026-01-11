@@ -1040,3 +1040,18 @@ add_header_library(
     libc.src.__support.math.sincos_eval
     libc.src.__support.macros.optimization
 )
+
+add_header_library(
+  hypotf16
+  HDRS
+    hypotf16.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.hdr.math_macros
+    libc.src.__support.common
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types
+)
