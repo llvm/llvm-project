@@ -21,6 +21,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Frontend/DiagnosticRenderer.h"
 #include "llvm/ADT/SmallVector.h"
+#include <unordered_set>
 
 namespace clang {
 
@@ -119,6 +120,12 @@ private:
   const LangOptions *LangOptsPtr;
   SarifDocumentWriter
       *Writer; // Shared between SARIFDiagnosticPrinter and this renderer.
+
+  // TODO: get rid of the fixed forkable diag lists.
+  // The proper long-term fix is definitely "build diag-tree where diag is provided", 
+  // not "reassemble diag-tree where diag is consumed".
+  // See https://github.com/llvm/llvm-project/pull/151234.
+  static std::unordered_set<unsigned> ForkableDiagIDs;
 };
 
 } // end namespace clang

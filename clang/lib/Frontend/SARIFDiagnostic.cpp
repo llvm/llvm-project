@@ -8,7 +8,9 @@
 
 #include "clang/Frontend/SARIFDiagnostic.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Sarif.h"
 #include "clang/Basic/SourceLocation.h"
@@ -24,6 +26,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Locale.h"
 #include <string>
+#include <unordered_set>
 
 namespace clang {
 
@@ -100,7 +103,10 @@ void SARIFDiagnostic::emitDiagnosticMessage(
     Current =
         &Root; // If this is a top-level error/warning, repoint Current to Root.
   } else {
-    if (Message.starts_with("candidate"))
+    auto ID = llvm::isa<const Diagnostic*>(Diag) ? Diag.dyn_cast<const Diagnostic*>()->getID() : 
+                                       Diag.dyn_cast<const StoredDiagnostic*>()->getID();
+    if (ForkableDiagIDs.find(ID) != ForkableDiagIDs.end() or 
+        Message.starts_with("candidate"))
       Current =
           &Current
                ->getForkableParent(); // If this is an forked-case note, repoint
@@ -271,6 +277,81 @@ SARIFDiagnostic::Node::Location::getCharSourceRangesWithOption(
 
   return Locations;
 }
+
+std::unordered_set<unsigned> SARIFDiagnostic::ForkableDiagIDs = {
+  // Overload
+  diag::note_ovl_too_many_candidates,
+  diag::note_ovl_candidate,
+  diag::note_ovl_candidate_explicit,
+  diag::note_ovl_candidate_inherited_constructor,
+  diag::note_ovl_candidate_inherited_constructor_slice,
+  diag::note_ovl_candidate_illegal_constructor,
+  diag::note_ovl_candidate_illegal_constructor_adrspace_mismatch,
+  diag::note_ovl_candidate_bad_deduction,
+  diag::note_ovl_candidate_incomplete_deduction,
+  diag::note_ovl_candidate_incomplete_deduction_pack,
+  diag::note_ovl_candidate_inconsistent_deduction,
+  diag::note_ovl_candidate_inconsistent_deduction_types,
+  diag::note_ovl_candidate_explicit_arg_mismatch_named,
+  diag::note_ovl_candidate_unsatisfied_constraints,
+  diag::note_ovl_candidate_explicit_arg_mismatch_unnamed,
+  diag::note_ovl_candidate_instantiation_depth,
+  diag::note_ovl_candidate_underqualified,
+  diag::note_ovl_candidate_substitution_failure,
+  diag::note_ovl_candidate_disabled_by_enable_if,
+  diag::note_ovl_candidate_disabled_by_requirement,
+  diag::note_ovl_candidate_has_pass_object_size_params,
+  diag::note_ovl_candidate_disabled_by_function_cond_attr,
+  diag::note_ovl_candidate_deduced_mismatch,
+  diag::note_ovl_candidate_non_deduced_mismatch,
+  diag::note_ovl_candidate_non_deduced_mismatch_qualified,
+  diag::note_ovl_candidate_arity,
+  diag::note_ovl_candidate_arity_one,
+  diag::note_ovl_candidate_deleted,
+  diag::note_ovl_candidate_bad_conv_incomplete,
+  diag::note_ovl_candidate_bad_list_argument,
+  diag::note_ovl_candidate_bad_overload,
+  diag::note_ovl_candidate_bad_conv,
+  diag::note_ovl_candidate_bad_arc_conv,
+  diag::note_ovl_candidate_bad_value_category,
+  diag::note_ovl_candidate_bad_addrspace,
+  diag::note_ovl_candidate_bad_addrspace_this,
+  diag::note_ovl_candidate_bad_gc,
+  diag::note_ovl_candidate_bad_ownership,
+  diag::note_ovl_candidate_bad_ptrauth,
+  diag::note_ovl_candidate_bad_cvr_this,
+  diag::note_ovl_candidate_bad_cvr,
+  diag::note_ovl_candidate_bad_base_to_derived_conv,
+  diag::note_ovl_candidate_bad_target,
+  diag::note_ovl_candidate_constraints_not_satisfied,
+  diag::note_ovl_surrogate_constraints_not_satisfied,
+  diag::note_ovl_builtin_candidate,
+  diag::note_ovl_ambiguous_oper_binary_reversed_self,
+  diag::note_ovl_ambiguous_eqeq_reversed_self_non_const,
+  diag::note_ovl_ambiguous_oper_binary_selected_candidate,
+  diag::note_ovl_ambiguous_oper_binary_reversed_candidate,
+  diag::note_ovl_surrogate_cand,
+  
+  // Multi-declaration/definition
+  diag::note_previous_declaration,
+  diag::note_previous_definition,
+  diag::note_declared_at,
+
+  // Base-derived reason list.
+  diag::note_unsatisfied_trait_reason,
+  diag::note_overridden_virtual_function,
+
+  // See clang/lib/Sema/SemaLookup.cpp -> DiagnoseAmbiguousLookup()
+  diag::note_ambiguous_candidate,
+  diag::note_ambiguous_member_found,
+  diag::note_ambiguous_member_type_found,
+
+  // See clang/lib/Sema/Sema.cpp -> noteOverloads()
+  diag::note_possible_target_of_call,
+  
+  // See clang/lib/Sema/SemaStmt.cpp -> ActOnFinishSwitchStmt()
+  diag::note_duplicate_case_prev,
+};
 
 /// Print out the file/line/column information and include trace.
 ///
