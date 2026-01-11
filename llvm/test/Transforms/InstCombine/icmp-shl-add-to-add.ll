@@ -142,7 +142,7 @@ define <2 x i1> @shl_add_const_eq_vec_splat(<2 x i64> %v0, <2 x i64> %v3) {
 ; Test: Vector splat with poison. Should fold once optimization is applied.
 define <2 x i1> @shl_add_const_eq_vec_splat_poison(<2 x i64> %v0, <2 x i64> %v3) {
 ; CHECK-LABEL: @shl_add_const_eq_vec_splat_poison(
-; CHECK-NEXT:    [[V5:%.*]] = add nsw <2 x i64> [[V3:%.*]], splat (i64 1)
+; CHECK-NEXT:    [[V5:%.*]] = add nsw <2 x i64> [[V3:%.*]], <i64 1, i64 poison>
 ; CHECK-NEXT:    [[V6:%.*]] = icmp eq <2 x i64> [[V1:%.*]], [[V5]]
 ; CHECK-NEXT:    ret <2 x i1> [[V6]]
 ;
