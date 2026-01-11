@@ -56,6 +56,7 @@
 #include "math/expf16.h"
 #include "math/expm1.h"
 #include "math/expm1f.h"
+#include "math/expm1f16.h"
 #include "math/frexpf.h"
 #include "math/frexpf128.h"
 #include "math/frexpf16.h"
@@ -64,5 +65,6 @@
 #include "math/ldexpf16.h"
 #include "math/rsqrtf.h"
 #include "math/rsqrtf16.h"
+#include "math/sin.h"
 
 #endif // LLVM_LIBC_SHARED_MATH_H
