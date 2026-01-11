@@ -2666,6 +2666,9 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType,
           RParen->setFinalizedType(TT_TypeDeclarationParen);
         } else if (Prev->is(tok::greater) && RParen->Previous == LParen) {
           Prev->setFinalizedType(TT_TemplateCloser);
+        } else if (FormatTok->is(tok::l_brace) && Prev->is(tok::amp) &&
+                   !Prev->Previous) {
+          FormatTok->setBlockKind(BK_BracedInit);
         }
       }
       return SeenEqual;
