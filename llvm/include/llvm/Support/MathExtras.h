@@ -138,6 +138,7 @@ template <typename T> constexpr T reverseBits(T Val) {
   std::memcpy(in, &Val, sizeof(Val));
   for (unsigned i = 0; i < sizeof(Val); ++i)
     out[(sizeof(Val) - i) - 1] = BitReverseTable256[in[i]];
+  // cppcheck-suppress uninitvar symbolName=out
   std::memcpy(&Val, out, sizeof(Val));
   return Val;
 }
@@ -608,6 +609,7 @@ template <typename T>
 std::enable_if_t<std::is_unsigned_v<T>, T>
 SaturatingAdd(T X, T Y, bool *ResultOverflowed = nullptr) {
   bool Dummy;
+  // cppcheck-suppress legacyUninitvar symbolName=Overflowed
   bool &Overflowed = ResultOverflowed ? *ResultOverflowed : Dummy;
   // Hacker's Delight, p. 29
   T Z = X + Y;
@@ -637,6 +639,7 @@ template <typename T>
 std::enable_if_t<std::is_unsigned_v<T>, T>
 SaturatingMultiply(T X, T Y, bool *ResultOverflowed = nullptr) {
   bool Dummy;
+  // cppcheck-suppress legacyUninitvar symbolName=Overflowed
   bool &Overflowed = ResultOverflowed ? *ResultOverflowed : Dummy;
 
   // Hacker's Delight, p. 30 has a different algorithm, but we don't use that
@@ -683,6 +686,7 @@ template <typename T>
 std::enable_if_t<std::is_unsigned_v<T>, T>
 SaturatingMultiplyAdd(T X, T Y, T A, bool *ResultOverflowed = nullptr) {
   bool Dummy;
+  // cppcheck-suppress legacyUninitvar symbolName=Overflowed
   bool &Overflowed = ResultOverflowed ? *ResultOverflowed : Dummy;
 
   T Product = SaturatingMultiply(X, Y, &Overflowed);
