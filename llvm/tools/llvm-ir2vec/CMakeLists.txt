@@ -1,20 +1,10 @@
 set(LLVM_LINK_COMPONENTS
-  # Core LLVM components for IR processing
-  Analysis
-  Core
-  IRReader
-  Support
-  
   # Machine IR components (for -mode=mir)
-  CodeGen           
-  MIRParser         
+  MIRParser
   
   # Target initialization (required for MIR parsing)
   AllTargetsAsmParsers
   AllTargetsCodeGens
-  AllTargetsDescs
-  AllTargetsInfos
-  TargetParser
   )
 
 # Add the utils subdirectory for the library
