@@ -39,14 +39,13 @@
 // declaration while still encompassing all it's uses.
 
 #include "ScopeReductionCheck.h"
-#include "../utils/ASTUtils.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::misc {
 
+// TODO: Try using utils::decl_ref_expr::allDeclRefExprs here.
 static void
 collectVariableUses(const Stmt *S, const VarDecl *Var,
                     llvm::SmallVector<const DeclRefExpr *, 8> &Uses) {
@@ -63,6 +62,8 @@ collectVariableUses(const Stmt *S, const VarDecl *Var,
 }
 
 void ScopeReductionCheck::registerMatchers(MatchFinder *Finder) {
+  // TODO: Try adding unless(hasParent(declStmt(hasParent(forStmt( to matcher
+  //       to simplify check code.
   Finder->addMatcher(varDecl(hasLocalStorage()).bind("var"), this);
 }
 
@@ -153,12 +154,12 @@ void ScopeReductionCheck::check(
     InnermostScope = UseScopeChains[0][0];
 
     // For each subsequent use, find common ancestor scope
-    for (size_t i = 1; i < UseScopeChains.size(); ++i) {
+    for (const auto &ScopeChain : llvm::drop_begin(UseScopeChains)) {
       const CompoundStmt *CommonScope = nullptr;
 
       // Find first scope that appears in both chains (common ancestor)
       for (const auto *Scope1 : UseScopeChains[0]) {
-        for (const auto *Scope2 : UseScopeChains[i]) {
+        for (const auto *Scope2 : ScopeChain) {
           if (Scope1 == Scope2) {
             CommonScope = Scope1;
             break;

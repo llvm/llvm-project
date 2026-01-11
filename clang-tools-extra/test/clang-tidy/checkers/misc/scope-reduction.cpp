@@ -2,7 +2,8 @@
 
 // Test case 1: Variable can be moved to smaller scope (if-block)
 void test_if_scope() {
-  int x = 42; // CHECK-MESSAGES: :[[@LINE]]:7: warning: variable 'x' can be declared in a smaller scope
+  int x = 42;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'x' can be declared in a smaller scope
   if (true) {
     int y = x + 1;
   }
@@ -19,7 +20,8 @@ int test_multiple_scopes(int v) {
 
 // Test case 3: Variable can be moved to nested if-block
 void test_nested_if() {
-  int a = 5; // CHECK-MESSAGES: :[[@LINE]]:7: warning: variable 'a' can be declared in a smaller scope
+  int a = 5;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'a' can be declared in a smaller scope
   if (true) {
     if (true) {
       int b = a * 2;
@@ -34,8 +36,11 @@ void test_same_scope() {
 }
 
 // Test case 5: Variable can be moved to while loop body
+// TODO: This is a false positive. Correcting this will require
+//       loop semantic comprehension and var lifetime analysis.
 void test_while_loop() {
-  int counter = 0; // CHECK-MESSAGES: :[[@LINE]]:7: warning: variable 'counter' can be declared in a smaller scope
+  int counter = 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'counter' can be declared in a smaller scope
   while (true) {
     counter++;
     if (counter > 10) break;
@@ -54,7 +59,8 @@ void test_if_branches(bool condition) {
 
 // Test case 7: Variable can be moved to for-loop body
 void test_for_loop_body() {
-  int temp = 0; // CHECK-MESSAGES: :[[@LINE]]:7: warning: variable 'temp' can be declared in a smaller scope
+  int temp = 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'temp' can be declared in a smaller scope
   for (int i = 0; i < 10; i++) {
     temp = i * i;
   }
@@ -62,7 +68,8 @@ void test_for_loop_body() {
 
 // Test case 8: Variable used in for-loop expressions - should NOT warn (current limitation)
 void test_for_loop_expressions() {
-  int i; // CHECK-MESSAGES: :[[@LINE]]:7: warning: variable 'i' can be declared in for-loop initialization
+  int i;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'i' can be declared in for-loop initialization
   for (i = 0; i < 5; i++) {
     // loop body
   }
@@ -70,7 +77,8 @@ void test_for_loop_expressions() {
 
 // Test case 9: Variable can be moved to switch case
 void test_switch_case(int value) {
-  int result = 0; // CHECK-MESSAGES: :[[@LINE]]:7: warning: variable 'result' can be declared in a smaller scope
+  int result = 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'result' can be declared in a smaller scope
   switch (value) {
     case 1:
       result = 10;
@@ -82,7 +90,8 @@ void test_switch_case(int value) {
 
 // Test case 10: Variable used across multiple switch cases - should NOT warn
 void test_switch_multiple_cases(int value) {
-  int accumulator = 0; // CHECK-MESSAGES: :[[@LINE]]:7: warning: variable 'accumulator' can be declared in a smaller scope
+  int accumulator = 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'accumulator' can be declared in a smaller scope
   switch (value) {
     case 1:
       accumulator += 10;
@@ -95,7 +104,8 @@ void test_switch_multiple_cases(int value) {
 
 // Test case 11: Variable with complex initialization can be moved
 void test_complex_init() {
-  int complex = (5 + 3) * 2; // CHECK-MESSAGES: :[[@LINE]]:7: warning: variable 'complex' can be declared in a smaller scope
+  int complex = (5 + 3) * 2;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'complex' can be declared in a smaller scope
   if (true) {
     int doubled = complex * 2;
   }
@@ -103,7 +113,8 @@ void test_complex_init() {
 
 // Test case 12: Multiple variables, some can be moved, some cannot
 int test_mixed_variables(bool flag) {
-  int movable = 10;   // CHECK-MESSAGES: :[[@LINE]]:7: warning: variable 'movable' can be declared in a smaller scope
+  int movable = 10;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'movable' can be declared in a smaller scope
   int unmovable = 20; // Should NOT warn - used across scopes
 
   if (flag) {
@@ -116,7 +127,8 @@ int test_mixed_variables(bool flag) {
 
 // Test case 13: Variable in try-catch block
 void test_try_catch() {
-  int error_code = 0; // CHECK-MESSAGES: :[[@LINE]]:7: warning: variable 'error_code' can be declared in a smaller scope
+  int error_code = 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'error_code' can be declared in a smaller scope
   try {
     error_code = 404;
   } catch (...) {
@@ -136,7 +148,8 @@ void test_try_catch_shared() {
 
 // Test case 15: Deeply nested scopes
 void test_deep_nesting() {
-  int deep = 1; // CHECK-MESSAGES: :[[@LINE]]:7: warning: variable 'deep' can be declared in a smaller scope
+  int deep = 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'deep' can be declared in a smaller scope
   if (true) {
     if (true) {
       if (true) {

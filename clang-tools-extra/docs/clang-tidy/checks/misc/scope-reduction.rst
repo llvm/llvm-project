@@ -1,7 +1,7 @@
 .. title:: clang-tidy - misc-scope-reduction
 
 misc-scope-reduction
-===========================
+====================
 
 Detects local variables in functions whose scopes can be minimized. This check
 covers guidelines described by SEI DCL19-C, MISRA C++:2008 Rule 3-4-1, and MISRA
@@ -45,6 +45,7 @@ Examples:
 
 References
 ----------
+
 This check corresponds to the CERT C Coding Standard rules
 `DCL19-C. Minimize the scope of variables and functions
 <https://wiki.sei.cmu.edu/confluence/spaces/c/pages/87152335/DCL19-C.+Minimize+the+scope+of+variables+and+functions>`_.

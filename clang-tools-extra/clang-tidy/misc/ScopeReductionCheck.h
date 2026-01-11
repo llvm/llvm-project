@@ -11,7 +11,6 @@
 
 #include "../../clang-tidy/utils/DeclRefExprUtils.h"
 #include "../ClangTidyCheck.h"
-#include "clang/AST/ASTContext.h"
 
 namespace clang::tidy::misc {
 
