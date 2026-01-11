@@ -275,16 +275,14 @@ llvm::Error IncrementalExecutorBuilder::UpdateOrcRuntimePath(
   if (!IsOutOfProcess)
     return llvm::Error::success();
 
-  // Candidate runtime filenames to look for (tweak as appropriate).
   static constexpr std::array<const char *, 3> OrcRTLibNames = {
       "liborc_rt.a",
       "liborc_rt_osx.a",
       "liborc_rt-x86_64.a",
   };
 
-  // Return the first file found inside 'Base' (Base may be a directory).
   auto findInDir = [&](llvm::StringRef Base) -> std::optional<std::string> {
-    if (Base.empty())
+    if (Base.empty() || !llvm::sys::fs::exists(Base))
       return std::nullopt;
     for (const char *LibName : OrcRTLibNames) {
       llvm::SmallString<256> Candidate(Base);
@@ -296,74 +294,60 @@ llvm::Error IncrementalExecutorBuilder::UpdateOrcRuntimePath(
   };
 
   const clang::driver::Driver &D = C.getDriver();
-
+  const clang::driver::ToolChain &TC = C.getDefaultToolChain();
   llvm::SmallVector<std::string, 8> triedPaths;
 
-  // Prefer Driver::ResourceDir-derived locations:
-  // ResourceDir is typically: <prefix>/lib/clang/<version>
-  if (!D.ResourceDir.empty()) {
-    llvm::SmallString<256> Resource(D.ResourceDir);
-
-    // Directly searching ResourceDir is cheap and sometimes sufficient.
-    if (auto F = findInDir(Resource)) {
-      OrcRuntimePath = *F;
-      return llvm::Error::success();
-    }
-    triedPaths.emplace_back(std::string(Resource.str()));
-
-    // Build <prefix>/lib/clang/<version>/lib. Resource already contains
-    // .../clang/<version>)
-    llvm::SmallString<256> ClangLibDir(Resource);
-    // ClangLibDir currently: <prefix>/lib/clang/<version>
-    // We want: <prefix>/lib/clang/<version>/lib
-    llvm::sys::path::append(ClangLibDir, "lib");
-    if (auto F = findInDir(ClangLibDir)) {
-      OrcRuntimePath = *F;
-      return llvm::Error::success();
-    }
-    triedPaths.emplace_back(std::string(ClangLibDir.str()));
-
-    // Walk up to <prefix>/lib and search there and common variants.
-    llvm::SmallString<256> PrefixLib = Resource;
-    llvm::sys::path::remove_filename(PrefixLib); // remove <version>
-    llvm::sys::path::remove_filename(PrefixLib); // remove clang
-    if (!PrefixLib.empty()) {
-      if (auto F = findInDir(PrefixLib)) {
-        OrcRuntimePath = *F;
-        return llvm::Error::success();
-      }
-      triedPaths.emplace_back(std::string(PrefixLib.str()));
-
-      // Also check <prefix>/<libdir_basename>/clang/<version>/lib if present in
-      // this environment. We extract version from the original ResourceDir
-      // filename (the '<version>' component).
-      llvm::SmallString<64> Version =
-          llvm::sys::path::filename(llvm::StringRef(Resource));
-      llvm::SmallString<256> FormalClangLib = PrefixLib;
-      llvm::sys::path::append(FormalClangLib, "lib", "clang", Version, "lib");
-      if (auto F = findInDir(FormalClangLib)) {
-        OrcRuntimePath = *F;
-        return llvm::Error::success();
-      }
-      triedPaths.emplace_back(std::string(FormalClangLib.str()));
-    }
-  }
-
-  // ToolChain runtime/compiler-rt locations (if available).
-  const clang::driver::ToolChain &TC = C.getDefaultToolChain();
-  for (auto RuntimePath :
-       {TC.getRuntimePath(), std::make_optional(TC.getCompilerRTPath())}) {
-    if (RuntimePath && TC.getVFS().exists(*RuntimePath)) {
-      if (auto Found = findInDir(*RuntimePath)) {
-        OrcRuntimePath = *Found;
-        return llvm::Error::success();
-      } else {
+  llvm::SmallString<256> Resource(D.ResourceDir);
+  if (llvm::sys::fs::exists(Resource)) {
+    // Ask the ToolChain for its runtime paths first (most authoritative).
+    for (auto RuntimePath :
+         {TC.getRuntimePath(), std::make_optional(TC.getCompilerRTPath())}) {
+      if (RuntimePath) {
+        if (auto Found = findInDir(*RuntimePath)) {
+          OrcRuntimePath = *Found;
+          return llvm::Error::success();
+        }
         triedPaths.emplace_back(*RuntimePath);
       }
     }
+
+    // Check ResourceDir and ResourceDir/lib
+    for (auto P : {Resource.str().str(), (Resource + "/lib").str()}) {
+      if (auto F = findInDir(P)) {
+        OrcRuntimePath = *F;
+        return llvm::Error::success();
+      }
+      triedPaths.emplace_back(P);
+    }
+  } else {
+    // The binary was misplaced. Generic Backward Search (Climbing the tree)
+    // This allows unit tests in tools/clang/unittests to find the real lib/
+    llvm::SmallString<256> Cursor = Resource;
+    // ResourceDir-derived locations
+    llvm::StringRef Version = llvm::sys::path::filename(Resource);
+    llvm::StringRef OSName = TC.getOSLibName();
+    while (llvm::sys::path::has_parent_path(Cursor)) {
+      Cursor = llvm::sys::path::parent_path(Cursor).str();
+      // At each level, try standard relative layouts
+      for (auto Rel :
+           {(llvm::Twine("lib/clang/") + Version + "/lib/" + OSName).str(),
+            (llvm::Twine("lib/clang/") + Version + "/lib").str(),
+            (llvm::Twine("lib/") + OSName).str(), std::string("lib/clang")}) {
+        llvm::SmallString<256> Candidate = Cursor;
+        llvm::sys::path::append(Candidate, Rel);
+        if (auto F = findInDir(Candidate)) {
+          OrcRuntimePath = *F;
+          return llvm::Error::success();
+        }
+        triedPaths.emplace_back(std::string(Candidate.str()));
+      }
+      // Stop if we hit the root or go too far (safety check)
+      if (triedPaths.size() > 32)
+        break;
+    }
   }
 
-  // If we reached here, nothing was found. Build a helpful error string.
+  // Build a helpful error string if everything failed.
   std::string Joined;
   for (size_t i = 0; i < triedPaths.size(); ++i) {
     if (i)
