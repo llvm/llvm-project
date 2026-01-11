@@ -110,8 +110,12 @@ static Value getLinearIndexI32(ConversionPatternRewriter &rewriter,
 static Value getNumRecords(ConversionPatternRewriter &rewriter, Location loc,
                            MemRefType memrefType,
                            MemRefDescriptor &memrefDescriptor,
-                           ArrayRef<int64_t> strides,
-                           int64_t elementByteWidth) {
+                           ArrayRef<int64_t> strides, int64_t elementByteWidth,
+                           amdgpu::Chipset chipset, bool boundsCheck) {
+  if (chipset >= kGfx1250 && !boundsCheck) {
+    constexpr int64_t first45bits = (1ll << 45) - 1;
+    return createI64Constant(rewriter, loc, first45bits);
+  }
   if (memrefType.hasStaticShape() &&
       !llvm::any_of(strides, ShapedType::isDynamic)) {
     int64_t size = memrefType.getRank() == 0 ? 1 : 0;
@@ -156,26 +160,39 @@ static Value makeBufferRsrc(ConversionPatternRewriter &rewriter, Location loc,
     stride = LLVM::ConstantOp::create(rewriter, loc, i16,
                                       rewriter.getI16IntegerAttr(0));
   }
-  // Get the number of elements.
-  // Flag word:
-  // bits 0-11: dst sel, ignored by these intrinsics
-  // bits 12-14: data format (ignored, must be nonzero, 7=float)
-  // bits 15-18: data format (ignored, must be nonzero, 4=32bit)
-  // bit 19: In nested heap (0 here)
-  // bit 20: Behavior on unmap (0 means  "return 0 / ignore")
-  // bits 21-22: Index stride for swizzles (N/A)
-  // bit 23: Add thread ID (0)
-  // bit 24: Reserved to 1 (RDNA) or 0 (CDNA)
-  // bits 25-26: Reserved (0)
-  // bit 27: Buffer is non-volatile (CDNA only)
-  // bits 28-29: Out of bounds select (0 = structured, 1 = check index, 2 =
-  //  none, 3 = either swizzles or testing against offset field) RDNA only
-  // bits 30-31: Type (must be 0)
-  uint32_t flags = (7 << 12) | (4 << 15);
-  if (chipset.majorVersion >= 10) {
-    flags |= (1 << 24);
-    uint32_t oob = boundsCheck ? 3 : 2;
-    flags |= (oob << 28);
+
+  uint32_t flags = 0;
+  if (chipset >= kGfx1250) {
+    // Flag word:
+    // bit 0: swizzle
+    // bit 1: 0 means (total_offset + payload > numRecords)
+    //        1 means ((total_offset + payload >) numRecords) || ((offset +
+    //        payload) > stride) only applied when swizzle_enable = 0. keep at
+    //        zero.
+    //        whether oob is done depends on numRecords.
+    // bits 2-3: Type (must be 0)
+  } else {
+    // Get the number of elements.
+    // Flag word:
+    // bits 0-11: dst sel, ignored by these intrinsics
+    // bits 12-14: data format (ignored, must be nonzero, 7=float)
+    // bits 15-18: data format (ignored, must be nonzero, 4=32bit)
+    // bit 19: In nested heap (0 here)
+    // bit 20: Behavior on unmap (0 means  "return 0 / ignore")
+    // bits 21-22: Index stride for swizzles (N/A)
+    // bit 23: Add thread ID (0)
+    // bit 24: Reserved to 1 (RDNA) or 0 (CDNA)
+    // bits 25-26: Reserved (0)
+    // bit 27: Buffer is non-volatile (CDNA only)
+    // bits 28-29: Out of bounds select (0 = structured, 1 = check index, 2 =
+    //  none, 3 = either swizzles or testing against offset field) RDNA only
+    // bits 30-31: Type (must be 0)
+    flags |= (7 << 12) | (4 << 15);
+    if (chipset.majorVersion >= 10) {
+      flags |= (1 << 24);
+      uint32_t oob = boundsCheck ? 3 : 2;
+      flags |= (oob << 28);
+    }
   }
   Value flagsConst = createI32Constant(rewriter, loc, flags);
   Type rsrcType =
@@ -214,8 +231,9 @@ struct FatRawBufferCastLowering
 
     Value numRecords = adaptor.getValidBytes();
     if (!numRecords)
-      numRecords = getNumRecords(rewriter, loc, memrefType, descriptor,
-                                 strideVals, elementByteWidth);
+      numRecords =
+          getNumRecords(rewriter, loc, memrefType, descriptor, strideVals,
+                        elementByteWidth, chipset, adaptor.getBoundsCheck());
 
     Value basePointer =
         adaptor.getResetOffset()
@@ -386,8 +404,9 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
 
     Value ptr = memrefDescriptor.bufferPtr(
         rewriter, loc, *this->getTypeConverter(), memrefType);
-    Value numRecords = getNumRecords(
-        rewriter, loc, memrefType, memrefDescriptor, strides, elementByteWidth);
+    Value numRecords =
+        getNumRecords(rewriter, loc, memrefType, memrefDescriptor, strides,
+                      elementByteWidth, chipset, adaptor.getBoundsCheck());
     Value resource = makeBufferRsrc(rewriter, loc, ptr, numRecords,
                                     adaptor.getBoundsCheck(), chipset);
     args.push_back(resource);

@@ -1548,6 +1548,11 @@ TLI_DEFINE_VECFUNC("modff", "armpl_vmodfq_f32", FIXED(4), NOMASK, "_ZGV_LLVM_N4v
 TLI_DEFINE_VECFUNC("modf", "armpl_svmodf_f64_x", SCALABLE(2), MASKED, "_ZGVsMxvl8", NOCC)
 TLI_DEFINE_VECFUNC("modff", "armpl_svmodf_f32_x", SCALABLE(4), MASKED, "_ZGVsMxvl4", NOCC)
 
+TLI_DEFINE_VECFUNC("llvm.modf.f64", "armpl_vmodfq_f64_stret", FIXED(2), NOMASK, "_ZGV_LLVM_N2v", CallingConv::AArch64_VectorCall)
+TLI_DEFINE_VECFUNC("llvm.modf.f32", "armpl_vmodfq_f32_stret", FIXED(4), NOMASK, "_ZGV_LLVM_N4v", CallingConv::AArch64_VectorCall)
+TLI_DEFINE_VECFUNC("llvm.modf.f64", "armpl_svmodf_f64_stret_x", SCALABLE(2), MASKED, "_ZGVsMxv", NOCC)
+TLI_DEFINE_VECFUNC("llvm.modf.f32", "armpl_svmodf_f32_stret_x", SCALABLE(4), MASKED, "_ZGVsMxv", NOCC)
+
 TLI_DEFINE_VECFUNC("nextafter", "armpl_vnextafterq_f64", FIXED(2), NOMASK, "_ZGV_LLVM_N2vv", CallingConv::AArch64_VectorCall)
 TLI_DEFINE_VECFUNC("nextafterf", "armpl_vnextafterq_f32", FIXED(4), NOMASK, "_ZGV_LLVM_N4vv", CallingConv::AArch64_VectorCall)
 TLI_DEFINE_VECFUNC("nextafter", "armpl_svnextafter_f64_x",  SCALABLE(2), MASKED, "_ZGVsMxvv", NOCC)
@@ -1578,10 +1583,20 @@ TLI_DEFINE_VECFUNC("sincosf", "armpl_vsincosq_f32", FIXED(4), NOMASK, "_ZGV_LLVM
 TLI_DEFINE_VECFUNC("sincos", "armpl_svsincos_f64_x", SCALABLE(2), MASKED, "_ZGVsMxvl8l8", NOCC)
 TLI_DEFINE_VECFUNC("sincosf", "armpl_svsincos_f32_x", SCALABLE(4), MASKED, "_ZGVsMxvl4l4", NOCC)
 
+TLI_DEFINE_VECFUNC("llvm.sincos.f64", "armpl_vcexpiq_f64", FIXED(2), NOMASK, "_ZGV_LLVM_N2v", CallingConv::AArch64_VectorCall)
+TLI_DEFINE_VECFUNC("llvm.sincos.f32", "armpl_vcexpiq_f32", FIXED(4), NOMASK, "_ZGV_LLVM_N4v", CallingConv::AArch64_VectorCall)
+TLI_DEFINE_VECFUNC("llvm.sincos.f64", "armpl_svcexpi_f64_x", SCALABLE(2), MASKED, "_ZGVsMxv", NOCC)
+TLI_DEFINE_VECFUNC("llvm.sincos.f32", "armpl_svcexpi_f32_x", SCALABLE(4), MASKED, "_ZGVsMxv", NOCC)
+
 TLI_DEFINE_VECFUNC("sincospi", "armpl_vsincospiq_f64", FIXED(2), NOMASK, "_ZGV_LLVM_N2vl8l8", CallingConv::AArch64_VectorCall)
 TLI_DEFINE_VECFUNC("sincospif", "armpl_vsincospiq_f32", FIXED(4), NOMASK, "_ZGV_LLVM_N4vl4l4", CallingConv::AArch64_VectorCall)
 TLI_DEFINE_VECFUNC("sincospi", "armpl_svsincospi_f64_x", SCALABLE(2), MASKED, "_ZGVsMxvl8l8", NOCC)
 TLI_DEFINE_VECFUNC("sincospif", "armpl_svsincospi_f32_x", SCALABLE(4), MASKED, "_ZGVsMxvl4l4", NOCC)
+
+TLI_DEFINE_VECFUNC("llvm.sincospi.f64", "armpl_vcexpipiq_f64", FIXED(2), NOMASK, "_ZGV_LLVM_N2v", CallingConv::AArch64_VectorCall)
+TLI_DEFINE_VECFUNC("llvm.sincospi.f32", "armpl_vcexpipiq_f32", FIXED(4), NOMASK, "_ZGV_LLVM_N4v", CallingConv::AArch64_VectorCall)
+TLI_DEFINE_VECFUNC("llvm.sincospi.f64", "armpl_svcexpipi_f64_x", SCALABLE(2), MASKED, "_ZGVsMxv", NOCC)
+TLI_DEFINE_VECFUNC("llvm.sincospi.f32", "armpl_svcexpipi_f32_x", SCALABLE(4), MASKED, "_ZGVsMxv", NOCC)
 
 TLI_DEFINE_VECFUNC("sinh", "armpl_vsinhq_f64", FIXED(2), NOMASK, "_ZGV_LLVM_N2v", CallingConv::AArch64_VectorCall)
 TLI_DEFINE_VECFUNC("sinhf", "armpl_vsinhq_f32", FIXED(4), NOMASK, "_ZGV_LLVM_N4v", CallingConv::AArch64_VectorCall)
