@@ -273,8 +273,6 @@ KnownFPClass KnownFPClass::fadd_self(const KnownFPClass &KnownSrc,
        Mode.Output == DenormalMode::PreserveSign))
     Known.knownNot(fcPosZero);
 
-  if (KnownSrc.isKnownNeverLogicalNegZero(Mode))
-    Known.knownNot(fcNegZero);
   return Known;
 }
 
