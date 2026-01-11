@@ -1131,6 +1131,7 @@ public:
       CI_HasMatchingInput = 0x08,  // This output operand has a matching input.
       CI_ImmediateConstant = 0x10, // This operand must be an immediate constant
       CI_EarlyClobber = 0x20,      // "&" output constraint (early clobber).
+      CI_CCOutputOperand = 0x40,   // "=@cc" sets CC, Flag output operand.
     };
     unsigned Flags;
     int TiedOperand;
@@ -1168,6 +1169,9 @@ public:
     /// If this returns true then getTiedOperand will indicate which output
     /// operand this is tied to.
     bool hasTiedOperand() const { return TiedOperand != -1; }
+    bool hasFlagOutputOperand() const {
+      return (Flags & CI_CCOutputOperand) != 0;
+    }
     unsigned getTiedOperand() const {
       assert(hasTiedOperand() && "Has no tied operand!");
       return (unsigned)TiedOperand;
@@ -1188,6 +1192,7 @@ public:
     void setAllowsMemory() { Flags |= CI_AllowsMemory; }
     void setAllowsRegister() { Flags |= CI_AllowsRegister; }
     void setHasMatchingInput() { Flags |= CI_HasMatchingInput; }
+    void setFlagOutputOperand() { Flags |= CI_CCOutputOperand; }
     void setRequiresImmediate(int Min, int Max) {
       Flags |= CI_ImmediateConstant;
       ImmRange.Min = Min;

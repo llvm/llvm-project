@@ -2968,7 +2968,10 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       ResultRegQualTys.push_back(QTy);
       ResultRegDests.push_back(Dest);
 
-      ResultBounds.emplace_back(Info.getOutputOperandBounds());
+      ResultBounds.emplace_back(
+          Info.hasFlagOutputOperand()
+              ? Info.getOutputOperandBounds()
+              : std::optional<std::pair<unsigned, unsigned>>());
 
       llvm::Type *Ty = ConvertTypeForMem(QTy);
       const bool RequiresCast = Info.allowsRegister() &&
