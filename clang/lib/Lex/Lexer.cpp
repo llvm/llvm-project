@@ -1933,7 +1933,7 @@ static const char *fastParseASCIIIdentifierScalar(const char *CurPtr) {
 // the 'target' attribute, which is used for runtime dispatch. Otherwise, we
 // fall back to the scalar implementation.
 #if (defined(__i386__) || defined(__x86_64__)) && defined(__has_attribute) &&  \
-    __has_attribute(target) && !defined(_MSC_VER)
+    __has_attribute(target) && !defined(_WIN32)
 __attribute__((target("sse4.2"))) static const char *
 fastParseASCIIIdentifierSSE42(const char *CurPtr, const char *BufferEnd) {
   alignas(16) static constexpr char AsciiIdentifierRange[16] = {
@@ -1959,15 +1959,11 @@ fastParseASCIIIdentifierSSE42(const char *CurPtr, const char *BufferEnd) {
   return fastParseASCIIIdentifierScalar(CurPtr);
 }
 
-__attribute__((target("sse4.2"))) static const char *
-fastParseASCIIIdentifier(const char *CurPtr, const char *BufferEnd) {
-  return fastParseASCIIIdentifierSSE42(CurPtr, BufferEnd);
-}
-
 __attribute__((target("default")))
 #endif
-static const char *fastParseASCIIIdentifier(const char *CurPtr,
-                                            const char *BufferEnd) {
+static const char *
+fastParseASCIIIdentifier(const char *CurPtr,
+                         [[maybe_unused]] const char *BufferEnd) {
   return fastParseASCIIIdentifierScalar(CurPtr);
 }
 
