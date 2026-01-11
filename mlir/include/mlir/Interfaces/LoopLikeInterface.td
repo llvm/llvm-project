@@ -243,6 +243,18 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       /*defaultImplementation=*/[{
         return ::std::nullopt;
       }]
+    >,
+    InterfaceMethod<[{
+        Check if the given type is supported as a loop induction variable.
+        By default, only IndexType is supported.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isValidInductionVarType",
+      /*args=*/(ins "::mlir::Type":$type),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return type.isIndex();
+      }]
     >
   ];
 

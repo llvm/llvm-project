@@ -429,6 +429,10 @@ std::optional<SmallVector<OpFoldResult>> ForOp::getLoopUpperBounds() {
   return SmallVector<OpFoldResult>{OpFoldResult(getUpperBound())};
 }
 
+bool ForOp::isValidInductionVarType(Type type) {
+  return type.isIndex() || type.isSignlessInteger();
+}
+
 std::optional<ResultRange> ForOp::getLoopResults() { return getResults(); }
 
 /// Promotes the loop body of a forOp to its containing block if the forOp
