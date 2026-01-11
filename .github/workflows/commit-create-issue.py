@@ -36,7 +36,7 @@ In the future, if you want to re-apply for commit access, you can follow the ins
 [here](https://llvm.org/docs/DeveloperPolicy.html#obtaining-commit-access).
 """
 
-issue=repo.create_issue(
+issue = repo.create_issue(
     title="Do you still need commit access?", body=body, labels=["infra:commit-access"]
 )
 print(issue.html_url)
