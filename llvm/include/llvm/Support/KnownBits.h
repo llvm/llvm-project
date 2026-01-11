@@ -514,6 +514,11 @@ public:
   /// Compute known bits for the absolute value.
   LLVM_ABI KnownBits abs(bool IntMinIsPoison = false) const;
 
+  /// Compute known bits for horizontal add for a vector with NumElts
+  /// elements, where each element has the known bits represented by this
+  /// object.
+  LLVM_ABI KnownBits reduceAdd(unsigned NumElts) const;
+
   KnownBits byteSwap() const {
     return KnownBits(Zero.byteSwap(), One.byteSwap());
   }
