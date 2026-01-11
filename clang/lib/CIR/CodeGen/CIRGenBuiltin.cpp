@@ -122,13 +122,26 @@ static mlir::Value makeBinaryAtomicValue(
 
   Address destAddr = checkAtomicAlignment(cgf, expr);
   CIRGenBuilderTy &builder = cgf.getBuilder();
-  cir::IntType intType =
-      ptrType->getPointeeType()->isUnsignedIntegerType()
-          ? builder.getUIntNTy(cgf.getContext().getTypeSize(type))
-          : builder.getSIntNTy(cgf.getContext().getTypeSize(type));
+
   mlir::Value val = cgf.emitScalarExpr(expr->getArg(1));
   mlir::Type valueType = val.getType();
-  val = emitToInt(cgf, val, type, intType);
+  mlir::Value destValue = destAddr.emitRawPointer();
+
+  if (ptrType->getPointeeType()->isPointerType()) {
+    // Pointer to pointer
+    // `cir.atomic.fetch` expects a pointer to an integer type, so we cast
+    // ptr<ptr<T>> to ptr<intPtrSize>
+    cir::IntType ptrSizeInt = builder.getSIntNTy(cgf.getContext().getTypeSize(ptrType));
+    destValue = builder.createBitcast(destValue, builder.getPointerTo(ptrSizeInt));
+    val = emitToInt(cgf, val, type, ptrSizeInt);
+  } else {
+    // Pointer to integer type
+    cir::IntType intType =
+        ptrType->getPointeeType()->isUnsignedIntegerType()
+            ? builder.getUIntNTy(cgf.getContext().getTypeSize(type))
+            : builder.getSIntNTy(cgf.getContext().getTypeSize(type));
+    val = emitToInt(cgf, val, type, intType);
+  }
 
   // This output argument is needed for post atomic fetch operations
   // that calculate the result of the operation as return value of
@@ -140,10 +153,10 @@ static mlir::Value makeBinaryAtomicValue(
   }
 
   auto rmwi = cir::AtomicFetchOp::create(
-      builder, cgf.getLoc(expr->getSourceRange()), destAddr.emitRawPointer(),
+      builder, cgf.getLoc(expr->getSourceRange()), destValue,
       val, kind, ordering, false, /* is volatile */
       true);                      /* fetch first */
-  return emitFromInt(cgf, rmwi->getResult(0), type, valueType);
+  return rmwi->getResult(0);
 }
 
 static RValue emitBinaryAtomicPost(CIRGenFunction &cgf,
