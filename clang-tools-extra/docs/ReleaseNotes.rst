@@ -662,7 +662,8 @@ Changes in existing checks
 
 - Improved :doc:`modernize-use-using
   <clang-tidy/checks/modernize/use-using>` check to correctly provide fix-its
-  for typedefs of pointers or references to array types.
+  for typedefs of pointers, references to array types and cases with
+  comma-separated multiple declarations and complex declarators.
 
 - Improved :doc:`performance-unnecessary-copy-initialization
   <clang-tidy/checks/performance/unnecessary-copy-initialization>` by printing
