@@ -441,7 +441,7 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
       assert(CurLexer && "Got EOF but no current lexer set!");
       Result.startToken();
       CurLexer->FormTokenWithChars(Result, CurLexer->BufferEnd, tok::eof);
-      CurLexer.reset();
+      PendingDestroyLexers.push_back(std::move(CurLexer));
 
       CurPPLexer = nullptr;
       recomputeCurLexerKind();

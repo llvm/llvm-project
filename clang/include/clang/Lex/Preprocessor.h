@@ -2638,6 +2638,8 @@ private:
   }
 
   void PopIncludeMacroStack() {
+    if (CurLexer)
+      PendingDestroyLexers.push_back(std::move(CurLexer));
     CurLexer = std::move(IncludeMacroStack.back().TheLexer);
     CurPPLexer = IncludeMacroStack.back().ThePPLexer;
     CurTokenLexer = std::move(IncludeMacroStack.back().TheTokenLexer);
