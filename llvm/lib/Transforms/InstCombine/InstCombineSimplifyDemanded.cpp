@@ -2090,6 +2090,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     if (I->getOperand(0) == I->getOperand(1) &&
         isGuaranteedNotToBeUndef(I->getOperand(0), SQ.AC, CxtI, SQ.DT,
                                  Depth + 1)) {
+      Type *EltTy = VTy->getScalarType();
+      DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+
       FPClassTest SrcDemandedMask = DemandedMask;
 
       // Doubling a subnormal could have resulted in a normal value.
@@ -2097,6 +2100,19 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         SrcDemandedMask |= fcPosSubnormal;
       if (DemandedMask & fcNegNormal)
         SrcDemandedMask |= fcNegSubnormal;
+
+      // Doubling a subnormal may produce 0 if FTZ/DAZ.
+      if (Mode != DenormalMode::getIEEE()) {
+        if (DemandedMask & fcPosZero) {
+          SrcDemandedMask |= fcPosSubnormal;
+
+          if (Mode.inputsMayBePositiveZero() || Mode.outputsMayBePositiveZero())
+            SrcDemandedMask |= fcNegSubnormal;
+        }
+
+        if (DemandedMask & fcNegZero)
+          SrcDemandedMask |= fcNegSubnormal;
+      }
 
       // Doubling a normal could have resulted in an infinity.
       if (DemandedMask & fcPosInf)
@@ -2107,8 +2123,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (SimplifyDemandedFPClass(I, 0, SrcDemandedMask, KnownLHS, Depth + 1))
         return I;
 
-      Type *EltTy = VTy->getScalarType();
-      DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
       Known = KnownFPClass::fadd_self(KnownLHS, Mode);
       KnownRHS = KnownLHS;
     } else {
