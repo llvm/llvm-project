@@ -686,6 +686,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const IndexFileOut &O) {
   case IndexFileFormat::YAML:
     writeYAML(O, OS);
     break;
+  case IndexFileFormat::BACKGROUND:
+    llvm_unreachable("BACKGROUND format not supported for serialization");
   }
   return OS;
 }
