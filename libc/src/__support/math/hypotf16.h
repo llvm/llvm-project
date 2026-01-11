@@ -11,10 +11,10 @@
 
 #include "hdr/fenv_macros.h"
 #include "hdr/math_macros.h"
-#include "src/__support/common.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/sqrt.h"
+#include "src/__support/common.h"
 #include "src/__support/macros/optimization.h"
 
 namespace LIBC_NAMESPACE_DECL {
