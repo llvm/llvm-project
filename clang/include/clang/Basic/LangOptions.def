@@ -104,7 +104,9 @@ LANGOPT(AssumeNothrowExceptionDtor , 1, 0, NotCompatible, "Assume exception obje
 LANGOPT(TraditionalCPP    , 1, 0, NotCompatible, "traditional CPP emulation")
 LANGOPT(RTTI              , 1, 1, NotCompatible, "run-time type information")
 LANGOPT(RTTIData          , 1, 1, NotCompatible, "emit run-time type information data")
-LANGOPT(MSBitfields       , 1, 0, NotCompatible, "Microsoft-compatible structure layout")
+ENUM_LANGOPT(LayoutCompatibility, LayoutCompatibilityKind, 2,
+             LayoutCompatibilityKind::Default, NotCompatible,
+             "Microsoft-compatible structure layout")
 LANGOPT(MSVolatile        , 1, 0, NotCompatible, "Microsoft-compatible volatile loads and stores")
 LANGOPT(Freestanding      , 1, 0, NotCompatible, "freestanding implementation")
 LANGOPT(NoBuiltin         , 1, 0, NotCompatible, "disable builtin functions")
@@ -194,6 +196,7 @@ LANGOPT(NoSignedZero      , 1, 0, Benign, "Permit Floating Point optimization wi
 LANGOPT(AllowRecip        , 1, 0, Benign, "Permit Floating Point reciprocal")
 LANGOPT(ApproxFunc        , 1, 0, Benign, "Permit Floating Point approximation")
 LANGOPT(NamedLoops        , 1, 0, Benign, "Permit named break/continue")
+LANGOPT(DeferTS           , 1, 0, Benign, "C '_Defer' Technical Specification")
 
 ENUM_LANGOPT(ComplexRange, ComplexRangeKind, 3, CX_None, NotCompatible, "Enable use of range reduction for complex arithmetics.")
 
@@ -499,6 +502,8 @@ LANGOPT(CheckConstexprFunctionBodies, 1, 1, Benign,
 LANGOPT(BoundsSafety, 1, 0, NotCompatible, "Bounds safety extension for C")
 
 LANGOPT(EnableLifetimeSafety, 1, 0, NotCompatible, "Experimental lifetime safety analysis for C++")
+
+LANGOPT(EnableLifetimeSafetyInference, 1, 0, NotCompatible, "Experimental lifetime safety inference analysis for C++")
 
 LANGOPT(PreserveVec3Type, 1, 0, NotCompatible, "Preserve 3-component vector type")
 

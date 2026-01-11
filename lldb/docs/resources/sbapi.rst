@@ -24,9 +24,9 @@ or remove ivars without breaking binary compatibility. In some cases, the SB
 class is a thin wrapper around an internal lldb_private object. In that case,
 the class can have a single ivar, which is either a pointer, shared_ptr or
 unique_ptr to the object in the lldb_private API. All the lldb_private classes
-that get used this way are declared as opaque classes in lldb_forward.h, which
+that get used this way are declared as opaque classes in lldb-forward.h, which
 is included in SBDefines.h. So if you need an SB class to wrap an lldb_private
-class that isn't in lldb_forward.h, add it there rather than making a direct
+class that isn't in lldb-forward.h, add it there rather than making a direct
 opaque declaration in the SB classes .h file.
 
 If the SB Class needs some state of its own, as well as the backing object,

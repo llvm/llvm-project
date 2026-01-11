@@ -139,24 +139,27 @@ void ObjectFileWasm::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-ObjectFile *
-ObjectFileWasm::CreateInstance(const ModuleSP &module_sp, DataBufferSP data_sp,
-                               offset_t data_offset, const FileSpec *file,
-                               offset_t file_offset, offset_t length) {
+ObjectFile *ObjectFileWasm::CreateInstance(const ModuleSP &module_sp,
+                                           DataExtractorSP extractor_sp,
+                                           offset_t data_offset,
+                                           const FileSpec *file,
+                                           offset_t file_offset,
+                                           offset_t length) {
   Log *log = GetLog(LLDBLog::Object);
 
-  if (!data_sp) {
-    data_sp = MapFileData(*file, length, file_offset);
+  if (!extractor_sp || !extractor_sp->HasData()) {
+    DataBufferSP data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp) {
       LLDB_LOGF(log, "Failed to create ObjectFileWasm instance for file %s",
                 file->GetPath().c_str());
       return nullptr;
     }
+    extractor_sp = std::make_shared<DataExtractor>(data_sp);
     data_offset = 0;
   }
 
-  assert(data_sp);
-  if (!ValidateModuleHeader(data_sp)) {
+  assert(extractor_sp);
+  if (!ValidateModuleHeader(extractor_sp->GetSharedDataBuffer())) {
     LLDB_LOGF(log,
               "Failed to create ObjectFileWasm instance: invalid Wasm header");
     return nullptr;
@@ -164,19 +167,20 @@ ObjectFileWasm::CreateInstance(const ModuleSP &module_sp, DataBufferSP data_sp,
 
   // Update the data to contain the entire file if it doesn't contain it
   // already.
-  if (data_sp->GetByteSize() < length) {
-    data_sp = MapFileData(*file, length, file_offset);
+  if (extractor_sp->GetByteSize() < length) {
+    DataBufferSP data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp) {
       LLDB_LOGF(log,
                 "Failed to create ObjectFileWasm instance: cannot read file %s",
                 file->GetPath().c_str());
       return nullptr;
     }
+    extractor_sp = std::make_shared<DataExtractor>(data_sp);
     data_offset = 0;
   }
 
   std::unique_ptr<ObjectFileWasm> objfile_up(new ObjectFileWasm(
-      module_sp, data_sp, data_offset, file, file_offset, length));
+      module_sp, extractor_sp, data_offset, file, file_offset, length));
   ArchSpec spec = objfile_up->GetArchitecture();
   if (spec && objfile_up->SetModulesArchitecture(spec)) {
     LLDB_LOGF(log,
@@ -282,10 +286,11 @@ size_t ObjectFileWasm::GetModuleSpecifications(
   return 1;
 }
 
-ObjectFileWasm::ObjectFileWasm(const ModuleSP &module_sp, DataBufferSP data_sp,
+ObjectFileWasm::ObjectFileWasm(const ModuleSP &module_sp,
+                               DataExtractorSP extractor_sp,
                                offset_t data_offset, const FileSpec *file,
                                offset_t offset, offset_t length)
-    : ObjectFile(module_sp, file, offset, length, data_sp, data_offset),
+    : ObjectFile(module_sp, file, offset, length, extractor_sp, data_offset),
       m_arch("wasm32-unknown-unknown-wasm") {
   m_data_nsp->SetAddressByteSize(4);
 }
@@ -294,7 +299,8 @@ ObjectFileWasm::ObjectFileWasm(const lldb::ModuleSP &module_sp,
                                lldb::WritableDataBufferSP header_data_sp,
                                const lldb::ProcessSP &process_sp,
                                lldb::addr_t header_addr)
-    : ObjectFile(module_sp, process_sp, header_addr, header_data_sp),
+    : ObjectFile(module_sp, process_sp, header_addr,
+                 std::make_shared<DataExtractor>(header_data_sp)),
       m_arch("wasm32-unknown-unknown-wasm") {}
 
 bool ObjectFileWasm::ParseHeader() {
@@ -781,7 +787,7 @@ DataExtractor ObjectFileWasm::ReadImageData(offset_t offset, uint32_t size) {
           offset, data_up->GetBytes(), data_up->GetByteSize(), readmem_error);
       if (bytes_read > 0) {
         DataBufferSP buffer_sp(data_up.release());
-        data.SetData(buffer_sp, 0, buffer_sp->GetByteSize());
+        data.SetData(buffer_sp);
       }
     } else if (offset < m_data_nsp->GetByteSize()) {
       size = std::min(static_cast<uint64_t>(size),

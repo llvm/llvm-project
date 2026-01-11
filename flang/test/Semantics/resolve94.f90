@@ -1,5 +1,5 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
-! C929   No specifier shall appear more than once in a given 
+! C929   No specifier shall appear more than once in a given
 !   image-selector-spec-list.
 ! C930 TEAM and TEAM_NUMBER shall not both appear in the same
 !   image-selector-spec-list.

@@ -1616,7 +1616,8 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
   }
   case Attribute::DeadOnReturn: {
     std::optional<uint64_t> Bytes;
-    if (parseOptionalAttrBytes(lltok::kw_dead_on_return, Bytes))
+    if (parseOptionalAttrBytes(lltok::kw_dead_on_return, Bytes,
+                               /*ErrorNoBytes=*/false))
       return true;
     if (Bytes.has_value()) {
       B.addDeadOnReturnAttr(DeadOnReturnInfo(Bytes.value()));
@@ -2605,7 +2606,7 @@ std::optional<MemoryEffects> LLParser::parseMemoryAttr() {
   // We use syntax like memory(argmem: read), so the colon should not be
   // interpreted as a label terminator.
   Lex.setIgnoreColonInIdentifiers(true);
-  auto _ = make_scope_exit([&] { Lex.setIgnoreColonInIdentifiers(false); });
+  llvm::scope_exit _([&] { Lex.setIgnoreColonInIdentifiers(false); });
 
   Lex.Lex();
   if (!EatIfPresent(lltok::lparen)) {
@@ -3265,7 +3266,7 @@ bool LLParser::parseCapturesAttr(AttrBuilder &B) {
   // We use syntax like captures(ret: address, provenance), so the colon
   // should not be interpreted as a label terminator.
   Lex.setIgnoreColonInIdentifiers(true);
-  auto _ = make_scope_exit([&] { Lex.setIgnoreColonInIdentifiers(false); });
+  llvm::scope_exit _([&] { Lex.setIgnoreColonInIdentifiers(false); });
 
   Lex.Lex();
   if (parseToken(lltok::lparen, "expected '('"))

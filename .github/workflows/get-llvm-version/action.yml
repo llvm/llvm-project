@@ -13,6 +13,10 @@ outputs:
   patch:
     description: LLVM patch version
     value: ${{ steps.version.outputs.patch }}
+  full-no-suffix:
+    description: |
+      The full LLVM vesion without any suffixes like `-rc` or `git`.  This will be `$major.$minor.$patch`
+    value: ${{ steps.version.outputs.full-no-suffix }}
 
 runs:
   using: "composite"
@@ -24,3 +28,5 @@ runs:
         for v in major minor patch; do
           echo "$v=`llvm/utils/release/get-llvm-version.sh --$v`" >> $GITHUB_OUTPUT
         done
+
+        echo "full-no-suffix=$(llvm/utils/release/get-llvm-version.sh)" >> $GITHUB_OUTPUT

@@ -553,7 +553,7 @@ bool ClangUserExpression::TryParse(
 
   ResetDeclMap(exe_ctx, m_result_delegate, keep_result_in_memory);
 
-  auto on_exit = llvm::make_scope_exit([this]() { ResetDeclMap(); });
+  llvm::scope_exit on_exit([this]() { ResetDeclMap(); });
 
   if (!DeclMap()->WillParse(exe_ctx, GetMaterializer())) {
     diagnostic_manager.PutString(
@@ -797,7 +797,7 @@ bool ClangUserExpression::Complete(ExecutionContext &exe_ctx,
 
   ResetDeclMap(exe_ctx, m_result_delegate, /*keep result in memory*/ true);
 
-  auto on_exit = llvm::make_scope_exit([this]() { ResetDeclMap(); });
+  llvm::scope_exit on_exit([this]() { ResetDeclMap(); });
 
   if (!DeclMap()->WillParse(exe_ctx, GetMaterializer())) {
     diagnostic_manager.PutString(
