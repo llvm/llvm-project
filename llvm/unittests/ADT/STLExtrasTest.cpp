@@ -1055,7 +1055,7 @@ TEST(STLExtrasTest, to_address) {
   EXPECT_EQ(V1, llvm::to_address(V3));
 }
 
-TEST(STLExtrasTest, EqualToNotEqualTo) {
+TEST(STLExtras, EqualToNotEqualTo) {
   std::vector<int> V;
   EXPECT_TRUE(all_of(V, equal_to(1)));
   EXPECT_TRUE(all_of(V, not_equal_to(1)));

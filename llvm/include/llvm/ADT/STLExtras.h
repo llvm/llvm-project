@@ -2161,7 +2161,7 @@ template <typename T> bool all_equal(std::initializer_list<T> Values) {
 /// functional algorithms like all_of.
 template <typename T>
 constexpr auto equal_to(const T &Arg) { // NOLINT(readability-identifier-naming)
-  return bind_front<std::declval<std::equal_to<T>()>>(Arg);
+  return bind_front(std::equal_to<>(), Arg);
 }
 
 /// Functor variant of std::not_equal_to that can be used as a UnaryPredicate in
@@ -2169,7 +2169,7 @@ constexpr auto equal_to(const T &Arg) { // NOLINT(readability-identifier-naming)
 template <typename T>
 constexpr auto
 not_equal_to(const T &Arg) { // NOLINT(readability-identifier-naming)
-  return bind_front<std::declval<std::not_equal_to<T>()>>(Arg);
+  return bind_front(std::not_equal_to<>(), Arg);
 }
 
 /// Provide a container algorithm similar to C++ Library Fundamentals v2's

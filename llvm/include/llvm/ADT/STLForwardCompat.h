@@ -158,6 +158,23 @@ invoke(FnT &&Fn, ArgsT &&...Args) { // NOLINT(readability-identifier-naming)
                     std::forward_as_tuple(std::forward<ArgsT>(Args)...));
 }
 
+// The behvaior is the same as std::bind_front, with the following differences:
+// - BindArgs are not perfect-forwarded
+// - The value catagory and const of the returned lambda are not considered when
+// calling it. An approach to handle them is using deducing this and
+// std::forward_like (C++23).
+template <typename FnT, typename... BindArgsT>
+constexpr auto bind_front(FnT &&Fn, // NOLINT(readability-identifier-naming)
+                          BindArgsT &&...BindArgs) {
+  if constexpr (std::is_pointer_v<FnT> or std::is_member_pointer_v<FnT>)
+    static_assert(Fn != nullptr);
+
+  return [&BindArgs..., Fn = std::forward<FnT>(Fn)](auto &&...CallArgs) {
+    return std::invoke(Fn, std::forward<BindArgsT>(BindArgs)...,
+                       std::forward<decltype(CallArgs)>(CallArgs)...);
+  };
+}
+
 //===----------------------------------------------------------------------===//
 //     Features from C++23
 //===----------------------------------------------------------------------===//
@@ -186,38 +203,23 @@ struct from_range_t {
   explicit from_range_t() = default;
 };
 inline constexpr from_range_t from_range{};
-} // namespace llvm
 
-//===----------------------------------------------------------------------===//
-//     Features from C++26
-//===----------------------------------------------------------------------===//
-
-template <auto Fn, typename... BindArgsT>
-constexpr auto
-bind_front(BindArgsT &&...BindArgs) { // NOLINT(readability-identifier-naming)
-  using FnT = decltype(Fn);
-
+// The behvaior is the same as std::bind_back, with the following differences:
+// - BindArgs are not perfect-forwarded
+// - The value catagory and const of the returned lambda are not considered when
+// calling it. An approach to handle them is using deducing this and
+// std::forward_like (C++23).
+template <typename FnT, typename... BindArgsT>
+constexpr auto bind_back(FnT &&Fn, // NOLINT(readability-identifier-naming)
+                         BindArgsT &&...BindArgs) {
   if constexpr (std::is_pointer_v<FnT> or std::is_member_pointer_v<FnT>)
     static_assert(Fn != nullptr);
 
-  return [&BindArgs...](auto &&...CallArgs) {
-    return std::invoke(Fn, std::forward<BindArgsT>(BindArgs)...,
-                       std::forward<decltype(CallArgs)>(CallArgs)...);
-  };
-}
-
-template <auto Fn, typename... BindArgsT>
-constexpr auto
-bind_back(BindArgsT &&...BindArgs) { // NOLINT(readability-identifier-naming)
-  using FnT = decltype(Fn);
-
-  if constexpr (std::is_pointer_v<FnT> or std::is_member_pointer_v<FnT>)
-    static_assert(Fn != nullptr);
-
-  return [&BindArgs...](auto &&...CallArgs) {
+  return [&BindArgs..., Fn = std::forward<FnT>(Fn)](auto &&...CallArgs) {
     return std::invoke(Fn, std::forward<decltype(CallArgs)>(CallArgs)...,
                        std::forward<BindArgsT>(BindArgs)...);
   };
 }
+} // namespace llvm
 
 #endif // LLVM_ADT_STLFORWARDCOMPAT_H

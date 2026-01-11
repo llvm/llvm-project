@@ -27,7 +27,7 @@ template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
 /// algorithms like all_of.
 template <typename Val, typename Pattern>
 constexpr auto match_fn(const Pattern &P) {
-  return bind_back<match<Val, Pattern>>(P);
+  return bind_back(match<Val, Pattern>, P);
 }
 
 template <typename Pattern> bool match(VPUser *U, const Pattern &P) {
@@ -37,7 +37,7 @@ template <typename Pattern> bool match(VPUser *U, const Pattern &P) {
 
 /// Match functor for VPUser.
 template <typename Pattern> constexpr auto match_fn(const Pattern &P) {
-  return bind_back<match<Pattern>>(P);
+  return bind_back(match<Pattern>, P);
 }
 
 template <typename Pattern> bool match(VPSingleDefRecipe *R, const Pattern &P) {

@@ -54,7 +54,7 @@ template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
 /// algorithms like all_of.
 template <typename Val = const Value, typename Pattern>
 auto match_fn(const Pattern &P) {
-  return bind_back<match<Val, Pattern>>(P);
+  return bind_back(match<Val, Pattern>, P);
 }
 
 template <typename Pattern> bool match(ArrayRef<int> Mask, const Pattern &P) {
