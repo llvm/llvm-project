@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/IR/IntrinsicsRISCV.h"
 
 #define GET_TARGET_REGBANK_IMPL
 #include "RISCVGenRegisterBank.inc"
@@ -544,6 +545,16 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         } else {
           OpdsMapping[Idx] = GPRValueMapping;
         }
+      }
+    }
+
+    if (IntrinsicID == Intrinsic::riscv_vsetvli ||
+        IntrinsicID == Intrinsic::riscv_vsetvlimax) {
+      for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
+        const MachineOperand &MO = MI.getOperand(Idx);
+        if (!MO.isReg())
+          continue;
+        OpdsMapping[Idx] = GPRValueMapping;
       }
     }
     break;

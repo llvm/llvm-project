@@ -2644,7 +2644,7 @@ LogicalResult OperationLegalizer::legalizeWithFold(Operation *op) {
 
   // Clear pattern state, so that the next pattern application starts with a
   // clean slate. (The op/block sets are populated by listener notifications.)
-  auto cleanup = llvm::make_scope_exit([&]() {
+  llvm::scope_exit cleanup([&]() {
     rewriterImpl.patternNewOps.clear();
     rewriterImpl.patternModifiedOps.clear();
   });

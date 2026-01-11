@@ -117,7 +117,8 @@ public:
   virtual ~CGObjCRuntime();
 
   std::string getSymbolNameForMethod(const ObjCMethodDecl *method,
-                                     bool includeCategoryName = true);
+                                     bool includeCategoryName = true,
+                                     bool includePrefixByte = true);
 
   /// Generate the function required to register all Objective-C components in
   /// this compilation unit with the runtime library.
@@ -322,10 +323,12 @@ public:
   MessageSendInfo getMessageSendInfo(const ObjCMethodDecl *method,
                                      QualType resultType,
                                      CallArgList &callArgs);
+
   bool canMessageReceiverBeNull(CodeGenFunction &CGF,
                                 const ObjCMethodDecl *method, bool isSuper,
                                 const ObjCInterfaceDecl *classReceiver,
                                 llvm::Value *receiver);
+
   static bool isWeakLinkedClass(const ObjCInterfaceDecl *cls);
 
   /// Destroy the callee-destroyed arguments of the given method,

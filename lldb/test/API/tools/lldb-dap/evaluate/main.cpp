@@ -47,5 +47,6 @@ int main(int argc, char const *argv[]) {
   my_bool_vec.push_back(true);  // breakpoint 7
 
   uint8_t my_ints[] = {5, 10, 15, 20, 25, 30};
+  long my_longs[] = {5, 6, 7};
   return 0; // breakpoint 8
 }
