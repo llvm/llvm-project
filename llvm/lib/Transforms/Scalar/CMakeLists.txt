@@ -22,6 +22,7 @@ add_llvm_component_library(LLVMScalarOpts
   IVUsersPrinter.cpp
   InductiveRangeCheckElimination.cpp
   IndVarSimplify.cpp
+  InferAddressSpacesPrepare.cpp
   InferAddressSpaces.cpp
   InferAlignment.cpp
   InstSimplifyPass.cpp

@@ -339,6 +339,11 @@ KnownBits TargetTransformInfo::computeKnownBitsAddrSpaceCast(
   return TTIImpl->computeKnownBitsAddrSpaceCast(FromAS, ToAS, FromPtrBits);
 }
 
+bool TargetTransformInfo::getMutableLSBSizeInAddrSpaces(
+    SmallVectorImpl<std::pair<unsigned, unsigned>> &AsLSBSizePairs) const {
+  return TTIImpl->getMutableLSBSizeInAddrSpaces(AsLSBSizePairs);
+}
+
 bool TargetTransformInfo::canHaveNonUndefGlobalInitializerInAddressSpace(
     unsigned AS) const {
   return TTIImpl->canHaveNonUndefGlobalInitializerInAddressSpace(AS);

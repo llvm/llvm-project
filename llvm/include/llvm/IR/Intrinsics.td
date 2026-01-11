@@ -961,6 +961,10 @@ def int_readsteadycounter : DefaultAttrsIntrinsic<[llvm_i64_ty]>;
 def int_assume : DefaultAttrsIntrinsic<
     [], [llvm_i1_ty], [IntrWriteMem, IntrInaccessibleMemOnly, NoUndef<ArgIndex<0>>]>;
 
+def int_ptr_bit_diff
+    : DefaultAttrsIntrinsic<[], [llvm_ptr_ty, llvm_ptr_ty, llvm_i32_ty, llvm_anyint_ty],
+                            [IntrWriteMem, IntrInaccessibleMemOnly]>;
+
 // 'llvm.experimental.noalias.scope.decl' intrinsic: Inserted at the location of
 // noalias scope declaration. Makes it possible to identify that a noalias scope
 // is only valid inside the body of a loop.

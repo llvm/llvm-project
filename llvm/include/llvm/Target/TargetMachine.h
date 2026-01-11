@@ -367,6 +367,11 @@ public:
     return false;
   }
 
+  virtual bool getMutableLSBSizeInAddrSpaces(
+      SmallVectorImpl<std::pair<unsigned, unsigned>> &AsLSBSizePairs) const {
+    return false;
+  }
+
   void setPGOOption(std::optional<PGOOptions> PGOOpt) { PGOOption = PGOOpt; }
   const std::optional<PGOOptions> &getPGOOption() const { return PGOOption; }
 
