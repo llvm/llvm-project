@@ -82,7 +82,7 @@ void load(int *ptr) {
 
 // CIR-LABEL: @load
 // CIR:   %{{.+}} = cir.load align(4) syncscope(system) atomic(relaxed) %{{.+}} : !cir.ptr<!s32i>, !s32i
-// CIR:   %{{.+}} = cir.load align(4) syncscope(system) atomic(consume) %{{.+}} : !cir.ptr<!s32i>, !s32i
+// CIR:   %{{.+}} = cir.load align(4) syncscope(system) atomic(acquire) %{{.+}} : !cir.ptr<!s32i>, !s32i
 // CIR:   %{{.+}} = cir.load align(4) syncscope(system) atomic(acquire) %{{.+}} : !cir.ptr<!s32i>, !s32i
 // CIR:   %{{.+}} = cir.load align(4) syncscope(system) atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i
 // CIR: }
@@ -111,7 +111,7 @@ void load_n(int *ptr) {
 
 // CIR-LABEL: @load_n
 // CIR:   %{{.+}} = cir.load align(4) syncscope(system) atomic(relaxed) %{{.+}} : !cir.ptr<!s32i>, !s32i
-// CIR:   %{{.+}} = cir.load align(4) syncscope(system) atomic(consume) %{{.+}} : !cir.ptr<!s32i>, !s32i
+// CIR:   %{{.+}} = cir.load align(4) syncscope(system) atomic(acquire) %{{.+}} : !cir.ptr<!s32i>, !s32i
 // CIR:   %{{.+}} = cir.load align(4) syncscope(system) atomic(acquire) %{{.+}} : !cir.ptr<!s32i>, !s32i
 // CIR:   %{{.+}} = cir.load align(4) syncscope(system) atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i
 // CIR: }
@@ -139,7 +139,7 @@ void c11_load(_Atomic(int) *ptr) {
 
 // CIR-LABEL: @c11_load
 // CIR:   %{{.+}} = cir.load align(4) syncscope(system) atomic(relaxed) %{{.+}} : !cir.ptr<!s32i>, !s32i
-// CIR:   %{{.+}} = cir.load align(4) syncscope(system) atomic(consume) %{{.+}} : !cir.ptr<!s32i>, !s32i
+// CIR:   %{{.+}} = cir.load align(4) syncscope(system) atomic(acquire) %{{.+}} : !cir.ptr<!s32i>, !s32i
 // CIR:   %{{.+}} = cir.load align(4) syncscope(system) atomic(acquire) %{{.+}} : !cir.ptr<!s32i>, !s32i
 // CIR:   %{{.+}} = cir.load align(4) syncscope(system) atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i
 // CIR: }
@@ -158,6 +158,33 @@ void c11_load(_Atomic(int) *ptr) {
 // OGCG:   %{{.+}} = load atomic i32, ptr %{{.+}} seq_cst, align 4
 // OGCG: }
 
+struct Pair {
+  int x;
+  int y;
+};
+
+void c11_load_aggregate() {
+  _Atomic(struct Pair) a;
+  __c11_atomic_load(&a, __ATOMIC_RELAXED);
+  __c11_atomic_load(&a, __ATOMIC_ACQUIRE);
+  __c11_atomic_load(&a, __ATOMIC_SEQ_CST);
+}
+
+// CIR-LABEL: @c11_load_aggregate
+// CIR: %{{.*}} = cir.load {{.*}} syncscope(system) atomic(relaxed) %{{.*}} : !cir.ptr<!u64i>, !u64i
+// CIR: %{{.*}} = cir.load {{.*}} syncscope(system) atomic(acquire) %{{.*}} : !cir.ptr<!u64i>, !u64i
+// CIR: %{{.*}} = cir.load {{.*}} syncscope(system) atomic(seq_cst) %{{.*}} : !cir.ptr<!u64i>, !u64i
+
+// LLVM-LABEL: @c11_load_aggregate
+// LLVM: %{{.*}} = load atomic i64, ptr %{{.*}} monotonic, align 8
+// LLVM: %{{.*}} = load atomic i64, ptr %{{.*}} acquire, align 8
+// LLVM: %{{.*}} = load atomic i64, ptr %{{.*}} seq_cst, align 8
+
+// OGCG-LABEL: @c11_load_aggregate
+// OGCG: %{{.*}} = load atomic i64, ptr %{{.*}} monotonic, align 8
+// OGCG: %{{.*}} = load atomic i64, ptr %{{.*}} acquire, align 8
+// OGCG: %{{.*}} = load atomic i64, ptr %{{.*}} seq_cst, align 8
+
 void store(int *ptr, int x) {
   __atomic_store(ptr, &x, __ATOMIC_RELAXED);
   __atomic_store(ptr, &x, __ATOMIC_RELEASE);
@@ -165,9 +192,9 @@ void store(int *ptr, int x) {
 }
 
 // CIR-LABEL: @store
-// CIR:   cir.store align(4) atomic(relaxed) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
-// CIR:   cir.store align(4) atomic(release) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
-// CIR:   cir.store align(4) atomic(seq_cst) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
+// CIR:   cir.store align(4) syncscope(system) atomic(relaxed) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
+// CIR:   cir.store align(4) syncscope(system) atomic(release) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
+// CIR:   cir.store align(4) syncscope(system) atomic(seq_cst) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
 // CIR: }
 
 // LLVM-LABEL: @store
@@ -189,9 +216,9 @@ void store_n(int *ptr, int x) {
 }
 
 // CIR-LABEL: @store_n
-// CIR:   cir.store align(4) atomic(relaxed) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
-// CIR:   cir.store align(4) atomic(release) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
-// CIR:   cir.store align(4) atomic(seq_cst) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
+// CIR:   cir.store align(4) syncscope(system) atomic(relaxed) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
+// CIR:   cir.store align(4) syncscope(system) atomic(release) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
+// CIR:   cir.store align(4) syncscope(system) atomic(seq_cst) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
 // CIR: }
 
 // LLVM-LABEL: @store_n
@@ -213,9 +240,9 @@ void c11_store(_Atomic(int) *ptr, int x) {
 }
 
 // CIR-LABEL: @c11_store
-// CIR:   cir.store align(4) atomic(relaxed) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
-// CIR:   cir.store align(4) atomic(release) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
-// CIR:   cir.store align(4) atomic(seq_cst) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
+// CIR:   cir.store align(4) syncscope(system) atomic(relaxed) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
+// CIR:   cir.store align(4) syncscope(system) atomic(release) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
+// CIR:   cir.store align(4) syncscope(system) atomic(seq_cst) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
 // CIR: }
 
 // LLVM-LABEL: @c11_store
@@ -454,7 +481,7 @@ void c11_atomic_exchange(_Atomic(int) *ptr, int value) {
   __c11_atomic_exchange(ptr, value, __ATOMIC_ACQ_REL);
   __c11_atomic_exchange(ptr, value, __ATOMIC_SEQ_CST);
   // CIR: %{{.+}} = cir.atomic.xchg relaxed %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg consume %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg acquire %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
   // CIR: %{{.+}} = cir.atomic.xchg acquire %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
   // CIR: %{{.+}} = cir.atomic.xchg release %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
   // CIR: %{{.+}} = cir.atomic.xchg acq_rel %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
@@ -487,7 +514,7 @@ void atomic_exchange(int *ptr, int *value, int *old) {
   __atomic_exchange(ptr, value, old, __ATOMIC_ACQ_REL);
   __atomic_exchange(ptr, value, old, __ATOMIC_SEQ_CST);
   // CIR: %{{.+}} = cir.atomic.xchg relaxed %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg consume %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg acquire %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
   // CIR: %{{.+}} = cir.atomic.xchg acquire %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
   // CIR: %{{.+}} = cir.atomic.xchg release %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
   // CIR: %{{.+}} = cir.atomic.xchg acq_rel %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
@@ -520,7 +547,7 @@ void atomic_exchange_n(int *ptr, int value) {
   __atomic_exchange_n(ptr, value, __ATOMIC_ACQ_REL);
   __atomic_exchange_n(ptr, value, __ATOMIC_SEQ_CST);
   // CIR: %{{.+}} = cir.atomic.xchg relaxed %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg consume %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg acquire %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
   // CIR: %{{.+}} = cir.atomic.xchg acquire %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
   // CIR: %{{.+}} = cir.atomic.xchg release %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
   // CIR: %{{.+}} = cir.atomic.xchg acq_rel %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
@@ -1143,7 +1170,7 @@ int atomic_load_dynamic_order(int *ptr, int order) {
   
   // CIR:      %[[PTR:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
   // CIR-NEXT: %[[ORDER:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR-NEXT: cir.switch (%[[ORDER]] : !s32i) {
+  // CIR-NEXT: cir.switch(%[[ORDER]] : !s32i) {
   // CIR-NEXT:   cir.case(default, []) {
   // CIR-NEXT:     %[[RES:.+]] = cir.load align(4) syncscope(system) atomic(relaxed) %[[PTR]] : !cir.ptr<!s32i>, !s32i
   // CIR-NEXT:     cir.store align(4) %[[RES]], %[[RES_SLOT:.+]] : !s32i, !cir.ptr<!s32i>
@@ -1218,28 +1245,28 @@ void atomic_store_dynamic_order(int *ptr, int order) {
   __atomic_store_n(ptr, 10, order);
 
   // CIR:      %[[PTR:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
-  // CIR-NEXT: %[[ORDER:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR:      cir.switch (%[[ORDER]] : !s32i) {
+  // CIR:      %[[ORDER:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // CIR:      cir.switch(%[[ORDER]] : !s32i) {
   // CIR-NEXT:   cir.case(default, []) {
   // CIR-NEXT:     %[[VALUE:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR-NEXT:     cir.store align(4) atomic(relaxed) %[[VALUE]], %[[PTR]] : !s32i, !cir.ptr<!s32i>
+  // CIR-NEXT:     cir.store align(4) syncscope(system) atomic(relaxed) %[[VALUE]], %[[PTR]] : !s32i, !cir.ptr<!s32i>
   // CIR-NEXT:     cir.break
   // CIR-NEXT:   }
   // CIR-NEXT:   cir.case(anyof, [#cir.int<3> : !s32i]) {
   // CIR-NEXT:     %[[VALUE:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR-NEXT:     cir.store align(4) atomic(release) %[[VALUE]], %[[PTR]] : !s32i, !cir.ptr<!s32i>
+  // CIR-NEXT:     cir.store align(4) syncscope(system) atomic(release) %[[VALUE]], %[[PTR]] : !s32i, !cir.ptr<!s32i>
   // CIR-NEXT:     cir.break
   // CIR-NEXT:   }
   // CIR-NEXT:   cir.case(anyof, [#cir.int<5> : !s32i]) {
   // CIR-NEXT:     %[[VALUE:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR-NEXT:     cir.store align(4) atomic(seq_cst) %[[VALUE]], %[[PTR]] : !s32i, !cir.ptr<!s32i>
+  // CIR-NEXT:     cir.store align(4) syncscope(system) atomic(seq_cst) %[[VALUE]], %[[PTR]] : !s32i, !cir.ptr<!s32i>
   // CIR-NEXT:     cir.break
   // CIR-NEXT:   }
   // CIR-NEXT:   cir.yield
   // CIR-NEXT: }
 
   // LLVM:        %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
-  // LLVM-NEXT:   %[[ORDER:.+]] = load i32, ptr %{{.+}}, align 4
+  // LLVM:        %[[ORDER:.+]] = load i32, ptr %{{.+}}, align 4
   // LLVM:        br label %[[SWITCH_BLK:.+]]
   // LLVM:      [[SWITCH_BLK]]:
   // LLVM-NEXT:   switch i32 %[[ORDER]], label %[[DEFAULT_BLK:.+]] [
@@ -1287,8 +1314,8 @@ int atomic_load_and_store_dynamic_order(int *ptr, int order) {
   return __atomic_exchange_n(ptr, 20, order);
 
   // CIR:      %[[PTR:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
-  // CIR-NEXT: %[[ORDER:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR:      cir.switch (%[[ORDER]] : !s32i) {
+  // CIR:      %[[ORDER:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // CIR:      cir.switch(%[[ORDER]] : !s32i) {
   // CIR-NEXT:   cir.case(default, []) {
   // CIR-NEXT:     %[[LIT:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
   // CIR-NEXT:     %[[RES:.+]] = cir.atomic.xchg relaxed %[[PTR]], %[[LIT]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
@@ -1324,7 +1351,7 @@ int atomic_load_and_store_dynamic_order(int *ptr, int order) {
   // CIR-NEXT: %{{.+}} = cir.load align(4) %[[RES_SLOT]] : !cir.ptr<!s32i>, !s32i
 
   // LLVM:        %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
-  // LLVM-NEXT:   %[[ORDER:.+]] = load i32, ptr %{{.+}}, align 4
+  // LLVM:        %[[ORDER:.+]] = load i32, ptr %{{.+}}, align 4
   // LLVM:        br label %[[SWITCH_BLK:.+]]
   // LLVM:      [[SWITCH_BLK]]:
   // LLVM-NEXT:   switch i32 %[[ORDER]], label %[[DEFAULT_BLK:.+]] [

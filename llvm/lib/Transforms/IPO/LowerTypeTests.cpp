@@ -1001,10 +1001,12 @@ LowerTypeTestsModule::importTypeId(StringRef TypeId) {
       GV->setMetadata(LLVMContext::MD_absolute_symbol,
                       MDNode::get(M.getContext(), {MinC, MaxC}));
     };
-    if (AbsWidth == IntPtrTy->getBitWidth())
-      SetAbsRange(~0ull, ~0ull); // Full set.
-    else
+    if (AbsWidth == IntPtrTy->getBitWidth()) {
+      uint64_t AllOnes = IntPtrTy->getBitMask();
+      SetAbsRange(AllOnes, AllOnes); // Full set.
+    } else {
       SetAbsRange(0, 1ull << AbsWidth);
+    }
     return C;
   };
 

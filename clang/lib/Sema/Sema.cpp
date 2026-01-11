@@ -1663,8 +1663,8 @@ ObjCMethodDecl *Sema::getCurMethodDecl() {
   return dyn_cast<ObjCMethodDecl>(DC);
 }
 
-NamedDecl *Sema::getCurFunctionOrMethodDecl() const {
-  DeclContext *DC = getFunctionLevelDeclContext();
+NamedDecl *Sema::getCurFunctionOrMethodDecl(bool AllowLambda) const {
+  DeclContext *DC = getFunctionLevelDeclContext(AllowLambda);
   if (isa<ObjCMethodDecl>(DC) || isa<FunctionDecl>(DC))
     return cast<NamedDecl>(DC);
   return nullptr;
@@ -2440,8 +2440,8 @@ static void markEscapingByrefs(const FunctionScopeInfo &FSI, Sema &S) {
 }
 
 Sema::PoppedFunctionScopePtr
-Sema::PopFunctionScopeInfo(const AnalysisBasedWarnings::Policy *WP,
-                           const Decl *D, QualType BlockType) {
+Sema::PopFunctionScopeInfo(const AnalysisBasedWarnings::Policy *WP, Decl *D,
+                           QualType BlockType) {
   assert(!FunctionScopes.empty() && "mismatched push/pop!");
 
   markEscapingByrefs(*FunctionScopes.back(), *this);

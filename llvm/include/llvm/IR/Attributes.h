@@ -65,14 +65,14 @@ public:
   DeadOnReturnInfo() : DeadBytes(std::nullopt) {}
   DeadOnReturnInfo(uint64_t DeadOnReturnBytes) : DeadBytes(DeadOnReturnBytes) {}
 
-  uint64_t getNumberOfDeadBytes() {
+  uint64_t getNumberOfDeadBytes() const {
     assert(DeadBytes.has_value() &&
            "This attribute does not specify a byte count. Did you forget to "
            "check if the attribute covers all reachable memory?");
     return DeadBytes.value();
   }
 
-  bool coversAllReachableMemory() { return !DeadBytes.has_value(); }
+  bool coversAllReachableMemory() const { return !DeadBytes.has_value(); }
 
   static DeadOnReturnInfo createFromintValue(uint64_t Data) {
     if (Data == std::numeric_limits<uint64_t>::max())

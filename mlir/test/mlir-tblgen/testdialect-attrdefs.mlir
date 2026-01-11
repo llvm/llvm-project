@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -verify-diagnostics | FileCheck %s --strict-whitespace
 
 // CHECK-LABEL: func private @compoundA()
 // CHECK-SAME: #test.cmpnd_a<1, !test.smpla, [5, 6]>
@@ -43,4 +43,20 @@ func.func private @decimalIntegerShapeMultiple() attributes {
 func.func private @hexdecimalInteger() attributes {
 // expected-error @below {{expected an integer}}
   sdg = #test.decimal_shape<1x0xb>
+}
+
+// -----
+
+// CHECK-LABEL: @newlineAndIndent
+// CHECK-SAME:  indent = #test.newline_and_indent<
+// CHECK-NEXT:  {{^    }}!test.newline_and_indent<    
+// CHECK-NEXT:  {{^      }}indented_content
+// CHECK-NEXT:  {{^    }}>
+// CHECK-NEXT:  {{^  }}>
+func.func private @newlineAndIndent() attributes {
+  indent = #test.newline_and_indent<
+    !test.newline_and_indent<
+      indented_content
+    >
+  >
 }

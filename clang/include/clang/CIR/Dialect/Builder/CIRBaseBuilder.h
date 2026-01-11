@@ -97,6 +97,10 @@ public:
     return getConstPtrAttr(t, 0);
   }
 
+  mlir::TypedAttr getNullDataMemberAttr(cir::DataMemberType ty) {
+    return cir::DataMemberAttr::get(ty);
+  }
+
   mlir::TypedAttr getZeroInitAttr(mlir::Type ty) {
     if (mlir::isa<cir::IntType>(ty))
       return cir::IntAttr::get(ty, 0);
@@ -112,6 +116,8 @@ public:
       return getConstNullPtrAttr(ptrTy);
     if (auto recordTy = mlir::dyn_cast<cir::RecordType>(ty))
       return cir::ZeroAttr::get(recordTy);
+    if (auto dataMemberTy = mlir::dyn_cast<cir::DataMemberType>(ty))
+      return getNullDataMemberAttr(dataMemberTy);
     if (mlir::isa<cir::BoolType>(ty)) {
       return getFalseAttr();
     }
@@ -330,8 +336,10 @@ public:
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, mlir::Value dst,
                            bool isVolatile = false,
                            mlir::IntegerAttr align = {},
+                           cir::SyncScopeKindAttr scope = {},
                            cir::MemOrderAttr order = {}) {
-    return cir::StoreOp::create(*this, loc, val, dst, isVolatile, align, order);
+    return cir::StoreOp::create(*this, loc, val, dst, isVolatile, align, scope,
+                                order);
   }
 
   /// Emit a load from an boolean flag variable.
@@ -586,7 +594,7 @@ public:
 
   cir::CmpOp createCompare(mlir::Location loc, cir::CmpOpKind kind,
                            mlir::Value lhs, mlir::Value rhs) {
-    return cir::CmpOp::create(*this, loc, getBoolTy(), kind, lhs, rhs);
+    return cir::CmpOp::create(*this, loc, kind, lhs, rhs);
   }
 
   cir::VecCmpOp createVecCompare(mlir::Location loc, cir::CmpOpKind kind,
@@ -595,7 +603,7 @@ public:
     IntType integralTy =
         getSIntNTy(getCIRIntOrFloatBitWidth(vecCast.getElementType()));
     VectorType integralVecTy =
-        VectorType::get(context, integralTy, vecCast.getSize());
+        cir::VectorType::get(integralTy, vecCast.getSize());
     return cir::VecCmpOp::create(*this, loc, integralVecTy, kind, lhs, rhs);
   }
 

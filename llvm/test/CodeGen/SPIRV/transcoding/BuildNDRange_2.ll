@@ -56,28 +56,28 @@ entry:
   %tmp = alloca %struct.ndrange_t, align 8
   %lsize3 = alloca [3 x i64], align 8
   %tmp3 = alloca %struct.ndrange_t, align 8
-  %0 = bitcast [2 x i64]* %lsize2 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %0, i8* align 8 bitcast ([2 x i64]* @test_ndrange_2D3D.lsize2 to i8*), i64 16, i1 false)
-  %arraydecay = getelementptr inbounds [2 x i64], [2 x i64]* %lsize2, i64 0, i64 0
-  call spir_func void @_Z10ndrange_2DPKm(%struct.ndrange_t* sret(%struct.ndrange_t*) %tmp, i64* %arraydecay)
-  %1 = bitcast [3 x i64]* %lsize3 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %1, i8* align 8 bitcast ([3 x i64]* @test_ndrange_2D3D.lsize3 to i8*), i64 24, i1 false)
-  %arraydecay2 = getelementptr inbounds [3 x i64], [3 x i64]* %lsize3, i64 0, i64 0
-  call spir_func void @_Z10ndrange_3DPKm(%struct.ndrange_t* sret(%struct.ndrange_t*) %tmp3, i64* %arraydecay2)
+  %0 = bitcast ptr %lsize2 to ptr
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %0, ptr align 8 @test_ndrange_2D3D.lsize2, i64 16, i1 false)
+  %arraydecay = getelementptr inbounds [2 x i64], ptr %lsize2, i64 0, i64 0
+  call spir_func void @_Z10ndrange_2DPKm(ptr sret(ptr) %tmp, ptr %arraydecay)
+  %1 = bitcast ptr %lsize3 to ptr
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %1, ptr align 8 @test_ndrange_2D3D.lsize3, i64 24, i1 false)
+  %arraydecay2 = getelementptr inbounds [3 x i64], ptr %lsize3, i64 0, i64 0
+  call spir_func void @_Z10ndrange_3DPKm(ptr sret(ptr) %tmp3, ptr %arraydecay2)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1)
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1)
 
-declare spir_func void @_Z10ndrange_2DPKm(%struct.ndrange_t* sret(%struct.ndrange_t*), i64*)
+declare spir_func void @_Z10ndrange_2DPKm(ptr sret(ptr), ptr)
 
-declare spir_func void @_Z10ndrange_3DPKm(%struct.ndrange_t* sret(%struct.ndrange_t*), i64*)
+declare spir_func void @_Z10ndrange_3DPKm(ptr sret(ptr), ptr)
 
 define spir_func void @test_ndrange_const_2D3D() {
 entry:
   %tmp = alloca %struct.ndrange_t, align 8
   %tmp1 = alloca %struct.ndrange_t, align 8
-  call spir_func void @_Z10ndrange_2DPKm(%struct.ndrange_t* sret(%struct.ndrange_t*) %tmp, i64* getelementptr inbounds ([2 x i64], [2 x i64]* @test_ndrange_2D3D.lsize2, i64 0, i64 0))
-  call spir_func void @_Z10ndrange_3DPKm(%struct.ndrange_t* sret(%struct.ndrange_t*) %tmp1, i64* getelementptr inbounds ([3 x i64], [3 x i64]* @test_ndrange_2D3D.lsize3, i64 0, i64 0))
+  call spir_func void @_Z10ndrange_2DPKm(ptr sret(ptr) %tmp, ptr @test_ndrange_2D3D.lsize2)
+  call spir_func void @_Z10ndrange_3DPKm(ptr sret(ptr) %tmp1, ptr @test_ndrange_2D3D.lsize3)
   ret void
 }

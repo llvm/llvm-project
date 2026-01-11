@@ -1067,19 +1067,16 @@ define i32 @test_iv_uniform_with_outside_use_scev_simplification(ptr %dst) {
 ; VEC:       [[VECTOR_PH]]:
 ; VEC-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VEC:       [[VECTOR_BODY]]:
-; VEC-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VEC-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
-; VEC-NEXT:    [[TMP6:%.*]] = add i32 [[INDEX]], 1
+; VEC-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VEC-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[DST]], i32 [[TMP0]]
 ; VEC-NEXT:    store <2 x i16> zeroinitializer, ptr [[TMP1]], align 2
-; VEC-NEXT:    [[TMP5:%.*]] = add i32 [[STEP_2]], [[TMP6]]
-; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[TMP0]], 2
 ; VEC-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 8
 ; VEC-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; VEC:       [[MIDDLE_BLOCK]]:
 ; VEC-NEXT:    br label %[[E_EXIT:.*]]
 ; VEC:       [[E_EXIT]]:
-; VEC-NEXT:    ret i32 [[TMP5]]
+; VEC-NEXT:    ret i32 8
 ;
 ; INTERLEAVE-LABEL: define i32 @test_iv_uniform_with_outside_use_scev_simplification(
 ; INTERLEAVE-SAME: ptr [[DST:%.*]]) {
@@ -1096,14 +1093,13 @@ define i32 @test_iv_uniform_with_outside_use_scev_simplification(ptr %dst) {
 ; INTERLEAVE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[DST]], i32 [[TMP1]]
 ; INTERLEAVE-NEXT:    store i16 0, ptr [[TMP2]], align 2
 ; INTERLEAVE-NEXT:    store i16 0, ptr [[TMP3]], align 2
-; INTERLEAVE-NEXT:    [[TMP5:%.*]] = add i32 [[STEP_2]], [[TMP1]]
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; INTERLEAVE-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], 8
 ; INTERLEAVE-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; INTERLEAVE:       [[MIDDLE_BLOCK]]:
 ; INTERLEAVE-NEXT:    br label %[[E_EXIT:.*]]
 ; INTERLEAVE:       [[E_EXIT]]:
-; INTERLEAVE-NEXT:    ret i32 [[TMP5]]
+; INTERLEAVE-NEXT:    ret i32 8
 ;
 entry:
   %step.1 = sext i8 0 to i32
@@ -1131,8 +1127,6 @@ define i32 @test_iv_uniform_with_outside_use_scev_simplification_2(ptr %dst) {
 ; VEC-NEXT:    [[STEP_2:%.*]] = add nsw i32 [[STEP_1]], 1
 ; VEC-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VEC:       [[VECTOR_PH]]:
-; VEC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[STEP_2]], i64 0
-; VEC-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; VEC-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VEC:       [[VECTOR_BODY]]:
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -1145,7 +1139,7 @@ define i32 @test_iv_uniform_with_outside_use_scev_simplification_2(ptr %dst) {
 ; VEC-NEXT:    store i16 0, ptr [[TMP2]], align 2
 ; VEC-NEXT:    store i16 0, ptr [[TMP3]], align 2
 ; VEC-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[VEC_IND]], splat (i32 1)
-; VEC-NEXT:    [[TMP5:%.*]] = add <2 x i32> [[BROADCAST_SPLAT]], [[TMP4]]
+; VEC-NEXT:    [[TMP5:%.*]] = add <2 x i32> splat (i32 1), [[TMP4]]
 ; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; VEC-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], splat (i32 4)
 ; VEC-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 4
@@ -1173,7 +1167,7 @@ define i32 @test_iv_uniform_with_outside_use_scev_simplification_2(ptr %dst) {
 ; INTERLEAVE-NEXT:    store i16 0, ptr [[TMP2]], align 2
 ; INTERLEAVE-NEXT:    store i16 0, ptr [[TMP3]], align 2
 ; INTERLEAVE-NEXT:    [[TMP4:%.*]] = add i32 [[TMP1]], 1
-; INTERLEAVE-NEXT:    [[TMP5:%.*]] = add i32 [[STEP_2]], [[TMP4]]
+; INTERLEAVE-NEXT:    [[TMP5:%.*]] = add i32 1, [[TMP4]]
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; INTERLEAVE-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 4
 ; INTERLEAVE-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
