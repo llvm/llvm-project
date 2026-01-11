@@ -1127,7 +1127,9 @@ cc_library(
     ],
     textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
     deps = [
+        ":CAPIDebugHeaders",
         ":CAPIIRHeaders",
+        ":CAPITransformsHeaders",
         "@pybind11",
         "@rules_python//python/cc:current_py_cc_headers",
     ],
@@ -1140,7 +1142,9 @@ cc_library(
     ],
     textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
     deps = [
+        ":CAPIDebug",
         ":CAPIIR",
+        ":CAPITransforms",
         "@pybind11",
         "@rules_python//python/cc:current_py_cc_headers",
     ],
@@ -1153,7 +1157,9 @@ cc_library(
     ],
     textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
     deps = [
+        ":CAPIDebugHeaders",
         ":CAPIIRHeaders",
+        ":CAPITransformsHeaders",
         "@nanobind",
         "@rules_python//python/cc:current_py_cc_headers",
     ],
@@ -1166,7 +1172,9 @@ cc_library(
     ],
     textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
     deps = [
+        ":CAPIDebug",
         ":CAPIIR",
+        ":CAPITransforms",
         "@nanobind",
         "@rules_python//python/cc:current_py_cc_headers",
     ],
