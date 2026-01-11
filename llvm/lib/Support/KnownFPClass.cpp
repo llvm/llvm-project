@@ -268,8 +268,11 @@ KnownFPClass KnownFPClass::fadd_self(const KnownFPClass &KnownSrc,
   KnownFPClass Known = fadd(KnownSrc, KnownSrc, Mode);
 
   // Doubling 0 will give the same 0.
-  if (KnownSrc.isKnownNeverLogicalPosZero(Mode))
+  if (KnownSrc.isKnownNeverLogicalPosZero(Mode) &&
+      (Mode.Output == DenormalMode::IEEE ||
+       Mode.Output == DenormalMode::PreserveSign))
     Known.knownNot(fcPosZero);
+
   if (KnownSrc.isKnownNeverLogicalNegZero(Mode))
     Known.knownNot(fcNegZero);
   return Known;
