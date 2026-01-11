@@ -186,8 +186,7 @@ The low-level design of VPlan comprises of the following classes.
   input IR instructions are referred to as "Ingredients" of the Recipe. A Recipe
   may specify how its ingredients are to be transformed to produce the output IR
   instructions; e.g., cloned once, replicated multiple times or widened
-  according to selected VF. VPRecipeBase also defines zero, one or multiple
-  VPValues, modeling the fact that recipes can produce multiple results.
+  according to selected VF.
 
 :VPValue:
   The base of VPlan's def-use relations class hierarchy. When instantiated, it
@@ -197,6 +196,11 @@ The low-level design of VPlan comprises of the following classes.
 :VPUser:
   A VPUser represents an entity that uses a number of VPValues as operands.
   VPUser is similar in some aspects to LLVM's User class.
+
+:VPDef:
+  A VPDef represents an entity that defines zero, one or multiple VPValues.
+  It is used to model the fact that recipes in VPlan can define multiple
+  VPValues.
 
 :VPInstruction:
   A VPInstruction is a recipe characterized by a single opcode and optional

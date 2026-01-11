@@ -114,6 +114,8 @@ void VPRecipeBase::dump() const {
 }
 #endif
 
+bool VPRecipeValue::isDefinedBy(const VPDef *D) const { return Def == D; }
+
 VPRecipeBase *VPValue::getDefiningRecipe() {
   auto *DefValue = dyn_cast<VPRecipeValue>(this);
   return DefValue ? DefValue->Def : nullptr;

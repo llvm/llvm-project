@@ -387,31 +387,12 @@ class LLVM_ABI_FOR_TEST VPRecipeBase
       public VPUser {
   friend VPBasicBlock;
   friend class VPBlockUtils;
-  friend class VPRecipeValue;
 
   /// Each VPRecipe belongs to a single VPBasicBlock.
   VPBasicBlock *Parent = nullptr;
 
   /// The debug location for the recipe.
   DebugLoc DL;
-
-  /// Add \p V as a defined value by this VPRecipeBase.
-  void addDefinedValue(VPRecipeValue *V) {
-    assert(V->Def == this &&
-           "can only add VPValue already linked with this VPRecipeBase");
-    DefinedValues.push_back(V);
-  }
-
-  /// Remove \p V from the values defined by this VPRecipeBase. \p V must be a
-  /// defined value of this VPRecipeBase.
-  void removeDefinedValue(VPRecipeValue *V) {
-    assert(V->Def == this &&
-           "can only remove VPValue linked with this VPRecipeBase");
-    assert(is_contained(DefinedValues, V) &&
-           "VPValue to remove must be in DefinedValues");
-    llvm::erase(DefinedValues, V);
-    V->Def = nullptr;
-  }
 
 public:
   /// An enumeration for keeping track of the concrete subclass of VPRecipeBase
@@ -470,16 +451,7 @@ public:
                DebugLoc DL = DebugLoc::getUnknown())
       : VPDef(SC), VPUser(Operands), DL(DL) {}
 
-  ~VPRecipeBase() override {
-    for (VPRecipeValue *D : to_vector(DefinedValues)) {
-      assert(
-          D->Def == this &&
-          "all defined VPValues should point to the containing VPRecipeBase");
-      assert(D->getNumUsers() == 0 &&
-             "all defined VPValues should have no more users");
-      delete D;
-    }
-  }
+  ~VPRecipeBase() override = default;
 
   /// \return an ID for the concrete type of this object.
   /// This is used to implement the classof checks. This should not be used

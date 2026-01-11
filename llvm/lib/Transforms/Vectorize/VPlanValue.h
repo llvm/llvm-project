@@ -11,8 +11,8 @@
 /// Plans, e.g. the instructions the VPlan intends to generate if executed.
 /// VPlan models the following entities:
 /// VPValue   VPUser   VPDef
-///    |        |        |
-///   VPInstruction -----+
+///    |        |
+///   VPInstruction
 /// These are documented in docs/VectorizationPlan.rst.
 ///
 //===----------------------------------------------------------------------===//
@@ -209,9 +209,11 @@ struct VPSymbolicValue : public VPValue {
 class VPRecipeValue : public VPValue {
   friend class VPValue;
   friend class VPDef;
-  friend class VPRecipeBase;
-  /// Pointer to the VPRecipeBase that defines this VPValue.
+  /// Pointer to the VPDef that defines this VPValue.
   VPRecipeBase *Def;
+
+  /// Returns true if this VPRecipeValue is defined by \p D.
+  bool isDefinedBy(const VPDef *D) const;
 
 public:
   VPRecipeValue(VPRecipeBase *Def, Value *UV = nullptr);
@@ -329,7 +331,8 @@ public:
 /// Single-value VPDefs that also inherit from VPValue must make sure to inherit
 /// from VPDef before VPValue.
 class VPDef {
-  friend class VPRecipeBase;
+  friend class VPValue;
+  friend class VPRecipeValue;
 
   /// Subclass identifier (for isa/dyn_cast).
   const unsigned char SubclassID;
@@ -337,10 +340,36 @@ class VPDef {
   /// The VPValues defined by this VPDef.
   TinyPtrVector<VPRecipeValue *> DefinedValues;
 
+  /// Add \p V as a defined value by this VPDef.
+  void addDefinedValue(VPRecipeValue *V) {
+    assert(V->isDefinedBy(this) &&
+           "can only add VPValue already linked with this VPDef");
+    DefinedValues.push_back(V);
+  }
+
+  /// Remove \p V from the values defined by this VPDef. \p V must be a defined
+  /// value of this VPDef.
+  void removeDefinedValue(VPRecipeValue *V) {
+    assert(V->isDefinedBy(this) &&
+           "can only remove VPValue linked with this VPDef");
+    assert(is_contained(DefinedValues, V) &&
+           "VPValue to remove must be in DefinedValues");
+    llvm::erase(DefinedValues, V);
+    V->Def = nullptr;
+  }
+
 public:
   VPDef(const unsigned char SC) : SubclassID(SC) {}
 
-  virtual ~VPDef() = default;
+  virtual ~VPDef() {
+    for (VPRecipeValue *D : to_vector(DefinedValues)) {
+      assert(D->isDefinedBy(this) &&
+             "all defined VPValues should point to the containing VPDef");
+      assert(D->getNumUsers() == 0 &&
+             "all defined VPValues should have no more users");
+      delete D;
+    }
+  }
 
   /// Returns the only VPValue defined by the VPDef. Can only be called for
   /// VPDefs with a single defined value.
