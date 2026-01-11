@@ -136,3 +136,12 @@ public:
 
 extern X OuterX;
 
+X test24() {
+  X x;
+  if (&x == &OuterX)
+    throw 0;
+  return x;
+}
+// CHECK: _Z6test24v
+// CHECK-NOT: eh.resume
+// CHECK-NOT: unreachable
