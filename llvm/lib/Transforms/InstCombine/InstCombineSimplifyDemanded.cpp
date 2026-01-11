@@ -2673,7 +2673,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       // Ignore denormals-as-zero, as canonicalization is not mandated.
       if ((IID == Intrinsic::trunc || IID == Intrinsic::floor ||
            IsRoundNearest) &&
-          (KnownSrc.isKnownAlways(fcPosZero | fcPosSubnormal)))
+          KnownSrc.isKnownAlways(fcPosZero | fcPosSubnormal))
         return ConstantFP::getZero(VTy);
 
       if ((IID == Intrinsic::trunc || IsRoundNearest) &&
