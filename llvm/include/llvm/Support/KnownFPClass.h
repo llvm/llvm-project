@@ -20,6 +20,7 @@
 
 namespace llvm {
 class APFloat;
+struct fltSemantics;
 
 struct KnownFPClass {
   /// Floating-point classes the value could be one of.
@@ -29,7 +30,8 @@ struct KnownFPClass {
   /// definitely set or false if the sign bit is definitely unset.
   std::optional<bool> SignBit;
 
-  KnownFPClass() = default;
+  KnownFPClass(FPClassTest Known = fcAllFlags, std::optional<bool> Sign = {})
+      : KnownFPClasses(Known), SignBit(Sign) {}
   KnownFPClass(const APFloat &C);
 
   bool operator==(KnownFPClass Other) const {
@@ -133,6 +135,11 @@ struct KnownFPClass {
   ///   x < -0 --> true
   bool cannotBeOrderedGreaterEqZero(DenormalMode Mode) const {
     return isKnownNever(fcPositive) && isKnownNeverLogicalNegZero(Mode);
+  }
+
+  KnownFPClass intersectWith(const KnownFPClass &RHS) {
+    return KnownFPClass(~(~KnownFPClasses & ~RHS.KnownFPClasses),
+                        SignBit == RHS.SignBit ? SignBit : std::nullopt);
   }
 
   KnownFPClass &operator|=(const KnownFPClass &RHS) {
@@ -282,6 +289,15 @@ struct KnownFPClass {
   /// Propagate known class for log/log2/log10
   static LLVM_ABI KnownFPClass
   log(const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Propagate known class for sqrt
+  static LLVM_ABI KnownFPClass
+  sqrt(const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Propagate known class for fpext.
+  static LLVM_ABI KnownFPClass fpext(const KnownFPClass &KnownSrc,
+                                     const fltSemantics &DstTy,
+                                     const fltSemantics &SrcTy);
 
   void resetAll() { *this = KnownFPClass(); }
 };

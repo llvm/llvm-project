@@ -705,8 +705,6 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
   if (getSrc().getType() == getType()) {
     switch (getKind()) {
     case cir::CastKind::integral: {
-      // TODO: for sign differences, it's possible in certain conditions to
-      // create a new attribute that's capable of representing the source.
       llvm::SmallVector<mlir::OpFoldResult, 1> foldResults;
       auto foldOrder = getSrc().getDefiningOp()->fold(foldResults);
       if (foldOrder.succeeded() && mlir::isa<mlir::Attribute>(foldResults[0]))
@@ -723,7 +721,36 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
       return {};
     }
   }
-  return tryFoldCastChain(*this);
+
+  // Handle cases where a chain of casts cancel out.
+  Value result = tryFoldCastChain(*this);
+  if (result)
+    return result;
+
+  // Handle simple constant casts.
+  if (auto srcConst = getSrc().getDefiningOp<cir::ConstantOp>()) {
+    switch (getKind()) {
+    case cir::CastKind::integral: {
+      mlir::Type srcTy = getSrc().getType();
+      // Don't try to fold vector casts for now.
+      assert(mlir::isa<cir::VectorType>(srcTy) ==
+             mlir::isa<cir::VectorType>(getType()));
+      if (mlir::isa<cir::VectorType>(srcTy))
+        break;
+
+      auto srcIntTy = mlir::cast<cir::IntType>(srcTy);
+      auto dstIntTy = mlir::cast<cir::IntType>(getType());
+      APInt newVal =
+          srcIntTy.isSigned()
+              ? srcConst.getIntValue().sextOrTrunc(dstIntTy.getWidth())
+              : srcConst.getIntValue().zextOrTrunc(dstIntTy.getWidth());
+      return cir::IntAttr::get(dstIntTy, newVal);
+    }
+    default:
+      break;
+    }
+  }
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
@@ -2454,6 +2481,38 @@ OpFoldResult cir::UnaryOp::fold(FoldAdaptor adaptor) {
 
   return {};
 }
+
+//===----------------------------------------------------------------------===//
+// BaseDataMemberOp & DerivedDataMemberOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verifyMemberPtrCast(Operation *op, mlir::Value src,
+                                         mlir::Type resultTy) {
+  // Let the operand type be T1 C1::*, let the result type be T2 C2::*.
+  // Verify that T1 and T2 are the same type.
+  mlir::Type inputMemberTy;
+  mlir::Type resultMemberTy;
+  if (mlir::isa<cir::DataMemberType>(src.getType())) {
+    inputMemberTy =
+        mlir::cast<cir::DataMemberType>(src.getType()).getMemberTy();
+    resultMemberTy = mlir::cast<cir::DataMemberType>(resultTy).getMemberTy();
+  }
+  assert(!cir::MissingFeatures::memberFuncPtrCast());
+  if (inputMemberTy != resultMemberTy)
+    return op->emitOpError()
+           << "member types of the operand and the result do not match";
+
+  return mlir::success();
+}
+
+LogicalResult cir::BaseDataMemberOp::verify() {
+  return verifyMemberPtrCast(getOperation(), getSrc(), getType());
+}
+
+LogicalResult cir::DerivedDataMemberOp::verify() {
+  return verifyMemberPtrCast(getOperation(), getSrc(), getType());
+}
+
 //===----------------------------------------------------------------------===//
 // AwaitOp
 //===----------------------------------------------------------------------===//
@@ -2557,6 +2616,23 @@ LogicalResult cir::GetMemberOp::verify() {
 
   return mlir::success();
 }
+
+//===----------------------------------------------------------------------===//
+// ExtractMemberOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::ExtractMemberOp::verify() {
+  auto recordTy = mlir::cast<cir::RecordType>(getRecord().getType());
+  if (recordTy.getKind() == cir::RecordType::Union)
+    return emitError()
+           << "cir.extract_member currently does not support unions";
+  if (recordTy.getMembers().size() <= getIndex())
+    return emitError() << "member index out of bounds";
+  if (recordTy.getMembers()[getIndex()] != getType())
+    return emitError() << "member type mismatch";
+  return mlir::success();
+}
+
 //===----------------------------------------------------------------------===//
 // VecCreateOp
 //===----------------------------------------------------------------------===//
