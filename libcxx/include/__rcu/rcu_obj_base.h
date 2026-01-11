@@ -26,7 +26,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class T, class D = default_delete<T>>
 class rcu_obj_base : private __rcu_node {
 public:
-  void retire(D d = D(), rcu_domain& dom = rcu_default_domain()) noexcept;
+  void retire(D d = D(), rcu_domain& dom = rcu_default_domain()) noexcept {
+    auto ptr = static_cast<T*>(this);
+    dom.__retire_callback(
+        [ptr, d = std::move(d)]() mutable { d(ptr); });
+  }
 
 protected:
   rcu_obj_base()                               = default;
@@ -36,8 +40,6 @@ protected:
   rcu_obj_base& operator=(rcu_obj_base&&)      = default;
   ~rcu_obj_base()                              = default;
 
-private:
-  D deleter; // exposition only
 };
 
 #endif // _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_THREADS && _LIBCPP_HAS_EXPERIMENTAL_RCU
