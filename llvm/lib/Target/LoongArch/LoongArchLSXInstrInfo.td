@@ -72,9 +72,6 @@ def loongarch_vreplgr2vr: SDNode<"LoongArchISD::VREPLGR2VR", SDT_LoongArchVreplg
 def loongarch_vfrecipe: SDNode<"LoongArchISD::FRECIPE", SDT_LoongArchVFRECIPE>;
 def loongarch_vfrsqrte: SDNode<"LoongArchISD::FRSQRTE", SDT_LoongArchVFRSQRTE>;
 
-// Vector logicial right shift
-def loongarch_vsrl : SDNode<"LoongArchISD::VSRL", SDT_LoongArchV2R>;
-
 // Vector logicial left / right shift by immediate
 def loongarch_vslli : SDNode<"LoongArchISD::VSLLI", SDT_LoongArchV1RUimm>;
 def loongarch_vsrli : SDNode<"LoongArchISD::VSRLI", SDT_LoongArchV1RUimm>;
@@ -1538,22 +1535,10 @@ multiclass VAvgPat<SDPatternOperator OpNode, string Inst, ValueType vt> {
             (!cast<LAInst>(Inst) vt:$vj, vt:$vk)>;
 }
 
-multiclass VAvgIPat<SDPatternOperator OpNode, string Inst, ValueType vt> {
-  def : Pat<(OpNode (vt (add vt:$vj, vt:$vk)), (GRLenVT 1)),
-            (!cast<LAInst>(Inst) vt:$vj, vt:$vk)>;
-}
-
 multiclass VAvgrPat<SDPatternOperator OpNode, string Inst, ValueType vt> {
   def : Pat<(OpNode (vt (add (vt (add vt:$vj, vt:$vk)),
                              (vt (vsplat_imm_eq_1)))),
                     (vt (vsplat_imm_eq_1))),
-            (!cast<LAInst>(Inst) vt:$vj, vt:$vk)>;
-}
-
-multiclass VAvgrIPat<SDPatternOperator OpNode, string Inst, ValueType vt> {
-  def : Pat<(OpNode (vt (add (vt (add vt:$vj, vt:$vk)),
-                             (vt (vsplat_imm_eq_1)))),
-                    (GRLenVT 1)),
             (!cast<LAInst>(Inst) vt:$vj, vt:$vk)>;
 }
 
@@ -1662,8 +1647,9 @@ defm : PatShiftVrSplatUimm<shl, "VSLLI">;
 defm : PatShiftVrUimm<loongarch_vslli, "VSLLI">;
 
 // VSRL[I]_{B/H/W/D}
-defm : PatVrVr<loongarch_vsrl, "VSRL">;
-defm : PatShiftVrVr<loongarch_vsrl, "VSRL">;
+defm : PatVrVr<srl, "VSRL">;
+defm : PatShiftVrVr<srl, "VSRL">;
+defm : PatShiftVrSplatUimm<srl, "VSRLI">;
 defm : PatShiftVrUimm<loongarch_vsrli, "VSRLI">;
 
 // VSRA[I]_{B/H/W/D}
@@ -2209,18 +2195,18 @@ defm : VAvgPat<sra, "VAVG_B", v16i8>;
 defm : VAvgPat<sra, "VAVG_H", v8i16>;
 defm : VAvgPat<sra, "VAVG_W", v4i32>;
 defm : VAvgPat<sra, "VAVG_D", v2i64>;
-defm : VAvgIPat<loongarch_vsrli, "VAVG_BU", v16i8>;
-defm : VAvgIPat<loongarch_vsrli, "VAVG_HU", v8i16>;
-defm : VAvgIPat<loongarch_vsrli, "VAVG_WU", v4i32>;
-defm : VAvgIPat<loongarch_vsrli, "VAVG_DU", v2i64>;
+defm : VAvgPat<srl, "VAVG_BU", v16i8>;
+defm : VAvgPat<srl, "VAVG_HU", v8i16>;
+defm : VAvgPat<srl, "VAVG_WU", v4i32>;
+defm : VAvgPat<srl, "VAVG_DU", v2i64>;
 defm : VAvgrPat<sra, "VAVGR_B", v16i8>;
 defm : VAvgrPat<sra, "VAVGR_H", v8i16>;
 defm : VAvgrPat<sra, "VAVGR_W", v4i32>;
 defm : VAvgrPat<sra, "VAVGR_D", v2i64>;
-defm : VAvgrIPat<loongarch_vsrli, "VAVGR_BU", v16i8>;
-defm : VAvgrIPat<loongarch_vsrli, "VAVGR_HU", v8i16>;
-defm : VAvgrIPat<loongarch_vsrli, "VAVGR_WU", v4i32>;
-defm : VAvgrIPat<loongarch_vsrli, "VAVGR_DU", v2i64>;
+defm : VAvgrPat<srl, "VAVGR_BU", v16i8>;
+defm : VAvgrPat<srl, "VAVGR_HU", v8i16>;
+defm : VAvgrPat<srl, "VAVGR_WU", v4i32>;
+defm : VAvgrPat<srl, "VAVGR_DU", v2i64>;
 
 // abs
 def : Pat<(abs v16i8:$vj), (VSIGNCOV_B v16i8:$vj, v16i8:$vj)>;

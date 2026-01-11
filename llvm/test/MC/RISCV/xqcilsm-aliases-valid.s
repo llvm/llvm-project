@@ -1,13 +1,13 @@
 # Xqcilsm - Qualcomm uC Load Store Multiple Extension
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcilsm -M no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xqcilsm -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcilsm < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqcilsm -M no-aliases --no-print-imm-hex -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xqcilsm < %s \
+# RUN:     | llvm-objdump --mattr=+xqcilsm -M no-aliases --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcilsm -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xqcilsm -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcilsm < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqcilsm --no-print-imm-hex -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xqcilsm < %s \
+# RUN:     | llvm-objdump --mattr=+xqcilsm --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
 # CHECK-INST: qc.swm   t0, s4, 0(gp)
