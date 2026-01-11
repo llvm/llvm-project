@@ -2293,7 +2293,6 @@ bool static hasAbsentOptional(llvm::ArrayRef<fir::ExtendedValue> args) {
       return true;
   return false;
 }
-
 template <typename GeneratorType>
 mlir::Value
 IntrinsicLibrary::outlineInWrapper(GeneratorType generator,
@@ -3854,6 +3853,13 @@ void IntrinsicLibrary::genExit(llvm::ArrayRef<fir::ExtendedValue> args) {
 
   mlir::Type defaultIntTy = builder.getDefaultIntegerType();
 
+  // Warn about non-default integer kinds with -pedantic
+  if (status.getType() != defaultIntTy) {
+    mlir::emitWarning(
+        loc,
+        "EXIT intrinsic with non-default INTEGER kind is a language extension");
+  }
+
   // Convert INTEGER(any kind) → default INTEGER
   if (status.getType() != defaultIntTy) {
     status = builder.createConvert(loc, defaultIntTy, status);
@@ -3861,8 +3867,6 @@ void IntrinsicLibrary::genExit(llvm::ArrayRef<fir::ExtendedValue> args) {
 
   fir::runtime::genExit(builder, loc, status);
 }
-
-
 // EXPONENT
 mlir::Value IntrinsicLibrary::genExponent(mlir::Type resultType,
                                           llvm::ArrayRef<mlir::Value> args) {
