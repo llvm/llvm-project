@@ -2618,10 +2618,9 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType,
       nextToken();
       if (Prev) {
         auto OptionalParens = [&] {
-          if (MightBeStmtExpr || MightBeFoldExpr || SeenComma || InMacroCall ||
-              Line->InMacroBody ||
-              Style.RemoveParentheses == FormatStyle::RPS_Leave ||
-              RParen->getPreviousNonComment() == LParen) {
+          if (Style.RemoveParentheses == FormatStyle::RPS_Leave ||
+              MightBeStmtExpr || MightBeFoldExpr || SeenComma || InMacroCall ||
+              Line->InMacroBody || RParen->getPreviousNonComment() == LParen) {
             return false;
           }
           const bool DoubleParens =
@@ -2659,7 +2658,10 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType,
           }
           return false;
         };
-        if (Prev->is(TT_TypenameMacro)) {
+        if (OptionalParens()) {
+          LParen->Optional = true;
+          RParen->Optional = true;
+        } else if (Prev->is(TT_TypenameMacro)) {
           LParen->setFinalizedType(TT_TypeDeclarationParen);
           RParen->setFinalizedType(TT_TypeDeclarationParen);
         } else if (Prev->is(tok::greater) && RParen->Previous == LParen) {
@@ -2667,9 +2669,6 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType,
         } else if (FormatTok->is(tok::l_brace) && Prev->is(tok::amp) &&
                    !Prev->Previous) {
           FormatTok->setBlockKind(BK_BracedInit);
-        } else if (OptionalParens()) {
-          LParen->Optional = true;
-          RParen->Optional = true;
         }
       }
       return SeenEqual;

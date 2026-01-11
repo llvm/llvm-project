@@ -909,6 +909,22 @@ add_header_library(
 )
 
 add_header_library(
+  expm1f16
+  HDRS
+    expm1f16.h
+  DEPENDS
+    .expxf16_utils
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
   range_reduction_double
   HDRS
     range_reduction_double_common.h
@@ -1007,4 +1023,20 @@ add_header_library(
   DEPENDS
     .exp10f_utils
     libc.src.__support.FPUtil.multiply_add
+)
+
+add_header_library(
+  sin
+  HDRS
+    sin.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.errno.errno
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.math.range_reduction_double
+    libc.src.__support.math.sincos_eval
+    libc.src.__support.macros.optimization
 )

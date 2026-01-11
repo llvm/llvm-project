@@ -372,16 +372,6 @@ typedef __char32_t char32_t;
 #  endif
 #  define _LIBCPP_HIDE_FROM_ABI_VIRTUAL _LIBCPP_HIDDEN _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
 
-#  ifdef _LIBCPP_BUILDING_LIBRARY
-#    if _LIBCPP_ABI_VERSION > 1
-#      define _LIBCPP_HIDE_FROM_ABI_AFTER_V1 _LIBCPP_HIDE_FROM_ABI
-#    else
-#      define _LIBCPP_HIDE_FROM_ABI_AFTER_V1
-#    endif
-#  else
-#    define _LIBCPP_HIDE_FROM_ABI_AFTER_V1 _LIBCPP_HIDE_FROM_ABI
-#  endif
-
 // Clang modules take a significant compile time hit when pushing and popping diagnostics.
 // Since all the headers are marked as system headers unless _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER is defined, we can
 // simply disable this pushing and popping when _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER isn't defined.
