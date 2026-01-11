@@ -2144,12 +2144,12 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
     // With nnan: X + {+/-}Inf --> {+/-}Inf
     if (KnownRHS.isKnownAlways(fcInf | fcNan) &&
-        (ResultNotNan || KnownLHS.isKnownNever(fcNan)))
+        KnownLHS.isKnownNever(fcNan))
       return I->getOperand(1);
 
     // With nnan: {+/-}Inf + X --> {+/-}Inf
     if (KnownLHS.isKnownAlways(fcInf | fcNan) &&
-        (ResultNotNan || KnownRHS.isKnownNever(fcNan)))
+        KnownRHS.isKnownNever(fcNan))
       return I->getOperand(0);
 
     FastMathFlags InferredFMF =
