@@ -330,6 +330,30 @@ KnownFPClass KnownFPClass::log(const KnownFPClass &KnownSrc,
   return Known;
 }
 
+KnownFPClass KnownFPClass::sqrt(const KnownFPClass &KnownSrc,
+                                DenormalMode Mode) {
+  KnownFPClass Known;
+
+  if (KnownSrc.isKnownNeverPosInfinity())
+    Known.knownNot(fcPosInf);
+  if (KnownSrc.isKnownNever(fcSNan))
+    Known.knownNot(fcSNan);
+
+  // Any negative value besides -0 returns a nan.
+  if (KnownSrc.isKnownNeverNaN() && KnownSrc.cannotBeOrderedLessThanZero())
+    Known.knownNot(fcNan);
+
+  // The only negative value that can be returned is -0 for -0 inputs.
+  Known.knownNot(fcNegInf | fcNegSubnormal | fcNegNormal);
+
+  // If the input denormal mode could be PreserveSign, a negative
+  // subnormal input could produce a negative zero output.
+  if (KnownSrc.isKnownNeverLogicalNegZero(Mode))
+    Known.knownNot(fcNegZero);
+
+  return Known;
+}
+
 KnownFPClass KnownFPClass::fpext(const KnownFPClass &KnownSrc,
                                  const fltSemantics &DstTy,
                                  const fltSemantics &SrcTy) {
