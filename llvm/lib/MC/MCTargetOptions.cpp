@@ -20,11 +20,9 @@ MCTargetOptions::MCTargetOptions()
       EmitDwarfUnwind(EmitDwarfUnwindType::Default),
       MCUseDwarfDirectory(DefaultDwarfDirectory),
       EmitCompactUnwindNonCanonical(false), EmitSFrameUnwind(false),
-      PPCUseFullRegisterNames(false) {}
+      PPCUseFullRegisterNames(false), LargeFDEEncoding(false) {}
 
-StringRef MCTargetOptions::getABIName() const {
-  return ABIName;
-}
+StringRef MCTargetOptions::getABIName() const { return ABIName; }
 
 StringRef MCTargetOptions::getAssemblyLanguage() const {
   return AssemblyLanguage;

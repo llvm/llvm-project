@@ -59,6 +59,7 @@ MCOPT(bool, Crel)
 MCOPT(bool, ImplicitMapSyms)
 MCOPT(bool, X86RelaxRelocations)
 MCOPT(bool, X86Sse2Avx)
+MCOPT(bool, LargeFDEEncoding)
 MCSTROPT(ABIName)
 MCSTROPT(AsSecureLogFile)
 
@@ -168,6 +169,13 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
                               "instructions with VEX prefix"));
   MCBINDOPT(X86Sse2Avx);
 
+  static cl::opt<bool> LargeFDEEncoding(
+      "large-fde-encoding",
+      cl::desc("Use 8-byte pointer size for ELF FDE CFI encoding, useful "
+               "when text sections may exceed 2GB even with medium code"),
+      cl::init(false));
+  MCBINDOPT(LargeFDEEncoding);
+
   static cl::opt<std::string> ABIName(
       "target-abi",
       cl::desc("The name of the ABI to be targeted from the backend."),
@@ -199,6 +207,7 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   Options.ImplicitMapSyms = getImplicitMapSyms();
   Options.X86RelaxRelocations = getX86RelaxRelocations();
   Options.X86Sse2Avx = getX86Sse2Avx();
+  Options.LargeFDEEncoding = getLargeFDEEncoding();
   Options.EmitDwarfUnwind = getEmitDwarfUnwind();
   Options.EmitCompactUnwindNonCanonical = getEmitCompactUnwindNonCanonical();
   Options.EmitSFrameUnwind = getEmitSFrameUnwind();

@@ -24,6 +24,7 @@
 #include "llvm/MC/MCSectionSPIRV.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCSectionXCOFF.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
@@ -332,7 +333,6 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
 
   TLSExtraDataSection = TLSTLVSection;
 }
-
 void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   switch (T.getArch()) {
   case Triple::mips:
@@ -354,10 +354,15 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   case Triple::ppc64le:
   case Triple::aarch64:
   case Triple::aarch64_be:
-  case Triple::x86_64:
-    FDECFIEncoding = dwarf::DW_EH_PE_pcrel |
-                     (Large ? dwarf::DW_EH_PE_sdata8 : dwarf::DW_EH_PE_sdata4);
+  case Triple::x86_64: {
+    // Check if the user requested large FDE encoding via MCTargetOptions
+    const MCTargetOptions *TO = Ctx->getTargetOptions();
+    bool Use8ByteFDE = Large || (TO && TO->LargeFDEEncoding);
+    FDECFIEncoding =
+        dwarf::DW_EH_PE_pcrel |
+        (Use8ByteFDE ? dwarf::DW_EH_PE_sdata8 : dwarf::DW_EH_PE_sdata4);
     break;
+  }
   case Triple::bpfel:
   case Triple::bpfeb:
     FDECFIEncoding = dwarf::DW_EH_PE_sdata8;
