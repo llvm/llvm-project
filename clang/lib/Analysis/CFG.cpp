@@ -4740,11 +4740,20 @@ CFGBlock *CFGBuilder::VisitCXXTryStmt(CXXTryStmt *Terminator) {
 
   // Save the current "try" context.
   SaveAndRestore SaveTry(TryTerminatedBlock, NewTryTerminatedBlock);
-  cfg->addTryDispatchBlock(TryTerminatedBlock);
+  cfg->addTryDispatchBlock(NewTryTerminatedBlock);
 
   assert(Terminator->getTryBlock() && "try must contain a non-NULL body");
   Block = nullptr;
-  return addStmt(Terminator->getTryBlock());
+
+  CFGBlock *TryBodyEntry = addStmt(Terminator->getTryBlock());
+  if (TryBodyEntry) {
+    addSuccessor(NewTryTerminatedBlock, TryBodyEntry);
+  } else {
+    CFGBlock *EmptyTryBody = createBlock(/*add_successor*/ false);
+    addSuccessor(NewTryTerminatedBlock, EmptyTryBody);
+    addSuccessor(EmptyTryBody, TrySuccessor);
+  }
+  return NewTryTerminatedBlock;
 }
 
 CFGBlock *CFGBuilder::VisitCXXCatchStmt(CXXCatchStmt *CS) {
