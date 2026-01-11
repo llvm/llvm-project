@@ -381,8 +381,8 @@ struct UniformQuantizedSubChannelType
     c.def_static(
         "get",
         [](unsigned flags, const PyType &storageType,
-           const PyType &expressedType, MlirAttribute scales,
-           MlirAttribute zeroPoints, std::vector<int32_t> quantizedDimensions,
+           const PyType &expressedType, PyAttribute scales,
+           PyAttribute zeroPoints, std::vector<int32_t> quantizedDimensions,
            std::vector<int64_t> blockSizes, int64_t storageTypeMin,
            int64_t storageTypeMax, DefaultingPyMlirContext context) {
           return UniformQuantizedSubChannelType(
