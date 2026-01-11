@@ -9,9 +9,6 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_HYPOTF16_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_HYPOTF16_H
 
-#include "hdr/fenv_macros.h"
-#include "hdr/math_macros.h"
-#include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/common.h"
