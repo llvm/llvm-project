@@ -669,6 +669,7 @@ Miscellaneous Bug Fixes
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed a crash when an ``asm goto`` statement referenced an undeclared label in the presence of a variable with ``__attribute__((cleanup))``. (#GH175314)
 
 OpenACC Specific Changes
 ------------------------
