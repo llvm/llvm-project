@@ -71,8 +71,6 @@ INITIALIZE_PASS(RISCVMergeBaseOffsetOpt, DEBUG_TYPE,
 //   a. lui   vreg1, %hi(s)
 //      addi  vreg2, vreg1, %lo(s)
 //
-//   or
-//
 //   b.  qc.e.li vreg1, s
 //
 // 2. (medany pattern):
@@ -557,9 +555,9 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
         }
       }
     } else {
-      if (Hi.getOpcode() == RISCV::QC_E_LI)
+      if (Hi.getOpcode() == RISCV::QC_E_LI) {
         UseMI.getOperand(2).ChangeToImmediate(0);
-      else {
+      } else {
         UseMI.removeOperand(2);
         UseMI.addOperand(ImmOp);
       }
