@@ -2218,6 +2218,28 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
     return getFPClassConstant(VTy, ValidResults, /*IsCanonicalizing=*/true);
   }
+  case Instruction::FPExt: {
+    FPClassTest SrcDemandedMask = DemandedMask;
+
+    // No subnormal result does not imply not-subnormal in the source type.
+    if ((DemandedMask & fcNegNormal) != fcNone)
+      SrcDemandedMask |= fcNegSubnormal;
+    if ((DemandedMask & fcPosNormal) != fcNone)
+      SrcDemandedMask |= fcPosSubnormal;
+
+    KnownFPClass KnownSrc;
+    if (SimplifyDemandedFPClass(I, 0, SrcDemandedMask, KnownSrc, Depth + 1))
+      return I;
+
+    const fltSemantics &DstTy = VTy->getScalarType()->getFltSemantics();
+    const fltSemantics &SrcTy =
+        I->getOperand(0)->getType()->getScalarType()->getFltSemantics();
+
+    Known = KnownFPClass::fpext(KnownSrc, DstTy, SrcTy);
+    FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
+
+    return getFPClassConstant(VTy, ValidResults, /*IsCanonicalizing=*/true);
+  }
   case Instruction::Call: {
     CallInst *CI = cast<CallInst>(I);
     const Intrinsic::ID IID = CI->getIntrinsicID();
