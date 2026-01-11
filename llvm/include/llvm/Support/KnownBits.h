@@ -115,6 +115,9 @@ public:
     return Zero.isSignBitSet() && !One.isZero();
   }
 
+  /// Returns true if this value is known to be non-positive.
+  bool isNonPositive() const { return getSignedMaxValue().isNonPositive(); }
+
   /// Make this value negative.
   void makeNegative() {
     One.setSignBit();
