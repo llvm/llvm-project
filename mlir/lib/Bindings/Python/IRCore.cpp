@@ -2766,7 +2766,7 @@ void populateRoot(nb::module_ &m) {
       "a dialect");
   m.def(
       MLIR_PYTHON_CAPI_TYPE_CASTER_REGISTER_ATTR,
-      [](MlirTypeID mlirTypeID, bool replace) -> nb::object {
+      [](PyTypeID mlirTypeID, bool replace) -> nb::object {
         return nb::cpp_function([mlirTypeID, replace](
                                     nb::callable typeCaster) -> nb::object {
           PyGlobals::get().registerTypeCaster(mlirTypeID, typeCaster, replace);
@@ -2781,7 +2781,7 @@ void populateRoot(nb::module_ &m) {
       "Register a type caster for casting MLIR types to custom user types.");
   m.def(
       MLIR_PYTHON_CAPI_VALUE_CASTER_REGISTER_ATTR,
-      [](MlirTypeID mlirTypeID, bool replace) -> nb::object {
+      [](PyTypeID mlirTypeID, bool replace) -> nb::object {
         return nb::cpp_function(
             [mlirTypeID, replace](nb::callable valueCaster) -> nb::object {
               PyGlobals::get().registerValueCaster(mlirTypeID, valueCaster,
@@ -3231,7 +3231,7 @@ void populateIRCore(nb::module_ &m) {
            "Returns True if this location is a FileLineColLoc.")
       .def_prop_ro(
           "filename",
-          [](MlirLocation loc) {
+          [](PyLocation loc) {
             return mlirIdentifierStr(
                 mlirLocationFileLineColRangeGetFilename(loc));
           },
@@ -3295,7 +3295,7 @@ void populateIRCore(nb::module_ &m) {
            "Returns True if this location is a `NameLoc`.")
       .def_prop_ro(
           "name_str",
-          [](MlirLocation loc) {
+          [](PyLocation loc) {
             return mlirIdentifierStr(mlirLocationNameGetName(loc));
           },
           "Gets the name string from a `NameLoc`.")
@@ -4698,7 +4698,7 @@ void populateIRCore(nb::module_ &m) {
           "Downcasts the `Value` to a more specific kind if possible.")
       .def_prop_ro(
           "location",
-          [](MlirValue self) {
+          [](PyValue self) {
             return PyLocation(
                 PyMlirContext::forContext(mlirValueGetContext(self)),
                 mlirValueGetLocation(self));
