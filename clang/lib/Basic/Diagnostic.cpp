@@ -22,6 +22,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Frontend/CompilerInstance.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -773,6 +774,11 @@ void DiagnosticConsumer::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     ++NumWarnings;
   else if (DiagLevel >= DiagnosticsEngine::Error)
     ++NumErrors;
+}
+
+void DiagnosticConsumer::PrintDiagnosticStats(StringRef Message, CompilerInstance& Compiler) {
+  if (Compiler.getDiagnosticOpts().ShowCarets)
+    Compiler.getVerboseOutputStream() << Message;
 }
 
 /// ModifierIs - Return true if the specified modifier matches specified string.

@@ -544,6 +544,13 @@ public:
   /// to \ref createRule.
   void appendResult(const SarifResult &SarifResult);
 
+  /// Append a new Invocation to the currently in-flight run,
+  ///
+  /// \pre
+  /// There must be a run associated with the document, failing to do so will
+  /// cause undefined behaviour.
+  void appendInvocation(const std::vector<std::string>& CommandLine, bool ExecutionSuccessful, StringRef Message);
+
   /// Return the SARIF document in its current state.
   /// Calling this will trigger a copy of the internal state including all
   /// reported diagnostics, resulting in an expensive call.

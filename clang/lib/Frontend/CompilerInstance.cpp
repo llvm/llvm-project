@@ -1011,8 +1011,8 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
     }
   }
 
-  printDiagnosticStats();
-
+  getDiagnosticClient().PrintDiagnosticStats(getDiagnosticStats(), *this);
+  
   if (getFrontendOpts().ShowStats) {
     if (hasFileManager()) {
       getFileManager().PrintStats();
@@ -1038,12 +1038,12 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
 
   return !getDiagnostics().getClient()->getNumErrors();
 }
-
-void CompilerInstance::printDiagnosticStats() {
+std::string CompilerInstance::getDiagnosticStats() {
   if (!getDiagnosticOpts().ShowCarets)
-    return;
+    return "";
 
-  raw_ostream &OS = getVerboseOutputStream();
+  std::string Message = "";
+  llvm::raw_string_ostream OS(Message);
 
   // We can have multiple diagnostics sharing one diagnostic client.
   // Get the total number of warnings/errors from the client.
@@ -1069,6 +1069,8 @@ void CompilerInstance::printDiagnosticStats() {
     }
     OS << ".\n";
   }
+
+  return Message;
 }
 
 void CompilerInstance::LoadRequestedPlugins() {

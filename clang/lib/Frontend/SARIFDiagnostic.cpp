@@ -13,6 +13,8 @@
 #include "clang/Basic/Sarif.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/DiagnosticRenderer.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
@@ -34,11 +36,9 @@ SARIFDiagnostic::SARIFDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
       Current(&Root), 
       LangOptsPtr(&LangOpts),
       Writer(Writer) {
-  // Don't print 'X warnings and Y errors generated'.
-  DiagOpts.ShowCarets = false;
 }
 
-SARIFDiagnostic::~SARIFDiagnostic() {
+void SARIFDiagnostic::writeResult() {
   // clang-format off
   for (auto& TopLevelDiagnosticsPtr : Root.getChildrenPtrs()) { // For each top-level error/warnings.
     unsigned DiagID = TopLevelDiagnosticsPtr->getDiagID();
@@ -79,6 +79,19 @@ SARIFDiagnostic::~SARIFDiagnostic() {
     Writer->appendResult(Result); // Write into Writer.
   }
   // clang-format on
+  Root.getChildrenPtrs().clear(); // Reset the result cache
+}
+
+void SARIFDiagnostic::setLangOptions(const LangOptions& LangOpts) {
+  LangOptsPtr = &LangOpts;
+}
+
+void SARIFDiagnostic::emitInvocation(CompilerInstance& Compiler, bool Successful, StringRef Message) {
+  Writer->appendInvocation(
+    /*CommandLine=*/Compiler.getInvocation().getCC1CommandLine(),
+    /*ExecutionSuccessful=*/Successful,
+    /*ToolExecutionNotification=*/Message
+  );
 }
 
 void SARIFDiagnostic::emitDiagnosticMessage(

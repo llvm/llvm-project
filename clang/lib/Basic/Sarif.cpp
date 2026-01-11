@@ -23,6 +23,7 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Program.h"
 
 #include <optional>
 #include <string>
@@ -444,6 +445,28 @@ void SarifDocumentWriter::appendResult(const SarifResult &Result) {
   json::Object &Run = getCurrentRun();
   json::Array *Results = Run.getArray("results");
   Results->emplace_back(std::move(Ret));
+}
+
+void SarifDocumentWriter::appendInvocation(const std::vector<std::string>& CommandLine, bool ExecutionSuccessful, StringRef Message) {
+  // In clang++, the appendInvocation always happens after all runs have been created.
+  // Clang first prints diagnostics on each frontend input file,
+  // and finally prints the diagnostics stats (X warnings and Y errors generated) which corresponds to toolExecutionNotifications here.
+  auto &LastRun = *Runs.back().getAsObject();
+  if (LastRun.find("invocations") == LastRun.end())
+    LastRun.insert({"invocations", json::Array()});
+  LastRun.getArray("invocations")->push_back(
+    json::Object{
+      {"commandLine",         llvm::join(CommandLine, " ")},
+      {"executionSuccessful", ExecutionSuccessful},
+      {"exitCode",            ExecutionSuccessful ? 0 : 1}, // See clang/tools/driver/cc1_main.cpp, the process exit code is either 0 or 1.
+      {"toolExecutionNotifications", json::Array{
+        json::Object{
+          {"level",   "note"},
+          {"message", createMessage(Message)}
+        }
+      }}
+    }
+  );
 }
 
 json::Object SarifDocumentWriter::createDocument() {

@@ -17,7 +17,8 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Sarif.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Frontend/SARIFDiagnostic.h"
 #include "llvm/ADT/StringRef.h"
 #include <memory>
 
@@ -42,13 +43,6 @@ public:
   /// used.
   void setPrefix(llvm::StringRef Value) { Prefix = Value; }
 
-  bool hasSarifWriter() const { return Writer != nullptr; }
-
-  SarifDocumentWriter &getSarifWriter() const {
-    assert(Writer && "SarifWriter not set!");
-    return *Writer;
-  }
-
   void setSarifWriter(std::unique_ptr<SarifDocumentWriter> SarifWriter) {
     Writer = std::move(SarifWriter);
   }
@@ -57,6 +51,7 @@ public:
   void EndSourceFile() override;
   void HandleDiagnostic(DiagnosticsEngine::Level Level,
                         const Diagnostic &Info) override;
+  void PrintDiagnosticStats(StringRef Message, CompilerInstance& Compiler) override;
 
 private:
   raw_ostream &OS;

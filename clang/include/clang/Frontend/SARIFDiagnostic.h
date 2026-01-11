@@ -29,12 +29,14 @@ public:
   SARIFDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
                   DiagnosticOptions &DiagOpts, SarifDocumentWriter *Writer);
 
-  ~SARIFDiagnostic();
-
   SARIFDiagnostic &operator=(const SARIFDiagnostic &&) = delete;
   SARIFDiagnostic(SARIFDiagnostic &&) = delete;
   SARIFDiagnostic &operator=(const SARIFDiagnostic &) = delete;
   SARIFDiagnostic(const SARIFDiagnostic &) = delete;
+
+  void writeResult();
+  void setLangOptions(const LangOptions& LangOpts);
+  void emitInvocation(CompilerInstance& Compiler, bool Successful, StringRef Message);
 
 protected:
   void emitDiagnosticMessage(FullSourceLoc Loc, PresumedLoc PLoc,
