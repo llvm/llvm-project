@@ -35,8 +35,9 @@ public:
   SARIFDiagnostic(const SARIFDiagnostic &) = delete;
 
   void writeResult();
-  void setLangOptions(const LangOptions& LangOpts);
-  void emitInvocation(CompilerInstance& Compiler, bool Successful, StringRef Message);
+  void setLangOptions(const LangOptions &LangOpts);
+  void emitInvocation(CompilerInstance &Compiler, bool Successful,
+                      StringRef Message);
 
 protected:
   void emitDiagnosticMessage(FullSourceLoc Loc, PresumedLoc PLoc,
@@ -76,7 +77,8 @@ private:
       llvm::SmallVector<CharSourceRange> Ranges;
 
       // Methods to construct a llvm-style location.
-      llvm::SmallVector<CharSourceRange> getCharSourceRangesWithOption(const LangOptions& LangOpts);
+      llvm::SmallVector<CharSourceRange>
+      getCharSourceRangesWithOption(const LangOptions &LangOpts);
     };
 
     // Constructor
@@ -90,16 +92,17 @@ private:
     Node &addChildResult(Result);
     Node &addLocation(Location);
     Node &addRelatedLocation(Location);
-    template <class Func>
-    void recursiveForEach(Func&&);
+    template <class Func> void recursiveForEach(Func &&);
 
     // Methods to access underlying data for other llvm-components to read from
     // it. Arguments and results are all in llvm-style.
     unsigned getDiagID();
     DiagnosticsEngine::Level getLevel();
     std::string getDiagnosticMessage();
-    llvm::SmallVector<CharSourceRange> getLocations(const LangOptions& LangOpts);
-    llvm::SmallVector<CharSourceRange> getRelatedLocations(const LangOptions& LangOpts);
+    llvm::SmallVector<CharSourceRange>
+    getLocations(const LangOptions &LangOpts);
+    llvm::SmallVector<CharSourceRange>
+    getRelatedLocations(const LangOptions &LangOpts);
     int getNesting();
 
   private:
@@ -113,7 +116,7 @@ private:
 
   Node Root;
   Node *Current = &Root;
-  const LangOptions* LangOptsPtr;
+  const LangOptions *LangOptsPtr;
   SarifDocumentWriter
       *Writer; // Shared between SARIFDiagnosticPrinter and this renderer.
 };

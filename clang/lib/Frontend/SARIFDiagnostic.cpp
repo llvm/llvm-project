@@ -31,12 +31,10 @@ SARIFDiagnostic::SARIFDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
                                  DiagnosticOptions &DiagOpts,
                                  SarifDocumentWriter *Writer)
     : DiagnosticRenderer(LangOpts, DiagOpts),
-      Root(Node::Result{/*Level=*/DiagnosticsEngine::Level::Error, /*Message=*/"", /*Diag=*/nullptr},
+      Root(Node::Result{/*Level=*/DiagnosticsEngine::Level::Error,
+                        /*Message=*/"", /*Diag=*/nullptr},
            /*Nesting=*/-1), // The root does not represents a diagnostic.
-      Current(&Root), 
-      LangOptsPtr(&LangOpts),
-      Writer(Writer) {
-}
+      Current(&Root), LangOptsPtr(&LangOpts), Writer(Writer) {}
 
 void SARIFDiagnostic::writeResult() {
   // clang-format off
@@ -82,16 +80,16 @@ void SARIFDiagnostic::writeResult() {
   Root.getChildrenPtrs().clear(); // Reset the result cache
 }
 
-void SARIFDiagnostic::setLangOptions(const LangOptions& LangOpts) {
+void SARIFDiagnostic::setLangOptions(const LangOptions &LangOpts) {
   LangOptsPtr = &LangOpts;
 }
 
-void SARIFDiagnostic::emitInvocation(CompilerInstance& Compiler, bool Successful, StringRef Message) {
+void SARIFDiagnostic::emitInvocation(CompilerInstance &Compiler,
+                                     bool Successful, StringRef Message) {
   Writer->appendInvocation(
-    /*CommandLine=*/Compiler.getInvocation().getCC1CommandLine(),
-    /*ExecutionSuccessful=*/Successful,
-    /*ToolExecutionNotification=*/Message
-  );
+      /*CommandLine=*/Compiler.getInvocation().getCC1CommandLine(),
+      /*ExecutionSuccessful=*/Successful,
+      /*ToolExecutionNotification=*/Message);
 }
 
 void SARIFDiagnostic::emitDiagnosticMessage(
@@ -116,7 +114,8 @@ void SARIFDiagnostic::emitDiagnosticMessage(
 }
 
 void SARIFDiagnostic::emitIncludeLocation(FullSourceLoc Loc, PresumedLoc PLoc) {
-  Current = &Current->addRelatedLocation(Node::Location{Loc, PLoc, /*Ranges=*/{}});
+  Current =
+      &Current->addRelatedLocation(Node::Location{Loc, PLoc, /*Ranges=*/{}});
 }
 
 void SARIFDiagnostic::emitImportLocation(FullSourceLoc Loc, PresumedLoc PLoc,
@@ -125,8 +124,7 @@ void SARIFDiagnostic::emitImportLocation(FullSourceLoc Loc, PresumedLoc PLoc,
 }
 
 SARIFDiagnostic::Node::Node(Result Result_, int Nesting)
-    : Result_(std::move(Result_)),
-      Nesting(Nesting) {}
+    : Result_(std::move(Result_)), Nesting(Nesting) {}
 
 SARIFDiagnostic::Node &SARIFDiagnostic::Node::getParent() {
   assert(ParentPtr && "getParent() of SARIFDiagnostic::Root!");
@@ -148,8 +146,8 @@ SARIFDiagnostic::Node::getChildrenPtrs() {
 
 SARIFDiagnostic::Node &
 SARIFDiagnostic::Node::addChildResult(Result ChildResult) {
-  ChildrenPtrs.push_back(
-      std::make_unique<Node>(Node::Result(std::move(ChildResult)), Nesting + 1));
+  ChildrenPtrs.push_back(std::make_unique<Node>(
+      Node::Result(std::move(ChildResult)), Nesting + 1));
   ChildrenPtrs.back()->ParentPtr = this; // I am the parent of this new child.
   return *ChildrenPtrs.back();
 }
@@ -166,10 +164,10 @@ SARIFDiagnostic::Node::addRelatedLocation(Location Location) {
 }
 
 template <class Func>
-void SARIFDiagnostic::Node::recursiveForEach(Func&& Function) {
+void SARIFDiagnostic::Node::recursiveForEach(Func &&Function) {
   for (auto &&ChildPtr : getChildrenPtrs()) {
     Function(*ChildPtr);
-    ChildPtr->recursiveForEach(std::forward<Func&&>(Function));
+    ChildPtr->recursiveForEach(std::forward<Func &&>(Function));
   }
 }
 
@@ -187,7 +185,8 @@ std::string SARIFDiagnostic::Node::getDiagnosticMessage() {
   return Result_.Message;
 }
 
-llvm::SmallVector<CharSourceRange> SARIFDiagnostic::Node::getLocations(const LangOptions& LangOpts) {
+llvm::SmallVector<CharSourceRange>
+SARIFDiagnostic::Node::getLocations(const LangOptions &LangOpts) {
   llvm::SmallVector<CharSourceRange> CharSourceRanges;
   llvm::for_each(Locations, [&](Location &Location) {
     CharSourceRanges.append(Location.getCharSourceRangesWithOption(LangOpts));
@@ -196,20 +195,20 @@ llvm::SmallVector<CharSourceRange> SARIFDiagnostic::Node::getLocations(const Lan
 }
 
 llvm::SmallVector<CharSourceRange>
-SARIFDiagnostic::Node::getRelatedLocations(const LangOptions& LangOpts) {
+SARIFDiagnostic::Node::getRelatedLocations(const LangOptions &LangOpts) {
   llvm::SmallVector<CharSourceRange> CharSourceRanges;
-  llvm::for_each(RelatedLocations,
-                [&](Location &RelatedLocation) {
-                  CharSourceRanges.append(
-                      RelatedLocation.getCharSourceRangesWithOption(LangOpts));
-                });
+  llvm::for_each(RelatedLocations, [&](Location &RelatedLocation) {
+    CharSourceRanges.append(
+        RelatedLocation.getCharSourceRangesWithOption(LangOpts));
+  });
   return CharSourceRanges;
 }
 
 int SARIFDiagnostic::Node::getNesting() { return Nesting; }
 
 llvm::SmallVector<CharSourceRange>
-SARIFDiagnostic::Node::Location::getCharSourceRangesWithOption(const LangOptions& LangOpts) {
+SARIFDiagnostic::Node::Location::getCharSourceRangesWithOption(
+    const LangOptions &LangOpts) {
   SmallVector<CharSourceRange> Locations = {};
 
   if (PLoc.isInvalid()) {
@@ -259,11 +258,10 @@ SARIFDiagnostic::Node::Location::getCharSourceRangesWithOption(const LangOptions
   auto &SM = Loc.getManager();
   auto FID = PLoc.getFileID();
   // Visual Studio 2010 or earlier expects column number to be off by one.
-  unsigned int ColNo =
-      (LangOpts.MSCompatibilityVersion &&
-       !LangOpts.isCompatibleWithMSVC(LangOptions::MSVC2012))
-          ? PLoc.getColumn() - 1
-          : PLoc.getColumn();
+  unsigned int ColNo = (LangOpts.MSCompatibilityVersion &&
+                        !LangOpts.isCompatibleWithMSVC(LangOptions::MSVC2012))
+                           ? PLoc.getColumn() - 1
+                           : PLoc.getColumn();
   SourceLocation DiagLoc = SM.translateLineCol(FID, PLoc.getLine(), ColNo);
 
   // FIXME(llvm-project/issues/57366): Properly process #line directives.

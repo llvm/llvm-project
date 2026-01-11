@@ -1791,7 +1791,8 @@ public:
                                 const Diagnostic &Info);
 
   /// At the end of a compilation, print the number of warnings/errors.
-  virtual void PrintDiagnosticStats(StringRef Message, CompilerInstance& Compiler);
+  virtual void PrintDiagnosticStats(StringRef Message,
+                                    CompilerInstance &Compiler);
 };
 
 /// A diagnostic client that ignores all diagnostics.

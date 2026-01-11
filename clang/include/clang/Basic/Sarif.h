@@ -549,7 +549,8 @@ public:
   /// \pre
   /// There must be a run associated with the document, failing to do so will
   /// cause undefined behaviour.
-  void appendInvocation(const std::vector<std::string>& CommandLine, bool ExecutionSuccessful, StringRef Message);
+  void appendInvocation(const std::vector<std::string> &CommandLine,
+                        bool ExecutionSuccessful, StringRef Message);
 
   /// Return the SARIF document in its current state.
   /// Calling this will trigger a copy of the internal state including all

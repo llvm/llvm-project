@@ -78,12 +78,13 @@ void SARIFDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
       DiagMessageStream.str(), Info.getRanges(), Info.getFixItHints(), &Info);
 }
 
-void SARIFDiagnosticPrinter::PrintDiagnosticStats(StringRef Message, CompilerInstance& Compiler) {
+void SARIFDiagnosticPrinter::PrintDiagnosticStats(StringRef Message,
+                                                  CompilerInstance &Compiler) {
   if (Compiler.getDiagnosticOpts().ShowCarets)
     SARIFDiag->emitInvocation(
-      /*Compiler=*/Compiler, 
-      /*Successul=*/getNumErrors() == 0, 
-      /*Message=*/Message);
+        /*Compiler=*/Compiler,
+        /*Successul=*/getNumErrors() == 0,
+        /*Message=*/Message);
   llvm::json::Value Value(Writer->createDocument());
   OS << "\n" << Value << "\n\n";
   OS.flush();

@@ -1012,7 +1012,7 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   }
 
   getDiagnosticClient().PrintDiagnosticStats(getDiagnosticStats(), *this);
-  
+
   if (getFrontendOpts().ShowStats) {
     if (hasFileManager()) {
       getFileManager().PrintStats();

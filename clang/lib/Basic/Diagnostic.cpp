@@ -776,7 +776,8 @@ void DiagnosticConsumer::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     ++NumErrors;
 }
 
-void DiagnosticConsumer::PrintDiagnosticStats(StringRef Message, CompilerInstance& Compiler) {
+void DiagnosticConsumer::PrintDiagnosticStats(StringRef Message,
+                                              CompilerInstance &Compiler) {
   if (Compiler.getDiagnosticOpts().ShowCarets)
     Compiler.getVerboseOutputStream() << Message;
 }

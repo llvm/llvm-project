@@ -51,7 +51,8 @@ public:
   void EndSourceFile() override;
   void HandleDiagnostic(DiagnosticsEngine::Level Level,
                         const Diagnostic &Info) override;
-  void PrintDiagnosticStats(StringRef Message, CompilerInstance& Compiler) override;
+  void PrintDiagnosticStats(StringRef Message,
+                            CompilerInstance &Compiler) override;
 
 private:
   raw_ostream &OS;
