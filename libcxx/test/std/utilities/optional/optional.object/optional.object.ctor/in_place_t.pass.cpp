@@ -11,7 +11,9 @@
 // <optional>
 
 // template <class... Args>
-//   constexpr explicit optional(in_place_t, Args&&... args);
+//   constexpr explicit optional(in_place_t, Args&&... args);   // only for the primary template
+// template <class Arg>
+//   constexpr explicit optional(in_place_t, Arg arg);          // since C++26, only for optional<T&>
 
 #include <cassert>
 #include <optional>
@@ -53,6 +55,47 @@ class Z {
 public:
   Z(int) { TEST_THROW(6); }
 };
+
+#if TEST_STD_VER >= 26
+static_assert(!std::is_constructible_v<optional<const int&>, in_place_t>);
+static_assert(std::is_constructible_v<optional<const int&>, in_place_t, int&>);
+static_assert(std::is_constructible_v<optional<const int&>, in_place_t, const int&>);
+static_assert(!std::is_constructible_v<optional<const int&>, in_place_t, int>);
+static_assert(!std::is_constructible_v<optional<const int&>, in_place_t, const int>);
+static_assert(!std::is_constructible_v<optional<const int&>, in_place_t, long&>);
+static_assert(!std::is_constructible_v<optional<const int&>, in_place_t, const long&>);
+
+// Test that initilization in std::optional<std::initializer_list<T>&>{in_place, il} selects the (in_place_t, Arg&&)
+// constructor.
+// Otherwise, the created optional would store a dangling reference.
+constexpr bool test_ref_initializer_list() {
+  std::initializer_list<int> il{4, 2};
+  optional<std::initializer_list<int>&> opt{in_place, il};
+
+  auto il2 = opt.value();
+  assert(il2.begin() == il.begin());
+  assert(il2.size() == il.size());
+
+  return true;
+}
+
+constexpr bool test_ref() {
+  { // optional(in_place_t, _Arg&&)
+    Y y{1, 2};
+    optional<Y&> xo(in_place, y);
+
+    Y x2{1, 2};
+
+    assert(*xo == x2);
+    assert(&(*xo) == &y);
+  }
+
+  assert(test_ref_initializer_list());
+  static_assert(test_ref_initializer_list());
+
+  return true;
+}
+#endif
 
 int main(int, char**) {
   {
@@ -119,6 +162,11 @@ int main(int, char**) {
       assert(i == 6);
     }
   }
+#endif
+
+#if TEST_STD_VER >= 26
+  test_ref();
+  static_assert(test_ref());
 #endif
 
   return 0;
