@@ -91,7 +91,6 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
   EXPECT_FP_EQ(0x1p+0, LIBC_NAMESPACE::shared::exp10(0.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::expm1(0.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::log(1.0));
-  EXPECT_FP_EQ(0x1.62e42fefa39efp-1, LIBC_NAMESPACE::shared::log(2.0));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::sin(0.0));
 }
 

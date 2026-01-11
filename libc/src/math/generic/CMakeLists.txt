@@ -1958,7 +1958,6 @@ add_entrypoint_object(
   HDRS
     ../log10.h
   DEPENDS
-    libc.src.__support.math.log_range_reduction
     libc.src.__support.FPUtil.double_double
     libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.fenv_impl
@@ -1968,6 +1967,7 @@ add_entrypoint_object(
     libc.src.__support.integer_literals
     libc.src.__support.macros.optimization
     libc.src.__support.math.common_constants
+    libc.src.__support.math.log_range_reduction
 )
 
 add_entrypoint_object(
@@ -2046,7 +2046,6 @@ add_entrypoint_object(
   HDRS
     ../log2.h
   DEPENDS
-    libc.src.__support.math.log_range_reduction
     libc.src.__support.FPUtil.double_double
     libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.fenv_impl
@@ -2056,6 +2055,7 @@ add_entrypoint_object(
     libc.src.__support.integer_literals
     libc.src.__support.macros.optimization
     libc.src.__support.math.common_constants
+    libc.src.__support.math.log_range_reduction
 )
 
 add_entrypoint_object(
