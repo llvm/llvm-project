@@ -7,9 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_SCOPEREDUCTIONCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_SCOPEREDCUTIONCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_SCOPEREDUCTIONCHECK_H
 
-#include "../../clang-tidy/utils/DeclRefExprUtils.h"
 #include "../ClangTidyCheck.h"
 
 namespace clang::tidy::misc {
