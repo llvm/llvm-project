@@ -1071,3 +1071,147 @@ define nofpclass(sub) float @ret_no_sub__floor__select_source_only_sub_or_unknow
   %result = call float @llvm.floor.f32(float %select)
   ret float %result
 }
+
+define nofpclass(nan norm sub) float @zero_demands_norm_input__floor(i1 %cond, float %unknown, float nofpclass(nan inf sub zero) %only.norm) {
+; CHECK-LABEL: define nofpclass(nan sub norm) float @zero_demands_norm_input__floor(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], float nofpclass(nan inf zero sub) [[ONLY_NORM:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[UNKNOWN]], float [[ONLY_NORM]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.floor.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %unknown, float %only.norm
+  %result = call float @llvm.floor.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan norm sub nzero) float @pzero_demands_pnorm_input__floor(i1 %cond, float %unknown, float nofpclass(nan inf nnorm sub zero) %only.pnorm) {
+; CHECK-LABEL: define nofpclass(nan nzero sub norm) float @pzero_demands_pnorm_input__floor(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], float nofpclass(nan inf zero sub nnorm) [[ONLY_PNORM:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[UNKNOWN]], float [[ONLY_PNORM]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.floor.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %unknown, float %only.pnorm
+  %result = call float @llvm.floor.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan norm sub pzero) float @nzero_demands_pnorm_input__floor(i1 %cond, float %unknown, float nofpclass(nan inf pnorm sub zero) %only.nnorm) {
+; CHECK-LABEL: define nofpclass(nan pzero sub norm) float @nzero_demands_pnorm_input__floor(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], float nofpclass(nan inf zero sub pnorm) [[ONLY_NNORM:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[UNKNOWN]], float [[ONLY_NNORM]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.floor.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %unknown, float %only.nnorm
+  %result = call float @llvm.floor.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan norm sub) float @zero_demands_norm_input__ceil(i1 %cond, float %unknown, float nofpclass(nan inf sub zero) %only.norm) {
+; CHECK-LABEL: define nofpclass(nan sub norm) float @zero_demands_norm_input__ceil(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], float nofpclass(nan inf zero sub) [[ONLY_NORM:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[UNKNOWN]], float [[ONLY_NORM]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.ceil.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %unknown, float %only.norm
+  %result = call float @llvm.ceil.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan norm sub nzero) float @pzero_demands_pnorm_input__ceil(i1 %cond, float %unknown, float nofpclass(nan inf nnorm sub zero) %only.pnorm) {
+; CHECK-LABEL: define nofpclass(nan nzero sub norm) float @pzero_demands_pnorm_input__ceil(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], float nofpclass(nan inf zero sub nnorm) [[ONLY_PNORM:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[UNKNOWN]], float [[ONLY_PNORM]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.ceil.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %unknown, float %only.pnorm
+  %result = call float @llvm.ceil.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan norm sub pzero) float @nzero_demands_pnorm_input__ceil(i1 %cond, float %unknown, float nofpclass(nan inf pnorm sub zero) %only.nnorm) {
+; CHECK-LABEL: define nofpclass(nan pzero sub norm) float @nzero_demands_pnorm_input__ceil(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], float nofpclass(nan inf zero sub pnorm) [[ONLY_NNORM:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[UNKNOWN]], float [[ONLY_NNORM]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.ceil.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %unknown, float %only.nnorm
+  %result = call float @llvm.ceil.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan norm sub) float @zero_demands_norm_input__trunc(i1 %cond, float %unknown, float nofpclass(nan inf sub zero) %only.norm) {
+; CHECK-LABEL: define nofpclass(nan sub norm) float @zero_demands_norm_input__trunc(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], float nofpclass(nan inf zero sub) [[ONLY_NORM:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[UNKNOWN]], float [[ONLY_NORM]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.trunc.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %unknown, float %only.norm
+  %result = call float @llvm.trunc.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan norm sub nzero) float @pzero_demands_pnorm_input__trunc(i1 %cond, float %unknown, float nofpclass(nan inf nnorm sub zero) %only.pnorm) {
+; CHECK-LABEL: define nofpclass(nan nzero sub norm) float @pzero_demands_pnorm_input__trunc(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], float nofpclass(nan inf zero sub nnorm) [[ONLY_PNORM:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[UNKNOWN]], float [[ONLY_PNORM]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.trunc.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %unknown, float %only.pnorm
+  %result = call float @llvm.trunc.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan norm sub pzero) float @nzero_demands_pnorm_input__trunc(i1 %cond, float %unknown, float nofpclass(nan inf pnorm sub zero) %only.nnorm) {
+; CHECK-LABEL: define nofpclass(nan pzero sub norm) float @nzero_demands_pnorm_input__trunc(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], float nofpclass(nan inf zero sub pnorm) [[ONLY_NNORM:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[UNKNOWN]], float [[ONLY_NNORM]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.trunc.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %unknown, float %only.nnorm
+  %result = call float @llvm.trunc.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan norm sub) float @zero_demands_norm_input__round(i1 %cond, float %unknown, float nofpclass(nan inf sub zero) %only.norm) {
+; CHECK-LABEL: define nofpclass(nan sub norm) float @zero_demands_norm_input__round(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], float nofpclass(nan inf zero sub) [[ONLY_NORM:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[UNKNOWN]], float [[ONLY_NORM]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.round.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %unknown, float %only.norm
+  %result = call float @llvm.round.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan norm sub nzero) float @pzero_demands_pnorm_input__round(i1 %cond, float %unknown, float nofpclass(nan inf nnorm sub zero) %only.pnorm) {
+; CHECK-LABEL: define nofpclass(nan nzero sub norm) float @pzero_demands_pnorm_input__round(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], float nofpclass(nan inf zero sub nnorm) [[ONLY_PNORM:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[UNKNOWN]], float [[ONLY_PNORM]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.round.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %unknown, float %only.pnorm
+  %result = call float @llvm.round.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan norm sub pzero) float @nzero_demands_pnorm_input__round(i1 %cond, float %unknown, float nofpclass(nan inf pnorm sub zero) %only.nnorm) {
+; CHECK-LABEL: define nofpclass(nan pzero sub norm) float @nzero_demands_pnorm_input__round(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]], float nofpclass(nan inf zero sub pnorm) [[ONLY_NNORM:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[UNKNOWN]], float [[ONLY_NNORM]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.round.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %unknown, float %only.nnorm
+  %result = call float @llvm.round.f32(float %select)
+  ret float %result
+}
