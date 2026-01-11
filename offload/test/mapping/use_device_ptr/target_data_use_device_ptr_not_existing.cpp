@@ -6,15 +6,6 @@
 // Test for various cases of use_device_ptr on a variable.
 // The corresponding data is not previously mapped.
 
-// Note that this tests for the current behavior wherein if a lookup fails,
-// the runtime returns nullptr, instead of the original host-address.
-// That was compatible with OpenMP 5.0, where it was a user error if
-// corresponding storage didn't exist, but with 5.1+, the runtime needs to
-// return the host address, as it needs to assume that the host-address is
-// device-accessible, as the user has guaranteed it.
-// Once the runtime returns the original host-address when the lookup fails, the
-// test will need to be updated.
-
 int aa[10][10];
 int h[10];
 int *ph = &h[0];
@@ -24,7 +15,9 @@ struct S {
 
   void f1(int i) {
     paa--;
+    void *original_ph = ph;
     void *original_addr_ph3 = &ph[3];
+    void *original_paa = paa;
     void *original_addr_paa102 = &paa[1][0][2];
 
 // (A) No corresponding item, lookup should fail.
@@ -34,7 +27,7 @@ struct S {
       void *mapped_ptr_ph3 =
           omp_get_mapped_ptr(original_addr_ph3, omp_get_default_device());
       printf("A: %d %d %d\n", mapped_ptr_ph3 == nullptr,
-             mapped_ptr_ph3 != original_addr_ph3, ph == nullptr);
+             mapped_ptr_ph3 != original_addr_ph3, ph == original_ph);
     }
 
 // (B) use_device_ptr/map on pointer, and pointee does not exist.
@@ -45,7 +38,7 @@ struct S {
       void *mapped_ptr_ph3 =
           omp_get_mapped_ptr(original_addr_ph3, omp_get_default_device());
       printf("B: %d %d %d\n", mapped_ptr_ph3 == nullptr,
-             mapped_ptr_ph3 != original_addr_ph3, ph == nullptr);
+             mapped_ptr_ph3 != original_addr_ph3, ph == original_ph);
     }
 
 // (C) map on pointee: base-pointer of map matches use_device_ptr operand.
@@ -78,7 +71,7 @@ struct S {
       void *mapped_ptr_paa102 =
           omp_get_mapped_ptr(original_addr_paa102, omp_get_default_device());
       printf("E: %d %d %d\n", mapped_ptr_paa102 == nullptr,
-             mapped_ptr_paa102 != original_addr_paa102, paa == nullptr);
+             mapped_ptr_paa102 != original_addr_paa102, paa == original_paa);
     }
 
 // (F) use_device_ptr/map on pointer, and pointee does not exist.
@@ -89,7 +82,7 @@ struct S {
       void *mapped_ptr_paa102 =
           omp_get_mapped_ptr(original_addr_paa102, omp_get_default_device());
       printf("F: %d %d %d\n", mapped_ptr_paa102 == nullptr,
-             mapped_ptr_paa102 != original_addr_paa102, paa == nullptr);
+             mapped_ptr_paa102 != original_addr_paa102, paa == original_paa);
     }
 
 // (G) map on pointee: base-pointer of map matches use_device_ptr operand.

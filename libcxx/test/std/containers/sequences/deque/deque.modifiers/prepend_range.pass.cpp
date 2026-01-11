@@ -31,6 +31,8 @@ int main(int, char**) {
     });
   });
   test_sequence_prepend_range_move_only<std::deque>();
+  // FIXME: This should work - see https://llvm.org/PR162605
+  // test_sequence_prepend_range_emplace_constructible<std::deque>();
 
   test_prepend_range_exception_safety_throwing_copy<std::deque>();
   test_prepend_range_exception_safety_throwing_allocator<std::deque, int>();

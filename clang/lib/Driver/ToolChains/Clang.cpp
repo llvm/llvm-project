@@ -2411,6 +2411,7 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   const llvm::Triple &Triple = C.getDefaultToolChain().getTriple();
   bool IsELF = Triple.isOSBinFormatELF();
   bool Crel = false, ExperimentalCrel = false;
+  bool SFrame = false, ExperimentalSFrame = false;
   bool ImplicitMapSyms = false;
   bool UseRelaxRelocations = C.getDefaultToolChain().useRelaxRelocations();
   bool UseNoExecStack = false;
@@ -2626,6 +2627,10 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
                                   llvm::codegenoptions::DebugInfoConstructor,
                                   DwarfVersion, llvm::DebuggerKind::Default);
         }
+      } else if (Value == "--gsframe") {
+        SFrame = true;
+      } else if (Value == "--allow-experimental-sframe") {
+        ExperimentalSFrame = true;
       } else if (Value.starts_with("-mcpu") || Value.starts_with("-mfpu") ||
                  Value.starts_with("-mhwdiv") || Value.starts_with("-march")) {
         // Do nothing, we'll validate it later.
@@ -2677,6 +2682,17 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
     } else {
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << "-Wa,--crel" << D.getTargetTriple();
+    }
+  }
+  if (SFrame) {
+    if (Triple.isOSBinFormatELF() && Triple.isX86()) {
+      if (!ExperimentalSFrame)
+        D.Diag(diag::err_drv_experimental_sframe);
+      else
+        CmdArgs.push_back("--gsframe");
+    } else {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << "-Wa,--gsframe" << D.getTargetTriple();
     }
   }
   if (ImplicitMapSyms)
@@ -3783,8 +3799,10 @@ clang::driver::tools::getCXX20NamedModuleOutputPath(const ArgList &Args,
   if (Arg *FinalOutput = Args.getLastArg(options::OPT_o);
       FinalOutput && Args.hasArg(options::OPT_c))
     OutputPath = FinalOutput->getValue();
-  else
-    OutputPath = BaseInput;
+  else {
+    llvm::sys::fs::current_path(OutputPath);
+    llvm::sys::path::append(OutputPath, llvm::sys::path::filename(BaseInput));
+  }
 
   const char *Extension = types::getTypeTempSuffix(types::TY_ModuleFile);
   llvm::sys::path::replace_extension(OutputPath, Extension);
@@ -5973,6 +5991,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   else if (UnwindTables)
      CmdArgs.push_back("-funwind-tables=1");
 
+  // Sframe unwind tables are independent of the other types. Although also
+  // defined for aarch64, only x86_64 support is implemented at the moment.
+  if (Arg *A = Args.getLastArg(options::OPT_gsframe)) {
+    if (Triple.isOSBinFormatELF() && Triple.isX86())
+      CmdArgs.push_back("--gsframe");
+    else
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getOption().getName() << TripleStr;
+  }
+
   // Prepare `-aux-target-cpu` and `-aux-target-feature` unless
   // `--gpu-use-aux-triple-only` is specified.
   if (!Args.getLastArg(options::OPT_gpu_use_aux_triple_only) &&
@@ -6191,6 +6219,22 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       if ((Triple.isX86() || Triple.isAArch64()) && Triple.isOSBinFormatELF())
         A->render(Args, CmdArgs);
       else
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << A->getAsString(Args) << TripleStr;
+    }
+  }
+
+  if (Arg *A =
+          Args.getLastArg(options::OPT_fpartition_static_data_sections,
+                          options::OPT_fno_partition_static_data_sections)) {
+    if (!A->getOption().matches(
+            options::OPT_fno_partition_static_data_sections)) {
+      // This codegen pass is only available on x86 and AArch64 ELF targets.
+      if ((Triple.isX86() || Triple.isAArch64()) && Triple.isOSBinFormatELF()) {
+        A->render(Args, CmdArgs);
+        CmdArgs.push_back("-mllvm");
+        CmdArgs.push_back("-memprof-annotate-static-data-prefix");
+      } else
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << A->getAsString(Args) << TripleStr;
     }

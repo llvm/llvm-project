@@ -96,6 +96,9 @@ Improvements to clangd
 Inlay hints
 ^^^^^^^^^^^
 
+- ``clangd`` now shows designator hints for aggregate initialization of structures 
+  with parentheses-list initialization (``CXXParenListInitExpr``) syntax. 
+
 Diagnostics
 ^^^^^^^^^^^
 
@@ -143,6 +146,32 @@ Miscellaneous
 
 Improvements to clang-doc
 -------------------------
+
+- Use the Mustache HTML generator as the default HTML option.
+
+- Document concepts, typedefs, aliases, public class members, nested records, 
+  nested namespaces, global functions, global variables, protected methods and
+  members and friends in HTML.
+
+- Document ``throws`` comments in HTML.
+
+- Add definition location for classes in HTML.
+
+- Show class template declaration in HTML.
+
+- Add a top-level index page in HTML. This page lists the top-level namespaces
+  and serves as the documentation's root URL.
+
+- Add a ``Home`` button to the navigation bar which replaces non-useful buttons.
+  This new button links to the top-level index page.
+
+- Add a breadcrumb navigation bar to the navbar. This helps navigate through a
+  documented entity's context.
+
+- If a filename is too long, then the name will be truncated and the documented
+  entity's USR will be concatenated to guarantee its uniqueness.
+
+- Revert the flat directory structure to a nested directory structure.
 
 Improvements to clang-query
 ---------------------------
@@ -364,7 +393,7 @@ New check aliases
   keeping initial check as an alias to the new one.
 
 - Renamed :doc:`google-build-namespaces <clang-tidy/checks/google/build-namespaces>` to
-  :doc:`misc-anonymous-namespace-in-header 
+  :doc:`misc-anonymous-namespace-in-header
   <clang-tidy/checks/misc/anonymous-namespace-in-header>`
   keeping initial check as an alias to the new one.
 
@@ -382,9 +411,12 @@ Changes in existing checks
   expansions.
 
 - Improved :doc:`bugprone-dynamic-static-initializers
-  <clang-tidy/checks/bugprone/dynamic-static-initializers>` check by
-  avoiding false positives for ``constexpr`` variables whose
-  initializers are value-dependent.
+  <clang-tidy/checks/bugprone/dynamic-static-initializers>` check:
+
+  - Avoided false positives for ``constexpr`` variables whose initializers
+    are value-dependent.
+
+  - Added support for C++20 ``constinit`` variables.
 
 - Improved :doc:`bugprone-easily-swappable-parameters
   <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
@@ -392,13 +424,17 @@ Changes in existing checks
   ``NamePrefixSuffixSilenceDissimilarityTreshold``.
 
 - Improved :doc:`bugprone-exception-escape
-  <clang-tidy/checks/bugprone/exception-escape>` check's handling of lambdas:
-  exceptions from captures are now diagnosed, exceptions in the bodies of
-  lambdas that aren't actually invoked are not. Additionally, fixed an issue
-  where the check wouldn't diagnose throws in arguments to functions or
-  constructors. Added fine-grained configuration via options
-  `CheckDestructors`, `CheckMoveMemberFunctions`, `CheckMain`,
-  `CheckedSwapFunctions`, and `CheckNothrowFunctions`.
+  <clang-tidy/checks/bugprone/exception-escape>` check:
+
+  - Exceptions from lambda captures are now diagnosed, exceptions in the
+    bodies of lambdas that aren't actually invoked are not.
+
+  - Fixed an issue where the check wouldn't diagnose throws in arguments to
+    functions or constructors.
+
+  - Added fine-grained configuration via options `CheckDestructors`,
+    `CheckMoveMemberFunctions`, `CheckMain`, `CheckedSwapFunctions`, and
+    `CheckNothrowFunctions`.
 
 - Improved :doc:`bugprone-infinite-loop
   <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for
@@ -444,20 +480,30 @@ Changes in existing checks
   tagged union respectively.
 
 - Improved :doc:`bugprone-throw-keyword-missing
-  <clang-tidy/checks/bugprone/throw-keyword-missing>` check by only considering
-  the canonical types of base classes as written and adding a note on the base
-  class that triggered the warning. Also, fixed an issue where the check
-  wouldn't fire in constructors or (in certain contexts) lambdas.
+  <clang-tidy/checks/bugprone/throw-keyword-missing>` check:
+
+  - Now it only considers the canonical types of base classes as written.
+
+  - Added a note on the base class that triggered the warning.
+
+  - Fixed an issue where the check wouldn't fire in constructors or
+    (in certain contexts) lambdas.
 
 - Improved :doc:`bugprone-unchecked-optional-access
-  <clang-tidy/checks/bugprone/unchecked-optional-access>` check by supporting
-  ``NullableValue::makeValue`` and ``NullableValue::makeValueInplace`` to
-  prevent false-positives for ``BloombergLP::bdlb::NullableValue``. Fixed
-  false-positives for ``bsl::optional`` containing allocator-aware type.
-  Added the `IgnoreValueCalls` option to suppress diagnostics for
-  ``optional::value()`` and the `IgnoreSmartPointerDereference` option to
-  ignore optionals reached via smart-pointer-like dereference, while still
-  diagnosing UB-prone dereferences via ``operator*`` and ``operator->``.
+  <clang-tidy/checks/bugprone/unchecked-optional-access>` check:
+
+  - Added support for ``NullableValue::makeValue`` and
+    ``NullableValue::makeValueInplace`` to prevent false-positives for
+    ``BloombergLP::bdlb::NullableValue``.
+
+  - Fixed false-positives for ``bsl::optional`` containing allocator-aware type.
+
+  - Added the `IgnoreValueCalls` option to suppress diagnostics for
+    ``optional::value()``.
+
+  - Added the `IgnoreSmartPointerDereference` option to ignore optionals
+    reached via smart-pointer-like dereference, while still diagnosing UB-prone
+    dereferences via ``operator*`` and ``operator->``.
 
 - Improved :doc:`bugprone-unhandled-self-assignment
   <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
@@ -470,10 +516,12 @@ Changes in existing checks
   option.
 
 - Improved :doc:`bugprone-use-after-move
-  <clang-tidy/checks/bugprone/use-after-move>` check by adding
-  `InvalidationFunctions` option to support custom invalidation functions
-  and `ReinitializationFunctions` option to support custom reinitialization
-  functions.
+  <clang-tidy/checks/bugprone/use-after-move>` check:
+
+  - Added `InvalidationFunctions` option to support custom invalidation functions.
+
+  - Added `ReinitializationFunctions` option to support custom reinitialization
+    functions.
 
 - Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
   <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
@@ -496,8 +544,8 @@ Changes in existing checks
 
 - Improved :doc:`cppcoreguidelines-pro-bounds-pointer-arithmetic
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-pointer-arithmetic>` check
-  adding an option to allow pointer arithmetic via prefix/postfix increment or
-  decrement operators.
+  adding `AllowIncrementDecrementOperators` option to allow pointer arithmetic
+  via prefix/postfix increment or decrement operators.
 
 - Improved :doc:`cppcoreguidelines-pro-type-member-init
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check to
@@ -529,12 +577,15 @@ Changes in existing checks
   - ``for`` loops are supported.
 
 - Improved :doc:`misc-const-correctness
-  <clang-tidy/checks/misc/const-correctness>` check to avoid false
-  positives when pointers is transferred to non-const references
-  and avoid false positives of function pointer and fix false
-  positives on return of non-const pointer and fix false positives on
-  pointer-to-member operator and avoid false positives when the address
-  of a variable is taken to be passed to a function.
+  <clang-tidy/checks/misc/const-correctness>` check:
+
+  - Fixed false positives when pointers is transferred to non-const references.
+
+  - Fixed false positives of function pointer, on return of non-const pointer,
+    on pointer-to-member operator.
+
+  - Fixed false positives when the address of a variable is taken to be passed
+    to a function.
 
 - Improved :doc:`misc-coroutine-hostile-raii
   <clang-tidy/checks/misc/coroutine-hostile-raii>` check by adding the option
@@ -545,11 +596,16 @@ Changes in existing checks
   <clang-tidy/checks/misc/header-include-cycle>` check performance.
 
 - Improved :doc:`misc-use-internal-linkage
-  <clang-tidy/checks/misc/use-internal-linkage>` to suggest giving
-  user-defined types (structs, classes, unions, and enums) internal
-  linkage. Added fine-grained options to control whether the check
-  should diagnose functions, variables, and/or user-defined types.
-  Enabled the check for C.
+  <clang-tidy/checks/misc/use-internal-linkage>` check:
+
+  - Added suggestion of internal linkage for user-defined types (structs,
+    classes, unions, and enums).
+
+  - Added fine-grained options `AnalyzeFunctions`, `AnalyzeVariables`,
+    `AnalyzeTypes` to control whether the check should diagnose functions,
+    variables, and/or user-defined types.
+
+  - Enabled the check for C.
 
 - Improved :doc:`modernize-avoid-c-arrays
   <clang-tidy/checks/modernize/avoid-c-arrays>` to not diagnose array types
@@ -642,19 +698,28 @@ Changes in existing checks
   filenames) to allow intentional duplicates.
 
 - Improved :doc:`readability-identifier-naming
-  <clang-tidy/checks/readability/identifier-naming>` check by ignoring
-  declarations and macros in system headers. The documentation is also improved
-  to differentiate the general options from the specific ones. Options for
-  fine-grained control over ``constexpr`` variables were added. Added default
-  options which simplify configs by removing the need to specify each
-  identifier kind separately.
+  <clang-tidy/checks/readability/identifier-naming>` check:
+
+  - Now ignores declarations and macros in system headers.
+
+  - The documentation is improved to differentiate the general options from the
+    specific ones.
+
+  - Options for fine-grained control over ``constexpr`` variables were added.
+
+  - Added default options which simplify configs by removing the need to specify
+    each identifier kind separately.
 
 - Improved :doc:`readability-implicit-bool-conversion
-  <clang-tidy/checks/readability/implicit-bool-conversion>` check by correctly
-  adding parentheses when inner expressions are implicitly converted multiple
-  times, enabling the check for C99 and later standards, and allowing implicit
-  conversions from ``bool`` to integer when used as operands of logical
-  operators (``&&``, ``||``) in C.
+  <clang-tidy/checks/readability/implicit-bool-conversion>` check:
+
+  - Now correctly adds parentheses when inner expressions are implicitly
+    converted multiple times.
+
+  - Enabled the check for C99 and later standards.
+
+  - Now allows implicit conversions from ``bool`` to integer when used as
+    operands of logical operators (``&&``, ``||``) in C.
 
 - Improved :doc:`readability-inconsistent-declaration-parameter-name
   <clang-tidy/checks/readability/inconsistent-declaration-parameter-name>` check
