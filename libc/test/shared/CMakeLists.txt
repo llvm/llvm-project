@@ -90,4 +90,5 @@ add_fp_unittest(
     libc.src.__support.math.sinhf16
     libc.src.__support.math.tan
     libc.src.__support.math.tanf
+    libc.src.__support.math.logf16
 )

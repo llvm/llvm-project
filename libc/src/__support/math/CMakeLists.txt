@@ -624,7 +624,7 @@ add_header_library(
   HDRS
     logf16.h
   DEPENDS
-.expxf16_utils
+    .expxf16_utils
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.__support.common
@@ -637,6 +637,15 @@ add_header_library(
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
+)
+
+add_header_library(
+  frexpf128
+  HDRS
+    frexpf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
 )
 
 add_header_library(

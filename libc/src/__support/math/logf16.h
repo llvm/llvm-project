@@ -167,5 +167,4 @@ LIBC_INLINE float16 logf16(float16 x) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_LOGF16_H
