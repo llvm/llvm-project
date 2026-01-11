@@ -1949,6 +1949,20 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     }
     return false;
   }
+  case Intrinsic::aarch64_neon_vsli: {
+    MIB.buildInstr(
+        AArch64::G_SLI, {MI.getOperand(0)},
+        {MI.getOperand(2), MI.getOperand(3), MI.getOperand(4).getImm()});
+    MI.eraseFromParent();
+    break;
+  }
+  case Intrinsic::aarch64_neon_vsri: {
+    MIB.buildInstr(
+        AArch64::G_SRI, {MI.getOperand(0)},
+        {MI.getOperand(2), MI.getOperand(3), MI.getOperand(4).getImm()});
+    MI.eraseFromParent();
+    break;
+  }
   case Intrinsic::aarch64_neon_abs: {
     // Lower the intrinsic to G_ABS.
     MIB.buildInstr(TargetOpcode::G_ABS, {MI.getOperand(0)}, {MI.getOperand(2)});

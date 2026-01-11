@@ -364,6 +364,8 @@ private:
       const parser::OmpObjectList &ompObjectList);
   void CheckIfContiguous(const parser::OmpObject &object);
   const parser::Name *GetObjectName(const parser::OmpObject &object);
+  void CheckInitOnDepobj(const parser::OpenMPDepobjConstruct &depobj,
+      const parser::OmpClause &initClause);
 
   void CheckAllowedRequiresClause(llvmOmpClause clause);
   bool deviceConstructFound_{false};
