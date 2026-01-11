@@ -44,16 +44,18 @@ class ConstraintLoweringContext:
 
     def _lower(self, type_) -> ir.Value:
         origin = get_origin(type_)
-        if origin and issubclass(origin, ir.Type):
+        if origin is UnionType or origin is Union:
+            return irdl.any_of(self.lower(arg) for arg in get_args(type_))
+        elif type_ is Any:
+            return irdl.any()
+        elif isinstance(type_, TypeVar):
+            return self.lower(type_)
+        elif origin and issubclass(origin, ir.Type):
             t = origin.get(*get_args(type_))
             return irdl.is_(ir.TypeAttr.get(t))
         elif origin and issubclass(origin, ir.Attribute):
             attr = origin.get(*get_args(type_))
             return irdl.is_(attr)
-        elif origin is UnionType or origin is Union:
-            return irdl.any_of(self.lower(arg) for arg in get_args(type_))
-        elif type_ is Any or isinstance(type_, TypeVar):
-            return irdl.any()
         elif issubclass(type_, ir.Type):
             return irdl.base(base_name=f"!{type_.type_name}")
         elif issubclass(type_, ir.Attribute):

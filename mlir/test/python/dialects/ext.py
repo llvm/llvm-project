@@ -2,7 +2,7 @@
 
 from mlir.ir import *
 from mlir.dialects import ext, arith
-from typing import Any, Optional, Sequence
+from typing import Any, Optional, Sequence, TypeVar, Union
 import sys
 
 
@@ -109,7 +109,7 @@ def testExtDialect():
         a: OpOperand[i32]
         b: Optional[OpOperand[i32]]
         out1: OpResult[i32]
-        out2: Optional[OpResult[i32]]
+        out2: OpResult[i32] | None
         out3: OpResult[i32]
 
     class Optional2Op(Test.Operation, name="optional2"):
@@ -138,6 +138,17 @@ def testExtDialect():
         in3: Optional[OpOperand[i32]]
         in4: IntegerAttr
         in5: OpOperand[i32]
+
+    T = TypeVar("T")
+    U = TypeVar("U", bound=IntegerType[32] | IntegerType[64])
+    V = TypeVar("V", bound=Union[IntegerType[8], IntegerType[16]])
+
+    class TypeVarOp(Test.Operation, name="type_var"):
+        in1: OpOperand[T]
+        in2: OpOperand[T]
+        in3: OpOperand[U]
+        in4: OpOperand[U | V]
+        in5: OpOperand[V]
 
     # CHECK: irdl.dialect @ext_test {
     # CHECK:   irdl.operation @constraint {
@@ -180,6 +191,17 @@ def testExtDialect():
     # CHECK:     %2 = irdl.base "#builtin.integer"
     # CHECK:     irdl.attributes {"in2" = %1, "in4" = %2}
     # CHECK:     irdl.results(out: %0)
+    # CHECK:   }
+    # CHECK:   irdl.operation @type_var {
+    # CHECK:     %0 = irdl.any
+    # CHECK:     %1 = irdl.is i32
+    # CHECK:     %2 = irdl.is i64
+    # CHECK:     %3 = irdl.any_of(%1, %2)
+    # CHECK:     %4 = irdl.is i8
+    # CHECK:     %5 = irdl.is i16
+    # CHECK:     %6 = irdl.any_of(%4, %5)
+    # CHECK:     %7 = irdl.any_of(%3, %6)
+    # CHECK:     irdl.operands(in1: %0, in2: %0, in3: %3, in4: %7, in5: %6)
     # CHECK:   }
     # CHECK: }
     with Context(), Location.unknown():
