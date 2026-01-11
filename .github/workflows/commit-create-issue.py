@@ -3,14 +3,13 @@ import sys
 
 token = sys.argv[1]
 gh = github.Github(login_or_token=token)
-repo = gh.get_repo('llvm/llvm-project')
+repo = gh.get_repo("llvm/llvm-project")
 
-length = '4 weeks'
-names = " ".join(['@' + name.rstrip() for name in sys.stdin])
+length = "4 weeks"
+names = " ".join(["@" + name.rstrip() for name in sys.stdin])
 
 
-body = \
-f"""### TLDR: If you want to retain your commit access, please comment on this issue.  Otherwise, you can unsubscribe from this issue and ignore it.  Commit access is not required to contribute to the project.  You can still create Pull Requests without commit access.
+body = f"""### TLDR: If you want to retain your commit access, please comment on this issue.  Otherwise, you can unsubscribe from this issue and ignore it.  Commit access is not required to contribute to the project.  You can still create Pull Requests without commit access.
 
 {names}
 
@@ -37,5 +36,7 @@ In the future, if you want to re-apply for commit access, you can follow the ins
 [here](https://llvm.org/docs/DeveloperPolicy.html#obtaining-commit-access).
 """
 
-issue=repo.create_issue(title="Do you still need commit access?", body=body, labels=['infra:commit-access'])
+issue=repo.create_issue(
+    title="Do you still need commit access?", body=body, labels=["infra:commit-access"]
+)
 print(issue.html_url)
