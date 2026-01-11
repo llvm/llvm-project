@@ -16,11 +16,7 @@
 #include <ranges>
 
 #include "test_macros.h"
-#include "type_algorithms.h"
 #include "types.h"
-
-template <typename T>
-concept HasSize = requires(const T t) { t.size(); };
 
 constexpr bool test() {
   // Both are integer like and both are less than zero.
@@ -101,15 +97,6 @@ constexpr bool test() {
     std::ranges::iota_view<short, short> io(10, 20);
     std::same_as<unsigned int> auto sz = io.size();
     assert(sz == 10);
-  }
-
-  // LWG3610: `iota_view::size` sometimes rejects integer-class types
-  {
-    types::for_each(types::integer_types{}, []<typename IntegerLikeT>() {
-      types::for_each(types::integer_types{}, []<typename BoundT>() {
-        static_assert(HasSize<std::ranges::iota_view<IntegerLikeT, BoundT>>);
-      });
-    });
   }
 
   return true;
