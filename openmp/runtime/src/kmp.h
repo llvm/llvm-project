@@ -48,6 +48,12 @@
 #define KMP_CANCEL_THREADS
 #define KMP_THREAD_ATTR
 
+// GCC 15 libstdc++ enables debug assertions in unoptimized builds.
+// Disable them to allow libomp.so to link without libstdc++.so.
+#if !__OPTIMIZE__
+#define GLIBCXX_NO_ASSERTIONS
+#endif
+
 // Android does not have pthread_cancel.  Undefine KMP_CANCEL_THREADS if being
 // built on Android
 #if defined(__ANDROID__)
