@@ -532,9 +532,9 @@ class _BodyBuilder:
         raise NotImplementedError("Unsupported 'max' operands: {lhs}, {rhs}")
 
     def _binary_max_unsigned(self, lhs: Value, rhs: Value) -> Value:
-        if _is_floating_point_type(lhs.type):
-            return arith.MaximumFOp(lhs, rhs).result
-        if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
+        if (
+            _is_integer_type(lhs.type) and not _is_bool_type(lhs.type)
+        ) or _is_index_type(lhs.type):
             return arith.MaxUIOp(lhs, rhs).result
         raise NotImplementedError("Unsupported 'max_unsigned' operands: {lhs}, {rhs}")
 
@@ -546,9 +546,9 @@ class _BodyBuilder:
         raise NotImplementedError("Unsupported 'min' operands: {lhs}, {rhs}")
 
     def _binary_min_unsigned(self, lhs: Value, rhs: Value) -> Value:
-        if _is_floating_point_type(lhs.type):
-            return arith.MinimumFOp(lhs, rhs).result
-        if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
+        if (
+            _is_integer_type(lhs.type) and not _is_bool_type(lhs.type)
+        ) or _is_index_type(lhs.type):
             return arith.MinUIOp(lhs, rhs).result
         raise NotImplementedError("Unsupported 'min_unsigned' operands: {lhs}, {rhs}")
 
@@ -632,6 +632,12 @@ def _is_integer_type(t: Type) -> bool:
 
 def _is_index_type(t: Type) -> bool:
     return IndexType.isinstance(t)
+
+
+def _is_bool_type(t: Type) -> bool:
+    if not IntegerType.isinstance(t):
+        return False
+    return IntegerType(t).width == 1
 
 
 def _get_floating_point_width(t: Type) -> int:

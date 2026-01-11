@@ -24,6 +24,7 @@
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
@@ -2832,25 +2833,17 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
     }
     switch (Kind) {
     case llvm::OpenMPIRBuilder::EMIT_MD_TARGET_REGION_ERROR: {
-      unsigned DiagID = CGM.getDiags().getCustomDiagID(
-          DiagnosticsEngine::Error, "Offloading entry for target region in "
-                                    "%0 is incorrect: either the "
-                                    "address or the ID is invalid.");
-      CGM.getDiags().Report(Loc, DiagID) << EntryInfo.ParentName;
+      CGM.getDiags().Report(Loc,
+                            diag::err_target_region_offloading_entry_incorrect)
+          << EntryInfo.ParentName;
     } break;
     case llvm::OpenMPIRBuilder::EMIT_MD_DECLARE_TARGET_ERROR: {
-      unsigned DiagID = CGM.getDiags().getCustomDiagID(
-          DiagnosticsEngine::Error, "Offloading entry for declare target "
-                                    "variable %0 is incorrect: the "
-                                    "address is invalid.");
-      CGM.getDiags().Report(Loc, DiagID) << EntryInfo.ParentName;
+      CGM.getDiags().Report(
+          Loc, diag::err_target_var_offloading_entry_incorrect_with_parent)
+          << EntryInfo.ParentName;
     } break;
     case llvm::OpenMPIRBuilder::EMIT_MD_GLOBAL_VAR_LINK_ERROR: {
-      unsigned DiagID = CGM.getDiags().getCustomDiagID(
-          DiagnosticsEngine::Error,
-          "Offloading entry for declare target variable is incorrect: the "
-          "address is invalid.");
-      CGM.getDiags().Report(DiagID);
+      CGM.getDiags().Report(diag::err_target_var_offloading_entry_incorrect);
     } break;
     }
   };
@@ -8341,13 +8334,25 @@ private:
           ElementType = CAT->getElementType().getTypePtr();
         else if (VAT)
           ElementType = VAT->getElementType().getTypePtr();
-        else
-          assert(&Component == &*Components.begin() &&
-                 "Only expect pointer (non CAT or VAT) when this is the "
-                 "first Component");
-        // If ElementType is null, then it means the base is a pointer
-        // (neither CAT nor VAT) and we'll attempt to get ElementType again
-        // for next iteration.
+        else if (&Component == &*Components.begin()) {
+          // If the base is a raw pointer (e.g. T *data with data[a:b:c]),
+          // there was no earlier CAT/VAT/array handling to establish
+          // ElementType. Capture the pointee type now so that subsequent
+          // components (offset/length/stride) have a concrete element type to
+          // work with. This makes pointer-backed sections behave consistently
+          // with CAT/VAT/array bases.
+          if (const auto *PtrType = Ty->getAs<PointerType>())
+            ElementType = PtrType->getPointeeType().getTypePtr();
+        } else {
+          // Any component after the first should never have a raw pointer type;
+          // by this point. ElementType must already be known (set above or in
+          // prior array / CAT / VAT handling).
+          assert(!Ty->isPointerType() &&
+                 "Non-first components should not be raw pointers");
+        }
+
+        // At this stage, if ElementType was a base pointer and we are in the
+        // first iteration, it has been computed.
         if (ElementType) {
           // For the case that having pointer as base, we need to remove one
           // level of indirection.
@@ -9097,12 +9102,20 @@ private:
         // If there is an entry in PartialStruct it means we have a struct with
         // individual members mapped. Emit an extra combined entry.
         if (PartialStruct.Base.isValid()) {
-          GroupUnionCurInfo.NonContigInfo.Dims.push_back(0);
+          // Prepend a synthetic dimension of length 1 to represent the
+          // aggregated struct object. Using 1 (not 0, as 0 produced an
+          //    incorrect non-contiguous descriptor (DimSize==1), causing the
+          //    non-contiguous motion clause path to be skipped.) is important:
+          //  * It preserves the correct rank so targetDataUpdate() computes
+          //    DimSize == 2 for cases like strided array sections originating
+          //    from user-defined mappers (e.g. test with s.data[0:8:2]).
+          GroupUnionCurInfo.NonContigInfo.Dims.insert(
+              GroupUnionCurInfo.NonContigInfo.Dims.begin(), 1);
           emitCombinedEntry(
               CurInfo, GroupUnionCurInfo.Types, PartialStruct, AttachInfo,
-              /*IsMapThis*/ !VD, OMPBuilder, VD,
+              /*IsMapThis=*/!VD, OMPBuilder, VD,
               /*OffsetForMemberOfFlag=*/CombinedInfo.BasePointers.size(),
-              /*NotTargetParam=*/true);
+              /*NotTargetParams=*/true);
         }
 
         // Append this group's results to the overall CurInfo in the correct
@@ -11988,20 +12001,14 @@ static void emitAArch64DeclareSimdFunction(
   // Check the values provided via `simdlen` by the user.
   // 1. A `simdlen(1)` doesn't produce vector signatures,
   if (UserVLEN == 1) {
-    unsigned DiagID = CGM.getDiags().getCustomDiagID(
-        DiagnosticsEngine::Warning,
-        "The clause simdlen(1) has no effect when targeting aarch64.");
-    CGM.getDiags().Report(SLoc, DiagID);
+    CGM.getDiags().Report(SLoc, diag::warn_simdlen_1_no_effect);
     return;
   }
 
   // 2. Section 3.3.1, item 1: user input must be a power of 2 for
   // Advanced SIMD output.
   if (ISA == 'n' && UserVLEN && !llvm::isPowerOf2_32(UserVLEN)) {
-    unsigned DiagID = CGM.getDiags().getCustomDiagID(
-        DiagnosticsEngine::Warning, "The value specified in simdlen must be a "
-                                    "power of 2 when targeting Advanced SIMD.");
-    CGM.getDiags().Report(SLoc, DiagID);
+    CGM.getDiags().Report(SLoc, diag::warn_simdlen_requires_power_of_2);
     return;
   }
 
@@ -12009,12 +12016,7 @@ static void emitAArch64DeclareSimdFunction(
   // limits.
   if (ISA == 's' && UserVLEN != 0) {
     if ((UserVLEN * WDS > 2048) || (UserVLEN * WDS % 128 != 0)) {
-      unsigned DiagID = CGM.getDiags().getCustomDiagID(
-          DiagnosticsEngine::Warning, "The clause simdlen must fit the %0-bit "
-                                      "lanes in the architectural constraints "
-                                      "for SVE (min is 128-bit, max is "
-                                      "2048-bit, by steps of 128-bit)");
-      CGM.getDiags().Report(SLoc, DiagID) << WDS;
+      CGM.getDiags().Report(SLoc, diag::warn_simdlen_must_fit_lanes) << WDS;
       return;
     }
   }

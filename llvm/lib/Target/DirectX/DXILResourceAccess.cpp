@@ -120,19 +120,33 @@ static void createTypedBufferStore(IntrinsicInst *II, StoreInst *SI,
   SI->replaceAllUsesWith(Inst);
 }
 
-static void createRawStore(IntrinsicInst *II, StoreInst *SI) {
+static void createRawStore(IntrinsicInst *II, StoreInst *SI,
+                           dxil::ResourceTypeInfo &RTI) {
   const DataLayout &DL = SI->getDataLayout();
   IRBuilder<> Builder(SI);
 
   Value *V = SI->getValueOperand();
+  assert(!V->getType()->isAggregateType() &&
+         "Resource store should be scalar or vector type");
+
+  Value *Index = II->getOperand(1);
   // The offset for the rawbuffer load and store ops is always in bytes.
   uint64_t AccessSize = 1;
   Value *Offset =
       traverseGEPOffsets(DL, Builder, SI->getPointerOperand(), AccessSize);
-  // TODO: break up larger types
-  auto *Inst = Builder.CreateIntrinsic(
-      Builder.getVoidTy(), Intrinsic::dx_resource_store_rawbuffer,
-      {II->getOperand(0), II->getOperand(1), Offset, V});
+
+  // For raw buffer (ie, HLSL's ByteAddressBuffer), we need to fold the access
+  // entirely into the index.
+  if (!RTI.isStruct()) {
+    auto *ConstantOffset = dyn_cast<ConstantInt>(Offset);
+    if (!ConstantOffset || !ConstantOffset->isZero())
+      Index = Builder.CreateAdd(Index, Offset);
+    Offset = llvm::PoisonValue::get(Builder.getInt32Ty());
+  }
+
+  auto *Inst = Builder.CreateIntrinsic(Builder.getVoidTy(),
+                                       Intrinsic::dx_resource_store_rawbuffer,
+                                       {II->getOperand(0), Index, Offset, V});
   SI->replaceAllUsesWith(Inst);
 }
 
@@ -143,7 +157,7 @@ static void createStoreIntrinsic(IntrinsicInst *II, StoreInst *SI,
     return createTypedBufferStore(II, SI, RTI);
   case dxil::ResourceKind::RawBuffer:
   case dxil::ResourceKind::StructuredBuffer:
-    return createRawStore(II, SI);
+    return createRawStore(II, SI, RTI);
   case dxil::ResourceKind::Texture1D:
   case dxil::ResourceKind::Texture2D:
   case dxil::ResourceKind::Texture2DMS:
@@ -198,20 +212,33 @@ static void createTypedBufferLoad(IntrinsicInst *II, LoadInst *LI,
   LI->replaceAllUsesWith(V);
 }
 
-static void createRawLoad(IntrinsicInst *II, LoadInst *LI) {
+static void createRawLoad(IntrinsicInst *II, LoadInst *LI,
+                          dxil::ResourceTypeInfo &RTI) {
   const DataLayout &DL = LI->getDataLayout();
   IRBuilder<> Builder(LI);
 
-  // TODO: break up larger types
   Type *LoadType = StructType::get(LI->getType(), Builder.getInt1Ty());
+  assert(!LI->getType()->isAggregateType() &&
+         "Resource load should be scalar or vector type");
 
+  Value *Index = II->getOperand(1);
   // The offset for the rawbuffer load and store ops is always in bytes.
   uint64_t AccessSize = 1;
   Value *Offset =
       traverseGEPOffsets(DL, Builder, LI->getPointerOperand(), AccessSize);
+
+  // For raw buffer (ie, HLSL's ByteAddressBuffer), we need to fold the access
+  // entirely into the index.
+  if (!RTI.isStruct()) {
+    auto *ConstantOffset = dyn_cast<ConstantInt>(Offset);
+    if (!ConstantOffset || !ConstantOffset->isZero())
+      Index = Builder.CreateAdd(Index, Offset);
+    Offset = llvm::PoisonValue::get(Builder.getInt32Ty());
+  }
+
   Value *V =
       Builder.CreateIntrinsic(LoadType, Intrinsic::dx_resource_load_rawbuffer,
-                              {II->getOperand(0), II->getOperand(1), Offset});
+                              {II->getOperand(0), Index, Offset});
   V = Builder.CreateExtractValue(V, {0});
 
   LI->replaceAllUsesWith(V);
@@ -367,7 +394,7 @@ static void createLoadIntrinsic(IntrinsicInst *II, LoadInst *LI,
     return createTypedBufferLoad(II, LI, RTI);
   case dxil::ResourceKind::RawBuffer:
   case dxil::ResourceKind::StructuredBuffer:
-    return createRawLoad(II, LI);
+    return createRawLoad(II, LI, RTI);
   case dxil::ResourceKind::CBuffer:
     return createCBufferLoad(II, LI, RTI);
   case dxil::ResourceKind::Texture1D:

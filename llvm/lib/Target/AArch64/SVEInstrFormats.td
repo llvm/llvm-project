@@ -3165,7 +3165,7 @@ multiclass sve_fp_2op_p_zd<bits<7> opc, string asm,
   def : SVE_3_Op_Pat<packedvt1, int_op, packedvt1, vt2, packedvt3, !cast<Instruction>(NAME)>;
   def : SVE_1_Op_Passthru_Pat<vt1, ir_op, vt2, vt3, !cast<Instruction>(NAME)>;
 
-  def _UNDEF : PredOneOpPassthruPseudo<NAME, !cast<ZPRRegOp>(i_zprtype)>;
+  def _UNDEF : PredOneOpPassthruPseudo<NAME, !cast<ZPRRegOp>(i_zprtype), FalseLanesUndef>;
 
   defm : SVE_1_Op_PassthruUndef_Pat<vt1, ir_op, vt2, vt3, !cast<Instruction>(NAME # _UNDEF)>;
 }
@@ -3185,7 +3185,7 @@ multiclass sve_fp_2op_p_zdr<bits<7> opc, string asm,
   def : SVE_3_Op_Pat<packedvt1, int_op, packedvt1, vt2, vt3, !cast<Instruction>(NAME)>;
   def : SVE_1_Op_Passthru_Round_Pat<vt1, ir_op, vt2, vt3, !cast<Instruction>(NAME)>;
 
-  def _UNDEF : PredOneOpPassthruPseudo<NAME, !cast<ZPRRegOp>(i_zprtype)>;
+  def _UNDEF : PredOneOpPassthruPseudo<NAME, !cast<ZPRRegOp>(i_zprtype), FalseLanesUndef>;
 
   defm : SVE_1_Op_PassthruUndef_Round_Pat<vt1, ir_op, vt2, vt3, !cast<Instruction>(NAME # _UNDEF)>;
 }
@@ -3205,9 +3205,9 @@ multiclass sve_fp_2op_p_zd_HSD<bits<5> opc, string asm, SDPatternOperator op> {
   def : SVE_1_Op_Passthru_Pat<nxv2f32, op, nxv2i1, nxv2f32, !cast<Instruction>(NAME # _S)>;
   def : SVE_1_Op_Passthru_Pat<nxv2f64, op, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _D)>;
 
-  def _H_UNDEF : PredOneOpPassthruPseudo<NAME # _H, ZPR16>;
-  def _S_UNDEF : PredOneOpPassthruPseudo<NAME # _S, ZPR32>;
-  def _D_UNDEF : PredOneOpPassthruPseudo<NAME # _D, ZPR64>;
+  def _H_UNDEF : PredOneOpPassthruPseudo<NAME # _H, ZPR16, FalseLanesUndef>;
+  def _S_UNDEF : PredOneOpPassthruPseudo<NAME # _S, ZPR32, FalseLanesUndef>;
+  def _D_UNDEF : PredOneOpPassthruPseudo<NAME # _D, ZPR64, FalseLanesUndef>;
 
   defm : SVE_1_Op_PassthruUndef_Pat<nxv8f16, op, nxv8i1, nxv8f16, !cast<Instruction>(NAME # _H_UNDEF)>;
   defm : SVE_1_Op_PassthruUndef_Pat<nxv4f16, op, nxv4i1, nxv4f16, !cast<Instruction>(NAME # _H_UNDEF)>;
@@ -4235,7 +4235,7 @@ multiclass sve2_int_un_pred_arit_s<bits<2> opc, string asm,
 
   def : SVE_3_Op_Pat<nxv4i32, op, nxv4i32, nxv4i1, nxv4i32, !cast<Instruction>(NAME # _S)>;
 
-  def _S_UNDEF : PredOneOpPassthruPseudo<NAME # _S, ZPR32>;
+  def _S_UNDEF : PredOneOpPassthruPseudo<NAME # _S, ZPR32, FalseLanesUndef>;
 
   defm : SVE_3_Op_Undef_Pat<nxv4i32, op, nxv4i32, nxv4i1,  nxv4i32, !cast<Pseudo>(NAME # _S_UNDEF)>;
 }
@@ -4255,10 +4255,10 @@ multiclass sve2_int_un_pred_arit<bits<2> opc, string asm, SDPatternOperator op> 
   def : SVE_3_Op_Pat<nxv4i32, op, nxv4i32, nxv4i1,  nxv4i32, !cast<Instruction>(NAME # _S)>;
   def : SVE_3_Op_Pat<nxv2i64, op, nxv2i64, nxv2i1,  nxv2i64, !cast<Instruction>(NAME # _D)>;
 
-  def _B_UNDEF : PredOneOpPassthruPseudo<NAME # _B, ZPR8>;
-  def _H_UNDEF : PredOneOpPassthruPseudo<NAME # _H, ZPR16>;
-  def _S_UNDEF : PredOneOpPassthruPseudo<NAME # _S, ZPR32>;
-  def _D_UNDEF : PredOneOpPassthruPseudo<NAME # _D, ZPR64>;
+  def _B_UNDEF : PredOneOpPassthruPseudo<NAME # _B, ZPR8, FalseLanesUndef>;
+  def _H_UNDEF : PredOneOpPassthruPseudo<NAME # _H, ZPR16, FalseLanesUndef>;
+  def _S_UNDEF : PredOneOpPassthruPseudo<NAME # _S, ZPR32, FalseLanesUndef>;
+  def _D_UNDEF : PredOneOpPassthruPseudo<NAME # _D, ZPR64, FalseLanesUndef>;
 
   defm : SVE_3_Op_Undef_Pat<nxv16i8, op, nxv16i8, nxv16i1, nxv16i8, !cast<Pseudo>(NAME # _B_UNDEF)>;
   defm : SVE_3_Op_Undef_Pat<nxv8i16, op, nxv8i16, nxv8i1,  nxv8i16, !cast<Pseudo>(NAME # _H_UNDEF)>;
@@ -4957,10 +4957,10 @@ multiclass sve_int_un_pred_arit<bits<3> opc, string asm,
   def : SVE_1_Op_Passthru_Pat<nxv4i32, op, nxv4i1,  nxv4i32, !cast<Instruction>(NAME # _S)>;
   def : SVE_1_Op_Passthru_Pat<nxv2i64, op, nxv2i1,  nxv2i64, !cast<Instruction>(NAME # _D)>;
 
-  def _B_UNDEF : PredOneOpPassthruPseudo<NAME # _B, ZPR8>;
-  def _H_UNDEF : PredOneOpPassthruPseudo<NAME # _H, ZPR16>;
-  def _S_UNDEF : PredOneOpPassthruPseudo<NAME # _S, ZPR32>;
-  def _D_UNDEF : PredOneOpPassthruPseudo<NAME # _D, ZPR64>;
+  def _B_UNDEF : PredOneOpPassthruPseudo<NAME # _B, ZPR8, FalseLanesUndef>;
+  def _H_UNDEF : PredOneOpPassthruPseudo<NAME # _H, ZPR16, FalseLanesUndef>;
+  def _S_UNDEF : PredOneOpPassthruPseudo<NAME # _S, ZPR32, FalseLanesUndef>;
+  def _D_UNDEF : PredOneOpPassthruPseudo<NAME # _D, ZPR64, FalseLanesUndef>;
 
   defm : SVE_1_Op_PassthruUndef_Pat<nxv16i8, op, nxv16i1, nxv16i8, !cast<Pseudo>(NAME # _B_UNDEF)>;
   defm : SVE_1_Op_PassthruUndef_Pat<nxv8i16, op, nxv8i1,  nxv8i16, !cast<Pseudo>(NAME # _H_UNDEF)>;
@@ -4993,9 +4993,9 @@ multiclass sve_int_un_pred_arit_h<bits<3> opc, string asm,
   def : SVE_InReg_Extend<nxv4i32, op, nxv4i1, nxv4i8, !cast<Instruction>(NAME # _S)>;
   def : SVE_InReg_Extend<nxv2i64, op, nxv2i1, nxv2i8, !cast<Instruction>(NAME # _D)>;
 
-  def _H_UNDEF : PredOneOpPassthruPseudo<NAME # _H, ZPR16>;
-  def _S_UNDEF : PredOneOpPassthruPseudo<NAME # _S, ZPR32>;
-  def _D_UNDEF : PredOneOpPassthruPseudo<NAME # _D, ZPR64>;
+  def _H_UNDEF : PredOneOpPassthruPseudo<NAME # _H, ZPR16, FalseLanesUndef>;
+  def _S_UNDEF : PredOneOpPassthruPseudo<NAME # _S, ZPR32, FalseLanesUndef>;
+  def _D_UNDEF : PredOneOpPassthruPseudo<NAME # _D, ZPR64, FalseLanesUndef>;
 
   defm : SVE_InReg_Extend_PassthruUndef<nxv8i16, op, nxv8i1, nxv8i8, !cast<Pseudo>(NAME # _H_UNDEF)>;
   defm : SVE_InReg_Extend_PassthruUndef<nxv4i32, op, nxv4i1, nxv4i8, !cast<Pseudo>(NAME # _S_UNDEF)>;
@@ -5022,8 +5022,8 @@ multiclass sve_int_un_pred_arit_w<bits<3> opc, string asm,
   def : SVE_InReg_Extend<nxv4i32, op, nxv4i1, nxv4i16, !cast<Instruction>(NAME # _S)>;
   def : SVE_InReg_Extend<nxv2i64, op, nxv2i1, nxv2i16, !cast<Instruction>(NAME # _D)>;
 
-  def _S_UNDEF : PredOneOpPassthruPseudo<NAME # _S, ZPR32>;
-  def _D_UNDEF : PredOneOpPassthruPseudo<NAME # _D, ZPR64>;
+  def _S_UNDEF : PredOneOpPassthruPseudo<NAME # _S, ZPR32, FalseLanesUndef>;
+  def _D_UNDEF : PredOneOpPassthruPseudo<NAME # _D, ZPR64, FalseLanesUndef>;
 
   defm : SVE_InReg_Extend_PassthruUndef<nxv4i32, op, nxv4i1, nxv4i16, !cast<Pseudo>(NAME # _S_UNDEF)>;
   defm : SVE_InReg_Extend_PassthruUndef<nxv2i64, op, nxv2i1, nxv2i16, !cast<Pseudo>(NAME # _D_UNDEF)>;
@@ -5044,7 +5044,7 @@ multiclass sve_int_un_pred_arit_d<bits<3> opc, string asm,
 
   def : SVE_InReg_Extend<nxv2i64, op, nxv2i1, nxv2i32, !cast<Instruction>(NAME # _D)>;
 
-  def _D_UNDEF : PredOneOpPassthruPseudo<NAME # _D, ZPR64>;
+  def _D_UNDEF : PredOneOpPassthruPseudo<NAME # _D, ZPR64, FalseLanesUndef>;
 
   defm : SVE_InReg_Extend_PassthruUndef<nxv2i64, op, nxv2i1, nxv2i32, !cast<Pseudo>(NAME # _D_UNDEF)>;
 }
@@ -5071,10 +5071,10 @@ multiclass sve_int_un_pred_arit_bitwise<bits<3> opc, string asm,
   def : SVE_1_Op_Passthru_Pat<nxv4i32, op, nxv4i1,  nxv4i32, !cast<Instruction>(NAME # _S)>;
   def : SVE_1_Op_Passthru_Pat<nxv2i64, op, nxv2i1,  nxv2i64, !cast<Instruction>(NAME # _D)>;
 
-  def _B_UNDEF : PredOneOpPassthruPseudo<NAME # _B, ZPR8>;
-  def _H_UNDEF : PredOneOpPassthruPseudo<NAME # _H, ZPR16>;
-  def _S_UNDEF : PredOneOpPassthruPseudo<NAME # _S, ZPR32>;
-  def _D_UNDEF : PredOneOpPassthruPseudo<NAME # _D, ZPR64>;
+  def _B_UNDEF : PredOneOpPassthruPseudo<NAME # _B, ZPR8, FalseLanesUndef>;
+  def _H_UNDEF : PredOneOpPassthruPseudo<NAME # _H, ZPR16, FalseLanesUndef>;
+  def _S_UNDEF : PredOneOpPassthruPseudo<NAME # _S, ZPR32, FalseLanesUndef>;
+  def _D_UNDEF : PredOneOpPassthruPseudo<NAME # _D, ZPR64, FalseLanesUndef>;
 
   defm : SVE_1_Op_PassthruUndef_Pat<nxv16i8, op, nxv16i1, nxv16i8, !cast<Pseudo>(NAME # _B_UNDEF)>;
   defm : SVE_1_Op_PassthruUndef_Pat<nxv8i16, op, nxv8i1,  nxv8i16, !cast<Pseudo>(NAME # _H_UNDEF)>;
@@ -5113,9 +5113,9 @@ multiclass sve_int_un_pred_arit_bitwise_fp<bits<3> opc, string asm,
   def : SVE_1_Op_Passthru_Pat<nxv4bf16, op, nxv4i1, nxv4bf16, !cast<Instruction>(NAME # _H)>;
   def : SVE_1_Op_Passthru_Pat<nxv2bf16, op, nxv2i1, nxv2bf16, !cast<Instruction>(NAME # _H)>;
 
-  def _H_UNDEF : PredOneOpPassthruPseudo<NAME # _H, ZPR16>;
-  def _S_UNDEF : PredOneOpPassthruPseudo<NAME # _S, ZPR32>;
-  def _D_UNDEF : PredOneOpPassthruPseudo<NAME # _D, ZPR64>;
+  def _H_UNDEF : PredOneOpPassthruPseudo<NAME # _H, ZPR16, FalseLanesUndef>;
+  def _S_UNDEF : PredOneOpPassthruPseudo<NAME # _S, ZPR32, FalseLanesUndef>;
+  def _D_UNDEF : PredOneOpPassthruPseudo<NAME # _D, ZPR64, FalseLanesUndef>;
 
   defm : SVE_1_Op_PassthruUndef_Pat<nxv8f16, op, nxv8i1, nxv8f16, !cast<Pseudo>(NAME # _H_UNDEF)>;
   defm : SVE_1_Op_PassthruUndef_Pat<nxv4f16, op, nxv4i1, nxv4f16, !cast<Pseudo>(NAME # _H_UNDEF)>;
@@ -5142,9 +5142,9 @@ multiclass sve_int_un_pred_arit_bitwise_fp_z<bits<3> opc, string asm, SDPatternO
 }
 
 multiclass sve_fp_un_pred_arit_hsd<SDPatternOperator op> {
-  def _H_UNDEF : PredOneOpPassthruPseudo<NAME # _H, ZPR16>;
-  def _S_UNDEF : PredOneOpPassthruPseudo<NAME # _S, ZPR32>;
-  def _D_UNDEF : PredOneOpPassthruPseudo<NAME # _D, ZPR64>;
+  def _H_UNDEF : PredOneOpPassthruPseudo<NAME # _H, ZPR16, FalseLanesUndef>;
+  def _S_UNDEF : PredOneOpPassthruPseudo<NAME # _S, ZPR32, FalseLanesUndef>;
+  def _D_UNDEF : PredOneOpPassthruPseudo<NAME # _D, ZPR64, FalseLanesUndef>;
 
   defm : SVE_1_Op_PassthruUndef_Pat<nxv8f16, op, nxv8i1, nxv8f16, !cast<Pseudo>(NAME # _H_UNDEF)>;
   defm : SVE_1_Op_PassthruUndef_Pat<nxv4f16, op, nxv4i1, nxv4f16, !cast<Pseudo>(NAME # _H_UNDEF)>;
@@ -5155,10 +5155,10 @@ multiclass sve_fp_un_pred_arit_hsd<SDPatternOperator op> {
 }
 
 multiclass sve_int_un_pred_arit_bhsd<SDPatternOperator op> {
-  def _B_UNDEF : PredOneOpPassthruPseudo<NAME # _B, ZPR8>;
-  def _H_UNDEF : PredOneOpPassthruPseudo<NAME # _H, ZPR16>;
-  def _S_UNDEF : PredOneOpPassthruPseudo<NAME # _S, ZPR32>;
-  def _D_UNDEF : PredOneOpPassthruPseudo<NAME # _D, ZPR64>;
+  def _B_UNDEF : PredOneOpPassthruPseudo<NAME # _B, ZPR8, FalseLanesUndef>;
+  def _H_UNDEF : PredOneOpPassthruPseudo<NAME # _H, ZPR16, FalseLanesUndef>;
+  def _S_UNDEF : PredOneOpPassthruPseudo<NAME # _S, ZPR32, FalseLanesUndef>;
+  def _D_UNDEF : PredOneOpPassthruPseudo<NAME # _D, ZPR64, FalseLanesUndef>;
 
   defm : SVE_1_Op_PassthruUndef_Pat<nxv16i8, op, nxv16i1, nxv16i8, !cast<Pseudo>(NAME # _B_UNDEF)>;
   defm : SVE_1_Op_PassthruUndef_Pat<nxv8i16, op, nxv8i1,  nxv8i16, !cast<Pseudo>(NAME # _H_UNDEF)>;

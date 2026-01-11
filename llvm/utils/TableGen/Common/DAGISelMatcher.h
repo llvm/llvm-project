@@ -86,7 +86,6 @@ public:
 
     // Node creation/emisssion.
     EmitInteger,          // Create a TargetConstant
-    EmitStringInteger,    // Create a TargetConstant from a string.
     EmitRegister,         // Create a register.
     EmitConvertToTarget,  // Convert a imm/fpimm to target imm/fpimm
     EmitMergeInputChains, // Merge together a chains for an input.
@@ -829,6 +828,8 @@ private:
 
 /// EmitIntegerMatcher - This creates a new TargetConstant.
 class EmitIntegerMatcher : public Matcher {
+  // Optional string to give the value a symbolic name for readability.
+  std::string Str;
   int64_t Val;
   MVT VT;
 
@@ -839,7 +840,11 @@ public:
       : Matcher(EmitInteger),
         Val(SignExtend64(val, MVT(vt).getFixedSizeInBits())), VT(vt),
         ResultNo(resultNo) {}
+  EmitIntegerMatcher(const std::string &str, int64_t val, MVT vt,
+                     unsigned resultNo)
+      : Matcher(EmitInteger), Str(str), Val(val), VT(vt), ResultNo(resultNo) {}
 
+  const std::string &getString() const { return Str; }
   int64_t getValue() const { return Val; }
   MVT getVT() const { return VT; }
   unsigned getResultNo() const { return ResultNo; }
@@ -850,35 +855,8 @@ private:
   void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<EmitIntegerMatcher>(M)->Val == Val &&
-           cast<EmitIntegerMatcher>(M)->VT == VT;
-  }
-};
-
-/// EmitStringIntegerMatcher - A target constant whose value is represented
-/// by a string.
-class EmitStringIntegerMatcher : public Matcher {
-  std::string Val;
-  MVT VT;
-
-  unsigned ResultNo;
-
-public:
-  EmitStringIntegerMatcher(const std::string &val, MVT vt, unsigned resultNo)
-      : Matcher(EmitStringInteger), Val(val), VT(vt), ResultNo(resultNo) {}
-
-  const std::string &getValue() const { return Val; }
-  MVT getVT() const { return VT; }
-  unsigned getResultNo() const { return ResultNo; }
-
-  static bool classof(const Matcher *N) {
-    return N->getKind() == EmitStringInteger;
-  }
-
-private:
-  void printImpl(raw_ostream &OS, indent Indent) const override;
-  bool isEqualImpl(const Matcher *M) const override {
-    return cast<EmitStringIntegerMatcher>(M)->Val == Val &&
-           cast<EmitStringIntegerMatcher>(M)->VT == VT;
+           cast<EmitIntegerMatcher>(M)->VT == VT &&
+           cast<EmitIntegerMatcher>(M)->Str == Str;
   }
 };
 

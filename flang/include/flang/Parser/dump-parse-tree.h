@@ -580,6 +580,7 @@ public:
   NODE(OmpDependClause::TaskDep, Modifier)
   NODE(parser, OmpDependenceType)
   NODE_ENUM(OmpDependenceType, Value)
+  NODE(parser, OmpDepinfoModifier)
   NODE(parser, OmpDestroyClause)
   NODE(parser, OmpDetachClause)
   NODE(parser, OmpDeviceClause)

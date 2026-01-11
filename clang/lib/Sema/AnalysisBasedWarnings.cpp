@@ -3135,7 +3135,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   if (EnableLifetimeSafetyAnalysis && S.getLangOpts().CPlusPlus) {
     if (AC.getCFG()) {
       lifetimes::LifetimeSafetyReporterImpl LifetimeSafetyReporter(S);
-      lifetimes::runLifetimeSafetyAnalysis(AC, &LifetimeSafetyReporter);
+      lifetimes::runLifetimeSafetyAnalysis(AC, &LifetimeSafetyReporter, LSStats,
+                                           S.CollectStats);
     }
   }
   // Check for violations of "called once" parameter properties.
@@ -3231,4 +3232,5 @@ void clang::sema::AnalysisBasedWarnings::PrintStats() const {
                << " average block visits per function.\n"
                << "  " << MaxUninitAnalysisBlockVisitsPerFunction
                << " max block visits per function.\n";
+  clang::lifetimes::printStats(LSStats);
 }

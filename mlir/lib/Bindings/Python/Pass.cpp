@@ -224,7 +224,19 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
           },
           "run"_a, "name"_a.none() = nb::none(), "argument"_a.none() = "",
           "description"_a.none() = "", "op_name"_a.none() = "",
-          "Add a python-defined pass to the pass manager.")
+          R"(
+            Add a python-defined pass to the current pipeline of the pass manager.
+
+            Args:
+              run: A callable with signature ``(op: ir.Operation, pass_: ExternalPass) -> None``.
+                   Called when the pass executes. It receives the operation to be processed and
+                   the current ``ExternalPass`` instance.
+                   Use ``pass_.signal_pass_failure()`` to signal failure.
+              name: The name of the pass. Defaults to ``run.__name__``.
+              argument: The command-line argument for the pass. Defaults to empty.
+              description: The description of the pass. Defaults to empty.
+              op_name: The name of the operation this pass operates on.
+                       It will be a generic operation pass if not specified.)")
       .def(
           "run",
           [](PyPassManager &passManager, PyOperationBase &op) {
