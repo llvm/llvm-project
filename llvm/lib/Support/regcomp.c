@@ -514,7 +514,7 @@ static void p_ere_exp(struct parse *p) {
       MUSTEAT('{', REG_BADRPT);
 
       backrefnum = 0;
-      while (MORE() && isdigit(PEEK()) && PEEK() != '}') {
+      while (MORE() && isdigit(PEEK())) {
         c = GETNEXT();
         backrefnum = backrefnum * 10 + c - '0';
       }
@@ -523,6 +523,11 @@ static void p_ere_exp(struct parse *p) {
       /* Other chars are simply themselves when escaped with a backslash.
        */
       ordinary(p, c);
+      break;
+    }
+
+    if (backrefnum >= NPAREN) {
+      SETERROR(REG_ESUBREG);
       break;
     }
 
