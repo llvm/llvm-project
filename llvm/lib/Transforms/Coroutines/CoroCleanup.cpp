@@ -30,6 +30,7 @@ struct Lowerer : coro::LowererBase {
   bool lower(Function &F);
 
 private:
+  void elideCoroNoop(IntrinsicInst *II);
   void lowerCoroNoop(IntrinsicInst *II);
 };
 }
@@ -72,7 +73,8 @@ bool Lowerer::lower(Function &F) {
   bool IsPrivateAndUnprocessed = F.isPresplitCoroutine() && F.hasLocalLinkage();
   bool Changed = false;
 
-  for (Instruction &I : llvm::make_early_inc_range(instructions(F))) {
+  SmallPtrSet<Instruction *, 8> DeadInsts{};
+  for (Instruction &I : instructions(F)) {
     if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
       switch (II->getIntrinsicID()) {
       default:
@@ -98,7 +100,9 @@ bool Lowerer::lower(Function &F) {
         II->replaceAllUsesWith(ConstantTokenNone::get(Context));
         break;
       case Intrinsic::coro_noop:
-        lowerCoroNoop(II);
+        elideCoroNoop(II);
+        if (!II->user_empty())
+          lowerCoroNoop(II);
         break;
       case Intrinsic::coro_subfn_addr:
         lowerSubFn(Builder, cast<CoroSubFnInst>(II));
@@ -128,12 +132,36 @@ bool Lowerer::lower(Function &F) {
         Target->replaceAllUsesWith(NewFuncPtrStruct);
         break;
       }
-      II->eraseFromParent();
+      DeadInsts.insert(II);
       Changed = true;
     }
   }
 
+  for (auto *I : DeadInsts)
+    I->eraseFromParent();
   return Changed;
+}
+
+void Lowerer::elideCoroNoop(IntrinsicInst *II) {
+  for (User *U : make_early_inc_range(II->users())) {
+    auto *Fn = dyn_cast<CoroSubFnInst>(U);
+    if (Fn == nullptr)
+      continue;
+
+    auto *User = Fn->getUniqueUndroppableUser();
+    if (auto *Call = dyn_cast<CallInst>(User)) {
+      Call->eraseFromParent();
+      Fn->eraseFromParent();
+      continue;
+    }
+
+    if (auto *I = dyn_cast<InvokeInst>(User)) {
+      Builder.SetInsertPoint(I);
+      Builder.CreateBr(I->getNormalDest());
+      I->eraseFromParent();
+      Fn->eraseFromParent();
+    }
+  }
 }
 
 void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
