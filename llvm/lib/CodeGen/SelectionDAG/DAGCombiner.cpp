@@ -20497,9 +20497,8 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
             !TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, InterVT))
           break;
 
-        Val = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(LD), LDMemType,
-                          DAG.getBitcast(InterVT, Val),
-                          DAG.getVectorIdxConstant(0, SDLoc(LD)));
+        Val = DAG.getExtractSubvector(SDLoc(LD), LDMemType,
+                                      DAG.getBitcast(InterVT, Val), 0);
       } else if (!STMemType.isVector() && !LDMemType.isVector() &&
                  STMemType.isInteger() && LDMemType.isInteger())
         Val = DAG.getNode(ISD::TRUNCATE, SDLoc(LD), LDMemType, Val);

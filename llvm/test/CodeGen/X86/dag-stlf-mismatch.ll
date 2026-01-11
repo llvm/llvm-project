@@ -7,11 +7,12 @@ define float @test_stlf_integer(ptr %p, float %v) {
 ; CHECK-LABEL: test_stlf_integer:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl $0, (%rdi)
-; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    mulss %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   store i32 0, ptr %p, align 4
   %f = load float, ptr %p, align 4
-  %r = fmul fast float %f, %v
+  %r = fmul float %f, %v
   ret float %r
 }
 
@@ -24,7 +25,7 @@ define float @test_stlf_vector(ptr %p, float %v) {
 ; CHECK-NEXT:    retq
   store <4 x float> zeroinitializer, ptr %p, align 4
   %f = load float, ptr %p, align 4
-  %r = fmul fast float %f, %v
+  %r = fmul float %f, %v
   ret float %r
 }
 
@@ -42,16 +43,14 @@ define float @test_stlf_bitcast(ptr %p, float %v) {
 }
 
 declare void @ext_func(ptr byval(%struct.Data) align 4 %p)
-define void @test_stlf_late_byval(ptr %ptr) {
+define void @test_stlf_late_byval(ptr %ptr) nounwind {
 ; CHECK-LABEL: test_stlf_late_byval:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movl $0, (%rdi)
 ; CHECK-NEXT:    movl $0, (%rsp)
 ; CHECK-NEXT:    callq ext_func@PLT
 ; CHECK-NEXT:    popq %rax
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   store i32 0, ptr %ptr, align 4
   call void @ext_func(ptr byval(%struct.Data) align 4 %ptr)
