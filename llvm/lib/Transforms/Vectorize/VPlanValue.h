@@ -24,6 +24,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -195,6 +197,24 @@ struct VPIRValue : public VPValue {
   static bool classof(const VPValue *V) {
     return V->getVPValueID() == VPVIRValueSC;
   }
+};
+
+/// An overlay on VPIRValue for VPValues that wrap a ConstantInt. Provides
+/// convenient accessors for the underlying constant.
+struct VPConstantInt : public VPIRValue {
+  VPConstantInt(ConstantInt *CI) : VPIRValue(CI) {}
+
+  uint64_t getZExtValue() const { return getCI()->getZExtValue(); }
+  const APInt &getAPInt() const { return getCI()->getValue(); }
+  bool isZero() const { return getCI()->isZero(); }
+  bool isOne() const { return getCI()->isOne(); }
+
+  static bool classof(const VPValue *V) {
+    return isa<VPIRValue>(V) && isa<ConstantInt>(V->getUnderlyingValue());
+  }
+
+private:
+  ConstantInt *getCI() const { return cast<ConstantInt>(getValue()); }
 };
 
 /// A symbolic live-in VPValue, used for values like vector trip count, VF, and
