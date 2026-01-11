@@ -5035,5 +5035,71 @@ TEST_P(ASTMatchersTest, IsImplicit_LambdaCapture) {
                        matcher));
 }
 
+TEST_P(ASTMatchersTest, IsImplicit_CoawaitExpr) {
+  StringRef Code = R"cpp(
+namespace std {
+template <typename R, typename...>
+struct coroutine_traits {
+  using promise_type = typename R::promise_type;
+};
+
+template <typename Promise = void>
+struct coroutine_handle;
+
+template <>
+struct coroutine_handle<void> {
+  static coroutine_handle from_address(void *) noexcept;
+  void operator()();
+  void *address() const noexcept;
+  void resume() const;
+  void destroy() const;
+  bool done() const;
+  coroutine_handle &operator=(decltype(nullptr));
+  coroutine_handle(decltype(nullptr));
+  coroutine_handle();
+  explicit operator bool() const;
+};
+
+template <typename Promise>
+struct coroutine_handle : coroutine_handle<> {
+  using coroutine_handle<>::operator=;
+  static coroutine_handle from_address(void *addr) noexcept;
+  Promise &promise() const;
+  static coroutine_handle from_promise(Promise &promise);
+};
+
+struct suspend_always {
+  bool await_ready() noexcept;
+  void await_suspend(coroutine_handle<>) noexcept;
+  void await_resume() noexcept;
+};
+
+}
+
+struct Task {
+  struct promise_type;
+  explicit Task(std::coroutine_handle<promise_type>);
+  struct promise_type {
+    std::suspend_always final_suspend() noexcept;
+    Task get_return_object() noexcept;
+    std::suspend_always initial_suspend() noexcept;
+    void return_void();
+    void unhandled_exception();
+  };
+};
+
+Task foo() {
+  co_await std::suspend_always();
+}
+)cpp";
+  if (!GetParam().isCXX20OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(matches(Code,
+      coawaitExpr(isImplicit(), unless(hasAncestor(compoundStmt())))));
+  EXPECT_TRUE(matches(Code,
+      coawaitExpr(unless(isImplicit()), hasAncestor(compoundStmt()))));
+}
+
 } // namespace ast_matchers
 } // namespace clang

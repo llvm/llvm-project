@@ -775,7 +775,8 @@ AST_MATCHER_P(ClassTemplateSpecializationDecl, hasSpecializedTemplate,
 /// implicit default/copy constructors).
 AST_POLYMORPHIC_MATCHER(isImplicit,
                         AST_POLYMORPHIC_SUPPORTED_TYPES(Decl, Attr,
-                                                        LambdaCapture)) {
+                                                        LambdaCapture,
+                                                        CoawaitExpr)) {
   return Node.isImplicit();
 }
 

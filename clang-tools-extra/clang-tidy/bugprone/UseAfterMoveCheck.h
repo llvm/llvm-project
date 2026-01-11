@@ -31,6 +31,8 @@ public:
 private:
   std::vector<StringRef> InvalidationFunctions;
   std::vector<StringRef> ReinitializationFunctions;
+  std::vector<StringRef> Awaitables;
+  std::vector<StringRef> NonlocalAccessors;
 };
 
 } // namespace clang::tidy::bugprone

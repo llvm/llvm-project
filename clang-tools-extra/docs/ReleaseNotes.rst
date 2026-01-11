@@ -523,6 +523,9 @@ Changes in existing checks
   - Added `ReinitializationFunctions` option to support custom reinitialization
     functions.
 
+  - Added `Awaitables` and `NonlocalAccessors` options to detect uses of
+    thread-locals after suspension points (which may cause thread migrations).
+
 - Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
   <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
   by adding a new option `AllowThreadLocal` that suppresses warnings on
