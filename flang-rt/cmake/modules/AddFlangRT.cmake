@@ -317,6 +317,12 @@ function (add_flangrt_library name)
           "$<$<COMPILE_LANGUAGE:CXX>:-Wp,-U_LIBCPP_ENABLE_ASSERTIONS>")
     endif ()
 
+    # Use own function in place of `std::__libcpp_verbose_abort` to avoid an
+    # unwanted dependency on the symbol provided by libc++.
+    target_compile_options(${tgtname} PRIVATE
+      $<$<COMPILE_LANGUAGE:CXX>:"-D_LIBCPP_VERBOSE_ABORT(...)=flang_rt_verbose_abort(__VA_ARGS__)" -include "${FLANG_RT_SOURCE_DIR}/lib/runtime/io-api-minimal.h">
+      )
+
     # Non-GTest unittests depend on LLVMSupport
     if (ARG_LINK_TO_LLVM)
       if (LLVM_LINK_LLVM_DYLIB)
