@@ -356,10 +356,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::ADD, ISD::SUB, ISD::SHL, ISD::SRA, ISD::SRL},
                        MVT::i32, Custom);
     setOperationAction({ISD::UADDO, ISD::USUBO}, MVT::i32, Custom);
-    if (!Subtarget.hasStdExtZbb())
-      setOperationAction(
-          {ISD::SADDSAT, ISD::SSUBSAT, ISD::UADDSAT, ISD::USUBSAT}, MVT::i32,
-          Custom);
     setOperationAction({ISD::SADDO, ISD::SSUBO}, MVT::i32, Custom);
   }
   if (!Subtarget.hasStdExtZmmul()) {
@@ -471,11 +467,18 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (!Subtarget.useMIPSCCMovInsn() && !Subtarget.hasVendorXTHeadCondMov())
     setOperationAction(ISD::SELECT, XLenVT, Custom);
 
+  if ((Subtarget.hasStdExtP() || Subtarget.hasVendorXqcia()) &&
+      !Subtarget.is64Bit()) {
+    // FIXME: Support i32 on RV64+P by inserting into a v2i32 vector, doing
+    // the vector operation and extracting.
+    setOperationAction({ISD::SADDSAT, ISD::SSUBSAT, ISD::UADDSAT, ISD::USUBSAT},
+                       MVT::i32, Legal);
+  } else if (!Subtarget.hasStdExtZbb() && Subtarget.is64Bit()) {
+    setOperationAction({ISD::SADDSAT, ISD::SSUBSAT, ISD::UADDSAT, ISD::USUBSAT},
+                       MVT::i32, Custom);
+  }
+
   if (Subtarget.hasVendorXqcia() && !Subtarget.is64Bit()) {
-    setOperationAction(ISD::UADDSAT, MVT::i32, Legal);
-    setOperationAction(ISD::SADDSAT, MVT::i32, Legal);
-    setOperationAction(ISD::USUBSAT, MVT::i32, Legal);
-    setOperationAction(ISD::SSUBSAT, MVT::i32, Legal);
     setOperationAction(ISD::USHLSAT, MVT::i32, Legal);
   }
 
@@ -523,16 +526,18 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine(ISD::TRUNCATE);
     setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
     setTruncStoreAction(MVT::v4i16, MVT::v4i8, Expand);
-    SmallVector<MVT, 2> VTs;
+    static const MVT RV32VTs[] = {MVT::v2i16, MVT::v4i8};
+    static const MVT RV64VTs[] = {MVT::v2i32, MVT::v4i16, MVT::v8i8};
+    ArrayRef<MVT> VTs;
     if (Subtarget.is64Bit()) {
-      VTs.append({MVT::v2i32, MVT::v4i16, MVT::v8i8});
+      VTs = RV64VTs;
       setTruncStoreAction(MVT::v2i64, MVT::v2i32, Expand);
       setTruncStoreAction(MVT::v4i32, MVT::v4i16, Expand);
       setTruncStoreAction(MVT::v8i16, MVT::v8i8, Expand);
       setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
       setTruncStoreAction(MVT::v4i16, MVT::v4i8, Expand);
     } else {
-      VTs.append({MVT::v2i16, MVT::v4i8});
+      VTs = RV32VTs;
       setOperationAction(ISD::BUILD_VECTOR, MVT::v4i8, Custom);
     }
     setOperationAction(ISD::UADDSAT, VTs, Legal);
@@ -25365,7 +25370,7 @@ bool RISCVTargetLowering::isMulAddWithConstProfitable(SDValue AddNode,
 bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(
     EVT VT, unsigned AddrSpace, Align Alignment, MachineMemOperand::Flags Flags,
     unsigned *Fast) const {
-  if (!VT.isVector()) {
+  if (!VT.isVector() || Subtarget.enablePExtSIMDCodeGen()) {
     if (Fast)
       *Fast = Subtarget.enableUnalignedScalarMem();
     return Subtarget.enableUnalignedScalarMem();

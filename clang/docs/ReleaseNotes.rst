@@ -140,6 +140,12 @@ ABI Changes in This Version
 ---------------------------
 - Fix AArch64 argument passing for C++ empty classes with large explicitly specified alignment.
 
+AST Potentially Breaking Changes
+--------------------------------
+- Abbreviated function templates and generic lambdas now have a valid begin source location.
+  The begin source location of abbreviated function templates is the begin source location of the templated function.
+  The begin source location of generic lambdas is the begin source location of the lambda introducer ``[...]``.
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 - How nested name specifiers are dumped and printed changes, keeping track of clang AST changes.
@@ -438,6 +444,8 @@ Improvements to Clang's diagnostics
 - Fixed false positives in ``-Waddress-of-packed-member`` diagnostics when
   potential misaligned members get processed before they can get discarded.
   (#GH144729)
+- Clang now emits a warning when ``std::atomic_thread_fence`` is used with ``-fsanitize=thread`` as this can
+  lead to false positives. (This can be disabled with ``-Wno-tsan``)
 - Fix a false positive warning in ``-Wignored-qualifiers`` when the return type is undeduced. (#GH43054)
 
 - Clang now emits a diagnostic with the correct message in case of assigning to const reference captured in lambda. (#GH105647)
@@ -512,6 +520,9 @@ Improvements to Clang's time-trace
 
 Improvements to Coverage Mapping
 --------------------------------
+
+- [MC/DC] Unary logical not `!` among binary operators is recognized
+  as a part of the expression. (#GH124563)
 
 Bug Fixes in This Version
 -------------------------
@@ -765,6 +776,10 @@ WebAssembly Support
 
 - Fix a bug so that ``__has_attribute(musttail)`` is no longer true when WebAssembly's tail-call is not enabled. (#GH163256)
 
+- The `wasm32-wasi` target has been renamed to `wasm32-wasip1`. The old
+  option is still recognized, though by default will emit a deprecation
+  warning.
+
 AVR Support
 ^^^^^^^^^^^
 
@@ -989,6 +1004,8 @@ OpenMP Support
 - Added parsing and semantic analysis support for ``need_device_ptr`` modifier
   to accept an optional fallback argument (``fb_nullify`` or ``fb_preserve``)
   with OpenMP >= 61.
+- ``use_device_ptr`` and ``use_device_addr`` now preserve the original host
+  address when lookup fails.
 
 Improvements
 ^^^^^^^^^^^^

@@ -176,6 +176,111 @@ def Tosa_DivFloorShapeOp : Tosa_ElementwiseShapeOp<"div_floor_shape", [Pure]> {
 }
 
 //===----------------------------------------------------------------------===//
+// Operator: Exp2Shape
+//===----------------------------------------------------------------------===//
+def Tosa_Exp2ShapeOp : Tosa_ElementwiseShapeOp<"exp2_shape", [Pure]> {
+  let summary = "Elementwise base-2 exponential of shapes.";
+
+  let description = [{
+      Computation of raising two to the power of each element in input.
+  }];
+
+  let arguments = (ins
+    Tosa_Shape:$input
+  );
+
+  let results = (outs Tosa_Shape:$output);
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: Log2CeilShape
+//===----------------------------------------------------------------------===//
+def Tosa_Log2CeilShapeOp : Tosa_ElementwiseShapeOp<"log2_ceil_shape", [Pure]> {
+  let summary = "Elementwise ceil base-2 logarithm of shapes.";
+
+  let description = [{
+      Computation of the base two logarithm of each element in input. Result is rounded up.
+  }];
+
+  let arguments = (ins
+    Tosa_Shape:$input
+  );
+
+  let results = (outs Tosa_Shape:$output);
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: Log2FloorShape
+//===----------------------------------------------------------------------===//
+def Tosa_Log2FloorShapeOp : Tosa_ElementwiseShapeOp<"log2_floor_shape", [Pure]> {
+  let summary = "Elementwise floor base-2 logarithm of shapes.";
+
+  let description = [{
+      Computation of the base two logarithm of each element in input. Result is rounded down.
+  }];
+
+  let arguments = (ins
+    Tosa_Shape:$input
+  );
+
+  let results = (outs Tosa_Shape:$output);
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: MaxShape
+//===----------------------------------------------------------------------===//
+def Tosa_MaxShapeOp : Tosa_ElementwiseShapeOp<"max_shape", [Pure]> {
+  let summary = "Elementwise maximum of shapes.";
+
+  let description = [{
+      Elementwise maximum of input1 and input2.
+  }];
+
+  let arguments = (ins
+    Tosa_Shape:$input1,
+    Tosa_Shape:$input2
+  );
+
+  let results = (outs Tosa_Shape:$output);
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: MinShape
+//===----------------------------------------------------------------------===//
+def Tosa_MinShapeOp : Tosa_ElementwiseShapeOp<"min_shape", [Pure]> {
+  let summary = "Elementwise minimum of shapes.";
+
+  let description = [{
+      Elementwise minimum of input1 and input2.
+  }];
+
+  let arguments = (ins
+    Tosa_Shape:$input1,
+    Tosa_Shape:$input2
+  );
+
+  let results = (outs Tosa_Shape:$output);
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: ModShape
+//===----------------------------------------------------------------------===//
+def Tosa_ModShapeOp : Tosa_ElementwiseShapeOp<"mod_shape", [Pure]> {
+  let summary = "Elementwise modulo of shapes.";
+
+  let description = [{
+    Elementwise modulo of input1 divided by input2.
+  }];
+
+  let arguments = (ins
+    Tosa_Shape:$input1,
+    Tosa_Shape:$input2
+  );
+
+  let results = (outs Tosa_Shape:$output);
+}
+
+//===----------------------------------------------------------------------===//
 // Operator: MulShape
 //===----------------------------------------------------------------------===//
 def Tosa_MulShapeOp : Tosa_ElementwiseShapeOp<"mul_shape", [Pure]> {
