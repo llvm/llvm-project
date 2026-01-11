@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_FSQRT_H
-#define LLVM_LIBC_SRC___SUPPORT_MATH_FSQRT_H
+#ifndef LLVM_LIBC_SHARED_MATH_FSQRT_H
+#define LLVM_LIBC_SHARED_MATH_FSQRT_H
 
 #include "shared/libc_common.h"
 #include "src/__support/math/fsqrt.h"
