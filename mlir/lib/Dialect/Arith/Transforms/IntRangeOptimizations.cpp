@@ -533,7 +533,6 @@ struct NarrowLoopBounds final : OpInterfaceRewritePattern<LoopLikeOpInterface> {
         continue;
 
       const ConstantIntRanges &lbRange = ranges[0];
-      const ConstantIntRanges &ubRange = ranges[1];
       const ConstantIntRanges &stepRange = ranges[2];
       const ConstantIntRanges &indVarRange = ranges[3];
 
