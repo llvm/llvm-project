@@ -3661,18 +3661,32 @@ bool VectorCombine::foldFragmentedLoads(Instruction &I) {
 
   SmallPtrSet<LoadInst *, 4> Loads;
   SmallVector<Value *, 2> Bases;
+  LoadInst *FirstLI = nullptr;
   Align Align = Origins[0].LI->getAlign();
   for (const auto &O : Origins) {
     Align = commonAlignment(O.LI->getAlign(), Align.value());
     Loads.insert(O.LI);
     if (!is_contained(Bases, O.BasePtr))
       Bases.push_back(O.BasePtr);
+    if (!FirstLI || O.LI->comesBefore(FirstLI))
+      FirstLI = O.LI;
   }
 
   if (Bases.size() > 2 || Loads.size() <= Bases.size()) {
     LLVM_DEBUG(dbgs() << "No load reduction: " << Loads.size() << " loads -> "
                       << Bases.size() << " wide loads..\n");
     return false;
+  }
+
+  for (Value *Base : Bases) {
+    MemoryLocation Loc(Base, LocationSize::precise(VTySize / 8));
+    if (isMemModifiedBetween(FirstLI->getIterator(), I.getIterator(), Loc,
+                             AA)) {
+      LLVM_DEBUG(dbgs() << "Optimization aborted: Memory modification detected "
+                           "for base: ";
+                 Base->dump());
+      return false;
+    }
   }
 
   Type *WideVecTy = VT;

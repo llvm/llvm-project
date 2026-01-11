@@ -544,22 +544,15 @@ define <4 x i32> @test_neg_too_many_bases(ptr dereferenceable(8) align 16 %x, pt
 
 ; Negative Case 7: Store to %p blocks the merge.
 define <8 x i32> @test_alias_fail_mod_avx(ptr dereferenceable(32) align 64 %p) {
-; SSE-LABEL: define <8 x i32> @test_alias_fail_mod_avx(
-; SSE-SAME: ptr align 64 dereferenceable(32) [[P:%.*]]) #[[ATTR0]] {
-; SSE-NEXT:    [[L0:%.*]] = load <4 x i32>, ptr [[P]], align 16
-; SSE-NEXT:    [[BAD_PTR:%.*]] = getelementptr i8, ptr [[P]], i64 20
-; SSE-NEXT:    store i32 99, ptr [[BAD_PTR]], align 4
-; SSE-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P]], i64 16
-; SSE-NEXT:    [[L1:%.*]] = load <4 x i32>, ptr [[P1]], align 16
-; SSE-NEXT:    [[RES:%.*]] = shufflevector <4 x i32> [[L0]], <4 x i32> [[L1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; SSE-NEXT:    ret <8 x i32> [[RES]]
-;
-; AVX-LABEL: define <8 x i32> @test_alias_fail_mod_avx(
-; AVX-SAME: ptr align 64 dereferenceable(32) [[P:%.*]]) #[[ATTR0]] {
-; AVX-NEXT:    [[BAD_PTR:%.*]] = getelementptr i8, ptr [[P]], i64 20
-; AVX-NEXT:    store i32 99, ptr [[BAD_PTR]], align 4
-; AVX-NEXT:    [[RES:%.*]] = load <8 x i32>, ptr [[P]], align 16
-; AVX-NEXT:    ret <8 x i32> [[RES]]
+; CHECK-LABEL: define <8 x i32> @test_alias_fail_mod_avx(
+; CHECK-SAME: ptr align 64 dereferenceable(32) [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[L0:%.*]] = load <4 x i32>, ptr [[P]], align 16
+; CHECK-NEXT:    [[BAD_PTR:%.*]] = getelementptr i8, ptr [[P]], i64 20
+; CHECK-NEXT:    store i32 99, ptr [[BAD_PTR]], align 4
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P]], i64 16
+; CHECK-NEXT:    [[L1:%.*]] = load <4 x i32>, ptr [[P1]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x i32> [[L0]], <4 x i32> [[L1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    ret <8 x i32> [[RES]]
 ;
   %L0 = load <4 x i32>, ptr %p, align 16
   %bad_ptr = getelementptr i8, ptr %p, i64 20
@@ -572,20 +565,14 @@ define <8 x i32> @test_alias_fail_mod_avx(ptr dereferenceable(32) align 64 %p) {
 
 ; Negative Case 8: Store before the final shuffle blocks the merge.
 define <8 x i32> @test_alias_fail_mod_at_end_avx(ptr dereferenceable(32) align 64 %p) {
-; SSE-LABEL: define <8 x i32> @test_alias_fail_mod_at_end_avx(
-; SSE-SAME: ptr align 64 dereferenceable(32) [[P:%.*]]) #[[ATTR0]] {
-; SSE-NEXT:    [[L0:%.*]] = load <4 x i32>, ptr [[P]], align 16
-; SSE-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P]], i64 16
-; SSE-NEXT:    [[L1:%.*]] = load <4 x i32>, ptr [[P1]], align 16
-; SSE-NEXT:    store i32 77, ptr [[P]], align 4
-; SSE-NEXT:    [[RES:%.*]] = shufflevector <4 x i32> [[L0]], <4 x i32> [[L1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; SSE-NEXT:    ret <8 x i32> [[RES]]
-;
-; AVX-LABEL: define <8 x i32> @test_alias_fail_mod_at_end_avx(
-; AVX-SAME: ptr align 64 dereferenceable(32) [[P:%.*]]) #[[ATTR0]] {
-; AVX-NEXT:    store i32 77, ptr [[P]], align 4
-; AVX-NEXT:    [[RES:%.*]] = load <8 x i32>, ptr [[P]], align 16
-; AVX-NEXT:    ret <8 x i32> [[RES]]
+; CHECK-LABEL: define <8 x i32> @test_alias_fail_mod_at_end_avx(
+; CHECK-SAME: ptr align 64 dereferenceable(32) [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[L0:%.*]] = load <4 x i32>, ptr [[P]], align 16
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P]], i64 16
+; CHECK-NEXT:    [[L1:%.*]] = load <4 x i32>, ptr [[P1]], align 16
+; CHECK-NEXT:    store i32 77, ptr [[P]], align 4
+; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x i32> [[L0]], <4 x i32> [[L1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    ret <8 x i32> [[RES]]
 ;
   %L0 = load <4 x i32>, ptr %p, align 16
   %p1 = getelementptr i8, ptr %p, i64 16
