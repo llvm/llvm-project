@@ -31,9 +31,14 @@ define i32 @test_arg5_v4i32(i32 %a0, i32 %a1, i32 %a2, ptr %a3, i32 %a4, <4 x i3
   ret i32 %result
 }
 
-define {i32, i32, i64} @test_return_type_valid(i32 %arg) {
-  %result = call {i32, i32, i64} @llvm.nvvm.test.return.type.i32(i32 %arg)
+define {i32, i32, i64} @test_return_type_valid(i32 %arg, float %a1) {
+  %result = call {i32, i32, i64} @llvm.nvvm.test.return.type.i32(i32 %arg, float %a1)
   ret {i32, i32, i64} %result
+}
+ 
+define i16 @test_except(float %a1, <4 x i32> %a2, i32 %a3) {
+  %result = call i16 @llvm.nvvm.except.v4i32.i32.f32(float %a1, <4 x i32> %a2, i32 %a3)
+  ret i16 %result
 }
 
 declare i32 @llvm.nvvm.test.type.i16.i16.i32.p0.i32.i16(i16, i16, i32, ptr, i32, i16)
@@ -42,4 +47,5 @@ declare i32 @llvm.nvvm.test.type.i32.i32.f32.p0.i32.i16(i32, i32, float, ptr, i3
 declare i32 @llvm.nvvm.test.type.i32.i32.i32.p3.i32.i16(i32, i32, i32, ptr addrspace(3), i32, i16)
 declare i32 @llvm.nvvm.test.type.i32.i32.i32.p0.i16.i16(i32, i32, i32, ptr, i16, i16)
 declare i32 @llvm.nvvm.test.type.i32.i32.i32.p0.i32.v4i32(i32, i32, i32, ptr, i32, <4 x i32>)
-declare {i32, i32, i64} @llvm.nvvm.test.return.type.i32(i32)
+declare {i32, i32, i64} @llvm.nvvm.test.return.type.i32.f32(i32, float)
+declare i16 @llvm.nvvm.except.v4i32.i32(float, <4 x i32>, i32)

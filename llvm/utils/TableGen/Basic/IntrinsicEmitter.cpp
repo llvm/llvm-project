@@ -321,6 +321,32 @@ void IntrinsicEmitter::EmitIntrinsicToOverloadTable(
 
 using TypeSigTy = SmallVector<unsigned char>;
 
+static void AppendExceptConstraints(const Record *IntDef, TypeSigTy &TypeSig) {
+  if (!IntDef->getValue("ExceptConstraints"))
+    return;
+
+  const ListInit *ExceptList = IntDef->getValueAsListInit("ExceptConstraints");
+  if (!ExceptList || ExceptList->empty())
+    return;
+
+  for (const Init *ExceptInit : ExceptList->getElements()) {
+    const DefInit *DI = dyn_cast<DefInit>(ExceptInit);
+    if (!DI)
+      continue;
+
+    const Record *ExceptRec = DI->getDef();
+    const ListInit *SigList = ExceptRec->getValueAsListInit("Sig");
+    if (!SigList)
+      continue;
+
+    for (const Init *SigByteInit : SigList->getElements()) {
+      const IntInit *II = dyn_cast<IntInit>(SigByteInit);
+      if (II)
+        TypeSig.emplace_back(II->getValue());
+    }
+  }
+}
+
 /// Computes type signature of the intrinsic \p Int.
 static TypeSigTy ComputeTypeSignature(const CodeGenIntrinsic &Int) {
   TypeSigTy TypeSig;
@@ -329,6 +355,8 @@ static TypeSigTy ComputeTypeSignature(const CodeGenIntrinsic &Int) {
 
   for (const auto *TypeListEntry : TypeList->getElements())
     TypeSig.emplace_back(cast<IntInit>(TypeListEntry)->getValue());
+
+  AppendExceptConstraints(Int.TheDef, TypeSig);
   return TypeSig;
 }
 
