@@ -602,7 +602,7 @@ VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
 /// Creates a VPWidenIntOrFpInductionRecipe or VPWidenPointerInductionRecipe
 /// for \p Phi based on \p IndDesc.
 static VPHeaderPHIRecipe *
-createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPValue *Start,
+createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
                            const InductionDescriptor &IndDesc, VPlan &Plan,
                            PredicatedScalarEvolution &PSE, Loop &OrigLoop,
                            DebugLoc DL) {
@@ -663,7 +663,7 @@ void VPlanTransforms::createHeaderPhiRecipes(
            "Must have 2 operands for header phis");
 
     // Extract common values once.
-    VPValue *Start = PhiR->getOperand(0);
+    VPIRValue *Start = cast<VPIRValue>(PhiR->getOperand(0));
     VPValue *BackedgeValue = PhiR->getOperand(1);
 
     if (FixedOrderRecurrences.contains(Phi)) {
@@ -1310,8 +1310,8 @@ static bool handleFirstArgMinOrMax(VPlan &Plan,
   auto *FindIVSelectR = cast<VPSingleDefRecipe>(
       FindLastIVPhiR->getBackedgeValue()->getDefiningRecipe());
   if (!WideIV->isCanonical()) {
-    VPValue *Zero = Plan.getConstantInt(Ty, 0);
-    VPValue *One = Plan.getConstantInt(Ty, 1);
+    VPIRValue *Zero = Plan.getConstantInt(Ty, 0);
+    VPIRValue *One = Plan.getConstantInt(Ty, 1);
     auto *WidenCanIV = new VPWidenIntOrFpInductionRecipe(
         nullptr, Zero, One, WideIV->getVFValue(),
         WideIV->getInductionDescriptor(),

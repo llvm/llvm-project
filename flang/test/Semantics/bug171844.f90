@@ -1,5 +1,5 @@
-! RUN: %flang_fc1 -fsyntax-only %s 2>&1 | FileCheck --check-prefix=CHECK-WARNING %s
-! RUN: %flang_fc1 -fsyntax-only -Wno-bad-value-in-dead-code %s 2>&1 | FileCheck %s
+! RUN: not %flang_fc1 -fsyntax-only %s 2>&1 | FileCheck --check-prefix=CHECK-WARNING %s
+! RUN: not %flang_fc1 -fsyntax-only -Wno-bad-value-in-dead-code %s 2>&1 | FileCheck %s
 
 real a(2)
 
