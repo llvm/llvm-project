@@ -371,3 +371,24 @@ define <4 x i32> @test_neg_too_many_bases(ptr %x, ptr %y, ptr %z) {
   %res = shufflevector <4 x i32> %v_xy, <4 x i32> %v_z, <4 x i32> <i32 0, i32 2, i32 4, i32 1>
   ret <4 x i32> %res
 }
+
+; Negative Case 7: Store to %p blocks the merge.
+define <8 x i32> @test_alias_fail_mod_avx(ptr dereferenceable(32) %p) {
+  %L0 = load <4 x i32>, ptr %p, align 16
+  %bad_ptr = getelementptr i8, ptr %p, i64 20
+  store i32 99, ptr %bad_ptr, align 4
+  %p1 = getelementptr i8, ptr %p, i64 16
+  %L1 = load <4 x i32>, ptr %p1, align 16
+  %res = shufflevector <4 x i32> %L0, <4 x i32> %L1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i32> %res
+}
+
+; Negative Case 8: Store before the final shuffle blocks the merge.
+define <8 x i32> @test_alias_fail_mod_at_end_avx(ptr dereferenceable(32) %p) {
+  %L0 = load <4 x i32>, ptr %p, align 16
+  %p1 = getelementptr i8, ptr %p, i64 16
+  %L1 = load <4 x i32>, ptr %p1, align 16
+  store i32 77, ptr %p, align 4
+  %res = shufflevector <4 x i32> %L0, <4 x i32> %L1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i32> %res
+}
