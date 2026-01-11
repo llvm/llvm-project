@@ -419,14 +419,18 @@ elif config.target_os == "Darwin" and not config.apple_target_is_host:
     # =========================================================================
     # Target             | Feature set
     # =========================================================================
-    # macOS              | darwin
-    # iOS device         | darwin, ios
-    # iOS simulator      | darwin, ios, iossim
-    # tvOS device        | darwin, ios, tvos
-    # tvOS simulator     | darwin, ios, iossim, tvos, tvossim
-    # watchOS device     | darwin, ios, watchos
-    # watchOS simulator  | darwin, ios, iossim, watchos, watchossim
+    # macOS host         | darwin
+    # macOS device       | darwin, darwin-remote
+    # iOS device         | darwin, darwin-remote, ios
+    # iOS simulator      | darwin, darwin-remote, ios, iossim
+    # tvOS device        | darwin, darwin-remote, ios, tvos
+    # tvOS simulator     | darwin, darwin-remote, ios, iossim, tvos, tvossim
+    # watchOS device     | darwin, darwin-remote, ios, watchos
+    # watchOS simulator  | darwin, darwin-remote, ios, iossim, watchos, watchossim
     # =========================================================================
+
+    # All suites that aren't running on the host get the darwin-remote feature.
+    config.available_features.add("darwin-remote")
 
     # All non-OSX targets have the ios feature (see the above table)
     if config.apple_platform != "osx":

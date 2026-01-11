@@ -5394,7 +5394,7 @@ private:
                 ++Inc;
             }
           } else {
-            Inc = 1;
+            Inc = count(TE->Scalars, User);
           }
 
           // Check if the user is commutative.
@@ -5477,8 +5477,6 @@ private:
               --P.getSecond();
           }
           // If parent node is schedulable, it will be handled correctly.
-          if (!IsNonSchedulableWithParentPhiNode)
-            break;
           It = find(make_range(std::next(It), P.first->Scalars.end()), User);
         } while (It != P.first->Scalars.end());
       }
@@ -5772,7 +5770,7 @@ private:
                   DecrUnschedForInst(I, Bundle->getTreeEntry(), OpIdx, Checked);
                 }
               // If parent node is schedulable, it will be handled correctly.
-              if (!IsNonSchedulableWithParentPhiNode)
+              if (Bundle->getTreeEntry()->isCopyableElement(In))
                 break;
               It = std::find(std::next(It),
                              Bundle->getTreeEntry()->Scalars.end(), In);
@@ -5957,8 +5955,7 @@ private:
     /// bundles which depend on the original bundle.
     void calculateDependencies(ScheduleBundle &Bundle, bool InsertInReadyList,
                                BoUpSLP *SLP,
-                               ArrayRef<ScheduleData *> ControlDeps = {},
-                               bool NonSchedulable = false);
+                               ArrayRef<ScheduleData *> ControlDeps = {});
 
     /// Sets all instruction in the scheduling region to un-scheduled.
     void resetSchedule();
@@ -7168,7 +7165,7 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
   }
 
   Type *StrideTy = DL->getIndexType(Ptr0->getType());
-  SPtrInfo.StrideVal = ConstantInt::get(StrideTy, StrideIntVal);
+  SPtrInfo.StrideVal = ConstantInt::getSigned(StrideTy, StrideIntVal);
   SPtrInfo.Ty = getWidenedType(NewScalarTy, VecSz);
   return true;
 }
@@ -13445,6 +13442,7 @@ void BoUpSLP::transformNodes() {
       // insertvector instructions.
       unsigned StartIdx = 0;
       unsigned End = VL.size();
+      SmallBitVector Processed(End);
       for (unsigned VF = getFloorFullVectorNumberOfElements(
                *TTI, VL.front()->getType(), VL.size() - 1);
            VF >= MinVF; VF = getFloorFullVectorNumberOfElements(
@@ -13457,7 +13455,7 @@ void BoUpSLP::transformNodes() {
           ArrayRef<Value *> Slice = VL.slice(Cnt, VF);
           // If any instruction is vectorized already - do not try again.
           // Reuse the existing node, if it fully matches the slice.
-          if (isVectorized(Slice.front()) &&
+          if ((Processed.test(Cnt) || isVectorized(Slice.front())) &&
               !getSameValuesTreeEntry(Slice.front(), Slice, /*SameVF=*/true))
             continue;
           // Constant already handled effectively - skip.
@@ -13543,6 +13541,7 @@ void BoUpSLP::transformNodes() {
           continue;
         auto AddCombinedNode = [&](unsigned Idx, unsigned Cnt, unsigned Sz) {
           E.CombinedEntriesWithIndices.emplace_back(Idx, Cnt);
+          Processed.set(Cnt, Cnt + Sz);
           if (StartIdx == Cnt)
             StartIdx = Cnt + Sz;
           if (End == Cnt + Sz)
@@ -20474,7 +20473,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         Value *NewStride =
             Builder.CreateIntCast(Stride, StrideTy, /*isSigned=*/true);
         StrideVal = Builder.CreateMul(
-            NewStride, ConstantInt::get(
+            NewStride, ConstantInt::getSigned(
                            StrideTy, (IsReverseOrder ? -1 : 1) *
                                          static_cast<int>(
                                              DL->getTypeAllocSize(ScalarTy))));
@@ -20556,7 +20555,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             Intrinsic::experimental_vp_strided_store,
             {VecTy, Ptr->getType(), StrideTy},
             {VecValue, Ptr,
-             ConstantInt::get(
+             ConstantInt::getSigned(
                  StrideTy, -static_cast<int>(DL->getTypeAllocSize(ScalarTy))),
              Builder.getAllOnesMask(VecTy->getElementCount()),
              Builder.getInt32(E->Scalars.size())});
@@ -21799,17 +21798,11 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         if (auto *Op = dyn_cast<Instruction>(U.get());
             Op && areAllOperandsReplacedByCopyableData(I, Op, *SLP, NumOps)) {
           if (ScheduleData *OpSD = getScheduleData(Op);
-              OpSD && OpSD->hasValidDependencies()) {
-            OpSD->clearDirectDependencies();
-            ControlDependentMembers.push_back(OpSD);
-          }
+              OpSD && OpSD->hasValidDependencies())
+            // TODO: investigate how to improve it instead of early exiting.
+            return std::nullopt;
         }
       }
-    }
-    if (!ControlDependentMembers.empty()) {
-      ScheduleBundle Invalid = ScheduleBundle::invalid();
-      calculateDependencies(Invalid, /*InsertInReadyList=*/true, SLP,
-                            ControlDependentMembers, /*NonSchedulable=*/true);
     }
     return nullptr;
   }
@@ -22193,7 +22186,7 @@ void BoUpSLP::BlockScheduling::initScheduleData(Instruction *FromI,
 
 void BoUpSLP::BlockScheduling::calculateDependencies(
     ScheduleBundle &Bundle, bool InsertInReadyList, BoUpSLP *SLP,
-    ArrayRef<ScheduleData *> ControlDeps, bool NonSchedulable) {
+    ArrayRef<ScheduleData *> ControlDeps) {
   SmallVector<ScheduleEntity *> WorkList;
   auto ProcessNode = [&](ScheduleEntity *SE) {
     if (auto *CD = dyn_cast<ScheduleCopyableData>(SE)) {
@@ -22278,8 +22271,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
         // The operand is a copyable element - skip.
         unsigned &NumOps = UserToNumOps.try_emplace(U, 0).first->getSecond();
         ++NumOps;
-        if (!NonSchedulable &&
-            areAllOperandsReplacedByCopyableData(
+        if (areAllOperandsReplacedByCopyableData(
                 cast<Instruction>(U), BundleMember->getInst(), *SLP, NumOps))
           continue;
         BundleMember->incDependencies();

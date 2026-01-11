@@ -13,7 +13,7 @@ define void @load_store_interleave_group(ptr noalias %data) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -62,7 +62,7 @@ define void @test_2xi64_unary_op_load_interleave_group(ptr noalias %data, ptr no
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1111, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1111, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -172,7 +172,7 @@ define void @test_masked_interleave_group(i32 %N, ptr %mask, ptr %src, ptr %dst)
 ;
 ; CHECK-LABEL: define void @test_masked_interleave_group(
 ; CHECK-SAME: i32 [[N:%.*]], ptr [[MASK:%.*]], ptr [[SRC:%.*]], ptr [[DST:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ITER_CHECK:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
@@ -202,7 +202,7 @@ define void @test_masked_interleave_group(i32 %N, ptr %mask, ptr %src, ptr %dst)
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK6]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP21:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP21]], 16
+; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP21]], 4
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], [[TMP9]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -243,7 +243,7 @@ define void @test_masked_interleave_group(i32 %N, ptr %mask, ptr %src, ptr %dst)
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[TMP22:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP23:%.*]] = mul nuw i64 [[TMP22]], 8
+; CHECK-NEXT:    [[TMP23:%.*]] = shl nuw i64 [[TMP22]], 3
 ; CHECK-NEXT:    [[N_MOD_VF10:%.*]] = urem i64 [[TMP1]], [[TMP23]]
 ; CHECK-NEXT:    [[INDEX:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF10]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = trunc i64 [[INDEX]] to i32
@@ -279,10 +279,10 @@ define void @test_masked_interleave_group(i32 %N, ptr %mask, ptr %src, ptr %dst)
 ; CHECK-NEXT:    [[CMP_N24:%.*]] = icmp eq i64 [[TMP1]], [[INDEX]]
 ; CHECK-NEXT:    br i1 [[CMP_N24]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[TMP24]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP10]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL25:%.*]] = phi ptr [ [[NEXT_GEP]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP12]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[DST]], %[[VECTOR_MEMCHECK]] ], [ [[DST]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL26:%.*]] = phi ptr [ [[NEXT_GEP7]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP14]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[SRC]], %[[VECTOR_MEMCHECK]] ], [ [[SRC]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL27:%.*]] = phi ptr [ [[NEXT_GEP8]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP15]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[MASK]], %[[VECTOR_MEMCHECK]] ], [ [[MASK]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[TMP24]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP10]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL25:%.*]] = phi ptr [ [[NEXT_GEP]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP12]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[DST]], %[[VECTOR_MEMCHECK]] ], [ [[DST]], %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL26:%.*]] = phi ptr [ [[NEXT_GEP7]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP14]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[SRC]], %[[VECTOR_MEMCHECK]] ], [ [[SRC]], %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL27:%.*]] = phi ptr [ [[NEXT_GEP8]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP15]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[MASK]], %[[VECTOR_MEMCHECK]] ], [ [[MASK]], %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]

@@ -4,6 +4,9 @@
 // RUN: %clang -c -o %t %s
 // RUN: %llvm_jitlink %t | FileCheck %s
 
+// REQUIRES: disabled
+//// https://github.com/llvm/llvm-project/issues/175094
+
 // CHECK: constructor 100
 // CHECK-NEXT: constructor 200
 // CHECK-NEXT: constructor 65535

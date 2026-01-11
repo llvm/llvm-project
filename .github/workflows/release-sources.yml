@@ -24,6 +24,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/release-sources.yml'
+      - 'llvm/utils/release/export.sh'
     types:
       - opened
       - synchronize

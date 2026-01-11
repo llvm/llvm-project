@@ -10,7 +10,7 @@
 // fundamental operations.
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/Passes.h"
+#include "mlir/Dialect/Affine/Transforms/Passes.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Transforms/Transforms.h"
@@ -21,7 +21,7 @@
 namespace mlir {
 namespace affine {
 #define GEN_PASS_DEF_AFFINEEXPANDINDEXOPSASAFFINE
-#include "mlir/Dialect/Affine/Passes.h.inc"
+#include "mlir/Dialect/Affine/Transforms/Passes.h.inc"
 } // namespace affine
 } // namespace mlir
 
