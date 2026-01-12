@@ -1627,8 +1627,6 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   if (TM->getOptLevel() > CodeGenOptLevel::Less)
     insertPass(&MachineSchedulerID, &SIFormMemoryClausesID);
 
-  // Have the pre-RA machine scheduler require MachineBlockFrequencyInfo.
-  RequireMBFILegacySched = true;
   TargetPassConfig::addOptimizedRegAlloc();
 }
 
@@ -2346,7 +2344,7 @@ void AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(
   if (TM.getOptLevel() > CodeGenOptLevel::Less)
     insertPass<MachineSchedulerPass>(SIFormMemoryClausesPass());
 
-  Base::addOptimizedRegAlloc(PMW, /* ReqireMBFI */ true);
+  Base::addOptimizedRegAlloc(PMW);
 }
 
 void AMDGPUCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) const {

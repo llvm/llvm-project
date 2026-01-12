@@ -208,10 +208,6 @@ cl::opt<bool> llvm::VerifyScheduling(
     "verify-misched", cl::Hidden,
     cl::desc("Verify machine instrs before and after machine scheduling"));
 
-cl::opt<bool> llvm::RequireMBFILegacySched(
-    "require-mbfi-legacy-sched", cl::Hidden,
-    cl::desc("Require MachineBlocFrequencyInfo for legacy scheduling pass"));
-
 #ifndef NDEBUG
 cl::opt<bool> llvm::ViewMISchedDAGs(
     "view-misched-dags", cl::Hidden,
@@ -674,8 +670,8 @@ bool MachineSchedulerLegacy::runOnMachineFunction(MachineFunction &MF) {
   return Impl.run(MF, TM, {MLI, MDT, AA, LIS, MBFI});
 }
 
-MachineSchedulerPass::MachineSchedulerPass(const TargetMachine *TM, bool UMBFI)
-    : Impl(std::make_unique<MachineSchedulerImpl>()), TM(TM), UseMBFI(UMBFI) {}
+MachineSchedulerPass::MachineSchedulerPass(const TargetMachine *TM)
+    : Impl(std::make_unique<MachineSchedulerImpl>()), TM(TM) {}
 MachineSchedulerPass::~MachineSchedulerPass() = default;
 MachineSchedulerPass::MachineSchedulerPass(MachineSchedulerPass &&Other) =
     default;
@@ -713,7 +709,8 @@ MachineSchedulerPass::run(MachineFunction &MF,
   return getMachineFunctionPassPreservedAnalyses()
       .preserveSet<CFGAnalyses>()
       .preserve<SlotIndexesAnalysis>()
-      .preserve<LiveIntervalsAnalysis>();
+      .preserve<LiveIntervalsAnalysis>()
+      .preserve<MachineBlockFrequencyAnalysis>();
 }
 
 bool PostMachineSchedulerLegacy::runOnMachineFunction(MachineFunction &MF) {

@@ -308,7 +308,6 @@ public:
     AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
     AU.addPreserved<MachineCycleInfoWrapperPass>();
     AU.addPreserved<MachineLoopInfoWrapperPass>();
-    AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
     if (UseBlockFreqInfo) {
       AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();

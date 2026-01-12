@@ -472,8 +472,7 @@ protected:
   /// addOptimizedRegAlloc - Add passes related to register allocation.
   /// CodeGenTargetMachineImpl provides standard regalloc passes for most
   /// targets.
-  void addOptimizedRegAlloc(PassManagerWrapper &PMW,
-                            bool RequireMBFI = false) const;
+  void addOptimizedRegAlloc(PassManagerWrapper &PMW) const;
 
   /// Add passes that optimize machine instructions after register allocation.
   void addMachineLateOptimization(PassManagerWrapper &PMW) const;
@@ -1213,7 +1212,7 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addFastRegAlloc(
 /// scheduling, and register allocation itself.
 template <typename Derived, typename TargetMachineT>
 void CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
-    PassManagerWrapper &PMW, bool RequireMBFI) const {
+    PassManagerWrapper &PMW) const {
   addMachineFunctionPass(DetectDeadLanesPass(), PMW);
 
   addMachineFunctionPass(InitUndefPass(), PMW);
@@ -1253,7 +1252,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
   addMachineFunctionPass(RenameIndependentSubregsPass(), PMW);
 
   // PreRA instruction scheduling.
-  addMachineFunctionPass(MachineSchedulerPass(&TM, RequireMBFI), PMW);
+  addMachineFunctionPass(MachineSchedulerPass(&TM), PMW);
 
   if (auto E = derived().addRegAssignmentOptimized(PMW)) {
     // addRegAssignmentOptimized did not add a reg alloc pass, so do nothing.
