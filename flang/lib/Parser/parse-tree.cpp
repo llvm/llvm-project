@@ -54,7 +54,6 @@ DataRef::DataRef(std::list<PartRef> &&prl)
     : u{std::move(std::get<Name>(prl.front().t))} {
   for (bool first{true}; !prl.empty(); first = false, prl.pop_front()) {
     auto &&[name, subscripts, imageSelector]{prl.front().t};
-    // PartRef &pr{prl.front()};
     if (!first) {
       u = common::Indirection<StructureComponent>::Make(
           std::move(*this), std::move(name));
