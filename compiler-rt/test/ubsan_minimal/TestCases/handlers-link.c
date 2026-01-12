@@ -1,0 +1,170 @@
+// RUN: %clang_min_runtime -fsanitize=undefined %s -o /dev/null
+
+void __ubsan_handle_add_overflow_minimal();
+void __ubsan_handle_alignment_assumption_minimal();
+void __ubsan_handle_builtin_unreachable_minimal();
+void __ubsan_handle_cfi_check_fail_minimal();
+void __ubsan_handle_divrem_overflow_minimal();
+void __ubsan_handle_float_cast_overflow_minimal();
+void __ubsan_handle_function_type_mismatch_minimal();
+void __ubsan_handle_implicit_conversion_minimal();
+void __ubsan_handle_invalid_builtin_minimal();
+void __ubsan_handle_invalid_objc_cast_minimal();
+void __ubsan_handle_load_invalid_value_minimal();
+void __ubsan_handle_local_out_of_bounds_minimal();
+void __ubsan_handle_missing_return_minimal();
+void __ubsan_handle_mul_overflow_minimal();
+void __ubsan_handle_negate_overflow_minimal();
+void __ubsan_handle_nonnull_arg_minimal();
+void __ubsan_handle_nonnull_return_minimal();
+void __ubsan_handle_nullability_arg_minimal();
+void __ubsan_handle_nullability_return_minimal();
+void __ubsan_handle_out_of_bounds_minimal();
+void __ubsan_handle_pointer_overflow_minimal();
+void __ubsan_handle_shift_out_of_bounds_minimal();
+void __ubsan_handle_sub_overflow_minimal();
+void __ubsan_handle_type_mismatch_minimal();
+void __ubsan_handle_vla_bound_not_positive_minimal();
+void __ubsan_report_error();
+
+void __ubsan_handle_alignment_assumption_minimal_abort();
+// This one doesn't exist, it is recover only.
+// void __ubsan_handle_builtin_unreachable_minimal_abort();
+void __ubsan_handle_cfi_check_fail_minimal_abort();
+void __ubsan_handle_divrem_overflow_minimal_abort();
+void __ubsan_handle_float_cast_overflow_minimal_abort();
+void __ubsan_handle_function_type_mismatch_minimal_abort();
+void __ubsan_handle_implicit_conversion_minimal_abort();
+void __ubsan_handle_invalid_builtin_minimal_abort();
+void __ubsan_handle_invalid_objc_cast_minimal_abort();
+void __ubsan_handle_load_invalid_value_minimal_abort();
+void __ubsan_handle_local_out_of_bounds_minimal_abort();
+// This one doesn't exist, it is recover only.
+// void __ubsan_handle_missing_return_minimal_abort();
+void __ubsan_handle_mul_overflow_minimal_abort();
+void __ubsan_handle_negate_overflow_minimal_abort();
+void __ubsan_handle_nonnull_arg_minimal_abort();
+void __ubsan_handle_nonnull_return_minimal_abort();
+void __ubsan_handle_nullability_arg_minimal_abort();
+void __ubsan_handle_nullability_return_minimal_abort();
+void __ubsan_handle_out_of_bounds_minimal_abort();
+void __ubsan_handle_pointer_overflow_minimal_abort();
+void __ubsan_handle_shift_out_of_bounds_minimal_abort();
+void __ubsan_handle_sub_overflow_minimal_abort();
+void __ubsan_handle_type_mismatch_minimal_abort();
+void __ubsan_handle_vla_bound_not_positive_minimal_abort();
+void __ubsan_report_error_fatal();
+
+#if defined(__aarch64__) || defined(__x86_64__)
+void __ubsan_handle_add_overflow_minimal_preserve();
+void __ubsan_handle_alignment_assumption_minimal_preserve();
+void __ubsan_handle_builtin_unreachable_minimal_preserve();
+void __ubsan_handle_cfi_check_fail_minimal_preserve();
+void __ubsan_handle_divrem_overflow_minimal_preserve();
+void __ubsan_handle_float_cast_overflow_minimal_preserve();
+void __ubsan_handle_function_type_mismatch_minimal_preserve();
+void __ubsan_handle_implicit_conversion_minimal_preserve();
+void __ubsan_handle_invalid_builtin_minimal_preserve();
+void __ubsan_handle_invalid_objc_cast_minimal_preserve();
+void __ubsan_handle_load_invalid_value_minimal_preserve();
+void __ubsan_handle_local_out_of_bounds_minimal_preserve();
+void __ubsan_handle_missing_return_minimal_preserve();
+void __ubsan_handle_mul_overflow_minimal_preserve();
+void __ubsan_handle_negate_overflow_minimal_preserve();
+void __ubsan_handle_nonnull_arg_minimal_preserve();
+void __ubsan_handle_nonnull_return_minimal_preserve();
+void __ubsan_handle_nullability_arg_minimal_preserve();
+void __ubsan_handle_nullability_return_minimal_preserve();
+void __ubsan_handle_out_of_bounds_minimal_preserve();
+void __ubsan_handle_pointer_overflow_minimal_preserve();
+void __ubsan_handle_shift_out_of_bounds_minimal_preserve();
+void __ubsan_handle_sub_overflow_minimal_preserve();
+void __ubsan_handle_type_mismatch_minimal_preserve();
+void __ubsan_handle_vla_bound_not_positive_minimal_preserve();
+void __ubsan_report_error_preserve();
+#endif
+int main(int argc, char **argv) {
+  __ubsan_handle_add_overflow_minimal();
+  __ubsan_handle_alignment_assumption_minimal();
+  __ubsan_handle_builtin_unreachable_minimal();
+  __ubsan_handle_cfi_check_fail_minimal();
+  __ubsan_handle_divrem_overflow_minimal();
+  __ubsan_handle_float_cast_overflow_minimal();
+  __ubsan_handle_function_type_mismatch_minimal();
+  __ubsan_handle_implicit_conversion_minimal();
+  __ubsan_handle_invalid_builtin_minimal();
+  __ubsan_handle_invalid_objc_cast_minimal();
+  __ubsan_handle_load_invalid_value_minimal();
+  __ubsan_handle_local_out_of_bounds_minimal();
+  __ubsan_handle_missing_return_minimal();
+  __ubsan_handle_mul_overflow_minimal();
+  __ubsan_handle_negate_overflow_minimal();
+  __ubsan_handle_nonnull_arg_minimal();
+  __ubsan_handle_nonnull_return_minimal();
+  __ubsan_handle_nullability_arg_minimal();
+  __ubsan_handle_nullability_return_minimal();
+  __ubsan_handle_out_of_bounds_minimal();
+  __ubsan_handle_pointer_overflow_minimal();
+  __ubsan_handle_shift_out_of_bounds_minimal();
+  __ubsan_handle_sub_overflow_minimal();
+  __ubsan_handle_type_mismatch_minimal();
+  __ubsan_handle_vla_bound_not_positive_minimal();
+  __ubsan_report_error();
+
+  __ubsan_handle_alignment_assumption_minimal_abort();
+  // This one doesn't exist, it is recover only.
+  // __ubsan_handle_builtin_unreachable_minimal_abort();
+  __ubsan_handle_cfi_check_fail_minimal_abort();
+  __ubsan_handle_divrem_overflow_minimal_abort();
+  __ubsan_handle_float_cast_overflow_minimal_abort();
+  __ubsan_handle_function_type_mismatch_minimal_abort();
+  __ubsan_handle_implicit_conversion_minimal_abort();
+  __ubsan_handle_invalid_builtin_minimal_abort();
+  __ubsan_handle_invalid_objc_cast_minimal_abort();
+  __ubsan_handle_load_invalid_value_minimal_abort();
+  __ubsan_handle_local_out_of_bounds_minimal_abort();
+  // This one doesn't exist, it is recover only.
+  // __ubsan_handle_missing_return_minimal_abort();
+  __ubsan_handle_mul_overflow_minimal_abort();
+  __ubsan_handle_negate_overflow_minimal_abort();
+  __ubsan_handle_nonnull_arg_minimal_abort();
+  __ubsan_handle_nonnull_return_minimal_abort();
+  __ubsan_handle_nullability_arg_minimal_abort();
+  __ubsan_handle_nullability_return_minimal_abort();
+  __ubsan_handle_out_of_bounds_minimal_abort();
+  __ubsan_handle_pointer_overflow_minimal_abort();
+  __ubsan_handle_shift_out_of_bounds_minimal_abort();
+  __ubsan_handle_sub_overflow_minimal_abort();
+  __ubsan_handle_type_mismatch_minimal_abort();
+  __ubsan_handle_vla_bound_not_positive_minimal_abort();
+  __ubsan_report_error_fatal();
+
+#if defined(__aarch64__) || defined(__x86_64__)
+  __ubsan_handle_add_overflow_minimal_preserve();
+  __ubsan_handle_alignment_assumption_minimal_preserve();
+  __ubsan_handle_builtin_unreachable_minimal_preserve();
+  __ubsan_handle_cfi_check_fail_minimal_preserve();
+  __ubsan_handle_divrem_overflow_minimal_preserve();
+  __ubsan_handle_float_cast_overflow_minimal_preserve();
+  __ubsan_handle_function_type_mismatch_minimal_preserve();
+  __ubsan_handle_implicit_conversion_minimal_preserve();
+  __ubsan_handle_invalid_builtin_minimal_preserve();
+  __ubsan_handle_invalid_objc_cast_minimal_preserve();
+  __ubsan_handle_load_invalid_value_minimal_preserve();
+  __ubsan_handle_local_out_of_bounds_minimal_preserve();
+  __ubsan_handle_missing_return_minimal_preserve();
+  __ubsan_handle_mul_overflow_minimal_preserve();
+  __ubsan_handle_negate_overflow_minimal_preserve();
+  __ubsan_handle_nonnull_arg_minimal_preserve();
+  __ubsan_handle_nonnull_return_minimal_preserve();
+  __ubsan_handle_nullability_arg_minimal_preserve();
+  __ubsan_handle_nullability_return_minimal_preserve();
+  __ubsan_handle_out_of_bounds_minimal_preserve();
+  __ubsan_handle_pointer_overflow_minimal_preserve();
+  __ubsan_handle_shift_out_of_bounds_minimal_preserve();
+  __ubsan_handle_sub_overflow_minimal_preserve();
+  __ubsan_handle_type_mismatch_minimal_preserve();
+  __ubsan_handle_vla_bound_not_positive_minimal_preserve();
+  __ubsan_report_error_preserve();
+#endif
+}
