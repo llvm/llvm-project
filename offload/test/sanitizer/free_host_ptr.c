@@ -20,4 +20,4 @@ int main(void) {
 // CHECK:  OFFLOAD ERROR: deallocation of non-allocated device memory: 0x
 // CHECK:   dataDelete
 // NDEBG:   main
-// DEBUG:   main {{.*}}free_host_ptr.c:21
+// DEBUG:   main {{.*}}free_host_ptr.c:[[@LINE-5]]
