@@ -1,5 +1,5 @@
 ; Several inner-loop reduction patterns not yet supported.
-; RUN: opt < %s -passes="loop-interchange"  -loop-interchange-undo-inner-reduction -pass-remarks-missed='loop-interchange' \
+; RUN: opt < %s -passes="loop-interchange"  -loop-interchange-reduction-to-mem -pass-remarks-missed='loop-interchange' \
 ; RUN:            -pass-remarks-output=%t -S | FileCheck -check-prefix=IR %s
 ; RUN: FileCheck --input-file=%t %s
 
@@ -17,7 +17,7 @@
 ; CHECK-NEXT: Name:            UnsupportedInnerReduction
 ; CHECK-NEXT: Function:        reduction_01
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Cannot undo a reduction with non-constant initial value.
+; CHECK-NEXT:   - String:          Only supported for the reduction with a constant initial value.
 
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
@@ -82,7 +82,7 @@ exit:
 ; CHECK-NEXT: Name:            UnsupportedInnerReduction
 ; CHECK-NEXT: Function:        reduction_02
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Cannot undo more than one reduction.
+; CHECK-NEXT:   - String:          Only supports at most one reduction.
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
 ; CHECK-NEXT: Name:            UnsupportedPHIInner
@@ -147,7 +147,7 @@ exit:
 ; CHECK-NEXT: Name:            UnsupportedInnerReduction
 ; CHECK-NEXT: Function:        reduction_03
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Cannot undo a reduction when the reduction is used more than once in the outer loop.
+; CHECK-NEXT:   - String:          Only supported when the reduction is used once in the outer loop.
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
 ; CHECK-NEXT: Name:            UnsupportedPHIInner
@@ -218,7 +218,7 @@ exit:
 ; CHECK-NEXT: Name:            UnsupportedInnerReduction
 ; CHECK-NEXT: Function:        reduction_04
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Cannot undo a reduction when the loop is not the innermost loop.
+; CHECK-NEXT:   - String:          Only supported when the loop is the innermost.
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
 ; CHECK-NEXT: Name:            UnsupportedPHIInner
@@ -288,7 +288,7 @@ exit:
 ; CHECK-NEXT: Name:            UnsupportedInnerReduction
 ; CHECK-NEXT: Function:        reduction_05
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Cannot undo a reduction when memory reference does not dominate the inner loop.
+; CHECK-NEXT:   - String:          Only supported when memory reference dominate the inner loop.
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
 ; CHECK-NEXT: Name:            UnsupportedPHIInner
