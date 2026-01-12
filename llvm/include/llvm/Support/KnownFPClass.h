@@ -138,8 +138,13 @@ struct KnownFPClass {
   }
 
   KnownFPClass intersectWith(const KnownFPClass &RHS) {
-    return KnownFPClass(~(~KnownFPClasses & ~RHS.KnownFPClasses),
+    return KnownFPClass(KnownFPClasses | RHS.KnownFPClasses,
                         SignBit == RHS.SignBit ? SignBit : std::nullopt);
+  }
+
+  KnownFPClass unionWith(const KnownFPClass &RHS) {
+    // TODO: Handle sign bit?
+    return KnownFPClass(KnownFPClasses & RHS.KnownFPClasses);
   }
 
   KnownFPClass &operator|=(const KnownFPClass &RHS) {
