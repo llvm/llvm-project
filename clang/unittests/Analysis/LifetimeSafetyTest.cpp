@@ -437,10 +437,9 @@ MATCHER_P(HasLoanToATemporary, Annotation, "") {
 
   std::vector<LoanID> Loans(LoansSetOpt->begin(), LoansSetOpt->end());
 
-  for (LoanID LID : Loans) {
+  for (LoanID LID : Loans)
     if (Helper.isLoanToATemporary(LID))
       return true;
-  }
   *result_listener << "could not find loan to a temporary for '"
                    << Info.OriginVar.str() << "'";
   return false;

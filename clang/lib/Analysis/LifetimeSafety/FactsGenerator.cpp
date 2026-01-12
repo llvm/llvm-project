@@ -359,29 +359,26 @@ void FactsGenerator::VisitInitListExpr(const InitListExpr *ILE) {
 
 void FactsGenerator::VisitMaterializeTemporaryExpr(
     const MaterializeTemporaryExpr *MTE) {
+  assert(MTE->isGLValue());
+  // We defer from handling lifetime extended materializations.
+  if (MTE->getStorageDuration() != SD_FullExpression)
+    return;
   OriginList *MTEList = getOriginsList(*MTE);
-  // Here we also defer from handling lifetime extended materializations.
-  if (!MTEList || MTE->getStorageDuration() != SD_FullExpression)
+  if (!MTEList)
     return;
   OriginList *SubExprList = getOriginsList(*MTE->getSubExpr());
-  if (MTE->isGLValue()) {
-    assert(!SubExprList ||
-           MTEList->getLength() == SubExprList->getLength() + 1 &&
-               "MTE top level origin should contain a loan to the MTE itself");
-    MTEList = getRValueOrigins(MTE, MTEList);
-    if (getChildBinding(MTE)) {
-      // Issue a loan to MTE for the storage location represented by MTE.
-      const Loan *L = createLoan(FactMgr, MTE);
-      OriginList *List = getOriginsList(*MTE);
-      CurrentBlockFacts.push_back(
-          FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
-    }
-    flow(MTEList, SubExprList, /*Kill=*/true);
-  } else {
-    // A temporary object's origin is the same as the origin of the
-    // expression that initializes it.
-    killAndFlowOrigin(*MTE, *MTE->getSubExpr());
+  assert(!SubExprList ||
+         MTEList->getLength() == SubExprList->getLength() + 1 &&
+             "MTE top level origin should contain a loan to the MTE itself");
+  MTEList = getRValueOrigins(MTE, MTEList);
+  if (getChildBinding(MTE)) {
+    // Issue a loan to MTE for the storage location represented by MTE.
+    const Loan *L = createLoan(FactMgr, MTE);
+    OriginList *List = getOriginsList(*MTE);
+    CurrentBlockFacts.push_back(
+        FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
   }
+  flow(MTEList, SubExprList, /*Kill=*/true);
 }
 
 void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
