@@ -32,7 +32,7 @@ struct KnownFPClass {
 
   KnownFPClass(FPClassTest Known = fcAllFlags, std::optional<bool> Sign = {})
       : KnownFPClasses(Known), SignBit(Sign) {}
-  KnownFPClass(const APFloat &C);
+  LLVM_ABI KnownFPClass(const APFloat &C);
 
   bool operator==(KnownFPClass Other) const {
     return KnownFPClasses == Other.KnownFPClasses && SignBit == Other.SignBit;
