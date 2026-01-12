@@ -2524,6 +2524,33 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     }
     break;
 
+  // Generalize SSE/AVX FP to maxnum/minnum.
+  case Intrinsic::x86_sse_max_ps:
+  case Intrinsic::x86_sse2_max_pd:
+  case Intrinsic::x86_avx_max_pd_256:
+  case Intrinsic::x86_avx_max_ps_256:
+  case Intrinsic::x86_avx512_max_pd_512:
+  case Intrinsic::x86_avx512_max_ps_512:
+  case Intrinsic::x86_avx512fp16_max_ph_128:
+  case Intrinsic::x86_avx512fp16_max_ph_256:
+  case Intrinsic::x86_avx512fp16_max_ph_512:
+    if (Value *V = simplifyX86FPMaxMin(II, IC.Builder, Intrinsic::maxnum))
+      return IC.replaceInstUsesWith(II, V);
+    break;
+
+  case Intrinsic::x86_sse_min_ps:
+  case Intrinsic::x86_sse2_min_pd:
+  case Intrinsic::x86_avx_min_pd_256:
+  case Intrinsic::x86_avx_min_ps_256:
+  case Intrinsic::x86_avx512_min_pd_512:
+  case Intrinsic::x86_avx512_min_ps_512:
+  case Intrinsic::x86_avx512fp16_min_ph_128:
+  case Intrinsic::x86_avx512fp16_min_ph_256:
+  case Intrinsic::x86_avx512fp16_min_ph_512:
+    if (Value *V = simplifyX86FPMaxMin(II, IC.Builder, Intrinsic::minnum))
+      return IC.replaceInstUsesWith(II, V);
+    break;
+
   // Constant fold ashr( <A x Bi>, Ci ).
   // Constant fold lshr( <A x Bi>, Ci ).
   // Constant fold shl( <A x Bi>, Ci ).
@@ -3340,32 +3367,6 @@ std::optional<Value *> X86TTIImpl::simplifyDemandedVectorEltsIntrinsic(
     UndefElts &= UndefElts2;
     break;
   }
-
-  // Generalize SSE/AVX FP to maxnum/minnum.
-  case Intrinsic::x86_sse_max_ps:
-  case Intrinsic::x86_sse2_max_pd:
-  case Intrinsic::x86_avx_max_pd_256:
-  case Intrinsic::x86_avx_max_ps_256:
-  case Intrinsic::x86_avx512_max_pd_512:
-  case Intrinsic::x86_avx512_max_ps_512:
-  case Intrinsic::x86_avx512fp16_max_ph_128:
-  case Intrinsic::x86_avx512fp16_max_ph_256:
-  case Intrinsic::x86_avx512fp16_max_ph_512:
-    if (Value *V = simplifyX86FPMaxMin(II, IC.Builder, Intrinsic::maxnum))
-      return IC.replaceInstUsesWith(II, V);
-    break;
-  case Intrinsic::x86_sse_min_ps:
-  case Intrinsic::x86_sse2_min_pd:
-  case Intrinsic::x86_avx_min_pd_256:
-  case Intrinsic::x86_avx_min_ps_256:
-  case Intrinsic::x86_avx512_min_pd_512:
-  case Intrinsic::x86_avx512_min_ps_512:
-  case Intrinsic::x86_avx512fp16_min_ph_128:
-  case Intrinsic::x86_avx512fp16_min_ph_256:
-  case Intrinsic::x86_avx512fp16_min_ph_512:
-    if (Value *V = simplifyX86FPMaxMin(II, IC.Builder, Intrinsic::minnum))
-      return IC.replaceInstUsesWith(II, V);
-    break;
 
   // General per-element vector operations.
   case Intrinsic::x86_avx2_psllv_d:
