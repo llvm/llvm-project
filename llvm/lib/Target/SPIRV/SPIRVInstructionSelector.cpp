@@ -4797,7 +4797,8 @@ bool SPIRVInstructionSelector::selectGlobalValue(
   // express the concept.
   if (GlobalVar->isExternallyInitialized() &&
       STI.getTargetTriple().getVendor() == Triple::AMD) {
-    buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::HostAccessINTEL, {3u});
+    constexpr unsigned ReadWriteINTEL = 3u;
+    buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::HostAccessINTEL, {ReadWriteINTEL});
     MachineInstrBuilder MIB(*MF, --MIRBuilder.getInsertPt());
     addStringImm(GV->getName(), MIB);
   }
