@@ -43,13 +43,15 @@ class CoverageMappingWriter {
   ArrayRef<unsigned> VirtualFileMapping;
   ArrayRef<CounterExpression> Expressions;
   MutableArrayRef<CounterMappingRegion> MappingRegions;
+  bool KeepMappingOrder;
 
 public:
   CoverageMappingWriter(ArrayRef<unsigned> VirtualFileMapping,
                         ArrayRef<CounterExpression> Expressions,
-                        MutableArrayRef<CounterMappingRegion> MappingRegions)
+                        MutableArrayRef<CounterMappingRegion> MappingRegions,
+                        bool KeepMappingOrder = false)
       : VirtualFileMapping(VirtualFileMapping), Expressions(Expressions),
-        MappingRegions(MappingRegions) {}
+        MappingRegions(MappingRegions), KeepMappingOrder(KeepMappingOrder) {}
 
   /// Write encoded coverage mapping data to the given output stream.
   LLVM_ABI void write(raw_ostream &OS);
