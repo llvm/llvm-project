@@ -3548,6 +3548,11 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
         // NB: We don't do usub_sat here as in any case we can prove its
         // non-zero, we will fold it to `sub nuw` in InstCombine.
       case Intrinsic::ssub_sat:
+        // For most types, if x != y then ssub.sat x, y != 0.  But
+        // ssub.sat.i1 0, -1 = 0, because 1 saturates to 0.  This means
+        // isNonZeroSub will do the wrong thing for ssub.sat.i1.
+        if (BitWidth == 1)
+          return false;
         return isNonZeroSub(DemandedElts, Q, BitWidth, II->getArgOperand(0),
                             II->getArgOperand(1), Depth);
       case Intrinsic::sadd_sat:
