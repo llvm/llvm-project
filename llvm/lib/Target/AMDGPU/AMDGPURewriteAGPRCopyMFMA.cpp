@@ -437,9 +437,9 @@ unsigned
 AMDGPURewriteAGPRCopyMFMAImpl::getSubRegFromReload(MachineInstr &MI,
                                                    Register Reg) const {
   unsigned NumRegs = TRI.getRegSizeInBits(*MRI.getRegClass(Reg)) / 32;
-  unsigned SubReg = 0;
+  unsigned SubReg = AMDGPU::NoSubRegister;
   // SubReg accesses for the tuple registers are of interest here.
-  // Note: We don't support 16-bit subreg reloads. If that assuption is
+  // Note: We don't support 16-bit subreg reloads. If that assumption is
   // changed in the future, this function should be revised.
   if (NumRegs == 1)
     return SubReg;
