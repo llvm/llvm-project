@@ -396,7 +396,7 @@ function(add_mlir_python_modules name)
   # Collect up all the transitive extension targets.
   _flatten_mlir_python_targets(_flat_targets ${ARG_DECLARED_SOURCES})
 
-  # Modules with only pure extensions shouldn't build libnanobind.
+  # Modules with only pure python extensions shouldn't build libnanobind.
   set(_needs_build_nanobind_lib OFF)
   foreach(sources_target ${_flat_targets})
     get_target_property(_source_type ${sources_target} mlir_python_SOURCES_TYPE)
