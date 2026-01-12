@@ -121,6 +121,11 @@ enum NodeType {
   /// function calling this intrinsic.
   SPONENTRY,
 
+  /// STACKADDRESS - Represents the llvm.stackaddress intrinsic. Takes no
+  /// argument and returns the starting address of the stack region that may be
+  /// used by called functions.
+  STACKADDRESS,
+
   /// LOCAL_RECOVER - Represents the llvm.localrecover intrinsic.
   /// Materializes the offset from the local object pointer of another
   /// function to a particular local object passed to llvm.localescape. The

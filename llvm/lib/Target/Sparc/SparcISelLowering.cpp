@@ -1922,6 +1922,7 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::STACKSAVE         , MVT::Other, Expand);
   setOperationAction(ISD::STACKRESTORE      , MVT::Other, Expand);
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i32  , Custom);
+  setOperationAction(ISD::STACKADDRESS, MVT::Other, Custom);
 
   setStackPointerRegisterToSaveRestore(SP::O6);
 
@@ -2754,6 +2755,28 @@ static SDValue LowerVAARG(SDValue Op, SelectionDAG &DAG) {
       Align(std::min(PtrVT.getFixedSizeInBits(), VT.getFixedSizeInBits()) / 8));
 }
 
+static SDValue LowerSTACKADDRESS(SDValue Op, SelectionDAG &DAG,
+                                 const SparcSubtarget &Subtarget) {
+  SDValue Chain = Op.getOperand(0);
+  EVT VT = Op->getValueType(0);
+  SDLoc DL(Op);
+
+  MCRegister SPReg = SP::O6;
+  SDValue SP = DAG.getCopyFromReg(Chain, DL, SPReg, VT);
+
+  // Unbias the stack pointer register.
+  unsigned OffsetToStackStart = Subtarget.getStackPointerBias();
+  // Move past the register save area: 8 in registers + 8 local registers.
+  OffsetToStackStart += 16 * (Subtarget.is64Bit() ? 8 : 4);
+  // Move past the struct return address slot (4 bytes) on SPARC 32-bit.
+  if (!Subtarget.is64Bit())
+    OffsetToStackStart += 4;
+
+  SDValue StackAddr = DAG.getNode(ISD::ADD, DL, VT, SP,
+                                  DAG.getConstant(OffsetToStackStart, DL, VT));
+  return DAG.getMergeValues({StackAddr, Chain}, DL);
+}
+
 static SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG,
                                        const SparcSubtarget *Subtarget) {
   SDValue Chain = Op.getOperand(0);
@@ -3151,6 +3174,8 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::VAARG:              return LowerVAARG(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC: return LowerDYNAMIC_STACKALLOC(Op, DAG,
                                                                Subtarget);
+  case ISD::STACKADDRESS:
+    return LowerSTACKADDRESS(Op, DAG, *Subtarget);
 
   case ISD::LOAD:               return LowerLOAD(Op, DAG);
   case ISD::STORE:              return LowerSTORE(Op, DAG);

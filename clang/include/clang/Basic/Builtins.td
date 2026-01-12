@@ -923,6 +923,12 @@ def FrameAddress : Builtin {
   let Prototype = "void*(_Constant unsigned int)";
 }
 
+def StackAddress : Builtin {
+  let Spellings = ["__builtin_stack_address"];
+  let Attributes = [NoThrow];
+  let Prototype = "void*()";
+}
+
 def ClearCache : Builtin {
   let Spellings = ["__builtin___clear_cache"];
   let Attributes = [NoThrow];
