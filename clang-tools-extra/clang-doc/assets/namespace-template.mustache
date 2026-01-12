@@ -113,6 +113,22 @@
                         </details>
                     </li>
                     {{/HasTypedefs}}
+                    {{#HasVariables}}
+                    <li>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#Variables">Variables</a>
+                            </summary>
+                            <ul>
+                                {{#Variables}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                                </li>
+                                {{/Variables}}
+                            </ul>
+                        </details>
+                    </li>
+                    {{/HasVariables}}
                 </ul>
             </div>
             <div class="resizer" id="resizer"></div>
@@ -193,6 +209,21 @@
                     {{/Typedefs}}
                 </section>
                 {{/HasTypedefs}}
+                {{#HasVariables}}
+                <section id="Variables" class="section-container">
+                    <h2>Variables</h2>
+                    <div>
+                        {{#Variables}}
+                        <div id="{{USR}}" class="delimiter-container">
+                            <pre><code class="language-cpp code-clang-doc" >{{#IsStatic}}static {{/IsStatic}}{{Type.QualName}} {{Name}}</code></pre>
+                            {{#Location}}
+                            <p>Defined at line {{LineNumber}} of file {{^FileURL}}{{Filename}}{{/FileURL}}{{#FileURL}}<a href="{{FileURL}}">{{Filename}}</a>{{/FileURL}}</p>
+                            {{/Location}}
+                        </div>
+                        {{/Variables}}
+                    </div>
+                </section>
+                {{/HasVariables}}
             </div>
         </div>
     </main>

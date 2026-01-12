@@ -451,6 +451,42 @@ declare i8 @llvm.usub.sat.i8(i8, i8)
 declare i8 @llvm.ssub.sat.i8(i8, i8)
 declare <2 x i8> @llvm.usub.sat.v2i8(<2 x i8>, <2 x i8>)
 declare <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8>, <2 x i8>)
+declare i1 @llvm.ssub.sat.i1(i1, i1)
+
+define i1 @test_ssub_sat_i1_cmp_ule_zero(i1 %a) {
+; CHECK-LABEL: @test_ssub_sat_i1_cmp_ule_zero(
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[A:%.*]], true
+; CHECK-NEXT:    [[SAT:%.*]] = call i1 @llvm.ssub.sat.i1(i1 [[A]], i1 [[CMP]])
+; CHECK-NEXT:    [[RES:%.*]] = xor i1 [[SAT]], true
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %cmp = icmp ule i1 %a, false
+  %sat = call i1 @llvm.ssub.sat.i1(i1 %a, i1 %cmp)
+  %res = icmp ule i1 %sat, false
+  ret i1 %res
+}
+
+define i1 @test_ssub_sat_i1_cmp_eq_zero(i1 %a, i1 %b) {
+; CHECK-LABEL: @test_ssub_sat_i1_cmp_eq_zero(
+; CHECK-NEXT:    [[SAT:%.*]] = call i1 @llvm.ssub.sat.i1(i1 [[A:%.*]], i1 [[B:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = xor i1 [[SAT]], true
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %sat = call i1 @llvm.ssub.sat.i1(i1 %a, i1 %b)
+  %res = icmp eq i1 %sat, false
+  ret i1 %res
+}
+
+define i1 @test_ssub_sat_i1_cmp_sgt_allones(i1 %a, i1 %b) {
+; CHECK-LABEL: @test_ssub_sat_i1_cmp_sgt_allones(
+; CHECK-NEXT:    [[SAT:%.*]] = call i1 @llvm.ssub.sat.i1(i1 [[A:%.*]], i1 [[B:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = xor i1 [[SAT]], true
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %sat = call i1 @llvm.ssub.sat.i1(i1 %a, i1 %b)
+  %res = icmp sgt i1 %sat, true
+  ret i1 %res
+}
 
 ; Cannot canonicalize usub to uadd.
 define i8 @test_scalar_usub_canonical(i8 %a) {

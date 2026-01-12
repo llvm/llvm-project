@@ -1,4 +1,5 @@
 header: link.h
+header_template: link.h.def
 standards:
   - svid
 macros:
