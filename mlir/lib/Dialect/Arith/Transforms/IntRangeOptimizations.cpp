@@ -482,12 +482,14 @@ struct NarrowLoopBounds final : OpInterfaceRewritePattern<LoopLikeOpInterface> {
   NarrowLoopBounds(MLIRContext *context, DataFlowSolver &s,
                    ArrayRef<unsigned> target)
       : OpInterfaceRewritePattern<LoopLikeOpInterface>(context), solver(s),
-        targetBitwidths(target) {}
+        targetBitwidths(target),
+        boundsNarrowingFailedAttr(
+            StringAttr::get(context, "arith.bounds_narrowing_failed")) {}
 
   LogicalResult matchAndRewrite(LoopLikeOpInterface loopLike,
                                 PatternRewriter &rewriter) const override {
     // Skip ops where bounds narrowing previously failed.
-    if (loopLike->hasAttr("arith.bounds_narrowing_failed"))
+    if (loopLike->hasAttr(boundsNarrowingFailedAttr))
       return failure();
 
     auto inductionVars = loopLike.getLoopInductionVars();
@@ -624,8 +626,7 @@ struct NarrowLoopBounds final : OpInterfaceRewritePattern<LoopLikeOpInterface> {
           failed(loopLike.setLoopSteps(newSteps))) {
         // Mark op to prevent future attempts. IR was modified (attribute
         // added), so we must return success() from the pattern.
-        loopLike->setAttr("arith.bounds_narrowing_failed",
-                          rewriter.getUnitAttr());
+        loopLike->setAttr(boundsNarrowingFailedAttr, rewriter.getUnitAttr());
         updateFailed = true;
         return;
       }
@@ -667,6 +668,7 @@ struct NarrowLoopBounds final : OpInterfaceRewritePattern<LoopLikeOpInterface> {
 private:
   DataFlowSolver &solver;
   SmallVector<unsigned, 4> targetBitwidths;
+  StringAttr boundsNarrowingFailedAttr;
 };
 
 struct IntRangeOptimizationsPass final
