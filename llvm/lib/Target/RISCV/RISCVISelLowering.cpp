@@ -356,10 +356,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::ADD, ISD::SUB, ISD::SHL, ISD::SRA, ISD::SRL},
                        MVT::i32, Custom);
     setOperationAction({ISD::UADDO, ISD::USUBO}, MVT::i32, Custom);
-    if (!Subtarget.hasStdExtZbb())
-      setOperationAction(
-          {ISD::SADDSAT, ISD::SSUBSAT, ISD::UADDSAT, ISD::USUBSAT}, MVT::i32,
-          Custom);
     setOperationAction({ISD::SADDO, ISD::SSUBO}, MVT::i32, Custom);
   }
   if (!Subtarget.hasStdExtZmmul()) {
@@ -471,11 +467,18 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (!Subtarget.useMIPSCCMovInsn() && !Subtarget.hasVendorXTHeadCondMov())
     setOperationAction(ISD::SELECT, XLenVT, Custom);
 
+  if ((Subtarget.hasStdExtP() || Subtarget.hasVendorXqcia()) &&
+      !Subtarget.is64Bit()) {
+    // FIXME: Support i32 on RV64+P by inserting into a v2i32 vector, doing
+    // the vector operation and extracting.
+    setOperationAction({ISD::SADDSAT, ISD::SSUBSAT, ISD::UADDSAT, ISD::USUBSAT},
+                       MVT::i32, Legal);
+  } else if (!Subtarget.hasStdExtZbb() && Subtarget.is64Bit()) {
+    setOperationAction({ISD::SADDSAT, ISD::SSUBSAT, ISD::UADDSAT, ISD::USUBSAT},
+                       MVT::i32, Custom);
+  }
+
   if (Subtarget.hasVendorXqcia() && !Subtarget.is64Bit()) {
-    setOperationAction(ISD::UADDSAT, MVT::i32, Legal);
-    setOperationAction(ISD::SADDSAT, MVT::i32, Legal);
-    setOperationAction(ISD::USUBSAT, MVT::i32, Legal);
-    setOperationAction(ISD::SSUBSAT, MVT::i32, Legal);
     setOperationAction(ISD::USHLSAT, MVT::i32, Legal);
   }
 
@@ -523,16 +526,18 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine(ISD::TRUNCATE);
     setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
     setTruncStoreAction(MVT::v4i16, MVT::v4i8, Expand);
-    SmallVector<MVT, 2> VTs;
+    static const MVT RV32VTs[] = {MVT::v2i16, MVT::v4i8};
+    static const MVT RV64VTs[] = {MVT::v2i32, MVT::v4i16, MVT::v8i8};
+    ArrayRef<MVT> VTs;
     if (Subtarget.is64Bit()) {
-      VTs.append({MVT::v2i32, MVT::v4i16, MVT::v8i8});
+      VTs = RV64VTs;
       setTruncStoreAction(MVT::v2i64, MVT::v2i32, Expand);
       setTruncStoreAction(MVT::v4i32, MVT::v4i16, Expand);
       setTruncStoreAction(MVT::v8i16, MVT::v8i8, Expand);
       setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
       setTruncStoreAction(MVT::v4i16, MVT::v4i8, Expand);
     } else {
-      VTs.append({MVT::v2i16, MVT::v4i8});
+      VTs = RV32VTs;
       setOperationAction(ISD::BUILD_VECTOR, MVT::v4i8, Custom);
     }
     setOperationAction(ISD::UADDSAT, VTs, Legal);
@@ -549,6 +554,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::SDIV, ISD::UDIV, ISD::SREM, ISD::UREM,
                         ISD::SDIVREM, ISD::UDIVREM},
                        VTs, Expand);
+    setOperationAction(ISD::SETCC, VTs, Legal);
+    setCondCodeAction({ISD::SETNE, ISD::SETGT, ISD::SETGE, ISD::SETUGT,
+                       ISD::SETUGE, ISD::SETULE, ISD::SETLE},
+                      VTs, Expand);
+    // P extension vector comparisons produce all 1s for true, all 0s for false
+    setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
   }
 
   if (Subtarget.hasStdExtZfbfmin()) {
@@ -15328,14 +15339,18 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
   }
   case RISCVISD::PASUB:
   case RISCVISD::PASUBU:
-  case RISCVISD::PMULHSU: {
+  case RISCVISD::PMULHSU:
+  case RISCVISD::PMULHR:
+  case RISCVISD::PMULHRU:
+  case RISCVISD::PMULHRSU: {
     MVT VT = N->getSimpleValueType(0);
     SDValue Op0 = N->getOperand(0);
     SDValue Op1 = N->getOperand(1);
     unsigned Opcode = N->getOpcode();
-    // PMULHSU doesn't support i8 variants
-    assert(VT == MVT::v2i16 ||
-           (Opcode != RISCVISD::PMULHSU && VT == MVT::v4i8));
+    // PMULH* variants don't support i8
+    bool IsMulH = Opcode == RISCVISD::PMULHSU || Opcode == RISCVISD::PMULHR ||
+                  Opcode == RISCVISD::PMULHRU || Opcode == RISCVISD::PMULHRSU;
+    assert(VT == MVT::v2i16 || (!IsMulH && VT == MVT::v4i8));
     MVT NewVT = MVT::v4i16;
     if (VT == MVT::v4i8)
       NewVT = MVT::v8i8;
@@ -15416,8 +15431,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     }
     case Intrinsic::experimental_cttz_elts: {
       SDValue Res = lowerCttzElts(N, DAG, Subtarget);
-      Results.push_back(
-          DAG.getNode(ISD::TRUNCATE, DL, N->getValueType(0), Res));
+      Results.push_back(DAG.getZExtOrTrunc(Res, DL, N->getValueType(0)));
       return;
     }
     case Intrinsic::riscv_orc_b:
@@ -16455,6 +16469,7 @@ static SDValue combineTruncSelectToSMaxUSat(SDNode *N, SelectionDAG &DAG) {
 // Handle P extension truncate patterns:
 // PASUB/PASUBU: (trunc (srl (sub ([s|z]ext a), ([s|z]ext b)), 1))
 // PMULHSU: (trunc (srl (mul (sext a), (zext b)), EltBits))
+// PMULHR*: (trunc (srl (add (mul (sext a), (zext b)), round_const), EltBits))
 static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
                                    const RISCVSubtarget &Subtarget) {
   SDValue N0 = N->getOperand(0);
@@ -16484,6 +16499,24 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
 
   SDValue Op = N0.getOperand(0);
   unsigned ShAmtVal = C->getZExtValue();
+  unsigned EltBits = VecVT.getScalarSizeInBits();
+
+  // Check for rounding pattern: (add (mul ...), round_const)
+  bool IsRounding = false;
+  if (Op.getOpcode() == ISD::ADD && (EltBits == 16 || EltBits == 32)) {
+    SDValue AddRHS = Op.getOperand(1);
+    if (auto *RndBV = dyn_cast<BuildVectorSDNode>(AddRHS.getNode())) {
+      if (auto *RndC =
+              dyn_cast_or_null<ConstantSDNode>(RndBV->getSplatValue())) {
+        uint64_t ExpectedRnd = 1ULL << (EltBits - 1);
+        if (RndC->getZExtValue() == ExpectedRnd &&
+            Op.getOperand(0).getOpcode() == ISD::MUL) {
+          Op = Op.getOperand(0);
+          IsRounding = true;
+        }
+      }
+    }
+  }
 
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
@@ -16518,17 +16551,31 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
       return SDValue();
     break;
   case ISD::MUL:
-    // PMULHSU: shift amount must be element size, only for i16/i32
-    unsigned EltBits = VecVT.getScalarSizeInBits();
+    // PMULH*/PMULHR*: shift amount must be element size, only for i16/i32
     if (ShAmtVal != EltBits || (EltBits != 16 && EltBits != 32))
       return SDValue();
-    if ((LHSIsSExt && RHSIsZExt) || (LHSIsZExt && RHSIsSExt)) {
-      Opc = RISCVISD::PMULHSU;
-      // commuted case
-      if (LHSIsZExt && RHSIsSExt)
-        std::swap(A, B);
-    } else
-      return SDValue();
+    if (IsRounding) {
+      if (LHSIsSExt && RHSIsSExt) {
+        Opc = RISCVISD::PMULHR;
+      } else if (LHSIsZExt && RHSIsZExt) {
+        Opc = RISCVISD::PMULHRU;
+      } else if ((LHSIsSExt && RHSIsZExt) || (LHSIsZExt && RHSIsSExt)) {
+        Opc = RISCVISD::PMULHRSU;
+        // commuted case
+        if (LHSIsZExt && RHSIsSExt)
+          std::swap(A, B);
+      } else {
+        return SDValue();
+      }
+    } else {
+      if ((LHSIsSExt && RHSIsZExt) || (LHSIsZExt && RHSIsSExt)) {
+        Opc = RISCVISD::PMULHSU;
+        // commuted case
+        if (LHSIsZExt && RHSIsSExt)
+          std::swap(A, B);
+      } else
+        return SDValue();
+    }
     break;
   }
 
@@ -25365,7 +25412,7 @@ bool RISCVTargetLowering::isMulAddWithConstProfitable(SDValue AddNode,
 bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(
     EVT VT, unsigned AddrSpace, Align Alignment, MachineMemOperand::Flags Flags,
     unsigned *Fast) const {
-  if (!VT.isVector()) {
+  if (!VT.isVector() || Subtarget.enablePExtSIMDCodeGen()) {
     if (Fast)
       *Fast = Subtarget.enableUnalignedScalarMem();
     return Subtarget.enableUnalignedScalarMem();

@@ -199,9 +199,11 @@ let SchedRW = [WriteIntMul] in {
 
 let SchedRW = [WriteDoubleAdd] in {
 let FPDPRounding = 1 in {
+let IsDPMACCInstruction = 1 in
 defm V_FMA_F64 : VOP3Inst <"v_fma_f64", VOP_F64_F64_F64_F64_DPP_PROF, any_fma>, VOPD_Component<0x20, "v_fma_f64">;
 let SubtargetPredicate = isNotGFX12Plus in {
 defm V_ADD_F64 : VOP3Inst <"v_add_f64", VOP3_Profile<VOP_F64_F64_F64>, any_fadd>;
+let IsDPMACCInstruction = 1 in
 defm V_MUL_F64 : VOP3Inst <"v_mul_f64", VOP3_Profile<VOP_F64_F64_F64>, any_fmul>;
 } // End SubtargetPredicate = isNotGFX12Plus
 } // End FPDPRounding = 1
@@ -224,10 +226,10 @@ defm V_MAXIMUM_F32 : VOP3Inst <"v_maximum_f32", VOP3_Profile<VOP_F32_F32_F32>, f
 defm V_MINIMUM_F16 : VOP3Inst_t16 <"v_minimum_f16", VOP_F16_F16_F16, fminimum>;
 defm V_MAXIMUM_F16 : VOP3Inst_t16 <"v_maximum_f16", VOP_F16_F16_F16, fmaximum>;
 
-let SchedRW = [WriteDoubleAdd] in {
+let SchedRW = [WriteDoubleAdd], IsDPMACCInstruction = 1 in {
 defm V_MINIMUM_F64 : VOP3Inst <"v_minimum_f64", VOP3_Profile<VOP_F64_F64_F64>, fminimum>;
 defm V_MAXIMUM_F64 : VOP3Inst <"v_maximum_f64", VOP3_Profile<VOP_F64_F64_F64>, fmaximum>;
-} // End SchedRW = [WriteDoubleAdd]
+} // End SchedRW = [WriteDoubleAdd], IsDPMACCInstruction = 1
 } // End SubtargetPredicate = HasIEEEMinimumMaximumInsts, ReadsModeReg = 0, AddedComplexity = 1
 
 let SubtargetPredicate = isGFX1250Plus, SchedRW = [WriteDoubleAdd] in {
@@ -252,7 +254,7 @@ defm V_DIV_FMAS_F32 : VOP3Inst_Pseudo_Wrapper <"v_div_fmas_f32", VOP_F32_F32_F32
 //   if (vcc)
 //     result *= 2^64
 //
-let SchedRW = [WriteDouble], FPDPRounding = 1 in
+let SchedRW = [WriteDouble], FPDPRounding = 1, IsDPMACCInstruction = 1 in
 defm V_DIV_FMAS_F64 : VOP3Inst <"v_div_fmas_f64", VOP_F64_F64_F64_F64_VCC>;
 } // End Uses = [MODE, VCC, EXEC]
 
@@ -317,10 +319,10 @@ defm V_CVT_PK_U8_F32 : VOP3Inst<"v_cvt_pk_u8_f32", VOP3_Profile<VOP_I32_F32_I32_
 
 defm V_DIV_FIXUP_F32 : VOP3Inst <"v_div_fixup_f32", DIV_FIXUP_F32_PROF, AMDGPUdiv_fixup>;
 
-let SchedRW = [WriteDoubleAdd], FPDPRounding = 1 in {
+let SchedRW = [WriteDoubleAdd], FPDPRounding = 1, IsDPMACCInstruction = 1 in {
   defm V_DIV_FIXUP_F64 : VOP3Inst <"v_div_fixup_f64", VOP_F64_F64_F64_F64_DPP_PROF, AMDGPUdiv_fixup>;
   defm V_LDEXP_F64 : VOP3Inst <"v_ldexp_f64", VOP3_Profile<VOP_F64_F64_I32>, any_fldexp>;
-} // End SchedRW = [WriteDoubleAdd], FPDPRounding = 1
+} // End SchedRW = [WriteDoubleAdd], FPDPRounding = 1, IsDPMACCInstruction = 1
 } // End isReMaterializable = 1
 
 let SubtargetPredicate = isGFX9GFX10 in
@@ -358,7 +360,7 @@ let mayRaiseFPException = 0 in { // Seems suspicious but manual doesn't say it d
   defm V_DIV_SCALE_F32 : VOP3Inst_Pseudo_Wrapper <"v_div_scale_f32", VOP3b_F32_I1_F32_F32_F32> ;
 
   // Double precision division pre-scale.
-  let SchedRW = [WriteDouble, WriteSALU], FPDPRounding = 1 in
+  let SchedRW = [WriteDouble, WriteSALU], FPDPRounding = 1, IsDPMACCInstruction = 1 in
   defm V_DIV_SCALE_F64 : VOP3Inst <"v_div_scale_f64", VOP3b_F64_I1_F64_F64_F64>;
 } // End mayRaiseFPException = 0
 
@@ -371,12 +373,12 @@ defm V_MQSAD_PK_U16_U8 : VOP3Inst <"v_mqsad_pk_u16_u8", VOP3_Profile<VOP_I64_I64
 
 
 let isReMaterializable = 1 in {
-let SchedRW = [WriteDouble] in {
+let SchedRW = [WriteDouble], IsDPMACCInstruction = 1 in {
 defm V_TRIG_PREOP_F64 : VOP3Inst <"v_trig_preop_f64", VOP3_Profile<VOP_F64_F64_I32>, int_amdgcn_trig_preop>;
-} // End SchedRW = [WriteDouble]
+} // End SchedRW = [WriteDouble], IsDPMACCInstruction = 1
 
 let SchedRW = [Write64Bit] in {
-  let SubtargetPredicate = isGFX6GFX7 in {
+  let SubtargetPredicate = isGFX6GFX7, IsDPMACCInstruction = 1 in {
   defm V_LSHL_B64 : VOP3Inst <"v_lshl_b64", VOP3_Profile<VOP_I64_I64_I32>, cshl_64>;
   defm V_LSHR_B64 : VOP3Inst <"v_lshr_b64", VOP3_Profile<VOP_I64_I64_I32>, csrl_64>;
   defm V_ASHR_I64 : VOP3Inst <"v_ashr_i64", VOP3_Profile<VOP_I64_I64_I32>, csra_64>;

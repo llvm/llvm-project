@@ -488,6 +488,7 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.MCOptions.EmitDwarfUnwind = CodeGenOpts.getEmitDwarfUnwind();
   Options.MCOptions.EmitCompactUnwindNonCanonical =
       CodeGenOpts.EmitCompactUnwindNonCanonical;
+  Options.MCOptions.EmitSFrameUnwind = CodeGenOpts.EmitSFrameUnwind;
   Options.MCOptions.MCRelaxAll = CodeGenOpts.RelaxAll;
   Options.MCOptions.MCSaveTempLabels = CodeGenOpts.SaveTempLabels;
   Options.MCOptions.MCUseDwarfDirectory =

@@ -6229,6 +6229,19 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return DAG.getNode(AArch64ISD::PREFETCH, DL, MVT::Other, Chain,
                        DAG.getTargetConstant(PrfOp, DL, MVT::i32), Addr);
   }
+  case Intrinsic::aarch64_range_prefetch: {
+    SDValue Chain = Op.getOperand(0);
+    SDValue Addr = Op.getOperand(2);
+
+    unsigned IsWrite = Op.getConstantOperandVal(3);
+    unsigned IsStream = Op.getConstantOperandVal(4);
+    unsigned PrfOp = (IsStream << 2) | IsWrite;
+
+    SDValue Metadata = Op.getOperand(5);
+    return DAG.getNode(AArch64ISD::RANGE_PREFETCH, DL, MVT::Other, Chain,
+                       DAG.getTargetConstant(PrfOp, DL, MVT::i32), Addr,
+                       Metadata);
+  }
   case Intrinsic::aarch64_sme_str:
   case Intrinsic::aarch64_sme_ldr: {
     return LowerSMELdrStr(Op, DAG, IntNo == Intrinsic::aarch64_sme_ldr);
@@ -16035,39 +16048,6 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     }
   }
 
-  // 128-bit NEON vectors: writing to the 64-bit low half with
-  // DUP/SCALAR_TO_VECTOR already zeroes the other 64 bits, so if the low half
-  // is a splat and the upper half is zero/undef we can materialise just that
-  // low half.
-  if (VT.isFixedLengthVector() && VT.getSizeInBits() == 128) {
-    EVT LaneVT = VT.getVectorElementType();
-    const unsigned HalfElts = NumElts >> 1;
-    SDValue FirstVal = Op.getOperand(0);
-
-    auto IsZero = [&](SDValue V) {
-      return isNullConstant(V) || isNullFPConstant(V);
-    };
-
-    if (llvm::all_of(llvm::seq<unsigned>(0, NumElts), [&](unsigned I) {
-          SDValue Vi = Op.getOperand(I);
-          return I < HalfElts ? (Vi == FirstVal) : IsZero(Vi);
-        })) {
-      EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
-
-      SDValue HiZero = LaneVT.isInteger() ? DAG.getConstant(0, DL, HalfVT)
-                                          : DAG.getConstantFP(0.0, DL, HalfVT);
-
-      SDValue LoHalf =
-          LaneVT.getSizeInBits() == 64
-              // 64-bit lanes lower to an FMOV via SCALAR_TO_VECTOR.
-              ? DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, HalfVT, FirstVal)
-              // Smaller lanes need DUP to splat the whole low half.
-              : DAG.getNode(AArch64ISD::DUP, DL, HalfVT, FirstVal);
-
-      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, LoHalf, HiZero);
-    }
-  }
-
   // Use DUP for non-constant splats. For f32 constant splats, reduce to
   // i32 and try again.
   if (usesOnlyOneValue) {
@@ -20564,7 +20544,7 @@ static SDValue performANDORCSELCombine(SDNode *N, SelectionDAG &DAG) {
   SDValue CCmp, Condition;
   unsigned NZCV;
 
-  if (N->getOpcode() == ISD::AND) {
+  if (N->getOpcode() == ISD::AND || N->getOpcode() == AArch64ISD::ANDS) {
     AArch64CC::CondCode InvCC0 = AArch64CC::getInvertedCondCode(CC0);
     Condition = getCondCode(DAG, InvCC0);
     NZCV = AArch64CC::getNZCVToSatisfyCondCode(CC1);
@@ -26789,6 +26769,24 @@ static SDValue performFlagSettingCombine(SDNode *N,
   return SDValue();
 }
 
+static SDValue performANDSCombine(SDNode *N,
+                                  TargetLowering::DAGCombinerInfo &DCI) {
+  SelectionDAG &DAG = DCI.DAG;
+  if (SDValue R = performFlagSettingCombine(N, DCI, ISD::AND))
+    return R;
+
+  // If we have no uses of the AND value, use performANDORCSELCombine to try to
+  // convert ANDS(CSET(CMP), CSET(CMP)) into CMP(CSET(CCMP(CMP))). The outer
+  // CMP(CSET should be removed by other combines, folded into the use of the
+  // CMP.
+  if (!N->hasAnyUseOfValue(0))
+    if (SDValue R = performANDORCSELCombine(N, DAG))
+      return DAG.getNode(AArch64ISD::SUBS, SDLoc(N), N->getVTList(), R,
+                         DAG.getConstant(0, SDLoc(N), N->getValueType(0)));
+
+  return SDValue();
+}
+
 static SDValue performSetCCPunpkCombine(SDNode *N, SelectionDAG &DAG) {
   // setcc_merge_zero pred
   //   (sign_extend (extract_subvector (setcc_merge_zero ... pred ...))), 0, ne
@@ -28434,7 +28432,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::TRUNCATE:
     return performTruncateCombine(N, DAG, DCI);
   case AArch64ISD::ANDS:
-    return performFlagSettingCombine(N, DCI, ISD::AND);
+    return performANDSCombine(N, DCI);
   case AArch64ISD::ADC:
     if (auto R = foldOverflowCheck(N, DAG, /* IsAdd */ true))
       return R;

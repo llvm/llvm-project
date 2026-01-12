@@ -7439,10 +7439,13 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, DAG.getNode(ISD::UCMP, sdl, DestVT, Op1, Op2));
     break;
   }
+  case Intrinsic::stackaddress:
   case Intrinsic::stacksave: {
+    unsigned SDOpcode = Intrinsic == Intrinsic::stackaddress ? ISD::STACKADDRESS
+                                                             : ISD::STACKSAVE;
     SDValue Op = getRoot();
     EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
-    Res = DAG.getNode(ISD::STACKSAVE, sdl, DAG.getVTList(VT, MVT::Other), Op);
+    Res = DAG.getNode(SDOpcode, sdl, DAG.getVTList(VT, MVT::Other), Op);
     setValue(&I, Res);
     DAG.setRoot(Res.getValue(1));
     return;
@@ -9432,11 +9435,9 @@ bool SelectionDAGBuilder::visitStrCpyCall(const CallInst &I, bool isStpcpy) {
   const Value *Arg0 = I.getArgOperand(0), *Arg1 = I.getArgOperand(1);
 
   const SelectionDAGTargetInfo &TSI = DAG.getSelectionDAGInfo();
-  std::pair<SDValue, SDValue> Res =
-    TSI.EmitTargetCodeForStrcpy(DAG, getCurSDLoc(), getRoot(),
-                                getValue(Arg0), getValue(Arg1),
-                                MachinePointerInfo(Arg0),
-                                MachinePointerInfo(Arg1), isStpcpy);
+  std::pair<SDValue, SDValue> Res = TSI.EmitTargetCodeForStrcpy(
+      DAG, getCurSDLoc(), getRoot(), getValue(Arg0), getValue(Arg1),
+      MachinePointerInfo(Arg0), MachinePointerInfo(Arg1), isStpcpy, &I);
   if (Res.first.getNode()) {
     setValue(&I, Res.first);
     DAG.setRoot(Res.second);

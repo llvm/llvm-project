@@ -38,11 +38,11 @@ using namespace llvm;
 
 namespace {
 
-class X86LowerTileCopy : public MachineFunctionPass {
+class X86LowerTileCopyLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  X86LowerTileCopy() : MachineFunctionPass(ID) {}
+  X86LowerTileCopyLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
@@ -53,23 +53,23 @@ public:
 
 } // namespace
 
-char X86LowerTileCopy::ID = 0;
+char X86LowerTileCopyLegacy::ID = 0;
 
-INITIALIZE_PASS_BEGIN(X86LowerTileCopy, "lowertilecopy", "Tile Copy Lowering",
+INITIALIZE_PASS_BEGIN(X86LowerTileCopyLegacy, DEBUG_TYPE, "Tile Copy Lowering",
                       false, false)
-INITIALIZE_PASS_END(X86LowerTileCopy, "lowertilecopy", "Tile Copy Lowering",
+INITIALIZE_PASS_END(X86LowerTileCopyLegacy, DEBUG_TYPE, "Tile Copy Lowering",
                     false, false)
 
-void X86LowerTileCopy::getAnalysisUsage(AnalysisUsage &AU) const {
+void X86LowerTileCopyLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-FunctionPass *llvm::createX86LowerTileCopyPass() {
-  return new X86LowerTileCopy();
+FunctionPass *llvm::createX86LowerTileCopyLegacyPass() {
+  return new X86LowerTileCopyLegacy();
 }
 
-bool X86LowerTileCopy::runOnMachineFunction(MachineFunction &MF) {
+static bool lowerTileCopy(MachineFunction &MF) {
   X86MachineFunctionInfo *FuncInfo = MF.getInfo<X86MachineFunctionInfo>();
   if (FuncInfo->getAMXProgModel() != AMXProgModelEnum::ManagedRA)
     return false;
@@ -159,4 +159,16 @@ bool X86LowerTileCopy::runOnMachineFunction(MachineFunction &MF) {
     }
   }
   return Changed;
+}
+
+bool X86LowerTileCopyLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return lowerTileCopy(MF);
+}
+
+PreservedAnalyses
+X86LowerTileCopyPass::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
+  return lowerTileCopy(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                 .preserveSet<CFGAnalyses>()
+                           : PreservedAnalyses::all();
 }
