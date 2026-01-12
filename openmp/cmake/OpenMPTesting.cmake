@@ -49,28 +49,27 @@ function(find_standalone_test_dependencies)
   endif()
 endfunction()
 
-if (${OPENMP_STANDALONE_BUILD})
-  find_standalone_test_dependencies()
-
-  # Set lit arguments.
-  set(DEFAULT_LIT_ARGS "-sv --show-unsupported --show-xfail")
-  if (MSVC OR XCODE)
-    set(DEFAULT_LIT_ARGS "${DEFAULT_LIT_ARGS} --no-progress-bar")
-  endif()
-  if ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
-    set(DEFAULT_LIT_ARGS "${DEFAULT_LIT_ARGS} --time-tests --timeout=3000")
-  endif()
-  set(OPENMP_LIT_ARGS "${DEFAULT_LIT_ARGS}" CACHE STRING "Options for lit.")
-  separate_arguments(OPENMP_LIT_ARGS)
+if(TARGET FileCheck)
+  set(OPENMP_FILECHECK_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/FileCheck)
+  set(OPENMP_NOT_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/not)
 else()
-  if (NOT TARGET "FileCheck")
+  find_standalone_test_dependencies()
+  if(OPENMP_FILECHECK_EXECUTABLE)
+    # Set lit arguments.
+    set(DEFAULT_LIT_ARGS "-sv --show-unsupported --show-xfail")
+    if (MSVC OR XCODE)
+      set(DEFAULT_LIT_ARGS "${DEFAULT_LIT_ARGS} --no-progress-bar")
+    endif()
+    if ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
+      set(DEFAULT_LIT_ARGS "${DEFAULT_LIT_ARGS} --time-tests --timeout=3000")
+    endif()
+    set(OPENMP_LIT_ARGS "${DEFAULT_LIT_ARGS}" CACHE STRING "Options for lit.")
+    separate_arguments(OPENMP_LIT_ARGS)
+  else()
     message(STATUS "Cannot find 'FileCheck'.")
     message(WARNING "The check targets will not be available!")
     set(ENABLE_CHECK_TARGETS FALSE)
-  else()
-    set(OPENMP_FILECHECK_EXECUTABLE ${LLVM_TOOLS_BINARY_DIR}/FileCheck)
   endif()
-  set(OPENMP_NOT_EXECUTABLE ${LLVM_TOOLS_BINARY_DIR}/not)
 endif()
 
 # Macro to extract information about compiler from file. (no own scope)
@@ -118,50 +117,28 @@ function(set_test_compiler_information dir)
   endif()
 endfunction()
 
-if (${OPENMP_STANDALONE_BUILD})
-  # Detect compiler that should be used for testing.
-  # We cannot use ExternalProject_Add() because its configuration runs when this
-  # project is built which is too late for detecting the compiler...
-  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/DetectTestCompiler)
-  execute_process(
-    COMMAND ${CMAKE_COMMAND} -G${CMAKE_GENERATOR} ${CMAKE_CURRENT_LIST_DIR}/DetectTestCompiler
-      -DCMAKE_C_COMPILER=${OPENMP_TEST_C_COMPILER}
-      -DCMAKE_CXX_COMPILER=${OPENMP_TEST_CXX_COMPILER}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/DetectTestCompiler
-    OUTPUT_VARIABLE DETECT_COMPILER_OUT
-    ERROR_VARIABLE DETECT_COMPILER_ERR
-    RESULT_VARIABLE DETECT_COMPILER_RESULT)
-  if (DETECT_COMPILER_RESULT)
-    message(STATUS "Could not detect test compilers.")
-    message(WARNING "The check targets will not be available!")
-    set(ENABLE_CHECK_TARGETS FALSE)
-  else()
-    set_test_compiler_information(${CMAKE_CURRENT_BINARY_DIR}/DetectTestCompiler)
-  endif()
+# Set the information that we know.
+set(OPENMP_TEST_COMPILER_ID "Clang")
+# Cannot use CLANG_VERSION because we are not guaranteed that this is already set.
+set(OPENMP_TEST_COMPILER_VERSION "${LLVM_VERSION}")
+set(OPENMP_TEST_COMPILER_VERSION_MAJOR "${LLVM_VERSION_MAJOR}")
+set(OPENMP_TEST_COMPILER_VERSION_MAJOR_MINOR "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
+# Unfortunately the top-level cmake/config-ix.cmake file mangles CMake's
+# CMAKE_THREAD_LIBS_INIT variable from the FindThreads package, so work
+# around that, until it is fixed there.
+if("${CMAKE_THREAD_LIBS_INIT}" STREQUAL "-lpthread")
+  set(OPENMP_TEST_COMPILER_THREAD_FLAGS "-pthread")
 else()
-  # Set the information that we know.
-  set(OPENMP_TEST_COMPILER_ID "Clang")
-  # Cannot use CLANG_VERSION because we are not guaranteed that this is already set.
-  set(OPENMP_TEST_COMPILER_VERSION "${LLVM_VERSION}")
-  set(OPENMP_TEST_COMPILER_VERSION_MAJOR "${LLVM_VERSION_MAJOR}")
-  set(OPENMP_TEST_COMPILER_VERSION_MAJOR_MINOR "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
-  # Unfortunately the top-level cmake/config-ix.cmake file mangles CMake's
-  # CMAKE_THREAD_LIBS_INIT variable from the FindThreads package, so work
-  # around that, until it is fixed there.
-  if("${CMAKE_THREAD_LIBS_INIT}" STREQUAL "-lpthread")
-    set(OPENMP_TEST_COMPILER_THREAD_FLAGS "-pthread")
-  else()
-    set(OPENMP_TEST_COMPILER_THREAD_FLAGS "${CMAKE_THREAD_LIBS_INIT}")
-  endif()
-  if(TARGET tsan)
-    set(OPENMP_TEST_COMPILER_HAS_TSAN_FLAGS 1)
-  else()
-    set(OPENMP_TEST_COMPILER_HAS_TSAN_FLAGS 0)
-  endif()
-  set(OPENMP_TEST_COMPILER_HAS_OMP_H 1)
-  set(OPENMP_TEST_COMPILER_OPENMP_FLAGS "-fopenmp ${OPENMP_TEST_COMPILER_THREAD_FLAGS}")
-  set(OPENMP_TEST_COMPILER_HAS_OMIT_FRAME_POINTER_FLAGS 1)
+  set(OPENMP_TEST_COMPILER_THREAD_FLAGS "${CMAKE_THREAD_LIBS_INIT}")
 endif()
+if(TARGET tsan)
+  set(OPENMP_TEST_COMPILER_HAS_TSAN_FLAGS 1)
+else()
+  set(OPENMP_TEST_COMPILER_HAS_TSAN_FLAGS 0)
+endif()
+set(OPENMP_TEST_COMPILER_HAS_OMP_H 1)
+set(OPENMP_TEST_COMPILER_OPENMP_FLAGS "-fopenmp ${OPENMP_TEST_COMPILER_THREAD_FLAGS}")
+set(OPENMP_TEST_COMPILER_HAS_OMIT_FRAME_POINTER_FLAGS 1)
 
 set(OPENMP_TEST_ENABLE_TSAN "${OPENMP_TEST_COMPILER_HAS_TSAN_FLAGS}" CACHE BOOL
     "Whether to enable tests using tsan")
@@ -212,7 +189,7 @@ function(add_openmp_testsuite target comment)
     set_property(GLOBAL APPEND PROPERTY OPENMP_LIT_DEPENDS ${ARG_DEPENDS})
   endif()
 
-  if (${OPENMP_STANDALONE_BUILD})
+  if (NOT TARGET Clang)
     set(LIT_ARGS ${OPENMP_LIT_ARGS} ${ARG_ARGS})
     add_custom_target(${target}
       COMMAND ${Python3_EXECUTABLE} ${OPENMP_LLVM_LIT_EXECUTABLE} ${LIT_ARGS} ${ARG_UNPARSED_ARGUMENTS}
