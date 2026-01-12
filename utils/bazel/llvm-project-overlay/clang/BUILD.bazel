@@ -1798,6 +1798,7 @@ cc_library(
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
         "//llvm:Core",
+        "//llvm:JITLink",
         "//llvm:ExecutionEngine",
         "//llvm:MC",
         "//llvm:Option",
