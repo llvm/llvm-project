@@ -2007,3 +2007,5 @@ def : Pat<(i64 (int_ppc_mfspr timm:$SPR)),
           (MFSPR8 $SPR)>;
 def : Pat<(int_ppc_mtspr timm:$SPR, g8rc:$RT),
           (MTSPR8 $SPR, $RT)>;
+def : Pat<(PPCstat i64:$val, ptr_rc_nor0:$ptr, timm:$fc),
+          (STDAT $val, $ptr, $fc)>;

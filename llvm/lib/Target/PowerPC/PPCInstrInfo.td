@@ -143,6 +143,10 @@ def SDT_PPCBinaryArithWithFlagsInOut : SDTypeProfile<2, 3, [
   SDTCisVT<1, i32>,
 ]>;
 
+def SDT_PPCstat : SDTypeProfile<0, 3, [
+  SDTCisInt<0>, SDTCisPtrTy<1>, SDTCisVT<2, i32>
+]>;
+
 //===----------------------------------------------------------------------===//
 // PowerPC specific DAG Nodes.
 //
@@ -678,6 +682,9 @@ def PPCsubc : SDNode<"PPCISD::SUBC", SDT_PPCBinaryArithWithFlagsOut,
                      []>;
 def PPCsube : SDNode<"PPCISD::SUBE", SDT_PPCBinaryArithWithFlagsInOut,
                      []>;
+
+def PPCstat : SDNode<"PPCISD::STAT", SDT_PPCstat,
+                     [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 //===----------------------------------------------------------------------===//
 // PowerPC specific transformation functions and pattern fragments.
@@ -5604,3 +5611,6 @@ def : Pat<(int_ppc_dcbtt ForceXForm:$dst),
 
 def : Pat<(int_ppc_stfiw ForceXForm:$dst, f64:$XT),
           (STFIWX f64:$XT, ForceXForm:$dst)>;
+
+def : Pat<(PPCstat i32:$val, ptr_rc_nor0:$ptr, timm:$fc),
+          (STWAT $val, $ptr, $fc)>;
