@@ -729,7 +729,7 @@ llvm::json::Object CreateRunInTerminalReverseRequest(
     for (const std::optional<std::string> &file : stdio) {
       ss << std::exchange(delimiter, ":");
       if (file)
-        ss << file.value();
+        ss << *file;
     }
     req_args.push_back(ss.str());
   }

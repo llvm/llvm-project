@@ -22,11 +22,10 @@
 #include "llvm/Support/raw_ostream.h"
 #include <mutex>
 
-#if !defined(_WIN32)
-#include <unistd.h>
-#endif
 #ifdef _WIN32
 #include "lldb/Host/windows/PosixApi.h"
+#else
+#include <unistd.h>
 #endif
 
 #ifndef LLDB_DAP_README_URL

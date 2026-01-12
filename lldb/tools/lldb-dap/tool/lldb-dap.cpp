@@ -286,11 +286,11 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
 
   lldb_private::FileSystem::Initialize();
   if (!stdio.empty()) {
-    llvm::SmallVector<llvm::StringRef, 3> files;
-    stdio.split(files, ':');
+    llvm::SmallVector<llvm::StringRef, 3> stdio_files;
+    stdio.split(stdio_files, ':');
     constexpr size_t num_of_stdio = 3;
-    files.resize(std::max(num_of_stdio, files.size()));
-    if (llvm::Error err = SetupIORedirection(files))
+    stdio_files.resize(std::max(num_of_stdio, stdio_files.size()));
+    if (llvm::Error err = SetupIORedirection(stdio_files))
       return err;
   } else if ((isatty(STDIN_FILENO) != 0) &&
              llvm::StringRef(getenv("TERM")).starts_with_insensitive("xterm")) {
