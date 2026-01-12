@@ -24,6 +24,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/TextEncoding.h"
+
 namespace clang {
 
 class DiagnosticsEngine;

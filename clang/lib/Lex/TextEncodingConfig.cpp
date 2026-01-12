@@ -12,13 +12,15 @@
 using namespace llvm;
 
 llvm::TextEncodingConverter *
-TextEncodingConfig::getConverter(ConversionAction Action) {
-  if (Action == CA_ToSystemEncoding)
+TextEncodingConfig::getConverter(ConversionAction Action) const {
+  switch (Action) {
+  case CA_ToSystemEncoding:
     return ToSystemEncodingConverter;
-  else if (Action == CA_ToExecEncoding)
+  case CA_ToExecEncoding:
     return ToExecEncodingConverter;
-  else
+  default:
     return nullptr;
+  }
 }
 
 std::error_code
