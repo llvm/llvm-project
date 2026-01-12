@@ -2666,18 +2666,17 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if ((DemandedMask & fcNan) == fcNone)
         KnownSrc.knownNot(fcNan);
 
-      bool IsRoundNearest =
+      bool IsRoundNearestOrTrunc =
           IID == Intrinsic::round || IID == Intrinsic::roundeven ||
-          IID == Intrinsic::nearbyint || IID == Intrinsic::rint;
+          IID == Intrinsic::nearbyint || IID == Intrinsic::rint ||
+          IID == Intrinsic::trunc;
 
       // Ignore denormals-as-zero, as canonicalization is not mandated.
-      if ((IID == Intrinsic::trunc || IID == Intrinsic::floor ||
-           IsRoundNearest) &&
+      if ((IID == Intrinsic::floor || IsRoundNearestOrTrunc) &&
           KnownSrc.isKnownAlways(fcPosZero | fcPosSubnormal))
         return ConstantFP::getZero(VTy);
 
-      if ((IID == Intrinsic::trunc || IID == Intrinsic::ceil ||
-           IsRoundNearest) &&
+      if ((IID == Intrinsic::ceil || IsRoundNearestOrTrunc) &&
           KnownSrc.isKnownAlways(fcNegZero | fcNegSubnormal))
         return ConstantFP::getZero(VTy, true);
 
@@ -2696,7 +2695,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
               getFPClassConstant(VTy, ValidResults, /*IsCanonicalizing=*/true))
         return SingleVal;
 
-      if ((IID == Intrinsic::trunc || IsRoundNearest) &&
+      if ((IID == Intrinsic::trunc || IsRoundNearestOrTrunc) &&
           KnownSrc.isKnownAlways(fcZero | fcSubnormal)) {
         Value *Copysign = Builder.CreateCopySign(ConstantFP::getZero(VTy),
                                                  CI->getArgOperand(0));
