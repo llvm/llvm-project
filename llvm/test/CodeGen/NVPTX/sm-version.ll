@@ -76,7 +76,7 @@
 
 ; SM20: .version 3.2
 ; SM21: .version 3.2
-; SM30: .version 6.0
+; SM30: .version 3.2
 ; SM32: .version 4.0
 ; SM35: .version 3.2
 ; SM37: .version 4.1
