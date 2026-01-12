@@ -1792,8 +1792,7 @@ add_entrypoint_object(
   HDRS
     ../ilogbf16.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.ilogbf16
 )
 
 add_entrypoint_object(
@@ -1951,16 +1950,6 @@ add_entrypoint_object(
     libc.src.__support.macros.properties.types
 )
 
-add_header_library(
-  log_range_reduction
-  HDRS
-    log_range_reduction.h
-  DEPENDS
-    libc.src.__support.FPUtil.dyadic_float
-    libc.src.__support.math.common_constants
-    libc.src.__support.uint128
-)
-
 add_entrypoint_object(
   log10
   SRCS
@@ -1968,7 +1957,6 @@ add_entrypoint_object(
   HDRS
     ../log10.h
   DEPENDS
-    .log_range_reduction
     libc.src.__support.FPUtil.double_double
     libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.fenv_impl
@@ -1978,6 +1966,7 @@ add_entrypoint_object(
     libc.src.__support.integer_literals
     libc.src.__support.macros.optimization
     libc.src.__support.math.common_constants
+    libc.src.__support.math.log_range_reduction
 )
 
 add_entrypoint_object(
@@ -2056,7 +2045,6 @@ add_entrypoint_object(
   HDRS
     ../log2.h
   DEPENDS
-    .log_range_reduction
     libc.src.__support.FPUtil.double_double
     libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.fenv_impl
@@ -2066,6 +2054,7 @@ add_entrypoint_object(
     libc.src.__support.integer_literals
     libc.src.__support.macros.optimization
     libc.src.__support.math.common_constants
+    libc.src.__support.math.log_range_reduction
 )
 
 add_entrypoint_object(
@@ -2111,16 +2100,7 @@ add_entrypoint_object(
   HDRS
     ../log.h
   DEPENDS
-    .log_range_reduction
-    libc.src.__support.FPUtil.double_double
-    libc.src.__support.FPUtil.dyadic_float
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.integer_literals
-    libc.src.__support.macros.optimization
-    libc.src.__support.math.common_constants
+    libc.src.__support.math.log
 )
 
 add_entrypoint_object(
