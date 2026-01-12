@@ -10,6 +10,7 @@
 #include "mlir/Bindings/Python/Globals.h"
 #include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/NanobindUtils.h"
+#include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
 // clang-format on
 #include "mlir-c/BuiltinAttributes.h"
@@ -17,10 +18,6 @@
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
-#include "mlir/Bindings/Python/Nanobind.h"
-#include "mlir/Bindings/Python/NanobindAdaptors.h"
-#include "nanobind/nanobind.h"
-#include "nanobind/typing.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -2003,7 +2000,22 @@ nb::object PyValue::getCapsule() {
   return nb::steal<nb::object>(mlirPythonValueToCapsule(get()));
 }
 
-nb::typed<nb::object, PyValue> PyValue::maybeDownCast() {
+static PyOperationRef getValueOwnerRef(MlirValue value) {
+  MlirOperation owner;
+  if (mlirValueIsAOpResult(value))
+    owner = mlirOpResultGetOwner(value);
+  else if (mlirValueIsABlockArgument(value))
+    owner = mlirBlockGetParentOperation(mlirBlockArgumentGetOwner(value));
+  else
+    assert(false && "Value must be an block arg or op result.");
+  if (mlirOperationIsNull(owner))
+    throw nb::python_error();
+  MlirContext ctx = mlirOperationGetContext(owner);
+  return PyOperation::forOperation(PyMlirContext::forContext(ctx), owner);
+}
+
+nb::typed<nb::object, std::variant<PyBlockArgument, PyOpResult, PyValue>>
+PyValue::maybeDownCast() {
   MlirType type = mlirValueGetType(get());
   MlirTypeID mlirTypeID = mlirTypeGetTypeID(type);
   assert(!mlirTypeIDIsNull(mlirTypeID) &&
@@ -2012,26 +2024,23 @@ nb::typed<nb::object, PyValue> PyValue::maybeDownCast() {
       PyGlobals::get().lookupValueCaster(mlirTypeID, mlirTypeGetDialect(type));
   // nb::rv_policy::move means use std::move to move the return value
   // contents into a new instance that will be owned by Python.
-  nb::object thisObj = nb::cast(this, nb::rv_policy::move);
-  if (!valueCaster)
-    return thisObj;
-  return valueCaster.value()(thisObj);
+  nb::object thisObj;
+  if (mlirValueIsAOpResult(value))
+    thisObj = nb::cast<PyOpResult>(*this, nb::rv_policy::move);
+  else if (mlirValueIsABlockArgument(value))
+    thisObj = nb::cast<PyBlockArgument>(*this, nb::rv_policy::move);
+  else
+    assert(false && "Value must be an block arg or op result.");
+  if (valueCaster)
+    return valueCaster.value()(thisObj);
+  return thisObj;
 }
 
 PyValue PyValue::createFromCapsule(nb::object capsule) {
   MlirValue value = mlirPythonCapsuleToValue(capsule.ptr());
   if (mlirValueIsNull(value))
     throw nb::python_error();
-  MlirOperation owner;
-  if (mlirValueIsAOpResult(value))
-    owner = mlirOpResultGetOwner(value);
-  if (mlirValueIsABlockArgument(value))
-    owner = mlirBlockGetParentOperation(mlirBlockArgumentGetOwner(value));
-  if (mlirOperationIsNull(owner))
-    throw nb::python_error();
-  MlirContext ctx = mlirOperationGetContext(owner);
-  PyOperationRef ownerRef =
-      PyOperation::forOperation(PyMlirContext::forContext(ctx), owner);
+  PyOperationRef ownerRef = getValueOwnerRef(value);
   return PyValue(ownerRef, value);
 }
 
@@ -2279,15 +2288,7 @@ intptr_t PyOpOperandList::getRawNumElements() {
 
 PyValue PyOpOperandList::getRawElement(intptr_t pos) {
   MlirValue operand = mlirOperationGetOperand(operation->get(), pos);
-  MlirOperation owner;
-  if (mlirValueIsAOpResult(operand))
-    owner = mlirOpResultGetOwner(operand);
-  else if (mlirValueIsABlockArgument(operand))
-    owner = mlirBlockGetParentOperation(mlirBlockArgumentGetOwner(operand));
-  else
-    assert(false && "Value must be an block arg or op result.");
-  PyOperationRef pyOwner =
-      PyOperation::forOperation(operation->getContext(), owner);
+  PyOperationRef pyOwner = getValueOwnerRef(operand);
   return PyValue(pyOwner, operand);
 }
 
@@ -4692,9 +4693,7 @@ void populateIRCore(nb::module_ &m) {
           "with_"_a, "exceptions"_a, kValueReplaceAllUsesExceptDocstring)
       .def(
           MLIR_PYTHON_MAYBE_DOWNCAST_ATTR,
-          [](PyValue &self) -> nb::typed<nb::object, PyValue> {
-            return self.maybeDownCast();
-          },
+          [](PyValue &self) { return self.maybeDownCast(); },
           "Downcasts the `Value` to a more specific kind if possible.")
       .def_prop_ro(
           "location",
