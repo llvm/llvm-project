@@ -43,6 +43,7 @@ def N2UnitL2  : ProcResource<1>;  // Load 2
 def N2UnitD   : ProcResource<2>;  // Store data 0/1
 def N2UnitV0  : ProcResource<1>;  // FP/ASIMD 0
 def N2UnitV1  : ProcResource<1>;  // FP/ASIMD 1
+def N2UnitFlg : ProcResource<3>;  // Flags
 
 def N2UnitV : ProcResGroup<[N2UnitV0, N2UnitV1]>;  // FP/ASIMD 0/1
 def N2UnitM : ProcResGroup<[N2UnitM0, N2UnitM1]>;  // Integer single/multicycle 0/1
@@ -80,10 +81,12 @@ def N2Write_0c : SchedWriteRes<[]> { let Latency = 0; }
 
 def N2Write_1c_1B   : SchedWriteRes<[N2UnitB]>   { let Latency = 1; }
 def N2Write_1c_1I   : SchedWriteRes<[N2UnitI]>   { let Latency = 1; }
+def N2Write_1c_1I_1Flg : SchedWriteRes<[N2UnitI, N2UnitFlg]>   { let Latency = 1; }
 def N2Write_1c_1M   : SchedWriteRes<[N2UnitM]>   { let Latency = 1; }
 def N2Write_1c_1M0  : SchedWriteRes<[N2UnitM0]>  { let Latency = 1; }
 def N2Write_1c_1L01 : SchedWriteRes<[N2UnitL01]> { let Latency = 1; }
 def N2Write_2c_1M   : SchedWriteRes<[N2UnitM]>   { let Latency = 2; }
+def N2Write_2c_1M_1Flg : SchedWriteRes<[N2UnitM, N2UnitFlg]>   { let Latency = 2; }
 def N2Write_3c_1M   : SchedWriteRes<[N2UnitM]>   { let Latency = 3; }
 def N2Write_2c_1M0  : SchedWriteRes<[N2UnitM0]>  { let Latency = 2;
                                                    let ReleaseAtCycles = [2]; }
@@ -679,9 +682,13 @@ def N2Write_Arith : SchedWriteVariant<[
                       SchedVar<IsCheapLSL,  [N2Write_1c_1I]>,
                       SchedVar<NoSchedPred, [N2Write_2c_1M]>]>;
 
+def N2Write_ArithI : SchedWriteVariant<[
+                      SchedVar<IsCheapLSL,  [N2Write_1c_1I_1Flg]>,
+                      SchedVar<NoSchedPred, [N2Write_2c_1M_1Flg]>]>;
+
 def N2Write_Logical: SchedWriteVariant<[
-                       SchedVar<NeoverseNoLSL, [N2Write_1c_1I]>,
-                       SchedVar<NoSchedPred,   [N2Write_2c_1M]>]>;
+                      SchedVar<NeoverseNoLSL, [N2Write_1c_1I_1Flg]>,
+                      SchedVar<NoSchedPred,   [N2Write_2c_1M_1Flg]>]>;
 
 // Miscellaneous
 // -----------------------------------------------------------------------------
@@ -706,9 +713,15 @@ def : InstRW<[N2Write_1c_1B_1S], (instrs BL, BLR)>;
 // -----------------------------------------------------------------------------
 
 // ALU, basic
-// ALU, basic, flagset
 def : SchedAlias<WriteI,     N2Write_1c_1I>;
 def : InstRW<[N2Write_0or1c_1I], (instregex "^MOVZ[WX]i$")>;
+
+// ALU, basic, flagset
+def : InstRW<[N2Write_1c_1I_1Flg],
+             (instregex "^(ADD|SUB)S[WX]r[ir]$",
+                        "^(ADC|SBC)S[WX]r$",
+                        "^ANDS[WX]ri$",
+                        "^(AND|BIC)S[WX]rr$")>;
 
 // ALU, extend and shift
 def : SchedAlias<WriteIEReg, N2Write_2c_1M>;
@@ -717,6 +730,12 @@ def : SchedAlias<WriteIEReg, N2Write_2c_1M>;
 // Arithmetic, flagset, LSL shift, shift <= 4
 // Arithmetic, LSR/ASR/ROR shift or LSL shift > 4
 def : SchedAlias<WriteISReg, N2Write_Arith>;
+def : InstRW<[N2Write_ArithI],
+             (instregex "^(ADD|SUB)S[WX]rs$")>;
+
+// Arithmetic, flagset, extend
+def : InstRW<[N2Write_2c_1M_1Flg],
+             (instregex "^(ADD|SUB)S[WX]rx(64)?$")>;
 
 // Logical, shift, no flagset
 def : InstRW<[N2Write_1c_1I],
@@ -729,6 +748,9 @@ def : InstRW<[N2Write_Logical], (instregex "^(AND|BIC)S[WX]rs$")>;
 // Arithmetic, immediate to logical address tag
 def : InstRW<[N2Write_2c_1M], (instrs ADDG, SUBG)>;
 
+// Conditional compare
+def : InstRW<[N2Write_1c_1I_1Flg], (instregex "^CCM[NP][WX][ir]")>;
+
 // Convert floating-point condition flags
 // Flag manipulation instructions
 def : WriteRes<WriteSys, []> { let Latency = 1; }
@@ -739,7 +761,8 @@ def : InstRW<[N2Write_2c_1M], (instrs IRG, IRGstack)>;
 // Insert Tag Mask
 // Subtract Pointer
 // Subtract Pointer, flagset
-def : InstRW<[N2Write_1c_1I], (instrs GMI, SUBP, SUBPS)>;
+def : InstRW<[N2Write_1c_1I], (instrs GMI, SUBP)>;
+def : InstRW<[N2Write_1c_1I_1Flg], (instrs SUBPS)>;
 
 // Move and shift instructions
 // -----------------------------------------------------------------------------

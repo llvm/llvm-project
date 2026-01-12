@@ -117,6 +117,8 @@ Changes to the AArch64 Backend
 
 * Added support for C1-Nano, C1-Pro, C1-Premium, and C1-Ultra CPUs.
 
+* Added support for Ampere1C cores.
+
 Changes to the AMDGPU Backend
 -----------------------------
 

@@ -12,19 +12,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "InterpreterTestFixture.h"
+
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/AST/Mangle.h"
-#include "clang/Basic/Version.h"
-#include "clang/Config/config.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
+#include "clang/Interpreter/IncrementalExecutor.h"
 #include "clang/Interpreter/Interpreter.h"
 #include "clang/Interpreter/Value.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
+
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Host.h"
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
