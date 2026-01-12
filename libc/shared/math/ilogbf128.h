@@ -13,7 +13,6 @@
 
 #ifdef LIBC_TYPES_HAS_FLOAT128
 
-#include "shared/libc_common.h"
 #include "src/__support/math/ilogbf128.h"
 
 namespace LIBC_NAMESPACE_DECL {
