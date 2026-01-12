@@ -393,6 +393,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### libclang
 
+- Implemented `clang_getAtomicUnqualifiedType` for unsugaring `_Atomic` qualified types. (#GH175534)
+
 ### Code Completion
 
 ### Static Analyzer

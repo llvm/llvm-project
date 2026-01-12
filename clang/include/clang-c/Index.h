@@ -3390,7 +3390,9 @@ CINDEX_LINKAGE CXType clang_getPointeeType(CXType T);
  * Retrieve the unqualified variant of the given type, removing as
  * little sugar as possible.
  *
- * For example, given the following series of typedefs:
+ * This routine looks through various kinds of sugar to find the
+ * least-desugared type that is unqualified. For example, given the
+ * following series of typedefs:
  *
  * \code
  * typedef int Integer;
@@ -3420,8 +3422,21 @@ CINDEX_LINKAGE CXType clang_getPointeeType(CXType T);
  *
  * A type that resulted from a call to \c clang_getUnqualifiedType
  * will return \c false for all of the above calls.
+ *
+ * Note: In C, the _Atomic qualifier is special (see C23 6.2.5p32 for
+ * details), and it is not stripped by this function. Use
+ * clang_getAtomicUnqualifiedType() to strip qualifiers including
+ * _Atomic.
  */
 CINDEX_LINKAGE CXType clang_getUnqualifiedType(CXType CT);
+
+/**
+ * Remove all qualifiers including _Atomic.
+ *
+ * Like \c clang_getUnqualifiedType(), the type may still be
+ * qualified if it is a sugared array type.
+ */
+CINDEX_LINKAGE CXType clang_getAtomicUnqualifiedType(CXType CT);
 
 /**
  * For reference types (e.g., "const int&"), returns the type that the
