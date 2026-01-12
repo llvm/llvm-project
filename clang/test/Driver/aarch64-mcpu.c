@@ -102,6 +102,9 @@
 // RUN: %clang --target=aarch64 -mcpu=grace -### -c %s 2>&1 | FileCheck -check-prefix=GRACE %s
 // GRACE: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "grace"
 
+// RUN: %clang --target=aarch64 -mcpu=ampere1c -### -c %s 2>&1 | FileCheck -check-prefix=AMPERE1C %s
+// AMPERE1C: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "ampere1c"
+
 // ================== Check whether -mcpu and -mtune accept mixed-case values.
 // RUN: %clang --target=aarch64 -mcpu=Cortex-a53 -### -c %s 2>&1 | FileCheck -check-prefix=CASE-INSENSITIVE-CA53 %s
 // RUN: %clang --target=aarch64 -mtune=Cortex-a53 -### -c %s 2>&1 | FileCheck -check-prefix=CASE-INSENSITIVE-CA53-TUNE %s
