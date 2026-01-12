@@ -1932,8 +1932,9 @@ static const char *fastParseASCIIIdentifierScalar(const char *CurPtr) {
 // Only enabled on x86/x86_64 when building with a compiler that supports
 // the 'target' attribute, which is used for runtime dispatch. Otherwise, we
 // fall back to the scalar implementation.
-#if (defined(__i386__) || defined(__x86_64__)) && defined(__has_attribute) &&  \
-    __has_attribute(target) && !defined(_WIN32)
+#if defined(__SSE4_2__) || (defined(__i386__) || defined(__x86_64__)) &&       \
+                               defined(__has_attribute) &&                     \
+                               __has_attribute(target) && !defined(_WIN32)
 __attribute__((target("sse4.2"))) static const char *
 fastParseASCIIIdentifier(const char *CurPtr, const char *BufferEnd) {
   alignas(16) static constexpr char AsciiIdentifierRange[16] = {
@@ -1959,13 +1960,17 @@ fastParseASCIIIdentifier(const char *CurPtr, const char *BufferEnd) {
   return fastParseASCIIIdentifierScalar(CurPtr);
 }
 
+#ifndef __SSE4_2__
 __attribute__((target("default")))
 #endif
+#endif
+#ifndef __SSE4_2__
 static const char *
 fastParseASCIIIdentifier(const char *CurPtr,
                          [[maybe_unused]] const char *BufferEnd) {
   return fastParseASCIIIdentifierScalar(CurPtr);
 }
+#endif
 
 bool Lexer::LexIdentifierContinue(Token &Result, const char *CurPtr) {
   // Match [_A-Za-z0-9]*, we have already matched an identifier start.
