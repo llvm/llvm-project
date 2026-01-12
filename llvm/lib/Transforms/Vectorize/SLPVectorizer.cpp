@@ -5394,7 +5394,7 @@ private:
                 ++Inc;
             }
           } else {
-            Inc = 1;
+            Inc = count(TE->Scalars, User);
           }
 
           // Check if the user is commutative.
@@ -5477,8 +5477,6 @@ private:
               --P.getSecond();
           }
           // If parent node is schedulable, it will be handled correctly.
-          if (!IsNonSchedulableWithParentPhiNode)
-            break;
           It = find(make_range(std::next(It), P.first->Scalars.end()), User);
         } while (It != P.first->Scalars.end());
       }
@@ -5772,7 +5770,7 @@ private:
                   DecrUnschedForInst(I, Bundle->getTreeEntry(), OpIdx, Checked);
                 }
               // If parent node is schedulable, it will be handled correctly.
-              if (!IsNonSchedulableWithParentPhiNode)
+              if (Bundle->getTreeEntry()->isCopyableElement(In))
                 break;
               It = std::find(std::next(It),
                              Bundle->getTreeEntry()->Scalars.end(), In);
@@ -5957,8 +5955,7 @@ private:
     /// bundles which depend on the original bundle.
     void calculateDependencies(ScheduleBundle &Bundle, bool InsertInReadyList,
                                BoUpSLP *SLP,
-                               ArrayRef<ScheduleData *> ControlDeps = {},
-                               bool NonSchedulable = false);
+                               ArrayRef<ScheduleData *> ControlDeps = {});
 
     /// Sets all instruction in the scheduling region to un-scheduled.
     void resetSchedule();
@@ -21801,24 +21798,11 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         if (auto *Op = dyn_cast<Instruction>(U.get());
             Op && areAllOperandsReplacedByCopyableData(I, Op, *SLP, NumOps)) {
           if (ScheduleData *OpSD = getScheduleData(Op);
-              OpSD && OpSD->hasValidDependencies()) {
-            OpSD->clearDirectDependencies();
-            ControlDependentMembers.push_back(OpSD);
-          }
+              OpSD && OpSD->hasValidDependencies())
+            // TODO: investigate how to improve it instead of early exiting.
+            return std::nullopt;
         }
       }
-    }
-    if (!ControlDependentMembers.empty()) {
-      ScheduleBundle Invalid = ScheduleBundle::invalid();
-      bool IsNonSchedulableWithParentPhiNode =
-          EI.UserTE->hasState() &&
-          EI.UserTE->State != TreeEntry::SplitVectorize &&
-          EI.UserTE->getOpcode() == Instruction::PHI;
-      calculateDependencies(Invalid, /*InsertInReadyList=*/true, SLP,
-                            ControlDependentMembers,
-                            /*NonSchedulable=*/HasCopyables ||
-                                IsNonSchedulableWithParentPhiNode ||
-                                !all_of(VL, isUsedOutsideBlock));
     }
     return nullptr;
   }
@@ -22202,7 +22186,7 @@ void BoUpSLP::BlockScheduling::initScheduleData(Instruction *FromI,
 
 void BoUpSLP::BlockScheduling::calculateDependencies(
     ScheduleBundle &Bundle, bool InsertInReadyList, BoUpSLP *SLP,
-    ArrayRef<ScheduleData *> ControlDeps, bool NonSchedulable) {
+    ArrayRef<ScheduleData *> ControlDeps) {
   SmallVector<ScheduleEntity *> WorkList;
   auto ProcessNode = [&](ScheduleEntity *SE) {
     if (auto *CD = dyn_cast<ScheduleCopyableData>(SE)) {
@@ -22287,8 +22271,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
         // The operand is a copyable element - skip.
         unsigned &NumOps = UserToNumOps.try_emplace(U, 0).first->getSecond();
         ++NumOps;
-        if (!NonSchedulable &&
-            areAllOperandsReplacedByCopyableData(
+        if (areAllOperandsReplacedByCopyableData(
                 cast<Instruction>(U), BundleMember->getInst(), *SLP, NumOps))
           continue;
         BundleMember->incDependencies();

@@ -69,7 +69,7 @@ public:
   void EnsureBlock(PdbCompilandSymId block_id);
   void EnsureVariable(PdbCompilandSymId scope_id, PdbCompilandSymId var_id);
   void EnsureVariable(PdbGlobalSymId var_id);
-  clang::TypedefNameDecl *GetOrCreateTypedefDecl(PdbGlobalSymId id);
+  CompilerType GetOrCreateTypedefType(PdbGlobalSymId id);
   void ParseDeclsForContext(lldb_private::CompilerDeclContext context);
 
   clang::QualType GetBasicType(lldb::BasicType type);
