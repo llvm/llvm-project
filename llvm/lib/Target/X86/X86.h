@@ -87,7 +87,14 @@ public:
 FunctionPass *createX86FixupInstTuningLegacyPass();
 
 /// Return a pass that reduces the size of vector constant pool loads.
-FunctionPass *createX86FixupVectorConstants();
+class X86FixupVectorConstantsPass
+    : public PassInfoMixin<X86FixupInstTuningPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86FixupVectorConstantsLegacyPass();
 
 /// Return a pass that removes redundant LEA instructions and redundant address
 /// recalculations.
@@ -304,6 +311,16 @@ public:
 
 FunctionPass *createX86LowerAMXTypeLegacyPass();
 
+// Suppresses APX features for relocations for supporting older linkers.
+class X86SuppressAPXForRelocationPass
+    : public PassInfoMixin<X86SuppressAPXForRelocationPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86SuppressAPXForRelocationLegacyPass();
+
 /// The pass transforms amx intrinsics to scalar operation if the function has
 /// optnone attribute or it is O0.
 class X86LowerAMXIntrinsicsPass
@@ -329,7 +346,6 @@ FunctionPass *createX86LoadValueInjectionRetHardeningPass();
 FunctionPass *createX86SpeculativeLoadHardeningPass();
 FunctionPass *createX86SpeculativeExecutionSideEffectSuppression();
 FunctionPass *createX86ArgumentStackSlotPass();
-FunctionPass *createX86SuppressAPXForRelocationPass();
 
 void initializeCompressEVEXLegacyPass(PassRegistry &);
 void initializeX86FixupBWInstLegacyPass(PassRegistry &);
@@ -337,7 +353,7 @@ void initializeFixupLEAsLegacyPass(PassRegistry &);
 void initializeX86ArgumentStackSlotPassPass(PassRegistry &);
 void initializeX86AsmPrinterPass(PassRegistry &);
 void initializeX86FixupInstTuningLegacyPass(PassRegistry &);
-void initializeX86FixupVectorConstantsPassPass(PassRegistry &);
+void initializeX86FixupVectorConstantsLegacyPass(PassRegistry &);
 void initializeWinEHStatePassPass(PassRegistry &);
 void initializeX86AvoidSFBLegacyPass(PassRegistry &);
 void initializeX86AvoidTrailingCallLegacyPassPass(PassRegistry &);
@@ -364,8 +380,8 @@ void initializeX86PreTileConfigPass(PassRegistry &);
 void initializeX86ReturnThunksPass(PassRegistry &);
 void initializeX86SpeculativeExecutionSideEffectSuppressionPass(PassRegistry &);
 void initializeX86SpeculativeLoadHardeningPassPass(PassRegistry &);
+void initializeX86SuppressAPXForRelocationLegacyPass(PassRegistry &);
 void initializeX86TileConfigLegacyPass(PassRegistry &);
-void initializeX86SuppressAPXForRelocationPassPass(PassRegistry &);
 void initializeX86WinEHUnwindV2Pass(PassRegistry &);
 void initializeX86PreLegalizerCombinerPass(PassRegistry &);
 
