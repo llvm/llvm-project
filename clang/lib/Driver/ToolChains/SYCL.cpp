@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "SYCL.h"
 #include "clang/Driver/CommonArgs.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
@@ -14,18 +15,28 @@ using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
 
+SYCLInstallationDetector::SYCLInstallationDetector(const Driver &D)
+    : D(D), InstallationCandidates() {
+  InstallationCandidates.emplace_back(D.Dir + "/..");
+}
+
 SYCLInstallationDetector::SYCLInstallationDetector(
     const Driver &D, const llvm::Triple &HostTriple,
-    const llvm::opt::ArgList &Args) {}
+    const llvm::opt::ArgList &Args)
+    : SYCLInstallationDetector(D) {}
 
 void SYCLInstallationDetector::addSYCLIncludeArgs(
     const ArgList &DriverArgs, ArgStringList &CC1Args) const {
   if (DriverArgs.hasArg(options::OPT_nobuiltininc))
     return;
 
-  // Add the SYCL header search locations in the specified order.
-  // FIXME: Add the header file locations once the SYCL library and headers
-  //        are properly established within the build.
+  // Add the SYCL header search locations.
+  // These are icluded for both SYCL host and device compilations.
+  SmallString<128> IncludePath(D.Dir);
+  llvm::sys::path::append(IncludePath, "..");
+  llvm::sys::path::append(IncludePath, "include");
+  CC1Args.push_back("-internal-isystem");
+  CC1Args.push_back(DriverArgs.MakeArgString(IncludePath));
 }
 
 // Unsupported options for SYCL device compilation.
