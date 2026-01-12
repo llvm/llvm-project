@@ -97,7 +97,7 @@ class Andes45GetCyclesDefault<string mx> {
 }
 
 // (VLEN/DLEN)*LMUL*2, if LMUL >= 1,
-// (VLEN != DLEN) ? : 4 : 1, if LMUL < 1.
+// (VLEN != DLEN) ? 4 : 1, if LMUL < 1.
 class Andes45GetCyclesWidening<string mx> {
   int c = !cond(
     !eq(mx, "M1") : !mul(Andes45VLEN_DLEN_RATIO, 2),
