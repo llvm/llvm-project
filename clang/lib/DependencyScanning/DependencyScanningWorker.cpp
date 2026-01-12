@@ -95,7 +95,7 @@ bool DependencyScanningWorker::computeDependencies(
     if (StringRef(Cmd[1]) != "-cc1") {
       // Non-clang command. Just pass through to the dependency consumer.
       DepConsumer.handleBuildCommand(
-          {Cmd.front(), {Cmd.begin() + 1, Cmd.end()}});
+          {Cmd.front(), {Cmd.begin() + 1, Cmd.end()}, std::nullopt});
       return true;
     }
 
