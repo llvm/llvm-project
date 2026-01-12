@@ -114,4 +114,14 @@ def XeGPUOptimizeBlockLoads : Pass<"xegpu-optimize-block-loads"> {
                            "vector::VectorDialect"];
 }
 
+def XeGPUSgToWiDistributeExperimental : Pass<"xegpu-sg-to-wi-distribute-experimental"> {
+  let summary = "Distribute XeGPU ops to work items";
+  let description = [{
+    The pass distributes subgroup level XeGPU ops to work item level XeGPU ops.
+  }];
+  let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect",
+                           "vector::VectorDialect", "index::IndexDialect"];
+}
+
+
 #endif // MLIR_DIALECT_XEGPU_TRANSFORMS_PASSES_TD
