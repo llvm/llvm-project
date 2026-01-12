@@ -2830,6 +2830,15 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
     // Propagate metadata on the callsite if necessary.
     PropagateCallSiteMetadata(CB, FirstNewBlock, Caller->end());
 
+    // Propagate implicit ref metadata.
+    if (CalledFunc->hasMetadata(LLVMContext::MD_implicit_ref)) {
+      SmallVector<MDNode *> MDs;
+      CalledFunc->getMetadata(LLVMContext::MD_implicit_ref, MDs);
+      for (MDNode *MD : MDs) {
+        Caller->addMetadata(LLVMContext::MD_implicit_ref, *MD);
+      }
+    }
+
     // Register any cloned assumptions.
     if (IFI.GetAssumptionCache)
       for (BasicBlock &NewBlock :

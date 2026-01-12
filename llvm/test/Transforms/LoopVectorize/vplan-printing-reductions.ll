@@ -1051,8 +1051,8 @@ define i64 @print_ext_mulacc_not_extended_const(ptr %start, ptr %end) {
 ; CHECK-NEXT:      vp<[[VEC_PTR:%.+]]> = vector-pointer vp<%next.gep>
 ; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:      WIDEN-CAST ir<%l.ext> = sext ir<%l> to i32
-; CHECK-NEXT:      WIDEN ir<%mul> = mul ir<%l.ext>, ir<128>
-; CHECK-NEXT:      EXPRESSION vp<[[RDX_NEXT]]> = ir<[[RDX]]> + reduce.add (ir<%mul> sext to i64)
+; CHECK-NEXT:      EMIT vp<[[SHL:%.+]]> = shl ir<%l.ext>, ir<7>
+; CHECK-NEXT:      EXPRESSION vp<[[RDX_NEXT]]> = ir<[[RDX]]> + reduce.add (vp<[[SHL]]> sext to i64)
 ; CHECK-NEXT:      EMIT vp<[[IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<[[IV_NEXT]]>, vp<[[VTC]]>
 ; CHECK-NEXT:    No successors
@@ -1060,7 +1060,7 @@ define i64 @print_ext_mulacc_not_extended_const(ptr %start, ptr %end) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<%11> = compute-reduction-result ir<[[RDX]]>, vp<[[RDX_NEXT]]>
+; CHECK-NEXT:    EMIT vp<[[RES:%.+]]> = compute-reduction-result ir<[[RDX]]>, vp<[[RDX_NEXT]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<%3>, vp<[[VTC]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 entry:
