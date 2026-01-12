@@ -406,7 +406,7 @@ class _BaseProcess(object, metaclass=abc.ABCMeta):
 
 class _LocalProcess(_BaseProcess):
     def __init__(self, trace_on):
-        self._proc: Popen | None = None
+        self._proc: Optional[Popen] = None
         self._trace_on = trace_on
         self._delayafterterminate = 0.1
 
