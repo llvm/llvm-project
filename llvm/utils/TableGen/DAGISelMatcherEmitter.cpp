@@ -957,25 +957,30 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
     }
     bool IsEmitNode = isa<EmitNodeMatcher>(EN);
     OS << (IsEmitNode ? "OPC_EmitNode" : "OPC_MorphNodeTo");
-    bool CompressVTs = EN->getNumVTs() < 3;
+    unsigned NumVTs = EN->getNumVTs();
+    bool CompressVTs = NumVTs < 3;
     bool CompressNodeInfo = false;
     if (CompressVTs) {
-      OS << EN->getNumVTs();
-      if (!EN->hasChain() && !EN->hasInGlue() && !EN->hasOutGlue() &&
-          !EN->hasMemRefs() && EN->getNumFixedArityOperands() == -1) {
+      OS << NumVTs;
+      // When NumVTs is zero, only consider compressing the chain flag. Any
+      // zero result node without chain would be deleted and not eligible for
+      // isel.
+      if (NumVTs > 0 && !EN->hasChain() && !EN->hasInGlue() &&
+          !EN->hasOutGlue() && !EN->hasMemRefs() &&
+          EN->getNumFixedArityOperands() == -1) {
         CompressNodeInfo = true;
         OS << "None";
       } else if (EN->hasChain() && !EN->hasInGlue() && !EN->hasOutGlue() &&
                  !EN->hasMemRefs() && EN->getNumFixedArityOperands() == -1) {
         CompressNodeInfo = true;
         OS << "Chain";
-      } else if (!IsEmitNode && !EN->hasChain() && EN->hasInGlue() &&
-                 !EN->hasOutGlue() && !EN->hasMemRefs() &&
+      } else if (NumVTs > 0 && !IsEmitNode && !EN->hasChain() &&
+                 EN->hasInGlue() && !EN->hasOutGlue() && !EN->hasMemRefs() &&
                  EN->getNumFixedArityOperands() == -1) {
         CompressNodeInfo = true;
         OS << "GlueInput";
-      } else if (!IsEmitNode && !EN->hasChain() && !EN->hasInGlue() &&
-                 EN->hasOutGlue() && !EN->hasMemRefs() &&
+      } else if (NumVTs > 0 && !IsEmitNode && !EN->hasChain() &&
+                 !EN->hasInGlue() && EN->hasOutGlue() && !EN->hasMemRefs() &&
                  EN->getNumFixedArityOperands() == -1) {
         CompressNodeInfo = true;
         OS << "GlueOutput";
