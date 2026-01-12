@@ -554,6 +554,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::SDIV, ISD::UDIV, ISD::SREM, ISD::UREM,
                         ISD::SDIVREM, ISD::UDIVREM},
                        VTs, Expand);
+    setOperationAction(ISD::SETCC, VTs, Legal);
+    setCondCodeAction({ISD::SETNE, ISD::SETGT, ISD::SETGE, ISD::SETUGT,
+                       ISD::SETUGE, ISD::SETULE, ISD::SETLE},
+                      VTs, Expand);
+    // P extension vector comparisons produce all 1s for true, all 0s for false
+    setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
   }
 
   if (Subtarget.hasStdExtZfbfmin()) {
