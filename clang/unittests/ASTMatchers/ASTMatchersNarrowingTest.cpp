@@ -4839,14 +4839,77 @@ TEST_P(ASTMatchersTest, OMPTargetUpdateDirective_From_HasClause) {
     // lower bound (0)
     const Expr *LowerBound = ArraySection->getLowerBound();
     ASSERT_TRUE(LowerBound);
+    if (const auto *LowerBoundLiteral = dyn_cast<IntegerLiteral>(LowerBound)) {
+      EXPECT_EQ(LowerBoundLiteral->getValue().getZExtValue(), 0u);
+    }
 
     // length (8)
     const Expr *Length = ArraySection->getLength();
     ASSERT_TRUE(Length);
+    if (const auto *LengthLiteral = dyn_cast<IntegerLiteral>(Length)) {
+      EXPECT_EQ(LengthLiteral->getValue().getZExtValue(), 8u);
+    }
 
     // stride (2)
     const Expr *Stride = ArraySection->getStride();
     ASSERT_TRUE(Stride);
+    if (const auto *StrideLiteral = dyn_cast<IntegerLiteral>(Stride)) {
+      EXPECT_EQ(StrideLiteral->getValue().getZExtValue(), 2u);
+    }
+  }
+}
+
+TEST_P(ASTMatchersTest, OMPTargetUpdateDirective_From_ArraySection_NoStride) {
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[20];
+      #pragma omp target update from(arr[2:10])
+      ;
+    }
+  )";
+
+  auto astUnit = tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp"});
+  ASSERT_TRUE(astUnit);
+
+  auto Results = match(ompTargetUpdateDirective().bind("directive"),
+                       astUnit->getASTContext());
+  ASSERT_FALSE(Results.empty());
+
+  const auto *Directive =
+      Results[0].getNodeAs<OMPTargetUpdateDirective>("directive");
+  ASSERT_TRUE(Directive);
+
+  OMPFromClause *FromClause = nullptr;
+  for (auto *Clause : Directive->clauses()) {
+    if ((FromClause = dyn_cast<OMPFromClause>(Clause))) {
+      break;
+    }
+  }
+  ASSERT_TRUE(FromClause);
+
+  for (const auto *VarExpr : FromClause->varlist()) {
+    const auto *ArraySection = dyn_cast<ArraySectionExpr>(VarExpr);
+    if (!ArraySection)
+      continue;
+
+    const Expr *LowerBound = ArraySection->getLowerBound();
+    ASSERT_TRUE(LowerBound);
+    if (const auto *LowerBoundLiteral = dyn_cast<IntegerLiteral>(LowerBound)) {
+      EXPECT_EQ(LowerBoundLiteral->getValue().getZExtValue(), 2u);
+    }
+
+    const Expr *Length = ArraySection->getLength();
+    ASSERT_TRUE(Length);
+    if (const auto *LengthLiteral = dyn_cast<IntegerLiteral>(Length)) {
+      EXPECT_EQ(LengthLiteral->getValue().getZExtValue(), 10u);
+    }
+
+    const Expr *Stride = ArraySection->getStride();
+    if (Stride) {
+      if (const auto *StrideLiteral = dyn_cast<IntegerLiteral>(Stride)) {
+        EXPECT_EQ(StrideLiteral->getValue().getZExtValue(), 1u);
+      }
+    }
   }
 }
 
@@ -4891,12 +4954,75 @@ TEST_P(ASTMatchersTest, OMPTargetUpdateDirective_To_HasClause) {
 
     const Expr *LowerBound = ArraySection->getLowerBound();
     ASSERT_TRUE(LowerBound);
+    if (const auto *LowerBoundLiteral = dyn_cast<IntegerLiteral>(LowerBound)) {
+      EXPECT_EQ(LowerBoundLiteral->getValue().getZExtValue(), 0u);
+    }
 
     const Expr *Length = ArraySection->getLength();
     ASSERT_TRUE(Length);
+    if (const auto *LengthLiteral = dyn_cast<IntegerLiteral>(Length)) {
+      EXPECT_EQ(LengthLiteral->getValue().getZExtValue(), 8u);
+    }
 
     const Expr *Stride = ArraySection->getStride();
     ASSERT_TRUE(Stride);
+    if (const auto *StrideLiteral = dyn_cast<IntegerLiteral>(Stride)) {
+      EXPECT_EQ(StrideLiteral->getValue().getZExtValue(), 2u);
+    }
+  }
+}
+
+TEST_P(ASTMatchersTest, OMPTargetUpdateDirective_To_ArraySection_NoStride) {
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[20];
+      #pragma omp target update to(arr[1:15])
+      ;
+    }
+  )";
+
+  auto astUnit = tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp"});
+  ASSERT_TRUE(astUnit);
+
+  auto Results = match(ompTargetUpdateDirective().bind("directive"),
+                       astUnit->getASTContext());
+  ASSERT_FALSE(Results.empty());
+
+  const auto *Directive =
+      Results[0].getNodeAs<OMPTargetUpdateDirective>("directive");
+  ASSERT_TRUE(Directive);
+
+  OMPToClause *ToClause = nullptr;
+  for (auto *Clause : Directive->clauses()) {
+    if ((ToClause = dyn_cast<OMPToClause>(Clause))) {
+      break;
+    }
+  }
+  ASSERT_TRUE(ToClause);
+
+  for (const auto *VarExpr : ToClause->varlist()) {
+    const auto *ArraySection = dyn_cast<ArraySectionExpr>(VarExpr);
+    if (!ArraySection)
+      continue;
+
+    const Expr *LowerBound = ArraySection->getLowerBound();
+    ASSERT_TRUE(LowerBound);
+    if (const auto *LowerBoundLiteral = dyn_cast<IntegerLiteral>(LowerBound)) {
+      EXPECT_EQ(LowerBoundLiteral->getValue().getZExtValue(), 1u);
+    }
+
+    const Expr *Length = ArraySection->getLength();
+    ASSERT_TRUE(Length);
+    if (const auto *LengthLiteral = dyn_cast<IntegerLiteral>(Length)) {
+      EXPECT_EQ(LengthLiteral->getValue().getZExtValue(), 15u);
+    }
+
+    const Expr *Stride = ArraySection->getStride();
+    if (Stride) {
+      if (const auto *StrideLiteral = dyn_cast<IntegerLiteral>(Stride)) {
+        EXPECT_EQ(StrideLiteral->getValue().getZExtValue(), 1u);
+      }
+    }
   }
 }
 
@@ -4942,6 +5068,600 @@ TEST_P(ASTMatchersTest,
     }
   )";
   EXPECT_TRUE(matchesWithOpenMP(Source1, Matcher));
+}
+
+TEST_P(ASTMatchersTest, OMPFromClause_DoesNotMatchToClause) {
+  auto Matcher = ompTargetUpdateDirective(hasAnyClause(ompFromClause()));
+
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target update to(arr[0:8:2])
+      ;
+    }
+  )";
+  EXPECT_TRUE(notMatchesWithOpenMP(Source0, Matcher));
+}
+
+TEST_P(ASTMatchersTest, OMPToClause_DoesNotMatchFromClause) {
+  auto Matcher = ompTargetUpdateDirective(hasAnyClause(ompToClause()));
+
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target update from(arr[0:8:2])
+      ;
+    }
+  )";
+  EXPECT_TRUE(notMatchesWithOpenMP(Source0, Matcher));
+}
+
+TEST_P(ASTMatchersTest,
+       OMPTargetUpdateDirective_From_ArraySection_WrongOffset) {
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[20];
+      #pragma omp target update from(arr[5:8:2])
+      ;
+    }
+  )";
+
+  auto astUnit = tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp"});
+  ASSERT_TRUE(astUnit);
+
+  auto Results = match(ompTargetUpdateDirective().bind("directive"),
+                       astUnit->getASTContext());
+  ASSERT_FALSE(Results.empty());
+
+  const auto *Directive =
+      Results[0].getNodeAs<OMPTargetUpdateDirective>("directive");
+  ASSERT_TRUE(Directive);
+
+  OMPFromClause *FromClause = nullptr;
+  for (auto *Clause : Directive->clauses()) {
+    if ((FromClause = dyn_cast<OMPFromClause>(Clause))) {
+      break;
+    }
+  }
+  ASSERT_TRUE(FromClause);
+
+  for (const auto *VarExpr : FromClause->varlist()) {
+    const auto *ArraySection = dyn_cast<ArraySectionExpr>(VarExpr);
+    if (!ArraySection)
+      continue;
+
+    // lower bound (5, not 0)
+    const Expr *LowerBound = ArraySection->getLowerBound();
+    ASSERT_TRUE(LowerBound);
+    ASSERT_TRUE(isa<IntegerLiteral>(LowerBound));
+    const auto *LowerBoundLiteral = cast<IntegerLiteral>(LowerBound);
+    EXPECT_NE(LowerBoundLiteral->getValue().getZExtValue(), 0u);
+    EXPECT_EQ(LowerBoundLiteral->getValue().getZExtValue(), 5u);
+
+    // length (8)
+    const Expr *Length = ArraySection->getLength();
+    ASSERT_TRUE(Length);
+
+    // stride (2)
+    const Expr *Stride = ArraySection->getStride();
+    ASSERT_TRUE(Stride);
+  }
+}
+
+TEST_P(ASTMatchersTest,
+       OMPTargetUpdateDirective_From_ArraySection_OffsetVariable) {
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[20];
+      int offset = 5;
+      #pragma omp target update from(arr[offset:8:2])
+      ;
+    }
+  )";
+
+  auto astUnit = tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp"});
+  ASSERT_TRUE(astUnit);
+
+  auto Results = match(ompTargetUpdateDirective().bind("directive"),
+                       astUnit->getASTContext());
+  ASSERT_FALSE(Results.empty());
+
+  const auto *Directive =
+      Results[0].getNodeAs<OMPTargetUpdateDirective>("directive");
+  ASSERT_TRUE(Directive);
+
+  OMPFromClause *FromClause = nullptr;
+  for (auto *Clause : Directive->clauses()) {
+    if ((FromClause = dyn_cast<OMPFromClause>(Clause))) {
+      break;
+    }
+  }
+  ASSERT_TRUE(FromClause);
+
+  for (const auto *VarExpr : FromClause->varlist()) {
+    const auto *ArraySection = dyn_cast<ArraySectionExpr>(VarExpr);
+    if (!ArraySection)
+      continue;
+
+    // lower bound (variable, not literal)
+    const Expr *LowerBound = ArraySection->getLowerBound();
+    ASSERT_TRUE(LowerBound);
+    EXPECT_FALSE(isa<IntegerLiteral>(LowerBound));
+    EXPECT_TRUE(isa<ImplicitCastExpr>(LowerBound) ||
+                isa<DeclRefExpr>(LowerBound));
+  }
+}
+
+TEST_P(ASTMatchersTest,
+       OMPTargetUpdateDirective_From_ArraySection_WrongLength) {
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[20];
+      #pragma omp target update from(arr[0:10:2])
+      ;
+    }
+  )";
+
+  auto astUnit = tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp"});
+  ASSERT_TRUE(astUnit);
+
+  auto Results = match(ompTargetUpdateDirective().bind("directive"),
+                       astUnit->getASTContext());
+  ASSERT_FALSE(Results.empty());
+
+  const auto *Directive =
+      Results[0].getNodeAs<OMPTargetUpdateDirective>("directive");
+  ASSERT_TRUE(Directive);
+
+  OMPFromClause *FromClause = nullptr;
+  for (auto *Clause : Directive->clauses()) {
+    if ((FromClause = dyn_cast<OMPFromClause>(Clause))) {
+      break;
+    }
+  }
+  ASSERT_TRUE(FromClause);
+
+  for (const auto *VarExpr : FromClause->varlist()) {
+    const auto *ArraySection = dyn_cast<ArraySectionExpr>(VarExpr);
+    if (!ArraySection)
+      continue;
+
+    // lower bound (0)
+    const Expr *LowerBound = ArraySection->getLowerBound();
+    ASSERT_TRUE(LowerBound);
+
+    // length (10, not 8)
+    const Expr *Length = ArraySection->getLength();
+    ASSERT_TRUE(Length);
+    ASSERT_TRUE(isa<IntegerLiteral>(Length));
+    const auto *LengthLiteral = cast<IntegerLiteral>(Length);
+    EXPECT_NE(LengthLiteral->getValue().getZExtValue(), 8u);
+    EXPECT_EQ(LengthLiteral->getValue().getZExtValue(), 10u);
+
+    // stride (2)
+    const Expr *Stride = ArraySection->getStride();
+    ASSERT_TRUE(Stride);
+  }
+}
+
+TEST_P(ASTMatchersTest,
+       OMPTargetUpdateDirective_From_ArraySection_LengthVariable) {
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[20];
+      int len = 10;
+      #pragma omp target update from(arr[0:len:2])
+      ;
+    }
+  )";
+
+  auto astUnit = tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp"});
+  ASSERT_TRUE(astUnit);
+
+  auto Results = match(ompTargetUpdateDirective().bind("directive"),
+                       astUnit->getASTContext());
+  ASSERT_FALSE(Results.empty());
+
+  const auto *Directive =
+      Results[0].getNodeAs<OMPTargetUpdateDirective>("directive");
+  ASSERT_TRUE(Directive);
+
+  OMPFromClause *FromClause = nullptr;
+  for (auto *Clause : Directive->clauses()) {
+    if ((FromClause = dyn_cast<OMPFromClause>(Clause))) {
+      break;
+    }
+  }
+  ASSERT_TRUE(FromClause);
+
+  for (const auto *VarExpr : FromClause->varlist()) {
+    const auto *ArraySection = dyn_cast<ArraySectionExpr>(VarExpr);
+    if (!ArraySection)
+      continue;
+
+    // length (variable, not literal)
+    const Expr *Length = ArraySection->getLength();
+    ASSERT_TRUE(Length);
+    EXPECT_FALSE(isa<IntegerLiteral>(Length));
+    EXPECT_TRUE(isa<ImplicitCastExpr>(Length) || isa<DeclRefExpr>(Length));
+  }
+}
+
+TEST_P(ASTMatchersTest,
+       OMPTargetUpdateDirective_From_ArraySection_WrongStride) {
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[20];
+      #pragma omp target update from(arr[0:8:4])
+      ;
+    }
+  )";
+
+  auto astUnit = tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp"});
+  ASSERT_TRUE(astUnit);
+
+  auto Results = match(ompTargetUpdateDirective().bind("directive"),
+                       astUnit->getASTContext());
+  ASSERT_FALSE(Results.empty());
+
+  const auto *Directive =
+      Results[0].getNodeAs<OMPTargetUpdateDirective>("directive");
+  ASSERT_TRUE(Directive);
+
+  OMPFromClause *FromClause = nullptr;
+  for (auto *Clause : Directive->clauses()) {
+    if ((FromClause = dyn_cast<OMPFromClause>(Clause))) {
+      break;
+    }
+  }
+  ASSERT_TRUE(FromClause);
+
+  for (const auto *VarExpr : FromClause->varlist()) {
+    const auto *ArraySection = dyn_cast<ArraySectionExpr>(VarExpr);
+    if (!ArraySection)
+      continue;
+
+    // lower bound (0)
+    const Expr *LowerBound = ArraySection->getLowerBound();
+    ASSERT_TRUE(LowerBound);
+
+    // length (8)
+    const Expr *Length = ArraySection->getLength();
+    ASSERT_TRUE(Length);
+
+    // stride (4, not 2)
+    const Expr *Stride = ArraySection->getStride();
+    ASSERT_TRUE(Stride);
+    ASSERT_TRUE(isa<IntegerLiteral>(Stride));
+    const auto *StrideLiteral = cast<IntegerLiteral>(Stride);
+    EXPECT_NE(StrideLiteral->getValue().getZExtValue(), 2u);
+    EXPECT_EQ(StrideLiteral->getValue().getZExtValue(), 4u);
+  }
+}
+
+TEST_P(ASTMatchersTest,
+       OMPTargetUpdateDirective_From_ArraySection_StrideVariable) {
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[20];
+      int step = 4;
+      #pragma omp target update from(arr[0:8:step])
+      ;
+    }
+  )";
+
+  auto astUnit = tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp"});
+  ASSERT_TRUE(astUnit);
+
+  auto Results = match(ompTargetUpdateDirective().bind("directive"),
+                       astUnit->getASTContext());
+  ASSERT_FALSE(Results.empty());
+
+  const auto *Directive =
+      Results[0].getNodeAs<OMPTargetUpdateDirective>("directive");
+  ASSERT_TRUE(Directive);
+
+  OMPFromClause *FromClause = nullptr;
+  for (auto *Clause : Directive->clauses()) {
+    if ((FromClause = dyn_cast<OMPFromClause>(Clause))) {
+      break;
+    }
+  }
+  ASSERT_TRUE(FromClause);
+
+  for (const auto *VarExpr : FromClause->varlist()) {
+    const auto *ArraySection = dyn_cast<ArraySectionExpr>(VarExpr);
+    if (!ArraySection)
+      continue;
+
+    // stride (variable, not literal)
+    const Expr *Stride = ArraySection->getStride();
+    ASSERT_TRUE(Stride);
+    EXPECT_FALSE(isa<IntegerLiteral>(Stride));
+    EXPECT_TRUE(isa<ImplicitCastExpr>(Stride) || isa<DeclRefExpr>(Stride));
+  }
+}
+
+TEST_P(ASTMatchersTest, OMPTargetUpdateDirective_To_ArraySection_WrongOffset) {
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[20];
+      #pragma omp target update to(arr[3:8:2])
+      ;
+    }
+  )";
+
+  auto astUnit = tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp"});
+  ASSERT_TRUE(astUnit);
+
+  auto Results = match(ompTargetUpdateDirective().bind("directive"),
+                       astUnit->getASTContext());
+  ASSERT_FALSE(Results.empty());
+
+  const auto *Directive =
+      Results[0].getNodeAs<OMPTargetUpdateDirective>("directive");
+  ASSERT_TRUE(Directive);
+
+  OMPToClause *ToClause = nullptr;
+  for (auto *Clause : Directive->clauses()) {
+    if ((ToClause = dyn_cast<OMPToClause>(Clause))) {
+      break;
+    }
+  }
+  ASSERT_TRUE(ToClause);
+
+  for (const auto *VarExpr : ToClause->varlist()) {
+    const auto *ArraySection = dyn_cast<ArraySectionExpr>(VarExpr);
+    if (!ArraySection)
+      continue;
+
+    // lower bound (3, not 0)
+    const Expr *LowerBound = ArraySection->getLowerBound();
+    ASSERT_TRUE(LowerBound);
+    ASSERT_TRUE(isa<IntegerLiteral>(LowerBound));
+    const auto *LowerBoundLiteral = cast<IntegerLiteral>(LowerBound);
+    EXPECT_NE(LowerBoundLiteral->getValue().getZExtValue(), 0u);
+    EXPECT_EQ(LowerBoundLiteral->getValue().getZExtValue(), 3u);
+
+    // length (8)
+    const Expr *Length = ArraySection->getLength();
+    ASSERT_TRUE(Length);
+
+    // stride (2)
+    const Expr *Stride = ArraySection->getStride();
+    ASSERT_TRUE(Stride);
+  }
+}
+
+TEST_P(ASTMatchersTest,
+       OMPTargetUpdateDirective_To_ArraySection_OffsetVariable) {
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[20];
+      int idx = 3;
+      #pragma omp target update to(arr[idx:8:2])
+      ;
+    }
+  )";
+
+  auto astUnit = tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp"});
+  ASSERT_TRUE(astUnit);
+
+  auto Results = match(ompTargetUpdateDirective().bind("directive"),
+                       astUnit->getASTContext());
+  ASSERT_FALSE(Results.empty());
+
+  const auto *Directive =
+      Results[0].getNodeAs<OMPTargetUpdateDirective>("directive");
+  ASSERT_TRUE(Directive);
+
+  OMPToClause *ToClause = nullptr;
+  for (auto *Clause : Directive->clauses()) {
+    if ((ToClause = dyn_cast<OMPToClause>(Clause))) {
+      break;
+    }
+  }
+  ASSERT_TRUE(ToClause);
+
+  for (const auto *VarExpr : ToClause->varlist()) {
+    const auto *ArraySection = dyn_cast<ArraySectionExpr>(VarExpr);
+    if (!ArraySection)
+      continue;
+
+    // lower bound (variable, not literal)
+    const Expr *LowerBound = ArraySection->getLowerBound();
+    ASSERT_TRUE(LowerBound);
+    EXPECT_FALSE(isa<IntegerLiteral>(LowerBound));
+    EXPECT_TRUE(isa<ImplicitCastExpr>(LowerBound) ||
+                isa<DeclRefExpr>(LowerBound));
+  }
+}
+
+TEST_P(ASTMatchersTest, OMPTargetUpdateDirective_To_ArraySection_WrongLength) {
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[20];
+      #pragma omp target update to(arr[0:12:2])
+      ;
+    }
+  )";
+
+  auto astUnit = tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp"});
+  ASSERT_TRUE(astUnit);
+
+  auto Results = match(ompTargetUpdateDirective().bind("directive"),
+                       astUnit->getASTContext());
+  ASSERT_FALSE(Results.empty());
+
+  const auto *Directive =
+      Results[0].getNodeAs<OMPTargetUpdateDirective>("directive");
+  ASSERT_TRUE(Directive);
+
+  OMPToClause *ToClause = nullptr;
+  for (auto *Clause : Directive->clauses()) {
+    if ((ToClause = dyn_cast<OMPToClause>(Clause))) {
+      break;
+    }
+  }
+  ASSERT_TRUE(ToClause);
+
+  for (const auto *VarExpr : ToClause->varlist()) {
+    const auto *ArraySection = dyn_cast<ArraySectionExpr>(VarExpr);
+    if (!ArraySection)
+      continue;
+
+    // lower bound (0)
+    const Expr *LowerBound = ArraySection->getLowerBound();
+    ASSERT_TRUE(LowerBound);
+
+    // length (12, not 8)
+    const Expr *Length = ArraySection->getLength();
+    ASSERT_TRUE(Length);
+    ASSERT_TRUE(isa<IntegerLiteral>(Length));
+    const auto *LengthLiteral = cast<IntegerLiteral>(Length);
+    EXPECT_NE(LengthLiteral->getValue().getZExtValue(), 8u);
+    EXPECT_EQ(LengthLiteral->getValue().getZExtValue(), 12u);
+
+    // stride (2)
+    const Expr *Stride = ArraySection->getStride();
+    ASSERT_TRUE(Stride);
+  }
+}
+
+TEST_P(ASTMatchersTest,
+       OMPTargetUpdateDirective_To_ArraySection_LengthVariable) {
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[20];
+      int count = 12;
+      #pragma omp target update to(arr[0:count:2])
+      ;
+    }
+  )";
+
+  auto astUnit = tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp"});
+  ASSERT_TRUE(astUnit);
+
+  auto Results = match(ompTargetUpdateDirective().bind("directive"),
+                       astUnit->getASTContext());
+  ASSERT_FALSE(Results.empty());
+
+  const auto *Directive =
+      Results[0].getNodeAs<OMPTargetUpdateDirective>("directive");
+  ASSERT_TRUE(Directive);
+
+  OMPToClause *ToClause = nullptr;
+  for (auto *Clause : Directive->clauses()) {
+    if ((ToClause = dyn_cast<OMPToClause>(Clause))) {
+      break;
+    }
+  }
+  ASSERT_TRUE(ToClause);
+
+  for (const auto *VarExpr : ToClause->varlist()) {
+    const auto *ArraySection = dyn_cast<ArraySectionExpr>(VarExpr);
+    if (!ArraySection)
+      continue;
+
+    // length (variable, not literal)
+    const Expr *Length = ArraySection->getLength();
+    ASSERT_TRUE(Length);
+    EXPECT_FALSE(isa<IntegerLiteral>(Length));
+    EXPECT_TRUE(isa<ImplicitCastExpr>(Length) || isa<DeclRefExpr>(Length));
+  }
+}
+
+TEST_P(ASTMatchersTest, OMPTargetUpdateDirective_To_ArraySection_WrongStride) {
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[20];
+      #pragma omp target update to(arr[0:8:3])
+      ;
+    }
+  )";
+
+  auto astUnit = tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp"});
+  ASSERT_TRUE(astUnit);
+
+  auto Results = match(ompTargetUpdateDirective().bind("directive"),
+                       astUnit->getASTContext());
+  ASSERT_FALSE(Results.empty());
+
+  const auto *Directive =
+      Results[0].getNodeAs<OMPTargetUpdateDirective>("directive");
+  ASSERT_TRUE(Directive);
+
+  OMPToClause *ToClause = nullptr;
+  for (auto *Clause : Directive->clauses()) {
+    if ((ToClause = dyn_cast<OMPToClause>(Clause))) {
+      break;
+    }
+  }
+  ASSERT_TRUE(ToClause);
+
+  for (const auto *VarExpr : ToClause->varlist()) {
+    const auto *ArraySection = dyn_cast<ArraySectionExpr>(VarExpr);
+    if (!ArraySection)
+      continue;
+
+    // lower bound (0)
+    const Expr *LowerBound = ArraySection->getLowerBound();
+    ASSERT_TRUE(LowerBound);
+
+    // length (8)
+    const Expr *Length = ArraySection->getLength();
+    ASSERT_TRUE(Length);
+
+    // stride (3, not 2)
+    const Expr *Stride = ArraySection->getStride();
+    ASSERT_TRUE(Stride);
+    ASSERT_TRUE(isa<IntegerLiteral>(Stride));
+    const auto *StrideLiteral = cast<IntegerLiteral>(Stride);
+    EXPECT_NE(StrideLiteral->getValue().getZExtValue(), 2u);
+    EXPECT_EQ(StrideLiteral->getValue().getZExtValue(), 3u);
+  }
+}
+
+TEST_P(ASTMatchersTest,
+       OMPTargetUpdateDirective_To_ArraySection_StrideVariable) {
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[20];
+      int stride = 3;
+      #pragma omp target update to(arr[0:8:stride])
+      ;
+    }
+  )";
+
+  auto astUnit = tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp"});
+  ASSERT_TRUE(astUnit);
+
+  auto Results = match(ompTargetUpdateDirective().bind("directive"),
+                       astUnit->getASTContext());
+  ASSERT_FALSE(Results.empty());
+
+  const auto *Directive =
+      Results[0].getNodeAs<OMPTargetUpdateDirective>("directive");
+  ASSERT_TRUE(Directive);
+
+  OMPToClause *ToClause = nullptr;
+  for (auto *Clause : Directive->clauses()) {
+    if ((ToClause = dyn_cast<OMPToClause>(Clause))) {
+      break;
+    }
+  }
+  ASSERT_TRUE(ToClause);
+
+  for (const auto *VarExpr : ToClause->varlist()) {
+    const auto *ArraySection = dyn_cast<ArraySectionExpr>(VarExpr);
+    if (!ArraySection)
+      continue;
+
+    const Expr *Stride = ArraySection->getStride();
+    ASSERT_TRUE(Stride);
+    EXPECT_FALSE(isa<IntegerLiteral>(Stride));
+    EXPECT_TRUE(isa<ImplicitCastExpr>(Stride) || isa<DeclRefExpr>(Stride));
+  }
 }
 
 TEST_P(ASTMatchersTest, HasAnyBase_DirectBase) {
