@@ -5560,7 +5560,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         // Doubling 0 will give the same 0.
         if (SelfAdd && KnownRHS.isKnownNeverLogicalPosZero(Mode) &&
             (Mode.Output == DenormalMode::IEEE ||
-             Mode.Output == DenormalMode::PreserveSign))
+             (Mode.Output == DenormalMode::PreserveSign &&
+              KnownRHS.isKnownNeverPosSubnormal()) ||
+             (Mode.Output == DenormalMode::PositiveZero &&
+              KnownRHS.isKnownNeverSubnormal())))
           Known.knownNot(fcPosZero);
 
         // (fadd x, 0.0) is guaranteed to return +0.0, not -0.0.
