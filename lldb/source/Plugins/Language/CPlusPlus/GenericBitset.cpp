@@ -8,6 +8,7 @@
 
 #include "LibCxx.h"
 #include "LibStdcpp.h"
+#include "MsvcStl.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Target.h"
@@ -24,6 +25,7 @@ public:
   enum class StdLib {
     LibCxx,
     LibStdcpp,
+    MsvcStl,
   };
 
   GenericBitsetFrontEnd(ValueObject &valobj, StdLib stdlib);
@@ -75,11 +77,14 @@ GenericBitsetFrontEnd::GenericBitsetFrontEnd(ValueObject &valobj, StdLib stdlib)
 llvm::StringRef GenericBitsetFrontEnd::GetDataContainerMemberName() {
   static constexpr llvm::StringLiteral s_libcxx_case("__first_");
   static constexpr llvm::StringLiteral s_libstdcpp_case("_M_w");
+  static constexpr llvm::StringLiteral s_msvcstl_case("_Array");
   switch (m_stdlib) {
   case StdLib::LibCxx:
     return s_libcxx_case;
   case StdLib::LibStdcpp:
     return s_libstdcpp_case;
+  case StdLib::MsvcStl:
+    return s_msvcstl_case;
   }
   llvm_unreachable("Unknown StdLib enum");
 }
@@ -96,6 +101,17 @@ lldb::ChildCacheState GenericBitsetFrontEnd::Update() {
 
   if (auto arg = m_backend.GetCompilerType().GetIntegralTemplateArgument(0))
     size = arg->value.GetAPSInt().getLimitedValue();
+  else {
+    // PDB doesn't create template types. Instead, the type is a (non-template)
+    // struct with the name "bitset<N>".
+    ConstString type_name =
+        m_backend.GetCompilerType().GetTypeName(/*BaseOnly=*/true);
+    llvm::StringRef size_str = type_name.GetStringRef();
+    size_str.consume_front("bitset<");
+    size_str.consume_back(">");
+    if (size_str.getAsInteger(10, size))
+      return lldb::ChildCacheState::eRefetch;
+  }
 
   m_elements.assign(size, ValueObjectSP());
   m_first =
@@ -154,5 +170,19 @@ SyntheticChildrenFrontEnd *formatters::LibcxxBitsetSyntheticFrontEndCreator(
   if (valobj_sp)
     return new GenericBitsetFrontEnd(*valobj_sp,
                                      GenericBitsetFrontEnd::StdLib::LibCxx);
+  return nullptr;
+}
+
+bool formatters::IsMsvcStlBitset(ValueObject &valobj) {
+  if (ValueObjectSP valobj_sp = valobj.GetNonSyntheticValue())
+    return valobj_sp->GetChildMemberWithName("_Array") != nullptr;
+  return false;
+}
+
+SyntheticChildrenFrontEnd *formatters::MsvcStlBitsetSyntheticFrontEndCreator(
+    CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
+  if (valobj_sp)
+    return new GenericBitsetFrontEnd(*valobj_sp,
+                                     GenericBitsetFrontEnd::StdLib::MsvcStl);
   return nullptr;
 }
