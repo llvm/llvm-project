@@ -4204,14 +4204,16 @@ llvm::Function *CGObjCGNU::GenerateMethod(const ObjCMethodDecl *OMD,
 void CGObjCGNU::GenerateDirectMethodsPreconditionCheck(
     CodeGenFunction &CGF, llvm::Function *Fn, const ObjCMethodDecl *OMD,
     const ObjCContainerDecl *CD) {
-   llvm_unreachable("Direct method precondition checks not supported in GNU runtime yet");
+  llvm_unreachable(
+      "Direct method precondition checks not supported in GNU runtime yet");
 }
 
 void CGObjCGNU::GenerateDirectMethodPrologue(CodeGenFunction &CGF,
                                              llvm::Function *Fn,
                                              const ObjCMethodDecl *OMD,
                                              const ObjCContainerDecl *CD) {
-   llvm_unreachable("Direct method precondition checks not supported in GNU runtime yet");
+  llvm_unreachable(
+      "Direct method precondition checks not supported in GNU runtime yet");
 }
 
 llvm::FunctionCallee CGObjCGNU::GetPropertyGetFunction() {
