@@ -77,7 +77,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeCompressEVEXLegacyPass(PR);
   initializeFixupLEAsLegacyPass(PR);
   initializeX86FPStackifierLegacyPass(PR);
-  initializeX86FixupSetCCPassPass(PR);
+  initializeX86FixupSetCCLegacyPass(PR);
   initializeX86CallFrameOptimizationLegacyPass(PR);
   initializeX86CmovConversionLegacyPass(PR);
   initializeX86TileConfigPass(PR);
@@ -514,7 +514,7 @@ bool X86PassConfig::addPreISel() {
 void X86PassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(&LiveRangeShrinkID);
-    addPass(createX86FixupSetCC());
+    addPass(createX86FixupSetCCLegacyPass());
     addPass(createX86OptimizeLEAsLegacyPass());
     addPass(createX86CallFrameOptimizationLegacyPass());
     addPass(createX86AvoidStoreForwardingBlocksLegacyPass());
