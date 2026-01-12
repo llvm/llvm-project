@@ -8,6 +8,7 @@
 
 #include "SelectionDAGTestBase.h"
 #include "llvm/CodeGen/SDPatternMatch.h"
+#include "llvm/IR/IntrinsicsWebAssembly.h"
 
 using namespace llvm;
 
@@ -691,6 +692,28 @@ TEST_F(SelectionDAGPatternMatchTest, matchSelectLike) {
   EXPECT_TRUE(
       sd_match(VSelect, m_SelectLike(m_Specific(VCond), m_Specific(VTVal),
                                      m_Specific(VFVal))));
+}
+
+TEST_F(SelectionDAGPatternMatchTest, matchIntrinsicWOChain) {
+  SDLoc DL;
+  auto Int32VT = EVT::getIntegerVT(Context, 32);
+
+  SDValue IntrinsicId = DAG->getConstant(Intrinsic::wasm_bitmask, DL, Int32VT);
+  SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 0, Int32VT);
+  SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int32VT);
+  SDValue Op2 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 2, Int32VT);
+
+  // Intrinsic operations should match
+  SDValue WasmBitmask = DAG->getNode(ISD::INTRINSIC_WO_CHAIN, DL, Int32VT, IntrinsicId, Op0);
+
+  // Add operation shouldn't match
+  SDValue Add = DAG->getNode(ISD::ADD, DL, Int32VT, Op0, Op1);
+
+  using namespace SDPatternMatch;
+  SDValue OpHolder;
+
+  EXPECT_TRUE(sd_match(WasmBitmask, m_IntrinsicWOChain(m_SpecificInt(Intrinsic::wasm_bitmask), m_Value(OpHolder))));
+  EXPECT_FALSE(sd_match(Add, m_IntrinsicWOChain(m_SpecificInt(Intrinsic::wasm_bitmask), m_Value(OpHolder))));
 }
 
 namespace {
