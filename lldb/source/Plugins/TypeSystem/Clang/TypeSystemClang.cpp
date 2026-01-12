@@ -5511,18 +5511,17 @@ CompilerType TypeSystemClang::GetBuiltinTypeByName(ConstString name) {
   StringRef name_ref = name.GetStringRef();
   // We compile the regex only the type name fulfills certain
   // necessary conditions. Otherwise we do not bother.
-  if ((!name_ref.empty() && name_ref[0] == '_') ||
-      (name_ref.size() >= 10 && name_ref[9] == '_')) {
-    llvm::Regex re("^(unsigned )?_BitInt\\((.*)\\)$");
-    llvm::SmallVector<llvm::StringRef, 3> matches;
-    bool is_bitint = re.match(name_ref, &matches);
-    if (is_bitint && matches.size() == 3) {
-      bool is_unsigned = matches[1] == "unsigned ";
-      llvm::APInt ap_bit_size;
-      if (!matches[2].getAsInteger(10, ap_bit_size))
-        return GetType(getASTContext().getBitIntType(
-            is_unsigned, ap_bit_size.getZExtValue()));
-    }
+  if (name_ref.consume_front("unsigned _BitInt(") ||
+      name_ref.consume_front("_BitInt(")) {
+    uint64_t bit_size;
+    if (name_ref.consumeInteger(/*Radix=*/10, bit_size))
+      return {};
+
+    if (!name_ref.consume_front(")"))
+      return {};
+
+    return GetType(getASTContext().getBitIntType(
+        name.GetStringRef().starts_with("unsigned"), bit_size));
   }
   return GetBasicType(GetBasicTypeEnumeration(name));
 }
