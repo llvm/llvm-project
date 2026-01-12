@@ -1572,6 +1572,7 @@ SDValue SelectionDAG::getZeroExtendInReg(SDValue Op, const SDLoc &DL, EVT VT) {
   assert(VT.bitsLE(OpVT) && "Not extending!");
   if (OpVT == VT)
     return Op;
+  // TODO: Use computeKnownBits instead of AssertZext.
   if (Op.getOpcode() == ISD::AssertZext &&
       cast<VTSDNode>(Op.getOperand(1))->getVT().bitsLE(VT))
     return Op;
