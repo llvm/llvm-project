@@ -40,6 +40,9 @@ by the :program:`llvm-ifs`:
     - { Name: sym2, Type: Func, Weak: false }
     - { Name: sym3, Type: TLS }
     - { Name: sym4, Type: Unknown, Warning: foo }
+    - { Name: sym5, Version: VER_1, Type: Func }
+  VersionDefinitions: /* Optional */
+    - { Name: VER_1 }
   ...
 
 * ``IFSVersion``: Version of the IFS file for reader compatibility.
@@ -57,15 +60,21 @@ by the :program:`llvm-ifs`:
 
   + ``Name``: Symbol name.
 
+  + ``Version`` (optional): Symbol version.
+
   + ``Type``: Whether the symbol is an object, function, no-type, thread local storage, or unknown. Symbol types not explicitly supported are mapped as unknown to improve signal-to-noise ratio.
 
   + ``Size``: The size of the symbol in question, doesn't apply to functions, and is optional for NoType symbols.
+
+  + ``Default``: Whether or not the symbol is a default version symbol in this shared object file.
 
   + ``Undefined``: Whether or not the symbol is defined in this shared object file.
 
   + ``Weak``: Whether or not the symbol should be treated as weak.
 
   + ``Warning`` (optional): Warning text to output when this symbol is linked against.
+
+* ``VersionDefinitions`` (optional): A collection of symbol versions defined in this shared object file.
 
 This YAML based text format contains everything that is needed to generate a
 linkable ELF shared object as well as an Apple TAPI format file. The ordering
@@ -87,6 +96,10 @@ A minimum ELF file that can be used by linker should have following sections pro
 
 * Dynamic string table (``.dynstr`` section).
 
+* Version symbol table (``.gnu.version`` section). (optional)
+
+* Version definition table (``.gnu.version_d`` section). (optional)
+
 * Dynamic table (``.dynamic`` section).
 
   + ``DT_SYMTAB`` entry.
@@ -98,6 +111,10 @@ A minimum ELF file that can be used by linker should have following sections pro
   + ``DT_NEEDED`` entries. (optional)
 
   + ``DT_SONAME`` entry. (optional)
+
+  + ``DT_VERSYM`` entry. (optional)
+
+  + ``DT_VERDEF`` entry. (optional)
 
 * Section header string table (``.shstrtab`` section)
 
@@ -163,7 +180,7 @@ OPTIONS
  triple in the output IFS file. If the value matches the target information
  from the object file, this value will be used in the 'Target:' filed in the
  generated IFS. If it conflicts with the input object file, an error will be
- reported and the program will stop. 
+ reported and the program will stop.
 
 .. option:: --hint-ifs-target
 

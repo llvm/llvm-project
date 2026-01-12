@@ -52,14 +52,28 @@ enum class IFSBitWidthType {
 
 struct IFSSymbol {
   IFSSymbol() = default;
-  explicit IFSSymbol(std::string SymbolName) : Name(std::move(SymbolName)) {}
+  explicit IFSSymbol(const std::string &Name) : Name(Name) {}
   std::string Name;
+  std::string Version;
   std::optional<uint64_t> Size;
   IFSSymbolType Type = IFSSymbolType::NoType;
+  bool Default = false;
   bool Undefined = false;
   bool Weak = false;
   std::optional<std::string> Warning;
-  bool operator<(const IFSSymbol &RHS) const { return Name < RHS.Name; }
+  bool operator<(const IFSSymbol &Other) const {
+    return std::tie(Name, Version) < std::tie(Other.Name, Other.Version);
+  }
+};
+
+struct IFSVerDef {
+  std::string Name;
+  std::vector<std::string> Parents;
+
+  bool operator==(const IFSVerDef &Other) const {
+    return std::tie(Name, Parents) == std::tie(Other.Name, Other.Parents);
+  }
+  bool operator!=(const IFSVerDef &Other) const { return !(*this == Other); }
 };
 
 struct IFSTarget {
@@ -70,20 +84,15 @@ struct IFSTarget {
   std::optional<IFSEndiannessType> Endianness;
   std::optional<IFSBitWidthType> BitWidth;
 
+  bool operator==(const IFSTarget &Other) const {
+    return std::tie(Arch, BitWidth, Endianness, ObjectFormat, Triple) ==
+           std::tie(Other.Arch, Other.BitWidth, Other.Endianness,
+                    Other.ObjectFormat, Other.Triple);
+  }
+  bool operator!=(const IFSTarget &Other) const { return !(*this == Other); }
+
   LLVM_ABI bool empty();
 };
-
-inline bool operator==(const IFSTarget &Lhs, const IFSTarget &Rhs) {
-  if (Lhs.Arch != Rhs.Arch || Lhs.BitWidth != Rhs.BitWidth ||
-      Lhs.Endianness != Rhs.Endianness ||
-      Lhs.ObjectFormat != Rhs.ObjectFormat || Lhs.Triple != Rhs.Triple)
-    return false;
-  return true;
-}
-
-inline bool operator!=(const IFSTarget &Lhs, const IFSTarget &Rhs) {
-  return !(Lhs == Rhs);
-}
 
 // A cumulative representation of InterFace stubs.
 // Both textual and binary stubs will read into and write from this object.
@@ -94,6 +103,7 @@ struct IFSStub {
   IFSTarget Target;
   std::vector<std::string> NeededLibs;
   std::vector<IFSSymbol> Symbols;
+  std::vector<IFSVerDef> VersionDefinitions;
 
   IFSStub() = default;
   LLVM_ABI IFSStub(const IFSStub &Stub);

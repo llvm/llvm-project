@@ -392,7 +392,8 @@ int llvm_ifs_main(int argc, char **argv, const llvm::ToolContext &) {
 
   // Attempt to merge input.
   IFSStub Stub;
-  std::map<std::string, IFSSymbol> SymbolMap;
+  std::map<std::tuple<std::string, std::string>, IFSSymbol> SymbolMap;
+  std::map<std::string, std::set<std::string>> VersionDefinitionMap;
   std::string PreviousInputFilePath;
   for (const std::string &InputFilePath : Config.InputFilePaths) {
     Expected<std::unique_ptr<IFSStub>> StubOrErr =
@@ -439,10 +440,17 @@ int llvm_ifs_main(int argc, char **argv, const llvm::ToolContext &) {
                            << InputFilePath << "\n";
         return -1;
       }
+      if (Stub.VersionDefinitions != TargetStub->VersionDefinitions) {
+        WithColor::error() << "Interface Stub: VersionDefinitions Mismatch."
+                           << "\nFilenames: " << PreviousInputFilePath << " "
+                           << InputFilePath << "\n";
+        return -1;
+      }
     }
 
     for (auto Symbol : TargetStub->Symbols) {
-      auto [SI, Inserted] = SymbolMap.try_emplace(Symbol.Name, Symbol);
+      auto [SI, Inserted] =
+          SymbolMap.try_emplace({Symbol.Name, Symbol.Version}, Symbol);
       if (Inserted)
         continue;
 
@@ -472,6 +480,14 @@ int llvm_ifs_main(int argc, char **argv, const llvm::ToolContext &) {
       // TODO: Not checking Warning. Will be dropped.
     }
 
+    for (const auto &[Name, Parents] : TargetStub->VersionDefinitions) {
+      if (TargetStub->SoName == Name)
+        continue;
+      auto [Iter, Inserted] = VersionDefinitionMap.insert({Name, {}});
+      auto &[Key, Value] = *Iter;
+      llvm::copy(Parents, std::inserter(Value, Value.end()));
+    }
+
     PreviousInputFilePath = InputFilePath;
   }
 
@@ -483,8 +499,14 @@ int llvm_ifs_main(int argc, char **argv, const llvm::ToolContext &) {
       return -1;
     }
 
-  for (auto &Entry : SymbolMap)
-    Stub.Symbols.push_back(Entry.second);
+  for (const auto &[Name, Symbol] : SymbolMap)
+    Stub.Symbols.push_back(Symbol);
+
+  for (const auto &[Name, ParentSet] : VersionDefinitionMap) {
+    std::vector<std::string> Parents;
+    llvm::copy(ParentSet, std::back_inserter(Parents));
+    Stub.VersionDefinitions.push_back({Name, std::move(Parents)});
+  }
 
   // Change SoName before emitting stubs.
   if (Config.SoName)
