@@ -4798,7 +4798,8 @@ bool SPIRVInstructionSelector::selectGlobalValue(
   if (GlobalVar->isExternallyInitialized() &&
       STI.getTargetTriple().getVendor() == Triple::AMD) {
     constexpr unsigned ReadWriteINTEL = 3u;
-    buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::HostAccessINTEL, {ReadWriteINTEL});
+    buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::HostAccessINTEL,
+                    {ReadWriteINTEL});
     MachineInstrBuilder MIB(*MF, --MIRBuilder.getInsertPt());
     addStringImm(GV->getName(), MIB);
   }
