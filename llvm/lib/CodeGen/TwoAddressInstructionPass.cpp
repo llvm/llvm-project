@@ -2014,6 +2014,14 @@ void TwoAddressInstructionImpl::eliminateRegSequence(
     unsigned SubIdx = MI.getOperand(i+1).getImm();
     // Nothing needs to be inserted for undef operands.
     if (UseMO.isUndef()) {
+      // Propagate the undef flag to the next use (if any)
+      for (MachineOperand &Use : MRI->use_operands(DstReg)) {
+        if (Use.getSubReg() == SubIdx) {
+          Use.setIsUndef(true);
+          break;
+        }
+      }
+
       UndefLanes |= TRI->getSubRegIndexLaneMask(SubIdx);
       continue;
     }
