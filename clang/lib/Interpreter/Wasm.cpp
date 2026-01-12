@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Wasm.h"
-#include "IncrementalExecutor.h"
 
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Module.h>
@@ -58,9 +57,8 @@ bool link(llvm::ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
 
 namespace clang {
 
-WasmIncrementalExecutor::WasmIncrementalExecutor(
-    llvm::orc::ThreadSafeContext &TSC)
-    : IncrementalExecutor(TSC) {}
+WasmIncrementalExecutor::WasmIncrementalExecutor() = default;
+WasmIncrementalExecutor::~WasmIncrementalExecutor() = default;
 
 llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
   std::string ErrorString;
@@ -157,6 +155,12 @@ WasmIncrementalExecutor::getSymbolAddress(llvm::StringRef Name,
   return llvm::orc::ExecutorAddr::fromPtr(Sym);
 }
 
-WasmIncrementalExecutor::~WasmIncrementalExecutor() = default;
-
+llvm::Error WasmIncrementalExecutor::LoadDynamicLibrary(const char *name) {
+  void *handle = dlopen(name, RTLD_NOW | RTLD_GLOBAL);
+  if (!handle) {
+    llvm::errs() << dlerror() << '\n';
+    return llvm::make_error<llvm::StringError>("Failed to load dynamic library",
+                                               llvm::inconvertibleErrorCode());
+  }
+}
 } // namespace clang
