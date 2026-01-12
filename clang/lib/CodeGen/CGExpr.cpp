@@ -2745,7 +2745,7 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
       llvm::Value *Row = Dst.getMatrixRowIdx();
       llvm::Value *RowVal = Src.getScalarVal(); // <NumCols x T>
       if (getLangOpts().HLSL && RowVal->getType()->isIntOrIntVectorTy(1)) {
-        auto* RowValVecTy = dyn_cast<llvm::FixedVectorType>(RowVal->getType());
+        auto *RowValVecTy = dyn_cast<llvm::FixedVectorType>(RowVal->getType());
         assert(RowValVecTy);
         llvm::Type *StorageElmTy =
             llvm::FixedVectorType::get(MatrixVec->getType()->getScalarType(),
