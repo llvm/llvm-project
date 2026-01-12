@@ -1935,7 +1935,7 @@ static const char *fastParseASCIIIdentifierScalar(const char *CurPtr) {
 #if (defined(__i386__) || defined(__x86_64__)) && defined(__has_attribute) &&  \
     __has_attribute(target) && !defined(_WIN32)
 __attribute__((target("sse4.2"))) static const char *
-fastParseASCIIIdentifierSSE42(const char *CurPtr, const char *BufferEnd) {
+fastParseASCIIIdentifier(const char *CurPtr, const char *BufferEnd) {
   alignas(16) static constexpr char AsciiIdentifierRange[16] = {
       '_', '_', 'A', 'Z', 'a', 'z', '0', '9',
   };
