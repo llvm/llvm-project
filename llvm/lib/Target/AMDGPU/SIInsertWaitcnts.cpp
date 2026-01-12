@@ -1649,13 +1649,12 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
     Wait.ExpCnt = ~0u;
     Wait.DsCnt = ~0u;
 
-    LLVM_DEBUG(It.isEnd()
-                   ? dbgs()
-                         << "applied pre-existing waitcnt\n"
-                         << "New Instr at block end: " << *WaitcntInstr << '\n'
-                   : dbgs() << "applied pre-existing waitcnt\n"
-                            << "Old Instr: " << *It
-                            << "New Instr: " << *WaitcntInstr << '\n');
+    LLVM_DEBUG(It.isEnd() ? dbgs() << "applied pre-existing waitcnt\n"
+                                   << "New Instr at block end: "
+                                   << *WaitcntInstr << '\n'
+                          : dbgs() << "applied pre-existing waitcnt\n"
+                                   << "Old Instr: " << *It
+                                   << "New Instr: " << *WaitcntInstr << '\n');
   }
 
   if (WaitcntVsCntInstr) {
@@ -1877,13 +1876,12 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       Wait.LoadCnt = ~0u;
       Wait.DsCnt = ~0u;
 
-      LLVM_DEBUG(It.isEnd()
-                     ? dbgs() << "applied pre-existing waitcnt\n"
-                              << "New Instr at block end: "
-                              << *CombinedLoadDsCntInstr << '\n'
-                     : dbgs() << "applied pre-existing waitcnt\n"
-                              << "Old Instr: " << *It << "New Instr: "
-                              << *CombinedLoadDsCntInstr << '\n');
+      LLVM_DEBUG(It.isEnd() ? dbgs() << "applied pre-existing waitcnt\n"
+                                     << "New Instr at block end: "
+                                     << *CombinedLoadDsCntInstr << '\n'
+                            : dbgs() << "applied pre-existing waitcnt\n"
+                                     << "Old Instr: " << *It << "New Instr: "
+                                     << *CombinedLoadDsCntInstr << '\n');
     } else {
       CombinedLoadDsCntInstr->eraseFromParent();
       Modified = true;
@@ -1902,13 +1900,12 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       Wait.StoreCnt = ~0u;
       Wait.DsCnt = ~0u;
 
-      LLVM_DEBUG(It.isEnd()
-                     ? dbgs() << "applied pre-existing waitcnt\n"
-                              << "New Instr at block end: "
-                              << *CombinedStoreDsCntInstr << '\n'
-                     : dbgs() << "applied pre-existing waitcnt\n"
-                              << "Old Instr: " << *It << "New Instr: "
-                              << *CombinedStoreDsCntInstr << '\n');
+      LLVM_DEBUG(It.isEnd() ? dbgs() << "applied pre-existing waitcnt\n"
+                                     << "New Instr at block end: "
+                                     << *CombinedStoreDsCntInstr << '\n'
+                            : dbgs() << "applied pre-existing waitcnt\n"
+                                     << "Old Instr: " << *It << "New Instr: "
+                                     << *CombinedStoreDsCntInstr << '\n');
     } else {
       CombinedStoreDsCntInstr->eraseFromParent();
       Modified = true;
@@ -1994,13 +1991,12 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
     if (Enc != (unsigned)AMDGPU::DepCtr::getDefaultDepCtrEncoding(*ST)) {
       Modified |= updateOperandIfDifferent(*WaitcntDepctrInstr,
                                            AMDGPU::OpName::simm16, Enc);
-      LLVM_DEBUG(It.isEnd()
-                     ? dbgs() << "applyPreexistingWaitcnt\n"
-                              << "New Instr at block end: "
-                              << *WaitcntDepctrInstr << '\n'
-                     : dbgs() << "applyPreexistingWaitcnt\n"
-                              << "Old Instr: " << *It
-                              << "New Instr: " << *WaitcntDepctrInstr << '\n');
+      LLVM_DEBUG(It.isEnd() ? dbgs() << "applyPreexistingWaitcnt\n"
+                                     << "New Instr at block end: "
+                                     << *WaitcntDepctrInstr << '\n'
+                            : dbgs() << "applyPreexistingWaitcnt\n"
+                                     << "Old Instr: " << *It << "New Instr: "
+                                     << *WaitcntDepctrInstr << '\n');
     } else {
       WaitcntDepctrInstr->eraseFromParent();
       Modified = true;
