@@ -420,6 +420,64 @@ TEST_F(TestTypeSystemClang, TestEnumerationValueSign) {
   EXPECT_TRUE(enum_decl->getInitVal().isSigned());
 }
 
+TEST_F(TestTypeSystemClang, TestIsEnumerationType) {
+  auto holder =
+      std::make_unique<clang_utils::TypeSystemClangHolder>("enum_ast");
+  auto &ast = *holder->GetAST();
+
+  // Scoped signed enum
+  {
+    CompilerType enum_type = ast.CreateEnumerationType(
+        "scoped_signed_enum", ast.GetTranslationUnitDecl(),
+        OptionalClangModuleID(), Declaration(),
+        ast.GetBasicType(eBasicTypeLong), /*is_scoped=*/true);
+    ASSERT_TRUE(enum_type);
+
+    bool is_signed;
+    EXPECT_TRUE(enum_type.IsEnumerationType(is_signed));
+    EXPECT_TRUE(is_signed);
+  }
+
+  // Scoped unsigned enum
+  {
+    CompilerType enum_type = ast.CreateEnumerationType(
+        "scoped_unsigned_enum", ast.GetTranslationUnitDecl(),
+        OptionalClangModuleID(), Declaration(),
+        ast.GetBasicType(eBasicTypeUnsignedInt), /*is_scoped=*/true);
+    ASSERT_TRUE(enum_type);
+
+    bool is_signed;
+    EXPECT_TRUE(enum_type.IsEnumerationType(is_signed));
+    EXPECT_FALSE(is_signed);
+  }
+
+  // Unscoped signed enum
+  {
+    CompilerType enum_type = ast.CreateEnumerationType(
+        "unscoped_signed_enum", ast.GetTranslationUnitDecl(),
+        OptionalClangModuleID(), Declaration(),
+        ast.GetBasicType(eBasicTypeLong), /*is_scoped=*/false);
+    ASSERT_TRUE(enum_type);
+
+    bool is_signed;
+    EXPECT_TRUE(enum_type.IsEnumerationType(is_signed));
+    EXPECT_TRUE(is_signed);
+  }
+
+  // Unscoped unsigned enum
+  {
+    CompilerType enum_type = ast.CreateEnumerationType(
+        "unscoped_unsigned_enum", ast.GetTranslationUnitDecl(),
+        OptionalClangModuleID(), Declaration(),
+        ast.GetBasicType(eBasicTypeUnsignedInt), /*is_scoped=*/false);
+    ASSERT_TRUE(enum_type);
+
+    bool is_signed;
+    EXPECT_TRUE(enum_type.IsEnumerationType(is_signed));
+    EXPECT_FALSE(is_signed);
+  }
+}
+
 TEST_F(TestTypeSystemClang, TestOwningModule) {
   auto holder =
       std::make_unique<clang_utils::TypeSystemClangHolder>("module_ast");
