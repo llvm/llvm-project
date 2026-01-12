@@ -19,6 +19,18 @@ function(get_subproject_title outvar)
   endif ()
 endfunction(get_subproject_title)
 
+# Determine required flags to enable/disable RTTI.
+set(LLVM_CXXFLAGS_RTTI_DISABLE "")
+set(LLVM_CXXFLAGS_RTTI_ENABLE "")
+if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
+  set(LLVM_CXXFLAGS_RTTI_DISABLE "-fno-rtti")
+elseif(MSVC)
+  set(LLVM_CXXFLAGS_RTTI_DISABLE "/GR-")
+  set(LLVM_CXXFLAGS_RTTI_ENABLE "/GR")
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "XL")
+  set(LLVM_CXXFLAGS_RTTI_DISABLE "-qnortti")
+endif()
+
 function(llvm_update_compile_flags name)
   set(LLVM_COMPILE_CXXFLAGS "")
 
@@ -51,19 +63,10 @@ function(llvm_update_compile_flags name)
 
   # LLVM_REQUIRES_RTTI is an internal flag that individual
   # targets can use to force RTTI
-  set(LLVM_CONFIG_HAS_RTTI YES CACHE INTERNAL "")
   if(NOT (LLVM_REQUIRES_RTTI OR LLVM_ENABLE_RTTI))
-    set(LLVM_CONFIG_HAS_RTTI NO CACHE INTERNAL "")
-    list(APPEND LLVM_COMPILE_DEFINITIONS GTEST_HAS_RTTI=0)
-    if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
-      list(APPEND LLVM_COMPILE_CXXFLAGS "-fno-rtti")
-    elseif (MSVC)
-      list(APPEND LLVM_COMPILE_CXXFLAGS "/GR-")
-    elseif (CMAKE_CXX_COMPILER_ID MATCHES "XL")
-      list(APPEND LLVM_COMPILE_CXXFLAGS "-qnortti")
-    endif ()
-  elseif(MSVC)
-    list(APPEND LLVM_COMPILE_CXXFLAGS "/GR")
+    list(APPEND LLVM_COMPILE_CXXFLAGS ${LLVM_CXXFLAGS_RTTI_DISABLE})
+  else()
+    list(APPEND LLVM_COMPILE_CXXFLAGS ${LLVM_CXXFLAGS_RTTI_ENABLE})
   endif()
 
   target_compile_options(${name} PRIVATE ${LLVM_COMPILE_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:${LLVM_COMPILE_CXXFLAGS}>)

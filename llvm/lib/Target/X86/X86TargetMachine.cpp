@@ -73,22 +73,22 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86PreTileConfigPass(PR);
   initializeGlobalISel(PR);
   initializeWinEHStatePassPass(PR);
-  initializeFixupBWInstPassPass(PR);
-  initializeCompressEVEXPassPass(PR);
+  initializeX86FixupBWInstLegacyPass(PR);
+  initializeCompressEVEXLegacyPass(PR);
   initializeFixupLEAsLegacyPass(PR);
   initializeX86FPStackifierLegacyPass(PR);
   initializeX86FixupSetCCPassPass(PR);
-  initializeX86CallFrameOptimizationPass(PR);
-  initializeX86CmovConverterPassPass(PR);
+  initializeX86CallFrameOptimizationLegacyPass(PR);
+  initializeX86CmovConversionLegacyPass(PR);
   initializeX86TileConfigPass(PR);
-  initializeX86FastPreTileConfigPass(PR);
-  initializeX86FastTileConfigPass(PR);
+  initializeX86FastPreTileConfigLegacyPass(PR);
+  initializeX86FastTileConfigLegacyPass(PR);
   initializeKCFIPass(PR);
   initializeX86LowerTileCopyPass(PR);
   initializeX86ExpandPseudoLegacyPass(PR);
   initializeX86ExecutionDomainFixPass(PR);
-  initializeX86DomainReassignmentPass(PR);
-  initializeX86AvoidSFBPassPass(PR);
+  initializeX86DomainReassignmentLegacyPass(PR);
+  initializeX86AvoidSFBLegacyPass(PR);
   initializeX86AvoidTrailingCallLegacyPassPass(PR);
   initializeX86SpeculativeLoadHardeningPassPass(PR);
   initializeX86SpeculativeExecutionSideEffectSuppressionPass(PR);
@@ -102,7 +102,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86DAGToDAGISelLegacyPass(PR);
   initializeX86ArgumentStackSlotPassPass(PR);
   initializeX86AsmPrinterPass(PR);
-  initializeX86FixupInstTuningPassPass(PR);
+  initializeX86FixupInstTuningLegacyPass(PR);
   initializeX86FixupVectorConstantsPassPass(PR);
   initializeX86DynAllocaExpanderLegacyPass(PR);
   initializeX86SuppressAPXForRelocationPassPass(PR);
@@ -499,7 +499,7 @@ bool X86PassConfig::addILPOpts() {
   addPass(&EarlyIfConverterLegacyID);
   if (EnableMachineCombinerPass)
     addPass(&MachineCombinerID);
-  addPass(createX86CmovConverterPass());
+  addPass(createX86CmovConversionLegacyPass());
   return true;
 }
 
@@ -516,8 +516,8 @@ void X86PassConfig::addPreRegAlloc() {
     addPass(&LiveRangeShrinkID);
     addPass(createX86FixupSetCC());
     addPass(createX86OptimizeLEAsLegacyPass());
-    addPass(createX86CallFrameOptimization());
-    addPass(createX86AvoidStoreForwardingBlocks());
+    addPass(createX86CallFrameOptimizationLegacyPass());
+    addPass(createX86AvoidStoreForwardingBlocksLegacyPass());
   }
 
   addPass(createX86SuppressAPXForRelocationPass());
@@ -529,11 +529,11 @@ void X86PassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createX86PreTileConfigPass());
   else
-    addPass(createX86FastPreTileConfigPass());
+    addPass(createX86FastPreTileConfigLegacyPass());
 }
 
 void X86PassConfig::addMachineSSAOptimization() {
-  addPass(createX86DomainReassignmentPass());
+  addPass(createX86DomainReassignmentLegacyPass());
   TargetPassConfig::addMachineSSAOptimization();
 }
 
@@ -564,13 +564,13 @@ void X86PassConfig::addPreEmitPass() {
   addPass(createX86IssueVZeroUpperPass());
 
   if (getOptLevel() != CodeGenOptLevel::None) {
-    addPass(createX86FixupBWInsts());
+    addPass(createX86FixupBWInstsLegacyPass());
     addPass(createX86PadShortFunctions());
     addPass(createX86FixupLEAsLegacyPass());
-    addPass(createX86FixupInstTuning());
+    addPass(createX86FixupInstTuningLegacyPass());
     addPass(createX86FixupVectorConstants());
   }
-  addPass(createX86CompressEVEXPass());
+  addPass(createX86CompressEVEXLegacyPass());
   addPass(createX86InsertX87waitPass());
 }
 
@@ -635,7 +635,7 @@ void X86PassConfig::addPreEmitPass2() {
 }
 
 bool X86PassConfig::addPostFastRegAllocRewrite() {
-  addPass(createX86FastTileConfigPass());
+  addPass(createX86FastTileConfigLegacyPass());
   return true;
 }
 

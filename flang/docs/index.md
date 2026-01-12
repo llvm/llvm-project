@@ -6,7 +6,7 @@ referred to as "LLVM Flang" to differentiate itself from ["Classic
 Flang"](https://github.com/flang-compiler/flang) - these are two separate and
 independent Fortran compilers. LLVM Flang is under active development. While it
 is capable of generating executables for a number of examples, some
-functionality is still missing. See [Getting Involved](GettingInvolved) for tips
+functionality is still missing. See [Getting Involved](GettingInvolved.md) for tips
 on how to get in touch with us and to learn more about the current status.
 
 ```{eval-rst}

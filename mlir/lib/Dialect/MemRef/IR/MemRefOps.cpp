@@ -10,6 +10,7 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -192,9 +193,8 @@ static LogicalResult verifyAllocLikeOp(AllocLikeOp op) {
   if (!memRefType)
     return op.emitOpError("result must be a memref");
 
-  if (op.getDynamicSizes().size() != memRefType.getNumDynamicDims())
-    return op.emitOpError("dimension operand count does not equal memref "
-                          "dynamic dimension count");
+  if (failed(verifyDynamicDimensionCount(op, memRefType, op.getDynamicSizes())))
+    return failure();
 
   unsigned numSymbols = 0;
   if (!memRefType.getLayout().isIdentity())
@@ -604,6 +604,13 @@ OpFoldResult AssumeAlignmentOp::fold(FoldAdaptor adaptor) {
 FailureOr<std::optional<SmallVector<Value>>>
 AssumeAlignmentOp::bubbleDownCasts(OpBuilder &builder) {
   return bubbleDownCastsPassthroughOpImpl(*this, builder, getMemrefMutable());
+}
+
+FailureOr<OpFoldResult> AssumeAlignmentOp::reifyDimOfResult(OpBuilder &builder,
+                                                            int resultIndex,
+                                                            int dim) {
+  assert(resultIndex == 0 && "AssumeAlignmentOp has a single result");
+  return getMixedSize(builder, getLoc(), getMemref(), dim);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2629,6 +2636,11 @@ computeCollapsedLayoutMap(MemRefType srcType,
     for (int64_t idx : llvm::reverse(trailingReassocs)) {
       stride = stride * SaturatedInteger::wrap(srcShape[idx]);
 
+      // Dimensions of size 1 should be skipped, because their strides are
+      // meaningless and could have any arbitrary value.
+      if (srcShape[idx - 1] == 1)
+        continue;
+
       // Both source and result stride must have the same static value. In that
       // case, we can be sure, that the dimensions are collapsible (because they
       // are contiguous).
@@ -2640,11 +2652,6 @@ computeCollapsedLayoutMap(MemRefType srcType,
       auto srcStride = SaturatedInteger::wrap(srcStrides[idx - 1]);
       if (strict && (stride.saturated || srcStride.saturated))
         return failure();
-
-      // Dimensions of size 1 should be skipped, because their strides are
-      // meaningless and could have any arbitrary value.
-      if (srcShape[idx - 1] == 1)
-        continue;
 
       if (!stride.saturated && !srcStride.saturated && stride != srcStride)
         return failure();
@@ -3728,9 +3735,8 @@ LogicalResult ViewOp::verify() {
            << baseType << " and view memref type " << viewType;
 
   // Verify that we have the correct number of sizes for the result type.
-  unsigned numDynamicDims = viewType.getNumDynamicDims();
-  if (getSizes().size() != numDynamicDims)
-    return emitError("incorrect number of size operands for type ") << viewType;
+  if (failed(verifyDynamicDimensionCount(getOperation(), viewType, getSizes())))
+    return failure();
 
   return success();
 }

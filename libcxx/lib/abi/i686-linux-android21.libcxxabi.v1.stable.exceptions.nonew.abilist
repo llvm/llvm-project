@@ -1094,7 +1094,6 @@
 {'is_defined': True, 'name': '_ZNSt6__ndk115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEEC2EOS5_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEEaSEOS5_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk115future_categoryEv', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt6__ndk115numpunct_bynameIcE6__initEPKc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk115numpunct_bynameIcEC1EPKcj', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk115numpunct_bynameIcEC1ERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEEj', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk115numpunct_bynameIcEC2EPKcj', 'type': 'FUNC'}
@@ -1102,7 +1101,6 @@
 {'is_defined': True, 'name': '_ZNSt6__ndk115numpunct_bynameIcED0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk115numpunct_bynameIcED1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk115numpunct_bynameIcED2Ev', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt6__ndk115numpunct_bynameIwE6__initEPKc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk115numpunct_bynameIwEC1EPKcj', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk115numpunct_bynameIwEC1ERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEEj', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk115numpunct_bynameIwEC2EPKcj', 'type': 'FUNC'}
