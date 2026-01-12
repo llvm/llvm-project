@@ -140,7 +140,6 @@ entry:
   call void @llvm.memmove.p0.p0.i32(ptr align 1 %dst, ptr align 1 %src, i32 %n, i1 false)
   ret ptr %dst
 }
-; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.memmove.p0.p0.i32(ptr writeonly captures(none), ptr readonly captures(none), i32, i1 immarg)
 
 define ptr @strcpy_test(ptr noundef %dest, ptr noundef %src) nounwind {
