@@ -52,11 +52,6 @@ template <class _Tp>
   return __a + std::midpoint(ptrdiff_t(0), __b - __a);
 }
 
-template <typename _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr int __sign(_Tp __val) {
-  return (_Tp(0) < __val) - (__val < _Tp(0));
-}
-
 template <typename _Fp>
 _LIBCPP_HIDE_FROM_ABI constexpr _Fp __fp_abs(_Fp __f) {
   return __f >= 0 ? __f : -__f;
