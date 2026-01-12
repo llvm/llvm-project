@@ -117,6 +117,67 @@ collectInOutConstraintInfos(const CIRGenFunction &cgf, const AsmStmt &s,
   }
 }
 
+std::pair<mlir::Value, mlir::Type> CIRGenFunction::emitAsmInputLValue(
+    const TargetInfo::ConstraintInfo &info, LValue inputValue,
+    QualType inputType, std::string &constraintString, SourceLocation loc) {
+
+  if (info.allowsRegister() || !info.allowsMemory()) {
+    if (hasScalarEvaluationKind(inputType))
+      return {emitLoadOfLValue(inputValue, loc).getValue(), mlir::Type()};
+
+    mlir::Type ty = convertType(inputType);
+    uint64_t size = cgm.getDataLayout().getTypeSizeInBits(ty);
+    if ((size <= 64 && llvm::isPowerOf2_64(size)) ||
+        getTargetHooks().isScalarizableAsmOperand(*this, ty)) {
+      ty = cir::IntType::get(&getMLIRContext(), size, false);
+
+      return {builder.createLoad(
+                  getLoc(loc),
+                  inputValue.getAddress().withElementType(builder, ty)),
+              mlir::Type()};
+    }
+  }
+
+  Address addr = inputValue.getAddress();
+  constraintString += '*';
+  return {addr.getPointer(), addr.getElementType()};
+}
+
+std::pair<mlir::Value, mlir::Type>
+CIRGenFunction::emitAsmInput(const TargetInfo::ConstraintInfo &info,
+                             const Expr *inputExpr,
+                             std::string &constraintString) {
+  auto loc = getLoc(inputExpr->getExprLoc());
+
+  // If this can't be a register or memory, i.e., has to be a constant
+  // (immediate or symbolic), try to emit it as such.
+  if (!info.allowsRegister() && !info.allowsMemory()) {
+    if (info.requiresImmediateConstant()) {
+      Expr::EvalResult evalResult;
+      inputExpr->EvaluateAsRValue(evalResult, getContext(), true);
+
+      llvm::APSInt intResult;
+      if (evalResult.Val.toIntegralConstant(intResult, inputExpr->getType(),
+                                            getContext()))
+        return {builder.getConstInt(loc, intResult), mlir::Type()};
+    }
+
+    Expr::EvalResult result;
+    if (inputExpr->EvaluateAsInt(result, getContext()))
+      return {builder.getConstInt(loc, result.Val.getInt()), mlir::Type()};
+  }
+
+  if (info.allowsRegister() || !info.allowsMemory())
+    if (CIRGenFunction::hasScalarEvaluationKind(inputExpr->getType()))
+      return {emitScalarExpr(inputExpr), mlir::Type()};
+  if (inputExpr->getStmtClass() == Expr::CXXThisExprClass)
+    return {emitScalarExpr(inputExpr), mlir::Type()};
+  inputExpr = inputExpr->IgnoreParenNoopCasts(getContext());
+  LValue dest = emitLValue(inputExpr);
+  return emitAsmInputLValue(info, dest, inputExpr->getType(), constraintString,
+                            inputExpr->getExprLoc());
+}
+
 static void emitAsmStores(CIRGenFunction &cgf, const AsmStmt &s,
                           const llvm::ArrayRef<mlir::Value> regResults,
                           const llvm::ArrayRef<mlir::Type> resultRegTypes,
@@ -227,6 +288,11 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
   llvm::BitVector resultTypeRequiresCast;
   llvm::BitVector resultRegIsFlagReg;
 
+  // Keep track of input constraints.
+  std::string inOutConstraints;
+  std::vector<mlir::Type> inOutArgTypes;
+  std::vector<mlir::Type> inOutArgElemTypes;
+
   // Keep track of out constraints for tied input operand.
   SmallVector<std::string> outputConstraints;
 
@@ -240,11 +306,6 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
   // It can be marked readnone if it doesn't have any input memory constraints
   // in addition to meeting the conditions listed above.
   bool readOnly = true, readNone = true;
-
-  if (s.getNumInputs() != 0) {
-    assert(!cir::MissingFeatures::asmInputOperands());
-    cgm.errorNYI(srcLoc, "asm with input operands");
-  }
 
   std::string outputConstraint;
   for (unsigned i = 0, e = s.getNumOutputs(); i != e; ++i) {
@@ -310,15 +371,31 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
       // If this output is tied to an input, and if the input is larger, then
       // we need to set the actual result type of the inline asm node to be the
       // same as the input type.
-      if (info.hasMatchingInput())
-        assert(!cir::MissingFeatures::asmInputOperands());
+      if (info.hasMatchingInput()) {
+        unsigned inputNo;
+        for (inputNo = 0; inputNo != s.getNumInputs(); ++inputNo) {
+          TargetInfo::ConstraintInfo &input = inputConstraintInfos[inputNo];
+          if (input.hasTiedOperand() && input.getTiedOperand() == i)
+            break;
+        }
+        assert(inputNo != s.getNumInputs() && "Didn't find matching input!");
 
-      if (mlir::Type adjTy = cgm.getTargetCIRGenInfo().adjustInlineAsmType(
-              *this, outputConstraint, resultRegTypes.back()))
-        resultRegTypes.back() = adjTy;
-      else
-        cgm.getDiags().Report(srcLoc, diag::err_asm_invalid_type_in_input)
-            << outExpr->getType() << outputConstraint;
+        QualType inputTy = s.getInputExpr(inputNo)->getType();
+        QualType outputType = outExpr->getType();
+
+        uint64_t inputSize = getContext().getTypeSize(inputTy);
+        if (getContext().getTypeSize(outputType) < inputSize) {
+          // Form the asm to return the value as a larger integer or fp type.
+          resultRegTypes.back() = convertType(inputTy);
+        }
+
+        if (mlir::Type adjTy = cgm.getTargetCIRGenInfo().adjustInlineAsmType(
+                *this, outputConstraint, resultRegTypes.back()))
+          resultRegTypes.back() = adjTy;
+        else
+          cgm.getDiags().Report(srcLoc, diag::err_asm_invalid_type_in_input)
+              << outExpr->getType() << outputConstraint;
+      }
 
       // Update largest vector width for any vector types.
       assert(!cir::MissingFeatures::asmVectorType());
@@ -343,10 +420,110 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
       readOnly = readNone = false;
     }
 
-    if (info.isReadWrite())
-      assert(!cir::MissingFeatures::asmInputOperands());
+    if (info.isReadWrite()) {
+      inOutConstraints += ',';
+      const Expr *inputExpr = s.getOutputExpr(i);
+
+      auto [arg, argElementType] =
+          emitAsmInputLValue(info, dest, inputExpr->getType(), inOutConstraints,
+                             inputExpr->getExprLoc());
+
+      if (mlir::Type adjTy = getTargetHooks().adjustInlineAsmType(
+              *this, outputConstraint, arg.getType()))
+        arg = builder.createBitcast(arg, adjTy);
+
+      // Update largest vector width for any vector types.
+      assert(!cir::MissingFeatures::asmVectorType());
+
+      // Only tie earlyclobber physregs.
+      if (info.allowsRegister() && (gccReg.empty() || info.earlyClobber()))
+        inOutConstraints += llvm::utostr(i);
+      else
+        inOutConstraints += outputConstraint;
+
+      inOutArgTypes.push_back(arg.getType());
+      inOutArgElemTypes.push_back(argElementType);
+      inOutArgs.push_back(arg);
+    }
 
   } // iterate over output operands
+
+  for (unsigned i = 0, e = s.getNumInputs(); i != e; ++i) {
+    TargetInfo::ConstraintInfo &info = inputConstraintInfos[i];
+    const Expr *inputExpr = s.getInputExpr(i);
+
+    if (info.allowsMemory())
+      readNone = false;
+
+    if (!constraints.empty())
+      constraints += ',';
+
+    std::string inputConstraint(s.getInputConstraint(i));
+    inputConstraint =
+        getTarget().simplifyConstraint(inputConstraint, &outputConstraintInfos);
+
+    inputConstraint = s.addVariableConstraints(
+        inputConstraint, *inputExpr->IgnoreParenNoopCasts(getContext()),
+        getTarget(), /*EarlyClobber=*/false,
+        [&](const Stmt *unspStmt, StringRef msg) {
+          cgm.errorUnsupported(unspStmt, msg);
+        });
+
+    std::string replaceConstraint(inputConstraint);
+    auto [arg, argElemType] = emitAsmInput(info, inputExpr, constraints);
+
+    // If this input argument is tied to a larger output result, extend the
+    // input to be the same size as the output.  The LLVM backend wants to see
+    // the input and output of a matching constraint be the same size.  Note
+    // that GCC does not define what the top bits are here.  We use zext because
+    // that is usually cheaper, but LLVM IR should really get an anyext someday.
+    if (info.hasTiedOperand()) {
+      unsigned output = info.getTiedOperand();
+      QualType outputType = s.getOutputExpr(output)->getType();
+      QualType inputTy = inputExpr->getType();
+
+      if (getContext().getTypeSize(outputType) >
+          getContext().getTypeSize(inputTy)) {
+        // Use ptrtoint as appropriate so that we can do our extension.
+        if (isa<cir::PointerType>(arg.getType()))
+          arg = builder.createPtrToInt(arg, uIntPtrTy);
+        mlir::Type outputTy = convertType(outputType);
+        if (isa<cir::IntType>(outputTy))
+          arg = builder.createIntCast(arg, outputTy);
+        else if (isa<cir::PointerType>(outputTy))
+          arg = builder.createIntCast(arg, uIntPtrTy);
+        else if (isa<cir::FPTypeInterface>(outputTy))
+          arg = builder.createFloatingCast(arg, outputTy);
+      }
+
+      // Deal with the tied operands' constraint code in adjustInlineAsmType.
+      replaceConstraint = outputConstraints[output];
+    }
+
+    if (mlir::Type adjTy = getTargetHooks().adjustInlineAsmType(
+            *this, replaceConstraint, arg.getType()))
+      arg = builder.createBitcast(arg, adjTy);
+    else
+      cgm.getDiags().Report(s.getAsmLoc(), diag::err_asm_invalid_type_in_input)
+          << inputExpr->getType() << inputConstraint;
+
+    // Update largest vector width for any vector types.
+    assert(!cir::MissingFeatures::asmVectorType());
+
+    argTypes.push_back(arg.getType());
+    argElemTypes.push_back(argElemType);
+    inArgs.push_back(arg);
+    args.push_back(arg);
+    constraints += inputConstraint;
+  } // iterate over input operands
+
+  // Append the "input" part of inout constraints.
+  for (unsigned i = 0, e = inOutArgs.size(); i != e; ++i) {
+    args.push_back(inOutArgs[i]);
+    argTypes.push_back(inOutArgTypes[i]);
+    argElemTypes.push_back(inOutArgElemTypes[i]);
+  }
+  constraints += inOutConstraints;
 
   bool hasUnwindClobber = false;
   collectClobbers(*this, s, constraints, hasUnwindClobber, readOnly, readNone);
