@@ -140,7 +140,13 @@ public:
 FunctionPass *createX86DynAllocaExpanderLegacyPass();
 
 /// Return a pass that config the tile registers.
-FunctionPass *createX86TileConfigPass();
+class X86TileConfigPass : public PassInfoMixin<X86TileConfigPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86TileConfigLegacyPass();
 
 /// Return a pass that preconfig the tile registers before fast reg allocation.
 class X86FastPreTileConfigPass
@@ -358,7 +364,7 @@ void initializeX86PreTileConfigPass(PassRegistry &);
 void initializeX86ReturnThunksPass(PassRegistry &);
 void initializeX86SpeculativeExecutionSideEffectSuppressionPass(PassRegistry &);
 void initializeX86SpeculativeLoadHardeningPassPass(PassRegistry &);
-void initializeX86TileConfigPass(PassRegistry &);
+void initializeX86TileConfigLegacyPass(PassRegistry &);
 void initializeX86SuppressAPXForRelocationPassPass(PassRegistry &);
 void initializeX86WinEHUnwindV2Pass(PassRegistry &);
 void initializeX86PreLegalizerCombinerPass(PassRegistry &);
