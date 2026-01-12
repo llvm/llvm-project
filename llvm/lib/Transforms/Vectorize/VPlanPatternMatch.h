@@ -113,7 +113,7 @@ template <typename Pred, unsigned BitWidth = 0> struct int_pred_ty {
     if (!CI)
       return false;
 
-    if (BitWidth != 0 && CI->getAPInt().getBitWidth() != BitWidth)
+    if (BitWidth != 0 && CI->getBitWidth() != BitWidth)
       return false;
     return P.isValue(CI->getAPInt());
   }

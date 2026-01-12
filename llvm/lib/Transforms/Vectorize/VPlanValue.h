@@ -204,17 +204,17 @@ struct VPIRValue : public VPValue {
 struct VPConstantInt : public VPIRValue {
   VPConstantInt(ConstantInt *CI) : VPIRValue(CI) {}
 
-  uint64_t getZExtValue() const { return getCI()->getZExtValue(); }
-  const APInt &getAPInt() const { return getCI()->getValue(); }
-  bool isZero() const { return getCI()->isZero(); }
-  bool isOne() const { return getCI()->isOne(); }
-
   static bool classof(const VPValue *V) {
     return isa<VPIRValue>(V) && isa<ConstantInt>(V->getUnderlyingValue());
   }
 
-private:
-  ConstantInt *getCI() const { return cast<ConstantInt>(getValue()); }
+  bool isOne() const { return getAPInt().isOne(); }
+  bool isZero() const { return getAPInt().isZero(); }
+  const APInt &getAPInt() const {
+    return cast<ConstantInt>(getValue())->getValue();
+  }
+  unsigned getBitWidth() const { return getAPInt().getBitWidth(); }
+  uint64_t getZExtValue() const { return getAPInt().getZExtValue(); }
 };
 
 /// A symbolic live-in VPValue, used for values like vector trip count, VF, and
