@@ -131,3 +131,65 @@ def olGetDeviceInfoSize : Function {
     Return<"OL_ERRC_INVALID_DEVICE">
   ];
 }
+
+def olCreateInterop : Function {
+  let desc = "Create OpenMP interop with the given interop context.";
+  let params = [
+    Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
+    Param<"int32_t", "InteropContext", "Interop Context", PARAM_IN>,
+    Param<"void *", "InteropSpec", "Interop Spec", PARAM_IN>,
+    Param<"void**", "Interop", "output for the interop", PARAM_OUT>
+  ];
+  let returns = [];
+}
+
+def olReleaseInterop : Function {
+  let desc = "Release OpenMP interop object.";
+  let params = [
+    Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
+    Param<"void *", "InteropSpec", "Interop Context", PARAM_IN>
+  ];
+  let returns = [];
+}
+
+def olSelectInterop : Function {
+  let desc = "Return OpenMP interop object that the device supports.";
+  let params = [
+    Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
+    Param<"int32_t", "InteropType", "Interop Context", PARAM_IN>,
+    Param<"int32_t", "InteropPreferencesSize", "Interop Context", PARAM_IN>,
+    Param<"void*", "InteropPreferences", "Interop Context", PARAM_IN>,
+    Param<"void*", "InteropSpec", "output for the interop", PARAM_OUT>
+  ];
+  let returns = [];
+}
+
+def olFlushQueueInterop : Function {
+    let desc = "Flush the queue associated with the interop object if necessary.";
+    let details = [];
+    let params = [
+      Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
+      Param<"void *", "Interop", "Interop", PARAM_IN>
+    ];
+    let returns = [];
+}
+
+def olSyncBarrierInterop : Function {
+    let desc = "Perform a host synchronization with the queue associated with the interop object and wait for it to complete.";
+    let details = [];
+    let params = [
+      Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
+      Param<"void *", "Interop", "Interop", PARAM_IN>
+    ];
+    let returns = [];
+}
+
+def olAsyncBarrierInterop : Function {
+    let desc = "Queue an asynchronous barrier in the queue associated with the interop object and return immediately.";
+    let details = [];
+    let params = [
+      Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
+      Param<"void *", "Interop", "Interop", PARAM_IN>
+    ];
+    let returns = [];
+}
