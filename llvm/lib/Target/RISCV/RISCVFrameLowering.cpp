@@ -359,10 +359,10 @@ static void emitSiFiveCLICPreemptibleRestores(MachineFunction &MF,
   // saved onto the stack in `emitSiFiveCLICPreemptibleSaves`.
   TII->loadRegFromStackSlot(
       MBB, MBBI, RISCV::X9, RVFI->getInterruptCSRFrameIndex(1),
-      &RISCV::GPRRegClass, Register(), MachineInstr::FrameSetup);
+      &RISCV::GPRRegClass, Register(), /*SubReg=*/0, MachineInstr::FrameSetup);
   TII->loadRegFromStackSlot(
       MBB, MBBI, RISCV::X8, RVFI->getInterruptCSRFrameIndex(0),
-      &RISCV::GPRRegClass, Register(), MachineInstr::FrameSetup);
+      &RISCV::GPRRegClass, Register(), /*SubReg=*/0, MachineInstr::FrameSetup);
 }
 
 // Get the ID of the libcall used for spilling and restoring callee saved
@@ -2257,7 +2257,7 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
       MCRegister Reg = CS.getReg();
       const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
       TII.loadRegFromStackSlot(MBB, MI, Reg, CS.getFrameIdx(), RC, Register(),
-                               MachineInstr::FrameDestroy);
+                               /*SubReg=*/0, MachineInstr::FrameDestroy);
       assert(MI != MBB.begin() &&
              "loadRegFromStackSlot didn't insert any code!");
     }
