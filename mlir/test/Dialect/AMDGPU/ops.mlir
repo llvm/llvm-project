@@ -549,6 +549,29 @@ func.func @lds_barrier() {
   func.return
 }
 
+// CHECK-LABEL: func @lds_barrier_signal
+func.func @lds_barrier_signal() {
+  // CHECK: amdgpu.lds_barrier_signal
+  amdgpu.lds_barrier_signal
+  func.return
+}
+
+// CHECK-LABEL: func @lds_barrier_wait
+func.func @lds_barrier_wait() {
+  // CHECK: amdgpu.lds_barrier_wait
+  amdgpu.lds_barrier_wait
+  func.return
+}
+
+// CHECK-LABEL: func @lds_barrier_split
+func.func @lds_barrier_split() {
+  // CHECK: amdgpu.lds_barrier_signal
+  amdgpu.lds_barrier_signal
+  // CHECK: amdgpu.lds_barrier_wait
+  amdgpu.lds_barrier_wait
+  func.return
+}
+
 // CHECK-LABEL: func @sched_barrier
 func.func @sched_barrier() {
   // CHECK: amdgpu.sched_barrier allow = <none>
