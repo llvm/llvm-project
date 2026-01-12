@@ -19,6 +19,18 @@ function(get_subproject_title outvar)
   endif ()
 endfunction(get_subproject_title)
 
+# Determine required flags to enable/disable RTTI.
+set(LLVM_CXXFLAGS_RTTI_DISABLE "")
+set(LLVM_CXXFLAGS_RTTI_ENABLE "")
+if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
+  set(LLVM_CXXFLAGS_RTTI_DISABLE "-fno-rtti")
+elseif(MSVC)
+  set(LLVM_CXXFLAGS_RTTI_DISABLE "/GR-")
+  set(LLVM_CXXFLAGS_RTTI_ENABLE "/GR")
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "XL")
+  set(LLVM_CXXFLAGS_RTTI_DISABLE "-qnortti")
+endif()
+
 function(llvm_update_compile_flags name)
   set(LLVM_COMPILE_CXXFLAGS "")
 
