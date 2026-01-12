@@ -489,7 +489,8 @@ TEST_F(TestTypeSystemClang, TestIsIntegerType_BitInt) {
 
   // Signed _BitInt
   {
-    CompilerType bitint_type = ast.GetType(ast.getASTContext().getBitIntType(/*Unsigned=*/false, /*NumBits=*/37));
+    CompilerType bitint_type = ast.GetType(
+        ast.getASTContext().getBitIntType(/*Unsigned=*/false, /*NumBits=*/37));
     ASSERT_TRUE(bitint_type);
 
     EXPECT_TRUE(bitint_type.IsInteger());
@@ -505,7 +506,8 @@ TEST_F(TestTypeSystemClang, TestIsIntegerType_BitInt) {
 
   // Unsigned _BitInt
   {
-    CompilerType bitint_type = ast.GetType(ast.getASTContext().getBitIntType(/*Unsigned=*/true, /*NumBits=*/122));
+    CompilerType bitint_type = ast.GetType(
+        ast.getASTContext().getBitIntType(/*Unsigned=*/true, /*NumBits=*/122));
     ASSERT_TRUE(bitint_type);
 
     EXPECT_TRUE(bitint_type.IsInteger());
