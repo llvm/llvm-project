@@ -4540,8 +4540,9 @@ void InterfaceVisitor::CheckGenericProcedures(Symbol &generic) {
   auto &details{generic.get<GenericDetails>()};
   if (auto *proc{details.CheckSpecific()}) {
     context().Warn(common::UsageWarning::HomonymousSpecific,
-        proc->name().begin() > generic.name().begin() ? proc->name()
-                                                      : generic.name(),
+        context().allCookedSources().Precedes(generic.name(), proc->name())
+            ? proc->name()
+            : generic.name(),
         "'%s' should not be the name of both a generic interface and a procedure unless it is a specific procedure of the generic"_warn_en_US,
         generic.name());
   }
@@ -6138,14 +6139,14 @@ void DeclarationVisitor::Post(const parser::UnsignedTypeSpec &x) {
 }
 void DeclarationVisitor::Post(const parser::IntrinsicTypeSpec::Real &x) {
   if (!isVectorType_) {
-    SetDeclTypeSpec(MakeNumericType(TypeCategory::Real, x.kind));
+    SetDeclTypeSpec(MakeNumericType(TypeCategory::Real, x.v));
   }
 }
 void DeclarationVisitor::Post(const parser::IntrinsicTypeSpec::Complex &x) {
-  SetDeclTypeSpec(MakeNumericType(TypeCategory::Complex, x.kind));
+  SetDeclTypeSpec(MakeNumericType(TypeCategory::Complex, x.v));
 }
 void DeclarationVisitor::Post(const parser::IntrinsicTypeSpec::Logical &x) {
-  SetDeclTypeSpec(MakeLogicalType(x.kind));
+  SetDeclTypeSpec(MakeLogicalType(x.v));
 }
 void DeclarationVisitor::Post(const parser::IntrinsicTypeSpec::Character &) {
   if (!charInfo_.length) {
@@ -6160,7 +6161,8 @@ void DeclarationVisitor::Post(const parser::IntrinsicTypeSpec::Character &) {
   charInfo_ = {};
 }
 void DeclarationVisitor::Post(const parser::CharSelector::LengthAndKind &x) {
-  charInfo_.kind = EvaluateSubscriptIntExpr(x.kind);
+  const auto &[length, kind]{x.t};
+  charInfo_.kind = EvaluateSubscriptIntExpr(kind);
   std::optional<std::int64_t> intKind{ToInt64(charInfo_.kind)};
   if (intKind &&
       !context().targetCharacteristics().IsTypeEnabled(
@@ -6169,8 +6171,8 @@ void DeclarationVisitor::Post(const parser::CharSelector::LengthAndKind &x) {
         "KIND value (%jd) not valid for CHARACTER"_err_en_US, *intKind);
     charInfo_.kind = std::nullopt; // prevent further errors
   }
-  if (x.length) {
-    charInfo_.length = GetParamValue(*x.length, common::TypeParamAttr::Len);
+  if (length) {
+    charInfo_.length = GetParamValue(*length, common::TypeParamAttr::Len);
   }
 }
 void DeclarationVisitor::Post(const parser::CharLength &x) {
@@ -6245,7 +6247,7 @@ void DeclarationVisitor::Post(const parser::VectorTypeSpec &x) {
                     },
                     [&](const parser::IntrinsicTypeSpec::Real &z) {
                       vecElemKind = GetVectorElementKind(
-                          TypeCategory::Real, std::move(z.kind));
+                          TypeCategory::Real, std::move(z.v));
                       typeParams.push_back(
                           ParamValue(static_cast<common::ConstantSubscript>(
                                          common::VectorElementCategory::Real),
@@ -6321,7 +6323,7 @@ bool DeclarationVisitor::Pre(const parser::DeclarationTypeSpec::Type &) {
 }
 
 void DeclarationVisitor::Post(const parser::DeclarationTypeSpec::Type &type) {
-  const parser::Name &derivedName{std::get<parser::Name>(type.derived.t)};
+  const parser::Name &derivedName{std::get<parser::Name>(type.v.t)};
   if (const Symbol * derivedSymbol{derivedName.symbol}) {
     CheckForAbstractType(*derivedSymbol); // C706
   }
@@ -6334,7 +6336,7 @@ bool DeclarationVisitor::Pre(const parser::DeclarationTypeSpec::Class &) {
 
 void DeclarationVisitor::Post(
     const parser::DeclarationTypeSpec::Class &parsedClass) {
-  const auto &typeName{std::get<parser::Name>(parsedClass.derived.t)};
+  const auto &typeName{std::get<parser::Name>(parsedClass.v.t)};
   if (auto spec{ResolveDerivedType(typeName)};
       spec && !IsExtensibleType(&*spec)) { // C705
     SayWithDecl(typeName, *typeName.symbol,
@@ -6534,6 +6536,9 @@ void DeclarationVisitor::Post(const parser::DerivedTypeStmt &x) {
   if (!paramNames.empty()) {
     set_inPDTDefinition(true);
   }
+  // Clear the attributes so that the attributes of the derived type
+  // (ABSTRACT, PUBLIC/PRIVATE, &c.) don't apply to the type's parameters.
+  EndAttrs(), BeginAttrs();
   if (auto *details{symbol.detailsIf<DerivedTypeDetails>()}) {
     for (const auto &name : paramNames) {
       if (Symbol * symbol{MakeTypeSymbol(name, TypeParamDetails{})}) {
@@ -7890,8 +7895,9 @@ bool ConstructVisitor::Pre(const parser::LocalitySpec::Shared &x) {
 }
 
 bool ConstructVisitor::Pre(const parser::AcSpec &x) {
-  ProcessTypeSpec(x.type);
-  Walk(x.values);
+  const auto &[type, values]{x.t};
+  ProcessTypeSpec(type);
+  Walk(values);
   return false;
 }
 
@@ -8489,12 +8495,12 @@ public:
     return true;
   }
   void Post(const parser::ImportStmt &x) {
-    if (x.kind == common::ImportKind::None ||
-        x.kind == common::ImportKind::Only) {
+    const auto &[kind, names]{x.t};
+    if (kind == common::ImportKind::None || kind == common::ImportKind::Only) {
       if (!nestedScopes_.front().importOnly.has_value()) {
         nestedScopes_.front().importOnly.emplace();
       }
-      for (const auto &name : x.names) {
+      for (const auto &name : names) {
         nestedScopes_.front().importOnly->emplace(name.source);
       }
     } else {
@@ -8706,6 +8712,7 @@ bool ResolveNamesVisitor::Pre(const parser::CallStmt &x) {
 }
 
 bool ResolveNamesVisitor::Pre(const parser::ImportStmt &x) {
+  const auto &[kind, names]{x.t};
   auto &scope{currScope()};
   // Check C896 and C899: where IMPORT statements are allowed
   switch (scope.kind()) {
@@ -8713,7 +8720,7 @@ bool ResolveNamesVisitor::Pre(const parser::ImportStmt &x) {
     if (scope.IsModule()) {
       Say("IMPORT is not allowed in a module scoping unit"_err_en_US);
       return false;
-    } else if (x.kind == common::ImportKind::None) {
+    } else if (kind == common::ImportKind::None) {
       Say("IMPORT,NONE is not allowed in a submodule scoping unit"_err_en_US);
       return false;
     }
@@ -8732,10 +8739,10 @@ bool ResolveNamesVisitor::Pre(const parser::ImportStmt &x) {
     return false;
   default:;
   }
-  if (auto error{scope.SetImportKind(x.kind)}) {
+  if (auto error{scope.SetImportKind(kind)}) {
     Say(std::move(*error));
   }
-  for (auto &name : x.names) {
+  for (auto &name : names) {
     if (Symbol * outer{FindSymbol(scope.parent(), name)}) {
       scope.add_importName(name.source);
       if (Symbol * symbol{FindInScope(name)}) {
@@ -9610,10 +9617,10 @@ void ResolveNamesVisitor::HandleDerivedTypesInImplicitStmts(
           if (const auto *dtSpec{common::visit(
                   common::visitors{
                       [](const parser::DeclarationTypeSpec::Type &x) {
-                        return &x.derived;
+                        return &x.v;
                       },
                       [](const parser::DeclarationTypeSpec::Class &x) {
-                        return &x.derived;
+                        return &x.v;
                       },
                       [](const auto &) -> const parser::DerivedTypeSpec * {
                         return nullptr;
@@ -9780,7 +9787,7 @@ void ResolveNamesVisitor::EarlyDummyTypeDeclaration(
 
 void ResolveNamesVisitor::CreateCommonBlockSymbols(
     const parser::CommonStmt &commonStmt) {
-  for (const parser::CommonStmt::Block &block : commonStmt.blocks) {
+  for (const parser::CommonStmt::Block &block : commonStmt.v) {
     const auto &[name, objects] = block.t;
     Symbol &commonBlock{MakeCommonBlockSymbol(name, commonStmt.source)};
     for (const auto &object : objects) {

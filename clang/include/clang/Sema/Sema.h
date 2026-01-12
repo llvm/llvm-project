@@ -1165,8 +1165,10 @@ public:
 
   /// getCurFunctionOrMethodDecl - Return the Decl for the current ObjC method
   /// or C function we're in, otherwise return null.  If we're currently
-  /// in a 'block', this returns the containing context.
-  NamedDecl *getCurFunctionOrMethodDecl() const;
+  /// in a 'block', this returns the containing context. If \p AllowLambda is
+  /// true, this can return the call operator of an enclosing lambda, otherwise
+  /// lambdas are skipped when looking for an enclosing function.
+  NamedDecl *getCurFunctionOrMethodDecl(bool AllowLambda = false) const;
 
   /// Warn if we're implicitly casting from a _Nullable pointer type to a
   /// _Nonnull one.
@@ -3038,6 +3040,9 @@ private:
 
   void CheckMaxUnsignedZero(const CallExpr *Call, const FunctionDecl *FDecl);
 
+  void CheckUseOfAtomicThreadFenceWithTSan(const CallExpr *Call,
+                                           const FunctionDecl *FDecl);
+
   /// Check for dangerous or invalid arguments to memset().
   ///
   /// This issues warnings on known problematic, dangerous or unspecified
@@ -4372,7 +4377,6 @@ public:
                                        SourceLocation FinalLoc,
                                        bool IsFinalSpelledSealed,
                                        bool IsAbstract,
-                                       SourceLocation TriviallyRelocatable,
                                        SourceLocation LBraceLoc);
 
   /// ActOnTagFinishDefinition - Invoked once we have finished parsing
