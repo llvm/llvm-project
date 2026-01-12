@@ -5228,26 +5228,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedSrcs,
                           KnownSrc, Q, Depth + 1);
 
-      // Integer results cannot be subnormal.
-      Known.knownNot(fcSubnormal);
-
-      Known.propagateNaN(KnownSrc, true);
-
-      // Pass through infinities, except PPC_FP128 is a special case for
-      // intrinsics other than trunc.
-      if (IID == Intrinsic::trunc || !V->getType()->isMultiUnitFPType()) {
-        if (KnownSrc.isKnownNeverPosInfinity())
-          Known.knownNot(fcPosInf);
-        if (KnownSrc.isKnownNeverNegInfinity())
-          Known.knownNot(fcNegInf);
-      }
-
-      // Negative round ups to 0 produce -0
-      if (KnownSrc.isKnownNever(fcPosFinite))
-        Known.knownNot(fcPosFinite);
-      if (KnownSrc.isKnownNever(fcNegFinite))
-        Known.knownNot(fcNegFinite);
-
+      Known = KnownFPClass::roundToIntegral(
+          KnownSrc, IID == Intrinsic::trunc,
+          V->getType()->getScalarType()->isMultiUnitFPType());
       break;
     }
     case Intrinsic::exp:
