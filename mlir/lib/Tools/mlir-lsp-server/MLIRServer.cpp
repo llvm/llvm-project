@@ -172,11 +172,6 @@ static std::optional<StringRef> getTextFromRange(SMRange range) {
   return StringRef(startPtr, range.End.getPointer() - startPtr);
 }
 
-/// Given a block, return its position in its parent region.
-static unsigned getBlockNumber(Block *block) {
-  return std::distance(block->getParent()->begin(), block->getIterator());
-}
-
 /// Given a block and source location, print the source name of the block to the
 /// given output stream.
 static void printDefBlockName(raw_ostream &os, Block *block, SMRange loc = {}) {
@@ -188,7 +183,7 @@ static void printDefBlockName(raw_ostream &os, Block *block, SMRange loc = {}) {
   }
 
   // Otherwise, we don't have a name so print the block number.
-  os << "<Block #" << getBlockNumber(block) << ">";
+  os << "<Block #" << block->computeBlockNumber() << ">";
 }
 static void printDefBlockName(raw_ostream &os,
                               const AsmParserState::BlockDefinition &def) {
@@ -622,7 +617,7 @@ MLIRDocument::buildHoverForBlock(SMRange hoverRange,
 
   // Display the parent operation, block number, predecessors, and successors.
   os << "Operation: \"" << block.block->getParentOp()->getName() << "\"\n\n"
-     << "Block #" << getBlockNumber(block.block) << "\n\n";
+     << "Block #" << block.block->computeBlockNumber() << "\n\n";
   if (!block.block->hasNoPredecessors()) {
     os << "Predecessors: ";
     llvm::interleaveComma(block.block->getPredecessors(), os,

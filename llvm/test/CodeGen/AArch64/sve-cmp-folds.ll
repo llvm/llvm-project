@@ -106,18 +106,31 @@ define i1 @foo_last(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: foo_last:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, z1.s
-; CHECK-NEXT:    mov z0.s, p0/z, #1 // =0x1
-; CHECK-NEXT:    whilels p0.s, xzr, x8
-; CHECK-NEXT:    lastb w8, p0, z0.s
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    fcmeq p1.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    ptest p0, p1.b
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
   %vcond = fcmp oeq <vscale x 4 x float> %a, %b
   %vscale = call i64 @llvm.vscale.i64()
   %shl2 = shl nuw nsw i64 %vscale, 2
-  %idx = add nuw nsw i64 %shl2, -1
+  %idx = add nsw i64 %shl2, -1
   %bit = extractelement <vscale x 4 x i1> %vcond, i64 %idx
+  ret i1 %bit
+}
+
+define i1 @foo_last_i32(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
+; CHECK-LABEL: foo_last_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcmeq p1.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    ptest p0, p1.b
+; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    ret
+  %vcond = fcmp oeq <vscale x 4 x float> %a, %b
+  %vscale = call i32 @llvm.vscale.i32()
+  %mul = mul nuw i32 %vscale, 4
+  %idx = sub i32 %mul, 1
+  %bit = extractelement <vscale x 4 x i1> %vcond, i32 %idx
   ret i1 %bit
 }
 

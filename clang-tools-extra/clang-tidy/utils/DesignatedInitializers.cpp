@@ -142,7 +142,7 @@ static void collectDesignators(
   if (!Fields)
     return;
   for (const Expr *Init : Sem->inits()) {
-    auto Next = llvm::make_scope_exit([&, Size(Prefix.size())] {
+    const llvm::scope_exit Next([&, Size(Prefix.size())] {
       Fields.next();       // Always advance to the next subobject name.
       Prefix.resize(Size); // Erase any designator we appended.
     });

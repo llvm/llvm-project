@@ -489,7 +489,7 @@ llvm::Value *CodeGenFunction::EmitFP8NeonFMLACall(
 Value *CodeGenFunction::EmitNeonShiftVector(Value *V, llvm::Type *Ty,
                                             bool neg) {
   int SV = cast<ConstantInt>(V)->getSExtValue();
-  return ConstantInt::get(Ty, neg ? -SV : SV);
+  return ConstantInt::getSigned(Ty, neg ? -SV : SV);
 }
 
 Value *CodeGenFunction::EmitFP8NeonCvtCall(unsigned IID, llvm::Type *Ty0,
@@ -3510,6 +3510,38 @@ static llvm::Value *ARMMVEVectorElementReverse(CGBuilderTy &Builder,
   for (unsigned i = 0; i < Elements; i++)
     Indices.push_back(i ^ Mask);
   return Builder.CreateShuffleVector(V, Indices);
+}
+
+static llvm::Value *ARMMVECreateSIToFP(CGBuilderTy &Builder,
+                                       CodeGenFunction *CGF, llvm::Value *V,
+                                       llvm::Type *Ty) {
+  return Builder.CreateCall(
+      CGF->CGM.getIntrinsic(Intrinsic::arm_mve_vcvt_fp_int, {Ty, V->getType()}),
+      {V, llvm::ConstantInt::get(Builder.getInt32Ty(), 0)});
+}
+
+static llvm::Value *ARMMVECreateUIToFP(CGBuilderTy &Builder,
+                                       CodeGenFunction *CGF, llvm::Value *V,
+                                       llvm::Type *Ty) {
+  return Builder.CreateCall(
+      CGF->CGM.getIntrinsic(Intrinsic::arm_mve_vcvt_fp_int, {Ty, V->getType()}),
+      {V, llvm::ConstantInt::get(Builder.getInt32Ty(), 1)});
+}
+
+static llvm::Value *ARMMVECreateFPToSI(CGBuilderTy &Builder,
+                                       CodeGenFunction *CGF, llvm::Value *V,
+                                       llvm::Type *Ty) {
+  return Builder.CreateCall(
+      CGF->CGM.getIntrinsic(Intrinsic::arm_mve_vcvt_int_fp, {Ty, V->getType()}),
+      {V, llvm::ConstantInt::get(Builder.getInt32Ty(), 0)});
+}
+
+static llvm::Value *ARMMVECreateFPToUI(CGBuilderTy &Builder,
+                                       CodeGenFunction *CGF, llvm::Value *V,
+                                       llvm::Type *Ty) {
+  return Builder.CreateCall(
+      CGF->CGM.getIntrinsic(Intrinsic::arm_mve_vcvt_int_fp, {Ty, V->getType()}),
+      {V, llvm::ConstantInt::get(Builder.getInt32Ty(), 1)});
 }
 
 Value *CodeGenFunction::EmitARMMVEBuiltinExpr(unsigned BuiltinID,

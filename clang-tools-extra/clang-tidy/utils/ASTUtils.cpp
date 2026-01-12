@@ -24,13 +24,11 @@ const FunctionDecl *getSurroundingFunction(ASTContext &Context,
 
 bool isBinaryOrTernary(const Expr *E) {
   const Expr *EBase = E->IgnoreImpCasts();
-  if (isa<BinaryOperator>(EBase) || isa<ConditionalOperator>(EBase)) {
+  if (isa<BinaryOperator>(EBase) || isa<ConditionalOperator>(EBase))
     return true;
-  }
 
-  if (const auto *Operator = dyn_cast<CXXOperatorCallExpr>(EBase)) {
+  if (const auto *Operator = dyn_cast<CXXOperatorCallExpr>(EBase))
     return Operator->isInfixBinaryOp();
-  }
 
   return false;
 }

@@ -63,7 +63,7 @@ END SUBROUTINE test_interop_03
 !PARSE-TREE: | | Modifier -> OmpInteropType -> Value = Targetsync
 !PARSE-TREE: | | OmpObject -> Designator -> DataRef -> Name = 'obj'
 !PARSE-TREE: | OmpClause -> Depend -> OmpDependClause -> TaskDep
-!PARSE-TREE: | | Modifier -> OmpTaskDependenceType -> Value = Inout
+!PARSE-TREE: | | Modifier -> OmpTaskDependenceType -> OmpDependenceKind = Inout
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'obj'
 !PARSE-TREE: | Flags = {}
 
@@ -94,7 +94,7 @@ END SUBROUTINE test_interop_04
 !PARSE-TREE: | | Modifier -> OmpInteropType -> Value = Target
 !PARSE-TREE: | | OmpObject -> Designator -> DataRef -> Name = 'obj'
 !PARSE-TREE: | OmpClause -> Depend -> OmpDependClause -> TaskDep
-!PARSE-TREE: | | Modifier -> OmpTaskDependenceType -> Value = Inout
+!PARSE-TREE: | | Modifier -> OmpTaskDependenceType -> OmpDependenceKind = Inout
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'arr'
 !PARSE-TREE: | OmpClause -> Nowait
 !PARSE-TREE: | Flags = {}

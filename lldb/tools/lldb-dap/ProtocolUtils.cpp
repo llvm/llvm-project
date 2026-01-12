@@ -242,7 +242,7 @@ CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp) {
 Variable CreateVariable(lldb::SBValue v, int64_t var_ref, bool format_hex,
                         bool auto_variable_summaries,
                         bool synthetic_child_debugging, bool is_name_duplicated,
-                        std::optional<std::string> custom_name) {
+                        std::optional<llvm::StringRef> custom_name) {
   VariableDescription desc(v, auto_variable_summaries, format_hex,
                            is_name_duplicated, custom_name);
   Variable var;

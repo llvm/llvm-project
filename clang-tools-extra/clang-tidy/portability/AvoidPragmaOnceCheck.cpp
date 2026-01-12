@@ -15,6 +15,8 @@
 
 namespace clang::tidy::portability {
 
+namespace {
+
 class PragmaOnceCallbacks : public PPCallbacks {
 public:
   PragmaOnceCallbacks(AvoidPragmaOnceCheck *Check, const SourceManager &SM)
@@ -37,6 +39,8 @@ private:
   AvoidPragmaOnceCheck *Check;
   const SourceManager &SM;
 };
+
+} // namespace
 
 void AvoidPragmaOnceCheck::registerPPCallbacks(const SourceManager &SM,
                                                Preprocessor *PP,

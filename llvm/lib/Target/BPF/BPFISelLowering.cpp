@@ -962,7 +962,7 @@ MachineBasicBlock *BPFTargetLowering::EmitInstrWithCustomInserterLDimm64(
   MachineOperand &MO = MI.getOperand(1);
   assert(MO.isBlockAddress() || MO.isGlobal());
 
-  MCRegister ResultReg = MI.getOperand(0).getReg();
+  Register ResultReg = MI.getOperand(0).getReg();
   Register TmpReg = RegInfo.createVirtualRegister(RC);
 
   std::vector<MachineBasicBlock *> Targets;
