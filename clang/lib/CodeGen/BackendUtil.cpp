@@ -468,7 +468,7 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.VecLib =
       convertDriverVectorLibraryToVectorLibrary(CodeGenOpts.getVecLib());
 
-  switch(CodeGenOpts.getTrapUnreachable()){
+  switch (CodeGenOpts.getTrapUnreachable()) {
   case clang::CodeGenOptions::TrapUnreachableKind::ExceptNoreturn:
     Options.NoTrapAfterNoreturn = true;
     LLVM_FALLTHROUGH;
