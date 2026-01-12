@@ -3240,13 +3240,9 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::print(
        << ")\n";
   if (!Clones.empty()) {
     OS << "\tClones: ";
-    bool First = true;
-    for (auto *C : Clones) {
-      if (!First)
-        OS << ", ";
-      First = false;
-      OS << C << " NodeId: " << C->NodeId;
-    }
+    ListSeparator LS;
+    for (auto *C : Clones)
+      OS << LS << C << " NodeId: " << C->NodeId;
     OS << "\n";
   } else if (CloneOf) {
     OS << "\tClone of " << CloneOf << " NodeId: " << CloneOf->NodeId << "\n";
