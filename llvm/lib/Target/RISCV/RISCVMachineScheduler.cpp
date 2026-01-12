@@ -21,18 +21,16 @@ RISCVPreRAMachineSchedStrategy::getVSETVLIInfo(const MachineInstr *MI) const {
   return VIA.computeInfoForInstr(*MI);
 }
 
-bool RISCVPreRAMachineSchedStrategy::tryVSETVLIInfo(RISCV::VSETVLIInfo TryInfo,
-                                                    RISCV::VSETVLIInfo CandInfo,
-                                                    SchedCandidate &TryCand,
-                                                    SchedCandidate &Cand,
-                                                    CandReason Reason) const {
+bool RISCVPreRAMachineSchedStrategy::tryVSETVLIInfo(
+    const RISCV::VSETVLIInfo TryInfo, const RISCV::VSETVLIInfo CandInfo,
+    SchedCandidate &TryCand, SchedCandidate &Cand, CandReason Reason) const {
   // Do not compare the vsetvli info changes between top and bottom
   // boundary.
   if (Cand.AtTop != TryCand.AtTop)
     return false;
 
-  auto IsCompatible = [&](RISCV::VSETVLIInfo FirstInfo,
-                          RISCV::VSETVLIInfo SecondInfo) {
+  auto IsCompatible = [&](const RISCV::VSETVLIInfo FirstInfo,
+                          const RISCV::VSETVLIInfo SecondInfo) {
     return FirstInfo.isValid() && SecondInfo.isValid() &&
            FirstInfo.isCompatible(RISCV::DemandedFields::all(), SecondInfo,
                                   Context->LIS);

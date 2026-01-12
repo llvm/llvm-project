@@ -287,4 +287,80 @@ def ACCIfClauseLowering : Pass<"acc-if-clause-lowering", "mlir::func::FuncOp"> {
       "mlir::scf::SCFDialect"];
 }
 
+def OffloadLiveInValueCanonicalization : Pass<"offload-livein-value-canonicalization", "mlir::func::FuncOp"> {
+  let summary = "Canonicalize live-in values for regions destined for outlining";
+  let description = [{
+    This pass canonicalizes live-in values for regions destined for outlining.
+    It handles operations that produce synthetic types or values that cannot
+    be passed as arguments to outlined regions.
+
+    The pass performs the following transformations:
+
+    1. **Sinking**: Operations whose results are only used inside the region
+       are moved into the region. This reduces the number of live-in values
+       and keeps related operations together.
+
+    2. **Rematerialization**: Operations whose results are used both inside
+       and outside the region are cloned into the region. The uses inside
+       the region are updated to use the cloned operation's results.
+
+    Operations are considered candidates for these transformations if they
+    implement the `OutlineRematerializationOpInterface` or match constant
+    patterns. These operations typically produce synthetic types (shapes,
+    bounds, field indices) that cannot be passed as function arguments.
+
+    The pass iterates until convergence since canonicalizing one value may
+    expose new candidates (e.g., a bounds operation's operands may themselves
+    be constants that should be rematerialized).
+
+    Example transformation (rematerialization):
+    ```mlir
+    // Before:
+    %c0 = arith.constant 0 : index
+    %c10 = arith.constant 10 : index
+    %bounds = acc.bounds lowerbound(%c0 : index) upperbound(%c10 : index)
+    acc.parallel {
+      %priv = acc.private varPtr(%ptr : ...) bounds(%bounds) -> ...
+      acc.yield
+    }
+    // %bounds is also used elsewhere
+
+    // After:
+    %c0 = arith.constant 0 : index
+    %c10 = arith.constant 10 : index
+    %bounds = acc.bounds lowerbound(%c0 : index) upperbound(%c10 : index)
+    acc.parallel {
+      %c0_clone = arith.constant 0 : index
+      %c10_clone = arith.constant 10 : index
+      %bounds_clone = acc.bounds lowerbound(%c0_clone : index) upperbound(%c10_clone : index)
+      %priv = acc.private varPtr(%ptr : ...) bounds(%bounds_clone) -> ...
+      acc.yield
+    }
+    ```
+
+    Example transformation (sinking):
+    ```mlir
+    // Before:
+    %c0 = arith.constant 0 : index
+    %c10 = arith.constant 10 : index
+    %bounds = acc.bounds lowerbound(%c0 : index) upperbound(%c10 : index)
+    acc.parallel {
+      %priv = acc.private varPtr(%ptr : ...) bounds(%bounds) -> ...
+      acc.yield
+    }
+    // %bounds is NOT used elsewhere
+
+    // After:
+    acc.parallel {
+      %c0 = arith.constant 0 : index
+      %c10 = arith.constant 10 : index
+      %bounds = acc.bounds lowerbound(%c0 : index) upperbound(%c10 : index)
+      %priv = acc.private varPtr(%ptr : ...) bounds(%bounds) -> ...
+      acc.yield
+    }
+    ```
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect"];
+}
+
 #endif // MLIR_DIALECT_OPENACC_TRANSFORMS_PASSES
