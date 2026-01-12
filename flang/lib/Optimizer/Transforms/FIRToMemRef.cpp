@@ -787,24 +787,7 @@ MemRefInfo FIRToMemRef::getMemRefInfo(Value firMemref,
   }
 
   if (auto declareOp = dyn_cast<fir::DeclareOp>(memrefOp)) {
-    if (memrefIsOptional(memrefOp)) {
-      rewriter.setInsertionPoint(memOp);
-      auto ifOp = memOp->getParentOfType<scf::IfOp>();
-      if (ifOp) {
-        Operation *condition = ifOp.getCondition().getDefiningOp();
-        if (condition && isa<fir::IsPresentOp>(condition)) {
-          if (condition->getOperand(0) == declareOp) {
-            if (memOp->getParentRegion() == &ifOp.getThenRegion())
-              rewriter.setInsertionPointToStart(
-                  &(ifOp.getThenRegion().front()));
-            else if (memOp->getParentRegion() == &ifOp.getElseRegion())
-              rewriter.setInsertionPointToStart(
-                  &(ifOp.getElseRegion().front()));
-          }
-        }
-      }
-    }
-
+    rewriter.setInsertionPoint(memOp);
     FailureOr<Value> converted =
         getFIRConvert(memOp, declareOp, rewriter, typeConverter);
     if (failed(converted)) {
