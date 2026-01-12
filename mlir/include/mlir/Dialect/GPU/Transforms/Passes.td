@@ -147,7 +147,7 @@ def GpuNVVMAttachTarget: Pass<"nvvm-attach-target", ""> {
            "Target chip.">,
     Option<"features", "features", "std::string",
            /*default=*/"\"\"",
-           "Target features.">,
+           "Target features, default is to use the minimum PTX ISA version for the SM target.">,
     Option<"optLevel", "O", "unsigned",
            /*default=*/"2",
            "Optimization level.">,
