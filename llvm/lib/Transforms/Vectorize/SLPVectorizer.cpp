@@ -199,6 +199,11 @@ static cl::opt<unsigned> MaxProfitableLoadStride(
     "slp-max-stride", cl::init(8), cl::Hidden,
     cl::desc("The maximum stride, considered to be profitable."));
 
+static cl::opt<bool> EnableStridedStores(
+    "slp-enable-strided-stores", cl::init(false), cl::Hidden,
+    cl::desc("Enable SLP trees to be built from strided "
+             "store chains."));
+
 static cl::opt<bool>
     DisableTreeReorder("slp-disable-tree-reorder", cl::init(false), cl::Hidden,
                        cl::desc("Disable tree reordering even if it is "
@@ -24197,6 +24202,10 @@ bool SLPVectorizerPass::vectorizeStores(
       Operands.push_back(Stores[InstIdx]);
       PrevDist = Dist;
     }
+
+    // Only generate strided stores if enabled
+    if (!EnableStridedStores)
+      return;
 
     Operands.clear();
     int64_t PrevStride = -1;
