@@ -202,8 +202,7 @@ void FIRToMemRef::copyAttribute(Operation *from, Operation *to,
 
 Type FIRToMemRef::getBaseType(Type type, bool complexBaseTypes) const {
   if (fir::isa_fir_type(type)) {
-    type = fir::unwrapAllRefAndSeqType(type);
-    type = fir::unwrapSeqOrBoxedSeqType(type);
+    type = fir::getFortranElementType(type);
   } else if (auto memrefTy = dyn_cast<MemRefType>(type)) {
     type = memrefTy.getElementType();
   }
