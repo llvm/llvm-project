@@ -4130,7 +4130,8 @@ static void FixMisparsedFunctionReference(
                 [&](parser::Name &name) { return name.symbol; },
                 [&](parser::ProcComponentRef &pcr) {
                   return parser::UnwrapRef<parser::StructureComponent>(pcr)
-                      .Component().symbol;
+                      .Component()
+                      .symbol;
                 },
             },
             proc.u)}) {

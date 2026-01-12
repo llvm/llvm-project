@@ -101,8 +101,8 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
               source = structureComponent.Component().source;
               if (const auto *expr{GetExpr(context_, allocateObject)}) {
                 if (const Symbol *symbol{structureComponent.Component().symbol
-                            ? &structureComponent.Component().symbol
-                                  ->GetUltimate()
+                            ? &structureComponent.Component()
+                                  .symbol->GetUltimate()
                             : nullptr};
                     !IsAllocatableOrObjectPointer(symbol)) { // F'2023 C936
                   context_.Say(source,
