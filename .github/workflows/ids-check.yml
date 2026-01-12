@@ -1,9 +1,6 @@
 name: "Check LLVM ABI annotations"
 on:
   pull_request:
-    branches:
-      - main
-      - 'users/**'
   push:
     branches:
       - 'main'
@@ -24,7 +21,6 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      # TODO: Use an image with a prebuilt idt.
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4.2.2
         with:
           repository: compnerd/ids
@@ -45,11 +41,10 @@ jobs:
           base_sha: 'HEAD~1'
           sha: 'HEAD'
 
-      # TODO: Use an image with a prebuilt idt.
       - name: Install dependencies
         run: |
           sudo apt install -y clang-19 ninja-build libclang-19-dev
-          pip install lit PyGithub
+          pip install --require-hashes -r ./llvm/utils/git/requirements.txt
 
       - name: Configure and build minimal LLVM for use by ids
         run: |
@@ -65,7 +60,6 @@ jobs:
           cd ${{ github.workspace }}/llvm-project/build/
           ninja -t targets all | grep "CommonTableGen: phony$" | grep -v "/" | sed 's/:.*//'
 
-      # TODO: Use an image with a prebuilt idt.
       - name: Configure ids
         run: |
           cmake -B ${{ github.workspace }}/ids/build/ \
