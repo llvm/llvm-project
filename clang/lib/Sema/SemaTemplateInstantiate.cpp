@@ -3190,6 +3190,11 @@ bool Sema::SubstDefaultArgument(
            << FD << PatternExpr->getSourceRange();
   }
 
+  // Exit early if argument has error, we should've emitted the diagnostic when
+  // we constructed the default arg expr.
+  if (PatternExpr->containsErrors())
+    return true;
+
   EnterExpressionEvaluationContext EvalContext(
       *this, ExpressionEvaluationContext::PotentiallyEvaluated, Param);
   NonSFINAEContext _(*this);
