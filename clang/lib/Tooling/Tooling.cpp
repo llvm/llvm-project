@@ -116,9 +116,6 @@ static bool ignoreExtraCC1Commands(const driver::Compilation *Compilation) {
               (isa<driver::BindArchAction>(Actions.front()) &&
                isa<driver::CompileJobAction>(*Actions.front()->input_begin())));
         }
-        // FIXME: CUDA/HIP can produce a single top-level OffloadAction (e.g.
-        // -fsyntax-only, -E, -M), which contradicts the expectation of at least
-        // two top-level actions.
         OffloadCompilation = true;
         break;
       }

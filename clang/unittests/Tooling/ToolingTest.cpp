@@ -80,9 +80,9 @@ TEST(runToolOnCode, FindsNoTopLevelDeclOnEmptyCode) {
 
 TEST(runToolOnCode, CudaSyntaxOnly) {
   EXPECT_TRUE(runToolOnCodeWithArgs(
-      std::make_unique<TestAction>(std::make_unique<clang::ASTConsumer>()),
-      "__global__ void k() {}",
-      {"-fsyntax-only", "-x", "cuda", "--offload-arch=sm_70"}));
+      std::make_unique<TestAction>(std::make_unique<clang::ASTConsumer>()), "",
+      {"-fsyntax-only", "-x", "cuda", "--offload-arch=sm_70", "-nocudalib",
+       "-nocudainc"}));
 }
 
 namespace {
