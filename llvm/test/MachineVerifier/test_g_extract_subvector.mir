@@ -1,10 +1,9 @@
-# RUN: not --crash llc -o - -run-pass=none -verify-machineinstrs -mtriple=arm64 %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=aarch64 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: aarch64-registered-target
+
 ---
-name:            g_extract_subvector
-tracksRegLiveness: true
-liveins:
-body:             |
+name: g_extract_subvector
+body: |
   bb.0:
     %0:_(s32) = G_CONSTANT i32 0
     %1:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
@@ -59,5 +58,4 @@ body:             |
 
     ; CHECK: Index must be a multiple of the destination vector's minimum vector length
     %20:_(<vscale x 2 x s32>) = G_EXTRACT_SUBVECTOR %12, 1
-
 ...

@@ -94,7 +94,7 @@ bool M68kInstrInfo::AnalyzeBranchImpl(MachineBasicBlock &MBB,
 
   // Erase any instructions if allowed at the end of the scope.
   std::vector<std::reference_wrapper<llvm::MachineInstr>> EraseList;
-  auto FinalizeOnReturn = llvm::make_scope_exit([&EraseList] {
+  llvm::scope_exit FinalizeOnReturn([&EraseList] {
     for (auto &Ref : EraseList)
       Ref.get().eraseFromParent();
   });

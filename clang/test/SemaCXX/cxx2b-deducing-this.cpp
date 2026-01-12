@@ -1389,3 +1389,14 @@ void f() {
 }
 
 }
+
+namespace GH173943 {
+
+a void Bar(this int) { // expected-note {{candidate function}}
+    // expected-error@-1 {{unknown type name 'a'}}
+    // expected-error@-2 {{an explicit object parameter cannot appear in a non-member function}}
+    Bar(0);
+    Bar(); // expected-error {{no matching function for call to 'Bar'}}
+}
+
+}

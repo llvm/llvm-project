@@ -429,16 +429,17 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
 
   VPBlockUtils::disconnectBlocks(PreheaderVPBB, HeaderVPB);
   VPBlockUtils::disconnectBlocks(LatchVPBB, HeaderVPB);
-  VPBlockBase *LatchExitVPB = LatchVPBB->getSingleSuccessor();
-  assert(LatchExitVPB && "Latch expected to be left with a single successor");
 
   // Create an empty region first and insert it between PreheaderVPBB and
-  // LatchExitVPB, taking care to preserve the original predecessor & successor
-  // order of blocks. Set region entry and exiting after both HeaderVPB and
-  // LatchVPBB have been disconnected from their predecessors/successors.
+  // the exit blocks, taking care to preserve the original predecessor &
+  // successor order of blocks. Set region entry and exiting after both
+  // HeaderVPB and LatchVPBB have been disconnected from their
+  // predecessors/successors.
   auto *R = Plan.createLoopRegion();
-  VPBlockUtils::insertOnEdge(LatchVPBB, LatchExitVPB, R);
-  VPBlockUtils::disconnectBlocks(LatchVPBB, R);
+
+  // Transfer latch's successors to the region.
+  VPBlockUtils::transferSuccessors(LatchVPBB, R);
+
   VPBlockUtils::connectBlocks(PreheaderVPBB, R);
   R->setEntry(HeaderVPB);
   R->setExiting(LatchVPBB);
@@ -579,7 +580,7 @@ static void simplifyLiveInsWithSCEV(VPlan &Plan,
     return nullptr;
   };
 
-  for (VPValue *LiveIn : Plan.getLiveIns()) {
+  for (VPValue *LiveIn : to_vector(Plan.getLiveIns())) {
     if (VPValue *SimplifiedLiveIn = GetSimplifiedLiveInViaSCEV(LiveIn))
       LiveIn->replaceAllUsesWith(SimplifiedLiveIn);
   }
@@ -599,7 +600,7 @@ VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
 /// Creates a VPWidenIntOrFpInductionRecipe or VPWidenPointerInductionRecipe
 /// for \p Phi based on \p IndDesc.
 static VPHeaderPHIRecipe *
-createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPValue *Start,
+createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
                            const InductionDescriptor &IndDesc, VPlan &Plan,
                            PredicatedScalarEvolution &PSE, Loop &OrigLoop,
                            DebugLoc DL) {
@@ -660,7 +661,7 @@ void VPlanTransforms::createHeaderPhiRecipes(
            "Must have 2 operands for header phis");
 
     // Extract common values once.
-    VPValue *Start = PhiR->getOperand(0);
+    VPIRValue *Start = cast<VPIRValue>(PhiR->getOperand(0));
     VPValue *BackedgeValue = PhiR->getOperand(1);
 
     if (FixedOrderRecurrences.contains(Phi)) {
