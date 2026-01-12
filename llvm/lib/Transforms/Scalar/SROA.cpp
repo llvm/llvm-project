@@ -2684,23 +2684,23 @@ static Value *insertVector(IRBuilderTy &IRB, Value *Old, Value *V,
     return V;
   }
 
-  assert(cast<FixedVectorType>(Ty)->getNumElements() <=
-             cast<FixedVectorType>(VecTy)->getNumElements() &&
-         "Too many elements!");
-  if (cast<FixedVectorType>(Ty)->getNumElements() ==
-      cast<FixedVectorType>(VecTy)->getNumElements()) {
+  unsigned NumSubElements = cast<FixedVectorType>(Ty)->getNumElements();
+  unsigned NumElements = cast<FixedVectorType>(VecTy)->getNumElements();
+
+  assert(NumSubElements <= NumElements && "Too many elements!");
+  if (NumSubElements == NumElements) {
     assert(V->getType() == VecTy && "Vector type mismatch");
     return V;
   }
-  unsigned EndIndex = BeginIndex + cast<FixedVectorType>(Ty)->getNumElements();
+  unsigned EndIndex = BeginIndex + NumSubElements;
 
   // When inserting a smaller vector into the larger to store, we first
   // use a shuffle vector to widen it with undef elements, and then
   // a second shuffle vector to select between the loaded vector and the
   // incoming vector.
   SmallVector<int, 8> Mask;
-  Mask.reserve(cast<FixedVectorType>(VecTy)->getNumElements());
-  for (unsigned i = 0; i != cast<FixedVectorType>(VecTy)->getNumElements(); ++i)
+  Mask.reserve(NumElements);
+  for (unsigned i = 0; i != NumElements; ++i)
     if (i >= BeginIndex && i < EndIndex)
       Mask.push_back(i - BeginIndex);
     else
@@ -2708,15 +2708,13 @@ static Value *insertVector(IRBuilderTy &IRB, Value *Old, Value *V,
   V = IRB.CreateShuffleVector(V, Mask, Name + ".expand");
   LLVM_DEBUG(dbgs() << "    shuffle: " << *V << "\n");
 
-  SmallVector<Constant *, 8> Mask2;
-  Mask2.reserve(cast<FixedVectorType>(VecTy)->getNumElements());
-  for (unsigned i = 0; i != cast<FixedVectorType>(VecTy)->getNumElements(); ++i)
-    Mask2.push_back(IRB.getInt1(i >= BeginIndex && i < EndIndex));
-
-  // No profiling support for vector selects.
-  V = IRB.CreateSelectWithUnknownProfile(ConstantVector::get(Mask2), V, Old,
-                                         DEBUG_TYPE, Name + "blend");
-
+  Mask.clear();
+  for (unsigned i = 0; i != NumElements; ++i)
+    if (i >= BeginIndex && i < EndIndex)
+      Mask.push_back(i);
+    else
+      Mask.push_back(i + NumElements);
+  V = IRB.CreateShuffleVector(V, Old, Mask, Name + "blend");
   LLVM_DEBUG(dbgs() << "    blend: " << *V << "\n");
   return V;
 }
