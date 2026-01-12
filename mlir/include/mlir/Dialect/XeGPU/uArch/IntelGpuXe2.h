@@ -222,7 +222,8 @@ struct StoreScatterInstruction : public Instruction {
     return B->getInstructionKind() == InstructionKind::StoreScatter;
   }
 
-  int32_t getMaxLaneLoadStoreBitSize() const { return 128; }
+  // SPIRV restricts vector size
+  int32_t getMaxLaneLoadStoreSize() const { return 16; }
 };
 
 struct LoadGatherInstruction : public Instruction {
@@ -232,7 +233,8 @@ struct LoadGatherInstruction : public Instruction {
     return B->getInstructionKind() == InstructionKind::LoadGather;
   }
 
-  int32_t getMaxLaneLoadStoreBitSize() const { return 128; }
+  // SPIRV restricts vector size
+  int32_t getMaxLaneLoadStoreSize() const { return 16; }
 };
 
 //===----------------------------------------------------------------------===//

@@ -1171,10 +1171,6 @@ void LayoutInfoPropagation::visitLoadGatherOp(
 
     // Check if value inst_data complies with uArch
     if (!instDataIncoming.empty()) {
-      const int maxElemsPerInst =
-          uArchInstruction->getMaxLaneLoadStoreBitSize() /
-          payloadTy.getElementType().getIntOrFloatBitWidth();
-
       // Each lane loads either one element
       SmallVector<int> instDataUarch(instDataIncoming.size(), 1);
       // Or multiple elements as 2D with lane's elements in the inner dimension
@@ -1182,8 +1178,9 @@ void LayoutInfoPropagation::visitLoadGatherOp(
         instDataUarch.back() = subgroupSize;
       } else {
         *std::prev(instDataUarch.end(), 2) = subgroupSize;
-        instDataUarch.back() = (std::min(
-            static_cast<int>(payloadTy.getShape().back()), maxElemsPerInst));
+        instDataUarch.back() =
+            (std::min(static_cast<int>(payloadTy.getShape().back()),
+                      uArchInstruction->getMaxLaneLoadStoreSize()));
       }
       // If inst data does not match, enforce the uArch-based one
       if (!llvm::equal(instDataIncoming, instDataUarch)) {
@@ -1268,10 +1265,6 @@ void LayoutInfoPropagation::visitStoreScatterOp(
       const auto *uArchInstruction =
           dyn_cast<xegpu::uArch::LoadGatherInstruction>(
               uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
-      const int maxElemsPerInst =
-          uArchInstruction->getMaxLaneLoadStoreBitSize() /
-          payloadTy.getElementType().getIntOrFloatBitWidth();
-
       const int subgroupSize = uArch->getSubgroupSize();
       SmallVector<int> instData{subgroupSize};
       auto chunkSize = storeScatter.getChunkSize().value_or(0);
@@ -1280,8 +1273,8 @@ void LayoutInfoPropagation::visitStoreScatterOp(
           !chunkSize && srcTdescTy) {
         chunkSize = srcTdescTy.getChunkSizeAsInt();
       }
-      instData.push_back(
-          std::min(static_cast<int>(chunkSize), maxElemsPerInst));
+      instData.push_back(std::min(static_cast<int>(chunkSize),
+                                  uArchInstruction->getMaxLaneLoadStoreSize()));
 
       payloadLayout = LayoutInfo(
           xegpu::LayoutAttr::get(storeScatter.getContext(), instData));
