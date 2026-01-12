@@ -454,7 +454,6 @@ struct AllocInfo {
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const AllocInfo &AE) {
-  ListSeparator LS;
   OS << "Versions: "
      << interleaved(map_range(AE.Versions, StaticCastTo<unsigned>));
 
