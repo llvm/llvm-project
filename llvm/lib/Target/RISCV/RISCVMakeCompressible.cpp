@@ -365,8 +365,7 @@ static Register analyzeCompressibleUses(MachineInstr &FirstMI,
     RegImmPair CandidateRegImm = getRegImmPairPreventingCompression(MI);
     if (CandidateRegImm.Reg == RegImm.Reg &&
         CandidateRegImm.Imm == RegImm.Imm) {
-      if (isXqciloLdSt(MI) && !XqciloLdSt)
-        XqciloLdSt = true;
+      XqciloLdSt |= isXqciloLdSt(MI);
       MIs.push_back(&MI);
     }
 
@@ -384,12 +383,12 @@ static Register analyzeCompressibleUses(MachineInstr &FirstMI,
   //     lw/sw (4 bytes) --> compressed to 2 bytes
   //     lw/sw (4 bytes) --> compressed to 2 bytes
   //     lw/sw (4 bytes) --> compressed to 2 bytes
-  // atleast three lw/sw instructions for code size reduction.
+  // at least three lw/sw instructions for code size reduction.
   //
   // b.                       --> qc.e.addi (uncompressed 6 bytes)
   //     qc.e.lw/sw (6 bytes) --> compressed to 2 bytes
   //     qc.e.lw/sw (6 bytes) --> compressed to 2 bytes
-  // atleast two qc.e.lw/sw instructions for code size reduction.
+  // at least two qc.e.lw/sw instructions for code size reduction.
   //
   // If no base adjustment is required, then copying the register costs one new
   // c.mv (or c.li Rd, 0 for "copying" the zero register) and therefore two uses
