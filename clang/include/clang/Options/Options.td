@@ -5577,6 +5577,13 @@ defm amdgpu_ieee : BoolMOption<"amdgpu-ieee",
   "This option changes the ABI. (AMDGPU only)">,
   NegFlag<SetFalse, [], [ClangOption, CC1Option]>>;
 
+defm amdgpu_expand_waitcnt_profiling : BoolMOption<"amdgpu-expand-waitcnt-profiling",
+  CodeGenOpts<"AMDGPUExpandWaitcntProfiling">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Expand s_waitcnt instructions to help "
+  "PC-sampling profilers identify memory stalls. Instead of a single waitcnt(target), "
+  "emits waitcnt(N-1), waitcnt(N-2), ..., waitcnt(target). (AMDGPU only)">,
+  NegFlag<SetFalse, [], [ClangOption]>>;
+
 def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Group>,
   HelpText<"Specify code object ABI version. Defaults to 6. (AMDGPU only)">,
   Visibility<[ClangOption, FlangOption, CC1Option, FC1Option]>,

@@ -134,9 +134,9 @@ void ReachingDefInfo::enterBasicBlock(MachineBasicBlock *MBB) {
         // Treat function live-ins as if they were defined just before the first
         // instruction.  Usually, function arguments are set up immediately
         // before the call.
-        if (LiveRegs[static_cast<unsigned>(Unit)] != -1) {
-          LiveRegs[static_cast<unsigned>(Unit)] = -1;
-          MBBReachingDefs.append(MBBNumber, Unit, -1);
+        if (LiveRegs[static_cast<unsigned>(Unit)] != FunctionLiveInMarker) {
+          LiveRegs[static_cast<unsigned>(Unit)] = FunctionLiveInMarker;
+          MBBReachingDefs.append(MBBNumber, Unit, FunctionLiveInMarker);
         }
       }
     }

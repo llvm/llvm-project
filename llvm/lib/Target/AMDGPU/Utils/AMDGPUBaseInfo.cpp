@@ -1785,6 +1785,25 @@ unsigned getStorecntBitMask(const IsaVersion &Version) {
   return (1 << getStorecntBitWidth(Version.Major)) - 1;
 }
 
+HardwareLimits::HardwareLimits(const IsaVersion &IV,
+                               bool HasExtendedWaitCounts) {
+  if (HasExtendedWaitCounts) {
+    LoadcntMax = getLoadcntBitMask(IV);
+    DscntMax = getDscntBitMask(IV);
+  } else {
+    LoadcntMax = getVmcntBitMask(IV);
+    DscntMax = getLgkmcntBitMask(IV);
+  }
+  ExpcntMax = getExpcntBitMask(IV);
+  StorecntMax = getStorecntBitMask(IV);
+  SamplecntMax = getSamplecntBitMask(IV);
+  BvhcntMax = getBvhcntBitMask(IV);
+  KmcntMax = getKmcntBitMask(IV);
+  XcntMax = getXcntBitMask(IV);
+  VaVdstMax = DepCtr::getVaVdstBitMask();
+  VmVsrcMax = DepCtr::getVmVsrcBitMask();
+}
+
 unsigned getWaitcntBitMask(const IsaVersion &Version) {
   unsigned VmcntLo = getBitMask(getVmcntBitShiftLo(Version.Major),
                                 getVmcntBitWidthLo(Version.Major));
