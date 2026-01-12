@@ -614,7 +614,7 @@ void populateIRAffine(nb::module_ &m) {
              return PyAffineExpr(self.getContext(),
                                  mlirAffineExprCompose(self, other));
            })
-      .def("maybe_downcast", &PyAffineExpr::maybeDownCast)
+      .def(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR, &PyAffineExpr::maybeDownCast)
       .def(
           "shift_dims",
           [](PyAffineExpr &self, uint32_t numDims, uint32_t shift,
