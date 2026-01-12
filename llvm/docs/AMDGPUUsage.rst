@@ -6631,9 +6631,8 @@ Threads can synchronize execution by performing barrier operations on barrier *o
     *barrier-modification-order<BO>* is a strict total order over ``S``. It is the order
     in which ``BO`` observes barrier operations that change its state.
 
-    * *Barrier-modification-order<BO>* is consistent with *happens-before* and
-      *thread-barrier-order<BO>*.
-    * Let ``A`` and ``B`` be two barrier modification operations, such that ``A -> B`` in
+    * *Barrier-modification-order<BO>* is consistent with *happens-before*.
+    * Let ``A`` and ``B`` be two barrier modification operations where ``A -> B`` in
       *thread-barrier-order<BO>*, then ``A -> B`` in *barrier-modification-order<BO>*.
     * The first element in *barrier-modification-order<BO>* is a barrier *init*.
       There is only one barrier *init* in *barrier-modification-order<BO>*
@@ -6802,7 +6801,7 @@ by all barrier operations.
      ===================== ====================== ===========================================================
      **Init, Join and Leave**
      --------------------------------------------------------------------------------------------------------
-     *init*                - *Workgroup barrier*  See barrier *ini* in
+     *init*                - *Workgroup barrier*  See barrier *init* in
                                                   :ref:`amdgpu-amdhsa-execution-barriers-workgroup-barriers`.
 
      *join*                - *Workgroup barrier*  See barrier *join* in
@@ -6849,7 +6848,7 @@ GFX12 targets have the split-barrier feature, and also offer multiple barrier *o
      ===================== =========================== ===========================================================
      Barrier Operation(s)  Barrier *Object*            AMDGPU Machine Code
      ===================== =========================== ===========================================================
-     **Join and Leave**
+     **Init, Join and Leave**
      -------------------------------------------------------------------------------------------------------------
      *init*                - *Workgroup barrier*       See barrier *init* in
                            - *Workgroup trap barrier*  :ref:`amdgpu-amdhsa-execution-barriers-workgroup-barriers`.
