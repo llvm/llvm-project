@@ -604,15 +604,11 @@ define <2 x i16> @v_bswap_v2i16(<2 x i16> %src) {
 ; SI-LABEL: v_bswap_v2i16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_alignbit_b32 v2, v0, v0, 8
+; SI-NEXT:    v_alignbit_b32 v1, v0, v0, 8
 ; SI-NEXT:    v_alignbit_b32 v0, v0, v0, 24
 ; SI-NEXT:    s_mov_b32 s4, 0xff00ff
-; SI-NEXT:    v_alignbit_b32 v3, v1, v1, 8
-; SI-NEXT:    v_alignbit_b32 v1, v1, v1, 24
-; SI-NEXT:    v_bfi_b32 v0, s4, v0, v2
-; SI-NEXT:    v_bfi_b32 v1, s4, v1, v3
-; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; SI-NEXT:    v_alignbit_b32 v0, v1, v0, 16
+; SI-NEXT:    v_bfi_b32 v0, s4, v0, v1
+; SI-NEXT:    v_alignbit_b32 v0, v0, v0, 16
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_bswap_v2i16:
@@ -635,20 +631,15 @@ define <3 x i16> @v_bswap_v3i16(<3 x i16> %src) {
 ; SI-LABEL: v_bswap_v3i16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_alignbit_b32 v3, v0, v0, 8
+; SI-NEXT:    v_alignbit_b32 v2, v0, v0, 8
 ; SI-NEXT:    v_alignbit_b32 v0, v0, v0, 24
 ; SI-NEXT:    s_mov_b32 s4, 0xff00ff
-; SI-NEXT:    v_alignbit_b32 v4, v1, v1, 8
+; SI-NEXT:    v_alignbit_b32 v3, v1, v1, 8
 ; SI-NEXT:    v_alignbit_b32 v1, v1, v1, 24
-; SI-NEXT:    v_alignbit_b32 v5, v2, v2, 8
-; SI-NEXT:    v_alignbit_b32 v2, v2, v2, 24
-; SI-NEXT:    v_bfi_b32 v0, s4, v0, v3
-; SI-NEXT:    v_bfi_b32 v1, s4, v1, v4
-; SI-NEXT:    v_bfi_b32 v2, s4, v2, v5
+; SI-NEXT:    v_bfi_b32 v0, s4, v0, v2
+; SI-NEXT:    v_bfi_b32 v1, s4, v1, v3
+; SI-NEXT:    v_alignbit_b32 v0, v0, v0, 16
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; SI-NEXT:    v_alignbit_b32 v0, v1, v0, 16
-; SI-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
-; SI-NEXT:    v_alignbit_b32 v1, v2, v0, 16
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_bswap_v3i16:
@@ -673,25 +664,15 @@ define <4 x i16> @v_bswap_v4i16(<4 x i16> %src) {
 ; SI-LABEL: v_bswap_v4i16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_alignbit_b32 v4, v2, v2, 8
-; SI-NEXT:    v_alignbit_b32 v2, v2, v2, 24
-; SI-NEXT:    s_mov_b32 s4, 0xff00ff
-; SI-NEXT:    v_alignbit_b32 v5, v3, v3, 8
-; SI-NEXT:    v_alignbit_b32 v3, v3, v3, 24
-; SI-NEXT:    v_alignbit_b32 v6, v0, v0, 8
+; SI-NEXT:    v_alignbit_b32 v2, v0, v0, 8
 ; SI-NEXT:    v_alignbit_b32 v0, v0, v0, 24
-; SI-NEXT:    v_alignbit_b32 v7, v1, v1, 8
+; SI-NEXT:    s_mov_b32 s4, 0xff00ff
+; SI-NEXT:    v_alignbit_b32 v3, v1, v1, 8
 ; SI-NEXT:    v_alignbit_b32 v1, v1, v1, 24
-; SI-NEXT:    v_bfi_b32 v2, s4, v2, v4
-; SI-NEXT:    v_bfi_b32 v3, s4, v3, v5
-; SI-NEXT:    v_bfi_b32 v0, s4, v0, v6
-; SI-NEXT:    v_bfi_b32 v1, s4, v1, v7
-; SI-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
-; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; SI-NEXT:    v_alignbit_b32 v2, v3, v2, 16
-; SI-NEXT:    v_alignbit_b32 v0, v1, v0, 16
-; SI-NEXT:    v_alignbit_b32 v1, v2, v0, 16
-; SI-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
+; SI-NEXT:    v_bfi_b32 v0, s4, v0, v2
+; SI-NEXT:    v_bfi_b32 v1, s4, v1, v3
+; SI-NEXT:    v_alignbit_b32 v0, v0, v0, 16
+; SI-NEXT:    v_alignbit_b32 v1, v1, v1, 16
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_bswap_v4i16:
