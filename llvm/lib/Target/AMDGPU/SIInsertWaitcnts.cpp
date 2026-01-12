@@ -718,8 +718,6 @@ public:
   void simplifyWaitcnt(const AMDGPU::Waitcnt &CheckWait,
                        AMDGPU::Waitcnt &UpdateWait) const;
   void simplifyWaitcnt(InstCounterType T, unsigned &Count) const;
-  bool hasRedundantXCntWithKmCnt(const AMDGPU::Waitcnt &Wait) const;
-  bool canOptimizeXCntWithLoadCnt(const AMDGPU::Waitcnt &Wait) const;
   void simplifyXcnt(const AMDGPU::Waitcnt &CheckWait,
                     AMDGPU::Waitcnt &UpdateWait) const;
   void simplifyVmVsrc(const AMDGPU::Waitcnt &CheckWait,
@@ -1445,23 +1443,6 @@ void WaitcntBrackets::applyWaitcnt(InstCounterType T, unsigned Count) {
   }
 }
 
-bool WaitcntBrackets::hasRedundantXCntWithKmCnt(
-    const AMDGPU::Waitcnt &Wait) const {
-  // Wait on XCNT is redundant if we are already waiting for a load to complete.
-  // SMEM can return out of order, so only omit XCNT wait if we are waiting till
-  // zero.
-  return Wait.KmCnt == 0 && hasPendingEvent(SMEM_GROUP);
-}
-
-bool WaitcntBrackets::canOptimizeXCntWithLoadCnt(
-    const AMDGPU::Waitcnt &Wait) const {
-  // If we have pending store we cannot optimize XCnt because we do not wait for
-  // stores. VMEM loads retun in order, so if we only have loads XCnt is
-  // decremented to the same number as LOADCnt.
-  return Wait.LoadCnt != ~0u && hasPendingEvent(VMEM_GROUP) &&
-         !hasPendingEvent(STORE_CNT);
-}
-
 void WaitcntBrackets::simplifyXcnt(const AMDGPU::Waitcnt &CheckWait,
                                    AMDGPU::Waitcnt &UpdateWait) const {
   // Try to simplify xcnt further by checking for joint kmcnt and loadcnt
@@ -1469,10 +1450,16 @@ void WaitcntBrackets::simplifyXcnt(const AMDGPU::Waitcnt &CheckWait,
   // be pending SMEM and VMEM events active at the same time.
   // In such cases, only clear one active event at a time.
   // TODO: Revisit xcnt optimizations for gfx1250.
-  if (hasRedundantXCntWithKmCnt(CheckWait))
+  // Wait on XCNT is redundant if we are already waiting for a load to complete.
+  // SMEM can return out of order, so only omit XCNT wait if we are waiting till
+  // zero.
+  if (CheckWait.KmCnt == 0 && hasPendingEvent(SMEM_GROUP))
     UpdateWait.XCnt = ~0u;
-  if (canOptimizeXCntWithLoadCnt(CheckWait) &&
-      CheckWait.XCnt >= CheckWait.LoadCnt)
+  // If we have pending store we cannot optimize XCnt because we do not wait for
+  // stores. VMEM loads retun in order, so if we only have loads XCnt is
+  // decremented to the same number as LOADCnt.
+  if (CheckWait.LoadCnt != ~0u && hasPendingEvent(VMEM_GROUP) &&
+      !hasPendingEvent(STORE_CNT) && CheckWait.XCnt >= CheckWait.LoadCnt)
     UpdateWait.XCnt = ~0u;
   simplifyWaitcnt(X_CNT, UpdateWait.XCnt);
 }
@@ -1581,7 +1568,7 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
 
   LLVM_DEBUG({
     dbgs() << "PreGFX12::applyPreexistingWaitcnt at: ";
-    if (It == OldWaitcntInstr.getParent()->instr_end())
+    if (It.isEnd())
       dbgs() << "end of block\n";
     else
       dbgs() << *It;
@@ -1657,13 +1644,12 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
     Wait.ExpCnt = ~0u;
     Wait.DsCnt = ~0u;
 
-    LLVM_DEBUG(It == WaitcntInstr->getParent()->end()
-                   ? dbgs()
-                         << "applied pre-existing waitcnt\n"
-                         << "New Instr at block end: " << *WaitcntInstr << '\n'
-                   : dbgs() << "applied pre-existing waitcnt\n"
-                            << "Old Instr: " << *It
-                            << "New Instr: " << *WaitcntInstr << '\n');
+    LLVM_DEBUG(It.isEnd() ? dbgs() << "applied pre-existing waitcnt\n"
+                                   << "New Instr at block end: "
+                                   << *WaitcntInstr << '\n'
+                          : dbgs() << "applied pre-existing waitcnt\n"
+                                   << "Old Instr: " << *It
+                                   << "New Instr: " << *WaitcntInstr << '\n');
   }
 
   if (WaitcntVsCntInstr) {
@@ -1674,7 +1660,7 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
     ScoreBrackets.applyWaitcnt(STORE_CNT, Wait.StoreCnt);
     Wait.StoreCnt = ~0u;
 
-    LLVM_DEBUG(It == WaitcntVsCntInstr->getParent()->end()
+    LLVM_DEBUG(It.isEnd()
                    ? dbgs() << "applied pre-existing waitcnt\n"
                             << "New Instr at block end: " << *WaitcntVsCntInstr
                             << '\n'
@@ -1828,7 +1814,7 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
 
   LLVM_DEBUG({
     dbgs() << "GFX12Plus::applyPreexistingWaitcnt at: ";
-    if (It == OldWaitcntInstr.getParent()->instr_end())
+    if (It.isEnd())
       dbgs() << "end of block\n";
     else
       dbgs() << *It;
@@ -1956,13 +1942,12 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       Wait.LoadCnt = ~0u;
       Wait.DsCnt = ~0u;
 
-      LLVM_DEBUG(It == OldWaitcntInstr.getParent()->end()
-                     ? dbgs() << "applied pre-existing waitcnt\n"
-                              << "New Instr at block end: "
-                              << *CombinedLoadDsCntInstr << '\n'
-                     : dbgs() << "applied pre-existing waitcnt\n"
-                              << "Old Instr: " << *It << "New Instr: "
-                              << *CombinedLoadDsCntInstr << '\n');
+      LLVM_DEBUG(It.isEnd() ? dbgs() << "applied pre-existing waitcnt\n"
+                                     << "New Instr at block end: "
+                                     << *CombinedLoadDsCntInstr << '\n'
+                            : dbgs() << "applied pre-existing waitcnt\n"
+                                     << "Old Instr: " << *It << "New Instr: "
+                                     << *CombinedLoadDsCntInstr << '\n');
     } else {
       CombinedLoadDsCntInstr->eraseFromParent();
       Modified = true;
@@ -1981,13 +1966,12 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       Wait.StoreCnt = ~0u;
       Wait.DsCnt = ~0u;
 
-      LLVM_DEBUG(It == OldWaitcntInstr.getParent()->end()
-                     ? dbgs() << "applied pre-existing waitcnt\n"
-                              << "New Instr at block end: "
-                              << *CombinedStoreDsCntInstr << '\n'
-                     : dbgs() << "applied pre-existing waitcnt\n"
-                              << "Old Instr: " << *It << "New Instr: "
-                              << *CombinedStoreDsCntInstr << '\n');
+      LLVM_DEBUG(It.isEnd() ? dbgs() << "applied pre-existing waitcnt\n"
+                                     << "New Instr at block end: "
+                                     << *CombinedStoreDsCntInstr << '\n'
+                            : dbgs() << "applied pre-existing waitcnt\n"
+                                     << "Old Instr: " << *It << "New Instr: "
+                                     << *CombinedStoreDsCntInstr << '\n');
     } else {
       CombinedStoreDsCntInstr->eraseFromParent();
       Modified = true;
@@ -2040,7 +2024,7 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       ScoreBrackets.applyWaitcnt(CT, NewCnt);
       setNoWait(Wait, CT);
 
-      LLVM_DEBUG(It == OldWaitcntInstr.getParent()->end()
+      LLVM_DEBUG(It.isEnd()
                      ? dbgs() << "applied pre-existing waitcnt\n"
                               << "New Instr at block end: " << *WaitInstrs[CT]
                               << '\n'
@@ -2073,13 +2057,12 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
     if (Enc != (unsigned)AMDGPU::DepCtr::getDefaultDepCtrEncoding(*ST)) {
       Modified |= updateOperandIfDifferent(*WaitcntDepctrInstr,
                                            AMDGPU::OpName::simm16, Enc);
-      LLVM_DEBUG(It == OldWaitcntInstr.getParent()->end()
-                     ? dbgs() << "applyPreexistingWaitcnt\n"
-                              << "New Instr at block end: "
-                              << *WaitcntDepctrInstr << '\n'
-                     : dbgs() << "applyPreexistingWaitcnt\n"
-                              << "Old Instr: " << *It
-                              << "New Instr: " << *WaitcntDepctrInstr << '\n');
+      LLVM_DEBUG(It.isEnd() ? dbgs() << "applyPreexistingWaitcnt\n"
+                                     << "New Instr at block end: "
+                                     << *WaitcntDepctrInstr << '\n'
+                            : dbgs() << "applyPreexistingWaitcnt\n"
+                                     << "Old Instr: " << *It << "New Instr: "
+                                     << *WaitcntDepctrInstr << '\n');
     } else {
       WaitcntDepctrInstr->eraseFromParent();
       Modified = true;
