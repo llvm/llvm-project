@@ -449,10 +449,8 @@ float RTNAME(Rand)(int *i, const char *sourceFile, int line) {
   unsigned mask = 0;
   constexpr int radix = std::numeric_limits<float>::radix;
   constexpr int digits = std::numeric_limits<float>::digits;
-  if (radix == 2) {
+  if constexpr (radix == 2) {
     mask = ~(unsigned)0u << (32 - digits + 1);
-  } else if (radix == 16) {
-    mask = ~(unsigned)0u << ((8 - digits) * 4 + 1);
   } else {
     Terminator terminator{sourceFile, line};
     terminator.Crash("Radix unknown value.");
