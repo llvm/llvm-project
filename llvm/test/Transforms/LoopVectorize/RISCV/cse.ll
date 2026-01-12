@@ -2,8 +2,8 @@
 ; RUN: opt < %s -S -p loop-vectorize -mtriple riscv32 -mattr=+v | FileCheck %s
 
 ; The EVL here is used by two VPWidenPointerInductionRecipes which are then
-; expanded to two muls. The muls are then CSEd, so make sure the verifier
-; complains if a user of EVL has multiple uses.
+; expanded to two muls. The muls are then CSE'd, so make sure the verifier
+; doesn't complain if a user of EVL has multiple uses.
 define i32 @widenpointerinduction_evl_cse(ptr noalias %p0, ptr noalias %p1) {
 ; CHECK-LABEL: define i32 @widenpointerinduction_evl_cse(
 ; CHECK-SAME: ptr noalias [[P0:%.*]], ptr noalias [[P1:%.*]]) #[[ATTR0:[0-9]+]] {
