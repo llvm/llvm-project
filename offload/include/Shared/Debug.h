@@ -605,17 +605,6 @@ static inline odbg_ostream reportErrorStream() {
 
 #define DP(...) ODBG() << FORMAT_TO_STR(__VA_ARGS__);
 
-#define REPORT_INT_OLD(...)                                                    \
-  do {                                                                         \
-    if (::llvm::offload::debug::isDebugEnabled()) {                            \
-      ODBG(::llvm::omp::target::debug::ODT_Error,                              \
-           ::llvm::omp::target::debug::ODL_Error)                              \
-          << FORMAT_TO_STR(__VA_ARGS__);                                       \
-    } else {                                                                   \
-      FAILURE_MESSAGE(__VA_ARGS__);                                            \
-    }                                                                          \
-  } while (false)
-
 // Define default format for pointers
 static inline raw_ostream &operator<<(raw_ostream &Os, void *Ptr) {
   Os << ::llvm::format(DPxMOD, DPxPTR(Ptr));
@@ -626,14 +615,10 @@ static inline raw_ostream &operator<<(raw_ostream &Os, void *Ptr) {
 #define DP(...)                                                                \
   {                                                                            \
   }
-#define REPORT_INT_OLD(...) FAILURE_MESSAGE(__VA_ARGS__);
 #endif // OMPTARGET_DEBUG
 
-// This is used for the new style REPORT macro
-#define REPORT_INT() ::llvm::omp::target::debug::reportErrorStream()
-
-// Make REPORT compatible with old and new syntax
-#define REPORT(...) REPORT_INT##__VA_OPT__(_OLD)(__VA_ARGS__)
+// New REPORT macro in the same style as ODBG
+#define REPORT() ::llvm::omp::target::debug::reportErrorStream()
 
 } // namespace llvm::omp::target::debug
 
