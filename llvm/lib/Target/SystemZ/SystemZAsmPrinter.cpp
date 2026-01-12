@@ -1047,6 +1047,10 @@ void SystemZAsmPrinter::emitXXStructorList(const DataLayout &DL,
     auto &Ctx = OutStreamer->getContext();
     const MCExpr *ADAFuncRefExpr;
     unsigned SlotKind = SystemZII::MO_ADA_DIRECT_FUNC_DESC;
+    const MCSymbol *ADASym = Section->getBeginSymbol();
+    if (!ADASym)
+      ADASym = Ctx.getOrCreateSymbol(Section->getName());
+
     ADAFuncRefExpr = MCBinaryExpr::createAdd(
         MCSpecifierExpr::create(MCSymbolRefExpr::create(ADASym, OutContext),
                                 SystemZ::S_QCon, OutContext),
@@ -1632,12 +1636,8 @@ void SystemZAsmPrinter::emitPPA1(MCSymbol *FnEndSym) {
 }
 
 void SystemZAsmPrinter::emitStartOfAsmFile(Module &M) {
-  if (TM.getTargetTriple().isOSzOS()) {
-    ADASym = getObjFileLowering().getADASection()->getBeginSymbol();
-
+  if (TM.getTargetTriple().isOSzOS())
     emitPPA2(M);
-  }
-
   AsmPrinter::emitStartOfAsmFile(M);
 }
 

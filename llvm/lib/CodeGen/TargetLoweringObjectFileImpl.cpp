@@ -2795,10 +2795,6 @@ void TargetLoweringObjectFileGOFF::getModuleMetadata(Module &M) {
   TextLD->setWeak(false);
   TextLD->setADA(ADAPR);
   TextSection->setBeginSymbol(TextLD);
-  // Initialize the label for the ADA section.
-  MCSymbolGOFF *ADASym = static_cast<MCSymbolGOFF *>(
-      getContext().getOrCreateSymbol(ADAPR->getName()));
-  ADAPR->setBeginSymbol(ADASym);
 }
 
 MCSection *TargetLoweringObjectFileGOFF::getExplicitSectionGlobal(
