@@ -41,9 +41,9 @@ entry:
   br label %loop
 
 loop:
-  %iv = phi i32 [ %iv.next, %loop ], [ 0, %entry ]
-  %x = phi ptr [ %x.next, %loop ], [ %p0, %entry ]
-  %y = phi ptr [ %y.next, %loop ], [ %p1, %entry ]
+  %iv = phi i32 [ 0, %entry], [ %iv.next, %loop ]
+  %x = phi ptr [ %p0, %entry ], [ %x.next, %loop ]
+  %y = phi ptr [ %p1, %entry ], [ %y.next, %loop ]
 
   store ptr %x, ptr %p0
   store ptr %y, ptr %p1
