@@ -333,6 +333,7 @@ KnownFPClass KnownFPClass::log(const KnownFPClass &KnownSrc,
 KnownFPClass KnownFPClass::sqrt(const KnownFPClass &KnownSrc,
                                 DenormalMode Mode) {
   KnownFPClass Known;
+  Known.knownNot(fcPosSubnormal);
 
   if (KnownSrc.isKnownNeverPosInfinity())
     Known.knownNot(fcPosInf);
@@ -372,6 +373,34 @@ KnownFPClass KnownFPClass::fpext(const KnownFPClass &KnownSrc,
   // Sign bit of a nan isn't guaranteed.
   if (!Known.isKnownNeverNaN())
     Known.SignBit = std::nullopt;
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::roundToIntegral(const KnownFPClass &KnownSrc,
+                                           bool IsTrunc,
+                                           bool IsMultiUnitFPType) {
+  KnownFPClass Known;
+
+  // Integer results cannot be subnormal.
+  Known.knownNot(fcSubnormal);
+
+  Known.propagateNaN(KnownSrc, true);
+
+  // Pass through infinities, except PPC_FP128 is a special case for
+  // intrinsics other than trunc.
+  if (IsTrunc || !IsMultiUnitFPType) {
+    if (KnownSrc.isKnownNeverPosInfinity())
+      Known.knownNot(fcPosInf);
+    if (KnownSrc.isKnownNeverNegInfinity())
+      Known.knownNot(fcNegInf);
+  }
+
+  // Negative round ups to 0 produce -0
+  if (KnownSrc.isKnownNever(fcPosFinite))
+    Known.knownNot(fcPosFinite);
+  if (KnownSrc.isKnownNever(fcNegFinite))
+    Known.knownNot(fcNegFinite);
 
   return Known;
 }
