@@ -31,7 +31,7 @@ void SYCLInstallationDetector::addSYCLIncludeArgs(
     return;
 
   // Add the SYCL header search locations.
-  // These are icluded for both SYCL host and device compilations.
+  // These are included for both SYCL host and device compilations.
   SmallString<128> IncludePath(D.Dir);
   llvm::sys::path::append(IncludePath, "..");
   llvm::sys::path::append(IncludePath, "include");
