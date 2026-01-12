@@ -718,11 +718,10 @@ void VPlanTransforms::createInLoopReductionRecipes(
       continue;
 
     RecurKind Kind = PhiR->getRecurrenceKind();
-    assert(
-        !RecurrenceDescriptor::isFindLastRecurrenceKind(Kind) &&
-        !RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
-        !RecurrenceDescriptor::isFindIVRecurrenceKind(Kind) &&
-        "AnyOf and Find reductions are not allowed for in-loop reductions");
+    assert(!RecurrenceDescriptor::isFindLastRecurrenceKind(Kind) &&
+           !RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
+           !RecurrenceDescriptor::isFindIVRecurrenceKind(Kind) &&
+           "AnyOf and Find reductions are not allowed for in-loop reductions");
 
     bool IsFPRecurrence =
         RecurrenceDescriptor::isFloatingPointRecurrenceKind(Kind);
