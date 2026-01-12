@@ -1381,8 +1381,7 @@ private:
     // If this is a PHI node before a catchswitch, we cannot insert any non-PHI
     // instructions in this BB, which may be required during rewriting. Bail out
     // on these cases.
-    if (isa<PHINode>(I) &&
-        I.getParent()->getFirstInsertionPt() == I.getParent()->end())
+    if (isa<PHINode>(I) && !I.getParent()->hasInsertionPt())
       return PI.setAborted(&I);
 
     // TODO: We could use simplifyInstruction here to fold PHINodes and
