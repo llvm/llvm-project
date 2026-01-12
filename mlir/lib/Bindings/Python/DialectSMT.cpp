@@ -1,4 +1,4 @@
-//===- DialectSMT.cpp - Pybind module for SMT dialect API support ---------===//
+//===- DialectSMT.cpp - Python extension module for SMT API support -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
