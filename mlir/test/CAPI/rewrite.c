@@ -17,7 +17,6 @@
 #include <inttypes.h>
 #include <stdio.h>
 
-
 MlirOperation createOperationWithName(MlirContext ctx, const char *name) {
   MlirStringRef nameRef = mlirStringRefCreateFromCString(name);
   MlirLocation loc = mlirLocationUnknownGet(ctx);
