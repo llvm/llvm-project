@@ -3310,11 +3310,7 @@ bool TypeSystemClang::IsEnumerationType(lldb::opaque_compiler_type_t type,
         GetCanonicalQualType(type)->getCanonicalTypeInternal());
 
     if (enum_type) {
-      IsIntegerType(enum_type->getDecl()
-                        ->getDefinitionOrSelf()
-                        ->getIntegerType()
-                        .getAsOpaquePtr(),
-                    is_signed);
+      is_signed = enum_type->isSignedIntegerOrEnumerationType();
       return true;
     }
   }
