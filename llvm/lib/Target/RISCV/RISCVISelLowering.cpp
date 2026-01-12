@@ -15351,6 +15351,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     bool IsMulH = Opcode == RISCVISD::PMULHSU || Opcode == RISCVISD::PMULHR ||
                   Opcode == RISCVISD::PMULHRU || Opcode == RISCVISD::PMULHRSU;
     assert(VT == MVT::v2i16 || (!IsMulH && VT == MVT::v4i8));
+    (void)IsMulH;
     MVT NewVT = MVT::v4i16;
     if (VT == MVT::v4i8)
       NewVT = MVT::v8i8;
