@@ -108,9 +108,8 @@ struct AArch64SRLTDefineSuperRegs : public MachineFunctionPass {
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  void collectWidestSuperReg(Register R, const BitVector &RequiredBaseRegUnits,
-                 const BitVector &QHiRegUnits,
-                 SmallSet<Register, 8> &SuperRegs);
+  Register getWidestSuperReg(Register R, const BitVector &RequiredBaseRegUnits,
+                             const BitVector &QHiRegUnits);
 
   StringRef getPassName() const override { return PASS_NAME; }
 
@@ -125,52 +124,23 @@ private:
   MachineFunction *MF = nullptr;
   const AArch64Subtarget *Subtarget = nullptr;
   const AArch64RegisterInfo *TRI = nullptr;
-  const AArch64FunctionInfo *AFI = nullptr;
-  const TargetInstrInfo *TII = nullptr;
-  MachineRegisterInfo *MRI = nullptr;
 };
 
 } // end anonymous namespace
 
-INITIALIZE_PASS(AArch64SRLTDefineSuperRegs, DEBUG_TYPE, PASS_NAME, false,
-                false)
+INITIALIZE_PASS(AArch64SRLTDefineSuperRegs, DEBUG_TYPE, PASS_NAME, false, false)
 
-SmallVector<MCRegister> SupportedAliasRegs = {
-    AArch64::X0,  AArch64::X1,  AArch64::X2,  AArch64::X3,  AArch64::X4,
-    AArch64::X5,  AArch64::X6,  AArch64::X7,  AArch64::X8,  AArch64::X9,
-    AArch64::X10, AArch64::X11, AArch64::X12, AArch64::X13, AArch64::X14,
-    AArch64::X15, AArch64::X16, AArch64::X17, AArch64::X18, AArch64::X19,
-    AArch64::X20, AArch64::X21, AArch64::X22, AArch64::X23, AArch64::X24,
-    AArch64::X25, AArch64::X26, AArch64::X27, AArch64::X28, AArch64::FP,
-    AArch64::LR,  AArch64::SP,  AArch64::Z0,  AArch64::Z1,  AArch64::Z2,
-    AArch64::Z3,  AArch64::Z4,  AArch64::Z5,  AArch64::Z6,  AArch64::Z7,
-    AArch64::Z8,  AArch64::Z9,  AArch64::Z10, AArch64::Z11, AArch64::Z12,
-    AArch64::Z13, AArch64::Z14, AArch64::Z15, AArch64::Z16, AArch64::Z17,
-    AArch64::Z18, AArch64::Z19, AArch64::Z20, AArch64::Z21, AArch64::Z22,
-    AArch64::Z23, AArch64::Z24, AArch64::Z25, AArch64::Z26, AArch64::Z27,
-    AArch64::Z28, AArch64::Z29, AArch64::Z30, AArch64::Z31};
-
-SmallVector<MCRegister> QHiRegs = {
-    AArch64::Q0_HI,  AArch64::Q1_HI,  AArch64::Q2_HI,  AArch64::Q3_HI,
-    AArch64::Q4_HI,  AArch64::Q5_HI,  AArch64::Q6_HI,  AArch64::Q7_HI,
-    AArch64::Q8_HI,  AArch64::Q9_HI,  AArch64::Q10_HI, AArch64::Q11_HI,
-    AArch64::Q12_HI, AArch64::Q13_HI, AArch64::Q14_HI, AArch64::Q15_HI,
-    AArch64::Q16_HI, AArch64::Q17_HI, AArch64::Q18_HI, AArch64::Q19_HI,
-    AArch64::Q20_HI, AArch64::Q21_HI, AArch64::Q22_HI, AArch64::Q23_HI,
-    AArch64::Q24_HI, AArch64::Q25_HI, AArch64::Q26_HI, AArch64::Q27_HI,
-    AArch64::Q28_HI, AArch64::Q29_HI, AArch64::Q30_HI, AArch64::Q31_HI};
-
-// Find the widest super-reg for a given reg and adds it to `SuperRegs`.
-// For example:
+// Returns the widest super-reg for a given reg, or NoRegister if no suitable
+// wider super-reg has been found. For example:
 //  W0    -> X0
 //  B1    -> Q1 (without SVE)
 //        -> Z1 (with SVE)
 //  W1_W2 -> X1_X2
 //  D0_D1 -> Q0_Q1 (without SVE)
 //        -> Z0_Z1 (with SVE)
-void AArch64SRLTDefineSuperRegs::collectWidestSuperReg(
+Register AArch64SRLTDefineSuperRegs::getWidestSuperReg(
     Register R, const BitVector &RequiredBaseRegUnits,
-    const BitVector &QHiRegUnits, SmallSet<Register, 8> &SuperRegs) {
+    const BitVector &QHiRegUnits) {
   assert(R.isPhysical() &&
          "Expected to be run straight after virtregrewriter!");
 
@@ -181,13 +151,16 @@ void AArch64SRLTDefineSuperRegs::collectWidestSuperReg(
   auto IsSuitableSuperReg = [&](Register SR) {
     for (MCRegUnit U : TRI->regunits(SR)) {
       // Avoid choosing z1 as super-reg of d1 if SVE is not available.
+      // Q*_HI registers are only set for SVE registers, as those consist
+      // of the Q* register for the low 128 bits and the Q*_HI (artificial)
+      // register for the top (vscale-1) * 128 bits.
       if (QHiRegUnits.test((unsigned)U) &&
           !Subtarget->isSVEorStreamingSVEAvailable())
         return false;
-      // We consider reg A as a suitable super-reg of B when any of the reg units:
-      // * is shared (Q0 and B0, both have B0 as sub-register)
-      // * is artificial (Q0 = B0 + (B0_HI + H0_HI + S0_HI))
-      // This avoids considering e.g. Q0_Q1 as a super reg of D0 or D1.
+      // We consider a super-reg as unsuitable if any of its reg units is not
+      // artificial and not shared, as that would imply that U is a unit for a
+      // different register, which means the candidate super-reg is likely
+      // a register tuple.
       if (!TRI->isArtificialRegUnit(U) &&
           (!Units.test((unsigned)U) || !RequiredBaseRegUnits.test((unsigned)U)))
         return false;
@@ -201,41 +174,48 @@ void AArch64SRLTDefineSuperRegs::collectWidestSuperReg(
                                    TRI->isSuperRegister(LargestSuperReg, SR)))
       LargestSuperReg = SR;
 
-  if (LargestSuperReg != AArch64::NoRegister)
-    SuperRegs.insert(LargestSuperReg);
+  return LargestSuperReg;
 }
 
 bool AArch64SRLTDefineSuperRegs::runOnMachineFunction(MachineFunction &MF) {
   this->MF = &MF;
   Subtarget = &MF.getSubtarget<AArch64Subtarget>();
-  TII = Subtarget->getInstrInfo();
   TRI = Subtarget->getRegisterInfo();
-  MRI = &MF.getRegInfo();
+  const MachineRegisterInfo *MRI = &MF.getRegInfo();
 
   if (!MRI->subRegLivenessEnabled())
     return false;
 
   assert(!MRI->isSSA() && "Expected to be run after breaking down SSA form!");
 
+  auto XRegs = seq_inclusive<unsigned>(AArch64::X0, AArch64::X28);
+  auto ZRegs = seq_inclusive<unsigned>(AArch64::Z0, AArch64::Z31);
+  constexpr unsigned FixedRegs[] = {AArch64::FP, AArch64::LR, AArch64::SP};
+
   BitVector RequiredBaseRegUnits(TRI->getNumRegUnits());
-  for (Register R : SupportedAliasRegs)
+  for (Register R : concat<unsigned>(XRegs, ZRegs, FixedRegs))
     for (MCRegUnit U : TRI->regunits(R))
       RequiredBaseRegUnits.set((unsigned)U);
 
   BitVector QHiRegUnits(TRI->getNumRegUnits());
-  for (Register R : QHiRegs)
+  for (Register R : seq_inclusive<unsigned>(AArch64::Q0_HI, AArch64::Q31_HI))
     for (MCRegUnit U : TRI->regunits(R))
       QHiRegUnits.set((unsigned)U);
 
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      // For each partial register write (e.g. w0), also add implicit-def for
-      // top bits of register (x0).
+      // PATCHPOINT may have a 'def' that's not a register, avoid this.
+      if (MI.getOpcode() == TargetOpcode::PATCHPOINT)
+        continue;
+      // For each partial register write, also add an implicit-def for top bits
+      // of the register (e.g. for w0 add a def of x0).
       SmallSet<Register, 8> SuperRegs;
       for (const MachineOperand &DefOp : MI.defs())
-        collectWidestSuperReg(DefOp.getReg(), RequiredBaseRegUnits, QHiRegUnits,
-                              SuperRegs);
+        if (Register R = getWidestSuperReg(DefOp.getReg(), RequiredBaseRegUnits,
+                                           QHiRegUnits);
+            R != AArch64::NoRegister)
+          SuperRegs.insert(R);
 
       if (!SuperRegs.size())
         continue;
@@ -246,9 +226,12 @@ bool AArch64SRLTDefineSuperRegs::runOnMachineFunction(MachineFunction &MF) {
         bool IsRenamable = any_of(MI.defs(), [&](const MachineOperand &MO) {
           return TRI->regsOverlap(MO.getReg(), R) && MO.isRenamable();
         });
+        bool IsDead = any_of(MI.defs(), [&](const MachineOperand &MO) {
+          return TRI->regsOverlap(MO.getReg(), R) && MO.isDead();
+        });
         MachineOperand DefOp = MachineOperand::CreateReg(
             R, /*isDef=*/true, /*isImp=*/true, /*isKill=*/false,
-            /*isDead=*/false, /*isUndef=*/false, /*isEarlyClobber=*/false,
+            /*isDead=*/IsDead, /*isUndef=*/false, /*isEarlyClobber=*/false,
             /*SubReg=*/0, /*isDebug=*/false, /*isInternalRead=*/false,
             /*isRenamable=*/IsRenamable);
         MI.addOperand(DefOp);
