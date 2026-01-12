@@ -2843,6 +2843,17 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_ilogbf16",
+    hdrs = ["src/__support/math/ilogbf16.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_ldexpf128",
     hdrs = ["src/__support/math/ldexpf128.h"],
     deps = [
@@ -4327,7 +4338,12 @@ libc_math_function(name = "ilogbl")
 
 libc_math_function(name = "ilogbf128")
 
-libc_math_function(name = "ilogbf16")
+libc_math_function(
+    name = "ilogbf16",
+    additional_deps = [
+        ":__support_math_ilogbf16",
+    ],
+)
 
 libc_math_function(name = "ldexp")
 
