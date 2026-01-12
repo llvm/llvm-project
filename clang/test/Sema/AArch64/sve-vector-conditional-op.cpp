@@ -22,6 +22,16 @@ auto error_sve_vector_result_matched_element_count(__SVBool_t svbool, __SVUint32
   return svbool ? a : b;
 }
 
+auto error_fixed_cond_mixed_scalar_and_vector_operands(fixed_vector cond, unsigned char a, __SVUint8_t b) {
+  // expected-error@+1 {{cannot mix vectors and sizeless vectors in a vector conditional}}
+  return cond ? a : b;
+}
+
+auto error_scalable_cond_mixed_scalar_and_vector_operands(__SVBool_t svbool, unsigned char a, fixed_vector b) {
+  // expected-error@+1 {{cannot mix vectors and sizeless vectors in a vector conditional}}
+  return svbool ? a : b;
+}
+
 // The following cases should be supported:
 
 __SVBool_t cond_svbool(__SVBool_t a, __SVBool_t b) {

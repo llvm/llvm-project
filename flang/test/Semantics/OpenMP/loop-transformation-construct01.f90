@@ -7,7 +7,7 @@ subroutine loop_transformation_construct1
 
   !ERROR: OpenMP loop construct cannot apply to a fully unrolled loop
   !$omp do
-  !ERROR: OpenMP loop construct should contain a DO-loop or a loop-nest-generating OpenMP construct
+  !ERROR: This construct should contain a DO-loop or a loop-nest-generating OpenMP construct
   !$omp unroll
 end subroutine
 
@@ -51,7 +51,7 @@ subroutine loop_transformation_construct4
   do x = 1, i
     v(x) = v(x) * 2
   end do
-  !ERROR: OpenMP loop construct should contain a DO-loop or a loop-nest-generating OpenMP construct
+  !ERROR: This construct should contain a DO-loop or a loop-nest-generating OpenMP construct
   !ERROR: At least one of SIZES clause must appear on the TILE directive
   !$omp tile
 end subroutine

@@ -21,7 +21,6 @@
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Index/IndexingAction.h"
 #include "clang/Index/IndexingOptions.h"
-#include <cstddef>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -146,6 +145,11 @@ public:
       // inside, it becomes quadratic. So we give up on nested symbols.
       if (isDeeplyNested(D))
         return false;
+      // If D is a likely forwarding function we need the body to index indirect
+      // constructor calls (e.g. `make_unique`)
+      if (auto *FT = llvm::dyn_cast<clang::FunctionTemplateDecl>(D);
+          FT && isLikelyForwardingFunction(FT))
+        return true;
       auto &SM = D->getASTContext().getSourceManager();
       auto FID = SM.getFileID(SM.getExpansionLoc(D->getLocation()));
       if (!FID.isValid())
@@ -220,6 +224,9 @@ std::unique_ptr<FrontendAction> createStaticIndexingAction(
       index::IndexingOptions::SystemSymbolFilterKind::All;
   // We index function-local classes and its member functions only.
   IndexOpts.IndexFunctionLocals = true;
+  // We need to delay indexing so instantiations of function bodies become
+  // available, this is so we can find constructor calls through `make_unique`.
+  IndexOpts.DeferIndexingToEndOfTranslationUnit = true;
   Opts.CollectIncludePath = true;
   if (Opts.Origin == SymbolOrigin::Unknown)
     Opts.Origin = SymbolOrigin::Static;

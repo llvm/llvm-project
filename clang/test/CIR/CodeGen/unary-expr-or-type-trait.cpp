@@ -7,20 +7,26 @@ void foo() {
   unsigned long i = sizeof(int);
   // CHECK: cir.const #cir.int<4> : !u64i
 
-  unsigned long l =  sizeof(long);
+  unsigned long l = sizeof(long);
   // CHECK: cir.const #cir.int<8> : !u64i
 
-  unsigned long f =  sizeof(float);
+  unsigned long f = sizeof(float);
   // CHECK: cir.const #cir.int<4> : !u64i
 
-  unsigned long d =  sizeof(double);
+  unsigned long d = sizeof(double);
   // CHECK: cir.const #cir.int<8> : !u64i
 
   unsigned long iArr = sizeof(int[5]);
   // CHECK: cir.const #cir.int<20> : !u64i
 
-  unsigned long dArr =  sizeof(double[5]);
+  unsigned long dArr = sizeof(double[5]);
   // CHECK: cir.const #cir.int<40> : !u64i
+
+  unsigned long vi4 = sizeof(int __attribute__((vector_size(4))));
+  // CHECK: cir.const #cir.int<4> : !u64i
+
+  unsigned long evi4 = sizeof(int __attribute__((ext_vector_type(4))));
+  // CHECK: cir.const #cir.int<16> : !u64i
 }
 
 void foo2() {
@@ -30,18 +36,24 @@ void foo2() {
   unsigned long i = alignof(int);
   // CHECK: cir.const #cir.int<4> : !u64i
 
-  unsigned long l =  alignof(long);
+  unsigned long l = alignof(long);
   // CHECK: cir.const #cir.int<8> : !u64i
 
-  unsigned long f =  alignof(float);
+  unsigned long f = alignof(float);
   // CHECK: cir.const #cir.int<4> : !u64i
 
-  unsigned long d =  alignof(double);
+  unsigned long d = alignof(double);
   // CHECK: cir.const #cir.int<8> : !u64i
 
   unsigned long iArr = alignof(int[5]);
   // CHECK: cir.const #cir.int<4> : !u64i
 
-  unsigned long dArr =  alignof(double[5]);
+  unsigned long dArr = alignof(double[5]);
   // CHECK: cir.const #cir.int<8> : !u64i
+
+  unsigned long vi4 = alignof(int __attribute__((vector_size(4))));
+  // CHECK: cir.const #cir.int<4> : !u64i
+
+  unsigned long evi4 = alignof(int __attribute__((ext_vector_type(4))));
+  // CHECK: cir.const #cir.int<16> : !u64i
 }

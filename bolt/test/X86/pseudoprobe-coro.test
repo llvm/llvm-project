@@ -1,0 +1,17 @@
+## This reproduces the top-level node lookup issue with coroutine fragments
+## test-coro-probes.yaml is built from test-coro.cpp using
+## clang++ -stdlib=libc++ -std=c++20 -fpseudo-probe-for-profiling
+# RUN: yaml2obj %p/Inputs/test-coro-probes.yaml &> %t.exe
+# RUN: link_fdata %s %t.exe %t.pa PREAGG
+# RUN: perf2bolt %t.exe -p %t.pa --pa --profile-write-pseudo-probes -o %t.null -w %t.yaml
+# RUN: FileCheck %s --input-file %t.yaml
+# PREAGG: B X:0 #_Z4foo1v.resume# 1 0
+# PREAGG: B X:0 #_Z4foo1v.destroy# 1 0
+# PREAGG: B X:0 #_Z4foo1v.cleanup# 1 0
+## All fragments share the same GUID
+# CHECK: _Z4foo1v.resume
+# CHECK: inline_tree: [ {  } ]
+# CHECK: _Z4foo1v.destroy
+# CHECK: inline_tree: [ {  } ]
+# CHECK: _Z4foo1v.cleanup
+# CHECK: inline_tree: [ {  } ]

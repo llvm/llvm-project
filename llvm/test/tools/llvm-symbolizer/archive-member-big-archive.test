@@ -1,0 +1,129 @@
+## Test big archive recognition with same-named members (XCOFF format).
+## Big archives can contain multiple members with the same name but different
+## architectures. This test verifies llvm-symbolizer can disambiguate using
+## architecture specification.
+
+# RUN: rm -rf %t.dir && mkdir %t.dir && cd %t.dir
+
+# RUN: yaml2obj -DSYMBOL=foo32 --docnum=1 %s -o 32.o
+# RUN: yaml2obj -DSYMBOL=foo64 --docnum=2 %s -o 64.o
+# RUN: yaml2obj -DSYMBOL=foo1 --docnum=2 %s -o 1.o
+# RUN: yaml2obj -DSYMBOL=foo2 --docnum=2 %s -o 2.o
+
+## Create big archive with unique member names.
+# RUN: llvm-ar --format=bigarchive %if system-aix %{-X64%} crv archive.a 1.o 2.o
+
+## Create big archive with duplicate member names (64-bit first, 32-bit second).
+# RUN: cp 64.o test.o
+# RUN: llvm-ar --format=bigarchive %if system-aix %{-X64%} crv archive.a test.o
+# RUN: cp 32.o test.o
+# RUN: llvm-ar --format=bigarchive %if system-aix %{-X32 rv%} %else %{qv%} archive.a test.o
+
+## Test symbolization with unique member names.
+# RUN: llvm-symbolizer --default-arch=ppc64 --obj="archive.a(1.o)" 0x0 | FileCheck %s --check-prefix=CHECK-1
+# RUN: llvm-symbolizer --obj="archive.a(1.o):ppc64" 0x0 | FileCheck %s --check-prefix=CHECK-1
+# RUN: llvm-symbolizer --default-arch=ppc64 --obj="archive.a(2.o)" 0x0 | FileCheck %s --check-prefix=CHECK-2
+# RUN: llvm-symbolizer --obj="archive.a(2.o):ppc64" 0x0 | FileCheck %s --check-prefix=CHECK-2
+
+# CHECK-1: foo1
+# CHECK-2: foo2
+
+## Test 64-bit member (first in archive).
+# RUN: llvm-symbolizer --default-arch=ppc64 --obj="archive.a(test.o)" 0x0 | FileCheck %s --check-prefix=CHECK-64
+# RUN: llvm-symbolizer --obj="archive.a(test.o):ppc64" 0x0 | FileCheck %s --check-prefix=CHECK-64
+
+# CHECK-64: foo64
+
+## Test 32-bit member (second in archive).
+# RUN: llvm-symbolizer --default-arch=ppc --obj="archive.a(test.o)" 0x0 | FileCheck %s --check-prefix=CHECK-32
+# RUN: llvm-symbolizer --obj="archive.a(test.o):ppc" 0x0 | FileCheck %s --check-prefix=CHECK-32
+
+# CHECK-32: foo32
+
+## Test error: no matching architecture.
+# RUN: not llvm-symbolizer --default-arch=x86_64 --obj="archive.a(test.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOARCH
+# CHECK-NOARCH: error: 'archive.a(test.o)': no matching member 'test.o' with arch 'x86_64' in 'archive.a'
+
+## Test error: no architecture specified.
+# RUN: not llvm-symbolizer --obj="archive.a(test.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOARCHSPEC
+# CHECK-NOARCHSPEC: error: 'archive.a(test.o)': no matching member 'test.o' with arch '' in 'archive.a'
+
+## Test error: nonexistent member.
+# RUN: not llvm-symbolizer --default-arch=ppc --obj="archive.a(nonexistent.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+# CHECK-ERROR: error: 'archive.a(nonexistent.o)': no matching member 'nonexistent.o' with arch 'ppc' in 'archive.a'
+
+## Test error: not an archive.
+# RUN: not llvm-symbolizer --obj="test.o(test.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOTARCHIVE
+# CHECK-NOTARCHIVE: error: 'test.o(test.o)': 'test.o' is not a valid archive
+
+## Test error: empty member name.
+# RUN: not llvm-symbolizer --obj="archive.a():ppc64" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NONAME
+# CHECK-NONAME: error: 'archive.a():ppc64': no matching member '' with arch 'ppc64' in 'archive.a'
+
+## 32-bit XCOFF object.
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1DF
+Sections:
+  - Name:        .text
+    Flags:       [ STYP_TEXT ]
+    SectionData: 4E800020
+Symbols:
+  - Name:                .file
+    Section:             N_DEBUG
+    StorageClass:        C_FILE
+    NumberOfAuxEntries:  1
+    AuxEntries:
+      - Type:            AUX_FILE
+        FileNameOrString: foo.c
+        FileStringType:  XFT_FN
+  - Name:                .[[SYMBOL]]
+    Section:             .text
+    StorageClass:        C_EXT
+    NumberOfAuxEntries:  1
+    AuxEntries:
+      - Type:                   AUX_CSECT
+        SymbolType:              XTY_LD
+        StorageMappingClass:     XMC_PR
+  - Name:                [[SYMBOL]]
+    Section:             .text
+    StorageClass:        C_EXT
+    NumberOfAuxEntries:  1
+    AuxEntries:
+      - Type:                   AUX_CSECT
+        SymbolType:              XTY_SD
+        StorageMappingClass:     XMC_PR
+
+## 64-bit XCOFF object.
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1F7
+Sections:
+  - Name:        .text
+    Flags:       [ STYP_TEXT ]
+    SectionData: 4E800020
+Symbols:
+  - Name:                .file
+    Section:             N_DEBUG
+    StorageClass:        C_FILE
+    NumberOfAuxEntries:  1
+    AuxEntries:
+      - Type:            AUX_FILE
+        FileNameOrString: foo.c
+        FileStringType:  XFT_FN
+  - Name:                .[[SYMBOL]]
+    Section:             .text
+    StorageClass:        C_EXT
+    NumberOfAuxEntries:  1
+    AuxEntries:
+      - Type:                   AUX_CSECT
+        SymbolType:              XTY_LD
+        StorageMappingClass:     XMC_PR
+  - Name:                [[SYMBOL]]
+    Section:             .text
+    StorageClass:        C_EXT
+    NumberOfAuxEntries:  1
+    AuxEntries:
+      - Type:                   AUX_CSECT
+        SymbolType:              XTY_SD
+        StorageMappingClass:     XMC_PR

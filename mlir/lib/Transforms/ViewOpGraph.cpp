@@ -57,7 +57,7 @@ static std::string quoteString(const std::string &str) {
 /// For Graphviz record nodes:
 /// " Braces, vertical bars and angle brackets must be escaped with a backslash
 /// character if you wish them to appear as a literal character "
-std::string escapeLabelString(const std::string &str) {
+static std::string escapeLabelString(const std::string &str) {
   std::string buf;
   llvm::raw_string_ostream os(buf);
   for (char c : str) {

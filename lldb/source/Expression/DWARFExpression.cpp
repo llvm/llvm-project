@@ -879,11 +879,11 @@ static Scalar DerefSizeExtractDataHelper(uint8_t *addr_bytes,
   return addr_data.GetAddress(&addr_data_offset);
 }
 
-static llvm::Error Evaluate_DW_OP_deref_size(DWARFExpression::Stack &stack,
-                                             ExecutionContext *exe_ctx,
-                                             lldb::ModuleSP module_sp,
-                                             Process *process, Target *target,
-                                             uint8_t size) {
+static llvm::Error Evaluate_DW_OP_deref_size(
+    DWARFExpression::Stack &stack, ExecutionContext *exe_ctx,
+    lldb::ModuleSP module_sp, Process *process, Target *target, uint8_t size,
+    size_t size_addr_bytes,
+    LocationDescriptionKind &dwarf4_location_description_kind) {
   if (stack.empty())
     return llvm::createStringError(
         "expression stack empty for DW_OP_deref_size");
@@ -891,6 +891,25 @@ static llvm::Error Evaluate_DW_OP_deref_size(DWARFExpression::Stack &stack,
   if (size > 8)
     return llvm::createStringError(
         "Invalid address size for DW_OP_deref_size: %d\n", size);
+
+  // Deref a register or implicit location and truncate the value to `size`
+  // bytes. See the corresponding comment in DW_OP_deref for more details on
+  // why we deref these locations this way.
+  if (dwarf4_location_description_kind == Register ||
+      dwarf4_location_description_kind == Implicit) {
+    // Reset context to default values.
+    dwarf4_location_description_kind = Memory;
+    stack.back().ClearContext();
+
+    // Truncate the value on top of the stack to *size* bytes then
+    // extend to the size of an address (e.g. generic type).
+    Scalar scalar = stack.back().GetScalar();
+    scalar.TruncOrExtendTo(size * 8, /*sign=*/false);
+    scalar.TruncOrExtendTo(size_addr_bytes * 8,
+                           /*sign=*/false);
+    stack.back().GetScalar() = scalar;
+    return llvm::Error::success();
+  }
 
   Value::ValueType value_type = stack.back().GetValueType();
   switch (value_type) {
@@ -1142,8 +1161,9 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // target machine.
     case DW_OP_deref: {
       size_t size = opcodes.GetAddressByteSize();
-      if (llvm::Error err = Evaluate_DW_OP_deref_size(stack, exe_ctx, module_sp,
-                                                      process, target, size))
+      if (llvm::Error err = Evaluate_DW_OP_deref_size(
+              stack, exe_ctx, module_sp, process, target, size, size,
+              dwarf4_location_description_kind))
         return err;
     } break;
 
@@ -1161,8 +1181,9 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // expression stack.
     case DW_OP_deref_size: {
       size_t size = opcodes.GetU8(&offset);
-      if (llvm::Error err = Evaluate_DW_OP_deref_size(stack, exe_ctx, module_sp,
-                                                      process, target, size))
+      if (llvm::Error err = Evaluate_DW_OP_deref_size(
+              stack, exe_ctx, module_sp, process, target, size,
+              opcodes.GetAddressByteSize(), dwarf4_location_description_kind))
         return err;
     } break;
 

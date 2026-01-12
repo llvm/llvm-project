@@ -159,6 +159,48 @@ void Language::ForEach(
   }
 }
 
+llvm::Expected<LanguageType>
+Language::GetExceptionLanguageForLanguage(llvm::StringRef lang_name) {
+  LanguageType language = Language::GetLanguageTypeFromString(lang_name);
+  LanguageType exception_language = eLanguageTypeUnknown;
+
+  llvm::StringRef error_context;
+  switch (language) {
+  case eLanguageTypeC89:
+  case eLanguageTypeC:
+  case eLanguageTypeC99:
+  case eLanguageTypeC11:
+    exception_language = eLanguageTypeC;
+    break;
+  case eLanguageTypeC_plus_plus:
+  case eLanguageTypeC_plus_plus_03:
+  case eLanguageTypeC_plus_plus_11:
+  case eLanguageTypeC_plus_plus_14:
+    exception_language = eLanguageTypeC_plus_plus;
+    break;
+  case eLanguageTypeObjC_plus_plus:
+    error_context =
+        "Set exception breakpoints separately for c++ and objective-c";
+    break;
+  case eLanguageTypeUnknown:
+    error_context = "Unknown language type for exception breakpoint";
+    break;
+  default:
+    if (Language *languagePlugin = Language::FindPlugin(language)) {
+      if (languagePlugin->SupportsExceptionBreakpointsOnThrow() ||
+          languagePlugin->SupportsExceptionBreakpointsOnCatch()) {
+        exception_language = language;
+        break;
+      }
+    }
+    error_context = "Unsupported language type for exception breakpoint";
+  }
+  if (!error_context.empty())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   error_context);
+  return exception_language;
+}
+
 bool Language::IsTopLevelFunction(Function &function) { return false; }
 
 lldb::TypeCategoryImplSP Language::GetFormatters() { return nullptr; }

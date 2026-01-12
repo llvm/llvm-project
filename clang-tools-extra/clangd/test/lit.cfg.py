@@ -1,3 +1,5 @@
+import os
+
 import lit.llvm
 import lit.util
 
@@ -5,10 +7,21 @@ lit.llvm.initialize(lit_config, config)
 lit.llvm.llvm_config.clang_setup()
 lit.llvm.llvm_config.use_default_substitutions()
 
+# TODO: Consolidate the logic for turning on the internal shell by default for all LLVM test suites.
+# See https://github.com/llvm/llvm-project/issues/106636 for more details.
+#
+# We prefer the lit internal shell which provides a better user experience on failures
+# and is faster unless the user explicitly disables it with LIT_USE_INTERNAL_SHELL=0
+# env var.
+use_lit_shell = True
+lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
+if lit_shell_env:
+    use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
+
 config.name = "Clangd"
 config.suffixes = [".test"]
 config.excludes = ["Inputs"]
-config.test_format = lit.formats.ShTest(not lit.llvm.llvm_config.use_lit_shell)
+config.test_format = lit.formats.ShTest(not use_lit_shell)
 config.test_source_root = config.clangd_source_dir + "/test"
 config.test_exec_root = config.clangd_binary_dir + "/test"
 

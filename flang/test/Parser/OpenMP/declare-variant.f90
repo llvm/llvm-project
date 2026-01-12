@@ -121,7 +121,7 @@ subroutine f
   y = 2
   !omp simd
   call f2(x, y)
-  !omp end simd 
+  !omp end simd
 contains
   subroutine f1 (x, y)
     real :: x, y

@@ -168,6 +168,9 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     assert(VecTy->getElementType() == ArrTy->getElementType() &&
            "Element types of array and vector must be the same.");
 
+    const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
+    uint64_t ElemSize = DL.getTypeAllocSize(ArrTy->getElementType());
+
     for (unsigned i = 0; i < VecTy->getNumElements(); ++i) {
       // Create a GEP to access the i-th element of the array.
       SmallVector<Type *, 2> Types = {DstArrayPtr->getType(),
@@ -190,7 +193,8 @@ class SPIRVLegalizePointerCast : public FunctionPass {
       buildAssignType(B, VecTy->getElementType(), Element);
 
       Types = {Element->getType(), ElementPtr->getType()};
-      Args = {Element, ElementPtr, B.getInt16(2), B.getInt8(Alignment.value())};
+      Align NewAlign = commonAlignment(Alignment, i * ElemSize);
+      Args = {Element, ElementPtr, B.getInt16(2), B.getInt8(NewAlign.value())};
       B.CreateIntrinsic(Intrinsic::spv_store, {Types}, {Args});
     }
   }
