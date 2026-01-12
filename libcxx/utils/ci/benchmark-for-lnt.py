@@ -111,7 +111,9 @@ def main(argv):
         with open(build_dir / 'benchmarks.lnt', 'a') as f:
             run([args.git_repo / 'libcxx/utils/consolidate-benchmarks', build_dir / 'micro'], stdout=f)
         order = len(subprocess.check_output(['git', '-C', args.git_repo, 'rev-list', args.benchmark_commit]).splitlines())
+        commit_info = subprocess.check_output(['git', '-C', args.git_repo, 'show', args.benchmark_commit, '--no-patch']).decode()
         run([build_dir / '.venv/bin/lnt', 'importreport', '--order', str(order), '--machine', args.machine,
+                '--run-info', f'commit_info={commit_info}',
                 build_dir / 'benchmarks.lnt', build_dir / 'benchmarks.json'])
 
         if not args.dry_run:
