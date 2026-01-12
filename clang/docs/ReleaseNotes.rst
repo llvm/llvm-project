@@ -978,6 +978,8 @@ Python Binding Changes
 ----------------------
 - Exposed ``clang_Cursor_isFunctionInlined``.
 - Exposed ``clang_getCursorLanguage`` via ``Cursor.language``.
+- Exposed ``clang_getNonReferenceType`` and ``clang_getUnqualifiedType`` via
+  ``Type.get_non_reference()`` and ``Type.get_unqualified()``.
 - Add all missing ``CursorKind``s, ``TypeKind``s and
   ``ExceptionSpecificationKind``s from ``Index.h``
 
