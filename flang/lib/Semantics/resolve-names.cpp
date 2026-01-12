@@ -3518,7 +3518,6 @@ void ScopeHandler::SetCUDADataAttr(SourceName source, Symbol &symbol,
           symbol.name());
     }
   }
-
 }
 
 // ModuleVisitor implementation
