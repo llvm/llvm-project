@@ -417,6 +417,9 @@ VALUE_CODEGENOPT(TLSSize, 8, 0, Benign)
 /// The types of variables that we will extend the live ranges of.
 ENUM_CODEGENOPT(ExtendVariableLiveness, ExtendVariableLivenessKind, 2, ExtendVariableLivenessKind::None, Benign)
 
+/// Whether we should use make unreachable trap or not.
+ENUM_CODEGENOPT(TrapUnreachable, TrapUnreachableKind, 2, TrapUnreachableKind::None, Benign)
+
 /// The default stack protector guard offset to use.
 VALUE_CODEGENOPT(StackProtectorGuardOffset, 32, INT_MAX, Benign)
 
@@ -433,9 +436,6 @@ CODEGENOPT(DirectAccessExternalData, 1, 0, Benign)
 /// Whether we should use the undefined behaviour optimization for control flow
 /// paths that reach the end of a function without executing a required return.
 CODEGENOPT(StrictReturn, 1, 1, Benign)
-
-/// Whether we should use make unreachable trap or not.
-CODEGENOPT(TrapUnreachable, 1, 0, Benign)
 
 /// Whether emit pseudo probes for sample pgo profile collection.
 CODEGENOPT(PseudoProbeForProfiling, 1, 0, Benign)

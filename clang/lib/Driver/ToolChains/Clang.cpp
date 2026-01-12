@@ -5849,9 +5849,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addOptInFlag(CmdArgs, options::OPT_fsplit_stack,
                     options::OPT_fno_split_stack);
 
-  Args.addOptInFlag(CmdArgs, options::OPT_ftrap_unreachable,
-                    options::OPT_ftrap_unreachable);
-
   // -fprotect-parens=0 is default.
   if (Args.hasFlag(options::OPT_fprotect_parens,
                    options::OPT_fno_protect_parens, false))
@@ -5865,6 +5862,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_atomic_fine_grained_memory);
   Args.addOptInFlag(CmdArgs, options::OPT_fatomic_ignore_denormal_mode,
                     options::OPT_fno_atomic_ignore_denormal_mode);
+
+  Args.addLastArg(CmdArgs, options::OPT_ftrap_unreachable);
 
   if (Arg *A = Args.getLastArg(options::OPT_fextend_args_EQ)) {
     const llvm::Triple::ArchType Arch = TC.getArch();

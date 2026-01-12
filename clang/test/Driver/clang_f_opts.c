@@ -652,7 +652,11 @@
 // CHECK-STRICT-ALIASING-NOT: -relaxed-aliasing
 // CHECK-NO-STRICT-ALIASING: -relaxed-aliasing
 
-// RUN: %clang -### -ftrap-unreachable %s 2>&1 | FileCheck %s -check-prefix=UNREACHABLE-TRAP
-// RUN: %clang -### -fno-trap-unreachable %s 2>&1 | FileCheck %s -check-prefix=NO-UNREACHABLE-TRAP
-// UNREACHABLE-TRAP: "-ftrap-unreachable"
-// NO-UNREACHABLE-TRAP-NOT: "-ftrap-unreachable"
+// RUN: %clang -### -ftrap-unreachable=all %s 2>&1 | FileCheck %s -check-prefix=UNREACHABLE-TRAP-ALL
+// RUN: %clang -### -ftrap-unreachable=none %s 2>&1 | FileCheck %s -check-prefix=UNREACHABLE-TRAP-NONE
+// RUN: %clang -### -ftrap-unreachable=except-noreturn %s 2>&1 | FileCheck %s -check-prefix=UNREACHABLE-TRAP-EXCEPT-NORETURN
+// RUN: %clang -###  %s 2>&1 | FileCheck %s -check-prefix=UNREACHABLE-TRAP-EMPTY
+// UNREACHABLE-TRAP-ALL: "-ftrap-unreachable=all"
+// UNREACHABLE-TRAP-EXCEPT-NORETURN: "-ftrap-unreachable=except-noreturn"
+// UNREACHABLE-TRAP-NONE: "-ftrap-unreachable=none"
+// UNREACHABLE-TRAP-EMPTY-NOT: -ftrap-unreachable
