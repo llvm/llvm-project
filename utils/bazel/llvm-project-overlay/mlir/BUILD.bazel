@@ -4522,6 +4522,7 @@ cc_library(
         ":ControlFlowInterfaces",
         ":ConvertToEmitCInterface",
         ":DestinationStyleOpInterface",
+        ":DialectUtils",
         ":FunctionInterfaces",
         ":IR",
         ":InferTypeOpInterface",
@@ -5728,6 +5729,7 @@ cc_library(
         ":BytecodeOpInterface",
         ":ControlFlowInterfaces",
         ":DLTIDialect",
+        ":DialectUtils",
         ":FunctionInterfaces",
         ":GPUBaseIncGen",
         ":GPUCompilationAttrInterfacesIncGen",
@@ -11134,6 +11136,7 @@ td_library(
     includes = ["include"],
     deps = [
         ":DestinationStyleOpInterface",
+        ":DialectUtils",
         ":LinalgOpsTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
@@ -11265,6 +11268,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":DestinationStyleOpInterface",
+        ":DialectUtils",
         ":IR",
         ":SubsetOpInterfaceIncGen",
         ":ValueBoundsOpInterface",
@@ -11588,6 +11592,7 @@ cc_library(
     deps = [
         ":Analysis",
         ":DestinationStyleOpInterface",
+        ":DialectUtils",
         ":IR",
         ":ValueBoundsOpInterfaceIncGen",
         ":ViewLikeInterface",
@@ -13012,6 +13017,7 @@ cc_library(
         ":ConvertToEmitCInterface",
         ":ConvertToLLVMInterface",
         ":DestinationStyleOpInterface",
+        # ":DialectUtils", # Removed to break circular dependency
         ":IR",
         ":InferIntRangeCommon",
         ":InferIntRangeInterface",
@@ -13948,6 +13954,7 @@ cc_library(
         ":BytecodeOpInterface",
         ":ControlFlowInterfaces",
         ":DestinationStyleOpInterface",
+        ":DialectUtils",
         ":FuncDialect",
         ":FunctionInterfaces",
         ":IR",
