@@ -9,7 +9,9 @@
 <html lang="en-US">
 {{>HeadPartial}}
 <body>
-    {{>NavbarPartial}}
+    <header>
+        {{>NavbarPartial}}
+    </header>
     <main>
         <div class="container">
             <div class="sidebar">
@@ -176,7 +178,9 @@
                         {{#Description}}
                         {{>Comments}}
                         {{/Description}}
-                        <p>Defined at line {{Location.LineNumber}} of file {{Location.Filename}}</p>
+                        {{#Location}}
+                        <p>Defined at line {{LineNumber}} of file {{^FileURL}}{{Filename}}{{/FileURL}}{{#FileURL}}<a href="{{FileURL}}">{{Filename}}</a>{{/FileURL}}</p>
+                        {{/Location}}
                     </div>
                     {{/Concepts}}
                 </section>
