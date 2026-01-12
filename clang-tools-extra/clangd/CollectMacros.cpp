@@ -44,7 +44,7 @@ void CollectMainFileMacros::add(const Token &MacroNameTok, const MacroInfo *MI,
 
   bool IsCommandLineDefined = false;
   if (MI) {
-    const auto DefLoc =/*  */ MI->getDefinitionLoc();
+    const auto DefLoc = MI->getDefinitionLoc();
     if (DefLoc.isValid())
       IsCommandLineDefined = SM.isWrittenInCommandLineFile(DefLoc);
   }

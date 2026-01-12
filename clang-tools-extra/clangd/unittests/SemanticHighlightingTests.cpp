@@ -1205,9 +1205,10 @@ TEST(SemanticHighlighting, CommandLineMacros) {
   checkHighlightings(R"cpp(
     int $Variable_def_globalScope[[x]] = $Macro_globalScope[[CMD_MACRO]];
   )cpp",
-                    /*AdditionalFiles=*/{}, 
-                    /*ModifierMask=*/~(1 << unsigned(HighlightingModifier::CommandLineDefined)),
-                    /*AdditionalArgs=*/{"-DCMD_MACRO=1"});
+                     /*AdditionalFiles=*/{},
+                     /*ModifierMask=*/
+                     ~(1 << unsigned(HighlightingModifier::CommandLineDefined)),
+                     /*AdditionalArgs=*/{"-DCMD_MACRO=1"});
 }
 
 // Ranges are highlighted as variables, unless highlighted as $Function etc.
