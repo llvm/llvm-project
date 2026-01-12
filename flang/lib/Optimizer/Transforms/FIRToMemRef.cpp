@@ -335,9 +335,10 @@ void FIRToMemRef::rewriteAlloca(fir::AllocaOp firAlloca,
 
 bool FIRToMemRef::memrefIsOptional(Operation *op) const {
   if (auto declare = dyn_cast<fir::DeclareOp>(op)) {
-    if (declare.isOptional())
+    if (fir::FortranVariableOpInterface(declare).isOptional())
       return true;
 
+    Value operand = declare.getMemref();
     Operation *operandOp = operand.getDefiningOp();
     if (operandOp && isa<fir::AbsentOp>(operandOp))
       return true;
@@ -473,8 +474,8 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
     rewriter.setInsertionPoint(arrayCoorOp);
   } else {
     Operation *arrayCoorOperation = arrayCoorOp.getOperation();
+    rewriter.setInsertionPoint(arrayCoorOp);
     if (memrefIsOptional(memref)) {
-      rewriter.setInsertionPoint(arrayCoorOp);
       auto ifOp = arrayCoorOperation->getParentOfType<scf::IfOp>();
       if (ifOp) {
         Operation *condition = ifOp.getCondition().getDefiningOp();
@@ -491,7 +492,6 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
       }
     }
 
-    rewriter.setInsertionPoint(arrayCoorOp);
     converted = getFIRConvert(memOp, memref, rewriter, typeConverter);
     if (failed(converted))
       return failure();
