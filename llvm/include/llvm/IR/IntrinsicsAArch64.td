@@ -76,6 +76,12 @@ def int_aarch64_prefetch : Intrinsic<[],
      ]>,
     ClangBuiltin<"__builtin_arm_prefetch">;
 
+def int_aarch64_range_prefetch : Intrinsic<[],
+    [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty, llvm_i64_ty],
+    [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn, ReadOnly<ArgIndex<0>>,
+     ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>,
+    ClangBuiltin<"__builtin_arm_range_prefetch">;
+
 //===----------------------------------------------------------------------===//
 // Data Barrier Instructions
 

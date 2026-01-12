@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s | FileCheck --check-prefix=GFX1250 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX12-ERR --implicit-check-not=error: --strict-whitespace %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -filetype=null %s 2>&1 | FileCheck --check-prefix=GFX12-ERR --implicit-check-not=error: --strict-whitespace %s
 
 flat_atomic_add_f32 v1, v[0:1], v2 offset:-8000000 th:TH_ATOMIC_RETURN
 // GFX1250: flat_atomic_add_f32 v1, v[0:1], v2 offset:-8000000 th:TH_ATOMIC_RETURN ; encoding: [0x7c,0x80,0x15,0xec,0x01,0x00,0x10,0x01,0x00,0x00,0xee,0x85]

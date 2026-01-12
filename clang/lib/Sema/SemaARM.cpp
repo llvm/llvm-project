@@ -1122,6 +1122,19 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
            SemaRef.BuiltinConstantArgRange(TheCall, 4, 0, 1);
   }
 
+  if (BuiltinID == AArch64::BI__builtin_arm_range_prefetch_x) {
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 1) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 3, -2097152, 2097151) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 4, 1, 65536) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 5, -2097152, 2097151);
+  }
+
+  if (BuiltinID == AArch64::BI__builtin_arm_range_prefetch) {
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 1);
+  }
+
   if (BuiltinID == AArch64::BI__builtin_arm_rsr64 ||
       BuiltinID == AArch64::BI__builtin_arm_wsr64 ||
       BuiltinID == AArch64::BI__builtin_arm_rsr128 ||

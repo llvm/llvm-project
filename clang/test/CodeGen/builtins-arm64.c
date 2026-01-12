@@ -62,6 +62,55 @@ void prefetch(void) {
   // CHECK: call {{.*}} @llvm.aarch64.prefetch(ptr null, i32 0, i32 3, i32 0, i32 1)
 }
 
+void range_prefetch(void) {
+  __builtin_arm_range_prefetch(0, 0, 0, 0); // pldkeep
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 0, i32 0, i64 0)
+
+  __builtin_arm_range_prefetch(0, 0, 1, 0); // pldstrm
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 0, i32 1, i64 0)
+
+  __builtin_arm_range_prefetch(0, 1, 0, 0); // pstkeep
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 1, i32 0, i64 0)
+
+  __builtin_arm_range_prefetch(0, 1, 1, 0); // pststrm
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 1, i32 1, i64 0)
+}
+
+void range_prefetch_x(void) {
+  __builtin_arm_range_prefetch_x(0, 0, 0, 0, 1, 0, 0); // pldkeep
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 0, i32 0, i64 0)
+  __builtin_arm_range_prefetch_x(0, 0, 1, 0, 1, 0, 0); // pldstrm
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 0, i32 1, i64 0)
+  __builtin_arm_range_prefetch_x(0, 1, 0, 0, 1, 0, 0); // pstkeep
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 1, i32 0, i64 0)
+  __builtin_arm_range_prefetch_x(0, 1, 1, 0, 1, 0, 0); // pststrm
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 1, i32 1, i64 0)
+
+  // Lower limits (length, count & stride)
+  __builtin_arm_range_prefetch_x(0, 0, 0, -2097152, 1, -2097152, 0);
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 0, i32 0, i64 576460752305520640)
+
+  // Upper limits (length, count & stride)
+  __builtin_arm_range_prefetch_x(0, 0, 0, 2097151, 65536, 2097151, 0);
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 0, i32 0, i64 576460752301326335)
+
+  // Distance less than minumum, round up to first power of two (1111)
+  __builtin_arm_range_prefetch_x(0, 0, 0, 0, 1, 0, 1);
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 0, i32 0, i64 -1152921504606846976)
+
+  // Distance 1 over minimum, round up to next power of 2 (1110)
+  __builtin_arm_range_prefetch_x(0, 0, 0, 0, 1, 0, 32769);
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 0, i32 0, i64 -2305843009213693952)
+
+  // Distance is a power of two in range (1010)
+  __builtin_arm_range_prefetch_x(0, 0, 0, 0, 1, 0, 1048576);
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 0, i32 0, i64 -6917529027641081856)
+
+  // Distance is out of range, set to 0 (0000)
+  __builtin_arm_range_prefetch_x(0, 0, 0, 0, 1, 0, 536870913);
+  // CHECK: call {{.*}} @llvm.aarch64.range.prefetch(ptr null, i32 0, i32 0, i64 0)
+}
+
 __attribute__((target("v8.5a")))
 int32_t jcvt(double v) {
   //CHECK-LABEL: @jcvt(

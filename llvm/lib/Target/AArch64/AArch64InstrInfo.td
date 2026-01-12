@@ -538,6 +538,7 @@ def SDT_AArch64trivec : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0,1>,
                                            SDTCisSameAs<0,3>]>;
 def SDT_AArch64TCRET : SDTypeProfile<0, 2, [SDTCisPtrTy<0>]>;
 def SDT_AArch64PREFETCH : SDTypeProfile<0, 2, [SDTCisVT<0, i32>, SDTCisPtrTy<1>]>;
+def SDT_AArch64RANGE_PREFETCH: SDTypeProfile<0, 3, [SDTCisVT<0, i32>, SDTCisPtrTy<1>, SDTCisVT<2, i64>]>;
 
 def SDT_AArch64ITOF  : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisSameAs<0,1>]>;
 
@@ -1053,6 +1054,10 @@ def AArch64tcret: SDNode<"AArch64ISD::TC_RETURN", SDT_AArch64TCRET,
 // Custom prefetch handling
 def AArch64Prefetch        : SDNode<"AArch64ISD::PREFETCH", SDT_AArch64PREFETCH,
                                [SDNPHasChain, SDNPSideEffect]>;
+
+def AArch64RangePrefetch: SDNode<"AArch64ISD::RANGE_PREFETCH",
+                                 SDT_AArch64RANGE_PREFETCH,
+                                 [SDNPHasChain, SDNPSideEffect]>;
 
 // {s|u}int to FP within a FP register.
 def AArch64sitof: SDNode<"AArch64ISD::SITOF", SDT_AArch64ITOF>;
@@ -11088,6 +11093,9 @@ def RPRFM:
   // the decoder namespace to "Fallback".
   let DecoderNamespace = "Fallback";
 }
+
+def : Pat<(AArch64RangePrefetch rprfop:$Rt, GPR64sp:$Rn, GPR64:$Rm),
+          (RPRFM rprfop:$Rt, GPR64:$Rm, GPR64sp:$Rn)>;
 
 //===----------------------------------------------------------------------===//
 // 128-bit Atomics (FEAT_LSE128)
