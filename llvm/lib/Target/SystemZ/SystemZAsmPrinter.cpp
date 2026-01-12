@@ -1025,11 +1025,11 @@ void SystemZAsmPrinter::emitXXStructorList(const DataLayout &DL,
     return;
 
   const Align Align = llvm::Align(4);
-  const TargetLoweringObjectFile &Obj = getObjFileLowering();
+  const TargetLoweringObjectFileGOFF &Obj =
+      static_cast<const TargetLoweringObjectFileGOFF &>(getObjFileLowering());
   for (Structor &S : Structors) {
     MCSectionGOFF *Section = static_cast<MCSectionGOFF *>(
-        IsCtor ? Obj.getStaticCtorSection(S.Priority, nullptr)
-               : Obj.getStaticDtorSection(S.Priority, nullptr));
+        Obj.getStaticXtorSection(S.Priority, nullptr));
     OutStreamer->switchSection(Section);
     if (OutStreamer->getCurrentSection() != OutStreamer->getPreviousSection())
       emitAlignment(Align);
@@ -1050,8 +1050,7 @@ void SystemZAsmPrinter::emitXXStructorList(const DataLayout &DL,
     ADAFuncRefExpr = MCBinaryExpr::createAdd(
         MCSpecifierExpr::create(MCSymbolRefExpr::create(ADASym, OutContext),
                                 SystemZ::S_QCon, OutContext),
-        MCConstantExpr::create(ADATable.insert(Symbol, SlotKind).second, Ctx),
-        Ctx);
+        MCConstantExpr::create(ADATable.insert(Symbol, SlotKind), Ctx), Ctx);
 
     emitInt32(XtorPriority);
     if (IsCtor) {

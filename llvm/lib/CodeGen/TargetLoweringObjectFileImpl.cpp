@@ -2895,12 +2895,7 @@ static MCSectionGOFF *getStaticStructorSectionGOFF(MCContext &Ctx,
   return Xtor;
 }
 
-MCSection *TargetLoweringObjectFileGOFF::getStaticCtorSection(
-    unsigned Priority, const MCSymbol *KeySym) const {
-  return getStaticStructorSectionGOFF(getContext(), TextSection, Priority);
-}
-
-MCSection *TargetLoweringObjectFileGOFF::getStaticDtorSection(
+MCSection *TargetLoweringObjectFileGOFF::getStaticXtorSection(
     unsigned Priority, const MCSymbol *KeySym) const {
   return getStaticStructorSectionGOFF(getContext(), TextSection, Priority);
 }
