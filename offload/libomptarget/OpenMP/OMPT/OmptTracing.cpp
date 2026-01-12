@@ -84,9 +84,8 @@ void llvm::omp::target::ompt::setBufferManagementFns(
   std::unique_lock<std::mutex> Lock(BufferManagementFnMutex);
   auto BufferMgrItr = BufferManagementFns.find(DeviceId);
   if (BufferMgrItr != BufferManagementFns.end()) {
-    REPORT("Buffer request and complete functions already exist for device %d, "
-           "ignoring ...\n",
-           DeviceId);
+    REPORT() << "Buffer request and complete functions already exist for device  "
+             << DeviceId  << "ignoring ...";
     return;
   }
   BufferManagementFns[DeviceId] = std::make_pair(ReqFn, CmpltFn);
@@ -96,9 +95,8 @@ void llvm::omp::target::ompt::removeBufferManagementFns(int DeviceId) {
   std::unique_lock<std::mutex> Lock(BufferManagementFnMutex);
   auto BufferMgrItr = BufferManagementFns.find(DeviceId);
   if (BufferMgrItr == BufferManagementFns.end()) {
-    REPORT("Buffer request and complete functions don't exist for device %d, "
-           "ignoring ...\n",
-           DeviceId);
+    REPORT() << "Buffer request and complete functions don't exist for device  "
+             << DeviceId  << "ignoring ...";
     return;
   }
   BufferManagementFns.erase(BufferMgrItr);
@@ -246,7 +244,7 @@ ompt_set_result_t
 llvm::omp::target::ompt::setTraceEventTy(int DeviceId, unsigned int Enable,
                                          unsigned int EventTy) {
   if (DeviceId < 0) {
-    REPORT("Failed to set trace event type for DeviceId=%d\n", DeviceId);
+    REPORT() << "Failed to set trace event type for DeviceId=" << DeviceId;
     return ompt_set_never;
   }
 
@@ -753,8 +751,8 @@ int libomptarget_ompt_start_trace(int DeviceId,
                                   ompt_callback_buffer_request_t Request,
                                   ompt_callback_buffer_complete_t Complete) {
   if (!PM) {
-    REPORT("Failed to start trace for DeviceId=%d (invalid plugin manager)\n",
-           DeviceId);
+    REPORT() << "Failed to start trace for DeviceId="
+             << DeviceId << " (invalid plugin manager)";
     // Indicate failure
     return 0;
   }
@@ -776,8 +774,8 @@ int libomptarget_ompt_start_trace(int DeviceId,
 // Device-independent entry point for ompt_flush_trace
 int libomptarget_ompt_flush_trace(int DeviceId) {
   if (!PM) {
-    REPORT("Failed to flush trace for DeviceId=%d (invalid plugin manager)\n",
-           DeviceId);
+    REPORT() << "Failed to flush trace for DeviceId="
+             << DeviceId << " (invalid plugin manager)";
     // Indicate failure
     return 0;
   }
@@ -789,8 +787,8 @@ int libomptarget_ompt_flush_trace(int DeviceId) {
 // Device independent entry point for ompt_stop_trace
 int libomptarget_ompt_stop_trace(int DeviceId) {
   if (!PM) {
-    REPORT("Failed to stop trace for DeviceId=%d (invalid plugin manager)\n",
-           DeviceId);
+    REPORT() << "Failed to stop trace for DeviceId="
+             << DeviceId << " (invalid plugin manager)";
     // Indicate failure
     return 0;
   }
@@ -823,9 +821,8 @@ int libomptarget_ompt_advance_buffer_cursor(ompt_device_t *Device,
                                             ompt_buffer_cursor_t CurrentPos,
                                             ompt_buffer_cursor_t *NextPos) {
   if (!PM) {
-    REPORT("Failed to advance buffer cursor for Device=%p (invalid plugin "
-           "manager)\n",
-           Device);
+    REPORT() << "Failed to advance buffer cursor for Device=" 
+             << Device << " (invalid plugin manager)";
     // Indicate failure
     return false;
   }

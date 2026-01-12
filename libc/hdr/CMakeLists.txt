@@ -1,3 +1,8 @@
+set(LIBC_INCLUDE_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(LIBC_INCLUDE_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+
+include(LLVMLibCHeaderRules)
+
 function(add_proxy_header_library target_name)
   cmake_parse_arguments(
     "ADD_PROXY_HEADER"
@@ -259,6 +264,17 @@ add_proxy_header_library(
     stdint_proxy.h
   FULL_BUILD_DEPENDS
     libc.include.stdint
+)
+
+add_gen_header(
+  elf_proxy
+  YAML_FILE
+    ../libc/include/elf.yaml
+  GEN_HDR
+    elf_proxy.h
+  DEPENDS
+    libc.include.llvm_libc_common_h
+  PROXY
 )
 
 add_subdirectory(types)
