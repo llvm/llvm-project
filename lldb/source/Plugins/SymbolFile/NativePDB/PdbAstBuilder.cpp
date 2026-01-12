@@ -733,10 +733,12 @@ clang::VarDecl *PdbAstBuilder::GetOrCreateVariableDecl(PdbGlobalSymId var_id) {
   return CreateVariableDecl(PdbSymUid(var_id), sym, *context);
 }
 
-clang::TypedefNameDecl *
-PdbAstBuilder::GetOrCreateTypedefDecl(PdbGlobalSymId id) {
-  if (clang::Decl *decl = TryGetDecl(id))
-    return llvm::dyn_cast<clang::TypedefNameDecl>(decl);
+CompilerType PdbAstBuilder::GetOrCreateTypedefType(PdbGlobalSymId id) {
+  if (clang::Decl *decl = TryGetDecl(id)) {
+    if (auto *tnd = llvm::dyn_cast<clang::TypedefNameDecl>(decl))
+      return ToCompilerType(m_clang.getASTContext().getTypeDeclType(tnd));
+    return CompilerType();
+  }
 
   SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
       m_clang.GetSymbolFile()->GetBackingSymbolFile());
@@ -750,18 +752,17 @@ PdbAstBuilder::GetOrCreateTypedefDecl(PdbGlobalSymId id) {
   PdbTypeSymId real_type_id{udt.Type, false};
   clang::QualType qt = GetOrCreateClangType(real_type_id);
   if (qt.isNull() || !scope)
-    return nullptr;
+    return CompilerType();
 
   std::string uname = std::string(DropNameScope(udt.Name));
 
   CompilerType ct = ToCompilerType(qt).CreateTypedef(
       uname.c_str(), ToCompilerDeclContext(scope), 0);
-  clang::TypedefNameDecl *tnd = m_clang.GetAsTypedefDecl(ct);
   DeclStatus status;
   status.resolved = true;
   status.uid = toOpaqueUid(id);
-  m_decl_to_status.insert({tnd, status});
-  return tnd;
+  m_decl_to_status.insert({m_clang.GetAsTypedefDecl(ct), status});
+  return ct;
 }
 
 clang::QualType PdbAstBuilder::GetBasicType(lldb::BasicType type) {
@@ -1466,7 +1467,7 @@ CompilerDecl PdbAstBuilder::ToCompilerDecl(clang::Decl *decl) {
 }
 
 CompilerType PdbAstBuilder::ToCompilerType(clang::QualType qt) {
-  return {m_clang.weak_from_this(), qt.getAsOpaquePtr()};
+  return m_clang.GetType(qt);
 }
 
 clang::QualType PdbAstBuilder::FromCompilerType(CompilerType ct) {

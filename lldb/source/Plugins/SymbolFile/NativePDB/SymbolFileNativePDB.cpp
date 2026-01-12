@@ -2267,11 +2267,9 @@ TypeSP SymbolFileNativePDB::CreateTypedef(PdbGlobalSymId id) {
   if (!ts)
     return nullptr;
 
-  auto *typedef_decl = ts->GetNativePDBParser()->GetOrCreateTypedefDecl(id);
-
-  CompilerType ct = target_type->GetForwardCompilerType();
-  if (auto *clang = llvm::dyn_cast_or_null<TypeSystemClang>(ts.get()))
-    ct = clang->GetType(clang->getASTContext().getTypeDeclType(typedef_decl));
+  CompilerType ct = ts->GetNativePDBParser()->GetOrCreateTypedefType(id);
+  if (!ct)
+    ct = target_type->GetForwardCompilerType();
 
   Declaration decl;
   return MakeType(toOpaqueUid(id), ConstString(udt.Name),
