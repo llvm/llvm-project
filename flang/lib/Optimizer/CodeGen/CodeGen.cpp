@@ -3566,6 +3566,11 @@ struct SelectCaseOpConversion : public fir::FIROpConversion<fir::SelectCaseOp> {
       mlir::Block *dest = caseOp.getSuccessor(t);
       std::optional<mlir::ValueRange> destOps =
           caseOp.getSuccessorOperands(adaptor.getOperands(), t);
+      // Convert block signature if needed
+      if (destOps && !destOps->empty())
+        if (auto conversion = getTypeConverter()->convertBlockSignature(dest))
+          dest = rewriter.applySignatureConversion(dest, *conversion,
+                                                   getTypeConverter());
       std::optional<mlir::ValueRange> cmpOps =
           *caseOp.getCompareOperands(adaptor.getOperands(), t);
       mlir::Attribute attr = cases[t];

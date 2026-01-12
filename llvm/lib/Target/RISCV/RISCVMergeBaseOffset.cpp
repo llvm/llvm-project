@@ -341,7 +341,8 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi,
                       << Tail);
     break;
   case RISCV::ADDI:
-  case RISCV::QC_E_ADDI: {
+  case RISCV::QC_E_ADDI:
+  case RISCV::QC_E_ADDAI: {
     // Offset is simply an immediate operand.
     int64_t Offset = Tail.getOperand(2).getImm();
     if (Tail.getOpcode() == RISCV::ADDI) {

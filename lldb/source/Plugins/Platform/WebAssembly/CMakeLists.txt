@@ -8,6 +8,7 @@ lldb_tablegen(PlatformWasmPropertiesEnum.inc -gen-lldb-property-enum-defs
 
 add_lldb_library(lldbPluginPlatformWasm PLUGIN
   PlatformWasm.cpp
+  PlatformWasmRemoteGDBServer.cpp
 
   LINK_LIBS
     lldbCore

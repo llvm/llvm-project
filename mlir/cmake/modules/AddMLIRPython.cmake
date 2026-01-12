@@ -393,13 +393,28 @@ function(add_mlir_python_modules name)
     set(ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN "mlir")
   endif()
 
+  # Collect up all the transitive extension targets.
+  _flatten_mlir_python_targets(_flat_targets ${ARG_DECLARED_SOURCES})
+
+  # Modules with only pure python sources shouldn't build libnanobind.
+  set(_needs_build_nanobind_lib OFF)
+  foreach(sources_target ${_flat_targets})
+    get_target_property(_source_type ${sources_target} mlir_python_SOURCES_TYPE)
+    if((_source_type STREQUAL "support") OR (_source_type STREQUAL "extension"))
+      set(_needs_build_nanobind_lib ON)
+      break()
+    endif()
+  endforeach()
+
   # This call sets NB_LIBRARY_TARGET_NAME.
-  build_nanobind_lib(
-    INSTALL_COMPONENT ${name}
-    INSTALL_DESTINATION "${ARG_INSTALL_PREFIX}/_mlir_libs"
-    OUTPUT_DIRECTORY "${ARG_ROOT_PREFIX}/_mlir_libs"
-    MLIR_BINDINGS_PYTHON_NB_DOMAIN ${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
-  )
+  if(_needs_build_nanobind_lib)
+    build_nanobind_lib(
+      INSTALL_COMPONENT ${name}
+      INSTALL_DESTINATION "${ARG_INSTALL_PREFIX}/_mlir_libs"
+      OUTPUT_DIRECTORY "${ARG_ROOT_PREFIX}/_mlir_libs"
+      MLIR_BINDINGS_PYTHON_NB_DOMAIN ${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
+    )
+  endif()
 
   # Helper to process an individual target.
   function(_process_target modules_target sources_target support_libs)
@@ -442,7 +457,6 @@ function(add_mlir_python_modules name)
 
   # Build the modules target.
   add_custom_target(${name} ALL)
-  _flatten_mlir_python_targets(_flat_targets ${ARG_DECLARED_SOURCES})
 
   # Build all support libs first.
   set(_mlir_python_support_libs)

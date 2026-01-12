@@ -100,7 +100,7 @@ func.func @tensor.from_elements_wrong_elements_count() {
 
 func.func @tensor.generate(%m : index)
     -> tensor<?x3x?xf32> {
-  // expected-error @+1 {{must have as many index operands as dynamic extents in the result type}}
+  // expected-error @+1 {{incorrect number of dynamic sizes, has 1, expected 2}}
   %tnsr = tensor.generate %m {
     ^bb0(%i : index, %j : index, %k : index):
       %elem = arith.constant 8.0 : f32
