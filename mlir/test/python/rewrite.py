@@ -89,19 +89,19 @@ def testRewritePattern():
         print(module)
 
 
-# CHECK-LABEL: TEST: testGreedyRewriteDriverConfigCreation
+# CHECK-LABEL: TEST: testGreedyRewriteConfigCreation
 @run
-def testGreedyRewriteDriverConfigCreation():
+def testGreedyRewriteConfigCreation():
     # Test basic config creation and destruction
-    config = GreedyRewriteDriverConfig()
+    config = GreedyRewriteConfig()
     # CHECK: Config created successfully
     print("Config created successfully")
 
 
-# CHECK-LABEL: TEST: testGreedyRewriteDriverConfigGetters
+# CHECK-LABEL: TEST: testGreedyRewriteConfigGetters
 @run
-def testGreedyRewriteDriverConfigGetters():
-    config = GreedyRewriteDriverConfig()
+def testGreedyRewriteConfigGetters():
+    config = GreedyRewriteConfig()
 
     # Set some values
     config.max_iterations = 5
@@ -139,7 +139,7 @@ def testGreedyRewriteDriverConfigGetters():
 # CHECK-LABEL: TEST: testGreedyRewriteStrictnessEnum
 @run
 def testGreedyRewriteStrictnessEnum():
-    config = GreedyRewriteDriverConfig()
+    config = GreedyRewriteConfig()
 
     # Test ANY_OP
     # CHECK: strictness ANY_OP: GreedyRewriteStrictness.ANY_OP
@@ -163,7 +163,7 @@ def testGreedyRewriteStrictnessEnum():
 # CHECK-LABEL: TEST: testGreedySimplifyRegionLevelEnum
 @run
 def testGreedySimplifyRegionLevelEnum():
-    config = GreedyRewriteDriverConfig()
+    config = GreedyRewriteConfig()
 
     # Test DISABLED
     # CHECK: region_level DISABLED: GreedySimplifyRegionLevel.DISABLED
@@ -184,9 +184,9 @@ def testGreedySimplifyRegionLevelEnum():
     print(f"region_level AGGRESSIVE: {level}")
 
 
-# CHECK-LABEL: TEST: testRewriteWithGreedyRewriteDriverConfig
+# CHECK-LABEL: TEST: testRewriteWithGreedyRewriteConfig
 @run
-def testRewriteWithGreedyRewriteDriverConfig():
+def testRewriteWithGreedyRewriteConfig():
     def constant_1_to_2(op, rewriter):
         c = op.value.value
         if c != 1:
@@ -212,7 +212,7 @@ def testRewriteWithGreedyRewriteDriverConfig():
             """
         )
 
-        config = GreedyRewriteDriverConfig()
+        config = GreedyRewriteConfig()
         config.enable_constant_cse = False
         apply_patterns_and_fold_greedily(module, frozen, config)
         # CHECK: %c2_i64 = arith.constant 2 : i64
@@ -220,7 +220,7 @@ def testRewriteWithGreedyRewriteDriverConfig():
         # CHECK: return %c2_i64, %c2_i64_0 : i64, i64
         print(module)
 
-        config = GreedyRewriteDriverConfig()
+        config = GreedyRewriteConfig()
         config.enable_constant_cse = True
         apply_patterns_and_fold_greedily(module, frozen, config)
         # CHECK: %c2_i64 = arith.constant 2 : i64

@@ -115,6 +115,8 @@ MLIR_CAPI_EXPORTED MlirTypeID mlirDictionaryAttrGetTypeID(void);
 /// Checks whether the given attribute is a floating point attribute.
 MLIR_CAPI_EXPORTED bool mlirAttributeIsAFloat(MlirAttribute attr);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirFloatAttrGetName(void);
+
 /// Creates a floating point attribute in the given context with the given
 /// double value and double-precision FP semantics.
 MLIR_CAPI_EXPORTED MlirAttribute mlirFloatAttrDoubleGet(MlirContext ctx,

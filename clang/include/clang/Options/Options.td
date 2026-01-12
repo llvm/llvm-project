@@ -5577,6 +5577,13 @@ defm amdgpu_ieee : BoolMOption<"amdgpu-ieee",
   "This option changes the ABI. (AMDGPU only)">,
   NegFlag<SetFalse, [], [ClangOption, CC1Option]>>;
 
+defm amdgpu_expand_waitcnt_profiling : BoolMOption<"amdgpu-expand-waitcnt-profiling",
+  CodeGenOpts<"AMDGPUExpandWaitcntProfiling">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Expand s_waitcnt instructions to help "
+  "PC-sampling profilers identify memory stalls. Instead of a single waitcnt(target), "
+  "emits waitcnt(N-1), waitcnt(N-2), ..., waitcnt(target). (AMDGPU only)">,
+  NegFlag<SetFalse, [], [ClangOption]>>;
+
 def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Group>,
   HelpText<"Specify code object ABI version. Defaults to 6. (AMDGPU only)">,
   Visibility<[ClangOption, FlangOption, CC1Option, FC1Option]>,
@@ -7812,6 +7819,10 @@ let Visibility = [CC1Option, CC1AsOption] in {
 def debug_info_macro : Flag<["-"], "debug-info-macro">,
   HelpText<"Emit macro debug information">,
   MarshallingInfoFlag<CodeGenOpts<"MacroDebugInfo">>;
+def debug_info_macro_expansion_loc
+    : Flag<["-"], "debug-info-macro-expansion-loc">,
+      HelpText<"Use expansion location for debug info for multi line macros">,
+      MarshallingInfoFlag<CodeGenOpts<"DebugInfoMacroExpansionLoc">>;
 def default_function_attr : Separate<["-"], "default-function-attr">,
   HelpText<"Apply given attribute to all functions">,
   MarshallingInfoStringVector<CodeGenOpts<"DefaultFunctionAttrs">>;
