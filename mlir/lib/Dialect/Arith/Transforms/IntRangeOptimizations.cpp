@@ -572,7 +572,7 @@ struct NarrowLoopBounds final : OpInterfaceRewritePattern<LoopLikeOpInterface> {
         // iv_next < ub. If iv_current + step overflows, the comparison may
         // produce incorrect results and break loop termination.
         // Both signed and unsigned interpretations must fit because loop
-        // semantics are unknown (e.g., index type is signless).
+        // semantics are unknown (integer types are signless).
         ConstantIntRanges indVarPlusStepRange(
             indVarRange.smin().sadd_sat(stepRange.smin()),
             indVarRange.smax().sadd_sat(stepRange.smax()),
