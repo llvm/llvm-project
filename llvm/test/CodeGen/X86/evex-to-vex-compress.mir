@@ -10,6 +10,7 @@
    define void @evex_z256_to_evex_test() { ret void }
    define void @evex_z128_to_evex_test() { ret void }
    define void @evex_scalar_to_evex_test() { ret void }
+   define void @evex_vpmov_cross_block_test() { ret void }
 ...
 ---
   # CHECK-LABEL: name: evex_z256_to_vex_test
@@ -894,6 +895,25 @@ body: |
   $ymm0 = VSHUFI64X2Z256rmi                    $ymm0, $rip, 1, $noreg, 0, $noreg, 228
   ; CHECK: $ymm0 = VPERM2I128rri               $ymm0, $ymm1, 32
   $ymm0 = VSHUFI64X2Z256rri                    $ymm0, $ymm1, 228
+  ; CHECK: $eax = VMOVMSKPSYrr                 $ymm0
+  $k0 = VPMOVD2MZ256kr                         $ymm0
+  $eax = KMOVBrk                               $k0
+  ; CHECK: $eax = VMOVMSKPDYrr                 $ymm0
+  $k0 = VPMOVQ2MZ256kr                         $ymm0
+  $eax = KMOVBrk                               $k0
+  ; CHECK: $eax = VPMOVMSKBYrr                 $ymm0
+  $k0 = VPMOVB2MZ256kr                         $ymm0
+  $eax = KMOVDrk                               $k0
+  ; CHECK: $k0 = VPMOVD2MZ256kr                $ymm0
+  ; CHECK: $eax = KMOVBrk                      $k0
+  ; CHECK: $ebx = KMOVBrk                      $k0
+  $k0 = VPMOVD2MZ256kr                         $ymm0
+  $eax = KMOVBrk                               $k0
+  $ebx = KMOVBrk                               $k0
+  ; CHECK: $k0 = VPMOVB2MZ256kr                $ymm0
+  ; CHECK: $eax = KMOVWrk                      $k0
+  $k0 = VPMOVB2MZ256kr                         $ymm0
+  $eax = KMOVWrk                               $k0
 
   RET64
 ...
@@ -1760,6 +1780,25 @@ body: |
   $xmm0 = VRNDSCALEPSZ128rmi                   $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
   ; CHECK: $xmm0 = VROUNDPSri                  $xmm0, 15, implicit $mxcsr
   $xmm0 = VRNDSCALEPSZ128rri                   $xmm0, 15, implicit $mxcsr
+  ; CHECK: $eax = VMOVMSKPSrr                  $xmm0
+  $k0 = VPMOVD2MZ128kr                         $xmm0
+  $eax = KMOVBrk                               $k0
+  ; CHECK: $eax = VMOVMSKPDrr                  $xmm0
+  $k0 = VPMOVQ2MZ128kr                         $xmm0
+  $eax = KMOVBrk                               $k0
+  ; CHECK: $eax = VPMOVMSKBrr                  $xmm0
+  $k0 = VPMOVB2MZ128kr                         $xmm0
+  $eax = KMOVWrk                               $k0
+  ; CHECK: $k0 = VPMOVD2MZ128kr                $xmm0
+  ; CHECK: $eax = KMOVBrk                      $k0
+  ; CHECK: $ebx = KMOVBrk                      $k0
+  $k0 = VPMOVD2MZ128kr                         $xmm0
+  $eax = KMOVBrk                               $k0
+  $ebx = KMOVBrk                               $k0
+  ; CHECK: $k0 = VPMOVB2MZ128kr                $xmm0
+  ; CHECK: $eax = KMOVBrk                      $k0
+  $k0 = VPMOVB2MZ128kr                         $xmm0
+  $eax = KMOVBrk                               $k0
 
   RET64
 ...
@@ -4669,6 +4708,27 @@ body: |
   $xmm0 = VRNDSCALESSZrmi_Int                  $xmm0, $rip, 1, $noreg, 0, $noreg, 31, implicit $mxcsr
   ; CHECK: $xmm0 = VRNDSCALESSZrri_Int         $xmm0, $xmm1, 31, implicit $mxcsr
   $xmm0 = VRNDSCALESSZrri_Int                  $xmm0, $xmm1, 31, implicit $mxcsr
+
+  RET64
+...
+---
+  # CHECK-LABEL: name: evex_vpmov_cross_block_test
+  # CHECK: bb.0:
+
+name: evex_vpmov_cross_block_test
+body: |
+  bb.0:
+  ; CHECK: $k0 = VPMOVD2MZ128kr                $xmm0
+  ; CHECK: $eax = KMOVBrk                      $k0
+  ; CHECK: JCC_1 %bb.1
+  $k0 = VPMOVD2MZ128kr                         $xmm0
+  $eax = KMOVBrk                               $k0
+  JCC_1 %bb.1, 4, implicit $eflags
+
+  bb.1:
+  ; CHECK: bb.1:
+  ; CHECK: $k1 = KANDBkk                       $k0, $k0
+  $k1 = KANDBkk                                $k0, $k0
 
   RET64
 ...
