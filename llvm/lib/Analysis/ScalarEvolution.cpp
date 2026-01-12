@@ -14085,15 +14085,9 @@ void ScalarEvolution::print(raw_ostream &OS) const {
             OS << *ExitValue;
           }
 
-          bool First = true;
+          ListSeparator LS(", ", "\t\tLoopDispositions: { ");
           for (const auto *Iter = L; Iter; Iter = Iter->getParentLoop()) {
-            if (First) {
-              OS << "\t\t" "LoopDispositions: { ";
-              First = false;
-            } else {
-              OS << ", ";
-            }
-
+            OS << LS;
             Iter->getHeader()->printAsOperand(OS, /*PrintType=*/false);
             OS << ": " << SE.getLoopDisposition(SV, Iter);
           }
@@ -14101,13 +14095,7 @@ void ScalarEvolution::print(raw_ostream &OS) const {
           for (const auto *InnerL : depth_first(L)) {
             if (InnerL == L)
               continue;
-            if (First) {
-              OS << "\t\t" "LoopDispositions: { ";
-              First = false;
-            } else {
-              OS << ", ";
-            }
-
+            OS << LS;
             InnerL->getHeader()->printAsOperand(OS, /*PrintType=*/false);
             OS << ": " << SE.getLoopDisposition(SV, InnerL);
           }

@@ -77,14 +77,14 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeCompressEVEXLegacyPass(PR);
   initializeFixupLEAsLegacyPass(PR);
   initializeX86FPStackifierLegacyPass(PR);
-  initializeX86FixupSetCCPassPass(PR);
+  initializeX86FixupSetCCLegacyPass(PR);
   initializeX86CallFrameOptimizationLegacyPass(PR);
   initializeX86CmovConversionLegacyPass(PR);
-  initializeX86TileConfigPass(PR);
+  initializeX86TileConfigLegacyPass(PR);
   initializeX86FastPreTileConfigLegacyPass(PR);
   initializeX86FastTileConfigLegacyPass(PR);
   initializeKCFIPass(PR);
-  initializeX86LowerTileCopyPass(PR);
+  initializeX86LowerTileCopyLegacyPass(PR);
   initializeX86ExpandPseudoLegacyPass(PR);
   initializeX86ExecutionDomainFixPass(PR);
   initializeX86DomainReassignmentLegacyPass(PR);
@@ -103,9 +103,9 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86ArgumentStackSlotPassPass(PR);
   initializeX86AsmPrinterPass(PR);
   initializeX86FixupInstTuningLegacyPass(PR);
-  initializeX86FixupVectorConstantsPassPass(PR);
+  initializeX86FixupVectorConstantsLegacyPass(PR);
   initializeX86DynAllocaExpanderLegacyPass(PR);
-  initializeX86SuppressAPXForRelocationPassPass(PR);
+  initializeX86SuppressAPXForRelocationLegacyPass(PR);
   initializeX86WinEHUnwindV2Pass(PR);
   initializeX86PreLegalizerCombinerPass(PR);
 }
@@ -514,13 +514,13 @@ bool X86PassConfig::addPreISel() {
 void X86PassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(&LiveRangeShrinkID);
-    addPass(createX86FixupSetCC());
+    addPass(createX86FixupSetCCLegacyPass());
     addPass(createX86OptimizeLEAsLegacyPass());
     addPass(createX86CallFrameOptimizationLegacyPass());
     addPass(createX86AvoidStoreForwardingBlocksLegacyPass());
   }
 
-  addPass(createX86SuppressAPXForRelocationPass());
+  addPass(createX86SuppressAPXForRelocationLegacyPass());
 
   addPass(createX86SpeculativeLoadHardeningPass());
   addPass(createX86FlagsCopyLoweringLegacyPass());
@@ -538,7 +538,7 @@ void X86PassConfig::addMachineSSAOptimization() {
 }
 
 void X86PassConfig::addPostRegAlloc() {
-  addPass(createX86LowerTileCopyPass());
+  addPass(createX86LowerTileCopyLegacyPass());
   addPass(createX86FPStackifierLegacyPass());
   // When -O0 is enabled, the Load Value Injection Hardening pass will fall back
   // to using the Speculative Execution Side Effect Suppression pass for
@@ -568,7 +568,7 @@ void X86PassConfig::addPreEmitPass() {
     addPass(createX86PadShortFunctions());
     addPass(createX86FixupLEAsLegacyPass());
     addPass(createX86FixupInstTuningLegacyPass());
-    addPass(createX86FixupVectorConstants());
+    addPass(createX86FixupVectorConstantsLegacyPass());
   }
   addPass(createX86CompressEVEXLegacyPass());
   addPass(createX86InsertX87waitPass());
@@ -655,7 +655,7 @@ bool X86PassConfig::addRegAssignAndRewriteOptimized() {
   if (!isCustomizedRegAlloc() && EnableTileRAPass) {
     // Allocate tile register first.
     addPass(createGreedyRegisterAllocator(onlyAllocateTileRegisters));
-    addPass(createX86TileConfigPass());
+    addPass(createX86TileConfigLegacyPass());
   }
   return TargetPassConfig::addRegAssignAndRewriteOptimized();
 }
