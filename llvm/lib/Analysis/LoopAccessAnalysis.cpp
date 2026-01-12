@@ -968,7 +968,8 @@ private:
 /// isNoWrap.
 static std::optional<int64_t>
 getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
-                    Value *Ptr, PredicatedScalarEvolution &PSE) {
+                    Value *Ptr, PredicatedScalarEvolution &PSE,
+                    bool AllowStridedPtrs = false) {
   if (isa<ScalableVectorType>(AccessTy)) {
     LLVM_DEBUG(dbgs() << "LAA: Bad stride - Scalable object: " << *AccessTy
                       << "\n");
@@ -987,12 +988,43 @@ getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
     return std::nullopt;
   }
 
-  // Check the step is constant.
-  const SCEV *Step = AR->getStepRecurrence(*PSE.getSE());
-
   // Calculate the pointer stride and check if it is constant.
+  // If we allow strided pointers we also check the add recurrence
+  // expression is making use of loop-invariant
+  // runtime constant for example
+  //
+  // Step = { stride * runtime_constant }
+  //
+  // we should treat this as a constant add recurrence.
+  // To achieve this we check the arguments of
+  // the step are loop invariant and compute the step
+  // as equivalent to just stride.
+  //
+  // We only check this for mul expressions as these
+  // are most common and expected for strided
+  // pointer recurrence expressions.
+  const SCEV *Step = AR->getStepRecurrence(*PSE.getSE());
   const APInt *APStepVal;
-  if (!match(Step, m_scev_APInt(APStepVal))) {
+  auto IsInvariantConstAddRecStep = [&](const SCEV *Step) -> bool {
+    const SCEV *Multiplier;
+
+    // Check the step is constant.
+    if (match(Step, m_scev_APInt(APStepVal)))
+      return true;
+
+    if (AllowStridedPtrs) {
+      for (const auto *Op : Step->operands()) {
+        if (!PSE.getSE()->isLoopInvariant(Op, Lp))
+          return false;
+      }
+      return match(Step,
+                   m_scev_c_Mul(m_scev_APInt(APStepVal), m_SCEV(Multiplier)));
+    }
+
+    return false;
+  };
+
+  if (!IsInvariantConstAddRecStep(Step)) {
     LLVM_DEBUG({
       dbgs() << "LAA: Bad stride - Not a constant strided ";
       if (Ptr)
@@ -1625,7 +1657,7 @@ std::optional<int64_t>
 llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
                    const Loop *Lp, const DominatorTree &DT,
                    const DenseMap<Value *, const SCEV *> &StridesMap,
-                   bool Assume, bool ShouldCheckWrap) {
+                   bool Assume, bool ShouldCheckWrap, bool AllowStridedPtrs) {
   const SCEV *PtrScev = replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr);
   if (PSE.getSE()->isLoopInvariant(PtrScev, Lp))
     return 0;
@@ -1643,7 +1675,7 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
   }
 
   std::optional<int64_t> Stride =
-      getStrideFromAddRec(AR, Lp, AccessTy, Ptr, PSE);
+      getStrideFromAddRec(AR, Lp, AccessTy, Ptr, PSE, AllowStridedPtrs);
   if (!ShouldCheckWrap || !Stride)
     return Stride;
 

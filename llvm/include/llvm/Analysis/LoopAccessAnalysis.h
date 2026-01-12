@@ -896,7 +896,8 @@ getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
              const Loop *Lp, const DominatorTree &DT,
              const DenseMap<Value *, const SCEV *> &StridesMap =
                  DenseMap<Value *, const SCEV *>(),
-             bool Assume = false, bool ShouldCheckWrap = true);
+             bool Assume = false, bool ShouldCheckWrap = true,
+             bool AllowStridedPtrs = false);
 
 /// Returns the distance between the pointers \p PtrA and \p PtrB iff they are
 /// compatible and it is possible to calculate the distance between them. This
