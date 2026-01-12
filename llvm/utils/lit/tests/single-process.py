@@ -13,14 +13,8 @@
 #
 # These are the semaphores that fail in sandboxed environments, so verifying
 # they don't appear with -j1 confirms the fix works.
-#
-# Note: We use /usr/bin/env explicitly because lit's test config puts
-# fake-externals (which use #!/usr/bin/env python) at the start of PATH.
-# We also call lit.py directly (../lit.py relative to tests/) to avoid
-# the %{lit} substitution which includes the problematic 'env' command.
 
-# RUN: strace -f -e trace=openat \
-# RUN:     /usr/bin/env -u FILECHECK_OPTS %{python} ../lit.py -j1 %{inputs}/shtest-format \
+# RUN: strace -f -e trace=openat %{python} %{lit-script} -j1 %{inputs}/shtest-format \
 # RUN:     > %t.j1.out 2>&1 || true
 # RUN: FileCheck --check-prefix=CHECK-J1 %s < %t.j1.out
 #
@@ -32,8 +26,7 @@
 # POSIX semaphores. This validates that the CHECK-NOT pattern above is correct
 # and won't become stale if Python/glibc changes how semaphores are created.
 #
-# RUN: strace -f -e trace=openat \
-# RUN:     /usr/bin/env -u FILECHECK_OPTS %{python} ../lit.py -j2 %{inputs}/shtest-format \
+# RUN: strace -f -e trace=openat %{python} %{lit-script} -j2 %{inputs}/shtest-format \
 # RUN:     > %t.j2.out 2>&1 || true
 # RUN: FileCheck --check-prefix=CHECK-J2 %s < %t.j2.out
 #
