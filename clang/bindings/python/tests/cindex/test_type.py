@@ -530,6 +530,45 @@ class A
         pp.set_property(PrintingPolicyProperty.SuppressTagKeyword, False)
         self.assertEqual(f.type.get_canonical().pretty_printed(pp), "struct X")
 
+    def test_non_reference(self):
+        source = """
+        int &reference;
+        """
+        tu = get_tu(source, lang="cpp")
+        reference = get_cursor(tu, "reference")
+        self.assertEqual(
+            reference.type.get_non_reference().get_ref_qualifier(),
+            RefQualifierKind.NONE,
+        )
+
+    def test_unqualified(self):
+        source = """
+        bool b;
+        const long c;
+        volatile long v;
+        const volatile int cv;
+        void f(int *__restrict l, const int *__restrict r, long s);
+        const bool &ref;
+        """
+        tu = get_tu(source, lang="cpp")
+        b = get_cursor(tu, "b")
+        c = get_cursor(tu, "c")
+        v = get_cursor(tu, "v")
+        cv = get_cursor(tu, "cv")
+        l = get_cursor(tu, "l")
+        r = get_cursor(tu, "r")
+        ref = get_cursor(tu, "ref")
+        self.assertEqual(b.type.get_unqualified().spelling, "bool")
+        self.assertEqual(c.type.get_unqualified().spelling, "long")
+        self.assertEqual(v.type.get_unqualified().spelling, "long")
+        self.assertEqual(cv.type.get_unqualified().spelling, "int")
+        self.assertEqual(l.type.get_unqualified().spelling, "int *")
+        self.assertEqual(r.type.get_unqualified().spelling, "const int *")
+        self.assertEqual(ref.type.get_unqualified().spelling, "const bool &")
+        self.assertEqual(
+            ref.type.get_non_reference().get_unqualified().spelling, "bool"
+        )
+
     def test_fully_qualified_name(self):
         source = """
         namespace home {
