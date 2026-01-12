@@ -6,13 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14
+#include <clc/internal/clc.h>
+#include <clc/math/clc_ldexp.h>
 
-// check that <__node_handle> functions are marked [[nodiscard]]
-
-#include <set>
-
-void func() {
-  std::set<int> set;
-  set.extract(0).empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-}
+#define __CLC_FUNCTION __clc_ldexp
+#define __CLC_IMPL_FUNCTION(x) __builtin_elementwise_ldexp
+#define __CLC_BODY <clc/shared/binary_def_with_int_second_arg.inc>
+#include <clc/math/gentype.inc>
