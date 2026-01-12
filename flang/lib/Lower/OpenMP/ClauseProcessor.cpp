@@ -1722,6 +1722,22 @@ bool ClauseProcessor::processUseDevicePtr(
   return clauseFound;
 }
 
+static void addUniformClause(lower::AbstractConverter &converter,
+                             const omp::clause::Uniform &clause,
+                             llvm::SmallVectorImpl<mlir::Value> &uniformVars) {
+  const auto &objects = clause.v;
+  if (!objects.empty())
+    genObjectList(objects, converter, uniformVars);
+}
+
+bool ClauseProcessor::processUniform(
+    mlir::omp::UniformClauseOps &result) const {
+  return findRepeatableClause<omp::clause::Uniform>(
+      [&](const omp::clause::Uniform &clause, const parser::CharBlock &) {
+        addUniformClause(converter, clause, result.uniformVars);
+      });
+}
+
 } // namespace omp
 } // namespace lower
 } // namespace Fortran

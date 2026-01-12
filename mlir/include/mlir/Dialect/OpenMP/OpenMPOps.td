@@ -2248,7 +2248,7 @@ def DeclareSimdOp
     : OpenMP_Op<"declare_simd",
                 traits = [AttrSizedOperandSegments, IsolatedFromAbove],
                 clauses = [OpenMP_AlignedClause, OpenMP_LinearClause,
-                           OpenMP_SimdlenClause]> {
+                           OpenMP_SimdlenClause, OpenMP_UniformClause]> {
   let summary = "declare simd directive";
   let description = [{
     "omp.declare_simd" models the OpenMP `declare simd` directive.

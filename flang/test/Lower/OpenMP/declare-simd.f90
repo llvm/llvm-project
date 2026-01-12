@@ -88,8 +88,35 @@ end subroutine declare_simd_simdlen
 ! CHECK-SAME: simdlen(8)
 ! CHECK: return
 
+subroutine declare_simd_uniform(x, y, n, i)
+  !$omp declare simd uniform(x, y)
+
+  real(8), pointer, intent(inout) :: x(:)
+  real(8), pointer, intent(in)    :: y(:)
+  integer, intent(in) :: n, i
+
+  if (i <= n) then
+    x(i) = x(i) + y(i)
+  end if
+end subroutine declare_simd_uniform
+
+! CHECK-LABEL: func.func @_QPdeclare_simd_uniform(
+! CHECK-SAME: fir.bindc_name = "x"
+! CHECK-SAME: fir.bindc_name = "y"
+! CHECK-SAME: fir.bindc_name = "n"
+! CHECK-SAME: fir.bindc_name = "i"
+
+! Function prologue
+! CHECK: %[[SCOPE:.*]] = fir.dummy_scope : !fir.dscope
+! CHECK: %[[IDECL:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[SCOPE]] arg 4
+! CHECK: %[[NDECL:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[SCOPE]] arg 3
+! CHECK: %[[XDECL:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[SCOPE]] arg 1
+! CHECK: %[[YDECL:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[SCOPE]] arg 2
+
+! CHECK: omp.declare_simd uniform(%[[XDECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>, %[[YDECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>)
+
 subroutine declare_simd_combined(x, y, n, i)
-    !$omp declare simd aligned(x, y : 64) linear(i) simdlen(8)
+    !$omp declare simd aligned(x, y : 64) linear(i) simdlen(8) uniform(x, y)
     real(8), pointer, intent(inout) :: x(:)
     real(8), pointer, intent(in)    :: y(:)
     integer, intent(in) :: n, i
@@ -116,4 +143,6 @@ end subroutine declare_simd_combined
 ! CHECK-SAME:         %[[Y_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>> -> 64 : i64)
 ! CHECK-SAME: linear(%[[I_DECL]]#0 = %[[C1]] : !fir.ref<i32>)
 ! CHECK-SAME: simdlen(8)
+! CHECK-SAME: uniform(%[[X_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>,
+! CHECK-SAME:         %[[Y_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>)
 ! CHECK-SAME: {linear_var_types = [i32]}
