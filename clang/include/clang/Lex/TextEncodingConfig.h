@@ -34,7 +34,7 @@ public:
   static std::error_code
   setConvertersFromOptions(TextEncodingConfig &TEC,
                            const clang::LangOptions &Opts,
-                           const clang::TargetInfo &TInfo);
+                           clang::TargetInfo &TInfo);
 };
 
 #endif

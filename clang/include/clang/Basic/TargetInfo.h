@@ -38,6 +38,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/TextEncoding.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cassert>
@@ -319,6 +320,8 @@ public:
                                       TargetOptions &Opts);
 
   virtual ~TargetInfo();
+
+  llvm::TextEncodingConverter *FormatStrConverter;
 
   /// Retrieve the target options.
   TargetOptions &getTargetOpts() const {

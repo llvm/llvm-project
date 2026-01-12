@@ -83,8 +83,9 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
   const char *I = Beg;
   const char *Start = nullptr;
   UpdateOnReturn <const char*> UpdateBeg(Beg, I);
-
-    // Look for a '%' character that indicates the start of a format specifier.
+  const llvm::TextEncodingConverter &FormatStrConverter =
+      *Target.FormatStrConverter;
+  // Look for a '%' character that indicates the start of a format specifier.
   for ( ; I != E ; ++I) {
     char c = *I;
     if (c == '\0') {
@@ -92,7 +93,9 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
       H.HandleNullChar(I);
       return true;
     }
-    if (c == '%') {
+    SmallString<1> ConvertedChar;
+    FormatStrConverter.convert(StringRef(&c, 1), ConvertedChar);
+    if (ConvertedChar[0] == '%') {
       Start = I++;  // Record the start of the format specifier.
       break;
     }
@@ -109,7 +112,7 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
   }
 
   ScanfSpecifier FS;
-  if (ParseArgPosition(H, FS, Start, I, E))
+  if (ParseArgPosition(H, FS, Start, I, E, FormatStrConverter))
     return true;
 
   if (I == E) {
@@ -119,7 +122,7 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
   }
 
   // Look for '*' flag if it is present.
-  if (*I == '*') {
+  if (FormatStrConverter.convert(*I) == '*') {
     FS.setSuppressAssignment(I);
     if (++I == E) {
       H.HandleIncompleteSpecifier(Start, E - Start);
@@ -129,7 +132,8 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
 
   // Look for the field width (if any).  Unlike printf, this is either
   // a fixed integer or isn't present.
-  const OptionalAmount &Amt = clang::analyze_format_string::ParseAmount(I, E);
+  const OptionalAmount &Amt =
+      clang::analyze_format_string::ParseAmount(I, E, FormatStrConverter);
   if (Amt.getHowSpecified() != OptionalAmount::NotSpecified) {
     assert(Amt.getHowSpecified() == OptionalAmount::Constant);
     FS.setFieldWidth(Amt);
@@ -142,8 +146,10 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
   }
 
   // Look for the length modifier.
-  if (ParseLengthModifier(FS, I, E, LO, /*IsScanf=*/true) && I == E) {
-      // No more characters left?
+  if (ParseLengthModifier(FS, I, E, LO, FormatStrConverter,
+                          /*IsScanf=*/true) &&
+      I == E) {
+    // No more characters left?
     H.HandleIncompleteSpecifier(Start, E - Start);
     return true;
   }
@@ -157,46 +163,92 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
   // Finally, look for the conversion specifier.
   const char *conversionPosition = I++;
   ScanfConversionSpecifier::Kind k = ScanfConversionSpecifier::InvalidSpecifier;
-  switch (*conversionPosition) {
-    default:
-      break;
-    case '%': k = ConversionSpecifier::PercentArg;   break;
-    case 'b': k = ConversionSpecifier::bArg; break;
-    case 'A': k = ConversionSpecifier::AArg; break;
-    case 'E': k = ConversionSpecifier::EArg; break;
-    case 'F': k = ConversionSpecifier::FArg; break;
-    case 'G': k = ConversionSpecifier::GArg; break;
-    case 'X': k = ConversionSpecifier::XArg; break;
-    case 'a': k = ConversionSpecifier::aArg; break;
-    case 'd': k = ConversionSpecifier::dArg; break;
-    case 'e': k = ConversionSpecifier::eArg; break;
-    case 'f': k = ConversionSpecifier::fArg; break;
-    case 'g': k = ConversionSpecifier::gArg; break;
-    case 'i': k = ConversionSpecifier::iArg; break;
-    case 'n': k = ConversionSpecifier::nArg; break;
-    case 'c': k = ConversionSpecifier::cArg; break;
-    case 'C': k = ConversionSpecifier::CArg; break;
-    case 'S': k = ConversionSpecifier::SArg; break;
-    case '[': k = ConversionSpecifier::ScanListArg; break;
-    case 'u': k = ConversionSpecifier::uArg; break;
-    case 'x': k = ConversionSpecifier::xArg; break;
-    case 'o': k = ConversionSpecifier::oArg; break;
-    case 's': k = ConversionSpecifier::sArg; break;
-    case 'p': k = ConversionSpecifier::pArg; break;
-    // Apple extensions
-      // Apple-specific
-    case 'D':
-      if (Target.getTriple().isOSDarwin())
-        k = ConversionSpecifier::DArg;
-      break;
-    case 'O':
-      if (Target.getTriple().isOSDarwin())
-        k = ConversionSpecifier::OArg;
-      break;
-    case 'U':
-      if (Target.getTriple().isOSDarwin())
-        k = ConversionSpecifier::UArg;
-      break;
+  switch (FormatStrConverter.convert(*conversionPosition)) {
+  default:
+    break;
+  case '%':
+    k = ConversionSpecifier::PercentArg;
+    break;
+  case 'b':
+    k = ConversionSpecifier::bArg;
+    break;
+  case 'A':
+    k = ConversionSpecifier::AArg;
+    break;
+  case 'E':
+    k = ConversionSpecifier::EArg;
+    break;
+  case 'F':
+    k = ConversionSpecifier::FArg;
+    break;
+  case 'G':
+    k = ConversionSpecifier::GArg;
+    break;
+  case 'X':
+    k = ConversionSpecifier::XArg;
+    break;
+  case 'a':
+    k = ConversionSpecifier::aArg;
+    break;
+  case 'd':
+    k = ConversionSpecifier::dArg;
+    break;
+  case 'e':
+    k = ConversionSpecifier::eArg;
+    break;
+  case 'f':
+    k = ConversionSpecifier::fArg;
+    break;
+  case 'g':
+    k = ConversionSpecifier::gArg;
+    break;
+  case 'i':
+    k = ConversionSpecifier::iArg;
+    break;
+  case 'n':
+    k = ConversionSpecifier::nArg;
+    break;
+  case 'c':
+    k = ConversionSpecifier::cArg;
+    break;
+  case 'C':
+    k = ConversionSpecifier::CArg;
+    break;
+  case 'S':
+    k = ConversionSpecifier::SArg;
+    break;
+  case '[':
+    k = ConversionSpecifier::ScanListArg;
+    break;
+  case 'u':
+    k = ConversionSpecifier::uArg;
+    break;
+  case 'x':
+    k = ConversionSpecifier::xArg;
+    break;
+  case 'o':
+    k = ConversionSpecifier::oArg;
+    break;
+  case 's':
+    k = ConversionSpecifier::sArg;
+    break;
+  case 'p':
+    k = ConversionSpecifier::pArg;
+    break;
+  // Apple extensions
+  // Apple-specific
+  case 'D':
+    if (Target.getTriple().isOSDarwin())
+      k = ConversionSpecifier::DArg;
+    break;
+  case 'O':
+    if (Target.getTriple().isOSDarwin())
+      k = ConversionSpecifier::OArg;
+    break;
+  case 'U':
+    if (Target.getTriple().isOSDarwin())
+      k = ConversionSpecifier::UArg;
+    break;
   }
   ScanfConversionSpecifier CS(conversionPosition, k);
   if (k == ScanfConversionSpecifier::ScanListArg) {
@@ -218,7 +270,8 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
       FS.setConversionSpecifier(CS);
     }
     // Assume the conversion takes one argument.
-    return !H.HandleInvalidScanfConversionSpecifier(FS, Beg, Len);
+    return !H.HandleInvalidScanfConversionSpecifier(FS, Beg, Len,
+                                                    FormatStrConverter);
   }
   return ScanfSpecifierResult(Start, FS);
 }
@@ -551,8 +604,8 @@ bool clang::analyze_format_string::ParseScanfString(FormatStringHandler &H,
 
   // Keep looking for a format specifier until we have exhausted the string.
   while (I != E) {
-    const ScanfSpecifierResult &FSR = ParseScanfSpecifier(H, I, E, argIndex,
-                                                          LO, Target);
+    const ScanfSpecifierResult &FSR =
+        ParseScanfSpecifier(H, I, E, argIndex, LO, Target);
     // Did a fail-stop error of any kind occur when parsing the specifier?
     // If so, don't do any more processing.
     if (FSR.shouldStop())

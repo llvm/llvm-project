@@ -105,6 +105,8 @@ public:
   LLVM_ABI static ErrorOr<TextEncodingConverter> create(StringRef From,
                                                         StringRef To);
 
+  LLVM_ABI static ErrorOr<TextEncodingConverter> createNoopConverter();
+
   TextEncodingConverter(const TextEncodingConverter &) = delete;
   TextEncodingConverter &operator=(const TextEncodingConverter &) = delete;
 
@@ -134,6 +136,14 @@ public:
     if (!EC)
       return std::string(Result);
     return EC;
+  }
+
+  char convert(char SingleChar) const {
+    SmallString<1> Result;
+    auto EC = Converter->convert(StringRef(&SingleChar, 1), Result);
+    if (!EC)
+      return Result[0];
+    return '\0';
   }
 
   // Maps the encoding name to enum constant if possible.
