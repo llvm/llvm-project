@@ -482,9 +482,6 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
 
   getASTContext().setCurrentNamedModule(Mod);
 
-  if (auto *Listener = getASTMutationListener())
-    Listener->EnteringModulePurview();
-
   // We already potentially made an implicit import (in the case of a module
   // implementation unit importing its interface).  Make this module visible
   // and return the import decl to be added to the current TU.
