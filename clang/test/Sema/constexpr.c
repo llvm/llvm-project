@@ -401,3 +401,11 @@ bool issue155507(v2int16_t a, v2int16_t b) {
 
 constexpr bool b2 = (bool)nullptr;
 _Static_assert(!b2);
+
+double ghissue173847(double a) {
+  double result = 3.0 / (a + 4.5 - 2.1 * 0.7);
+  return result;
+}
+void ghissue173847_test() {
+  constexpr float f_const = ghissue173847(2.0); // expected-error {{constexpr variable 'f_const' must be initialized by a constant expression}}
+}

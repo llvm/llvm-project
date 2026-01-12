@@ -117,6 +117,8 @@ Changes to the AArch64 Backend
 
 * Added support for C1-Nano, C1-Pro, C1-Premium, and C1-Ultra CPUs.
 
+* Added support for Ampere1C cores.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
@@ -163,13 +165,18 @@ Changes to the RISC-V Backend
 * Adds assembler support for the Andes `XAndesvsinth` (Andes Vector Small Int Handling Extension).
 * DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`
   to be used together when building for the RISC-V platform.
-* The Xqci Qualcomm uC Vendor Extension is no longger marked as experimental.
+* The Xqci Qualcomm uC Vendor Extension is no longer marked as experimental.
+* The Xqccmp Qualcomm Vendor Extension is no longer marked as experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------
 
 * `half` now uses a soft float lowering, which resolves various precision and
   bitcast issues.
+
+- The `wasm32-wasi` target has been renamed to `wasm32-wasip1`. The old
+  option is still recognized, though by default will emit a deprecation
+  warning.
 
 Changes to the Windows Target
 -----------------------------
@@ -290,6 +297,7 @@ Changes to LLDB
   LLDB's build configuration is included in the command's output. This includes
   all the supported targets, along with the presence of (or lack of) optional
   features like XML parsing.
+* LLDB now includes formatters for many types from the MSVC STL.
 
 Changes to BOLT
 ---------------------------------
