@@ -120,10 +120,11 @@ inline ShuffleMasks getShuffleMasks(int64_t nonUnitDimAcc) {
   // We only support these two layouts for now.
   assert((nonUnitDimAcc == 8 || nonUnitDimAcc == 16) &&
          "Unsupported nonUnitDimAcc value");
-
+  // Do interleaving between two <8xf32> targeting AVX2.
   static constexpr int64_t maskLo8[] = {0, 8, 1, 9, 2, 10, 3, 11};
   static constexpr int64_t maskHi8[] = {4, 12, 5, 13, 6, 14, 7, 15};
 
+  // Shuffle two <16xf32> as below targeting AVX512.
   static constexpr int64_t maskLo16[] = {0, 1, 2, 3, 16, 17, 18, 19,
                                          4, 5, 6, 7, 20, 21, 22, 23};
   static constexpr int64_t maskHi16[] = {8,  9,  10, 11, 24, 25, 26, 27,
@@ -132,10 +133,16 @@ inline ShuffleMasks getShuffleMasks(int64_t nonUnitDimAcc) {
   if (nonUnitDimAcc == 16)
     return {maskLo16, maskHi16};
 
-  // nonUnitDimAcc == 8
   return {maskLo8, maskHi8};
 }
 
+// This function walks backward from a value to locate its originating
+// vector read-like operation (`vector.transfer_read` or `vector.load`).
+// It follows simple forwarding through unary ops and across `scf.for`
+// loop iter-arguments, while stopping if layout-transforming ops such
+// as `shape_cast` or `shuffle` are encountered. The traversal returns
+// the read-like defining operation or `nullptr` if no valid source
+// is found.
 Operation *traceToVectorReadLikeParentOperation(Value v) {
   while (true) {
     // Case 1: Value defined by an operation
@@ -180,6 +187,12 @@ Operation *traceToVectorReadLikeParentOperation(Value v) {
   }
 }
 
+// This function recursively traces a value through its uses to find
+// a downstream vector write-like operation (`vector.transfer_write`
+// or `vector.store`). It transparently follows values across `scf.for`
+// and `scf.yield` boundaries while stopping if layout-altering ops such
+// as `shape_cast` or `shuffle` are encountered. The traversal returns
+// the first matching write-like user or `nullptr` if none is found.
 Operation *traceToVectorWriteLikeUserOperation(Value v) {
   for (OpOperand &use : v.getUses()) {
     Operation *user = use.getOwner();
@@ -227,8 +240,6 @@ static void rewriteUses(mlir::Value oldVal, mlir::Value newVal,
   for (mlir::OpOperand &use : llvm::make_early_inc_range(oldVal.getUses())) {
 
     mlir::Operation *user = use.getOwner();
-
-    // if (user == targetContract ||
     if (mlir::isa<mlir::vector::ContractionOp>(user) ||
         mlir::isa<mlir::scf::ForOp>(user)) {
       use.set(newVal);
@@ -236,6 +247,9 @@ static void rewriteUses(mlir::Value oldVal, mlir::Value newVal,
   }
 }
 
+// This function packs the accumulator of two flat BF16 vector.contract
+// operations into VNNI packed and are then replaced in their respective
+// contraction ops, enabling post-read layout or packing transformations.
 void shuffleAfterReadLikeOp(mlir::PatternRewriter &rewriter,
                             mlir::Operation *opA, mlir::Operation *opB,
                             mlir::vector::ContractionOp contractA,
@@ -251,7 +265,6 @@ void shuffleAfterReadLikeOp(mlir::PatternRewriter &rewriter,
 
   auto castA = mlir::vector::ShapeCastOp::create(rewriter, loc, flatTy,
                                                  opA->getResult(0));
-
   auto castB = mlir::vector::ShapeCastOp::create(rewriter, loc, flatTy,
                                                  opB->getResult(0));
 
@@ -259,21 +272,20 @@ void shuffleAfterReadLikeOp(mlir::PatternRewriter &rewriter,
 
   auto shuffleLo = mlir::vector::ShuffleOp::create(rewriter, loc, flatTy, castA,
                                                    castB, masks.maskLo);
-
   auto shuffleHi = mlir::vector::ShuffleOp::create(rewriter, loc, flatTy, castA,
                                                    castB, masks.maskHi);
 
   auto newAccA =
       mlir::vector::ShapeCastOp::create(rewriter, loc, accTy, shuffleLo);
-
   auto newAccB =
       mlir::vector::ShapeCastOp::create(rewriter, loc, accTy, shuffleHi);
 
   rewriteUses(opA->getResult(0), newAccA.getResult(), contractA, rewriter);
-
   rewriteUses(opB->getResult(0), newAccB.getResult(), contractB, rewriter);
 }
 
+// This function shuffles the vectors written by vector.ocntract operation
+// as a flat layout structure before they are stored.
 void shuffleBeforeWriteLikeOp(mlir::PatternRewriter &rewriter,
                               mlir::Operation *opA, mlir::Operation *opB,
                               int64_t nonUnitDimAcc, mlir::VectorType accTy) {
@@ -302,7 +314,6 @@ void shuffleBeforeWriteLikeOp(mlir::PatternRewriter &rewriter,
 
   // Flatten vectors
   auto castA = mlir::vector::ShapeCastOp::create(rewriter, loc, flatTy, vecA);
-
   auto castB = mlir::vector::ShapeCastOp::create(rewriter, loc, flatTy, vecB);
 
   // TODO: derive shuffle masks instead of hard-coding
@@ -310,63 +321,18 @@ void shuffleBeforeWriteLikeOp(mlir::PatternRewriter &rewriter,
 
   auto shuffledLo = mlir::vector::ShuffleOp::create(rewriter, loc, flatTy,
                                                     castA, castB, masks.maskLo);
-
   auto shuffledHi = mlir::vector::ShuffleOp::create(rewriter, loc, flatTy,
                                                     castA, castB, masks.maskHi);
 
   // Cast back to accumulator type
   auto newVecA =
       mlir::vector::ShapeCastOp::create(rewriter, loc, accTy, shuffledLo);
-
   auto newVecB =
       mlir::vector::ShapeCastOp::create(rewriter, loc, accTy, shuffledHi);
 
   // Update write operands in place
   opA->setOperand(0, newVecA.getResult());
   opB->setOperand(0, newVecB.getResult());
-}
-
-void shuffleNonUnitDimOperand(mlir::PatternRewriter &rewriter,
-                              mlir::Operation *opA, mlir::Operation *opB,
-                              mlir::vector::ContractionOp contractA,
-                              mlir::vector::ContractionOp contractB,
-                              int64_t nonUnitDimAcc, mlir::VectorType Ty) {
-  mlir::Operation *insertAfter = opA->isBeforeInBlock(opB) ? opB : opA;
-
-  rewriter.setInsertionPointAfter(insertAfter);
-  mlir::Location loc = insertAfter->getLoc();
-
-  auto elemTy = Ty.getElementType();
-  auto flatTy = mlir::VectorType::get(nonUnitDimAcc, elemTy);
-
-  auto castA = mlir::vector::ShapeCastOp::create(rewriter, loc, flatTy,
-                                                 opA->getResult(0));
-
-  auto castB = mlir::vector::ShapeCastOp::create(rewriter, loc, flatTy,
-                                                 opB->getResult(0));
-
-  static constexpr int64_t maskLo[] = {
-      0,  32, 1,  33, 2,  34, 3,  35, 8,  40, 9,  41, 10, 42, 11, 43,
-      16, 48, 17, 49, 18, 50, 19, 51, 24, 56, 25, 57, 26, 58, 27, 59};
-  static constexpr int64_t maskHi[] = {
-      4,  36, 5,  37, 6,  38, 7,  39, 12, 44, 13, 45, 14, 46, 15, 47,
-      20, 52, 21, 53, 22, 54, 23, 55, 28, 60, 29, 61, 30, 62, 31, 63};
-
-  auto shuffleLo = mlir::vector::ShuffleOp::create(rewriter, loc, flatTy, castA,
-                                                   castB, maskLo);
-
-  auto shuffleHi = mlir::vector::ShuffleOp::create(rewriter, loc, flatTy, castA,
-                                                   castB, maskHi);
-
-  auto newAccA =
-      mlir::vector::ShapeCastOp::create(rewriter, loc, Ty, shuffleLo);
-
-  auto newAccB =
-      mlir::vector::ShapeCastOp::create(rewriter, loc, Ty, shuffleHi);
-
-  rewriteUses(opA->getResult(0), newAccA.getResult(), contractA, rewriter);
-
-  rewriteUses(opB->getResult(0), newAccB.getResult(), contractB, rewriter);
 }
 
 // Return true if vector.contract operations matches on below conditions:
