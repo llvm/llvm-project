@@ -2061,10 +2061,9 @@ void CheckHelper::CheckGeneric(
 void CheckHelper::CheckModule(const Symbol &symbol, const ModuleDetails &x) {
 
   for (const auto &pair : *symbol.scope()) {
-    const SourceName &memberName = pair.first;
     const Symbol &member = *pair.second;
 
-    if (const auto *obj = member.detailsIf<ObjectEntityDetails>()) {
+    if (member.detailsIf<ObjectEntityDetails>()) {
       if (symbol.name() == member.name()) {
         messages_.Say(member.name(),
             "Module name '%s' must not be the same as any local name in the module"_err_en_US,
