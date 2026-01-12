@@ -96,7 +96,7 @@ void ARCTargetLowering::ReplaceNodeResults(SDNode *N,
 
 ARCTargetLowering::ARCTargetLowering(const TargetMachine &TM,
                                      const ARCSubtarget &Subtarget)
-    : TargetLowering(TM), Subtarget(Subtarget) {
+    : TargetLowering(TM, Subtarget), Subtarget(Subtarget) {
   // Set up the register classes.
   addRegisterClass(MVT::i32, &ARC::GPR32RegClass);
 

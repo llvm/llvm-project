@@ -13,7 +13,7 @@ Some parallel execution environments execute threads in groups that allow
 efficient communication within the group using special primitives called
 *convergent* operations. The outcome of a convergent operation is sensitive to
 the set of threads that executes it "together", i.e., convergently. When control
-flow :ref:`diverges <convergence-and-uniformity>`, i.e. threads of the same
+flow :ref:`diverges <convergence-and-uniformity>`, i.e., threads of the same
 group follow different
 paths through the CFG, not all threads of the group may be available to
 participate in this communication. This is the defining characteristic that
@@ -41,7 +41,7 @@ In structured programming languages, there is often an intuitive and
 unambiguous way of determining the threads that are expected to communicate.
 However, this is not always the case even in structured programming languages,
 and the intuition breaks down entirely in unstructured control flow. This
-document describes the formal semantics in LLVM, i.e. how to determine the set
+document describes the formal semantics in LLVM, i.e., how to determine the set
 of communicating threads for convergent operations.
 
 The definitions in this document leave many details open, such as how groups of
@@ -449,15 +449,15 @@ Consider the following example:
     // E
   }
 
-In this program, the call to convergent_op() is lexically "inside" the ``for``
+In this program, the call to ``convergent_op()`` is lexically "inside" the ``for``
 loop. But when translated to LLVM IR, the basic block B is an exiting block
 ending in a divergent branch, and the basic block C is an exit of the loop.
-Thus, the call to convergent_op() is outside the loop. This causes a mismatch
+Thus, the call to ``convergent_op()`` is outside the loop. This causes a mismatch
 between the programmer's expectation and the compiled program. The call should
 be executed convergently on every iteration of the loop, by threads that
 together take the branch to exit the loop. But when compiled, all threads that
 take the divergent exit on different iterations first converge at the beginning
-of basic block C and then together execute the call to convergent_op().
+of basic block C and then together execute the call to ``convergent_op()``.
 
 In this case, :ref:`llvm.experimental.convergence.loop
 <llvm.experimental.convergence.loop>` can be used to express the desired
@@ -588,18 +588,18 @@ indirectly.
 
   token @llvm.experimental.convergence.entry() convergent readnone
 
-This intrinsic is used to tie the dynamic instances inside of a function to
+This intrinsic is used to tie the dynamic instances inside a function to
 those in the caller.
 
 1. If the function is called from outside the scope of LLVM, the convergence of
-   dynamic instances of this intrinsic are environment-defined. For example:
+   dynamic instances of this intrinsic is environment-defined. For example:
 
    a. In an OpenCL *kernel launch*, the maximal set of threads that
       can communicate outside the memory model is a *workgroup*.
       Hence, a suitable choice is to specify that all the threads from
       a single workgroup in OpenCL execute converged dynamic instances
       of this intrinsic.
-   b. In a C/C++ program, threads are launched independently and they can
+   b. In a C/C++ program, threads are launched independently and can
       communicate only through the memory model. Hence the dynamic instances of
       this intrinsic in a C/C++ program are never converged.
 2. If the function is called from a call-site in LLVM IR, then two
@@ -701,7 +701,7 @@ convergent operation in the same basic block.
 
   token @llvm.experimental.convergence.anchor() convergent readnone
 
-This intrinsic produces an initial convergence token that is independent from
+This intrinsic produces an initial convergence token that is independent of
 any "outer scope". The set of threads executing converged dynamic instances of
 this intrinsic is implementation-defined.
 
@@ -1483,7 +1483,7 @@ There is no guarantee about the value of ``%id`` in the threads where
 hoisting ``@subgroupShuffle`` might introduce UB.
 
 On the other hand, if ``@subgroupShuffle`` is defined such that it merely
-produces an undefined value or poison as result when ``%id`` is "out of range",
+produces an undefined value or poison as a result when ``%id`` is "out of range",
 then speculating is okay.
 
 Even though
@@ -1502,7 +1502,7 @@ Assuming that ``%tok`` is only used inside the conditional block, the anchor can
 be sunk. The rationale is two-fold. First, the anchor has implementation-defined
 behavior, and the sinking is part of the implementation. Second, already in the
 original program, the set of threads that communicates in the
-``@convergent.operation`` is automatically subset to the threads for which
+``@convergent.operation`` is automatically a subset of the threads for which
 ``condition`` is true.
 
 Anchors can be hoisted in acyclic control flow. For example:

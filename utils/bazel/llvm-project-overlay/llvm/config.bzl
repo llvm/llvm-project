@@ -105,6 +105,7 @@ llvm_config_defines = os_defines + builtin_thread_pointer + select({
     "@bazel_tools//src/conditions:darwin_x86_64": native_arch_defines("X86", "x86_64-unknown-darwin"),
     "@bazel_tools//src/conditions:linux_aarch64": native_arch_defines("AArch64", "aarch64-unknown-linux-gnu"),
     "@bazel_tools//src/conditions:linux_ppc64le": native_arch_defines("PowerPC", "powerpc64le-unknown-linux-gnu"),
+    "@bazel_tools//src/conditions:linux_riscv64": native_arch_defines("RISCV", "riscv64-unknown-linux-gnu"),
     "@bazel_tools//src/conditions:linux_s390x": native_arch_defines("SystemZ", "systemz-unknown-linux_gnu"),
     "//conditions:default": native_arch_defines("X86", "x86_64-unknown-linux-gnu"),
 }) + [

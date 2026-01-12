@@ -8,18 +8,18 @@ Introduction
 This document contains information about building and testing the builtins part
 of compiler-rt for an Arm target, from an x86_64 Linux machine.
 
-While this document concentrates on Arm and Linux the general principles should
+While this document concentrates on Arm and Linux, the general principles should
 apply to other targets supported by compiler-rt. Further contributions for other
 targets are welcome.
 
 The instructions in this document depend on libraries and programs external to
-LLVM, there are many ways to install and configure these dependencies so you
+LLVM. There are many ways to install and configure these dependencies, so you
 may need to adapt the instructions here to fit your own situation.
 
 Prerequisites
 =============
 
-In this use case we will be using cmake on a Debian-based Linux system,
+In this use case, we will be using cmake on a Debian-based Linux system,
 cross-compiling from an x86_64 host to a hard-float Armv7-A target. We will be
 using as many of the LLVM tools as we can, but it is possible to use GNU
 equivalents.
@@ -35,7 +35,7 @@ You will need:
   An existing sysroot is required because some of the builtins include C library
   headers and a sysroot is the easiest way to get those.
 
-In this example we will be using ``ninja`` as the build tool.
+In this example, we will be using ``ninja`` as the build tool.
 
 See https://compiler-rt.llvm.org/ for information about the dependencies
 on clang and LLVM.
@@ -46,7 +46,7 @@ the source for LLVM and compiler-rt.
 ``qemu-arm`` should be available as a package for your Linux distribution.
 
 The most complicated of the prerequisites to satisfy is the ``arm-linux-gnueabihf``
-sysroot. In theory it is possible to use the Linux distributions multiarch
+sysroot. In theory, it is possible to use the Linux distributions multiarch
 support to fulfill the dependencies for building but unfortunately due to
 ``/usr/local/include`` being added some host includes are selected.
 
@@ -153,7 +153,7 @@ The cmake try compile stage fails
 At an early stage cmake will attempt to compile and link a simple C program to
 test if the toolchain is working.
 
-This stage can often fail at link time if the ``--sysroot=``, ``--target`` or
+This stage can often fail at link time if the ``--sysroot=``, ``--target``, or
 ``--gcc-toolchain=`` options are not passed to the compiler. Check the
 ``CMAKE_<LANGUAGE>_FLAGS`` and ``CMAKE_<LANGAUGE>_COMPILER_TARGET`` flags along
 with any of the specific CMake sysroot and toolchain options.
@@ -165,7 +165,7 @@ to make sure it is working. For example::
 
 Clang uses the host header files
 --------------------------------
-On debian based systems it is possible to install multiarch support for
+On Debian-based systems, it is possible to install multiarch support for
 ``arm-linux-gnueabi`` and ``arm-linux-gnueabihf``. In many cases clang can successfully
 use this multiarch support when ``--gcc-toolchain=`` and ``--sysroot=`` are not supplied.
 Unfortunately clang adds ``/usr/local/include`` before
@@ -177,8 +177,8 @@ use a separate ``arm-linux-gnueabihf`` toolchain.
 
 No target passed to clang
 -------------------------
-If clang is not given a target it will typically use the host target, this will
-not understand the Arm assembly language files resulting in error messages such
+If clang is not given a target, it will typically use the host target. This will
+not understand the Arm assembly language files, resulting in error messages such
 as ``error: unknown directive .syntax unified``.
 
 You can check the clang invocation in the error message to see if there is no
@@ -217,7 +217,7 @@ target to use is:
 
 * ``-DCMAKE_C_COMPILER_TARGET=arm-linux-gnueabi``
 
-Depending on whether you want to use floating point instructions or not you
+Depending on whether you want to use floating point instructions or not, you
 may need extra c-flags such as ``-mfloat-abi=softfp`` for use of floating-point
 instructions, and ``-mfloat-abi=soft -mfpu=none`` for software floating-point
 emulation.
@@ -241,7 +241,7 @@ To build and test the libraries using a similar method to Armv7-A is possible
 but more difficult. The main problems are:
 
 * There is not a ``qemu-arm`` user-mode emulator for bare-metal systems.
-  ``qemu-system-arm`` can be used but this is significantly more difficult
+  ``qemu-system-arm`` can be used, but this is significantly more difficult
   to setup. This document does not explain how to do this.
 * The targets to compile compiler-rt have the suffix ``-none-eabi``. This uses
   the BareMetal driver in clang and by default will not find the libraries
@@ -252,8 +252,8 @@ that are supported on Armv7-A we can still get most of the value of running the
 tests using the same ``qemu-arm`` that we used for Armv7-A by building and
 running the test cases for Armv7-A but using the builtins compiled for
 Armv6-M, Armv7-M or Armv7E-M. This will test that the builtins can be linked
-into a binary and execute the tests correctly but it will not catch if the
-builtins use instructions that are supported on Armv7-A but not Armv6-M,
+into a binary and execute the tests correctly, but it will not catch if the
+builtins use instructions that are supported on Armv7-A but not on Armv6-M,
 Armv7-M and Armv7E-M.
 
 This requires a second ``arm-none-eabi`` toolchain for building the builtins.
@@ -321,9 +321,9 @@ command for Armv7-A build and test::
 
 The Armv6-M builtins will use the soft-float ABI. When compiling the tests for
 Armv7-A we must include ``"-mthumb -mfloat-abi=soft -mfpu=none"`` in the
-test-c-flags. We must use an Armv7-A soft-float abi sysroot for ``qemu-arm``.
+test-c-flags. We must use an Armv7-A soft-float ABI sysroot for ``qemu-arm``.
 
-Depending on the linker used for the test cases you may encounter BuildAttribute
+Depending on the linker used for the test cases, you may encounter BuildAttribute
 mismatches between the M-profile objects from compiler-rt and the A-profile
 objects from the test. The lld linker does not check the profile
 BuildAttribute so it can be used to link the tests by adding ``-fuse-ld=lld`` to the

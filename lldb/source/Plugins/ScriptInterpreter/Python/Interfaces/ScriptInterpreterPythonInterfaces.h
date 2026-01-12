@@ -17,6 +17,8 @@
 
 #include "OperatingSystemPythonInterface.h"
 #include "ScriptedBreakpointPythonInterface.h"
+#include "ScriptedFrameProviderPythonInterface.h"
+#include "ScriptedFramePythonInterface.h"
 #include "ScriptedPlatformPythonInterface.h"
 #include "ScriptedProcessPythonInterface.h"
 #include "ScriptedStopHookPythonInterface.h"

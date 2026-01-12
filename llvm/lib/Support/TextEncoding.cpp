@@ -54,9 +54,9 @@ static std::optional<TextEncoding> getKnownEncoding(StringRef Name) {
   return std::nullopt;
 }
 
-LLVM_ATTRIBUTE_UNUSED static void
-HandleOverflow(size_t &Capacity, char *&Output, size_t &OutputLength,
-               SmallVectorImpl<char> &Result) {
+[[maybe_unused]] static void HandleOverflow(size_t &Capacity, char *&Output,
+                                            size_t &OutputLength,
+                                            SmallVectorImpl<char> &Result) {
   // No space left in output buffer. Double the size of the underlying
   // memory in the SmallVectorImpl, adjust pointer and length and continue
   // the conversion.
@@ -161,7 +161,7 @@ TextEncodingConverterICU::convertString(StringRef Source,
     EC = U_ZERO_ERROR;
     const char *Input = In;
 
-    Output = InputLength ? static_cast<char *>(Result.data()) : nullptr;
+    Output = static_cast<char *>(Result.data());
     ucnv_convertEx(&*ToConvDesc, &*FromConvDesc, &Output, Result.end(), &Input,
                    In + InputLength, /*pivotStart=*/NULL,
                    /*pivotSource=*/NULL, /*pivotTarget=*/NULL,
@@ -172,8 +172,10 @@ TextEncodingConverterICU::convertString(StringRef Source,
         if (Capacity < Result.max_size()) {
           HandleOverflow(Capacity, Output, OutputLength, Result);
           continue;
-        } else
+        } else {
+          Result.resize(Output - Result.data());
           return std::error_code(E2BIG, std::generic_category());
+        }
       }
       // Some other error occured.
       Result.resize(Output - Result.data());
@@ -268,10 +270,8 @@ TextEncodingConverterIconv::convertString(StringRef Source,
   };
 
   do {
-    // Setup the input. Use nullptr to reset iconv state if input length is
-    // zero.
     size_t InputLength = Source.size();
-    char *Input = const_cast<char *>(InputLength ? Source.data() : "");
+    char *Input = const_cast<char *>(Source.data());
     Ret = iconv(ConvDesc, &Input, &InputLength, &Output, &OutputLength);
     if (Ret != 0) {
       if (auto EC = HandleError(Ret))

@@ -10,7 +10,7 @@
 #define LLVM_LIBC_SRC_STDFIX_BITSUHK_H
 
 #include "include/llvm-libc-macros/stdfix-macros.h" // unsigned short accum
-#include "include/llvm-libc-types/stdfix-types.h"   // uint_uhk_t
+#include "include/llvm-libc-types/uint_uhk_t.h"     // uint_uhk_t
 #include "src/__support/macros/config.h"            // LIBC_NAMESPACE_DECL
 
 namespace LIBC_NAMESPACE_DECL {

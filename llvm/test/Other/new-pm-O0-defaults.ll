@@ -9,13 +9,13 @@
 
 ; RUN: opt -disable-verify -verify-analysis-invalidation=0 -debug-pass-manager \
 ; RUN:     -passes='default<O0>' -S %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-DEFAULT,CHECK-CORO
+; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-DEFAULT,CHECK-CORO,CHECK-ALLOCTOKEN
 ; RUN: opt -disable-verify -verify-analysis-invalidation=0 -debug-pass-manager -enable-matrix \
 ; RUN:     -passes='default<O0>' -S %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-DEFAULT,CHECK-MATRIX,CHECK-CORO
+; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-DEFAULT,CHECK-MATRIX,CHECK-CORO,CHECK-ALLOCTOKEN
 ; RUN: opt -disable-verify -verify-analysis-invalidation=0 -debug-pass-manager -debug-info-for-profiling \
 ; RUN:     -passes='default<O0>' -S %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-DIS,CHECK-CORO
+; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-DIS,CHECK-CORO,CHECK-ALLOCTOKEN
 ; RUN: opt -disable-verify -verify-analysis-invalidation=0 -debug-pass-manager \
 ; RUN:     -passes='thinlto-pre-link<O0>' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-DEFAULT,CHECK-PRE-LINK,CHECK-CORO
@@ -41,9 +41,13 @@
 ; CHECK-MATRIX: Running pass: LowerMatrixIntrinsicsPass
 ; CHECK-MATRIX-NEXT: Running analysis: TargetIRAnalysis
 ; CHECK-CORO-NEXT: Running pass: CoroConditionalWrapper
+; CHECK-ALLOCTOKEN-NEXT: Running pass: AllocTokenPass
 ; CHECK-PRE-LINK: Running pass: CanonicalizeAliasesPass
 ; CHECK-PRE-LINK-NEXT: Running pass: NameAnonGlobalPass
 ; CHECK-THINLTO: Running pass: LowerTypeTestsPass
+; CHECK-THINLTO-NEXT: Running pass: CoroConditionalWrapper
+; CHECK-THINLTO-NEXT: Running pass: AllocTokenPass
+; CHECK-THINLTO-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-THINLTO-NEXT: Running pass: EliminateAvailableExternallyPass
 ; CHECK-THINLTO-NEXT: Running pass: GlobalDCEPass
 ; CHECK-LTO: Running pass: CrossDSOCFIPass on [module]
@@ -52,6 +56,7 @@
 ; CHECK-LTO-NEXT: Running pass: LowerTypeTestsPass
 ; CHECK-LTO-NEXT: Running pass: LowerTypeTestsPass
 ; CHECK-LTO-NEXT: CoroConditionalWrapper
+; CHECK-LTO-NEXT: Running pass: AllocTokenPass
 ; CHECK-CORO-NEXT: Running pass: AnnotationRemarksPass
 ; CHECK-CORO-NEXT: Running analysis: TargetLibraryAnalysis
 ; CHECK-LTO-NEXT: Running pass: AnnotationRemarksPass

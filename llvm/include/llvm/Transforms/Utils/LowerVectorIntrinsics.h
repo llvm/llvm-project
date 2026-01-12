@@ -14,7 +14,6 @@
 #define LLVM_TRANSFORMS_UTILS_LOWERVECTORINTRINSICS_H
 
 #include <cstdint>
-#include <optional>
 
 namespace llvm {
 

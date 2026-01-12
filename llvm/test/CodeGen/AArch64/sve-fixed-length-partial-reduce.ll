@@ -35,7 +35,7 @@ define <8 x i16> @two_way_i8_i16_vl128(ptr %accptr, ptr %uptr, ptr %sptr) {
   %u.wide = zext <16 x i8> %u to <16 x i16>
   %s.wide = zext <16 x i8> %s to <16 x i16>
   %mult = mul nuw nsw <16 x i16> %s.wide, %u.wide
-  %partial.reduce = tail call <8 x i16> @llvm.experimental.vector.partial.reduce.add(<8 x i16> %acc, <16 x i16> %mult)
+  %partial.reduce = tail call <8 x i16> @llvm.vector.partial.reduce.add(<8 x i16> %acc, <16 x i16> %mult)
   ret <8 x i16> %partial.reduce
 }
 
@@ -70,7 +70,7 @@ define <16 x i16> @two_way_i8_i16_vl128_double_width(ptr %accptr, ptr %uptr, ptr
   %u.wide = zext <32 x i8> %u to <32 x i16>
   %s.wide = zext <32 x i8> %s to <32 x i16>
   %mult = mul nuw nsw <32 x i16> %s.wide, %u.wide
-  %partial.reduce = tail call <16 x i16> @llvm.experimental.vector.partial.reduce.add(<16 x i16> %acc, <32 x i16> %mult)
+  %partial.reduce = tail call <16 x i16> @llvm.vector.partial.reduce.add(<16 x i16> %acc, <32 x i16> %mult)
   ret <16 x i16> %partial.reduce
 }
 
@@ -124,7 +124,7 @@ define <16 x i16> @two_way_i8_i16_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vscal
   %u.wide = zext <32 x i8> %u to <32 x i16>
   %s.wide = zext <32 x i8> %s to <32 x i16>
   %mult = mul nuw nsw <32 x i16> %s.wide, %u.wide
-  %partial.reduce = tail call <16 x i16> @llvm.experimental.vector.partial.reduce.add(<16 x i16> %acc, <32 x i16> %mult)
+  %partial.reduce = tail call <16 x i16> @llvm.vector.partial.reduce.add(<16 x i16> %acc, <32 x i16> %mult)
   ret <16 x i16> %partial.reduce
 }
 
@@ -158,7 +158,7 @@ define <4 x i32> @two_way_i16_i32_vl128(ptr %accptr, ptr %uptr, ptr %sptr) {
   %u.wide = zext <8 x i16> %u to <8 x i32>
   %s.wide = zext <8 x i16> %s to <8 x i32>
   %mult = mul nuw nsw <8 x i32> %s.wide, %u.wide
-  %partial.reduce = tail call <4 x i32> @llvm.experimental.vector.partial.reduce.add(<4 x i32> %acc, <8 x i32> %mult)
+  %partial.reduce = tail call <4 x i32> @llvm.vector.partial.reduce.add(<4 x i32> %acc, <8 x i32> %mult)
   ret <4 x i32> %partial.reduce
 }
 
@@ -193,7 +193,7 @@ define <8 x i32> @two_way_i16_i32_vl128_double_width(ptr %accptr, ptr %uptr, ptr
   %u.wide = zext <16 x i16> %u to <16 x i32>
   %s.wide = zext <16 x i16> %s to <16 x i32>
   %mult = mul nuw nsw <16 x i32> %s.wide, %u.wide
-  %partial.reduce = tail call <8 x i32> @llvm.experimental.vector.partial.reduce.add(<8 x i32> %acc, <16 x i32> %mult)
+  %partial.reduce = tail call <8 x i32> @llvm.vector.partial.reduce.add(<8 x i32> %acc, <16 x i32> %mult)
   ret <8 x i32> %partial.reduce
 }
 
@@ -247,7 +247,7 @@ define <8 x i32> @two_way_i16_i32_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vscal
   %u.wide = zext <16 x i16> %u to <16 x i32>
   %s.wide = zext <16 x i16> %s to <16 x i32>
   %mult = mul nuw nsw <16 x i32> %s.wide, %u.wide
-  %partial.reduce = tail call <8 x i32> @llvm.experimental.vector.partial.reduce.add(<8 x i32> %acc, <16 x i32> %mult)
+  %partial.reduce = tail call <8 x i32> @llvm.vector.partial.reduce.add(<8 x i32> %acc, <16 x i32> %mult)
   ret <8 x i32> %partial.reduce
 }
 
@@ -281,7 +281,7 @@ define <2 x i64> @two_way_i32_i64_vl128(ptr %accptr, ptr %uptr, ptr %sptr) {
   %u.wide = zext <4 x i32> %u to <4 x i64>
   %s.wide = zext <4 x i32> %s to <4 x i64>
   %mult = mul nuw nsw <4 x i64> %s.wide, %u.wide
-  %partial.reduce = tail call <2 x i64> @llvm.experimental.vector.partial.reduce.add(<2 x i64> %acc, <4 x i64> %mult)
+  %partial.reduce = tail call <2 x i64> @llvm.vector.partial.reduce.add(<2 x i64> %acc, <4 x i64> %mult)
   ret <2 x i64> %partial.reduce
 }
 
@@ -316,7 +316,7 @@ define <4 x i64> @two_way_i32_i64_vl128_double_width(ptr %accptr, ptr %uptr, ptr
   %u.wide = zext <8 x i32> %u to <8 x i64>
   %s.wide = zext <8 x i32> %s to <8 x i64>
   %mult = mul nuw nsw <8 x i64> %s.wide, %u.wide
-  %partial.reduce = tail call <4 x i64> @llvm.experimental.vector.partial.reduce.add(<4 x i64> %acc, <8 x i64> %mult)
+  %partial.reduce = tail call <4 x i64> @llvm.vector.partial.reduce.add(<4 x i64> %acc, <8 x i64> %mult)
   ret <4 x i64> %partial.reduce
 }
 
@@ -370,7 +370,7 @@ define <4 x i64> @two_way_i32_i64_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vscal
   %u.wide = zext <8 x i32> %u to <8 x i64>
   %s.wide = zext <8 x i32> %s to <8 x i64>
   %mult = mul nuw nsw <8 x i64> %s.wide, %u.wide
-  %partial.reduce = tail call <4 x i64> @llvm.experimental.vector.partial.reduce.add(<4 x i64> %acc, <8 x i64> %mult)
+  %partial.reduce = tail call <4 x i64> @llvm.vector.partial.reduce.add(<4 x i64> %acc, <8 x i64> %mult)
   ret <4 x i64> %partial.reduce
 }
 
@@ -403,7 +403,7 @@ define <4 x i32> @four_way_i8_i32_vl128(ptr %accptr, ptr %uptr, ptr %sptr) {
   %u.wide = zext <16 x i8> %u to <16 x i32>
   %s.wide = zext <16 x i8> %s to <16 x i32>
   %mult = mul nuw nsw <16 x i32> %s.wide, %u.wide
-  %partial.reduce = tail call <4 x i32> @llvm.experimental.vector.partial.reduce.add(<4 x i32> %acc, <16 x i32> %mult)
+  %partial.reduce = tail call <4 x i32> @llvm.vector.partial.reduce.add(<4 x i32> %acc, <16 x i32> %mult)
   ret <4 x i32> %partial.reduce
 }
 
@@ -430,7 +430,7 @@ define <4 x i32> @four_way_i8_i32_vl128_usdot(ptr %accptr, ptr %uptr, ptr %sptr)
   %u.wide = zext <16 x i8> %u to <16 x i32>
   %s.wide = sext <16 x i8> %s to <16 x i32>
   %mult = mul nuw nsw <16 x i32> %s.wide, %u.wide
-  %partial.reduce = tail call <4 x i32> @llvm.experimental.vector.partial.reduce.add(<4 x i32> %acc, <16 x i32> %mult)
+  %partial.reduce = tail call <4 x i32> @llvm.vector.partial.reduce.add(<4 x i32> %acc, <16 x i32> %mult)
   ret <4 x i32> %partial.reduce
 }
 
@@ -457,7 +457,7 @@ define <4 x i32> @four_way_i8_i32_vl128_sudot(ptr %accptr, ptr %uptr, ptr %sptr)
   %u.wide = sext <16 x i8> %u to <16 x i32>
   %s.wide = zext <16 x i8> %s to <16 x i32>
   %mult = mul nuw nsw <16 x i32> %s.wide, %u.wide
-  %partial.reduce = tail call <4 x i32> @llvm.experimental.vector.partial.reduce.add(<4 x i32> %acc, <16 x i32> %mult)
+  %partial.reduce = tail call <4 x i32> @llvm.vector.partial.reduce.add(<4 x i32> %acc, <16 x i32> %mult)
   ret <4 x i32> %partial.reduce
 }
 
@@ -504,7 +504,7 @@ define <2 x i64> @four_way_i8_i64_vl128_usdot(ptr %accptr, ptr %uptr, ptr %sptr)
   %u.wide = zext <16 x i8> %u to <16 x i64>
   %s.wide = sext <16 x i8> %s to <16 x i64>
   %mult = mul nuw nsw <16 x i64> %s.wide, %u.wide
-  %partial.reduce = tail call <2 x i64> @llvm.experimental.vector.partial.reduce.add(<2 x i64> %acc, <16 x i64> %mult)
+  %partial.reduce = tail call <2 x i64> @llvm.vector.partial.reduce.add(<2 x i64> %acc, <16 x i64> %mult)
   ret <2 x i64> %partial.reduce
 }
 
@@ -551,7 +551,7 @@ define <2 x i64> @four_way_i16_i64_vl128_usdot(ptr %accptr, ptr %uptr, ptr %sptr
   %u.wide = zext <8 x i16> %u to <8 x i64>
   %s.wide = sext <8 x i16> %s to <8 x i64>
   %mult = mul nuw nsw <8 x i64> %s.wide, %u.wide
-  %partial.reduce = tail call <2 x i64> @llvm.experimental.vector.partial.reduce.add(<2 x i64> %acc, <8 x i64> %mult)
+  %partial.reduce = tail call <2 x i64> @llvm.vector.partial.reduce.add(<2 x i64> %acc, <8 x i64> %mult)
   ret <2 x i64> %partial.reduce
 }
 
@@ -582,7 +582,7 @@ define <8 x i32> @four_way_i8_i32_vl128_double_width(ptr %accptr, ptr %uptr, ptr
   %u.wide = zext <32 x i8> %u to <32 x i32>
   %s.wide = zext <32 x i8> %s to <32 x i32>
   %mult = mul nuw nsw <32 x i32> %s.wide, %u.wide
-  %partial.reduce = tail call <8 x i32> @llvm.experimental.vector.partial.reduce.add(<8 x i32> %acc, <32 x i32> %mult)
+  %partial.reduce = tail call <8 x i32> @llvm.vector.partial.reduce.add(<8 x i32> %acc, <32 x i32> %mult)
   ret <8 x i32> %partial.reduce
 }
 
@@ -613,7 +613,7 @@ define <8 x i32> @four_way_i8_i32_vl128_double_width_usdot(ptr %accptr, ptr %upt
   %u.wide = zext <32 x i8> %u to <32 x i32>
   %s.wide = sext <32 x i8> %s to <32 x i32>
   %mult = mul nuw nsw <32 x i32> %s.wide, %u.wide
-  %partial.reduce = tail call <8 x i32> @llvm.experimental.vector.partial.reduce.add(<8 x i32> %acc, <32 x i32> %mult)
+  %partial.reduce = tail call <8 x i32> @llvm.vector.partial.reduce.add(<8 x i32> %acc, <32 x i32> %mult)
   ret <8 x i32> %partial.reduce
 }
 
@@ -658,7 +658,7 @@ define <8 x i32> @four_way_i8_i32_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vscal
   %u.wide = zext <32 x i8> %u to <32 x i32>
   %s.wide = zext <32 x i8> %s to <32 x i32>
   %mult = mul nuw nsw <32 x i32> %s.wide, %u.wide
-  %partial.reduce = tail call <8 x i32> @llvm.experimental.vector.partial.reduce.add(<8 x i32> %acc, <32 x i32> %mult)
+  %partial.reduce = tail call <8 x i32> @llvm.vector.partial.reduce.add(<8 x i32> %acc, <32 x i32> %mult)
   ret <8 x i32> %partial.reduce
 }
 
@@ -703,7 +703,7 @@ define <8 x i32> @four_way_i8_i32_vl256_usdot(ptr %accptr, ptr %uptr, ptr %sptr)
   %u.wide = zext <32 x i8> %u to <32 x i32>
   %s.wide = sext <32 x i8> %s to <32 x i32>
   %mult = mul nuw nsw <32 x i32> %s.wide, %u.wide
-  %partial.reduce = tail call <8 x i32> @llvm.experimental.vector.partial.reduce.add(<8 x i32> %acc, <32 x i32> %mult)
+  %partial.reduce = tail call <8 x i32> @llvm.vector.partial.reduce.add(<8 x i32> %acc, <32 x i32> %mult)
   ret <8 x i32> %partial.reduce
 }
 
@@ -740,7 +740,7 @@ define <2 x i64> @four_way_i16_i64_vl128(ptr %accptr, ptr %uptr, ptr %sptr) {
   %u.wide = zext <8 x i16> %u to <8 x i64>
   %s.wide = zext <8 x i16> %s to <8 x i64>
   %mult = mul nuw nsw <8 x i64> %s.wide, %u.wide
-  %partial.reduce = tail call <2 x i64> @llvm.experimental.vector.partial.reduce.add(<2 x i64> %acc, <8 x i64> %mult)
+  %partial.reduce = tail call <2 x i64> @llvm.vector.partial.reduce.add(<2 x i64> %acc, <8 x i64> %mult)
   ret <2 x i64> %partial.reduce
 }
 
@@ -781,7 +781,7 @@ define <4 x i64> @four_way_i16_i64_vl128_double_width(ptr %accptr, ptr %uptr, pt
   %u.wide = zext <16 x i16> %u to <16 x i64>
   %s.wide = zext <16 x i16> %s to <16 x i64>
   %mult = mul nuw nsw <16 x i64> %s.wide, %u.wide
-  %partial.reduce = tail call <4 x i64> @llvm.experimental.vector.partial.reduce.add(<4 x i64> %acc, <16 x i64> %mult)
+  %partial.reduce = tail call <4 x i64> @llvm.vector.partial.reduce.add(<4 x i64> %acc, <16 x i64> %mult)
   ret <4 x i64> %partial.reduce
 }
 
@@ -836,7 +836,7 @@ define <4 x i64> @four_way_i16_i64_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vsca
   %u.wide = zext <16 x i16> %u to <16 x i64>
   %s.wide = zext <16 x i16> %s to <16 x i64>
   %mult = mul nuw nsw <16 x i64> %s.wide, %u.wide
-  %partial.reduce = tail call <4 x i64> @llvm.experimental.vector.partial.reduce.add(<4 x i64> %acc, <16 x i64> %mult)
+  %partial.reduce = tail call <4 x i64> @llvm.vector.partial.reduce.add(<4 x i64> %acc, <16 x i64> %mult)
   ret <4 x i64> %partial.reduce
 }
 
@@ -889,7 +889,7 @@ define <2 x i64> @eight_way_i8_i64_vl128(ptr %accptr, ptr %uptr, ptr %sptr) {
   %u.wide = zext <16 x i8> %u to <16 x i64>
   %s.wide = zext <16 x i8> %s to <16 x i64>
   %mult = mul nuw nsw <16 x i64> %s.wide, %u.wide
-  %partial.reduce = tail call <2 x i64> @llvm.experimental.vector.partial.reduce.add(<2 x i64> %acc, <16 x i64> %mult)
+  %partial.reduce = tail call <2 x i64> @llvm.vector.partial.reduce.add(<2 x i64> %acc, <16 x i64> %mult)
   ret <2 x i64> %partial.reduce
 }
 
@@ -953,7 +953,7 @@ define <4 x i64> @four_way_i8_i64_vl128_double_width(ptr %accptr, ptr %uptr, ptr
   %u.wide = zext <32 x i8> %u to <32 x i64>
   %s.wide = zext <32 x i8> %s to <32 x i64>
   %mult = mul nuw nsw <32 x i64> %s.wide, %u.wide
-  %partial.reduce = tail call <4 x i64> @llvm.experimental.vector.partial.reduce.add(<4 x i64> %acc, <32 x i64> %mult)
+  %partial.reduce = tail call <4 x i64> @llvm.vector.partial.reduce.add(<4 x i64> %acc, <32 x i64> %mult)
   ret <4 x i64> %partial.reduce
 }
 
@@ -1010,6 +1010,6 @@ define <4 x i64> @four_way_i8_i64_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vscal
   %u.wide = zext <32 x i8> %u to <32 x i64>
   %s.wide = zext <32 x i8> %s to <32 x i64>
   %mult = mul nuw nsw <32 x i64> %s.wide, %u.wide
-  %partial.reduce = tail call <4 x i64> @llvm.experimental.vector.partial.reduce.add(<4 x i64> %acc, <32 x i64> %mult)
+  %partial.reduce = tail call <4 x i64> @llvm.vector.partial.reduce.add(<4 x i64> %acc, <32 x i64> %mult)
   ret <4 x i64> %partial.reduce
 }

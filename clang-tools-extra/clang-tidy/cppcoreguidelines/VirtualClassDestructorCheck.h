@@ -1,4 +1,4 @@
-//===--- VirtualClassDestructorCheck.h - clang-tidy -------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@ namespace clang::tidy::cppcoreguidelines {
 /// nor protected and non-virtual.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/virtual-class-destructor.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/virtual-class-destructor.html
 class VirtualClassDestructorCheck : public ClangTidyCheck {
 public:
   VirtualClassDestructorCheck(StringRef Name, ClangTidyContext *Context)

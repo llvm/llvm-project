@@ -5,14 +5,15 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "Annotations.h"
 #include "AST.h"
+#include "Annotations.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "SyncAPI.h"
 #include "TestFS.h"
 #include "TestTU.h"
+#include "TestWorkspace.h"
 #include "XRefs.h"
 #include "index/MemIndex.h"
 #include "clang/AST/Decl.h"
@@ -311,6 +312,7 @@ MATCHER_P3(sym, Name, Decl, DefOrNone, "") {
 MATCHER_P(sym, Name, "") { return arg.Name == Name; }
 
 MATCHER_P(rangeIs, R, "") { return arg.Loc.range == R; }
+MATCHER_P(fileIs, F, "") { return arg.Loc.uri.file() == F; }
 MATCHER_P(containerIs, C, "") {
   return arg.Loc.containerName.value_or("") == C;
 }
@@ -924,11 +926,19 @@ TEST(LocateSymbol, All) {
         }
       )cpp",
 
+      R"cpp(// auto with dependent type
+        template <typename>
+        struct [[A]] {};
+        template <typename T>
+        void foo(A<T> a) {
+          ^auto copy = a;
+        }
+      )cpp",
+
       R"cpp(// Override specifier jumps to overridden method
         class Y { virtual void $decl[[a]]() = 0; };
         class X : Y { void a() ^override {} };
       )cpp",
-
       R"cpp(// Final specifier jumps to overridden method
         class Y { virtual void $decl[[a]]() = 0; };
         class X : Y { void a() ^final {} };
@@ -2703,6 +2713,140 @@ TEST(FindReferences, NoQueryForLocalSymbols) {
     else
       EXPECT_EQ(Rec.RefIDs, std::nullopt) << T.AnnotatedCode;
   }
+}
+
+TEST(FindReferences, ConstructorForwardingInAST) {
+  Annotations Main(R"cpp(
+    namespace std {
+    template <class T> T &&forward(T &t);
+    template <class T, class... Args> T *make_unique(Args &&...args) {
+      return new T(std::forward<Args>(args)...);
+    }
+    }
+
+    struct Test {
+      $Constructor[[T^est]](){}
+    };
+
+    int main() {
+      auto a = std::$Caller[[make_unique]]<Test>();
+    }
+  )cpp");
+  TestTU TU;
+  TU.Code = std::string(Main.code());
+  auto AST = TU.build();
+
+  EXPECT_THAT(findReferences(AST, Main.point(), 0).References,
+              ElementsAre(rangeIs(Main.range("Constructor")),
+                          rangeIs(Main.range("Caller"))));
+}
+
+TEST(FindReferences, ConstructorForwardingInASTChained) {
+  Annotations Main(R"cpp(
+    namespace std {
+    template <class T> T &&forward(T &t);
+    template <class T, class... Args> T *make_unique(Args &&...args) {
+      return new T(forward<Args>(args)...);
+    }
+    template <class T, class... Args> T *make_unique2(Args &&...args) {
+      return make_unique<T>(forward<Args>(args)...);
+    }
+    template <class T, class... Args> T *make_unique3(Args &&...args) {
+      return make_unique2<T>(forward<Args>(args)...);
+    }
+    }
+
+    struct Test {
+      $Constructor[[T^est]](){}
+    };
+
+    int main() {
+      auto a = std::$Caller[[make_unique3]]<Test>();
+    }
+  )cpp");
+  TestTU TU;
+  TU.Code = std::string(Main.code());
+  auto AST = TU.build();
+
+  EXPECT_THAT(findReferences(AST, Main.point(), 0).References,
+              ElementsAre(rangeIs(Main.range("Constructor")),
+                          rangeIs(Main.range("Caller"))));
+}
+
+TEST(FindReferences, ConstructorForwardingInIndex) {
+  Annotations Header(R"cpp(
+    namespace std {
+    template <class T> T &&forward(T &t);
+    template <class T, class... Args> T *make_unique(Args &&...args) {
+      return new T(std::forward<Args>(args)...);
+    }
+    }
+    struct Test {
+      [[T^est]](){}
+    };
+  )cpp");
+  Annotations Main(R"cpp(
+    #include "header.hpp"
+    int main() {
+      auto a = std::[[make_unique]]<Test>();
+    }
+  )cpp");
+  TestWorkspace TW;
+  TW.addSource("header.hpp", Header.code());
+  TW.addMainFile("main.cpp", Main.code());
+  auto AST = TW.openFile("header.hpp").value();
+  auto Index = TW.index();
+
+  EXPECT_THAT(
+      findReferences(AST, Header.point(), 0, Index.get(),
+                     /*AddContext*/ true)
+          .References,
+      ElementsAre(
+          AllOf(rangeIs(Header.range()), fileIs(testPath("header.hpp"))),
+          AllOf(rangeIs(Main.range()), fileIs(testPath("main.cpp")))));
+}
+
+TEST(FindReferences, TemplatedConstructorForwarding) {
+  Annotations Main(R"cpp(
+    namespace std {
+    template <class T> T &&forward(T &t);
+    template <class T, class... Args> T *make_unique(Args &&...args) {
+      return new T(std::forward<Args>(args)...);
+    }
+    }
+
+    struct Waldo {
+      template <typename T>
+      $Constructor[[W$Waldo^aldo]](T);
+    };
+    template <typename T>
+    struct Waldo2 {
+      $Constructor2[[W$Waldo2^aldo2]](int);
+    };
+    struct S {};
+
+    int main() {
+      S s;
+      Waldo $Caller[[w]](s);
+      std::$ForwardedCaller[[make_unique]]<Waldo>(s);
+
+      Waldo2<int> $Caller2[[w2]](42);
+      std::$ForwardedCaller2[[make_unique]]<Waldo2<int>>(42);
+    }
+  )cpp");
+  TestTU TU;
+  TU.Code = std::string(Main.code());
+  auto AST = TU.build();
+
+  EXPECT_THAT(findReferences(AST, Main.point("Waldo"), 0).References,
+              ElementsAre(rangeIs(Main.range("Constructor")),
+                          rangeIs(Main.range("Caller")),
+                          rangeIs(Main.range("ForwardedCaller"))));
+
+  EXPECT_THAT(findReferences(AST, Main.point("Waldo2"), 0).References,
+              ElementsAre(rangeIs(Main.range("Constructor2")),
+                          rangeIs(Main.range("Caller2")),
+                          rangeIs(Main.range("ForwardedCaller2"))));
 }
 
 TEST(GetNonLocalDeclRefs, All) {

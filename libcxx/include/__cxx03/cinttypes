@@ -241,9 +241,9 @@ uintmax_t wcstoumax(const wchar_t* restrict nptr, wchar_t** restrict endptr, int
 // [cinttypes.syn]
 #include <__cxx03/cstdint>
 
-#include <__cxx03/inttypes.h>
+#include <inttypes.h>
 
-#ifndef _LIBCPP___CXX03_INTTYPES_H
+#ifndef _LIBCPP_INTTYPES_H
 #   error <cinttypes> tried including <inttypes.h> but didn't find libc++'s <inttypes.h> header. \
           This usually means that your header search paths are not configured properly. \
           The header search paths should contain the C++ Standard Library headers before \

@@ -1,4 +1,4 @@
-//===--- StringFindStrContainsCheck.cc - clang-tidy------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -33,10 +33,11 @@ namespace {
 AST_MATCHER(Type, isCharType) { return Node.isCharType(); }
 } // namespace
 
-static const char DefaultStringLikeClasses[] = "::std::basic_string;"
-                                               "::std::basic_string_view;"
-                                               "::absl::string_view";
-static const char DefaultAbseilStringsMatchHeader[] = "absl/strings/match.h";
+static constexpr char DefaultStringLikeClasses[] = "::std::basic_string;"
+                                                   "::std::basic_string_view;"
+                                                   "::absl::string_view";
+static constexpr char DefaultAbseilStringsMatchHeader[] =
+    "absl/strings/match.h";
 
 static transformer::RewriteRuleWith<std::string>
 makeRewriteRule(ArrayRef<StringRef> StringLikeClassNames,

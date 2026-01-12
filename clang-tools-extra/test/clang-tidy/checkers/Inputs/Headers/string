@@ -50,11 +50,18 @@ struct basic_string {
   size_type find(const _Type& str, size_type pos = 0) const;
   size_type find(const C* s, size_type pos = 0) const;
   size_type find(const C* s, size_type pos, size_type n) const;
+  size_type find(C ch, size_type pos = 0) const;
+  template<class StringViewLike>
+  size_type find(const StringViewLike& t, size_type pos = 0) const;
 
   size_type rfind(const _Type& str, size_type pos = npos) const;
   size_type rfind(const C* s, size_type pos, size_type count) const;
   size_type rfind(const C* s, size_type pos = npos) const;
   size_type rfind(C ch, size_type pos = npos) const;
+
+  constexpr bool contains(std::basic_string_view<C, T> sv) const noexcept;
+  constexpr bool contains(C ch) const noexcept;
+  constexpr bool contains(const C* s) const;
 
   _Type& insert(size_type pos, const _Type& str);
   _Type& insert(size_type pos, const C* s);
@@ -109,6 +116,10 @@ struct basic_string_view {
   size_type rfind(C ch, size_type pos = npos) const;
   size_type rfind(const C* s, size_type pos, size_type count) const;
   size_type rfind(const C* s, size_type pos = npos) const;
+
+  constexpr bool contains(basic_string_view sv) const noexcept;
+  constexpr bool contains(C ch) const noexcept;
+  constexpr bool contains(const C* s) const;
 
   constexpr bool starts_with(basic_string_view sv) const noexcept;
   constexpr bool starts_with(C ch) const noexcept;

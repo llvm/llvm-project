@@ -85,8 +85,8 @@ define amdgpu_kernel void @buffers_from_flat_dont_alias(ptr noalias %a.flat, ptr
 ; GISEL-NEXT:    v_mul_f32_e32 v3, v3, v3
 ; GISEL-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; GISEL-NEXT:    s_endpgm
-  %a = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr %a.flat, i16 0, i32 16, i32 0)
-  %b = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr %b.flat, i16 0, i32 16, i32 0)
+  %a = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr %a.flat, i16 0, i64 16, i32 0)
+  %b = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr %b.flat, i16 0, i64 16, i32 0)
 
   %l0 = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %a, i32 0, i32 0, i32 0)
   %s0 = fmul float %l0, %l0
@@ -211,4 +211,4 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 
 declare float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8), i32, i32, i32)
 declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32 immarg)
-declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr readnone nocapture, i16, i32, i32)
+declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr readnone nocapture, i16, i64, i32)

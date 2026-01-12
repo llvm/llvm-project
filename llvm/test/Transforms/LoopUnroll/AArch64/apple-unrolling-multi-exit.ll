@@ -73,7 +73,7 @@ define i1 @multi_2_exit_find_i8_loop(ptr %vec, i8 %tgt) {
 ; APPLE-NEXT:    [[C_2_3:%.*]] = icmp eq ptr [[PTR_IV_NEXT_3]], [[END]]
 ; APPLE-NEXT:    br i1 [[C_2_3]], label %[[EXIT_UNR_LCSSA_LOOPEXIT]], label %[[LOOP_HEADER]]
 ; APPLE:       [[EXIT_UNR_LCSSA_LOOPEXIT]]:
-; APPLE-NEXT:    [[RES_PH_PH:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP_HEADER]] ], [ [[PTR_IV_NEXT]], %[[LOOP_LATCH]] ], [ [[PTR_IV_NEXT_1]], %[[LOOP_LATCH_1]] ], [ [[PTR_IV_NEXT_2]], %[[LOOP_LATCH_2]] ], [ [[END]], %[[LOOP_LATCH_3]] ]
+; APPLE-NEXT:    [[RES_PH_PH:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP_HEADER]] ], [ [[END]], %[[LOOP_LATCH_3]] ], [ [[PTR_IV_NEXT]], %[[LOOP_LATCH]] ], [ [[PTR_IV_NEXT_2]], %[[LOOP_LATCH_2]] ], [ [[PTR_IV_NEXT_1]], %[[LOOP_LATCH_1]] ]
 ; APPLE-NEXT:    br label %[[EXIT_UNR_LCSSA:.*]]
 ; APPLE:       [[EXIT_UNR_LCSSA_LOOPEXIT3]]:
 ; APPLE-NEXT:    [[RES_PH_PH4:%.*]] = phi ptr [ [[PTR_IV_PROL]], %[[LOOP_HEADER_PROL]] ]
@@ -201,7 +201,7 @@ define i1 @multi_2_exit_find_ptr_loop(ptr %vec, ptr %tgt) {
 ; APPLE-NEXT:    [[C_2_3:%.*]] = icmp eq ptr [[PTR_IV_NEXT_3]], [[END]]
 ; APPLE-NEXT:    br i1 [[C_2_3]], label %[[EXIT_UNR_LCSSA_LOOPEXIT]], label %[[LOOP_HEADER]]
 ; APPLE:       [[EXIT_UNR_LCSSA_LOOPEXIT]]:
-; APPLE-NEXT:    [[RES_PH_PH:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP_HEADER]] ], [ [[PTR_IV_NEXT]], %[[LOOP_LATCH]] ], [ [[PTR_IV_NEXT_1]], %[[LOOP_LATCH_1]] ], [ [[PTR_IV_NEXT_2]], %[[LOOP_LATCH_2]] ], [ [[END]], %[[LOOP_LATCH_3]] ]
+; APPLE-NEXT:    [[RES_PH_PH:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP_HEADER]] ], [ [[END]], %[[LOOP_LATCH_3]] ], [ [[PTR_IV_NEXT]], %[[LOOP_LATCH]] ], [ [[PTR_IV_NEXT_2]], %[[LOOP_LATCH_2]] ], [ [[PTR_IV_NEXT_1]], %[[LOOP_LATCH_1]] ]
 ; APPLE-NEXT:    br label %[[EXIT_UNR_LCSSA:.*]]
 ; APPLE:       [[EXIT_UNR_LCSSA_LOOPEXIT3]]:
 ; APPLE-NEXT:    [[RES_PH_PH4:%.*]] = phi ptr [ [[PTR_IV_PROL]], %[[LOOP_HEADER_PROL]] ]

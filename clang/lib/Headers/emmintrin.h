@@ -27,7 +27,6 @@ typedef double __v2df __attribute__((__vector_size__(16)));
 
 /* Unsigned types */
 typedef unsigned long long __v2du __attribute__((__vector_size__(16)));
-typedef unsigned char __v16qu __attribute__((__vector_size__(16)));
 
 /* We need an explicitly signed variant for char. Note that this shouldn't
  * appear in the interface though. */
@@ -44,15 +43,9 @@ typedef __bf16 __m128bh __attribute__((__vector_size__(16), __aligned__(16)));
 #endif
 
 /* Define the default attributes for the functions in this file. */
-#if defined(__EVEX512__) && !defined(__AVX10_1_512__)
-#define __DEFAULT_FN_ATTRS                                                     \
-  __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("sse2,no-evex512"), __min_vector_width__(128)))
-#else
 #define __DEFAULT_FN_ATTRS                                                     \
   __attribute__((__always_inline__, __nodebug__, __target__("sse2"),           \
                  __min_vector_width__(128)))
-#endif
 
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 #define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS constexpr
@@ -248,8 +241,7 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_div_pd(__m128d __a,
 ///    bits are copied from the upper 64 bits of operand \a __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_sqrt_sd(__m128d __a,
                                                          __m128d __b) {
-  __m128d __c = __builtin_ia32_sqrtsd((__v2df)__b);
-  return __extension__(__m128d){__c[0], __a[1]};
+  return __extension__(__m128d){__builtin_elementwise_sqrt(__b[0]), __a[1]};
 }
 
 /// Calculates the square root of the each of two values stored in a
@@ -264,7 +256,7 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_sqrt_sd(__m128d __a,
 /// \returns A 128-bit vector of [2 x double] containing the square roots of the
 ///    values in the operand.
 static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_sqrt_pd(__m128d __a) {
-  return __builtin_ia32_sqrtpd((__v2df)__a);
+  return __builtin_elementwise_sqrt(__a);
 }
 
 /// Compares lower 64-bit double-precision values of both operands, and
@@ -1286,7 +1278,8 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_ucomineq_sd(__m128d __a,
 ///    A 128-bit vector of [2 x double].
 /// \returns A 128-bit vector of [4 x float] whose lower 64 bits contain the
 ///    converted values. The upper 64 bits are set to zero.
-static __inline__ __m128 __DEFAULT_FN_ATTRS _mm_cvtpd_ps(__m128d __a) {
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cvtpd_ps(__m128d __a) {
   return __builtin_ia32_cvtpd2ps((__v2df)__a);
 }
 
@@ -1391,8 +1384,8 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_cvtsd_si32(__m128d __a) {
 /// \returns A 128-bit vector of [4 x float]. The lower 32 bits contain the
 ///    converted value from the second parameter. The upper 96 bits are copied
 ///    from the upper 96 bits of the first parameter.
-static __inline__ __m128 __DEFAULT_FN_ATTRS _mm_cvtsd_ss(__m128 __a,
-                                                         __m128d __b) {
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cvtsd_ss(__m128 __a, __m128d __b) {
   return (__m128)__builtin_ia32_cvtsd2ss((__v4sf)__a, (__v2df)__b);
 }
 
@@ -2066,8 +2059,8 @@ static __inline__ void __DEFAULT_FN_ATTRS _mm_storel_pd(double *__dp,
 ///    A 128-bit vector of [16 x i8].
 /// \returns A 128-bit vector of [16 x i8] containing the sums of both
 ///    parameters.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_add_epi8(__m128i __a,
-                                                          __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_add_epi8(__m128i __a, __m128i __b) {
   return (__m128i)((__v16qu)__a + (__v16qu)__b);
 }
 
@@ -2087,8 +2080,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_add_epi8(__m128i __a,
 ///    A 128-bit vector of [8 x i16].
 /// \returns A 128-bit vector of [8 x i16] containing the sums of both
 ///    parameters.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_add_epi16(__m128i __a,
-                                                           __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_add_epi16(__m128i __a, __m128i __b) {
   return (__m128i)((__v8hu)__a + (__v8hu)__b);
 }
 
@@ -2253,9 +2246,9 @@ _mm_adds_epu16(__m128i __a, __m128i __b) {
 ///    A 128-bit unsigned [16 x i8] vector.
 /// \returns A 128-bit unsigned [16 x i8] vector containing the rounded
 ///    averages of both parameters.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_avg_epu8(__m128i __a,
-                                                          __m128i __b) {
-  return (__m128i)__builtin_ia32_pavgb128((__v16qi)__a, (__v16qi)__b);
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_avg_epu8(__m128i __a, __m128i __b) {
+  return (__m128i)__builtin_ia32_pavgb128((__v16qu)__a, (__v16qu)__b);
 }
 
 /// Computes the rounded averages of corresponding elements of two
@@ -2272,9 +2265,9 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_avg_epu8(__m128i __a,
 ///    A 128-bit unsigned [8 x i16] vector.
 /// \returns A 128-bit unsigned [8 x i16] vector containing the rounded
 ///    averages of both parameters.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_avg_epu16(__m128i __a,
-                                                           __m128i __b) {
-  return (__m128i)__builtin_ia32_pavgw128((__v8hi)__a, (__v8hi)__b);
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_avg_epu16(__m128i __a, __m128i __b) {
+  return (__m128i)__builtin_ia32_pavgw128((__v8hu)__a, (__v8hu)__b);
 }
 
 /// Multiplies the corresponding elements of two 128-bit signed [8 x i16]
@@ -2297,8 +2290,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_avg_epu16(__m128i __a,
 ///    A 128-bit signed [8 x i16] vector.
 /// \returns A 128-bit signed [4 x i32] vector containing the sums of products
 ///    of both parameters.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_madd_epi16(__m128i __a,
-                                                            __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_madd_epi16(__m128i __a, __m128i __b) {
   return (__m128i)__builtin_ia32_pmaddwd128((__v8hi)__a, (__v8hi)__b);
 }
 
@@ -2316,8 +2309,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_madd_epi16(__m128i __a,
 ///    A 128-bit signed [8 x i16] vector.
 /// \returns A 128-bit signed [8 x i16] vector containing the greater value of
 ///    each comparison.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_max_epi16(__m128i __a,
-                                                           __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_max_epi16(__m128i __a, __m128i __b) {
   return (__m128i)__builtin_elementwise_max((__v8hi)__a, (__v8hi)__b);
 }
 
@@ -2335,8 +2328,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_max_epi16(__m128i __a,
 ///    A 128-bit unsigned [16 x i8] vector.
 /// \returns A 128-bit unsigned [16 x i8] vector containing the greater value of
 ///    each comparison.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_max_epu8(__m128i __a,
-                                                          __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_max_epu8(__m128i __a, __m128i __b) {
   return (__m128i)__builtin_elementwise_max((__v16qu)__a, (__v16qu)__b);
 }
 
@@ -2354,8 +2347,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_max_epu8(__m128i __a,
 ///    A 128-bit signed [8 x i16] vector.
 /// \returns A 128-bit signed [8 x i16] vector containing the smaller value of
 ///    each comparison.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_min_epi16(__m128i __a,
-                                                           __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_min_epi16(__m128i __a, __m128i __b) {
   return (__m128i)__builtin_elementwise_min((__v8hi)__a, (__v8hi)__b);
 }
 
@@ -2373,8 +2366,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_min_epi16(__m128i __a,
 ///    A 128-bit unsigned [16 x i8] vector.
 /// \returns A 128-bit unsigned [16 x i8] vector containing the smaller value of
 ///    each comparison.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_min_epu8(__m128i __a,
-                                                          __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_min_epu8(__m128i __a, __m128i __b) {
   return (__m128i)__builtin_elementwise_min((__v16qu)__a, (__v16qu)__b);
 }
 
@@ -2505,8 +2498,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sad_epu8(__m128i __a,
 ///    A 128-bit integer vector containing the subtrahends.
 /// \returns A 128-bit integer vector containing the differences of the values
 ///    in the operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sub_epi8(__m128i __a,
-                                                          __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_sub_epi8(__m128i __a, __m128i __b) {
   return (__m128i)((__v16qu)__a - (__v16qu)__b);
 }
 
@@ -2522,8 +2515,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sub_epi8(__m128i __a,
 ///    A 128-bit integer vector containing the subtrahends.
 /// \returns A 128-bit integer vector containing the differences of the values
 ///    in the operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sub_epi16(__m128i __a,
-                                                           __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_sub_epi16(__m128i __a, __m128i __b) {
   return (__m128i)((__v8hu)__a - (__v8hu)__b);
 }
 
@@ -2752,11 +2745,11 @@ _mm_xor_si128(__m128i __a, __m128i __b) {
 ///    \a a.
 /// \returns A 128-bit integer vector containing the left-shifted value.
 #define _mm_slli_si128(a, imm)                                                 \
-  ((__m128i)__builtin_ia32_pslldqi128_byteshift((__v2di)(__m128i)(a),          \
+  ((__m128i)__builtin_ia32_pslldqi128_byteshift((__v16qi)(__m128i)(a),         \
                                                 (int)(imm)))
 
 #define _mm_bslli_si128(a, imm)                                                \
-  ((__m128i)__builtin_ia32_pslldqi128_byteshift((__v2di)(__m128i)(a),          \
+  ((__m128i)__builtin_ia32_pslldqi128_byteshift((__v16qi)(__m128i)(a),         \
                                                 (int)(imm)))
 
 /// Left-shifts each 16-bit value in the 128-bit integer vector operand
@@ -2772,8 +2765,8 @@ _mm_xor_si128(__m128i __a, __m128i __b) {
 ///    An integer value specifying the number of bits to left-shift each value
 ///    in operand \a __a.
 /// \returns A 128-bit integer vector containing the left-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_slli_epi16(__m128i __a,
-                                                            int __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_slli_epi16(__m128i __a, int __count) {
   return (__m128i)__builtin_ia32_psllwi128((__v8hi)__a, __count);
 }
 
@@ -2790,8 +2783,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_slli_epi16(__m128i __a,
 ///    A 128-bit integer vector in which bits [63:0] specify the number of bits
 ///    to left-shift each value in operand \a __a.
 /// \returns A 128-bit integer vector containing the left-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sll_epi16(__m128i __a,
-                                                           __m128i __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_sll_epi16(__m128i __a, __m128i __count) {
   return (__m128i)__builtin_ia32_psllw128((__v8hi)__a, (__v8hi)__count);
 }
 
@@ -2808,8 +2801,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sll_epi16(__m128i __a,
 ///    An integer value specifying the number of bits to left-shift each value
 ///    in operand \a __a.
 /// \returns A 128-bit integer vector containing the left-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_slli_epi32(__m128i __a,
-                                                            int __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_slli_epi32(__m128i __a, int __count) {
   return (__m128i)__builtin_ia32_pslldi128((__v4si)__a, __count);
 }
 
@@ -2826,8 +2819,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_slli_epi32(__m128i __a,
 ///    A 128-bit integer vector in which bits [63:0] specify the number of bits
 ///    to left-shift each value in operand \a __a.
 /// \returns A 128-bit integer vector containing the left-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sll_epi32(__m128i __a,
-                                                           __m128i __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_sll_epi32(__m128i __a, __m128i __count) {
   return (__m128i)__builtin_ia32_pslld128((__v4si)__a, (__v4si)__count);
 }
 
@@ -2844,8 +2837,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sll_epi32(__m128i __a,
 ///    An integer value specifying the number of bits to left-shift each value
 ///    in operand \a __a.
 /// \returns A 128-bit integer vector containing the left-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_slli_epi64(__m128i __a,
-                                                            int __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_slli_epi64(__m128i __a, int __count) {
   return __builtin_ia32_psllqi128((__v2di)__a, __count);
 }
 
@@ -2862,8 +2855,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_slli_epi64(__m128i __a,
 ///    A 128-bit integer vector in which bits [63:0] specify the number of bits
 ///    to left-shift each value in operand \a __a.
 /// \returns A 128-bit integer vector containing the left-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sll_epi64(__m128i __a,
-                                                           __m128i __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_sll_epi64(__m128i __a, __m128i __count) {
   return __builtin_ia32_psllq128((__v2di)__a, (__v2di)__count);
 }
 
@@ -2881,8 +2874,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sll_epi64(__m128i __a,
 ///    An integer value specifying the number of bits to right-shift each value
 ///    in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_srai_epi16(__m128i __a,
-                                                            int __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_srai_epi16(__m128i __a, int __count) {
   return (__m128i)__builtin_ia32_psrawi128((__v8hi)__a, __count);
 }
 
@@ -2900,8 +2893,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_srai_epi16(__m128i __a,
 ///    A 128-bit integer vector in which bits [63:0] specify the number of bits
 ///    to right-shift each value in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sra_epi16(__m128i __a,
-                                                           __m128i __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_sra_epi16(__m128i __a, __m128i __count) {
   return (__m128i)__builtin_ia32_psraw128((__v8hi)__a, (__v8hi)__count);
 }
 
@@ -2919,8 +2912,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sra_epi16(__m128i __a,
 ///    An integer value specifying the number of bits to right-shift each value
 ///    in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_srai_epi32(__m128i __a,
-                                                            int __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_srai_epi32(__m128i __a, int __count) {
   return (__m128i)__builtin_ia32_psradi128((__v4si)__a, __count);
 }
 
@@ -2938,8 +2931,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_srai_epi32(__m128i __a,
 ///    A 128-bit integer vector in which bits [63:0] specify the number of bits
 ///    to right-shift each value in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sra_epi32(__m128i __a,
-                                                           __m128i __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_sra_epi32(__m128i __a, __m128i __count) {
   return (__m128i)__builtin_ia32_psrad128((__v4si)__a, (__v4si)__count);
 }
 
@@ -2961,11 +2954,11 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sra_epi32(__m128i __a,
 ///    \a a.
 /// \returns A 128-bit integer vector containing the right-shifted value.
 #define _mm_srli_si128(a, imm)                                                 \
-  ((__m128i)__builtin_ia32_psrldqi128_byteshift((__v2di)(__m128i)(a),          \
+  ((__m128i)__builtin_ia32_psrldqi128_byteshift((__v16qi)(__m128i)(a),         \
                                                 (int)(imm)))
 
 #define _mm_bsrli_si128(a, imm)                                                \
-  ((__m128i)__builtin_ia32_psrldqi128_byteshift((__v2di)(__m128i)(a),          \
+  ((__m128i)__builtin_ia32_psrldqi128_byteshift((__v16qi)(__m128i)(a),         \
                                                 (int)(imm)))
 
 /// Right-shifts each of 16-bit values in the 128-bit integer vector
@@ -2981,8 +2974,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sra_epi32(__m128i __a,
 ///    An integer value specifying the number of bits to right-shift each value
 ///    in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_srli_epi16(__m128i __a,
-                                                            int __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_srli_epi16(__m128i __a, int __count) {
   return (__m128i)__builtin_ia32_psrlwi128((__v8hi)__a, __count);
 }
 
@@ -2999,8 +2992,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_srli_epi16(__m128i __a,
 ///    A 128-bit integer vector in which bits [63:0] specify the number of bits
 ///    to right-shift each value in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_srl_epi16(__m128i __a,
-                                                           __m128i __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_srl_epi16(__m128i __a, __m128i __count) {
   return (__m128i)__builtin_ia32_psrlw128((__v8hi)__a, (__v8hi)__count);
 }
 
@@ -3017,8 +3010,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_srl_epi16(__m128i __a,
 ///    An integer value specifying the number of bits to right-shift each value
 ///    in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_srli_epi32(__m128i __a,
-                                                            int __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_srli_epi32(__m128i __a, int __count) {
   return (__m128i)__builtin_ia32_psrldi128((__v4si)__a, __count);
 }
 
@@ -3035,8 +3028,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_srli_epi32(__m128i __a,
 ///    A 128-bit integer vector in which bits [63:0] specify the number of bits
 ///    to right-shift each value in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_srl_epi32(__m128i __a,
-                                                           __m128i __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_srl_epi32(__m128i __a, __m128i __count) {
   return (__m128i)__builtin_ia32_psrld128((__v4si)__a, (__v4si)__count);
 }
 
@@ -3053,8 +3046,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_srl_epi32(__m128i __a,
 ///    An integer value specifying the number of bits to right-shift each value
 ///    in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_srli_epi64(__m128i __a,
-                                                            int __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_srli_epi64(__m128i __a, int __count) {
   return __builtin_ia32_psrlqi128((__v2di)__a, __count);
 }
 
@@ -3071,8 +3064,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_srli_epi64(__m128i __a,
 ///    A 128-bit integer vector in which bits [63:0] specify the number of bits
 ///    to right-shift each value in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_srl_epi64(__m128i __a,
-                                                           __m128i __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_srl_epi64(__m128i __a, __m128i __count) {
   return __builtin_ia32_psrlq128((__v2di)__a, (__v2di)__count);
 }
 
@@ -3090,8 +3083,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_srl_epi64(__m128i __a,
 /// \param __b
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpeq_epi8(__m128i __a,
-                                                            __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpeq_epi8(__m128i __a, __m128i __b) {
   return (__m128i)((__v16qi)__a == (__v16qi)__b);
 }
 
@@ -3109,8 +3102,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpeq_epi8(__m128i __a,
 /// \param __b
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpeq_epi16(__m128i __a,
-                                                             __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpeq_epi16(__m128i __a, __m128i __b) {
   return (__m128i)((__v8hi)__a == (__v8hi)__b);
 }
 
@@ -3128,8 +3121,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpeq_epi16(__m128i __a,
 /// \param __b
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpeq_epi32(__m128i __a,
-                                                             __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpeq_epi32(__m128i __a, __m128i __b) {
   return (__m128i)((__v4si)__a == (__v4si)__b);
 }
 
@@ -3148,8 +3141,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpeq_epi32(__m128i __a,
 /// \param __b
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpgt_epi8(__m128i __a,
-                                                            __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpgt_epi8(__m128i __a, __m128i __b) {
   /* This function always performs a signed comparison, but __v16qi is a char
      which may be signed or unsigned, so use __v16qs. */
   return (__m128i)((__v16qs)__a > (__v16qs)__b);
@@ -3170,8 +3163,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpgt_epi8(__m128i __a,
 /// \param __b
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpgt_epi16(__m128i __a,
-                                                             __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpgt_epi16(__m128i __a, __m128i __b) {
   return (__m128i)((__v8hi)__a > (__v8hi)__b);
 }
 
@@ -3190,8 +3183,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpgt_epi16(__m128i __a,
 /// \param __b
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpgt_epi32(__m128i __a,
-                                                             __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpgt_epi32(__m128i __a, __m128i __b) {
   return (__m128i)((__v4si)__a > (__v4si)__b);
 }
 
@@ -3210,8 +3203,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpgt_epi32(__m128i __a,
 /// \param __b
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmplt_epi8(__m128i __a,
-                                                            __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmplt_epi8(__m128i __a, __m128i __b) {
   return _mm_cmpgt_epi8(__b, __a);
 }
 
@@ -3230,8 +3223,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmplt_epi8(__m128i __a,
 /// \param __b
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmplt_epi16(__m128i __a,
-                                                             __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmplt_epi16(__m128i __a, __m128i __b) {
   return _mm_cmpgt_epi16(__b, __a);
 }
 
@@ -3250,8 +3243,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmplt_epi16(__m128i __a,
 /// \param __b
 ///    A 128-bit integer vector.
 /// \returns A 128-bit integer vector containing the comparison results.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmplt_epi32(__m128i __a,
-                                                             __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmplt_epi32(__m128i __a, __m128i __b) {
   return _mm_cmpgt_epi32(__b, __a);
 }
 
@@ -4166,8 +4159,8 @@ void _mm_mfence(void);
 ///   A 128-bit integer vector of [8 x i16]. The converted [8 x i8] values are
 ///   written to the higher 64 bits of the result.
 /// \returns A 128-bit vector of [16 x i8] containing the converted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_packs_epi16(__m128i __a,
-                                                             __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_packs_epi16(__m128i __a, __m128i __b) {
   return (__m128i)__builtin_ia32_packsswb128((__v8hi)__a, (__v8hi)__b);
 }
 
@@ -4189,8 +4182,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_packs_epi16(__m128i __a,
 ///    A 128-bit integer vector of [4 x i32]. The converted [4 x i16] values
 ///    are written to the higher 64 bits of the result.
 /// \returns A 128-bit vector of [8 x i16] containing the converted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_packs_epi32(__m128i __a,
-                                                             __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_packs_epi32(__m128i __a, __m128i __b) {
   return (__m128i)__builtin_ia32_packssdw128((__v4si)__a, (__v4si)__b);
 }
 
@@ -4212,8 +4205,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_packs_epi32(__m128i __a,
 ///    A 128-bit integer vector of [8 x i16]. The converted [8 x i8] values are
 ///    written to the higher 64 bits of the result.
 /// \returns A 128-bit vector of [16 x i8] containing the converted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_packus_epi16(__m128i __a,
-                                                              __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_packus_epi16(__m128i __a, __m128i __b) {
   return (__m128i)__builtin_ia32_packuswb128((__v8hi)__a, (__v8hi)__b);
 }
 
@@ -4287,7 +4280,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_packus_epi16(__m128i __a,
 ///    A 128-bit integer vector containing the values with bits to be extracted.
 /// \returns The most significant bits from each 8-bit element in \a __a,
 ///    written to bits [15:0]. The other bits are assigned zeros.
-static __inline__ int __DEFAULT_FN_ATTRS _mm_movemask_epi8(__m128i __a) {
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_movemask_epi8(__m128i __a) {
   return __builtin_ia32_pmovmskb128((__v16qi)__a);
 }
 
@@ -4706,7 +4700,8 @@ _mm_unpacklo_pd(__m128d __a, __m128d __b) {
 ///    be extracted.
 /// \returns The sign bits from each of the double-precision elements in \a __a,
 ///    written to bits [1:0]. The remaining bits are assigned values of zero.
-static __inline__ int __DEFAULT_FN_ATTRS _mm_movemask_pd(__m128d __a) {
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_movemask_pd(__m128d __a) {
   return __builtin_ia32_movmskpd((__v2df)__a);
 }
 

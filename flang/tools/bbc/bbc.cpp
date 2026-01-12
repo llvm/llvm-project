@@ -316,13 +316,14 @@ createTargetMachine(llvm::StringRef targetTriple, std::string &error) {
   std::string triple{targetTriple};
   if (triple.empty())
     triple = llvm::sys::getDefaultTargetTriple();
+  llvm::Triple parsedTriple(triple);
 
   const llvm::Target *theTarget =
-      llvm::TargetRegistry::lookupTarget(triple, error);
+      llvm::TargetRegistry::lookupTarget(parsedTriple, error);
   if (!theTarget)
     return nullptr;
   return std::unique_ptr<llvm::TargetMachine>{
-      theTarget->createTargetMachine(llvm::Triple(triple), /*CPU=*/"",
+      theTarget->createTargetMachine(parsedTriple, /*CPU=*/"",
                                      /*Features=*/"", llvm::TargetOptions(),
                                      /*Reloc::Model=*/std::nullopt)};
 }
@@ -417,7 +418,10 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   }
 
   if (pftDumpTest) {
-    if (auto ast = Fortran::lower::createPFT(parseTree, semanticsContext)) {
+    // Use default lowering options for PFT dump test
+    Fortran::lower::LoweringOptions loweringOptions{};
+    if (auto ast = Fortran::lower::createPFT(parseTree, semanticsContext,
+                                             loweringOptions)) {
       Fortran::lower::dumpPFT(llvm::outs(), *ast);
       return mlir::success();
     }
@@ -538,6 +542,7 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
 
     // Add O2 optimizer pass pipeline.
     MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
+    config.SkipConvertComplexPow = targetMachine.getTargetTriple().isAMDGCN();
     if (enableOpenMP)
       config.EnableOpenMP = true;
     config.NSWOnLoopVarInc = !integerWrapAround;

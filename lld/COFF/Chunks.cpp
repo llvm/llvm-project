@@ -564,7 +564,7 @@ void SectionChunk::getBaserels(std::vector<Baserel> *res) {
     if (ty == IMAGE_REL_BASED_ABSOLUTE)
       continue;
     Symbol *target = file->getSymbol(rel.SymbolTableIndex);
-    if (!target || isa<DefinedAbsolute>(target))
+    if (!isa_and_nonnull<Defined>(target) || isa<DefinedAbsolute>(target))
       continue;
     res->emplace_back(rva + rel.VirtualAddress, ty);
   }
@@ -777,7 +777,7 @@ uint32_t SectionChunk::getSectionNumber() const {
   return s.getIndex() + 1;
 }
 
-CommonChunk::CommonChunk(const COFFSymbolRef s) : sym(s) {
+CommonChunk::CommonChunk(const COFFSymbolRef s) : live(false), sym(s) {
   // The value of a common symbol is its size. Align all common symbols smaller
   // than 32 bytes naturally, i.e. round the size up to the next power of two.
   // This is what MSVC link.exe does.
@@ -946,7 +946,7 @@ void ECCodeMapChunk::writeTo(uint8_t *buf) const {
   auto table = reinterpret_cast<chpe_range_entry *>(buf);
   for (uint32_t i = 0; i < map.size(); i++) {
     const ECCodeMapEntry &entry = map[i];
-    uint32_t start = entry.first->getRVA();
+    uint32_t start = entry.first->getRVA() & ~0xfff;
     table[i].StartOffset = start | entry.type;
     table[i].Length = entry.last->getRVA() + entry.last->getSize() - start;
   }

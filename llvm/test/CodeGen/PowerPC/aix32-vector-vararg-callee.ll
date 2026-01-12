@@ -17,11 +17,11 @@ define <4 x i32> @callee(i32 %count, ...) {
   ; CHECK:   [[COPY6:%[0-9]+]]:gprc = COPY $r4
   ; CHECK:   STW [[COPY6]], 0, %fixed-stack.0 :: (store (s32) into %fixed-stack.0)
   ; CHECK:   STW [[COPY5]], 4, %fixed-stack.0 :: (store (s32) into %fixed-stack.0 + 4)
-  ; CHECK:   STW [[COPY4]], 8, %fixed-stack.0 :: (store (s32))
-  ; CHECK:   STW [[COPY3]], 12, %fixed-stack.0 :: (store (s32))
-  ; CHECK:   STW [[COPY2]], 16, %fixed-stack.0 :: (store (s32))
-  ; CHECK:   STW [[COPY1]], 20, %fixed-stack.0 :: (store (s32))
-  ; CHECK:   STW [[COPY]], 24, %fixed-stack.0 :: (store (s32))
+  ; CHECK:   STW [[COPY4]], 8, %fixed-stack.0 :: (store (s32) into %fixed-stack.0 + 8)
+  ; CHECK:   STW [[COPY3]], 12, %fixed-stack.0 :: (store (s32) into %fixed-stack.0 + 12)
+  ; CHECK:   STW [[COPY2]], 16, %fixed-stack.0 :: (store (s32) into %fixed-stack.0 + 16)
+  ; CHECK:   STW [[COPY1]], 20, %fixed-stack.0 :: (store (s32) into %fixed-stack.0 + 20)
+  ; CHECK:   STW [[COPY]], 24, %fixed-stack.0 :: (store (s32) into %fixed-stack.0 + 24)
   ; CHECK:   LIFETIME_START %stack.0.arg_list
   ; CHECK:   [[ADDI:%[0-9]+]]:gprc = ADDI %fixed-stack.0, 0
   ; CHECK:   STW killed [[ADDI]], 0, %stack.0.arg_list :: (store (s32) into %ir.arg_list)

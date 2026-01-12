@@ -2,19 +2,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+f,+d,+a,+c,+v \
 ; RUN:   -target-abi=lp64d -verify-machineinstrs -O0 < %s | FileCheck %s
 
-declare i64 @llvm.riscv.vsetvli(i64, i64, i64)
-declare i64 @llvm.riscv.vsetvlimax(i64, i64)
-declare <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
-  <vscale x 1 x double>,
-  <vscale x 1 x double>,
-  <vscale x 1 x double>,
-  i64, i64)
-declare <vscale x 1 x i64> @llvm.riscv.vle.mask.nxv1i64(
-  <vscale x 1 x i64>,
-  ptr,
-  <vscale x 1 x i1>,
-  i64, i64)
-
 define <2 x double> @fixed_length(<2 x double> %a, <2 x double> %b) nounwind {
 ; CHECK-LABEL: fixed_length:
 ; CHECK:       # %bb.0: # %entry
@@ -49,7 +36,6 @@ entry:
   ret <vscale x 1 x double> %2
 }
 
-
 define <vscale x 1 x double> @intrinsic_same_vlmax(<vscale x 1 x double> %a, <vscale x 1 x double> %b) nounwind {
 ; CHECK-LABEL: intrinsic_same_vlmax:
 ; CHECK:       # %bb.0: # %entry
@@ -65,18 +51,17 @@ define <vscale x 1 x double> @intrinsic_same_vlmax(<vscale x 1 x double> %a, <vs
 entry:
   %0 = tail call i64 @llvm.riscv.vsetvlimax(i64 2, i64 7)
   %1 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
-    <vscale x 1 x double> undef,
+    <vscale x 1 x double> poison,
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %b,
     i64 7, i64 %0)
   %2 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
-    <vscale x 1 x double> undef,
+    <vscale x 1 x double> poison,
     <vscale x 1 x double> %1,
     <vscale x 1 x double> %b,
     i64 7, i64 %0)
   ret <vscale x 1 x double> %2
 }
-
 
 define <vscale x 1 x double> @intrinsic_same_avl_imm(<vscale x 1 x double> %a, <vscale x 1 x double> %b) nounwind {
 ; CHECK-LABEL: intrinsic_same_avl_imm:
@@ -93,12 +78,12 @@ define <vscale x 1 x double> @intrinsic_same_avl_imm(<vscale x 1 x double> %a, <
 entry:
   %0 = tail call i64 @llvm.riscv.vsetvli(i64 2, i64 2, i64 7)
   %1 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
-    <vscale x 1 x double> undef,
+    <vscale x 1 x double> poison,
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %b,
     i64 7, i64 %0)
   %2 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
-    <vscale x 1 x double> undef,
+    <vscale x 1 x double> poison,
     <vscale x 1 x double> %1,
     <vscale x 1 x double> %b,
     i64 7, i64 %0)
@@ -121,12 +106,12 @@ define <vscale x 1 x double> @intrinsic_same_avl_reg(i64 %avl, <vscale x 1 x dou
 entry:
   %0 = tail call i64 @llvm.riscv.vsetvli(i64 %avl, i64 2, i64 7)
   %1 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
-    <vscale x 1 x double> undef,
+    <vscale x 1 x double> poison,
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %b,
     i64 7, i64 %0)
   %2 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
-    <vscale x 1 x double> undef,
+    <vscale x 1 x double> poison,
     <vscale x 1 x double> %1,
     <vscale x 1 x double> %b,
     i64 7, i64 %0)
@@ -150,13 +135,13 @@ define <vscale x 1 x double> @intrinsic_diff_avl_reg(i64 %avl, i64 %avl2, <vscal
 entry:
   %0 = tail call i64 @llvm.riscv.vsetvli(i64 %avl, i64 2, i64 7)
   %1 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
-    <vscale x 1 x double> undef,
+    <vscale x 1 x double> poison,
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %b,
     i64 7, i64 %0)
   %2 = tail call i64 @llvm.riscv.vsetvli(i64 %avl2, i64 2, i64 7)
   %3 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
-    <vscale x 1 x double> undef,
+    <vscale x 1 x double> poison,
     <vscale x 1 x double> %1,
     <vscale x 1 x double> %b,
     i64 7, i64 %2)

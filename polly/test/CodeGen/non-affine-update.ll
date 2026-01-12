@@ -1,5 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-import-jscop,polly-codegen' \
-; RUN:     -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;codegen>' -S < %s | FileCheck %s
 ;
 ;    void non-affine-update(double A[], double C[], double B[]) {
 ;      for (int i = 0; i < 10; i++) {

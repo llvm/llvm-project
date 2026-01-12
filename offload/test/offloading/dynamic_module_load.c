@@ -1,5 +1,7 @@
+// clang-format off
 // RUN: %libomptarget-compile-generic -DSHARED -fPIC -shared -o %t.so && %clang %flags %s -o %t -ldl && %libomptarget-run-generic %t.so 2>&1 | %fcheck-generic
-
+// XFAIL: intelgpu
+// clang-format on
 #ifdef SHARED
 #include <stdio.h>
 int foo() {

@@ -31,10 +31,14 @@ OL_DEVICE_INFO_SIZE_TEST_EQ(Type, ol_device_type_t, OL_DEVICE_INFO_TYPE);
 OL_DEVICE_INFO_SIZE_TEST_EQ(Platform, ol_platform_handle_t,
                             OL_DEVICE_INFO_PLATFORM);
 OL_DEVICE_INFO_SIZE_TEST_NONZERO(Name, OL_DEVICE_INFO_NAME);
+OL_DEVICE_INFO_SIZE_TEST_NONZERO(ProductName, OL_DEVICE_INFO_PRODUCT_NAME);
+OL_DEVICE_INFO_SIZE_TEST_NONZERO(UID, OL_DEVICE_INFO_UID);
 OL_DEVICE_INFO_SIZE_TEST_NONZERO(Vendor, OL_DEVICE_INFO_VENDOR);
 OL_DEVICE_INFO_SIZE_TEST_NONZERO(DriverVersion, OL_DEVICE_INFO_DRIVER_VERSION);
 OL_DEVICE_INFO_SIZE_TEST_EQ(MaxWorkGroupSize, uint32_t,
                             OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE);
+OL_DEVICE_INFO_SIZE_TEST_EQ(MaxWorkSize, uint32_t,
+                            OL_DEVICE_INFO_MAX_WORK_SIZE);
 OL_DEVICE_INFO_SIZE_TEST_EQ(VendorId, uint32_t, OL_DEVICE_INFO_VENDOR_ID);
 OL_DEVICE_INFO_SIZE_TEST_EQ(NumComputeUnits, uint32_t,
                             OL_DEVICE_INFO_NUM_COMPUTE_UNITS);
@@ -67,11 +71,21 @@ OL_DEVICE_INFO_SIZE_TEST_EQ(MaxMemAllocSize, uint64_t,
                             OL_DEVICE_INFO_MAX_MEM_ALLOC_SIZE);
 OL_DEVICE_INFO_SIZE_TEST_EQ(GlobalMemSize, uint64_t,
                             OL_DEVICE_INFO_GLOBAL_MEM_SIZE);
+OL_DEVICE_INFO_SIZE_TEST_EQ(SharedMemSize, uint64_t,
+                            OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE);
 
 TEST_P(olGetDeviceInfoSizeTest, SuccessMaxWorkGroupSizePerDimension) {
   size_t Size = 0;
   ASSERT_SUCCESS(olGetDeviceInfoSize(
       Device, OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE_PER_DIMENSION, &Size));
+  ASSERT_EQ(Size, sizeof(ol_dimensions_t));
+  ASSERT_EQ(Size, sizeof(uint32_t) * 3);
+}
+
+TEST_P(olGetDeviceInfoSizeTest, SuccessMaxWorkSizePerDimension) {
+  size_t Size = 0;
+  ASSERT_SUCCESS(olGetDeviceInfoSize(
+      Device, OL_DEVICE_INFO_MAX_WORK_SIZE_PER_DIMENSION, &Size));
   ASSERT_EQ(Size, sizeof(ol_dimensions_t));
   ASSERT_EQ(Size, sizeof(uint32_t) * 3);
 }

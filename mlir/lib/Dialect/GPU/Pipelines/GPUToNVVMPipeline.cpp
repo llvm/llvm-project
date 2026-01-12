@@ -72,6 +72,7 @@ void buildGpuPassPipeline(OpPassManager &pm,
   ConvertGpuOpsToNVVMOpsOptions opt;
   opt.useBarePtrCallConv = options.kernelUseBarePtrCallConv;
   opt.indexBitwidth = options.indexBitWidth;
+  opt.allowPatternRollback = options.allowPatternRollback;
   pm.addNestedPass<gpu::GPUModuleOp>(createConvertGpuOpsToNVVMOps(opt));
   pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());

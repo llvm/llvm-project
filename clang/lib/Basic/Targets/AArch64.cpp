@@ -206,8 +206,7 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
 StringRef AArch64TargetInfo::getABI() const { return ABI; }
 
 bool AArch64TargetInfo::setABI(const std::string &Name) {
-  if (Name != "aapcs" && Name != "aapcs-soft" && Name != "darwinpcs" &&
-      Name != "pauthtest")
+  if (Name != "aapcs" && Name != "aapcs-soft" && Name != "darwinpcs")
     return false;
 
   ABI = Name;
@@ -219,12 +218,6 @@ bool AArch64TargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
     // aapcs-soft is not allowed for targets with an FPU, to avoid there being
     // two incomatible ABIs.
     Diags.Report(diag::err_target_unsupported_abi_with_fpu) << ABI;
-    return false;
-  }
-  if (getTriple().getEnvironment() == llvm::Triple::PAuthTest &&
-      getTriple().getOS() != llvm::Triple::Linux) {
-    Diags.Report(diag::err_target_unsupported_abi_for_triple)
-        << getTriple().getEnvironmentName() << getTriple().getTriple();
     return false;
   }
   return true;
@@ -398,6 +391,12 @@ void AArch64TargetInfo::getTargetDefinesARMV96A(const LangOptions &Opts,
   getTargetDefinesARMV95A(Opts, Builder);
 }
 
+void AArch64TargetInfo::getTargetDefinesARMV97A(const LangOptions &Opts,
+                                                MacroBuilder &Builder) const {
+  // Armv9.7-A does not have a v8.* equivalent, but is a superset of v9.6-A.
+  getTargetDefinesARMV96A(Opts, Builder);
+}
+
 void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
                                          MacroBuilder &Builder) const {
   // Target identification.
@@ -412,6 +411,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   } else {
     Builder.defineMacro("__aarch64__");
   }
+
+  if (getTriple().isLFI())
+    Builder.defineMacro("__LFI__");
 
   // Inline assembly supports AArch64 flag outputs.
   Builder.defineMacro("__GCC_ASM_FLAG_OUTPUTS__");
@@ -607,9 +609,6 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasMTE)
     Builder.defineMacro("__ARM_FEATURE_MEMORY_TAGGING", "1");
 
-  if (HasTME)
-    Builder.defineMacro("__ARM_FEATURE_TME", "1");
-
   if (HasMatMul)
     Builder.defineMacro("__ARM_FEATURE_MATMUL_INT8", "1");
 
@@ -714,6 +713,8 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     getTargetDefinesARMV95A(Opts, Builder);
   else if (*ArchInfo == llvm::AArch64::ARMV9_6A)
     getTargetDefinesARMV96A(Opts, Builder);
+  else if (*ArchInfo == llvm::AArch64::ARMV9_7A)
+    getTargetDefinesARMV97A(Opts, Builder);
 
   // All of the __sync_(bool|val)_compare_and_swap_(1|2|4|8|16) builtins work.
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
@@ -810,10 +811,10 @@ bool AArch64TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
 
 bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
-      .Cases("aarch64", "arm64", "arm", true)
+      .Cases({"aarch64", "arm64", "arm"}, true)
       .Case("fmv", HasFMV)
       .Case("fp", FPU & FPUMode)
-      .Cases("neon", "simd", FPU & NeonMode)
+      .Cases({"neon", "simd"}, FPU & NeonMode)
       .Case("jscvt", HasJSCVT)
       .Case("fcma", HasFCMA)
       .Case("rng", HasRandGen)
@@ -828,8 +829,8 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("cssc", HasCSSC)
       .Case("sha2", HasSHA2)
       .Case("sha3", HasSHA3)
-      .Cases("aes", "pmull", HasAES)
-      .Cases("fp16", "fullfp16", HasFullFP16)
+      .Cases({"aes", "pmull"}, HasAES)
+      .Cases({"fp16", "fullfp16"}, HasFullFP16)
       .Case("dit", HasDIT)
       .Case("dpb", HasCCPP)
       .Case("dpb2", HasCCDP)
@@ -858,9 +859,9 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("memtag", HasMTE)
       .Case("sb", HasSB)
       .Case("predres", HasPredRes)
-      .Cases("ssbs", "ssbs2", HasSSBS)
+      .Cases({"ssbs", "ssbs2"}, HasSSBS)
       .Case("bti", HasBTI)
-      .Cases("ls64", "ls64_v", "ls64_accdata", HasLS64)
+      .Cases({"ls64", "ls64_v", "ls64_accdata"}, HasLS64)
       .Case("wfxt", HasWFxT)
       .Case("rcpc3", HasRCPC3)
       .Case("fp8", HasFP8)
@@ -1152,6 +1153,9 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     if (Feature == "+v9.6a" &&
         ArchInfo->Version < llvm::AArch64::ARMV9_6A.Version)
       ArchInfo = &llvm::AArch64::ARMV9_6A;
+    if (Feature == "+v9.7a" &&
+        ArchInfo->Version < llvm::AArch64::ARMV9_7A.Version)
+      ArchInfo = &llvm::AArch64::ARMV9_7A;
     if (Feature == "+v8r")
       ArchInfo = &llvm::AArch64::ARMV8R;
     if (Feature == "+fullfp16") {
@@ -1169,8 +1173,6 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     }
     if (Feature == "+mte")
       HasMTE = true;
-    if (Feature == "+tme")
-      HasTME = true;
     if (Feature == "+pauth")
       HasPAuth = true;
     if (Feature == "+i8mm")
@@ -1213,7 +1215,7 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasD128 = false;
   }
 
-  setDataLayout();
+  resetDataLayout();
 
   if (HasNoFP) {
     FPU &= ~FPUMode;
@@ -1568,6 +1570,7 @@ bool AArch64TargetInfo::validateAsmConstraint(
     if (const unsigned Len = matchAsmCCConstraint(Name)) {
       Name += Len - 1;
       Info.setAllowsRegister();
+      Info.setOutputOperandBounds(0, 2);
       return true;
     }
   }
@@ -1628,21 +1631,6 @@ AArch64leTargetInfo::AArch64leTargetInfo(const llvm::Triple &Triple,
                                          const TargetOptions &Opts)
     : AArch64TargetInfo(Triple, Opts) {}
 
-void AArch64leTargetInfo::setDataLayout() {
-  if (getTriple().isOSBinFormatMachO()) {
-    if(getTriple().isArch32Bit())
-      resetDataLayout("e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-"
-                      "i128:128-n32:64-S128-Fn32",
-                      "_");
-    else
-      resetDataLayout("e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-"
-                      "n32:64-S128-Fn32",
-                      "_");
-  } else
-    resetDataLayout("e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-"
-                    "i64:64-i128:128-n32:64-S128-Fn32");
-}
-
 void AArch64leTargetInfo::getTargetDefines(const LangOptions &Opts,
                                            MacroBuilder &Builder) const {
   Builder.defineMacro("__AARCH64EL__");
@@ -1661,12 +1649,6 @@ void AArch64beTargetInfo::getTargetDefines(const LangOptions &Opts,
   AArch64TargetInfo::getTargetDefines(Opts, Builder);
 }
 
-void AArch64beTargetInfo::setDataLayout() {
-  assert(!getTriple().isOSBinFormatMachO());
-  resetDataLayout("E-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-"
-                  "i64:64-i128:128-n32:64-S128-Fn32");
-}
-
 WindowsARM64TargetInfo::WindowsARM64TargetInfo(const llvm::Triple &Triple,
                                                const TargetOptions &Opts)
     : WindowsTargetInfo<AArch64leTargetInfo>(Triple, Opts), Triple(Triple) {
@@ -1683,15 +1665,6 @@ WindowsARM64TargetInfo::WindowsARM64TargetInfo(const llvm::Triple &Triple,
   SizeType = UnsignedLongLong;
   PtrDiffType = SignedLongLong;
   IntPtrType = SignedLongLong;
-}
-
-void WindowsARM64TargetInfo::setDataLayout() {
-  resetDataLayout(Triple.isOSBinFormatMachO()
-                      ? "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:"
-                        "128-n32:64-S128-Fn32"
-                      : "e-m:w-p270:32:32-p271:32:32-p272:64:64-p:64:64-i32:32-"
-                        "i64:64-i128:128-n32:64-S128-Fn32",
-                  Triple.isOSBinFormatMachO() ? "_" : "");
 }
 
 TargetInfo::BuiltinVaListKind

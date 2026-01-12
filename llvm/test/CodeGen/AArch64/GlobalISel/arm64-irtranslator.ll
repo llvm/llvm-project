@@ -1,4 +1,5 @@
-; RUN: llc -O0 -aarch64-enable-atomic-cfg-tidy=0 -mattr=+lse -stop-after=irtranslator -global-isel -verify-machineinstrs %s -o - 2>&1 | FileCheck %s
+; RUN: llc -O0 -aarch64-enable-atomic-cfg-tidy=0 -mattr=+lse -stop-after=irtranslator -global-isel -verify-machineinstrs %s -o - -use-constant-int-for-fixed-length-splat=false 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-CV
+; RUN: llc -O0 -aarch64-enable-atomic-cfg-tidy=0 -mattr=+lse -stop-after=irtranslator -global-isel -verify-machineinstrs %s -o - -use-constant-int-for-fixed-length-splat 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-CI
 ; RUN: llc -O3 -aarch64-enable-atomic-cfg-tidy=0 -mattr=+lse -stop-after=irtranslator -global-isel -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefix=O3
 
 ; This file checks that the translation from llvm IR to generic MachineInstr
@@ -1701,13 +1702,19 @@ define i32 @test_constantaggzerovector_v1s32(i32 %arg){
 }
 
 define i32 @test_constantdatavector_v1s32(i32 %arg){
-; CHECK-LABEL: name: test_constantdatavector_v1s32
-; CHECK: [[ARG:%[0-9]+]]:_(s32) = COPY $w0
-; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-; CHECK-NOT: G_MERGE_VALUES
-; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[C0]]
-; CHECK-NOT: G_MERGE_VALUES
-; CHECK: G_ADD [[ARG]], [[COPY]]
+; CHECK-CV-LABEL: name: test_constantdatavector_v1s32
+; CHECK-CV: [[ARG:%[0-9]+]]:_(s32) = COPY $w0
+; CHECK-CV: [[C0:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+; CHECK-CV-NOT: G_MERGE_VALUES
+; CHECK-CV: [[COPY:%[0-9]+]]:_(s32) = COPY [[C0]]
+; CHECK-CV-NOT: G_MERGE_VALUES
+; CHECK-CV: G_ADD [[ARG]], [[COPY]]
+;
+; CHECK-CI-LABEL: name: test_constantdatavector_v1s32
+; CHECK-CI: [[ARG:%[0-9]+]]:_(s32) = COPY $w0
+; CHECK-CI: [[C0:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+; CHECK-CI-NOT: G_MERGE_VALUES
+; CHECK-CI: G_ADD [[ARG]], [[C0]]
   %vec = insertelement <1 x i32> undef, i32 %arg, i32 0
   %add = add <1 x i32> %vec, <i32 1>
   %res = extractelement <1 x i32> %add, i32 0
@@ -1727,8 +1734,7 @@ define float @test_different_call_conv_target(float %x) {
 define <2 x i32> @test_shufflevector_s32_v2s32(i32 %arg) {
 ; CHECK-LABEL: name: test_shufflevector_s32_v2s32
 ; CHECK: [[ARG:%[0-9]+]]:_(s32) = COPY $w0
-; CHECK-DAG: [[UNDEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-; CHECK: [[VEC:%[0-9]+]]:_(<2 x s32>) = G_SHUFFLE_VECTOR [[ARG]](s32), [[UNDEF]], shufflemask(0, 0)
+; CHECK: [[VEC:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[ARG]](s32), [[ARG]](s32)
 ; CHECK: $d0 = COPY [[VEC]](<2 x s32>)
   %vec = insertelement <1 x i32> undef, i32 %arg, i32 0
   %res = shufflevector <1 x i32> %vec, <1 x i32> undef, <2 x i32> zeroinitializer
@@ -1738,7 +1744,8 @@ define <2 x i32> @test_shufflevector_s32_v2s32(i32 %arg) {
 define i32 @test_shufflevector_v2s32_s32(<2 x i32> %arg) {
 ; CHECK-LABEL: name: test_shufflevector_v2s32_s32
 ; CHECK: [[ARG:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-; CHECK: [[RES:%[0-9]+]]:_(s32) = G_SHUFFLE_VECTOR [[ARG]](<2 x s32>), [[UNDEF]], shufflemask(1)
+; CHECK: [[IDX:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+; CHECK: [[RES:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[ARG]](<2 x s32>), [[IDX]](s64)
 ; CHECK: $w0 = COPY [[RES]](s32)
   %vec = shufflevector <2 x i32> %arg, <2 x i32> undef, <1 x i32> <i32 1>
   %res = extractelement <1 x i32> %vec, i32 0

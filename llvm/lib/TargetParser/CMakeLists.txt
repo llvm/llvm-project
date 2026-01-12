@@ -26,6 +26,7 @@ add_llvm_component_library(LLVMTargetParser
   SubtargetFeature.cpp
   TargetParser.cpp
   Triple.cpp
+  TargetDataLayout.cpp
   X86TargetParser.cpp
   XtensaTargetParser.cpp
 

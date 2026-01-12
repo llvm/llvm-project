@@ -18,9 +18,9 @@
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/DirectivesCommon.h"
 #include "flang/Lower/OpenMP/Clauses.h"
+#include "flang/Lower/Support/ReductionProcessor.h"
 #include "flang/Optimizer/Builder/Todo.h"
-#include "flang/Parser/dump-parse-tree.h"
-#include "flang/Parser/parse-tree.h"
+#include "flang/Parser/char-block.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 
 namespace fir {
@@ -63,8 +63,11 @@ public:
       mlir::omp::CancelDirectiveNameClauseOps &result) const;
   bool
   processCollapse(mlir::Location currentLocation, lower::pft::Evaluation &eval,
-                  mlir::omp::LoopRelatedClauseOps &result,
+                  mlir::omp::LoopRelatedClauseOps &loopResult,
+                  mlir::omp::CollapseClauseOps &collapseResult,
                   llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const;
+  bool processSizes(StatementContext &stmtCtx,
+                    mlir::omp::SizesClauseOps &result) const;
   bool processDevice(lower::StatementContext &stmtCtx,
                      mlir::omp::DeviceClauseOps &result) const;
   bool processDeviceType(mlir::omp::DeviceTypeClauseOps &result) const;
@@ -85,7 +88,11 @@ public:
   bool processHint(mlir::omp::HintClauseOps &result) const;
   bool processInclusive(mlir::Location currentLocation,
                         mlir::omp::InclusiveClauseOps &result) const;
+  bool processInitializer(
+      lower::SymMap &symMap,
+      ReductionProcessor::GenInitValueCBTy &genInitValueCB) const;
   bool processMergeable(mlir::omp::MergeableClauseOps &result) const;
+  bool processNogroup(mlir::omp::NogroupClauseOps &result) const;
   bool processNowait(mlir::omp::NowaitClauseOps &result) const;
   bool processNumTasks(lower::StatementContext &stmtCtx,
                        mlir::omp::NumTasksClauseOps &result) const;
@@ -98,6 +105,8 @@ public:
   bool processPriority(lower::StatementContext &stmtCtx,
                        mlir::omp::PriorityClauseOps &result) const;
   bool processProcBind(mlir::omp::ProcBindClauseOps &result) const;
+  bool processTileSizes(lower::pft::Evaluation &eval,
+                        mlir::omp::LoopNestOperands &result) const;
   bool processSafelen(mlir::omp::SafelenClauseOps &result) const;
   bool processSchedule(lower::StatementContext &stmtCtx,
                        mlir::omp::ScheduleClauseOps &result) const;
@@ -125,7 +134,7 @@ public:
       mlir::Location currentLocation, mlir::omp::InReductionClauseOps &result,
       llvm::SmallVectorImpl<const semantics::Symbol *> &outReductionSyms) const;
   bool processIsDevicePtr(
-      mlir::omp::IsDevicePtrClauseOps &result,
+      lower::StatementContext &stmtCtx, mlir::omp::IsDevicePtrClauseOps &result,
       llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSyms) const;
   bool processLinear(mlir::omp::LinearClauseOps &result) const;
   bool
@@ -189,8 +198,7 @@ private:
 
   void processMapObjects(
       lower::StatementContext &stmtCtx, mlir::Location clauseLocation,
-      const omp::ObjectList &objects,
-      llvm::omp::OpenMPOffloadMappingFlags mapTypeBits,
+      const omp::ObjectList &objects, mlir::omp::ClauseMapFlags mapTypeBits,
       std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
       llvm::SmallVectorImpl<mlir::Value> &mapVars,
       llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,

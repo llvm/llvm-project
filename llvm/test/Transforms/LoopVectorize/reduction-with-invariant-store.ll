@@ -17,14 +17,14 @@ define void @reduc_store(ptr %dst, ptr readonly %src) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 42
 ; CHECK-NEXT:    store i32 0, ptr [[GEP_DST]], align 4
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 172
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC]], i64 4000
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[GEP_DST]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -75,14 +75,14 @@ define void @reduc_store_fadd_fast(ptr %dst, ptr readonly %src) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 42
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[GEP_DST]], align 4
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 172
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC]], i64 4000
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[GEP_DST]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -314,14 +314,14 @@ define void @reduc_store_inside_unrolled(ptr %dst, ptr readonly %src) {
 ; CHECK-SAME: ptr [[DST:%.*]], ptr readonly [[SRC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 42
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 172
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC]], i64 4000
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[GEP_DST]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -348,16 +348,16 @@ define void @reduc_store_inside_unrolled(ptr %dst, ptr readonly %src) {
 ; CHECK-NEXT:    [[TMP16:%.*]] = add <4 x i32> [[TMP15]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = or disjoint <4 x i64> [[VEC_IND]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i64> [[TMP17]], i32 0
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP18]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x i64> [[TMP17]], i32 1
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP20]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i64> [[TMP17]], i32 2
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP22]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i64> [[TMP17]], i32 3
+; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP18]]
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP20]]
+; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP22]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP24]]
-; CHECK-NEXT:    [[TMP26:%.*]] = load i32, ptr [[TMP19]], align 4, !alias.scope [[META16]]
-; CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[TMP21]], align 4, !alias.scope [[META16]]
-; CHECK-NEXT:    [[TMP28:%.*]] = load i32, ptr [[TMP23]], align 4, !alias.scope [[META16]]
+; CHECK-NEXT:    [[TMP26:%.*]] = load i32, ptr [[TMP37]], align 4, !alias.scope [[META16]]
+; CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[TMP23]], align 4, !alias.scope [[META16]]
+; CHECK-NEXT:    [[TMP28:%.*]] = load i32, ptr [[TMP38]], align 4, !alias.scope [[META16]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = load i32, ptr [[TMP25]], align 4, !alias.scope [[META16]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x i32> poison, i32 [[TMP26]], i32 0
 ; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <4 x i32> [[TMP30]], i32 [[TMP27]], i32 1
@@ -365,7 +365,7 @@ define void @reduc_store_inside_unrolled(ptr %dst, ptr readonly %src) {
 ; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <4 x i32> [[TMP32]], i32 [[TMP29]], i32 3
 ; CHECK-NEXT:    [[TMP34]] = add <4 x i32> [[TMP33]], [[TMP16]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 8)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 8)
 ; CHECK-NEXT:    [[TMP35:%.*]] = icmp eq i64 [[INDEX_NEXT]], 500
 ; CHECK-NEXT:    br i1 [[TMP35]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -520,14 +520,14 @@ define void @reduc_store_middle_store_predicated(ptr %dst, ptr readonly %src) {
 ; CHECK-SAME: ptr [[DST:%.*]], ptr readonly [[SRC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr i32, ptr [[DST]], i64 42
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 172
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC]], i64 4000
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[GEP_DST]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -554,16 +554,16 @@ define void @reduc_store_middle_store_predicated(ptr %dst, ptr readonly %src) {
 ; CHECK-NEXT:    [[TMP16:%.*]] = add <4 x i32> [[TMP15]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = or disjoint <4 x i64> [[VEC_IND]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i64> [[TMP17]], i32 0
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP18]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x i64> [[TMP17]], i32 1
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP20]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i64> [[TMP17]], i32 2
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP22]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i64> [[TMP17]], i32 3
+; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP18]]
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP20]]
+; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP22]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP24]]
-; CHECK-NEXT:    [[TMP26:%.*]] = load i32, ptr [[TMP19]], align 4, !alias.scope [[META23]]
-; CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[TMP21]], align 4, !alias.scope [[META23]]
-; CHECK-NEXT:    [[TMP28:%.*]] = load i32, ptr [[TMP23]], align 4, !alias.scope [[META23]]
+; CHECK-NEXT:    [[TMP26:%.*]] = load i32, ptr [[TMP37]], align 4, !alias.scope [[META23]]
+; CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[TMP23]], align 4, !alias.scope [[META23]]
+; CHECK-NEXT:    [[TMP28:%.*]] = load i32, ptr [[TMP38]], align 4, !alias.scope [[META23]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = load i32, ptr [[TMP25]], align 4, !alias.scope [[META23]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x i32> poison, i32 [[TMP26]], i32 0
 ; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <4 x i32> [[TMP30]], i32 [[TMP27]], i32 1
@@ -571,7 +571,7 @@ define void @reduc_store_middle_store_predicated(ptr %dst, ptr readonly %src) {
 ; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <4 x i32> [[TMP32]], i32 [[TMP29]], i32 3
 ; CHECK-NEXT:    [[TMP34]] = add <4 x i32> [[TMP33]], [[TMP16]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 8)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 8)
 ; CHECK-NEXT:    [[TMP35:%.*]] = icmp eq i64 [[INDEX_NEXT]], 500
 ; CHECK-NEXT:    br i1 [[TMP35]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -739,14 +739,14 @@ define void @reduc_store_inoutside(ptr %dst, ptr readonly %src) {
 ; CHECK-SAME: ptr [[DST:%.*]], ptr readonly [[SRC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 42
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 172
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC]], i64 4000
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[GEP_DST]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -791,7 +791,7 @@ define void @test_drop_poison_generating_dead_recipe(ptr %dst) {
 ; CHECK-LABEL: define void @test_drop_poison_generating_dead_recipe(
 ; CHECK-SAME: ptr [[DST:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -804,7 +804,7 @@ define void @test_drop_poison_generating_dead_recipe(ptr %dst) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP0]])
 ; CHECK-NEXT:    store i64 [[TMP2]], ptr [[DST]], align 8
-; CHECK-NEXT:    br label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ;
 entry:
@@ -869,7 +869,7 @@ define i32 @non_reduc_store_invariant_addr_not_hoisted(ptr %dst, ptr readonly %s
 ; CHECK-LABEL: define i32 @non_reduc_store_invariant_addr_not_hoisted(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr readonly [[SRC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[DST]], i64 168
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[DST]], i64 172
@@ -877,7 +877,7 @@ define i32 @non_reduc_store_invariant_addr_not_hoisted(ptr %dst, ptr readonly %s
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 42
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -922,14 +922,14 @@ define void @reduc_add_mul_store_same_ptr(ptr %dst, ptr readonly %src) {
 ; CHECK-LABEL: define void @reduc_add_mul_store_same_ptr(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr readonly [[SRC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 4
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC]], i64 4000
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -976,14 +976,14 @@ define void @reduc_mul_add_store_same_ptr(ptr %dst, ptr readonly %src) {
 ; CHECK-LABEL: define void @reduc_mul_add_store_same_ptr(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr readonly [[SRC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 4
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC]], i64 4000
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -1031,7 +1031,7 @@ define void @reduc_add_mul_store_different_ptr(ptr %dst1, ptr %dst2, ptr readonl
 ; CHECK-LABEL: define void @reduc_add_mul_store_different_ptr(
 ; CHECK-SAME: ptr [[DST1:%.*]], ptr [[DST2:%.*]], ptr readonly [[SRC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST1]], i64 4
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[DST2]], i64 4
@@ -1047,7 +1047,7 @@ define void @reduc_add_mul_store_different_ptr(ptr %dst1, ptr %dst2, ptr readonl
 ; CHECK-NEXT:    [[BOUND17:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT8:%.*]] = and i1 [[BOUND06]], [[BOUND17]]
 ; CHECK-NEXT:    [[CONFLICT_RDX9:%.*]] = or i1 [[CONFLICT_RDX]], [[FOUND_CONFLICT8]]
-; CHECK-NEXT:    br i1 [[CONFLICT_RDX9]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[CONFLICT_RDX9]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -1094,7 +1094,7 @@ define void @reduc_mul_add_store_different_ptr(ptr %dst1, ptr %dst2, ptr readonl
 ; CHECK-LABEL: define void @reduc_mul_add_store_different_ptr(
 ; CHECK-SAME: ptr [[DST1:%.*]], ptr [[DST2:%.*]], ptr readonly [[SRC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST1]], i64 4
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[DST2]], i64 4
@@ -1110,7 +1110,7 @@ define void @reduc_mul_add_store_different_ptr(ptr %dst1, ptr %dst2, ptr readonl
 ; CHECK-NEXT:    [[BOUND17:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT8:%.*]] = and i1 [[BOUND06]], [[BOUND17]]
 ; CHECK-NEXT:    [[CONFLICT_RDX9:%.*]] = or i1 [[CONFLICT_RDX]], [[FOUND_CONFLICT8]]
-; CHECK-NEXT:    br i1 [[CONFLICT_RDX9]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[CONFLICT_RDX9]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:

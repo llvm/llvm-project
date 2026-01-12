@@ -167,7 +167,7 @@ int main(int argc, char **argv) {
 // CHECK4-NEXT:    [[TMP31:%.*]] = zext i1 [[TOBOOL]] to i32
 // CHECK4-NEXT:    [[TMP32:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK4-NEXT:    [[TMP33:%.*]] = load i32, ptr [[TMP32]], align 4
-// CHECK4-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP33]], i32 [[TMP31]], i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l19_omp_outlined_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 7)
+// CHECK4-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP33]], i32 [[TMP31]], i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l19_omp_outlined_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 7, i32 0)
 // CHECK4-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK4:       omp.inner.for.inc:
 // CHECK4-NEXT:    [[TMP34:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
@@ -483,7 +483,7 @@ int main(int argc, char **argv) {
 // CHECK5-NEXT:    [[TMP29:%.*]] = zext i1 [[TOBOOL]] to i32
 // CHECK5-NEXT:    [[TMP30:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK5-NEXT:    [[TMP31:%.*]] = load i32, ptr [[TMP30]], align 4
-// CHECK5-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP31]], i32 [[TMP29]], i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l19_omp_outlined_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 7)
+// CHECK5-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP31]], i32 [[TMP29]], i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l19_omp_outlined_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 7, i32 0)
 // CHECK5-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK5:       omp.inner.for.inc:
 // CHECK5-NEXT:    [[TMP32:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4

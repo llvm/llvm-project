@@ -229,6 +229,20 @@ declaration kind), all of which are optional:
     - Name: vector
       SwiftConformsTo: Cxx.CxxSequence
 
+:SwiftSafety:
+
+  Import a declaration as ``@safe`` or ``@unsafe`` to Swift.
+
+  ::
+
+    Tags:
+    - Name: UnsafeType
+      SwiftSafety: unsafe
+    - Name: span
+      Methods:
+        - Name: size
+          SwiftSafety: safe
+
 :Availability, AvailabilityMsg:
 
   A value of "nonswift" is equivalent to ``NS_SWIFT_UNAVAILABLE``. A value of

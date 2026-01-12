@@ -835,3 +835,120 @@ define i1 @discr_eq_constantexpr(ptr %p) {
   %cmp = icmp eq i64 %sub, -1
   ret i1 %cmp
 }
+
+define i1 @shl_nsw_eq_simplify_zero_to_self(i8 %a, i1 %cond) {
+; CHECK-LABEL: @shl_nsw_eq_simplify_zero_to_self(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[COND:%.*]] to i8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nsw i8 %a, 3
+  %sel = select i1 %cond, i8 8, i8 0
+  %cmp = icmp eq i8 %shl, %sel
+  ret i1 %cmp
+}
+
+define i1 @shl_nsw_eq(i8 %a, i1 %cond) {
+; CHECK-LABEL: @shl_nsw_eq(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i8 1, i8 -15
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nsw i8 %a, 3
+  %sel = select i1 %cond, i8 8, i8 -120
+  %cmp = icmp eq i8 %shl, %sel
+  ret i1 %cmp
+}
+
+define i1 @shl_nuw_eq(i8 %a, i1 %cond) {
+; CHECK-LABEL: @shl_nuw_eq(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i8 1, i8 17
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nuw i8 %a, 3
+  %sel = select i1 %cond, i8 8, i8 -120
+  %cmp = icmp eq i8 %shl, %sel
+  ret i1 %cmp
+}
+
+define i1 @shl_nsw_failed_to_simplify(i8 %a, i1 %cond) {
+; CHECK-LABEL: @shl_nsw_failed_to_simplify(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[A:%.*]], 1
+; CHECK-NEXT:    [[NOT_COND:%.*]] = xor i1 [[COND:%.*]], true
+; CHECK-NEXT:    [[CMP:%.*]] = select i1 [[NOT_COND]], i1 [[CMP1]], i1 false
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nsw i8 %a, 4
+  %sel = select i1 %cond, i8 8, i8 16
+  %cmp = icmp eq i8 %shl, %sel
+  ret i1 %cmp
+}
+
+define i1 @shl_nuw_failed_to_simplify(i8 %a, i1 %cond) {
+; CHECK-LABEL: @shl_nuw_failed_to_simplify(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[A:%.*]], 4
+; CHECK-NEXT:    [[NOT_COND:%.*]] = xor i1 [[COND:%.*]], true
+; CHECK-NEXT:    [[CMP:%.*]] = select i1 [[NOT_COND]], i1 [[CMP1]], i1 false
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nuw i8 %a, 3
+  %sel = select i1 %cond, i8 -1, i8 32
+  %cmp = icmp eq i8 %shl, %sel
+  ret i1 %cmp
+}
+
+define i1 @shl_failed_to_simplify(i8 %a, i1 %cond) {
+; CHECK-LABEL: @shl_failed_to_simplify(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[A:%.*]], 3
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i8 8, i8 32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[SHL]], [[SEL]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl i8 %a, 3
+  %sel = select i1 %cond, i8 8, i8 32
+  %cmp = icmp eq i8 %shl, %sel
+  ret i1 %cmp
+}
+
+define i1 @shl_nuw_ne(i8 %a, i8 %b, i8 %c, i1 %cond) {
+; CHECK-LABEL: @shl_nuw_ne(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i8 [[B:%.*]], i8 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl_a = shl nuw i8 %a, 3
+  %shl_b = shl nuw i8 %b, 3
+  %sel = select i1 %cond, i8 %shl_b, i8 32
+  %cmp = icmp ne i8 %sel, %shl_a
+  ret i1 %cmp
+}
+
+define i1 @shl_const_phi_failed_to_simplify(i64 %indvars, i32 %conv) {
+; CHECK-LABEL: @shl_const_phi_failed_to_simplify(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP_SLT:%.*]] = icmp slt i64 [[INDVARS:%.*]], 1
+; CHECK-NEXT:    br i1 [[CMP_SLT]], label [[END:%.*]], label [[THEN:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[CONST_PHI:%.*]] = phi i32 [ 0, [[THEN]] ], [ 65535, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[SHL_NUW:%.*]] = shl nuw i32 [[CONV:%.*]], 31
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP_SLT]], i32 [[CONST_PHI]], i32 [[SHL_NUW]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SEL]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %cmp_slt = icmp slt i64 %indvars, 1
+  br i1 %cmp_slt, label %end, label %then
+
+then:
+  br label %end
+
+end:
+  %const_phi = phi i32 [ 0, %then ], [ 65535, %entry ]
+  %shl_nuw = shl nuw i32 %conv, 31
+  %sel = select i1 %cmp_slt, i32 %const_phi, i32 %shl_nuw
+  %cmp = icmp eq i32 %sel, 0
+  ret i1 %cmp
+}

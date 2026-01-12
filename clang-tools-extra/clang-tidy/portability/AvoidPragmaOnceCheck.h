@@ -1,4 +1,4 @@
-//===--- AvoidPragmaOnceCheck.h - clang-tidy --------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@ namespace clang::tidy::portability {
 /// portability.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/portability/avoid-pragma-once.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/portability/avoid-pragma-once.html
 class AvoidPragmaOnceCheck : public ClangTidyCheck {
 public:
   AvoidPragmaOnceCheck(StringRef Name, ClangTidyContext *Context)

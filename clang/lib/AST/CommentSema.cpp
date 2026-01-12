@@ -225,7 +225,7 @@ static ParamCommandPassDirection getParamPassDirection(StringRef Arg) {
   return llvm::StringSwitch<ParamCommandPassDirection>(Arg)
       .Case("[in]", ParamCommandPassDirection::In)
       .Case("[out]", ParamCommandPassDirection::Out)
-      .Cases("[in,out]", "[out,in]", ParamCommandPassDirection::InOut)
+      .Cases({"[in,out]", "[out,in]"}, ParamCommandPassDirection::InOut)
       .Default(static_cast<ParamCommandPassDirection>(-1));
 }
 
@@ -1061,8 +1061,8 @@ InlineCommandRenderKind Sema::getInlineCommandRenderKind(StringRef Name) const {
 
   return llvm::StringSwitch<InlineCommandRenderKind>(Name)
       .Case("b", InlineCommandRenderKind::Bold)
-      .Cases("c", "p", InlineCommandRenderKind::Monospaced)
-      .Cases("a", "e", "em", InlineCommandRenderKind::Emphasized)
+      .Cases({"c", "p"}, InlineCommandRenderKind::Monospaced)
+      .Cases({"a", "e", "em"}, InlineCommandRenderKind::Emphasized)
       .Case("anchor", InlineCommandRenderKind::Anchor)
       .Default(InlineCommandRenderKind::Normal);
 }

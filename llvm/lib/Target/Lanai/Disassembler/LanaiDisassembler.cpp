@@ -28,6 +28,7 @@
 #define DEBUG_TYPE "lanai-disassembler"
 
 using namespace llvm;
+using namespace llvm::MCD;
 
 typedef MCDisassembler::DecodeStatus DecodeStatus;
 

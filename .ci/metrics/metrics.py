@@ -40,6 +40,7 @@ GITHUB_WORKFLOW_TO_TRACK = {
 GITHUB_JOB_TO_TRACK = {
     "github_llvm_premerge_checks": {
         "Build and Test Linux": "premerge_linux",
+        "Build and Test Linux AArch64": "premerge_linux_aarch64",
         "Build and Test Windows": "premerge_windows",
     },
     "github_libcxx_premerge_checks": {
@@ -69,6 +70,7 @@ GITHUB_WORKFLOW_MAX_CREATED_AGE_HOURS = 8
 # Grafana will fail to insert any metric older than ~2 hours (value determined
 # by trial and error).
 GRAFANA_METRIC_MAX_AGE_MN = 120
+
 
 @dataclass
 class JobMetrics:
@@ -243,6 +245,7 @@ def clean_up_libcxx_job_name(old_name: str) -> str:
     new_name = stage + "_" + remainder
     return new_name
 
+
 def github_get_metrics(
     github_repo: github.Repository, last_workflows_seen_as_completed: set[int]
 ) -> tuple[list[JobMetrics], int]:
@@ -366,6 +369,13 @@ def github_get_metrics(
             created_at = job.created_at
             started_at = job.started_at
             completed_at = job.completed_at
+
+            if completed_at is None:
+                logging.info(
+                    f"Workflow {task.id} is marked completed but has a job without a "
+                    "completion timestamp."
+                )
+                continue
 
             # GitHub API can return results where the started_at is slightly
             # later then the created_at (or completed earlier than started).

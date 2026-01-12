@@ -308,8 +308,7 @@ body:             |
     ; CHECK-LABEL: name: s_mov_b64_0_copy_vgpr_reg_sequence_128_splat_copy_to_agpr_elt64
     ; CHECK: [[V_MOV_B:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 0, implicit $exec
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[V_MOV_B]], %subreg.sub0_sub1, [[V_MOV_B]], %subreg.sub2_sub3
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY [[V_MOV_B]]
-    ; CHECK-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:areg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0_sub1, [[COPY]], %subreg.sub2_sub3
+    ; CHECK-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:areg_128 = REG_SEQUENCE [[V_MOV_B]], %subreg.sub0_sub1, [[V_MOV_B]], %subreg.sub2_sub3
     ; CHECK-NEXT: $agpr0_agpr1_agpr2_agpr3 = COPY [[REG_SEQUENCE1]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit $agpr0_agpr1_agpr2_agpr3
     %0:sreg_64 = S_MOV_B64 0
@@ -329,8 +328,7 @@ body:             |
     ; CHECK-LABEL: name: s_mov_b64_0_copy_vgpr_reg_sequence_128_splat_copy_to_agpr_subreg_elt32
     ; CHECK: [[V_MOV_B:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 0, implicit $exec
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[V_MOV_B]].sub0, %subreg.sub0, [[V_MOV_B]].sub1, %subreg.sub1, [[V_MOV_B]], %subreg.sub1_sub2
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY [[V_MOV_B]]
-    ; CHECK-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:areg_128 = REG_SEQUENCE [[V_MOV_B]].sub0, %subreg.sub0, [[V_MOV_B]].sub1, %subreg.sub1, [[COPY]], %subreg.sub1_sub2
+    ; CHECK-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:areg_128 = REG_SEQUENCE [[V_MOV_B]].sub0, %subreg.sub0, [[V_MOV_B]].sub1, %subreg.sub1, [[V_MOV_B]], %subreg.sub1_sub2
     ; CHECK-NEXT: $agpr0_agpr1_agpr2_agpr3 = COPY [[REG_SEQUENCE1]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit $agpr0_agpr1_agpr2_agpr3
     %0:sreg_64 = S_MOV_B64 0
@@ -354,9 +352,7 @@ body:             |
     ; CHECK-NEXT: [[V_MOV_B:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 0, implicit $exec
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[V_MOV_B]], %subreg.sub0_sub1, [[COPY]], %subreg.sub2_sub3
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY [[V_MOV_B]]
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY [[COPY]]
-    ; CHECK-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:areg_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0_sub1, [[COPY2]], %subreg.sub2_sub3
+    ; CHECK-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:areg_128 = REG_SEQUENCE [[V_MOV_B]], %subreg.sub0_sub1, [[COPY]], %subreg.sub2_sub3
     ; CHECK-NEXT: $agpr0_agpr1_agpr2_agpr3 = COPY [[REG_SEQUENCE1]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit $agpr0_agpr1_agpr2_agpr3
     %0:sreg_64 = S_MOV_B64 0
@@ -381,8 +377,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr8_sgpr9
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY killed [[COPY]]
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0_sub1, [[COPY1]], %subreg.sub2_sub3
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY [[COPY1]]
-    ; CHECK-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:areg_128 = REG_SEQUENCE [[COPY2]], %subreg.sub0_sub1, [[COPY2]], %subreg.sub2_sub3
+    ; CHECK-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:areg_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0_sub1, [[COPY1]], %subreg.sub2_sub3
     ; CHECK-NEXT: $agpr0_agpr1_agpr2_agpr3 = COPY [[REG_SEQUENCE1]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit $agpr0_agpr1_agpr2_agpr3
     %0:sreg_64 = COPY $sgpr8_sgpr9

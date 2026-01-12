@@ -16,6 +16,7 @@
 #include "CoverageMappingGen.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/CommandLine.h"
@@ -58,9 +59,10 @@ enum PGOHashVersion : unsigned {
   PGO_HASH_V1,
   PGO_HASH_V2,
   PGO_HASH_V3,
+  PGO_HASH_V4,
 
   // Keep this set to the latest hash version.
-  PGO_HASH_LATEST = PGO_HASH_V3
+  PGO_HASH_LATEST = PGO_HASH_V4
 };
 
 namespace {
@@ -152,7 +154,9 @@ static PGOHashVersion getPGOHashVersion(llvm::IndexedInstrProfReader *PGOReader,
     return PGO_HASH_V1;
   if (PGOReader->getVersion() <= 5)
     return PGO_HASH_V2;
-  return PGO_HASH_V3;
+  if (PGOReader->getVersion() <= 12)
+    return PGO_HASH_V3;
+  return PGO_HASH_V4;
 }
 
 /// A RecursiveASTVisitor that fills a map of statements to PGO counters.
@@ -248,8 +252,9 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     }
 
     if (const Expr *E = dyn_cast<Expr>(S)) {
-      const BinaryOperator *BinOp = dyn_cast<BinaryOperator>(E->IgnoreParens());
-      if (BinOp && BinOp->isLogicalOp()) {
+      if (const auto *BinOp =
+              dyn_cast<BinaryOperator>(CodeGenFunction::stripCond(E));
+          BinOp && BinOp->isLogicalOp()) {
         /// Check for "split-nested" logical operators. This happens when a new
         /// boolean expression logical-op nest is encountered within an existing
         /// boolean expression, separated by a non-logical operator.  For
@@ -281,7 +286,8 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
       return true;
 
     if (const Expr *E = dyn_cast<Expr>(S)) {
-      const BinaryOperator *BinOp = dyn_cast<BinaryOperator>(E->IgnoreParens());
+      const BinaryOperator *BinOp =
+          dyn_cast<BinaryOperator>(CodeGenFunction::stripCond(E));
       if (BinOp && BinOp->isLogicalOp()) {
         assert(LogOpStack.back() == BinOp);
         LogOpStack.pop_back();
@@ -290,28 +296,19 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
         if (LogOpStack.empty()) {
           /// Was the "split-nested" logical operator case encountered?
           if (SplitNestedLogicalOp) {
-            unsigned DiagID = Diag.getCustomDiagID(
-                DiagnosticsEngine::Warning,
-                "unsupported MC/DC boolean expression; "
-                "contains an operation with a nested boolean expression. "
-                "Expression will not be covered");
-            Diag.Report(S->getBeginLoc(), DiagID);
+            Diag.Report(S->getBeginLoc(), diag::warn_pgo_nested_boolean_expr);
             return true;
           }
 
           /// Was the maximum number of conditions encountered?
           if (NumCond > MCDCMaxCond) {
-            unsigned DiagID = Diag.getCustomDiagID(
-                DiagnosticsEngine::Warning,
-                "unsupported MC/DC boolean expression; "
-                "number of conditions (%0) exceeds max (%1). "
-                "Expression will not be covered");
-            Diag.Report(S->getBeginLoc(), DiagID) << NumCond << MCDCMaxCond;
+            Diag.Report(S->getBeginLoc(), diag::warn_pgo_condition_limit)
+                << NumCond << MCDCMaxCond;
             return true;
           }
 
           // Otherwise, allocate the Decision.
-          MCDCState.DecisionByStmt[BinOp].BitmapIdx = 0;
+          MCDCState.DecisionByStmt[BinOp].ID = MCDCState.DecisionByStmt.size();
         }
         return true;
       }
@@ -972,7 +969,7 @@ void PGOHash::combine(HashType Type) {
   if (Count && Count % NumTypesPerWord == 0) {
     using namespace llvm::support;
     uint64_t Swapped =
-        endian::byte_swap<uint64_t, llvm::endianness::little>(Working);
+        endian::byte_swap<uint64_t>(Working, llvm::endianness::little);
     MD5.update(llvm::ArrayRef((uint8_t *)&Swapped, sizeof(Swapped)));
     Working = 0;
   }
@@ -999,7 +996,7 @@ uint64_t PGOHash::finalize() {
     } else {
       using namespace llvm::support;
       uint64_t Swapped =
-          endian::byte_swap<uint64_t, llvm::endianness::little>(Working);
+          endian::byte_swap<uint64_t>(Working, llvm::endianness::little);
       MD5.update(llvm::ArrayRef((uint8_t *)&Swapped, sizeof(Swapped)));
     }
   }
@@ -1099,6 +1096,8 @@ void CodeGenPGO::mapRegionCounters(const Decl *D) {
   assert(Walker.NextCounter > 0 && "no entry counter mapped for decl");
   NumRegionCounters = Walker.NextCounter;
   FunctionHash = Walker.Hash.finalize();
+  if (HashVersion >= PGO_HASH_V4)
+    FunctionHash &= llvm::NamedInstrProfRecord::FUNC_HASH_MASK;
 }
 
 bool CodeGenPGO::skipRegionMappingForDecl(const Decl *D) {
@@ -1137,6 +1136,16 @@ void CodeGenPGO::emitCounterRegionMapping(const Decl *D) {
 
   if (CoverageMapping.empty())
     return;
+
+  // Scan max(FalseCnt) and update NumRegionCounters.
+  unsigned MaxNumCounters = NumRegionCounters;
+  for (const auto &[_, V] : *RegionCounterMap) {
+    assert((!V.Executed.hasValue() || MaxNumCounters > V.Executed) &&
+           "TrueCnt should not be reassigned");
+    if (V.Skipped.hasValue())
+      MaxNumCounters = std::max(MaxNumCounters, V.Skipped + 1);
+  }
+  NumRegionCounters = MaxNumCounters;
 
   CGM.getCoverageMapping()->addFunctionMappingRecord(
       FuncNameVar, FuncName, FunctionHash, CoverageMapping);
@@ -1198,11 +1207,21 @@ std::pair<bool, bool> CodeGenPGO::getIsCounterPair(const Stmt *S) const {
 }
 
 void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
+                                           bool UseSkipPath, bool UseBoth,
                                            llvm::Value *StepV) {
-  if (!RegionCounterMap || !Builder.GetInsertBlock())
+  if (!RegionCounterMap)
     return;
 
-  unsigned Counter = (*RegionCounterMap)[S].Executed;
+  // Allocate S in the Map regardless of emission.
+  const auto &TheCounterPair = (*RegionCounterMap)[S];
+
+  if (!Builder.GetInsertBlock())
+    return;
+
+  const CounterPair::ValueOpt &Counter =
+      (UseSkipPath ? TheCounterPair.Skipped : TheCounterPair.Executed);
+  if (!Counter.hasValue())
+    return;
 
   // Make sure that pointer to global is passed in with zero addrspace
   // This is relevant during GPU profiling
@@ -1513,13 +1532,15 @@ CodeGenFunction::createProfileWeightsForLoop(const Stmt *Cond,
                               std::max(*CondCount, LoopCount) - LoopCount);
 }
 
-void CodeGenFunction::incrementProfileCounter(const Stmt *S,
+void CodeGenFunction::incrementProfileCounter(CounterForIncrement ExecSkip,
+                                              const Stmt *S, bool UseBoth,
                                               llvm::Value *StepV) {
   if (CGM.getCodeGenOpts().hasProfileClangInstr() &&
       !CurFn->hasFnAttribute(llvm::Attribute::NoProfile) &&
       !CurFn->hasFnAttribute(llvm::Attribute::SkipProfile)) {
     auto AL = ApplyDebugLocation::CreateArtificial(*this);
-    PGO->emitCounterSetOrIncrement(Builder, S, StepV);
+    PGO->emitCounterSetOrIncrement(Builder, S, (ExecSkip == UseSkipPath),
+                                   UseBoth, StepV);
   }
   PGO->setCurrentStmt(S);
 }

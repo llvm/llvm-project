@@ -2,7 +2,7 @@
 ; generate extra function prologue instructions that interfere with matching
 ; the STR of X19. Disable this for now.
 ;
-; UNSUPPORTED: *
+; UNSUPPORTED: target={{.*}}
 
 REQUIRES: aarch64-registered-target, asserts
 

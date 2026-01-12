@@ -69,9 +69,10 @@ tablegen("AMDGPUGenRegisterBank") {
   td_file = "AMDGPU.td"
 }
 
-tablegen("InstCombineTables") {
+tablegen("AMDGPUGenSDNodeInfo") {
   visibility = [ ":LLVMAMDGPUCodeGen" ]
-  args = [ "-gen-searchable-tables" ]
+  args = [ "-gen-sd-node-info" ]
+  td_file = "AMDGPU.td"
 }
 
 tablegen("R600GenCallingConv") {
@@ -103,7 +104,7 @@ static_library("LLVMAMDGPUCodeGen") {
     ":AMDGPUGenPreLegalizeGICombiner",
     ":AMDGPUGenRegBankGICombiner",
     ":AMDGPUGenRegisterBank",
-    ":InstCombineTables",
+    ":AMDGPUGenSDNodeInfo",
     ":R600GenCallingConv",
     ":R600GenDAGISel",
     ":R600GenDFAPacketizer",
@@ -137,6 +138,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUAsmPrinter.cpp",
     "AMDGPUAtomicOptimizer.cpp",
     "AMDGPUAttributor.cpp",
+    "AMDGPUBarrierLatency.cpp",
     "AMDGPUCallLowering.cpp",
     "AMDGPUCodeGenPrepare.cpp",
     "AMDGPUCombinerHelper.cpp",
@@ -160,9 +162,12 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPULibCalls.cpp",
     "AMDGPULibFunc.cpp",
     "AMDGPULowerBufferFatPointers.cpp",
+    "AMDGPULowerExecSync.cpp",
+    "AMDGPULowerIntrinsics.cpp",
     "AMDGPULowerKernelArguments.cpp",
     "AMDGPULowerKernelAttributes.cpp",
     "AMDGPULowerModuleLDSPass.cpp",
+    "AMDGPULowerVGPREncoding.cpp",
     "AMDGPUMCInstLower.cpp",
     "AMDGPUMCResourceInfo.cpp",
     "AMDGPUMIRFormatter.cpp",
@@ -200,6 +205,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUTargetMachine.cpp",
     "AMDGPUTargetObjectFile.cpp",
     "AMDGPUTargetTransformInfo.cpp",
+    "AMDGPUUniformIntrinsicCombine.cpp",
     "AMDGPUUnifyDivergentExitNodes.cpp",
     "AMDGPUWaitSGPRHazards.cpp",
     "GCNCreateVOPD.cpp",

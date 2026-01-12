@@ -66,9 +66,7 @@ struct PolymorphicTemplate {
 };
 
 void test_function(int);    // expected-note{{possible target for call}}
-                            // expected-note@-1{{possible target for call}}
 void test_function(double); // expected-note{{possible target for call}}
-                            // expected-note@-1{{possible target for call}}
 
 void getVTablePointer() {
   ForwardDeclaration *fd = nullptr;
@@ -89,7 +87,6 @@ void getVTablePointer() {
   __builtin_get_vtable_pointer(np_array);      // expected-error{{__builtin_get_vtable_pointer requires an argument of polymorphic class pointer type, but 'NonPolymorphic' has no virtual methods}}
   __builtin_get_vtable_pointer(&np_array);     // expected-error{{__builtin_get_vtable_pointer requires an argument of class pointer type, but 'NonPolymorphic (*)[1]' was provided}}
   __builtin_get_vtable_pointer(test_function); // expected-error{{reference to overloaded function could not be resolved; did you mean to call it?}}
-                                               // expected-error@-1{{reference to overloaded function could not be resolved; did you mean to call it?}}
   Foo<double> Food;
   Foo<int> Fooi;
   __builtin_get_vtable_pointer(Food); // expected-error{{__builtin_get_vtable_pointer requires an argument of class pointer type, but 'Foo<double>' was provided}}

@@ -183,12 +183,12 @@ class SCEVExpander : public SCEVVisitor<SCEVExpander, Value *> {
 
 public:
   /// Construct a SCEVExpander in "canonical" mode.
-  explicit SCEVExpander(ScalarEvolution &se, const DataLayout &DL,
-                        const char *name, bool PreserveLCSSA = true)
-      : SE(se), DL(DL), IVName(name), PreserveLCSSA(PreserveLCSSA),
-        IVIncInsertLoop(nullptr), IVIncInsertPos(nullptr), CanonicalMode(true),
-        LSRMode(false),
-        Builder(se.getContext(), InstSimplifyFolder(DL),
+  explicit SCEVExpander(ScalarEvolution &SE, const char *Name,
+                        bool PreserveLCSSA = true)
+      : SE(SE), DL(SE.getDataLayout()), IVName(Name),
+        PreserveLCSSA(PreserveLCSSA), IVIncInsertLoop(nullptr),
+        IVIncInsertPos(nullptr), CanonicalMode(true), LSRMode(false),
+        Builder(SE.getContext(), InstSimplifyFolder(DL),
                 IRBuilderCallbackInserter(
                     [this](Instruction *I) { rememberInstruction(I); })) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -432,6 +432,10 @@ public:
   /// MustDominate. Skips instructions inserted by the expander.
   LLVM_ABI BasicBlock::iterator
   findInsertPointAfter(Instruction *I, Instruction *MustDominate) const;
+
+  /// Remove inserted instructions that are dead, e.g. due to InstSimplifyFolder
+  /// simplifications. \p Root is assumed to be used and won't be removed.
+  void eraseDeadInstructions(Value *Root);
 
 private:
   LLVMContext &getContext() const { return SE.getContext(); }

@@ -11,13 +11,18 @@ Each entry should contain at least the (N), (E) and (D) fields.
 N: Linaro Toolchain Working Group
 E: linaro-toolchain@lists.linaro.org
 D: Arm platforms and picolibc
-G: DavidSpickett, omjavaid, ceseo
+G: omjavaid, ceseo, antmox
 
 N: LLVM on Power
 E: powerllvm@ca.ibm.com
 D: AIX, ppc64le
 
 N: Android libc++
-E: rprichard@google.com
-H: rprichard
+E: pirama@google.com, sharjeelkhan@google.com
+G: pirama-arumuga-nainar, Sharjeel-Khan
 D: Emulator-based x86[-64] libc++ CI testing
+
+N: FreeBSD libc++
+E: emaste@freebsd.org
+G: emaste
+D: FreeBSD x86-64 libc++ CI testing

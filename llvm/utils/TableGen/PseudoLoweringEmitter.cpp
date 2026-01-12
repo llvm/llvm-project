@@ -229,11 +229,10 @@ void PseudoLoweringEmitter::emitLoweringEmitter(raw_ostream &o) {
     for (auto &Expansion : Expansions) {
       CodeGenInstruction &Source = Expansion.Source;
       CodeGenInstruction &Dest = Expansion.Dest;
-      o << "  case " << Source.Namespace << "::" << Source.TheDef->getName()
-        << ": {\n"
+      o << "  case " << Source.Namespace << "::" << Source.getName() << ": {\n"
         << "    MCOperand MCOp;\n"
-        << "    Inst.setOpcode(" << Dest.Namespace
-        << "::" << Dest.TheDef->getName() << ");\n";
+        << "    Inst.setOpcode(" << Dest.Namespace << "::" << Dest.getName()
+        << ");\n";
 
       // Copy the operands from the source instruction.
       // FIXME: Instruction operands with defaults values (predicates and cc_out

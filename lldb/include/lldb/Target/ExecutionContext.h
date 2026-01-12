@@ -92,9 +92,20 @@ public:
 
   /// Construct using the target and all the selected items inside of it (the
   /// process and its selected thread, and the thread's selected frame). If
-  /// there is no selected thread, default to the first thread If there is no
+  /// there is no selected thread, default to the first thread. If there is no
   /// selected frame, default to the first frame.
   ExecutionContextRef(Target *target, bool adopt_selected);
+
+  /// Construct using the process and all the selected items inside of it (
+  /// the selected thread, and the thread's selected frame). If
+  /// there is no selected thread, default to the first thread. If there is no
+  /// selected frame, default to the first frame.
+  ExecutionContextRef(Process *process, bool adopt_selected);
+
+  /// Construct using the thread and all the selected items inside of it ( the
+  /// selected frame). If there is no selected frame, default to the first
+  /// frame.
+  ExecutionContextRef(Thread *thread, bool adopt_selected);
 
   /// Construct using an execution context scope.
   ///
@@ -199,9 +210,9 @@ public:
 
   void SetTargetPtr(Target *target, bool adopt_selected);
 
-  void SetProcessPtr(Process *process);
+  void SetProcessPtr(Process *process, bool adopt_selected = false);
 
-  void SetThreadPtr(Thread *thread);
+  void SetThreadPtr(Thread *thread, bool adopt_selected = false);
 
   void SetFramePtr(StackFrame *frame);
 
@@ -257,7 +268,10 @@ public:
     m_tid = LLDB_INVALID_THREAD_ID;
   }
 
-  void ClearFrame() { m_stack_id.Clear(); }
+  void ClearFrame() {
+    m_stack_id.Clear();
+    m_frame_list_wp.reset();
+  }
 
 protected:
   // Member variables
@@ -268,7 +282,14 @@ protected:
                                               ///< object refers to in case the
                                               /// backing object changes
   StackID m_stack_id; ///< The stack ID that this object refers to in case the
-                      ///backing object changes
+                      ///< backing object changes
+  mutable lldb::StackFrameListWP
+      m_frame_list_wp; ///< Weak reference to the
+                       ///< frame list that contains
+                       ///< this frame. If we can create a valid
+                       ///< StackFrameListSP from it, we must use it to resolve
+                       ///< the StackID, otherwise, we should ask the Thread's
+                       ///< StackFrameList.
 };
 
 /// \class ExecutionContext ExecutionContext.h

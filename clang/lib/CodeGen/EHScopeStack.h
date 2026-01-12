@@ -143,7 +143,7 @@ public:
   ///
   /// Cleanup implementations should generally be declared in an
   /// anonymous namespace.
-  class alignas(uint64_t) Cleanup {
+  class LLVM_MOVABLE_POLYMORPHIC_TYPE alignas(uint64_t) Cleanup {
     // Anchor the construction vtable.
     virtual void anchor();
 

@@ -10,6 +10,9 @@
 # Create and manage releases in the llvm github project.
 #
 # This script requires python3 and the PyGithub module.
+
+# Requirements and lockfiles can be found in llvm/utils/git/requirements.upload_release.txt.in
+# and llvm/utils/git/requirements.upload_release.txt
 #
 # Example Usage:
 #
@@ -67,7 +70,7 @@ AUTOMATIC_DOWNLOAD_LINKS_END -->
 
 <!-- * Windows x64 (64-bit): [installer](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-win64.exe) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-win64.exe.sig)), [archive](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/clang+llvm-{release}-x86_64-pc-windows-msvc.tar.xz) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/clang+llvm-{release}-x86_64-pc-windows-msvc.tar.xz.sig)) -->
 <!-- * Windows x86 (32-bit): [installer](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-win32.exe) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-win32.exe.sig)) -->
-<!-- * Windows on Arm (ARM64): [installer](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-woa64.exe) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-woa64.exe.sig)), [archive](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/clang+llvm-{release}-aarch64-pc-windows-msvc.tar.xz) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/clang+llvm-{release}-aarch64-pc-windows-msvc.tar.xz.sig)) -->
+<!-- * Windows on Arm (ARM64): [installer](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-woa64.exe) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-woa64.exe.sig)), [archive](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/clang+llvm-{release}-aarch64-pc-windows-msvc.tar.xz) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/clang+llvm-{release}-aarch64-pc-windows-msvc.tar.xz.sig)) -->
 
 Download links will appear here once builds have completed. <!-- AUTOMATIC_DOWNLOAD_LINKS_PLACEHOLDER -->
 

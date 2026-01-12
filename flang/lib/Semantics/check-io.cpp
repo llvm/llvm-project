@@ -424,8 +424,8 @@ void IoChecker::Enter(const parser::InquireSpec::CharVar &spec) {
     specKind = IoSpecKind::Dispose;
     break;
   }
-  const parser::Variable &var{
-      std::get<parser::ScalarDefaultCharVariable>(spec.t).thing.thing};
+  const auto &var{parser::UnwrapRef<parser::Variable>(
+      std::get<parser::ScalarDefaultCharVariable>(spec.t))};
   std::string what{parser::ToUpperCaseLetters(common::EnumToString(specKind))};
   CheckForDefinableVariable(var, what);
   WarnOnDeferredLengthCharacterScalar(
@@ -627,7 +627,7 @@ void IoChecker::Enter(const parser::IoUnit &spec) {
 }
 
 void IoChecker::Enter(const parser::MsgVariable &msgVar) {
-  const parser::Variable &var{msgVar.v.thing.thing};
+  const auto &var{parser::UnwrapRef<parser::Variable>(msgVar)};
   if (stmt_ == IoStmtKind::None) {
     // allocate, deallocate, image control
     CheckForDefinableVariable(var, "ERRMSG");

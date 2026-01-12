@@ -76,6 +76,7 @@ tablegen("AArch64GenSDNodeInfo") {
   visibility = [
     ":LLVMAArch64CodeGen",
     "//bolt/unittests/Core:CoreTests",
+    "//bolt/unittests/Passes:PassTests",
     "//llvm/unittests/Target/AArch64:AArch64Tests",
   ]
   args = [ "-gen-sd-node-info" ]
@@ -108,6 +109,7 @@ static_library("LLVMAArch64CodeGen") {
     "//llvm/lib/CodeGen/SelectionDAG",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
+    "//llvm/lib/Passes",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/TargetParser",
@@ -150,11 +152,14 @@ static_library("LLVMAArch64CodeGen") {
     "AArch64PBQPRegAlloc.cpp",
     "AArch64PointerAuth.cpp",
     "AArch64PostCoalescerPass.cpp",
+    "AArch64PrologueEpilogue.cpp",
     "AArch64PromoteConstant.cpp",
+    "AArch64RedundantCondBranchPass.cpp",
     "AArch64RedundantCopyElimination.cpp",
     "AArch64RegisterInfo.cpp",
     "AArch64SIMDInstrOpt.cpp",
     "AArch64SLSHardening.cpp",
+    "AArch64SMEAttributes.cpp",
     "AArch64SelectionDAGInfo.cpp",
     "AArch64SpeculationHardening.cpp",
     "AArch64StackTagging.cpp",

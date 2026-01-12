@@ -19,13 +19,14 @@ define i32 @foo(ptr noundef %cp, ptr noundef %old, i32 noundef %c)  {
 ; CHECK-NEXT:    stw r5, -16(r1)
 ; CHECK-NEXT:    lwarx r6, 0, r3
 ; CHECK-NEXT:    cmplw r6, r7
-; CHECK-NEXT:    bne cr0, L..BB0_2
+; CHECK-NEXT:    bne- cr0, L..BB0_5
 ; CHECK-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; CHECK-NEXT:    creqv 4*cr5+lt, 4*cr5+lt, 4*cr5+lt
 ; CHECK-NEXT:    stwcx. r5, 0, r3
-; CHECK-NEXT:    beq cr0, L..BB0_5
-; CHECK-NEXT:  L..BB0_2: # %cmpxchg.failure
-; CHECK-NEXT:    crxor 4*cr5+lt, 4*cr5+lt, 4*cr5+lt
-; CHECK-NEXT:  # %bb.3: # %cmpxchg.store_expected
+; CHECK-NEXT:    bne- cr0, L..BB0_5
+; CHECK-NEXT:  # %bb.2: # %cmpxchg.end
+; CHECK-NEXT:    bc 12, 4*cr5+lt, L..BB0_4
+; CHECK-NEXT:  L..BB0_3: # %cmpxchg.store_expected
 ; CHECK-NEXT:    stw r6, 0(r4)
 ; CHECK-NEXT:  L..BB0_4: # %cmpxchg.continue
 ; CHECK-NEXT:    li r3, 0
@@ -33,9 +34,9 @@ define i32 @foo(ptr noundef %cp, ptr noundef %old, i32 noundef %c)  {
 ; CHECK-NEXT:    isel r3, r4, r3, 4*cr5+lt
 ; CHECK-NEXT:    stb r3, -17(r1)
 ; CHECK-NEXT:    blr
-; CHECK-NEXT:  L..BB0_5:
-; CHECK-NEXT:    creqv 4*cr5+lt, 4*cr5+lt, 4*cr5+lt
-; CHECK-NEXT:    b L..BB0_4
+; CHECK-NEXT:  L..BB0_5: # %cmpxchg.failure
+; CHECK-NEXT:    crxor 4*cr5+lt, 4*cr5+lt, 4*cr5+lt
+; CHECK-NEXT:    b L..BB0_3
 ;
 ; CHECK64-LABEL: foo:
 ; CHECK64:       # %bb.0: # %entry
@@ -46,13 +47,14 @@ define i32 @foo(ptr noundef %cp, ptr noundef %old, i32 noundef %c)  {
 ; CHECK64-NEXT:    stw r5, -24(r1)
 ; CHECK64-NEXT:    lwarx r6, 0, r3
 ; CHECK64-NEXT:    cmplw r6, r7
-; CHECK64-NEXT:    bne cr0, L..BB0_2
+; CHECK64-NEXT:    bne- cr0, L..BB0_5
 ; CHECK64-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; CHECK64-NEXT:    creqv 4*cr5+lt, 4*cr5+lt, 4*cr5+lt
 ; CHECK64-NEXT:    stwcx. r5, 0, r3
-; CHECK64-NEXT:    beq cr0, L..BB0_5
-; CHECK64-NEXT:  L..BB0_2: # %cmpxchg.failure
-; CHECK64-NEXT:    crxor 4*cr5+lt, 4*cr5+lt, 4*cr5+lt
-; CHECK64-NEXT:  # %bb.3: # %cmpxchg.store_expected
+; CHECK64-NEXT:    bne- cr0, L..BB0_5
+; CHECK64-NEXT:  # %bb.2: # %cmpxchg.end
+; CHECK64-NEXT:    bc 12, 4*cr5+lt, L..BB0_4
+; CHECK64-NEXT:  L..BB0_3: # %cmpxchg.store_expected
 ; CHECK64-NEXT:    stw r6, 0(r4)
 ; CHECK64-NEXT:  L..BB0_4: # %cmpxchg.continue
 ; CHECK64-NEXT:    li r3, 0
@@ -63,9 +65,9 @@ define i32 @foo(ptr noundef %cp, ptr noundef %old, i32 noundef %c)  {
 ; CHECK64-NEXT:    li r3, 0
 ; CHECK64-NEXT:    isel r3, r4, r3, 4*cr5+lt
 ; CHECK64-NEXT:    blr
-; CHECK64-NEXT:  L..BB0_5:
-; CHECK64-NEXT:    creqv 4*cr5+lt, 4*cr5+lt, 4*cr5+lt
-; CHECK64-NEXT:    b L..BB0_4
+; CHECK64-NEXT:  L..BB0_5: # %cmpxchg.failure
+; CHECK64-NEXT:    crxor 4*cr5+lt, 4*cr5+lt, 4*cr5+lt
+; CHECK64-NEXT:    b L..BB0_3
 entry:
   %cp.addr = alloca ptr, align 4
   %old.addr = alloca ptr, align 4

@@ -1,4 +1,4 @@
-//===--- RedundantMemberInitCheck.h - clang-tidy----------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANT_MEMBER_INIT_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANT_MEMBER_INIT_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANTMEMBERINITCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANTMEMBERINITCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -17,7 +17,7 @@ namespace clang::tidy::readability {
 /// constructor would be called if they were not present.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/redundant-member-init.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/redundant-member-init.html
 class RedundantMemberInitCheck : public ClangTidyCheck {
 public:
   RedundantMemberInitCheck(StringRef Name, ClangTidyContext *Context)
@@ -40,4 +40,4 @@ private:
 
 } // namespace clang::tidy::readability
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANT_MEMBER_INIT_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANTMEMBERINITCHECK_H
