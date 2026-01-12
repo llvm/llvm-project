@@ -3343,15 +3343,11 @@ bool SIInsertWaitcnts::isDSRead(const MachineInstr &MI) const {
 // Check if instruction is a store to LDS that is counted via DSCNT
 // (where that counter exists).
 bool SIInsertWaitcnts::mayStoreIncrementingDSCNT(const MachineInstr &MI) const {
-  if (!MI.mayStore())
-    return false;
-  if (SIInstrInfo::isDS(MI))
-    return true;
-  return false;
+  return MI.mayStore() && SIInstrInfo::isDS(MI);
 }
 
 // Return flags indicating which counters should be flushed in the preheader of
-// the given loop. We currently decide to flush in a few situations:
+// the given loop. We currently decide to flush in the following situations:
 // For VMEM (FlushVmCnt):
 // 1. The loop contains vmem store(s), no vmem load and at least one use of a
 //    vgpr containing a value that is loaded outside of the loop. (Only on
@@ -3367,6 +3363,12 @@ bool SIInsertWaitcnts::mayStoreIncrementingDSCNT(const MachineInstr &MI) const {
 //    use of a vgpr containing a value that is DS loaded outside of the loop.
 //    Flushing in preheader reduces wait overhead if the wait requirement in
 //    iteration 1 would otherwise be more strict.
+// 5. (Single-block loops only) The loop has DS prefetch loads with flush point
+//    tracking. Some DS loads may be used in the same iteration (creating
+//    "flush points"), but others remain unflushed at the backedge. When a DS
+//    load is consumed in the same iteration, it and all prior loads are
+//    "flushed" (FIFO). No DS stores are allowed in the loop.
+//    TODO: Find a way to extend to multi-block loops.
 PreheaderFlushFlags
 SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
                                          const WaitcntBrackets &Brackets) {
@@ -3382,6 +3384,17 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
   DenseSet<MCRegUnit> VgprDefVMEM;
   DenseSet<MCRegUnit> VgprDefDS;
 
+  // Track DS loads for prefetch pattern with flush points (single-block only).
+  // Keeps track of the last DS load (position counted from the top of the loop)
+  // to each VGPR. Load is considered consumed (and thus needs flushing) if
+  // the loaded register has a use or is overwritten (by any later opertions).
+  DenseMap<MCRegUnit, unsigned> DSLoadPosition;
+  bool IsSingleBlock = ML->getNumBlocks() == 1;
+  bool FlushPointTrackingInvalid =
+      !ST->hasExtendedWaitCounts() || !IsSingleBlock;
+  unsigned DSLoadCount = 0;
+  unsigned LastFlushedPosition = 0;
+
   for (MachineBasicBlock *MBB : ML->blocks()) {
     for (MachineInstr &MI : *MBB) {
       if (isVMEMOrFlatVMEM(MI)) {
@@ -3396,6 +3409,7 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
         if (VMemInvalidated)
           return Flags;
         DSInvalidated = true;
+        FlushPointTrackingInvalid = true;
       }
       for (const MachineOperand &Op : MI.all_uses()) {
         if (Op.isDebug() || !TRI->isVectorRegister(*MRI, Op.getReg()))
@@ -3411,9 +3425,16 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
           if (VgprDefDS.contains(RU))
             DSInvalidated = true;
 
-          // Early exit if both optimizations are invalidated
-          if (VMemInvalidated && DSInvalidated)
+          // Early exit if all optimizations are invalidated
+          if (VMemInvalidated && DSInvalidated && FlushPointTrackingInvalid)
             return Flags;
+
+          // Check for flush points (DS load used in same iteration)
+          if (!FlushPointTrackingInvalid) {
+            auto It = DSLoadPosition.find(RU);
+            if (It != DSLoadPosition.end() && It->second > LastFlushedPosition)
+              LastFlushedPosition = It->second;
+          }
 
           VgprUse.insert(RU);
           // Check if this register has a pending VMEM load from outside the
@@ -3442,10 +3463,14 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
             VgprDefVMEM.insert(RU);
           }
         }
-        // Early exit if both optimizations are invalidated
-        if (VMemInvalidated && DSInvalidated)
+        // Early exit if all optimizations are invalidated
+        if (VMemInvalidated && DSInvalidated && FlushPointTrackingInvalid)
           return Flags;
       }
+
+      bool IsDSRead = isDSRead(MI);
+      if (IsDSRead && !FlushPointTrackingInvalid)
+        ++DSLoadCount;
 
       // DS read vgpr def
       // Note: Unlike VMEM, we DON'T invalidate when VgprUse.contains(RegNo).
@@ -3454,10 +3479,25 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
       // in preheader so iteration 1 doesn't need to wait inside the loop.
       // Only invalidate when DEF comes before USE (same-iteration consumption,
       // checked above when processing uses).
-      if (isDSRead(MI)) {
+      if (IsDSRead || !FlushPointTrackingInvalid) {
         for (const MachineOperand &Op : MI.all_defs()) {
+          if (!TRI->isVectorRegister(*MRI, Op.getReg()))
+            continue;
           for (MCRegUnit RU : TRI->regunits(Op.getReg().asMCReg())) {
-            VgprDefDS.insert(RU);
+            if (IsDSRead)
+              VgprDefDS.insert(RU);
+            // Check for overwrite of pending DS load (flush point) by any
+            // instruction
+            if (!FlushPointTrackingInvalid) {
+              auto It = DSLoadPosition.find(RU);
+              if (It != DSLoadPosition.end()) {
+                if (It->second > LastFlushedPosition)
+                  LastFlushedPosition = It->second;
+                if (IsDSRead)
+                  It->second = DSLoadCount;
+              } else if (IsDSRead)
+                DSLoadPosition.try_emplace(RU, DSLoadCount);
+            }
           }
         }
       }
@@ -3475,7 +3515,15 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
   // are not used in the loop.
   // DSInvalidated is pre-set to true on non-GFX12+ targets where DS_CNT
   // is LGKM_CNT which also tracks FLAT/SMEM.
-  if (!DSInvalidated && UsesVgprLoadedOutsideDS)
+  // Pure prefetch: no same-iteration DS load use, no DS stores
+  bool PurePrefetchFlush = !DSInvalidated && UsesVgprLoadedOutsideDS;
+  // Prefetch with flush points: some DS loads used in same iteration,
+  // but unflushed loads remain at backedge
+  bool HasUnflushedDSLoads = (DSLoadCount > LastFlushedPosition);
+  bool FlushPointPrefetchFlush = !FlushPointTrackingInvalid &&
+                                 UsesVgprLoadedOutsideDS && HasUnflushedDSLoads;
+
+  if (PurePrefetchFlush || FlushPointPrefetchFlush)
     Flags.FlushDsCnt = true;
 
   return Flags;
