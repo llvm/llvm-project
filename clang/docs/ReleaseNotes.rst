@@ -557,6 +557,7 @@ Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fix an ambiguous reference to the builtin `type_info` (available when using
   `-fms-compatibility`) with modules. (#GH38400)
+- Fix a crash when passing an unresolved overload set to ``__builtin_classify_type``. (#GH175589)
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
