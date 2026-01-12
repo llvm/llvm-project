@@ -2945,11 +2945,9 @@ int main(int argc, char *argv[]) {
     LLVM_DEBUG(dbgs() << "Running \"" << EntryPointName << "\"...\n");
     TimeRegion TR(Timers ? &Timers->RunTimer : nullptr);
     if (!OrcRuntime.empty())
-      Result =
-          ExitOnErr(runWithRuntime(*S, ExecutorAddr(EntryPoint->getAddress())));
+      Result = ExitOnErr(runWithRuntime(*S, EntryPoint->getAddress()));
     else
-      Result = ExitOnErr(
-          runWithoutRuntime(*S, ExecutorAddr(EntryPoint->getAddress())));
+      Result = ExitOnErr(runWithoutRuntime(*S, EntryPoint->getAddress()));
   }
 
   // Destroy the session.
