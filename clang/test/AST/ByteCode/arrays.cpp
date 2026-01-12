@@ -835,3 +835,12 @@ namespace MultiDimConstructExpr {
   constexpr b d;
   static_assert(d.m[2][1].p == &d.m[2][1]);
 }
+
+// Test for issue #175432 - assertion crash with GlobalInlineDescriptor
+// Previously crashed with: Assertion `BS.Base != sizeof(GlobalInlineDescriptor)` failed
+namespace gh175432 {
+  constexpr const int *arr[][2] = {{nullptr, nullptr}};
+  static_assert(arr[0][0] == nullptr, "");
+  static_assert(arr[0][1] == nullptr, "");
+}
+
