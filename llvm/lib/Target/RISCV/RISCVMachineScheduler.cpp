@@ -13,6 +13,52 @@ using namespace llvm;
 
 #define DEBUG_TYPE "riscv-prera-sched-strategy"
 
+RISCV::VSETVLIInfo
+RISCVPreRAMachineSchedStrategy::getVSETVLIInfo(const MachineInstr *MI) const {
+  unsigned TSFlags = MI->getDesc().TSFlags;
+  if (!RISCVII::hasSEWOp(TSFlags))
+    return RISCV::VSETVLIInfo();
+  return VIA.computeInfoForInstr(*MI);
+}
+
+bool RISCVPreRAMachineSchedStrategy::tryVSETVLIInfo(
+    const RISCV::VSETVLIInfo &TryInfo, const RISCV::VSETVLIInfo &CandInfo,
+    SchedCandidate &TryCand, SchedCandidate &Cand, CandReason Reason) const {
+  // Do not compare the vsetvli info changes between top and bottom
+  // boundary.
+  if (Cand.AtTop != TryCand.AtTop)
+    return false;
+
+  auto IsCompatible = [&](const RISCV::VSETVLIInfo &FirstInfo,
+                          const RISCV::VSETVLIInfo &SecondInfo) {
+    return FirstInfo.isValid() && SecondInfo.isValid() &&
+           FirstInfo.isCompatible(RISCV::DemandedFields::all(), SecondInfo,
+                                  Context->LIS);
+  };
+
+  // Try Cand first.
+  // We prefer the top node as it is straightforward from the perspective of
+  // vsetvli dataflow.
+  if (Cand.AtTop && IsCompatible(CandInfo, TopInfo))
+    return true;
+
+  if (!Cand.AtTop && IsCompatible(CandInfo, BottomInfo))
+    return true;
+
+  // Then try TryCand.
+  if (TryCand.AtTop && IsCompatible(TryInfo, TopInfo)) {
+    TryCand.Reason = Reason;
+    return true;
+  }
+
+  if (!TryCand.AtTop && IsCompatible(TryInfo, BottomInfo)) {
+    TryCand.Reason = Reason;
+    return true;
+  }
+
+  return false;
+}
+
 bool RISCVPreRAMachineSchedStrategy::tryCandidate(SchedCandidate &Cand,
                                                   SchedCandidate &TryCand,
                                                   SchedBoundary *Zone) const {
@@ -112,11 +158,59 @@ bool RISCVPreRAMachineSchedStrategy::tryCandidate(SchedCandidate &Cand,
 
     // Fall through to original instruction order.
     if ((Zone->isTop() && TryCand.SU->NodeNum < Cand.SU->NodeNum) ||
-        (!Zone->isTop() && TryCand.SU->NodeNum > Cand.SU->NodeNum)) {
+        (!Zone->isTop() && TryCand.SU->NodeNum > Cand.SU->NodeNum))
       TryCand.Reason = NodeOrder;
-      return true;
-    }
   }
 
-  return false;
+  //-------------------------------------------------------------------------//
+  // Below is RISC-V specific scheduling heuristics.
+  //-------------------------------------------------------------------------//
+
+  // Add RISC-V specific heuristic only when TryCand isn't selected or
+  // selected as node order.
+  if (TryCand.Reason != NodeOrder && TryCand.Reason != NoCand)
+    return true;
+
+  // TODO: We should not use `CandReason::Cluster` here, but is there a
+  // mechanism to extend this enum?
+  if (ST->enableVsetvliSchedHeuristic() &&
+      tryVSETVLIInfo(getVSETVLIInfo(TryCand.SU->getInstr()),
+                     getVSETVLIInfo(Cand.SU->getInstr()), TryCand, Cand,
+                     Cluster))
+    return TryCand.Reason != NoCand;
+
+  return TryCand.Reason != NoCand;
+}
+
+void RISCVPreRAMachineSchedStrategy::enterMBB(MachineBasicBlock *MBB) {
+  TopInfo = RISCV::VSETVLIInfo();
+  BottomInfo = RISCV::VSETVLIInfo();
+}
+
+void RISCVPreRAMachineSchedStrategy::leaveMBB() {
+  TopInfo = RISCV::VSETVLIInfo();
+  BottomInfo = RISCV::VSETVLIInfo();
+}
+
+void RISCVPreRAMachineSchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
+  GenericScheduler::schedNode(SU, IsTopNode);
+  if (ST->enableVsetvliSchedHeuristic()) {
+    MachineInstr *MI = SU->getInstr();
+    const RISCV::VSETVLIInfo &Info = getVSETVLIInfo(MI);
+    if (Info.isValid()) {
+      if (IsTopNode)
+        TopInfo = Info;
+      else
+        BottomInfo = Info;
+      LLVM_DEBUG({
+        dbgs() << "Previous scheduled Unit: \n";
+        dbgs() << "  IsTop: " << IsTopNode << "\n";
+        dbgs() << "  SU(" << SU->NodeNum << ") - ";
+        MI->dump();
+        dbgs() << "  \n";
+        Info.dump();
+        dbgs() << "  \n";
+      });
+    }
+  }
 }
