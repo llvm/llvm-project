@@ -87,7 +87,14 @@ public:
 FunctionPass *createX86FixupInstTuningLegacyPass();
 
 /// Return a pass that reduces the size of vector constant pool loads.
-FunctionPass *createX86FixupVectorConstants();
+class X86FixupVectorConstantsPass
+    : public PassInfoMixin<X86FixupInstTuningPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86FixupVectorConstantsLegacyPass();
 
 /// Return a pass that removes redundant LEA instructions and redundant address
 /// recalculations.
@@ -340,7 +347,7 @@ void initializeFixupLEAsLegacyPass(PassRegistry &);
 void initializeX86ArgumentStackSlotPassPass(PassRegistry &);
 void initializeX86AsmPrinterPass(PassRegistry &);
 void initializeX86FixupInstTuningLegacyPass(PassRegistry &);
-void initializeX86FixupVectorConstantsPassPass(PassRegistry &);
+void initializeX86FixupVectorConstantsLegacyPass(PassRegistry &);
 void initializeWinEHStatePassPass(PassRegistry &);
 void initializeX86AvoidSFBLegacyPass(PassRegistry &);
 void initializeX86AvoidTrailingCallLegacyPassPass(PassRegistry &);
