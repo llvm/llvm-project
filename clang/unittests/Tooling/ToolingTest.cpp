@@ -78,6 +78,13 @@ TEST(runToolOnCode, FindsNoTopLevelDeclOnEmptyCode) {
   EXPECT_FALSE(FoundTopLevelDecl);
 }
 
+TEST(runToolOnCode, CudaSyntaxOnly) {
+  EXPECT_TRUE(runToolOnCodeWithArgs(
+      std::make_unique<TestAction>(std::make_unique<clang::ASTConsumer>()),
+      "__global__ void k() {}",
+      {"-fsyntax-only", "-x", "cuda", "--offload-arch=sm_70"}));
+}
+
 namespace {
 class FindClassDeclXConsumer : public clang::ASTConsumer {
  public:
