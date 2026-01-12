@@ -340,16 +340,20 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
         files[1], STDOUT_FILENO);
     stderr_handle = lldb_private::ProcessLauncherWindows::GetStdioHandle(
         files[2], STDERR_FILENO);
-    // Only close the handles we created
-    llvm::scope_exit close_handles([&] {
-      if (stdin_handle)
-        CloseHandle(stdin_handle);
-      if (stdout_handle)
-        CloseHandle(stdout_handle);
-      if (stderr_handle)
-        CloseHandle(stderr_handle);
-    });
   }
+
+  llvm::scope_exit close_handles([&] {
+    // Only close the handles we created
+    if (stdio.empty())
+      return;
+    if (stdin_handle)
+      CloseHandle(stdin_handle);
+    if (stdout_handle)
+      CloseHandle(stdout_handle);
+    if (stderr_handle)
+      CloseHandle(stderr_handle);
+  });
+
   auto inherited_handles_or_err =
       lldb_private::ProcessLauncherWindows::GetInheritedHandles(
           startupinfoex, /*launch_info*=*/nullptr, stdout_handle, stderr_handle,
