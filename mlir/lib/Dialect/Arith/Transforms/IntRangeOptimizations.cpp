@@ -518,7 +518,7 @@ struct NarrowLoopBounds final : OpInterfaceRewritePattern<LoopLikeOpInterface> {
     SmallVector<OpFoldResult> newLowerBounds(*lowerBounds);
     SmallVector<OpFoldResult> newUpperBounds(*upperBounds);
     SmallVector<OpFoldResult> newSteps(*steps);
-    SmallVector<std::pair<size_t, std::pair<Type, CastKind>>> narrowings;
+    SmallVector<std::tuple<size_t, Type, CastKind>> narrowings;
 
     // Check each (indVar, lb, ub, step) tuple.
     for (auto [idx, indVar, lbOFR, ubOFR, stepOFR] :
@@ -605,7 +605,7 @@ struct NarrowLoopBounds final : OpInterfaceRewritePattern<LoopLikeOpInterface> {
         newLowerBounds[idx] = newLb;
         newUpperBounds[idx] = newUb;
         newSteps[idx] = newStep;
-        narrowings.push_back({idx, {targetType, castKind}});
+        narrowings.push_back({idx, targetType, castKind});
         break;
       }
     }
@@ -615,7 +615,7 @@ struct NarrowLoopBounds final : OpInterfaceRewritePattern<LoopLikeOpInterface> {
 
     // Save original types before modifying.
     SmallVector<Type> origTypes;
-    for (auto [idx, typeAndCast] : narrowings) {
+    for (auto [idx, targetType, castKind] : narrowings) {
       Value indVar = (*inductionVars)[idx];
       origTypes.push_back(indVar.getType());
     }
@@ -636,8 +636,7 @@ struct NarrowLoopBounds final : OpInterfaceRewritePattern<LoopLikeOpInterface> {
       }
 
       // Update induction variable types.
-      for (auto [idx, typeAndCast] : narrowings) {
-        auto [targetType, castKind] = typeAndCast;
+      for (auto [idx, targetType, castKind] : narrowings) {
         Value indVar = (*inductionVars)[idx];
         auto blockArg = cast<BlockArgument>(indVar);
 
@@ -651,8 +650,7 @@ struct NarrowLoopBounds final : OpInterfaceRewritePattern<LoopLikeOpInterface> {
 
     // Insert casts back to original type for uses.
     for (auto [narrowingIdx, narrowingInfo] : llvm::enumerate(narrowings)) {
-      auto [idx, typeAndCast] = narrowingInfo;
-      auto [targetType, castKind] = typeAndCast;
+      auto [idx, targetType, castKind] = narrowingInfo;
       Value indVar = (*inductionVars)[idx];
       auto blockArg = cast<BlockArgument>(indVar);
       Type origType = origTypes[narrowingIdx];
