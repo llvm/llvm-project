@@ -64,9 +64,6 @@ function(llvm_update_compile_flags name)
   # LLVM_REQUIRES_RTTI is an internal flag that individual
   # targets can use to force RTTI
   if(NOT (LLVM_REQUIRES_RTTI OR LLVM_ENABLE_RTTI))
-    # TODO: GTEST_HAS_RTTI should be determined automatically, evaluate whether
-    # the explicit definition is actually required.
-    list(APPEND LLVM_COMPILE_DEFINITIONS GTEST_HAS_RTTI=0)
     list(APPEND LLVM_COMPILE_CXXFLAGS ${LLVM_CXXFLAGS_RTTI_DISABLE})
   else()
     list(APPEND LLVM_COMPILE_CXXFLAGS ${LLVM_CXXFLAGS_RTTI_ENABLE})
