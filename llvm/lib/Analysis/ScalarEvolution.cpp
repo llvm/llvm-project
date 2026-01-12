@@ -1007,26 +1007,75 @@ SCEVAddRecExpr::evaluateAtIteration(ArrayRef<const SCEV *> Operands,
 //                    SCEV Expression folder implementations
 //===----------------------------------------------------------------------===//
 
-const SCEV *ScalarEvolution::getLosslessPtrToIntExpr(const SCEV *Op,
-                                                     unsigned Depth) {
-  assert(Depth <= 1 &&
-         "getLosslessPtrToIntExpr() should self-recurse at most once.");
+/// The SCEVCastSinkingRewriter takes a scalar evolution expression,
+/// which computes a pointer-typed value, and rewrites the whole expression
+/// tree so that *all* the computations are done on integers, and the only
+/// pointer-typed operands in the expression are SCEVUnknown.
+/// The CreatePtrCast callback is invoked to create the actual conversion
+/// (ptrtoint or ptrtoaddr) at the SCEVUnknown leaves.
+class SCEVCastSinkingRewriter
+    : public SCEVRewriteVisitor<SCEVCastSinkingRewriter> {
+  using Base = SCEVRewriteVisitor<SCEVCastSinkingRewriter>;
+  using ConversionFn = function_ref<const SCEV *(const SCEVUnknown *)>;
+  Type *TargetTy;
+  ConversionFn CreatePtrCast;
 
-  // We could be called with an integer-typed operands during SCEV rewrites.
-  // Since the operand is an integer already, just perform zext/trunc/self cast.
-  if (!Op->getType()->isPointerTy())
-    return Op;
+public:
+  SCEVCastSinkingRewriter(ScalarEvolution &SE, Type *TargetTy,
+                          ConversionFn CreatePtrCast)
+      : Base(SE), TargetTy(TargetTy), CreatePtrCast(std::move(CreatePtrCast)) {}
 
-  // What would be an ID for such a SCEV cast expression?
-  FoldingSetNodeID ID;
-  ID.AddInteger(scPtrToInt);
-  ID.AddPointer(Op);
+  static const SCEV *rewrite(const SCEV *Scev, ScalarEvolution &SE,
+                             Type *TargetTy, ConversionFn CreatePtrCast) {
+    SCEVCastSinkingRewriter Rewriter(SE, TargetTy, std::move(CreatePtrCast));
+    return Rewriter.visit(Scev);
+  }
 
-  void *IP = nullptr;
+  const SCEV *visit(const SCEV *S) {
+    Type *STy = S->getType();
+    // If the expression is not pointer-typed, just keep it as-is.
+    if (!STy->isPointerTy())
+      return S;
+    // Else, recursively sink the cast down into it.
+    return Base::visit(S);
+  }
 
-  // Is there already an expression for such a cast?
-  if (const SCEV *S = UniqueSCEVs.FindNodeOrInsertPos(ID, IP))
-    return S;
+  const SCEV *visitAddExpr(const SCEVAddExpr *Expr) {
+    // Preserve wrap flags on rewritten SCEVAddExpr, which the default
+    // implementation drops.
+    SmallVector<const SCEV *, 2> Operands;
+    bool Changed = false;
+    for (const auto *Op : Expr->operands()) {
+      Operands.push_back(visit(Op));
+      Changed |= Op != Operands.back();
+    }
+    return !Changed ? Expr : SE.getAddExpr(Operands, Expr->getNoWrapFlags());
+  }
+
+  const SCEV *visitMulExpr(const SCEVMulExpr *Expr) {
+    SmallVector<const SCEV *, 2> Operands;
+    bool Changed = false;
+    for (const auto *Op : Expr->operands()) {
+      Operands.push_back(visit(Op));
+      Changed |= Op != Operands.back();
+    }
+    return !Changed ? Expr : SE.getMulExpr(Operands, Expr->getNoWrapFlags());
+  }
+
+  const SCEV *visitUnknown(const SCEVUnknown *Expr) {
+    assert(Expr->getType()->isPointerTy() &&
+           "Should only reach pointer-typed SCEVUnknown's.");
+    // Perform some basic constant folding. If the operand of the cast is a
+    // null pointer, don't create a cast SCEV expression (that will be left
+    // as-is), but produce a zero constant.
+    if (isa<ConstantPointerNull>(Expr->getValue()))
+      return SE.getZero(TargetTy);
+    return CreatePtrCast(Expr);
+  }
+};
+
+const SCEV *ScalarEvolution::getLosslessPtrToIntExpr(const SCEV *Op) {
+  assert(Op->getType()->isPointerTy() && "Op must be a pointer");
 
   // It isn't legal for optimizations to construct new ptrtoint expressions
   // for non-integral pointers.
@@ -1043,88 +1092,21 @@ const SCEV *ScalarEvolution::getLosslessPtrToIntExpr(const SCEV *Op,
       getDataLayout().getTypeSizeInBits(IntPtrTy))
     return getCouldNotCompute();
 
-  // If not, is this expression something we can't reduce any further?
-  if (auto *U = dyn_cast<SCEVUnknown>(Op)) {
-    // Perform some basic constant folding. If the operand of the ptr2int cast
-    // is a null pointer, don't create a ptr2int SCEV expression (that will be
-    // left as-is), but produce a zero constant.
-    // NOTE: We could handle a more general case, but lack motivational cases.
-    if (isa<ConstantPointerNull>(U->getValue()))
-      return getZero(IntPtrTy);
-
-    // Create an explicit cast node.
-    // We can reuse the existing insert position since if we get here,
-    // we won't have made any changes which would invalidate it.
-    SCEV *S = new (SCEVAllocator)
-        SCEVPtrToIntExpr(ID.Intern(SCEVAllocator), Op, IntPtrTy);
-    UniqueSCEVs.InsertNode(S, IP);
-    registerUser(S, Op);
-    return S;
-  }
-
-  assert(Depth == 0 && "getLosslessPtrToIntExpr() should not self-recurse for "
-                       "non-SCEVUnknown's.");
-
-  // Otherwise, we've got some expression that is more complex than just a
-  // single SCEVUnknown. But we don't want to have a SCEVPtrToIntExpr of an
-  // arbitrary expression, we want to have SCEVPtrToIntExpr of an SCEVUnknown
-  // only, and the expressions must otherwise be integer-typed.
-  // So sink the cast down to the SCEVUnknown's.
-
-  /// The SCEVPtrToIntSinkingRewriter takes a scalar evolution expression,
-  /// which computes a pointer-typed value, and rewrites the whole expression
-  /// tree so that *all* the computations are done on integers, and the only
-  /// pointer-typed operands in the expression are SCEVUnknown.
-  class SCEVPtrToIntSinkingRewriter
-      : public SCEVRewriteVisitor<SCEVPtrToIntSinkingRewriter> {
-    using Base = SCEVRewriteVisitor<SCEVPtrToIntSinkingRewriter>;
-
-  public:
-    SCEVPtrToIntSinkingRewriter(ScalarEvolution &SE) : SCEVRewriteVisitor(SE) {}
-
-    static const SCEV *rewrite(const SCEV *Scev, ScalarEvolution &SE) {
-      SCEVPtrToIntSinkingRewriter Rewriter(SE);
-      return Rewriter.visit(Scev);
-    }
-
-    const SCEV *visit(const SCEV *S) {
-      Type *STy = S->getType();
-      // If the expression is not pointer-typed, just keep it as-is.
-      if (!STy->isPointerTy())
-        return S;
-      // Else, recursively sink the cast down into it.
-      return Base::visit(S);
-    }
-
-    const SCEV *visitAddExpr(const SCEVAddExpr *Expr) {
-      SmallVector<const SCEV *, 2> Operands;
-      bool Changed = false;
-      for (const auto *Op : Expr->operands()) {
-        Operands.push_back(visit(Op));
-        Changed |= Op != Operands.back();
-      }
-      return !Changed ? Expr : SE.getAddExpr(Operands, Expr->getNoWrapFlags());
-    }
-
-    const SCEV *visitMulExpr(const SCEVMulExpr *Expr) {
-      SmallVector<const SCEV *, 2> Operands;
-      bool Changed = false;
-      for (const auto *Op : Expr->operands()) {
-        Operands.push_back(visit(Op));
-        Changed |= Op != Operands.back();
-      }
-      return !Changed ? Expr : SE.getMulExpr(Operands, Expr->getNoWrapFlags());
-    }
-
-    const SCEV *visitUnknown(const SCEVUnknown *Expr) {
-      assert(Expr->getType()->isPointerTy() &&
-             "Should only reach pointer-typed SCEVUnknown's.");
-      return SE.getLosslessPtrToIntExpr(Expr, /*Depth=*/1);
-    }
-  };
-
-  // And actually perform the cast sinking.
-  const SCEV *IntOp = SCEVPtrToIntSinkingRewriter::rewrite(Op, *this);
+  // Use the rewriter to sink the cast down to SCEVUnknown leaves.
+  const SCEV *IntOp = SCEVCastSinkingRewriter::rewrite(
+      Op, *this, IntPtrTy, [this, IntPtrTy](const SCEVUnknown *U) {
+        FoldingSetNodeID ID;
+        ID.AddInteger(scPtrToInt);
+        ID.AddPointer(U);
+        void *IP = nullptr;
+        if (const SCEV *S = UniqueSCEVs.FindNodeOrInsertPos(ID, IP))
+          return S;
+        SCEV *S = new (SCEVAllocator)
+            SCEVPtrToIntExpr(ID.Intern(SCEVAllocator), U, IntPtrTy);
+        UniqueSCEVs.InsertNode(S, IP);
+        registerUser(S, U);
+        return static_cast<const SCEV *>(S);
+      });
   assert(IntOp->getType()->isIntegerTy() &&
          "We must have succeeded in sinking the cast, "
          "and ending up with an integer-typed expression!");
