@@ -85,6 +85,9 @@ Changes to building LLVM
 Changes to TableGen
 -------------------
 
+* The `!getop` and `!setop` bang operators have been removed in favor of
+  `!getdagop` and `!setdagop`.
+
 Changes to Interprocedural Optimizations
 ----------------------------------------
 
@@ -114,6 +117,8 @@ Changes to the AArch64 Backend
 
 * Added support for C1-Nano, C1-Pro, C1-Premium, and C1-Ultra CPUs.
 
+* Added support for Ampere1C cores.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
@@ -142,6 +147,8 @@ Changes to the MIPS Backend
 Changes to the PowerPC Backend
 ------------------------------
 
+* `half` now uses a soft float ABI, which works correctly in more cases.
+
 Changes to the RISC-V Backend
 -----------------------------
 
@@ -158,10 +165,18 @@ Changes to the RISC-V Backend
 * Adds assembler support for the Andes `XAndesvsinth` (Andes Vector Small Int Handling Extension).
 * DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`
   to be used together when building for the RISC-V platform.
-* The Xqci Qualcomm uC Vendor Extension is no longger marked as experimental.
+* The Xqci Qualcomm uC Vendor Extension is no longer marked as experimental.
+* The Xqccmp Qualcomm Vendor Extension is no longer marked as experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------
+
+* `half` now uses a soft float lowering, which resolves various precision and
+  bitcast issues.
+
+- The `wasm32-wasi` target has been renamed to `wasm32-wasip1`. The old
+  option is still recognized, though by default will emit a deprecation
+  warning.
 
 Changes to the Windows Target
 -----------------------------
@@ -177,6 +192,12 @@ Changes to the X86 Backend
 Changes to the OCaml bindings
 -----------------------------
 
+* The IR reader bindings renamed `parse_ir` to
+  `parse_ir_bitcode_or_assembly` to clarify that the parser accepts both
+  textual IR and bitcode. This rename is intentional to force existing code to
+  update because the ownership semantics changed: the function no longer takes
+  ownership of the input memory buffer.
+
 Changes to the Python bindings
 ------------------------------
 
@@ -186,6 +207,10 @@ Changes to the C API
 * Add `LLVMGetOrInsertFunction` to get or insert a function, replacing the combination of `LLVMGetNamedFunction` and `LLVMAddFunction`.
 * Allow `LLVMGetVolatile` to work with any kind of Instruction.
 * Add `LLVMConstFPFromBits` to get a constant floating-point value from an array of 64 bit values.
+* Add `LLVMParseIRInContext2`, which is equivalent to `LLVMParseIRInContext`
+  but does not take ownership of the input `LLVMMemoryBufferRef`. This matches
+  the underlying C++ API and avoids ownership surprises in language bindings
+  and examples.
 * Functions working on the global context have been deprecated. Use the
   functions that work on a specific context instead.
 
@@ -272,6 +297,7 @@ Changes to LLDB
   LLDB's build configuration is included in the command's output. This includes
   all the supported targets, along with the presence of (or lack of) optional
   features like XML parsing.
+* LLDB now includes formatters for many types from the MSVC STL.
 
 Changes to BOLT
 ---------------------------------
