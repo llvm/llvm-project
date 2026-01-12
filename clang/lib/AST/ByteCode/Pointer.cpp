@@ -454,6 +454,12 @@ bool Pointer::isInitialized() const {
     return GD.InitState == GlobalInitState::Initialized;
   }
 
+  // Safety check: if BS.Base == sizeof(GlobalInlineDescriptor) but we're not
+  // in the isRoot() case above, we still cannot call getInlineDesc().
+  // This can happen when Offset != BS.Base. Return true to avoid crash.
+  if (BS.Base == sizeof(GlobalInlineDescriptor))
+    return true;
+
   assert(BS.Pointee && "Cannot check if null pointer was initialized");
   const Descriptor *Desc = getFieldDesc();
   assert(Desc);

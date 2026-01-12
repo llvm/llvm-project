@@ -127,6 +127,8 @@ Bug Fixes to C++ Support
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Fixed assertion crash in bytecode interpreter when checking initialization of
+  constexpr pointer arrays with GlobalInlineDescriptor. (#GH175432)
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
 
