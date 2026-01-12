@@ -1,10 +1,13 @@
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: llvm-mc -triple=arm64-apple-darwin -filetype=obj -o %t/crash.o %s
-# RUN: not --crash llvm-jitlink -debugger-support=false \
+# RUN: not --crash llvm-jitlink -debugger-support=false -show-addrs \
 # RUN:     -write-symtab %t/crash.symtab.txt %t/crash.o \
 # RUN:     > %t/backtrace.txt 2>&1
 # RUN: llvm-jitlink -symbolicate-with %t/crash.symtab.txt %t/backtrace.txt \
 # RUN:     | FileCheck %s
+
+# TODO: Remove -show-addrs option once we identify the current failure
+#       affecting some darwin bots.
 
 # Deliberately crash by dereferencing an environment variable that should never
 # be defined, then symbolicate the backtrace using the dumped symbol table.
