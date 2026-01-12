@@ -2005,6 +2005,22 @@ public:
   }
 };
 
+class DeactivationSymbolSDNode : public SDNode {
+  friend class SelectionDAG;
+
+  const GlobalValue *TheGlobal;
+
+  DeactivationSymbolSDNode(const GlobalValue *GV, SDVTList VTs)
+      : SDNode(ISD::DEACTIVATION_SYMBOL, 0, DebugLoc(), VTs), TheGlobal(GV) {}
+
+public:
+  const GlobalValue *getGlobal() const { return TheGlobal; }
+
+  static bool classof(const SDNode *N) {
+    return N->getOpcode() == ISD::DEACTIVATION_SYMBOL;
+  }
+};
+
 class FrameIndexSDNode : public SDNode {
   friend class SelectionDAG;
 

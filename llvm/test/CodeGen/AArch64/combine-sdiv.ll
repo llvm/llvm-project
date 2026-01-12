@@ -1493,13 +1493,12 @@ define i5 @combine_i5_sdiv_const7(i5 %x) {
 ; CHECK-SD-LABEL: combine_i5_sdiv_const7:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-SD-NEXT:    mov x8, #-56173 // =0xffffffffffff2493
-; CHECK-SD-NEXT:    sbfx x9, x0, #0, #5
-; CHECK-SD-NEXT:    movk x8, #37449, lsl #16
-; CHECK-SD-NEXT:    smull x8, w9, w8
-; CHECK-SD-NEXT:    lsl w9, w0, #27
-; CHECK-SD-NEXT:    lsr x8, x8, #32
-; CHECK-SD-NEXT:    add w8, w8, w9, asr #27
+; CHECK-SD-NEXT:    sbfx x8, x0, #0, #5
+; CHECK-SD-NEXT:    mov x9, #-56173 // =0xffffffffffff2493
+; CHECK-SD-NEXT:    movk x9, #37449, lsl #16
+; CHECK-SD-NEXT:    smull x8, w8, w9
+; CHECK-SD-NEXT:    sbfx w9, w0, #0, #5
+; CHECK-SD-NEXT:    add x8, x9, x8, lsr #32
 ; CHECK-SD-NEXT:    asr w9, w8, #2
 ; CHECK-SD-NEXT:    add w0, w9, w8, lsr #31
 ; CHECK-SD-NEXT:    ret
@@ -1646,10 +1645,10 @@ define i32 @combine_i32_sdiv_const7(i32 %x) {
 ; CHECK-SD-LABEL: combine_i32_sdiv_const7:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    mov w8, #9363 // =0x2493
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    movk w8, #37449, lsl #16
 ; CHECK-SD-NEXT:    smull x8, w0, w8
-; CHECK-SD-NEXT:    lsr x8, x8, #32
-; CHECK-SD-NEXT:    add w8, w8, w0
+; CHECK-SD-NEXT:    add x8, x0, x8, lsr #32
 ; CHECK-SD-NEXT:    asr w9, w8, #2
 ; CHECK-SD-NEXT:    add w0, w9, w8, lsr #31
 ; CHECK-SD-NEXT:    ret
@@ -1657,10 +1656,10 @@ define i32 @combine_i32_sdiv_const7(i32 %x) {
 ; CHECK-GI-LABEL: combine_i32_sdiv_const7:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #9363 // =0x2493
+; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-GI-NEXT:    movk w8, #37449, lsl #16
 ; CHECK-GI-NEXT:    smull x8, w0, w8
-; CHECK-GI-NEXT:    asr x8, x8, #32
-; CHECK-GI-NEXT:    add w8, w8, w0
+; CHECK-GI-NEXT:    add x8, x0, x8, asr #32
 ; CHECK-GI-NEXT:    asr w8, w8, #2
 ; CHECK-GI-NEXT:    add w0, w8, w8, lsr #31
 ; CHECK-GI-NEXT:    ret
@@ -1674,8 +1673,9 @@ define i32 @combine_i32_sdiv_const100(i32 %x) {
 ; CHECK-SD-NEXT:    mov w8, #34079 // =0x851f
 ; CHECK-SD-NEXT:    movk w8, #20971, lsl #16
 ; CHECK-SD-NEXT:    smull x8, w0, w8
-; CHECK-SD-NEXT:    asr x8, x8, #37
-; CHECK-SD-NEXT:    add w0, w8, w8, lsr #31
+; CHECK-SD-NEXT:    asr x9, x8, #37
+; CHECK-SD-NEXT:    add x0, x9, x8, lsr #63
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: combine_i32_sdiv_const100:

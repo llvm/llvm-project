@@ -1,7 +1,7 @@
 # Xqcicm - Qualcomm uC Conditional Move Extension
-# RUN: not llvm-mc -triple riscv32 -mattr=+experimental-xqcicm < %s 2>&1 \
+# RUN: not llvm-mc -triple riscv32 -mattr=+xqcicm < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-IMM %s
-# RUN: not llvm-mc -triple riscv32 -mattr=-experimental-xqcicm < %s 2>&1 \
+# RUN: not llvm-mc -triple riscv32 -mattr=-xqcicm < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-EXT %s
 
 # CHECK-PLUS: :[[@LINE+2]]:12: error: register must be a GPR excluding zero (x0)

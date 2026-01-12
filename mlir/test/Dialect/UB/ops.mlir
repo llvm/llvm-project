@@ -38,3 +38,9 @@ func.func @poison_tensor() -> tensor<8x?xf64> {
   %0 = ub.poison : tensor<8x?xf64>
   return %0 : tensor<8x?xf64>
 }
+
+// CHECK-LABEL: func @unreachable()
+//       CHECK:   ub.unreachable
+func.func @unreachable() {
+  ub.unreachable
+}

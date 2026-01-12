@@ -51,40 +51,40 @@ getNewScaleSingleStep(DurationScale OldScale, double Multiplier) {
   switch (OldScale) {
   case DurationScale::Hours:
     if (Multiplier <= 1.0 / 60.0)
-      return std::make_tuple(DurationScale::Minutes, Multiplier * 60.0);
+      return {{DurationScale::Minutes, Multiplier * 60.0}};
     break;
 
   case DurationScale::Minutes:
     if (Multiplier >= 60.0)
-      return std::make_tuple(DurationScale::Hours, Multiplier / 60.0);
+      return {{DurationScale::Hours, Multiplier / 60.0}};
     if (Multiplier <= 1.0 / 60.0)
-      return std::make_tuple(DurationScale::Seconds, Multiplier * 60.0);
+      return {{DurationScale::Seconds, Multiplier * 60.0}};
     break;
 
   case DurationScale::Seconds:
     if (Multiplier >= 60.0)
-      return std::make_tuple(DurationScale::Minutes, Multiplier / 60.0);
+      return {{DurationScale::Minutes, Multiplier / 60.0}};
     if (Multiplier <= 1e-3)
-      return std::make_tuple(DurationScale::Milliseconds, Multiplier * 1e3);
+      return {{DurationScale::Milliseconds, Multiplier * 1e3}};
     break;
 
   case DurationScale::Milliseconds:
     if (Multiplier >= 1e3)
-      return std::make_tuple(DurationScale::Seconds, Multiplier / 1e3);
+      return {{DurationScale::Seconds, Multiplier / 1e3}};
     if (Multiplier <= 1e-3)
-      return std::make_tuple(DurationScale::Microseconds, Multiplier * 1e3);
+      return {{DurationScale::Microseconds, Multiplier * 1e3}};
     break;
 
   case DurationScale::Microseconds:
     if (Multiplier >= 1e3)
-      return std::make_tuple(DurationScale::Milliseconds, Multiplier / 1e3);
+      return {{DurationScale::Milliseconds, Multiplier / 1e3}};
     if (Multiplier <= 1e-3)
-      return std::make_tuple(DurationScale::Nanoseconds, Multiplier * 1e-3);
+      return {{DurationScale::Nanoseconds, Multiplier * 1e-3}};
     break;
 
   case DurationScale::Nanoseconds:
     if (Multiplier >= 1e3)
-      return std::make_tuple(DurationScale::Microseconds, Multiplier / 1e3);
+      return {{DurationScale::Microseconds, Multiplier / 1e3}};
     break;
   }
 

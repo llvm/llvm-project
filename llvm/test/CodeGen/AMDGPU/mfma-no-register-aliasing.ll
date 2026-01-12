@@ -1005,10 +1005,7 @@ define amdgpu_kernel void @test_mfma_f32_4x4x1f32(ptr addrspace(1) %arg) #0 {
 ; FAST90A-NEXT:    v_accvgpr_write_b32 a3, s7
 ; FAST90A-NEXT:    s_nop 1
 ; FAST90A-NEXT:    v_mfma_f32_4x4x1f32 a[0:3], v1, v2, a[0:3]
-; FAST90A-NEXT:    v_mfma_f32_4x4x1f32 a[4:7], v1, v2, a[0:3]
-; FAST90A-NEXT:    s_nop 4
-; FAST90A-NEXT:    v_accvgpr_mov_b32 a2, a4
-; FAST90A-NEXT:    v_accvgpr_mov_b32 a3, a5
+; FAST90A-NEXT:    v_mfma_f32_4x4x1f32 a[2:5], v1, v2, a[0:3]
 ; FAST90A-NEXT:    s_nop 1
 ; FAST90A-NEXT:    v_mfma_f32_4x4x1f32 a[0:3], v1, v2, a[0:3]
 ; FAST90A-NEXT:    s_nop 4

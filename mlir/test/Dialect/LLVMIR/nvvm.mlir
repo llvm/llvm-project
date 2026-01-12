@@ -92,13 +92,6 @@ func.func @llvm_nvvm_cluster_wait() {
   llvm.return
 }
 
-// CHECK-LABEL: @llvm_nvvm_fence_sc_cluster
-func.func @llvm_nvvm_fence_sc_cluster() {
-  // CHECK: nvvm.fence.sc.cluster
-  nvvm.fence.sc.cluster
-  llvm.return
-}
-
 // CHECK-LABEL: @nvvm_shfl
 func.func @nvvm_shfl(
     %arg0 : i32, %arg1 : i32, %arg2 : i32,
@@ -461,19 +454,6 @@ llvm.func private @mbarrier_arrive_nocomplete_shared(%barrier: !llvm.ptr<3>) {
   %count = nvvm.read.ptx.sreg.ntid.x : i32
   // CHECK:   nvvm.mbarrier.arrive.nocomplete %{{.*}} : !llvm.ptr<3>
   %0 = nvvm.mbarrier.arrive.nocomplete %barrier, %count : !llvm.ptr<3>, i32  -> i64
-  llvm.return
-}
-
-llvm.func private @mbarrier_test_wait(%barrier: !llvm.ptr, %token : i64) -> i1 {  
-  // CHECK:   nvvm.mbarrier.test.wait %{{.*}}
-  %isComplete = nvvm.mbarrier.test.wait %barrier, %token : !llvm.ptr, i64 -> i1
-  llvm.return %isComplete : i1
-}
-
-llvm.func private @mbarrier_test_wait_shared(%barrier: !llvm.ptr<3>, %token : i64) {
-  %count = nvvm.read.ptx.sreg.ntid.x : i32
-  // CHECK:   nvvm.mbarrier.test.wait %{{.*}}
-  %isComplete = nvvm.mbarrier.test.wait %barrier, %token : !llvm.ptr<3>, i64 -> i1
   llvm.return
 }
 

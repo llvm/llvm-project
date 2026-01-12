@@ -167,6 +167,23 @@ const char *toString(std::optional<DWARFFormValueType> F) {
   }
   return nullptr;
 }
+
+/// Resolve the DW_AT_type of \c D until we reach a DIE that is not a
+/// DW_TAG_typedef.
+template <typename DieType> DieType unwrapReferencedTypedefType(DieType D) {
+  auto TypeAttr = D.find(dwarf::DW_AT_type);
+  if (!TypeAttr)
+    return DieType();
+
+  auto Unwrapped = detail::resolveReferencedType(D, *TypeAttr);
+  if (!Unwrapped)
+    return DieType();
+
+  if (Unwrapped.getTag() == dwarf::DW_TAG_typedef)
+    return unwrapReferencedTypedefType(Unwrapped);
+
+  return Unwrapped;
+}
 } // namespace detail
 
 template <typename DieType>
@@ -588,10 +605,9 @@ bool DWARFTypePrinter<DieType>::appendTemplateParameters(DieType D,
     }
     if (C.getTag() != dwarf::DW_TAG_template_type_parameter)
       continue;
-    auto TypeAttr = C.find(dwarf::DW_AT_type);
     Sep();
-    appendQualifiedName(TypeAttr ? detail::resolveReferencedType(C, *TypeAttr)
-                                 : DieType());
+
+    appendQualifiedName(detail::unwrapReferencedTypedefType(C));
   }
   if (IsTemplate && *FirstParameter && FirstParameter == &FirstParameterValue) {
     OS << '<';

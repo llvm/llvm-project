@@ -200,6 +200,14 @@ TYPED_TEST(DenseMapTest, AtTest) {
   EXPECT_EQ(this->getValue(0), this->Map.at(this->getKey(0)));
   EXPECT_EQ(this->getValue(1), this->Map.at(this->getKey(1)));
   EXPECT_EQ(this->getValue(2), this->Map.at(this->getKey(2)));
+
+  this->Map.at(this->getKey(0)) = this->getValue(1);
+  EXPECT_EQ(this->getValue(1), this->Map.at(this->getKey(0)));
+
+  const auto &ConstMap = this->Map;
+  EXPECT_EQ(this->getValue(1), ConstMap.at(this->getKey(0)));
+  EXPECT_EQ(this->getValue(1), ConstMap.at(this->getKey(1)));
+  EXPECT_EQ(this->getValue(2), ConstMap.at(this->getKey(2)));
 }
 
 // Test clear() method

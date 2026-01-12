@@ -179,7 +179,7 @@ define void @divergent_br_no_metadata(i32 noundef inreg %value, ptr addrspace(8)
 ; GFX1010-NEXT:    s_mov_b32 s4, s17
 ; GFX1010-NEXT:    buffer_store_dword v0, v1, s[4:7], 0 offen
 ; GFX1010-NEXT:  .LBB3_2: ; %if.end
-; GFX1010-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1010-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1010-NEXT:    s_or_b32 exec_lo, exec_lo, s8
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
@@ -250,7 +250,7 @@ define void @divergent_br_same_weight(i32 noundef inreg %value, ptr addrspace(8)
 ; GFX1010-NEXT:    s_mov_b32 s4, s17
 ; GFX1010-NEXT:    buffer_store_dword v0, v1, s[4:7], 0 offen
 ; GFX1010-NEXT:  .LBB4_2: ; %if.end
-; GFX1010-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1010-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1010-NEXT:    s_or_b32 exec_lo, exec_lo, s8
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
@@ -319,7 +319,7 @@ define void @divergent_br_then_likely(i32 noundef inreg %value, ptr addrspace(8)
 ; GFX1010-NEXT:    s_mov_b32 s4, s17
 ; GFX1010-NEXT:    buffer_store_dword v0, v1, s[4:7], 0 offen
 ; GFX1010-NEXT:  ; %bb.2: ; %if.end
-; GFX1010-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1010-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1010-NEXT:    s_or_b32 exec_lo, exec_lo, s8
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]

@@ -186,6 +186,36 @@ static mlir::Type wrapAllocaResultType(mlir::Type intype) {
   return fir::ReferenceType::get(intype);
 }
 
+llvm::SmallVector<mlir::MemorySlot> fir::AllocaOp::getPromotableSlots() {
+  // TODO: support promotion of dynamic allocas
+  if (isDynamic())
+    return {};
+
+  return {mlir::MemorySlot{getResult(), getAllocatedType()}};
+}
+
+mlir::Value fir::AllocaOp::getDefaultValue(const mlir::MemorySlot &slot,
+                                           mlir::OpBuilder &builder) {
+  return fir::UndefOp::create(builder, getLoc(), slot.elemType);
+}
+
+void fir::AllocaOp::handleBlockArgument(const mlir::MemorySlot &slot,
+                                        mlir::BlockArgument argument,
+                                        mlir::OpBuilder &builder) {}
+
+std::optional<mlir::PromotableAllocationOpInterface>
+fir::AllocaOp::handlePromotionComplete(const mlir::MemorySlot &slot,
+                                       mlir::Value defaultValue,
+                                       mlir::OpBuilder &builder) {
+  if (defaultValue && defaultValue.use_empty()) {
+    assert(mlir::isa<fir::UndefOp>(defaultValue.getDefiningOp()) &&
+           "Expected undef op to be the default value");
+    defaultValue.getDefiningOp()->erase();
+  }
+  this->erase();
+  return std::nullopt;
+}
+
 mlir::Type fir::AllocaOp::getAllocatedType() {
   return mlir::cast<fir::ReferenceType>(getType()).getEleTy();
 }
@@ -2861,6 +2891,39 @@ llvm::SmallVector<mlir::Attribute> fir::LenParamIndexOp::getAttributes() {
 // LoadOp
 //===----------------------------------------------------------------------===//
 
+bool fir::LoadOp::loadsFrom(const mlir::MemorySlot &slot) {
+  return getMemref() == slot.ptr;
+}
+
+bool fir::LoadOp::storesTo(const mlir::MemorySlot &slot) { return false; }
+
+mlir::Value fir::LoadOp::getStored(const mlir::MemorySlot &slot,
+                                   mlir::OpBuilder &builder,
+                                   mlir::Value reachingDef,
+                                   const mlir::DataLayout &dataLayout) {
+  return mlir::Value();
+}
+
+bool fir::LoadOp::canUsesBeRemoved(
+    const mlir::MemorySlot &slot,
+    const SmallPtrSetImpl<mlir::OpOperand *> &blockingUses,
+    mlir::SmallVectorImpl<mlir::OpOperand *> &newBlockingUses,
+    const mlir::DataLayout &dataLayout) {
+  if (blockingUses.size() != 1)
+    return false;
+  mlir::Value blockingUse = (*blockingUses.begin())->get();
+  return blockingUse == slot.ptr && getMemref() == slot.ptr;
+}
+
+mlir::DeletionKind fir::LoadOp::removeBlockingUses(
+    const mlir::MemorySlot &slot,
+    const SmallPtrSetImpl<mlir::OpOperand *> &blockingUses,
+    mlir::OpBuilder &builder, mlir::Value reachingDefinition,
+    const mlir::DataLayout &dataLayout) {
+  getResult().replaceAllUsesWith(reachingDefinition);
+  return mlir::DeletionKind::Delete;
+}
+
 void fir::LoadOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
                         mlir::Value refVal) {
   if (!refVal) {
@@ -3230,11 +3293,19 @@ mlir::ParseResult fir::DTEntryOp::parse(mlir::OpAsmParser &parser,
       parser.parseAttribute(calleeAttr, fir::DTEntryOp::getProcAttrNameStr(),
                             result.attributes))
     return mlir::failure();
+
+  // Optional "deferred" keyword.
+  if (succeeded(parser.parseOptionalKeyword("deferred"))) {
+    result.addAttribute(fir::DTEntryOp::getDeferredAttrNameStr(),
+                        parser.getBuilder().getUnitAttr());
+  }
   return mlir::success();
 }
 
 void fir::DTEntryOp::print(mlir::OpAsmPrinter &p) {
   p << ' ' << getMethodAttr() << ", " << getProcAttr();
+  if ((*this)->getAttr(fir::DTEntryOp::getDeferredAttrNameStr()))
+    p << " deferred";
 }
 
 //===----------------------------------------------------------------------===//
@@ -4248,6 +4319,39 @@ llvm::LogicalResult fir::SliceOp::verify() {
 // StoreOp
 //===----------------------------------------------------------------------===//
 
+bool fir::StoreOp::loadsFrom(const mlir::MemorySlot &slot) { return false; }
+
+bool fir::StoreOp::storesTo(const mlir::MemorySlot &slot) {
+  return getMemref() == slot.ptr;
+}
+
+mlir::Value fir::StoreOp::getStored(const mlir::MemorySlot &slot,
+                                    mlir::OpBuilder &builder,
+                                    mlir::Value reachingDef,
+                                    const mlir::DataLayout &dataLayout) {
+  return getValue();
+}
+
+bool fir::StoreOp::canUsesBeRemoved(
+    const mlir::MemorySlot &slot,
+    const SmallPtrSetImpl<mlir::OpOperand *> &blockingUses,
+    mlir::SmallVectorImpl<mlir::OpOperand *> &newBlockingUses,
+    const mlir::DataLayout &dataLayout) {
+  if (blockingUses.size() != 1)
+    return false;
+  mlir::Value blockingUse = (*blockingUses.begin())->get();
+  return blockingUse == slot.ptr && getMemref() == slot.ptr &&
+         getValue() != slot.ptr;
+}
+
+mlir::DeletionKind fir::StoreOp::removeBlockingUses(
+    const mlir::MemorySlot &slot,
+    const SmallPtrSetImpl<mlir::OpOperand *> &blockingUses,
+    mlir::OpBuilder &builder, mlir::Value reachingDefinition,
+    const mlir::DataLayout &dataLayout) {
+  return mlir::DeletionKind::Delete;
+}
+
 mlir::Type fir::StoreOp::elementType(mlir::Type refType) {
   return fir::dyn_cast_ptrEleTy(refType);
 }
@@ -4295,6 +4399,84 @@ void fir::StoreOp::getEffects(
   effects.emplace_back(mlir::MemoryEffects::Write::get(), &getMemrefMutable(),
                        mlir::SideEffects::DefaultResource::get());
   addVolatileMemoryEffects({getMemref().getType()}, effects);
+}
+
+//===----------------------------------------------------------------------===//
+// PrefetchOp
+//===----------------------------------------------------------------------===//
+
+mlir::ParseResult fir::PrefetchOp::parse(mlir::OpAsmParser &parser,
+                                         mlir::OperationState &result) {
+  mlir::OpAsmParser::UnresolvedOperand memref;
+  if (parser.parseOperand(memref))
+    return mlir::failure();
+
+  if (mlir::succeeded(parser.parseLBrace())) {
+    llvm::StringRef kw;
+    if (parser.parseKeyword(&kw))
+      return mlir::failure();
+
+    if (kw == "read")
+      result.addAttribute("rw", parser.getBuilder().getBoolAttr(false));
+    else if (kw == "write")
+      result.addAttribute("rw", parser.getBuilder().getUnitAttr());
+    else
+      return parser.emitError(parser.getCurrentLocation(),
+                              "Expected either read or write keyword");
+
+    if (parser.parseComma())
+      return mlir::failure();
+
+    if (parser.parseKeyword(&kw))
+      return mlir::failure();
+    if (kw == "instruction") {
+      result.addAttribute("cacheType", parser.getBuilder().getBoolAttr(false));
+    } else if (kw == "data") {
+      result.addAttribute("cacheType", parser.getBuilder().getUnitAttr());
+    } else
+      return parser.emitError(parser.getCurrentLocation(),
+                              "Expected either intruction or data keyword");
+
+    if (parser.parseComma())
+      return mlir::failure();
+
+    if (mlir::succeeded(parser.parseKeyword("localityHint"))) {
+      if (parser.parseEqual())
+        return mlir::failure();
+      mlir::Attribute intAttr;
+      if (parser.parseAttribute(intAttr))
+        return mlir::failure();
+      result.addAttribute("localityHint", intAttr);
+    }
+    if (parser.parseRBrace())
+      return mlir::failure();
+  }
+  mlir::Type type;
+  if (parser.parseColonType(type))
+    return mlir::failure();
+
+  if (parser.resolveOperand(memref, type, result.operands))
+    return mlir::failure();
+  return mlir::success();
+}
+
+void fir::PrefetchOp::print(mlir::OpAsmPrinter &p) {
+  p << " ";
+  p.printOperand(getMemref());
+  p << " {";
+  if (getRw())
+    p << "write";
+  else
+    p << "read";
+  p << ", ";
+  if (getCacheType())
+    p << "data";
+  else
+    p << "instruction";
+  p << ", localityHint = ";
+  p << getLocalityHint();
+  p << " : " << getLocalityHintAttr().getType();
+  p << "} : " << getMemref().getType();
 }
 
 //===----------------------------------------------------------------------===//

@@ -6,8 +6,6 @@
 
 ; Verify that we lower @llvm.readcyclecounter() correctly.
 
-declare i64 @llvm.readcyclecounter()
-
 define i64 @test_builtin_readcyclecounter() nounwind {
 ; RV32I-LABEL: test_builtin_readcyclecounter:
 ; RV32I:       # %bb.0:

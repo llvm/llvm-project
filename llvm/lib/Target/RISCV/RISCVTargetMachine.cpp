@@ -14,6 +14,7 @@
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "RISCV.h"
 #include "RISCVMachineFunctionInfo.h"
+#include "RISCVMachineScheduler.h"
 #include "RISCVTargetObjectFile.h"
 #include "RISCVTargetTransformInfo.h"
 #include "TargetInfo/RISCVTargetInfo.h"
@@ -141,6 +142,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVPushPopOptPass(*PR);
   initializeRISCVIndirectBranchTrackingPass(*PR);
   initializeRISCVLoadStoreOptPass(*PR);
+  initializeRISCVPreAllocZilsdOptPass(*PR);
   initializeRISCVExpandAtomicPseudoPass(*PR);
   initializeRISCVRedundantCopyEliminationPass(*PR);
   initializeRISCVAsmPrinterPass(*PR);
@@ -149,6 +151,12 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
+}
+
+static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
+  if (TT.isOSBinFormatMachO())
+    return std::make_unique<RISCVMachOTargetObjectFile>();
+  return std::make_unique<RISCVELFTargetObjectFile>();
 }
 
 RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
@@ -161,7 +169,7 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
           T, TT.computeDataLayout(Options.MCOptions.getABIName()), TT, CPU, FS,
           Options, getEffectiveRelocModel(RM),
           getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      TLOF(std::make_unique<RISCVELFTargetObjectFile>()) {
+      TLOF(createTLOF(TT)) {
   initAsmInfo();
 
   // RISC-V supports the MachineOutliner.
@@ -278,7 +286,7 @@ bool RISCVTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
 ScheduleDAGInstrs *
 RISCVTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
   const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
-  ScheduleDAGMILive *DAG = createSchedLive(C);
+  ScheduleDAGMILive *DAG = createSchedLive<RISCVPreRAMachineSchedStrategy>(C);
 
   if (ST.enableMISchedLoadClustering())
     DAG->addMutation(createLoadClusterDAGMutation(
@@ -604,6 +612,8 @@ void RISCVPassConfig::addPreRegAlloc() {
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     addPass(createRISCVMergeBaseOffsetOptPass());
     addPass(createRISCVVLOptimizerPass());
+    // Add Zilsd pre-allocation load/store optimization
+    addPass(createRISCVPreAllocZilsdOptPass());
   }
 
   addPass(createRISCVInsertReadWriteCSRPass());

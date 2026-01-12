@@ -96,8 +96,10 @@ module {
 // CHECK:       reduce.finalize:                                  ; preds = %[[VAL_34]], %[[VAL_28]]
 // CHECK:         br label %[[VAL_38:.*]]
 // CHECK:       omp.par.pre_finalize:                             ; preds = %[[VAL_33]]
+// CHECK:         br label %[[FINI:.*]]
+// CHECK:       [[FINI]]:
 // CHECK:         br label %[[VAL_39:.*]]
-// CHECK:       omp.par.exit.exitStub:                            ; preds = %[[VAL_38]]
+// CHECK:       omp.par.exit.exitStub:                            ; preds = %[[FINI]]
 // CHECK:         ret void
 // CHECK:         %[[VAL_40:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_41:.*]], i64 0, i64 0
 // CHECK:         %[[VAL_42:.*]] = load ptr, ptr %[[VAL_40]], align 8

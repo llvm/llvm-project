@@ -40,13 +40,13 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -66,11 +66,13 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Hash.h"
 #include "llvm/Support/TimeProfiler.h"
-#include "llvm/Support/xxhash.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/TargetParser/X86TargetParser.h"
+#include "llvm/Transforms/Instrumentation/KCFI.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include <optional>
 #include <set>
@@ -377,15 +379,11 @@ static void checkDataLayoutConsistency(const TargetInfo &Target,
     Check("bfloat", llvm::Type::getBFloatTy(Context), Target.BFloat16Align);
   Check("float", llvm::Type::getFloatingPointTy(Context, *Target.FloatFormat),
         Target.FloatAlign);
-  // FIXME: AIX specifies wrong double alignment in DataLayout
-  if (!Triple.isOSAIX()) {
-    Check("double",
-          llvm::Type::getFloatingPointTy(Context, *Target.DoubleFormat),
-          Target.DoubleAlign);
-    Check("long double",
-          llvm::Type::getFloatingPointTy(Context, *Target.LongDoubleFormat),
-          Target.LongDoubleAlign);
-  }
+  Check("double", llvm::Type::getFloatingPointTy(Context, *Target.DoubleFormat),
+        Target.DoubleAlign);
+  Check("long double",
+        llvm::Type::getFloatingPointTy(Context, *Target.LongDoubleFormat),
+        Target.LongDoubleAlign);
   if (Target.hasFloat128Type())
     Check("__float128", llvm::Type::getFP128Ty(Context), Target.Float128Align);
   if (Target.hasIbm128Type())
@@ -493,10 +491,8 @@ CodeGenModule::CodeGenModule(ASTContext &C,
         CodeGenOpts.ProfileInstrumentUsePath, *FS,
         CodeGenOpts.ProfileRemappingFile);
     if (auto E = ReaderOrErr.takeError()) {
-      unsigned DiagID = Diags.getCustomDiagID(
-          DiagnosticsEngine::Error, "Error in reading profile %0: %1");
       llvm::handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EI) {
-        Diags.Report(DiagID)
+        Diags.Report(diag::err_reading_profile)
             << CodeGenOpts.ProfileInstrumentUsePath << EI.message();
       });
       return;
@@ -540,12 +536,9 @@ CodeGenModule::CodeGenModule(ASTContext &C,
           this->MSHotPatchFunctions.push_back(std::string{*I});
       } else {
         auto &DE = Context.getDiagnostics();
-        unsigned DiagID =
-            DE.getCustomDiagID(DiagnosticsEngine::Error,
-                               "failed to open hotpatch functions file "
-                               "(-fms-hotpatch-functions-file): %0 : %1");
-        DE.Report(DiagID) << CGO.MSSecureHotPatchFunctionsFile
-                          << BufOrErr.getError().message();
+        DE.Report(diag::err_open_hotpatch_file_failed)
+            << CGO.MSSecureHotPatchFunctionsFile
+            << BufOrErr.getError().message();
       }
     }
 
@@ -1272,6 +1265,12 @@ void CodeGenModule::Release() {
                                 CodeGenOpts.PatchableFunctionEntryOffset);
     if (CodeGenOpts.SanitizeKcfiArity)
       getModule().addModuleFlag(llvm::Module::Override, "kcfi-arity", 1);
+    // Store the hash algorithm choice for use in LLVM passes
+    getModule().addModuleFlag(
+        llvm::Module::Override, "kcfi-hash",
+        llvm::MDString::get(
+            getLLVMContext(),
+            llvm::stringifyKCFIHashAlgorithm(CodeGenOpts.SanitizeKcfiHash)));
   }
 
   if (CodeGenOpts.CFProtectionReturn &&
@@ -1635,6 +1634,22 @@ void CodeGenModule::EmitBackendOptionsMetadata(
     getModule().addModuleFlag(llvm::Module::Min, "SmallDataLimit",
                               CodeGenOpts.SmallDataLimit);
   }
+
+  // Set AllocToken configuration for backend pipeline.
+  if (LangOpts.AllocTokenMode) {
+    StringRef S = llvm::getAllocTokenModeAsString(*LangOpts.AllocTokenMode);
+    getModule().addModuleFlag(llvm::Module::Error, "alloc-token-mode",
+                              llvm::MDString::get(VMContext, S));
+  }
+  if (LangOpts.AllocTokenMax)
+    getModule().addModuleFlag(
+        llvm::Module::Error, "alloc-token-max",
+        llvm::ConstantInt::get(llvm::Type::getInt64Ty(VMContext),
+                               *LangOpts.AllocTokenMax));
+  if (CodeGenOpts.SanitizeAllocTokenFastABI)
+    getModule().addModuleFlag(llvm::Module::Error, "alloc-token-fast-abi", 1);
+  if (CodeGenOpts.SanitizeAllocTokenExtended)
+    getModule().addModuleFlag(llvm::Module::Error, "alloc-token-extended", 1);
 }
 
 void CodeGenModule::UpdateCompletedType(const TagDecl *TD) {
@@ -1740,20 +1755,19 @@ void CodeGenModule::Error(SourceLocation loc, StringRef message) {
 /// ErrorUnsupported - Print out an error that codegen doesn't support the
 /// specified stmt yet.
 void CodeGenModule::ErrorUnsupported(const Stmt *S, const char *Type) {
-  unsigned DiagID = getDiags().getCustomDiagID(DiagnosticsEngine::Error,
-                                               "cannot compile this %0 yet");
   std::string Msg = Type;
-  getDiags().Report(Context.getFullLoc(S->getBeginLoc()), DiagID)
+  getDiags().Report(Context.getFullLoc(S->getBeginLoc()),
+                    diag::err_codegen_unsupported)
       << Msg << S->getSourceRange();
 }
 
 /// ErrorUnsupported - Print out an error that codegen doesn't support the
 /// specified decl yet.
 void CodeGenModule::ErrorUnsupported(const Decl *D, const char *Type) {
-  unsigned DiagID = getDiags().getCustomDiagID(DiagnosticsEngine::Error,
-                                               "cannot compile this %0 yet");
   std::string Msg = Type;
-  getDiags().Report(Context.getFullLoc(D->getLocation()), DiagID) << Msg;
+  getDiags().Report(Context.getFullLoc(D->getLocation()),
+                    diag::err_codegen_unsupported)
+      << Msg;
 }
 
 void CodeGenModule::runWithSufficientStackSpace(SourceLocation Loc,
@@ -2434,8 +2448,8 @@ llvm::ConstantInt *CodeGenModule::CreateKCFITypeId(QualType T, StringRef Salt) {
   if (getCodeGenOpts().SanitizeCfiICallGeneralizePointers)
     Out << ".generalized";
 
-  return llvm::ConstantInt::get(Int32Ty,
-                                static_cast<uint32_t>(llvm::xxHash64(OutName)));
+  return llvm::ConstantInt::get(
+      Int32Ty, llvm::getKCFITypeID(OutName, getCodeGenOpts().SanitizeKcfiHash));
 }
 
 void CodeGenModule::SetLLVMFunctionAttributes(GlobalDecl GD,
@@ -3189,7 +3203,8 @@ void CodeGenModule::finalizeKCFITypes() {
       continue;
 
     std::string Asm = (".weak __kcfi_typeid_" + Name + "\n.set __kcfi_typeid_" +
-                       Name + ", " + Twine(Type->getZExtValue()) + "\n")
+                       Name + ", " + Twine(Type->getZExtValue()) + " /* " +
+                       Twine(Type->getSExtValue()) + " */\n")
                           .str();
     M.appendModuleInlineAsm(Asm);
   }
@@ -4107,6 +4122,38 @@ template <typename AttrT> static bool hasImplicitAttr(const ValueDecl *D) {
   return D->isImplicit();
 }
 
+static bool shouldSkipAliasEmission(const CodeGenModule &CGM,
+                                    const ValueDecl *Global) {
+  const LangOptions &LangOpts = CGM.getLangOpts();
+  if (!LangOpts.OpenMPIsTargetDevice && !LangOpts.CUDA)
+    return false;
+
+  const auto *AA = Global->getAttr<AliasAttr>();
+  GlobalDecl AliaseeGD;
+
+  // Check if the aliasee exists, if the aliasee is not found, skip the alias
+  // emission. This is executed for both the host and device.
+  if (!CGM.lookupRepresentativeDecl(AA->getAliasee(), AliaseeGD))
+    return true;
+
+  const auto *AliaseeDecl = dyn_cast<ValueDecl>(AliaseeGD.getDecl());
+  if (LangOpts.OpenMPIsTargetDevice)
+    return !AliaseeDecl ||
+           !OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(AliaseeDecl);
+
+  // CUDA / HIP
+  const bool HasDeviceAttr = Global->hasAttr<CUDADeviceAttr>();
+  const bool AliaseeHasDeviceAttr =
+      AliaseeDecl && AliaseeDecl->hasAttr<CUDADeviceAttr>();
+
+  if (LangOpts.CUDAIsDevice)
+    return !HasDeviceAttr || !AliaseeHasDeviceAttr;
+
+  // CUDA / HIP Host
+  // we know that the aliasee exists from above, so we know to emit
+  return false;
+}
+
 bool CodeGenModule::shouldEmitCUDAGlobalVar(const VarDecl *Global) const {
   assert(LangOpts.CUDA && "Should not be called by non-CUDA languages");
   // We need to emit host-side 'shadows' for all global
@@ -4129,8 +4176,11 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
 
   // If this is an alias definition (which otherwise looks like a declaration)
   // emit it now.
-  if (Global->hasAttr<AliasAttr>())
+  if (Global->hasAttr<AliasAttr>()) {
+    if (shouldSkipAliasEmission(*this, Global))
+      return;
     return EmitAliasDefinition(GD);
+  }
 
   // IFunc like an alias whose value is resolved at runtime by calling resolver.
   if (Global->hasAttr<IFuncAttr>())
@@ -4615,6 +4665,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
     // in this TU. For other architectures it is always emitted.
     bool ShouldEmitResolver = !getTarget().getTriple().isAArch64();
     SmallVector<CodeGenFunction::FMVResolverOption, 10> Options;
+    llvm::DenseMap<llvm::Function *, const FunctionDecl *> DeclMap;
 
     getContext().forEachMultiversionedFunctionVersion(
         FD, [&](const FunctionDecl *CurFD) {
@@ -4625,11 +4676,13 @@ void CodeGenModule::emitMultiVersionFunctions() {
             assert(getTarget().getTriple().isX86() && "Unsupported target");
             TA->getX86AddedFeatures(Feats);
             llvm::Function *Func = createFunction(CurFD);
+            DeclMap.insert({Func, CurFD});
             Options.emplace_back(Func, Feats, TA->getX86Architecture());
           } else if (const auto *TVA = CurFD->getAttr<TargetVersionAttr>()) {
             if (TVA->isDefaultVersion() && IsDefined)
               ShouldEmitResolver = true;
             llvm::Function *Func = createFunction(CurFD);
+            DeclMap.insert({Func, CurFD});
             char Delim = getTarget().getTriple().isAArch64() ? '+' : ',';
             TVA->getFeatures(Feats, Delim);
             Options.emplace_back(Func, Feats);
@@ -4640,6 +4693,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
               if (TC->isDefaultVersion(I) && IsDefined)
                 ShouldEmitResolver = true;
               llvm::Function *Func = createFunction(CurFD, I);
+              DeclMap.insert({Func, CurFD});
               Feats.clear();
               if (getTarget().getTriple().isX86()) {
                 TC->getX86Feature(Feats, I);
@@ -4685,6 +4739,24 @@ void CodeGenModule::emitMultiVersionFunctions() {
                        const CodeGenFunction::FMVResolverOption &RHS) {
           return getFMVPriority(TI, LHS).ugt(getFMVPriority(TI, RHS));
         });
+
+    // Diagnose unreachable function versions.
+    if (getTarget().getTriple().isAArch64()) {
+      for (auto I = Options.begin() + 1, E = Options.end(); I != E; ++I) {
+        llvm::APInt RHS = llvm::AArch64::getCpuSupportsMask(I->Features);
+        if (std::any_of(Options.begin(), I, [RHS](auto RO) {
+              llvm::APInt LHS = llvm::AArch64::getCpuSupportsMask(RO.Features);
+              return LHS.isSubsetOf(RHS);
+            })) {
+          Diags.Report(DeclMap[I->Function]->getLocation(),
+                       diag::warn_unreachable_version)
+              << I->Function->getName();
+          assert(I->Function->user_empty() && "unexpected users");
+          I->Function->eraseFromParent();
+          I->Function = nullptr;
+        }
+      }
+    }
     CodeGenFunction CGF(*this);
     CGF.EmitMultiVersionResolver(ResolverFunc, Options);
 
@@ -5925,7 +5997,8 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
              (D->getType()->isHLSLResourceRecord() ||
               D->getType()->isHLSLResourceRecordArray())) {
     Init = llvm::PoisonValue::get(getTypes().ConvertType(ASTTy));
-    NeedsGlobalCtor = D->getType()->isHLSLResourceRecord();
+    NeedsGlobalCtor = D->getType()->isHLSLResourceRecord() ||
+                      D->getStorageClass() == SC_Static;
   } else if (D->hasAttr<LoaderUninitializedAttr>()) {
     Init = llvm::UndefValue::get(getTypes().ConvertTypeForMem(ASTTy));
   } else if (!InitExpr) {
@@ -6049,9 +6122,11 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
     getCUDARuntime().handleVarRegistration(D, *GV);
   }
 
-  if (LangOpts.HLSL && GetGlobalVarAddressSpace(D) == LangAS::hlsl_input) {
+  if (LangOpts.HLSL &&
+      hlsl::isInitializedByPipeline(GetGlobalVarAddressSpace(D))) {
     // HLSL Input variables are considered to be set by the driver/pipeline, but
-    // only visible to a single thread/wave.
+    // only visible to a single thread/wave. Push constants are also externally
+    // initialized, but constant, hence cross-wave visibility is not relevant.
     GV->setExternallyInitialized(true);
   } else {
     GV->setInitializer(Init);
@@ -6102,10 +6177,11 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
       !D->hasAttr<ConstInitAttr>())
     Linkage = llvm::GlobalValue::InternalLinkage;
 
-  // HLSL variables in the input address space maps like memory-mapped
-  // variables. Even if they are 'static', they are externally initialized and
-  // read/write by the hardware/driver/pipeline.
-  if (LangOpts.HLSL && GetGlobalVarAddressSpace(D) == LangAS::hlsl_input)
+  // HLSL variables in the input or push-constant address space maps are like
+  // memory-mapped variables. Even if they are 'static', they are externally
+  // initialized and read/write by the hardware/driver/pipeline.
+  if (LangOpts.HLSL &&
+      hlsl::isInitializedByPipeline(GetGlobalVarAddressSpace(D)))
     Linkage = llvm::GlobalValue::ExternalLinkage;
 
   GV->setLinkage(Linkage);
@@ -8206,11 +8282,7 @@ bool CodeGenModule::stopAutoInit() {
       return true;
     }
     if (!NumAutoVarInit) {
-      unsigned DiagID = getDiags().getCustomDiagID(
-          DiagnosticsEngine::Warning,
-          "-ftrivial-auto-var-init-stop-after=%0 has been enabled to limit the "
-          "number of times ftrivial-auto-var-init=%1 gets applied.");
-      getDiags().Report(DiagID)
+      getDiags().Report(diag::warn_trivial_auto_var_limit)
           << StopAfter
           << (getContext().getLangOpts().getTrivialAutoVarInit() ==
                       LangOptions::TrivialAutoVarInitKind::Zero
@@ -8287,54 +8359,4 @@ void CodeGenModule::moveLazyEmissionStates(CodeGenModule *NewBuilder) {
   NewBuilder->WeakRefReferences = std::move(WeakRefReferences);
 
   NewBuilder->ABI->MangleCtx = std::move(ABI->MangleCtx);
-}
-
-bool CodeGenModule::classNeedsVectorDestructor(const CXXRecordDecl *RD) {
-  if (!Context.getTargetInfo().emitVectorDeletingDtors(Context.getLangOpts()))
-    return false;
-  CXXDestructorDecl *Dtor = RD->getDestructor();
-  // The compiler can't know if new[]/delete[] will be used outside of the DLL,
-  // so just force vector deleting destructor emission if dllexport is present.
-  // This matches MSVC behavior.
-  if (Dtor && Dtor->isVirtual() && Dtor->isDefined() &&
-      Dtor->hasAttr<DLLExportAttr>())
-    return true;
-
-  return RequireVectorDeletingDtor.count(RD);
-}
-
-void CodeGenModule::requireVectorDestructorDefinition(const CXXRecordDecl *RD) {
-  if (!Context.getTargetInfo().emitVectorDeletingDtors(Context.getLangOpts()))
-    return;
-  RequireVectorDeletingDtor.insert(RD);
-
-  // To reduce code size in general case we lazily emit scalar deleting
-  // destructor definition and an alias from vector deleting destructor to
-  // scalar deleting destructor. It may happen that we first emitted the scalar
-  // deleting destructor definition and the alias and then discovered that the
-  // definition of the vector deleting destructor is required. Then we need to
-  // remove the alias and the scalar deleting destructor and queue vector
-  // deleting destructor body for emission. Check if that is the case.
-  CXXDestructorDecl *DtorD = RD->getDestructor();
-  GlobalDecl ScalarDtorGD(DtorD, Dtor_Deleting);
-  StringRef MangledName = getMangledName(ScalarDtorGD);
-  llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
-  if (Entry && !Entry->isDeclaration()) {
-    GlobalDecl VectorDtorGD(DtorD, Dtor_VectorDeleting);
-    StringRef VDName = getMangledName(VectorDtorGD);
-    llvm::GlobalValue *VDEntry = GetGlobalValue(VDName);
-    // It exists and it should be an alias.
-    assert(VDEntry && isa<llvm::GlobalAlias>(VDEntry));
-    auto *NewFn = llvm::Function::Create(
-        cast<llvm::FunctionType>(VDEntry->getValueType()),
-        llvm::Function::ExternalLinkage, VDName, &getModule());
-    SetFunctionAttributes(VectorDtorGD, NewFn, /*IsIncompleteFunction*/ false,
-                          /*IsThunk*/ false);
-    NewFn->takeName(VDEntry);
-    VDEntry->replaceAllUsesWith(NewFn);
-    VDEntry->eraseFromParent();
-    Entry->replaceAllUsesWith(NewFn);
-    Entry->eraseFromParent();
-    addDeferredDeclToEmit(VectorDtorGD);
-  }
 }

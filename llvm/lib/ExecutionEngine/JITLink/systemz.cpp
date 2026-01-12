@@ -104,6 +104,8 @@ const char *getEdgeKindName(Edge::Kind R) {
     return "RequestGOTAndTransformToDelta12FromGOT";
   case RequestGOTAndTransformToDelta32dbl:
     return "RequestGOTAndTransformToDelta32dbl";
+  case RequestTLSDescInGOTAndTransformToDelta64FromGOT:
+    return "RequestTLSDescInGOTAndTransformToDelta64FromGOT";
   default:
     return getGenericEdgeKindName(static_cast<Edge::Kind>(R));
   }

@@ -3,9 +3,9 @@
 
 target triple = "aarch64-linux-gnu"
 
-; Original loop has trip count 16, but contains interleave groups with gaps, so
+; Original loop has trip count 17, but contains interleave groups with gaps, so
 ; the last iteration must execute in the scalar loop. Thus the vector loop can
-; only execute up to 15 iterations.
+; only execute up to 16 iterations.
 define i64 @vector_loop_with_remaining_iterations(ptr %src, ptr noalias %dst, i32 %x) #0 {
 ; CHECK-LABEL: define i64 @vector_loop_with_remaining_iterations(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr noalias [[DST:%.*]], i32 [[X:%.*]]) #[[ATTR0:[0-9]+]] {

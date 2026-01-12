@@ -18,9 +18,9 @@ define i64 @test_pr98660(ptr %dst, i64 %N) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[TMP9]], i32 8
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr [[TMP9]], i32 16
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i32, ptr [[TMP9]], i32 24
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[TMP9]], i64 8
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr [[TMP9]], i64 16
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i32, ptr [[TMP9]], i64 24
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i32>, ptr [[TMP14]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x i32>, ptr [[TMP15]], align 4

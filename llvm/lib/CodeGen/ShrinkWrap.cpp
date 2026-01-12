@@ -618,6 +618,8 @@ bool ShrinkWrapImpl::postShrinkWrapping(bool HasCandidate, MachineFunction &MF,
 
   DenseSet<const MachineBasicBlock *> DirtyBBs;
   for (MachineBasicBlock &MBB : MF) {
+    if (!MDT->isReachableFromEntry(&MBB))
+      continue;
     if (MBB.isEHPad()) {
       DirtyBBs.insert(&MBB);
       continue;
@@ -648,9 +650,17 @@ bool ShrinkWrapImpl::postShrinkWrapping(bool HasCandidate, MachineFunction &MF,
                      EntryFreq < MBFI->getBlockFreq(NewSave) ||
                      /*Entry freq has been observed more than a loop block in
                         some cases*/
-                     MLI->getLoopFor(NewSave)))
-    NewSave = FindIDom<>(**NewSave->pred_begin(), NewSave->predecessors(), *MDT,
+                     MLI->getLoopFor(NewSave))) {
+    SmallVector<MachineBasicBlock*> ReachablePreds;
+    for (auto BB: NewSave->predecessors())
+      if (MDT->isReachableFromEntry(BB))
+        ReachablePreds.push_back(BB);
+    if (ReachablePreds.empty())
+      break;
+
+    NewSave = FindIDom<>(**ReachablePreds.begin(), ReachablePreds, *MDT,
                          false);
+  }
 
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
   if (!NewSave || NewSave == InitSave ||

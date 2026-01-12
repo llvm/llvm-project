@@ -12,6 +12,7 @@
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DarwinSDKInfo.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
@@ -25,7 +26,6 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Frontend/TextDiagnostic.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
@@ -607,15 +607,21 @@ static void SetupLangOpts(CompilerInstance &compiler,
     lang_opts.CPlusPlus11 = true;
     compiler.getHeaderSearchOpts().UseLibcxx = true;
     [[fallthrough]];
-  case lldb::eLanguageTypeC_plus_plus_03:
+  case lldb::eLanguageTypeC_plus_plus_03: {
     lang_opts.CPlusPlus = true;
     if (process_sp
         // We're stopped in a frame without debug-info. The user probably
         // intends to make global queries (which should include Objective-C).
-        && !(frame_sp && frame_sp->HasDebugInformation()))
+        && !(frame_sp && frame_sp->HasDebugInformation())) {
       lang_opts.ObjC =
           process_sp->GetLanguageRuntime(lldb::eLanguageTypeObjC) != nullptr;
-    break;
+      if (lang_opts.ObjC) {
+        language_for_note = lldb::eLanguageTypeObjC_plus_plus;
+        language_fallback_reason = "Possibly stopped inside system library, so "
+                                   "speculatively enabled Objective-C. ";
+      }
+    }
+  } break;
   case lldb::eLanguageTypeObjC_plus_plus:
   case lldb::eLanguageTypeUnknown:
   default:

@@ -4,7 +4,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v,+f,+d,+zvfh -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-RV32
 
-declare <1 x half> @llvm.masked.expandload.v1f16(ptr, <1 x i1>, <1 x half>)
 define <1 x half> @expandload_v1f16(ptr %base, <1 x half> %src0, <1 x i1> %mask) {
 ; CHECK-LABEL: expandload_v1f16:
 ; CHECK:       # %bb.0:
@@ -20,7 +19,6 @@ define <1 x half> @expandload_v1f16(ptr %base, <1 x half> %src0, <1 x i1> %mask)
   ret <1 x half>%res
 }
 
-declare <2 x half> @llvm.masked.expandload.v2f16(ptr, <2 x i1>, <2 x half>)
 define <2 x half> @expandload_v2f16(ptr %base, <2 x half> %src0, <2 x i1> %mask) {
 ; CHECK-LABEL: expandload_v2f16:
 ; CHECK:       # %bb.0:
@@ -36,7 +34,6 @@ define <2 x half> @expandload_v2f16(ptr %base, <2 x half> %src0, <2 x i1> %mask)
   ret <2 x half>%res
 }
 
-declare <4 x half> @llvm.masked.expandload.v4f16(ptr, <4 x i1>, <4 x half>)
 define <4 x half> @expandload_v4f16(ptr %base, <4 x half> %src0, <4 x i1> %mask) {
 ; CHECK-LABEL: expandload_v4f16:
 ; CHECK:       # %bb.0:
@@ -52,7 +49,6 @@ define <4 x half> @expandload_v4f16(ptr %base, <4 x half> %src0, <4 x i1> %mask)
   ret <4 x half>%res
 }
 
-declare <8 x half> @llvm.masked.expandload.v8f16(ptr, <8 x i1>, <8 x half>)
 define <8 x half> @expandload_v8f16(ptr %base, <8 x half> %src0, <8 x i1> %mask) {
 ; CHECK-LABEL: expandload_v8f16:
 ; CHECK:       # %bb.0:
@@ -68,7 +64,6 @@ define <8 x half> @expandload_v8f16(ptr %base, <8 x half> %src0, <8 x i1> %mask)
   ret <8 x half>%res
 }
 
-declare <1 x float> @llvm.masked.expandload.v1f32(ptr, <1 x i1>, <1 x float>)
 define <1 x float> @expandload_v1f32(ptr %base, <1 x float> %src0, <1 x i1> %mask) {
 ; CHECK-LABEL: expandload_v1f32:
 ; CHECK:       # %bb.0:
@@ -84,7 +79,6 @@ define <1 x float> @expandload_v1f32(ptr %base, <1 x float> %src0, <1 x i1> %mas
   ret <1 x float>%res
 }
 
-declare <2 x float> @llvm.masked.expandload.v2f32(ptr, <2 x i1>, <2 x float>)
 define <2 x float> @expandload_v2f32(ptr %base, <2 x float> %src0, <2 x i1> %mask) {
 ; CHECK-LABEL: expandload_v2f32:
 ; CHECK:       # %bb.0:
@@ -100,7 +94,6 @@ define <2 x float> @expandload_v2f32(ptr %base, <2 x float> %src0, <2 x i1> %mas
   ret <2 x float>%res
 }
 
-declare <4 x float> @llvm.masked.expandload.v4f32(ptr, <4 x i1>, <4 x float>)
 define <4 x float> @expandload_v4f32(ptr %base, <4 x float> %src0, <4 x i1> %mask) {
 ; CHECK-LABEL: expandload_v4f32:
 ; CHECK:       # %bb.0:
@@ -116,7 +109,6 @@ define <4 x float> @expandload_v4f32(ptr %base, <4 x float> %src0, <4 x i1> %mas
   ret <4 x float>%res
 }
 
-declare <8 x float> @llvm.masked.expandload.v8f32(ptr, <8 x i1>, <8 x float>)
 define <8 x float> @expandload_v8f32(ptr %base, <8 x float> %src0, <8 x i1> %mask) {
 ; CHECK-LABEL: expandload_v8f32:
 ; CHECK:       # %bb.0:
@@ -132,7 +124,6 @@ define <8 x float> @expandload_v8f32(ptr %base, <8 x float> %src0, <8 x i1> %mas
   ret <8 x float>%res
 }
 
-declare <1 x double> @llvm.masked.expandload.v1f64(ptr, <1 x i1>, <1 x double>)
 define <1 x double> @expandload_v1f64(ptr %base, <1 x double> %src0, <1 x i1> %mask) {
 ; CHECK-LABEL: expandload_v1f64:
 ; CHECK:       # %bb.0:
@@ -148,7 +139,6 @@ define <1 x double> @expandload_v1f64(ptr %base, <1 x double> %src0, <1 x i1> %m
   ret <1 x double>%res
 }
 
-declare <2 x double> @llvm.masked.expandload.v2f64(ptr, <2 x i1>, <2 x double>)
 define <2 x double> @expandload_v2f64(ptr %base, <2 x double> %src0, <2 x i1> %mask) {
 ; CHECK-LABEL: expandload_v2f64:
 ; CHECK:       # %bb.0:
@@ -164,7 +154,6 @@ define <2 x double> @expandload_v2f64(ptr %base, <2 x double> %src0, <2 x i1> %m
   ret <2 x double>%res
 }
 
-declare <4 x double> @llvm.masked.expandload.v4f64(ptr, <4 x i1>, <4 x double>)
 define <4 x double> @expandload_v4f64(ptr %base, <4 x double> %src0, <4 x i1> %mask) {
 ; CHECK-LABEL: expandload_v4f64:
 ; CHECK:       # %bb.0:
@@ -180,7 +169,6 @@ define <4 x double> @expandload_v4f64(ptr %base, <4 x double> %src0, <4 x i1> %m
   ret <4 x double>%res
 }
 
-declare <8 x double> @llvm.masked.expandload.v8f64(ptr, <8 x i1>, <8 x double>)
 define <8 x double> @expandload_v8f64(ptr %base, <8 x double> %src0, <8 x i1> %mask) {
 ; CHECK-LABEL: expandload_v8f64:
 ; CHECK:       # %bb.0:

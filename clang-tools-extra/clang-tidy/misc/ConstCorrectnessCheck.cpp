@@ -98,8 +98,8 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
       hasType(referenceType(pointee(hasCanonicalType(templateTypeParmType())))),
       hasType(referenceType(pointee(substTemplateTypeParmType()))));
 
-  auto AllowedTypeDecl = namedDecl(
-      anyOf(matchers::matchesAnyListedName(AllowedTypes), usingShadowDecl()));
+  auto AllowedTypeDecl = namedDecl(anyOf(
+      matchers::matchesAnyListedRegexName(AllowedTypes), usingShadowDecl()));
 
   const auto AllowedType = hasType(qualType(
       anyOf(hasDeclaration(AllowedTypeDecl), references(AllowedTypeDecl),
@@ -137,8 +137,12 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(FunctionScope, this);
 }
 
+namespace {
+
 /// Classify for a variable in what the Const-Check is interested.
 enum class VariableCategory { Value, Reference, Pointer };
+
+} // namespace
 
 void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *LocalScope = Result.Nodes.getNodeAs<Stmt>("scope");
