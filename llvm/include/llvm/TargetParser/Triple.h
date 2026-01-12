@@ -513,7 +513,8 @@ public:
   /// For example, "fooos1.2.3" would return "1.2.3".
   LLVM_ABI StringRef getEnvironmentVersionString() const;
 
-  /// getDefaultNarrowTextEncoding - Get the default encoding of the triple.
+  /// Get the default system encoding of the triple.
+  /// For example, "IBM-1047" for z/OS, "UTF-8" for others
   StringRef getDefaultNarrowTextEncoding() const;
 
   /// @}

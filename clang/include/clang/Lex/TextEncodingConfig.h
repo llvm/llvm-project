@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LEX_LITERALCONVERTER_H
-#define LLVM_CLANG_LEX_LITERALCONVERTER_H
+#ifndef LLVM_CLANG_LEX_TEXTENCODINGCONFIG_H
+#define LLVM_CLANG_LEX_TEXTENCODINGCONFIG_H
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
@@ -30,7 +30,7 @@ class TextEncodingConfig {
   llvm::TextEncodingConverter *ToExecEncodingConverter = nullptr;
 
 public:
-  llvm::TextEncodingConverter *getConverter(ConversionAction Action);
+  llvm::TextEncodingConverter *getConverter(ConversionAction Action) const;
   static std::error_code
   setConvertersFromOptions(TextEncodingConfig &TEC,
                            const clang::LangOptions &Opts,

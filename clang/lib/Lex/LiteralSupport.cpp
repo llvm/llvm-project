@@ -1776,7 +1776,7 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
   HadError = false;
 
   Kind = kind;
-  TextEncodingConfig TEC = PP.getTextEncodingConfig();
+  const TextEncodingConfig TEC = PP.getTextEncodingConfig();
 
   const char *TokBegin = begin;
 
@@ -1844,7 +1844,7 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
   }
 
   llvm::TextEncodingConverter *Converter = nullptr;
-  if (!isUTFLiteral(Kind) && !isWideLiteral(Kind))
+  if (isOrdinary())
     Converter = TEC.getConverter(CA_ToExecEncoding);
 
   while (begin != end) {
@@ -2204,7 +2204,7 @@ void StringLiteralParser::init(ArrayRef<Token> StringToks,
   SourceLocation UDSuffixTokLoc;
 
   llvm::TextEncodingConverter *Converter = nullptr;
-  if (!isUTFLiteral(Kind) && !isWideLiteral(Kind) && TEC)
+  if (isOrdinary() && TEC)
     Converter = TEC->getConverter(Action);
 
   for (unsigned i = 0, e = StringToks.size(); i != e; ++i) {
