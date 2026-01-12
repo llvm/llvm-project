@@ -430,8 +430,8 @@ struct InitSliceInfo {
 /// Return the result shape, offsets, sizes and strides of the slice of the
 /// `initValue` to use as the destination of the partial reduction op generated
 /// with outer reduction strategy.
-static InitSliceInfo getInitSliceInfoForOuterReduction(
-    MLIRContext *context, ArrayRef<OpFoldResult> offsets,
+static FailureOr<InitSliceInfo> getInitSliceInfoForOuterReduction(
+    Operation *op, MLIRContext *context, ArrayRef<OpFoldResult> offsets,
     ArrayRef<OpFoldResult> sizes, const SetVector<unsigned> &reductionDims,
     ArrayRef<OpFoldResult> splitReductionIvs, AffineMap partialReductionMap) {
   int64_t initRank = partialReductionMap.getNumResults();
@@ -453,19 +453,21 @@ static InitSliceInfo getInitSliceInfoForOuterReduction(
       initOffsets.push_back(IntegerAttr::get(idxType, cstExpr.getValue()));
       initSizes.push_back(one);
     } else {
-      llvm_unreachable("Unsupported affine expression type");
+      return op->emitOpError(
+          "Unexpected affine expression type: only dimension and constant "
+          "expressions are supported");
     }
   }
   SmallVector<int64_t> resultShape;
   std::tie(resultShape, std::ignore) = decomposeMixedValues(initSizes);
-  return {resultShape, initOffsets, initSizes, initStrides};
+  return InitSliceInfo{resultShape, initOffsets, initSizes, initStrides};
 }
 
 /// Return the result shape, offsets, sizes and strides of the slice of the
 /// `initValue` to use as destination of the partial reduction op generated with
 /// outer parallel strategy.
-static InitSliceInfo getInitSliceInfoForOuterParallel(
-    MLIRContext *context, ArrayRef<OpFoldResult> offsets,
+static FailureOr<InitSliceInfo> getInitSliceInfoForOuterParallel(
+    Operation *op, MLIRContext *context, ArrayRef<OpFoldResult> offsets,
     ArrayRef<OpFoldResult> sizes, const SetVector<unsigned> &reductionDims,
     ArrayRef<OpFoldResult> splitReductionIvs, AffineMap partialReductionMap) {
   int64_t initRank = partialReductionMap.getNumResults();
@@ -490,31 +492,31 @@ static InitSliceInfo getInitSliceInfoForOuterParallel(
       initSizes.push_back(one);
       resultShape.push_back(one);
     } else {
-      llvm_unreachable("Unsupported affine expression type");
+      return op->emitOpError(
+          "Unexpected affine expression type: only dimension and constant "
+          "expressions are supported");
     }
   }
   SmallVector<int64_t> staticShapes;
   std::tie(staticShapes, std::ignore) = decomposeMixedValues(resultShape);
-  return {staticShapes, initOffsets, initSizes, initStrides};
+  return InitSliceInfo{staticShapes, initOffsets, initSizes, initStrides};
 }
 
 /// Return the result shape, offsets, sizes and strides of the slice of the
 /// `initValue` to use as destination of the partial reduction op.
-static InitSliceInfo getInitSliceInfo(MLIRContext *context,
-                                      ReductionTilingStrategy strategy,
-                                      ArrayRef<OpFoldResult> offsets,
-                                      ArrayRef<OpFoldResult> sizes,
-                                      const SetVector<unsigned> &reductionDims,
-                                      ArrayRef<OpFoldResult> splitReductionIvs,
-                                      AffineMap partialReductionMap) {
+static FailureOr<InitSliceInfo> getInitSliceInfo(
+    Operation *op, MLIRContext *context, ReductionTilingStrategy strategy,
+    ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes,
+    const SetVector<unsigned> &reductionDims,
+    ArrayRef<OpFoldResult> splitReductionIvs, AffineMap partialReductionMap) {
   if (strategy == ReductionTilingStrategy::PartialReductionOuterReduction) {
-    return getInitSliceInfoForOuterReduction(context, offsets, sizes,
+    return getInitSliceInfoForOuterReduction(op, context, offsets, sizes,
                                              reductionDims, splitReductionIvs,
                                              partialReductionMap);
   }
   assert(strategy == ReductionTilingStrategy::PartialReductionOuterParallel &&
          "unexpected ReductionTilingStrategy");
-  return getInitSliceInfoForOuterParallel(context, offsets, sizes,
+  return getInitSliceInfoForOuterParallel(op, context, offsets, sizes,
                                           reductionDims, splitReductionIvs,
                                           partialReductionMap);
 }
@@ -612,16 +614,18 @@ struct LinalgOpPartialReductionInterface
     SmallVector<Value, 1> tiledInits;
     for (auto [partialReductionMap, valueToTile] :
          llvm::zip_equal(partialReductionMaps, init)) {
-      InitSliceInfo sliceInfo = getInitSliceInfo(
-          b.getContext(), tilingStrategy, offsets, sizes, reductionDims,
+      FailureOr<InitSliceInfo> sliceInfo = getInitSliceInfo(
+          op, b.getContext(), tilingStrategy, offsets, sizes, reductionDims,
           splitReductionIvs, partialReductionMap);
+      if (failed(sliceInfo))
+        return failure();
       auto valueToTileType = cast<RankedTensorType>(valueToTile.getType());
       RankedTensorType sliceResultType = RankedTensorType::get(
-          sliceInfo.resultShape, valueToTileType.getElementType(),
+          sliceInfo->resultShape, valueToTileType.getElementType(),
           valueToTileType.getEncoding());
       auto sliceOp = tensor::ExtractSliceOp::create(
-          b, loc, sliceResultType, valueToTile, sliceInfo.offsets,
-          sliceInfo.sizes, sliceInfo.strides);
+          b, loc, sliceResultType, valueToTile, sliceInfo->offsets,
+          sliceInfo->sizes, sliceInfo->strides);
       tiledInits.push_back(sliceOp.getResult());
       generatedSlices.push_back(sliceOp);
     }
@@ -725,11 +729,13 @@ struct LinalgOpPartialReductionInterface
     auto linalgOp = cast<LinalgOp>(op);
     SmallVector<AffineMap> partialReductionMaps =
         getPartialResultAffineMaps(linalgOp, reductionDims);
-    InitSliceInfo sliceInfo = getInitSliceInfo(
-        b.getContext(), tilingStrategy, offsets, sizes, reductionDims,
+    FailureOr<InitSliceInfo> sliceInfo = getInitSliceInfo(
+        op, b.getContext(), tilingStrategy, offsets, sizes, reductionDims,
         splitReductionIvs, partialReductionMaps[resultNumber]);
-    std::swap(resultOffsets, sliceInfo.offsets);
-    std::swap(resultSizes, sliceInfo.sizes);
+    if (failed(sliceInfo))
+      return failure();
+    std::swap(resultOffsets, sliceInfo->offsets);
+    std::swap(resultSizes, sliceInfo->sizes);
 
     return success();
   }
