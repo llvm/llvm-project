@@ -104,7 +104,6 @@ bool SystemZTargetInfo::validateAsmConstraint(
     if (StringRef(Name) == "@cc") {
       Name += 2;
       Info.setAllowsRegister();
-      Info.setFlagOutputOperand();
       // SystemZ has 2-bits CC, and hence Interval [0, 4).
       Info.setOutputOperandBounds(0, 4);
       return true;
