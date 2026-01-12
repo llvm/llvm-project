@@ -69,18 +69,6 @@ using namespace mlir;
 
 namespace {
 
-static bool isFirRefToBox(Type type) {
-  // First check if it's a FIR reference type
-  if (!fir::isa_ref_type(type))
-    return false;
-
-  // Unwrap the reference to get the inner type
-  Type innerType = fir::unwrapRefType(type);
-
-  // Check if the inner type is a box type
-  return isa<fir::BoxType>(innerType);
-}
-
 struct UseDeviceHostDataHoisting : public OpRewritePattern<acc::HostDataOp> {
   using OpRewritePattern<acc::HostDataOp>::OpRewritePattern;
 
@@ -98,7 +86,7 @@ struct UseDeviceHostDataHoisting : public OpRewritePattern<acc::HostDataOp> {
       if (acc::UseDeviceOp useDeviceOp =
               operand.getDefiningOp<acc::UseDeviceOp>()) {
         hasUseDeviceOperand = true;
-        if (isFirRefToBox(useDeviceOp.getVar().getType())) {
+        if (fir::isBoxAddress(useDeviceOp.getVar().getType())) {
           if (!llvm::hasSingleElement(useDeviceOp->getUsers()))
             refToBoxUseDeviceOps.push_back(useDeviceOp);
         } else if (isa<fir::BoxType>(useDeviceOp.getVar().getType())) {
