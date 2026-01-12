@@ -340,7 +340,7 @@ public:
   ///
   /// This is an O(1) check, unlike getFirstInsertionPt() which must scan
   /// through all PHI nodes.
-  inline bool hasInsertionPt() const {
+  bool hasInsertionPt() const {
     const Instruction *Term = getTerminator();
     return Term && Term->getOpcode() != Instruction::CatchSwitch;
   }
