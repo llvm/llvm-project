@@ -142,7 +142,7 @@ inline uint32_t getInfoLevel() { return getInfoLevelInternal().load(); }
 #define INFO(_flags, _id, ...)                                                 \
   do {                                                                         \
     if (::llvm::offload::debug::isDebugEnabled()) {                            \
-      DP(__VA_ARGS__);                                                         \
+      INFO_DEBUG_INT(_flags, _id, __VA_ARGS__);                                \
     } else if (getInfoLevel() & _flags) {                                      \
       INFO_MESSAGE(_id, __VA_ARGS__);                                          \
     }                                                                          \
@@ -616,6 +616,32 @@ static inline odbg_ostream reportErrorStream() {
     }                                                                          \
   } while (false)
 
+static constexpr const char *InfoIdToODT(uint32_t InfoId) {
+  switch (InfoId) {
+  case OMP_INFOTYPE_KERNEL_ARGS:
+    return ODT_KernelArgs;
+  case OMP_INFOTYPE_MAPPING_EXISTS:
+    return ODT_MappingExists;
+  case OMP_INFOTYPE_DUMP_TABLE:
+    return ODT_DumpTable;
+  case OMP_INFOTYPE_MAPPING_CHANGED:
+    return ODT_MappingChanged;
+  case OMP_INFOTYPE_PLUGIN_KERNEL:
+    return ODT_PluginKernel;
+  case OMP_INFOTYPE_DATA_TRANSFER:
+    return ODT_DataTransfer;
+  case OMP_INFOTYPE_EMPTY_MAPPING:
+    return ODT_EmptyMapping;
+  default:
+    return "UnknownInfoType";
+  }
+}
+
+// Transform the INFO id to the corresponding debug type and print the message
+#define INFO_DEBUG_INT(_flags, _id, ...)                                       \
+  ODBG(::llvm::omp::target::debug::InfoIdToODT(_flags))                        \
+      << FORMAT_TO_STR(__VA_ARGS__);
+
 // Define default format for pointers
 static inline raw_ostream &operator<<(raw_ostream &Os, void *Ptr) {
   Os << ::llvm::format(DPxMOD, DPxPTR(Ptr));
@@ -627,6 +653,9 @@ static inline raw_ostream &operator<<(raw_ostream &Os, void *Ptr) {
   {                                                                            \
   }
 #define REPORT_INT_OLD(...) FAILURE_MESSAGE(__VA_ARGS__);
+#define INFO_DEBUG_INT(_flags, _id, ...)                                       \
+  {                                                                            \
+  }
 #endif // OMPTARGET_DEBUG
 
 // This is used for the new style REPORT macro
