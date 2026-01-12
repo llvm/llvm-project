@@ -84,6 +84,18 @@ jobs:
           ref: compiler/amd-staging
           #ref: ${{ secrets.THEROCK_MAINLINE_REF }}
           fetch-depth: 10
+          
+      - name: Update Submodule Pointer to the PR
+        run: |
+          git config --global --add safe.directory $PWD
+          # Fetch the latest commit SHA from the PR branch          
+          PR_SHA=${{ github.event.pull_request.head.sha }}
+          # Update the submodule pointer using cacheinfo
+          git update-index --cacheinfo 160000,$PR_SHA,compiler/amd-llvm                   
+          # Verify the pointer update
+          git submodule status
+          git submodule
+    
 
       - name: Install python deps
         run: |
@@ -117,11 +129,6 @@ jobs:
         run: |
           ./build_tools/fetch_sources.py --jobs 12
 
-      - name: "Checking out repository for llvm-project"
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-        with:
-          path: compiler/amd-llvm
-
       - name: "Checking out repository for spriv-llvm-translator"
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
@@ -150,9 +157,11 @@ jobs:
       - name: TheRock and llvm SHA
         run: |
              git config --global --add safe.directory $PWD
-             git log -1
-             cd compiler/amd-llvm/llvm
-             git log -3
+             git log --oneline -1
+             ls -l compiler/amd-llvm
+             cd compiler/amd-llvm/llvm  
+             ls -l
+             git log --oneline -3
              cd -
 
       - name: Configure Projects
@@ -160,7 +169,7 @@ jobs:
           cmake_preset: ${{ inputs.build_variant_cmake_preset }}
           amdgpu_families: ${{ inputs.amdgpu_families }}
           package_version: ${{ inputs.package_version }}
-          extra_cmake_options: "-DTHEROCK_ENABLE_ALL=OFF -DTHEROCK_ENABLE_COMPILER=ON  -DTHEROCK_ENABLE_CORE_RUNTIME=ON -DTHEROCK_ENABLE_HIP_RUNTIME=ON -DTHEROCK_ENABLE_RCCL=ON -DTHEROCK_ENABLE_PRIM=ON -DTHEROCK_ENABLE_BLAS=ON -DTHEROCK_ENABLE_RAND=ON -DTHEROCK_ENABLE_SOLVER=ON -DTHEROCK_ENABLE_SPARSE=ON -DTHEROCK_ENABLE_SYSDEPS=OFF  -DTHEROCK_ENABLE_COMPOSABLE_KERNEL=OFF -DTHEROCK_ENABLE_OCL_RUNTIME=ON  -DTHEROCK_ENABLE_MATH_LIBS=ON"
+          extra_cmake_options: "-DTHEROCK_ENABLE_ALL=OFF -DTHEROCK_ENABLE_COMPILER=ON  -DTHEROCK_ENABLE_CORE_RUNTIME=ON -DTHEROCK_ENABLE_HIP_RUNTIME=ON -DTHEROCK_ENABLE_RCCL=ON -DTHEROCK_ENABLE_PRIM=ON -DTHEROCK_ENABLE_BLAS=ON -DTHEROCK_ENABLE_RAND=ON -DTHEROCK_ENABLE_SOLVER=ON -DTHEROCK_ENABLE_SPARSE=ON -DTHEROCK_ENABLE_SYSDEPS=OFF  -DTHEROCK_ENABLE_COMPOSABLE_KERNEL=OFF -DTHEROCK_ENABLE_OCL_RUNTIME=ON  -DTHEROCK_ENABLE_MATH_LIBS=ON -DLLVM_SMREV_REPO='' -DLLVM_SMREV_REVISION=''"
           BUILD_DIR: build
         run: |
           python3 build_tools/github_actions/build_configure.py --manylinux
