@@ -16,4 +16,4 @@
 
 !NVPTX: module attributes {
 !NVPTX-SAME: fir.target_cpu = "sm_80"
-!NVPTX-SAME: fir.target_features = #llvm.target_features<["+ptx61", "+sm_80"]>
+!NVPTX-SAME: fir.target_features = #llvm.target_features<["+sm_80"]>
