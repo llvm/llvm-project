@@ -755,8 +755,10 @@ static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
     Obj["HasConcepts"] = true;
   }
 
-  if (!I.Children.Variables.empty())
+  if (!I.Children.Variables.empty()) {
     serializeArray(I.Children.Variables, Obj, "Variables", SerializeInfo);
+    Obj["HasVariables"] = true;
+  }
 
   serializeCommonChildren(I.Children, Obj, RepositoryUrl, RepositoryLinePrefix);
 }
