@@ -300,8 +300,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_min_sd(__m128d __a,
 ///    A 128-bit vector of [2 x double] containing one of the operands.
 /// \returns A 128-bit vector of [2 x double] containing the minimum values
 ///    between both operands.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_min_pd(__m128d __a,
-                                                        __m128d __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_min_pd(__m128d __a,
+                                                                  __m128d __b) {
   return __builtin_ia32_minpd((__v2df)__a, (__v2df)__b);
 }
 
@@ -346,8 +346,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_max_sd(__m128d __a,
 ///    A 128-bit vector of [2 x double] containing one of the operands.
 /// \returns A 128-bit vector of [2 x double] containing the maximum values
 ///    between both operands.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_max_pd(__m128d __a,
-                                                        __m128d __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_max_pd(__m128d __a,
+                                                                  __m128d __b) {
   return __builtin_ia32_maxpd((__v2df)__a, (__v2df)__b);
 }
 
