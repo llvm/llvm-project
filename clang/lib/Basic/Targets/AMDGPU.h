@@ -445,18 +445,12 @@ public:
   // address space has value 0 but in private and local address space has
   // value ~0.
   uint64_t getNullPointerValue(LangAS AS) const override {
-    // FIXME: Also should handle region.
     // Check language-specific address spaces
     if (AS == LangAS::opencl_local || AS == LangAS::opencl_private ||
         AS == LangAS::sycl_local || AS == LangAS::sycl_private)
       return ~0;
-    // Also check target address spaces that map to local or private
-    if (isTargetAddressSpace(AS)) {
-      unsigned TargetAS = toTargetAddressSpace(AS);
-      if (TargetAS == llvm::AMDGPUAS::LOCAL_ADDRESS ||
-          TargetAS == llvm::AMDGPUAS::PRIVATE_ADDRESS)
-        return ~0;
-    }
+    if (isTargetAddressSpace(AS))
+      return llvm::AMDGPU::getNullPointerValue(toTargetAddressSpace(AS));
     return 0;
   }
 
