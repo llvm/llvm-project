@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14
+#include "PlatformWasmRemoteGDBServer.h"
 
-// check that <__node_handle> functions are marked [[nodiscard]]
+using namespace lldb_private;
 
-#include <set>
+PlatformWasmRemoteGDBServer::~PlatformWasmRemoteGDBServer() {}
 
-void func() {
-  std::set<int> set;
-  set.extract(0).empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+llvm::StringRef
+PlatformWasmRemoteGDBServer::GetDefaultProcessPluginName() const {
+  return "wasm";
 }

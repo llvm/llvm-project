@@ -6,56 +6,75 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the class which performs incremental code execution.
+// This has the implementation of the base facilities for incremental execution.
 //
 //===----------------------------------------------------------------------===//
 
-#include "IncrementalExecutor.h"
+#include "clang/Interpreter/IncrementalExecutor.h"
+#include "OrcIncrementalExecutor.h"
+#ifdef __EMSCRIPTEN__
+#include "Wasm.h"
+#endif // __EMSCRIPTEN__
 
 #include "clang/Basic/TargetInfo.h"
-#include "clang/Basic/TargetOptions.h"
-#include "clang/Interpreter/PartialTranslationUnit.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "llvm/ExecutionEngine/Orc/CompileUtils.h"
+#include "clang/Driver/Compilation.h"
+#include "clang/Driver/Driver.h"
+#include "clang/Driver/ToolChain.h"
+
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
+
+#include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupport.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
-#include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
+#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
-#include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
-#include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
-#include "llvm/ExecutionEngine/SectionMemoryManager.h"
-#include "llvm/IR/Module.h"
+#include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
+
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/raw_ostream.h"
+
 #include "llvm/TargetParser/Host.h"
+
+#include <array>
+#include <functional>
+#include <memory>
+#include <optional>
+#include <string>
+#include <utility>
 
 #ifdef LLVM_ON_UNIX
 #include <netdb.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#endif // LLVM_ON_UNIX
-
-// Force linking some of the runtimes that helps attaching to a debugger.
-LLVM_ATTRIBUTE_USED void linkComponents() {
-  llvm::errs() << (void *)&llvm_orc_registerJITLoaderGDBAllocAction;
-}
+#endif
 
 namespace clang {
-IncrementalExecutor::IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC)
-    : TSCtx(TSC) {}
+IncrementalExecutorBuilder::~IncrementalExecutorBuilder() = default;
 
-llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
-IncrementalExecutor::createDefaultJITBuilder(
-    llvm::orc::JITTargetMachineBuilder JTMB) {
+static llvm::Expected<llvm::orc::JITTargetMachineBuilder>
+createJITTargetMachineBuilder(const llvm::Triple &TT) {
+  if (TT.getTriple() == llvm::sys::getProcessTriple())
+    // This fails immediately if the target backend is not registered
+    return llvm::orc::JITTargetMachineBuilder::detectHost();
+
+  // If the target backend is not registered, LLJITBuilder::create() will fail
+  return llvm::orc::JITTargetMachineBuilder(TT);
+}
+
+static llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
+createDefaultJITBuilder(llvm::orc::JITTargetMachineBuilder JTMB) {
   auto JITBuilder = std::make_unique<llvm::orc::LLJITBuilder>();
   JITBuilder->setJITTargetMachineBuilder(std::move(JTMB));
   JITBuilder->setPrePlatformSetup([](llvm::orc::LLJIT &J) {
@@ -65,71 +84,6 @@ IncrementalExecutor::createDefaultJITBuilder(
     return llvm::Error::success();
   });
   return std::move(JITBuilder);
-}
-
-IncrementalExecutor::IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
-                                         llvm::orc::LLJITBuilder &JITBuilder,
-                                         llvm::Error &Err)
-    : TSCtx(TSC) {
-  using namespace llvm::orc;
-  llvm::ErrorAsOutParameter EAO(&Err);
-
-  if (auto JitOrErr = JITBuilder.create())
-    Jit = std::move(*JitOrErr);
-  else {
-    Err = JitOrErr.takeError();
-    return;
-  }
-}
-
-IncrementalExecutor::~IncrementalExecutor() {}
-
-llvm::Error IncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
-  llvm::orc::ResourceTrackerSP RT =
-      Jit->getMainJITDylib().createResourceTracker();
-  ResourceTrackers[&PTU] = RT;
-
-  return Jit->addIRModule(RT, {std::move(PTU.TheModule), TSCtx});
-}
-
-llvm::Error IncrementalExecutor::removeModule(PartialTranslationUnit &PTU) {
-
-  llvm::orc::ResourceTrackerSP RT = std::move(ResourceTrackers[&PTU]);
-  if (!RT)
-    return llvm::Error::success();
-
-  ResourceTrackers.erase(&PTU);
-  if (llvm::Error Err = RT->remove())
-    return Err;
-  return llvm::Error::success();
-}
-
-// Clean up the JIT instance.
-llvm::Error IncrementalExecutor::cleanUp() {
-  // This calls the global dtors of registered modules.
-  return Jit->deinitialize(Jit->getMainJITDylib());
-}
-
-llvm::Error IncrementalExecutor::runCtors() const {
-  return Jit->initialize(Jit->getMainJITDylib());
-}
-
-llvm::Expected<llvm::orc::ExecutorAddr>
-IncrementalExecutor::getSymbolAddress(llvm::StringRef Name,
-                                      SymbolNameKind NameKind) const {
-  using namespace llvm::orc;
-  auto SO = makeJITDylibSearchOrder({&Jit->getMainJITDylib(),
-                                     Jit->getPlatformJITDylib().get(),
-                                     Jit->getProcessSymbolsJITDylib().get()});
-
-  ExecutionSession &ES = Jit->getExecutionSession();
-
-  auto SymOrErr =
-      ES.lookup(SO, (NameKind == LinkerName) ? ES.intern(Name)
-                                             : Jit->mangleAndIntern(Name));
-  if (auto Err = SymOrErr.takeError())
-    return std::move(Err);
-  return SymOrErr->getAddress();
 }
 
 Expected<std::unique_ptr<llvm::jitlink::JITLinkMemoryManager>>
@@ -165,11 +119,10 @@ createSharedMemoryManager(llvm::orc::SimpleRemoteEPC &SREPC,
       llvm::orc::SharedMemoryMapper>(SlabSize, SREPC, SAs);
 }
 
-llvm::Expected<std::pair<std::unique_ptr<llvm::orc::SimpleRemoteEPC>, uint32_t>>
-IncrementalExecutor::launchExecutor(llvm::StringRef ExecutablePath,
-                                    bool UseSharedMemory,
-                                    unsigned SlabAllocateSize,
-                                    std::function<void()> CustomizeFork) {
+static llvm::Expected<
+    std::pair<std::unique_ptr<llvm::orc::SimpleRemoteEPC>, uint32_t>>
+launchExecutor(llvm::StringRef ExecutablePath, bool UseSharedMemory,
+               unsigned SlabAllocateSize, std::function<void()> CustomizeFork) {
 #ifndef LLVM_ON_UNIX
   // FIXME: Add support for Windows.
   return llvm::make_error<llvm::StringError>(
@@ -302,10 +255,9 @@ static Expected<int> connectTCPSocketImpl(std::string Host,
   return SockFD;
 }
 
-llvm::Expected<std::unique_ptr<llvm::orc::SimpleRemoteEPC>>
-IncrementalExecutor::connectTCPSocket(llvm::StringRef NetworkAddress,
-                                      bool UseSharedMemory,
-                                      unsigned SlabAllocateSize) {
+static llvm::Expected<std::unique_ptr<llvm::orc::SimpleRemoteEPC>>
+connectTCPSocket(llvm::StringRef NetworkAddress, bool UseSharedMemory,
+                 unsigned SlabAllocateSize) {
 #ifndef LLVM_ON_UNIX
   // FIXME: Add TCP support for Windows.
   return llvm::make_error<llvm::StringError>(
@@ -357,4 +309,202 @@ IncrementalExecutor::connectTCPSocket(llvm::StringRef NetworkAddress,
 }
 #endif // _WIN32
 
-} // namespace clang
+static llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
+createLLJITBuilder(std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC,
+                   llvm::StringRef OrcRuntimePath) {
+  auto JTMB = createJITTargetMachineBuilder(EPC->getTargetTriple());
+  if (!JTMB)
+    return JTMB.takeError();
+  auto JB = createDefaultJITBuilder(std::move(*JTMB));
+  if (!JB)
+    return JB.takeError();
+
+  (*JB)->setExecutorProcessControl(std::move(EPC));
+  (*JB)->setPlatformSetUp(
+      llvm::orc::ExecutorNativePlatform(OrcRuntimePath.str()));
+
+  return std::move(*JB);
+}
+
+static llvm::Expected<
+    std::pair<std::unique_ptr<llvm::orc::LLJITBuilder>, uint32_t>>
+outOfProcessJITBuilder(const IncrementalExecutorBuilder &IncrExecutorBuilder) {
+  std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC;
+  uint32_t childPid = -1;
+  if (!IncrExecutorBuilder.OOPExecutor.empty()) {
+    // Launch an out-of-process executor locally in a child process.
+    auto ResultOrErr = launchExecutor(IncrExecutorBuilder.OOPExecutor,
+                                      IncrExecutorBuilder.UseSharedMemory,
+                                      IncrExecutorBuilder.SlabAllocateSize,
+                                      IncrExecutorBuilder.CustomizeFork);
+    if (!ResultOrErr)
+      return ResultOrErr.takeError();
+    childPid = ResultOrErr->second;
+    auto EPCOrErr = std::move(ResultOrErr->first);
+    EPC = std::move(EPCOrErr);
+  } else if (IncrExecutorBuilder.OOPExecutorConnect != "") {
+#if LLVM_ON_UNIX && LLVM_ENABLE_THREADS
+    auto EPCOrErr = connectTCPSocket(IncrExecutorBuilder.OOPExecutorConnect,
+                                     IncrExecutorBuilder.UseSharedMemory,
+                                     IncrExecutorBuilder.SlabAllocateSize);
+    if (!EPCOrErr)
+      return EPCOrErr.takeError();
+    EPC = std::move(*EPCOrErr);
+#else
+    return llvm::make_error<llvm::StringError>(
+        "Out-of-process JIT over TCP is not supported on this platform",
+        std::error_code());
+#endif
+  }
+
+  std::unique_ptr<llvm::orc::LLJITBuilder> JB;
+  if (EPC) {
+    auto JBOrErr =
+        createLLJITBuilder(std::move(EPC), IncrExecutorBuilder.OrcRuntimePath);
+    if (!JBOrErr)
+      return JBOrErr.takeError();
+    JB = std::move(*JBOrErr);
+  }
+
+  return std::make_pair(std::move(JB), childPid);
+}
+
+llvm::Expected<std::unique_ptr<IncrementalExecutor>>
+IncrementalExecutorBuilder::create(llvm::orc::ThreadSafeContext &TSC,
+                                   const clang::TargetInfo &TI) {
+  if (IE)
+    return std::move(IE);
+  llvm::Triple TT = TI.getTriple();
+  if (!TT.isOSWindows() && IsOutOfProcess) {
+    if (!JITBuilder) {
+      auto ResOrErr = outOfProcessJITBuilder(*this);
+      if (!ResOrErr)
+        return ResOrErr.takeError();
+      JITBuilder = std::move(ResOrErr->first);
+      ExecutorPID = ResOrErr->second;
+    }
+    if (!JITBuilder)
+      return llvm::make_error<llvm::StringError>(
+          "Operation failed. No LLJITBuilder for out-of-process JIT",
+          std::error_code());
+  }
+
+  if (!JITBuilder) {
+    auto JTMB = createJITTargetMachineBuilder(TT);
+    if (!JTMB)
+      return JTMB.takeError();
+    if (CM)
+      JTMB->setCodeModel(CM);
+    auto JB = createDefaultJITBuilder(std::move(*JTMB));
+    if (!JB)
+      return JB.takeError();
+    JITBuilder = std::move(*JB);
+  }
+
+  llvm::Error Err = llvm::Error::success();
+  std::unique_ptr<IncrementalExecutor> Executor;
+#ifdef __EMSCRIPTEN__
+  Executor = std::make_unique<WasmIncrementalExecutor>(Err);
+#else
+  Executor = std::make_unique<OrcIncrementalExecutor>(TSC, *JITBuilder, Err);
+#endif
+
+  if (Err)
+    return std::move(Err);
+
+  return std::move(Executor);
+}
+
+llvm::Error IncrementalExecutorBuilder::UpdateOrcRuntimePath(
+    const clang::driver::Compilation &C) {
+  if (!IsOutOfProcess)
+    return llvm::Error::success();
+
+  static constexpr std::array<const char *, 3> OrcRTLibNames = {
+      "liborc_rt.a",
+      "liborc_rt_osx.a",
+      "liborc_rt-x86_64.a",
+  };
+
+  auto findInDir = [&](llvm::StringRef Base) -> std::optional<std::string> {
+    if (Base.empty() || !llvm::sys::fs::exists(Base))
+      return std::nullopt;
+    for (const char *LibName : OrcRTLibNames) {
+      llvm::SmallString<256> Candidate(Base);
+      llvm::sys::path::append(Candidate, LibName);
+      if (llvm::sys::fs::exists(Candidate))
+        return std::string(Candidate.str());
+    }
+    return std::nullopt;
+  };
+
+  const clang::driver::Driver &D = C.getDriver();
+  const clang::driver::ToolChain &TC = C.getDefaultToolChain();
+  llvm::SmallVector<std::string, 8> triedPaths;
+
+  llvm::SmallString<256> Resource(D.ResourceDir);
+  if (llvm::sys::fs::exists(Resource)) {
+    // Ask the ToolChain for its runtime paths first (most authoritative).
+    for (auto RuntimePath :
+         {TC.getRuntimePath(), std::make_optional(TC.getCompilerRTPath())}) {
+      if (RuntimePath) {
+        if (auto Found = findInDir(*RuntimePath)) {
+          OrcRuntimePath = *Found;
+          return llvm::Error::success();
+        }
+        triedPaths.emplace_back(*RuntimePath);
+      }
+    }
+
+    // Check ResourceDir and ResourceDir/lib
+    for (auto P : {Resource.str().str(), (Resource + "/lib").str()}) {
+      if (auto F = findInDir(P)) {
+        OrcRuntimePath = *F;
+        return llvm::Error::success();
+      }
+      triedPaths.emplace_back(P);
+    }
+  } else {
+    // The binary was misplaced. Generic Backward Search (Climbing the tree)
+    // This allows unit tests in tools/clang/unittests to find the real lib/
+    llvm::SmallString<256> Cursor = Resource;
+    // ResourceDir-derived locations
+    llvm::StringRef Version = llvm::sys::path::filename(Resource);
+    llvm::StringRef OSName = TC.getOSLibName();
+    while (llvm::sys::path::has_parent_path(Cursor)) {
+      Cursor = llvm::sys::path::parent_path(Cursor).str();
+      // At each level, try standard relative layouts
+      for (auto Rel :
+           {(llvm::Twine("lib/clang/") + Version + "/lib/" + OSName).str(),
+            (llvm::Twine("lib/clang/") + Version + "/lib").str(),
+            (llvm::Twine("lib/") + OSName).str(), std::string("lib/clang")}) {
+        llvm::SmallString<256> Candidate = Cursor;
+        llvm::sys::path::append(Candidate, Rel);
+        if (auto F = findInDir(Candidate)) {
+          OrcRuntimePath = *F;
+          return llvm::Error::success();
+        }
+        triedPaths.emplace_back(std::string(Candidate.str()));
+      }
+      // Stop if we hit the root or go too far (safety check)
+      if (triedPaths.size() > 32)
+        break;
+    }
+  }
+
+  // Build a helpful error string if everything failed.
+  std::string Joined;
+  for (size_t i = 0; i < triedPaths.size(); ++i) {
+    if (i)
+      Joined += ", ";
+    Joined += triedPaths[i];
+  }
+  if (Joined.empty())
+    Joined = "<no candidate paths available>";
+
+  return llvm::make_error<llvm::StringError>(
+      llvm::formatv("OrcRuntime library not found in: {0}", Joined).str(),
+      llvm::inconvertibleErrorCode());
+}
+
+} // end namespace clang
