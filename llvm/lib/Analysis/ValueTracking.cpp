@@ -4893,6 +4893,7 @@ void llvm::adjustKnownFPClassForSelectArm(KnownFPClass &Known, Value *Cond,
   if (KnownSrc.isUnknown())
     return;
 
+  KnownSrc |= Known;
   if (isGuaranteedNotToBeUndef(Arm, SQ.AC, SQ.CxtI, SQ.DT, Depth + 1))
     Known = KnownSrc;
 }
