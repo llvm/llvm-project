@@ -9,19 +9,19 @@
 #include "mlir-c/Dialect/IRDL.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
+#include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 
 namespace nb = nanobind;
-using namespace mlir;
-using namespace mlir::python;
+using namespace mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN;
 using namespace mlir::python::nanobind_adaptors;
 
 static void populateDialectIRDLSubmodule(nb::module_ &m) {
   m.def(
       "load_dialects",
-      [](MlirModule module) {
-        if (mlirLogicalResultIsFailure(mlirLoadIRDLDialects(module)))
+      [](PyModule &module) {
+        if (mlirLogicalResultIsFailure(mlirLoadIRDLDialects(module.get())))
           throw std::runtime_error(
               "failed to load IRDL dialects from the input module");
       },
