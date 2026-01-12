@@ -177,7 +177,7 @@ public:
     return polymorphic_allocator();
   }
 
-  [[nodiscard]] [[__gnu__::__returns_nonnull__]] _LIBCPP_HIDE_FROM_ABI memory_resource* resource() const noexcept {
+  [[nodiscard, __gnu__::__returns_nonnull__]] _LIBCPP_HIDE_FROM_ABI memory_resource* resource() const noexcept {
     return __res_;
   }
 
