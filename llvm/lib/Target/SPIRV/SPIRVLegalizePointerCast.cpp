@@ -370,6 +370,8 @@ class SPIRVLegalizePointerCast : public FunctionPass {
       storeToFirstValueAggregate(B, Src, Dst, D_VT, Alignment);
     else if (D_AT && S_VT && S_VT->getElementType() == D_AT->getElementType())
       storeArrayFromVector(B, Src, Dst, D_AT, Alignment);
+    else if (D_AT && D_AT->getElementType() == FromTy)
+      storeToFirstValueAggregate(B, Src, Dst, D_AT, Alignment);
     else
       llvm_unreachable("Unsupported ptrcast use in store. Please fix.");
 
