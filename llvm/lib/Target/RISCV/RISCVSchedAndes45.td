@@ -111,12 +111,7 @@ class Andes45GetCyclesWidening<string mx> {
 }
 
 class Andes45GetLatencyDiv<int sew> {
-  int c = !cond(
-    !eq(sew, 8) : 12,
-    !eq(sew, 16) : 20,
-    !eq(sew, 32) : 36,
-    !eq(sew, 64) : 68
-  );
+  int c = !add(sew, 4);
 }
 
 // (VLEN/DLEN)*LMUL*SEW+(VLEN/DLEN)*LMUL*2+1
