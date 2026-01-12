@@ -23956,6 +23956,8 @@ bool SLPVectorizerPass::vectorizeStores(
           ValueTy->getScalarType()));
       MinVF /= getNumElements(StoreTy);
       MinVF = std::max<unsigned>(2, MinVF);
+      if (Strided)
+        MinVF = std::max<unsigned>(MinVF, MinProfitableStridedMemOps);
 
       if (MaxVF < MinVF) {
         LLVM_DEBUG(dbgs() << "SLP: Vectorization infeasible as MaxVF (" << MaxVF
@@ -24226,7 +24228,7 @@ bool SLPVectorizerPass::vectorizeStores(
         if (Idx != StoreSeq.size() - 1)
           continue;
       }
-      if (PrevStride != 1 && PrevStride < MaxProfitableStride)
+      if (PrevStride != 1 && PrevStride <= MaxProfitableStride)
         VectorizeOperands(Operands, /*Strided=*/true);
 
       Operands.clear();
