@@ -1067,7 +1067,8 @@ public:
           const LLT VecTy = Query.Types[TypeIdx];
           unsigned NumElts = VecTy.getNumElements();
           unsigned MinSize = VectorSize / NumElts;
-          LLT NewTy = LLT::fixed_vector(NumElts, VecTy.getElementType().changeElementSize(MinSize));
+          LLT NewTy = LLT::fixed_vector(
+              NumElts, VecTy.getElementType().changeElementSize(MinSize));
           return std::make_pair(TypeIdx, NewTy);
         });
   }

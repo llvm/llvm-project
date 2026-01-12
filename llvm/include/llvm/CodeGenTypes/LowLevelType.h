@@ -107,7 +107,8 @@ public:
 
   static LLT buildFloatingPoint(const FpSemantics &Sem) {
     if (!getUseExtended())
-      return LLT::scalar(APFloat::getSizeInBits(APFloatBase::EnumToSemantics(Sem)));
+      return LLT::scalar(
+          APFloat::getSizeInBits(APFloatBase::EnumToSemantics(Sem)));
 
     return floatingPoint(Sem);
   }
@@ -407,7 +408,8 @@ public:
     assert(!isPointerOrPointerVector() &&
            "invalid to directly change element size for pointers");
     if (isVector())
-      return LLT::vector(getElementCount(), getElementType().changeElementSize(NewEltSize));
+      return LLT::vector(getElementCount(),
+                         getElementType().changeElementSize(NewEltSize));
 
     if (isInteger())
       return LLT::integer(NewEltSize);
