@@ -244,7 +244,7 @@ public:
     // Rewrite the contents of the module in a separate compiler instance.
     CompilerInstance Instance(
         std::make_shared<CompilerInvocation>(CI.getInvocation()),
-        CI.getPCHContainerOperations(), &CI.getModuleCache());
+        CI.getPCHContainerOperations(), CI.getModuleCachePtr());
     Instance.setVirtualFileSystem(CI.getVirtualFileSystemPtr());
     Instance.createDiagnostics(
         new ForwardingDiagnosticConsumer(CI.getDiagnosticClient()),

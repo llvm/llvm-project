@@ -12,6 +12,7 @@
 
 #include "LowerToLLVM.h"
 
+#include <array>
 #include <deque>
 #include <optional>
 
@@ -1050,7 +1051,8 @@ mlir::LogicalResult CIRToLLVMBitClrsbOpLowering::matchAndRewrite(
       rewriter, op.getLoc(), resTy, select, /*is_zero_poison=*/false);
 
   auto one = mlir::LLVM::ConstantOp::create(rewriter, op.getLoc(), resTy, 1);
-  auto res = mlir::LLVM::SubOp::create(rewriter, op.getLoc(), clz, one);
+  auto res = mlir::LLVM::SubOp::create(rewriter, op.getLoc(), clz, one,
+                                       mlir::LLVM::IntegerOverflowFlags::nuw);
   rewriter.replaceOp(op, res);
 
   return mlir::LogicalResult::success();
@@ -2624,9 +2626,6 @@ mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type type = cmpOp.getLhs().getType();
 
-  assert(!cir::MissingFeatures::dataMemberType());
-  assert(!cir::MissingFeatures::methodType());
-
   if (mlir::isa<cir::IntType, mlir::IntegerType>(type)) {
     bool isSigned = mlir::isa<cir::IntType>(type)
                         ? mlir::cast<cir::IntType>(type).isSigned()
@@ -3009,6 +3008,8 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
       break;
     // Unions are lowered as only the largest member.
     case cir::RecordType::Union:
+      if (type.getMembers().empty())
+        break;
       if (auto largestMember = type.getLargestMember(dataLayout))
         llvmMembers.push_back(
             convertTypeForMemory(converter, dataLayout, largestMember));
@@ -3289,6 +3290,27 @@ mlir::LogicalResult CIRToLLVMGetMemberOpLowering::matchAndRewrite(
   }
 }
 
+mlir::LogicalResult CIRToLLVMExtractMemberOpLowering::matchAndRewrite(
+    cir::ExtractMemberOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  std::int64_t indices[1] = {static_cast<std::int64_t>(op.getIndex())};
+
+  mlir::Type recordTy = op.getRecord().getType();
+  auto cirRecordTy = mlir::cast<cir::RecordType>(recordTy);
+  switch (cirRecordTy.getKind()) {
+  case cir::RecordType::Struct:
+  case cir::RecordType::Class:
+    rewriter.replaceOpWithNewOp<mlir::LLVM::ExtractValueOp>(
+        op, adaptor.getRecord(), indices);
+    return mlir::success();
+
+  case cir::RecordType::Union:
+    op.emitError("cir.extract_member cannot extract member from a union");
+    return mlir::failure();
+  }
+  llvm_unreachable("Unexpected record kind");
+}
+
 mlir::LogicalResult CIRToLLVMUnreachableOpLowering::matchAndRewrite(
     cir::UnreachableOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -3466,6 +3488,18 @@ mlir::LogicalResult CIRToLLVMResumeFlatOpLowering::matchAndRewrite(
       rewriter, op.getLoc(), slot, adaptor.getTypeId(), selectorIdx);
 
   rewriter.replaceOpWithNewOp<mlir::LLVM::ResumeOp>(op, selector);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMEhTypeIdOpLowering::matchAndRewrite(
+    cir::EhTypeIdOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Value addrOp = mlir::LLVM::AddressOfOp::create(
+      rewriter, op.getLoc(),
+      mlir::LLVM::LLVMPointerType::get(rewriter.getContext()),
+      op.getTypeSymAttr());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::EhTypeidForOp>(
+      op, rewriter.getI32Type(), addrOp);
   return mlir::success();
 }
 
@@ -4246,6 +4280,71 @@ mlir::LogicalResult CIRToLLVMAwaitOpLowering::matchAndRewrite(
     cir::AwaitOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   return mlir::failure();
+}
+
+mlir::LogicalResult CIRToLLVMCpuIdOpLowering::matchAndRewrite(
+    cir::CpuIdOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type i32Ty = rewriter.getI32Type();
+  mlir::Type i64Ty = rewriter.getI64Type();
+  mlir::Type i32PtrTy = mlir::LLVM::LLVMPointerType::get(i32Ty.getContext(), 0);
+
+  mlir::Type cpuidRetTy = mlir::LLVM::LLVMStructType::getLiteral(
+      rewriter.getContext(), {i32Ty, i32Ty, i32Ty, i32Ty});
+
+  mlir::Value functionId = adaptor.getFunctionId();
+  mlir::Value subFunctionId = adaptor.getSubFunctionId();
+
+  StringRef asmString, constraints;
+  mlir::ModuleOp moduleOp = op->getParentOfType<mlir::ModuleOp>();
+  llvm::Triple triple(
+      mlir::cast<mlir::StringAttr>(
+          moduleOp->getAttr(cir::CIRDialect::getTripleAttrName()))
+          .getValue());
+  if (triple.getArch() == llvm::Triple::x86) {
+    asmString = "cpuid";
+    constraints = "={ax},={bx},={cx},={dx},{ax},{cx}";
+  } else {
+    // x86-64 uses %rbx as the base register, so preserve it.
+    asmString = "xchgq %rbx, ${1:q}\n"
+                "cpuid\n"
+                "xchgq %rbx, ${1:q}";
+    constraints = "={ax},=r,={cx},={dx},0,2";
+  }
+
+  mlir::Value inlineAsm =
+      mlir::LLVM::InlineAsmOp::create(
+          rewriter, op.getLoc(), cpuidRetTy, {functionId, subFunctionId},
+          rewriter.getStringAttr(asmString),
+          rewriter.getStringAttr(constraints),
+          /*has_side_effects=*/mlir::UnitAttr{},
+          /*is_align_stack=*/mlir::UnitAttr{},
+          /*tail_call_kind=*/mlir::LLVM::TailCallKindAttr{},
+          /*asm_dialect=*/mlir::LLVM::AsmDialectAttr{},
+          /*operand_attrs=*/mlir::ArrayAttr{})
+          .getResult(0);
+
+  mlir::Value basePtr = adaptor.getCpuInfo();
+
+  mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
+  unsigned alignment = layout.getTypeABIAlignment(i32Ty);
+  for (unsigned i = 0; i < 4; i++) {
+    mlir::Value extracted =
+        mlir::LLVM::ExtractValueOp::create(rewriter, op.getLoc(), inlineAsm, i)
+            .getResult();
+    mlir::Value index = mlir::LLVM::ConstantOp::create(
+        rewriter, op.getLoc(), i64Ty, rewriter.getI64IntegerAttr(i));
+    llvm::SmallVector<mlir::Value, 1> gepIndices = {index};
+    mlir::Value storePtr = mlir::LLVM::GEPOp::create(
+                               rewriter, op.getLoc(), i32PtrTy, i32Ty, basePtr,
+                               gepIndices, mlir::LLVM::GEPNoWrapFlags::none)
+                               .getResult();
+    mlir::LLVM::StoreOp::create(rewriter, op.getLoc(), extracted, storePtr,
+                                alignment);
+  }
+
+  rewriter.eraseOp(op);
+  return mlir::success();
 }
 
 std::unique_ptr<mlir::Pass> createConvertCIRToLLVMPass() {

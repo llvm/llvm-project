@@ -191,7 +191,7 @@ cbuffer CB {
     // CHECK: FieldDecl {{.*}} f 'RWBuffer<float>':'hlsl::RWBuffer<float>'
     RWBuffer<float> f;
   } s9;
-  // CHECK: VarDecl {{.*}} s9 'hlsl_constant struct (unnamed struct at {{.*}}cbuffer.hlsl:[[# @LINE - 8]]:3
+  // CHECK: VarDecl {{.*}} s9 'hlsl_constant struct (unnamed at {{.*}}cbuffer.hlsl:[[# @LINE - 8]]:3
   // CHECK: CXXRecordDecl {{.*}} struct definition
   struct {
     // CHECK: FieldDecl {{.*}} g 'float'
@@ -199,7 +199,7 @@ cbuffer CB {
     // CHECK: FieldDecl {{.*}} f 'RWBuffer<float>':'hlsl::RWBuffer<float>'
     RWBuffer<float> f;
   } s10;
-  // CHECK: VarDecl {{.*}} s10 'hlsl_constant struct (unnamed struct at {{.*}}cbuffer.hlsl:[[# @LINE - 6]]:3
+  // CHECK: VarDecl {{.*}} s10 'hlsl_constant struct (unnamed at {{.*}}cbuffer.hlsl:[[# @LINE - 6]]:3
   // CHECK: CXXRecordDecl {{.*}} implicit referenced struct __cblayout_anon definition
   // CHECK: PackedAttr
   // CHECK-NEXT: FieldDecl {{.*}} e 'float'

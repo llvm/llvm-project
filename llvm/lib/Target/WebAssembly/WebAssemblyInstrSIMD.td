@@ -300,11 +300,17 @@ foreach vec = [I32x4, I64x2, F32x4, F64x2] in {
   defm : LoadPat<vec.vt, pat, inst>;
 }
 
-// TODO: f32x4 and f64x2 as well
 foreach vec = [I32x4, I64x2] in {
   defvar inst = "LOAD_ZERO_"#vec.lane_bits;
   defvar pat = PatFrag<(ops node:$ptr),
     (vector_insert (vec.splat (vec.lane_vt 0)), (vec.lane_vt (load $ptr)), 0)>;
+  defm : LoadPat<vec.vt, pat, inst>;
+}
+
+foreach vec = [F32x4, F64x2] in {
+  defvar inst = "LOAD_ZERO_"#vec.lane_bits;
+  defvar pat = PatFrag<(ops node:$ptr),
+    (vector_insert (vec.splat (vec.lane_vt fpimm0)), (vec.lane_vt (load $ptr)), 0)>;
   defm : LoadPat<vec.vt, pat, inst>;
 }
 

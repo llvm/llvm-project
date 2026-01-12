@@ -28,14 +28,14 @@ TEST(AbstractCallSite, CallbackCall) {
   LLVMContext C;
 
   const char *IR =
-      "define void @callback(i8* %X, i32* %A) {\n"
+      "define void @callback(ptr %X, ptr %A) {\n"
       "  ret void\n"
       "}\n"
-      "define void @foo(i32* %A) {\n"
-      "  call void (i32, void (i8*, ...)*, ...) @broker(i32 1, void (i8*, ...)* bitcast (void (i8*, i32*)* @callback to void (i8*, ...)*), i32* %A)\n"
+      "define void @foo(ptr %A) {\n"
+      "  call void (i32, ptr, ...) @broker(i32 1, ptr @callback, ptr %A)\n"
       "  ret void\n"
       "}\n"
-      "declare !callback !0 void @broker(i32, void (i8*, ...)*, ...)\n"
+      "declare !callback !0 void @broker(i32, ptr, ...)\n"
       "!0 = !{!1}\n"
       "!1 = !{i64 1, i64 -1, i1 true}";
 
