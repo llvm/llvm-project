@@ -161,7 +161,7 @@ define void @test_subs_tbnz(i32 %a, i32 %b, ptr %ptr) {
 ; CHECK-LABEL: test_subs_tbnz:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    subs w8, w0, w1
-; CHECK-NEXT:    b.lt .LBB8_2
+; CHECK-NEXT:    b.mi .LBB8_2
 ; CHECK-NEXT:  // %bb.1: // %L1
 ; CHECK-NEXT:    str w8, [x2]
 ; CHECK-NEXT:  .LBB8_2: // %L2

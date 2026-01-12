@@ -160,11 +160,17 @@ define i32 @not_neg_sel_same_variable(i32 %a) {
 
 ; ret = (x-y) > 0 ? x-y : 0
 define i32 @PR31175(i32 %x, i32 %y) {
-; CHECK-LABEL: PR31175:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    subs w8, w0, w1
-; CHECK-NEXT:    csel w0, w8, wzr, gt
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: PR31175:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sub w8, w0, w1
+; CHECK-SD-NEXT:    bic w0, w8, w8, asr #31
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: PR31175:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    subs w8, w0, w1
+; CHECK-GI-NEXT:    csel w0, w8, wzr, gt
+; CHECK-GI-NEXT:    ret
   %sub = sub nsw i32 %x, %y
   %cmp = icmp sgt i32 %sub, 0
   %sel = select i1 %cmp, i32 %sub, i32 0

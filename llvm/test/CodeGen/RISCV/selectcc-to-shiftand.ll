@@ -184,18 +184,18 @@ define i32 @not_neg_sel_same_variable(i32 signext %a) {
 define i32 @sub_clamp_zero(i32 signext %x, i32 signext %y) {
 ; RV32I-LABEL: sub_clamp_zero:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    sub a2, a0, a1
-; RV32I-NEXT:    slt a0, a1, a0
-; RV32I-NEXT:    neg a0, a0
-; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    sub a0, a0, a1
+; RV32I-NEXT:    sgtz a1, a0
+; RV32I-NEXT:    neg a1, a1
+; RV32I-NEXT:    and a0, a1, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: sub_clamp_zero:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    subw a2, a0, a1
-; RV64I-NEXT:    slt a0, a1, a0
-; RV64I-NEXT:    neg a0, a0
-; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    sgtz a1, a0
+; RV64I-NEXT:    neg a1, a1
+; RV64I-NEXT:    and a0, a1, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: sub_clamp_zero:

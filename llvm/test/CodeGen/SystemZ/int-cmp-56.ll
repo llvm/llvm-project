@@ -87,7 +87,7 @@ bb4:
 ; "nsw" is not needed for the equality check against zero.
 define i32 @fun3(i32 %arg, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: fun3:
-; CHECK: crjle   %r2, %r3, .LBB3_2{{$}}
+; CHECK: jle .LBB3_2{{$}}
 ; CHECK: je .LBB3_4{{$}}
 
 bb:
