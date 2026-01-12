@@ -335,16 +335,8 @@ void FIRToMemRef::rewriteAlloca(fir::AllocaOp firAlloca,
 
 bool FIRToMemRef::memrefIsOptional(Operation *op) const {
   if (auto declare = dyn_cast<fir::DeclareOp>(op)) {
-    Value operand = declare.getMemref();
-
-    if (auto blockArg = dyn_cast<BlockArgument>(operand)) {
-      if (auto func =
-              dyn_cast<func::FuncOp>((blockArg.getOwner())->getParentOp())) {
-        if (func.getArgAttr(blockArg.getArgNumber(),
-                            fir::getOptionalAttrName()))
-          return true;
-      }
-    }
+    if (declare.isOptional())
+      return true;
 
     Operation *operandOp = operand.getDefiningOp();
     if (operandOp && isa<fir::AbsentOp>(operandOp))
