@@ -1869,6 +1869,15 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
     return false;
   }
 
+  // We nedd to compile (and check) early for function pointer calls
+  // because the Call/CallVirt below might access the instance pointer
+  // but the Function's information about them is wrong.
+  if (!F->isFullyCompiled())
+    compileFunction(S, F);
+
+  if (!CheckCallable(S, OpPC, F))
+    return false;
+
   assert(ArgSize >= F->getWrittenArgSize());
   uint32_t VarArgSize = ArgSize - F->getWrittenArgSize();
 

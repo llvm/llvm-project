@@ -2207,6 +2207,15 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"nolse", "lse128"}, {"lse", "lse128"}, {}},
         {AArch64::ARMV8A, {"lse128", "nolse"}, {}, {"lse", "lse128"}},
 
+        // mtetc -> mte
+        {AArch64::ARMV9_7A, {"nomemtag", "mtetc"}, {"mte"}, {}},
+
+        // mops-go -> mops, mte
+        {AArch64::ARMV9_7A,
+         {"nomops", "nomemtag", "mops-go"},
+         {"mops", "mte"},
+         {}},
+
         // predres -> predres2
         {AArch64::ARMV8A,
          {"nopredres", "predres2"},
