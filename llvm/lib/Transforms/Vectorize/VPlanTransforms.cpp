@@ -3207,7 +3207,7 @@ void VPlanTransforms::addExplicitVectorLength(
                                "safe_avl");
   }
   auto *VPEVL = Builder.createNaryOp(VPInstruction::ExplicitVectorLength, AVL,
-                                     DebugLoc::getUnknown());
+                                     DebugLoc::getUnknown(), "evl");
 
   auto *CanonicalIVIncrement =
       cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());
