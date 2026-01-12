@@ -2640,6 +2640,7 @@ vectorizeScalableVectorPrecondition(Operation *op,
   // Cond 4: Only the following ops are supported in the
   // presence of scalable vectors
   return success(isElementwise(linalgOp) || isa<linalg::MatmulOp>(op) ||
+                 isa<linalg::BatchMatmulOp>(op) ||
                  isa<linalg::DepthwiseConv1DNwcWcOp>(op) ||
                  isa<linalg::MatvecOp>(op) || isa<linalg::Mmt4DOp>(op) ||
                  isa<linalg::BatchMmt4DOp>(op) ||
