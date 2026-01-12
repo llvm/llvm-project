@@ -1335,7 +1335,8 @@ void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
 
   if (E->getRHS()->isLValue()) {
     LValue RHS = CGF.EmitCheckedLValue(E->getRHS(), CodeGenFunction::TCK_Load);
-    CGF.EmitAggregateCopy(LHS, RHS, E->getType(), Dest.isVolatile());
+    CGF.EmitAggregateCopy(LHS, RHS, E->getType(), AggValueSlot::MayOverlap,
+                          Dest.isVolatile());
   } else {
     if (!LHSSlot.isVolatile() && CGF.hasVolatileMember(E->getLHS()->getType()))
       LHSSlot.setVolatile(true);
