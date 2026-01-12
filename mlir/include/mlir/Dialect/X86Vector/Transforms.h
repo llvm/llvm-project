@@ -100,6 +100,7 @@ void populateVectorContractBF16ToFMAPatterns(RewritePatternSet &patterns);
 // range by placing them at their earliest legal use site.
 void populateSinkVectorProducerOpsPatterns(RewritePatternSet &patterns);
 
+// Shuffle the output of BF16 type flat layout vector.contract operations.
 void populateShuffleBF16VectorContractResultPatterns(
     RewritePatternSet &patterns);
 
