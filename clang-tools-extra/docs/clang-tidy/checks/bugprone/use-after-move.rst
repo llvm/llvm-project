@@ -259,7 +259,15 @@ Options
 
 .. option:: InvalidationFunctions
 
-  A semicolon-separated list of names of functions that cause their first
-  arguments to be invalidated (e.g., closing a handle).
+  A semicolon-separated list of regular expressions matching names of functions
+  that cause their first arguments to be invalidated (e.g., closing a handle).
   For member functions, the first argument is considered to be the implicit
   object argument (``this``). Default value is an empty string.
+
+.. option:: ReinitializationFunctions
+
+  A semicolon-separated list of regular expressions matching names of functions
+  that reinitialize the object. For member functions, the implicit object
+  argument (``*this``) is considered to be reinitialized. For non-member or
+  static member functions, the first argument is considered to be
+  reinitialized. Default value is an empty string.

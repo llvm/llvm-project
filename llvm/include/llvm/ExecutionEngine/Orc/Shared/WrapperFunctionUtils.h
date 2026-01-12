@@ -24,60 +24,60 @@ namespace orc {
 namespace shared {
 
 // Must be kept in-sync with compiler-rt/lib/orc/c-api.h.
-union CWrapperFunctionResultDataUnion {
+union CWrapperFunctionBufferDataUnion {
   char *ValuePtr;
   char Value[sizeof(ValuePtr)];
 };
 
 // Must be kept in-sync with compiler-rt/lib/orc/c-api.h.
 typedef struct {
-  CWrapperFunctionResultDataUnion Data;
+  CWrapperFunctionBufferDataUnion Data;
   size_t Size;
-} CWrapperFunctionResult;
+} CWrapperFunctionBuffer;
 
-/// C++ wrapper function result: Same as CWrapperFunctionResult but
+/// C++ wrapper function buffer: Same as CWrapperFunctionBuffer but
 /// auto-releases memory.
-class WrapperFunctionResult {
+class WrapperFunctionBuffer {
 public:
-  /// Create a default WrapperFunctionResult.
-  WrapperFunctionResult() { init(R); }
+  /// Create a default WrapperFunctionBuffer.
+  WrapperFunctionBuffer() { init(R); }
 
-  /// Create a WrapperFunctionResult by taking ownership of a
-  /// CWrapperFunctionResult.
+  /// Create a WrapperFunctionBuffer by taking ownership of a
+  /// CWrapperFunctionBuffer.
   ///
   /// Warning: This should only be used by clients writing wrapper-function
   /// caller utilities (like TargetProcessControl).
-  explicit WrapperFunctionResult(CWrapperFunctionResult R) : R(R) {
+  explicit WrapperFunctionBuffer(CWrapperFunctionBuffer R) : R(R) {
     // Reset R.
     init(R);
   }
 
-  WrapperFunctionResult(const WrapperFunctionResult &) = delete;
-  WrapperFunctionResult &operator=(const WrapperFunctionResult &) = delete;
+  WrapperFunctionBuffer(const WrapperFunctionBuffer &) = delete;
+  WrapperFunctionBuffer &operator=(const WrapperFunctionBuffer &) = delete;
 
-  WrapperFunctionResult(WrapperFunctionResult &&Other) {
+  WrapperFunctionBuffer(WrapperFunctionBuffer &&Other) {
     init(R);
     std::swap(R, Other.R);
   }
 
-  WrapperFunctionResult &operator=(WrapperFunctionResult &&Other) {
-    WrapperFunctionResult Tmp(std::move(Other));
+  WrapperFunctionBuffer &operator=(WrapperFunctionBuffer &&Other) {
+    WrapperFunctionBuffer Tmp(std::move(Other));
     std::swap(R, Tmp.R);
     return *this;
   }
 
-  ~WrapperFunctionResult() {
+  ~WrapperFunctionBuffer() {
     if ((R.Size > sizeof(R.Data.Value)) ||
         (R.Size == 0 && R.Data.ValuePtr != nullptr))
       free(R.Data.ValuePtr);
   }
 
-  /// Release ownership of the contained CWrapperFunctionResult.
+  /// Release ownership of the contained CWrapperFunctionBuffer.
   /// Warning: Do not use -- this method will be removed in the future. It only
   /// exists to temporarily support some code that will eventually be moved to
   /// the ORC runtime.
-  CWrapperFunctionResult release() {
-    CWrapperFunctionResult Tmp;
+  CWrapperFunctionBuffer release() {
+    CWrapperFunctionBuffer Tmp;
     init(Tmp);
     std::swap(R, Tmp);
     return Tmp;
@@ -105,14 +105,14 @@ public:
   }
 
   /// Returns true if this value is equivalent to a default-constructed
-  /// WrapperFunctionResult.
+  /// WrapperFunctionBuffer.
   bool empty() const { return R.Size == 0 && R.Data.ValuePtr == nullptr; }
 
-  /// Create a WrapperFunctionResult with the given size and return a pointer
+  /// Create a WrapperFunctionBuffer with the given size and return a pointer
   /// to the underlying memory.
-  static WrapperFunctionResult allocate(size_t Size) {
+  static WrapperFunctionBuffer allocate(size_t Size) {
     // Reset.
-    WrapperFunctionResult WFR;
+    WrapperFunctionBuffer WFR;
     WFR.R.Size = Size;
     if (WFR.R.Size > sizeof(WFR.R.Data.Value))
       WFR.R.Data.ValuePtr = (char *)malloc(WFR.R.Size);
@@ -120,26 +120,26 @@ public:
   }
 
   /// Copy from the given char range.
-  static WrapperFunctionResult copyFrom(const char *Source, size_t Size) {
+  static WrapperFunctionBuffer copyFrom(const char *Source, size_t Size) {
     auto WFR = allocate(Size);
     memcpy(WFR.data(), Source, Size);
     return WFR;
   }
 
   /// Copy from the given null-terminated string (includes the null-terminator).
-  static WrapperFunctionResult copyFrom(const char *Source) {
+  static WrapperFunctionBuffer copyFrom(const char *Source) {
     return copyFrom(Source, strlen(Source) + 1);
   }
 
   /// Copy from the given std::string (includes the null terminator).
-  static WrapperFunctionResult copyFrom(const std::string &Source) {
+  static WrapperFunctionBuffer copyFrom(const std::string &Source) {
     return copyFrom(Source.c_str());
   }
 
   /// Create an out-of-band error by copying the given string.
-  static WrapperFunctionResult createOutOfBandError(const char *Msg) {
+  static WrapperFunctionBuffer createOutOfBandError(const char *Msg) {
     // Reset.
-    WrapperFunctionResult WFR;
+    WrapperFunctionBuffer WFR;
     char *Tmp = (char *)malloc(strlen(Msg) + 1);
     strcpy(Tmp, Msg);
     WFR.R.Data.ValuePtr = Tmp;
@@ -147,7 +147,7 @@ public:
   }
 
   /// Create an out-of-band error by copying the given string.
-  static WrapperFunctionResult createOutOfBandError(const std::string &Msg) {
+  static WrapperFunctionBuffer createOutOfBandError(const std::string &Msg) {
     return createOutOfBandError(Msg.c_str());
   }
 
@@ -158,23 +158,23 @@ public:
   }
 
 private:
-  static void init(CWrapperFunctionResult &R) {
+  static void init(CWrapperFunctionBuffer &R) {
     R.Data.ValuePtr = nullptr;
     R.Size = 0;
   }
 
-  CWrapperFunctionResult R;
+  CWrapperFunctionBuffer R;
 };
 
 namespace detail {
 
 template <typename SPSArgListT, typename... ArgTs>
-WrapperFunctionResult
-serializeViaSPSToWrapperFunctionResult(const ArgTs &...Args) {
-  auto Result = WrapperFunctionResult::allocate(SPSArgListT::size(Args...));
+WrapperFunctionBuffer
+serializeViaSPSToWrapperFunctionBuffer(const ArgTs &...Args) {
+  auto Result = WrapperFunctionBuffer::allocate(SPSArgListT::size(Args...));
   SPSOutputBuffer OB(Result.data(), Result.size());
   if (!SPSArgListT::serialize(OB, Args...))
-    return WrapperFunctionResult::createOutOfBandError(
+    return WrapperFunctionBuffer::createOutOfBandError(
         "Error serializing arguments to blob in call");
   return Result;
 }
@@ -214,11 +214,11 @@ public:
   using ArgIndices = std::make_index_sequence<std::tuple_size<ArgTuple>::value>;
 
   template <typename HandlerT>
-  static WrapperFunctionResult apply(HandlerT &&H, const char *ArgData,
+  static WrapperFunctionBuffer apply(HandlerT &&H, const char *ArgData,
                                      size_t ArgSize) {
     ArgTuple Args;
     if (!deserialize(ArgData, ArgSize, Args, ArgIndices{}))
-      return WrapperFunctionResult::createOutOfBandError(
+      return WrapperFunctionBuffer::createOutOfBandError(
           "Could not deserialize arguments for wrapper function call");
 
     auto HandlerResult = WrapperFunctionHandlerCaller<RetT>::call(
@@ -276,19 +276,19 @@ public:
   using ArgTuple = std::tuple<std::decay_t<ArgTs>...>;
   using ArgIndices = std::make_index_sequence<std::tuple_size<ArgTuple>::value>;
 
-  template <typename HandlerT, typename SendWrapperFunctionResultT>
+  template <typename HandlerT, typename SendWrapperFunctionBufferT>
   static void applyAsync(HandlerT &&H,
-                         SendWrapperFunctionResultT &&SendWrapperFunctionResult,
+                         SendWrapperFunctionBufferT &&SendWrapperFunctionBuffer,
                          const char *ArgData, size_t ArgSize) {
     ArgTuple Args;
     if (!deserialize(ArgData, ArgSize, Args, ArgIndices{})) {
-      SendWrapperFunctionResult(WrapperFunctionResult::createOutOfBandError(
+      SendWrapperFunctionBuffer(WrapperFunctionBuffer::createOutOfBandError(
           "Could not deserialize arguments for wrapper function call"));
       return;
     }
 
     auto SendResult =
-        [SendWFR = std::move(SendWrapperFunctionResult)](auto Result) mutable {
+        [SendWFR = std::move(SendWrapperFunctionBuffer)](auto Result) mutable {
           using ResultT = decltype(Result);
           SendWFR(ResultSerializer<ResultT>::serialize(std::move(Result)));
         };
@@ -342,16 +342,16 @@ class WrapperFunctionAsyncHandlerHelper<RetT (ClassT::*)(ArgTs...) const,
 
 template <typename SPSRetTagT, typename RetT> class ResultSerializer {
 public:
-  static WrapperFunctionResult serialize(RetT Result) {
-    return serializeViaSPSToWrapperFunctionResult<SPSArgList<SPSRetTagT>>(
+  static WrapperFunctionBuffer serialize(RetT Result) {
+    return serializeViaSPSToWrapperFunctionBuffer<SPSArgList<SPSRetTagT>>(
         Result);
   }
 };
 
 template <typename SPSRetTagT> class ResultSerializer<SPSRetTagT, Error> {
 public:
-  static WrapperFunctionResult serialize(Error Err) {
-    return serializeViaSPSToWrapperFunctionResult<SPSArgList<SPSRetTagT>>(
+  static WrapperFunctionBuffer serialize(Error Err) {
+    return serializeViaSPSToWrapperFunctionBuffer<SPSArgList<SPSRetTagT>>(
         toSPSSerializable(std::move(Err)));
   }
 };
@@ -359,8 +359,8 @@ public:
 template <typename SPSRetTagT>
 class ResultSerializer<SPSRetTagT, ErrorSuccess> {
 public:
-  static WrapperFunctionResult serialize(ErrorSuccess Err) {
-    return serializeViaSPSToWrapperFunctionResult<SPSArgList<SPSRetTagT>>(
+  static WrapperFunctionBuffer serialize(ErrorSuccess Err) {
+    return serializeViaSPSToWrapperFunctionBuffer<SPSArgList<SPSRetTagT>>(
         toSPSSerializable(std::move(Err)));
   }
 };
@@ -368,8 +368,8 @@ public:
 template <typename SPSRetTagT, typename T>
 class ResultSerializer<SPSRetTagT, Expected<T>> {
 public:
-  static WrapperFunctionResult serialize(Expected<T> E) {
-    return serializeViaSPSToWrapperFunctionResult<SPSArgList<SPSRetTagT>>(
+  static WrapperFunctionBuffer serialize(Expected<T> E) {
+    return serializeViaSPSToWrapperFunctionBuffer<SPSArgList<SPSRetTagT>>(
         toSPSSerializable(std::move(E)));
   }
 };
@@ -441,7 +441,7 @@ private:
 
 public:
   /// Call a wrapper function. Caller should be callable as
-  /// WrapperFunctionResult Fn(const char *ArgData, size_t ArgSize);
+  /// WrapperFunctionBuffer Fn(const char *ArgData, size_t ArgSize);
   template <typename CallerFn, typename RetT, typename... ArgTs>
   static Error call(const CallerFn &Caller, RetT &Result,
                     const ArgTs &...Args) {
@@ -452,12 +452,12 @@ public:
     detail::ResultDeserializer<SPSRetTagT, RetT>::makeSafe(Result);
 
     auto ArgBuffer =
-        detail::serializeViaSPSToWrapperFunctionResult<SPSArgList<SPSTagTs...>>(
+        detail::serializeViaSPSToWrapperFunctionBuffer<SPSArgList<SPSTagTs...>>(
             Args...);
     if (const char *ErrMsg = ArgBuffer.getOutOfBandError())
       return make_error<StringError>(ErrMsg, inconvertibleErrorCode());
 
-    WrapperFunctionResult ResultBuffer =
+    WrapperFunctionBuffer ResultBuffer =
         Caller(ArgBuffer.data(), ArgBuffer.size());
     if (auto ErrMsg = ResultBuffer.getOutOfBandError())
       return make_error<StringError>(ErrMsg, inconvertibleErrorCode());
@@ -468,8 +468,8 @@ public:
 
   /// Call an async wrapper function.
   /// Caller should be callable as
-  /// void Fn(unique_function<void(WrapperFunctionResult)> SendResult,
-  ///         WrapperFunctionResult ArgBuffer);
+  /// void Fn(unique_function<void(WrapperFunctionBuffer)> SendResult,
+  ///         WrapperFunctionBuffer ArgBuffer);
   template <typename AsyncCallerFn, typename SendDeserializedResultFn,
             typename... ArgTs>
   static void callAsync(AsyncCallerFn &&Caller,
@@ -481,7 +481,7 @@ public:
                ResultSerializer, SPSRetTagT>::ArgTuple>::type;
 
     auto ArgBuffer =
-        detail::serializeViaSPSToWrapperFunctionResult<SPSArgList<SPSTagTs...>>(
+        detail::serializeViaSPSToWrapperFunctionBuffer<SPSArgList<SPSTagTs...>>(
             Args...);
     if (auto *ErrMsg = ArgBuffer.getOutOfBandError()) {
       SendDeserializedResult(
@@ -491,7 +491,7 @@ public:
     }
 
     auto SendSerializedResult = [SDR = std::move(SendDeserializedResult)](
-                                    WrapperFunctionResult R) mutable {
+                                    WrapperFunctionBuffer R) mutable {
       RetT RetVal = detail::ResultDeserializer<SPSRetTagT, RetT>::makeValue();
       detail::ResultDeserializer<SPSRetTagT, RetT>::makeSafe(RetVal);
 
@@ -516,7 +516,7 @@ public:
 
   /// Handle a call to a wrapper function.
   template <typename HandlerT>
-  static WrapperFunctionResult handle(const char *ArgData, size_t ArgSize,
+  static WrapperFunctionBuffer handle(const char *ArgData, size_t ArgSize,
                                       HandlerT &&Handler) {
     using WFHH =
         detail::WrapperFunctionHandlerHelper<std::remove_reference_t<HandlerT>,
@@ -593,7 +593,7 @@ public:
 ///   using SPSMyMethodWrapperSignature =
 ///     SPSString(SPSExecutorAddr, uint32_t, bool);
 ///
-///   WrapperFunctionResult
+///   WrapperFunctionBuffer
 ///   myMethodCallWrapper(const char *ArgData, size_t ArgSize) {
 ///     return WrapperFunction<SPSMyMethodWrapperSignature>::handle(
 ///        ArgData, ArgSize, makeMethodWrapperHandler(&MyClass::myMethod));
@@ -662,11 +662,11 @@ public:
   /// WrapperFunctionCalls convert to true if the callee is non-null.
   explicit operator bool() const { return !!FnAddr; }
 
-  /// Run call returning raw WrapperFunctionResult.
-  shared::WrapperFunctionResult run() const {
+  /// Run call returning raw WrapperFunctionBuffer.
+  shared::WrapperFunctionBuffer run() const {
     using FnTy =
-        shared::CWrapperFunctionResult(const char *ArgData, size_t ArgSize);
-    return shared::WrapperFunctionResult(
+        shared::CWrapperFunctionBuffer(const char *ArgData, size_t ArgSize);
+    return shared::WrapperFunctionBuffer(
         FnAddr.toPtr<FnTy *>()(ArgData.data(), ArgData.size()));
   }
 

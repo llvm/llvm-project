@@ -1985,7 +1985,7 @@ SmallVector<ReassociationExprs, 4> ExpandShapeOp::getReassociationExprs() {
 }
 
 RankedTensorType CollapseShapeOp::inferCollapsedType(
-    RankedTensorType type, SmallVector<ReassociationIndices> reassociation) {
+    RankedTensorType type, ArrayRef<ReassociationIndices> reassociation) {
   return inferCollapsedType(
       type, getSymbolLessAffineMaps(convertReassociationIndicesToExprs(
                 type.getContext(), reassociation)));
@@ -2023,10 +2023,11 @@ CollapseShapeOp::inferCollapsedType(RankedTensorType type,
 void CollapseShapeOp::build(OpBuilder &b, OperationState &result, Value src,
                             ArrayRef<ReassociationIndices> reassociation,
                             ArrayRef<NamedAttribute> attrs) {
-  auto resultType = inferCollapsedType(
-      llvm::cast<RankedTensorType>(src.getType()),
-      getSymbolLessAffineMaps(
-          convertReassociationIndicesToExprs(b.getContext(), reassociation)));
+  auto srcType = llvm::cast<RankedTensorType>(src.getType());
+  RankedTensorType collapsedType = inferCollapsedType(srcType, reassociation);
+  auto resultType =
+      RankedTensorType::get(collapsedType.getShape(), srcType.getElementType(),
+                            srcType.getEncoding());
   result.addAttribute(getReassociationAttrStrName(),
                       getReassociationIndicesAttribute(b, reassociation));
   build(b, result, resultType, src, attrs);
@@ -2072,6 +2073,11 @@ LogicalResult ExpandShapeOp::verify() {
 }
 
 LogicalResult CollapseShapeOp::verify() {
+  CollapseShapeOp op = *this;
+  if (llvm::any_of(op.getReassociationIndices(),
+                   [](ReassociationIndices group) { return group.empty(); })) {
+    return op.emitOpError("reassociation indices must not be empty");
+  }
   return verifyTensorReshapeOp(*this, getSrcType(), getResultType());
 }
 
