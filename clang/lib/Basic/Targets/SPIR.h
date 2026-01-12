@@ -320,7 +320,7 @@ public:
 
   virtual bool isAddressSpaceSupersetOf(LangAS A, LangAS B) const override {
     // The generic space AS(4) is a superset of all the other address
-    // spaces used by the backend target.
+    // spaces used by the backend target except constant address space.
     return A == B || ((A == LangAS::Default ||
                        (isTargetAddressSpace(A) &&
                         toTargetAddressSpace(A) == /*Generic=*/4)) &&
