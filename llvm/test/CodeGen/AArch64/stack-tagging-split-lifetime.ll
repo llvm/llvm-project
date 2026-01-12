@@ -236,6 +236,5 @@ exit1:
   ret void
 }
 
-
 declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
