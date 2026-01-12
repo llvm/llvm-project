@@ -114,6 +114,64 @@ define void @test_xor_h(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
   ret void
 }
 
+define void @test_andn_h(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-LABEL: test_andn_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    lw a2, 0(a2)
+; CHECK-NEXT:    andn a1, a1, a2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i16>, ptr %a_ptr
+  %b = load <2 x i16>, ptr %b_ptr
+  %not = xor <2 x i16> %b, splat (i16 -1)
+  %res = and <2 x i16> %a, %not
+  store <2 x i16> %res, ptr %ret_ptr
+  ret void
+}
+
+define void @test_orn_h(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-LABEL: test_orn_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    lw a2, 0(a2)
+; CHECK-NEXT:    orn a1, a1, a2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i16>, ptr %a_ptr
+  %b = load <2 x i16>, ptr %b_ptr
+  %not = xor <2 x i16> %b, splat (i16 -1)
+  %res = or <2 x i16> %a, %not
+  store <2 x i16> %res, ptr %ret_ptr
+  ret void
+}
+
+; FIXME: A bitcast is getting in the way on RV64.
+define void @test_xnor_h(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-RV32-LABEL: test_xnor_h:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    lw a1, 0(a1)
+; CHECK-RV32-NEXT:    lw a2, 0(a2)
+; CHECK-RV32-NEXT:    xnor a1, a2, a1
+; CHECK-RV32-NEXT:    sw a1, 0(a0)
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: test_xnor_h:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    lw a1, 0(a1)
+; CHECK-RV64-NEXT:    lw a2, 0(a2)
+; CHECK-RV64-NEXT:    xor a1, a2, a1
+; CHECK-RV64-NEXT:    not a1, a1
+; CHECK-RV64-NEXT:    sw a1, 0(a0)
+; CHECK-RV64-NEXT:    ret
+  %a = load <2 x i16>, ptr %a_ptr
+  %b = load <2 x i16>, ptr %b_ptr
+  %not = xor <2 x i16> %b, splat (i16 -1)
+  %res = xor <2 x i16> %a, %not
+  store <2 x i16> %res, ptr %ret_ptr
+  ret void
+}
+
 ; Test bitwise operations for v4i8 (use scalar instructions)
 define void @test_and_b(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-LABEL: test_and_b:
@@ -156,6 +214,64 @@ define void @test_xor_b(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
   %a = load <4 x i8>, ptr %a_ptr
   %b = load <4 x i8>, ptr %b_ptr
   %res = xor <4 x i8> %a, %b
+  store <4 x i8> %res, ptr %ret_ptr
+  ret void
+}
+
+define void @test_andn_b(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-LABEL: test_andn_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    lw a2, 0(a2)
+; CHECK-NEXT:    andn a1, a1, a2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x i8>, ptr %a_ptr
+  %b = load <4 x i8>, ptr %b_ptr
+  %not = xor <4 x i8> %b, splat (i8 -1)
+  %res = and <4 x i8> %a, %not
+  store <4 x i8> %res, ptr %ret_ptr
+  ret void
+}
+
+define void @test_orn_b(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-LABEL: test_orn_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    lw a2, 0(a2)
+; CHECK-NEXT:    orn a1, a1, a2
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x i8>, ptr %a_ptr
+  %b = load <4 x i8>, ptr %b_ptr
+  %not = xor <4 x i8> %b, splat (i8 -1)
+  %res = or <4 x i8> %a, %not
+  store <4 x i8> %res, ptr %ret_ptr
+  ret void
+}
+
+; FIXME: A bitcast is getting in the way on RV64.
+define void @test_xnor_b(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
+; CHECK-RV32-LABEL: test_xnor_b:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    lw a1, 0(a1)
+; CHECK-RV32-NEXT:    lw a2, 0(a2)
+; CHECK-RV32-NEXT:    xnor a1, a2, a1
+; CHECK-RV32-NEXT:    sw a1, 0(a0)
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: test_xnor_b:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    lw a1, 0(a1)
+; CHECK-RV64-NEXT:    lw a2, 0(a2)
+; CHECK-RV64-NEXT:    xor a1, a2, a1
+; CHECK-RV64-NEXT:    not a1, a1
+; CHECK-RV64-NEXT:    sw a1, 0(a0)
+; CHECK-RV64-NEXT:    ret
+  %a = load <4 x i8>, ptr %a_ptr
+  %b = load <4 x i8>, ptr %b_ptr
+  %not = xor <4 x i8> %b, splat (i8 -1)
+  %res = xor <4 x i8> %a, %not
   store <4 x i8> %res, ptr %ret_ptr
   ret void
 }

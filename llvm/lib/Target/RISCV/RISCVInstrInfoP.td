@@ -1497,12 +1497,22 @@ let Predicates = [HasStdExtP] in {
   def: Pat<(XLenVecI8VT (or GPR:$rs1, GPR:$rs2)), (OR GPR:$rs1, GPR:$rs2)>;
   def: Pat<(XLenVecI8VT (xor GPR:$rs1, GPR:$rs2)), (XOR GPR:$rs1, GPR:$rs2)>;
   def: Pat<(XLenVecI8VT (vnot GPR:$rs1)), (XORI GPR:$rs1, -1)>;
+  let Predicates = [HasStdExtP, HasStdExtZbbOrZbkb] in {
+    def: Pat<(XLenVecI8VT (and GPR:$rs1, (vnot GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
+    def: Pat<(XLenVecI8VT (or  GPR:$rs1, (vnot GPR:$rs2))), (ORN GPR:$rs1, GPR:$rs2)>;
+    def: Pat<(XLenVecI8VT (vnot (xor GPR:$rs1, GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
+  }
 
   // 16-bit bitwise operation patterns
   def: Pat<(XLenVecI16VT (and GPR:$rs1, GPR:$rs2)), (AND GPR:$rs1, GPR:$rs2)>;
   def: Pat<(XLenVecI16VT (or GPR:$rs1, GPR:$rs2)), (OR GPR:$rs1, GPR:$rs2)>;
   def: Pat<(XLenVecI16VT (xor GPR:$rs1, GPR:$rs2)), (XOR GPR:$rs1, GPR:$rs2)>;
   def: Pat<(XLenVecI16VT (vnot GPR:$rs1)), (XORI GPR:$rs1, -1)>;
+  let Predicates = [HasStdExtP, HasStdExtZbbOrZbkb] in {
+    def: Pat<(XLenVecI16VT (and GPR:$rs1, (vnot GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
+    def: Pat<(XLenVecI16VT (or  GPR:$rs1, (vnot GPR:$rs2))), (ORN GPR:$rs1, GPR:$rs2)>;
+    def: Pat<(XLenVecI16VT (vnot (xor GPR:$rs1, GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
+  }
 
   // 8-bit saturating add/sub patterns
   def: Pat<(XLenVecI8VT (saddsat GPR:$rs1, GPR:$rs2)), (PSADD_B GPR:$rs1, GPR:$rs2)>;
@@ -1662,6 +1672,11 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def: Pat<(v2i32 (or GPR:$rs1, GPR:$rs2)), (OR GPR:$rs1, GPR:$rs2)>;
   def: Pat<(v2i32 (xor GPR:$rs1, GPR:$rs2)), (XOR GPR:$rs1, GPR:$rs2)>;
   def: Pat<(v2i32 (vnot GPR:$rs1)), (XORI GPR:$rs1, -1)>;
+  let Predicates = [HasStdExtP, HasStdExtZbbOrZbkb] in {
+    def: Pat<(v2i32 (and GPR:$rs1, (vnot GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
+    def: Pat<(v2i32 (or  GPR:$rs1, (vnot GPR:$rs2))), (ORN GPR:$rs1, GPR:$rs2)>;
+    def: Pat<(v2i32 (vnot (xor GPR:$rs1, GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
+  }
 
   // 32-bit saturating add/sub patterns
   def: Pat<(v2i32 (saddsat GPR:$rs1, GPR:$rs2)), (PSADD_W GPR:$rs1, GPR:$rs2)>;
