@@ -9,7 +9,7 @@
 # Deliberately crash by dereferencing an environment variable that should never
 # be defined, then symbolicate the backtrace using the dumped symbol table.
 
-# REQUIRES: system-darwin && native
+# REQUIRES: system-darwin && native && target-aarch64
 
 # CHECK: this_should_crash {{.*}} ({{.*}}crash.o)
 

@@ -205,7 +205,7 @@ define i1 @one_with_self(double %arg) {
 ; and between uge and olt, to give reasonble coverage
 ; without combinatorial explosion.
 
-define i1 @orderedLessZeroTree(float,float,float,float) {
+define i1 @orderedLessZeroTree(float noundef, float noundef, float noundef, float noundef) {
 ; CHECK-LABEL: @orderedLessZeroTree(
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -260,7 +260,7 @@ define i1 @orderedLessZeroExp2Trunc(double) {
   ret i1 %olt
 }
 
-define i1 @orderedLessZeroPowi(double,double) {
+define i1 @orderedLessZeroPowi(double noundef, double noundef) {
 ; CHECK-LABEL: @orderedLessZeroPowi(
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -1613,7 +1613,7 @@ entry:
 }
 
 ; Make sure we recognize fcmp < 0 is recognized as impossible here when simplifying the fcmp
-define float @fast_square_must_be_positive_ieee(float %arg, float %arg1) {
+define float @fast_square_must_be_positive_ieee(float noundef %arg, float noundef %arg1) {
 ; CHECK-LABEL: @fast_square_must_be_positive_ieee(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = fmul float [[ARG:%.*]], [[ARG]]
@@ -1631,7 +1631,7 @@ bb:
 }
 
 ; Make sure we recognize fcmp < 0 is recognized as impossible here when simplifying the fcmp
-define float @fast_square_must_be_positive_ieee_nnan(float %arg, float %arg1) {
+define float @fast_square_must_be_positive_ieee_nnan(float noundef %arg, float noundef %arg1) {
 ; CHECK-LABEL: @fast_square_must_be_positive_ieee_nnan(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = fmul float [[ARG:%.*]], [[ARG]]
@@ -1649,7 +1649,7 @@ bb:
 }
 
 ; Make sure we recognize fcmp < 0 is recognized as impossible here when simplifying the fcmp
-define float @fast_square_must_be_positive_daz(float %arg, float %arg1) #0 {
+define float @fast_square_must_be_positive_daz(float noundef %arg, float noundef %arg1) #0 {
 ; CHECK-LABEL: @fast_square_must_be_positive_daz(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = fmul float [[ARG:%.*]], [[ARG]]
@@ -1667,7 +1667,7 @@ bb:
 }
 
 ; Make sure we recognize fcmp < 0 is recognized as impossible here when simplifying the fcmp
-define float @fast_square_must_be_positive_daz_nnan(float %arg, float %arg1) #0 {
+define float @fast_square_must_be_positive_daz_nnan(float noundef %arg, float noundef %arg1) #0 {
 ; CHECK-LABEL: @fast_square_must_be_positive_daz_nnan(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = fmul float [[ARG:%.*]], [[ARG]]
@@ -1685,7 +1685,7 @@ bb:
 }
 
 ; Make the compare to negative constant is folded out
-define float @must_be_olt_negative_constant_daz(float %arg, float %arg1) #0 {
+define float @must_be_olt_negative_constant_daz(float noundef %arg, float noundef %arg1) #0 {
 ; CHECK-LABEL: @must_be_olt_negative_constant_daz(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = fmul float [[ARG:%.*]], [[ARG]]
@@ -1703,7 +1703,7 @@ bb:
 }
 
 ; Make the compare to negative constant is folded out
-define float @must_be_olt_negative_constant_daz_nnan(float %arg, float %arg1) #0 {
+define float @must_be_olt_negative_constant_daz_nnan(float noundef %arg, float noundef %arg1) #0 {
 ; CHECK-LABEL: @must_be_olt_negative_constant_daz_nnan(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = fmul float [[ARG:%.*]], [[ARG]]
