@@ -16860,12 +16860,6 @@ isNonNegativeIntegerValue(Expr *&ValExpr, Sema &SemaRef, OpenMPClauseKind CKind,
             << ValExpr->getSourceRange();
         return false;
       }
-      if (CKind == OMPC_transparent) {
-        if (Result->isNegative() ||
-            Result >=
-                static_cast<int64_t>(SemaOpenMP::OpenMPImpexType::OMP_Export))
-          SemaRef.Diag(Loc, diag::err_omp_transparent_invalid_value);
-      }
     }
     if (!BuildCapture)
       return true;
@@ -16998,7 +16992,6 @@ ExprResult SemaOpenMP::VerifyPositiveIntegerConstantInClause(
     DSAStack->setAssociatedLoops(Result.getExtValue());
   else if (CKind == OMPC_ordered)
     DSAStack->setAssociatedLoops(Result.getExtValue());
-
   return ICE;
 }
 
@@ -17474,6 +17467,16 @@ OMPClause *SemaOpenMP::ActOnOpenMPTransparentClause(Expr *ImpexTypeArg,
   if (Ty->isIntegerType()) {
     if (isNonNegativeIntegerValue(ImpexTypeArg, SemaRef, OMPC_transparent,
                                   /*StrictlyPositive=*/false)) {
+      ExprResult Value =
+          SemaRef.OpenMP().PerformOpenMPImplicitIntegerConversion(StartLoc,
+                                                                  ImpexTypeArg);
+      if (std::optional<llvm::APSInt> Result =
+              Value.get()->getIntegerConstantExpr(SemaRef.Context)) {
+        if (Result->isNegative() ||
+            Result >
+                static_cast<int64_t>(SemaOpenMP::OpenMPImpexType::OMP_Export))
+          SemaRef.Diag(StartLoc, diag::err_omp_transparent_invalid_value);
+      }
       return createTransparentClause(SemaRef, getASTContext(), ImpexTypeArg,
                                      StartLoc, LParenLoc, EndLoc);
     }
