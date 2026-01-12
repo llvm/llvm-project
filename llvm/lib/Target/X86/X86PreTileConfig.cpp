@@ -267,7 +267,7 @@ void X86PreTileConfigImpl::collectShapeInfo(MachineInstr &MI) {
 }
 
 bool X86PreTileConfigImpl::runOnMachineFunction(MachineFunction &MF) {
-  scope_exit([this] { releaseMemory(); });
+  scope_exit ClearStateOnExit([this] { releaseMemory(); });
 
   X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
   // Early exit in the common case of non-AMX code.
