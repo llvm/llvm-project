@@ -923,6 +923,31 @@ static void createDeclareGlobalOp(mlir::OpBuilder &modBuilder,
   modBuilder.setInsertionPointAfter(declareGlobalOp);
 }
 
+static fir::GlobalOp
+lookupGlobalBySymbolOrEquivalence(Fortran::lower::AbstractConverter &converter,
+                                  fir::FirOpBuilder &builder,
+                                  const Fortran::semantics::Symbol &sym) {
+  const Fortran::semantics::Symbol *commonBlock =
+      Fortran::semantics::FindCommonBlockContaining(sym);
+  std::string globalName = commonBlock ? converter.mangleName(*commonBlock)
+                                       : converter.mangleName(sym);
+  if (fir::GlobalOp g = builder.getNamedGlobal(globalName)) {
+    return g;
+  }
+  // Not found: if not a COMMON member, try equivalence members
+  if (!commonBlock) {
+    if (const Fortran::semantics::EquivalenceSet *eqSet =
+            Fortran::semantics::FindEquivalenceSet(sym)) {
+      for (const Fortran::semantics::EquivalenceObject &eqObj : *eqSet) {
+        std::string eqName = converter.mangleName(eqObj.symbol);
+        if (fir::GlobalOp g = builder.getNamedGlobal(eqName))
+          return g;
+      }
+    }
+  }
+  return {};
+}
+
 template <typename EntryOp, typename ExitOp>
 static void
 emitCtorDtorPair(mlir::OpBuilder &modBuilder, fir::FirOpBuilder &builder,
@@ -961,6 +986,25 @@ static void genDeclareDataOperandOperations(
     // Handle COMMON/global symbols via module-level ctor/dtor path.
     if (symbol.detailsIf<Fortran::semantics::CommonBlockDetails>() ||
         Fortran::semantics::FindCommonBlockContaining(symbol)) {
+      if (dataClause == mlir::acc::DataClause::acc_present) {
+        fir::GlobalOp globalOp =
+            lookupGlobalBySymbolOrEquivalence(converter, builder, symbol);
+        if (!globalOp)
+          llvm::report_fatal_error("could not retrieve global symbol");
+
+        fir::AddrOfOp addrOp = fir::AddrOfOp::create(
+            builder, operandLocation,
+            fir::ReferenceType::get(globalOp.getType()), globalOp.getSymbol());
+
+        asFortran << symbol.name().ToString();
+        EntryOp op = createDataEntryOp<EntryOp>(
+            builder, operandLocation, addrOp.getResTy(), asFortran, bounds,
+            structured, implicit, dataClause, addrOp.getResTy().getType(),
+            /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
+        dataOperands.push_back(op.getAccVar());
+        continue;
+      }
+
       emitCommonGlobal(
           converter, builder, accObject, dataClause,
           [&](mlir::OpBuilder &modBuilder, [[maybe_unused]] mlir::Location loc,
@@ -4250,31 +4294,6 @@ genGlobalCtorsWithModifier(Fortran::lower::AbstractConverter &converter,
                                   dataClause);
 }
 
-static fir::GlobalOp
-lookupGlobalBySymbolOrEquivalence(Fortran::lower::AbstractConverter &converter,
-                                  fir::FirOpBuilder &builder,
-                                  const Fortran::semantics::Symbol &sym) {
-  const Fortran::semantics::Symbol *commonBlock =
-      Fortran::semantics::FindCommonBlockContaining(sym);
-  std::string globalName = commonBlock ? converter.mangleName(*commonBlock)
-                                       : converter.mangleName(sym);
-  if (fir::GlobalOp g = builder.getNamedGlobal(globalName)) {
-    return g;
-  }
-  // Not found: if not a COMMON member, try equivalence members
-  if (!commonBlock) {
-    if (const Fortran::semantics::EquivalenceSet *eqSet =
-            Fortran::semantics::FindEquivalenceSet(sym)) {
-      for (const Fortran::semantics::EquivalenceObject &eqObj : *eqSet) {
-        std::string eqName = converter.mangleName(eqObj.symbol);
-        if (fir::GlobalOp g = builder.getNamedGlobal(eqName))
-          return g;
-      }
-    }
-  }
-  return {};
-}
-
 template <typename EmitterFn>
 static void emitCommonGlobal(Fortran::lower::AbstractConverter &converter,
                              fir::FirOpBuilder &builder,
@@ -4298,7 +4317,8 @@ static void emitCommonGlobal(Fortran::lower::AbstractConverter &converter,
     return;
 
   mlir::Location operandLocation = genOperandLocation(converter, obj);
-  addDeclareAttr(builder, globalOp.getOperation(), clause);
+  if (clause != mlir::acc::DataClause::acc_present)
+    addDeclareAttr(builder, globalOp.getOperation(), clause);
   mlir::OpBuilder modBuilder(builder.getModule().getBodyRegion());
   modBuilder.setInsertionPointAfter(globalOp);
   std::stringstream asFortran;
