@@ -82,6 +82,7 @@ private:
   bool CheckDistinguishableFinals(const Symbol &f1, SourceName f1name,
       const Symbol &f2, SourceName f2name, const Symbol &derivedType);
   void CheckGeneric(const Symbol &, const GenericDetails &);
+  void CheckModule(const Symbol &symbol, const ModuleDetails &x);
   void CheckHostAssoc(const Symbol &, const HostAssocDetails &);
   bool CheckDefinedOperator(
       SourceName, GenericKind, const Symbol &, const Procedure &);
@@ -291,6 +292,7 @@ void CheckHelper::Check(const Symbol &symbol) {
           [&](const SubprogramDetails &x) { CheckSubprogram(symbol, x); },
           [&](const DerivedTypeDetails &x) { CheckDerivedType(symbol, x); },
           [&](const GenericDetails &x) { CheckGeneric(symbol, x); },
+          [&](const ModuleDetails &x) { CheckModule(symbol, x); },
           [](const auto &) {},
       },
       symbol.details());
@@ -2053,6 +2055,23 @@ void CheckHelper::CheckGeneric(
   }
   if (details.derivedType()) {
     Check(*details.derivedType());
+  }
+}
+
+void CheckHelper::CheckModule(const Symbol &symbol, const ModuleDetails &x) {
+
+  for (const auto &pair : *symbol.scope()) {
+    const SourceName &memberName = pair.first;
+    const Symbol &member = *pair.second;
+
+    if (const auto *obj = member.detailsIf<ObjectEntityDetails>()) {
+      if (symbol.name() == member.name()) {
+        messages_.Say(member.name(),
+            "Module name '%s' must not be the same as any local name in the module"_err_en_US,
+            symbol.name());
+        context_.SetError(member);
+      }
+    }
   }
 }
 
