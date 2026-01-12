@@ -263,12 +263,12 @@ void ScopeReductionCheck::check(
     }
   }
 
-    if (AllUsesInSameForLoop && CommonForLoop) {
-      diag(Var->getLocation(),
-           "variable '%0' can be declared in for-loop initialization")
-          << Var->getName();
-      return;
-    }
+  if (AllUsesInSameForLoop && CommonForLoop) {
+    diag(Var->getLocation(),
+         "variable '%0' can be declared in for-loop initialization")
+        << Var->getName();
+    return;
+  }
 }
 
 } // namespace clang::tidy::misc
