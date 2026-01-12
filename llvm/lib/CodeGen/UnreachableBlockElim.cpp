@@ -131,11 +131,7 @@ UnreachableMachineBlockElimPass::run(MachineFunction &MF,
   return getMachineFunctionPassPreservedAnalyses()
       .preserve<MachineLoopAnalysis>()
       .preserve<MachineDominatorTreeAnalysis>()
-<<<<<<< HEAD
       .preserve<MachinePostDominatorTreeAnalysis>()
-=======
-      .preserve<MachinePostDominatorTreeAnalysis>();
->>>>>>> 4c54902ed730 (Review comments: add MachineBlockFrequencyAnalysis as preserved to PHI elimination,)
       .preserve<MachineBlockFrequencyAnalysis>();
 }
 
