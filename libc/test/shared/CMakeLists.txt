@@ -35,6 +35,7 @@ add_fp_unittest(
     libc.src.__support.math.coshf16
     libc.src.__support.math.cospif
     libc.src.__support.math.cospif16
+    libc.src.__support.math.dfmal
     libc.src.__support.math.dsqrtl
     libc.src.__support.math.exp10m1f
     libc.src.__support.math.exp10m1f16
@@ -62,5 +63,4 @@ add_fp_unittest(
     libc.src.__support.math.rsqrtf
     libc.src.__support.math.rsqrtf16
     libc.src.__support.math.sin
-    libc.src.__support.math.dfmal
 )
