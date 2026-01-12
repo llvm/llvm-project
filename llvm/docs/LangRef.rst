@@ -21765,10 +21765,6 @@ integer (e.g., ``i8`` for FP8, ``i6`` for FP6) containing the encoded arbitrary 
 
 For FP6/FP4 interpretations, producers are expected to use ``saturation`` = ``true``; using ``saturation`` = ``false`` and generating NaN/Inf/overflowing values results in a poison value.
 
-.. note::
-
-   The supported conversions are target dependent.
-
 Example:
 """"""""
 
@@ -21831,10 +21827,6 @@ remain signaling), and the NaN payload may be truncated or extended to fit the t
 payload size. Infinity values are preserved as infinity. If a value exceeds the representable
 range of the target type (for example, converting ``Float8E8M0FNU`` with large exponents to
 ``half``), the result is converted to infinity with the appropriate sign.
-
-.. note::
-
-   The supported conversions are target dependent.
 
 Example:
 """"""""

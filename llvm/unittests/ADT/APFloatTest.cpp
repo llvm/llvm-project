@@ -10200,8 +10200,8 @@ TEST(APFloatTest, isValidArbitraryFPFormat) {
   EXPECT_FALSE(APFloat::isValidArbitraryFPFormat(""));
   EXPECT_FALSE(APFloat::isValidArbitraryFPFormat("Float8"));
   EXPECT_FALSE(
-      APFloat::isValidArbitraryFPFormat("Float8E5M2FN")); // Should be FNUZ
-  EXPECT_FALSE(APFloat::isValidArbitraryFPFormat("float8e4m3")); // Wrong case
+      APFloat::isValidArbitraryFPFormat("Float8E5M2FN")); // Should be FNUZ.
+  EXPECT_FALSE(APFloat::isValidArbitraryFPFormat("float8e4m3")); // Wrong case.
   EXPECT_FALSE(APFloat::isValidArbitraryFPFormat("Float16E5M10"));
   EXPECT_FALSE(APFloat::isValidArbitraryFPFormat("unknown"));
 }
