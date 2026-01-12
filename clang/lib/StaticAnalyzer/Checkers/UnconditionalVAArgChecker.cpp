@@ -40,7 +40,7 @@ using llvm::formatv;
 /// Either nullptr or a function under symbolic execution; a non-null value
 /// means that the analyzer didn't see any branching points from the beginning
 /// of that function until the current location.
-REGISTER_TRAIT_WITH_PROGRAMSTATE(HasUnconditionalPath, const FunctionDecl *);
+REGISTER_TRAIT_WITH_PROGRAMSTATE(HasUnconditionalPath, const FunctionDecl *)
 
 namespace {
 class UnconditionalVAArgChecker
