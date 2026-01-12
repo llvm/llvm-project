@@ -254,6 +254,7 @@ public:
   bool visitIntrinsicInst(IntrinsicInst &I);
   bool visitFMinLike(IntrinsicInst &I);
   bool visitSqrt(IntrinsicInst &I);
+  bool visitBufferIntrinsic(IntrinsicInst &I);
   bool run();
 };
 
@@ -1992,6 +1993,15 @@ bool AMDGPUCodeGenPrepareImpl::visitIntrinsicInst(IntrinsicInst &I) {
     return visitFMinLike(I);
   case Intrinsic::sqrt:
     return visitSqrt(I);
+  case Intrinsic::amdgcn_raw_buffer_load:
+  case Intrinsic::amdgcn_raw_buffer_load_format:
+  case Intrinsic::amdgcn_raw_buffer_store:
+  case Intrinsic::amdgcn_raw_buffer_store_format:
+  case Intrinsic::amdgcn_raw_ptr_buffer_load:
+  case Intrinsic::amdgcn_raw_ptr_buffer_load_format:
+  case Intrinsic::amdgcn_raw_ptr_buffer_store:
+  case Intrinsic::amdgcn_raw_ptr_buffer_store_format:
+    return visitBufferIntrinsic(I);
   default:
     return false;
   }
@@ -2125,6 +2135,75 @@ bool AMDGPUCodeGenPrepareImpl::visitSqrt(IntrinsicInst &Sqrt) {
   NewSqrt->takeName(&Sqrt);
   Sqrt.replaceAllUsesWith(NewSqrt);
   DeadVals.push_back(&Sqrt);
+  return true;
+}
+
+/// Sink uniform addends in buffer address calculations into soffset.
+///
+/// Transforms buffer loads/stores with voffset = add(uniform, divergent)
+/// into voffset = divergent, soffset = uniform for better address coalescing
+/// Only applies to raw buffer operations with soffset initially zero.
+bool AMDGPUCodeGenPrepareImpl::visitBufferIntrinsic(IntrinsicInst &I) {
+  Intrinsic::ID IID = I.getIntrinsicID();
+  bool IsLoad = (IID == Intrinsic::amdgcn_raw_buffer_load ||
+                 IID == Intrinsic::amdgcn_raw_buffer_load_format ||
+                 IID == Intrinsic::amdgcn_raw_ptr_buffer_load ||
+                 IID == Intrinsic::amdgcn_raw_ptr_buffer_load_format);
+  bool IsStore = (IID == Intrinsic::amdgcn_raw_buffer_store ||
+                  IID == Intrinsic::amdgcn_raw_buffer_store_format ||
+                  IID == Intrinsic::amdgcn_raw_ptr_buffer_store ||
+                  IID == Intrinsic::amdgcn_raw_ptr_buffer_store_format);
+
+  if (!IsLoad && !IsStore)
+    return false;
+
+  // Buffer intrinsic operand layout (same for vector and pointer descriptor):
+  // Load:  (rsrc, voffset, soffset, cachepolicy)
+  // Store: (vdata, rsrc, voffset, soffset, cachepolicy)
+  const unsigned VOffsetIdx = IsStore ? 2 : 1;
+  const unsigned SOffsetIdx = IsStore ? 3 : 2;
+
+  Value *VOffset = I.getArgOperand(VOffsetIdx);
+  Value *SOffset = I.getArgOperand(SOffsetIdx);
+
+  // Only optimize when soffset is currently zero
+  if (!match(SOffset, m_Zero()))
+    return false;
+
+  // Pattern match: voffset = add(uniform, divergent)
+  Value *LHS, *RHS;
+  if (!match(VOffset, m_Add(m_Value(LHS), m_Value(RHS))))
+    return false;
+
+  bool LHSUniform = UA.isUniform(LHS);
+  bool RHSUniform = UA.isUniform(RHS);
+
+  // Need exactly one uniform and one divergent operand.
+  // TODO: Handle the case where both are uniform.
+  if (LHSUniform == RHSUniform)
+    return false;
+
+  Value *UniformAddend = LHSUniform ? LHS : RHS;
+  Value *DivergentAddend = LHSUniform ? RHS : LHS;
+
+  // Skip if the uniform addend is a non-negative constant that fits in the
+  // 12-bit immediate offset field. The backend will fold it into the immediate
+  // field, which avoids consuming an soffset operand.
+  // Negative or large constants must use soffset.
+  if (auto *CI = dyn_cast<ConstantInt>(UniformAddend)) {
+    int64_t Offset = CI->getSExtValue();
+    if (Offset >= 0 && Offset <= 4095)
+      return false;
+  }
+
+  LLVM_DEBUG(dbgs() << "AMDGPUCodeGenPrepare: Sinking uniform addend into "
+                       "soffset for buffer "
+                    << (IsStore ? "store" : "load") << ": " << I << '\n');
+
+  // Update voffset and soffset operands
+  I.setArgOperand(VOffsetIdx, DivergentAddend);
+  I.setArgOperand(SOffsetIdx, UniformAddend);
+
   return true;
 }
 
