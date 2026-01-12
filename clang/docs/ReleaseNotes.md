@@ -427,6 +427,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### Python Binding Changes
 
+- Exposed `clang_getNonReferenceType`, `clang_getUnqualifiedType` and `clang_getAtomicUnqualifiedType` via `Type.get_non_reference()`, `Type.get_unqualified()` and `Type.get_atomic_unqualified()` respectively. (#GH175534)
+
 ### OpenMP Support
 
 ### SYCL Support
