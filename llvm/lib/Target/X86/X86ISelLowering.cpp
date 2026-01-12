@@ -33103,19 +33103,44 @@ static SDValue LowerCLMUL(SDValue Op, const X86Subtarget &Subtarget,
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
 
-  if (VT != MVT::i64) {
-    LHS = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, LHS);
-    RHS = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, RHS);
+  if (Subtarget.is64Bit()) {
+    if (VT != MVT::i64) {
+      LHS = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, LHS);
+      RHS = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, RHS);
+    }
+
+    SDValue Vec1 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i64, LHS);
+    SDValue Vec2 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i64, RHS);
+    SDValue Result = DAG.getNode(X86ISD::PCLMULQDQ, DL, MVT::v2i64, Vec1, Vec2,
+                                 DAG.getTargetConstant(0, DL, MVT::i8));
+    Result = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Result,
+                         DAG.getVectorIdxConstant(0, DL));
+
+    if (VT != MVT::i64)
+      Result = DAG.getNode(ISD::TRUNCATE, DL, VT, Result);
+
+    return Result;
   }
 
-  SDValue Vec1 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i64, LHS);
-  SDValue Vec2 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i64, RHS);
+  // On 32-bit, i64 is not legal. Use i32 and v4i32 instead.
+  if (VT != MVT::i32) {
+    LHS = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, LHS);
+    RHS = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, RHS);
+  }
+
+  SDValue Vec1 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i32, LHS);
+  SDValue Vec2 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i32, RHS);
+  Vec1 = DAG.getBitcast(MVT::v2i64, Vec1);
+  Vec2 = DAG.getBitcast(MVT::v2i64, Vec2);
+
   SDValue Result = DAG.getNode(X86ISD::PCLMULQDQ, DL, MVT::v2i64, Vec1, Vec2,
                                DAG.getTargetConstant(0, DL, MVT::i8));
-  Result = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Result,
+
+  Result = DAG.getBitcast(MVT::v4i32, Result);
+  Result = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Result,
                        DAG.getVectorIdxConstant(0, DL));
 
-  if (VT != MVT::i64)
+  if (VT != MVT::i32)
     Result = DAG.getNode(ISD::TRUNCATE, DL, VT, Result);
 
   return Result;

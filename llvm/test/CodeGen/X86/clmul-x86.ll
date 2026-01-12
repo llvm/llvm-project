@@ -6,17 +6,10 @@
 define i32 @clmul_i32(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: clmul_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushl %ebp
-; CHECK-NEXT:    movl %esp, %ebp
-; CHECK-NEXT:    andl $-16, %esp
-; CHECK-NEXT:    subl $32, %esp
 ; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    pclmulqdq $0, %xmm0, %xmm1
-; CHECK-NEXT:    movdqa %xmm1, (%esp)
-; CHECK-NEXT:    movl (%esp), %eax
-; CHECK-NEXT:    movl %ebp, %esp
-; CHECK-NEXT:    popl %ebp
+; CHECK-NEXT:    movd %xmm1, %eax
 ; CHECK-NEXT:    retl
   %res = call i32 @llvm.clmul.i32(i32 %a, i32 %b)
   ret i32 %res
