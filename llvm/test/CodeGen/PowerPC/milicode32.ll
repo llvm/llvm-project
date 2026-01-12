@@ -104,6 +104,45 @@ entry:
 declare i32 @strlen(ptr noundef) nounwind
 attributes #0 = { strictfp }
 
+; Function Attrs: noinline nounwind optnone
+define ptr @test_memmove(ptr noundef %dst, ptr noundef %src, i32 noundef %n) nounwind {
+; CHECK-AIX-32-P9-LABEL: test_memmove:
+; CHECK-AIX-32-P9:       # %bb.0: # %entry
+; CHECK-AIX-32-P9-NEXT:    mflr r0
+; CHECK-AIX-32-P9-NEXT:    stwu r1, -64(r1)
+; CHECK-AIX-32-P9-NEXT:    stw r0, 72(r1)
+; CHECK-AIX-32-P9-NEXT:    stw r31, 60(r1) # 4-byte Folded Spill
+; CHECK-AIX-32-P9-NEXT:    mr r31, r3
+; CHECK-AIX-32-P9-NEXT:    bl .___memmove[PR]
+; CHECK-AIX-32-P9-NEXT:    nop
+; CHECK-AIX-32-P9-NEXT:    mr r3, r31
+; CHECK-AIX-32-P9-NEXT:    lwz r31, 60(r1) # 4-byte Folded Reload
+; CHECK-AIX-32-P9-NEXT:    addi r1, r1, 64
+; CHECK-AIX-32-P9-NEXT:    lwz r0, 8(r1)
+; CHECK-AIX-32-P9-NEXT:    mtlr r0
+; CHECK-AIX-32-P9-NEXT:    blr
+;
+; CHECK-LINUX32-P9-LABEL: test_memmove:
+; CHECK-LINUX32-P9:       # %bb.0: # %entry
+; CHECK-LINUX32-P9-NEXT:    mflr r0
+; CHECK-LINUX32-P9-NEXT:    stwu r1, -16(r1)
+; CHECK-LINUX32-P9-NEXT:    stw r0, 20(r1)
+; CHECK-LINUX32-P9-NEXT:    stw r30, 8(r1) # 4-byte Folded Spill
+; CHECK-LINUX32-P9-NEXT:    mr r30, r3
+; CHECK-LINUX32-P9-NEXT:    bl memmove
+; CHECK-LINUX32-P9-NEXT:    mr r3, r30
+; CHECK-LINUX32-P9-NEXT:    lwz r30, 8(r1) # 4-byte Folded Reload
+; CHECK-LINUX32-P9-NEXT:    lwz r0, 20(r1)
+; CHECK-LINUX32-P9-NEXT:    addi r1, r1, 16
+; CHECK-LINUX32-P9-NEXT:    mtlr r0
+; CHECK-LINUX32-P9-NEXT:    blr
+entry:
+  call void @llvm.memmove.p0.p0.i32(ptr align 1 %dst, ptr align 1 %src, i32 %n, i1 false)
+  ret ptr %dst
+}
+; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.memmove.p0.p0.i32(ptr writeonly captures(none), ptr readonly captures(none), i32, i1 immarg)
+
 define ptr @strcpy_test(ptr noundef %dest, ptr noundef %src) nounwind {
 ; CHECK-AIX-32-P9-LABEL: strcpy_test:
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
@@ -163,47 +202,7 @@ entry:
 }
 
 declare ptr @stpcpy(ptr noundef, ptr noundef)
-; Function Attrs: noinline nounwind optnone
-define ptr @test_memmove(ptr noundef %dst, ptr noundef %src, i32 noundef %n) nounwind {
-; CHECK-AIX-32-P9-LABEL: test_memmove:
-; CHECK-AIX-32-P9:       # %bb.0: # %entry
-; CHECK-AIX-32-P9-NEXT:    mflr r0
-; CHECK-AIX-32-P9-NEXT:    stwu r1, -64(r1)
-; CHECK-AIX-32-P9-NEXT:    stw r0, 72(r1)
-; CHECK-AIX-32-P9-NEXT:    stw r31, 60(r1) # 4-byte Folded Spill
-; CHECK-AIX-32-P9-NEXT:    mr r31, r3
-; CHECK-AIX-32-P9-NEXT:    bl .___memmove[PR]
-; CHECK-AIX-32-P9-NEXT:    nop
-; CHECK-AIX-32-P9-NEXT:    mr r3, r31
-; CHECK-AIX-32-P9-NEXT:    lwz r31, 60(r1) # 4-byte Folded Reload
-; CHECK-AIX-32-P9-NEXT:    addi r1, r1, 64
-; CHECK-AIX-32-P9-NEXT:    lwz r0, 8(r1)
-; CHECK-AIX-32-P9-NEXT:    mtlr r0
-; CHECK-AIX-32-P9-NEXT:    blr
-;
-; CHECK-LINUX32-P9-LABEL: test_memmove:
-; CHECK-LINUX32-P9:       # %bb.0: # %entry
-; CHECK-LINUX32-P9-NEXT:    mflr r0
-; CHECK-LINUX32-P9-NEXT:    stwu r1, -16(r1)
-; CHECK-LINUX32-P9-NEXT:    stw r0, 20(r1)
-; CHECK-LINUX32-P9-NEXT:    stw r30, 8(r1) # 4-byte Folded Spill
-; CHECK-LINUX32-P9-NEXT:    mr r30, r3
-; CHECK-LINUX32-P9-NEXT:    bl memmove
-; CHECK-LINUX32-P9-NEXT:    mr r3, r30
-; CHECK-LINUX32-P9-NEXT:    lwz r30, 8(r1) # 4-byte Folded Reload
-; CHECK-LINUX32-P9-NEXT:    lwz r0, 20(r1)
-; CHECK-LINUX32-P9-NEXT:    addi r1, r1, 16
-; CHECK-LINUX32-P9-NEXT:    mtlr r0
-; CHECK-LINUX32-P9-NEXT:    blr
-entry:
-  call void @llvm.memmove.p0.p0.i32(ptr align 1 %dst, ptr align 1 %src, i32 %n, i1 false)
-  ret ptr %dst
-}
 
-; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.memmove.p0.p0.i32(ptr writeonly captures(none), ptr readonly captures(none), i32, i1 immarg)
-
-; Function Attrs: noinline nounwind optnone
 define ptr @test_memcpy(ptr noundef %dst, ptr noundef %src, i32 noundef %n) nounwind {
 ; CHECK-AIX-32-P9-LABEL: test_memcpy:
 ; CHECK-AIX-32-P9:       # %bb.0:
@@ -239,10 +238,8 @@ define ptr @test_memcpy(ptr noundef %dst, ptr noundef %src, i32 noundef %n) noun
   ret ptr %dst
 }
 
-; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.memcpy.p0.p0.i32(ptr noalias writeonly captures(none), ptr noalias readonly captures(none), i32, i1 immarg)
 
-; Function Attrs: noinline nounwind optnone
 define ptr @test_memset(ptr noundef %dst, i32 noundef signext %value, i32 noundef %num) nounwind {
 ; CHECK-AIX-32-P9-LABEL: test_memset:
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
@@ -280,7 +277,6 @@ entry:
   ret ptr %dst
 }
 
-; Function Attrs: noinline nounwind optnone
 define ptr @test_strstr(ptr noundef %s1, ptr noundef %s2) nounwind {
 ; CHECK-AIX-32-P9-LABEL: test_strstr:
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
@@ -309,10 +305,8 @@ entry:
   ret ptr %call
 }
 
-; Function Attrs: nounwind
-declare ptr @strstr(ptr noundef, ptr noundef) #3
+declare ptr @strstr(ptr noundef, ptr noundef)
 
-; Function Attrs: noinline nounwind optnone
 define ptr @test_memccpy(ptr noalias noundef %dst, ptr noalias noundef %src, i32 noundef signext %c, i32 noundef %n) nounwind {
 ; CHECK-AIX-32-P9-LABEL: test_memccpy:
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
@@ -343,7 +337,6 @@ entry:
 
 declare ptr @memccpy(ptr noundef, ptr noundef, i32 noundef signext, i32 noundef)
 
-; Function Attrs: noinline nounwind optnone
 define signext i32 @test_strcmp(ptr noundef %s1, ptr noundef %s2) nounwind {
 ; CHECK-AIX-32-P9-LABEL: test_strcmp:
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
@@ -372,5 +365,4 @@ entry:
   ret i32 %call
 }
 
-; Function Attrs: nounwind
 declare signext i32 @strcmp(ptr noundef, ptr noundef)

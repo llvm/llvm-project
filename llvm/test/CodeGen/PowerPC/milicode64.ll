@@ -101,6 +101,61 @@ entry:
 
 declare i64 @strlen(ptr noundef) nounwind
 
+define ptr @test_memmove(ptr noundef %dst, ptr noundef %src, i64 noundef %n) nounwind {
+; CHECK-LE-P9-LABEL: test_memmove:
+; CHECK-LE-P9:       # %bb.0: # %entry
+; CHECK-LE-P9-NEXT:    mflr r0
+; CHECK-LE-P9-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
+; CHECK-LE-P9-NEXT:    stdu r1, -48(r1)
+; CHECK-LE-P9-NEXT:    std r0, 64(r1)
+; CHECK-LE-P9-NEXT:    mr r30, r3
+; CHECK-LE-P9-NEXT:    bl memmove
+; CHECK-LE-P9-NEXT:    nop
+; CHECK-LE-P9-NEXT:    mr r3, r30
+; CHECK-LE-P9-NEXT:    addi r1, r1, 48
+; CHECK-LE-P9-NEXT:    ld r0, 16(r1)
+; CHECK-LE-P9-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
+; CHECK-LE-P9-NEXT:    mtlr r0
+; CHECK-LE-P9-NEXT:    blr
+;
+; CHECK-BE-P9-LABEL: test_memmove:
+; CHECK-BE-P9:       # %bb.0: # %entry
+; CHECK-BE-P9-NEXT:    mflr r0
+; CHECK-BE-P9-NEXT:    stdu r1, -128(r1)
+; CHECK-BE-P9-NEXT:    std r0, 144(r1)
+; CHECK-BE-P9-NEXT:    std r30, 112(r1) # 8-byte Folded Spill
+; CHECK-BE-P9-NEXT:    mr r30, r3
+; CHECK-BE-P9-NEXT:    bl memmove
+; CHECK-BE-P9-NEXT:    nop
+; CHECK-BE-P9-NEXT:    mr r3, r30
+; CHECK-BE-P9-NEXT:    ld r30, 112(r1) # 8-byte Folded Reload
+; CHECK-BE-P9-NEXT:    addi r1, r1, 128
+; CHECK-BE-P9-NEXT:    ld r0, 16(r1)
+; CHECK-BE-P9-NEXT:    mtlr r0
+; CHECK-BE-P9-NEXT:    blr
+;
+; CHECK-AIX-64-P9-LABEL: test_memmove:
+; CHECK-AIX-64-P9:       # %bb.0: # %entry
+; CHECK-AIX-64-P9-NEXT:    mflr r0
+; CHECK-AIX-64-P9-NEXT:    stdu r1, -128(r1)
+; CHECK-AIX-64-P9-NEXT:    std r0, 144(r1)
+; CHECK-AIX-64-P9-NEXT:    std r31, 120(r1) # 8-byte Folded Spill
+; CHECK-AIX-64-P9-NEXT:    mr r31, r3
+; CHECK-AIX-64-P9-NEXT:    bl .___memmove64[PR]
+; CHECK-AIX-64-P9-NEXT:    nop
+; CHECK-AIX-64-P9-NEXT:    mr r3, r31
+; CHECK-AIX-64-P9-NEXT:    ld r31, 120(r1) # 8-byte Folded Reload
+; CHECK-AIX-64-P9-NEXT:    addi r1, r1, 128
+; CHECK-AIX-64-P9-NEXT:    ld r0, 16(r1)
+; CHECK-AIX-64-P9-NEXT:    mtlr r0
+; CHECK-AIX-64-P9-NEXT:    blr
+entry:
+  call void @llvm.memmove.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 %n, i1 false)
+  ret ptr %dst
+}
+
+declare void @llvm.memmove.p0.p0.i64(ptr writeonly captures(none), ptr readonly captures(none), i64, i1 immarg)
+
 define dso_local ptr @strcpy_test(ptr noundef %dest, ptr noundef %src) nounwind {
 ; CHECK-LE-P9-LABEL: strcpy_test:
 ; CHECK-LE-P9:       # %bb.0: # %entry
@@ -187,7 +242,6 @@ entry:
 
 declare ptr @stpcpy(ptr noundef, ptr noundef)
 
-; Function Attrs: noinline nounwind optnone
 define ptr @test_memcpy(ptr noundef %dst, ptr noundef %src, i64 noundef %n) nounwind {
 ; CHECK-LE-P9-LABEL: test_memcpy:
 ; CHECK-LE-P9:       # %bb.0:
@@ -240,66 +294,8 @@ define ptr @test_memcpy(ptr noundef %dst, ptr noundef %src, i64 noundef %n) noun
   ret ptr %dst
 }
 
-define ptr @test_memmove(ptr noundef %dst, ptr noundef %src, i64 noundef %n) nounwind {
-; CHECK-LE-P9-LABEL: test_memmove:
-; CHECK-LE-P9:       # %bb.0: # %entry
-; CHECK-LE-P9-NEXT:    mflr r0
-; CHECK-LE-P9-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-LE-P9-NEXT:    stdu r1, -48(r1)
-; CHECK-LE-P9-NEXT:    std r0, 64(r1)
-; CHECK-LE-P9-NEXT:    mr r30, r3
-; CHECK-LE-P9-NEXT:    bl memmove
-; CHECK-LE-P9-NEXT:    nop
-; CHECK-LE-P9-NEXT:    mr r3, r30
-; CHECK-LE-P9-NEXT:    addi r1, r1, 48
-; CHECK-LE-P9-NEXT:    ld r0, 16(r1)
-; CHECK-LE-P9-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
-; CHECK-LE-P9-NEXT:    mtlr r0
-; CHECK-LE-P9-NEXT:    blr
-;
-; CHECK-BE-P9-LABEL: test_memmove:
-; CHECK-BE-P9:       # %bb.0: # %entry
-; CHECK-BE-P9-NEXT:    mflr r0
-; CHECK-BE-P9-NEXT:    stdu r1, -128(r1)
-; CHECK-BE-P9-NEXT:    std r0, 144(r1)
-; CHECK-BE-P9-NEXT:    std r30, 112(r1) # 8-byte Folded Spill
-; CHECK-BE-P9-NEXT:    mr r30, r3
-; CHECK-BE-P9-NEXT:    bl memmove
-; CHECK-BE-P9-NEXT:    nop
-; CHECK-BE-P9-NEXT:    mr r3, r30
-; CHECK-BE-P9-NEXT:    ld r30, 112(r1) # 8-byte Folded Reload
-; CHECK-BE-P9-NEXT:    addi r1, r1, 128
-; CHECK-BE-P9-NEXT:    ld r0, 16(r1)
-; CHECK-BE-P9-NEXT:    mtlr r0
-; CHECK-BE-P9-NEXT:    blr
-;
-; CHECK-AIX-64-P9-LABEL: test_memmove:
-; CHECK-AIX-64-P9:       # %bb.0: # %entry
-; CHECK-AIX-64-P9-NEXT:    mflr r0
-; CHECK-AIX-64-P9-NEXT:    stdu r1, -128(r1)
-; CHECK-AIX-64-P9-NEXT:    std r0, 144(r1)
-; CHECK-AIX-64-P9-NEXT:    std r31, 120(r1) # 8-byte Folded Spill
-; CHECK-AIX-64-P9-NEXT:    mr r31, r3
-; CHECK-AIX-64-P9-NEXT:    bl .___memmove64[PR]
-; CHECK-AIX-64-P9-NEXT:    nop
-; CHECK-AIX-64-P9-NEXT:    mr r3, r31
-; CHECK-AIX-64-P9-NEXT:    ld r31, 120(r1) # 8-byte Folded Reload
-; CHECK-AIX-64-P9-NEXT:    addi r1, r1, 128
-; CHECK-AIX-64-P9-NEXT:    ld r0, 16(r1)
-; CHECK-AIX-64-P9-NEXT:    mtlr r0
-; CHECK-AIX-64-P9-NEXT:    blr
-entry:
-  call void @llvm.memmove.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 %n, i1 false)
-  ret ptr %dst
-}
-
-; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.memmove.p0.p0.i64(ptr writeonly captures(none), ptr readonly captures(none), i64, i1 immarg)
-
-; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias writeonly captures(none), ptr noalias readonly captures(none), i64, i1 immarg)
 
-; Function Attrs: noinline nounwind optnone
 define ptr @test_memset(ptr noundef %dst, i32 noundef signext %value, i64 noundef %num) nounwind {
 ; CHECK-LE-P9-LABEL: test_memset:
 ; CHECK-LE-P9:       # %bb.0: # %entry
@@ -357,7 +353,6 @@ entry:
   ret ptr %dst
 }
 
-; Function Attrs: noinline nounwind optnone
 define ptr @test_strstr(ptr noundef %s1, ptr noundef %s2) nounwind {
 ; CHECK-LE-P9-LABEL: test_strstr:
 ; CHECK-LE-P9:       # %bb.0: # %entry
@@ -399,10 +394,8 @@ entry:
   ret ptr %call
 }
 
-; Function Attrs: nounwind
 declare ptr @strstr(ptr noundef, ptr noundef) #3
 
-; Function Attrs: noinline nounwind optnone
 define ptr @test_memccpy(ptr noalias noundef %dst, ptr noalias noundef %src, i32 noundef signext %c, i64 noundef %n) nounwind {
 ; CHECK-LE-P9-LABEL: test_memccpy:
 ; CHECK-LE-P9:       # %bb.0: # %entry
@@ -446,7 +439,6 @@ entry:
 
 declare ptr @memccpy(ptr noundef, ptr noundef, i32 noundef signext, i64 noundef)
 
-; Function Attrs: noinline nounwind optnone
 define signext i32 @test_strcmp(ptr noundef %s1, ptr noundef %s2) nounwind {
 ; CHECK-LE-P9-LABEL: test_strcmp:
 ; CHECK-LE-P9:       # %bb.0: # %entry
@@ -488,5 +480,4 @@ entry:
   ret i32 %call
 }
 
-; Function Attrs: nounwind
 declare signext i32 @strcmp(ptr noundef, ptr noundef)
