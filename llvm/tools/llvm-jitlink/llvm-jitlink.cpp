@@ -418,11 +418,16 @@ namespace llvm {
 
 static raw_ostream &
 operator<<(raw_ostream &OS, const Session::MemoryRegionInfo &MRI) {
-  return OS << "target addr = "
-            << format("0x%016" PRIx64, MRI.getTargetAddress())
-            << ", content: " << (const void *)MRI.getContent().data() << " -- "
-            << (const void *)(MRI.getContent().data() + MRI.getContent().size())
-            << " (" << MRI.getContent().size() << " bytes)";
+  OS << "target addr = " << format("0x%016" PRIx64, MRI.getTargetAddress());
+
+  if (MRI.isZeroFill())
+    OS << ", zero-fill: " << MRI.getZeroFillLength() << " bytes";
+  else
+    OS << ", content: " << (const void *)MRI.getContent().data() << " -- "
+       << (const void *)(MRI.getContent().data() + MRI.getContent().size())
+       << " (" << MRI.getContent().size() << " bytes)";
+
+  return OS;
 }
 
 static raw_ostream &
@@ -1396,7 +1401,7 @@ void Session::modifyPassConfig(LinkGraph &G, PassConfiguration &PassConfig) {
   if (ShowLinkedFiles)
     outs() << "Linking " << G.getName() << "\n";
 
-  if (!CheckFiles.empty())
+  if (!CheckFiles.empty() || ShowAddrs)
     PassConfig.PostFixupPasses.push_back([this](LinkGraph &G) {
       if (ES.getTargetTriple().getObjectFormat() == Triple::ELF)
         return registerELFGraphInfo(*this, G);
