@@ -231,6 +231,9 @@ Resolutions to C++ Defect Reports
 C Language Changes
 ------------------
 
+- Clang now supports the
+  :ref:`__builtin_stack_address <builtin_stack_address-doc>` () builtin.
+  The semantics match those of GCC's builtin with the same name.
 - Implemented the ``defer`` draft Technical Specification
   (`WG14 N3734 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3734.pdf>`_); it is enabled in C mode by
   passing ``-fdefer-ts``. Note, the details of this feature are subject to change given that the Technical
@@ -441,8 +444,6 @@ Improvements to Clang's diagnostics
 - Fixed false positives in ``-Waddress-of-packed-member`` diagnostics when
   potential misaligned members get processed before they can get discarded.
   (#GH144729)
-- Clang now emits a warning when ``std::atomic_thread_fence`` is used with ``-fsanitize=thread`` as this can
-  lead to false positives. (This can be disabled with ``-Wno-tsan``)
 - Fix a false positive warning in ``-Wignored-qualifiers`` when the return type is undeduced. (#GH43054)
 
 - Clang now emits a diagnostic with the correct message in case of assigning to const reference captured in lambda. (#GH105647)
@@ -653,6 +654,7 @@ Bug Fixes to C++ Support
 - Fixed a crash when parsing the ``enable_if`` attribute on C function declarations with identifier-list parameters. (#GH173826)
 - Fixed an assertion failure triggered by nested lambdas during capture handling. (#GH172814)
 - Fixed an assertion failure in vector conversions involving instantiation-dependent template expressions. (#GH173347)
+- Fixed an assertion failure in floating conversion narrowing caused by C++ constant expression checks in C23 mode. (#GH173847)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -701,6 +703,7 @@ X86 Support
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 - Support has been added for the following processors (command-line identifiers in parentheses):
+  - Ampere Computing Ampere1C (``ampere1c``)
   - Arm C1-Nano (``c1-nano``)
   - Arm C1-Pro (``c1-pro``)
   - Arm C1-Premium (``c1-premium``)
