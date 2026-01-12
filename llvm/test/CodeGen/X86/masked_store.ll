@@ -1829,8 +1829,7 @@ define void @store_v8i16_v8i16(<8 x i16> %trigger, ptr %addr, <8 x i16> %val) no
 ; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512VLDQ-NEXT:    vpcmpeqw %xmm2, %xmm0, %xmm0
 ; AVX512VLDQ-NEXT:    vpmovsxwd %xmm0, %ymm0
-; AVX512VLDQ-NEXT:    vpmovd2m %ymm0, %k0
-; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    vmovmskps %ymm0, %eax
 ; AVX512VLDQ-NEXT:    testb $1, %al
 ; AVX512VLDQ-NEXT:    jne LBB13_1
 ; AVX512VLDQ-NEXT:  ## %bb.2: ## %else
