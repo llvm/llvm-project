@@ -2803,6 +2803,25 @@ class Type(Structure):
         """
         return Type.from_result(conf.lib.clang_getCanonicalType(self), self)
 
+    def get_non_reference(self) -> Type:
+        """
+        Return the type stripped of references from a Type.
+
+        If a type is either an l-value or an r-value reference then those
+        are going to be removed. It returns the type unchanged otherwise.
+        """
+        return Type.from_result(conf.lib.clang_getNonReferenceType(self), self)
+
+    def get_unqualified(self) -> Type:
+        """
+        Return the type without any qualifiers from a Type.
+
+        A type can be qualified with const, volatile or restrict. This method
+        removes the qualifier of a type. In the absence of any of these, the
+        type is returned unchanged.
+        """
+        return Type.from_result(conf.lib.clang_getUnqualifiedType(self), self)
+
     def get_fully_qualified_name(
         self, policy: PrintingPolicy, with_global_ns_prefix: bool = False
     ) -> str:
@@ -4246,6 +4265,7 @@ FUNCTION_LIST: list[LibFunc] = [
     ),
     ("clang_getLocation", [TranslationUnit, File, c_uint, c_uint], SourceLocation),
     ("clang_getLocationForOffset", [TranslationUnit, File, c_uint], SourceLocation),
+    ("clang_getNonReferenceType", [Type], Type),
     ("clang_getNullCursor", None, Cursor),
     ("clang_getNumArgTypes", [Type], c_uint),
     ("clang_getNumCompletionChunks", [c_void_p], c_int),
@@ -4275,6 +4295,7 @@ FUNCTION_LIST: list[LibFunc] = [
     ("clang_getTypeKindSpelling", [c_uint], _CXString),
     ("clang_getTypePrettyPrinted", [Type, PrintingPolicy], _CXString),
     ("clang_getTypeSpelling", [Type], _CXString),
+    ("clang_getUnqualifiedType", [Type], Type),
     ("clang_hashCursor", [Cursor], c_uint),
     ("clang_isAttribute", [CursorKind], c_uint),
     ("clang_getFullyQualifiedName", [Type, PrintingPolicy, c_uint], _CXString),
