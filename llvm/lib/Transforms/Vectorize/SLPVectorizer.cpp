@@ -190,12 +190,12 @@ static cl::opt<int> RootLookAheadMaxDepth(
     "slp-max-root-look-ahead-depth", cl::init(2), cl::Hidden,
     cl::desc("The maximum look-ahead depth for searching best rooting option"));
 
-static cl::opt<unsigned> MinProfitableStridedLoads(
+static cl::opt<unsigned> MinProfitableStridedMemOps(
     "slp-min-strided-loads", cl::init(2), cl::Hidden,
     cl::desc("The minimum number of loads, which should be considered strided, "
              "if the stride is > 1 or is runtime value"));
 
-static cl::opt<unsigned> MaxProfitableLoadStride(
+static cl::opt<unsigned> MaxProfitableStride(
     "slp-max-stride", cl::init(8), cl::Hidden,
     cl::desc("The maximum stride, considered to be profitable."));
 
@@ -7043,8 +7043,8 @@ isMaskedLoadCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
 /// Checks if strided loads can be generated out of \p VL loads with pointers \p
 /// PointerOps:
 /// 1. Target with strided load support is detected.
-/// 2. The number of loads is greater than MinProfitableStridedLoads, or the
-/// potential stride <= MaxProfitableLoadStride and the potential stride is
+/// 2. The number of loads is greater than MinProfitableStridedMemOps, or the
+/// potential stride <= MaxProfitableStride and the potential stride is
 /// power-of-2 (to avoid perf regressions for the very small number of loads)
 /// and max distance > number of loads, or potential stride is -1.
 /// 3. The loads are ordered, or number of unordered loads <=
@@ -7070,8 +7070,8 @@ bool BoUpSLP::isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
   auto *VecTy = getWidenedType(ScalarTy, Sz);
   if (IsAnyPointerUsedOutGraph ||
       (AbsoluteDiff > Sz &&
-       (Sz > MinProfitableStridedLoads ||
-        (AbsoluteDiff <= MaxProfitableLoadStride * Sz &&
+       (Sz > MinProfitableStridedMemOps ||
+        (AbsoluteDiff <= MaxProfitableStride * Sz &&
          AbsoluteDiff % Sz == 0 && has_single_bit(AbsoluteDiff / Sz)))) ||
       Diff == -(static_cast<int64_t>(Sz) - 1)) {
     int64_t Stride = Diff / static_cast<int64_t>(Sz - 1);
@@ -7226,7 +7226,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
         DL->getTypeSizeInBits(ScalarTy).getFixedValue() * NumOffsets);
   }
   FixedVectorType *StridedLoadTy = getWidenedType(NewScalarTy, VecSz);
-  if (Sz <= MinProfitableStridedLoads || !TTI->isTypeLegal(StridedLoadTy) ||
+  if (Sz <= MinProfitableStridedMemOps || !TTI->isTypeLegal(StridedLoadTy) ||
       !TTI->isLegalStridedLoadStore(StridedLoadTy, CommonAlignment))
     return false;
 
@@ -23922,7 +23922,7 @@ bool SLPVectorizerPass::vectorizeStores(
     auto VectorizeOperands = [&](BoUpSLP::ValueList &Operands,
                                  bool Strided) -> void {
       if (Operands.size() <= 1 ||
-          (Operands.size() < MinProfitableStridedLoads &&
+          (Operands.size() < MinProfitableStridedMemOps &&
            Strided) ||
           !Visited
                .insert({Operands.front(),
@@ -24226,7 +24226,7 @@ bool SLPVectorizerPass::vectorizeStores(
         if (Idx != StoreSeq.size() - 1)
           continue;
       }
-      if (PrevStride != 1 && PrevStride < MaxProfitableLoadStride)
+      if (PrevStride != 1 && PrevStride < MaxProfitableStride)
         VectorizeOperands(Operands, /*Strided=*/true);
 
       Operands.clear();
