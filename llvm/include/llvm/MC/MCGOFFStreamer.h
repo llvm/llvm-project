@@ -31,6 +31,8 @@ public:
 
   GOFFObjectWriter &getWriter();
 
+  void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
+
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
 
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
