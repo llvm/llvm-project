@@ -1143,13 +1143,13 @@ const SCEV *ScalarEvolution::getLosslessPtrToIntExpr(const SCEV *Op,
   return IntOp;
 }
 
-const SCEV *ScalarEvolution::getPtrToAddrExpr(const SCEV *Op, Type *Ty) {
+const SCEV *ScalarEvolution::getPtrToAddrExpr(const SCEV *Op) {
   assert(Op->getType()->isPointerTy() && "Op must be a pointer");
+  Type *Ty = DL.getAddressType(Op->getType());
 
   FoldingSetNodeID ID;
   ID.AddInteger(scPtrToAddr);
   ID.AddPointer(Op);
-  ID.AddPointer(Ty);
 
   void *IP = nullptr;
 
@@ -1159,8 +1159,8 @@ const SCEV *ScalarEvolution::getPtrToAddrExpr(const SCEV *Op, Type *Ty) {
 
   // If not, is this expression something we can't reduce any further?
   if (auto *U = dyn_cast<SCEVUnknown>(Op)) {
-    // Perform some basic constant folding. If the operand of the ptr2int cast
-    // is a null pointer, don't create a ptr2int SCEV expression (that will be
+    // Perform some basic constant folding. If the operand of the ptr2addr cast
+    // is a null pointer, don't create a ptr2addr SCEV expression (that will be
     // left as-is), but produce a zero constant.
     // NOTE: We could handle a more general case, but lack motivational cases.
     if (isa<ConstantPointerNull>(U->getValue()))
@@ -8201,15 +8201,15 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
     break;
 
   case Instruction::PtrToAddr:
+    return getPtrToAddrExpr(getSCEV(U->getOperand(0)));
+
   case Instruction::PtrToInt: {
     // Pointer to integer cast is straight-forward, so do model it.
     const SCEV *Op = getSCEV(U->getOperand(0));
     Type *DstIntTy = U->getType();
     // But only if effective SCEV (integer) type is wide enough to represent
     // all possible pointer values.
-    const SCEV *IntOp = U->getOpcode() == Instruction::PtrToInt
-                            ? getPtrToIntExpr(Op, DstIntTy)
-                            : getPtrToAddrExpr(Op, DstIntTy);
+    const SCEV *IntOp = getPtrToIntExpr(Op, DstIntTy);
     if (isa<SCEVCouldNotCompute>(IntOp))
       return getUnknown(V);
     return IntOp;

@@ -575,7 +575,7 @@ public:
   LLVM_ABI const SCEV *getLosslessPtrToIntExpr(const SCEV *Op,
                                                unsigned Depth = 0);
 
-  LLVM_ABI const SCEV *getPtrToAddrExpr(const SCEV *Op, Type *Ty);
+  LLVM_ABI const SCEV *getPtrToAddrExpr(const SCEV *Op);
   LLVM_ABI const SCEV *getPtrToIntExpr(const SCEV *Op, Type *Ty);
   LLVM_ABI const SCEV *getTruncateExpr(const SCEV *Op, Type *Ty,
                                        unsigned Depth = 0);
