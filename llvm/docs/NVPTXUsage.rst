@@ -1045,6 +1045,173 @@ If the given pointer in the generic address space refers to memory which falls
 within the state space of the intrinsic (and therefore could be safely address
 space casted to this space), 1 is returned, otherwise 0 is returned.
 
+Narrow Floating-Point Conversion intrinsics
+-------------------------------------------
+
+``fp8`` Conversion Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i16 @llvm.nvvm.ff.to{.e4m3x2, .e5m2x2}.rn{.relu}(float %a, float %b)
+    declare i16 @llvm.nvvm.ff.to.ue8m0x2{.rz, .rp}{.satfinite}(float %a, float %b)
+    declare i16 @llvm.f16x2.to{.e4m3x2, .e5m2x2}.rn{.relu}(<2 x half> %a)
+    declare i16 @llvm.bf16x2.to{.e4m3x2, .e5m2x2}.rn{.relu}.satfinite(<2 x bfloat> %a)
+    declare i16 @llvm.bf16x2.to.ue8m0x2{.rz, .rp}{.satfinite}(<2 x bfloat> %a)
+    declare <2 x half> @llvm.nvvm{.e4m3x2, .e5m2x2}.to.f16x2.rn{.relu}(i16 %a)
+    declare <2 x bfloat> @llvm.nvvm.ue8m0x2.to.bf16x2(i16 %a)
+    declare <4 x i8> @llvm.nvvm.f32x4.to{.e4m3x4, .e5m2x4}.rs{.relu}.satfinite(<4 x f32> %a, i32 %rnd_bits)
+
+Overview:
+"""""""""
+
+These intrinsics perform conversions involving the ``e4m3`` and ``e5m2`` narrow 
+floating-point formats.
+
+The ``rn`` rounding mode performs conversions while rounding to nearest, with 
+ties to even. This is the default rounding mode.
+The ``rz`` rounding mode performs conversions while rounding towards zero.
+The ``rp`` rounding mode performs conversions while rounding towards positive 
+infinity.
+The ``rs`` rounding mode performs stochastic rounding which is achieved through 
+the use of the supplied random bits (``%rnd_bits``). The result is rounded in 
+the direction towards zero or away from zero based on the carry out of the 
+integer addition of the supplied random bits to the truncated off (discarded) 
+bits of mantissa from the input.
+
+The ``relu`` modifier clamps negative results to 0.
+
+When ``satfinite`` is specified, if the absolute value of input (ignoring sign) 
+is greater than ``MAX_NORM`` of the specified destination format, then the 
+result is sign-preserved ``MAX_NORM`` of the destination format and a positive 
+``MAX_NORM`` in ``.ue8m0x2`` for which the destination sign is not supported. 
+Also, if the input value is ``NaN``, then the result is ``NaN`` in the 
+specified destination format. The ``satfinite`` modifier is assumed to be 
+present for conversions involving ``e4m3`` and ``e5m2`` types as the 
+destination.
+
+For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cvt>`__.
+
+``s2f6`` Conversion Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i16 @llvm.nvvm.ff.to.s2f6x2.rn{.relu}.satfinite(float %a, float %b)
+    declare i16 @llvm.nvvm.ff.to.s2f6x2.rn{.relu}.satfinite.scale.n2.ue8m0(float %a, float %b, i16 %scale_factor)
+    declare i16 @llvm.nvvm.bf16x2.to.s2f6x2.rn{.relu}.satfinite(<2 x bfloat> %a)
+    declare i16 @llvm.nvvm.bf16x2.to.s2f6x2.rn{.relu}.satfinite.scale.n2.ue8m0(<2 x bfloat> %a, i16 %scale_factor)
+    declare <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn{.relu}{.satfinite}(i16 %a)
+    declare <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn{.relu}{.satfinite}.scale.n2.ue8m0(i16 %a, i16 %scale_factor)
+
+Overview:
+"""""""""
+
+These intrinsics perform conversions involving the ``s2f6`` narrow 
+floating-point format.
+
+The ``rn`` rounding mode performs conversions while rounding to nearest, with 
+ties to even.
+
+The ``relu`` modifier clamps negative results to 0.
+
+When ``satfinite`` is specified, if the absolute value of input (ignoring sign) 
+is greater than ``MAX_NORM`` of the specified destination format, then the 
+result is sign-preserved ``MAX_NORM`` of the destination format. Also, if the 
+input is ``NaN``, then the result is the positive ``MAX_NORM`` of the 
+destination format.
+
+For conversions with ``scale.n2.ue8m0``, the operand ``%scale_factor`` stores 
+two packed scaling factors of type ``ue8m0``, one for each input. For down 
+conversion, inputs are divided by ``scale_factor`` and then the conversion is 
+performed. For up-conversion, inputs are converted to destination type and then 
+multiplied by ``scale_factor``.
+
+For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cvt>`__.
+
+``fp6`` Conversion Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i16 @llvm.nvvm.ff.to{.e2m3x2, .e3m2x2}.rn{.relu}.satfinite(float %a, float %b)
+    declare i16 @llvm.nvvm.f16x2.to{.e2m3x2, .e3m2x2}.rn{.relu}.satfinite(<2 x half> %a)
+    declare i16 @llvm.nvvm.bf16x2.to{.e2m3x2, .e3m2x2}.rn{.relu}.satfinite(<2 x bfloat> %a)
+    declare <2 x half> @llvm.nvvm{.e2m3x2, .e3m2x2}.to.f16x2.rn{.relu}(i16 %a)
+    declare <4 x i8> @llvm.nvvm.f32x4.to{.e2m3x4, .e3m2x4}.rs{.relu}.satfinite(<4 x f32> %a, i32 %rnd_bits)
+    
+Overview:
+"""""""""
+
+These intrinsics perform conversions involving the ``e2m3`` and ``e3m2`` narrow 
+floating-point formats.
+
+The ``rn`` rounding mode performs conversions while rounding to nearest, with 
+ties to even.
+The ``rs`` rounding mode performs stochastic rounding which is achieved through 
+the use of the supplied random bits (``%rnd_bits``). The result is rounded in 
+the direction towards zero or away from zero based on the carry out of the 
+integer addition of the supplied random bits to the truncated off (discarded) 
+bits of mantissa from the input.
+
+The ``relu`` modifier clamps negative results to 0.
+
+When ``satfinite`` is specified, if the absolute value of input (ignoring sign) 
+is greater than ``MAX_NORM`` of the specified destination format, then the 
+result is sign-preserved ``MAX_NORM`` of the destination format. Also, if the 
+input is ``NaN``, then the result is the positive ``MAX_NORM`` of the 
+destination format.
+
+For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cvt>`__.
+
+``fp4`` Conversion Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i16 @llvm.nvvm.ff.to.e2m1x2.rn{.relu}.satfinite(float %a, float %b)
+    declare i16 @llvm.nvvm.f16x2.to.e2m1x2.rn{.relu}.satfinite(<2 x half> %a)
+    declare i16 @llvm.nvvm.bf16x2.to.e2m1x2.rn{.relu}.satfinite(<2 x bfloat> %a)
+    declare <2 x half> @llvm.nvvm.e2m1x2.to.f16x2.rn{.relu}(i16 %a)
+    declare i16 @llvm.nvvm.f32x4.to.e2m1x4.rs{.relu}.satfinite(<4 x f32> %a, i32 %rnd_bits)
+
+Overview:
+"""""""""
+
+These intrinsics perform conversions involving the ``e2m1`` narrow 
+floating-point format. For conversions involving ``e2m1x2``, the packed 
+``e2m1x2`` value is stored in the lower byte of the ``i16`` argument or result.
+
+The ``rn`` rounding mode performs conversions while rounding to nearest, with 
+ties to even.
+The ``rs`` rounding mode performs stochastic rounding which is achieved through 
+the use of the supplied random bits (``%rnd_bits``). The result is rounded in 
+the direction towards zero or away from zero based on the carry out of the 
+integer addition of the supplied random bits to the truncated off (discarded) 
+bits of mantissa from the input.
+
+The ``relu`` modifier clamps negative results to 0.
+
+When ``satfinite`` is specified, if the absolute value of input (ignoring sign) 
+is greater than ``MAX_NORM`` of the specified destination format, then the 
+result is sign-preserved ``MAX_NORM`` of the destination format. Also, if the 
+input is ``NaN``, then the result is the positive ``MAX_NORM`` of the 
+destination format.
+
+For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cvt>`__.
+
 Arithmetic Intrinsics
 ---------------------
 
