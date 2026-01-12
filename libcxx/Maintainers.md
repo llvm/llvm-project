@@ -27,7 +27,7 @@ nikolasklauser@berlin.de (email), [philnik777](https://github.com/philnik777) (G
 
 ### ISO C++ Conformance Status, LWG Issues
 
-A. Jiang
+An Jiang
 de34@live.cn (email), [frederick-vs-ja](https://github.com/frederick-vs-ja) (GitHub)
 
 Hristo Hristov
@@ -43,12 +43,12 @@ varconst@apple.com (email), [var-const](https://github.com/var-const) (GitHub)
 Hui Xie
 hui.xie1990@gmail.com (email), [huixie90](https://github.com/huixie90) (GitHub)
 
-Damien L-G
+Damien Lebrun-Grandie
 dalg24@gmail.com (email), [dalg24](https://github.com/dalg24) (GitHub)
 
 ### `<mdspan>`
 
-Damien L-G
+Damien Lebrun-Grandie
 dalg24@gmail.com (email), [dalg24](https://github.com/dalg24) (GitHub)
 
 ### Flat containers
