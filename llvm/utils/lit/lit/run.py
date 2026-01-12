@@ -74,6 +74,15 @@ class Run(object):
     def _execute(self, deadline):
         self._increase_process_limit()
 
+        # When only one worker is requested, avoid multiprocessing entirely.
+        #
+        # This is faster for small runs and (importantly) allows lit to run in
+        # restricted environments/sandboxes where Python's multiprocessing
+        # primitives (e.g. POSIX semaphores/locks) are not permitted.
+        if self.workers == 1:
+            self._execute_single_process(deadline)
+            return
+
         semaphores = {
             k: multiprocessing.BoundedSemaphore(v)
             for k, v in self.lit_config.parallelism_groups.items()
@@ -139,6 +148,21 @@ class Run(object):
             # Join all pools
             for pool in pools:
                 pool.join()
+
+    def _execute_single_process(self, deadline):
+        # Run tests directly in this process (see lit.worker docstring).
+        for test in self.tests:
+            if time.time() > deadline:
+                raise TimeoutError()
+
+            result = lit.worker._execute(test, self.lit_config)
+            test.setResult(result)
+            self.progress_callback(test)
+
+            if test.isFailure():
+                self.failures += 1
+                if self.failures == self.max_failures:
+                    raise MaxFailuresError()
 
     def _wait_for(self, async_results, deadline):
         timeout = deadline - time.time()
