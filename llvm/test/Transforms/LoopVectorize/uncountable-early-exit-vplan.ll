@@ -24,7 +24,7 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[STEPS]]>
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer inbounds ir<%gep.src>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
@@ -32,14 +32,9 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT vp<[[EA_TAKEN:%.+]]> = any-of ir<%c.1>
 ; CHECK-NEXT:     EMIT vp<[[LATCH_CMP:%.+]]> = icmp eq vp<%index.next>, vp<[[VTC]]>
-; CHECK-NEXT:     EMIT vp<[[EC:%.+]]> = or vp<[[EA_TAKEN]]>, vp<[[LATCH_CMP]]>
-; CHECK-NEXT:     EMIT branch-on-cond vp<[[EC]]>
+; CHECK-NEXT:     EMIT branch-on-two-conds vp<[[EA_TAKEN]]>, vp<[[LATCH_CMP]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): middle.split
-; CHECK-EMPTY:
-; CHECK-NEXT: middle.split:
-; CHECK-NEXT:   EMIT branch-on-cond vp<[[EA_TAKEN]]>
 ; CHECK-NEXT: Successor(s): vector.early.exit, middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
@@ -60,7 +55,7 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
 ; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT: ir-bb<loop.header>
+; CHECK-NEXT: Successor(s): ir-bb<loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop.header>:
 ; CHECK-NEXT:   IR   %iv = phi i64 [ %inc, %loop.latch ], [ 0, %entry ] (extra operand: vp<[[RESUME]]> from scalar.ph)
@@ -119,14 +114,9 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values() {
 ; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT vp<[[EA_TAKEN:%.+]]> = any-of ir<%c.1>
 ; CHECK-NEXT:     EMIT vp<[[LATCH_CMP:%.+]]> = icmp eq vp<%index.next>, vp<[[VTC]]>
-; CHECK-NEXT:     EMIT vp<[[EC:%.+]]> = or vp<[[EA_TAKEN]]>, vp<[[LATCH_CMP]]>
-; CHECK-NEXT:     EMIT branch-on-cond vp<[[EC]]>
+; CHECK-NEXT:     EMIT branch-on-two-conds vp<[[EA_TAKEN]]>, vp<[[LATCH_CMP]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): middle.split
-; CHECK-EMPTY:
-; CHECK-NEXT: middle.split:
-; CHECK-NEXT:   EMIT branch-on-cond vp<[[EA_TAKEN]]>
 ; CHECK-NEXT: Successor(s): vector.early.exit, middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
@@ -143,7 +133,7 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
 ; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT: ir-bb<loop.header>
+; CHECK-NEXT: Successor(s): ir-bb<loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop.header>:
 ; CHECK-NEXT:   IR   %iv = phi i64 [ %inc, %loop.latch ], [ 0, %entry ] (extra operand: vp<[[RESUME]]> from scalar.ph)
@@ -199,14 +189,9 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values_2() {
 ; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT vp<[[EA_TAKEN:%.+]]> = any-of ir<%c.1>
 ; CHECK-NEXT:     EMIT vp<[[LATCH_CMP:%.+]]> = icmp eq vp<%index.next>, vp<[[VTC]]>
-; CHECK-NEXT:     EMIT vp<[[EC:%.+]]> = or vp<[[EA_TAKEN]]>, vp<[[LATCH_CMP]]>
-; CHECK-NEXT:     EMIT branch-on-cond vp<[[EC]]>
+; CHECK-NEXT:     EMIT branch-on-two-conds vp<[[EA_TAKEN]]>, vp<[[LATCH_CMP]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): middle.split
-; CHECK-EMPTY:
-; CHECK-NEXT: middle.split:
-; CHECK-NEXT:   EMIT branch-on-cond vp<[[EA_TAKEN]]>
 ; CHECK-NEXT: Successor(s): vector.early.exit, middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
@@ -223,7 +208,7 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values_2() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
 ; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT: ir-bb<loop.header>
+; CHECK-NEXT: Successor(s): ir-bb<loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop.header>:
 ; CHECK-NEXT:   IR   %iv = phi i64 [ %inc, %loop.latch ], [ 0, %entry ] (extra operand: vp<[[RESUME]]> from scalar.ph)

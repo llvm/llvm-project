@@ -14,16 +14,11 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-static constexpr llvm::StringLiteral LoopName =
-    llvm::StringLiteral("forLoopName");
-static constexpr llvm::StringLiteral LoopVarName =
-    llvm::StringLiteral("loopVar");
-static constexpr llvm::StringLiteral LoopVarCastName =
-    llvm::StringLiteral("loopVarCast");
-static constexpr llvm::StringLiteral LoopUpperBoundName =
-    llvm::StringLiteral("loopUpperBound");
-static constexpr llvm::StringLiteral LoopIncrementName =
-    llvm::StringLiteral("loopIncrement");
+static constexpr StringRef LoopName = "forLoopName";
+static constexpr StringRef LoopVarName = "loopVar";
+static constexpr StringRef LoopVarCastName = "loopVarCast";
+static constexpr StringRef LoopUpperBoundName = "loopUpperBound";
+static constexpr StringRef LoopIncrementName = "loopIncrement";
 
 namespace {
 

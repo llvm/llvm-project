@@ -16,6 +16,7 @@ static_library("Frontend") {
     "//llvm/include/llvm/Config:llvm-config",
     "//llvm/lib/Bitcode/Reader",
     "//llvm/lib/Option",
+    "//llvm/lib/Plugins",
     "//llvm/lib/ProfileData",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",

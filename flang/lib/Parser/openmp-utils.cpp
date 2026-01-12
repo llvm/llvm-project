@@ -173,13 +173,19 @@ bool IsStrictlyStructuredBlock(const Block &block) {
   }
 }
 
-const OmpCombinerExpression *GetCombinerExpr(
-    const OmpReductionSpecifier &rspec) {
-  return addr_if(std::get<std::optional<OmpCombinerExpression>>(rspec.t));
+const OmpCombinerExpression *GetCombinerExpr(const OmpReductionSpecifier &x) {
+  return addr_if(std::get<std::optional<OmpCombinerExpression>>(x.t));
 }
 
-const OmpInitializerExpression *GetInitializerExpr(const OmpClause &init) {
-  if (auto *wrapped{std::get_if<OmpClause::Initializer>(&init.u)}) {
+const OmpCombinerExpression *GetCombinerExpr(const OmpClause &x) {
+  if (auto *wrapped{std::get_if<OmpClause::Combiner>(&x.u)}) {
+    return &wrapped->v.v;
+  }
+  return nullptr;
+}
+
+const OmpInitializerExpression *GetInitializerExpr(const OmpClause &x) {
+  if (auto *wrapped{std::get_if<OmpClause::Initializer>(&x.u)}) {
     return &wrapped->v.v;
   }
   return nullptr;

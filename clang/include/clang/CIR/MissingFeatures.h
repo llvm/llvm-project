@@ -154,6 +154,7 @@ struct MissingFeatures {
   static bool coroOutsideFrameMD() { return false; }
   static bool coroCoReturn() { return false; }
   static bool coroCoYield() { return false; }
+  static bool coroutineExceptions() { return false; };
 
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }
@@ -301,6 +302,8 @@ struct MissingFeatures {
   static bool makeTripleAlwaysPresent() { return false; }
   static bool maybeHandleStaticInExternC() { return false; }
   static bool mergeAllConstants() { return false; }
+  static bool memberFuncPtrAuthInfo() { return false; }
+  static bool memberFuncPtrCast() { return false; }
   static bool metaDataNode() { return false; }
   static bool moduleNameHash() { return false; }
   static bool msabi() { return false; }
