@@ -165,7 +165,13 @@ FunctionPass *createX86FastTileConfigLegacyPass();
 FunctionPass *createX86PreTileConfigPass();
 
 /// Return a pass that lower the tile copy instruction.
-FunctionPass *createX86LowerTileCopyPass();
+class X86LowerTileCopyPass : public PassInfoMixin<X86LowerTileCopyPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86LowerTileCopyLegacyPass();
 
 /// Return a pass that inserts int3 at the end of the function if it ends with a
 /// CALL instruction. The pass does the same for each funclet as well. This
@@ -345,7 +351,7 @@ void initializeX86LoadValueInjectionLoadHardeningPassPass(PassRegistry &);
 void initializeX86LoadValueInjectionRetHardeningPassPass(PassRegistry &);
 void initializeX86LowerAMXIntrinsicsLegacyPassPass(PassRegistry &);
 void initializeX86LowerAMXTypeLegacyPassPass(PassRegistry &);
-void initializeX86LowerTileCopyPass(PassRegistry &);
+void initializeX86LowerTileCopyLegacyPass(PassRegistry &);
 void initializeX86OptimizeLEAsLegacyPass(PassRegistry &);
 void initializeX86PartialReductionLegacyPass(PassRegistry &);
 void initializeX86PreTileConfigPass(PassRegistry &);
