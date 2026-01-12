@@ -2,7 +2,7 @@
 # `_foo` or the second basic block in function `_goo` as epilogue, and will
 # recognize epilogues in the other cases.
 
-# RUN: %clang %cflags %s -o %t.so -Wl,-q
+# RUN: %clang %cflags %s -o %t.so -Wl,-q,-z,undefs
 # RUN: llvm-bolt %t.so -o %t.bolt --print-cfg | FileCheck %s
 
   .text
@@ -48,7 +48,7 @@ _L2:
   .type _goo, %function
 _goo:
   ldr w8, [sp]
-  adr x10, _jmptbl2
+  adr x10, _jmptbl
   ldrsw x9, [x10, x9, lsl #2]
   add x10, x10, x9
   str x30, [sp, #-0x10]!

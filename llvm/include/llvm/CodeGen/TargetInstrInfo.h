@@ -2350,7 +2350,18 @@ public:
 
   /// Returns the callee operand from the given \p MI.
   virtual const MachineOperand &getCalleeOperand(const MachineInstr &MI) const {
-    return MI.getOperand(0);
+    assert(MI.isCall());
+
+    switch (MI.getOpcode()) {
+    case TargetOpcode::STATEPOINT:
+    case TargetOpcode::STACKMAP:
+    case TargetOpcode::PATCHPOINT:
+      return MI.getOperand(3);
+    default:
+      return MI.getOperand(0);
+    }
+
+    llvm_unreachable("impossible call instruction");
   }
 
   /// Return the uniformity behavior of the given instruction.

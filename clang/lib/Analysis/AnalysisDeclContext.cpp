@@ -250,13 +250,13 @@ CFG *AnalysisDeclContext::getUnoptimizedCFG() {
   return completeCFG.get();
 }
 
-CFGStmtMap *AnalysisDeclContext::getCFGStmtMap() {
+const CFGStmtMap *AnalysisDeclContext::getCFGStmtMap() {
   if (cfgStmtMap)
-    return cfgStmtMap.get();
+    return &*cfgStmtMap;
 
-  if (CFG *c = getCFG()) {
-    cfgStmtMap.reset(CFGStmtMap::Build(c, &getParentMap()));
-    return cfgStmtMap.get();
+  if (const CFG *c = getCFG()) {
+    cfgStmtMap.emplace(*c, getParentMap());
+    return &*cfgStmtMap;
   }
 
   return nullptr;

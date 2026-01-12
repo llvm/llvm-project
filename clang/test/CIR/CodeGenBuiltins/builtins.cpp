@@ -32,7 +32,8 @@ extern "C" void *test_frame_address(void) {
 
   // CIR-LABEL: test_frame_address
   // CIR: [[ARG:%.*]] = cir.const #cir.int<1> : !u32i
-  // CIR: {{%.*}} = cir.frame_address([[ARG]])
+  // CIR: %[[ADDR:.*]] = cir.frame_address([[ARG]]) : !cir.ptr<!u8i>
+  // CIR: {{%.*}} = cir.cast bitcast %[[ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!void>
 
   // LLVM-LABEL: @test_frame_address
   // LLVM: {{%.*}} = call ptr @llvm.frameaddress.p0(i32 1)
