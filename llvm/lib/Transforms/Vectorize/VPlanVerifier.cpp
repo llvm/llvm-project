@@ -202,16 +202,6 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
             errs() << "EVL used by unexpected VPInstruction\n";
             return false;
           }
-          // EVLIVIncrement is only used by EVLIV & BranchOnCount.
-          // Having more than two users is unexpected.
-          if (I->getOpcode() != VPInstruction::Broadcast &&
-              I->getNumUsers() != 1 &&
-              (I->getNumUsers() != 2 ||
-               none_of(I->users(), match_fn(m_BranchOnCount(m_Specific(I),
-                                                            m_VPValue()))))) {
-            errs() << "EVL is used in VPInstruction with multiple users\n";
-            return false;
-          }
           if (!VerifyLate && !isa<VPEVLBasedIVPHIRecipe>(*I->users().begin())) {
             errs() << "Result of VPInstruction::Add with EVL operand is "
                       "not used by VPEVLBasedIVPHIRecipe\n";
