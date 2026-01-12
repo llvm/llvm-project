@@ -85,6 +85,13 @@ TEST(runToolOnCode, CudaSyntaxOnly) {
        "-nocudainc"}));
 }
 
+TEST(runToolOnCode, CudaMultipleArchs) {
+  EXPECT_TRUE(runToolOnCodeWithArgs(
+      std::make_unique<TestAction>(std::make_unique<clang::ASTConsumer>()), "",
+      {"-fsyntax-only", "-x", "cuda", "--offload-arch=sm_70,sm_80",
+       "-nocudalib", "-nocudainc"}));
+}
+
 namespace {
 class FindClassDeclXConsumer : public clang::ASTConsumer {
  public:
