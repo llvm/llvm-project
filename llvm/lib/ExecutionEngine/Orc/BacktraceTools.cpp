@@ -131,8 +131,7 @@ std::string DumpedSymbolTable::symbolicate(StringRef Backtrace) {
     auto I = SymbolInfos.upper_bound(Addr);
 
     // If no JIT symbol entry within 2Gb then skip.
-    if (I == SymbolInfos.begin() ||
-        (Addr - std::prev(I)->first >= 1U << 31)) {
+    if (I == SymbolInfos.begin() || (Addr - std::prev(I)->first >= 1U << 31)) {
       Out << Row << "\n";
       continue;
     }
