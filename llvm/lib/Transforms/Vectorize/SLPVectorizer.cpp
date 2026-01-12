@@ -23922,8 +23922,8 @@ bool SLPVectorizerPass::vectorizeStores(
     auto VectorizeOperands = [&](BoUpSLP::ValueList &Operands,
                                  bool Strided) -> void {
       if (Operands.size() <= 1 ||
-          (Operands.size() == 2 &&
-           Strided) || // Any 2 elements can be formed into strided load
+          (Operands.size() < MinProfitableStridedLoads &&
+           Strided) ||
           !Visited
                .insert({Operands.front(),
                         cast<StoreInst>(Operands.front())->getValueOperand(),
@@ -24226,7 +24226,7 @@ bool SLPVectorizerPass::vectorizeStores(
         if (Idx != StoreSeq.size() - 1)
           continue;
       }
-      if (PrevStride != 1)
+      if (PrevStride != 1 && PrevStride < MaxProfitableLoadStride)
         VectorizeOperands(Operands, /*Strided=*/true);
 
       Operands.clear();
