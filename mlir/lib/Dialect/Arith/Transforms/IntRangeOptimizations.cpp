@@ -493,13 +493,16 @@ struct NarrowLoopBounds final : OpInterfaceRewritePattern<LoopLikeOpInterface> {
       return rewriter.notifyMatchFailure(loopLike,
                                          "bounds narrowing previously failed");
 
-    auto inductionVars = loopLike.getLoopInductionVars();
+    std::optional<SmallVector<Value>> inductionVars =
+        loopLike.getLoopInductionVars();
     if (!inductionVars.has_value() || inductionVars->empty())
       return rewriter.notifyMatchFailure(loopLike, "no induction variables");
 
-    auto lowerBounds = loopLike.getLoopLowerBounds();
-    auto upperBounds = loopLike.getLoopUpperBounds();
-    auto steps = loopLike.getLoopSteps();
+    std::optional<SmallVector<OpFoldResult>> lowerBounds =
+        loopLike.getLoopLowerBounds();
+    std::optional<SmallVector<OpFoldResult>> upperBounds =
+        loopLike.getLoopUpperBounds();
+    std::optional<SmallVector<OpFoldResult>> steps = loopLike.getLoopSteps();
 
     if (!lowerBounds.has_value() || !upperBounds.has_value() ||
         !steps.has_value())
