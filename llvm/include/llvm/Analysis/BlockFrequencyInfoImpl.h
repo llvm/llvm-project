@@ -1811,8 +1811,7 @@ struct BFIDOTGraphTraitsBase : public DefaultDOTGraphTraits {
     if (Freq < HotFreq)
       return Result;
 
-    raw_string_ostream OS(Result);
-    OS << "color=\"red\"";
+    raw_string_ostream(Result) << "color=\"red\"";
     return Result;
   }
 
@@ -1867,9 +1866,8 @@ struct BFIDOTGraphTraitsBase : public DefaultDOTGraphTraits {
       BlockFrequency HotFreq = BlockFrequency(MaxFrequency) *
                                BranchProbability(HotPercentThreshold, 100);
 
-      if (EFreq >= HotFreq) {
+      if (EFreq >= HotFreq)
         OS << ",color=\"red\"";
-      }
     }
     return Str;
   }

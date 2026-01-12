@@ -670,15 +670,13 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
 
   if (hasAttribute(Attribute::Captures)) {
     std::string Result;
-    raw_string_ostream OS(Result);
-    OS << getCaptureInfo();
+    raw_string_ostream(Result) << getCaptureInfo();
     return Result;
   }
 
   if (hasAttribute(Attribute::NoFPClass)) {
     std::string Result = "nofpclass";
-    raw_string_ostream OS(Result);
-    OS << getNoFPClass();
+    raw_string_ostream(Result) << getNoFPClass();
     return Result;
   }
 

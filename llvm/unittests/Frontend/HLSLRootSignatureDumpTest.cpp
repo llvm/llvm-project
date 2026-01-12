@@ -21,8 +21,7 @@ TEST(HLSLRootSignatureTest, DescriptorCBVClauseDump) {
   Clause.setDefaultFlags(llvm::dxbc::RootSignatureVersion::V1_1);
 
   std::string Out;
-  llvm::raw_string_ostream OS(Out);
-  OS << Clause;
+  llvm::raw_string_ostream(Out) << Clause;
 
   std::string Expected = "CBV(b0, numDescriptors = 1, space = 0, "
                          "offset = DescriptorTableOffsetAppend, "
@@ -40,8 +39,7 @@ TEST(HLSLRootSignatureTest, DescriptorSRVClauseDump) {
   Clause.Flags = llvm::dxbc::DescriptorRangeFlags::None;
 
   std::string Out;
-  llvm::raw_string_ostream OS(Out);
-  OS << Clause;
+  llvm::raw_string_ostream(Out) << Clause;
 
   std::string Expected = "SRV(t0, numDescriptors = unbounded, space = 42, "
                          "offset = 3, flags = None)";
@@ -65,8 +63,7 @@ TEST(HLSLRootSignatureTest, DescriptorUAVClauseDump) {
   Clause.Flags = ValidDescriptorRangeFlags;
 
   std::string Out;
-  llvm::raw_string_ostream OS(Out);
-  OS << Clause;
+  llvm::raw_string_ostream(Out) << Clause;
 
   std::string Expected =
       "UAV(u92374, numDescriptors = 3298, space = 932847, offset = 1, flags = "
@@ -88,8 +85,7 @@ TEST(HLSLRootSignatureTest, DescriptorSamplerClauseDump) {
   Clause.Flags = llvm::dxbc::DescriptorRangeFlags::DescriptorsVolatile;
 
   std::string Out;
-  llvm::raw_string_ostream OS(Out);
-  OS << Clause;
+  llvm::raw_string_ostream(Out) << Clause;
 
   std::string Expected = "Sampler(s0, numDescriptors = 2, space = 42, offset = "
                          "DescriptorTableOffsetAppend, "
@@ -104,8 +100,7 @@ TEST(HLSLRootSignatureTest, DescriptorCBVV10ClauseDump) {
   Clause.setDefaultFlags(llvm::dxbc::RootSignatureVersion::V1_0);
 
   std::string Out;
-  llvm::raw_string_ostream OS(Out);
-  OS << Clause;
+  llvm::raw_string_ostream(Out) << Clause;
 
   std::string Expected = "CBV(b0, numDescriptors = 1, space = 0, "
                          "offset = DescriptorTableOffsetAppend, "
@@ -120,8 +115,7 @@ TEST(HLSLRootSignatureTest, DescriptorSamplerV10ClauseDump) {
   Clause.setDefaultFlags(llvm::dxbc::RootSignatureVersion::V1_0);
 
   std::string Out;
-  llvm::raw_string_ostream OS(Out);
-  OS << Clause;
+  llvm::raw_string_ostream(Out) << Clause;
 
   std::string Expected = "Sampler(s0, numDescriptors = 1, space = 0, offset = "
                          "DescriptorTableOffsetAppend, "
@@ -135,8 +129,7 @@ TEST(HLSLRootSignatureTest, DescriptorTableDump) {
   Table.Visibility = llvm::dxbc::ShaderVisibility::Geometry;
 
   std::string Out;
-  llvm::raw_string_ostream OS(Out);
-  OS << Table;
+  llvm::raw_string_ostream(Out) << Table;
 
   std::string Expected =
       "DescriptorTable(numClauses = 4, visibility = Geometry)";
@@ -150,8 +143,7 @@ TEST(HLSLRootSignatureTest, RootCBVDump) {
   Descriptor.setDefaultFlags(llvm::dxbc::RootSignatureVersion::V1_1);
 
   std::string Out;
-  llvm::raw_string_ostream OS(Out);
-  OS << Descriptor;
+  llvm::raw_string_ostream(Out) << Descriptor;
 
   std::string Expected = "RootCBV(b0, space = 0, "
                          "visibility = All, "
@@ -166,8 +158,7 @@ TEST(HLSLRootSignatureTest, RootSRV10Dump) {
   Descriptor.setDefaultFlags(llvm::dxbc::RootSignatureVersion::V1_0);
 
   std::string Out;
-  llvm::raw_string_ostream OS(Out);
-  OS << Descriptor;
+  llvm::raw_string_ostream(Out) << Descriptor;
 
   std::string Expected = "RootSRV(t0, space = 0, "
                          "visibility = All, "
@@ -182,8 +173,7 @@ TEST(HLSLRootSignatureTest, RootUAVV10Dump) {
   Descriptor.setDefaultFlags(llvm::dxbc::RootSignatureVersion::V1_0);
 
   std::string Out;
-  llvm::raw_string_ostream OS(Out);
-  OS << Descriptor;
+  llvm::raw_string_ostream(Out) << Descriptor;
 
   std::string Expected = "RootUAV(u0, space = 0, "
                          "visibility = All, "
@@ -200,8 +190,7 @@ TEST(HLSLRootSignatureTest, RootSRVDump) {
   Descriptor.Flags = llvm::dxbc::RootDescriptorFlags::None;
 
   std::string Out;
-  llvm::raw_string_ostream OS(Out);
-  OS << Descriptor;
+  llvm::raw_string_ostream(Out) << Descriptor;
 
   std::string Expected =
       "RootSRV(t0, space = 42, visibility = Geometry, flags = None)";
@@ -222,8 +211,7 @@ TEST(HLSLRootSignatureTest, RootUAVDump) {
   Descriptor.Flags = ValidRootDescriptorFlags;
 
   std::string Out;
-  llvm::raw_string_ostream OS(Out);
-  OS << Descriptor;
+  llvm::raw_string_ostream(Out) << Descriptor;
 
   std::string Expected =
       "RootUAV(u92374, space = 932847, visibility = Hull, flags = "
@@ -238,8 +226,7 @@ TEST(HLSLRootSignatureTest, DefaultStaticSamplerDump) {
   Sampler.Reg = {RegisterType::SReg, 0};
 
   std::string Out;
-  llvm::raw_string_ostream OS(Out);
-  OS << Sampler;
+  llvm::raw_string_ostream(Out) << Sampler;
 
   std::string Expected = "StaticSampler(s0, "
                          "filter = Anisotropic, "
@@ -278,8 +265,7 @@ TEST(HLSLRootSignatureTest, DefinedStaticSamplerDump) {
   Sampler.Flags = llvm::dxbc::StaticSamplerFlags::NonNormalizedCoordinates;
 
   std::string Out;
-  llvm::raw_string_ostream OS(Out);
-  OS << Sampler;
+  llvm::raw_string_ostream(Out) << Sampler;
 
   std::string Expected = "StaticSampler(s0, "
                          "filter = ComparisonMinMagLinearMipPoint, "
@@ -305,8 +291,7 @@ TEST(HLSLRootSignatureTest, DefaultRootConstantsDump) {
   Constants.Reg = {RegisterType::BReg, 3};
 
   std::string Out;
-  llvm::raw_string_ostream OS(Out);
-  OS << Constants;
+  llvm::raw_string_ostream(Out) << Constants;
 
   std::string Expected = "RootConstants(num32BitConstants = 1, b3, space = 0, "
                          "visibility = All)";
@@ -321,8 +306,7 @@ TEST(HLSLRootSignatureTest, SetRootConstantsDump) {
   Constants.Visibility = llvm::dxbc::ShaderVisibility::Pixel;
 
   std::string Out;
-  llvm::raw_string_ostream OS(Out);
-  OS << Constants;
+  llvm::raw_string_ostream(Out) << Constants;
 
   std::string Expected = "RootConstants(num32BitConstants = 983, b34593, "
                          "space = 7, visibility = Pixel)";
