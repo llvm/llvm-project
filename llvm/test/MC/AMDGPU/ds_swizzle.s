@@ -5,12 +5,12 @@
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck -check-prefix=GFX10PLUS %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s | FileCheck -check-prefix=GFX10PLUS %s
 
-// RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire -show-encoding %s 2>&1 | FileCheck -check-prefix=ERROR-PREGFX9 %s --implicit-check-not=error:
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s 2>&1 | FileCheck -check-prefix=ERROR-PREGFX9 %s --implicit-check-not=error:
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx908 -show-encoding %s 2>&1 | FileCheck -check-prefix=ERROR %s --implicit-check-not=error:
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -show-encoding %s 2>&1 | FileCheck -check-prefix=ERROR %s --implicit-check-not=error:
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -show-encoding %s 2>&1 | FileCheck -check-prefix=ERROR %s --implicit-check-not=error:
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s 2>&1 | FileCheck -check-prefix=ERROR %s --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-PREGFX9 %s --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-PREGFX9 %s --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx908 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR %s --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR %s --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR %s --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR %s --implicit-check-not=error:
 
 //==============================================================================
 // FFT mode
