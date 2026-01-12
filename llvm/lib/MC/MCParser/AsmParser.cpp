@@ -848,7 +848,8 @@ bool AsmParser::enterIncludeFile(const std::string &Filename) {
 /// returns true on failure.
 bool AsmParser::processIncbinFile(const std::string &Filename, int64_t Skip,
                                   const MCExpr *Count, SMLoc Loc) {
-  if (!getProcessIncbinFile())
+  // The .incbin file cannot introduce new symbols.
+  if (SymbolScanningMode)
     return false;
 
   std::string IncludedFile;

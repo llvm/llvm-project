@@ -150,7 +150,11 @@ protected: // Can only create subclasses.
   bool HadError = false;
 
   bool ShowParsedOperands = false;
-  bool ProcessIncbinFile = true;
+
+  /// Flag tracking whether we're only interested in symbols, which allows us to
+  /// avoid some work (e.g. resolving .incbin directives).
+  // TODO: Adopt this in more places.
+  bool SymbolScanningMode = false;
 
 public:
   MCAsmParser(const MCAsmParser &) = delete;
@@ -177,8 +181,7 @@ public:
   bool getShowParsedOperands() const { return ShowParsedOperands; }
   void setShowParsedOperands(bool Value) { ShowParsedOperands = Value; }
 
-  bool getProcessIncbinFile() const { return ProcessIncbinFile; }
-  void setProcessIncbinFile(bool Value) { ProcessIncbinFile = Value; }
+  void setSymbolScanningMode(bool Value) { SymbolScanningMode = Value; }
 
   /// Run the parser on the input source buffer.
   virtual bool Run(bool NoInitialTextSection, bool NoFinalize = false) = 0;

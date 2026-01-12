@@ -129,8 +129,7 @@ initializeRecordStreamer(const Module &M,
   // AsmPrinter::doInitialization()).
   Parser->setAssemblerDialect(InlineAsm::AD_ATT);
 
-  // The .incbin directive cannot introduce new symbols.
-  Parser->setProcessIncbinFile(false);
+  Parser->setSymbolScanningMode(true);
 
   Parser->setTargetParser(*TAP);
   if (Parser->Run(false))
