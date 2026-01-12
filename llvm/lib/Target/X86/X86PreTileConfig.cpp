@@ -28,6 +28,7 @@
 #include "X86MachineFunctionInfo.h"
 #include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -266,7 +267,7 @@ void X86PreTileConfigImpl::collectShapeInfo(MachineInstr &MI) {
 }
 
 bool X86PreTileConfigImpl::runOnMachineFunction(MachineFunction &MF) {
-  llvm::scope_exit([this] { releaseMemory(); });
+  scope_exit([this] { releaseMemory(); });
 
   X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
   // Early exit in the common case of non-AMX code.
