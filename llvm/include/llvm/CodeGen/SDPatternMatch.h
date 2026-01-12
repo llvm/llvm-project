@@ -599,7 +599,7 @@ m_c_TernaryOp(unsigned Opc, const T0_P &Op0, const T1_P &Op1, const T2_P &Op2) {
 
 template <typename T0_P, typename T1_P, typename T2_P>
 inline TernaryOpc_match<T0_P, T1_P, T2_P, true>
-m_IntrinsicWOChain(unsigned Opc, const T0_P &IntrinsicId, const T1_P &Op0, const T2_P &Op1) {
+m_IntrinsicWOChain(const T0_P &IntrinsicId, const T1_P &Op0, const T2_P &Op1) {
   return TernaryOpc_match<T0_P, T1_P, T2_P, true>(ISD::INTRINSIC_WO_CHAIN, IntrinsicId, Op0, Op1);
 }
 
