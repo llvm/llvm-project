@@ -7,6 +7,11 @@
 // RUN: clang-doc --doxygen --executor=standalone %s -output=%t/docs --format=md
 // RUN: cat %t/docs/GlobalNamespace/index.md | FileCheck %s --check-prefix=MD
 
+// RUN: clang-doc --doxygen --executor=standalone %s -output=%t/docs --format=html
+// RUN: cat %t/docs/json/GlobalNamespace/index.json | FileCheck %s --check-prefix=JSON
+// RUN: cat %t/docs/html/GlobalNamespace/_ZTV5tuple.html | FileCheck %s --check-prefix=HTML-STRUCT
+// RUN: cat %t/docs/html/GlobalNamespace/index.html | FileCheck %s --check-prefix=HTML
+
 // YAML: ---
 // YAML-NEXT: USR:             '{{([0-9A-F]{40})}}'
 // YAML-NEXT: ChildRecords:
@@ -44,6 +49,37 @@ void ParamPackFunction(T... args);
 // MD: ### ParamPackFunction
 // MD: *void ParamPackFunction(T... args)*
 
+// JSON:           "Name": "ParamPackFunction",
+// JSON-NEXT:      "Params": [
+// JSON-NEXT:        {
+// JSON-NEXT:          "End": true,
+// JSON-NEXT:          "Name": "args",
+// JSON-NEXT:          "Type": {
+// JSON-NEXT:            "Name": "T...",
+// JSON-NEXT:            "QualName": "T...",
+// JSON-NEXT:            "USR": "0000000000000000000000000000000000000000"
+// JSON-NEXT:          }
+// JSON-NEXT:        }
+// JSON-NEXT:      ],
+// JSON-NEXT:      "ReturnType": {
+// JSON-NEXT:        "IsBuiltIn": true,
+// JSON-NEXT:        "IsTemplate": false,
+// JSON-NEXT:        "Name": "void",
+// JSON-NEXT:        "QualName": "void",
+// JSON-NEXT:        "USR": "0000000000000000000000000000000000000000"
+// JSON-NEXT:      },
+// JSON-NEXT:      "Template": {
+// JSON-NEXT:        "Parameters": [
+// JSON-NEXT:          {
+// JSON-NEXT:            "End": true, 
+// JSON-NEXT:            "Param": "class... T"
+// JSON-NEXT:          }
+// JSON-NEXT:        ]
+// JSON-NEXT:      },
+
+// HTML:        <pre><code class="language-cpp code-clang-doc">template &lt;class... T&gt;</code></pre>
+// HTML-NEXT:   <pre><code class="language-cpp code-clang-doc">void ParamPackFunction (T... args)</code></pre>
+
 template <typename T, int U = 1>
 void function(T x) {}
 
@@ -69,6 +105,43 @@ void function(T x) {}
 // MD: ### function
 // MD: *void function(T x)*
 // MD: *Defined at {{.*}}templates.cpp#[[# @LINE - 23]]*
+
+// JSON:           "Name": "function",
+// JSON-NEXT:      "Params": [
+// JSON-NEXT:        {
+// JSON-NEXT:          "End": true,
+// JSON-NEXT:          "Name": "x",
+// JSON-NEXT:          "Type": {
+// JSON-NEXT:            "Name": "T",
+// JSON-NEXT:            "QualName": "T",
+// JSON-NEXT:            "USR": "0000000000000000000000000000000000000000"
+// JSON-NEXT:          }
+// JSON-NEXT:        }
+// JSON-NEXT:      ],
+// JSON-NEXT:      "ReturnType": {
+// JSON-NEXT:        "IsBuiltIn": true,
+// JSON-NEXT:        "IsTemplate": false,
+// JSON-NEXT:        "Name": "void",
+// JSON-NEXT:        "QualName": "void",
+// JSON-NEXT:        "USR": "0000000000000000000000000000000000000000"
+// JSON-NEXT:      },
+// JSON-NEXT:      "Template": {
+// JSON-NEXT:        "Parameters": [
+// JSON-NEXT:          {
+// JSON-NEXT:            "Param": "typename T"
+// JSON-NEXT:          },
+// JSON-NEXT:          {
+// JSON-NEXT:            "End": true, 
+// JSON-NEXT:            "Param": "int U = 1"
+// JSON-NEXT:          }
+// JSON-NEXT:        ]
+// JSON-NEXT:      }
+
+// HTML:           <pre><code class="language-cpp code-clang-doc">template &lt;typename T, int U = 1&gt;</code></pre>
+// HTML-NEXT:      <pre><code class="language-cpp code-clang-doc">void function (T x)</code></pre>
+// HTML-NEXT:      <p>Defined at line [[# @LINE - 58]] of file {{.*}}templates.cpp</p>
+// HTML-NEXT:  </div>
+
 
 template <>
 void function<bool, 0>(bool x) {}
@@ -98,11 +171,66 @@ void function<bool, 0>(bool x) {}
 // MD: *void function(bool x)*
 // MD: *Defined at {{.*}}templates.cpp#[[# @LINE - 26]]*
 
+// JSON:           "Name": "function",
+// JSON-NEXT:      "Params": [
+// JSON-NEXT:        {
+// JSON-NEXT:          "End": true,
+// JSON-NEXT:          "Name": "x",
+// JSON-NEXT:          "Type": {
+// JSON-NEXT:            "Name": "bool",
+// JSON-NEXT:            "QualName": "bool",
+// JSON-NEXT:            "USR": "0000000000000000000000000000000000000000"
+// JSON-NEXT:          }
+// JSON-NEXT:        }
+// JSON-NEXT:      ],
+// JSON-NEXT:      "ReturnType": {
+// JSON-NEXT:        "IsBuiltIn": true,
+// JSON-NEXT:        "IsTemplate": false,
+// JSON-NEXT:        "Name": "void",
+// JSON-NEXT:        "QualName": "void",
+// JSON-NEXT:        "USR": "0000000000000000000000000000000000000000"
+// JSON-NEXT:      },
+// JSON-NEXT:      "Template": {
+// JSON-NEXT:        "Specialization": {
+// JSON-NEXT:          "Parameters": [
+// JSON-NEXT:            {
+// JSON-NEXT:              "Param": "bool"
+// JSON-NEXT:            },
+// JSON-NEXT:            {
+// JSON-NEXT:              "End": true, 
+// JSON-NEXT:              "Param": "0"
+// JSON-NEXT:            }
+// JSON-NEXT:          ],
+// JSON-NEXT:          "SpecializationOf": "{{([0-9A-F]{40})}}"
+// JSON-NEXT:        }
+// JSON-NEXT:      },
+
+// HTML:           <pre><code class="language-cpp code-clang-doc">template &lt;&gt;</code></pre>
+// HTML-NEXT:      <pre><code class="language-cpp code-clang-doc">void function&lt;bool, 0&gt; (bool x)</code></pre>
+// HTML-NEXT:      <p>Defined at line [[# @LINE - 64]] of file {{.*}}templates.cpp</p>
+// HTML-NEXT:  </div>
+
 /// A Tuple type
 ///
 /// Does Tuple things.
 template <typename... Tys>
 struct tuple {};
+
+// HTML-STRUCT:        <section class="hero section-container">
+// HTML-STRUCT-NEXT:       <pre><code class="language-cpp code-clang-doc">template &lt;typename... Tys&gt;</code></pre>
+// HTML-STRUCT-NEXT:       <div class="hero__title">
+// HTML-STRUCT-NEXT:           <h1 class="hero__title-large">struct tuple</h1>
+// HTML-STRUCT-NEXT:           <p>Defined at line [[# @LINE - 6]] of file {{.*}}templates.cpp</p>
+// HTML-STRUCT-NEXT:           <div class="doc-card">
+// HTML-STRUCT-NEXT:               <div class="nested-delimiter-container">
+// HTML-STRUCT-NEXT:                   <p> A Tuple type</p>
+// HTML-STRUCT-NEXT:               </div>
+// HTML-STRUCT-NEXT:               <div class="nested-delimiter-container">
+// HTML-STRUCT-NEXT:                   <p> Does Tuple things.</p>
+// HTML-STRUCT-NEXT:               </div>
+// HTML-STRUCT-NEXT:           </div>
+// HTML-STRUCT-NEXT:       </div>
+// HTML-STRUCT-NEXT:   </section>
 
 /// A function with a tuple parameter
 ///
@@ -154,3 +282,38 @@ tuple<int, int, bool> func_with_tuple_param(tuple<int, int, bool> t) { return t;
 // MD: *Defined at {{.*}}templates.cpp#[[# @LINE - 44]]*
 // MD:  A function with a tuple parameter
 // MD: **t** The input to func_with_tuple_param
+
+// JSON:           "Name": "func_with_tuple_param",
+// JSON-NEXT:      "Params": [
+// JSON-NEXT:        {
+// JSON-NEXT:          "End": true,
+// JSON-NEXT:          "Name": "t",
+// JSON-NEXT:          "Type": {
+// JSON-NEXT:            "Name": "tuple",
+// JSON-NEXT:            "Path": "GlobalNamespace",
+// JSON-NEXT:            "QualName": "tuple<int, int, bool>",
+// JSON-NEXT:            "USR": "{{([0-9A-F]{40})}}"
+// JSON-NEXT:          }
+// JSON-NEXT:        }
+// JSON-NEXT:      ],
+// JSON-NEXT:      "ReturnType": {
+// JSON-NEXT:        "IsBuiltIn": false,
+// JSON-NEXT:        "IsTemplate": false,
+// JSON-NEXT:        "Name": "tuple",
+// JSON-NEXT:        "QualName": "tuple<int, int, bool>",
+// JSON-NEXT:        "USR": "{{([0-9A-F]{40})}}"
+// JSON-NEXT:      },
+
+// HTML:           <pre><code class="language-cpp code-clang-doc">tuple&lt;int, int, bool&gt; func_with_tuple_param (tuple&lt;int, int, bool&gt; t)</code></pre>
+// HTML-NEXT:      <div class="doc-card">
+// HTML-NEXT:          <div class="nested-delimiter-container">
+// HTML-NEXT:              <p> A function with a tuple parameter</p>
+// HTML-NEXT:          </div>
+// HTML-NEXT:          <div class="nested-delimiter-container">
+// HTML-NEXT:              <h3>Parameters</h3>
+// HTML-NEXT:              <div>
+// HTML-NEXT:                  <b>t</b>   The input to func_with_tuple_param
+// HTML-NEXT:              </div> 
+// HTML-NEXT:          </div>
+// HTML-NEXT:      </div>
+// HTML-NEXT:      <p>Defined at line [[# @LINE - 81]] of file {{.*}}templates.cpp</p>

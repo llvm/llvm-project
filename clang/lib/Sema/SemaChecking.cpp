@@ -29,6 +29,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/FormatString.h"
 #include "clang/AST/IgnoreExpr.h"
+#include "clang/AST/Mangle.h"
 #include "clang/AST/NSAPI.h"
 #include "clang/AST/NonTrivialTypeVisitor.h"
 #include "clang/AST/OperationKinds.h"
@@ -46,6 +47,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/OpenCLOptions.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/PartialDiagnostic.h"
@@ -1140,6 +1142,53 @@ static bool ProcessFormatStringLiteral(const Expr *FormatExpr,
   return false;
 }
 
+/// Returns true if:
+/// - The sanitizers are enabled.
+/// - `Decl` does not have attributes preventing sanitizer instrumentation.
+/// - `Decl` or its location is not included in the no-sanitize list.
+static bool isSanitizationEnabledForDecl(ASTContext &Context,
+                                         const NamedDecl *Decl,
+                                         SanitizerMask TheSanitizerMask) {
+  // Check that the sanitizer is enabled globally.
+  const SanitizerMask EnabledSanitizerMask =
+      Context.getLangOpts().Sanitize.Mask;
+  if (!(EnabledSanitizerMask & TheSanitizerMask))
+    return false;
+
+  // Check that the source file is not included in the no sanitize list.
+  const auto &NoSanitizeList = Context.getNoSanitizeList();
+  if (NoSanitizeList.containsLocation(TheSanitizerMask,
+                                      Decl->getSourceRange().getBegin()))
+    return false;
+
+  // Check that the declaration name is not included in the no sanitize list.
+  // NB no-sanitize lists use mangled names.
+  std::unique_ptr<MangleContext> MC(Context.createMangleContext());
+  std::string MangledName;
+  if (MC->shouldMangleDeclName(Decl)) {
+    llvm::raw_string_ostream S = llvm::raw_string_ostream(MangledName);
+    MC->mangleName(Decl, S);
+  } else {
+    MangledName = Decl->getName();
+  }
+  if (NoSanitizeList.containsFunction(TheSanitizerMask, MangledName))
+    return false;
+
+  // Check that the declaration does not have the
+  // "disable_sanitizer_instrumentation" attribute.
+  if (Decl->hasAttr<DisableSanitizerInstrumentationAttr>())
+    return false;
+
+  // Check that the declaration does not have a "no_sanitize" attribute matching
+  // this sanitizer mask.
+  for (const NoSanitizeAttr *Attr : Decl->specific_attrs<NoSanitizeAttr>()) {
+    if (Attr->getMask() & TheSanitizerMask)
+      return false;
+  }
+
+  return true;
+}
+
 void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
                                                CallExpr *TheCall) {
   if (TheCall->isValueDependent() || TheCall->isTypeDependent() ||
@@ -2131,6 +2180,11 @@ bool Sema::CheckTSBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   }
 }
 
+static bool isValidMathElementType(QualType T) {
+  return T->isDependentType() ||
+         (T->isRealType() && !T->isBooleanType() && !T->isEnumeralType());
+}
+
 // Check if \p Ty is a valid type for the elementwise math builtins. If it is
 // not a valid type, emit an error message and return true. Otherwise return
 // false.
@@ -2144,8 +2198,7 @@ checkMathBuiltinElementType(Sema &S, SourceLocation Loc, QualType ArgTy,
 
   switch (ArgTyRestr) {
   case Sema::EltwiseBuiltinArgTyRestriction::None:
-    if (!ArgTy->getAs<VectorType>() &&
-        !ConstantMatrixType::isValidElementType(ArgTy)) {
+    if (!ArgTy->getAs<VectorType>() && !isValidMathElementType(ArgTy)) {
       return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
              << ArgOrdinal << /* vector */ 2 << /* integer */ 1 << /* fp */ 1
              << ArgTy;
@@ -3583,6 +3636,30 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     }
     break;
   }
+
+  case Builtin::BI__builtin_allow_sanitize_check: {
+    Expr *Arg = TheCall->getArg(0);
+    // Check if the argument is a string literal.
+    const StringLiteral *SanitizerName =
+        dyn_cast<StringLiteral>(Arg->IgnoreParenImpCasts());
+    if (!SanitizerName) {
+      Diag(TheCall->getBeginLoc(), diag::err_expr_not_string_literal)
+          << Arg->getSourceRange();
+      return ExprError();
+    }
+    // Validate the sanitizer name.
+    if (!llvm::StringSwitch<bool>(SanitizerName->getString())
+             .Cases({"address", "thread", "memory", "hwaddress",
+                     "kernel-address", "kernel-memory", "kernel-hwaddress"},
+                    true)
+             .Default(false)) {
+      Diag(TheCall->getBeginLoc(), diag::err_invalid_builtin_argument)
+          << SanitizerName->getString() << "__builtin_allow_sanitize_check"
+          << Arg->getSourceRange();
+      return ExprError();
+    }
+    break;
+  }
   case Builtin::BI__builtin_counted_by_ref:
     if (BuiltinCountedByRef(TheCall))
       return ExprError();
@@ -4193,6 +4270,7 @@ bool Sema::CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
   CheckAbsoluteValueFunction(TheCall, FDecl);
   CheckMaxUnsignedZero(TheCall, FDecl);
   CheckInfNaNFunction(TheCall, FDecl);
+  CheckUseOfAtomicThreadFenceWithTSan(TheCall, FDecl);
 
   if (getLangOpts().ObjC)
     ObjC().DiagnoseCStringFormatDirectiveInCFAPI(FDecl, Args, NumArgs);
@@ -10067,6 +10145,23 @@ void Sema::CheckMaxUnsignedZero(const CallExpr *Call,
   Diag(Call->getExprLoc(), diag::note_remove_max_call)
         << FixItHint::CreateRemoval(Call->getCallee()->getSourceRange())
         << FixItHint::CreateRemoval(RemovalRange);
+}
+
+//===--- CHECK: Warn on use of `std::atomic_thread_fence` with TSan. ------===//
+void Sema::CheckUseOfAtomicThreadFenceWithTSan(const CallExpr *Call,
+                                               const FunctionDecl *FDecl) {
+  // Thread sanitizer currently does not support `std::atomic_thread_fence`,
+  // leading to false positives. Example issue:
+  // https://github.com/llvm/llvm-project/issues/52942
+
+  if (!Call || !FDecl || !IsStdFunction(FDecl, "atomic_thread_fence"))
+    return;
+
+  const NamedDecl *Caller = getCurFunctionOrMethodDecl(/*AllowLambda=*/true);
+  if (!isSanitizationEnabledForDecl(Context, Caller, SanitizerKind::Thread))
+    return;
+
+  Diag(Call->getExprLoc(), diag::warn_atomic_thread_fence_with_tsan);
 }
 
 //===--- CHECK: Standard memory functions ---------------------------------===//
@@ -16552,7 +16647,7 @@ ExprResult Sema::BuiltinMatrixColumnMajorLoad(CallExpr *TheCall,
   } else {
     ElementTy = PtrTy->getPointeeType().getUnqualifiedType();
 
-    if (!ConstantMatrixType::isValidElementType(ElementTy)) {
+    if (!ConstantMatrixType::isValidElementType(ElementTy, getLangOpts())) {
       Diag(PtrExpr->getBeginLoc(), diag::err_builtin_invalid_arg_type)
           << PtrArgIdx + 1 << 0 << /* pointer to element ty */ 5
           << /* no fp */ 0 << PtrExpr->getType();

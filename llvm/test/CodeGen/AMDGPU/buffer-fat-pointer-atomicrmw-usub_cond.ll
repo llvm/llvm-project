@@ -20,7 +20,6 @@ define i32 @buffer_fat_ptr_agent_atomic_usub_cond_ret_u32__offset__amdgpu_no_fin
 ; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v0, v1, s[0:3], null offen offset:1024 th:TH_ATOMIC_RETURN
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: buffer_fat_ptr_agent_atomic_usub_cond_ret_u32__offset__amdgpu_no_fine_grained_memory:
@@ -71,7 +70,6 @@ define void @buffer_fat_ptr_agent_atomic_usub_cond_noret_u32__offset__amdgpu_no_
 ; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v0, v1, s[0:3], null offen offset:1024 th:TH_ATOMIC_RETURN
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: buffer_fat_ptr_agent_atomic_usub_cond_noret_u32__offset__amdgpu_no_fine_grained_memory:
@@ -121,7 +119,6 @@ define i32 @buffer_fat_ptr_agent_atomic_usub_cond_ret_u32__offset__amdgpu_no_rem
 ; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v0, v1, s[0:3], null offen offset:1024 th:TH_ATOMIC_RETURN
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: buffer_fat_ptr_agent_atomic_usub_cond_ret_u32__offset__amdgpu_no_remote_memory:
@@ -172,7 +169,6 @@ define i32 @buffer_fat_ptr_agent_atomic_usub_cond_ret_u32__offset__amdgpu_no_fin
 ; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v0, v1, s[0:3], null offen offset:1024 th:TH_ATOMIC_RETURN
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: buffer_fat_ptr_agent_atomic_usub_cond_ret_u32__offset__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
@@ -228,7 +224,6 @@ define i32 @buffer_fat_ptr_system_atomic_usub_cond_ret_u32__offset__amdgpu_no_fi
 ; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v0, v1, s[0:3], null offen offset:1024 th:TH_ATOMIC_RETURN
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: buffer_fat_ptr_system_atomic_usub_cond_ret_u32__offset__amdgpu_no_fine_grained_memory:

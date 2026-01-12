@@ -744,11 +744,6 @@ void CIRGenFunction::emitDecl(const Decl &d, bool evaluateConditionDecl) {
   case Decl::Import:
   case Decl::MSGuid: // __declspec(uuid("..."))
   case Decl::TemplateParamObject:
-  case Decl::OMPThreadPrivate:
-  case Decl::OMPGroupPrivate:
-  case Decl::OMPAllocate:
-  case Decl::OMPCapturedExpr:
-  case Decl::OMPRequires:
   case Decl::Empty:
   case Decl::Concept:
   case Decl::LifetimeExtendedTemporary:
@@ -782,6 +777,27 @@ void CIRGenFunction::emitDecl(const Decl &d, bool evaluateConditionDecl) {
   case Decl::OpenACCRoutine:
     emitOpenACCRoutine(cast<OpenACCRoutineDecl>(d));
     return;
+  case Decl::OMPThreadPrivate:
+    emitOMPThreadPrivateDecl(cast<OMPThreadPrivateDecl>(d));
+    return;
+  case Decl::OMPGroupPrivate:
+    emitOMPGroupPrivateDecl(cast<OMPGroupPrivateDecl>(d));
+    return;
+  case Decl::OMPAllocate:
+    emitOMPAllocateDecl(cast<OMPAllocateDecl>(d));
+    return;
+  case Decl::OMPCapturedExpr:
+    emitOMPCapturedExpr(cast<OMPCapturedExprDecl>(d));
+    return;
+  case Decl::OMPRequires:
+    emitOMPRequiresDecl(cast<OMPRequiresDecl>(d));
+    return;
+  case Decl::OMPDeclareMapper:
+    emitOMPDeclareMapper(cast<OMPDeclareMapperDecl>(d));
+    return;
+  case Decl::OMPDeclareReduction:
+    emitOMPDeclareReduction(cast<OMPDeclareReductionDecl>(d));
+    return;
   case Decl::Typedef:     // typedef int X;
   case Decl::TypeAlias: { // using X = int; [C++0x]
     QualType ty = cast<TypedefNameDecl>(d).getUnderlyingType();
@@ -793,8 +809,6 @@ void CIRGenFunction::emitDecl(const Decl &d, bool evaluateConditionDecl) {
   case Decl::ImplicitConceptSpecialization:
   case Decl::TopLevelStmt:
   case Decl::UsingPack:
-  case Decl::OMPDeclareMapper:
-  case Decl::OMPDeclareReduction:
     cgm.errorNYI(d.getSourceRange(),
                  std::string("emitDecl: unhandled decl type: ") +
                      d.getDeclKindName());

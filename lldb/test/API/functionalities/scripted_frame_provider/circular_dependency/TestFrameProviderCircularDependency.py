@@ -9,7 +9,6 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import TestBase
 from lldbsuite.test import lldbutil
 
-@skipIf(oslist=["linux"], archs=["arm$"])
 class FrameProviderCircularDependencyTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -17,6 +16,7 @@ class FrameProviderCircularDependencyTestCase(TestBase):
         TestBase.setUp(self)
         self.source = "main.c"
 
+    @expectedFailureAll(oslist=["linux"], archs=["arm$"])
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_circular_dependency_with_function_replacement(self):
         """

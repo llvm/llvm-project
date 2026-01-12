@@ -110,7 +110,7 @@ class LibcallLoweringModuleAnalysis
     : public AnalysisInfoMixin<LibcallLoweringModuleAnalysis> {
 private:
   friend AnalysisInfoMixin<LibcallLoweringModuleAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
   LibcallLoweringModuleAnalysisResult LibcallLoweringMap;
 

@@ -16,6 +16,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/GlobalValue.h"
@@ -190,6 +191,8 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
     if (tryBF16ArithToFMA(N))
       return;
     break;
+  case ISD::BR_JT:
+    return selectBR_JT(N);
   default:
     break;
   }
@@ -2272,4 +2275,39 @@ void NVPTXDAGToDAGISel::selectAtomicSwap128(SDNode *N) {
   CurDAG->setNodeMemRefs(ATOM, AN->getMemOperand());
 
   ReplaceNode(N, ATOM);
+}
+
+void NVPTXDAGToDAGISel::selectBR_JT(SDNode *N) {
+  assert(Subtarget->hasBrx() &&
+         "BR_JT should be expanded during legalization on unsupported targets");
+
+  SDLoc DL(N);
+  const SDValue InChain = N->getOperand(0);
+  const auto *JT = cast<JumpTableSDNode>(N->getOperand(1));
+  const SDValue Index = N->getOperand(2);
+
+  unsigned JId = JT->getIndex();
+  MachineJumpTableInfo *MJTI = CurDAG->getMachineFunction().getJumpTableInfo();
+  ArrayRef<MachineBasicBlock *> MBBs = MJTI->getJumpTables()[JId].MBBs;
+
+  SDValue IdV = getI32Imm(JId, DL);
+
+  // Generate BrxStart node
+  MachineSDNode *Chain = CurDAG->getMachineNode(
+      NVPTX::BRX_START, DL, {MVT::Other, MVT::Glue}, {IdV, InChain});
+
+  // Generate BrxItem nodes
+  assert(!MBBs.empty());
+  for (MachineBasicBlock *MBB : MBBs.drop_back())
+    Chain = CurDAG->getMachineNode(
+        NVPTX::BRX_ITEM, DL, {MVT::Other, MVT::Glue},
+        {CurDAG->getBasicBlock(MBB), SDValue(Chain, 0), SDValue(Chain, 1)});
+
+  // Generate BrxEnd nodes
+  MachineSDNode *BrxEnd =
+      CurDAG->getMachineNode(NVPTX::BRX_END, DL, MVT::Other,
+                             {CurDAG->getBasicBlock(MBBs.back()), Index, IdV,
+                              SDValue(Chain, 0), SDValue(Chain, 1)});
+
+  ReplaceNode(N, BrxEnd);
 }

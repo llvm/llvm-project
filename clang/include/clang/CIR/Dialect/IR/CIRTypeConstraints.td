@@ -47,7 +47,8 @@ class CIR_TypeSummaries<list<Type> types> {
 // Bool Type predicates
 //===----------------------------------------------------------------------===//
 
-def CIR_AnyBoolType : CIR_TypeBase<"::cir::BoolType", "boolean type">;
+def CIR_AnyBoolType : CIR_TypeBase<"::cir::BoolType", "boolean type">,
+      BuildableType<"$_builder.getType<" # cppType # ">()">;
 
 //===----------------------------------------------------------------------===//
 // IntType predicates
@@ -132,18 +133,25 @@ def CIR_AnyFundamentalSIntType
 // Float Type predicates
 //===----------------------------------------------------------------------===//
 
-def CIR_AnySingleType : CIR_TypeBase<"::cir::SingleType", "single float type">;
+def CIR_AnySingleType : CIR_TypeBase<"::cir::SingleType", "single float type">,
+      BuildableType<"$_builder.getType<" # cppType # ">()">;
 def CIR_AnyFP32Type : TypeAlias<CIR_AnySingleType>;
 
-def CIR_AnyDoubleType : CIR_TypeBase<"::cir::DoubleType", "double float type">;
+def CIR_AnyDoubleType : CIR_TypeBase<"::cir::DoubleType", "double float type">,
+      BuildableType<"$_builder.getType<" # cppType # ">()">;
 def CIR_AnyFP64Type : TypeAlias<CIR_AnyDoubleType>;
 
-def CIR_AnyFP16Type : CIR_TypeBase<"::cir::FP16Type", "f16 type">;
-def CIR_AnyBFloat16Type : CIR_TypeBase<"::cir::BF16Type", "bf16 type">;
-def CIR_AnyFP80Type : CIR_TypeBase<"::cir::FP80Type", "f80 type">;
-def CIR_AnyFP128Type : CIR_TypeBase<"::cir::FP128Type", "f128 type">;
+def CIR_AnyFP16Type : CIR_TypeBase<"::cir::FP16Type", "f16 type">,
+      BuildableType<"$_builder.getType<" # cppType # ">()">;
+def CIR_AnyBFloat16Type : CIR_TypeBase<"::cir::BF16Type", "bf16 type">,
+      BuildableType<"$_builder.getType<" # cppType # ">()">;
+def CIR_AnyFP80Type : CIR_TypeBase<"::cir::FP80Type", "f80 type">,
+      BuildableType<"$_builder.getType<" # cppType # ">()">;
+def CIR_AnyFP128Type : CIR_TypeBase<"::cir::FP128Type", "f128 type">,
+      BuildableType<"$_builder.getType<" # cppType # ">()">;
 def CIR_AnyLongDoubleType : CIR_TypeBase<"::cir::LongDoubleType",
-    "long double type">;
+    "long double type">,
+      BuildableType<"$_builder.getType<" # cppType # ">()">;
 
 def CIR_AnyFloatType : AnyTypeOf<[
     CIR_AnySingleType, CIR_AnyDoubleType, CIR_AnyFP16Type,
@@ -196,19 +204,25 @@ def CIR_AnyArrayType : CIR_TypeBase<"::cir::ArrayType", "array type">;
 def CIR_AnyPtrType : CIR_TypeBase<"::cir::PointerType", "pointer type">;
 
 // Pointer to type constraint bases
-class CIR_IsPtrToPred<code type> : CPred<"$_self.isPtrTo<" # type # ">()">;
+class CIR_IsPtrToPred<Type type>
+    : CPred<"$_self.isPtrTo<" # type.cppType # ">()">;
 
-class CIR_PtrTo<code type, string summary>
+class CIR_PtrTo<Type type, string summary>
     : CIR_ConfinedType<CIR_AnyPtrType, [CIR_IsPtrToPred<type>],
-        "pointer to " # summary>;
+        "pointer to " # summary>,
+      SameBuildabilityAs<type,
+        "$_builder.getType<" # cppType # ">(" # type.builderCall # ")">;
 
 // Pointer to pointer constraint bases
-class CIR_IsPtrToPtrToPred<code type>
-    : CPred<"$_self.isPtrToPtrTo<" # type # ">()">;
+class CIR_IsPtrToPtrToPred<Type type>
+    : CPred<"$_self.isPtrToPtrTo<" # type.cppType # ">()">;
 
-class CIR_PtrToPtrTo<code type, string summary>
+class CIR_PtrToPtrTo<Type type, string summary>
     : CIR_ConfinedType<CIR_AnyPtrType, [CIR_IsPtrToPtrToPred<type>],
-        "pointer to pointer to " # summary>;
+        "pointer to pointer to " # summary>,
+      SameBuildabilityAs<type,
+          "$_builder.getType<" # cppType # ">($_builder.getType<" # cppType #
+          ">(" # type.builderCall # "))">;
 
 // Pointee type constraint bases
 class CIR_PointeePred<Pred pred> : SubstLeaves<"$_self",
@@ -221,17 +235,14 @@ class CIR_PtrToAnyOf<list<Type> types, string summary = "">
       "pointer to " # CIR_TypeSummaries<types>.value,
       summary)>;
 
-// Void pointer type constraints
-def CIR_VoidPtrType
-    : CIR_PtrTo<"::cir::VoidType", "void type">,
-      BuildableType<"$_builder.getType<" # cppType # ">("
-        "cir::VoidType::get($_builder.getContext()))">;
+// Void type constraints
+def CIR_AnyVoidType : CIR_TypeBase<"::cir::VoidType", "void type">,
+      BuildableType<"$_builder.getType<" # cppType # ">()">;
 
-def CIR_PtrToVoidPtrType
-    : CIR_PtrToPtrTo<"::cir::VoidType", "void type">,
-      BuildableType<"$_builder.getType<" # cppType # ">("
-        "$_builder.getType<" # cppType # ">("
-        "cir::VoidType::get($_builder.getContext())))">;
+// Void pointer type constraints
+def CIR_VoidPtrType : CIR_PtrTo<CIR_AnyVoidType, "void type">;
+
+def CIR_PtrToVoidPtrType : CIR_PtrToPtrTo<CIR_AnyVoidType, "void type">;
 
 class CIR_PtrToType<Type type> : CIR_PtrToAnyOf<[type]>;
 
@@ -250,10 +261,10 @@ def CIR_PtrToArray : CIR_PtrToType<CIR_AnyArrayType>;
 
 def CIR_AnyVectorType : CIR_TypeBase<"::cir::VectorType", "vector type">;
 
-def CIR_VectorElementType : AnyTypeOf<[CIR_AnyIntOrFloatType, CIR_AnyPtrType],
-    "any cir integer, floating point or pointer type"
-> {
-    let cppFunctionName = "isValidVectorTypeElementType";
+def CIR_VectorElementType
+    : AnyTypeOf<[CIR_AnyBoolType, CIR_AnyIntOrFloatType, CIR_AnyPtrType],
+                "any cir boolean, integer, floating point or pointer type"> {
+  let cppFunctionName = "isValidVectorTypeElementType";
 }
 
 class CIR_ElementTypePred<Pred pred> : SubstLeaves<"$_self",
@@ -265,6 +276,9 @@ class CIR_VectorTypeOf<list<Type> types, string summary = "">
         !if(!empty(summary),
             "vector of " # CIR_TypeSummaries<types>.value,
             summary)>;
+
+// Type constraint accepting a either a type T or a vector of type T
+class CIR_ScalarOrVectorOf<Type T> : AnyTypeOf<[T, CIR_VectorTypeOf<[T]>]>;
 
 // Vector of integral type
 def IntegerVector : Type<
@@ -320,9 +334,12 @@ def CIR_AnyDataMemberType : CIR_TypeBase<"::cir::DataMemberType",
 // VPtr type predicates
 //===----------------------------------------------------------------------===//
 
-def CIR_AnyVPtrType : CIR_TypeBase<"::cir::VPtrType", "vptr type">;
+def CIR_AnyVPtrType : CIR_TypeBase<"::cir::VPtrType", "vptr type">,
+      BuildableType<"$_builder.getType<" # cppType # ">()">;
 
-def CIR_PtrToVPtr : CIR_PtrToType<CIR_AnyVPtrType>;
+def CIR_PtrToVPtr : CIR_PtrToType<CIR_AnyVPtrType>,
+      BuildableType<"$_builder.getType<" # cppType # ">("
+        "$_builder.getType<::cir::VPtrType>())">;
 
 //===----------------------------------------------------------------------===//
 // Scalar Type predicates
