@@ -19,25 +19,25 @@ define void @min_trip_count_due_to_runtime_checks_1(ptr %dst.1, ptr %dst.2, ptr 
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[UMAX]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
+; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[DST_21]], [[DST_12]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 16
-; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[DST_21]], [[DST_12]]
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP4]], 16
 ; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[DST_12]], [[SRC_13]]
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP4]], 16
 ; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP8]], [[TMP7]]
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP4]], 16
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 [[DST_12]], [[SRC_25]]
+; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP4]], 16
 ; CHECK-NEXT:    [[DIFF_CHECK6:%.*]] = icmp ult i64 [[TMP10]], [[TMP9]]
 ; CHECK-NEXT:    [[CONFLICT_RDX7:%.*]] = or i1 [[CONFLICT_RDX]], [[DIFF_CHECK6]]
-; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP4]], 16
 ; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 [[DST_21]], [[SRC_13]]
+; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP4]], 16
 ; CHECK-NEXT:    [[DIFF_CHECK8:%.*]] = icmp ult i64 [[TMP12]], [[TMP11]]
 ; CHECK-NEXT:    [[CONFLICT_RDX9:%.*]] = or i1 [[CONFLICT_RDX7]], [[DIFF_CHECK8]]
-; CHECK-NEXT:    [[TMP13:%.*]] = mul i64 [[TMP4]], 16
 ; CHECK-NEXT:    [[TMP14:%.*]] = sub i64 [[DST_21]], [[SRC_25]]
+; CHECK-NEXT:    [[TMP13:%.*]] = mul i64 [[TMP4]], 16
 ; CHECK-NEXT:    [[DIFF_CHECK10:%.*]] = icmp ult i64 [[TMP14]], [[TMP13]]
 ; CHECK-NEXT:    [[CONFLICT_RDX11:%.*]] = or i1 [[CONFLICT_RDX9]], [[DIFF_CHECK10]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX11]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
