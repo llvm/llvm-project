@@ -5623,6 +5623,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                           Q, Depth + 1);
     }
 
+    // TODO: Improve accuracy in unfused FMA pattern. We can prove an additional
+    // not-nan if the addend is known-not negative infinity if the multiply is
+    // known-not infinity.
+
     computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
                         Q, Depth + 1);
 

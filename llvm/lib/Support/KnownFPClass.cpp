@@ -375,7 +375,17 @@ KnownFPClass KnownFPClass::fma(const KnownFPClass &KnownLHS,
 KnownFPClass KnownFPClass::fma_square(const KnownFPClass &KnownSquared,
                                       const KnownFPClass &KnownAddend,
                                       DenormalMode Mode) {
-  return fadd_impl(square(KnownSquared, Mode), KnownAddend, Mode);
+  KnownFPClass Squared = square(KnownSquared, Mode);
+  KnownFPClass Known = fadd_impl(Squared, KnownAddend, Mode);
+
+  // Since we know the squared input must be positive, the add of opposite sign
+  // infinities nan hazard only applies for negative nan.
+  if (KnownAddend.isKnownNever(fcNegInf | fcNan) &&
+      Known.isKnownNever(fcPosInf | fcNan) &&
+      KnownSquared.isKnownNeverLogicalZero(Mode))
+    Known.knownNot(fcNan);
+
+  return Known;
 }
 
 KnownFPClass KnownFPClass::exp(const KnownFPClass &KnownSrc) {
