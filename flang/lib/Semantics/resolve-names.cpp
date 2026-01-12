@@ -4670,9 +4670,9 @@ bool SubprogramVisitor::Pre(const parser::Suffix &suffix) {
         }
       }
     } else {
-      Message &msg{Say(*resultName,
-          "RESULT(%s) may appear only in a function"_err_en_US)};
-      if (const Symbol * subprogram{InclusiveScope().symbol()}) {
+      Message &msg{Say(
+          *resultName, "RESULT(%s) may appear only in a function"_err_en_US)};
+      if (const Symbol *subprogram{InclusiveScope().symbol()}) {
         msg.Attach(subprogram->name(), "Containing subprogram"_en_US);
       }
     }

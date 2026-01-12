@@ -918,8 +918,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::RealLiteralConstant &x) {
     }
   }
   bool isDefaultKind{!xkind && letterKind.value_or('e') == 'e'};
-  auto result{common::SearchTypes(RealTypeVisitor{
-      kind, xreal.source, GetFoldingContext(), isDefaultKind})};
+  auto result{common::SearchTypes(
+      RealTypeVisitor{kind, xreal.source, GetFoldingContext(), isDefaultKind})};
   if (!result) { // C717
     Say("Unsupported REAL(KIND=%d)"_err_en_US, kind);
   }

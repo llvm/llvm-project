@@ -3251,8 +3251,8 @@ struct CallStmt {
         t;
   };
   explicit CallStmt(ProcedureDesignator &&pd, std::optional<Chevrons> &&ch,
-      std::list<ActualArgSpec> &&args) :
-      CallStmt(Call{std::move(pd), std::move(args)}, std::move(ch)) {}
+      std::list<ActualArgSpec> &&args)
+      : CallStmt(Call{std::move(pd), std::move(args)}, std::move(ch)) {}
   std::tuple<Call, std::optional<Chevrons>> t;
   CharBlock source;
   mutable TypedCall typedCall; // filled by semantics
