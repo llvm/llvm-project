@@ -84,10 +84,7 @@ namespace fir {
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 
 static bool isMarshalLike(Operation *op) {
-  if (!op)
-    return false;
-
-  auto convert = dyn_cast<fir::ConvertOp>(op);
+  auto convert = dyn_cast_if_present<fir::ConvertOp>(op);
   if (!convert)
     return false;
 
