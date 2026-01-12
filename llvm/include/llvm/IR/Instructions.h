@@ -2650,7 +2650,6 @@ class PHINode : public Instruction {
                    InsertPosition InsertBefore = nullptr)
       : Instruction(Ty, Instruction::PHI, AllocMarker, InsertBefore),
         ReservedSpace(NumReservedValues) {
-    assert(!Ty->isTokenTy() && "PHI nodes cannot have token type!");
     setName(NameStr);
     allocHungoffUses(ReservedSpace);
   }

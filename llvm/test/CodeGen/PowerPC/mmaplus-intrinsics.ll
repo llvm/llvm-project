@@ -1049,9 +1049,9 @@ define void @test_ldst_1(ptr nocapture readonly %vqp, ptr %vpp, <16 x i8> %vc, p
 ; CHECK-NEXT:    lxv v1, 32(r3)
 ; CHECK-NEXT:    lxv v4, 16(r3)
 ; CHECK-NEXT:    lxv v0, 48(r3)
+; CHECK-NEXT:    plxvp vsp38, 8(r4), 0
 ; CHECK-NEXT:    dmxxinstdmr512 wacc0, vsp32, vsp36, 0
-; CHECK-NEXT:    plxvp vsp36, 8(r4), 0
-; CHECK-NEXT:    pmxvf64gernn wacc0, vsp36, v2, 0, 0
+; CHECK-NEXT:    pmxvf64gernn wacc0, vsp38, v2, 0, 0
 ; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-NEXT:    stxv v4, 48(r7)
 ; CHECK-NEXT:    stxv v5, 32(r7)
@@ -1065,9 +1065,9 @@ define void @test_ldst_1(ptr nocapture readonly %vqp, ptr %vpp, <16 x i8> %vc, p
 ; CHECK-BE-NEXT:    lxv v1, 16(r3)
 ; CHECK-BE-NEXT:    lxv v4, 32(r3)
 ; CHECK-BE-NEXT:    lxv v0, 0(r3)
+; CHECK-BE-NEXT:    plxvp vsp38, 8(r4), 0
 ; CHECK-BE-NEXT:    dmxxinstdmr512 wacc0, vsp32, vsp36, 0
-; CHECK-BE-NEXT:    plxvp vsp36, 8(r4), 0
-; CHECK-BE-NEXT:    pmxvf64gernn wacc0, vsp36, v2, 0, 0
+; CHECK-BE-NEXT:    pmxvf64gernn wacc0, vsp38, v2, 0, 0
 ; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-NEXT:    stxv v5, 48(r7)
 ; CHECK-BE-NEXT:    stxv v4, 32(r7)
@@ -1137,9 +1137,9 @@ define void @test_ldst_1(ptr nocapture readonly %vqp, ptr %vpp, <16 x i8> %vc, p
 ; CHECK-AIX64-NEXT:    lxv 1, 16(3)
 ; CHECK-AIX64-NEXT:    lxv 4, 32(3)
 ; CHECK-AIX64-NEXT:    lxv 0, 0(3)
+; CHECK-AIX64-NEXT:    plxvp 38, 8(4), 0
 ; CHECK-AIX64-NEXT:    dmxxinstdmr512 0, 32, 36, 0
-; CHECK-AIX64-NEXT:    plxvp 36, 8(4), 0
-; CHECK-AIX64-NEXT:    pmxvf64gernn 0, 36, 2, 0, 0
+; CHECK-AIX64-NEXT:    pmxvf64gernn 0, 38, 2, 0, 0
 ; CHECK-AIX64-NEXT:    dmxxextfdmr512 34, 36, 0, 0
 ; CHECK-AIX64-NEXT:    stxv 5, 48(5)
 ; CHECK-AIX64-NEXT:    stxv 4, 32(5)
@@ -1153,9 +1153,9 @@ define void @test_ldst_1(ptr nocapture readonly %vqp, ptr %vpp, <16 x i8> %vc, p
 ; CHECK-AIX32-NEXT:    lxv 1, 16(3)
 ; CHECK-AIX32-NEXT:    lxv 4, 32(3)
 ; CHECK-AIX32-NEXT:    lxv 0, 0(3)
+; CHECK-AIX32-NEXT:    plxvp 38, 8(4), 0
 ; CHECK-AIX32-NEXT:    dmxxinstdmr512 0, 32, 36, 0
-; CHECK-AIX32-NEXT:    plxvp 36, 8(4), 0
-; CHECK-AIX32-NEXT:    pmxvf64gernn 0, 36, 2, 0, 0
+; CHECK-AIX32-NEXT:    pmxvf64gernn 0, 38, 2, 0, 0
 ; CHECK-AIX32-NEXT:    dmxxextfdmr512 34, 36, 0, 0
 ; CHECK-AIX32-NEXT:    stxv 5, 48(5)
 ; CHECK-AIX32-NEXT:    stxv 4, 32(5)

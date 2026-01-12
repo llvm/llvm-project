@@ -7,8 +7,6 @@
 // list-item is device-accessible, even if it was not
 // previously mapped.
 
-// XFAIL: *
-
 #include <stdio.h>
 int h[10];
 int *ph = &h[0];

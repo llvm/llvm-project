@@ -141,7 +141,13 @@ public:
 FunctionPass *createX86FastPreTileConfigLegacyPass();
 
 /// Return a pass that config the tile registers after fast reg allocation.
-FunctionPass *createX86FastTileConfigPass();
+class X86FastTileConfigPass : public PassInfoMixin<X86FastTileConfigPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86FastTileConfigLegacyPass();
 
 /// Return a pass that insert pseudo tile config instruction.
 FunctionPass *createX86PreTileConfigPass();
@@ -204,7 +210,13 @@ FunctionPass *createX86CmovConversionLegacyPass();
 /// certain byte and word instructions by equivalent 32 bit instructions,
 /// in order to eliminate partial register usage, false dependences on
 /// the upper portions of registers, and to save code size.
-FunctionPass *createX86FixupBWInsts();
+class X86FixupBWInstsPass : public PassInfoMixin<X86FixupBWInstsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86FixupBWInstsLegacyPass();
 
 /// Return a Machine IR pass that reassigns instruction chains from one domain
 /// to another, when profitable.
@@ -296,7 +308,7 @@ FunctionPass *createX86ArgumentStackSlotPass();
 FunctionPass *createX86SuppressAPXForRelocationPass();
 
 void initializeCompressEVEXLegacyPass(PassRegistry &);
-void initializeFixupBWInstPassPass(PassRegistry &);
+void initializeX86FixupBWInstLegacyPass(PassRegistry &);
 void initializeFixupLEAsLegacyPass(PassRegistry &);
 void initializeX86ArgumentStackSlotPassPass(PassRegistry &);
 void initializeX86AsmPrinterPass(PassRegistry &);
@@ -314,7 +326,7 @@ void initializeX86ExecutionDomainFixPass(PassRegistry &);
 void initializeX86ExpandPseudoLegacyPass(PassRegistry &);
 void initializeX86FPStackifierLegacyPass(PassRegistry &);
 void initializeX86FastPreTileConfigLegacyPass(PassRegistry &);
-void initializeX86FastTileConfigPass(PassRegistry &);
+void initializeX86FastTileConfigLegacyPass(PassRegistry &);
 void initializeX86FixupSetCCPassPass(PassRegistry &);
 void initializeX86FlagsCopyLoweringLegacyPass(PassRegistry &);
 void initializeX86LoadValueInjectionLoadHardeningPassPass(PassRegistry &);

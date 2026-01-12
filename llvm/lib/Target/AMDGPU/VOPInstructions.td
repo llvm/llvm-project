@@ -18,6 +18,7 @@ class LetDummies {
   bit isConvergent;
   bit isAsCheapAsAMove;
   bit FPDPRounding;
+  bit IsDPMACCInstruction;
   Predicate SubtargetPredicate;
   string Constraints;
   string DisableEncoding;
@@ -71,6 +72,7 @@ class VOP_Pseudo <string opName, string suffix, VOPProfile P, dag outs, dag ins,
   string Mnemonic = opName;
   Instruction Opcode = !cast<Instruction>(NAME);
   bit IsTrue16 = P.IsTrue16;
+  bit IsDPMACCInstruction = 0;
   VOPProfile Pfl = P;
 
   string AsmOperands;
@@ -166,6 +168,7 @@ class VOP3P_Pseudo <string opName, VOPProfile P, list<dag> pattern = []> :
 class VOP_Real<VOP_Pseudo ps> {
   Instruction Opcode = !cast<Instruction>(NAME);
   bit IsSingle = ps.Pfl.IsSingle;
+  bit IsDPMACCInstruction = ps.IsDPMACCInstruction;
 }
 
 class VOP3_Real <VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemonic> :
@@ -196,6 +199,7 @@ class VOP3_Real <VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemoni
   let mayStore             = ps.mayStore;
   let TRANS                = ps.TRANS;
   let isConvergent         = ps.isConvergent;
+  let PostEncoderMethod = ps.PostEncoderMethod;
 
   VOPProfile Pfl = ps.Pfl;
 }
@@ -2277,4 +2281,13 @@ def VOPTrue16Table : GenericTable {
 
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "getTrue16OpcodeHelper";
+}
+
+def DPMACCInstructionTable : GenericTable {
+  let FilterClass = "VOP_Pseudo";
+  let CppTypeName = "DPMACCInstructionInfo";
+  let Fields = ["Opcode", "IsDPMACCInstruction"];
+
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "getDPMACCInstructionHelper";
 }

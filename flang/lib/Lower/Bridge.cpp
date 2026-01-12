@@ -244,6 +244,9 @@ emitUseStatementsFromFunit(Fortran::lower::AbstractConverter &converter,
       if (ultimateSym.has<Fortran::semantics::DerivedTypeDetails>())
         return "";
 
+      if (ultimateSym.has<Fortran::semantics::UseErrorDetails>())
+        return "";
+
       if (const auto *generic =
               ultimateSym.detailsIf<Fortran::semantics::GenericDetails>()) {
         if (!generic->specific())
@@ -4008,16 +4011,17 @@ private:
         }
         const auto &caseRange =
             std::get<Fortran::parser::CaseValueRange::Range>(caseValueRange.u);
-        if (caseRange.lower && caseRange.upper) {
+        const auto &[lower, upper]{caseRange.t};
+        if (lower && upper) {
           attrList.push_back(fir::ClosedIntervalAttr::get(context));
-          addValue(*caseRange.lower);
-          addValue(*caseRange.upper);
-        } else if (caseRange.lower) {
+          addValue(*lower);
+          addValue(*upper);
+        } else if (lower) {
           attrList.push_back(fir::LowerBoundAttr::get(context));
-          addValue(*caseRange.lower);
+          addValue(*lower);
         } else {
           attrList.push_back(fir::UpperBoundAttr::get(context));
-          addValue(*caseRange.upper);
+          addValue(*upper);
         }
       }
     }
