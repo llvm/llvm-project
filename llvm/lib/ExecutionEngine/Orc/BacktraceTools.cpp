@@ -119,11 +119,10 @@ std::string DumpedSymbolTable::symbolicate(StringRef Backtrace) {
     // if the last column is not a hex number, then just reproduce the input
     // row.
     auto [RowStart, AddrCol] = Row.rtrim().rsplit(' ');
-    if (AddrCol.starts_with("0x"))
-      AddrCol = AddrCol.drop_front(2);
+    auto AddrStr = AddrCol.starts_with("0x") ? AddrCol.drop_front(2) : AddrCol;
 
     uint64_t Addr;
-    if (AddrCol.empty() || AddrCol.getAsInteger(16, Addr)) {
+    if (AddrStr.empty() || AddrStr.getAsInteger(16, Addr)) {
       Out << Row << "\n";
       continue;
     }
@@ -132,13 +131,14 @@ std::string DumpedSymbolTable::symbolicate(StringRef Backtrace) {
     auto I = SymbolInfos.upper_bound(Addr);
 
     // If no JIT symbol entry within 2Gb then skip.
-    if (I == SymbolInfos.begin() || (Addr - I->first >= 1U << 31)) {
+    if (I == SymbolInfos.begin() ||
+        (Addr - std::prev(I)->first >= 1U << 31)) {
       Out << Row << "\n";
       continue;
     }
 
     // Found a symbol. Output modified line.
-    auto &[SymAddr, SymInfo] = *(--I);
+    auto &[SymAddr, SymInfo] = *std::prev(I);
     Out << RowStart << " " << AddrCol << " " << SymInfo.SymName;
     if (auto Delta = Addr - SymAddr)
       Out << " + " << formatv("{0}", Delta);
