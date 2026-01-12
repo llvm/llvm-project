@@ -33,8 +33,7 @@ void SYCLInstallationDetector::addSYCLIncludeArgs(
   // Add the SYCL header search locations.
   // These are included for both SYCL host and device compilations.
   SmallString<128> IncludePath(D.Dir);
-  llvm::sys::path::append(IncludePath, "..");
-  llvm::sys::path::append(IncludePath, "include");
+  llvm::sys::path::append(IncludePath, "..", "include");
   CC1Args.push_back("-internal-isystem");
   CC1Args.push_back(DriverArgs.MakeArgString(IncludePath));
 }

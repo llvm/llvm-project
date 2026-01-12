@@ -32,9 +32,9 @@
 // Check if -lsycl is passed to clang-linker-wrapper tool by default for SYCL compilation.
 // RUN: %clang -### -fsycl %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHECK-LSYCL,CHECK-SYCL-HEADERS-HOST,CHECK-SYCL-HEADERS-DEVICE %s
-// CHECK-SYCL-HEADERS-DEVICE: "-fsycl-is-device"{{.*}} "-internal-isystem" "{{.*}}build/bin/../include"
-// CHECK-SYCL-HEADERS-HOST: "-fsycl-is-host"{{.*}} "-internal-isystem" "{{.*}}build/bin/../include"
-// CHECK-LSYCL: clang-linker-wrapper{{.*}} "-L{{.*}}build/bin/../lib"{{.*}} "-lsycl"
+// CHECK-SYCL-HEADERS-DEVICE: "-fsycl-is-device"{{.*}} "-internal-isystem" "{{.*}}bin/../include"
+// CHECK-SYCL-HEADERS-HOST: "-fsycl-is-host"{{.*}} "-internal-isystem" "{{.*}}bin/../include"
+// CHECK-LSYCL: clang-linker-wrapper{{.*}} "-L{{.*}}bin/../lib"{{.*}} "-lsycl"
 
 /// Check -fsycl-is-device is passed when compiling for the device.
 /// Check -fsycl-is-host is passed when compiling for host.
