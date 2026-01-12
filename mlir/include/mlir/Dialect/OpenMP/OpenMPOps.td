@@ -2285,12 +2285,15 @@ def GroupprivateOp : OpenMP_Op<"groupprivate",
     each group having its own copy.
 
     This operation takes in the address of a symbol that represents the original
-    variable, optional DeviceTypeAttr and returns the address of its groupprivate copy.
-    All occurrences of groupprivate variables in a parallel region should
-    use the groupprivate copy returned by this operation.
+    variable and returns the address of its groupprivate copy. The symbol must
+    refer to a global variable so that type information can be obtained from it.
 
     The `sym_addr` refers to the address of the symbol, which is a pointer to
-    the original variable.
+    the original variable. It must be obtained via `llvm.mlir.addressof` from
+    a global variable.
+
+    The optional `device_type` attribute specifies where the groupprivate
+    storage should be allocated (host, nohost, or any).
   }];
 
   let arguments = (ins

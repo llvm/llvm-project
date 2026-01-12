@@ -7112,7 +7112,7 @@ convertOmpGroupprivate(Operation &opInst, llvm::IRBuilderBase &builder,
   bool isTargetDevice = ompBuilder->Config.isTargetDevice();
   auto deviceType = groupprivateOp.getDeviceType();
 
-  // skip allocation based on device_type
+  // Skip allocation based on device_type
   bool shouldAllocate = true;
   if (deviceType.has_value()) {
     switch (*deviceType) {
@@ -7132,30 +7132,45 @@ convertOmpGroupprivate(Operation &opInst, llvm::IRBuilderBase &builder,
   }
 
   Value symAddr = groupprivateOp.getSymAddr();
-  Operation *symOp = symAddr.getDefiningOp();
-
-  LLVM::GlobalOp global =
-      getGlobalFromSymbol(symOp, moduleTranslation, &opInst);
-  if (!global)
-    return failure();
-
-  llvm::GlobalValue *globalValue = moduleTranslation.lookupGlobal(global);
+  llvm::Value *symValue = moduleTranslation.lookupValue(symAddr);
   llvm::Value *resultPtr;
+
+  // Get the element type and variable name from the global.
+  // Groupprivate requires sym_addr to come from a global variable.
+  llvm::Type *varType = nullptr;
+  std::string varName = "omp.groupprivate";
+
+  if (Operation *symOp = symAddr.getDefiningOp()) {
+    if (LLVM::GlobalOp global =
+            getGlobalFromSymbol(symOp, moduleTranslation, nullptr)) {
+      // Get type from the global
+      varType = moduleTranslation.convertType(global.getType());
+      // Get name from the global
+      if (llvm::GlobalValue *globalValue =
+              moduleTranslation.lookupGlobal(global)) {
+        varName = globalValue->getName().str();
+      }
+    }
+  }
+
+  if (!varType) {
+    return opInst.emitError()
+           << "Groupprivate requires sym_addr to reference a global variable";
+  }
 
   if (shouldAllocate) {
     if (isTargetDevice) {
-      // Get the size of the variable
-      llvm::Type *varType = globalValue->getValueType();
       llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
-      // Create a llvm global variable in shared memory
       llvm::Triple targetTriple = llvm::Triple(llvmModule->getTargetTriple());
       if (targetTriple.isAMDGCN() || targetTriple.isNVPTX()) {
-        // Shared address space is 3 for amdgpu and nvptx targets.
+        // Shared address space is 3 for AMDGPU and NVPTX targets.
         unsigned sharedAddressSpace = 3;
         llvm::GlobalVariable *sharedVar = new llvm::GlobalVariable(
-            *llvmModule, varType, false, llvm::GlobalValue::InternalLinkage,
-            llvm::PoisonValue::get(varType), globalValue->getName(), nullptr,
-            llvm::GlobalValue::NotThreadLocal, sharedAddressSpace, false);
+            *llvmModule, varType, /*isConstant=*/false,
+            llvm::GlobalValue::InternalLinkage, llvm::PoisonValue::get(varType),
+            varName, /*InsertBefore=*/nullptr,
+            llvm::GlobalValue::NotThreadLocal, sharedAddressSpace,
+            /*isExternallyInitialized=*/false);
         resultPtr = sharedVar;
       } else {
         return opInst.emitError()
@@ -7163,13 +7178,13 @@ convertOmpGroupprivate(Operation &opInst, llvm::IRBuilderBase &builder,
                << targetTriple.str();
       }
     } else {
-      // Use original global address when allocating on host device.
+      // Use original address when allocating on host device.
       // TODO: Add support for allocating group-private storage on host device.
-      resultPtr = globalValue;
+      resultPtr = symValue;
     }
   } else {
-    // Use original global address when not allocating group-private storage.
-    resultPtr = globalValue;
+    // Use original address when not allocating group-private storage.
+    resultPtr = symValue;
   }
 
   moduleTranslation.mapValue(opInst.getResult(0), resultPtr);
@@ -7184,8 +7199,8 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
 
   if (ompBuilder->Config.isTargetDevice() &&
-      !isa<omp::TargetOp, omp::MapInfoOp, omp::TerminatorOp, omp::YieldOp>(
-          op) &&
+      !isa<omp::TargetOp, omp::MapInfoOp, omp::TerminatorOp, omp::YieldOp,
+           omp::GroupprivateOp>(op) &&
       isHostDeviceOp(op))
     return op->emitOpError() << "unsupported host op found in device";
 
