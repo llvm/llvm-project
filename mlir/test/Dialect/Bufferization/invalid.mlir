@@ -2,7 +2,7 @@
 
 func.func @alloc_tensor_missing_dims(%arg0: index)
 {
-  // expected-error @+1 {{expected 2 dynamic sizes}}
+  // expected-error @+1 {{incorrect number of dynamic sizes, has 1, expected 2}}
   %0 = bufferization.alloc_tensor(%arg0) : tensor<4x?x?x5xf32>
   return
 }
