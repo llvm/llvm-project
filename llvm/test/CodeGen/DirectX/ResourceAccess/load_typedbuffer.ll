@@ -30,7 +30,7 @@ define void @load_float4(i32 %index, i32 %elemindex) {
   ; CHECK: %[[LOAD:.*]] = call { <4 x float>, i1 } @llvm.dx.resource.load.typedbuffer.v4f32.tdx.TypedBuffer_v4f32_1_0_0t(target("dx.TypedBuffer", <4 x float>, 1, 0, 0) %buffer, i32 %index)
   ; CHECK: %[[VALUE:.*]] = extractvalue { <4 x float>, i1 } %[[LOAD]], 0
   ; CHECK: extractelement <4 x float> %[[VALUE]], i32 %elemindex
-  %dynamic = getelementptr inbounds <4 x float>, ptr %ptr, i32 0, i32 %elemindex
+  %dynamic = getelementptr inbounds float, ptr %ptr, i32 %elemindex
   %dyndata = load float, ptr %dynamic
   call void @use_float(float %dyndata)
 

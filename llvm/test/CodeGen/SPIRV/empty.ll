@@ -6,9 +6,9 @@
 
 ; CHECK: OpCapability Addresses
 ; CHECK: "foo"
-define spir_kernel void @foo(i32 addrspace(1)* %a) {
+define spir_kernel void @foo(ptr addrspace(1) %a) {
 entry:
-  %a.addr = alloca i32 addrspace(1)*, align 4
-  store i32 addrspace(1)* %a, i32 addrspace(1)** %a.addr, align 4
+  %a.addr = alloca ptr addrspace(1), align 4
+  store ptr addrspace(1) %a, ptr %a.addr, align 4
   ret void
 }

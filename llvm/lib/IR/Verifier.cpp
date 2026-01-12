@@ -769,6 +769,31 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
                               DL.getIntPtrType(GO->getType()),
                               RangeLikeMetadataKind::AbsoluteSymbol);
     }
+
+    if (GO->hasMetadata(LLVMContext::MD_implicit_ref)) {
+      Check(!GO->isDeclaration(),
+            "ref metadata must not be placed on a declaration", GO);
+
+      SmallVector<MDNode *> MDs;
+      GO->getMetadata(LLVMContext::MD_implicit_ref, MDs);
+      for (const MDNode *MD : MDs) {
+        Check(MD->getNumOperands() == 1, "ref metadata must have one operand",
+              &GV, MD);
+        const Metadata *Op = MD->getOperand(0).get();
+        const auto *VM = dyn_cast_or_null<ValueAsMetadata>(Op);
+        Check(VM, "ref metadata must be ValueAsMetadata", GO, MD);
+        if (VM) {
+          Check(isa<PointerType>(VM->getValue()->getType()),
+                "ref value must be pointer typed", GV, MD);
+
+          const Value *Stripped = VM->getValue()->stripPointerCastsAndAliases();
+          Check(isa<GlobalObject>(Stripped) || isa<Constant>(Stripped),
+                "ref metadata must point to a GlobalObject", GO, Stripped);
+          Check(Stripped != GO, "values should not reference themselves", GO,
+                MD);
+        }
+      }
+    }
   }
 
   Check(!GV.hasAppendingLinkage() || isa<GlobalVariable>(GV),
@@ -2612,6 +2637,22 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     unsigned UpperBound = FT->getNumParams() + (FT->isVarArg() ? 1 : 0);
     Check(FirstArgIdx > 0 && FirstArgIdx <= UpperBound,
           "modular-format attribute first arg index is out of bounds", V);
+  }
+
+  if (auto A = Attrs.getFnAttr("target-features"); A.isValid()) {
+    StringRef S = A.getValueAsString();
+    if (!S.empty()) {
+      for (auto FeatureFlag : split(S, ',')) {
+        if (FeatureFlag.empty())
+          CheckFailed(
+              "target-features attribute should not contain an empty string");
+        else
+          Check(FeatureFlag[0] == '+' || FeatureFlag[0] == '-',
+                "target feature '" + FeatureFlag +
+                    "' must start with a '+' or '-'",
+                V);
+      }
+    }
   }
 }
 void Verifier::verifyUnknownProfileMetadata(MDNode *MD) {
@@ -5340,19 +5381,12 @@ void Verifier::visitMemProfMetadata(Instruction &I, MDNode *MD) {
     MDNode *StackMD = dyn_cast<MDNode>(MIB->getOperand(0));
     visitCallStackMetadata(StackMD);
 
-    // The next set of 1 or more operands should be MDString.
-    unsigned I = 1;
-    for (; I < MIB->getNumOperands(); ++I) {
-      if (!isa<MDString>(MIB->getOperand(I))) {
-        Check(I > 1,
-              "!memprof MemInfoBlock second operand should be an MDString",
-              MIB);
-        break;
-      }
-    }
+    // The second MIB operand should be MDString.
+    Check(isa<MDString>(MIB->getOperand(1)),
+          "!memprof MemInfoBlock second operand should be an MDString", MIB);
 
     // Any remaining should be MDNode that are pairs of integers
-    for (; I < MIB->getNumOperands(); ++I) {
+    for (unsigned I = 2; I < MIB->getNumOperands(); ++I) {
       MDNode *OpNode = dyn_cast<MDNode>(MIB->getOperand(I));
       Check(OpNode, "Not all !memprof MemInfoBlock operands 2 to N are MDNode",
             MIB);
@@ -6563,23 +6597,31 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
 
     break;
   }
-  case Intrinsic::vector_splice: {
+  case Intrinsic::vector_splice_left:
+  case Intrinsic::vector_splice_right: {
     VectorType *VecTy = cast<VectorType>(Call.getType());
-    int64_t Idx = cast<ConstantInt>(Call.getArgOperand(2))->getSExtValue();
-    int64_t KnownMinNumElements = VecTy->getElementCount().getKnownMinValue();
+    uint64_t Idx = cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue();
+    uint64_t KnownMinNumElements = VecTy->getElementCount().getKnownMinValue();
     if (VecTy->isScalableTy() && Call.getParent() &&
         Call.getParent()->getParent()) {
       AttributeList Attrs = Call.getParent()->getParent()->getAttributes();
       if (Attrs.hasFnAttr(Attribute::VScaleRange))
         KnownMinNumElements *= Attrs.getFnAttrs().getVScaleRangeMin();
     }
-    Check((Idx < 0 && std::abs(Idx) <= KnownMinNumElements) ||
-              (Idx >= 0 && Idx < KnownMinNumElements),
-          "The splice index exceeds the range [-VL, VL-1] where VL is the "
-          "known minimum number of elements in the vector. For scalable "
-          "vectors the minimum number of elements is determined from "
-          "vscale_range.",
-          &Call);
+    if (ID == Intrinsic::vector_splice_left)
+      Check(Idx < KnownMinNumElements,
+            "The splice index exceeds the range [0, VL-1] where VL is the "
+            "known minimum number of elements in the vector. For scalable "
+            "vectors the minimum number of elements is determined from "
+            "vscale_range.",
+            &Call);
+    else
+      Check(Idx <= KnownMinNumElements,
+            "The splice index exceeds the range [0, VL] where VL is the "
+            "known minimum number of elements in the vector. For scalable "
+            "vectors the minimum number of elements is determined from "
+            "vscale_range.",
+            &Call);
     break;
   }
   case Intrinsic::stepvector: {
