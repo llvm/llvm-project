@@ -213,13 +213,9 @@ LayoutAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
                    DenseI32ArrayAttr inst_data, DenseI32ArrayAttr lane_layout,
                    DenseI32ArrayAttr lane_data, DenseI32ArrayAttr order) {
 
-  // A valid layout must include at least one of sg_layout and lane_layout.
-  // sg_layout is essential for Workgroup layout, while lane_layout is
-  // required for Subgroup layout.
-  if (!sg_layout && !inst_data && !lane_layout) {
-    return emitError()
-           << "expected at least one of sg_layout, inst_data or lane_layout";
-  }
+  // Special case for store_matrix
+  if (!sg_layout && !inst_data && !lane_layout)
+    return success();
 
   // generate code to check sg_laout, inst_data and lane_layout having the same
   // rank if they are not null.
@@ -478,15 +474,14 @@ DistributeLayoutAttr LayoutAttr::setUnitDimLayout(SetVector<int64_t> unitDims) {
 LogicalResult
 SliceAttr::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
                   xegpu::DistributeLayoutAttr parent, DenseI64ArrayAttr dims) {
-  if (!parent || !dims)
-    return emitError() << "expected parent layout and dims attribute";
 
-  int64_t rank = parent.getRank();
+  if (!dims)
+    return emitError() << "expected dims attribute";
 
   // check every element in dims is unique and smaller than rank
   llvm::SmallDenseSet<int64_t> seen;
   for (int64_t dim : dims.asArrayRef()) {
-    if (dim < 0 || dim >= rank)
+    if (dim < 0)
       return emitError() << "invalid dim (" << dim << ") in slice attribute.";
     if (!seen.insert(dim).second)
       return emitError() << "repeated dim (" << dim << ") in slice attribute.";

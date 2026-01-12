@@ -1184,6 +1184,89 @@ struct WgToSgVectorShapeCastOp
   }
 };
 
+static Value createNeutralAccumulator(ConversionPatternRewriter &rewriter,
+                                      Location loc, VectorType type,
+                                      vector::CombiningKind kind) {
+  Type elemTy = type.getElementType();
+
+  switch (kind) {
+  case vector::CombiningKind::ADD:
+  case vector::CombiningKind::XOR:
+  case vector::CombiningKind::OR:
+  case vector::CombiningKind::MAXUI:
+    return arith::ConstantOp::create(
+        rewriter, loc, type,
+        DenseElementsAttr::get(type, rewriter.getZeroAttr(elemTy)));
+
+  case vector::CombiningKind::MUL:
+  case vector::CombiningKind::AND:
+    return arith::ConstantOp::create(
+        rewriter, loc, type,
+        DenseElementsAttr::get(type, rewriter.getOneAttr(elemTy)));
+
+  case vector::CombiningKind::MINSI:
+    // Use max signed int value for signed integer min
+    if (auto intTy = dyn_cast<IntegerType>(elemTy)) {
+      auto maxVal = APInt::getSignedMaxValue(intTy.getWidth());
+      return arith::ConstantOp::create(
+          rewriter, loc, type,
+          DenseElementsAttr::get(type,
+                                 rewriter.getIntegerAttr(elemTy, maxVal)));
+    }
+    return nullptr;
+
+  case vector::CombiningKind::MINUI:
+    if (auto intTy = dyn_cast<IntegerType>(elemTy)) {
+      auto maxVal = APInt::getMaxValue(intTy.getWidth());
+      return arith::ConstantOp::create(
+          rewriter, loc, type,
+          DenseElementsAttr::get(type,
+                                 rewriter.getIntegerAttr(elemTy, maxVal)));
+    }
+    return nullptr;
+
+  case vector::CombiningKind::MAXSI:
+    if (auto intTy = dyn_cast<IntegerType>(elemTy)) {
+      auto minVal = APInt::getSignedMinValue(intTy.getWidth());
+      return arith::ConstantOp::create(
+          rewriter, loc, type,
+          DenseElementsAttr::get(type,
+                                 rewriter.getIntegerAttr(elemTy, minVal)));
+    }
+    return nullptr;
+
+  case vector::CombiningKind::MAXUI:
+    return arith::ConstantOp::create(
+        rewriter, loc, type,
+        DenseElementsAttr::get(type, rewriter.getZeroAttr(elemTy)));
+
+  case vector::CombiningKind::MINNUMF:
+  case vector::CombiningKind::MINIMUMF:
+    // Use +infinity for float min operations
+    if (auto floatTy = dyn_cast<FloatType>(elemTy)) {
+      auto posInf = APFloat::getInf(floatTy.getFloatSemantics());
+      return arith::ConstantOp::create(
+          rewriter, loc, type,
+          DenseElementsAttr::get(type, rewriter.getFloatAttr(elemTy, posInf)));
+    }
+    return nullptr;
+
+  case vector::CombiningKind::MAXNUMF:
+  case vector::CombiningKind::MAXIMUMF:
+    // Use -infinity for float max operations
+    if (auto floatTy = dyn_cast<FloatType>(elemTy)) {
+      auto negInf = APFloat::getInf(floatTy.getFloatSemantics(), true);
+      return arith::ConstantOp::create(
+          rewriter, loc, type,
+          DenseElementsAttr::get(type, rewriter.getFloatAttr(elemTy, negInf)));
+    }
+    return nullptr;
+
+  default:
+    return nullptr; // Unsupported reduction kind
+  }
+}
+
 /// This function converts multi-dimensional subgroup indices into a single
 /// linear offset. It's used to calculate memory offsets in SLM for
 /// cross-subgroup reduction coordination.
@@ -1303,32 +1386,29 @@ struct WgToSgMultiDimReductionOp
     VectorType newDstType = VectorType::get(sgShape, elemTy);
     for (auto sgSrc : adaptor.getSource()) {
       // Create ZERO accumulator for local reduction
-      auto zeroLocalAcc = arith::ConstantOp::create(
-          rewriter, loc, newDstType,
-          DenseElementsAttr::get(newDstType, rewriter.getZeroAttr(elemTy)));
+      auto neutralLocalAcc =
+          createNeutralAccumulator(rewriter, loc, newDstType, op.getKind());
       // Local reduction with ZERO accumulator
       auto localReduce = vector::MultiDimReductionOp::create(
-          rewriter, loc, newDstType, op.getKind(), sgSrc,
-          zeroLocalAcc.getResult(), reductionDims);
+          rewriter, loc, newDstType, op.getKind(), sgSrc, neutralLocalAcc,
+          reductionDims);
       localReductions.push_back(localReduce.getResult());
     }
 
     // Check if cross-subgroup reduction is needed for any reduction dimension
-    bool needsCrossSubgroupReduction = false;
     SmallVector<int64_t> crossSgReductionDims;
     for (int64_t reductionDim : reductionDims) {
-      bool needsCrossSg =
+      bool needsCrossSubgroupReduction =
           (sgLayout[reductionDim] > 1) &&
           (sgData[reductionDim] < originalSrcShape[reductionDim]);
 
-      if (needsCrossSg) {
-        needsCrossSubgroupReduction = true;
+      if (needsCrossSubgroupReduction) {
         crossSgReductionDims.push_back(reductionDim);
       }
     }
 
     // If no cross-subgroup reduction needed, add accumulator and return
-    if (!needsCrossSubgroupReduction) {
+    if (crossSgReductionDims.empty()) {
       SmallVector<Value> results;
       for (auto localResult : localReductions) {
         auto finalResult = vector::makeArithReduction(
@@ -1419,8 +1499,15 @@ struct WgToSgMultiDimReductionOp
 
     SmallVector<OpFoldResult> storeOffsets2D = {rowOffsetStore, colOffset};
 
+    auto storeMatrixLayout = xegpu::SliceAttr::get(
+        rewriter.getContext(),
+        xegpu::LayoutAttr::get(rewriter.getContext(), /*sg_layout =*/nullptr,
+                               /*sg_data =*/nullptr,
+                               /*inst_data =*/nullptr, /*lane_layout =*/nullptr,
+                               /*lane_data =*/nullptr, /*order =*/nullptr),
+        dyn_cast<xegpu::SliceAttr>(layout).getDims());
     xegpu::StoreMatrixOp::create(rewriter, loc, storeData, memDesc.getResult(),
-                                 storeOffsets2D, /*layout=*/nullptr);
+                                 storeOffsets2D, /*layout=*/storeMatrixLayout);
 
     gpu::BarrierOp::create(rewriter, loc);
 
@@ -1443,14 +1530,12 @@ struct WgToSgMultiDimReductionOp
     SmallVector<int64_t> finalResultShape = {localElements};
     VectorType finalResultType = VectorType::get(finalResultShape, elemTy);
 
-    // Create ZERO accumulator for final reduction
-    auto zeroFinalAcc = arith::ConstantOp::create(
-        rewriter, loc, finalResultType,
-        DenseElementsAttr::get(finalResultType, rewriter.getZeroAttr(elemTy)));
+    auto neutralFinalAcc =
+        createNeutralAccumulator(rewriter, loc, finalResultType, op.getKind());
 
     auto finalReduce = vector::MultiDimReductionOp::create(
         rewriter, loc, finalResultType, op.getKind(), loadOp.getResult(),
-        zeroFinalAcc.getResult(), finalReductionDims);
+        neutralFinalAcc, finalReductionDims);
 
     // Step 7: Add the original accumulator at the end
     Value originalAcc = adaptor.getAcc()[0];
