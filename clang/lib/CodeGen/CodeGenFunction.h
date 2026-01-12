@@ -1662,9 +1662,31 @@ public:
   void markStmtAsUsed(bool Skipped, const Stmt *S);
   void markStmtMaybeUsed(const Stmt *S);
 
+  /// Used to specify which counter in a pair shall be incremented.
+  /// For non-binary counters, a skip counter is derived as (Parent - Exec).
+  /// In contrast for binary counters, a skip counter cannot be computed from
+  /// the Parent counter. In such cases, dedicated SkipPath counters must be
+  /// allocated and marked (incremented as binary counters). (Parent can be
+  /// synthesized with (Exec + Skip) in simple cases)
+  enum CounterForIncrement {
+    UseExecPath = 0, ///< Exec (true)
+    UseSkipPath,     ///< Skip (false)
+  };
+
   /// Increment the profiler's counter for the given statement by \p StepV.
   /// If \p StepV is null, the default increment is 1.
-  void incrementProfileCounter(const Stmt *S, llvm::Value *StepV = nullptr);
+  void incrementProfileCounter(const Stmt *S, llvm::Value *StepV = nullptr) {
+    incrementProfileCounter(UseExecPath, S, false, StepV);
+  }
+
+  /// Emit increment of Counter.
+  /// \param ExecSkip Use `Skipped` Counter if UseSkipPath is specified.
+  /// \param S The Stmt that Counter is associated.
+  /// \param UseBoth Mark both Exec/Skip as used. (for verification)
+  /// \param StepV The offset Value for adding to Counter.
+  void incrementProfileCounter(CounterForIncrement ExecSkip, const Stmt *S,
+                               bool UseBoth = false,
+                               llvm::Value *StepV = nullptr);
 
   bool isMCDCCoverageEnabled() const {
     return (CGM.getCodeGenOpts().hasProfileClangInstr() &&

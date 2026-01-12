@@ -29,7 +29,6 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/FormatString.h"
 #include "clang/AST/IgnoreExpr.h"
-#include "clang/AST/Mangle.h"
 #include "clang/AST/NSAPI.h"
 #include "clang/AST/NonTrivialTypeVisitor.h"
 #include "clang/AST/OperationKinds.h"
@@ -47,7 +46,6 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/OpenCLOptions.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/PartialDiagnostic.h"
@@ -1140,53 +1138,6 @@ static bool ProcessFormatStringLiteral(const Expr *FormatExpr,
     return true;
   }
   return false;
-}
-
-/// Returns true if:
-/// - The sanitizers are enabled.
-/// - `Decl` does not have attributes preventing sanitizer instrumentation.
-/// - `Decl` or its location is not included in the no-sanitize list.
-static bool isSanitizationEnabledForDecl(ASTContext &Context,
-                                         const NamedDecl *Decl,
-                                         SanitizerMask TheSanitizerMask) {
-  // Check that the sanitizer is enabled globally.
-  const SanitizerMask EnabledSanitizerMask =
-      Context.getLangOpts().Sanitize.Mask;
-  if (!(EnabledSanitizerMask & TheSanitizerMask))
-    return false;
-
-  // Check that the source file is not included in the no sanitize list.
-  const auto &NoSanitizeList = Context.getNoSanitizeList();
-  if (NoSanitizeList.containsLocation(TheSanitizerMask,
-                                      Decl->getSourceRange().getBegin()))
-    return false;
-
-  // Check that the declaration name is not included in the no sanitize list.
-  // NB no-sanitize lists use mangled names.
-  std::unique_ptr<MangleContext> MC(Context.createMangleContext());
-  std::string MangledName;
-  if (MC->shouldMangleDeclName(Decl)) {
-    llvm::raw_string_ostream S = llvm::raw_string_ostream(MangledName);
-    MC->mangleName(Decl, S);
-  } else {
-    MangledName = Decl->getName();
-  }
-  if (NoSanitizeList.containsFunction(TheSanitizerMask, MangledName))
-    return false;
-
-  // Check that the declaration does not have the
-  // "disable_sanitizer_instrumentation" attribute.
-  if (Decl->hasAttr<DisableSanitizerInstrumentationAttr>())
-    return false;
-
-  // Check that the declaration does not have a "no_sanitize" attribute matching
-  // this sanitizer mask.
-  for (const NoSanitizeAttr *Attr : Decl->specific_attrs<NoSanitizeAttr>()) {
-    if (Attr->getMask() & TheSanitizerMask)
-      return false;
-  }
-
-  return true;
 }
 
 void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
@@ -4270,7 +4221,6 @@ bool Sema::CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
   CheckAbsoluteValueFunction(TheCall, FDecl);
   CheckMaxUnsignedZero(TheCall, FDecl);
   CheckInfNaNFunction(TheCall, FDecl);
-  CheckUseOfAtomicThreadFenceWithTSan(TheCall, FDecl);
 
   if (getLangOpts().ObjC)
     ObjC().DiagnoseCStringFormatDirectiveInCFAPI(FDecl, Args, NumArgs);
@@ -10145,23 +10095,6 @@ void Sema::CheckMaxUnsignedZero(const CallExpr *Call,
   Diag(Call->getExprLoc(), diag::note_remove_max_call)
         << FixItHint::CreateRemoval(Call->getCallee()->getSourceRange())
         << FixItHint::CreateRemoval(RemovalRange);
-}
-
-//===--- CHECK: Warn on use of `std::atomic_thread_fence` with TSan. ------===//
-void Sema::CheckUseOfAtomicThreadFenceWithTSan(const CallExpr *Call,
-                                               const FunctionDecl *FDecl) {
-  // Thread sanitizer currently does not support `std::atomic_thread_fence`,
-  // leading to false positives. Example issue:
-  // https://github.com/llvm/llvm-project/issues/52942
-
-  if (!Call || !FDecl || !IsStdFunction(FDecl, "atomic_thread_fence"))
-    return;
-
-  const NamedDecl *Caller = getCurFunctionOrMethodDecl(/*AllowLambda=*/true);
-  if (!isSanitizationEnabledForDecl(Context, Caller, SanitizerKind::Thread))
-    return;
-
-  Diag(Call->getExprLoc(), diag::warn_atomic_thread_fence_with_tsan);
 }
 
 //===--- CHECK: Standard memory functions ---------------------------------===//
