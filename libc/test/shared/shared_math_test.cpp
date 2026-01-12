@@ -41,6 +41,8 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
       0.75f16, LIBC_NAMESPACE::shared::frexpf16(24.0f16, &exponent));
   EXPECT_EQ(exponent, 5);
 
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::ilogbf16(1.0f16));
+
   EXPECT_FP_EQ(0x1.921fb6p+0f16, LIBC_NAMESPACE::shared::acosf16(0.0f16));
 }
 
@@ -90,6 +92,7 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
   EXPECT_FP_EQ(0x1p+0, LIBC_NAMESPACE::shared::exp2(0.0));
   EXPECT_FP_EQ(0x1p+0, LIBC_NAMESPACE::shared::exp10(0.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::expm1(0.0));
+  EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::log(1.0));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::sin(0.0));
 }
 

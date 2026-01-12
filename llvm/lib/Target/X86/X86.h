@@ -210,7 +210,13 @@ FunctionPass *createX86CmovConversionLegacyPass();
 /// certain byte and word instructions by equivalent 32 bit instructions,
 /// in order to eliminate partial register usage, false dependences on
 /// the upper portions of registers, and to save code size.
-FunctionPass *createX86FixupBWInsts();
+class X86FixupBWInstsPass : public PassInfoMixin<X86FixupBWInstsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86FixupBWInstsLegacyPass();
 
 /// Return a Machine IR pass that reassigns instruction chains from one domain
 /// to another, when profitable.
@@ -302,7 +308,7 @@ FunctionPass *createX86ArgumentStackSlotPass();
 FunctionPass *createX86SuppressAPXForRelocationPass();
 
 void initializeCompressEVEXLegacyPass(PassRegistry &);
-void initializeFixupBWInstPassPass(PassRegistry &);
+void initializeX86FixupBWInstLegacyPass(PassRegistry &);
 void initializeFixupLEAsLegacyPass(PassRegistry &);
 void initializeX86ArgumentStackSlotPassPass(PassRegistry &);
 void initializeX86AsmPrinterPass(PassRegistry &);
