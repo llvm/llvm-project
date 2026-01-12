@@ -70,7 +70,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeX86LowerAMXIntrinsicsLegacyPassPass(PR);
   initializeX86LowerAMXTypeLegacyPassPass(PR);
-  initializeX86PreTileConfigPass(PR);
+  initializeX86PreTileConfigLegacyPass(PR);
   initializeGlobalISel(PR);
   initializeWinEHStatePassPass(PR);
   initializeX86FixupBWInstLegacyPass(PR);
@@ -527,7 +527,7 @@ void X86PassConfig::addPreRegAlloc() {
   addPass(createX86DynAllocaExpanderLegacyPass());
 
   if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(createX86PreTileConfigPass());
+    addPass(createX86PreTileConfigLegacyPass());
   else
     addPass(createX86FastPreTileConfigLegacyPass());
 }
