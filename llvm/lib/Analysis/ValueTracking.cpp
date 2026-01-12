@@ -5884,7 +5884,25 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     // Unreachable blocks may have zero-operand PHI nodes.
     if (P->getNumIncomingValues() == 0)
       break;
-
+    // Look for the case of a for loop which has a positive
+    // initial value and is incremented by a squared value.
+    // This will propogate sign information out of such loops.
+    if (P->getNumIncomingValues() == 2) {
+      Value *Start = P->getIncomingValue(0);
+      Value *RecurValue = P->getIncomingValue(1);
+      Value *X;
+      if (match(RecurValue,
+                m_Intrinsic<Intrinsic::fmuladd>(m_Value(X), m_Value(X), m_Specific(P)))) {
+        KnownFPClass KnownStart;
+        computeKnownFPClass(Start, DemandedElts,
+                            KnownFPClass::OrderedLessThanZeroMask, KnownStart,
+                            Q, Depth + 1);
+        if (KnownStart.cannotBeOrderedLessThanZero()) {
+          Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
+        }
+        break;
+      }
+    }
     // Otherwise take the unions of the known bit sets of the operands,
     // taking conservative care to avoid excessive recursion.
     const unsigned PhiRecursionLimit = MaxAnalysisRecursionDepth - 2;
