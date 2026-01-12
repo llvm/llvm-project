@@ -112,13 +112,13 @@ rpc::Status handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
         for (uint32_t idx = 0; idx < ab->NumSendXfers; idx++) {
           numSendXfers++;
           devXfers[id] = (void *)*((uint64_t *)ab->argptr);
-          XferSzs[id] = (size_t) * ((size_t *)(ab->argptr + sizeof(void *)));
+          XferSzs[id] = (size_t)*((size_t *)(ab->argptr + sizeof(void *)));
           emisSkipXferArgSet(ab);
         }
         // Allocate the host space for the receive Xfers
         for (uint32_t idx = 0; idx < ab->NumRecvXfers; idx++) {
           void *devAddr = (void *)*((uint64_t *)ab->argptr);
-          size_t devSz = (size_t) * ((size_t *)(ab->argptr + sizeof(void *)));
+          size_t devSz = (size_t)*((size_t *)(ab->argptr + sizeof(void *)));
           void *hostAddr = new char[devSz];
           D2HAddrList.insert(std::pair<void *, void *>(devAddr, hostAddr));
           emisSkipXferArgSet(ab);
@@ -174,7 +174,7 @@ rpc::Status handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
           void *devAddr = (void *)*((uint64_t *)ab->argptr);
           recvXfers[id] = D2HAddrList[devAddr];
           recvXferSzs[id] =
-              (uint64_t) * ((size_t *)(ab->argptr + sizeof(void *)));
+              (uint64_t)*((size_t *)(ab->argptr + sizeof(void *)));
           emisSkipXferArgSet(ab);
         }
         id++;

@@ -276,7 +276,7 @@ static service_rc emissary_pfBuildValist(emissary_ValistExt_t *valist,
       if (numbits == 1) { // This is a pointer to string
         num_bytes = 4;
         bytes_consumed = num_bytes;
-        strsz = (size_t) * (unsigned int *)dataptr;
+        strsz = (size_t)*(unsigned int *)dataptr;
         if ((*data_not_used) < bytes_consumed)
           return _ERC_DATA_USED_ERROR;
         if (emissary_pfAddString(valist, (char *)&strptr, strsz, &stacksize))
@@ -355,7 +355,7 @@ static service_rc emissary_fprintf(uint *rc, emisArgBuf_t *ab) {
   // Skip past the format string
   ab->NumArgs--;
   ab->keyptr += 4;
-  size_t abstrsz = (size_t) * (unsigned int *)ab->argptr;
+  size_t abstrsz = (size_t)*(unsigned int *)ab->argptr;
   ab->strptr += abstrsz;
   ab->argptr += 4;
   ab->data_not_used -= 4;
@@ -389,7 +389,7 @@ static service_rc emissary_printf(uint *rc, emisArgBuf_t *ab) {
   // Skip past the format string
   ab->NumArgs--;
   ab->keyptr += 4;
-  size_t abstrsz = (size_t) * (unsigned int *)ab->argptr;
+  size_t abstrsz = (size_t)*(unsigned int *)ab->argptr;
   ab->strptr += abstrsz;
   ab->argptr += 4;
   ab->data_not_used -= 4;

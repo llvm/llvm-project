@@ -8940,11 +8940,13 @@ def fopenmp_host_ir_file_path : Separate<["-"], "fopenmp-host-ir-file-path">,
 
 } // let Visibility = [CC1Option, FC1Option]
 
-defm use_emissary_print: BoolFOption<"use-emissary-print",
-  LangOpts<"UseEmissaryPrint">, DefaultTrue,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
-  "Enable use of Emissary printf/fprint overriding device libc printf/fprintf">,
-  NegFlag<SetFalse>>;
+defm use_emissary_print
+    : BoolFOption<"use-emissary-print", LangOpts<"UseEmissaryPrint">,
+                  DefaultTrue,
+                  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+                          "Enable use of Emissary printf/fprint overriding "
+                          "device libc printf/fprintf">,
+                  NegFlag<SetFalse>>;
 
 //===----------------------------------------------------------------------===//
 // Coarray Options

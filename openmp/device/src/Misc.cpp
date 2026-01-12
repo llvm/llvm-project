@@ -174,7 +174,7 @@ unsigned long long __llvm_emissary_rpc_dm(uint32_t sz32, void *bufdata) {
   for (uint32_t idx = 0; idx < NumSendXfers; idx++) {
     void *D2Hdata = (void *)*((uint64_t *)argptr);
     argptr += sizeof(void *);
-    size_t D2Hsize = (size_t) * ((size_t *)argptr);
+    size_t D2Hsize = (size_t)*((size_t *)argptr);
     argptr += sizeof(size_t);
     Port.send_n(D2Hdata, D2Hsize);
   }

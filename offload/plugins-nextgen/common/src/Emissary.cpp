@@ -196,7 +196,7 @@ EmissaryBuildVargs(int NumArgs, char *keyptr, char *dataptr, char *strptr,
       if (numbits == 1) { // This is a pointer to string
         num_bytes = 4;
         bytes_consumed = num_bytes;
-        strsz = (size_t) * (unsigned int *)dataptr;
+        strsz = (size_t)*(unsigned int *)dataptr;
         if ((*data_not_used) < bytes_consumed)
           return _ERC_DATA_USED_ERROR;
         a[argcount] = (emis_argptr_t *)((char *)strptr);

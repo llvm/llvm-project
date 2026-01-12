@@ -33,8 +33,8 @@ typedef enum {
 /// The vargs function used by emissary API device stubs
 unsigned long long _emissary_exec(unsigned long long, ...);
 
-//#define _PACK_EMIS_IDS(x, y)                                                   \
-//  ((unsigned long long)x << 32) | ((unsigned long long)y)
+// #define _PACK_EMIS_IDS(x, y) \
+//   ((unsigned long long)x << 32) | ((unsigned long long)y)
 
 #define _PACK_EMIS_IDS(a, b, c, d)                                             \
   ((unsigned long long)a << 48) | ((unsigned long long)b << 32) |              \
