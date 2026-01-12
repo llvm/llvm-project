@@ -341,9 +341,13 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       Copy->setOperand(1, getValueForPart(Op, Part));
       continue;
     }
-    if (auto *WideCanIV = dyn_cast<VPWidenCanonicalIVRecipe>(&R)) {
-      VPBuilder Builder(WideCanIV);
-      Type *IndexTy = Plan.getVectorLoopRegion()->getCanonicalIVType();
+    if (isa<VPVectorPointerRecipe, VPWidenCanonicalIVRecipe>(R)) {
+      VPBuilder Builder(&R);
+      const DataLayout &DL = Plan.getDataLayout();
+      Type *IndexTy =
+          isa<VPWidenCanonicalIVRecipe>(R)
+              ? Plan.getVectorLoopRegion()->getCanonicalIVType()
+              : DL.getIndexType(TypeInfo.inferScalarType(R.getVPSingleValue()));
       Type *VFTy = Plan.getVF().getType();
       VPValue *VF = Builder.createScalarZExtOrTrunc(
           &Plan.getVF(), IndexTy, VFTy, DebugLoc::getUnknown());
@@ -352,27 +356,6 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
           Instruction::Mul, {VF, Plan.getConstantInt(IndexTy, Part)},
           {true, true});
       Copy->addOperand(VFxPart);
-      continue;
-    }
-    if (auto *VPR = dyn_cast<VPVectorPointerRecipe>(&R)) {
-      VPBuilder Builder(VPR);
-      const DataLayout &DL = Plan.getDataLayout();
-      Type *IndexTy = DL.getIndexType(TypeInfo.inferScalarType(VPR));
-      Type *VFTy = Plan.getVF().getType();
-      VPValue *VF = Builder.createScalarZExtOrTrunc(
-          &Plan.getVF(), IndexTy, VFTy, DebugLoc::getUnknown());
-      // VFxUF does not wrap, so VF * Part also cannot wrap.
-      VPValue *VFxPart = Builder.createOverflowingOp(
-          Instruction::Mul, {VF, Plan.getConstantInt(IndexTy, Part)},
-          {true, true});
-      VPValue *Stride = Builder.createScalarZExtOrTrunc(
-          VPR->getStride(), IndexTy,
-          TypeInfo.inferScalarType(VPR->getStride()), DebugLoc::getUnknown());
-      VPValue *Offset =
-          Builder.createOverflowingOp(Instruction::Mul, {VFxPart, Stride});
-      Copy->setOperand(0, VPR->getOperand(0));
-      Copy->setOperand(1, VPR->getOperand(1));
-      Copy->addOperand(Offset);
       continue;
     }
     if (auto *Red = dyn_cast<VPReductionRecipe>(&R)) {
