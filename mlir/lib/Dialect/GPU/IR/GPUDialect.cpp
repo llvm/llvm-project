@@ -396,6 +396,8 @@ LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
     return verifyKnownLaunchSizeAttr(op, attr);
   if (attr.getName() == getKnownGridSizeAttrHelper().getName())
     return verifyKnownLaunchSizeAttr(op, attr);
+  if (attr.getName() == getKnownClusterSizeAttrHelper().getName())
+    return verifyKnownLaunchSizeAttr(op, attr);
   if (!llvm::isa<UnitAttr>(attr.getValue()) ||
       attr.getName() != getContainerModuleAttrName())
     return success();
@@ -1466,19 +1468,15 @@ LogicalResult RotateOp::verify() {
 // BarrierOp
 //===----------------------------------------------------------------------===//
 
-namespace {
-
 /// Remove gpu.barrier after gpu.barrier, the threads are already synchronized!
-LogicalResult eraseRedundantGpuBarrierOps(BarrierOp op,
-                                          PatternRewriter &rewriter) {
+static LogicalResult eraseRedundantGpuBarrierOps(BarrierOp op,
+                                                 PatternRewriter &rewriter) {
   if (isa_and_nonnull<BarrierOp>(op->getNextNode())) {
     rewriter.eraseOp(op);
     return success();
   }
   return failure();
 }
-
-} // end anonymous namespace
 
 void BarrierOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {

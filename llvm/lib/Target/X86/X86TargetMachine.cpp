@@ -73,7 +73,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86PreTileConfigPass(PR);
   initializeGlobalISel(PR);
   initializeWinEHStatePassPass(PR);
-  initializeFixupBWInstPassPass(PR);
+  initializeX86FixupBWInstLegacyPass(PR);
   initializeCompressEVEXLegacyPass(PR);
   initializeFixupLEAsLegacyPass(PR);
   initializeX86FPStackifierLegacyPass(PR);
@@ -82,7 +82,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86CmovConversionLegacyPass(PR);
   initializeX86TileConfigPass(PR);
   initializeX86FastPreTileConfigLegacyPass(PR);
-  initializeX86FastTileConfigPass(PR);
+  initializeX86FastTileConfigLegacyPass(PR);
   initializeKCFIPass(PR);
   initializeX86LowerTileCopyPass(PR);
   initializeX86ExpandPseudoLegacyPass(PR);
@@ -564,7 +564,7 @@ void X86PassConfig::addPreEmitPass() {
   addPass(createX86IssueVZeroUpperPass());
 
   if (getOptLevel() != CodeGenOptLevel::None) {
-    addPass(createX86FixupBWInsts());
+    addPass(createX86FixupBWInstsLegacyPass());
     addPass(createX86PadShortFunctions());
     addPass(createX86FixupLEAsLegacyPass());
     addPass(createX86FixupInstTuning());
@@ -635,7 +635,7 @@ void X86PassConfig::addPreEmitPass2() {
 }
 
 bool X86PassConfig::addPostFastRegAllocRewrite() {
-  addPass(createX86FastTileConfigPass());
+  addPass(createX86FastTileConfigLegacyPass());
   return true;
 }
 
