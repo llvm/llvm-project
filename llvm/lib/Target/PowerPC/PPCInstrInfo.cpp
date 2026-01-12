@@ -3013,7 +3013,18 @@ unsigned PPCInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return Opers.getNumPatchBytes();
   } else if (Opcode == TargetOpcode::PATCHPOINT) {
     PatchPointOpers Opers(&MI);
-    return Opers.getNumPatchBytes();
+    // The call sequence is up to 44 bytes large.
+    // TODO: Per LangRef the client must ensure that the number of bytes is
+    // large enough, but many tests use patchpoint with 40 bytes.
+    return std::max(Opers.getNumPatchBytes(), 44u);
+  } else if (Opcode == TargetOpcode::PATCHABLE_FUNCTION_ENTER) {
+    const MachineFunction *MF = MI.getParent()->getParent();
+    const Function &F = MF->getFunction();
+    unsigned Num = 0;
+    (void)F.getFnAttribute("patchable-function-entry")
+        .getValueAsString()
+        .getAsInteger(10, Num);
+    return Num * 4;
   } else {
     return get(Opcode).getSize();
   }
