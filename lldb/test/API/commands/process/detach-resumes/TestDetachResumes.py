@@ -14,7 +14,6 @@ class DetachResumesTestCase(TestBase):
 
     @skipIf(
         oslist=["windows"],
-        archs=["x86_64"],
         bugnumber="github.com/llvm/llvm-project/issues/144891",
     )
     def test_detach_resumes(self):
