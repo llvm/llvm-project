@@ -1215,3 +1215,63 @@ define nofpclass(nan norm sub pzero) float @nzero_demands_pnorm_input__round(i1 
   %result = call float @llvm.round.f32(float %select)
   ret float %result
 }
+
+define nofpclass(snan) float @ret_only_only_psub__ceil(float nofpclass(nan inf norm nsub zero) %only.psub) {
+; CHECK-LABEL: define nofpclass(snan) float @ret_only_only_psub__ceil(
+; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ONLY_PSUB:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.ceil.f32(float [[ONLY_PSUB]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.ceil.f32(float %only.psub)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret_only_only_psub__floor(float nofpclass(nan inf norm nsub zero) %only.psub) {
+; CHECK-LABEL: define nofpclass(snan) float @ret_only_only_psub__floor(
+; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ONLY_PSUB:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.floor.f32(float [[ONLY_PSUB]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.floor.f32(float %only.psub)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret_only_only_psub__round(float nofpclass(nan inf norm nsub zero) %only.psub) {
+; CHECK-LABEL: define nofpclass(snan) float @ret_only_only_psub__round(
+; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ONLY_PSUB:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.round.f32(float [[ONLY_PSUB]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.round.f32(float %only.psub)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret_only_only_nsub__ceil(float nofpclass(nan inf norm psub zero) %only.nsub) {
+; CHECK-LABEL: define nofpclass(snan) float @ret_only_only_nsub__ceil(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ONLY_NSUB:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.ceil.f32(float [[ONLY_NSUB]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.ceil.f32(float %only.nsub)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret_only_only_nsub__floor(float nofpclass(nan inf norm psub zero) %only.nsub) {
+; CHECK-LABEL: define nofpclass(snan) float @ret_only_only_nsub__floor(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ONLY_NSUB:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.floor.f32(float [[ONLY_NSUB]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.floor.f32(float %only.nsub)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret_only_only_nsub__round(float nofpclass(nan inf norm psub zero) %only.nsub) {
+; CHECK-LABEL: define nofpclass(snan) float @ret_only_only_nsub__round(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ONLY_NSUB:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.round.f32(float [[ONLY_NSUB]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.round.f32(float %only.nsub)
+  ret float %result
+}
