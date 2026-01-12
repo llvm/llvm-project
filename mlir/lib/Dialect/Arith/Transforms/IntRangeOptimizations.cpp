@@ -538,7 +538,6 @@ struct NarrowLoopBounds final : OpInterfaceRewritePattern<LoopLikeOpInterface> {
               solver, ValueRange{maybeLb, maybeUb, maybeStep, indVar}, ranges)))
         continue;
 
-      const ConstantIntRanges &lbRange = ranges[0];
       const ConstantIntRanges &stepRange = ranges[2];
       const ConstantIntRanges &indVarRange = ranges[3];
 
@@ -567,34 +566,21 @@ struct NarrowLoopBounds final : OpInterfaceRewritePattern<LoopLikeOpInterface> {
         if (castKind == CastKind::None)
           continue;
 
-        // Additional check: ensure indVar + step doesn't overflow.
-        // During loop increment, we compute iv_next = iv_current + step in the
-        // narrowed type. If this overflows, the loop behavior becomes
-        // incorrect. We must check both signed and unsigned ranges since we
-        // don't know whether the loop semantics treat values as signed or
-        // unsigned.
-        unsigned srcWidth = lbRange.smin().getBitWidth();
-        unsigned removedWidth = srcWidth - targetBitwidth;
+        // Check if indVar + step fits in the narrowed type.
+        // This is critical for loop correctness: the loop computes
+        // iv_next = iv_current + step in the narrowed type, then compares
+        // iv_next < ub. If iv_current + step overflows, the comparison may
+        // produce incorrect results and break loop termination.
+        // Both signed and unsigned interpretations must fit because loop
+        // semantics are unknown (e.g., index type is signless).
+        ConstantIntRanges indVarPlusStepRange(
+            indVarRange.smin().sadd_sat(stepRange.smin()),
+            indVarRange.smax().sadd_sat(stepRange.smax()),
+            indVarRange.umin().uadd_sat(stepRange.umin()),
+            indVarRange.umax().uadd_sat(stepRange.umax()));
 
-        // Check that max(indVar) + step fits in the target type.
-        APInt indVarPlusStepSmin =
-            indVarRange.smin().sadd_sat(stepRange.smin());
-        APInt indVarPlusStepSmax =
-            indVarRange.smax().sadd_sat(stepRange.smax());
-        APInt indVarPlusStepUmin =
-            indVarRange.umin().uadd_sat(stepRange.umin());
-        APInt indVarPlusStepUmax =
-            indVarRange.umax().uadd_sat(stepRange.umax());
-
-        bool indVarPlusStepFitsSigned =
-            indVarPlusStepSmin.getNumSignBits() >= (removedWidth + 1) &&
-            indVarPlusStepSmax.getNumSignBits() >= (removedWidth + 1);
-        bool indVarPlusStepFitsUnsigned =
-            indVarPlusStepUmin.countLeadingZeros() >= removedWidth &&
-            indVarPlusStepUmax.countLeadingZeros() >= removedWidth;
-
-        // Both signed and unsigned must fit since loop semantics are unknown.
-        if (!indVarPlusStepFitsSigned || !indVarPlusStepFitsUnsigned)
+        if (checkTruncatability(indVarPlusStepRange, targetBitwidth) !=
+            CastKind::Both)
           continue;
 
         // Narrow the bounds and step values.
