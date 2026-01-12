@@ -32,6 +32,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
+
+#include <AST.h>
 #include <algorithm>
 #include <optional>
 
@@ -1024,6 +1026,10 @@ public:
 private:
   HighlightingsBuilder &H;
 };
+
+SymbolTags toSymbolTagBitmask(const SymbolTag ST) {
+  return (1 << static_cast<unsigned>(ST));
+}
 } // namespace
 
 std::vector<HighlightingToken>
@@ -1055,22 +1061,31 @@ getSemanticHighlightings(ParsedAST &AST, bool IncludeInactiveRegionTokens) {
           }
           if (auto Mod = scopeModifier(Decl))
             Tok.addModifier(*Mod);
-          if (isConst(Decl))
+
+          const auto SymbolTags = computeSymbolTags(*Decl);
+
+          if (SymbolTags & toSymbolTagBitmask(SymbolTag::Deprecated))
+            Tok.addModifier(HighlightingModifier::Deprecated);
+
+          if (SymbolTags & toSymbolTagBitmask(SymbolTag::ReadOnly))
             Tok.addModifier(HighlightingModifier::Readonly);
-          if (isStatic(Decl))
+
+          if (SymbolTags & toSymbolTagBitmask(SymbolTag::Static))
             Tok.addModifier(HighlightingModifier::Static);
-          if (isAbstract(Decl))
-            Tok.addModifier(HighlightingModifier::Abstract);
-          if (isVirtual(Decl))
+
+          if (SymbolTags & toSymbolTagBitmask(SymbolTag::Virtual))
             Tok.addModifier(HighlightingModifier::Virtual);
+
+          if (SymbolTags & toSymbolTagBitmask(SymbolTag::Abstract))
+            Tok.addModifier(HighlightingModifier::Abstract);
+
           if (isDependent(Decl))
             Tok.addModifier(HighlightingModifier::DependentName);
           if (isDefaultLibrary(Decl))
             Tok.addModifier(HighlightingModifier::DefaultLibrary);
-          if (Decl->isDeprecated())
-            Tok.addModifier(HighlightingModifier::Deprecated);
           if (isa<CXXConstructorDecl>(Decl))
             Tok.addModifier(HighlightingModifier::ConstructorOrDestructor);
+
           if (R.IsDecl) {
             // Do not treat an UnresolvedUsingValueDecl as a declaration.
             // It's more common to think of it as a reference to the

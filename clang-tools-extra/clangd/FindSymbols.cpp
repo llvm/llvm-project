@@ -30,41 +30,47 @@
 namespace clang {
 namespace clangd {
 
+namespace {
+SymbolTags toSymbolTagBitmask(const SymbolTag ST) {
+  return (1 << static_cast<unsigned>(ST));
+}
+}
+
 std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND) {
   const auto SymbolTags = computeSymbolTags(ND);
   std::vector<SymbolTag> Tags;
 
-  if (SymbolTags & 1 << static_cast<unsigned>(SymbolTag::Deprecated))
+  if (SymbolTags & toSymbolTagBitmask(SymbolTag::Deprecated))
     Tags.push_back(SymbolTag::Deprecated);
 
-  if (SymbolTags & 1 << static_cast<unsigned>(SymbolTag::ReadOnly))
+  if (SymbolTags & toSymbolTagBitmask(SymbolTag::ReadOnly))
     Tags.push_back(SymbolTag::ReadOnly);
 
-  if (SymbolTags & 1 << static_cast<unsigned>(SymbolTag::Static))
+  if (SymbolTags & toSymbolTagBitmask(SymbolTag::Static))
     Tags.push_back(SymbolTag::Static);
 
-  if (SymbolTags & 1 << static_cast<unsigned>(SymbolTag::Virtual))
+  if (SymbolTags & toSymbolTagBitmask(SymbolTag::Virtual))
     Tags.push_back(SymbolTag::Virtual);
 
-  if (SymbolTags & 1 << static_cast<unsigned>(SymbolTag::Abstract))
+  if (SymbolTags & toSymbolTagBitmask(SymbolTag::Abstract))
     Tags.push_back(SymbolTag::Abstract);
 
-  if (SymbolTags & 1 << static_cast<unsigned>(SymbolTag::Final))
+  if (SymbolTags & toSymbolTagBitmask(SymbolTag::Final))
     Tags.push_back(SymbolTag::Final);
 
-  if (SymbolTags & 1 << static_cast<unsigned>(SymbolTag::Definition))
+  if (SymbolTags & toSymbolTagBitmask(SymbolTag::Definition))
     Tags.push_back(SymbolTag::Definition);
 
-  if (SymbolTags & 1 << static_cast<unsigned>(SymbolTag::Declaration))
+  if (SymbolTags & toSymbolTagBitmask(SymbolTag::Declaration))
     Tags.push_back(SymbolTag::Declaration);
 
-   if (SymbolTags & 1 << static_cast<unsigned>(SymbolTag::Public))
+   if (SymbolTags & toSymbolTagBitmask(SymbolTag::Public))
      Tags.push_back(SymbolTag::Public);
 
-  if (SymbolTags & 1 << static_cast<unsigned>(SymbolTag::Protected))
+  if (SymbolTags & toSymbolTagBitmask(SymbolTag::Protected))
     Tags.push_back(SymbolTag::Protected);
 
-  if (SymbolTags & 1 << static_cast<unsigned>(SymbolTag::Private))
+  if (SymbolTags & toSymbolTagBitmask(SymbolTag::Private))
     Tags.push_back(SymbolTag::Private);
 
   return Tags;

@@ -618,6 +618,10 @@ public:
 
   QualType DeducedType;
 };
+
+SymbolTags toSymbolTagBitmask(const SymbolTag ST) {
+  return (1 << static_cast<unsigned>(ST));
+}
 } // namespace
 
 std::optional<QualType> getDeducedType(ASTContext &ASTCtx,
@@ -1119,37 +1123,40 @@ SymbolTags computeSymbolTags(const NamedDecl &ND) {
   SymbolTags result = 0;
 
   if (ND.isDeprecated())
-    result |= 1 << static_cast<unsigned>(SymbolTag::Deprecated);
+    result |= toSymbolTagBitmask(SymbolTag::Deprecated);
 
   if (isConst(&ND))
-    result |= 1 << static_cast<unsigned>(SymbolTag::ReadOnly);
+    result |= toSymbolTagBitmask(SymbolTag::ReadOnly);
 
   if (isStatic(&ND))
-    result |= 1 << static_cast<unsigned>(SymbolTag::Static);
+    result |= toSymbolTagBitmask(SymbolTag::Static);
 
   if (isVirtual(&ND))
-    result |= 1 << static_cast<unsigned>(SymbolTag::Virtual);
+    result |= toSymbolTagBitmask(SymbolTag::Virtual);
 
   if (isAbstract(&ND))
-    result |= 1 << static_cast<unsigned>(SymbolTag::Abstract);
+    result |= toSymbolTagBitmask(SymbolTag::Abstract);
 
   if (isFinal(&ND))
-    result |= 1 << static_cast<unsigned>(SymbolTag::Final);
+    result |= toSymbolTagBitmask(SymbolTag::Final);
 
+  // Do not treat an UnresolvedUsingValueDecl as a declaration.
+  // It's more common to think of it as a reference to the
+  // underlying declaration.
   if (isUniqueDefinition(&ND))
-    result |= 1 << static_cast<unsigned>(SymbolTag::Definition);
+    result |= toSymbolTagBitmask(SymbolTag::Definition);
   else if (!isa<UnresolvedUsingValueDecl>(ND))
-    result |= 1 << static_cast<unsigned>(SymbolTag::Declaration);
+    result |= toSymbolTagBitmask(SymbolTag::Declaration);
 
   switch (ND.getAccess()) {
   case AS_public:
-    result |= 1 << static_cast<unsigned>(SymbolTag::Public);
+    result |= toSymbolTagBitmask(SymbolTag::Public);
     break;
   case AS_protected:
-    result |= 1 << static_cast<unsigned>(SymbolTag::Protected);
+    result |= toSymbolTagBitmask(SymbolTag::Protected);
     break;
   case AS_private:
-    result |= 1 << static_cast<unsigned>(SymbolTag::Private);
+    result |= toSymbolTagBitmask(SymbolTag::Private);
     break;
   default:
     break;
