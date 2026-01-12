@@ -545,37 +545,53 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
   unsigned StoreSizeBytes = XLen / 8;
   Align StackAlign = Align(XLen / 8);
 
+  static const MCPhysReg ArgGPRPairs[] = {RISCV::X10_X11, RISCV::X12_X13,
+                                          RISCV::X14_X15, RISCV::X16_X17};
+
   if (ValVT.isVector() || ValVT.isRISCVVectorTuple()) {
-    Reg = allocateRVVReg(ValVT, ValNo, State, TLI);
-    if (Reg) {
-      // Fixed-length vectors are located in the corresponding scalable-vector
-      // container types.
-      if (ValVT.isFixedLengthVector()) {
-        LocVT = TLI.getContainerForFixedLengthVector(LocVT);
-        State.addLoc(
-            CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
-        return false;
-      }
-    } else {
-      // For return values, the vector must be passed fully via registers or
-      // via the stack.
-      // FIXME: The proposed vector ABI only mandates v8-v15 for return values,
-      // but we're using all of them.
-      if (IsRet)
-        return true;
-      // Try using a GPR to pass the address
-      if ((Reg = State.AllocateReg(ArgGPRs))) {
-        LocVT = XLenVT;
-        LocInfo = CCValAssign::Indirect;
-      } else if (ValVT.isScalableVector()) {
-        LocVT = XLenVT;
-        LocInfo = CCValAssign::Indirect;
+    bool IsPVectorInGPR = false;
+    if (Subtarget.enablePExtSIMDCodeGen() && ValVT.isVector()) {
+      const TargetRegisterClass *RC = TLI.getRegClassFor(ValVT);
+      if (RC == &RISCV::GPRRegClass || RC == &RISCV::GPRPairRegClass)
+        IsPVectorInGPR = true;
+    }
+
+    if (!IsPVectorInGPR) {
+      Reg = allocateRVVReg(ValVT, ValNo, State, TLI);
+      if (Reg) {
+        // Fixed-length vectors are located in the corresponding scalable-vector
+        // container types.
+        if (ValVT.isFixedLengthVector()) {
+          LocVT = TLI.getContainerForFixedLengthVector(LocVT);
+          State.addLoc(
+              CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+          return false;
+        }
       } else {
-        StoreSizeBytes = ValVT.getStoreSize();
-        // Align vectors to their element sizes, being careful for vXi1
-        // vectors.
-        StackAlign = MaybeAlign(ValVT.getScalarSizeInBits() / 8).valueOrOne();
+        // For return values, the vector must be passed fully via registers or
+        // via the stack.
+        // FIXME: The proposed vector ABI only mandates v8-v15 for return
+        // values, but we're using all of them.
+        if (IsRet)
+          return true;
+        // Try using a GPR to pass the address
+        if ((Reg = State.AllocateReg(ArgGPRs))) {
+          LocVT = XLenVT;
+          LocInfo = CCValAssign::Indirect;
+        } else if (ValVT.isScalableVector()) {
+          LocVT = XLenVT;
+          LocInfo = CCValAssign::Indirect;
+        } else {
+          StoreSizeBytes = ValVT.getStoreSize();
+          // Align vectors to their element sizes, being careful for vXi1
+          // vectors.
+          StackAlign = MaybeAlign(ValVT.getScalarSizeInBits() / 8).valueOrOne();
+        }
       }
+    } else if (XLen == 32 && ValVT.getSizeInBits() == 64) {
+      Reg = State.AllocateReg(ArgGPRPairs);
+    } else {
+      Reg = State.AllocateReg(ArgGPRs);
     }
   } else {
     Reg = State.AllocateReg(ArgGPRs);
@@ -604,7 +620,8 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
 
   assert(((ValVT.isFloatingPoint() && !ValVT.isVector()) || LocVT == XLenVT ||
           (TLI.getSubtarget().hasVInstructions() &&
-           (ValVT.isVector() || ValVT.isRISCVVectorTuple()))) &&
+           (ValVT.isVector() || ValVT.isRISCVVectorTuple())) ||
+          (Subtarget.enablePExtSIMDCodeGen() && ValVT.isVector())) &&
          "Expected an XLenVT or vector types at this stage");
 
   if (Reg) {
