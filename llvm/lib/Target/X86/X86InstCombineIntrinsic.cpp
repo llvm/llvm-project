@@ -1734,24 +1734,41 @@ static Value *simplifyTernarylogic(const IntrinsicInst &II,
   return Res.first;
 }
 
-static Value *simplifyX86FPMaxMin(const IntrinsicInst &II,
-                                  InstCombiner::BuilderTy &Builder,
-                                  Intrinsic::ID NewIID) {
+static Value *simplifyX86FPMaxMin(const IntrinsicInst &II, InstCombiner &IC,
+                                  Intrinsic::ID NewIID, bool IsScalar = false) {
 
   Value *Arg0 = II.getArgOperand(0);
   Value *Arg1 = II.getArgOperand(1);
+  unsigned VWidth = cast<FixedVectorType>(Arg0->getType())->getNumElements();
+
+  SimplifyQuery SQ = IC.getSimplifyQuery().getWithInstruction(&II);
+  APInt DemandedElts =
+      IsScalar ? APInt::getOneBitSet(VWidth, 0) : APInt::getAllOnes(VWidth);
 
   // Verify that the inputs are not one of (NaN, Inf, Subnormal, NegZero),
   // otherwise we cannot safely generalize to MAXNUM/MINNUM.
   FPClassTest Forbidden = fcNan | fcInf | fcSubnormal | fcNegZero;
   KnownFPClass KnownArg0 =
-      computeKnownFPClass(Arg0, Forbidden, II.getDataLayout(), 0);
+      computeKnownFPClass(Arg0, DemandedElts, Forbidden, SQ);
   KnownFPClass KnownArg1 =
-      computeKnownFPClass(Arg1, Forbidden, II.getDataLayout(), 0);
+      computeKnownFPClass(Arg1, DemandedElts, Forbidden, SQ);
 
   if (KnownArg0.isKnownNever(Forbidden) && KnownArg1.isKnownNever(Forbidden)) {
-    return (NewIID == Intrinsic::maxnum) ? Builder.CreateMaxNum(Arg0, Arg1)
-                                         : Builder.CreateMinNum(Arg0, Arg1);
+    if (IsScalar) {
+      // It performs the operation on the first element and puts it back into
+      // the vector.
+      Value *Scalar0 = IC.Builder.CreateExtractElement(Arg0, (uint64_t)0);
+      Value *Scalar1 = IC.Builder.CreateExtractElement(Arg1, (uint64_t)0);
+
+      Value *NewScalar = (NewIID == Intrinsic::maxnum)
+                             ? IC.Builder.CreateMaxNum(Scalar0, Scalar1)
+                             : IC.Builder.CreateMinNum(Scalar0, Scalar1);
+      return IC.Builder.CreateInsertElement(Arg0, NewScalar, (uint64_t)0);
+    } else {
+      return (NewIID == Intrinsic::maxnum)
+                 ? IC.Builder.CreateMaxNum(Arg0, Arg1)
+                 : IC.Builder.CreateMinNum(Arg0, Arg1);
+    }
   }
 
   return nullptr;
@@ -2534,9 +2551,15 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::x86_avx512fp16_max_ph_128:
   case Intrinsic::x86_avx512fp16_max_ph_256:
   case Intrinsic::x86_avx512fp16_max_ph_512:
-    if (Value *V = simplifyX86FPMaxMin(II, IC.Builder, Intrinsic::maxnum))
+    if (Value *V = simplifyX86FPMaxMin(II, IC, Intrinsic::maxnum))
       return IC.replaceInstUsesWith(II, V);
     break;
+  case Intrinsic::x86_sse_max_ss:
+  case Intrinsic::x86_sse2_max_sd: {
+    if (Value *V = simplifyX86FPMaxMin(II, IC, Intrinsic::maxnum, true))
+      return IC.replaceInstUsesWith(II, V);
+    break;
+  }
 
   case Intrinsic::x86_sse_min_ps:
   case Intrinsic::x86_sse2_min_pd:
@@ -2547,9 +2570,16 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::x86_avx512fp16_min_ph_128:
   case Intrinsic::x86_avx512fp16_min_ph_256:
   case Intrinsic::x86_avx512fp16_min_ph_512:
-    if (Value *V = simplifyX86FPMaxMin(II, IC.Builder, Intrinsic::minnum))
+    if (Value *V = simplifyX86FPMaxMin(II, IC, Intrinsic::minnum))
       return IC.replaceInstUsesWith(II, V);
     break;
+
+  case Intrinsic::x86_sse_min_ss:
+  case Intrinsic::x86_sse2_min_sd: {
+    if (Value *V = simplifyX86FPMaxMin(II, IC, Intrinsic::minnum, true))
+      return IC.replaceInstUsesWith(II, V);
+    break;
+  }
 
   // Constant fold ashr( <A x Bi>, Ci ).
   // Constant fold lshr( <A x Bi>, Ci ).
@@ -3165,6 +3195,7 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return IC.replaceInstUsesWith(II, V);
     }
     break;
+
   default:
     break;
   }
