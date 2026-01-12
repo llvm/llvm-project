@@ -2019,7 +2019,7 @@ void ForallOp::getSuccessorRegions(RegionBranchPoint point,
   // 1. "parent": entering the forall op for the first time.
   // 2. scf.in_parallel terminator
   if (point.isParent()) {
-    // When first entering the forallc op, the control flow typically branches
+    // When first entering the forall op, the control flow typically branches
     // into the forall body. (In parallel for multiple threads.)
     regions.push_back(RegionSuccessor(&getRegion()));
     // However, when there are 0 threads, the control flow may branch back to
