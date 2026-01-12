@@ -4745,11 +4745,10 @@ CFGBlock *CFGBuilder::VisitCXXTryStmt(CXXTryStmt *Terminator) {
   assert(Terminator->getTryBlock() && "try must contain a non-NULL body");
   Block = nullptr;
 
-  CFGBlock *TryBodyEntry = addStmt(Terminator->getTryBlock());
-  if (TryBodyEntry) {
+  if (CFGBlock *TryBodyEntry = addStmt(Terminator->getTryBlock())) {
     addSuccessor(NewTryTerminatedBlock, TryBodyEntry);
   } else {
-    CFGBlock *EmptyTryBody = createBlock(/*add_successor*/ false);
+    CFGBlock *EmptyTryBody = createBlock(/*add_successor=*/false);
     addSuccessor(NewTryTerminatedBlock, EmptyTryBody);
     addSuccessor(EmptyTryBody, TrySuccessor);
   }
