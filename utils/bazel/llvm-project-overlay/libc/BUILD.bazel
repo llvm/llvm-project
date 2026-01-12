@@ -2805,19 +2805,19 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_math_fsqrt",
-    hdrs = ["src/__support/math/fsqrt.h"],
-    deps = [
-        ":__support_fputil_sqrt",
-    ],
-)
-
-libc_support_library(
     name = "__support_math_frexpf128",
     hdrs = ["src/__support/math/frexpf128.h"],
     deps = [
         ":__support_fputil_manipulation_functions",
         ":__support_macros_properties_types",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fsqrt",
+    hdrs = ["src/__support/math/fsqrt.h"],
+    deps = [
+        ":__support_fputil_sqrt",
     ],
 )
 
