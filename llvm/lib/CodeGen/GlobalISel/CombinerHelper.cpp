@@ -6215,10 +6215,10 @@ static bool hasMoreUses(const MachineInstr &MI0, const MachineInstr &MI1,
 // would duplicate the multiply without reducing the total number of operations.
 //
 // This uses a simple, non-recursive check for the following patterns:
-//   - fmul → fadd/fsub: Direct contraction
-//   - fmul → fneg → fsub: FNEG folds into FMA with negated operand
-//   - fmul → fpext → {fadd, fsub, fma}: FPEXT folds if it can be folded
-//   - fmul → fma: Assume FMA contraction will handle it (to avoid complexity)
+//   - fmul --> fadd/fsub: Direct contraction
+//   - fmul --> fneg --> fsub: FNEG folds into FMA with negated operand
+//   - fmul --> fpext --> {fadd, fsub, fma}: FPEXT folds if it can be folded
+//   - fmul --> fma: Assume FMA contraction will handle it (to avoid complexity)
 static bool allMulUsesCanBeContracted(const MachineInstr &MI,
                                       const MachineRegisterInfo &MRI,
                                       const unsigned PreferredFusedOpcode) {
@@ -6234,8 +6234,8 @@ static bool allMulUsesCanBeContracted(const MachineInstr &MI,
       continue;
     }
 
-    // FNEG → FSUB pattern
-    // Also handles FNEG → FPEXT → FSUB
+    // FNEG --> FSUB pattern
+    // Also handles FNEG --> FPEXT --> FSUB
     if (Opcode == TargetOpcode::G_FNEG) {
       Register FNegReg = UseMI.getOperand(0).getReg();
       // ALL users of the FNEG must be contractable FSUBs or FPEXTs leading to
@@ -6247,7 +6247,7 @@ static bool allMulUsesCanBeContracted(const MachineInstr &MI,
         if (FNegUseOpcode == TargetOpcode::G_FSUB)
           continue;
         if (FNegUseOpcode == TargetOpcode::G_FPEXT) {
-          // FNEG → FPEXT → FSUB
+          // FNEG --> FPEXT --> FSUB
           Register FNegFPExtReg = FNegUseMI.getOperand(0).getReg();
           for (const MachineInstr &FNegFPExtUseMI :
                MRI.use_nodbg_instructions(FNegFPExtReg)) {
@@ -6267,7 +6267,7 @@ static bool allMulUsesCanBeContracted(const MachineInstr &MI,
       continue;
     }
 
-    // FP_EXTEND - check if ALL users are FADD, FSUB, FMA, or FNEG → FSUB
+    // FP_EXTEND - check if ALL users are FADD, FSUB, FMA, or FNEG --> FSUB
     if (Opcode == TargetOpcode::G_FPEXT) {
       Register FPExtReg = UseMI.getOperand(0).getReg();
 
@@ -6286,7 +6286,7 @@ static bool allMulUsesCanBeContracted(const MachineInstr &MI,
           continue;
         }
         if (ExtUseOpcode == TargetOpcode::G_FNEG) {
-          // FP_EXTEND → FNEG → FSUB
+          // FP_EXTEND --> FNEG --> FSUB
           Register FPExtFNegReg = FPExtUseMI.getOperand(0).getReg();
           for (const MachineInstr &FPExtFNegUseMI :
                MRI.use_nodbg_instructions(FPExtFNegReg)) {

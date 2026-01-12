@@ -17237,10 +17237,10 @@ static bool isFusedOp(const MatcherClass &matcher, SDValue N) {
 // would duplicate the multiply without reducing the total number of operations.
 //
 // This uses a simple, non-recursive check for the following patterns:
-//   - fmul → fadd/fsub: Direct contraction
-//   - fmul → fneg → fsub: FNEG folds into FMA with negated operand
-//   - fmul → fpext → {fadd, fsub, fma}: FPEXT folds if it can be folded
-//   - fmul → fma: Assume FMA can always be contracted (to avoid complexity)
+//   - fmul --> fadd/fsub: Direct contraction
+//   - fmul --> fneg --> fsub: FNEG folds into FMA with negated operand
+//   - fmul --> fpext --> {fadd, fsub, fma}: FPEXT folds if it can be folded
+//   - fmul --> fma: Assume FMA can always be contracted (to avoid complexity)
 static bool allMulUsesCanBeContracted(SDValue Mul,
                                       const unsigned PreferredFusedOpcode,
                                       const TargetLowering &TLI,
@@ -17260,17 +17260,17 @@ static bool allMulUsesCanBeContracted(SDValue Mul,
       continue; // This use is contractable
     }
 
-    // FNEG - check if ALL users are FSUB or folrdable FPEXT → FSUB
+    // FNEG - check if ALL users are FSUB or folrdable FPEXT --> FSUB
     if (Opcode == ISD::FNEG) {
       for (const auto *FNegUser : UserNode->users()) {
         unsigned FNegUserOp = FNegUser->getOpcode();
 
         if (FNegUserOp == ISD::FSUB) {
-          // FNEG → FSUB
+          // FNEG --> FSUB
           continue;
         }
         if (FNegUserOp == ISD::FP_EXTEND) {
-          // FNEG → FPEXT → FSUB
+          // FNEG --> FPEXT --> FSUB
           EVT SrcVT = UserNode->getValueType(0); // Src of FPEXT is the FNEG
           for (const auto *FNegFPExtUser : FNegUser->users()) {
             if (FNegFPExtUser->getOpcode() != ISD::FSUB)
@@ -17286,7 +17286,7 @@ static bool allMulUsesCanBeContracted(SDValue Mul,
       continue; // All FNEG uses are contractable
     }
 
-    // FP_EXTEND - check if ALL users are FADD, FSUB, FMA, or FNEG → FSUB
+    // FP_EXTEND - check if ALL users are FADD, FSUB, FMA, or FNEG --> FSUB
     if (Opcode == ISD::FP_EXTEND) {
       EVT SrcVT = Mul.getValueType();
 
@@ -17298,10 +17298,10 @@ static bool allMulUsesCanBeContracted(SDValue Mul,
 
         if (ExtUserOp == ISD::FADD || ExtUserOp == ISD::FSUB ||
             ExtUserOp == ISD::FMA || ExtUserOp == ISD::FMAD) {
-          continue; // FPEXT → {FADD, FSUB, FMA} is contractable
+          continue; // FPEXT --> {FADD, FSUB, FMA} is contractable
         }
         if (ExtUserOp == ISD::FNEG) {
-          // FP_EXTEND → FNEG → FSUB
+          // FP_EXTEND --> FNEG --> FSUB
           for (const auto *FPExtFNegUser : FPExtUser->users()) {
             if (FPExtFNegUser->getOpcode() != ISD::FSUB) {
               return false;
