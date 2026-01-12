@@ -9,6 +9,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_HYPOTF16_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_HYPOTF16_H
 
+#include "include/llvm-libc-types/float128.h"
+
+#ifdef LIBC_TYPES_HAS_FLOAT128
+
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/common.h"
@@ -60,5 +64,7 @@ LIBC_INLINE float16 hypotf16(float16 x, float16 y) {
 
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TYPES_HAS_FLOAT128
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_HYPOTF16_H

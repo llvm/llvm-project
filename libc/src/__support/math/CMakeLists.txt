@@ -604,16 +604,6 @@ add_header_library(
 )
 
 add_header_library(
-  inv_trigf_utils
-  HDRS
-    inv_trigf_utils.h
-  DEPENDS
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.common
-)
-
-add_header_library(
   frexpf16
   HDRS
     frexpf16.h
@@ -631,6 +621,31 @@ add_header_library(
     libc.src.__support.FPUtil.manipulation_functions
 )
 
+add_header_library(
+  hypotf16
+  HDRS
+    hypotf16.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.hdr.math_macros
+    libc.src.__support.common
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  inv_trigf_utils
+  HDRS
+    inv_trigf_utils.h
+  DEPENDS
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.common
+)
+  
 add_header_library(
   ldexpf128
   HDRS
@@ -1039,19 +1054,4 @@ add_header_library(
     libc.src.__support.math.range_reduction_double
     libc.src.__support.math.sincos_eval
     libc.src.__support.macros.optimization
-)
-
-add_header_library(
-  hypotf16
-  HDRS
-    hypotf16.h
-  DEPENDS
-    libc.hdr.fenv_macros
-    libc.hdr.math_macros
-    libc.src.__support.common
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.sqrt
-    libc.src.__support.macros.config
-    libc.src.__support.macros.optimization
-    libc.src.__support.macros.properties.types
 )
