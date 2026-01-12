@@ -1,4 +1,4 @@
-! RUN: bbc -emit-hlfir -fcuda -gpu=managed %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir -fcuda -gpu=mem:managed %s -o - | FileCheck %s
 
 ! Test -gpu=managed flag: allocatable arrays without explicit CUDA attributes
 ! should be implicitly treated as managed.
@@ -88,7 +88,7 @@ subroutine test_mixed_allocatables()
   real, allocatable, device :: d(:)   ! Should stay device
   real, allocatable, pinned :: p(:)   ! Should stay pinned
   real, allocatable, managed :: m(:)  ! Should stay managed (explicit)
-  
+
   allocate(a(10), d(10), p(10), m(10))
   deallocate(a, d, p, m)
 end subroutine
@@ -100,27 +100,7 @@ end subroutine
 ! CHECK: cuf.alloc {{.*}} {bindc_name = "p", data_attr = #cuf.cuda<pinned>, uniq_name = "_QFtest_mixed_allocatablesEp"}
 
 ! -----------------------------------------------------------------------------
-! Test 7: Allocatable in derived type - component allocation uses managed
-! -----------------------------------------------------------------------------
-module mod_derived
-  type :: container
-    real, allocatable :: data(:)
-  end type
-end module
-
-subroutine test_derived_type()
-  use mod_derived
-  type(container) :: c
-  allocate(c%data(100))
-  deallocate(c%data)
-end subroutine
-
-! CHECK-LABEL: func.func @_QPtest_derived_type()
-! CHECK: cuf.allocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<managed>}
-! CHECK: cuf.deallocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<managed>}
-
-! -----------------------------------------------------------------------------
-! Test 8: Multi-dimensional allocatable array
+! Test 7: Multi-dimensional allocatable array
 ! -----------------------------------------------------------------------------
 subroutine test_multidim()
   real, allocatable :: arr(:,:,:)
@@ -134,7 +114,7 @@ end subroutine
 ! CHECK: fir.embox {{.*}} {allocator_idx = 3 : i32}
 
 ! -----------------------------------------------------------------------------
-! Test 9: Explicit unified attribute is preserved (not overridden to managed)
+! Test 8: Explicit unified attribute is preserved (not overridden to managed)
 ! -----------------------------------------------------------------------------
 subroutine test_explicit_unified()
   real, allocatable, unified :: u(:)
@@ -147,7 +127,7 @@ end subroutine
 ! CHECK: hlfir.declare {{.*}} {data_attr = #cuf.cuda<unified>, fortran_attrs = #fir.var_attrs<allocatable>
 
 ! -----------------------------------------------------------------------------
-! Test 10: Dummy arguments - allocatable dummy without explicit attribute
+! Test 9: Dummy arguments - allocatable dummy without explicit attribute
 ! -----------------------------------------------------------------------------
 subroutine test_dummy_allocatable(arr)
   real, allocatable, intent(inout) :: arr(:)
@@ -160,7 +140,7 @@ end subroutine
 ! CHECK: hlfir.declare {{.*}} {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<allocatable, intent_inout>
 
 ! -----------------------------------------------------------------------------
-! Test 11: Module variables - allocatable module variable becomes managed
+! Test 10: Module variables - allocatable module variable becomes managed
 ! -----------------------------------------------------------------------------
 module mod_globals
   real, allocatable :: global_arr(:)

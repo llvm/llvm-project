@@ -3517,15 +3517,8 @@ void ScopeHandler::SetCUDADataAttr(SourceName source, Symbol &symbol,
           "'%s' is not an object and may not have a CUDA data attribute"_err_en_US,
           symbol.name());
     }
-  } else if (context().languageFeatures().IsEnabled(
-                 common::LanguageFeature::CudaManaged)) {
-    // -gpu=managed: implicitly treat allocatable arrays as managed
-    if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-      if (IsAllocatable(symbol) && !object->cudaDataAttr()) {
-        object->set_cudaDataAttr(common::CUDADataAttr::Managed);
-      }
-    }
   }
+
 }
 
 // ModuleVisitor implementation
@@ -9916,6 +9909,17 @@ void ResolveNamesVisitor::FinishSpecificationPart(
           iface && IsBindCProcedure(*iface)) {
         SetImplicitAttr(symbol, Attr::BIND_C);
         SetBindNameOn(symbol);
+      }
+    }
+    // -gpu=managed: implicitly treat allocatable arrays as managed
+    // This is done here after all explicit CUDA attributes have been processed.
+    if (context().languageFeatures().IsEnabled(
+            common::LanguageFeature::CudaManaged)) {
+      if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+        if (IsAllocatable(symbol) && !IsPointer(symbol) &&
+            !object->cudaDataAttr()) {
+          object->set_cudaDataAttr(common::CUDADataAttr::Managed);
+        }
       }
     }
   }
