@@ -14,7 +14,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, ilogbf128, (float128 x)) {
-  return shared::ilogbf128(x);
+  return math::ilogbf128(x);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
