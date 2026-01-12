@@ -2452,6 +2452,46 @@ static bool interp__builtin_elementwise_int_unaryop(
   return true;
 }
 
+static bool interp__builtin_elementwise_fp_binop(
+    InterpState &S, CodePtr OpPC, const CallExpr *Call,
+    llvm::function_ref<APFloat(const APFloat &, const APFloat &,
+                               std::optional<APSInt> RoundingMode)>
+        Fn) {
+  assert((Call->getNumArgs() == 2) || (Call->getNumArgs() == 3));
+  const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
+  assert(VT->getElementType()->isFloatingType());
+  unsigned NumElems = VT->getNumElements();
+
+  // Vector case.
+  assert(Call->getArg(0)->getType()->isVectorType() &&
+         Call->getArg(1)->getType()->isVectorType());
+  assert(VT->getElementType() ==
+         Call->getArg(1)->getType()->castAs<VectorType>()->getElementType());
+  assert(VT->getNumElements() ==
+         Call->getArg(1)->getType()->castAs<VectorType>()->getNumElements());
+
+  std::optional<APSInt> RoundingMode = std::nullopt;
+  if (Call->getNumArgs() == 3)
+    RoundingMode = popToAPSInt(S, Call->getArg(2));
+
+  const Pointer &BPtr = S.Stk.pop<Pointer>();
+  const Pointer &APtr = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  for (unsigned ElemIdx = 0; ElemIdx != NumElems; ++ElemIdx) {
+    using T = PrimConv<PT_Float>::T;
+    APFloat ElemA = APtr.elem<T>(ElemIdx).getAPFloat();
+    APFloat ElemB = BPtr.elem<T>(ElemIdx).getAPFloat();
+    if (ElemA.isNaN() || ElemA.isInfinity() || ElemA.isDenormal() ||
+        ElemB.isNaN() || ElemB.isInfinity() || ElemB.isDenormal())
+      return false;
+    Dst.elem<T>(ElemIdx) = static_cast<T>(Fn(ElemA, ElemB, RoundingMode));
+  }
+
+  Dst.initializeAllElements();
+
+  return true;
+}
+
 static bool interp__builtin_elementwise_int_binop(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<APInt(const APSInt &, const APSInt &)> Fn) {
@@ -5718,6 +5758,40 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return std::pair<unsigned, int>{VecIdx, static_cast<int>(ElemIdx)};
         });
   }
+
+  case clang::X86::BI__builtin_ia32_minps:
+  case clang::X86::BI__builtin_ia32_minpd:
+  case clang::X86::BI__builtin_ia32_minph128:
+  case clang::X86::BI__builtin_ia32_minph256:
+  case clang::X86::BI__builtin_ia32_minps256:
+  case clang::X86::BI__builtin_ia32_minpd256:
+  case clang::X86::BI__builtin_ia32_minps512:
+  case clang::X86::BI__builtin_ia32_minpd512:
+  case clang::X86::BI__builtin_ia32_minph512:
+    return interp__builtin_elementwise_fp_binop(
+        S, OpPC, Call,
+        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
+          if (A.isZero() && B.isZero())
+            return B;
+          return llvm::minimum(A, B);
+        });
+
+  case clang::X86::BI__builtin_ia32_maxps:
+  case clang::X86::BI__builtin_ia32_maxpd:
+  case clang::X86::BI__builtin_ia32_maxph128:
+  case clang::X86::BI__builtin_ia32_maxph256:
+  case clang::X86::BI__builtin_ia32_maxps256:
+  case clang::X86::BI__builtin_ia32_maxpd256:
+  case clang::X86::BI__builtin_ia32_maxps512:
+  case clang::X86::BI__builtin_ia32_maxpd512:
+  case clang::X86::BI__builtin_ia32_maxph512:
+    return interp__builtin_elementwise_fp_binop(
+        S, OpPC, Call,
+        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
+          if (A.isZero() && B.isZero())
+            return B;
+          return llvm::maximum(A, B);
+        });
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
