@@ -616,8 +616,7 @@ static inline odbg_ostream reportErrorStream() {
     }                                                                          \
   } while (false)
 
-template <uint32_t InfoId>
-static constexpr const char *InfoIdToODT() {
+template <uint32_t InfoId> static constexpr const char *InfoIdToODT() {
   constexpr auto getId = []() {
     switch (InfoId) {
     case OMP_INFOTYPE_KERNEL_ARGS:
