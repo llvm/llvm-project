@@ -37,6 +37,14 @@ class TestCase(TestBase):
         self.assertEqual(self.target().FindFirstType("__int128_t").size, 16)
         self.assertEqual(self.target().FindFirstType("__uint128_t").size, 16)
 
+        self.assertEqual(self.target().FindFirstType("_BitInt").name, "")
+        self.assertEqual(self.target().FindFirstType("unsigned _BitInt").name, "")
+        self.assertEqual(self.target().FindFirstType("_BitInt()").name, "")
+        self.assertEqual(self.target().FindFirstType("unsigned _BitInt()").name, "")
+        self.assertEqual(self.target().FindFirstType("_BitInt(65").name, "")
+        self.assertEqual(self.target().FindFirstType("unsigned _BitInt(65").name, "")
+        self.assertEqual(self.target().FindFirstType("_BitInt(0x41)").name, "")
+        self.assertEqual(self.target().FindFirstType("unsigned _BitInt(0x41)").name, "")
         self.assertEqual(self.target().FindFirstType("_BitInt(65)").name, "_BitInt(65)")
         self.assertEqual(self.target().FindFirstType("_BitInt(65)").size, 16)
         self.assertEqual(
