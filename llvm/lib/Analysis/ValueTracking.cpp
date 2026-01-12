@@ -2133,6 +2133,14 @@ static void computeKnownBitsFromOperator(const Operator *I,
           Known.One.clearAllBits();
         break;
       }
+      case Intrinsic::vector_reduce_add: {
+        auto *VecTy = dyn_cast<FixedVectorType>(I->getOperand(0)->getType());
+        if (!VecTy)
+          break;
+        computeKnownBits(I->getOperand(0), Known, Q, Depth + 1);
+        Known = Known.reduceAdd(VecTy->getNumElements());
+        break;
+      }
       case Intrinsic::umin:
         computeKnownBits(I->getOperand(0), DemandedElts, Known, Q, Depth + 1);
         computeKnownBits(I->getOperand(1), DemandedElts, Known2, Q, Depth + 1);
@@ -5122,27 +5130,18 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedSrcs,
                           KnownSrc, Q, Depth + 1);
 
-      if (KnownSrc.isKnownNeverPosInfinity())
-        Known.knownNot(fcPosInf);
-      if (KnownSrc.isKnownNever(fcSNan))
-        Known.knownNot(fcSNan);
+      DenormalMode Mode = DenormalMode::getDynamic();
 
-      // Any negative value besides -0 returns a nan.
-      if (KnownSrc.isKnownNeverNaN() && KnownSrc.cannotBeOrderedLessThanZero())
-        Known.knownNot(fcNan);
+      bool HasNSZ = Q.IIQ.hasNoSignedZeros(II);
+      if (!HasNSZ) {
+        const Function *F = II->getFunction();
+        const fltSemantics &FltSem =
+            II->getType()->getScalarType()->getFltSemantics();
+        Mode = F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
+      }
 
-      // The only negative value that can be returned is -0 for -0 inputs.
-      Known.knownNot(fcNegInf | fcNegSubnormal | fcNegNormal);
-
-      // If the input denormal mode could be PreserveSign, a negative
-      // subnormal input could produce a negative zero output.
-      const Function *F = II->getFunction();
-      const fltSemantics &FltSem =
-          II->getType()->getScalarType()->getFltSemantics();
-
-      if (Q.IIQ.hasNoSignedZeros(II) ||
-          (F &&
-           KnownSrc.isKnownNeverLogicalNegZero(F->getDenormalMode(FltSem))))
+      Known = KnownFPClass::sqrt(KnownSrc, Mode);
+      if (HasNSZ)
         Known.knownNot(fcNegZero);
 
       break;
@@ -5561,7 +5560,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         // Doubling 0 will give the same 0.
         if (SelfAdd && KnownRHS.isKnownNeverLogicalPosZero(Mode) &&
             (Mode.Output == DenormalMode::IEEE ||
-             Mode.Output == DenormalMode::PreserveSign))
+             (Mode.Output == DenormalMode::PreserveSign &&
+              KnownRHS.isKnownNeverPosSubnormal()) ||
+             (Mode.Output == DenormalMode::PositiveZero &&
+              KnownRHS.isKnownNeverSubnormal())))
           Known.knownNot(fcPosZero);
 
         // (fadd x, 0.0) is guaranteed to return +0.0, not -0.0.
@@ -5759,27 +5761,16 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     break;
   }
   case Instruction::FPExt: {
-    // Infinity, nan and zero propagate from source.
+    KnownFPClass KnownSrc;
     computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedClasses,
-                        Known, Q, Depth + 1);
+                        KnownSrc, Q, Depth + 1);
 
     const fltSemantics &DstTy =
         Op->getType()->getScalarType()->getFltSemantics();
     const fltSemantics &SrcTy =
         Op->getOperand(0)->getType()->getScalarType()->getFltSemantics();
 
-    // All subnormal inputs should be in the normal range in the result type.
-    if (APFloat::isRepresentableAsNormalIn(SrcTy, DstTy)) {
-      if (Known.KnownFPClasses & fcPosSubnormal)
-        Known.KnownFPClasses |= fcPosNormal;
-      if (Known.KnownFPClasses & fcNegSubnormal)
-        Known.KnownFPClasses |= fcNegNormal;
-      Known.knownNot(fcSubnormal);
-    }
-
-    // Sign bit of a nan isn't guaranteed.
-    if (!Known.isKnownNeverNaN())
-      Known.SignBit = std::nullopt;
+    Known = KnownFPClass::fpext(KnownSrc, DstTy, SrcTy);
     break;
   }
   case Instruction::FPTrunc: {

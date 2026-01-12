@@ -2193,8 +2193,8 @@ libc_function(
 ########################### math support library ###############################
 
 libc_support_library(
-    name = "log_range_reduction",
-    hdrs = ["src/math/generic/log_range_reduction.h"],
+    name = "__support_math_log_range_reduction",
+    hdrs = ["src/__support/math/log_range_reduction.h"],
     deps = [
         ":__support_common",
         ":__support_fputil_dyadic_float",
@@ -2843,6 +2843,17 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_ilogbf16",
+    hdrs = ["src/__support/math/ilogbf16.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_ldexpf128",
     hdrs = ["src/__support/math/ldexpf128.h"],
     deps = [
@@ -2867,6 +2878,23 @@ libc_support_library(
     hdrs = ["src/__support/math/ldexpf.h"],
     deps = [
         ":__support_fputil_manipulation_functions",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_log",
+    hdrs = ["src/__support/math/log.h"],
+    deps = [
+        ":__support_fputil_double_double",
+        ":__support_fputil_dyadic_float",
+        ":__support_fputil_fma",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_integer_literals",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":__support_math_common_constants",
+        ":__support_math_log_range_reduction",
     ],
 )
 
@@ -4310,7 +4338,12 @@ libc_math_function(name = "ilogbl")
 
 libc_math_function(name = "ilogbf128")
 
-libc_math_function(name = "ilogbf16")
+libc_math_function(
+    name = "ilogbf16",
+    additional_deps = [
+        ":__support_math_ilogbf16",
+    ],
+)
 
 libc_math_function(name = "ldexp")
 
@@ -4370,16 +4403,7 @@ libc_math_function(name = "llroundf16")
 libc_math_function(
     name = "log",
     additional_deps = [
-        ":__support_fputil_double_double",
-        ":__support_fputil_dyadic_float",
-        ":__support_fputil_fma",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_polyeval",
-        ":__support_integer_literals",
-        ":__support_macros_optimization",
-        ":__support_macros_properties_cpu_features",
-        ":__support_math_common_constants",
-        ":log_range_reduction",
+        ":__support_math_log",
     ],
 )
 
@@ -4414,7 +4438,7 @@ libc_math_function(
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":__support_math_common_constants",
-        ":log_range_reduction",
+        ":__support_math_log_range_reduction",
     ],
 )
 
@@ -4476,7 +4500,7 @@ libc_math_function(
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":__support_math_common_constants",
-        ":log_range_reduction",
+        ":__support_math_log_range_reduction",
     ],
 )
 
