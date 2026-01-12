@@ -1605,7 +1605,9 @@ def tLDRLIT_ga_pcrel : PseudoInst<(outs tGPR:$dst), (ins i32imm:$addr),
                                   IIC_iLoadiALU,
                                   [(set tGPR:$dst,
                                         (ARMWrapperPIC tglobaladdr:$addr))]>,
-                       Requires<[IsThumb, DontUseMovtInPic]>;
+                       Requires<[IsThumb, DontUseMovtInPic]> {
+  let Size = 12;  // 2 instructions + constant.
+}
 
 def tLDRLIT_ga_abs : PseudoInst<(outs tGPR:$dst), (ins i32imm:$src),
                                 IIC_iLoad_i,
