@@ -15348,7 +15348,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue Op1 = N->getOperand(1);
     unsigned Opcode = N->getOpcode();
     // PMULH* variants don't support i8
-    bool IsMulH = Opcode == RISCVISD::PMULHSU || Opcode == RISCVISD::PMULHR ||
+    [[maybe_unused]] bool IsMulH = Opcode == RISCVISD::PMULHSU || Opcode == RISCVISD::PMULHR ||
                   Opcode == RISCVISD::PMULHRU || Opcode == RISCVISD::PMULHRSU;
     assert(VT == MVT::v2i16 || (!IsMulH && VT == MVT::v4i8));
     MVT NewVT = MVT::v4i16;
