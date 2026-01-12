@@ -45,8 +45,9 @@ add_flang_nongtest_unittest(logical
 # IEEE exception flags (different use of the word "exception")
 # in the actual hardware floating-point status register, so ensure that
 # C++ exceptions are enabled for this test.
+# TODO: add_flang_nongtest_unittest never disables RTTI/exceptions, this should
+# not be required at all.
 set(LLVM_REQUIRES_EH ON)
-set(LLVM_REQUIRES_RTTI ON)
 add_flang_nongtest_unittest(real
   NonGTestTesting
   FortranEvaluate
