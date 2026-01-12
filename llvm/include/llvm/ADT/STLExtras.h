@@ -1415,6 +1415,18 @@ template <typename ContainerTy> auto make_second_range(ContainerTy &&c) {
       });
 }
 
+/// Return a range that conditionally reverses \p C. The collection is iterated
+/// in reverse if \p ShouldReverse is true (otherwise, it is iterated forwards).
+template <typename ContainerTy>
+[[nodiscard]] auto reverse_conditionally(ContainerTy &&C, bool ShouldReverse) {
+  using IterTy = detail::IterOfRange<ContainerTy>;
+  using ReferenceTy = typename std::iterator_traits<IterTy>::reference;
+  return map_range(zip_equal(reverse(C), C),
+                   [ShouldReverse](auto I) -> ReferenceTy {
+                     return ShouldReverse ? std::get<0>(I) : std::get<1>(I);
+                   });
+}
+
 //===----------------------------------------------------------------------===//
 //     Extra additions to <utility>
 //===----------------------------------------------------------------------===//
@@ -1776,6 +1788,42 @@ auto remove_if(R &&Range, UnaryPredicate P) {
 template <typename R, typename OutputIt, typename UnaryPredicate>
 OutputIt copy_if(R &&Range, OutputIt Out, UnaryPredicate P) {
   return std::copy_if(adl_begin(Range), adl_end(Range), Out, P);
+}
+
+/// Provide wrappers to std::search which searches for the first occurrence of
+/// Range2 within Range1.
+/// \returns An iterator to the start of Range2 within Range1 if found, or
+///          the end iterator of Range1 if not found.
+template <typename R1, typename R2> auto search(R1 &&Range1, R2 &&Range2) {
+  return std::search(adl_begin(Range1), adl_end(Range1), adl_begin(Range2),
+                     adl_end(Range2));
+}
+
+/// Provide wrappers to std::search which searches for the first occurrence of
+/// Range2 within Range1 using predicate `P`.
+/// \returns An iterator to the start of Range2 within Range1 if found, or
+///          the end iterator of Range1 if not found.
+template <typename R1, typename R2, typename BinaryPredicate>
+auto search(R1 &&Range1, R2 &&Range2, BinaryPredicate P) {
+  return std::search(adl_begin(Range1), adl_end(Range1), adl_begin(Range2),
+                     adl_end(Range2), P);
+}
+
+/// Provide wrappers to std::adjacent_find which finds the first pair of
+/// adjacent elements that are equal.
+/// \returns An iterator to the first adjacent element within Range1 if found,
+///          or the end iterator of Range1 if not found.
+template <typename R> auto adjacent_find(R &&Range) {
+  return std::adjacent_find(adl_begin(Range), adl_end(Range));
+}
+
+/// Provide wrappers to std::adjacent_find which finds the first pair of
+/// adjacent elements that are satisfy `P`.
+/// \returns An iterator to the first adjacent element within Range1 if found,
+///          or the end iterator of Range1 if not found.
+template <typename R, typename BinaryPredicate>
+auto adjacent_find(R &&Range, BinaryPredicate P) {
+  return std::adjacent_find(adl_begin(Range), adl_end(Range), P);
 }
 
 /// Return the single value in \p Range that satisfies
@@ -2140,7 +2188,17 @@ void append_range(Container &C, Range &&R) {
 /// Appends all `Values` to container `C`.
 template <typename Container, typename... Args>
 void append_values(Container &C, Args &&...Values) {
-  C.reserve(range_size(C) + sizeof...(Args));
+  if (size_t InitialSize = range_size(C); InitialSize == 0) {
+    // Only reserve if the container is empty. Reserving on a non-empty
+    // container may interfere with the exponential growth strategy, if the
+    // container does not round up the capacity. Consider `append_values` called
+    // repeatedly in a loop: each call would reserve exactly `size + N`, causing
+    // the capacity to grow linearly (e.g., 100 -> 105 -> 110 -> ...) instead of
+    // exponentially (e.g., 100 -> 200 -> ...). Linear growth turns the
+    // amortized O(1) append into O(n) because every few insertions trigger a
+    // reallocation and copy of all elements.
+    C.reserve(InitialSize + sizeof...(Args));
+  }
   // Append all values one by one.
   ((void)C.insert(C.end(), std::forward<Args>(Values)), ...);
 }

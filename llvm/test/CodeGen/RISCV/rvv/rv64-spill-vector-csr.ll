@@ -14,7 +14,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+d,+zcmp,+prefer-vsetvli-over-read-vlenb -O2 < %s \
 ; RUN:    | FileCheck --check-prefix=SPILL-O2-ZCMP-VSETVLI %s
 
-
 @.str = private unnamed_addr constant [6 x i8] c"hello\00", align 1
 
 define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double> %b, <vscale x 1 x double> %c, i64 %gvl) nounwind
@@ -262,5 +261,4 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
    ret <vscale x 1 x double> %z
 }
 
-declare <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(<vscale x 1 x double> %passthru, <vscale x 1 x double> %a, <vscale x 1 x double> %b, i64, i64 %gvl)
 declare i32 @puts(ptr);

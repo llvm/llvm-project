@@ -16,12 +16,14 @@ define void @foo(i64 %n, i64 %m, ptr %A) {
 ; CHECK-NEXT:  Base offset: %A
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][%m] with elements of 8 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%for.i>][{0,+,1}<nuw><nsw><%for.j>]
+; CHECK-NEXT:  Delinearization validation: Failed
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Inst: store double %val, ptr %arrayidx, align 8
 ; CHECK-NEXT:  AccessFunction: {{\{\{}}0,+,(8 * %m)}<%for.i>,+,8}<%for.j>
 ; CHECK-NEXT:  Base offset: %A
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][%m] with elements of 8 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%for.i>][{0,+,1}<nuw><nsw><%for.j>]
+; CHECK-NEXT:  Delinearization validation: Failed
 ;
 entry:
   br label %for.i

@@ -49,8 +49,9 @@ function(add_flangrt_unittest_offload_properties target)
   # FIXME: replace 'native' in --offload-arch option with the list
   #        of targets that Fortran Runtime was built for.
   if (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "OpenMP")
-    set_property(TARGET ${target} APPEND
-      PROPERTY LINK_OPTIONS -fopenmp --offload-arch=native
+    set_target_properties(${target}
+      PROPERTIES LINK_OPTIONS
+      "-fopenmp;--offload-arch=native"
       )
   endif()
 endfunction()

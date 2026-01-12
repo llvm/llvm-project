@@ -47,7 +47,8 @@ struct IntPointer {
   const Descriptor *Desc;
   uint64_t Value;
 
-  IntPointer atOffset(const ASTContext &ASTCtx, unsigned Offset) const;
+  std::optional<IntPointer> atOffset(const ASTContext &ASTCtx,
+                                     unsigned Offset) const;
   IntPointer baseCast(const ASTContext &ASTCtx, unsigned BaseOffset) const;
 };
 
@@ -353,7 +354,8 @@ public:
       if (const auto *CT = getFieldDesc()->getType()->getAs<VectorType>())
         return CT->getElementType();
     }
-    return getFieldDesc()->getType();
+
+    return getFieldDesc()->getDataElemType();
   }
 
   [[nodiscard]] Pointer getDeclPtr() const { return Pointer(BS.Pointee); }
@@ -783,7 +785,7 @@ public:
   /// Compute an integer that can be used to compare this pointer to
   /// another one. This is usually NOT the same as the pointer offset
   /// regarding the AST record layout.
-  size_t computeOffsetForComparison() const;
+  size_t computeOffsetForComparison(const ASTContext &ASTCtx) const;
 
 private:
   friend class Block;

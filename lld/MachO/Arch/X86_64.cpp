@@ -54,7 +54,8 @@ static constexpr std::array<RelocAttrs, 10> relocAttrsArray{{
     {"UNSIGNED", B(UNSIGNED) | B(ABSOLUTE) | B(EXTERN) | B(LOCAL) | B(BYTE1) |
                      B(BYTE4) | B(BYTE8)},
     {"SIGNED", B(PCREL) | B(EXTERN) | B(LOCAL) | B(BYTE4)},
-    {"BRANCH", B(PCREL) | B(EXTERN) | B(BRANCH) | B(BYTE1) | B(BYTE4)},
+    {"BRANCH",
+     B(PCREL) | B(EXTERN) | B(LOCAL) | B(BRANCH) | B(BYTE1) | B(BYTE4)},
     {"GOT_LOAD", B(PCREL) | B(EXTERN) | B(GOT) | B(LOAD) | B(BYTE4)},
     {"GOT", B(PCREL) | B(EXTERN) | B(GOT) | B(POINTER) | B(BYTE4)},
     {"SUBTRACTOR", B(SUBTRAHEND) | B(EXTERN) | B(BYTE4) | B(BYTE8)},

@@ -28,11 +28,10 @@ __m128d test_mm_sqrt_pd(__m128d x) {
 
 __m128d test_sqrt_sd(__m128d x, __m128d y) {
   // COMMON-LABEL: test_sqrt_sd
-  // COMMONIR: extractelement <2 x double> {{.*}}, i64 0
+  // COMMONIR: extractelement <2 x double> {{.*}}, i32 0
   // UNCONSTRAINED: call double @llvm.sqrt.f64(double {{.*}})
   // CONSTRAINED: call double @llvm.experimental.constrained.sqrt.f64(double {{.*}}, metadata !{{.*}})
   // CHECK-ASM: sqrtsd
-  // COMMONIR: insertelement <2 x double> {{.*}}, double {{.*}}, i64 0
+  // COMMONIR: insertelement <2 x double> {{.*}}, double {{.*}}, i32 0
   return _mm_sqrt_sd(x, y);
 }
-

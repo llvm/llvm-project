@@ -26,7 +26,7 @@ define protected amdgpu_kernel void @no_folding_imm_to_inst_with_fi(<4 x i64> %v
 ; CHECK-NEXT:    v_dual_mov_b32 v16, s20 :: v_dual_mov_b32 v17, s21
 ; CHECK-NEXT:    s_add_nc_u64 s[20:21], s[34:35], 0x50
 ; CHECK-NEXT:    v_dual_mov_b32 v14, s26 :: v_dual_mov_b32 v15, s27
-; CHECK-NEXT:    s_wait_alu 0xfffe
+; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-NEXT:    v_dual_mov_b32 v22, s24 :: v_dual_mov_b32 v23, s25
 ; CHECK-NEXT:    v_dual_mov_b32 v18, s22 :: v_dual_mov_b32 v19, s23
 ; CHECK-NEXT:    v_dual_mov_b32 v25, s21 :: v_dual_mov_b32 v24, s20
@@ -45,7 +45,7 @@ define protected amdgpu_kernel void @no_folding_imm_to_inst_with_fi(<4 x i64> %v
 ; CHECK-NEXT:    v_dual_mov_b32 v0, s16 :: v_dual_mov_b32 v1, s17
 ; CHECK-NEXT:    v_dual_mov_b32 v2, s18 :: v_dual_mov_b32 v3, s19
 ; CHECK-NEXT:    v_dual_mov_b32 v6, s14 :: v_dual_mov_b32 v7, s15
-; CHECK-NEXT:    s_wait_alu 0xfffe
+; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-NEXT:    v_dual_mov_b32 v29, s13 :: v_dual_mov_b32 v28, s12
 ; CHECK-NEXT:    v_dual_mov_b32 v8, s8 :: v_dual_mov_b32 v9, s9
 ; CHECK-NEXT:    v_dual_mov_b32 v10, s10 :: v_dual_mov_b32 v11, s11

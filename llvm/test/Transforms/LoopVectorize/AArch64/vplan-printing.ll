@@ -80,8 +80,8 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) "target-features"="+neon,+do
 ; CHECK-NEXT: Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.body:
-; CHECK-NEXT:   EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
-; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<%accum> = phi vp<[[RDX_START]]>, ir<%add> (VF scaled by 1/4)
+; CHECK-NEXT:   EMIT-SCALAR vp<[[EP_IV:%.+]]> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
+; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<[[RDX:%.+]]> = phi vp<[[RDX_START]]>, ir<[[RDX_NEXT:%.+]]> (VF scaled by 1/4)
 ; CHECK-NEXT:   CLONE ir<%gep.a> = getelementptr ir<%a>, vp<%index>
 ; CHECK-NEXT:   WIDEN ir<%load.a> = load ir<%gep.a>
 ; CHECK-NEXT:   CLONE ir<%gep.b> = getelementptr ir<%b>, vp<%index>
@@ -89,13 +89,14 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) "target-features"="+neon,+do
 ; CHECK-NEXT:   WIDEN-CAST ir<%ext.b> = zext ir<%load.b> to i32
 ; CHECK-NEXT:   WIDEN-CAST ir<%ext.a> = zext ir<%load.a> to i32
 ; CHECK-NEXT:   WIDEN ir<%mul> = mul ir<%ext.b>, ir<%ext.a>
-; CHECK-NEXT:   PARTIAL-REDUCE ir<%add> = add ir<%accum>, ir<%mul>
-; CHECK-NEXT:   EMIT vp<%index.next> = add nuw vp<%index>, ir<16>
-; CHECK-NEXT:   EMIT branch-on-count vp<%index.next>, ir<1024>
+; CHECK-NEXT:   PARTIAL-REDUCE ir<[[RDX_NEXT]]> = ir<[[RDX]]> + reduce.add (ir<%mul>)
+; CHECK-NEXT:   EMIT vp<[[EP_IV_NEXT:%.+]]> = add nuw vp<[[EP_IV]]>, ir<16>
+; CHECK-NEXT:   EMIT vp<{{%.+}}> = icmp eq vp<%index.next>, ir<1024>
+; CHECK-NEXT:   EMIT branch-on-cond vp<{{%.+}}>
 ; CHECK-NEXT: Successor(s): middle.block, vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[RED_RESULT:%[0-9]+]]> = compute-reduction-result ir<%accum>, ir<%add>
+; CHECK-NEXT:   EMIT vp<[[RED_RESULT:%[0-9]+]]> = compute-reduction-result ir<[[RDX]]>, ir<[[RDX_NEXT]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>:

@@ -49,7 +49,7 @@ define <4 x i64> @scalar_to_4xi64(i64 %val) {
 define <8 x float> @scalar_to_8xf32(float %val) {
 ; CHECK-LABEL: scalar_to_8xf32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f0 killed $f0 def $vr0 def $xr0
+; CHECK-NEXT:    # kill: def $f0 killed $f0 def $xr0
 ; CHECK-NEXT:    ret
   %ret = insertelement <8 x float> poison, float %val, i32 0
   ret <8 x float> %ret
@@ -58,7 +58,7 @@ define <8 x float> @scalar_to_8xf32(float %val) {
 define <4 x double> @scalar_to_4xf64(double %val) {
 ; CHECK-LABEL: scalar_to_4xf64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0 def $xr0
+; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 def $xr0
 ; CHECK-NEXT:    ret
   %ret = insertelement <4 x double> poison, double %val, i32 0
   ret <4 x double> %ret

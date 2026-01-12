@@ -83,7 +83,6 @@ static const llvm::StringSet<> ValueTraits = {
     "is_pointer_interconvertible_base_of",
     "is_polymorphic",
     "is_reference",
-    "is_replaceable",
     "is_rvalue_reference",
     "is_same",
     "is_scalar",
@@ -212,9 +211,8 @@ static bool checkTemplatedDecl(NestedNameSpecifier NNS,
   const auto *TST = NNS.getAsType()->getAs<TemplateSpecializationType>();
   if (!TST)
     return false;
-  if (const TemplateDecl *TD = TST->getTemplateName().getAsTemplateDecl()) {
+  if (const TemplateDecl *TD = TST->getTemplateName().getAsTemplateDecl())
     return isNamedDeclInStdTraitsSet(TD, Set);
-  }
   return false;
 }
 

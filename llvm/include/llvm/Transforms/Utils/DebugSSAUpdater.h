@@ -29,6 +29,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/IR/ValueMap.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {
@@ -342,7 +343,7 @@ class DbgValueRangeTable {
   DenseMap<DebugVariableAggregate, DbgValueDef> OrigSingleLocVariableValueTable;
 
 public:
-  void addVariable(Function *F, DebugVariableAggregate DVA);
+  LLVM_ABI_FOR_TEST void addVariable(Function *F, DebugVariableAggregate DVA);
   bool hasVariableEntry(DebugVariableAggregate DVA) const {
     return OrigVariableValueRangeTable.contains(DVA) ||
            OrigSingleLocVariableValueTable.contains(DVA);

@@ -22,7 +22,7 @@ subroutine reduce(r)
 end subroutine
 end program
 
-! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_Uxf64 : !fir.ref<!fir.box<!fir.array<?xf64>>> alloc {
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_Uxf64 : !fir.ref<!fir.box<!fir.array<?xf64>>> {{.*}} alloc {
 ! CHECK:           %[[VAL_8:.*]] = fir.alloca !fir.box<!fir.array<?xf64>>
 ! CHECK:           omp.yield(%[[VAL_8]] : !fir.ref<!fir.box<!fir.array<?xf64>>>)
 ! CHECK-LABEL:   } init {

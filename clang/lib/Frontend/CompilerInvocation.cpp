@@ -27,7 +27,6 @@
 #include "clang/Basic/Version.h"
 #include "clang/Basic/XRayInstr.h"
 #include "clang/Config/config.h"
-#include "clang/Driver/Driver.h"
 #include "clang/Frontend/CommandLineSourceLoc.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
 #include "clang/Frontend/FrontendOptions.h"
@@ -2670,7 +2669,7 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   return Diags->getNumErrors() == NumErrorsBefore;
 }
 
-unsigned clang::getOptimizationLevel(ArgList &Args, InputKind IK,
+unsigned clang::getOptimizationLevel(const ArgList &Args, InputKind IK,
                                      DiagnosticsEngine &Diags) {
   unsigned DefaultOpt = 0;
   if ((IK.getLanguage() == Language::OpenCL ||
@@ -2709,7 +2708,7 @@ unsigned clang::getOptimizationLevel(ArgList &Args, InputKind IK,
   return DefaultOpt;
 }
 
-unsigned clang::getOptimizationLevelSize(ArgList &Args) {
+unsigned clang::getOptimizationLevelSize(const ArgList &Args) {
   if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
     if (A->getOption().matches(options::OPT_O)) {
       switch (A->getValue()[0]) {
@@ -3271,13 +3270,6 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   Opts.DashX = DashX;
 
   return Diags.getNumErrors() == NumErrorsBefore;
-}
-
-std::string CompilerInvocation::GetResourcesPath(const char *Argv0,
-                                                 void *MainAddr) {
-  std::string ClangExecutable =
-      llvm::sys::fs::getMainExecutable(Argv0, MainAddr);
-  return driver::Driver::GetResourcesPath(ClangExecutable);
 }
 
 static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
@@ -3956,22 +3948,17 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
                 std::to_string(*Opts.AllocTokenMax));
 
   if (Opts.AllocTokenMode) {
-    StringRef S;
-    switch (*Opts.AllocTokenMode) {
-    case llvm::AllocTokenMode::Increment:
-      S = "increment";
-      break;
-    case llvm::AllocTokenMode::Random:
-      S = "random";
-      break;
-    case llvm::AllocTokenMode::TypeHash:
-      S = "typehash";
-      break;
-    case llvm::AllocTokenMode::TypeHashPointerSplit:
-      S = "typehashpointersplit";
-      break;
-    }
+    StringRef S = llvm::getAllocTokenModeAsString(*Opts.AllocTokenMode);
     GenerateArg(Consumer, OPT_falloc_token_mode_EQ, S);
+  }
+  // Generate args for matrix types.
+  if (Opts.MatrixTypes) {
+    if (Opts.getDefaultMatrixMemoryLayout() ==
+        LangOptions::MatrixMemoryLayout::MatrixColMajor)
+      GenerateArg(Consumer, OPT_fmatrix_memory_layout_EQ, "column-major");
+    if (Opts.getDefaultMatrixMemoryLayout() ==
+        LangOptions::MatrixMemoryLayout::MatrixRowMajor)
+      GenerateArg(Consumer, OPT_fmatrix_memory_layout_EQ, "row-major");
   }
 }
 
@@ -4565,6 +4552,27 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Opts.AllocTokenMode = Mode;
     else
       Diags.Report(diag::err_drv_invalid_value) << Arg->getAsString(Args) << S;
+  }
+
+  // Enable options for matrix types.
+  if (Opts.MatrixTypes) {
+    if (const Arg *A = Args.getLastArg(OPT_fmatrix_memory_layout_EQ)) {
+      StringRef ClangValue = A->getValue();
+      if (ClangValue == "row-major")
+        Opts.setDefaultMatrixMemoryLayout(
+            LangOptions::MatrixMemoryLayout::MatrixRowMajor);
+      else
+        Opts.setDefaultMatrixMemoryLayout(
+            LangOptions::MatrixMemoryLayout::MatrixColMajor);
+
+      for (Arg *A : Args.filtered(options::OPT_mllvm)) {
+        StringRef OptValue = A->getValue();
+        if (OptValue.consume_front("-matrix-default-layout=") &&
+            ClangValue != OptValue)
+          Diags.Report(diag::err_conflicting_matrix_layout_flags)
+              << ClangValue << OptValue;
+      }
+    }
   }
 
   // Validate options for HLSL

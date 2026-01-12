@@ -27,8 +27,6 @@
     ret <vscale x 1 x i64> %b
   }
 
-  declare i64 @llvm.riscv.vmv.x.s.nxv1i64(<vscale x 1 x i64>) #1
-
   define i64 @vmv_x_s(<vscale x 1 x i64> %0) #0 {
   entry:
     %a = call i64 @llvm.riscv.vmv.x.s.nxv1i64(<vscale x 1 x i64> %0)
@@ -43,15 +41,11 @@
     ret void
   }
 
-  declare i64 @llvm.vector.reduce.add.v2i64(<2 x i64>) #2
-
   define i64 @vreduce_add_v2i64(ptr %x) #0 {
     %v = load <2 x i64>, ptr %x, align 16
     %red = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %v)
     ret i64 %red
   }
-
-  declare i64 @llvm.riscv.vsetvli.i64(i64, i64 immarg, i64 immarg) #3
 
   define <vscale x 1 x i64> @vsetvli_add(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, i64 %avl) #0 {
   entry:
@@ -112,19 +106,7 @@
     ret void
   }
 
-  declare <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, i64) #1
-
-  declare <vscale x 1 x i64> @llvm.riscv.vle.nxv1i64.i64(<vscale x 1 x i64>, ptr nocapture, i64) #4
-
-  declare <vscale x 1 x i32> @llvm.riscv.vle.nxv1i32.i64(<vscale x 1 x i32>, ptr nocapture, i64) #4
-
-  declare <vscale x 1 x i64> @llvm.riscv.vzext.nxv1i64.nxv1i32.i64(<vscale x 1 x i64>, <vscale x 1 x i32>, i64) #1
-
   attributes #0 = { "target-features"="+v" }
-  attributes #1 = { nounwind readnone }
-  attributes #2 = { nofree nosync nounwind readnone willreturn }
-  attributes #3 = { nounwind }
-  attributes #4 = { nounwind readonly }
 
 ...
 ---

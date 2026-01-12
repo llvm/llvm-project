@@ -91,8 +91,12 @@ public:
   bool legalizeFlogUnsafe(MachineIRBuilder &B, Register Dst, Register Src,
                           bool IsLog10, unsigned Flags) const;
   bool legalizeFExp2(MachineInstr &MI, MachineIRBuilder &B) const;
+  bool legalizeFExpUnsafeImpl(MachineIRBuilder &B, Register Dst, Register Src,
+                              unsigned Flags, bool IsExp10) const;
   bool legalizeFExpUnsafe(MachineIRBuilder &B, Register Dst, Register Src,
                           unsigned Flags) const;
+  bool legalizeFExp10Unsafe(MachineIRBuilder &B, Register Dst, Register Src,
+                            unsigned Flags) const;
   bool legalizeFExp(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeFPow(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeFFloor(MachineInstr &MI, MachineRegisterInfo &MRI,
@@ -132,6 +136,7 @@ public:
       MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
       unsigned Dim, AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;
 
+  MachinePointerInfo getKernargSegmentPtrInfo(MachineFunction &MF) const;
   Register getKernargParameterPtr(MachineIRBuilder &B, int64_t Offset) const;
   bool legalizeKernargMemParameter(MachineInstr &MI, MachineIRBuilder &B,
                                    uint64_t Offset,

@@ -66,10 +66,6 @@ const TargetRegisterClass *TargetInstrInfo::getRegClass(const MCInstrDesc &MCID,
   const MCOperandInfo &OpInfo = MCID.operands()[OpNum];
   int16_t RegClass = getOpRegClassID(OpInfo);
 
-  // TODO: Remove isLookupPtrRegClass in favor of isLookupRegClassByHwMode
-  if (OpInfo.isLookupPtrRegClass())
-    return TRI.getPointerRegClass(RegClass);
-
   // Instructions like INSERT_SUBREG do not have fixed register classes.
   if (RegClass < 0)
     return nullptr;

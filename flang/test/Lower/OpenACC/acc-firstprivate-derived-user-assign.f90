@@ -53,14 +53,14 @@ module m_firstprivate_derived_user_def
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = "_QMm_firstprivate_derived_user_defFtestEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_5:.*]] = fir.alloca i32 {bindc_name = "n", uniq_name = "_QMm_firstprivate_derived_user_defFtestEn"}
 ! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] {uniq_name = "_QMm_firstprivate_derived_user_defFtestEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_7:.*]] = acc.firstprivate varPtr(%[[VAL_2]]#0 : !fir.ref<!fir.type<_QMm_firstprivate_derived_user_defTpoint{x:f32,y:f32,z:f32}>>) -> !fir.ref<!fir.type<_QMm_firstprivate_derived_user_defTpoint{x:f32,y:f32,z:f32}>> {name = "a"}
-! CHECK:           acc.parallel combined(loop) firstprivate(@firstprivatization_ref_rec__QMm_firstprivate_derived_user_defTpoint -> %[[VAL_7]] : !fir.ref<!fir.type<_QMm_firstprivate_derived_user_defTpoint{x:f32,y:f32,z:f32}>>) {
+! CHECK:           %[[VAL_7:.*]] = acc.firstprivate varPtr(%[[VAL_2]]#0 : !fir.ref<!fir.type<_QMm_firstprivate_derived_user_defTpoint{x:f32,y:f32,z:f32}>>) recipe(@firstprivatization_ref_rec__QMm_firstprivate_derived_user_defTpoint) -> !fir.ref<!fir.type<_QMm_firstprivate_derived_user_defTpoint{x:f32,y:f32,z:f32}>> {name = "a"}
+! CHECK:           acc.parallel combined(loop) firstprivate(%[[VAL_7]] : !fir.ref<!fir.type<_QMm_firstprivate_derived_user_defTpoint{x:f32,y:f32,z:f32}>>) {
 ! CHECK:             %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] {uniq_name = "_QMm_firstprivate_derived_user_defFtestEa"} : (!fir.ref<!fir.type<_QMm_firstprivate_derived_user_defTpoint{x:f32,y:f32,z:f32}>>) -> (!fir.ref<!fir.type<_QMm_firstprivate_derived_user_defTpoint{x:f32,y:f32,z:f32}>>, !fir.ref<!fir.type<_QMm_firstprivate_derived_user_defTpoint{x:f32,y:f32,z:f32}>>)
 ! CHECK:             %[[VAL_9:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_10:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<i32>
 ! CHECK:             %[[VAL_11:.*]] = arith.constant 1 : i32
-! CHECK:             %[[VAL_12:.*]] = acc.private varPtr(%[[VAL_4]]#0 : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = "i"}
-! CHECK:             acc.loop combined(parallel) private(@privatization_ref_i32 -> %[[VAL_12]] : !fir.ref<i32>) control(%[[VAL_14:.*]] : i32) = (%[[VAL_9]] : i32) to (%[[VAL_10]] : i32)  step (%[[VAL_11]] : i32) {
+! CHECK:             %[[VAL_12:.*]] = acc.private varPtr(%[[VAL_4]]#0 : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK:             acc.loop combined(parallel) private(%[[VAL_12]] : !fir.ref<i32>) control(%[[VAL_14:.*]] : i32) = (%[[VAL_9]] : i32) to (%[[VAL_10]] : i32)  step (%[[VAL_11]] : i32) {
   ! CHECK:             %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12]] {uniq_name = "_QMm_firstprivate_derived_user_defFtestEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:               fir.store %[[VAL_14]] to %[[VAL_13]]#0 : !fir.ref<i32>
 ! CHECK:               %[[VAL_15:.*]] = arith.constant 1.000000e+00 : f32

@@ -547,9 +547,11 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       // MIPS Prefetch instructions require the offset to be 9 bits encoded.
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
     } else if ((Opc == RISCV::PseudoRV32ZdinxLD ||
-                Opc == RISCV::PseudoRV32ZdinxSD) &&
+                Opc == RISCV::PseudoRV32ZdinxSD ||
+                Opc == RISCV::PseudoLD_RV32_OPT ||
+                Opc == RISCV::PseudoSD_RV32_OPT) &&
                Lo12 >= 2044) {
-      // This instruction will be split into 2 instructions. The second
+      // This instruction will/might be split into 2 instructions. The second
       // instruction will add 4 to the immediate. If that would overflow 12
       // bits, we can't fold the offset.
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
@@ -869,6 +871,7 @@ bool RISCVRegisterInfo::getRegAllocationHints(
   unsigned HintType = Hint.first;
   Register Partner = Hint.second;
 
+  MCRegister TargetReg;
   if (HintType == RISCVRI::RegPairEven || HintType == RISCVRI::RegPairOdd) {
     // Check if we want the even or odd register of a consecutive pair
     bool WantOdd = (HintType == RISCVRI::RegPairOdd);
@@ -877,7 +880,7 @@ bool RISCVRegisterInfo::getRegAllocationHints(
     if (Partner.isVirtual() && VRM && VRM->hasPhys(Partner)) {
       MCRegister PartnerPhys = VRM->getPhys(Partner);
       // Calculate the exact register we need for consecutive pairing
-      MCRegister TargetReg = PartnerPhys.id() + (WantOdd ? 1 : -1);
+      TargetReg = PartnerPhys.id() + (WantOdd ? 1 : -1);
 
       // Verify it's valid and available
       if (RISCV::GPRRegClass.contains(TargetReg) &&
@@ -888,18 +891,17 @@ bool RISCVRegisterInfo::getRegAllocationHints(
     // Second priority: Try to find consecutive register pairs in the allocation
     // order
     for (MCPhysReg PhysReg : Order) {
-      if (!PhysReg)
+      // Don't add the hint if we already added above.
+      if (TargetReg == PhysReg)
         continue;
 
       unsigned RegNum = getEncodingValue(PhysReg);
       // Check if this register matches the even/odd requirement
       bool IsOdd = (RegNum % 2 != 0);
 
-      // Verify the pair register exists and is in the same register class
-      // TODO: Skip unallocatable registers: we need to prevent any of odd/even
-      // to be reserved, so if we need odd, we need to check if corresponding
-      // even is preserved, vice versa.
-      if ((WantOdd && IsOdd) || (!WantOdd && !IsOdd))
+      // Don't provide hints that are paired to a reserved register.
+      MCRegister Paired = PhysReg + (IsOdd ? -1 : 1);
+      if (WantOdd == IsOdd && !MRI->isReserved(Paired))
         Hints.push_back(PhysReg);
     }
   }
@@ -980,6 +982,13 @@ bool RISCVRegisterInfo::getRegAllocationHints(
       NeedGPRC = true;
       return Subtarget.hasStdExtZcb() && MI.getOperand(2).isImm() &&
              MI.getOperand(2).getImm() == -1;
+    case RISCV::QC_EXTU:
+      return MI.getOperand(2).getImm() >= 6 && MI.getOperand(3).getImm() == 0;
+    case RISCV::BSETI:
+    case RISCV::BEXTI:
+      // qc.c.bseti, qc.c.bexti
+      NeedGPRC = true;
+      return Subtarget.hasVendorXqcibm() && MI.getOperand(2).getImm() != 0;
     }
   };
 

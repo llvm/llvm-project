@@ -288,3 +288,61 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
   spirv.EntryPoint "GLCompute" @main
   spirv.ExecutionMode @main "LocalSize", 1, 1, 1
 }
+
+// -----
+
+// Selection with switch and block operands
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.5, [Shader], []> {
+// CHECK-LABEL: @selection_switch_operands
+  spirv.func @selection_switch_operands(%selector : si32) "None" {
+    %cst1 = spirv.Constant 1.000000e+00 : f32
+    %vec0 = spirv.Undef : vector<3xf32>
+// CHECK: {{%.*}} = spirv.CompositeInsert {{%.*}}, {{%.*}}[0 : i32] : f32 into vector<3xf32>
+    %vec1 = spirv.CompositeInsert %cst1, %vec0[0 : i32] : f32 into vector<3xf32>
+    spirv.Branch ^bb1
+  ^bb1:
+// CHECK: {{%.*}} = spirv.mlir.selection -> vector<3xf32> {
+    %vec4 = spirv.mlir.selection -> vector<3xf32> {
+// CHECK-NEXT: spirv.Switch {{%.*}} : si32, [
+// CHECK-NEXT: default: ^[[DEFAULT:.+]]({{%.*}} : vector<3xf32>),
+// CHECK-NEXT: 0: ^[[CASE0:.+]]({{%.*}} : vector<3xf32>),
+// CHECK-NEXT: 1: ^[[CASE1:.+]]({{%.*}} : vector<3xf32>)
+      spirv.Switch %selector : si32, [
+        default: ^bb3(%vec1 : vector<3xf32>),
+        0: ^bb1(%vec1 : vector<3xf32>),
+        1: ^bb2(%vec1 : vector<3xf32>)
+      ]
+// CHECK: ^[[CASE0]]({{%.*}}: vector<3xf32>)
+    ^bb1(%vecbb1: vector<3xf32>):
+      %cst3 = spirv.Constant 3.000000e+00 : f32
+// CHECK: {{%.*}} = spirv.CompositeInsert {{%.*}}, {{%.*}}[1 : i32] : f32 into vector<3xf32>
+      %vec2 = spirv.CompositeInsert %cst3, %vecbb1[1 : i32] : f32 into vector<3xf32>
+// CHECK-NEXT: spirv.Branch ^[[DEFAULT]]({{%.*}} : vector<3xf32>)
+      spirv.Branch ^bb3(%vec2 : vector<3xf32>)
+// CHECK-NEXT: ^[[CASE1]]({{%.*}}: vector<3xf32>)
+    ^bb2(%vecbb2: vector<3xf32>):
+      %cst4 = spirv.Constant 4.000000e+00 : f32
+// CHECK: {{%.*}} = spirv.CompositeInsert {{%.*}}, {{%.*}}[1 : i32] : f32 into vector<3xf32>
+      %vec3 = spirv.CompositeInsert %cst4, %vecbb2[1 : i32] : f32 into vector<3xf32>
+// CHECK-NEXT: spirv.Branch ^[[DEFAULT]]({{%.*}} : vector<3xf32>)
+      spirv.Branch ^bb3(%vec3 : vector<3xf32>)
+// CHECK-NEXT: ^[[DEFAULT]]({{%.*}}: vector<3xf32>)
+    ^bb3(%vecbb3: vector<3xf32>):
+// CHECK-NEXT: spirv.mlir.merge {{%.*}} : vector<3xf32>
+      spirv.mlir.merge %vecbb3 : vector<3xf32>
+// CHECK-NEXT: }
+    }
+    %cst2 = spirv.Constant 2.000000e+00 : f32
+// CHECK: {{%.*}} = spirv.CompositeInsert {{%.*}}, {{%.*}}[2 : i32] : f32 into vector<3xf32>
+    %vec5 = spirv.CompositeInsert %cst2, %vec4[2 : i32] : f32 into vector<3xf32>
+    spirv.Return
+  }
+
+  spirv.func @main() -> () "None" {
+    spirv.Return
+  }
+
+  spirv.EntryPoint "GLCompute" @main
+  spirv.ExecutionMode @main "LocalSize", 1, 1, 1
+}
