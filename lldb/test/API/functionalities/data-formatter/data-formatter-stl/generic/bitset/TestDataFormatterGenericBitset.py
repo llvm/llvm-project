@@ -66,12 +66,12 @@ class GenericBitsetDataFormatterTestCase(TestBase):
 
     @add_test_categories(["libstdcxx"])
     def test_value_libstdcpp(self):
-        self.build(dictionary={'USE_LIBSTDCPP': "1"})
+        self.build(dictionary={"USE_LIBSTDCPP": "1"})
         self.do_test_value()
 
     @add_test_categories(["libc++"])
     def test_value_libcpp(self):
-        self.build(dictionary={'USE_LIBCPP': "1"})
+        self.build(dictionary={"USE_LIBCPP": "1"})
         self.do_test_value()
 
     @add_test_categories(["msvcstl"])
@@ -100,12 +100,12 @@ class GenericBitsetDataFormatterTestCase(TestBase):
 
     @add_test_categories(["libstdcxx"])
     def test_ptr_and_ref_libstdcpp(self):
-        self.build(dictionary={'USE_LIBSTDCPP': "1"})
+        self.build(dictionary={"USE_LIBSTDCPP": "1"})
         self.do_test_ptr_and_ref()
 
     @add_test_categories(["libc++"])
     def test_ptr_and_ref_libcpp(self):
-        self.build(dictionary={'USE_LIBCPP': "1"})
+        self.build(dictionary={"USE_LIBCPP": "1"})
         self.do_test_ptr_and_ref()
 
     @add_test_categories(["msvcstl"])
