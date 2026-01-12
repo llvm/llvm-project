@@ -20,7 +20,8 @@ next0:
   call void @llvm.lifetime.end.p0(i64 40, ptr nonnull %a)
   call void @llvm.lifetime.end.p0(i64 40, ptr nonnull %b)
   br label %exit
-; CHECK-NOT: settag
+; CHECK-DAG: call void @llvm.aarch64.settag(ptr %a, i64 48)
+; CHECK-DAG: call void @llvm.aarch64.settag(ptr %b, i64 48)
 
 lpad0:
 ; CHECK-LABEL: lpad0:
