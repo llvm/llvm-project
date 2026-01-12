@@ -519,6 +519,9 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setMaxAtomicSizeInBitsSupported(128);
     setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i128, Custom);
   }
+
+  // Disable strict node mutation.
+  IsStrictFPEnabled = true;
 }
 
 bool LoongArchTargetLowering::isOffsetFoldingLegal(
