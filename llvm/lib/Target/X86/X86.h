@@ -100,7 +100,13 @@ public:
 FunctionPass *createX86OptimizeLEAsLegacyPass();
 
 /// Return a pass that transforms setcc + movzx pairs into xor + setcc.
-FunctionPass *createX86FixupSetCC();
+class X86FixupSetCCPass : public PassInfoMixin<X86FixupSetCCPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86FixupSetCCLegacyPass();
 
 /// Return a pass that avoids creating store forward block issues in the
 /// hardware.
@@ -159,7 +165,13 @@ FunctionPass *createX86FastTileConfigLegacyPass();
 FunctionPass *createX86PreTileConfigPass();
 
 /// Return a pass that lower the tile copy instruction.
-FunctionPass *createX86LowerTileCopyPass();
+class X86LowerTileCopyPass : public PassInfoMixin<X86LowerTileCopyPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86LowerTileCopyLegacyPass();
 
 /// Return a pass that inserts int3 at the end of the function if it ends with a
 /// CALL instruction. The pass does the same for each funclet as well. This
@@ -333,13 +345,13 @@ void initializeX86ExpandPseudoLegacyPass(PassRegistry &);
 void initializeX86FPStackifierLegacyPass(PassRegistry &);
 void initializeX86FastPreTileConfigLegacyPass(PassRegistry &);
 void initializeX86FastTileConfigLegacyPass(PassRegistry &);
-void initializeX86FixupSetCCPassPass(PassRegistry &);
+void initializeX86FixupSetCCLegacyPass(PassRegistry &);
 void initializeX86FlagsCopyLoweringLegacyPass(PassRegistry &);
 void initializeX86LoadValueInjectionLoadHardeningPassPass(PassRegistry &);
 void initializeX86LoadValueInjectionRetHardeningPassPass(PassRegistry &);
 void initializeX86LowerAMXIntrinsicsLegacyPassPass(PassRegistry &);
 void initializeX86LowerAMXTypeLegacyPassPass(PassRegistry &);
-void initializeX86LowerTileCopyPass(PassRegistry &);
+void initializeX86LowerTileCopyLegacyPass(PassRegistry &);
 void initializeX86OptimizeLEAsLegacyPass(PassRegistry &);
 void initializeX86PartialReductionLegacyPass(PassRegistry &);
 void initializeX86PreTileConfigPass(PassRegistry &);
