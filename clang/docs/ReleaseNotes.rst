@@ -231,6 +231,9 @@ Resolutions to C++ Defect Reports
 C Language Changes
 ------------------
 
+- Clang now supports the
+  :ref:`__builtin_stack_address <builtin_stack_address-doc>` () builtin.
+  The semantics match those of GCC's builtin with the same name.
 - Implemented the ``defer`` draft Technical Specification
   (`WG14 N3734 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3734.pdf>`_); it is enabled in C mode by
   passing ``-fdefer-ts``. Note, the details of this feature are subject to change given that the Technical
@@ -701,6 +704,7 @@ X86 Support
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 - Support has been added for the following processors (command-line identifiers in parentheses):
+  - Ampere Computing Ampere1C (``ampere1c``)
   - Arm C1-Nano (``c1-nano``)
   - Arm C1-Pro (``c1-pro``)
   - Arm C1-Premium (``c1-premium``)
