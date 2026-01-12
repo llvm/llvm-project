@@ -71,7 +71,7 @@ public:
   clang::VarDecl *GetOrCreateVariableDecl(PdbCompilandSymId scope_id,
                                           PdbCompilandSymId var_id);
   clang::VarDecl *GetOrCreateVariableDecl(PdbGlobalSymId var_id);
-  clang::TypedefNameDecl *GetOrCreateTypedefDecl(PdbGlobalSymId id);
+  CompilerType GetOrCreateTypedefType(PdbGlobalSymId id);
   void ParseDeclsForContext(lldb_private::CompilerDeclContext context);
 
   clang::QualType GetBasicType(lldb::BasicType type);
