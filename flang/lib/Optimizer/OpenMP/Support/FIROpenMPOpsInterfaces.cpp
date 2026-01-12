@@ -20,18 +20,17 @@ namespace {
 template <typename OP, typename Enable = void>
 struct OperationMoveModel {
   // Returns true if it is allowed to move the given 'candidate'
-  // operation from the 'descendant' operation into 'op' operation.
+  // operation from the 'descendant' operation into operation 'op'.
   // If 'candidate' is nullptr, then the caller is querying whether
   // any operation from any descendant can be moved into 'op' operation.
-  bool canMoveFromDescendantImpl(mlir::Operation *op,
-                                 mlir::Operation *descendant,
-                                 mlir::Operation *candidate) const;
+  bool canMoveFromDescendant(mlir::Operation *op, mlir::Operation *descendant,
+                             mlir::Operation *candidate) const;
 
   // Returns true if it is allowed to move the given 'candidate'
-  // operation out of 'op' operation. If 'candidate' is nullptr,
+  // operation out of operation 'op'. If 'candidate' is nullptr,
   // then the caller is querying whether any operation can be moved
   // out of 'op' operation.
-  bool canMoveOutOfImpl(mlir::Operation *op, mlir::Operation *candidate) const;
+  bool canMoveOutOf(mlir::Operation *op, mlir::Operation *candidate) const;
 };
 
 // Helpers to check if T is one of Ts.
@@ -53,14 +52,13 @@ struct OperationMoveModel<
     typename std::enable_if<is_any_omp_op_v<OP, OMP_LOOP_WRAPPER_OPS>>::type>
     : public fir::OperationMoveOpInterface::ExternalModel<
           OperationMoveModel<OP>, OP> {
-  bool canMoveFromDescendantImpl(mlir::Operation *op,
-                                 mlir::Operation *descendant,
-                                 mlir::Operation *candidate) const {
+  bool canMoveFromDescendant(mlir::Operation *op, mlir::Operation *descendant,
+                             mlir::Operation *candidate) const {
     // Operations cannot be moved from descendants of LoopWrapperInterface
     // operation into the LoopWrapperInterface operation.
     return false;
   }
-  bool canMoveOutOfImpl(mlir::Operation *op, mlir::Operation *candidate) const {
+  bool canMoveOutOf(mlir::Operation *op, mlir::Operation *candidate) const {
     // The LoopWrapperInterface operations are only supposed to contain
     // a loop operation, and it is probably okay to move operations
     // from the descendant loop operation out of the LoopWrapperInterface
@@ -75,14 +73,13 @@ struct OperationMoveModel<
     OP, typename std::enable_if<is_any_omp_op_v<OP, OMP_OUTLINEABLE_OPS>>::type>
     : public fir::OperationMoveOpInterface::ExternalModel<
           OperationMoveModel<OP>, OP> {
-  bool canMoveFromDescendantImpl(mlir::Operation *op,
-                                 mlir::Operation *descendant,
-                                 mlir::Operation *candidate) const {
+  bool canMoveFromDescendant(mlir::Operation *op, mlir::Operation *descendant,
+                             mlir::Operation *candidate) const {
     // Operations can be moved from descendants of OutlineableOpenMPOpInterface
     // operation into the OutlineableOpenMPOpInterface operation.
     return true;
   }
-  bool canMoveOutOfImpl(mlir::Operation *op, mlir::Operation *candidate) const {
+  bool canMoveOutOf(mlir::Operation *op, mlir::Operation *candidate) const {
     // Operations cannot be moved out of OutlineableOpenMPOpInterface operation.
     return false;
   }

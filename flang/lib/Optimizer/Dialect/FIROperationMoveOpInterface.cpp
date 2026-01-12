@@ -23,24 +23,27 @@ fir::detail::verifyOperationMoveOpInterface(mlir::Operation *op) {
   return llvm::success();
 }
 
-bool fir::detail::canMoveFromDescendant(mlir::Operation *op,
-                                        mlir::Operation *descendant,
-                                        mlir::Operation *candidate) {
+bool fir::canMoveFromDescendant(mlir::Operation *op,
+                                mlir::Operation *descendant,
+                                mlir::Operation *candidate) {
   // Perform some sanity checks.
   assert(op->isProperAncestor(descendant) &&
          "op must be an ancestor of descendant");
   if (candidate)
     assert(descendant->isProperAncestor(candidate) &&
            "descendant must be an ancestor of candidate");
-  auto iface = mlir::cast<OperationMoveOpInterface>(op);
-  return iface.canMoveFromDescendantImpl(descendant, candidate);
+  if (auto iface = mlir::dyn_cast<OperationMoveOpInterface>(op))
+    return iface.canMoveFromDescendant(descendant, candidate);
+
+  return true;
 }
 
-bool fir::detail::canMoveOutOf(mlir::Operation *op,
-                               mlir::Operation *candidate) {
+bool fir::canMoveOutOf(mlir::Operation *op, mlir::Operation *candidate) {
   if (candidate)
     assert(op->isProperAncestor(candidate) &&
            "op must be an ancestor of candidate");
-  auto iface = mlir::cast<OperationMoveOpInterface>(op);
-  return iface.canMoveOutOfImpl(candidate);
+  if (auto iface = mlir::dyn_cast<OperationMoveOpInterface>(op))
+    return iface.canMoveOutOf(candidate);
+
+  return true;
 }

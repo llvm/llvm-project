@@ -272,28 +272,29 @@ void LoopInvariantCodeMotion::runOnOperation() {
       };
 
   getOperation()->walk([&](LoopLikeOpInterface loopLike) {
-    auto loopMoveIface =
-        dyn_cast<fir::OperationMoveOpInterface>(loopLike.getOperation());
-    if (loopMoveIface && !loopMoveIface.canMoveOutOf(nullptr)) {
-      LDBG()
-          << "Cannot hoist anything out of OperationMoveOpInterface operation";
+    if (!fir::canMoveOutOf(loopLike, nullptr)) {
+      LDBG() << "Cannot hoist anything out of loop operation: ";
+      LDBG_OS([&](llvm::raw_ostream &os) {
+        loopLike->print(os, OpPrintingFlags().skipRegions());
+      });
       return;
     }
     // We always hoist operations to the parent operation of the loopLike.
     // Check that the parent operation allows the hoisting, e.g.
     // omp::LoopWrapperInterface operations assume tight nesting
     // of the inner maybe loop-like operations, so hoisting
-    // to such a parent would be invalid. We assume that all such
-    // operations properly implement fir::OperationMoveOpInterface.
+    // to such a parent would be invalid. We rely on
+    // fir::canMoveFromDescendant() to identify whether the hoisting
+    // is allowed.
     Operation *parentOp = loopLike->getParentOp();
-    auto parentMoveIface =
-        dyn_cast_or_null<fir::OperationMoveOpInterface>(parentOp);
     if (!parentOp) {
       LDBG() << "Skipping top-level loop-like operation?";
       return;
-    } else if (parentMoveIface &&
-               !parentMoveIface.canMoveFromDescendant(loopLike, nullptr)) {
-      LDBG() << "Cannot hoist anything into OperationMoveOpInterface operation";
+    } else if (!fir::canMoveFromDescendant(parentOp, loopLike, nullptr)) {
+      LDBG() << "Cannot hoist anything into operation: ";
+      LDBG_OS([&](llvm::raw_ostream &os) {
+        parentOp->print(os, OpPrintingFlags().skipRegions());
+      });
       return;
     }
     moveLoopInvariantCode(
@@ -304,12 +305,11 @@ void LoopInvariantCodeMotion::runOnOperation() {
         },
         /*shouldMoveOutOfRegion=*/
         [&](Operation *op, Region *) {
-          if (loopMoveIface && !loopMoveIface.canMoveOutOf(op)) {
+          if (!fir::canMoveOutOf(loopLike, op)) {
             LDBG() << "Cannot hoist " << *op << " out of the loop";
             return false;
           }
-          if (parentMoveIface &&
-              !parentMoveIface.canMoveFromDescendant(loopLike, op)) {
+          if (!fir::canMoveFromDescendant(parentOp, loopLike, op)) {
             LDBG() << "Cannot hoist " << *op << " into the parent of the loop";
             return false;
           }

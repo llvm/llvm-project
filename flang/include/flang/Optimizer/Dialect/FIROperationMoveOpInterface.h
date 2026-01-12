@@ -20,19 +20,23 @@
 namespace fir::detail {
 /// Verify invariants of OperationMoveOpInterface.
 llvm::LogicalResult verifyOperationMoveOpInterface(mlir::Operation *op);
-
-/// A wrapper around canMoveFromDescendantImpl().
-/// The wrapper asserts certain assumptions about the passed
-/// arguments.
-bool canMoveFromDescendant(mlir::Operation *op, mlir::Operation *descendant,
-                           mlir::Operation *candidate);
-
-/// A wrapper around canMoveOutOfImpl().
-/// The wrapper asserts certain assumptions about the passed
-/// arguments.
-bool canMoveOutOf(mlir::Operation *op, mlir::Operation *candidate);
 } // namespace fir::detail
 
 #include "flang/Optimizer/Dialect/FIROperationMoveOpInterface.h.inc"
+
+namespace fir {
+/// Returns true if it is allowed to move the given 'candidate'
+/// operation from the 'descendant' operation into operation 'op'.
+/// If 'candidate' is nullptr, then the caller is querying whether
+/// any operation from any descendant can be moved into this operation.
+bool canMoveFromDescendant(mlir::Operation *op, mlir::Operation *descendant,
+                           mlir::Operation *candidate);
+
+/// Returns true if it is allowed to move the given 'candidate'
+/// operation out of operation 'op'. If 'candidate' is nullptr,
+/// then the caller is querying whether any operation can be moved
+/// out of this operation.
+bool canMoveOutOf(mlir::Operation *op, mlir::Operation *candidate);
+} // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_FIR_OPERATION_MOVE_OP_INTERFACE_H

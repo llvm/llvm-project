@@ -178,7 +178,7 @@ void IndirectGlobalAccessModel<fir::TypeDescOp>::getReferencedSymbols(
 }
 
 template <>
-bool OperationMoveModel<mlir::acc::LoopOp>::canMoveFromDescendantImpl(
+bool OperationMoveModel<mlir::acc::LoopOp>::canMoveFromDescendant(
     mlir::Operation *op, mlir::Operation *descendant,
     mlir::Operation *candidate) const {
   // It should be always allowed to move operations from descendants
@@ -187,7 +187,7 @@ bool OperationMoveModel<mlir::acc::LoopOp>::canMoveFromDescendantImpl(
 }
 
 template <>
-bool OperationMoveModel<mlir::acc::LoopOp>::canMoveOutOfImpl(
+bool OperationMoveModel<mlir::acc::LoopOp>::canMoveOutOf(
     mlir::Operation *op, mlir::Operation *candidate) const {
   // TODO: disallow moving operations, which have operands that are referenced
   // in the data operands (e.g. in [first]private() etc.) of the acc.loop.

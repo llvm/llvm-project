@@ -97,7 +97,7 @@ struct OffloadRegionModel
 
 /// External model for fir::OperationMoveOpInterface.
 /// This interface provides methods to identify whether
-/// operations can be moved (e.g. by LICM) from/into
+/// operations can be moved (e.g. by LICM, CSE, etc.) from/into
 /// OpenACC dialect operations.
 template <typename Op>
 struct OperationMoveModel : public fir::OperationMoveOpInterface::ExternalModel<
@@ -106,15 +106,14 @@ struct OperationMoveModel : public fir::OperationMoveOpInterface::ExternalModel<
   // operation from the 'descendant' operation into 'op' operation.
   // If 'candidate' is nullptr, then the caller is querying whether
   // any operation from any descendant can be moved into 'op' operation.
-  bool canMoveFromDescendantImpl(mlir::Operation *op,
-                                 mlir::Operation *descendant,
-                                 mlir::Operation *candidate) const;
+  bool canMoveFromDescendant(mlir::Operation *op, mlir::Operation *descendant,
+                             mlir::Operation *candidate) const;
 
   // Returns true if it is allowed to move the given 'candidate'
   // operation out of 'op' operation. If 'candidate' is nullptr,
   // then the caller is querying whether any operation can be moved
   // out of 'op' operation.
-  bool canMoveOutOfImpl(mlir::Operation *op, mlir::Operation *candidate) const;
+  bool canMoveOutOf(mlir::Operation *op, mlir::Operation *candidate) const;
 };
 
 } // namespace fir::acc
