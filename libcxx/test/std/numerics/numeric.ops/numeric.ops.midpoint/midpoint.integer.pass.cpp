@@ -25,6 +25,14 @@
 #include "type_algorithms.h"
 
 template <typename T>
+concept has_midpoint = requires(T a, T b) { std::midpoint(a, b); };
+
+static_assert(!has_midpoint<bool>);
+static_assert(!has_midpoint<const bool>);
+static_assert(!has_midpoint<volatile bool>);
+static_assert(!has_midpoint<const volatile bool>);
+
+template <typename T>
 constexpr void test_signed() {
   ASSERT_SAME_TYPE(decltype(std::midpoint(T{}, T{})), T);
   ASSERT_NOEXCEPT(std::midpoint(T{}, T{}));

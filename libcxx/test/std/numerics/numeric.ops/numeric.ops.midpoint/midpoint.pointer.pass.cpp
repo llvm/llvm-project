@@ -27,6 +27,21 @@
 
 #include "test_macros.h"
 
+using FuncPtr = void (*)();
+struct Incomplete;
+
+template <typename T>
+concept has_midpoint = requires(T a, T b) { std::midpoint(a, b); };
+
+static_assert(!has_midpoint<std::nullptr_t>);
+static_assert(!has_midpoint<FuncPtr>);
+LIBCPP_STATIC_ASSERT(!has_midpoint<Incomplete*>);
+
+static_assert(!has_midpoint<void*>);
+static_assert(!has_midpoint<const void*>);
+static_assert(!has_midpoint<volatile void*>);
+static_assert(!has_midpoint<const volatile void*>);
+
 template <typename T>
 constexpr bool check(T* base, std::ptrdiff_t i, std::ptrdiff_t j, std::ptrdiff_t expect) {
   return std::midpoint(base + i, base + j) == base + expect;
