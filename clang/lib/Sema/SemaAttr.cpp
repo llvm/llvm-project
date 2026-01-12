@@ -1334,8 +1334,7 @@ NamedDecl *Sema::lookupExternCFunctionOrVariable(IdentifierInfo *IdentId,
   LookupName(Result, curScope);
   if (!getLangOpts().CPlusPlus)
     return Result.getAsSingle<NamedDecl>();
-  for (LookupResult::iterator I = Result.begin(); I != Result.end(); ++I) {
-    NamedDecl *D = (*I)->getUnderlyingDecl();
+  for (NamedDecl *D : Result) {
     if (auto *FD = dyn_cast<FunctionDecl>(D))
       if (FD->isExternC())
         return D;

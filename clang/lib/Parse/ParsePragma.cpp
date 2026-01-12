@@ -1402,7 +1402,7 @@ bool Parser::HandlePragmaMSAllocText(StringRef PragmaName,
   return true;
 }
 
-bool Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
+void Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
   assert(Tok.is(PragmaKind));
 
   StringRef PragmaName = "export";
@@ -1414,19 +1414,26 @@ bool Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
                       false);
   ConsumeAnnotationToken();
 
+  auto SkipToEnd = [this]() {
+    SkipUntil(tok::eof, StopBeforeMatch);
+    ConsumeToken();
+  };
+
   do {
     PP.Lex(Tok);
     if (Tok.isNot(tok::l_paren)) {
       PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_lparen)
           << PragmaName;
-      return false;
+      SkipToEnd();
+      return;
     }
 
     PP.Lex(Tok);
     if (Tok.isNot(tok::identifier)) {
       PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
           << PragmaName;
-      return false;
+      SkipToEnd();
+      return;
     }
 
     IdentifierInfo *IdentName = Tok.getIdentifierInfo();
@@ -1436,7 +1443,8 @@ bool Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
     if (Tok.isNot(tok::r_paren)) {
       PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_rparen)
           << PragmaName;
-      return false;
+      SkipToEnd();
+      return;
     }
 
     PP.Lex(Tok);
@@ -1451,22 +1459,18 @@ bool Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
     } else if (Tok.isNot(tok::eof)) {
       PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
           << PragmaName;
-      return false;
+      SkipToEnd();
+      return;
     }
   } while (Tok.isNot(tok::eof));
   PP.Lex(Tok);
-  return true;
+  return;
 }
 
 void Parser::HandlePragmaExport() {
   assert(Tok.is(tok::annot_pragma_export));
 
-  if (!zOSHandlePragmaHelper(tok::annot_pragma_export)) {
-    // Parsing pragma failed, and has been diagnosed.  Slurp up the
-    // tokens until eof (really end of line) to prevent follow-on errors.
-    SkipUntil(tok::eof, StopBeforeMatch);
-    ConsumeToken();
-  }
+  zOSHandlePragmaHelper(tok::annot_pragma_export);
 }
 
 static std::string PragmaLoopHintString(Token PragmaName, Token Option) {
@@ -4218,9 +4222,7 @@ void PragmaMaxTokensTotalHandler::HandlePragma(Preprocessor &PP,
 
 static void zOSPragmaHandlerHelper(Preprocessor &PP, Token &Tok,
                                    tok::TokenKind TokKind) {
-  Token EoF, AnnotTok;
-  EoF.startToken();
-  EoF.setKind(tok::eof);
+  Token AnnotTok;
   AnnotTok.startToken();
   AnnotTok.setKind(TokKind);
   AnnotTok.setLocation(Tok.getLocation());
@@ -4232,6 +4234,9 @@ static void zOSPragmaHandlerHelper(Preprocessor &PP, Token &Tok,
     AnnotTok.setAnnotationEndLoc(Tok.getLocation());
   }
   // Add a sentinel EoF token to the end of the list.
+  Token EoF;
+  EoF.startToken();
+  EoF.setKind(tok::eof);
   EoF.setLocation(Tok.getLocation());
   TokenVector.push_back(EoF);
   // We must allocate this array with new because EnterTokenStream is going to

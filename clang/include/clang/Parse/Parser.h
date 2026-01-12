@@ -7163,7 +7163,7 @@ private:
 
   void HandlePragmaAttribute();
 
-  bool zOSHandlePragmaHelper(tok::TokenKind);
+  void zOSHandlePragmaHelper(tok::TokenKind);
 
   /// Handle the annotation token produced for
   /// #pragma export ...

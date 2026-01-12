@@ -7651,15 +7651,15 @@ static void emitReadOnlyPlacementAttrWarning(Sema &S, const VarDecl *VD) {
 }
 
 void Sema::ProcessPragmaExport(DeclaratorDecl *NewD) {
+  assert((isa<FunctionDecl>(NewD) || isa<VarDecl>(NewD)) &&
+         "NewD is not a function or variable");
+
   if (PendingExportedNames.empty())
     return;
   if (FunctionDecl *FD = dyn_cast<FunctionDecl>(NewD)) {
     if (getLangOpts().CPlusPlus && !FD->isExternC())
       return;
   }
-  assert((isa<FunctionDecl>(NewD) || isa<VarDecl>(NewD)) &&
-         "NewD is not a function or variable");
-
   IdentifierInfo *IdentName = NewD->getIdentifier();
   if (IdentName == nullptr)
     return;
