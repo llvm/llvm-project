@@ -8131,13 +8131,12 @@ SDValue SystemZTargetLowering::combineSTORE(
     }
   }
 
-  // combine STORE (LOAD_STACK_GUARD) into MOVE_STACK_GUARD
+  // combine STORE (LOAD_STACK_GUARD) into MOVE_STACK_GUARD_DAG (MSGD)
   if (Op1->isMachineOpcode() &&
       (Op1->getMachineOpcode() == SystemZ::LOAD_STACK_GUARD)) {
-    // If so, create a MOVE_STACK_GUARD_DAG node to replace the store,
-    // as well as the LOAD_STACK_GUARD.
+    // Obtain the frame index the store was targeting.
     int FI = cast<FrameIndexSDNode>(SN->getOperand(2))->getIndex();
-    // FrameIndex, Dummy Displacement
+    // Prepare operands of MSGD - FrameIndex, Dummy Displacement.
     SDValue Ops[] = {DAG.getTargetFrameIndex(FI, MVT::i64),
                      DAG.getTargetConstant(0, SDLoc(SN), MVT::i64),
                      SN->getChain()};
@@ -8967,6 +8966,13 @@ SystemZTargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
 }
 
 namespace {
+// Check if a given ICMP N node implements a check of the stack guard
+// against a stack guard instance on the stack. Specifically, this checks if:
+// - N is ICMP
+// - N has a single use
+// - N's operands are a load of the stack guard, and a load from a stack slot
+// - Those operand values are not used elsewhere <-- asserts if this is not
+// true!
 bool isStackGuardCheck(SDNode const *N, int &FI, SDValue &InChain,
                        SDValue &OutChain, SDValue &StackGuardLoad,
                        SystemZTargetLowering::DAGCombinerInfo &DCI) {
@@ -9004,9 +9010,12 @@ bool isStackGuardCheck(SDNode const *N, int &FI, SDValue &InChain,
   assert(StackGuardLoad.hasOneUse() &&
          "Value of reference stackguard must be used for compare only!");
 
+  // Update arguments passed by reference.
   FI = cast<FrameIndexSDNode>(FILoad->getOperand(1))->getIndex();
   InChain = FILoad->getChain();
   OutChain = SDValue(FILoad, 1);
+  // At this point, it's clear these nodes will be combined.
+  // Add them to the work list.
   DCI.AddToWorklist(FILoad);
   DCI.AddToWorklist(Comp.getNode());
   return true;
@@ -9486,8 +9495,6 @@ SDValue SystemZTargetLowering::PerformDAGCombine(SDNode *N,
   case SystemZISD::BR_CCMASK:   return combineBR_CCMASK(N, DCI);
   case SystemZISD::SELECT_CCMASK: return combineSELECT_CCMASK(N, DCI);
   case SystemZISD::GET_CCMASK:  return combineGET_CCMASK(N, DCI);
-  // case SystemZISD::ICMP:
-  //   return combineICMP(N, DCI);
   case ISD::SRL:
   case ISD::SRA:                return combineShiftToMulAddHigh(N, DCI);
   case ISD::MUL:                return combineMUL(N, DCI);
@@ -11156,6 +11163,9 @@ getBackchainAddress(SDValue SP, SelectionDAG &DAG) const {
                      DAG.getIntPtrConstant(TFL->getBackchainOffset(MF), DL));
 }
 
+// Turn MOVE_STACK_GUARD_DAG into MOVE_STACK_GUARD, adding
+// a dead def-reg that will be used as a scratch register
+// when this pseudo is expanded.
 MachineBasicBlock *
 SystemZTargetLowering::emitMSGPseudo(MachineInstr &MI,
                                      MachineBasicBlock *MBB) const {
@@ -11170,6 +11180,9 @@ SystemZTargetLowering::emitMSGPseudo(MachineInstr &MI,
   return MBB;
 }
 
+// Turn COMPARE_STACK_GUARD_DAG into COMPARE_STACK_GUARD, adding
+// a dead def-reg that will be used as a scratch register
+// when this pseudo is expanded.
 MachineBasicBlock *
 SystemZTargetLowering::emitCSGPseudo(MachineInstr &MI,
                                      MachineBasicBlock *MBB) const {

@@ -1032,7 +1032,8 @@ void SystemZInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 // and no index.  Flag is SimpleBDXLoad for loads and SimpleBDXStore for stores.
 static bool isSimpleBD12Move(const MachineInstr *MI, unsigned Flag) {
   const MCInstrDesc &MCID = MI->getDesc();
-  return ((MCID.TSFlags & Flag) && isUInt<12>(MI->getOperand(2).getImm()) &&
+  return ((MCID.TSFlags & Flag) &&
+          isUInt<12>(MI->getOperand(2).getImm()) &&
           MI->getOperand(3).getReg() == 0);
 }
 
@@ -1808,7 +1809,7 @@ Register scavengeAddrReg(MachineInstr &MI, MachineBasicBlock *MBB) {
     Scratch =
         RS.scavengeRegisterBackwards(SystemZ::ADDR64BitRegClass,
                                      MI,   // Scavenge back to this position.
-                                     true, // Will need Scratch Reg after MI.
+                                     true, // Scope must include MI.
                                      0,
                                      true // Spills are allowed.
         );
@@ -1845,8 +1846,6 @@ void SystemZInstrInfo::emitLoadStackGuardAddress(MachineInstr &MI,
   MachineBasicBlock &MBB = *(MI.getParent());
   const MachineFunction &MF = *(MBB.getParent());
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  const Register Reg32 =
-      MRI.getTargetRegisterInfo()->getSubReg(AddrReg, SystemZ::subreg_l32);
   const auto DL = MI.getDebugLoc();
 
   const Module *M = MF.getFunction().getParent();
@@ -1855,6 +1854,8 @@ void SystemZInstrInfo::emitLoadStackGuardAddress(MachineInstr &MI,
   if (GuardType.empty() || (GuardType == "tls")) {
     // EAR can only load the low subregister so use a shift for %a0 to produce
     // the GR containing %a0 and %a1.
+    const Register Reg32 =
+        MRI.getTargetRegisterInfo()->getSubReg(AddrReg, SystemZ::subreg_l32);
 
     // ear <reg>, %a0
     BuildMI(MBB, MI, DL, get(SystemZ::EAR), Reg32).addReg(SystemZ::A0);
