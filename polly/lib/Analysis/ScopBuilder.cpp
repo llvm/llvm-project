@@ -3250,11 +3250,10 @@ static bool buildMinMaxAccess(isl::set Set,
   Set = Set.remove_divs();
   polly::simplify(Set);
 
-  unsigned SetSize = 0;
-  if (!Set.is_null())
-    SetSize = unsignedFromIslSize(Set.n_basic_set());
+  if (Set.is_null())
+    return false;
 
-  if (SetSize > RunTimeChecksMaxAccessDisjuncts)
+  if (unsignedFromIslSize(Set.n_basic_set()) > RunTimeChecksMaxAccessDisjuncts)
     Set = Set.simple_hull();
 
   // Restrict the number of parameters involved in the access as the lexmin/
