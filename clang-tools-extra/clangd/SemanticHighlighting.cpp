@@ -1493,7 +1493,7 @@ llvm::StringRef toSemanticTokenModifier(HighlightingModifier Modifier) {
   case HighlightingModifier::UserDefined:
     return "userDefined"; // nonstandard
   case HighlightingModifier::CommandLineDefined:
-    return "commandLine"; // nonstandard
+    return "commandLineDefined"; // nonstandard
   case HighlightingModifier::FunctionScope:
     return "functionScope"; // nonstandard
   case HighlightingModifier::ClassScope:
