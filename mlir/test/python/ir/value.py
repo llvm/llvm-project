@@ -381,6 +381,7 @@ def testValueCasters():
             return NOPResult(v)
         if isinstance(v, BlockArgument):
             return NOPBlockArg(v)
+        raise ValueError(f"expected OpResult or BlockArgument; got {v=}")
 
     ctx = Context()
     ctx.allow_unregistered_dialects = True
