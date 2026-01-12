@@ -62,12 +62,12 @@ collectVariableUses(const clang::Stmt *S, const clang::VarDecl *Var,
 }
 
 void ScopeReductionCheck::registerMatchers(MatchFinder *Finder) {
-  // TODO: Try adding unless(hasParent(declStmt(hasParent(forStmt( to matcher
-  //       to simplify check code.
-
-  // Match on varDecls that are part of a function
   Finder->addMatcher(
-      varDecl(hasLocalStorage(), hasAncestor(functionDecl())).bind("var"),
+      varDecl(hasLocalStorage(), hasAncestor(functionDecl()),
+              unless(hasParent(declStmt(hasParent(forStmt())))),
+              unless(hasInitializer(anyOf(callExpr(), cxxMemberCallExpr(),
+                                          cxxOperatorCallExpr()))))
+          .bind("var"),
       this);
 }
 
@@ -81,22 +81,6 @@ void ScopeReductionCheck::check(
   // These variables are already in their optimal scope and shouldn't be
   // analyzed
   auto &Parents = Result.Context->getParentMapContext();
-  auto ParentNodes = Parents.getParents(DynTypedNode::create(*Var));
-
-  if (!ParentNodes.empty()) {
-    if (const auto *Parent = ParentNodes[0].get<Stmt>()) {
-      if (isa<DeclStmt>(Parent)) {
-        // Check if DeclStmt's parent is ForStmt
-        auto GrandParentNodes = Parents.getParents(*Parent);
-        if (!GrandParentNodes.empty()) {
-          if (const auto *GrandParent = GrandParentNodes[0].get<Stmt>()) {
-            if (isa<ForStmt>(GrandParent))
-              return; // Skip for-loop declared variables
-          }
-        }
-      }
-    }
-  }
 
   const auto *Function = dyn_cast<FunctionDecl>(Var->getDeclContext());
   assert(Function);

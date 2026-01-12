@@ -194,12 +194,10 @@ void test_lambda() {
 }
 
 // Variable set from function call, used in if clause
-// FIXME: This is a false positive because we cannot know if
-//        func() has side effects or not (since not visible).
+// Should NOT warn. Don't know if func() has side effects
 int func();
 void test_function_call() {
   int i = func();
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'i' can be declared in a smaller scope
   if (true) {
     i = 0;
   }
