@@ -946,7 +946,7 @@ private:
     auto __zv = ranges::views::zip(__containers_.keys, __containers_.values);
     ranges::sort(__zv, __compare_, [](const auto& __p) -> decltype(auto) { return std::get<0>(__p); });
     auto __dup_start =
-        std::__unchecked_unique<_RangeAlgPolicy>(__zv.begin(), __zv.end(), __key_not_less(__compare_)).first;
+        std::__unique_sorted_range<_RangeAlgPolicy>(__zv.begin(), __zv.end(), __key_not_less(__compare_)).first;
     auto __dist      = ranges::distance(__zv.begin(), __dup_start);
     __containers_.keys.erase(__containers_.keys.begin() + __dist, __containers_.keys.end());
     __containers_.values.erase(__containers_.values.begin() + __dist, __containers_.values.end());
@@ -982,7 +982,7 @@ private:
       ranges::inplace_merge(__zv.begin(), __zv.begin() + __append_start_offset, __end, __compare_key);
 
       auto __dup_start =
-          std::__unchecked_unique<_RangeAlgPolicy>(__zv.begin(), __zv.end(), __key_not_less(__compare_)).first;
+          std::__unique_sorted_range<_RangeAlgPolicy>(__zv.begin(), __zv.end(), __key_not_less(__compare_)).first;
       auto __dist      = ranges::distance(__zv.begin(), __dup_start);
       __containers_.keys.erase(__containers_.keys.begin() + __dist, __containers_.keys.end());
       __containers_.values.erase(__containers_.values.begin() + __dist, __containers_.values.end());
