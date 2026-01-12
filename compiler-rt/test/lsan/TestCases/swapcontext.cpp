@@ -2,8 +2,15 @@
 // memory. Make sure we don't report these leaks.
 
 // RUN: %clangxx_lsan %s -o %t
+//
+// Heap-allocated
 // RUN: %env_lsan_opts= %run %t 2>&1
-// RUN: %env_lsan_opts= not %run %t foo 2>&1 | FileCheck %s
+//
+// The stack-allocated test case:
+//   %env_lsan_opts= not %run %t foo 2>&1 | FileCheck %s
+// is disabled because due to flakiness. LSan, by design, can have false
+// negatives, making it unreliable to check that the leak was found.
+//
 // Missing 'getcontext' and 'makecontext' on Android.
 // UNSUPPORTED: target={{(arm|aarch64|loongarch64|powerpc64).*}},android
 
