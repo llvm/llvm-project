@@ -490,7 +490,8 @@ struct NarrowLoopBounds final : OpInterfaceRewritePattern<LoopLikeOpInterface> {
                                 PatternRewriter &rewriter) const override {
     // Skip ops where bounds narrowing previously failed.
     if (loopLike->hasAttr(boundsNarrowingFailedAttr))
-      return failure();
+      return rewriter.notifyMatchFailure(loopLike,
+                                         "bounds narrowing previously failed");
 
     auto inductionVars = loopLike.getLoopInductionVars();
     if (!inductionVars.has_value() || inductionVars->empty())
@@ -607,7 +608,7 @@ struct NarrowLoopBounds final : OpInterfaceRewritePattern<LoopLikeOpInterface> {
     }
 
     if (narrowings.empty())
-      return failure();
+      return rewriter.notifyMatchFailure(loopLike, "no narrowings found");
 
     // Save original types before modifying.
     SmallVector<Type> origTypes;
