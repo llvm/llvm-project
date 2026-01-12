@@ -3290,17 +3290,18 @@ bool TypeSystemClang::IsIntegerType(lldb::opaque_compiler_type_t type,
     return false;
 
   clang::QualType qual_type(GetCanonicalQualType(type));
-  const clang::BuiltinType *builtin_type =
-      llvm::dyn_cast<clang::BuiltinType>(qual_type->getCanonicalTypeInternal());
+  if (qual_type.isNull())
+    return false;
 
-  if (builtin_type) {
-    if (builtin_type->isInteger()) {
-      is_signed = builtin_type->isSignedInteger();
-      return true;
-    }
-  }
+  // Note, using 'isIntegralType' as opposed to 'isIntegerType' because
+  // the latter treats unscoped enums as integer types (which is not true
+  // in C++). The former accounts for this.
+  if (!qual_type->isIntegralType(getASTContext()))
+    return false;
 
-  return false;
+  is_signed = qual_type->isSignedIntegerType();
+
+  return true;
 }
 
 bool TypeSystemClang::IsEnumerationType(lldb::opaque_compiler_type_t type,
