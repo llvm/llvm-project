@@ -241,7 +241,7 @@ void CloseMarker(PerfState &State) {
 }
 
 static Expected<Header> FillMachine(PerfState &State) {
-  Header Hdr = {0, 0, 0, 0, 0, 0, 0, 0};
+  Header Hdr = {};
   Hdr.Magic = LLVM_PERF_JIT_MAGIC;
   Hdr.Version = LLVM_PERF_JIT_VERSION;
   Hdr.TotalSize = sizeof(Hdr);
