@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_LOGF16_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_LOGF16_H
 
+#ifdef LIBC_TYPES_HAS_FLOAT16
+
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
@@ -27,13 +29,14 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
+namespace logf16_internal {
+
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 #ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
 static constexpr size_t N_LOGF16_EXCEPTS = 5;
 #else
 static constexpr size_t N_LOGF16_EXCEPTS = 11;
 #endif
-
 static constexpr fputil::ExceptValues<float16, N_LOGF16_EXCEPTS>
     LOGF16_EXCEPTS = {{
 // (input, RZ output, RU offset, RD offset, RN offset)
@@ -71,8 +74,11 @@ static constexpr fputil::ExceptValues<float16, N_LOGF16_EXCEPTS>
     }};
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
+} // namespace logf16_internal
+
 LIBC_INLINE float16 logf16(float16 x) {
   using namespace math::expxf16_internal;
+  using namespace math::logf16_internal;
   using FPBits = fputil::FPBits<float16>;
   FPBits x_bits(x);
 
@@ -166,5 +172,7 @@ LIBC_INLINE float16 logf16(float16 x) {
 } // namespace math
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TYPES_HAS_FLOAT16
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_LOGF16_H
