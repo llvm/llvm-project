@@ -1095,6 +1095,27 @@ PdbAstBuilder::GetOrCreateFunctionDecl(PdbCompilandSymId func_id) {
   return function_decl;
 }
 
+void PdbAstBuilder::EnsureFunction(PdbCompilandSymId func_id) {
+  GetOrCreateFunctionDecl(func_id);
+}
+
+void PdbAstBuilder::EnsureInlinedFunction(PdbCompilandSymId inlinesite_id) {
+  GetOrCreateInlinedFunctionDecl(inlinesite_id);
+}
+
+void PdbAstBuilder::EnsureBlock(PdbCompilandSymId block_id) {
+  GetOrCreateBlockDecl(block_id);
+}
+
+void PdbAstBuilder::EnsureVariable(PdbCompilandSymId scope_id,
+                                   PdbCompilandSymId var_id) {
+  GetOrCreateVariableDecl(scope_id, var_id);
+}
+
+void PdbAstBuilder::EnsureVariable(PdbGlobalSymId var_id) {
+  GetOrCreateVariableDecl(var_id);
+}
+
 void PdbAstBuilder::CreateFunctionParameters(PdbCompilandSymId func_id,
                                              clang::FunctionDecl &function_decl,
                                              uint32_t param_count) {
