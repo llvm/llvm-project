@@ -164,8 +164,6 @@ public:
   const TargetRegisterClass *
   getCrossCopyRegClass(const TargetRegisterClass *RC) const override;
 
-  unsigned getNumSubRegsForSpillOp(const MachineInstr &MI) const;
-
   const TargetRegisterClass *
   getRegClassForBlockOp(const MachineFunction &MF) const {
     return &AMDGPU::VReg_1024RegClass;
