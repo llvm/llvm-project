@@ -5222,11 +5222,19 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
       // Look for a declaration that's lexically in a record.
       for (const auto *FD = cast<FunctionDecl>(D)->getMostRecentDecl(); FD;
            FD = FD->getPreviousDecl()) {
-        if (isa<CXXRecordDecl>(FD->getLexicalDeclContext())) {
-          if (FD->doesThisDeclarationHaveABody()) {
-            addDeferredDeclToEmit(GD.getWithDecl(FD));
-            break;
-          }
+        const auto *LexicalRD =
+            dyn_cast<CXXRecordDecl>(FD->getLexicalDeclContext());
+        if (!LexicalRD)
+          continue;
+
+        // Do not attempt to emit template patterns. These are still in a
+        // dependent context and cannot be code generated until instantiated.
+        if (LexicalRD->isDependentContext())
+          continue;
+
+        if (FD->doesThisDeclarationHaveABody()) {
+          addDeferredDeclToEmit(GD.getWithDecl(FD));
+          break;
         }
       }
     }
