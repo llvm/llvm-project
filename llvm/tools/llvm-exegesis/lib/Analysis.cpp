@@ -244,12 +244,9 @@ static void writeParallelSnippetHtml(raw_ostream &OS,
 static void writeLatencySnippetHtml(raw_ostream &OS,
                                     const std::vector<MCInst> &Instructions,
                                     const MCInstrInfo &InstrInfo) {
-  bool First = true;
+  ListSeparator LS(" &rarr; ");
   for (const MCInst &Instr : Instructions) {
-    if (First)
-      First = false;
-    else
-      OS << " &rarr; ";
+    OS << LS;
     writeEscaped<kEscapeHtml>(OS, InstrInfo.getName(Instr.getOpcode()));
   }
 }

@@ -12,6 +12,8 @@
 #include "Shared/Debug.h"
 #include "llvm/Support/DynamicLibrary.h"
 
+using namespace llvm::offload::debug;
+
 DLWRAP_INITIALIZE()
 
 DLWRAP_INTERNAL(zeInit, 1)
@@ -106,13 +108,14 @@ static bool loadLevelZero() {
   const char *L0Library = LEVEL_ZERO_LIBRARY;
   std::string ErrMsg;
 
-  DP("Trying to load %s\n", L0Library);
+  ODBG(OLDT_Init) << "Trying to load " << L0Library;
   auto DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
       llvm::sys::DynamicLibrary::getPermanentLibrary(L0Library, &ErrMsg));
   if (!DynlibHandle->isValid()) {
     if (ErrMsg.empty())
       ErrMsg = "unknown error";
-    DP("Unable to load library '%s': %s!\n", L0Library, ErrMsg.c_str());
+    ODBG(OLDT_Init) << "Unable to load library '" << L0Library
+                    << "': " << ErrMsg << "!";
     return false;
   }
 
@@ -121,10 +124,12 @@ static bool loadLevelZero() {
 
     void *P = DynlibHandle->getAddressOfSymbol(Sym);
     if (P == nullptr) {
-      DP("Unable to find '%s' in '%s'!\n", Sym, L0Library);
+      ODBG(OLDT_Init) << "Unable to find '" << Sym << "' in '" << L0Library
+                      << "'!";
       return false;
     }
-    DP("Implementing %s with dlsym(%s) -> %p\n", Sym, Sym, P);
+    ODBG(OLDT_Init) << "Implementing " << Sym << " with dlsym(" << Sym
+                    << ") -> " << P;
 
     *dlwrap::pointer(I) = P;
   }

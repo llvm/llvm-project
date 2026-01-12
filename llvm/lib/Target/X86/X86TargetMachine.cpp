@@ -84,7 +84,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86FastPreTileConfigLegacyPass(PR);
   initializeX86FastTileConfigLegacyPass(PR);
   initializeKCFIPass(PR);
-  initializeX86LowerTileCopyPass(PR);
+  initializeX86LowerTileCopyLegacyPass(PR);
   initializeX86ExpandPseudoLegacyPass(PR);
   initializeX86ExecutionDomainFixPass(PR);
   initializeX86DomainReassignmentLegacyPass(PR);
@@ -105,7 +105,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86FixupInstTuningLegacyPass(PR);
   initializeX86FixupVectorConstantsPassPass(PR);
   initializeX86DynAllocaExpanderLegacyPass(PR);
-  initializeX86SuppressAPXForRelocationPassPass(PR);
+  initializeX86SuppressAPXForRelocationLegacyPass(PR);
   initializeX86WinEHUnwindV2Pass(PR);
   initializeX86PreLegalizerCombinerPass(PR);
 }
@@ -520,7 +520,7 @@ void X86PassConfig::addPreRegAlloc() {
     addPass(createX86AvoidStoreForwardingBlocksLegacyPass());
   }
 
-  addPass(createX86SuppressAPXForRelocationPass());
+  addPass(createX86SuppressAPXForRelocationLegacyPass());
 
   addPass(createX86SpeculativeLoadHardeningPass());
   addPass(createX86FlagsCopyLoweringLegacyPass());
@@ -538,7 +538,7 @@ void X86PassConfig::addMachineSSAOptimization() {
 }
 
 void X86PassConfig::addPostRegAlloc() {
-  addPass(createX86LowerTileCopyPass());
+  addPass(createX86LowerTileCopyLegacyPass());
   addPass(createX86FPStackifierLegacyPass());
   // When -O0 is enabled, the Load Value Injection Hardening pass will fall back
   // to using the Speculative Execution Side Effect Suppression pass for

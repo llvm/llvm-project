@@ -52,3 +52,35 @@ define <8 x float> @interleave_fma_const_chain(<4 x float> %a0, <4 x float> %a1)
   %res = shufflevector <4 x float> %l, <4 x float> %h, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
   ret <8 x float> %res
 }
+
+; Negative test - multiple uses make the transformation unprofitable
+define <4 x float> @shuffle_fma_const_chain_multiuse(<4 x float> %a0, ptr %p) {
+; CHECK-LABEL: define <4 x float> @shuffle_fma_const_chain_multiuse(
+; CHECK-SAME: <4 x float> [[A0:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[F:%.*]] = tail call noundef <4 x float> @llvm.fma.v4f32(<4 x float> [[A0]], <4 x float> splat (float 0x3F8DE8D040000000), <4 x float> splat (float 0xBFB3715EE0000000))
+; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x float> [[F]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    store <4 x float> [[F]], ptr [[P]], align 16
+; CHECK-NEXT:    ret <4 x float> [[RES]]
+;
+  %f = tail call noundef <4 x float> @llvm.fma.v4f32(<4 x float> %a0, <4 x float> splat (float 0x3F8DE8D040000000), <4 x float> splat (float 0xBFB3715EE0000000))
+  %res = shufflevector <4 x float> %f, <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  store <4 x float> %f, ptr %p, align 16
+  ret <4 x float> %res
+}
+
+; Negative test - intrinsic used by shuffle and arithmetic
+define <4 x float> @shuffle_fma_multiuse_with_arith(<4 x float> %a0, <4 x float> %b) {
+; CHECK-LABEL: define <4 x float> @shuffle_fma_multiuse_with_arith(
+; CHECK-SAME: <4 x float> [[A0:%.*]], <4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[F:%.*]] = tail call noundef <4 x float> @llvm.fma.v4f32(<4 x float> [[A0]], <4 x float> splat (float 0x3F8DE8D040000000), <4 x float> splat (float 0xBFB3715EE0000000))
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x float> [[F]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[ADD:%.*]] = fadd <4 x float> [[F]], [[B]]
+; CHECK-NEXT:    [[RES:%.*]] = fadd <4 x float> [[SHUF]], [[ADD]]
+; CHECK-NEXT:    ret <4 x float> [[RES]]
+;
+  %f = tail call noundef <4 x float> @llvm.fma.v4f32(<4 x float> %a0, <4 x float> splat (float 0x3F8DE8D040000000), <4 x float> splat (float 0xBFB3715EE0000000))
+  %shuf = shufflevector <4 x float> %f, <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %add = fadd <4 x float> %f, %b
+  %res = fadd <4 x float> %shuf, %add
+  ret <4 x float> %res
+}
