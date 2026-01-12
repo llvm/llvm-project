@@ -188,7 +188,11 @@ class GitHubAPI:
         title: str,
         body: str,
         draft: bool,
-    ) -> Optional[str]:
+    ) -> int:
+        if self.runner.dry_run:
+            self.runner.print(f"[Dry Run] Would create pull request for '{head_branch}'...")
+            return 0
+
         self.runner.print(f"Creating pull request for '{head_branch}'...")
         data = {
             "title": title,
@@ -200,10 +204,8 @@ class GitHubAPI:
         response_data = self._request_and_parse_json(
             "POST", f"/repos/{LLVM_REPO}/pulls", json_payload=data
         )
-        pr_url = response_data.get("html_url")
-        if not self.runner.dry_run:
-            self.runner.print(f"Pull request created: {pr_url}")
-        return pr_url
+        self.runner.print(f"Pull request created: {response_data.get("html_url")}")
+        return response_data.get("number")
 
     def get_repo_settings(self) -> dict:
         return self._request_and_parse_json("GET", f"/repos/{LLVM_REPO}")
@@ -230,22 +232,14 @@ class GitHubAPI:
             # Re-raise other HTTP errors.
             raise e
 
-    def merge_pr(self, pr_url: str) -> Optional[str]:
-        if not pr_url:
-            return None
-
+    def merge_pr(self, pr_number: int) -> Optional[str]:
         if self.runner.dry_run:
-            self.runner.print(f"[Dry Run] Would merge {pr_url}")
+            self.runner.print(f"[Dry Run] Would merge #{pr_number}")
             return None
-
-        pr_number_match = re.search(r"/pull/(\d+)", pr_url)
-        if not pr_number_match:
-            raise LlvmPrError(f"Could not extract PR number from URL: {pr_url}")
-        pr_number = pr_number_match.group(1)
 
         for i in range(MERGE_MAX_RETRIES):
             self.runner.print(
-                f"Attempting to merge {pr_url} (attempt {i + 1}/{MERGE_MAX_RETRIES})..."
+                f"Attempting to merge #{pr_number} (attempt {i + 1}/{MERGE_MAX_RETRIES})..."
             )
 
             pr_data = self._get_pr_details(pr_number)
@@ -267,20 +261,12 @@ class GitHubAPI:
 
         raise LlvmPrError(f"PR was not mergeable after {MERGE_MAX_RETRIES} attempts.")
 
-    def enable_auto_merge(self, pr_url: str) -> None:
-        if not pr_url:
-            return
-
+    def enable_auto_merge(self, pr_number: int) -> None:
         if self.runner.dry_run:
-            self.runner.print(f"[Dry Run] Would enable auto-merge for {pr_url}")
+            self.runner.print(f"[Dry Run] Would enable auto-merge for #{pr_number}")
             return
 
-        pr_number_match = re.search(r"/pull/(\d+)", pr_url)
-        if not pr_number_match:
-            raise LlvmPrError(f"Could not extract PR number from URL: {pr_url}")
-        pr_number = pr_number_match.group(1)
-
-        self.runner.print(f"Enabling auto-merge for {pr_url}...")
+        self.runner.print(f"Enabling auto-merge for #{pr_number}...")
         data = {
             "enabled": True,
             "merge_method": "squash",
@@ -481,7 +467,7 @@ class LLVMPRAutomator:
         temp_branch = self._create_and_push_branch_for_commit(
             commit_hash, base_branch_name, index
         )
-        pr_url = self.github_api.create_pr(
+        pr_number = self.github_api.create_pr(
             head_branch=f"{self.config.user_login}:{temp_branch}",
             base_branch=self.config.base_branch,
             title=commit_title,
@@ -493,9 +479,9 @@ class LLVMPRAutomator:
             return
 
         if self.config.auto_merge:
-            self.github_api.enable_auto_merge(pr_url)
+            self.github_api.enable_auto_merge(pr_number)
         else:
-            merged_branch = self.github_api.merge_pr(pr_url)
+            merged_branch = self.github_api.merge_pr(pr_number)
             if merged_branch and not self.repo_settings.get("delete_branch_on_merge"):
                 # After a merge, the branch should be deleted.
                 self.github_api.delete_branch(merged_branch)

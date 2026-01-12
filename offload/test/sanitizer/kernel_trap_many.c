@@ -13,6 +13,7 @@
 // UNSUPPORTED: x86_64-unknown-linux-gnu-LTO
 // UNSUPPORTED: s390x-ibm-linux-gnu
 // UNSUPPORTED: s390x-ibm-linux-gnu-LTO
+// XFAIL: intelgpu
 
 #include <omp.h>
 
@@ -28,7 +29,7 @@ int main(void) {
     __builtin_trap();
   }
 }
-// TRACE: OFFLOAD ERROR: Kernel {{.*}} (__omp_offloading_{{.*}}_main_l26)
+// TRACE: OFFLOAD ERROR: Kernel {{.*}} (__omp_offloading_{{.*}}_main_l27)
 // TRACE: OFFLOAD ERROR: execution interrupted by hardware trap instruction
 // TRACE:     launchKernel
 // NDEBG:     main

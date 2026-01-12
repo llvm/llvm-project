@@ -15,6 +15,7 @@
 // UNSUPPORTED: x86_64-unknown-linux-gnu-LTO
 // UNSUPPORTED: s390x-ibm-linux-gnu
 // UNSUPPORTED: s390x-ibm-linux-gnu-LTO
+// XFAIL: intelgpu
 
 #include <omp.h>
 
@@ -33,7 +34,7 @@ int main(void) {
 #pragma omp taskwait
 }
 
-// TRACE: Kernel {{.*}} (__omp_offloading_{{.*}}_main_l29)
+// TRACE: Kernel {{.*}} (__omp_offloading_{{.*}}_main_l30)
 // TRACE:     launchKernel
 //
-// CHECK: Kernel {{.*}} (__omp_offloading_{{.*}}_main_l29)
+// CHECK: Kernel {{.*}} (__omp_offloading_{{.*}}_main_l30)

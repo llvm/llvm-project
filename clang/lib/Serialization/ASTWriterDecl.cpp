@@ -525,7 +525,10 @@ void ASTDeclWriter::VisitDecl(Decl *D) {
   // store it as 0b001111, which takes 6 bits only now.
   DeclBits.addBits((uint64_t)D->getModuleOwnershipKind(), /*BitWidth=*/3);
   DeclBits.addBit(D->isThisDeclarationReferenced());
-  DeclBits.addBit(D->isUsed(false));
+  // If we're writing a BMI for a named module unit, we can treat all decls as in
+  // the BMI as used. Otherwise, the consumer need to mark it as used again, this
+  // simply waste time.
+  DeclBits.addBit(Writer.isWritingStdCXXNamedModules() ? true : D->isUsed(false));
   DeclBits.addBits(D->getAccess(), /*BitWidth=*/2);
   DeclBits.addBit(D->isImplicit());
   DeclBits.addBit(D->getDeclContext() != D->getLexicalDeclContext());

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/RISCVBaseInfo.h"
+#include "MCTargetDesc/RISCVELFStreamer.h"
 #include "MCTargetDesc/RISCVInstPrinter.h"
 #include "MCTargetDesc/RISCVMCAsmInfo.h"
 #include "MCTargetDesc/RISCVMatInt.h"
@@ -548,6 +549,8 @@ void RISCVAsmPrinter::emitSled(const MachineInstr *MI, SledKind Kind) {
 }
 
 void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
+  assert(OutStreamer->getTargetStreamer() &&
+         "target streamer is uninitialized");
   RISCVTargetStreamer &RTS =
       static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
   if (const MDString *ModuleTargetABI =
@@ -951,10 +954,11 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
 }
 
 void RISCVAsmPrinter::emitNoteGnuProperty(const Module &M) {
+  assert(TM.getTargetTriple().isOSBinFormatELF() && "invalid binary format");
   if (const Metadata *const Flag = M.getModuleFlag("cf-protection-return");
       Flag && !mdconst::extract<ConstantInt>(Flag)->isZero()) {
-    RISCVTargetStreamer &RTS =
-        static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+    RISCVTargetELFStreamer &RTS = static_cast<RISCVTargetELFStreamer &>(
+        *OutStreamer->getTargetStreamer());
     RTS.emitNoteGnuPropertySection(ELF::GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS);
   }
 }

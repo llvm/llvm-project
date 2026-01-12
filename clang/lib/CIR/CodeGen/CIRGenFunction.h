@@ -1309,6 +1309,8 @@ public:
 
   void emitAggExpr(const clang::Expr *e, AggValueSlot slot);
 
+  enum ExprValueKind { EVK_RValue, EVK_NonRValue };
+
   LValue emitAggExprToLValue(const Expr *e);
 
   /// Emit an aggregate copy.

@@ -20,6 +20,11 @@ void test() {
     int i = 49;
     const std::atomic_ref<int> atRef{i};
 
+#  if TEST_STD_VER >= 26
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    atRef.address();
+#  endif
+
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     atRef.is_lock_free();
 

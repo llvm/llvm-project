@@ -112,7 +112,6 @@ body, html {
     width: 100%;
     top: 0;
     left: 0;
-    height: 60px; /* Adjust as needed */
     color: white;
     display: flex;
     align-items: center;
@@ -255,6 +254,38 @@ body, html {
     color:var(--text1)
 }
 
+.navbar-breadcrumb-container {
+    position: absolute;
+    top: 60px;
+    left: 0;
+    width: 100%;
+    background: var(--surface2);
+    padding: 0.5rem 1rem;
+    display: flex;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--text2);
+    box-sizing: border-box;
+    border-top: 1px solid var(--text2);
+    border-bottom: 1px solid var(--text2);
+}
+
+.navbar-breadcrumb-item {
+    padding: 0.25rem 0.75rem;
+    background: var(--surface1);
+    border: 1px solid var(--text2);
+    border-radius: 4px;
+    color: var(--text1);
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.navbar-breadcrumb-item:hover {
+    background: var(--brand);
+    color: var(--text1-inverse);
+    border-color: var(--brand);
+    cursor: pointer;
+}
+
 .hero__container {
     margin-top:1rem;
     display:flex;
@@ -317,9 +348,7 @@ body, html {
     max-width: 2048px;
     margin-left:auto;
     margin-right:auto;
-    margin-top:0;
     margin-bottom: 1rem;
-    padding:1rem 2rem
 }
 
 @media(max-width:768px) {
@@ -404,9 +433,9 @@ body, html {
 
 .sidebar {
     width: 250px;
-    top: 60px;
     left: 0;
-    height: 100%;
+    top: 60px;
+    bottom: 0;
     position: fixed;
     background-color: var(--surface1);
     display: flex;
@@ -414,6 +443,7 @@ body, html {
     flex-direction: column;
     overflow-y: auto;
     scrollbar-width: thin;
+    flex-shrink: 0;
 }
 
 .sidebar h2 {
@@ -445,8 +475,8 @@ body, html {
 
 /* Content */
 .content {
+    top: 60px;
     background-color: var(--text1-inverse);
-    padding: 20px;
     left: 250px;
     position: relative;
     width: calc(100% - 250px);

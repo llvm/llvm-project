@@ -1,5 +1,6 @@
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: clang-doc --output=%t --format=json --executor=standalone %s
+// RUN: clang-doc --output=%t --format=html --executor=standalone %s
 // RUN: FileCheck %s < %t/json/nested/index.json --check-prefix=NESTED
 // RUN: FileCheck %s < %t/json/nested/inner/index.json --check-prefix=INNER
 
@@ -7,6 +8,7 @@ namespace nested {
   int Global;
   namespace inner {
     int InnerGlobal;
+    namespace inner_inner {}
   } // namespace inner
 } // namespace nested
 
@@ -17,7 +19,7 @@ namespace nested {
 // NESTED-NEXT:      "IsStatic": false,
 // NESTED-NEXT:      "Location": {
 // NESTED-NEXT:        "Filename": "{{.*}}nested-namespace.cpp",
-// NESTED-NEXT:        "LineNumber": 7
+// NESTED-NEXT:        "LineNumber": 8
 // NESTED-NEXT:      },
 // NESTED-NEXT:      "Name": "Global",
 // NESTED-NEXT:      "Namespace": [
@@ -31,7 +33,7 @@ namespace nested {
 // INNER-NEXT:      "IsStatic": false,
 // INNER-NEXT:      "Location": {
 // INNER-NEXT:        "Filename": "{{.*}}nested-namespace.cpp",
-// INNER-NEXT:        "LineNumber": 9
+// INNER-NEXT:        "LineNumber": 10
 // INNER-NEXT:      },
 // INNER-NEXT:      "Name": "InnerGlobal",
 // INNER-NEXT:      "Namespace": [

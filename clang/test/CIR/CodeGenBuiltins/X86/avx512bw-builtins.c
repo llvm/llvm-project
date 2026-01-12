@@ -756,13 +756,11 @@ unsigned char test_ktestz_mask64_u8(__mmask64 A, __mmask64 B) {
   return _ktestz_mask64_u8(A, B);
 }
 
-
-
 __m512i test_mm512_movm_epi16(__mmask32 __A) {
   // CIR-LABEL: _mm512_movm_epi16
   // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !u32i -> !cir.vector<32 x !cir.int<s, 1>>
   // CIR: %{{.*}} = cir.cast integral %{{.*}} : !cir.vector<32 x !cir.int<s, 1>> -> !cir.vector<32 x !s16i>
-  
+
   // LLVM-LABEL: test_mm512_movm_epi16
   // LLVM:  %{{.*}} = bitcast i32 %{{.*}} to <32 x i1>
   // LLVM:  %{{.*}} = sext <32 x i1> %{{.*}} to <32 x i16>
@@ -770,7 +768,7 @@ __m512i test_mm512_movm_epi16(__mmask32 __A) {
   // OGCG-LABEL: {{.*}}movm_epi16{{.*}}(
   // OGCG:  %{{.*}} = bitcast i32 %{{.*}} to <32 x i1>
   // OGCG:  %{{.*}} = sext <32 x i1> %{{.*}} to <32 x i16>
-  return _mm512_movm_epi16(__A); 
+  return _mm512_movm_epi16(__A);
 }
 
 __mmask64 test_mm512_movepi8_mask(__m512i __A) {
@@ -782,11 +780,11 @@ __mmask64 test_mm512_movepi8_mask(__m512i __A) {
   // LLVM-LABEL: test_mm512_movepi8_mask
   // LLVM: [[CMP:%.*]] = icmp slt <64 x i8> %{{.*}}, zeroinitializer
   // LLVM: bitcast <64 x i1> [[CMP]] to i64
-  
+
   // OGCG-LABEL: {{.*}}movepi8_mask{{.*}}(
   // OGCG: [[CMP:%.*]] = icmp slt <64 x i8> %{{.*}}, zeroinitializer
   // OGCG: bitcast <64 x i1> [[CMP]] to i64
-  return _mm512_movepi8_mask(__A); 
+  return _mm512_movepi8_mask(__A);
 }
 
 __mmask32 test_mm512_movepi16_mask(__m512i __A) {
@@ -802,5 +800,17 @@ __mmask32 test_mm512_movepi16_mask(__m512i __A) {
   // OGCG-LABEL: {{.*}}movepi16_mask{{.*}}(
   // OGCG: [[CMP:%.*]] = icmp slt <32 x i16> %{{.*}}, zeroinitializer
   // OGCG: bitcast <32 x i1> [[CMP]] to i32
-  return _mm512_movepi16_mask(__A); 
+  return _mm512_movepi16_mask(__A);
+}
+
+__m512i test_mm512_alignr_epi8(__m512i __A,__m512i __B) {
+  // CIR-LABEL: _mm512_alignr_epi8
+  // CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<64 x {{!s8i|!u8i}}>) [#cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i, #cir.int<8> : !s32i, #cir.int<9> : !s32i, #cir.int<10> : !s32i, #cir.int<11> : !s32i, #cir.int<12> : !s32i, #cir.int<13> : !s32i, #cir.int<14> : !s32i, #cir.int<15> : !s32i, #cir.int<64> : !s32i, #cir.int<65> : !s32i, #cir.int<18> : !s32i, #cir.int<19> : !s32i, #cir.int<20> : !s32i, #cir.int<21> : !s32i, #cir.int<22> : !s32i, #cir.int<23> : !s32i, #cir.int<24> : !s32i, #cir.int<25> : !s32i, #cir.int<26> : !s32i, #cir.int<27> : !s32i, #cir.int<28> : !s32i, #cir.int<29> : !s32i, #cir.int<30> : !s32i, #cir.int<31> : !s32i, #cir.int<80> : !s32i, #cir.int<81> : !s32i, #cir.int<34> : !s32i, #cir.int<35> : !s32i, #cir.int<36> : !s32i, #cir.int<37> : !s32i, #cir.int<38> : !s32i, #cir.int<39> : !s32i, #cir.int<40> : !s32i, #cir.int<41> : !s32i, #cir.int<42> : !s32i, #cir.int<43> : !s32i, #cir.int<44> : !s32i, #cir.int<45> : !s32i, #cir.int<46> : !s32i, #cir.int<47> : !s32i, #cir.int<96> : !s32i, #cir.int<97> : !s32i, #cir.int<50> : !s32i, #cir.int<51> : !s32i, #cir.int<52> : !s32i, #cir.int<53> : !s32i, #cir.int<54> : !s32i, #cir.int<55> : !s32i, #cir.int<56> : !s32i, #cir.int<57> : !s32i, #cir.int<58> : !s32i, #cir.int<59> : !s32i, #cir.int<60> : !s32i, #cir.int<61> : !s32i, #cir.int<62> : !s32i, #cir.int<63> : !s32i, #cir.int<112> : !s32i, #cir.int<113> : !s32i] : !cir.vector<64 x {{!s8i|!u8i}}>
+
+  // LLVM-LABEL: test_mm512_alignr_epi8
+  // LLVM: shufflevector <64 x i8> %{{.*}}, <64 x i8> %{{.*}}, <64 x i32> <i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 64, i32 65, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 80, i32 81, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 96, i32 97, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63, i32 112, i32 113>
+
+  // OGCG-LABEL: test_mm512_alignr_epi8
+  // OGCG: shufflevector <64 x i8> %{{.*}}, <64 x i8> %{{.*}}, <64 x i32> <i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 64, i32 65, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 80, i32 81, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 96, i32 97, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63, i32 112, i32 113>
+  return _mm512_alignr_epi8(__A, __B, 2);
 }

@@ -294,6 +294,7 @@ public:
   // VE has NND instruction.
   bool hasAndNot(SDValue Y) const override;
 
+  bool softPromoteHalfType() const override { return true; }
   /// } Target Optimization
 };
 } // namespace llvm

@@ -2834,7 +2834,6 @@ private:
   mutable IdentifierInfo *Ident_final;
   mutable IdentifierInfo *Ident_GNU_final;
   mutable IdentifierInfo *Ident_override;
-  mutable IdentifierInfo *Ident_trivially_relocatable_if_eligible;
 
   /// Representation of a class that has been parsed, including
   /// any member function declarations or definitions that need to be
@@ -3597,10 +3596,6 @@ private:
   ///         'public'
   /// \endverbatim
   AccessSpecifier getAccessSpecifierIfPresent() const;
-
-  bool isCXX2CTriviallyRelocatableKeyword(Token Tok) const;
-  bool isCXX2CTriviallyRelocatableKeyword() const;
-  void ParseCXX2CTriviallyRelocatableSpecifier(SourceLocation &TRS);
 
   /// 'final', a C++26 'trivially_relocatable_if_eligible',
   /// or Microsoft 'sealed' or 'abstract' contextual

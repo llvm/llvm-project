@@ -75,6 +75,29 @@ LLVM_LICENSE_TEXT = [
     "SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception",
 ]
 
+PROXY_TEMPLATE = """\
+//===-- Implementation proxy header for <{header}> --===//
+//
+{license_lines}
+//
+//===---------------------------------------------------------------------===//
+
+#ifndef {guard}
+#define {guard}
+
+#ifdef LIBC_FULL_BUILD
+
+{include_lines}
+
+#else // Overlay mode
+
+#include <{header}>
+
+#endif // LLVM_LIBC_FULL_BUILD
+
+#endif // {guard}
+"""
+
 
 class HeaderFile:
     def __init__(self, name):
@@ -158,10 +181,11 @@ class HeaderFile:
             }
         )
 
-    def header_guard(self):
-        return "_LLVM_LIBC_" + "_".join(
-            word.upper() for word in NONIDENTIFIER.split(self.name) if word
-        )
+    def header_guard(self, proxy=False):
+        words = [word.upper() for word in NONIDENTIFIER.split(self.name) if word]
+        if proxy:
+            return "LLVM_LIBC_HDR_" + "_".join(words[:-1]) + "_PROXY_H"
+        return "_LLVM_LIBC_" + "_".join(words)
 
     def library_description(self):
         descriptions = LIBRARY_DESCRIPTIONS | self.extra_standards
@@ -203,43 +227,60 @@ class HeaderFile:
             license_lines=self.license_lines(),
         )
 
-    def public_api(self):
+    def include_lines(self, with_common=False):
         # Python 3.12 has .relative_to(dir, walk_up=True) for this.
         path_prefix = PurePosixPath("../" * (len(PurePosixPath(self.name).parents) - 1))
 
         def relpath(file):
             return path_prefix / file
 
-        content = []
-
-        if self.template_file is None:
-            # This always goes before all the other includes, which are sorted.
-            # It's implicitly emitted here when using the default template so
-            # it can get the right relative path.  Custom template files should
-            # all have it explicitly with their right particular relative path.
-            content.append('#include "{file!s}"'.format(file=relpath(COMMON_HEADER)))
-
-        content += [
+        # This always goes before all the other includes, which are sorted.
+        # It's implicitly emitted here when using the default template so
+        # it can get the right relative path.  Custom template files should
+        # all have it explicitly with their right particular relative path.
+        return [
             f"#include {file}"
-            for file in sorted(
+            for file in ([f'"{relpath(COMMON_HEADER)!s}"'] if with_common else [])
+            + sorted(
                 file if isinstance(file, str) else f'"{relpath(file)!s}"'
                 for file in self.includes()
             )
         ]
 
+    def macro_lines(self):
+        content = []
         for macro in sorted(self.macros):
             # When there is nothing to define, the Macro object converts to str
             # as an empty string.  Don't emit a blank line for those cases.
             if str(macro):
                 content.extend(["", f"{macro}"])
+        return content
 
+    def enum_lines(self):
+        content = []
         if self.enumerations:
             combined_enum_content = ",\n  ".join(
                 str(enum) for enum in self.enumerations
             )
             content.append(f"\nenum {{\n  {combined_enum_content},\n}};")
+        return content
 
-        content.append("\n__BEGIN_C_DECLS\n")
+    def proxy_contents(self):
+        return PROXY_TEMPLATE.format(
+            header=self.name,
+            guard=self.header_guard(proxy=True),
+            license_lines=self.license_lines(),
+            include_lines="\n".join(self.include_lines()),
+            macro_lines="\n".join(self.macro_lines()),
+        )
+
+    def public_api(self):
+        content = (
+            self.include_lines(self.template_file is None)
+            + self.macro_lines()
+            + self.enum_lines()
+            + ["\n__BEGIN_C_DECLS\n"]
+        )
 
         current_guard = None
         last_name = None

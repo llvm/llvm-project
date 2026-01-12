@@ -142,6 +142,8 @@ Changes to the MIPS Backend
 Changes to the PowerPC Backend
 ------------------------------
 
+* `half` now uses a soft float ABI, which works correctly in more cases.
+
 Changes to the RISC-V Backend
 -----------------------------
 
@@ -163,6 +165,9 @@ Changes to the RISC-V Backend
 Changes to the WebAssembly Backend
 ----------------------------------
 
+* `half` now uses a soft float lowering, which resolves various precision and
+  bitcast issues.
+
 Changes to the Windows Target
 -----------------------------
 
@@ -177,6 +182,12 @@ Changes to the X86 Backend
 Changes to the OCaml bindings
 -----------------------------
 
+* The IR reader bindings renamed `parse_ir` to
+  `parse_ir_bitcode_or_assembly` to clarify that the parser accepts both
+  textual IR and bitcode. This rename is intentional to force existing code to
+  update because the ownership semantics changed: the function no longer takes
+  ownership of the input memory buffer.
+
 Changes to the Python bindings
 ------------------------------
 
@@ -186,6 +197,10 @@ Changes to the C API
 * Add `LLVMGetOrInsertFunction` to get or insert a function, replacing the combination of `LLVMGetNamedFunction` and `LLVMAddFunction`.
 * Allow `LLVMGetVolatile` to work with any kind of Instruction.
 * Add `LLVMConstFPFromBits` to get a constant floating-point value from an array of 64 bit values.
+* Add `LLVMParseIRInContext2`, which is equivalent to `LLVMParseIRInContext`
+  but does not take ownership of the input `LLVMMemoryBufferRef`. This matches
+  the underlying C++ API and avoids ownership surprises in language bindings
+  and examples.
 * Functions working on the global context have been deprecated. Use the
   functions that work on a specific context instead.
 

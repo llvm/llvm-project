@@ -18806,7 +18806,6 @@ void Sema::ActOnStartCXXMemberDeclarations(Scope *S, Decl *TagD,
                                            SourceLocation FinalLoc,
                                            bool IsFinalSpelledSealed,
                                            bool IsAbstract,
-                                           SourceLocation TriviallyRelocatable,
                                            SourceLocation LBraceLoc) {
   AdjustDeclIfTemplate(TagD);
   CXXRecordDecl *Record = cast<CXXRecordDecl>(TagD);
@@ -18825,10 +18824,6 @@ void Sema::ActOnStartCXXMemberDeclarations(Scope *S, Decl *TagD,
                                           ? FinalAttr::Keyword_sealed
                                           : FinalAttr::Keyword_final));
   }
-
-  if (TriviallyRelocatable.isValid())
-    Record->addAttr(
-        TriviallyRelocatableAttr::Create(Context, TriviallyRelocatable));
 
   // C++ [class]p2:
   //   [...] The class-name is also inserted into the scope of the

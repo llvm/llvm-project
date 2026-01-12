@@ -8,7 +8,7 @@
 
 ### Pre-requisites
 
-*   A relatively recent Python3 installation
+*   A [non-EOL](https://devguide.python.org/versions/) Python3 installation
 *   Installation of Python dependencies as specified in
     `mlir/python/requirements.txt`
 

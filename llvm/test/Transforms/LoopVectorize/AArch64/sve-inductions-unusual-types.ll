@@ -28,12 +28,10 @@ define void @induction_i7(ptr %dst) #0 {
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = trunc <vscale x 2 x i64> [[DOTSPLAT_]] to <vscale x 2 x i7>
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i8> @llvm.stepvector.nxv2i8()
 ; CHECK-NEXT:    [[TMP7:%.*]] = trunc <vscale x 2 x i8> [[TMP6]] to <vscale x 2 x i7>
-; CHECK-NEXT:    [[TMP9:%.*]] = mul <vscale x 2 x i7> [[TMP7]], splat (i7 1)
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i7> zeroinitializer, [[TMP9]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i7> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i7> [ [[TMP7]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <vscale x 2 x i7> [[VEC_IND]], [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = zext <vscale x 2 x i7> [[VEC_IND]] to <vscale x 2 x i64>
@@ -94,12 +92,10 @@ define void @induction_i3_zext(ptr %dst) #0 {
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = trunc <vscale x 2 x i64> [[DOTSPLAT_]] to <vscale x 2 x i3>
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i8> @llvm.stepvector.nxv2i8()
 ; CHECK-NEXT:    [[TMP7:%.*]] = trunc <vscale x 2 x i8> [[TMP6]] to <vscale x 2 x i3>
-; CHECK-NEXT:    [[TMP9:%.*]] = mul <vscale x 2 x i3> [[TMP7]], splat (i3 1)
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i3> zeroinitializer, [[TMP9]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i3> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i3> [ [[TMP7]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <vscale x 2 x i3> [[VEC_IND]], [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = zext <vscale x 2 x i3> [[VEC_IND]] to <vscale x 2 x i64>
 ; CHECK-NEXT:    [[TMP20:%.*]] = zext <vscale x 2 x i3> [[STEP_ADD]] to <vscale x 2 x i64>

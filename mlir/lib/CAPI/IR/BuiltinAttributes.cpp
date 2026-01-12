@@ -41,6 +41,10 @@ MlirAttribute mlirAffineMapAttrGet(MlirAffineMap map) {
   return wrap(AffineMapAttr::get(unwrap(map)));
 }
 
+MlirStringRef mlirAffineMapAttrGetName(void) {
+  return wrap(AffineMapAttr::name);
+}
+
 MlirAffineMap mlirAffineMapAttrGetValue(MlirAttribute attr) {
   return wrap(llvm::cast<AffineMapAttr>(unwrap(attr)).getValue());
 }
@@ -64,6 +68,8 @@ MlirAttribute mlirArrayAttrGet(MlirContext ctx, intptr_t numElements,
       ArrayAttr::get(unwrap(ctx), unwrapList(static_cast<size_t>(numElements),
                                              elements, attrs)));
 }
+
+MlirStringRef mlirArrayAttrGetName(void) { return wrap(ArrayAttr::name); }
 
 intptr_t mlirArrayAttrGetNumElements(MlirAttribute attr) {
   return static_cast<intptr_t>(llvm::cast<ArrayAttr>(unwrap(attr)).size());
@@ -91,6 +97,10 @@ MlirAttribute mlirDictionaryAttrGet(MlirContext ctx, intptr_t numElements,
     attributes.emplace_back(unwrap(elements[i].name),
                             unwrap(elements[i].attribute));
   return wrap(DictionaryAttr::get(unwrap(ctx), attributes));
+}
+
+MlirStringRef mlirDictionaryAttrGetName(void) {
+  return wrap(DictionaryAttr::name);
 }
 
 intptr_t mlirDictionaryAttrGetNumElements(MlirAttribute attr) {
@@ -149,6 +159,8 @@ MlirAttribute mlirIntegerAttrGet(MlirType type, int64_t value) {
   return wrap(IntegerAttr::get(unwrap(type), value));
 }
 
+MlirStringRef mlirIntegerAttrGetName(void) { return wrap(IntegerAttr::name); }
+
 int64_t mlirIntegerAttrGetValueInt(MlirAttribute attr) {
   return llvm::cast<IntegerAttr>(unwrap(attr)).getInt();
 }
@@ -197,6 +209,10 @@ MlirAttribute mlirIntegerSetAttrGet(MlirIntegerSet set) {
   return wrap(IntegerSetAttr::get(unwrap(set)));
 }
 
+MlirStringRef mlirIntegerSetAttrGetName(void) {
+  return wrap(IntegerSetAttr::name);
+}
+
 MlirIntegerSet mlirIntegerSetAttrGetValue(MlirAttribute attr) {
   return wrap(llvm::cast<IntegerSetAttr>(unwrap(attr)).getValue());
 }
@@ -216,6 +232,8 @@ MlirAttribute mlirOpaqueAttrGet(MlirContext ctx, MlirStringRef dialectNamespace,
       OpaqueAttr::get(StringAttr::get(unwrap(ctx), unwrap(dialectNamespace)),
                       StringRef(data, dataLength), unwrap(type)));
 }
+
+MlirStringRef mlirOpaqueAttrGetName(void) { return wrap(OpaqueAttr::name); }
 
 MlirStringRef mlirOpaqueAttrGetDialectNamespace(MlirAttribute attr) {
   return wrap(
@@ -241,6 +259,8 @@ bool mlirAttributeIsAString(MlirAttribute attr) {
 MlirAttribute mlirStringAttrGet(MlirContext ctx, MlirStringRef str) {
   return wrap((Attribute)StringAttr::get(unwrap(ctx), unwrap(str)));
 }
+
+MlirStringRef mlirStringAttrGetName(void) { return wrap(StringAttr::name); }
 
 MlirAttribute mlirStringAttrTypedGet(MlirType type, MlirStringRef str) {
   return wrap((Attribute)StringAttr::get(unwrap(str), unwrap(type)));
@@ -271,6 +291,10 @@ MlirAttribute mlirSymbolRefAttrGet(MlirContext ctx, MlirStringRef symbol,
     refs.push_back(llvm::cast<FlatSymbolRefAttr>(unwrap(references[i])));
   auto symbolAttr = StringAttr::get(unwrap(ctx), unwrap(symbol));
   return wrap(SymbolRefAttr::get(symbolAttr, refs));
+}
+
+MlirStringRef mlirSymbolRefAttrGetName(void) {
+  return wrap(SymbolRefAttr::name);
 }
 
 MlirStringRef mlirSymbolRefAttrGetRootReference(MlirAttribute attr) {
@@ -314,6 +338,10 @@ MlirAttribute mlirFlatSymbolRefAttrGet(MlirContext ctx, MlirStringRef symbol) {
   return wrap(FlatSymbolRefAttr::get(unwrap(ctx), unwrap(symbol)));
 }
 
+MlirStringRef mlirFlatSymbolRefAttrGetName(void) {
+  return wrap(FlatSymbolRefAttr::name);
+}
+
 MlirStringRef mlirFlatSymbolRefAttrGetValue(MlirAttribute attr) {
   return wrap(llvm::cast<FlatSymbolRefAttr>(unwrap(attr)).getValue());
 }
@@ -329,6 +357,8 @@ bool mlirAttributeIsAType(MlirAttribute attr) {
 MlirAttribute mlirTypeAttrGet(MlirType type) {
   return wrap(TypeAttr::get(unwrap(type)));
 }
+
+MlirStringRef mlirTypeAttrGetName(void) { return wrap(TypeAttr::name); }
 
 MlirType mlirTypeAttrGetValue(MlirAttribute attr) {
   return wrap(llvm::cast<TypeAttr>(unwrap(attr)).getValue());
@@ -347,6 +377,8 @@ bool mlirAttributeIsAUnit(MlirAttribute attr) {
 MlirAttribute mlirUnitAttrGet(MlirContext ctx) {
   return wrap(UnitAttr::get(unwrap(ctx)));
 }
+
+MlirStringRef mlirUnitAttrGetName(void) { return wrap(UnitAttr::name); }
 
 MlirTypeID mlirUnitAttrGetTypeID(void) { return wrap(UnitAttr::getTypeID()); }
 
@@ -810,6 +842,10 @@ MlirAttribute mlirUnmanagedDenseResourceElementsAttrGet(
                                      unwrap(name), std::move(blob)));
 }
 
+MlirStringRef mlirDenseResourceElementsAttrGetName(void) {
+  return wrap(DenseResourceElementsAttr::name);
+}
+
 template <typename U, typename T>
 static MlirAttribute getDenseResource(MlirType shapedType, MlirStringRef name,
                                       intptr_t numElements, const T *elements) {
@@ -979,6 +1015,10 @@ MlirAttribute mlirStridedLayoutAttrGet(MlirContext ctx, int64_t offset,
                                        const int64_t *strides) {
   return wrap(StridedLayoutAttr::get(unwrap(ctx), offset,
                                      ArrayRef<int64_t>(strides, numStrides)));
+}
+
+MlirStringRef mlirStridedLayoutAttrGetName(void) {
+  return wrap(StridedLayoutAttr::name);
 }
 
 int64_t mlirStridedLayoutAttrGetOffset(MlirAttribute attr) {

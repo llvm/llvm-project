@@ -8,224 +8,300 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_uqsub_s32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_uqsub_s64
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_sqdmulls_scalar
-define i32 @test_sqrshl_s32(float noundef %a){
+define void @test_sqrshl_s32(float noundef %a, ptr %dst){
 ; CHECK-LABEL: test_sqrshl_s32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzs s0, s0
 ; CHECK-NEXT:    sqrshl s0, s0, s0
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %cvt = tail call i32 @llvm.aarch64.neon.fcvtzs.i32.f32(float %a)
   %res = tail call i32 @llvm.aarch64.neon.sqrshl.i32(i32 %cvt, i32 %cvt)
-  ret i32 %res
+  store i32 %res, ptr %dst, align 4
+  ret void
 }
 
-define i64 @test_sqrshl_s64(float noundef %a){
+define void @test_sqrshl_s64(float noundef %a, ptr %dst){
 ; CHECK-LABEL: test_sqrshl_s64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzs d0, s0
 ; CHECK-NEXT:    sqrshl d0, d0, d0
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %cvt = tail call i64 @llvm.aarch64.neon.fcvtzs.i64.f32(float %a)
   %res = tail call i64 @llvm.aarch64.neon.sqrshl.i64(i64 %cvt, i64 %cvt)
-  ret i64 %res
+  store i64 %res, ptr %dst, align 8
+  ret void
 }
 
-define i32 @test_sqshl_s32(float noundef %a) {
+define void @test_sqshl_s32(float noundef %a, ptr %dst) {
 ; CHECK-LABEL: test_sqshl_s32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzs s0, s0
 ; CHECK-NEXT:    sqshl s0, s0, s0
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %cvt = tail call i32 @llvm.aarch64.neon.fcvtzs.i32.f32(float %a)
   %res = tail call i32 @llvm.aarch64.neon.sqshl.i32(i32 %cvt, i32 %cvt)
-  ret i32 %res
+  store i32 %res, ptr %dst, align 4
+  ret void
 }
 
-define i64 @test_sqshl_s64(float noundef %a) {
+define void @test_sqshl_s64(float noundef %a, ptr %dst) {
 ; CHECK-LABEL: test_sqshl_s64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzs d0, s0
 ; CHECK-NEXT:    sqshl d0, d0, d0
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %cvt = tail call i64 @llvm.aarch64.neon.fcvtzs.i64.f32(float %a)
   %res = tail call i64 @llvm.aarch64.neon.sqshl.i64(i64 %cvt, i64 %cvt)
-  ret i64 %res
+  store i64 %res, ptr %dst, align 8
+  ret void
 }
 
-define i32 @test_uqrshl_s32(float noundef %a) {
+define void @test_uqrshl_s32(float noundef %a, ptr %dst) {
 ; CHECK-LABEL: test_uqrshl_s32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzs s0, s0
 ; CHECK-NEXT:    uqrshl s0, s0, s0
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %cvt = tail call i32 @llvm.aarch64.neon.fcvtzs.i32.f32(float %a)
   %res = tail call i32 @llvm.aarch64.neon.uqrshl.i32(i32 %cvt, i32 %cvt)
-  ret i32 %res
+  store i32 %res, ptr %dst, align 4
+  ret void
 }
 
-define i64 @test_uqrshl_s64(float noundef %a) {
+define void @test_uqrshl_s64(float noundef %a, ptr %dst) {
 ; CHECK-LABEL: test_uqrshl_s64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzs d0, s0
 ; CHECK-NEXT:    uqrshl d0, d0, d0
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %cvt = tail call i64 @llvm.aarch64.neon.fcvtzs.i64.f32(float %a)
   %res = tail call i64 @llvm.aarch64.neon.uqrshl.i64(i64 %cvt, i64 %cvt)
-  ret i64 %res
+  store i64 %res, ptr %dst, align 8
+  ret void
 }
 
-define i32 @test_uqshl_s32(float noundef %a) {
+define void @test_uqshl_s32(float noundef %a, ptr %dst) {
 ; CHECK-LABEL: test_uqshl_s32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzs s0, s0
 ; CHECK-NEXT:    uqshl s0, s0, s0
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %cvt = tail call i32 @llvm.aarch64.neon.fcvtzs.i32.f32(float %a)
   %res = tail call i32 @llvm.aarch64.neon.uqshl.i32(i32 %cvt, i32 %cvt)
-  ret i32 %res
+  store i32 %res, ptr %dst, align 4
+  ret void
 }
 
-define i64 @test_uqshl_s64(float noundef %a) {
+define void @test_uqshl_s64(float noundef %a, ptr %dst) {
 ; CHECK-LABEL: test_uqshl_s64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzs d0, s0
 ; CHECK-NEXT:    uqshl d0, d0, d0
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %cvt = tail call i64 @llvm.aarch64.neon.fcvtzs.i64.f32(float %a)
   %res = tail call i64 @llvm.aarch64.neon.uqshl.i64(i64 %cvt, i64 %cvt)
-  ret i64 %res
+  store i64 %res, ptr %dst, align 8
+  ret void
 }
 
-define i32 @test_sqadd_s32(float noundef %a) {
+define void @test_sqadd_s32(float noundef %a, ptr %dst) {
 ; CHECK-LABEL: test_sqadd_s32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzs s0, s0
 ; CHECK-NEXT:    sqadd s0, s0, s0
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %cvt = tail call i32 @llvm.aarch64.neon.fcvtzs.i32.f32(float %a)
   %res = tail call i32 @llvm.aarch64.neon.sqadd.i32(i32 %cvt, i32 %cvt)
-  ret i32 %res
+  store i32 %res, ptr %dst, align 4
+  ret void
 }
 
-define i64 @test_sqadd_s64(float noundef %a) {
+define void @test_sqadd_s64(float noundef %a, ptr %dst) {
 ; CHECK-LABEL: test_sqadd_s64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzs d0, s0
 ; CHECK-NEXT:    sqadd d0, d0, d0
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %cvt = tail call i64 @llvm.aarch64.neon.fcvtzs.i64.f32(float %a)
   %res = tail call i64 @llvm.aarch64.neon.sqadd.i64(i64 %cvt, i64 %cvt)
-  ret i64 %res
+  store i64 %res, ptr %dst, align 8
+  ret void
 }
 
-define i32 @test_sqsub_s32(float noundef %a) {
+define void @test_sqsub_s32(float noundef %a, ptr %dst) {
 ; CHECK-LABEL: test_sqsub_s32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzs s0, s0
 ; CHECK-NEXT:    sqsub s0, s0, s0
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %cvt = tail call i32 @llvm.aarch64.neon.fcvtzs.i32.f32(float %a)
   %res = tail call i32 @llvm.aarch64.neon.sqsub.i32(i32 %cvt, i32 %cvt)
-  ret i32 %res
+  store i32 %res, ptr %dst, align 4
+  ret void
 }
 
-define i64 @test_sqsub_s64(float noundef %a) {
+define void @test_sqsub_s64(float noundef %a, ptr %dst) {
 ; CHECK-LABEL: test_sqsub_s64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzs d0, s0
 ; CHECK-NEXT:    sqsub d0, d0, d0
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %cvt = tail call i64 @llvm.aarch64.neon.fcvtzs.i64.f32(float %a)
   %res = tail call i64 @llvm.aarch64.neon.sqsub.i64(i64 %cvt, i64 %cvt)
-  ret i64 %res
+  store i64 %res, ptr %dst, align 8
+  ret void
 }
 
-define i32 @test_uqadd_s32(float noundef %a) {
+define void @test_uqadd_s32(float noundef %a, ptr %dst) {
 ; CHECK-LABEL: test_uqadd_s32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzs s0, s0
 ; CHECK-NEXT:    uqadd s0, s0, s0
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %cvt = tail call i32 @llvm.aarch64.neon.fcvtzs.i32.f32(float %a)
   %res = tail call i32 @llvm.aarch64.neon.uqadd.i32(i32 %cvt, i32 %cvt)
-  ret i32 %res
+  store i32 %res, ptr %dst, align 4
+  ret void
 }
 
-define i64 @test_uqadd_s64(float noundef %a) {
+define void @test_uqadd_s64(float noundef %a, ptr %dst) {
 ; CHECK-LABEL: test_uqadd_s64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzs d0, s0
 ; CHECK-NEXT:    uqadd d0, d0, d0
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %cvt = tail call i64 @llvm.aarch64.neon.fcvtzs.i64.f32(float %a)
   %res = tail call i64 @llvm.aarch64.neon.uqadd.i64(i64 %cvt, i64 %cvt)
-  ret i64 %res
+  store i64 %res, ptr %dst, align 8
+  ret void
 }
 
-define i32 @test_uqsub_s32(float noundef %a) {
+define void @test_uqsub_s32(float noundef %a, ptr %dst) {
 ; CHECK-LABEL: test_uqsub_s32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzs s0, s0
 ; CHECK-NEXT:    uqsub s0, s0, s0
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %cvt = tail call i32 @llvm.aarch64.neon.fcvtzs.i32.f32(float %a)
   %res = tail call i32 @llvm.aarch64.neon.uqsub.i32(i32 %cvt, i32 %cvt)
-  ret i32 %res
+  store i32 %res, ptr %dst, align 4
+  ret void
 }
 
-define i64 @test_uqsub_s64(float noundef %a) {
+define void @test_uqsub_s64(float noundef %a, ptr %dst) {
 ; CHECK-LABEL: test_uqsub_s64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcvtzs d0, s0
 ; CHECK-NEXT:    uqsub d0, d0, d0
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %cvt = tail call i64 @llvm.aarch64.neon.fcvtzs.i64.f32(float %a)
   %res = tail call i64 @llvm.aarch64.neon.uqsub.i64(i64 %cvt, i64 %cvt)
-  ret i64 %res
+  store i64 %res, ptr %dst, align 8
+  ret void
 }
 
-define i64 @test_sqdmulls_scalar(float %A){
+define void @test_sqdmulls_scalar(float %A, ptr %dst){
 ; CHECK-LABEL: test_sqdmulls_scalar:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvtzs s0, s0
 ; CHECK-NEXT:    sqdmull d0, s0, s0
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
   %cvt = tail call i32 @llvm.aarch64.neon.fcvtzs.i32.f32(float %A)
   %prod = call i64 @llvm.aarch64.neon.sqdmulls.scalar(i32  %cvt, i32  %cvt)
-  ret i64 %prod
+  store i64 %prod, ptr %dst, align 8
+  ret void
 }
+
+define void @test_sqdmulh_scalar(float noundef %a, ptr %dst) {
+; CHECK-LABEL: test_sqdmulh_scalar:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzs s0, s0
+; CHECK-NEXT:    sqdmulh s0, s0, s0
+; CHECK-NEXT:    str s0, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %cvt = tail call i32 @llvm.aarch64.neon.fcvtzs.i32.f32(float %a)
+  %res = call i32 @llvm.aarch64.neon.sqdmulh.i32(i32 %cvt, i32 %cvt)
+  store i32 %res, ptr %dst
+  ret void
+}
+
+define void @test_sqrdmulh_scalar(float noundef %a, ptr %dst) {
+; CHECK-LABEL: test_sqrdmulh_scalar:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzs s0, s0
+; CHECK-NEXT:    sqrdmulh s0, s0, s0
+; CHECK-NEXT:    str s0, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %cvt = tail call i32 @llvm.aarch64.neon.fcvtzs.i32.f32(float %a)
+  %res = call i32 @llvm.aarch64.neon.sqrdmulh.i32(i32 %cvt, i32 %cvt)
+  store i32 %res, ptr %dst
+  ret void
+}
+
+define void @test_sqrdmlah_scalar(float noundef %a, ptr %dst) #0 {
+; CHECK-LABEL: test_sqrdmlah_scalar:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzs s0, s0
+; CHECK-NEXT:    sqrdmlah s0, s0, s0
+; CHECK-NEXT:    str s0, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %cvt = tail call i32 @llvm.aarch64.neon.fcvtzs.i32.f32(float %a)
+  %res = call i32 @llvm.aarch64.neon.sqrdmlah.i32(i32 %cvt, i32 %cvt, i32 %cvt)
+  store i32 %res, ptr %dst
+  ret void
+}
+
+define void @test_sqrdmlsh_scalar(float noundef %a, ptr %dst) #0 {
+; CHECK-LABEL: test_sqrdmlsh_scalar:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzs s0, s0
+; CHECK-NEXT:    sqrdmlsh s0, s0, s0
+; CHECK-NEXT:    str s0, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %cvt = tail call i32 @llvm.aarch64.neon.fcvtzs.i32.f32(float %a)
+  %res = call i32 @llvm.aarch64.neon.sqrdmlsh.i32(i32 %cvt, i32 %cvt, i32 %cvt)
+  store i32 %res, ptr %dst
+  ret void
+}
+
+attributes #0 = { "target-features"="+rdm" }
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CHECK-GI: {{.*}}

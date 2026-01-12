@@ -61,6 +61,17 @@ TEST_CONSTEXPR_CXX20 bool test()
         assert(state == State::destroyed);
         assert(static_cast<bool>(opt) == false);
     }
+
+#if TEST_STD_VER >= 26
+    {
+      int i = 0;
+      optional<int&> o{i};
+      ASSERT_NOEXCEPT(o = std::nullopt);
+      o = std::nullopt;
+      assert(!o.has_value());
+      assert(static_cast<bool>(o) == false);
+    }
+#endif
     return true;
 }
 

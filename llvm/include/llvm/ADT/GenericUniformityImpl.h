@@ -962,8 +962,10 @@ static const CycleT *getExtDivCycle(const CycleT *Cycle,
   (void)OriginalCycle;
   assert(Cycle == OriginalCycle || !Cycle->isReducible());
 
-  if (Cycle->isReducible())
+  if (Cycle->isReducible()) {
+    assert(Cycle->getHeader() == JoinBlock);
     return nullptr;
+  }
 
   LLVM_DEBUG(dbgs() << "cycle made divergent by external branch\n");
   return Cycle;

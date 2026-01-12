@@ -1101,6 +1101,7 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
              UseEnd = MRI->use_instr_end();
          UseIt != UseEnd; UseIt = std::next(UseIt)) {
       if ((*UseIt).getOpcode() == TargetOpcode::G_GLOBAL_VALUE ||
+          (*UseIt).getOpcode() == SPIRV::OpSpecConstantOp ||
           (*UseIt).getOpcode() == SPIRV::OpVariable) {
         IsGVInit = true;
         break;
@@ -1409,9 +1410,9 @@ bool SPIRVInstructionSelector::selectUnOp(Register ResVReg,
              MRI->def_instr_begin(SrcReg);
          DefIt != MRI->def_instr_end(); DefIt = std::next(DefIt)) {
       unsigned DefOpCode = DefIt->getOpcode();
-      if (DefOpCode == SPIRV::ASSIGN_TYPE) {
-        // We need special handling to look through the type assignment and see
-        // if this is a constant or a global
+      if (DefOpCode == SPIRV::ASSIGN_TYPE || DefOpCode == TargetOpcode::COPY) {
+        // We need special handling to look through the type assignment or the
+        // COPY pseudo-op and see if this is a constant or a global.
         if (auto *VRD = getVRegDef(*MRI, DefIt->getOperand(1).getReg()))
           DefOpCode = VRD->getOpcode();
       }
@@ -3299,6 +3300,17 @@ bool SPIRVInstructionSelector::selectInsertVal(Register ResVReg,
 bool SPIRVInstructionSelector::selectExtractVal(Register ResVReg,
                                                 const SPIRVType *ResType,
                                                 MachineInstr &I) const {
+  Type *MaybeResTy = nullptr;
+  StringRef ResName;
+  if (GR.findValueAttrs(&I, MaybeResTy, ResName) &&
+      MaybeResTy != GR.getTypeForSPIRVType(ResType)) {
+    assert(!MaybeResTy ||
+           MaybeResTy->isAggregateType() &&
+               "Expected aggregate type for extractv instruction");
+    ResType = GR.getOrCreateSPIRVType(MaybeResTy, I,
+                                      SPIRV::AccessQualifier::ReadWrite, false);
+    GR.assignSPIRVTypeToVReg(ResType, ResVReg, *I.getMF());
+  }
   MachineBasicBlock &BB = *I.getParent();
   auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
                  .addDef(ResVReg)
@@ -3803,6 +3815,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformAll);
   case Intrinsic::spv_wave_any:
     return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformAny);
+  case Intrinsic::spv_wave_ballot:
+    return selectWaveOpInst(ResVReg, ResType, I,
+                            SPIRV::OpGroupNonUniformBallot);
   case Intrinsic::spv_wave_is_first_lane:
     return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformElect);
   case Intrinsic::spv_wave_reduce_umax:

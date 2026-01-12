@@ -1598,5 +1598,185 @@ TEST_F(LifetimeAnalysisTest, TrivialClassDestructorsUAR) {
   EXPECT_THAT("s", HasLiveLoanAtExpiry("p1"));
 }
 
+// ========================================================================= //
+//                    Tests for shouldTrackImplicitObjectArg
+// ========================================================================= //
+
+TEST_F(LifetimeAnalysisTest, TrackImplicitObjectArg_STLBegin) {
+  SetupTest(R"(
+    namespace std {
+      template<typename T>
+      struct vector {
+        struct iterator {};
+        iterator begin();
+      };
+    }
+    
+    void target() {
+      std::vector<int> vec;
+      auto it = vec.begin();
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("it"), HasLoansTo({"vec"}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, TrackImplicitObjectArg_OwnerDeref) {
+  SetupTest(R"(
+    namespace std {
+      template<typename T>
+      struct optional {
+        T& operator*();
+      };
+    }
+    
+    void target() {
+      std::optional<int> opt;
+      int& r = *opt;
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("r"), HasLoansTo({"opt"}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, TrackImplicitObjectArg_Value) {
+  SetupTest(R"(
+    namespace std {
+      template<typename T>
+      struct optional {
+        T& value();
+      };
+    }
+    
+    void target() {
+      std::optional<int> opt;
+      int& r = opt.value();
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("r"), HasLoansTo({"opt"}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, TrackImplicitObjectArg_UniquePtr_Get) {
+  SetupTest(R"(
+    namespace std {
+      template<typename T>
+      struct unique_ptr {
+        T *get() const;
+      };
+    }
+    
+    void target() {
+      std::unique_ptr<int> up;
+      int* r = up.get();
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("r"), HasLoansTo({"up"}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, TrackImplicitObjectArg_ConversionOperator) {
+  SetupTest(R"(
+    struct [[gsl::Pointer(int)]] IntPtr {
+      int& operator*();
+    };
+    
+    struct [[gsl::Owner(int)]] OwnerWithConversion {
+      operator IntPtr();
+    };
+    
+    void target() {
+      OwnerWithConversion owner;
+      IntPtr ptr = owner;
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("ptr"), HasLoansTo({"owner"}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, TrackImplicitObjectArg_MapFind) {
+  SetupTest(R"(
+    namespace std {
+      template<typename K, typename V>
+      struct map {
+        struct iterator {};
+        iterator find(const K&);
+      };
+    }
+
+    void target() {
+      std::map<int, int> m;
+      auto it = m.find(42);
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("it"), HasLoansTo({"m"}, "p1"));
+}
+
+// ========================================================================= //
+//                    Tests for shouldTrackFirstArgument
+// ========================================================================= //
+
+TEST_F(LifetimeAnalysisTest, TrackFirstArgument_StdBegin) {
+  SetupTest(R"(
+    namespace std {
+      template<typename T>
+      struct vector {
+        struct iterator {};
+        iterator begin();
+      };
+      
+      template<typename C>
+      auto begin(C& c) -> decltype(c.begin());
+    }
+    
+    void target() {
+      std::vector<int> vec;
+      auto it = std::begin(vec);
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("it"), HasLoansTo({"vec"}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, TrackFirstArgument_StdData) {
+  SetupTest(R"(
+    namespace std {
+      template<typename T>
+      struct vector {
+        const T* data() const;
+      };
+      
+      template<typename C>
+      auto data(C& c) -> decltype(c.data());
+    }
+    
+    void target() {
+      std::vector<int> vec;
+      const int* p = std::data(vec);
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("p"), HasLoansTo({"vec"}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, TrackFirstArgument_StdAnyCast) {
+  SetupTest(R"(
+    namespace std {
+      struct any {};
+      
+      template<typename T>
+      T any_cast(const any& op);
+    }
+
+    void target() {
+      std::any a;
+      int& r = std::any_cast<int&>(a);
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("r"), HasLoansTo({"a"}, "p1"));
+}
+
 } // anonymous namespace
 } // namespace clang::lifetimes::internal

@@ -3936,13 +3936,7 @@ wstring numpunct<wchar_t>::do_falsename() const { return L"false"; }
 
 // numpunct_byname<char>
 
-numpunct_byname<char>::numpunct_byname(const char* nm, size_t refs) : numpunct<char>(refs) { __init(nm); }
-
-numpunct_byname<char>::numpunct_byname(const string& nm, size_t refs) : numpunct<char>(refs) { __init(nm.c_str()); }
-
-numpunct_byname<char>::~numpunct_byname() {}
-
-void numpunct_byname<char>::__init(const char* nm) {
+numpunct_byname<char>::numpunct_byname(const char* nm, size_t refs) : numpunct<char>(refs) {
   typedef numpunct<char> base;
   if (strcmp(nm, "C") != 0) {
     __libcpp_unique_locale loc(nm);
@@ -3963,18 +3957,14 @@ void numpunct_byname<char>::__init(const char* nm) {
   }
 }
 
+numpunct_byname<char>::numpunct_byname(const string& nm, size_t refs) : numpunct_byname<char>(nm.c_str(), refs) {}
+
+numpunct_byname<char>::~numpunct_byname() {}
+
 // numpunct_byname<wchar_t>
 
 #if _LIBCPP_HAS_WIDE_CHARACTERS
-numpunct_byname<wchar_t>::numpunct_byname(const char* nm, size_t refs) : numpunct<wchar_t>(refs) { __init(nm); }
-
-numpunct_byname<wchar_t>::numpunct_byname(const string& nm, size_t refs) : numpunct<wchar_t>(refs) {
-  __init(nm.c_str());
-}
-
-numpunct_byname<wchar_t>::~numpunct_byname() {}
-
-void numpunct_byname<wchar_t>::__init(const char* nm) {
+numpunct_byname<wchar_t>::numpunct_byname(const char* nm, size_t refs) : numpunct<wchar_t>(refs) {
   if (strcmp(nm, "C") != 0) {
     __libcpp_unique_locale loc(nm);
     if (!loc)
@@ -3991,6 +3981,10 @@ void numpunct_byname<wchar_t>::__init(const char* nm) {
     // localization for truename and falsename is not available
   }
 }
+
+numpunct_byname<wchar_t>::numpunct_byname(const string& nm, size_t refs) : numpunct_byname<wchar_t>(nm.c_str(), refs) {}
+
+numpunct_byname<wchar_t>::~numpunct_byname() {}
 #endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 // num_get helpers

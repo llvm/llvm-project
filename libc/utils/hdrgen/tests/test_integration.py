@@ -82,6 +82,12 @@ class TestHeaderGenIntegration(unittest.TestCase):
         self.run_script(yaml_file, output_file)
         self.compare_files(output_file, expected_output_file)
 
+    def test_generate_header(self):
+        yaml_file = self.source_dir / "input/test_small.yaml"
+        expected_output_file = self.source_dir / "expected_output/test_small_proxy.h"
+        output_file = self.output_dir / "test_small.h"
+        self.run_script(yaml_file, output_file, switches=["--proxy"])
+        self.compare_files(output_file, expected_output_file)
 
 def main():
     parser = argparse.ArgumentParser(description="TestHeaderGenIntegration arguments")

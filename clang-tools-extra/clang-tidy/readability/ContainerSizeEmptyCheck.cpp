@@ -217,13 +217,14 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
                     expr(hasType(pointsTo(ValidContainer))).bind("Pointee"))),
             expr(hasType(ValidContainer)).bind("STLObject"));
 
-  const auto ExcludedComparisonTypesMatcher = qualType(anyOf(
-      hasDeclaration(
-          cxxRecordDecl(matchers::matchesAnyListedName(ExcludedComparisonTypes))
-              .bind("excluded")),
-      hasCanonicalType(hasDeclaration(
-          cxxRecordDecl(matchers::matchesAnyListedName(ExcludedComparisonTypes))
-              .bind("excluded")))));
+  const auto ExcludedComparisonTypesMatcher = qualType(
+      anyOf(hasDeclaration(cxxRecordDecl(matchers::matchesAnyListedRegexName(
+                                             ExcludedComparisonTypes))
+                               .bind("excluded")),
+            hasCanonicalType(hasDeclaration(
+                cxxRecordDecl(matchers::matchesAnyListedRegexName(
+                                  ExcludedComparisonTypes))
+                    .bind("excluded")))));
   const auto SameExcludedComparisonTypesMatcher =
       qualType(anyOf(hasDeclaration(cxxRecordDecl(equalsBoundNode("excluded"))),
                      hasCanonicalType(hasDeclaration(

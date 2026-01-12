@@ -271,9 +271,13 @@ static bool isMergePassthruOpcode(unsigned Opc) {
   case AArch64ISD::FFLOOR_MERGE_PASSTHRU:
   case AArch64ISD::FNEARBYINT_MERGE_PASSTHRU:
   case AArch64ISD::FRINT_MERGE_PASSTHRU:
+  case AArch64ISD::FRINT32_MERGE_PASSTHRU:
+  case AArch64ISD::FRINT64_MERGE_PASSTHRU:
   case AArch64ISD::FROUND_MERGE_PASSTHRU:
   case AArch64ISD::FROUNDEVEN_MERGE_PASSTHRU:
   case AArch64ISD::FTRUNC_MERGE_PASSTHRU:
+  case AArch64ISD::FTRUNC32_MERGE_PASSTHRU:
+  case AArch64ISD::FTRUNC64_MERGE_PASSTHRU:
   case AArch64ISD::FP_ROUND_MERGE_PASSTHRU:
   case AArch64ISD::FP_EXTEND_MERGE_PASSTHRU:
   case AArch64ISD::SINT_TO_FP_MERGE_PASSTHRU:
@@ -4591,6 +4595,9 @@ static SDValue lowerADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG,
 
 static SDValue lowerIntNeonIntrinsic(SDValue Op, unsigned Opcode,
                                      SelectionDAG &DAG) {
+  if (Op.getValueType().isVector())
+    return SDValue();
+
   SDLoc DL(Op);
   auto getFloatVT = [](EVT VT) {
     assert((VT == MVT::i32 || VT == MVT::i64) && "Unexpected VT");
@@ -6468,21 +6475,21 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                      Op.getOperand(1).getValueType(),
                                      Op.getOperand(1), Op.getOperand(2)));
     return SDValue();
+  case Intrinsic::aarch64_neon_sqdmulh:
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::SQDMULH, DAG);
+  case Intrinsic::aarch64_neon_sqrdmulh:
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::SQRDMULH, DAG);
+  case Intrinsic::aarch64_neon_sqrdmlah:
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::SQRDMLAH, DAG);
+  case Intrinsic::aarch64_neon_sqrdmlsh:
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::SQRDMLSH, DAG);
   case Intrinsic::aarch64_neon_sqrshl:
-    if (Op.getValueType().isVector())
-      return SDValue();
     return lowerIntNeonIntrinsic(Op, AArch64ISD::SQRSHL, DAG);
   case Intrinsic::aarch64_neon_sqshl:
-    if (Op.getValueType().isVector())
-      return SDValue();
     return lowerIntNeonIntrinsic(Op, AArch64ISD::SQSHL, DAG);
   case Intrinsic::aarch64_neon_uqrshl:
-    if (Op.getValueType().isVector())
-      return SDValue();
     return lowerIntNeonIntrinsic(Op, AArch64ISD::UQRSHL, DAG);
   case Intrinsic::aarch64_neon_uqshl:
-    if (Op.getValueType().isVector())
-      return SDValue();
     return lowerIntNeonIntrinsic(Op, AArch64ISD::UQSHL, DAG);
   case Intrinsic::aarch64_neon_sqadd:
     if (Op.getValueType().isVector())
@@ -6610,6 +6617,14 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_sve_frintx:
     return DAG.getNode(AArch64ISD::FRINT_MERGE_PASSTHRU, DL, Op.getValueType(),
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
+  case Intrinsic::aarch64_sve_frint32x:
+    return DAG.getNode(AArch64ISD::FRINT32_MERGE_PASSTHRU, DL,
+                       Op.getValueType(), Op.getOperand(2), Op.getOperand(3),
+                       Op.getOperand(1));
+  case Intrinsic::aarch64_sve_frint64x:
+    return DAG.getNode(AArch64ISD::FRINT64_MERGE_PASSTHRU, DL,
+                       Op.getValueType(), Op.getOperand(2), Op.getOperand(3),
+                       Op.getOperand(1));
   case Intrinsic::aarch64_sve_frinta:
     return DAG.getNode(AArch64ISD::FROUND_MERGE_PASSTHRU, DL, Op.getValueType(),
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
@@ -6620,6 +6635,14 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_sve_frintz:
     return DAG.getNode(AArch64ISD::FTRUNC_MERGE_PASSTHRU, DL, Op.getValueType(),
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
+  case Intrinsic::aarch64_sve_frint32z:
+    return DAG.getNode(AArch64ISD::FTRUNC32_MERGE_PASSTHRU, DL,
+                       Op.getValueType(), Op.getOperand(2), Op.getOperand(3),
+                       Op.getOperand(1));
+  case Intrinsic::aarch64_sve_frint64z:
+    return DAG.getNode(AArch64ISD::FTRUNC64_MERGE_PASSTHRU, DL,
+                       Op.getValueType(), Op.getOperand(2), Op.getOperand(3),
+                       Op.getOperand(1));
   case Intrinsic::aarch64_sve_ucvtf:
     return DAG.getNode(AArch64ISD::UINT_TO_FP_MERGE_PASSTHRU, DL,
                        Op.getValueType(), Op.getOperand(2), Op.getOperand(3),
@@ -16340,10 +16363,18 @@ AArch64TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
   EVT VT = Op.getOperand(0).getValueType();
 
   if (VT.getScalarType() == MVT::i1) {
+    SDLoc DL(Op);
+    // There are no operations to extend a nxv1i1 predicate to a nxv1i128 vector
+    // An easy lowering is widening the input predicate to nxv2i1.
+    if (VT == MVT::nxv1i1) {
+      SDValue WidenedPred = DAG.getInsertSubvector(
+          DL, DAG.getPOISON(MVT::nxv2i1), Op->getOperand(0), 0);
+      return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, Op.getValueType(),
+                         WidenedPred, Op.getOperand(1));
+    }
     // We can't directly extract from an SVE predicate; extend it first.
     // (This isn't the only possible lowering, but it's straightforward.)
     EVT VectorVT = getPromotedVTForPredicate(VT);
-    SDLoc DL(Op);
     SDValue Extend =
         DAG.getNode(ISD::ANY_EXTEND, DL, VectorVT, Op.getOperand(0));
     MVT ExtractTy = VectorVT == MVT::nxv2i64 ? MVT::i64 : MVT::i32;
@@ -20500,7 +20531,7 @@ static SDValue performANDORCSELCombine(SDNode *N, SelectionDAG &DAG) {
   SDValue CCmp, Condition;
   unsigned NZCV;
 
-  if (N->getOpcode() == ISD::AND) {
+  if (N->getOpcode() == ISD::AND || N->getOpcode() == AArch64ISD::ANDS) {
     AArch64CC::CondCode InvCC0 = AArch64CC::getInvertedCondCode(CC0);
     Condition = getCondCode(DAG, InvCC0);
     NZCV = AArch64CC::getNZCVToSatisfyCondCode(CC1);
@@ -26725,6 +26756,24 @@ static SDValue performFlagSettingCombine(SDNode *N,
   return SDValue();
 }
 
+static SDValue performANDSCombine(SDNode *N,
+                                  TargetLowering::DAGCombinerInfo &DCI) {
+  SelectionDAG &DAG = DCI.DAG;
+  if (SDValue R = performFlagSettingCombine(N, DCI, ISD::AND))
+    return R;
+
+  // If we have no uses of the AND value, use performANDORCSELCombine to try to
+  // convert ANDS(CSET(CMP), CSET(CMP)) into CMP(CSET(CCMP(CMP))). The outer
+  // CMP(CSET should be removed by other combines, folded into the use of the
+  // CMP.
+  if (!N->hasAnyUseOfValue(0))
+    if (SDValue R = performANDORCSELCombine(N, DAG))
+      return DAG.getNode(AArch64ISD::SUBS, SDLoc(N), N->getVTList(), R,
+                         DAG.getConstant(0, SDLoc(N), N->getValueType(0)));
+
+  return SDValue();
+}
+
 static SDValue performSetCCPunpkCombine(SDNode *N, SelectionDAG &DAG) {
   // setcc_merge_zero pred
   //   (sign_extend (extract_subvector (setcc_merge_zero ... pred ...))), 0, ne
@@ -28370,7 +28419,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::TRUNCATE:
     return performTruncateCombine(N, DAG, DCI);
   case AArch64ISD::ANDS:
-    return performFlagSettingCombine(N, DCI, ISD::AND);
+    return performANDSCombine(N, DCI);
   case AArch64ISD::ADC:
     if (auto R = foldOverflowCheck(N, DAG, /* IsAdd */ true))
       return R;

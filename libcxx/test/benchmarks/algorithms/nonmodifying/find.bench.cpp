@@ -51,6 +51,7 @@ int main(int argc, char** argv) {
   auto register_benchmarks = [&](auto bm, std::string comment) {
     // find
     bm.template operator()<std::vector<char>>("std::find(vector<char>) (" + comment + ")", std_find);
+    bm.template operator()<std::vector<short>>("std::find(vector<short>) (" + comment + ")", std_find);
     bm.template operator()<std::vector<int>>("std::find(vector<int>) (" + comment + ")", std_find);
     bm.template operator()<std::vector<long long>>("std::find(vector<long long>) (" + comment + ")", std_find);
     bm.template operator()<std::deque<int>>("std::find(deque<int>) (" + comment + ")", std_find);

@@ -166,3 +166,13 @@ func.func @test_dim(%arg0: tensor<1x2x3x4xi32>) -> !tosa.shape<1> {
   %0 = tosa.dim %arg0 {axis = 2 : i32} : (tensor<1x2x3x4xi32>) -> !tosa.shape<1>
   return %0 : !tosa.shape<1>
 }
+
+// -----
+
+// CHECK-LABEL: test_mod_shape
+func.func @test_mod_shape() -> !tosa.shape<3> {
+  %a = tosa.const_shape {values = dense<[10, 11, 12]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %b = tosa.const_shape {values = dense<[3, 5, 2]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %c = tosa.mod_shape %a, %b : (!tosa.shape<3>, !tosa.shape<3>) -> !tosa.shape<3>
+  return %c : !tosa.shape<3>
+}

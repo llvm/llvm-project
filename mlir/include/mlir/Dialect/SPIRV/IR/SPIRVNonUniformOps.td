@@ -1608,4 +1608,82 @@ def SPIRV_GroupNonUniformAllEqualOp : SPIRV_Op<"GroupNonUniformAllEqual", [
 
 // -----
 
+def SPIRV_GroupNonUniformQuadSwapOp : SPIRV_Op<"GroupNonUniformQuadSwap", [
+  SPIRV_ExecutionScopeAttrIs<"execution_scope", "Subgroup">, AllTypesMatch<["value", "result"]>
+]> {
+  let summary = [{
+    Swap the Value of the invocation within the quad with another invocation
+    in the quad using Direction.
+  }];
+
+  let description = [{
+    Result Type must be a scalar or vector of floating-point type, integer type,
+    or Boolean type.
+
+    Execution is a Scope, but has no effect on the behavior of this instruction.
+    It must be Subgroup.
+
+    The type of Value must be the same as Result Type.
+
+    Direction is the kind of swap to perform.
+
+    Direction must be a scalar of integer type, whose Signedness operand is 0.
+
+    Direction must come from a constant instruction.
+
+    The value returned in Result is the value provided to Value by another invocation
+    in the same quad scope instance. The invocation providing this value is
+    determined according to Direction.
+
+    A Direction of 0 indicates a horizontal swap;
+    - Invocations with quad indices of 0 and 1 swap values
+    - Invocations with quad indices of 2 and 3 swap values
+    A Direction of 1 indicates a vertical swap;
+    - Invocations with quad indices of 0 and 2 swap values
+    - Invocations with quad indices of 1 and 3 swap values
+    A Direction of 2 indicates a diagonal swap;
+    - Invocations with quad indices of 0 and 3 swap values
+    - Invocations with quad indices of 1 and 2 swap values
+
+    Direction must be one of the above values.
+
+    If a tangled invocation within the quad reads Value from an invocation not part
+    of the tangled invocation within the same quad, the resulting value is undefined.
+
+    An invocation will not execute a dynamic instance of this instruction (X') until
+    all invocations in its quad have executed all dynamic instances that are program-ordered
+    before X'.
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.GroupNonUniformQuadSwap <Subgroup> %value %dir : f32, i32
+    %1 = spirv.GroupNonUniformQuadSwap <Subgroup> %value %dir : vector<4xf32>, i32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_GroupNonUniformQuad]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScopeAttr:$execution_scope,
+    AnyTypeOf<[SPIRV_ScalarOrVectorOf<SPIRV_Float>, SPIRV_ScalarOrVectorOf<SPIRV_Integer>, SPIRV_ScalarOrVectorOf<SPIRV_Bool>]>:$value,
+    SPIRV_SignlessOrUnsignedInt:$direction
+  );
+
+  let results = (outs
+    AnyTypeOf<[SPIRV_ScalarOrVectorOf<SPIRV_Float>, SPIRV_ScalarOrVectorOf<SPIRV_Integer>, SPIRV_ScalarOrVectorOf<SPIRV_Bool>]>:$result
+  );
+
+  let hasVerifier = 0;
+
+  let assemblyFormat = [{
+    $execution_scope $value $direction attr-dict `:` type($value) `,` type($direction)
+  }];
+}
+
 #endif // MLIR_DIALECT_SPIRV_IR_NON_UNIFORM_OPS

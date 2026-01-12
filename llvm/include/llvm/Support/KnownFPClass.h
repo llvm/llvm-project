@@ -29,7 +29,8 @@ struct KnownFPClass {
   /// definitely set or false if the sign bit is definitely unset.
   std::optional<bool> SignBit;
 
-  KnownFPClass() = default;
+  KnownFPClass(FPClassTest Known = fcAllFlags, std::optional<bool> Sign = {})
+      : KnownFPClasses(Known), SignBit(Sign) {}
   KnownFPClass(const APFloat &C);
 
   bool operator==(KnownFPClass Other) const {
@@ -53,6 +54,9 @@ struct KnownFPClass {
 
   /// Return true if it's known this can never be an infinity.
   bool isKnownNeverInfinity() const { return isKnownNever(fcInf); }
+
+  /// Return true if it's known this can never be an infinity or nan
+  bool isKnownNeverInfOrNaN() const { return isKnownNever(fcInf | fcNan); }
 
   /// Return true if it's known this can never be +infinity.
   bool isKnownNeverPosInfinity() const { return isKnownNever(fcPosInf); }
@@ -80,15 +84,17 @@ struct KnownFPClass {
   /// literal -0 and does not include denormal inputs implicitly treated as -0.
   bool isKnownNeverNegZero() const { return isKnownNever(fcNegZero); }
 
-  /// Return true if it's know this can never be interpreted as a zero. This
+  /// Return true if it's known this can never be interpreted as a zero. This
   /// extends isKnownNeverZero to cover the case where the assumed
   /// floating-point mode for the function interprets denormals as zero.
   LLVM_ABI bool isKnownNeverLogicalZero(DenormalMode Mode) const;
 
-  /// Return true if it's know this can never be interpreted as a negative zero.
+  /// Return true if it's known this can never be interpreted as a negative
+  /// zero.
   LLVM_ABI bool isKnownNeverLogicalNegZero(DenormalMode Mode) const;
 
-  /// Return true if it's know this can never be interpreted as a positive zero.
+  /// Return true if it's known this can never be interpreted as a positive
+  /// zero.
   LLVM_ABI bool isKnownNeverLogicalPosZero(DenormalMode Mode) const;
 
   static constexpr FPClassTest OrderedLessThanZeroMask =
@@ -117,6 +123,22 @@ struct KnownFPClass {
   ///   x < -0 --> true
   bool cannotBeOrderedGreaterThanZero() const {
     return isKnownNever(OrderedGreaterThanZeroMask);
+  }
+
+  /// Return true if it's know this can never be a negative value or a logical
+  /// 0.
+  ///
+  ///      NaN --> true
+  ///  x >= -0 --> false
+  ///     nsub --> true if mode is ieee, false otherwise.
+  ///   x < -0 --> true
+  bool cannotBeOrderedGreaterEqZero(DenormalMode Mode) const {
+    return isKnownNever(fcPositive) && isKnownNeverLogicalNegZero(Mode);
+  }
+
+  KnownFPClass intersectWith(const KnownFPClass &RHS) {
+    return KnownFPClass(~(~KnownFPClasses & ~RHS.KnownFPClasses),
+                        SignBit == RHS.SignBit ? SignBit : std::nullopt);
   }
 
   KnownFPClass &operator|=(const KnownFPClass &RHS) {
@@ -159,11 +181,40 @@ struct KnownFPClass {
     signBitMustBeZero();
   }
 
+  // Enum of min/max intrinsics to avoid dependency on IR.
+  enum class MinMaxKind {
+    minimum,
+    maximum,
+    minimumnum,
+    maximumnum,
+    minnum,
+    maxnum
+  };
+
+  LLVM_ABI static KnownFPClass
+  minMaxLike(const KnownFPClass &LHS, const KnownFPClass &RHS, MinMaxKind Kind,
+             DenormalMode DenormMode = DenormalMode::getDynamic());
+
   /// Apply the canonicalize intrinsic to this value. This is essentially a
   /// stronger form of propagateCanonicalizingSrc.
   LLVM_ABI static KnownFPClass
   canonicalize(const KnownFPClass &Src,
                DenormalMode DenormMode = DenormalMode::getDynamic());
+
+  /// Report known values for fmul
+  LLVM_ABI static KnownFPClass
+  fmul(const KnownFPClass &LHS, const KnownFPClass &RHS,
+       DenormalMode Mode = DenormalMode::getDynamic());
+
+  // Special case of fmul x, x.
+  static KnownFPClass square(const KnownFPClass &Src,
+                             DenormalMode Mode = DenormalMode::getDynamic()) {
+    KnownFPClass Known = fmul(Src, Src, Mode);
+
+    // X * X is always non-negative or a NaN.
+    Known.knownNot(fcNegative);
+    return Known;
+  }
 
   /// Report known values for exp, exp2 and exp10.
   LLVM_ABI static KnownFPClass exp(const KnownFPClass &Src);
@@ -233,6 +284,10 @@ struct KnownFPClass {
   /// information.
   LLVM_ABI void propagateCanonicalizingSrc(const KnownFPClass &Src,
                                            DenormalMode Mode);
+
+  /// Propagate known class for log/log2/log10
+  static LLVM_ABI KnownFPClass
+  log(const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
 
   void resetAll() { *this = KnownFPClass(); }
 };

@@ -24,49 +24,42 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/ReplaceConstant.h"
 
 #define DEBUG_TYPE "spirv-pushconstant-access"
 using namespace llvm;
 
 static bool replacePushConstantAccesses(Module &M, SPIRVGlobalRegistry *GR) {
-  SmallVector<GlobalVariable *> PushConstants;
-  for (GlobalVariable &GV : M.globals()) {
+  bool Changed = false;
+  for (GlobalVariable &GV : make_early_inc_range(M.globals())) {
     if (GV.getAddressSpace() !=
         storageClassToAddressSpace(SPIRV::StorageClass::PushConstant))
       continue;
 
     GV.removeDeadConstantUsers();
-    PushConstants.push_back(&GV);
-  }
 
-  for (GlobalVariable *GV : PushConstants) {
     Type *PCType = llvm::TargetExtType::get(
-        M.getContext(), "spirv.PushConstant", {GV->getValueType()});
-    GlobalVariable *NewGV = new GlobalVariable(
-        M, PCType, GV->isConstant(), GV->getLinkage(),
-        /* initializer= */ nullptr, GV->getName(),
-        /* InsertBefore= */ GV, GV->getThreadLocalMode(), GV->getAddressSpace(),
-        GV->isExternallyInitialized());
+        M.getContext(), "spirv.PushConstant", {GV.getValueType()});
+    GlobalVariable *NewGV =
+        new GlobalVariable(M, PCType, GV.isConstant(), GV.getLinkage(),
+                           /* initializer= */ nullptr, GV.getName(),
+                           /* InsertBefore= */ &GV, GV.getThreadLocalMode(),
+                           GV.getAddressSpace(), GV.isExternallyInitialized());
 
-    SmallVector<User *, 4> Users(GV->user_begin(), GV->user_end());
-    for (User *U : Users) {
+    for (User *U : make_early_inc_range(GV.users())) {
       Instruction *I = cast<Instruction>(U);
       IRBuilder<> Builder(I);
       Value *GetPointerCall = Builder.CreateIntrinsic(
           NewGV->getType(), Intrinsic::spv_pushconstant_getpointer, {NewGV});
-      GR->buildAssignPtr(Builder, GV->getValueType(), GetPointerCall);
+      GR->buildAssignPtr(Builder, GV.getValueType(), GetPointerCall);
 
-      for (unsigned N = 0; N < I->getNumOperands(); ++N) {
-        if (I->getOperand(N) == GV)
-          I->setOperand(N, GetPointerCall);
-      }
+      I->replaceUsesOfWith(&GV, GetPointerCall);
     }
 
-    GV->eraseFromParent();
+    GV.eraseFromParent();
+    Changed = true;
   }
 
-  return true;
+  return Changed;
 }
 
 PreservedAnalyses SPIRVPushConstantAccess::run(Module &M,

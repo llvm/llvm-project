@@ -705,8 +705,6 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
   if (getSrc().getType() == getType()) {
     switch (getKind()) {
     case cir::CastKind::integral: {
-      // TODO: for sign differences, it's possible in certain conditions to
-      // create a new attribute that's capable of representing the source.
       llvm::SmallVector<mlir::OpFoldResult, 1> foldResults;
       auto foldOrder = getSrc().getDefiningOp()->fold(foldResults);
       if (foldOrder.succeeded() && mlir::isa<mlir::Attribute>(foldResults[0]))
@@ -723,7 +721,36 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
       return {};
     }
   }
-  return tryFoldCastChain(*this);
+
+  // Handle cases where a chain of casts cancel out.
+  Value result = tryFoldCastChain(*this);
+  if (result)
+    return result;
+
+  // Handle simple constant casts.
+  if (auto srcConst = getSrc().getDefiningOp<cir::ConstantOp>()) {
+    switch (getKind()) {
+    case cir::CastKind::integral: {
+      mlir::Type srcTy = getSrc().getType();
+      // Don't try to fold vector casts for now.
+      assert(mlir::isa<cir::VectorType>(srcTy) ==
+             mlir::isa<cir::VectorType>(getType()));
+      if (mlir::isa<cir::VectorType>(srcTy))
+        break;
+
+      auto srcIntTy = mlir::cast<cir::IntType>(srcTy);
+      auto dstIntTy = mlir::cast<cir::IntType>(getType());
+      APInt newVal =
+          srcIntTy.isSigned()
+              ? srcConst.getIntValue().sextOrTrunc(dstIntTy.getWidth())
+              : srcConst.getIntValue().zextOrTrunc(dstIntTy.getWidth());
+      return cir::IntAttr::get(dstIntTy, newVal);
+    }
+    default:
+      break;
+    }
+  }
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
@@ -2557,6 +2584,23 @@ LogicalResult cir::GetMemberOp::verify() {
 
   return mlir::success();
 }
+
+//===----------------------------------------------------------------------===//
+// ExtractMemberOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::ExtractMemberOp::verify() {
+  auto recordTy = mlir::cast<cir::RecordType>(getRecord().getType());
+  if (recordTy.getKind() == cir::RecordType::Union)
+    return emitError()
+           << "cir.extract_member currently does not support unions";
+  if (recordTy.getMembers().size() <= getIndex())
+    return emitError() << "member index out of bounds";
+  if (recordTy.getMembers()[getIndex()] != getType())
+    return emitError() << "member type mismatch";
+  return mlir::success();
+}
+
 //===----------------------------------------------------------------------===//
 // VecCreateOp
 //===----------------------------------------------------------------------===//
@@ -3506,6 +3550,19 @@ static mlir::ParseResult parseTryHandlerRegions(
 
   handlerTypes = parser.getBuilder().getArrayAttr(catcherAttrs);
   return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// EhTypeIdOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+cir::EhTypeIdOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  Operation *op = symbolTable.lookupNearestSymbolFrom(*this, getTypeSymAttr());
+  if (!isa_and_nonnull<GlobalOp>(op))
+    return emitOpError("'")
+           << getTypeSym() << "' does not reference a valid cir.global";
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

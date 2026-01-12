@@ -116,6 +116,9 @@ generateReproducerForInvocationArguments(
     ArrayRef<const char *> Argv, const ClangInvocationInfo &Info,
     const llvm::ToolContext &ToolContext,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
+  // The driver is not expected to be free of sandbox violations.
+  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
   using namespace driver;
   auto TargetAndMode = ToolChain::getTargetAndModeFromProgramName(Argv[0]);
 
