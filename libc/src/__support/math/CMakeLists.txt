@@ -925,6 +925,18 @@ add_header_library(
 )
 
 add_header_library(
+  llogb
+  HDRS
+    llogb.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
   range_reduction_double
   HDRS
     range_reduction_double_common.h

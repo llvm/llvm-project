@@ -1828,7 +1828,8 @@ add_entrypoint_object(
   HDRS
     ../llogb.h
   DEPENDS
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.llogb
+    libc.src.__support.macros.config
 )
 
 add_entrypoint_object(
