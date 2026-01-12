@@ -28,23 +28,23 @@ using namespace mlir::x86vector;
 
 namespace {
 
-// Returns true if the A or B matrix vector is packed (shuffled) to 
+// Returns true if the A or B matrix vector is packed (shuffled) to
 // VNNI layout, already.
 static bool isNonUnitDimOperandShuffled(Value nonUnitDimOperand) {
- if (Operation *defOp = nonUnitDimOperand.getDefiningOp()) {
-   if (isa<vector::ShuffleOp>(defOp)) {
+  if (Operation *defOp = nonUnitDimOperand.getDefiningOp()) {
+    if (isa<vector::ShuffleOp>(defOp)) {
       return true;
-   }
+    }
 
-   if (isa<vector::ShapeCastOp>(defOp)) {
+    if (isa<vector::ShapeCastOp>(defOp)) {
       Operation *defOpShpCst = defOp->getOperand(0).getDefiningOp();
       if (isa<vector::ShuffleOp>(defOpShpCst)) {
-         return true;
+        return true;
       }
-   }
- }
+    }
+  }
 
- return false;
+  return false;
 }
 
 static void rewriteUses(mlir::Value oldVal, mlir::Value newVal,
@@ -63,10 +63,12 @@ static void rewriteUses(mlir::Value oldVal, mlir::Value newVal,
 // Function to convert the flat layout A or B matrix vector<32xbf16>
 // into VNNI packed layout using the vpunpack operations
 static void packNonUnitDimOperandToVNNI(mlir::PatternRewriter &rewriter,
-                              mlir::Operation *opA, mlir::Operation *opB,
-                              mlir::vector::ContractionOp contractA,
-                              mlir::vector::ContractionOp contractB,
-                              int64_t nonUnitDimAcc, mlir::VectorType Ty) {
+                                        mlir::Operation *opA,
+                                        mlir::Operation *opB,
+                                        mlir::vector::ContractionOp contractA,
+                                        mlir::vector::ContractionOp contractB,
+                                        int64_t nonUnitDimAcc,
+                                        mlir::VectorType Ty) {
   mlir::Operation *insertAfter = opA->isBeforeInBlock(opB) ? opB : opA;
 
   rewriter.setInsertionPointAfter(insertAfter);
@@ -92,10 +94,8 @@ static void packNonUnitDimOperandToVNNI(mlir::PatternRewriter &rewriter,
   auto shuffleHi = mlir::vector::ShuffleOp::create(rewriter, loc, flatTy, castA,
                                                    castB, maskHi);
 
-  auto newA =
-      mlir::vector::ShapeCastOp::create(rewriter, loc, Ty, shuffleLo);
-  auto newB =
-      mlir::vector::ShapeCastOp::create(rewriter, loc, Ty, shuffleHi);
+  auto newA = mlir::vector::ShapeCastOp::create(rewriter, loc, Ty, shuffleLo);
+  auto newB = mlir::vector::ShapeCastOp::create(rewriter, loc, Ty, shuffleHi);
 
   rewriteUses(opA->getResult(0), newA.getResult(), contractA, rewriter);
   rewriteUses(opB->getResult(0), newB.getResult(), contractB, rewriter);
@@ -150,8 +150,9 @@ struct VectorContractToPackedTypeDotProduct
           contractOp, "Only BF16/Int8 lowering is supported.");
 
     unsigned int blockingFactor = lhsTy.getElementType().isBF16() ? 2 : 4;
-    bool isVnni = isInVnniLayout(contractOp.getOperation(),
-                        contractOp.getIndexingMapsArray(), blockingFactor);
+    bool isVnni =
+        isInVnniLayout(contractOp.getOperation(),
+                       contractOp.getIndexingMapsArray(), blockingFactor);
 
     if (lhsTy.getElementType().isSignlessInteger(8) && !isVnni)
       return failure();
@@ -171,8 +172,8 @@ struct VectorContractToPackedTypeDotProduct
     int64_t nonUnitDimValue = nonUnitDimAcc.front();
     // Non-unit dimensions should match the vector length of BF16 or Int8
     // dot-product.
-    if (lhsTy.getElementType().isBF16() && nonUnitDimValue != 4 && nonUnitDimValue != 8 &&
-        nonUnitDimValue != 16)
+    if (lhsTy.getElementType().isBF16() && nonUnitDimValue != 4 &&
+        nonUnitDimValue != 8 && nonUnitDimValue != 16)
       return rewriter.notifyMatchFailure(
           contractOp, "BF16 dot-product operation expects non-unit (LHR or "
                       "RHS) dim and acc dim of size 4/8/16.");
@@ -205,12 +206,12 @@ struct VectorContractToPackedTypeDotProduct
           "Excepts a one non-unit A/B dimension for either LHS or RHS shape.");
 
     bool rhsHasMultipleNonUnitDims = (nonUnitDimRhs.size() - 1) > 0;
-    int64_t extraFlatDim = rhsHasMultipleNonUnitDims ? nonUnitDimLhs.front() : nonUnitDimRhs.size();
+    int64_t extraFlatDim = rhsHasMultipleNonUnitDims ? nonUnitDimLhs.front()
+                                                     : nonUnitDimRhs.size();
 
     if (!isVnni && (extraFlatDim != blockingFactor))
       return rewriter.notifyMatchFailure(
-          contractOp,
-          "The K or reduction dim for flat layout should be 2.");
+          contractOp, "The K or reduction dim for flat layout should be 2.");
 
     if ((lhsTy.getElementType().isBF16() && !accTy.getElementType().isF32()) ||
         (lhsTy.getElementType().isSignlessInteger(8) &&
@@ -244,11 +245,12 @@ struct VectorContractToPackedTypeDotProduct
       }
 
       if (!pairContractOp)
-        return rewriter.notifyMatchFailure(
-            contractOp, "Could not find a contract pair");
+        return rewriter.notifyMatchFailure(contractOp,
+                                           "Could not find a contract pair");
 
-      Value nonUnitDimOperandPairContract =
-            rhsHasMultipleNonUnitDims ? pairContractOp.getRhs() : pairContractOp.getLhs();
+      Value nonUnitDimOperandPairContract = rhsHasMultipleNonUnitDims
+                                                ? pairContractOp.getRhs()
+                                                : pairContractOp.getLhs();
 
       // Get the non-packed A or B matrix's vector<32xbf16> elements.
       Operation *nonUnitDimReadOp =
@@ -261,18 +263,21 @@ struct VectorContractToPackedTypeDotProduct
             contractOp, "Could not find a valid contract pair");
 
       if (contractOp->getBlock() == nonUnitDimReadOpPairContract->getBlock() &&
-        contractOp->isBeforeInBlock(nonUnitDimReadOpPairContract))
+          contractOp->isBeforeInBlock(nonUnitDimReadOpPairContract))
         return rewriter.notifyMatchFailure(
             contractOp, "The load/read operation of pair contract operation is "
                         "after the contractOp");
 
-      VectorType nonUnitDimTy = rhsHasMultipleNonUnitDims ? contractOp.getRhsType() : contractOp.getLhsType();
-      
-      packNonUnitDimOperandToVNNI(rewriter, nonUnitDimReadOp, nonUnitDimReadOpPairContract, contractOp, pairContractOp,
-                                blockingFactor * nonUnitDimValue, nonUnitDimTy);
+      VectorType nonUnitDimTy = rhsHasMultipleNonUnitDims
+                                    ? contractOp.getRhsType()
+                                    : contractOp.getLhsType();
+
+      packNonUnitDimOperandToVNNI(
+          rewriter, nonUnitDimReadOp, nonUnitDimReadOpPairContract, contractOp,
+          pairContractOp, blockingFactor * nonUnitDimValue, nonUnitDimTy);
 
       nonUnitDimOperand =
-        rhsHasMultipleNonUnitDims ? contractOp.getRhs() : contractOp.getLhs();
+          rhsHasMultipleNonUnitDims ? contractOp.getRhs() : contractOp.getLhs();
     }
 
     rewriter.setInsertionPoint(contractOp);
@@ -282,42 +287,46 @@ struct VectorContractToPackedTypeDotProduct
         VectorType::get(nonUnitDimAcc.front(), accTy.getElementType()),
         contractOp.getAcc());
 
-    VectorType nonUnitDimTy = rhsHasMultipleNonUnitDims ? contractOp.getRhsType() : contractOp.getLhsType();
-    VectorType unitDimTy = rhsHasMultipleNonUnitDims ? contractOp.getLhsType() : contractOp.getRhsType();
+    VectorType nonUnitDimTy = rhsHasMultipleNonUnitDims
+                                  ? contractOp.getRhsType()
+                                  : contractOp.getLhsType();
+    VectorType unitDimTy = rhsHasMultipleNonUnitDims ? contractOp.getLhsType()
+                                                     : contractOp.getRhsType();
 
     Value dp;
 
     auto castNonUnitDim = vector::ShapeCastOp::create(
-          rewriter, loc,
-          VectorType::get(blockingFactor * nonUnitDimValue,
-                          nonUnitDimTy.getElementType()), nonUnitDimOperand);
+        rewriter, loc,
+        VectorType::get(blockingFactor * nonUnitDimValue,
+                        nonUnitDimTy.getElementType()),
+        nonUnitDimOperand);
 
     auto castUnitDim = vector::ShapeCastOp::create(
-          rewriter, loc,
-          VectorType::get(blockingFactor, unitDimTy.getElementType()),
-          unitDimOperand);
+        rewriter, loc,
+        VectorType::get(blockingFactor, unitDimTy.getElementType()),
+        unitDimOperand);
     auto bitcastUnitDim = vector::BitCastOp::create(
-          rewriter, loc, VectorType::get({1}, rewriter.getIntegerType(32)),
-          castUnitDim);
+        rewriter, loc, VectorType::get({1}, rewriter.getIntegerType(32)),
+        castUnitDim);
     auto broadcastUnitDim = vector::BroadcastOp::create(
-          rewriter, loc,
-          VectorType::get({nonUnitDimValue}, rewriter.getIntegerType(32)),
-          bitcastUnitDim);
+        rewriter, loc,
+        VectorType::get({nonUnitDimValue}, rewriter.getIntegerType(32)),
+        bitcastUnitDim);
     auto bitcastUnitDimPkType = vector::BitCastOp::create(
-          rewriter, loc, castNonUnitDim.getResult().getType(), broadcastUnitDim);
+        rewriter, loc, castNonUnitDim.getResult().getType(), broadcastUnitDim);
 
     if (lhsTy.getElementType().isBF16()) {
-        dp = x86vector::DotBF16Op::create(
-            rewriter, loc,
-            VectorType::get(nonUnitDimValue, rewriter.getF32Type()),
-            castAcc, bitcastUnitDimPkType, castNonUnitDim);
+      dp = x86vector::DotBF16Op::create(
+          rewriter, loc,
+          VectorType::get(nonUnitDimValue, rewriter.getF32Type()), castAcc,
+          bitcastUnitDimPkType, castNonUnitDim);
     }
 
     if (lhsTy.getElementType().isSignlessInteger(8)) {
-        dp = x86vector::DotInt8Op::create(
-            rewriter, loc,
-            VectorType::get(nonUnitDimValue, rewriter.getIntegerType(32)),
-            castAcc, bitcastUnitDimPkType, castNonUnitDim);
+      dp = x86vector::DotInt8Op::create(
+          rewriter, loc,
+          VectorType::get(nonUnitDimValue, rewriter.getIntegerType(32)),
+          castAcc, bitcastUnitDimPkType, castNonUnitDim);
     }
 
     if (!dp)
