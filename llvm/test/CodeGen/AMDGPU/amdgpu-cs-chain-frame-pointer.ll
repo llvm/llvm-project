@@ -48,17 +48,10 @@ define amdgpu_cs_chain void @recurse(ptr %callee) {
 ; CHECK-NEXT:    v_mov_b32_e32 v10, s3
 ; CHECK-NEXT:    v_mov_b32_e32 v11, s3
 ; CHECK-NEXT:    s_mov_b64 s[4:5], 0
-; CHECK-NEXT:    v_readlane_b32 s3, v41, 0
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[6:7], -1
 ; CHECK-NEXT:    scratch_load_dword v40, off, off ; 4-byte Folded Reload
 ; CHECK-NEXT:    scratch_load_dword v41, off, off offset:4 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[6:7]
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_readlane_b32 s3, v41, 0
-; CHECK-NEXT:    s_xor_saveexec_b64 s[8:9], -1
-; CHECK-NEXT:    scratch_load_dword v40, off, off ; 4-byte Folded Reload
-; CHECK-NEXT:    scratch_load_dword v41, off, off offset:4 ; 4-byte Folded Reload
-; CHECK-NEXT:    s_mov_b64 exec, s[8:9]
 ; CHECK-NEXT:    s_mov_b64 exec, 0
 ; CHECK-NEXT:    s_setpc_b64 s[4:5]
   call void @recurse(ptr null)
