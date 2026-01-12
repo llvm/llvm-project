@@ -1016,7 +1016,7 @@ SCEVAddRecExpr::evaluateAtIteration(ArrayRef<const SCEV *> Operands,
 class SCEVCastSinkingRewriter
     : public SCEVRewriteVisitor<SCEVCastSinkingRewriter> {
   using Base = SCEVRewriteVisitor<SCEVCastSinkingRewriter>;
-  using ConversionFn = std::function<const SCEV *(const SCEVUnknown *)>;
+  using ConversionFn = function_ref<const SCEV *(const SCEVUnknown *)>;
   Type *TargetTy;
   ConversionFn CreatePtrCast;
 
@@ -1041,6 +1041,8 @@ public:
   }
 
   const SCEV *visitAddExpr(const SCEVAddExpr *Expr) {
+    // Preserve wrap flags on rewritten SCEVAddExpr, which the default
+    // implementation drops.
     SmallVector<const SCEV *, 2> Operands;
     bool Changed = false;
     for (const auto *Op : Expr->operands()) {
