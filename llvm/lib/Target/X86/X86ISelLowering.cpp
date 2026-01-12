@@ -1155,8 +1155,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::OR, MVT::i128, Custom);
     setOperationAction(ISD::XOR, MVT::i128, Custom);
 
-    if (Subtarget.hasPCLMUL() && Subtarget.is64Bit()) {
-      setOperationAction(ISD::CLMUL, MVT::i64, Custom);
+    if (Subtarget.hasPCLMUL()) {
+      if (Subtarget.is64Bit())
+        setOperationAction(ISD::CLMUL, MVT::i64, Custom);
       setOperationAction(ISD::CLMUL, MVT::i32, Custom);
       setOperationAction(ISD::CLMUL, MVT::i16, Custom);
       setOperationAction(ISD::CLMUL, MVT::i8, Custom);
