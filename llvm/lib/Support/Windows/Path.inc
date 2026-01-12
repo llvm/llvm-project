@@ -60,13 +60,29 @@ static bool is_separator(const wchar_t value) {
   }
 }
 
+// Extended-length path prefix constants (UTF-8).
+static constexpr llvm::StringLiteral ExtendedPrefix8 = R"(\\?\)";
+static constexpr llvm::StringLiteral ExtendedUNCPrefix8 = R"(\\?\UNC\)";
+
+// Extended-length path prefix constants (UTF-16).
+static constexpr wchar_t ExtendedPrefix16[] = LR"(\\?\)";
+static constexpr wchar_t ExtendedUNCPathPrefix16[] = LR"(\\?\UNC\)";
+
+static constexpr DWORD ExtendedPrefix16Len =
+    static_cast<DWORD>(std::size(ExtendedPrefix16) - 1);
+static constexpr DWORD ExtendedUNCPathPrefix16Len =
+    static_cast<DWORD>(std::size(ExtendedUNCPathPrefix16) - 1);
+
 static void stripExtendedPrefix(wchar_t *&Data, DWORD &CountChars) {
-  if (CountChars >= 8 && ::memcmp(Data, L"\\\\?\\UNC\\", 16) == 0) {
+  if (CountChars >= ExtendedUNCPathPrefix16Len &&
+      ::wmemcmp(Data, ExtendedUNCPathPrefix16, ExtendedUNCPathPrefix16Len) ==
+          0) {
     // Convert \\?\UNC\foo\bar to \\foo\bar
     CountChars -= 6;
     Data += 6;
-    Data[0] = '\\';
-  } else if (CountChars >= 4 && ::memcmp(Data, L"\\\\?\\", 8) == 0) {
+    Data[0] = L'\\';
+  } else if (CountChars >= ExtendedPrefix16Len &&
+             ::wmemcmp(Data, ExtendedPrefix16, ExtendedPrefix16Len) == 0) {
     // Convert \\?\C:\foo to C:\foo
     CountChars -= 4;
     Data += 4;
@@ -108,10 +124,8 @@ std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
       return mapWindowsError(::GetLastError());
   }
 
-  const char *const LongPathPrefix = "\\\\?\\";
-
   if ((Path16.size() + CurPathLen) < MaxPathLen ||
-      Path8Str.starts_with(LongPathPrefix))
+      Path8Str.starts_with(ExtendedPrefix8))
     return std::error_code();
 
   if (!IsAbsolute) {
@@ -129,11 +143,12 @@ std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
   assert(!RootName.empty() &&
          "Root name cannot be empty for an absolute path!");
 
-  SmallString<2 * MAX_PATH> FullPath(LongPathPrefix);
+  SmallString<2 * MAX_PATH> FullPath;
   if (RootName[1] != ':') { // Check if UNC.
-    FullPath.append("UNC\\");
+    FullPath.append(ExtendedUNCPrefix8);
     FullPath.append(Path8Str.begin() + 2, Path8Str.end());
   } else {
+    FullPath.append(ExtendedPrefix8);
     FullPath.append(Path8Str);
   }
 
@@ -142,11 +157,9 @@ std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
 
 std::error_code makeLongFormPath(const Twine &Path8,
                                  llvm::SmallVectorImpl<char> &Result8) {
-  constexpr StringLiteral LongPathPrefix = R"(\\?\)";
-
   SmallString<128> PathStorage;
   StringRef PathStr = Path8.toStringRef(PathStorage);
-  bool HadPrefix = PathStr.starts_with(LongPathPrefix);
+  bool HadPrefix = PathStr.starts_with(ExtendedPrefix8);
 
   SmallVector<wchar_t, 128> Path16;
   if (std::error_code EC = widenPath(PathStr, Path16))
@@ -173,7 +186,9 @@ std::error_code makeLongFormPath(const Twine &Path8,
   // On success, GetLongPathNameW returns the number of characters not
   // including the null-terminator.
   Long16.truncate(Len);
-  // Strip \\?\ or \\?\UNC\ prefix if it wasn't part of the original path
+
+  // Strip \\?\ or \\?\UNC\ extended length prefix if it wasn't part of the
+  // original path.
   wchar_t *Data = Long16.data();
   if (!HadPrefix)
     stripExtendedPrefix(Data, Len);
