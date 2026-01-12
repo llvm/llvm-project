@@ -61,7 +61,7 @@ define i64 @same_exit_block_pre_inc_use1() #0 {
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1> [[TMP33]])
 ; CHECK-NEXT:    [[TMP35:%.*]] = icmp eq i64 [[INDEX_NEXT3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[VECTOR_EARLY_EXIT:%.*]], label [[COND_0]]
-; CHECK:       vector.body.cond.1:
+; CHECK:       vector.body.interim:
 ; CHECK-NEXT:    br i1 [[TMP35]], label [[LOOP_INC:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 510, [[N_VEC]]
