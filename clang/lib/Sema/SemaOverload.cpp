@@ -449,7 +449,8 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
 
       Expr::EvalResult R;
       if ((Ctx.getLangOpts().C23 && Initializer->EvaluateAsRValue(R, Ctx)) ||
-          Initializer->isCXX11ConstantExpr(Ctx, &ConstantValue)) {
+          ((Ctx.getLangOpts().CPlusPlus &&
+            Initializer->isCXX11ConstantExpr(Ctx, &ConstantValue)))) {
         // Constant!
         if (Ctx.getLangOpts().C23)
           ConstantValue = R.Val;

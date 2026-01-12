@@ -18806,7 +18806,6 @@ void Sema::ActOnStartCXXMemberDeclarations(Scope *S, Decl *TagD,
                                            SourceLocation FinalLoc,
                                            bool IsFinalSpelledSealed,
                                            bool IsAbstract,
-                                           SourceLocation TriviallyRelocatable,
                                            SourceLocation LBraceLoc) {
   AdjustDeclIfTemplate(TagD);
   CXXRecordDecl *Record = cast<CXXRecordDecl>(TagD);
@@ -18825,10 +18824,6 @@ void Sema::ActOnStartCXXMemberDeclarations(Scope *S, Decl *TagD,
                                           ? FinalAttr::Keyword_sealed
                                           : FinalAttr::Keyword_final));
   }
-
-  if (TriviallyRelocatable.isValid())
-    Record->addAttr(
-        TriviallyRelocatableAttr::Create(Context, TriviallyRelocatable));
 
   // C++ [class]p2:
   //   [...] The class-name is also inserted into the scope of the
@@ -20822,10 +20817,12 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
       NewSign = true;
     } else if (ECD->getType() == BestType) {
       // Already the right type!
-      if (getLangOpts().CPlusPlus)
+      if (getLangOpts().CPlusPlus || (getLangOpts().C23 && Enum->isFixed()))
         // C++ [dcl.enum]p4: Following the closing brace of an
         // enum-specifier, each enumerator has the type of its
         // enumeration.
+        // C23 6.7.3.3p16: The enumeration member type for an enumerated type
+        // with fixed underlying type is the enumerated type.
         ECD->setType(EnumType);
       continue;
     } else {
@@ -20845,10 +20842,13 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
       ECD->setInitExpr(ImplicitCastExpr::Create(
           Context, NewTy, CK_IntegralCast, ECD->getInitExpr(),
           /*base paths*/ nullptr, VK_PRValue, FPOptionsOverride()));
-    if (getLangOpts().CPlusPlus)
+    if (getLangOpts().CPlusPlus ||
+        (getLangOpts().C23 && (Enum->isFixed() || !MembersRepresentableByInt)))
       // C++ [dcl.enum]p4: Following the closing brace of an
       // enum-specifier, each enumerator has the type of its
       // enumeration.
+      // C23 6.7.3.3p16: The enumeration member type for an enumerated type
+      // with fixed underlying type is the enumerated type.
       ECD->setType(EnumType);
     else
       ECD->setType(NewTy);

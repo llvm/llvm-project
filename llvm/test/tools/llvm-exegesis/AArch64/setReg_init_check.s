@@ -94,87 +94,84 @@ FFR-ASM:         setffr
 FFR-ASM-NEXT:    ldff1b    { z{{[0-9]+}}.d }, p{{[0-9]+}}/z, [x{{[0-9]+}}, z{{[0-9]+}}.d]
 
 # NOTE: Multi-register classes below can wrap around, e.g. { v31.1d, v0.1d }
-# It's not possible to write a FileCheck pattern to support all cases, so we
-# must seed to get consistent output.
+# FileCheck cant handle this constraint and '--random-generator-seed=<seed>'
+# can't be used either as the implementation relies on uniform_int_distribution
+# which produces inconsistent results across libc++ implementations.
 
 ## WSeqPair Register Class Initialization Testcase
-RUN: llvm-exegesis -mtriple=aarch64 -mcpu=neoverse-v2 -mode=latency --dump-object-to-disk=%d --opcode-name=CASPW --benchmark-phase=assemble-measured-code --random-generator-seed=2 2>&1
+RUN: llvm-exegesis -mtriple=aarch64 -mcpu=neoverse-v2 -mode=latency --dump-object-to-disk=%d --opcode-name=CASPW --benchmark-phase=assemble-measured-code 2>&1
 RUN: llvm-objdump -d %d > %t.s
 RUN: FileCheck %s --check-prefix=WSEQPAIR-ASM < %t.s
 WSEQPAIR-ASM:         <foo>:
-WSEQPAIR-ASM:         mov     w12, #0x0
-WSEQPAIR-ASM-NEXT:    mov     w13, #0x0
-WSEQPAIR-ASM-NEXT:    mov     w4, #0x0
-WSEQPAIR-ASM-NEXT:    mov     w5, #0x0
-WSEQPAIR-ASM:         casp    w12, w13, w4, w5, [x30]
+WSEQPAIR-ASM:         mov     w{{[0-9]+}}, #0x0
+WSEQPAIR-ASM-NEXT:    mov     w{{[0-9]+}}, #0x0
+WSEQPAIR-ASM:         casp    w{{[0-9]+}}, w{{[0-9]+}}, w{{[0-9]+}}, w{{[0-9]+}}, [x{{[0-9]+}}]
 
 ## XSeqPair Register Class Initialization Testcase
-RUN: llvm-exegesis -mtriple=aarch64 -mcpu=neoverse-v2 -mode=latency --dump-object-to-disk=%d --opcode-name=CASPX --benchmark-phase=assemble-measured-code --random-generator-seed=2 2>&1
+RUN: llvm-exegesis -mtriple=aarch64 -mcpu=neoverse-v2 -mode=latency --dump-object-to-disk=%d --opcode-name=CASPX --benchmark-phase=assemble-measured-code 2>&1
 RUN: llvm-objdump -d %d > %t.s
 RUN: FileCheck %s --check-prefix=XSEQPAIR-ASM < %t.s
 XSEQPAIR-ASM:         <foo>:
-XSEQPAIR-ASM:         mov     x12, #0x0
-XSEQPAIR-ASM-NEXT:    mov     x13, #0x0
-XSEQPAIR-ASM-NEXT:    mov     x4, #0x0
-XSEQPAIR-ASM-NEXT:    mov     x5, #0x0
-XSEQPAIR-ASM:         casp    x12, x13, x4, x5, [x30]
+XSEQPAIR-ASM:         mov     x{{[0-9]+}}, #0x{{[0-9]+}}
+XSEQPAIR-ASM-NEXT:    mov     x{{[0-9]+}}, #0x{{[0-9]+}}
+XSEQPAIR-ASM:         casp    x{{[0-9]+}}, x{{[0-9]+}}, x{{[0-9]+}}, x{{[0-9]+}}, [x{{[0-9]+}}]
 
 ## DD Register Class Initialization Testcase
-RUN: llvm-exegesis -mtriple=aarch64 -mcpu=neoverse-v2 -mode=latency --dump-object-to-disk=%d --opcode-name=ST1Twov1d_POST --benchmark-phase=assemble-measured-code --random-generator-seed=2 2>&1
+RUN: llvm-exegesis -mtriple=aarch64 -mcpu=neoverse-v2 -mode=latency --dump-object-to-disk=%d --opcode-name=ST1Twov1d_POST --benchmark-phase=assemble-measured-code 2>&1
 RUN: llvm-objdump -d %d > %t.s
 RUN: FileCheck %s --check-prefix=DD-ASM < %t.s
 DD-ASM:         <foo>:
-DD-ASM:         movi     d5, #0000000000000000
-DD-ASM-NEXT:    movi     d6, #0000000000000000
-DD-ASM:         st1      { v5.1d, v6.1d }, [x11], x30
+DD-ASM:         movi     d{{[0-9]+}}, #0000000000000000
+DD-ASM-NEXT:    movi     d{{[0-9]+}}, #0000000000000000
+DD-ASM:         st1      { v{{[0-9]+}}.1d, v{{[0-9]+}}.1d }, [x{{[0-9]+}}], x{{[0-9]+}}
 
 ## DDD Register Class Initialization Testcase
-RUN: llvm-exegesis -mtriple=aarch64 -mcpu=neoverse-v2 -mode=latency --dump-object-to-disk=%d --opcode-name=ST1Threev1d_POST --benchmark-phase=assemble-measured-code --random-generator-seed=2 2>&1
+RUN: llvm-exegesis -mtriple=aarch64 -mcpu=neoverse-v2 -mode=latency --dump-object-to-disk=%d --opcode-name=ST1Threev1d_POST --benchmark-phase=assemble-measured-code 2>&1
 RUN: llvm-objdump -d %d > %t.s
 RUN: FileCheck %s --check-prefix=DDD-ASM < %t.s
 DDD-ASM:         <foo>:
-DDD-ASM:         movi     d5, #0000000000000000
-DDD-ASM-NEXT:    movi     d6, #0000000000000000
-DDD-ASM-NEXT:    movi     d7, #0000000000000000
-DDD-ASM:         st1      { v5.1d, v6.1d, v7.1d }, [x11], x30
+DDD-ASM:         movi     d{{[0-9]+}}, #0000000000000000
+DDD-ASM-NEXT:    movi     d{{[0-9]+}}, #0000000000000000
+DDD-ASM-NEXT:    movi     d{{[0-9]+}}, #0000000000000000
+DDD-ASM:         st1      { v{{[0-9]+}}.1d, v{{[0-9]+}}.1d, v{{[0-9]+}}.1d }, [x{{[0-9]+}}], x{{[0-9]+}}
 
 ## DDDD Register Class Initialization Testcase
-RUN: llvm-exegesis -mtriple=aarch64 -mcpu=neoverse-v2 -mode=latency --dump-object-to-disk=%d --opcode-name=ST1Fourv1d_POST --benchmark-phase=assemble-measured-code --random-generator-seed=2 2>&1
+RUN: llvm-exegesis -mtriple=aarch64 -mcpu=neoverse-v2 -mode=latency --dump-object-to-disk=%d --opcode-name=ST1Fourv1d_POST --benchmark-phase=assemble-measured-code 2>&1
 RUN: llvm-objdump -d %d > %t.s
 RUN: FileCheck %s --check-prefix=DDDD-ASM < %t.s
 DDDD-ASM:         <foo>:
-DDDD-ASM:         movi     d5, #0000000000000000
-DDDD-ASM-NEXT:    movi     d6, #0000000000000000
-DDDD-ASM-NEXT:    movi     d7, #0000000000000000
-DDDD-ASM-NEXT:    movi     d8, #0000000000000000
-DDDD-ASM:         st1      { v5.1d, v6.1d, v7.1d, v8.1d }, [x11], x30
+DDDD-ASM:         movi     d{{[0-9]+}}, #0000000000000000
+DDDD-ASM-NEXT:    movi     d{{[0-9]+}}, #0000000000000000
+DDDD-ASM-NEXT:    movi     d{{[0-9]+}}, #0000000000000000
+DDDD-ASM-NEXT:    movi     d{{[0-9]+}}, #0000000000000000
+DDDD-ASM:         st1      { v{{[0-9]+}}.1d, v{{[0-9]+}}.1d, v{{[0-9]+}}.1d, v{{[0-9]+}}.1d }, [x{{[0-9]+}}], x{{[0-9]+}}
 
 ## QQ Register Class Initialization Testcase
-RUN: llvm-exegesis -mtriple=aarch64 -mcpu=neoverse-v2 -mode=latency --dump-object-to-disk=%d --opcode-name=ST1Twov16b_POST --benchmark-phase=assemble-measured-code --random-generator-seed=2 2>&1
+RUN: llvm-exegesis -mtriple=aarch64 -mcpu=neoverse-v2 -mode=latency --dump-object-to-disk=%d --opcode-name=ST1Twov16b_POST --benchmark-phase=assemble-measured-code 2>&1
 RUN: llvm-objdump -d %d > %t.s
 RUN: FileCheck %s --check-prefix=QQ-ASM < %t.s
 QQ-ASM:         <foo>:
-QQ-ASM:         movi     v5.2d, #0000000000000000
-QQ-ASM-NEXT:    movi     v6.2d, #0000000000000000
-QQ-ASM:         st1      { v5.16b, v6.16b }, [x11], x30
+QQ-ASM:         movi     v{{[0-9]+}}.2d, #0000000000000000
+QQ-ASM-NEXT:    movi     v{{[0-9]+}}.2d, #0000000000000000
+QQ-ASM:         st1      { v{{[0-9]+}}.16b, v{{[0-9]+}}.16b }, [x{{[0-9]+}}], x{{[0-9]+}}
 
 ## QQQ Register Class Initialization Testcase
-RUN: llvm-exegesis -mtriple=aarch64 -mcpu=neoverse-v2 -mode=latency --dump-object-to-disk=%d --opcode-name=ST1Threev16b_POST --benchmark-phase=assemble-measured-code --random-generator-seed=2 2>&1
+RUN: llvm-exegesis -mtriple=aarch64 -mcpu=neoverse-v2 -mode=latency --dump-object-to-disk=%d --opcode-name=ST1Threev16b_POST --benchmark-phase=assemble-measured-code 2>&1
 RUN: llvm-objdump -d %d > %t.s
 RUN: FileCheck %s --check-prefix=QQQ-ASM < %t.s
 QQQ-ASM:         <foo>:
-QQQ-ASM:         movi     v5.2d, #0000000000000000
-QQQ-ASM-NEXT:    movi     v6.2d, #0000000000000000
-QQQ-ASM-NEXT:    movi     v7.2d, #0000000000000000
-QQQ-ASM:         st1      { v5.16b, v6.16b, v7.16b }, [x11], x30
+QQQ-ASM:         movi     v{{[0-9]+}}.2d, #0000000000000000
+QQQ-ASM-NEXT:    movi     v{{[0-9]+}}.2d, #0000000000000000
+QQQ-ASM-NEXT:    movi     v{{[0-9]+}}.2d, #0000000000000000
+QQQ-ASM:         st1      { v{{[0-9]+}}.16b, v{{[0-9]+}}.16b, v{{[0-9]+}}.16b }, [x{{[0-9]+}}], x{{[0-9]+}}
 
 ## QQQQ Register Class Initialization Testcase
-RUN: llvm-exegesis -mtriple=aarch64 -mcpu=neoverse-v2 -mode=latency --dump-object-to-disk=%d --opcode-name=ST1Fourv16b_POST --benchmark-phase=assemble-measured-code --random-generator-seed=2 2>&1
+RUN: llvm-exegesis -mtriple=aarch64 -mcpu=neoverse-v2 -mode=latency --dump-object-to-disk=%d --opcode-name=ST1Fourv16b_POST --benchmark-phase=assemble-measured-code 2>&1
 RUN: llvm-objdump -d %d > %t.s
 RUN: FileCheck %s --check-prefix=QQQQ-ASM < %t.s
 QQQQ-ASM:         <foo>:
-QQQQ-ASM:         movi     v5.2d, #0000000000000000
-QQQQ-ASM-NEXT:    movi     v6.2d, #0000000000000000
-QQQQ-ASM-NEXT:    movi     v7.2d, #0000000000000000
-QQQQ-ASM-NEXT:    movi     v8.2d, #0000000000000000
-QQQQ-ASM:         st1      { v5.16b, v6.16b, v7.16b, v8.16b }, [x11], x30
+QQQQ-ASM:         movi     v{{[0-9]+}}.2d, #0000000000000000
+QQQQ-ASM-NEXT:    movi     v{{[0-9]+}}.2d, #0000000000000000
+QQQQ-ASM-NEXT:    movi     v{{[0-9]+}}.2d, #0000000000000000
+QQQQ-ASM-NEXT:    movi     v{{[0-9]+}}.2d, #0000000000000000
+QQQQ-ASM:         st1      { v{{[0-9]+}}.16b, v{{[0-9]+}}.16b, v{{[0-9]+}}.16b, v{{[0-9]+}}.16b }, [x{{[0-9]+}}], x{{[0-9]+}}

@@ -61,6 +61,23 @@ static inline uint32_t amo_lwat_swap(uint32_t *ptr, uint32_t val) {
   return __builtin_amo_lwat(ptr, val, _AMO_LD_SWAP);
 }
 
+/* 32-bit signed AMO load operations */
+static inline int32_t amo_lwat_sadd(int32_t *ptr, int32_t val) {
+  return __builtin_amo_lwat_s(ptr, val, _AMO_LD_ADD);
+}
+
+static inline int32_t amo_lwat_smax(int32_t *ptr, int32_t val) {
+  return __builtin_amo_lwat_s(ptr, val, _AMO_LD_SMAX);
+}
+
+static inline int32_t amo_lwat_smin(int32_t *ptr, int32_t val) {
+  return __builtin_amo_lwat_s(ptr, val, _AMO_LD_SMIN);
+}
+
+static inline int32_t amo_lwat_sswap(int32_t *ptr, int32_t val) {
+  return __builtin_amo_lwat_s(ptr, val, _AMO_LD_SWAP);
+}
+
 /* 64-bit unsigned AMO load operations */
 static inline uint64_t amo_ldat_add(uint64_t *ptr, uint64_t val) {
   return __builtin_amo_ldat(ptr, val, _AMO_LD_ADD);
@@ -88,6 +105,23 @@ static inline uint64_t amo_ldat_umin(uint64_t *ptr, uint64_t val) {
 
 static inline uint64_t amo_ldat_swap(uint64_t *ptr, uint64_t val) {
   return __builtin_amo_ldat(ptr, val, _AMO_LD_SWAP);
+}
+
+/* 64-bit signed AMO load operations */
+static inline int64_t amo_ldat_sadd(int64_t *ptr, int64_t val) {
+  return __builtin_amo_ldat_s(ptr, val, _AMO_LD_ADD);
+}
+
+static inline int64_t amo_ldat_smax(int64_t *ptr, int64_t val) {
+  return __builtin_amo_ldat_s(ptr, val, _AMO_LD_SMAX);
+}
+
+static inline int64_t amo_ldat_smin(int64_t *ptr, int64_t val) {
+  return __builtin_amo_ldat_s(ptr, val, _AMO_LD_SMIN);
+}
+
+static inline int64_t amo_ldat_sswap(int64_t *ptr, int64_t val) {
+  return __builtin_amo_ldat_s(ptr, val, _AMO_LD_SWAP);
 }
 
 #ifdef __cplusplus

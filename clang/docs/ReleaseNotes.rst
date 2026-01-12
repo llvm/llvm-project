@@ -130,9 +130,21 @@ C++ Specific Potentially Breaking Changes
 - ``VarTemplateSpecializationDecl::getTemplateArgsAsWritten()`` method now
   returns ``nullptr`` for implicitly instantiated declarations.
 
+- ``__builtin_is_replaceable``, ``trivially_relocable_if_eligible``, and ``replaceable_if_eligible``
+  have been removed as `P2786 <https://wg21.link/P2786>`_ have been removed from C++2c.
+  ``__builtin_is_cpp_trivially_relocatable`` and ``__builtin_trivially_relocate`` have been kept back,
+  with the `P2786 <https://wg21.link/P2786>`_ semantics, except there is no longer a way
+  to explicitly specify a type is relocatable.
+
 ABI Changes in This Version
 ---------------------------
 - Fix AArch64 argument passing for C++ empty classes with large explicitly specified alignment.
+
+AST Potentially Breaking Changes
+--------------------------------
+- Abbreviated function templates and generic lambdas now have a valid begin source location.
+  The begin source location of abbreviated function templates is the begin source location of the templated function.
+  The begin source location of generic lambdas is the begin source location of the lambda introducer ``[...]``.
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
@@ -197,7 +209,7 @@ C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
 - Started the implementation of `P2686R5 <https://wg21.link/P2686R5>`_ Constexpr structured bindings.
-  At this timem, references to constexpr and decomposition of *tuple-like* types are not supported
+  At this time, references to constexpr and decomposition of *tuple-like* types are not supported
   (only arrays and aggregates are).
 
 C++23 Feature Support
@@ -219,6 +231,9 @@ Resolutions to C++ Defect Reports
 C Language Changes
 ------------------
 
+- Clang now supports the
+  :ref:`__builtin_stack_address <builtin_stack_address-doc>` () builtin.
+  The semantics match those of GCC's builtin with the same name.
 - Implemented the ``defer`` draft Technical Specification
   (`WG14 N3734 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3734.pdf>`_); it is enabled in C mode by
   passing ``-fdefer-ts``. Note, the details of this feature are subject to change given that the Technical
@@ -504,6 +519,9 @@ Improvements to Clang's time-trace
 Improvements to Coverage Mapping
 --------------------------------
 
+- [MC/DC] Unary logical not `!` among binary operators is recognized
+  as a part of the expression. (#GH124563)
+
 Bug Fixes in This Version
 -------------------------
 - Fix a crash when marco name is empty in ``#pragma push_macro("")`` or
@@ -552,6 +570,7 @@ Bug Fixes in This Version
   containing a single colon. (#GH167905)
 - Fixed a crash when parsing malformed #pragma clang loop vectorize_width(4,8,16)
   by diagnosing invalid comma-separated argument lists. (#GH166325)
+- Clang now treats enumeration constants of fixed-underlying enums as the enumerated type. (#GH172118)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -595,6 +614,7 @@ Bug Fixes to C++ Support
   "initializing multiple members of union" coincide (#GH149985).
 - Fix a crash when using ``explicit(bool)`` in pre-C++11 language modes. (#GH152729)
 - Fix the parsing of variadic member functions when the ellipis immediately follows a default argument.(#GH153445)
+- Fix a crash when using an explicit object parameter in a non-member function with an invalid return type.(#GH173943)
 - Fixed a bug that caused ``this`` captured by value in a lambda with a dependent explicit object parameter to not be
   instantiated properly. (#GH154054)
 - Fixed a bug where our ``member-like constrained friend`` checking caused an incorrect analysis of lambda captures. (#GH156225)
@@ -631,6 +651,10 @@ Bug Fixes to C++ Support
 - Fix the result of ``__is_pointer_interconvertible_base_of`` when arguments are qualified and passed via template parameters. (#GH135273)
 - Fixed a crash when evaluating nested requirements in requires-expressions that reference invented parameters. (#GH166325)
 - Fixed a crash when standard comparison categories (e.g. ``std::partial_ordering``) are defined with incorrect static member types. (#GH170015) (#GH56571)
+- Fixed a crash when parsing the ``enable_if`` attribute on C function declarations with identifier-list parameters. (#GH173826)
+- Fixed an assertion failure triggered by nested lambdas during capture handling. (#GH172814)
+- Fixed an assertion failure in vector conversions involving instantiation-dependent template expressions. (#GH173347)
+- Fixed an assertion failure in floating conversion narrowing caused by C++ constant expression checks in C23 mode. (#GH173847)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -679,6 +703,7 @@ X86 Support
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 - Support has been added for the following processors (command-line identifiers in parentheses):
+  - Ampere Computing Ampere1C (``ampere1c``)
   - Arm C1-Nano (``c1-nano``)
   - Arm C1-Pro (``c1-pro``)
   - Arm C1-Premium (``c1-premium``)
@@ -750,6 +775,10 @@ WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
 
 - Fix a bug so that ``__has_attribute(musttail)`` is no longer true when WebAssembly's tail-call is not enabled. (#GH163256)
+
+- The `wasm32-wasi` target has been renamed to `wasm32-wasip1`. The old
+  option is still recognized, though by default will emit a deprecation
+  warning.
 
 AVR Support
 ^^^^^^^^^^^
@@ -975,6 +1004,8 @@ OpenMP Support
 - Added parsing and semantic analysis support for ``need_device_ptr`` modifier
   to accept an optional fallback argument (``fb_nullify`` or ``fb_preserve``)
   with OpenMP >= 61.
+- ``use_device_ptr`` and ``use_device_addr`` now preserve the original host
+  address when lookup fails.
 
 Improvements
 ^^^^^^^^^^^^

@@ -116,6 +116,13 @@ LLVM_ABI void adjustKnownBitsForSelectArm(KnownBits &Known, Value *Cond,
                                           const SimplifyQuery &Q,
                                           unsigned Depth = 0);
 
+/// Adjust \p Known for the given select \p Arm to include information from the
+/// select \p Cond.
+LLVM_ABI void adjustKnownFPClassForSelectArm(KnownFPClass &Known, Value *Cond,
+                                             Value *Arm, bool Invert,
+                                             const SimplifyQuery &Q,
+                                             unsigned Depth = 0);
+
 /// Return true if LHS and RHS have no common bits set.
 LLVM_ABI bool haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
                                   const WithCache<const Value *> &RHSCache,
@@ -230,6 +237,10 @@ LLVM_ABI Intrinsic::ID getIntrinsicForCallSite(const CallBase &CB,
 /// the result of the comparison is true when the input value is signed.
 LLVM_ABI bool isSignBitCheck(ICmpInst::Predicate Pred, const APInt &RHS,
                              bool &TrueIfSigned);
+
+LLVM_ABI KnownFPClass analyzeKnownFPClassFromSelect(
+    const Instruction *I, const KnownFPClass &KnownLHS,
+    const KnownFPClass &KnownRHS, const SimplifyQuery &SQ, unsigned Depth = 0);
 
 /// Determine which floating-point classes are valid for \p V, and return them
 /// in KnownFPClass bit sets.

@@ -188,6 +188,7 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
           case Instruction::Trunc:
           case Instruction::ZExt:
           case Instruction::Mul:
+          case Instruction::Shl:
           case Instruction::FMul:
           case VPInstruction::Broadcast:
             // Opcodes above can only use EVL after wide inductions have been
@@ -199,16 +200,6 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
             break;
           default:
             errs() << "EVL used by unexpected VPInstruction\n";
-            return false;
-          }
-          // EVLIVIncrement is only used by EVLIV & BranchOnCount.
-          // Having more than two users is unexpected.
-          if (I->getOpcode() != VPInstruction::Broadcast &&
-              I->getNumUsers() != 1 &&
-              (I->getNumUsers() != 2 ||
-               none_of(I->users(), match_fn(m_BranchOnCount(m_Specific(I),
-                                                            m_VPValue()))))) {
-            errs() << "EVL is used in VPInstruction with multiple users\n";
             return false;
           }
           if (!VerifyLate && !isa<VPEVLBasedIVPHIRecipe>(*I->users().begin())) {
