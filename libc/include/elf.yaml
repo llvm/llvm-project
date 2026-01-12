@@ -326,7 +326,7 @@ macros:
     macro_value: 22
   - macro_name: DT_JMPREL
     macro_value: 23
-  - macro_name: DT_BIND_NOW*
+  - macro_name: DT_BIND_NOW
     macro_value: 24
   - macro_name: DT_INIT_ARRAY
     macro_value: 25
