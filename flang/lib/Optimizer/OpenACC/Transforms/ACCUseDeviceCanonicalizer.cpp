@@ -412,10 +412,9 @@ public:
 
     // Apply patterns greedily
     GreedyRewriteConfig config;
+    // Prevent the pattern driver from merging blocks.
+    config.setRegionSimplificationLevel(GreedySimplifyRegionLevel::Disabled);
     config.setUseTopDownTraversal(true);
-    config.setRegionSimplificationLevel(GreedySimplifyRegionLevel::Normal);
-    config.setMaxIterations(10);
-    config.setMaxNumRewrites(-1);
 
     (void)applyPatternsGreedily(getOperation(), std::move(patterns), config);
   }
