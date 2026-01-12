@@ -4346,6 +4346,7 @@ libc_math_function(
         ":__support_math_ilogb",
     ],
 )
+
 libc_math_function(name = "ilogbf")
 
 libc_math_function(name = "ilogbl")
