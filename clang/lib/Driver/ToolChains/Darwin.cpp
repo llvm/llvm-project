@@ -1344,7 +1344,7 @@ void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
   }
 }
 
-std::string MachO::getCompilerRT(const ArgList &, StringRef Component,
+std::string MachO::getCompilerRT(const ArgList &Args, StringRef Component,
                                  FileType Type, bool IsFortran) const {
   assert(Type != ToolChain::FT_Object &&
          "it doesn't make sense to ask for the compiler-rt library name as an "
@@ -1363,7 +1363,7 @@ std::string MachO::getCompilerRT(const ArgList &, StringRef Component,
   return std::string(FullPath);
 }
 
-std::string Darwin::getCompilerRT(const ArgList &, StringRef Component,
+std::string Darwin::getCompilerRT(const ArgList &Args, StringRef Component,
                                   FileType Type, bool IsFortran) const {
   assert(Type != ToolChain::FT_Object &&
          "it doesn't make sense to ask for the compiler-rt library name as an "

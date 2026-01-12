@@ -747,3 +747,5 @@ def testAttrNames():
         print(DenseResourceElementsAttr.attr_name)
         # CHECK: builtin.string
         print(StringAttr.attr_name)
+        # CHECK: builtin.float
+        print(FloatAttr.attr_name)

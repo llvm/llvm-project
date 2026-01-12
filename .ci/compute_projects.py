@@ -109,10 +109,10 @@ EXCLUDE_WINDOWS = {
 }
 
 # These are projects that we should test if the project itself is changed but
-# where testing is not yet stable enough for it to be enabled on changes to
-# dependencies.
+# where testing is not yet stable enough or is too expensive for it to be
+# enabled on changes to dependencies.
 EXCLUDE_DEPENDENTS_WINDOWS = {
-    "flang",  # TODO(issues/132803): Flang is not stable.
+    "flang",
 }
 
 EXCLUDE_MAC = {

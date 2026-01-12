@@ -18,6 +18,6 @@
         </div>
         {{/Description}}
         {{#Location}}
-        <p>Defined at line {{LineNumber}} of file {{Filename}}</p>
+        <p>Defined at line {{LineNumber}} of file {{^FileURL}}{{Filename}}{{/FileURL}}{{#FileURL}}<a href="{{FileURL}}">{{Filename}}</a>{{/FileURL}}</p>
         {{/Location}}
 </div>

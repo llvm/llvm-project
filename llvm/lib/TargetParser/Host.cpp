@@ -389,6 +389,7 @@ getHostCPUNameForARMFromComponents(StringRef Implementer, StringRef Hardware,
         .Case("0xac3", "ampere1")
         .Case("0xac4", "ampere1a")
         .Case("0xac5", "ampere1b")
+        .Case("0xac7", "ampere1c")
         .Default("generic");
   }
 

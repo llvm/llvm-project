@@ -42,8 +42,6 @@
     </div>
     {{/EnumComments}}
     {{#Location}}
-    <div>
-        Defined at line {{LineNumber}} of file {{Filename}}
-    </div>
+    <p>Defined at line {{LineNumber}} of file {{^FileURL}}{{Filename}}{{/FileURL}}{{#FileURL}}<a href="{{FileURL}}">{{Filename}}</a>{{/FileURL}}</p>
     {{/Location}}
 </div>

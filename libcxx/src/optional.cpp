@@ -19,6 +19,8 @@ const char* bad_optional_access::what() const noexcept { return "bad_optional_ac
 
 #include <__config>
 
+#if _LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION < 7
+
 //  Preserve std::experimental::bad_optional_access for ABI compatibility
 //  Even though it no longer exists in a header file
 _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL
@@ -34,3 +36,5 @@ public:
 bad_optional_access::~bad_optional_access() noexcept = default;
 
 _LIBCPP_END_NAMESPACE_EXPERIMENTAL
+
+#endif // _LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION < 7

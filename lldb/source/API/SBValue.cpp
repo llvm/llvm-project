@@ -45,6 +45,7 @@
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
+#include "lldb/lldb-enumerations.h"
 
 #include <memory>
 
@@ -1262,14 +1263,45 @@ lldb::SBValue SBValue::EvaluateExpression(const char *expr,
 bool SBValue::GetDescription(SBStream &description) {
   LLDB_INSTRUMENT_VA(this, description);
 
+  return GetDescription(description, eDescriptionLevelFull);
+}
+
+static DumpValueObjectOptions
+GetDumpOptions(lldb::DescriptionLevel description_level,
+               lldb::DynamicValueType dyn, bool use_synthetic) {
+  DumpValueObjectOptions options;
+  switch (description_level) {
+  case eDescriptionLevelInitial:
+    return options;
+  case eDescriptionLevelBrief:
+    options.SetAllowOnelinerMode(true);
+    options.SetHideRootName(true);
+    options.SetHideRootType(true);
+    break;
+  case eDescriptionLevelVerbose:
+    options.SetShowTypes(true);
+    options.SetShowLocation(true);
+    break;
+  default:
+    break;
+  }
+  options.SetUseDynamicType(dyn);
+  options.SetUseSyntheticValue(use_synthetic);
+  return options;
+}
+
+bool SBValue::GetDescription(SBStream &description,
+                             lldb::DescriptionLevel description_level) {
+  LLDB_INSTRUMENT_VA(this, description, description_level);
+
   Stream &strm = description.ref();
 
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp) {
-    DumpValueObjectOptions options;
-    options.SetUseDynamicType(m_opaque_sp->GetUseDynamic());
-    options.SetUseSyntheticValue(m_opaque_sp->GetUseSynthetic());
+    const DumpValueObjectOptions options =
+        GetDumpOptions(description_level, m_opaque_sp->GetUseDynamic(),
+                       m_opaque_sp->GetUseSynthetic());
     if (llvm::Error error = value_sp->Dump(strm, options)) {
       strm << "error: " << toString(std::move(error));
       return false;

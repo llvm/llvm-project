@@ -54,9 +54,7 @@ class Foo;
 // CHECK-NEXT:                      </tr>
 // CHECK-NEXT:                  </tbody>
 // CHECK-NEXT:              </table>
-// CHECK-NEXT:              <div>
-// CHECK-NEXT:                  Defined at line 5 of file {{.*}}mustache-index.cpp
-// CHECK-NEXT:              </div>
+// CHECK-NEXT:              <p>Defined at line 5 of file {{.*}}mustache-index.cpp</p>
 // CHECK-NEXT:          </div>
 // CHECK-NEXT:      </div>
 // CHECK-NEXT:  </section>

@@ -19635,10 +19635,10 @@ void Sema::ActOnFinishFunctionDeclarationDeclarator(Declarator &Declarator) {
               ExplicitParams->getRAngleLoc(),
               ExplicitParams->getRequiresClause()));
     } else {
-      Declarator.setInventedTemplateParameterList(
-          TemplateParameterList::Create(
-              Context, SourceLocation(), SourceLocation(), FSI.TemplateParams,
-              SourceLocation(), /*RequiresClause=*/nullptr));
+      Declarator.setInventedTemplateParameterList(TemplateParameterList::Create(
+          Context, Declarator.getBeginLoc(), SourceLocation(),
+          FSI.TemplateParams, Declarator.getEndLoc(),
+          /*RequiresClause=*/nullptr));
     }
   }
   InventedParameterInfos.pop_back();

@@ -59,6 +59,22 @@ public:
   lowerGetRuntimeMember(cir::GetRuntimeMemberOp op, mlir::Type loweredResultTy,
                         mlir::Value loweredAddr, mlir::Value loweredMember,
                         mlir::OpBuilder &builder) const = 0;
+
+  /// Lower the given cir.base_data_member op to a sequence of more "primitive"
+  /// CIR operations that act on the ABI types.
+  virtual mlir::Value lowerBaseDataMember(cir::BaseDataMemberOp op,
+                                          mlir::Value loweredSrc,
+                                          mlir::OpBuilder &builder) const = 0;
+
+  /// Lower the given cir.derived_data_member op to a sequence of more
+  /// "primitive" CIR operations that act on the ABI types.
+  virtual mlir::Value
+  lowerDerivedDataMember(cir::DerivedDataMemberOp op, mlir::Value loweredSrc,
+                         mlir::OpBuilder &builder) const = 0;
+
+  virtual mlir::Value lowerDataMemberCmp(cir::CmpOp op, mlir::Value loweredLhs,
+                                         mlir::Value loweredRhs,
+                                         mlir::OpBuilder &builder) const = 0;
 };
 
 /// Creates an Itanium-family ABI.

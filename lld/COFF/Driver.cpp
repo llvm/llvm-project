@@ -151,7 +151,8 @@ using MBErrPair = std::pair<std::unique_ptr<MemoryBuffer>, std::error_code>;
 
 // Create a std::future that opens and maps a file using the best strategy for
 // the host platform.
-static std::future<MBErrPair> createFutureForFile(std::string path) {
+static std::future<MBErrPair> createFutureForFile(std::string path,
+                                                  bool prefetchInputs) {
 #if _WIN64
   // On Windows, file I/O is relatively slow so it is best to do this
   // asynchronously.  But 32-bit has issues with potentially launching tons
@@ -165,6 +166,9 @@ static std::future<MBErrPair> createFutureForFile(std::string path) {
                                          /*RequiresNullTerminator=*/false);
     if (!mbOrErr)
       return MBErrPair{nullptr, mbOrErr.getError()};
+    // Prefetch memory pages in the background as we will need them soon enough.
+    if (prefetchInputs)
+      (*mbOrErr)->willNeedIfMmap();
     return MBErrPair{std::move(*mbOrErr), std::error_code()};
   });
 }
@@ -361,7 +365,7 @@ void LinkerDriver::handleReproFile(StringRef path, InputOpt inputOpt) {
 
 void LinkerDriver::enqueuePath(StringRef path, bool lazy, InputOpt inputOpt) {
   auto future = std::make_shared<std::future<MBErrPair>>(
-      createFutureForFile(std::string(path)));
+      createFutureForFile(std::string(path), ctx.config.prefetchInputs));
   std::string pathStr = std::string(path);
   enqueueTask([=]() {
     llvm::TimeTraceScope timeScope("File: ", path);
@@ -378,8 +382,13 @@ void LinkerDriver::enqueuePath(StringRef path, bool lazy, InputOpt inputOpt) {
         auto retryMb = MemoryBuffer::getFile(*retryPath, /*IsText=*/false,
                                              /*RequiresNullTerminator=*/false);
         ec = retryMb.getError();
-        if (!ec)
+        if (!ec) {
           mb = std::move(*retryMb);
+          // Prefetch memory pages in the background as we will need them soon
+          // enough.
+          if (ctx.config.prefetchInputs)
+            mb->willNeedIfMmap();
+        }
       } else {
         // We've already handled this file.
         return;
@@ -476,8 +485,8 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
       CHECK(c.getFullName(),
             "could not get the filename for the member defining symbol " +
                 toCOFFString(ctx, sym));
-  auto future =
-      std::make_shared<std::future<MBErrPair>>(createFutureForFile(childName));
+  auto future = std::make_shared<std::future<MBErrPair>>(
+      createFutureForFile(childName, ctx.config.prefetchInputs));
   enqueueTask([=]() {
     auto mbOrErr = future->get();
     if (mbOrErr.second)
@@ -2268,6 +2277,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
                  "disable";
     config->incremental = false;
   }
+
+  if (args.hasFlag(OPT_prefetch_inputs, OPT_prefetch_inputs_no, false))
+    config->prefetchInputs = true;
 
   if (errCount(ctx))
     return;

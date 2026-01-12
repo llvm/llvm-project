@@ -80,8 +80,7 @@ public:
 
 /// Check if any summary strategy options are explicitly enabled.
 static bool isAnyStrategyRequested() {
-  StringMap<cl::Option *> Opts = cl::getRegisteredOptions(SummarySub);
-  for (auto &[_, Opt] : Opts) {
+  for (auto &[_, Opt] : cl::getRegisteredOptions(SummarySub)) {
     if (!is_contained(Opt->Categories, &SummaryStrategyCat))
       continue;
     if (!Opt->getNumOccurrences())

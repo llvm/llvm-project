@@ -3943,6 +3943,10 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   // Not TT_FunctionDeclarationName.
   EXPECT_TOKEN(Tokens[6], tok::kw_operator, TT_Unknown);
   EXPECT_BRACE_KIND(Tokens[9], BK_BracedInit);
+
+  Tokens = annotate("&(type){v}");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[4], BK_BracedInit);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsElaboratedTypeSpecifier) {

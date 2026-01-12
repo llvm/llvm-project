@@ -42,6 +42,7 @@
 #include <__memory/temp_value.h>
 #include <__memory/uninitialized_algorithms.h>
 #include <__ranges/access.h>
+#include <__ranges/as_rvalue_view.h>
 #include <__ranges/concepts.h>
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/from_range.h>
@@ -484,7 +485,21 @@ public:
 #if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<_Tp> _Range>
   _LIBCPP_HIDE_FROM_ABI constexpr void append_range(_Range&& __range) {
-    insert_range(end(), std::forward<_Range>(__range));
+    if constexpr (ranges::forward_range<_Range> || ranges::sized_range<_Range>) {
+      auto __len = ranges::distance(__range);
+      if (__len < __cap_ - __end_) {
+        __construct_at_end(ranges::begin(__range), ranges::end(__range), __len);
+      } else {
+        __split_buffer<value_type, allocator_type> __buffer(__recommend(size() + __len), size(), __alloc_);
+        __buffer.__construct_at_end_with_size(ranges::begin(__range), __len);
+        __swap_out_circular_buffer(__buffer);
+      }
+    } else {
+      vector __buffer(__alloc_);
+      for (auto&& __val : __range)
+        __buffer.emplace_back(std::forward<decltype(__val)>(__val));
+      append_range(ranges::as_rvalue_view(__buffer));
+    }
   }
 #endif
 

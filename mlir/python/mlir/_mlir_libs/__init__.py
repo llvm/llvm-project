@@ -2,7 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
 
 import os
 
@@ -245,6 +245,7 @@ def _site_initialize():
     Sequence.register(ir.OpResultList)
     Sequence.register(ir.OpSuccessors)
     Sequence.register(ir.RegionSequence)
+    Mapping.register(ir.OpAttributeMap)
 
 
 _site_initialize()

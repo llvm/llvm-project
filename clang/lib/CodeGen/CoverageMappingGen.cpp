@@ -801,6 +801,12 @@ public:
   /// Return the LHS Decision ([0,0] if not set).
   const mcdc::ConditionIDs &back() const { return DecisionStack.back(); }
 
+  void swapConds() {
+    if (DecisionStack.empty())
+      return;
+
+    std::swap(DecisionStack.back()[false], DecisionStack.back()[true]);
+  }
   /// Push the binary operator statement to track the nest level and assign IDs
   /// to the operator's LHS and RHS.  The RHS may be a larger subtree that is
   /// broken up on successive levels.
@@ -886,6 +892,14 @@ struct CounterCoverageMappingBuilder
   /// The map of statements to count values.
   llvm::DenseMap<const Stmt *, CounterPair> &CounterMap;
 
+  /// Used to expand an allocatd SkipCnt to Expression with known counters.
+  /// Key: SkipCnt
+  /// Val: Subtract Expression
+  CounterExpressionBuilder::SubstMap MapToExpand;
+
+  /// Index and number for additional counters for SkipCnt.
+  unsigned NextCounterNum;
+
   MCDC::State &MCDCState;
 
   /// A stack of currently live regions.
@@ -960,7 +974,8 @@ struct CounterCoverageMappingBuilder
   BranchCounterPair
   getBranchCounterPair(const Stmt *S, Counter ParentCnt,
                        std::optional<Counter> SkipCntForOld = std::nullopt) {
-    Counter ExecCnt = getRegionCounter(S);
+    auto &TheMap = CounterMap[S];
+    auto ExecCnt = Counter::getCounter(TheMap.Executed);
 
     // The old behavior of SingleByte is unaware of Branches.
     // Will be pruned after the migration of SingleByte.
@@ -970,11 +985,42 @@ struct CounterCoverageMappingBuilder
       return {ExecCnt, *SkipCntForOld};
     }
 
-    return {ExecCnt, Builder.subtract(ParentCnt, ExecCnt)};
+    BranchCounterPair Counters = {ExecCnt,
+                                  Builder.subtract(ParentCnt, ExecCnt)};
+
+    if (!llvm::EnableSingleByteCoverage || !Counters.Skipped.isExpression()) {
+      assert(
+          !TheMap.Skipped.hasValue() &&
+          "SkipCnt shouldn't be allocated but refer to an existing counter.");
+      return Counters;
+    }
+
+    // Assign second if second is not assigned yet.
+    if (!TheMap.Skipped.hasValue())
+      TheMap.Skipped = NextCounterNum++;
+
+    // Replace an expression (ParentCnt - ExecCnt) with SkipCnt.
+    Counter SkipCnt = Counter::getCounter(TheMap.Skipped);
+    MapToExpand[SkipCnt] = Builder.subst(Counters.Skipped, MapToExpand);
+    Counters.Skipped = SkipCnt;
+    return Counters;
   }
 
   bool IsCounterEqual(Counter OutCount, Counter ParentCount) {
     if (OutCount == ParentCount)
+      return true;
+
+    // Try comaparison with pre-replaced expressions.
+    //
+    // For example, getBranchCounterPair(#0) returns {#1, #0 - #1}.
+    // The sum of the pair should be equivalent to the Parent, #0.
+    // OTOH when (#0 - #1) is replaced with the new counter #2,
+    // The sum is (#1 + #2). If the reverse substitution #2 => (#0 - #1)
+    // can be applied, the sum can be transformed to (#1 + (#0 - #1)).
+    // To apply substitutions to both hand expressions, transform (LHS - RHS)
+    // and check isZero.
+    if (Builder.subst(Builder.subtract(OutCount, ParentCount), MapToExpand)
+            .isZero())
       return true;
 
     return false;
@@ -1190,12 +1236,14 @@ struct CounterCoverageMappingBuilder
   /// and add it to the function's SourceRegions.
   /// Returns Counter that corresponds to SC.
   Counter createSwitchCaseRegion(const SwitchCase *SC, Counter ParentCount) {
+    Counter TrueCnt = getRegionCounter(SC);
+    Counter FalseCnt = (llvm::EnableSingleByteCoverage
+                            ? Counter::getZero() // Folded
+                            : subtractCounters(ParentCount, TrueCnt));
     // Push region onto RegionStack but immediately pop it (which adds it to
     // the function's SourceRegions) because it doesn't apply to any other
     // source other than the SwitchCase.
-    Counter TrueCnt = getRegionCounter(SC);
-    popRegions(pushRegion(TrueCnt, getStart(SC), SC->getColonLoc(),
-                          subtractCounters(ParentCount, TrueCnt)));
+    popRegions(pushRegion(TrueCnt, getStart(SC), SC->getColonLoc(), FalseCnt));
     return TrueCnt;
   }
 
@@ -1462,7 +1510,8 @@ struct CounterCoverageMappingBuilder
       llvm::DenseMap<const Stmt *, CounterPair> &CounterMap,
       MCDC::State &MCDCState, SourceManager &SM, const LangOptions &LangOpts)
       : CoverageMappingBuilder(CVM, SM, LangOpts), CounterMap(CounterMap),
-        MCDCState(MCDCState), MCDCBuilder(CVM.getCodeGenModule(), MCDCState) {}
+        NextCounterNum(CounterMap.size()), MCDCState(MCDCState),
+        MCDCBuilder(CVM.getCodeGenModule(), MCDCState) {}
 
   /// Write the mapping data to the output stream
   void write(llvm::raw_ostream &OS) {
@@ -2206,10 +2255,8 @@ struct CounterCoverageMappingBuilder
 
     // Update the state for CodeGenPGO
     assert(MCDCState.DecisionByStmt.contains(E));
-    MCDCState.DecisionByStmt[E] = {
-        MCDCState.BitmapBits, // Top
-        std::move(Builder.Indices),
-    };
+    MCDCState.DecisionByStmt[E].update(MCDCState.BitmapBits, // Top
+                                       std::move(Builder.Indices));
 
     auto DecisionParams = mcdc::DecisionParameters{
         MCDCState.BitmapBits += NumTVs, // Tail
@@ -2244,6 +2291,12 @@ struct CounterCoverageMappingBuilder
             SM.isInSystemHeader(SM.getSpellingLoc(E->getOperatorLoc())) &&
             SM.isInSystemHeader(SM.getSpellingLoc(E->getBeginLoc())) &&
             SM.isInSystemHeader(SM.getSpellingLoc(E->getEndLoc())));
+  }
+
+  void VisitUnaryLNot(const UnaryOperator *E) {
+    MCDCBuilder.swapConds();
+    Visit(E->getSubExpr());
+    MCDCBuilder.swapConds();
   }
 
   void VisitBinLAnd(const BinaryOperator *E) {

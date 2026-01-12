@@ -10,6 +10,7 @@
 #define FORTRAN_PARSER_PARSE_TREE_VISITOR_H_
 
 #include "parse-tree.h"
+#include "tools.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/visit.h"
 #include <cstddef>
@@ -55,6 +56,13 @@ struct ParseTreeVisitorLookupScope {
   Walk(A &x, M &mutator) {
     if (mutator.Pre(x)) {
       mutator.Post(x);
+    }
+  }
+
+  template <typename A, typename VM>
+  static void WalkSource(A &x, VM &visitorOrMutator) {
+    if constexpr (HasSource<A>::value) {
+      Walk(x.source, visitorOrMutator);
     }
   }
 
@@ -168,12 +176,14 @@ struct ParseTreeVisitorLookupScope {
   template <typename A, typename V>
   static std::enable_if_t<EmptyTrait<A>> Walk(const A &x, V &visitor) {
     if (visitor.Pre(x)) {
+      WalkSource(x, visitor);
       visitor.Post(x);
     }
   }
   template <typename A, typename M>
   static std::enable_if_t<EmptyTrait<A>> Walk(A &x, M &mutator) {
     if (mutator.Pre(x)) {
+      WalkSource(x, mutator);
       mutator.Post(x);
     }
   }
@@ -181,6 +191,7 @@ struct ParseTreeVisitorLookupScope {
   template <typename A, typename V>
   static std::enable_if_t<TupleTrait<A>> Walk(const A &x, V &visitor) {
     if (visitor.Pre(x)) {
+      WalkSource(x, visitor);
       Walk(x.t, visitor);
       visitor.Post(x);
     }
@@ -188,6 +199,7 @@ struct ParseTreeVisitorLookupScope {
   template <typename A, typename M>
   static std::enable_if_t<TupleTrait<A>> Walk(A &x, M &mutator) {
     if (mutator.Pre(x)) {
+      WalkSource(x, mutator);
       Walk(x.t, mutator);
       mutator.Post(x);
     }
@@ -196,6 +208,7 @@ struct ParseTreeVisitorLookupScope {
   template <typename A, typename V>
   static std::enable_if_t<UnionTrait<A>> Walk(const A &x, V &visitor) {
     if (visitor.Pre(x)) {
+      WalkSource(x, visitor);
       Walk(x.u, visitor);
       visitor.Post(x);
     }
@@ -203,6 +216,7 @@ struct ParseTreeVisitorLookupScope {
   template <typename A, typename M>
   static std::enable_if_t<UnionTrait<A>> Walk(A &x, M &mutator) {
     if (mutator.Pre(x)) {
+      WalkSource(x, mutator);
       Walk(x.u, mutator);
       mutator.Post(x);
     }
@@ -211,6 +225,7 @@ struct ParseTreeVisitorLookupScope {
   template <typename A, typename V>
   static std::enable_if_t<WrapperTrait<A>> Walk(const A &x, V &visitor) {
     if (visitor.Pre(x)) {
+      WalkSource(x, visitor);
       Walk(x.v, visitor);
       visitor.Post(x);
     }
@@ -218,6 +233,7 @@ struct ParseTreeVisitorLookupScope {
   template <typename A, typename M>
   static std::enable_if_t<WrapperTrait<A>> Walk(A &x, M &mutator) {
     if (mutator.Pre(x)) {
+      WalkSource(x, mutator);
       Walk(x.v, mutator);
       mutator.Post(x);
     }
@@ -226,6 +242,7 @@ struct ParseTreeVisitorLookupScope {
   template <typename A, typename V>
   static std::enable_if_t<ConstraintTrait<A>> Walk(const A &x, V &visitor) {
     if (visitor.Pre(x)) {
+      WalkSource(x, visitor);
       Walk(x.thing, visitor);
       visitor.Post(x);
     }
@@ -233,6 +250,7 @@ struct ParseTreeVisitorLookupScope {
   template <typename A, typename M>
   static std::enable_if_t<ConstraintTrait<A>> Walk(A &x, M &mutator) {
     if (mutator.Pre(x)) {
+      WalkSource(x, mutator);
       Walk(x.thing, mutator);
       mutator.Post(x);
     }
