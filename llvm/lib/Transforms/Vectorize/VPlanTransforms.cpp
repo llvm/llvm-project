@@ -3007,14 +3007,16 @@ void VPlanTransforms::optimizeEVLMasks(VPlan &Plan) {
       OldRecipes.push_back(R);
     }
   }
-  // Erase recipes at the end so we don't invalidate TypeInfo.
+  // Erase the old recipes ourselves since removeDeadRecipes won't remove dead
+  // stores. Do this at the end so we don't invalidate TypeInfo.
   for (VPRecipeBase *OldR : OldRecipes)
     OldR->eraseFromParent();
   removeDeadRecipes(Plan);
 }
 
-/// After replacing the IV with a EVL-based IV, fixup recipes that use VF to use
-/// the EVL instead to avoid incorrect updates on the penultimate iteration.
+/// After replacing the canonical IV with a EVL-based IV, fixup recipes that use
+/// VF to use the EVL instead to avoid incorrect updates on the penultimate
+/// iteration.
 static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
   VPTypeAnalysis TypeInfo(Plan);
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
@@ -3099,10 +3101,19 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
   HeaderMask->replaceAllUsesWith(EVLMask);
 }
 
-/// Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and
+/// Converts a tail folded vector loop region to step by @llvm.get.vector.length
+/// elements instead of VF elements each iteration.
+///
+/// - Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and
 /// replaces all uses except the canonical IV increment of
 /// VPCanonicalIVPHIRecipe with a VPEVLBasedIVPHIRecipe. VPCanonicalIVPHIRecipe
 /// is used only for loop iterations counting after this transformation.
+///
+/// - The header mask is replaced with a header mask based on the EVL.
+///
+/// - Plans with FORs have a new phi added to keep track of the EVL of the
+/// previous iteration, and VPFirstOrderRecurrencePHIRecipes are replaced with
+/// @llvm.vp.splice.
 ///
 /// The function uses the following definitions:
 ///  %StartV is the canonical induction start value.

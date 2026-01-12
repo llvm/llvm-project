@@ -266,7 +266,8 @@ struct VPlanTransforms {
   addExplicitVectorLength(VPlan &Plan,
                           const std::optional<unsigned> &MaxEVLSafeElements);
 
-  /// Optimize recipes which use an EVL based header mask to a VP intrinsic:
+  /// Optimize recipes which use an EVL-based header mask to VP intrinsics, for
+  /// example:
   ///
   /// %mask = icmp ult step-vector, EVL
   /// %load = load %ptr, %mask
