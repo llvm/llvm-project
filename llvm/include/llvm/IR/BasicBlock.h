@@ -334,6 +334,17 @@ public:
         .getNonConst();
   }
 
+  /// Returns true if there is a valid insertion point for non-PHI instructions
+  /// in this block. Returns false for blocks that can only contain PHI nodes,
+  /// such as blocks with a catchswitch terminator.
+  ///
+  /// This is an O(1) check, unlike getFirstInsertionPt() which must scan
+  /// through all PHI nodes.
+  bool hasInsertionPt() const {
+    const Instruction *Term = getTerminator();
+    return Term && Term->getOpcode() != Instruction::CatchSwitch;
+  }
+
   /// Returns an iterator to the first instruction in this block that is
   /// not a PHINode, a debug intrinsic, a static alloca or any pseudo operation.
   LLVM_ABI const_iterator getFirstNonPHIOrDbgOrAlloca() const;

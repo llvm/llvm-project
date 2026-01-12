@@ -800,7 +800,70 @@ __mmask32 test_mm512_movepi16_mask(__m512i __A) {
   // OGCG-LABEL: {{.*}}movepi16_mask{{.*}}(
   // OGCG: [[CMP:%.*]] = icmp slt <32 x i16> %{{.*}}, zeroinitializer
   // OGCG: bitcast <32 x i1> [[CMP]] to i32
-  return _mm512_movepi16_mask(__A);
+  return _mm512_movepi16_mask(__A); 
+}
+
+__m256i test_mm512_cvtepi16_epi8(__m512i __A) {
+  // CIR-LABEL: test_mm512_cvtepi16_epi8
+  // CIR: %[[TRUNC:.*]] = cir.cast integral {{.*}} : !cir.vector<32 x !s16i> -> !cir.vector<32 x !s8i>
+  // CIR: %[[RETBC:.*]] = cir.cast bitcast {{.*}} : !cir.vector<32 x !s8i> -> !cir.vector<4 x !s64i>
+  // CIR: cir.store %[[RETBC]], %[[RETPTR:.*]] : !cir.vector<4 x !s64i>, !cir.ptr<!cir.vector<4 x !s64i>>
+  // CIR: %[[RETLOAD:.*]] = cir.load %[[RETPTR]] : !cir.ptr<!cir.vector<4 x !s64i>>, !cir.vector<4 x !s64i>
+  // CIR: cir.return %[[RETLOAD]] : !cir.vector<4 x !s64i>
+  
+  // LLVM-LABEL: test_mm512_cvtepi16_epi8
+  // LLVM: %[[TRUNC:.*]] = trunc <32 x i16> %{{.*}} to <32 x i8>
+  // LLVM: bitcast <32 x i8> %[[TRUNC]] to <4 x i64>
+  
+  // OGCG-LABEL: test_mm512_cvtepi16_epi8
+  // OGCG: %[[TRUNC:.*]] = trunc <32 x i16> %{{.*}} to <32 x i8>
+  // OGCG: bitcast <32 x i8> %[[TRUNC]] to <4 x i64>
+  return _mm512_cvtepi16_epi8(__A);
+}
+
+__m256i test_mm512_mask_cvtepi16_epi8(__m256i __O, __mmask32 __M, __m512i __A) {
+  // CIR-LABEL: test_mm512_mask_cvtepi16_epi8
+  // CIR: %[[TRUNC:.*]] = cir.cast integral {{.*}} : !cir.vector<32 x !s16i> -> !cir.vector<32 x !s8i>
+  // CIR: %[[MASK_VEC:.*]] = cir.cast bitcast {{.*}} : !u32i -> !cir.vector<32 x !cir.int<s, 1>>
+  // CIR: %[[TER:.*]] = cir.vec.ternary(%[[MASK_VEC]], %[[TRUNC]], {{.*}}) : !cir.vector<32 x !cir.int<s, 1>>, !cir.vector<32 x !s8i>
+  // CIR: %[[RETBC:.*]] = cir.cast bitcast %[[TER]] : !cir.vector<32 x !s8i> -> !cir.vector<4 x !s64i>
+  // CIR: cir.store %[[RETBC]], %[[RETPTR:.*]] : !cir.vector<4 x !s64i>, !cir.ptr<!cir.vector<4 x !s64i>>
+  // CIR: %[[RETLOAD:.*]] = cir.load %[[RETPTR]] : !cir.ptr<!cir.vector<4 x !s64i>>, !cir.vector<4 x !s64i>
+  // CIR: cir.return %[[RETLOAD]] : !cir.vector<4 x !s64i>
+  
+  // LLVM-LABEL: test_mm512_mask_cvtepi16_epi8
+  // LLVM: %[[TRUNC:.*]] = trunc <32 x i16> %{{.*}} to <32 x i8>
+  // LLVM: %[[MASK_VEC:.*]] = bitcast i32 %{{.*}} to <32 x i1>
+  // LLVM: %[[SEL:.*]] = select <32 x i1> %[[MASK_VEC]], <32 x i8> %[[TRUNC]], <32 x i8> %{{.*}}
+  // LLVM: bitcast <32 x i8> %[[SEL]] to <4 x i64>
+  
+  // OGCG-LABEL: test_mm512_mask_cvtepi16_epi8
+  // OGCG: %[[TRUNC:.*]] = trunc <32 x i16> %{{.*}} to <32 x i8>
+  // OGCG: %[[MASK_VEC:.*]] = bitcast i32 %{{.*}} to <32 x i1>
+  // OGCG: %[[SEL:.*]] = select <32 x i1> %[[MASK_VEC]], <32 x i8> %[[TRUNC]], <32 x i8> %{{.*}}
+  // OGCG: bitcast <32 x i8> %[[SEL]] to <4 x i64>
+  return _mm512_mask_cvtepi16_epi8(__O, __M, __A);
+}
+
+__m256i test_mm512_maskz_cvtepi16_epi8(__mmask32 __M, __m512i __A) {
+  // CIR-LABEL: test_mm512_maskz_cvtepi16_epi8
+  // CIR: %[[CALL:.*]] = cir.call {{.*}} : (!u32i, !cir.vector<8 x !s64i>) -> !cir.vector<4 x !s64i>
+  // CIR: cir.store %[[CALL]], %[[RETPTR:.*]] : !cir.vector<4 x !s64i>, !cir.ptr<!cir.vector<4 x !s64i>>
+  // CIR: %[[RETLOAD:.*]] = cir.load %[[RETPTR]] : !cir.ptr<!cir.vector<4 x !s64i>>, !cir.vector<4 x !s64i>
+  // CIR: cir.return %[[RETLOAD]] : !cir.vector<4 x !s64i>
+  
+  // LLVM-LABEL: test_mm512_maskz_cvtepi16_epi8
+  // LLVM: %[[TRUNC:.*]] = trunc <32 x i16> %{{.*}} to <32 x i8>
+  // LLVM: %[[MASK_VEC:.*]] = bitcast i32 %{{.*}} to <32 x i1>
+  // LLVM: %[[SEL:.*]] = select <32 x i1> %[[MASK_VEC]], <32 x i8> %[[TRUNC]], <32 x i8> {{.*}}
+  // LLVM: bitcast <32 x i8> %[[SEL]] to <4 x i64>
+  
+  // OGCG-LABEL: test_mm512_maskz_cvtepi16_epi8
+  // OGCG: %[[TRUNC:.*]] = trunc <32 x i16> %{{.*}} to <32 x i8>
+  // OGCG: %[[MASK_VEC:.*]] = bitcast i32 %{{.*}} to <32 x i1>
+  // OGCG: %[[SEL:.*]] = select <32 x i1> %[[MASK_VEC]], <32 x i8> %[[TRUNC]], <32 x i8> {{.*}}
+  // OGCG: bitcast <32 x i8> %[[SEL]] to <4 x i64>
+  return _mm512_maskz_cvtepi16_epi8(__M, __A);
 }
 
 __m512i test_mm512_alignr_epi8(__m512i __A,__m512i __B) {
