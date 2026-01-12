@@ -1230,46 +1230,6 @@ static Value linearizeSubgroupIndices(ConversionPatternRewriter &rewriter,
   return linearizedOffset;
 }
 
-// Helper function to create the appropriate binary operation based on reduction
-// kind
-static Value reductionOpKind(ConversionPatternRewriter &rewriter, Location loc,
-                             vector::CombiningKind kind, Value lhs, Value rhs) {
-  Type elemType = getElementTypeOrSelf(lhs.getType());
-  bool isFloat = isa<FloatType>(elemType);
-
-  switch (kind) {
-  case vector::CombiningKind::ADD:
-    return isFloat ? arith::AddFOp::create(rewriter, loc, lhs, rhs).getResult()
-                   : arith::AddIOp::create(rewriter, loc, lhs, rhs).getResult();
-  case vector::CombiningKind::MUL:
-    return isFloat ? arith::MulFOp::create(rewriter, loc, lhs, rhs).getResult()
-                   : arith::MulIOp::create(rewriter, loc, lhs, rhs).getResult();
-  case vector::CombiningKind::MINSI:
-    return arith::MinSIOp::create(rewriter, loc, lhs, rhs).getResult();
-  case vector::CombiningKind::MINUI:
-    return arith::MinUIOp::create(rewriter, loc, lhs, rhs).getResult();
-  case vector::CombiningKind::MAXSI:
-    return arith::MaxSIOp::create(rewriter, loc, lhs, rhs).getResult();
-  case vector::CombiningKind::MAXUI:
-    return arith::MaxUIOp::create(rewriter, loc, lhs, rhs).getResult();
-  case vector::CombiningKind::AND:
-    return arith::AndIOp::create(rewriter, loc, lhs, rhs).getResult();
-  case vector::CombiningKind::OR:
-    return arith::OrIOp::create(rewriter, loc, lhs, rhs).getResult();
-  case vector::CombiningKind::XOR:
-    return arith::XOrIOp::create(rewriter, loc, lhs, rhs).getResult();
-  case vector::CombiningKind::MINNUMF:
-    return arith::MinNumFOp::create(rewriter, loc, lhs, rhs).getResult();
-  case vector::CombiningKind::MAXNUMF:
-    return arith::MaxNumFOp::create(rewriter, loc, lhs, rhs).getResult();
-  case vector::CombiningKind::MINIMUMF:
-    return arith::MinimumFOp::create(rewriter, loc, lhs, rhs).getResult();
-  case vector::CombiningKind::MAXIMUMF:
-    return arith::MaximumFOp::create(rewriter, loc, lhs, rhs).getResult();
-  }
-  llvm_unreachable("unsupported OpKind");
-}
-
 /// This pattern transforms vector.multi_dim_reduction operations from
 /// workgroup-level to subgroup-level execution with support for multiple
 /// reduction dimensions.
@@ -1282,7 +1242,7 @@ static Value reductionOpKind(ConversionPatternRewriter &rewriter, Location loc,
 ///
 /// 2. CROSS-SUBGROUP :
 ///    - Determines if cross-subgroup reduction is needed (when sg_layout > 1 in
-///    reduction dims)
+///      reduction dims & sgData[reduction dims] < wgData[reduction dims])
 ///    - If not needed, adds original accumulator and returns local results
 ///
 /// 3. SHARED LOCAL MEMORY (SLM) PHASE (when cross-subgroup reduction needed):
@@ -1357,7 +1317,11 @@ struct WgToSgMultiDimReductionOp
     bool needsCrossSubgroupReduction = false;
     SmallVector<int64_t> crossSgReductionDims;
     for (int64_t reductionDim : reductionDims) {
-      if (sgLayout[reductionDim] > 1) {
+      bool needsCrossSg =
+          (sgLayout[reductionDim] > 1) &&
+          (sgData[reductionDim] < originalSrcShape[reductionDim]);
+
+      if (needsCrossSg) {
         needsCrossSubgroupReduction = true;
         crossSgReductionDims.push_back(reductionDim);
       }
@@ -1367,8 +1331,8 @@ struct WgToSgMultiDimReductionOp
     if (!needsCrossSubgroupReduction) {
       SmallVector<Value> results;
       for (auto localResult : localReductions) {
-        auto finalResult = reductionOpKind(rewriter, loc, op.getKind(),
-                                           localResult, adaptor.getAcc()[0]);
+        auto finalResult = vector::makeArithReduction(
+            rewriter, loc, op.getKind(), localResult, adaptor.getAcc()[0]);
         if (auto defOp = finalResult.getDefiningOp())
           xegpu::setDistributeLayoutAttr(defOp->getResult(0),
                                          layout.dropSgLayoutAndData());
@@ -1507,8 +1471,8 @@ struct WgToSgMultiDimReductionOp
       }
     }
 
-    auto finalResult = reductionOpKind(rewriter, loc, op.getKind(),
-                                       finalReduce.getResult(), accToAdd);
+    auto finalResult = vector::makeArithReduction(
+        rewriter, loc, op.getKind(), finalReduce.getResult(), accToAdd);
 
     if (auto defOp = finalResult.getDefiningOp())
       xegpu::setDistributeLayoutAttr(defOp->getResult(0),
