@@ -43,16 +43,18 @@ S3:
   call void @llvm.lifetime.end.p0(ptr nonnull %v) #1
   tail call void @z1() #1
   br label %exit2
-; CHECK-NOT: settag
+; CHECK: call void @llvm.aarch64.settag(ptr %v, i64 48)
 
+; Dominated by S1 and S2
 exit1:
 ; CHECK-LABEL: exit1:
 ; CHECK: call void @llvm.aarch64.settag(ptr %v, i64 48)
   ret void
 
+; Dominated by S3
 exit2:
 ; CHECK-LABEL: exit2:
-; CHECK: call void @llvm.aarch64.settag(ptr %v, i64 48)
+; CHECK-NOT: call void @llvm.aarch64.settag
   ret void
 
 exit3:
