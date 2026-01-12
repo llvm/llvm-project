@@ -17,16 +17,16 @@ v_add_co_ci_u32 v255, vcc_lo, v255, v255, vcc_lo dpp8:[0,0,0,0,0,0,0,0] fi:0
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_add_co_ci_u32 v5, vcc, v1, v2, vcc dpp8:[7,6,5,4,3,2,1,0]
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_add_co_ci_u32_dpp v5, vcc, v1, v2, vcc dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0x04,0x0a,0x40,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_add_co_ci_u32 v5, vcc, v1, v2, vcc dpp8:[7,6,5,4,3,2,1,0] fi:1
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_add_co_ci_u32_dpp v5, vcc, v1, v2, vcc dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0x04,0x0a,0x40,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_add_co_ci_u32 v255, vcc, v255, v255, vcc dpp8:[0,0,0,0,0,0,0,0] fi:0
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_add_co_ci_u32_dpp v255, vcc, v255, v255, vcc dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xfe,0xff,0x41,0xff,0x00,0x00,0x00]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_add_f16 v5.l, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: v_add_f16_dpp v5.l, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0x04,0x0a,0x64,0x01,0x77,0x39,0x05]
@@ -95,16 +95,16 @@ v_cndmask_b32 v255, v255, v255, vcc_lo dpp8:[0,0,0,0,0,0,0,0] fi:0
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cndmask_b32 v5, v1, v2, vcc dpp8:[7,6,5,4,3,2,1,0]
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_cndmask_b32_dpp v5, v1, v2, vcc dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0x04,0x0a,0x02,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cndmask_b32 v5, v1, v2, vcc dpp8:[7,6,5,4,3,2,1,0] fi:1
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_cndmask_b32_dpp v5, v1, v2, vcc dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0x04,0x0a,0x02,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cndmask_b32 v255, v255, v255, vcc dpp8:[0,0,0,0,0,0,0,0] fi:0
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_cndmask_b32_dpp v255, v255, v255, vcc dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xfe,0xff,0x03,0xff,0x00,0x00,0x00]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_pk_rtz_f16_f32 v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: v_cvt_pk_rtz_f16_f32_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0x04,0x0a,0x5e,0x01,0x77,0x39,0x05]
@@ -392,16 +392,16 @@ v_sub_co_ci_u32 v255, vcc_lo, v255, v255, vcc_lo dpp8:[0,0,0,0,0,0,0,0] fi:0
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_sub_co_ci_u32 v5, vcc, v1, v2, vcc dpp8:[7,6,5,4,3,2,1,0]
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_sub_co_ci_u32_dpp v5, vcc, v1, v2, vcc dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0x04,0x0a,0x42,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_sub_co_ci_u32 v5, vcc, v1, v2, vcc dpp8:[7,6,5,4,3,2,1,0] fi:1
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_sub_co_ci_u32_dpp v5, vcc, v1, v2, vcc dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0x04,0x0a,0x42,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_sub_co_ci_u32 v255, vcc, v255, v255, vcc dpp8:[0,0,0,0,0,0,0,0] fi:0
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_sub_co_ci_u32_dpp v255, vcc, v255, v255, vcc dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xfe,0xff,0x43,0xff,0x00,0x00,0x00]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_sub_f16 v5.l, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: v_sub_f16_dpp v5.l, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0x04,0x0a,0x66,0x01,0x77,0x39,0x05]
@@ -452,16 +452,16 @@ v_subrev_co_ci_u32 v255, vcc_lo, v255, v255, vcc_lo dpp8:[0,0,0,0,0,0,0,0] fi:0
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_subrev_co_ci_u32 v5, vcc, v1, v2, vcc dpp8:[7,6,5,4,3,2,1,0]
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_subrev_co_ci_u32_dpp v5, vcc, v1, v2, vcc dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0x04,0x0a,0x44,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_subrev_co_ci_u32 v5, vcc, v1, v2, vcc dpp8:[7,6,5,4,3,2,1,0] fi:1
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_subrev_co_ci_u32_dpp v5, vcc, v1, v2, vcc dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0x04,0x0a,0x44,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_subrev_co_ci_u32 v255, vcc, v255, v255, vcc dpp8:[0,0,0,0,0,0,0,0] fi:0
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_subrev_co_ci_u32_dpp v255, vcc, v255, v255, vcc dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xfe,0xff,0x45,0xff,0x00,0x00,0x00]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_subrev_f16 v5.l, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: v_subrev_f16_dpp v5.l, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0x04,0x0a,0x68,0x01,0x77,0x39,0x05]

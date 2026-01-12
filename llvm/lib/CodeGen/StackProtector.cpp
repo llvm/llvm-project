@@ -581,7 +581,7 @@ bool InsertStackProtectors(const TargetMachine *TM, Function *F,
   // impossible to emit the check in IR, so the target *must* support stack
   // protection in SDAG.
   bool SupportsSelectionDAGSP =
-      TLI->useStackGuardMixCookie() ||
+      TLI->useStackGuardXorFP() ||
       (EnableSelectionDAGSP && !TM->Options.EnableFastISel);
   AllocaInst *AI = nullptr; // Place on stack that stores the stack guard.
   BasicBlock *FailBB = nullptr;
