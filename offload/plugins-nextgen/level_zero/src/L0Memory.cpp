@@ -16,7 +16,6 @@
 
 namespace llvm::omp::target::plugin {
 
-#if OMPTARGET_DEBUG
 static const char *AllocKindToStr(int32_t Kind) {
   switch (Kind) {
   case TARGET_ALLOC_DEVICE:
@@ -29,7 +28,6 @@ static const char *AllocKindToStr(int32_t Kind) {
     return "DEFAULT";
   }
 }
-#endif
 
 void *MemAllocatorTy::MemPoolTy::BlockTy::alloc() {
   if (isFull())
