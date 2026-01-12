@@ -60,6 +60,7 @@
 #include "math/frexpf.h"
 #include "math/frexpf128.h"
 #include "math/frexpf16.h"
+#include "math/ilogb.h"
 #include "math/ilogbf16.h"
 #include "math/ldexpf.h"
 #include "math/ldexpf128.h"
