@@ -1150,6 +1150,11 @@ public:
   /// underlying ingredient.
   bool doesGeneratePerAllLanes() const;
 
+  /// Return the number of operands determined by the opcode of the
+  /// VPInstruction. Returns -1u if the number of operands cannot be determined
+  /// directly by the opcode.
+  static unsigned getNumOperandsForOpcode(unsigned Opcode);
+
 private:
   typedef unsigned char OpcodeTy;
   OpcodeTy Opcode;
@@ -1165,13 +1170,6 @@ private:
   /// the modeled instruction. \returns the generated value. . In some cases an
   /// existing value is returned rather than a generated one.
   Value *generate(VPTransformState &State);
-
-#if !defined(NDEBUG)
-  /// Return the number of operands determined by the opcode of the
-  /// VPInstruction. Returns -1u if the number of operands cannot be determined
-  /// directly by the opcode.
-  static unsigned getNumOperandsForOpcode(unsigned Opcode);
-#endif
 
 public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,

@@ -1,4 +1,4 @@
-math/clc_ldexp_override.cl
+math/clc_ldexp.cl
 mem_fence/clc_mem_fence.cl
 synchronization/clc_work_group_barrier.cl
 workitem/clc_get_global_offset.cl
