@@ -107,8 +107,11 @@ lldb::ChildCacheState GenericBitsetFrontEnd::Update() {
     ConstString type_name =
         m_backend.GetCompilerType().GetTypeName(/*BaseOnly=*/true);
     llvm::StringRef size_str = type_name.GetStringRef();
+    assert(size_str.starts_with("bitset<") && size_str.ends_with(">"));
+
     size_str.consume_front("bitset<");
     size_str.consume_back(">");
+    size_str = size_str.trim();
     if (size_str.getAsInteger(10, size))
       return lldb::ChildCacheState::eRefetch;
   }
