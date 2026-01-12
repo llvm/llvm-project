@@ -286,9 +286,9 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
 
   lldb_private::FileSystem::Initialize();
   if (!stdio.empty()) {
-    llvm::SmallVector<llvm::StringRef, 3> stdio_files;
-    stdio.split(stdio_files, ':');
     constexpr size_t num_of_stdio = 3;
+    llvm::SmallVector<llvm::StringRef, num_of_stdio> stdio_files;
+    stdio.split(stdio_files, ':');
     stdio_files.resize(std::max(num_of_stdio, stdio_files.size()));
     if (llvm::Error err = SetupIORedirection(stdio_files))
       return err;
