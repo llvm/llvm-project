@@ -20,6 +20,25 @@ func.func @single_expression(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32) -> 
   return %c : i1
 }
 
+// CHECK-LABEL:   func.func @expression_recurring_args(
+// CHECK-SAME:      %[[ARG0:.*]]: i32,
+// CHECK-SAME:      %[[ARG1:.*]]: i32) -> i1 {
+// CHECK:           %[[EXPRESSION_0:.*]] = emitc.expression %[[ARG1]], %[[ARG0]] : (i32, i32) -> i1 {
+// CHECK:             %[[VAL_0:.*]] = mul %[[ARG0]], %[[ARG1]] : (i32, i32) -> i32
+// CHECK:             %[[VAL_1:.*]] = sub %[[VAL_0]], %[[ARG0]] : (i32, i32) -> i32
+// CHECK:             %[[VAL_2:.*]] = cmp lt, %[[VAL_1]], %[[ARG1]] : (i32, i32) -> i1
+// CHECK:             yield %[[VAL_2]] : i1
+// CHECK:           }
+// CHECK:           return %[[EXPRESSION_0]] : i1
+// CHECK:         }
+
+func.func @expression_recurring_args(%arg0: i32, %arg1: i32) -> i1 {
+  %a = emitc.mul %arg0, %arg1 : (i32, i32) -> i32
+  %b = emitc.sub %a, %arg0 : (i32, i32) -> i32
+  %c = emitc.cmp lt, %b, %arg1 :(i32, i32) -> i1
+  return %c : i1
+}
+
 // CHECK-LABEL: func.func @multiple_expressions(
 // CHECK-SAME:      %[[VAL_0:.*]]: i32, %[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: i32, %[[VAL_3:.*]]: i32) -> (i32, i32) {
 // CHECK:         %[[VAL_4:.*]] = emitc.expression %[[VAL_2]], %[[VAL_0]], %[[VAL_1]] : (i32, i32, i32) -> i32 {

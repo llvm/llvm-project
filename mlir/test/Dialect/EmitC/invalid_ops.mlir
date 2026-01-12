@@ -379,6 +379,19 @@ emitc.func @test_expression_op_outside_expression() {
 
 // -----
 
+func.func @test_expression_recurring_operands(%arg0: i32, %arg1: i32) -> i32 {
+  // expected-error @+1 {{'emitc.expression' with recurring operands expected block arguments}}
+  %r = emitc.expression %arg0, %arg1, %arg0 : (i32, i32, i32) -> i32 {
+    %a = emitc.rem %arg0, %arg1 : (i32, i32) -> i32
+    %b = emitc.add %a, %arg0 : (i32, i32) -> i32
+    %c = emitc.mul %b, %a : (i32, i32) -> i32
+    emitc.yield %c : i32
+  }
+  return %r : i32
+}
+
+// -----
+
 // expected-error @+1 {{'emitc.func' op requires zero or exactly one result, but has 2}}
 emitc.func @multiple_results(%0: i32) -> (i32, i32) {
   emitc.return %0 : i32
