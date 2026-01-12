@@ -796,20 +796,15 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
       const ConstantRange IVRange =
           IsSigned ? SE.getSignedRange(AR) : SE.getUnsignedRange(AR);
       unsigned NumBits = Ty->getIntegerBitWidth();
-      ConstantRange ValidRange = ConstantRange::getEmpty(NumBits);
+      APInt Sentinel;
       if (isFindLastIVRecurrenceKind(Kind)) {
-        APInt Sentinel = IsSigned ? APInt::getSignedMinValue(NumBits)
-                                  : APInt::getMinValue(NumBits);
-        ValidRange = ConstantRange::getNonEmpty(Sentinel + 1, Sentinel);
+        Sentinel = IsSigned ? APInt::getSignedMinValue(NumBits)
+                            : APInt::getMinValue(NumBits);
       } else {
-        if (IsSigned)
-          ValidRange =
-              ConstantRange::getNonEmpty(APInt::getSignedMinValue(NumBits),
-                                         APInt::getSignedMaxValue(NumBits) - 1);
-        else
-          ValidRange = ConstantRange::getNonEmpty(
-              APInt::getMinValue(NumBits), APInt::getMaxValue(NumBits) - 1);
+        Sentinel = IsSigned ? APInt::getSignedMaxValue(NumBits)
+                            : APInt::getMaxValue(NumBits);
       }
+      ConstantRange ValidRange = ConstantRange(Sentinel).inverse();
 
       LLVM_DEBUG(dbgs() << "LV: "
                         << (isFindLastIVRecurrenceKind(Kind) ? "FindLastIV"
