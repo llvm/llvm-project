@@ -2138,7 +2138,7 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI, int Index,
   if (OnlyToVGPR && !SpillToVGPR)
     return false;
 
-  int SpillOfst = MI->getOperand(2).getImm();
+  int SpillOffset = MI->getOperand(2).getImm();
   if (SpillToVGPR) {
     for (unsigned i = 0, e = SB.NumSubRegs; i < e; ++i) {
       Register SubReg =
@@ -2146,7 +2146,7 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI, int Index,
               ? SB.SuperReg
               : Register(getSubReg(SB.SuperReg, SB.SplitParts[i]));
 
-      SpilledReg Spill = VGPRSpills[i + SpillOfst];
+      SpilledReg Spill = VGPRSpills[i + SpillOffset];
       auto MIB = BuildMI(*SB.MBB, MI, SB.DL,
                          SB.TII.get(AMDGPU::SI_RESTORE_S32_FROM_VGPR), SubReg)
                      .addReg(Spill.VGPR)
@@ -2183,7 +2183,7 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI, int Index,
         auto MIB = BuildMI(*SB.MBB, MI, SB.DL,
                            SB.TII.get(AMDGPU::SI_RESTORE_S32_FROM_VGPR), SubReg)
                        .addReg(SB.TmpVGPR, getKillRegState(LastSubReg))
-                       .addImm(i + SpillOfst);
+                       .addImm(i + SpillOffset);
         if (SB.NumSubRegs > 1 && i == 0)
           MIB.addReg(SB.SuperReg, RegState::ImplicitDefine);
         if (Indexes) {
