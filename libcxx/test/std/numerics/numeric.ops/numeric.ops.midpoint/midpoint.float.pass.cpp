@@ -5,131 +5,161 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// REQUIRES: std-at-least-c++20
 
 // <numeric>
 
-// template <class _Float>
-// _Tp midpoint(_Float __a, _Float __b) noexcept
-//
+// template <class _Fp>
+// _Fp midpoint(_Fp __a, _Fp __b) noexcept
 
+#include <cassert>
+#include <cmath>
+#include <concepts>
 #include <limits>
 #include <numeric>
-#include <cassert>
 
 #include "test_macros.h"
 #include "fp_compare.h"
 
-//  Totally arbitrary picks for precision
 template <typename T>
-constexpr T fp_error_pct();
-
-template <>
-constexpr float fp_error_pct<float>() { return 1.0e-4f; }
-
-template <>
-constexpr double fp_error_pct<double>() { return 1.0e-12; }
-
-template <>
-constexpr long double fp_error_pct<long double>() { return 1.0e-13l; }
-
-
-template <typename T>
-void fp_test()
-{
-    ASSERT_SAME_TYPE(T, decltype(std::midpoint(T(), T())));
-    ASSERT_NOEXCEPT(             std::midpoint(T(), T()));
-
-    constexpr T maxV = std::numeric_limits<T>::max();
-    constexpr T minV = std::numeric_limits<T>::min();
-
-//  Things that can be compared exactly
-    static_assert((std::midpoint(T(0), T(0))   == T(0)),   "");
-    static_assert((std::midpoint(T(2), T(4))   == T(3)),   "");
-    static_assert((std::midpoint(T(4), T(2))   == T(3)),   "");
-    static_assert((std::midpoint(T(3), T(4))   == T(3.5)), "");
-    static_assert((std::midpoint(T(0), T(0.4)) == T(0.2)), "");
-
-//  Things that can't be compared exactly
-    constexpr T pct = fp_error_pct<T>();
-    assert((fptest_close_pct(std::midpoint(T( 1.3), T(11.4)), T( 6.35),    pct)));
-    assert((fptest_close_pct(std::midpoint(T(11.33), T(31.45)), T(21.39),  pct)));
-    assert((fptest_close_pct(std::midpoint(T(-1.3), T(11.4)), T( 5.05),    pct)));
-    assert((fptest_close_pct(std::midpoint(T(11.4), T(-1.3)), T( 5.05),    pct)));
-    assert((fptest_close_pct(std::midpoint(T(0.1),  T(0.4)),  T(0.25),     pct)));
-
-    assert((fptest_close_pct(std::midpoint(T(11.2345), T(14.5432)), T(12.88885),  pct)));
-
-//  From e to pi
-    assert((fptest_close_pct(std::midpoint(T(2.71828182845904523536028747135266249775724709369995),
-                                      T(3.14159265358979323846264338327950288419716939937510)),
-                                      T(2.92993724102441923691146542731608269097720824653752),  pct)));
-
-    assert((fptest_close_pct(std::midpoint(maxV, T(0)), maxV/2, pct)));
-    assert((fptest_close_pct(std::midpoint(T(0), maxV), maxV/2, pct)));
-    assert((fptest_close_pct(std::midpoint(minV, T(0)), minV/2, pct)));
-    assert((fptest_close_pct(std::midpoint(T(0), minV), minV/2, pct)));
-    assert((fptest_close_pct(std::midpoint(maxV, maxV), maxV,   pct)));
-    assert((fptest_close_pct(std::midpoint(minV, minV), minV,   pct)));
-    assert((fptest_close_pct(std::midpoint(maxV, minV), maxV/2, pct)));
-    assert((fptest_close_pct(std::midpoint(minV, maxV), maxV/2, pct)));
-
-//  Near the min and the max
-    assert((fptest_close_pct(std::midpoint(maxV*T(0.75), maxV*T(0.50)),  maxV*T(0.625), pct)));
-    assert((fptest_close_pct(std::midpoint(maxV*T(0.50), maxV*T(0.75)),  maxV*T(0.625), pct)));
-    assert((fptest_close_pct(std::midpoint(minV*T(2),    minV*T(8)),     minV*T(5),     pct)));
-
-//  Big numbers of different signs
-    assert((fptest_close_pct(std::midpoint(maxV*T( 0.75),  maxV*T(-0.5)), maxV*T( 0.125), pct)));
-    assert((fptest_close_pct(std::midpoint(maxV*T(-0.75),  maxV*T( 0.5)), maxV*T(-0.125), pct)));
-
-//  Denormalized values
-//  TODO
-
-//  Check two values "close to each other"
-    T d1 = T(3.14);
-    T d0 = std::nextafter(d1, T(2));
-    T d2 = std::nextafter(d1, T(5));
-    assert(d0 < d1);  // sanity checking
-    assert(d1 < d2);  // sanity checking
-
-#if defined(__PPC__) && (defined(__LONG_DOUBLE_128__) && __LONG_DOUBLE_128__) &&                                       \
-    !(defined(__LONG_DOUBLE_IEEE128__) && __LONG_DOUBLE_IEEE128__)
-//  For 128 bit long double implemented as 2 doubles on PowerPC,
-//  nextafterl() of libm gives imprecise results which fails the
-//  midpoint() tests below. So skip the test for this case.
-    if constexpr (sizeof(T) != 16)
-#endif
-    {
-    //  Since there's nothing in between, the midpoint has to be one or the other
-        T res;
-        res = std::midpoint(d0, d1);
-        assert(res == d0 || res == d1);
-        assert(d0 <= res);
-        assert(res <= d1);
-        res = std::midpoint(d1, d0);
-        assert(res == d0 || res == d1);
-        assert(d0 <= res);
-        assert(res <= d1);
-
-        res = std::midpoint(d1, d2);
-        assert(res == d1 || res == d2);
-        assert(d1 <= res);
-        assert(res <= d2);
-        res = std::midpoint(d2, d1);
-        assert(res == d1 || res == d2);
-        assert(d1 <= res);
-        assert(res <= d2);
-    }
+constexpr bool is_nan(T x) {
+  return x != x;
 }
 
+template <typename T>
+constexpr T get_error_pct() {
+  if constexpr (std::same_as<T, float>)
+    return 1.0e-4f;
+  else if constexpr (std::same_as<T, double>)
+    return 1.0e-12;
+  else
+    return 1.0e-13l;
+}
 
-int main (int, char**)
-{
-    fp_test<float>();
-    fp_test<double>();
-    fp_test<long double>();
+template <typename T>
+constexpr bool check_near(T a, T b, T expect) {
+  if (std::is_constant_evaluated())
+    return true;
+  return fptest_close_pct(std::midpoint(a, b), expect, get_error_pct<T>());
+}
 
-    return 0;
+template <typename T>
+constexpr bool check_exact(T a, T b, T expect) {
+  T res = std::midpoint(a, b);
+  if (is_nan(expect)) {
+    return is_nan(res);
+  } else {
+    return res == expect;
+  }
+}
+
+template <std::floating_point T>
+constexpr bool test_ppc_edge_cases() {
+  if (std::is_constant_evaluated())
+    return true;
+
+// For 128 bit long double implemented as 2 doubles on PowerPC,
+// nextafterl() of libm gives imprecise results which fails the
+// midpoint() tests below. So skip the test for this case.
+#if defined(__PPC__) && (defined(__LONG_DOUBLE_128__) && __LONG_DOUBLE_128__) &&                                       \
+    !(defined(__LONG_DOUBLE_IEEE128__) && __LONG_DOUBLE_IEEE128__)
+  if constexpr (sizeof(T) == 16)
+    return true;
+#endif
+
+  T d1 = 3.14;
+  T d0 = std::nextafter(d1, T{2});
+  T d2 = std::nextafter(d1, T{5});
+
+  auto verify = [](T res, T low, T high) { return (res == low || res == high) && (low <= res && res <= high); };
+
+  return verify(std::midpoint(d0, d1), d0, d1) && verify(std::midpoint(d1, d2), d1, d2);
+}
+
+template <typename T>
+constexpr bool test_floating_points() {
+  ASSERT_SAME_TYPE(T, decltype(std::midpoint(T{}, T{})));
+  ASSERT_NOEXCEPT(std::midpoint(T{}, T{}));
+
+  constexpr T max_v      = std::numeric_limits<T>::max();
+  constexpr T min_v      = std::numeric_limits<T>::min();
+  constexpr T denorm_min = std::numeric_limits<T>::denorm_min();
+  constexpr T inf        = std::numeric_limits<T>::infinity();
+  constexpr T qnan       = std::numeric_limits<T>::quiet_NaN();
+
+  // Things that can be compared exactly
+  assert(check_exact<T>(0, 0, 0));
+  assert(check_exact<T>(2, 4, 3));
+  assert(check_exact<T>(4, 2, 3));
+  assert(check_exact<T>(3, 4, 3.5));
+  assert(check_exact<T>(0, 0.4, 0.2));
+  assert(check_exact<T>(-2, -4, -3));
+  assert(check_exact<T>(-2, 2, 0));
+  assert(check_exact<T>(2, -2, 0));
+
+  // Infinity
+  assert(check_exact<T>(inf, inf, inf));
+  assert(check_exact<T>(-inf, -inf, -inf));
+  if (!std::is_constant_evaluated()) {
+    assert(check_exact<T>(inf, -inf, qnan));
+  }
+  assert(check_exact<T>(inf, 0, inf));
+
+  // NaN
+  if (!std::is_constant_evaluated()) {
+    assert(check_exact<T>(qnan, 0, qnan));
+    assert(check_exact<T>(qnan, qnan, qnan));
+  }
+
+  // Subnormal
+  assert(check_exact<T>(denorm_min, 0, 0));
+  assert(check_exact<T>(denorm_min, denorm_min, denorm_min));
+
+  // Things that can't be compared exactly
+  assert(check_near<T>(1.3, 11.4, 6.35));
+  assert(check_near<T>(11.33, 31.45, 21.39));
+  assert(check_near<T>(-1.3, 11.4, 5.05));
+  assert(check_near<T>(11.4, -1.3, 5.05));
+  assert(check_near<T>(11.2345, 14.5432, 12.88885));
+  assert(check_near<T>(2.71828182845904523536028747135266249775724709369995,
+                       3.14159265358979323846264338327950288419716939937510,
+                       2.92993724102441923691146542731608269097720824653752));
+
+  assert(check_near<T>(max_v, 0, max_v / 2));
+  assert(check_near<T>(0, max_v, max_v / 2));
+  assert(check_near<T>(min_v, 0, min_v / 2));
+  assert(check_near<T>(0, min_v, min_v / 2));
+  assert(check_near<T>(max_v, max_v, max_v));
+  assert(check_near<T>(min_v, min_v, min_v));
+  assert(check_near<T>(max_v, min_v, max_v / 2));
+  assert(check_near<T>(min_v, max_v, max_v / 2));
+
+  // Near the min and the max
+  assert(check_near<T>(max_v * 0.75, max_v * 0.50, max_v * 0.625));
+  assert(check_near<T>(max_v * 0.50, max_v * 0.75, max_v * 0.625));
+  assert(check_near<T>(min_v * 2, min_v * 8, min_v * 5));
+
+  // Big numbers of different signs
+  assert(check_near<T>(max_v * 0.75, max_v * -0.50, max_v * 0.125));
+  assert(check_near<T>(max_v * -0.75, max_v * 0.50, max_v * -0.125));
+
+  assert(test_ppc_edge_cases<T>());
+
+  return true;
+}
+
+constexpr bool test() {
+  test_floating_points<float>();
+  test_floating_points<double>();
+  test_floating_points<long double>();
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+  static_assert(test());
+
+  return 0;
 }
