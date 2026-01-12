@@ -7361,7 +7361,7 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
     MainResumeValue = EpiRedHeaderPhi->getStartValue()->getUnderlyingValue();
   if (RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind)) {
     [[maybe_unused]] Value *StartV =
-        EpiRedResult->getOperand(1)->getLiveInIRValue();
+        EpiRedResult->getOperand(0)->getLiveInIRValue();
     auto *Cmp = cast<ICmpInst>(MainResumeValue);
     assert(Cmp->getPredicate() == CmpInst::ICMP_NE &&
            "AnyOf expected to start with ICMP_NE");
@@ -8770,9 +8770,22 @@ void LoopVectorizationPlanner::addReductionResultComputation(
                                {PhiR, Start, Sentinel, NewExitingVPV}, ExitDL);
     } else if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RecurrenceKind)) {
       VPValue *Start = PhiR->getStartValue();
+      // Find the NewVal from the original scalar select. NewVal is the value
+      // selected when the condition is true (i.e., the non-phi operand).
+      // We need to find the SelectInst among the original phi's users.
+      auto *OrigPhi = cast<PHINode>(PhiR->getUnderlyingInstr());
+      SelectInst *SI = nullptr;
+      for (auto *U : OrigPhi->users()) {
+        if ((SI = dyn_cast<SelectInst>(U)))
+          break;
+      }
+      assert(SI && "AnyOf reduction must have a select user");
+      Value *NewValIR = SI->getTrueValue() == OrigPhi ? SI->getFalseValue()
+                                                      : SI->getTrueValue();
+      VPValue *NewVal = Plan->getOrAddLiveIn(NewValIR);
       FinalReductionResult =
           Builder.createNaryOp(VPInstruction::ComputeAnyOfResult,
-                               {PhiR, Start, NewExitingVPV}, ExitDL);
+                               {Start, NewVal, NewExitingVPV}, ExitDL);
     } else {
       FastMathFlags FMFs =
           RecurrenceDescriptor::isFloatingPointRecurrenceKind(RecurrenceKind)
@@ -9449,9 +9462,8 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
 
       ResumeV = cast<PHINode>(ReductionPhi->getUnderlyingInstr())
                     ->getIncomingValueForBlock(L->getLoopPreheader());
-      RecurKind RK = ReductionPhi->getRecurrenceKind();
-      if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) {
-        Value *StartV = RdxResult->getOperand(1)->getLiveInIRValue();
+      if (RdxResult->getOpcode() == VPInstruction::ComputeAnyOfResult) {
+        Value *StartV = RdxResult->getOperand(0)->getLiveInIRValue();
         // VPReductionPHIRecipes for AnyOf reductions expect a boolean as
         // start value; compare the final value from the main vector loop
         // to the start value.
@@ -9460,7 +9472,7 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
         ResumeV = Builder.CreateICmpNE(ResumeV, StartV);
         if (auto *I = dyn_cast<Instruction>(ResumeV))
           InstsToMove.push_back(I);
-      } else if (RecurrenceDescriptor::isFindIVRecurrenceKind(RK)) {
+      } else if (RdxResult->getOpcode() == VPInstruction::ComputeFindIVResult) {
         Value *StartV = getStartValueFromReductionResult(RdxResult);
         ToFrozen[StartV] = cast<PHINode>(ResumeV)->getIncomingValueForBlock(
             EPI.MainLoopIterationCountCheck);

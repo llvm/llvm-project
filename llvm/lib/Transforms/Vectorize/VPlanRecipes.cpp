@@ -711,17 +711,22 @@ Value *VPInstruction::generate(VPTransformState &State) {
                                        Builder.getInt32(0));
   }
   case VPInstruction::ComputeAnyOfResult: {
-    // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
-    // and will be removed by breaking up the recipe further.
-    auto *PhiR = cast<VPReductionPHIRecipe>(getOperand(0));
-    auto *OrigPhi = cast<PHINode>(PhiR->getUnderlyingValue());
+    // Operands: Start, NewVal, followed by reduction parts.
+    Value *InitVal = State.get(getOperand(0), VPLane(0));
+    Value *NewVal = State.get(getOperand(1), VPLane(0));
     Value *ReducedPartRdx = State.get(getOperand(2));
     for (unsigned Idx = 3; Idx < getNumOperands(); ++Idx)
       ReducedPartRdx =
           Builder.CreateBinOp(Instruction::Or, State.get(getOperand(Idx)),
                               ReducedPartRdx, "bin.rdx");
-    return createAnyOfReduction(Builder, ReducedPartRdx,
-                                State.get(getOperand(1), VPLane(0)), OrigPhi);
+    // If any predicate is true it means that we want to select the new value.
+    Value *AnyOf = ReducedPartRdx->getType()->isVectorTy()
+                       ? Builder.CreateOrReduce(ReducedPartRdx)
+                       : ReducedPartRdx;
+    // The compares in the loop may yield poison, which propagates through the
+    // bitwise ORs. Freeze it here before the condition is used.
+    AnyOf = Builder.CreateFreeze(AnyOf);
+    return Builder.CreateSelect(AnyOf, NewVal, InitVal, "rdx.select");
   }
   case VPInstruction::ComputeFindIVResult: {
     // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
@@ -1410,6 +1415,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
     // WidePtrAdd supports scalar and vector base addresses.
     return false;
   case VPInstruction::ComputeAnyOfResult:
+    return Op == getOperand(0) || Op == getOperand(1);
   case VPInstruction::ComputeFindIVResult:
     return Op == getOperand(1);
   case VPInstruction::ExtractLane:
@@ -2176,6 +2182,9 @@ void VPIRFlags::printFlags(raw_ostream &O) const {
     RecurKind RK = getRecurKind();
     O << " (";
     switch (RK) {
+    case RecurKind::AnyOf:
+      O << "any-of";
+      break;
     case RecurKind::SMax:
       O << "smax";
       break;
