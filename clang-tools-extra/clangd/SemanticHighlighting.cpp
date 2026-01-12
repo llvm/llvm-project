@@ -1190,6 +1190,8 @@ getSemanticHighlightings(ParsedAST &AST, bool IncludeInactiveRegionTokens) {
     auto &T = Builder.addToken(M.toRange(C.getSourceManager()),
                                HighlightingKind::Macro);
     T.addModifier(HighlightingModifier::GlobalScope);
+    if (M.IsCommandLineDefined)
+      T.addModifier(HighlightingModifier::CommandLineDefined);
     if (M.IsDefinition)
       T.addModifier(HighlightingModifier::Declaration);
   };
@@ -1319,6 +1321,7 @@ highlightingModifierFromString(llvm::StringRef Name) {
       {"ConstructorOrDestructor",
        HighlightingModifier::ConstructorOrDestructor},
       {"UserDefined", HighlightingModifier::UserDefined},
+      {"CommandLineDefined", HighlightingModifier::CommandLineDefined},
       {"FunctionScope", HighlightingModifier::FunctionScope},
       {"ClassScope", HighlightingModifier::ClassScope},
       {"FileScope", HighlightingModifier::FileScope},
@@ -1489,6 +1492,8 @@ llvm::StringRef toSemanticTokenModifier(HighlightingModifier Modifier) {
     return "constructorOrDestructor"; // nonstandard
   case HighlightingModifier::UserDefined:
     return "userDefined"; // nonstandard
+  case HighlightingModifier::CommandLineDefined:
+    return "commandLine"; // nonstandard
   case HighlightingModifier::FunctionScope:
     return "functionScope"; // nonstandard
   case HighlightingModifier::ClassScope:
