@@ -7,10 +7,23 @@ on:
   push:
     branches:
       - ripple
+      - ripple_rebase
   pull_request:
     types: [opened, reopened, synchronize]
     branches:
       - ripple
+    paths:
+      - "llvm/lib/**"
+      - "llvm/include/**"
+      - "llvm/test/Transforms/Ripple/**"
+      - "clang/lib/**"
+      - "clang/include/**"
+      - "clang/test/Ripple/**"
+      - "compiler-rt/lib/ripple/**"
+      - ".github/**"
+
+env:
+  LIT_OPTS: --no-progress-bar -v --show-unsupported --show-xfail --time-tests
 
 jobs:
   build_and_test:
@@ -18,12 +31,10 @@ jobs:
     name: Build and Test ripple
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
         os: [ubuntu-24.04]
         targets:
           - { arch: X86, triple: x86_64-pc-linux-gnu }
-          - { arch: Hexagon, triple: hexagon-unknown-elf }
           - { arch: AArch64, triple: aarch64-linux-gnu }
         include:
           - cc: clang-18
@@ -33,14 +44,15 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
-      - name: Install test requirements
+      - name: Get LLD
         run: |
           sudo apt-get update
-          sudo apt-get install -y libc6-dev
+          sudo apt-get install -y lld
+          sudo rm -rf /var/lib/apt/lists/*
 
       - name: Configure
         run: |
-          cmake -G Ninja -S ${{ github.workspace }}/llvm -B build \
+          cmake -G Ninja -S llvm -B build \
             -DCMAKE_BUILD_TYPE=Release \
             -DLLVM_ENABLE_ASSERTIONS=ON \
             -DCMAKE_C_COMPILER=${{ matrix.cc }} \
@@ -51,10 +63,98 @@ jobs:
             -DLLVM_DEFAULT_TARGET_TRIPLE=${{ matrix.targets.triple }} \
             -DLLVM_PARALLEL_LINK_JOBS=1
 
-      - name: Ripple Clang Lit Tests
+      - name: Clang Ripple Lit Tests
+        run: cmake --build build --target check-clang-ripple
+
+      - name: Clang AST Lit Tests (Ripple Parallel)
+        run: cmake --build build --target check-clang-ast
+
+      - name: Ripple LLVM Lit Tests
+        run: cmake --build build --target check-llvm-transforms-ripple
+
+  hexagon_build_and_test:
+    env:
+      HEXAGON_TOOLCHAIN_URL: https://artifacts.codelinaro.org/artifactory/codelinaro-toolchain-for-hexagon/20.1.4/clang+llvm-20.1.4-cross-hexagon-unknown-linux-musl.tar.zst
+    if: github.repository_owner == 'Ripple-Programming'
+    name: Build and Test ripple
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-24.04]
+        targets:
+          - { arch: Hexagon, triple: hexagon-unknown-linux-musl }
+        include:
+          - cc: clang-18
+            cxx: clang++-18
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
+      - name: Get Hexagon Toolchain
         run: |
-          cmake --build build --target check-clang-ripple
-          cmake --build build --target check-clang-ast
+          mkdir hexagon_toolchain
+          wget -qO - $HEXAGON_TOOLCHAIN_URL | \
+            tar --zstd -xvf - --strip-component=2 -C hexagon_toolchain
+
+      - name: Get LLD
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lld
+          sudo rm -rf /var/lib/apt/lists/*
+
+      - name: Configure
+        run: |
+          cmake -G Ninja -S llvm -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLLVM_ENABLE_ASSERTIONS=ON \
+            -DCMAKE_C_COMPILER=${{ matrix.cc }} \
+            -DCMAKE_CXX_COMPILER=${{ matrix.cxx }} \
+            -DLLVM_USE_LINKER=lld \
+            -DLLVM_ENABLE_PROJECTS="clang" \
+            -DLLVM_TARGETS_TO_BUILD=${{ matrix.targets.arch }} \
+            -DLLVM_DEFAULT_TARGET_TRIPLE=${{ matrix.targets.triple }} \
+            -DLLVM_PARALLEL_LINK_JOBS=1
+
+      - name: Build Ripple Compiler
+        run: cmake --build build
+
+      - name: Configure compiler-rt
+        run: |
+          cmake -G Ninja -S compiler-rt -B build-compiler-rt \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLLVM_ENABLE_ASSERTIONS=ON \
+            -DCMAKE_C_COMPILER=${{ github.workspace }}/build/bin/clang \
+            -DCMAKE_CXX_COMPILER=${{ github.workspace }}/build/bin/clang++ \
+            -DCOMPILER_RT_BUILD_BUILTINS=OFF \
+            -DCOMPILER_RT_BUILD_CRT=OFF \
+            -DCOMPILER_RT_BUILD_CTX_PROFILE=OFF \
+            -DCOMPILER_RT_BUILD_GWP_ASAN=OFF \
+            -DCOMPILER_RT_BUILD_LIBFUZZER=OFF \
+            -DCOMPILER_RT_BUILD_MEMPROF=OFF \
+            -DCOMPILER_RT_BUILD_ORC=OFF \
+            -DCOMPILER_RT_BUILD_PROFILE=OFF \
+            -DCOMPILER_RT_BUILD_SANITIZERS=OFF \
+            -DCOMPILER_RT_BUILD_XRAY=OFF \
+            -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON \
+            -DCMAKE_C_COMPILER_TARGET=${{ matrix.targets.triple }} \
+            -DCMAKE_CXX_COMPILER_TARGET=${{ matrix.targets.triple }} \
+            -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld" \
+            -DCMAKE_SYSROOT="${{ github.workspace }}/hexagon_toolchain/target/${{ matrix.targets.triple }}" \
+            -DLLVM_PARALLEL_LINK_JOBS=1
+
+      - name: Build Ripple compiler-rt
+        run: cmake --build build-compiler-rt
+
+      - name: Install Ripple compiler-rt
+        run: cmake --install build-compiler-rt --prefix $(${{ github.workspace }}/build/bin/clang --print-resource-dir)
+
+      - name: Clang Ripple Lit Tests
+        run: cmake --build build --target check-clang-ripple
+
+      - name: Clang AST Lit Tests (Ripple Parallel)
+        run: cmake --build build --target check-clang-ast
 
       - name: Ripple LLVM Lit Tests
         run: cmake --build build --target check-llvm-transforms-ripple
