@@ -16,8 +16,14 @@
 // be simpler.
 //
 // The 7-step algorithm used by this checker for scope reduction analysis is:
-// 1) Filter out variables declared in for-loop initializations
-//    - Those variables are already in optimal scope, and can be skipped
+// 1) AST Matcher Filtering
+//    - Only match variables within functions (hasAncestor(functionDecl())
+//    - Exclude for-loop declared variables
+//       (unless(hasParent(declStmt(hasParent(forStmt))))))
+//    - Exclude variables with function call initializors
+//       (unless(hasInitializer(...)))
+//    - Exclude parameters from analysis
+//       (unless(parmVarDecl())
 // 2) Collect variable uses
 //    - find all DeclRefExpr nodes that reference the variable
 // 3) Build scope chains
@@ -63,7 +69,8 @@ collectVariableUses(const clang::Stmt *S, const clang::VarDecl *Var,
 
 void ScopeReductionCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      varDecl(hasLocalStorage(), hasAncestor(functionDecl()),
+      varDecl(hasLocalStorage(), unless(hasGlobalStorage()),
+              hasAncestor(functionDecl()), unless(parmVarDecl()),
               unless(hasParent(declStmt(hasParent(forStmt())))),
               unless(hasInitializer(anyOf(callExpr(), cxxMemberCallExpr(),
                                           cxxOperatorCallExpr()))))
@@ -211,52 +218,50 @@ void ScopeReductionCheck::check(
   // Step 7: Alternative analysis - check for for-loop initialization
   // opportunity This only runs if the compound statement analysis didn't find a
   // smaller scope Only check local variables, not parameters
-  // TODO: ParmVarDecls maybe excluded for all analysis.
-  if (!isa<ParmVarDecl>(Var)) {
-    const ForStmt *CommonForLoop = nullptr;
-    bool AllUsesInSameForLoop = true;
+  const ForStmt *CommonForLoop = nullptr;
+  bool AllUsesInSameForLoop = true;
 
-    for (const auto *Use : Uses) {
-      const ForStmt *ContainingForLoop = nullptr;
-      const Stmt *Current = Use;
+  for (const auto *Use : Uses) {
+    const ForStmt *ContainingForLoop = nullptr;
+    const Stmt *Current = Use;
 
-      // Walk up the AST to find a containing ForStmt
-      while (Current) {
-        auto ParentNodes = Parents.getParents(*Current);
-        if (ParentNodes.empty())
-          break;
+    // Walk up the AST to find a containing ForStmt
+    while (Current) {
+      auto ParentNodes = Parents.getParents(*Current);
+      if (ParentNodes.empty())
+        break;
 
-        if (const auto *FS = ParentNodes[0].get<ForStmt>()) {
-          ContainingForLoop = FS;
-          break;
-        }
-
-        const Stmt *Parent = ParentNodes[0].get<Stmt>();
-        if (!Parent) {
-          // Handle Decl parents like we do in the existing logic
-          if (const auto *DeclParent = ParentNodes[0].get<Decl>()) {
-            auto DeclParentNodes = Parents.getParents(*DeclParent);
-            if (!DeclParentNodes.empty())
-              Parent = DeclParentNodes[0].get<Stmt>();
-          }
-          if (!Parent)
-            break;
-        }
-        Current = Parent;
-      }
-
-      if (!ContainingForLoop) {
-        AllUsesInSameForLoop = false;
+      if (const auto *FS = ParentNodes[0].get<ForStmt>()) {
+        ContainingForLoop = FS;
         break;
       }
 
-      if (!CommonForLoop) {
-        CommonForLoop = ContainingForLoop;
-      } else if (CommonForLoop != ContainingForLoop) {
-        AllUsesInSameForLoop = false;
-        break;
+      const Stmt *Parent = ParentNodes[0].get<Stmt>();
+      if (!Parent) {
+        // Handle Decl parents like we do in the existing logic
+        if (const auto *DeclParent = ParentNodes[0].get<Decl>()) {
+          auto DeclParentNodes = Parents.getParents(*DeclParent);
+          if (!DeclParentNodes.empty())
+            Parent = DeclParentNodes[0].get<Stmt>();
+        }
+        if (!Parent)
+          break;
       }
+      Current = Parent;
     }
+
+    if (!ContainingForLoop) {
+      AllUsesInSameForLoop = false;
+      break;
+    }
+
+    if (!CommonForLoop) {
+      CommonForLoop = ContainingForLoop;
+    } else if (CommonForLoop != ContainingForLoop) {
+      AllUsesInSameForLoop = false;
+      break;
+    }
+  }
 
     if (AllUsesInSameForLoop && CommonForLoop) {
       diag(Var->getLocation(),
@@ -264,7 +269,6 @@ void ScopeReductionCheck::check(
           << Var->getName();
       return;
     }
-  }
 }
 
 } // namespace clang::tidy::misc
