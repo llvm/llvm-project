@@ -117,6 +117,8 @@ Changes to the AArch64 Backend
 
 * Added support for C1-Nano, C1-Pro, C1-Premium, and C1-Ultra CPUs.
 
+* Added support for Ampere1C cores.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
@@ -295,6 +297,7 @@ Changes to LLDB
   LLDB's build configuration is included in the command's output. This includes
   all the supported targets, along with the presence of (or lack of) optional
   features like XML parsing.
+* LLDB now includes formatters for many types from the MSVC STL.
 
 Changes to BOLT
 ---------------------------------
