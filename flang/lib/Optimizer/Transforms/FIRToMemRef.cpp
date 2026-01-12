@@ -83,6 +83,21 @@ namespace fir {
 #define GEN_PASS_DEF_FIRTOMEMREF
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 
+static bool isPolymorphicConversion(fir::ConvertOp c) {
+  // Polymorphic conversions (CLASS -> BOX with different dynamic element types)
+  // should not be treated as memref descriptor marshaling.
+  if (fir::ClassType fromBoxTy = dyn_cast<fir::ClassType>(
+          fir::unwrapRefType(c.getValue().getType()))) {
+    if (fir::BaseBoxType toBoxTy =
+            dyn_cast<fir::BaseBoxType>(fir::unwrapRefType(c.getType()))) {
+      Type fromEleTy = fir::unwrapAllRefAndSeqType(fromBoxTy.getEleTy());
+      Type toEleTy = fir::unwrapAllRefAndSeqType(toBoxTy.getEleTy());
+      return fromEleTy != toEleTy;
+    }
+  }
+  return false;
+}
+
 static bool isMarshalLike(Operation *op) {
   auto convert = dyn_cast_if_present<fir::ConvertOp>(op);
   if (!convert)
@@ -94,7 +109,7 @@ static bool isMarshalLike(Operation *op) {
   assert(!(resIsMemRef && argIsMemRef) &&
          "unexpected fir.convert memref -> memref in isMarshalLike");
 
-  return resIsMemRef || argIsMemRef;
+  return !isPolymorphicConversion(convert) && (resIsMemRef || argIsMemRef);
 }
 
 using MemRefInfo = FailureOr<std::pair<Value, SmallVector<Value>>>;
@@ -171,8 +186,6 @@ private:
 
   bool memrefIsDeviceData(Operation *memref) const;
 
-  bool isMarshalLikeOp(Operation *op) const;
-
   mlir::Attribute findCudaDataAttr(Value val) const;
 };
 
@@ -226,38 +239,6 @@ bool FIRToMemRef::memrefIsDeviceData(Operation *memref) const {
            attrValue == cuf::DataAttribute::Unified;
   }
   return false;
-}
-
-bool FIRToMemRef::isMarshalLikeOp(Operation *op) const {
-  if (!op)
-    return false;
-
-  auto convert = dyn_cast<fir::ConvertOp>(op);
-  if (convert) {
-    bool resIsMemRef = isa<MemRefType>(convert.getType());
-    bool argIsMemRef = isa<MemRefType>(convert.getValue().getType());
-    assert(!(resIsMemRef && argIsMemRef) &&
-           "unexpected fir.convert memref -> memref in isMarshalLikeOp");
-  }
-
-  auto isaPolymorphicConversion = [](fir::ConvertOp c) {
-    bool retVal{false};
-    if (fir::ClassType fromBoxTy = dyn_cast<fir::ClassType>(
-            fir::unwrapRefType(c.getValue().getType()))) {
-      if (fir::BaseBoxType toBoxTy =
-              dyn_cast<fir::BaseBoxType>(fir::unwrapRefType(c.getType()))) {
-        Type fromEleTy = fir::unwrapAllRefAndSeqType(fromBoxTy.getEleTy());
-        Type toEleTy = fir::unwrapAllRefAndSeqType(toBoxTy.getEleTy());
-        if (fromEleTy != toEleTy)
-          retVal = true;
-      }
-    }
-    return retVal;
-  };
-
-  return convert && !isaPolymorphicConversion(convert) &&
-         (isa<MemRefType>(convert.getType()) ||
-          isa<MemRefType>(convert.getValue().getType()));
 }
 
 mlir::Attribute FIRToMemRef::findCudaDataAttr(Value val) const {
