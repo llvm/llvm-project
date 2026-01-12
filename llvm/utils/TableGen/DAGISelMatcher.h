@@ -9,7 +9,7 @@
 #ifndef LLVM_UTILS_TABLEGEN_COMMON_DAGISELMATCHER_H
 #define LLVM_UTILS_TABLEGEN_COMMON_DAGISELMATCHER_H
 
-#include "InfoByHwMode.h"
+#include "Common/InfoByHwMode.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
