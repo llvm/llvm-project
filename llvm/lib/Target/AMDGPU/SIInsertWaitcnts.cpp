@@ -105,6 +105,35 @@ auto inst_counter_types(InstCounterType MaxCounter = NUM_INST_CNTS) {
   return enum_seq(LOAD_CNT, MaxCounter);
 }
 
+// Get the maximum wait count value for a given counter type.
+static unsigned getWaitCountMax(const AMDGPU::HardwareLimits &Limits,
+                                InstCounterType T) {
+  switch (T) {
+  case LOAD_CNT:
+    return Limits.LoadcntMax;
+  case DS_CNT:
+    return Limits.DscntMax;
+  case EXP_CNT:
+    return Limits.ExpcntMax;
+  case STORE_CNT:
+    return Limits.StorecntMax;
+  case SAMPLE_CNT:
+    return Limits.SamplecntMax;
+  case BVH_CNT:
+    return Limits.BvhcntMax;
+  case KM_CNT:
+    return Limits.KmcntMax;
+  case X_CNT:
+    return Limits.XcntMax;
+  case VA_VDST:
+    return Limits.VaVdstMax;
+  case VM_VSRC:
+    return Limits.VmVsrcMax;
+  default:
+    return 0;
+  }
+}
+
 /// Integer IDs used to track vector memory locations we may have to wait on.
 /// Encoded as u16 chunks:
 ///
@@ -320,29 +349,7 @@ public:
   // optimization.
   bool isOptNone() const { return OptNone; }
 
-  // Get the maximum wait count value for a given counter type.
-  unsigned getWaitCountMax(InstCounterType T) const {
-    switch (T) {
-    case LOAD_CNT:
-      return Limits->LoadcntMax;
-    case DS_CNT:
-      return Limits->DscntMax;
-    case EXP_CNT:
-      return Limits->ExpcntMax;
-    case STORE_CNT:
-      return Limits->StorecntMax;
-    case SAMPLE_CNT:
-      return Limits->SamplecntMax;
-    case BVH_CNT:
-      return Limits->BvhcntMax;
-    case KM_CNT:
-      return Limits->KmcntMax;
-    case X_CNT:
-      return Limits->XcntMax;
-    default:
-      return 0;
-    }
-  }
+  const AMDGPU::HardwareLimits &getLimits() const { return *Limits; }
 
   // Edits an existing sequence of wait count instructions according
   // to an incoming Waitcnt value, which is itself updated to reflect
@@ -531,33 +538,7 @@ public:
     (void)ForceVMCounter;
   }
 
-  unsigned getWaitCountMax(InstCounterType T) const {
-    switch (T) {
-    case LOAD_CNT:
-      return Limits.LoadcntMax;
-    case DS_CNT:
-      return Limits.DscntMax;
-    case EXP_CNT:
-      return Limits.ExpcntMax;
-    case STORE_CNT:
-      return Limits.StorecntMax;
-    case SAMPLE_CNT:
-      return Limits.SamplecntMax;
-    case BVH_CNT:
-      return Limits.BvhcntMax;
-    case KM_CNT:
-      return Limits.KmcntMax;
-    case X_CNT:
-      return Limits.XcntMax;
-    case VA_VDST:
-      return Limits.VaVdstMax;
-    case VM_VSRC:
-      return Limits.VmVsrcMax;
-    default:
-      break;
-    }
-    return 0;
-  }
+  const AMDGPU::HardwareLimits &getLimits() const { return Limits; }
 
   bool shouldFlushVmCnt(MachineLoop *ML, const WaitcntBrackets &Brackets);
   bool isPreheaderToFlush(MachineBasicBlock &MBB,
@@ -788,7 +769,7 @@ public:
 
   unsigned getPendingGDSWait() const {
     return std::min(getScoreUB(DS_CNT) - LastGDS,
-                    Context->getWaitCountMax(DS_CNT) - 1);
+                    getWaitCountMax(Context->getLimits(), DS_CNT) - 1);
   }
 
   void setPendingGDS() { LastGDS = ScoreUBs[DS_CNT]; }
@@ -815,8 +796,8 @@ public:
   }
 
   void setStateOnFunctionEntryOrReturn() {
-    setScoreUB(STORE_CNT,
-               getScoreUB(STORE_CNT) + Context->getWaitCountMax(STORE_CNT));
+    setScoreUB(STORE_CNT, getScoreUB(STORE_CNT) +
+                              getWaitCountMax(Context->getLimits(), STORE_CNT));
     PendingEvents |= Context->WaitEventMaskForInst[STORE_CNT];
   }
 
@@ -872,8 +853,9 @@ private:
     if (T != EXP_CNT)
       return;
 
-    if (getScoreRange(EXP_CNT) > Context->getWaitCountMax(EXP_CNT))
-      ScoreLBs[EXP_CNT] = ScoreUBs[EXP_CNT] - Context->getWaitCountMax(EXP_CNT);
+    if (getScoreRange(EXP_CNT) > getWaitCountMax(Context->getLimits(), EXP_CNT))
+      ScoreLBs[EXP_CNT] =
+          ScoreUBs[EXP_CNT] - getWaitCountMax(Context->getLimits(), EXP_CNT);
   }
 
   void setRegScore(MCPhysReg Reg, InstCounterType T, unsigned Val) {
@@ -1378,8 +1360,8 @@ void WaitcntBrackets::determineWaitForScore(InstCounterType T,
     } else {
       // If a counter has been maxed out avoid overflow by waiting for
       // MAX(CounterType) - 1 instead.
-      unsigned NeededWait =
-          std::min(UB - ScoreToWait, Context->getWaitCountMax(T) - 1);
+      unsigned NeededWait = std::min(
+          UB - ScoreToWait, getWaitCountMax(Context->getLimits(), T) - 1);
       addWait(Wait, T, NeededWait);
     }
   }
@@ -1763,7 +1745,7 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
 
           unsigned Outstanding = std::min(ScoreBrackets->getScoreUB(CT) -
                                               ScoreBrackets->getScoreLB(CT),
-                                          getWaitCountMax(CT) - 1);
+                                          getWaitCountMax(getLimits(), CT) - 1);
           EmitExpandedWaitcnt(Outstanding, WaitCnt, [&](unsigned Count) {
             AMDGPU::Waitcnt W;
             getCounterRef(W, CT) = Count;
@@ -1791,9 +1773,10 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
     if (ExpandWaitcntProfiling && ScoreBrackets && Wait.StoreCnt != ~0u &&
         !ScoreBrackets->counterOutOfOrder(STORE_CNT)) {
       // Only expand if counter is not out-of-order
-      unsigned Outstanding = std::min(ScoreBrackets->getScoreUB(STORE_CNT) -
-                                          ScoreBrackets->getScoreLB(STORE_CNT),
-                                      getWaitCountMax(STORE_CNT) - 1);
+      unsigned Outstanding =
+          std::min(ScoreBrackets->getScoreUB(STORE_CNT) -
+                       ScoreBrackets->getScoreLB(STORE_CNT),
+                   getWaitCountMax(getLimits(), STORE_CNT) - 1);
       EmitExpandedWaitcnt(Outstanding, Wait.StoreCnt, [&](unsigned Count) {
         BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT_VSCNT))
             .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
@@ -2148,7 +2131,7 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
 
       unsigned Outstanding = std::min(ScoreBrackets->getScoreUB(CT) -
                                           ScoreBrackets->getScoreLB(CT),
-                                      getWaitCountMax(CT) - 1);
+                                      getWaitCountMax(getLimits(), CT) - 1);
       EmitExpandedWaitcnt(Outstanding, Count, [&](unsigned Val) {
         BuildMI(Block, It, DL, TII->get(instrsForExtendedCounterTypes[CT]))
             .addImm(Val);
@@ -3203,7 +3186,8 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
                               .getFnAttribute("amdgpu-expert-scheduling-mode")
                               .getValueAsBool());
     MaxCounter = IsExpertMode ? NUM_EXPERT_INST_CNTS : NUM_EXTENDED_INST_CNTS;
-    WCGGFX12Plus = WaitcntGeneratorGFX12Plus(MF, MaxCounter, &Limits, IsExpertMode);
+    WCGGFX12Plus =
+        WaitcntGeneratorGFX12Plus(MF, MaxCounter, &Limits, IsExpertMode);
     WCG = &WCGGFX12Plus;
   } else {
     MaxCounter = NUM_NORMAL_INST_CNTS;
