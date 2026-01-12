@@ -244,11 +244,12 @@ bool isMovedFrom(ProgramStateRef State, const MemRegion *Region) {
 
 // If a region is removed all of the subregions needs to be removed too.
 static ProgramStateRef removeFromState(ProgramStateRef State,
-                                       const MemRegion *Region) {
+                                       const MemRegion *Region,
+                                       bool Strict = false) {
   if (!Region)
     return State;
   for (auto &E : State->get<TrackedRegionMap>()) {
-    if (E.first->isSubRegionOf(Region))
+    if ((!Strict || E.first != Region) && E.first->isSubRegionOf(Region))
       State = State->remove<TrackedRegionMap>(E.first);
   }
   return State;
@@ -709,18 +710,16 @@ ProgramStateRef MoveChecker::checkRegionChanges(
     // that are passed directly via non-const pointers or non-const references
     // or rvalue references.
     // In case of an InstanceCall don't invalidate the this-region since
-    // it is fully handled in checkPreCall and checkPostCall.
-    const MemRegion *ThisRegion = nullptr;
-    if (const auto *IC = dyn_cast<CXXInstanceCall>(Call))
-      ThisRegion = IC->getCXXThisVal().getAsRegion();
+    // it is fully handled in checkPreCall and checkPostCall, but do invalidate
+    // its strict subregions, as they are not handled.
 
     // Requested ("explicit") regions are the regions passed into the call
     // directly, but not all of them end up being invalidated.
     // But when they do, they appear in the InvalidatedRegions array as well.
     for (const auto *Region : RequestedRegions) {
-      if (ThisRegion != Region &&
-          llvm::is_contained(InvalidatedRegions, Region))
-        State = removeFromState(State, Region);
+      if (llvm::is_contained(InvalidatedRegions, Region))
+        State = removeFromState(State, Region,
+                                /*Strict=*/isa<CXXInstanceCall>(Call));
     }
   } else {
     // For invalidations that aren't caused by calls, assume nothing. In

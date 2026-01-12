@@ -25,7 +25,7 @@ end subroutine
 !CHECK-PARSE-NEXT: | | | | OmpClauseList -> OmpClause -> Collapse -> Scalar -> Integer -> Constant -> Expr = '2_4'
 !CHECK-PARSE-NEXT: | | | | | LiteralConstant -> IntLiteralConstant = '2'
 !CHECK-PARSE-NEXT: | | | | OmpClause -> Private -> OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'b'
-!CHECK-PARSE-NEXT: | | | | Flags = None
+!CHECK-PARSE-NEXT: | | | | Flags = {}
 !CHECK-PARSE-NEXT: | | | Block
 !CHECK-PARSE-NEXT: | | | | ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
 !CHECK-PARSE-NEXT: | | | | | NonLabelDoStmt

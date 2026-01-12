@@ -453,13 +453,18 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
       Features.push_back("+fix-cortex-a53-835769");
     else
       Features.push_back("-fix-cortex-a53-835769");
-  } else if (Triple.isAndroid() || Triple.isOHOSFamily()) {
-    // Enabled A53 errata (835769) workaround by default on android
-    Features.push_back("+fix-cortex-a53-835769");
-  } else if (Triple.isOSFuchsia()) {
-    std::string CPU = getCPUName(D, Args, Triple);
-    if (CPU.empty() || CPU == "generic" || CPU == "cortex-a53")
+  } else if (Extensions.BaseArch &&
+             Extensions.BaseArch->Version.getMajor() == 8 &&
+             Extensions.BaseArch->Version.getMinor() == 0) {
+    if (Triple.isAndroid() || Triple.isOHOSFamily()) {
+      // Enabled A53 errata (835769) workaround by default on android, providing
+      // that the architecture allows running on a cortex-a53.
       Features.push_back("+fix-cortex-a53-835769");
+    } else if (Triple.isOSFuchsia()) {
+      std::string CPU = getCPUName(D, Args, Triple);
+      if (CPU.empty() || CPU == "generic" || CPU == "cortex-a53")
+        Features.push_back("+fix-cortex-a53-835769");
+    }
   }
 
   if (Args.getLastArg(options::OPT_mno_bti_at_return_twice))

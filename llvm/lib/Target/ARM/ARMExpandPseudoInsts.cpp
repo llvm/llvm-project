@@ -932,6 +932,7 @@ static bool IsAnAddressOperand(const MachineOperand &MO) {
     return true;
   case MachineOperand::MO_RegisterMask:
   case MachineOperand::MO_RegisterLiveOut:
+  case MachineOperand::MO_LaneMask:
     return false;
   case MachineOperand::MO_Metadata:
   case MachineOperand::MO_MCSymbol:

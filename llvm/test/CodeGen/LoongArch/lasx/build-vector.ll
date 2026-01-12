@@ -1532,11 +1532,11 @@ define void @buildvector_v8f32(ptr %dst, float %a0, float %a1, float %a2, float 
 ; CHECK-NEXT:    # kill: def $f7 killed $f7 def $vr7
 ; CHECK-NEXT:    # kill: def $f6 killed $f6 def $vr6
 ; CHECK-NEXT:    # kill: def $f5 killed $f5 def $vr5
-; CHECK-NEXT:    # kill: def $f4 killed $f4 def $vr4 def $xr4
+; CHECK-NEXT:    # kill: def $f4 killed $f4 def $xr4
 ; CHECK-NEXT:    # kill: def $f3 killed $f3 def $vr3
 ; CHECK-NEXT:    # kill: def $f2 killed $f2 def $vr2
 ; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vr1
-; CHECK-NEXT:    # kill: def $f0 killed $f0 def $vr0 def $xr0
+; CHECK-NEXT:    # kill: def $f0 killed $f0 def $xr0
 ; CHECK-NEXT:    vextrins.w $vr4, $vr5, 16
 ; CHECK-NEXT:    vextrins.w $vr4, $vr6, 32
 ; CHECK-NEXT:    vextrins.w $vr4, $vr7, 48
@@ -1619,7 +1619,7 @@ define void @buildvector_v8f32_subseq_2(ptr %dst, float %a0, float %a1, float %a
 ; CHECK-NEXT:    # kill: def $f3 killed $f3 def $vr3
 ; CHECK-NEXT:    # kill: def $f2 killed $f2 def $vr2
 ; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vr1
-; CHECK-NEXT:    # kill: def $f0 killed $f0 def $vr0 def $xr0
+; CHECK-NEXT:    # kill: def $f0 killed $f0 def $xr0
 ; CHECK-NEXT:    vextrins.w $vr0, $vr1, 16
 ; CHECK-NEXT:    vextrins.w $vr0, $vr2, 32
 ; CHECK-NEXT:    vextrins.w $vr0, $vr3, 48
@@ -1643,7 +1643,7 @@ define void @buildvector_v8f32_subseq_4(ptr %dst, float %a0, float %a1) nounwind
 ; CHECK-LABEL: buildvector_v8f32_subseq_4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vr1
-; CHECK-NEXT:    # kill: def $f0 killed $f0 def $vr0 def $xr0
+; CHECK-NEXT:    # kill: def $f0 killed $f0 def $xr0
 ; CHECK-NEXT:    vextrins.w $vr0, $vr1, 16
 ; CHECK-NEXT:    xvreplve0.d $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
@@ -1665,9 +1665,9 @@ define void @buildvector_v4f64(ptr %dst, double %a0, double %a1, double %a2, dou
 ; CHECK-LABEL: buildvector_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $f3_64 killed $f3_64 def $vr3
-; CHECK-NEXT:    # kill: def $f2_64 killed $f2_64 def $vr2 def $xr2
+; CHECK-NEXT:    # kill: def $f2_64 killed $f2_64 def $xr2
 ; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 def $vr1
-; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0 def $xr0
+; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 def $xr0
 ; CHECK-NEXT:    vextrins.d $vr2, $vr3, 16
 ; CHECK-NEXT:    vextrins.d $vr0, $vr1, 16
 ; CHECK-NEXT:    xvpermi.q $xr0, $xr2, 2
@@ -1722,7 +1722,7 @@ define void @buildvector_v4f64_subseq_2(ptr %dst, double %a0, double %a1) nounwi
 ; CHECK-LABEL: buildvector_v4f64_subseq_2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 def $vr1
-; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0 def $xr0
+; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 def $xr0
 ; CHECK-NEXT:    vextrins.d $vr0, $vr1, 16
 ; CHECK-NEXT:    xvreplve0.q $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0

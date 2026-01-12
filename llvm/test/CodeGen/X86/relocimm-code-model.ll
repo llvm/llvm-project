@@ -1,7 +1,7 @@
 ; RUN: llc < %s | FileCheck %s --check-prefix=CHECK-SMALL
 ; RUN: llc --code-model=medium -large-data-threshold=100 < %s | FileCheck %s --check-prefix=CHECK-SMALL
 ; RUN: llc --code-model=medium < %s | FileCheck %s --check-prefix=CHECK-LARGE
-; RUN: llc --code-model=large -large-data-threshold=100 < %s | FileCheck %s --check-prefix=CHECK-SMALL
+; RUN: llc --code-model=large -large-data-threshold=100 < %s | FileCheck %s --check-prefix=CHECK-LARGE
 ; RUN: llc --code-model=large < %s | FileCheck %s --check-prefix=CHECK-LARGE
 ; RUN: llc --code-model=kernel < %s | FileCheck %s --check-prefix=CHECK-SMALL
 

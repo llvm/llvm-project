@@ -27,10 +27,6 @@ namespace clangd {
 llvm::Expected<SelectionRange> getSemanticRanges(ParsedAST &AST, Position Pos);
 
 /// Returns a list of ranges whose contents might be collapsible in an editor.
-/// This should include large scopes, preprocessor blocks etc.
-llvm::Expected<std::vector<FoldingRange>> getFoldingRanges(ParsedAST &AST);
-
-/// Returns a list of ranges whose contents might be collapsible in an editor.
 /// This version uses the pseudoparser which does not require the AST.
 llvm::Expected<std::vector<FoldingRange>>
 getFoldingRanges(const std::string &Code, bool LineFoldingOnly);

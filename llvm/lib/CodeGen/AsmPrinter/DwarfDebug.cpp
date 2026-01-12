@@ -942,25 +942,27 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
       DIType *AllocSiteTy = dyn_cast_or_null<DIType>(MI.getHeapAllocMarker());
 
       // If this is a direct call, find the callee's subprogram.
-      // In the case of an indirect call find the register that holds
-      // the callee.
+      // In the case of an indirect call find the register or memory location
+      // that holds the callee address.
       const MachineOperand &CalleeOp = TII->getCalleeOperand(MI);
       bool PhysRegCalleeOperand =
           CalleeOp.isReg() && CalleeOp.getReg().isPhysical();
-      // Hack: WebAssembly CALL instructions have MCInstrDesc that does not
-      // describe the call target operand.
-      if (CalleeOp.getOperandNo() < MI.getDesc().operands().size()) {
-        const MCOperandInfo &MCOI =
-            MI.getDesc().operands()[CalleeOp.getOperandNo()];
-        PhysRegCalleeOperand =
-            PhysRegCalleeOperand && MCOI.OperandType == MCOI::OPERAND_REGISTER;
-      }
-
-      unsigned CallReg = 0;
+      MachineLocation CallTarget{0};
+      int64_t Offset = 0;
       const DISubprogram *CalleeSP = nullptr;
       const Function *CalleeDecl = nullptr;
       if (PhysRegCalleeOperand) {
-        CallReg = CalleeOp.getReg(); // might be zero
+        bool Scalable = false;
+        const MachineOperand *BaseOp = nullptr;
+        const TargetRegisterInfo &TRI =
+            *Asm->MF->getSubtarget().getRegisterInfo();
+        if (TII->getMemOperandWithOffset(MI, BaseOp, Offset, Scalable, &TRI)) {
+          if (BaseOp && BaseOp->isReg() && !Scalable)
+            CallTarget = MachineLocation(BaseOp->getReg(), /*Indirect*/ true);
+        }
+
+        if (!CallTarget.isIndirect())
+          CallTarget = MachineLocation(CalleeOp.getReg()); // Might be zero.
       } else if (CalleeOp.isGlobal()) {
         CalleeDecl = dyn_cast<Function>(CalleeOp.getGlobal());
         if (CalleeDecl)
@@ -969,7 +971,8 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
 
       // Omit DIE if we can't tell where the call goes *and* we don't want to
       // add metadata to it.
-      if (CalleeSP == nullptr && CallReg == 0 && AllocSiteTy == nullptr)
+      if (CalleeSP == nullptr && CallTarget.getReg() == 0 &&
+          AllocSiteTy == nullptr)
         continue;
 
       // TODO: Omit call site entries for runtime calls (objc_msgSend, etc).
@@ -997,16 +1000,18 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
 
       assert((IsTail || PCAddr) && "Non-tail call without return PC");
 
-      LLVM_DEBUG(dbgs() << "CallSiteEntry: " << MF.getName() << " -> "
-                        << (CalleeDecl ? CalleeDecl->getName()
-                                       : StringRef(MF.getSubtarget()
-                                                       .getRegisterInfo()
-                                                       ->getName(CallReg)))
-                        << (IsTail ? " [IsTail]" : "") << "\n");
+      LLVM_DEBUG(
+          dbgs() << "CallSiteEntry: " << MF.getName() << " -> "
+                 << (CalleeDecl
+                         ? CalleeDecl->getName()
+                         : StringRef(
+                               MF.getSubtarget().getRegisterInfo()->getName(
+                                   CallTarget.getReg())))
+                 << (IsTail ? " [IsTail]" : "") << "\n");
 
-      DIE &CallSiteDIE =
-          CU.constructCallSiteEntryDIE(ScopeDIE, CalleeSP, CalleeDecl, IsTail,
-                                       PCAddr, CallAddr, CallReg, AllocSiteTy);
+      DIE &CallSiteDIE = CU.constructCallSiteEntryDIE(
+          ScopeDIE, CalleeSP, CalleeDecl, IsTail, PCAddr, CallAddr, CallTarget,
+          Offset, AllocSiteTy);
 
       // Optionally emit call-site-param debug info.
       if (emitDebugEntryValues()) {
@@ -3307,14 +3312,12 @@ static MCSymbol *emitLoclistsTableHeader(AsmPrinter *Asm,
 }
 
 template <typename Ranges, typename PayloadEmitter>
-static void emitRangeList(
-    DwarfDebug &DD, AsmPrinter *Asm, MCSymbol *Sym, const Ranges &R,
-    const DwarfCompileUnit &CU, unsigned BaseAddressx, unsigned OffsetPair,
-    unsigned StartxLength, unsigned EndOfList,
-    StringRef (*StringifyEnum)(unsigned),
-    bool ShouldUseBaseAddress,
-    PayloadEmitter EmitPayload) {
-
+static void
+emitRangeList(DwarfDebug &DD, AsmPrinter *Asm, MCSymbol *Sym, const Ranges &R,
+              const DwarfCompileUnit &CU, unsigned BaseAddressx,
+              unsigned OffsetPair, unsigned StartxLength, unsigned StartxEndx,
+              unsigned EndOfList, StringRef (*StringifyEnum)(unsigned),
+              bool ShouldUseBaseAddress, PayloadEmitter EmitPayload) {
   auto Size = Asm->MAI->getCodePointerSize();
   bool UseDwarf5 = DD.getDwarfVersion() >= 5;
 
@@ -3333,7 +3336,8 @@ static void emitRangeList(
   bool BaseIsSet = false;
   for (const auto &P : SectionRanges) {
     auto *Base = CUBase;
-    if ((Asm->TM.getTargetTriple().isNVPTX() && DD.tuneForGDB())) {
+    if ((Asm->TM.getTargetTriple().isNVPTX() && DD.tuneForGDB()) ||
+        (DD.useSplitDwarf() && UseDwarf5 && P.first->isLinkerRelaxable())) {
       // PTX does not support subtracting labels from the code section in the
       // debug_loc section.  To work around this, the NVPTX backend needs the
       // compile unit to have no low_pc in order to have a zero base_address
@@ -3389,12 +3393,27 @@ static void emitRangeList(
           Asm->emitLabelDifference(End, Base, Size);
         }
       } else if (UseDwarf5) {
-        Asm->OutStreamer->AddComment(StringifyEnum(StartxLength));
-        Asm->emitInt8(StartxLength);
-        Asm->OutStreamer->AddComment("  start index");
-        Asm->emitULEB128(DD.getAddressPool().getIndex(Begin));
-        Asm->OutStreamer->AddComment("  length");
-        Asm->emitLabelDifferenceAsULEB128(End, Begin);
+        // NOTE: We can't use absoluteSymbolDiff here instead of
+        // isRangeRelaxable. While isRangeRelaxable only checks that the offset
+        // between labels won't change at link time (which is exactly what we
+        // need), absoluteSymbolDiff also requires that the offset remain
+        // unchanged at assembly time, imposing a much stricter condition.
+        // Consequently, this would lead to less optimal debug info emission.
+        if (DD.useSplitDwarf() && llvm::isRangeRelaxable(Begin, End)) {
+          Asm->OutStreamer->AddComment(StringifyEnum(StartxEndx));
+          Asm->emitInt8(StartxEndx);
+          Asm->OutStreamer->AddComment("  start index");
+          Asm->emitULEB128(DD.getAddressPool().getIndex(Begin));
+          Asm->OutStreamer->AddComment("  end index");
+          Asm->emitULEB128(DD.getAddressPool().getIndex(End));
+        } else {
+          Asm->OutStreamer->AddComment(StringifyEnum(StartxLength));
+          Asm->emitInt8(StartxLength);
+          Asm->OutStreamer->AddComment("  start index");
+          Asm->emitULEB128(DD.getAddressPool().getIndex(Begin));
+          Asm->OutStreamer->AddComment("  length");
+          Asm->emitLabelDifferenceAsULEB128(End, Begin);
+        }
       } else {
         Asm->OutStreamer->emitSymbolValue(Begin, Size);
         Asm->OutStreamer->emitSymbolValue(End, Size);
@@ -3415,14 +3434,14 @@ static void emitRangeList(
 
 // Handles emission of both debug_loclist / debug_loclist.dwo
 static void emitLocList(DwarfDebug &DD, AsmPrinter *Asm, const DebugLocStream::List &List) {
-  emitRangeList(DD, Asm, List.Label, DD.getDebugLocs().getEntries(List),
-                *List.CU, dwarf::DW_LLE_base_addressx,
-                dwarf::DW_LLE_offset_pair, dwarf::DW_LLE_startx_length,
-                dwarf::DW_LLE_end_of_list, llvm::dwarf::LocListEncodingString,
-                /* ShouldUseBaseAddress */ true,
-                [&](const DebugLocStream::Entry &E) {
-                  DD.emitDebugLocEntryLocation(E, List.CU);
-                });
+  emitRangeList(
+      DD, Asm, List.Label, DD.getDebugLocs().getEntries(List), *List.CU,
+      dwarf::DW_LLE_base_addressx, dwarf::DW_LLE_offset_pair,
+      dwarf::DW_LLE_startx_length, dwarf::DW_LLE_startx_endx,
+      dwarf::DW_LLE_end_of_list, llvm::dwarf::LocListEncodingString,
+      /* ShouldUseBaseAddress */ true, [&](const DebugLocStream::Entry &E) {
+        DD.emitDebugLocEntryLocation(E, List.CU);
+      });
 }
 
 void DwarfDebug::emitDebugLocImpl(MCSection *Sec) {
@@ -3644,8 +3663,8 @@ static void emitRangeList(DwarfDebug &DD, AsmPrinter *Asm,
                           const RangeSpanList &List) {
   emitRangeList(DD, Asm, List.Label, List.Ranges, *List.CU,
                 dwarf::DW_RLE_base_addressx, dwarf::DW_RLE_offset_pair,
-                dwarf::DW_RLE_startx_length, dwarf::DW_RLE_end_of_list,
-                llvm::dwarf::RangeListEncodingString,
+                dwarf::DW_RLE_startx_length, dwarf::DW_RLE_startx_endx,
+                dwarf::DW_RLE_end_of_list, llvm::dwarf::RangeListEncodingString,
                 List.CU->getCUNode()->getRangesBaseAddress() ||
                     DD.getDwarfVersion() >= 5,
                 [](auto) {});

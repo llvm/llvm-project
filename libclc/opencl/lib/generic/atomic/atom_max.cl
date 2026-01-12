@@ -7,17 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/atomic/clc_atomic_fetch_max.h>
-#include <clc/opencl/atomic/atom_max.h>
 
 // Non-volatile overloads are for backward compatibility with OpenCL 1.0.
 
 #define __CLC_IMPL(AS, TYPE)                                                   \
-  _CLC_OVERLOAD _CLC_DEF TYPE atom_max(volatile AS TYPE *p, TYPE val) {        \
+  _CLC_OVERLOAD _CLC_DEF TYPE atom_max(AS TYPE *p, TYPE val) {                 \
     return __clc_atomic_fetch_max(p, val, __ATOMIC_RELAXED,                    \
                                   __MEMORY_SCOPE_DEVICE);                      \
   }                                                                            \
-  _CLC_OVERLOAD _CLC_DEF TYPE atom_max(AS TYPE *p, TYPE val) {                 \
-    return atom_max((volatile AS TYPE *)p, val);                               \
+  _CLC_OVERLOAD _CLC_DEF TYPE atom_max(volatile AS TYPE *p, TYPE val) {        \
+    return atom_max((AS TYPE *)p, val);                                        \
   }
 
 #ifdef cl_khr_global_int32_extended_atomics

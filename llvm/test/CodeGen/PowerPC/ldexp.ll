@@ -107,7 +107,6 @@ define <4 x float> @ldexp_v4f32(<4 x float> %val, <4 x i32> %exp) nounwind {
 ; CHECK-NEXT:    extsw r4, r3
 ; CHECK-NEXT:    bl ldexpf
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-NEXT:    xxmrghd vs0, vs1, v29
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    vextuwrx r3, r3, v31
@@ -124,7 +123,6 @@ define <4 x float> @ldexp_v4f32(<4 x float> %val, <4 x i32> %exp) nounwind {
 ; CHECK-NEXT:    xscvspdpn f1, vs0
 ; CHECK-NEXT:    bl ldexpf
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-NEXT:    xxmrghd vs0, vs1, v29
 ; CHECK-NEXT:    lxv v31, 80(r1) # 16-byte Folded Reload
 ; CHECK-NEXT:    lxv v30, 64(r1) # 16-byte Folded Reload
@@ -145,15 +143,15 @@ define half @ldexp_f16(half %arg0, i32 %arg1) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -32(r1)
-; CHECK-NEXT:    std r0, 48(r1)
-; CHECK-NEXT:    xscvdphp f0, f1
-; CHECK-NEXT:    extsw r4, r4
-; CHECK-NEXT:    mffprwz r3, f0
 ; CHECK-NEXT:    clrlwi r3, r3, 16
+; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    extsw r4, r4
 ; CHECK-NEXT:    mtfprwz f0, r3
 ; CHECK-NEXT:    xscvhpdp f1, f0
 ; CHECK-NEXT:    bl ldexpf
 ; CHECK-NEXT:    nop
+; CHECK-NEXT:    xscvdphp f0, f1
+; CHECK-NEXT:    mffprwz r3, f0
 ; CHECK-NEXT:    addi r1, r1, 32
 ; CHECK-NEXT:    ld r0, 16(r1)
 ; CHECK-NEXT:    mtlr r0

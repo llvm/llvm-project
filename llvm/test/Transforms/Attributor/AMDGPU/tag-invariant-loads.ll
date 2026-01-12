@@ -305,7 +305,7 @@ define amdgpu_kernel void @test_call_untouched_ptr() {
 
 define amdgpu_kernel void @test_make_buffer(ptr addrspace(1) %ptr) {
 ; AMDGCN-LABEL: define amdgpu_kernel void @test_make_buffer(
-; AMDGCN-SAME: ptr addrspace(1) nofree readonly captures(none) [[PTR:%.*]]) #[[ATTR2]] {
+; AMDGCN-SAME: ptr addrspace(1) nofree readonly align 4 captures(none) [[PTR:%.*]]) #[[ATTR2]] {
 ; AMDGCN-NEXT:    [[RSRC:%.*]] = call align 4 ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1(ptr addrspace(1) [[PTR]], i16 noundef 0, i64 noundef 0, i32 noundef 0) #[[ATTR11:[0-9]+]]
 ; AMDGCN-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(7) [[RSRC]], align 4
 ; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR7]]
@@ -320,7 +320,7 @@ define amdgpu_kernel void @test_make_buffer(ptr addrspace(1) %ptr) {
 
 define amdgpu_kernel void @test_make_buffer_noalias(ptr addrspace(1) noalias %ptr) {
 ; AMDGCN-LABEL: define amdgpu_kernel void @test_make_buffer_noalias(
-; AMDGCN-SAME: ptr addrspace(1) noalias nofree readonly captures(none) [[PTR:%.*]]) #[[ATTR2]] {
+; AMDGCN-SAME: ptr addrspace(1) noalias nofree readonly align 4 captures(none) [[PTR:%.*]]) #[[ATTR2]] {
 ; AMDGCN-NEXT:    [[RSRC:%.*]] = call align 4 ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1(ptr addrspace(1) [[PTR]], i16 noundef 0, i64 noundef 0, i32 noundef 0) #[[ATTR11]]
 ; AMDGCN-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(7) [[RSRC]], align 4, !invariant.load [[META0]]
 ; AMDGCN-NEXT:    call void @clobber(i32 [[VAL]]) #[[ATTR7]]

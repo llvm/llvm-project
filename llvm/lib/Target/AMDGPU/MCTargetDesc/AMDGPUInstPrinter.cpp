@@ -491,6 +491,18 @@ void AMDGPUInstPrinter::printVINTRPDst(const MCInst *MI, unsigned OpNo,
   printRegularOperand(MI, OpNo, STI, O);
 }
 
+void AMDGPUInstPrinter::printAVLdSt32Align2RegOp(const MCInst *MI,
+                                                 unsigned OpNo,
+                                                 const MCSubtargetInfo &STI,
+                                                 raw_ostream &O) {
+  MCRegister Reg = MI->getOperand(OpNo).getReg();
+
+  // On targets with an even alignment requirement
+  if (MCRegister SubReg = MRI.getSubReg(Reg, AMDGPU::sub0))
+    Reg = SubReg;
+  printRegOperand(Reg, O, MRI);
+}
+
 void AMDGPUInstPrinter::printImmediateInt16(uint32_t Imm,
                                             const MCSubtargetInfo &STI,
                                             raw_ostream &O) {

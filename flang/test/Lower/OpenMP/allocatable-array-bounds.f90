@@ -47,7 +47,7 @@
 subroutine read_write_section()
     integer, allocatable :: sp_read(:)
     integer, allocatable :: sp_write(:)
-    allocate(sp_read(10)) 
+    allocate(sp_read(10))
     allocate(sp_write(10))
     sp_write = (/0,0,0,0,0,0,0,0,0,0/)
     sp_read = (/1,2,3,4,5,6,7,8,9,10/)

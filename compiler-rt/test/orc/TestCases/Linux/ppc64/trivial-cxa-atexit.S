@@ -1,5 +1,8 @@
 // Test that the runtime correctly interposes ___cxa_atexit.
-//
+
+// REQUIRES: disabled
+//// https://github.com/llvm/llvm-project/issues/175094
+
 // RUN: %clang -c -o %t %s
 // RUN: %llvm_jitlink %t
 	.text

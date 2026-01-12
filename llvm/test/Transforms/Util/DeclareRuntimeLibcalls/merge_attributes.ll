@@ -8,4 +8,4 @@ define noundef nofpclass(nan) float @sqrtf(float %x) "foo" {
 ; FIXME: Individual fields of nofpclass not merged
 ; CHECK: define noundef nofpclass(ninf nsub nnorm) float @sqrtf(float %x) [[SQRT_ATTR:#[0-9]+]] {
 
-; CHECK: attributes [[SQRT_ATTR]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) "foo" }
+; CHECK: attributes [[SQRT_ATTR]] = { mustprogress nocallback nofree nosync nounwind willreturn memory(errnomem: write) "foo" }

@@ -2581,13 +2581,14 @@ static void emitValidateOperandClass(const CodeGenTarget &Target,
             });
 
         if (FoundMode == ModeSelect.Items.end()) {
-          OS << indent(8) << "InvalidMatchClass, // Missing mode\n";
+          OS << indent(8) << "InvalidMatchClass, // Missing mode entry for "
+             << Class->getName() << "\n";
         } else {
           const CodeGenRegisterClass *RegClass =
               RegBank.getRegClass(FoundMode->second);
           const ClassInfo *CI =
               Info.RegisterClassClasses.at(RegClass->getDef());
-          OS << indent(8) << CI->Name << ",\n";
+          OS << indent(8) << CI->Name << ", // " << Class->getName() << "\n";
         }
       }
 

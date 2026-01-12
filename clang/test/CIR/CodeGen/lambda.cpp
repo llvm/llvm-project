@@ -8,18 +8,51 @@
 // We declare anonymous record types to represent lambdas. Rather than trying to
 // to match the declarations, we establish variables for these when they are used.
 
+auto global_lambda = [](){};
+void use_global_lambda() {
+  global_lambda();
+}
+
+// CIR: cir.global "private" internal dso_local @global_lambda = #cir.undef : ![[REC_LAM_GLOBAL_LAMBDA:.*]] {alignment = 1 : i64}
+// CIR: cir.func {{.*}} lambda internal private dso_local @_ZNK3$_0clEv(%[[THIS_ARG:.*]]: !cir.ptr<![[REC_LAM_GLOBAL_LAMBDA]]> {{.*}})
+// CIR:   %[[THIS:.*]] = cir.alloca !cir.ptr<![[REC_LAM_GLOBAL_LAMBDA]]>, !cir.ptr<!cir.ptr<![[REC_LAM_GLOBAL_LAMBDA]]>>, ["this", init]
+// CIR:   cir.store %[[THIS_ARG]], %[[THIS]]
+// CIR:   cir.load %[[THIS]]
+//
+// CIR: cir.func {{.*}} @_Z17use_global_lambdav()
+// CIR:   %[[LAMBDA:.*]] = cir.get_global @global_lambda : !cir.ptr<![[REC_LAM_GLOBAL_LAMBDA]]>
+// CIR:   cir.call @_ZNK3$_0clEv(%[[LAMBDA]]) : (!cir.ptr<![[REC_LAM_GLOBAL_LAMBDA]]>) -> ()
+
+// LLVM: @global_lambda = internal global %[[REC_LAM_GLOBAL_LAMBDA:.*]] undef, align 1
+// LLVM: define internal void @"_ZNK3$_0clEv"(ptr %[[THIS_ARG:.*]])
+// LLVM:   %[[THIS_ADDR:.*]] = alloca ptr
+// LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
+// LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
+//
+// LLVM: define dso_local void @_Z17use_global_lambdav()
+// LLVM:   call void @"_ZNK3$_0clEv"(ptr @global_lambda)
+
+// OGCG: @global_lambda = internal global %[[REC_LAM_GLOBAL_LAMBDA:.*]] undef, align 1
+// OGCG: define dso_local void @_Z17use_global_lambdav()
+// OGCG:   call void @"_ZNK3$_0clEv"(ptr noundef nonnull align 1 dereferenceable(1) @global_lambda)
+//
+// OGCG: define internal void @"_ZNK3$_0clEv"(ptr {{.*}} %[[THIS_ARG:.*]])
+// OGCG:   %[[THIS_ADDR:.*]] = alloca ptr
+// OGCG:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
+// OGCG:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
+
 void fn() {
   auto a = [](){};
   a();
 }
 
-// CIR: cir.func lambda internal private dso_local @_ZZ2fnvENK3$_0clEv(%[[THIS_ARG:.*]]: !cir.ptr<![[REC_LAM_FN_A:.*]]> {{.*}}) {{.*}} {
+// CIR: cir.func {{.*}} lambda internal private dso_local @_ZZ2fnvENK3$_0clEv(%[[THIS_ARG:.*]]: !cir.ptr<![[REC_LAM_FN_A:.*]]> {{.*}})
 // CIR:   %[[THIS:.*]] = cir.alloca !cir.ptr<![[REC_LAM_FN_A]]>, !cir.ptr<!cir.ptr<![[REC_LAM_FN_A]]>>, ["this", init]
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS]]
 // CIR:   cir.load %[[THIS]]
 // CIR:   cir.return
 
-// CIR: cir.func dso_local @_Z2fnv() {{.*}} {
+// CIR: cir.func {{.*}} @_Z2fnv()
 // CIR:   %[[A:.*]] = cir.alloca ![[REC_LAM_FN_A]], !cir.ptr<![[REC_LAM_FN_A]]>, ["a"]
 // CIR:   cir.call @_ZZ2fnvENK3$_0clEv(%[[A]])
 
@@ -52,7 +85,7 @@ void l0() {
   a();
 }
 
-// CIR: cir.func lambda internal private dso_local @_ZZ2l0vENK3$_0clEv(%[[THIS_ARG:.*]]: !cir.ptr<![[REC_LAM_L0_A:.*]]> {{.*}}) {{.*}} {
+// CIR: cir.func {{.*}} lambda internal private dso_local @_ZZ2l0vENK3$_0clEv(%[[THIS_ARG:.*]]: !cir.ptr<![[REC_LAM_L0_A:.*]]> {{.*}})
 // CIR:   %[[THIS_ADDR:.*]] = cir.alloca !cir.ptr<![[REC_LAM_L0_A]]>, !cir.ptr<!cir.ptr<![[REC_LAM_L0_A]]>>, ["this", init] {alignment = 8 : i64}
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
@@ -66,7 +99,7 @@ void l0() {
 // CIR:   cir.store{{.*}} %[[I_PLUS_ONE]], %[[I_ADDR]]
 // CIR:   cir.return
 
-// CIR: cir.func {{.*}} @_Z2l0v() {{.*}} {
+// CIR: cir.func {{.*}} @_Z2l0v()
 // CIR:   %[[I:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i"]
 // CIR:   %[[A:.*]] = cir.alloca ![[REC_LAM_L0_A]], !cir.ptr<![[REC_LAM_L0_A]]>, ["a", init]
 // CIR:   %[[I_ADDR:.*]] = cir.get_member %[[A]][0] {name = "i"}
@@ -124,7 +157,7 @@ auto g() {
   };
 }
 
-// CIR: cir.func dso_local @_Z1gv() -> ![[REC_LAM_G:.*]] {{.*}} {
+// CIR: cir.func {{.*}} @_Z1gv() -> ![[REC_LAM_G:.*]] {
 // CIR:   %[[RETVAL:.*]] = cir.alloca ![[REC_LAM_G]], !cir.ptr<![[REC_LAM_G]]>, ["__retval"]
 // CIR:   %[[I_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init]
 // CIR:   %[[TWELVE:.*]] = cir.const #cir.int<12> : !s32i
@@ -166,7 +199,7 @@ auto g2() {
 }
 
 // Should be same as above because of NRVO
-// CIR: cir.func dso_local @_Z2g2v() -> ![[REC_LAM_G2:.*]] {{.*}} {
+// CIR: cir.func {{.*}} @_Z2g2v() -> ![[REC_LAM_G2:.*]] {
 // CIR:   %[[RETVAL:.*]] = cir.alloca ![[REC_LAM_G2]], !cir.ptr<![[REC_LAM_G2]]>, ["__retval", init]
 // CIR:   %[[I_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init]
 // CIR:   %[[TWELVE:.*]] = cir.const #cir.int<12> : !s32i
@@ -199,7 +232,7 @@ int f() {
   return g2()();
 }
 
-// CIR:cir.func lambda internal private dso_local @_ZZ2g2vENK3$_0clEv(%[[THIS_ARG:.*]]: !cir.ptr<![[REC_LAM_G2]]> {{.*}}) -> !s32i {{.*}} {
+// CIR:cir.func {{.*}} lambda internal private dso_local @_ZZ2g2vENK3$_0clEv(%[[THIS_ARG:.*]]: !cir.ptr<![[REC_LAM_G2]]> {{.*}}) -> !s32i
 // CIR:   %[[THIS_ADDR:.*]] = cir.alloca !cir.ptr<![[REC_LAM_G2]]>, !cir.ptr<!cir.ptr<![[REC_LAM_G2]]>>, ["this", init]
 // CIR:   %[[RETVAL:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
@@ -217,7 +250,7 @@ int f() {
 // CIR:   %[[RET:.*]] = cir.load %[[RETVAL]]
 // CIR:   cir.return %[[RET]]
 
-// CIR: cir.func dso_local @_Z1fv() -> !s32i {{.*}} {
+// CIR: cir.func {{.*}} @_Z1fv() -> !s32i
 // CIR:   %[[RETVAL:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR:   cir.scope {
 // CIR:     %[[TMP:.*]] = cir.alloca ![[REC_LAM_G2]], !cir.ptr<![[REC_LAM_G2]]>, ["ref.tmp0"]
@@ -299,7 +332,7 @@ struct A {
 // OGCG:   call noundef i32 @_ZN1A3barEv(ptr {{.*}} %[[A_THIS]])
 
 // lambda operator() in foo()
-// CIR: cir.func lambda comdat linkonce_odr @_ZZN1A3fooEvENKUlvE_clEv(%[[THIS_ARG:.*]]: !cir.ptr<![[REC_LAM_A:.*]]> {{.*}}) {{.*}} {
+// CIR: cir.func {{.*}} lambda comdat linkonce_odr @_ZZN1A3fooEvENKUlvE_clEv(%[[THIS_ARG:.*]]: !cir.ptr<![[REC_LAM_A:.*]]> {{.*}})
 // CIR:   %[[THIS_ADDR:.*]] = cir.alloca !cir.ptr<![[REC_LAM_A]]>, !cir.ptr<!cir.ptr<![[REC_LAM_A]]>>, ["this", init]
 // CIR:   %[[RETVAL:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR:   cir.store{{.*}} %[[THIS_ARG]], %[[THIS_ADDR]]
@@ -326,7 +359,7 @@ struct A {
 // The function above is defined after _ZN1A3barEv in OGCG, see below.
 
 // A::foo()
-// CIR: cir.func {{.*}} @_ZN1A3fooEv(%[[THIS_ARG:.*]]: !cir.ptr<!rec_A> {{.*}}) -> !s32i {{.*}} {
+// CIR: cir.func {{.*}} @_ZN1A3fooEv(%[[THIS_ARG:.*]]: !cir.ptr<!rec_A> {{.*}}) -> !s32i
 // CIR:   %[[THIS_ADDR:.*]] = cir.alloca !cir.ptr<!rec_A>, !cir.ptr<!cir.ptr<!rec_A>>, ["this", init]
 // CIR:   %[[RETVAL:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
@@ -334,7 +367,7 @@ struct A {
 // CIR:   cir.scope {
 // CIR:     %[[LAM_ADDR:.*]] = cir.alloca ![[REC_LAM_A]], !cir.ptr<![[REC_LAM_A]]>, ["ref.tmp0"]
 // CIR:     %[[STRUCT_A:.*]] = cir.get_member %[[LAM_ADDR]][0] {name = "this"} : !cir.ptr<![[REC_LAM_A]]> -> !cir.ptr<!rec_A>
-// CIR:     cir.call @_ZN1AC1ERKS_(%[[STRUCT_A]], %[[THIS]]){{.*}} : (!cir.ptr<!rec_A>, !cir.ptr<!rec_A>){{.*}} -> ()
+// CIR:     cir.copy %[[THIS]] to %[[STRUCT_A]] : !cir.ptr<!rec_A>
 // CIR:     %[[LAM_RET:.*]] = cir.call @_ZZN1A3fooEvENKUlvE_clEv(%[[LAM_ADDR]])
 // CIR:     cir.store{{.*}} %[[LAM_RET]], %[[RETVAL]]
 // CIR:   }
@@ -350,7 +383,7 @@ struct A {
 // LLVM:   br label %[[SCOPE_BB:.*]]
 // LLVM: [[SCOPE_BB]]:
 // LLVM:   %[[STRUCT_A:.*]] = getelementptr %[[REC_LAM_A]], ptr %[[LAM_ALLOCA]], i32 0, i32 0
-// LLVM:   call void @_ZN1AC1ERKS_(ptr %[[STRUCT_A]], ptr %[[THIS]])
+// LLVM:   call void @llvm.memcpy.p0.p0.i32(ptr %[[STRUCT_A]], ptr %[[THIS]], i32 4, i1 false)
 // LLVM:   %[[LAM_RET:.*]] = call i32 @_ZZN1A3fooEvENKUlvE_clEv(ptr %[[LAM_ALLOCA]])
 // LLVM:   store i32 %[[LAM_RET]], ptr %[[RETVAL]]
 // LLVM:   br label %[[RET_BB:.*]]
@@ -369,7 +402,7 @@ struct A {
 // OGCG:   ret i32 %[[LAM_RET]]
 
 // lambda operator() in bar()
-// CIR: cir.func {{.*}} @_ZZN1A3barEvENKUlvE_clEv(%[[THIS_ARG2:.*]]: !cir.ptr<![[REC_LAM_PTR_A:.*]]> {{.*}}) -> !s32i {{.*}} {
+// CIR: cir.func {{.*}} @_ZZN1A3barEvENKUlvE_clEv(%[[THIS_ARG2:.*]]: !cir.ptr<![[REC_LAM_PTR_A:.*]]> {{.*}}) -> !s32i
 // CIR:   %[[THIS_ADDR:.*]] = cir.alloca !cir.ptr<![[REC_LAM_PTR_A]]>, !cir.ptr<!cir.ptr<![[REC_LAM_PTR_A]]>>, ["this", init]
 // CIR:   %[[RETVAL:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR:   cir.store{{.*}} %[[THIS_ARG]], %[[THIS_ADDR]]
@@ -398,7 +431,7 @@ struct A {
 // The function above is defined after _ZZN1A3fooEvENKUlvE_clEv in OGCG, see below.
 
 // A::bar()
-// CIR: cir.func {{.*}} @_ZN1A3barEv(%[[THIS_ARG:.*]]: !cir.ptr<!rec_A> {{.*}}) -> !s32i {{.*}} {
+// CIR: cir.func {{.*}} @_ZN1A3barEv(%[[THIS_ARG:.*]]: !cir.ptr<!rec_A> {{.*}}) -> !s32i
 // CIR:   %[[THIS_ADDR:.*]] = cir.alloca !cir.ptr<!rec_A>, !cir.ptr<!cir.ptr<!rec_A>>, ["this", init]
 // CIR:   %[[RETVAL:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
@@ -466,7 +499,7 @@ int test_lambda_this1(){
   return x+y;
 }
 
-// CIR: cir.func {{.*}} @_Z17test_lambda_this1v{{.*}} {
+// CIR: cir.func {{.*}} @_Z17test_lambda_this1v
 // CIR:   cir.call @_ZN1AC1Ev(%[[A_THIS:.*]]){{.*}} : (!cir.ptr<!rec_A>) -> ()
 // CIR:   cir.call @_ZN1A3fooEv(%[[A_THIS]]){{.*}} : (!cir.ptr<!rec_A>) -> !s32i
 // CIR:   cir.call @_ZN1A3barEv(%[[A_THIS]]){{.*}} : (!cir.ptr<!rec_A>) -> !s32i

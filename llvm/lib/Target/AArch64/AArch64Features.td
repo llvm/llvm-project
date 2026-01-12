@@ -894,6 +894,11 @@ def FeatureUseFixedOverScalableIfEqualCost : SubtargetFeature<"use-fixed-over-sc
   "UseFixedOverScalableIfEqualCost", "true",
   "Prefer fixed width loop vectorization over scalable if the cost-model assigns equal costs">;
 
+def FeatureDisableMaximizeScalableBandwidth : SubtargetFeature< "disable-maximize-scalable-bandwidth",
+    "DisableMaximizeScalableBandwidth", "true",
+    "Determine the maximum scalable vector length for a loop by the "
+    "largest scalar type rather than the smallest">;
+
 // For performance reasons we prefer to use ldapr to ldapur on certain cores.
 def FeatureAvoidLDAPUR : SubtargetFeature<"avoid-ldapur", "AvoidLDAPUR", "true",
   "Prefer add+ldapr to offset ldapur">;
@@ -909,6 +914,18 @@ def FeatureDisableFastIncVL : SubtargetFeature<"disable-fast-inc-vl",
 def FeatureUseWzrToVecMove : SubtargetFeature<"use-wzr-to-vec-move",
                                               "UseWzrToVecMove", "true",
                                               "Move from WZR to insert 0 into vector registers">;
+
+def FeatureDisableUnpredicatedLdStLower : SubtargetFeature<
+    "disable-unpredicated-ld-st-lower", "DisableUnpredicatedLdStLower",
+    "true", "Disable lowering unpredicated loads/stores as LDR/STR">;
+
+def FeatureAggressiveInterleaving : SubtargetFeature<"aggressive-interleaving",
+                                                     "AggressiveInterleaving", "true",
+                                                     "Make use of aggressive interleaving during vectorization">;
+
+def FeatureMaxInterleaveFactor4 : SubtargetFeature<
+    "max-interleave-factor-4", "MaxInterleaveFactor", "4",
+    "Set the MaxInterleaveFactor to 4 (from the default 2)">;
 
 //===----------------------------------------------------------------------===//
 // Architectures.
