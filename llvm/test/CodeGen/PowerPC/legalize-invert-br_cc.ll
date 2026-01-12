@@ -29,10 +29,8 @@ define void @test_fcmpueq_legalize_br_cc_with_invert(float %a) {
 ; CHECK-NEXT:    mr 4, 29
 ; CHECK-NEXT:    bl __ltsf2
 ; CHECK-NEXT:    srwi 3, 3, 31
-; CHECK-NEXT:    or 3, 28, 3
-; CHECK-NEXT:    xori 3, 3, 1
-; CHECK-NEXT:    cmplwi 3, 0
-; CHECK-NEXT:    beq 0, .LBB0_4
+; CHECK-NEXT:    or. 3, 28, 3
+; CHECK-NEXT:    bne 0, .LBB0_4
 ; CHECK-NEXT:  .LBB0_2: # %l1
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    mr 3, 30

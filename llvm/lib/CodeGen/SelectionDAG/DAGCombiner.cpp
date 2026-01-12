@@ -10054,6 +10054,8 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
                                                LHS.getValueType());
     if (!LegalOperations ||
         TLI.isCondCodeLegal(NotCC, LHS.getSimpleValueType())) {
+      // Propagate fast-math-flags.
+      SelectionDAG::FlagInserter FlagsInserter(DAG, N0->getFlags());
       switch (N0Opcode) {
       default:
         llvm_unreachable("Unhandled SetCC Equivalent!");

@@ -1,6 +1,6 @@
 ; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -mattr=-vsx | FileCheck %s --check-prefix=ELF64
 ; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -mtriple=powerpc64le-unknown-linux-gnu -mattr=+vsx | FileCheck %s --check-prefix=VSX
-; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -mtriple=powerpc-unknown-linux-gnu -mcpu=e500 -mattr=spe --enable-no-nans-fp-math | FileCheck %s --check-prefix=SPE
+; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -mtriple=powerpc-unknown-linux-gnu -mcpu=e500 -mattr=spe | FileCheck %s --check-prefix=SPE
 
 declare void @foo()
 
@@ -9,7 +9,7 @@ entry:
 ; ELF64-LABEL: @t1a
 ; SPE-LABEL: @t1a
 ; VSX-LABEL: @t1a
-  %cmp = fcmp oeq float %a, 0.000000e+00
+  %cmp = fcmp nnan ninf oeq float %a, 0.000000e+00
 ; ELF64: addis
 ; ELF64: lfs
 ; ELF64: fcmpu
@@ -32,7 +32,7 @@ entry:
 ; ELF64-LABEL: @t1b
 ; SPE-LABEL: @t1b
 ; VSX-LABEL: @t1b
-  %cmp = fcmp oeq float %a, -0.000000e+00
+  %cmp = fcmp nnan ninf oeq float %a, -0.000000e+00
 ; ELF64: addis
 ; ELF64: lfs
 ; ELF64: fcmpu
@@ -55,7 +55,7 @@ entry:
 ; ELF64-LABEL: @t1c
 ; SPE-LABEL: @t1c
 ; VSX-LABEL: @t1c
-  %cmp = fcmp oeq float -0.000000e+00, %a
+  %cmp = fcmp nnan ninf oeq float -0.000000e+00, %a
 ; ELF64: addis
 ; ELF64: lfs
 ; ELF64: fcmpu
@@ -78,7 +78,7 @@ entry:
 ; ELF64-LABEL: @t2a
 ; SPE-LABEL: @t2a
 ; VSX-LABEL: @t2a
-  %cmp = fcmp oeq double %a, 0.000000e+00
+  %cmp = fcmp nnan ninf oeq double %a, 0.000000e+00
 ; ELF64: addis
 ; ELF64: lfd
 ; ELF64: fcmpu
@@ -101,7 +101,7 @@ entry:
 ; ELF64-LABEL: @t2b
 ; SPE-LABEL: @t2b
 ; VSX-LABEL: @t2b
-  %cmp = fcmp oeq double %a, -0.000000e+00
+  %cmp = fcmp nnan ninf oeq double %a, -0.000000e+00
 ; ELF64: addis
 ; ELF64: lfd
 ; ELF64: fcmpu
@@ -124,7 +124,7 @@ entry:
 ; ELF64-LABEL: @t2c
 ; SPE-LABEL: @t2c
 ; VSX-LABEL: @t2c
-  %cmp = fcmp oeq double -0.000000e+00, %a
+  %cmp = fcmp nnan ninf oeq double -0.000000e+00, %a
 ; ELF64: addis
 ; ELF64: lfd
 ; ELF64: fcmpu
