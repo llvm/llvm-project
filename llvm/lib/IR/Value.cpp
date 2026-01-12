@@ -963,12 +963,14 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
 Align Value::getPointerAlignment(const DataLayout &DL) const {
   assert(getType()->isPointerTy() && "must be pointer");
   if (const Function *F = dyn_cast<Function>(this)) {
-    Align FunctionPtrAlign = DL.getFunctionPtrAlign().valueOrOne();
+    // Note: Do not factor out DL.getFunctionPtrAlign().valueOrOne() as it will
+    // confuse valgrind to start reporting uninitialized conditional jumps.
     switch (DL.getFunctionPtrAlignType()) {
     case DataLayout::FunctionPtrAlignType::Independent:
-      return FunctionPtrAlign;
+      return DL.getFunctionPtrAlign().valueOrOne();
     case DataLayout::FunctionPtrAlignType::MultipleOfFunctionAlign:
-      return std::max(FunctionPtrAlign, F->getAlign().valueOrOne());
+      return std::max(DL.getFunctionPtrAlign().valueOrOne(),
+                      F->getAlign().valueOrOne());
     }
     llvm_unreachable("Unhandled FunctionPtrAlignType");
   } else if (auto *GVar = dyn_cast<GlobalVariable>(this)) {
