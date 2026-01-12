@@ -102,7 +102,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86DAGToDAGISelLegacyPass(PR);
   initializeX86ArgumentStackSlotPassPass(PR);
   initializeX86AsmPrinterPass(PR);
-  initializeX86FixupInstTuningPassPass(PR);
+  initializeX86FixupInstTuningLegacyPass(PR);
   initializeX86FixupVectorConstantsPassPass(PR);
   initializeX86DynAllocaExpanderLegacyPass(PR);
   initializeX86SuppressAPXForRelocationPassPass(PR);
@@ -567,7 +567,7 @@ void X86PassConfig::addPreEmitPass() {
     addPass(createX86FixupBWInstsLegacyPass());
     addPass(createX86PadShortFunctions());
     addPass(createX86FixupLEAsLegacyPass());
-    addPass(createX86FixupInstTuning());
+    addPass(createX86FixupInstTuningLegacyPass());
     addPass(createX86FixupVectorConstants());
   }
   addPass(createX86CompressEVEXLegacyPass());
