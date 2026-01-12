@@ -343,14 +343,9 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       VPValue *VFxPart = Builder.createOverflowingOp(
           Instruction::Mul, {VF, Plan.getConstantInt(IndexTy, Part)},
           {true, true});
-      VPValue *Stride = Builder.createScalarZExtOrTrunc(
-          VPR->getStride(), IndexTy, TypeInfo.inferScalarType(VPR->getStride()),
-          DebugLoc::getUnknown());
-      VPValue *Offset =
-          Builder.createOverflowingOp(Instruction::Mul, {VFxPart, Stride});
       Copy->setOperand(0, VPR->getOperand(0));
       Copy->setOperand(1, VPR->getOperand(1));
-      Copy->addOperand(Offset);
+      Copy->addOperand(VFxPart);
       continue;
     }
     if (auto *Red = dyn_cast<VPReductionRecipe>(&R)) {

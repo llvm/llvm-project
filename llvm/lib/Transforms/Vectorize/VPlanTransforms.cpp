@@ -1555,7 +1555,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   // Simplify unrolled VectorPointer without offset, or with zero offset, to
   // just the pointer operand.
   if (auto *VPR = dyn_cast<VPVectorPointerRecipe>(Def))
-    if (!VPR->getOffset() || match(VPR->getOffset(), m_ZeroInt()))
+    if (!VPR->getVFxPart() || match(VPR->getVFxPart(), m_ZeroInt()))
       return VPR->replaceAllUsesWith(VPR->getOperand(0));
 
   // VPScalarIVSteps after unrolling can be replaced by their start value, if
