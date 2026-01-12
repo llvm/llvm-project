@@ -419,8 +419,6 @@ function(add_libclc_builtin_set)
     endif()
   else()
     # Non-SPIR-V targets add an extra step to optimize the bytecode
-    set( builtins_opt_lib_tgt builtins.opt.${ARG_ARCH_SUFFIX} )
-
     set( obj_suffix ${ARG_ARCH_SUFFIX}.bc )
     set( libclc_builtins_lib ${LIBCLC_OUTPUT_LIBRARY_DIR}/${obj_suffix} )
 
