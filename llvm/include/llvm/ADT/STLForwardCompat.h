@@ -169,9 +169,10 @@ constexpr auto bind_front(FnT &&Fn, // NOLINT(readability-identifier-naming)
   if constexpr (std::is_pointer_v<FnT> or std::is_member_pointer_v<FnT>)
     static_assert(Fn != nullptr);
 
-  return [&BindArgs..., Fn = std::forward<FnT>(Fn)](auto &&...CallArgs) {
-    return std::invoke(Fn, std::forward<BindArgsT>(BindArgs)...,
-                       std::forward<decltype(CallArgs)>(CallArgs)...);
+  return [Fn = std::forward<FnT>(Fn),
+          BindArgs = std::forward_as_tuple(BindArgs...)](auto &&...CallArgs) {
+    return std::apply(
+        Fn, std::tuple_cat(BindArgs, std::forward_as_tuple(CallArgs...)));
   };
 }
 
@@ -204,9 +205,8 @@ struct from_range_t {
 };
 inline constexpr from_range_t from_range{};
 
-// The behvaior is the same as std::bind_back, with the following differences:
-// - BindArgs are not perfect-forwarded
-// - The value catagory and const of the returned lambda are not considered when
+// The behvaior is the same as std::bind_back, with the following difference:
+// The value catagory and const of the returned lambda are not considered when
 // calling it. An approach to handle them is using deducing this and
 // std::forward_like (C++23).
 template <typename FnT, typename... BindArgsT>
@@ -215,9 +215,10 @@ constexpr auto bind_back(FnT &&Fn, // NOLINT(readability-identifier-naming)
   if constexpr (std::is_pointer_v<FnT> or std::is_member_pointer_v<FnT>)
     static_assert(Fn != nullptr);
 
-  return [&BindArgs..., Fn = std::forward<FnT>(Fn)](auto &&...CallArgs) {
-    return std::invoke(Fn, std::forward<decltype(CallArgs)>(CallArgs)...,
-                       std::forward<BindArgsT>(BindArgs)...);
+  return [Fn = std::forward<FnT>(Fn),
+          BindArgs = std::forward_as_tuple(BindArgs...)](auto &&...CallArgs) {
+    return std::apply(
+        Fn, std::tuple_cat(std::forward_as_tuple(CallArgs...), BindArgs));
   };
 }
 } // namespace llvm

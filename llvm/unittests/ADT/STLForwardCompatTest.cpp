@@ -268,21 +268,24 @@ TEST(STLForwardCompatTest, InvokeConstexpr) {
 TEST(STLForwardCompat, BindFrontBindBack) {
   std::vector<int> V;
   auto MulAdd = [](int A, int B, int C) { return A * (B + C) == 12; };
+  auto MulAdd1 = [](const int &A, const int &B, const int &C) {
+    return A * (B + C) == 12;
+  };
   auto Mul0 = bind_back(MulAdd, 4, 2);
-  auto Mul1 = bind_front(MulAdd, 2, 4);
+  auto MulL = bind_front(MulAdd1, 2, 4);
   auto Mul20 = bind_back(MulAdd, 4);
-  auto Mul21 = bind_front(MulAdd, 2);
+  auto Mul21 = bind_front(MulAdd1, 2);
   EXPECT_TRUE(all_of(V, Mul0));
-  EXPECT_TRUE(all_of(V, Mul1));
+  EXPECT_TRUE(all_of(V, MulL));
 
   V.push_back(2);
   EXPECT_TRUE(all_of(V, Mul0));
-  EXPECT_TRUE(all_of(V, Mul1));
+  EXPECT_TRUE(all_of(V, MulL));
 
   V.push_back(2);
   V.push_back(2);
   EXPECT_TRUE(all_of(V, Mul0));
-  EXPECT_TRUE(all_of(V, Mul1));
+  EXPECT_TRUE(all_of(V, MulL));
 
   auto Spec0 = bind_front(Mul20, 2);
   auto Spec1 = bind_back(Mul21, 4);
@@ -291,7 +294,7 @@ TEST(STLForwardCompat, BindFrontBindBack) {
 
   V.push_back(3);
   EXPECT_FALSE(all_of(V, Mul0));
-  EXPECT_FALSE(all_of(V, Mul1));
+  EXPECT_FALSE(all_of(V, MulL));
   EXPECT_FALSE(all_of(V, Spec0));
   EXPECT_FALSE(all_of(V, Spec1));
   EXPECT_TRUE(any_of(V, Spec0));
