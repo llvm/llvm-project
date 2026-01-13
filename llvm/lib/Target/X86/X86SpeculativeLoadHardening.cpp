@@ -225,10 +225,10 @@ private:
 bool X86SpeculativeLoadHardeningPass::runOnMachineFunction(
     MachineFunction &MF) {
   X86SpeculativeLoadHardeningImpl Impl;
-  bool Result = Impl.run(MF);
+  bool Changed = Impl.run(MF);
   LLVM_DEBUG(dbgs() << "Final speculative load hardened function:\n"; MF.dump();
              dbgs() << "\n"; MF.verify(this));
-  return Result;
+  return Changed;
 }
 
 char X86SpeculativeLoadHardeningPass::ID = 0;
