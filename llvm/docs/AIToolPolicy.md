@@ -109,23 +109,23 @@ help new contributors learn.
 
 ## Handling Violations
 
-If a maintainer judges that a contribution is *extractive* (i.e. it doesn't
-comply with this policy), they should copy-paste the following response to
-request changes, add the `extractive` label if applicable, and refrain from
-further engagement:
+If a maintainer judges that a contribution doesn't comply with this policy,
+they should paste the following response to request changes:
 
-    This PR appears to be extractive, and requires additional justification for
-    why it is valuable enough to the project for us to review it. Please see
-    our developer policy on AI-generated contributions:
-    http://llvm.org/docs/AIToolPolicy.html
-
-Other reviewers should use the label to prioritize their review time.
+    This PR doesn't appear to comply with our policy on tool-generated content,
+    and requires additional justification for why it is valuable enough to the
+    project for us to review it. Please see our developer policy on
+    AI-generated contributions: http://llvm.org/docs/AIToolPolicy.html
 
 The best ways to make a change less extractive and more valuable are to reduce
 its size or complexity or to increase its usefulness to the community. These
 factors are impossible to weigh objectively, and our project policy leaves this
 determination up to the maintainers of the project, i.e. those who are doing
 the work of sustaining the project.
+
+If or when it becomes clear that a GitHub issue or PR is off-track and not
+moving in the right direction, maintainers should apply the `extractive` label
+to help other reviewers prioritize their review time.
 
 If a contributor responds but doesn't make their change meaningfully less
 extractive, maintainers should escalate to the relevant moderation or admin
