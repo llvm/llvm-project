@@ -17481,8 +17481,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPTransparentClause(Expr *ImpexTypeArg,
                                      StartLoc, LParenLoc, EndLoc);
     }
   }
-  SemaRef.Diag(StartLoc, diag::err_omp_transparent_invalid_type)
-      << Ty.getAsString();
+  SemaRef.Diag(StartLoc, diag::err_omp_transparent_invalid_type) << Ty;
   return nullptr;
 }
 

@@ -31,13 +31,13 @@ void TestTaskTransparentWithErrors() {
 #pragma omp task transparent(omp_impex)
   // expected-error@+1{{invalid value for transparent clause, expected one of: omp_not_impex, omp_import, omp_export, omp_impex}}
 #pragma omp task transparent(5)
-  // expected-error@+1{{transparent clause cannot be applied to type: int *}}
+  // expected-error@+1{{transparent clause cannot be applied to type: 'int *'}}
 #pragma omp task transparent(ptr)
-  // expected-error@+1{{transparent clause cannot be applied to type: int *}}
+  // expected-error@+1{{transparent clause cannot be applied to type: 'int *'}}
 #pragma omp task transparent(&x)
-  // expected-error@+1{{transparent clause cannot be applied to type: double}}
+  // expected-error@+1{{transparent clause cannot be applied to type: 'double'}}
 #pragma omp task transparent(20.0)
-  // expected-error@+1{{transparent clause cannot be applied to type: int[5]}}
+  // expected-error@+1{{transparent clause cannot be applied to type: 'int[5]'}}
 #pragma omp task transparent(arr)
   for (int i = 0; i < 5; ++i) {}
 }
