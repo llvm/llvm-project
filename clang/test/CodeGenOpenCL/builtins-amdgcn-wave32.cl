@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -D__AMDGCN_WAVEFRONT_SIZE=32 -target-feature +wavefrontsize32 -emit-llvm -o - %s | FileCheck -enable-var-scope %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-feature +wavefrontsize32 -emit-llvm -o - %s | FileCheck -enable-var-scope %s
 // RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx1010 -emit-llvm -o - %s | FileCheck -enable-var-scope %s
 // RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx1010 -target-feature +wavefrontsize32 -emit-llvm -o - %s | FileCheck -enable-var-scope %s
 // RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx1100 -target-feature +wavefrontsize32 -emit-llvm -o - %s | FileCheck -enable-var-scope %s
@@ -24,6 +24,13 @@ void test_ballot_wave32_target_attr(global uint* out, int a, int b)
   *out = __builtin_amdgcn_ballot_w32(a == b);
 }
 
+// CHECK-LABEL: @test_inverse_ballot_wave32(
+// CHECK: call i1 @llvm.amdgcn.inverse.ballot.i32(i32 %{{.+}})
+void test_inverse_ballot_wave32(global bool* out, int a)
+{
+  *out = __builtin_amdgcn_inverse_ballot_w32(a);
+}
+
 // CHECK-LABEL: @test_read_exec(
 // CHECK: call i32 @llvm.amdgcn.ballot.i32(i1 true)
 void test_read_exec(global uint* out) {
@@ -41,7 +48,3 @@ void test_read_exec_lo(global uint* out) {
 void test_read_exec_hi(global uint* out) {
   *out = __builtin_amdgcn_read_exec_hi();
 }
-
-#if __AMDGCN_WAVEFRONT_SIZE != 32
-#error Wrong wavesize detected
-#endif

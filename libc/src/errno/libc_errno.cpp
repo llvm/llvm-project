@@ -46,11 +46,6 @@ Errno::operator int() { return shared_errno; }
 void Errno::operator=(int a) { *__llvm_libc_errno() = a; }
 Errno::operator int() { return *__llvm_libc_errno(); }
 
-#elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_SYSTEM
-
-void Errno::operator=(int a) { errno = a; }
-Errno::operator int() { return errno; }
-
 #endif
 
 // Define the global `libc_errno` instance.

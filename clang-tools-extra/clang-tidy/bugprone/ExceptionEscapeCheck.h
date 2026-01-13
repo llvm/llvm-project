@@ -1,4 +1,4 @@
-//===--- ExceptionEscapeCheck.h - clang-tidy --------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_EXCEPTION_ESCAPE_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_EXCEPTION_ESCAPE_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_EXCEPTIONESCAPECHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_EXCEPTIONESCAPECHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "../utils/ExceptionAnalyzer.h"
@@ -21,7 +21,7 @@ namespace clang::tidy::bugprone {
 /// given as option to the checker.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/exception-escape.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/exception-escape.html
 class ExceptionEscapeCheck : public ClangTidyCheck {
 public:
   ExceptionEscapeCheck(StringRef Name, ClangTidyContext *Context);
@@ -33,13 +33,20 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  std::string RawFunctionsThatShouldNotThrow;
-  std::string RawIgnoredExceptions;
+  StringRef RawFunctionsThatShouldNotThrow;
+  StringRef RawIgnoredExceptions;
+  StringRef RawCheckedSwapFunctions;
+
+  const bool CheckDestructors;
+  const bool CheckMoveMemberFunctions;
+  const bool CheckMain;
+  const bool CheckNothrowFunctions;
 
   llvm::StringSet<> FunctionsThatShouldNotThrow;
+  llvm::StringSet<> CheckedSwapFunctions;
   utils::ExceptionAnalyzer Tracer;
 };
 
 } // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_EXCEPTION_ESCAPE_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_EXCEPTIONESCAPECHECK_H

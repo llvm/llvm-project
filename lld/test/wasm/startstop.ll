@@ -27,19 +27,19 @@ entry:
 
 ;      CHECK:   - Type:            DATA
 ; CHECK-NEXT:     Segments:
-; CHECK-NEXT:       - SectionOffset:   7
+; CHECK-NEXT:       - SectionOffset:   8
 ; CHECK-NEXT:         InitFlags:       0
 ; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           1024
+; CHECK-NEXT:           Value:           65536
 ; CHECK-NEXT:         Content:         03000000040000002A0000002B000000
 
-;       ASM: 0000006e <get_start>:
+;       ASM: 00000070 <get_start>:
 ; ASM-EMPTY:
-;  ASM-NEXT:        70:     i32.const 1024
-;  ASM-NEXT:        76:     end
+;  ASM-NEXT:        72:     i32.const 65536
+;  ASM-NEXT:        78:     end
 
-;       ASM: 00000077 <get_end>:
+;       ASM: 00000079 <get_end>:
 ; ASM-EMPTY:
-;  ASM-NEXT:        79:     i32.const 1040
-;  ASM-NEXT:       7f:     end
+;  ASM-NEXT:        7b:     i32.const 65552
+;  ASM-NEXT:       81:     end

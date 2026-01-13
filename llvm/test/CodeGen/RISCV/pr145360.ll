@@ -27,11 +27,11 @@ define i32 @unsigned(i32 %0, ptr %1) {
 ; CHECK-NEXT:    slli a4, a3, 32
 ; CHECK-NEXT:    mulhu a2, a2, a4
 ; CHECK-NEXT:    srli a2, a2, 36
-; CHECK-NEXT:    slli a4, a2, 5
-; CHECK-NEXT:    slli a2, a2, 3
-; CHECK-NEXT:    sub a2, a2, a4
+; CHECK-NEXT:    slli a4, a2, 3
+; CHECK-NEXT:    slli a2, a2, 4
+; CHECK-NEXT:    add a2, a2, a4
 ; CHECK-NEXT:    srliw a4, a0, 3
-; CHECK-NEXT:    add a2, a0, a2
+; CHECK-NEXT:    sub a2, a0, a2
 ; CHECK-NEXT:    mulw a0, a4, a3
 ; CHECK-NEXT:    sw a2, 0(a1)
 ; CHECK-NEXT:    ret
@@ -68,10 +68,10 @@ define i32 @unsigned_div_first(i32 %0, ptr %1) {
 ; CHECK-NEXT:    slli a3, a3, 32
 ; CHECK-NEXT:    mulhu a2, a2, a3
 ; CHECK-NEXT:    srli a2, a2, 36
-; CHECK-NEXT:    slli a3, a2, 5
-; CHECK-NEXT:    slli a4, a2, 3
-; CHECK-NEXT:    sub a4, a4, a3
-; CHECK-NEXT:    add a0, a0, a4
+; CHECK-NEXT:    slli a3, a2, 3
+; CHECK-NEXT:    slli a4, a2, 4
+; CHECK-NEXT:    add a3, a4, a3
+; CHECK-NEXT:    sub a0, a0, a3
 ; CHECK-NEXT:    sw a0, 0(a1)
 ; CHECK-NEXT:    mv a0, a2
 ; CHECK-NEXT:    ret

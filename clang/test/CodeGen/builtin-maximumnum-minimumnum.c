@@ -12,10 +12,10 @@ typedef long double ldouble2 __attribute__((ext_vector_type(2)));
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <8 x half>, align 16
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <8 x half>, align 16
-// CHECK-NEXT:    store <8 x half> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA2:![0-9]+]]
-// CHECK-NEXT:    store <8 x half> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <8 x half>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load <8 x half>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA2]]
+// CHECK-NEXT:    store <8 x half> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA6:![0-9]+]]
+// CHECK-NEXT:    store <8 x half> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <8 x half>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load <8 x half>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[ELT_MINIMUMNUM:%.*]] = call <8 x half> @llvm.minimumnum.v8f16(<8 x half> [[TMP0]], <8 x half> [[TMP1]])
 // CHECK-NEXT:    ret <8 x half> [[ELT_MINIMUMNUM]]
 //
@@ -27,10 +27,10 @@ half8 pfmin16(half8 a, half8 b) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <8 x bfloat>, align 16
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <8 x bfloat>, align 16
-// CHECK-NEXT:    store <8 x bfloat> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store <8 x bfloat> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <8 x bfloat>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load <8 x bfloat>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA2]]
+// CHECK-NEXT:    store <8 x bfloat> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store <8 x bfloat> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <8 x bfloat>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load <8 x bfloat>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[ELT_MINIMUMNUM:%.*]] = call <8 x bfloat> @llvm.minimumnum.v8bf16(<8 x bfloat> [[TMP0]], <8 x bfloat> [[TMP1]])
 // CHECK-NEXT:    ret <8 x bfloat> [[ELT_MINIMUMNUM]]
 //
@@ -42,10 +42,10 @@ bf16x8 pfmin16b(bf16x8 a, bf16x8 b) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <4 x float>, align 16
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <4 x float>, align 16
-// CHECK-NEXT:    store <4 x float> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store <4 x float> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA2]]
+// CHECK-NEXT:    store <4 x float> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store <4 x float> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[ELT_MINIMUMNUM:%.*]] = call <4 x float> @llvm.minimumnum.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]])
 // CHECK-NEXT:    ret <4 x float> [[ELT_MINIMUMNUM]]
 //
@@ -57,10 +57,10 @@ float4 pfmin32(float4 a, float4 b) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <2 x double>, align 16
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <2 x double>, align 16
-// CHECK-NEXT:    store <2 x double> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store <2 x double> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA2]]
+// CHECK-NEXT:    store <2 x double> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store <2 x double> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[ELT_MINIMUMNUM:%.*]] = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]])
 // CHECK-NEXT:    ret <2 x double> [[ELT_MINIMUMNUM]]
 //
@@ -72,12 +72,12 @@ double2 pfmin64(double2 a, double2 b) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <2 x x86_fp80>, align 32
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <2 x x86_fp80>, align 32
-// CHECK-NEXT:    [[A:%.*]] = load <2 x x86_fp80>, ptr [[TMP0]], align 32, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[B:%.*]] = load <2 x x86_fp80>, ptr [[TMP1]], align 32, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store <2 x x86_fp80> [[A]], ptr [[A_ADDR]], align 32, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store <2 x x86_fp80> [[B]], ptr [[B_ADDR]], align 32, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[TMP2:%.*]] = load <2 x x86_fp80>, ptr [[A_ADDR]], align 32, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[TMP3:%.*]] = load <2 x x86_fp80>, ptr [[B_ADDR]], align 32, !tbaa [[TBAA2]]
+// CHECK-NEXT:    [[A:%.*]] = load <2 x x86_fp80>, ptr [[TMP0]], align 32, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[B:%.*]] = load <2 x x86_fp80>, ptr [[TMP1]], align 32, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store <2 x x86_fp80> [[A]], ptr [[A_ADDR]], align 32, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store <2 x x86_fp80> [[B]], ptr [[B_ADDR]], align 32, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load <2 x x86_fp80>, ptr [[A_ADDR]], align 32, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP3:%.*]] = load <2 x x86_fp80>, ptr [[B_ADDR]], align 32, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[ELT_MINIMUMNUM:%.*]] = call <2 x x86_fp80> @llvm.minimumnum.v2f80(<2 x x86_fp80> [[TMP2]], <2 x x86_fp80> [[TMP3]])
 // CHECK-NEXT:    ret <2 x x86_fp80> [[ELT_MINIMUMNUM]]
 //
@@ -90,10 +90,10 @@ ldouble2 pfmin80(ldouble2 a, ldouble2 b) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <8 x half>, align 16
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <8 x half>, align 16
-// CHECK-NEXT:    store <8 x half> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store <8 x half> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <8 x half>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load <8 x half>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA2]]
+// CHECK-NEXT:    store <8 x half> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store <8 x half> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <8 x half>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load <8 x half>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[ELT_MAXIMUMNUM:%.*]] = call <8 x half> @llvm.maximumnum.v8f16(<8 x half> [[TMP0]], <8 x half> [[TMP1]])
 // CHECK-NEXT:    ret <8 x half> [[ELT_MAXIMUMNUM]]
 //
@@ -105,10 +105,10 @@ half8 pfmax16(half8 a, half8 b) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <8 x bfloat>, align 16
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <8 x bfloat>, align 16
-// CHECK-NEXT:    store <8 x bfloat> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store <8 x bfloat> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <8 x bfloat>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load <8 x bfloat>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA2]]
+// CHECK-NEXT:    store <8 x bfloat> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store <8 x bfloat> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <8 x bfloat>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load <8 x bfloat>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[ELT_MAXIMUMNUM:%.*]] = call <8 x bfloat> @llvm.maximumnum.v8bf16(<8 x bfloat> [[TMP0]], <8 x bfloat> [[TMP1]])
 // CHECK-NEXT:    ret <8 x bfloat> [[ELT_MAXIMUMNUM]]
 //
@@ -120,10 +120,10 @@ bf16x8 pfmax16b(bf16x8 a, bf16x8 b) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <4 x float>, align 16
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <4 x float>, align 16
-// CHECK-NEXT:    store <4 x float> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store <4 x float> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA2]]
+// CHECK-NEXT:    store <4 x float> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store <4 x float> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[ELT_MAXIMUMNUM:%.*]] = call <4 x float> @llvm.maximumnum.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]])
 // CHECK-NEXT:    ret <4 x float> [[ELT_MAXIMUMNUM]]
 //
@@ -135,10 +135,10 @@ float4 pfmax32(float4 a, float4 b) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <2 x double>, align 16
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <2 x double>, align 16
-// CHECK-NEXT:    store <2 x double> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store <2 x double> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA2]]
+// CHECK-NEXT:    store <2 x double> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store <2 x double> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[ELT_MAXIMUMNUM:%.*]] = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]])
 // CHECK-NEXT:    ret <2 x double> [[ELT_MAXIMUMNUM]]
 //
@@ -151,12 +151,12 @@ double2 pfmax64(double2 a, double2 b) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <2 x x86_fp80>, align 32
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <2 x x86_fp80>, align 32
-// CHECK-NEXT:    [[A:%.*]] = load <2 x x86_fp80>, ptr [[TMP0]], align 32, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[B:%.*]] = load <2 x x86_fp80>, ptr [[TMP1]], align 32, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store <2 x x86_fp80> [[A]], ptr [[A_ADDR]], align 32, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store <2 x x86_fp80> [[B]], ptr [[B_ADDR]], align 32, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[TMP2:%.*]] = load <2 x x86_fp80>, ptr [[A_ADDR]], align 32, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[TMP3:%.*]] = load <2 x x86_fp80>, ptr [[B_ADDR]], align 32, !tbaa [[TBAA2]]
+// CHECK-NEXT:    [[A:%.*]] = load <2 x x86_fp80>, ptr [[TMP0]], align 32, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[B:%.*]] = load <2 x x86_fp80>, ptr [[TMP1]], align 32, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store <2 x x86_fp80> [[A]], ptr [[A_ADDR]], align 32, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store <2 x x86_fp80> [[B]], ptr [[B_ADDR]], align 32, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load <2 x x86_fp80>, ptr [[A_ADDR]], align 32, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP3:%.*]] = load <2 x x86_fp80>, ptr [[B_ADDR]], align 32, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[ELT_MINIMUMNUM:%.*]] = call <2 x x86_fp80> @llvm.minimumnum.v2f80(<2 x x86_fp80> [[TMP2]], <2 x x86_fp80> [[TMP3]])
 // CHECK-NEXT:    ret <2 x x86_fp80> [[ELT_MINIMUMNUM]]
 //
@@ -165,7 +165,7 @@ ldouble2 pfmax80(ldouble2 a, ldouble2 b) {
 }
 
 //.
-// CHECK: [[TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// CHECK: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
-// CHECK: [[META4]] = !{!"Simple C++ TBAA"}
+// CHECK: [[META4:![0-9]+]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// CHECK: [[META5]] = !{!"Simple C++ TBAA"}
+// CHECK: [[TBAA6]] = !{[[META4]], [[META4]], i64 0}
 //.

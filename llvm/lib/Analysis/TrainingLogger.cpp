@@ -23,7 +23,6 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <cassert>
-#include <numeric>
 
 using namespace llvm;
 

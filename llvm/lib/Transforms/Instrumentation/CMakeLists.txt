@@ -1,5 +1,6 @@
 add_llvm_component_library(LLVMInstrumentation
   AddressSanitizer.cpp
+  AllocToken.cpp
   BoundsChecking.cpp
   CGProfile.cpp
   ControlHeightReduction.cpp
@@ -16,7 +17,6 @@ add_llvm_component_library(LLVMInstrumentation
   LowerAllowCheckPass.cpp
   PGOCtxProfFlattening.cpp
   PGOCtxProfLowering.cpp
-  PGOEstimateTripCounts.cpp
   PGOForceFunctionAttrs.cpp
   PGOInstrumentation.cpp
   PGOMemOPSizeOpt.cpp

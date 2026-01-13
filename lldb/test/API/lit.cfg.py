@@ -90,6 +90,8 @@ def find_python_interpreter():
     )
 
     shutil.copy(real_python, copied_python)
+    # macOS 15+ restricts injecting the ASAN runtime to only user-compiled code.
+    subprocess.check_call(["/usr/bin/codesign", "--remove-signature", copied_python])
 
     # Now make sure the copied Python works. The Python in Xcode has a relative
     # RPATH and cannot be copied.
@@ -353,6 +355,7 @@ if platform.system() == "Windows":
 # Some steps required to initialize the tests dynamically link with python.dll
 # and need to know the location of the Python libraries. This ensures that we
 # use the same version of Python that was used to build lldb to run our tests.
+config.environment["PYTHONHOME"] = config.python_root_dir
 config.environment["PATH"] = os.path.pathsep.join(
     (config.python_root_dir, config.environment.get("PATH", ""))
 )

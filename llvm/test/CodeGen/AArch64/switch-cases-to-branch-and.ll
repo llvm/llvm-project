@@ -422,25 +422,23 @@ e2:
 define i32 @switch_in_loop_with_matching_dests_0_and_pow2_4_cases(ptr %start) {
 ; CHECK-LABEL: switch_in_loop_with_matching_dests_0_and_pow2_4_cases:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    mov x10, #32769 ; =0x8001
-; CHECK-NEXT:    mov w8, #1 ; =0x1
+; CHECK-NEXT:    mov x8, #32769 ; =0x8001
 ; CHECK-NEXT:    add x9, x0, #1
-; CHECK-NEXT:    movk x10, #1, lsl #32
+; CHECK-NEXT:    movk x8, #1, lsl #32
 ; CHECK-NEXT:    b LBB5_2
 ; CHECK-NEXT:  LBB5_1: ; %loop
 ; CHECK-NEXT:    ; in Loop: Header=BB5_2 Depth=1
-; CHECK-NEXT:    cmp w11, #124
+; CHECK-NEXT:    cmp w10, #124
 ; CHECK-NEXT:    b.eq LBB5_5
 ; CHECK-NEXT:  LBB5_2: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldrb w11, [x9], #1
-; CHECK-NEXT:    cmp w11, #32
+; CHECK-NEXT:    ldrb w10, [x9], #1
+; CHECK-NEXT:    cmp w10, #32
 ; CHECK-NEXT:    b.hi LBB5_1
 ; CHECK-NEXT:  ; %bb.3: ; %loop
 ; CHECK-NEXT:    ; in Loop: Header=BB5_2 Depth=1
-; CHECK-NEXT:    lsl x12, x8, x11
-; CHECK-NEXT:    tst x12, x10
-; CHECK-NEXT:    b.eq LBB5_1
+; CHECK-NEXT:    lsr x11, x8, x10
+; CHECK-NEXT:    tbz w11, #0, LBB5_1
 ; CHECK-NEXT:  ; %bb.4: ; %e1
 ; CHECK-NEXT:    mov w0, #-1 ; =0xffffffff
 ; CHECK-NEXT:    ret
@@ -608,10 +606,9 @@ exit:
 define i64 @consecutive_match_both(ptr %p, i32 %param) {
 ; CHECK-LABEL: consecutive_match_both:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    mov w8, #1 ; =0x1
+; CHECK-NEXT:    mov w8, #249 ; =0xf9
 ; CHECK-NEXT:    mov w9, #100 ; =0x64
-; CHECK-NEXT:    mov w10, #249 ; =0xf9
-; CHECK-NEXT:    lsl w8, w8, w1
+; CHECK-NEXT:    lsr w8, w8, w1
 ; CHECK-NEXT:    b LBB8_2
 ; CHECK-NEXT:  LBB8_1: ; %loop.latch
 ; CHECK-NEXT:    ; in Loop: Header=BB8_2 Depth=1
@@ -623,8 +620,7 @@ define i64 @consecutive_match_both(ptr %p, i32 %param) {
 ; CHECK-NEXT:    b.hi LBB8_1
 ; CHECK-NEXT:  ; %bb.3: ; %loop.header
 ; CHECK-NEXT:    ; in Loop: Header=BB8_2 Depth=1
-; CHECK-NEXT:    tst w8, w10
-; CHECK-NEXT:    b.eq LBB8_1
+; CHECK-NEXT:    tbz w8, #0, LBB8_1
 ; CHECK-NEXT:  ; %bb.4: ; %e0
 ; CHECK-NEXT:    mov x0, xzr
 ; CHECK-NEXT:    ret
@@ -688,10 +684,9 @@ e1:
 define i64 @consecutive_match_before(ptr %p, i32 %param) {
 ; CHECK-LABEL: consecutive_match_before:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    mov w8, #1 ; =0x1
+; CHECK-NEXT:    mov w8, #25 ; =0x19
 ; CHECK-NEXT:    mov w9, #100 ; =0x64
-; CHECK-NEXT:    mov w10, #25 ; =0x19
-; CHECK-NEXT:    lsl w8, w8, w1
+; CHECK-NEXT:    lsr w8, w8, w1
 ; CHECK-NEXT:    b LBB9_2
 ; CHECK-NEXT:  LBB9_1: ; %loop.latch
 ; CHECK-NEXT:    ; in Loop: Header=BB9_2 Depth=1
@@ -703,8 +698,7 @@ define i64 @consecutive_match_before(ptr %p, i32 %param) {
 ; CHECK-NEXT:    b.hi LBB9_1
 ; CHECK-NEXT:  ; %bb.3: ; %loop.header
 ; CHECK-NEXT:    ; in Loop: Header=BB9_2 Depth=1
-; CHECK-NEXT:    tst w8, w10
-; CHECK-NEXT:    b.eq LBB9_1
+; CHECK-NEXT:    tbz w8, #0, LBB9_1
 ; CHECK-NEXT:  ; %bb.4: ; %e0
 ; CHECK-NEXT:    mov x0, xzr
 ; CHECK-NEXT:    ret
@@ -765,10 +759,9 @@ e1:
 define i64 @consecutive_match_after(ptr %p, i32 %param) {
 ; CHECK-LABEL: consecutive_match_after:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    mov w8, #1 ; =0x1
+; CHECK-NEXT:    mov w8, #49 ; =0x31
 ; CHECK-NEXT:    mov w9, #100 ; =0x64
-; CHECK-NEXT:    mov w10, #49 ; =0x31
-; CHECK-NEXT:    lsl w8, w8, w1
+; CHECK-NEXT:    lsr w8, w8, w1
 ; CHECK-NEXT:    b LBB10_2
 ; CHECK-NEXT:  LBB10_1: ; %loop.latch
 ; CHECK-NEXT:    ; in Loop: Header=BB10_2 Depth=1
@@ -780,8 +773,7 @@ define i64 @consecutive_match_after(ptr %p, i32 %param) {
 ; CHECK-NEXT:    b.hi LBB10_1
 ; CHECK-NEXT:  ; %bb.3: ; %loop.header
 ; CHECK-NEXT:    ; in Loop: Header=BB10_2 Depth=1
-; CHECK-NEXT:    tst w8, w10
-; CHECK-NEXT:    b.eq LBB10_1
+; CHECK-NEXT:    tbz w8, #0, LBB10_1
 ; CHECK-NEXT:  ; %bb.4: ; %e0
 ; CHECK-NEXT:    mov x0, xzr
 ; CHECK-NEXT:    ret
@@ -899,3 +891,90 @@ other.dst:
 pow2.dst:
   ret void
 }
+
+define void @switch_large_enough_for_clustering(i32 %x, ptr %dst) {
+; CHECK-LABEL: switch_large_enough_for_clustering:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    cmp w0, #1
+; CHECK-NEXT:    b.le LBB12_5
+; CHECK-NEXT:  ; %bb.1: ; %entry
+; CHECK-NEXT:    cmp w0, #7
+; CHECK-NEXT:    b.eq LBB12_9
+; CHECK-NEXT:  ; %bb.2: ; %entry
+; CHECK-NEXT:    cmp w0, #4
+; CHECK-NEXT:    b.eq LBB12_7
+; CHECK-NEXT:  ; %bb.3: ; %entry
+; CHECK-NEXT:    cmp w0, #2
+; CHECK-NEXT:    b.eq LBB12_8
+; CHECK-NEXT:  LBB12_4: ; %exit
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  LBB12_5: ; %entry
+; CHECK-NEXT:    cbz w0, LBB12_8
+; CHECK-NEXT:  ; %bb.6: ; %entry
+; CHECK-NEXT:    cmp w0, #1
+; CHECK-NEXT:    b.ne LBB12_4
+; CHECK-NEXT:  LBB12_7: ; %succ.2
+; CHECK-NEXT:    str wzr, [x1]
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  LBB12_8: ; %succ.1
+; CHECK-NEXT:    strb wzr, [x1]
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  LBB12_9: ; %succ.3
+; CHECK-NEXT:    strh wzr, [x1]
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: switch_large_enough_for_clustering:
+; GISEL:       ; %bb.0: ; %entry
+; GISEL-NEXT:    cmp w0, #2
+; GISEL-NEXT:    b.lt LBB12_5
+; GISEL-NEXT:  ; %bb.1: ; %entry
+; GISEL-NEXT:    cmp w0, #7
+; GISEL-NEXT:    b.eq LBB12_9
+; GISEL-NEXT:  ; %bb.2: ; %entry
+; GISEL-NEXT:    cmp w0, #4
+; GISEL-NEXT:    b.eq LBB12_7
+; GISEL-NEXT:  ; %bb.3: ; %entry
+; GISEL-NEXT:    cmp w0, #2
+; GISEL-NEXT:    b.eq LBB12_8
+; GISEL-NEXT:  LBB12_4: ; %exit
+; GISEL-NEXT:    ret
+; GISEL-NEXT:  LBB12_5: ; %entry
+; GISEL-NEXT:    cbz w0, LBB12_8
+; GISEL-NEXT:  ; %bb.6: ; %entry
+; GISEL-NEXT:    cmp w0, #1
+; GISEL-NEXT:    b.ne LBB12_4
+; GISEL-NEXT:  LBB12_7: ; %succ.2
+; GISEL-NEXT:    str wzr, [x1]
+; GISEL-NEXT:    ret
+; GISEL-NEXT:  LBB12_8: ; %succ.1
+; GISEL-NEXT:    strb wzr, [x1]
+; GISEL-NEXT:    ret
+; GISEL-NEXT:  LBB12_9: ; %succ.3
+; GISEL-NEXT:    strh wzr, [x1]
+; GISEL-NEXT:    ret
+entry:
+  switch i32 %x, label %exit [
+    i32 0, label %succ.1
+    i32 2, label %succ.1
+    i32 1, label %succ.2
+    i32 4, label %succ.2
+    i32 7, label %succ.3
+  ]
+
+succ.1:
+  store i8 0, ptr %dst
+  br label %exit
+
+succ.2:
+  call void @llvm.memset.p0.i64(ptr %dst, i8 0, i64 4, i1 false)
+  br label %exit
+
+succ.3:
+  call void @llvm.memset.p0.i64(ptr %dst, i8 0, i64 2, i1 false)
+  br label %exit
+
+exit:
+  ret void
+}
+
+declare void @llvm.memset.p0.i64(ptr writeonly captures(none), i8, i64, i1 immarg)

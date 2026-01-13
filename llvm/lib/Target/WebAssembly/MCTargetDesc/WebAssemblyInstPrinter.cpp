@@ -317,8 +317,8 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
     const MCInstrDesc &Desc = MII.get(MI->getOpcode());
-    unsigned WAReg = Op.getReg();
-    if (int(WAReg) >= 0)
+    MCRegister WAReg = Op.getReg();
+    if (int(WAReg.id()) >= 0)
       printRegName(O, WAReg);
     else if (OpNo >= Desc.getNumDefs() && !IsVariadicDef)
       O << "$pop" << WebAssembly::getWARegStackId(WAReg);
@@ -380,7 +380,7 @@ void WebAssemblyInstPrinter::printWebAssemblySignatureOperand(const MCInst *MI,
       O << WebAssembly::anyTypeToString(Imm);
   } else {
     auto Expr = cast<MCSymbolRefExpr>(Op.getExpr());
-    auto *Sym = cast<MCSymbolWasm>(&Expr->getSymbol());
+    auto *Sym = static_cast<const MCSymbolWasm *>(&Expr->getSymbol());
     if (Sym->getSignature()) {
       O << WebAssembly::signatureToString(Sym->getSignature());
     } else {
@@ -398,10 +398,10 @@ void WebAssemblyInstPrinter::printCatchList(const MCInst *MI, unsigned OpNo,
 
   auto PrintTagOp = [&](const MCOperand &Op) {
     const MCSymbolRefExpr *TagExpr = nullptr;
-    const MCSymbolWasm *TagSym = nullptr;
+    const MCSymbol *TagSym = nullptr;
     if (Op.isExpr()) {
       TagExpr = cast<MCSymbolRefExpr>(Op.getExpr());
-      TagSym = cast<MCSymbolWasm>(&TagExpr->getSymbol());
+      TagSym = &TagExpr->getSymbol();
       O << TagSym->getName() << " ";
     } else {
       // When instructions are parsed from the disassembler, we have an

@@ -13,6 +13,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -48,6 +49,10 @@ static bool canReduceUse(Use &Op) {
   if (auto *CI = dyn_cast<CallBase>(Op.getUser()))
     if (&CI->getCalledOperandUse() == &Op)
       return false;
+
+  // lifetime.start/lifetime.end require alloca argument.
+  if (isa<LifetimeIntrinsic>(Op.getUser()))
+    return false;
 
   return true;
 }

@@ -8,6 +8,7 @@
 #include "../Target.h"
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 
 #if defined(__aarch64__) && defined(__linux__)
 #include <sys/prctl.h> // For PR_PAC_* constants
@@ -69,6 +70,13 @@ static MCInst loadPPRImmediate(MCRegister Reg, unsigned RegBitWidth,
       .addImm(31); // All lanes true for 16 bits
 }
 
+static MCInst loadFFRImmediate(MCRegister Reg, unsigned RegBitWidth,
+                               const APInt &Value) {
+  assert(Value.getZExtValue() == 0 && "Expected initialisation value 0");
+  // For first-fault register FFR, we set it to a true
+  return MCInstBuilder(AArch64::SETFFR);
+}
+
 // Generates instructions to load an immediate value into an FPCR register.
 static std::vector<MCInst>
 loadFPCRImmediate(MCRegister Reg, unsigned RegBitWidth, const APInt &Value) {
@@ -77,6 +85,42 @@ loadFPCRImmediate(MCRegister Reg, unsigned RegBitWidth, const APInt &Value) {
   MCInst MoveToFPCR =
       MCInstBuilder(AArch64::MSR).addImm(AArch64SysReg::FPCR).addReg(TempReg);
   return {LoadImm, MoveToFPCR};
+}
+
+// Generates instructions to load an immediate value into a pair of W registers
+static std::vector<MCInst> loadWSeqPairImmediate(MCRegister Reg,
+                                                 unsigned RegBitWidth,
+                                                 const APInt &Value) {
+  MCRegister EvenReg = (Reg - AArch64::W0_W1) * 2 + AArch64::W0 + 0;
+  MCRegister OddReg = (Reg - AArch64::W0_W1) * 2 + AArch64::W0 + 1;
+  assert(Value.getBitWidth() <= RegBitWidth &&
+         "Value must fit in the Register");
+
+  MCInst LoadEven = MCInstBuilder(getLoadImmediateOpcode(RegBitWidth))
+                        .addReg(EvenReg)
+                        .addImm(Value.getZExtValue());
+  MCInst LoadOdd = MCInstBuilder(getLoadImmediateOpcode(RegBitWidth))
+                       .addReg(OddReg)
+                       .addImm(Value.getZExtValue());
+  return {LoadEven, LoadOdd};
+}
+
+// Generates instructions to load an immediate value into a pair of X registers
+static std::vector<MCInst> loadXSeqPairImmediate(MCRegister Reg,
+                                                 unsigned RegBitWidth,
+                                                 const APInt &Value) {
+  MCRegister EvenReg = (Reg - AArch64::X0_X1) * 2 + AArch64::X0 + 0;
+  MCRegister OddReg = (Reg - AArch64::X0_X1) * 2 + AArch64::X0 + 1;
+  assert(Value.getBitWidth() <= RegBitWidth &&
+         "Value must fit in the Register");
+
+  MCInst LoadEven = MCInstBuilder(getLoadImmediateOpcode(RegBitWidth))
+                        .addReg(EvenReg)
+                        .addImm(Value.getZExtValue());
+  MCInst LoadOdd = MCInstBuilder(getLoadImmediateOpcode(RegBitWidth))
+                       .addReg(OddReg)
+                       .addImm(Value.getZExtValue());
+  return {LoadEven, LoadOdd};
 }
 
 // Fetch base-instruction to load an FP immediate value into a register.
@@ -105,14 +149,75 @@ static MCInst loadFPImmediate(MCRegister Reg, unsigned RegBitWidth,
   return Instructions;
 }
 
+// Generates instructions to load an immediate value into a DD, DDD, DDDD,
+// QQ, QQQ or QQQQ Reg
+static std::vector<MCInst>
+loadDQ234RegImmediate(MCRegister Reg, unsigned RegBitWidth, const APInt &Value,
+                      MCRegister BaseReg, unsigned RegCount) {
+  MCRegister RegDorQ0 = AArch64::D0;
+  if (RegBitWidth == 128)
+    RegDorQ0 = AArch64::Q0;
+
+  MCRegister RegDQ0 = RegDorQ0 + ((Reg - BaseReg + 0) % 32);
+  MCRegister RegDQ1 = RegDorQ0 + ((Reg - BaseReg + 1) % 32);
+  MCRegister RegDQ2 = RegDorQ0 + ((Reg - BaseReg + 2) % 32);
+  MCRegister RegDQ3 = RegDorQ0 + ((Reg - BaseReg + 3) % 32);
+
+  MCInst LoadDQ0 = loadFPImmediate(RegDQ0, RegBitWidth, Value);
+  MCInst LoadDQ1 = loadFPImmediate(RegDQ1, RegBitWidth, Value);
+  if (RegCount == 2)
+    return {LoadDQ0, LoadDQ1};
+  MCInst LoadDQ2 = loadFPImmediate(RegDQ2, RegBitWidth, Value);
+  if (RegCount == 3)
+    return {LoadDQ0, LoadDQ1, LoadDQ2};
+  MCInst LoadDQ3 = loadFPImmediate(RegDQ3, RegBitWidth, Value);
+  assert((RegCount == 4) && "ExpectedRegCount 2, 3 or 4");
+  return {LoadDQ0, LoadDQ1, LoadDQ2, LoadDQ3};
+}
+
+// Generates instructions to load immediate in the flags register
+static std::vector<MCInst>
+loadNZCVImmediate(MCRegister Reg, unsigned RegBitWidth, const APInt &Value) {
+  MCRegister TempReg1 = AArch64::X8;
+  MCRegister TempReg2 = AArch64::X9;
+
+  MCInst MoveFromNZCV =
+      MCInstBuilder(AArch64::MRS).addReg(TempReg1).addImm(AArch64SysReg::NZCV);
+  MCInst LoadMask =
+      MCInstBuilder(AArch64::MOVi64imm).addReg(TempReg2).addImm(0xf0000000);
+  MCInst BitClear = MCInstBuilder(AArch64::BICXrr)
+                        .addReg(TempReg1)
+                        .addReg(TempReg1)
+                        .addReg(TempReg2);
+  MCInst MoveToNZCV =
+      MCInstBuilder(AArch64::MSR).addImm(AArch64SysReg::NZCV).addReg(TempReg1);
+
+  if (Value.getZExtValue() == 0)
+    return {MoveFromNZCV, LoadMask, BitClear, MoveToNZCV};
+
+  MCInst OrrMask = MCInstBuilder(AArch64::ORRXrr)
+                       .addReg(TempReg1)
+                       .addReg(TempReg1)
+                       .addImm(Value.getZExtValue());
+  return {MoveFromNZCV, LoadMask, BitClear, OrrMask, MoveToNZCV};
+}
+
 #include "AArch64GenExegesis.inc"
 
 namespace {
+
+// Use X19 as the loop counter register since it's a callee-saved register
+// that's available for temporary use.
+constexpr MCPhysReg kDefaultLoopCounterReg = AArch64::X19;
 
 class ExegesisAArch64Target : public ExegesisTarget {
 public:
   ExegesisAArch64Target()
       : ExegesisTarget(AArch64CpuPfmCounters, AArch64_MC::isOpcodeAvailable) {}
+
+  Error randomizeTargetMCOperand(const Instruction &Instr, const Variable &Var,
+                                 MCOperand &AssignedValue,
+                                 const BitVector &ForbiddenRegs) const override;
 
 private:
   std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, MCRegister Reg,
@@ -137,9 +242,58 @@ private:
       return {loadZPRImmediate(Reg, 128, Value)};
     if (Reg == AArch64::FPCR)
       return {loadFPCRImmediate(Reg, 32, Value)};
+    if (Reg == AArch64::NZCV)
+      return {loadNZCVImmediate(Reg, 32, Value)};
+    if (Reg == AArch64::FFR)
+      return {loadFFRImmediate(Reg, 32, Value)};
+    if (AArch64::WSeqPairsClassRegClass.contains(Reg))
+      return {loadWSeqPairImmediate(Reg, 32, Value)};
+    if (AArch64::XSeqPairsClassRegClass.contains(Reg))
+      return {loadXSeqPairImmediate(Reg, 64, Value)};
+    if (AArch64::DDRegClass.contains(Reg))
+      return loadDQ234RegImmediate(Reg, 64, Value, AArch64::D0_D1, 2);
+    if (AArch64::DDDRegClass.contains(Reg))
+      return loadDQ234RegImmediate(Reg, 64, Value, AArch64::D0_D1_D2, 3);
+    if (AArch64::DDDDRegClass.contains(Reg))
+      return loadDQ234RegImmediate(Reg, 64, Value, AArch64::D0_D1_D2_D3, 4);
+    if (AArch64::QQRegClass.contains(Reg))
+      return loadDQ234RegImmediate(Reg, 128, Value, AArch64::Q0_Q1, 2);
+    if (AArch64::QQQRegClass.contains(Reg))
+      return loadDQ234RegImmediate(Reg, 128, Value, AArch64::Q0_Q1_Q2, 3);
+    if (AArch64::QQQQRegClass.contains(Reg))
+      return loadDQ234RegImmediate(Reg, 128, Value, AArch64::Q0_Q1_Q2_Q3, 4);
+    // TODO if (AArch64::PNRRegClass.contains(Reg))
+    // TODO if (AArch64::ZPRRegClass.contains(Reg))
+    // TODO if (AArch64::ZPR2RegClass.contains(Reg))
+    // TODO if (AArch64::ZPR2StridedOrContiguousRegClass.contains(Reg))
 
     errs() << "setRegTo is not implemented, results will be unreliable\n";
     return {};
+  }
+  MCRegister getDefaultLoopCounterRegister(const Triple &) const override {
+    return kDefaultLoopCounterReg;
+  }
+
+  void decrementLoopCounterAndJump(MachineBasicBlock &MBB,
+                                   MachineBasicBlock &TargetMBB,
+                                   const MCInstrInfo &MII,
+                                   MCRegister LoopRegister) const override {
+    // subs LoopRegister, LoopRegister, #1
+    BuildMI(&MBB, DebugLoc(), MII.get(AArch64::SUBSXri))
+        .addDef(LoopRegister)
+        .addUse(LoopRegister)
+        .addImm(1)  // Subtract 1
+        .addImm(0); // No shift amount
+    // b.ne TargetMBB
+    BuildMI(&MBB, DebugLoc(), MII.get(AArch64::Bcc))
+        .addImm(AArch64CC::NE)
+        .addMBB(&TargetMBB);
+  }
+
+  // Registers that should not be selected for use in snippets.
+  const MCPhysReg UnavailableRegisters[1] = {kDefaultLoopCounterReg};
+  ArrayRef<MCPhysReg> getUnavailableRegisters() const override {
+    return UnavailableRegisters;
   }
 
   bool matchesArch(Triple::ArchType Arch) const override {
@@ -151,6 +305,63 @@ private:
     PM.add(createAArch64ExpandPseudoPass());
   }
 };
+
+Error ExegesisAArch64Target::randomizeTargetMCOperand(
+    const Instruction &Instr, const Variable &Var, MCOperand &AssignedValue,
+    const BitVector &ForbiddenRegs) const {
+  const Operand &Op = Instr.getPrimaryOperand(Var);
+  const auto OperandType = Op.getExplicitOperandInfo().OperandType;
+  // NOTE: To resolve "Not all operands were initialized by snippet generator"
+  // Requires OperandType to be defined for such opcode's operands in AArch64
+  // tablegen files. And omit introduced OperandType(s).
+
+  // Hacky Fix: Defaulting all OPERAND_UNKNOWN to immediate value 0 works with a
+  // limitation that it introduces illegal instruction error for system
+  // instructions. System instructions will need to be omitted with OperandType
+  // or opcode specific values to avoid generating invalid encodings or
+  // unreliable benchmark results for these system-level instructions.
+  //  Implement opcode-specific immediate value handling for system instrs:
+  //   - MRS/MSR: Use valid system register encodings (e.g., NZCV, FPCR, FPSR)
+  //   - MSRpstatesvcrImm1: Use valid PSTATE field encodings (e.g., SPSel,
+  //   DAIFSet)
+  //   - SYSLxt/SYSxt: Use valid system instruction encodings with proper
+  //   CRn/CRm/op values
+  //   - UDF: Use valid undefined instruction immediate ranges (0-65535)
+
+  switch (OperandType) {
+  // MSL (Masking Shift Left) imm operand for 32-bit splatted SIMD constants
+  // Correspond to AArch64InstructionSelector::tryAdvSIMDModImm321s()
+  case llvm::AArch64::OPERAND_SHIFT_MSL: {
+    // There are two valid encodings:
+    //   - Type 7: imm at [15:8], [47:40], shift = 264 (0x108) → msl #8
+    //   - Type 8: imm at [23:16], [55:48], shift = 272 (0x110) → msl #16
+    //     Corresponds AArch64_AM::encodeAdvSIMDModImmType7()
+    // But, v2s_msl and v4s_msl instructions accept either form,
+    // Thus, Arbitrarily chosing 264 (msl #8) for simplicity.
+    AssignedValue = MCOperand::createImm(264);
+    return Error::success();
+  }
+  case llvm::AArch64::OPERAND_IMPLICIT_IMM_0:
+    AssignedValue = MCOperand::createImm(0);
+    return Error::success();
+  case llvm::AArch64::OPERAND_SHIFTED_REGISTER:
+    // TODO it would be better if these operands were randomized
+    AssignedValue = MCOperand::createReg(0);
+    return Error::success();
+  case llvm::AArch64::OPERAND_SHIFTED_IMMEDIATE:
+    AssignedValue = MCOperand::createImm(0);
+    return Error::success();
+  case MCOI::OperandType::OPERAND_PCREL:
+    AssignedValue = MCOperand::createImm(8);
+    return Error::success();
+  default:
+    break;
+  }
+
+  return make_error<Failure>(
+      Twine("Unimplemented operand type: MCOI::OperandType:")
+          .concat(Twine(static_cast<int>(OperandType))));
+}
 
 } // namespace
 

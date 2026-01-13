@@ -26,10 +26,10 @@ bb5:                                              ; preds = %bb4, %bb1, %bb
 ; CHECK-LABEL: bb:
 ; CHECK-NEXT:  [[CALL26LOC:%.*]] = alloca ptr
 ; CHECK-LABEL: codeRepl.i:
-; CHECK-NEXT:   call void @llvm.lifetime.start.p0(i64 -1, ptr [[CALL26LOC]])
+; CHECK-NEXT:   call void @llvm.lifetime.start.p0(ptr [[CALL26LOC]])
 ; CHECK-NEXT:   call void @bar.1.bb1(ptr [[CALL26LOC]])
 ; CHECK-NEXT:   %call26.reload.i = load ptr, ptr [[CALL26LOC]]
-; CHECK-NEXT:   call void @llvm.lifetime.end.p0(i64 -1, ptr [[CALL26LOC]])
+; CHECK-NEXT:   call void @llvm.lifetime.end.p0(ptr [[CALL26LOC]])
 define ptr @dummy_caller(i32 %arg) {
 bb:
   %tmp = tail call ptr @bar(i32 %arg)

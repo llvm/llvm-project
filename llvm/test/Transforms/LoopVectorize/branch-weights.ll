@@ -4,13 +4,6 @@
 ; RUN: opt < %s -S -passes=loop-vectorize -force-vector-interleave=2 -force-vector-width=4  -enable-epilogue-vectorization \
 ; RUN:   -epilogue-vectorization-force-VF=4 | FileCheck %s --check-prefix=MAINVF4IC2_EPI4
 
-; FIXME: For MAINVF4IC2_EPI4 the branch weights in the terminator of
-; the VEC_EPILOG_ITER_CHECK block should be [4,4] since we process 8
-; scalar iterations in the main loop, leaving the remaining count to
-; be in the range [0,7]. That gives a 4:4 chance of skipping the
-; vector epilogue. I believe the problem lies in
-; EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck
-; where the main loop VF is set to the same value as the epilogue VF.
 define void @f0(i8 %n, i32 %len, ptr %p) !prof !0 {
 ; MAINVF4IC1_EPI4-LABEL: define void @f0(
 ; MAINVF4IC1_EPI4-SAME: i8 [[N:%.*]], i32 [[LEN:%.*]], ptr [[P:%.*]]) !prof [[PROF0:![0-9]+]] {
@@ -133,11 +126,11 @@ exit:
 ; MAINVF4IC1_EPI4: [[META7]] = !{!"llvm.loop.estimated_trip_count", i32 308}
 ; MAINVF4IC1_EPI4: [[PROF8]] = !{!"branch_weights", i32 1, i32 3}
 ; MAINVF4IC1_EPI4: [[PROF9]] = !{!"branch_weights", i32 4, i32 0}
-; MAINVF4IC1_EPI4: [[PROF10]] = !{!"branch_weights", i32 0, i32 0}
+; MAINVF4IC1_EPI4: [[PROF10]] = !{!"branch_weights", i32 1, i32 0}
 ; MAINVF4IC1_EPI4: [[LOOP11]] = distinct !{[[LOOP11]], [[META5]], [[META6]], [[META12:![0-9]+]]}
 ; MAINVF4IC1_EPI4: [[META12]] = !{!"llvm.loop.estimated_trip_count", i32 0}
 ; MAINVF4IC1_EPI4: [[PROF13]] = !{!"branch_weights", i32 2, i32 1}
-; MAINVF4IC1_EPI4: [[LOOP14]] = distinct !{[[LOOP14]], [[META15:![0-9]+]], [[META5]]}
+; MAINVF4IC1_EPI4: [[LOOP14]] = distinct !{[[LOOP14]], [[META5]], [[META15:![0-9]+]]}
 ; MAINVF4IC1_EPI4: [[META15]] = !{!"llvm.loop.estimated_trip_count", i32 3}
 ;.
 ; MAINVF4IC2_EPI4: [[PROF0]] = !{!"function_entry_count", i64 13}
@@ -149,12 +142,12 @@ exit:
 ; MAINVF4IC2_EPI4: [[META6]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; MAINVF4IC2_EPI4: [[META7]] = !{!"llvm.loop.estimated_trip_count", i32 154}
 ; MAINVF4IC2_EPI4: [[PROF8]] = !{!"branch_weights", i32 1, i32 7}
-; MAINVF4IC2_EPI4: [[PROF9]] = !{!"branch_weights", i32 4, i32 0}
-; MAINVF4IC2_EPI4: [[PROF10]] = !{!"branch_weights", i32 0, i32 0}
+; MAINVF4IC2_EPI4: [[PROF9]] = !{!"branch_weights", i32 4, i32 4}
+; MAINVF4IC2_EPI4: [[PROF10]] = !{!"branch_weights", i32 1, i32 0}
 ; MAINVF4IC2_EPI4: [[LOOP11]] = distinct !{[[LOOP11]], [[META5]], [[META6]], [[META12:![0-9]+]]}
 ; MAINVF4IC2_EPI4: [[META12]] = !{!"llvm.loop.estimated_trip_count", i32 0}
 ; MAINVF4IC2_EPI4: [[PROF13]] = !{!"branch_weights", i32 1, i32 3}
 ; MAINVF4IC2_EPI4: [[PROF14]] = !{!"branch_weights", i32 2, i32 1}
-; MAINVF4IC2_EPI4: [[LOOP15]] = distinct !{[[LOOP15]], [[META16:![0-9]+]], [[META5]]}
+; MAINVF4IC2_EPI4: [[LOOP15]] = distinct !{[[LOOP15]], [[META5]], [[META16:![0-9]+]]}
 ; MAINVF4IC2_EPI4: [[META16]] = !{!"llvm.loop.estimated_trip_count", i32 3}
 ;.

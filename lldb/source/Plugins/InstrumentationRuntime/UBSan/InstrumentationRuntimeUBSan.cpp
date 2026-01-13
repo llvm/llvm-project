@@ -124,7 +124,7 @@ StructuredData::ObjectSP InstrumentationRuntimeUBSan::RetrieveReportData(
   options.SetTimeout(process_sp->GetUtilityExpressionTimeout());
   options.SetPrefix(ub_sanitizer_retrieve_report_data_prefix);
   options.SetAutoApplyFixIts(false);
-  options.SetLanguage(eLanguageTypeObjC_plus_plus);
+  options.SetLanguage(eLanguageTypeC);
 
   ValueObjectSP main_value;
   ExecutionContext exe_ctx;
@@ -324,9 +324,9 @@ InstrumentationRuntimeUBSan::GetBacktracesFromExtendedStopInfo(
 
   // We gather symbolication addresses above, so no need for HistoryThread to
   // try to infer the call addresses.
-  bool pcs_are_call_addresses = true;
-  ThreadSP new_thread_sp = std::make_shared<HistoryThread>(
-      *process_sp, tid, PCs, pcs_are_call_addresses);
+  auto pc_type = HistoryPCType::Calls;
+  ThreadSP new_thread_sp =
+      std::make_shared<HistoryThread>(*process_sp, tid, PCs, pc_type);
   std::string stop_reason_description = GetStopReasonDescription(info);
   new_thread_sp->SetName(stop_reason_description.c_str());
 

@@ -1,4 +1,4 @@
-//===--- DurationConversionCastCheck.cpp - clang-tidy ---------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,7 +19,7 @@ namespace clang::tidy::abseil {
 
 void DurationConversionCastCheck::registerMatchers(MatchFinder *Finder) {
   auto CallMatcher = ignoringImpCasts(callExpr(
-      callee(functionDecl(DurationConversionFunction()).bind("func_decl")),
+      callee(functionDecl(durationConversionFunction()).bind("func_decl")),
       hasArgument(0, expr().bind("arg"))));
 
   Finder->addMatcher(
@@ -41,7 +41,7 @@ void DurationConversionCastCheck::check(
 
   const auto *FuncDecl = Result.Nodes.getNodeAs<FunctionDecl>("func_decl");
   const auto *Arg = Result.Nodes.getNodeAs<Expr>("arg");
-  StringRef ConversionFuncName = FuncDecl->getName();
+  const StringRef ConversionFuncName = FuncDecl->getName();
 
   std::optional<DurationScale> Scale =
       getScaleForDurationInverse(ConversionFuncName);
@@ -51,7 +51,8 @@ void DurationConversionCastCheck::check(
   // Casting a double to an integer.
   if (MatchedCast->getTypeAsWritten()->isIntegerType() &&
       ConversionFuncName.contains("Double")) {
-    llvm::StringRef NewFuncName = getDurationInverseForScale(*Scale).second;
+    const llvm::StringRef NewFuncName =
+        getDurationInverseForScale(*Scale).second;
 
     diag(MatchedCast->getBeginLoc(),
          "duration should be converted directly to an integer rather than "
@@ -66,7 +67,8 @@ void DurationConversionCastCheck::check(
   // Casting an integer to a double.
   if (MatchedCast->getTypeAsWritten()->isRealFloatingType() &&
       ConversionFuncName.contains("Int64")) {
-    llvm::StringRef NewFuncName = getDurationInverseForScale(*Scale).first;
+    const llvm::StringRef NewFuncName =
+        getDurationInverseForScale(*Scale).first;
 
     diag(MatchedCast->getBeginLoc(), "duration should be converted directly to "
                                      "a floating-point number rather than "

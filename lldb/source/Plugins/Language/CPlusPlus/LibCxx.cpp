@@ -40,18 +40,15 @@ using namespace lldb_private::formatters;
 static void consumeInlineNamespace(llvm::StringRef &name) {
   // Delete past an inline namespace, if any: __[a-zA-Z0-9_]+::
   auto scratch = name;
-  if (scratch.consume_front("__") && std::isalnum(scratch[0])) {
-    scratch = scratch.drop_while([](char c) { return std::isalnum(c); });
+  if (scratch.consume_front("__") &&
+      std::isalnum(static_cast<unsigned char>(scratch[0]))) {
+    scratch = scratch.drop_while(
+        [](char c) { return std::isalnum(static_cast<unsigned char>(c)); });
     if (scratch.consume_front("::")) {
       // Successfully consumed a namespace.
       name = scratch;
     }
   }
-}
-
-bool lldb_private::formatters::isOldCompressedPairLayout(
-    ValueObject &pair_obj) {
-  return isStdTemplate(pair_obj.GetTypeName(), "__compressed_pair");
 }
 
 bool lldb_private::formatters::isStdTemplate(ConstString type_name,
@@ -103,6 +100,35 @@ lldb_private::formatters::GetSecondValueOfLibCXXCompressedPair(
     value = pair.GetChildMemberWithName("__second_");
   }
   return value;
+}
+
+std::pair<lldb::ValueObjectSP, bool>
+lldb_private::formatters::GetValueOrOldCompressedPair(
+    ValueObject &obj, llvm::StringRef child_name,
+    llvm::StringRef compressed_pair_name) {
+  auto is_old_compressed_pair = [](ValueObject &pair_obj) -> bool {
+    return isStdTemplate(pair_obj.GetTypeName(), "__compressed_pair");
+  };
+
+  ValueObjectSP node_sp(obj.GetChildMemberWithName(child_name));
+  if (node_sp)
+    return {node_sp, is_old_compressed_pair(*node_sp)};
+
+  // Try the even older __compressed_pair layout.
+
+  assert(!compressed_pair_name.empty());
+
+  node_sp = obj.GetChildMemberWithName(compressed_pair_name);
+
+  // Unrecognized layout (possibly older than LLDB supports).
+  if (!node_sp)
+    return {nullptr, false};
+
+  // Expected old compressed_pair layout, but got something else.
+  if (!is_old_compressed_pair(*node_sp))
+    return {nullptr, false};
+
+  return {node_sp, true};
 }
 
 bool lldb_private::formatters::LibcxxFunctionSummaryProvider(
@@ -205,11 +231,12 @@ bool lldb_private::formatters::LibcxxUniquePointerSummaryProvider(
   if (!valobj_sp)
     return false;
 
-  ValueObjectSP ptr_sp(valobj_sp->GetChildMemberWithName("__ptr_"));
+  auto [ptr_sp, is_compressed_pair] =
+      GetValueOrOldCompressedPair(*valobj_sp, "__ptr_", "__ptr_");
   if (!ptr_sp)
     return false;
 
-  if (isOldCompressedPairLayout(*ptr_sp))
+  if (is_compressed_pair)
     ptr_sp = GetFirstValueOfLibCXXCompressedPair(*ptr_sp);
 
   if (!ptr_sp)
@@ -379,13 +406,14 @@ lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::Update() {
   if (!valobj_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  ValueObjectSP ptr_sp(valobj_sp->GetChildMemberWithName("__ptr_"));
+  auto [ptr_sp, is_compressed_pair] =
+      GetValueOrOldCompressedPair(*valobj_sp, "__ptr_", "__ptr_");
   if (!ptr_sp)
     return lldb::ChildCacheState::eRefetch;
 
   // Retrieve the actual pointer and the deleter, and clone them to give them
   // user-friendly names.
-  if (isOldCompressedPairLayout(*ptr_sp)) {
+  if (is_compressed_pair) {
     if (ValueObjectSP value_pointer_sp =
             GetFirstValueOfLibCXXCompressedPair(*ptr_sp))
       m_value_ptr_sp = value_pointer_sp->Clone(ConstString("pointer"));
@@ -424,17 +452,15 @@ enum class StringLayout { CSD, DSC };
 }
 
 static ValueObjectSP ExtractLibCxxStringData(ValueObject &valobj) {
-  if (auto rep_sp = valobj.GetChildMemberWithName("__rep_"))
-    return rep_sp;
-
-  ValueObjectSP valobj_r_sp = valobj.GetChildMemberWithName("__r_");
-  if (!valobj_r_sp || !valobj_r_sp->GetError().Success())
+  auto [valobj_r_sp, is_compressed_pair] =
+      GetValueOrOldCompressedPair(valobj, "__rep_", "__r_");
+  if (!valobj_r_sp)
     return nullptr;
 
-  if (!isOldCompressedPairLayout(*valobj_r_sp))
-    return nullptr;
+  if (is_compressed_pair)
+    return GetFirstValueOfLibCXXCompressedPair(*valobj_r_sp);
 
-  return GetFirstValueOfLibCXXCompressedPair(*valobj_r_sp);
+  return valobj_r_sp;
 }
 
 /// Determine the size in bytes of \p valobj (a libc++ std::string object) and

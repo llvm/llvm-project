@@ -14,16 +14,9 @@ define void @s172(i32 noundef %xa, i32 noundef %xb, ptr noundef %a, ptr noundef 
 ; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[XA]], -1
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[SUB]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[XB]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i64 [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    [[SMAX7:%.*]] = tail call i64 @llvm.smax.i64(i64 [[TMP2]], i64 32000)
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i64 [[TMP2]], 32000
-; CHECK-NEXT:    [[UMIN8:%.*]] = zext i1 [[TMP3]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i64 [[TMP2]], [[UMIN8]]
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[SMAX7]], [[TMP4]]
-; CHECK-NEXT:    [[UMAX9:%.*]] = tail call i64 @llvm.umax.i64(i64 [[TMP1]], i64 1)
-; CHECK-NEXT:    [[TMP6:%.*]] = udiv i64 [[TMP5]], [[UMAX9]]
-; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], [[UMIN8]]
-; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP7]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i64 @llvm.smax.i64(i64 [[TMP0]], i64 31999)
+; CHECK-NEXT:    [[SMAX10:%.*]] = add nuw nsw i64 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[SMAX10]], [[TMP0]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ugt i64 [[TMP8]], 23
 ; CHECK-NEXT:    [[IDENT_CHECK_NOT:%.*]] = icmp eq i32 [[XB]], 1
 ; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[MIN_ITERS_CHECK]], [[IDENT_CHECK_NOT]]
@@ -50,13 +43,11 @@ define void @s172(i32 noundef %xa, i32 noundef %xb, ptr noundef %a, ptr noundef 
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[FOR_BODY_PREHEADER13]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP8]], -8
-; CHECK-NEXT:    [[TMP18:%.*]] = mul nuw i64 [[N_VEC]], [[TMP1]]
-; CHECK-NEXT:    [[IND_END:%.*]] = add i64 [[TMP18]], [[TMP0]]
+; CHECK-NEXT:    [[IND_END:%.*]] = add i64 [[N_VEC]], [[TMP0]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP19:%.*]] = mul nuw i64 [[INDEX]], [[TMP1]]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[TMP19]], [[TMP0]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[INDEX]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP20]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP20]], align 4, !alias.scope [[META0:![0-9]+]]
@@ -75,7 +66,7 @@ define void @s172(i32 noundef %xa, i32 noundef %xb, ptr noundef %a, ptr noundef 
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP8]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END]], label [[FOR_BODY_PREHEADER13]]
-; CHECK:       for.body.preheader13:
+; CHECK:       for.body.preheader14:
 ; CHECK-NEXT:    [[INDVARS_IV_PH:%.*]] = phi i64 [ [[TMP0]], [[VECTOR_MEMCHECK]] ], [ [[TMP0]], [[FOR_BODY_PREHEADER]] ], [ [[IND_END]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
@@ -88,7 +79,7 @@ define void @s172(i32 noundef %xa, i32 noundef %xb, ptr noundef %a, ptr noundef 
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP_A]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], [[TMP1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], 32000
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -131,10 +122,9 @@ for.end:
 ; CHECK: [[META2]] = distinct !{[[META2]], !"LVerDomain"}
 ; CHECK: [[META3]] = !{[[META4:![0-9]+]]}
 ; CHECK: [[META4]] = distinct !{[[META4]], [[META2]]}
-; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]], [[META7:![0-9]+]], [[META8:![0-9]+]], [[META9:![0-9]+]]}
+; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]], [[META7:![0-9]+]], [[META8:![0-9]+]]}
 ; CHECK: [[META6]] = !{!"llvm.loop.mustprogress"}
-; CHECK: [[META7]] = !{!"llvm.loop.estimated_trip_count"}
-; CHECK: [[META8]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META9]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META6]], [[META7]], [[META8]]}
+; CHECK: [[META7]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META8]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META6]], [[META7]]}
 ;.

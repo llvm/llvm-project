@@ -53,7 +53,7 @@ protected:
     assert(!DriverInstance && "Running twice is not allowed");
 
     DiagnosticOptions DiagOpts;
-    DiagnosticsEngine Diags(new DiagnosticIDs, DiagOpts,
+    DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts,
                             new TextDiagnosticPrinter(llvm::errs(), DiagOpts));
     DriverInstance.emplace(ClangBinary, "x86_64-unknown-linux-gnu", Diags,
                            "clang LLVM compiler", prepareFS(ExtraFiles));

@@ -18,9 +18,9 @@ define i64 @t(ptr %arg) nounwind {
         ret i64 0
 }
 
-; Make sure that we translate this to the bswap intrinsic which lowers down without the
-; inline assembly.
-; CHECK-NOT: #APP
+; Make sure this lowers to inline assembly and is not translated to an
+; intrinsic.
+; CHECK: #APP
 define i32 @s(i32 %argc, ptr nocapture %argv) unnamed_addr nounwind {
 entry:
   %0 = trunc i32 %argc to i16

@@ -50,14 +50,12 @@ public:
   struct BaseArgInfo {
     Type *Ty;
     SmallVector<ISD::ArgFlagsTy, 4> Flags;
-    bool IsFixed;
 
     BaseArgInfo(Type *Ty,
-                ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>(),
-                bool IsFixed = true)
-        : Ty(Ty), Flags(Flags), IsFixed(IsFixed) {}
+                ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>())
+        : Ty(Ty), Flags(Flags) {}
 
-    BaseArgInfo() : Ty(nullptr), IsFixed(false) {}
+    BaseArgInfo() : Ty(nullptr) {}
   };
 
   struct ArgInfo : public BaseArgInfo {
@@ -81,8 +79,8 @@ public:
 
     ArgInfo(ArrayRef<Register> Regs, Type *Ty, unsigned OrigIndex,
             ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>(),
-            bool IsFixed = true, const Value *OrigValue = nullptr)
-        : BaseArgInfo(Ty, Flags, IsFixed), Regs(Regs), OrigValue(OrigValue),
+            const Value *OrigValue = nullptr)
+        : BaseArgInfo(Ty, Flags), Regs(Regs), OrigValue(OrigValue),
           OrigArgIndex(OrigIndex) {
       if (!Regs.empty() && Flags.empty())
         this->Flags.push_back(ISD::ArgFlagsTy());
@@ -93,9 +91,8 @@ public:
     }
 
     ArgInfo(ArrayRef<Register> Regs, const Value &OrigValue, unsigned OrigIndex,
-            ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>(),
-            bool IsFixed = true)
-      : ArgInfo(Regs, OrigValue.getType(), OrigIndex, Flags, IsFixed, &OrigValue) {}
+            ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>())
+        : ArgInfo(Regs, OrigValue.getType(), OrigIndex, Flags, &OrigValue) {}
 
     ArgInfo() = default;
   };
@@ -162,6 +159,8 @@ public:
 
     /// True if this call results in convergent operations.
     bool IsConvergent = true;
+
+    GlobalValue *DeactivationSymbol = nullptr;
   };
 
   /// Argument handling is mostly uniform between the four places that
@@ -201,7 +200,7 @@ public:
                            CCValAssign::LocInfo LocInfo, const ArgInfo &Info,
                            ISD::ArgFlagsTy Flags, CCState &State) {
       if (getAssignFn(State.isVarArg())(ValNo, ValVT, LocVT, LocInfo, Flags,
-                                        State))
+                                        Info.Ty, State))
         return true;
       StackSize = State.getStackSize();
       return false;

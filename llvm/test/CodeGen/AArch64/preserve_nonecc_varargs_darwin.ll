@@ -27,17 +27,22 @@ define i32 @caller() nounwind ssp {
 ; CHECK-NEXT:    sub sp, sp, #208
 ; CHECK-NEXT:    mov w8, #10 ; =0xa
 ; CHECK-NEXT:    mov w9, #9 ; =0x9
+; CHECK-NEXT:    mov w10, #8 ; =0x8
+; CHECK-NEXT:    ; kill: def $x8 killed $w8
+; CHECK-NEXT:    mov w11, #6 ; =0x6
+; CHECK-NEXT:    ; kill: def $x9 killed $w9
+; CHECK-NEXT:    str x8, [sp, #32]
+; CHECK-NEXT:    ; kill: def $x10 killed $w10
 ; CHECK-NEXT:    mov w0, #1 ; =0x1
-; CHECK-NEXT:    stp x9, x8, [sp, #24]
-; CHECK-NEXT:    mov w8, #8 ; =0x8
-; CHECK-NEXT:    mov w9, #6 ; =0x6
-; CHECK-NEXT:    str x8, [sp, #16]
 ; CHECK-NEXT:    mov w8, #7 ; =0x7
+; CHECK-NEXT:    stp x10, x9, [sp, #16]
+; CHECK-NEXT:    mov w9, w11
 ; CHECK-NEXT:    mov w1, #2 ; =0x2
 ; CHECK-NEXT:    mov w2, #3 ; =0x3
 ; CHECK-NEXT:    mov w3, #4 ; =0x4
 ; CHECK-NEXT:    mov w4, #5 ; =0x5
 ; CHECK-NEXT:    stp d15, d14, [sp, #48] ; 16-byte Folded Spill
+; CHECK-NEXT:    ; kill: def $x8 killed $w8
 ; CHECK-NEXT:    stp d13, d12, [sp, #64] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #80] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #96] ; 16-byte Folded Spill

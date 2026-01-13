@@ -1,4 +1,4 @@
-//===--- UnhandledSelfAssignmentCheck.h - clang-tidy ------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@ namespace clang::tidy::bugprone {
 /// using the copy-and-swap or the copy-and-move method.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/unhandled-self-assignment.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/unhandled-self-assignment.html
 class UnhandledSelfAssignmentCheck : public ClangTidyCheck {
 public:
   UnhandledSelfAssignmentCheck(StringRef Name, ClangTidyContext *Context);

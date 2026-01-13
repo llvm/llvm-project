@@ -210,6 +210,14 @@ public:
   AnyResourceExtType(const AnyResourceExtType &) = delete;
   AnyResourceExtType &operator=(const AnyResourceExtType &) = delete;
 
+  Type *getResourceType() const {
+    // Sampler and feedback resources do not have an underlying type.
+    if (isa<SamplerExtType>(this) || isa<FeedbackTextureExtType>(this))
+      return nullptr;
+    // All other resources store the type in a parameter.
+    return getTypeParameter(0);
+  }
+
   static bool classof(const TargetExtType *T) {
     return isa<RawBufferExtType>(T) || isa<TypedBufferExtType>(T) ||
            isa<TextureExtType>(T) || isa<MSTextureExtType>(T) ||
@@ -237,6 +245,25 @@ public:
 
   static bool classof(const TargetExtType *T) {
     return T->getName() == "dx.Layout";
+  }
+  static bool classof(const Type *T) {
+    return isa<TargetExtType>(T) && classof(cast<TargetExtType>(T));
+  }
+};
+
+/// The dx.Padding target extension type
+///
+/// `target("dx.Padding", NumBytes)`
+class PaddingExtType : public TargetExtType {
+public:
+  PaddingExtType() = delete;
+  PaddingExtType(const PaddingExtType &) = delete;
+  PaddingExtType &operator=(const PaddingExtType &) = delete;
+
+  unsigned getNumBytes() const { return getIntParameter(0); }
+
+  static bool classof(const TargetExtType *T) {
+    return T->getName() == "dx.Padding";
   }
   static bool classof(const Type *T) {
     return isa<TargetExtType>(T) && classof(cast<TargetExtType>(T));
@@ -274,6 +301,7 @@ public:
 
   struct TypedInfo {
     dxil::ElementType ElementTy;
+    dxil::ElementType DXILStorageTy;
     uint32_t ElementCount;
 
     bool operator==(const TypedInfo &RHS) const {
@@ -360,9 +388,11 @@ public:
              std::tie(RHS.RecordID, RHS.Space, RHS.LowerBound, RHS.Size);
     }
     bool overlapsWith(const ResourceBinding &RHS) const {
+      if (Space != RHS.Space)
+        return false;
       if (Size == UINT32_MAX)
         return LowerBound < RHS.LowerBound;
-      return Space == RHS.Space && LowerBound + Size - 1 >= RHS.LowerBound;
+      return LowerBound + Size - 1 >= RHS.LowerBound;
     }
   };
 
@@ -649,8 +679,8 @@ public:
   bool hasOverlappingBinding() const { return HasOverlappingBinding; }
   void setHasOverlappingBinding(bool Value) { HasOverlappingBinding = Value; }
 
-  LLVM_ABI std::optional<uint32_t>
-  findAvailableBinding(dxil::ResourceClass RC, uint32_t Space, int32_t Size) {
+  std::optional<uint32_t> findAvailableBinding(dxil::ResourceClass RC,
+                                               uint32_t Space, int32_t Size) {
     return Bindings.findAvailableBinding(RC, Space, Size);
   }
 

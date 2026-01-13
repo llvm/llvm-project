@@ -103,7 +103,7 @@ Fortran::lower::genIntrinsicCall(fir::FirOpBuilder &builder, mlir::Location loc,
       addr =
           fir::BoxAddrOp::create(builder, loc, box->getMemTy(), box->getAddr());
     fir::FirOpBuilder *bldr = &builder;
-    stmtCtx.attachCleanup([=]() { bldr->create<fir::FreeMemOp>(loc, addr); });
+    stmtCtx.attachCleanup([=]() { fir::FreeMemOp::create(*bldr, loc, addr); });
   }
   return result;
 }

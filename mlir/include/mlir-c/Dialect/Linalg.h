@@ -10,6 +10,7 @@
 #ifndef MLIR_C_DIALECT_LINALG_H
 #define MLIR_C_DIALECT_LINALG_H
 
+#include "mlir-c/AffineMap.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
 
@@ -33,6 +34,10 @@ typedef struct MlirLinalgContractionDimensions {
 
 MLIR_CAPI_EXPORTED MlirLinalgContractionDimensions
 mlirLinalgInferContractionDimensions(MlirOperation op);
+
+MLIR_CAPI_EXPORTED MlirLinalgContractionDimensions
+mlirLinalgInferContractionDimensionsFromMaps(const MlirAffineMap *indexingMaps,
+                                             size_t numMaps);
 
 MLIR_CAPI_EXPORTED bool mlirLinalgIsAConvolutionOp(MlirOperation op);
 

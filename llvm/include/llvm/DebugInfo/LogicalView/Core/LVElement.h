@@ -143,7 +143,7 @@ public:
         VirtualityCode(0) {}
   LVElement(const LVElement &) = delete;
   LVElement &operator=(const LVElement &) = delete;
-  virtual ~LVElement() = default;
+  ~LVElement() override = default;
 
   LVSubclassID getSubclassID() const { return SubclassID; }
 

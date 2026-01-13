@@ -8,14 +8,14 @@ define <4 x i64> @vector_ptrtoint({<2 x ptr>, <2 x ptr>} %x) {
 ; CHECK-NEXT:    [[X_FCA_0_EXTRACT:%.*]] = extractvalue { <2 x ptr>, <2 x ptr> } [[X:%.*]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint <2 x ptr> [[X_FCA_0_EXTRACT]] to <2 x i64>
 ; CHECK-NEXT:    [[A_SROA_0_0_VEC_EXPAND:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[A_SROA_0_0_VECBLEND:%.*]] = select <4 x i1> <i1 true, i1 true, i1 false, i1 false>, <4 x i64> [[A_SROA_0_0_VEC_EXPAND]], <4 x i64> undef
+; CHECK-NEXT:    [[A_SROA_0_0_VECBLEND:%.*]] = shufflevector <4 x i64> [[A_SROA_0_0_VEC_EXPAND]], <4 x i64> undef, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
 ; CHECK-NEXT:    [[X_FCA_1_EXTRACT:%.*]] = extractvalue { <2 x ptr>, <2 x ptr> } [[X]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint <2 x ptr> [[X_FCA_1_EXTRACT]] to <2 x i64>
 ; CHECK-NEXT:    [[A_SROA_0_16_VEC_EXPAND:%.*]] = shufflevector <2 x i64> [[TMP2]], <2 x i64> poison, <4 x i32> <i32 poison, i32 poison, i32 0, i32 1>
-; CHECK-NEXT:    [[A_SROA_0_16_VECBLEND:%.*]] = select <4 x i1> <i1 false, i1 false, i1 true, i1 true>, <4 x i64> [[A_SROA_0_16_VEC_EXPAND]], <4 x i64> [[A_SROA_0_0_VECBLEND]]
+; CHECK-NEXT:    [[A_SROA_0_16_VECBLEND:%.*]] = shufflevector <4 x i64> [[A_SROA_0_16_VEC_EXPAND]], <4 x i64> [[A_SROA_0_0_VECBLEND]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x i64> [[A_SROA_0_16_VECBLEND]]
 ;
-  %a = alloca {<2 x ptr>, <2 x ptr>}
+  %a = alloca {<2 x ptr>, <2 x ptr>}, align 32
 
   store {<2 x ptr>, <2 x ptr>} %x, ptr %a
 
@@ -29,14 +29,14 @@ define <4 x ptr> @vector_inttoptr({<2 x i64>, <2 x i64>} %x) {
 ; CHECK-NEXT:    [[X_FCA_0_EXTRACT:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[X:%.*]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr <2 x i64> [[X_FCA_0_EXTRACT]] to <2 x ptr>
 ; CHECK-NEXT:    [[A_SROA_0_0_VEC_EXPAND:%.*]] = shufflevector <2 x ptr> [[TMP1]], <2 x ptr> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[A_SROA_0_0_VECBLEND:%.*]] = select <4 x i1> <i1 true, i1 true, i1 false, i1 false>, <4 x ptr> [[A_SROA_0_0_VEC_EXPAND]], <4 x ptr> undef
+; CHECK-NEXT:    [[A_SROA_0_0_VECBLEND:%.*]] = shufflevector <4 x ptr> [[A_SROA_0_0_VEC_EXPAND]], <4 x ptr> undef, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
 ; CHECK-NEXT:    [[X_FCA_1_EXTRACT:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[X]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr <2 x i64> [[X_FCA_1_EXTRACT]] to <2 x ptr>
 ; CHECK-NEXT:    [[A_SROA_0_16_VEC_EXPAND:%.*]] = shufflevector <2 x ptr> [[TMP2]], <2 x ptr> poison, <4 x i32> <i32 poison, i32 poison, i32 0, i32 1>
-; CHECK-NEXT:    [[A_SROA_0_16_VECBLEND:%.*]] = select <4 x i1> <i1 false, i1 false, i1 true, i1 true>, <4 x ptr> [[A_SROA_0_16_VEC_EXPAND]], <4 x ptr> [[A_SROA_0_0_VECBLEND]]
+; CHECK-NEXT:    [[A_SROA_0_16_VECBLEND:%.*]] = shufflevector <4 x ptr> [[A_SROA_0_16_VEC_EXPAND]], <4 x ptr> [[A_SROA_0_0_VECBLEND]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x ptr> [[A_SROA_0_16_VECBLEND]]
 ;
-  %a = alloca {<2 x i64>, <2 x i64>}
+  %a = alloca {<2 x i64>, <2 x i64>}, align 32
 
   store {<2 x i64>, <2 x i64>} %x, ptr %a
 
@@ -57,7 +57,7 @@ define <2 x i64> @vector_ptrtointbitcast({<1 x ptr>, <1 x ptr>} %x) {
 ; CHECK-NEXT:    [[A_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[A_SROA_0_0_VEC_INSERT]], i64 [[TMP4]], i32 1
 ; CHECK-NEXT:    ret <2 x i64> [[A_SROA_0_8_VEC_INSERT]]
 ;
-  %a = alloca {<1 x ptr>, <1 x ptr>}
+  %a = alloca {<1 x ptr>, <1 x ptr>}, align 16
 
   store {<1 x ptr>, <1 x ptr>} %x, ptr %a
 
@@ -74,7 +74,7 @@ define <2 x ptr> @vector_inttoptrbitcast_vector({<16 x i8>, <16 x i8>} %x) {
 ; CHECK-NEXT:    [[X_FCA_1_EXTRACT:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[X]], 1
 ; CHECK-NEXT:    ret <2 x ptr> [[TMP2]]
 ;
-  %a = alloca {<16 x i8>, <16 x i8>}
+  %a = alloca {<16 x i8>, <16 x i8>}, align 16
 
   store {<16 x i8>, <16 x i8>} %x, ptr %a
 
@@ -91,7 +91,7 @@ define <16 x i8> @vector_ptrtointbitcast_vector({<2 x ptr>, <2 x ptr>} %x) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to <16 x i8>
 ; CHECK-NEXT:    ret <16 x i8> [[TMP2]]
 ;
-  %a = alloca {<2 x ptr>, <2 x ptr>}
+  %a = alloca {<2 x ptr>, <2 x ptr>}, align 16
 
   store {<2 x ptr>, <2 x ptr>} %x, ptr %a
 

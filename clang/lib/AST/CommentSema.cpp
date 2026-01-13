@@ -225,7 +225,7 @@ static ParamCommandPassDirection getParamPassDirection(StringRef Arg) {
   return llvm::StringSwitch<ParamCommandPassDirection>(Arg)
       .Case("[in]", ParamCommandPassDirection::In)
       .Case("[out]", ParamCommandPassDirection::Out)
-      .Cases("[in,out]", "[out,in]", ParamCommandPassDirection::InOut)
+      .Cases({"[in,out]", "[out,in]"}, ParamCommandPassDirection::InOut)
       .Default(static_cast<ParamCommandPassDirection>(-1));
 }
 
@@ -363,12 +363,13 @@ void Sema::actOnTParamCommandFinish(TParamCommandComment *Command,
 InlineCommandComment *
 Sema::actOnInlineCommand(SourceLocation CommandLocBegin,
                          SourceLocation CommandLocEnd, unsigned CommandID,
+                         CommandMarkerKind CommandMarker,
                          ArrayRef<Comment::Argument> Args) {
   StringRef CommandName = Traits.getCommandInfo(CommandID)->Name;
 
-  return new (Allocator)
-      InlineCommandComment(CommandLocBegin, CommandLocEnd, CommandID,
-                           getInlineCommandRenderKind(CommandName), Args);
+  return new (Allocator) InlineCommandComment(
+      CommandLocBegin, CommandLocEnd, CommandID,
+      getInlineCommandRenderKind(CommandName), CommandMarker, Args);
 }
 
 InlineContentComment *Sema::actOnUnknownCommand(SourceLocation LocBegin,
@@ -905,17 +906,9 @@ bool Sema::isClassOrStructOrTagTypedefDecl() {
   if (isClassOrStructDeclImpl(ThisDeclInfo->CurrentDecl))
     return true;
 
-  if (auto *ThisTypedefDecl = dyn_cast<TypedefDecl>(ThisDeclInfo->CurrentDecl)) {
-    auto UnderlyingType = ThisTypedefDecl->getUnderlyingType();
-    if (auto ThisElaboratedType = dyn_cast<ElaboratedType>(UnderlyingType)) {
-      auto DesugaredType = ThisElaboratedType->desugar();
-      if (auto *DesugaredTypePtr = DesugaredType.getTypePtrOrNull()) {
-        if (auto *ThisRecordType = dyn_cast<RecordType>(DesugaredTypePtr)) {
-          return isClassOrStructDeclImpl(ThisRecordType->getAsRecordDecl());
-        }
-      }
-    }
-  }
+  if (auto *ThisTypedefDecl = dyn_cast<TypedefDecl>(ThisDeclInfo->CurrentDecl))
+    if (auto *D = ThisTypedefDecl->getUnderlyingType()->getAsRecordDecl())
+      return isClassOrStructDeclImpl(D);
 
   return false;
 }
@@ -1068,8 +1061,8 @@ InlineCommandRenderKind Sema::getInlineCommandRenderKind(StringRef Name) const {
 
   return llvm::StringSwitch<InlineCommandRenderKind>(Name)
       .Case("b", InlineCommandRenderKind::Bold)
-      .Cases("c", "p", InlineCommandRenderKind::Monospaced)
-      .Cases("a", "e", "em", InlineCommandRenderKind::Emphasized)
+      .Cases({"c", "p"}, InlineCommandRenderKind::Monospaced)
+      .Cases({"a", "e", "em"}, InlineCommandRenderKind::Emphasized)
       .Case("anchor", InlineCommandRenderKind::Anchor)
       .Default(InlineCommandRenderKind::Normal);
 }

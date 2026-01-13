@@ -293,15 +293,14 @@ static CallExpr *create_call_once_lambda_call(ASTContext &C, ASTMaker M,
   FunctionDecl *callOperatorDecl = CallbackDecl->getLambdaCallOperator();
   assert(callOperatorDecl != nullptr);
 
-  DeclRefExpr *callOperatorDeclRef =
-      DeclRefExpr::Create(/* Ctx =*/ C,
-                          /* QualifierLoc =*/ NestedNameSpecifierLoc(),
-                          /* TemplateKWLoc =*/ SourceLocation(),
-                          const_cast<FunctionDecl *>(callOperatorDecl),
-                          /* RefersToEnclosingVariableOrCapture=*/ false,
-                          /* NameLoc =*/ SourceLocation(),
-                          /* T =*/ callOperatorDecl->getType(),
-                          /* VK =*/ VK_LValue);
+  DeclRefExpr *callOperatorDeclRef = DeclRefExpr::Create(
+      /* Ctx =*/C,
+      /* QualifierLoc =*/NestedNameSpecifierLoc(),
+      /* TemplateKWLoc =*/SourceLocation(), callOperatorDecl,
+      /* RefersToEnclosingVariableOrCapture=*/false,
+      /* NameLoc =*/SourceLocation(),
+      /* T =*/callOperatorDecl->getType(),
+      /* VK =*/VK_LValue);
 
   return CXXOperatorCallExpr::Create(
       /*AstContext=*/C, OO_Call, callOperatorDeclRef,

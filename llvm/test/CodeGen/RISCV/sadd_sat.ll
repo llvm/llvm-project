@@ -4,19 +4,13 @@
 ; RUN: llc < %s -mtriple=riscv32 -mattr=+m,+zbb | FileCheck %s --check-prefixes=RV32,RV32IZbb
 ; RUN: llc < %s -mtriple=riscv64 -mattr=+m,+zbb | FileCheck %s --check-prefixes=RV64,RV64IZbb
 
-declare i4 @llvm.sadd.sat.i4(i4, i4)
-declare i8 @llvm.sadd.sat.i8(i8, i8)
-declare i16 @llvm.sadd.sat.i16(i16, i16)
-declare i32 @llvm.sadd.sat.i32(i32, i32)
-declare i64 @llvm.sadd.sat.i64(i64, i64)
-
 define signext i32 @func(i32 signext %x, i32 signext %y) nounwind {
 ; RV32-LABEL: func:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    mv a2, a0
 ; RV32-NEXT:    add a0, a0, a1
 ; RV32-NEXT:    slt a2, a0, a2
-; RV32-NEXT:    slti a1, a1, 0
+; RV32-NEXT:    srli a1, a1, 31
 ; RV32-NEXT:    beq a1, a2, .LBB0_2
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    srai a0, a0, 31
@@ -27,16 +21,15 @@ define signext i32 @func(i32 signext %x, i32 signext %y) nounwind {
 ;
 ; RV64I-LABEL: func:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    add a2, a0, a1
+; RV64I-NEXT:    mv a2, a0
 ; RV64I-NEXT:    addw a0, a0, a1
-; RV64I-NEXT:    beq a0, a2, .LBB0_2
+; RV64I-NEXT:    add a1, a2, a1
+; RV64I-NEXT:    beq a0, a1, .LBB0_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    srli a0, a0, 31
-; RV64I-NEXT:    li a1, 1
-; RV64I-NEXT:    slli a1, a1, 31
-; RV64I-NEXT:    xor a2, a0, a1
+; RV64I-NEXT:    sraiw a0, a1, 31
+; RV64I-NEXT:    lui a1, 524288
+; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:  .LBB0_2:
-; RV64I-NEXT:    sext.w a0, a2
 ; RV64I-NEXT:    ret
 ;
 ; RV64IZbb-LABEL: func:
@@ -77,7 +70,7 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; RV64-NEXT:    mv a2, a0
 ; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    slt a2, a0, a2
-; RV64-NEXT:    slti a1, a1, 0
+; RV64-NEXT:    srli a1, a1, 63
 ; RV64-NEXT:    beq a1, a2, .LBB1_2
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    srai a0, a0, 63

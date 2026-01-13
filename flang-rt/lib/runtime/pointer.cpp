@@ -157,7 +157,8 @@ RT_API_ATTRS void *AllocateValidatedPointerPayload(
 }
 
 int RTDEF(PointerAllocate)(Descriptor &pointer, bool hasStat,
-    const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
+    const Descriptor *errMsg, const char *sourceFile, int sourceLine,
+    MemcpyFct memcpyFct) {
   Terminator terminator{sourceFile, sourceLine};
   if (!pointer.IsPointer()) {
     return ReturnError(terminator, StatInvalidDescriptor, errMsg, hasStat);
@@ -179,7 +180,8 @@ int RTDEF(PointerAllocate)(Descriptor &pointer, bool hasStat,
   if (const DescriptorAddendum * addendum{pointer.Addendum()}) {
     if (const auto *derived{addendum->derivedType()}) {
       if (!derived->noInitializationNeeded()) {
-        stat = Initialize(pointer, *derived, terminator, hasStat, errMsg);
+        stat = Initialize(
+            pointer, *derived, terminator, hasStat, errMsg, memcpyFct);
       }
     }
   }
@@ -267,8 +269,10 @@ bool RTDEF(PointerIsAssociatedWith)(
   if (!target) {
     return pointer.raw().base_addr != nullptr;
   }
-  if (!target->raw().base_addr ||
-      (target->raw().type != CFI_type_struct && target->ElementBytes() == 0)) {
+  if (!target->raw().base_addr || target->ElementBytes() == 0 ||
+      target->Elements() == 0) {
+    // F2023, 16.9.20, p5, case (v)-(vi): don't associate pointers with
+    // targets that have zero sized storage sequence.
     return false;
   }
   int rank{pointer.rank()};

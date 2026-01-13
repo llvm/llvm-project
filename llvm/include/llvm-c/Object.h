@@ -55,6 +55,7 @@ typedef enum {
   LLVMBinaryTypeMachO64B,             /**< MachO 64-bit, big endian. */
   LLVMBinaryTypeWasm,                 /**< Web Assembly. */
   LLVMBinaryTypeOffload,              /**< Offloading fatbinary. */
+  LLVMBinaryTypeDXcontainer,          /**< DirectX Binary Container. */
 
 } LLVMBinaryType;
 
@@ -65,7 +66,7 @@ typedef enum {
  * appropriate implementation selected.  The context may be NULL except if
  * the resulting file is an LLVM IR file.
  *
- * The memory buffer is not consumed by this function.  It is the responsibilty
+ * The memory buffer is not consumed by this function. It is the responsibility
  * of the caller to free it with \c LLVMDisposeMemoryBuffer.
  *
  * If NULL is returned, the \p ErrorMessage parameter is populated with the
@@ -81,7 +82,7 @@ LLVM_C_ABI LLVMBinaryRef LLVMCreateBinary(LLVMMemoryBufferRef MemBuf,
 /**
  * Dispose of a binary file.
  *
- * The binary file does not own its backing buffer.  It is the responsibilty
+ * The binary file does not own its backing buffer. It is the responsibility
  * of the caller to free it with \c LLVMDisposeMemoryBuffer.
  */
 LLVM_C_ABI void LLVMDisposeBinary(LLVMBinaryRef BR);

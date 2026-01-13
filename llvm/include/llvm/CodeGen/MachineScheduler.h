@@ -829,7 +829,7 @@ private:
 
 public:
   // constructor for empty set
-  explicit ResourceSegments(){};
+  explicit ResourceSegments() = default;
   bool empty() const { return _Intervals.empty(); }
   explicit ResourceSegments(const std::list<IntervalTy> &Intervals)
       : _Intervals(Intervals) {
@@ -1038,7 +1038,7 @@ public:
   getNextResourceCycle(const MCSchedClassDesc *SC, unsigned PIdx,
                        unsigned ReleaseAtCycle, unsigned AcquireAtCycle);
 
-  bool isUnbufferedGroup(unsigned PIdx) const {
+  bool isReservedGroup(unsigned PIdx) const {
     return SchedModel->getProcResource(PIdx)->SubUnitsIdxBegin &&
            !SchedModel->getProcResource(PIdx)->BufferSize;
   }
@@ -1303,8 +1303,8 @@ protected:
   SchedBoundary Top;
   SchedBoundary Bot;
 
-  ClusterInfo *TopCluster;
-  ClusterInfo *BotCluster;
+  unsigned TopClusterID;
+  unsigned BotClusterID;
 
   /// Candidate last picked from Top boundary.
   SchedCandidate TopCand;
@@ -1346,8 +1346,8 @@ protected:
   /// Candidate last picked from Bot boundary.
   SchedCandidate BotCand;
 
-  ClusterInfo *TopCluster;
-  ClusterInfo *BotCluster;
+  unsigned TopClusterID;
+  unsigned BotClusterID;
 
 public:
   PostGenericScheduler(const MachineSchedContext *C)

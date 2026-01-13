@@ -1,6 +1,9 @@
 <!-- This document is written in Markdown and uses extra directives provided by
 MyST (https://myst-parser.readthedocs.io/en/latest/). -->
 
+<!-- If you want to modify sections/contents permanently, you should modify both
+ReleaseNotes.md and ReleaseNotesTemplate.txt. -->
+
 LLVM {{env.config.release}} Release Notes
 =========================================
 
@@ -69,10 +72,7 @@ Changes to Interprocedural Optimizations
 ----------------------------------------
 
 Changes to Vectorizers
-----------------------------------------
-
-* Added initial support for copyable elements in SLP, which models copyable
-  elements as add <element>, 0, i.e. uses identity constants for missing lanes.
+----------------------
 
 Changes to the AArch64 Backend
 ------------------------------
@@ -94,6 +94,9 @@ Changes to the Hexagon Backend
 
 Changes to the LoongArch Backend
 --------------------------------
+
+* DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`
+  to be used together when building for the LoongArch platform.
 
 Changes to the MIPS Backend
 ---------------------------
@@ -126,22 +129,19 @@ Changes to the CodeGen infrastructure
 -------------------------------------
 
 Changes to the Metadata Info
----------------------------------
+----------------------------
 
 Changes to the Debug Info
----------------------------------
+-------------------------
 
 Changes to the LLVM tools
----------------------------------
+-------------------------
 
 Changes to LLDB
----------------------------------
-
-* LLDB can now set breakpoints, show backtraces, and display variables when
-  debugging Wasm with supported runtimes (WAMR and V8).
+---------------
 
 Changes to BOLT
----------------------------------
+---------------
 
 Changes to Sanitizers
 ---------------------
@@ -151,8 +151,6 @@ Other Changes
 
 External Open Source Projects Using LLVM {{env.config.release}}
 ===============================================================
-
-* A project...
 
 Additional Information
 ======================

@@ -44,6 +44,16 @@ public:
   }
 
   virtual StructuredData::ArraySP GetExtendedInfo() { return {}; }
+
+  virtual std::optional<std::string> GetScriptedFramePluginName() {
+    return std::nullopt;
+  }
+
+protected:
+  friend class ScriptedFrame;
+  virtual lldb::ScriptedFrameInterfaceSP CreateScriptedFrameInterface() {
+    return {};
+  }
 };
 } // namespace lldb_private
 

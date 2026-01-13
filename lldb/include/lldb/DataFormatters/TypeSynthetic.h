@@ -28,13 +28,8 @@ class SyntheticChildrenFrontEnd {
 protected:
   ValueObject &m_backend;
 
-  void SetValid(bool valid) { m_valid = valid; }
-
-  bool IsValid() { return m_valid; }
-
 public:
-  SyntheticChildrenFrontEnd(ValueObject &backend)
-      : m_backend(backend), m_valid(true) {}
+  SyntheticChildrenFrontEnd(ValueObject &backend) : m_backend(backend) {}
 
   virtual ~SyntheticChildrenFrontEnd() = default;
 
@@ -81,7 +76,7 @@ public:
   virtual ConstString GetSyntheticTypeName() { return ConstString(); }
 
   typedef std::shared_ptr<SyntheticChildrenFrontEnd> SharedPointer;
-  typedef std::unique_ptr<SyntheticChildrenFrontEnd> AutoPointer;
+  typedef std::unique_ptr<SyntheticChildrenFrontEnd> UniquePointer;
 
 protected:
   lldb::ValueObjectSP
@@ -100,7 +95,6 @@ protected:
                                                 CompilerType type);
 
 private:
-  bool m_valid;
   SyntheticChildrenFrontEnd(const SyntheticChildrenFrontEnd &) = delete;
   const SyntheticChildrenFrontEnd &
   operator=(const SyntheticChildrenFrontEnd &) = delete;
@@ -266,7 +260,7 @@ public:
 
   virtual std::string GetDescription() = 0;
 
-  virtual SyntheticChildrenFrontEnd::AutoPointer
+  virtual SyntheticChildrenFrontEnd::UniquePointer
   GetFrontEnd(ValueObject &backend) = 0;
 
   typedef std::shared_ptr<SyntheticChildren> SharedPointer;
@@ -360,9 +354,10 @@ public:
     const FrontEnd &operator=(const FrontEnd &) = delete;
   };
 
-  SyntheticChildrenFrontEnd::AutoPointer
+  SyntheticChildrenFrontEnd::UniquePointer
   GetFrontEnd(ValueObject &backend) override {
-    return SyntheticChildrenFrontEnd::AutoPointer(new FrontEnd(this, backend));
+    return SyntheticChildrenFrontEnd::UniquePointer(
+        new FrontEnd(this, backend));
   }
 
   typedef std::shared_ptr<TypeFilterImpl> SharedPointer;
@@ -386,9 +381,9 @@ public:
 
   std::string GetDescription() override;
 
-  SyntheticChildrenFrontEnd::AutoPointer
+  SyntheticChildrenFrontEnd::UniquePointer
   GetFrontEnd(ValueObject &backend) override {
-    return SyntheticChildrenFrontEnd::AutoPointer(
+    return SyntheticChildrenFrontEnd::UniquePointer(
         m_create_callback(this, backend.GetSP()));
   }
 
@@ -465,9 +460,9 @@ public:
     const FrontEnd &operator=(const FrontEnd &) = delete;
   };
 
-  SyntheticChildrenFrontEnd::AutoPointer
+  SyntheticChildrenFrontEnd::UniquePointer
   GetFrontEnd(ValueObject &backend) override {
-    auto synth_ptr = SyntheticChildrenFrontEnd::AutoPointer(
+    auto synth_ptr = SyntheticChildrenFrontEnd::UniquePointer(
         new FrontEnd(m_python_class, backend));
     if (synth_ptr && ((FrontEnd *)synth_ptr.get())->IsValid())
       return synth_ptr;

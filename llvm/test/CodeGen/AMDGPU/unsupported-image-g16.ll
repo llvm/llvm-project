@@ -1,8 +1,8 @@
-; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn -mcpu=fiji -o /dev/null %s 2>&1 | FileCheck -check-prefix=SDAG-ERR %s
-; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx900 -o /dev/null %s 2>&1 | FileCheck -check-prefix=SDAG-ERR %s
+; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn -mcpu=fiji -filetype=null %s 2>&1 | FileCheck -check-prefix=SDAG-ERR %s
+; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx900 -filetype=null %s 2>&1 | FileCheck -check-prefix=SDAG-ERR %s
 
-; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=fiji -o /dev/null %s 2>&1 | FileCheck -check-prefix=GISEL-ERR %s
-; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx900 -o /dev/null %s 2>&1 | FileCheck -check-prefix=GISEL-ERR %s
+; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=fiji -filetype=null %s 2>&1 | FileCheck -check-prefix=GISEL-ERR %s
+; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx900 -filetype=null %s 2>&1 | FileCheck -check-prefix=GISEL-ERR %s
 
 ; Make sure this doesn't assert on targets without the g16 feature, and instead
 ; generates a selection error.

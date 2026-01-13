@@ -79,10 +79,10 @@ for.body:                                         ; preds = %for.cond
 declare i32 @c(...) #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #2
+declare void @llvm.lifetime.start.p0(ptr nocapture) #2
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #2
+declare void @llvm.lifetime.end.p0(ptr nocapture) #2
 
 attributes #0 = { "use-soft-float"="false" }
 attributes #1 = { "target-cpu"="x86-64" }

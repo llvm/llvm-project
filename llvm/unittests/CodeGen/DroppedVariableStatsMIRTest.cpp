@@ -158,8 +158,8 @@ frameInfo:
   hasTailCall:     false
   isCalleeSavedInfoValid: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:           []
 entry_values:    []
@@ -307,8 +307,8 @@ frameInfo:
   hasTailCall:     false
   isCalleeSavedInfoValid: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:           []
 entry_values:    []
@@ -450,8 +450,8 @@ frameInfo:
   hasTailCall:     false
   isCalleeSavedInfoValid: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:           []
 entry_values:    []
@@ -593,8 +593,8 @@ frameInfo:
   hasTailCall:     false
   isCalleeSavedInfoValid: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:           []
 entry_values:    []
@@ -738,8 +738,8 @@ frameInfo:
   hasTailCall:     false
   isCalleeSavedInfoValid: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:           []
 entry_values:    []
@@ -883,8 +883,8 @@ frameInfo:
   hasTailCall:     false
   isCalleeSavedInfoValid: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:           []
 entry_values:    []
@@ -1029,8 +1029,8 @@ frameInfo:
   hasTailCall:     false
   isCalleeSavedInfoValid: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:           []
 entry_values:    []

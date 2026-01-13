@@ -1675,8 +1675,9 @@ template <class ELFT> void SharedFile::parse() {
 
     const uint16_t ver = versyms[i], idx = ver & ~VERSYM_HIDDEN;
     if (sym.isUndefined()) {
-      // For unversioned undefined symbols, VER_NDX_GLOBAL makes more sense but
-      // as of binutils 2.34, GNU ld produces VER_NDX_LOCAL.
+      // Index 0 (VER_NDX_LOCAL) is used for unversioned undefined symbols.
+      // GNU ld versions between 2.35 and 2.45 also generate VER_NDX_GLOBAL
+      // for this case (https://sourceware.org/PR33577).
       if (ver != VER_NDX_LOCAL && ver != VER_NDX_GLOBAL) {
         if (idx >= verneeds.size()) {
           ErrAlways(ctx) << "corrupt input file: version need index " << idx
@@ -1832,9 +1833,11 @@ BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
                        ? ss.save(path)
                        : ss.save(archiveName + "(" + path::filename(path) +
                                  " at " + utostr(offsetInArchive) + ")");
+
   MemoryBufferRef mbref(mb.getBuffer(), name);
 
   obj = CHECK2(lto::InputFile::create(mbref), this);
+  obj->setArchivePathAndName(archiveName, mb.getBufferIdentifier());
 
   Triple t(obj->getTargetTriple());
   ekind = getBitcodeELFKind(t);

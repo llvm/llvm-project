@@ -190,12 +190,12 @@ define i32 @reorder_indices_1(float %0) {
 ; NON-POW2-NEXT:  entry:
 ; NON-POW2-NEXT:    [[NOR1:%.*]] = alloca [0 x [3 x float]], i32 0, align 4
 ; NON-POW2-NEXT:    [[TMP1:%.*]] = load <3 x float>, ptr [[NOR1]], align 4
-; NON-POW2-NEXT:    [[TMP3:%.*]] = fneg <3 x float> [[TMP1]]
+; NON-POW2-NEXT:    [[TMP2:%.*]] = shufflevector <3 x float> [[TMP1]], <3 x float> poison, <3 x i32> <i32 1, i32 2, i32 0>
+; NON-POW2-NEXT:    [[TMP3:%.*]] = fneg <3 x float> [[TMP2]]
 ; NON-POW2-NEXT:    [[TMP4:%.*]] = insertelement <3 x float> poison, float [[TMP0]], i32 0
 ; NON-POW2-NEXT:    [[TMP5:%.*]] = shufflevector <3 x float> [[TMP4]], <3 x float> poison, <3 x i32> zeroinitializer
 ; NON-POW2-NEXT:    [[TMP6:%.*]] = fmul <3 x float> [[TMP3]], [[TMP5]]
-; NON-POW2-NEXT:    [[TMP10:%.*]] = shufflevector <3 x float> [[TMP6]], <3 x float> poison, <3 x i32> <i32 1, i32 2, i32 0>
-; NON-POW2-NEXT:    [[TMP7:%.*]] = call <3 x float> @llvm.fmuladd.v3f32(<3 x float> [[TMP1]], <3 x float> zeroinitializer, <3 x float> [[TMP10]])
+; NON-POW2-NEXT:    [[TMP7:%.*]] = call <3 x float> @llvm.fmuladd.v3f32(<3 x float> [[TMP1]], <3 x float> zeroinitializer, <3 x float> [[TMP6]])
 ; NON-POW2-NEXT:    [[TMP8:%.*]] = call <3 x float> @llvm.fmuladd.v3f32(<3 x float> [[TMP5]], <3 x float> [[TMP7]], <3 x float> zeroinitializer)
 ; NON-POW2-NEXT:    [[TMP9:%.*]] = fmul <3 x float> [[TMP8]], zeroinitializer
 ; NON-POW2-NEXT:    store <3 x float> [[TMP9]], ptr [[NOR1]], align 4
@@ -446,12 +446,11 @@ define void @reuse_shuffle_indices_cost_crash_3(ptr %m, double %conv, double %co
 ; CHECK-SAME: ptr [[M:%.*]], double [[CONV:%.*]], double [[CONV2:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SUB19:%.*]] = fsub double 0.000000e+00, [[CONV2]]
-; CHECK-NEXT:    [[CONV20:%.*]] = fptrunc double [[SUB19]] to float
-; CHECK-NEXT:    store float [[CONV20]], ptr [[M]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[CONV]], 0.000000e+00
-; CHECK-NEXT:    [[CONV239:%.*]] = fptrunc double [[ADD]] to float
-; CHECK-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr [4 x float], ptr [[M]], i64 0, i64 1
-; CHECK-NEXT:    store float [[CONV239]], ptr [[ARRAYIDX25]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[SUB19]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[ADD]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = fptrunc <2 x double> [[TMP1]] to <2 x float>
+; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr [[M]], align 4
 ; CHECK-NEXT:    [[ADD26:%.*]] = fsub double [[CONV]], [[CONV]]
 ; CHECK-NEXT:    [[CONV27:%.*]] = fptrunc double [[ADD26]] to float
 ; CHECK-NEXT:    [[ARRAYIDX29:%.*]] = getelementptr [4 x float], ptr [[M]], i64 0, i64 2
@@ -522,12 +521,11 @@ define void @common_mask(ptr %m, double %conv, double %conv2) {
 ; CHECK-SAME: ptr [[M:%.*]], double [[CONV:%.*]], double [[CONV2:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SUB19:%.*]] = fsub double [[CONV]], [[CONV]]
-; CHECK-NEXT:    [[CONV20:%.*]] = fptrunc double [[SUB19]] to float
-; CHECK-NEXT:    store float [[CONV20]], ptr [[M]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[CONV2]], 0.000000e+00
-; CHECK-NEXT:    [[CONV239:%.*]] = fptrunc double [[ADD]] to float
-; CHECK-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr [4 x float], ptr [[M]], i64 0, i64 1
-; CHECK-NEXT:    store float [[CONV239]], ptr [[ARRAYIDX25]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[SUB19]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[ADD]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = fptrunc <2 x double> [[TMP1]] to <2 x float>
+; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr [[M]], align 4
 ; CHECK-NEXT:    [[ADD26:%.*]] = fsub double 0.000000e+00, [[CONV]]
 ; CHECK-NEXT:    [[CONV27:%.*]] = fptrunc double [[ADD26]] to float
 ; CHECK-NEXT:    [[ARRAYIDX29:%.*]] = getelementptr [4 x float], ptr [[M]], i64 0, i64 2

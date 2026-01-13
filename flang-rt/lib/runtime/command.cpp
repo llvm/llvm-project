@@ -23,11 +23,9 @@
 #define unlink _unlink
 #define PATH_MAX MAX_PATH
 
-#ifdef _MSC_VER
 // On Windows GetCurrentProcessId returns a DWORD aka uint32_t
 #include <processthreadsapi.h>
 inline pid_t getpid() { return GetCurrentProcessId(); }
-#endif
 #else
 #include <unistd.h> //getpid() unlink()
 
@@ -58,7 +56,7 @@ static std::int64_t StringLength(const char *string) {
 
 static void FillWithSpaces(const Descriptor &value, std::size_t offset = 0) {
   if (offset < value.ElementBytes()) {
-    std::memset(
+    runtime::memset(
         value.OffsetElement(offset), ' ', value.ElementBytes() - offset);
   }
 }

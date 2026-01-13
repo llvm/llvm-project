@@ -11,7 +11,7 @@
 define i16 @test_true_and_false_branch_equal() {
 ; CHECK-LABEL: @test_true_and_false_branch_equal(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -19,8 +19,7 @@ define i16 @test_true_and_false_branch_equal() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr @v_38, align 1
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i16> poison, i16 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT]], <2 x i16> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i16> [[BROADCAST_SPLAT]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i1> [[TMP1]], splat (i1 true)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i16> [[BROADCAST_SPLAT]], zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[PRED_SREM_IF:%.*]], label [[PRED_SREM_CONTINUE:%.*]]
 ; CHECK:       pred.srem.if:
@@ -37,34 +36,15 @@ define i16 @test_true_and_false_branch_equal() {
 ; CHECK-NEXT:    br label [[PRED_SREM_CONTINUE2]]
 ; CHECK:       pred.srem.continue2:
 ; CHECK-NEXT:    [[TMP10:%.*]] = phi <2 x i16> [ [[TMP6]], [[PRED_SREM_CONTINUE]] ], [ [[TMP9]], [[PRED_SREM_IF1]] ]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP1]], <2 x i16> splat (i16 5786), <2 x i16> [[TMP10]]
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP13]], <2 x i16> [[TMP10]], <2 x i16> splat (i16 5786)
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i16> [[PREDPHI]], i32 1
 ; CHECK-NEXT:    store i16 [[TMP11]], ptr @v_39, align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], 12
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 99, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[I_07:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC7:%.*]], [[FOR_LATCH:%.*]] ]
-; CHECK-NEXT:    [[LV:%.*]] = load i16, ptr @v_38, align 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i16 [[LV]], 32767
-; CHECK-NEXT:    br i1 [[CMP1]], label [[COND_END:%.*]], label [[COND_END]]
-; CHECK:       cond.end:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i16 [[LV]], 0
-; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_LATCH]], label [[COND_FALSE4:%.*]]
-; CHECK:       cond.false4:
-; CHECK-NEXT:    [[REM:%.*]] = srem i16 5786, [[LV]]
-; CHECK-NEXT:    br label [[FOR_LATCH]]
-; CHECK:       for.latch:
-; CHECK-NEXT:    [[COND6:%.*]] = phi i16 [ [[REM]], [[COND_FALSE4]] ], [ 5786, [[COND_END]] ]
-; CHECK-NEXT:    store i16 [[COND6]], ptr @v_39, align 1
-; CHECK-NEXT:    [[INC7]] = add nsw i16 [[I_07]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[INC7]], 111
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[EXIT]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br label [[FOR_LATCH:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[RV:%.*]] = load i16, ptr @v_39, align 1
 ; CHECK-NEXT:    ret i16 [[RV]]

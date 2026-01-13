@@ -18,7 +18,6 @@
 ; the analysis caches.
 ;
 ; CHECK: Running pass: SimpleLoopUnswitchPass on loop %loop_begin in function test6
-; CHECK-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-NEXT: Clearing all analysis results for: loop_a_inner
 
 

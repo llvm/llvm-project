@@ -200,7 +200,7 @@ def AttrE : TestAttr<"TestH"> {
 
 def TestEnum : I32EnumAttr<"TestEnum", "TestEnumType", [
   I32EnumAttrCase<"first", 0>,
-  I32EnumAttrCase<"second", 1>
+  I32EnumAttrCase<"second", 1>,
 ]> {
   let genSpecializedAttr = 0;
 }
@@ -213,6 +213,20 @@ def TestEnum : I32EnumAttr<"TestEnum", "TestEnumType", [
 // ATTR-NEXT: getValue()
 def EnumAttrA : EnumAttr<Test_Dialect, TestEnum, "EnumAttrA"> {
   let assemblyFormat = "custom<Foo>($value)";
+}
+
+def TestEnumB : I32EnumAttr<"TestEnumB", "TestEnumType", [
+  I32EnumAttrCase<"Plus", 0, "+">,
+  I32EnumAttrCase<"LongString", 1, "dash-separated-sentence">,
+  I32EnumAttrCase<"Other", 2>
+]> {
+  let genSpecializedAttr = 0;
+}
+
+// ATTR-LABEL: TestEnumBAttr::parse
+// ATTR: parseKeywordOrString(
+def EnumAttrB : EnumAttr<Test_Dialect, TestEnumB, "EnumAttrB"> {
+  let assemblyFormat = "$value";
 }
 
 /// Test type parser and printer that mix variables and struct are generated

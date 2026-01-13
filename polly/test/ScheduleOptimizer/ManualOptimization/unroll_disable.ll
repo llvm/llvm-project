@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-pragma-based-opts=1 '-passes=print<polly-opt-isl>' -disable-output < %s | FileCheck %s --match-full-lines
+; RUN: opt %loadNPMPolly -polly-pragma-based-opts=1 '-passes=polly-custom<opt-isl>' -polly-print-opt-isl -disable-output < %s | FileCheck %s --match-full-lines
 ;
 ; Override unroll metadata with llvm.loop.unroll.disable.
 ;

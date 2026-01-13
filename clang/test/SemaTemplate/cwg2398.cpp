@@ -672,3 +672,22 @@ namespace nttp_partial_order {
     template void f<B>(B<nullptr>);
   } // namespace t6
 } // namespace nttp_partial_order
+
+namespace nttp_inconsistent {
+  namespace t1 {
+    template<class A, A B> struct X {};
+    // expected-error@-1 {{conflicting deduction 'C' against 'int' for parameter}}
+    template<template<class C, int D> class TT> struct Y {};
+    // expected-note@-1 {{previous template template parameter is here}}
+    template struct Y<X>;
+    // expected-note@-1 {{has different template parameters}}
+  } // namespace t1
+  namespace t2 {
+    template<class A, A B = 0> struct X {};
+    // expected-error@-1 {{conflicting deduction 'C' against 'int' for parameter}}
+    template<template<class C> class TT> struct Y {};
+    // expected-note@-1 {{previous template template parameter is here}}
+    template struct Y<X>;
+    // expected-note@-1 {{has different template parameters}}
+  } // namespace t2
+} // namespace nttp_inconsistent

@@ -65,7 +65,7 @@ bool Loop::isLoopInvariant(const Value *V) const {
 }
 
 bool Loop::hasLoopInvariantOperands(const Instruction *I) const {
-  return all_of(I->operands(), [this](Value *V) { return isLoopInvariant(V); });
+  return all_of(I->operands(), [&](Value *V) { return isLoopInvariant(V); });
 }
 
 bool Loop::makeLoopInvariant(Value *V, bool &Changed, Instruction *InsertPt,
@@ -887,7 +887,7 @@ bool LoopInfo::invalidate(Function &F, const PreservedAnalyses &PA,
 void LoopInfo::erase(Loop *Unloop) {
   assert(!Unloop->isInvalid() && "Loop has already been erased!");
 
-  auto InvalidateOnExit = make_scope_exit([&]() { destroy(Unloop); });
+  llvm::scope_exit InvalidateOnExit([&]() { destroy(Unloop); });
 
   // First handle the special case of no parent loop to simplify the algorithm.
   if (Unloop->isOutermost()) {
@@ -986,8 +986,8 @@ PreservedAnalyses LoopPrinterPass::run(Function &F,
   return PreservedAnalyses::all();
 }
 
-void llvm::printLoop(Loop &L, raw_ostream &OS, const std::string &Banner) {
-
+void llvm::printLoop(const Loop &L, raw_ostream &OS,
+                     const std::string &Banner) {
   if (forcePrintModuleIR()) {
     // handling -print-module-scope
     OS << Banner << " (loop: ";
@@ -1111,13 +1111,9 @@ bool llvm::getBooleanLoopAttribute(const Loop *TheLoop, StringRef Name) {
 }
 
 std::optional<int> llvm::getOptionalIntLoopAttribute(const Loop *TheLoop,
-                                                     StringRef Name,
-                                                     bool *Missing) {
-  std::optional<const MDOperand *> AttrMDOpt =
-      findStringMetadataForLoop(TheLoop, Name);
-  if (Missing)
-    *Missing = !AttrMDOpt;
-  const MDOperand *AttrMD = AttrMDOpt.value_or(nullptr);
+                                                     StringRef Name) {
+  const MDOperand *AttrMD =
+      findStringMetadataForLoop(TheLoop, Name).value_or(nullptr);
   if (!AttrMD)
     return std::nullopt;
 

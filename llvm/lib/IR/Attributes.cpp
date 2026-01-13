@@ -544,7 +544,6 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     Result += '(';
     raw_string_ostream OS(Result);
     getValueAsType()->print(OS, false, true);
-    OS.flush();
     Result += ')';
     return Result;
   }
@@ -656,25 +655,28 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
         break;
       case IRMemLocation::Other:
         llvm_unreachable("This is represented as the default access kind");
+      case IRMemLocation::TargetMem0:
+        OS << "target_mem0: ";
+        break;
+      case IRMemLocation::TargetMem1:
+        OS << "target_mem1: ";
+        break;
       }
       OS << getModRefStr(MR);
     }
     OS << ")";
-    OS.flush();
     return Result;
   }
 
   if (hasAttribute(Attribute::Captures)) {
     std::string Result;
-    raw_string_ostream OS(Result);
-    OS << getCaptureInfo();
+    raw_string_ostream(Result) << getCaptureInfo();
     return Result;
   }
 
   if (hasAttribute(Attribute::NoFPClass)) {
     std::string Result = "nofpclass";
-    raw_string_ostream OS(Result);
-    OS << getNoFPClass();
+    raw_string_ostream(Result) << getNoFPClass();
     return Result;
   }
 
@@ -686,7 +688,6 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     OS << "i" << CR.getBitWidth() << " ";
     OS << CR.getLower() << ", " << CR.getUpper();
     OS << ")";
-    OS.flush();
     return Result;
   }
 
@@ -697,7 +698,6 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     OS << "initializes(";
     CRL.print(OS);
     OS << ")";
-    OS.flush();
     return Result;
   }
 
@@ -952,6 +952,19 @@ AttributeSet AttributeSet::addAttributes(LLVMContext &C,
   AttrBuilder B(C, *this);
   B.merge(AttrBuilder(C, AS));
   return get(C, B);
+}
+
+AttributeSet AttributeSet::addAttributes(LLVMContext &C,
+                                         const AttrBuilder &B) const {
+  if (!hasAttributes())
+    return get(C, B);
+
+  if (!B.hasAttributes())
+    return *this;
+
+  AttrBuilder Merged(C, *this);
+  Merged.merge(B);
+  return get(C, Merged);
 }
 
 AttributeSet AttributeSet::removeAttribute(LLVMContext &C,

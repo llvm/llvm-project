@@ -161,7 +161,7 @@ template <char NsanTypeId>
 class ShadowTypeConfigImpl : public ShadowTypeConfig {
 public:
   char getNsanTypeId() const override { return NsanTypeId; }
-  static constexpr const char kNsanTypeId = NsanTypeId;
+  static constexpr char kNsanTypeId = NsanTypeId;
 };
 
 // `double` (`d`) shadow type.
@@ -468,7 +468,8 @@ private:
       // Floating-point constants.
       Type *Ty = Config.getExtendedFPType(CFP->getType());
       return ConstantFP::get(
-          Ty, extendConstantFP(CFP->getValueAPF(), Ty->getFltSemantics()));
+          Ty, extendConstantFP(CFP->getValueAPF(),
+                               Ty->getScalarType()->getFltSemantics()));
     }
     // Vector, array, or aggregate constants.
     if (C->getType()->isVectorTy()) {
@@ -810,7 +811,7 @@ static bool shouldCheckArgs(CallBase &CI, const TargetLibraryInfo &TLI,
     return false;
 
   const auto ID = Fn->getIntrinsicID();
-  LibFunc LFunc = LibFunc::NumLibFuncs;
+  LibFunc LFunc = LibFunc::NotLibFunc;
   // Always check args of unknown functions.
   if (ID == Intrinsic::ID() && !TLI.getLibFunc(*Fn, LFunc))
     return true;
@@ -2019,7 +2020,6 @@ static void moveFastMathFlags(Function &F,
     F.removeFnAttr(attr);                                                      \
     FMF.set##setter();                                                         \
   }
-  MOVE_FLAG("unsafe-fp-math", Fast)
   MOVE_FLAG("no-infs-fp-math", NoInfs)
   MOVE_FLAG("no-nans-fp-math", NoNaNs)
   MOVE_FLAG("no-signed-zeros-fp-math", NoSignedZeros)

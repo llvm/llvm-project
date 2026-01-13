@@ -17,6 +17,8 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/LogicalResult.h"
 #include <optional>
 
 namespace llvm {
@@ -110,6 +112,7 @@ public:
       return std::move(*result);
     return defaultFn(this->value);
   }
+
   /// As a default, return the given value.
   [[nodiscard]] ResultT Default(ResultT defaultResult) {
     if (result)
@@ -117,10 +120,41 @@ public:
     return defaultResult;
   }
 
-  [[nodiscard]] operator ResultT() {
-    assert(result && "Fell off the end of a type-switch");
-    return std::move(*result);
+  /// Default for pointer-like results types that accept `nullptr`.
+  template <typename ArgT = ResultT,
+            typename =
+                std::enable_if_t<std::is_constructible_v<ArgT, std::nullptr_t>>>
+  [[nodiscard]] ResultT Default(std::nullptr_t) {
+    return Default(ResultT(nullptr));
   }
+
+  /// Default for optional results types that accept `std::nullopt`.
+  template <typename ArgT = ResultT,
+            typename =
+                std::enable_if_t<std::is_constructible_v<ArgT, std::nullopt_t>>>
+  [[nodiscard]] ResultT Default(std::nullopt_t) {
+    return Default(ResultT(std::nullopt));
+  }
+
+  /// Default for result types constructible from `LogicalResult` (e.g.,
+  /// `FailureOr<T>`).
+  template <typename ArgT = ResultT,
+            typename =
+                std::enable_if_t<std::is_constructible_v<ArgT, LogicalResult> &&
+                                 !std::is_same_v<ArgT, LogicalResult>>>
+  [[nodiscard]] ResultT Default(LogicalResult result) {
+    return Default(ResultT(result));
+  }
+
+  /// Declare default as unreachable, making sure that all cases were handled.
+  [[nodiscard]] ResultT DefaultUnreachable(
+      const char *message = "Fell off the end of a type-switch") {
+    if (result)
+      return std::move(*result);
+    llvm_unreachable(message);
+  }
+
+  [[nodiscard]] operator ResultT() { return DefaultUnreachable(); }
 
 private:
   /// The pointer to the result of this switch statement, once known,
@@ -156,6 +190,13 @@ public:
   template <typename CallableT> void Default(CallableT &&defaultFn) {
     if (!foundMatch)
       defaultFn(this->value);
+  }
+
+  /// Declare default as unreachable, making sure that all cases were handled.
+  void DefaultUnreachable(
+      const char *message = "Fell off the end of a type-switch") {
+    if (!foundMatch)
+      llvm_unreachable(message);
   }
 
 private:

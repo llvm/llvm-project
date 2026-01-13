@@ -8,6 +8,7 @@
 
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
@@ -33,7 +34,7 @@ TEST(CompilerInstance, DefaultVFSOverlayFromInvocation) {
 
   SmallString<256> CurrentPath;
   sys::fs::current_path(CurrentPath);
-  sys::fs::make_absolute(CurrentPath, FileName);
+  sys::path::make_absolute(CurrentPath, FileName);
 
   // Mount the VFS file itself on the path 'virtual.file'. Makes this test
   // a bit shorter than creating a new dummy file just for this purpose.
@@ -71,7 +72,8 @@ TEST(CompilerInstance, DefaultVFSOverlayFromInvocation) {
   // Create a minimal CompilerInstance which should use the VFS we specified
   // in the CompilerInvocation (as we don't explicitly set our own).
   CompilerInstance Instance(std::move(CInvok));
-  Instance.setDiagnostics(Diags.get());
+  Instance.setDiagnostics(Diags);
+  Instance.createVirtualFileSystem();
   Instance.createFileManager();
 
   // Check if the virtual file exists which means that our VFS is used by the
@@ -91,10 +93,10 @@ TEST(CompilerInstance, AllowDiagnosticLogWithUnownedDiagnosticConsumer) {
   llvm::raw_string_ostream DiagnosticsOS(DiagnosticOutput);
   auto DiagPrinter =
       std::make_unique<TextDiagnosticPrinter>(DiagnosticsOS, DiagOpts);
-  CompilerInstance Instance;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      Instance.createDiagnostics(*llvm::vfs::getRealFileSystem(), DiagOpts,
-                                 DiagPrinter.get(), /*ShouldOwnClient=*/false);
+      CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
+                                          DiagOpts, DiagPrinter.get(),
+                                          /*ShouldOwnClient=*/false);
 
   Diags->Report(diag::err_expected) << "no crash";
   ASSERT_EQ(DiagnosticOutput, "error: expected no crash\n");
@@ -135,8 +137,9 @@ TEST(CompilerInstance, MultipleInputsCleansFileIDs) {
   ASSERT_TRUE(CInvok) << "could not create compiler invocation";
 
   CompilerInstance Instance(std::move(CInvok));
-  Instance.setDiagnostics(Diags.get());
-  Instance.createFileManager(VFS);
+  Instance.setVirtualFileSystem(VFS);
+  Instance.setDiagnostics(Diags);
+  Instance.createFileManager();
 
   // Run once for `a.cc` and then for `a.h`. This makes sure we get the same
   // file ID for `b.h` in the second run as `a.h` from first run.

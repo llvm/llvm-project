@@ -356,13 +356,10 @@ bool ThreadPlanStepOut::DoPlanExplainsStop(Event *event_ptr) {
           }
         }
 
-        // If there was only one owner, then we're done.  But if we also hit
-        // some user breakpoint on our way out, we should mark ourselves as
-        // done, but also not claim to explain the stop, since it is more
-        // important to report the user breakpoint than the step out
-        // completion.
-
-        if (site_sp->GetNumberOfConstituents() == 1)
+        // If the thread also hit a user breakpoint on its way out, the plan is
+        // done but should not claim to explain the stop. It is more important
+        // to report the user breakpoint than the step out completion.
+        if (!site_sp->ContainsUserBreakpointForThread(GetThread()))
           return true;
       }
       return false;
@@ -397,9 +394,10 @@ bool ThreadPlanStepOut::ShouldStop(Event *event_ptr) {
     else
       return m_step_through_inline_plan_sp->ShouldStop(event_ptr);
   } else if (m_step_out_further_plan_sp) {
-    if (m_step_out_further_plan_sp->MischiefManaged())
+    if (m_step_out_further_plan_sp->MischiefManaged()) {
       m_step_out_further_plan_sp.reset();
-    else
+      done = true;
+    } else
       return m_step_out_further_plan_sp->ShouldStop(event_ptr);
   }
 

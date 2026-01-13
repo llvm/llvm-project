@@ -20,10 +20,10 @@
 using namespace llvm;
 
 void LiveRegUnits::removeRegsNotPreserved(const uint32_t *RegMask) {
-  for (unsigned U = 0, E = TRI->getNumRegUnits(); U != E; ++U) {
+  for (MCRegUnit U : TRI->regunits()) {
     for (MCRegUnitRootIterator RootReg(U, TRI); RootReg.isValid(); ++RootReg) {
       if (MachineOperand::clobbersPhysReg(RegMask, *RootReg)) {
-        Units.reset(U);
+        Units.reset(static_cast<unsigned>(U));
         break;
       }
     }
@@ -31,10 +31,10 @@ void LiveRegUnits::removeRegsNotPreserved(const uint32_t *RegMask) {
 }
 
 void LiveRegUnits::addRegsInMask(const uint32_t *RegMask) {
-  for (unsigned U = 0, E = TRI->getNumRegUnits(); U != E; ++U) {
+  for (MCRegUnit U : TRI->regunits()) {
     for (MCRegUnitRootIterator RootReg(U, TRI); RootReg.isValid(); ++RootReg) {
       if (MachineOperand::clobbersPhysReg(RegMask, *RootReg)) {
-        Units.set(U);
+        Units.set(static_cast<unsigned>(U));
         break;
       }
     }
@@ -91,6 +91,13 @@ static void addBlockLiveIns(LiveRegUnits &LiveUnits,
     LiveUnits.addRegMasked(LI.PhysReg, LI.LaneMask);
 }
 
+/// Add live-out registers of basic block \p MBB to \p LiveUnits.
+static void addBlockLiveOuts(LiveRegUnits &LiveUnits,
+                             const MachineBasicBlock &MBB) {
+  for (const auto &LO : MBB.liveouts())
+    LiveUnits.addRegMasked(LO.PhysReg, LO.LaneMask);
+}
+
 /// Adds all callee saved registers to \p LiveUnits.
 static void addCalleeSavedRegs(LiveRegUnits &LiveUnits,
                                const MachineFunction &MF) {
@@ -137,12 +144,8 @@ void LiveRegUnits::addPristines(const MachineFunction &MF) {
 
 void LiveRegUnits::addLiveOuts(const MachineBasicBlock &MBB) {
   const MachineFunction &MF = *MBB.getParent();
-
   addPristines(MF);
-
-  // To get the live-outs we simply merge the live-ins of all successors.
-  for (const MachineBasicBlock *Succ : MBB.successors())
-    addBlockLiveIns(*this, *Succ);
+  addBlockLiveOuts(*this, MBB);
 
   // For the return block: Add all callee saved registers.
   if (MBB.isReturnBlock()) {

@@ -171,7 +171,7 @@ define void @load_add_store_v4i10(ptr %pa, ptr %pb) {
 ; MIN32-NEXT:    [[C_I0:%.*]] = add <3 x i10> [[A_I0]], [[B_I0]]
 ; MIN32-NEXT:    [[B_I1:%.*]] = extractelement <4 x i10> [[B]], i64 3
 ; MIN32-NEXT:    [[C_I1:%.*]] = add i10 [[A_I1]], [[B_I1]]
-; MIN32-NEXT:    [[TMP1:%.*]] = shufflevector <3 x i10> [[C_I0]], <3 x i10> [[C_I0]], <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; MIN32-NEXT:    [[TMP1:%.*]] = shufflevector <3 x i10> [[C_I0]], <3 x i10> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 ; MIN32-NEXT:    [[C:%.*]] = insertelement <4 x i10> [[TMP1]], i10 [[C_I1]], i64 3
 ; MIN32-NEXT:    store <4 x i10> [[C]], ptr [[PA]], align 8
 ; MIN32-NEXT:    ret void
@@ -237,7 +237,7 @@ define <3 x half> @select_uniform_condition_v3f16(<3 x half> %a, <3 x half> %b, 
 ; MIN32-NEXT:    [[A_I1:%.*]] = extractelement <3 x half> [[A]], i64 2
 ; MIN32-NEXT:    [[B_I1:%.*]] = extractelement <3 x half> [[B]], i64 2
 ; MIN32-NEXT:    [[R_I1:%.*]] = select i1 [[CC]], half [[A_I1]], half [[B_I1]]
-; MIN32-NEXT:    [[TMP1:%.*]] = shufflevector <2 x half> [[R_I0]], <2 x half> [[R_I0]], <3 x i32> <i32 0, i32 1, i32 poison>
+; MIN32-NEXT:    [[TMP1:%.*]] = shufflevector <2 x half> [[R_I0]], <2 x half> poison, <3 x i32> <i32 0, i32 1, i32 poison>
 ; MIN32-NEXT:    [[R:%.*]] = insertelement <3 x half> [[TMP1]], half [[R_I1]], i64 2
 ; MIN32-NEXT:    ret <3 x half> [[R]]
 ;
@@ -276,8 +276,8 @@ define <4 x half> @select_uniform_condition_v4f16(<4 x half> %a, <4 x half> %b, 
 ; MIN32-NEXT:    [[A_I1:%.*]] = shufflevector <4 x half> [[A]], <4 x half> poison, <2 x i32> <i32 2, i32 3>
 ; MIN32-NEXT:    [[B_I1:%.*]] = shufflevector <4 x half> [[B]], <4 x half> poison, <2 x i32> <i32 2, i32 3>
 ; MIN32-NEXT:    [[R_I1:%.*]] = select i1 [[CC]], <2 x half> [[A_I1]], <2 x half> [[B_I1]]
-; MIN32-NEXT:    [[TMP1:%.*]] = shufflevector <2 x half> [[R_I0]], <2 x half> [[R_I0]], <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; MIN32-NEXT:    [[TMP2:%.*]] = shufflevector <2 x half> [[R_I1]], <2 x half> [[R_I1]], <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; MIN32-NEXT:    [[TMP1:%.*]] = shufflevector <2 x half> [[R_I0]], <2 x half> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; MIN32-NEXT:    [[TMP2:%.*]] = shufflevector <2 x half> [[R_I1]], <2 x half> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; MIN32-NEXT:    [[R:%.*]] = shufflevector <4 x half> [[TMP1]], <4 x half> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; MIN32-NEXT:    ret <4 x half> [[R]]
 ;
@@ -338,7 +338,7 @@ define <3 x half> @unary_v3f16(<3 x half> %a) {
 ; MIN32-NEXT:    [[R_I0:%.*]] = fneg <2 x half> [[A_I0]]
 ; MIN32-NEXT:    [[A_I1:%.*]] = extractelement <3 x half> [[A]], i64 2
 ; MIN32-NEXT:    [[R_I1:%.*]] = fneg half [[A_I1]]
-; MIN32-NEXT:    [[TMP1:%.*]] = shufflevector <2 x half> [[R_I0]], <2 x half> [[R_I0]], <3 x i32> <i32 0, i32 1, i32 poison>
+; MIN32-NEXT:    [[TMP1:%.*]] = shufflevector <2 x half> [[R_I0]], <2 x half> poison, <3 x i32> <i32 0, i32 1, i32 poison>
 ; MIN32-NEXT:    [[R:%.*]] = insertelement <3 x half> [[TMP1]], half [[R_I1]], i64 2
 ; MIN32-NEXT:    ret <3 x half> [[R]]
 ;
@@ -371,8 +371,8 @@ define <4 x half> @unary_v4f16(<4 x half> %a) {
 ; MIN32-NEXT:    [[R_I0:%.*]] = fneg <2 x half> [[A_I0]]
 ; MIN32-NEXT:    [[A_I1:%.*]] = shufflevector <4 x half> [[A]], <4 x half> poison, <2 x i32> <i32 2, i32 3>
 ; MIN32-NEXT:    [[R_I1:%.*]] = fneg <2 x half> [[A_I1]]
-; MIN32-NEXT:    [[TMP1:%.*]] = shufflevector <2 x half> [[R_I0]], <2 x half> [[R_I0]], <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; MIN32-NEXT:    [[TMP2:%.*]] = shufflevector <2 x half> [[R_I1]], <2 x half> [[R_I1]], <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; MIN32-NEXT:    [[TMP1:%.*]] = shufflevector <2 x half> [[R_I0]], <2 x half> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; MIN32-NEXT:    [[TMP2:%.*]] = shufflevector <2 x half> [[R_I1]], <2 x half> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; MIN32-NEXT:    [[R:%.*]] = shufflevector <4 x half> [[TMP1]], <4 x half> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; MIN32-NEXT:    ret <4 x half> [[R]]
 ;
@@ -431,7 +431,7 @@ define <3 x half> @binary_v3f16(<3 x half> %a, <3 x half> %b) {
 ; MIN32-NEXT:    [[A_I1:%.*]] = extractelement <3 x half> [[A]], i64 2
 ; MIN32-NEXT:    [[B_I1:%.*]] = extractelement <3 x half> [[B]], i64 2
 ; MIN32-NEXT:    [[R_I1:%.*]] = fadd half [[A_I1]], [[B_I1]]
-; MIN32-NEXT:    [[TMP1:%.*]] = shufflevector <2 x half> [[R_I0]], <2 x half> [[R_I0]], <3 x i32> <i32 0, i32 1, i32 poison>
+; MIN32-NEXT:    [[TMP1:%.*]] = shufflevector <2 x half> [[R_I0]], <2 x half> poison, <3 x i32> <i32 0, i32 1, i32 poison>
 ; MIN32-NEXT:    [[R:%.*]] = insertelement <3 x half> [[TMP1]], half [[R_I1]], i64 2
 ; MIN32-NEXT:    ret <3 x half> [[R]]
 ;
@@ -470,8 +470,8 @@ define <4 x half> @binary_v4f16(<4 x half> %a, <4 x half> %b) {
 ; MIN32-NEXT:    [[A_I1:%.*]] = shufflevector <4 x half> [[A]], <4 x half> poison, <2 x i32> <i32 2, i32 3>
 ; MIN32-NEXT:    [[B_I1:%.*]] = shufflevector <4 x half> [[B]], <4 x half> poison, <2 x i32> <i32 2, i32 3>
 ; MIN32-NEXT:    [[R_I1:%.*]] = fadd <2 x half> [[A_I1]], [[B_I1]]
-; MIN32-NEXT:    [[TMP1:%.*]] = shufflevector <2 x half> [[R_I0]], <2 x half> [[R_I0]], <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; MIN32-NEXT:    [[TMP2:%.*]] = shufflevector <2 x half> [[R_I1]], <2 x half> [[R_I1]], <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; MIN32-NEXT:    [[TMP1:%.*]] = shufflevector <2 x half> [[R_I0]], <2 x half> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; MIN32-NEXT:    [[TMP2:%.*]] = shufflevector <2 x half> [[R_I1]], <2 x half> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; MIN32-NEXT:    [[R:%.*]] = shufflevector <4 x half> [[TMP1]], <4 x half> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; MIN32-NEXT:    ret <4 x half> [[R]]
 ;
@@ -523,7 +523,7 @@ define <3 x i16> @fptosi_v3f16(<3 x half> %a) {
 ; MIN32-NEXT:    [[R_I0:%.*]] = fptosi <2 x half> [[A_I0]] to <2 x i16>
 ; MIN32-NEXT:    [[A_I1:%.*]] = extractelement <3 x half> [[A]], i64 2
 ; MIN32-NEXT:    [[R_I1:%.*]] = fptosi half [[A_I1]] to i16
-; MIN32-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i16> [[R_I0]], <2 x i16> [[R_I0]], <3 x i32> <i32 0, i32 1, i32 poison>
+; MIN32-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i16> [[R_I0]], <2 x i16> poison, <3 x i32> <i32 0, i32 1, i32 poison>
 ; MIN32-NEXT:    [[R:%.*]] = insertelement <3 x i16> [[TMP1]], i16 [[R_I1]], i64 2
 ; MIN32-NEXT:    ret <3 x i16> [[R]]
 ;
@@ -556,8 +556,8 @@ define <4 x i16> @fptosi_v4f16(<4 x half> %a) {
 ; MIN32-NEXT:    [[R_I0:%.*]] = fptosi <2 x half> [[A_I0]] to <2 x i16>
 ; MIN32-NEXT:    [[A_I1:%.*]] = shufflevector <4 x half> [[A]], <4 x half> poison, <2 x i32> <i32 2, i32 3>
 ; MIN32-NEXT:    [[R_I1:%.*]] = fptosi <2 x half> [[A_I1]] to <2 x i16>
-; MIN32-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i16> [[R_I0]], <2 x i16> [[R_I0]], <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; MIN32-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i16> [[R_I1]], <2 x i16> [[R_I1]], <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; MIN32-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i16> [[R_I0]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; MIN32-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i16> [[R_I1]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; MIN32-NEXT:    [[R:%.*]] = shufflevector <4 x i16> [[TMP1]], <4 x i16> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; MIN32-NEXT:    ret <4 x i16> [[R]]
 ;
@@ -804,7 +804,7 @@ define <3 x i16> @load_insertelement_v3i16(ptr %pa, i16 %b) {
 ;
 ; MIN32-LABEL: @load_insertelement_v3i16(
 ; MIN32-NEXT:    [[A_I0:%.*]] = load <2 x i16>, ptr [[PA:%.*]], align 8
-; MIN32-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i16> [[A_I0]], <2 x i16> [[A_I0]], <3 x i32> <i32 0, i32 1, i32 poison>
+; MIN32-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i16> [[A_I0]], <2 x i16> poison, <3 x i32> <i32 0, i32 1, i32 poison>
 ; MIN32-NEXT:    [[R:%.*]] = insertelement <3 x i16> [[TMP1]], i16 [[B:%.*]], i64 2
 ; MIN32-NEXT:    ret <3 x i16> [[R]]
 ;
@@ -836,8 +836,8 @@ define <4 x i16> @load_insertelement_v4i16(ptr %pa, i16 %b) {
 ; MIN32-NEXT:    [[PA_I1:%.*]] = getelementptr <2 x i16>, ptr [[PA]], i32 1
 ; MIN32-NEXT:    [[A_I1:%.*]] = load <2 x i16>, ptr [[PA_I1]], align 4
 ; MIN32-NEXT:    [[TMP1:%.*]] = insertelement <2 x i16> [[A_I1]], i16 [[B:%.*]], i64 1
-; MIN32-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i16> [[A_I0]], <2 x i16> [[A_I0]], <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; MIN32-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i16> [[TMP1]], <2 x i16> [[TMP1]], <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; MIN32-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i16> [[A_I0]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; MIN32-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i16> [[TMP1]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; MIN32-NEXT:    [[R:%.*]] = shufflevector <4 x i16> [[TMP2]], <4 x i16> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; MIN32-NEXT:    ret <4 x i16> [[R]]
 ;
@@ -906,8 +906,8 @@ define void @shufflevector_shrink(ptr %pa) {
 ; MIN32-NEXT:    [[A_I0:%.*]] = load <2 x i16>, ptr [[PA:%.*]], align 8
 ; MIN32-NEXT:    [[PA_I1:%.*]] = getelementptr <2 x i16>, ptr [[PA]], i32 1
 ; MIN32-NEXT:    [[A_I1:%.*]] = load <2 x i16>, ptr [[PA_I1]], align 4
-; MIN32-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i16> [[A_I0]], <2 x i16> [[A_I0]], <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; MIN32-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i16> [[A_I1]], <2 x i16> [[A_I1]], <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; MIN32-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i16> [[A_I0]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; MIN32-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i16> [[A_I1]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; MIN32-NEXT:    [[A:%.*]] = shufflevector <4 x i16> [[TMP1]], <4 x i16> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; MIN32-NEXT:    [[R:%.*]] = shufflevector <4 x i16> [[A]], <4 x i16> poison, <2 x i32> <i32 1, i32 2>
 ; MIN32-NEXT:    store <2 x i16> [[R]], ptr [[PA]], align 4
@@ -1221,7 +1221,7 @@ define <3 x half> @call_v3f16(<3 x half> %a, <3 x half> %b) {
 ; MIN32-NEXT:    [[A_I1:%.*]] = extractelement <3 x half> [[A]], i64 2
 ; MIN32-NEXT:    [[B_I1:%.*]] = extractelement <3 x half> [[B]], i64 2
 ; MIN32-NEXT:    [[R_I1:%.*]] = call half @llvm.minnum.f16(half [[A_I1]], half [[B_I1]])
-; MIN32-NEXT:    [[TMP1:%.*]] = shufflevector <2 x half> [[R_I0]], <2 x half> [[R_I0]], <3 x i32> <i32 0, i32 1, i32 poison>
+; MIN32-NEXT:    [[TMP1:%.*]] = shufflevector <2 x half> [[R_I0]], <2 x half> poison, <3 x i32> <i32 0, i32 1, i32 poison>
 ; MIN32-NEXT:    [[R:%.*]] = insertelement <3 x half> [[TMP1]], half [[R_I1]], i64 2
 ; MIN32-NEXT:    ret <3 x half> [[R]]
 ;
@@ -1260,8 +1260,8 @@ define <4 x half> @call_v4f16(<4 x half> %a, <4 x half> %b) {
 ; MIN32-NEXT:    [[A_I1:%.*]] = shufflevector <4 x half> [[A]], <4 x half> poison, <2 x i32> <i32 2, i32 3>
 ; MIN32-NEXT:    [[B_I1:%.*]] = shufflevector <4 x half> [[B]], <4 x half> poison, <2 x i32> <i32 2, i32 3>
 ; MIN32-NEXT:    [[R_I1:%.*]] = call <2 x half> @llvm.minnum.v2f16(<2 x half> [[A_I1]], <2 x half> [[B_I1]])
-; MIN32-NEXT:    [[TMP1:%.*]] = shufflevector <2 x half> [[R_I0]], <2 x half> [[R_I0]], <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; MIN32-NEXT:    [[TMP2:%.*]] = shufflevector <2 x half> [[R_I1]], <2 x half> [[R_I1]], <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; MIN32-NEXT:    [[TMP1:%.*]] = shufflevector <2 x half> [[R_I0]], <2 x half> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; MIN32-NEXT:    [[TMP2:%.*]] = shufflevector <2 x half> [[R_I1]], <2 x half> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; MIN32-NEXT:    [[R:%.*]] = shufflevector <4 x half> [[TMP1]], <4 x half> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; MIN32-NEXT:    ret <4 x half> [[R]]
 ;

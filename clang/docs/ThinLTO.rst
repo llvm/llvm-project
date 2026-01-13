@@ -249,6 +249,9 @@ during the traditional link step.
 
 The implementation is documented here: https://llvm.org/docs/DTLTO.html.
 
+Command-Line Options
+^^^^^^^^^^^^^^^^^^^^
+
 DTLTO requires the LLD linker (``-fuse-ld=lld``).
 
 ``-fthinlto-distributor=<path>``
@@ -260,17 +263,29 @@ DTLTO requires the LLD linker (``-fuse-ld=lld``).
    - Can be specified multiple times to pass multiple options.
    - Multiple options can also be specified by separating them with commas.
 
-Examples:
-   - ``clang -flto=thin -fthinlto-distributor=incredibuild.exe -Xthinlto-distributor=--verbose,--j10 -fuse-ld=lld``
-   - ``clang -flto=thin -fthinlto-distributor=$(which python) -Xthinlto-distributor=incredibuild.py -fuse-ld=lld``
-
 If ``-fthinlto-distributor=`` is specified, Clang supplies the path to a
 compiler to be executed remotely to perform the ThinLTO backend
 compilations. Currently, this is Clang itself.
 
+Usage
+^^^^^
+
+Compilation is unchanged from ThinLTO. DTLTO options need to supplied for the link step:
+
+.. code-block:: console
+
+  % clang -flto=thin -fthinlto-distributor=distribute.sh -Xthinlto-distributor=--verbose,--j10 -fuse-ld=lld file1.o file2.o
+  % clang -flto=thin -fthinlto-distributor=$(which python) -Xthinlto-distributor=distribute.py -fuse-ld=lld file1.o file2.o
+
+When using lld-link:
+
+.. code-block:: console
+
+  % lld-link /out:a.exe file1.obj file2.obj /thinlto-distributor:distribute.exe /thinlto-remote-compiler:${LLVM}\bin\clang.exe /thinlto-distributor-arg:--verbose
+
 Note that currently, DTLTO is only supported in some LLD flavors. Support can
 be added to other LLD flavours in the future.
-See `DTLTO <https://lld.llvm.org/dtlto.html>`_ for more information.
+See `DTLTO <https://lld.llvm.org/DTLTO.html>`_ for more information.
 
 More Information
 ================

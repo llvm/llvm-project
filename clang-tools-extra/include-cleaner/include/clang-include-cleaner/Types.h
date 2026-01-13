@@ -136,7 +136,7 @@ struct Header {
   }
   StringRef verbatim() const { return std::get<Verbatim>(Storage); }
 
-  /// For phiscal files, either absolute path or path relative to the execution
+  /// For physical files, either absolute path or path relative to the execution
   /// root. Otherwise just the spelling without surrounding quotes/brackets.
   llvm::StringRef resolvedPath() const;
 
@@ -219,10 +219,10 @@ template <> struct DenseMapInfo<clang::include_cleaner::Symbol> {
   using Outer = clang::include_cleaner::Symbol;
   using Base = DenseMapInfo<decltype(Outer::Storage)>;
 
-  static inline Outer getEmptyKey() {
+  static Outer getEmptyKey() {
     return {Outer::SentinelTag{}, Base::getEmptyKey()};
   }
-  static inline Outer getTombstoneKey() {
+  static Outer getTombstoneKey() {
     return {Outer::SentinelTag{}, Base::getTombstoneKey()};
   }
   static unsigned getHashValue(const Outer &Val) {
@@ -236,10 +236,8 @@ template <> struct DenseMapInfo<clang::include_cleaner::Macro> {
   using Outer = clang::include_cleaner::Macro;
   using Base = DenseMapInfo<decltype(Outer::Definition)>;
 
-  static inline Outer getEmptyKey() { return {nullptr, Base::getEmptyKey()}; }
-  static inline Outer getTombstoneKey() {
-    return {nullptr, Base::getTombstoneKey()};
-  }
+  static Outer getEmptyKey() { return {nullptr, Base::getEmptyKey()}; }
+  static Outer getTombstoneKey() { return {nullptr, Base::getTombstoneKey()}; }
   static unsigned getHashValue(const Outer &Val) {
     return Base::getHashValue(Val.Definition);
   }
@@ -251,10 +249,10 @@ template <> struct DenseMapInfo<clang::include_cleaner::Header> {
   using Outer = clang::include_cleaner::Header;
   using Base = DenseMapInfo<decltype(Outer::Storage)>;
 
-  static inline Outer getEmptyKey() {
+  static Outer getEmptyKey() {
     return {Outer::SentinelTag{}, Base::getEmptyKey()};
   }
-  static inline Outer getTombstoneKey() {
+  static Outer getTombstoneKey() {
     return {Outer::SentinelTag{}, Base::getTombstoneKey()};
   }
   static unsigned getHashValue(const Outer &Val) {
