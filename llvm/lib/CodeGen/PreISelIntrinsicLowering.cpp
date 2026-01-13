@@ -50,6 +50,12 @@ static cl::opt<int64_t> MemIntrinsicExpandSizeThresholdOpt(
     cl::desc("Set minimum mem intrinsic size to expand in IR"), cl::init(-1),
     cl::Hidden);
 
+static llvm::cl::opt<bool>
+    ForceMemIntrinsicExpansion("force-mem-intrinsic-expansion",
+                               cl::desc("Force expansion of memory intrinsics "
+                                        "instead of lowering to libc calls"),
+                               cl::init(false));
+
 namespace {
 
 struct PreISelIntrinsicLowering {
@@ -70,8 +76,8 @@ struct PreISelIntrinsicLowering {
       function_ref<TargetLibraryInfo &(Function &)> LookupTLI_,
       bool UseMemIntrinsicLibFunc_ = true)
       : TM(TM_), ModuleLibcalls(ModuleLibcalls_), LookupTTI(LookupTTI_),
-        LookupTLI(LookupTLI_), UseMemIntrinsicLibFunc(UseMemIntrinsicLibFunc_) {
-  }
+        LookupTLI(LookupTLI_), UseMemIntrinsicLibFunc(UseMemIntrinsicLibFunc_ && 
+                               !ForceMemIntrinsicExpansion) {}
 
   static bool shouldExpandMemIntrinsicWithSize(Value *Size,
                                                const TargetTransformInfo &TTI);
@@ -381,7 +387,7 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(
             canEmitLibcall(ModuleLibcalls, TM, ParentFunc, RTLIB::MEMSET))
           break;
 
-        expandMemSetAsLoop(Memset);
+        expandMemSetAsLoop(Memset, TTI);
         Changed = true;
         Memset->eraseFromParent();
       }
@@ -396,7 +402,9 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(
       if (isa<ConstantInt>(Memset->getLength()))
         break;
 
-      expandMemSetAsLoop(Memset);
+      Function *ParentFunc = Memset->getFunction();
+      const TargetTransformInfo &TTI = LookupTTI(*ParentFunc);
+      expandMemSetAsLoop(Memset, TTI);
       Changed = true;
       Memset->eraseFromParent();
       break;

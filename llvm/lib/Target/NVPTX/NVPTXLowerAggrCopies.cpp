@@ -128,7 +128,7 @@ bool NVPTXLowerAggrCopies::runOnFunction(Function &F) {
     } else if (MemMoveInst *Memmove = dyn_cast<MemMoveInst>(MemCall)) {
       expandMemMoveAsLoop(Memmove, TTI);
     } else if (MemSetInst *Memset = dyn_cast<MemSetInst>(MemCall)) {
-      expandMemSetAsLoop(Memset);
+      expandMemSetAsLoop(Memset, TTI);
     }
     MemCall->eraseFromParent();
   }
