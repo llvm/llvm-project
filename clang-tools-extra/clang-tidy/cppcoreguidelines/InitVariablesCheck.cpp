@@ -21,6 +21,7 @@ namespace clang::tidy::cppcoreguidelines {
 
 namespace {
 AST_MATCHER(VarDecl, isLocalVarDecl) { return Node.isLocalVarDecl(); }
+AST_MATCHER(VarDecl, isObjCForDecl) { return Node.isObjCForDecl(); }
 } // namespace
 
 InitVariablesCheck::InitVariablesCheck(StringRef Name,
@@ -41,7 +42,7 @@ void InitVariablesCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       varDecl(unless(hasInitializer(anything())), unless(isInstantiated()),
               isLocalVarDecl(), unless(isStaticLocal()), isDefinition(),
-              unless(hasParent(cxxCatchStmt())),
+              unless(isObjCForDecl()), unless(hasParent(cxxCatchStmt())),
               optionally(hasParent(declStmt(hasParent(
                   cxxForRangeStmt(hasLoopVariable(varDecl().bind(BadDecl))))))),
               unless(equalsBoundNode(BadDecl)))
