@@ -95,7 +95,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -331,21 +330,17 @@ static void diagnosePossiblyInvalidConstraint(LLVMContext &Ctx, const Value *V,
   return Ctx.emitError(I, ErrMsg);
 }
 
-/// Emit a fatal error if the broken dow registers don't match part type
-// or count.
+/// Emit a fatal error if the broken down registers don't match part type
+/// or count.
 static void ensureMatchedVecRegParts(unsigned NumRegs, unsigned NumParts,
                                      MVT RegisterVT, MVT PartVT) {
   if (NumRegs != NumParts || RegisterVT != PartVT)
-    report_fatal_error(Twine("Part count doesn't match vector breakdown! ")
-                           .concat(Twine(NumRegs))
-                           .concat(" registers, ")
-                           .concat(Twine(NumParts))
-                           .concat(" parts, ")
-                           .concat(Twine(RegisterVT.getString()))
-                           .concat(" RegisterVT, ")
-                           .concat(Twine(PartVT.getString()))
-                           .concat(" PartVT"));
+    llvm::reportFatalInternalError(
+        Twine("Part count doesn't match vector breakdown! ") + Twine(NumRegs) +
+        " registers, " + Twine(NumParts) + " parts, " + RegisterVT.getString() +
+        " RegisterVT, " + PartVT.getString() + " PartVT");
 }
+
 /// getCopyFromPartsVector - Create a value that contains the specified legal
 /// parts combined into the value they represent.  If the parts combine to a
 /// type larger than ValueVT then AssertOp can be used to specify whether the
