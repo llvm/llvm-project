@@ -558,7 +558,7 @@ struct AMDGPUKernelTy : public GenericKernelTy {
 
     ImplicitArgsSize =
         hsa_utils::getImplicitArgsSize(AMDImage.getELFABIVersion());
-    OBDG(OLDT_Module) << "ELFABIVersion: " << AMDImage.getELFABIVersion();
+    ODBG(OLDT_Module) << "ELFABIVersion: " << AMDImage.getELFABIVersion();
 
     // Get additional kernel info read from image
     KernelInfo = AMDImage.getKernelInfo(getName());
