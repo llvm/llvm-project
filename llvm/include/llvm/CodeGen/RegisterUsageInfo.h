@@ -24,7 +24,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
-#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <vector>
 
@@ -109,9 +108,6 @@ public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
   static bool isRequired() { return true; }
 };
-
-/// Returns true if the -print-regusage flag is enabled.
-LLVM_ABI bool shouldPrintRegUsage();
 
 } // end namespace llvm
 

@@ -1041,7 +1041,7 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
                   PMW);
     addMachineFunctionPass(RegUsageInfoCollectorPass(), PMW);
     // If -print-regusage is specified, print the collected register usage info.
-    if (shouldPrintRegUsage()) {
+    if (Opt.PrintRegUsage) {
       flushFPMsToMPM(PMW);
       addModulePass(PhysicalRegisterUsageInfoPrinterPass(errs()), PMW);
     }
