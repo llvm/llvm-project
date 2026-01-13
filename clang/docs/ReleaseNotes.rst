@@ -153,6 +153,8 @@ New Compiler Flags
   reduced BMI only for a C++20 importable module unit. Previously the users
   can only generate the reduced BMI as a by-product, e.g, an object files or
   a full BMI.
+- New option ``-ftrap-unreachable`` added to enable the existing backend option: TrapUnreachable.
+  This behavior is off by default (e.g. no change in the compiler's behavior) for now.
 
 - New ``-cc1`` option ``-fexperimental-overflow-behavior-types`` added to
   enable parsing of the experimental ``overflow_behavior`` type attribute and
