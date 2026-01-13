@@ -100,7 +100,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializePseudoProbeInserterPass(PR);
   initializeX86ReturnThunksPass(PR);
   initializeX86DAGToDAGISelLegacyPass(PR);
-  initializeX86ArgumentStackSlotPassPass(PR);
+  initializeX86ArgumentStackSlotLegacyPass(PR);
   initializeX86AsmPrinterPass(PR);
   initializeX86FixupInstTuningLegacyPass(PR);
   initializeX86FixupVectorConstantsLegacyPass(PR);
@@ -462,7 +462,7 @@ bool X86PassConfig::addInstSelector() {
     addPass(createCleanupLocalDynamicTLSPass());
 
   addPass(createX86GlobalBaseRegPass());
-  addPass(createX86ArgumentStackSlotPass());
+  addPass(createX86ArgumentStackSlotLegacyPass());
   return false;
 }
 
