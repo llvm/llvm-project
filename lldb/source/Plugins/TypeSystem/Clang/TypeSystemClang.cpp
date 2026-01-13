@@ -5505,6 +5505,21 @@ TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
 }
 
 CompilerType TypeSystemClang::GetBuiltinTypeByName(ConstString name) {
+  StringRef name_ref = name.GetStringRef();
+  // We compile the regex only the type name fulfills certain
+  // necessary conditions. Otherwise we do not bother.
+  if (name_ref.consume_front("unsigned _BitInt(") ||
+      name_ref.consume_front("_BitInt(")) {
+    uint64_t bit_size;
+    if (name_ref.consumeInteger(/*Radix=*/10, bit_size))
+      return {};
+
+    if (!name_ref.consume_front(")"))
+      return {};
+
+    return GetType(getASTContext().getBitIntType(
+        name.GetStringRef().starts_with("unsigned"), bit_size));
+  }
   return GetBasicType(GetBasicTypeEnumeration(name));
 }
 

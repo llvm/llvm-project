@@ -1635,6 +1635,16 @@ let Predicates = [HasStdExtP] in {
            (PMSLT_H GPR:$rs1, GPR:$rs2)>;
   def: Pat<(XLenVecI16VT (setcc (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2), SETULT)),
            (PMSLTU_H GPR:$rs1, GPR:$rs2)>;
+
+  // 8/16-bit [s|u]min/[s|u]max patterns
+  def: Pat<(XLenVecI8VT (smin GPR:$rs1, GPR:$rs2)), (PMIN_B GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI8VT (umin GPR:$rs1, GPR:$rs2)), (PMINU_B GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI16VT (smin GPR:$rs1, GPR:$rs2)), (PMIN_H GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI16VT (umin GPR:$rs1, GPR:$rs2)), (PMINU_H GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI8VT (smax GPR:$rs1, GPR:$rs2)), (PMAX_B GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI8VT (umax GPR:$rs1, GPR:$rs2)), (PMAXU_B GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI16VT (smax GPR:$rs1, GPR:$rs2)), (PMAX_H GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI16VT (umax GPR:$rs1, GPR:$rs2)), (PMAXU_H GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtP]
 
 let Predicates = [HasStdExtP, IsRV32] in {
@@ -1742,6 +1752,12 @@ let Predicates = [HasStdExtP, IsRV64] in {
            (PMSLT_W GPR:$rs1, GPR:$rs2)>;
   def: Pat<(v2i32 (setcc (v2i32 GPR:$rs2), (v2i32 GPR:$rs1), SETUGT)),
            (PMSLTU_W GPR:$rs1, GPR:$rs2)>;
+
+  // 32-bit [s|u]min/[s|u]max patterns
+  def: Pat<(v2i32 (smin GPR:$rs1, GPR:$rs2)), (PMIN_W GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(v2i32 (umin GPR:$rs1, GPR:$rs2)), (PMINU_W GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(v2i32 (smax GPR:$rs1, GPR:$rs2)), (PMAX_W GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(v2i32 (umax GPR:$rs1, GPR:$rs2)), (PMAXU_W GPR:$rs1, GPR:$rs2)>;
 
   // 32-bit logical shift left/right patterns
   def: Pat<(v2i32 (shl GPR:$rs1, (v2i32 (splat_vector uimm5:$shamt)))),
