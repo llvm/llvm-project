@@ -37,7 +37,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR AND NOT MSVC_IDE)
           `CMakeFiles'. Please delete them.")
 endif()
 
-option(FLANG_ENABLE_WERROR "Fail and stop building flang if a warning is triggered." OFF)
+option(FLANG_ENABLE_WERROR "Fail and stop building flang if a warning is triggered." ON)
 
 # Check for a standalone build and configure as appropriate from
 # there.
