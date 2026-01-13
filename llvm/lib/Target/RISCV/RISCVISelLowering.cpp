@@ -556,6 +556,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                        VTs, Expand);
     setOperationAction({ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX}, VTs,
                        Legal);
+    setOperationAction(ISD::VSELECT, VTs, Expand);
     setOperationAction(ISD::SETCC, VTs, Legal);
     setCondCodeAction({ISD::SETNE, ISD::SETGT, ISD::SETGE, ISD::SETUGT,
                        ISD::SETUGE, ISD::SETULE, ISD::SETLE},
