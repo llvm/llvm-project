@@ -324,6 +324,7 @@ public:
   using PyConcreteAttribute::PyConcreteAttribute;
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirFloatAttrGetTypeID;
+  static inline const MlirStringRef name = mlirFloatAttrGetName();
 
   static void bindDerived(ClassTy &c);
 };

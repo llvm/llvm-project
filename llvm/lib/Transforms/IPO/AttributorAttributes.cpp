@@ -13251,7 +13251,7 @@ struct AAAddressSpaceCallSiteArgument final : AAAddressSpaceImpl {
 
 // TODO: this is similar to AAAddressSpace, most of the code should be merged.
 // But merging it created failing cased on gateway test that cannot be
-// reproduced locally. So should open a seperated PR to hande the merge of
+// reproduced locally. So should open a separated PR to handle the merge of
 // AANoAliasAddrSpace and AAAddressSpace attribute
 
 namespace {
