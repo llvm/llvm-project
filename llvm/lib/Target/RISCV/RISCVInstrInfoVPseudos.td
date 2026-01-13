@@ -3174,7 +3174,7 @@ multiclass VPseudoTernaryWithPolicyRoundingMode<VReg RetClass,
                                                 int sew = 0,
                                                 bit Commutable = 0,
                                                 bits<2> TargetConstraintType = 1> {
-  let VLMul = MInfo.value in {
+  let VLMul = MInfo.value, SEW = sew in {
     defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
     let isCommutable = Commutable in
     def suffix :
