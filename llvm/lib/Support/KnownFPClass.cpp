@@ -329,3 +329,78 @@ KnownFPClass KnownFPClass::log(const KnownFPClass &KnownSrc,
 
   return Known;
 }
+
+KnownFPClass KnownFPClass::sqrt(const KnownFPClass &KnownSrc,
+                                DenormalMode Mode) {
+  KnownFPClass Known;
+  Known.knownNot(fcPosSubnormal);
+
+  if (KnownSrc.isKnownNeverPosInfinity())
+    Known.knownNot(fcPosInf);
+  if (KnownSrc.isKnownNever(fcSNan))
+    Known.knownNot(fcSNan);
+
+  // Any negative value besides -0 returns a nan.
+  if (KnownSrc.isKnownNeverNaN() && KnownSrc.cannotBeOrderedLessThanZero())
+    Known.knownNot(fcNan);
+
+  // The only negative value that can be returned is -0 for -0 inputs.
+  Known.knownNot(fcNegInf | fcNegSubnormal | fcNegNormal);
+
+  // If the input denormal mode could be PreserveSign, a negative
+  // subnormal input could produce a negative zero output.
+  if (KnownSrc.isKnownNeverLogicalNegZero(Mode))
+    Known.knownNot(fcNegZero);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::fpext(const KnownFPClass &KnownSrc,
+                                 const fltSemantics &DstTy,
+                                 const fltSemantics &SrcTy) {
+  // Infinity, nan and zero propagate from source.
+  KnownFPClass Known = KnownSrc;
+
+  // All subnormal inputs should be in the normal range in the result type.
+  if (APFloat::isRepresentableAsNormalIn(SrcTy, DstTy)) {
+    if (Known.KnownFPClasses & fcPosSubnormal)
+      Known.KnownFPClasses |= fcPosNormal;
+    if (Known.KnownFPClasses & fcNegSubnormal)
+      Known.KnownFPClasses |= fcNegNormal;
+    Known.knownNot(fcSubnormal);
+  }
+
+  // Sign bit of a nan isn't guaranteed.
+  if (!Known.isKnownNeverNaN())
+    Known.SignBit = std::nullopt;
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::roundToIntegral(const KnownFPClass &KnownSrc,
+                                           bool IsTrunc,
+                                           bool IsMultiUnitFPType) {
+  KnownFPClass Known;
+
+  // Integer results cannot be subnormal.
+  Known.knownNot(fcSubnormal);
+
+  Known.propagateNaN(KnownSrc, true);
+
+  // Pass through infinities, except PPC_FP128 is a special case for
+  // intrinsics other than trunc.
+  if (IsTrunc || !IsMultiUnitFPType) {
+    if (KnownSrc.isKnownNeverPosInfinity())
+      Known.knownNot(fcPosInf);
+    if (KnownSrc.isKnownNeverNegInfinity())
+      Known.knownNot(fcNegInf);
+  }
+
+  // Negative round ups to 0 produce -0
+  if (KnownSrc.isKnownNever(fcPosFinite))
+    Known.knownNot(fcPosFinite);
+  if (KnownSrc.isKnownNever(fcNegFinite))
+    Known.knownNot(fcNegFinite);
+
+  return Known;
+}
