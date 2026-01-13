@@ -1,5 +1,5 @@
 Section,Description,Assignee,Complete
-| `[adjacent.difference] <https://wg21.link/adjacent.difference>`_,std::adjacent_difference,Nikolas Klauser,|Not Started|
+| `[adjacent.difference] <https://wg21.link/adjacent.difference>`_,std::adjacent_difference,Nikolas Klauser,|Complete|
 | `[alg.adjacent.find] <https://wg21.link/alg.adjacent.find>`_,std::adjacent_find,Nikolas Klauser,|Not Started|
 | `[alg.all.of] <https://wg21.link/alg.all.of>`_,std::all_of,Nikolas Klauser,|Complete|
 | `[alg.any.of] <https://wg21.link/alg.any.of>`_,std::any_of,Nikolas Klauser,|Complete|
