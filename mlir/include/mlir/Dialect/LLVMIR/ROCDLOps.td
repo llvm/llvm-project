@@ -610,14 +610,7 @@ def ROCDL_IglpOpt : ROCDL_ConcreteNonMemIntrOp<"iglp.opt", [], 0, [0], ["variant
 //===---------------------------------------------------------------------===//
 // Xdlops intrinsics
 
-class ROCDL_Mfma_IntrOp<string mnemonic, list<Trait> traits = []> :
-  ROCDL_IntrOp<mnemonic, [], [], traits, 1>,
-  Arguments<(ins Variadic<LLVM_Type>:$args)> {
-  let assemblyFormat =
-    "$args attr-dict `:` functional-type($args, $res)";
-}
-
-class ROCDL_Mfma_IntrOpV0<string mnemonic, Type AB, Type CD> :
+class ROCDL_Mfma_IntrOp<string mnemonic, Type AB, Type CD> :
   ROCDL_IntrOp<mnemonic, [], [], [], 1, 0, 0, 0, [3, 4, 5], ["cbsz", "abid", "blgp"]>,
   Arguments<(ins
              LLVM_ScalarOrVectorOf<AB>:$a,
@@ -632,6 +625,21 @@ class ROCDL_Mfma_IntrOpV0<string mnemonic, Type AB, Type CD> :
   }];
 }
 
+class ROCDL_Smfmac_IntrOp<string mnemonic, Type AB, Type CD> :
+  ROCDL_IntrOp<mnemonic, [], [], [], 1, 0, 0, 0, [4, 5], ["cbsz", "abid"]>,
+  Arguments<(ins
+             LLVM_ScalarOrVectorOf<AB>:$a,
+             LLVM_ScalarOrVectorOf<AB>:$b,
+             LLVM_ScalarOrVectorOf<CD>:$c,
+             I32:$index,
+             I32Attr:$cbsz,
+             I32Attr:$abid)> {
+  let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
+  let assemblyFormat = [{
+    $a `,` $b `,` $c `,` $index `,` $cbsz `,` $abid attr-dict `:` functional-type(operands, $res)
+  }];
+}
+
 //===---------------------------------------------------------------------===//
 // MFMA intrinsics with overloaded operands
 class ROCDL_Mfma_OO_IntrOp<string mnemonic, list<int> overloadedOperands,
@@ -643,89 +651,89 @@ class ROCDL_Mfma_OO_IntrOp<string mnemonic, list<int> overloadedOperands,
 }
 
 // Available on all CDNA.
-def ROCDL_mfma_f32_32x32x1f32 : ROCDL_Mfma_IntrOpV0<"mfma.f32.32x32x1f32", /*Type AB=*/F32, /*Type CD=*/F32>;
-def ROCDL_mfma_f32_16x16x1f32 : ROCDL_Mfma_IntrOpV0<"mfma.f32.16x16x1f32", F32, F32>;
-def ROCDL_mfma_f32_4x4x1f32 : ROCDL_Mfma_IntrOpV0<"mfma.f32.4x4x1f32", F32, F32>;
-def ROCDL_mfma_f32_32x32x2f32 : ROCDL_Mfma_IntrOpV0<"mfma.f32.32x32x2f32", F32, F32>;
-def ROCDL_mfma_f32_16x16x4f32 : ROCDL_Mfma_IntrOpV0<"mfma.f32.16x16x4f32", F32, F32>;
-def ROCDL_mfma_f32_32x32x4f16 : ROCDL_Mfma_IntrOpV0<"mfma.f32.32x32x4f16", F16, F32>;
-def ROCDL_mfma_f32_16x16x4f16 : ROCDL_Mfma_IntrOpV0<"mfma.f32.16x16x4f16", F16, F32>;
-def ROCDL_mfma_f32_4x4x4f16 : ROCDL_Mfma_IntrOpV0<"mfma.f32.4x4x4f16", F16, F32>;
-def ROCDL_mfma_f32_32x32x8f16 : ROCDL_Mfma_IntrOpV0<"mfma.f32.32x32x8f16", F16, F32>;
-def ROCDL_mfma_f32_16x16x16f16 : ROCDL_Mfma_IntrOpV0<"mfma.f32.16x16x16f16", F16, F32>;
-def ROCDL_mfma_i32_32x32x4i8 : ROCDL_Mfma_IntrOpV0<"mfma.i32.32x32x4i8", I32, I32>;
-def ROCDL_mfma_i32_16x16x4i8 : ROCDL_Mfma_IntrOpV0<"mfma.i32.16x16x4i8", I32, I32>;
-def ROCDL_mfma_i32_4x4x4i8 : ROCDL_Mfma_IntrOpV0<"mfma.i32.4x4x4i8", I32, I32>;
-def ROCDL_mfma_i32_32x32x8i8 : ROCDL_Mfma_IntrOpV0<"mfma.i32.32x32x8i8", I32, I32>;
-def ROCDL_mfma_i32_16x16x16i8 : ROCDL_Mfma_IntrOpV0<"mfma.i32.16x16x16i8", I32, I32>;
-def ROCDL_mfma_f32_32x32x2bf16 : ROCDL_Mfma_IntrOpV0<"mfma.f32.32x32x2bf16", I16, F32>;
-def ROCDL_mfma_f32_16x16x2bf16 : ROCDL_Mfma_IntrOpV0<"mfma.f32.16x16x2bf16", I16, F32>;
-def ROCDL_mfma_f32_4x4x2bf16 : ROCDL_Mfma_IntrOpV0<"mfma.f32.4x4x2bf16", I16, F32>;
-def ROCDL_mfma_f32_32x32x4bf16 : ROCDL_Mfma_IntrOpV0<"mfma.f32.32x32x4bf16", I16, F32>;
-def ROCDL_mfma_f32_16x16x8bf16 : ROCDL_Mfma_IntrOpV0<"mfma.f32.16x16x8bf16", I16, F32>;
+def ROCDL_mfma_f32_32x32x1f32 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x1f32", /*Type AB=*/F32, /*Type CD=*/F32>;
+def ROCDL_mfma_f32_16x16x1f32 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x1f32", F32, F32>;
+def ROCDL_mfma_f32_4x4x1f32 : ROCDL_Mfma_IntrOp<"mfma.f32.4x4x1f32", F32, F32>;
+def ROCDL_mfma_f32_32x32x2f32 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x2f32", F32, F32>;
+def ROCDL_mfma_f32_16x16x4f32 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x4f32", F32, F32>;
+def ROCDL_mfma_f32_32x32x4f16 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x4f16", F16, F32>;
+def ROCDL_mfma_f32_16x16x4f16 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x4f16", F16, F32>;
+def ROCDL_mfma_f32_4x4x4f16 : ROCDL_Mfma_IntrOp<"mfma.f32.4x4x4f16", F16, F32>;
+def ROCDL_mfma_f32_32x32x8f16 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x8f16", F16, F32>;
+def ROCDL_mfma_f32_16x16x16f16 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x16f16", F16, F32>;
+def ROCDL_mfma_i32_32x32x4i8 : ROCDL_Mfma_IntrOp<"mfma.i32.32x32x4i8", I32, I32>;
+def ROCDL_mfma_i32_16x16x4i8 : ROCDL_Mfma_IntrOp<"mfma.i32.16x16x4i8", I32, I32>;
+def ROCDL_mfma_i32_4x4x4i8 : ROCDL_Mfma_IntrOp<"mfma.i32.4x4x4i8", I32, I32>;
+def ROCDL_mfma_i32_32x32x8i8 : ROCDL_Mfma_IntrOp<"mfma.i32.32x32x8i8", I32, I32>;
+def ROCDL_mfma_i32_16x16x16i8 : ROCDL_Mfma_IntrOp<"mfma.i32.16x16x16i8", I32, I32>;
+def ROCDL_mfma_f32_32x32x2bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x2bf16", I16, F32>;
+def ROCDL_mfma_f32_16x16x2bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x2bf16", I16, F32>;
+def ROCDL_mfma_f32_4x4x2bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.4x4x2bf16", I16, F32>;
+def ROCDL_mfma_f32_32x32x4bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x4bf16", I16, F32>;
+def ROCDL_mfma_f32_16x16x8bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x8bf16", I16, F32>;
 // New in gfx90a.
-def ROCDL_mfma_f32_32x32x4bf16_1k : ROCDL_Mfma_IntrOpV0<"mfma.f32.32x32x4bf16.1k", I16, F32>;
-def ROCDL_mfma_f32_16x16x4bf16_1k : ROCDL_Mfma_IntrOpV0<"mfma.f32.16x16x4bf16.1k", I16, F32>;
-def ROCDL_mfma_f32_4x4x4bf16_1k : ROCDL_Mfma_IntrOpV0<"mfma.f32.4x4x4bf16.1k", I16, F32>;
-def ROCDL_mfma_f32_32x32x8bf16_1k : ROCDL_Mfma_IntrOpV0<"mfma.f32.32x32x8bf16.1k", I16, F32>;
-def ROCDL_mfma_f32_16x16x16bf16_1k : ROCDL_Mfma_IntrOpV0<"mfma.f32.16x16x16bf16.1k", I16, F32>;
+def ROCDL_mfma_f32_32x32x4bf16_1k : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x4bf16.1k", I16, F32>;
+def ROCDL_mfma_f32_16x16x4bf16_1k : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x4bf16.1k", I16, F32>;
+def ROCDL_mfma_f32_4x4x4bf16_1k : ROCDL_Mfma_IntrOp<"mfma.f32.4x4x4bf16.1k", I16, F32>;
+def ROCDL_mfma_f32_32x32x8bf16_1k : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x8bf16.1k", I16, F32>;
+def ROCDL_mfma_f32_16x16x16bf16_1k : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x16bf16.1k", I16, F32>;
 // Note: in gfx94x, unlike in gfx90a, the f64 xdlops use the "blgp" argument as
 // a NEG bitfield. See IntrinsicsAMDGPU.td for more info.
-def ROCDL_mfma_f64_16x16x4f64 : ROCDL_Mfma_IntrOpV0<"mfma.f64.16x16x4f64", F64, F64>;
-def ROCDL_mfma_f64_4x4x4f64 : ROCDL_Mfma_IntrOpV0<"mfma.f64.4x4x4f64", F64, F64>;
+def ROCDL_mfma_f64_16x16x4f64 : ROCDL_Mfma_IntrOp<"mfma.f64.16x16x4f64", F64, F64>;
+def ROCDL_mfma_f64_4x4x4f64 : ROCDL_Mfma_IntrOp<"mfma.f64.4x4x4f64", F64, F64>;
 // New in gfx94x.
-def ROCDL_mfma_i32_16x16x32_i8 : ROCDL_Mfma_IntrOpV0<"mfma.i32.16x16x32.i8", I64, I32>;
-def ROCDL_mfma_i32_32x32x16_i8 : ROCDL_Mfma_IntrOpV0<"mfma.i32.32x32x16.i8", I64, I32>;
-def ROCDL_mfma_f32_16x16x8_xf32 : ROCDL_Mfma_IntrOpV0<"mfma.f32.16x16x8.xf32", F32, F32>;
-def ROCDL_mfma_f32_32x32x4_xf32 : ROCDL_Mfma_IntrOpV0<"mfma.f32.32x32x4.xf32", F32, F32>;
-def ROCDL_mfma_f32_16x16x32_bf8_bf8 : ROCDL_Mfma_IntrOpV0<"mfma.f32.16x16x32.bf8.bf8", I64, F32>;
-def ROCDL_mfma_f32_16x16x32_bf8_fp8 : ROCDL_Mfma_IntrOpV0<"mfma.f32.16x16x32.bf8.fp8", I64, F32>;
-def ROCDL_mfma_f32_16x16x32_fp8_bf8 : ROCDL_Mfma_IntrOpV0<"mfma.f32.16x16x32.fp8.bf8", I64, F32>;
-def ROCDL_mfma_f32_16x16x32_fp8_fp8 : ROCDL_Mfma_IntrOpV0<"mfma.f32.16x16x32.fp8.fp8", I64, F32>;
-def ROCDL_mfma_f32_32x32x16_bf8_bf8 : ROCDL_Mfma_IntrOpV0<"mfma.f32.32x32x16.bf8.bf8", I64, F32>;
-def ROCDL_mfma_f32_32x32x16_bf8_fp8 : ROCDL_Mfma_IntrOpV0<"mfma.f32.32x32x16.bf8.fp8", I64, F32>;
-def ROCDL_mfma_f32_32x32x16_fp8_bf8 : ROCDL_Mfma_IntrOpV0<"mfma.f32.32x32x16.fp8.bf8", I64, F32>;
-def ROCDL_mfma_f32_32x32x16_fp8_fp8 : ROCDL_Mfma_IntrOpV0<"mfma.f32.32x32x16.fp8.fp8", I64, F32>;
+def ROCDL_mfma_i32_16x16x32_i8 : ROCDL_Mfma_IntrOp<"mfma.i32.16x16x32.i8", I64, I32>;
+def ROCDL_mfma_i32_32x32x16_i8 : ROCDL_Mfma_IntrOp<"mfma.i32.32x32x16.i8", I64, I32>;
+def ROCDL_mfma_f32_16x16x8_xf32 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x8.xf32", F32, F32>;
+def ROCDL_mfma_f32_32x32x4_xf32 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x4.xf32", F32, F32>;
+def ROCDL_mfma_f32_16x16x32_bf8_bf8 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x32.bf8.bf8", I64, F32>;
+def ROCDL_mfma_f32_16x16x32_bf8_fp8 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x32.bf8.fp8", I64, F32>;
+def ROCDL_mfma_f32_16x16x32_fp8_bf8 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x32.fp8.bf8", I64, F32>;
+def ROCDL_mfma_f32_16x16x32_fp8_fp8 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x32.fp8.fp8", I64, F32>;
+def ROCDL_mfma_f32_32x32x16_bf8_bf8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.bf8.bf8", I64, F32>;
+def ROCDL_mfma_f32_32x32x16_bf8_fp8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.bf8.fp8", I64, F32>;
+def ROCDL_mfma_f32_32x32x16_fp8_bf8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.fp8.bf8", I64, F32>;
+def ROCDL_mfma_f32_32x32x16_fp8_fp8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.fp8.fp8", I64, F32>;
 // New in gfx950.
-def ROCDL_mfma_f32_16x16x32_bf16 : ROCDL_Mfma_IntrOpV0<"mfma.f32.16x16x32.bf16", BF16, F32>;
-def ROCDL_mfma_i32_16x16x64_i8 : ROCDL_Mfma_IntrOpV0<"mfma.i32.16x16x64.i8", I32, I32>;
-def ROCDL_mfma_f32_16x16x32_f16 : ROCDL_Mfma_IntrOpV0<"mfma.f32.16x16x32.f16", F16, F32>;
-def ROCDL_mfma_f32_32x32x16_bf16 : ROCDL_Mfma_IntrOpV0<"mfma.f32.32x32x16.bf16", BF16, F32>;
-def ROCDL_mfma_i32_32x32x32_i8 : ROCDL_Mfma_IntrOpV0<"mfma.i32.32x32x32.i8", I32, I32>;
-def ROCDL_mfma_f32_32x32x16_f16 : ROCDL_Mfma_IntrOpV0<"mfma.f32.32x32x16.f16", F16, F32>;
+def ROCDL_mfma_f32_16x16x32_bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x32.bf16", BF16, F32>;
+def ROCDL_mfma_i32_16x16x64_i8 : ROCDL_Mfma_IntrOp<"mfma.i32.16x16x64.i8", I32, I32>;
+def ROCDL_mfma_f32_16x16x32_f16 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x32.f16", F16, F32>;
+def ROCDL_mfma_f32_32x32x16_bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.bf16", BF16, F32>;
+def ROCDL_mfma_i32_32x32x32_i8 : ROCDL_Mfma_IntrOp<"mfma.i32.32x32x32.i8", I32, I32>;
+def ROCDL_mfma_f32_32x32x16_f16 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.f16", F16, F32>;
 def ROCDL_mfma_scale_f32_16x16x128_f8f6f4 : ROCDL_Mfma_OO_IntrOp<"mfma.scale.f32.16x16x128.f8f6f4", [0,1]>;
 def ROCDL_mfma_scale_f32_32x32x64_f8f6f4 : ROCDL_Mfma_OO_IntrOp<"mfma.scale.f32.32x32x64.f8f6f4", [0,1]>;
 
 // 2:4 Sparsity ops (GFX94x)
-def ROCDL_smfmac_f32_16x16x32_f16 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x32.f16">;
-def ROCDL_smfmac_f32_32x32x16_f16 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x16.f16">;
-def ROCDL_smfmac_f32_16x16x32_bf16 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x32.bf16">;
-def ROCDL_smfmac_f32_32x32x16_bf16 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x16.bf16">;
-def ROCDL_smfmac_i32_16x16x64_i8 : ROCDL_Mfma_IntrOp<"smfmac.i32.16x16x64.i8">;
-def ROCDL_smfmac_i32_32x32x32_i8 : ROCDL_Mfma_IntrOp<"smfmac.i32.32x32x32.i8">;
-def ROCDL_smfmac_f32_16x16x64_bf8_bf8 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x64.bf8.bf8">;
-def ROCDL_smfmac_f32_16x16x64_bf8_fp8 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x64.bf8.fp8">;
-def ROCDL_smfmac_f32_16x16x64_fp8_bf8 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x64.fp8.bf8">;
-def ROCDL_smfmac_f32_16x16x64_fp8_fp8 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x64.fp8.fp8">;
-def ROCDL_smfmac_f32_32x32x32_bf8_bf8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x32.bf8.bf8">;
-def ROCDL_smfmac_f32_32x32x32_bf8_fp8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x32.bf8.fp8">;
-def ROCDL_smfmac_f32_32x32x32_fp8_bf8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x32.fp8.bf8">;
-def ROCDL_smfmac_f32_32x32x32_fp8_fp8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x32.fp8.fp8">;
+def ROCDL_smfmac_f32_16x16x32_f16 : ROCDL_Smfmac_IntrOp<"smfmac.f32.16x16x32.f16", F16, F32>;
+def ROCDL_smfmac_f32_32x32x16_f16 : ROCDL_Smfmac_IntrOp<"smfmac.f32.32x32x16.f16", F16, F32>;
+def ROCDL_smfmac_f32_16x16x32_bf16 : ROCDL_Smfmac_IntrOp<"smfmac.f32.16x16x32.bf16", I16, F32>;
+def ROCDL_smfmac_f32_32x32x16_bf16 : ROCDL_Smfmac_IntrOp<"smfmac.f32.32x32x16.bf16", I16, F32>;
+def ROCDL_smfmac_i32_16x16x64_i8 : ROCDL_Smfmac_IntrOp<"smfmac.i32.16x16x64.i8", I32, I32>;
+def ROCDL_smfmac_i32_32x32x32_i8 : ROCDL_Smfmac_IntrOp<"smfmac.i32.32x32x32.i8", I32, I32>;
+def ROCDL_smfmac_f32_16x16x64_bf8_bf8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.16x16x64.bf8.bf8", I32, F32>;
+def ROCDL_smfmac_f32_16x16x64_bf8_fp8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.16x16x64.bf8.fp8", I32, F32>;
+def ROCDL_smfmac_f32_16x16x64_fp8_bf8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.16x16x64.fp8.bf8", I32, F32>;
+def ROCDL_smfmac_f32_16x16x64_fp8_fp8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.16x16x64.fp8.fp8", I32, F32>;
+def ROCDL_smfmac_f32_32x32x32_bf8_bf8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.32x32x32.bf8.bf8", I32, F32>;
+def ROCDL_smfmac_f32_32x32x32_bf8_fp8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.32x32x32.bf8.fp8", I32, F32>;
+def ROCDL_smfmac_f32_32x32x32_fp8_bf8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.32x32x32.fp8.bf8", I32, F32>;
+def ROCDL_smfmac_f32_32x32x32_fp8_fp8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.32x32x32.fp8.fp8", I32, F32>;
 // New in gfx950.
-def ROCDL_smfmac_f32_16x16x64_bf16 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x64.bf16">;
-def ROCDL_smfmac_f32_16x16x64_f16 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x64.f16">;
-def ROCDL_smfmac_i32_16x16x128_i8 : ROCDL_Mfma_IntrOp<"smfmac.i32.16x16x128.i8">;
-def ROCDL_smfmac_f32_16x16x128_bf8_bf8 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x128.bf8.bf8">;
-def ROCDL_smfmac_f32_16x16x128_bf8_fp8 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x128.bf8.fp8">;
-def ROCDL_smfmac_f32_16x16x128_fp8_bf8 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x128.fp8.bf8">;
-def ROCDL_smfmac_f32_16x16x128_fp8_fp8 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x128.fp8.fp8">;
-def ROCDL_smfmac_f32_32x32x32_bf16 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x32.bf16">;
-def ROCDL_smfmac_f32_32x32x32_f16 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x32.f16">;
-def ROCDL_smfmac_i32_32x32x64_i8 : ROCDL_Mfma_IntrOp<"smfmac.i32.32x32x64.i8">;
-def ROCDL_smfmac_f32_32x32x64_bf8_bf8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x64.bf8.bf8">;
-def ROCDL_smfmac_f32_32x32x64_bf8_fp8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x64.bf8.fp8">;
-def ROCDL_smfmac_f32_32x32x64_fp8_bf8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x64.fp8.bf8">;
-def ROCDL_smfmac_f32_32x32x64_fp8_fp8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x64.fp8.fp8">;
+def ROCDL_smfmac_f32_16x16x64_bf16 : ROCDL_Smfmac_IntrOp<"smfmac.f32.16x16x64.bf16", BF16, F32>;
+def ROCDL_smfmac_f32_16x16x64_f16 : ROCDL_Smfmac_IntrOp<"smfmac.f32.16x16x64.f16", F16, F32>;
+def ROCDL_smfmac_i32_16x16x128_i8 : ROCDL_Smfmac_IntrOp<"smfmac.i32.16x16x128.i8", I32, I32>;
+def ROCDL_smfmac_f32_16x16x128_bf8_bf8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.16x16x128.bf8.bf8", I32, F32>;
+def ROCDL_smfmac_f32_16x16x128_bf8_fp8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.16x16x128.bf8.fp8", I32, F32>;
+def ROCDL_smfmac_f32_16x16x128_fp8_bf8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.16x16x128.fp8.bf8", I32, F32>;
+def ROCDL_smfmac_f32_16x16x128_fp8_fp8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.16x16x128.fp8.fp8", I32, F32>;
+def ROCDL_smfmac_f32_32x32x32_bf16 : ROCDL_Smfmac_IntrOp<"smfmac.f32.32x32x32.bf16", BF16, F32>;
+def ROCDL_smfmac_f32_32x32x32_f16 : ROCDL_Smfmac_IntrOp<"smfmac.f32.32x32x32.f16", F16, F32>;
+def ROCDL_smfmac_i32_32x32x64_i8 : ROCDL_Smfmac_IntrOp<"smfmac.i32.32x32x64.i8", I32, I32>;
+def ROCDL_smfmac_f32_32x32x64_bf8_bf8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.32x32x64.bf8.bf8", I32, F32>;
+def ROCDL_smfmac_f32_32x32x64_bf8_fp8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.32x32x64.bf8.fp8", I32, F32>;
+def ROCDL_smfmac_f32_32x32x64_fp8_bf8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.32x32x64.fp8.bf8", I32, F32>;
+def ROCDL_smfmac_f32_32x32x64_fp8_fp8 : ROCDL_Smfmac_IntrOp<"smfmac.f32.32x32x64.fp8.fp8", I32, F32>;
 
 
 //===---------------------------------------------------------------------===//
