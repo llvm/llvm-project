@@ -1496,7 +1496,7 @@ void Sema::ActOnEndOfTranslationUnit() {
   }
 
   // Visit all pending #pragma export.
-  for (const SymbolLabel &Exported : PendingExportedNames.values()) {
+  for (const PendingPragmaInfo &Exported : PendingExportedNames.values()) {
     if (!Exported.Used)
       Diag(Exported.NameLoc, diag::warn_failed_to_resolve_pragma) << "export";
   }

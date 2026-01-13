@@ -1346,14 +1346,14 @@ NamedDecl *Sema::lookupExternCFunctionOrVariable(IdentifierInfo *IdentId,
 
 void Sema::ActOnPragmaExport(IdentifierInfo *IdentId, SourceLocation NameLoc,
                              Scope *curScope) {
-  SymbolLabel Label;
-  Label.NameLoc = NameLoc;
-  Label.Used = false;
+  PendingPragmaInfo Info;
+  Info.NameLoc = NameLoc;
+  Info.Used = false;
 
   NamedDecl *PrevDecl =
       lookupExternCFunctionOrVariable(IdentId, NameLoc, curScope);
   if (!PrevDecl) {
-    PendingExportedNames[IdentId] = Label;
+    PendingExportedNames[IdentId] = Info;
     return;
   }
 

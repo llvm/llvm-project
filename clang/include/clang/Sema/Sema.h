@@ -2318,14 +2318,14 @@ public:
                                              SourceLocation NameLoc,
                                              Scope *curScope);
 
-  /// A label from a C++ #pragma export, for a symbol that we
+  /// Information from a C++ #pragma export, for a symbol that we
   /// haven't seen the declaration for yet.
-  struct SymbolLabel {
+  struct PendingPragmaInfo {
     SourceLocation NameLoc;
     bool Used;
   };
 
-  llvm::DenseMap<IdentifierInfo *, SymbolLabel> PendingExportedNames;
+  llvm::DenseMap<IdentifierInfo *, PendingPragmaInfo> PendingExportedNames;
 
   /// ActonPragmaExport - called on well-formed '\#pragma export'.
   void ActOnPragmaExport(IdentifierInfo *IdentId, SourceLocation ExportNameLoc,
