@@ -14,6 +14,7 @@
 #define LLVM_CLANG_LIB_BASIC_TARGETS_SPIR_H
 
 #include "Targets.h"
+#include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/Support/Compiler.h"
@@ -51,6 +52,7 @@ static const unsigned SPIRDefIsPrivMap[] = {
     10, // hlsl_private
     11, // hlsl_device
     7,  // hlsl_input
+    13, // hlsl_push_constant
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -87,6 +89,7 @@ static const unsigned SPIRDefIsGenMap[] = {
     10, // hlsl_private
     11, // hlsl_device
     7,  // hlsl_input
+    13, // hlsl_push_constant
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -313,6 +316,17 @@ public:
 
   bool hasFeature(StringRef Feature) const override {
     return Feature == "spirv";
+  }
+
+  virtual bool isAddressSpaceSupersetOf(LangAS A, LangAS B) const override {
+    // The generic space AS(4) is a superset of all the other address
+    // spaces used by the backend target except constant address space.
+    return A == B || ((A == LangAS::Default ||
+                       (isTargetAddressSpace(A) &&
+                        toTargetAddressSpace(A) == /*Generic=*/4)) &&
+                      isTargetAddressSpace(B) &&
+                      (toTargetAddressSpace(B) <= /*Generic=*/4 &&
+                       toTargetAddressSpace(B) != /*Constant=*/2));
   }
 
   void getTargetDefines(const LangOptions &Opts,

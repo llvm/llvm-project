@@ -2010,7 +2010,7 @@ uint64_t InitOffsetsSection::getSize() const {
 void InitOffsetsSection::writeTo(uint8_t *buf) const {
   // FIXME: Add function specified by -init when that argument is implemented.
   for (ConcatInputSection *isec : sections) {
-    for (const Reloc &rel : isec->relocs) {
+    for (const Relocation &rel : isec->relocs) {
       const Symbol *referent = cast<Symbol *>(rel.referent);
       assert(referent && "section relocation should have been rejected");
       uint64_t offset = referent->getVA() - in.header->addr;
@@ -2035,7 +2035,7 @@ void InitOffsetsSection::writeTo(uint8_t *buf) const {
 // not known at link time, stub-indirection has to be used.
 void InitOffsetsSection::setUp() {
   for (const ConcatInputSection *isec : sections) {
-    for (const Reloc &rel : isec->relocs) {
+    for (const Relocation &rel : isec->relocs) {
       RelocAttrs attrs = target->getRelocAttrs(rel.type);
       if (!attrs.hasAttr(RelocAttrBits::UNSIGNED))
         error(isec->getLocation(rel.offset) +
@@ -2076,7 +2076,7 @@ void ObjCMethListSection::setUp() {
 
     // Loop through all methods, and ensure a selref for each of them exists.
     while (methodNameOff < isec->data.size()) {
-      const Reloc *reloc = isec->getRelocAt(methodNameOff);
+      const Relocation *reloc = isec->getRelocAt(methodNameOff);
       assert(reloc && "Relocation expected at method list name slot");
 
       StringRef methname = reloc->getReferentString();
@@ -2177,7 +2177,7 @@ bool ObjCMethListSection::isMethodList(const ConcatInputSection *isec) {
 void ObjCMethListSection::writeRelativeOffsetForIsec(
     const ConcatInputSection *isec, uint8_t *buf, uint32_t &inSecOff,
     uint32_t &outSecOff, bool useSelRef) const {
-  const Reloc *reloc = isec->getRelocAt(inSecOff);
+  const Relocation *reloc = isec->getRelocAt(inSecOff);
   assert(reloc && "Relocation expected at __objc_methlist Offset");
 
   uint32_t symVA = 0;

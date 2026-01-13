@@ -11,11 +11,15 @@
 
 // constexpr T&& optional<T>::operator*() const &&;
 
-#include <optional>
-#include <type_traits>
 #include <cassert>
+#include <memory>
+#include <optional>
+#include <utility>
 
 #include "test_macros.h"
+#if TEST_STD_VER >= 26
+#  include "copy_move_types.h"
+#endif
 
 using std::optional;
 
@@ -32,6 +36,38 @@ struct Y
     int test() const && {return 2;}
 };
 
+#if TEST_STD_VER >= 26
+constexpr bool test_ref() {
+  { // const&&
+    TracedCopyMove x{};
+    const std::optional<TracedCopyMove&> opt(x);
+    ASSERT_NOEXCEPT(*std::move(opt));
+    ASSERT_SAME_TYPE(decltype(*std::move(opt)), TracedCopyMove&);
+
+    assert(std::addressof(*(std::move(opt))) == std::addressof(x));
+    assert((*std::move(opt)).constMove == 0);
+    assert((*std::move(opt)).nonConstMove == 0);
+    assert((*std::move(opt)).constCopy == 0);
+    assert((*std::move(opt)).nonConstCopy == 0);
+  }
+
+  {
+    TracedCopyMove x{};
+    const std::optional<const TracedCopyMove&> opt(x);
+    ASSERT_NOEXCEPT(*std::move(opt));
+    ASSERT_SAME_TYPE(decltype(*std::move(opt)), const TracedCopyMove&);
+
+    assert(std::addressof(*(std::move(opt))) == std::addressof(x));
+    assert((*std::move(opt)).constMove == 0);
+    assert((*std::move(opt)).nonConstMove == 0);
+    assert((*std::move(opt)).constCopy == 0);
+    assert((*std::move(opt)).nonConstCopy == 0);
+  }
+
+  return true;
+}
+#endif
+
 int main(int, char**)
 {
     {
@@ -47,6 +83,11 @@ int main(int, char**)
         constexpr optional<Y> opt(Y{});
         assert((*std::move(opt)).test() == 2);
     }
+
+#if TEST_STD_VER >= 26
+    assert(test_ref());
+    static_assert(test_ref());
+#endif
 
     return 0;
 }

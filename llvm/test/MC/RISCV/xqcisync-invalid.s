@@ -1,7 +1,7 @@
 # Xqcisync - Qualcomm uC Sync Delay Extension
-# RUN: not llvm-mc -triple riscv32 -mattr=+experimental-xqcisync < %s 2>&1 \
+# RUN: not llvm-mc -triple riscv32 -mattr=+xqcisync < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-PLUS %s
-# RUN: not llvm-mc -triple riscv32 -mattr=-experimental-xqcisync < %s 2>&1 \
+# RUN: not llvm-mc -triple riscv32 -mattr=-xqcisync < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-MINUS %s
 
 # CHECK-PLUS: :[[@LINE+1]]:12: error: immediate must be an integer in the range [1, 31]

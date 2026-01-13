@@ -17,4 +17,5 @@ add_clang_library(MLIRCIRTargetLowering
   MLIRDLTIDialect
   MLIRCIR
   MLIRCIRInterfaces
+  MLIRLLVMDialect
 )

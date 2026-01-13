@@ -63,7 +63,7 @@ end
 
 subroutine s8
   data x/1.0/
-  !ERROR: The type of 'x' has already been implicitly declared
+  !ERROR: The type of 'x' has already been implicitly declared as REAL(4)
   integer x
 end
 

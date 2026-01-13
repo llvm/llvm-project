@@ -53,7 +53,7 @@ static bool isDirectInModuleLikeOp(Operation *op) {
 static Type getUnaryOpResultType(Type operandType) {
   Builder builder(operandType.getContext());
   Type resultType = builder.getIntegerType(1);
-  if (auto vecType = llvm::dyn_cast<VectorType>(operandType))
+  if (auto vecType = dyn_cast<VectorType>(operandType))
     return VectorType::get(vecType.getNumElements(), resultType);
   return resultType;
 }
