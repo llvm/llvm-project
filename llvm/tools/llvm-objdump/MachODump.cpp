@@ -590,7 +590,6 @@ Error objdump::getMachORelocationValueString(const MachOObjectFile *Obj,
   } else
     printRelocationTargetName(Obj, RE, Fmt);
 
-  Fmt.flush();
   Result.append(FmtBuf.begin(), FmtBuf.end());
   return Error::success();
 }

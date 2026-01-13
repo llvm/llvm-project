@@ -16,8 +16,7 @@
 
 namespace llvm::omp::target::plugin {
 
-#if OMPTARGET_DEBUG
-static const char *AllocKindToStr(int32_t Kind) {
+static const char *allocKindToStr(int32_t Kind) {
   switch (Kind) {
   case TARGET_ALLOC_DEVICE:
     return "DEVICE";
@@ -29,7 +28,6 @@ static const char *AllocKindToStr(int32_t Kind) {
     return "DEFAULT";
   }
 }
-#endif
 
 void *MemAllocatorTy::MemPoolTy::BlockTy::alloc() {
   if (isFull())
@@ -121,7 +119,7 @@ Error MemAllocatorTy::MemPoolTy::init(int32_t Kind, MemAllocatorTy *AllocatorIn,
   if (AllocMin >= AllocMax) {
     AllocMax = 2 * AllocMin;
     ODBG(OLDT_Alloc) << "Warning: Adjusting pool's AllocMax to " << AllocMax
-                     << " for " << AllocKindToStr(AllocKind)
+                     << " for " << allocKindToStr(AllocKind)
                      << " due to device requirements.";
   }
   assert(AllocMin < AllocMax &&
@@ -151,7 +149,7 @@ Error MemAllocatorTy::MemPoolTy::init(int32_t Kind, MemAllocatorTy *AllocatorIn,
     BucketParams.emplace_back(ChunkSize, BlockSize);
   }
 
-  ODBG(OLDT_Alloc) << "Initialized " << AllocKindToStr(AllocKind)
+  ODBG(OLDT_Alloc) << "Initialized " << allocKindToStr(AllocKind)
                    << " pool for device " << Device
                    << ": AllocUnit = " << AllocUnit
                    << ", AllocMax = " << AllocMax
@@ -223,7 +221,7 @@ void MemAllocatorTy::MemPoolTy::printUsage() {
       }
     }
 
-    Os << "MemPool usage for " << AllocKindToStr(AllocKind) << ", device "
+    Os << "MemPool usage for " << allocKindToStr(AllocKind) << ", device "
        << Allocator->Device << "\n";
 
     if (HasPoolAlloc) {
@@ -315,7 +313,7 @@ Expected<void *> MemAllocatorTy::MemPoolTy::alloc(size_t Size,
       SmallPoolSize += BlockSize;
     else
       PoolSize += BlockSize;
-    ODBG(OLDT_Alloc) << "New block allocation for " << AllocKindToStr(AllocKind)
+    ODBG(OLDT_Alloc) << "New block allocation for " << allocKindToStr(AllocKind)
                      << " pool: base = " << Base << ", size = " << BlockSize
                      << ", pool size = " << PoolSize;
     BucketStats[BucketId].first++;
@@ -471,7 +469,7 @@ Error MemAllocatorTy::deinit() {
   ODBG_OS([&](llvm::raw_ostream &Os) {
     for (size_t Kind = 0; Kind < MaxMemKind; Kind++) {
       auto &Stat = Stats[Kind];
-      Os << "Memory usage for " << AllocKindToStr(Kind) << ", device " << Device
+      Os << "Memory usage for " << allocKindToStr(Kind) << ", device " << Device
          << "\n";
       if (Stat.NumAllocs[0] == 0 && Stat.NumAllocs[1] == 0) {
         Os << "-- Not used\n";
