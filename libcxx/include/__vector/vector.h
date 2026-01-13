@@ -676,7 +676,7 @@ private:
 	}
 
 	[[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type __remaining_capacity() const _NOEXCEPT {
-		return __end_;
+		return __cap_ - __end_;
 	}
 
 	[[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool __is_full() const _NOEXCEPT {
@@ -695,15 +695,11 @@ private:
 
 	_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_sentinel(pointer __end) _NOEXCEPT { __end_ = __end; }
 
-	_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_sentinel(pointer __pos) _NOEXCEPT {
+	_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_sentinel(size_type __offset) _NOEXCEPT {
     __end_ = __begin_ + __offset;
 	}
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_capacity(pointer __cap) _NOEXCEPT { __cap_ = __cap; }
-
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_capacity(size_type __offset) _NOEXCEPT {
-    __cap_ = __begin_ + __offset;
-  }
 
 	_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_capacity(size_type __offset) _NOEXCEPT {
     __cap_ = __begin_ + __offset;
