@@ -118,6 +118,8 @@ class PassBuilder {
   PassInstrumentationCallbacks *PIC;
   IntrusiveRefCntPtr<vfs::FileSystem> FS;
 
+  friend class TargetPassBuilder;
+
 public:
   /// A struct to capture parsed pass pipeline names.
   ///
