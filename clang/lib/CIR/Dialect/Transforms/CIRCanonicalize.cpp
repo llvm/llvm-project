@@ -66,17 +66,6 @@ struct RemoveRedundantBranches : public OpRewritePattern<BrOp> {
   }
 };
 
-struct RemoveUnusedConstants : public OpRewritePattern<ConstantOp> {
-  using OpRewritePattern<ConstantOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(ConstantOp op,
-                                PatternRewriter &rewriter) const final {
-    if (op.use_empty())
-      op.erase();
-    return success();
-  }
-};
-
 //===----------------------------------------------------------------------===//
 // CIRCanonicalizePass
 //===----------------------------------------------------------------------===//
@@ -99,8 +88,7 @@ struct CIRCanonicalizePass
 void populateCIRCanonicalizePatterns(RewritePatternSet &patterns) {
   // clang-format off
   patterns.add<
-    RemoveRedundantBranches,
-    RemoveUnusedConstants
+    RemoveRedundantBranches
   >(patterns.getContext());
   // clang-format on
 }
