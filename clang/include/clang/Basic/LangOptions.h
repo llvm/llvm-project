@@ -441,7 +441,7 @@ public:
   SanitizerSet Sanitize;
   /// Is at least one coverage instrumentation type enabled.
   bool SanitizeCoverage = false;
-  /// Set of enabled (undefined behavior) sanitizers that do not cause
+  /// Set of (UBSan) sanitizers that when enabled do not cause
   /// `__has_feature(undefined_behavior_sanitizer)` to evaluate true.
   SanitizerSet UBSanFeatureIgnoredSanitize;
 
