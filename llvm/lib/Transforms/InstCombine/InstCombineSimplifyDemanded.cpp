@@ -2033,6 +2033,25 @@ static Constant *getFPClassConstant(Type *Ty, FPClassTest Mask,
   }
 }
 
+/// Try to set an inferred no-nans or no-infs in \p FMF. \p
+/// ValidResults is a mask of known valid results for the operator
+/// (already computed from the result, and the known operand inputs,
+/// \p KnownLHS and \p KnownRHS)
+static FastMathFlags
+inferFastMathValueFlagsBinOp(FastMathFlags FMF, FPClassTest ValidResults,
+                             const KnownFPClass &KnownLHS,
+                             const KnownFPClass &KnownRHS) {
+  if (!FMF.noNaNs() && (ValidResults & fcNan) == fcNone &&
+      KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN())
+    FMF.setNoNaNs();
+
+  if (!FMF.noInfs() && (ValidResults & fcInf) == fcNone &&
+      KnownLHS.isKnownNeverInfinity() && KnownRHS.isKnownNeverInfinity())
+    FMF.setNoInfs();
+
+  return FMF;
+}
+
 Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                                     FPClassTest DemandedMask,
                                                     KnownFPClass &Known,
@@ -2061,6 +2080,100 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       return I;
     Known.fneg();
     break;
+  }
+  case Instruction::FAdd: {
+    KnownFPClass KnownLHS, KnownRHS;
+
+    const SimplifyQuery &SQ = getSimplifyQuery();
+
+    // fadd x, x can be handled more aggressively.
+    if (I->getOperand(0) == I->getOperand(1) &&
+        isGuaranteedNotToBeUndef(I->getOperand(0), SQ.AC, CxtI, SQ.DT,
+                                 Depth + 1)) {
+      Type *EltTy = VTy->getScalarType();
+      DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+
+      FPClassTest SrcDemandedMask = DemandedMask;
+
+      // Doubling a subnormal could have resulted in a normal value.
+      if (DemandedMask & fcPosNormal)
+        SrcDemandedMask |= fcPosSubnormal;
+      if (DemandedMask & fcNegNormal)
+        SrcDemandedMask |= fcNegSubnormal;
+
+      // Doubling a subnormal may produce 0 if FTZ/DAZ.
+      if (Mode != DenormalMode::getIEEE()) {
+        if (DemandedMask & fcPosZero) {
+          SrcDemandedMask |= fcPosSubnormal;
+
+          if (Mode.inputsMayBePositiveZero() || Mode.outputsMayBePositiveZero())
+            SrcDemandedMask |= fcNegSubnormal;
+        }
+
+        if (DemandedMask & fcNegZero)
+          SrcDemandedMask |= fcNegSubnormal;
+      }
+
+      // Doubling a normal could have resulted in an infinity.
+      if (DemandedMask & fcPosInf)
+        SrcDemandedMask |= fcPosNormal;
+      if (DemandedMask & fcNegInf)
+        SrcDemandedMask |= fcNegNormal;
+
+      if (SimplifyDemandedFPClass(I, 0, SrcDemandedMask, KnownLHS, Depth + 1))
+        return I;
+
+      Known = KnownFPClass::fadd_self(KnownLHS, Mode);
+      KnownRHS = KnownLHS;
+    } else {
+      FPClassTest SrcDemandedMask = fcFinite;
+
+      // inf + (-inf) = nan
+      if (DemandedMask & fcNan)
+        SrcDemandedMask |= fcNan | fcInf;
+
+      if (DemandedMask & fcInf)
+        SrcDemandedMask |= fcInf;
+
+      if (SimplifyDemandedFPClass(I, 1, SrcDemandedMask, KnownRHS, Depth + 1) ||
+          SimplifyDemandedFPClass(I, 0, SrcDemandedMask, KnownLHS, Depth + 1))
+        return I;
+
+      Type *EltTy = VTy->getScalarType();
+      DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+      Known = KnownFPClass::fadd(KnownLHS, KnownRHS, Mode);
+    }
+
+    FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
+    if (Constant *SingleVal =
+            getFPClassConstant(VTy, ValidResults, /*IsCanonicalizing=*/true))
+      return SingleVal;
+
+    // Propagate known result to simplify edge case checks.
+    bool ResultNotNan = (DemandedMask & fcNan) == fcNone;
+    if (ResultNotNan) {
+      KnownLHS.knownNot(fcNan);
+      KnownRHS.knownNot(fcNan);
+    }
+
+    // With nnan: X + {+/-}Inf --> {+/-}Inf
+    if (KnownRHS.isKnownAlways(fcInf | fcNan) &&
+        KnownLHS.isKnownNever(fcNan))
+      return I->getOperand(1);
+
+    // With nnan: {+/-}Inf + X --> {+/-}Inf
+    if (KnownLHS.isKnownAlways(fcInf | fcNan) &&
+        KnownRHS.isKnownNever(fcNan))
+      return I->getOperand(0);
+
+    FastMathFlags InferredFMF =
+        inferFastMathValueFlagsBinOp(FMF, ValidResults, KnownLHS, KnownRHS);
+    if (InferredFMF != FMF) {
+      I->setFastMathFlags(InferredFMF);
+      return I;
+    }
+
+    return nullptr;
   }
   case Instruction::FMul: {
     KnownFPClass KnownLHS, KnownRHS;

@@ -32,7 +32,7 @@ struct KnownFPClass {
 
   KnownFPClass(FPClassTest Known = fcAllFlags, std::optional<bool> Sign = {})
       : KnownFPClasses(Known), SignBit(Sign) {}
-  KnownFPClass(const APFloat &C);
+  LLVM_ABI KnownFPClass(const APFloat &C);
 
   bool operator==(KnownFPClass Other) const {
     return KnownFPClasses == Other.KnownFPClasses && SignBit == Other.SignBit;
@@ -201,6 +201,16 @@ struct KnownFPClass {
   LLVM_ABI static KnownFPClass
   canonicalize(const KnownFPClass &Src,
                DenormalMode DenormMode = DenormalMode::getDynamic());
+
+  /// Report known values for fadd
+  LLVM_ABI static KnownFPClass
+  fadd(const KnownFPClass &LHS, const KnownFPClass &RHS,
+       DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Report known values for fadd x, x
+  LLVM_ABI static KnownFPClass
+  fadd_self(const KnownFPClass &Src,
+            DenormalMode Mode = DenormalMode::getDynamic());
 
   /// Report known values for fmul
   LLVM_ABI static KnownFPClass

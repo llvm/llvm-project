@@ -385,6 +385,9 @@ void GOFFWriter::defineSymbols() {
     } else if (Symbol.isInEDSection()) {
       Symbol.setIndex(++Ordinal);
       defineLabel(Symbol);
+    } else {
+      // Symbol is in PR section, the symbol refers to the section.
+      Symbol.setIndex(Symbol.getSection().getOrdinal());
     }
   }
 }
