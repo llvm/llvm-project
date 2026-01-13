@@ -23,15 +23,26 @@ void ConstantFloatSplat() {
     float2x2 M = 3.25;
 }
 
-// CHECK-LABEL: define hidden void @_Z17ConstantBoolSplatv(
+// CHECK-LABEL: define hidden void @_Z21ConstantTrueBoolSplatv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[M:%.*]] = alloca [9 x i32], align 4
 // CHECK-NEXT:    store <9 x i32> splat (i32 1), ptr [[M]], align 4
 // CHECK-NEXT:    ret void
 //
-void ConstantBoolSplat() {
+void ConstantTrueBoolSplat() {
     bool3x3 M = true;
+}
+
+// CHECK-LABEL: define hidden void @_Z22ConstantFalseBoolSplatv(
+// CHECK-SAME: ) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[M:%.*]] = alloca [9 x i32], align 4
+// CHECK-NEXT:    store <9 x i32> zeroinitializer, ptr [[M]], align 4
+// CHECK-NEXT:    ret void
+//
+void ConstantFalseBoolSplat() {
+    bool3x3 M = false;
 }
 
 // CHECK-LABEL: define hidden void @_Z12DynamicSplatf(
@@ -86,7 +97,7 @@ void CastThenSplat(float4 Value) {
     float3x3 M = (float) Value;
 }
 
-// CHECK-LABEL: define hidden void @_Z17BoolCastThenSplatDv3_i(
+// CHECK-LABEL: define hidden void @_Z30ExplicitIntToBoolCastThenSplatDv3_i(
 // CHECK-SAME: <3 x i32> noundef [[VALUE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VALUE_ADDR:%.*]] = alloca <3 x i32>, align 16
@@ -101,6 +112,44 @@ void CastThenSplat(float4 Value) {
 // CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[M]], align 4
 // CHECK-NEXT:    ret void
 //
-void BoolCastThenSplat(int3 Value) {
+void ExplicitIntToBoolCastThenSplat(int3 Value) {
     bool2x2 M = (bool) Value;
+}
+
+// CHECK-LABEL: define hidden void @_Z32ExplicitFloatToBoolCastThenSplatDv2_f(
+// CHECK-SAME: <2 x float> noundef nofpclass(nan inf) [[VALUE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[VALUE_ADDR:%.*]] = alloca <2 x float>, align 8
+// CHECK-NEXT:    [[M:%.*]] = alloca [6 x i32], align 4
+// CHECK-NEXT:    store <2 x float> [[VALUE]], ptr [[VALUE_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[VALUE_ADDR]], align 8
+// CHECK-NEXT:    [[TOBOOL:%.*]] = fcmp reassoc nnan ninf nsz arcp afn une <2 x float> [[TMP0]], zeroinitializer
+// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <2 x i1> [[TOBOOL]], i32 0
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <6 x i1> poison, i1 [[CAST_VTRUNC]], i64 0
+// CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <6 x i1> [[SPLAT_SPLATINSERT]], <6 x i1> poison, <6 x i32> zeroinitializer
+// CHECK-NEXT:    [[TMP1:%.*]] = zext <6 x i1> [[SPLAT_SPLAT]] to <6 x i32>
+// CHECK-NEXT:    store <6 x i32> [[TMP1]], ptr [[M]], align 4
+// CHECK-NEXT:    ret void
+//
+void ExplicitFloatToBoolCastThenSplat(float2 Value) {
+    bool2x3 M = (bool) Value;
+}
+
+// CHECK-LABEL: define hidden void @_Z32ExplicitBoolToFloatCastThenSplatb(
+// CHECK-SAME: i1 noundef [[VALUE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[VALUE_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[M:%.*]] = alloca [6 x float], align 4
+// CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[VALUE]] to i32
+// CHECK-NEXT:    store i32 [[STOREDV]], ptr [[VALUE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[VALUE_ADDR]], align 4
+// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i32 [[TMP0]] to i1
+// CHECK-NEXT:    [[CONV:%.*]] = uitofp i1 [[LOADEDV]] to float
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <6 x float> poison, float [[CONV]], i64 0
+// CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <6 x float> [[SPLAT_SPLATINSERT]], <6 x float> poison, <6 x i32> zeroinitializer
+// CHECK-NEXT:    store <6 x float> [[SPLAT_SPLAT]], ptr [[M]], align 4
+// CHECK-NEXT:    ret void
+//
+void ExplicitBoolToFloatCastThenSplat(bool Value) {
+    float3x2 M = (float) Value;
 }
