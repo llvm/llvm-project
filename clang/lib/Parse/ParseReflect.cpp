@@ -17,7 +17,9 @@
 using namespace clang;
 
 ExprResult Parser::ParseCXXReflectExpression() {
-  // TODO(reflection) : support parsing for more reflect-expressions.
+  // TODO(reflection) : support parsing for global namespace,
+  // reflection-name, id-expression and remaining supports for
+  // type-id (placeholder type, alias template, etc.)
   EnterExpressionEvaluationContext Unevaluated(
       Actions, Sema::ExpressionEvaluationContext::Unevaluated);
   assert(Tok.is(tok::caretcaret));
