@@ -210,7 +210,7 @@ void Thumb2InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                            MachineBasicBlock::iterator I,
                                            Register DestReg, int FI,
                                            const TargetRegisterClass *RC,
-                                           Register VReg,
+                                           Register VReg, unsigned SubReg,
                                            MachineInstr::MIFlag Flags) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();

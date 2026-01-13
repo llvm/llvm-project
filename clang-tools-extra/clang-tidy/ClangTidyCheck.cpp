@@ -165,9 +165,8 @@ ClangTidyCheck::OptionsView::getEnumInt(StringRef LocalName,
   StringRef Closest;
   unsigned EditDistance = 3;
   for (const auto &NameAndEnum : Mapping) {
-    if (Value == NameAndEnum.second) {
+    if (Value == NameAndEnum.second)
       return NameAndEnum.first;
-    }
     if (Value.equals_insensitive(NameAndEnum.second)) {
       Closest = NameAndEnum.second;
       EditDistance = 0;
@@ -187,7 +186,7 @@ ClangTidyCheck::OptionsView::getEnumInt(StringRef LocalName,
   return std::nullopt;
 }
 
-static constexpr llvm::StringLiteral ConfigWarning(
+static constexpr StringRef ConfigWarning(
     "invalid configuration value '%0' for option '%1'%select{|; expected a "
     "bool|; expected an integer|; did you mean '%3'?}2");
 

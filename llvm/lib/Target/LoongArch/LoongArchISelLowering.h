@@ -240,7 +240,6 @@ private:
   SDValue lowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerConstantFP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerRotate(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVectorSRL(SDValue Op, SelectionDAG &DAG) const;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
@@ -263,8 +262,6 @@ private:
   bool isEligibleForTailCallOptimization(
       CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,
       const SmallVectorImpl<CCValAssign> &ArgLocs) const;
-
-  bool softPromoteHalfType() const override { return true; }
 
   bool
   splitValueIntoRegisterParts(SelectionDAG &DAG, const SDLoc &DL, SDValue Val,

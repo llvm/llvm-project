@@ -32,7 +32,7 @@ void test() {
 
   opt.has_value(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
-#if TEST_STD_VER >= 26
+#if TEST_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
   opt.begin();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   cOpt.begin(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   opt.end();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -92,8 +92,10 @@ void test() {
 
   optRef.has_value(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
+#  if _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
   optRef.begin(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   optRef.end();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+#  endif
 
   *optRef;  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   *cOptRef; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}

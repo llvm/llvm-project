@@ -51,7 +51,7 @@ message(
 # Create a separate config for each tool we support.
 foreach(tool ${SUPPORTED_TOOLS})
   string(TOUPPER ${tool} tool_toupper)
-  if(${tool_toupper}_SUPPORTED_ARCH AND NOT COMPILER_RT_STANDALONE_BUILD)
+  if(${tool_toupper}_SUPPORTED_ARCH AND (NOT COMPILER_RT_STANDALONE_BUILD OR LLVM_RUNTIMES_BUILD))
     list(APPEND SANITIZER_COMMON_TEST_DEPS ${tool})
   endif()
   set(TEST_ARCH ${${tool_toupper}_SUPPORTED_ARCH})
@@ -81,6 +81,9 @@ foreach(tool ${SUPPORTED_TOOLS})
       string(REPLACE ";" " " SANITIZER_COMMON_TEST_TARGET_CFLAGS
                              "${SANITIZER_COMMON_TEST_TARGET_CFLAGS}")
     endif()
+
+    set(SANITIZER_COMMON_TEST_APPLE_TARGET_IS_HOST ON)
+    pythonize_bool(SANITIZER_COMMON_TEST_APPLE_TARGET_IS_HOST)
 
     configure_lit_site_cfg(
       ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
@@ -131,6 +134,8 @@ if(APPLE)
         set(CONFIG_NAME "${tool}-${arch}-${platform}")
         set(SANITIZER_COMMON_TEST_CONFIG_SUFFIX "-${arch}-${platform}")
         set(SANITIZER_COMMON_TEST_APPLE_PLATFORM "${platform}")
+        set(SANITIZER_COMMON_TEST_APPLE_TARGET_IS_HOST OFF)
+        pythonize_bool(SANITIZER_COMMON_TEST_APPLE_TARGET_IS_HOST)
         set(SANITIZER_COMMON_TEST_TARGET_ARCH "${arch}")
         set(SANITIZER_COMMON_TEST_MIN_DEPLOYMENT_TARGET_FLAG "${DARWIN_${platform}_MIN_VER_FLAG}")
         configure_lit_site_cfg(

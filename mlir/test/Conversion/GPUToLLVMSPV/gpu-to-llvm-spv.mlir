@@ -215,7 +215,7 @@ gpu.module @barriers {
 
   // CHECK-LABEL: gpu_barrier
   func.func @gpu_barrier() {
-    // CHECK:         [[FLAGS:%.*]] = llvm.mlir.constant(1 : i32) : i32
+    // CHECK:         [[FLAGS:%.*]] = llvm.mlir.constant(3 : i32) : i32
     // CHECK:         llvm.call spir_funccc @_Z7barrierj([[FLAGS]]) {
     // CHECK-SAME-DAG:  no_unwind
     // CHECK-SAME-DAG:  convergent

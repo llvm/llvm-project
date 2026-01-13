@@ -2553,6 +2553,12 @@ public:
                                                  StringRef PassName,
                                                  const Twine &Name = "");
 
+  LLVM_ABI Value *CreateSelectFMFWithUnknownProfile(Value *C, Value *True,
+                                                    Value *False,
+                                                    FMFSource FMFSource,
+                                                    StringRef PassName,
+                                                    const Twine &Name = "");
+
   LLVM_ABI Value *CreateSelect(Value *C, Value *True, Value *False,
                                const Twine &Name = "",
                                Instruction *MDFrom = nullptr);

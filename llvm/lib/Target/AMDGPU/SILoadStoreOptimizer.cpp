@@ -2163,7 +2163,7 @@ Register SILoadStoreOptimizer::computeBase(MachineInstr &MI,
                                            const MemAddress &Addr) const {
   MachineBasicBlock *MBB = MI.getParent();
   MachineBasicBlock::iterator MBBI = MI.getIterator();
-  DebugLoc DL = MI.getDebugLoc();
+  const DebugLoc &DL = MI.getDebugLoc();
 
   assert((TRI->getRegSizeInBits(Addr.Base.LoReg, *MRI) == 32 ||
           Addr.Base.LoSubReg) &&

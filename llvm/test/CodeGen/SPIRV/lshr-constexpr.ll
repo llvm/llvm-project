@@ -14,9 +14,9 @@
 ; CHECK:     %[[#bitcast_res:]] = OpBitcast %[[#type_int64]] %[[#vec_const]]
 ; CHECK:     %[[#shift_res:]] = OpShiftRightLogical %[[#type_int64]] %[[#bitcast_res]] %[[#const32]]
 
-define void @foo(i64* %arg) {
+define void @foo(ptr %arg) {
 entry:
   %0 = lshr i64 bitcast (<2 x i32> <i32 1, i32 1> to i64), 32
-  store i64 %0, i64* %arg
+  store i64 %0, ptr %arg
   ret void
 }

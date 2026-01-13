@@ -1847,7 +1847,5 @@ X86FPStackifierPass::run(MachineFunction &MF,
   bool Changed = Impl.run(MF, Bundles);
   if (!Changed)
     return PreservedAnalyses::all();
-  PreservedAnalyses PA = PreservedAnalyses::none();
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
 }
