@@ -1308,26 +1308,9 @@ inline BinaryOpc_match<ValTy, AllOnes_match, true> m_Not(const ValTy &V) {
   return m_Xor(V, m_AllOnes());
 }
 
-// Match Intrinsics
-template <unsigned IntrinsicId> inline auto m_IntrinsicWOChain() {
-  return m_Node(ISD::INTRINSIC_WO_CHAIN, m_SpecificInt(IntrinsicId));
-}
-
-template <unsigned IntrinsicId, typename Opnd>
-inline auto m_IntrinsicWOChain(const Opnd &Op) {
-  return m_Node(ISD::INTRINSIC_WO_CHAIN, m_SpecificInt(IntrinsicId), Op);
-}
-
-template <unsigned IntrinsicId, typename LHS, typename RHS>
-inline auto m_IntrinsicWOChain(const LHS &Op0, const RHS &Op1) {
-  return m_Node(ISD::INTRINSIC_WO_CHAIN, m_SpecificInt(IntrinsicId), Op0, Op1);
-}
-
-template <unsigned IntrinsicId, typename T0_P, typename T1_P, typename T2_P>
-inline auto m_IntrinsicWOChain(const T0_P &Op0, const T1_P &Op1,
-                               const T2_P &Op2) {
-  return m_Node(ISD::INTRINSIC_WO_CHAIN, m_SpecificInt(IntrinsicId), Op0, Op1,
-                Op2);
+template <unsigned IntrinsicId, typename... OpndPreds>
+inline auto m_IntrinsicWOChain(const OpndPreds &...Opnds) {
+  return m_Node(ISD::INTRINSIC_WO_CHAIN, m_SpecificInt(IntrinsicId), Opnds...);
 }
 
 struct SpecificNeg_match {
