@@ -44,8 +44,8 @@ public:
 
   virtual void ParseDeclsForContext(CompilerDeclContext context) = 0;
 
-  virtual CompilerDeclContext
-  FindNamespaceDecl(CompilerDeclContext parent_ctx, llvm::StringRef name) = 0;
+  virtual CompilerDeclContext FindNamespaceDecl(CompilerDeclContext parent_ctx,
+                                                llvm::StringRef name) = 0;
 
   virtual void Dump(Stream &stream, llvm::StringRef filter,
                     bool show_color) = 0;

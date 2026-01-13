@@ -81,8 +81,8 @@
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"
-#include "Plugins/SymbolFile/PDB/PDBASTParser.h"
 #include "Plugins/SymbolFile/NativePDB/PdbAstBuilderClang.h"
+#include "Plugins/SymbolFile/PDB/PDBASTParser.h"
 
 #include <cstdio>
 
