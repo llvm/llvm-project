@@ -1350,9 +1350,14 @@ bool FastISel::lowerDbgDeclare(const Value *Address, DIExpression *Expr,
       // If using instruction referencing, produce this as a DBG_INSTR_REF,
       // to be later patched up by finalizeDebugInstrRefs. Tack a deref onto
       // the expression, we don't have an "indirect" flag in DBG_INSTR_REF.
+      /*
       SmallVector<uint64_t, 3> Ops(
           {dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_deref});
       auto *NewExpr = DIExpression::prependOpcodes(Expr, Ops);
+      */
+      auto *NewExpr = DIBuf.assign(Expr)
+                          .prependOpcodes({DIOp::LLVMArg(0), DIOp::Deref()})
+                          .toExpr();
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DL,
               TII.get(TargetOpcode::DBG_INSTR_REF), /*IsIndirect*/ false, *Op,
               Var, NewExpr);

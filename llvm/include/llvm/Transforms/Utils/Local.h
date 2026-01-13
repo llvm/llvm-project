@@ -37,6 +37,7 @@ class BranchInst;
 class CallBase;
 class CallInst;
 class DIBuilder;
+class DIExprBuf;
 class DomTreeUpdater;
 class Function;
 class Instruction;
@@ -349,8 +350,8 @@ salvageDebugInfoForDbgValues(Instruction &I,
 ///   Ops = llvm::dwarf::DW_OP_LLVM_arg0 llvm::dwarf::DW_OP_add
 ///   AdditionalValues = %b
 LLVM_ABI Value *
-salvageDebugInfoImpl(Instruction &I, uint64_t CurrentLocOps,
-                     SmallVectorImpl<uint64_t> &Ops,
+salvageDebugInfoImpl(Instruction &I, uint64_t &CurrentLocOps,
+                     DIExprBuf &OpsToAppend,
                      SmallVectorImpl<Value *> &AdditionalValues);
 
 /// Point debug users of \p From to \p To or salvage them. Use this function

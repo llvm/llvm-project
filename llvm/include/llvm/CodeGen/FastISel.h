@@ -23,6 +23,8 @@
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/DebugInfoExprs.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstrTypes.h"
@@ -213,6 +215,7 @@ protected:
   const TargetRegisterInfo &TRI;
   const TargetLibraryInfo *LibInfo;
   bool SkipTargetIndependentISel;
+  DIExprBuf DIBuf;
 
   /// The position of the last instruction for materializing constants
   /// for use in the current block. It resets to EmitStartPt when it makes sense

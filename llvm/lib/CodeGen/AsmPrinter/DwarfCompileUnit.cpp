@@ -257,11 +257,10 @@ void DwarfCompileUnit::addLocationAttribute(
     // DW_AT_const_value(X).
     if (GlobalExprs.size() == 1 && Expr && Expr->isConstant()) {
       addToAccelTable = true;
-      addConstantValue(
-          *VariableDIE,
-          DIExpression::SignedOrUnsignedConstant::UnsignedConstant ==
-              *Expr->isConstant(),
-          Expr->getElement(1));
+      addConstantValue(*VariableDIE,
+                       SignedOrUnsignedConstant::UnsignedConstant ==
+                           *Expr->isConstant(),
+                       Expr->getElement(1));
       break;
     }
 

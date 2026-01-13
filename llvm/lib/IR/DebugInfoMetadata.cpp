@@ -16,6 +16,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/IR/DebugInfoExprs.h"
 #include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -41,6 +42,32 @@ LLVM_ABI cl::opt<bool> PickMergedSourceLocations(
     "pick-merged-source-locations", cl::init(false), cl::Hidden,
     cl::desc("Preserve line and column number when merging locations."));
 } // namespace llvm
+
+enum class DIExprsFlags {
+  Ref,
+  Buf,
+};
+
+// Enable DIOp-based implementation of many DIExpression methods.
+static cl::bits<DIExprsFlags>
+    DIExprsMode("diexprs-mode", cl::Hidden, cl::CommaSeparated,
+                cl::desc("Enable DIExprs impls of many DIExpression methods."),
+                cl::values(clEnumValN(DIExprsFlags::Ref, "ref",
+                                      "enable DIExprRef-based impls"),
+                           clEnumValN(DIExprsFlags::Buf, "buf",
+                                      "enable DIExprBuf-based impls")));
+
+#if 1
+static inline bool isDIRefEnabled() {
+  return DIExprsMode.isSet(DIExprsFlags::Ref);
+}
+static inline bool isDIBufEnabled() {
+  return DIExprsMode.isSet(DIExprsFlags::Buf);
+}
+#else
+static inline bool isDIRefEnabled() { return true; }
+static inline bool isDIBufEnabled() { return true; }
+#endif
 
 uint32_t DIType::getAlignInBits() const {
   return (getTag() == dwarf::DW_TAG_LLVM_ptrauth_type ? 0 : SubclassData32);
@@ -1669,6 +1696,8 @@ DIExpression *DIExpression::getImpl(LLVMContext &Context,
   DEFINE_GETIMPL_STORE_NO_OPS(DIExpression, (Elements));
 }
 bool DIExpression::isEntryValue() const {
+  if (isDIRefEnabled())
+    return DIExprRef(this).isEntryValue();
   if (auto singleLocElts = getSingleLocationExpressionElements()) {
     return singleLocElts->size() > 0 &&
            (*singleLocElts)[0] == dwarf::DW_OP_LLVM_entry_value;
@@ -1676,12 +1705,16 @@ bool DIExpression::isEntryValue() const {
   return false;
 }
 bool DIExpression::startsWithDeref() const {
+  if (isDIRefEnabled())
+    return DIExprRef(this).startsWithDeref();
   if (auto singleLocElts = getSingleLocationExpressionElements())
     return singleLocElts->size() > 0 &&
            (*singleLocElts)[0] == dwarf::DW_OP_deref;
   return false;
 }
 bool DIExpression::isDeref() const {
+  if (isDIRefEnabled())
+    return DIExprRef(this).isDeref();
   if (auto singleLocElts = getSingleLocationExpressionElements())
     return singleLocElts->size() == 1 &&
            (*singleLocElts)[0] == dwarf::DW_OP_deref;
@@ -1695,34 +1728,9 @@ DIAssignID *DIAssignID::getImpl(LLVMContext &Context, StorageType Storage,
   return storeImpl(new (0u, Storage) DIAssignID(Context, Storage), Storage);
 }
 
-unsigned DIExpression::ExprOperand::getSize() const {
-  uint64_t Op = getOp();
-
-  if (Op >= dwarf::DW_OP_breg0 && Op <= dwarf::DW_OP_breg31)
-    return 2;
-
-  switch (Op) {
-  case dwarf::DW_OP_LLVM_convert:
-  case dwarf::DW_OP_LLVM_fragment:
-  case dwarf::DW_OP_LLVM_extract_bits_sext:
-  case dwarf::DW_OP_LLVM_extract_bits_zext:
-  case dwarf::DW_OP_bregx:
-    return 3;
-  case dwarf::DW_OP_constu:
-  case dwarf::DW_OP_consts:
-  case dwarf::DW_OP_deref_size:
-  case dwarf::DW_OP_plus_uconst:
-  case dwarf::DW_OP_LLVM_tag_offset:
-  case dwarf::DW_OP_LLVM_entry_value:
-  case dwarf::DW_OP_LLVM_arg:
-  case dwarf::DW_OP_regx:
-    return 2;
-  default:
-    return 1;
-  }
-}
-
 bool DIExpression::isValid() const {
+  if (isDIRefEnabled())
+    return DIExprRef(this).isValid();
   for (auto I = expr_op_begin(), E = expr_op_end(); I != E; ++I) {
     // Check that there's space for the operand.
     if (I->get() + I->getSize() > E->get())
@@ -1818,6 +1826,8 @@ bool DIExpression::isValid() const {
 }
 
 bool DIExpression::isImplicit() const {
+  if (isDIRefEnabled())
+    return DIExprRef(this).isImplicit();
   if (!isValid())
     return false;
 
@@ -1837,6 +1847,8 @@ bool DIExpression::isImplicit() const {
 }
 
 bool DIExpression::isComplex() const {
+  if (isDIRefEnabled())
+    return DIExprRef(this).isComplex();
   if (!isValid())
     return false;
 
@@ -1860,6 +1872,8 @@ bool DIExpression::isComplex() const {
 }
 
 bool DIExpression::isSingleLocationExpression() const {
+  if (isDIRefEnabled())
+    return DIExprRef(this).isSingleLocationExpression();
   if (!isValid())
     return false;
 
@@ -1898,6 +1912,8 @@ DIExpression::getSingleLocationExpressionElements() const {
 
 const DIExpression *
 DIExpression::convertToUndefExpression(const DIExpression *Expr) {
+  if (isDIBufEnabled())
+    return DIExprBuf(Expr).convertToUndefExpression().toExpr();
   SmallVector<uint64_t, 3> UndefOps;
   if (auto FragmentInfo = Expr->getFragmentInfo()) {
     UndefOps.append({dwarf::DW_OP_LLVM_fragment, FragmentInfo->OffsetInBits,
@@ -1908,6 +1924,8 @@ DIExpression::convertToUndefExpression(const DIExpression *Expr) {
 
 const DIExpression *
 DIExpression::convertToVariadicExpression(const DIExpression *Expr) {
+  if (isDIBufEnabled())
+    return DIExprBuf(Expr).convertToVariadicExpression().toExpr();
   if (any_of(Expr->expr_ops(), [](auto ExprOp) {
         return ExprOp.getOp() == dwarf::DW_OP_LLVM_arg;
       }))
@@ -1921,6 +1939,12 @@ DIExpression::convertToVariadicExpression(const DIExpression *Expr) {
 
 std::optional<const DIExpression *>
 DIExpression::convertToNonVariadicExpression(const DIExpression *Expr) {
+  if (isDIBufEnabled()) {
+    DIExprBuf DIBuf(Expr);
+    if (DIBuf.convertToNonVariadicExpression())
+      return DIBuf.toExpr();
+    return std::nullopt;
+  }
   if (!Expr)
     return std::nullopt;
 
@@ -1983,6 +2007,8 @@ DIExpression::getFragmentInfo(expr_op_iterator Start, expr_op_iterator End) {
 }
 
 std::optional<uint64_t> DIExpression::getActiveBits(DIVariable *Var) {
+  if (isDIRefEnabled())
+    return DIExprRef(this).getActiveBits(Var);
   std::optional<uint64_t> InitialActiveBits = Var->getSizeInBits();
   std::optional<uint64_t> ActiveBits = InitialActiveBits;
   for (auto Op : expr_ops()) {
@@ -2019,20 +2045,17 @@ std::optional<uint64_t> DIExpression::getActiveBits(DIVariable *Var) {
 
 void DIExpression::appendOffset(SmallVectorImpl<uint64_t> &Ops,
                                 int64_t Offset) {
-  if (Offset > 0) {
-    Ops.push_back(dwarf::DW_OP_plus_uconst);
-    Ops.push_back(Offset);
-  } else if (Offset < 0) {
-    Ops.push_back(dwarf::DW_OP_constu);
-    // Avoid UB when encountering LLONG_MIN, because in 2's complement
-    // abs(LLONG_MIN) is LLONG_MAX+1.
-    uint64_t AbsMinusOne = -(Offset+1);
-    Ops.push_back(AbsMinusOne + 1);
-    Ops.push_back(dwarf::DW_OP_minus);
-  }
+  appendOffsetImpl(Ops, Offset);
 }
 
 bool DIExpression::extractIfOffset(int64_t &Offset) const {
+  if (isDIRefEnabled()) {
+    if (auto OffsetOp = DIExprRef(this).extractIfOffset()) {
+      Offset = *OffsetOp;
+      return true;
+    }
+    return false;
+  }
   auto SingleLocEltsOpt = getSingleLocationExpressionElements();
   if (!SingleLocEltsOpt)
     return false;
@@ -2103,6 +2126,8 @@ bool DIExpression::extractLeadingOffset(
 }
 
 bool DIExpression::hasAllLocationOps(unsigned N) const {
+  if (isDIRefEnabled())
+    return DIExprRef(this).hasAllLocationOps(N);
   SmallDenseSet<uint64_t, 4> SeenOps;
   for (auto ExprOp : expr_ops())
     if (ExprOp.getOp() == dwarf::DW_OP_LLVM_arg)
@@ -2140,6 +2165,8 @@ const DIExpression *DIExpression::extractAddressClass(const DIExpression *Expr,
 
 DIExpression *DIExpression::prepend(const DIExpression *Expr, uint8_t Flags,
                                     int64_t Offset) {
+  if (isDIBufEnabled())
+    return DIExprBuf(Expr).prepend(Flags, Offset).toExpr();
   SmallVector<uint64_t, 8> Ops;
   if (Flags & DIExpression::DerefBefore)
     Ops.push_back(dwarf::DW_OP_deref);
@@ -2158,6 +2185,13 @@ DIExpression *DIExpression::appendOpsToArg(const DIExpression *Expr,
                                            ArrayRef<uint64_t> Ops,
                                            unsigned ArgNo, bool StackValue) {
   assert(Expr && "Can't add ops to this expression");
+  if (isDIBufEnabled()) {
+    DIExprBuf DIBuf(Expr);
+    return DIBuf
+        .appendOpsToArg(DIOp::FromUIntIterator::makeRange(Ops), ArgNo,
+                        StackValue)
+        .toExpr();
+  }
 
   // Handle non-variadic intrinsics by prepending the opcodes.
   if (!any_of(Expr->expr_ops(),
@@ -2215,6 +2249,13 @@ DIExpression *DIExpression::prependOpcodes(const DIExpression *Expr,
                                            SmallVectorImpl<uint64_t> &Ops,
                                            bool StackValue, bool EntryValue) {
   assert(Expr && "Can't prepend ops to this expression");
+  if (isDIBufEnabled()) {
+    DIExprBuf DIBuf(Expr);
+    return DIBuf
+        .prependOpcodes(DIOp::FromUIntIterator::makeRange(Ops), StackValue,
+                        EntryValue)
+        .toExpr();
+  }
 
   if (EntryValue) {
     Ops.push_back(dwarf::DW_OP_LLVM_entry_value);
@@ -2247,6 +2288,12 @@ DIExpression *DIExpression::prependOpcodes(const DIExpression *Expr,
 DIExpression *DIExpression::append(const DIExpression *Expr,
                                    ArrayRef<uint64_t> Ops) {
   assert(Expr && !Ops.empty() && "Can't append ops to this expression");
+  if (isDIBufEnabled()) {
+    DIExprBuf DIBuf(Expr);
+    return DIBuf.append(DIOp::FromUIntIterator::makeRange(Ops))
+        .toExpr()
+        ->foldConstantMath();
+  }
 
   // Copy Expr's current op list.
   SmallVector<uint64_t, 16> NewOps;
@@ -2304,6 +2351,12 @@ DIExpression *DIExpression::appendToStack(const DIExpression *Expr,
 
 std::optional<DIExpression *> DIExpression::createFragmentExpression(
     const DIExpression *Expr, unsigned OffsetInBits, unsigned SizeInBits) {
+  if (isDIBufEnabled()) {
+    DIExprBuf DIBuf(Expr);
+    if (DIBuf.createFragmentExpression(OffsetInBits, SizeInBits))
+      return DIBuf.toExpr();
+    return std::nullopt;
+  }
   SmallVector<uint64_t, 8> Ops;
   // Track whether it's safe to split the value at the top of the DWARF stack,
   // assuming that it'll be used as an implicit location value.
@@ -2465,6 +2518,12 @@ bool DIExpression::calculateFragmentIntersect(
 
 std::pair<DIExpression *, const ConstantInt *>
 DIExpression::constantFold(const ConstantInt *CI) {
+  if (isDIBufEnabled()) {
+    DIExprBuf DIBuf(this);
+    auto *NewInt = DIBuf.constantFold(CI);
+    return {DIBuf.toExpr(), NewInt};
+  }
+
   // Copy the APInt so we can modify it.
   APInt NewInt = CI->getValue();
   SmallVector<uint64_t, 8> Ops;
@@ -2503,6 +2562,8 @@ DIExpression::constantFold(const ConstantInt *CI) {
 }
 
 uint64_t DIExpression::getNumLocationOperands() const {
+  if (isDIRefEnabled())
+    return DIExprRef(this).getNumLocationOperands();
   uint64_t Result = 0;
   for (auto ExprOp : expr_ops())
     if (ExprOp.getOp() == dwarf::DW_OP_LLVM_arg)
@@ -2512,14 +2573,12 @@ uint64_t DIExpression::getNumLocationOperands() const {
   return Result;
 }
 
-std::optional<DIExpression::SignedOrUnsignedConstant>
-DIExpression::isConstant() const {
-
+std::optional<SignedOrUnsignedConstant> DIExpression::isConstant() const {
   // Recognize signed and unsigned constants.
-  // An signed constants can be represented as DW_OP_consts C DW_OP_stack_value
-  // (DW_OP_LLVM_fragment of Len).
-  // An unsigned constant can be represented as
-  // DW_OP_constu C DW_OP_stack_value (DW_OP_LLVM_fragment of Len).
+  // An signed constants can be represented as DW_OP_consts C
+  // DW_OP_stack_value (DW_OP_LLVM_fragment of Len). An unsigned constant can
+  // be represented as DW_OP_constu C DW_OP_stack_value (DW_OP_LLVM_fragment
+  // of Len).
 
   if ((getNumElements() != 2 && getNumElements() != 3 &&
        getNumElements() != 6) ||
