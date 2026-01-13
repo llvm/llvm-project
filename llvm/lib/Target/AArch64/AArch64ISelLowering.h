@@ -363,10 +363,6 @@ public:
   shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const override;
 
   bool useLoadStackGuardNode(const Module &M) const override;
-  bool useStackGuardMixCookie() const override;
-  SDValue emitStackGuardMixCookie(SelectionDAG &DAG, SDValue Val,
-                                  const SDLoc &DL,
-                                  bool FailureBB) const override;
   TargetLoweringBase::LegalizeTypeAction
   getPreferredVectorAction(MVT VT) const override;
 
@@ -923,8 +919,6 @@ private:
   bool preferScalarizeSplat(SDNode *N) const override;
 
   unsigned getMinimumJumpTableEntries() const override;
-
-  bool softPromoteHalfType() const override { return true; }
 
   bool shouldScalarizeBinop(SDValue VecOp) const override {
     return VecOp.getOpcode() == ISD::SETCC;
