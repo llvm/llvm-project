@@ -117,7 +117,7 @@ static cl::opt<bool> HardenIndirectCallsAndJumps(
 
 namespace {
 
-StringRef getX86SLHPassName() {
+constexpr StringRef getX86SLHPassName() {
   return "X86 speculative load hardening";
 }
 
@@ -125,9 +125,7 @@ class X86SpeculativeLoadHardeningPass : public MachineFunctionPass {
 public:
   X86SpeculativeLoadHardeningPass() : MachineFunctionPass(ID) { }
 
-  StringRef getPassName() const override {
-    return getX86SLHPassName();
-  }
+  StringRef getPassName() const override { return getX86SLHPassName(); }
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
@@ -413,8 +411,8 @@ static bool hasVulnerableLoad(MachineFunction &MF) {
 }
 
 bool X86SpeculativeLoadHardeningImpl::run(MachineFunction &MF) {
-  LLVM_DEBUG(dbgs() << "********** " << getX86SLHPassName() << " : " << MF.getName()
-                    << " **********\n");
+  LLVM_DEBUG(dbgs() << "********** " << getX86SLHPassName() << " : "
+                    << MF.getName() << " **********\n");
 
   // Only run if this pass is forced enabled or we detect the relevant function
   // attribute requesting SLH.
