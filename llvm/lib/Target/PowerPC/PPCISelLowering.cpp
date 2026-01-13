@@ -3676,15 +3676,17 @@ SDValue PPCTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   EVT LHSVT = LHS.getValueType();
   SDLoc dl(Op);
 
-  if (Subtarget.hasSPE() && (LHSVT == MVT::f32 || LHSVT == MVT::f64) &&
-      Flags.hasNoNaNs() && Flags.hasNoInfs())
+  assert(Subtarget.hasSPE() && "LowerBR_CC used only for targets with SPE");
+
+  if ((LHSVT == MVT::f32 || LHSVT == MVT::f64) && Flags.hasNoNaNs() &&
+      Flags.hasNoInfs())
     return Op;
 
   softenSetCCOperands(DAG, LHSVT, LHS, RHS, CC, dl, LHS, RHS);
 
   // If softenSetCCOperands returned a scalar, we need to compare the result
   // against zero to select between true and false values.
-  if (!RHS.getNode()) {
+  if (!RHS) {
     RHS = DAG.getConstant(0, dl, LHSVT);
     CC = ISD::SETNE;
   }
