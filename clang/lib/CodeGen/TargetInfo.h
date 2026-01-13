@@ -98,11 +98,10 @@ public:
 
   /// Any further codegen related checks that need to be done on a function call
   /// in a target specific manner.
-  virtual void checkFunctionCallABI(CodeGenModule &CGM, SourceLocation CallLoc,
-                                    const FunctionDecl *Caller,
-                                    const FunctionDecl *Callee,
-                                    const CallArgList &Args,
-                                    QualType ReturnType) const {}
+  virtual void
+  checkFunctionCallABI(CodeGenFunction &CGF, SourceLocation CallLoc,
+                       const FunctionDecl *Caller, const FunctionDecl *Callee,
+                       const CallArgList &Args, QualType ReturnType) const {}
 
   /// Returns true if inlining the function call would produce incorrect code
   /// for the current target and should be ignored (even with the always_inline
@@ -117,7 +116,8 @@ public:
   /// See previous discussion here:
   /// https://discourse.llvm.org/t/rfc-avoid-inlining-alwaysinline-functions-when-they-cannot-be-inlined/79528
   virtual bool
-  wouldInliningViolateFunctionCallABI(const FunctionDecl *Caller,
+  wouldInliningViolateFunctionCallABI(CodeGenFunction &CGF,
+                                      const FunctionDecl *Caller,
                                       const FunctionDecl *Callee) const {
     return false;
   }

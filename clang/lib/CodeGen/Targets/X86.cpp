@@ -1504,7 +1504,7 @@ public:
     }
   }
 
-  void checkFunctionCallABI(CodeGenModule &CGM, SourceLocation CallLoc,
+  void checkFunctionCallABI(CodeGenFunction &CGF, SourceLocation CallLoc,
                             const FunctionDecl *Caller,
                             const FunctionDecl *Callee, const CallArgList &Args,
                             QualType ReturnType) const override;
@@ -1570,7 +1570,7 @@ static bool checkAVXParam(DiagnosticsEngine &Diag, ASTContext &Ctx,
   return false;
 }
 
-void X86_64TargetCodeGenInfo::checkFunctionCallABI(CodeGenModule &CGM,
+void X86_64TargetCodeGenInfo::checkFunctionCallABI(CodeGenFunction &CGF,
                                                    SourceLocation CallLoc,
                                                    const FunctionDecl *Caller,
                                                    const FunctionDecl *Callee,
@@ -1579,6 +1579,7 @@ void X86_64TargetCodeGenInfo::checkFunctionCallABI(CodeGenModule &CGM,
   if (!Callee)
     return;
 
+  CodeGenModule &CGM = CGF.CGM;
   llvm::StringMap<bool> CallerMap;
   llvm::StringMap<bool> CalleeMap;
   unsigned ArgIndex = 0;

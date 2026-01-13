@@ -5284,7 +5284,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // attribute-target/features. Give them a chance to diagnose.
   const FunctionDecl *CallerDecl = dyn_cast_or_null<FunctionDecl>(CurCodeDecl);
   const FunctionDecl *CalleeDecl = dyn_cast_or_null<FunctionDecl>(TargetDecl);
-  CGM.getTargetCodeGenInfo().checkFunctionCallABI(CGM, Loc, CallerDecl,
+  CGM.getTargetCodeGenInfo().checkFunctionCallABI(*this, Loc, CallerDecl,
                                                   CalleeDecl, CallArgs, RetTy);
 
   // 1. Set up the arguments.
@@ -5860,7 +5860,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // Note: This corresponds to the [[clang::always_inline]] statement attribute.
   if (InAlwaysInlineAttributedStmt &&
       !CGM.getTargetCodeGenInfo().wouldInliningViolateFunctionCallABI(
-          CallerDecl, CalleeDecl))
+          *this, CallerDecl, CalleeDecl))
     Attrs =
         Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::AlwaysInline);
 
@@ -5878,7 +5878,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       !InNoInlineAttributedStmt &&
       !(TargetDecl && TargetDecl->hasAttr<NoInlineAttr>()) &&
       !CGM.getTargetCodeGenInfo().wouldInliningViolateFunctionCallABI(
-          CallerDecl, CalleeDecl)) {
+          *this, CallerDecl, CalleeDecl)) {
     Attrs =
         Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::AlwaysInline);
   }
