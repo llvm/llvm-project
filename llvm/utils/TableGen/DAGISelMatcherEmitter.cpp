@@ -1365,17 +1365,17 @@ void MatcherTableEmitter::EmitValueTypeFunction(raw_ostream &OS) {
   OS << "  switch (Index) {\n";
   OS << "  default: llvm_unreachable(\"Unexpected index\");\n";
 
-  for (const auto &P : ValueTypeMap) {
-    OS << "  case " << (P.second - 1) << ":\n";
+  for (const auto &[VTs, Idx] : ValueTypeMap) {
+    OS << "  case " << (Idx - 1) << ":\n";
     OS << "    switch (HwMode) {\n";
-    if (!P.first.hasDefault())
+    if (!VTs.hasDefault())
       OS << "    default:\n      return MVT();\n";
-    for (const auto &VT : P.first) {
-      if (VT.first == 0)
+    for (const auto [Mode, VT] : VTs) {
+      if (Mode == DefaultMode)
         OS << "    default:\n";
       else
-        OS << "    case " << VT.first << ":\n";
-      OS << "      return " << getEnumName(VT.second) << ";\n";
+        OS << "    case " << Mode << ":\n";
+      OS << "      return " << getEnumName(VT) << ";\n";
     }
 
     OS << "    }\n";
