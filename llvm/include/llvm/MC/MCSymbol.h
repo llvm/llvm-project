@@ -21,7 +21,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/include/llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -384,7 +383,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const MCSymbol &Sym) {
   return OS;
 }
 
-LLVM_ABI bool isRangeRelaxable(const MCSymbol *Begin, const MCSymbol *End);
+bool isRangeRelaxable(const MCSymbol *Begin, const MCSymbol *End);
 
 } // end namespace llvm
 

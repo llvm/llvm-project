@@ -14,7 +14,7 @@
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/include/llvm/Support/Compiler.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class MCContext;
