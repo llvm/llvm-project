@@ -248,12 +248,13 @@ static bool interp__builtin_is_constant_evaluated(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-// __builtin_assume(int)
+// __builtin_assume
+// __assume (MS extension)
 static bool interp__builtin_assume(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
                                    const CallExpr *Call) {
+  // Nothing to be done here since the argument is NOT evaluated.
   assert(Call->getNumArgs() == 1);
-  discard(S.Stk, *S.getContext().classify(Call->getArg(0)));
   return true;
 }
 
