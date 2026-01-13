@@ -1,4 +1,4 @@
-//===- ClangTidyForceLinker.h - clang-tidy --------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,6 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYFORCELINKER_H
 
 #include "clang-tidy-config.h"
-#include "llvm/Support/Compiler.h"
 
 namespace clang::tidy {
 

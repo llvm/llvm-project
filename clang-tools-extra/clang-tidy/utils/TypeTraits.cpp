@@ -113,9 +113,8 @@ bool isTriviallyDefaultConstructible(QualType Type, const ASTContext &Context) {
   if (CanonicalType->isScalarType() || CanonicalType->isVectorType())
     return true;
 
-  if (const auto *RD = CanonicalType->getAsRecordDecl()) {
+  if (const auto *RD = CanonicalType->getAsRecordDecl())
     return recordIsTriviallyDefaultConstructible(*RD, Context);
-  }
 
   // No other types can match.
   return false;

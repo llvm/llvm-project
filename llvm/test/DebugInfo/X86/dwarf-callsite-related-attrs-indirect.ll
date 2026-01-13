@@ -18,7 +18,7 @@ entry:
     #dbg_value(ptr %f, !17, !DIExpression(), !18)
 
 ; OBJ:   DW_TAG_call_site
-; OBJ:     DW_AT_call_target (DW_OP_reg[[#]] {{.*}})
+; OBJ:     DW_AT_call_target{{(_clobbered)?}} (DW_OP_reg[[#]] {{.*}})
 ; OBJ:     DW_AT_call_return_pc
   call void (...) %f() #1, !dbg !19
   ret void, !dbg !20
@@ -33,7 +33,7 @@ entry:
   %0 = load ptr, ptr %f, align 8, !dbg !28, !tbaa !29
 
 ; OBJ:   DW_TAG_call_site
-; OBJ:     DW_AT_call_target (DW_OP_breg[[#]] {{.*}})
+; OBJ:     DW_AT_call_target{{(_clobbered)?}} (DW_OP_breg[[#]] {{.*}})
 ; OBJ:     DW_AT_call_return_pc
   call void (...) %0() #1, !dbg !28
   ret void, !dbg !33

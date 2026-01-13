@@ -1293,6 +1293,8 @@ DwarfCompileUnit::getDwarf5OrGNUAttr(dwarf::Attribute Attr) const {
     return dwarf::DW_AT_GNU_all_call_sites;
   case dwarf::DW_AT_call_target:
     return dwarf::DW_AT_GNU_call_site_target;
+  case dwarf::DW_AT_call_target_clobbered:
+    return dwarf::DW_AT_GNU_call_site_target_clobbered;
   case dwarf::DW_AT_call_origin:
     return dwarf::DW_AT_abstract_origin;
   case dwarf::DW_AT_call_return_pc:
@@ -1328,15 +1330,22 @@ DIE &DwarfCompileUnit::constructCallSiteEntryDIE(
 
   // A valid register in CallTarget indicates an indirect call.
   if (CallTarget.getReg()) {
+    // Add a DW_AT_call_target location expression describing the location of
+    // the address of the target function. If any register in the expression
+    // (i.e., the single register we currently handle) is volatile we must use
+    // DW_AT_call_target_clobbered instead.
+    const TargetRegisterInfo &TRI = *Asm->MF->getSubtarget().getRegisterInfo();
+    dwarf::Attribute Attribute = getDwarf5OrGNUAttr(
+        TRI.isCalleeSavedPhysReg(CallTarget.getReg(), *Asm->MF)
+            ? dwarf::DW_AT_call_target
+            : dwarf::DW_AT_call_target_clobbered);
+
     // CallTarget is the location of the address of an indirect call. The
     // location may be indirect, modified by Offset.
     if (CallTarget.isIndirect())
-      addMemoryLocation(CallSiteDIE,
-                        getDwarf5OrGNUAttr(dwarf::DW_AT_call_target),
-                        CallTarget, Offset);
+      addMemoryLocation(CallSiteDIE, Attribute, CallTarget, Offset);
     else
-      addAddress(CallSiteDIE, getDwarf5OrGNUAttr(dwarf::DW_AT_call_target),
-                 CallTarget);
+      addAddress(CallSiteDIE, Attribute, CallTarget);
   } else if (CalleeSP) {
     DIE *CalleeDIE = getOrCreateSubprogramDIE(CalleeSP, CalleeF);
     assert(CalleeDIE && "Could not create DIE for call site entry origin");

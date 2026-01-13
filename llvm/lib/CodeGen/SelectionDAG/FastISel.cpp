@@ -1943,7 +1943,10 @@ Register FastISel::fastEmit_ri_(MVT VT, unsigned Opcode, Register Op0,
     // fast-isel, which would be very slow.
     IntegerType *ITy =
         IntegerType::get(FuncInfo.Fn->getContext(), VT.getSizeInBits());
-    MaterialReg = getRegForValue(ConstantInt::get(ITy, Imm));
+    // TODO: Avoid implicit trunc?
+    // See https://github.com/llvm/llvm-project/issues/112510.
+    MaterialReg = getRegForValue(
+        ConstantInt::get(ITy, Imm, /*IsSigned=*/false, /*ImplicitTrunc=*/true));
     if (!MaterialReg)
       return Register();
   }

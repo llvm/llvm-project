@@ -293,11 +293,11 @@ define i64 @test_lsb_i64(i64 %a0, i64 %a1) nounwind {
 ;
 ; X64-LABEL: test_lsb_i64:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rsi, %rax
-; X64-NEXT:    andq %rdi, %rax
-; X64-NEXT:    xorq %rdi, %rsi
-; X64-NEXT:    shrq %rsi
-; X64-NEXT:    addq %rsi, %rax
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    andq %rsi, %rax
+; X64-NEXT:    xorq %rsi, %rdi
+; X64-NEXT:    shrq %rdi
+; X64-NEXT:    addq %rdi, %rax
 ; X64-NEXT:    retq
   %s0 = lshr i64 %a0, 1
   %s1 = lshr i64 %a1, 1
