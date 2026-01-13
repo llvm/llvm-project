@@ -8,6 +8,7 @@
 subroutine linear_clause_01(arg)
     integer, intent(in) :: arg(:)
     !ERROR: A modifier may not be specified in a LINEAR clause on the DO directive
+    !ERROR: List item 'arg' in LINEAR clause must be a scalar variable
     !$omp do linear(uval(arg))
     do i = 1, 5
         print *, arg(i)
