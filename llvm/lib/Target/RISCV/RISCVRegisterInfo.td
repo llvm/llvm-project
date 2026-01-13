@@ -901,3 +901,42 @@ let RegInfos = XLenRI in {
   def TRM2 : RISCVRegisterClass<[untyped], 32, (add (decimate TR, 2))>;
   def TRM4 : RISCVRegisterClass<[untyped], 32, (add (decimate TR, 4))>;
 }
+
+//===----------------------------------------------------------------------===//
+// XAIFET registers
+//===----------------------------------------------------------------------===//
+
+// Each scalar floating point register is extended to a 256 bits wide vector.
+// The original scalar floating point register occupies the 32 LSB of the
+// vector.
+
+let SubRegIndices = [sub_32] in
+  class RISCVReg256<RISCVReg32 subreg> :
+    RISCVRegWithSubRegs<subreg.HWEncoding{4-0}, subreg.AsmName, [subreg],
+                        subreg.AltNames>;
+
+let RegAltNameIndices = [ABIRegAltName] in
+  foreach Index = 0-31 in
+    def F#Index#_Q2 : RISCVReg256<!cast<RISCVReg32>("F"#Index#"_F")>,
+                                  DwarfRegNum<[!add(Index, 3088)]>;
+
+// The order of registers represents the preferred allocation sequence,
+// meaning caller-save regs are listed before callee-save.
+def FPR256 : RISCVRegisterClass<[v8i32, v8f32], 256,
+                                (add
+                                  (sequence "F%u_Q2", 0, 7),
+                                  (sequence "F%u_Q2", 10, 17),
+                                  (sequence "F%u_Q2", 28, 31),
+                                  (sequence "F%u_Q2", 8, 9),
+                                  (sequence "F%u_Q2", 18, 27))>;
+
+// Mask registers m0 to m7
+foreach Index = 0-7 in
+  def M#Index : RISCVReg<Index, "m"#Index, ["m"#Index]>,
+                         DwarfRegNum<[!add(Index, 4020)]>;
+
+// Allowing i8 in addition to v8i1 simplifies the handling of builtins
+def MR : RISCVRegisterClass<[i8, v8i1], 8,
+                            (add (sequence "M%u", 1, 7), M0)>;
+
+def MR0 : RISCVRegisterClass<[i8, v8i1], 8, (add M0)>;
