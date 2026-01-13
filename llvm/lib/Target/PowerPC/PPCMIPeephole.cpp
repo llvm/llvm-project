@@ -746,17 +746,7 @@ bool PPCMIPeephole::simplifyCode() {
                    (DefMI->getOperand(2).getImm() == 0 ||
                     DefMI->getOperand(2).getImm() == 3)) {
 
-          bool OnlyUsedInMI = true;
-          for (MachineInstr &UseMI :
-               MRI->use_instructions(DefMI->getOperand(0).getReg())) {
-            if (UseMI.isDebugInstr())
-              continue;
-            if (&UseMI != &MI) {
-              OnlyUsedInMI = false;
-              break;
-            }
-          }
-          if (!OnlyUsedInMI)
+          if (!MRI->hasOneNonDBGUser(DefMI->getOperand(0).getReg()))
             break;
           Simplified = true;
           // Swap of a splat, convert to copy.
