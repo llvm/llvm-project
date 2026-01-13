@@ -175,6 +175,8 @@ public:
       Rounding rounding = TargetCharacteristics::defaultRounding) const;
   ValueWithRealFlags<Real> MODULO(const Real &,
       Rounding rounding = TargetCharacteristics::defaultRounding) const;
+  ValueWithRealFlags<Real> KahanSummation(const Real &, Real &correction,
+      Rounding rounding = TargetCharacteristics::defaultRounding) const;
 
   template <typename INT> constexpr INT EXPONENT() const {
     if (Exponent() == maxExponent) {

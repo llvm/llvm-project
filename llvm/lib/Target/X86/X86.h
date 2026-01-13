@@ -175,7 +175,13 @@ public:
 FunctionPass *createX86FastTileConfigLegacyPass();
 
 /// Return a pass that insert pseudo tile config instruction.
-FunctionPass *createX86PreTileConfigPass();
+class X86PreTileConfigPass : public PassInfoMixin<X86PreTileConfigPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86PreTileConfigLegacyPass();
 
 /// Return a pass that lower the tile copy instruction.
 class X86LowerTileCopyPass : public PassInfoMixin<X86LowerTileCopyPass> {
@@ -376,7 +382,7 @@ void initializeX86LowerAMXTypeLegacyPassPass(PassRegistry &);
 void initializeX86LowerTileCopyLegacyPass(PassRegistry &);
 void initializeX86OptimizeLEAsLegacyPass(PassRegistry &);
 void initializeX86PartialReductionLegacyPass(PassRegistry &);
-void initializeX86PreTileConfigPass(PassRegistry &);
+void initializeX86PreTileConfigLegacyPass(PassRegistry &);
 void initializeX86ReturnThunksPass(PassRegistry &);
 void initializeX86SpeculativeExecutionSideEffectSuppressionPass(PassRegistry &);
 void initializeX86SpeculativeLoadHardeningPassPass(PassRegistry &);

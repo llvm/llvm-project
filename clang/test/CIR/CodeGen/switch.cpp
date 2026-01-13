@@ -1218,9 +1218,8 @@ int sw_return_multi_cases(int x) {
 // CIR-NEXT:    cir.return %[[RET2]] : !s32i
 // CIR-NEXT:  }
 // CIR-NEXT:  cir.case(default, []) {
-// CIR:         %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-// CIR:         %[[NEG:.*]] = cir.unary(minus, %[[ONE]]) {{.*}} : !s32i, !s32i
-// CIR:         cir.store{{.*}} %[[NEG]], %{{.*}} : !s32i, !cir.ptr<!s32i>
+// CIR:         %[[MINUS_ONE:.*]] = cir.const #cir.int<-1> : !s32i
+// CIR:         cir.store{{.*}} %[[MINUS_ONE]], %{{.*}} : !s32i, !cir.ptr<!s32i>
 // CIR:         %[[RETDEF:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:    cir.return %[[RETDEF]] : !s32i
 // CIR-NEXT:  }

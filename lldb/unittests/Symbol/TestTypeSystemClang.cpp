@@ -436,6 +436,7 @@ TEST_F(TestTypeSystemClang, TestIsEnumerationType) {
     bool is_signed;
     EXPECT_TRUE(enum_type.IsEnumerationType(is_signed));
     EXPECT_TRUE(is_signed);
+    EXPECT_FALSE(enum_type.IsIntegerType(is_signed));
   }
 
   // Scoped unsigned enum
@@ -449,6 +450,7 @@ TEST_F(TestTypeSystemClang, TestIsEnumerationType) {
     bool is_signed;
     EXPECT_TRUE(enum_type.IsEnumerationType(is_signed));
     EXPECT_FALSE(is_signed);
+    EXPECT_FALSE(enum_type.IsIntegerType(is_signed));
   }
 
   // Unscoped signed enum
@@ -462,6 +464,7 @@ TEST_F(TestTypeSystemClang, TestIsEnumerationType) {
     bool is_signed;
     EXPECT_TRUE(enum_type.IsEnumerationType(is_signed));
     EXPECT_TRUE(is_signed);
+    EXPECT_FALSE(enum_type.IsIntegerType(is_signed));
   }
 
   // Unscoped unsigned enum
@@ -474,6 +477,47 @@ TEST_F(TestTypeSystemClang, TestIsEnumerationType) {
 
     bool is_signed;
     EXPECT_TRUE(enum_type.IsEnumerationType(is_signed));
+    EXPECT_FALSE(is_signed);
+    EXPECT_FALSE(enum_type.IsIntegerType(is_signed));
+  }
+}
+
+TEST_F(TestTypeSystemClang, TestIsIntegerType_BitInt) {
+  auto holder =
+      std::make_unique<clang_utils::TypeSystemClangHolder>("bitint_ast");
+  auto &ast = *holder->GetAST();
+
+  // Signed _BitInt
+  {
+    CompilerType bitint_type = ast.GetType(
+        ast.getASTContext().getBitIntType(/*Unsigned=*/false, /*NumBits=*/37));
+    ASSERT_TRUE(bitint_type);
+
+    EXPECT_TRUE(bitint_type.IsInteger());
+    EXPECT_TRUE(bitint_type.IsSigned());
+
+    bool is_signed;
+    EXPECT_TRUE(bitint_type.IsIntegerType(is_signed));
+    EXPECT_TRUE(is_signed);
+
+    EXPECT_TRUE(bitint_type.IsIntegerOrEnumerationType(is_signed));
+    EXPECT_TRUE(is_signed);
+  }
+
+  // Unsigned _BitInt
+  {
+    CompilerType bitint_type = ast.GetType(
+        ast.getASTContext().getBitIntType(/*Unsigned=*/true, /*NumBits=*/122));
+    ASSERT_TRUE(bitint_type);
+
+    EXPECT_TRUE(bitint_type.IsInteger());
+    EXPECT_FALSE(bitint_type.IsSigned());
+
+    bool is_signed;
+    EXPECT_TRUE(bitint_type.IsIntegerType(is_signed));
+    EXPECT_FALSE(is_signed);
+
+    EXPECT_TRUE(bitint_type.IsIntegerOrEnumerationType(is_signed));
     EXPECT_FALSE(is_signed);
   }
 }

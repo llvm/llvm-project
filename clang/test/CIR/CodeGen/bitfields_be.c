@@ -52,12 +52,11 @@ void load(S* s) {
 
 // field 'a'
 // CIR: cir.func {{.*}} @load
-// CIR:    %[[PTR0:.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["s", init] {alignment = 8 : i64} loc(#loc35)
-// CIR:    %[[CONST1:.*]] = cir.const #cir.int<4> : !s32i
-// CIR:    %[[MIN1:.*]] = cir.unary(minus, %[[CONST1]]) nsw : !s32i, !s32i
+// CIR:    %[[PTR0:.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["s", init]
+// CIR:    %[[CONST1:.*]] = cir.const #cir.int<-4> : !s32i
 // CIR:    %[[VAL0:.*]] = cir.load align(8) %[[PTR0]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
 // CIR:    %[[GET0:.*]] = cir.get_member %[[VAL0]][0] {name = "a"} : !cir.ptr<!rec_S> -> !cir.ptr<!u32i>
-// CIR:    %[[SET0:.*]] = cir.set_bitfield align(4) (#bfi_a, %[[GET0]] : !cir.ptr<!u32i>, %[[MIN1]] : !s32i) -> !s32i
+// CIR:    %[[SET0:.*]] = cir.set_bitfield align(4) (#bfi_a, %[[GET0]] : !cir.ptr<!u32i>, %[[CONST1]] : !s32i) -> !s32i
 
 // LLVM: define dso_local void @load{{.*}}{{.*}}
 // LLVM:   %[[PTR0:.*]] = load ptr
@@ -94,11 +93,10 @@ void load(S* s) {
 // OGCG:   store i32 %[[OR1]], ptr %[[PTR1]], align 4
 
 // field 'c'
-// CIR:    %[[CONST3:.*]] = cir.const #cir.int<12345> : !s32i
-// CIR:    %[[MIN2:.*]] = cir.unary(minus, %[[CONST3]]) nsw : !s32i, !s32i
+// CIR:    %[[CONST3:.*]] = cir.const #cir.int<-12345> : !s32i
 // CIR:    %[[VAL2:.*]] = cir.load align(8) %[[PTR0]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
 // CIR:    %[[GET2:.*]] = cir.get_member %[[VAL2]][0] {name = "c"} : !cir.ptr<!rec_S> -> !cir.ptr<!u32i>
-// CIR:    %[[SET2:.*]] = cir.set_bitfield align(4) (#bfi_c, %[[GET2]] : !cir.ptr<!u32i>, %[[MIN2]] : !s32i) -> !s32i
+// CIR:    %[[SET2:.*]] = cir.set_bitfield align(4) (#bfi_c, %[[GET2]] : !cir.ptr<!u32i>, %[[CONST3]] : !s32i) -> !s32i
 
 // LLVM:  %[[PTR2:.*]] = load ptr
 // LLVM:  %[[GET2:.*]] = getelementptr %struct.S, ptr  %[[PTR2]], i32 0, i32 0
