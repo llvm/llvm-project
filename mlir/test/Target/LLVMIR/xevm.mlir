@@ -5,7 +5,7 @@ module {
   // CHECK-SAME: %[[ARG0:.*]]) {
   llvm.func @load(%arg0: !llvm.ptr<1>) -> i32 {
     // CHECK: getelementptr i32
-    // CHECK-SAME: !spirv.DecorationCacheControlINTEL ![[DECO1:.*]]
+    // CHECK-SAME: !spirv.Decorations ![[DECO1:.*]]
     %0 = llvm.getelementptr %arg0[0] {xevm.DecorationCacheControl = [[6442 : i32, 0 : i32, 1 : i32], [6442 : i32, 1 : i32, 1 : i32]]} : (!llvm.ptr<1>) -> !llvm.ptr<1>, i32
     %1 = llvm.load %0 : !llvm.ptr<1> -> i32
     llvm.return %1 : i32
@@ -22,7 +22,7 @@ module {
   // CHECK-SAME: %[[ARG0:.*]], i32 %[[ARG1:.*]]) {
   llvm.func @store(%arg0: !llvm.ptr<1>, %arg1: i32) {
     // CHECK: getelementptr i32
-    // CHECK-SAME: !spirv.DecorationCacheControlINTEL ![[DECO1:.*]]
+    // CHECK-SAME: !spirv.Decorations ![[DECO1:.*]]
     %0 = llvm.getelementptr %arg0[0] {xevm.DecorationCacheControl = [[6443 : i32, 0 : i32, 1 : i32], [6443 : i32, 1 : i32, 2 : i32]]} : (!llvm.ptr<1>) -> !llvm.ptr<1>, i32
     llvm.store %arg1, %0 : i32, !llvm.ptr<1>
     llvm.return

@@ -77,7 +77,7 @@ private:
           return llvm::MDNode::get(ctx, metadata);
         });
     constexpr llvm::StringLiteral decorationCacheControlMDName =
-        "spirv.DecorationCacheControlINTEL";
+        "spirv.Decorations";
     inst->setMetadata(decorationCacheControlMDName,
                       llvm::MDNode::get(ctx, decorations));
     return success();
