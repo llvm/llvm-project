@@ -1093,7 +1093,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_s_getpc}).Any({{UniS64, _}, {{Sgpr64}, {None}}});
 
   // This is "intrinsic lane mask" it was set to i32/i64 in llvm-ir.
-  addRulesForIOpcs({amdgcn_end_cf}).Any({{_, S32}, {{}, {None, Sgpr32}}});
+  addRulesForIOpcs({amdgcn_end_cf})
+      .Any({{_, UniS32}, {{}, {IntrId, Sgpr32}}})
+      .Any({{_, UniS64}, {{}, {IntrId, Sgpr64}}});
 
   addRulesForIOpcs({amdgcn_if_break}, Standard)
       .Uni(S32, {{Sgpr32}, {IntrId, Vcc, Sgpr32}});
