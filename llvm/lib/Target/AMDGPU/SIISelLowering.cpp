@@ -11740,7 +11740,7 @@ SITargetLowering::splitBufferOffsets(SDValue Offset, SelectionDAG &DAG) const {
     // On GFX1250+, voffset and immoffset are zero-extended from 32 bits before
     // being added, so we can only safely match a 32-bit addition with no
     // unsigned overflow.
-    bool CheckNUW = AMDGPU::isGFX1250(*Subtarget);
+    bool CheckNUW = AMDGPU::isGFX1250Plus(*Subtarget);
     if (!CheckNUW || isNoUnsignedWrap(N0)) {
       C1 = cast<ConstantSDNode>(N0.getOperand(1));
       N0 = N0.getOperand(0);

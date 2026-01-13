@@ -161,6 +161,7 @@
   X(GFX10_AEncoding)                                                           \
   X(GFX10_BEncoding)                                                           \
   X(GFX1250Insts)                                                              \
+  X(GFX13Insts)                                                                \
   X(GFX90AInsts)                                                               \
   X(GFX940Insts)                                                               \
   X(GFX950Insts)                                                               \
