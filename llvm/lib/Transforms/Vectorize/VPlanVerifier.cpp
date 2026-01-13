@@ -191,6 +191,7 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
           case Instruction::Shl:
           case Instruction::FMul:
           case VPInstruction::Broadcast:
+          case VPInstruction::PtrAdd:
             // Opcodes above can only use EVL after wide inductions have been
             // expanded.
             if (!VerifyLate) {

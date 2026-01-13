@@ -1865,8 +1865,10 @@ bool TwoAddressInstructionImpl::run() {
 
       // Expand REG_SEQUENCE instructions. This will position mi at the first
       // expanded instruction.
-      if (mi->isRegSequence())
+      if (mi->isRegSequence()) {
         eliminateRegSequence(mi);
+        MadeChange = true;
+      }
 
       DistanceMap.insert(std::make_pair(&*mi, ++Dist));
 
