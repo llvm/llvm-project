@@ -1708,8 +1708,8 @@ mlir::LogicalResult CIRToLLVMLroundOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-mlir::LogicalResult CIRToLLVMLLroundOpLowering::matchAndRewrite(
-    cir::LLroundOp op, OpAdaptor adaptor,
+mlir::LogicalResult CIRToLLVMLlroundOpLowering::matchAndRewrite(
+    cir::LlroundOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type resTy = typeConverter->convertType(op.getType());
   rewriter.replaceOpWithNewOp<mlir::LLVM::LlroundOp>(op, resTy,
@@ -1725,8 +1725,8 @@ mlir::LogicalResult CIRToLLVMLrintOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-mlir::LogicalResult CIRToLLVMLLrintOpLowering::matchAndRewrite(
-    cir::LLrintOp op, OpAdaptor adaptor,
+mlir::LogicalResult CIRToLLVMLlrintOpLowering::matchAndRewrite(
+    cir::LlrintOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type resTy = typeConverter->convertType(op.getType());
   rewriter.replaceOpWithNewOp<mlir::LLVM::LlrintOp>(op, resTy,
@@ -2188,9 +2188,9 @@ mlir::LogicalResult CIRToLLVMAbsOpLowering::matchAndRewrite(
     cir::AbsOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type resTy = typeConverter->convertType(op.getType());
-  auto absOp =
-      mlir::LLVM::AbsOp::create(rewriter, op.getLoc(), resTy,
-                                adaptor.getOperands()[0], adaptor.getPoison());
+  auto absOp = mlir::LLVM::AbsOp::create(rewriter, op.getLoc(), resTy,
+                                         adaptor.getOperands()[0],
+                                         adaptor.getMinIsPoison());
   rewriter.replaceOp(op, absOp);
   return mlir::success();
 }

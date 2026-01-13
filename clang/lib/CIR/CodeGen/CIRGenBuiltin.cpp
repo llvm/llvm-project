@@ -645,7 +645,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_llroundf:
   case Builtin::BI__builtin_llroundl:
   case Builtin::BI__builtin_llroundf128:
-    return emitUnaryMaybeConstrainedFPToIntBuiltin<cir::LLroundOp>(cgf, *e);
+    return emitUnaryMaybeConstrainedFPToIntBuiltin<cir::LlroundOp>(cgf, *e);
   case Builtin::BIlrint:
   case Builtin::BIlrintf:
   case Builtin::BIlrintl:
@@ -661,7 +661,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_llrintf:
   case Builtin::BI__builtin_llrintl:
   case Builtin::BI__builtin_llrintf128:
-    return emitUnaryMaybeConstrainedFPToIntBuiltin<cir::LLrintOp>(cgf, *e);
+    return emitUnaryMaybeConstrainedFPToIntBuiltin<cir::LlrintOp>(cgf, *e);
   case Builtin::BI__builtin_ldexp:
   case Builtin::BI__builtin_ldexpf:
   case Builtin::BI__builtin_ldexpl:
@@ -761,19 +761,18 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     switch (getLangOpts().getSignedOverflowBehavior()) {
     case LangOptions::SOB_Defined:
       result = cir::AbsOp::create(builder, loc, arg.getType(), arg,
-                                  /*poison=*/false);
+                                  /*minIsPoison=*/false);
       break;
     case LangOptions::SOB_Undefined:
       if (!sanitizeOverflow) {
         result = cir::AbsOp::create(builder, loc, arg.getType(), arg,
-                                    /*poison=*/true);
+                                    /*minIsPoison=*/true);
         break;
       }
-      llvm_unreachable("BI__builtin_abs with LangOptions::SOB_Undefined when "
-                       "SanitizeOverflow is true");
       [[fallthrough]];
     case LangOptions::SOB_Trapping:
-      llvm_unreachable("BI__builtin_abs with LangOptions::SOB_Trapping");
+      cgm.errorNYI(e->getSourceRange(), "abs with overflow handling");
+      return RValue::get(nullptr);
     }
     return RValue::get(result);
   }
@@ -901,8 +900,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return emitBuiltinBitOp<cir::BitPopcountOp>(*this, e);
 
   case Builtin::BI__builtin_unpredictable: {
-    if (cgm.getCodeGenOpts().OptimizationLevel != 0)
-      assert(!cir::MissingFeatures::insertBuiltinUnpredictable());
+    assert(!cir::MissingFeatures::insertBuiltinUnpredictable());
     return RValue::get(emitScalarExpr(e->getArg(0)));
   }
 

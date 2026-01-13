@@ -5202,7 +5202,9 @@ def CIR_RintOp : CIR_UnaryFPToFPBuiltinOp<"rint", "RintOp"> {
     `cir.rint` rounds a floating-point operand to the nearest integer value
     and returns a result of the same type.
 
-    Floating-point exceptions are ignored, and it does not set `errno`.
+    This operation does not set `errno`. Unlike `cir.nearbyint`, this operation
+    may raise the `FE_INEXACT` exception if the input value is not an exact
+    integer, but this is not guaranteed to happen.
   }];
 }
 
@@ -5272,26 +5274,27 @@ def CIR_AbsOp : CIR_Op<"abs", [Pure, SameOperandsAndResultType]> {
     `cir.abs` computes the absolute value of a signed integer or vector
     of signed integers.
 
-    The `poison` attribute indicates whether the result value is a poison
-    value if the argument is statically or dynamically INT_MIN.
+    The `min_is_poison` attribute indicates whether the result value is a
+    poison value if the argument is statically or dynamically the minimum
+    value for the type.
 
     Example:
 
     ```mlir
       %0 = cir.const #cir.int<-42> : s32i
-      %1 = cir.abs %0 poison : s32i
+      %1 = cir.abs %0 min_is_poison : s32i
       %2 = cir.abs %3 : !cir.vector<!s32i x 4>
     ```
   }];
 
   let arguments = (ins
     CIR_AnySIntOrVecOfSIntType:$src,
-    UnitAttr:$poison
+    UnitAttr:$min_is_poison
   );
 
   let results = (outs CIR_AnySIntOrVecOfSIntType:$result);
 
-  let assemblyFormat = "$src ( `poison` $poison^ )? `:` type($src) attr-dict";
+  let assemblyFormat = "$src ( `min_is_poison` $min_is_poison^ )? `:` type($src) attr-dict";
 }
 
 def CIR_FloorOp : CIR_UnaryFPToFPBuiltinOp<"floor", "FloorOp"> {
@@ -5329,10 +5332,38 @@ class CIR_UnaryFPToIntBuiltinOp<string mnemonic, string llvmOpName>
   let llvmOp = llvmOpName;
 }
 
-def CIR_LroundOp : CIR_UnaryFPToIntBuiltinOp<"lround", "LroundOp">;
-def CIR_LLroundOp : CIR_UnaryFPToIntBuiltinOp<"llround", "LlroundOp">;
-def CIR_LrintOp : CIR_UnaryFPToIntBuiltinOp<"lrint", "LrintOp">;
-def CIR_LLrintOp : CIR_UnaryFPToIntBuiltinOp<"llrint", "LlrintOp">;
+def CIR_LroundOp : CIR_UnaryFPToIntBuiltinOp<"lround", "LroundOp"> {
+  let summary = "Rounds floating-point to long integer";
+  let description = [{
+    `cir.lround` rounds a floating-point value to the nearest integer value,
+    rounding halfway cases away from zero, and returns the result as a `long`.
+  }];
+}
+
+def CIR_LlroundOp : CIR_UnaryFPToIntBuiltinOp<"llround", "LlroundOp"> {
+  let summary = "Rounds floating-point to long long integer";
+  let description = [{
+    `cir.llround` rounds a floating-point value to the nearest integer value,
+    rounding halfway cases away from zero, and returns the result as a
+    `long long`.
+  }];
+}
+
+def CIR_LrintOp : CIR_UnaryFPToIntBuiltinOp<"lrint", "LrintOp"> {
+  let summary = "Rounds floating-point to long integer using current rounding mode";
+  let description = [{
+    `cir.lrint` rounds a floating-point value to the nearest integer value
+    using the current rounding mode and returns the result as a `long`.
+  }];
+}
+
+def CIR_LlrintOp : CIR_UnaryFPToIntBuiltinOp<"llrint", "LlrintOp"> {
+  let summary = "Rounds floating-point to long long integer using current rounding mode";
+  let description = [{
+    `cir.llrint` rounds a floating-point value to the nearest integer value
+    using the current rounding mode and returns the result as a `long long`.
+  }];
+}
 
 class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
     : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
@@ -5354,14 +5385,69 @@ class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   let llvmOp = llvmOpName;
 }
 
-def CIR_CopysignOp : CIR_BinaryFPToFPBuiltinOp<"copysign", "CopySignOp">;
-def CIR_FMaxNumOp : CIR_BinaryFPToFPBuiltinOp<"fmaxnum", "MaxNumOp">;
-def CIR_FMaximumOp : CIR_BinaryFPToFPBuiltinOp<"fmaximum", "MaximumOp">;
-def CIR_FMinNumOp : CIR_BinaryFPToFPBuiltinOp<"fminnum", "MinNumOp">;
-def CIR_FMinimumOp : CIR_BinaryFPToFPBuiltinOp<"fminimum", "MinimumOp">;
-def CIR_FModOp : CIR_BinaryFPToFPBuiltinOp<"fmod", "FRemOp">;
-def CIR_PowOp : CIR_BinaryFPToFPBuiltinOp<"pow", "PowOp">;
-def CIR_ATan2Op : CIR_BinaryFPToFPBuiltinOp<"atan2", "ATan2Op">;
+def CIR_CopysignOp : CIR_BinaryFPToFPBuiltinOp<"copysign", "CopySignOp"> {
+  let summary = "Copies the sign of a floating-point value";
+  let description = [{
+    `cir.copysign` returns a value with the magnitude of the first operand
+    and the sign of the second operand.
+  }];
+}
+
+def CIR_FMaxNumOp : CIR_BinaryFPToFPBuiltinOp<"fmaxnum", "MaxNumOp"> {
+  let summary = "Returns the larger of two floating-point values";
+  let description = [{
+    `cir.fmaxnum` returns the larger of its two operands. If one operand is
+    NaN, the other operand is returned.
+  }];
+}
+
+def CIR_FMaximumOp : CIR_BinaryFPToFPBuiltinOp<"fmaximum", "MaximumOp"> {
+  let summary = "Returns the larger of two floating-point values (IEEE 754-2019)";
+  let description = [{
+    `cir.fmaximum` returns the larger of its two operands according to
+    IEEE 754-2019 semantics. If either operand is NaN, NaN is returned.
+  }];
+}
+
+def CIR_FMinNumOp : CIR_BinaryFPToFPBuiltinOp<"fminnum", "MinNumOp"> {
+  let summary = "Returns the smaller of two floating-point values";
+  let description = [{
+    `cir.fminnum` returns the smaller of its two operands. If one operand is
+    NaN, the other operand is returned.
+  }];
+}
+
+def CIR_FMinimumOp : CIR_BinaryFPToFPBuiltinOp<"fminimum", "MinimumOp"> {
+  let summary = "Returns the smaller of two floating-point values (IEEE 754-2019)";
+  let description = [{
+    `cir.fminimum` returns the smaller of its two operands according to
+    IEEE 754-2019 semantics. If either operand is NaN, NaN is returned.
+  }];
+}
+
+def CIR_FModOp : CIR_BinaryFPToFPBuiltinOp<"fmod", "FRemOp"> {
+  let summary = "Computes the floating-point remainder";
+  let description = [{
+    `cir.fmod` computes the floating-point remainder of dividing the first
+    operand by the second operand.
+  }];
+}
+
+def CIR_PowOp : CIR_BinaryFPToFPBuiltinOp<"pow", "PowOp"> {
+  let summary = "Computes the power of a floating-point value";
+  let description = [{
+    `cir.pow` computes the first operand raised to the power of the second
+    operand.
+  }];
+}
+
+def CIR_ATan2Op : CIR_BinaryFPToFPBuiltinOp<"atan2", "ATan2Op"> {
+  let summary = "Computes the arc tangent of y/x";
+  let description = [{
+    `cir.atan2` computes the arc tangent of the first operand divided by the
+    second operand, using the signs of both to determine the quadrant.
+  }];
+}
 
 //===----------------------------------------------------------------------===//
 // Variadic Operations

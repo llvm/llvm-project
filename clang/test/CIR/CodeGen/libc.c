@@ -46,7 +46,7 @@ float testFabsf(float x) {
 int abs(int);
 int testAbs(int x) {
   return abs(x);
-  // CHECK: cir.abs %{{.+}} poison : !s32i
+  // CHECK: cir.abs %{{.+}} min_is_poison : !s32i
   // LLVM: %{{.+}} = call i32 @llvm.abs.i32(i32 %{{.+}}, i1 true)
   // CIR_NO_POISON: cir.abs %{{.+}} : !s32i
   // LLVM_NO_POISON: %{{.+}} = call i32 @llvm.abs.i32(i32 %{{.+}}, i1 false)
@@ -55,7 +55,7 @@ int testAbs(int x) {
 long labs(long);
 long testLabs(long x) {
   return labs(x);
-  // CHECK: cir.abs %{{.+}} poison : !s64i
+  // CHECK: cir.abs %{{.+}} min_is_poison : !s64i
   // LLVM: %{{.+}} = call i64 @llvm.abs.i64(i64 %{{.+}}, i1 true)
   // CIR_NO_POISON: cir.abs %{{.+}} : !s64i
   // LLVM_NO_POISON: %{{.+}} = call i64 @llvm.abs.i64(i64 %{{.+}}, i1 false)
@@ -64,7 +64,7 @@ long testLabs(long x) {
 long long llabs(long long);
 long long testLlabs(long long x) {
   return llabs(x);
-  // CHECK: cir.abs %{{.+}} poison : !s64i
+  // CHECK: cir.abs %{{.+}} min_is_poison : !s64i
   // LLVM: %{{.+}} = call i64 @llvm.abs.i64(i64 %{{.+}}, i1 true)
   // CIR_NO_POISON: cir.abs %{{.+}} : !s64i
   // LLVM_NO_POISON: %{{.+}} = call i64 @llvm.abs.i64(i64 %{{.+}}, i1 false)
