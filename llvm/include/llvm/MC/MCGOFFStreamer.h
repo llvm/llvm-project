@@ -9,6 +9,7 @@
 #ifndef LLVM_MC_MCGOFFSTREAMER_H
 #define LLVM_MC_MCGOFFSTREAMER_H
 
+#include "llvm/include/llvm/Support/Compiler.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCObjectWriter.h"
 
@@ -16,7 +17,7 @@ namespace llvm {
 class GOFFObjectWriter;
 class MCSymbolGOFF;
 
-class MCGOFFStreamer : public MCObjectStreamer {
+class LLVM_ABI MCGOFFStreamer : public MCObjectStreamer {
 
 public:
   MCGOFFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,

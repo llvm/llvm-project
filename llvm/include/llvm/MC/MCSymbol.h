@@ -13,6 +13,7 @@
 #ifndef LLVM_MC_MCSYMBOL_H
 #define LLVM_MC_MCSYMBOL_H
 
+#include "llvm/include/llvm/Support/Compiler.h"
 #include "llvm/ADT/StringMapEntry.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCExpr.h"
@@ -383,7 +384,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const MCSymbol &Sym) {
   return OS;
 }
 
-bool isRangeRelaxable(const MCSymbol *Begin, const MCSymbol *End);
+LLVM_ABI bool isRangeRelaxable(const MCSymbol *Begin, const MCSymbol *End);
 
 } // end namespace llvm
 
