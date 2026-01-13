@@ -161,11 +161,9 @@ struct VPlanTransforms {
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes. Returns false if any VPInstructions could not be converted
   /// to a wide recipe if needed.
-  LLVM_ABI_FOR_TEST static bool tryToConvertVPInstructionsToVPRecipes(
-      VPlan &Plan,
-      function_ref<const InductionDescriptor *(PHINode *)>
-          GetIntOrFpInductionDescriptor,
-      const TargetLibraryInfo &TLI);
+  LLVM_ABI_FOR_TEST static bool
+  tryToConvertVPInstructionsToVPRecipes(VPlan &Plan,
+                                        const TargetLibraryInfo &TLI);
 
   /// Try to legalize reductions with multiple in-loop uses. Currently only
   /// min/max reductions used by FindLastIV reductions are supported. Otherwise
