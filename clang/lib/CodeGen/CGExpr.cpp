@@ -6829,7 +6829,8 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
   //
   // This is used for the indirect function case, virtual function case is
   // handled in ItaniumCXXABI.cpp
-  if (getLangOpts().OpenMPIsTargetDevice && CGM.OMPTargetCalls.contains(E)) {
+  if (getLangOpts().OpenMPIsTargetDevice &&
+      getContext().OMPTargetCalls.contains(E)) {
     auto *PtrTy = CGM.VoidPtrTy;
     llvm::Type *RtlFnArgs[] = {PtrTy};
     llvm::FunctionCallee DeviceRtlFn = CGM.CreateRuntimeFunction(

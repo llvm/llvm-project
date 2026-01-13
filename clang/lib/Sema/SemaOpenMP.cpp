@@ -7360,8 +7360,14 @@ ExprResult SemaOpenMP::ActOnOpenMPCall(ExprResult Call, Scope *Scope,
     return Call;
 
   FunctionDecl *CalleeFnDecl = CE->getDirectCallee();
-  if (!CalleeFnDecl)
+
+  // Mark indirect calls inside target regions, to allow for insertion of
+  // __llvm_omp_indirect_call_lookup calls during codegen.
+  if (!CalleeFnDecl) {
+    if (isInOpenMPTargetExecutionDirective())
+      getASTContext().OMPTargetCalls.insert(CE);
     return Call;
+  }
 
   if (getLangOpts().OpenMP >= 50 && getLangOpts().OpenMP <= 60 &&
       CalleeFnDecl->getIdentifier() &&

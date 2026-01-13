@@ -22,7 +22,6 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/OpenMPClause.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/DiagnosticFrontend.h"
@@ -6343,22 +6342,6 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
     llvm::Function *&OutlinedFn, llvm::Constant *&OutlinedFnID,
     bool IsOffloadEntry, const RegionCodeGenTy &CodeGen) {
 
-  class OMPTargetCallCollector
-      : public RecursiveASTVisitor<OMPTargetCallCollector> {
-  public:
-    OMPTargetCallCollector(llvm::SmallPtrSetImpl<const CallExpr *> &TargetCalls)
-        : TargetCalls(TargetCalls) {}
-
-    bool VisitCallExpr(CallExpr *CE) {
-      if (!CE->getDirectCallee())
-        TargetCalls.insert(CE);
-      return true;
-    }
-
-  private:
-    llvm::SmallPtrSetImpl<const CallExpr *> &TargetCalls;
-  };
-
   llvm::TargetRegionEntryInfo EntryInfo =
       getEntryInfoFromPresumedLoc(CGM, OMPBuilder, D.getBeginLoc(), ParentName);
 
@@ -6367,15 +6350,6 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
       [&CGF, &D, &CodeGen](StringRef EntryFnName) {
         const CapturedStmt &CS = *D.getCapturedStmt(OMPD_target);
 
-        // Search Clang AST within "omp target" region for CallExprs.
-        // Store them in the set OMPTargetCalls (kept by CodeGenModule).
-        // This is used for the translation of indirect function calls.
-        const auto &LangOpts = CGF.getLangOpts();
-        if (LangOpts.OpenMPIsTargetDevice) {
-          // Search AST for target "CallExpr"s of "OMPTargetAutoLookup".
-          OMPTargetCallCollector Visitor(CGF.CGM.OMPTargetCalls);
-          Visitor.TraverseStmt(const_cast<Stmt *>(CS.getCapturedStmt()));
-        }
 
         CGOpenMPTargetRegionInfo CGInfo(CS, CodeGen, EntryFnName);
         CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
