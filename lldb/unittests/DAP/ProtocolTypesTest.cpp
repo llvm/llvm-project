@@ -1137,7 +1137,7 @@ TEST(ProtocolTypesTest, ExceptionBreakMode) {
        {ExceptionBreakMode::eExceptionBreakModeUnhandled, "unhandled"},
        {ExceptionBreakMode::eExceptionBreakModeUserUnhandled, "userUnhandled"}};
 
-  for (const auto [value, expected] : test_cases) {
+  for (const auto &[value, expected] : test_cases) {
     json::Value const serialized = toJSON(value);
     ASSERT_EQ(serialized.kind(), llvm::json::Value::Kind::String);
     EXPECT_EQ(serialized.getAsString(), expected);
