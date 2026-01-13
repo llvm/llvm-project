@@ -725,6 +725,9 @@ LoongArch Support
 ^^^^^^^^^^^^^^^^^
 - Enable linker relaxation by default for loongarch64.
 
+- DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`
+  to be used together when building for the LoongArch platform.
+
 RISC-V Support
 ^^^^^^^^^^^^^^
 
