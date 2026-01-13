@@ -101,7 +101,7 @@ bool SyntheticChildren::IsScripted() { return false; }
 
 std::string SyntheticChildren::GetDescription() { return ""; }
 
-SyntheticChildrenFrontEnd::AutoPointer
+SyntheticChildrenFrontEnd::UniquePointer
 SyntheticChildren::GetFrontEnd(ValueObject &backend) {
   return nullptr;
 }

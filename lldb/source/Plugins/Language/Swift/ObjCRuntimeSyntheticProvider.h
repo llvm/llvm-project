@@ -67,9 +67,9 @@ public:
     const FrontEnd &operator=(const FrontEnd &) = delete;
   };
 
-  virtual SyntheticChildrenFrontEnd::AutoPointer
+  virtual SyntheticChildrenFrontEnd::UniquePointer
   GetFrontEnd(ValueObject &backend) override {
-    return SyntheticChildrenFrontEnd::AutoPointer(new FrontEnd(this, backend));
+    return SyntheticChildrenFrontEnd::UniquePointer(new FrontEnd(this, backend));
   }
 
 private:

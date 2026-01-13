@@ -976,7 +976,7 @@ public:
   ValueObjectWrapperSyntheticChildren(ValueObjectSP valobj, const Flags &flags)
       : SyntheticChildren(flags), m_valobj(valobj) {}
 
-  SyntheticChildrenFrontEnd::AutoPointer
+  SyntheticChildrenFrontEnd::UniquePointer
   GetFrontEnd(ValueObject &backend) override {
     if (!m_valobj)
       return nullptr;
