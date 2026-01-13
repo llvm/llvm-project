@@ -49,38 +49,38 @@
                         </details>
                     </li>
                     {{/HasProtectedMembers}}
-                    {{#HasPublicFunctions}}
+                    {{#HasPublicMethods}}
                     <li>
                         <details open>
                             <summary class="sidebar-section">
-                                <a class="sidebar-item" href="#PublicMethods">Public Method</a>
+                                <a class="sidebar-item" href="#PublicMethods">Public Methods</a>
                             </summary>
                             <ul>
-                                {{#PublicFunctions}}
+                                {{#PublicMethods}}
                                 <li class="sidebar-item-container">
                                     <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
                                 </li>
-                                {{/PublicFunctions}}
+                                {{/PublicMethods}}
                             </ul>
                         </details>
                     </li>
-                    {{/HasPublicFunctions}}
-                    {{#HasProtectedFunctions}}
+                    {{/HasPublicMethods}}
+                    {{#HasProtectedMethods}}
                     <li>
                         <details open>
                             <summary class="sidebar-section">
                                 <a class="sidebar-item" href="#ProtectedMethods">Protected Methods</a>
                             </summary>
                             <ul>
-                                {{#ProtectedFunctions}}
+                                {{#ProtectedMethods}}
                                 <li class="sidebar-item-container">
                                     <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
                                 </li>
-                                {{/ProtectedFunctions}}
+                                {{/ProtectedMethods}}
                             </ul>
                         </details>
                     </li>
-                    {{/HasProtectedFunctions}}
+                    {{/HasProtectedMethods}}
                     {{#HasEnums}}
                     <li>
                         <details open>
@@ -117,7 +117,7 @@
                     <li>
                         <details open>
                             <summary class="sidebar-section">
-                                <a class="sidebar-item" href="#Classes">Inner Classes</a>
+                                <a class="sidebar-item" href="#Records">Records</a>
                             </summary>
                             <ul>
                                 {{#Records}}
@@ -144,7 +144,7 @@
                             </ul>
                         </details>
                     </li>
-                    {{/HasRecords}}
+                    {{/HasFriends}}
                 </ul>
             </div>
             <div class="resizer" id="resizer"></div>
@@ -172,11 +172,6 @@
                         {{#PublicMembers}}
                         <div id="{{Name}}" class="delimiter-container">
                             <pre><code class="language-cpp code-clang-doc" >{{#IsStatic}}static {{/IsStatic}}{{Type}} {{Name}}</code></pre>
-                            {{#MemberComments}}
-                            <div>
-                                {{>Comments}}
-                            </div>
-                            {{/MemberComments}}
                         </div>
                         {{/PublicMembers}}
                     </div>
@@ -194,24 +189,24 @@
                     </div>
                 </section>
                 {{/HasProtectedMembers}}
-                {{#HasPublicFunctions}}
+                {{#HasPublicMethods}}
                 <section id="PublicMethods" class="section-container">
                     <h2>Public Methods</h2>
-                    {{#PublicFunctions}}
+                    {{#PublicMethods}}
                     {{>FunctionPartial}}
-                    {{/PublicFunctions}}
+                    {{/PublicMethods}}
                 </section>
-                {{/PublicFunctions}}
-                {{#HasProtectedFunctions}}
+                {{/HasPublicMethods}}
+                {{#HasProtectedMethods}}
                 <section id="ProtectedMethods" class="section-container">
                     <h2>Protected Methods</h2>
                     <div>
-                        {{#ProtectedFunctions}}
+                        {{#ProtectedMethods}}
                         {{>FunctionPartial}}
-                        {{/ProtectedFunctions}}
+                        {{/ProtectedMethods}}
                     </div>
                 </section>
-                {{/HasProtectedFunctions}}
+                {{/HasProtectedMethods}}
                 {{#HasEnums}}
                 <section id="Enums" class="section-container">
                     <h2>Enumerations</h2>
@@ -221,8 +216,8 @@
                 </section>
                 {{/HasEnums}}
                 {{#HasRecords}}
-                <section id="Classes" class="section-container">
-                    <h2>Inner Classes</h2>
+                <section id="Records" class="section-container">
+                    <h2>Records</h2>
                     <ul class="class-container">
                         {{#Records}}
                         <li id="{{USR}}" style="max-height: 40px;">
@@ -256,9 +251,6 @@
                         {{^IsClass}}
                         <pre><code class="language-cpp code-clang-doc">{{ReturnType.Name}} {{Name}}{{#Template}}{{#Specialization}}&lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;{{/Specialization}}{{/Template}} ({{#Params}}{{Type.QualName}} {{Name}}{{^End}}, {{/End}}{{/Params}})</code></pre>
                         {{/IsClass}}
-                        {{#.Description}}
-                        {{>Comments}}
-                        {{/.Description}}
                     </div>
                     {{/Friends}}
                 </section>

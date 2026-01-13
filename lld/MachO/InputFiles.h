@@ -45,7 +45,7 @@ class ConcatInputSection;
 class Symbol;
 class Defined;
 class AliasSymbol;
-struct Reloc;
+struct Relocation;
 enum class RefState : uint8_t;
 
 // If --reproduce option is given, all input files are written

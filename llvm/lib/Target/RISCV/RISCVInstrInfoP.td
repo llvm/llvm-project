@@ -140,14 +140,13 @@ class RVPNarrowingBase<bits<3> f, bit r, bits<4> funct4, dag outs, dag ins,
 }
 
 // Common base for pair ops (non-widening nor narrowing)
-class RVPPairBase<bits<3> f, bit r, bit direction, dag outs, dag ins,
+class RVPPairBase<bits<4> f, bit direction, dag outs, dag ins,
                   string opcodestr, string argstr>
   : RVInst<outs, ins, opcodestr, argstr, [], InstFormatOther> {
   bits<5> rs1;
   bits<5> rd;
 
-  let Inst{30-28} = f;
-  let Inst{27}    = r;
+  let Inst{30-27} = f;
   let Inst{19-16} = rs1{4-1};
   let Inst{15}    = direction;
   let Inst{14-12} = 0b110;
@@ -157,9 +156,9 @@ class RVPPairBase<bits<3> f, bit r, bit direction, dag outs, dag ins,
 }
 
 // Common base for pair binary ops
-class RVPPairBinaryBase_rr<bits<3> f, bit r, bits<2> w, bit pack, bit direction,
+class RVPPairBinaryBase_rr<bits<4> f, bits<2> w, bit pack, bit direction,
                            string opcodestr>
-    : RVPPairBase<f, r, direction, (outs GPRPairRV32:$rd),
+    : RVPPairBase<f, direction, (outs GPRPairRV32:$rd),
                   (ins GPRPairRV32:$rs1, GPRPairRV32:$rs2), opcodestr,
                   "$rd, $rs1, $rs2"> {
   bits<5> rs2;
@@ -290,7 +289,7 @@ class RVPNarrowingShiftB_ri<bits<3> f, string opcodestr>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPPairShift_ri<bits<3> f, string opcodestr, Operand ImmType, 
                       bit direction>
-    : RVPPairBase<f, 0b0, direction, (outs GPRPairRV32:$rd),
+    : RVPPairBase<{f, 0b0}, direction, (outs GPRPairRV32:$rd),
                   (ins GPRPairRV32:$rs1, ImmType:$shamt), opcodestr,
                   "$rd, $rs1, $shamt"> {
   let Inst{31}    = 0b0;
@@ -342,7 +341,7 @@ class RVPWideningShift_rr<bits<3> f, bits<2> w, string opcodestr>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPPairShift_rr<bits<3> f, bits<2> w, string opcodestr,
                       bit direction = 0b0>
-    : RVPPairBase<f, 0b1, direction, (outs GPRPairRV32:$rd),
+    : RVPPairBase<{f, 0b1}, direction, (outs GPRPairRV32:$rd),
                   (ins GPRPairRV32:$rs1, GPR:$rs2), opcodestr,
                   "$rd, $rs1, $rs2"> {
   bits<5> rs2;
@@ -362,7 +361,7 @@ class RVPUnary_ri<bits<2> w, bits<5> uf, string opcodestr>
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPPairUnary_r<bits<2> w, bits<5> uf, string opcodestr>
-    : RVPPairBase<0b110, 0b0, 0b0, (outs GPRPairRV32:$rd),
+    : RVPPairBase<0b1100, 0b0, (outs GPRPairRV32:$rd),
                   (ins GPRPairRV32:$rs1), opcodestr, "$rd, $rs1"> {
   let Inst{31}    = 0b0;
   let Inst{26-25} = w;
@@ -415,22 +414,22 @@ class RVPNarrowingBinary_rr<bits<3> f, bits<2> w, string opcodestr>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPPairBinary_rr<bits<4> f, bits<2> w, string opcodestr,
                        bit Commutable = 0>
-    : RVPPairBinaryBase_rr<f{3-1}, f{0}, w, 0b0, 0b0, opcodestr> {
+    : RVPPairBinaryBase_rr<f, w, 0b0, 0b0, opcodestr> {
   let isCommutable = Commutable;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPPairBinaryShift_rr<bits<3> f, bits<2> w, string opcodestr>
-    : RVPPairBinaryBase_rr<f, 0b0, w, 0b1, 0b0, opcodestr>;
+    : RVPPairBinaryBase_rr<{f, 0b0}, w, 0b1, 0b0, opcodestr>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPPairBinaryPack_rr<bits<3> f, bits<2> w, string opcodestr>
-    : RVPPairBinaryBase_rr<f, 0b0, w, 0b0, 0b1, opcodestr>;
+    : RVPPairBinaryBase_rr<{f, 0b0}, w, 0b0, 0b1, opcodestr>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPPairBinaryExchanged_rr<bits<4> f, bits<2> w, string opcodestr,
                                 bit Commutable = 0>
-    : RVPPairBinaryBase_rr<f{3-1}, f{0}, w, 0b1, 0b1, opcodestr> {
+    : RVPPairBinaryBase_rr<f, w, 0b1, 0b1, opcodestr> {
   let isCommutable = Commutable;
 }
 
