@@ -133,14 +133,9 @@ public:
 
 class X86SpeculativeLoadHardeningImpl {
 public:
-  X86SpeculativeLoadHardeningImpl(MachineFunction &MFn) : MF(MFn) {
-    Subtarget = &MF.getSubtarget<X86Subtarget>();
-    MRI = &MF.getRegInfo();
-    TII = Subtarget->getInstrInfo();
-    TRI = Subtarget->getRegisterInfo();
-  }
+  X86SpeculativeLoadHardeningImpl() = default;
 
-  bool run();
+  bool run(MachineFunction &MF);
 
 private:
   /// The information about a block's conditional terminators needed to trace
@@ -166,8 +161,6 @@ private:
     PredState(MachineFunction &MF, const TargetRegisterClass *RC)
         : RC(RC), SSA(MF) {}
   };
-
-  MachineFunction &MF;
 
   const X86Subtarget *Subtarget = nullptr;
   MachineRegisterInfo *MRI = nullptr;
@@ -230,8 +223,8 @@ bool X86SpeculativeLoadHardeningPass::runOnMachineFunction(
   LLVM_DEBUG(dbgs() << "********** " << getPassName() << " : " << MF.getName()
                     << " **********\n");
 
-  X86SpeculativeLoadHardeningImpl Impl(MF);
-  bool ret = Impl.run();
+  X86SpeculativeLoadHardeningImpl Impl;
+  bool ret = Impl.run(MF);
   LLVM_DEBUG(dbgs() << "Final speculative load hardened function:\n"; MF.dump();
              dbgs() << "\n"; MF.verify(this));
   return ret;
@@ -418,12 +411,17 @@ static bool hasVulnerableLoad(MachineFunction &MF) {
   return false;
 }
 
-bool X86SpeculativeLoadHardeningImpl::run() {
+bool X86SpeculativeLoadHardeningImpl::run(MachineFunction &MF) {
   // Only run if this pass is forced enabled or we detect the relevant function
   // attribute requesting SLH.
   if (!EnableSpeculativeLoadHardening &&
       !MF.getFunction().hasFnAttribute(Attribute::SpeculativeLoadHardening))
     return false;
+
+  Subtarget = &MF.getSubtarget<X86Subtarget>();
+  MRI = &MF.getRegInfo();
+  TII = Subtarget->getInstrInfo();
+  TRI = Subtarget->getRegisterInfo();
 
   // FIXME: Support for 32-bit.
   PS.emplace(MF, &X86::GR64_NOSPRegClass);
