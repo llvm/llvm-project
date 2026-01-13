@@ -154,8 +154,8 @@ Variables::GetScopeKind(const int64_t variablesReference) {
     return std::nullopt;
   }
 
-  auto scope_iter = m_frames.find(scope_kind_iter->second.second);
-  if (scope_iter == m_frames.end()) {
+  auto frames_iter = m_frames.find(scope_kind_iter->second.second);
+  if (frames_iter == m_frames.end()) {
     return std::nullopt;
   }
 
