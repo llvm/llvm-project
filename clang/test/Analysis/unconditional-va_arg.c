@@ -30,47 +30,53 @@ void log_message(const char *msg, ...) {
   va_end(va);
 }
 
-void simple(int fst, ...) {
-  // This function is not called in this test file.
+
+void never_called(int fst, ...) {
+  // This simple test function is not called in this test file.
   va_list va;
   va_start(va, fst);
   (void)va_arg(va, int); // expected-warning{{Unconditional use of va_arg()}}
-  // expected-note@-1 {{Calls to 'simple' always reach this va_arg() expression, so calling 'simple' with no variadic arguments would be undefined behavior}}
+  // expected-note@-1 {{Calls to 'never_called' always reach this va_arg() expression, so calling 'never_called' with no variadic arguments would be undefined behavior}}
   va_end(va);
 }
 
-void used_with_varargs(int fst, ...) {
-  // This function is identical to simple(), but it is used and the call passes
-  // several variadic arguments.
+
+void called_with_varargs(int fst, ...) {
+  // This function is identical to never_called(), but it is called by another
+  // function (which will serve as the entrypoint) and the call passes several
+  // variadic arguments. The diagnostic is still raised.
   va_list va;
   va_start(va, fst);
   (void)va_arg(va, int); // expected-warning{{Unconditional use of va_arg()}}
-  // expected-note@-1 {{Calls to 'used_with_varargs' always reach this va_arg() expression, so calling 'used_with_varargs' with no variadic arguments would be undefined behavior}}
+  // expected-note@-1 {{Calls to 'called_with_varargs' always reach this va_arg() expression, so calling 'called_with_varargs' with no variadic arguments would be undefined behavior}}
   va_end(va);
 }
 
 void caller1(void) {
-  used_with_varargs(1, 2, 3, 4);
+  called_with_varargs(1, 2, 3, 4);
 }
 
-void used_without_varargs(int fst, ...) {
-  // This function is identical to simple(), but it is used and the call passes
-  // no variadic arguments.
+
+void called_without_varargs(int fst, ...) {
+  // This function is identical to never_called(), but it is called by another
+  // function (which will serve as the entrypoint) and the call passes no
+  // variadic arguments. The diagnostic is still raised.
   va_list va;
   va_start(va, fst);
   (void)va_arg(va, int); // expected-warning{{Unconditional use of va_arg()}}
-  // expected-note@-1 {{Calls to 'used_without_varargs' always reach this va_arg() expression, so calling 'used_without_varargs' with no variadic arguments would be undefined behavior}}
+  // expected-note@-1 {{Calls to 'called_without_varargs' always reach this va_arg() expression, so calling 'called_without_varargs' with no variadic arguments would be undefined behavior}}
   // FIXME: Here the checker should mention that this function is _actually_
   // called with no variadic arguments.
   va_end(va);
 }
 
 void caller2(void) {
-  used_without_varargs(1);
+  called_without_varargs(1);
 }
 
+
 void multiple_va_arg_calls(int fst, ...) {
-  // This function is similar to simple() but calls va_arg() multiple times. To
+  // This function function unconditionally calls va_arg() multiple times. To
   // avoid spamming the user, only the first use is reported.
   va_list va;
   va_start(va, fst);
@@ -94,6 +100,7 @@ void has_conditional_return(int fst, ...) {
   va_end(va);
 }
 
+
 void has_conditional_logic(int fst, ...) {
   // As static analyzer only follows one execution path, it cannot see that
   // va_arg() is always executed in this function. Theoretically it would be
@@ -107,9 +114,10 @@ void has_conditional_logic(int fst, ...) {
   va_end(va);
 }
 
+
 void caller_has_conditional_logic(int fst, ...) {
-  // This function is identical to simple(), but it is used by a function that
-  // performs a state split before the call.
+  // This function is identical to never_called(), but it is used by a function
+  // that performs a state split before the call.
   // This test validates that state splits _before_ the variadic call (which
   // are irrelevant) do not influence the report creation. This is basically a
   // workaround for the fact that not all functions are entrypoints and before
@@ -128,6 +136,20 @@ void caller_with_conditional_logic(int flag) {
 }
 
 
+int has_shortcircuiting_operator(int fst, ...) {
+  // In addition to 'if' and similar statements, ternary operators and
+  // shortcircuiting logical operators can also ensure that the use of va_arg()
+  // is not unconditional. (These all behave identically in the BranchCondition
+  // callback, so this simple testcase is mostly for documentation purposes.)
+  va_list va;
+  int x;
+  va_start(va, fst);
+  x = fst || va_arg(va, int); // no-warning
+  va_end(va);
+  return x;
+}
+
+
 void validate_argument(int fst) {
   if (fst <= 0) {
     printf("Negative first argument is illegal: %d!\n", fst);
@@ -136,16 +158,17 @@ void validate_argument(int fst) {
 }
 
 void noreturn_in_function(int fst, ...) {
-  // This function is very similar to simple(), but calls a function which may
-  // call the noreturn function abort() before reaching the va_arg() call, so
-  // the checker doesn't produce a warning. This is important e.g. for cases
-  // when a function uses assertions to mark preconditions.
+  // This function calls a function which may call the noreturn function
+  // abort() before reaching the va_arg() call, so the checker doesn't produce
+  // a warning. This behavior is important e.g. for cases when a function uses
+  // assertions to mark preconditions.
   va_list va;
   validate_argument(fst);
   va_start(va, fst);
   (void)va_arg(va, int); // no-warning
   va_end(va);
 }
+
 
 void print_negative(int fst) {
   if (fst <= 0) {
@@ -164,6 +187,7 @@ void conditional_in_function(int fst, ...) {
   (void)va_arg(va, int); // no-warning
   va_end(va);
 }
+
 
 void defined_in_different_tu(int);
 
