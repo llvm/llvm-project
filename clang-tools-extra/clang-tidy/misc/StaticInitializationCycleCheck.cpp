@@ -56,10 +56,6 @@ struct VarUseRecord {
   operator VarUseNode *() const { return Node; }
 };
 
-inline bool operator==(const VarUseRecord &LHS, const VarUseRecord &RHS) {
-  return LHS.Node == RHS.Node;
-}
-
 // One node in the variable usage graph.
 // If 'D' is a VarDecl:
 // 'Uses' contains all static variables and global function calls in the
