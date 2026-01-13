@@ -2466,8 +2466,6 @@ genScanOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   if (loopWrappers.size() > 1)
     TODO(loc, "unsupported composite");
   mlir::omp::WsloopOp wsLoopOp = llvm::cast<mlir::omp::WsloopOp>(loopWrapperOp);
-  // mlir::omp::WsloopOp wsLoopOp =
-  // scanOp->getParentOfType<mlir::omp::WsloopOp>();
   bool isNested =
       (loopNestOp.getNumLoops() > 1) ||
       (wsLoopOp && (wsLoopOp->getParentOfType<mlir::omp::WsloopOp>()));
