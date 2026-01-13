@@ -409,8 +409,8 @@ void FactsGenerator::handleTemporaryDtor(
   // Iterate through all loans to see if any expire.
   for (const auto *Loan : FactMgr.getLoanMgr().getLoans()) {
     if (const auto *PL = dyn_cast<PathLoan>(Loan)) {
-      // Check if the loan is for a temporary materialization and if that storage
-      // location is the one being destructed.
+      // Check if the loan is for a temporary materialization and if that
+      // storage location is the one being destructed.
       const AccessPath &AP = PL->getAccessPath();
       const MaterializeTemporaryExpr *Path = AP.getAsMaterializeTemporaryExpr();
       if (!Path)
