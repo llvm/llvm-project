@@ -2070,22 +2070,22 @@ func.func @test_rfft2d(%arg0: tensor<13x8x16xbf16>) -> (tensor<13x8x9xbf16>, ten
 
 // -----
 
-func.func @test_slice_shape_non_const_start(%arg0: tensor<1xi32>) -> !tosa.shape<3> {
+func.func @test_slice_shape_non_const_start(%arg0: tensor<1xi32>) {
   %0 = tosa.const_shape {values = dense<[4, 5, 6, 7, 8, 9]> : tensor<6xindex>} : () -> !tosa.shape<6>
   %2 = "tosa.const"() {values = dense<3> : tensor<1xi32>} : () -> tensor<1xi32>
   // expected-error@+1 {{'tosa.slice_shape' op expected compile time resolvable constant, but got variable value for operand #1}}
   %3 = tosa.slice_shape %0, %arg0, %2 : (!tosa.shape<6>, tensor<1xi32>, tensor<1xi32>) -> !tosa.shape<3>
-  return %3 : !tosa.shape<3>
+  return
 }
 
 // -----
 
-func.func @test_slice_shape_non_const_size(%arg0: tensor<1xi32>) -> !tosa.shape<3> {
+func.func @test_slice_shape_non_const_size(%arg0: tensor<1xi32>) {
   %0 = tosa.const_shape {values = dense<[4, 5, 6, 7, 8, 9]> : tensor<6xindex>} : () -> !tosa.shape<6>
   %1 = "tosa.const"() {values = dense<3> : tensor<1xi32>} : () -> tensor<1xi32>
   // expected-error@+1 {{'tosa.slice_shape' op expected compile time resolvable constant, but got variable value for operand #2}}
   %3 = tosa.slice_shape %0, %1, %arg0 : (!tosa.shape<6>, tensor<1xi32>, tensor<1xi32>) -> !tosa.shape<3>
-  return %3 : !tosa.shape<3>
+  return
 }
 
 // -----
