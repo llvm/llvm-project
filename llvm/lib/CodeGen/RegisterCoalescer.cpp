@@ -2876,7 +2876,10 @@ JoinVals::ConflictResolution JoinVals::analyzeValue(unsigned ValNo,
         //
         // Clearing the valid lanes is deferred until it is sure this can be
         // erased.
-        V.ErasableImplicitDef = true;
+        // IMPLICIT_DEF can also be used to initialize the undef sub-parts
+        // of a tuple. We want to retain those IMPLICIT_DEFs.
+        if (DefMI->getOperand(0).getSubReg() == 0)
+          V.ErasableImplicitDef = true;
       }
     }
   }
@@ -2975,8 +2978,23 @@ JoinVals::ConflictResolution JoinVals::analyzeValue(unsigned ValNo,
     return CR_Replace;
 
   // Check for simple erasable conflicts.
-  if (DefMI->isImplicitDef())
+  if (DefMI->isImplicitDef()) {
+    // A subreg IMPLICIT_DEF that initializes an undef sublane of a tuple
+    // must not be erased if the other value has no overlapping lanes. Erasing
+    // it would leave the merged interval with sublane masks that have no
+    // definition.
+    if (DefMI->getOperand(0).getSubReg() && !SubRangeJoin &&
+        TrackSubRegLiveness && !OtherV.ErasableImplicitDef) {
+      LaneBitmask OtherLanes = Other.SubIdx
+                                   ? TRI->getSubRegIndexLaneMask(Other.SubIdx)
+                                   : LaneBitmask::getAll();
+      if ((OtherLanes & V.WriteLanes).none()) {
+        V.ValidLanes &= ~V.WriteLanes;
+        return CR_Replace;
+      }
+    }
     return CR_Erase;
+  }
 
   // Include the non-conflict where DefMI is a coalescable copy that kills
   // OtherVNI. We still want the copy erased and value numbers merged.
