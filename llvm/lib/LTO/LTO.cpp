@@ -1272,6 +1272,8 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
   if (StatsFile)
     PrintStatisticsJSON(StatsFile->os());
 
+  cleanup();
+
   return Result;
 }
 

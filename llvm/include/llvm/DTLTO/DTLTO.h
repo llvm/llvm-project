@@ -54,6 +54,9 @@ public:
 
   // Entry point for DTLTO archives support.
   LLVM_ABI virtual llvm::Error handleArchiveInputs() override;
+
+  // Remove the temporary DTLTO input files.
+  LLVM_ABI virtual void cleanup() override;
 };
 } // namespace lto
 } // namespace llvm
