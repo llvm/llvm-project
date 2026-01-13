@@ -61,9 +61,9 @@ public:
         !LinkSpecDecl->hasBraces())
       return true;
 
-    auto ExternCBlockBegin = LinkSpecDecl->getBeginLoc();
-    auto ExternCBlockEnd = LinkSpecDecl->getEndLoc();
-    auto IsWrapped = [=, &SM = SM](const IncludeMarker &Marker) -> bool {
+    const auto ExternCBlockBegin = LinkSpecDecl->getBeginLoc();
+    const auto ExternCBlockEnd = LinkSpecDecl->getEndLoc();
+    const auto IsWrapped = [=, &SM = SM](const IncludeMarker &Marker) -> bool {
       return SM.isBeforeInTranslationUnit(ExternCBlockBegin, Marker.DiagLoc) &&
              SM.isBeforeInTranslationUnit(Marker.DiagLoc, ExternCBlockEnd);
     };
@@ -183,7 +183,7 @@ void IncludeModernizePPCallbacks::InclusionDirective(
   // 2. Insert `using namespace std;` to the beginning of TU.
   // 3. Do nothing and let the user deal with the migration himself.
   const SourceLocation DiagLoc = FilenameRange.getBegin();
-  if (auto It = CStyledHeaderToCxx.find(FileName);
+  if (const auto It = CStyledHeaderToCxx.find(FileName);
       It != CStyledHeaderToCxx.end()) {
     IncludesToBeProcessed.emplace_back(IncludeMarker{
         It->second, FileName, FilenameRange.getAsRange(), DiagLoc});

@@ -288,7 +288,8 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
   if (hasRValueOverload(Ctor, ParamDecl))
     return;
 
-  auto Diag = diag(ParamDecl->getBeginLoc(), "pass by value and use std::move");
+  const auto Diag =
+      diag(ParamDecl->getBeginLoc(), "pass by value and use std::move");
 
   // If we received a `const&` type, we need to rewrite the function
   // declarations.
@@ -296,7 +297,7 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
     // Check if we can succesfully rewrite all declarations of the constructor.
     for (const ParmVarDecl *ParmDecl : collectParamDecls(Ctor, ParamDecl)) {
       const TypeLoc ParamTL = ParmDecl->getTypeSourceInfo()->getTypeLoc();
-      auto RefTL = ParamTL.getAs<ReferenceTypeLoc>();
+      const auto RefTL = ParamTL.getAs<ReferenceTypeLoc>();
       if (RefTL.isNull()) {
         // We cannot rewrite this instance. The type is probably hidden behind
         // some `typedef`. Do not offer a fix-it in this case.
@@ -306,7 +307,7 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
     // Rewrite all declarations.
     for (const ParmVarDecl *ParmDecl : collectParamDecls(Ctor, ParamDecl)) {
       const TypeLoc ParamTL = ParmDecl->getTypeSourceInfo()->getTypeLoc();
-      auto RefTL = ParamTL.getAs<ReferenceTypeLoc>();
+      const auto RefTL = ParamTL.getAs<ReferenceTypeLoc>();
 
       const TypeLoc ValueTL = RefTL.getPointeeLoc();
       const CharSourceRange TypeRange = CharSourceRange::getTokenRange(

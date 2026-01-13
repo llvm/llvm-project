@@ -199,7 +199,7 @@ void UnsafeFunctionsCheck::registerMatchers(MatchFinder *Finder) {
   if (ReportDefaultFunctions) {
     if (getLangOpts().C11) {
       // Matching functions with safe replacements only in Annex K.
-      auto FunctionNamesWithAnnexKReplacementMatcher = hasAnyName(
+      const auto FunctionNamesWithAnnexKReplacementMatcher = hasAnyName(
           "::bsearch", "::ctime", "::fopen", "::fprintf", "::freopen",
           "::fscanf", "::fwprintf", "::fwscanf", "::getenv", "::gmtime",
           "::localtime", "::mbsrtowcs", "::mbstowcs", "::memcpy", "::memmove",
@@ -220,7 +220,7 @@ void UnsafeFunctionsCheck::registerMatchers(MatchFinder *Finder) {
     }
 
     // Matching functions with replacements without Annex K.
-    auto FunctionNamesMatcher =
+    const auto FunctionNamesMatcher =
         hasAnyName("::asctime", "asctime_r", "::gets", "::rewind", "::setbuf");
     Finder->addMatcher(
         declRefExpr(
@@ -230,7 +230,7 @@ void UnsafeFunctionsCheck::registerMatchers(MatchFinder *Finder) {
 
     if (ReportMoreUnsafeFunctions) {
       // Matching functions with replacements without Annex K, at user request.
-      auto AdditionalFunctionNamesMatcher =
+      const auto AdditionalFunctionNamesMatcher =
           hasAnyName("::bcmp", "::bcopy", "::bzero", "::getpw", "::vfork");
       Finder->addMatcher(
           declRefExpr(to(functionDecl(AdditionalFunctionNamesMatcher)
@@ -247,7 +247,7 @@ void UnsafeFunctionsCheck::registerMatchers(MatchFinder *Finder) {
     for (const auto &Entry : CustomFunctions)
       FunctionNames.emplace_back(Entry.Name);
 
-    auto CustomFunctionsMatcher =
+    const auto CustomFunctionsMatcher =
         matchers::matchesAnyListedRegexName(FunctionNames);
 
     Finder->addMatcher(declRefExpr(to(functionDecl(CustomFunctionsMatcher)

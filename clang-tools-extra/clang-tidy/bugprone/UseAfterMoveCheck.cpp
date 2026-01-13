@@ -194,7 +194,7 @@ UseAfterMoveFinder::find(Stmt *CodeBlock, const Expr *MovingCall,
   CFG::BuildOptions Options;
   Options.AddImplicitDtors = true;
   Options.AddTemporaryDtors = true;
-  std::unique_ptr<CFG> TheCFG =
+  const std::unique_ptr<CFG> TheCFG =
       CFG::buildCFG(nullptr, CodeBlock, Context, Options);
   if (!TheCFG)
     return std::nullopt;
@@ -352,8 +352,8 @@ void UseAfterMoveFinder::getDeclRefs(
     if (!S)
       continue;
 
-    auto AddDeclRefs = [this, Block,
-                        DeclRefs](const ArrayRef<BoundNodes> Matches) {
+    const auto AddDeclRefs = [this, Block,
+                              DeclRefs](const ArrayRef<BoundNodes> Matches) {
       for (const auto &Match : Matches) {
         const auto *DeclRef = Match.getNodeAs<DeclRefExpr>("declref");
         const auto *Operator = Match.getNodeAs<CXXOperatorCallExpr>("operator");
@@ -366,9 +366,10 @@ void UseAfterMoveFinder::getDeclRefs(
       }
     };
 
-    auto DeclRefMatcher = declRefExpr(hasDeclaration(equalsNode(MovedVariable)),
-                                      unless(inDecltypeOrTemplateArg()))
-                              .bind("declref");
+    const auto DeclRefMatcher =
+        declRefExpr(hasDeclaration(equalsNode(MovedVariable)),
+                    unless(inDecltypeOrTemplateArg()))
+            .bind("declref");
 
     AddDeclRefs(match(traverse(TK_AsIs, findAll(DeclRefMatcher)), *S->getStmt(),
                       *Context));
@@ -481,11 +482,12 @@ void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
   // bool to tell callers whether it moved. Ignore std::move inside
   // try_emplace to avoid false positives as we don't track uses of
   // the bool.
-  auto TryEmplaceMatcher =
+  const auto TryEmplaceMatcher =
       cxxMemberCallExpr(callee(cxxMethodDecl(hasName("try_emplace"))));
-  auto Arg = declRefExpr().bind("arg");
-  auto IsMemberCallee = callee(functionDecl(unless(isStaticStorageClass())));
-  auto CallMoveMatcher =
+  const auto Arg = declRefExpr().bind("arg");
+  const auto IsMemberCallee =
+      callee(functionDecl(unless(isStaticStorageClass())));
+  const auto CallMoveMatcher =
       callExpr(callee(functionDecl(getNameMatcher(InvalidationFunctions))
                           .bind("move-decl")),
                anyOf(cxxMemberCallExpr(IsMemberCallee, on(Arg)),

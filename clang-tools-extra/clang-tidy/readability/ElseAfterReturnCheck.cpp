@@ -113,10 +113,10 @@ static bool containsDeclInScope(const Stmt *Node) {
 
 static void removeElseAndBrackets(DiagnosticBuilder &Diag, ASTContext &Context,
                                   const Stmt *Else, SourceLocation ElseLoc) {
-  auto Remap = [&](SourceLocation Loc) {
+  const auto Remap = [&](SourceLocation Loc) {
     return Context.getSourceManager().getExpansionLoc(Loc);
   };
-  auto TokLen = [&](SourceLocation Loc) {
+  const auto TokLen = [&](SourceLocation Loc) {
     return Lexer::MeasureTokenLength(Loc, Context.getSourceManager(),
                                      Context.getLangOpts());
   };
@@ -195,7 +195,7 @@ static bool hasPreprocessorBranchEndBetweenLocations(
 
   assert(ExpandedStartLoc < ExpandedEndLoc);
 
-  auto Iter = ConditionalBranchMap.find(SM.getFileID(ExpandedEndLoc));
+  const auto Iter = ConditionalBranchMap.find(SM.getFileID(ExpandedEndLoc));
 
   if (Iter == ConditionalBranchMap.end() || Iter->getSecond().empty())
     return false;

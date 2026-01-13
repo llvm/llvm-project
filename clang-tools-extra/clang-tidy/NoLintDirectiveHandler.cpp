@@ -356,13 +356,13 @@ bool NoLintDirectiveHandler::Impl::diagHasNoLint(
     return false;
 
   // Check if there's a NOLINT on this line.
-  auto ThisLine = getLineStartAndEnd(*Buffer, Pos);
+  const auto ThisLine = getLineStartAndEnd(*Buffer, Pos);
   if (lineHasNoLint(*Buffer, ThisLine, NoLintType::NoLint, DiagName))
     return true;
 
   // Check if there's a NOLINTNEXTLINE on the previous line.
   if (ThisLine.first > 0) {
-    auto PrevLine = getLineStartAndEnd(*Buffer, ThisLine.first - 1);
+    const auto PrevLine = getLineStartAndEnd(*Buffer, ThisLine.first - 1);
     if (lineHasNoLint(*Buffer, PrevLine, NoLintType::NoLintNextLine, DiagName))
       return true;
   }

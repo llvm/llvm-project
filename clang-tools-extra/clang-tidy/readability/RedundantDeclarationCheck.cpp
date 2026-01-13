@@ -82,7 +82,7 @@ void RedundantDeclarationCheck::check(const MatchFinder::MatchResult &Result) {
   const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
       D->getSourceRange().getEnd(), 0, SM, Result.Context->getLangOpts());
   {
-    auto Diag = diag(D->getLocation(), "redundant %0 declaration") << D;
+    const auto Diag = diag(D->getLocation(), "redundant %0 declaration") << D;
     if (!MultiVar && !DifferentHeaders) {
       SourceLocation BeginLoc;
       if (const auto *Extern =

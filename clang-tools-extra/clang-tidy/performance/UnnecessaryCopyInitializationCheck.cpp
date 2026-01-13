@@ -58,10 +58,11 @@ static void recordRemoval(const DeclStmt &Stmt, ASTContext &Context,
   std::optional<SourceLocation> PastNewLine =
       firstLocAfterNewLine(Stmt.getEndLoc(), SM);
   if (Tok && PastNewLine) {
-    auto BeforeFirstTokenAfterComment = Tok->getLocation().getLocWithOffset(-1);
+    const auto BeforeFirstTokenAfterComment =
+        Tok->getLocation().getLocWithOffset(-1);
     // Remove until the end of the line or the end of a trailing comment which
     // ever comes first.
-    auto End =
+    const auto End =
         SM.isBeforeInTranslationUnit(*PastNewLine, BeforeFirstTokenAfterComment)
             ? *PastNewLine
             : BeforeFirstTokenAfterComment;
@@ -120,7 +121,7 @@ AST_MATCHER_FUNCTION(StatementMatcher, isConstRefReturningFunctionCall) {
 
 AST_MATCHER_FUNCTION_P(StatementMatcher, initializerReturnsReferenceToConst,
                        std::vector<StringRef>, ExcludedContainerTypes) {
-  auto OldVarDeclRef =
+  const auto OldVarDeclRef =
       declRefExpr(to(varDecl(hasLocalStorage()).bind(OldVarDeclId)));
   return expr(
       anyOf(isConstRefReturningFunctionCall(),
@@ -162,7 +163,7 @@ static bool isInitializingVariableImmutable(
   if (!InitializingVar.isLocalVarDecl() || !InitializingVar.hasInit())
     return true;
 
-  auto Matches =
+  const auto Matches =
       match(initializerReturnsReferenceToConst(ExcludedContainerTypes),
             *InitializingVar.getInit(), Context);
   // The reference is initialized from a free function without arguments
@@ -188,7 +189,7 @@ static bool isVariableUnused(const VarDecl &Var, const Stmt &BlockStmt,
 
 static const SubstTemplateTypeParmType *
 getSubstitutedType(const QualType &Type, ASTContext &Context) {
-  auto Matches = match(
+  const auto Matches = match(
       qualType(anyOf(substTemplateTypeParmType().bind("subst"),
                      hasDescendant(substTemplateTypeParmType().bind("subst")))),
       Type, Context);
@@ -232,7 +233,7 @@ UnnecessaryCopyInitializationCheck::UnnecessaryCopyInitializationCheck(
           Options.get("ExcludedContainerTypes", ""))) {}
 
 void UnnecessaryCopyInitializationCheck::registerMatchers(MatchFinder *Finder) {
-  auto LocalVarCopiedFrom =
+  const auto LocalVarCopiedFrom =
       [this](const ast_matchers::internal::Matcher<Expr> &CopyCtorArg) {
         return compoundStmt(
                    forEachDescendant(

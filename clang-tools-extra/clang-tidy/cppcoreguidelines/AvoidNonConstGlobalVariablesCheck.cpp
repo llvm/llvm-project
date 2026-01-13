@@ -24,11 +24,11 @@ void AvoidNonConstGlobalVariablesCheck::registerMatchers(MatchFinder *Finder) {
   auto NamespaceMatcher = AllowInternalLinkage
                               ? namespaceDecl(unless(isAnonymous()))
                               : namespaceDecl();
-  auto GlobalContext =
+  const auto GlobalContext =
       varDecl(hasGlobalStorage(),
               hasDeclContext(anyOf(NamespaceMatcher, translationUnitDecl())));
 
-  auto GlobalVariable = varDecl(
+  const auto GlobalVariable = varDecl(
       GlobalContext,
       AllowInternalLinkage ? varDecl(unless(isStaticStorageClass()))
                            : varDecl(),
@@ -39,11 +39,11 @@ void AvoidNonConstGlobalVariablesCheck::registerMatchers(MatchFinder *Finder) {
           hasType(referenceType())))); // References can't be changed, only the
                                        // data they reference can be changed.
 
-  auto GlobalReferenceToNonConst =
+  const auto GlobalReferenceToNonConst =
       varDecl(GlobalContext, hasType(referenceType()),
               unless(hasType(references(qualType(isConstQualified())))));
 
-  auto GlobalPointerToNonConst = varDecl(
+  const auto GlobalPointerToNonConst = varDecl(
       GlobalContext, hasType(pointerType(pointee(unless(isConstQualified())))));
 
   Finder->addMatcher(GlobalVariable.bind("non-const_variable"), this);

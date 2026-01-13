@@ -49,7 +49,7 @@ void SimplifySubscriptExprCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   const auto *Member = Result.Nodes.getNodeAs<MemberExpr>("member");
-  auto DiagBuilder =
+  const auto DiagBuilder =
       diag(Member->getMemberLoc(),
            "accessing an element of the container does not require a call to "
            "'data()'; did you mean to use 'operator[]'?");

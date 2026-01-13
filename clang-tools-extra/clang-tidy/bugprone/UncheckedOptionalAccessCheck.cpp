@@ -27,8 +27,9 @@ static constexpr StringRef FuncID = "fun";
 void UncheckedOptionalAccessCheck::registerMatchers(MatchFinder *Finder) {
   using namespace ast_matchers;
 
-  auto HasOptionalCallDescendant = hasDescendant(callExpr(callee(cxxMethodDecl(
-      ofClass(UncheckedOptionalAccessModel::optionalClassDecl())))));
+  const auto HasOptionalCallDescendant =
+      hasDescendant(callExpr(callee(cxxMethodDecl(
+          ofClass(UncheckedOptionalAccessModel::optionalClassDecl())))));
   Finder->addMatcher(
       decl(anyOf(functionDecl(unless(isExpansionInSystemHeader()),
                               // FIXME: Remove the filter below when lambdas are

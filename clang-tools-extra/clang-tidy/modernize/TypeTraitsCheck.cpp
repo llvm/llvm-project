@@ -175,11 +175,11 @@ AST_POLYMORPHIC_MATCHER(isValue, AST_POLYMORPHIC_SUPPORTED_TYPES(
 }
 
 AST_MATCHER(TypeLoc, isType) {
-  if (auto TL = Node.getAs<TypedefTypeLoc>()) {
+  if (const auto TL = Node.getAs<TypedefTypeLoc>()) {
     const auto *TD = TL.getDecl();
     return TD->getDeclName().isIdentifier() && TD->getName() == "type";
   }
-  if (auto TL = Node.getAs<DependentNameTypeLoc>())
+  if (const auto TL = Node.getAs<DependentNameTypeLoc>())
     return TL.getTypePtr()->getIdentifier()->getName() == "type";
   return false;
 }
@@ -221,10 +221,11 @@ TypeTraitsCheck::TypeTraitsCheck(StringRef Name, ClangTidyContext *Context)
       IgnoreMacros(Options.get("IgnoreMacros", false)) {}
 
 void TypeTraitsCheck::check(const MatchFinder::MatchResult &Result) {
-  auto EmitValueWarning = [this, &Result](const NestedNameSpecifierLoc &QualLoc,
+  const auto EmitValueWarning = [this,
+                                 &Result](const NestedNameSpecifierLoc &QualLoc,
                                           SourceLocation EndLoc) {
     SourceLocation TemplateNameEndLoc;
-    if (auto TSTL =
+    if (const auto TSTL =
             QualLoc.getAsTypeLoc().getAs<TemplateSpecializationTypeLoc>())
       TemplateNameEndLoc = Lexer::getLocForEndOfToken(
           TSTL.getTemplateNameLoc(), 0, *Result.SourceManager,
@@ -244,11 +245,12 @@ void TypeTraitsCheck::check(const MatchFinder::MatchResult &Result) {
         << FixItHint::CreateRemoval({QualLoc.getEndLoc(), EndLoc});
   };
 
-  auto EmitTypeWarning = [this, &Result](const NestedNameSpecifierLoc &QualLoc,
+  const auto EmitTypeWarning = [this,
+                                &Result](const NestedNameSpecifierLoc &QualLoc,
                                          SourceLocation EndLoc,
                                          SourceLocation TypenameLoc) {
     SourceLocation TemplateNameEndLoc;
-    if (auto TSTL =
+    if (const auto TSTL =
             QualLoc.getAsTypeLoc().getAs<TemplateSpecializationTypeLoc>())
       TemplateNameEndLoc = Lexer::getLocForEndOfToken(
           TSTL.getTemplateNameLoc(), 0, *Result.SourceManager,
@@ -263,7 +265,8 @@ void TypeTraitsCheck::check(const MatchFinder::MatchResult &Result) {
       diag(QualLoc.getBeginLoc(), "use c++14 style type templates");
       return;
     }
-    auto Diag = diag(QualLoc.getBeginLoc(), "use c++14 style type templates");
+    const auto Diag =
+        diag(QualLoc.getBeginLoc(), "use c++14 style type templates");
 
     if (TypenameLoc.isValid())
       Diag << FixItHint::CreateRemoval(TypenameLoc);

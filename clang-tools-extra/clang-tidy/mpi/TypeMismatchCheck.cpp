@@ -255,8 +255,9 @@ void TypeMismatchCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Adds a buffer, MPI datatype pair of an MPI call expression to the
   // containers. For buffers, the type and expression is captured.
-  auto AddPair = [&CE, &Result, &BufferTypes, &BufferExprs, &MPIDatatypes](
-                     const size_t BufferIdx, const size_t DatatypeIdx) {
+  const auto AddPair = [&CE, &Result, &BufferTypes, &BufferExprs,
+                        &MPIDatatypes](const size_t BufferIdx,
+                                       const size_t DatatypeIdx) {
     // Skip null pointer constants and in place 'operators'.
     if (CE->getArg(BufferIdx)->isNullPointerConstant(
             *Result.Context, Expr::NPC_ValueDependentIsNull) ||

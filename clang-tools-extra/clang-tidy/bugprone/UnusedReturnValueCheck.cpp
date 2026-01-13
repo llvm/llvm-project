@@ -184,9 +184,9 @@ void UnusedReturnValueCheck::registerMatchers(MatchFinder *Finder) {
                                  CheckedReturnTypes)))))))))
           .bind("match"));
 
-  auto CheckCastToVoid =
+  const auto CheckCastToVoid =
       AllowCastToVoid ? castExpr(unless(hasCastKind(CK_ToVoid))) : castExpr();
-  auto MatchedCallExpr = expr(
+  const auto MatchedCallExpr = expr(
       anyOf(MatchedDirectCallExpr,
             explicitCastExpr(unless(cxxFunctionalCastExpr()), CheckCastToVoid,
                              hasSourceExpression(MatchedDirectCallExpr))));

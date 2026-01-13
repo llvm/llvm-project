@@ -19,7 +19,7 @@ namespace clang::tidy::utils::fixit {
 
 FixItHint changeVarDeclToReference(const VarDecl &Var, ASTContext &Context) {
   SourceLocation AmpLocation = Var.getLocation();
-  auto Token = utils::lexer::getPreviousToken(
+  const auto Token = utils::lexer::getPreviousToken(
       AmpLocation, Context.getSourceManager(), Context.getLangOpts());
 
   // For parameter packs the '&' must go before the '...' token
@@ -52,7 +52,7 @@ skipLParensBackwards(SourceLocation Start, const ASTContext &Context) {
   if (locDangerous(Start))
     return std::nullopt;
 
-  auto PreviousTokenLParen = [&Start, &Context]() {
+  const auto PreviousTokenLParen = [&Start, &Context]() {
     Token T;
     T = lexer::getPreviousToken(Start, Context.getSourceManager(),
                                 Context.getLangOpts());

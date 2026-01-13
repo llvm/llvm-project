@@ -68,10 +68,11 @@ void AvoidConstParamsInDeclsCheck::check(
   const auto Tok = findConstToRemove(*Param, Result);
   const auto ConstLocation = Tok ? Tok->getLocation() : Param->getBeginLoc();
 
-  auto Diag = diag(ConstLocation,
-                   "parameter %0 is const-qualified in the function "
-                   "declaration; const-qualification of parameters only has an "
-                   "effect in function definitions");
+  const auto Diag =
+      diag(ConstLocation,
+           "parameter %0 is const-qualified in the function "
+           "declaration; const-qualification of parameters only has an "
+           "effect in function definitions");
   if (Param->getName().empty()) {
     for (unsigned int I = 0; I < Func->getNumParams(); ++I) {
       if (Param == Func->getParamDecl(I)) {

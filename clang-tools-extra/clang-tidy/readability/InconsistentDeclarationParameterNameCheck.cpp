@@ -18,7 +18,7 @@ namespace {
 
 AST_MATCHER(FunctionDecl, hasOtherDeclarations) {
   auto It = Node.redecls_begin();
-  auto EndIt = Node.redecls_end();
+  const auto EndIt = Node.redecls_end();
 
   if (It == EndIt)
     return false;
@@ -218,7 +218,7 @@ static void formatDifferingParamsDiagnostic(
     return ParamInfo.SourceName;
   };
 
-  auto ParamDiag =
+  const auto ParamDiag =
       Check->diag(Location,
                   "differing parameters are named here: (%0), in %1: (%2)",
                   DiagnosticIDs::Level::Note)

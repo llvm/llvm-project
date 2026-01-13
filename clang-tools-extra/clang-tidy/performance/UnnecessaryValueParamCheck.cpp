@@ -29,7 +29,7 @@ static std::string paramNameOrIndex(StringRef Name, size_t Index) {
 
 static bool hasLoopStmtAncestor(const DeclRefExpr &DeclRef, const Decl &Decl,
                                 ASTContext &Context) {
-  auto Matches = match(
+  const auto Matches = match(
       traverse(TK_AsIs,
                decl(forEachDescendant(declRefExpr(
                    equalsNode(&DeclRef),
@@ -90,10 +90,10 @@ void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
   // In this case wrap DeclRefExpr with std::move() to avoid the unnecessary
   // copy.
   if (!IsConstQualified) {
-    auto AllDeclRefExprs = utils::decl_ref_expr::allDeclRefExprs(
+    const auto AllDeclRefExprs = utils::decl_ref_expr::allDeclRefExprs(
         *Param, *Function, *Result.Context);
     if (AllDeclRefExprs.size() == 1) {
-      auto CanonicalType = Param->getType().getCanonicalType();
+      const auto CanonicalType = Param->getType().getCanonicalType();
       const auto &DeclRefExpr = **AllDeclRefExprs.begin();
 
       if (!hasLoopStmtAncestor(DeclRefExpr, *Function, *Result.Context) &&
@@ -137,7 +137,7 @@ void UnnecessaryValueParamCheck::handleConstRefFix(const FunctionDecl &Function,
   const bool IsConstQualified =
       Param.getType().getCanonicalType().isConstQualified();
 
-  auto Diag =
+  const auto Diag =
       diag(Param.getLocation(),
            "the %select{|const qualified }0parameter %1 of type %2 is copied "
            "for each "
@@ -171,7 +171,7 @@ void UnnecessaryValueParamCheck::handleConstRefFix(const FunctionDecl &Function,
 void UnnecessaryValueParamCheck::handleMoveFix(const ParmVarDecl &Param,
                                                const DeclRefExpr &CopyArgument,
                                                ASTContext &Context) {
-  auto Diag =
+  const auto Diag =
       diag(CopyArgument.getBeginLoc(),
            "parameter %0 of type %1 is passed by value and only copied once; "
            "consider moving it to avoid unnecessary copies")
@@ -180,8 +180,8 @@ void UnnecessaryValueParamCheck::handleMoveFix(const ParmVarDecl &Param,
   if (CopyArgument.getBeginLoc().isMacroID())
     return;
   const auto &SM = Context.getSourceManager();
-  auto EndLoc = Lexer::getLocForEndOfToken(CopyArgument.getLocation(), 0, SM,
-                                           Context.getLangOpts());
+  const auto EndLoc = Lexer::getLocForEndOfToken(CopyArgument.getLocation(), 0,
+                                                 SM, Context.getLangOpts());
   Diag << FixItHint::CreateInsertion(CopyArgument.getBeginLoc(), "std::move(")
        << FixItHint::CreateInsertion(EndLoc, ")")
        << Inserter.createIncludeInsertion(

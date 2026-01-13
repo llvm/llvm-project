@@ -125,10 +125,11 @@ void NSInvocationArgumentLifetimeCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *MatchedExpr = Result.Nodes.getNodeAs<ObjCMessageExpr>("call");
 
-  auto Diag = diag(MatchedExpr->getArg(0)->getBeginLoc(),
-                   "NSInvocation %objcinstance0 should only pass pointers to "
-                   "objects with ownership __unsafe_unretained")
-              << MatchedExpr->getSelector();
+  const auto Diag =
+      diag(MatchedExpr->getArg(0)->getBeginLoc(),
+           "NSInvocation %objcinstance0 should only pass pointers to "
+           "objects with ownership __unsafe_unretained")
+      << MatchedExpr->getSelector();
 
   // Only provide fix-it hints for references to local variables; fixes for
   // instance variable references don't have as clear an automated fix.

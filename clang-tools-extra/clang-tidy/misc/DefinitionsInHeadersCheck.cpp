@@ -31,7 +31,7 @@ DefinitionsInHeadersCheck::DefinitionsInHeadersCheck(StringRef Name,
       HeaderFileExtensions(Context->getHeaderFileExtensions()) {}
 
 void DefinitionsInHeadersCheck::registerMatchers(MatchFinder *Finder) {
-  auto DefinitionMatcher =
+  const auto DefinitionMatcher =
       anyOf(functionDecl(isDefinition(), unless(isDeleted())),
             varDecl(isDefinition()));
   Finder->addMatcher(namedDecl(DefinitionMatcher,

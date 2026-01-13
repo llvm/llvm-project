@@ -500,12 +500,12 @@ SuspiciousCallArgumentCheck::SuspiciousCallArgumentCheck(
     : ClangTidyCheck(Name, Context),
       MinimumIdentifierNameLength(Options.get(
           "MinimumIdentifierNameLength", DefaultMinimumIdentifierNameLength)) {
-  auto GetToggleOpt = [this](Heuristic H) -> bool {
+  const auto GetToggleOpt = [this](Heuristic H) -> bool {
     auto Idx = static_cast<std::size_t>(H);
     assert(Idx < HeuristicCount);
     return Options.get(HeuristicToString[Idx], Defaults[Idx].Enabled);
   };
-  auto GetBoundOpt = [this](Heuristic H, BoundKind BK) -> int8_t {
+  const auto GetBoundOpt = [this](Heuristic H, BoundKind BK) -> int8_t {
     auto Idx = static_cast<std::size_t>(H);
     assert(Idx < HeuristicCount);
 
@@ -518,7 +518,7 @@ SuspiciousCallArgumentCheck::SuspiciousCallArgumentCheck(
     return Options.get(Key, Default);
   };
   for (std::size_t Idx = 0; Idx < HeuristicCount; ++Idx) {
-    auto H = static_cast<Heuristic>(Idx);
+    const auto H = static_cast<Heuristic>(Idx);
     if (GetToggleOpt(H))
       AppliedHeuristics.emplace_back(H);
     ConfiguredBounds.emplace_back(GetBoundOpt(H, BoundKind::DissimilarBelow),
@@ -554,7 +554,7 @@ void SuspiciousCallArgumentCheck::storeOptions(
   };
 
   for (std::size_t Idx = 0; Idx < HeuristicCount; ++Idx) {
-    auto H = static_cast<Heuristic>(Idx);
+    const auto H = static_cast<Heuristic>(Idx);
     SetToggleOpt(H);
     SetBoundOpt(H, BoundKind::DissimilarBelow);
     SetBoundOpt(H, BoundKind::SimilarAbove);

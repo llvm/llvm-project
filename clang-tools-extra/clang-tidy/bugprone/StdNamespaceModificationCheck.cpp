@@ -39,17 +39,17 @@ AST_POLYMORPHIC_MATCHER_P(
 namespace clang::tidy::bugprone {
 
 void StdNamespaceModificationCheck::registerMatchers(MatchFinder *Finder) {
-  auto HasStdParent =
+  const auto HasStdParent =
       hasDeclContext(namespaceDecl(hasAnyName("std", "posix"),
                                    unless(hasParent(namespaceDecl())))
                          .bind("nmspc"));
-  auto UserDefinedType = qualType(
+  const auto UserDefinedType = qualType(
       hasUnqualifiedDesugaredType(tagType(unless(hasDeclaration(tagDecl(
           hasAncestor(namespaceDecl(hasAnyName("std", "posix"),
                                     unless(hasParent(namespaceDecl()))))))))));
-  auto HasNoProgramDefinedTemplateArgument = unless(
+  const auto HasNoProgramDefinedTemplateArgument = unless(
       hasAnyTemplateArgumentIncludingPack(refersToType(UserDefinedType)));
-  auto InsideStdClassOrClassTemplateSpecialization = hasDeclContext(
+  const auto InsideStdClassOrClassTemplateSpecialization = hasDeclContext(
       anyOf(cxxRecordDecl(HasStdParent),
             classTemplateSpecializationDecl(
                 HasStdParent, HasNoProgramDefinedTemplateArgument)));

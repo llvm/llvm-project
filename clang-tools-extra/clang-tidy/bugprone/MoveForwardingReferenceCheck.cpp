@@ -71,7 +71,7 @@ static void replaceMoveWithForward(const UnresolvedLookupExpr *Callee,
 void MoveForwardingReferenceCheck::registerMatchers(MatchFinder *Finder) {
   // Matches a ParmVarDecl for a forwarding reference, i.e. a non-const rvalue
   // reference of a function template parameter type.
-  auto ForwardingReferenceParmMatcher =
+  const auto ForwardingReferenceParmMatcher =
       parmVarDecl(
           hasType(qualType(rValueReferenceType(),
                            references(templateTypeParmType(hasDeclaration(

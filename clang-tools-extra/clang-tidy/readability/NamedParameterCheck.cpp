@@ -90,10 +90,10 @@ void NamedParameterCheck::check(const MatchFinder::MatchResult &Result) {
   if (!UnnamedParams.empty()) {
     const ParmVarDecl *FirstParm =
         UnnamedParams.front().first->getParamDecl(UnnamedParams.front().second);
-    auto D = diag(FirstParm->getLocation(),
-                  "all parameters should be named in a function");
+    const auto D = diag(FirstParm->getLocation(),
+                        "all parameters should be named in a function");
 
-    for (auto P : UnnamedParams) {
+    for (const auto P : UnnamedParams) {
       // Fallback to an unused marker.
       static constexpr StringRef FallbackName = "unused";
       StringRef NewName = FallbackName;

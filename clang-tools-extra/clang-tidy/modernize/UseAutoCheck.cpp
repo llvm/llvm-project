@@ -188,10 +188,10 @@ static TypeMatcher nestedIterator() {
 /// Returns a TypeMatcher that matches types declared with using
 /// declarations and which name standard iterators for standard containers.
 static TypeMatcher iteratorFromUsingDeclaration() {
-  auto HasIteratorDecl = hasDeclaration(namedDecl(hasStdIteratorName()));
+  const auto HasIteratorDecl = hasDeclaration(namedDecl(hasStdIteratorName()));
   // Unwrap the nested name specifier to test for one of the standard
   // containers.
-  auto Qualifier = hasQualifier(specifiesType(templateSpecializationType(
+  const auto Qualifier = hasQualifier(specifiesType(templateSpecializationType(
       hasDeclaration(namedDecl(hasStdContainerName(), isInStdNamespace())))));
   // the named type is what comes after the final '::' in the type. It should
   // name one of the standard iterator names.
@@ -238,14 +238,14 @@ static StatementMatcher makeDeclWithTemplateCastMatcher() {
   auto ST =
       substTemplateTypeParmType(hasReplacementType(equalsBoundNode("arg")));
 
-  auto ExplicitCall =
+  const auto ExplicitCall =
       anyOf(has(memberExpr(hasExplicitTemplateArgs())),
             has(ignoringImpCasts(declRefExpr(hasExplicitTemplateArgs()))));
 
-  auto TemplateArg =
+  const auto TemplateArg =
       hasTemplateArgument(0, refersToType(qualType().bind("arg")));
 
-  auto TemplateCall = callExpr(
+  const auto TemplateCall = callExpr(
       ExplicitCall,
       callee(functionDecl(TemplateArg,
                           returns(anyOf(ST, pointsTo(ST), references(ST))))));
@@ -421,7 +421,7 @@ void UseAutoCheck::replaceExpr(
           MinTypeNameLength)
     return;
 
-  auto Diag = diag(Range.getBegin(), Message);
+  const auto Diag = diag(Range.getBegin(), Message);
 
   const bool ShouldReplenishVariableName = isMultiLevelPointerToTypeLocClasses(
       TSI->getTypeLoc(), {TypeLoc::FunctionProto, TypeLoc::ConstantArray});

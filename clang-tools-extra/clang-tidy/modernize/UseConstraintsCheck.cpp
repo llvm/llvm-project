@@ -29,7 +29,7 @@ struct EnableIfData {
 
 AST_MATCHER(FunctionDecl, hasOtherDeclarations) {
   auto It = Node.redecls_begin();
-  auto EndIt = Node.redecls_end();
+  const auto EndIt = Node.redecls_end();
 
   if (It == EndIt)
     return false;
@@ -333,7 +333,7 @@ static std::optional<std::string> getConditionText(const Expr *ConditionExpr,
   if (Invalid)
     return std::nullopt;
 
-  auto AddParens = [&](llvm::StringRef Text) -> std::string {
+  const auto AddParens = [&](llvm::StringRef Text) -> std::string {
     if (isPrimaryExpression(ConditionExpr))
       return Text.str();
     return "(" + Text.str() + ")";

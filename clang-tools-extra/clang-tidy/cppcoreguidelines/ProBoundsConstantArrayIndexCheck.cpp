@@ -80,9 +80,9 @@ void ProBoundsConstantArrayIndexCheck::check(
           cast<CXXOperatorCallExpr>(Matched)->getArg(0)->getSourceRange();
     const SourceRange IndexRange = IndexExpr->getSourceRange();
 
-    auto Diag = diag(Matched->getExprLoc(),
-                     "do not use array subscript when the index is "
-                     "not an integer constant expression");
+    const auto Diag = diag(Matched->getExprLoc(),
+                           "do not use array subscript when the index is "
+                           "not an integer constant expression");
     if (!GslHeader.empty()) {
       Diag << FixItHint::CreateInsertion(BaseRange.getBegin(), "gsl::at(")
            << FixItHint::CreateReplacement(

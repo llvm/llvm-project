@@ -402,7 +402,7 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
         Branches.back().push_back(S);
     }
 
-    auto *End = Branches.end();
+    const auto *End = Branches.end();
     auto *BeginCurrent = Branches.begin();
     while (BeginCurrent < End) {
       if (isFallthroughSwitchBranch(*BeginCurrent)) {

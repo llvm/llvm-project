@@ -126,7 +126,7 @@ void NonConstParameterCheck::addParm(const ParmVarDecl *Parm) {
 }
 
 void NonConstParameterCheck::setReferenced(const DeclRefExpr *Ref) {
-  auto It = Parameters.find(dyn_cast<ParmVarDecl>(Ref->getDecl()));
+  const auto It = Parameters.find(dyn_cast<ParmVarDecl>(Ref->getDecl()));
   if (It != Parameters.end())
     It->second.IsReferenced = true;
 }
@@ -223,7 +223,7 @@ void NonConstParameterCheck::markCanNotBeConst(const Expr *E,
   } else if (CanNotBeConst) {
     // Referencing parameter.
     if (const auto *D = dyn_cast<DeclRefExpr>(E)) {
-      auto It = Parameters.find(dyn_cast<ParmVarDecl>(D->getDecl()));
+      const auto It = Parameters.find(dyn_cast<ParmVarDecl>(D->getDecl()));
       if (It != Parameters.end())
         It->second.CanBeConst = false;
     }

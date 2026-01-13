@@ -69,8 +69,8 @@ AST_MATCHER(QualType, isVAList) {
   const QualType Desugar = Node.getDesugaredType(Context);
   const QualType NodeTy = Node.getUnqualifiedType();
 
-  auto CheckVaList = [](QualType NodeTy, QualType Expected,
-                        const ASTContext &Context) {
+  const auto CheckVaList = [](QualType NodeTy, QualType Expected,
+                              const ASTContext &Context) {
     if (NodeTy == Expected)
       return true;
     QualType Desugar = NodeTy;
@@ -159,7 +159,7 @@ static bool hasSingleVariadicArgumentWithValue(const CallExpr *C, uint64_t I) {
   if (!FDecl)
     return false;
 
-  auto N = FDecl->getNumParams(); // Number of parameters without '...'
+  const auto N = FDecl->getNumParams(); // Number of parameters without '...'
   if (C->getNumArgs() != N + 1)
     return false; // more/less than one argument passed to '...'
 
@@ -185,7 +185,7 @@ void ProTypeVarargCheck::check(const MatchFinder::MatchResult &Result) {
     diag(Matched->getExprLoc(), VaArgWarningMessage);
 
   if (const auto *Matched = Result.Nodes.getNodeAs<VarDecl>("va_list")) {
-    auto SR = Matched->getSourceRange();
+    const auto SR = Matched->getSourceRange();
     if (SR.isInvalid())
       return; // some implicitly generated builtins take va_list
     diag(SR.getBegin(), "do not declare variables of type va_list; "

@@ -28,12 +28,13 @@ void RandomGeneratorSeedCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void RandomGeneratorSeedCheck::registerMatchers(MatchFinder *Finder) {
-  auto RandomGeneratorEngineDecl = cxxRecordDecl(hasAnyName(
+  const auto RandomGeneratorEngineDecl = cxxRecordDecl(hasAnyName(
       "::std::linear_congruential_engine", "::std::mersenne_twister_engine",
       "::std::subtract_with_carry_engine", "::std::discard_block_engine",
       "::std::independent_bits_engine", "::std::shuffle_order_engine"));
-  auto RandomGeneratorEngineTypeMatcher = hasType(hasUnqualifiedDesugaredType(
-      recordType(hasDeclaration(RandomGeneratorEngineDecl))));
+  const auto RandomGeneratorEngineTypeMatcher =
+      hasType(hasUnqualifiedDesugaredType(
+          recordType(hasDeclaration(RandomGeneratorEngineDecl))));
 
   // std::mt19937 engine;
   // engine.seed();

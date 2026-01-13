@@ -246,7 +246,7 @@ void UseDefaultMemberInitCheck::storeOptions(
 }
 
 void UseDefaultMemberInitCheck::registerMatchers(MatchFinder *Finder) {
-  auto Init = anyOf(
+  const auto Init = anyOf(
       initListExpr(anyOf(allOf(initCountIs(1), hasInit(0, allowedInitExpr())),
                          initCountIs(0), hasType(arrayType()))),
       allowedInitExpr());
@@ -318,7 +318,7 @@ void UseDefaultMemberInitCheck::checkDefaultInit(
       UseAssignment && (!ValueInit || !InitType->isEnumeralType());
   const bool NeedsBraces = !CanAssign || isa<ArrayType>(InitType);
 
-  auto Diag =
+  const auto Diag =
       diag(Field->getLocation(), "use default member initializer for %0")
       << Field;
 

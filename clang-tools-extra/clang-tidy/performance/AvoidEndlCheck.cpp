@@ -50,9 +50,9 @@ void AvoidEndlCheck::check(const MatchFinder::MatchResult &Result) {
         TokenRange, *Result.SourceManager, Result.Context->getLangOpts());
     if (SourceText.empty())
       SourceText = "std::endl";
-    auto Diag = diag(Expression->getBeginLoc(),
-                     "do not use '%0' with streams; use '\\n' instead")
-                << SourceText;
+    const auto Diag = diag(Expression->getBeginLoc(),
+                           "do not use '%0' with streams; use '\\n' instead")
+                      << SourceText;
     if (TokenRange.isValid())
       Diag << FixItHint::CreateReplacement(TokenRange, "'\\n'");
   } else {
@@ -66,9 +66,9 @@ void AvoidEndlCheck::check(const MatchFinder::MatchResult &Result) {
         *Result.SourceManager, Result.Context->getLangOpts());
     if (SourceText.empty())
       SourceText = "std::endl";
-    auto Diag = diag(CallExpression->getBeginLoc(),
-                     "do not use '%0' with streams; use '\\n' instead")
-                << SourceText;
+    const auto Diag = diag(CallExpression->getBeginLoc(),
+                           "do not use '%0' with streams; use '\\n' instead")
+                      << SourceText;
 
     const CharSourceRange ArgTokenRange = CharSourceRange::getTokenRange(
         CallExpression->getArg(0)->getSourceRange());

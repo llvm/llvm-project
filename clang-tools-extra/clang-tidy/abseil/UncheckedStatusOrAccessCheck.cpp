@@ -26,7 +26,7 @@ static constexpr StringRef FuncID = "fun";
 void UncheckedStatusOrAccessCheck::registerMatchers(MatchFinder *Finder) {
   using namespace ast_matchers;
 
-  auto HasStatusOrCallDescendant =
+  const auto HasStatusOrCallDescendant =
       hasDescendant(callExpr(callee(cxxMethodDecl(ofClass(hasAnyName(
           "absl::StatusOr", "absl::internal_statusor::OperatorBase"))))));
   Finder->addMatcher(functionDecl(unless(isExpansionInSystemHeader()),

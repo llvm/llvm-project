@@ -125,14 +125,14 @@ void UpgradeGoogletestCaseCheck::registerPPCallbacks(const SourceManager &,
 }
 
 void UpgradeGoogletestCaseCheck::registerMatchers(MatchFinder *Finder) {
-  auto LocationFilter =
+  const auto LocationFilter =
       unless(isExpansionInFileMatching("gtest/gtest(-typed-test)?\\.h$"));
 
   // Matchers for the member functions that are being renamed. In each matched
   // Google Test class, we check for the existence of one new method name. This
   // makes sure the check gives warnings only if the included version of Google
   // Test is recent enough.
-  auto Methods =
+  const auto Methods =
       cxxMethodDecl(
           anyOf(
               cxxMethodDecl(
@@ -182,7 +182,7 @@ void UpgradeGoogletestCaseCheck::registerMatchers(MatchFinder *Finder) {
   // Matchers for `TestCase` -> `TestSuite`. The fact that `TestCase` is an
   // alias and not a class declaration ensures we only match with a recent
   // enough version of Google Test.
-  auto TestCaseTypeAlias =
+  const auto TestCaseTypeAlias =
       typeAliasDecl(hasName("::testing::TestCase")).bind("test-case");
   Finder->addMatcher(
       typeLoc(loc(qualType(typedefType(hasDeclaration(TestCaseTypeAlias)))),
@@ -255,10 +255,10 @@ getAliasNameRange(const MatchFinder::MatchResult &Result) {
         Using->getNameInfo().getSourceRange());
   }
   TypeLoc TL = *Result.Nodes.getNodeAs<TypeLoc>("typeloc");
-  if (auto QTL = TL.getAs<QualifiedTypeLoc>())
+  if (const auto QTL = TL.getAs<QualifiedTypeLoc>())
     TL = QTL.getUnqualifiedLoc();
 
-  if (auto TTL = TL.getAs<TypedefTypeLoc>())
+  if (const auto TTL = TL.getAs<TypedefTypeLoc>())
     return CharSourceRange::getTokenRange(TTL.getNameLoc());
   return CharSourceRange::getTokenRange(TL.castAs<UsingTypeLoc>().getNameLoc());
 }

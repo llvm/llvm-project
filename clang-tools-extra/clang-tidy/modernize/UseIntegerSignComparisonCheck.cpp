@@ -38,7 +38,7 @@ intCastExpression(bool IsSigned, StringRef CastBindName = {}) {
   // std::cmp_{} functions trigger a compile-time error if either LHS or RHS
   // is a non-integer type, char, enum or bool
   // (unsigned char/ signed char are Ok and can be used).
-  auto IntTypeExpr = expr(hasType(hasCanonicalType(qualType(
+  const auto IntTypeExpr = expr(hasType(hasCanonicalType(qualType(
       IsSigned ? isSignedInteger() : isUnsignedInteger(),
       unless(isActualChar()), unless(booleanType()), unless(enumType())))));
 

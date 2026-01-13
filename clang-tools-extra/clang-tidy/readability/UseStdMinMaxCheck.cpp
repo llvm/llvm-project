@@ -130,11 +130,11 @@ void UseStdMinMaxCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UseStdMinMaxCheck::registerMatchers(MatchFinder *Finder) {
-  auto AssignOperator =
+  const auto AssignOperator =
       binaryOperator(hasOperatorName("="),
                      hasLHS(expr(unless(isTypeDependent())).bind("AssignLhs")),
                      hasRHS(expr(unless(isTypeDependent())).bind("AssignRhs")));
-  auto BinaryOperator =
+  const auto BinaryOperator =
       binaryOperator(hasAnyOperatorName("<", ">", "<=", ">="),
                      hasLHS(expr(unless(isTypeDependent())).bind("CondLhs")),
                      hasRHS(expr(unless(isTypeDependent())).bind("CondRhs")))
@@ -169,7 +169,7 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
   const SourceLocation IfLocation = If->getIfLoc();
   const SourceLocation ThenLocation = If->getEndLoc();
 
-  auto ReplaceAndDiagnose = [&](const llvm::StringRef FunctionName) {
+  const auto ReplaceAndDiagnose = [&](const llvm::StringRef FunctionName) {
     const SourceManager &Source = *Result.SourceManager;
     llvm::SmallString<64> Comment;
 

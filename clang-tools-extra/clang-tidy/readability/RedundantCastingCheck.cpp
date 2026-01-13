@@ -156,9 +156,10 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   {
-    auto Diag = diag(CastExpr->getExprLoc(),
-                     "redundant explicit casting to the same type %0 as the "
-                     "sub-expression, remove this casting");
+    const auto Diag =
+        diag(CastExpr->getExprLoc(),
+             "redundant explicit casting to the same type %0 as the "
+             "sub-expression, remove this casting");
     Diag << TypeD;
 
     const SourceManager &SM = *Result.SourceManager;

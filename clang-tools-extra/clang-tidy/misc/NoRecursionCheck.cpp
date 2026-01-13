@@ -162,7 +162,7 @@ static CallStackTy pathfindSomeCycle(ArrayRef<CallGraphNode *> SCC) {
   const ImmutableSmallSet<CallGraphNode *, SmallSCCSize> SCCElts(SCC);
 
   // Is node N part if the current SCC?
-  auto NodeIsPartOfSCC = [&SCCElts](CallGraphNode *N) {
+  const auto NodeIsPartOfSCC = [&SCCElts](CallGraphNode *N) {
     return SCCElts.count(N) != 0;
   };
 

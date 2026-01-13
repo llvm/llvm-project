@@ -49,7 +49,7 @@ void DeleteNullPointerCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *IfWithDelete = Result.Nodes.getNodeAs<IfStmt>("ifWithDelete");
   const auto *Compound = Result.Nodes.getNodeAs<CompoundStmt>("compound");
 
-  auto Diag = diag(
+  const auto Diag = diag(
       IfWithDelete->getBeginLoc(),
       "'if' statement is unnecessary; deleting null pointer has no effect");
   if (IfWithDelete->getElse())

@@ -134,7 +134,7 @@ void UseInternalLinkageCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UseInternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
-  auto Common =
+  const auto Common =
       allOf(isFirstDecl(), isAllRedeclsInMainFile(HeaderFileExtensions),
             unless(anyOf(
                 // 1. internal linkage

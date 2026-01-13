@@ -41,14 +41,14 @@ void RedundantVoidArgCheck::registerMatchers(MatchFinder *Finder) {
                      this);
   Finder->addMatcher(typedefNameDecl(unless(isImplicit())).bind(TypedefId),
                      this);
-  auto ParenFunctionType = parenType(innerType(functionType()));
-  auto PointerToFunctionType = pointee(ParenFunctionType);
-  auto FunctionOrMemberPointer =
+  const auto ParenFunctionType = parenType(innerType(functionType()));
+  const auto PointerToFunctionType = pointee(ParenFunctionType);
+  const auto FunctionOrMemberPointer =
       anyOf(hasType(pointerType(PointerToFunctionType)),
             hasType(memberPointerType(PointerToFunctionType)));
   Finder->addMatcher(fieldDecl(FunctionOrMemberPointer).bind(FieldId), this);
   Finder->addMatcher(varDecl(FunctionOrMemberPointer).bind(VarId), this);
-  auto CastDestinationIsFunction =
+  const auto CastDestinationIsFunction =
       hasDestinationType(pointsTo(ParenFunctionType));
   Finder->addMatcher(
       cStyleCastExpr(CastDestinationIsFunction).bind(CStyleCastId), this);

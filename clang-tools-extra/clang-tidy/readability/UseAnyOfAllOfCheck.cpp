@@ -40,13 +40,13 @@ AST_MATCHER_P(Stmt, nextStmt, ast_matchers::internal::Matcher<Stmt>,
 namespace tidy::readability {
 
 void UseAnyOfAllOfCheck::registerMatchers(MatchFinder *Finder) {
-  auto Returns = [](bool V) {
+  const auto Returns = [](bool V) {
     return returnStmt(hasReturnValue(cxxBoolLiteral(equals(V))));
   };
 
-  auto ReturnsButNotTrue =
+  const auto ReturnsButNotTrue =
       returnStmt(hasReturnValue(unless(cxxBoolLiteral(equals(true)))));
-  auto ReturnsButNotFalse =
+  const auto ReturnsButNotFalse =
       returnStmt(hasReturnValue(unless(cxxBoolLiteral(equals(false)))));
 
   Finder->addMatcher(

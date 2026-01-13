@@ -80,7 +80,7 @@ void ArgumentCommentCheck::registerMatchers(MatchFinder *Finder) {
 static std::vector<std::pair<SourceLocation, StringRef>>
 getCommentsInRange(ASTContext *Ctx, CharSourceRange Range) {
   std::vector<std::pair<SourceLocation, StringRef>> Comments;
-  auto &SM = Ctx->getSourceManager();
+  const auto &SM = Ctx->getSourceManager();
   const std::pair<FileID, unsigned> BeginLoc =
                                         SM.getDecomposedLoc(Range.getBegin()),
                                     EndLoc =
@@ -273,7 +273,8 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
   if ((NumArgs == 0) || (IgnoreSingleArgument && NumArgs == 1))
     return;
 
-  auto MakeFileCharRange = [Ctx](SourceLocation Begin, SourceLocation End) {
+  const auto MakeFileCharRange = [Ctx](SourceLocation Begin,
+                                       SourceLocation End) {
     return Lexer::makeFileCharRange(CharSourceRange::getCharRange(Begin, End),
                                     Ctx->getSourceManager(),
                                     Ctx->getLangOpts());
@@ -309,7 +310,7 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
       Comments = getCommentsBeforeLoc(Ctx, ArgsRange.getBegin());
     }
 
-    for (auto Comment : Comments) {
+    for (const auto Comment : Comments) {
       llvm::SmallVector<StringRef, 2> Matches;
       if (IdentRE.match(Comment.second, &Matches) &&
           !sameName(Matches[2], II->getName(), StrictMode)) {

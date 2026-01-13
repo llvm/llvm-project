@@ -24,7 +24,7 @@ void UseEnumClassCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UseEnumClassCheck::registerMatchers(MatchFinder *Finder) {
-  auto EnumDecl =
+  const auto EnumDecl =
       IgnoreUnscopedEnumsInClasses
           ? enumDecl(unless(isScoped()), unless(hasParent(recordDecl())))
           : enumDecl(unless(isScoped()));

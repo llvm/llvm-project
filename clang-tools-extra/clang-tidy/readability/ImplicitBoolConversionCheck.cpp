@@ -269,7 +269,7 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
                  expr(hasType(qualType().bind("type")),
                       hasParent(initListExpr(hasParent(explicitCastExpr(
                           hasType(qualType(equalsBoundNode("type"))))))))));
-  auto ImplicitCastFromBool = implicitCastExpr(
+  const auto ImplicitCastFromBool = implicitCastExpr(
       anyOf(hasCastKind(CK_IntegralCast), hasCastKind(CK_IntegralToFloating),
             // Prior to C++11 cast from bool literal to pointer was allowed.
             allOf(anyOf(hasCastKind(CK_NullToPointer),
@@ -322,9 +322,10 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
                                          hasLHS(expr(hasType(booleanType()))));
   auto BitfieldAssignment = binaryOperator(
       hasLHS(memberExpr(hasDeclaration(fieldDecl(hasBitWidth(1))))));
-  auto BitfieldConstruct = cxxConstructorDecl(hasDescendant(cxxCtorInitializer(
-      withInitializer(equalsBoundNode("implicitCastFromBool")),
-      forField(hasBitWidth(1)))));
+  const auto BitfieldConstruct =
+      cxxConstructorDecl(hasDescendant(cxxCtorInitializer(
+          withInitializer(equalsBoundNode("implicitCastFromBool")),
+          forField(hasBitWidth(1)))));
   Finder->addMatcher(
       traverse(
           TK_AsIs,
