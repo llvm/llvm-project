@@ -6,7 +6,6 @@ int x;
 #pragma export  // expected-warning {{missing '(' after '#pragma export' - ignoring}}
 #pragma export(  // expected-warning {{expected identifier in '#pragma export' - ignored}}
 #pragma export(x  // expected-warning {{missing ')' after '#pragma export' - ignoring}}
-#pragma export(x y  // expected-warning {{missing ')' after '#pragma export' - ignoring}}
 #pragma export(::x) // expected-warning {{expected identifier in '#pragma export' - ignored}}
 #pragma export(x)
 

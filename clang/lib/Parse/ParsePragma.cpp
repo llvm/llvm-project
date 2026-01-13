@@ -25,6 +25,7 @@
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaRISCV.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <optional>
 using namespace clang;
@@ -1414,17 +1415,13 @@ void Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
                       false);
   ConsumeAnnotationToken();
 
-  auto SkipToEnd = [this]() {
-    SkipUntil(tok::eof, StopBeforeMatch);
-    ConsumeToken();
-  };
+  llvm::scope_exit OnReturn([this]() { SkipUntil(tok::eof);});
 
   do {
     PP.Lex(Tok);
     if (Tok.isNot(tok::l_paren)) {
       PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_lparen)
           << PragmaName;
-      SkipToEnd();
       return;
     }
 
@@ -1432,7 +1429,6 @@ void Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
     if (Tok.isNot(tok::identifier)) {
       PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
           << PragmaName;
-      SkipToEnd();
       return;
     }
 
@@ -1443,7 +1439,6 @@ void Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
     if (Tok.isNot(tok::r_paren)) {
       PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_rparen)
           << PragmaName;
-      SkipToEnd();
       return;
     }
 
@@ -1459,7 +1454,6 @@ void Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
     } else if (Tok.isNot(tok::eof)) {
       PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
           << PragmaName;
-      SkipToEnd();
       return;
     }
   } while (Tok.isNot(tok::eof));
