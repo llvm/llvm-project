@@ -308,9 +308,10 @@ VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
   if (FoldTail) {
     assert(Plan.getExitBlocks().size() == 1 &&
            "only a single-exit block is supported currently");
-    assert(Plan.getExitBlocks().front()->getSinglePredecessor() ==
-               Plan.getMiddleBlock() &&
-           "the exit block must have middle block as single predecessor");
+    // exit block must be either vector.early.exit or middle.block
+    assert(is_contained(Plan.getExitBlocks().front()->predecessors(),
+			Plan.getMiddleBlock()) &&
+           "the exit block must have middle block as a predecessor");
 
     VPBuilder B(Plan.getMiddleBlock()->getTerminator());
     for (VPRecipeBase &R : *Plan.getMiddleBlock()) {

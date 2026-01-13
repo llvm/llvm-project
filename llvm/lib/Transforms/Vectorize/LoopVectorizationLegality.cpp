@@ -25,6 +25,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
@@ -1840,6 +1841,9 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
 
   // Check non-dereferenceable loads if any.
   for (LoadInst *LI : NonDerefLoads) {
+    // Occurs after the early exit, so we can predicate it.
+    if (DT->properlyDominates(SingleUncountableExitingBlock, LI->getParent()))
+      continue;
     // Only support unit-stride access for now.
     int Stride = isConsecutivePtr(LI->getType(), LI->getPointerOperand());
     if (Stride != 1) {
@@ -2038,6 +2042,11 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
         else
           return false;
       }
+      // isVectorizableEarlyExitLoop will have predicated some instructions when
+      // they previously weren't. Call canVectorizeWithIfConvert again to
+      // repopulate MaskedOp with any new instructions.
+      if (!canVectorizeWithIfConvert())
+        return false;
     }
   }
 
@@ -2091,17 +2100,6 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
 }
 
 bool LoopVectorizationLegality::canFoldTailByMasking() const {
-  // The only loops we can vectorize without a scalar epilogue, are loops with
-  // a bottom-test and a single exiting block. We'd have to handle the fact
-  // that not every instruction executes on the last iteration.  This will
-  // require a lane mask which varies through the vector loop body.  (TODO)
-  if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch()) {
-    LLVM_DEBUG(
-        dbgs()
-        << "LV: Cannot fold tail by masking. Requires a singe latch exit\n");
-    return false;
-  }
-
   LLVM_DEBUG(dbgs() << "LV: checking if tail can be folded by masking.\n");
 
   SmallPtrSet<const Value *, 8> ReductionLiveOuts;
