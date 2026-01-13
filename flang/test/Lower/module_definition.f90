@@ -36,7 +36,7 @@ end module
 ! file.
 module modEq1
   ! Equivalence, no initialization
-  real :: x1(10), x2(10), x3(10) 
+  real :: x1(10), x2(10), x3(10)
   ! Equivalence with initialization
   real :: y1 = 42.
   real :: y2(10)

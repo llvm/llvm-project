@@ -29,7 +29,6 @@
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 #include <memory>
-#include <string>
 #include <utility>
 
 using namespace llvm;
@@ -148,21 +147,27 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
     Image->setAlignment(Align(object::OffloadBinary::getAlignment()));
 
     StringRef Binary(Buf.data(), Buf.size());
-    assert(identify_magic(Binary) == file_magic::offload_binary &&
-           "Invalid binary format");
 
+    uint64_t BeginOffset = 0;
+    uint64_t EndOffset = Binary.size();
+
+    // Optionally use an offload binary for its offload dumping support.
     // The device image struct contains the pointer to the beginning and end of
     // the image stored inside of the offload binary. There should only be one
     // of these for each buffer so we parse it out manually.
-    const auto *Header =
-        reinterpret_cast<const object::OffloadBinary::Header *>(
-            Binary.bytes_begin());
-    const auto *Entry = reinterpret_cast<const object::OffloadBinary::Entry *>(
-        Binary.bytes_begin() + Header->EntryOffset);
+    if (identify_magic(Binary) == file_magic::offload_binary) {
+      const auto *Header =
+          reinterpret_cast<const object::OffloadBinary::Header *>(
+              Binary.bytes_begin());
+      const auto *Entry =
+          reinterpret_cast<const object::OffloadBinary::Entry *>(
+              Binary.bytes_begin() + Header->EntryOffset);
+      BeginOffset = Entry->ImageOffset;
+      EndOffset = Entry->ImageOffset + Entry->ImageSize;
+    }
 
-    auto *Begin = ConstantInt::get(getSizeTTy(M), Entry->ImageOffset);
-    auto *Size =
-        ConstantInt::get(getSizeTTy(M), Entry->ImageOffset + Entry->ImageSize);
+    auto *Begin = ConstantInt::get(getSizeTTy(M), BeginOffset);
+    auto *Size = ConstantInt::get(getSizeTTy(M), EndOffset);
     Constant *ZeroBegin[] = {Zero, Begin};
     Constant *ZeroSize[] = {Zero, Size};
 
@@ -489,13 +494,13 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP,
 
   // Create kernel registration code.
   Builder.SetInsertPoint(IfThenBB);
-  Builder.CreateCall(RegFunc, {RegGlobalsFn->arg_begin(), Addr, Name, Name,
-                               ConstantInt::get(Type::getInt32Ty(C), -1),
-                               ConstantPointerNull::get(Int8PtrTy),
-                               ConstantPointerNull::get(Int8PtrTy),
-                               ConstantPointerNull::get(Int8PtrTy),
-                               ConstantPointerNull::get(Int8PtrTy),
-                               ConstantPointerNull::get(Int32PtrTy)});
+  Builder.CreateCall(
+      RegFunc,
+      {RegGlobalsFn->arg_begin(), Addr, Name, Name,
+       ConstantInt::getAllOnesValue(Type::getInt32Ty(C)),
+       ConstantPointerNull::get(Int8PtrTy), ConstantPointerNull::get(Int8PtrTy),
+       ConstantPointerNull::get(Int8PtrTy), ConstantPointerNull::get(Int8PtrTy),
+       ConstantPointerNull::get(Int32PtrTy)});
   Builder.CreateBr(IfEndBB);
   Builder.SetInsertPoint(IfElseBB);
 
@@ -635,273 +640,13 @@ void createRegisterFatbinFunction(Module &M, GlobalVariable *FatbinDesc,
 }
 
 /// SYCLWrapper helper class that creates all LLVM IRs wrapping given images.
-struct SYCLWrapper {
-  Module &M;
-  LLVMContext &C;
-  SYCLJITOptions Options;
-
-  StructType *EntryTy = nullptr;
-  StructType *SyclDeviceImageTy = nullptr;
-  StructType *SyclBinDescTy = nullptr;
-
+class SYCLWrapper {
+public:
   SYCLWrapper(Module &M, const SYCLJITOptions &Options)
       : M(M), C(M.getContext()), Options(Options) {
     EntryTy = offloading::getEntryTy(M);
     SyclDeviceImageTy = getSyclDeviceImageTy();
     SyclBinDescTy = getSyclBinDescTy();
-  }
-
-  IntegerType *getSizeTTy() {
-    switch (M.getDataLayout().getPointerSize()) {
-    case 4:
-      return Type::getInt32Ty(C);
-    case 8:
-      return Type::getInt64Ty(C);
-    }
-    llvm_unreachable("unsupported pointer type size");
-  }
-
-  SmallVector<Constant *, 2> getSizetConstPair(size_t First, size_t Second) {
-    IntegerType *SizeTTy = getSizeTTy();
-    return SmallVector<Constant *, 2>{ConstantInt::get(SizeTTy, First),
-                                      ConstantInt::get(SizeTTy, Second)};
-  }
-
-  /// Note: Properties aren't supported and the support is going
-  /// to be added later.
-  /// Creates a structure corresponding to:
-  /// SYCL specific image descriptor type.
-  /// \code
-  /// struct __sycl.tgt_device_image {
-  ///   // version of this structure - for backward compatibility;
-  ///   // all modifications which change order/type/offsets of existing fields
-  ///   // should increment the version.
-  ///   uint16_t Version;
-  ///   // the kind of offload model the image employs.
-  ///   uint8_t OffloadKind;
-  ///   // format of the image data - SPIRV, LLVMIR bitcode, etc
-  ///   uint8_t Format;
-  ///   // null-terminated string representation of the device's target
-  ///   // architecture
-  ///   const char *Arch;
-  ///   // a null-terminated string; target- and compiler-specific options
-  ///   // which are suggested to use to "compile" program at runtime
-  ///   const char *CompileOptions;
-  ///   // a null-terminated string; target- and compiler-specific options
-  ///   // which are suggested to use to "link" program at runtime
-  ///   const char *LinkOptions;
-  ///   // Pointer to the device binary image start
-  ///   void *ImageStart;
-  ///   // Pointer to the device binary image end
-  ///   void *ImageEnd;
-  ///   // the entry table
-  ///   __tgt_offload_entry *EntriesBegin;
-  ///   __tgt_offload_entry *EntriesEnd;
-  ///   const char *PropertiesBegin;
-  ///   const char *PropertiesEnd;
-  /// };
-  /// \endcode
-  StructType *getSyclDeviceImageTy() {
-    return StructType::create(
-        {
-            Type::getInt16Ty(C),       // Version
-            Type::getInt8Ty(C),        // OffloadKind
-            Type::getInt8Ty(C),        // Format
-            PointerType::getUnqual(C), // Arch
-            PointerType::getUnqual(C), // CompileOptions
-            PointerType::getUnqual(C), // LinkOptions
-            PointerType::getUnqual(C), // ImageStart
-            PointerType::getUnqual(C), // ImageEnd
-            PointerType::getUnqual(C), // EntriesBegin
-            PointerType::getUnqual(C), // EntriesEnd
-            PointerType::getUnqual(C), // PropertiesBegin
-            PointerType::getUnqual(C)  // PropertiesEnd
-        },
-        "__sycl.tgt_device_image");
-  }
-
-  /// Creates a structure for SYCL specific binary descriptor type. Corresponds
-  /// to:
-  ///
-  /// \code
-  ///  struct __sycl.tgt_bin_desc {
-  ///    // version of this structure - for backward compatibility;
-  ///    // all modifications which change order/type/offsets of existing fields
-  ///    // should increment the version.
-  ///    uint16_t Version;
-  ///    uint16_t NumDeviceImages;
-  ///    __sycl.tgt_device_image *DeviceImages;
-  ///    // the offload entry table
-  ///    __tgt_offload_entry *HostEntriesBegin;
-  ///    __tgt_offload_entry *HostEntriesEnd;
-  ///  };
-  /// \endcode
-  StructType *getSyclBinDescTy() {
-    return StructType::create(
-        {Type::getInt16Ty(C), Type::getInt16Ty(C), PointerType::getUnqual(C),
-         PointerType::getUnqual(C), PointerType::getUnqual(C)},
-        "__sycl.tgt_bin_desc");
-  }
-
-  /// Adds a global readonly variable that is initialized by given
-  /// \p Initializer to the module.
-  GlobalVariable *addGlobalArrayVariable(const Twine &Name,
-                                         ArrayRef<char> Initializer,
-                                         const Twine &Section = "") {
-    auto *Arr = ConstantDataArray::get(M.getContext(), Initializer);
-    auto *Var = new GlobalVariable(M, Arr->getType(), /*isConstant*/ true,
-                                   GlobalVariable::InternalLinkage, Arr, Name);
-    Var->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-
-    SmallVector<char, 32> NameBuf;
-    auto SectionName = Section.toStringRef(NameBuf);
-    if (!SectionName.empty())
-      Var->setSection(SectionName);
-    return Var;
-  }
-
-  /// Adds given \p Buf as a global variable into the module.
-  /// \returns Pair of pointers that point at the beginning and the end of the
-  /// variable.
-  std::pair<Constant *, Constant *>
-  addArrayToModule(ArrayRef<char> Buf, const Twine &Name,
-                   const Twine &Section = "") {
-    auto *Var = addGlobalArrayVariable(Name, Buf, Section);
-    auto *ImageB = ConstantExpr::getGetElementPtr(Var->getValueType(), Var,
-                                                  getSizetConstPair(0, 0));
-    auto *ImageE = ConstantExpr::getGetElementPtr(
-        Var->getValueType(), Var, getSizetConstPair(0, Buf.size()));
-    return std::make_pair(ImageB, ImageE);
-  }
-
-  /// Adds given \p Data as constant byte array in the module.
-  /// \returns Constant pointer to the added data. The pointer type does not
-  /// carry size information.
-  Constant *addRawDataToModule(ArrayRef<char> Data, const Twine &Name) {
-    auto *Var = addGlobalArrayVariable(Name, Data);
-    auto *DataPtr = ConstantExpr::getGetElementPtr(Var->getValueType(), Var,
-                                                   getSizetConstPair(0, 0));
-    return DataPtr;
-  }
-
-  /// Creates a global variable of const char* type and creates an
-  /// initializer that initializes it with \p Str.
-  ///
-  /// \returns Link-time constant pointer (constant expr) to that
-  /// variable.
-  Constant *addStringToModule(StringRef Str, const Twine &Name) {
-    auto *Arr = ConstantDataArray::getString(C, Str);
-    auto *Var = new GlobalVariable(M, Arr->getType(), /*isConstant*/ true,
-                                   GlobalVariable::InternalLinkage, Arr, Name);
-    Var->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-    auto *Zero = ConstantInt::get(getSizeTTy(), 0);
-    Constant *ZeroZero[] = {Zero, Zero};
-    return ConstantExpr::getGetElementPtr(Var->getValueType(), Var, ZeroZero);
-  }
-
-  /// Each image contains its own set of symbols, which may contain different
-  /// symbols than other images. This function constructs an array of
-  /// symbol entries for a particular image.
-  ///
-  /// \returns Pointers to the beginning and end of the array.
-  std::pair<Constant *, Constant *>
-  initOffloadEntriesPerImage(StringRef Entries, const Twine &OffloadKindTag) {
-    SmallVector<Constant *> EntriesInits;
-    std::unique_ptr<MemoryBuffer> MB = MemoryBuffer::getMemBuffer(
-        Entries, /*BufferName*/ "", /*RequiresNullTerminator*/ false);
-    for (line_iterator LI(*MB); !LI.is_at_eof(); ++LI) {
-      GlobalVariable *GV =
-          emitOffloadingEntry(M, /*Kind*/ OffloadKind::OFK_SYCL,
-                              Constant::getNullValue(PointerType::getUnqual(C)),
-                              /*Name*/ *LI, /*Size*/ 0,
-                              /*Flags*/ 0, /*Data*/ 0);
-      EntriesInits.push_back(GV->getInitializer());
-    }
-
-    auto *Arr = ConstantArray::get(ArrayType::get(EntryTy, EntriesInits.size()),
-                                   EntriesInits);
-    auto *EntriesGV = new GlobalVariable(M, Arr->getType(), /*isConstant*/ true,
-                                         GlobalVariable::InternalLinkage, Arr,
-                                         OffloadKindTag + "entries_arr");
-
-    auto *EntriesB = ConstantExpr::getGetElementPtr(
-        EntriesGV->getValueType(), EntriesGV, getSizetConstPair(0, 0));
-    auto *EntriesE = ConstantExpr::getGetElementPtr(
-        EntriesGV->getValueType(), EntriesGV,
-        getSizetConstPair(0, EntriesInits.size()));
-    return std::make_pair(EntriesB, EntriesE);
-  }
-
-  Constant *wrapImage(const OffloadBinary &OB, const Twine &ImageID,
-                      StringRef OffloadKindTag) {
-    // Note: Intel DPC++ compiler had 2 versions of this structure
-    // and clang++ has a third different structure. To avoid ABI incompatibility
-    // between generated device images the Version here starts from 3.
-    constexpr uint16_t DeviceImageStructVersion = 3;
-    Constant *Version =
-        ConstantInt::get(Type::getInt16Ty(C), DeviceImageStructVersion);
-    Constant *OffloadKindConstant = ConstantInt::get(
-        Type::getInt8Ty(C), static_cast<uint8_t>(OB.getOffloadKind()));
-    Constant *ImageKindConstant = ConstantInt::get(
-        Type::getInt8Ty(C), static_cast<uint8_t>(OB.getImageKind()));
-    StringRef Triple = OB.getString("triple");
-    Constant *TripleConstant =
-        addStringToModule(Triple, Twine(OffloadKindTag) + "target." + ImageID);
-    Constant *CompileOptions =
-        addStringToModule(Options.CompileOptions,
-                          Twine(OffloadKindTag) + "opts.compile." + ImageID);
-    Constant *LinkOptions = addStringToModule(
-        Options.LinkOptions, Twine(OffloadKindTag) + "opts.link." + ImageID);
-
-    // Note: NULL for now.
-    std::pair<Constant *, Constant *> PropertiesConstants = {
-        Constant::getNullValue(PointerType::getUnqual(C)),
-        Constant::getNullValue(PointerType::getUnqual(C))};
-
-    StringRef RawImage = OB.getImage();
-    std::pair<Constant *, Constant *> Binary = addArrayToModule(
-        ArrayRef<char>(RawImage.begin(), RawImage.end()),
-        Twine(OffloadKindTag) + ImageID + ".data", ".llvm.offloading");
-
-    // For SYCL images offload entries are defined here per image.
-    std::pair<Constant *, Constant *> ImageEntriesPtrs =
-        initOffloadEntriesPerImage(OB.getString("symbols"), OffloadKindTag);
-    Constant *WrappedBinary = ConstantStruct::get(
-        SyclDeviceImageTy, Version, OffloadKindConstant, ImageKindConstant,
-        TripleConstant, CompileOptions, LinkOptions, Binary.first,
-        Binary.second, ImageEntriesPtrs.first, ImageEntriesPtrs.second,
-        PropertiesConstants.first, PropertiesConstants.second);
-
-    return WrappedBinary;
-  }
-
-  GlobalVariable *combineWrappedImages(ArrayRef<Constant *> WrappedImages,
-                                       StringRef OffloadKindTag) {
-    auto *ImagesData = ConstantArray::get(
-        ArrayType::get(SyclDeviceImageTy, WrappedImages.size()), WrappedImages);
-    auto *ImagesGV =
-        new GlobalVariable(M, ImagesData->getType(), /*isConstant*/ true,
-                           GlobalValue::InternalLinkage, ImagesData,
-                           Twine(OffloadKindTag) + "device_images");
-    ImagesGV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-
-    auto *Zero = ConstantInt::get(getSizeTTy(), 0);
-    Constant *ZeroZero[] = {Zero, Zero};
-    auto *ImagesB = ConstantExpr::getGetElementPtr(ImagesGV->getValueType(),
-                                                   ImagesGV, ZeroZero);
-
-    Constant *EntriesB = Constant::getNullValue(PointerType::getUnqual(C));
-    Constant *EntriesE = Constant::getNullValue(PointerType::getUnqual(C));
-    static constexpr uint16_t BinDescStructVersion = 1;
-    auto *DescInit = ConstantStruct::get(
-        SyclBinDescTy,
-        ConstantInt::get(Type::getInt16Ty(C), BinDescStructVersion),
-        ConstantInt::get(Type::getInt16Ty(C), WrappedImages.size()), ImagesB,
-        EntriesB, EntriesE);
-
-    return new GlobalVariable(M, DescInit->getType(), /*isConstant*/ true,
-                              GlobalValue::InternalLinkage, DescInit,
-                              Twine(OffloadKindTag) + "descriptor");
   }
 
   /// Creates binary descriptor for the given device images. Binary descriptor
@@ -967,19 +712,20 @@ struct SYCLWrapper {
   }
 
   void createRegisterFatbinFunction(GlobalVariable *FatbinDesc) {
-    auto *FuncTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
-    auto *Func = Function::Create(FuncTy, GlobalValue::InternalLinkage,
-                                  Twine("sycl") + ".descriptor_reg", &M);
+    FunctionType *FuncTy =
+        FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
+    Function *Func = Function::Create(FuncTy, GlobalValue::InternalLinkage,
+                                      Twine("sycl") + ".descriptor_reg", &M);
     Func->setSection(".text.startup");
 
     // Get RegFuncName function declaration.
-    auto *RegFuncTy =
+    FunctionType *RegFuncTy =
         FunctionType::get(Type::getVoidTy(C), PointerType::getUnqual(C),
                           /*isVarArg=*/false);
     FunctionCallee RegFuncC =
         M.getOrInsertFunction("__sycl_register_lib", RegFuncTy);
 
-    // Construct function body
+    // Construct function body.
     IRBuilder Builder(BasicBlock::Create(C, "entry", Func));
     Builder.CreateCall(RegFuncC, FatbinDesc);
     Builder.CreateRetVoid();
@@ -989,13 +735,14 @@ struct SYCLWrapper {
   }
 
   void createUnregisterFunction(GlobalVariable *FatbinDesc) {
-    auto *FuncTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
-    auto *Func = Function::Create(FuncTy, GlobalValue::InternalLinkage,
-                                  "sycl.descriptor_unreg", &M);
+    FunctionType *FuncTy =
+        FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
+    Function *Func = Function::Create(FuncTy, GlobalValue::InternalLinkage,
+                                      "sycl.descriptor_unreg", &M);
     Func->setSection(".text.startup");
 
     // Get UnregFuncName function declaration.
-    auto *UnRegFuncTy =
+    FunctionType *UnRegFuncTy =
         FunctionType::get(Type::getVoidTy(C), PointerType::getUnqual(C),
                           /*isVarArg=*/false);
     FunctionCallee UnRegFuncC =
@@ -1009,6 +756,273 @@ struct SYCLWrapper {
     // Add this function to global destructors.
     appendToGlobalDtors(M, Func, /*Priority*/ 1);
   }
+
+private:
+  IntegerType *getSizeTTy() {
+    switch (M.getDataLayout().getPointerSize()) {
+    case 4:
+      return Type::getInt32Ty(C);
+    case 8:
+      return Type::getInt64Ty(C);
+    }
+    llvm_unreachable("unsupported pointer type size");
+  }
+
+  SmallVector<Constant *, 2> getSizetConstPair(size_t First, size_t Second) {
+    IntegerType *SizeTTy = getSizeTTy();
+    return SmallVector<Constant *, 2>{ConstantInt::get(SizeTTy, First),
+                                      ConstantInt::get(SizeTTy, Second)};
+  }
+
+  /// Note: Properties aren't supported and the support is going
+  /// to be added later.
+  /// Creates a structure corresponding to:
+  /// SYCL specific image descriptor type.
+  /// \code
+  /// struct __sycl.tgt_device_image {
+  ///   // Version of this structure - for backward compatibility;
+  ///   // all modifications which change order/type/offsets of existing fields
+  ///   // should increment the version.
+  ///   uint16_t Version;
+  ///   // The kind of offload model the image employs.
+  ///   uint8_t OffloadKind;
+  ///   // Format of the image data - SPIRV, LLVMIR bitcode, etc.
+  ///   uint8_t Format;
+  ///   // Null-terminated string representation of the device's target
+  ///   // architecture.
+  ///   const char *Arch;
+  ///   // A null-terminated string; target- and compiler-specific options
+  ///   // which are passed to the device compiler at runtime.
+  ///   const char *CompileOptions;
+  ///   // A null-terminated string; target- and compiler-specific options
+  ///   // which are passed to the device linker at runtime.
+  ///   const char *LinkOptions;
+  ///   // Pointer to the device binary image start.
+  ///   void *ImageStart;
+  ///   // Pointer to the device binary image end.
+  ///   void *ImageEnd;
+  ///   // The entry table.
+  ///   __tgt_offload_entry *EntriesBegin;
+  ///   __tgt_offload_entry *EntriesEnd;
+  ///   const char *PropertiesBegin;
+  ///   const char *PropertiesEnd;
+  /// };
+  /// \endcode
+  StructType *getSyclDeviceImageTy() {
+    return StructType::create(
+        {
+            Type::getInt16Ty(C),       // Version
+            Type::getInt8Ty(C),        // OffloadKind
+            Type::getInt8Ty(C),        // Format
+            PointerType::getUnqual(C), // Arch
+            PointerType::getUnqual(C), // CompileOptions
+            PointerType::getUnqual(C), // LinkOptions
+            PointerType::getUnqual(C), // ImageStart
+            PointerType::getUnqual(C), // ImageEnd
+            PointerType::getUnqual(C), // EntriesBegin
+            PointerType::getUnqual(C), // EntriesEnd
+            PointerType::getUnqual(C), // PropertiesBegin
+            PointerType::getUnqual(C)  // PropertiesEnd
+        },
+        "__sycl.tgt_device_image");
+  }
+
+  /// Creates a structure for SYCL specific binary descriptor type. Corresponds
+  /// to:
+  ///
+  /// \code
+  ///  struct __sycl.tgt_bin_desc {
+  ///    // version of this structure - for backward compatibility;
+  ///    // all modifications which change order/type/offsets of existing fields
+  ///    // should increment the version.
+  ///    uint16_t Version;
+  ///    uint16_t NumDeviceImages;
+  ///    __sycl.tgt_device_image *DeviceImages;
+  ///    // the offload entry table
+  ///    __tgt_offload_entry *HostEntriesBegin;
+  ///    __tgt_offload_entry *HostEntriesEnd;
+  ///  };
+  /// \endcode
+  StructType *getSyclBinDescTy() {
+    return StructType::create(
+        {Type::getInt16Ty(C), Type::getInt16Ty(C), PointerType::getUnqual(C),
+         PointerType::getUnqual(C), PointerType::getUnqual(C)},
+        "__sycl.tgt_bin_desc");
+  }
+
+  /// Adds a global readonly variable that is initialized by given
+  /// \p Initializer to the module.
+  GlobalVariable *addGlobalArrayVariable(const Twine &Name,
+                                         ArrayRef<char> Initializer,
+                                         const Twine &Section = "") {
+    Constant *Arr = ConstantDataArray::get(M.getContext(), Initializer);
+    GlobalVariable *Var =
+        new GlobalVariable(M, Arr->getType(), /*isConstant*/ true,
+                           GlobalVariable::InternalLinkage, Arr, Name);
+    Var->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+
+    SmallVector<char, 32> NameBuf;
+    StringRef SectionName = Section.toStringRef(NameBuf);
+    if (!SectionName.empty())
+      Var->setSection(SectionName);
+    return Var;
+  }
+
+  /// Adds given \p Buf as a global variable into the module.
+  /// \returns Pair of pointers that point at the beginning and the end of the
+  /// variable.
+  std::pair<Constant *, Constant *>
+  addArrayToModule(ArrayRef<char> Buf, const Twine &Name,
+                   const Twine &Section = "") {
+    GlobalVariable *Var = addGlobalArrayVariable(Name, Buf, Section);
+    Constant *ImageB = ConstantExpr::getGetElementPtr(Var->getValueType(), Var,
+                                                      getSizetConstPair(0, 0));
+    Constant *ImageE = ConstantExpr::getGetElementPtr(
+        Var->getValueType(), Var, getSizetConstPair(0, Buf.size()));
+    return std::make_pair(ImageB, ImageE);
+  }
+
+  /// Adds given \p Data as constant byte array in the module.
+  /// \returns Constant pointer to the added data. The pointer type does not
+  /// carry size information.
+  Constant *addRawDataToModule(ArrayRef<char> Data, const Twine &Name) {
+    GlobalVariable *Var = addGlobalArrayVariable(Name, Data);
+    Constant *DataPtr = ConstantExpr::getGetElementPtr(Var->getValueType(), Var,
+                                                       getSizetConstPair(0, 0));
+    return DataPtr;
+  }
+
+  /// Creates a global variable of const char* type and creates an
+  /// initializer that initializes it with \p Str.
+  ///
+  /// \returns Link-time constant pointer (constant expr) to that
+  /// variable.
+  Constant *addStringToModule(StringRef Str, const Twine &Name) {
+    Constant *Arr = ConstantDataArray::getString(C, Str);
+    GlobalVariable *Var =
+        new GlobalVariable(M, Arr->getType(), /*isConstant*/ true,
+                           GlobalVariable::InternalLinkage, Arr, Name);
+    Var->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+    ConstantInt *Zero = ConstantInt::get(getSizeTTy(), 0);
+    Constant *ZeroZero[] = {Zero, Zero};
+    return ConstantExpr::getGetElementPtr(Var->getValueType(), Var, ZeroZero);
+  }
+
+  /// Each image contains its own set of symbols, which may contain different
+  /// symbols than other images. This function constructs an array of
+  /// symbol entries for a particular image.
+  ///
+  /// \returns Pointers to the beginning and end of the array.
+  std::pair<Constant *, Constant *>
+  initOffloadEntriesPerImage(StringRef Entries, const Twine &OffloadKindTag) {
+    SmallVector<Constant *> EntriesInits;
+    std::unique_ptr<MemoryBuffer> MB = MemoryBuffer::getMemBuffer(
+        Entries, /*BufferName*/ "", /*RequiresNullTerminator*/ false);
+    for (line_iterator LI(*MB); !LI.is_at_eof(); ++LI) {
+      GlobalVariable *GV =
+          emitOffloadingEntry(M, /*Kind*/ OffloadKind::OFK_SYCL,
+                              Constant::getNullValue(PointerType::getUnqual(C)),
+                              /*Name*/ *LI, /*Size*/ 0,
+                              /*Flags*/ 0, /*Data*/ 0);
+      EntriesInits.push_back(GV->getInitializer());
+    }
+
+    Constant *Arr = ConstantArray::get(
+        ArrayType::get(EntryTy, EntriesInits.size()), EntriesInits);
+    GlobalVariable *EntriesGV = new GlobalVariable(
+        M, Arr->getType(), /*isConstant*/ true, GlobalVariable::InternalLinkage,
+        Arr, OffloadKindTag + "entries_arr");
+
+    Constant *EntriesB = ConstantExpr::getGetElementPtr(
+        EntriesGV->getValueType(), EntriesGV, getSizetConstPair(0, 0));
+    Constant *EntriesE = ConstantExpr::getGetElementPtr(
+        EntriesGV->getValueType(), EntriesGV,
+        getSizetConstPair(0, EntriesInits.size()));
+    return std::make_pair(EntriesB, EntriesE);
+  }
+
+  Constant *wrapImage(const OffloadBinary &OB, const Twine &ImageID,
+                      StringRef OffloadKindTag) {
+    // Note: Intel DPC++ compiler had 2 versions of this structure
+    // and clang++ has a third different structure. To avoid ABI incompatibility
+    // between generated device images the Version here starts from 3.
+    constexpr uint16_t DeviceImageStructVersion = 3;
+    Constant *Version =
+        ConstantInt::get(Type::getInt16Ty(C), DeviceImageStructVersion);
+    Constant *OffloadKindConstant = ConstantInt::get(
+        Type::getInt8Ty(C), static_cast<uint8_t>(OB.getOffloadKind()));
+    Constant *ImageKindConstant = ConstantInt::get(
+        Type::getInt8Ty(C), static_cast<uint8_t>(OB.getImageKind()));
+    StringRef Triple = OB.getString("triple");
+    Constant *TripleConstant =
+        addStringToModule(Triple, Twine(OffloadKindTag) + "target." + ImageID);
+    Constant *CompileOptions =
+        addStringToModule(Options.CompileOptions,
+                          Twine(OffloadKindTag) + "opts.compile." + ImageID);
+    Constant *LinkOptions = addStringToModule(
+        Options.LinkOptions, Twine(OffloadKindTag) + "opts.link." + ImageID);
+
+    // Note: NULL for now.
+    std::pair<Constant *, Constant *> PropertiesConstants = {
+        Constant::getNullValue(PointerType::getUnqual(C)),
+        Constant::getNullValue(PointerType::getUnqual(C))};
+
+    StringRef RawImage = OB.getImage();
+    std::pair<Constant *, Constant *> Binary = addArrayToModule(
+        ArrayRef<char>(RawImage.begin(), RawImage.end()),
+        Twine(OffloadKindTag) + ImageID + ".data", ".llvm.offloading");
+
+    // For SYCL images offload entries are defined here per image.
+    std::pair<Constant *, Constant *> ImageEntriesPtrs =
+        initOffloadEntriesPerImage(OB.getString("symbols"), OffloadKindTag);
+
+    // .first and .second arguments below correspond to start and end pointers
+    // respectively.
+    Constant *WrappedBinary = ConstantStruct::get(
+        SyclDeviceImageTy, Version, OffloadKindConstant, ImageKindConstant,
+        TripleConstant, CompileOptions, LinkOptions, Binary.first,
+        Binary.second, ImageEntriesPtrs.first, ImageEntriesPtrs.second,
+        PropertiesConstants.first, PropertiesConstants.second);
+
+    return WrappedBinary;
+  }
+
+  GlobalVariable *combineWrappedImages(ArrayRef<Constant *> WrappedImages,
+                                       StringRef OffloadKindTag) {
+    Constant *ImagesData = ConstantArray::get(
+        ArrayType::get(SyclDeviceImageTy, WrappedImages.size()), WrappedImages);
+    GlobalVariable *ImagesGV =
+        new GlobalVariable(M, ImagesData->getType(), /*isConstant*/ true,
+                           GlobalValue::InternalLinkage, ImagesData,
+                           Twine(OffloadKindTag) + "device_images");
+    ImagesGV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+
+    ConstantInt *Zero = ConstantInt::get(getSizeTTy(), 0);
+    Constant *ZeroZero[] = {Zero, Zero};
+    Constant *ImagesB = ConstantExpr::getGetElementPtr(ImagesGV->getValueType(),
+                                                       ImagesGV, ZeroZero);
+
+    Constant *EntriesB = Constant::getNullValue(PointerType::getUnqual(C));
+    Constant *EntriesE = Constant::getNullValue(PointerType::getUnqual(C));
+    static constexpr uint16_t BinDescStructVersion = 1;
+    Constant *DescInit = ConstantStruct::get(
+        SyclBinDescTy,
+        ConstantInt::get(Type::getInt16Ty(C), BinDescStructVersion),
+        ConstantInt::get(Type::getInt16Ty(C), WrappedImages.size()), ImagesB,
+        EntriesB, EntriesE);
+
+    return new GlobalVariable(M, DescInit->getType(), /*isConstant*/ true,
+                              GlobalValue::InternalLinkage, DescInit,
+                              Twine(OffloadKindTag) + "descriptor");
+  }
+
+  Module &M;
+  LLVMContext &C;
+  SYCLJITOptions Options;
+
+  StructType *EntryTy = nullptr;
+  StructType *SyclDeviceImageTy = nullptr;
+  StructType *SyclBinDescTy = nullptr;
 }; // end of SYCLWrapper
 
 } // namespace

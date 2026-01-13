@@ -28,7 +28,7 @@ _start:
 # CHECK-NEXT:        Mutable:         true
 # CHECK-NEXT:        InitExpr:
 # CHECK-NEXT:          Opcode:          I32_CONST
-# CHECK-NEXT:          Value:           66560
+# CHECK-NEXT:          Value:           65536
 
 # __tls_base
 # CHECK-NEXT:      - Index:           1

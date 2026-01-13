@@ -273,6 +273,11 @@ public:
   /// of the function that will be called to configure kernel call, with the
   /// parameters specified via <<<>>>.
   std::string getConfigureFuncName() const;
+  /// Return the name of the parameter buffer allocation function for the
+  /// device kernel launch.
+  std::string getGetParameterBufferFuncName() const;
+  /// Return the name of the device kernel launch function.
+  std::string getLaunchDeviceFuncName() const;
 
   /// Record variables that are potentially ODR-used in CUDA/HIP.
   void recordPotentialODRUsedVariable(MultiExprArg Args,

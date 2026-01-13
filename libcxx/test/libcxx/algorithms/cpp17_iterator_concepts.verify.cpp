@@ -102,7 +102,7 @@ void check_iterator_requirements() {
   // expected-note@*:* {{because 'not_copy_assignable' does not satisfy '__cpp17_copy_assignable'}}
 
   static_assert(std::__cpp17_iterator<diff_t_not_signed>); // expected-error {{static assertion failed}}
-  // expected-note-re@*:* {{because 'is_signed_v<__iter_diff_t<diff_t_not_signed>{{.*}}>' evaluated to false}}
+  // expected-note-re@*:* {{because 'is_signed_v<__iterator_difference_type<diff_t_not_signed>{{.*}}>' evaluated to false}}
 }
 
 struct not_equality_comparable : valid_iterator<not_equality_comparable> {};
@@ -173,7 +173,7 @@ void check_bidirectional_iterator_requirements() {
   _LIBCPP_REQUIRE_CPP17_BIDIRECTIONAL_ITERATOR(missing_postdecrement, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{cannot decrement value of type 'missing_postdecrement'}}
   _LIBCPP_REQUIRE_CPP17_BIDIRECTIONAL_ITERATOR(not_returning_iter_reference, ""); // expected-error {{static assertion failed}}
-  // expected-note-re@*:* {{'same_as<int, __iter_reference<not_returning_iter_reference>{{ ?}}>'}}
+  // expected-note-re@*:* {{'same_as<int, __iterator_reference<not_returning_iter_reference>{{ ?}}>'}}
   // clang-format on
 }
 

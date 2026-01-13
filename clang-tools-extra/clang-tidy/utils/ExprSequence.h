@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_EXPRSEQUENCE_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_EXPRSEQUENCE_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_EXPRSEQUENCE_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_EXPRSEQUENCE_H
 
 #include "clang/Analysis/CFG.h"
 #include "clang/Lex/Lexer.h"
@@ -117,4 +117,4 @@ private:
 
 } // namespace clang::tidy::utils
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_EXPRSEQUENCE_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_EXPRSEQUENCE_H

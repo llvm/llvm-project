@@ -150,7 +150,7 @@ bool LoongArchABIInfo::detectFARsEligibleStructHelper(
     // Non-zero-length arrays of empty records make the struct ineligible to be
     // passed via FARs in C++.
     if (const auto *RTy = EltTy->getAsCanonical<RecordType>()) {
-      if (ArraySize != 0 && isa<CXXRecordDecl>(RTy->getOriginalDecl()) &&
+      if (ArraySize != 0 && isa<CXXRecordDecl>(RTy->getDecl()) &&
           isEmptyRecord(getContext(), EltTy, true, true))
         return false;
     }
@@ -169,7 +169,7 @@ bool LoongArchABIInfo::detectFARsEligibleStructHelper(
     // copy constructor are not eligible for the FP calling convention.
     if (getRecordArgABI(Ty, CGT.getCXXABI()))
       return false;
-    const RecordDecl *RD = RTy->getOriginalDecl()->getDefinitionOrSelf();
+    const RecordDecl *RD = RTy->getDecl()->getDefinitionOrSelf();
     if (isEmptyRecord(getContext(), Ty, true, true) &&
         (!RD->isUnion() || !isa<CXXRecordDecl>(RD)))
       return true;

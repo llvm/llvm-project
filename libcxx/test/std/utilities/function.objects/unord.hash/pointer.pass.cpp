@@ -17,6 +17,8 @@
 //     size_t operator()(T val) const;
 // };
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 // Not very portable
 
 #include <cassert>
@@ -44,18 +46,14 @@ test()
     assert(h(&i) != h(&j));
 }
 
-// can't hash nullptr_t until C++17
-void test_nullptr()
-{
-#if TEST_STD_VER > 14
-    typedef std::nullptr_t T;
-    typedef std::hash<T> H;
+void test_nullptr() {
+  typedef std::nullptr_t T;
+  typedef std::hash<T> H;
 #if TEST_STD_VER <= 17
-    static_assert((std::is_same<typename H::argument_type, T>::value), "" );
-    static_assert((std::is_same<typename H::result_type, std::size_t>::value), "" );
+  static_assert((std::is_same<typename H::argument_type, T>::value), "");
+  static_assert((std::is_same<typename H::result_type, std::size_t>::value), "");
 #endif
-    ASSERT_NOEXCEPT(H()(T()));
-#endif
+  ASSERT_NOEXCEPT(H()(T()));
 }
 
 int main(int, char**)

@@ -110,7 +110,7 @@ public:
       std::string Filename;
       TimestampTy Timestamp;
 
-      KeyTy() {}
+      KeyTy() = default;
       KeyTy(StringRef Filename, TimestampTy Timestamp)
           : Filename(Filename.str()), Timestamp(Timestamp) {}
     };

@@ -11,6 +11,7 @@ add_clang_unittest(ClangAnalysisTests
   clangAST
   clangASTMatchers
   clangAnalysis
+  clangAnalysisLifetimeSafety
   clangBasic
   clangFrontend
   clangLex
@@ -25,3 +26,4 @@ add_clang_unittest(ClangAnalysisTests
   )
 
 add_subdirectory(FlowSensitive)
+add_subdirectory(Scalable)

@@ -149,11 +149,6 @@ public:
     std::string Data;
     llvm::raw_string_ostream OS(Data);
 
-    Triple OriginalTriple = M.getTargetTriple();
-    // Set to DXIL triple when write to bitcode.
-    // Only the output bitcode need to be DXIL triple.
-    M.setTargetTriple(Triple("dxil-ms-dx"));
-
     // Perform late legalization of lifetime intrinsics that would otherwise
     // fail the Module Verifier if performed in an earlier pass
     legalizeLifetimeIntrinsics(M);
@@ -164,9 +159,6 @@ public:
     // simply remove them to keep the Module Verifier happy after our
     // not-so-legal legalizations
     removeLifetimeIntrinsics(M);
-
-    // Recover triple.
-    M.setTargetTriple(OriginalTriple);
 
     Constant *ModuleConstant =
         ConstantDataArray::get(M.getContext(), arrayRefFromStringRef(Data));

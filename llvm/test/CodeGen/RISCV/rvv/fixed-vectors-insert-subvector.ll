@@ -140,7 +140,6 @@ define <vscale x 2 x i32> @insert_nxv8i32_v4i32_0(<vscale x 2 x i32> %vec, <4 x 
   ret <vscale x 2 x i32> %v
 }
 
-
 define <4 x i32> @insert_v4i32_v4i32_0(<4 x i32> %vec, <4 x i32> %subvec) {
 ; CHECK-LABEL: insert_v4i32_v4i32_0:
 ; CHECK:       # %bb.0:
@@ -251,7 +250,6 @@ bar:
   %w = phi <4 x i32> [%v, %foo], [zeroinitializer, %entry]
   ret <4 x i32> %w
 }
-
 
 define void @insert_v8i32_v2i32_0(ptr %vp, ptr %svp) {
 ; VLA-LABEL: insert_v8i32_v2i32_0:
@@ -602,8 +600,6 @@ define <vscale x 8 x i1> @insert_nxv8i1_v8i1_16(<vscale x 8 x i1> %v, ptr %svp) 
   %c = call <vscale x 8 x i1> @llvm.vector.insert.v8i1.nxv8i1(<vscale x 8 x i1> %v, <8 x i1> %sv, i64 16)
   ret <vscale x 8 x i1> %c
 }
-
-declare <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64>, <2 x i64>, i64)
 
 define void @insert_v2i64_nxv16i64(ptr %psv0, ptr %psv1, ptr %out) {
 ; VLA-LABEL: insert_v2i64_nxv16i64:
@@ -966,23 +962,6 @@ define <vscale x 8 x half> @insert_nxv8f16_v2f16_2(<vscale x 8 x half> %vec, ptr
   ret <vscale x 8 x half> %v
 }
 
-declare <8 x i1> @llvm.vector.insert.v4i1.v8i1(<8 x i1>, <4 x i1>, i64)
-declare <32 x i1> @llvm.vector.insert.v8i1.v32i1(<32 x i1>, <8 x i1>, i64)
-
-declare <4 x i16> @llvm.vector.insert.v2i16.v4i16(<4 x i16>, <2 x i16>, i64)
-
-declare <4 x i32> @llvm.vector.insert.v2i32.v4i32(<4 x i32>, <2 x i32>, i64)
-declare <8 x i32> @llvm.vector.insert.v2i32.v8i32(<8 x i32>, <2 x i32>, i64)
-
-declare <vscale x 2 x i1> @llvm.vector.insert.v4i1.nxv2i1(<vscale x 2 x i1>, <4 x i1>, i64)
-declare <vscale x 8 x i1> @llvm.vector.insert.v8i1.nxv8i1(<vscale x 8 x i1>, <8 x i1>, i64)
-
-declare <vscale x 2 x i16> @llvm.vector.insert.v2i16.nxv2i16(<vscale x 2 x i16>, <2 x i16>, i64)
-
-declare <vscale x 8 x i32> @llvm.vector.insert.v2i32.nxv8i32(<vscale x 8 x i32>, <2 x i32>, i64)
-declare <vscale x 8 x i32> @llvm.vector.insert.v4i32.nxv8i32(<vscale x 8 x i32>, <4 x i32>, i64)
-declare <vscale x 8 x i32> @llvm.vector.insert.v8i32.nxv8i32(<vscale x 8 x i32>, <8 x i32>, i64)
-
 ; We emit insert_subvectors of fixed vectors at index 0 into undefs as a
 ; copy_to_regclass or insert_subreg, depending on the register classes of the
 ; vector types. Make sure that we use the correct type and not the shrunken
@@ -991,7 +970,6 @@ declare <vscale x 8 x i32> @llvm.vector.insert.v8i32.nxv8i32(<vscale x 8 x i32>,
 ;
 ;   t14: nxv2i32 = insert_subvector poison:nxv2i32, t4, Constant:i64<0>
 ; t15: v8i32 = extract_subvector t14, Constant:i64<0>
-declare <4 x i32> @llvm.vector.extract.v4i32.v8i32(<8 x i32>, i64)
 define <4 x i32> @insert_extract_v8i32_v2i32_0(<2 x i32> %v) {
 ; CHECK-LABEL: insert_extract_v8i32_v2i32_0:
 ; CHECK:       # %bb.0:

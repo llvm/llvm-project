@@ -262,6 +262,7 @@ public:
   const Scope &FindScope(parser::CharBlock) const;
   Scope &FindScope(parser::CharBlock);
   void UpdateScopeIndex(Scope &, parser::CharBlock);
+  void DumpScopeIndex(llvm::raw_ostream &) const;
 
   bool IsInModuleFile(parser::CharBlock) const;
 
@@ -330,6 +331,8 @@ public:
 
   void NoteDefinedSymbol(const Symbol &);
   bool IsSymbolDefined(const Symbol &) const;
+  void NoteUsedSymbol(const Symbol &);
+  bool IsSymbolUsed(const Symbol &) const;
 
   void DumpSymbols(llvm::raw_ostream &);
 
@@ -389,6 +392,7 @@ private:
   ModuleDependences moduleDependences_;
   std::map<const Symbol *, SourceName> moduleFileOutputRenamings_;
   UnorderedSymbolSet isDefined_;
+  UnorderedSymbolSet isUsed_;
   std::list<ProgramTree> programTrees_;
 };
 

@@ -259,6 +259,9 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
     }
     return Cl::CL_LValue;
 
+  case Expr::MatrixSingleSubscriptExprClass:
+    return ClassifyInternal(Ctx, cast<MatrixSingleSubscriptExpr>(E)->getBase());
+
   // Subscripting matrix types behaves like member accesses.
   case Expr::MatrixSubscriptExprClass:
     return ClassifyInternal(Ctx, cast<MatrixSubscriptExpr>(E)->getBase());

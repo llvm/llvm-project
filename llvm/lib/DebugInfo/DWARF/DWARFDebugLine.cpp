@@ -9,6 +9,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
@@ -1219,15 +1220,10 @@ Error DWARFDebugLine::LineTable::parse(
           }
           if (Verbose && !Operands.empty()) {
             *OS << " (operands: ";
-            bool First = true;
-            for (uint64_t Value : Operands) {
-              if (!First)
-                *OS << ", ";
-              First = false;
-              *OS << format("0x%16.16" PRIx64, Value);
-            }
-            if (Verbose)
-              *OS << ')';
+            ListSeparator LS;
+            for (uint64_t Value : Operands)
+              *OS << LS << format("0x%16.16" PRIx64, Value);
+            *OS << ')';
           }
         }
         break;

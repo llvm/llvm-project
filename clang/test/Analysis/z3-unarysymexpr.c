@@ -47,3 +47,11 @@ int z3_crash2(int a) {
     return *d; // expected-warning{{Dereference of undefined pointer value}}
   return 0;
 }
+
+// Refer to issue 165779
+void z3_crash3(long a) {
+  if (~-(5 && a)) {
+    long *c;
+    *c; // expected-warning{{Dereference of undefined pointer value (loaded from variable 'c')}}
+  }
+}
