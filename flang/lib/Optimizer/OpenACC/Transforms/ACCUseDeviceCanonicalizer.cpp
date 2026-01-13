@@ -187,22 +187,15 @@ private:
         useDeviceOp.getModifiersAttr(), useDeviceOp.getNameAttr(),
         useDeviceOp.getRecipeAttr());
 
-    // Replace the old use_device operand in the host_data with the new one
-    SmallVector<Value> newOperands;
-    for (Value operand : hostDataOp.getDataClauseOperands()) {
-      if (operand == useDeviceOp.getResult())
-        newOperands.push_back(newUseDeviceOp.getResult());
-      else
-        newOperands.push_back(operand);
-    }
-
     LLVM_DEBUG(llvm::dbgs() << "Created new hoisted pattern for box access:\n"
                             << "  box_addr: " << *boxAddr << "\n"
                             << "  new use_device: " << *newUseDeviceOp << "\n");
 
-    // Update the host_data operation
+    // Replace the old `acc.use_device` operand in the `acc.host_data` operation
+    // with the new one
     rewriter.modifyOpInPlace(hostDataOp, [&]() {
-      hostDataOp.getDataClauseOperandsMutable().assign(newOperands);
+      hostDataOp->replaceUsesOfWith(useDeviceOp.getResult(),
+                                    newUseDeviceOp.getResult());
     });
 
     return newUseDeviceOp;
