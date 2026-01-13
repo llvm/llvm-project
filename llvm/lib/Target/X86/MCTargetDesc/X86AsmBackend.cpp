@@ -133,6 +133,8 @@ class X86AsmBackend : public MCAsmBackend {
   bool needAlign(const MCInst &Inst) const;
   bool canPadBranches(MCObjectStreamer &OS) const;
   bool canPadInst(const MCInst &Inst, MCObjectStreamer &OS) const;
+  void emitInstructionBeginBundle(MCObjectStreamer &OS);
+  void emitInstructionEndBundle(MCObjectStreamer &OS);
 
 public:
   X86AsmBackend(const Target &T, const MCSubtargetInfo &STI)
@@ -196,6 +198,12 @@ public:
                               unsigned &RemainingSize) const;
 
   bool finishLayout() const override;
+
+  bool padInstsBackward(SmallVectorImpl<MCFragment *> &Relaxable,
+                        unsigned &RemainingSize) const;
+  bool dividePadInBundle(const MCAssembler &Asm,
+                         ArrayRef<MCFragment *> Peephole) const;
+  bool optimizeBundleNops(const MCAssembler &Asm) const;
 
   unsigned getMaximumNopSize(const MCSubtargetInfo &STI) const override;
 
@@ -463,9 +471,55 @@ void X86_MC::emitInstruction(MCObjectStreamer &S, const MCInst &Inst,
   Backend.emitInstructionEnd(S, Inst);
 }
 
+/// If the upcoming instruction is inside the bundle lock, do nothing so that
+/// the ObjectStreamer emits the instruction to the current fragment. If not, it
+/// creates a new BA to group bundled fragments.
+void X86AsmBackend::emitInstructionBeginBundle(MCObjectStreamer &OS) {
+  assert(Asm->isBundlingEnabled());
+
+  if (OS.getCurrentSectionOnly()->isBundleLocked()) {
+    OS.getCurrentFragment()->setAllowAutoPadding(true);
+    return;
+  }
+  PendingBA = OS.newSpecialFragment<MCBoundaryAlignFragment>(
+      Align(Asm->getBundleAlignSize()), STI);
+  // We can set LastFragment now, before the instruction is emitted, as bundling
+  // emits one fragment per instruction. Deferring setLastFragment to
+  // post-emitInstruction would risk capturing a fragment that a subsequent
+  // emitCodeAlignment repurposes in-place to FT_Align, corrupting the BA's
+  // boundary range.
+  PendingBA->setLastFragment(OS.getCurrentFragment());
+
+  OS.getCurrentFragment()->setAllowAutoPadding(true);
+}
+
+/// If the just-emitted instruction is inside the bundle lock, check the current
+/// fragment is non-zero to ensure the instruction is placed as expected. If it
+/// is not locked, finalize pending BA Fragment. emitBundleUnlock will close the
+/// fragment and start a new empty fragment.
+void X86AsmBackend::emitInstructionEndBundle(MCObjectStreamer &OS) {
+  assert(Asm->isBundlingEnabled());
+
+  MCFragment *CF = OS.getCurrentFragment();
+
+  if (OS.getCurrentSectionOnly()->isBundleLocked()) {
+    // We're still inside the lock, do not close the current fragment with BA.
+    return;
+  }
+  assert(PendingBA && "MCBoundaryAlignFragment is expected for every "
+                      "instruction if it is not bundle-locked");
+
+  PendingBA = nullptr;
+
+  CF->getParent()->ensureMinAlignment(Align(Asm->getBundleAlignSize()));
+}
+
 /// Insert BoundaryAlignFragment before instructions to align branches.
 void X86AsmBackend::emitInstructionBegin(MCObjectStreamer &OS,
-                                         const MCInst &Inst, const MCSubtargetInfo &STI) {
+                                         const MCInst &Inst,
+                                         const MCSubtargetInfo &STI) {
+  if (Asm->isBundlingEnabled())
+    return emitInstructionBeginBundle(OS);
   bool CanPadInst = canPadInst(Inst, OS);
   if (CanPadInst)
     OS.getCurrentFragment()->setAllowAutoPadding(true);
@@ -528,6 +582,8 @@ void X86AsmBackend::emitInstructionBegin(MCObjectStreamer &OS,
 /// Set the last fragment to be aligned for the BoundaryAlignFragment.
 void X86AsmBackend::emitInstructionEnd(MCObjectStreamer &OS,
                                        const MCInst &Inst) {
+  if (Asm->isBundlingEnabled())
+    return emitInstructionEndBundle(OS);
   // Update PrevInstOpcode here, canPadInst() reads that.
   MCFragment *CF = OS.getCurrentFragment();
   PrevInstOpcode = Inst.getOpcode();
@@ -735,6 +791,14 @@ bool X86AsmBackend::fixupNeedsRelaxationAdvanced(const MCFragment &,
                                                  const MCValue &Target,
                                                  uint64_t Value,
                                                  bool Resolved) const {
+  if (Asm->isBundlingEnabled() && Resolved) {
+    // This ensures remaining short branches have sufficient headroom to survive
+    // any intra-bundle shift caused by prefix padding in dividePadInBundle.
+    auto BundleAlignSize = Asm->getBundleAlignSize();
+    return (!isInt<8>(Value + BundleAlignSize) ||
+            !isInt<8>(Value - BundleAlignSize)) ||
+           Target.getSpecifier();
+  }
   // If resolved, relax if the value is too big for a (signed) i8.
   //
   // Currently, `jmp local@plt` relaxes JMP even if the offset is small,
@@ -852,7 +916,144 @@ bool X86AsmBackend::padInstructionEncoding(MCFragment &RF,
   return Changed;
 }
 
+bool X86AsmBackend::padInstsBackward(SmallVectorImpl<MCFragment *> &Relaxable,
+                                     unsigned &RemainingSize) const {
+  bool Changed = false;
+  while (!Relaxable.empty() && RemainingSize != 0) {
+    auto &RF = *Relaxable.pop_back_val();
+    // Give the backend a chance to play any tricks it wishes to increase
+    // the encoding size of the given instruction.  Target independent code
+    // will try further relaxation, but target's may play further tricks.
+    Changed |= padInstructionEncoding(RF, Asm->getEmitter(), RemainingSize);
+
+    // If we have an instruction which hasn't been fully relaxed, we can't
+    // skip past it and insert bytes before it.  Changing its starting
+    // offset might require a larger negative offset than it can encode.
+    // We don't need to worry about larger positive offsets as none of the
+    // possible offsets between this and our align are visible, and the
+    // ones afterwards aren't changing.
+    if (mayNeedRelaxation(RF.getOpcode(), RF.getOperands(),
+                          *RF.getSubtargetInfo()))
+      break;
+  }
+  Relaxable.clear();
+  return Changed;
+}
+
+// Peephole is a list of Fragments that ends with non-zero-sized
+// BoundaryAlignFragment. Most of the time it will be every instruction within a
+// bundle, but there can be a partial bundle if it has nops in the middle(e.g.,
+// align_to_end).
+bool X86AsmBackend::dividePadInBundle(const MCAssembler &Asm,
+                                      ArrayRef<MCFragment *> Peephole) const {
+  bool Changed = false;
+
+  // Last Fragment is either FT_Align or FT_BoundaryAlign
+  auto *LastF = Peephole.back();
+  unsigned RemainingSize =
+      Asm.computeFragmentSize(*LastF) - LastF->getFixedSize();
+
+  unsigned StartOffset = Asm.getFragmentOffset(*LastF);
+  unsigned EndOffset = StartOffset + RemainingSize;
+  auto BoundaryAlignment = Align(Asm.getBundleAlignSize());
+  bool CrossBoundary = (StartOffset >> Log2(BoundaryAlignment)) !=
+                       ((EndOffset - 1) >> Log2(BoundaryAlignment));
+
+  if (CrossBoundary) {
+    // i.e., this pad is a mix of suffix fragment of one bundle + prefix of the
+    // very next bundle. It prevents overflow of the first bundle when Peephole
+    // contains more than one bundle.
+    //
+    // This design limits the possibly further-optimized code, which might be
+    // achieved by migrating some instructions to the next bundle, but doing
+    // such may cause fixup errors because instructions can shift by more than
+    // a bundle-size and labels may become unreachable. Until we come up with a
+    // better logic, we limits the optimization scope to a single bundle.
+    RemainingSize -= EndOffset % Asm.getBundleAlignSize();
+  }
+  assert(RemainingSize > 0);
+
+  SmallVector<MCFragment *, 4> Relaxable;
+  for (auto *FIB : Peephole) {
+    if (FIB->getKind() == MCFragment::FT_Data) // Skip and ignore
+      continue;
+
+    if (FIB->getKind() == MCFragment::FT_Align) {
+      // p2align within a bundle
+      Relaxable.clear();
+      continue;
+    }
+
+    if (FIB->getKind() == MCFragment::FT_Relaxable) {
+      auto &RF = cast<MCFragment>(*FIB);
+      Relaxable.push_back(&RF);
+      continue;
+    }
+  }
+
+  // First, try padding previous instructions.
+  Changed |= padInstsBackward(Relaxable, RemainingSize);
+
+  // Second, try padding following instructions.
+  auto padInstsForward = [&](unsigned &Size) {
+    auto *BF = cast<MCBoundaryAlignFragment>(LastF);
+    for (auto *F = BF->getNext();; F = F->getNext()) {
+      if (F->getKind() == MCFragment::FT_Relaxable)
+        Changed |= padInstructionEncoding(*F, Asm.getEmitter(), Size);
+      if (F == BF->getLastFragment() || Size == 0)
+        break;
+    }
+  };
+
+  unsigned TailSize = EndOffset % Asm.getBundleAlignSize();
+  if (!CrossBoundary && RemainingSize > 0 && TailSize != 0) {
+    padInstsForward(RemainingSize);
+  } else if (CrossBoundary && TailSize > 0) {
+    unsigned NextRemainingSize = TailSize;
+    padInstsForward(NextRemainingSize);
+    RemainingSize += NextRemainingSize;
+  }
+
+  // FT_Align sizes will be recalculated by layoutSection(),
+  // FT_BoundaryAlign sizes are adjusted here.
+  if (auto *BF = dyn_cast<MCBoundaryAlignFragment>(LastF))
+    BF->setSize(RemainingSize);
+
+  return Changed;
+}
+
+bool X86AsmBackend::optimizeBundleNops(const MCAssembler &Asm) const {
+  bool Changed = false;
+  for (MCSection &Sec : Asm) {
+    if (!Sec.isText())
+      continue;
+
+    SmallVector<MCFragment *, 4> Bundle;
+    for (MCSection::iterator I = Sec.begin(), IE = Sec.end(); I != IE; ++I) {
+      MCFragment &F = *I;
+
+      if (F.getKind() == llvm::MCFragment::FT_BoundaryAlign) {
+        unsigned RemainingSize = Asm.computeFragmentSize(F) - F.getFixedSize();
+        if (RemainingSize > 0) {
+          Bundle.push_back(&F);
+          Changed |= dividePadInBundle(Asm, Bundle);
+          Bundle.clear();
+          continue;
+        }
+      }
+
+      if (Asm.getFragmentOffset(F) % Asm.getBundleAlignSize() == 0)
+        Bundle.clear(); // start a new bundle
+      Bundle.push_back(&F);
+    }
+  }
+
+  return Changed;
+}
+
 bool X86AsmBackend::finishLayout() const {
+  if (Asm->isBundlingEnabled() && TargetPrefixMax != 0)
+    return optimizeBundleNops(*Asm);
   // See if we can further relax some instructions to cut down on the number of
   // nop bytes required for code alignment.  The actual win is in reducing
   // instruction count, not number of bytes.  Modern X86-64 can easily end up
@@ -911,24 +1112,7 @@ bool X86AsmBackend::finishLayout() const {
       // of the resulting code.  If we later find a reason to expand
       // particular instructions over others, we can adjust.
       unsigned RemainingSize = Asm->computeFragmentSize(F) - F.getFixedSize();
-      while (!Relaxable.empty() && RemainingSize != 0) {
-        auto &RF = *Relaxable.pop_back_val();
-        // Give the backend a chance to play any tricks it wishes to increase
-        // the encoding size of the given instruction.  Target independent code
-        // will try further relaxation, but target's may play further tricks.
-        Changed |= padInstructionEncoding(RF, Asm->getEmitter(), RemainingSize);
-
-        // If we have an instruction which hasn't been fully relaxed, we can't
-        // skip past it and insert bytes before it.  Changing its starting
-        // offset might require a larger negative offset than it can encode.
-        // We don't need to worry about larger positive offsets as none of the
-        // possible offsets between this and our align are visible, and the
-        // ones afterwards aren't changing.
-        if (mayNeedRelaxation(RF.getOpcode(), RF.getOperands(),
-                              *RF.getSubtargetInfo()))
-          break;
-      }
-      Relaxable.clear();
+      padInstsBackward(Relaxable, RemainingSize);
 
       // If we're looking at a boundary align, make sure we don't try to pad
       // its target instructions for some following directive.  Doing so would
