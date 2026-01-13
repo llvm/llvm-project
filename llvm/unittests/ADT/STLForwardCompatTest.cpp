@@ -295,6 +295,7 @@ TEST(STLForwardCompatTest, BindFrontReferences) {
     EXPECT_EQ(FArg, 6);
     static_assert(std::is_same_v<decltype(FArg), int &&>);
 
+    ++AArg;
     ++DArg;
   };
 
@@ -331,6 +332,7 @@ TEST(STLForwardCompatTest, BindBackReferences) {
     static_assert(std::is_same_v<decltype(FArg), int &>);
 
     ++AArg;
+    ++DArg;
   };
 
   bind_back(TestTypes, D, E, std::move(F))(A, B, std::move(C));
