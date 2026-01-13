@@ -507,6 +507,8 @@ LANGOPT(EnableLifetimeSafetyInference, 1, 0, NotCompatible, "Experimental lifeti
 
 LANGOPT(PreserveVec3Type, 1, 0, NotCompatible, "Preserve 3-component vector type")
 
+LANGOPT(CIRFallThroughAnalysis, 1, 0, NotCompatible, "Use CIR fallthrough analysis")
+
 #undef LANGOPT
 #undef ENUM_LANGOPT
 #undef VALUE_LANGOPT

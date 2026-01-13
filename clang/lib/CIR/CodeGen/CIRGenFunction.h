@@ -1207,7 +1207,7 @@ public:
       return b;
     }
 
-    cir::ReturnOp emitReturn(mlir::Location loc);
+    cir::ReturnOp emitReturn(mlir::Location loc, bool isImplicit = false);
     void emitImplicitReturn();
 
   public:

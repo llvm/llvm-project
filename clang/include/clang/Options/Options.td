@@ -3209,6 +3209,11 @@ def clangir_disable_verifier : Flag<["-"], "clangir-disable-verifier">,
   HelpText<"ClangIR: Disable MLIR module verifier">,
   MarshallingInfoFlag<FrontendOpts<"ClangIRDisableCIRVerifier">>;
 
+def fclangir_analysis_EQ : CommaJoined<["-"], "fclangir-analysis=">,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Enable ClangIR semantic analysis passes. Pass comma or semicolon separated list of analysis names">,
+  MarshallingInfoStringVector<FrontendOpts<"ClangIRAnalysisList">>;
+
 defm clangir : BoolFOption<"clangir",
   FrontendOpts<"UseClangIRPipeline">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use the ClangIR pipeline to compile">,
