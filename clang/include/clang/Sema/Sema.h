@@ -3044,7 +3044,6 @@ private:
                                IdentifierInfo *FnName);
 
   bool CheckSizeofMemaccessArgument(const Expr *SizeOfArg, const Expr *Dest,
-                                    llvm::FoldingSetNodeID SizeOfArgID,
                                     IdentifierInfo *FnName);
   // Warn if the user has made the 'size' argument to strlcpy or strlcat
   // be the size of the source, instead of the destination.

@@ -1453,9 +1453,8 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     const Expr *Dest = TheCall->getArg(0)->IgnoreParenImpCasts();
     if (const auto *DestCast = dyn_cast_or_null<CastExpr>(Dest))
       Dest = DestCast->getSubExprAsWritten();
-    llvm::FoldingSetNodeID SizeOfArgID;
     IdentifierInfo *FnInfo = FD->getIdentifier();
-    CheckSizeofMemaccessArgument(LenArg, Dest, SizeOfArgID, FnInfo);
+    CheckSizeofMemaccessArgument(LenArg, Dest, FnInfo);
   }
   }
 
@@ -10217,8 +10216,6 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
 
   // We have special checking when the length is a sizeof expression.
   QualType SizeOfArgTy = getSizeOfArgType(LenExpr);
-  const Expr *SizeOfArg = getSizeOfExprArg(LenExpr);
-  llvm::FoldingSetNodeID SizeOfArgID;
 
   // Although widely used, 'bzero' is not a standard function. Be more strict
   // with the argument types before allowing diagnostics and only allow the
@@ -10245,7 +10242,7 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
       // actually comparing the expressions for equality. Because computing the
       // expression IDs can be expensive, we only do this if the diagnostic is
       // enabled.
-      if (CheckSizeofMemaccessArgument(LenExpr, Dest, SizeOfArgID, FnName))
+      if (CheckSizeofMemaccessArgument(LenExpr, Dest, FnName))
         break;
 
       // Also check for cases where the sizeof argument is the exact same
@@ -10350,11 +10347,13 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
 }
 
 bool Sema::CheckSizeofMemaccessArgument(const Expr *LenExpr, const Expr *Dest,
-                                        llvm::FoldingSetNodeID SizeOfArgID,
                                         IdentifierInfo *FnName) {
+  llvm::FoldingSetNodeID SizeOfArgID;
   const Expr *SizeOfArg = getSizeOfExprArg(LenExpr);
   if (!SizeOfArg)
     return false;
+  // Computing this warning is expensive, so we only do so if the warning is
+  // enabled.
   if (Diags.isIgnored(diag::warn_sizeof_pointer_expr_memaccess,
                       SizeOfArg->getExprLoc()))
     return false;
@@ -10365,12 +10364,6 @@ bool Sema::CheckSizeofMemaccessArgument(const Expr *LenExpr, const Expr *Dest,
 
   QualType PointeeTy = DestPtrTy->getPointeeType();
 
-  // Catch "memset(p, 0, sizeof(p))" -- needs to be sizeof(*p). Do this by
-  // actually comparing the expressions for equality. Because computing the
-  // expression IDs can be expensive, we only do this if the diagnostic is
-  // enabled.
-  // We only compute IDs for expressions if the warning is enabled, and
-  // cache the sizeof arg's ID.
   if (SizeOfArgID == llvm::FoldingSetNodeID())
     SizeOfArg->Profile(SizeOfArgID, Context, true);
 
