@@ -241,11 +241,6 @@ public:
   constexpr BindStorage(ConstantFnTag, BoundArgsArgT &&...Args)
       : BoundArgs(std::forward<BoundArgsArgT>(Args)...), FnStorage() {}
 
-  BindStorage(const BindStorage &) = default;
-  BindStorage(BindStorage &&) = default;
-  BindStorage &operator=(const BindStorage &) = default;
-  BindStorage &operator=(BindStorage &&) = default;
-
   template <typename... CallArgsT>
   constexpr auto operator()(CallArgsT &&...CallArgs) {
     if constexpr (BindFront)

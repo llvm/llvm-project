@@ -2158,13 +2158,15 @@ template <typename T> bool all_equal(std::initializer_list<T> Values) {
 }
 
 /// Functor variant of std::equal_to that can be used as a UnaryPredicate in
-/// functional algorithms like all_of.
+/// functional algorithms like all_of. `Args` is forwarded and stored by value.
+/// If you would like to pass by reference, use `std::ref` or `std::cref`.
 template <typename T> constexpr auto equal_to(T &&Arg) {
   return bind_front(std::equal_to<>{}, std::forward<T>(Arg));
 }
 
 /// Functor variant of std::not_equal_to that can be used as a UnaryPredicate in
-/// functional algorithms like all_of.
+/// functional algorithms like all_of. `Args` is forwarded and stored by value.
+/// If you would like to pass by reference, use `std::ref` or `std::cref`.
 template <typename T> constexpr auto not_equal_to(T &&Arg) {
   return bind_front(std::not_equal_to<>{}, std::forward<T>(Arg));
 }
