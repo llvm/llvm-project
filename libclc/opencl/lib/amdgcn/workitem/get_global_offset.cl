@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/workitem/get_global_offset.h>
 #include <clc/workitem/clc_get_global_offset.h>
 
 _CLC_DEF _CLC_OVERLOAD size_t get_global_offset(uint dim) {

@@ -526,10 +526,9 @@ define void @zip_v4f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    zip1 z5.d, z0.d, z2.d
 ; CHECK-NEXT:    trn2 z1.d, z1.d, z3.d
 ; CHECK-NEXT:    trn2 z0.d, z0.d, z2.d
-; CHECK-NEXT:    movprfx z2, z4
-; CHECK-NEXT:    fadd z2.d, p0/m, z2.d, z5.d
+; CHECK-NEXT:    fadd z4.d, p0/m, z4.d, z5.d
 ; CHECK-NEXT:    fadd z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    stp q2, q0, [x0]
+; CHECK-NEXT:    stp q4, q0, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: zip_v4f64:
@@ -2159,10 +2158,9 @@ define void @zip_vscale2_4(ptr %a, ptr %b) {
 ; CHECK-NEXT:    zip1 z5.d, z0.d, z2.d
 ; CHECK-NEXT:    trn2 z1.d, z1.d, z3.d
 ; CHECK-NEXT:    trn2 z0.d, z0.d, z2.d
-; CHECK-NEXT:    movprfx z2, z4
-; CHECK-NEXT:    fadd z2.d, p0/m, z2.d, z5.d
+; CHECK-NEXT:    fadd z4.d, p0/m, z4.d, z5.d
 ; CHECK-NEXT:    fadd z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    stp q2, q0, [x0]
+; CHECK-NEXT:    stp q4, q0, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: zip_vscale2_4:

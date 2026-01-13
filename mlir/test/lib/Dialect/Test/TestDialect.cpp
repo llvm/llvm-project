@@ -37,7 +37,6 @@
 #include "llvm/Support/Base64.h"
 #include "llvm/Support/Casting.h"
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"

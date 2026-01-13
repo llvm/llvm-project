@@ -21,11 +21,11 @@ template <class Func>
 bool TestDeathTest(
     Outcome expected_outcome, DeathCause expected_cause, const char* stmt, Func&& func, const Matcher& matcher) {
   auto get_matcher = [&] {
-#if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
-    return matcher;
-#else
+#if _LIBCPP_ASSERTION_SEMANTIC == _LIBCPP_ASSERTION_SEMANTIC_QUICK_ENFORCE
     (void)matcher;
     return MakeAnyMatcher();
+#else
+    return matcher;
 #endif
   };
 
@@ -69,7 +69,7 @@ bool TestDeathTest(
 
 // clang-format on
 
-#if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
+#if _LIBCPP_ASSERTION_SEMANTIC == _LIBCPP_ASSERTION_SEMANTIC_ENFORCE
 DeathCause assertion_death_cause = DeathCause::VerboseAbort;
 #else
 DeathCause assertion_death_cause = DeathCause::Trap;
@@ -99,7 +99,7 @@ int main(int, char**) {
     // Success -- assertion failure with a specific matcher.
     TEST_DEATH_TEST_MATCHES(Outcome::Success, assertion_death_cause, good_matcher, fail_assert());
 
-#  if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
+#  if _LIBCPP_ASSERTION_SEMANTIC == _LIBCPP_ASSERTION_SEMANTIC_ENFORCE
     // Failure -- error message doesn't match.
     TEST_DEATH_TEST_MATCHES(Outcome::UnexpectedErrorMessage, assertion_death_cause, bad_matcher, fail_assert());
 #  endif

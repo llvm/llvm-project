@@ -43,7 +43,7 @@ class LLVM_ABI MergingTypeTableBuilder : public TypeCollection {
 
 public:
   explicit MergingTypeTableBuilder(BumpPtrAllocator &Storage);
-  ~MergingTypeTableBuilder();
+  ~MergingTypeTableBuilder() override;
 
   // TypeCollection overrides
   std::optional<TypeIndex> getFirst() override;

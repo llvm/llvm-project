@@ -143,8 +143,23 @@
 ??_7A@B@@6BC@D@@@
 ; CHECK: const B::A::`vftable'{for `D::C'}
 
+??_7A@B@@6BC@D@@E@F@@@
+; CHECK: const B::A::`vftable'{for `D::C's `F::E'}
+
+??_7A@B@@6BC@D@@E@F@@G@H@@@
+; CHECK: const B::A::`vftable'{for `D::C's `F::E's `H::G'}
+
 ??_8Middle2@@7B@
 ; CHECK: const Middle2::`vbtable'
+
+??_7A@@6BB@@@
+; CHECK: const A::`vftable'{for `B'}
+
+??_7A@@6BB@@C@@@
+; CHECK: const A::`vftable'{for `B's `C'}
+
+??_7A@@6BB@@C@@D@@@
+; CHECK: const A::`vftable'{for `B's `C's `D'}
 
 ??_9Base@@$B7AA
 ; CHECK: [thunk]: __cdecl Base::`vcall'{8, {flat}}

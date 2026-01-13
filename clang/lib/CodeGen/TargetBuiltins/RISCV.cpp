@@ -1121,6 +1121,8 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   bool IsMasked = false;
   // This is used by segment load/store to determine it's llvm type.
   unsigned SegInstSEW = 8;
+  // This is used by XSfmm.
+  unsigned TWiden = 0;
 
   // Required for overloaded intrinsics.
   llvm::SmallVector<llvm::Type *, 2> IntrinsicTypes;
@@ -1344,6 +1346,28 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     break;
   case RISCV::BI__builtin_riscv_cv_alu_subuRN:
     ID = Intrinsic::riscv_cv_alu_subuRN;
+    break;
+
+  // XAndesPerf
+  case RISCV::BI__builtin_riscv_nds_ffb_32:
+  case RISCV::BI__builtin_riscv_nds_ffb_64:
+    IntrinsicTypes = {ResultType};
+    ID = Intrinsic::riscv_nds_ffb;
+    break;
+  case RISCV::BI__builtin_riscv_nds_ffzmism_32:
+  case RISCV::BI__builtin_riscv_nds_ffzmism_64:
+    IntrinsicTypes = {ResultType};
+    ID = Intrinsic::riscv_nds_ffzmism;
+    break;
+  case RISCV::BI__builtin_riscv_nds_ffmism_32:
+  case RISCV::BI__builtin_riscv_nds_ffmism_64:
+    IntrinsicTypes = {ResultType};
+    ID = Intrinsic::riscv_nds_ffmism;
+    break;
+  case RISCV::BI__builtin_riscv_nds_flmism_32:
+  case RISCV::BI__builtin_riscv_nds_flmism_64:
+    IntrinsicTypes = {ResultType};
+    ID = Intrinsic::riscv_nds_flmism;
     break;
 
   // XAndesBFHCvt

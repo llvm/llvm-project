@@ -19,7 +19,7 @@
   ! CHECK: call {{.*}}BeginFlush
   ! CHECK: call {{.*}}EndIoStatement
   flush(8)
-  
+
   ! CHECK: call {{.*}}BeginRewind
   ! CHECK: call {{.*}}EndIoStatement
   rewind(8)

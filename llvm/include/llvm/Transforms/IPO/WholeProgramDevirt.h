@@ -226,11 +226,14 @@ struct WholeProgramDevirtPass : public PassInfoMixin<WholeProgramDevirtPass> {
   ModuleSummaryIndex *ExportSummary;
   const ModuleSummaryIndex *ImportSummary;
   bool UseCommandLine = false;
+  bool DevirtSpeculatively = false;
   WholeProgramDevirtPass()
       : ExportSummary(nullptr), ImportSummary(nullptr), UseCommandLine(true) {}
   WholeProgramDevirtPass(ModuleSummaryIndex *ExportSummary,
-                         const ModuleSummaryIndex *ImportSummary)
-      : ExportSummary(ExportSummary), ImportSummary(ImportSummary) {
+                         const ModuleSummaryIndex *ImportSummary,
+                         bool DevirtSpeculatively = false)
+      : ExportSummary(ExportSummary), ImportSummary(ImportSummary),
+        DevirtSpeculatively(DevirtSpeculatively) {
     assert(!(ExportSummary && ImportSummary));
   }
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &);

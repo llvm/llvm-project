@@ -386,7 +386,7 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 module attributes {transform.with_named_sequence} {
-  // expected-error @below {{trying to schedule a pass on an unsupported operation}}
+  // expected-error @below {{trying to schedule pass 'DuplicateFunctionEliminationPass' on an unsupported operation}}
   // expected-note @below {{target op}}
   func.func @invalid_target_op_type() {
     return

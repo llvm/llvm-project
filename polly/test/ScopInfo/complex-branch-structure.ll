@@ -1,5 +1,4 @@
-; RUN: opt %loadNPMPolly -pass-remarks-analysis="polly-scops" '-passes=print<polly-function-scops>' \
-; RUN:     -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -pass-remarks-analysis=polly-scops '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
 
 ; We build a scop of the following form to check that the domain construction
 ; does not take a huge amount of time, but that we instead just bail out.

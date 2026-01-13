@@ -40,13 +40,13 @@ void TwineLocalCheck::check(const MatchFinder::MatchResult &Result) {
       C = cast<CXXConstructExpr>(C)->getArg(0)->IgnoreParenImpCasts();
     }
 
-    SourceRange TypeRange =
+    const SourceRange TypeRange =
         VD->getTypeSourceInfo()->getTypeLoc().getSourceRange();
 
     // A real Twine, turn it into a std::string.
     if (VD->getType()->getCanonicalTypeUnqualified() ==
         C->getType()->getCanonicalTypeUnqualified()) {
-      SourceLocation EndLoc = Lexer::getLocForEndOfToken(
+      const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
           VD->getInit()->getEndLoc(), 0, *Result.SourceManager, getLangOpts());
       Diag << FixItHint::CreateReplacement(TypeRange, "std::string")
            << FixItHint::CreateInsertion(VD->getInit()->getBeginLoc(), "(")

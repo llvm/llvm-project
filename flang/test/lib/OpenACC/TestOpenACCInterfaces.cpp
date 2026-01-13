@@ -100,6 +100,10 @@ struct TestFIROpenACCInterfaces
             }
           }
 
+          llvm::errs() << "\t\tHas unknown dimensions: "
+                       << (mappableTy.hasUnknownDimensions() ? "true" : "false")
+                       << "\n";
+
           if (auto declareOp =
                   dyn_cast_if_present<hlfir::DeclareOp>(var.getDefiningOp())) {
             llvm::errs() << "\t\tShape: " << declareOp.getShape() << "\n";

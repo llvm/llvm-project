@@ -13,8 +13,9 @@
 #ifndef LLVM_ASMPARSER_LLPARSER_H
 #define LLVM_ASMPARSER_LLPARSER_H
 
-#include "LLLexer.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/AsmParser/AsmParserContext.h"
+#include "llvm/AsmParser/LLLexer.h"
 #include "llvm/AsmParser/NumberedValues.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Attributes.h"
@@ -177,6 +178,9 @@ namespace llvm {
     // Map of module ID to path.
     std::map<unsigned, StringRef> ModuleIdMap;
 
+    /// Keeps track of source locations for Values, BasicBlocks, and Functions.
+    AsmParserContext *ParserContext;
+
     /// Only the llvm-as tool may set this to false to bypass
     /// UpgradeDebuginfo so it can generate broken bitcode.
     bool UpgradeDebugInfo;
@@ -189,10 +193,11 @@ namespace llvm {
   public:
     LLParser(StringRef F, SourceMgr &SM, SMDiagnostic &Err, Module *M,
              ModuleSummaryIndex *Index, LLVMContext &Context,
-             SlotMapping *Slots = nullptr)
+             SlotMapping *Slots = nullptr,
+             AsmParserContext *ParserContext = nullptr)
         : Context(Context), OPLex(F, SM, Err, Context),
           Lex(F, SM, Err, Context), M(M), Index(Index), Slots(Slots),
-          BlockAddressPFS(nullptr) {}
+          BlockAddressPFS(nullptr), ParserContext(ParserContext) {}
     bool Run(
         bool UpgradeDebugInfo,
         DataLayoutCallbackTy DataLayoutCallback = [](StringRef, StringRef) {

@@ -166,10 +166,10 @@ define i64 @test_atomicrmw_sub_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret i64 [[NEWLOADED]]
 ;
-; GFX940-LABEL: define i64 @test_atomicrmw_sub_i64_global_agent(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw sub ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
-; GFX940-NEXT:    ret i64 [[RES]]
+; GFX942-LABEL: define i64 @test_atomicrmw_sub_i64_global_agent(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw sub ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
+; GFX942-NEXT:    ret i64 [[RES]]
 ;
 ; GFX10-LABEL: define i64 @test_atomicrmw_sub_i64_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
@@ -204,6 +204,10 @@ define i64 @test_atomicrmw_sub_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ; GFX12-NEXT:    [[RES:%.*]] = atomicrmw sub ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
 ; GFX12-NEXT:    ret i64 [[RES]]
 ;
+; GFX940-LABEL: define i64 @test_atomicrmw_sub_i64_global_agent(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw sub ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
+; GFX940-NEXT:    ret i64 [[RES]]
   %res = atomicrmw sub ptr addrspace(1) %ptr, i64 %value syncscope("agent") seq_cst
   ret i64 %res
 }
@@ -300,10 +304,10 @@ define i64 @test_atomicrmw_and_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret i64 [[NEWLOADED]]
 ;
-; GFX940-LABEL: define i64 @test_atomicrmw_and_i64_global_agent(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw and ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
-; GFX940-NEXT:    ret i64 [[RES]]
+; GFX942-LABEL: define i64 @test_atomicrmw_and_i64_global_agent(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw and ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
+; GFX942-NEXT:    ret i64 [[RES]]
 ;
 ; GFX10-LABEL: define i64 @test_atomicrmw_and_i64_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
@@ -338,6 +342,10 @@ define i64 @test_atomicrmw_and_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ; GFX12-NEXT:    [[RES:%.*]] = atomicrmw and ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
 ; GFX12-NEXT:    ret i64 [[RES]]
 ;
+; GFX940-LABEL: define i64 @test_atomicrmw_and_i64_global_agent(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw and ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
+; GFX940-NEXT:    ret i64 [[RES]]
   %res = atomicrmw and ptr addrspace(1) %ptr, i64 %value syncscope("agent") seq_cst
   ret i64 %res
 }
@@ -519,10 +527,10 @@ define i64 @test_atomicrmw_or_i64_global_agent(ptr addrspace(1) %ptr, i64 %value
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret i64 [[NEWLOADED]]
 ;
-; GFX940-LABEL: define i64 @test_atomicrmw_or_i64_global_agent(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
-; GFX940-NEXT:    ret i64 [[RES]]
+; GFX942-LABEL: define i64 @test_atomicrmw_or_i64_global_agent(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
+; GFX942-NEXT:    ret i64 [[RES]]
 ;
 ; GFX10-LABEL: define i64 @test_atomicrmw_or_i64_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
@@ -557,6 +565,10 @@ define i64 @test_atomicrmw_or_i64_global_agent(ptr addrspace(1) %ptr, i64 %value
 ; GFX12-NEXT:    [[RES:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
 ; GFX12-NEXT:    ret i64 [[RES]]
 ;
+; GFX940-LABEL: define i64 @test_atomicrmw_or_i64_global_agent(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
+; GFX940-NEXT:    ret i64 [[RES]]
   %res = atomicrmw or ptr addrspace(1) %ptr, i64 %value syncscope("agent") seq_cst
   ret i64 %res
 }
@@ -653,10 +665,10 @@ define i64 @test_atomicrmw_xor_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret i64 [[NEWLOADED]]
 ;
-; GFX940-LABEL: define i64 @test_atomicrmw_xor_i64_global_agent(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw xor ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
-; GFX940-NEXT:    ret i64 [[RES]]
+; GFX942-LABEL: define i64 @test_atomicrmw_xor_i64_global_agent(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw xor ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
+; GFX942-NEXT:    ret i64 [[RES]]
 ;
 ; GFX10-LABEL: define i64 @test_atomicrmw_xor_i64_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
@@ -691,6 +703,10 @@ define i64 @test_atomicrmw_xor_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ; GFX12-NEXT:    [[RES:%.*]] = atomicrmw xor ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
 ; GFX12-NEXT:    ret i64 [[RES]]
 ;
+; GFX940-LABEL: define i64 @test_atomicrmw_xor_i64_global_agent(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw xor ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
+; GFX940-NEXT:    ret i64 [[RES]]
   %res = atomicrmw xor ptr addrspace(1) %ptr, i64 %value syncscope("agent") seq_cst
   ret i64 %res
 }
@@ -791,10 +807,10 @@ define i64 @test_atomicrmw_max_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret i64 [[NEWLOADED]]
 ;
-; GFX940-LABEL: define i64 @test_atomicrmw_max_i64_global_agent(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw max ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
-; GFX940-NEXT:    ret i64 [[RES]]
+; GFX942-LABEL: define i64 @test_atomicrmw_max_i64_global_agent(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw max ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
+; GFX942-NEXT:    ret i64 [[RES]]
 ;
 ; GFX10-LABEL: define i64 @test_atomicrmw_max_i64_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
@@ -831,6 +847,10 @@ define i64 @test_atomicrmw_max_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ; GFX12-NEXT:    [[RES:%.*]] = atomicrmw max ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
 ; GFX12-NEXT:    ret i64 [[RES]]
 ;
+; GFX940-LABEL: define i64 @test_atomicrmw_max_i64_global_agent(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw max ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
+; GFX940-NEXT:    ret i64 [[RES]]
   %res = atomicrmw max ptr addrspace(1) %ptr, i64 %value syncscope("agent") seq_cst
   ret i64 %res
 }
@@ -931,10 +951,10 @@ define i64 @test_atomicrmw_min_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret i64 [[NEWLOADED]]
 ;
-; GFX940-LABEL: define i64 @test_atomicrmw_min_i64_global_agent(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw min ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
-; GFX940-NEXT:    ret i64 [[RES]]
+; GFX942-LABEL: define i64 @test_atomicrmw_min_i64_global_agent(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw min ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
+; GFX942-NEXT:    ret i64 [[RES]]
 ;
 ; GFX10-LABEL: define i64 @test_atomicrmw_min_i64_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
@@ -971,6 +991,10 @@ define i64 @test_atomicrmw_min_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ; GFX12-NEXT:    [[RES:%.*]] = atomicrmw min ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
 ; GFX12-NEXT:    ret i64 [[RES]]
 ;
+; GFX940-LABEL: define i64 @test_atomicrmw_min_i64_global_agent(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw min ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
+; GFX940-NEXT:    ret i64 [[RES]]
   %res = atomicrmw min ptr addrspace(1) %ptr, i64 %value syncscope("agent") seq_cst
   ret i64 %res
 }
@@ -1071,10 +1095,10 @@ define i64 @test_atomicrmw_umax_i64_global_agent(ptr addrspace(1) %ptr, i64 %val
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret i64 [[NEWLOADED]]
 ;
-; GFX940-LABEL: define i64 @test_atomicrmw_umax_i64_global_agent(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw umax ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
-; GFX940-NEXT:    ret i64 [[RES]]
+; GFX942-LABEL: define i64 @test_atomicrmw_umax_i64_global_agent(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw umax ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
+; GFX942-NEXT:    ret i64 [[RES]]
 ;
 ; GFX10-LABEL: define i64 @test_atomicrmw_umax_i64_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1111,6 +1135,10 @@ define i64 @test_atomicrmw_umax_i64_global_agent(ptr addrspace(1) %ptr, i64 %val
 ; GFX12-NEXT:    [[RES:%.*]] = atomicrmw umax ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
 ; GFX12-NEXT:    ret i64 [[RES]]
 ;
+; GFX940-LABEL: define i64 @test_atomicrmw_umax_i64_global_agent(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw umax ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
+; GFX940-NEXT:    ret i64 [[RES]]
   %res = atomicrmw umax ptr addrspace(1) %ptr, i64 %value syncscope("agent") seq_cst
   ret i64 %res
 }
@@ -1211,10 +1239,10 @@ define i64 @test_atomicrmw_umin_i64_global_agent(ptr addrspace(1) %ptr, i64 %val
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret i64 [[NEWLOADED]]
 ;
-; GFX940-LABEL: define i64 @test_atomicrmw_umin_i64_global_agent(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw umin ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
-; GFX940-NEXT:    ret i64 [[RES]]
+; GFX942-LABEL: define i64 @test_atomicrmw_umin_i64_global_agent(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw umin ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
+; GFX942-NEXT:    ret i64 [[RES]]
 ;
 ; GFX10-LABEL: define i64 @test_atomicrmw_umin_i64_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1251,6 +1279,10 @@ define i64 @test_atomicrmw_umin_i64_global_agent(ptr addrspace(1) %ptr, i64 %val
 ; GFX12-NEXT:    [[RES:%.*]] = atomicrmw umin ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
 ; GFX12-NEXT:    ret i64 [[RES]]
 ;
+; GFX940-LABEL: define i64 @test_atomicrmw_umin_i64_global_agent(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw umin ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
+; GFX940-NEXT:    ret i64 [[RES]]
   %res = atomicrmw umin ptr addrspace(1) %ptr, i64 %value syncscope("agent") seq_cst
   ret i64 %res
 }
@@ -1355,10 +1387,10 @@ define i64 @test_atomicrmw_uinc_wrap_i64_global_agent(ptr addrspace(1) %ptr, i64
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret i64 [[NEWLOADED]]
 ;
-; GFX940-LABEL: define i64 @test_atomicrmw_uinc_wrap_i64_global_agent(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw uinc_wrap ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
-; GFX940-NEXT:    ret i64 [[RES]]
+; GFX942-LABEL: define i64 @test_atomicrmw_uinc_wrap_i64_global_agent(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw uinc_wrap ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
+; GFX942-NEXT:    ret i64 [[RES]]
 ;
 ; GFX10-LABEL: define i64 @test_atomicrmw_uinc_wrap_i64_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1397,6 +1429,10 @@ define i64 @test_atomicrmw_uinc_wrap_i64_global_agent(ptr addrspace(1) %ptr, i64
 ; GFX12-NEXT:    [[RES:%.*]] = atomicrmw uinc_wrap ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
 ; GFX12-NEXT:    ret i64 [[RES]]
 ;
+; GFX940-LABEL: define i64 @test_atomicrmw_uinc_wrap_i64_global_agent(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw uinc_wrap ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
+; GFX940-NEXT:    ret i64 [[RES]]
   %res = atomicrmw uinc_wrap ptr addrspace(1) %ptr, i64 %value syncscope("agent") seq_cst
   ret i64 %res
 }
@@ -1509,10 +1545,10 @@ define i64 @test_atomicrmw_udec_wrap_i64_global_agent(ptr addrspace(1) %ptr, i64
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret i64 [[NEWLOADED]]
 ;
-; GFX940-LABEL: define i64 @test_atomicrmw_udec_wrap_i64_global_agent(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw udec_wrap ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
-; GFX940-NEXT:    ret i64 [[RES]]
+; GFX942-LABEL: define i64 @test_atomicrmw_udec_wrap_i64_global_agent(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw udec_wrap ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
+; GFX942-NEXT:    ret i64 [[RES]]
 ;
 ; GFX10-LABEL: define i64 @test_atomicrmw_udec_wrap_i64_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1555,6 +1591,10 @@ define i64 @test_atomicrmw_udec_wrap_i64_global_agent(ptr addrspace(1) %ptr, i64
 ; GFX12-NEXT:    [[RES:%.*]] = atomicrmw udec_wrap ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
 ; GFX12-NEXT:    ret i64 [[RES]]
 ;
+; GFX940-LABEL: define i64 @test_atomicrmw_udec_wrap_i64_global_agent(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw udec_wrap ptr addrspace(1) [[PTR]], i64 [[VALUE]] syncscope("agent") seq_cst, align 8
+; GFX940-NEXT:    ret i64 [[RES]]
   %res = atomicrmw udec_wrap ptr addrspace(1) %ptr, i64 %value syncscope("agent") seq_cst
   ret i64 %res
 }
@@ -1586,6 +1626,176 @@ define i64 @test_atomicrmw_udec_wrap_i64_global_agent__amdgpu_no_fine_grained_me
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
   %res = atomicrmw udec_wrap ptr addrspace(1) %ptr, i64 %value syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
+  ret i64 %res
+}
+
+;---------------------------------------------------------------------
+; atomicrmw usub_cond
+;---------------------------------------------------------------------
+
+; expansion is necessary, operation not supported over PCIe
+define i64 @test_atomicrmw_usub_cond_i64_global_agent(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_usub_cond_i64_global_agent(
+; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[TMP2:%.*]] = icmp uge i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[TMP3:%.*]] = sub i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[NEW:%.*]] = select i1 [[TMP2]], i64 [[TMP3]], i64 [[LOADED]]
+; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] syncscope("agent") seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP4]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
+; COMMON-NEXT:    ret i64 [[NEWLOADED]]
+;
+  %res = atomicrmw usub_cond ptr addrspace(1) %ptr, i64 %value syncscope("agent") seq_cst
+  ret i64 %res
+}
+
+define i64 @test_atomicrmw_usub_cond_i64_global_agent__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_usub_cond_i64_global_agent__amdgpu_no_fine_grained_memory(
+; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[TMP2:%.*]] = icmp uge i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[TMP3:%.*]] = sub i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[NEW:%.*]] = select i1 [[TMP2]], i64 [[TMP3]], i64 [[LOADED]]
+; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] syncscope("agent") seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP4]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
+; COMMON-NEXT:    ret i64 [[NEWLOADED]]
+;
+  %res = atomicrmw usub_cond ptr addrspace(1) %ptr, i64 %value syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
+  ret i64 %res
+}
+
+define i64 @test_atomicrmw_usub_cond_i64_global_agent__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_usub_cond_i64_global_agent__amdgpu_no_remote_memory(
+; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[TMP2:%.*]] = icmp uge i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[TMP3:%.*]] = sub i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[NEW:%.*]] = select i1 [[TMP2]], i64 [[TMP3]], i64 [[LOADED]]
+; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] syncscope("agent") seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP4]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
+; COMMON-NEXT:    ret i64 [[NEWLOADED]]
+;
+  %res = atomicrmw usub_cond ptr addrspace(1) %ptr, i64 %value syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
+  ret i64 %res
+}
+
+define i64 @test_atomicrmw_usub_cond_i64_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_usub_cond_i64_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[TMP2:%.*]] = icmp uge i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[TMP3:%.*]] = sub i64 [[LOADED]], [[VALUE]]
+; COMMON-NEXT:    [[NEW:%.*]] = select i1 [[TMP2]], i64 [[TMP3]], i64 [[LOADED]]
+; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] syncscope("agent") seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP4]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
+; COMMON-NEXT:    ret i64 [[NEWLOADED]]
+;
+  %res = atomicrmw usub_cond ptr addrspace(1) %ptr, i64 %value syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
+  ret i64 %res
+}
+
+;---------------------------------------------------------------------
+; atomicrmw usub_sat
+;---------------------------------------------------------------------
+
+; expansion is necessary, operation not supported over PCIe
+define i64 @test_atomicrmw_usub_sat_i64_global_agent(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_usub_sat_i64_global_agent(
+; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[NEW:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[LOADED]], i64 [[VALUE]])
+; COMMON-NEXT:    [[TMP2:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] syncscope("agent") seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP2]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
+; COMMON-NEXT:    ret i64 [[NEWLOADED]]
+;
+  %res = atomicrmw usub_sat ptr addrspace(1) %ptr, i64 %value syncscope("agent") seq_cst
+  ret i64 %res
+}
+
+define i64 @test_atomicrmw_usub_sat_i64_global_agent__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_usub_sat_i64_global_agent__amdgpu_no_fine_grained_memory(
+; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[NEW:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[LOADED]], i64 [[VALUE]])
+; COMMON-NEXT:    [[TMP2:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] syncscope("agent") seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP2]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
+; COMMON-NEXT:    ret i64 [[NEWLOADED]]
+;
+  %res = atomicrmw usub_sat ptr addrspace(1) %ptr, i64 %value syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
+  ret i64 %res
+}
+
+define i64 @test_atomicrmw_usub_sat_i64_global_agent__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_usub_sat_i64_global_agent__amdgpu_no_remote_memory(
+; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[NEW:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[LOADED]], i64 [[VALUE]])
+; COMMON-NEXT:    [[TMP2:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] syncscope("agent") seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP2]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
+; COMMON-NEXT:    ret i64 [[NEWLOADED]]
+;
+  %res = atomicrmw usub_sat ptr addrspace(1) %ptr, i64 %value syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
+  ret i64 %res
+}
+
+define i64 @test_atomicrmw_usub_sat_i64_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_usub_sat_i64_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
+; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; COMMON:       atomicrmw.start:
+; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[NEW:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[LOADED]], i64 [[VALUE]])
+; COMMON-NEXT:    [[TMP2:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[LOADED]], i64 [[NEW]] syncscope("agent") seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
+; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP2]], 0
+; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; COMMON:       atomicrmw.end:
+; COMMON-NEXT:    ret i64 [[NEWLOADED]]
+;
+  %res = atomicrmw usub_sat ptr addrspace(1) %ptr, i64 %value syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret i64 %res
 }
 

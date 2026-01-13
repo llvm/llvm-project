@@ -1450,3 +1450,9 @@ namespace GH149500 {
   unsigned int * p = &(*(unsigned int *)0x400);
   static const void *q = &(*(const struct sysrq_key_op *)0);
 }
+
+constexpr bool missingCase() {
+  switch (1) {
+    1u: return false; // expected-error {{expected 'case' keyword before expression}}
+  }
+}

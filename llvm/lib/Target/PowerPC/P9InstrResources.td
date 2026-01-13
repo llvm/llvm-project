@@ -905,7 +905,7 @@ def : InstRW<[P9_LS_1C, IP_EXEC_1C, IP_AGEN_1C, DISP_3SLOTS_1C],
     SLBIEG,
     STMW,
     STSWI,
-    TLBIE
+    TLBIE, TLBIEP9, TLBIE8P9
 )>;
 
 // Vector Store Instruction

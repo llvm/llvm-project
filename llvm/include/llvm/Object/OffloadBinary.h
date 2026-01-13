@@ -100,9 +100,7 @@ public:
   }
 
   // Iterator over all the key and value pairs in the binary.
-  string_iterator_range strings() const {
-    return string_iterator_range(StringData.begin(), StringData.end());
-  }
+  string_iterator_range strings() const { return StringData; }
 
   StringRef getString(StringRef Key) const { return StringData.lookup(Key); }
 

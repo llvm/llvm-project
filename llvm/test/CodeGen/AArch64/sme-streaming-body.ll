@@ -12,13 +12,13 @@ define void @locally_streaming_caller_streaming_callee() "aarch64_pstate_sm_body
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Spill
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    bl streaming_compatible_callee
 ; CHECK-NEXT:    bl streaming_compatible_callee
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
@@ -92,18 +92,18 @@ define <2 x i64> @locally_streaming_caller_no_callee(<2 x i64> %a) "aarch64_psta
 ; CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    index z0.d, #0, #1
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    add z0.d, z0.d, z1.d
 ; CHECK-NEXT:    add z0.d, z0.d, #41 // =0x29
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
@@ -144,17 +144,17 @@ define <2 x i64> @locally_streaming_caller_compatible_callee_vec_args_ret(<2 x i
 ; CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    str x30, [sp, #80] // 8-byte Folded Spill
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #80] // 8-byte Spill
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-NEXT:    smstart sm
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-NEXT:    bl streaming_compatible_callee_vec_args_ret
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #80] // 8-byte Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #96
@@ -173,15 +173,15 @@ define {<2 x i64>, <2 x i64>} @locally_streaming_caller_compatible_callee_struct
 ; CHECK-NEXT:    stp d13, d12, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    str x30, [sp, #96] // 8-byte Folded Spill
-; CHECK-NEXT:    str q1, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #96] // 8-byte Spill
+; CHECK-NEXT:    str q1, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    smstart sm
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    bl streaming_compatible_callee_vec_arg_struct_ret
 ; CHECK-NEXT:    stp q1, q0, [sp] // 32-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldp q1, q0, [sp] // 32-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #96] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #96] // 8-byte Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #80] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #48] // 16-byte Folded Reload
@@ -247,7 +247,7 @@ define float @test_arg_survives_loop(float %arg, i32 %N) nounwind "aarch64_pstat
 ; CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    str s0, [sp, #12] // 4-byte Folded Spill
+; CHECK-NEXT:    str s0, [sp, #12] // 4-byte Spill
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB9_1: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -255,12 +255,12 @@ define float @test_arg_survives_loop(float %arg, i32 %N) nounwind "aarch64_pstat
 ; CHECK-NEXT:    b.ne .LBB9_1
 ; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
 ; CHECK-NEXT:    fmov s0, #1.00000000
-; CHECK-NEXT:    ldr s1, [sp, #12] // 4-byte Folded Reload
+; CHECK-NEXT:    ldr s1, [sp, #12] // 4-byte Reload
 ; CHECK-NEXT:    fadd s0, s1, s0
-; CHECK-NEXT:    str s0, [sp, #12] // 4-byte Folded Spill
+; CHECK-NEXT:    str s0, [sp, #12] // 4-byte Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr s0, [sp, #12] // 4-byte Folded Reload
+; CHECK-NEXT:    ldr s0, [sp, #12] // 4-byte Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
@@ -288,12 +288,12 @@ define void @disable_tailcallopt() "aarch64_pstate_sm_body" nounwind {
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Spill
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    bl streaming_compatible_callee
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basic-aa -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; CHECK: Reduction Type: +
 ; CHECK: MemRef_sum

@@ -63,7 +63,6 @@
 #include <cstdint>
 #include <iterator>
 #include <map>
-#include <utility>
 #include <vector>
 
 using namespace llvm;
@@ -750,13 +749,13 @@ void CodeExtractor::severSplitPHINodesOfEntry(BasicBlock *&Header) {
 
       // Loop over all of the incoming value in PN, moving them to NewPN if they
       // are from the extracted region.
-      for (unsigned i = 0; i != PN->getNumIncomingValues(); ++i) {
+      PN->removeIncomingValueIf([&](unsigned i) {
         if (Blocks.count(PN->getIncomingBlock(i))) {
           NewPN->addIncoming(PN->getIncomingValue(i), PN->getIncomingBlock(i));
-          PN->removeIncomingValue(i);
-          --i;
+          return true;
         }
-      }
+        return false;
+      });
     }
   }
 }
@@ -933,6 +932,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::CoroDestroyOnlyWhenComplete:
       case Attribute::CoroElideSafe:
       case Attribute::NoDivergenceSource:
+      case Attribute::NoCreateUndefOrPoison:
         continue;
       // Those attributes should be safe to propagate to the extracted function.
       case Attribute::AlwaysInline:
@@ -970,6 +970,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::SanitizeMemTag:
       case Attribute::SanitizeRealtime:
       case Attribute::SanitizeRealtimeBlocking:
+      case Attribute::SanitizeAllocToken:
       case Attribute::SpeculativeLoadHardening:
       case Attribute::StackProtect:
       case Attribute::StackProtectReq:

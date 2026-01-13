@@ -55,6 +55,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  clock_settime
+  SRCS
+    clock_settime.cpp
+  HDRS
+    ../clock_settime.h
+  DEPENDS
+    libc.hdr.types.clockid_t
+    libc.hdr.types.struct_timespec
+    libc.src.__support.time.clock_settime
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   gettimeofday
   SRCS
     gettimeofday.cpp

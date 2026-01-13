@@ -17,11 +17,6 @@
     ret void
   }
 
-  ; Function Attrs: nofree nosync nounwind readnone willreturn
-  declare ptr @llvm.returnaddress(i32 immarg) #0
-
-  attributes #0 = { nofree nosync nounwind readnone willreturn }
-
 ...
 ---
 name:            test1

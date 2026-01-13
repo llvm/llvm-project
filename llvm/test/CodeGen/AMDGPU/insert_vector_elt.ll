@@ -1508,35 +1508,33 @@ define amdgpu_kernel void @dynamic_insertelement_v2i16(ptr addrspace(1) %out, <2
 ; SI-LABEL: dynamic_insertelement_v2i16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
-; SI-NEXT:    s_mov_b32 s7, 0x100f000
-; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_mov_b32 s5, s1
-; SI-NEXT:    s_lshl_b32 s1, s3, 4
-; SI-NEXT:    s_mov_b32 s4, s0
-; SI-NEXT:    s_xor_b32 s0, s2, 0x50005
-; SI-NEXT:    s_lshl_b32 s1, 0xffff, s1
-; SI-NEXT:    s_and_b32 s0, s0, s1
-; SI-NEXT:    s_xor_b32 s0, s0, s2
-; SI-NEXT:    v_mov_b32_e32 v0, s0
-; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; SI-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; SI-NEXT:    s_lshl_b32 s5, s5, 4
+; SI-NEXT:    s_xor_b32 s6, s4, 0x50005
+; SI-NEXT:    s_lshl_b32 s5, 0xffff, s5
+; SI-NEXT:    s_and_b32 s5, s6, s5
+; SI-NEXT:    s_xor_b32 s4, s5, s4
+; SI-NEXT:    s_mov_b32 s3, 0x100f000
+; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    v_mov_b32_e32 v0, s4
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: dynamic_insertelement_v2i16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
-; VI-NEXT:    s_mov_b32 s7, 0x1100f000
-; VI-NEXT:    s_mov_b32 s6, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_mov_b32 s5, s1
-; VI-NEXT:    s_lshl_b32 s1, s3, 4
-; VI-NEXT:    s_mov_b32 s4, s0
-; VI-NEXT:    s_xor_b32 s0, s2, 0x50005
-; VI-NEXT:    s_lshl_b32 s1, 0xffff, s1
-; VI-NEXT:    s_and_b32 s0, s0, s1
-; VI-NEXT:    s_xor_b32 s0, s0, s2
-; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; VI-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; VI-NEXT:    s_lshl_b32 s5, s5, 4
+; VI-NEXT:    s_xor_b32 s6, s4, 0x50005
+; VI-NEXT:    s_lshl_b32 s5, 0xffff, s5
+; VI-NEXT:    s_and_b32 s5, s6, s5
+; VI-NEXT:    s_xor_b32 s4, s5, s4
+; VI-NEXT:    s_mov_b32 s3, 0x1100f000
+; VI-NEXT:    s_mov_b32 s2, -1
+; VI-NEXT:    v_mov_b32_e32 v0, s4
+; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <2 x i16> %a, i16 5, i32 %b
   store <2 x i16> %vecins, ptr addrspace(1) %out, align 8

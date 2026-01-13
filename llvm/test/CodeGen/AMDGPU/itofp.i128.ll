@@ -1066,13 +1066,13 @@ define double @uitofp_i128_to_f64(i128 %x) {
 ; GISEL-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[8:9]
 ; GISEL-NEXT:    v_lshlrev_b64 v[8:9], 30, v[2:3]
 ; GISEL-NEXT:    v_lshrrev_b32_e32 v5, 2, v1
-; GISEL-NEXT:    v_or_b32_e32 v9, v5, v8
+; GISEL-NEXT:    v_or_b32_e32 v9, v8, v5
 ; GISEL-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GISEL-NEXT:  ; %bb.11: ; %itofp-if-then20
 ; GISEL-NEXT:    v_lshlrev_b64 v[2:3], 29, v[2:3]
 ; GISEL-NEXT:    v_lshrrev_b64 v[4:5], 3, v[0:1]
 ; GISEL-NEXT:    v_lshrrev_b32_e32 v0, 3, v1
-; GISEL-NEXT:    v_or_b32_e32 v9, v0, v2
+; GISEL-NEXT:    v_or_b32_e32 v9, v2, v0
 ; GISEL-NEXT:    v_mov_b32_e32 v7, v6
 ; GISEL-NEXT:  ; %bb.12: ; %Flow
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[4:5]

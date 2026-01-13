@@ -195,7 +195,6 @@ define i128 @fptosi_sat_f64_to_i128(double %a) nounwind {
   %1 = tail call i128 @llvm.fptosi.sat.i128.f64(double %a)
   ret i128 %1
 }
-declare i128 @llvm.fptosi.sat.i128.f64(double)
 
 define i128 @fptoui_sat_f64_to_i128(double %a) nounwind {
 ; RV64I-LABEL: fptoui_sat_f64_to_i128:
@@ -286,4 +285,3 @@ define i128 @fptoui_sat_f64_to_i128(double %a) nounwind {
   %1 = tail call i128 @llvm.fptoui.sat.i128.f64(double %a)
   ret i128 %1
 }
-declare i128 @llvm.fptoui.sat.i128.f64(double)
