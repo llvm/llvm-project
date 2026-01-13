@@ -179,10 +179,10 @@ static Value *handleHlslWaveActiveBallot(CodeGenFunction &CGF,
 
     // Reassemble struct to <4 x i32>
     llvm::Value *VecVal = llvm::PoisonValue::get(Vec4I32);
-    for (unsigned i = 0; i < 4; ++i) {
-      Value *Elt = CGF.Builder.CreateExtractValue(StructVal, i);
+    for (unsigned I = 0; I < 4; ++I) {
+      Value *Elt = CGF.Builder.CreateExtractValue(StructVal, I);
       VecVal =
-          CGF.Builder.CreateInsertElement(VecVal, Elt, CGF.Builder.getInt32(i));
+          CGF.Builder.CreateInsertElement(VecVal, Elt, CGF.Builder.getInt32(I));
     }
 
     return VecVal;
