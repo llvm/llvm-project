@@ -53679,12 +53679,31 @@ static SDValue combineMaskedLoad(SDNode *N, SelectionDAG &DAG,
         return Blend;
   }
 
+  EVT VT = Mld->getValueType(0);
+  SDValue Mask = Mld->getMask();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+  // Attempt to convert a (vXi1 bitcast(iX Mask)) mask before it might get split
+  // by legalization.
+  if (DCI.isBeforeLegalizeOps() && Mask.getOpcode() == ISD::BITCAST &&
+      Mask.getScalarValueSizeInBits() == 1 && !Subtarget.hasAVX512() &&
+      TLI.isOperationLegalOrCustom(ISD::MLOAD, VT)) {
+    SDLoc DL(N);
+    EVT MaskVT = Mask.getValueType();
+    EVT ExtMaskVT = VT.changeVectorElementTypeToInteger();
+    if (SDValue NewMask = combineToExtendBoolVectorInReg(
+            ISD::SIGN_EXTEND, DL, ExtMaskVT, Mask, DAG, DCI, Subtarget)) {
+      NewMask = DAG.getNode(ISD::TRUNCATE, DL, MaskVT, NewMask);
+      return DAG.getMaskedLoad(
+          VT, DL, Mld->getChain(), Mld->getBasePtr(), Mld->getOffset(), NewMask,
+          Mld->getPassThru(), Mld->getMemoryVT(), Mld->getMemOperand(),
+          Mld->getAddressingMode(), Mld->getExtensionType());
+    }
+  }
+
   // If the mask value has been legalized to a non-boolean vector, try to
   // simplify ops leading up to it. We only demand the MSB of each lane.
-  SDValue Mask = Mld->getMask();
   if (Mask.getScalarValueSizeInBits() != 1) {
-    EVT VT = Mld->getValueType(0);
-    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
     APInt DemandedBits(APInt::getSignMask(VT.getScalarSizeInBits()));
     if (TLI.SimplifyDemandedBits(Mask, DemandedBits, DCI)) {
       if (N->getOpcode() != ISD::DELETED_NODE)
@@ -53784,6 +53803,24 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
     // Otherwise don't combine if this store already truncates.
     return SDValue();
   }
+
+  // Attempt to convert a (vXi1 bitcast(iX Mask)) mask before it might get split
+  // by legalization.
+  if (DCI.isBeforeLegalizeOps() && Mask.getOpcode() == ISD::BITCAST &&
+      Mask.getScalarValueSizeInBits() == 1 && !Subtarget.hasAVX512() &&
+      TLI.isOperationLegalOrCustom(ISD::MSTORE, VT)) {
+    EVT MaskVT = Mask.getValueType();
+    EVT ExtMaskVT = VT.changeVectorElementTypeToInteger();
+    if (SDValue NewMask = combineToExtendBoolVectorInReg(
+            ISD::SIGN_EXTEND, DL, ExtMaskVT, Mask, DAG, DCI, Subtarget)) {
+      NewMask = DAG.getNode(ISD::TRUNCATE, DL, MaskVT, NewMask);
+      return DAG.getMaskedStore(Mst->getChain(), SDLoc(N), Mst->getValue(),
+                                Mst->getBasePtr(), Mst->getOffset(), NewMask,
+                                Mst->getMemoryVT(), Mst->getMemOperand(),
+                                Mst->getAddressingMode());
+    }
+  }
+
 
   // If the mask value has been legalized to a non-boolean vector, try to
   // simplify ops leading up to it. We only demand the MSB of each lane.
@@ -57398,35 +57435,35 @@ static SDValue combineX86GatherScatter(SDNode *N, SelectionDAG &DAG,
 }
 
 static SDValue rebuildGatherScatter(MaskedGatherScatterSDNode *GorS,
-                                    SDValue Index, SDValue Base, SDValue Scale,
-                                    SelectionDAG &DAG) {
+                                    SDValue Index, SDValue Base, SDValue Mask,
+                                    SDValue Scale, SelectionDAG &DAG) {
   SDLoc DL(GorS);
 
   if (auto *Gather = dyn_cast<MaskedGatherSDNode>(GorS)) {
-    SDValue Ops[] = { Gather->getChain(), Gather->getPassThru(),
-                      Gather->getMask(), Base, Index, Scale } ;
-    return DAG.getMaskedGather(Gather->getVTList(),
-                               Gather->getMemoryVT(), DL, Ops,
-                               Gather->getMemOperand(),
+    SDValue Ops[] = {
+        Gather->getChain(), Gather->getPassThru(), Mask, Base, Index, Scale};
+    return DAG.getMaskedGather(Gather->getVTList(), Gather->getMemoryVT(), DL,
+                               Ops, Gather->getMemOperand(),
                                Gather->getIndexType(),
                                Gather->getExtensionType());
   }
   auto *Scatter = cast<MaskedScatterSDNode>(GorS);
-  SDValue Ops[] = { Scatter->getChain(), Scatter->getValue(),
-                    Scatter->getMask(), Base, Index, Scale };
-  return DAG.getMaskedScatter(Scatter->getVTList(),
-                              Scatter->getMemoryVT(), DL,
+  SDValue Ops[] = {
+      Scatter->getChain(), Scatter->getValue(), Mask, Base, Index, Scale};
+  return DAG.getMaskedScatter(Scatter->getVTList(), Scatter->getMemoryVT(), DL,
                               Ops, Scatter->getMemOperand(),
                               Scatter->getIndexType(),
                               Scatter->isTruncatingStore());
 }
 
 static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
-                                    TargetLowering::DAGCombinerInfo &DCI) {
+                                    TargetLowering::DAGCombinerInfo &DCI,
+                                    const X86Subtarget &Subtarget) {
   SDLoc DL(N);
   auto *GorS = cast<MaskedGatherScatterSDNode>(N);
   SDValue Index = GorS->getIndex();
   SDValue Base = GorS->getBasePtr();
+  SDValue Mask = GorS->getMask();
   SDValue Scale = GorS->getScale();
   EVT IndexVT = Index.getValueType();
   EVT IndexSVT = IndexVT.getVectorElementType();
@@ -57460,7 +57497,8 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
                                          Index.getOperand(0), NewShAmt);
           SDValue NewScale =
               DAG.getConstant(ScaleAmt * 2, DL, Scale.getValueType());
-          return rebuildGatherScatter(GorS, NewIndex, Base, NewScale, DAG);
+          return rebuildGatherScatter(GorS, NewIndex, Base, Mask, NewScale,
+                                      DAG);
         }
       }
     }
@@ -57478,7 +57516,7 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
       // a split.
       if (SDValue TruncIndex =
               DAG.FoldConstantArithmetic(ISD::TRUNCATE, DL, NewVT, Index))
-        return rebuildGatherScatter(GorS, TruncIndex, Base, Scale, DAG);
+        return rebuildGatherScatter(GorS, TruncIndex, Base, Mask, Scale, DAG);
 
       // Shrink any sign/zero extends from 32 or smaller to larger than 32 if
       // there are sufficient sign bits. Only do this before legalize types to
@@ -57487,13 +57525,13 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
            Index.getOpcode() == ISD::ZERO_EXTEND) &&
           Index.getOperand(0).getScalarValueSizeInBits() <= 32) {
         Index = DAG.getNode(ISD::TRUNCATE, DL, NewVT, Index);
-        return rebuildGatherScatter(GorS, Index, Base, Scale, DAG);
+        return rebuildGatherScatter(GorS, Index, Base, Mask, Scale, DAG);
       }
 
       // Shrink if we remove an illegal type.
       if (!TLI.isTypeLegal(Index.getValueType()) && TLI.isTypeLegal(NewVT)) {
         Index = DAG.getNode(ISD::TRUNCATE, DL, NewVT, Index);
-        return rebuildGatherScatter(GorS, Index, Base, Scale, DAG);
+        return rebuildGatherScatter(GorS, Index, Base, Mask, Scale, DAG);
       }
     }
   }
@@ -57518,13 +57556,15 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
               SDValue NewBase = DAG.getNode(ISD::ADD, DL, PtrVT, Base,
                                             DAG.getConstant(Adder, DL, PtrVT));
               SDValue NewIndex = Index.getOperand(1 - I);
-              return rebuildGatherScatter(GorS, NewIndex, NewBase, Scale, DAG);
+              return rebuildGatherScatter(GorS, NewIndex, NewBase, Mask, Scale,
+                                          DAG);
             }
             // For non-constant cases, limit this to non-scaled cases.
             if (ScaleAmt == 1) {
               SDValue NewBase = DAG.getNode(ISD::ADD, DL, PtrVT, Base, Splat);
               SDValue NewIndex = Index.getOperand(1 - I);
-              return rebuildGatherScatter(GorS, NewIndex, NewBase, Scale, DAG);
+              return rebuildGatherScatter(GorS, NewIndex, NewBase, Mask, Scale,
+                                          DAG);
             }
           }
         }
@@ -57539,7 +57579,8 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
           SDValue NewIndex = DAG.getNode(ISD::ADD, DL, IndexVT,
                                          Index.getOperand(1 - I), Splat);
           SDValue NewBase = DAG.getConstant(0, DL, PtrVT);
-          return rebuildGatherScatter(GorS, NewIndex, NewBase, Scale, DAG);
+          return rebuildGatherScatter(GorS, NewIndex, NewBase, Mask, Scale,
+                                      DAG);
         }
       }
   }
@@ -57550,12 +57591,25 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
       MVT EltVT = IndexWidth > 32 ? MVT::i64 : MVT::i32;
       IndexVT = IndexVT.changeVectorElementType(*DAG.getContext(), EltVT);
       Index = DAG.getSExtOrTrunc(Index, DL, IndexVT);
-      return rebuildGatherScatter(GorS, Index, Base, Scale, DAG);
+      return rebuildGatherScatter(GorS, Index, Base, Mask, Scale, DAG);
+    }
+
+    // Attempt to convert a (vXi1 bitcast(iX Mask)) mask before it might get
+    // split by legalization.
+    if (GorS->getOpcode() == ISD::MGATHER && Mask.getOpcode() == ISD::BITCAST &&
+        Mask.getScalarValueSizeInBits() == 1 && !Subtarget.hasAVX512() &&
+        TLI.isOperationLegalOrCustom(ISD::MGATHER, N->getValueType(0))) {
+      EVT MaskVT = Mask.getValueType();
+      EVT ExtMaskVT = N->getValueType(0).changeVectorElementTypeToInteger();
+      if (SDValue ExtMask = combineToExtendBoolVectorInReg(
+              ISD::SIGN_EXTEND, DL, ExtMaskVT, Mask, DAG, DCI, Subtarget)) {
+        ExtMask = DAG.getNode(ISD::TRUNCATE, DL, MaskVT, ExtMask);
+        return rebuildGatherScatter(GorS, Index, Base, ExtMask, Scale, DAG);
+      }
     }
   }
 
   // With vector masks we only demand the upper bit of the mask.
-  SDValue Mask = GorS->getMask();
   if (Mask.getScalarValueSizeInBits() != 1) {
     APInt DemandedMask(APInt::getSignMask(Mask.getScalarValueSizeInBits()));
     if (TLI.SimplifyDemandedBits(Mask, DemandedMask, DCI)) {
@@ -61700,7 +61754,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::MGATHER:
   case X86ISD::MSCATTER:    return combineX86GatherScatter(N, DAG, DCI);
   case ISD::MGATHER:
-  case ISD::MSCATTER:       return combineGatherScatter(N, DAG, DCI);
+  case ISD::MSCATTER:       return combineGatherScatter(N, DAG, DCI, Subtarget);
   case X86ISD::PCMPEQ:
   case X86ISD::PCMPGT:      return combineVectorCompare(N, DAG, Subtarget);
   case X86ISD::PMULDQ:
