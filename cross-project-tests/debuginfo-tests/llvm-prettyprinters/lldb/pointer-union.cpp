@@ -2,6 +2,17 @@
 
 #include "llvm/ADT/PointerUnion.h"
 
+struct HasVirtual {
+  virtual void func() = 0;
+  virtual ~HasVirtual() = default;
+};
+struct DerivedWithVirtual : public HasVirtual {
+  virtual void func() override;
+  virtual ~DerivedWithVirtual() = default;
+};
+
+void DerivedWithVirtual::func() {}
+
 int main() {
   int a = 5;
   float f = 4.0;
@@ -10,6 +21,8 @@ int main() {
 
   struct Derived : public Z {};
   Derived derived;
+
+  DerivedWithVirtual dv;
 
   llvm::PointerUnion<Z *, float *> z_float(&f);
   llvm::PointerUnion<Z *, float *> raw_z_float(nullptr);
@@ -23,6 +36,10 @@ int main() {
   puts("Break here");
 
   z_float = &derived;
+
+  puts("Break here");
+
+  llvm::PointerUnion<HasVirtual *, float *> virtual_float(&dv);
 
   puts("Break here");
 }
