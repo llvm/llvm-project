@@ -2556,23 +2556,27 @@ static void licm(VPlan &Plan) {
     }
   }
 
+  // Collect dedicated exit blocks, which have only the loop region as
+  // predecessor.
+  // TODO: Sinking to non-dedicated exits is not supported yet, as it would
+  // require splitting the edge to create a dedicated exit block. Without this,
+  // the sunk instruction would incorrectly execute on paths entering the exit
+  // block from other predecessors.
+  SmallPtrSet<VPBasicBlock *, 2> DedicatedExits;
+  for (VPBlockBase *Succ : LoopRegion->getSuccessors()) {
+    auto *ExitBB = cast<VPBasicBlock>(Succ);
+    if (ExitBB->getSinglePredecessor() == LoopRegion)
+      DedicatedExits.insert(ExitBB);
+  }
+  if (DedicatedExits.empty())
+    return;
+
   VPDominatorTree VPDT(Plan);
   // Sink recipes with no users inside the vector loop region into a dedicated
   // exit block.
   // TODO: Extend to sink recipes from inner loops.
-  auto *SingleExit =
-      cast_or_null<VPBasicBlock>(LoopRegion->getSingleSuccessor());
-  // Check whether there is a unique dedicated exit block.
-  // TODO: Should check all predecessors of the exit block.
-  if (!SingleExit || SingleExit->getSinglePredecessor() != LoopRegion)
-    return;
-
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_post_order_shallow(LoopRegion->getEntry()))) {
-    // Skip the basic block that is not dominates the exit block.
-    if (!VPDT.properlyDominates(VPBB, SingleExit))
-      continue;
-
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
       if (cannotHoistOrSinkRecipe(R))
         continue;
@@ -2581,15 +2585,35 @@ static void licm(VPlan &Plan) {
       if (Def->getNumUsers() == 0)
         continue;
 
+      SmallPtrSet<VPBasicBlock *, 2> UserBBs;
       // Cannot sink the recipe if any user is defined in the same loop or in
       // any nested inner loop region.
       if (any_of(Def->users(), [&](VPUser *U) {
-            VPRegionBlock *ParentL =
-                cast<VPRecipeBase>(U)->getParent()->getEnclosingLoopRegion();
-            return ParentL;
+            auto *UserR = cast<VPRecipeBase>(U);
+            VPBasicBlock *Parent = UserR->getParent();
+            // TODO: If the user is a PHI node, we should check the block of
+            // incoming value. Support PHI node users if needed.
+            if (UserR->isPhi() || Parent->getEnclosingLoopRegion())
+              return true;
+            // Collect the basic block of users.
+            UserBBs.insert(Parent);
+            return false;
           }))
         continue;
-      Def->moveBefore(*SingleExit, SingleExit->getFirstNonPhi());
+
+      VPBasicBlock *SinkBB = nullptr;
+      // TODO: Support sinking when users are in multiple blocks.
+      if (UserBBs.size() == 1) {
+        SinkBB = *UserBBs.begin();
+        // Only sink to dedicated exit blocks.
+        if (!DedicatedExits.contains(SinkBB))
+          continue;
+        // Skip if the defining block does not dominate the sink block.
+        if (!VPDT.properlyDominates(VPBB, SinkBB))
+          continue;
+
+        Def->moveBefore(*SinkBB, SinkBB->getFirstNonPhi());
+      }
     }
   }
 }
