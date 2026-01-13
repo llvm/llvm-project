@@ -232,13 +232,15 @@ void SystemZHLASMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
 
   MCStreamer::emitLabel(Sym, Loc);
 
-  // Emit ENTRY statement only if not implied by CSECT.
-  bool EmitEntry = true;
+  // Emit label and ENTRY statement only if not implied by CSECT. Do not emit a
+  // label if the symbol is on a PR section.
+  bool EmitLabelAndEntry =
+      !static_cast<MCSectionGOFF *>(getCurrentSectionOnly())->isPR();
   if (!Sym->isTemporary() && Sym->isInEDSection()) {
-    EmitEntry =
+    EmitLabelAndEntry =
         Sym->getName() !=
         static_cast<MCSectionGOFF &>(Sym->getSection()).getParent()->getName();
-    if (EmitEntry) {
+    if (EmitLabelAndEntry) {
       OS << " ENTRY " << Sym->getName();
       EmitEOL();
     }
@@ -248,12 +250,8 @@ void SystemZHLASMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
     EmitEOL();
   }
 
-  // TODO Need to adjust this based on Label type
-  if (EmitEntry) {
+  if (EmitLabelAndEntry) {
     OS << Sym->getName() << " DS 0H";
-    // TODO Update LabelSuffix in SystemZMCAsmInfoGOFF once tests have been
-    // moved to HLASM syntax.
-    // OS << MAI->getLabelSuffix();
     EmitEOL();
   }
 }
