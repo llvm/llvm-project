@@ -125,13 +125,13 @@ void UnconditionalVAArgChecker::checkBranchCondition(const Stmt *Condition,
 void UnconditionalVAArgChecker::checkPreStmt(const VAArgExpr *VAA,
                                              CheckerContext &C) const {
   ProgramStateRef State = C.getState();
-  const FunctionDecl *FD = getCurrentFunction(C);
-  if (FD && FD == State->get<HasUnconditionalPath>()) {
+  const FunctionDecl *PathFrom = State->get<HasUnconditionalPath>();//getCurrentFunction(C);
+  if (PathFrom) {
     // Reset this field in the state to ensure that multiple consecutive
     // va_arg() calls don't produce repeated warnings.
     C.addTransition(State->set<HasUnconditionalPath>(nullptr));
 
-    IdentifierInfo *II = FD->getIdentifier();
+    IdentifierInfo *II = PathFrom->getIdentifier();
     if (!II)
       return;
     StringRef FN = II->getName();
@@ -143,14 +143,21 @@ void UnconditionalVAArgChecker::checkPreStmt(const VAArgExpr *VAA,
     SourceRange SR = VAA->getSourceRange();
     PathDiagnosticLocation PDL(SR.getBegin(),
                                C.getASTContext().getSourceManager());
-
     // We create a non-path-sensitive report because the path wouldn't contain
     // any useful information: the path leading to this function is actively
     // ignored by the checker and the path within the function is trivial.
     auto R =
         std::make_unique<BasicBugReport>(BT, BT.getDescription(), FullMsg, PDL);
+
+    if (getCurrentFunction(C) != PathFrom) {
+      SourceRange DefSR = PathFrom->getSourceRange();
+      PathDiagnosticLocation DefPDL(DefSR.getBegin(),
+                               C.getASTContext().getSourceManager());
+      std::string NoteMsg = formatv("Variadic function '{0}' is defined here", FN);
+      R->addNote(NoteMsg, DefPDL, DefSR);
+    }
     R->addRange(SR);
-    R->setDeclWithIssue(FD);
+    R->setDeclWithIssue(PathFrom);
     C.emitReport(std::move(R));
   }
 }

@@ -224,3 +224,38 @@ void calls_other_variadic(int fst, ...) {
   // expected-note@-1 {{Calls to 'calls_other_variadic' always reach this va_arg() expression, so calling 'calls_other_variadic' with no variadic arguments would be undefined behavior}}
   va_end(va);
 }
+
+int get_int_from_va_list(va_list *va) {
+  // This checker can report va_arg() expressions that are unconditionally
+  // reached from a variadic function, even if they are located in a different
+  // function. In this case the originating variadic function is marked with a
+  // note (to make it easier to find).
+  return va_arg(*va, int); // expected-warning{{Unconditional use of va_arg()}}
+  // expected-note@-1 {{Calls to 'uses_wrapped_va_arg' always reach this va_arg() expression, so calling 'uses_wrapped_va_arg' with no variadic arguments would be undefined behavior}}
+}
+
+void uses_wrapped_va_arg(int fst, ...) {
+  // expected-note@-1 {{Variadic function 'uses_wrapped_va_arg' is defined here}}
+  va_list va;
+  va_start(va, fst);
+  (void)get_int_from_va_list(&va);
+  va_end(va);
+}
+
+int standalone_non_variadic(va_list *va) {
+  // A va_arg() expression is only reported if it is unconditionally reached
+  // from the beginning of a _variadic_ function. Functions that use va_arg()
+  // on a va_list obtained from other sources (e.g. as an argument) are
+  // presumed to be small helper subroutines of a complex variadic function, so
+  // we do not report cases where the va_arg() is unconditionally reached from
+  // the beginning of a _non-variadic_ function.
+  return va_arg(*va, int); //no-warning
+}
+
+int variadic_but_also_takes_va_list(va_list *va, ...) {
+  // The checker just looks for va_arg() calls without checking the origin of
+  // their argument, so in this (very artifical) example it produces a
+  // result that is arguably a false positive.
+  return va_arg(*va, int); // expected-warning{{Unconditional use of va_arg()}}
+  // expected-note@-1 {{Calls to 'variadic_but_also_takes_va_list' always reach this va_arg() expression, so calling 'variadic_but_also_takes_va_list' with no variadic arguments would be undefined behavior}}
+}
