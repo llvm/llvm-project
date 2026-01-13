@@ -48,8 +48,8 @@ clang-doc
 | Paul Kirth
 | paulkirth@google.com (email), ilovepi (GitHub), ilovepi (Discourse)
 
-| Peter Chou
-| peterchou411@gmail.com (email), PeterChou1 (GitHub), PeterChou1 (Discourse), .peterchou (Discord)
+| Erick Velez
+| erickvelez7@gmail.com (email), evelez7 (GitHub), evelez (Discourse)
 
 
 clangd
