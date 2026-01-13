@@ -97,6 +97,8 @@ static StringRef getLoongArchSpecifierName(uint16_t S) {
     return "gd_pc_hi20";
   case ELF::R_LARCH_TLS_GD_HI20:
     return "gd_hi20";
+  case ELF::R_LARCH_CALL30:
+    return "call30";
   case ELF::R_LARCH_CALL36:
     return "call36";
   case ELF::R_LARCH_TLS_DESC_PC_HI20:
@@ -174,6 +176,7 @@ LoongArchMCExpr::Specifier LoongArch::parseSpecifier(StringRef name) {
       .Case("ld_hi20", ELF::R_LARCH_TLS_LD_HI20)
       .Case("gd_pc_hi20", ELF::R_LARCH_TLS_GD_PC_HI20)
       .Case("gd_hi20", ELF::R_LARCH_TLS_GD_HI20)
+      .Case("call30", ELF::R_LARCH_CALL30)
       .Case("call36", ELF::R_LARCH_CALL36)
       .Case("desc_pc_hi20", ELF::R_LARCH_TLS_DESC_PC_HI20)
       .Case("desc_pc_lo12", ELF::R_LARCH_TLS_DESC_PC_LO12)
