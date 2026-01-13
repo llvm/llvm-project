@@ -274,6 +274,18 @@ getExecutionModel(const SPIRVSubtarget &STI, const Function &F) {
   report_fatal_error("This HLSL entry point is not supported by this backend.");
 }
 
+static bool shouldSkipOperands(SPIRV::Decoration::Decoration Dec) {
+  switch (Dec) {
+  case SPIRV::Decoration::StableKernelArgumentALTERA:
+  case SPIRV::Decoration::RegisterMapKernelArgumentALTERA:
+  case SPIRV::Decoration::ConduitKernelArgumentALTERA:
+  case SPIRV::Decoration::Restrict:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                              const Function &F,
                                              ArrayRef<ArrayRef<Register>> VRegs,
@@ -374,10 +386,12 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
           auto Dec =
               static_cast<SPIRV::Decoration::Decoration>(Const->getZExtValue());
           std::vector<uint32_t> DecVec;
-          for (unsigned j = 1; j < MD2->getNumOperands(); j++) {
-            ConstantInt *Const = getConstInt(MD2, j);
-            assert(Const && "MDOperand should be ConstantInt");
-            DecVec.push_back(static_cast<uint32_t>(Const->getZExtValue()));
+          if (!shouldSkipOperands(Dec)) {
+            for (unsigned j = 1; j < MD2->getNumOperands(); j++) {
+              ConstantInt *Const = getConstInt(MD2, j);
+              assert(Const && "MDOperand should be ConstantInt");
+              DecVec.push_back(static_cast<uint32_t>(Const->getZExtValue()));
+            }
           }
           buildOpDecorate(VRegs[i][0], MIRBuilder, Dec, DecVec);
         }
