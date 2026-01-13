@@ -46,7 +46,7 @@ LIBC_INLINE FileIOResult read_internal(char *buf, size_t size, ::FILE *stream) {
   if (pop_ungetc_value(stream, ungetc_value)) {
     buf[0] = static_cast<char>(ungetc_value);
     ungetc_value_copied = 1;
-    
+
     if (size == 1)
       return 1;
   }

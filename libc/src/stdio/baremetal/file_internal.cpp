@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/optional.h"
 #include "src/stdio/baremetal/file_internal.h"
+#include "src/__support/CPP/optional.h"
 
 #include "hdr/stdio_macros.h" // for EOF
 
@@ -45,7 +45,8 @@ int store_ungetc_value(::FILE *stream, int c) {
   if (ungetc_state_stdin)
     return EOF;
 
-  ungetc_state_stdin = cpp::optional<unsigned char>{static_cast<unsigned char>(c)};
+  ungetc_state_stdin =
+      cpp::optional<unsigned char>{static_cast<unsigned char>(c)};
   return c;
 }
 
