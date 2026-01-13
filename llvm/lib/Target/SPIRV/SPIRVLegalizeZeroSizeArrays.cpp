@@ -289,6 +289,9 @@ bool SPIRVLegalizeZeroSizeArraysImpl::runOnModule(Module &M) {
   // Runtime arrays are allowed for shaders, so we don't need to do anything.
   if (TM.getSubtargetImpl()->isShader())
     return false;
+  // 0-sized arrays are handled differently for AMDGCN flavoured SPIRV.
+  if (M.getTargetTriple().getVendor() == Triple::VendorType::AMD)
+    return false;
 
   // First pass: create new globals (legalizing the initializer as needed) and
   // track mapping (don't erase old ones yet).

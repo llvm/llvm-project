@@ -876,6 +876,9 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeArray(uint32_t NumElems,
   SPIRVType *ArrayType = nullptr;
   const SPIRVSubtarget &ST =
       cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
+  if (NumElems == 0 &&
+      ST.getTargetTriple().getVendor() == Triple::VendorType::AMD)
+    NumElems = UINT32_MAX;
   if (NumElems != 0) {
     Register NumElementsVReg =
         buildConstantInt(NumElems, MIRBuilder, SpvTypeInt32, EmitIR);

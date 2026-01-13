@@ -12,11 +12,11 @@
 ; CHECK: OpDecorate %[[#LLVM_EMBEDDED_MODULE]] Constant
 ; CHECK: %[[#UCHAR:]] = OpTypeInt 8 0
 ; CHECK: %[[#UINT:]] = OpTypeInt 32 0
-; CHECK: %[[#ONE:]] = OpConstant %[[#UINT]] 1
-; CHECK: %[[#UCHAR_ARR_1:]] = OpTypeArray %[[#UCHAR]] %[[#ONE]]
-; CHECK: %[[#UCHAR_ARR_1_PTR:]] = OpTypePointer CrossWorkgroup %[[#UCHAR_ARR_1]]
-; CHECK: %[[#CONST_UCHAR_ARR_1:]] = OpConstantNull %[[#UCHAR_ARR_1]]
-; CHECK: %[[#LLVM_EMBEDDED_MODULE]] = OpVariable %[[#UCHAR_ARR_1_PTR]] CrossWorkgroup %[[#CONST_UCHAR_ARR_1]]
+; CHECK: %[[#UINT_MAX:]] = OpConstant %[[#UINT]] 4294967295
+; CHECK: %[[#UCHAR_ARR_UINT_MAX:]] = OpTypeArray %[[#UCHAR]] %[[#UINT_MAX]]
+; CHECK: %[[#UCHAR_ARR_UINT_MAX_PTR:]] = OpTypePointer CrossWorkgroup %[[#UCHAR_ARR_UINT_MAX]]
+; CHECK: %[[#CONST_UCHAR_ARR_UINT_MAX:]] = OpConstantNull %[[#UCHAR_ARR_UINT_MAX]]
+; CHECK: %[[#LLVM_EMBEDDED_MODULE]] = OpVariable %[[#UCHAR_ARR_UINT_MAX_PTR]] CrossWorkgroup %[[#CONST_UCHAR_ARR_UINT_MAX]]
 
 define spir_kernel void @foo() {
 entry:
