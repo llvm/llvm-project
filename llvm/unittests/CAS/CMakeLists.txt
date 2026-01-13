@@ -49,6 +49,7 @@ add_llvm_unittest(CASTests
   CASProvidingFileSystemTest.cpp
   CachingOnDiskFileSystemTest.cpp
   HierarchicalTreeBuilderTest.cpp
+  NamedValuesSchemaTest.cpp
   ObjectStoreTest.cpp
   ThreadSafeAllocatorTest.cpp
   TreeSchemaTest.cpp
