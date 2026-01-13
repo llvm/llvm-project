@@ -793,8 +793,12 @@ public:
   // to provide debug info for the BB at that time, so keep this one around.
   LLVM_ABI SDValue getBasicBlock(MachineBasicBlock *MBB);
   LLVM_ABI SDValue getExternalSymbol(const char *Sym, EVT VT);
+  LLVM_ABI SDValue getExternalSymbol(RTLIB::LibcallImpl LCImpl, EVT VT);
   LLVM_ABI SDValue getTargetExternalSymbol(const char *Sym, EVT VT,
                                            unsigned TargetFlags = 0);
+  LLVM_ABI SDValue getTargetExternalSymbol(RTLIB::LibcallImpl LCImpl, EVT VT,
+                                           unsigned TargetFlags = 0);
+
   LLVM_ABI SDValue getMCSymbol(MCSymbol *Sym, EVT VT);
 
   LLVM_ABI SDValue getValueType(EVT);
@@ -1272,6 +1276,12 @@ public:
   LLVM_ABI std::pair<SDValue, SDValue> getMemcmp(SDValue Chain, const SDLoc &dl,
                                                  SDValue Dst, SDValue Src,
                                                  SDValue Size,
+                                                 const CallInst *CI);
+
+  /// Lower a strcpy operation into a target library call and return the
+  /// resulting chain and call result as SelectionDAG SDValues.
+  LLVM_ABI std::pair<SDValue, SDValue> getStrcpy(SDValue Chain, const SDLoc &dl,
+                                                 SDValue Dst, SDValue Src,
                                                  const CallInst *CI);
 
   /// Lower a strlen operation into a target library call and return the
@@ -2332,6 +2342,12 @@ public:
   /// Test whether the given float value is known to be positive. +0.0, +inf and
   /// +nan are considered positive, -0.0, -inf and -nan are not.
   LLVM_ABI bool cannotBeOrderedNegativeFP(SDValue Op) const;
+
+  /// Check if a use of a float value is insensitive to signed zeros.
+  LLVM_ABI bool canIgnoreSignBitOfZero(const SDUse &Use) const;
+
+  /// Check if at most two uses of a value are insensitive to signed zeros.
+  LLVM_ABI bool canIgnoreSignBitOfZero(SDValue Op) const;
 
   /// Test whether two SDValues are known to compare equal. This
   /// is true if they are the same value, or if one is negative zero and the

@@ -99,6 +99,8 @@ private:
                                   LLT *IndexVT = nullptr) const;
   bool selectIntrinsicWithSideEffects(MachineInstr &I,
                                       MachineIRBuilder &MIB) const;
+  bool selectIntrinsic(MachineInstr &I, MachineIRBuilder &MIB) const;
+  bool selectExtractSubvector(MachineInstr &MI, MachineIRBuilder &MIB) const;
 
   ComplexRendererFns selectShiftMask(MachineOperand &Root,
                                      unsigned ShiftWidth) const;
@@ -967,6 +969,118 @@ bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
   }
 }
 
+bool RISCVInstructionSelector::selectIntrinsic(MachineInstr &I,
+                                               MachineIRBuilder &MIB) const {
+  // Find the intrinsic ID.
+  unsigned IntrinID = cast<GIntrinsic>(I).getIntrinsicID();
+  // Select the instruction.
+  switch (IntrinID) {
+  default:
+    return false;
+  case Intrinsic::riscv_vsetvli:
+  case Intrinsic::riscv_vsetvlimax: {
+
+    bool VLMax = IntrinID == Intrinsic::riscv_vsetvlimax;
+
+    unsigned Offset = VLMax ? 2 : 3;
+    unsigned SEW = RISCVVType::decodeVSEW(I.getOperand(Offset).getImm() & 0x7);
+    RISCVVType::VLMUL VLMul =
+        static_cast<RISCVVType::VLMUL>(I.getOperand(Offset + 1).getImm() & 0x7);
+
+    unsigned VTypeI = RISCVVType::encodeVTYPE(VLMul, SEW, /*TailAgnostic*/ true,
+                                              /*MaskAgnostic*/ true);
+
+    Register DstReg = I.getOperand(0).getReg();
+
+    Register VLOperand;
+    unsigned Opcode = RISCV::PseudoVSETVLI;
+
+    // Check if AVL is a constant that equals VLMAX.
+    if (!VLMax) {
+      Register AVLReg = I.getOperand(2).getReg();
+      if (auto AVLConst = getIConstantVRegValWithLookThrough(AVLReg, *MRI)) {
+        uint64_t AVL = AVLConst->Value.getZExtValue();
+        if (auto VLEN = Subtarget->getRealVLen()) {
+          if (*VLEN / RISCVVType::getSEWLMULRatio(SEW, VLMul) == AVL)
+            VLMax = true;
+        }
+      }
+
+      MachineInstr *AVLDef = MRI->getVRegDef(AVLReg);
+      if (AVLDef && AVLDef->getOpcode() == TargetOpcode::G_CONSTANT) {
+        const auto *C = AVLDef->getOperand(1).getCImm();
+        if (C->getValue().isAllOnes())
+          VLMax = true;
+      }
+    }
+
+    if (VLMax) {
+      VLOperand = Register(RISCV::X0);
+      Opcode = RISCV::PseudoVSETVLIX0;
+    } else {
+      Register AVLReg = I.getOperand(2).getReg();
+      VLOperand = AVLReg;
+
+      // Check if AVL is a small constant that can use PseudoVSETIVLI.
+      if (auto AVLConst = getIConstantVRegValWithLookThrough(AVLReg, *MRI)) {
+        uint64_t AVL = AVLConst->Value.getZExtValue();
+        if (isUInt<5>(AVL)) {
+          auto PseudoMI = MIB.buildInstr(RISCV::PseudoVSETIVLI, {DstReg}, {})
+                              .addImm(AVL)
+                              .addImm(VTypeI);
+          I.eraseFromParent();
+          return constrainSelectedInstRegOperands(*PseudoMI, TII, TRI, RBI);
+        }
+      }
+    }
+
+    auto PseudoMI =
+        MIB.buildInstr(Opcode, {DstReg}, {VLOperand}).addImm(VTypeI);
+    I.eraseFromParent();
+    return constrainSelectedInstRegOperands(*PseudoMI, TII, TRI, RBI);
+  }
+  }
+}
+
+bool RISCVInstructionSelector::selectExtractSubvector(
+    MachineInstr &MI, MachineIRBuilder &MIB) const {
+  assert(MI.getOpcode() == TargetOpcode::G_EXTRACT_SUBVECTOR);
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+
+  LLT DstTy = MRI->getType(DstReg);
+  LLT SrcTy = MRI->getType(SrcReg);
+
+  unsigned Idx = static_cast<unsigned>(MI.getOperand(2).getImm());
+
+  MVT DstMVT = getMVTForLLT(DstTy);
+  MVT SrcMVT = getMVTForLLT(SrcTy);
+
+  unsigned SubRegIdx;
+  std::tie(SubRegIdx, Idx) =
+      RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
+          SrcMVT, DstMVT, Idx, &TRI);
+
+  if (Idx != 0)
+    return false;
+
+  unsigned DstRegClassID = RISCVTargetLowering::getRegClassIDForVecVT(DstMVT);
+  const TargetRegisterClass *DstRC = TRI.getRegClass(DstRegClassID);
+  if (!RBI.constrainGenericRegister(DstReg, *DstRC, *MRI))
+    return false;
+
+  unsigned SrcRegClassID = RISCVTargetLowering::getRegClassIDForVecVT(SrcMVT);
+  const TargetRegisterClass *SrcRC = TRI.getRegClass(SrcRegClassID);
+  if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI))
+    return false;
+
+  MIB.buildInstr(TargetOpcode::COPY, {DstReg}, {}).addReg(SrcReg, 0, SubRegIdx);
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool RISCVInstructionSelector::select(MachineInstr &MI) {
   MachineIRBuilder MIB(MI);
 
@@ -1239,6 +1353,10 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   }
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
     return selectIntrinsicWithSideEffects(MI, MIB);
+  case TargetOpcode::G_INTRINSIC:
+    return selectIntrinsic(MI, MIB);
+  case TargetOpcode::G_EXTRACT_SUBVECTOR:
+    return selectExtractSubvector(MI, MIB);
   default:
     return false;
   }
@@ -1569,7 +1687,7 @@ bool RISCVInstructionSelector::selectAddr(MachineInstr &MI,
 
   switch (TM.getCodeModel()) {
   default: {
-    reportGISelFailure(*MF, *TPC, *MORE, getName(),
+    reportGISelFailure(*MF, *MORE, getName(),
                        "Unsupported code model for lowering", MI);
     return false;
   }

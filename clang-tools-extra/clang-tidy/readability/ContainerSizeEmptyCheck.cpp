@@ -217,13 +217,14 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
                     expr(hasType(pointsTo(ValidContainer))).bind("Pointee"))),
             expr(hasType(ValidContainer)).bind("STLObject"));
 
-  const auto ExcludedComparisonTypesMatcher = qualType(anyOf(
-      hasDeclaration(
-          cxxRecordDecl(matchers::matchesAnyListedName(ExcludedComparisonTypes))
-              .bind("excluded")),
-      hasCanonicalType(hasDeclaration(
-          cxxRecordDecl(matchers::matchesAnyListedName(ExcludedComparisonTypes))
-              .bind("excluded")))));
+  const auto ExcludedComparisonTypesMatcher = qualType(
+      anyOf(hasDeclaration(cxxRecordDecl(matchers::matchesAnyListedRegexName(
+                                             ExcludedComparisonTypes))
+                               .bind("excluded")),
+            hasCanonicalType(hasDeclaration(
+                cxxRecordDecl(matchers::matchesAnyListedRegexName(
+                                  ExcludedComparisonTypes))
+                    .bind("excluded")))));
   const auto SameExcludedComparisonTypesMatcher =
       qualType(anyOf(hasDeclaration(cxxRecordDecl(equalsBoundNode("excluded"))),
                      hasCanonicalType(hasDeclaration(
@@ -278,21 +279,18 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
     ReplacementText += ".empty()";
 
   if (BinCmp) {
-    if (BinCmp->getOperator() == OO_ExclaimEqual) {
+    if (BinCmp->getOperator() == OO_ExclaimEqual)
       ReplacementText = "!" + ReplacementText;
-    }
     Hint =
         FixItHint::CreateReplacement(BinCmp->getSourceRange(), ReplacementText);
   } else if (BinCmpTempl) {
-    if (BinCmpTempl->getOpcode() == BinaryOperatorKind::BO_NE) {
+    if (BinCmpTempl->getOpcode() == BinaryOperatorKind::BO_NE)
       ReplacementText = "!" + ReplacementText;
-    }
     Hint = FixItHint::CreateReplacement(BinCmpTempl->getSourceRange(),
                                         ReplacementText);
   } else if (BinCmpRewritten) {
-    if (BinCmpRewritten->getOpcode() == BinaryOperatorKind::BO_NE) {
+    if (BinCmpRewritten->getOpcode() == BinaryOperatorKind::BO_NE)
       ReplacementText = "!" + ReplacementText;
-    }
     Hint = FixItHint::CreateReplacement(BinCmpRewritten->getSourceRange(),
                                         ReplacementText);
   } else if (BinaryOp) { // Determine the correct transformation.
@@ -400,10 +398,9 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
                  Result.Nodes.getNodeAs<CXXDependentScopeMemberExpr>(
                      "MemberExpr"))
       Diag << DependentExpr->getMember();
-    else if (const auto *ME =
-                 Result.Nodes.getNodeAs<MemberExpr>("MemberExpr")) {
+    else if (const auto *ME = Result.Nodes.getNodeAs<MemberExpr>("MemberExpr"))
       Diag << ME->getMemberNameInfo().getName();
-    } else
+    else
       Diag << "unknown method";
     Diag << Hint;
   } else {

@@ -110,7 +110,7 @@ void bar() {
 // CHECK1-NEXT:    [[BAR_B:%.*]] = alloca double, align 8
 // CHECK1-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1:[0-9]+]])
-// CHECK1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @_Z3barv_omp_outlined, ptr @_Z3barv_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
+// CHECK1-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @_Z3barv_omp_outlined, ptr @_Z3barv_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0, i32 0)
 // CHECK1-NEXT:    ret void
 //
 //

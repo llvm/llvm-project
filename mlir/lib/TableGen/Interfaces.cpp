@@ -208,3 +208,11 @@ bool OpInterface::classof(const Interface *interface) {
 bool TypeInterface::classof(const Interface *interface) {
   return interface->getDef().isSubClassOf("TypeInterface");
 }
+
+//===----------------------------------------------------------------------===//
+// DialectInterface
+//===----------------------------------------------------------------------===//
+
+bool DialectInterface::classof(const Interface *interface) {
+  return interface->getDef().isSubClassOf("DialectInterface");
+}

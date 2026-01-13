@@ -1287,9 +1287,12 @@ void CGOpenMPRuntimeGPU::emitParallelCall(
       IfCondVal = llvm::ConstantInt::get(CGF.Int32Ty, 1);
 
     if (!NumThreadsVal)
-      NumThreadsVal = llvm::ConstantInt::get(CGF.Int32Ty, -1);
+      NumThreadsVal = llvm::ConstantInt::getAllOnesValue(CGF.Int32Ty);
     else
       NumThreadsVal = Bld.CreateZExtOrTrunc(NumThreadsVal, CGF.Int32Ty);
+
+    // No strict prescriptiveness for the number of threads.
+    llvm::Value *StrictNumThreadsVal = llvm::ConstantInt::get(CGF.Int32Ty, 0);
 
     assert(IfCondVal && "Expected a value");
     llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
@@ -1298,14 +1301,16 @@ void CGOpenMPRuntimeGPU::emitParallelCall(
         getThreadID(CGF, Loc),
         IfCondVal,
         NumThreadsVal,
-        llvm::ConstantInt::get(CGF.Int32Ty, -1),
+        llvm::ConstantInt::getAllOnesValue(CGF.Int32Ty),
         FnPtr,
         ID,
         Bld.CreateBitOrPointerCast(CapturedVarsAddrs.emitRawPointer(CGF),
                                    CGF.VoidPtrPtrTy),
-        llvm::ConstantInt::get(CGM.SizeTy, CapturedVars.size())};
+        llvm::ConstantInt::get(CGM.SizeTy, CapturedVars.size()),
+        StrictNumThreadsVal};
+
     CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                            CGM.getModule(), OMPRTL___kmpc_parallel_51),
+                            CGM.getModule(), OMPRTL___kmpc_parallel_60),
                         Args);
   };
 
@@ -2304,6 +2309,7 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::SM_80:
       case OffloadArch::SM_86:
       case OffloadArch::SM_87:
+      case OffloadArch::SM_88:
       case OffloadArch::SM_89:
       case OffloadArch::SM_90:
       case OffloadArch::SM_90a:
@@ -2313,6 +2319,8 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::SM_101a:
       case OffloadArch::SM_103:
       case OffloadArch::SM_103a:
+      case OffloadArch::SM_110:
+      case OffloadArch::SM_110a:
       case OffloadArch::SM_120:
       case OffloadArch::SM_120a:
       case OffloadArch::SM_121:

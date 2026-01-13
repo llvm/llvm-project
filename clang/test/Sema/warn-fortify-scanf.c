@@ -59,10 +59,17 @@ void call_fscanf(void) {
   char buf20[20];
   char buf30[30];
   fscanf(0, "%4s %5s %10s", buf20, buf30, buf10); // expected-warning {{'fscanf' may overflow; destination buffer in argument 5 has size 10, but the corresponding specifier may require size 11}}
+  // expected-warning@-1 {{null passed to a callee that requires a non-null argument}}
   fscanf(0, "%4s %5s %11s", buf20, buf30, buf10); // expected-warning {{'fscanf' may overflow; destination buffer in argument 5 has size 10, but the corresponding specifier may require size 12}}
+  // expected-warning@-1 {{null passed to a callee that requires a non-null argument}}
   fscanf(0, "%4s %5s %9s", buf20, buf30, buf10);
+  // expected-warning@-1 {{null passed to a callee that requires a non-null argument}}
   fscanf(0, "%20s %5s %9s", buf20, buf30, buf10); // expected-warning {{'fscanf' may overflow; destination buffer in argument 3 has size 20, but the corresponding specifier may require size 21}}
+  // expected-warning@-1 {{null passed to a callee that requires a non-null argument}}
   fscanf(0, "%21s %5s %9s", buf20, buf30, buf10); // expected-warning {{'fscanf' may overflow; destination buffer in argument 3 has size 20, but the corresponding specifier may require size 22}}
+  // expected-warning@-1 {{null passed to a callee that requires a non-null argument}}
   fscanf(0, "%19s %5s %9s", buf20, buf30, buf10);
+  // expected-warning@-1 {{null passed to a callee that requires a non-null argument}}
   fscanf(0, "%19s %29s %9s", buf20, buf30, buf10);
+  // expected-warning@-1 {{null passed to a callee that requires a non-null argument}}
 }

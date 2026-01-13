@@ -12,9 +12,9 @@
 ; CHECK-SPIRV:        OpReturnValue %[[#ret]]
 ; CHECK-SPIRV-LABEL:  OpFunctionEnd
 
-define spir_func i32 @test_load(i32 addrspace(4)* %object) {
+define spir_func i32 @test_load(ptr addrspace(4) %object) {
 entry:
-  %0 = call spir_func i32 @_Z11atomic_loadPVU3AS4U7_Atomici(i32 addrspace(4)* %object)
+  %0 = call spir_func i32 @_Z11atomic_loadPVU3AS4U7_Atomici(ptr addrspace(4) %object)
   ret i32 %0
 }
 
@@ -24,14 +24,14 @@ entry:
 ; CHECK-SPIRV:        OpAtomicStore %[[#object]] %[[#]] %[[#]] %[[#desired]]
 ; CHECK-SPIRV-LABEL:  OpFunctionEnd
 
-define spir_func void @test_store(i32 addrspace(4)* %object, i32 %desired) {
+define spir_func void @test_store(ptr addrspace(4) %object, i32 %desired) {
 entry:
-  call spir_func void @_Z12atomic_storePVU3AS4U7_Atomicii(i32 addrspace(4)* %object, i32 %desired)
+  call spir_func void @_Z12atomic_storePVU3AS4U7_Atomicii(ptr addrspace(4) %object, i32 %desired)
   ret void
 }
 
-declare spir_func i32 @_Z11atomic_loadPVU3AS4U7_Atomici(i32 addrspace(4)*)
-declare spir_func void @_Z12atomic_storePVU3AS4U7_Atomicii(i32 addrspace(4)*, i32)
+declare spir_func i32 @_Z11atomic_loadPVU3AS4U7_Atomici(ptr addrspace(4))
+declare spir_func void @_Z12atomic_storePVU3AS4U7_Atomicii(ptr addrspace(4), i32)
 
 ; The goal of @test_typesX() cases is to ensure that a correct pointer type
 ; is deduced from the Value argument of OpAtomicLoad/OpAtomicStore. There is
@@ -53,14 +53,14 @@ entry:
 
 define spir_func void @test_types3(i64 noundef %arg, float %val) {
 entry:
-  %ptr1 = inttoptr i64 %arg to float addrspace(1)*
+  %ptr1 = inttoptr i64 %arg to ptr addrspace(1)
   %r = call spir_func float @atomic_load(ptr addrspace(1) %ptr1)
   ret void
 }
 
 define spir_func void @test_types4(i64 noundef %arg, float %val) {
 entry:
-  %ptr2 = inttoptr i64 %arg to float addrspace(1)*
+  %ptr2 = inttoptr i64 %arg to ptr addrspace(1)
   call spir_func void @atomic_store(ptr addrspace(1) %ptr2, float %val)
   ret void
 }

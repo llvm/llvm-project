@@ -672,7 +672,7 @@ yield.w
 # CHECK-NEXT:  1      3     0.50                  U     ldrsht	r0, [r1, #1]
 # CHECK-NEXT:  1      2     0.50                  U     ldrt	r0, [r1, #1]
 # CHECK-NEXT:  0      0     0.00                  U     le	lr, next
-# CHECK-NEXT:  0      4294967294   0.00                  U     le	next
+# CHECK-NEXT:  0      4294967294 0.00             U     le	next
 # CHECK-NEXT:  0      0     0.00                  U     letp	lr, next
 # CHECK-NEXT:  1      1     0.50                        lsls	r0, r1, #1
 # CHECK-NEXT:  1      1     0.50                        lsl.w	r0, r1, #1

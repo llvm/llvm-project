@@ -350,6 +350,8 @@ def err_address_of_label_outside_fn : Error<
   "use of address-of-label extension outside of a function body">;
 def err_asm_operand_wide_string_literal : Error<
   "cannot use %select{unicode|wide}0 string literal in 'asm'">;
+def err_defer_ts_labeled_stmt : Error<
+  "substatement of defer must not be a label">;
 
 def err_asm_expected_string : Error<
   "expected string literal %select{or parenthesized constant expression |}0in 'asm'">;
@@ -1077,23 +1079,11 @@ def ext_ms_abstract_keyword : ExtWarn<
   "'abstract' keyword is a Microsoft extension">,
   InGroup<MicrosoftAbstract>;
 
-def ext_relocatable_keyword : ExtWarn<
-  "'%select{trivially_relocatable_if_eligible|replaceable_if_eligible}0' "
-  "keyword is a C++2c extension">,
-  InGroup<CXX26>;
-def warn_relocatable_keyword  : Warning<
-  "'%select{trivially_relocatable|replaceable}0_if_eligible' "
-  "keyword is incompatible with standards before C++2c">,
-  DefaultIgnore, InGroup<CXXPre26Compat>;
-
 def err_access_specifier_interface : Error<
   "interface types cannot specify '%select{private|protected}0' access">;
 
 def err_duplicate_class_virt_specifier : Error<
   "class already marked '%0'">;
-
-def err_duplicate_class_relocation_specifier : Error<
-  "class already marked '%select{trivially_relocatable_if_eligible|replaceable_if_eligible}0'">;
 
 def err_duplicate_virt_specifier : Error<
   "class member already marked '%0'">;
@@ -1727,7 +1717,7 @@ def err_omp_expected_modifier : Error<"expected modifier in '%0' clause">;
 def err_omp_unknown_need_device_ptr_kind
     : Error<
         "invalid argument for 'need_device_ptr' kind in 'adjust_args' clause; "
-        "expected 'fp_nullify' or 'fb_preserve'">;
+        "expected 'fb_nullify' or 'fb_preserve'">;
 
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<
