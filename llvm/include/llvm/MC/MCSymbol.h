@@ -13,7 +13,6 @@
 #ifndef LLVM_MC_MCSYMBOL_H
 #define LLVM_MC_MCSYMBOL_H
 
-#include "llvm/include/llvm/Support/Compiler.h"
 #include "llvm/ADT/StringMapEntry.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCExpr.h"
@@ -22,6 +21,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/include/llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>

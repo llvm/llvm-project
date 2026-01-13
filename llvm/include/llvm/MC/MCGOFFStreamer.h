@@ -9,9 +9,9 @@
 #ifndef LLVM_MC_MCGOFFSTREAMER_H
 #define LLVM_MC_MCGOFFSTREAMER_H
 
-#include "llvm/include/llvm/Support/Compiler.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/include/llvm/Support/Compiler.h"
 
 namespace llvm {
 class GOFFObjectWriter;
