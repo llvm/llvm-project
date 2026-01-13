@@ -168,11 +168,14 @@ public:
 
 private:
   std::string Prefix;
-  raw_ostream &Os;
+  raw_ostream &FOs;
   uint32_t BaseLevel;
   bool ShouldPrefixNextString;
   bool ShouldEmitNewLineOnDestruction;
   bool NeedEndNewLine = false;
+
+  llvm::SmallString<512> Buffer;
+  llvm::raw_svector_ostream Os;
 
   /// If the stream is muted, writes to it are ignored
   bool Muted = false;
@@ -213,21 +216,22 @@ private:
   }
 
 public:
-  explicit odbg_ostream(std::string Prefix, raw_ostream &Os, uint32_t BaseLevel,
+  explicit odbg_ostream(std::string Prefix, raw_ostream &FOs, uint32_t BaseLevel,
                         bool ShouldPrefixNextString = true,
                         bool ShouldEmitNewLineOnDestruction = true)
-      : Prefix(std::move(Prefix)), Os(Os), BaseLevel(BaseLevel),
+      : Prefix(std::move(Prefix)), FOs(FOs), BaseLevel(BaseLevel),
         ShouldPrefixNextString(ShouldPrefixNextString),
-        ShouldEmitNewLineOnDestruction(ShouldEmitNewLineOnDestruction) {
+        ShouldEmitNewLineOnDestruction(ShouldEmitNewLineOnDestruction), Os(Buffer) {
     SetUnbuffered();
   }
   ~odbg_ostream() final {
     if (ShouldEmitNewLineOnDestruction && NeedEndNewLine)
       Os << '\n';
+    FOs << Os.str();
   }
   odbg_ostream(const odbg_ostream &) = delete;
   odbg_ostream &operator=(const odbg_ostream &) = delete;
-  odbg_ostream(odbg_ostream &&other) : Os(other.Os) {
+  odbg_ostream(odbg_ostream &&other) : FOs(other.FOs), Os(Buffer) {
     Prefix = std::move(other.Prefix);
     BaseLevel = other.BaseLevel;
     ShouldPrefixNextString = other.ShouldPrefixNextString;
@@ -248,16 +252,7 @@ public:
 };
 
 /// dbgs - Return a circular-buffered debug stream.
-[[maybe_unused]] static llvm::raw_ostream &dbgs() {
-  // Do one-time initialization in a thread-safe way.
-  static struct dbgstream {
-    llvm::circular_raw_ostream strm;
-
-    dbgstream() : strm(llvm::errs(), "*** Debug Log Output ***\n", 0) {}
-  } thestrm;
-
-  return thestrm.strm;
-}
+[[maybe_unused]] static llvm::raw_ostream &dbgs() { return llvm::errs(); }
 
 #ifdef OMPTARGET_DEBUG
 
