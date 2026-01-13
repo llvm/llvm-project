@@ -32,7 +32,7 @@ struct KnownFPClass {
 
   KnownFPClass(FPClassTest Known = fcAllFlags, std::optional<bool> Sign = {})
       : KnownFPClasses(Known), SignBit(Sign) {}
-  KnownFPClass(const APFloat &C);
+  LLVM_ABI KnownFPClass(const APFloat &C);
 
   bool operator==(KnownFPClass Other) const {
     return KnownFPClasses == Other.KnownFPClasses && SignBit == Other.SignBit;
@@ -298,6 +298,13 @@ struct KnownFPClass {
   static LLVM_ABI KnownFPClass fpext(const KnownFPClass &KnownSrc,
                                      const fltSemantics &DstTy,
                                      const fltSemantics &SrcTy);
+
+  /// Propagate known class for rounding intrinsics (trunc, floor, ceil, rint,
+  /// nearbyint, round, roundeven). This is trunc if \p IsTrunc. \p
+  /// IsMultiUnitFPType if this is for a multi-unit floating-point type.
+  static LLVM_ABI KnownFPClass roundToIntegral(const KnownFPClass &Src,
+                                               bool IsTrunc,
+                                               bool IsMultiUnitFPType);
 
   void resetAll() { *this = KnownFPClass(); }
 };

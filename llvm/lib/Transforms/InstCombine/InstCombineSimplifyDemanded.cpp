@@ -2638,6 +2638,73 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
       return getFPClassConstant(VTy, ValidResults, /*IsCanonicalizing=*/true);
     }
+    case Intrinsic::trunc:
+    case Intrinsic::floor:
+    case Intrinsic::ceil:
+    case Intrinsic::rint:
+    case Intrinsic::nearbyint:
+    case Intrinsic::round:
+    case Intrinsic::roundeven: {
+      FPClassTest DemandedSrcMask = DemandedMask;
+
+      // Zero results imply valid subnormal sources.
+      if (DemandedMask & fcNegZero)
+        DemandedSrcMask |= fcNegSubnormal | fcNegNormal;
+
+      if (DemandedMask & fcPosZero)
+        DemandedSrcMask |= fcPosSubnormal | fcPosNormal;
+
+      KnownFPClass KnownSrc;
+      if (SimplifyDemandedFPClass(CI, 0, DemandedSrcMask, KnownSrc, Depth + 1))
+        return I;
+
+      // Note: Possibly dropping snan quiet.
+      if (KnownSrc.isKnownAlways(fcInf | fcNan | fcZero))
+        return CI->getArgOperand(0);
+
+      // Propagate nnan-ness to source to simplify source checks.
+      if ((DemandedMask & fcNan) == fcNone)
+        KnownSrc.knownNot(fcNan);
+
+      bool IsRoundNearestOrTrunc =
+          IID == Intrinsic::round || IID == Intrinsic::roundeven ||
+          IID == Intrinsic::nearbyint || IID == Intrinsic::rint ||
+          IID == Intrinsic::trunc;
+
+      // Ignore denormals-as-zero, as canonicalization is not mandated.
+      if ((IID == Intrinsic::floor || IsRoundNearestOrTrunc) &&
+          KnownSrc.isKnownAlways(fcPosZero | fcPosSubnormal))
+        return ConstantFP::getZero(VTy);
+
+      if ((IID == Intrinsic::ceil || IsRoundNearestOrTrunc) &&
+          KnownSrc.isKnownAlways(fcNegZero | fcNegSubnormal))
+        return ConstantFP::getZero(VTy, true);
+
+      if (IID == Intrinsic::floor && KnownSrc.isKnownAlways(fcNegSubnormal))
+        return ConstantFP::get(VTy, -1.0);
+
+      if (IID == Intrinsic::ceil && KnownSrc.isKnownAlways(fcPosSubnormal))
+        return ConstantFP::get(VTy, 1.0);
+
+      Known = KnownFPClass::roundToIntegral(
+          KnownSrc, IID == Intrinsic::trunc,
+          VTy->getScalarType()->isMultiUnitFPType());
+
+      FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
+      if (Constant *SingleVal =
+              getFPClassConstant(VTy, ValidResults, /*IsCanonicalizing=*/true))
+        return SingleVal;
+
+      if ((IID == Intrinsic::trunc || IsRoundNearestOrTrunc) &&
+          KnownSrc.isKnownAlways(fcZero | fcSubnormal)) {
+        Value *Copysign = Builder.CreateCopySign(ConstantFP::getZero(VTy),
+                                                 CI->getArgOperand(0));
+        Copysign->takeName(CI);
+        return Copysign;
+      }
+
+      return nullptr;
+    }
     case Intrinsic::canonicalize: {
       Type *EltTy = VTy->getScalarType();
 
