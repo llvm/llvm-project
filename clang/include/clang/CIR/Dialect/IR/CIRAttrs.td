@@ -515,6 +515,20 @@ def CIR_MethodAttr : CIR_Attr<"Method", "method", [TypedAttrInterface]> {
 
     If `symbol` is not present, the attribute represents a null pointer
     constant.
+
+    Examples:
+    ```
+    // Non-virtual method
+    %0 = cir.const #cir.method<@_ZN1S2m1Ei> :
+             !cir.method<!cir.func<(!s32i)> in !rec_S>
+
+    // Virtual method (not yet implemented)
+    %1 = cir.const #cir.method<vtable_offset = 8> :
+             !cir.method<!cir.func<(!s32i)> in !rec_S>
+
+    // Null method pointer
+    %0 = cir.const #cir.method<null> :
+             !cir.method<!cir.func<(!s32i)> in !rec_S>
   }];
 
   let parameters = (ins AttributeSelfTypeParameter<
