@@ -19,8 +19,8 @@ body:             |
   ; DEBUG: Machine code for function sink_and_inc_idx_when_skipping_small_region_1: IsSSA, NoPHIs, TracksLiveness
   ; DEBUG: [PreRARemat] Retrying function scheduling with new min. occupancy of 10 from rematerializing (original was 9, target was 10)
   ; DEBUG-NEXT: ********** MI Scheduling **********
-  ; DEBUG-NEXT: sink_and_inc_idx_when_skipping_small_region_1:%bb.2
-  ; DEBUG-NEXT:   From: %24:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode, implicit-def $m0
+  ; DEBUG-NEXT: sink_and_inc_idx_when_skipping_small_region_1:%bb.1
+  ; DEBUG-NEXT:   From: %23:vgpr_32 = nofpexcept DBG_VALUE 23, implicit $exec, implicit $mode
   ; DEBUG-NEXT:     To: End RegionInstrs: 2
   bb.0:
     successors: %bb.1
@@ -91,9 +91,9 @@ body:             |
   ; DEBUG: Machine code for function sink_and_inc_idx_when_skipping_small_regions_2: IsSSA, NoPHIs, TracksLiveness
   ; DEBUG: [PreRARemat] Retrying function scheduling with new min. occupancy of 10 from rematerializing (original was 9, target was 10)
   ; DEBUG-NEXT: ********** MI Scheduling **********
-  ; DEBUG-NEXT: sink_and_inc_idx_when_skipping_small_regions_2:%bb.2
-  ; DEBUG-NEXT:   From: %24:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode, implicit-def $m0
-  ; DEBUG-NEXT:     To: End RegionInstrs: 4
+  ; DEBUG-NEXT: sink_and_inc_idx_when_skipping_small_regions_2:%bb.1
+  ; DEBUG-NEXT:   From: %23:vgpr_32 = nofpexcept DBG_VALUE 23, implicit $exec, implicit $mode
+  ; DEBUG-NEXT:     To: End RegionInstrs: 2
   bb.0:
     successors: %bb.1
 
