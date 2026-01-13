@@ -92,7 +92,7 @@ define ptr @gep16(i32 %i, ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addl $-5, %edi
 ; CHECK-NEXT:    movslq %edi, %rax
-; CHECK-NEXT:    imulq $2, %rax, %rax
+; CHECK-NEXT:    addq %rax, %rax
 ; CHECK-NEXT:    addq %rsi, %rax
 ; CHECK-NEXT:    retq
 
@@ -107,7 +107,7 @@ define ptr @gep32(i32 %i, ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addl $5, %edi
 ; CHECK-NEXT:    movslq %edi, %rax
-; CHECK-NEXT:    imulq $4, %rax, %rax
+; CHECK-NEXT:    shlq $2, %rax
 ; CHECK-NEXT:    addq %rsi, %rax
 ; CHECK-NEXT:    retq
 
@@ -122,7 +122,7 @@ define ptr @gep64(i32 %i, ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addl $-5, %edi
 ; CHECK-NEXT:    movslq %edi, %rax
-; CHECK-NEXT:    imulq $8, %rax, %rax
+; CHECK-NEXT:    shlq $3, %rax
 ; CHECK-NEXT:    addq %rsi, %rax
 ; CHECK-NEXT:    retq
 
@@ -139,7 +139,7 @@ define ptr @gep128(i32 %i, ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addl $5, %edi
 ; CHECK-NEXT:    movslq %edi, %rax
-; CHECK-NEXT:    imulq $16, %rax, %rax
+; CHECK-NEXT:    shlq $4, %rax
 ; CHECK-NEXT:    addq %rsi, %rax
 ; CHECK-NEXT:    retq
 
@@ -159,18 +159,20 @@ define void @PR20134(ptr %a, i32 %i) {
 ; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
 ; CHECK-NEXT:    leal 1(%rsi), %eax
 ; CHECK-NEXT:    cltq
-; CHECK-NEXT:    imulq $4, %rax, %rax
+; CHECK-NEXT:    shlq $2, %rax
 ; CHECK-NEXT:    addq %rdi, %rax
 ; CHECK-NEXT:    leal 2(%rsi), %ecx
-; CHECK-NEXT:    movslq %ecx, %rcx
-; CHECK-NEXT:    imulq $4, %rcx, %rcx
-; CHECK-NEXT:    addq %rdi, %rcx
-; CHECK-NEXT:    movl (%rcx), %ecx
-; CHECK-NEXT:    addl (%rax), %ecx
+; CHECK-NEXT:    movslq %ecx, %rdx
+; CHECK-NEXT:    movb $2, %cl
+; CHECK-NEXT:    shlq %cl, %rdx
+; CHECK-NEXT:    leaq (%rdi,%rdx), %rcx
+; CHECK-NEXT:    movl (%rcx), %edx
+; CHECK-NEXT:    addl (%rax), %edx
 ; CHECK-NEXT:    movslq %esi, %rax
-; CHECK-NEXT:    imulq $4, %rax, %rax
+; CHECK-NEXT:    movb $2, %cl
+; CHECK-NEXT:    shlq %cl, %rax
 ; CHECK-NEXT:    addq %rdi, %rax
-; CHECK-NEXT:    movl %ecx, (%rax)
+; CHECK-NEXT:    movl %edx, (%rax)
 ; CHECK-NEXT:    retq
 
   %add1 = add nsw i32 %i, 1
@@ -197,18 +199,20 @@ define void @PR20134_zext(ptr %a, i32 %i) {
 ; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
 ; CHECK-NEXT:    leal 1(%rsi), %eax
 ; CHECK-NEXT:    movl %eax, %eax
-; CHECK-NEXT:    imulq $4, %rax, %rax
+; CHECK-NEXT:    shlq $2, %rax
 ; CHECK-NEXT:    addq %rdi, %rax
 ; CHECK-NEXT:    leal 2(%rsi), %ecx
-; CHECK-NEXT:    movl %ecx, %ecx
-; CHECK-NEXT:    imulq $4, %rcx, %rcx
-; CHECK-NEXT:    addq %rdi, %rcx
-; CHECK-NEXT:    movl (%rcx), %ecx
-; CHECK-NEXT:    addl (%rax), %ecx
+; CHECK-NEXT:    movl %ecx, %edx
+; CHECK-NEXT:    movb $2, %cl
+; CHECK-NEXT:    shlq %cl, %rdx
+; CHECK-NEXT:    leaq (%rdi,%rdx), %rcx
+; CHECK-NEXT:    movl (%rcx), %edx
+; CHECK-NEXT:    addl (%rax), %edx
 ; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    imulq $4, %rax, %rax
+; CHECK-NEXT:    movb $2, %cl
+; CHECK-NEXT:    shlq %cl, %rax
 ; CHECK-NEXT:    addq %rdi, %rax
-; CHECK-NEXT:    movl %ecx, (%rax)
+; CHECK-NEXT:    movl %edx, (%rax)
 ; CHECK-NEXT:    retq
 
   %add1 = add nuw i32 %i, 1
