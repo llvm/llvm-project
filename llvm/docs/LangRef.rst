@@ -6394,8 +6394,8 @@ multiple metadata attachments with the same identifier.
 A transformation is required to drop any metadata attachment that it
 does not recognize or cannot preserve. Currently there is an
 exception for metadata attachment to globals for ``!func_sanitize``,
-``!type``, ``!absolute_symbol`` and ``!associated`` which can't be
-unconditionally dropped unless the global is itself deleted.
+``!type``, ``!absolute_symbol``, ``!implicit.ref`` and ``!associated`` which
+can't be unconditionally dropped unless the global is itself deleted.
 
 Metadata attached to a module using named metadata may not be dropped, with
 the exception of debug metadata (named metadata with the name ``!llvm.dbg.*``).
@@ -8693,6 +8693,36 @@ of requiring a stack protector.
    %a = alloca [1000 x i8], align 1, !stack-protector !0
 
   !0 = !{i32 0}
+
+'``implicit.ref``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``implicit.ref`` metadata may be attached to a function or global variable
+definition with a single argument that references a global object.
+This is typically used when there is some implicit dependence between the
+symbols that is otherwise opaque to the linker. One such example is metadata
+which is accessed by a runtime with associated ``__start_<section_name>`` and
+``__stop_<section_name>`` symbols.
+
+It does not have any effect on non-XCOFF targets.
+
+This metadata lowers to the .ref assembly directive which will add a relocation
+representing an implicit reference from the section the global belongs to, to
+the associated symbol. This link will keep the referenced symbol alive if the
+section is not garbage collected. More than one ref node can be attached
+to the same function or global variable.
+
+
+Example:
+
+.. code-block:: text
+
+    @a = global i32 1
+    @b = global i32 2
+    @c = global i32 3, section "abc", !implicit.ref !0, !implicit.ref !1
+    !0 = !{ptr @a}
+    !1 = !{ptr @b}
+
 
 Module Flags Metadata
 =====================
@@ -14641,6 +14671,37 @@ Semantics:
 """"""""""
 
 Note this intrinsic is only verified on AArch64 and ARM.
+
+'``llvm.stackaddress``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare ptr @llvm.stackaddress.p0()
+
+Overview:
+"""""""""
+
+The '``llvm.stackaddress``' intrinsic returns the starting address of the
+stack region that may be used by called functions.
+
+Semantics:
+""""""""""
+
+This intrinsic returns the *logical* value of the stack pointer register, that
+is, the address separating the stack space of the current function from the
+stack space that may be modified by called functions. It corresponds to the
+address returned by '``llvm.sponentry``', offset by the size of the current
+function's stack frame.
+
+On certain targets (e.g. x86), the logical and actual (or physical) values of
+the stack pointer register are the same. However, on other architectures (e.g.
+SPARCv9), the logical value of the stack pointer register may differ from the
+physical value. '``llvm.stackaddress``' handles this discrepancy and returns
+the correct boundary address.
 
 '``llvm.frameaddress``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

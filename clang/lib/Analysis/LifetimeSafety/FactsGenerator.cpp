@@ -219,6 +219,8 @@ void FactsGenerator::VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
   case CK_NoOp:
   case CK_ConstructorConversion:
   case CK_UserDefinedConversion:
+  case CK_UncheckedDerivedToBase:
+  case CK_DerivedToBase:
     flow(Dest, SrcList, /*Kill=*/true);
     return;
   case CK_FunctionToPointerDecay:
@@ -410,11 +412,14 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
         Method && Method->isInstance()) {
       if (I == 0)
         // For the 'this' argument, the attribute is on the method itself.
-        return implicitObjectParamIsLifetimeBound(Method);
+        return implicitObjectParamIsLifetimeBound(Method) ||
+               shouldTrackImplicitObjectArg(Method);
       if ((I - 1) < Method->getNumParams())
         // For explicit arguments, find the corresponding parameter
         // declaration.
         PVD = Method->getParamDecl(I - 1);
+    } else if (I == 0 && shouldTrackFirstArgument(FD)) {
+      return true;
     } else if (I < FD->getNumParams()) {
       // For free functions or static methods.
       PVD = FD->getParamDecl(I);

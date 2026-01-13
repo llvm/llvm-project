@@ -23,9 +23,17 @@ together with its specifications:
 
 ## Implementation
 
-The function's actual implementation and its corresponding header should be
+The function's actual implementation is defined in an internal header, while the public entry point is a thin wrapper 
 added to the following locations:
 
+- Add the core math logic (under `LIBC_NAMESPACE::math` namespace) to:
+```
+  libc/src/__support/math/<func>.h
+```
+- Add the corresponding `add_header_library` to:
+```
+  libc/src/__support/math/CMakeLists.txt
+```
 - Add `add_math_entrypoint_object(<func>)` to:
 ```
   libc/src/math/CMakeLists.txt
@@ -34,7 +42,7 @@ added to the following locations:
 ```
   libc/src/math/<func>.h
 ```
-- Add function definition to:
+- Add function definition (calling the __support implementation) to:
 ```
   libc/src/math/generic/<func>.cpp
 ```
@@ -45,6 +53,27 @@ added to the following locations:
 - Add architectural specific implementations to:
 ```
   libc/src/math/<arch>/<func>.cpp
+```
+
+### Shared Math Library
+
+If the function should be available to internal LLVM projects:
+
+- Include the support header in:
+```
+  libc/shared/math.h
+```
+- Add a header that exports the function via using in:
+```
+  libc/shared/math/<func>.h
+```
+- add a simple test case to
+```
+ libc/test/shared/shared_math_test.cpp
+```
+- add the corresponding `libc_support_library` and `libc_math_function` to:
+```
+utils/bazel/llvm-project-overlay/libc/BUILD.bazel
 ```
 
 ### Floating point utility
@@ -143,16 +172,19 @@ implementation (which is very often glibc).
   $ git clone https://github.com/llvm/llvm-project.git
 ```
 
+- Compiler Requirements: The libc implementation should support compiling with both Clang and GCC (12.2).
+
 - Setup projects with CMake:
 ```
   $ cd llvm-project
   $ mkdir build
   $ cd build
   $ cmake ../llvm -G Ninja \
-  -DLLVM_ENABLE_PROJECTS="llvm;libc" \
+  -DLLVM_ENABLE_RUNTIMES="libc" \
   -DCMAKE_BUILD_TYPE=Debug \
   -DCMAKE_C_COMPILER=clang \
   -DCMAKE_CXX_COMPILER=clang++
+  $ cd runtimes/runtimes-bins/
 ```
 
 - Build the whole `libc`:
