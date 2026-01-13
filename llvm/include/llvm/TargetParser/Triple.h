@@ -515,7 +515,7 @@ public:
 
   /// Get the default system encoding of the triple.
   /// For example, "IBM-1047" for z/OS, "UTF-8" for others
-  StringRef getDefaultNarrowTextEncoding() const;
+  LLVM_ABI StringRef getDefaultNarrowTextEncoding() const;
 
   /// @}
   /// @name Convenience Predicates

@@ -7567,17 +7567,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Arg *ExecEncoding = Args.getLastArg(options::OPT_fexec_charset_EQ)) {
     StringRef Value = ExecEncoding->getValue();
-    bool KnownEncoding =
-        llvm::TextEncodingConverter::getKnownEncoding(Value).has_value();
-    if (!KnownEncoding) {
-      llvm::ErrorOr<llvm::TextEncodingConverter> ErrorOrConverter =
-          llvm::TextEncodingConverter::create("UTF-8", Value.data());
-      if (!ErrorOrConverter)
-        D.Diag(diag::err_drv_invalid_value)
-            << ExecEncoding->getAsString(Args) << Value;
+    if (llvm::TextEncodingConverter::isEncodingSupported(Value)) {
+      CmdArgs.push_back("-fexec-charset");
+      CmdArgs.push_back(Args.MakeArgString(Value));
+    } else {
+      D.Diag(diag::err_drv_invalid_value)
+          << ExecEncoding->getAsString(Args) << Value;
     }
-    CmdArgs.push_back("-fexec-charset");
-    CmdArgs.push_back(Args.MakeArgString(Value));
   } else {
     // Set the default fexec-charset as the system charset.
     CmdArgs.push_back("-fexec-charset");

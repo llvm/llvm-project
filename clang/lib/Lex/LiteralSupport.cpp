@@ -1776,7 +1776,7 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
   HadError = false;
 
   Kind = kind;
-  const TextEncodingConfig TEC = PP.getTextEncodingConfig();
+  const TextEncodingConfig &TEC = PP.getTextEncodingConfig();
 
   const char *TokBegin = begin;
 
