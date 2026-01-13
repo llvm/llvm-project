@@ -733,8 +733,8 @@ TEST_F(SelectionDAGPatternMatchTest, matchIntrinsicWOChain) {
                                        m_Value(), m_Value())));
 
   // Add operation shouldn't match
-  EXPECT_FALSE(sd_match(Add, m_IntrinsicWOChain<Intrinsic::x86_aadd32>(
-                                 m_Value(), m_Value())));
+  EXPECT_FALSE(sd_match(
+      Add, m_IntrinsicWOChain<Intrinsic::x86_aadd32>(m_Value(), m_Value())));
 }
 
 namespace {
