@@ -126,6 +126,14 @@ class PRSubscriber:
         return None
 
     def run(self) -> bool:
+        for label in self.pr.get_labels():
+            # skip-precommit-approval label is intended for simple PR that don't
+            # require approval. To reduce the volume of notifications, avoid
+            # sending notifications to subscribers for PRs labeled as such.
+            if label.name == "skip-precommit-approval":
+                print(f"{label.name} label found, skip subscribers")
+                return True
+
         patch = None
         team = _get_current_team(self.team_name, self.org.get_teams())
         if not team:

@@ -317,6 +317,7 @@ copy("Headers") {
     "sm4evexintrin.h",
     "sm4intrin.h",
     "smmintrin.h",
+    "spirvintrin.h",
     "stdalign.h",
     "stdarg.h",
     "stdatomic.h",

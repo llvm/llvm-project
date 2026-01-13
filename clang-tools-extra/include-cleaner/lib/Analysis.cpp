@@ -58,7 +58,19 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
   tooling::stdlib::Recognizer Recognizer;
   for (auto *Root : ASTRoots) {
     walkAST(*Root, [&](SourceLocation Loc, NamedDecl &ND, RefType RT) {
-      auto FID = SM.getFileID(SM.getSpellingLoc(Loc));
+      auto SpellLoc = SM.getSpellingLoc(Loc);
+      // Tokens resulting from macro concatenation ends up in scratch space and
+      // clang currently doesn't have a good/simple APIs for tracking where
+      // pieces of a concataned token originated from.
+      // So we use the macro expansion location instead, and downgrade reference
+      // type to ambigious to prevent false negatives.
+      if (SM.isWrittenInScratchSpace(SpellLoc)) {
+        Loc = SM.getExpansionLoc(Loc);
+        if (RT == RefType::Explicit)
+          RT = RefType::Ambiguous;
+        SpellLoc = SM.getSpellingLoc(Loc);
+      }
+      auto FID = SM.getFileID(SpellLoc);
       if (FID != SM.getMainFileID() && FID != SM.getPreambleFileID())
         return;
       // FIXME: Most of the work done here is repetitive. It might be useful to

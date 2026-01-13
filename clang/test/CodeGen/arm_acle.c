@@ -164,6 +164,28 @@ void test_pld() {
   __pld(0);
 }
 
+#if defined(__ARM_64BIT_STATE) && defined(__ARM_PREFETCH_RANGE)
+
+// AArch64-LABEL: @test_pld_range(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    call void @llvm.aarch64.range.prefetch(ptr null, i32 0, i32 1, i64 [[MD:%.*]])
+// AArch64-NEXT:    ret void
+//
+void test_pld_range(uint64_t md) {
+  __pld_range(0, 1, md, 0);
+}
+
+// AArch64-LABEL: @test_pldx_range(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    call void @llvm.aarch64.range.prefetch(ptr null, i32 0, i32 1, i64 -576460477427613697)
+// AArch64-NEXT:    ret void
+//
+void test_pldx_range() {
+  __pldx_range(0, 1, 2097151, 65536, -2097152, 15, 0);
+}
+
+#endif
+
 // AArch32-LABEL: @test_pldx(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    call void @llvm.prefetch.p0(ptr null, i32 1, i32 3, i32 1)

@@ -814,5 +814,13 @@ llvm::getEHScopeMembership(const MachineFunction &MF) {
        CatchRetSuccessors)
     collectEHScopeMembers(EHScopeMembership, CatchRetPair.second,
                           CatchRetPair.first);
+
+  // Add any remaining blocks in the function to the unreachable set, which
+  // might not otherwise have been identified as unreachable (such as infinite
+  // loops).
+  for (const MachineBasicBlock &MBB : MF)
+    if (!EHScopeMembership.count(&MBB))
+      collectEHScopeMembers(EHScopeMembership, EntryBBNumber, &MBB);
+
   return EHScopeMembership;
 }

@@ -140,11 +140,10 @@ public:
   /// of the destination string for strcpy, a pointer to the null terminator
   /// for stpcpy) and the second is the chain.  Both SDValues can be null
   /// if a normal libcall should be used.
-  virtual std::pair<SDValue, SDValue>
-  EmitTargetCodeForStrcpy(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
-                          SDValue Dest, SDValue Src,
-                          MachinePointerInfo DestPtrInfo,
-                          MachinePointerInfo SrcPtrInfo, bool isStpcpy) const {
+  virtual std::pair<SDValue, SDValue> EmitTargetCodeForStrcpy(
+      SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dest,
+      SDValue Src, MachinePointerInfo DestPtrInfo,
+      MachinePointerInfo SrcPtrInfo, bool isStpcpy, const CallInst *CI) const {
     return std::make_pair(SDValue(), SDValue());
   }
 

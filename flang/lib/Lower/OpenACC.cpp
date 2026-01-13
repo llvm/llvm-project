@@ -126,7 +126,9 @@ createDataEntryOp(fir::FirOpBuilder &builder, mlir::Location loc,
                   mlir::Type retTy, llvm::ArrayRef<mlir::Value> async,
                   llvm::ArrayRef<mlir::Attribute> asyncDeviceTypes,
                   llvm::ArrayRef<mlir::Attribute> asyncOnlyDeviceTypes,
-                  bool unwrapBoxAddr = false, mlir::Value isPresent = {}) {
+                  bool unwrapBoxAddr = false, mlir::Value isPresent = {},
+                  mlir::acc::DataClauseModifier modifiers =
+                      mlir::acc::DataClauseModifier::none) {
   mlir::Value varPtrPtr;
   llvm::SmallVector<mlir::Value, 8> operands;
   llvm::SmallVector<int32_t, 8> operandSegments;
@@ -156,6 +158,7 @@ createDataEntryOp(fir::FirOpBuilder &builder, mlir::Location loc,
     op.setAsyncOperandsDeviceTypeAttr(builder.getArrayAttr(asyncDeviceTypes));
   if (!asyncOnlyDeviceTypes.empty())
     op.setAsyncOnlyAttr(builder.getArrayAttr(asyncOnlyDeviceTypes));
+  op.setModifiers(modifiers);
   return op;
 }
 
@@ -4841,8 +4844,58 @@ static void
 genACC(Fortran::lower::AbstractConverter &converter,
        Fortran::semantics::SemanticsContext &semanticsContext,
        const Fortran::parser::OpenACCCacheConstruct &cacheConstruct) {
-  mlir::Location loc = converter.genLocation(cacheConstruct.source);
-  TODO(loc, "OpenACC cache directive");
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  const auto &objectListWithModifier =
+      std::get<Fortran::parser::AccObjectListWithModifier>(cacheConstruct.t);
+  const auto &accObjectList =
+      std::get<Fortran::parser::AccObjectList>(objectListWithModifier.t);
+  const auto &modifier =
+      std::get<std::optional<Fortran::parser::AccDataModifier>>(
+          objectListWithModifier.t);
+  bool isReadonly =
+      modifier &&
+      (*modifier).v == Fortran::parser::AccDataModifier::Modifier::ReadOnly;
+
+  Fortran::lower::StatementContext stmtCtx;
+
+  for (const auto &accObject : accObjectList.v) {
+    mlir::Location operandLocation = genOperandLocation(converter, accObject);
+    Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
+
+    std::stringstream asFortran;
+
+    Fortran::evaluate::ExpressionAnalyzer ea{semanticsContext};
+    Fortran::semantics::MaybeExpr designator = Fortran::common::visit(
+        [&](auto &&s) { return ea.Analyze(s); }, accObject.u);
+
+    llvm::SmallVector<mlir::Value> bounds;
+    Fortran::lower::gatherDataOperandAddrAndBounds<mlir::acc::DataBoundsOp,
+                                                   mlir::acc::DataBoundsType>(
+        converter, builder, semanticsContext, stmtCtx, symbol, designator,
+        operandLocation, asFortran, bounds,
+        /*treatIndexAsSection=*/true, /*unwrapFirBox=*/false,
+        /*genDefaultBounds=*/false, /*strideIncludeLowerExtent=*/false,
+        /*loadAllocatableAndPointerComponent=*/false);
+
+    std::optional<fir::FortranVariableOpInterface> varDef =
+        converter.getSymbolMap().lookupVariableDefinition(symbol);
+    assert(varDef.has_value() && llvm::isa<hlfir::DeclareOp>(*varDef) &&
+           "expected symbol to be mapped to hlfir.declare");
+    mlir::Value base = varDef->getBase();
+
+    mlir::acc::CacheOp cacheOp = createDataEntryOp<mlir::acc::CacheOp>(
+        builder, operandLocation, base, asFortran, bounds,
+        /*structured=*/false, /*implicit=*/false,
+        mlir::acc::DataClause::acc_cache, base.getType(),
+        /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{},
+        /*unwrapBoxAddr=*/false, /*isPresent=*/mlir::Value{},
+        isReadonly ? mlir::acc::DataClauseModifier::readonly
+                   : mlir::acc::DataClauseModifier::none);
+
+    fir::ExtendedValue hostExv = converter.getSymbolExtendedValue(symbol);
+    fir::ExtendedValue cacheExv = fir::substBase(hostExv, cacheOp.getAccVar());
+    converter.bindSymbol(symbol, cacheExv);
+  }
 }
 
 mlir::Value Fortran::lower::genOpenACCConstruct(

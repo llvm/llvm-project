@@ -191,7 +191,7 @@ void ObjcCategoryChecker::parseMethods(const ConcatInputSection *methodsIsec,
                                        MethodContainerKind mcKind,
                                        MethodKind mKind) {
   ObjcClass &klass = classMap[methodContainerSym];
-  for (const Reloc &r : methodsIsec->relocs) {
+  for (const Relocation &r : methodsIsec->relocs) {
     if ((r.offset - listHeaderLayout.totalSize) % methodLayout.totalSize !=
         methodLayout.nameOffset)
       continue;
@@ -219,7 +219,7 @@ void ObjcCategoryChecker::parseMethods(const ConcatInputSection *methodsIsec,
 
     // We have a duplicate; generate a warning message.
     const auto &mc = methodMap.lookup(methodName);
-    const Reloc *nameReloc = nullptr;
+    const Relocation *nameReloc = nullptr;
     if (mc.kind == MCK_Category) {
       nameReloc = mc.isec->getRelocAt(catLayout.nameOffset);
     } else {
@@ -316,7 +316,7 @@ void objc::checkCategories() {
   ObjcCategoryChecker checker;
   for (const InputSection *isec : inputSections) {
     if (isec->getName() == section_names::objcCatList)
-      for (const Reloc &r : isec->relocs) {
+      for (const Relocation &r : isec->relocs) {
         auto *catIsec = cast<ConcatInputSection>(r.getReferentInputSection());
         checker.parseCategory(catIsec);
       }
@@ -349,7 +349,7 @@ class ObjcCategoryMerger {
     bool valid = false; // Data has been successfully collected from input
     uint32_t align = 0;
     Section *inputSection;
-    Reloc relocTemplate;
+    Relocation relocTemplate;
     OutputSection *outputSection;
   };
 
@@ -465,7 +465,7 @@ private:
                             const std::string &baseClassName, ObjFile *objFile);
   Defined *emitCategoryName(const std::string &name, ObjFile *objFile);
   void createSymbolReference(Defined *refFrom, const Symbol *refTo,
-                             uint32_t offset, const Reloc &relocTemplate);
+                             uint32_t offset, const Relocation &relocTemplate);
   Defined *tryFindDefinedOnIsec(const InputSection *isec, uint32_t offset);
   Symbol *tryGetSymbolAtIsecOffset(const ConcatInputSection *isec,
                                    uint32_t offset);
@@ -537,7 +537,7 @@ ObjcCategoryMerger::tryGetSymbolAtIsecOffset(const ConcatInputSection *isec,
                                              uint32_t offset) {
   if (!isec)
     return nullptr;
-  const Reloc *reloc = isec->getRelocAt(offset);
+  const Relocation *reloc = isec->getRelocAt(offset);
 
   if (!reloc)
     return nullptr;
@@ -597,7 +597,7 @@ Defined *ObjcCategoryMerger::getClassRo(const Defined *classSym,
 // a symbol(Defined) at that offset, then erase the symbol (mark it not live)
 void ObjcCategoryMerger::tryEraseDefinedAtIsecOffset(
     const ConcatInputSection *isec, uint32_t offset) {
-  const Reloc *reloc = isec->getRelocAt(offset);
+  const Relocation *reloc = isec->getRelocAt(offset);
 
   if (!reloc)
     return;
@@ -670,7 +670,7 @@ void ObjcCategoryMerger::parseProtocolListInfo(
   assert((isec && (secOffset + target->wordSize <= isec->data.size())) &&
          "Tried to read pointer list beyond protocol section end");
 
-  const Reloc *reloc = isec->getRelocAt(secOffset);
+  const Relocation *reloc = isec->getRelocAt(secOffset);
   if (!reloc)
     return;
 
@@ -703,7 +703,7 @@ void ObjcCategoryMerger::parseProtocolListInfo(
 
   uint32_t off = protocolListHeaderLayout.totalSize;
   for (uint32_t inx = 0; inx < protocolCount; ++inx) {
-    const Reloc *reloc = ptrListSym->isec()->getRelocAt(off);
+    const Relocation *reloc = ptrListSym->isec()->getRelocAt(off);
     assert(reloc && "No reloc found at protocol list offset");
 
     auto *listSym = dyn_cast_or_null<Defined>(cast<Symbol *>(reloc->referent));
@@ -739,7 +739,7 @@ bool ObjcCategoryMerger::parsePointerListInfo(const ConcatInputSection *isec,
   assert(secOffset + target->wordSize <= isec->data.size() &&
          "Trying to read pointer list beyond section end");
 
-  const Reloc *reloc = isec->getRelocAt(secOffset);
+  const Relocation *reloc = isec->getRelocAt(secOffset);
   // Empty list is a valid case, return true.
   if (!reloc)
     return true;
@@ -765,7 +765,7 @@ bool ObjcCategoryMerger::parsePointerListInfo(const ConcatInputSection *isec,
 
   for (uint32_t off = listHeaderLayout.totalSize; off < expectedListSize;
        off += target->wordSize) {
-    const Reloc *reloc = ptrListSym->isec()->getRelocAt(off);
+    const Relocation *reloc = ptrListSym->isec()->getRelocAt(off);
     assert(reloc && "No reloc found at pointer list offset");
 
     auto *listSym =
@@ -787,7 +787,7 @@ bool ObjcCategoryMerger::parsePointerListInfo(const ConcatInputSection *isec,
 // information about how a class is extended (extInfo)
 bool ObjcCategoryMerger::parseCatInfoToExtInfo(const InfoInputCategory &catInfo,
                                                ClassExtensionInfo &extInfo) {
-  const Reloc *catNameReloc =
+  const Relocation *catNameReloc =
       catInfo.catBodyIsec->getRelocAt(catLayout.nameOffset);
 
   // Parse name
@@ -1135,11 +1135,10 @@ bool ObjcCategoryMerger::mergeCategoriesIntoSingleCategory(
   return true;
 }
 
-void ObjcCategoryMerger::createSymbolReference(Defined *refFrom,
-                                               const Symbol *refTo,
-                                               uint32_t offset,
-                                               const Reloc &relocTemplate) {
-  Reloc r = relocTemplate;
+void ObjcCategoryMerger::createSymbolReference(
+    Defined *refFrom, const Symbol *refTo, uint32_t offset,
+    const Relocation &relocTemplate) {
+  Relocation r = relocTemplate;
   r.offset = offset;
   r.addend = 0;
   r.referent = const_cast<Symbol *>(refTo);
@@ -1500,7 +1499,9 @@ void ObjcCategoryMerger::eraseSymbolAtIsecOffset(ConcatInputSection *isec,
   llvm::erase(isec->symbols, sym);
 
   // Remove the relocs that refer to this symbol
-  auto removeAtOff = [offset](Reloc const &r) { return r.offset == offset; };
+  auto removeAtOff = [offset](Relocation const &r) {
+    return r.offset == offset;
+  };
   llvm::erase_if(isec->relocs, removeAtOff);
 
   // Now, if the symbol fully occupies a ConcatInputSection, we can also erase

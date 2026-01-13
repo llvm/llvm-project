@@ -1755,6 +1755,20 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   }
+  case Intrinsic::aarch64_range_prefetch: {
+    auto &AddrVal = MI.getOperand(1);
+
+    int64_t IsWrite = MI.getOperand(2).getImm();
+    int64_t IsStream = MI.getOperand(3).getImm();
+    unsigned PrfOp = (IsStream << 2) | IsWrite;
+
+    MIB.buildInstr(AArch64::G_AARCH64_RANGE_PREFETCH)
+        .addImm(PrfOp)
+        .add(AddrVal)
+        .addUse(MI.getOperand(4).getReg()); // Metadata
+    MI.eraseFromParent();
+    return true;
+  }
   case Intrinsic::aarch64_neon_uaddv:
   case Intrinsic::aarch64_neon_saddv:
   case Intrinsic::aarch64_neon_umaxv:

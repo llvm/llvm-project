@@ -1069,6 +1069,28 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
                   {options::OPT_D, options::OPT_U, options::OPT_I_Group,
                    options::OPT_F, options::OPT_embed_dir_EQ});
 
+  if (C.isOffloadingHostKind(Action::OFK_Cuda) ||
+      JA.isDeviceOffloading(Action::OFK_Cuda)) {
+    // Collect all enabled NVPTX architectures.
+    std::set<unsigned> ArchIDs;
+    for (auto &I : llvm::make_range(C.getOffloadToolChains(Action::OFK_Cuda))) {
+      const ToolChain *TC = I.second;
+      for (StringRef Arch :
+           D.getOffloadArchs(C, C.getArgs(), Action::OFK_Cuda, *TC)) {
+        OffloadArch OA = StringToOffloadArch(Arch);
+        if (IsNVIDIAOffloadArch(OA))
+          ArchIDs.insert(CudaArchToID(OA));
+      }
+    }
+
+    if (!ArchIDs.empty()) {
+      SmallString<128> List;
+      llvm::raw_svector_ostream OS(List);
+      llvm::interleave(ArchIDs, OS, ",");
+      CmdArgs.push_back(Args.MakeArgString("-D__CUDA_ARCH_LIST__=" + List));
+    }
+  }
+
   // Add -Wp, and -Xpreprocessor if using the preprocessor.
 
   // FIXME: There is a very unfortunate problem here, some troubled

@@ -202,6 +202,8 @@ static SPIRVType *deduceResultTypeFromOperands(MachineInstr *I,
   switch (I->getOpcode()) {
   case TargetOpcode::G_CONSTANT:
   case TargetOpcode::G_ANYEXT:
+  case TargetOpcode::G_SEXT:
+  case TargetOpcode::G_ZEXT:
     return deduceIntTypeFromResult(ResVReg, MIB, GR);
   case TargetOpcode::G_BUILD_VECTOR:
     return deduceTypeFromOperandRange(I, MIB, GR, 1, I->getNumOperands());

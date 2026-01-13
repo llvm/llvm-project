@@ -89,7 +89,9 @@
 
 #define DEBUG_TYPE "ir2vec"
 
-namespace llvm {
+using namespace llvm;
+using namespace llvm::ir2vec;
+using namespace llvm::mir2vec;
 
 // Common option category for options shared between IR2Vec and MIR2Vec
 static cl::OptionCategory CommonCategory("Common Options",
@@ -144,8 +146,6 @@ static cl::opt<EmbeddingLevel>
                                 "Generate function-level embeddings")),
           cl::init(FunctionLevel), cl::sub(EmbeddingsSubCmd),
           cl::cat(CommonCategory));
-
-namespace ir2vec {
 
 bool IR2VecTool::initializeVocabulary() {
   // Register and run the IR2Vec vocabulary analysis
@@ -309,7 +309,7 @@ void IR2VecTool::writeEmbeddingsToStream(const Function &F, raw_ostream &OS,
 }
 
 /// Process the module and generate output based on selected subcommand
-Error processModule(Module &M, raw_ostream &OS) {
+static Error processModule(Module &M, raw_ostream &OS) {
   IR2VecTool Tool(M);
 
   if (EmbeddingsSubCmd) {
@@ -337,9 +337,6 @@ Error processModule(Module &M, raw_ostream &OS) {
   }
   return Error::success();
 }
-} // namespace ir2vec
-
-namespace mir2vec {
 
 bool MIR2VecTool::initializeVocabulary(const Module &M) {
   MIR2VecVocabProvider Provider(MMI);
@@ -551,7 +548,7 @@ void MIR2VecTool::writeEmbeddingsToStream(MachineFunction &MF, raw_ostream &OS,
 }
 
 /// Setup MIR context from input file
-Error setupMIRContext(const std::string &InputFile, MIRContext &Ctx) {
+static Error setupMIRContext(const std::string &InputFile, MIRContext &Ctx) {
   SMDiagnostic Err;
 
   auto MIR = createMIRParserFromFile(InputFile, Err, Ctx.Context);
@@ -596,8 +593,8 @@ Error setupMIRContext(const std::string &InputFile, MIRContext &Ctx) {
 
 /// Generic vocabulary initialization and processing
 template <typename ProcessFunc>
-Error processWithVocabulary(MIRContext &Ctx, raw_ostream &OS,
-                            bool useLayoutVocab, ProcessFunc processFn) {
+static Error processWithVocabulary(MIRContext &Ctx, raw_ostream &OS,
+                                   bool useLayoutVocab, ProcessFunc processFn) {
   MIR2VecTool Tool(*Ctx.MMI);
 
   // Initialize appropriate vocabulary type
@@ -626,7 +623,7 @@ Error processWithVocabulary(MIRContext &Ctx, raw_ostream &OS,
 }
 
 /// Process module for triplet generation
-Error processModuleForTriplets(MIRContext &Ctx, raw_ostream &OS) {
+static Error processModuleForTriplets(MIRContext &Ctx, raw_ostream &OS) {
   return processWithVocabulary(Ctx, OS, /*useLayoutVocab=*/true,
                                [&](MIR2VecTool &Tool) -> Error {
                                  Tool.writeTripletsToStream(*Ctx.M, OS);
@@ -635,7 +632,7 @@ Error processModuleForTriplets(MIRContext &Ctx, raw_ostream &OS) {
 }
 
 /// Process module for entity generation
-Error processModuleForEntities(MIRContext &Ctx, raw_ostream &OS) {
+static Error processModuleForEntities(MIRContext &Ctx, raw_ostream &OS) {
   return processWithVocabulary(Ctx, OS, /*useLayoutVocab=*/true,
                                [&](MIR2VecTool &Tool) -> Error {
                                  Tool.writeEntitiesToStream(OS);
@@ -644,7 +641,7 @@ Error processModuleForEntities(MIRContext &Ctx, raw_ostream &OS) {
 }
 
 /// Process module for embedding generation
-Error processModuleForEmbeddings(MIRContext &Ctx, raw_ostream &OS) {
+static Error processModuleForEmbeddings(MIRContext &Ctx, raw_ostream &OS) {
   return processWithVocabulary(
       Ctx, OS, /*useLayoutVocab=*/false, [&](MIR2VecTool &Tool) -> Error {
         if (!FunctionName.empty()) {
@@ -675,7 +672,7 @@ Error processModuleForEmbeddings(MIRContext &Ctx, raw_ostream &OS) {
 }
 
 /// Main entry point for MIR processing
-Error processModule(const std::string &InputFile, raw_ostream &OS) {
+static Error processModule(const std::string &InputFile, raw_ostream &OS) {
   MIRContext Ctx;
 
   // Setup MIR context (parse file, setup target machine, etc.)
@@ -696,15 +693,7 @@ Error processModule(const std::string &InputFile, raw_ostream &OS) {
   }
 }
 
-} // namespace mir2vec
-
-} // namespace llvm
-
 int main(int argc, char **argv) {
-  using namespace llvm;
-  using namespace llvm::ir2vec;
-  using namespace llvm::mir2vec;
-
   InitLLVM X(argc, argv);
   // Show Common, IR2Vec and MIR2Vec option categories
   cl::HideUnrelatedOptions(ArrayRef<const cl::OptionCategory *>{
@@ -758,7 +747,7 @@ int main(int argc, char **argv) {
     InitializeAllAsmPrinters();
     static codegen::RegisterCodeGenFlags CGF;
 
-    if (Error Err = mir2vec::processModule(InputFilename, OS)) {
+    if (Error Err = processModule(InputFilename, OS)) {
       handleAllErrors(std::move(Err), [&](const ErrorInfoBase &EIB) {
         WithColor::error(errs(), ToolName) << EIB.message() << "\n";
       });

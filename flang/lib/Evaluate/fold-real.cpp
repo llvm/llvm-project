@@ -77,13 +77,8 @@ public:
       auto scaled{item.Divide(scale).value};
       auto square{scaled.Multiply(scaled).value};
       if constexpr (useKahanSummation) {
-        auto next{square.Subtract(correction_, rounding_)};
-        overflow_ |= next.flags.test(RealFlag::Overflow);
-        auto sum{element.Add(next.value, rounding_)};
+        auto sum{element.KahanSummation(square, correction_, rounding_)};
         overflow_ |= sum.flags.test(RealFlag::Overflow);
-        correction_ = sum.value.Subtract(element, rounding_)
-                          .value.Subtract(next.value, rounding_)
-                          .value;
         element = sum.value;
       } else {
         auto sum{element.Add(square, rounding_)};
@@ -387,13 +382,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
                 ScalarFunc<T, T, TBY>(
                     [&](const Scalar<T> &x, const Scalar<TBY> &y) -> Scalar<T> {
                       ValueWithRealFlags<Scalar<T>> result{
-                          x.
-// MSVC chokes on the keyword "template" here in a call to a
-// member function template.
-#ifndef _MSC_VER
-                          template
-#endif
-                          SCALE<Scalar<TBY>>(y)};
+                          x.template SCALE<Scalar<TBY>>(y)};
                       if (result.flags.test(RealFlag::Overflow)) {
                         context.Warn(common::UsageWarning::FoldingException,
                             "SCALE/IEEE_SCALB intrinsic folding overflow"_warn_en_US);

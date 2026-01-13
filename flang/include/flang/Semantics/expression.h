@@ -429,7 +429,6 @@ private:
   bool inDataStmtConstant_{false};
   bool inStmtFunctionDefinition_{false};
   bool iterativelyAnalyzingSubexpressions_{false};
-  bool inDeadCode_{false};
   friend class ArgumentAnalyzer;
 };
 

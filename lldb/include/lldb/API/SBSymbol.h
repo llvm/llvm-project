@@ -90,7 +90,8 @@ public:
   /// Get the ID of this symbol, usually the original symbol table index.
   ///
   /// \returns
-  ///   Returns the ID of this symbol.
+  ///     LLDB_INVALID_SYMBOL_ID if this object does not contain a valid symbol
+  ///     object. Otherwise, Returns a valid symbol ID.
   uint32_t GetID() const;
 
   bool operator==(const lldb::SBSymbol &rhs) const;

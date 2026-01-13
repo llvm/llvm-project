@@ -1170,6 +1170,8 @@ public:
 /// value. For block argument values, this is the operation that contains the
 /// block to which the value is an argument (blocks cannot be detached in Python
 /// bindings so such operation always exists).
+class PyBlockArgument;
+class PyOpResult;
 class MLIR_PYTHON_API_EXPORTED PyValue {
 public:
   // The virtual here is "load bearing" in that it enables RTTI
@@ -1188,7 +1190,9 @@ public:
   /// Gets a capsule wrapping the void* within the MlirValue.
   nanobind::object getCapsule();
 
-  nanobind::typed<nanobind::object, PyValue> maybeDownCast();
+  nanobind::typed<nanobind::object,
+                  std::variant<PyBlockArgument, PyOpResult, PyValue>>
+  maybeDownCast();
 
   /// Creates a PyValue from the MlirValue wrapped by a capsule. Ownership of
   /// the underlying MlirValue is still tied to the owning operation.
@@ -1567,6 +1571,14 @@ public:
         [](DerivedTy &self) -> nanobind::typed<nanobind::object, DerivedTy> {
           return self.maybeDownCast();
         });
+    cls.def("__str__", [](PyValue &self) {
+      PyPrintAccumulator printAccum;
+      printAccum.parts.append(std::string(DerivedTy::pyClassName) + "(");
+      mlirValuePrint(self.get(), printAccum.getCallback(),
+                     printAccum.getUserData());
+      printAccum.parts.append(")");
+      return printAccum.join();
+    });
 
     if (DerivedTy::getTypeIdFunction) {
       PyGlobals::get().registerValueCaster(

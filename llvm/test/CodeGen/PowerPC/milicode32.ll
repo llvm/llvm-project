@@ -160,17 +160,15 @@ entry:
 
 declare void @llvm.memmove.p0.p0.i32(ptr writeonly captures(none), ptr readonly captures(none), i32, i1 immarg)
 
-define void @strcpy_test(ptr noundef %dest, ptr noundef %src) nounwind {
+define ptr @strcpy_test(ptr noundef %dest, ptr noundef %src) nounwind {
 ; CHECK-AIX-32-P9-LABEL: strcpy_test:
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
 ; CHECK-AIX-32-P9-NEXT:    mflr r0
-; CHECK-AIX-32-P9-NEXT:    stwu r1, -80(r1)
-; CHECK-AIX-32-P9-NEXT:    stw r0, 88(r1)
-; CHECK-AIX-32-P9-NEXT:    stw r3, 72(r1)
-; CHECK-AIX-32-P9-NEXT:    stw r4, 64(r1)
-; CHECK-AIX-32-P9-NEXT:    bl .strcpy[PR]
+; CHECK-AIX-32-P9-NEXT:    stwu r1, -64(r1)
+; CHECK-AIX-32-P9-NEXT:    stw r0, 72(r1)
+; CHECK-AIX-32-P9-NEXT:    bl .___strcpy[PR]
 ; CHECK-AIX-32-P9-NEXT:    nop
-; CHECK-AIX-32-P9-NEXT:    addi r1, r1, 80
+; CHECK-AIX-32-P9-NEXT:    addi r1, r1, 64
 ; CHECK-AIX-32-P9-NEXT:    lwz r0, 8(r1)
 ; CHECK-AIX-32-P9-NEXT:    mtlr r0
 ; CHECK-AIX-32-P9-NEXT:    blr
@@ -178,24 +176,46 @@ define void @strcpy_test(ptr noundef %dest, ptr noundef %src) nounwind {
 ; CHECK-LINUX32-P9-LABEL: strcpy_test:
 ; CHECK-LINUX32-P9:       # %bb.0: # %entry
 ; CHECK-LINUX32-P9-NEXT:    mflr r0
-; CHECK-LINUX32-P9-NEXT:    stwu r1, -32(r1)
-; CHECK-LINUX32-P9-NEXT:    stw r0, 36(r1)
-; CHECK-LINUX32-P9-NEXT:    stw r3, 24(r1)
-; CHECK-LINUX32-P9-NEXT:    stw r4, 16(r1)
+; CHECK-LINUX32-P9-NEXT:    stwu r1, -16(r1)
+; CHECK-LINUX32-P9-NEXT:    stw r0, 20(r1)
 ; CHECK-LINUX32-P9-NEXT:    bl strcpy
-; CHECK-LINUX32-P9-NEXT:    lwz r0, 36(r1)
-; CHECK-LINUX32-P9-NEXT:    addi r1, r1, 32
+; CHECK-LINUX32-P9-NEXT:    lwz r0, 20(r1)
+; CHECK-LINUX32-P9-NEXT:    addi r1, r1, 16
 ; CHECK-LINUX32-P9-NEXT:    mtlr r0
 ; CHECK-LINUX32-P9-NEXT:    blr
 entry:
-  %dest.addr = alloca ptr, align 8
-  %src.addr = alloca ptr, align 8
-  store ptr %dest, ptr %dest.addr, align 8
-  store ptr %src, ptr %src.addr, align 8
-  %0 = load ptr, ptr %dest.addr, align 8
-  %1 = load ptr, ptr %src.addr, align 8
-  %call = call ptr @strcpy(ptr noundef %0, ptr noundef %1)
-  ret void
+  %call = call ptr @strcpy(ptr noundef %dest, ptr noundef %src)
+  ret ptr %call
 }
 
 declare ptr @strcpy(ptr noundef, ptr noundef)
+
+define ptr @stpcpy_test(ptr noundef %dest, ptr noundef %src) nounwind {
+; CHECK-AIX-32-P9-LABEL: stpcpy_test:
+; CHECK-AIX-32-P9:       # %bb.0: # %entry
+; CHECK-AIX-32-P9-NEXT:    mflr r0
+; CHECK-AIX-32-P9-NEXT:    stwu r1, -64(r1)
+; CHECK-AIX-32-P9-NEXT:    stw r0, 72(r1)
+; CHECK-AIX-32-P9-NEXT:    bl .stpcpy[PR]
+; CHECK-AIX-32-P9-NEXT:    nop
+; CHECK-AIX-32-P9-NEXT:    addi r1, r1, 64
+; CHECK-AIX-32-P9-NEXT:    lwz r0, 8(r1)
+; CHECK-AIX-32-P9-NEXT:    mtlr r0
+; CHECK-AIX-32-P9-NEXT:    blr
+;
+; CHECK-LINUX32-P9-LABEL: stpcpy_test:
+; CHECK-LINUX32-P9:       # %bb.0: # %entry
+; CHECK-LINUX32-P9-NEXT:    mflr r0
+; CHECK-LINUX32-P9-NEXT:    stwu r1, -16(r1)
+; CHECK-LINUX32-P9-NEXT:    stw r0, 20(r1)
+; CHECK-LINUX32-P9-NEXT:    bl stpcpy
+; CHECK-LINUX32-P9-NEXT:    lwz r0, 20(r1)
+; CHECK-LINUX32-P9-NEXT:    addi r1, r1, 16
+; CHECK-LINUX32-P9-NEXT:    mtlr r0
+; CHECK-LINUX32-P9-NEXT:    blr
+entry:
+  %call = call ptr @stpcpy(ptr noundef %dest, ptr noundef %src)
+  ret ptr %call
+}
+
+declare ptr @stpcpy(ptr noundef, ptr noundef)

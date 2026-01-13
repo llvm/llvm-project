@@ -8,6 +8,13 @@ template<typename T> struct MyClass {
 };
 
 // CHECK:         "Name": "MyClass",
+// CHECK:         "PublicMembers": [
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "IsStatic": false,
+// CHECK-NEXT:        "Name": "MemberTemplate",
+// CHECK-NEXT:        "Type": "T"
+// CHECK-NEXT:      }
+// CHECK-NEXT:    ],
 // CHECK:         "Name": "method",
 // CHECK:         "Params": [
 // CHECK-NEXT:      {
@@ -24,10 +31,8 @@ template<typename T> struct MyClass {
 // CHECK-NEXT:      "IsBuiltIn": false,
 // CHECK-NEXT:      "IsTemplate": true,
 // CHECK-NEXT:      "Name": "T",
-// CHECK-NEXT:      "QualName": "T"
+// CHECK-NEXT:      "QualName": "T",
 // CHECK-NEXT:      "USR": "0000000000000000000000000000000000000000"
-// CHECK:           "Name": "MemberTemplate",
-// CHECK:           "Type": "T"
 // CHECK:         "Template": {
 // CHECK-NEXT:      "Parameters": [
 // CHECK-NEXT:        {
