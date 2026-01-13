@@ -118,6 +118,13 @@ struct DilationsAndStrides {
 template <typename ConvOpTy>
 std::optional<DilationsAndStrides> matchConvolutionOpOfType(LinalgOp op);
 
+/// Returns true if the linalg `op` is a convolution op of type `ConvOpTy`.
+/// This is a convenience wrapper around matchConvolutionOpOfType.
+template <typename ConvOpTy>
+bool isaConvolutionOpOfType(LinalgOp op) {
+  return matchConvolutionOpOfType<ConvOpTy>(op).has_value();
+}
+
 //===----------------------------------------------------------------------===//
 // Fusion / Tiling utilities
 //===----------------------------------------------------------------------===//
