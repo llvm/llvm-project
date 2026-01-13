@@ -89,9 +89,7 @@
 
 #define DEBUG_TYPE "ir2vec"
 
-using namespace llvm;
-using namespace llvm::ir2vec;
-using namespace llvm::mir2vec;
+namespace llvm {
 
 // Common option category for options shared between IR2Vec and MIR2Vec
 static cl::OptionCategory CommonCategory("Common Options",
@@ -150,7 +148,7 @@ static cl::opt<EmbeddingLevel>
 namespace ir2vec {
 
 /// Process the module and generate output based on selected subcommand
-static Error processModule(Module &M, raw_ostream &OS) {
+Error processModule(Module &M, raw_ostream &OS) {
   IR2VecTool Tool(M);
 
   if (EmbeddingsSubCmd) {
@@ -178,9 +176,12 @@ static Error processModule(Module &M, raw_ostream &OS) {
   }
   return Error::success();
 }
+} // namespace ir2vec
+
+namespace mir2vec {
 
 /// Setup MIR context from input file
-static Error setupMIRContext(const std::string &InputFile, MIRContext &Ctx) {
+Error setupMIRContext(const std::string &InputFile, MIRContext &Ctx) {
   SMDiagnostic Err;
 
   auto MIR = createMIRParserFromFile(InputFile, Err, Ctx.Context);
@@ -225,8 +226,8 @@ static Error setupMIRContext(const std::string &InputFile, MIRContext &Ctx) {
 
 /// Generic vocabulary initialization and processing
 template <typename ProcessFunc>
-static Error processWithVocabulary(MIRContext &Ctx, raw_ostream &OS,
-                                   bool useLayoutVocab, ProcessFunc processFn) {
+Error processWithVocabulary(MIRContext &Ctx, raw_ostream &OS,
+                            bool useLayoutVocab, ProcessFunc processFn) {
   MIR2VecTool Tool(*Ctx.MMI);
 
   // Initialize appropriate vocabulary type
@@ -255,7 +256,7 @@ static Error processWithVocabulary(MIRContext &Ctx, raw_ostream &OS,
 }
 
 /// Process module for triplet generation
-static Error processModuleForTriplets(MIRContext &Ctx, raw_ostream &OS) {
+Error processModuleForTriplets(MIRContext &Ctx, raw_ostream &OS) {
   return processWithVocabulary(Ctx, OS, /*useLayoutVocab=*/true,
                                [&](MIR2VecTool &Tool) -> Error {
                                  Tool.writeTripletsToStream(*Ctx.M, OS);
@@ -264,7 +265,7 @@ static Error processModuleForTriplets(MIRContext &Ctx, raw_ostream &OS) {
 }
 
 /// Process module for entity generation
-static Error processModuleForEntities(MIRContext &Ctx, raw_ostream &OS) {
+Error processModuleForEntities(MIRContext &Ctx, raw_ostream &OS) {
   return processWithVocabulary(Ctx, OS, /*useLayoutVocab=*/true,
                                [&](MIR2VecTool &Tool) -> Error {
                                  Tool.writeEntitiesToStream(OS);
@@ -273,7 +274,7 @@ static Error processModuleForEntities(MIRContext &Ctx, raw_ostream &OS) {
 }
 
 /// Process module for embedding generation
-static Error processModuleForEmbeddings(MIRContext &Ctx, raw_ostream &OS) {
+Error processModuleForEmbeddings(MIRContext &Ctx, raw_ostream &OS) {
   return processWithVocabulary(
       Ctx, OS, /*useLayoutVocab=*/false, [&](MIR2VecTool &Tool) -> Error {
         if (!FunctionName.empty()) {
@@ -304,7 +305,7 @@ static Error processModuleForEmbeddings(MIRContext &Ctx, raw_ostream &OS) {
 }
 
 /// Main entry point for MIR processing
-static Error processModule(const std::string &InputFile, raw_ostream &OS) {
+Error processModule(const std::string &InputFile, raw_ostream &OS) {
   MIRContext Ctx;
 
   // Setup MIR context (parse file, setup target machine, etc.)
@@ -325,7 +326,15 @@ static Error processModule(const std::string &InputFile, raw_ostream &OS) {
   }
 }
 
+} // namespace mir2vec
+
+} // namespace llvm
+
 int main(int argc, char **argv) {
+  using namespace llvm;
+  using namespace llvm::ir2vec;
+  using namespace llvm::mir2vec;
+
   InitLLVM X(argc, argv);
   // Show Common, IR2Vec and MIR2Vec option categories
   cl::HideUnrelatedOptions(ArrayRef<const cl::OptionCategory *>{
@@ -379,7 +388,7 @@ int main(int argc, char **argv) {
     InitializeAllAsmPrinters();
     static codegen::RegisterCodeGenFlags CGF;
 
-    if (Error Err = processModule(InputFilename, OS)) {
+    if (Error Err = mir2vec::processModule(InputFilename, OS)) {
       handleAllErrors(std::move(Err), [&](const ErrorInfoBase &EIB) {
         WithColor::error(errs(), ToolName) << EIB.message() << "\n";
       });
