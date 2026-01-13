@@ -248,6 +248,24 @@ llvm::Error ToError(const lldb::SBError &error, bool show_user = true);
 /// Provides the string value if this data structure is a string type.
 std::string GetStringValue(const lldb::SBStructuredData &data);
 
+/// Converts UTF16 column codeunits to bytes.
+/// we are recieving utf8 from the specification.
+/// UTF16 codunit size => 2 bytes.
+/// UTF8 codunit size => 1 byte.
+/// Example
+/// | info     | info  | utf16_cu | size in bytes |
+/// | fake f   | ƒ     | 1        | 2             |
+/// | fake c   | ç     | 1        | 3             |
+/// | poop char| 💩    | 2        | 4             |
+///
+/// so with inputs string of
+/// (`ƒ💩`, 3) we have 3 utf16_u and ( 2 + 4 ) bytes.
+/// (`ƒ💩`, 2) we have 3 utf16_u and ( 2 + 4 ) bytes but the position is in
+///  between the 💩 char so we return null since the codepoint is not complete.
+///
+/// see https://utf8everywhere.org/#characters for more info.
+std::optional<size_t> UTF16CodeunitToBytes(llvm::StringRef line,
+                                           uint32_t utf16_codeunits);
 } // namespace lldb_dap
 
 #endif

@@ -5,31 +5,32 @@ Test lldb-dap completions request
 import lldbdap_testcase
 import dap_server
 from lldbsuite.test import lldbutil
-from lldbsuite.test.decorators import *
-from lldbsuite.test.lldbtest import *
+from lldbsuite.test.decorators import skipIf
+from lldbsuite.test.lldbtest import line_number
 
 session_completion = {
     "text": "session",
-    "label": "session -- Commands controlling LLDB session.",
+    "label": "session",
+    "detail": "Commands controlling LLDB session.",
 }
 settings_completion = {
     "text": "settings",
-    "label": "settings -- Commands for managing LLDB settings.",
+    "label": "settings",
+    "detail": "Commands for managing LLDB settings.",
 }
 memory_completion = {
     "text": "memory",
-    "label": "memory -- Commands for operating on memory in the current target process.",
+    "label": "memory",
+    "detail": "Commands for operating on memory in the current target process.",
 }
 command_var_completion = {
     "text": "var",
-    "label": "var -- Show variables for the current stack frame. Defaults to all arguments and local variables in scope. Names of argument, local, file static and file global variables can be specified.",
+    "label": "var",
+    "detail": "Show variables for the current stack frame. Defaults to all arguments and local variables in scope. Names of argument, local, file static and file global variables can be specified.",
 }
-variable_var_completion = {
-    "text": "var",
-    "label": "var -- vector<baz> &",
-}
-variable_var1_completion = {"text": "var1", "label": "var1 -- int &"}
-variable_var2_completion = {"text": "var2", "label": "var2 -- int &"}
+variable_var_completion = {"text": "var", "label": "var", "detail": "vector<baz> &"}
+variable_var1_completion = {"text": "var1", "label": "var1", "detail": "int &"}
+variable_var2_completion = {"text": "var2", "label": "var2", "detail": "int &"}
 
 
 # Older version of libcxx produce slightly different typename strings for
@@ -79,11 +80,13 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
             [
                 {
                     "text": "read",
-                    "label": "read -- Read from the memory of the current target process.",
+                    "label": "read",
+                    "detail": "Read from the memory of the current target process.",
                 },
                 {
                     "text": "region",
-                    "label": "region -- Get information on the memory region containing an address in the current target process.",
+                    "label": "region",
+                    "detail": "Get information on the memory region containing an address in the current target process.",
                 },
             ],
         )
@@ -110,7 +113,8 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
             [
                 {
                     "text": "set",
-                    "label": "set -- Set the value of the specified debugger setting.",
+                    "label": "set",
+                    "detail": "Set the value of the specified debugger setting.",
                 }
             ],
         )
@@ -167,7 +171,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
         self.verify_completions(
             self.dap_server.get_completions("str"),
             [{"text": "struct", "label": "struct"}],
-            [{"text": "str1", "label": "str1 -- std::string &"}],
+            [{"text": "str1", "label": "str1", "detail": "std::string &"}],
         )
 
         self.continue_to_next_stop()
@@ -189,42 +193,46 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
             self.dap_server.get_completions("str"),
             [
                 {"text": "struct", "label": "struct"},
-                {"text": "str1", "label": "str1 -- std::string &"},
+                {"text": "str1", "label": "str1", "detail": "std::string &"},
             ],
         )
+
+        self.assertIsNotNone(self.dap_server.get_completions("ƒ"))
+        # Test utf8 after ascii.
+        self.dap_server.get_completions("mƒ")
 
         # Completion also works for more complex expressions
         self.verify_completions(
             self.dap_server.get_completions("foo1.v"),
-            [{"text": "var1", "label": "foo1.var1 -- int"}],
+            [{"text": "var1", "label": "foo1.var1", "detail": "int"}],
         )
 
         self.verify_completions(
             self.dap_server.get_completions("foo1.my_bar_object.v"),
-            [{"text": "var1", "label": "foo1.my_bar_object.var1 -- int"}],
+            [{"text": "var1", "label": "foo1.my_bar_object.var1", "detail": "int"}],
         )
 
         self.verify_completions(
             self.dap_server.get_completions("foo1.var1 + foo1.v"),
-            [{"text": "var1", "label": "foo1.var1 -- int"}],
+            [{"text": "var1", "label": "foo1.var1", "detail": "int"}],
         )
 
         self.verify_completions(
             self.dap_server.get_completions("foo1.var1 + v"),
-            [{"text": "var1", "label": "var1 -- int &"}],
+            [{"text": "var1", "label": "var1", "detail": "int &"}],
         )
 
         # should correctly handle spaces between objects and member operators
         self.verify_completions(
             self.dap_server.get_completions("foo1 .v"),
-            [{"text": "var1", "label": ".var1 -- int"}],
-            [{"text": "var2", "label": ".var2 -- int"}],
+            [{"text": "var1", "label": ".var1", "detail": "int"}],
+            [{"text": "var2", "label": ".var2", "detail": "int"}],
         )
 
         self.verify_completions(
             self.dap_server.get_completions("foo1 . v"),
-            [{"text": "var1", "label": "var1 -- int"}],
-            [{"text": "var2", "label": "var2 -- int"}],
+            [{"text": "var1", "label": "var1", "detail": "int"}],
+            [{"text": "var2", "label": "var2", "detail": "int"}],
         )
 
         # Even in variable mode, we can still use the escape prefix
@@ -272,6 +280,10 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
                 variable_var2_completion,
             ],
         )
+
+        # TODO: Note we are not checking the result because the `expression --` command adds an extra character
+        # for non ascii variables.
+        self.assertIsNotNone(self.dap_server.get_completions("ƒ"))
 
         self.continue_to_exit()
         console_str = self.get_console()
