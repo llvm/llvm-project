@@ -801,7 +801,7 @@ APInt ConstantOffsetExtractor::extractDisjointBitsFromXor(
   // and extend the optimization for those cases.
   if (!match(XorInst,
              m_Xor(m_Value(BaseOperand), m_ConstantInt(XorConstant))) ||
-      (isa<Constant>(BaseOperand)))
+      (match(BaseOperand, m_ConstantInt())))
     return APInt::getZero(BitWidth);
 
   // Compute known bits for the base operand.
