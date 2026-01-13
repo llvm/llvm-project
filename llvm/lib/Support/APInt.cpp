@@ -969,7 +969,7 @@ APInt APInt::truncUSat(unsigned width) const {
   return APInt::getMaxValue(width);
 }
 
-// Truncate to new width with signed saturation.
+// Truncate to new width with signed saturation to signed result.
 APInt APInt::truncSSat(unsigned width) const {
   assert(width <= BitWidth && "Invalid APInt Truncate request");
 
@@ -979,6 +979,17 @@ APInt APInt::truncSSat(unsigned width) const {
   // If not, then just return the new limits.
   return isNegative() ? APInt::getSignedMinValue(width)
                       : APInt::getSignedMaxValue(width);
+}
+
+// Truncate to new width with signed saturation to unsigned result.
+APInt APInt::truncSSatU(unsigned width) const {
+  assert(width <= BitWidth && "Invalid APInt Truncate request");
+
+  // Can we just losslessly truncate it?
+  if (isIntN(width))
+    return trunc(width);
+  // If not, then just return the new limits.
+  return isNegative() ? APInt::getZero(width) : APInt::getMaxValue(width);
 }
 
 // Sign extend to a new width.

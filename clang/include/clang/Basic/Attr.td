@@ -1486,7 +1486,7 @@ def CPUSpecific : InheritableAttr {
   let Subjects = SubjectList<[Function]>;
   let Documentation = [CPUSpecificCPUDispatchDocs];
   let AdditionalMembers = [{
-    IdentifierInfo *getCPUName(unsigned Index) const {
+    const IdentifierInfo *getCPUName(unsigned Index) const {
       return *(cpus_begin() + Index);
     }
   }];
@@ -1938,14 +1938,6 @@ def RegCall : DeclOrTypeAttr {
 def Final : InheritableAttr {
   let Spellings = [CustomKeyword<"final">, CustomKeyword<"sealed">];
   let Accessors = [Accessor<"isSpelledAsSealed", [CustomKeyword<"sealed">]>];
-  let SemaHandler = 0;
-  // Omitted from docs, since this is language syntax, not an attribute, as far
-  // as users are concerned.
-  let Documentation = [InternalOnly];
-}
-
-def TriviallyRelocatable : InheritableAttr {
-  let Spellings = [CustomKeyword<"trivially_relocatable_if_eligible">];
   let SemaHandler = 0;
   // Omitted from docs, since this is language syntax, not an attribute, as far
   // as users are concerned.

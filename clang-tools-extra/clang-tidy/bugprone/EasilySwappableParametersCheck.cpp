@@ -106,6 +106,8 @@ static bool prefixSuffixCoverUnderThreshold(std::size_t Threshold,
 
 namespace model {
 
+namespace {
+
 /// The language features involved in allowing the mix between two parameters.
 enum class MixFlags : unsigned char {
   Invalid = 0, ///< Sentinel bit pattern. DO NOT USE!
@@ -129,6 +131,9 @@ enum class MixFlags : unsigned char {
 
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue =*/ImplicitConversion)
 };
+
+} // namespace
+
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 /// Returns whether the SearchedFlag is turned on in the Data.
@@ -178,6 +183,8 @@ static inline std::string formatMixFlags(MixFlags F) {
 }
 
 #endif // NDEBUG
+
+namespace {
 
 /// The results of the steps of an Implicit Conversion Sequence is saved in
 /// an instance of this record.
@@ -564,6 +571,8 @@ enum class ImplicitConversionModellingMode : unsigned char {
   /// standard conversion sequence.
   OneWaySingleStandardOnly
 };
+
+} // namespace
 
 static MixData
 isLRefEquallyBindingToType(const TheCheck &Check,
@@ -1594,6 +1603,8 @@ static bool lazyMapOfSetsIntersectionExists(const MapTy &Map, const ElemTy &E1,
   });
 }
 
+namespace {
+
 /// Implements the heuristic that marks two parameters related if there is
 /// a usage for both in the same strict expression subtree. A strict
 /// expression subtree is a tree which only includes Expr nodes, i.e. no
@@ -1754,6 +1765,8 @@ public:
            llvm::is_contained(ReturnedParams, Param2);
   }
 };
+
+} // namespace
 
 } // namespace relatedness_heuristic
 
@@ -1950,7 +1963,7 @@ static inline bool needsToPrintTypeInDiagnostic(const model::Mix &M) {
 /// Returns whether a particular Mix between the two parameters should have
 /// implicit conversions elaborated.
 static inline bool needsToElaborateImplicitConversion(const model::Mix &M) {
-  return hasFlag(M.flags(), model::MixFlags::ImplicitConversion);
+  return model::hasFlag(M.flags(), model::MixFlags::ImplicitConversion);
 }
 
 namespace {
