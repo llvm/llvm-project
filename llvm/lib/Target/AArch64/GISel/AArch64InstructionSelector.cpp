@@ -5634,7 +5634,8 @@ bool AArch64InstructionSelector::selectIndexedStore(GIndexedStore &I,
   LocationSize MemSize = I.getMMO().getSize();
   unsigned MemSizeInBytes = MemSize.getValue();
 
-  assert(MemSizeInBytes && MemSizeInBytes <= 16 && "Unexpected indexed store size");
+  assert(MemSizeInBytes && MemSizeInBytes <= 16 &&
+         "Unexpected indexed store size");
   unsigned MemSizeLog2 = Log2_32(MemSizeInBytes);
 
   unsigned Opc = 0;
