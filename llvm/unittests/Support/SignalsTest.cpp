@@ -32,9 +32,13 @@ using testing::Not;
 #if defined(HAVE_BACKTRACE) && ENABLE_BACKTRACES &&                            \
     (defined(__linux__) || defined(__FreeBSD__) ||                             \
      defined(__FreeBSD_kernel__) || defined(__NetBSD__))
+// Test relies on the binary this test is linked into having a GNU build ID
+// note, which is not universally enabled by default (even when using Clang).
+// Disable until we can reliably detect whether this is the case and skip it if
+// not. See https://github.com/llvm/llvm-project/issues/168891.
+#if 0
 TEST(SignalsTest, PrintsSymbolizerMarkup) {
-  auto Exit =
-      make_scope_exit([]() { unsetenv("LLVM_ENABLE_SYMBOLIZER_MARKUP"); });
+  scope_exit Exit([]() { unsetenv("LLVM_ENABLE_SYMBOLIZER_MARKUP"); });
   setenv("LLVM_ENABLE_SYMBOLIZER_MARKUP", "1", 1);
   std::string Res;
   raw_string_ostream RawStream(Res);
@@ -51,9 +55,10 @@ TEST(SignalsTest, PrintsSymbolizerMarkup) {
   // Backtrace line
   EXPECT_THAT(Res, MatchesRegex(".*" TAG_BEGIN "bt:0:" P_REGEX ".*"));
 }
+#endif
 
 TEST(SignalsTest, SymbolizerMarkupDisabled) {
-  auto Exit = make_scope_exit([]() { unsetenv("LLVM_DISABLE_SYMBOLIZATION"); });
+  scope_exit Exit([]() { unsetenv("LLVM_DISABLE_SYMBOLIZATION"); });
   setenv("LLVM_DISABLE_SYMBOLIZATION", "1", 1);
   std::string Res;
   raw_string_ostream RawStream(Res);

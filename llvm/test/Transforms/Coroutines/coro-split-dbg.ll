@@ -6,9 +6,9 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
-declare void @bar(...) local_unnamed_addr #2
+declare void @bar(...) local_unnamed_addr
 
 ; Function Attrs: nounwind uwtable
 define ptr @f() #3 !dbg !16 {
@@ -16,14 +16,14 @@ entry:
   %0 = tail call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null), !dbg !26
   %1 = tail call i64 @llvm.coro.size.i64(), !dbg !26
   %call = tail call ptr @malloc(i64 %1), !dbg !26
-  %2 = tail call ptr @llvm.coro.begin(token %0, ptr %call) #9, !dbg !26
+  %2 = tail call ptr @llvm.coro.begin(token %0, ptr %call), !dbg !26
   tail call void @llvm.dbg.value(metadata ptr %2, metadata !21, metadata !12), !dbg !26
   br label %for.cond, !dbg !27
 
 for.cond:                                         ; preds = %for.cond, %entry
   tail call void @llvm.dbg.value(metadata i32 undef, metadata !22, metadata !12), !dbg !28
-  tail call void @llvm.dbg.value(metadata i32 undef, metadata !11, metadata !12) #7, !dbg !29
-  tail call void (...) @bar() #7, !dbg !33
+  tail call void @llvm.dbg.value(metadata i32 undef, metadata !11, metadata !12), !dbg !29
+  tail call void (...) @bar(), !dbg !33
   %3 = tail call token @llvm.coro.save(ptr null), !dbg !34
   %4 = tail call i8 @llvm.coro.suspend(token %3, i1 false), !dbg !34
   %conv = sext i8 %4 to i32, !dbg !34
@@ -38,40 +38,31 @@ coro_Cleanup:                                     ; preds = %for.cond
   br label %coro_Suspend, !dbg !36
 
 coro_Suspend:                                     ; preds = %for.cond, %if.then, %coro_Cleanup
-  tail call void @llvm.coro.end(ptr null, i1 false, token none) #9, !dbg !38
+  tail call void @llvm.coro.end(ptr null, i1 false, token none), !dbg !38
   ret ptr %2, !dbg !39
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0(ptr nocapture) #4
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 
 ; Function Attrs: argmemonly nounwind readonly
-declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #5
+declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr)
 
 ; Function Attrs: nounwind
-declare noalias ptr @malloc(i64) local_unnamed_addr #6
-declare i64 @llvm.coro.size.i64() #1
-declare ptr @llvm.coro.begin(token, ptr writeonly) #7
-declare token @llvm.coro.save(ptr) #7
-declare i8 @llvm.coro.suspend(token, i1) #7
-declare void @llvm.lifetime.end.p0(ptr nocapture) #4
-declare ptr @llvm.coro.free(token, ptr nocapture readonly) #5
-declare void @free(ptr nocapture) local_unnamed_addr #6
-declare void @llvm.coro.end(ptr, i1, token) #7
-declare ptr @llvm.coro.subfn.addr(ptr nocapture readonly, i8) #5
+declare noalias ptr @malloc(i64) local_unnamed_addr
+declare i64 @llvm.coro.size.i64()
+declare ptr @llvm.coro.begin(token, ptr writeonly)
+declare token @llvm.coro.save(ptr)
+declare i8 @llvm.coro.suspend(token, i1)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
+declare ptr @llvm.coro.free(token, ptr nocapture readonly)
+declare void @free(ptr nocapture) local_unnamed_addr
+declare void @llvm.coro.end(ptr, i1, token)
+declare ptr @llvm.coro.subfn.addr(ptr nocapture readonly, i8)
 
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
-attributes #0 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone }
-attributes #2 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #3 = { nounwind uwtable presplitcoroutine "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #4 = { argmemonly nounwind }
-attributes #5 = { argmemonly nounwind readonly }
-attributes #6 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #7 = { nounwind }
-attributes #8 = { alwaysinline nounwind }
-attributes #9 = { noduplicate }
+attributes #3 = { nounwind uwtable presplitcoroutine }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}

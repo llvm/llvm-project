@@ -14,23 +14,23 @@ define void @foo(i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: outer.header:
 ; CHECK-NEXT:   EMIT-SCALAR ir<%outer.iv> = phi [ ir<%outer.iv.next>, outer.latch ], [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT:   EMIT ir<%gep.1> = getelementptr ir<@arr2>, ir<0>, ir<%outer.iv>
+; CHECK-NEXT:   EMIT ir<%gep.1> = getelementptr inbounds ir<@arr2>, ir<0>, ir<%outer.iv>
 ; CHECK-NEXT:   EMIT store ir<%outer.iv>, ir<%gep.1>
-; CHECK-NEXT:   EMIT ir<%add> = add ir<%outer.iv>, ir<%n>
+; CHECK-NEXT:   EMIT ir<%add> = add nsw ir<%outer.iv>, ir<%n>
 ; CHECK-NEXT: Successor(s): inner
 ; CHECK-EMPTY:
 ; CHECK-NEXT: inner:
 ; CHECK-NEXT:   EMIT-SCALAR ir<%inner.iv> = phi [ ir<%inner.iv.next>, inner ], [ ir<0>, outer.header ]
-; CHECK-NEXT:   EMIT ir<%gep.2> = getelementptr ir<@arr>, ir<0>, ir<%inner.iv>, ir<%outer.iv>
+; CHECK-NEXT:   EMIT ir<%gep.2> = getelementptr inbounds ir<@arr>, ir<0>, ir<%inner.iv>, ir<%outer.iv>
 ; CHECK-NEXT:   EMIT store ir<%add>, ir<%gep.2>
-; CHECK-NEXT:   EMIT ir<%inner.iv.next> = add ir<%inner.iv>, ir<1>
-; CHECK-NEXT:   EMIT ir<%inner.ec> = icmp ir<%inner.iv.next>, ir<8>
+; CHECK-NEXT:   EMIT ir<%inner.iv.next> = add nuw nsw ir<%inner.iv>, ir<1>
+; CHECK-NEXT:   EMIT ir<%inner.ec> = icmp eq ir<%inner.iv.next>, ir<8>
 ; CHECK-NEXT:   EMIT branch-on-cond ir<%inner.ec>
 ; CHECK-NEXT: Successor(s): outer.latch, inner
 ; CHECK-EMPTY:
 ; CHECK-NEXT: outer.latch:
-; CHECK-NEXT:   EMIT ir<%outer.iv.next> = add ir<%outer.iv>, ir<1>
-; CHECK-NEXT:   EMIT ir<%outer.ec> = icmp ir<%outer.iv.next>, ir<8>
+; CHECK-NEXT:   EMIT ir<%outer.iv.next> = add nuw nsw ir<%outer.iv>, ir<1>
+; CHECK-NEXT:   EMIT ir<%outer.ec> = icmp eq ir<%outer.iv.next>, ir<8>
 ; CHECK-NEXT:   EMIT branch-on-cond ir<%outer.ec>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, outer.header
 ; CHECK-EMPTY:

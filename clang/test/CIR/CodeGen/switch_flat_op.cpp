@@ -21,7 +21,7 @@ void swf(int a) {
 // BEFORE:  cir.func{{.*}} @_Z3swfi
 // BEFORE:   %[[VAR_B:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init] {alignment = 4 : i64}
 // BEFORE:   %[[CONST_3:.*]] = cir.const #cir.int<3> : !s32i
-// BEFORE:   cir.switch (%[[COND:.*]] : !s32i) {
+// BEFORE:   cir.switch(%[[COND:.*]] : !s32i) {
 // BEFORE:     cir.case(equal, [#cir.int<3> : !s32i]) {
 // BEFORE:       %[[LOAD_B_EQ:.*]] = cir.load{{.*}} %[[VAR_B]] : !cir.ptr<!s32i>, !s32i
 // BEFORE:       %[[CONST_2:.*]] = cir.const #cir.int<2> : !s32i

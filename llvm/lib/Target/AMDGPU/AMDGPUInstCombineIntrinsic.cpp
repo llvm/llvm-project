@@ -35,7 +35,7 @@ struct AMDGPUImageDMaskIntrinsic {
 };
 
 #define GET_AMDGPUImageDMaskIntrinsicTable_IMPL
-#include "InstCombineTables.inc"
+#include "AMDGPUGenSearchableTables.inc"
 
 } // end anonymous namespace
 
@@ -788,7 +788,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       if (Exp == APFloat::IEK_NaN || Exp == APFloat::IEK_Inf)
         Exp = 0;
 
-      return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), Exp));
+      return IC.replaceInstUsesWith(II,
+                                    ConstantInt::getSigned(II.getType(), Exp));
     }
 
     if (isa<PoisonValue>(Src))
@@ -1736,6 +1737,27 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         Args, &II);
     NewII->takeName(&II);
     return IC.replaceInstUsesWith(II, NewII);
+  }
+  case Intrinsic::amdgcn_tensor_load_to_lds:
+  case Intrinsic::amdgcn_tensor_store_from_lds: {
+    Value *D2 = II.getArgOperand(2);
+    Value *D3 = II.getArgOperand(3);
+    // We know that not passing the second and third tensor DMA groups is
+    // equivalent to passing zeroes for those registers, so we rewrite to the
+    // shorter form here. Undef or poison are replaced by 0.
+    auto Pred = m_CombineOr(m_Zero(), m_Undef());
+    if (!match(D2, Pred) || !match(D3, Pred))
+      return std::nullopt;
+
+    auto ShortIntrinsic = IID == Intrinsic::amdgcn_tensor_load_to_lds
+                              ? Intrinsic::amdgcn_tensor_load_to_lds_d2
+                              : Intrinsic::amdgcn_tensor_store_from_lds_d2;
+    CallInst *NewII = IC.Builder.CreateIntrinsic(
+        ShortIntrinsic,
+        {II.getArgOperand(0), II.getArgOperand(1), II.getArgOperand(4)});
+    NewII->takeName(&II);
+    NewII->copyMetadata(II);
+    return IC.eraseInstFromFunction(II);
   }
   }
   if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =

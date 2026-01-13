@@ -90,7 +90,7 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
 
   Operation *maskOp = mask.getDefiningOp();
   SmallVector<vector::ExtractOp, 2> extractOps;
-  // TODO: add support to `vector.splat`.
+  // TODO: add support to `vector.broadcast`.
   // Finding the mask creation operation.
   while (maskOp &&
          !isa<arith::ConstantOp, vector::CreateMaskOp, vector::ConstantMaskOp>(

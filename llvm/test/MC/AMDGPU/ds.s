@@ -2,8 +2,8 @@
 // RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire  -show-encoding %s | FileCheck %s --check-prefixes=CI,SICI
 // RUN: llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefix=VI
 
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck %s --check-prefixes=NOSI,NOSICI --implicit-check-not=error:
-// RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire %s 2>&1 | FileCheck %s --check-prefix=NOSICI --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=NOSI,NOSICI --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire %s -filetype=null 2>&1 | FileCheck %s --check-prefix=NOSICI --implicit-check-not=error:
 
 //===----------------------------------------------------------------------===//
 // Checks for 16-bit Offsets

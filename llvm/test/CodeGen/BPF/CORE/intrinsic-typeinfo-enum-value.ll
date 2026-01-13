@@ -20,7 +20,7 @@ target triple = "bpf"
 @2 = private unnamed_addr constant [18 x i8] c"VAL10:-2147483648\00", align 1
 
 ; Function Attrs: nounwind readnone
-define dso_local i32 @test() local_unnamed_addr #0 !dbg !18 {
+define dso_local i32 @test() local_unnamed_addr !dbg !18 {
 entry:
   %0 = tail call i64 @llvm.bpf.preserve.enum.value(i32 0, ptr @0, i64 0), !dbg !23, !llvm.preserve.access.index !3
   %1 = tail call i64 @llvm.bpf.preserve.enum.value(i32 1, ptr @1, i64 1), !dbg !24, !llvm.preserve.access.index !3
@@ -81,10 +81,7 @@ entry:
 ; CHECK-NEXT:        .long   11
 
 ; Function Attrs: nounwind readnone
-declare i64 @llvm.bpf.preserve.enum.value(i32, ptr, i64) #1
-
-attributes #0 = { nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone }
+declare i64 @llvm.bpf.preserve.enum.value(i32, ptr, i64)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!14, !15, !16}

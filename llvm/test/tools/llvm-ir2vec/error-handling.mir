@@ -1,0 +1,41 @@
+# REQUIRES: x86_64-linux
+# Test error handling and input validation for llvm-ir2vec tool in MIR mode
+
+# RUN: not llvm-ir2vec embeddings --mode=mir %s 2>&1 | FileCheck %s -check-prefix=CHECK-NO-VOCAB
+# RUN: not llvm-ir2vec embeddings --mode=mir --mir2vec-vocab-path=%S/nonexistent-vocab.json %s 2>&1 | FileCheck %s -check-prefix=CHECK-VOCAB-NOT-FOUND
+# RUN: not llvm-ir2vec embeddings --mode=mir --mir2vec-vocab-path=%S/../../CodeGen/MIR2Vec/Inputs/mir2vec_invalid_vocab.json %s 2>&1 | FileCheck %s -check-prefix=CHECK-INVALID-VOCAB
+# RUN: not llvm-ir2vec embeddings --mode=mir --function=nonexistent_function --mir2vec-vocab-path=%S/../../CodeGen/MIR2Vec/Inputs/mir2vec_dummy_3D_vocab.json %s 2>&1 | FileCheck %s -check-prefix=CHECK-FUNC-NOT-FOUND
+
+--- |
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+  
+  define dso_local noundef i32 @test_function(i32 noundef %a) {
+  entry:
+    ret i32 %a
+  }
+...
+---
+name:            test_function
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr32 }
+liveins:
+  - { reg: '$edi', virtual-reg: '%0' }
+body:             |
+  bb.0.entry:
+    liveins: $edi
+  
+    %0:gr32 = COPY $edi
+    $eax = COPY %0
+    RET 0, $eax
+
+# CHECK-NO-VOCAB: error: Failed to load MIR2Vec vocabulary - MIR2Vec vocabulary file path not specified; set it using --mir2vec-vocab-path
+
+# CHECK-VOCAB-NOT-FOUND: error: Failed to load MIR2Vec vocabulary
+# CHECK-VOCAB-NOT-FOUND: No such file or directory
+
+# CHECK-INVALID-VOCAB: error: Failed to load MIR2Vec vocabulary - Missing 'Opcodes' section in vocabulary file
+
+# CHECK-FUNC-NOT-FOUND: error: Function 'nonexistent_function' not found

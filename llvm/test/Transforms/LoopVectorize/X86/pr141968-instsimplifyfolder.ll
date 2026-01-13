@@ -97,8 +97,7 @@ define i8 @pr141968(i1 %cond, i8 %v) {
 ; CHECK:       [[PRED_SDIV_IF29]]:
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE30]]
 ; CHECK:       [[PRED_SDIV_CONTINUE30]]:
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <16 x i1> [[BROADCAST_SPLAT]], i32 0
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP18]], i8 0, i8 [[V]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[COND]], i8 0, i8 [[V]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

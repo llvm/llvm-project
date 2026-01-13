@@ -1,17 +1,8 @@
-; RUN: opt %loadNPMPolly -polly-parallel \
-; RUN: -polly-parallel-force -passes=polly-codegen \
-; RUN: -S -verify-dom-info < %s \
-; RUN: | FileCheck %s -check-prefix=IR
+; RUN: opt %loadNPMPolly -polly-parallel -polly-parallel-force '-passes=polly<no-default-opts>' -S -verify-dom-info < %s | FileCheck %s -check-prefix=IR
 
-; RUN: opt %loadNPMPolly -polly-parallel \
-; RUN: -polly-parallel-force -passes=polly-codegen -polly-scheduling=runtime \
-; RUN: -S -verify-dom-info < %s \
-; RUN: | FileCheck %s -check-prefix=IR
+; RUN: opt %loadNPMPolly -polly-parallel -polly-parallel-force '-passes=polly<no-default-opts>' -polly-scheduling=runtime -S -verify-dom-info < %s | FileCheck %s -check-prefix=IR
 
-; RUN: opt %loadNPMPolly -polly-parallel \
-; RUN: -polly-parallel-force -passes=polly-codegen -polly-omp-backend=LLVM \
-; RUN: -S -verify-dom-info < %s \
-; RUN: | FileCheck %s -check-prefix=LIBOMP-IR
+; RUN: opt %loadNPMPolly -polly-parallel -polly-parallel-force '-passes=polly<no-default-opts>' -polly-omp-backend=LLVM -S -verify-dom-info < %s | FileCheck %s -check-prefix=LIBOMP-IR
 
 ; IR: @GOMP_parallel_loop_runtime_start
 
@@ -23,7 +14,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 @longLimit = external global [9 x [23 x i32]], align 16
 @shortLimit = external global [9 x [14 x i32]], align 16
 
-define void @init_layer3(i32 %down_sample_sblimit) #0 {
+define void @init_layer3(i32 %down_sample_sblimit) {
 entry:
   br label %for.cond.463.preheader
 
@@ -62,8 +53,6 @@ for.inc.530:                                      ; preds = %for.inc.527
   %exitcond142 = icmp ne i64 %indvars.iv.next141, 9
   br i1 %exitcond142, label %for.cond.499.preheader, label %for.cond.533.preheader
 }
-
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.ident = !{!0}
 

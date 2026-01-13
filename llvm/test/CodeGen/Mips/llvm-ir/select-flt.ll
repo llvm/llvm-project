@@ -595,11 +595,8 @@ define float @tst_select_fcmp_one_float(float %x, float %y) {
 ; 32R6-LABEL: tst_select_fcmp_one_float:
 ; 32R6:       # %bb.0: # %entry
 ; 32R6-NEXT:    cmp.ueq.s $f0, $f12, $f14
-; 32R6-NEXT:    mfc1 $1, $f0
-; 32R6-NEXT:    not $1, $1
-; 32R6-NEXT:    mtc1 $1, $f0
 ; 32R6-NEXT:    jr $ra
-; 32R6-NEXT:    sel.s $f0, $f14, $f12
+; 32R6-NEXT:    sel.s $f0, $f12, $f14
 ;
 ; M3-LABEL: tst_select_fcmp_one_float:
 ; M3:       # %bb.0: # %entry
@@ -623,11 +620,8 @@ define float @tst_select_fcmp_one_float(float %x, float %y) {
 ; 64R6-LABEL: tst_select_fcmp_one_float:
 ; 64R6:       # %bb.0: # %entry
 ; 64R6-NEXT:    cmp.ueq.s $f0, $f12, $f13
-; 64R6-NEXT:    mfc1 $1, $f0
-; 64R6-NEXT:    not $1, $1
-; 64R6-NEXT:    mtc1 $1, $f0
 ; 64R6-NEXT:    jr $ra
-; 64R6-NEXT:    sel.s $f0, $f13, $f12
+; 64R6-NEXT:    sel.s $f0, $f12, $f13
 ;
 ; MM32R3-LABEL: tst_select_fcmp_one_float:
 ; MM32R3:       # %bb.0: # %entry
@@ -639,10 +633,7 @@ define float @tst_select_fcmp_one_float(float %x, float %y) {
 ; MM32R6-LABEL: tst_select_fcmp_one_float:
 ; MM32R6:       # %bb.0: # %entry
 ; MM32R6-NEXT:    cmp.ueq.s $f0, $f12, $f14
-; MM32R6-NEXT:    mfc1 $1, $f0
-; MM32R6-NEXT:    not $1, $1
-; MM32R6-NEXT:    mtc1 $1, $f0
-; MM32R6-NEXT:    sel.s $f0, $f14, $f12
+; MM32R6-NEXT:    sel.s $f0, $f12, $f14
 ; MM32R6-NEXT:    jrc $ra
 entry:
   %s = fcmp one float %x, %y

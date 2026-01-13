@@ -1470,21 +1470,20 @@ define amdgpu_kernel void @s_shl_inline_imm_1_i64(ptr addrspace(1) %out, ptr add
 ;
 ; EG-LABEL: s_shl_inline_imm_1_i64:
 ; EG:       ; %bb.0:
-; EG-NEXT:    ALU 11, @4, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 10, @4, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XY, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    ALU clause starting at 4:
 ; EG-NEXT:     AND_INT T0.W, KC0[2].W, literal.x,
-; EG-NEXT:     LSHL * T1.W, KC0[2].W, literal.y,
-; EG-NEXT:    31(4.344025e-44), 26(3.643376e-44)
-; EG-NEXT:     ASHR T1.W, PS, literal.x,
-; EG-NEXT:     LSHL * T0.W, 1, PV.W,
+; EG-NEXT:     NOT_INT * T1.W, KC0[2].W,
 ; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     AND_INT T0.Y, PV.W, PS,
-; EG-NEXT:     AND_INT * T1.W, KC0[2].W, literal.x,
+; EG-NEXT:     BIT_ALIGN_INT T0.Z, 0.0, 0.0, PS,
+; EG-NEXT:     AND_INT T1.W, KC0[2].W, literal.x,
+; EG-NEXT:     LSHL * T0.W, 1, PV.W,
 ; EG-NEXT:    32(4.484155e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T0.X, PV.W, T0.W, 0.0,
+; EG-NEXT:     CNDE_INT * T0.Y, PV.W, PV.Z, PS,
+; EG-NEXT:     CNDE_INT T0.X, T1.W, T0.W, 0.0,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %shl = shl i64 1, %a
