@@ -13,9 +13,7 @@ define i16 @t0(i8 %x) {
 ; CHECK-LABEL: @t0(
 ; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 5
 ; CHECK-NEXT:    call void @use8(i8 [[A]])
-; CHECK-NEXT:    [[B:%.*]] = zext i8 [[A]] to i16
-; CHECK-NEXT:    [[SEXT:%.*]] = shl i16 [[B]], 12
-; CHECK-NEXT:    [[C:%.*]] = ashr exact i16 [[SEXT]], 12
+; CHECK-NEXT:    [[C:%.*]] = sext i8 [[A]] to i16
 ; CHECK-NEXT:    ret i16 [[C]]
 ;
   %a = ashr i8 %x, 5
@@ -29,9 +27,7 @@ define i16 @t1(i8 %x) {
 ; CHECK-LABEL: @t1(
 ; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 4
 ; CHECK-NEXT:    call void @use8(i8 [[A]])
-; CHECK-NEXT:    [[B:%.*]] = zext i8 [[A]] to i16
-; CHECK-NEXT:    [[SEXT:%.*]] = shl i16 [[B]], 12
-; CHECK-NEXT:    [[C:%.*]] = ashr exact i16 [[SEXT]], 12
+; CHECK-NEXT:    [[C:%.*]] = sext i8 [[A]] to i16
 ; CHECK-NEXT:    ret i16 [[C]]
 ;
   %a = ashr i8 %x, 4
@@ -46,9 +42,8 @@ define i16 @n2(i8 %x) {
 ; CHECK-LABEL: @n2(
 ; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 3
 ; CHECK-NEXT:    call void @use8(i8 [[A]])
-; CHECK-NEXT:    [[B:%.*]] = zext i8 [[A]] to i16
-; CHECK-NEXT:    [[SEXT:%.*]] = shl i16 [[B]], 12
-; CHECK-NEXT:    [[C:%.*]] = ashr exact i16 [[SEXT]], 12
+; CHECK-NEXT:    [[B:%.*]] = trunc i8 [[A]] to i4
+; CHECK-NEXT:    [[C:%.*]] = sext i4 [[B]] to i16
 ; CHECK-NEXT:    ret i16 [[C]]
 ;
   %a = ashr i8 %x, 3
@@ -150,8 +145,9 @@ define i24 @wide_source_matching_signbits(i32 %x) {
 }
 
 define i32 @wide_source_matching_signbits_has_nsw_flag(i64 %i) {
-; CHECK-LABEL: @wide_source_matching_signbits_has_nsw_flag(
-; CHECK-NEXT:    [[A:%.*]] = trunc nsw i64 [[I:%.*]] to i32
+; CHECK-LABEL: define i32 @wide_source_matching_signbits_has_nsw_flag(
+; CHECK-SAME: i64 [[I:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = trunc nsw i64 [[I]] to i32
 ; CHECK-NEXT:    ret i32 [[A]]
 ;
   %a = trunc nsw i64 %i to i16
