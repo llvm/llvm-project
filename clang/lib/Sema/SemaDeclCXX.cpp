@@ -10993,7 +10993,7 @@ static void checkMethodTypeQualifiers(Sema &S, Declarator &D, unsigned DiagID) {
     bool DiagOccurred = false;
     FTI.MethodQualifiers->forEachQualifier(
         [DiagID, &S, &DiagOccurred](DeclSpec::TQ, StringRef QualName,
-                                   SourceLocation SL) {
+                                    SourceLocation SL) {
           // This diagnostic should be emitted on any qualifier except an addr
           // space qualifier. However, forEachQualifier currently doesn't visit
           // addr space qualifiers, so there's no way to write this condition
