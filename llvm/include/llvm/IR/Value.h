@@ -484,8 +484,8 @@ public:
   /// Remove every uses that can safely be removed.
   ///
   /// This will remove for example uses in llvm.assume.
-  /// This should be used when performing want to perform a tranformation but
-  /// some Droppable uses pervent it.
+  /// This should be used when performing want to perform a transformation but
+  /// some Droppable uses prevent it.
   /// This function optionally takes a filter to only remove some droppable
   /// uses.
   LLVM_ABI void

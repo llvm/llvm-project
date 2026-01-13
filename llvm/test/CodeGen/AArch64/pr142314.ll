@@ -10,14 +10,14 @@ define <2 x ptr addrspace(1)> @widget() nounwind gc "statepoint-example" {
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    mov x0, xzr
 ; CHECK-NEXT:    mov x1, xzr
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    str q0, [sp]
 ; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    blr xzr
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    orr x8, x8, #0x8
 ; CHECK-NEXT:    ld1 { v0.d }[1], [x8]
 ; CHECK-NEXT:    add sp, sp, #32

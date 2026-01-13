@@ -248,6 +248,8 @@ LogicalResult spirv::Deserializer::processInstruction(
     return processLoopMerge(operands);
   case spirv::Opcode::OpPhi:
     return processPhi(operands);
+  case spirv::Opcode::OpSwitch:
+    return processSwitch(operands);
   case spirv::Opcode::OpUndef:
     return processUndef(operands);
   default:

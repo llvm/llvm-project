@@ -4300,13 +4300,3 @@ define i64 @test_rint_ui64(half %x) nounwind {
   ret i64 %b
 }
 
-declare half @llvm.floor.f16(half)
-declare half @llvm.ceil.f16(half)
-declare half @llvm.trunc.f16(half)
-declare half @llvm.round.f16(half)
-declare half @llvm.roundeven.f16(half)
-declare half @llvm.rint.f16(half)
-declare i32 @llvm.fptosi.sat.i32.f16(half)
-declare i64 @llvm.fptosi.sat.i64.f16(half)
-declare i32 @llvm.fptoui.sat.i32.f16(half)
-declare i64 @llvm.fptoui.sat.i64.f16(half)

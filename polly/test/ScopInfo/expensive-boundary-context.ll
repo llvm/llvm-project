@@ -1,5 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-detect>,print<polly-function-scops>' -disable-output \
-; RUN:                < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-detect -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
 
 ; CHECK-NOT:   Assumed Context:
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -16,7 +15,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 %struct.foo.1 = type { [3 x i32], [3 x i32], i32, i32, [4 x i32], [4 x i32] }
 
 ; Function Attrs: nounwind uwtable
-define void @hoge() #0 {
+define void @hoge() {
 bb:
   %tmp52 = alloca ptr, align 8
   %tmp53 = alloca ptr, align 8
@@ -249,8 +248,6 @@ bb244:                                            ; preds = %bb232
 bb245:                                            ; preds = %bb244, %bb232
   unreachable
 }
-
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.ident = !{!0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0, !0}
 

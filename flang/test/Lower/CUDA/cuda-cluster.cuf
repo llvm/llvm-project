@@ -1,0 +1,55 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+attributes(global) subroutine test_this_cluster()
+  use cooperative_groups
+  type(cluster_group) :: cluster
+
+  cluster = this_cluster()
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_this_cluster() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
+! CHECK: %{{.*}} = fir.alloca !fir.type<_QMcooperative_groupsTcluster_group
+! CHECK: %[[RES:.*]] = fir.alloca !fir.type<_QMcooperative_groupsTcluster_group{_QMcooperative_groupsTcluster_group.handle:!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>,size:i32,rank:i32}>
+! CHECK: %[[RANK:.*]] = nvvm.read.ptx.sreg.cluster.ctarank : i32
+! CHECK: %[[RANK_1:.*]] = arith.addi %[[RANK]], %c1{{.*}} : i32 
+! CHECK: %[[RANK_COORD:.*]] = fir.coordinate_of %[[RES]], rank : (!fir.ref<!fir.type<_QMcooperative_groupsTcluster_group{_QMcooperative_groupsTcluster_group.handle:!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>,size:i32,rank:i32}>>) -> !fir.ref<i32>
+! CHECK: fir.store %[[RANK_1]] to %[[RANK_COORD]] : !fir.ref<i32>
+  
+attributes(global) subroutine test_cluster_dim_blocks()
+  use cooperative_groups
+  type(dim3) :: clusterDim
+
+  clusterDim = cluster_dim_blocks()
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_cluster_dim_blocks() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
+! CHECK: %[[X:.*]] = nvvm.read.ptx.sreg.cluster.nctaid.x : i32
+! CHECK: %[[COORD_X:.*]] = fir.coordinate_of %{{.*}}, x : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<i32>
+! CHECK: fir.store %[[X]] to %[[COORD_X]] : !fir.ref<i32>
+! CHECK: %[[Y:.*]] = nvvm.read.ptx.sreg.cluster.nctaid.y : i32
+! CHECK: %[[COORD_Y:.*]] = fir.coordinate_of %{{.*}}, y : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<i32>
+! CHECK: fir.store %[[Y]] to %[[COORD_Y]] : !fir.ref<i32>
+! CHECK: %[[Z:.*]] = nvvm.read.ptx.sreg.cluster.nctaid.z : i32
+! CHECK: %[[COORD_Z:.*]] = fir.coordinate_of %{{.*}}, z : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<i32>
+! CHECK: fir.store %[[Z]] to %[[COORD_Z]] : !fir.ref<i32>
+
+attributes(global) subroutine test_cluster_block_index()
+  use cooperative_groups
+  type(dim3) :: blockIndex
+
+  blockIndex = cluster_block_index()
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_cluster_block_index() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
+! CHECK: %[[X:.*]] = nvvm.read.ptx.sreg.cluster.ctaid.x : i32
+! CHECK: %[[X1:.*]] = arith.addi %[[X]], %c1{{.*}} : i32 
+! CHECK: %[[COORD_X:.*]] = fir.coordinate_of %{{.*}}, x : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<i32>
+! CHECK: fir.store %[[X1]] to %[[COORD_X]] : !fir.ref<i32>
+! CHECK: %[[Y:.*]] = nvvm.read.ptx.sreg.cluster.ctaid.y : i32
+! CHECK: %[[Y1:.*]] = arith.addi %[[Y]], %c1{{.*}} : i32 
+! CHECK: %[[COORD_Y:.*]] = fir.coordinate_of %{{.*}}, y : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<i32>
+! CHECK: fir.store %[[Y1]] to %[[COORD_Y]] : !fir.ref<i32>
+! CHECK: %[[Z:.*]] = nvvm.read.ptx.sreg.cluster.ctaid.z : i32
+! CHECK: %[[Z1:.*]] = arith.addi %[[Z]], %c1{{.*}} : i32 
+! CHECK: %[[COORD_Z:.*]] = fir.coordinate_of %{{.*}}, z : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<i32>
+! CHECK: fir.store %[[Z1]] to %[[COORD_Z]] : !fir.ref<i32>

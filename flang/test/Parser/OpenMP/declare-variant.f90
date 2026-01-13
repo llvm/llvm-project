@@ -13,7 +13,7 @@ subroutine sub0
 !PARSE-TREE: | | OmpTraitSetSelectorName -> Value = Construct
 !PARSE-TREE: | | OmpTraitSelector
 !PARSE-TREE: | | | OmpTraitSelectorName -> llvm::omp::Directive = parallel
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
   !$omp declare variant (sub:vsub) match (construct={parallel})
 contains
@@ -43,7 +43,7 @@ contains
 !PARSE-TREE: | | OmpTraitSetSelectorName -> Value = Construct
 !PARSE-TREE: | | OmpTraitSelector
 !PARSE-TREE: | | | OmpTraitSelectorName -> llvm::omp::Directive = dispatch
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
     !$omp declare variant(vsub), match(construct={dispatch})
     integer, value :: v1
@@ -75,7 +75,7 @@ contains
 !PARSE-TREE: | | | OmpTraitSelectorName -> llvm::omp::Directive = dispatch
 !PARSE-TREE: | OmpClause -> AppendArgs -> OmpAppendArgsClause -> OmpAppendOp -> OmpInteropType -> Value = Target
 !PARSE-TREE: | OmpAppendOp -> OmpInteropType -> Value = Target
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
     !$omp declare variant(vsub), match(construct={dispatch}), append_args (interop(target), interop(target))
     integer, value :: v1
@@ -107,7 +107,7 @@ contains
 !PARSE-TREE: | OmpClause -> AdjustArgs -> OmpAdjustArgsClause
 !PARSE-TREE: | | OmpAdjustOp -> Value = Need_Device_Ptr
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'v2'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
     !$omp declare variant(vsub) match ( construct = { dispatch } ) adjust_args(nothing : v1 ) adjust_args(need_device_ptr : v2)
   end
@@ -121,7 +121,7 @@ subroutine f
   y = 2
   !omp simd
   call f2(x, y)
-  !omp end simd 
+  !omp end simd
 contains
   subroutine f1 (x, y)
     real :: x, y
@@ -143,4 +143,4 @@ end subroutine
 !PARSE-TREE: | | | OmpTraitSelectorName -> Value = Simd
 !PARSE-TREE: | | | Properties
 !PARSE-TREE: | | | | OmpTraitProperty -> OmpClause -> Uniform -> Name = 'y'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}

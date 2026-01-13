@@ -408,7 +408,7 @@ operations:
   MemoryDependencyAnalysis (which is also used by other passes like GVN).
 
 * Folding a load: Any atomic load from a constant global can be constant-folded,
-  because it cannot be observed.  Similar reasoning allows sroa with
+  because it cannot be observed.  Similar reasoning allows SROA with
   atomic loads and stores.
 
 Atomics and Codegen

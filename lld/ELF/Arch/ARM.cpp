@@ -472,7 +472,7 @@ bool ARM::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
     // Bit 0 == 1 denotes Thumb state, it is not part of the range.
     dst &= ~0x1;
 
-  int64_t offset = dst - src;
+  int64_t offset = llvm::SignExtend64<32>(dst - src);
   switch (type) {
   case R_ARM_PC24:
   case R_ARM_PLT32:

@@ -16,7 +16,7 @@ namespace llvm {
 class BPFTargetLoweringObjectFileELF : public TargetLoweringObjectFileELF {
 
 public:
-  virtual MCSection *
+  MCSection *
   getSectionForJumpTable(const Function &F, const TargetMachine &TM,
                          const MachineJumpTableEntry *JTE) const override;
 };

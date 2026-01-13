@@ -3,11 +3,6 @@ function(_get_common_test_compile_options output_var c_test flags)
   _get_compile_options_from_config(config_flags)
   _get_compile_options_from_arch(arch_flags)
 
-  # Remove -fno-math-errno if it was added.
-  if(LIBC_ADD_FNO_MATH_ERRNO)
-    list(REMOVE_ITEM compile_flags "-fno-math-errno")
-  endif()
-
   # Death test executor is only available in Linux for now.
   if(NOT ${LIBC_TARGET_OS} STREQUAL "linux")
     list(REMOVE_ITEM config_flags "-DLIBC_ADD_NULL_CHECKS")
@@ -295,6 +290,7 @@ function(create_libc_unittest fq_target_name)
   )
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
+  target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_BUILD_DIR})
   target_compile_options(${fq_build_target_name} PRIVATE ${compile_options})
   target_link_options(${fq_build_target_name} PRIVATE ${link_options})
 

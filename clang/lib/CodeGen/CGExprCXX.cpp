@@ -503,6 +503,11 @@ RValue CodeGenFunction::EmitCXXOperatorMemberCallExpr(
 RValue CodeGenFunction::EmitCUDAKernelCallExpr(const CUDAKernelCallExpr *E,
                                                ReturnValueSlot ReturnValue,
                                                llvm::CallBase **CallOrInvoke) {
+  // Emit as a device kernel call if CUDA device code is to be generated.
+  // TODO: implement for HIP
+  if (!getLangOpts().HIP && getLangOpts().CUDAIsDevice)
+    return CGM.getCUDARuntime().EmitCUDADeviceKernelCallExpr(
+        *this, E, ReturnValue, CallOrInvoke);
   return CGM.getCUDARuntime().EmitCUDAKernelCallExpr(*this, E, ReturnValue,
                                                      CallOrInvoke);
 }
@@ -1236,8 +1241,8 @@ void CodeGenFunction::EmitNewArrayInitializer(
   if (auto *ILE = dyn_cast<InitListExpr>(Init)) {
     if (const RecordType *RType =
             ILE->getType()->getAsCanonical<RecordType>()) {
-      if (RType->getOriginalDecl()->isStruct()) {
-        const RecordDecl *RD = RType->getOriginalDecl()->getDefinitionOrSelf();
+      if (RType->getDecl()->isStruct()) {
+        const RecordDecl *RD = RType->getDecl()->getDefinitionOrSelf();
         unsigned NumElements = 0;
         if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
           NumElements = CXXRD->getNumBases();
@@ -1371,8 +1376,16 @@ RValue CodeGenFunction::EmitBuiltinNewDeleteCall(const FunctionProtoType *Type,
 
   for (auto *Decl : Ctx.getTranslationUnitDecl()->lookup(Name))
     if (auto *FD = dyn_cast<FunctionDecl>(Decl))
-      if (Ctx.hasSameType(FD->getType(), QualType(Type, 0)))
-        return EmitNewDeleteCall(*this, FD, Type, Args);
+      if (Ctx.hasSameType(FD->getType(), QualType(Type, 0))) {
+        RValue RV = EmitNewDeleteCall(*this, FD, Type, Args);
+        if (auto *CB = dyn_cast_if_present<llvm::CallBase>(RV.getScalarVal())) {
+          if (SanOpts.has(SanitizerKind::AllocToken)) {
+            // Set !alloc_token metadata.
+            EmitAllocToken(CB, TheCall);
+          }
+        }
+        return RV;
+      }
   llvm_unreachable("predeclared global operator new/delete is missing");
 }
 
@@ -1655,11 +1668,16 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
     RValue RV =
       EmitNewDeleteCall(*this, allocator, allocatorType, allocatorArgs);
 
-    // Set !heapallocsite metadata on the call to operator new.
-    if (getDebugInfo())
-      if (auto *newCall = dyn_cast<llvm::CallBase>(RV.getScalarVal()))
-        getDebugInfo()->addHeapAllocSiteMetadata(newCall, allocType,
-                                                 E->getExprLoc());
+    if (auto *newCall = dyn_cast<llvm::CallBase>(RV.getScalarVal())) {
+      if (auto *CGDI = getDebugInfo()) {
+        // Set !heapallocsite metadata on the call to operator new.
+        CGDI->addHeapAllocSiteMetadata(newCall, allocType, E->getExprLoc());
+      }
+      if (SanOpts.has(SanitizerKind::AllocToken)) {
+        // Set !alloc_token metadata.
+        EmitAllocToken(newCall, allocType);
+      }
+    }
 
     // If this was a call to a global replaceable allocation function that does
     // not take an alignment argument, the allocator is known to produce
@@ -1899,10 +1917,8 @@ static void EmitDestroyingObjectDelete(CodeGenFunction &CGF,
 /// Emit the code for deleting a single object.
 /// \return \c true if we started emitting UnconditionalDeleteBlock, \c false
 /// if not.
-static bool EmitObjectDelete(CodeGenFunction &CGF,
-                             const CXXDeleteExpr *DE,
-                             Address Ptr,
-                             QualType ElementType,
+static bool EmitObjectDelete(CodeGenFunction &CGF, const CXXDeleteExpr *DE,
+                             Address Ptr, QualType ElementType,
                              llvm::BasicBlock *UnconditionalDeleteBlock) {
   // C++11 [expr.delete]p3:
   //   If the static type of the object to be deleted is different from its
@@ -2095,6 +2111,42 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
   // We might be deleting a pointer to array.
   DeleteTy = getContext().getBaseElementType(DeleteTy);
   Ptr = Ptr.withElementType(ConvertTypeForMem(DeleteTy));
+
+  if (E->isArrayForm() &&
+      CGM.getContext().getTargetInfo().emitVectorDeletingDtors(
+          CGM.getContext().getLangOpts())) {
+    if (auto *RD = DeleteTy->getAsCXXRecordDecl()) {
+      auto *Dtor = RD->getDestructor();
+      if (Dtor && Dtor->isVirtual()) {
+        llvm::Value *NumElements = nullptr;
+        llvm::Value *AllocatedPtr = nullptr;
+        CharUnits CookieSize;
+        llvm::BasicBlock *BodyBB = createBasicBlock("vdtor.call");
+        llvm::BasicBlock *DoneBB = createBasicBlock("vdtor.nocall");
+        // Check array cookie to see if the array has length 0. Don't call
+        // the destructor in that case.
+        CGM.getCXXABI().ReadArrayCookie(*this, Ptr, E, DeleteTy, NumElements,
+                                        AllocatedPtr, CookieSize);
+
+        auto *CondTy = cast<llvm::IntegerType>(NumElements->getType());
+        llvm::Value *IsEmpty = Builder.CreateICmpEQ(
+            NumElements, llvm::ConstantInt::get(CondTy, 0));
+        Builder.CreateCondBr(IsEmpty, DoneBB, BodyBB);
+
+        // Delete cookie for empty array.
+        const FunctionDecl *OperatorDelete = E->getOperatorDelete();
+        EmitBlock(DoneBB);
+        EmitDeleteCall(OperatorDelete, AllocatedPtr, DeleteTy, NumElements,
+                       CookieSize);
+        EmitBranch(DeleteEnd);
+
+        EmitBlock(BodyBB);
+        if (!EmitObjectDelete(*this, E, Ptr, DeleteTy, DeleteEnd))
+          EmitBlock(DeleteEnd);
+        return;
+      }
+    }
+  }
 
   if (E->isArrayForm()) {
     EmitArrayDelete(*this, E, Ptr, DeleteTy);

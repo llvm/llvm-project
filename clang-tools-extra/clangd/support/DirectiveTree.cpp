@@ -305,8 +305,8 @@ private:
     if (&Value >= Tokens.end() || &Value.nextNC() < Tokens.end())
       return std::nullopt;
     return llvm::StringSwitch<std::optional<bool>>(Value.text())
-        .Cases("true", "1", true)
-        .Cases("false", "0", false)
+        .Cases({"true", "1"}, true)
+        .Cases({"false", "0"}, false)
         .Default(std::nullopt);
   }
 

@@ -955,8 +955,8 @@ void SourceCoverageViewHTML::renderLine(raw_ostream &OS, LineRef L,
 
   // 2. Escape all of the snippets.
 
-  for (unsigned I = 0, E = Snippets.size(); I < E; ++I)
-    Snippets[I] = escape(Snippets[I], getOptions());
+  for (std::string &Snippet : Snippets)
+    Snippet = escape(Snippet, getOptions());
 
   // 3. Use \p WrappedSegment to set the highlight for snippet 0. Use segment
   //    1 to set the highlight for snippet 2, segment 2 to set the highlight for

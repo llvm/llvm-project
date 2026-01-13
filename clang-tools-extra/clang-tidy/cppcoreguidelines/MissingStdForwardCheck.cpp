@@ -26,11 +26,12 @@ AST_MATCHER_P(QualType, possiblyPackExpansionOf,
 }
 
 AST_MATCHER(ParmVarDecl, isTemplateTypeParameter) {
-  ast_matchers::internal::Matcher<QualType> Inner = possiblyPackExpansionOf(
-      qualType(rValueReferenceType(),
-               references(templateTypeParmType(
-                   hasDeclaration(templateTypeParmDecl()))),
-               unless(references(qualType(isConstQualified())))));
+  const ast_matchers::internal::Matcher<QualType> Inner =
+      possiblyPackExpansionOf(
+          qualType(rValueReferenceType(),
+                   references(templateTypeParmType(
+                       hasDeclaration(templateTypeParmDecl()))),
+                   unless(references(qualType(isConstQualified())))));
   if (!Inner.matches(Node.getType(), Finder, Builder))
     return false;
 
@@ -43,7 +44,7 @@ AST_MATCHER(ParmVarDecl, isTemplateTypeParameter) {
   if (!FuncTemplate)
     return false;
 
-  QualType ParamType =
+  const QualType ParamType =
       Node.getType().getNonPackExpansionType()->getPointeeType();
   const auto *TemplateType = ParamType->getAsCanonical<TemplateTypeParmType>();
   if (!TemplateType)
@@ -54,10 +55,10 @@ AST_MATCHER(ParmVarDecl, isTemplateTypeParameter) {
 }
 
 AST_MATCHER_P(NamedDecl, hasSameNameAsBoundNode, std::string, BindingID) {
-  IdentifierInfo *II = Node.getIdentifier();
+  const IdentifierInfo *II = Node.getIdentifier();
   if (nullptr == II)
     return false;
-  StringRef Name = II->getName();
+  const StringRef Name = II->getName();
 
   return Builder->removeBindings(
       [this, Name](const ast_matchers::internal::BoundNodesMap &Nodes) {

@@ -14,12 +14,12 @@
 %__cblayout_PartiallyUsedCBuffer = type <{ float, i32 }>
 %__cblayout_AnotherCBuffer = type <{ <4 x float>, <4 x float> }>
 
-@UnusedCBuffer.cb = local_unnamed_addr global target("spirv.VulkanBuffer", target("spirv.Layout", %__cblayout_UnusedCBuffer, 4, 0), 2, 0) poison
+@UnusedCBuffer.cb = local_unnamed_addr global target("spirv.VulkanBuffer", %__cblayout_UnusedCBuffer, 2, 0) poison
 @UnusedCBuffer.str = private unnamed_addr constant [14 x i8] c"UnusedCBuffer\00", align 1
-@PartiallyUsedCBuffer.cb = local_unnamed_addr global target("spirv.VulkanBuffer", target("spirv.Layout", %__cblayout_PartiallyUsedCBuffer, 8, 0, 4), 2, 0) poison
+@PartiallyUsedCBuffer.cb = local_unnamed_addr global target("spirv.VulkanBuffer", %__cblayout_PartiallyUsedCBuffer, 2, 0) poison
 @used_member = external hidden local_unnamed_addr addrspace(12) global float, align 4
 @PartiallyUsedCBuffer.str = private unnamed_addr constant [21 x i8] c"PartiallyUsedCBuffer\00", align 1
-@AnotherCBuffer.cb = local_unnamed_addr global target("spirv.VulkanBuffer", target("spirv.Layout", %__cblayout_AnotherCBuffer, 32, 0, 16), 2, 0) poison
+@AnotherCBuffer.cb = local_unnamed_addr global target("spirv.VulkanBuffer", %__cblayout_AnotherCBuffer, 2, 0) poison
 @a = external hidden local_unnamed_addr addrspace(12) global <4 x float>, align 16
 @AnotherCBuffer.str = private unnamed_addr constant [15 x i8] c"AnotherCBuffer\00", align 1
 @.str = private unnamed_addr constant [7 x i8] c"output\00", align 1
@@ -28,18 +28,18 @@
 ; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(readwrite, argmem: write, inaccessiblemem: none)
 define void @main() local_unnamed_addr #1 {
 entry:
-  %UnusedCBuffer.cb_h.i.i = tail call target("spirv.VulkanBuffer", target("spirv.Layout", %__cblayout_UnusedCBuffer, 4, 0), 2, 0) @llvm.spv.resource.handlefromimplicitbinding.tspirv.VulkanBuffer_tspirv.Layout_s___cblayout_UnusedCBuffers_4_0t_2_0t(i32 0, i32 0, i32 1, i32 0, ptr nonnull @UnusedCBuffer.str)
-  store target("spirv.VulkanBuffer", target("spirv.Layout", %__cblayout_UnusedCBuffer, 4, 0), 2, 0) %UnusedCBuffer.cb_h.i.i, ptr @UnusedCBuffer.cb, align 8
+  %UnusedCBuffer.cb_h.i.i = tail call target("spirv.VulkanBuffer", %__cblayout_UnusedCBuffer, 2, 0) @llvm.spv.resource.handlefromimplicitbinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @UnusedCBuffer.str)
+  store target("spirv.VulkanBuffer", %__cblayout_UnusedCBuffer, 2, 0) %UnusedCBuffer.cb_h.i.i, ptr @UnusedCBuffer.cb, align 8
 
 ; CHECK: %[[tmp:[0-9]+]] = OpCopyObject {{%[0-9]+}} %[[PartiallyUsedCBuffer]]
 ; CHECK: %[[used_member_ptr:.+]] = OpAccessChain %{{.+}} %[[tmp]] %{{.+}} %[[uint_0:[0-9]+]]
-  %PartiallyUsedCBuffer.cb_h.i.i = tail call target("spirv.VulkanBuffer", target("spirv.Layout", %__cblayout_PartiallyUsedCBuffer, 8, 0, 4), 2, 0) @llvm.spv.resource.handlefromimplicitbinding.tspirv.VulkanBuffer_tspirv.Layout_s___cblayout_PartiallyUsedCBuffers_8_0_4t_2_0t(i32 1, i32 0, i32 1, i32 0, ptr nonnull @PartiallyUsedCBuffer.str)
-  store target("spirv.VulkanBuffer", target("spirv.Layout", %__cblayout_PartiallyUsedCBuffer, 8, 0, 4), 2, 0) %PartiallyUsedCBuffer.cb_h.i.i, ptr @PartiallyUsedCBuffer.cb, align 8
+  %PartiallyUsedCBuffer.cb_h.i.i = tail call target("spirv.VulkanBuffer", %__cblayout_PartiallyUsedCBuffer, 2, 0) @llvm.spv.resource.handlefromimplicitbinding(i32 1, i32 0, i32 1, i32 0, ptr nonnull @PartiallyUsedCBuffer.str)
+  store target("spirv.VulkanBuffer", %__cblayout_PartiallyUsedCBuffer, 2, 0) %PartiallyUsedCBuffer.cb_h.i.i, ptr @PartiallyUsedCBuffer.cb, align 8
 
 ; CHECK: %[[tmp:[0-9]+]] = OpCopyObject {{%[0-9]+}} %[[AnotherCBuffer]]
 ; CHECK: %[[a_ptr:.+]] = OpAccessChain %{{.+}} %[[tmp]] %{{.+}} %[[uint_0]]
-  %AnotherCBuffer.cb_h.i.i = tail call target("spirv.VulkanBuffer", target("spirv.Layout", %__cblayout_AnotherCBuffer, 32, 0, 16), 2, 0) @llvm.spv.resource.handlefromimplicitbinding.tspirv.VulkanBuffer_tspirv.Layout_s___cblayout_AnotherCBuffers_32_0_16t_2_0t(i32 2, i32 0, i32 1, i32 0, ptr nonnull @AnotherCBuffer.str)
-  store target("spirv.VulkanBuffer", target("spirv.Layout", %__cblayout_AnotherCBuffer, 32, 0, 16), 2, 0) %AnotherCBuffer.cb_h.i.i, ptr @AnotherCBuffer.cb, align 8
+  %AnotherCBuffer.cb_h.i.i = tail call target("spirv.VulkanBuffer", %__cblayout_AnotherCBuffer, 2, 0) @llvm.spv.resource.handlefromimplicitbinding(i32 2, i32 0, i32 1, i32 0, ptr nonnull @AnotherCBuffer.str)
+  store target("spirv.VulkanBuffer", %__cblayout_AnotherCBuffer, 2, 0) %AnotherCBuffer.cb_h.i.i, ptr @AnotherCBuffer.cb, align 8
   %0 = tail call target("spirv.Image", float, 5, 2, 0, 0, 2, 1) @llvm.spv.resource.handlefromimplicitbinding.tspirv.Image_f32_5_2_0_0_2_1t(i32 3, i32 0, i32 1, i32 0, ptr nonnull @.str)
 
   %2 = load float, ptr addrspace(12) @used_member, align 4
