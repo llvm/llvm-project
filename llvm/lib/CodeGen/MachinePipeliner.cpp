@@ -485,6 +485,61 @@ void MachinePipeliner::setPragmaPipelineOptions(MachineLoop &L) {
   }
 }
 
+/// Depth-first search to detect cycles among PHI dependencies.
+/// Returns true if a cycle is detected within the PHI-only subgraph.
+static bool hasPHICycleDFS(
+    unsigned Reg, const DenseMap<unsigned, SmallVector<unsigned, 2>> &PhiDeps,
+    SmallSet<unsigned, 8> &Visited, SmallSet<unsigned, 8> &RecStack) {
+
+  // If Reg is not a PHI-def it cannot contribute to a PHI cycle.
+  auto It = PhiDeps.find(Reg);
+  if (It == PhiDeps.end())
+    return false;
+
+  if (RecStack.count(Reg))
+    return true; // backedge.
+  if (Visited.count(Reg))
+    return false;
+
+  Visited.insert(Reg);
+  RecStack.insert(Reg);
+
+  for (unsigned Dep : It->second) {
+    if (hasPHICycleDFS(Dep, PhiDeps, Visited, RecStack))
+      return true;
+  }
+
+  RecStack.erase(Reg);
+  return false;
+}
+
+static bool hasPHICycle(const MachineBasicBlock *LoopHeader,
+                        const MachineRegisterInfo &MRI) {
+  DenseMap<unsigned, SmallVector<unsigned, 2>> PhiDeps;
+
+  // Collect PHI nodes and their dependencies.
+  for (const MachineInstr &MI : LoopHeader->phis()) {
+    unsigned DefReg = MI.getOperand(0).getReg();
+    auto Ins = PhiDeps.try_emplace(DefReg).first;
+
+    // PHI operands are (Reg, MBB) pairs starting at index 1.
+    for (unsigned I = 1; I < MI.getNumOperands(); I += 2)
+      Ins->second.push_back(MI.getOperand(I).getReg());
+  }
+
+  // DFS to detect cycles among PHI nodes.
+  SmallSet<unsigned, 8> Visited, RecStack;
+
+  // Start DFS from each PHI-def.
+  for (const auto &KV : PhiDeps) {
+    unsigned Reg = KV.first;
+    if (hasPHICycleDFS(Reg, PhiDeps, Visited, RecStack))
+      return true;
+  }
+
+  return false;
+}
+
 /// Return true if the loop can be software pipelined.  The algorithm is
 /// restricted to loops with a single basic block.  Make sure that the
 /// branch in the loop can be analyzed.
@@ -496,6 +551,11 @@ bool MachinePipeliner::canPipelineLoop(MachineLoop &L) {
              << "Not a single basic block: "
              << ore::NV("NumBlocks", L.getNumBlocks());
     });
+    return false;
+  }
+
+  if (hasPHICycle(L.getHeader(), MF->getRegInfo())) {
+    LLVM_DEBUG(dbgs() << "Cannot pipeline loop due to PHI cycle\n");
     return false;
   }
 
@@ -1214,8 +1274,19 @@ void SwingSchedulerDAG::updatePhiDependences() {
               HasPhiDef = Reg;
               // Add a chain edge to a dependent Phi that isn't an existing
               // predecessor.
-              if (SU->NodeNum < I.NodeNum && !I.isPred(SU))
-                I.addPred(SDep(SU, SDep::Barrier));
+
+              // %3:intregs = PHI %21:intregs, %bb.6, %7:intregs, %bb.1 - SU0
+              // %7:intregs = PHI %21:intregs, %bb.6, %13:intregs, %bb.1 - SU1
+              // %27:intregs = A2_zxtb %3:intregs - SU2
+              // %13:intregs = C2_muxri %45:predregs, 0, %46:intreg
+              // If we have dependent phis, SU0 should be the successor of SU1
+              // not the other way around. (it used to be SU1 is the successor
+              // of SU0). In some cases, SU0 is scheduled earlier than SU1
+              // resulting in bad IR as we do not have a value that can be used
+              // by SU2.
+
+              if (SU->NodeNum < I.NodeNum && !SU->isPred(&I))
+                SU->addPred(SDep(&I, SDep::Barrier));
             }
           }
         }

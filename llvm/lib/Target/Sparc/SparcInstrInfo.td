@@ -21,11 +21,12 @@ include "SparcInstrFormats.td"
 //===----------------------------------------------------------------------===//
 
 // True when generating 32-bit code.
-def Is32Bit : Predicate<"!Subtarget->is64Bit()">;
+def Is32Bit : Predicate<"!Subtarget->is64Bit()">,
+              AssemblerPredicate<(all_of (not Feature64Bit))>;
 
 // True when generating 64-bit code. This also implies HasV9.
 def Is64Bit : Predicate<"Subtarget->is64Bit()">,
-              AssemblerPredicate<(all_of FeatureV9)>;
+              AssemblerPredicate<(all_of Feature64Bit)>;
 
 def UseSoftMulDiv : Predicate<"Subtarget->useSoftMulDiv()">,
               AssemblerPredicate<(all_of FeatureSoftMulDiv)>;
@@ -369,7 +370,7 @@ def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_SPCallSeqStart,
 def callseq_end   : SDNode<"ISD::CALLSEQ_END",   SDT_SPCallSeqEnd,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
-def SDT_SPCall    : SDTypeProfile<0, -1, [SDTCisVT<0, i32>]>;
+def SDT_SPCall    : SDTypeProfile<0, -1, [SDTCisVT<0, iPTR>]>;
 def call          : SDNode<"SPISD::CALL", SDT_SPCall,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                             SDNPVariadic]>;

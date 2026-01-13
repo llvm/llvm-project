@@ -746,12 +746,12 @@ static Value buildVectorWrite(RewriterBase &rewriter, Value value,
   auto vectorType = state.getCanonicalVecType(
       getElementTypeOrSelf(outputOperand->get().getType()), vectorTypeMap);
 
+  SmallVector<Value> indices(linalgOp.getRank(outputOperand),
+                             arith::ConstantIndexOp::create(rewriter, loc, 0));
+
   Operation *write;
   if (vectorType.getRank() > 0) {
     AffineMap writeMap = inversePermutation(reindexIndexingMap(opOperandMap));
-    SmallVector<Value> indices(
-        linalgOp.getRank(outputOperand),
-        arith::ConstantIndexOp::create(rewriter, loc, 0));
     value = broadcastIfNeeded(rewriter, value, vectorType);
     assert(value.getType() == vectorType && "Incorrect type");
     write = vector::TransferWriteOp::create(
@@ -762,7 +762,7 @@ static Value buildVectorWrite(RewriterBase &rewriter, Value value,
       value = vector::BroadcastOp::create(rewriter, loc, vectorType, value);
     assert(value.getType() == vectorType && "Incorrect type");
     write = vector::TransferWriteOp::create(rewriter, loc, value,
-                                            outputOperand->get(), ValueRange{});
+                                            outputOperand->get(), indices);
   }
 
   write = state.maskOperation(rewriter, write, linalgOp, opOperandMap);
@@ -2640,6 +2640,7 @@ vectorizeScalableVectorPrecondition(Operation *op,
   // Cond 4: Only the following ops are supported in the
   // presence of scalable vectors
   return success(isElementwise(linalgOp) || isa<linalg::MatmulOp>(op) ||
+                 isa<linalg::BatchMatmulOp>(op) ||
                  isa<linalg::DepthwiseConv1DNwcWcOp>(op) ||
                  isa<linalg::MatvecOp>(op) || isa<linalg::Mmt4DOp>(op) ||
                  isa<linalg::BatchMmt4DOp>(op) ||
@@ -2676,7 +2677,7 @@ LogicalResult mlir::linalg::vectorizeOpPrecondition(
       .Case<tensor::InsertSliceOp>([&](auto sliceOp) {
         return vectorizeInsertSliceOpPrecondition(sliceOp, inputVectorSizes);
       })
-      .Default([](auto) { return failure(); });
+      .Default(failure());
 }
 
 /// Converts affine.apply Ops to arithmetic operations.
@@ -2783,7 +2784,7 @@ FailureOr<VectorizationResult> mlir::linalg::vectorize(
             return vectorizeAsInsertSliceOp(rewriter, sliceOp, inputVectorSizes,
                                             results);
           })
-          .Default([](auto) { return failure(); });
+          .Default(failure());
 
   if (failed(vectorizeResult)) {
     LDBG() << "Vectorization failed";

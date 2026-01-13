@@ -19,12 +19,14 @@ define void @foo(ptr %A, ptr %p) {
 ; CHECK-NEXT:  Base offset: %A
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][%pval] with elements of 4 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%bb2>][{0,+,1}<nuw><nsw><%bb4>]
+; CHECK-NEXT:  Delinearization validation: Failed
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Inst: store float %tmp12, ptr %tmp10, align 4
 ; CHECK-NEXT:  AccessFunction: (4 * (({0,+,1}<nuw><nsw><%bb2> * %pval)<nsw> + {0,+,1}<nuw><nsw><%bb4>)<nsw>)<nsw>
 ; CHECK-NEXT:  Base offset: %A
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][%pval] with elements of 4 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%bb2>][{0,+,1}<nuw><nsw><%bb4>]
+; CHECK-NEXT:  Delinearization validation: Failed
 ;
 bb:
   br label %bb2

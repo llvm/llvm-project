@@ -31,7 +31,7 @@ end
 
 ! CHECK-LABEL: fir.global internal @_QFECx constant : i128 {
 ! CHECK-NEXT:   %{{.*}} = arith.constant 9223372036854775808 : i128
- 
+
 ! CHECK-LABEL: fir.global internal @_QFECy constant : i128 {
 ! CHECK-NEXT: %{{.*}} = arith.constant -9223372036854775809 : i128
 

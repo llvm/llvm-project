@@ -13,7 +13,7 @@ i(3) = i(3) + 3
 print *,i
 end program
 
-! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_3xi32 : !fir.ref<!fir.box<!fir.array<3xi32>>> alloc {
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_3xi32 : !fir.ref<!fir.box<!fir.array<3xi32>>> {{.*}} alloc {
 ! CHECK:           %[[VAL_8:.*]] = fir.alloca !fir.box<!fir.array<3xi32>>
 ! CHECK:           omp.yield(%[[VAL_8]] : !fir.ref<!fir.box<!fir.array<3xi32>>>)
 ! CHECK-LABEL:   } init {

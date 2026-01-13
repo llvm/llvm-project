@@ -370,6 +370,13 @@ def github_get_metrics(
             started_at = job.started_at
             completed_at = job.completed_at
 
+            if completed_at is None:
+                logging.info(
+                    f"Workflow {task.id} is marked completed but has a job without a "
+                    "completion timestamp."
+                )
+                continue
+
             # GitHub API can return results where the started_at is slightly
             # later then the created_at (or completed earlier than started).
             # This would cause a -23h59mn delta, which will show up as +24h

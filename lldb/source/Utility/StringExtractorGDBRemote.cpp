@@ -12,9 +12,6 @@
 #include <cstring>
 #include <optional>
 
-constexpr lldb::pid_t StringExtractorGDBRemote::AllProcesses;
-constexpr lldb::tid_t StringExtractorGDBRemote::AllThreads;
-
 StringExtractorGDBRemote::ResponseType
 StringExtractorGDBRemote::GetResponseType() const {
   if (m_packet.empty())

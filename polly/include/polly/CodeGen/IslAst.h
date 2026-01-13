@@ -22,12 +22,11 @@
 #define POLLY_ISLAST_H
 
 #include "polly/DependenceInfo.h"
-#include "polly/ScopPass.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/IR/PassManager.h"
 #include "isl/ctx.h"
 
 namespace polly {
+using llvm::raw_ostream;
 using llvm::SmallPtrSet;
 
 class Dependences;
@@ -162,24 +161,6 @@ public:
   static isl::ast_build getBuild(const isl::ast_node &Node);
 
   ///}
-};
-
-struct IslAstAnalysis : AnalysisInfoMixin<IslAstAnalysis> {
-  static AnalysisKey Key;
-
-  using Result = IslAstInfo;
-
-  IslAstInfo run(Scop &S, ScopAnalysisManager &SAM,
-                 ScopStandardAnalysisResults &SAR);
-};
-
-struct IslAstPrinterPass final : PassInfoMixin<IslAstPrinterPass> {
-  IslAstPrinterPass(raw_ostream &OS) : OS(OS) {}
-
-  PreservedAnalyses run(Scop &S, ScopAnalysisManager &SAM,
-                        ScopStandardAnalysisResults &, SPMUpdater &U);
-
-  raw_ostream &OS;
 };
 
 std::unique_ptr<IslAstInfo> runIslAstGen(Scop &S,

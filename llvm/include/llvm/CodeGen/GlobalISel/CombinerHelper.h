@@ -647,6 +647,12 @@ public:
   bool matchRotateOutOfRange(MachineInstr &MI) const;
   void applyRotateOutOfRange(MachineInstr &MI) const;
 
+  bool matchCombineBuildUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                Register &UnmergeSrc) const;
+  void applyCombineBuildUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                MachineIRBuilder &B,
+                                Register &UnmergeSrc) const;
+
   bool matchUseVectorTruncate(MachineInstr &MI, Register &MatchInfo) const;
   void applyUseVectorTruncate(MachineInstr &MI, Register &MatchInfo) const;
 

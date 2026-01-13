@@ -465,19 +465,19 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                     - Radeon RX 7900 XT
                                                                         IDs                           - Radeon RX 7900 GRE
 
-     ``gfx1101``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
+     ``gfx1101``                 ``amdgcn``   dGPU  - cumode          - Architected                   - Radeon RX 7800 XT
+                                                    - wavefrontsize64   flat                          - Radeon RX 7700 XT
+                                                                        scratch                       - Radeon RX 7700
                                                                       - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
+                                                                        work-item
+                                                                        IDs
 
-     ``gfx1102``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
+     ``gfx1102``                 ``amdgcn``   dGPU  - cumode          - Architected                   - Radeon RX 7600 XT
+                                                    - wavefrontsize64   flat                          - Radeon RX 7600
+                                                                        scratch
                                                                       - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
+                                                                        work-item
+                                                                        IDs
 
      ``gfx1103``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
@@ -1527,11 +1527,6 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
                                                    The iglp_opt strategy implementations are subject to change.
 
-  llvm.amdgcn.atomic.cond.sub.u32                  Provides direct access to flat_atomic_cond_sub_u32, global_atomic_cond_sub_u32
-                                                   and ds_cond_sub_u32 based on address space on gfx12 targets. This
-                                                   performs a subtraction only if the memory value is greater than or
-                                                   equal to the data value.
-
   llvm.amdgcn.s.barrier.signal.isfirst             Provides access to the s_barrier_signal_first instruction;
                                                    additionally ensures that the result value is valid even when the
                                                    intrinsic is used from a wave that is not running in a workgroup.
@@ -2017,6 +2012,16 @@ The AMDGPU backend supports the following LLVM IR attributes.
 
                                                       This is only relevant on targets with cluster support.
 
+     "amdgpu-expert-scheduling-mode" true/false.      Enable expert scheduling mode 2 for this function. This is a hardware execution
+                                                      mode introduced in GFX12.
+
+                                                      This is only relevant on GFX12+.
+
+     "amdgpu-expand-waitcnt-profiling"                Enable expansion of s_waitcnt instructions for profiling purposes.
+                                                      When enabled, each s_waitcnt instruction that waits on multiple counter
+                                                      types is expanded into a sequence of s_waitcnt instructions, each waiting
+                                                      on a single counter type. This allows PC-sampling based profilers to
+                                                      attribute wait cycles to specific counter types (e.g., VMEM, LDS, EXP).
 
      ================================================ ==========================================================
 
@@ -2070,9 +2075,6 @@ The AMDGPU backend supports the following calling conventions:
                                      or output value, but functions are free to use scratch starting from an initial
                                      stack pointer. Calls to ``amdgpu_gfx`` functions are allowed and behave like they
                                      do in ``amdgpu_cs`` functions.
-
-                                     All counters (``lgkmcnt``, ``vmcnt``, ``storecnt``, etc.) are presumed in an
-                                     unknown state at function entry.
 
                                      A function may have multiple exits (e.g. one chain exit and one plain ``ret void``
                                      for when the wave ends), but all ``llvm.amdgcn.cs.chain`` exits must be in
@@ -2132,6 +2134,22 @@ The AMDGPU backend supports the following calling conventions:
                                      Describe.
 
      =============================== ==========================================================
+
+The following ABI conventions apply to all calling conventions that are used for
+callable functions (i.e. those that do not correspond to hardware entry points):
+
+* On entry to a function the dependency counters (``VMcnt``, ``LOADcnt`` etc.)
+  are in an indeterminate state.
+* On return from a function, all dependency counters must be zero except for
+  ``VScnt``/``STOREcnt``.
+
+For entry points, the ABI conventions are dictated by the hardware behavior at
+wave launch and wave termination:
+
+* When a wave is launched the shader can assume that all dependency counters are
+  zero.
+* The shader can leave the dependency counters in any state before terminating
+  the wave (e.g. with ``s_endpgm``).
 
 AMDGPU MCExpr
 -------------
@@ -5896,7 +5914,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      GFX950
                                                        roundup(lds-size / (320 * 4))
                                                      GFX125*
-                                                       roundup(lds-size / (256 * 4))
+                                                       roundup(lds-size / (512 * 4))
 
      24      1 bit   ENABLE_EXCEPTION_IEEE_754_FP    Wavefront starts execution
                      _INVALID_OPERATION              with specified exceptions
@@ -18986,8 +19004,8 @@ On entry to a function:
     objects and to convert this address to a flat address by adding the flat
     scratch aperture base address.
 
-    The swizzled SP value is always 4 bytes aligned for the ``r600``
-    architecture and 16 byte aligned for the ``amdgcn`` architecture.
+    The swizzled SP value is always 4-byte aligned for the ``r600``
+    architecture and 16-byte aligned for the ``amdgcn`` architecture.
 
     .. note::
 
@@ -19278,7 +19296,7 @@ describes how the AMDGPU implements function calls:
       The CFI will reflect the changed calculation needed to compute the CFA
       from SP.
 
-7.  4 byte spill slots are used in the stack frame. One slot is allocated for an
+7.  4-byte spill slots are used in the stack frame. One slot is allocated for an
     emergency spill slot. Buffer instructions are used for stack accesses and
     not the ``flat_scratch`` instruction.
 

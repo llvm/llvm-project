@@ -20108,7 +20108,7 @@ define <5 x double> @bitcast_v20i16_to_v5f64(<20 x i16> %a, i32 %b) {
 ; SI-NEXT:    v_add_i32_e32 v5, vcc, s6, v5
 ; SI-NEXT:    v_add_i32_e32 v6, vcc, s6, v6
 ; SI-NEXT:    v_add_i32_e32 v7, vcc, s6, v7
-; SI-NEXT:    v_add_i32_e32 v8, vcc, s6, v8
+; SI-NEXT:    v_add_i32_e32 v8, vcc, 0x30000, v8
 ; SI-NEXT:    v_add_i32_e32 v9, vcc, 0x30000, v9
 ; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -20954,7 +20954,7 @@ define <5 x i64> @bitcast_v20i16_to_v5i64(<20 x i16> %a, i32 %b) {
 ; SI-NEXT:    v_add_i32_e32 v5, vcc, s6, v5
 ; SI-NEXT:    v_add_i32_e32 v6, vcc, s6, v6
 ; SI-NEXT:    v_add_i32_e32 v7, vcc, s6, v7
-; SI-NEXT:    v_add_i32_e32 v8, vcc, s6, v8
+; SI-NEXT:    v_add_i32_e32 v8, vcc, 0x30000, v8
 ; SI-NEXT:    v_add_i32_e32 v9, vcc, 0x30000, v9
 ; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; SI-NEXT:    s_setpc_b64 s[30:31]

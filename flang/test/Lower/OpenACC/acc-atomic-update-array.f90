@@ -5,7 +5,7 @@ subroutine atomic_update_array1(r, n, x)
   integer :: n
   real :: r(n), x
   integer :: i
-   
+
   !$acc data copy(r)
 
   !$acc parallel loop
@@ -51,7 +51,7 @@ subroutine atomic_write_array1(r, n, x)
   implicit none
   integer :: n
   real :: r(n), x
-  
+
   !$acc atomic write
   x = r(n)
 end subroutine
@@ -61,7 +61,7 @@ end subroutine
 ! CHECK: %[[DECL_X:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFatomic_write_array1Ex"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK: %[[DECL_R:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFatomic_write_array1Er"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
 ! CHECK: %[[DES:.*]] = hlfir.designate %[[DECL_R]]#0 (%{{.*}})  : (!fir.box<!fir.array<?xf32>>, i64) -> !fir.ref<f32>
-! CHECK: %[[LOAD:.*]] = fir.load %[[DES]] : !fir.ref<f32> 
+! CHECK: %[[LOAD:.*]] = fir.load %[[DES]] : !fir.ref<f32>
 ! CHECK: acc.atomic.write %[[DECL_X]]#0 = %[[LOAD]] : !fir.ref<f32>, f32
 
 subroutine atomic_capture_array1(r, n, x, y)

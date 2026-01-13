@@ -12,11 +12,11 @@
 #include <__algorithm/copy.h>
 #include <__algorithm/copy_n.h>
 #include <__algorithm/fill_n.h>
+#include <__algorithm/iterator_operations.h>
 #include <__algorithm/max.h>
 #include <__algorithm/min.h>
 #include <__algorithm/move.h>
 #include <__algorithm/move_backward.h>
-#include <__algorithm/ranges_copy_n.h>
 #include <__algorithm/rotate.h>
 #include <__assert>
 #include <__config>
@@ -42,6 +42,7 @@
 #include <__memory/temp_value.h>
 #include <__memory/uninitialized_algorithms.h>
 #include <__ranges/access.h>
+#include <__ranges/as_rvalue_view.h>
 #include <__ranges/concepts.h>
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/from_range.h>
@@ -96,7 +97,7 @@ public:
   using difference_type                 = typename __alloc_traits::difference_type;
   using pointer                         = typename __alloc_traits::pointer;
   using const_pointer                   = typename __alloc_traits::const_pointer;
-  using __split_buffer _LIBCPP_NODEBUG  = std::__split_buffer<_Tp, _Allocator&, __split_buffer_size_layout>;
+  using __split_buffer _LIBCPP_NODEBUG  = std::__split_buffer<_Tp, _Allocator, __split_buffer_size_layout>;
   using __sentinel_type _LIBCPP_NODEBUG = size_type;
 
   _LIBCPP_HIDE_FROM_ABI __vector_layout() = default;
@@ -242,7 +243,7 @@ public:
   using difference_type                 = typename __alloc_traits::difference_type;
   using pointer                         = typename __alloc_traits::pointer;
   using const_pointer                   = typename __alloc_traits::const_pointer;
-  using __split_buffer _LIBCPP_NODEBUG  = std::__split_buffer<_Tp, _Allocator&, __split_buffer_pointer_layout>;
+  using __split_buffer _LIBCPP_NODEBUG  = std::__split_buffer<_Tp, _Allocator, __split_buffer_pointer_layout>;
   using __sentinel_type _LIBCPP_NODEBUG = pointer;
 
   // Can't be defaulted due to _LIBCPP_COMPRESSED_PAIR not being an aggregate in C++03 and C++11.
@@ -426,7 +427,7 @@ public:
 
   using __base::__invariants;
 
-  // A vector containers the following members which may be trivially relocatable:
+  // A vector contains the following members which may be trivially relocatable:
   // - pointer: may be trivially relocatable, so it's checked
   // - allocator_type: may be trivially relocatable, so it's checked
   // vector doesn't contain any self-references, so it's trivially relocatable if its members are.
@@ -626,7 +627,7 @@ public:
                         is_constructible<value_type, typename iterator_traits<_ForwardIterator>::reference>::value,
                     int> = 0>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void assign(_ForwardIterator __first, _ForwardIterator __last) {
-    __assign_with_size(__first, __last, std::distance(__first, __last));
+    __assign_with_size<_ClassicAlgPolicy>(__first, __last, std::distance(__first, __last));
   }
 
 #if _LIBCPP_STD_VER >= 23
@@ -634,7 +635,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr void assign_range(_Range&& __range) {
     if constexpr (ranges::forward_range<_Range> || ranges::sized_range<_Range>) {
       auto __n = static_cast<size_type>(ranges::distance(__range));
-      __assign_with_size(ranges::begin(__range), ranges::end(__range), __n);
+      __assign_with_size<_RangeAlgPolicy>(ranges::begin(__range), ranges::end(__range), __n);
 
     } else {
       __assign_with_sentinel(ranges::begin(__range), ranges::end(__range));
@@ -796,7 +797,21 @@ public:
 #if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<_Tp> _Range>
   _LIBCPP_HIDE_FROM_ABI constexpr void append_range(_Range&& __range) {
-    insert_range(end(), std::forward<_Range>(__range));
+    if constexpr (ranges::forward_range<_Range> || ranges::sized_range<_Range>) {
+      auto __len = static_cast<size_type>(ranges::distance(__range));
+      if (__len < __raw_capacity() - __raw_sentinel()) {
+        __construct_at_end(ranges::begin(__range), ranges::end(__range), __len);
+      } else {
+        __split_buffer __buffer(__recommend(size() + __len), size(), __allocator_ref());
+        __buffer.__construct_at_end_with_size(ranges::begin(__range), __len);
+        __swap_out_circular_buffer(__buffer);
+      }
+    } else {
+      vector __buffer(__allocator_ref());
+      for (auto&& __val : __range)
+        __buffer.emplace_back(std::forward<decltype(__val)>(__val));
+      append_range(ranges::as_rvalue_view(__buffer));
+    }
   }
 #endif
 
@@ -830,7 +845,7 @@ public:
                     int> = 0>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator
   insert(const_iterator __position, _ForwardIterator __first, _ForwardIterator __last) {
-    return __insert_with_size(__position, __first, __last, std::distance(__first, __last));
+    return __insert_with_size<_ClassicAlgPolicy>(__position, __first, __last, std::distance(__first, __last));
   }
 
 #if _LIBCPP_STD_VER >= 23
@@ -838,7 +853,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr iterator insert_range(const_iterator __position, _Range&& __range) {
     if constexpr (ranges::forward_range<_Range> || ranges::sized_range<_Range>) {
       auto __n = static_cast<size_type>(ranges::distance(__range));
-      return __insert_with_size(__position, ranges::begin(__range), ranges::end(__range), __n);
+      return __insert_with_size<_RangeAlgPolicy>(__position, ranges::begin(__range), ranges::end(__range), __n);
 
     } else {
       return __insert_with_sentinel(__position, ranges::begin(__range), ranges::end(__range));
@@ -929,12 +944,13 @@ private:
   // The `_Iterator` in `*_with_size` functions can be input-only only if called from `*_range` (since C++23).
   // Otherwise, `_Iterator` is a forward iterator.
 
-  template <class _Iterator, class _Sentinel>
+  template <class _AlgPolicy, class _Iterator, class _Sentinel>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __assign_with_size(_Iterator __first, _Sentinel __last, difference_type __n);
 
-  template <class _Iterator,
-            __enable_if_t<!is_same<decltype(*std::declval<_Iterator&>())&&, value_type&&>::value, int> = 0>
+  template <class _AlgPolicy,
+            class _Iterator,
+            __enable_if_t<!is_same<__policy_value_type<_AlgPolicy, _Iterator>, value_type>::value, int> = 0>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __insert_assign_n_unchecked(_Iterator __first, difference_type __n, pointer __position) {
     for (pointer __end_position = __position + __n; __position != __end_position; ++__position, (void)++__first) {
@@ -943,25 +959,19 @@ private:
     }
   }
 
-  template <class _Iterator,
-            __enable_if_t<is_same<decltype(*std::declval<_Iterator&>())&&, value_type&&>::value, int> = 0>
+  template <class _AlgPolicy,
+            class _Iterator,
+            __enable_if_t<is_same<__policy_value_type<_AlgPolicy, _Iterator>, value_type>::value, int> = 0>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __insert_assign_n_unchecked(_Iterator __first, difference_type __n, pointer __position) {
-#if _LIBCPP_STD_VER >= 23
-    if constexpr (!forward_iterator<_Iterator>) { // Handles input-only sized ranges for insert_range
-      ranges::copy_n(std::move(__first), __n, __position);
-    } else
-#endif
-    {
-      std::copy_n(__first, __n, __position);
-    }
+    std::__copy_n<_AlgPolicy>(std::move(__first), __n, __position);
   }
 
   template <class _InputIterator, class _Sentinel>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator
   __insert_with_sentinel(const_iterator __position, _InputIterator __first, _Sentinel __last);
 
-  template <class _Iterator, class _Sentinel>
+  template <class _AlgPolicy, class _Iterator, class _Sentinel>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator
   __insert_with_size(const_iterator __position, _Iterator __first, _Sentinel __last, difference_type __n);
 
@@ -1001,7 +1011,8 @@ private:
 #endif // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap_out_circular_buffer(__split_buffer& __v);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
+  __swap_out_circular_buffer(__split_buffer& __v);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer
   __swap_out_circular_buffer(__split_buffer& __v, pointer __p);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
@@ -1356,20 +1367,15 @@ vector<_Tp, _Allocator>::__assign_with_sentinel(_Iterator __first, _Sentinel __l
 }
 
 template <class _Tp, class _Allocator>
-template <class _Iterator, class _Sentinel>
+template <class _AlgPolicy, class _Iterator, class _Sentinel>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
 vector<_Tp, _Allocator>::__assign_with_size(_Iterator __first, _Sentinel __last, difference_type __n) {
   size_type __new_size = static_cast<size_type>(__n);
   if (__new_size <= capacity()) {
     if (__new_size > size()) {
-#if _LIBCPP_STD_VER >= 23
-      auto __mid = ranges::copy_n(std::move(__first), size(), __raw_begin()).in;
-      __construct_at_end(std::move(__mid), std::move(__last), __new_size - size());
-#else
-      _Iterator __mid = std::next(__first, size());
-      std::copy(__first, __mid, __raw_begin());
-      __construct_at_end(__mid, __last, __new_size - size());
-#endif
+      auto const __size = size();
+      auto __mid = std::__copy_n<_AlgPolicy>(std::move(__first), __size, __raw_begin()).first;
+      __construct_at_end(std::move(__mid), std::move(__last), __new_size - __size);
     } else {
       pointer __m = std::__copy(std::move(__first), __last, __raw_begin()).second;
       this->__destruct_at_end(__m);
@@ -1655,7 +1661,7 @@ vector<_Tp, _Allocator>::__insert_with_sentinel(const_iterator __position, _Inpu
 }
 
 template <class _Tp, class _Allocator>
-template <class _Iterator, class _Sentinel>
+template <class _AlgPolicy, class _Iterator, class _Sentinel>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::__insert_with_size(
     const_iterator __position, _Iterator __first, _Sentinel __last, difference_type __n) {
@@ -1677,12 +1683,12 @@ vector<_Tp, _Allocator>::__insert_with_size(
           __construct_at_end(__m, __last, __n - __dx);
           if (__dx > 0) {
             __move_range(__p, __old_last, __p + __n);
-            __insert_assign_n_unchecked(__first, __dx, __p);
+            __insert_assign_n_unchecked<_AlgPolicy>(__first, __dx, __p);
           }
         }
       } else {
         __move_range(__p, __old_last, __p + __n);
-        __insert_assign_n_unchecked(std::move(__first), __n, __p);
+        __insert_assign_n_unchecked<_AlgPolicy>(std::move(__first), __n, __p);
       }
     } else {
       __split_buffer __v(__recommend(size() + __n), __p - __raw_begin(), __allocator_ref());

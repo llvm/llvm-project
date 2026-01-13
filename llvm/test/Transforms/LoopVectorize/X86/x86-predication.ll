@@ -339,7 +339,7 @@ define i32 @scalarize_and_sink_gather(ptr %a, i1 %c, i32 %x, i64 %n) {
 ; SINK-GATHER-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP1]], <8 x i32> [[TMP64]], <8 x i32> [[BROADCAST_SPLAT16]]
 ; SINK-GATHER-NEXT:    [[TMP66]] = add <8 x i32> [[VEC_PHI]], [[PREDPHI]]
 ; SINK-GATHER-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; SINK-GATHER-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], splat (i64 8)
+; SINK-GATHER-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <8 x i64> [[VEC_IND]], splat (i64 8)
 ; SINK-GATHER-NEXT:    [[TMP67:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SINK-GATHER-NEXT:    br i1 [[TMP67]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; SINK-GATHER:       middle.block:

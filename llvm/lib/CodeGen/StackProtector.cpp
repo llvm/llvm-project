@@ -431,6 +431,11 @@ bool SSPLayoutAnalysis::requiresStackProtector(Function *F,
   for (const BasicBlock &BB : *F) {
     for (const Instruction &I : BB) {
       if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
+        if (const MDNode *MD = AI->getMetadata("stack-protector")) {
+          const auto *CI = mdconst::dyn_extract<ConstantInt>(MD->getOperand(0));
+          if (CI->isZero())
+            continue;
+        }
         if (AI->isArrayAllocation()) {
           auto RemarkBuilder = [&]() {
             return OptimizationRemark(DEBUG_TYPE, "StackProtectorAllocaOrArray",

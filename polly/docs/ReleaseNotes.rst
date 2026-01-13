@@ -17,3 +17,5 @@ In Polly |version| the following important changes have been incorporated.
 
  * Polly's support for the legacy pass manager has been removed.
 
+ * The infrastructure around ScopPasses has been removed.
+

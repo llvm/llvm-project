@@ -15,7 +15,6 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::bugprone {
 
 void SpuriouslyWakeUpFunctionsCheck::registerMatchers(MatchFinder *Finder) {
-
   auto HasUniqueLock = hasDescendant(declRefExpr(
       hasDeclaration(varDecl(hasType(recordDecl(classTemplateSpecializationDecl(
           hasName("::std::unique_lock"),
@@ -45,9 +44,7 @@ void SpuriouslyWakeUpFunctionsCheck::registerMatchers(MatchFinder *Finder) {
                       onImplicitObjectArgument(
                           declRefExpr(to(varDecl(hasType(references(recordDecl(
                               hasName("::std::condition_variable")))))))),
-                      HasUniqueLock)
-
-                    ))
+                      HasUniqueLock)))
           .bind("wait"));
 
   auto HasWaitDescendantC = hasDescendant(

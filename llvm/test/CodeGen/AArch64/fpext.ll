@@ -82,11 +82,12 @@ define <3 x double> @fpext_v3f32_v3f64(<3 x float> %a) {
 ;
 ; CHECK-GI-LABEL: fpext_v3f32_v3f64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov s1, v0.s[2]
+; CHECK-GI-NEXT:    mov v1.s[0], v0.s[2]
 ; CHECK-GI-NEXT:    fcvtl v0.2d, v0.2s
-; CHECK-GI-NEXT:    fcvt d2, s1
+; CHECK-GI-NEXT:    fcvtl v2.2d, v1.2s
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = fpext <3 x float> %a to <3 x double>
@@ -320,20 +321,11 @@ entry:
 }
 
 define <2 x double> @fpext_v2f16_v2f64(<2 x half> %a) {
-; CHECK-SD-LABEL: fpext_v2f16_v2f64:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-SD-NEXT:    fcvtl v0.2d, v0.2s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fpext_v2f16_v2f64:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    fcvt d0, h0
-; CHECK-GI-NEXT:    fcvt d1, h1
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: fpext_v2f16_v2f64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-NEXT:    fcvtl v0.2d, v0.2s
+; CHECK-NEXT:    ret
 entry:
   %c = fpext <2 x half> %a to <2 x double>
   ret <2 x double> %c
@@ -353,12 +345,12 @@ define <3 x double> @fpext_v3f16_v3f64(<3 x half> %a) {
 ;
 ; CHECK-GI-LABEL: fpext_v3f16_v3f64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-NEXT:    fcvt d0, h0
-; CHECK-GI-NEXT:    fcvt d1, h1
-; CHECK-GI-NEXT:    fcvt d2, h2
+; CHECK-GI-NEXT:    fcvtl v1.4s, v0.4h
+; CHECK-GI-NEXT:    fcvtl v0.2d, v1.2s
+; CHECK-GI-NEXT:    fcvtl2 v2.2d, v1.4s
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 killed $q2
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = fpext <3 x half> %a to <3 x double>
@@ -375,16 +367,9 @@ define <4 x double> @fpext_v4f16_v4f64(<4 x half> %a) {
 ;
 ; CHECK-GI-LABEL: fpext_v4f16_v4f64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-NEXT:    mov h3, v0.h[3]
-; CHECK-GI-NEXT:    fcvt d0, h0
-; CHECK-GI-NEXT:    fcvt d4, h1
-; CHECK-GI-NEXT:    fcvt d1, h2
-; CHECK-GI-NEXT:    fcvt d2, h3
-; CHECK-GI-NEXT:    mov v0.d[1], v4.d[0]
-; CHECK-GI-NEXT:    mov v1.d[1], v2.d[0]
+; CHECK-GI-NEXT:    fcvtl v1.4s, v0.4h
+; CHECK-GI-NEXT:    fcvtl v0.2d, v1.2s
+; CHECK-GI-NEXT:    fcvtl2 v1.2d, v1.4s
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = fpext <4 x half> %a to <4 x double>

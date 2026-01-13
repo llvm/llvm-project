@@ -402,9 +402,9 @@ hlfir::Entity hlfir::genVariableBox(mlir::Location loc,
       fir::BoxType::get(var.getElementOrSequenceType(), isVolatile);
   if (forceBoxType) {
     boxType = forceBoxType;
-    mlir::Type baseType =
-        fir::ReferenceType::get(fir::unwrapRefType(forceBoxType.getEleTy()));
-    addr = builder.createConvert(loc, baseType, addr);
+    mlir::Type baseType = fir::ReferenceType::get(
+        fir::unwrapRefType(forceBoxType.getEleTy()), forceBoxType.isVolatile());
+    addr = builder.createConvertWithVolatileCast(loc, baseType, addr);
   }
   auto embox = fir::EmboxOp::create(builder, loc, boxType, addr, shape,
                                     /*slice=*/mlir::Value{}, typeParams);

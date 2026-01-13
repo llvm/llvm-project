@@ -21,7 +21,6 @@
 #include <vector>
 
 #include "test_macros.h"
-#define TEST_HAS_NO_INT128 // Size cannot be larger than 64 bits
 #include "type_algorithms.h"
 
 #include "types.h"

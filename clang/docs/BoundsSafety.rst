@@ -912,7 +912,7 @@ unsafe library by calling ``get_buf()`` which returns ``void
   ``__bidi_indexable`` gets the lower bound same as the pointer value.
 
 * A type conversion may involve both a bitcast and a bounds annotation cast. For
-  example, casting from ``int *__bidi_indexable`` to ``char *__single`` involve
+  example, casting from ``int *__bidi_indexable`` to ``char *__single`` involves
   a bitcast (``int *`` to ``char *``) and a bounds annotation cast
   (``__bidi_indexable`` to ``__single``). In this case, the compiler performs
   the bitcast and then converts the bounds annotation. This means, ``int
@@ -994,7 +994,7 @@ other types of safety violations such as type confusion. For instance,
 
 ``-fbounds-safety`` heavily relies on run-time checks to keep the bounds safety
 and the soundness of the type system. This may incur significant code size
-overhead in unoptimized builds and leaving some of the adoption mistakes to be
+overhead in unoptimized builds and leave some of the adoption mistakes to be
 caught only at run time. This is not a fundamental limitation, however, because
 incrementally adding necessary static analysis will allow us to catch issues
 early on and remove unnecessary bounds checks in unoptimized builds.

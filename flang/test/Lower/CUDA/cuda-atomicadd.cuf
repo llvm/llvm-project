@@ -32,4 +32,4 @@ attributes(global) subroutine test_atomicadd_r4x4()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_atomicadd_r4x4() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
-! CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, vector<4xf32>
+! CHECK: atom.add.v4.f32

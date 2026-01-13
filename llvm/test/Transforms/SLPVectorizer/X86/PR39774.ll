@@ -5,34 +5,38 @@
 define void @Test(i32) {
 ; CHECK-LABEL: @Test(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> poison, i32 [[TMP0:%.*]], i32 0
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[LOCAL_8_43_US:%.*]] = phi i32 [ [[VAL_43:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ [[TMP6:%.*]], [[LOOP]] ], [ zeroinitializer, [[ENTRY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = add <8 x i32> [[TMP2]], <i32 0, i32 55, i32 285, i32 1240, i32 1496, i32 8555, i32 12529, i32 13685>
+; CHECK-NEXT:    [[LOCAL_8_43_US1:%.*]] = phi i32 [ [[VAL_44:%.*]], [[LOOP]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> [[TMP1]], i32 [[LOCAL_8_43_US]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[LOCAL_8_43_US1]], i32 2
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i32> [[TMP5]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[TMP3:%.*]] = add <8 x i32> [[TMP6]], <i32 0, i32 0, i32 55, i32 285, i32 1240, i32 1496, i32 8555, i32 12529>
+; CHECK-NEXT:    [[VAL_41:%.*]] = add i32 [[LOCAL_8_43_US1]], 13685
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> [[TMP3]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = and i32 [[TMP0:%.*]], [[TMP4]]
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = and i32 [[OP_RDX]], [[LOCAL_8_43_US]]
-; CHECK-NEXT:    [[VAL_43]] = add i32 [[LOCAL_8_43_US]], 14910
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[OP_RDX1]], i32 0
-; CHECK-NEXT:    [[TMP6]] = insertelement <2 x i32> [[TMP5]], i32 [[VAL_43]], i32 1
+; CHECK-NEXT:    [[OP_RDX:%.*]] = and i32 [[TMP4]], [[VAL_41]]
+; CHECK-NEXT:    [[VAL_43]] = and i32 [[OP_RDX]], [[LOCAL_8_43_US1]]
+; CHECK-NEXT:    [[VAL_44]] = add i32 [[LOCAL_8_43_US1]], 14910
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 ; FORCE_REDUCTION-LABEL: @Test(
 ; FORCE_REDUCTION-NEXT:  entry:
+; FORCE_REDUCTION-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> poison, i32 [[TMP0:%.*]], i32 0
 ; FORCE_REDUCTION-NEXT:    br label [[LOOP:%.*]]
 ; FORCE_REDUCTION:       loop:
 ; FORCE_REDUCTION-NEXT:    [[LOCAL_8_43_US:%.*]] = phi i32 [ [[VAL_43:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
-; FORCE_REDUCTION-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ [[TMP6:%.*]], [[LOOP]] ], [ zeroinitializer, [[ENTRY]] ]
-; FORCE_REDUCTION-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; FORCE_REDUCTION-NEXT:    [[TMP3:%.*]] = add <8 x i32> [[TMP2]], <i32 0, i32 55, i32 285, i32 1240, i32 1496, i32 8555, i32 12529, i32 13685>
+; FORCE_REDUCTION-NEXT:    [[LOCAL_8_43_US1:%.*]] = phi i32 [ [[VAL_44:%.*]], [[LOOP]] ], [ 0, [[ENTRY]] ]
+; FORCE_REDUCTION-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> [[TMP1]], i32 [[LOCAL_8_43_US]], i32 1
+; FORCE_REDUCTION-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[LOCAL_8_43_US1]], i32 2
+; FORCE_REDUCTION-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i32> [[TMP5]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+; FORCE_REDUCTION-NEXT:    [[TMP3:%.*]] = add <8 x i32> [[TMP6]], <i32 0, i32 0, i32 55, i32 285, i32 1240, i32 1496, i32 8555, i32 12529>
+; FORCE_REDUCTION-NEXT:    [[VAL_41:%.*]] = add i32 [[LOCAL_8_43_US1]], 13685
 ; FORCE_REDUCTION-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> [[TMP3]])
-; FORCE_REDUCTION-NEXT:    [[OP_RDX:%.*]] = and i32 [[TMP0:%.*]], [[TMP4]]
-; FORCE_REDUCTION-NEXT:    [[OP_RDX1:%.*]] = and i32 [[OP_RDX]], [[LOCAL_8_43_US]]
-; FORCE_REDUCTION-NEXT:    [[VAL_43]] = add i32 [[LOCAL_8_43_US]], 14910
-; FORCE_REDUCTION-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[OP_RDX1]], i32 0
-; FORCE_REDUCTION-NEXT:    [[TMP6]] = insertelement <2 x i32> [[TMP5]], i32 [[VAL_43]], i32 1
+; FORCE_REDUCTION-NEXT:    [[OP_RDX:%.*]] = and i32 [[TMP4]], [[VAL_41]]
+; FORCE_REDUCTION-NEXT:    [[VAL_43]] = and i32 [[OP_RDX]], [[LOCAL_8_43_US1]]
+; FORCE_REDUCTION-NEXT:    [[VAL_44]] = add i32 [[LOCAL_8_43_US1]], 14910
 ; FORCE_REDUCTION-NEXT:    br label [[LOOP]]
 ;
 entry:

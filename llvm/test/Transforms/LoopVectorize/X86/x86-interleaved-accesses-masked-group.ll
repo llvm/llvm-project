@@ -39,7 +39,7 @@ define dso_local void @masked_strided1(ptr noalias nocapture readonly %p, ptr no
 ; DISABLED_MASKED_STRIDED:       vector.body:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE14:%.*]] ]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_LOAD_CONTINUE14]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = icmp ugt <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = icmp samesign ugt <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = shl nuw nsw <8 x i32> [[VEC_IND]], splat (i32 1)
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = extractelement <8 x i1> [[TMP0]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP2]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
@@ -124,7 +124,7 @@ define dso_local void @masked_strided1(ptr noalias nocapture readonly %p, ptr no
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP50:%.*]] = getelementptr i8, ptr [[Q:%.*]], i32 [[INDEX]]
 ; DISABLED_MASKED_STRIDED-NEXT:    call void @llvm.masked.store.v8i8.p0(<8 x i8> [[TMP49]], ptr align 1 [[TMP50]], <8 x i1> [[TMP0]])
 ; DISABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
-; DISABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IND]], splat (i32 8)
+; DISABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <8 x i32> [[VEC_IND]], splat (i32 8)
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP51:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP51]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; DISABLED_MASKED_STRIDED:       for.end:
@@ -139,7 +139,7 @@ define dso_local void @masked_strided1(ptr noalias nocapture readonly %p, ptr no
 ; ENABLED_MASKED_STRIDED:       vector.body:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = icmp ugt <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = icmp samesign ugt <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = shl i32 [[INDEX]], 1
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 [[TMP1]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INTERLEAVED_MASK:%.*]] = shufflevector <8 x i1> [[TMP0]], <8 x i1> poison, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
@@ -148,7 +148,7 @@ define dso_local void @masked_strided1(ptr noalias nocapture readonly %p, ptr no
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[Q:%.*]], i32 [[INDEX]]
 ; ENABLED_MASKED_STRIDED-NEXT:    call void @llvm.masked.store.v8i8.p0(<8 x i8> [[STRIDED_VEC]], ptr align 1 [[TMP3]], <8 x i1> [[TMP0]])
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
-; ENABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IND]], splat (i32 8)
+; ENABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <8 x i32> [[VEC_IND]], splat (i32 8)
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1016
 ; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP4]], label [[FOR_BODY:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; ENABLED_MASKED_STRIDED:       for.body:
@@ -212,7 +212,7 @@ define dso_local void @masked_strided1_optsize(ptr noalias nocapture readonly %p
 ; DISABLED_MASKED_STRIDED:       vector.body:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE14:%.*]] ]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_LOAD_CONTINUE14]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = icmp ugt <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = icmp samesign ugt <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = shl nuw nsw <8 x i32> [[VEC_IND]], splat (i32 1)
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = extractelement <8 x i1> [[TMP0]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP2]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
@@ -297,7 +297,7 @@ define dso_local void @masked_strided1_optsize(ptr noalias nocapture readonly %p
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP50:%.*]] = getelementptr i8, ptr [[Q:%.*]], i32 [[INDEX]]
 ; DISABLED_MASKED_STRIDED-NEXT:    call void @llvm.masked.store.v8i8.p0(<8 x i8> [[TMP49]], ptr align 1 [[TMP50]], <8 x i1> [[TMP0]])
 ; DISABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
-; DISABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IND]], splat (i32 8)
+; DISABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <8 x i32> [[VEC_IND]], splat (i32 8)
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP51:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP51]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; DISABLED_MASKED_STRIDED:       for.end:
@@ -312,7 +312,7 @@ define dso_local void @masked_strided1_optsize(ptr noalias nocapture readonly %p
 ; ENABLED_MASKED_STRIDED:       vector.body:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = icmp ugt <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = icmp samesign ugt <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = shl i32 [[INDEX]], 1
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 [[TMP1]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INTERLEAVED_MASK:%.*]] = shufflevector <8 x i1> [[TMP0]], <8 x i1> poison, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
@@ -322,7 +322,7 @@ define dso_local void @masked_strided1_optsize(ptr noalias nocapture readonly %p
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[Q:%.*]], i32 [[INDEX]]
 ; ENABLED_MASKED_STRIDED-NEXT:    call void @llvm.masked.store.v8i8.p0(<8 x i8> [[STRIDED_VEC]], ptr align 1 [[TMP4]], <8 x i1> [[TMP0]])
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
-; ENABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IND]], splat (i32 8)
+; ENABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <8 x i32> [[VEC_IND]], splat (i32 8)
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
 ; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP5]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; ENABLED_MASKED_STRIDED:       for.end:
@@ -903,7 +903,7 @@ define dso_local void @unconditional_strided1_optsize(ptr noalias nocapture read
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i8, ptr [[Q:%.*]], i32 [[INDEX]]
 ; DISABLED_MASKED_STRIDED-NEXT:    store <8 x i8> [[TMP32]], ptr [[TMP33]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
-; DISABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IND]], splat (i32 8)
+; DISABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <8 x i32> [[VEC_IND]], splat (i32 8)
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP34:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP34]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; DISABLED_MASKED_STRIDED:       for.end:
@@ -1162,7 +1162,7 @@ define dso_local void @masked_strided2(ptr noalias nocapture readonly %p, ptr no
 ; DISABLED_MASKED_STRIDED:       vector.body:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE60:%.*]] ]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE60]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = icmp ugt <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = icmp samesign ugt <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = shl nuw nsw <8 x i32> [[VEC_IND]], splat (i32 1)
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = extractelement <8 x i1> [[TMP0]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP2]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
@@ -1472,7 +1472,7 @@ define dso_local void @masked_strided2(ptr noalias nocapture readonly %p, ptr no
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE60]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue60:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
-; DISABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IND]], splat (i32 8)
+; DISABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <8 x i32> [[VEC_IND]], splat (i32 8)
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP165:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP165]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; DISABLED_MASKED_STRIDED:       for.end:
@@ -1487,7 +1487,7 @@ define dso_local void @masked_strided2(ptr noalias nocapture readonly %p, ptr no
 ; ENABLED_MASKED_STRIDED:       vector.body:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = icmp ugt <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = icmp samesign ugt <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = shl i32 [[INDEX]], 1
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 [[TMP1]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INTERLEAVED_MASK:%.*]] = shufflevector <8 x i1> [[TMP0]], <8 x i1> poison, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
@@ -1500,7 +1500,7 @@ define dso_local void @masked_strided2(ptr noalias nocapture readonly %p, ptr no
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i8> [[TMP4]], <8 x i8> [[TMP5]], <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
 ; ENABLED_MASKED_STRIDED-NEXT:    call void @llvm.masked.store.v16i8.p0(<16 x i8> [[INTERLEAVED_VEC]], ptr align 1 [[TMP6]], <16 x i1> [[INTERLEAVED_MASK]])
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
-; ENABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IND]], splat (i32 8)
+; ENABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <8 x i32> [[VEC_IND]], splat (i32 8)
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
 ; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP8]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; ENABLED_MASKED_STRIDED:       for.end:
@@ -1877,7 +1877,7 @@ define dso_local void @masked_strided2_reverse(ptr noalias nocapture readonly %p
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE60]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue60:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
-; DISABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IND]], splat (i32 -8)
+; DISABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <8 x i32> [[VEC_IND]], splat (i32 -8)
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP165:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP165]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; DISABLED_MASKED_STRIDED:       for.end:
@@ -2202,7 +2202,7 @@ define dso_local void @masked_strided2_reverse(ptr noalias nocapture readonly %p
 ; ENABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE60]]
 ; ENABLED_MASKED_STRIDED:       pred.store.continue60:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
-; ENABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IND]], splat (i32 -8)
+; ENABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <8 x i32> [[VEC_IND]], splat (i32 -8)
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP165:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
 ; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP165]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; ENABLED_MASKED_STRIDED:       for.end:

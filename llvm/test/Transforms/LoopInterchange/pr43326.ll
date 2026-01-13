@@ -1,5 +1,5 @@
 ; RUN: opt < %s -passes=loop-interchange -cache-line-size=64 -pass-remarks-missed='loop-interchange' -pass-remarks-output=%t -S \
-; RUN:     -verify-dom-info -verify-loop-info -verify-loop-lcssa -stats 2>&1
+; RUN:     -verify-dom-info -verify-loop-info -verify-loop-lcssa -loop-interchange-profitabilities=ignore -stats 2>&1
 ; RUN: FileCheck --input-file=%t --check-prefix=REMARKS %s
 
 @a = global i32 0
@@ -64,7 +64,7 @@ for.end:                                          ; preds = %for.inc
 
 for.inc10:                                        ; preds = %for.end
   %j.next = add i8 %j, -1
-  %cmp = icmp sgt i8 %j.next, -1
+  %cmp = icmp sgt i8 %j.next, -10
   br i1 %cmp, label %inner1.header, label %for.end11
 
 for.end11:                                        ; preds = %for.inc10
@@ -75,8 +75,8 @@ for.end11:                                        ; preds = %for.inc10
 
 for.inc12:                                        ; preds = %for.end11
   %inc13 = add nsw i32 %inc1312, 1
-  %tobool.not = icmp eq i32 %inc13, 0
-  br i1 %tobool.not, label %for.cond.for.end14_crit_edge, label %outer.header
+  %tobool.not = icmp slt i32 %inc13, 42
+  br i1 %tobool.not, label %outer.header, label %for.cond.for.end14_crit_edge
 
 for.cond.for.end14_crit_edge:                     ; preds = %for.inc12
   %inc13.lcssa = phi i32 [ %inc13, %for.inc12 ]

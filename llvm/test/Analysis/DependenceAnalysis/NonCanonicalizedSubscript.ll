@@ -47,6 +47,8 @@ for.end:
 ;    }
 ;  }
 ;  Extends the previous example to coupled MIV subscripts.
+;
+; FIXME: Currently delinearization does not work as expected.
 
 
 @a = global [10004 x [10004 x i32]] zeroinitializer, align 16
@@ -57,7 +59,7 @@ define void @coupled_miv_type_mismatch(i32 %n) {
 ; CHECK-NEXT:  Src: %2 = load i32, ptr %arrayidx5, align 4 --> Dst: %2 = load i32, ptr %arrayidx5, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: %2 = load i32, ptr %arrayidx5, align 4 --> Dst: store i32 %add6, ptr %arrayidx10, align 4
-; CHECK-NEXT:    da analyze - consistent anti [1 -2]!
+; CHECK-NEXT:    da analyze - anti [< >]!
 ; CHECK-NEXT:  Src: store i32 %add6, ptr %arrayidx10, align 4 --> Dst: store i32 %add6, ptr %arrayidx10, align 4
 ; CHECK-NEXT:    da analyze - none!
 ;

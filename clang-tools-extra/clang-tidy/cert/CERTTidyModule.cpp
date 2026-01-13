@@ -8,7 +8,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "../bugprone/BadSignalToKillThreadCheck.h"
 #include "../bugprone/CommandProcessorCheck.h"
 #include "../bugprone/CopyConstructorMutatesArgumentCheck.h"
@@ -31,9 +30,10 @@
 #include "../bugprone/UnsafeFunctionsCheck.h"
 #include "../bugprone/UnusedReturnValueCheck.h"
 #include "../concurrency/ThreadCanceltypeAsynchronousCheck.h"
-#include "../google/UnnamedNamespaceInHeaderCheck.h"
+#include "../misc/AnonymousNamespaceInHeaderCheck.h"
 #include "../misc/NewDeleteOverloadsCheck.h"
 #include "../misc/NonCopyableObjectsCheck.h"
+#include "../misc/PredictableRandCheck.h"
 #include "../misc/StaticAssertCheck.h"
 #include "../misc/ThrowByValueCatchByReferenceCheck.h"
 #include "../modernize/AvoidSetjmpLongjmpCheck.h"
@@ -41,7 +41,6 @@
 #include "../performance/MoveConstructorInitCheck.h"
 #include "../readability/EnumInitialValueCheck.h"
 #include "../readability/UppercaseLiteralSuffixCheck.h"
-#include "LimitedRandomnessCheck.h"
 
 namespace {
 
@@ -232,6 +231,7 @@ const llvm::StringRef CertErr33CCheckedFunctions = "^::aligned_alloc$;"
 
 namespace clang::tidy {
 namespace cert {
+namespace {
 
 class CERTModule : public ClangTidyModule {
 public:
@@ -253,7 +253,7 @@ public:
         "cert-dcl54-cpp");
     CheckFactories.registerCheck<bugprone::StdNamespaceModificationCheck>(
         "cert-dcl58-cpp");
-    CheckFactories.registerCheck<google::build::UnnamedNamespaceInHeaderCheck>(
+    CheckFactories.registerCheck<misc::AnonymousNamespaceInHeaderCheck>(
         "cert-dcl59-cpp");
     // ERR
     CheckFactories.registerCheck<misc::ThrowByValueCatchByReferenceCheck>(
@@ -271,7 +271,7 @@ public:
         .registerCheck<bugprone::DefaultOperatorNewOnOveralignedTypeCheck>(
             "cert-mem57-cpp");
     // MSC
-    CheckFactories.registerCheck<LimitedRandomnessCheck>("cert-msc50-cpp");
+    CheckFactories.registerCheck<misc::PredictableRandCheck>("cert-msc50-cpp");
     CheckFactories.registerCheck<bugprone::RandomGeneratorSeedCheck>(
         "cert-msc51-cpp");
     CheckFactories.registerCheck<bugprone::SignalHandlerCheck>(
@@ -324,7 +324,7 @@ public:
     // MSC
     CheckFactories.registerCheck<bugprone::UnsafeFunctionsCheck>(
         "cert-msc24-c");
-    CheckFactories.registerCheck<LimitedRandomnessCheck>("cert-msc30-c");
+    CheckFactories.registerCheck<misc::PredictableRandCheck>("cert-msc30-c");
     CheckFactories.registerCheck<bugprone::RandomGeneratorSeedCheck>(
         "cert-msc32-c");
     CheckFactories.registerCheck<bugprone::UnsafeFunctionsCheck>(
@@ -360,6 +360,7 @@ public:
   }
 };
 
+} // namespace
 } // namespace cert
 
 // Register the MiscTidyModule using this statically initialized variable.

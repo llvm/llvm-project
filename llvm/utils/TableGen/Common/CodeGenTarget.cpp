@@ -18,6 +18,7 @@
 #include "CodeGenRegisters.h"
 #include "CodeGenSchedule.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -39,18 +40,24 @@ static cl::opt<unsigned>
                  cl::desc("Make -gen-asm-writer emit assembly writer #N"),
                  cl::cat(AsmWriterCat));
 
-/// getValueType - Return the MVT::SimpleValueType that the specified TableGen
+/// Returns the MVT that the specified TableGen
 /// record corresponds to.
-MVT::SimpleValueType llvm::getValueType(const Record *Rec) {
-  return (MVT::SimpleValueType)Rec->getValueAsInt("Value");
+MVT llvm::getValueType(const Record *Rec) {
+  return StringSwitch<MVT>(Rec->getValueAsString("LLVMName"))
+#define GET_VT_ATTR(Ty, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)      \
+  .Case(#Ty, MVT::Ty)
+#include "llvm/CodeGen/GenVT.inc"
+#undef GET_VT_ATTR
+      .Case("INVALID_SIMPLE_VALUE_TYPE", MVT::INVALID_SIMPLE_VALUE_TYPE);
 }
 
-StringRef llvm::getEnumName(MVT::SimpleValueType T) {
+StringRef llvm::getEnumName(MVT T) {
   // clang-format off
-  switch (T) {
-#define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)   \
+  switch (T.SimpleTy) {
+#define GET_VT_ATTR(Ty, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)   \
   case MVT::Ty: return "MVT::" # Ty;
 #include "llvm/CodeGen/GenVT.inc"
+#undef GET_VT_ATTR
   default: llvm_unreachable("ILLEGAL VALUE TYPE!");
   }
   // clang-format on
@@ -166,8 +173,8 @@ const CodeGenRegister *CodeGenTarget::getRegisterByName(StringRef Name) const {
 }
 
 const CodeGenRegisterClass &
-CodeGenTarget::getRegisterClass(const Record *R) const {
-  return *getRegBank().getRegClass(R);
+CodeGenTarget::getRegisterClass(const Record *R, ArrayRef<SMLoc> Loc) const {
+  return *getRegBank().getRegClass(R, Loc);
 }
 
 std::vector<ValueTypeByHwMode>
@@ -220,12 +227,14 @@ const Record *CodeGenTarget::getInitValueAsRegClassLike(const Init *V) const {
   const DefInit *VDefInit = dyn_cast<DefInit>(V);
   if (!VDefInit)
     return nullptr;
+  return getAsRegClassLike(VDefInit->getDef());
+}
 
-  const Record *RegClass = VDefInit->getDef();
-  if (RegClass->isSubClassOf("RegisterOperand"))
-    return RegClass->getValueAsDef("RegClass");
+const Record *CodeGenTarget::getAsRegClassLike(const Record *Rec) const {
+  if (Rec->isSubClassOf("RegisterOperand"))
+    return Rec->getValueAsDef("RegClass");
 
-  return RegClass->isSubClassOf("RegisterClassLike") ? RegClass : nullptr;
+  return Rec->isSubClassOf("RegisterClassLike") ? Rec : nullptr;
 }
 
 CodeGenSchedModels &CodeGenTarget::getSchedModels() const {
@@ -283,15 +292,25 @@ void CodeGenTarget::ComputeInstrsByEnum() const {
   assert(EndOfPredefines == getNumFixedInstructions() &&
          "Missing generic opcode");
 
+  [[maybe_unused]] unsigned SkippedInsts = 0;
+
   for (const auto &[_, CGIUp] : InstMap) {
     const CodeGenInstruction *CGI = CGIUp.get();
     if (CGI->Namespace != "TargetOpcode") {
+
+      if (CGI->TheDef->isSubClassOf(
+              "TargetSpecializedStandardPseudoInstruction")) {
+        ++SkippedInsts;
+        continue;
+      }
+
       InstrsByEnum.push_back(CGI);
       NumPseudoInstructions += CGI->TheDef->getValueAsBit("isPseudo");
     }
   }
 
-  assert(InstrsByEnum.size() == InstMap.size() && "Missing predefined instr");
+  assert(InstrsByEnum.size() + SkippedInsts == InstMap.size() &&
+         "Missing predefined instr");
 
   // All of the instructions are now in random order based on the map iteration.
   llvm::sort(

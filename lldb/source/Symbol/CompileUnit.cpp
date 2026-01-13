@@ -27,14 +27,14 @@ CompileUnit::CompileUnit(const lldb::ModuleSP &module_sp, void *user_data,
                   language, is_optimized) {}
 
 CompileUnit::CompileUnit(const lldb::ModuleSP &module_sp, void *user_data,
-                         lldb::SupportFileSP support_file_sp,
+                         SupportFileNSP support_file_nsp,
                          const lldb::user_id_t cu_sym_id,
                          lldb::LanguageType language,
                          lldb_private::LazyBool is_optimized,
                          SupportFileList &&support_files)
     : ModuleChild(module_sp), UserID(cu_sym_id), m_user_data(user_data),
       m_language(language), m_flags(0),
-      m_primary_support_file_sp(support_file_sp),
+      m_primary_support_file_nsp(support_file_nsp),
       m_support_files(std::move(support_files)), m_is_optimized(is_optimized) {
   if (language != eLanguageTypeUnknown)
     m_flags.Set(flagsParsedLanguage);

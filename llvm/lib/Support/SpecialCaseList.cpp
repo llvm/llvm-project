@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -42,10 +43,9 @@ namespace {
 class RegexMatcher {
 public:
   Error insert(StringRef Pattern, unsigned LineNumber);
-  void preprocess();
-
   unsigned match(StringRef Query) const;
 
+private:
   struct Reg {
     Reg(StringRef Name, unsigned LineNo, Regex &&Rg)
         : Name(Name), LineNo(LineNo), Rg(std::move(Rg)) {}
@@ -60,10 +60,9 @@ public:
 class GlobMatcher {
 public:
   Error insert(StringRef Pattern, unsigned LineNumber);
-  void preprocess();
-
   unsigned match(StringRef Query) const;
 
+private:
   struct Glob {
     Glob(StringRef Name, unsigned LineNo, GlobPattern &&Pattern)
         : Name(Name), LineNo(LineNo), Pattern(std::move(Pattern)) {}
@@ -72,15 +71,20 @@ public:
     GlobPattern Pattern;
   };
 
+  void LazyInit() const;
+
   std::vector<GlobMatcher::Glob> Globs;
 
-  RadixTree<iterator_range<StringRef::const_iterator>,
-            RadixTree<iterator_range<StringRef::const_reverse_iterator>,
-                      SmallVector<int, 1>>>
+  mutable RadixTree<iterator_range<StringRef::const_iterator>,
+                    RadixTree<iterator_range<StringRef::const_reverse_iterator>,
+                              SmallVector<int, 1>>>
       PrefixSuffixToGlob;
 
-  RadixTree<iterator_range<StringRef::const_iterator>, SmallVector<int, 1>>
+  mutable RadixTree<iterator_range<StringRef::const_iterator>,
+                    SmallVector<int, 1>>
       SubstrToGlob;
+
+  mutable bool Initialized = false;
 };
 
 /// Represents a set of patterns and their line numbers
@@ -89,7 +93,6 @@ public:
   Matcher(bool UseGlobs, bool RemoveDotSlash);
 
   Error insert(StringRef Pattern, unsigned LineNumber);
-  void preprocess();
   unsigned match(StringRef Query) const;
 
   bool matchAny(StringRef Query) const { return match(Query); }
@@ -122,8 +125,6 @@ Error RegexMatcher::insert(StringRef Pattern, unsigned LineNumber) {
   return Error::success();
 }
 
-void RegexMatcher::preprocess() {}
-
 unsigned RegexMatcher::match(StringRef Query) const {
   for (const auto &R : reverse(RegExes))
     if (R.Rg.match(Query))
@@ -142,7 +143,10 @@ Error GlobMatcher::insert(StringRef Pattern, unsigned LineNumber) {
   return Error::success();
 }
 
-void GlobMatcher::preprocess() {
+void GlobMatcher::LazyInit() const {
+  if (LLVM_LIKELY(Initialized))
+    return;
+  Initialized = true;
   for (const auto &[Idx, G] : enumerate(Globs)) {
     StringRef Prefix = G.Pattern.prefix();
     StringRef Suffix = G.Pattern.suffix();
@@ -167,6 +171,8 @@ void GlobMatcher::preprocess() {
 }
 
 unsigned GlobMatcher::match(StringRef Query) const {
+  LazyInit();
+
   int Best = -1;
   if (!PrefixSuffixToGlob.empty()) {
     for (const auto &[_, SToGlob] : PrefixSuffixToGlob.find_prefixes(Query)) {
@@ -224,10 +230,6 @@ Error Matcher::insert(StringRef Pattern, unsigned LineNumber) {
   return std::visit([&](auto &V) { return V.insert(Pattern, LineNumber); }, M);
 }
 
-void Matcher::preprocess() {
-  return std::visit([&](auto &V) { return V.preprocess(); }, M);
-}
-
 unsigned Matcher::match(StringRef Query) const {
   if (RemoveDotSlash)
     Query = llvm::sys::path::remove_leading_dotslash(Query);
@@ -237,7 +239,6 @@ unsigned Matcher::match(StringRef Query) const {
 
 class SpecialCaseList::Section::SectionImpl {
 public:
-  void preprocess();
   const Matcher *findMatcher(StringRef Prefix, StringRef Category) const;
 
   using SectionEntries = StringMap<StringMap<Matcher>>;
@@ -395,9 +396,6 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
     }
   }
 
-  for (Section &S : Sections)
-    S.Impl->preprocess();
-
   return true;
 }
 
@@ -448,13 +446,6 @@ SpecialCaseList::Section::SectionImpl::findMatcher(StringRef Prefix,
   return &II->second;
 }
 
-void SpecialCaseList::Section::SectionImpl::preprocess() {
-  SectionMatcher.preprocess();
-  for (auto &[K1, E] : Entries)
-    for (auto &[K2, M] : E)
-      M.preprocess();
-}
-
 unsigned SpecialCaseList::Section::getLastMatch(StringRef Prefix,
                                                 StringRef Query,
                                                 StringRef Category) const {
@@ -464,7 +455,7 @@ unsigned SpecialCaseList::Section::getLastMatch(StringRef Prefix,
 }
 
 bool SpecialCaseList::Section::hasPrefix(StringRef Prefix) const {
-  return Impl->Entries.find(Prefix) != Impl->Entries.end();
+  return Impl->Entries.contains(Prefix);
 }
 
 } // namespace llvm

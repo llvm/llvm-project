@@ -74,6 +74,9 @@ const char *RegisterEHFrameSectionAllocActionName =
 const char *DeregisterEHFrameSectionAllocActionName =
     "llvm_orc_deregisterEHFrameAllocAction";
 
+const char *RegisterJITLoaderGDBAllocActionName =
+    "llvm_orc_registerJITLoaderGDBAllocAction";
+
 const char *RunAsMainWrapperName = "__llvm_orc_bootstrap_run_as_main_wrapper";
 const char *RunAsVoidFunctionWrapperName =
     "__llvm_orc_bootstrap_run_as_void_function_wrapper";

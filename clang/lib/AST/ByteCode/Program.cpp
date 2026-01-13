@@ -27,7 +27,7 @@ unsigned Program::getOrCreateNativePointer(const void *Ptr) {
   return It->second;
 }
 
-const void *Program::getNativePointer(unsigned Idx) {
+const void *Program::getNativePointer(unsigned Idx) const {
   return NativePointers[Idx];
 }
 
@@ -411,7 +411,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
       if (OptPrimType T = Ctx.classify(ElemTy)) {
         // Arrays of primitives.
         unsigned ElemSize = primSize(*T);
-        if (std::numeric_limits<unsigned>::max() / ElemSize <= NumElems) {
+        if ((Descriptor::MaxArrayElemBytes / ElemSize) < NumElems) {
           return {};
         }
         return allocateDescriptor(D, *T, MDSize, NumElems, IsConst, IsTemporary,

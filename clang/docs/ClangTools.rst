@@ -72,7 +72,7 @@ instructions on how to setup and use `clang-check`.
 ----------------
 
 Clang-format is both a :doc:`library <LibFormat>` and a :doc:`stand-alone tool
-<ClangFormat>` with the goal of automatically reformatting C++ sources files
+<ClangFormat>` with the goal of automatically reformatting C++ source files
 according to configurable style guides.  To do so, clang-format uses Clang's
 ``Lexer`` to transform an input file into a token stream and then changes all
 the whitespace around those tokens.  The goal is for clang-format to serve both

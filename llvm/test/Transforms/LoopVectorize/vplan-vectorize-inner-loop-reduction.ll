@@ -41,7 +41,7 @@ define void @inner_loop_reduction(ptr noalias nocapture readonly %a.in, ptr noal
 ; CHECK-NEXT: %[[C_PTR:.*]] = getelementptr inbounds double, ptr %c.out, <4 x i64> %[[VEC_INDEX]]
 ; CHECK-NEXT: call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> %[[REDUCTION]], <4 x ptr> align 8 %[[C_PTR]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT: %[[FOR1_INDEX_NEXT:.*]] = add nuw i64 %[[FOR1_INDEX]], 4
-; CHECK-NEXT: %{{.*}} = add <4 x i64> %[[VEC_INDEX]], splat (i64 4)
+; CHECK-NEXT: %{{.*}} = add nuw nsw <4 x i64> %[[VEC_INDEX]], splat (i64 4)
 ; CHECK-NEXT: %[[EXIT_COND:.*]] = icmp eq i64 %[[FOR1_INDEX_NEXT]], 1000
 ; CHECK-NEXT: br i1 %[[EXIT_COND]], label %{{.*}}, label %vector.body
 

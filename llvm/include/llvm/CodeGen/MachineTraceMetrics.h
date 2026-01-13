@@ -78,12 +78,12 @@ struct LiveRegUnit {
   const MachineInstr *MI = nullptr;
   unsigned Op = 0;
 
-  unsigned getSparseSetIndex() const { return RegUnit; }
+  unsigned getSparseSetIndex() const { return static_cast<unsigned>(RegUnit); }
 
   explicit LiveRegUnit(MCRegUnit RU) : RegUnit(RU) {}
 };
 
-using LiveRegUnitSet = SparseSet<LiveRegUnit>;
+using LiveRegUnitSet = SparseSet<LiveRegUnit, MCRegUnit, MCRegUnitToIndex>;
 
 /// Strategies for selecting traces.
 enum class MachineTraceStrategy {

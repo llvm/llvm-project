@@ -46,6 +46,7 @@
 #include "llvm/MC/MCSymbolMachO.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/Base64.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -528,6 +529,7 @@ private:
     DK_LTO_SET_CONDITIONAL,
     DK_CFI_MTE_TAGGED_FRAME,
     DK_MEMTAG,
+    DK_BASE64,
     DK_END
   };
 
@@ -550,6 +552,7 @@ private:
 
   // ".ascii", ".asciz", ".string"
   bool parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated);
+  bool parseDirectiveBase64();                  // ".base64"
   bool parseDirectiveReloc(SMLoc DirectiveLoc); // ".reloc"
   bool parseDirectiveValue(StringRef IDVal,
                            unsigned Size);       // ".byte", ".long", ...
@@ -735,13 +738,6 @@ public:
 namespace llvm {
 
 extern cl::opt<unsigned> AsmMacroMaxNestingDepth;
-
-extern MCAsmParserExtension *createDarwinAsmParser();
-extern MCAsmParserExtension *createELFAsmParser();
-extern MCAsmParserExtension *createCOFFAsmParser();
-extern MCAsmParserExtension *createGOFFAsmParser();
-extern MCAsmParserExtension *createXCOFFAsmParser();
-extern MCAsmParserExtension *createWasmAsmParser();
 
 } // end namespace llvm
 
@@ -1951,6 +1947,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     case DK_ASCIZ:
     case DK_STRING:
       return parseDirectiveAscii(IDVal, true);
+    case DK_BASE64:
+      return parseDirectiveBase64();
     case DK_BYTE:
     case DK_DC_B:
       return parseDirectiveValue(IDVal, 1);
@@ -3072,6 +3070,37 @@ bool AsmParser::parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated) {
   };
 
   return parseMany(parseOp);
+}
+
+/// parseDirectiveBase64:
+//    ::= .base64 "string" (, "string" )*
+bool AsmParser::parseDirectiveBase64() {
+  auto parseOp = [&]() -> bool {
+    if (checkForValidSection())
+      return true;
+
+    if (getTok().isNot(AsmToken::String)) {
+      return true;
+    }
+
+    std::vector<char> Decoded;
+    std::string const str = getTok().getStringContents().str();
+    if (check(str.empty(), "expected nonempty string")) {
+      return true;
+    }
+
+    llvm::Error e = decodeBase64(str, Decoded);
+    if (e) {
+      consumeError(std::move(e));
+      return Error(Lexer.getLoc(), "failed to base64 decode string data");
+    }
+
+    getStreamer().emitBytes(std::string(Decoded.begin(), Decoded.end()));
+    Lex();
+    return false;
+  };
+
+  return check(parseMany(parseOp), "expected string");
 }
 
 /// parseDirectiveReloc
@@ -5343,6 +5372,7 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".asciz"] = DK_ASCIZ;
   DirectiveKindMap[".string"] = DK_STRING;
   DirectiveKindMap[".byte"] = DK_BYTE;
+  DirectiveKindMap[".base64"] = DK_BASE64;
   DirectiveKindMap[".short"] = DK_SHORT;
   DirectiveKindMap[".value"] = DK_VALUE;
   DirectiveKindMap[".2byte"] = DK_2BYTE;
@@ -6233,12 +6263,11 @@ bool HLASMAsmParser::parseStatement(ParseStatementInfo &Info,
   return parseAsMachineInstruction(Info, SI);
 }
 
-namespace llvm {
-namespace MCParserUtils {
-
-bool parseAssignmentExpression(StringRef Name, bool allow_redef,
-                               MCAsmParser &Parser, MCSymbol *&Sym,
-                               const MCExpr *&Value) {
+bool llvm::MCParserUtils::parseAssignmentExpression(StringRef Name,
+                                                    bool allow_redef,
+                                                    MCAsmParser &Parser,
+                                                    MCSymbol *&Sym,
+                                                    const MCExpr *&Value) {
 
   // FIXME: Use better location, we should use proper tokens.
   SMLoc EqualLoc = Parser.getTok().getLoc();
@@ -6274,9 +6303,6 @@ bool parseAssignmentExpression(StringRef Name, bool allow_redef,
 
   return false;
 }
-
-} // end namespace MCParserUtils
-} // end namespace llvm
 
 /// Create an MCAsmParser instance.
 MCAsmParser *llvm::createMCAsmParser(SourceMgr &SM, MCContext &C,

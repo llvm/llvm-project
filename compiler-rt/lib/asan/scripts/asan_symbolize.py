@@ -60,6 +60,7 @@ def is_valid_arch(s):
         "armv7k",
         "arm64",
         "arm64e",
+        "powerpc",
         "powerpc64",
         "powerpc64le",
         "s390x",
@@ -450,7 +451,14 @@ class SymbolizationLoop(object):
             # E.g. in Chrome several binaries may share a single .dSYM.
             self.dsym_hint_producer = dsym_hint_producer
             self.system = os.uname()[0]
-            if self.system not in ["Linux", "Darwin", "FreeBSD", "NetBSD", "SunOS"]:
+            if self.system not in [
+                "Linux",
+                "Darwin",
+                "FreeBSD",
+                "NetBSD",
+                "SunOS",
+                "AIX",
+            ]:
                 raise Exception("Unknown system")
             self.llvm_symbolizers = {}
             self.last_llvm_symbolizer = None

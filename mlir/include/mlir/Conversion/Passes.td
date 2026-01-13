@@ -198,7 +198,8 @@ def ArithToAPFloatConversionPass
     calls (APFloatWrappers.cpp). APFloat is a software implementation of
     floating-point arithmetic operations.
   }];
-  let dependentDialects = ["func::FuncDialect"];
+  let dependentDialects = ["arith::ArithDialect", "func::FuncDialect",
+                           "vector::VectorDialect"];
 }
 
 //===----------------------------------------------------------------------===//
@@ -628,6 +629,8 @@ def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm", "gpu::GPUModuleOp"> {
            /*default=*/"false",
            "Replace memref arguments in GPU functions with bare pointers. "
            "All memrefs must have static shape.">,
+    Option<"allowPatternRollback", "allow-pattern-rollback", "bool", "true",
+           "Experimental performance flag to disallow pattern rollback">,
     ListOption<"allowedDialects", "allowed-dialects", "std::string",
                "Run conversion patterns of only the specified dialects">,
   ];
@@ -770,6 +773,21 @@ def ConvertMathToLibmPass : Pass<"convert-math-to-libm", "ModuleOp"> {
     "func::FuncDialect",
     "vector::VectorDialect",
   ];
+}
+
+//===----------------------------------------------------------------------===//
+// MathToAPFloat
+//===----------------------------------------------------------------------===//
+
+def MathToAPFloatConversionPass
+    : Pass<"convert-math-to-apfloat", "ModuleOp"> {
+  let summary = "Convert Math ops to APFloat runtime library calls";
+  let description = [{
+    This pass converts supported Math ops to APFloat-based runtime library
+    calls (APFloatWrappers.cpp). APFloat is a software implementation of
+    floating-point mathmetic operations.
+  }];
+  let dependentDialects = ["math::MathDialect", "func::FuncDialect"];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1084,6 +1102,10 @@ def SCFToControlFlowPass : Pass<"convert-scf-to-cf"> {
   let summary = "Convert SCF dialect to ControlFlow dialect, replacing structured"
                 " control flow with a CFG";
   let dependentDialects = ["cf::ControlFlowDialect"];
+  let options = [
+    Option<"allowPatternRollback", "allow-pattern-rollback", "bool", "true",
+           "Experimental performance flag to disallow pattern rollback">
+  ];
 }
 
 //===----------------------------------------------------------------------===//

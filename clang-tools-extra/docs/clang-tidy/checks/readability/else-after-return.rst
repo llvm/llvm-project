@@ -9,7 +9,8 @@ Early exit is one of the suggested enforcements of that. Please do not use
 ``else`` or ``else if`` after something that interrupts control flow - like
 ``return``, ``break``, ``continue``, ``throw``.
 
-The following piece of code illustrates how the check works. This piece of code:
+The following piece of code illustrates how the check works.
+This piece of code:
 
 .. code-block:: c++
 
