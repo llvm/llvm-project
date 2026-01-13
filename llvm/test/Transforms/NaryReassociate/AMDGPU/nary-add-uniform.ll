@@ -30,7 +30,7 @@ define amdgpu_kernel void @prefer_uniform_grouping(i32 %u1, i32 %u2) {
 ; CHECK-NEXT:    [[U1_U2:%.*]] = add i32 [[U1]], [[U2]]
 ; CHECK-NEXT:    call void @use(i32 [[D_U2]])
 ; CHECK-NEXT:    call void @use(i32 [[U1_U2]])
-; CHECK-NEXT:    [[RESULT:%.*]] = add i32 [[D_U2]], [[U1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = add i32 [[U1_U2]], [[D]]
 ; CHECK-NEXT:    call void @use(i32 [[RESULT]])
 ; CHECK-NEXT:    ret void
 ;
@@ -60,7 +60,7 @@ define amdgpu_kernel void @prefer_uniform_grouping_mul(i32 %u1, i32 %u2) {
 ; CHECK-NEXT:    [[U1_U2:%.*]] = mul i32 [[U1]], [[U2]]
 ; CHECK-NEXT:    call void @use(i32 [[D_U2]])
 ; CHECK-NEXT:    call void @use(i32 [[U1_U2]])
-; CHECK-NEXT:    [[RESULT:%.*]] = mul i32 [[D_U2]], [[U1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = mul i32 [[U1_U2]], [[D]]
 ; CHECK-NEXT:    call void @use(i32 [[RESULT]])
 ; CHECK-NEXT:    ret void
 ;
@@ -135,7 +135,7 @@ define amdgpu_kernel void @prefer_uniform_grouping_smax(i32 %u1, i32 %u2) {
 ; CHECK-NEXT:    [[U1_U2:%.*]] = call i32 @llvm.smax.i32(i32 [[U1]], i32 [[U2]])
 ; CHECK-NEXT:    call void @use(i32 [[D_U2]])
 ; CHECK-NEXT:    call void @use(i32 [[U1_U2]])
-; CHECK-NEXT:    [[RESULT_NARY:%.*]] = call i32 @llvm.smax.i32(i32 [[D_U2]], i32 [[U1]])
+; CHECK-NEXT:    [[RESULT_NARY:%.*]] = call i32 @llvm.smax.i32(i32 [[U1_U2]], i32 [[D]])
 ; CHECK-NEXT:    call void @use(i32 [[RESULT_NARY]])
 ; CHECK-NEXT:    ret void
 ;
@@ -166,7 +166,7 @@ define amdgpu_kernel void @prefer_uniform_grouping_umin(i32 %u1, i32 %u2) {
 ; CHECK-NEXT:    [[U1_U2:%.*]] = call i32 @llvm.umin.i32(i32 [[U1]], i32 [[U2]])
 ; CHECK-NEXT:    call void @use(i32 [[D_U2]])
 ; CHECK-NEXT:    call void @use(i32 [[U1_U2]])
-; CHECK-NEXT:    [[RESULT_NARY:%.*]] = call i32 @llvm.umin.i32(i32 [[D_U2]], i32 [[U1]])
+; CHECK-NEXT:    [[RESULT_NARY:%.*]] = call i32 @llvm.umin.i32(i32 [[U1_U2]], i32 [[D]])
 ; CHECK-NEXT:    call void @use(i32 [[RESULT_NARY]])
 ; CHECK-NEXT:    ret void
 ;
@@ -195,7 +195,7 @@ define amdgpu_kernel void @gep_lhs_uniform_rhs_divergent(ptr %base, i64 %u_offse
 ; CHECK-NEXT:    [[GEP_D:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[D_EXT]]
 ; CHECK-NEXT:    call void @use_ptr(ptr [[GEP_U]])
 ; CHECK-NEXT:    call void @use_ptr(ptr [[GEP_D]])
-; CHECK-NEXT:    [[GEP_RESULT:%.*]] = getelementptr i32, ptr [[GEP_U]], i64 [[D_EXT]]
+; CHECK-NEXT:    [[GEP_RESULT:%.*]] = getelementptr i32, ptr [[GEP_D]], i64 [[U_OFFSET]]
 ; CHECK-NEXT:    call void @use_ptr(ptr [[GEP_RESULT]])
 ; CHECK-NEXT:    ret void
 ;

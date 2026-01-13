@@ -81,6 +81,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 
@@ -105,7 +106,7 @@ public:
   // Glue for old PM.
   bool runImpl(Function &F, AssumptionCache *AC_, DominatorTree *DT_,
                ScalarEvolution *SE_, TargetLibraryInfo *TLI_,
-               TargetTransformInfo *TTI_);
+               TargetTransformInfo *TTI_, UniformityInfo *UI_ = nullptr);
 
 private:
   // Runs only one iteration of the dominator-based algorithm. See the header
@@ -180,6 +181,7 @@ private:
   ScalarEvolution *SE;
   TargetLibraryInfo *TLI;
   TargetTransformInfo *TTI;
+  UniformityInfo *UI;
 
   // A lookup table quickly telling which instructions compute the given SCEV.
   // Note that there can be multiple instructions at different locations
