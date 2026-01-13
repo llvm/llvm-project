@@ -242,7 +242,6 @@ Transforms/InstCombine/div-shift.ll
 Transforms/InstCombine/fabs.ll
 Transforms/InstCombine/fcmp-select.ll
 Transforms/InstCombine/ffs-1.ll
-Transforms/InstCombine/ffs-i16.ll
 Transforms/InstCombine/fmul-bool.ll
 Transforms/InstCombine/fmul.ll
 Transforms/InstCombine/fneg.ll
