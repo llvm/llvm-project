@@ -1050,9 +1050,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       if (VT.getVectorElementType() == MVT::f16 ||
           VT.getVectorElementType() == MVT::bf16)
         setLoadExtAction(ISD::EXTLOAD, InnerVT, VT, Expand);
-
-      if (VT.getVectorElementType() == MVT::i4)
-        setLoadExtAction(ISD::EXTLOAD, InnerVT, VT, Expand);
     }
   }
 
@@ -2800,8 +2797,7 @@ X86TargetLowering::getPreferredVectorAction(MVT VT) const {
     return TypeSplitVector;
 
   if (!VT.isScalableVector() && VT.getVectorNumElements() != 1 &&
-      VT.getVectorElementType() != MVT::i1 &&
-      VT.getVectorElementType() != MVT::i4)
+      VT.getVectorElementType() != MVT::i1)
     return TypeWidenVector;
 
   return TargetLoweringBase::getPreferredVectorAction(VT);

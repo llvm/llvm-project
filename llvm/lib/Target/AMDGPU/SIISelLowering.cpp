@@ -877,7 +877,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                      {MVT::v4i16, MVT::v4f16, MVT::v4bf16, MVT::v2i8, MVT::v4i8,
                       MVT::v8i8, MVT::v8i16, MVT::v8f16, MVT::v8bf16,
                       MVT::v16i16, MVT::v16f16, MVT::v16bf16, MVT::v32i16,
-                      MVT::v32f16, MVT::v32bf16, MVT::v16i4},
+                      MVT::v32f16, MVT::v32bf16},
                      Custom);
 
   setOperationAction({ISD::SMULO, ISD::UMULO}, MVT::i64, Custom);
@@ -16986,20 +16986,16 @@ SDValue SITargetLowering::performClampCombine(SDNode *N,
   return SDValue(CSrc, 0);
 }
 
-SDValue SITargetLowering::performSelectCombine(SDNode *N,
-                                               DAGCombinerInfo &DCI) const {
-
-  // Try to fold CMP + SELECT patterns with shared constants (both FP and
-  // integer).
-  // Detect when CMP and SELECT use the same constant and fold them to avoid
-  // loading the constant twice. Specifically handles patterns like:
-  // %cmp = icmp eq i32 %val, 4242
-  // %sel = select i1 %cmp, i32 4242, i32 %other
-  // It can be optimized to reuse %val instead of 4242 in select.
-  SDValue Cond = N->getOperand(0);
-  SDValue TrueVal = N->getOperand(1);
-  SDValue FalseVal = N->getOperand(2);
-
+// Try to fold CMP + SELECT patterns with shared constants (both FP and
+// integer).
+// Detect when CMP and SELECT use the same constant and fold them to avoid
+// loading the constant twice. Specifically handles patterns like:
+// %cmp = icmp eq i32 %val, 4242
+// %sel = select i1 %cmp, i32 4242, i32 %other
+// It can be optimized to reuse %val instead of 4242 in select.
+SDValue SITargetLowering::foldShareConstSelect(SDNode *N, DAGCombinerInfo &DCI,
+                                               SDValue &Cond, SDValue &TrueVal,
+                                               SDValue &FalseVal) const {
   // Check if condition is a comparison.
   if (Cond.getOpcode() != ISD::SETCC)
     return SDValue();
@@ -17056,6 +17052,53 @@ SDValue SITargetLowering::performSelectCombine(SDNode *N,
       (isNonEquality && FalseVal == ConstVal) ? ArgVal : FalseVal;
   return DCI.DAG.getNode(ISD::SELECT, SDLoc(N), N->getValueType(0), Cond,
                          SelectLHS, SelectRHS);
+}
+
+// Try to convert vXiY into vZi32 with X * Y = Z * 32
+SDValue SITargetLowering::castTypeSelect(SDNode *N, DAGCombinerInfo &DCI,
+                                         SDValue &Cond, SDValue &TrueVal,
+                                         SDValue &FalseVal) const {
+  if (N->getNumValues() != 1)
+    return SDValue();
+
+  EVT ResultVT = N->getValueType(0);
+  if (ResultVT.isSimple() || !ResultVT.isVector() ||
+      !ResultVT.isPow2VectorType())
+    return SDValue();
+
+  EVT EltVT = ResultVT.getVectorElementType();
+  unsigned EltBitSize = EltVT.getSizeInBits();
+  ElementCount NumElts = ResultVT.getVectorElementCount();
+  if (!EltVT.isInteger() || !isPowerOf2_32(EltBitSize) || NumElts.isScalar())
+    return SDValue();
+
+  unsigned NewNumElts = ResultVT.getVectorNumElements() / (32 / EltBitSize);
+  if (TrueVal.getValueType() == ResultVT &&
+      FalseVal.getValueType() == ResultVT) {
+    EVT NewVT = EVT::getVectorVT(*DCI.DAG.getContext(), MVT::i32, NewNumElts);
+    SDValue NewTrue =
+        DCI.DAG.getNode(ISD::BITCAST, SDLoc(TrueVal), NewVT, TrueVal);
+    SDValue NewFalse =
+        DCI.DAG.getNode(ISD::BITCAST, SDLoc(FalseVal), NewVT, FalseVal);
+    SDValue NewSelect =
+        DCI.DAG.getNode(ISD::SELECT, SDLoc(N), NewVT, Cond, NewTrue, NewFalse);
+    return DCI.DAG.getNode(ISD::BITCAST, SDLoc(N), ResultVT, NewSelect);
+  }
+  return SDValue();
+}
+
+SDValue SITargetLowering::performSelectCombine(SDNode *N,
+                                               DAGCombinerInfo &DCI) const {
+
+  SDValue Cond = N->getOperand(0);
+  SDValue TrueVal = N->getOperand(1);
+  SDValue FalseVal = N->getOperand(2);
+
+  SDValue Res = foldShareConstSelect(N, DCI, Cond, TrueVal, FalseVal);
+  if (Res)
+    return Res;
+  else
+    return castTypeSelect(N, DCI, Cond, TrueVal, FalseVal);
 }
 
 SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
