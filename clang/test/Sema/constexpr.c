@@ -402,10 +402,17 @@ bool issue155507(v2int16_t a, v2int16_t b) {
 constexpr bool b2 = (bool)nullptr;
 _Static_assert(!b2);
 
-double ghissue173847(double a) {
+double gh173847_double(double a) {
   double result = 3.0 / (a + 4.5 - 2.1 * 0.7);
   return result;
 }
-void ghissue173847_test() {
-  constexpr float f_const = ghissue173847(2.0); // expected-error {{constexpr variable 'f_const' must be initialized by a constant expression}}
+
+long double gh173847_long_double(long double a) {
+  long double result = 3.0L / (a + 4.5L - 2.1L * 0.7L);
+  return result;
+}
+
+void gh173847_test() {
+  constexpr double d_const = gh173847_double(2.0);             // expected-error {{constexpr variable 'd_const' must be initialized by a constant expression}}
+  constexpr long double ld_const = gh173847_long_double(2.0L); // expected-error {{constexpr variable 'ld_const' must be initialized by a constant expression}}
 }
