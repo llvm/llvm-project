@@ -216,8 +216,7 @@ template <auto ConstFn> struct FnConstant {
 // Storage class for bind_front/bind_back that properly handles const/non-const
 // qualification of the wrapper when invoking the stored callable.
 // If BindFront is true, bound args are prepended; otherwise appended.
-// FnStorageT is either FnHolder<FnT> (runtime) or FnConstant<ConstFn> (template
-// argument).
+// FnStorageT is either FnHolder<FnT> (runtime) or FnConstant<ConstFn>.
 template <bool BindFront, typename BoundArgsTupleT, typename FnStorageT,
           typename IndicesT>
 class BindStorage;
