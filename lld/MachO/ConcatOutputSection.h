@@ -80,6 +80,17 @@ public:
   }
 
 private:
+  // Estimate the end VA of this section if it were to start at `startVA`.
+  uint64_t estimateEndVA(uint64_t startVA) const;
+
+  // Compute the end VA of the furthest section in this segment that can be
+  // the target of a branch relocation.
+  uint64_t estimateFurthestBranchTargetEndVA() const;
+
+  // Pre-populate thunkMap with call site counts for
+  // estimateBranchTargetThresholdVA().
+  void recordCallSites() const;
+
   uint64_t estimateBranchTargetThresholdVA(size_t callIdx) const;
 
   std::vector<ConcatInputSection *> thunks;
