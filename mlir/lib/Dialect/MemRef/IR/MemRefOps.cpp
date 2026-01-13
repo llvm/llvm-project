@@ -808,6 +808,35 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
   return succeeded(foldMemRefCast(*this)) ? getResult() : Value();
 }
 
+namespace {
+struct HoistCastPos : public OpRewritePattern<CastOp> {
+  using OpRewritePattern<CastOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(CastOp castOp,
+                                PatternRewriter &rewriter) const override {
+    if (auto *defineOp = castOp.getSource().getDefiningOp()) {
+      if (defineOp->getBlock() != castOp->getBlock()) {
+        rewriter.moveOpAfter(castOp.getOperation(), defineOp);
+        return success();
+      }
+      return failure();
+    } else {
+      auto argument = cast<BlockArgument>(castOp.getSource());
+      if (argument.getOwner() != castOp->getBlock()) {
+        rewriter.moveOpBefore(castOp.getOperation(),
+                              &argument.getOwner()->front());
+        return success();
+      }
+      return failure();
+    }
+  }
+};
+} // namespace
+
+void CastOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                         MLIRContext *context) {
+  results.add<HoistCastPos>(context);
+}
+
 FailureOr<std::optional<SmallVector<Value>>>
 CastOp::bubbleDownCasts(OpBuilder &builder) {
   return bubbleDownCastsPassthroughOpImpl(*this, builder, getSourceMutable());
