@@ -17,6 +17,7 @@
 //   ostreams with weird CharTraits, this is a compile-only test.
 
 //   It is unspecified whether these operators are SFINAE-friendly. We choose to make them so.
+//   See https://wg21.link/LWG4364 for whether this should be considered an extension or not.
 
 #include <iomanip>
 #include <istream>
