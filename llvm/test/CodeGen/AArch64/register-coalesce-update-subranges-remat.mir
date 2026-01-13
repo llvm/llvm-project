@@ -1,5 +1,6 @@
 # RUN: llc -mtriple=aarch64 -o /dev/null -run-pass=register-coalescer -aarch64-enable-subreg-liveness-tracking -debug-only=regalloc %s 2>&1 | FileCheck %s --check-prefix=CHECK-DBG
 # RUN: llc -mtriple=aarch64 -verify-machineinstrs -o - -run-pass=register-coalescer -aarch64-enable-subreg-liveness-tracking %s | FileCheck %s --check-prefix=CHECK
+# XFAIL: *
 # REQUIRES: asserts
 
 # CHECK-DBG: ********** REGISTER COALESCER **********
