@@ -23919,8 +23919,15 @@ bool SLPVectorizerPass::vectorizeStores(
   bool Changed = false;
 
   auto TryToVectorize = [&](const RelatedStoreInsts::DistToInstMap &StoreSeq) {
-    auto VectorizeOperands = [&](BoUpSLP::ValueList &Operands,
+    auto VectorizeOperands = [&](BoUpSLP::ValueList &RawOperands,
                                  bool Strided) -> void {
+      unsigned FirstAlive = RawOperands.size();
+      for (unsigned Idx : seq<unsigned>(RawOperands.size()))
+        if (!R.isDeleted(cast<Instruction>(RawOperands[Idx]))) {
+          FirstAlive = Idx;
+          break;
+        }
+      auto Operands = ArrayRef(RawOperands).slice(FirstAlive);
       if (Operands.size() <= 1 ||
           (Operands.size() < MinProfitableStridedMemOps &&
            Strided) ||
@@ -24001,8 +24008,14 @@ bool SLPVectorizerPass::vectorizeStores(
       unsigned Repeat = 0;
       constexpr unsigned MaxAttempts = 4;
       OwningArrayRef<std::pair<unsigned, unsigned>> RangeSizes(Operands.size());
-      for (std::pair<unsigned, unsigned> &P : RangeSizes)
-        P.first = P.second = 1;
+      for (auto Idx : seq<unsigned>(RangeSizes.size())) {
+        std::pair<unsigned, unsigned> &P = RangeSizes[Idx];
+        if (R.isDeleted(cast<Instruction>(Operands[Idx])))
+          P.first = P.second = 0;
+        else
+          P.first = P.second = 1;
+      }
+
       DenseMap<Value *, std::pair<unsigned, unsigned>> NonSchedulable;
       auto IsNotVectorized = [](bool First,
                                 const std::pair<unsigned, unsigned> &P) {
