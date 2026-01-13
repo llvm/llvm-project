@@ -35,7 +35,6 @@ struct SPIRVPrepareGlobals : public ModulePass {
   bool runOnModule(Module &M) override;
 };
 
-
 // The backend does not support GlobalAlias. Replace aliases with their aliasees
 // when possible and remove them from the module.
 bool tryReplaceAliasWithAliasee(GlobalAlias &GA) {
