@@ -20,6 +20,8 @@
 #include "hsa_ext_amd.h"
 #include <memory>
 
+using namespace llvm::offload::debug;
+
 DLWRAP_INITIALIZE()
 
 DLWRAP_INTERNAL(hsa_init, 0)

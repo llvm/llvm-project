@@ -34,6 +34,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Program.h"
 
+using namespace llvm::offload::debug;
 using namespace error;
 
 namespace llvm {

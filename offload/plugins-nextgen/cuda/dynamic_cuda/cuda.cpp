@@ -22,6 +22,8 @@
 #include <string>
 #include <unordered_map>
 
+using namespace llvm::offload::debug;
+
 DLWRAP_INITIALIZE()
 
 DLWRAP_INTERNAL(cuInit, 1)

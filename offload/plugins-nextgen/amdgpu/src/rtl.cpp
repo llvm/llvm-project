@@ -75,6 +75,7 @@
 #include "hsa/hsa_ext_amd.h"
 #endif
 
+using namespace llvm::offload::debug;
 using namespace error;
 
 namespace llvm {
