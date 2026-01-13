@@ -109,21 +109,19 @@ Branch the Git trunk using the following procedure:
 #. Verify the current git trunk is in decent shape by examining the status
    checks on the `most recent commits <https://github.com/llvm/llvm-project/commits/main>`_
 
-#. Bump the version in trunk to ``N.0.0git``, clear the release notes, and tag
-   the commit with ``llvmorg-N-init``.
-   If ``X`` is the version to be released, then ``N`` is ``X + 1``. ::
+#. Bump the version in trunk to ``N.0.0git`` and clear the release notes: ::
 
     $ llvm/utils/release/bump-version.py --git N.0.0
     $ llvm/utils/release/clear-release-notes.py
     $ git commit -am "Bump version to N.0.0git"
-    $ GPG_TTY=$(tty) git tag -sa llvmorg-N-init -m "llvmorg-N-init"
-
-#. Push changes to trunk: ::
-
     $ git push origin main
 
-#. Push tag to trunk: ::
+   If the push fails, rebase if necessary and try again.
 
+#. Tag the commit bumping the version on trunk with ``llvmorg-N-init``. If
+   ``X`` is the version to be released, then ``N`` is ``X + 1``. ::
+
+    $ GPG_TTY=$(tty) git tag -sa llvmorg-N-init -m "llvmorg-N-init"
     $ git push origin llvmorg-N-init
 
 #. Create the release branch from the last known good revision before the
@@ -146,6 +144,7 @@ Branch the Git trunk using the following procedure:
 #. And finally, create the release branch in ``llvm-test-suite`` repo: ::
 
     $ cd <llvm-test-suite>
+    $ git checkout main
     $ git pull
     $ git checkout -b release/X.x
     $ git push -u origin release/X.x
