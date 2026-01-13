@@ -3611,15 +3611,36 @@ def : GCNPat<
   (V_PK_MUL_F16 0, (i32 CONST.FP16_ONE), $src_mods, $src, DSTCLAMP.NONE)
 >;
 
-def : GCNPat<
-  (fcanonicalize (f32 (VOP3Mods f32:$src, i32:$src_mods))),
-  (V_MUL_F32_e64 0, (i32 CONST.FP32_ONE), $src_mods, $src)
->;
 
-def : GCNPat<
-  (fcanonicalize (f32 (fneg (VOP3Mods f32:$src, i32:$src_mods)))),
-  (V_MUL_F32_e64 0, (i32 CONST.FP32_NEG_ONE), $src_mods, $src)
->;
+let OtherPredicates = [IEEEModeEnabled] in {
+  def : GCNPat<
+    (fcanonicalize (f32 (VOP3Mods f32:$src, i32:$src_mods))),
+    (V_MUL_F32_e64 0, (i32 CONST.FP32_ONE), $src_mods, $src)
+  >;
+
+  def : GCNPat<
+    (fcanonicalize (f32 (fneg (VOP3Mods f32:$src, i32:$src_mods)))),
+    (V_MUL_F32_e64 0, (i32 CONST.FP32_NEG_ONE), $src_mods, $src)
+  >;
+}
+
+let OtherPredicates = [IEEEModeDisabled] in {
+  def : GCNPat<
+    (fcanonicalize (f32 (VOP3Mods f32:$src, i32:$src_mods))),
+    (V_MUL_F32_e32 (i32 CONST.FP32_ONE),
+      (f32 (V_CNDMASK_B32_e64 i32:$src_mods, f32:$src, (i32 0),
+        (V_OR_B32_e64 (i32 0x400000), $src),
+        (i1 (V_CMP_U_F32_e64 i32:$src_mods, f32:$src, (i32 0), (i32 0), (i1 0))))))> {
+  }
+
+  def : GCNPat<
+    (fcanonicalize (f32 (fneg (VOP3Mods f32:$src, i32:$src_mods)))),
+    (V_MUL_F32_e32 (i32 CONST.FP32_NEG_ONE),
+      (f32 (V_CNDMASK_B32_e64 i32:$src_mods, f32:$src, (i32 0),
+        (V_OR_B32_e64 (i32 0x400000), $src),
+        (i1 (V_CMP_U_F32_e64 i32:$src_mods, f32:$src, (i32 0), (i32 0), (i1 0))))))> {
+  }
+}
 
 let SubtargetPredicate = HasPackedFP32Ops in {
 def : GCNPat<
@@ -3641,16 +3662,43 @@ multiclass SelectCanonicalizeAsMax<
   list<Predicate> f32_preds = [],
   list<Predicate> f64_preds = [],
   list<Predicate> f16_preds = []> {
-  def : GCNPat<
-    (fcanonicalize (f32 (VOP3Mods f32:$src, i32:$src_mods))),
-    (V_MAX_F32_e64 $src_mods, $src, $src_mods, $src)> {
-    let OtherPredicates = f32_preds;
+
+  let OtherPredicates = !listconcat([IEEEModeEnabled], f32_preds) in {
+    def : GCNPat<
+      (fcanonicalize (f32 (VOP3Mods f32:$src, i32:$src_mods))),
+      (V_MAX_F32_e64 $src_mods, $src, $src_mods, $src)> {
+    }
   }
 
-  def : GCNPat<
-    (fcanonicalize (f64 (VOP3Mods f64:$src, i32:$src_mods))),
-    (V_MAX_F64_e64  $src_mods, $src, $src_mods, $src)> {
-    let OtherPredicates = !listconcat(f64_preds, [isNotGFX12Plus]);
+  let OtherPredicates = !listconcat([IEEEModeDisabled], f32_preds) in {
+    def : GCNPat<
+      (fcanonicalize (f32 (VOP3Mods f32:$src, i32:$src_mods))),
+      (V_MUL_F32_e32 (i32 CONST.FP32_ONE),
+        (f32 (V_CNDMASK_B32_e64 i32:$src_mods, f32:$src, (i32 0),
+          (V_OR_B32_e64 (i32 0x400000), $src),
+          (i1 (V_CMP_U_F32_e64 i32:$src_mods, f32:$src, (i32 0), (i32 0), (i1 0))))))> {
+    }
+  }
+
+  let OtherPredicates = !listconcat(f64_preds, [isNotGFX12Plus, IEEEModeEnabled]) in {
+    def : GCNPat<
+      (fcanonicalize (f64 (VOP3Mods f64:$src, i32:$src_mods))),
+      (V_MAX_F64_e64  $src_mods, $src, $src_mods, $src)> {
+    }
+  }
+
+  let OtherPredicates = !listconcat(f64_preds, [isNotGFX12Plus, IEEEModeDisabled]) in {
+    def : GCNPat<
+      (fcanonicalize (f64 (VOP3Mods f64:$src, i32:$src_mods))),
+      (V_MUL_F64_e64 (i32 0), (i64 CONST.FP64_ONE), (i32 0),
+        (INSERT_SUBREG f64:$src,
+          (f32 (V_CNDMASK_B32_e64 i32:$src_mods,
+            (i32 (EXTRACT_SUBREG f64:$src, sub1)),
+            (i32 0),
+            (V_OR_B32_e64 (i32 0x80000), (i32 (EXTRACT_SUBREG f64:$src, sub1))),
+            (i1 (V_CMP_U_F64_e64 i32:$src_mods, f64:$src, (i32 0), (i64 0), (i1 0))))),
+          sub1))> {
+    }
   }
 
   def : GCNPat<
@@ -3659,25 +3707,61 @@ multiclass SelectCanonicalizeAsMax<
     let OtherPredicates = !listconcat(f64_preds, [isGFX12Plus]);
   }
 
-  def : GCNPat<
-    (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
-    (V_MAX_F16_e64 $src_mods, $src, $src_mods, $src, 0, 0)> {
-    let OtherPredicates = !listconcat(f16_preds, [Has16BitInsts]);
-    let True16Predicate = NotHasTrue16BitInsts;
+  let OtherPredicates = !listconcat(f16_preds, [Has16BitInsts, IEEEModeEnabled]) in {
+    def : GCNPat<
+      (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
+      (V_MAX_F16_e64 $src_mods, $src, $src_mods, $src, 0, 0)> {
+      let True16Predicate = NotHasTrue16BitInsts;
+    }
   }
 
-  def : GCNPat<
-    (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
-    (V_MAX_F16_t16_e64 $src_mods, $src, $src_mods, $src, 0, 0)> {
-    let OtherPredicates = !listconcat(f16_preds, [Has16BitInsts]);
-    let True16Predicate = UseRealTrue16Insts;
+  let OtherPredicates = !listconcat(f16_preds, [Has16BitInsts, IEEEModeDisabled]) in {
+    def : GCNPat<
+      (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
+      (V_MUL_F16_e32 (i32 CONST.FP16_ONE),
+        (f16 (V_CNDMASK_B32_e64 i32:$src_mods, f16:$src, (i32 0),
+          (V_OR_B32_e64 (i32 0x200), f16:$src),
+          (i1 (V_CMP_U_F16_e64 i32:$src_mods, f16:$src, (i32 0), (i32 0), (i1 0))))))> {
+      let True16Predicate = NotHasTrue16BitInsts;
+    }
   }
 
-  def : GCNPat<
-    (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
-    (V_MAX_F16_fake16_e64 $src_mods, $src, $src_mods, $src, 0, 0)> {
-    let OtherPredicates = !listconcat(f16_preds, [Has16BitInsts]);
-    let True16Predicate = UseFakeTrue16Insts;
+  let OtherPredicates = !listconcat(f16_preds, [Has16BitInsts, IEEEModeEnabled]) in {
+    def : GCNPat<
+      (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
+      (V_MAX_F16_t16_e64 $src_mods, $src, $src_mods, $src, 0, 0)> {
+      let True16Predicate = UseRealTrue16Insts;
+    }
+  }
+
+  let OtherPredicates = !listconcat(f16_preds, [Has16BitInsts, IEEEModeDisabled]) in {
+    def : GCNPat<
+      (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
+      (V_MUL_F16_t16_e64 (i32 0), (i16 CONST.FP16_ONE), (i32 0),
+        (f16 (V_CNDMASK_B16_t16_e64 i32:$src_mods, f16:$src, (i32 0),
+          (V_OR_B32_e64 (i32 0x200), f16:$src),
+          (i1 (V_CMP_U_F16_t16_e64 i32:$src_mods, f16:$src, (i32 0), (i16 0), (i1 0))))))> {
+      let True16Predicate = UseRealTrue16Insts;
+    }
+  }
+
+  let OtherPredicates = !listconcat(f16_preds, [Has16BitInsts, IEEEModeEnabled]) in {
+    def : GCNPat<
+        (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
+        (V_MAX_F16_fake16_e64 $src_mods, $src, $src_mods, $src, 0, 0)> {
+        let True16Predicate = UseFakeTrue16Insts;
+      }
+  }
+
+  let OtherPredicates = !listconcat(f16_preds, [Has16BitInsts, IEEEModeDisabled]) in {
+    def : GCNPat<
+      (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
+      (V_MUL_F16_fake16_e32 (i32 CONST.FP16_ONE),
+        (f16 (V_CNDMASK_B16_fake16_e64 i32:$src_mods, f16:$src, (i32 0),
+          (V_OR_B32_e64 (i32 0x200), f16:$src),
+          (i1 (V_CMP_U_F16_fake16_e64 i32:$src_mods, f16:$src, (i32 0), (i32 0), (i1 0))))))> {
+      let True16Predicate = UseFakeTrue16Insts;
+    }
   }
 
   def : GCNPat<
