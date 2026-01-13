@@ -1579,6 +1579,8 @@ public:
   bool isBasicBlockPrologue(const MachineInstr &MI,
                             Register Reg = Register()) const override;
 
+  bool canAddToBBProlog(const MachineInstr &MI) const;
+
   MachineInstr *createPHIDestinationCopy(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator InsPt,
                                          const DebugLoc &DL, Register Src,
@@ -1652,6 +1654,8 @@ public:
   unsigned getInstrLatency(const InstrItineraryData *ItinData,
                            const MachineInstr &MI,
                            unsigned *PredCost = nullptr) const override;
+
+  const MachineOperand &getCalleeOperand(const MachineInstr &MI) const override;
 
   InstructionUniformity
   getInstructionUniformity(const MachineInstr &MI) const final;

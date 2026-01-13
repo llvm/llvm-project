@@ -235,10 +235,10 @@ getGenericLambdaTemplateParameterList(LambdaScopeInfo *LSI, Sema &SemaRef) {
   if (!LSI->GLTemplateParameterList && !LSI->TemplateParams.empty()) {
     LSI->GLTemplateParameterList = TemplateParameterList::Create(
         SemaRef.Context,
-        /*Template kw loc*/ SourceLocation(),
+        /*Begin loc of the lambda expression*/ LSI->IntroducerRange.getBegin(),
         /*L angle loc*/ LSI->ExplicitTemplateParamsRange.getBegin(),
         LSI->TemplateParams,
-        /*R angle loc*/LSI->ExplicitTemplateParamsRange.getEnd(),
+        /*R angle loc*/ LSI->ExplicitTemplateParamsRange.getEnd(),
         LSI->RequiresClause.get());
   }
   return LSI->GLTemplateParameterList;
@@ -1102,7 +1102,7 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
       CXXRecordDecl::LDK_Unknown;
   if (CurScope->getTemplateParamParent() != nullptr) {
     LambdaDependencyKind = CXXRecordDecl::LDK_AlwaysDependent;
-  } else if (Scope *P = CurScope->getParent()) {
+  } else if (Scope *ParentScope = CurScope->getParent()) {
     // Given a lambda defined inside a requires expression,
     //
     // struct S {
@@ -1113,10 +1113,14 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
     // The parameter var is not injected into the function Decl at the point of
     // parsing lambda. In such scenarios, perceiving it as dependent could
     // result in the constraint being evaluated, which matches what GCC does.
-    while (P->getEntity() && P->getEntity()->isRequiresExprBody())
-      P = P->getParent();
-    if (P->isFunctionDeclarationScope() &&
-        llvm::any_of(P->decls(), [](Decl *D) {
+    Scope *LookupScope = ParentScope;
+    while (LookupScope->getEntity() &&
+           LookupScope->getEntity()->isRequiresExprBody())
+      LookupScope = LookupScope->getParent();
+
+    if (LookupScope != ParentScope &&
+        LookupScope->isFunctionDeclarationScope() &&
+        llvm::any_of(LookupScope->decls(), [](Decl *D) {
           return isa<ParmVarDecl>(D) &&
                  cast<ParmVarDecl>(D)->getType()->isTemplateTypeParmType();
         }))

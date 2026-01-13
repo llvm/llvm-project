@@ -3,6 +3,7 @@ include(LLVM-Build)
 # `Demangle', `Support' and `TableGen' libraries are added on the top-level
 # CMakeLists.txt
 
+add_subdirectory(ABI)
 add_subdirectory(IR)
 add_subdirectory(FuzzMutate)
 add_subdirectory(FileCheck)
@@ -22,6 +23,7 @@ add_subdirectory(Frontend)
 add_subdirectory(Transforms)
 add_subdirectory(Linker)
 add_subdirectory(Analysis)
+add_subdirectory(DTLTO)
 add_subdirectory(LTO)
 add_subdirectory(MC)
 add_subdirectory(MCA)

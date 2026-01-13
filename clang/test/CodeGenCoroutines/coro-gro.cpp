@@ -56,7 +56,7 @@ int f() {
   // types mismatch (see cwg2563).
 
   // CHECK: pre.gvo.conv:
-  // CHECK-NEXT: %10 = phi i1 [ true, %cleanup8 ], [ false, %final.suspend ], [ false, %init.suspend ]
+  // CHECK-NEXT: %[[IsFinalExit:.+]] = phi i1 [ true, %cleanup8 ], [ false, %final.suspend ], [ false, %init.suspend ]
   // CHECK-NEXT: %InRamp = call i1 @llvm.coro.is_in_ramp()
   // CHECK-NEXT: br i1 %InRamp, label %[[GroConv:.+]], label %[[AfterGroConv:.+]]
 
@@ -66,7 +66,7 @@ int f() {
   // CHECK-NEXT: br label %[[AfterGroConv]]
 
   // CHECK: [[AfterGroConv]]:
-  // CHECK-NEXT: br i1 %10, label %cleanup.cont10, label %[[CoroRet:.+]]
+  // CHECK-NEXT: br i1  %[[IsFinalExit]], label %cleanup.cont10, label %[[CoroRet:.+]]
 
   // CHECK: cleanup.cont10:
   // CHECK-NEXT: br label %[[Cleanup:.+]]
