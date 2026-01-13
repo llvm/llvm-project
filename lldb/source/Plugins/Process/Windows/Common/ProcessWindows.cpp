@@ -984,6 +984,9 @@ public:
     HANDLE hInterrupt = (HANDLE)_get_osfhandle(m_pipe.GetReadFileDescriptor());
     HANDLE waitHandles[2] = {hStdin, hInterrupt};
 
+    DWORD consoleMode;
+    bool isConsole = GetConsoleMode(hStdin, &consoleMode) != 0;
+
     while (true) {
       {
         std::lock_guard<std::mutex> guard(m_mutex);
@@ -996,6 +999,20 @@ public:
       case WAIT_FAILED:
         goto exit_loop;
       case WAIT_OBJECT_0: {
+        if (isConsole) {
+          INPUT_RECORD inputRecord;
+          DWORD numRead = 0;
+          if (!PeekConsoleInput(hStdin, &inputRecord, 1, &numRead) ||
+              numRead == 0)
+            goto exit_loop;
+          // We only care about text input. Ignore all non text input events and
+          // let other IOHandlers handle them.
+          if (inputRecord.EventType != KEY_EVENT ||
+              !inputRecord.Event.KeyEvent.bKeyDown ||
+              inputRecord.Event.KeyEvent.uChar.AsciiChar == 0)
+            break;
+        }
+
         char ch = 0;
         DWORD read = 0;
         if (!ReadFile(hStdin, &ch, 1, &read, nullptr) || read != 1)
