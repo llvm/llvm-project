@@ -141,8 +141,12 @@ def X86fshr    : SDNode<"X86ISD::FSHR",     SDTIntShiftDOp>;
 
 def X86cmp     : SDNode<"X86ISD::CMP" ,     SDTX86CmpTest>;
 def X86fcmp    : SDNode<"X86ISD::FCMP",     SDTX86FCmp>;
-def X86strict_fcmp : SDNode<"X86ISD::STRICT_FCMP", SDTX86FCmp, [SDNPHasChain]>;
-def X86strict_fcmps : SDNode<"X86ISD::STRICT_FCMPS", SDTX86FCmp, [SDNPHasChain]>;
+
+let IsStrictFP = true in {
+  def X86strict_fcmp  : SDNode<"X86ISD::STRICT_FCMP",  SDTX86FCmp, [SDNPHasChain]>;
+  def X86strict_fcmps : SDNode<"X86ISD::STRICT_FCMPS", SDTX86FCmp, [SDNPHasChain]>;
+}
+
 def X86bt      : SDNode<"X86ISD::BT",       SDTX86CmpTest>;
 
 def X86ccmp    : SDNode<"X86ISD::CCMP",     SDTX86Ccmp>;
@@ -790,8 +794,11 @@ def SDTX86CwdLoad   : SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
 def SDTX86FPEnv     : SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
 
 def X86fp80_add     : SDNode<"X86ISD::FP80_ADD", SDTFPBinOp, [SDNPCommutative]>;
+
+let IsStrictFP = true in
 def X86strict_fp80_add : SDNode<"X86ISD::STRICT_FP80_ADD", SDTFPBinOp,
                         [SDNPHasChain,SDNPCommutative]>;
+
 def any_X86fp80_add : PatFrags<(ops node:$lhs, node:$rhs),
                                [(X86strict_fp80_add node:$lhs, node:$rhs),
                                 (X86fp80_add node:$lhs, node:$rhs)]>;
