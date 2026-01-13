@@ -1287,7 +1287,7 @@ public:
 
   /// Truncate to new width with signed saturation to unsigned result.
   ///
-  /// If this APInt, treated as unsigned integer, can be losslessly truncated to
+  /// If this APInt, treated as signed integer, can be losslessly truncated to
   /// the new bitwidth, then return truncated APInt. Else, return either
   /// zero if the APInt was negative, or unsigned max value.
   LLVM_ABI APInt truncSSatU(unsigned width) const;
