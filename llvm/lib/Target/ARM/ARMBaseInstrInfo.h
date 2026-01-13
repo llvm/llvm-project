@@ -305,8 +305,7 @@ public:
                             const MachineRegisterInfo *MRI) const override;
 
   bool analyzeSelect(const MachineInstr &MI,
-                     SmallVectorImpl<MachineOperand> &Cond, unsigned &TrueOp,
-                     unsigned &FalseOp, bool &Optimizable) const override;
+                     bool &Optimizable) const override;
 
   MachineInstr *optimizeSelect(MachineInstr &MI,
                                SmallPtrSetImpl<MachineInstr *> &SeenMIs,

@@ -961,11 +961,8 @@ bool PeepholeOptimizer::optimizeCmpInstr(MachineInstr &MI) {
 /// Optimize a select instruction.
 bool PeepholeOptimizer::optimizeSelect(
     MachineInstr &MI, SmallPtrSetImpl<MachineInstr *> &LocalMIs) {
-  unsigned TrueOp = 0;
-  unsigned FalseOp = 0;
   bool Optimizable = false;
-  SmallVector<MachineOperand, 4> Cond;
-  if (TII->analyzeSelect(MI, Cond, TrueOp, FalseOp, Optimizable))
+  if (TII->analyzeSelect(MI, Optimizable))
     return false;
   if (!Optimizable)
     return false;

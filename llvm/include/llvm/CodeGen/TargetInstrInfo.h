@@ -1024,24 +1024,14 @@ public:
   /// Analyze the given select instruction, returning true if
   /// it cannot be understood. It is assumed that MI->isSelect() is true.
   ///
-  /// When successful, return the controlling condition and the operands that
-  /// determine the true and false result values.
-  ///
-  ///   Result = SELECT Cond, TrueOp, FalseOp
-  ///
   /// Some targets can optimize select instructions, for example by predicating
   /// the instruction defining one of the operands. Such targets should set
   /// Optimizable.
   ///
   /// @param         MI Select instruction to analyze.
-  /// @param Cond    Condition controlling the select.
-  /// @param TrueOp  Operand number of the value selected when Cond is true.
-  /// @param FalseOp Operand number of the value selected when Cond is false.
   /// @param Optimizable Returned as true if MI is optimizable.
   /// @returns False on success.
   virtual bool analyzeSelect(const MachineInstr &MI,
-                             SmallVectorImpl<MachineOperand> &Cond,
-                             unsigned &TrueOp, unsigned &FalseOp,
                              bool &Optimizable) const {
     assert(MI.getDesc().isSelect() && "MI must be a select instruction");
     return true;
