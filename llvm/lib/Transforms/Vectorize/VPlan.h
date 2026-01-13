@@ -668,7 +668,10 @@ private:
   };
   /// Holds reduction-specific flags: RecurKind, IsOrdered, IsInLoop, and FMFs.
   struct ReductionFlagsTy {
-    unsigned char Kind : 6; // RecurKind has ~26 values, needs 5 bits
+    // RecurKind has ~26 values, needs 5 bits but uses 6 bits to account for
+    // additional kinds.
+    unsigned char Kind : 6;
+    // TODO: Derive order/in-loop from plan and remove here.
     unsigned char IsOrdered : 1;
     unsigned char IsInLoop : 1;
     FastMathFlagsTy FMFs;
@@ -802,8 +805,11 @@ public:
     case OperationType::NonNegOp:
       NonNegFlags.NonNeg = false;
       break;
-    case OperationType::Cmp:
     case OperationType::ReductionOp:
+      getFMFsRef().NoNaNs = false;
+      getFMFsRef().NoInfs = false;
+      break;
+    case OperationType::Cmp:
     case OperationType::Other:
       break;
     }
@@ -844,8 +850,10 @@ public:
     case OperationType::NonNegOp:
       I.setNonNeg(NonNegFlags.NonNeg);
       break;
-    case OperationType::Cmp:
     case OperationType::ReductionOp:
+      llvm_unreachable("reduction ops should not use applyFlags");
+      [[fallthrough]];
+    case OperationType::Cmp:
     case OperationType::Other:
       break;
     }

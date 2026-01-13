@@ -8792,7 +8792,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
         PhiR->setOperand(1, Extnd->getVPSingleValue());
 
       // Update ComputeReductionResult with the truncated exiting value and
-      // extend its result. Operand 0 is the first reduction part.
+      // extend its result. Operand 0 provides the value to be reduced.
       FinalReductionResult->setOperand(0, Trunc);
       FinalReductionResult =
           Builder.createScalarCast(ExtendOpc, FinalReductionResult, PhiTy, {});

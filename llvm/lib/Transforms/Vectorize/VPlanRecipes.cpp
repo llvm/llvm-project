@@ -773,27 +773,28 @@ Value *VPInstruction::generate(VPTransformState &State) {
     assert(!RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
            "should be handled by ComputeFindIVResult");
 
-    unsigned UF = getNumOperands();
-    VectorParts RdxParts(UF);
-    for (unsigned Part = 0; Part < UF; ++Part)
+    // The recipe may have multiple operands to be reduced together.
+    unsigned NumOperandsToReduce = getNumOperands();
+    VectorParts RdxParts(NumOperandsToReduce);
+    for (unsigned Part = 0; Part < NumOperandsToReduce; ++Part)
       RdxParts[Part] = State.get(getOperand(Part), IsInLoop);
 
     IRBuilderBase::FastMathFlagGuard FMFG(Builder);
     if (hasFastMathFlags())
       Builder.setFastMathFlags(getFastMathFlags());
 
-    // Reduce all of the unrolled parts into a single vector.
+    // Reduce multiple operands into one.
     Value *ReducedPartRdx = RdxParts[0];
     if (IsOrdered) {
-      ReducedPartRdx = RdxParts[UF - 1];
+      ReducedPartRdx = RdxParts[NumOperandsToReduce - 1];
     } else {
       // Floating-point operations should have some FMF to enable the reduction.
-      for (unsigned Part = 1; Part < UF; ++Part) {
+      for (unsigned Part = 1; Part < NumOperandsToReduce; ++Part) {
         Value *RdxPart = RdxParts[Part];
         if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))
           ReducedPartRdx = createMinMaxOp(Builder, RK, ReducedPartRdx, RdxPart);
         else {
-          // For sub-recurrences, each UF's reduction variable is already
+          // For sub-recurrences, each part's reduction variable is already
           // negative, we need to do: reduce.add(-acc_uf0 + -acc_uf1)
           Instruction::BinaryOps Opcode =
               RK == RecurKind::Sub
@@ -2148,12 +2149,12 @@ void VPIRFlags::printFlags(raw_ostream &O) const {
       O << " nneg";
     break;
   case OperationType::ReductionOp: {
-    RecurKind RK = static_cast<RecurKind>(ReductionFlags.Kind);
+    RecurKind RK = getRecurKind();
     O << " ("
       << Instruction::getOpcodeName(RecurrenceDescriptor::getOpcode(RK));
-    if (ReductionFlags.IsInLoop)
+    if (isReductionInLoop())
       O << ", in-loop";
-    if (ReductionFlags.IsOrdered)
+    if (isReductionOrdered())
       O << ", ordered";
     O << ")";
     getFastMathFlags().print(O);

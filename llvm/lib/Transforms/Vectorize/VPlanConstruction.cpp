@@ -1237,6 +1237,8 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
       auto *SelR = cast<VPSingleDefRecipe>(
           *find_if(BackedgeVal->users(),
                    [PhiR = RedPhiR](VPUser *U) { return U != PhiR; }));
+      assert(match(SelR, m_Select(m_VPValue(), m_VPValue(), m_VPValue())) &&
+             "SelR must be a select");
       RdxResult = findUserOf<VPInstruction::ComputeReductionResult>(SelR);
       assert(RdxResult && "must find a ComputeReductionResult");
     }
@@ -1309,10 +1311,12 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
 
     // MinMaxPhiR has users outside the reduction cycle in the loop. Check if
     // the only other user is a FindLastIV reduction. MinMaxPhiR must have
-    // exactly 2 users: 1) the min/max operation and the compare of a FindLastIV
-    // reduction. The comparison must compare MinMaxPhiR against the min/max
-    // operand used for the min/max reduction and only be used by the select of
-    // the FindLastIV reduction.
+    // exactly 2 users:
+    // 1) the min/max operation of the reduction cycle, and
+    // 2) the compare of a FindLastIV reduction cycle. This compare must match
+    // the min/max operation - comparing MinMaxPhiR with the operand of the
+    // min/max operation, and be used only by the select of the FindLastIV
+    // reduction cycle.
     RecurKind RdxKind = MinMaxPhiR->getRecurrenceKind();
     assert(
         RecurrenceDescriptor::isIntMinMaxRecurrenceKind(RdxKind) &&
@@ -1358,7 +1362,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
         findUserOf<VPInstruction::ComputeReductionResult>(MinMaxOp);
     assert(is_contained(MinMaxPhiR->users(), MinMaxOp) &&
            "one user must be MinMaxOp");
-    assert(MinMaxResult && "MinMaxResult must be a user of MinMaxOp");
+    assert(MinMaxResult && "MinMaxOp must have a ComputeReductionResult user");
 
     // Cmp must be used by the select of a FindLastIV chain.
     VPValue *Sel = dyn_cast<VPSingleDefRecipe>(Cmp->getSingleUser());
