@@ -796,7 +796,12 @@ APInt ConstantOffsetExtractor::extractDisjointBitsFromXor(
   ConstantInt *XorConstant;
 
   // Match pattern: xor BaseOperand, Constant.
-  if (!match(XorInst, m_Xor(m_Value(BaseOperand), m_ConstantInt(XorConstant))))
+  // Restricting the BaseOperand to a compile time unknown.
+  // TODO : Formally prove the safety of BaseOperand to be compile time constant
+  // and extend the optimization for those cases.
+  if (!match(XorInst,
+             m_Xor(m_Value(BaseOperand), m_ConstantInt(XorConstant))) ||
+      (isa<Constant>(BaseOperand)))
     return APInt::getZero(BitWidth);
 
   // Compute known bits for the base operand.
