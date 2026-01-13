@@ -102,7 +102,7 @@ class AArch64AsmPrinter : public AsmPrinter {
   unsigned InstsEmitted;
 #endif
   bool EnableImportCallOptimization = false;
-  DenseMap<MCSection *, std::vector<std::pair<MCSymbol *, MCSymbol *>>>
+  MapVector<MCSection *, std::vector<std::pair<MCSymbol *, MCSymbol *>>>
       SectionToImportedFunctionCalls;
   unsigned PAuthIFuncNextUniqueID = 1;
 
