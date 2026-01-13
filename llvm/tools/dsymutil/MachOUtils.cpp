@@ -322,9 +322,10 @@ static void transferSegmentAndSections(
 }
 
 // Write the __DWARF segment load command to the output file.
-static bool createDwarfSegment(const MCAssembler& Asm,uint64_t VMAddr, uint64_t FileOffset,
-                               uint64_t FileSize, unsigned NumSections,
-                                MachObjectWriter &Writer) {
+static bool createDwarfSegment(const MCAssembler &Asm, uint64_t VMAddr,
+                               uint64_t FileOffset, uint64_t FileSize,
+                               unsigned NumSections, MachObjectWriter &Writer,
+                               bool AllowSectionHeaderOffsetOverflow) {
   Writer.writeSegmentLoadCommand("__DWARF", NumSections, VMAddr,
                                  alignTo(FileSize, 0x1000), FileOffset,
                                  FileSize, /* MaxProt */ 7,
@@ -340,7 +341,14 @@ static bool createDwarfSegment(const MCAssembler& Asm,uint64_t VMAddr, uint64_t 
       VMAddr = alignTo(VMAddr, Alignment);
       FileOffset = alignTo(FileOffset, Alignment);
     }
-    if (FileOffset > UINT32_MAX)
+    // Mach-O section headers store the file offset in a 32-bit field
+    // (section.offset). For large dSYM files, a section can start beyond 4GB
+    // (UINT32_MAX), so the on-disk offset value may wrap/truncate. Within a
+    // single slice, sections are emitted in file order. If we allow emitting
+    // such non-standard Mach-O, compatible readers can reconstruct the true
+    // 64-bit offsets by walking sections in order and accumulating the sizes of
+    // preceding sections.
+    if (FileOffset > UINT32_MAX && !AllowSectionHeaderOffsetOverflow)
       return error("section " + Sec->getName() +
                    "'s file offset exceeds 4GB."
                    " Refusing to produce an invalid Mach-O file.");
@@ -374,7 +382,8 @@ bool generateDsymCompanion(
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, const DebugMap &DM,
     MCStreamer &MS, raw_fd_ostream &OutFile,
     const std::vector<MachOUtils::DwarfRelocationApplicationInfo>
-        &RelocationsToApply) {
+        &RelocationsToApply,
+    bool AllowSectionHeaderOffsetOverflow) {
   auto &ObjectStreamer = static_cast<MCObjectStreamer &>(MS);
   MCAssembler &MCAsm = ObjectStreamer.getAssembler();
   auto &Writer = static_cast<MachObjectWriter &>(MCAsm.getWriter());
@@ -585,8 +594,9 @@ bool generateDsymCompanion(
   }
 
   // Write the load command for the __DWARF segment.
-  if (!createDwarfSegment(MCAsm, DwarfVMAddr, DwarfSegmentStart, DwarfSegmentSize,
-                          NumDwarfSections, Writer))
+  if (!createDwarfSegment(MCAsm, DwarfVMAddr, DwarfSegmentStart,
+                          DwarfSegmentSize, NumDwarfSections, Writer,
+                          AllowSectionHeaderOffsetOverflow))
     return false;
 
   assert(OutFile.tell() == LoadCommandSize + HeaderSize);
