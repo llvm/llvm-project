@@ -799,15 +799,12 @@ public:
       break;
     case OperationType::FPMathOp:
     case OperationType::FCmp:
+    case OperationType::ReductionOp:
       getFMFsRef().NoNaNs = false;
       getFMFsRef().NoInfs = false;
       break;
     case OperationType::NonNegOp:
       NonNegFlags.NonNeg = false;
-      break;
-    case OperationType::ReductionOp:
-      getFMFsRef().NoNaNs = false;
-      getFMFsRef().NoInfs = false;
       break;
     case OperationType::Cmp:
     case OperationType::Other:
