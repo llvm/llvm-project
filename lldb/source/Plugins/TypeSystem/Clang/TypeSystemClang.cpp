@@ -81,8 +81,9 @@
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"
-#include "Plugins/SymbolFile/PDB/PDBASTParser.h"
 #include "Plugins/SymbolFile/NativePDB/PdbAstBuilder.h"
+#include "Plugins/SymbolFile/PDB/PDBASTParser.h"
+#include "lldb/lldb-types.h"
 
 #include <cstdio>
 
@@ -3768,6 +3769,24 @@ TypeSystemClang::GetCXXClassName(const CompilerType &type) {
     return std::nullopt;
 
   return std::string(cxx_record_decl->getIdentifier()->getNameStart());
+}
+
+bool TypeSystemClang::IsClassTypeForLanguage(lldb::opaque_compiler_type_t type,
+                                             lldb::LanguageType language) {
+  CompilerType ct(GetType(GetCanonicalQualType(type)));
+  if (!ct)
+    return false;
+
+  if (language == lldb::eLanguageTypeObjC)
+    return IsObjCClassType(ct);
+
+  if (language == lldb::eLanguageTypeObjC_plus_plus)
+    return IsObjCClassType(ct) || IsCXXClassType(ct);
+
+  if (Language::LanguageIsCPlusPlus(language))
+    return IsCXXClassType(ct);
+
+  return false;
 }
 
 bool TypeSystemClang::IsCXXClassType(const CompilerType &type) {
