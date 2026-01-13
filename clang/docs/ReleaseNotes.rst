@@ -1017,7 +1017,10 @@ CUDA/HIP Language Changes
 CUDA Support
 ^^^^^^^^^^^^
 
-Support calling `consteval` function between different target.
+- Fixed an assertion failure when processing CUDA files with `-fsyntax-only` or
+  device architecture flags.
+
+- Support calling `consteval` function between different target.
 
 AIX Support
 ^^^^^^^^^^^
