@@ -39,6 +39,16 @@ entry:
   ret i1 %or.cond1
 }
 
+define i1 @or_icmp_3_no_shift(i6 noundef %type) {
+entry:
+  %cmp = icmp eq i6 %type,  63
+  %cmp1 = icmp eq i6 %type, 3
+  %or.cond = or i1 %cmp, %cmp1
+  %cmp2 = icmp eq i6 %type, 13
+  %or.cond1 = or i1 %cmp2, %or.cond
+  ret i1 %or.cond1
+}
+
 ; Don't currently handle a single non-equal
 define i1 @or_icmp_extra(i32 noundef %type) {
 ; CHECK-LABEL: define i1 @or_icmp_extra(
