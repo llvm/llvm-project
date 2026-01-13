@@ -221,7 +221,7 @@ LogicalResult arith::ConstantOp::verify() {
   // However, this would most likely require updating the lowerings to LLVM.
   if (isa<ScalableVectorType>(type) && !isa<SplatElementsAttr>(getValue()))
     return emitOpError(
-        "intializing scalable vectors with elements attribute is not supported"
+        "initializing scalable vectors with elements attribute is not supported"
         " unless it's a vector splat");
   return success();
 }

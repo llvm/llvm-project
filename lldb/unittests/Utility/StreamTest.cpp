@@ -504,7 +504,7 @@ TEST_F(StreamTest, PutRawBytesToMixedEndian) {
 #endif
 }
 
-TEST_F(StreamTest, PutRawBytesZeroLenght) {
+TEST_F(StreamTest, PutRawBytesZeroLength) {
   uint32_t value = 0x12345678;
 
   s.PutRawBytes(static_cast<void *>(&value), 0, hostByteOrder,
@@ -516,7 +516,7 @@ TEST_F(StreamTest, PutRawBytesZeroLenght) {
   EXPECT_EQ(0U, s.GetWrittenBytes());
 }
 
-TEST_F(StreamTest, PutBytesAsRawHex8ZeroLenght) {
+TEST_F(StreamTest, PutBytesAsRawHex8ZeroLength) {
   uint32_t value = 0x12345678;
 
   s.PutBytesAsRawHex8(static_cast<void *>(&value), 0, hostByteOrder,

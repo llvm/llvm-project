@@ -881,7 +881,7 @@ public class Test
     private static void ComplexLambda(BuildReport protoReport)
     {
         allSelectedScenes =
-            veryVeryLongCollectionNameThatPutsTheLineLenghtAboveTheThresholds.Where(scene => scene.enabled)
+            veryVeryLongCollectionNameThatPutsTheLineLengthAboveTheThresholds.Where(scene => scene.enabled)
                 .Select(scene => scene.path)
                 .ToArray();
         if (allSelectedScenes.Count == 0)
@@ -899,7 +899,7 @@ public class Test
   verifyFormat(R"(//
 public class Test {
   private static void ComplexLambda(BuildReport protoReport) {
-    allSelectedScenes = veryVeryLongCollectionNameThatPutsTheLineLenghtAboveTheThresholds
+    allSelectedScenes = veryVeryLongCollectionNameThatPutsTheLineLengthAboveTheThresholds
                             .Where(scene => scene.enabled)
                             .Select(scene => scene.path)
                             .ToArray();
@@ -925,7 +925,7 @@ public class Test
     private static void MultipleLambdas(BuildReport protoReport)
     {
         allSelectedScenes =
-            veryVeryLongCollectionNameThatPutsTheLineLenghtAboveTheThresholds.Where(scene => scene.enabled)
+            veryVeryLongCollectionNameThatPutsTheLineLengthAboveTheThresholds.Where(scene => scene.enabled)
                 .Select(scene => scene.path)
                 .ToArray();
         preBindEnumerators.RemoveAll(enumerator => !enumerator.MoveNext());
@@ -944,7 +944,7 @@ public class Test
   verifyFormat(R"(//
 public class Test {
   private static void MultipleLambdas(BuildReport protoReport) {
-    allSelectedScenes = veryVeryLongCollectionNameThatPutsTheLineLenghtAboveTheThresholds
+    allSelectedScenes = veryVeryLongCollectionNameThatPutsTheLineLengthAboveTheThresholds
                             .Where(scene => scene.enabled)
                             .Select(scene => scene.path)
                             .ToArray();
