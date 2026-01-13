@@ -203,6 +203,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_syscall_linux_x86_64.inc
   sanitizer_syscall_linux_riscv64.inc
   sanitizer_syscall_linux_loongarch64.inc
+  sanitizer_syscall_linux_s390.inc
   sanitizer_syscalls_netbsd.inc
   sanitizer_thread_registry.h
   sanitizer_thread_safety.h
