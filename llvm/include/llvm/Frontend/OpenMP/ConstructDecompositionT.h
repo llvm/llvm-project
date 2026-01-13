@@ -836,10 +836,19 @@ bool ConstructDecompositionT<C, H>::applyClause(
   }
 
   if (!first.empty()) {
-    auto *firstp = makeClause(
-        llvm::omp::Clause::OMPC_firstprivate,
-        tomp::clause::FirstprivateT<TypeTy, IdTy, ExprTy>{/*List=*/first});
-    nodes.push_back(firstp); // Appending to the main clause list.
+    // A standalone "simd linear" may trigger the addition of "firstprivate",
+    // which will fail, since "simd" does not allow it. Add the firstprivate
+    // only if some leaf allows it.
+    bool allowed = llvm::any_of(leafs, [this](const LeafReprInternal &leaf) {
+      return llvm::omp::isAllowedClauseForDirective(
+          leaf.id, llvm::omp::Clause::OMPC_firstprivate, version);
+    });
+    if (allowed) {
+      auto *firstp = makeClause(
+          llvm::omp::Clause::OMPC_firstprivate,
+          tomp::clause::FirstprivateT<TypeTy, IdTy, ExprTy>{/*List=*/first});
+      nodes.push_back(firstp); // Appending to the main clause list.
+    }
   }
   if (!last.empty()) {
     auto *lastp =
@@ -1143,10 +1152,6 @@ bool ConstructDecompositionT<C, H>::applyClause(
 template <typename C, typename H> bool ConstructDecompositionT<C, H>::split() {
   bool success = true;
 
-  auto isImplicit = [this](const ClauseTy *node) {
-    return llvm::is_contained(llvm::make_pointer_range(implicit), node);
-  };
-
   for (llvm::omp::Directive leaf :
        llvm::omp::getLeafConstructsOrSelf(construct))
     leafs.push_back(LeafReprInternal{leaf, /*clauses=*/{}});
@@ -1186,10 +1191,9 @@ template <typename C, typename H> bool ConstructDecompositionT<C, H>::split() {
   for (const ClauseTy *node : nodes) {
     if (skip(node))
       continue;
-    bool result =
+    success =
+        success &&
         std::visit([&](auto &&s) { return applyClause(s, node); }, node->u);
-    if (!isImplicit(node))
-      success = success && result;
   }
 
   // Apply "allocate".

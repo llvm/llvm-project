@@ -104,6 +104,7 @@ add_llvm_component_library(LLVMTransformUtils
   LINK_COMPONENTS
   Analysis
   Core
+  ProfileData
   Support
   TargetParser
   )

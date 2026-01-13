@@ -78,7 +78,7 @@ public:
 
   /// Given a backtrace, try to symbolicate any unsymbolicated lines using the
   /// symbol addresses in the dumped symbol table.
-  LLVM_ABI std::string symbolicate(StringRef Backtrace);
+  std::string symbolicate(StringRef Backtrace);
 
 private:
   DumpedSymbolTable(std::unique_ptr<MemoryBuffer> SymtabBuffer);
