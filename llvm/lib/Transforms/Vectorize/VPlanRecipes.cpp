@@ -453,7 +453,6 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnTwoConds:
   case VPInstruction::ComputeReductionResult:
-  case VPInstruction::ExtractLane:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
   case VPInstruction::PtrAdd:
@@ -476,6 +475,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case VPInstruction::LastActiveLane:
   case VPInstruction::SLPLoad:
   case VPInstruction::SLPStore:
+  case VPInstruction::ExtractLane:
     // Cannot determine the number of operands from the opcode.
     return -1u;
   }
@@ -534,9 +534,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
   }
   case Instruction::ExtractElement: {
     assert(State.VF.isVector() && "Only extract elements from vectors");
-    if (getOperand(1)->isLiveIn()) {
+    if (auto *IdxIRV = dyn_cast<VPIRValue>(getOperand(1))) {
       unsigned IdxToExtract =
-          cast<ConstantInt>(getOperand(1)->getLiveInIRValue())->getZExtValue();
+          cast<ConstantInt>(IdxIRV->getValue())->getZExtValue();
       return State.get(getOperand(0), VPLane(IdxToExtract));
     }
     Value *Vec = State.get(getOperand(0));
@@ -1099,8 +1099,8 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
 
     llvm::CmpPredicate Pred;
     if (!match(getOperand(0), m_Cmp(Pred, m_VPValue(), m_VPValue())))
-      if (getOperand(0)->isLiveIn())
-        if (auto *Cmp = dyn_cast<CmpInst>(getOperand(0)->getLiveInIRValue()))
+      if (auto *CondIRV = dyn_cast<VPIRValue>(getOperand(0)))
+        if (auto *Cmp = dyn_cast<CmpInst>(CondIRV->getValue()))
           Pred = Cmp->getPredicate();
     Type *VectorTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
     return Ctx.TTI.getCmpSelInstrCost(
@@ -1640,7 +1640,7 @@ void VPIRInstruction::extractLastLaneOfLastPartOfFirstOperand(
          "can only update exiting operands to phi nodes");
   assert(getNumOperands() > 0 && "must have at least one operand");
   VPValue *Exiting = getOperand(0);
-  if (Exiting->isLiveIn())
+  if (isa<VPIRValue>(Exiting))
     return;
 
   Exiting = Builder.createNaryOp(VPInstruction::ExtractLastPart, Exiting);
@@ -2005,8 +2005,8 @@ InstructionCost VPHistogramRecipe::computeCost(ElementCount VF,
   // a multiply, and add that into the cost.
   InstructionCost MulCost =
       Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, VTy, Ctx.CostKind);
-  if (IncAmt->isLiveIn()) {
-    ConstantInt *CI = dyn_cast<ConstantInt>(IncAmt->getLiveInIRValue());
+  if (auto *IncAmountIRV = dyn_cast<VPIRValue>(IncAmt)) {
+    ConstantInt *CI = dyn_cast<ConstantInt>(IncAmountIRV->getValue());
 
     if (CI && CI->getZExtValue() == 1)
       MulCost = TTI::TCC_Free;
@@ -2283,7 +2283,6 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
   case Instruction::ExtractValue:
   case Instruction::ICmp:
   case Instruction::FCmp:
-    return getCostForRecipeWithOpcode(getOpcode(), VF, Ctx);
   case Instruction::Select:
     return getCostForRecipeWithOpcode(getOpcode(), VF, Ctx);
   default:
@@ -2344,13 +2343,6 @@ InstructionCost VPHeaderPHIRecipe::computeCost(ElementCount VF,
   return Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
 }
 
-/// A helper function that returns an integer or floating-point constant with
-/// value C.
-static Constant *getSignedIntOrFpConstant(Type *Ty, int64_t C) {
-  return Ty->isIntegerTy() ? ConstantInt::getSigned(Ty, C)
-                           : ConstantFP::get(Ty, C);
-}
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenIntOrFpInductionRecipe::printRecipe(
     raw_ostream &O, const Twine &Indent, VPSlotTracker &SlotTracker) const {
@@ -2369,10 +2361,12 @@ bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
   // The step may be defined by a recipe in the preheader (e.g. if it requires
   // SCEV expansion), but for the canonical induction the step is required to be
   // 1, which is represented as live-in.
-  if (getStepValue()->getDefiningRecipe())
+  const VPIRValue *Step = dyn_cast<VPIRValue>(getStepValue());
+  if (!Step)
     return false;
-  auto *StepC = dyn_cast<ConstantInt>(getStepValue()->getLiveInIRValue());
-  auto *StartC = dyn_cast<ConstantInt>(getStartValue()->getLiveInIRValue());
+  ;
+  auto *StepC = dyn_cast<ConstantInt>(Step->getValue());
+  auto *StartC = dyn_cast<ConstantInt>(getStartValue()->getValue());
   return StartC && StartC->isZero() && StepC && StepC->isOne() &&
          getScalarType() == getRegion()->getCanonicalIVType();
 }
@@ -2450,8 +2444,14 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
     StartIdx0 = Builder.CreateSIToFP(StartIdx0, BaseIVTy);
 
   for (unsigned Lane = StartLane; Lane < EndLane; ++Lane) {
-    Value *StartIdx = Builder.CreateBinOp(
-        AddOp, StartIdx0, getSignedIntOrFpConstant(BaseIVTy, Lane));
+    // It is okay if the induction variable type cannot hold the lane number,
+    // we expect truncation in this case.
+    Constant *LaneValue =
+        BaseIVTy->isIntegerTy()
+            ? ConstantInt::get(BaseIVTy, Lane, /*IsSigned=*/false,
+                               /*ImplicitTrunc=*/true)
+            : ConstantFP::get(BaseIVTy, Lane);
+    Value *StartIdx = Builder.CreateBinOp(AddOp, StartIdx0, LaneValue);
     // The step returned by `createStepForVF` is a runtime-evaluated value
     // when VF is scalable. Otherwise, it should be folded into a Constant.
     assert((State.VF.isScalable() || isa<Constant>(StartIdx)) &&
@@ -2830,7 +2830,7 @@ VPExpressionRecipe::VPExpressionRecipe(
       if (Def && ExpressionRecipesAsSetOfUsers.contains(Def))
         continue;
       addOperand(Op);
-      LiveInPlaceholders.push_back(new VPValue());
+      LiveInPlaceholders.push_back(new VPSymbolicValue());
     }
   }
 
@@ -3954,7 +3954,7 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
     // TODO: Also manage existing metadata using VPIRMetadata.
     Group->addMetadata(NewLoad);
 
-    ArrayRef<VPValue *> VPDefs = definedValues();
+    ArrayRef<VPRecipeValue *> VPDefs = definedValues();
     if (VecTy->isScalableTy()) {
       // Scalable vectors cannot use arbitrary shufflevectors (only splats),
       // so must use intrinsics to deinterleave.
