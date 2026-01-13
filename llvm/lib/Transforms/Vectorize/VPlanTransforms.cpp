@@ -2574,10 +2574,13 @@ static void licm(VPlan &Plan) {
       continue;
 
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      if (cannotHoistOrSinkRecipe(R) || R.mayHaveSideEffects())
+      if (cannotHoistOrSinkRecipe(R))
         continue;
 
       auto *Def = cast<VPSingleDefRecipe>(&R);
+      if (Def->getNumUsers() == 0)
+        continue;
+
       // Cannot sink the recipe if any user is defined in the same loop or in
       // any nested inner loop region.
       if (any_of(Def->users(), [&](VPUser *U) {
