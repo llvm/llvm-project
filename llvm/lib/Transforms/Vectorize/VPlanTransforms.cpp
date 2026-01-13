@@ -2536,11 +2536,12 @@ static void licm(VPlan &Plan) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
 
   // Collect loop regions in preorder.
-  SmallVector<VPRegionBlock *> WorklistForSink{LoopRegion};
+  SmallSetVector<VPRegionBlock *, 4> WorklistForSink;
+  WorklistForSink.insert(LoopRegion);
   for (VPRegionBlock *R : VPBlockUtils::blocksOnly<VPRegionBlock>(
            vp_depth_first_deep(LoopRegion->getEntry()))) {
     if (!R->isReplicator())
-      WorklistForSink.push_back(R);
+      WorklistForSink.insert(R);
   }
 
   VPDominatorTree VPDT(Plan);
@@ -2575,7 +2576,7 @@ static void licm(VPlan &Plan) {
         if (any_of(Def->users(), [&](VPUser *U) {
               VPRegionBlock *ParentL =
                   cast<VPRecipeBase>(U)->getParent()->getEnclosingLoopRegion();
-              return ParentL && !is_contained(WorklistForSink, ParentL);
+              return ParentL && !WorklistForSink.contains(ParentL);
             }))
           continue;
         Def->moveBefore(*SingleExit, SingleExit->getFirstNonPhi());
