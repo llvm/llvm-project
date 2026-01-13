@@ -744,7 +744,16 @@ bool Thread::ShouldResume(StateType resume_state) {
 
   if (need_to_resume) {
     ClearStackFrames();
-    m_stopped_at_unexecuted_bp = LLDB_INVALID_ADDRESS;
+
+    // Only reset m_stopped_at_unexecuted_bp if the thread is actually being
+    // resumed. Otherwise, the state of a suspended thread may not be restored
+    // correctly at the next stop. For example, this could happen if the thread
+    // is suspended by ThreadPlanStepOverBreakpoint in another thread, which
+    // temporarily disables the breakpoint that the suspended thread has reached
+    // but not yet executed.
+    if (resume_state != eStateSuspended)
+      m_stopped_at_unexecuted_bp = LLDB_INVALID_ADDRESS;
+
     // Let Thread subclasses do any special work they need to prior to resuming
     WillResume(resume_state);
   }
@@ -1455,16 +1464,33 @@ StackFrameListSP Thread::GetStackFrameList() {
       Target &target = process_sp->GetTarget();
       const auto &descriptors = target.GetScriptedFrameProviderDescriptors();
 
-      // Find first descriptor that applies to this thread.
+      // Collect all descriptors that apply to this thread.
+      std::vector<const ScriptedFrameProviderDescriptor *>
+          applicable_descriptors;
       for (const auto &entry : descriptors) {
         const ScriptedFrameProviderDescriptor &descriptor = entry.second;
-        if (descriptor.IsValid() && descriptor.AppliesToThread(*this)) {
-          if (llvm::Error error = LoadScriptedFrameProvider(descriptor)) {
-            LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), std::move(error),
-                           "Failed to load scripted frame provider: {0}");
-          }
-          break; // Use first matching descriptor (success or failure).
+        if (descriptor.IsValid() && descriptor.AppliesToThread(*this))
+          applicable_descriptors.push_back(&descriptor);
+      }
+
+      // Sort by priority (lower number = higher priority).
+      llvm::sort(applicable_descriptors,
+                 [](const ScriptedFrameProviderDescriptor *a,
+                    const ScriptedFrameProviderDescriptor *b) {
+                   // nullopt (no priority) sorts last (UINT32_MAX).
+                   uint32_t priority_a = a->GetPriority().value_or(UINT32_MAX);
+                   uint32_t priority_b = b->GetPriority().value_or(UINT32_MAX);
+                   return priority_a < priority_b;
+                 });
+
+      // Load the highest priority provider that successfully instantiates.
+      for (const auto *descriptor : applicable_descriptors) {
+        if (llvm::Error error = LoadScriptedFrameProvider(*descriptor)) {
+          LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), std::move(error),
+                         "Failed to load scripted frame provider: {0}");
+          continue; // Try next provider if this one fails.
         }
+        break; // Successfully loaded provider.
       }
     }
   }
@@ -1728,8 +1754,9 @@ bool Thread::DumpUsingFormat(Stream &strm, uint32_t frame_idx,
     }
   }
 
-  return FormatEntity::Format(*format, strm, frame_sp ? &frame_sc : nullptr,
-                              &exe_ctx, nullptr, nullptr, false, false);
+  return FormatEntity::Formatter(frame_sp ? &frame_sc : nullptr, &exe_ctx,
+                                 nullptr, false, false)
+      .Format(*format, strm);
 }
 
 void Thread::DumpUsingSettingsFormat(Stream &strm, uint32_t frame_idx,

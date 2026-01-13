@@ -119,10 +119,7 @@ buildDynamicCastToVoidAfterNullCheck(cir::CIRBaseBuilderTy &builder,
   // Access vtable to get the offset from the given object to its containing
   // complete object.
   // TODO: Add a specialized operation to get the object offset?
-  auto vptrTy = cir::VPtrType::get(builder.getContext());
-  cir::PointerType vptrPtrTy = builder.getPointerTo(vptrTy);
-  auto vptrPtr =
-      cir::VTableGetVPtrOp::create(builder, loc, vptrPtrTy, op.getSrc());
+  auto vptrPtr = cir::VTableGetVPtrOp::create(builder, loc, op.getSrc());
   mlir::Value vptr = builder.createLoad(loc, vptrPtr);
   mlir::Value elementPtr =
       builder.createBitcast(vptr, builder.getPointerTo(vtableElemTy));

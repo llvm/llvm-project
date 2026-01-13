@@ -835,7 +835,8 @@ void mlirOperationPrintWithState(MlirOperation op, MlirAsmState state,
   detail::CallbackOstream stream(callback, userData);
   if (state.ptr)
     unwrap(op)->print(stream, *unwrap(state));
-  unwrap(op)->print(stream);
+  else
+    unwrap(op)->print(stream);
 }
 
 void mlirOperationWriteBytecode(MlirOperation op, MlirStringCallback callback,
@@ -900,6 +901,11 @@ void mlirOperationWalk(MlirOperation op, MlirOperationWalkCallback callback,
           return unwrap(callback(wrap(op), userData));
         });
   }
+}
+
+void mlirOperationReplaceUsesOfWith(MlirOperation op, MlirValue oldValue,
+                                    MlirValue newValue) {
+  unwrap(op)->replaceUsesOfWith(unwrap(oldValue), unwrap(newValue));
 }
 
 //===----------------------------------------------------------------------===//

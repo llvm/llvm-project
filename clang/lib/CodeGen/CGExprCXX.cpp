@@ -502,7 +502,8 @@ RValue CodeGenFunction::EmitCUDAKernelCallExpr(const CUDAKernelCallExpr *E,
                                                ReturnValueSlot ReturnValue,
                                                llvm::CallBase **CallOrInvoke) {
   // Emit as a device kernel call if CUDA device code is to be generated.
-  if (getLangOpts().CUDAIsDevice)
+  // TODO: implement for HIP
+  if (!getLangOpts().HIP && getLangOpts().CUDAIsDevice)
     return CGM.getCUDARuntime().EmitCUDADeviceKernelCallExpr(
         *this, E, ReturnValue, CallOrInvoke);
   return CGM.getCUDARuntime().EmitCUDAKernelCallExpr(*this, E, ReturnValue,
@@ -2087,6 +2088,42 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
   // We might be deleting a pointer to array.
   DeleteTy = getContext().getBaseElementType(DeleteTy);
   Ptr = Ptr.withElementType(ConvertTypeForMem(DeleteTy));
+
+  if (E->isArrayForm() &&
+      CGM.getContext().getTargetInfo().emitVectorDeletingDtors(
+          CGM.getContext().getLangOpts())) {
+    if (auto *RD = DeleteTy->getAsCXXRecordDecl()) {
+      auto *Dtor = RD->getDestructor();
+      if (Dtor && Dtor->isVirtual()) {
+        llvm::Value *NumElements = nullptr;
+        llvm::Value *AllocatedPtr = nullptr;
+        CharUnits CookieSize;
+        llvm::BasicBlock *BodyBB = createBasicBlock("vdtor.call");
+        llvm::BasicBlock *DoneBB = createBasicBlock("vdtor.nocall");
+        // Check array cookie to see if the array has length 0. Don't call
+        // the destructor in that case.
+        CGM.getCXXABI().ReadArrayCookie(*this, Ptr, E, DeleteTy, NumElements,
+                                        AllocatedPtr, CookieSize);
+
+        auto *CondTy = cast<llvm::IntegerType>(NumElements->getType());
+        llvm::Value *IsEmpty = Builder.CreateICmpEQ(
+            NumElements, llvm::ConstantInt::get(CondTy, 0));
+        Builder.CreateCondBr(IsEmpty, DoneBB, BodyBB);
+
+        // Delete cookie for empty array.
+        const FunctionDecl *OperatorDelete = E->getOperatorDelete();
+        EmitBlock(DoneBB);
+        EmitDeleteCall(OperatorDelete, AllocatedPtr, DeleteTy, NumElements,
+                       CookieSize);
+        EmitBranch(DeleteEnd);
+
+        EmitBlock(BodyBB);
+        if (!EmitObjectDelete(*this, E, Ptr, DeleteTy, DeleteEnd))
+          EmitBlock(DeleteEnd);
+        return;
+      }
+    }
+  }
 
   if (E->isArrayForm()) {
     EmitArrayDelete(*this, E, Ptr, DeleteTy);

@@ -1567,72 +1567,38 @@ define i32 @vector_ctlz_i256(<8 x i32> %v0) nounwind {
 ;
 ; AVX512F-LABEL: vector_ctlz_i256:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovq %xmm0, %rax
-; AVX512F-NEXT:    vpextrq $1, %xmm0, %rcx
-; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX512F-NEXT:    vmovq %xmm0, %rdx
-; AVX512F-NEXT:    vpextrq $1, %xmm0, %rsi
-; AVX512F-NEXT:    lzcntq %rsi, %rdi
-; AVX512F-NEXT:    lzcntq %rdx, %r8
-; AVX512F-NEXT:    addl $64, %r8d
-; AVX512F-NEXT:    testq %rsi, %rsi
-; AVX512F-NEXT:    cmovnel %edi, %r8d
-; AVX512F-NEXT:    lzcntq %rcx, %rdi
-; AVX512F-NEXT:    lzcntq %rax, %rax
-; AVX512F-NEXT:    addl $64, %eax
-; AVX512F-NEXT:    testq %rcx, %rcx
-; AVX512F-NEXT:    cmovnel %edi, %eax
-; AVX512F-NEXT:    subl $-128, %eax
-; AVX512F-NEXT:    orq %rsi, %rdx
-; AVX512F-NEXT:    cmovnel %r8d, %eax
-; AVX512F-NEXT:    # kill: def $eax killed $eax killed $rax
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [256,256,256,256]
+; AVX512F-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,2,1,0]
+; AVX512F-NEXT:    vplzcntq %zmm0, %zmm2
+; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
+; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
+; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
+; AVX512F-NEXT:    vpcompressq %zmm2, %zmm1 {%k1}
+; AVX512F-NEXT:    vmovd %xmm1, %eax
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: vector_ctlz_i256:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpextrq $1, %xmm0, %rcx
-; AVX512VL-NEXT:    vmovq %xmm0, %rax
-; AVX512VL-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX512VL-NEXT:    vmovq %xmm0, %rdx
-; AVX512VL-NEXT:    vpextrq $1, %xmm0, %rsi
-; AVX512VL-NEXT:    lzcntq %rsi, %rdi
-; AVX512VL-NEXT:    lzcntq %rdx, %r8
-; AVX512VL-NEXT:    addl $64, %r8d
-; AVX512VL-NEXT:    testq %rsi, %rsi
-; AVX512VL-NEXT:    cmovnel %edi, %r8d
-; AVX512VL-NEXT:    lzcntq %rcx, %rdi
-; AVX512VL-NEXT:    lzcntq %rax, %rax
-; AVX512VL-NEXT:    addl $64, %eax
-; AVX512VL-NEXT:    testq %rcx, %rcx
-; AVX512VL-NEXT:    cmovnel %edi, %eax
-; AVX512VL-NEXT:    subl $-128, %eax
-; AVX512VL-NEXT:    orq %rsi, %rdx
-; AVX512VL-NEXT:    cmovnel %r8d, %eax
-; AVX512VL-NEXT:    # kill: def $eax killed $eax killed $rax
+; AVX512VL-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,2,1,0]
+; AVX512VL-NEXT:    vplzcntq %ymm0, %ymm1
+; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; AVX512VL-NEXT:    vptestmq %ymm0, %ymm0, %k1
+; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [256,256,256,256]
+; AVX512VL-NEXT:    vpcompressq %ymm1, %ymm0 {%k1}
+; AVX512VL-NEXT:    vmovd %xmm0, %eax
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512POPCNT-LABEL: vector_ctlz_i256:
 ; AVX512POPCNT:       # %bb.0:
-; AVX512POPCNT-NEXT:    vpextrq $1, %xmm0, %rcx
-; AVX512POPCNT-NEXT:    vmovq %xmm0, %rax
-; AVX512POPCNT-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX512POPCNT-NEXT:    vmovq %xmm0, %rdx
-; AVX512POPCNT-NEXT:    vpextrq $1, %xmm0, %rsi
-; AVX512POPCNT-NEXT:    lzcntq %rsi, %rdi
-; AVX512POPCNT-NEXT:    lzcntq %rdx, %r8
-; AVX512POPCNT-NEXT:    addl $64, %r8d
-; AVX512POPCNT-NEXT:    testq %rsi, %rsi
-; AVX512POPCNT-NEXT:    cmovnel %edi, %r8d
-; AVX512POPCNT-NEXT:    lzcntq %rcx, %rdi
-; AVX512POPCNT-NEXT:    lzcntq %rax, %rax
-; AVX512POPCNT-NEXT:    addl $64, %eax
-; AVX512POPCNT-NEXT:    testq %rcx, %rcx
-; AVX512POPCNT-NEXT:    cmovnel %edi, %eax
-; AVX512POPCNT-NEXT:    subl $-128, %eax
-; AVX512POPCNT-NEXT:    orq %rsi, %rdx
-; AVX512POPCNT-NEXT:    cmovnel %r8d, %eax
-; AVX512POPCNT-NEXT:    # kill: def $eax killed $eax killed $rax
+; AVX512POPCNT-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,2,1,0]
+; AVX512POPCNT-NEXT:    vplzcntq %ymm0, %ymm1
+; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; AVX512POPCNT-NEXT:    vptestmq %ymm0, %ymm0, %k1
+; AVX512POPCNT-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [256,256,256,256]
+; AVX512POPCNT-NEXT:    vpcompressq %ymm1, %ymm0 {%k1}
+; AVX512POPCNT-NEXT:    vmovd %xmm0, %eax
 ; AVX512POPCNT-NEXT:    vzeroupper
 ; AVX512POPCNT-NEXT:    retq
   %a0 = bitcast <8 x i32> %v0 to i256
@@ -3246,72 +3212,35 @@ define i32 @vector_ctlz_undef_i256(<8 x i32> %v0) nounwind {
 ;
 ; AVX512F-LABEL: vector_ctlz_undef_i256:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovq %xmm0, %rax
-; AVX512F-NEXT:    vpextrq $1, %xmm0, %rcx
-; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX512F-NEXT:    vmovq %xmm0, %rdx
-; AVX512F-NEXT:    vpextrq $1, %xmm0, %rsi
-; AVX512F-NEXT:    lzcntq %rsi, %rdi
-; AVX512F-NEXT:    lzcntq %rdx, %r8
-; AVX512F-NEXT:    addl $64, %r8d
-; AVX512F-NEXT:    testq %rsi, %rsi
-; AVX512F-NEXT:    cmovnel %edi, %r8d
-; AVX512F-NEXT:    lzcntq %rcx, %rdi
-; AVX512F-NEXT:    lzcntq %rax, %rax
-; AVX512F-NEXT:    addl $64, %eax
-; AVX512F-NEXT:    testq %rcx, %rcx
-; AVX512F-NEXT:    cmovnel %edi, %eax
-; AVX512F-NEXT:    subl $-128, %eax
-; AVX512F-NEXT:    orq %rsi, %rdx
-; AVX512F-NEXT:    cmovnel %r8d, %eax
-; AVX512F-NEXT:    # kill: def $eax killed $eax killed $rax
+; AVX512F-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,2,1,0]
+; AVX512F-NEXT:    vplzcntq %zmm0, %zmm1
+; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
+; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
+; AVX512F-NEXT:    vpcompressq %zmm1, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vmovd %xmm0, %eax
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: vector_ctlz_undef_i256:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpextrq $1, %xmm0, %rcx
-; AVX512VL-NEXT:    vmovq %xmm0, %rax
-; AVX512VL-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX512VL-NEXT:    vmovq %xmm0, %rdx
-; AVX512VL-NEXT:    vpextrq $1, %xmm0, %rsi
-; AVX512VL-NEXT:    lzcntq %rsi, %rdi
-; AVX512VL-NEXT:    lzcntq %rdx, %r8
-; AVX512VL-NEXT:    addl $64, %r8d
-; AVX512VL-NEXT:    testq %rsi, %rsi
-; AVX512VL-NEXT:    cmovnel %edi, %r8d
-; AVX512VL-NEXT:    lzcntq %rcx, %rdi
-; AVX512VL-NEXT:    lzcntq %rax, %rax
-; AVX512VL-NEXT:    addl $64, %eax
-; AVX512VL-NEXT:    testq %rcx, %rcx
-; AVX512VL-NEXT:    cmovnel %edi, %eax
-; AVX512VL-NEXT:    subl $-128, %eax
-; AVX512VL-NEXT:    orq %rsi, %rdx
-; AVX512VL-NEXT:    cmovnel %r8d, %eax
-; AVX512VL-NEXT:    # kill: def $eax killed $eax killed $rax
+; AVX512VL-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,2,1,0]
+; AVX512VL-NEXT:    vptestmq %ymm0, %ymm0, %k1
+; AVX512VL-NEXT:    vplzcntq %ymm0, %ymm0
+; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512VL-NEXT:    vpcompressq %ymm0, %ymm0 {%k1} {z}
+; AVX512VL-NEXT:    vmovd %xmm0, %eax
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512POPCNT-LABEL: vector_ctlz_undef_i256:
 ; AVX512POPCNT:       # %bb.0:
-; AVX512POPCNT-NEXT:    vpextrq $1, %xmm0, %rcx
-; AVX512POPCNT-NEXT:    vmovq %xmm0, %rax
-; AVX512POPCNT-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX512POPCNT-NEXT:    vmovq %xmm0, %rdx
-; AVX512POPCNT-NEXT:    vpextrq $1, %xmm0, %rsi
-; AVX512POPCNT-NEXT:    lzcntq %rsi, %rdi
-; AVX512POPCNT-NEXT:    lzcntq %rdx, %r8
-; AVX512POPCNT-NEXT:    addl $64, %r8d
-; AVX512POPCNT-NEXT:    testq %rsi, %rsi
-; AVX512POPCNT-NEXT:    cmovnel %edi, %r8d
-; AVX512POPCNT-NEXT:    lzcntq %rcx, %rdi
-; AVX512POPCNT-NEXT:    lzcntq %rax, %rax
-; AVX512POPCNT-NEXT:    addl $64, %eax
-; AVX512POPCNT-NEXT:    testq %rcx, %rcx
-; AVX512POPCNT-NEXT:    cmovnel %edi, %eax
-; AVX512POPCNT-NEXT:    subl $-128, %eax
-; AVX512POPCNT-NEXT:    orq %rsi, %rdx
-; AVX512POPCNT-NEXT:    cmovnel %r8d, %eax
-; AVX512POPCNT-NEXT:    # kill: def $eax killed $eax killed $rax
+; AVX512POPCNT-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,2,1,0]
+; AVX512POPCNT-NEXT:    vptestmq %ymm0, %ymm0, %k1
+; AVX512POPCNT-NEXT:    vplzcntq %ymm0, %ymm0
+; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512POPCNT-NEXT:    vpcompressq %ymm0, %ymm0 {%k1} {z}
+; AVX512POPCNT-NEXT:    vmovd %xmm0, %eax
 ; AVX512POPCNT-NEXT:    vzeroupper
 ; AVX512POPCNT-NEXT:    retq
   %a0 = bitcast <8 x i32> %v0 to i256
@@ -4887,72 +4816,47 @@ define i32 @vector_cttz_i256(<8 x i32> %v0) nounwind {
 ;
 ; AVX512F-LABEL: vector_cttz_i256:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512F-NEXT:    vpextrq $1, %xmm1, %rax
-; AVX512F-NEXT:    vmovq %xmm1, %rcx
-; AVX512F-NEXT:    vpextrq $1, %xmm0, %rdx
-; AVX512F-NEXT:    vmovq %xmm0, %rsi
-; AVX512F-NEXT:    tzcntq %rsi, %rdi
-; AVX512F-NEXT:    tzcntq %rdx, %r8
-; AVX512F-NEXT:    addl $64, %r8d
-; AVX512F-NEXT:    testq %rsi, %rsi
-; AVX512F-NEXT:    cmovnel %edi, %r8d
-; AVX512F-NEXT:    tzcntq %rcx, %rdi
-; AVX512F-NEXT:    tzcntq %rax, %rax
-; AVX512F-NEXT:    addl $64, %eax
-; AVX512F-NEXT:    testq %rcx, %rcx
-; AVX512F-NEXT:    cmovnel %edi, %eax
-; AVX512F-NEXT:    subl $-128, %eax
-; AVX512F-NEXT:    orq %rdx, %rsi
-; AVX512F-NEXT:    cmovnel %r8d, %eax
-; AVX512F-NEXT:    # kill: def $eax killed $eax killed $rax
+; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [256,256,256,256]
+; AVX512F-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
+; AVX512F-NEXT:    vpaddq %ymm2, %ymm0, %ymm2
+; AVX512F-NEXT:    vpandn %ymm2, %ymm0, %ymm2
+; AVX512F-NEXT:    vplzcntq %zmm2, %zmm2
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm3 = [64,128,192,256]
+; AVX512F-NEXT:    vpsubq %ymm2, %ymm3, %ymm2
+; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
+; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
+; AVX512F-NEXT:    vpcompressq %zmm2, %zmm1 {%k1}
+; AVX512F-NEXT:    vmovd %xmm1, %eax
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: vector_cttz_i256:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512VL-NEXT:    vpextrq $1, %xmm1, %rax
-; AVX512VL-NEXT:    vmovq %xmm1, %rcx
-; AVX512VL-NEXT:    vpextrq $1, %xmm0, %rdx
-; AVX512VL-NEXT:    vmovq %xmm0, %rsi
-; AVX512VL-NEXT:    tzcntq %rsi, %rdi
-; AVX512VL-NEXT:    tzcntq %rdx, %r8
-; AVX512VL-NEXT:    addl $64, %r8d
-; AVX512VL-NEXT:    testq %rsi, %rsi
-; AVX512VL-NEXT:    cmovnel %edi, %r8d
-; AVX512VL-NEXT:    tzcntq %rcx, %rdi
-; AVX512VL-NEXT:    tzcntq %rax, %rax
-; AVX512VL-NEXT:    addl $64, %eax
-; AVX512VL-NEXT:    testq %rcx, %rcx
-; AVX512VL-NEXT:    cmovnel %edi, %eax
-; AVX512VL-NEXT:    subl $-128, %eax
-; AVX512VL-NEXT:    orq %rdx, %rsi
-; AVX512VL-NEXT:    cmovnel %r8d, %eax
-; AVX512VL-NEXT:    # kill: def $eax killed $eax killed $rax
+; AVX512VL-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX512VL-NEXT:    vpaddq %ymm1, %ymm0, %ymm1
+; AVX512VL-NEXT:    vpandn %ymm1, %ymm0, %ymm1
+; AVX512VL-NEXT:    vplzcntq %ymm1, %ymm1
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm2 = [64,128,192,256]
+; AVX512VL-NEXT:    vpsubq %ymm1, %ymm2, %ymm1
+; AVX512VL-NEXT:    vptestmq %ymm0, %ymm0, %k1
+; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [256,256,256,256]
+; AVX512VL-NEXT:    vpcompressq %ymm1, %ymm0 {%k1}
+; AVX512VL-NEXT:    vmovd %xmm0, %eax
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512POPCNT-LABEL: vector_cttz_i256:
 ; AVX512POPCNT:       # %bb.0:
-; AVX512POPCNT-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512POPCNT-NEXT:    vpextrq $1, %xmm1, %rax
-; AVX512POPCNT-NEXT:    vmovq %xmm1, %rcx
-; AVX512POPCNT-NEXT:    vpextrq $1, %xmm0, %rdx
-; AVX512POPCNT-NEXT:    vmovq %xmm0, %rsi
-; AVX512POPCNT-NEXT:    tzcntq %rsi, %rdi
-; AVX512POPCNT-NEXT:    tzcntq %rdx, %r8
-; AVX512POPCNT-NEXT:    addl $64, %r8d
-; AVX512POPCNT-NEXT:    testq %rsi, %rsi
-; AVX512POPCNT-NEXT:    cmovnel %edi, %r8d
-; AVX512POPCNT-NEXT:    tzcntq %rcx, %rdi
-; AVX512POPCNT-NEXT:    tzcntq %rax, %rax
-; AVX512POPCNT-NEXT:    addl $64, %eax
-; AVX512POPCNT-NEXT:    testq %rcx, %rcx
-; AVX512POPCNT-NEXT:    cmovnel %edi, %eax
-; AVX512POPCNT-NEXT:    subl $-128, %eax
-; AVX512POPCNT-NEXT:    orq %rdx, %rsi
-; AVX512POPCNT-NEXT:    cmovnel %r8d, %eax
-; AVX512POPCNT-NEXT:    # kill: def $eax killed $eax killed $rax
+; AVX512POPCNT-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX512POPCNT-NEXT:    vpaddq %ymm1, %ymm0, %ymm1
+; AVX512POPCNT-NEXT:    vpandn %ymm1, %ymm0, %ymm1
+; AVX512POPCNT-NEXT:    vpopcntq %ymm1, %ymm1
+; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; AVX512POPCNT-NEXT:    vptestmq %ymm0, %ymm0, %k1
+; AVX512POPCNT-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [256,256,256,256]
+; AVX512POPCNT-NEXT:    vpcompressq %ymm1, %ymm0 {%k1}
+; AVX512POPCNT-NEXT:    vmovd %xmm0, %eax
 ; AVX512POPCNT-NEXT:    vzeroupper
 ; AVX512POPCNT-NEXT:    retq
   %a0 = bitcast <8 x i32> %v0 to i256
@@ -6484,72 +6388,44 @@ define i32 @vector_cttz_undef_i256(<8 x i32> %v0) nounwind {
 ;
 ; AVX512F-LABEL: vector_cttz_undef_i256:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512F-NEXT:    vpextrq $1, %xmm1, %rax
-; AVX512F-NEXT:    vmovq %xmm1, %rcx
-; AVX512F-NEXT:    vpextrq $1, %xmm0, %rdx
-; AVX512F-NEXT:    vmovq %xmm0, %rsi
-; AVX512F-NEXT:    tzcntq %rsi, %rdi
-; AVX512F-NEXT:    tzcntq %rdx, %r8
-; AVX512F-NEXT:    addl $64, %r8d
-; AVX512F-NEXT:    testq %rsi, %rsi
-; AVX512F-NEXT:    cmovnel %edi, %r8d
-; AVX512F-NEXT:    tzcntq %rcx, %rdi
-; AVX512F-NEXT:    tzcntq %rax, %rax
-; AVX512F-NEXT:    addl $64, %eax
-; AVX512F-NEXT:    testq %rcx, %rcx
-; AVX512F-NEXT:    cmovnel %edi, %eax
-; AVX512F-NEXT:    subl $-128, %eax
-; AVX512F-NEXT:    orq %rdx, %rsi
-; AVX512F-NEXT:    cmovnel %r8d, %eax
-; AVX512F-NEXT:    # kill: def $eax killed $eax killed $rax
+; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX512F-NEXT:    vpaddq %ymm1, %ymm0, %ymm1
+; AVX512F-NEXT:    vpandn %ymm1, %ymm0, %ymm1
+; AVX512F-NEXT:    vplzcntq %zmm1, %zmm1
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = [64,128,192,256]
+; AVX512F-NEXT:    vpsubq %ymm1, %ymm2, %ymm1
+; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
+; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
+; AVX512F-NEXT:    vpcompressq %zmm1, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vmovd %xmm0, %eax
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: vector_cttz_undef_i256:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512VL-NEXT:    vpextrq $1, %xmm1, %rax
-; AVX512VL-NEXT:    vmovq %xmm1, %rcx
-; AVX512VL-NEXT:    vpextrq $1, %xmm0, %rdx
-; AVX512VL-NEXT:    vmovq %xmm0, %rsi
-; AVX512VL-NEXT:    tzcntq %rsi, %rdi
-; AVX512VL-NEXT:    tzcntq %rdx, %r8
-; AVX512VL-NEXT:    addl $64, %r8d
-; AVX512VL-NEXT:    testq %rsi, %rsi
-; AVX512VL-NEXT:    cmovnel %edi, %r8d
-; AVX512VL-NEXT:    tzcntq %rcx, %rdi
-; AVX512VL-NEXT:    tzcntq %rax, %rax
-; AVX512VL-NEXT:    addl $64, %eax
-; AVX512VL-NEXT:    testq %rcx, %rcx
-; AVX512VL-NEXT:    cmovnel %edi, %eax
-; AVX512VL-NEXT:    subl $-128, %eax
-; AVX512VL-NEXT:    orq %rdx, %rsi
-; AVX512VL-NEXT:    cmovnel %r8d, %eax
-; AVX512VL-NEXT:    # kill: def $eax killed $eax killed $rax
+; AVX512VL-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX512VL-NEXT:    vpaddq %ymm1, %ymm0, %ymm1
+; AVX512VL-NEXT:    vpandn %ymm1, %ymm0, %ymm1
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm2 = [64,128,192,256]
+; AVX512VL-NEXT:    vplzcntq %ymm1, %ymm1
+; AVX512VL-NEXT:    vpsubq %ymm1, %ymm2, %ymm1
+; AVX512VL-NEXT:    vptestmq %ymm0, %ymm0, %k1
+; AVX512VL-NEXT:    vpcompressq %ymm1, %ymm0 {%k1} {z}
+; AVX512VL-NEXT:    vmovd %xmm0, %eax
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512POPCNT-LABEL: vector_cttz_undef_i256:
 ; AVX512POPCNT:       # %bb.0:
-; AVX512POPCNT-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512POPCNT-NEXT:    vpextrq $1, %xmm1, %rax
-; AVX512POPCNT-NEXT:    vmovq %xmm1, %rcx
-; AVX512POPCNT-NEXT:    vpextrq $1, %xmm0, %rdx
-; AVX512POPCNT-NEXT:    vmovq %xmm0, %rsi
-; AVX512POPCNT-NEXT:    tzcntq %rsi, %rdi
-; AVX512POPCNT-NEXT:    tzcntq %rdx, %r8
-; AVX512POPCNT-NEXT:    addl $64, %r8d
-; AVX512POPCNT-NEXT:    testq %rsi, %rsi
-; AVX512POPCNT-NEXT:    cmovnel %edi, %r8d
-; AVX512POPCNT-NEXT:    tzcntq %rcx, %rdi
-; AVX512POPCNT-NEXT:    tzcntq %rax, %rax
-; AVX512POPCNT-NEXT:    addl $64, %eax
-; AVX512POPCNT-NEXT:    testq %rcx, %rcx
-; AVX512POPCNT-NEXT:    cmovnel %edi, %eax
-; AVX512POPCNT-NEXT:    subl $-128, %eax
-; AVX512POPCNT-NEXT:    orq %rdx, %rsi
-; AVX512POPCNT-NEXT:    cmovnel %r8d, %eax
-; AVX512POPCNT-NEXT:    # kill: def $eax killed $eax killed $rax
+; AVX512POPCNT-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX512POPCNT-NEXT:    vpaddq %ymm1, %ymm0, %ymm1
+; AVX512POPCNT-NEXT:    vpandn %ymm1, %ymm0, %ymm1
+; AVX512POPCNT-NEXT:    vpopcntq %ymm1, %ymm1
+; AVX512POPCNT-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; AVX512POPCNT-NEXT:    vptestmq %ymm0, %ymm0, %k1
+; AVX512POPCNT-NEXT:    vpcompressq %ymm1, %ymm0 {%k1} {z}
+; AVX512POPCNT-NEXT:    vmovd %xmm0, %eax
 ; AVX512POPCNT-NEXT:    vzeroupper
 ; AVX512POPCNT-NEXT:    retq
   %a0 = bitcast <8 x i32> %v0 to i256

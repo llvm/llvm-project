@@ -30,6 +30,17 @@ HeapProfileRecords:
           - { Function: _Z3barv, LineOffset: 3, Column: 5, IsInlineFrame: true }
           - { Function: _Z3foov, LineOffset: 10, Column: 7, IsInlineFrame: false }
         CalleeGuids:   [0x3456, 0x4567]
+      # This set of frames is for the second indirect call below. We should match
+      # the interior non-leaf frame with the call. In this case the synthesized
+      # VP metadata should have _Z3xyzv (GUID 15367485273663173088 aka
+      # -3079258800046378528) as the target, not the one from CalleeGuids which
+      # is the callee of the leafmost frame. This simulates the case where sample
+      # PGO performed ICP during matching in the profiled compile, without using
+      # VP metadata.
+      - Frames:
+          - { Function: _Z3xyzv, LineOffset: 1, Column: 1, IsInlineFrame: true }
+          - { Function: _Z3barv, LineOffset: 4, Column: 10, IsInlineFrame: false }
+        CalleeGuids:   [0x5678]
 ...
 
 ;--- basic.ll
@@ -38,12 +49,17 @@ entry:
   %fp = alloca ptr, align 8
   %0 = load ptr, ptr %fp, align 8
   call void %0(), !dbg !5
-; CHECK-ENABLE: call void %0(), {{.*}} !prof !6
+; CHECK-ENABLE: call void %0(), {{.*}} !prof ![[VP1:[0-9]+]]
 ; CHECK-DISABLE-NOT: !prof
+  call void %0(), !dbg !6
+; CHECK-ENABLE: call void %0(), {{.*}} !prof ![[VP2:[0-9]+]]
   ret void
 }
 
-; CHECK-ENABLE: !6 = !{!"VP", i32 0, i64 6, i64 1311768467463790320, i64 1, i64 2541551405711093505, i64 1, i64 4660, i64 1, i64 9029, i64 1, i64 13398, i64 1, i64 17767, i64 1}
+; CHECK-ENABLE: ![[VP1]] = !{!"VP", i32 0, i64 6, i64 1311768467463790320, i64 1, i64 2541551405711093505, i64 1, i64 4660, i64 1, i64 9029, i64 1, i64 13398, i64 1, i64 17767, i64 1}
+;; The second call above gets a single target synthesized from the callee frame,
+;; to the GUID of _Z3xyzv, see comments in the profile above.
+; CHECK-ENABLE: ![[VP2]] = !{!"VP", i32 0, i64 1, i64 -3079258800046378528, i64 1}
 
 !llvm.module.flags = !{!2, !3}
 
@@ -53,6 +69,7 @@ entry:
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = distinct !DISubprogram(name: "bar", linkageName: "_Z3barv", scope: !1, file: !1, line: 1, unit: !0)
 !5 = !DILocation(line: 4, column: 5, scope: !4)
+!6 = !DILocation(line: 5, column: 10, scope: !4)
 
 ;--- fdo_conflict.yaml
 ---
@@ -62,10 +79,13 @@ HeapProfileRecords:
     CallSites:
       - Frames:
           - { Function: _Z3foov, LineOffset: 3, Column: 5, IsInlineFrame: false }
-        CalleeGuids:   [0x123456789abcdef0, 0x23456789abcdef01]
+        CalleeGuids:   [0x123456789abcdef0, 0x23456789abcdef01, 0x7f8d88fcc70a347b]
       - Frames:
           - { Function: _Z3foov, LineOffset: 5, Column: 5, IsInlineFrame: false }
         CalleeGuids:   [0x555556789abcdef0, 0x666656789abcdef1]
+      - Frames:
+          - { Function: _Z3foov, LineOffset: 6, Column: 5, IsInlineFrame: false }
+        CalleeGuids:   [0xf129122801e64264, 0x7f8d88fcc70a347b]
 ...
 
 ;--- fdo_conflict.ll
@@ -73,21 +93,33 @@ define dso_local void @_Z3foov() !dbg !14 {
 entry:
   %fp = alloca ptr, align 8
   %0 = load ptr, ptr %fp, align 8
-  ; This call already has FDO value profile metadata - should NOT be modified
-  ; CHECK-FDO: call void %0(), {{.*}} !prof !6
+  ; This call already has FDO value profile metadata - new GUIDs should be appended.
+  ; The profile contains 0x7f8d88fcc70a347b (9191153033785521275) which already
+  ; exists in VP metadata and should not be re-added or affect count.
+  ; CHECK-FDO: call void %0(), {{.*}} !prof ![[VP1:[0-9]+]]
   call void %0(), !dbg !15, !prof !16
 
   %1 = load ptr, ptr %fp, align 8
   ; This call does NOT have existing metadata - should get MemProf annotation
-  ; CHECK-FDO: call void %1(), {{.*}} !prof !9
+  ; CHECK-FDO: call void %1(), {{.*}} !prof ![[VP2:[0-9]+]]
   call void %1(), !dbg !17
+
+  %2 = load ptr, ptr %fp, align 8
+  ; This call already has FDO value profile metadata, and the profile contains
+  ; the same 2 callee guids that are already included in the VP metadata:
+  ; 0x7f8d88fcc70a347b (9191153033785521275) and 0xf129122801e64264 which is
+  ; 17377440600225628772 aka -1069303473483922844. The metadata should not be affected.
+  ; CHECK-FDO: call void %2(), {{.*}} !prof ![[VP3:[0-9]+]]
+  call void %2(), !dbg !18, !prof !19
   ret void
 }
 
 !16 = !{!"VP", i32 0, i64 100, i64 9191153033785521275, i64 80, i64 -1069303473483922844, i64 20}
+!19 = !{!"VP", i32 0, i64 100, i64 9191153033785521275, i64 80, i64 -1069303473483922844, i64 20}
 
-; CHECK-FDO: !6 = !{!"VP", i32 0, i64 100, i64 9191153033785521275, i64 80, i64 -1069303473483922844, i64 20}
-; CHECK-FDO: !9 = !{!"VP", i32 0, i64 2, i64 6148915942236413680, i64 1, i64 7378680115485269745, i64 1}
+; CHECK-FDO: ![[VP1]] = !{!"VP", i32 0, i64 102, i64 9191153033785521275, i64 80, i64 -1069303473483922844, i64 20, i64 1311768467463790320, i64 1, i64 2541551405711093505, i64 1}
+; CHECK-FDO: ![[VP2]] = !{!"VP", i32 0, i64 2, i64 6148915942236413680, i64 1, i64 7378680115485269745, i64 1}
+; CHECK-FDO: ![[VP3]] = !{!"VP", i32 0, i64 100, i64 9191153033785521275, i64 80, i64 -1069303473483922844, i64 20}
 
 !llvm.module.flags = !{!12, !13}
 
@@ -98,3 +130,4 @@ entry:
 !14 = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov", scope: !11, file: !11, line: 1, unit: !10)
 !15 = !DILocation(line: 4, column: 5, scope: !14)
 !17 = !DILocation(line: 6, column: 5, scope: !14)
+!18 = !DILocation(line: 7, column: 5, scope: !14)

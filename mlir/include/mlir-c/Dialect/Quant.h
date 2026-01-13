@@ -103,6 +103,8 @@ mlirQuantizedTypeCastExpressedToStorageType(MlirType type, MlirType candidate);
 /// Returns `true` if the given type is an AnyQuantizedType.
 MLIR_CAPI_EXPORTED bool mlirTypeIsAAnyQuantizedType(MlirType type);
 
+MLIR_CAPI_EXPORTED MlirTypeID mlirAnyQuantizedTypeGetTypeID(void);
+
 /// Creates an instance of AnyQuantizedType with the given parameters in the
 /// same context as `storageType` and returns it. The instance is owned by the
 /// context.
@@ -112,6 +114,8 @@ MLIR_CAPI_EXPORTED MlirType mlirAnyQuantizedTypeGet(unsigned flags,
                                                     int64_t storageTypeMin,
                                                     int64_t storageTypeMax);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirAnyQuantizedTypeGetName(void);
+
 //===---------------------------------------------------------------------===//
 // UniformQuantizedType
 //===---------------------------------------------------------------------===//
@@ -119,12 +123,16 @@ MLIR_CAPI_EXPORTED MlirType mlirAnyQuantizedTypeGet(unsigned flags,
 /// Returns `true` if the given type is a UniformQuantizedType.
 MLIR_CAPI_EXPORTED bool mlirTypeIsAUniformQuantizedType(MlirType type);
 
+MLIR_CAPI_EXPORTED MlirTypeID mlirUniformQuantizedTypeGetTypeID(void);
+
 /// Creates an instance of UniformQuantizedType with the given parameters in the
 /// same context as `storageType` and returns it. The instance is owned by the
 /// context.
 MLIR_CAPI_EXPORTED MlirType mlirUniformQuantizedTypeGet(
     unsigned flags, MlirType storageType, MlirType expressedType, double scale,
     int64_t zeroPoint, int64_t storageTypeMin, int64_t storageTypeMax);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirUniformQuantizedTypeGetName(void);
 
 /// Returns the scale of the given uniform quantized type.
 MLIR_CAPI_EXPORTED double mlirUniformQuantizedTypeGetScale(MlirType type);
@@ -142,6 +150,8 @@ MLIR_CAPI_EXPORTED bool mlirUniformQuantizedTypeIsFixedPoint(MlirType type);
 /// Returns `true` if the given type is a UniformQuantizedPerAxisType.
 MLIR_CAPI_EXPORTED bool mlirTypeIsAUniformQuantizedPerAxisType(MlirType type);
 
+MLIR_CAPI_EXPORTED MlirTypeID mlirUniformQuantizedPerAxisTypeGetTypeID(void);
+
 /// Creates an instance of UniformQuantizedPerAxisType with the given parameters
 /// in the same context as `storageType` and returns it. `scales` and
 /// `zeroPoints` point to `nDims` number of elements. The instance is owned
@@ -150,6 +160,8 @@ MLIR_CAPI_EXPORTED MlirType mlirUniformQuantizedPerAxisTypeGet(
     unsigned flags, MlirType storageType, MlirType expressedType,
     intptr_t nDims, double *scales, int64_t *zeroPoints,
     int32_t quantizedDimension, int64_t storageTypeMin, int64_t storageTypeMax);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirUniformQuantizedPerAxisTypeGetName(void);
 
 /// Returns the number of axes in the given quantized per-axis type.
 MLIR_CAPI_EXPORTED intptr_t
@@ -180,6 +192,8 @@ mlirUniformQuantizedPerAxisTypeIsFixedPoint(MlirType type);
 MLIR_CAPI_EXPORTED bool
 mlirTypeIsAUniformQuantizedSubChannelType(MlirType type);
 
+MLIR_CAPI_EXPORTED MlirTypeID mlirUniformQuantizedSubChannelTypeGetTypeID(void);
+
 /// Creates a UniformQuantizedSubChannelType with the given parameters.
 ///
 /// The type is owned by the context. `scalesAttr` and `zeroPointsAttr` must be
@@ -191,6 +205,9 @@ MLIR_CAPI_EXPORTED MlirType mlirUniformQuantizedSubChannelTypeGet(
     MlirAttribute scalesAttr, MlirAttribute zeroPointsAttr,
     intptr_t blockSizeInfoLength, int32_t *quantizedDimensions,
     int64_t *blockSizes, int64_t storageTypeMin, int64_t storageTypeMax);
+
+MLIR_CAPI_EXPORTED MlirStringRef
+mlirUniformQuantizedSubChannelTypeGetName(void);
 
 /// Returns the number of block sizes provided in type.
 MLIR_CAPI_EXPORTED intptr_t
@@ -220,11 +237,15 @@ mlirUniformQuantizedSubChannelTypeGetZeroPoints(MlirType type);
 /// Returns `true` if the given type is a CalibratedQuantizedType.
 MLIR_CAPI_EXPORTED bool mlirTypeIsACalibratedQuantizedType(MlirType type);
 
+MLIR_CAPI_EXPORTED MlirTypeID mlirCalibratedQuantizedTypeGetTypeID(void);
+
 /// Creates an instance of CalibratedQuantizedType with the given parameters
 /// in the same context as `expressedType` and returns it. The instance is owned
 /// by the context.
 MLIR_CAPI_EXPORTED MlirType
 mlirCalibratedQuantizedTypeGet(MlirType expressedType, double min, double max);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirCalibratedQuantizedTypeGetName(void);
 
 /// Returns the min value of the given calibrated quantized type.
 MLIR_CAPI_EXPORTED double mlirCalibratedQuantizedTypeGetMin(MlirType type);

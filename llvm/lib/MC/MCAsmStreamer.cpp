@@ -774,6 +774,9 @@ bool MCAsmStreamer::emitSymbolAttribute(MCSymbol *Symbol,
     // Assemblers currently do not support a .cold directive.
   case MCSA_Exported:
     // Non-AIX assemblers currently do not support exported visibility.
+  case MCSA_OSLinkage:
+  case MCSA_XPLinkage:
+    // Only for HLASM.
     return false;
   case MCSA_Memtag:
     OS << "\t.memtag\t";

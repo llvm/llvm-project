@@ -323,9 +323,8 @@ bool NarrowingConversionsCheck::isWarningInhibitedByEquivalentSize(
   if (!WarnOnEquivalentBitWidth) {
     const uint64_t FromTypeSize = Context.getTypeSize(&FromType);
     const uint64_t ToTypeSize = Context.getTypeSize(&ToType);
-    if (FromTypeSize == ToTypeSize) {
+    if (FromTypeSize == ToTypeSize)
       return true;
-    }
   }
   return false;
 }

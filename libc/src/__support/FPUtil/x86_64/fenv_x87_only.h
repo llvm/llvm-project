@@ -76,7 +76,7 @@ LIBC_INLINE static int get_round() {
 
 LIBC_INLINE static int set_round(int rounding_mode) {
   uint16_t rounding = internal::get_rounding_control_from_macro(rounding_mode);
-  if (LIBC_UNLIKELY(rounding == internal::RoundingControl::ERROR))
+  if (LIBC_UNLIKELY(rounding == internal::RoundingControl::RC_ERROR))
     return -1;
   x87::set_round(rounding);
   return 0;

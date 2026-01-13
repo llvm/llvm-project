@@ -139,44 +139,44 @@ define float @fround_s_1(float %a) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fround.s fa0, fa0, rmm
 ; CHECK-NEXT:    ret
-  %call = tail call float @roundf(float %a) nounwind readnone
+  %call = tail call float @llvm.round.f32(float %a) nounwind readnone
   ret float %call
 }
 
-declare float @roundf(float) nounwind readnone
+declare float @llvm.round.f32(float) nounwind readnone
 
 define float @fround_s_2(float %a) nounwind {
 ; CHECK-LABEL: fround_s_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fround.s fa0, fa0, rdn
 ; CHECK-NEXT:    ret
-  %call = tail call float @floorf(float %a) nounwind readnone
+  %call = tail call float @llvm.floor.f32(float %a) nounwind readnone
   ret float %call
 }
 
-declare float @floorf(float) nounwind readnone
+declare float @llvm.floor.f32(float) nounwind readnone
 
 define float @fround_s_3(float %a) nounwind {
 ; CHECK-LABEL: fround_s_3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fround.s fa0, fa0, rup
 ; CHECK-NEXT:    ret
-  %call = tail call float @ceilf(float %a) nounwind readnone
+  %call = tail call float @llvm.ceil.f32(float %a) nounwind readnone
   ret float %call
 }
 
-declare float @ceilf(float) nounwind readnone
+declare float @llvm.ceil.f32(float) nounwind readnone
 
 define float @fround_s_4(float %a) nounwind {
 ; CHECK-LABEL: fround_s_4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fround.s fa0, fa0, rtz
 ; CHECK-NEXT:    ret
-  %call = tail call float @truncf(float %a) nounwind readnone
+  %call = tail call float @llvm.trunc.f32(float %a) nounwind readnone
   ret float %call
 }
 
-declare float @truncf(float) nounwind readnone
+declare float @llvm.trunc.f32(float) nounwind readnone
 
 define float @fround_s_5(float %a) nounwind {
 ; CHECK-LABEL: fround_s_5:
@@ -201,11 +201,11 @@ define float @froundnx_s(float %a) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    froundnx.s fa0, fa0
 ; CHECK-NEXT:    ret
-  %call = tail call float @rintf(float %a) nounwind readnone
+  %call = tail call float @llvm.rint.f32(float %a) nounwind readnone
   ret float %call
 }
 
-declare float @rintf(float) nounwind readnone
+declare float @llvm.rint.f32(float) nounwind readnone
 
 define i32 @fcmp_olt_q(float %a, float %b) nounwind strictfp {
 ; CHECK-LABEL: fcmp_olt_q:

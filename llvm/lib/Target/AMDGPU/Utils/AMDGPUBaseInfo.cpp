@@ -424,6 +424,8 @@ struct FP4FP8DstByteSelInfo {
   bool HasFP4DstByteSel;
 };
 
+#define GET_DPMACCInstructionTable_DECL
+#define GET_DPMACCInstructionTable_IMPL
 #define GET_MTBUFInfoTable_DECL
 #define GET_MTBUFInfoTable_IMPL
 #define GET_MUBUFInfoTable_DECL
@@ -780,6 +782,11 @@ FPType getFPDstSelType(unsigned Opc) {
     return FPType::FP4;
 
   return FPType::None;
+}
+
+bool isDPMACCInstruction(unsigned Opc) {
+  const DPMACCInstructionInfo *Info = getDPMACCInstructionHelper(Opc);
+  return Info && Info->IsDPMACCInstruction;
 }
 
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc) {
@@ -1712,6 +1719,30 @@ bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val) {
   return false;
 }
 
+raw_ostream &operator<<(raw_ostream &OS, const AMDGPU::Waitcnt &Wait) {
+  ListSeparator LS;
+  if (Wait.LoadCnt != ~0u)
+    OS << LS << "LoadCnt: " << Wait.LoadCnt;
+  if (Wait.ExpCnt != ~0u)
+    OS << LS << "ExpCnt: " << Wait.ExpCnt;
+  if (Wait.DsCnt != ~0u)
+    OS << LS << "DsCnt: " << Wait.DsCnt;
+  if (Wait.StoreCnt != ~0u)
+    OS << LS << "StoreCnt: " << Wait.StoreCnt;
+  if (Wait.SampleCnt != ~0u)
+    OS << LS << "SampleCnt: " << Wait.SampleCnt;
+  if (Wait.BvhCnt != ~0u)
+    OS << LS << "BvhCnt: " << Wait.BvhCnt;
+  if (Wait.KmCnt != ~0u)
+    OS << LS << "KmCnt: " << Wait.KmCnt;
+  if (Wait.XCnt != ~0u)
+    OS << LS << "XCnt: " << Wait.XCnt;
+  if (LS.unused())
+    OS << "none";
+  OS << '\n';
+  return OS;
+}
+
 unsigned getVmcntBitMask(const IsaVersion &Version) {
   return (1 << (getVmcntBitWidthLo(Version.Major) +
                 getVmcntBitWidthHi(Version.Major))) -
@@ -1752,6 +1783,25 @@ unsigned getXcntBitMask(const IsaVersion &Version) {
 
 unsigned getStorecntBitMask(const IsaVersion &Version) {
   return (1 << getStorecntBitWidth(Version.Major)) - 1;
+}
+
+HardwareLimits::HardwareLimits(const IsaVersion &IV,
+                               bool HasExtendedWaitCounts) {
+  if (HasExtendedWaitCounts) {
+    LoadcntMax = getLoadcntBitMask(IV);
+    DscntMax = getDscntBitMask(IV);
+  } else {
+    LoadcntMax = getVmcntBitMask(IV);
+    DscntMax = getLgkmcntBitMask(IV);
+  }
+  ExpcntMax = getExpcntBitMask(IV);
+  StorecntMax = getStorecntBitMask(IV);
+  SamplecntMax = getSamplecntBitMask(IV);
+  BvhcntMax = getBvhcntBitMask(IV);
+  KmcntMax = getKmcntBitMask(IV);
+  XcntMax = getXcntBitMask(IV);
+  VaVdstMax = DepCtr::getVaVdstBitMask();
+  VmVsrcMax = DepCtr::getVmVsrcBitMask();
 }
 
 unsigned getWaitcntBitMask(const IsaVersion &Version) {
@@ -2021,6 +2071,10 @@ int encodeDepCtr(const StringRef Name, int64_t Val, unsigned &UsedOprMask,
   return encodeCustomOperand(DepCtrInfo, DEP_CTR_SIZE, Name, Val, UsedOprMask,
                              STI);
 }
+
+unsigned getVaVdstBitMask() { return (1 << getVaVdstBitWidth()) - 1; }
+
+unsigned getVmVsrcBitMask() { return (1 << getVmVsrcBitWidth()) - 1; }
 
 unsigned decodeFieldVmVsrc(unsigned Encoded) {
   return unpackBits(Encoded, getVmVsrcBitShift(), getVmVsrcBitWidth());

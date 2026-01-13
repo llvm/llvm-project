@@ -13,7 +13,7 @@
 #include <array>
 #include <cassert>
 
-int main(int, char**) {
+void test() {
   {
     typedef double T;
     typedef std::array<const T, 0> C;
@@ -21,6 +21,4 @@ int main(int, char**) {
     // expected-error-re@*:* {{static assertion failed{{.*}}cannot fill zero-sized array of type 'const T'}}
     c.fill(5.5); // expected-note {{requested here}}
   }
-
-  return 0;
 }
