@@ -407,6 +407,7 @@ ELFNixPlatform::ELFNixPlatform(
                        {PlatformBootstrap.Name, PlatformShutdown.Name,
                         RegisterJITDylib.Name, DeregisterJITDylib.Name,
                         RegisterInitSections.Name, DeregisterInitSections.Name,
+                        RegisterFiniSections.Name, DeregisterFiniSections.Name,
                         RegisterObjectSections.Name,
                         DeregisterObjectSections.Name, CreatePThreadKey.Name}))
                  .takeError()))
@@ -646,6 +647,8 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::
       {*MP.DeregisterObjectSections.Name, &MP.DeregisterObjectSections.Addr},
       {*MP.RegisterInitSections.Name, &MP.RegisterInitSections.Addr},
       {*MP.DeregisterInitSections.Name, &MP.DeregisterInitSections.Addr},
+      {*MP.RegisterFiniSections.Name, &MP.RegisterFiniSections.Addr},
+      {*MP.DeregisterFiniSections.Name, &MP.DeregisterFiniSections.Addr},
       {*MP.CreatePThreadKey.Name, &MP.CreatePThreadKey.Addr}};
 
   bool RegisterELFNixHeader = false;
@@ -774,6 +777,12 @@ void ELFNixPlatform::ELFNixPlatformPlugin::modifyPassConfig(
     return registerInitSections(G, JD, InBootstrapPhase);
   });
 
+  // If the object contains finalizers then add passes to record them.
+  Config.PostFixupPasses.push_back([this, &JD = MR.getTargetJITDylib(),
+                                    InBootstrapPhase](jitlink::LinkGraph &G) {
+    return registerFiniSections(G, JD, InBootstrapPhase);
+  });
+
   // If we're in the bootstrap phase then steal allocation actions and then
   // decrement the active graphs.
   if (InBootstrapPhase)
@@ -897,6 +906,32 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::preserveInitSections(
         InitSym->getBlock().addEdge(jitlink::Edge::KeepAlive, 0, S, 0);
       }
     }
+
+    // Also preserve fini sections (.fini_array, .fini, .dtors)
+    for (auto &FiniSection : G.sections()) {
+      // Skip non-fini sections.
+      if (!isELFFinalizerSection(FiniSection.getName()) ||
+          FiniSection.empty())
+        continue;
+
+      // Create the init symbol if it has not been created already and attach it
+      // to the first fini block.
+      if (!InitSym) {
+        auto &B = **FiniSection.blocks().begin();
+        InitSym = &G.addDefinedSymbol(
+            B, 0, *InitSymName, B.getSize(), jitlink::Linkage::Strong,
+            jitlink::Scope::SideEffectsOnly, false, true);
+      }
+
+      // Add keep-alive edges to anonymous symbols in all fini blocks.
+      for (auto *B : FiniSection.blocks()) {
+        if (B == &InitSym->getBlock())
+          continue;
+
+        auto &S = G.addAnonymousSymbol(*B, 0, B->getSize(), false, true);
+        InitSym->getBlock().addEdge(jitlink::Edge::KeepAlive, 0, S, 0);
+      }
+    }
   }
 
   return Error::success();
@@ -980,6 +1015,86 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::registerInitSections(
            MP.RegisterInitSections.Addr, HeaderAddr, ELFNixPlatformSecs)),
        cantFail(WrapperFunctionCall::Create<SPSRegisterInitSectionsArgs>(
            MP.DeregisterInitSections.Addr, HeaderAddr, ELFNixPlatformSecs))});
+
+  return Error::success();
+}
+
+Error ELFNixPlatform::ELFNixPlatformPlugin::registerFiniSections(
+    jitlink::LinkGraph &G, JITDylib &JD, bool IsBootstrapping) {
+  SmallVector<ExecutorAddrRange> ELFNixFiniSecs;
+  LLVM_DEBUG(dbgs() << "ELFNixPlatform::registerFiniSections\n");
+
+  SmallVector<jitlink::Section *> OrderedFiniSections;
+  for (auto &Sec : G.sections())
+    if (isELFFinalizerSection(Sec.getName()))
+      OrderedFiniSections.push_back(&Sec);
+
+  // Sort by priority (same order as init - will be reversed at runtime)
+  llvm::sort(OrderedFiniSections, [](const jitlink::Section *LHS,
+                                     const jitlink::Section *RHS) {
+    if (LHS->getName().starts_with(".fini_array")) {
+      if (RHS->getName().starts_with(".fini_array")) {
+        StringRef LHSPrioStr(LHS->getName());
+        StringRef RHSPrioStr(RHS->getName());
+        uint64_t LHSPriority;
+        bool LHSHasPriority = LHSPrioStr.consume_front(".fini_array.") &&
+                              !LHSPrioStr.getAsInteger(10, LHSPriority);
+        uint64_t RHSPriority;
+        bool RHSHasPriority = RHSPrioStr.consume_front(".fini_array.") &&
+                              !RHSPrioStr.getAsInteger(10, RHSPriority);
+        if (LHSHasPriority)
+          return RHSHasPriority ? LHSPriority < RHSPriority : true;
+        else if (RHSHasPriority)
+          return false;
+      } else {
+        return true;
+      }
+    }
+    return LHS->getName() < RHS->getName();
+  });
+
+  for (auto *Sec : OrderedFiniSections)
+    ELFNixFiniSecs.push_back(jitlink::SectionRange(*Sec).getRange());
+
+  if (ELFNixFiniSecs.empty())
+    return Error::success();
+
+  // Dump the scraped finis.
+  LLVM_DEBUG({
+    dbgs() << "ELFNixPlatform: Scraped " << G.getName() << " fini sections:\n";
+    for (auto *Sec : OrderedFiniSections) {
+      jitlink::SectionRange R(*Sec);
+      dbgs() << "  " << Sec->getName() << ": " << R.getRange() << "\n";
+    }
+  });
+
+  ExecutorAddr HeaderAddr;
+  {
+    std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
+    auto I = MP.JITDylibToHandleAddr.find(&JD);
+    assert(I != MP.JITDylibToHandleAddr.end() && "No header registered for JD");
+    assert(I->second && "Null header registered for JD");
+    HeaderAddr = I->second;
+  }
+
+  using SPSRegisterFiniSectionsArgs =
+      SPSArgList<SPSExecutorAddr, SPSSequence<SPSExecutorAddrRange>>;
+
+  if (LLVM_UNLIKELY(IsBootstrapping)) {
+    MP.Bootstrap.load()->addArgumentsToRTFnMap(
+        &MP.RegisterFiniSections, &MP.DeregisterFiniSections,
+        getArgDataBufferType<SPSRegisterFiniSectionsArgs>(HeaderAddr,
+                                                          ELFNixFiniSecs),
+        getArgDataBufferType<SPSRegisterFiniSectionsArgs>(HeaderAddr,
+                                                          ELFNixFiniSecs));
+    return Error::success();
+  }
+
+  G.allocActions().push_back(
+      {cantFail(WrapperFunctionCall::Create<SPSRegisterFiniSectionsArgs>(
+           MP.RegisterFiniSections.Addr, HeaderAddr, ELFNixFiniSecs)),
+       cantFail(WrapperFunctionCall::Create<SPSRegisterFiniSectionsArgs>(
+           MP.DeregisterFiniSections.Addr, HeaderAddr, ELFNixFiniSecs))});
 
   return Error::success();
 }
