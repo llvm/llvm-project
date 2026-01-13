@@ -154,6 +154,8 @@ public:
   NODE(parser, AllocatableStmt)
   NODE(parser, AllocateCoarraySpec)
   NODE(parser, AllocateObject)
+  NODE(parser, AllocateShapeSpecArray)
+  NODE(parser, AllocateShapeSpecArrayList)
   NODE(parser, AllocateShapeSpec)
   NODE(parser, AllocateStmt)
   NODE(parser, Allocation)

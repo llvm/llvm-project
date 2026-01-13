@@ -185,7 +185,7 @@ public:
   template <typename A> MaybeExpr Analyze(const parser::Scalar<A> &x) {
     auto result{Analyze(x.thing)};
     if (result) {
-      if (int rank{result->Rank()}; rank != 0) {
+      if (int rank{result->Rank()}; rank != 0 ) { //&& (rank != 1)) {
         SayAt(x, "Must be a scalar value, but is a rank-%d array"_err_en_US,
             rank);
         ResetExpr(x);

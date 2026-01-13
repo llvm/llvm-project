@@ -59,7 +59,7 @@ private:
 
   static int ShapeSpecRank(const parser::Allocation &allocation) {
     return static_cast<int>(
-        std::get<std::list<parser::AllocateShapeSpec>>(allocation.t).size());
+        std::get<std::list<parser::AllocateShapeSpec>>((std::get<parser::AllocateShapeSpecArrayList>(allocation.t)).u).size());
   }
 
   static int CoarraySpecRank(const parser::Allocation &allocation) {
@@ -600,7 +600,7 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
       }
     } else {
       // explicit shape-spec-list
-      if (allocateShapeSpecRank_ != rank_) {
+      if (allocateShapeSpecRank_ != rank_) { printf("got to allocateShapeSpecRank_ %d != rank_ %d\n", allocateShapeSpecRank_, rank_); 
         context
             .Say(name_.source,
                 "The number of shape specifications, when they appear, must match the rank of allocatable object"_err_en_US)
@@ -612,7 +612,7 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
               static_cast<std::size_t>(allocateShapeSpecRank_)) {
         std::size_t j{0};
         for (const auto &shapeSpec :
-            std::get<std::list<parser::AllocateShapeSpec>>(allocation_.t)) {
+            std::get<std::list<parser::AllocateShapeSpec>>((std::get<parser::AllocateShapeSpecArrayList>(allocation_.t)).u)) {
           if (j >= allocateInfo_.sourceExprShape->size()) {
             break;
           }
