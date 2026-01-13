@@ -10,10 +10,17 @@
 #include "hdr/math_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/acosf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
+
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
@@ -72,8 +79,8 @@ TEST_F(LlvmLibcAcosfTest, SpecificBitPatterns) {
   for (int i = 0; i < N; ++i) {
     float x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Acos, x,
-                                   LIBC_NAMESPACE::acosf(x), 0.5);
+                                   LIBC_NAMESPACE::acosf(x), TOLERANCE + 0.5);
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Acos, -x,
-                                   LIBC_NAMESPACE::acosf(-x), 0.5);
+                                   LIBC_NAMESPACE::acosf(-x), TOLERANCE + 0.5);
   }
 }

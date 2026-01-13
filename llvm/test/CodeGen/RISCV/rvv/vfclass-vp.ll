@@ -218,12 +218,3 @@ define <vscale x 8 x i1> @isneginf_nxv8f64_unmasked(<vscale x 8 x double> %x, i3
   ret <vscale x 8 x i1> %1
 }
 
-
-declare <vscale x 2 x i1> @llvm.vp.is.fpclass.nxv2f16(<vscale x 2 x half>, i32, <vscale x 2 x i1>, i32)
-declare <vscale x 2 x i1> @llvm.vp.is.fpclass.nxv2f32(<vscale x 2 x float>, i32, <vscale x 2 x i1>, i32)
-declare <vscale x 4 x i1> @llvm.vp.is.fpclass.nxv4f32(<vscale x 4 x float>, i32, <vscale x 4 x i1>, i32)
-declare <vscale x 8 x i1> @llvm.vp.is.fpclass.nxv8f32(<vscale x 8 x float>, i32, <vscale x 8 x i1>, i32)
-declare <vscale x 16 x i1> @llvm.vp.is.fpclass.nxv16f32(<vscale x 16 x float>, i32, <vscale x 16 x i1>, i32)
-declare <vscale x 2 x i1> @llvm.vp.is.fpclass.nxv2f64(<vscale x 2 x double>, i32, <vscale x 2 x i1>, i32)
-declare <vscale x 4 x i1> @llvm.vp.is.fpclass.nxv4f64(<vscale x 4 x double>, i32, <vscale x 4 x i1>, i32)
-declare <vscale x 8 x i1> @llvm.vp.is.fpclass.nxv8f64(<vscale x 8 x double>, i32, <vscale x 8 x i1>, i32)

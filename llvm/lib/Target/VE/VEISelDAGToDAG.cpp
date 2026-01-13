@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VE.h"
+#include "VESelectionDAGInfo.h"
 #include "VETargetMachine.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Support/ErrorHandling.h"

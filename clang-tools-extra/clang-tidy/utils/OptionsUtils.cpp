@@ -11,7 +11,7 @@
 
 namespace clang::tidy::utils::options {
 
-static const char StringsDelimiter[] = ";";
+static constexpr char StringsDelimiter[] = ";";
 
 std::vector<StringRef> parseStringList(StringRef Option) {
   Option = Option.trim().trim(StringsDelimiter);

@@ -8,12 +8,12 @@ Introduction
 This document contains information describing how to create a Windows Itanium toolchain.
 
 Windows Itanium allows you to deploy Itanium C++ ABI applications on top of the MS VS CRT.
-This environment can use the Windows SDK headers directly and does not required additional
+This environment can use the Windows SDK headers directly and does not require additional
 headers or additional runtime machinery (such as is used by mingw).
 
 Windows Itanium Stack:
 
-* Uses the Itanium C++ abi.
+* Uses the Itanium C++ ABI.
 * libc++.
 * libc++-abi.
 * libunwind.
@@ -75,7 +75,7 @@ It is also possible to cross-compile from Linux.
 
 To build the libraries in step 2, refer to the `libc++ documentation <https://libcxx.llvm.org/VendorDocumentation.html#the-default-build>`_.
 
-The next section discuss the salient options and modifications required for building and installing the
+The next section discusses the salient options and modifications required for building and installing the
 libraries. This assumes that we are building libunwind and libc++ as DLLs and statically linking libc++abi
 into libc++. Other build configurations are possible, but they are not discussed here.
 

@@ -216,9 +216,11 @@ TEST(ScudoQuarantineTest, GlobalQuarantine) {
   Quarantine.drainAndRecycle(&Cache, Cb);
   EXPECT_EQ(Cache.getSize(), 0UL);
 
-  scudo::ScopedString Str;
-  Quarantine.getStats(&Str);
-  Str.output();
+  if (TEST_HAS_FAILURE) {
+    scudo::ScopedString Str;
+    Quarantine.getStats(&Str);
+    Str.output();
+  }
 }
 
 struct PopulateQuarantineThread {
@@ -248,9 +250,11 @@ TEST(ScudoQuarantineTest, ThreadedGlobalQuarantine) {
   for (scudo::uptr I = 0; I < NumberOfThreads; I++)
     pthread_join(T[I].Thread, 0);
 
-  scudo::ScopedString Str;
-  Quarantine.getStats(&Str);
-  Str.output();
+  if (TEST_HAS_FAILURE) {
+    scudo::ScopedString Str;
+    Quarantine.getStats(&Str);
+    Str.output();
+  }
 
   for (scudo::uptr I = 0; I < NumberOfThreads; I++)
     Quarantine.drainAndRecycle(&T[I].Cache, Cb);

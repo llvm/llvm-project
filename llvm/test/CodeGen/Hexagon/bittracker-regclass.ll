@@ -19,7 +19,7 @@ for.body.i198:
   br i1 %cond, label %for.body34.preheader, label %for.body.i198
 
 for.body34.preheader:
-  %wide.load269.5 = load <16 x i32>, <16 x i32>* bitcast (i32* getelementptr inbounds ([100 x i32], [100 x i32]* @out, i32 0, i32 80) to <16 x i32>*), align 64
+  %wide.load269.5 = load <16 x i32>, ptr getelementptr inbounds ([100 x i32], ptr @out, i32 0, i32 80), align 64
   %0 = add nsw <16 x i32> %wide.load269.5, zeroinitializer
   %rdx.shuf270 = shufflevector <16 x i32> %0, <16 x i32> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %bin.rdx271 = add <16 x i32> %0, %rdx.shuf270
@@ -31,10 +31,10 @@ for.body34.preheader:
   %add45.1 = add nsw i32 0, %add45
   %add45.2 = add nsw i32 0, %add45.1
   %add45.3 = add nsw i32 0, %add45.2
-  call void (i8*, ...) @printf(i8* getelementptr inbounds ([29 x i8], [29 x i8]* @.str.3, i32 0, i32 0), i32 %add45.3) #2
-  store i32 32, i32* getelementptr inbounds ([55 x i32], [55 x i32]* @in55, i32 0, i32 32), align 128
-  store i32 33, i32* getelementptr inbounds ([55 x i32], [55 x i32]* @in55, i32 0, i32 33), align 4
+  call void (ptr, ...) @printf(ptr getelementptr inbounds ([29 x i8], ptr @.str.3, i32 0, i32 0), i32 %add45.3) #2
+  store i32 32, ptr getelementptr inbounds ([55 x i32], ptr @in55, i32 0, i32 32), align 128
+  store i32 33, ptr getelementptr inbounds ([55 x i32], ptr @in55, i32 0, i32 33), align 4
   ret void
 }
 
-declare dso_local void @printf(i8*, ...) local_unnamed_addr #1
+declare dso_local void @printf(ptr, ...) local_unnamed_addr #1

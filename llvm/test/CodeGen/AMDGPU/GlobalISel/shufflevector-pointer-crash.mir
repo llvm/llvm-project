@@ -19,15 +19,15 @@ body: |
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x p0>) = G_BITCAST [[BUILD_VECTOR]](<4 x s32>)
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(p0), [[UV1:%[0-9]+]]:_(p0) = G_UNMERGE_VALUES [[BITCAST]](<2 x p0>)
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY [[UV]](p0)
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](p0)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](p0)
     ; CHECK-NEXT: $vgpr0 = COPY [[UV2]](s32)
     ; CHECK-NEXT: $vgpr1 = COPY [[UV3]](s32)
     ; CHECK-NEXT: SI_RETURN implicit $vgpr0, implicit $vgpr1
     %0:_(p0) = G_CONSTANT i64 0
     %1:_(<2 x p0>) = G_BUILD_VECTOR %0:_(p0), %0:_(p0)
     %2:_(<2 x p0>) = G_LOAD %0:_(p0) :: (load (<2 x p0>))
-    %3:_(p0) = G_SHUFFLE_VECTOR %2:_(<2 x p0>), %1:_, shufflemask(0)
+    %idx:_(s32) = G_CONSTANT i32 0
+    %3:_(p0) = G_EXTRACT_VECTOR_ELT %2:_(<2 x p0>), %idx
     %4:_(s32), %5:_(s32) = G_UNMERGE_VALUES %3:_(p0)
     $vgpr0 = COPY %4:_(s32)
     $vgpr1 = COPY %5:_(s32)

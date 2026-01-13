@@ -16,6 +16,7 @@
 #include "clang/AST/ASTFwd.h"
 #include "clang/AST/AttrIterator.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AttrKinds.h"
 #include "clang/Basic/AttributeCommonInfo.h"
@@ -232,37 +233,19 @@ public:
   }
 };
 
-class HLSLSemanticAttr : public HLSLAnnotationAttr {
-  unsigned SemanticIndex = 0;
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned SemanticIndexable : 1;
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned SemanticExplicitIndex : 1;
-
+class HLSLSemanticBaseAttr : public HLSLAnnotationAttr {
 protected:
-  HLSLSemanticAttr(ASTContext &Context, const AttributeCommonInfo &CommonInfo,
-                   attr::Kind AK, bool IsLateParsed,
-                   bool InheritEvenIfAlreadyPresent, bool SemanticIndexable)
+  HLSLSemanticBaseAttr(ASTContext &Context,
+                       const AttributeCommonInfo &CommonInfo, attr::Kind AK,
+                       bool IsLateParsed, bool InheritEvenIfAlreadyPresent)
       : HLSLAnnotationAttr(Context, CommonInfo, AK, IsLateParsed,
-                           InheritEvenIfAlreadyPresent) {
-    this->SemanticIndexable = SemanticIndexable;
-    this->SemanticExplicitIndex = false;
-  }
+                           InheritEvenIfAlreadyPresent) {}
 
 public:
-  bool isSemanticIndexable() const { return SemanticIndexable; }
-
-  void setSemanticIndex(unsigned SemanticIndex) {
-    this->SemanticIndex = SemanticIndex;
-    this->SemanticExplicitIndex = true;
-  }
-
-  unsigned getSemanticIndex() const { return SemanticIndex; }
-
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Attr *A) {
-    return A->getKind() >= attr::FirstHLSLSemanticAttr &&
-           A->getKind() <= attr::LastHLSLSemanticAttr;
+    return A->getKind() >= attr::FirstHLSLSemanticBaseAttr &&
+           A->getKind() <= attr::LastHLSLSemanticBaseAttr;
   }
 };
 
@@ -320,8 +303,8 @@ public:
   ParamIdx(unsigned Idx, const Decl *D)
       : Idx(Idx), HasThis(false), IsValid(true) {
     assert(Idx >= 1 && "Idx must be one-origin");
-    if (const auto *FD = dyn_cast<FunctionDecl>(D))
-      HasThis = FD->isCXXInstanceMember();
+    if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(D))
+      HasThis = MethodDecl->isImplicitObjectMemberFunction();
   }
 
   /// A type into which \c ParamIdx can be serialized.

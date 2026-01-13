@@ -60,18 +60,18 @@ define <2 x float> @sin_v2f32(<2 x float> %x) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl sinf
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl sinf
-; CHECK-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    add sp, sp, #48
@@ -84,25 +84,25 @@ define <3 x float> @sin_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: sin_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl sinf
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl sinf
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    mov s0, v0.s[2]
 ; CHECK-NEXT:    bl sinf
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NEXT:    mov v1.s[2], v0.s[0]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    add sp, sp, #48
@@ -115,32 +115,32 @@ define <4 x float> @sin_v4f32(<4 x float> %x) nounwind {
 ; CHECK-LABEL: sin_v4f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl sinf
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl sinf
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    mov s0, v0.s[2]
 ; CHECK-NEXT:    bl sinf
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v1.s[2], v0.s[0]
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    mov s0, v0.s[3]
-; CHECK-NEXT:    str q1, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    str q1, [sp] // 16-byte Spill
 ; CHECK-NEXT:    bl sinf
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NEXT:    mov v1.s[3], v0.s[0]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    add sp, sp, #48
@@ -159,7 +159,7 @@ define <5 x float> @sin_v5f32(<5 x float> %x) nounwind {
 ; CHECK-NEXT:    stp d9, d8, [sp, #24] // 16-byte Folded Spill
 ; CHECK-NEXT:    fmov s8, s4
 ; CHECK-NEXT:    fmov s9, s3
-; CHECK-NEXT:    str x30, [sp, #40] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #40] // 8-byte Spill
 ; CHECK-NEXT:    bl sinf
 ; CHECK-NEXT:    fmov s12, s0
 ; CHECK-NEXT:    fmov s0, s11
@@ -175,7 +175,7 @@ define <5 x float> @sin_v5f32(<5 x float> %x) nounwind {
 ; CHECK-NEXT:    bl sinf
 ; CHECK-NEXT:    fmov s1, s11
 ; CHECK-NEXT:    fmov s2, s10
-; CHECK-NEXT:    ldr x30, [sp, #40] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #40] // 8-byte Reload
 ; CHECK-NEXT:    fmov s3, s9
 ; CHECK-NEXT:    ldp d9, d8, [sp, #24] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #8] // 16-byte Folded Reload
@@ -197,7 +197,7 @@ define <6 x float> @sin_v6f32(<6 x float> %x) nounwind {
 ; CHECK-NEXT:    stp d9, d8, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    fmov s8, s5
 ; CHECK-NEXT:    fmov s9, s4
-; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Spill
 ; CHECK-NEXT:    fmov s12, s1
 ; CHECK-NEXT:    bl sinf
 ; CHECK-NEXT:    fmov s13, s0
@@ -217,7 +217,7 @@ define <6 x float> @sin_v6f32(<6 x float> %x) nounwind {
 ; CHECK-NEXT:    bl sinf
 ; CHECK-NEXT:    fmov s2, s11
 ; CHECK-NEXT:    fmov s3, s10
-; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Reload
 ; CHECK-NEXT:    fmov s4, s9
 ; CHECK-NEXT:    ldp d9, d8, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #16] // 16-byte Folded Reload
@@ -237,7 +237,7 @@ define <3 x double> @sin_v3f64(<3 x double> %x) nounwind {
 ; CHECK-NEXT:    stp d9, d8, [sp, #8] // 16-byte Folded Spill
 ; CHECK-NEXT:    fmov d8, d2
 ; CHECK-NEXT:    fmov d9, d1
-; CHECK-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #24] // 8-byte Spill
 ; CHECK-NEXT:    bl sin
 ; CHECK-NEXT:    fmov d10, d0
 ; CHECK-NEXT:    fmov d0, d9
@@ -247,7 +247,7 @@ define <3 x double> @sin_v3f64(<3 x double> %x) nounwind {
 ; CHECK-NEXT:    bl sin
 ; CHECK-NEXT:    fmov d1, d9
 ; CHECK-NEXT:    ldp d9, d8, [sp, #8] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #24] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #24] // 8-byte Reload
 ; CHECK-NEXT:    fmov d2, d0
 ; CHECK-NEXT:    fmov d0, d10
 ; CHECK-NEXT:    ldr d10, [sp], #32 // 8-byte Folded Reload
@@ -278,25 +278,25 @@ define <3 x float> @cos_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: cos_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl cosf
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl cosf
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    mov s0, v0.s[2]
 ; CHECK-NEXT:    bl cosf
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NEXT:    mov v1.s[2], v0.s[0]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    add sp, sp, #48
@@ -309,25 +309,25 @@ define <3 x float> @tan_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: tan_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl tanf
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl tanf
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    mov s0, v0.s[2]
 ; CHECK-NEXT:    bl tanf
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NEXT:    mov v1.s[2], v0.s[0]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    add sp, sp, #48
@@ -340,25 +340,25 @@ define <3 x float> @asin_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: asin_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl asinf
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl asinf
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    mov s0, v0.s[2]
 ; CHECK-NEXT:    bl asinf
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NEXT:    mov v1.s[2], v0.s[0]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    add sp, sp, #48
@@ -371,25 +371,25 @@ define <3 x float> @acos_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: acos_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl acosf
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl acosf
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    mov s0, v0.s[2]
 ; CHECK-NEXT:    bl acosf
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NEXT:    mov v1.s[2], v0.s[0]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    add sp, sp, #48
@@ -402,25 +402,25 @@ define <3 x float> @atan_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: atan_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl atanf
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl atanf
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    mov s0, v0.s[2]
 ; CHECK-NEXT:    bl atanf
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NEXT:    mov v1.s[2], v0.s[0]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    add sp, sp, #48
@@ -436,25 +436,25 @@ define <3 x float> @atan2_v3f32(<3 x float> %x, <3 x float> %y) nounwind {
 ; CHECK-NEXT:    stp q0, q1, [sp, #16] // 32-byte Folded Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
 ; CHECK-NEXT:    mov s1, v1.s[1]
-; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Spill
 ; CHECK-NEXT:    bl atan2f
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-NEXT:    ldp q0, q1, [sp, #16] // 32-byte Folded Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    // kill: def $s1 killed $s1 killed $q1
 ; CHECK-NEXT:    bl atan2f
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-NEXT:    ldp q0, q1, [sp, #16] // 32-byte Folded Reload
 ; CHECK-NEXT:    mov s0, v0.s[2]
 ; CHECK-NEXT:    mov s1, v1.s[2]
 ; CHECK-NEXT:    bl atan2f
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Reload
 ; CHECK-NEXT:    mov v1.s[2], v0.s[0]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    add sp, sp, #64
@@ -467,25 +467,25 @@ define <3 x float> @sinh_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: sinh_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl sinhf
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl sinhf
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    mov s0, v0.s[2]
 ; CHECK-NEXT:    bl sinhf
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NEXT:    mov v1.s[2], v0.s[0]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    add sp, sp, #48
@@ -497,25 +497,25 @@ define <3 x float> @cosh_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: cosh_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl coshf
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl coshf
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    mov s0, v0.s[2]
 ; CHECK-NEXT:    bl coshf
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NEXT:    mov v1.s[2], v0.s[0]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    add sp, sp, #48
@@ -528,25 +528,25 @@ define <3 x float> @tanh_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: tanh_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl tanhf
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl tanhf
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    mov s0, v0.s[2]
 ; CHECK-NEXT:    bl tanhf
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NEXT:    mov v1.s[2], v0.s[0]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    add sp, sp, #48
@@ -559,25 +559,25 @@ define <3 x float> @exp_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: exp_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl expf
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl expf
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    mov s0, v0.s[2]
 ; CHECK-NEXT:    bl expf
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NEXT:    mov v1.s[2], v0.s[0]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    add sp, sp, #48
@@ -590,25 +590,25 @@ define <3 x float> @exp2_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: exp2_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl exp2f
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl exp2f
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    mov s0, v0.s[2]
 ; CHECK-NEXT:    bl exp2f
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NEXT:    mov v1.s[2], v0.s[0]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    add sp, sp, #48
@@ -630,25 +630,25 @@ define <3 x float> @log_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: log_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl logf
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl logf
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    mov s0, v0.s[2]
 ; CHECK-NEXT:    bl logf
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NEXT:    mov v1.s[2], v0.s[0]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    add sp, sp, #48
@@ -661,25 +661,25 @@ define <3 x float> @log10_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: log10_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl log10f
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl log10f
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    mov s0, v0.s[2]
 ; CHECK-NEXT:    bl log10f
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NEXT:    mov v1.s[2], v0.s[0]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    add sp, sp, #48
@@ -692,25 +692,25 @@ define <3 x float> @log2_v3f32(<3 x float> %x) nounwind {
 ; CHECK-LABEL: log2_v3f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
-; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEXT:    bl log2f
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl log2f
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEXT:    mov s0, v0.s[2]
 ; CHECK-NEXT:    bl log2f
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NEXT:    mov v1.s[2], v0.s[0]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    add sp, sp, #48

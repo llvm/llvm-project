@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -std=c2y -verify -fsyntax-only -fblocks %s
-// RUN: %clang_cc1 -std=c23 -verify -fsyntax-only -fblocks -fnamed-loops %s
-// RUN: %clang_cc1 -x c++ -verify -fsyntax-only -fblocks -fnamed-loops %s
+// RUN: %clang_cc1 -std=c2y -verify -Wunused -fsyntax-only -fblocks %s
+// RUN: %clang_cc1 -std=c23 -verify -Wunused -fsyntax-only -fblocks -fnamed-loops %s
+// RUN: %clang_cc1 -x c++ -verify -Wunused -fsyntax-only -fblocks -fnamed-loops %s
 
 void f1() {
   l1: while (true) {
@@ -157,5 +157,17 @@ void f7() {
   while (true) {
     break c; // expected-error {{'break' label does not name an enclosing loop or 'switch'}}
     continue d; // expected-error {{'continue' label does not name an enclosing loop}}
+  }
+}
+
+void f8() {
+  l1: // no-warning
+  while (true) {
+    break l1;
+  }
+
+  l2: // no-warning
+  while (true) {
+    continue l2;
   }
 }

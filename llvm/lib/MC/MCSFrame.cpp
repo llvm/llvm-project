@@ -8,6 +8,8 @@
 
 #include "llvm/MC/MCSFrame.h"
 #include "llvm/BinaryFormat/SFrame.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFCFIProgram.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFDataExtractorSimple.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
@@ -211,8 +213,152 @@ class SFrameEmitterImpl {
     return true;
   }
 
+  // Technically, the escape data could be anything, but it is commonly a dwarf
+  // CFI program. Even then, it could contain an arbitrarily complicated Dwarf
+  // expression. Following gnu-gas, look for certain common cases that could
+  // invalidate an FDE, emit a warning for those sequences, and don't generate
+  // an FDE in those cases. Allow any that are known safe. It is likely that
+  // more thorough test cases could refine this code, but it handles the most
+  // important ones compatibly with gas.
+  // Returns true if the CFI escape sequence is safe for sframes.
+  bool isCFIEscapeSafe(SFrameFDE &FDE, const SFrameFRE &FRE,
+                       const MCCFIInstruction &CFI) {
+    const MCAsmInfo *AI = Streamer.getContext().getAsmInfo();
+    DWARFDataExtractorSimple data(CFI.getValues(), AI->isLittleEndian(),
+                                  AI->getCodePointerSize());
+
+    // Normally, both alignment factors are extracted from the enclosing Dwarf
+    // FDE or CIE. We don't have one here. Alignments are used for scaling
+    // factors for ops like CFA_def_cfa_offset_sf. But this particular function
+    // is only interested in registers.
+    dwarf::CFIProgram P(/*CodeAlignmentFactor=*/1,
+                        /*DataAlignmentFactor=*/1,
+                        Streamer.getContext().getTargetTriple().getArch());
+    uint64_t Offset = 0;
+    if (P.parse(data, &Offset, CFI.getValues().size())) {
+      // Not a parsable dwarf expression. Assume the worst.
+      Streamer.getContext().reportWarning(
+          CFI.getLoc(),
+          "skipping SFrame FDE; .cfi_escape with unknown effects");
+      return false;
+    }
+
+    // This loop deals with dwarf::CFIProgram::Instructions. Everywhere else
+    // this file deals with MCCFIInstructions.
+    for (const dwarf::CFIProgram::Instruction &I : P) {
+      switch (I.Opcode) {
+      case dwarf::DW_CFA_nop:
+        break;
+      case dwarf::DW_CFA_val_offset: {
+        // First argument is a register. Anything that touches CFA, FP, or RA is
+        // a problem, but allow others through. As an even more special case,
+        // allow SP + 0.
+        auto Reg = I.getOperandAsUnsigned(P, 0);
+        // The parser should have failed in this case.
+        assert(Reg && "DW_CFA_val_offset with no register.");
+        bool SPOk = true;
+        if (*Reg == SPReg) {
+          auto Opnd = I.getOperandAsSigned(P, 1);
+          if (!Opnd || *Opnd != 0)
+            SPOk = false;
+        }
+        if (!SPOk || *Reg == RAReg || *Reg == FPReg) {
+          StringRef RN = *Reg == SPReg
+                             ? "SP reg "
+                             : (*Reg == FPReg ? "FP reg " : "RA reg ");
+          Streamer.getContext().reportWarning(
+              CFI.getLoc(),
+              Twine(
+                  "skipping SFrame FDE; .cfi_escape DW_CFA_val_offset with ") +
+                  RN + Twine(*Reg));
+          return false;
+        }
+      } break;
+      case dwarf::DW_CFA_expression: {
+        // First argument is a register. Anything that touches CFA, FP, or RA is
+        // a problem, but allow others through.
+        auto Reg = I.getOperandAsUnsigned(P, 0);
+        if (!Reg) {
+          Streamer.getContext().reportWarning(
+              CFI.getLoc(),
+              "skipping SFrame FDE; .cfi_escape with unknown effects");
+          return false;
+        }
+        if (*Reg == SPReg || *Reg == RAReg || *Reg == FPReg) {
+          StringRef RN = *Reg == SPReg
+                             ? "SP reg "
+                             : (*Reg == FPReg ? "FP reg " : "RA reg ");
+          Streamer.getContext().reportWarning(
+              CFI.getLoc(),
+              Twine(
+                  "skipping SFrame FDE; .cfi_escape DW_CFA_expression with ") +
+                  RN + Twine(*Reg));
+          return false;
+        }
+      } break;
+      case dwarf::DW_CFA_GNU_args_size: {
+        auto Size = I.getOperandAsSigned(P, 0);
+        // Zero size doesn't affect the cfa.
+        if (Size && *Size == 0)
+          break;
+        if (FRE.Info.getBaseRegister() != BaseReg::FP) {
+          Streamer.getContext().reportWarning(
+              CFI.getLoc(),
+              Twine("skipping SFrame FDE; .cfi_escape DW_CFA_GNU_args_size "
+                    "with non frame-pointer CFA"));
+          return false;
+        }
+      } break;
+      // Cases that gas doesn't specially handle. TODO: Some of these could be
+      // analyzed and handled instead of just punting. But these are uncommon,
+      // or should be written as normal cfi directives. Some will need fixes to
+      // the scaling factor.
+      case dwarf::DW_CFA_advance_loc:
+      case dwarf::DW_CFA_offset:
+      case dwarf::DW_CFA_restore:
+      case dwarf::DW_CFA_set_loc:
+      case dwarf::DW_CFA_advance_loc1:
+      case dwarf::DW_CFA_advance_loc2:
+      case dwarf::DW_CFA_advance_loc4:
+      case dwarf::DW_CFA_offset_extended:
+      case dwarf::DW_CFA_restore_extended:
+      case dwarf::DW_CFA_undefined:
+      case dwarf::DW_CFA_same_value:
+      case dwarf::DW_CFA_register:
+      case dwarf::DW_CFA_remember_state:
+      case dwarf::DW_CFA_restore_state:
+      case dwarf::DW_CFA_def_cfa:
+      case dwarf::DW_CFA_def_cfa_register:
+      case dwarf::DW_CFA_def_cfa_offset:
+      case dwarf::DW_CFA_def_cfa_expression:
+      case dwarf::DW_CFA_offset_extended_sf:
+      case dwarf::DW_CFA_def_cfa_sf:
+      case dwarf::DW_CFA_def_cfa_offset_sf:
+      case dwarf::DW_CFA_val_offset_sf:
+      case dwarf::DW_CFA_val_expression:
+      case dwarf::DW_CFA_MIPS_advance_loc8:
+      case dwarf::DW_CFA_AARCH64_negate_ra_state_with_pc:
+      case dwarf::DW_CFA_AARCH64_negate_ra_state:
+      case dwarf::DW_CFA_LLVM_def_aspace_cfa:
+      case dwarf::DW_CFA_LLVM_def_aspace_cfa_sf:
+        Streamer.getContext().reportWarning(
+            CFI.getLoc(), "skipping SFrame FDE; .cfi_escape "
+                          "CFA expression with unknown side effects");
+        return false;
+      default:
+        // Dwarf expression was only partially valid, and user could have
+        // written anything.
+        Streamer.getContext().reportWarning(
+            CFI.getLoc(),
+            "skipping SFrame FDE; .cfi_escape with unknown effects");
+        return false;
+      }
+    }
+    return true;
+  }
+
   // Add the effects of CFI to the current FDE, creating a new FRE when
-  // necessary.
+  // necessary. Return true if the CFI is representable in the sframe format.
   bool handleCFI(SFrameFDE &FDE, SFrameFRE &FRE, const MCCFIInstruction &CFI) {
     switch (CFI.getOperation()) {
     case MCCFIInstruction::OpDefCfaRegister:
@@ -265,10 +411,11 @@ class SFrameEmitterImpl {
       FRE = FDE.SaveState.pop_back_val();
       return true;
     case MCCFIInstruction::OpEscape:
-      // TODO: Implement. Will use FDE.
-      return true;
+      // This is a string of bytes that contains an arbitrary dwarf-expression
+      // that may or may not affect unwind info.
+      return isCFIEscapeSafe(FDE, FRE, CFI);
     default:
-      // Instructions that don't affect the CFA, RA, and SP can be safely
+      // Instructions that don't affect the CFA, RA, and FP can be safely
       // ignored.
       return true;
     }

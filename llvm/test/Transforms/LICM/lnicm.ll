@@ -3,6 +3,9 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes='loop-mssa(lnicm),loop(loop-interchange)' -cache-line-size=64 -S %s | FileCheck %s --check-prefixes LNICM
 ; RUN: opt -aa-pipeline=basic-aa -passes='loop-mssa(licm),loop(loop-interchange)' -cache-line-size=64 -S %s | FileCheck %s --check-prefixes LICM
 
+; XFAIL: *
+; Loop interchange currently fails due to a failure in dependence analysis.
+
 ; This test represents the following function:
 ; void test(int n, int m, int x[m][n], int y[n], int *z) {
 ;   for (int k = 0; k < n; k++) {

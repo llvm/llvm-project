@@ -45,6 +45,12 @@ func.func @eliminate_redundant_masks_through_insert_and_extracts(%tensor: tensor
 
 // -----
 
+// Test to ensure that functions without a body are skipped.
+// CHECK-LABEL: func.func private @negative_no_func_body()
+func.func private @negative_no_func_body()
+
+// -----
+
 // CHECK-LABEL: @negative_extract_slice_size_shrink
 // CHECK-NOT: vector.constant_mask
 // CHECK: %[[MASK:.*]] = vector.create_mask

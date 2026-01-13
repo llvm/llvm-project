@@ -64,18 +64,22 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
 
 start-group "ninja"
 
-# Targets are not escaped as they are passed as separate arguments.
-ninja -C "${BUILD_DIR}" -k 0 ${targets} |& tee ninja.log
+if [[ -n "${targets}" ]]; then
+  # Targets are not escaped as they are passed as separate arguments.
+  ninja -C "${BUILD_DIR}" -k 0 ${targets} |& tee ninja.log
+  cp ${BUILD_DIR}/.ninja_log ninja.ninja_log
+fi
 
-if [[ "${runtime_targets}" != "" ]]; then
+if [[ -n "${runtime_targets}" ]]; then
   start-group "ninja Runtimes"
 
   ninja -C "${BUILD_DIR}" ${runtime_targets} |& tee ninja_runtimes.log
+  cp ${BUILD_DIR}/.ninja_log ninja_runtimes.ninja_log
 fi
 
 # Compiling runtimes with just-built Clang and running their tests
 # as an additional testing for Clang.
-if [[ "${runtime_targets_needs_reconfig}" != "" ]]; then
+if [[ -n "${runtime_targets_needs_reconfig}" ]]; then
   start-group "CMake Runtimes C++26"
 
   cmake \
@@ -87,6 +91,7 @@ if [[ "${runtime_targets_needs_reconfig}" != "" ]]; then
 
   ninja -C "${BUILD_DIR}" ${runtime_targets_needs_reconfig} \
     |& tee ninja_runtimes_needs_reconfig1.log
+  cp ${BUILD_DIR}/.ninja_log ninja_runtimes_needs_reconig.ninja_log
 
   start-group "CMake Runtimes Clang Modules"
 
@@ -99,4 +104,5 @@ if [[ "${runtime_targets_needs_reconfig}" != "" ]]; then
 
   ninja -C "${BUILD_DIR}" ${runtime_targets_needs_reconfig} \
     |& tee ninja_runtimes_needs_reconfig2.log
+  cp ${BUILD_DIR}/.ninja_log ninja_runtimes_needs_reconfig2.ninja_log
 fi

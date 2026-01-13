@@ -4,11 +4,15 @@
 void CSMain(int GI : SV_GroupIndex, uint ID : SV_DispatchThreadID, uint GID : SV_GroupID, uint GThreadID : SV_GroupThreadID) {
 // CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> line:[[@LINE-1]]:6 CSMain 'void (int, uint, uint, uint)'
 // CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:17 GI 'int'
-// CHECK-NEXT: HLSLSV_GroupIndexAttr
+// CHECK-NEXT: HLSLParsedSemanticAttr 0x{{[0-9a-f]+}} <col:22> "SV_GroupIndex" 0
+// CHECK-NEXT: HLSLAppliedSemanticAttr 0x{{[0-9a-f]+}} <col:22> "SV_GroupIndex" 0
 // CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:42 ID 'uint'
-// CHECK-NEXT: HLSLSV_DispatchThreadIDAttr
+// CHECK-NEXT: HLSLParsedSemanticAttr 0x{{[0-9a-f]+}} <col:47> "SV_DispatchThreadID" 0
+// CHECK-NEXT: HLSLAppliedSemanticAttr 0x{{[0-9a-f]+}} <col:47> "SV_DispatchThreadID" 0
 // CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:73 GID 'uint'
-// CHECK-NEXT: HLSLSV_GroupIDAttr
+// CHECK-NEXT: HLSLParsedSemanticAttr 0x{{[0-9a-f]+}} <col:79> "SV_GroupID" 0
+// CHECK-NEXT: HLSLAppliedSemanticAttr 0x{{[0-9a-f]+}} <col:79> "SV_GroupID" 0
 // CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:96 GThreadID 'uint'
-// CHECK-NEXT: HLSLSV_GroupThreadIDAttr
+// CHECK-NEXT: HLSLParsedSemanticAttr 0x{{[0-9a-f]+}} <col:108> "SV_GroupThreadID" 0
+// CHECK-NEXT: HLSLAppliedSemanticAttr 0x{{[0-9a-f]+}} <col:108> "SV_GroupThreadID" 0
 }
