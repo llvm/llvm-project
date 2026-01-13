@@ -311,7 +311,7 @@ func.func @rocdl.xdlops(%arg0 : f32, %arg1 : f32,
   // CHECK: rocdl.mfma.f32.16x16x32.f16 {{.*}} : (vector<8xf16>, vector<8xf16>, vector<4xf32>, i32, i32, i32) -> vector<4xi32>
   %r33 = rocdl.mfma.f32.16x16x32.f16 %arg17, %arg17, %arg5, %arg3, %arg3, %arg3 :
                                (vector<8xf16>, vector<8xf16>, vector<4xf32>,
-                                i32, i32, i32) -> vector<4xi32>
+                                i32, i32, i32) -> vector<4xf32>
 
   // CHECK: rocdl.mfma.f32.32x32x16.bf16 {{.*}} : (vector<8xbf16>, vector<8xbf16>, vector<16xf32>, i32, i32, i32) -> vector<16xf32>
   %r34 = rocdl.mfma.f32.32x32x16.bf16 %arg16, %arg16, %arg4, %arg3, %arg3, %arg3 :
