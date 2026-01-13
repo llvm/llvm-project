@@ -46,6 +46,8 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
+
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ModRef.h"
@@ -57,6 +59,10 @@
 #include <vector>
 
 using namespace llvm;
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
 
 MetadataAsValue::MetadataAsValue(Type *Ty, Metadata *MD)
     : Value(Ty, MetadataAsValueVal), MD(MD) {
@@ -1240,6 +1246,12 @@ MDNode *MDNode::getMergedProfMetadata(MDNode *A, MDNode *B,
 
   if (!(A && B)) {
     return A ? A : B;
+  }
+
+  if (A == B && !ProfcheckDisableMetadataFixes) {
+    // For calls, we want to sum the weights even if identical.
+    if (!isa<CallInst>(AInstr))
+      return A;
   }
 
   assert(AInstr->getMetadata(LLVMContext::MD_prof) == A &&
