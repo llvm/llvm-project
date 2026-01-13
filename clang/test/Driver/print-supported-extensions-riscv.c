@@ -160,6 +160,7 @@
 // CHECK-NEXT:     svnapot              1.0       'Svnapot' (NAPOT Translation Contiguity)
 // CHECK-NEXT:     svpbmt               1.0       'Svpbmt' (Page-Based Memory Types)
 // CHECK-NEXT:     svvptc               1.0       'Svvptc' (Obviating Memory-Management Instructions after Marking PTEs Valid)
+// CHECK-NEXT:     xaifet               1.0       'XAIFET' (AI Foundry ET Extension)
 // CHECK-NEXT:     xandesbfhcvt         5.0       'XAndesBFHCvt' (Andes Scalar BFLOAT16 Conversion Extension)
 // CHECK-NEXT:     xandesperf           5.0       'XAndesPerf' (Andes Performance Extension)
 // CHECK-NEXT:     xandesvbfhcvt        5.0       'XAndesVBFHCvt' (Andes Vector BFLOAT16 Conversion Extension)

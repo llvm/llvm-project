@@ -4161,8 +4161,7 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
   EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
   EVT SrcVT = Src1.getValueType();
 
-  if (all_of(Mask, [](int Elem) { return Elem == 0; }) &&
-      VT.isScalableVector()) {
+  if (all_of(Mask, equal_to(0)) && VT.isScalableVector()) {
     // Canonical splat form of first element of first input vector.
     SDValue FirstElt =
         DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, SrcVT.getScalarType(), Src1,

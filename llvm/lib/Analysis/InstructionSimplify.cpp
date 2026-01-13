@@ -5610,7 +5610,7 @@ static Value *simplifyShuffleVectorInst(Value *Op0, Value *Op1,
                                         ArrayRef<int> Mask, Type *RetTy,
                                         const SimplifyQuery &Q,
                                         unsigned MaxRecurse) {
-  if (all_of(Mask, [](int Elem) { return Elem == PoisonMaskElem; }))
+  if (all_of(Mask, equal_to(PoisonMaskElem)))
     return PoisonValue::get(RetTy);
 
   auto *InVecTy = cast<VectorType>(Op0->getType());

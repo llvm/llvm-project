@@ -174,6 +174,7 @@
 ; CHECK-NEXT:   ventana-veyron                   - Ventana Veyron-Series processors.
 ; CHECK-NEXT:   vl-dependent-latency             - Latency of vector instructions is dependent on the dynamic value of vl.
 ; CHECK-NEXT:   vxrm-pipeline-flush              - VXRM writes causes pipeline flush.
+; CHECK-NEXT:   xaifet                           - 'XAIFET' (AI Foundry ET Extension).
 ; CHECK-NEXT:   xandesbfhcvt                     - 'XAndesBFHCvt' (Andes Scalar BFLOAT16 Conversion Extension).
 ; CHECK-NEXT:   xandesperf                       - 'XAndesPerf' (Andes Performance Extension).
 ; CHECK-NEXT:   xandesvbfhcvt                    - 'XAndesVBFHCvt' (Andes Vector BFLOAT16 Conversion Extension).
