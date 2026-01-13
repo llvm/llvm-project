@@ -54,7 +54,7 @@ def rst_to_markdown(text: str) -> str:
 
 def markdown_to_rst(text: str) -> str:
     """Best effort conversion from Markdown to RST assuming a single line of text."""
-    return text.replace('`', '``')
+    return re.sub(r'(?<!`)`(?!`)', '``', text)
 
 class PaperStatus:
     TODO = 1
