@@ -202,6 +202,16 @@ struct KnownFPClass {
   canonicalize(const KnownFPClass &Src,
                DenormalMode DenormMode = DenormalMode::getDynamic());
 
+  /// Report known values for fadd
+  LLVM_ABI static KnownFPClass
+  fadd(const KnownFPClass &LHS, const KnownFPClass &RHS,
+       DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Report known values for fadd x, x
+  LLVM_ABI static KnownFPClass
+  fadd_self(const KnownFPClass &Src,
+            DenormalMode Mode = DenormalMode::getDynamic());
+
   /// Report known values for fmul
   LLVM_ABI static KnownFPClass
   fmul(const KnownFPClass &LHS, const KnownFPClass &RHS,
