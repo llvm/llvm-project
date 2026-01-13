@@ -430,17 +430,10 @@ define i32 @FOR_reduction(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:    br i1 [[TMP24]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
 ; IF-EVL-NEXT:    [[TMP28:%.*]] = sub i64 [[TMP13]], 1
-; IF-EVL-NEXT:    [[TMP17:%.*]] = sub i64 [[TMP28]], 1
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
 ; IF-EVL-NEXT:    [[TMP19:%.*]] = mul nuw i64 [[TMP18]], 4
 ; IF-EVL-NEXT:    [[TMP20:%.*]] = mul i64 [[TMP19]], 0
-; IF-EVL-NEXT:    [[TMP21:%.*]] = extractelement <vscale x 4 x i32> [[WIDE_LOAD]], i64 [[TMP17]]
-; IF-EVL-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vscale.i32()
-; IF-EVL-NEXT:    [[TMP15:%.*]] = mul nuw i32 [[TMP14]], 4
-; IF-EVL-NEXT:    [[TMP16:%.*]] = sub i32 [[TMP15]], 1
-; IF-EVL-NEXT:    [[TMP25:%.*]] = extractelement <vscale x 4 x i32> [[VECTOR_RECUR]], i32 [[TMP16]]
-; IF-EVL-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[TMP28]], 0
-; IF-EVL-NEXT:    [[FOR1_LCSSA:%.*]] = select i1 [[TMP26]], i32 [[TMP25]], i32 [[TMP21]]
+; IF-EVL-NEXT:    [[FOR1_LCSSA:%.*]] = extractelement <vscale x 4 x i32> [[TMP10]], i64 [[TMP28]]
 ; IF-EVL-NEXT:    br label %[[FOR_END:.*]]
 ; IF-EVL:       [[FOR_END]]:
 ; IF-EVL-NEXT:    ret i32 [[FOR1_LCSSA]]

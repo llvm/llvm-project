@@ -8575,7 +8575,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
 
   // TODO: We can't call runPass on these transforms yet, due to verifier
   // failures.
-  VPlanTransforms::addExitUsersForFirstOrderRecurrences(*Plan, Range);
+  if (!CM.foldTailByMasking())
+    VPlanTransforms::addExitUsersForFirstOrderRecurrences(*Plan, Range);
   DenseMap<VPValue *, VPValue *> IVEndValues;
   VPlanTransforms::updateScalarResumePhis(*Plan, IVEndValues);
 

@@ -483,9 +483,10 @@ define i32 @pr45526() optsize {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 5>, %[[VECTOR_PH]] ], [ [[TMP1:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 5>, %[[VECTOR_PH]] ], [ [[TMP1:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt <4 x i32> [[VEC_IND]], splat (i32 510)
 ; CHECK-NEXT:    [[TMP1]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[TMP1]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 512
@@ -493,11 +494,7 @@ define i32 @pr45526() optsize {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP0]], i1 false)
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP4]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], 1
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP1]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP2]], i32 3
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[TMP5]], 0
-; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 [[TMP8]], i32 [[TMP7]]
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[TMP2]], i64 [[TMP5]]
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i32 [[TMP10]]
@@ -511,9 +508,10 @@ define i32 @pr45526() optsize {
 ; PGSO:       [[VECTOR_BODY]]:
 ; PGSO-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; PGSO-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; PGSO-NEXT:    [[TMP2:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 5>, %[[VECTOR_PH]] ], [ [[TMP1:%.*]], %[[VECTOR_BODY]] ]
+; PGSO-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 5>, %[[VECTOR_PH]] ], [ [[TMP1:%.*]], %[[VECTOR_BODY]] ]
 ; PGSO-NEXT:    [[TMP0:%.*]] = icmp ugt <4 x i32> [[VEC_IND]], splat (i32 510)
 ; PGSO-NEXT:    [[TMP1]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 1)
+; PGSO-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[TMP1]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; PGSO-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; PGSO-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
 ; PGSO-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 512
@@ -521,11 +519,7 @@ define i32 @pr45526() optsize {
 ; PGSO:       [[MIDDLE_BLOCK]]:
 ; PGSO-NEXT:    [[TMP4:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP0]], i1 false)
 ; PGSO-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP4]], 1
-; PGSO-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], 1
-; PGSO-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP1]], i64 [[TMP6]]
-; PGSO-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP2]], i32 3
-; PGSO-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[TMP5]], 0
-; PGSO-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 [[TMP8]], i32 [[TMP7]]
+; PGSO-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[TMP2]], i64 [[TMP5]]
 ; PGSO-NEXT:    br label %[[EXIT:.*]]
 ; PGSO:       [[EXIT]]:
 ; PGSO-NEXT:    ret i32 [[TMP10]]
@@ -539,9 +533,10 @@ define i32 @pr45526() optsize {
 ; NPGSO:       [[VECTOR_BODY]]:
 ; NPGSO-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; NPGSO-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; NPGSO-NEXT:    [[TMP2:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 5>, %[[VECTOR_PH]] ], [ [[TMP1:%.*]], %[[VECTOR_BODY]] ]
+; NPGSO-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 5>, %[[VECTOR_PH]] ], [ [[TMP1:%.*]], %[[VECTOR_BODY]] ]
 ; NPGSO-NEXT:    [[TMP0:%.*]] = icmp ugt <4 x i32> [[VEC_IND]], splat (i32 510)
 ; NPGSO-NEXT:    [[TMP1]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 1)
+; NPGSO-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[TMP1]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; NPGSO-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; NPGSO-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
 ; NPGSO-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 512
@@ -549,11 +544,7 @@ define i32 @pr45526() optsize {
 ; NPGSO:       [[MIDDLE_BLOCK]]:
 ; NPGSO-NEXT:    [[TMP4:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP0]], i1 false)
 ; NPGSO-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP4]], 1
-; NPGSO-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], 1
-; NPGSO-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP1]], i64 [[TMP6]]
-; NPGSO-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP2]], i32 3
-; NPGSO-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[TMP5]], 0
-; NPGSO-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 [[TMP8]], i32 [[TMP7]]
+; NPGSO-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[TMP2]], i64 [[TMP5]]
 ; NPGSO-NEXT:    br label %[[EXIT:.*]]
 ; NPGSO:       [[EXIT]]:
 ; NPGSO-NEXT:    ret i32 [[TMP10]]
@@ -583,9 +574,10 @@ define i32 @pr45526_pgso() !prof !14 {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 5>, %[[VECTOR_PH]] ], [ [[TMP1:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 5>, %[[VECTOR_PH]] ], [ [[TMP1:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt <4 x i32> [[VEC_IND]], splat (i32 510)
 ; CHECK-NEXT:    [[TMP1]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[TMP1]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 512
@@ -593,11 +585,7 @@ define i32 @pr45526_pgso() !prof !14 {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP0]], i1 false)
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP4]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], 1
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP1]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP2]], i32 3
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[TMP5]], 0
-; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 [[TMP8]], i32 [[TMP7]]
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[TMP2]], i64 [[TMP5]]
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i32 [[TMP10]]
@@ -611,9 +599,10 @@ define i32 @pr45526_pgso() !prof !14 {
 ; PGSO:       [[VECTOR_BODY]]:
 ; PGSO-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; PGSO-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; PGSO-NEXT:    [[TMP2:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 5>, %[[VECTOR_PH]] ], [ [[TMP1:%.*]], %[[VECTOR_BODY]] ]
+; PGSO-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 5>, %[[VECTOR_PH]] ], [ [[TMP1:%.*]], %[[VECTOR_BODY]] ]
 ; PGSO-NEXT:    [[TMP0:%.*]] = icmp ugt <4 x i32> [[VEC_IND]], splat (i32 510)
 ; PGSO-NEXT:    [[TMP1]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 1)
+; PGSO-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[TMP1]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; PGSO-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; PGSO-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
 ; PGSO-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 512
@@ -621,11 +610,7 @@ define i32 @pr45526_pgso() !prof !14 {
 ; PGSO:       [[MIDDLE_BLOCK]]:
 ; PGSO-NEXT:    [[TMP4:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP0]], i1 false)
 ; PGSO-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP4]], 1
-; PGSO-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], 1
-; PGSO-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP1]], i64 [[TMP6]]
-; PGSO-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP2]], i32 3
-; PGSO-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[TMP5]], 0
-; PGSO-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 [[TMP8]], i32 [[TMP7]]
+; PGSO-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[TMP2]], i64 [[TMP5]]
 ; PGSO-NEXT:    br label %[[EXIT:.*]]
 ; PGSO:       [[EXIT]]:
 ; PGSO-NEXT:    ret i32 [[TMP10]]
