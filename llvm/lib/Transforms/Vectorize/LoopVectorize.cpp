@@ -7124,10 +7124,9 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
         // used for a phi.
         if (auto *PHI = dyn_cast<PHINode>(UI)) {
           if (match(&R, m_VPInstruction<Instruction::Select>())) {
-            // The legacy cost model costs non-header phis with a scalar VF or
-            // that only use one lane as a phi.
-            if (VF.isScalar() ||
-                vputils::onlyFirstLaneUsed(R.getVPSingleValue()))
+            // The legacy cost model costs uniform non-header phis as a phi, not
+            // a select.
+            if (vputils::onlyFirstLaneUsed(R.getVPSingleValue()))
               return true;
             PHISelects[PHI]++;
           }
