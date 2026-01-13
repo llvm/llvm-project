@@ -339,7 +339,7 @@ nb::typed<nb::object, PyOpView> PyOperationIterator::dunderNext() {
   PyOperationRef returnOperation =
       PyOperation::forOperation(parentOperation->getContext(), next);
   next = mlirOperationGetNextInBlock(next);
-  return nb::cast(returnOperation->createOpView());
+  return returnOperation->createOpView();
 }
 
 void PyOperationIterator::bind(nb::module_ &m) {
