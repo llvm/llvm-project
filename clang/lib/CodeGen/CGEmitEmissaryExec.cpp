@@ -281,7 +281,7 @@ RValue CodeGenFunction::EmitEmissaryExec(const CallExpr *E) {
   structOffset = 4 * structIndex;
   bool hasXfers;
   for (unsigned I = 0; I < NumArgs; I++) {
-    llvm::Value *Arg;
+    llvm::Value *Arg = nullptr;
     if (I == 0) {
       Arg = Args[I].getKnownRValue().getScalarVal();
       llvm::ConstantInt *CI = llvm::dyn_cast<llvm::ConstantInt>(Arg);
