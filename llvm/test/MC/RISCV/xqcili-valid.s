@@ -1,16 +1,16 @@
 # Xqcili - Qualcomm uC Load Large Immediate Extension
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcili -M no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xqcili -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST,CHECK-NOALIAS %s
 
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcili < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqcili -M no-aliases --no-print-imm-hex -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xqcili < %s \
+# RUN:     | llvm-objdump --mattr=+xqcili -M no-aliases --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcili -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xqcili -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST,CHECK-ALIAS %s
 
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcili < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqcili --no-print-imm-hex -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xqcili < %s \
+# RUN:     | llvm-objdump --mattr=+xqcili --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
 

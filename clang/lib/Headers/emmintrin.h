@@ -300,8 +300,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_min_sd(__m128d __a,
 ///    A 128-bit vector of [2 x double] containing one of the operands.
 /// \returns A 128-bit vector of [2 x double] containing the minimum values
 ///    between both operands.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_min_pd(__m128d __a,
-                                                        __m128d __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_min_pd(__m128d __a,
+                                                                  __m128d __b) {
   return __builtin_ia32_minpd((__v2df)__a, (__v2df)__b);
 }
 
@@ -346,8 +346,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_max_sd(__m128d __a,
 ///    A 128-bit vector of [2 x double] containing one of the operands.
 /// \returns A 128-bit vector of [2 x double] containing the maximum values
 ///    between both operands.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_max_pd(__m128d __a,
-                                                        __m128d __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_max_pd(__m128d __a,
+                                                                  __m128d __b) {
   return __builtin_ia32_maxpd((__v2df)__a, (__v2df)__b);
 }
 
@@ -1278,7 +1278,8 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_ucomineq_sd(__m128d __a,
 ///    A 128-bit vector of [2 x double].
 /// \returns A 128-bit vector of [4 x float] whose lower 64 bits contain the
 ///    converted values. The upper 64 bits are set to zero.
-static __inline__ __m128 __DEFAULT_FN_ATTRS _mm_cvtpd_ps(__m128d __a) {
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cvtpd_ps(__m128d __a) {
   return __builtin_ia32_cvtpd2ps((__v2df)__a);
 }
 
@@ -1383,8 +1384,8 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_cvtsd_si32(__m128d __a) {
 /// \returns A 128-bit vector of [4 x float]. The lower 32 bits contain the
 ///    converted value from the second parameter. The upper 96 bits are copied
 ///    from the upper 96 bits of the first parameter.
-static __inline__ __m128 __DEFAULT_FN_ATTRS _mm_cvtsd_ss(__m128 __a,
-                                                         __m128d __b) {
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cvtsd_ss(__m128 __a, __m128d __b) {
   return (__m128)__builtin_ia32_cvtsd2ss((__v4sf)__a, (__v2df)__b);
 }
 

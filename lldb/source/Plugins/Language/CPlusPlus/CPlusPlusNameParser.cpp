@@ -315,7 +315,7 @@ bool CPlusPlusNameParser::ConsumeAbiTag() {
 
   // Consume the actual tag string (and allow some special characters)
   while (ConsumeToken(tok::raw_identifier, tok::comma, tok::period,
-                      tok::numeric_constant))
+                      tok::numeric_constant, tok::kw_operator))
     ;
 
   if (!ConsumeToken(tok::r_square))
@@ -420,10 +420,11 @@ bool CPlusPlusNameParser::ConsumeOperator() {
     // Make sure we have more tokens before attempting to look ahead one more.
     if (m_next_token_index + 1 < m_tokens.size()) {
       // Look ahead two tokens.
-      clang::Token n_token = m_tokens[m_next_token_index + 1];
-      // If we find ( or < then this is indeed operator<< no need for fix.
-      if (n_token.getKind() != tok::l_paren && n_token.getKind() != tok::less) {
-        clang::Token tmp_tok;
+      const clang::Token n_token = m_tokens[m_next_token_index + 1];
+      // If we find `(`, `<` or `[` then this is indeed operator<< no need for
+      // fix.
+      if (!n_token.isOneOf(tok::l_paren, tok::less, tok::l_square)) {
+        clang::Token tmp_tok{};
         tmp_tok.startToken();
         tmp_tok.setLength(1);
         tmp_tok.setLocation(token.getLocation().getLocWithOffset(1));

@@ -61,6 +61,7 @@ add_llvm_target(AArch64CodeGen
   AArch64CompressJumpTables.cpp
   AArch64ConditionOptimizer.cpp
   AArch64RedundantCopyElimination.cpp
+  AArch64RedundantCondBranchPass.cpp
   AArch64ISelDAGToDAG.cpp
   AArch64ISelLowering.cpp
   AArch64InstrInfo.cpp

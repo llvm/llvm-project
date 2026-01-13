@@ -31,7 +31,7 @@ void DbgLocOrigin::addTrace() {
   auto &[Depth, StackTrace] = StackTraces.emplace_back();
   Depth = sys::getStackTrace(StackTrace);
 }
-#endif
+#endif // LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
 
 #if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
 DILocAndCoverageTracking::DILocAndCoverageTracking(const DILocation *L)
@@ -83,16 +83,14 @@ DebugLoc DebugLoc::getFnDebugLoc() const {
 }
 
 bool DebugLoc::isImplicitCode() const {
-  if (DILocation *Loc = get()) {
+  if (DILocation *Loc = get())
     return Loc->isImplicitCode();
-  }
   return true;
 }
 
 void DebugLoc::setImplicitCode(bool ImplicitCode) {
-  if (DILocation *Loc = get()) {
+  if (DILocation *Loc = get())
     Loc->setImplicitCode(ImplicitCode);
-  }
 }
 
 DebugLoc DebugLoc::replaceInlinedAtSubprogram(

@@ -82,7 +82,7 @@ llvm_execute_on_thread_impl(void *(*ThreadFunc)(void *), void *Arg,
     ReportErrnumFatal("pthread_attr_init failed", errnum);
   }
 
-  auto AttrGuard = llvm::make_scope_exit([&] {
+  llvm::scope_exit AttrGuard([&] {
     if ((errnum = ::pthread_attr_destroy(&Attr)) != 0) {
       ReportErrnumFatal("pthread_attr_destroy failed", errnum);
     }

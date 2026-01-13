@@ -33,7 +33,6 @@
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/Host/MainLoop.h"
-#include "lldb/Utility/Status.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -88,7 +87,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   /// Path to the lldb-dap binary itself.
   static llvm::StringRef debug_adapter_path;
 
-  Log *log;
+  Log &log;
   DAPTransport &transport;
   lldb::SBFile in;
   OutputRedirector out;
@@ -147,6 +146,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   ReplMode repl_mode;
   lldb::SBFormat frame_format;
   lldb::SBFormat thread_format;
+  llvm::unique_function<void()> on_configuration_done;
 
   /// This is used to allow request_evaluate to handle empty expressions
   /// (ie the user pressed 'return' and expects the previous expression to
@@ -194,12 +194,12 @@ struct DAP final : public DAPTransport::MessageHandler {
   ///     Transport for this debug session.
   /// \param[in] loop
   ///     Main loop associated with this instance.
-  DAP(Log *log, const ReplMode default_repl_mode,
+  DAP(Log &log, const ReplMode default_repl_mode,
       std::vector<std::string> pre_init_commands, bool no_lldbinit,
       llvm::StringRef client_name, DAPTransport &transport,
       lldb_private::MainLoop &loop);
 
-  ~DAP();
+  ~DAP() override = default;
 
   /// DAP is not copyable.
   /// @{
@@ -272,7 +272,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   ///     either an expression or a statement, depending on the rest of
   ///     the expression.
   /// \return the expression mode
-  ReplMode DetectReplMode(lldb::SBFrame frame, std::string &expression,
+  ReplMode DetectReplMode(lldb::SBFrame &frame, std::string &expression,
                           bool partial_expression);
 
   /// Create a `protocol::Source` object as described in the debug adapter

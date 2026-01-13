@@ -78,7 +78,7 @@ public:
                                           Value *NewVal, Value *Mask,
                                           AtomicOrdering Ord) const override;
 
-  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallInst &I,
+  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
                           MachineFunction &MF,
                           unsigned Intrinsic) const override;
 
@@ -262,8 +262,6 @@ private:
   bool isEligibleForTailCallOptimization(
       CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,
       const SmallVectorImpl<CCValAssign> &ArgLocs) const;
-
-  bool softPromoteHalfType() const override { return true; }
 
   bool
   splitValueIntoRegisterParts(SelectionDAG &DAG, const SDLoc &DL, SDValue Val,

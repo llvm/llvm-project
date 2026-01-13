@@ -17,6 +17,7 @@
 #include <optional>
 
 namespace mlir {
+class PassInstrumentation;
 namespace detail {
 class OpToOpPassAdaptor;
 struct OpPassManagerImpl;
@@ -341,6 +342,9 @@ private:
 
   /// Allow access to 'passOptions'.
   friend class PassInfo;
+
+  /// Allow access to 'signalPassFailure'.
+  friend class PassInstrumentation;
 };
 
 //===----------------------------------------------------------------------===//

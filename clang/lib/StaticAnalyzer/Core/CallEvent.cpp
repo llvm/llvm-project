@@ -174,7 +174,7 @@ CallEvent::getCalleeStackFrame(unsigned BlockCount) const {
   // instead of doing this reverse lookup, we would be able to build the stack
   // frame for non-expression-based calls, and also we wouldn't need the reverse
   // lookup.
-  CFGStmtMap *Map = LCtx->getAnalysisDeclContext()->getCFGStmtMap();
+  const CFGStmtMap *Map = LCtx->getAnalysisDeclContext()->getCFGStmtMap();
   const CFGBlock *B = Map->getBlock(E);
   assert(B);
 
@@ -668,12 +668,12 @@ bool AnyFunctionCall::argumentsMayEscape() const {
   // - Many CF containers allow objects to escape through custom
   //   allocators/deallocators upon container construction. (PR12101)
   if (FName.starts_with("CF") || FName.starts_with("CG")) {
-    return StrInStrNoCase(FName, "InsertValue")  != StringRef::npos ||
-           StrInStrNoCase(FName, "AddValue")     != StringRef::npos ||
-           StrInStrNoCase(FName, "SetValue")     != StringRef::npos ||
-           StrInStrNoCase(FName, "WithData")     != StringRef::npos ||
-           StrInStrNoCase(FName, "AppendValue")  != StringRef::npos ||
-           StrInStrNoCase(FName, "SetAttribute") != StringRef::npos;
+    return FName.contains_insensitive("InsertValue") ||
+           FName.contains_insensitive("AddValue") ||
+           FName.contains_insensitive("SetValue") ||
+           FName.contains_insensitive("WithData") ||
+           FName.contains_insensitive("AppendValue") ||
+           FName.contains_insensitive("SetAttribute");
   }
 
   return false;

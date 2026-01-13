@@ -499,6 +499,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"dim", asValue},
        {"mask", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"irand",
+     &I::genIrand,
+     {{{"i", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"is_contiguous",
      &I::genIsContiguous,
      {{{"array", asBox}}},
@@ -625,6 +629,10 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genPutenv,
      {{{"str", asAddr}, {"status", asAddr, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"rand",
+     &I::genRand,
+     {{{"i", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"random_init",
      &I::genRandomInit,
      {{{"repeatable", asValue}, {"image_distinct", asValue}}},
@@ -719,6 +727,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"shifta", &I::genShiftA},
     {"shiftl", &I::genShift<mlir::arith::ShLIOp>},
     {"shiftr", &I::genShift<mlir::arith::ShRUIOp>},
+    {"show_descriptor",
+     &I::genShowDescriptor,
+     {{{"d", asInquired}}},
+     /*isElemental=*/false},
     {"sign", &I::genSign},
     {"signal",
      &I::genSignalSubroutine,
@@ -6158,6 +6170,20 @@ IntrinsicLibrary::genIparity(mlir::Type resultType,
                       "IPARITY", resultType, args);
 }
 
+// IRAND
+fir::ExtendedValue
+IntrinsicLibrary::genIrand(mlir::Type resultType,
+                           llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  mlir::Value i =
+      isStaticallyPresent(args[0])
+          ? fir::getBase(args[0])
+          : fir::AbsentOp::create(builder, loc,
+                                  builder.getRefType(builder.getI32Type()))
+                .getResult();
+  return fir::runtime::genIrand(builder, loc, i);
+}
+
 // IS_CONTIGUOUS
 fir::ExtendedValue
 IntrinsicLibrary::genIsContiguous(mlir::Type resultType,
@@ -7184,6 +7210,19 @@ IntrinsicLibrary::genPutenv(std::optional<mlir::Type> resultType,
   return {};
 }
 
+// RAND
+fir::ExtendedValue
+IntrinsicLibrary::genRand(mlir::Type, llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  mlir::Value i =
+      isStaticallyPresent(args[0])
+          ? fir::getBase(args[0])
+          : fir::AbsentOp::create(builder, loc,
+                                  builder.getRefType(builder.getI32Type()))
+                .getResult();
+  return fir::runtime::genRand(builder, loc, i);
+}
+
 // RANDOM_INIT
 void IntrinsicLibrary::genRandomInit(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 2);
@@ -7847,6 +7886,47 @@ mlir::Value IntrinsicLibrary::genShiftA(mlir::Type resultType,
   if (resultType.isUnsignedInteger())
     return builder.createConvert(loc, resultType, result);
   return result;
+}
+
+void IntrinsicLibrary::genShowDescriptor(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1 && "expected single argument for show_descriptor");
+  const mlir::Value arg = fir::getBase(args[0]);
+
+  // Use consistent !fir.ref<!fir.box<none>> argument type
+  auto targetType = fir::BoxType::get(builder.getNoneType());
+  auto targetRefType = fir::ReferenceType::get(targetType);
+
+  mlir::Value descrAddr = nullptr;
+  if (fir::isBoxAddress(arg.getType())) {
+    // If it's already a reference to a box, convert it to correct type and
+    // pass it directly
+    descrAddr = builder.createConvert(loc, targetRefType, arg);
+  } else {
+    // At this point, arg is either SSA descriptor or a non-descriptor entity.
+    // If necessary, wrap non-descriptor entity in a descriptor.
+    mlir::Value descriptor = nullptr;
+    if (fir::isa_box_type(arg.getType())) {
+      descriptor = arg;
+    } else if (fir::isa_ref_type(arg.getType())) {
+      // Note: here use full extended value args[0]
+      descriptor = builder.createBox(loc, args[0]);
+    } else {
+      // arg is a value (e.g. constant), spill it to a temporary
+      // because createBox expects a memory reference.
+      mlir::Value temp = builder.createTemporary(loc, arg.getType());
+      builder.createStoreWithConvert(loc, arg, temp);
+
+      // Note: here use full extended value args[0]
+      descriptor = builder.createBox(loc, fir::substBase(args[0], temp));
+    }
+
+    // Spill it to the stack
+    descrAddr = builder.createTemporary(loc, targetType);
+    builder.createStoreWithConvert(loc, descriptor, descrAddr);
+  }
+
+  fir::runtime::genShowDescriptor(builder, loc, descrAddr);
 }
 
 // SIGNAL
