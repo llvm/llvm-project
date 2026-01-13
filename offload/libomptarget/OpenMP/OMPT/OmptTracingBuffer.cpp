@@ -409,9 +409,9 @@ void OmptTracingBufferMgr::initTraceRecordMetaData(void *Rec) {
 OmptTracingBufferMgr::BufPtr
 OmptTracingBufferMgr::getDeviceSpecificBuffer(int64_t DeviceId) {
   if (DeviceId < 0 || DeviceId > MAX_NUM_DEVICES - 1) {
-    REPORT("getDeviceSpecificBuffer: Device id %ld invalid or exceeds "
-           "supported max: %d\n",
-           DeviceId, MAX_NUM_DEVICES - 1);
+    REPORT() << "getDeviceSpecificBuffer: Device id " << DeviceId
+             << " invalid or exceeds supported max: "
+             << MAX_NUM_DEVICES - 1;
     return nullptr;
   }
   return ArrayOfBufPtr[DeviceId];
@@ -420,9 +420,9 @@ OmptTracingBufferMgr::getDeviceSpecificBuffer(int64_t DeviceId) {
 void OmptTracingBufferMgr::setDeviceSpecificBuffer(int64_t DeviceId,
                                                    BufPtr Buf) {
   if (DeviceId < 0 || DeviceId > MAX_NUM_DEVICES - 1) {
-    REPORT("setDeviceSpecificBuffer: Device id %ld invalid or exceeds "
-           "supported max: %d\n",
-           DeviceId, MAX_NUM_DEVICES - 1);
+    REPORT() << "setDeviceSpecificBuffer: Device id " << DeviceId
+             << " invalid or exceeds supported max: "
+             << MAX_NUM_DEVICES - 1;
     return;
   }
   ArrayOfBufPtr[DeviceId] = Buf;

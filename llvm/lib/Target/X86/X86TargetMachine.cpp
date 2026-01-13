@@ -77,7 +77,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeCompressEVEXLegacyPass(PR);
   initializeFixupLEAsLegacyPass(PR);
   initializeX86FPStackifierLegacyPass(PR);
-  initializeX86FixupSetCCPassPass(PR);
+  initializeX86FixupSetCCLegacyPass(PR);
   initializeX86CallFrameOptimizationLegacyPass(PR);
   initializeX86CmovConversionLegacyPass(PR);
   initializeX86TileConfigPass(PR);
@@ -102,7 +102,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86DAGToDAGISelLegacyPass(PR);
   initializeX86ArgumentStackSlotPassPass(PR);
   initializeX86AsmPrinterPass(PR);
-  initializeX86FixupInstTuningPassPass(PR);
+  initializeX86FixupInstTuningLegacyPass(PR);
   initializeX86FixupVectorConstantsPassPass(PR);
   initializeX86DynAllocaExpanderLegacyPass(PR);
   initializeX86SuppressAPXForRelocationPassPass(PR);
@@ -514,7 +514,7 @@ bool X86PassConfig::addPreISel() {
 void X86PassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(&LiveRangeShrinkID);
-    addPass(createX86FixupSetCC());
+    addPass(createX86FixupSetCCLegacyPass());
     addPass(createX86OptimizeLEAsLegacyPass());
     addPass(createX86CallFrameOptimizationLegacyPass());
     addPass(createX86AvoidStoreForwardingBlocksLegacyPass());
@@ -567,7 +567,7 @@ void X86PassConfig::addPreEmitPass() {
     addPass(createX86FixupBWInstsLegacyPass());
     addPass(createX86PadShortFunctions());
     addPass(createX86FixupLEAsLegacyPass());
-    addPass(createX86FixupInstTuning());
+    addPass(createX86FixupInstTuningLegacyPass());
     addPass(createX86FixupVectorConstants());
   }
   addPass(createX86CompressEVEXLegacyPass());

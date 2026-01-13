@@ -1738,8 +1738,8 @@ void *GenericDeviceTy::getFree_ArgBuf(size_t sz) {
   if (!found_ptr) {
     auto AllocOrErr = this->allocate(sz, &found_ptr, TARGET_ALLOC_SHARED);
     if (!AllocOrErr) {
-      REPORT("Could not get SHARED mem for Arg Buffer: %s\n",
-             toString(AllocOrErr.takeError()).data());
+      REPORT() << "Could not get SHARED mem for Arg Buffer: " <<
+             toString(AllocOrErr.takeError()).data();
       return nullptr;
     }
     found_ptr = *AllocOrErr;
@@ -2511,9 +2511,8 @@ int GenericPluginTy::set_coarse_grain_mem_region(int32_t DeviceId, void *ptr,
     auto Err = getDevice(DeviceId).setCoarseGrainMemory(ptr, size);
 
     if (Err) {
-      REPORT("Failure switching memory region to coarse grain mode (ptr: %p, "
-             "size: %ld)\n",
-             ptr, size);
+      REPORT() << "Failure switching memory region to coarse grain mode (ptr: "
+               << ptr << " size: " << size;
       return OFFLOAD_FAIL;
     }
     return OFFLOAD_SUCCESS;
@@ -2535,9 +2534,8 @@ int GenericPluginTy::prepopulate_page_table(int32_t DeviceId, void *ptr,
     auto Err = getDevice(DeviceId).prepopulatePageTable(ptr, size);
 
     if (Err) {
-      REPORT("Failure prepopulating GPU page table (ptr: %p, "
-             "size: %ld)\n",
-             ptr, size);
+      REPORT() <<"Failure prepopulating GPU page table (ptr: " << ptr
+               << "size:" << size;
       return OFFLOAD_FAIL;
     }
     return OFFLOAD_SUCCESS;
@@ -2574,8 +2572,8 @@ void GenericPluginTy::set_coarse_grain_mem(int32_t DeviceId, const void *ptr,
   auto T = logger::log<int32_t>(__func__, DeviceId, ptr, size);
   if (auto Err = getDevice(DeviceId).setCoarseGrainMemoryImpl((void *)ptr, size,
                                                               set_attr))
-    REPORT("Failure to setCoarseGrainMemory: %s\n",
-           toString(std::move(Err)).data());
+    REPORT() << "Failure to setCoarseGrainMemory: "
+             << toString(std::move(Err)).data();
   T.res(0);
   return;
 }
