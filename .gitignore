@@ -61,6 +61,8 @@ AGENTS.md
 .codex/
 # Cursor specific files
 .cursor
+.cursorignore
+.cursorindexingignore
 
 #==============================================================================#
 # Directories to ignore (do not add trailing '/'s, they skip symlinks).
