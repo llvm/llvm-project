@@ -5487,6 +5487,32 @@ TEST_F(MDNodeTest, MergedProfMetadata) {
   EXPECT_EQ(Merged, Prof);
 }
 
+TEST_F(MDNodeTest, MergedProfMetadata_CallInst) {
+  // Check that identical profile metadata on CallInsts is SUMMED, not preserved.
+  Metadata *Ops[] = {
+      MDString::get(Context, "branch_weights"),
+      ConstantAsMetadata::get(ConstantInt::get(Context, APInt(32, 10)))};
+  MDNode *Prof = MDNode::get(Context, Ops);
+
+  // Create two CallInsts.
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(Context), false);
+  std::unique_ptr<CallInst> CI1(CallInst::Create(FTy, getFunction("f"), ArrayRef<Value *>()));
+  std::unique_ptr<CallInst> CI2(CallInst::Create(FTy, getFunction("f"), ArrayRef<Value *>()));
+
+  CI1->setMetadata(LLVMContext::MD_prof, Prof);
+  CI2->setMetadata(LLVMContext::MD_prof, Prof);
+
+  MDNode *Merged =
+      MDNode::getMergedProfMetadata(Prof, Prof, CI1.get(), CI2.get());
+
+  // Expect merged node to be different (summed weights).
+  EXPECT_NE(Merged, Prof);
+  // Verify value is 20.
+  ASSERT_EQ(Merged->getNumOperands(), 2u);
+  ConstantInt *W = mdconst::extract<ConstantInt>(Merged->getOperand(1));
+  EXPECT_EQ(W->getZExtValue(), 20u);
+}
+
 #if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG) && !defined(GTEST_HAS_SEH)
 typedef MetadataTest MDTupleAllocationDeathTest;
 TEST_F(MDTupleAllocationDeathTest, ResizeRejected) {
