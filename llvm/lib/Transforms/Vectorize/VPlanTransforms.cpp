@@ -3314,9 +3314,8 @@ convertFFLoadEarlyExitToVLStepping(VPlan &Plan,
   // Expected pattern
   //   EMIT vp<%alm> = active lane mask 0, vp<%faulting.lane>
   //   EMIT vp<%and> = logical-and vp<%alm>, vp<%cond>
-  //   EMIT vp<%alt.exit.cond> = any-of vp<%and>
-  //   EMIT vp<%exit.cond> = or vp<%alt.exit.cond>, vp<%main.exit.cond>
-  //   EMIT branch-on-cond vp<%exit.cond>
+  //   EMIT vp<%latch.exit> = any-of vp<%and>
+  //   EMIT branch-on-two-conds %earlyExit, %latchexit
   // use the index to step the iv
   VPBasicBlock *LatchExiting =
       HeaderVPBB->getPredecessors()[1]->getEntryBasicBlock();
@@ -3325,13 +3324,14 @@ convertFFLoadEarlyExitToVLStepping(VPlan &Plan,
   VPValue *FaultingLane = nullptr;
   [[maybe_unused]] bool IsExitingOnAnyOfOr =
       match(LatchExitingBr,
-            m_BranchOnCond(m_BinaryOr(m_VPValue(VPAnyOf), m_VPValue()))) &&
+            m_BranchOnTwoConds(m_VPValue(VPAnyOf), m_VPValue())) &&
       match(VPAnyOf,
             m_VPInstruction<VPInstruction::AnyOf>(
                 m_VPInstruction<VPInstruction::LogicalAnd>(
                     m_VPInstruction<VPInstruction::ActiveLaneMask>(
                         m_ZeroInt(), m_VPValue(FaultingLane), m_VPValue()),
                     m_VPValue())));
+  assert(IsExitingOnAnyOfOr && "Unexpected terminator for FFLoad");
 
   CanonicalIVIncrement->setOperand(1, FaultingLane);
 }

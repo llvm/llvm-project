@@ -11,7 +11,7 @@ define i64 @same_exit_block_pre_inc_use1(ptr %p1, i8 %ld2) {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[MIDDLE_BLOCK:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 64, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 4, [[TMP0]]
@@ -29,10 +29,9 @@ define i64 @same_exit_block_pre_inc_use1(ptr %p1, i8 %ld2) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP12]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 64
-; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP13]], [[TMP14]]
-; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_SPLIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       middle.split:
-; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
+; CHECK:       vector.body.interim:
+; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -41,7 +40,7 @@ define i64 @same_exit_block_pre_inc_use1(ptr %p1, i8 %ld2) {
 ; CHECK-NEXT:    [[TMP18:%.*]] = add i64 3, [[TMP17]]
 ; CHECK-NEXT:    br label [[LOOP_END]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP18]], [[VECTOR_EARLY_EXIT]] ], [ 67, [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP18]], [[VECTOR_EARLY_EXIT]] ], [ 67, [[MIDDLE_BLOCK1]] ]
 ; CHECK-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
@@ -74,7 +73,7 @@ define i32 @same_exit_block_pre_inc_use1_iv64_endi32_step2(ptr %p1, i8 %ld2) {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[MIDDLE_BLOCK:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 64, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 4, [[TMP0]]
@@ -92,10 +91,9 @@ define i32 @same_exit_block_pre_inc_use1_iv64_endi32_step2(ptr %p1, i8 %ld2) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP12]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 64
-; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP13]], [[TMP14]]
-; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_SPLIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
-; CHECK:       middle.split:
-; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
+; CHECK:       vector.body.interim:
+; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -106,7 +104,7 @@ define i32 @same_exit_block_pre_inc_use1_iv64_endi32_step2(ptr %p1, i8 %ld2) {
 ; CHECK-NEXT:    [[TMP19:%.*]] = add i32 9, [[TMP18]]
 ; CHECK-NEXT:    br label [[LOOP_END]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i32 [ [[TMP19]], [[VECTOR_EARLY_EXIT]] ], [ 67, [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i32 [ [[TMP19]], [[VECTOR_EARLY_EXIT]] ], [ 67, [[MIDDLE_BLOCK1]] ]
 ; CHECK-NEXT:    ret i32 [[RETVAL]]
 ;
 entry:
@@ -139,7 +137,7 @@ define i32 @same_exit_block_pre_inc_use1_iv128_endi32_step2(ptr %p1) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i128 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i128 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[MIDDLE_BLOCK:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i128 [[INDEX1]] to i64
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[P1]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i128 64, [[INDEX1]]
@@ -157,10 +155,9 @@ define i32 @same_exit_block_pre_inc_use1_iv128_endi32_step2(ptr %p1) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = freeze <4 x i1> [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP11]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i128 [[INDEX_NEXT2]], 64
-; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP12]], [[TMP13]]
-; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_SPLIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
-; CHECK:       middle.split:
-; CHECK-NEXT:    br i1 [[TMP12]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
+; CHECK:       vector.body.interim:
+; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -172,7 +169,7 @@ define i32 @same_exit_block_pre_inc_use1_iv128_endi32_step2(ptr %p1) {
 ; CHECK-NEXT:    [[TMP19:%.*]] = add i32 9, [[TMP18]]
 ; CHECK-NEXT:    br label [[LOOP_END]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i32 [ [[TMP19]], [[VECTOR_EARLY_EXIT]] ], [ 67, [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i32 [ [[TMP19]], [[VECTOR_EARLY_EXIT]] ], [ 67, [[MIDDLE_BLOCK1]] ]
 ; CHECK-NEXT:    ret i32 [[RETVAL]]
 ;
 entry:
@@ -206,7 +203,7 @@ define float @same_exit_block_pre_inc_use1_iv64_endf32(ptr %p1) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[MIDDLE_BLOCK:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 64, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 4, [[TMP0]]
@@ -224,10 +221,9 @@ define float @same_exit_block_pre_inc_use1_iv64_endf32(ptr %p1) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP12]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 64
-; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP13]], [[TMP14]]
-; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_SPLIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
-; CHECK:       middle.split:
-; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
+; CHECK:       vector.body.interim:
+; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -238,7 +234,7 @@ define float @same_exit_block_pre_inc_use1_iv64_endf32(ptr %p1) {
 ; CHECK-NEXT:    [[TMP19:%.*]] = fadd fast float 9.000000e+00, [[TMP18]]
 ; CHECK-NEXT:    br label [[LOOP_END]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi float [ [[TMP19]], [[VECTOR_EARLY_EXIT]] ], [ 1.230000e+02, [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi float [ [[TMP19]], [[VECTOR_EARLY_EXIT]] ], [ 1.230000e+02, [[MIDDLE_BLOCK1]] ]
 ; CHECK-NEXT:    ret float [[RETVAL]]
 ;
 entry:
@@ -272,7 +268,7 @@ define ptr @same_exit_block_pre_inc_use1_iv64_endptr(ptr %p1, ptr %p2) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[MIDDLE_BLOCK:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 64, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 4, [[TMP0]]
@@ -290,10 +286,9 @@ define ptr @same_exit_block_pre_inc_use1_iv64_endptr(ptr %p1, ptr %p2) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP12]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 64
-; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP13]], [[TMP14]]
-; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_SPLIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
-; CHECK:       middle.split:
-; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
+; CHECK:       vector.body.interim:
+; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -303,7 +298,7 @@ define ptr @same_exit_block_pre_inc_use1_iv64_endptr(ptr %p1, ptr %p2) {
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[P2]], i64 [[TMP18]]
 ; CHECK-NEXT:    br label [[LOOP_END]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi ptr [ [[TMP19]], [[VECTOR_EARLY_EXIT]] ], [ [[P1]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi ptr [ [[TMP19]], [[VECTOR_EARLY_EXIT]] ], [ [[P1]], [[MIDDLE_BLOCK1]] ]
 ; CHECK-NEXT:    ret ptr [[RETVAL]]
 ;
 entry:
@@ -337,7 +332,7 @@ define ptr @same_exit_block_pre_inc_use1_ivptr(ptr %p1) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[MIDDLE_BLOCK:%.*]] ]
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[P1]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 1024, [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 4, [[TMP0]]
@@ -354,10 +349,9 @@ define ptr @same_exit_block_pre_inc_use1_ivptr(ptr %p1) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = freeze <4 x i1> [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP11]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP12]], [[TMP13]]
-; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_SPLIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
-; CHECK:       middle.split:
-; CHECK-NEXT:    br i1 [[TMP12]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
+; CHECK:       vector.body.interim:
+; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -366,7 +360,7 @@ define ptr @same_exit_block_pre_inc_use1_ivptr(ptr %p1) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[P1]], i64 [[TMP16]]
 ; CHECK-NEXT:    br label [[LOOP_END]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi ptr [ [[TMP17]], [[VECTOR_EARLY_EXIT]] ], [ [[PTREND]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi ptr [ [[TMP17]], [[VECTOR_EARLY_EXIT]] ], [ [[PTREND]], [[MIDDLE_BLOCK1]] ]
 ; CHECK-NEXT:    ret ptr [[RETVAL]]
 ;
 entry:
@@ -397,7 +391,7 @@ define i64 @same_exit_block_pre_inc1_use_inv_cond(ptr %p1, i1 %cond) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[MIDDLE_BLOCK:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 64, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 4, [[TMP0]]
@@ -417,10 +411,9 @@ define i64 @same_exit_block_pre_inc1_use_inv_cond(ptr %p1, i1 %cond) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = freeze <4 x i1> [[TMP13]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP14]])
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 64
-; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP15]], [[TMP16]]
-; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_SPLIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
-; CHECK:       middle.split:
-; CHECK-NEXT:    br i1 [[TMP15]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK-NEXT:    br i1 [[TMP15]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
+; CHECK:       vector.body.interim:
+; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -429,7 +422,7 @@ define i64 @same_exit_block_pre_inc1_use_inv_cond(ptr %p1, i1 %cond) {
 ; CHECK-NEXT:    [[TMP20:%.*]] = add i64 3, [[TMP19]]
 ; CHECK-NEXT:    br label [[LOOP_END]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP20]], [[VECTOR_EARLY_EXIT]] ], [ 67, [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP20]], [[VECTOR_EARLY_EXIT]] ], [ 67, [[MIDDLE_BLOCK1]] ]
 ; CHECK-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
@@ -461,7 +454,7 @@ define i64 @same_exit_block_pre_inc_use1_gep_two_indices(ptr %p1) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[MIDDLE_BLOCK:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 64, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 4, [[TMP0]]
@@ -479,10 +472,9 @@ define i64 @same_exit_block_pre_inc_use1_gep_two_indices(ptr %p1) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP12]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 64
-; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP13]], [[TMP14]]
-; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_SPLIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
-; CHECK:       middle.split:
-; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
+; CHECK:       vector.body.interim:
+; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -491,7 +483,7 @@ define i64 @same_exit_block_pre_inc_use1_gep_two_indices(ptr %p1) {
 ; CHECK-NEXT:    [[TMP18:%.*]] = add i64 3, [[TMP17]]
 ; CHECK-NEXT:    br label [[LOOP_END]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP18]], [[VECTOR_EARLY_EXIT]] ], [ 67, [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP18]], [[VECTOR_EARLY_EXIT]] ], [ 67, [[MIDDLE_BLOCK1]] ]
 ; CHECK-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
@@ -522,7 +514,7 @@ define i64 @same_exit_block_pre_inc_use2(ptr %p1) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[MIDDLE_BLOCK:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 64, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 4, [[TMP0]]
@@ -540,16 +532,15 @@ define i64 @same_exit_block_pre_inc_use2(ptr %p1) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP12]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 64
-; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP13]], [[TMP14]]
-; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_SPLIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
-; CHECK:       middle.split:
-; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
+; CHECK:       vector.body.interim:
+; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
 ; CHECK-NEXT:    br label [[LOOP_END]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ 67, [[VECTOR_EARLY_EXIT]] ], [ 66, [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ 67, [[VECTOR_EARLY_EXIT]] ], [ 66, [[MIDDLE_BLOCK1]] ]
 ; CHECK-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
@@ -580,7 +571,7 @@ define i64 @same_exit_block_pre_inc_use3(ptr %p1) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[MIDDLE_BLOCK:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 64, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 4, [[TMP0]]
@@ -598,10 +589,9 @@ define i64 @same_exit_block_pre_inc_use3(ptr %p1) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP12]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 64
-; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP13]], [[TMP14]]
-; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_SPLIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
-; CHECK:       middle.split:
-; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
+; CHECK:       vector.body.interim:
+; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -610,7 +600,7 @@ define i64 @same_exit_block_pre_inc_use3(ptr %p1) {
 ; CHECK-NEXT:    [[TMP18:%.*]] = add i64 3, [[TMP17]]
 ; CHECK-NEXT:    br label [[LOOP_END]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[INDEX_LCSSA:%.*]] = phi i64 [ 66, [[MIDDLE_BLOCK]] ], [ [[TMP18]], [[VECTOR_EARLY_EXIT]] ]
+; CHECK-NEXT:    [[INDEX_LCSSA:%.*]] = phi i64 [ 66, [[MIDDLE_BLOCK1]] ], [ [[TMP18]], [[VECTOR_EARLY_EXIT]] ]
 ; CHECK-NEXT:    ret i64 [[INDEX_LCSSA]]
 ;
 entry:
@@ -642,8 +632,8 @@ define i64 @same_exit_block_pre_inc_use4(ptr %p1) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 3, i64 4, i64 5, i64 6>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[MIDDLE_BLOCK:%.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 3, i64 4, i64 5, i64 6>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 64, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 4, [[TMP0]]
@@ -662,10 +652,9 @@ define i64 @same_exit_block_pre_inc_use4(ptr %p1) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP12]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 64
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
-; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP13]], [[TMP14]]
-; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_SPLIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
-; CHECK:       middle.split:
-; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
+; CHECK:       vector.body.interim:
+; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -674,7 +663,7 @@ define i64 @same_exit_block_pre_inc_use4(ptr %p1) {
 ; CHECK-NEXT:    [[TMP18:%.*]] = add i64 3, [[TMP17]]
 ; CHECK-NEXT:    br label [[LOOP_END]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP18]], [[VECTOR_EARLY_EXIT]] ], [ 67, [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP18]], [[VECTOR_EARLY_EXIT]] ], [ 67, [[MIDDLE_BLOCK1]] ]
 ; CHECK-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
@@ -705,7 +694,7 @@ define i64 @same_exit_block_post_inc_use(ptr %p1) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[MIDDLE_BLOCK:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 64, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 4, [[TMP0]]
@@ -723,10 +712,9 @@ define i64 @same_exit_block_post_inc_use(ptr %p1) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP12]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 64
-; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP13]], [[TMP14]]
-; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_SPLIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
-; CHECK:       middle.split:
-; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
+; CHECK:       vector.body.interim:
+; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -735,7 +723,7 @@ define i64 @same_exit_block_post_inc_use(ptr %p1) {
 ; CHECK-NEXT:    [[TMP18:%.*]] = add i64 3, [[TMP17]]
 ; CHECK-NEXT:    br label [[LOOP_END]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP18]], [[VECTOR_EARLY_EXIT]] ], [ 67, [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP18]], [[VECTOR_EARLY_EXIT]] ], [ 67, [[MIDDLE_BLOCK1]] ]
 ; CHECK-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
@@ -767,7 +755,7 @@ define ptr @same_exit_block_post_inc_use1_ivptr(ptr %p1) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[MIDDLE_BLOCK:%.*]] ]
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[P1]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 1024, [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 4, [[TMP0]]
@@ -784,10 +772,9 @@ define ptr @same_exit_block_post_inc_use1_ivptr(ptr %p1) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = freeze <4 x i1> [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP11]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP12]], [[TMP13]]
-; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_SPLIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
-; CHECK:       middle.split:
-; CHECK-NEXT:    br i1 [[TMP12]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
+; CHECK:       vector.body.interim:
+; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -797,7 +784,7 @@ define ptr @same_exit_block_post_inc_use1_ivptr(ptr %p1) {
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[P1]], i64 [[TMP17]]
 ; CHECK-NEXT:    br label [[LOOP_END]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi ptr [ [[TMP18]], [[VECTOR_EARLY_EXIT]] ], [ [[PTREND]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi ptr [ [[TMP18]], [[VECTOR_EARLY_EXIT]] ], [ [[PTREND]], [[MIDDLE_BLOCK1]] ]
 ; CHECK-NEXT:    ret ptr [[RETVAL]]
 ;
 entry:
@@ -828,7 +815,7 @@ define i64 @same_exit_block_post_inc_use2(ptr %p1) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[MIDDLE_BLOCK:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 64, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 4, [[TMP0]]
@@ -846,10 +833,9 @@ define i64 @same_exit_block_post_inc_use2(ptr %p1) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP12]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 64
-; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP13]], [[TMP14]]
-; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_SPLIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
-; CHECK:       middle.split:
-; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
+; CHECK:       vector.body.interim:
+; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -859,7 +845,7 @@ define i64 @same_exit_block_post_inc_use2(ptr %p1) {
 ; CHECK-NEXT:    [[TMP19:%.*]] = add i64 3, [[TMP18]]
 ; CHECK-NEXT:    br label [[LOOP_END]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP19]], [[VECTOR_EARLY_EXIT]] ], [ 66, [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP19]], [[VECTOR_EARLY_EXIT]] ], [ 66, [[MIDDLE_BLOCK1]] ]
 ; CHECK-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
@@ -890,7 +876,7 @@ define i64 @diff_exit_block_pre_inc_use1(ptr %p1) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[MIDDLE_BLOCK:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 64, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 4, [[TMP0]]
@@ -908,10 +894,9 @@ define i64 @diff_exit_block_pre_inc_use1(ptr %p1) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP12]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 64
-; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP13]], [[TMP14]]
-; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_SPLIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
-; CHECK:       middle.split:
-; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
+; CHECK:       vector.body.interim:
+; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -956,7 +941,7 @@ define i64 @diff_exit_block_pre_inc_use2(ptr %p1) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[MIDDLE_BLOCK:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 64, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 4, [[TMP0]]
@@ -974,10 +959,9 @@ define i64 @diff_exit_block_pre_inc_use2(ptr %p1) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP12]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 64
-; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP13]], [[TMP14]]
-; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_SPLIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
-; CHECK:       middle.split:
-; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
+; CHECK:       vector.body.interim:
+; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -1019,7 +1003,7 @@ define i64 @diff_exit_block_pre_inc_use3(ptr %p1) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX2:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT3:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX2:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT3:%.*]], [[MIDDLE_BLOCK:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX2]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 64, [[INDEX2]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 4, [[TMP0]]
@@ -1037,10 +1021,9 @@ define i64 @diff_exit_block_pre_inc_use3(ptr %p1) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP12]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT3]], 64
-; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP13]], [[TMP14]]
-; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_SPLIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
-; CHECK:       middle.split:
-; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
+; CHECK:       vector.body.interim:
+; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -1083,7 +1066,7 @@ define i64 @diff_exit_block_post_inc_use1(ptr %p1) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[MIDDLE_BLOCK:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 64, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 4, [[TMP0]]
@@ -1101,10 +1084,9 @@ define i64 @diff_exit_block_post_inc_use1(ptr %p1) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP12]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 64
-; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP13]], [[TMP14]]
-; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_SPLIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
-; CHECK:       middle.split:
-; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
+; CHECK:       vector.body.interim:
+; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -1149,7 +1131,7 @@ define i64 @diff_exit_block_post_inc_use2(ptr %p1) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[MIDDLE_BLOCK:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 64, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 4, [[TMP0]]
@@ -1167,10 +1149,9 @@ define i64 @diff_exit_block_post_inc_use2(ptr %p1) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP12]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 64
-; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP13]], [[TMP14]]
-; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_SPLIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
-; CHECK:       middle.split:
-; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
+; CHECK:       vector.body.interim:
+; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -1217,7 +1198,7 @@ define i64 @diff_exit_block_post_inc_use3(ptr %p1, i64 %start) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[START]], 64
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[MIDDLE_BLOCK:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 64, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule i64 4, [[TMP1]]
@@ -1235,10 +1216,9 @@ define i64 @diff_exit_block_post_inc_use3(ptr %p1, i64 %start) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = freeze <4 x i1> [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP13]])
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 64
-; CHECK-NEXT:    [[TMP16:%.*]] = or i1 [[TMP14]], [[TMP15]]
-; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_SPLIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
-; CHECK:       middle.split:
-; CHECK-NEXT:    br i1 [[TMP14]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK-NEXT:    br i1 [[TMP14]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
+; CHECK:       vector.body.interim:
+; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = sub i64 [[TMP0]], 1
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
@@ -1287,7 +1267,7 @@ define i64 @loop_contains_safe_call(ptr %p1) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[MIDDLE_BLOCK:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 64, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 4, [[TMP0]]
@@ -1306,10 +1286,9 @@ define i64 @loop_contains_safe_call(ptr %p1) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = freeze <4 x i1> [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP13]])
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 64
-; CHECK-NEXT:    [[TMP16:%.*]] = or i1 [[TMP14]], [[TMP15]]
-; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_SPLIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
-; CHECK:       middle.split:
-; CHECK-NEXT:    br i1 [[TMP14]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK-NEXT:    br i1 [[TMP14]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
+; CHECK:       vector.body.interim:
+; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -1318,7 +1297,7 @@ define i64 @loop_contains_safe_call(ptr %p1) {
 ; CHECK-NEXT:    [[TMP19:%.*]] = add i64 3, [[TMP18]]
 ; CHECK-NEXT:    br label [[LOOP_END]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP19]], [[VECTOR_EARLY_EXIT]] ], [ 67, [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP19]], [[VECTOR_EARLY_EXIT]] ], [ 67, [[MIDDLE_BLOCK1]] ]
 ; CHECK-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
@@ -1350,7 +1329,7 @@ define i64 @loop_contains_safe_div(ptr %p1) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[MIDDLE_BLOCK:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 64, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 4, [[TMP0]]
@@ -1369,10 +1348,9 @@ define i64 @loop_contains_safe_div(ptr %p1) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = freeze <4 x i1> [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP13]])
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 64
-; CHECK-NEXT:    [[TMP16:%.*]] = or i1 [[TMP14]], [[TMP15]]
-; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_SPLIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
-; CHECK:       middle.split:
-; CHECK-NEXT:    br i1 [[TMP14]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK-NEXT:    br i1 [[TMP14]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
+; CHECK:       vector.body.interim:
+; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -1381,7 +1359,7 @@ define i64 @loop_contains_safe_div(ptr %p1) {
 ; CHECK-NEXT:    [[TMP19:%.*]] = add i64 3, [[TMP18]]
 ; CHECK-NEXT:    br label [[LOOP_END]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP19]], [[VECTOR_EARLY_EXIT]] ], [ 67, [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP19]], [[VECTOR_EARLY_EXIT]] ], [ 67, [[MIDDLE_BLOCK1]] ]
 ; CHECK-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
@@ -1414,7 +1392,7 @@ define i64 @loop_contains_load_after_early_exit(ptr %p1, ptr dereferenceable(102
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[MIDDLE_BLOCK:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 64, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 4, [[TMP0]]
@@ -1434,10 +1412,9 @@ define i64 @loop_contains_load_after_early_exit(ptr %p1, ptr dereferenceable(102
 ; CHECK-NEXT:    [[TMP13:%.*]] = freeze <4 x i1> [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP13]])
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 64
-; CHECK-NEXT:    [[TMP16:%.*]] = or i1 [[TMP14]], [[TMP15]]
-; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_SPLIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
-; CHECK:       middle.split:
-; CHECK-NEXT:    br i1 [[TMP14]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK-NEXT:    br i1 [[TMP14]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
+; CHECK:       vector.body.interim:
+; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i32 3
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
@@ -1447,7 +1424,7 @@ define i64 @loop_contains_load_after_early_exit(ptr %p1, ptr dereferenceable(102
 ; CHECK-NEXT:    [[TMP20:%.*]] = add i64 3, [[TMP19]]
 ; CHECK-NEXT:    br label [[LOOP_END]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP20]], [[VECTOR_EARLY_EXIT]] ], [ [[TMP17]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP20]], [[VECTOR_EARLY_EXIT]] ], [ [[TMP17]], [[MIDDLE_BLOCK1]] ]
 ; CHECK-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
@@ -1559,7 +1536,7 @@ define i64 @same_exit_block_pre_inc_use1_deref_ptrs(ptr %p1, ptr dereferenceable
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[MIDDLE_BLOCK:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 64, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 4, [[TMP0]]
@@ -1579,10 +1556,9 @@ define i64 @same_exit_block_pre_inc_use1_deref_ptrs(ptr %p1, ptr dereferenceable
 ; CHECK-NEXT:    [[TMP13:%.*]] = freeze <4 x i1> [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP13]])
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 64
-; CHECK-NEXT:    [[TMP16:%.*]] = or i1 [[TMP14]], [[TMP15]]
-; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_SPLIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
-; CHECK:       middle.split:
-; CHECK-NEXT:    br i1 [[TMP14]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK-NEXT:    br i1 [[TMP14]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK]]
+; CHECK:       vector.body.interim:
+; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK1:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit:
@@ -1591,7 +1567,7 @@ define i64 @same_exit_block_pre_inc_use1_deref_ptrs(ptr %p1, ptr dereferenceable
 ; CHECK-NEXT:    [[TMP19:%.*]] = add i64 3, [[TMP18]]
 ; CHECK-NEXT:    br label [[LOOP_END]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP19]], [[VECTOR_EARLY_EXIT]] ], [ 67, [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP19]], [[VECTOR_EARLY_EXIT]] ], [ 67, [[MIDDLE_BLOCK1]] ]
 ; CHECK-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:

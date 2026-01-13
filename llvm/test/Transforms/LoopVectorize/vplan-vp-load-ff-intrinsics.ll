@@ -6,7 +6,7 @@ define i64 @find_with_liveout(ptr %first, i8 %value) {
 ; CHECK-NEXT: Live-in ir<1024> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<1024> = original trip-count
 ; CHECK: vector.body:
-; CHECK-NEXT:   EMIT-SCALAR vp<[[IV:%.+]]> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
+; CHECK-NEXT:   EMIT-SCALAR vp<[[IV:%.+]]> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body.interim ]
 ; CHECK-NEXT:   EMIT vp<[[REMAINDER0:%.+]]> = sub ir<1024>, vp<[[IV]]>
 ; CHECK-NEXT:   EMIT vp<[[COND:%.+]]> = icmp ule ir<4>, vp<[[REMAINDER0]]>
 ; CHECK-NEXT:   EMIT vp<[[REMAINDER:%.+]]> = select vp<[[COND]]>, ir<4>, vp<[[REMAINDER0]]>
@@ -17,14 +17,25 @@ define i64 @find_with_liveout(ptr %first, i8 %value) {
 ; CHECK-NEXT:   EMIT-SCALAR vp<[[FAULTINGLANE64:%.+]]> = zext vp<[[FAULTINGLANE]]> to i64
 ; CHECK-NEXT:   EMIT vp<[[ALM:%.+]]> = active lane mask ir<0>, vp<[[FAULTINGLANE64]]>, ir<1>
 ; CHECK-NEXT:   EMIT vp<[[DATA:%.+]]> = extract-vector-value vp<[[STRUCT]]>, ir<0>
-; CHECK-NEXT:   WIDEN ir<%cmp1> = icmp eq vp<[[DATA]]>, vp<[[VALUE:%.+]]>
+; CHECK-NEXT:   WIDEN ir<[[EEMASK:%.+]]> = icmp eq vp<[[DATA]]>, vp<[[VALUE:%.+]]>
 ; CHECK-NEXT:   EMIT vp<%index.next> = add nuw vp<[[IV]]>, vp<[[FAULTINGLANE64]]>
-; CHECK-NEXT:   EMIT vp<[[ALM1:%.+]]> = logical-and vp<[[ALM]]>, ir<%cmp1>
+; CHECK-NEXT:   EMIT vp<[[ALM1:%.+]]> = logical-and vp<[[ALM]]>, ir<[[EEMASK]]>
 ; CHECK-NEXT:   EMIT vp<[[EARLYEXIT:%.+]]> = any-of vp<[[ALM1]]>
 ; CHECK-NEXT:   EMIT vp<[[MAINEXIT:%.+]]> = icmp eq vp<%index.next>, ir<1024>
-; CHECK-NEXT:   EMIT vp<[[EXIT:%.+]]> = or vp<[[EARLYEXIT]]>, vp<[[MAINEXIT]]>
-; CHECK-NEXT:   EMIT branch-on-cond vp<[[EXIT]]>
-; CHECK-NEXT: Successor(s): middle.split, vector.body
+; CHECK-NEXT:   EMIT branch-on-cond vp<[[EARLYEXIT]]>
+; CHECK-NEXT: Successor(s): vector.early.exit, vector.body.interim
+; CHECK-EMPTY:
+; CHECK-NEXT:vector.body.interim:
+; CHECK-NEXT:  EMIT branch-on-cond vp<[[MAINEXIT]]>
+; CHECK-NEXT:Successor(s): middle.block, vector.body
+; CHECK-EMPTY:
+; CHECK-NEXT:middle.block:
+; CHECK-NEXT:Successor(s): ir-bb<exit>
+; CHECK-EMPTY:
+; CHECK-NEXT:vector.early.exit:
+; CHECK-NEXT:  EMIT vp<%16> = first-active-lane ir<[[EEMASK]]>
+; CHECK-NEXT:  EMIT vp<%17> = add vp<%index>, vp<%16>
+; CHECK-NEXT:Successor(s): ir-bb<exit>
 entry:
   br label %for.body
 
