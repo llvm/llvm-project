@@ -126,7 +126,7 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
     // signature, so we can quickly modify the instruction in-place
     Module *Mod = II.getModule();
     II.setCalledFunction(Intrinsic::getOrInsertDeclaration(
-      Mod, Intrinsic::amdgcn_readlane, II.getType()));
+        Mod, Intrinsic::amdgcn_readlane, II.getType()));
     return true;
   }
   default:
