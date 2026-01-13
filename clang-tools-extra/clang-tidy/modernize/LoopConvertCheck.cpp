@@ -424,7 +424,7 @@ getContainerFromBeginEndCall(const Expr *Init, bool IsBegin, bool *IsArrow,
     return {};
   if (!Call->Name.empty() && Call->Name != "c")
     return {};
-  return std::make_pair(Call->Container, Call->CallKind);
+  return {Call->Container, Call->CallKind};
 }
 
 /// Determines the container whose begin() and end() functions are called
@@ -734,7 +734,7 @@ void LoopConvertCheck::doConversion(
                           ? "&" + VarNameOrStructuredBinding
                           : VarNameOrStructuredBinding;
       }
-      TUInfo->getReplacedVars().insert(std::make_pair(Loop, IndexVar));
+      TUInfo->getReplacedVars().try_emplace(Loop, IndexVar);
       FixIts.push_back(FixItHint::CreateReplacement(
           CharSourceRange::getTokenRange(Range), ReplaceText));
     }
@@ -796,8 +796,7 @@ void LoopConvertCheck::doConversion(
       FixIts.push_back(*Insertion);
   }
   diag(Loop->getForLoc(), "use range-based for loop instead") << FixIts;
-  TUInfo->getGeneratedDecls().insert(
-      make_pair(Loop, VarNameOrStructuredBinding));
+  TUInfo->getGeneratedDecls().try_emplace(Loop, VarNameOrStructuredBinding);
 }
 
 /// Returns a string which refers to the container iterated over.
