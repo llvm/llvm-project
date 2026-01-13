@@ -17,6 +17,7 @@
 #include "ABIInfo.h"
 #include "CIRGenTypes.h"
 #include "clang/Basic/AddressSpaces.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 
 #include <memory>
 #include <utility>
@@ -33,6 +34,8 @@ bool isEmptyFieldForLayout(const ASTContext &context, const FieldDecl *fd);
 /// if the [[no_unique_address]] attribute would have made them empty.
 bool isEmptyRecordForLayout(const ASTContext &context, QualType t);
 
+class CIRGenFunction;
+
 class TargetCIRGenInfo {
   std::unique_ptr<ABIInfo> info;
 
@@ -48,6 +51,15 @@ public:
   virtual cir::TargetAddressSpaceAttr getCIRAllocaAddressSpace() const {
     return {};
   }
+  /// Perform address space cast of an expression of pointer type.
+  /// \param V is the value to be casted to another address space.
+  /// \param DestTy is the destination pointer type.
+  /// \param srcAS is theaddress space of \p V.
+  /// \param IsNonNull is the flag indicating \p V is known to be non null.
+  virtual mlir::Value performAddrSpaceCast(CIRGenFunction &cgf, mlir::Value v,
+                                           cir::TargetAddressSpaceAttr srcAddr,
+                                           mlir::Type destTy,
+                                           bool isNonNull = false) const;
 
   /// Determine whether a call to an unprototyped functions under
   /// the given calling convention should use the variadic

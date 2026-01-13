@@ -171,9 +171,9 @@ class LoongArchAsmParser : public MCTargetAsmParser {
   // Helper to emit pseudo instruction "li.w/d $rd, $imm".
   void emitLoadImm(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
 
-  // Helper to emit pseudo instruction "call36 sym" or "tail36 $rj, sym".
-  void emitFuncCall36(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
-                      bool IsTailCall);
+  // Helper to emit pseudo instruction "call{3x} sym" or "tail{3x} $rj, sym".
+  void emitFuncCall(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out, bool IsTailCall,
+                    bool IsCall36);
 
 public:
   enum LoongArchMatchResultTy {
@@ -456,6 +456,22 @@ public:
         VK == ELF::R_LARCH_TLS_LE64_LO20 ||
         VK == ELF::R_LARCH_TLS_DESC64_PC_LO20 ||
         VK == ELF::R_LARCH_TLS_DESC64_LO20;
+
+    return IsConstantImm
+               ? isInt<20>(Imm) && IsValidKind
+               : LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
+                     IsValidKind;
+  }
+
+  bool isSImm20pcaddu12i() const {
+    if (!isImm())
+      return false;
+
+    int64_t Imm;
+    LoongArchMCExpr::Specifier VK = LoongArchMCExpr::VK_None;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    bool IsValidKind =
+        VK == LoongArchMCExpr::VK_None || VK == ELF::R_LARCH_CALL30;
 
     return IsConstantImm
                ? isInt<20>(Imm) && IsValidKind
@@ -1465,8 +1481,19 @@ void LoongArchAsmParser::emitLoadImm(MCInst &Inst, SMLoc IDLoc,
   }
 }
 
-void LoongArchAsmParser::emitFuncCall36(MCInst &Inst, SMLoc IDLoc,
-                                        MCStreamer &Out, bool IsTailCall) {
+void LoongArchAsmParser::emitFuncCall(MCInst &Inst, SMLoc IDLoc,
+                                      MCStreamer &Out, bool IsTailCall,
+                                      bool IsCall36) {
+  // call30 sym
+  // expands to:
+  //   pcaddu12i $ra, %call30(sym)
+  //   jirl      $ra, $ra, 0
+  //
+  // tail30 $rj, sym
+  // expands to:
+  //   pcaddu12i $rj, %call30(sym)
+  //   jirl      $r0, $rj, 0
+  //
   // call36 sym
   // expands to:
   //   pcaddu18i $ra, %call36(sym)
@@ -1478,14 +1505,15 @@ void LoongArchAsmParser::emitFuncCall36(MCInst &Inst, SMLoc IDLoc,
   //   jirl      $r0, $rj, 0
   MCRegister ScratchReg =
       IsTailCall ? Inst.getOperand(0).getReg() : MCRegister(LoongArch::R1);
+  unsigned PCAI = IsCall36 ? LoongArch::PCADDU18I : LoongArch::PCADDU12I;
+  unsigned Rel = IsCall36 ? ELF::R_LARCH_CALL36 : ELF::R_LARCH_CALL30;
   const MCExpr *Sym =
       IsTailCall ? Inst.getOperand(1).getExpr() : Inst.getOperand(0).getExpr();
-  const LoongArchMCExpr *LE = LoongArchMCExpr::create(
-      Sym, ELF::R_LARCH_CALL36, getContext(), /*RelaxHint=*/true);
+  const LoongArchMCExpr *LE =
+      LoongArchMCExpr::create(Sym, Rel, getContext(), /*RelaxHint=*/true);
 
-  Out.emitInstruction(
-      MCInstBuilder(LoongArch::PCADDU18I).addReg(ScratchReg).addExpr(LE),
-      getSTI());
+  Out.emitInstruction(MCInstBuilder(PCAI).addReg(ScratchReg).addExpr(LE),
+                      getSTI());
   Out.emitInstruction(
       MCInstBuilder(LoongArch::JIRL)
           .addReg(IsTailCall ? MCRegister(LoongArch::R0) : ScratchReg)
@@ -1548,11 +1576,17 @@ bool LoongArchAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   case LoongArch::PseudoLI_D:
     emitLoadImm(Inst, IDLoc, Out);
     return false;
+  case LoongArch::PseudoCALL30:
+    emitFuncCall(Inst, IDLoc, Out, /*IsTailCall=*/false, /*IsCall36=*/false);
+    return false;
   case LoongArch::PseudoCALL36:
-    emitFuncCall36(Inst, IDLoc, Out, /*IsTailCall=*/false);
+    emitFuncCall(Inst, IDLoc, Out, /*IsTailCall=*/false, /*IsCall36=*/true);
+    return false;
+  case LoongArch::PseudoTAIL30:
+    emitFuncCall(Inst, IDLoc, Out, /*IsTailCall=*/true, /*IsCall36=*/false);
     return false;
   case LoongArch::PseudoTAIL36:
-    emitFuncCall36(Inst, IDLoc, Out, /*IsTailCall=*/true);
+    emitFuncCall(Inst, IDLoc, Out, /*IsTailCall=*/true, /*IsCall36=*/true);
     return false;
   }
   Out.emitInstruction(Inst, getSTI());
@@ -1848,6 +1882,12 @@ bool LoongArchAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         Operands, ErrorInfo, /*Lower=*/-(1 << 19),
         /*Upper=*/(1 << 19) - 1,
         "operand must be a symbol with modifier (e.g. %pc_hi20) or an integer "
+        "in the range");
+  case Match_InvalidSImm20pcaddu12i:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, /*Lower=*/-(1 << 19),
+        /*Upper=*/(1 << 19) - 1,
+        "operand must be a symbol with modifier (e.g. %call30) or an integer "
         "in the range");
   case Match_InvalidSImm20pcaddu18i:
     return generateImmOutOfRangeError(

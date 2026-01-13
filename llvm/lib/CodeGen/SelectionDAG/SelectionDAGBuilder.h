@@ -195,6 +195,11 @@ private:
   /// Update root to include all chains from the Pending list.
   SDValue updateRoot(SmallVectorImpl<SDValue> &Pending);
 
+  /// Given a node representing a floating-point operation and its specified
+  /// exception behavior, this either updates the root or stores the node in
+  /// a list to be added to chains latter.
+  void pushFPOpOutChain(SDValue Result, fp::ExceptionBehavior EB);
+
   /// A unique monotonically increasing number used to order the SDNodes we
   /// create.
   unsigned SDNodeOrder;
@@ -227,6 +232,7 @@ public:
   BatchAAResults *BatchAA = nullptr;
   AssumptionCache *AC = nullptr;
   const TargetLibraryInfo *LibInfo = nullptr;
+  const TargetTransformInfo *TTI = nullptr;
 
   class SDAGSwitchLowering : public SwitchCG::SwitchLowering {
   public:
@@ -280,7 +286,7 @@ public:
         FuncInfo(funcinfo), SwiftError(swifterror) {}
 
   void init(GCFunctionInfo *gfi, BatchAAResults *BatchAA, AssumptionCache *AC,
-            const TargetLibraryInfo *li);
+            const TargetLibraryInfo *li, const TargetTransformInfo &TTI);
 
   /// Clear out the current SelectionDAG and the associated state and prepare
   /// this SelectionDAGBuilder object to be used for a new block. This doesn't
@@ -299,6 +305,13 @@ public:
   /// PendingLoad items. This must be done before emitting a store or any other
   /// memory node that may need to be ordered after any prior load instructions.
   SDValue getMemoryRoot();
+
+  /// Return the current virtual root of the Selection DAG, flushing
+  /// PendingConstrainedFP or PendingConstrainedFPStrict items if the new
+  /// exception behavior (specified by \p EB) differs from that of the pending
+  /// instructions. This must be done before emitting constrained FP operation
+  /// call.
+  SDValue getFPOperationRoot(fp::ExceptionBehavior EB);
 
   /// Similar to getMemoryRoot, but also flushes PendingConstrainedFP(Strict)
   /// items. This must be done before emitting any call other any other node
@@ -416,6 +429,10 @@ public:
   // floor power of two.
   SDValue lowerRangeToAssertZExt(SelectionDAG &DAG, const Instruction &I,
                                  SDValue Op);
+
+  // Lower nofpclass attributes to AssertNoFPClass
+  SDValue lowerNoFPClassToAssertNoFPClass(SelectionDAG &DAG,
+                                          const Instruction &I, SDValue Op);
 
   void populateCallLoweringInfo(TargetLowering::CallLoweringInfo &CLI,
                                 const CallBase *Call, unsigned ArgIdx,
@@ -539,9 +556,11 @@ public:
 private:
   // These all get lowered before this pass.
   void visitInvoke(const InvokeInst &I);
-  void visitCallBr(const CallBrInst &I);
   void visitCallBrLandingPad(const CallInst &I);
   void visitResume(const ResumeInst &I);
+
+  void visitCallBr(const CallBrInst &I);
+  void visitCallBrIntrinsic(const CallBrInst &I);
 
   void visitUnary(const User &I, unsigned Opcode);
   void visitFNeg(const User &I) { visitUnary(I, ISD::FNEG); }
@@ -715,6 +734,17 @@ private:
                        MCSymbol *&BeginLabel);
   SDValue lowerEndEH(SDValue Chain, const InvokeInst *II,
                      const BasicBlock *EHPadBB, MCSymbol *BeginLabel);
+
+  std::pair<bool, bool> getTargetIntrinsicCallProperties(const CallBase &I);
+  SmallVector<SDValue, 8> getTargetIntrinsicOperands(
+      const CallBase &I, bool HasChain, bool OnlyLoad,
+      TargetLowering::IntrinsicInfo *TgtMemIntrinsicInfo = nullptr);
+  SDVTList getTargetIntrinsicVTList(const CallBase &I, bool HasChain);
+  SDValue getTargetNonMemIntrinsicNode(const Type &IntrinsicVT, bool HasChain,
+                                       ArrayRef<SDValue> Ops,
+                                       const SDVTList &VTs);
+  SDValue handleTargetIntrinsicRet(const CallBase &I, bool HasChain,
+                                   bool OnlyLoad, SDValue Result);
 };
 
 /// This struct represents the registers (physical or virtual)

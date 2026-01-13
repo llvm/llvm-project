@@ -7,10 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Parser/parse-tree.h"
+
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/tools.h"
 #include "flang/Parser/user-state.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -19,7 +22,8 @@ namespace Fortran::parser {
 
 // R867
 ImportStmt::ImportStmt(common::ImportKind &&k, std::list<Name> &&n)
-    : kind{k}, names(std::move(n)) {
+    : t(k, std::move(n)) {
+  const auto &[kind, names]{t};
   CHECK(kind == common::ImportKind::Default ||
       kind == common::ImportKind::Only || names.empty());
 }
@@ -27,8 +31,8 @@ ImportStmt::ImportStmt(common::ImportKind &&k, std::list<Name> &&n)
 // R873
 CommonStmt::CommonStmt(std::optional<Name> &&name,
     std::list<CommonBlockObject> &&objects, std::list<Block> &&others) {
-  blocks.emplace_front(std::move(name), std::move(objects));
-  blocks.splice(blocks.end(), std::move(others));
+  v.emplace_front(std::move(name), std::move(objects));
+  v.splice(v.end(), std::move(others));
 }
 
 // R901 designator
@@ -185,7 +189,7 @@ StructureConstructor ArrayElement::ConvertToStructureConstructor(
   std::list<ComponentSpec> components;
   for (auto &subscript : subscripts) {
     components.emplace_back(std::optional<Keyword>{},
-        ComponentDataSource{std::move(*Unwrap<Expr>(subscript))});
+        ComponentDataSource{std::move(UnwrapRef<Expr>(subscript))});
   }
   DerivedTypeSpec spec{std::move(name), std::list<TypeParamSpec>{}};
   spec.derivedTypeSpec = &derived;
@@ -429,5 +433,64 @@ const OmpClauseList &OmpDirectiveSpecification::Clauses() const {
     return *clauses;
   }
   return empty;
+}
+
+const DoConstruct *OpenMPLoopConstruct::GetNestedLoop() const {
+  auto getFromBlock{[](const Block &body, auto self) -> const DoConstruct * {
+    for (auto &stmt : body) {
+      if (auto *block{Unwrap<BlockConstruct>(&stmt)}) {
+        return self(std::get<Block>(block->t), self);
+      }
+      if (auto *loop{Unwrap<DoConstruct>(&stmt)}) {
+        return loop;
+      }
+    }
+    return nullptr;
+  }};
+
+  return getFromBlock(std::get<Block>(t), getFromBlock);
+}
+
+const OpenMPLoopConstruct *OpenMPLoopConstruct::GetNestedConstruct() const {
+  auto getFromBlock{
+      [](const Block &body, auto self) -> const OpenMPLoopConstruct * {
+        for (auto &stmt : body) {
+          if (auto *block{Unwrap<BlockConstruct>(&stmt)}) {
+            return self(std::get<Block>(block->t), self);
+          }
+          if (auto *omp{Unwrap<OpenMPLoopConstruct>(&stmt)}) {
+            return omp;
+          }
+        }
+        return nullptr;
+      }};
+
+  return getFromBlock(std::get<Block>(t), getFromBlock);
+}
+
+static bool InitCharBlocksFromStrings(llvm::MutableArrayRef<CharBlock> blocks,
+    llvm::ArrayRef<std::string> strings) {
+  for (auto [i, n] : llvm::enumerate(strings)) {
+    blocks[i] = CharBlock(n);
+  }
+  return true;
+}
+
+// The names should have static storage duration. Keep these names
+// in a sigle place.
+llvm::ArrayRef<CharBlock> OmpCombinerExpression::Variables() {
+  static std::string names[]{"omp_in", "omp_out"};
+  static CharBlock vars[std::size(names)];
+
+  [[maybe_unused]] static bool init = InitCharBlocksFromStrings(vars, names);
+  return vars;
+}
+
+llvm::ArrayRef<CharBlock> OmpInitializerExpression::Variables() {
+  static std::string names[]{"omp_orig", "omp_priv"};
+  static CharBlock vars[std::size(names)];
+
+  [[maybe_unused]] static bool init = InitCharBlocksFromStrings(vars, names);
+  return vars;
 }
 } // namespace Fortran::parser

@@ -246,8 +246,19 @@ def RemoveDeadValues : Pass<"remove-dead-values"> {
     do = square_and_double_of_y(5)
     print(do)
     ```
+
+    Note: If `canonicalize` is set to "false", this pass does not remove any
+    block arguments / op results from ops that implement the
+    RegionBranchOpInterface. Instead, it just sets dead operands to
+    "ub.poison".
   }];
+
+  let options = [
+    Option<"canonicalize", "canonicalize", "bool", /*default=*/"true",
+           "Canonicalize region branch ops">,
+  ];
   let constructor = "mlir::createRemoveDeadValuesPass()";
+  let dependentDialects = ["ub::UBDialect"];
 }
 
 def PrintIRPass : Pass<"print-ir"> {
@@ -270,7 +281,14 @@ def GenerateRuntimeVerification : Pass<"generate-runtime-verification"> {
     passes that are suspected to introduce faulty IR.
   }];
   let constructor = "mlir::createGenerateRuntimeVerificationPass()";
+  let options = [
+    Option<"verboseLevel", "verbose-level", "unsigned", /*default=*/"1",
+           "Verbosity level for runtime verification messages: "
+           "0 = Minimum (only source location), "
+           "1 = Detailed (include full operation details, names, types, shapes, etc.)">
+  ];
 }
+
 
 def Inliner : Pass<"inline"> {
   let summary = "Inline function calls";

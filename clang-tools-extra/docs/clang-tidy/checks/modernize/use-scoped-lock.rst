@@ -93,9 +93,9 @@ Options
 
     template <typename T>
     using Lock = std::lock_guard<T>; // warning: use 'std::scoped_lock' instead of 'std::lock_guard'
-    
+
     using LockMutex = std::lock_guard<std::mutex>; // warning: use 'std::scoped_lock' instead of 'std::lock_guard'
-    
+
     typedef std::lock_guard<std::mutex> LockDef; // warning: use 'std::scoped_lock' instead of 'std::lock_guard'
 
     using std::lock_guard; // warning: use 'std::scoped_lock' instead of 'std::lock_guard'

@@ -127,7 +127,7 @@ MVT X86TargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
   if (isTypeLegal(MVT::f16)) {
     if (VT.isVector() && VT.getVectorElementType() == MVT::bf16)
       return getRegisterTypeForCallingConv(
-          Context, CC, VT.changeVectorElementType(MVT::f16));
+          Context, CC, VT.changeVectorElementType(Context, MVT::f16));
 
     if (VT == MVT::bf16)
       return MVT::f16;
@@ -166,8 +166,8 @@ unsigned X86TargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
 
   if (VT.isVector() && VT.getVectorElementType() == MVT::bf16 &&
       isTypeLegal(MVT::f16))
-    return getNumRegistersForCallingConv(Context, CC,
-                                         VT.changeVectorElementType(MVT::f16));
+    return getNumRegistersForCallingConv(
+        Context, CC, VT.changeVectorElementType(Context, MVT::f16));
 
   return TargetLowering::getNumRegistersForCallingConv(Context, CC, VT);
 }
@@ -199,7 +199,7 @@ unsigned X86TargetLowering::getVectorTypeBreakdownForCallingConv(
   // Split vNbf16 vectors according to vNf16.
   if (VT.isVector() && VT.getVectorElementType() == MVT::bf16 &&
       isTypeLegal(MVT::f16))
-    VT = VT.changeVectorElementType(MVT::f16);
+    VT = VT.changeVectorElementType(Context, MVT::f16);
 
   return TargetLowering::getVectorTypeBreakdownForCallingConv(Context, CC, VT, IntermediateVT,
                                               NumIntermediates, RegisterVT);
@@ -546,14 +546,14 @@ unsigned X86TargetLowering::getAddressSpace() const {
 }
 
 static bool hasStackGuardSlotTLS(const Triple &TargetTriple) {
-  return TargetTriple.isOSGlibc() || TargetTriple.isOSFuchsia() ||
-         (TargetTriple.isAndroid() && !TargetTriple.isAndroidVersionLT(17));
+  return TargetTriple.isOSGlibc() || TargetTriple.isMusl() ||
+         TargetTriple.isOSFuchsia() || TargetTriple.isAndroid();
 }
 
 static Constant* SegmentOffset(IRBuilderBase &IRB,
                                int Offset, unsigned AddressSpace) {
   return ConstantExpr::getIntToPtr(
-      ConstantInt::get(Type::getInt32Ty(IRB.getContext()), Offset),
+      ConstantInt::getSigned(Type::getInt32Ty(IRB.getContext()), Offset),
       IRB.getPtrTy(AddressSpace));
 }
 
@@ -606,16 +606,24 @@ Value *X86TargetLowering::getIRStackGuard(IRBuilderBase &IRB) const {
 
 void X86TargetLowering::insertSSPDeclarations(Module &M) const {
   // MSVC CRT provides functionalities for stack protection.
-  if (Subtarget.getTargetTriple().isWindowsMSVCEnvironment() ||
-      Subtarget.getTargetTriple().isWindowsItaniumEnvironment()) {
+  RTLIB::LibcallImpl SecurityCheckCookieLibcall =
+      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
+
+  RTLIB::LibcallImpl SecurityCookieVar =
+      getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
+  if (SecurityCheckCookieLibcall != RTLIB::Unsupported &&
+      SecurityCookieVar != RTLIB::Unsupported) {
+    // MSVC CRT provides functionalities for stack protection.
     // MSVC CRT has a global variable holding security cookie.
-    M.getOrInsertGlobal("__security_cookie",
+    M.getOrInsertGlobal(getLibcallImplName(SecurityCookieVar),
                         PointerType::getUnqual(M.getContext()));
 
     // MSVC CRT has a function to validate security cookie.
-    FunctionCallee SecurityCheckCookie = M.getOrInsertFunction(
-        "__security_check_cookie", Type::getVoidTy(M.getContext()),
-        PointerType::getUnqual(M.getContext()));
+    FunctionCallee SecurityCheckCookie =
+        M.getOrInsertFunction(getLibcallImplName(SecurityCheckCookieLibcall),
+                              Type::getVoidTy(M.getContext()),
+                              PointerType::getUnqual(M.getContext()));
+
     if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee())) {
       F->setCallingConv(CallingConv::X86_FastCall);
       F->addParamAttr(0, Attribute::AttrKind::InReg);
@@ -630,15 +638,6 @@ void X86TargetLowering::insertSSPDeclarations(Module &M) const {
       hasStackGuardSlotTLS(Subtarget.getTargetTriple()))
     return;
   TargetLowering::insertSSPDeclarations(M);
-}
-
-Function *X86TargetLowering::getSSPStackGuardCheck(const Module &M) const {
-  // MSVC CRT has a function to validate security cookie.
-  if (Subtarget.getTargetTriple().isWindowsMSVCEnvironment() ||
-      Subtarget.getTargetTriple().isWindowsItaniumEnvironment()) {
-    return M.getFunction("__security_check_cookie");
-  }
-  return TargetLowering::getSSPStackGuardCheck(M);
 }
 
 Value *

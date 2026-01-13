@@ -1,8 +1,19 @@
 add_mlir_unittest(MLIROpenACCTests
   OpenACCOpsTest.cpp
+  OpenACCOpsInterfacesTest.cpp
+  OpenACCUtilsTest.cpp
+  OpenACCUtilsTilingTest.cpp
+  OpenACCUtilsLoopTest.cpp
 )
 mlir_target_link_libraries(MLIROpenACCTests
   PRIVATE
   MLIRIR
+  MLIRAffineDialect
+  MLIRFuncDialect
+  MLIRMemRefDialect
+  MLIRArithDialect
   MLIROpenACCDialect
+  MLIROpenACCUtils
+  MLIRSCFDialect
+  MLIRControlFlowDialect
 )

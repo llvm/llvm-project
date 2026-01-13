@@ -15,8 +15,8 @@ define void @deref_assumption_in_header_constant_trip_count(ptr noalias noundef 
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_LOAD_CONTINUE2]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[A]], <2 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 0
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP4]], i64 4), "dereferenceable"(ptr [[TMP4]], i64 4) ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 1
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP4]], i64 4), "dereferenceable"(ptr [[TMP4]], i64 4) ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP5]], i64 4), "dereferenceable"(ptr [[TMP5]], i64 4) ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP6]], align 4
@@ -43,12 +43,13 @@ define void @deref_assumption_in_header_constant_trip_count(ptr noalias noundef 
 ; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[TMP0]]
 ; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP30]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP32:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP32]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop.header
@@ -102,8 +103,9 @@ define void @align_deref_assumption_in_header_constant_trip_count_loop_invariant
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   call void @llvm.assume(i1 true) [ "align"(ptr %a, i64 4), "dereferenceable"(ptr %a, i64 4) ]
@@ -144,8 +146,8 @@ define void @deref_assumption_too_small_in_header_constant_trip_count(ptr noalia
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_LOAD_CONTINUE2]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[A]], <2 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 0
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP4]], i64 4), "dereferenceable"(ptr [[TMP4]], i64 2) ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 1
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP4]], i64 4), "dereferenceable"(ptr [[TMP4]], i64 2) ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP5]], i64 4), "dereferenceable"(ptr [[TMP5]], i64 2) ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP6]], align 4
@@ -172,12 +174,13 @@ define void @deref_assumption_too_small_in_header_constant_trip_count(ptr noalia
 ; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[TMP0]]
 ; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP30]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP32:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP32]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop.header
@@ -219,8 +222,8 @@ define void @deref_assumption_in_header_constant_trip_count_align_1(ptr noalias 
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_LOAD_CONTINUE2]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[A]], <2 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 0
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP2]], i64 4) ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 1
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP2]], i64 4) ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP3]], i64 4) ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP4]], align 4
@@ -247,12 +250,13 @@ define void @deref_assumption_in_header_constant_trip_count_align_1(ptr noalias 
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[TMP0]]
 ; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP18]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop.header
@@ -294,8 +298,8 @@ define void @deref_assumption_in_header_constant_trip_count_align_via_arg_attrib
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_LOAD_CONTINUE2]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[A]], <2 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 0
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP2]], i64 4) ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 1
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP2]], i64 4) ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP3]], i64 4) ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP4]], align 4
@@ -322,12 +326,13 @@ define void @deref_assumption_in_header_constant_trip_count_align_via_arg_attrib
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[TMP0]]
 ; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP18]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop.header
@@ -369,8 +374,8 @@ define void @deref_assumption_in_header_constant_trip_count_align_not_known(ptr 
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_LOAD_CONTINUE2]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[A]], <2 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 0
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP2]], i64 4) ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 1
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP2]], i64 4) ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP3]], i64 4) ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP4]], align 4
@@ -397,12 +402,13 @@ define void @deref_assumption_in_header_constant_trip_count_align_not_known(ptr 
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[TMP0]]
 ; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP18]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop.header
@@ -468,12 +474,13 @@ define void @deref_assumption_in_then_constant_trip_count(ptr noalias noundef %a
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[TMP0]]
 ; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP26]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP28:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP28]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop.header
@@ -514,6 +521,8 @@ define void @deref_assumption_in_latch_constant_trip_count(ptr noalias noundef %
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE2:.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_LOAD_CONTINUE2]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[A]], <2 x i64> [[VEC_IND]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt <2 x i32> [[WIDE_LOAD]], zeroinitializer
@@ -536,19 +545,18 @@ define void @deref_assumption_in_latch_constant_trip_count(ptr noalias noundef %
 ; CHECK:       [[PRED_LOAD_CONTINUE2]]:
 ; CHECK-NEXT:    [[TMP12:%.*]] = phi <2 x i32> [ [[TMP10]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP14]], %[[PRED_LOAD_IF1]] ]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP5]], <2 x i32> [[TMP12]], <2 x i32> [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 0
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP20]], i64 4), "dereferenceable"(ptr [[TMP20]], i64 4) ]
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 1
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP19]], i64 4), "dereferenceable"(ptr [[TMP19]], i64 4) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP3]], i64 4), "dereferenceable"(ptr [[TMP3]], i64 4) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP4]], i64 4), "dereferenceable"(ptr [[TMP4]], i64 4) ]
 ; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[TMP0]]
 ; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP30]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP32:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP32]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop.header
@@ -593,8 +601,8 @@ define void @deref_assumption_in_header_variable_trip_count(ptr noalias noundef 
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_LOAD_CONTINUE2]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[A]], <2 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 0
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP4]], i64 4), "dereferenceable"(ptr [[TMP4]], i64 4) ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 1
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP4]], i64 4), "dereferenceable"(ptr [[TMP4]], i64 4) ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP5]], i64 4), "dereferenceable"(ptr [[TMP5]], i64 4) ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP6]], align 4
@@ -621,7 +629,7 @@ define void @deref_assumption_in_header_variable_trip_count(ptr noalias noundef 
 ; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[TMP0]]
 ; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP30]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP32:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP32]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -679,8 +687,9 @@ define void @deref_assumption_in_preheader_constant_trip_count_align_1(ptr noali
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %a, i64 4000) ]
@@ -750,8 +759,9 @@ define void @deref_assumption_too_small_in_preheader_constant_trip_count_align_1
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %a, i64 3999) ]
@@ -803,8 +813,9 @@ define void @align_and_deref_assumption_in_preheader_constant_trip_count_align_4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   call void @llvm.assume(i1 true) [ "align"(ptr %a, i64 4), "dereferenceable"(ptr %a, i64 4000) ]
@@ -857,8 +868,9 @@ define void @deref_assumption_in_preheader_constant_trip_count_align_4_known_via
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %a, i64 4000) ]
@@ -928,8 +940,9 @@ define void @deref_assumption_in_preheader_constant_trip_count_align_4_not_known
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %a, i64 4000) ]
@@ -999,8 +1012,9 @@ define void @deref_assumption_too_small_in_preheader_constant_trip_count_align_4
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %a, i64 3999) ]
@@ -1068,8 +1082,9 @@ define void @may_free_align_deref_assumption_in_header_constant_trip_count_loop_
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   call void @llvm.assume(i1 true) [ "align"(ptr %a, i64 4), "dereferenceable"(ptr %a, i64 4) ]
@@ -1138,8 +1153,9 @@ define void @may_free_local_ptr_align_deref_assumption_in_header_constant_trip_c
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   %a = call ptr @get_ptr()
@@ -1182,39 +1198,22 @@ define void @deref_assumption_in_header_constant_trip_count_nofree_via_context(p
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE2:.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <2 x i32> [[WIDE_LOAD1]], zeroinitializer
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
-; CHECK-NEXT:    br i1 [[TMP13]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
-; CHECK:       [[PRED_LOAD_IF]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> poison, i32 [[TMP5]], i32 0
-; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
-; CHECK:       [[PRED_LOAD_CONTINUE]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = phi <2 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP6]], %[[PRED_LOAD_IF]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP2]], i32 1
-; CHECK-NEXT:    br i1 [[TMP8]], label %[[PRED_LOAD_IF1:.*]], label %[[PRED_LOAD_CONTINUE2]]
-; CHECK:       [[PRED_LOAD_IF1]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP10]], align 4
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x i32> [[TMP7]], i32 [[TMP11]], i32 1
-; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE2]]
-; CHECK:       [[PRED_LOAD_CONTINUE2]]:
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = phi <2 x i32> [ [[TMP7]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP12]], %[[PRED_LOAD_IF1]] ]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP2]], <2 x i32> [[WIDE_LOAD]], <2 x i32> [[WIDE_LOAD1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sge <2 x i32> [[WIDE_LOAD1]], zeroinitializer
+; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i32>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP2]], <2 x i32> [[WIDE_LOAD1]], <2 x i32> [[WIDE_LOAD2]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP14]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   call void @llvm.assume(i1 true) [ "align"(ptr %a, i64 4), "dereferenceable"(ptr %a, i64 4000) ]
@@ -1285,8 +1284,9 @@ define void @deref_assumption_in_header_constant_trip_count_may_free(ptr noalias
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   call void @llvm.assume(i1 true) [ "align"(ptr %a, i64 4), "dereferenceable"(ptr %a, i64 4000) ]
@@ -1357,8 +1357,9 @@ define void @deref_assumption_in_header_constant_trip_count_nofree_via_context_b
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   call void @llvm.assume(i1 true) [ "align"(ptr %a, i64 4), "dereferenceable"(ptr %a, i64 4000) ]
@@ -1436,8 +1437,9 @@ define void @deref_assumption_in_header_constant_trip_count_multiple_loop_predec
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   call void @llvm.assume(i1 true) [ "align"(ptr %a, i64 4), "dereferenceable"(ptr %a, i64 4000) ]

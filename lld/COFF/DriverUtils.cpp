@@ -440,7 +440,7 @@ std::string LinkerDriver::createDefaultXml() {
      << "<assembly xmlns=\"urn:schemas-microsoft-com:asm.v1\"\n"
      << "          manifestVersion=\"1.0\">\n";
   if (ctx.config.manifestUAC) {
-    os << "  <trustInfo>\n"
+    os << "  <trustInfo xmlns=\"urn:schemas-microsoft-com:asm.v3\">\n"
        << "    <security>\n"
        << "      <requestedPrivileges>\n"
        << "         <requestedExecutionLevel level=" << ctx.config.manifestLevel
@@ -861,6 +861,9 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> argv) {
       Warn(ctx) << "ignoring unknown argument '" << arg->getAsString(args)
                 << "', did you mean '" << nearest << "'";
   }
+
+  if (args.hasArg(OPT_link))
+    Warn(ctx) << "ignoring /link, did you pass it multiple times?";
 
   if (args.hasArg(OPT_lib))
     Warn(ctx) << "ignoring /lib since it's not the first argument";

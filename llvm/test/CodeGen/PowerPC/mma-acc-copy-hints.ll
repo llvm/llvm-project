@@ -5,6 +5,12 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names \
 ; RUN:   -ppc-vsr-nums-as-vr < %s | FileCheck %s --check-prefix=CHECK-BE
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
+; RUN:   -mcpu=future -ppc-asm-full-reg-names \
+; RUN:   -ppc-vsr-nums-as-vr < %s | FileCheck %s --check-prefix=CHECK-LE-WACC
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
+; RUN:   -mcpu=future -ppc-asm-full-reg-names \
+; RUN:   -ppc-vsr-nums-as-vr < %s | FileCheck %s --check-prefix=CHECK-BE-WACC
 
 define void @testMultiply(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b, ptr nocapture noundef writeonly %c) local_unnamed_addr #0 {
 ; CHECK-LABEL: testMultiply:
@@ -91,6 +97,91 @@ define void @testMultiply(ptr nocapture noundef readonly %a, ptr nocapture nound
 ; CHECK-BE-NEXT:    ld r30, -16(r1)
 ; CHECK-BE-NEXT:    mtlr r0
 ; CHECK-BE-NEXT:    blr
+;
+; CHECK-LE-WACC-LABEL: testMultiply:
+; CHECK-LE-WACC:       # %bb.0: # %entry
+; CHECK-LE-WACC-NEXT:    mflr r0
+; CHECK-LE-WACC-NEXT:    std r30, -16(r1)
+; CHECK-LE-WACC-NEXT:    std r0, 16(r1)
+; CHECK-LE-WACC-NEXT:    clrldi r0, r1, 59
+; CHECK-LE-WACC-NEXT:    subfic r0, r0, -128
+; CHECK-LE-WACC-NEXT:    mr r30, r1
+; CHECK-LE-WACC-NEXT:    stdux r1, r1, r0
+; CHECK-LE-WACC-NEXT:    stxv v30, -64(r30) # 16-byte Folded Spill
+; CHECK-LE-WACC-NEXT:    stxv v31, -48(r30) # 16-byte Folded Spill
+; CHECK-LE-WACC-NEXT:    lxv v31, 0(r3)
+; CHECK-LE-WACC-NEXT:    lxv v30, 0(r4)
+; CHECK-LE-WACC-NEXT:    addi r3, r1, 32
+; CHECK-LE-WACC-NEXT:    std r29, -24(r30) # 8-byte Folded Spill
+; CHECK-LE-WACC-NEXT:    vmr v2, v31
+; CHECK-LE-WACC-NEXT:    vmr v3, v30
+; CHECK-LE-WACC-NEXT:    mr r29, r5
+; CHECK-LE-WACC-NEXT:    bl _Z15buildVectorPairPu13__vector_pairDv16_hS0_@notoc
+; CHECK-LE-WACC-NEXT:    dmxxsetaccz wacc0
+; CHECK-LE-WACC-NEXT:    xvf32gerpp wacc0, v31, v30
+; CHECK-LE-WACC-NEXT:    lxv vs0, 48(r1)
+; CHECK-LE-WACC-NEXT:    lxv vs1, 32(r1)
+; CHECK-LE-WACC-NEXT:    xvf32gerpp wacc0, vs1, vs0
+; CHECK-LE-WACC-NEXT:    dmxxextfdmr512 vsp36, vsp34, wacc0, 0
+; CHECK-LE-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp36, vsp34, 0
+; CHECK-LE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-LE-WACC-NEXT:    stxv v5, 0(r29)
+; CHECK-LE-WACC-NEXT:    pstxv v4, 8(r29), 0
+; CHECK-LE-WACC-NEXT:    stxv v3, 16(r29)
+; CHECK-LE-WACC-NEXT:    pstxv v2, 24(r29), 0
+; CHECK-LE-WACC-NEXT:    lxv v31, -48(r30) # 16-byte Folded Reload
+; CHECK-LE-WACC-NEXT:    lxv v30, -64(r30) # 16-byte Folded Reload
+; CHECK-LE-WACC-NEXT:    ld r29, -24(r30) # 8-byte Folded Reload
+; CHECK-LE-WACC-NEXT:    mr r1, r30
+; CHECK-LE-WACC-NEXT:    ld r0, 16(r1)
+; CHECK-LE-WACC-NEXT:    ld r30, -16(r1)
+; CHECK-LE-WACC-NEXT:    mtlr r0
+; CHECK-LE-WACC-NEXT:    blr
+;
+; CHECK-BE-WACC-LABEL: testMultiply:
+; CHECK-BE-WACC:       # %bb.0: # %entry
+; CHECK-BE-WACC-NEXT:    mflr r0
+; CHECK-BE-WACC-NEXT:    std r30, -16(r1)
+; CHECK-BE-WACC-NEXT:    std r0, 16(r1)
+; CHECK-BE-WACC-NEXT:    clrldi r0, r1, 59
+; CHECK-BE-WACC-NEXT:    subfic r0, r0, -224
+; CHECK-BE-WACC-NEXT:    mr r30, r1
+; CHECK-BE-WACC-NEXT:    stdux r1, r1, r0
+; CHECK-BE-WACC-NEXT:    stxv v30, -64(r30) # 16-byte Folded Spill
+; CHECK-BE-WACC-NEXT:    stxv v31, -48(r30) # 16-byte Folded Spill
+; CHECK-BE-WACC-NEXT:    lxv v31, 0(r3)
+; CHECK-BE-WACC-NEXT:    lxv v30, 0(r4)
+; CHECK-BE-WACC-NEXT:    addi r3, r1, 128
+; CHECK-BE-WACC-NEXT:    std r29, -24(r30) # 8-byte Folded Spill
+; CHECK-BE-WACC-NEXT:    vmr v2, v31
+; CHECK-BE-WACC-NEXT:    vmr v3, v30
+; CHECK-BE-WACC-NEXT:    mr r29, r5
+; CHECK-BE-WACC-NEXT:    bl _Z15buildVectorPairPu13__vector_pairDv16_hS0_
+; CHECK-BE-WACC-NEXT:    nop
+; CHECK-BE-WACC-NEXT:    dmxxsetaccz wacc0
+; CHECK-BE-WACC-NEXT:    xvf32gerpp wacc0, v31, v30
+; CHECK-BE-WACC-NEXT:    lxv vs0, 128(r1)
+; CHECK-BE-WACC-NEXT:    lxv vs1, 144(r1)
+; CHECK-BE-WACC-NEXT:    xvf32gerpp wacc0, vs0, vs1
+; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-BE-WACC-NEXT:    vmr v1, v2
+; CHECK-BE-WACC-NEXT:    vmr v7, v4
+; CHECK-BE-WACC-NEXT:    vmr v0, v3
+; CHECK-BE-WACC-NEXT:    vmr v6, v5
+; CHECK-BE-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp38, vsp32, 0
+; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-BE-WACC-NEXT:    stxv v2, 0(r29)
+; CHECK-BE-WACC-NEXT:    pstxv v3, 8(r29), 0
+; CHECK-BE-WACC-NEXT:    stxv v4, 16(r29)
+; CHECK-BE-WACC-NEXT:    pstxv v5, 24(r29), 0
+; CHECK-BE-WACC-NEXT:    lxv v31, -48(r30) # 16-byte Folded Reload
+; CHECK-BE-WACC-NEXT:    lxv v30, -64(r30) # 16-byte Folded Reload
+; CHECK-BE-WACC-NEXT:    ld r29, -24(r30) # 8-byte Folded Reload
+; CHECK-BE-WACC-NEXT:    mr r1, r30
+; CHECK-BE-WACC-NEXT:    ld r0, 16(r1)
+; CHECK-BE-WACC-NEXT:    ld r30, -16(r1)
+; CHECK-BE-WACC-NEXT:    mtlr r0
+; CHECK-BE-WACC-NEXT:    blr
 entry:
   %vP = alloca <256 x i1>, align 32
   call void @llvm.lifetime.start.p0(i64 32, ptr nonnull %vP)

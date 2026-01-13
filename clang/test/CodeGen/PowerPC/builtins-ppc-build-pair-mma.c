@@ -10,14 +10,14 @@
 // CHECK-LE-SAME: ptr noundef readnone captures(none) [[VQP:%.*]], ptr noundef readnone captures(none) [[VPP:%.*]], <16 x i8> noundef [[VC1:%.*]], <16 x i8> noundef [[VC2:%.*]], <16 x i8> noundef [[VC3:%.*]], <16 x i8> noundef [[VC4:%.*]], ptr noundef writeonly captures(none) initializes((0, 64)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-LE-NEXT:  [[ENTRY:.*:]]
 // CHECK-LE-NEXT:    [[TMP0:%.*]] = tail call <512 x i1> @llvm.ppc.mma.assemble.acc(<16 x i8> [[VC4]], <16 x i8> [[VC3]], <16 x i8> [[VC2]], <16 x i8> [[VC1]])
-// CHECK-LE-NEXT:    store <512 x i1> [[TMP0]], ptr [[RESP]], align 64, !tbaa [[__VECTOR_QUAD_TBAA2:![0-9]+]]
+// CHECK-LE-NEXT:    store <512 x i1> [[TMP0]], ptr [[RESP]], align 64, !tbaa [[__VECTOR_QUAD_TBAA6:![0-9]+]]
 // CHECK-LE-NEXT:    ret void
 //
 // CHECK-BE-LABEL: define dso_local void @test1(
 // CHECK-BE-SAME: ptr noundef readnone captures(none) [[VQP:%.*]], ptr noundef readnone captures(none) [[VPP:%.*]], <16 x i8> noundef [[VC1:%.*]], <16 x i8> noundef [[VC2:%.*]], <16 x i8> noundef [[VC3:%.*]], <16 x i8> noundef [[VC4:%.*]], ptr noundef writeonly captures(none) initializes((0, 64)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-BE-NEXT:  [[ENTRY:.*:]]
 // CHECK-BE-NEXT:    [[TMP0:%.*]] = tail call <512 x i1> @llvm.ppc.mma.assemble.acc(<16 x i8> [[VC1]], <16 x i8> [[VC2]], <16 x i8> [[VC3]], <16 x i8> [[VC4]])
-// CHECK-BE-NEXT:    store <512 x i1> [[TMP0]], ptr [[RESP]], align 64, !tbaa [[__VECTOR_QUAD_TBAA2:![0-9]+]]
+// CHECK-BE-NEXT:    store <512 x i1> [[TMP0]], ptr [[RESP]], align 64, !tbaa [[__VECTOR_QUAD_TBAA6:![0-9]+]]
 // CHECK-BE-NEXT:    ret void
 //
 // CHECK-LE-NOOPT-LABEL: define dso_local void @test1(
@@ -70,14 +70,14 @@ void test1(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc1, vec
 // CHECK-LE-SAME: ptr noundef readnone captures(none) [[VQP:%.*]], ptr noundef readnone captures(none) [[VPP:%.*]], <16 x i8> noundef [[VC1:%.*]], <16 x i8> noundef [[VC2:%.*]], ptr noundef writeonly captures(none) initializes((0, 32)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-LE-NEXT:  [[ENTRY:.*:]]
 // CHECK-LE-NEXT:    [[TMP0:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.assemble.pair(<16 x i8> [[VC2]], <16 x i8> [[VC1]])
-// CHECK-LE-NEXT:    store <256 x i1> [[TMP0]], ptr [[RESP]], align 32, !tbaa [[__VECTOR_PAIR_TBAA6:![0-9]+]]
+// CHECK-LE-NEXT:    store <256 x i1> [[TMP0]], ptr [[RESP]], align 32, !tbaa [[__VECTOR_PAIR_TBAA8:![0-9]+]]
 // CHECK-LE-NEXT:    ret void
 //
 // CHECK-BE-LABEL: define dso_local void @test2(
 // CHECK-BE-SAME: ptr noundef readnone captures(none) [[VQP:%.*]], ptr noundef readnone captures(none) [[VPP:%.*]], <16 x i8> noundef [[VC1:%.*]], <16 x i8> noundef [[VC2:%.*]], ptr noundef writeonly captures(none) initializes((0, 32)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-BE-NEXT:  [[ENTRY:.*:]]
 // CHECK-BE-NEXT:    [[TMP0:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.assemble.pair(<16 x i8> [[VC1]], <16 x i8> [[VC2]])
-// CHECK-BE-NEXT:    store <256 x i1> [[TMP0]], ptr [[RESP]], align 32, !tbaa [[__VECTOR_PAIR_TBAA6:![0-9]+]]
+// CHECK-BE-NEXT:    store <256 x i1> [[TMP0]], ptr [[RESP]], align 32, !tbaa [[__VECTOR_PAIR_TBAA8:![0-9]+]]
 // CHECK-BE-NEXT:    ret void
 //
 // CHECK-LE-NOOPT-LABEL: define dso_local void @test2(
@@ -120,17 +120,17 @@ void test2(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc1,
   *((__vector_pair *)resp) = res;
 }
 //.
-// CHECK-LE: [[__VECTOR_QUAD_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// CHECK-LE: [[META3]] = !{!"__vector_quad", [[META4:![0-9]+]], i64 0}
-// CHECK-LE: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// CHECK-LE: [[META4:![0-9]+]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // CHECK-LE: [[META5]] = !{!"Simple C/C++ TBAA"}
-// CHECK-LE: [[__VECTOR_PAIR_TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
-// CHECK-LE: [[META7]] = !{!"__vector_pair", [[META4]], i64 0}
+// CHECK-LE: [[__VECTOR_QUAD_TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
+// CHECK-LE: [[META7]] = !{!"__vector_quad", [[META4]], i64 0}
+// CHECK-LE: [[__VECTOR_PAIR_TBAA8]] = !{[[META9:![0-9]+]], [[META9]], i64 0}
+// CHECK-LE: [[META9]] = !{!"__vector_pair", [[META4]], i64 0}
 //.
-// CHECK-BE: [[__VECTOR_QUAD_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// CHECK-BE: [[META3]] = !{!"__vector_quad", [[META4:![0-9]+]], i64 0}
-// CHECK-BE: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// CHECK-BE: [[META4:![0-9]+]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // CHECK-BE: [[META5]] = !{!"Simple C/C++ TBAA"}
-// CHECK-BE: [[__VECTOR_PAIR_TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
-// CHECK-BE: [[META7]] = !{!"__vector_pair", [[META4]], i64 0}
+// CHECK-BE: [[__VECTOR_QUAD_TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
+// CHECK-BE: [[META7]] = !{!"__vector_quad", [[META4]], i64 0}
+// CHECK-BE: [[__VECTOR_PAIR_TBAA8]] = !{[[META9:![0-9]+]], [[META9]], i64 0}
+// CHECK-BE: [[META9]] = !{!"__vector_pair", [[META4]], i64 0}
 //.

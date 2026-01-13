@@ -1,4 +1,5 @@
-# RUN: llc %s -run-pass=x86-codegen -o - -experimental-debug-variable-locations | FileCheck %s --implicit-check-not=debug-instr-number
+# RUN: llc %s -run-pass=x86-fp-stackifier -o - -experimental-debug-variable-locations | FileCheck %s --implicit-check-not=debug-instr-number
+# RUN: llc %s -passes=x86-fp-stackifier -o - -experimental-debug-variable-locations | FileCheck %s --implicit-check-not=debug-instr-number
 #
 # The x87 FP instructions below have debug instr numbers attached -- but the
 # operands get rewritten when it's converted to stack-form. Rather than trying

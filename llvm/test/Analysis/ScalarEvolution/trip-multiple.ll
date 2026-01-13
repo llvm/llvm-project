@@ -16,7 +16,7 @@ define void @trip_multiple_3(i32 noundef %num) {
 ; CHECK-LABEL: 'trip_multiple_3'
 ; CHECK-NEXT:  Classifying expressions for: @trip_multiple_3
 ; CHECK-NEXT:    %rem = urem i32 %num, 3
-; CHECK-NEXT:    --> ((-3 * (%num /u 3)) + %num) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-3 * (%num /u 3)) + %num) U: [0,3) S: full-set
 ; CHECK-NEXT:    %or.cond = and i1 %cmp, %cmp14
 ; CHECK-NEXT:    --> (%cmp14 umin %cmp) U: full-set S: full-set
 ; CHECK-NEXT:    %i.05 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
@@ -85,7 +85,7 @@ define void @trip_multiple_5(i32 noundef %num) {
 ; CHECK-LABEL: 'trip_multiple_5'
 ; CHECK-NEXT:  Classifying expressions for: @trip_multiple_5
 ; CHECK-NEXT:    %rem = urem i32 %num, 5
-; CHECK-NEXT:    --> ((-5 * (%num /u 5)) + %num) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-5 * (%num /u 5)) + %num) U: [0,5) S: full-set
 ; CHECK-NEXT:    %or.cond = and i1 %cmp, %cmp14
 ; CHECK-NEXT:    --> (%cmp14 umin %cmp) U: full-set S: full-set
 ; CHECK-NEXT:    %i.05 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
@@ -120,7 +120,7 @@ define void @trip_multiple_6(i32 noundef %num) {
 ; CHECK-LABEL: 'trip_multiple_6'
 ; CHECK-NEXT:  Classifying expressions for: @trip_multiple_6
 ; CHECK-NEXT:    %rem = urem i32 %num, 6
-; CHECK-NEXT:    --> ((-6 * (%num /u 6)) + %num) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-6 * (%num /u 6)) + %num) U: [0,6) S: full-set
 ; CHECK-NEXT:    %or.cond = and i1 %cmp, %cmp14
 ; CHECK-NEXT:    --> (%cmp14 umin %cmp) U: full-set S: full-set
 ; CHECK-NEXT:    %i.05 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
@@ -155,7 +155,7 @@ define void @trip_multiple_7(i32 noundef %num) {
 ; CHECK-LABEL: 'trip_multiple_7'
 ; CHECK-NEXT:  Classifying expressions for: @trip_multiple_7
 ; CHECK-NEXT:    %rem = urem i32 %num, 7
-; CHECK-NEXT:    --> ((-7 * (%num /u 7)) + %num) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-7 * (%num /u 7)) + %num) U: [0,7) S: full-set
 ; CHECK-NEXT:    %or.cond = and i1 %cmp, %cmp14
 ; CHECK-NEXT:    --> (%cmp14 umin %cmp) U: full-set S: full-set
 ; CHECK-NEXT:    %i.05 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
@@ -224,7 +224,7 @@ define void @trip_multiple_9(i32 noundef %num) {
 ; CHECK-LABEL: 'trip_multiple_9'
 ; CHECK-NEXT:  Classifying expressions for: @trip_multiple_9
 ; CHECK-NEXT:    %rem = urem i32 %num, 9
-; CHECK-NEXT:    --> ((-9 * (%num /u 9)) + %num) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-9 * (%num /u 9)) + %num) U: [0,9) S: full-set
 ; CHECK-NEXT:    %or.cond = and i1 %cmp, %cmp14
 ; CHECK-NEXT:    --> (%cmp14 umin %cmp) U: full-set S: full-set
 ; CHECK-NEXT:    %i.05 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
@@ -258,7 +258,7 @@ define void @trip_multiple_10(i32 noundef %num) {
 ; CHECK-LABEL: 'trip_multiple_10'
 ; CHECK-NEXT:  Classifying expressions for: @trip_multiple_10
 ; CHECK-NEXT:    %rem = urem i32 %num, 10
-; CHECK-NEXT:    --> ((-10 * (%num /u 10)) + %num) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-10 * (%num /u 10)) + %num) U: [0,10) S: full-set
 ; CHECK-NEXT:    %or.cond = and i1 %cmp, %cmp14
 ; CHECK-NEXT:    --> (%cmp14 umin %cmp) U: full-set S: full-set
 ; CHECK-NEXT:    %i.05 = phi i32 [ %inc, %for.body ], [ 0, %entry ]

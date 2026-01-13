@@ -85,7 +85,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPcancel_parallel_if(
 ! CHECK-SAME:                                     %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "cond"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] {uniq_name = "_QFcancel_parallel_ifEcond"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] arg {{[0-9]+}} {uniq_name = "_QFcancel_parallel_ifEcond"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:           omp.parallel {
 ! CHECK:             %[[VAL_3:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<!fir.logical<4>>
 ! CHECK:             %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.logical<4>) -> i1
@@ -106,7 +106,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPcancel_do_if(
 ! CHECK-SAME:                               %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "cond"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] {uniq_name = "_QFcancel_do_ifEcond"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] arg {{[0-9]+}} {uniq_name = "_QFcancel_do_ifEcond"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFcancel_do_ifEi"}
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = "_QFcancel_do_ifEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           omp.parallel {
@@ -138,7 +138,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPcancel_sections_if(
 ! CHECK-SAME:                                     %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "cond"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] {uniq_name = "_QFcancel_sections_ifEcond"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] arg {{[0-9]+}} {uniq_name = "_QFcancel_sections_ifEcond"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:           omp.sections {
 ! CHECK:             omp.section {
 ! CHECK:               %[[VAL_3:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<!fir.logical<4>>
@@ -162,7 +162,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPcancel_taskgroup_if(
 ! CHECK-SAME:                                      %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "cond"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] {uniq_name = "_QFcancel_taskgroup_ifEcond"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] arg {{[0-9]+}} {uniq_name = "_QFcancel_taskgroup_ifEcond"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:           omp.taskgroup {
 ! CHECK:             omp.task {
 ! CHECK:               %[[VAL_3:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<!fir.logical<4>>

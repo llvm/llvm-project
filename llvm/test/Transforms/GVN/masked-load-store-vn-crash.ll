@@ -5,7 +5,7 @@
 define fastcc void @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD_1_I:%.*]] = tail call <4 x i64> @llvm.masked.load.v4i64.p0(ptr nonnull getelementptr inbounds ([8 x i64], ptr @file_mask, i64 0, i64 7), i32 8, <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x i64> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD_1_I:%.*]] = tail call <4 x i64> @llvm.masked.load.v4i64.p0(ptr align 8 getelementptr inbounds ([8 x i64], ptr @file_mask, i64 0, i64 7), <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x i64> undef)
 ; CHECK-NEXT:    unreachable
 ;
 entry:

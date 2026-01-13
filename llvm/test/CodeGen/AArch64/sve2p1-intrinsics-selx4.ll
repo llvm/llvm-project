@@ -10,7 +10,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    mov z31.d, z4.d
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    mov z25.d, z6.d
 ; CHECK-NEXT:    mov z30.d, z3.d
 ; CHECK-NEXT:    mov p8.b, p0.b
@@ -19,7 +19,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-NEXT:    ldr z27, [x0]
 ; CHECK-NEXT:    mov z28.d, z1.d
 ; CHECK-NEXT:    sel { z0.b - z3.b }, pn8, { z28.b - z31.b }, { z24.b - z27.b }
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -34,7 +34,7 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    mov z31.d, z4.d
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    mov z25.d, z6.d
 ; CHECK-NEXT:    mov z30.d, z3.d
 ; CHECK-NEXT:    mov p8.b, p0.b
@@ -43,7 +43,7 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8
 ; CHECK-NEXT:    ldr z27, [x0]
 ; CHECK-NEXT:    mov z28.d, z1.d
 ; CHECK-NEXT:    sel { z0.h - z3.h }, pn8, { z28.h - z31.h }, { z24.h - z27.h }
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -58,7 +58,7 @@ define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale 
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    mov z31.d, z4.d
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    mov z25.d, z6.d
 ; CHECK-NEXT:    mov z30.d, z3.d
 ; CHECK-NEXT:    mov p8.b, p0.b
@@ -67,7 +67,7 @@ define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale 
 ; CHECK-NEXT:    ldr z27, [x0]
 ; CHECK-NEXT:    mov z28.d, z1.d
 ; CHECK-NEXT:    sel { z0.h - z3.h }, pn8, { z28.h - z31.h }, { z24.h - z27.h }
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -82,7 +82,7 @@ define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <v
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    mov z31.d, z4.d
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    mov z25.d, z6.d
 ; CHECK-NEXT:    mov z30.d, z3.d
 ; CHECK-NEXT:    mov p8.b, p0.b
@@ -91,7 +91,7 @@ define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <v
 ; CHECK-NEXT:    ldr z27, [x0]
 ; CHECK-NEXT:    mov z28.d, z1.d
 ; CHECK-NEXT:    sel { z0.h - z3.h }, pn8, { z28.h - z31.h }, { z24.h - z27.h }
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -106,7 +106,7 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    mov z31.d, z4.d
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    mov z25.d, z6.d
 ; CHECK-NEXT:    mov z30.d, z3.d
 ; CHECK-NEXT:    mov p8.b, p0.b
@@ -115,7 +115,7 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4
 ; CHECK-NEXT:    ldr z27, [x0]
 ; CHECK-NEXT:    mov z28.d, z1.d
 ; CHECK-NEXT:    sel { z0.s - z3.s }, pn8, { z28.s - z31.s }, { z24.s - z27.s }
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -130,7 +130,7 @@ define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vsca
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    mov z31.d, z4.d
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    mov z25.d, z6.d
 ; CHECK-NEXT:    mov z30.d, z3.d
 ; CHECK-NEXT:    mov p8.b, p0.b
@@ -139,7 +139,7 @@ define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vsca
 ; CHECK-NEXT:    ldr z27, [x0]
 ; CHECK-NEXT:    mov z28.d, z1.d
 ; CHECK-NEXT:    sel { z0.s - z3.s }, pn8, { z28.s - z31.s }, { z24.s - z27.s }
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -154,7 +154,7 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    mov z31.d, z4.d
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    mov z25.d, z6.d
 ; CHECK-NEXT:    mov z30.d, z3.d
 ; CHECK-NEXT:    mov p8.b, p0.b
@@ -163,7 +163,7 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2
 ; CHECK-NEXT:    ldr z27, [x0]
 ; CHECK-NEXT:    mov z28.d, z1.d
 ; CHECK-NEXT:    sel { z0.d - z3.d }, pn8, { z28.d - z31.d }, { z24.d - z27.d }
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -178,7 +178,7 @@ define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <v
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    mov z31.d, z4.d
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    mov z25.d, z6.d
 ; CHECK-NEXT:    mov z30.d, z3.d
 ; CHECK-NEXT:    mov p8.b, p0.b
@@ -187,7 +187,7 @@ define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <v
 ; CHECK-NEXT:    ldr z27, [x0]
 ; CHECK-NEXT:    mov z28.d, z1.d
 ; CHECK-NEXT:    sel { z0.d - z3.d }, pn8, { z28.d - z31.d }, { z24.d - z27.d }
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret

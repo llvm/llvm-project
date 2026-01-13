@@ -1,0 +1,12 @@
+frint32x v0.2d, v0.2d
+frint32x v0.2s, v0.2s
+frint32x v0.4s, v0.4s
+frint32z v0.2d, v0.2d
+frint32z v0.2s, v0.2s
+frint32z v0.4s, v0.4s
+frint64x v0.2d, v0.2d
+frint64x v0.2s, v0.2s
+frint64x v0.4s, v0.4s
+frint64z v0.2d, v0.2d
+frint64z v0.2s, v0.2s
+frint64z v0.4s, v0.4s

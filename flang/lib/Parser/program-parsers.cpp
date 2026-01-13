@@ -201,6 +201,9 @@ TYPE_CONTEXT_PARSER("specification construct"_en_US,
         construct<SpecificationConstruct>(
             indirect(openaccDeclarativeConstruct)),
         construct<SpecificationConstruct>(indirect(openmpDeclarativeConstruct)),
+        construct<SpecificationConstruct>(
+            indirect(openmpMisplacedEndDirective)),
+        construct<SpecificationConstruct>(indirect(openmpInvalidDirective)),
         construct<SpecificationConstruct>(indirect(compilerDirective))))
 
 // R513 other-specification-stmt ->
@@ -484,7 +487,7 @@ constexpr auto starOrExpr{
         applyFunction(presentOptional<ScalarExpr>, scalarExpr))};
 TYPE_PARSER(extension<LanguageFeature::CUDA>(
     "<<<" >> construct<CallStmt::Chevrons>(starOrExpr, ", " >> scalarExpr,
-                 maybe("," >> scalarIntExpr), maybe("," >> scalarIntExpr)) /
+                 maybe("," >> scalarExpr), maybe("," >> scalarIntExpr)) /
         ">>>"))
 constexpr auto actualArgSpecList{optionalList(actualArgSpec)};
 TYPE_CONTEXT_PARSER("CALL statement"_en_US,

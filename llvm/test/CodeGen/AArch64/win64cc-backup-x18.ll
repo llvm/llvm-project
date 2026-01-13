@@ -12,10 +12,10 @@ define dso_local win64cc void @func() #0 {
 ; CHECK-LABEL: func:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEXT:    str x18, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x18, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    bl other
-; CHECK-NEXT:    ldr x18, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x18, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:

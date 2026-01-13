@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -disable-output '-passes=print<polly-ast>' -polly-process-unprofitable < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -disable-output '-passes=polly-custom<ast>' -polly-print-ast -polly-process-unprofitable < %s 2>&1 | FileCheck %s
 
 ; CHECK:      for (int c0 = 0; c0 <= 19999; c0 += 1) {
 ; CHECK-NEXT:   if (c0 % 2 == 0)

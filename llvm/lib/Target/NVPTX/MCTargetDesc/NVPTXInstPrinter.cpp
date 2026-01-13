@@ -395,6 +395,25 @@ void NVPTXInstPrinter::printMemOperand(const MCInst *MI, int OpNum,
   }
 }
 
+void NVPTXInstPrinter::printUsedBytesMaskPragma(const MCInst *MI, int OpNum,
+                                                raw_ostream &O) {
+  auto &Op = MI->getOperand(OpNum);
+  assert(Op.isImm() && "Invalid operand");
+  uint32_t Imm = (uint32_t)Op.getImm();
+  if (Imm != UINT32_MAX) {
+    O << ".pragma \"used_bytes_mask " << format_hex(Imm, 1) << "\";\n\t";
+  }
+}
+
+void NVPTXInstPrinter::printRegisterOrSinkSymbol(const MCInst *MI, int OpNum,
+                                                 raw_ostream &O) {
+  const MCOperand &Op = MI->getOperand(OpNum);
+  if (Op.isReg() && Op.getReg() == MCRegister::NoRegister)
+    O << "_";
+  else
+    printOperand(MI, OpNum, O);
+}
+
 void NVPTXInstPrinter::printHexu32imm(const MCInst *MI, int OpNum,
                                       raw_ostream &O) {
   int64_t Imm = MI->getOperand(OpNum).getImm();

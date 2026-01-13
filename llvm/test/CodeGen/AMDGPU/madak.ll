@@ -823,7 +823,7 @@ define amdgpu_kernel void @v_s_madak_f32(ptr addrspace(1) noalias %out, float %a
 ; GFX10-MAD-NEXT:    global_load_dword v1, v0, s[0:1]
 ; GFX10-MAD-NEXT:    s_clause 0x1
 ; GFX10-MAD-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX10-MAD-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-MAD-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-MAD-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10-MAD-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-MAD-NEXT:    v_madak_f32 v1, s2, v1, 0x41200000
@@ -871,7 +871,7 @@ define amdgpu_kernel void @v_s_madak_f32(ptr addrspace(1) noalias %out, float %a
 ; GFX10-FMA-NEXT:    global_load_dword v1, v0, s[0:1]
 ; GFX10-FMA-NEXT:    s_clause 0x1
 ; GFX10-FMA-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX10-FMA-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-FMA-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-FMA-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10-FMA-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-FMA-NEXT:    v_fmaak_f32 v1, s2, v1, 0x41200000
