@@ -5488,7 +5488,8 @@ TEST_F(MDNodeTest, MergedProfMetadata) {
 }
 
 TEST_F(MDNodeTest, MergedProfMetadata_CallInst) {
-  // Check that identical profile metadata on CallInsts is SUMMED, not preserved.
+  // Check that identical profile metadata on CallInsts is SUMMED, not
+  // preserved.
   Metadata *Ops[] = {
       MDString::get(Context, "branch_weights"),
       ConstantAsMetadata::get(ConstantInt::get(Context, APInt(32, 10)))};
@@ -5496,8 +5497,10 @@ TEST_F(MDNodeTest, MergedProfMetadata_CallInst) {
 
   // Create two CallInsts.
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(Context), false);
-  std::unique_ptr<CallInst> CI1(CallInst::Create(FTy, getFunction("f"), ArrayRef<Value *>()));
-  std::unique_ptr<CallInst> CI2(CallInst::Create(FTy, getFunction("f"), ArrayRef<Value *>()));
+  std::unique_ptr<CallInst> CI1(
+      CallInst::Create(FTy, getFunction("f"), ArrayRef<Value *>()));
+  std::unique_ptr<CallInst> CI2(
+      CallInst::Create(FTy, getFunction("f"), ArrayRef<Value *>()));
 
   CI1->setMetadata(LLVMContext::MD_prof, Prof);
   CI2->setMetadata(LLVMContext::MD_prof, Prof);
