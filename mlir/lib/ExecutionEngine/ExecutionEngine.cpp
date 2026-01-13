@@ -146,12 +146,10 @@ static void packFunctionArguments(Module *module) {
   llvm::IRBuilder<> builder(ctx);
   DenseSet<llvm::Function *> interfaceFunctions;
   for (auto &func : module->getFunctionList()) {
-    if (func.isDeclaration()) {
+    if (func.isDeclaration() || func.hasLocalLinkage())
       continue;
-    }
-    if (interfaceFunctions.count(&func)) {
+    if (interfaceFunctions.count(&func))
       continue;
-    }
 
     // Given a function `foo(<...>)`, define the interface function
     // `mlir_foo(i8**)`.
@@ -220,9 +218,7 @@ ExecutionEngine::ExecutionEngine(bool enableObjectDump,
 
 ExecutionEngine::~ExecutionEngine() {
   // Execute the global destructors from the module being processed.
-  // TODO: Allow JIT deinitialize for AArch64. Currently there's a bug causing a
-  // crash for AArch64 see related issue #71963.
-  if (jit && !jit->getTargetTriple().isAArch64())
+  if (jit)
     llvm::consumeError(jit->deinitialize(jit->getMainJITDylib()));
   // Run all dynamic library destroy callbacks to prepare for the shutdown.
   for (LibraryDestroyFn destroy : destroyFns)
@@ -239,6 +235,8 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
   // Remember all entry-points if object dumping is enabled.
   if (options.enableObjectDump) {
     for (auto funcOp : m->getRegion(0).getOps<LLVM::LLVMFuncOp>()) {
+      if (funcOp.getBlocks().empty())
+        continue;
       StringRef funcName = funcOp.getSymName();
       engine->functionNames.push_back(funcName.str());
     }
@@ -314,10 +312,14 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
   // Callback to create the object layer with symbol resolution to current
   // process and dynamically linked libraries.
   auto objectLinkingLayerCreator = [&](ExecutionSession &session) {
+    // Needed to respect AArch64 ABI requirements on the distance between
+    // TEXT and GOT sections.
+    bool reserveAlloc = llvmModule->getTargetTriple().isAArch64();
     auto objectLayer = std::make_unique<RTDyldObjectLinkingLayer>(
-        session, [sectionMemoryMapper =
-                      options.sectionMemoryMapper](const MemoryBuffer &) {
-          return std::make_unique<SectionMemoryManager>(sectionMemoryMapper);
+        session, [sectionMemoryMapper = options.sectionMemoryMapper,
+                  reserveAlloc](const MemoryBuffer &) {
+          return std::make_unique<SectionMemoryManager>(sectionMemoryMapper,
+                                                        reserveAlloc);
         });
 
     // Register JIT event listeners if they are enabled.
@@ -449,9 +451,6 @@ Error ExecutionEngine::invokePacked(StringRef name,
 void ExecutionEngine::initialize() {
   if (isInitialized)
     return;
-  // TODO: Allow JIT initialize for AArch64. Currently there's a bug causing a
-  // crash for AArch64 see related issue #71963.
-  if (!jit->getTargetTriple().isAArch64())
-    cantFail(jit->initialize(jit->getMainJITDylib()));
+  cantFail(jit->initialize(jit->getMainJITDylib()));
   isInitialized = true;
 }

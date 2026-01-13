@@ -8,6 +8,11 @@
 
 #if !defined(__Fuchsia__)
 
+#if defined(__linux__)
+// For fileno(), ftruncate(), getpagesize(), setenv()
+#define _DEFAULT_SOURCE
+#endif
+
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>

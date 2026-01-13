@@ -8,7 +8,7 @@
 @D = common global [2000 x float] zeroinitializer, align 16
 
 ; Function Attrs: nounwind ssp uwtable
-define void @foo_3double(i32 %u) #0 {
+define void @foo_3double(i32 %u) {
 ; CHECK-LABEL: @foo_3double(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[U_ADDR:%.*]] = alloca i32, align 4
@@ -65,7 +65,7 @@ entry:
 ; A[C1 + C2*i] are consecutive, if C2 is a power of 2, and C2 > C1 > 0.
 ; Thus, the following code should be vectorized.
 ; Function Attrs: nounwind ssp uwtable
-define void @foo_2double(i32 %u) #0 {
+define void @foo_2double(i32 %u) {
 ; CHECK-LABEL: @foo_2double(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[U_ADDR:%.*]] = alloca i32, align 4
@@ -104,7 +104,7 @@ entry:
 
 ; Similar to the previous test, but with different datatype.
 ; Function Attrs: nounwind ssp uwtable
-define void @foo_4float(i32 %u) #0 {
+define void @foo_4float(i32 %u) {
 ; CHECK-LABEL: @foo_4float(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[U_ADDR:%.*]] = alloca i32, align 4
@@ -159,7 +159,7 @@ entry:
 
 ; Similar to the previous tests, but now we are dealing with AddRec SCEV.
 ; Function Attrs: nounwind ssp uwtable
-define i32 @foo_loop(ptr %A, i32 %n) #0 {
+define i32 @foo_loop(ptr %A, i32 %n) {
 ; CHECK-LABEL: @foo_loop(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
@@ -248,7 +248,7 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 ; Similar to foo_2double but with a non-power-of-2 factor and potential
 ; wrapping (both indices wrap or both don't in the same time)
 ; Function Attrs: nounwind ssp uwtable
-define void @foo_2double_non_power_of_2(i32 %u) #0 {
+define void @foo_2double_non_power_of_2(i32 %u) {
 ; CHECK-LABEL: @foo_2double_non_power_of_2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[U_ADDR:%.*]] = alloca i32, align 4
@@ -289,7 +289,7 @@ entry:
 
 ; Similar to foo_2double_non_power_of_2 but with zext's instead of sext's
 ; Function Attrs: nounwind ssp uwtable
-define void @foo_2double_non_power_of_2_zext(i32 %u) #0 {
+define void @foo_2double_non_power_of_2_zext(i32 %u) {
 ; CHECK-LABEL: @foo_2double_non_power_of_2_zext(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[U_ADDR:%.*]] = alloca i32, align 4
@@ -332,7 +332,7 @@ entry:
 ; Alternatively, this is like foo_loop, but with a non-power-of-2 factor and
 ; potential wrapping (both indices wrap or both don't in the same time)
 ; Function Attrs: nounwind ssp uwtable
-define i32 @foo_loop_non_power_of_2(ptr %A, i32 %n) #0 {
+define i32 @foo_loop_non_power_of_2(ptr %A, i32 %n) {
 ; CHECK-LABEL: @foo_loop_non_power_of_2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
@@ -438,7 +438,7 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 ;
 ; Make sure we are able to vectorize this from now on:
 ;
-define double @bar(ptr nocapture readonly %a, i32 %n) local_unnamed_addr #0 {
+define double @bar(ptr nocapture readonly %a, i32 %n) local_unnamed_addr {
 ; CHECK-X86-LABEL: @bar(
 ; CHECK-X86-NEXT:  entry:
 ; CHECK-X86-NEXT:    [[CMP15:%.*]] = icmp eq i32 [[N:%.*]], 0
@@ -547,8 +547,6 @@ define void @store_constant_expression(ptr %p) {
   store i64 ptrtoint (ptr @g2 to i64), ptr %arrayidx1, align 8
   ret void
 }
-
-attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.ident = !{!0}
 

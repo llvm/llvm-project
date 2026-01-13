@@ -116,6 +116,13 @@ LLVM_ABI void adjustKnownBitsForSelectArm(KnownBits &Known, Value *Cond,
                                           const SimplifyQuery &Q,
                                           unsigned Depth = 0);
 
+/// Adjust \p Known for the given select \p Arm to include information from the
+/// select \p Cond.
+LLVM_ABI void adjustKnownFPClassForSelectArm(KnownFPClass &Known, Value *Cond,
+                                             Value *Arm, bool Invert,
+                                             const SimplifyQuery &Q,
+                                             unsigned Depth = 0);
+
 /// Return true if LHS and RHS have no common bits set.
 LLVM_ABI bool haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
                                   const WithCache<const Value *> &RHSCache,
@@ -230,6 +237,10 @@ LLVM_ABI Intrinsic::ID getIntrinsicForCallSite(const CallBase &CB,
 /// the result of the comparison is true when the input value is signed.
 LLVM_ABI bool isSignBitCheck(ICmpInst::Predicate Pred, const APInt &RHS,
                              bool &TrueIfSigned);
+
+LLVM_ABI KnownFPClass analyzeKnownFPClassFromSelect(
+    const Instruction *I, const KnownFPClass &KnownLHS,
+    const KnownFPClass &KnownRHS, const SimplifyQuery &SQ, unsigned Depth = 0);
 
 /// Determine which floating-point classes are valid for \p V, and return them
 /// in KnownFPClass bit sets.
@@ -612,6 +623,12 @@ LLVM_ABI bool isValidAssumeForContext(const Instruction *I,
                                       const Instruction *CxtI,
                                       const DominatorTree *DT = nullptr,
                                       bool AllowEphemerals = false);
+
+/// Returns true, if no instruction between \p Assume and \p CtxI may free
+/// memory and the function is marked as NoSync. The latter ensures the current
+/// function cannot arrange for another thread to free on its behalf.
+LLVM_ABI bool willNotFreeBetween(const Instruction *Assume,
+                                 const Instruction *CtxI);
 
 enum class OverflowResult {
   /// Always overflows in the direction of signed/unsigned min value.
@@ -1017,6 +1034,16 @@ findValuesAffectedByCondition(Value *Cond, bool IsAssume,
 /// where f(X) == 0 if and only if X == 0, otherwise returns nullptr.
 LLVM_ABI Value *stripNullTest(Value *V);
 LLVM_ABI const Value *stripNullTest(const Value *V);
+
+/// Enumerates all possible immediate values of V and inserts them into the set
+/// \p Constants. If \p AllowUndefOrPoison is false, it fails when V may contain
+/// undef/poison elements. Returns true if the result is complete. Otherwise,
+/// the result is incomplete (more than MaxCount values).
+/// NOTE: The constant values are not distinct.
+LLVM_ABI bool
+collectPossibleValues(const Value *V,
+                      SmallPtrSetImpl<const Constant *> &Constants,
+                      unsigned MaxCount, bool AllowUndefOrPoison = true);
 
 } // end namespace llvm
 

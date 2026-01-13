@@ -30,6 +30,14 @@
 
 // CHECK-MESSAGES: :[[@LINE+2]]:2: warning: preprocessor condition can be written more concisely using '#ifdef' [readability-use-concise-preprocessor-directives]
 // CHECK-FIXES: #ifdef FOO
+#if(defined(FOO))
+// CHECK-MESSAGES-23: :[[@LINE+2]]:2: warning: preprocessor condition can be written more concisely using '#elifdef' [readability-use-concise-preprocessor-directives]
+// CHECK-FIXES-23: #elifdef BAR
+#elif(defined(BAR))
+#endif
+
+// CHECK-MESSAGES: :[[@LINE+2]]:2: warning: preprocessor condition can be written more concisely using '#ifdef' [readability-use-concise-preprocessor-directives]
+// CHECK-FIXES: #ifdef FOO
 #if (defined FOO)
 // CHECK-MESSAGES-23: :[[@LINE+2]]:4: warning: preprocessor condition can be written more concisely using '#elifdef' [readability-use-concise-preprocessor-directives]
 // CHECK-FIXES-23: #  elifdef BAR

@@ -12,12 +12,12 @@
 )
 */
 
-// CHECK-LABEL:   wasmssa.func @abs_f32() -> f32 {
+// CHECK-LABEL:   wasmssa.func exported @abs_f32() -> f32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 1.000000e+01 : f32
 // CHECK:           %[[VAL_1:.*]] = wasmssa.abs %[[VAL_0]] : f32
 // CHECK:           wasmssa.return %[[VAL_1]] : f32
 
-// CHECK-LABEL:   wasmssa.func @abs_f64() -> f64 {
+// CHECK-LABEL:   wasmssa.func exported @abs_f64() -> f64 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 1.000000e+01 : f64
 // CHECK:           %[[VAL_1:.*]] = wasmssa.abs %[[VAL_0]] : f64
 // CHECK:           wasmssa.return %[[VAL_1]] : f64

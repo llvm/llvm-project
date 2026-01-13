@@ -17,6 +17,7 @@ import pathlib
 import glob
 
 from google.cloud import storage
+from google.api_core import exceptions
 
 GCS_PARALLELISM = 100
 
@@ -50,7 +51,14 @@ def _maybe_download_timing_file(blob):
 
 def download_timing_files(storage_client, bucket_name: str):
     bucket = storage_client.bucket(bucket_name)
-    blobs = bucket.list_blobs(prefix="lit_timing")
+    try:
+        blobs = bucket.list_blobs(prefix="lit_timing")
+    except exceptions.ClientError as client_error:
+        print(
+            "::warning file=cache_lit_timing_files.py::Failed to list blobs "
+            "in bucket."
+        )
+        sys.exit(0)
     with multiprocessing.pool.ThreadPool(GCS_PARALLELISM) as thread_pool:
         futures = []
         for timing_file_blob in blobs:
@@ -60,7 +68,13 @@ def download_timing_files(storage_client, bucket_name: str):
                 )
             )
         for future in futures:
-            future.get()
+            future.wait()
+            if not future.successful():
+                print(
+                    "::warning file=cache_lit_timing_files.py::Failed to "
+                    "download lit timing file."
+                )
+                continue
     print("Done downloading")
 
 

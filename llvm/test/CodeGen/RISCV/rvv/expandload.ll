@@ -1666,20 +1666,20 @@ define <512 x i8> @test_expandload_v512i8_vlen512(ptr %base, <512 x i1> %mask, <
 ; CHECK-RV32-NEXT:  .LBB61_32: # %else114
 ; CHECK-RV32-NEXT:    slli a2, a3, 1
 ; CHECK-RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; CHECK-RV32-NEXT:    vsrl.vx v16, v0, a1
+; CHECK-RV32-NEXT:    vsrl.vx v24, v0, a1
 ; CHECK-RV32-NEXT:    bgez a2, .LBB61_34
 ; CHECK-RV32-NEXT:  # %bb.33: # %cond.load117
 ; CHECK-RV32-NEXT:    lbu a2, 0(a0)
-; CHECK-RV32-NEXT:    vmv8r.v v24, v8
+; CHECK-RV32-NEXT:    vmv8r.v v16, v8
 ; CHECK-RV32-NEXT:    vmv.s.x v9, a2
 ; CHECK-RV32-NEXT:    vsetivli zero, 31, e8, m1, tu, ma
 ; CHECK-RV32-NEXT:    vslideup.vi v8, v9, 30
 ; CHECK-RV32-NEXT:    addi a0, a0, 1
-; CHECK-RV32-NEXT:    vmv1r.v v24, v8
-; CHECK-RV32-NEXT:    vmv8r.v v8, v24
+; CHECK-RV32-NEXT:    vmv1r.v v16, v8
+; CHECK-RV32-NEXT:    vmv8r.v v8, v16
 ; CHECK-RV32-NEXT:  .LBB61_34: # %else118
 ; CHECK-RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; CHECK-RV32-NEXT:    vmv.x.s a2, v16
+; CHECK-RV32-NEXT:    vmv.x.s a2, v24
 ; CHECK-RV32-NEXT:    bgez a3, .LBB61_35
 ; CHECK-RV32-NEXT:    j .LBB61_572
 ; CHECK-RV32-NEXT:  .LBB61_35: # %else122

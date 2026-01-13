@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-detect>,scop(polly-import-jscop,polly-codegen)' -disable-output < %s 2>&1 | FileCheck %s --allow-empty
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts;import-jscop>' -polly-print-detect -disable-output < %s 2>&1 | FileCheck %s --allow-empty
 ;
 ; Polly codegen used to generate invalid code (referring to %ptr from the
 ; original region) when regeneration of the access function is necessary.
@@ -34,4 +34,6 @@ exit:
 }
 
 
+; CHECK-NOT: Valid Region for Scop
+; CHECK: Detected Scops in Function base_pointer_is_inst_inside_invariant_1
 ; CHECK-NOT: Valid Region for Scop

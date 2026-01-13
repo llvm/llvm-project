@@ -109,7 +109,7 @@ protected:
     verifyJSONScopedPrinter(JSONExpectedOut, Func);
   }
 
-  void TearDown() {
+  void TearDown() override {
     // JSONScopedPrinter fails an assert if nothing's been printed.
     if (!HasPrintedToJSON)
       JSONWriter.printString("");

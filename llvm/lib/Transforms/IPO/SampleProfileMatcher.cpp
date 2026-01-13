@@ -18,10 +18,14 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/LongestCommonSequence.h"
 
+#include <unordered_set>
+
 using namespace llvm;
 using namespace sampleprof;
 
 #define DEBUG_TYPE "sample-profile-matcher"
+
+namespace llvm {
 
 static cl::opt<unsigned> FuncProfileSimilarityThreshold(
     "func-profile-similarity-threshold", cl::Hidden, cl::init(80),
@@ -54,6 +58,8 @@ static cl::opt<unsigned> SalvageStaleProfileMaxCallsites(
     "salvage-stale-profile-max-callsites", cl::Hidden, cl::init(UINT_MAX),
     cl::desc("The maximum number of callsites in a function, above which stale "
              "profile matching will be skipped."));
+
+} // end namespace llvm
 
 void SampleProfileMatcher::findIRAnchors(const Function &F,
                                          AnchorMap &IRAnchors) const {

@@ -154,15 +154,15 @@ void WalkAST::VisitCallExpr(CallExpr *CE) {
           .Case("mkstemp", &WalkAST::checkCall_mkstemp)
           .Case("mkdtemp", &WalkAST::checkCall_mkstemp)
           .Case("mkstemps", &WalkAST::checkCall_mkstemp)
-          .Cases("strcpy", "__strcpy_chk", &WalkAST::checkCall_strcpy)
-          .Cases("strcat", "__strcat_chk", &WalkAST::checkCall_strcat)
-          .Cases("sprintf", "vsprintf", "scanf", "wscanf", "fscanf", "fwscanf",
-                 "vscanf", "vwscanf", "vfscanf", "vfwscanf",
+          .Cases({"strcpy", "__strcpy_chk"}, &WalkAST::checkCall_strcpy)
+          .Cases({"strcat", "__strcat_chk"}, &WalkAST::checkCall_strcat)
+          .Cases({"sprintf", "vsprintf", "scanf", "wscanf", "fscanf", "fwscanf",
+                  "vscanf", "vwscanf", "vfscanf", "vfwscanf"},
                  &WalkAST::checkDeprecatedOrUnsafeBufferHandling)
-          .Cases("sscanf", "swscanf", "vsscanf", "vswscanf", "swprintf",
-                 "snprintf", "vswprintf", "vsnprintf", "memcpy", "memmove",
+          .Cases({"sscanf", "swscanf", "vsscanf", "vswscanf", "swprintf",
+                  "snprintf", "vswprintf", "vsnprintf", "memcpy", "memmove"},
                  &WalkAST::checkDeprecatedOrUnsafeBufferHandling)
-          .Cases("strncpy", "strncat", "memset", "fprintf",
+          .Cases({"strncpy", "strncat", "memset", "fprintf"},
                  &WalkAST::checkDeprecatedOrUnsafeBufferHandling)
           .Case("drand48", &WalkAST::checkCall_rand)
           .Case("erand48", &WalkAST::checkCall_rand)
@@ -766,12 +766,14 @@ void WalkAST::checkDeprecatedOrUnsafeBufferHandling(const CallExpr *CE,
 
   int ArgIndex =
       llvm::StringSwitch<int>(Name)
-          .Cases("scanf", "wscanf", "vscanf", "vwscanf", 0)
-          .Cases("fscanf", "fwscanf", "vfscanf", "vfwscanf", "sscanf",
-                 "swscanf", "vsscanf", "vswscanf", 1)
-          .Cases("sprintf", "vsprintf", "fprintf", 1)
-          .Cases("swprintf", "snprintf", "vswprintf", "vsnprintf", "memcpy",
-                 "memmove", "memset", "strncpy", "strncat", DEPR_ONLY)
+          .Cases({"scanf", "wscanf", "vscanf", "vwscanf"}, 0)
+          .Cases({"fscanf", "fwscanf", "vfscanf", "vfwscanf", "sscanf",
+                  "swscanf", "vsscanf", "vswscanf"},
+                 1)
+          .Cases({"sprintf", "vsprintf", "fprintf"}, 1)
+          .Cases({"swprintf", "snprintf", "vswprintf", "vsnprintf", "memcpy",
+                  "memmove", "memset", "strncpy", "strncat"},
+                 DEPR_ONLY)
           .Default(UNKNOWN_CALL);
 
   assert(ArgIndex != UNKNOWN_CALL && "Unsupported function");

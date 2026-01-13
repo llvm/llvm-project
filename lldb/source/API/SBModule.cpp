@@ -37,8 +37,8 @@ SBModule::SBModule(const SBModuleSpec &module_spec) {
   LLDB_INSTRUMENT_VA(this, module_spec);
 
   ModuleSP module_sp;
-  Status error = ModuleList::GetSharedModule(
-      *module_spec.m_opaque_up, module_sp, nullptr, nullptr, nullptr);
+  Status error = ModuleList::GetSharedModule(*module_spec.m_opaque_up,
+                                             module_sp, nullptr, nullptr);
   if (module_sp)
     SetSP(module_sp);
 }

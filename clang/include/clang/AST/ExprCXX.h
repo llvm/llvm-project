@@ -978,8 +978,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<MSPropertyRefExpr *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<MSPropertyRefExpr *>(this)->children();
   }
 
   static bool classof(const Stmt *T) {
@@ -1741,8 +1740,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<CXXConstructExpr *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<CXXConstructExpr *>(this)->children();
   }
 };
 
@@ -2340,6 +2338,14 @@ struct ImplicitDeallocationParameters {
   TypeAwareAllocationMode PassTypeIdentity;
   AlignedAllocationMode PassAlignment;
   SizedDeallocationMode PassSize;
+};
+
+/// The parameters to pass to a usual operator delete.
+struct UsualDeleteParams {
+  TypeAwareAllocationMode TypeAwareDelete = TypeAwareAllocationMode::No;
+  bool DestroyingDelete = false;
+  bool Size = false;
+  AlignedAllocationMode Alignment = AlignedAllocationMode::No;
 };
 
 /// Represents a new-expression for memory allocation and constructor
@@ -4714,7 +4720,7 @@ public:
   // sugared: it doesn't need to be resugared later.
   bool getFinal() const { return Final; }
 
-  NamedDecl *getParameter() const;
+  NonTypeTemplateParmDecl *getParameter() const;
 
   bool isReferenceParameter() const { return AssociatedDeclAndRef.getInt(); }
 

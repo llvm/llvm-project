@@ -22,6 +22,9 @@ declare <16 x float> @llvm.x86.avx512.mask.vpermi2var.ps.512(<16 x float>, <16 x
 declare <8 x i64> @llvm.x86.avx512.mask.vpermi2var.q.512(<8 x i64>, <8 x i64>, <8 x i64>, i8)
 declare <16 x i32> @llvm.x86.avx512.mask.vpermi2var.d.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
 
+declare <16 x i32> @llvm.x86.avx512.mask.expand.v16i32(<16 x i32>, <16 x i32>, <16 x i1>)
+declare <16 x i32> @llvm.x86.avx512.mask.compress.v16i32(<16 x i32>, <16 x i32>, <16 x i1>)
+
 define <8 x double> @combine_permvar_8f64_identity(<8 x double> %x0, <8 x double> %x1) {
 ; CHECK-LABEL: combine_permvar_8f64_identity:
 ; CHECK:       # %bb.0:
@@ -1030,4 +1033,25 @@ define <8 x double> @concat_vpermilvar_v8f64_v4f64(<4 x double> %a0, <4 x double
   %v1 = tail call noundef <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> %a1, <4 x i64> %m1)
   %res = shufflevector <4 x double> %v0, <4 x double> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x double> %res
+}
+
+; shift elements up by one
+define <16 x i32> @combine_vexpandd_as_valignd(<16 x i32>  %x) {
+; CHECK-LABEL: combine_vexpandd_as_valignd:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    valignd {{.*#+}} zmm0 = zmm1[15],zmm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <16 x i32> @llvm.x86.avx512.mask.expand.v16i32(<16 x i32> %x, <16 x i32> zeroinitializer, <16 x i1> <i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+  ret <16 x i32> %res
+}
+
+; zero upper half of vector
+define <16 x i32> @combine_vcompressd_as_vmov(<16 x i32> %x) {
+; CHECK-LABEL: combine_vcompressd_as_vmov:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovaps %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <16 x i32> @llvm.x86.avx512.mask.compress.v16i32(<16 x i32> %x, <16 x i32> zeroinitializer, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>)
+  ret <16 x i32> %res
 }

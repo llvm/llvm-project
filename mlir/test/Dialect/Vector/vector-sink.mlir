@@ -382,6 +382,21 @@ func.func @broadcast_scalar_extsi_scalable(%a : i8) -> vector<2x[4]xi32> {
   return %r : vector<2x[4]xi32>
 }
 
+// -----
+
+// CHECK-LABEL: func.func @negative_broadcast_cast_non_vector_result
+// CHECK-SAME: (%[[ARG:.*]]: i64)
+// CHECK: %[[BCAST:.*]] = vector.broadcast %[[ARG]] : i64 to vector<26x7xi64>
+// CHECK: %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[BCAST]] : vector<26x7xi64> to !llvm.array<26 x vector<7xi64>>
+// CHECK: return %[[CAST]] : !llvm.array<26 x vector<7xi64>>
+/// This test ensures that the `ReorderCastOpsOnBroadcast` pattern does not
+/// attempt to reorder a cast operation that produces a non-vector result type.
+func.func @negative_broadcast_cast_non_vector_result(%arg0: i64) -> !llvm.array<26 x vector<7xi64>> {
+  %0 = vector.broadcast %arg0 : i64 to vector<26x7xi64>
+  %1 = builtin.unrealized_conversion_cast %0 : vector<26x7xi64> to !llvm.array<26 x vector<7xi64>>
+  return %1 : !llvm.array<26 x vector<7xi64>>
+}
+
 //===----------------------------------------------------------------------===//
 // [Pattern: ReorderElementwiseOpsOnTranspose]
 //===----------------------------------------------------------------------===//
@@ -780,7 +795,7 @@ func.func @negative_extract_load_scalable(%arg0: memref<?xf32>, %arg1: index) ->
 }
 
 //-----------------------------------------------------------------------------
-// [Pattern: StoreOpFromSplatOrBroadcast]
+// [Pattern: StoreOpFromBroadcast]
 //-----------------------------------------------------------------------------
 
 // CHECK-LABEL: @store_splat

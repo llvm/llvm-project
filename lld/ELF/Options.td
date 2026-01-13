@@ -154,7 +154,7 @@ def bp_startup_sort: JJ<"bp-startup-sort=">, MetaVarName<"[none,function]">,
 
 // Auxiliary options related to balanced partition
 defm bp_compression_sort_startup_functions: BB<"bp-compression-sort-startup-functions",
-  "When --irpgo-profile is pecified, prioritize function similarity for compression in addition to startup time", "">;
+  "When --irpgo-profile is specified, prioritize function similarity for compression in addition to startup time", "">;
 def verbose_bp_section_orderer: FF<"verbose-bp-section-orderer">,
   HelpText<"Print information on balanced partitioning">;
 
@@ -722,11 +722,14 @@ def thinlto_distributor_eq: JJ<"thinlto-distributor=">,
   "ThinLTO backend compilations will be distributed">;
 defm thinlto_distributor_arg: EEq<"thinlto-distributor-arg", "Arguments to "
   "pass to the ThinLTO distributor">;
-def thinlto_compiler_eq: JJ<"thinlto-remote-compiler=">,
+def thinlto_remote_compiler_eq: JJ<"thinlto-remote-compiler=">,
   HelpText<"Compiler for the ThinLTO distributor to invoke for ThinLTO backend "
   "compilations">;
-defm thinlto_compiler_arg: EEq<"thinlto-remote-compiler-arg", "Compiler "
-  "arguments for the ThinLTO distributor to pass for ThinLTO backend "
+defm thinlto_remote_compiler_prepend_arg: EEq<"thinlto-remote-compiler-prepend-arg",
+  "Compiler prepend arguments for the ThinLTO distributor to pass for ThinLTO backend "
+  "compilations">;
+defm thinlto_remote_compiler_arg: EEq<"thinlto-remote-compiler-arg",
+  "Compiler arguments for the ThinLTO distributor to pass for ThinLTO backend "
   "compilations">;
 defm fat_lto_objects: BB<"fat-lto-objects",
     "Use the .llvm.lto section, which contains LLVM bitcode, in fat LTO object files to perform LTO.",

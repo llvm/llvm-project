@@ -40,7 +40,7 @@ class AVRDisassembler : public MCDisassembler {
 public:
   AVRDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx)
       : MCDisassembler(STI, Ctx) {}
-  virtual ~AVRDisassembler() = default;
+  ~AVRDisassembler() override = default;
 
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
@@ -82,7 +82,7 @@ static DecodeStatus DecodeGPR8RegisterClass(MCInst &Inst, unsigned RegNo,
   if (RegNo > 31)
     return MCDisassembler::Fail;
 
-  unsigned Register = GPRDecoderTable[RegNo];
+  MCRegister Register = GPRDecoderTable[RegNo];
   Inst.addOperand(MCOperand::createReg(Register));
   return MCDisassembler::Success;
 }
@@ -174,7 +174,7 @@ static DecodeStatus decodeLoadStore(MCInst &Inst, unsigned Insn,
                                     uint64_t Address,
                                     const MCDisassembler *Decoder) {
   // Get the register will be loaded or stored.
-  unsigned RegVal = GPRDecoderTable[(Insn >> 4) & 0x1f];
+  MCRegister RegVal = GPRDecoderTable[(Insn >> 4) & 0x1f];
 
   // Decode LDD/STD with offset less than 8.
   if ((Insn & 0xf000) == 0x8000) {

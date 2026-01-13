@@ -22,8 +22,8 @@ Example buggy usage looks like:
     // Do something with cs.
   }
 
-Because TEMP_FAILURE_RETRY will check for whether the result *of the comparison*
-is ``-1``, and retry if so.
+Because ``TEMP_FAILURE_RETRY`` will check for whether the result
+*of the comparison* is ``-1``, and retry if so.
 
 If you encounter this, the fix is simple: lift the comparison out of the
 ``TEMP_FAILURE_RETRY`` argument, like so:

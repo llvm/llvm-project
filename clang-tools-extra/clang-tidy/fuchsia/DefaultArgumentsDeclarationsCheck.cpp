@@ -24,7 +24,7 @@ void DefaultArgumentsDeclarationsCheck::check(
   if (!D)
     return;
 
-  SourceRange DefaultArgRange = D->getDefaultArgRange();
+  const SourceRange DefaultArgRange = D->getDefaultArgRange();
 
   if (DefaultArgRange.getEnd() != D->getEndLoc())
     return;
@@ -35,10 +35,10 @@ void DefaultArgumentsDeclarationsCheck::check(
     return;
   }
 
-  SourceLocation StartLocation =
+  const SourceLocation StartLocation =
       D->getName().empty() ? D->getBeginLoc() : D->getLocation();
 
-  SourceRange RemovalRange(
+  const SourceRange RemovalRange(
       Lexer::getLocForEndOfToken(StartLocation, 0, *Result.SourceManager,
                                  Result.Context->getLangOpts()),
       DefaultArgRange.getEnd());

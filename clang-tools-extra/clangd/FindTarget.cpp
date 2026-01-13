@@ -50,7 +50,7 @@ namespace clang {
 namespace clangd {
 namespace {
 
-LLVM_ATTRIBUTE_UNUSED std::string nodeToString(const DynTypedNode &N) {
+[[maybe_unused]] std::string nodeToString(const DynTypedNode &N) {
   std::string S = std::string(N.getNodeKind().asStringRef());
   {
     llvm::raw_string_ostream OS(S);
@@ -366,7 +366,7 @@ public:
       Visitor(TargetFinder &Outer, RelSet Flags) : Outer(Outer), Flags(Flags) {}
 
       void VisitTagType(const TagType *TT) {
-        Outer.add(cast<TagType>(TT)->getOriginalDecl(), Flags);
+        Outer.add(cast<TagType>(TT)->getDecl(), Flags);
       }
 
       void VisitUsingType(const UsingType *ET) {
@@ -861,7 +861,7 @@ refInTypeLoc(TypeLoc L, const HeuristicResolver *Resolver) {
       Refs.push_back(ReferenceLoc{L.getQualifierLoc(),
                                   L.getNameLoc(),
                                   /*IsDecl=*/false,
-                                  {L.getOriginalDecl()}});
+                                  {L.getDecl()}});
     }
 
     void VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc L) {
@@ -1040,16 +1040,11 @@ private:
     if (auto *S = N.get<Stmt>())
       return refInStmt(S, Resolver);
     if (auto *NNSL = N.get<NestedNameSpecifierLoc>()) {
+      if (TypeLoc TL = NNSL->getAsTypeLoc())
+        return refInTypeLoc(TL, Resolver);
       // (!) 'DeclRelation::Alias' ensures we do not lose namespace aliases.
-      NestedNameSpecifierLoc Qualifier;
-      SourceLocation NameLoc;
-      if (auto TL = NNSL->getAsTypeLoc()) {
-        Qualifier = TL.getPrefix();
-        NameLoc = TL.getNonPrefixBeginLoc();
-      } else {
-        Qualifier = NNSL->getAsNamespaceAndPrefix().Prefix;
-        NameLoc = NNSL->getLocalBeginLoc();
-      }
+      NestedNameSpecifierLoc Qualifier = NNSL->getAsNamespaceAndPrefix().Prefix;
+      SourceLocation NameLoc = NNSL->getLocalBeginLoc();
       return {
           ReferenceLoc{Qualifier, NameLoc, false,
                        explicitReferenceTargets(

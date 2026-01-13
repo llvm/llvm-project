@@ -18,6 +18,7 @@ class LetDummies {
   bit isConvergent;
   bit isAsCheapAsAMove;
   bit FPDPRounding;
+  bit IsDPMACCInstruction;
   Predicate SubtargetPredicate;
   string Constraints;
   string DisableEncoding;
@@ -71,6 +72,7 @@ class VOP_Pseudo <string opName, string suffix, VOPProfile P, dag outs, dag ins,
   string Mnemonic = opName;
   Instruction Opcode = !cast<Instruction>(NAME);
   bit IsTrue16 = P.IsTrue16;
+  bit IsDPMACCInstruction = 0;
   VOPProfile Pfl = P;
 
   string AsmOperands;
@@ -166,6 +168,7 @@ class VOP3P_Pseudo <string opName, VOPProfile P, list<dag> pattern = []> :
 class VOP_Real<VOP_Pseudo ps> {
   Instruction Opcode = !cast<Instruction>(NAME);
   bit IsSingle = ps.Pfl.IsSingle;
+  bit IsDPMACCInstruction = ps.IsDPMACCInstruction;
 }
 
 class VOP3_Real <VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemonic> :
@@ -196,6 +199,7 @@ class VOP3_Real <VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemoni
   let mayStore             = ps.mayStore;
   let TRANS                = ps.TRANS;
   let isConvergent         = ps.isConvergent;
+  let PostEncoderMethod = ps.PostEncoderMethod;
 
   VOPProfile Pfl = ps.Pfl;
 }
@@ -417,6 +421,13 @@ class VOP3a_ScaleSel_gfx1250<bits<10> op, VOPProfile p> : VOP3e_gfx11_gfx12<op, 
   bits<4> scale_sel;
 
   let Inst{14-11} = scale_sel;
+}
+
+class VOP3Interp_OpSel_gfx9<bits<10> op, VOPProfile p> : VOP3Interp_vi<op, p> {
+  let Inst{11} = src0_modifiers{2};
+  // There's no src1
+  let Inst{13} = src2_modifiers{2};
+  let Inst{14} = !if(p.HasDst,  src0_modifiers{3}, 0);
 }
 
 class VOP3Interp_gfx10<bits<10> op, VOPProfile p> : VOP3e_gfx10<op, p> {
@@ -1350,8 +1361,12 @@ class VOPBinOpClampPat<SDPatternOperator node, Instruction inst, ValueType vt> :
 
 class getVOP3ModPat<VOPProfile P, SDPatternOperator node> {
   dag src0 = !if(P.HasOMod,
-    (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod),
-    (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i1:$clamp));
+    !if(P.HasClamp,
+        (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod),
+        (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i32:$omod)),
+    !if(P.HasClamp,
+        (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i1:$clamp),
+        (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers)));
 
   list<dag> ret3 = [(set P.DstVT:$vdst,
     (DivergentFragOrOp<node, P>.ret (P.Src0VT src0),
@@ -2197,12 +2212,12 @@ include "VOP3PInstructions.td"
 include "VOPDInstructions.td"
 
 class ClassPat<Instruction inst, ValueType vt> : GCNPat <
-  (is_fpclass (vt (VOP3ModsNonCanonicalizing vt:$src0, i32:$src0_mods)), (i32 timm:$mask)),
+  (i1 (is_fpclass (vt (VOP3ModsNonCanonicalizing vt:$src0, i32:$src0_mods)), (i32 timm:$mask))),
   (inst i32:$src0_mods, vt:$src0, (V_MOV_B32_e32 timm:$mask))
 >;
 
 class ClassPat_t16<Instruction inst, ValueType vt> : GCNPat <
-  (is_fpclass (vt (VOP3ModsNonCanonicalizing vt:$src0, i32:$src0_mods)), (i32 timm:$mask)),
+  (i1 (is_fpclass (vt (VOP3ModsNonCanonicalizing vt:$src0, i32:$src0_mods)), (i32 timm:$mask))),
   (inst i32:$src0_mods, vt:$src0, SRCMODS.NONE, (V_MOV_B32_e32 timm:$mask))
 >;
 
@@ -2266,4 +2281,13 @@ def VOPTrue16Table : GenericTable {
 
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "getTrue16OpcodeHelper";
+}
+
+def DPMACCInstructionTable : GenericTable {
+  let FilterClass = "VOP_Pseudo";
+  let CppTypeName = "DPMACCInstructionInfo";
+  let Fields = ["Opcode", "IsDPMACCInstruction"];
+
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "getDPMACCInstructionHelper";
 }

@@ -28,19 +28,7 @@ define void @test(ptr %p) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[A1:%.*]] = getelementptr i64, ptr [[P]], i64 [[IV]]
-; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[A1]], align 32
-; CHECK-NEXT:    [[OFFSET:%.*]] = add i64 [[IV]], 200
-; CHECK-NEXT:    [[A2:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET]]
-; CHECK-NEXT:    store i64 [[V]], ptr [[A2]], align 32
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[IV]], 199
-; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -79,21 +67,9 @@ define void @test_may_clobber(ptr %p) {
 ; CHECK-NEXT:    store <4 x i64> [[WIDE_LOAD]], ptr [[TMP4]], align 32
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 200
-; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[A1:%.*]] = getelementptr i64, ptr [[P]], i64 [[IV]]
-; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[A1]], align 32
-; CHECK-NEXT:    [[OFFSET:%.*]] = add i64 [[IV]], 100
-; CHECK-NEXT:    [[A2:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET]]
-; CHECK-NEXT:    store i64 [[V]], ptr [[A2]], align 32
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[IV]], 199
-; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -135,21 +111,9 @@ define void @trivial_due_max_vscale(ptr %p) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP11]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[A1:%.*]] = getelementptr i64, ptr [[P]], i64 [[IV]]
-; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[A1]], align 32
-; CHECK-NEXT:    [[OFFSET:%.*]] = add i64 [[IV]], 8192
-; CHECK-NEXT:    [[A2:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET]]
-; CHECK-NEXT:    store i64 [[V]], ptr [[A2]], align 32
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[IV]], 199
-; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -191,21 +155,9 @@ define void @no_high_lmul_or_interleave(ptr %p) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP11]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[A1:%.*]] = getelementptr i64, ptr [[P]], i64 [[IV]]
-; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[A1]], align 32
-; CHECK-NEXT:    [[OFFSET:%.*]] = add i64 [[IV]], 1024
-; CHECK-NEXT:    [[A2:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET]]
-; CHECK-NEXT:    store i64 [[V]], ptr [[A2]], align 32
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[IV]], 199
-; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -251,11 +203,11 @@ define void @safe_load_store_distance_not_pow_of_2(i64 %N) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i64> [ <i64 0, i64 3, i64 6, i64 9, i64 12, i64 15, i64 18, i64 21>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr [10 x [12 x i16]], ptr @a, i64 0, i64 8, <8 x i64> [[VEC_IND]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v8i16.v8p0(<8 x i16> zeroinitializer, <8 x ptr> [[TMP7]], i32 2, <8 x i1> splat (i1 true))
+; CHECK-NEXT:    call void @llvm.masked.scatter.v8i16.v8p0(<8 x i16> zeroinitializer, <8 x ptr> align 2 [[TMP7]], <8 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], splat (i64 24)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <8 x i64> [[VEC_IND]], splat (i64 24)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -269,7 +221,7 @@ define void @safe_load_store_distance_not_pow_of_2(i64 %N) {
 ; CHECK-NEXT:    store i16 0, ptr [[GEP_OFF]], align 2
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 3
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IV]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

@@ -44,38 +44,38 @@ define <4 x float> @fmul_pow2_ldexp_4xfloat(<4 x i32> %i) {
 ; CHECK-NEON-LABEL: fmul_pow2_ldexp_4xfloat:
 ; CHECK-NEON:       // %bb.0:
 ; CHECK-NEON-NEXT:    sub sp, sp, #48
-; CHECK-NEON-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEON-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEON-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEON-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEON-NEXT:    mov w0, v0.s[1]
-; CHECK-NEON-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEON-NEXT:    fmov s0, #9.00000000
 ; CHECK-NEON-NEXT:    bl ldexpf
-; CHECK-NEON-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-NEON-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEON-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-NEON-NEXT:    fmov s0, #9.00000000
 ; CHECK-NEON-NEXT:    fmov w0, s1
 ; CHECK-NEON-NEXT:    bl ldexpf
-; CHECK-NEON-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEON-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEON-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-NEON-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEON-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEON-NEXT:    mov w0, v0.s[2]
 ; CHECK-NEON-NEXT:    fmov s0, #9.00000000
 ; CHECK-NEON-NEXT:    bl ldexpf
-; CHECK-NEON-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEON-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEON-NEXT:    mov v1.s[2], v0.s[0]
-; CHECK-NEON-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEON-NEXT:    mov w0, v0.s[3]
 ; CHECK-NEON-NEXT:    fmov s0, #9.00000000
-; CHECK-NEON-NEXT:    str q1, [sp] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    str q1, [sp] // 16-byte Spill
 ; CHECK-NEON-NEXT:    bl ldexpf
-; CHECK-NEON-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEON-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEON-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEON-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NEON-NEXT:    mov v1.s[3], v0.s[0]
 ; CHECK-NEON-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEON-NEXT:    add sp, sp, #48

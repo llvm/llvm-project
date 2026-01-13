@@ -6,7 +6,7 @@
 !    This has both an explicit and implicit iteration space. The WHERE construct
 !    makes the assignments conditional and the where mask evaluation must happen
 !    prior to evaluating the array assignment statement.
-subroutine test_nested_forall_where(a,b)  
+subroutine test_nested_forall_where(a,b)
   type t
      real data(100)
   end type t

@@ -17,30 +17,34 @@ human programmer probably expects that the converted value matches with the
 character code (a value from [0..255]), however, the actual value is in
 [-128..127] interval. To avoid this kind of misinterpretation, the desired way
 of converting from a ``signed char`` to an integer value is converting to
-``unsigned char`` first, which stores all the characters in the positive [0..255]
-interval which matches the known character codes.
+``unsigned char`` first, which stores all the characters in the positive
+[0..255] interval which matches the known character codes.
 
 In case of implicit conversion, the programmer might not actually be aware
 that a conversion happened and char value is used as an integer. There are
-some use cases when this unawareness might lead to a functionally imperfect code.
-For example, checking the equality of a ``signed char`` and an ``unsigned char``
-variable is something we should avoid in C++ code. During this comparison,
-the two variables are converted to integers which have different value ranges.
-For ``signed char``, the non-ASCII characters are stored as a value in [-128..-1]
-interval, while the same characters are stored in the [128..255] interval for
-an ``unsigned char``.
+some use cases when this unawareness might lead to a functionally imperfect
+code. For example, checking the equality of a ``signed char`` and an
+``unsigned char`` variable is something we should avoid in C++ code. During
+this comparison, the two variables are converted to integers which have
+different value ranges. For ``signed char``, the non-ASCII characters are
+stored as a value in [-128..-1] interval, while the same characters are
+stored in the [128..255] interval for an ``unsigned char``.
 
-It depends on the actual platform whether plain ``char`` is handled as ``signed char``
-by default and so it is caught by this check or not. To change the default behavior
-you can use ``-funsigned-char`` and ``-fsigned-char`` compilation options.
+It depends on the actual platform whether plain ``char`` is handled as
+``signed char`` by default and so it is caught by this check or not.
+To change the default behavior you can use ``-funsigned-char`` and
+``-fsigned-char`` compilation options.
 
 Currently, this check warns in the following cases:
+
 - ``signed char`` is assigned to an integer variable
-- ``signed char`` and ``unsigned char`` are compared with equality/inequality operator
+- ``signed char`` and ``unsigned char`` are compared with
+  equality/inequality operator
 - ``signed char`` is converted to an integer in the array subscript
 
 See also:
-`STR34-C. Cast characters to unsigned char before converting to larger integer sizes
+`STR34-C. Cast characters to unsigned char before converting to larger
+integer sizes
 <https://wiki.sei.cmu.edu/confluence/display/c/STR34-C.+Cast+characters+to+unsigned+char+before+converting+to+larger+integer+sizes>`_
 
 A good example from the CERT description when a ``char`` variable is used to
@@ -107,7 +111,7 @@ so both arguments will have the same type.
 Options
 -------
 
-.. option:: CharTypdefsToIgnore
+.. option:: CharTypedefsToIgnore
 
   A semicolon-separated list of typedef names. In this list, we can list
   typedefs for ``char`` or ``signed char``, which will be ignored by the

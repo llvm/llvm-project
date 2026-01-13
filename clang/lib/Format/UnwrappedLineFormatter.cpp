@@ -285,7 +285,8 @@ private:
       if (Tok && Tok->is(tok::kw_typedef))
         Tok = Tok->getNextNonComment();
       if (Tok && Tok->isOneOf(tok::kw_class, tok::kw_struct, tok::kw_union,
-                              tok::kw_extern, Keywords.kw_interface)) {
+                              tok::kw_extern, Keywords.kw_interface,
+                              Keywords.kw_record)) {
         return !Style.BraceWrapping.SplitEmptyRecord && EmptyBlock
                    ? tryMergeSimpleBlock(I, E, Limit)
                    : 0;
@@ -498,7 +499,8 @@ private:
         ShouldMerge = Style.AllowShortEnumsOnASingleLine;
       } else if (TheLine->Last->is(TT_CompoundRequirementLBrace)) {
         ShouldMerge = Style.AllowShortCompoundRequirementOnASingleLine;
-      } else if (TheLine->Last->isOneOf(TT_ClassLBrace, TT_StructLBrace)) {
+      } else if (TheLine->Last->isOneOf(TT_ClassLBrace, TT_StructLBrace,
+                                        TT_RecordLBrace)) {
         // NOTE: We use AfterClass (whereas AfterStruct exists) for both classes
         // and structs, but it seems that wrapping is still handled correctly
         // elsewhere.
@@ -506,8 +508,8 @@ private:
                       (NextLine.First->is(tok::r_brace) &&
                        !Style.BraceWrapping.SplitEmptyRecord);
       } else if (TheLine->InPPDirective ||
-                 !TheLine->First->isOneOf(tok::kw_class, tok::kw_enum,
-                                          tok::kw_struct)) {
+                 TheLine->First->isNoneOf(tok::kw_class, tok::kw_enum,
+                                          tok::kw_struct, Keywords.kw_record)) {
         // Try to merge a block with left brace unwrapped that wasn't yet
         // covered.
         ShouldMerge = !Style.BraceWrapping.AfterFunction ||
@@ -640,8 +642,10 @@ private:
         return 0;
       const auto N = MergedLines + LinesToBeMerged;
       // Check if there is even a line after the inner result.
-      if (std::distance(I, E) <= N)
+      if (auto Distance = std::distance(I, E);
+          static_cast<decltype(N)>(Distance) <= N) {
         return 0;
+      }
       // Check that the line after the inner result starts with a closing brace
       // which we are permitted to merge into one line.
       if (I[N]->First->is(TT_NamespaceRBrace) &&
@@ -686,8 +690,8 @@ private:
     }
     Limit = limitConsideringMacros(I + 1, E, Limit);
     AnnotatedLine &Line = **I;
-    if (Line.First->isNot(tok::kw_do) && Line.First->isNot(tok::kw_else) &&
-        Line.Last->isNot(tok::kw_else) && Line.Last->isNot(tok::r_paren)) {
+    if (Line.First->isNoneOf(tok::kw_do, tok::kw_else) &&
+        Line.Last->isNoneOf(tok::kw_else, tok::r_paren)) {
       return 0;
     }
     // Only merge `do while` if `do` is the only statement on the line.
@@ -1050,8 +1054,8 @@ static void markFinalized(FormatToken *Tok) {
 static void printLineState(const LineState &State) {
   llvm::dbgs() << "State: ";
   for (const ParenState &P : State.Stack) {
-    llvm::dbgs() << (P.Tok ? P.Tok->TokenText : "F") << "|" << P.Indent << "|"
-                 << P.LastSpace << "|" << P.NestedBlockIndent << " ";
+    llvm::dbgs() << (P.Tok ? P.Tok->TokenText : "F") << "|" << P.Indent.Total
+                 << "|" << P.LastSpace << "|" << P.NestedBlockIndent << " ";
   }
   llvm::dbgs() << State.NextToken->TokenText << "\n";
 }
@@ -1109,7 +1113,7 @@ protected:
       const ParenState &P = State.Stack.back();
 
       int AdditionalIndent =
-          P.Indent - Previous.Children[0]->Level * Style.IndentWidth;
+          P.Indent.Total - Previous.Children[0]->Level * Style.IndentWidth;
       Penalty +=
           BlockFormatter->format(Previous.Children, DryRun, AdditionalIndent,
                                  /*FixBadIndentation=*/true);

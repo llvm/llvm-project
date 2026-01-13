@@ -26,7 +26,6 @@ entry:
 
 ; Perform tail call optimization for external symbol.
 @dest = global [2 x i8] zeroinitializer
-declare void @llvm.memcpy.p0.p0.i32(ptr, ptr, i32, i1)
 define void @caller_extern(ptr %src) optsize {
 ; CHECK-LABEL: caller_extern:
 ; CHECK:       # %bb.0: # %entry

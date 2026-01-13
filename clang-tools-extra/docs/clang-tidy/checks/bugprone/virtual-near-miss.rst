@@ -3,8 +3,9 @@
 bugprone-virtual-near-miss
 ==========================
 
-Warn if a function is a near miss (i.e. the name is very similar and the function
-signature is the same) to a virtual function from a base class.
+Warn if a function is a near miss (i.e. the name is very similar and
+the function signature is the same) to a virtual function from a base
+class.
 
 Example:
 

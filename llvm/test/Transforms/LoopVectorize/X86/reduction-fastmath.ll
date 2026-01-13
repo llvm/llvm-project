@@ -60,7 +60,7 @@ define float @reduction_sum_float_fastmath(i32 %n, ptr %array) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x float> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[ARRAY:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr [[TMP2]], i32 4
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr [[TMP2]], i64 4
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP6]] = fadd fast <4 x float> [[VEC_PHI]], [[WIDE_LOAD]]
@@ -71,23 +71,11 @@ define float @reduction_sum_float_fastmath(i32 %n, ptr %array) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd fast <4 x float> [[TMP7]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[BIN_RDX]])
-; CHECK-NEXT:    br label [[LOOP_EXIT_LOOPEXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_INC:%.*]], [[LOOP]] ], [ 0, [[SCALAR_PH:%.*]] ]
-; CHECK-NEXT:    [[SUM:%.*]] = phi float [ [[SUM_INC:%.*]], [[LOOP]] ], [ 0.000000e+00, [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[ADDRESS:%.*]] = getelementptr float, ptr [[ARRAY]], i32 [[IDX]]
-; CHECK-NEXT:    [[VALUE:%.*]] = load float, ptr [[ADDRESS]], align 4
-; CHECK-NEXT:    [[SUM_INC]] = fadd fast float [[SUM]], [[VALUE]]
-; CHECK-NEXT:    [[IDX_INC]] = add i32 [[IDX]], 1
-; CHECK-NEXT:    [[BE_COND:%.*]] = icmp ne i32 [[IDX_INC]], 4096
-; CHECK-NEXT:    br i1 [[BE_COND]], label [[LOOP]], label [[LOOP_EXIT_LOOPEXIT]]
 ; CHECK:       loop.exit.loopexit:
-; CHECK-NEXT:    [[SUM_INC_LCSSA:%.*]] = phi float [ [[SUM_INC]], [[LOOP]] ], [ [[TMP9]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[LOOP_EXIT]]
 ; CHECK:       loop.exit:
-; CHECK-NEXT:    [[SUM_LCSSA:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[SUM_INC_LCSSA]], [[LOOP_EXIT_LOOPEXIT]] ]
+; CHECK-NEXT:    [[SUM_LCSSA:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[TMP9]], [[LOOP]] ]
 ; CHECK-NEXT:    ret float [[SUM_LCSSA]]
 ;
 entry:
@@ -123,7 +111,7 @@ define float @reduction_sum_float_only_reassoc(i32 %n, ptr %array) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ splat (float -0.000000e+00), [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x float> [ splat (float -0.000000e+00), [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[ARRAY:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr [[TMP2]], i32 4
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr [[TMP2]], i64 4
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP6]] = fadd reassoc <4 x float> [[VEC_PHI]], [[WIDE_LOAD]]
@@ -134,23 +122,11 @@ define float @reduction_sum_float_only_reassoc(i32 %n, ptr %array) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc <4 x float> [[TMP7]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call reassoc float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[BIN_RDX]])
-; CHECK-NEXT:    br label [[LOOP_EXIT_LOOPEXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_INC:%.*]], [[LOOP]] ], [ 0, [[SCALAR_PH:%.*]] ]
-; CHECK-NEXT:    [[SUM:%.*]] = phi float [ [[SUM_INC:%.*]], [[LOOP]] ], [ -0.000000e+00, [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[ADDRESS:%.*]] = getelementptr float, ptr [[ARRAY]], i32 [[IDX]]
-; CHECK-NEXT:    [[VALUE:%.*]] = load float, ptr [[ADDRESS]], align 4
-; CHECK-NEXT:    [[SUM_INC]] = fadd reassoc float [[SUM]], [[VALUE]]
-; CHECK-NEXT:    [[IDX_INC]] = add i32 [[IDX]], 1
-; CHECK-NEXT:    [[BE_COND:%.*]] = icmp ne i32 [[IDX_INC]], 4096
-; CHECK-NEXT:    br i1 [[BE_COND]], label [[LOOP]], label [[LOOP_EXIT_LOOPEXIT]]
 ; CHECK:       loop.exit.loopexit:
-; CHECK-NEXT:    [[SUM_INC_LCSSA:%.*]] = phi float [ [[SUM_INC]], [[LOOP]] ], [ [[TMP9]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[LOOP_EXIT]]
 ; CHECK:       loop.exit:
-; CHECK-NEXT:    [[SUM_LCSSA:%.*]] = phi float [ -0.000000e+00, [[ENTRY:%.*]] ], [ [[SUM_INC_LCSSA]], [[LOOP_EXIT_LOOPEXIT]] ]
+; CHECK-NEXT:    [[SUM_LCSSA:%.*]] = phi float [ -0.000000e+00, [[ENTRY:%.*]] ], [ [[TMP9]], [[LOOP]] ]
 ; CHECK-NEXT:    ret float [[SUM_LCSSA]]
 ;
 entry:
@@ -186,7 +162,7 @@ define float @reduction_sum_float_only_reassoc_and_contract(i32 %n, ptr %array) 
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ splat (float -0.000000e+00), [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x float> [ splat (float -0.000000e+00), [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[ARRAY:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr [[TMP2]], i32 4
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr [[TMP2]], i64 4
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP6]] = fadd reassoc contract <4 x float> [[VEC_PHI]], [[WIDE_LOAD]]
@@ -197,23 +173,11 @@ define float @reduction_sum_float_only_reassoc_and_contract(i32 %n, ptr %array) 
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc contract <4 x float> [[TMP7]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call reassoc contract float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[BIN_RDX]])
-; CHECK-NEXT:    br label [[LOOP_EXIT_LOOPEXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_INC:%.*]], [[LOOP]] ], [ 0, [[SCALAR_PH:%.*]] ]
-; CHECK-NEXT:    [[SUM:%.*]] = phi float [ [[SUM_INC:%.*]], [[LOOP]] ], [ -0.000000e+00, [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[ADDRESS:%.*]] = getelementptr float, ptr [[ARRAY]], i32 [[IDX]]
-; CHECK-NEXT:    [[VALUE:%.*]] = load float, ptr [[ADDRESS]], align 4
-; CHECK-NEXT:    [[SUM_INC]] = fadd reassoc contract float [[SUM]], [[VALUE]]
-; CHECK-NEXT:    [[IDX_INC]] = add i32 [[IDX]], 1
-; CHECK-NEXT:    [[BE_COND:%.*]] = icmp ne i32 [[IDX_INC]], 4096
-; CHECK-NEXT:    br i1 [[BE_COND]], label [[LOOP]], label [[LOOP_EXIT_LOOPEXIT]]
 ; CHECK:       loop.exit.loopexit:
-; CHECK-NEXT:    [[SUM_INC_LCSSA:%.*]] = phi float [ [[SUM_INC]], [[LOOP]] ], [ [[TMP9]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[LOOP_EXIT]]
 ; CHECK:       loop.exit:
-; CHECK-NEXT:    [[SUM_LCSSA:%.*]] = phi float [ -0.000000e+00, [[ENTRY:%.*]] ], [ [[SUM_INC_LCSSA]], [[LOOP_EXIT_LOOPEXIT]] ]
+; CHECK-NEXT:    [[SUM_LCSSA:%.*]] = phi float [ -0.000000e+00, [[ENTRY:%.*]] ], [ [[TMP9]], [[LOOP]] ]
 ; CHECK-NEXT:    ret float [[SUM_LCSSA]]
 ;
 entry:
@@ -256,7 +220,7 @@ define float @PR35538(ptr nocapture readonly %a, i32 %N) #0 {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ splat (float -1.000000e+00), [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x float> [ splat (float -1.000000e+00), [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 4
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i64 4
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = fcmp nnan ninf nsz oge <4 x float> [[WIDE_LOAD]], [[VEC_PHI]]
@@ -337,7 +301,7 @@ define float @PR35538_more_FMF(ptr nocapture readonly %a, i32 %N) #0 {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ splat (float -1.000000e+00), [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x float> [ splat (float -1.000000e+00), [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 4
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i64 4
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = fcmp nnan ninf oge <4 x float> [[WIDE_LOAD]], [[VEC_PHI]]
@@ -398,4 +362,4 @@ for.body:
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
-attributes #0 = { "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "unsafe-fp-math"="false" }
+attributes #0 = { "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" }

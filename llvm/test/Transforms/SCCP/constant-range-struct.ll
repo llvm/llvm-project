@@ -25,7 +25,7 @@ true:
   br label %exit
 
 false:
-  %s.3 = insertvalue {i64, i64} undef, i64 30, 0
+  %s.3 = insertvalue {i64, i64} poison, i64 30, 0
   %s.4 = insertvalue {i64, i64} %s.3, i64 300, 1
   br label %exit
 
@@ -39,14 +39,14 @@ define void @struct1_caller() {
 ; CHECK-NEXT:    [[S:%.*]] = call { i64, i64 } @struct1()
 ; CHECK-NEXT:    [[V1:%.*]] = extractvalue { i64, i64 } [[S]], 0
 ; CHECK-NEXT:    [[V2:%.*]] = extractvalue { i64, i64 } [[S]], 1
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ne i64 [[V1]], 10
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i64 [[V1]], 100
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ne i64 [[V2]], 0
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[T_3:%.*]] = icmp eq i64 [[V1]], 20
 ; CHECK-NEXT:    call void @use(i1 [[T_3]])
-; CHECK-NEXT:    [[T_4:%.*]] = icmp ult i64 [[V2]], 301
-; CHECK-NEXT:    call void @use(i1 [[T_4]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[T_6:%.*]] = icmp eq i64 [[V2]], 300
+; CHECK-NEXT:    call void @use(i1 [[T_6]])
 ; CHECK-NEXT:    ret void
 ;
   %s = call {i64, i64} @struct1()
@@ -57,10 +57,14 @@ define void @struct1_caller() {
   call void @use(i1 %t.1)
   %t.2 = icmp ult i64 %v1, 100
   call void @use(i1 %t.2)
-  %t.3 = icmp ne i64 %v2, 0
+  %t.3 = icmp eq i64 %v1, 20
   call void @use(i1 %t.3)
-  %t.4 = icmp ult i64 %v2, 301
+  %t.4 = icmp ne i64 %v2, 0
   call void @use(i1 %t.4)
+  %t.5 = icmp ult i64 %v2, 301
+  call void @use(i1 %t.5)
+  %t.6 = icmp eq i64 %v2, 300
+  call void @use(i1 %t.6)
 
   ret void
 }
@@ -76,7 +80,7 @@ define internal {i64, i64} @struct2() {
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[V1:%.*]] = phi i64 [ 20, [[TRUE]] ], [ 30, [[FALSE]] ]
 ; CHECK-NEXT:    [[V2:%.*]] = phi i64 [ 200, [[TRUE]] ], [ 300, [[FALSE]] ]
-; CHECK-NEXT:    [[S_1:%.*]] = insertvalue { i64, i64 } undef, i64 [[V1]], 0
+; CHECK-NEXT:    [[S_1:%.*]] = insertvalue { i64, i64 } poison, i64 [[V1]], 0
 ; CHECK-NEXT:    [[S_2:%.*]] = insertvalue { i64, i64 } [[S_1]], i64 [[V2]], 1
 ; CHECK-NEXT:    ret { i64, i64 } [[S_2]]
 ;
@@ -92,7 +96,7 @@ false:
 exit:
   %v1 = phi i64 [ 20, %true ], [ 30, %false ]
   %v2 = phi i64 [ 200, %true ], [ 300, %false ]
-  %s.1 = insertvalue {i64, i64} undef, i64 %v1, 0
+  %s.1 = insertvalue {i64, i64} poison, i64 %v1, 0
   %s.2 = insertvalue {i64, i64} %s.1, i64 %v2, 1
   ret {i64, i64} %s.2
 }
@@ -152,4 +156,41 @@ define void @struct2_caller() {
   call void @use(i1 %c.4)
 
   ret void
+}
+
+%"phi_type" =  type {i64, i64}
+
+define internal %"phi_type" @test(i32 %input) {
+; CHECK-LABEL: @test(
+; CHECK-NEXT:    br label [[COND_TRUE_I:%.*]]
+; CHECK:       cond.true.i:
+; CHECK-NEXT:    br label [[COND_END_I:%.*]]
+; CHECK:       cond.end.i:
+; CHECK-NEXT:    ret [[PHI_TYPE:%.*]] poison
+;
+  %cmp.cond = icmp eq i32 %input, 1
+  br i1 %cmp.cond, label %cond.true.i, label %cond.false.i
+
+cond.true.i:
+  %r1.tmp = insertvalue %"phi_type" poison, i64 1, 0
+  %r1.tmp.2 = insertvalue %"phi_type" %r1.tmp, i64 2, 1
+  br label %cond.end.i
+
+cond.false.i:
+  %r2.tmp = insertvalue %"phi_type" poison, i64 3, 0
+  %r2.tmp.2 = insertvalue %"phi_type" %r2.tmp, i64 4, 1
+  br label %cond.end.i
+
+cond.end.i:
+  %retval = phi %"phi_type" [ %r1.tmp.2, %cond.true.i ], [ %r2.tmp.2, %cond.false.i ]
+  ret %"phi_type" %retval
+}
+
+define %"phi_type" @test2() {
+; CHECK-LABEL: @test2(
+; CHECK-NEXT:    [[CALL_1:%.*]] = tail call fastcc [[PHI_TYPE:%.*]] @[[TEST:[a-zA-Z0-9_$\"\\.-]*[a-zA-Z_$\"\\.-][a-zA-Z0-9_$\"\\.-]*]](i32 noundef 1)
+; CHECK-NEXT:    ret [[PHI_TYPE]] { i64 1, i64 2 }
+;
+  %call.1 = tail call fastcc noundef %"phi_type" @test(i32 noundef 1)
+  ret %"phi_type" %call.1
 }

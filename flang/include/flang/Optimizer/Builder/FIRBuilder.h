@@ -208,6 +208,11 @@ public:
     return createRealConstant(loc, realType, 0u);
   }
 
+  /// Create a real constant of type \p realType with value one.
+  mlir::Value createRealOneConstant(mlir::Location loc, mlir::Type realType) {
+    return createRealConstant(loc, realType, 1u);
+  }
+
   /// Create a slot for a local on the stack. Besides the variable's type and
   /// shape, it may be given name, pinned, or target attributes.
   mlir::Value allocateLocal(mlir::Location loc, mlir::Type ty,
@@ -371,6 +376,8 @@ public:
   mlir::StringAttr createCommonLinkage() {
     return createCommonLinkage(getContext());
   }
+
+  mlir::StringAttr createExternalLinkage() { return getStringAttr("external"); }
 
   mlir::StringAttr createInternalLinkage() { return getStringAttr("internal"); }
 
@@ -818,7 +825,8 @@ void genScalarAssignment(fir::FirOpBuilder &builder, mlir::Location loc,
                          const fir::ExtendedValue &lhs,
                          const fir::ExtendedValue &rhs,
                          bool needFinalization = false,
-                         bool isTemporaryLHS = false);
+                         bool isTemporaryLHS = false,
+                         mlir::ArrayAttr accessGroups = {});
 
 /// Assign \p rhs to \p lhs. Both \p rhs and \p lhs must be scalar derived
 /// types. The assignment follows Fortran intrinsic assignment semantic for
@@ -852,6 +860,11 @@ mlir::Value genLenOfCharacter(fir::FirOpBuilder &builder, mlir::Location loc,
 /// for logical types).
 mlir::Value createZeroValue(fir::FirOpBuilder &builder, mlir::Location loc,
                             mlir::Type type);
+
+/// Create a one value of a given numerical or logical \p type (`true`
+/// for logical types).
+mlir::Value createOneValue(fir::FirOpBuilder &builder, mlir::Location loc,
+                           mlir::Type type);
 
 /// Get the integer constants of triplet and compute the extent.
 std::optional<std::int64_t> getExtentFromTriplet(mlir::Value lb, mlir::Value ub,
@@ -958,6 +971,15 @@ mlir::Value genLifetimeStart(mlir::OpBuilder &builder, mlir::Location loc,
 /// given an llvm.ptr value.
 void genLifetimeEnd(mlir::OpBuilder &builder, mlir::Location loc,
                     mlir::Value mem);
+
+/// Given a fir.box or fir.class \p box describing an entity and a raw address
+/// \p newAddr for an entity with the same Fortran properties (rank, dynamic
+/// type, length parameters and bounds) and attributes (POINTER or ALLOCATABLE),
+/// create a box for \p newAddr with the same type as \p box. This assumes \p
+/// newAddr is for contiguous storage (\p box does not have to be contiguous).
+mlir::Value getDescriptorWithNewBaseAddress(fir::FirOpBuilder &builder,
+                                            mlir::Location loc, mlir::Value box,
+                                            mlir::Value newAddr);
 
 } // namespace fir::factory
 

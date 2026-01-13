@@ -124,11 +124,6 @@ class StdUnorderedMapDataFormatterTestCase(TestBase):
         self.check_ptr_ptr("ptr5")
         self.check_ptr_ptr("ptr6")
 
-    @expectedFailureAll(
-        bugnumber="https://github.com/llvm/llvm-project/issues/146040",
-        compiler="clang",
-        compiler_version=["<", "21"],
-    )
     @add_test_categories(["libc++"])
     def test_ptr_libcxx(self):
         self.build(dictionary={"USE_LIBCPP": 1})

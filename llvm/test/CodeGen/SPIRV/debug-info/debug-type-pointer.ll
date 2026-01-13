@@ -1,7 +1,9 @@
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info --print-after=spirv-nonsemantic-debug-info -O0 -mtriple=spirv64-unknown-unknown %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-MIR
+; RUN: llc --verify-machineinstrs --print-after=spirv-nonsemantic-debug-info -O0 -mtriple=spirv64-amd-amdhsa %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-MIR
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION
-; TODO(#109287): When type is void * the spirv-val raises an error when DebugInfoNone is set as <id> Base Type argument of DebugTypePointer.   
+; TODO(#109287): When type is void * the spirv-val raises an error when DebugInfoNone is set as <id> Base Type argument of DebugTypePointer.
 ; DISABLED: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-MIR-DAG:   [[i32type:%[0-9]+\:type]] = OpTypeInt 32, 0
@@ -124,6 +126,7 @@ define spir_func i32 @test0() !dbg !17 {
   %14 = load ptr addrspace(4), ptr %11, align 4, !dbg !65
   store ptr addrspace(4) %14, ptr %12, align 4, !dbg !64
     #dbg_declare(ptr %13, !66, !DIExpression(DW_OP_constu, 0, DW_OP_swap, DW_OP_xderef), !70)
+  store [8 x i32] zeroinitializer, ptr %13, align 4
   ret i32 0, !dbg !71
 }
 
@@ -167,6 +170,7 @@ define spir_func i32 @test1() !dbg !72 {
   %14 = load ptr addrspace(4), ptr %11, align 4, !dbg !97
   store ptr addrspace(4) %14, ptr %12, align 4, !dbg !96
     #dbg_declare(ptr %13, !98, !DIExpression(DW_OP_constu, 0, DW_OP_swap, DW_OP_xderef), !99)
+  store [8 x i32] zeroinitializer, ptr %13, align 4
   ret i32 0, !dbg !100
 }
 
