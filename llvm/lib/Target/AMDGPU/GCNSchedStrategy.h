@@ -512,7 +512,7 @@ private:
   /// is not helpful to reduce RP in target regions.
   struct ScoredRemat {
     /// The rematerializable register under consideration.
-    const RematReg *Remat;
+    RematReg *Remat;
 
     /// Execution frequency information required by scoring heuristics.
     /// Frequencies are scaled down if they are high to avoid overflow/underflow
@@ -531,7 +531,7 @@ private:
 
     /// This only initializes state-independent characteristics of \p Remat, not
     /// the actual score.
-    ScoredRemat(const RematReg *Remat, const FreqInfo &Freq,
+    ScoredRemat(RematReg *Remat, const FreqInfo &Freq,
                 const GCNScheduleDAGMILive &DAG);
 
     /// Updates the rematerialization's score w.r.t. the current \p RPTargets.
@@ -570,7 +570,7 @@ private:
 
   private:
     /// Number of 32-bit registers this rematerialization covers.
-    const unsigned NumRegs;
+    unsigned NumRegs;
 
     // The three members below are the scoring components, top to bottom from
     // most important to least important when comparing candidates.
@@ -582,7 +582,7 @@ private:
     /// Frequency difference between defining and using regions. Negative values
     /// indicate we are rematerializing to higher frequency regions; positive
     /// values indicate the contrary.
-    const int64_t FreqDiff;
+    int64_t FreqDiff;
     /// Expected number of target regions impacted by the rematerialization,
     /// scaled by the size of the register being rematerialized.
     unsigned RegionImpact;
