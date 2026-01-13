@@ -76,6 +76,9 @@ void UnconditionalVAArgChecker::checkBeginFunction(CheckerContext &C) const {
     // this situation is fairly rare and it is very unlikely that the "big"
     // outer function still has an unconditional path, there is no need to
     // write more complex logic that handles this.
+    // NOTE: Despite this, the checker can sometimes still report the
+    // unconditional va_arg() use in the outer function (probably because there
+    // is an alternative execution path that doesn't enter the inner call).
     C.addTransition(C.getState()->set<HasUnconditionalPath>(FD));
   }
 }

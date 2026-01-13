@@ -205,3 +205,22 @@ void unknown_call(int fst, ...) {
   // expected-note@-1 {{Calls to 'unknown_call' always reach this va_arg() expression, so calling 'unknown_call' with no variadic arguments would be undefined behavior}}
   va_end(va);
 }
+
+
+void trivial_variadic(int fst, ...) {
+  // Do nothing.
+}
+
+void calls_other_variadic(int fst, ...) {
+  // As the 'HasUnconditionalPath' can "remember" only one variadic function,
+  // I would expect that the presence of 'trivial_variadic' would prevent the
+  // checker from reporting the unconditional use of va_arg() in this function.
+  // However, for some unclear reason the checker is still able to produce this
+  // (true positive) report.
+  va_list va;
+  trivial_variadic(fst, 2);
+  va_start(va, fst);
+  (void)va_arg(va, int); // expected-warning{{Unconditional use of va_arg()}}
+  // expected-note@-1 {{Calls to 'calls_other_variadic' always reach this va_arg() expression, so calling 'calls_other_variadic' with no variadic arguments would be undefined behavior}}
+  va_end(va);
+}
