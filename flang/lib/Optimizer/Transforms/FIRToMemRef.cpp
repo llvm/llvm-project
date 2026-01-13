@@ -238,10 +238,18 @@ mlir::Attribute FIRToMemRef::findCudaDataAttr(Value val) const {
     if (cuf::DataAttributeAttr cudaAttr = cuf::getDataAttr(defOp))
       return cudaAttr;
 
+    // TODO: This is a best-effort backward walk; it is easy to miss attributes
+    // as FIR evolves. Long term, it would be preferable if the necessary
+    // information was carried in the type system (or otherwise made available
+    // without relying on a walk-back through defining ops).
     if (auto reboxOp = dyn_cast<fir::ReboxOp>(defOp)) {
       currentVal = reboxOp.getBox();
+    } else if (auto convertOp = dyn_cast<fir::ConvertOp>(defOp)) {
+      currentVal = convertOp->getOperand(0);
     } else if (auto emboxOp = dyn_cast<fir::EmboxOp>(defOp)) {
       currentVal = emboxOp.getMemref();
+    } else if (auto boxAddrOp = dyn_cast<fir::BoxAddrOp>(defOp)) {
+      currentVal = boxAddrOp.getVal();
     } else if (auto declareOp = dyn_cast<fir::DeclareOp>(defOp)) {
       currentVal = declareOp.getMemref();
     } else {
