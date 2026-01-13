@@ -33,3 +33,12 @@ Because of the intervening macro definitions, this code remains unchanged:
   #define NDEBUG
   #include "assertion.h"
   // ...code with assertions disabled
+
+Options
+-------
+
+.. option:: IgnoredFilesList
+
+  A semicolon-separated list of regular expressions or filenames that are
+  allowed to be included multiple times without diagnostics. Matching is
+  performed against the textual include name. Default is an empty string.

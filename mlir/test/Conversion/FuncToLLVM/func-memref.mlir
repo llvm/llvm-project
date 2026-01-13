@@ -1,5 +1,6 @@
 // RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-arith-to-llvm),convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)" -split-input-file %s | FileCheck %s
 // RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-arith-to-llvm),convert-func-to-llvm{use-bare-ptr-memref-call-conv=1},convert-cf-to-llvm,reconcile-unrealized-casts)" -split-input-file %s | FileCheck %s --check-prefix=BAREPTR
+// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-arith-to-llvm{index-bitwidth=32}),convert-func-to-llvm{index-bitwidth=32},convert-cf-to-llvm{index-bitwidth=32},reconcile-unrealized-casts)" -split-input-file %s | FileCheck %s --check-prefix=CHECK32
 
 // BAREPTR-LABEL: func @check_noalias
 // BAREPTR-SAME: %{{.*}}: !llvm.ptr {llvm.noalias}, %{{.*}}: !llvm.ptr {llvm.noalias}

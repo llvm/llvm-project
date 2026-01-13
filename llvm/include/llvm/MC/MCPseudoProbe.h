@@ -328,6 +328,7 @@ public:
 
   // Return false if it's a dummy inline site
   bool hasInlineSite() const { return !isRoot() && !Parent->isRoot(); }
+  bool isTopLevelFunc() const { return !isRoot() && Parent->isRoot(); }
   InlineSite getInlineSite() const { return InlineSite(Guid, ProbeId); }
   void setProbes(MutableArrayRef<MCDecodedPseudoProbe> ProbesRef) {
     Probes = ProbesRef.data();

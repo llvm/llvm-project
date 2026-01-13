@@ -1,4 +1,4 @@
-//===- BuiltinCAS.h ---------------------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,6 +15,9 @@
 
 namespace llvm::cas {
 class ActionCache;
+namespace ondisk {
+class UnifiedOnDiskCache;
+} // namespace ondisk
 namespace builtin {
 
 /// Common base class for builtin CAS implementations using the same CASContext.
@@ -65,8 +68,26 @@ public:
                              "corrupt storage");
   }
 
-  Error validate(const CASID &ID) final;
+  Error validateObject(const CASID &ID) final;
 };
+
+/// Create a \p UnifiedOnDiskCache instance that uses \p BLAKE3 hashing.
+Expected<std::unique_ptr<ondisk::UnifiedOnDiskCache>>
+createBuiltinUnifiedOnDiskCache(StringRef Path);
+
+/// \param UniDB A \p UnifiedOnDiskCache instance from \p
+/// createBuiltinUnifiedOnDiskCache.
+std::unique_ptr<ObjectStore> createObjectStoreFromUnifiedOnDiskCache(
+    std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB);
+
+/// \param UniDB A \p UnifiedOnDiskCache instance from \p
+/// createBuiltinUnifiedOnDiskCache.
+std::unique_ptr<ActionCache> createActionCacheFromUnifiedOnDiskCache(
+    std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB);
+
+// FIXME: Proxy not portable. Maybe also error-prone?
+constexpr StringLiteral DefaultDirProxy = "/^llvm::cas::builtin::default";
+constexpr StringLiteral DefaultDir = "llvm.cas.builtin.default";
 
 } // end namespace builtin
 } // end namespace llvm::cas

@@ -563,18 +563,39 @@ Sancov matches these files using module names and binaries file names.
 
 .. code-block:: console
 
-    USAGE: sancov [options] <action> (<binary file>|<.sancov file>)...
+    USAGE: sancov [options] <action> <binary files...> <.sancov files...> <.symcov files...>
 
-    Action (required)
-      -print                    - Print coverage addresses
-      -covered-functions        - Print all covered functions.
-      -not-covered-functions    - Print all not covered functions.
-      -symbolize                - Symbolizes the report.
+    Action (required):
+      -covered-functions     Print all covered funcions.
+      -diff                  Compute difference between two sancov files (A - B) and write to the new output sancov file
+      -html-report           REMOVED. Use -symbolize & coverage-report-server.py.
+      -merge                 Merges reports.
+      -not-covered-functions Print all not covered funcions.
+      -print-coverage-pcs    Print coverage instrumentation points addresses.
+      -print-coverage-stats  Print coverage statistics.
+      -print                 Print coverage addresses
+      -symbolize             Produces a symbolized JSON report from binary report.
+      -union                 Compute union of multiple sancov files and write to the new output sancov file
 
-    Options
-      -blocklist=<string>         - Blocklist file (sanitizer blocklist format).
-      -demangle                   - Print demangled function name.
-      -strip_path_prefix=<string> - Strip this prefix from file paths in reports
+    Generic Options:
+      -help    Display this help
+      -h       Alias for --help
+      -version Display the version
+      -v       Alias for --version
+
+    OPTIONS:
+      -demangle=0          Alias for --no-demangle
+      -demangle            Demangle function names
+      -ignorelist=<string> Ignorelist file (sanitizer ignorelist format)
+      -no-demangle         Do not demangle function names
+      -no-skip-dead-files  List dead source files in reports
+      -output=<string>     Output file for diff and union actions
+      -skip-dead-files=0   Alias for --no-skip-dead-files
+      -skip-dead-files     Do not list dead source files in reports
+      -strip_path_prefix=<string>
+                          Strip this prefix from files paths in reports
+      -use_default_ignorelist=0
+                          Alias for --no-use_default_ignore_list
 
 
 Coverage Reports

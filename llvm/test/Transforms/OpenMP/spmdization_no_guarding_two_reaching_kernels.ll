@@ -253,7 +253,7 @@ define internal void @spmd_helper() #1 {
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 ; CHECK-NEXT:    call void @leaf() #[[ATTR8:[0-9]+]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2]]) #[[ATTR4:[0-9]+]]
-; CHECK-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB2]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
+; CHECK-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB2]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0, i32 0)
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-DISABLE-SPMDIZATION-LABEL: define {{[^@]+}}@spmd_helper
@@ -262,14 +262,14 @@ define internal void @spmd_helper() #1 {
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    call void @leaf() #[[ATTR8:[0-9]+]]
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2]]) #[[ATTR4:[0-9]+]]
-; CHECK-DISABLE-SPMDIZATION-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB2]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper.ID, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
+; CHECK-DISABLE-SPMDIZATION-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB2]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper.ID, ptr [[CAPTURED_VARS_ADDRS]], i64 0, i32 0)
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    ret void
 ;
 entry:
   %captured_vars_addrs = alloca [0 x ptr], align 8
   call void @leaf()
   %0 = call i32 @__kmpc_global_thread_num(ptr @2)
-  call void @__kmpc_parallel_51(ptr @2, i32 %0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr %captured_vars_addrs, i64 0)
+  call void @__kmpc_parallel_60(ptr @2, i32 %0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr %captured_vars_addrs, i64 0, i32 0)
   ret void
 }
 
@@ -353,7 +353,7 @@ declare void @__kmpc_get_shared_variables(ptr)
 declare i32 @__kmpc_global_thread_num(ptr) #3
 
 ; Function Attrs: alwaysinline
-declare void @__kmpc_parallel_51(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64) #4
+declare void @__kmpc_parallel_60(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64, i32) #4
 
 declare void @unknown()
 

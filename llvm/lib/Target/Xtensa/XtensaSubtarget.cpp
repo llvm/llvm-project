@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "XtensaSubtarget.h"
+#include "XtensaSelectionDAGInfo.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Support/Debug.h"
 
@@ -39,4 +40,12 @@ XtensaSubtarget::XtensaSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
                                  const TargetMachine &TM)
     : XtensaGenSubtargetInfo(TT, CPU, /*TuneCPU=*/CPU, FS), TargetTriple(TT),
       InstrInfo(initializeSubtargetDependencies(CPU, FS)), TLInfo(TM, *this),
-      TSInfo(), FrameLowering(*this) {}
+      FrameLowering(*this) {
+  TSInfo = std::make_unique<SelectionDAGTargetInfo>();
+}
+
+XtensaSubtarget::~XtensaSubtarget() = default;
+
+const SelectionDAGTargetInfo *XtensaSubtarget::getSelectionDAGInfo() const {
+  return TSInfo.get();
+}

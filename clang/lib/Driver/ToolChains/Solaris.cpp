@@ -13,9 +13,9 @@
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/ToolChain.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
@@ -346,7 +346,7 @@ SanitizerMask Solaris::getSupportedSanitizers() const {
 const char *Solaris::getDefaultLinker() const {
   // FIXME: Only handle Solaris ld and GNU ld here.
   return llvm::StringSwitch<const char *>(getDriver().getPreferredLinker())
-      .Cases("bfd", "gld", "/usr/gnu/bin/ld")
+      .Cases({"bfd", "gld"}, "/usr/gnu/bin/ld")
       .Default("/usr/bin/ld");
 }
 
@@ -360,7 +360,7 @@ void Solaris::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                         ArgStringList &CC1Args) const {
   const Driver &D = getDriver();
 
-  if (DriverArgs.hasArg(clang::driver::options::OPT_nostdinc))
+  if (DriverArgs.hasArg(options::OPT_nostdinc))
     return;
 
   if (!DriverArgs.hasArg(options::OPT_nostdlibinc))

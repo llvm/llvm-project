@@ -24,8 +24,7 @@ define signext i32 @ldptr_w(ptr %p) nounwind {
 ; LA32-LABEL: ldptr_w:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    addi.w $a0, $a0, 2047
-; LA32-NEXT:    addi.w $a0, $a0, 1
-; LA32-NEXT:    ld.w $a0, $a0, 0
+; LA32-NEXT:    ld.w $a0, $a0, 1
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: ldptr_w:
@@ -81,10 +80,9 @@ entry:
 define i64 @ldptr_d(ptr %p) nounwind {
 ; LA32-LABEL: ldptr_d:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    addi.w $a0, $a0, 2047
-; LA32-NEXT:    addi.w $a1, $a0, 1
-; LA32-NEXT:    ld.w $a0, $a1, 0
-; LA32-NEXT:    ld.w $a1, $a1, 4
+; LA32-NEXT:    addi.w $a1, $a0, 2047
+; LA32-NEXT:    ld.w $a0, $a1, 1
+; LA32-NEXT:    ld.w $a1, $a1, 5
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: ldptr_d:

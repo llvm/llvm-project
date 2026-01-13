@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -324,7 +325,7 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BRASL)
                                      .addReg(SystemZ::R7D)
                                      .addExpr(Lower.getExpr(MI->getOperand(0),
-                                                            SystemZ::S_PLT)));
+                                                            SystemZ::S_None)));
     emitCallInformation(CallType::BRASL7);
     return;
 
@@ -1114,9 +1115,6 @@ void SystemZAsmPrinter::emitEndOfAsmFile(Module &M) {
     emitIDRLSection(M);
   }
   emitAttributes(M);
-  // Emit the END instruction in case of HLASM output. This must be the last
-  // instruction in the source file.
-  getTargetStreamer()->emitEnd();
 }
 
 void SystemZAsmPrinter::emitADASection() {
@@ -1270,7 +1268,7 @@ void SystemZAsmPrinter::emitFunctionBodyEnd() {
 
 static void emitPPA1Flags(std::unique_ptr<MCStreamer> &OutStreamer, bool VarArg,
                           bool StackProtector, bool FPRMask, bool VRMask,
-                          bool EHBlock, bool HasName) {
+                          bool EHBlock, bool HasArgAreaLength, bool HasName) {
   enum class PPA1Flag1 : uint8_t {
     DSA64Bit = (0x80 >> 0),
     VarArg = (0x80 >> 7),
@@ -1282,8 +1280,9 @@ static void emitPPA1Flags(std::unique_ptr<MCStreamer> &OutStreamer, bool VarArg,
     LLVM_MARK_AS_BITMASK_ENUM(ExternalProcedure)
   };
   enum class PPA1Flag3 : uint8_t {
+    HasArgAreaLength = (0x80 >> 1),
     FPRMask = (0x80 >> 2),
-    LLVM_MARK_AS_BITMASK_ENUM(FPRMask)
+    LLVM_MARK_AS_BITMASK_ENUM(HasArgAreaLength)
   };
   enum class PPA1Flag4 : uint8_t {
     EPMOffsetPresent = (0x80 >> 0),
@@ -1306,6 +1305,9 @@ static void emitPPA1Flags(std::unique_ptr<MCStreamer> &OutStreamer, bool VarArg,
 
   if (StackProtector)
     Flags2 |= PPA1Flag2::STACKPROTECTOR;
+
+  if (HasArgAreaLength)
+    Flags3 |= PPA1Flag3::HasArgAreaLength; // Add emit ArgAreaLength flag.
 
   // SavedGPRMask, SavedFPRMask, and SavedVRMask are precomputed in.
   if (FPRMask)
@@ -1339,6 +1341,9 @@ static void emitPPA1Flags(std::unique_ptr<MCStreamer> &OutStreamer, bool VarArg,
   OutStreamer->emitInt8(static_cast<uint8_t>(Flags2)); // Flags 2.
 
   OutStreamer->AddComment("PPA1 Flags 3");
+  if ((Flags3 & PPA1Flag3::HasArgAreaLength) == PPA1Flag3::HasArgAreaLength)
+    OutStreamer->AddComment(
+        "  Bit 1: 1 = Argument Area Length is in optional area");
   if ((Flags3 & PPA1Flag3::FPRMask) == PPA1Flag3::FPRMask)
     OutStreamer->AddComment("  Bit 2: 1 = FP Reg Mask is in optional area");
   OutStreamer->emitInt8(
@@ -1477,18 +1482,37 @@ void SystemZAsmPrinter::emitPPA1(MCSymbol *FnEndSym) {
 
   bool NeedEmitEHBlock = !MF->getLandingPads().empty();
 
+  // Optional Argument Area Length.
+  // Note: This represents the length of the argument area that we reserve
+  //       in our stack for setting up arguments for calls to other
+  //       routines. If this optional field is not set, LE will reserve
+  //       128 bytes for the argument area. This optional field is
+  //       created if greater than 128 bytes is required - to guarantee
+  //       the required space is reserved on stack extension in the new
+  //       extension.  This optional field is also created if the
+  //       routine has alloca(). This may reduce stack space
+  //       if alloca() call causes a stack extension.
+  bool HasArgAreaLength =
+      (AllocaReg != 0) || (MFFrame.getMaxCallFrameSize() > 128);
+
   bool HasName =
       MF->getFunction().hasName() && MF->getFunction().getName().size() > 0;
 
   emitPPA1Flags(OutStreamer, MF->getFunction().isVarArg(),
                 MFFrame.hasStackProtectorIndex(), SavedFPRMask != 0,
-                TargetHasVector && SavedVRMask != 0, NeedEmitEHBlock, HasName);
+                TargetHasVector && SavedVRMask != 0, NeedEmitEHBlock,
+                HasArgAreaLength, HasName);
 
   OutStreamer->AddComment("Length/4 of Parms");
   OutStreamer->emitInt16(
       static_cast<uint16_t>(ZFI->getSizeOfFnParams() / 4)); // Parms/4.
   OutStreamer->AddComment("Length of Code");
   OutStreamer->emitAbsoluteSymbolDiff(FnEndSym, CurrentFnEPMarkerSym, 4);
+
+  if (HasArgAreaLength) {
+    OutStreamer->AddComment("Argument Area Length");
+    OutStreamer->emitInt32(MFFrame.getMaxCallFrameSize());
+  }
 
   // Emit saved FPR mask and offset to FPR save area (0x20 of flags 3).
   if (SavedFPRMask) {
@@ -1570,31 +1594,27 @@ void SystemZAsmPrinter::emitPPA2(Module &M) {
   // Make CELQSTRT symbol.
   const char *StartSymbolName = "CELQSTRT";
   MCSymbol *CELQSTRT = OutContext.getOrCreateSymbol(StartSymbolName);
+  OutStreamer->emitSymbolAttribute(CELQSTRT, MCSA_OSLinkage);
+  OutStreamer->emitSymbolAttribute(CELQSTRT, MCSA_Global);
 
   // Create symbol and assign to class field for use in PPA1.
   PPA2Sym = OutContext.createTempSymbol("PPA2", false);
   MCSymbol *DateVersionSym = OutContext.createTempSymbol("DVS", false);
 
   std::time_t Time = getTranslationTime(M);
-  SmallString<15> CompilationTime; // 14 + null
-  raw_svector_ostream O(CompilationTime);
-  O << formatv("{0:%Y%m%d%H%M%S}", llvm::sys::toUtcTime(Time));
+  SmallString<14> CompilationTimeEBCDIC, CompilationTime;
+  CompilationTime = formatv("{0:%Y%m%d%H%M%S}", llvm::sys::toUtcTime(Time));
 
   uint32_t ProductVersion = getProductVersion(M),
            ProductRelease = getProductRelease(M),
            ProductPatch = getProductPatch(M);
 
-  SmallString<7> Version; // 6 + null
-  raw_svector_ostream ostr(Version);
-  ostr << formatv("{0,0-2:d}{1,0-2:d}{2,0-2:d}", ProductVersion, ProductRelease,
-                  ProductPatch);
+  SmallString<6> VersionEBCDIC, Version;
+  Version = formatv("{0,0-2:d}{1,0-2:d}{2,0-2:d}", ProductVersion,
+                    ProductRelease, ProductPatch);
 
-  // Drop 0 during conversion.
-  SmallString<sizeof(CompilationTime) - 1> CompilationTimeStr;
-  SmallString<sizeof(Version) - 1> VersionStr;
-
-  ConverterEBCDIC::convertToEBCDIC(CompilationTime, CompilationTimeStr);
-  ConverterEBCDIC::convertToEBCDIC(Version, VersionStr);
+  ConverterEBCDIC::convertToEBCDIC(CompilationTime, CompilationTimeEBCDIC);
+  ConverterEBCDIC::convertToEBCDIC(Version, VersionEBCDIC);
 
   enum class PPA2MemberId : uint8_t {
     // See z/OS Language Environment Vendor Interfaces v2r5, p.23, for
@@ -1642,17 +1662,18 @@ void SystemZAsmPrinter::emitPPA2(Module &M) {
   uint8_t Flgs = static_cast<uint8_t>(PPA2Flags::CompileForBinaryFloatingPoint);
   Flgs |= static_cast<uint8_t>(PPA2Flags::CompiledWithXPLink);
 
+  bool IsASCII = true;
   if (auto *MD = M.getModuleFlag("zos_le_char_mode")) {
     const StringRef &CharMode = cast<MDString>(MD)->getString();
-    if (CharMode == "ascii") {
-      Flgs |= static_cast<uint8_t>(
-          PPA2Flags::CompiledUnitASCII); // Setting bit for ASCII char. mode.
-    } else if (CharMode != "ebcdic") {
-      report_fatal_error(
-          "Only ascii or ebcdic are valid values for zos_le_char_mode "
-          "metadata");
-    }
+    if (CharMode == "ebcdic")
+      IsASCII = false;
+    else if (CharMode != "ascii")
+      OutContext.reportError(
+          {}, "Only ascii or ebcdic are allowed for zos_le_char_mode");
   }
+  if (IsASCII)
+    Flgs |= static_cast<uint8_t>(
+        PPA2Flags::CompiledUnitASCII); // Setting bit for ASCII char. mode.
 
   OutStreamer->emitInt8(Flgs);
   OutStreamer->emitInt8(0x00);    // Reserved.
@@ -1663,8 +1684,8 @@ void SystemZAsmPrinter::emitPPA2(Module &M) {
 
   // Emit date and version section.
   OutStreamer->emitLabel(DateVersionSym);
-  OutStreamer->emitBytes(CompilationTimeStr.str());
-  OutStreamer->emitBytes(VersionStr.str());
+  OutStreamer->emitBytes(CompilationTimeEBCDIC.str());
+  OutStreamer->emitBytes(VersionEBCDIC.str());
 
   OutStreamer->emitInt16(0x0000); // Service level string length.
 

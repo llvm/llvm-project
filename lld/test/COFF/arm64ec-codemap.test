@@ -7,6 +7,7 @@ RUN: llvm-mc -filetype=obj -triple=arm64ec-windows arm64ec-func-sym2.s -o arm64e
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows data-sec.s -o data-sec.obj
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows data-sec2.s -o data-sec2.obj
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows empty-sec.s -o arm64ec-empty-sec.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows entry-thunk.s -o entry-thunk.obj
 RUN: llvm-mc -filetype=obj -triple=x86_64-windows x86_64-func-sym.s -o x86_64-func-sym.obj
 RUN: llvm-mc -filetype=obj -triple=x86_64-windows empty-sec.s -o x86_64-empty-sec.obj
 RUN: llvm-mc -filetype=obj -triple=aarch64-windows %S/Inputs/loadconfig-arm64.s -o loadconfig-arm64.obj
@@ -162,15 +163,17 @@ RUN:          loadconfig-arm64ec.obj -dll -noentry -merge:test=.testdata -merge:
 
 RUN: llvm-readobj --coff-load-config testcm.dll | FileCheck -check-prefix=CODEMAPCM %s
 CODEMAPCM:      CodeMap [
-CODEMAPCM-NEXT:     0x4008 - 0x4016  X64
+CODEMAPCM-NEXT:     0x4000 - 0x4016  X64
 CODEMAPCM-NEXT: ]
 
 RUN: llvm-objdump -d testcm.dll | FileCheck -check-prefix=DISASMCM %s
 DISASMCM:      Disassembly of section .testdat:
 DISASMCM-EMPTY:
 DISASMCM-NEXT: 0000000180004000 <.testdat>:
-DISASMCM-NEXT: 180004000: 00000001     udf     #0x1
-DISASMCM-NEXT: 180004004: 00000000     udf     #0x0
+DISASMCM-NEXT: 180004000: 01 00                        addl %eax, (%rax)
+DISASMCM-NEXT: 180004002: 00 00                        addb %al, (%rax)
+DISASMCM-NEXT: 180004004: 00 00                        addb %al, (%rax)
+DISASMCM-NEXT: 180004006: 00 00                        addb %al, (%rax)
 DISASMCM-NEXT: 180004008: b8 03 00 00 00               movl    $0x3, %eax
 DISASMCM-NEXT: 18000400d: c3                           retq
 DISASMCM-NEXT: 18000400e: 00 00                        addb    %al, (%rax)
@@ -206,6 +209,14 @@ DISASMMS-EMPTY:
 DISASMMS-NEXT: 0000000180006000 <test2>:
 DISASMMS-NEXT: 180006000: 528000a0     mov     w0, #0x5                // =5
 DISASMMS-NEXT: 180006004: d65f03c0     ret
+
+Test the code map that includes an ARM64EC function padded by its entry-thunk offset.
+
+RUN: lld-link -out:testpad.dll -machine:arm64ec entry-thunk.obj loadconfig-arm64ec.obj -dll -noentry -include:func
+RUN: llvm-readobj --coff-load-config testpad.dll | FileCheck -check-prefix=CODEMAPPAD %s
+CODEMAPPAD:      CodeMap [
+CODEMAPPAD:        0x1000 - 0x1010  ARM64EC
+CODEMAPPAD-NEXT: ]
 
 
 #--- arm64-func-sym.s
@@ -266,3 +277,22 @@ x86_64_func_sym2:
     .section .empty1, "xr"
     .section .empty2, "xr"
     .section .empty3, "xr"
+
+#--- entry-thunk.s
+    .section .text,"xr",discard,func
+    .globl func
+    .p2align 2, 0x0
+func:
+    mov w0, #1
+    ret
+
+    .section .wowthk$aa,"xr",discard,thunk
+    .globl thunk
+    .p2align 2
+thunk:
+    ret
+
+    .section .hybmp$x,"yi"
+    .symidx func
+    .symidx thunk
+    .word 1  // entry thunk

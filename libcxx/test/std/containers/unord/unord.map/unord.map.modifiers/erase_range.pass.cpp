@@ -57,6 +57,28 @@ int main(int, char**) {
     assert(c.size() == 0);
     assert(k == c.end());
   }
+  { // Make sure that we're properly updating the bucket list when we're erasing to the end
+    std::unordered_map<int, int> m;
+    m.insert(std::make_pair(1, 1));
+    m.insert(std::make_pair(2, 2));
+
+    {
+      auto pair = m.equal_range(1);
+      assert(pair.first != pair.second);
+      m.erase(pair.first, pair.second);
+    }
+
+    {
+      auto pair = m.equal_range(2);
+      assert(pair.first != pair.second);
+      m.erase(pair.first, pair.second);
+    }
+
+    m.insert(std::make_pair(3, 3));
+    assert(m.size() == 1);
+    assert(*m.begin() == std::make_pair(3, 3));
+    assert(++m.begin() == m.end());
+  }
 #if TEST_STD_VER >= 11
   {
     typedef std::unordered_map<int,

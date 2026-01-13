@@ -552,7 +552,7 @@ llvm::Error GsymCreator::saveSegments(StringRef Path,
         createSegment(SegmentSize, FuncIdx);
     if (ExpectedGC) {
       GsymCreator *GC = ExpectedGC->get();
-      if (GC == NULL)
+      if (!GC)
         break; // We had not more functions to encode.
       // Don't collect any messages at all
       OutputAggregator Out(nullptr);
@@ -564,7 +564,6 @@ llvm::Error GsymCreator::saveSegments(StringRef Path,
       std::optional<uint64_t> FirstFuncAddr = GC->getFirstFunctionAddress();
       if (FirstFuncAddr) {
         SGP << Path << "-" << llvm::format_hex(*FirstFuncAddr, 1);
-        SGP.flush();
         Err = GC->save(SegmentedGsymPath, ByteOrder, std::nullopt);
         if (Err)
           return Err;

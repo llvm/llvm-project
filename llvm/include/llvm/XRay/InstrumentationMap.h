@@ -23,9 +23,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace llvm {
-
-namespace xray {
+namespace llvm::xray {
 
 // Forward declare to make a friend.
 class InstrumentationMap;
@@ -102,11 +100,11 @@ public:
   const SledContainer &sleds() const { return Sleds; };
 };
 
-} // end namespace xray
+} // end namespace llvm::xray
 
-namespace yaml {
-
-template <> struct ScalarEnumerationTraits<xray::SledEntry::FunctionKinds> {
+namespace llvm {
+template <>
+struct yaml::ScalarEnumerationTraits<xray::SledEntry::FunctionKinds> {
   static void enumeration(IO &IO, xray::SledEntry::FunctionKinds &Kind) {
     IO.enumCase(Kind, "function-enter", xray::SledEntry::FunctionKinds::ENTRY);
     IO.enumCase(Kind, "function-exit", xray::SledEntry::FunctionKinds::EXIT);
@@ -118,7 +116,7 @@ template <> struct ScalarEnumerationTraits<xray::SledEntry::FunctionKinds> {
   }
 };
 
-template <> struct MappingTraits<xray::YAMLXRaySledEntry> {
+template <> struct yaml::MappingTraits<xray::YAMLXRaySledEntry> {
   static void mapping(IO &IO, xray::YAMLXRaySledEntry &Entry) {
     IO.mapRequired("id", Entry.FuncId);
     IO.mapRequired("address", Entry.Address);
@@ -131,10 +129,7 @@ template <> struct MappingTraits<xray::YAMLXRaySledEntry> {
 
   static constexpr bool flow = true;
 };
-
-} // end namespace yaml
-
-} // end namespace llvm
+} // namespace llvm
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(xray::YAMLXRaySledEntry)
 

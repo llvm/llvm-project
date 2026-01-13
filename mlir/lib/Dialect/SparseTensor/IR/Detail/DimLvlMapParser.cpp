@@ -267,7 +267,7 @@ DimLvlMapParser::parseLvlVarBinding(bool requireLvlVarBinding) {
   // since the thing we're parsing is supposed to be a variable *binding*
   // rather than a variable *use*.  However, the call to `VarEnv::bindVar`
   // (and its corresponding call to `DimLvlMapParser::recordVarBinding`)
-  // already occured in `parseLvlVarBindingList`, and therefore we must
+  // already occurred in `parseLvlVarBindingList`, and therefore we must
   // use `parseVarUsage` here in order to operationally do the right thing.
   const auto varID = parseVarUsage(VarKind::Level, /*requireKnown=*/true);
   FAILURE_IF_FAILED(varID)

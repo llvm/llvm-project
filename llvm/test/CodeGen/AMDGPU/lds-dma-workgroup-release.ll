@@ -49,10 +49,10 @@ define amdgpu_kernel void @barrier_release(<4 x i32> inreg %rsrc,
 ; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x3c
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_barrier
-; GFX90A-NEXT:    ds_read_b32 v0, v0
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0
+; GFX90A-NEXT:    ds_read_b32 v1, v0
+; GFX90A-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-NEXT:    global_store_dword v1, v0, s[0:1]
+; GFX90A-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX90A-NEXT:    s_endpgm
 ;
 ; GFX90A-TGSPLIT-LABEL: barrier_release:
@@ -72,10 +72,10 @@ define amdgpu_kernel void @barrier_release(<4 x i32> inreg %rsrc,
 ; GFX90A-TGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-TGSPLIT-NEXT:    s_barrier
 ; GFX90A-TGSPLIT-NEXT:    buffer_wbinvl1_vol
-; GFX90A-TGSPLIT-NEXT:    ds_read_b32 v0, v0
-; GFX90A-TGSPLIT-NEXT:    v_mov_b32_e32 v1, 0
+; GFX90A-TGSPLIT-NEXT:    ds_read_b32 v1, v0
+; GFX90A-TGSPLIT-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-TGSPLIT-NEXT:    global_store_dword v1, v0, s[0:1]
+; GFX90A-TGSPLIT-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX90A-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX942-LABEL: barrier_release:
@@ -94,10 +94,10 @@ define amdgpu_kernel void @barrier_release(<4 x i32> inreg %rsrc,
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x3c
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    s_barrier
-; GFX942-NEXT:    ds_read_b32 v0, v0
-; GFX942-NEXT:    v_mov_b32_e32 v1, 0
+; GFX942-NEXT:    ds_read_b32 v1, v0
+; GFX942-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    global_store_dword v1, v0, s[0:1]
+; GFX942-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX942-NEXT:    s_endpgm
 ;
 ; GFX942-TGSPLIT-LABEL: barrier_release:
@@ -117,10 +117,10 @@ define amdgpu_kernel void @barrier_release(<4 x i32> inreg %rsrc,
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    s_barrier
 ; GFX942-TGSPLIT-NEXT:    buffer_inv sc0
-; GFX942-TGSPLIT-NEXT:    ds_read_b32 v0, v0
-; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v1, 0
+; GFX942-TGSPLIT-NEXT:    ds_read_b32 v1, v0
+; GFX942-TGSPLIT-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-TGSPLIT-NEXT:    global_store_dword v1, v0, s[0:1]
+; GFX942-TGSPLIT-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX942-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX10WGP-LABEL: barrier_release:
@@ -150,7 +150,6 @@ define amdgpu_kernel void @barrier_release(<4 x i32> inreg %rsrc,
 ; GFX10CU-NEXT:    buffer_load_dword v0, s[8:11], 0 offen lds
 ; GFX10CU-NEXT:    v_mov_b32_e32 v0, s13
 ; GFX10CU-NEXT:    s_waitcnt vmcnt(0)
-; GFX10CU-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10CU-NEXT:    s_barrier
 ; GFX10CU-NEXT:    ds_read_b32 v0, v0
 ; GFX10CU-NEXT:    s_waitcnt lgkmcnt(0)

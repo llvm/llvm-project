@@ -1,8 +1,14 @@
 // RUN: cir-opt %s -cir-canonicalize -o - | FileCheck %s
 
+!s8i = !cir.int<s, 8>
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
+!u8i = !cir.int<u, 8>
 !u32i = !cir.int<u, 32>
+!u64i = !cir.int<u, 64>
+
+#true = #cir.bool<true> : !cir.bool
+#false = #cir.bool<false> : !cir.bool
 
 module {
   cir.func @redundant_br() {
@@ -22,6 +28,19 @@ module {
   // CHECK-NEXT:   cir.return
   // CHECK-NEXT: }
 
+  cir.func @scope_yield_value_fold() -> !u32i {
+    %0 = cir.const #cir.int<7> : !u32i
+    %1 = cir.scope {
+      cir.yield %0 : !u32i
+    } : !u32i
+    cir.return %1 : !u32i
+  }
+  // CHECK:      cir.func{{.*}} @scope_yield_value_fold() -> !u32i {
+  // CHECK-NEXT:   %[[C:.*]] = cir.const #cir.int<7> : !u32i
+  // CHECK-NOT:    cir.scope
+  // CHECK:        cir.return %[[C]] : !u32i
+  // CHECK-NEXT: }
+
   cir.func @empty_scope() {
     cir.scope {
     }
@@ -31,12 +50,25 @@ module {
   // CHECK-NEXT:   cir.return
   // CHECK-NEXT: }
 
-  cir.func @unary_not(%arg0: !cir.bool) -> !cir.bool {
+  cir.func @dead_switch() {
+    %0 = cir.const #cir.int<0> : !s32i
+    cir.switch (%0 : !s32i) {
+      cir.yield
+    }
+    cir.return
+  }
+  // CHECK:      cir.func{{.*}} @dead_switch() {
+  // CHECK-NOT:   %[[Z:.*]] = cir.const #cir.int<0> : !s32i
+  // CHECK-NOT:    cir.switch
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  cir.func @unary_not_not(%arg0: !cir.bool) -> !cir.bool {
     %0 = cir.unary(not, %arg0) : !cir.bool, !cir.bool
     %1 = cir.unary(not, %0) : !cir.bool, !cir.bool
     cir.return %1 : !cir.bool
   }
-  // CHECK:      cir.func{{.*}} @unary_not(%arg0: !cir.bool) -> !cir.bool
+  // CHECK:      cir.func{{.*}} @unary_not_not(%arg0: !cir.bool) -> !cir.bool
   // CHECK-NEXT:   cir.return %arg0 : !cir.bool
 
   cir.func @unary_poison() -> !s32i {
@@ -48,6 +80,186 @@ module {
   // CHECK-NEXT:   %[[P:.+]] = cir.const #cir.poison : !s32i
   // CHECK-NEXT:   cir.return %[[P]] : !s32i
   // CHECK-NEXT: }
+
+  cir.func @unary_not_true() -> !cir.bool {
+    %0 = cir.const #true
+    %1 = cir.unary(not, %0) : !cir.bool, !cir.bool
+    cir.return %1 : !cir.bool
+  }
+  // CHECK:      cir.func{{.*}} @unary_not_true() -> !cir.bool
+  // CHECK-NEXT:   %[[FALSE:.*]] = cir.const #false
+  // CHECK-NEXT:   cir.return %[[FALSE]] : !cir.bool
+
+  cir.func @unary_not_false() -> !cir.bool {
+    %0 = cir.const #false
+    %1 = cir.unary(not, %0) : !cir.bool, !cir.bool
+    cir.return %1 : !cir.bool
+  }
+  // CHECK:      cir.func{{.*}} @unary_not_false() -> !cir.bool
+  // CHECK-NEXT:   %[[FALSE:.*]] = cir.const #true
+  // CHECK-NEXT:   cir.return %[[FALSE]] : !cir.bool
+
+  cir.func @unary_not_int() -> !s32i {
+    %0 = cir.const #cir.int<1> : !s32i
+    %1 = cir.unary(not, %0) : !s32i, !s32i
+    cir.return %1 : !s32i
+  }
+  // CHECK:      cir.func{{.*}} @unary_not_int() -> !s32i
+  // CHECK-NEXT:   %[[CONST:.*]] = cir.const #cir.int<-2> : !s32i
+  // CHECK-NEXT:   cir.return %[[CONST]] : !s32i
+
+  cir.func @unary_not_uint() -> !u32i {
+    %0 = cir.const #cir.int<1> : !u32i
+    %1 = cir.unary(not, %0) : !u32i, !u32i
+    cir.return %1 : !u32i
+  }
+  // CHECK:      cir.func{{.*}} @unary_not_uint() -> !u32i
+  // CHECK-NEXT:   %[[CONST:.*]] = cir.const #cir.int<4294967294> : !u32i
+  // CHECK-NEXT:   cir.return %[[CONST]] : !u32i
+
+  cir.func @unary_plus_true() -> !cir.bool {
+    %0 = cir.const #true
+    %1 = cir.unary(plus, %0) : !cir.bool, !cir.bool
+    cir.return %1 : !cir.bool
+  }
+  // CHECK:      cir.func{{.*}} @unary_plus_true() -> !cir.bool
+  // CHECK-NEXT:   %[[CONST:.*]] = cir.const #true
+  // CHECK-NEXT:   cir.return %[[CONST]] : !cir.bool
+
+  cir.func @unary_plus_false() -> !cir.bool {
+    %0 = cir.const #false
+    %1 = cir.unary(plus, %0) : !cir.bool, !cir.bool
+    cir.return %1 : !cir.bool
+  }
+  // CHECK:      cir.func{{.*}} @unary_plus_false() -> !cir.bool
+  // CHECK-NEXT:   %[[CONST:.*]] = cir.const #false
+  // CHECK-NEXT:   cir.return %[[CONST]] : !cir.bool
+
+  cir.func @unary_plus_int() -> !s32i {
+    %0 = cir.const #cir.int<1> : !s32i
+    %1 = cir.unary(plus, %0) : !s32i, !s32i
+    cir.return %1 : !s32i
+  }
+  // CHECK:      cir.func{{.*}} @unary_plus_int() -> !s32i
+  // CHECK-NEXT:   %[[CONST:.*]] = cir.const #cir.int<1> : !s32i
+  // CHECK-NEXT:   cir.return %[[CONST]] : !s32i
+
+  cir.func @unary_plus_uint() -> !u32i {
+    %0 = cir.const #cir.int<1> : !u32i
+    %1 = cir.unary(plus, %0) : !u32i, !u32i
+    cir.return %1 : !u32i
+  }
+  // CHECK:      cir.func{{.*}} @unary_plus_uint() -> !u32i
+  // CHECK-NEXT:   %[[CONST:.*]] = cir.const #cir.int<1> : !u32i
+  // CHECK-NEXT:   cir.return %[[CONST]] : !u32i
+
+  cir.func @unary_plus_float() -> !cir.float {
+    %0 = cir.const #cir.fp<1.100000e+00> : !cir.float
+    %1 = cir.unary(plus, %0) : !cir.float, !cir.float
+    cir.return %1 : !cir.float
+  }
+  // CHECK:      cir.func{{.*}} @unary_plus_float() -> !cir.float
+  // CHECK-NEXT:   %[[CONST:.*]] = cir.const #cir.fp<1.100000e+00> : !cir.float
+  // CHECK-NEXT:   cir.return %[[CONST]] : !cir.float
+
+  cir.func @unary_plus_double() -> !cir.double {
+    %0 = cir.const #cir.fp<1.100000e+00> : !cir.double
+    %1 = cir.unary(plus, %0) : !cir.double, !cir.double
+    cir.return %1 : !cir.double
+  }
+  // CHECK:      cir.func{{.*}} @unary_plus_double() -> !cir.double
+  // CHECK-NEXT:   %[[CONST:.*]] = cir.const #cir.fp<1.100000e+00> : !cir.double
+  // CHECK-NEXT:   cir.return %[[CONST]] : !cir.double
+
+  cir.func @unary_plus_nan() -> !cir.float {
+    %0 = cir.const #cir.fp<0x7F800000> : !cir.float
+    %1 = cir.unary(plus, %0) : !cir.float, !cir.float
+    cir.return %1 : !cir.float
+  }
+  // CHECK:      cir.func{{.*}} @unary_plus_nan() -> !cir.float
+  // CHECK-NEXT:   %[[CONST:.*]] = cir.const #cir.fp<0x7F800000> : !cir.float
+  // CHECK-NEXT:   cir.return %[[CONST]] : !cir.float
+
+  cir.func @unary_plus_neg_nan() -> !cir.float {
+    %0 = cir.const #cir.fp<0xFF800000> : !cir.float
+    %1 = cir.unary(plus, %0) : !cir.float, !cir.float
+    cir.return %1 : !cir.float
+  }
+  // CHECK:      cir.func{{.*}} @unary_plus_neg_nan() -> !cir.float
+  // CHECK-NEXT:   %[[CONST:.*]] = cir.const #cir.fp<0xFF800000> : !cir.float
+  // CHECK-NEXT:   cir.return %[[CONST]] : !cir.float
+
+  cir.func @unary_minus_true() -> !cir.bool {
+    %0 = cir.const #true
+    %1 = cir.unary(minus, %0) : !cir.bool, !cir.bool
+    cir.return %1 : !cir.bool
+  }
+  // CHECK:      cir.func{{.*}} @unary_minus_true() -> !cir.bool
+  // CHECK-NEXT:   %[[CONST:.*]] = cir.const #true
+  // CHECK-NEXT:   cir.return %[[CONST]] : !cir.bool
+
+  cir.func @unary_minus_false() -> !cir.bool {
+    %0 = cir.const #false
+    %1 = cir.unary(minus, %0) : !cir.bool, !cir.bool
+    cir.return %1 : !cir.bool
+  }
+  // CHECK:      cir.func{{.*}} @unary_minus_false() -> !cir.bool
+  // CHECK-NEXT:   %[[CONST:.*]] = cir.const #false
+  // CHECK-NEXT:   cir.return %[[CONST]] : !cir.bool
+
+  cir.func @unary_minus_int() -> !s32i {
+    %0 = cir.const #cir.int<1> : !s32i
+    %1 = cir.unary(minus, %0) : !s32i, !s32i
+    cir.return %1 : !s32i
+  }
+  // CHECK:      cir.func{{.*}} @unary_minus_int() -> !s32i
+  // CHECK-NEXT:   %[[CONST:.*]] = cir.const #cir.int<-1> : !s32i
+  // CHECK-NEXT:   cir.return %[[CONST]] : !s32i
+
+  cir.func @unary_minus_uint() -> !u32i {
+    %0 = cir.const #cir.int<1> : !u32i
+    %1 = cir.unary(minus, %0) : !u32i, !u32i
+    cir.return %1 : !u32i
+  }
+  // CHECK:      cir.func{{.*}} @unary_minus_uint() -> !u32i
+  // CHECK-NEXT:   %[[CONST:.*]] = cir.const #cir.int<4294967295> : !u32i
+  // CHECK-NEXT:   cir.return %[[CONST]] : !u32i
+
+  cir.func @unary_minus_float() -> !cir.float {
+    %0 = cir.const #cir.fp<1.100000e+00> : !cir.float
+    %1 = cir.unary(minus, %0) : !cir.float, !cir.float
+    cir.return %1 : !cir.float
+  }
+  // CHECK:      cir.func{{.*}} @unary_minus_float() -> !cir.float
+  // CHECK-NEXT:   %[[CONST:.*]] = cir.const #cir.fp<-1.100000e+00> : !cir.float
+  // CHECK-NEXT:   cir.return %[[CONST]] : !cir.float
+
+  cir.func @unary_minus_double() -> !cir.double {
+    %0 = cir.const #cir.fp<1.100000e+00> : !cir.double
+    %1 = cir.unary(minus, %0) : !cir.double, !cir.double
+    cir.return %1 : !cir.double
+  }
+  // CHECK:      cir.func{{.*}} @unary_minus_double() -> !cir.double
+  // CHECK-NEXT:   %[[CONST:.*]] = cir.const #cir.fp<-1.100000e+00> : !cir.double
+  // CHECK-NEXT:   cir.return %[[CONST]] : !cir.double
+
+  cir.func @unary_minus_nan() -> !cir.float {
+    %0 = cir.const #cir.fp<0x7F800000> : !cir.float
+    %1 = cir.unary(minus, %0) : !cir.float, !cir.float
+    cir.return %1 : !cir.float
+  }
+  // CHECK:      cir.func{{.*}} @unary_minus_nan() -> !cir.float
+  // CHECK-NEXT:   %[[CONST:.*]] = cir.const #cir.fp<0xFF800000> : !cir.float
+  // CHECK-NEXT:   cir.return %[[CONST]] : !cir.float
+
+  cir.func @unary_minus_neg_nan() -> !cir.float {
+    %0 = cir.const #cir.fp<0xFF800000> : !cir.float
+    %1 = cir.unary(minus, %0) : !cir.float, !cir.float
+    cir.return %1 : !cir.float
+  }
+  // CHECK:      cir.func{{.*}} @unary_minus_neg_nan() -> !cir.float
+  // CHECK-NEXT:   %[[CONST:.*]] = cir.const #cir.fp<0x7F800000> : !cir.float
+  // CHECK-NEXT:   cir.return %[[CONST]] : !cir.float
 
   cir.func @cast1(%arg0: !cir.bool) -> !cir.bool {
     %0 = cir.cast bool_to_int %arg0 : !cir.bool -> !s32i
@@ -88,6 +300,108 @@ module {
   // CHECK:      @cast_poison
   // CHECK-NEXT:   %[[P:.+]] = cir.const #cir.poison : !s64i
   // CHECK-NEXT:   cir.return %[[P]] : !s64i
+  // CHECK-NEXT: }
+
+  cir.func @cast_s32_s64() -> !s64i {
+    %0 = cir.const #cir.int<2> : !s32i
+    %1 = cir.cast integral %0 : !s32i -> !s64i
+    cir.return %1 : !s64i
+  }
+  // CHECK:      @cast_s32_s64()
+  // CHECK-NEXT:   %[[P:.+]] = cir.const #cir.int<2> : !s64i
+  // CHECK-NEXT:   cir.return %[[P]] : !s64i
+  // CHECK-NEXT: }
+
+  cir.func @cast_s64_s32() -> !s32i {
+    %0 = cir.const #cir.int<2> : !s64i
+    %1 = cir.cast integral %0 : !s64i -> !s32i
+    cir.return %1 : !s32i
+  }
+  // CHECK:      @cast_s64_s32()
+  // CHECK-NEXT:   %[[P:.+]] = cir.const #cir.int<2> : !s32i
+  // CHECK-NEXT:   cir.return %[[P]] : !s32i
+  // CHECK-NEXT: }
+
+  cir.func @cast_s32_u32() -> !u32i {
+    %0 = cir.const #cir.int<2> : !s32i
+    %1 = cir.cast integral %0 : !s32i -> !u32i
+    cir.return %1 : !u32i
+  }
+  // CHECK:      @cast_s32_u32()
+  // CHECK-NEXT:   %[[P:.+]] = cir.const #cir.int<2> : !u32i
+  // CHECK-NEXT:   cir.return %[[P]] : !u32i
+  // CHECK-NEXT: }
+
+  cir.func @cast_u32_s32() -> !s32i {
+    %0 = cir.const #cir.int<2> : !u32i
+    %1 = cir.cast integral %0 : !u32i -> !s32i
+    cir.return %1 : !s32i
+  }
+  // CHECK:      @cast_u32_s32()
+  // CHECK-NEXT:   %[[P:.+]] = cir.const #cir.int<2> : !s32i
+  // CHECK-NEXT:   cir.return %[[P]] : !s32i
+  // CHECK-NEXT: }
+
+  cir.func @cast_overflow() -> !s8i {
+    %0 = cir.const #cir.int<259> : !s32i
+    %1 = cir.cast integral %0 : !s32i -> !s8i
+    cir.return %1 : !s8i
+  }
+  // CHECK:      @cast_overflow()
+  // CHECK-NEXT:   %[[P:.+]] = cir.const #cir.int<3> : !s8i
+  // CHECK-NEXT:   cir.return %[[P]] : !s8i
+  // CHECK-NEXT: }
+
+  cir.func @cast_sext_s32_s64() -> !s64i {
+    %0 = cir.const #cir.int<-1> : !s32i
+    %1 = cir.cast integral %0 : !s32i -> !s64i
+    cir.return %1 : !s64i
+  }
+  // CHECK:      @cast_sext_s32_s64()
+  // CHECK-NEXT:   %[[P:.+]] = cir.const #cir.int<-1> : !s64i
+  // CHECK-NEXT:   cir.return %[[P]] : !s64i
+  // CHECK-NEXT: }
+
+  cir.func @cast_sext_s32_u64() -> !u64i {
+    %0 = cir.const #cir.int<-1> : !s32i
+    %1 = cir.cast integral %0 : !s32i -> !u64i
+    cir.return %1 : !u64i
+  }
+  // CHECK:      @cast_sext_s32_u64()
+  // CHECK-NEXT:   %[[P:.+]] = cir.const #cir.int<18446744073709551615> : !u64i
+  // CHECK-NEXT:   cir.return %[[P]] : !u64i
+  // CHECK-NEXT: }
+
+  cir.func @cast_sext_twostep_s32_u64() -> !u64i {
+    %0 = cir.const #cir.int<-1> : !s32i
+    %1 = cir.cast integral %0 : !s32i -> !s64i
+    %2 = cir.cast integral %1 : !s64i -> !u64i
+    cir.return %2 : !u64i
+  }
+
+  // CHECK:      @cast_sext_twostep_s32_u64()
+  // CHECK-NEXT:   %[[P:.+]] = cir.const #cir.int<18446744073709551615> : !u64i
+  // CHECK-NEXT:   cir.return %[[P]] : !u64i
+  // CHECK-NEXT: }
+
+  cir.func @cast_zext_u8_u32() -> !u32i {
+    %0 = cir.const #cir.int<255> : !u8i
+    %1 = cir.cast integral %0 : !u8i -> !u32i
+    cir.return %1 : !u32i
+  }
+  // CHECK:      @cast_zext_u8_u32()
+  // CHECK-NEXT:   %[[P:.+]] = cir.const #cir.int<255> : !u32i
+  // CHECK-NEXT:   cir.return %[[P]] : !u32i
+  // CHECK-NEXT: }
+
+  cir.func @cast_zext_u8_s32() -> !s32i {
+    %0 = cir.const #cir.int<255> : !u8i
+    %1 = cir.cast integral %0 : !u8i -> !s32i
+    cir.return %1 : !s32i
+  }
+  // CHECK:      @cast_zext_u8_s32()
+  // CHECK-NEXT:   %[[P:.+]] = cir.const #cir.int<255> : !s32i
+  // CHECK-NEXT:   cir.return %[[P]] : !s32i
   // CHECK-NEXT: }
 
 }

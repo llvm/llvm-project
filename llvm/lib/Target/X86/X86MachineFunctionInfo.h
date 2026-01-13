@@ -43,7 +43,7 @@ struct X86MachineFunctionInfo final : public yaml::MachineFunctionInfo {
   X86MachineFunctionInfo(const llvm::X86MachineFunctionInfo &MFI);
 
   void mappingImpl(yaml::IO &YamlIO) override;
-  ~X86MachineFunctionInfo() = default;
+  ~X86MachineFunctionInfo() override = default;
 };
 
 template <> struct MappingTraits<X86MachineFunctionInfo> {

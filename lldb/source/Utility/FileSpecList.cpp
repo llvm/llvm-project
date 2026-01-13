@@ -45,10 +45,9 @@ bool FileSpecList::AppendIfUnique(const FileSpec &file_spec) {
 // FIXME: Replace this with a DenseSet at the call site. It is inefficient.
 bool SupportFileList::AppendIfUnique(const FileSpec &file_spec) {
   collection::iterator end = m_files.end();
-  if (find_if(m_files.begin(), end,
-              [&](const std::shared_ptr<SupportFile> &support_file) {
-                return support_file->GetSpecOnly() == file_spec;
-              }) == end) {
+  if (find_if(m_files.begin(), end, [&](const SupportFileNSP &support_file) {
+        return support_file->GetSpecOnly() == file_spec;
+      }) == end) {
     Append(file_spec);
     return true;
   }
@@ -214,11 +213,10 @@ const FileSpec &SupportFileList::GetFileSpecAtIndex(size_t idx) const {
   return g_empty_file_spec;
 }
 
-std::shared_ptr<SupportFile>
-SupportFileList::GetSupportFileAtIndex(size_t idx) const {
+SupportFileNSP SupportFileList::GetSupportFileAtIndex(size_t idx) const {
   if (idx < m_files.size())
     return m_files[idx];
-  return {};
+  return std::make_shared<SupportFile>();
 }
 
 // Return the size in bytes that this object takes in memory. This returns the

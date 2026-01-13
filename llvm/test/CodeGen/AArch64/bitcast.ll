@@ -433,12 +433,8 @@ define <2 x i16> @bitcast_v4i8_v2i16(<4 x i8> %a, <4 x i8> %b){
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    add v0.4h, v0.4h, v1.4h
-; CHECK-SD-NEXT:    add x8, sp, #12
 ; CHECK-SD-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
-; CHECK-SD-NEXT:    str s0, [sp, #12]
-; CHECK-SD-NEXT:    ld1 { v0.h }[0], [x8]
-; CHECK-SD-NEXT:    orr x8, x8, #0x2
-; CHECK-SD-NEXT:    ld1 { v0.h }[2], [x8]
+; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    add sp, sp, #16
 ; CHECK-SD-NEXT:    ret

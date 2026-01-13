@@ -26,23 +26,39 @@ public:
 
 private:
   ABIArgInfo classifyReturnType(QualType RetTy) const;
+  ABIArgInfo classifyArgumentType(QualType Ty) const;
   void computeInfo(CGFunctionInfo &FI) const override;
 };
 } // end anonymous namespace
 
+ABIArgInfo SparcV8ABIInfo::classifyReturnType(QualType Ty) const {
+  const auto *CT = Ty->getAs<ComplexType>();
+  const auto *BT = Ty->getAs<BuiltinType>();
+  if (CT)
+    BT = CT->getElementType()->getAs<BuiltinType>();
+  bool IsLongDouble = BT && BT->getKind() == BuiltinType::LongDouble;
 
-ABIArgInfo
-SparcV8ABIInfo::classifyReturnType(QualType Ty) const {
-  if (Ty->isAnyComplexType()) {
-    return ABIArgInfo::getDirect();
-  }
-  else {
-    return DefaultABIInfo::classifyReturnType(Ty);
-  }
+  // long double _Complex is special in that it should be marked as inreg.
+  if (CT)
+    return IsLongDouble ? ABIArgInfo::getDirectInReg()
+                        : ABIArgInfo::getDirect();
+
+  if (IsLongDouble)
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   /*ByVal=*/false);
+
+  return DefaultABIInfo::classifyReturnType(Ty);
+}
+
+ABIArgInfo SparcV8ABIInfo::classifyArgumentType(QualType Ty) const {
+  if (const auto *BT = Ty->getAs<BuiltinType>();
+      BT && BT->getKind() == BuiltinType::LongDouble)
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
+
+  return DefaultABIInfo::classifyArgumentType(Ty);
 }
 
 void SparcV8ABIInfo::computeInfo(CGFunctionInfo &FI) const {
-
   FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
   for (auto &Arg : FI.arguments())
     Arg.info = classifyArgumentType(Arg.type);

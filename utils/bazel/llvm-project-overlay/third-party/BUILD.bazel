@@ -1,0 +1,60 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
+load(":cc_library_wrapper.bzl", "cc_library_wrapper")
+
+package(default_visibility = ["//visibility:public"])
+
+bool_flag(
+    name = "llvm_enable_zstd",
+    build_setting_default = True,
+)
+
+config_setting(
+    name = "llvm_zstd_enabled",
+    flag_values = {":llvm_enable_zstd": "true"},
+)
+
+cc_library_wrapper(
+    name = "zstd",
+    defines = select({
+        ":llvm_zstd_enabled": [
+            "LLVM_ENABLE_ZSTD=1",
+            "ZSTD_MULTITHREAD",
+        ],
+        "//conditions:default": [],
+    }),
+    deps = select({
+        ":llvm_zstd_enabled": [
+            "@llvm_zstd//:zstd",
+        ],
+        "//conditions:default": [],
+    }),
+)
+
+bool_flag(
+    name = "llvm_enable_zlib",
+    build_setting_default = True,
+)
+
+config_setting(
+    name = "llvm_zlib_enabled",
+    flag_values = {":llvm_enable_zlib": "true"},
+)
+
+cc_library_wrapper(
+    name = "zlib",
+    defines = select({
+        ":llvm_zlib_enabled": [
+            "LLVM_ENABLE_ZLIB=1",
+        ],
+        "//conditions:default": [],
+    }),
+    deps = select({
+        ":llvm_zlib_enabled": [
+            "@llvm_zlib//:zlib-ng",
+        ],
+        "//conditions:default": [],
+    }),
+)

@@ -11,9 +11,9 @@
 target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-w64-windows-gnu"
 
-define void @cff_index_load_offsets(i1 %cond, i8 %x, ptr %p) #0 {
+define void @cff_index_load_offsets(i1 %cond, i8 %x, ptr %p, ptr %pend) #0 {
 ; CHECK-LABEL: define void @cff_index_load_offsets(
-; CHECK-SAME: i1 [[COND:%.*]], i8 [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: i1 [[COND:%.*]], i8 [[X:%.*]], ptr [[P:%.*]], ptr [[PEND:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[IF_THEN]]:
@@ -26,14 +26,14 @@ define void @cff_index_load_offsets(i1 %cond, i8 %x, ptr %p) #0 {
 ; CHECK-NEXT:    [[CONV73:%.*]] = zext i8 [[TMP0]] to i32
 ; CHECK-NEXT:    [[SHL74:%.*]] = shl nuw nsw i32 [[CONV73]], 16
 ; CHECK-NEXT:    [[OR75:%.*]] = or i32 [[SHL74]], [[SHL71]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr undef, align 1, !tbaa [[CHAR_TBAA1]]
-; CHECK-NEXT:    [[SHL78:%.*]] = shl nuw nsw i32 undef, 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[P]], align 1, !tbaa [[CHAR_TBAA1]]
+; CHECK-NEXT:    [[SHL78:%.*]] = shl nuw nsw i32 12, 8
 ; CHECK-NEXT:    [[OR79:%.*]] = or i32 [[OR75]], [[SHL78]]
 ; CHECK-NEXT:    [[CONV81:%.*]] = zext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    [[OR83:%.*]] = or i32 [[OR79]], [[CONV81]]
-; CHECK-NEXT:    store i32 [[OR83]], ptr undef, align 4, !tbaa [[LONG_TBAA4:![0-9]+]]
+; CHECK-NEXT:    store i32 [[OR83]], ptr [[P]], align 4, !tbaa [[LONG_TBAA4:![0-9]+]]
 ; CHECK-NEXT:    [[ADD_PTR86]] = getelementptr inbounds i8, ptr [[P_359]], i64 4
-; CHECK-NEXT:    [[CMP66:%.*]] = icmp ult ptr [[ADD_PTR86]], undef
+; CHECK-NEXT:    [[CMP66:%.*]] = icmp ult ptr [[ADD_PTR86]], [[PEND]]
 ; CHECK-NEXT:    br i1 [[CMP66]], label %[[FOR_BODY68]], label %[[SW_EPILOG:.*]]
 ; CHECK:       [[SW_EPILOG]]:
 ; CHECK-NEXT:    unreachable
@@ -54,14 +54,14 @@ for.body68:                                       ; preds = %for.body68, %if.the
   %conv73 = zext i8 %0 to i32
   %shl74 = shl nuw nsw i32 %conv73, 16
   %or75 = or i32 %shl74, %shl71
-  %1 = load i8, ptr undef, align 1, !tbaa !1
-  %shl78 = shl nuw nsw i32 undef, 8
+  %1 = load i8, ptr %p, align 1, !tbaa !1
+  %shl78 = shl nuw nsw i32 12, 8
   %or79 = or i32 %or75, %shl78
   %conv81 = zext i8 %1 to i32
   %or83 = or i32 %or79, %conv81
-  store i32 %or83, ptr undef, align 4, !tbaa !4
+  store i32 %or83, ptr %p, align 4, !tbaa !4
   %add.ptr86 = getelementptr inbounds i8, ptr %p.359, i64 4
-  %cmp66 = icmp ult ptr %add.ptr86, undef
+  %cmp66 = icmp ult ptr %add.ptr86, %pend
   br i1 %cmp66, label %for.body68, label %sw.epilog
 
 sw.epilog:                                        ; preds = %for.body68

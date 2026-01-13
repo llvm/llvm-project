@@ -11,6 +11,7 @@
 // template <class InputIter> vector(InputIter first, InputIter last,
 //                                   const allocator_type& a);
 
+#include <algorithm>
 #include <vector>
 #include <cassert>
 #include <cstddef>
@@ -31,8 +32,7 @@ TEST_CONSTEXPR_CXX20 void test(Iterator first, Iterator last, const A& a) {
   LIBCPP_ASSERT(c.__invariants());
   assert(c.size() == static_cast<std::size_t>(std::distance(first, last)));
   LIBCPP_ASSERT(is_contiguous_container_asan_correct(c));
-  for (typename C::const_iterator i = c.cbegin(), e = c.cend(); i != e; ++i, ++first)
-    assert(*i == *first);
+  assert(std::equal(c.cbegin(), c.cend(), first));
 }
 
 #if TEST_STD_VER >= 11
