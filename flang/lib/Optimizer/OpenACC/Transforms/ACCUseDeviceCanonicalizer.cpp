@@ -159,12 +159,23 @@ struct UseDeviceHostDataHoisting : public OpRewritePattern<acc::HostDataOp> {
   }
 
 private:
-  /// Create new use_device operation with the given box address as operand.
+  /// Collect users of `acc.use_device` operation inside the `acc.host_data`
+  /// region that need to be updated with the final replacement value.
+  void collectUseDeviceUsersToUpdate(
+      acc::UseDeviceOp useDeviceOp, acc::HostDataOp hostDataOp,
+      SmallVectorImpl<Operation *> &usersToUpdate) const {
+    for (mlir::Operation *user : useDeviceOp->getUsers())
+      if (hostDataOp.getRegion().isAncestor(user->getParentRegion()))
+        usersToUpdate.push_back(user);
+  }
+
+  /// Create new `acc.use_device` operation with the given box address as
+  /// operand. Updates the `acc.host_data` operation to use the new
+  /// `acc.use_device` result.
   acc::UseDeviceOp createNewUseDeviceOp(PatternRewriter &rewriter,
                                         acc::UseDeviceOp useDeviceOp,
                                         acc::HostDataOp hostDataOp,
                                         fir::BoxAddrOp boxAddr) const {
-
     // Create use_device on the raw pointer
     acc::UseDeviceOp newUseDeviceOp = acc::UseDeviceOp::create(
         rewriter, useDeviceOp.getLoc(), boxAddr.getType(), boxAddr.getResult(),
@@ -193,18 +204,6 @@ private:
     rewriter.modifyOpInPlace(hostDataOp, [&]() {
       hostDataOp.getDataClauseOperandsMutable().assign(newOperands);
     });
-
-    SmallVector<Operation *> usersOfUseDeviceOp;
-    for (mlir::Operation *user : useDeviceOp->getUsers())
-      if (hostDataOp.getRegion().isAncestor(user->getParentRegion()))
-        usersOfUseDeviceOp.push_back(user);
-
-    for (mlir::Operation *user : usersOfUseDeviceOp)
-      user->replaceUsesOfWith(useDeviceOp.getResult(),
-                              newUseDeviceOp.getResult());
-
-    // Set insertion point to the first op inside the host_data region
-    rewriter.setInsertionPoint(&hostDataOp.getRegion().front().front());
 
     return newUseDeviceOp;
   }
@@ -256,6 +255,11 @@ private:
     // Get the ModuleOp before we erase useDeviceOp to avoid invalid reference
     ModuleOp mod = useDeviceOp->getParentOfType<ModuleOp>();
 
+    // Collect users of the original `acc.use_device` operation that need to be
+    // updated
+    SmallVector<Operation *> usersToUpdate;
+    collectUseDeviceUsersToUpdate(useDeviceOp, hostDataOp, usersToUpdate);
+
     rewriter.setInsertionPoint(useDeviceOp);
     // Create a load operation to get the box from the variable
     fir::LoadOp box = fir::LoadOp::create(rewriter, useDeviceOp.getLoc(),
@@ -263,20 +267,27 @@ private:
     // Create a box_addr operation to get the address from the box
     fir::BoxAddrOp boxAddr =
         fir::BoxAddrOp::create(rewriter, useDeviceOp.getLoc(), box);
+
     acc::UseDeviceOp newUseDeviceOp =
         createNewUseDeviceOp(rewriter, useDeviceOp, hostDataOp, boxAddr);
+
     LLVM_DEBUG(llvm::dbgs()
                << "Created new hoisted pattern for pointer access:\n"
                << "  load box: " << *box << "\n"
                << "  box_addr: " << *boxAddr << "\n"
                << "  new use_device: " << *newUseDeviceOp << "\n");
+
+    // Set insertion point to the first op inside the host_data region
+    rewriter.setInsertionPoint(&hostDataOp.getRegion().front().front());
+
     // Create a FirOpBuilder from the PatternRewriter using the module we got
     // earlier
     fir::FirOpBuilder builder(rewriter, mod);
     Value newBoxwithDevicePtr = fir::factory::getDescriptorWithNewBaseAddress(
         builder, useDeviceOp.getLoc(), box.getResult(),
         newUseDeviceOp.getResult());
-    // create new memory location and store the newBoxwithDevicePtr into new
+
+    // Create new memory location and store the newBoxwithDevicePtr into new
     // memory location
     fir::AllocaOp newMemLoc = fir::AllocaOp::create(
         rewriter, useDeviceOp.getLoc(), newBoxwithDevicePtr.getType());
@@ -290,17 +301,13 @@ private:
                << *newBoxwithDevicePtr.getDefiningOp() << "\n"
                << "  mem loc: " << *newMemLoc << "\n"
                << "  store op: " << *newStoreOp << "\n");
-    SmallVector<Operation *> usersOfNewUseDeviceOp;
-    for (mlir::Operation *user : newUseDeviceOp->getUsers())
-      if (hostDataOp.getRegion().isAncestor(user->getParentRegion()))
-        usersOfNewUseDeviceOp.push_back(user);
 
-    // replace all uses of the newUseDeviceOp.getResult() strictly inside the
-    // host_data region with the newBoxwithDevicePtr
-    for (mlir::Operation *user : usersOfNewUseDeviceOp)
-      if (hostDataOp.getRegion().isAncestor(user->getParentRegion()))
-        if (user != hostDataOp && user != newBoxwithDevicePtr.getDefiningOp())
-          user->replaceUsesOfWith(newUseDeviceOp.getResult(), newMemLoc);
+    // Replace all uses of the original `acc.use_device` operation inside the
+    // `acc.host_data` region with the new memory location containing the box
+    // with device pointer
+    for (mlir::Operation *user : usersToUpdate)
+      user->replaceUsesOfWith(useDeviceOp.getResult(), newMemLoc);
+
     rewriter.eraseOp(useDeviceOp);
     return true;
   }
@@ -341,6 +348,11 @@ private:
       return false;
     }
 
+    // Collect users of the original `acc.use_device` operation that need to be
+    // updated
+    SmallVector<Operation *> usersToUpdate;
+    collectUseDeviceUsersToUpdate(useDeviceOp, hostDataOp, usersToUpdate);
+
     // Get the ModuleOp before we erase useDeviceOp to avoid invalid reference
     ModuleOp mod = useDeviceOp->getParentOfType<ModuleOp>();
 
@@ -351,6 +363,9 @@ private:
 
     acc::UseDeviceOp newUseDeviceOp =
         createNewUseDeviceOp(rewriter, useDeviceOp, hostDataOp, boxAddr);
+
+    // Set insertion point to the first op inside the host_data region
+    rewriter.setInsertionPoint(&hostDataOp.getRegion().front().front());
 
     // Create a FirOpBuilder from the PatternRewriter using the module we got
     // earlier
@@ -368,18 +383,10 @@ private:
                << "  box with device pointer: "
                << *newBoxWithDevicePtr.getDefiningOp() << "\n");
 
-    SmallVector<Operation *> usersOfNewUseDeviceOp;
-    for (mlir::Operation *user : newUseDeviceOp->getUsers())
-      if (hostDataOp.getRegion().isAncestor(user->getParentRegion()))
-        usersOfNewUseDeviceOp.push_back(user);
-
-    // Replace all uses of the newUseDeviceOp.getResult() strictly inside the
-    // host_data region with the newBoxWithDevicePtr
-    for (mlir::Operation *user : usersOfNewUseDeviceOp)
-      if (hostDataOp.getRegion().isAncestor(user->getParentRegion()))
-        if (user != hostDataOp && user != newBoxWithDevicePtr.getDefiningOp())
-          user->replaceUsesOfWith(newUseDeviceOp.getResult(),
-                                  newBoxWithDevicePtr);
+    // Replace all uses of the original useDeviceOp inside the host_data region
+    // with the new box containing device pointer
+    for (mlir::Operation *user : usersToUpdate)
+      user->replaceUsesOfWith(useDeviceOp.getResult(), newBoxWithDevicePtr);
 
     rewriter.eraseOp(useDeviceOp);
     return true;
