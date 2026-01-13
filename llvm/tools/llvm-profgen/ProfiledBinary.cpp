@@ -248,24 +248,33 @@ void ProfiledBinary::load() {
   // Load debug info of subprograms from DWARF section.
   // If path of debug info binary is specified, use the debug info from it,
   // otherwise use the debug info from the executable binary.
+  OwningBinary<Binary> DebugBinary;
   if (!DebugBinaryPath.empty()) {
-    OwningBinary<Binary> DebugPath =
-        unwrapOrError(createBinary(DebugBinaryPath), DebugBinaryPath);
-    loadSymbolsFromDWARF(*cast<ObjectFile>(DebugPath.getBinary()));
+    DebugBinary = unwrapOrError(createBinary(DebugBinaryPath), DebugBinaryPath);
+    ObjectFile *DebugObj = cast<ObjectFile>(DebugBinary.getBinary());
+    loadSymbolsFromDWARF(*DebugObj);
+    checkPseudoProbe(DebugObj, DebugBinaryPath);
   } else {
-    loadSymbolsFromDWARF(*cast<ObjectFile>(&ExeBinary));
+    loadSymbolsFromDWARF(*Obj);
   }
+
+  // Try to load pseudo probe from debug binary if it exists, otherwise try to
+  // load it from binary.
+  bool IsPseudoProbeInDebugBin = usePseudoProbes();
+  if (!IsPseudoProbeInDebugBin)
+    checkPseudoProbe(Obj, Path);
 
   DisassembleFunctionSet.insert_range(DisassembleFunctions);
 
-  checkPseudoProbe(Obj);
-  if (UsePseudoProbes)
+  if (usePseudoProbes())
     populateSymbolAddressList(Obj);
 
   if (ShowDisassemblyOnly)
-    decodePseudoProbe(Obj);
+    decodePseudoProbe(IsPseudoProbeInDebugBin
+                          ? cast<ObjectFile>(DebugBinary.getBinary())
+                          : Obj);
 
-  if (LoadFunctionFromSymbol && UsePseudoProbes)
+  if (LoadFunctionFromSymbol && usePseudoProbes())
     loadSymbolsFromSymtab(Obj);
 
   // Disassemble the text sections.
@@ -426,7 +435,8 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ObjectFile *Obj) {
     llvm_unreachable("invalid object format");
 }
 
-void ProfiledBinary::checkPseudoProbe(const ObjectFile *Obj) {
+void ProfiledBinary::checkPseudoProbe(const ObjectFile *Obj,
+                                      StringRef ObjPath) {
   if (UseDwarfCorrelation)
     return;
 
@@ -445,12 +455,12 @@ void ProfiledBinary::checkPseudoProbe(const ObjectFile *Obj) {
     }
   }
 
-  // set UsePseudoProbes flag, used for PerfReader
-  UsePseudoProbes = HasProbeDescSection && HasPseudoProbeSection;
+  if (HasProbeDescSection && HasPseudoProbeSection)
+    PseudoProbeBinPath = ObjPath;
 }
 
 void ProfiledBinary::decodePseudoProbe(const ObjectFile *Obj) {
-  if (!UsePseudoProbes)
+  if (!usePseudoProbes())
     return;
 
   MCPseudoProbeDecoder::Uint64Set GuidFilter;
@@ -525,9 +535,9 @@ void ProfiledBinary::decodePseudoProbe(const ObjectFile *Obj) {
 }
 
 void ProfiledBinary::decodePseudoProbe() {
-  OwningBinary<Binary> OBinary = unwrapOrError(createBinary(Path), Path);
-  Binary &ExeBinary = *OBinary.getBinary();
-  auto *Obj = cast<ObjectFile>(&ExeBinary);
+  OwningBinary<Binary> OBinary =
+      unwrapOrError(createBinary(PseudoProbeBinPath), PseudoProbeBinPath);
+  auto *Obj = cast<ObjectFile>(OBinary.getBinary());
   decodePseudoProbe(Obj);
 }
 
@@ -1122,7 +1132,7 @@ void ProfiledBinary::computeInlinedContextSizeForRange(uint64_t RangeBegin,
 
   do {
     const SampleContextFrameVector SymbolizedCallStack =
-        getFrameLocationStack(IP.Address, UsePseudoProbes);
+        getFrameLocationStack(IP.Address, usePseudoProbes());
     uint64_t Size = AddressToInstSizeMap[IP.Address];
     // Record instruction size for the corresponding context
     FuncSizeTracker.addInstructionForContext(SymbolizedCallStack, Size);
@@ -1150,7 +1160,7 @@ void ProfiledBinary::computeInlinedContextSizeForFunc(
 }
 
 void ProfiledBinary::loadSymbolsFromPseudoProbe() {
-  if (!UsePseudoProbes)
+  if (!usePseudoProbes())
     return;
 
   const AddressProbesMap &Address2ProbesMap = getAddress2ProbesMap();
