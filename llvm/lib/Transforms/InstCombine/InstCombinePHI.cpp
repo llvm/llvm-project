@@ -16,6 +16,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
@@ -552,7 +553,6 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
   // Scan to see if all operands are the same opcode, and all have one user.
   for (Value *V : drop_begin(PN.incoming_values())) {
     GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(V);
-    SmallVector<Value *, 16> GEPIndices;
     if (!GEP || !GEP->hasOneUser() ||
         GEP->getSourceElementType() != FirstInst->getSourceElementType() ||
         GEP->getNumOperands() != FirstInst->getNumOperands())
@@ -567,19 +567,18 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
       AllBasePointersAreAllocas = false;
 
     // Compare the operand lists.
+    gep_type_iterator TypeIter = gep_type_begin(GEP);
     for (unsigned Op = 0, E = FirstInst->getNumOperands(); Op != E; ++Op) {
       if (FirstInst->getOperand(Op) == GEP->getOperand(Op))
         continue;
 
       // Don't merge two GEPs if the GEP indices a struct, because struct
       // indices must be constant.
-
-      if (Op > 0) // skip base pointer for indeces
-        GEPIndices.push_back(GEP->getOperand(Op));
-
-      if (GEP->getIndexedType(GEP->getSourceElementType(), GEPIndices)
-              ->isStructTy())
-        return nullptr;
+      if (Op > 0) { // skip pointer operand
+        if (TypeIter.isStruct())
+          return nullptr;
+        ++TypeIter;
+      }
 
       // Don't merge if there is a mixture of constant and variable indices for
       // the same operand. If all the indices are constant, the chance is higher
