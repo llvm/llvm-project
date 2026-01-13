@@ -1,5 +1,4 @@
 ; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck --implicit-check-not "{{DW_TAG|NULL}}" %s
-; REQUIRES: object-emission
 
 ; inline __attribute__((always_inline))
 ; void removed() {

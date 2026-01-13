@@ -60,4 +60,4 @@ void instantiate(int x) {
 // CHECK: !DILocalVariable(name: "c", {{.*}}, flags: DIFlagArtificial
 // CHECK: !DILocalVariable(
 // CHECK-NOT: name:
-// CHECK: type: ![[UNION]]
+// CHECK-SAME: type: ![[UNION]]

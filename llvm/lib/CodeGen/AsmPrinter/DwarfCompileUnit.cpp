@@ -772,36 +772,22 @@ DIE *DwarfCompileUnit::getOrCreateLexicalBlockDIE(LexicalScope *Scope,
   if (DD->isLexicalScopeDIENull(Scope))
     return nullptr;
   const auto *DS = Scope->getScopeNode();
-  DIE *ScopeDIE = nullptr;
 
-  // FIXME: We may have a concrete DIE for this scope already created.
-  // This may happen when we emit local variables for an abstract tree of
-  // an inlined function: if a local variable has a templated type with
-  // a function-local type as a template parameter. See PR55680 for details
-  // (see also llvm/test/DebugInfo/Generic/local-type-as-template-parameter.ll).
-  if (!Scope->isAbstractScope() && !Scope->getInlinedAt()) {
-    if (auto It = LexicalBlockDIEs.find(DS); It != LexicalBlockDIEs.end()) {
-      ScopeDIE = It->second;
-      assert(!ScopeDIE->findAttribute(dwarf::DW_AT_low_pc) &&
-             !ScopeDIE->findAttribute(dwarf::DW_AT_ranges));
-      assert(ScopeDIE->getParent() == &ParentScopeDIE);
-    }
+  auto ScopeDIE = DIE::get(DIEValueAllocator, dwarf::DW_TAG_lexical_block);
+  ParentScopeDIE.addChild(ScopeDIE);
+
+  if (Scope->isAbstractScope()) {
+    assert(!getAbstractScopeDIEs().count(DS) &&
+           "Abstract DIE for this scope exists!");
+    getAbstractScopeDIEs()[DS] = ScopeDIE;
+    return ScopeDIE;
   }
-  if (!ScopeDIE) {
-    ScopeDIE = DIE::get(DIEValueAllocator, dwarf::DW_TAG_lexical_block);
-    ParentScopeDIE.addChild(ScopeDIE);
-
-    if (Scope->isAbstractScope()) {
-      assert(!getAbstractScopeDIEs().count(DS) &&
-             "Abstract DIE for this scope exists!");
-      getAbstractScopeDIEs()[DS] = ScopeDIE;
-      return ScopeDIE;
-    }
-
-    if (!Scope->getInlinedAt())
-      LexicalBlockDIEs[DS] = ScopeDIE;
-    else
-      InlinedLocalScopeDIEs[DS].push_back(ScopeDIE);
+  if (!Scope->getInlinedAt()) {
+    assert(!LexicalBlockDIEs.count(DS) &&
+           "Concrete out-of-line DIE for this scope exists!");
+    LexicalBlockDIEs[DS] = ScopeDIE;
+  } else {
+    InlinedLocalScopeDIEs[DS].push_back(ScopeDIE);
   }
 
   attachRangesOrLowHighPC(*ScopeDIE, Scope->getRanges());

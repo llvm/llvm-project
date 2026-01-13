@@ -1,10 +1,10 @@
-; REQUIERES: system-linux
+; REQUIRES: system-linux
 ; RUN: %llc_dwarf -mtriple=x86_64-linux -O0 -filetype=obj < %s              \
 ; RUN:  | llvm-dwarfdump --show-children --name=foo - \
 ; RUN:  | FileCheck --implicit-check-not "{{DW_TAG|NULL}}" %s
 
 ; The test ensures that AsmPrinter doesn't crashed compiling this.
-; It also demostrates misplacement for a local type (see PR55680 for details).
+; It also demonstrates misplacement for a local type (see https://github.com/llvm/llvm-project/issues/55680 for details).
 
 ; The test compiled from:
 
@@ -29,7 +29,7 @@
 ; CHECK: DW_TAG_subprogram
 ; CHECK:   DW_AT_abstract_origin {{.*}} "_Z3foov"
 
-; FIXME: 'struct B' should be in the abstract tree below, not here.
+;;; FIXME: 'struct B' should be in the abstract tree below, not here.
 ; CHECK:   DW_TAG_structure_type
 ; CHECK:     DW_AT_name	("B")
 ; CHECK:     DW_TAG_member

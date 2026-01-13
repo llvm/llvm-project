@@ -1,5 +1,4 @@
 ; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck --implicit-check-not "{{DW_TAG|NULL}}" %s
-; REQUIRES: object-emission
 
 ; inline __attribute__((always_inline))
 ; int removed() { struct A {int i;}; struct A a; return a.i++; }
@@ -9,8 +8,8 @@
 ;
 ; int foo() { return removed() + not_removed(); }}
 
-; Ensure that function-local types have the correct subprogram parent even if
-; those subprograms are inlined.
+; Ensure that function-local types have the abstract subprogram parent even
+; if those subprograms are inlined.
 
 ; CHECK: DW_TAG_compile_unit
 ; CHECK:   DW_TAG_subprogram

@@ -1,6 +1,6 @@
-; Test moving of local imports/enums from DICompileUnit to DISubprogram's 'retainedNodes'
-;
 ; RUN: llvm-dis -o - %s.bc | FileCheck %s
+
+; Test moving of local imports/enums from DICompileUnit to DISubprogram's 'retainedNodes'
 
 %"struct.ns::t1" = type { i8 }
 

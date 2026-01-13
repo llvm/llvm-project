@@ -10,6 +10,10 @@
 ;   {
 ;     struct X {};
 ;   }
+;   {
+;     struct Z {};
+;     test_external();
+;   }
 ; }
 
 ; CHECK: DW_TAG_compile_unit
@@ -25,11 +29,21 @@
 
 ; CHECK:     DW_TAG_structure_type
 ; CHECK:       DW_AT_name	("X")
+; The LexicalScope for parent scope of structure 'Z' is created (thanks to test_external
+; call), therefore, DW_TAG_structure_type for structure 'Z' is placed inside
+; the DW_TAG_lexical_block.
+; CHECK:     DW_TAG_lexical_block
+; CHECK:       DW_TAG_structure_type
+; CHECK:         DW_AT_name	("Z")
+; CHECK:       NULL
 ; CHECK:     NULL
 ; CHECK:   NULL
 
+declare void @_Z13test_externalv()
+
 define dso_local void @_Z11test_unusedv() !dbg !5 {
 entry:
+  call void @_Z13test_externalv(), !dbg !19
   ret void, !dbg !16
 }
 
@@ -46,10 +60,13 @@ entry:
 !6 = !DISubroutineType(types: !7)
 !7 = !{null}
 !8 = !{}
-!9 = !{!3, !10}
+!9 = !{!3, !10, !18}
 !10 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "X", scope: !11, file: !4, line: 4, size: 8, flags: DIFlagTypePassByValue, elements: !8)
 !11 = distinct !DILexicalBlock(scope: !5, file: !4, line: 3, column: 3)
 !13 = !{i32 2, !"Debug Info Version", i32 3}
 !14 = !{i32 1, !"wchar_size", i32 4}
 !15 = !{!"clang version 15.0.0"}
-!16 = !DILocation(line: 6, column: 1, scope: !5)
+!16 = !DILocation(line: 10, column: 1, scope: !5)
+!17 = distinct !DILexicalBlock(scope: !5, file: !4, line: 6, column: 3)
+!18 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Z", scope: !17, file: !4, line: 7, size: 8, flags: DIFlagTypePassByValue, elements: !8)
+!19 = !DILocation(line: 8, column: 1, scope: !17)

@@ -1,6 +1,4 @@
-; RUN: llvm-link %s %s -S -o %t
-; RUN: opt --passes=verify %t -o /dev/null
-; RUN: FileCheck --input-file=%t %s --implicit-check-not=DICompositeType
+; RUN: llvm-link %s %s -S -o - | FileCheck %s --implicit-check-not=DICompositeType
 
 ; During module loading, if a local type appears in retainedNodes
 ; field of multiple DISubprograms due to ODR-uniquing,
@@ -11,7 +9,7 @@
 ; CHECK: [[EMPTY:![0-9]+]] = !{}
 ; CHECK: [[RN_BAR1]] = !{[[T1:![0-9]+]]}
 ; CHECK: [[T1]] = distinct !DICompositeType(tag: DW_TAG_class_type, scope: [[BAR1]], {{.*}}, identifier: "local_type")
-; CHECK: {{![0-9]+}} = distinct !DISubprogram(name: "bar", {{.*}}, retainedNodes: [[EMPTY:![0-9]+]])
+; CHECK: {{![0-9]+}} = distinct !DISubprogram(name: "bar", {{.*}}, retainedNodes: [[EMPTY]])
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

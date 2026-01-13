@@ -1,4 +1,4 @@
-// REQUIRES: asserts
+// REQUIRES: asserts, riscv-registered-target
 // Should trigger GenerateVarArgsThunk.
 // RUN: %clang_cc1 -O0 -triple riscv64-linux-gnu -debug-info-kind=limited -emit-llvm %s -o - | \
 // RUN: FileCheck %s
@@ -6,8 +6,12 @@
 // RUN: %clang_cc1 -O0 -triple riscv64-linux-gnu -debug-info-kind=limited -emit-obj %s -o - | \
 // RUN: llvm-dwarfdump --verify -
 
-// This test checks that the varargs thunk is correctly created if types of
-// DILocalVariables of the base function are unresolved at the cloning time.
+// This test checks that clang doesn't crash when creating a varargs thunk
+// by cloning a function which DILocalVariable types are unresolved at cloning
+// time.
+// In such case, as a workaround, instead of cloning unresolved types for
+// the thunk, clang produces thunk DILocalVariables that refer to local
+// types from the original DISubprogram.
 
 typedef signed char __int8_t;
 typedef int BOOL;

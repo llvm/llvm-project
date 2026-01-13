@@ -1,7 +1,7 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @func() !dbg !5 {
+define void @func() {
 entry:
   ret void, !dbg !8
 }
@@ -15,7 +15,7 @@ entry:
 !llvm.module.flags = !{!3, !4}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
-!1 = !DIFile(filename: "funcimport_debug.c", directory: ".")
+!1 = !DIFile(filename: "funcimport_debug2.c", directory: ".")
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
