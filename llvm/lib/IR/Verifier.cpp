@@ -797,7 +797,8 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
 
     if (auto *Props = GO->getMetadata(LLVMContext::MD_elf_section_properties)) {
       Check(Props->getNumOperands() == 2,
-            "elf_section_properties metadata must have two operands", GO, Props);
+            "elf_section_properties metadata must have two operands", GO,
+            Props);
       if (Props->getNumOperands() == 2) {
         auto *Type = dyn_cast<ConstantAsMetadata>(Props->getOperand(0));
         Check(Type, "type field must be ConstantAsMetadata", GO, Props);

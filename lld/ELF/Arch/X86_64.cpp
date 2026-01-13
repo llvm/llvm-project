@@ -423,9 +423,9 @@ void X86_64::relaxCFIJumpTables() const {
       // become the actual relocation targets.
       replacements.push_back(sec);
 
-      // Walk the jump table entries other than the last one looking for sections
-      // that are small enough to be moved into the jump table and in the same
-      // section as the jump table's destination.
+      // Walk the jump table entries other than the last one looking for
+      // sections that are small enough to be moved into the jump table and in
+      // the same section as the jump table's destination.
       size_t begin = 0;
       Relocation *rbegin = sec->relocs().begin();
       size_t cur = begin;

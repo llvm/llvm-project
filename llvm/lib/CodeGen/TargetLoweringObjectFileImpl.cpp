@@ -801,13 +801,13 @@ getGlobalObjectInfo(const GlobalObject *GO, const TargetMachine &TM,
   unsigned Type, EntrySize;
   if (MDNode *MD = GO->getMetadata(LLVMContext::MD_elf_section_properties)) {
     Type = cast<ConstantAsMetadata>(MD->getOperand(0))
-        ->getValue()
-        ->getUniqueInteger()
-        .getZExtValue();
+               ->getValue()
+               ->getUniqueInteger()
+               .getZExtValue();
     EntrySize = cast<ConstantAsMetadata>(MD->getOperand(1))
-        ->getValue()
-        ->getUniqueInteger()
-        .getZExtValue();
+                    ->getValue()
+                    ->getUniqueInteger()
+                    .getZExtValue();
   } else {
     Type = getELFSectionType(SectionName, Kind);
     EntrySize = getEntrySizeForKind(Kind);
