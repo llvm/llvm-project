@@ -475,7 +475,7 @@ public:
 
   /// Returns true if the two subregisters are equal or overlap.
   /// The registers may be virtual registers.
-  bool subRegsOverlap(Register RegA, unsigned SubA, Register RegB,
+  bool subRegsInterfere(Register RegA, unsigned SubA, Register RegB,
                       unsigned SubB) const {
     if (RegA == RegB && SubA == SubB)
       return true;

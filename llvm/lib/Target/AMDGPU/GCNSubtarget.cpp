@@ -634,23 +634,18 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
 static const MachineOperand *
 getVOP3PSourceModifierFromOpIdx(const MachineInstr *UseI, int UseOpIdx,
                                 const SIInstrInfo &InstrInfo) {
-  AMDGPU::OpName UseModName;
   AMDGPU::OpName UseName =
       AMDGPU::getOperandIdxName(UseI->getOpcode(), UseOpIdx);
   switch (UseName) {
   case AMDGPU::OpName::src0:
-    UseModName = AMDGPU::OpName::src0_modifiers;
-    break;
+    return InstrInfo.getNamedOperand(*UseI, AMDGPU::OpName::src0_modifiers);
   case AMDGPU::OpName::src1:
-    UseModName = AMDGPU::OpName::src1_modifiers;
-    break;
+    return InstrInfo.getNamedOperand(*UseI, AMDGPU::OpName::src1_modifiers);
   case AMDGPU::OpName::src2:
-    UseModName = AMDGPU::OpName::src2_modifiers;
-    break;
+    return InstrInfo.getNamedOperand(*UseI, AMDGPU::OpName::src2_modifiers);
   default:
     return nullptr;
   }
-  return InstrInfo.getNamedOperand(*UseI, UseModName);
 }
 
 // Get the subreg idx of the subreg that is used by the given instruction
@@ -661,12 +656,12 @@ static unsigned getEffectiveSubRegIdx(const SIRegisterInfo &TRI,
                                       const MachineOperand &Op) {
   const MachineInstr *I = Op.getParent();
   if (!InstrInfo.isVOP3P(*I) || InstrInfo.isWMMA(*I) || InstrInfo.isSWMMAC(*I))
-    return 0;
+    return AMDGPU::NoSubRegister;
 
   const MachineOperand *OpMod =
       getVOP3PSourceModifierFromOpIdx(I, Op.getOperandNo(), InstrInfo);
   if (!OpMod)
-    return 0;
+    return AMDGPU::NoSubRegister;
 
   // Note: the FMA_MIX* and MAD_MIX* instructions have different semantics for
   // the op_sel and op_sel_hi source modifiers:
@@ -688,7 +683,7 @@ static unsigned getEffectiveSubRegIdx(const SIRegisterInfo &TRI,
   if ((!InstrInfo.isVOP3PMix(*I) && (!OpSel || !OpSelHi) &&
        (OpSel || OpSelHi)) ||
       (InstrInfo.isVOP3PMix(*I) && !OpSelHi))
-    return 0;
+    return AMDGPU::NoSubRegister;
 
   const MachineRegisterInfo &MRI = I->getParent()->getParent()->getRegInfo();
   const TargetRegisterClass *RC = TRI.getRegClassForOperandReg(MRI, Op);
@@ -700,7 +695,7 @@ static unsigned getEffectiveSubRegIdx(const SIRegisterInfo &TRI,
       TRI.getSubClassWithSubReg(RC, SubRegIdx) == RC)
     return SubRegIdx;
 
-  return 0;
+  return AMDGPU::NoSubRegister;
 }
 
 Register GCNSubtarget::getRealSchedDependency(const MachineInstr *DefI,
@@ -725,7 +720,7 @@ Register GCNSubtarget::getRealSchedDependency(const MachineInstr *DefI,
   if (UseReg.isVirtual() && !UseSubRegIdx)
     return DefReg;
 
-  if (!TRI->subRegsOverlap(DefReg, DefSubRegIdx, UseReg, UseSubRegIdx))
+  if (!TRI->subRegsInterfere(DefReg, DefSubRegIdx, UseReg, UseSubRegIdx))
     return 0; // no real dependency
 
   // UseReg might be smaller or larger than DefReg, depending on the subreg and

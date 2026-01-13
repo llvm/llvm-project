@@ -1,3 +1,4 @@
+# REQUIRES: asserts
 # RUN: llc -mtriple=amdgcn -mcpu=gfx942 -start-before=machine-scheduler -verify-misched -misched-print-dags -stop-after=machine-scheduler -filetype=null %s 2>&1 | FileCheck -check-prefix=GCN %s
 
 # Note: the source modifier is the parameter before the source itself. So,
