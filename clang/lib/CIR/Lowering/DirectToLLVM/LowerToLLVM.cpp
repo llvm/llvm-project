@@ -578,6 +578,10 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::GlobalViewAttr globalAttr) {
                                   mlir::LLVM::GEPNoWrapFlags::none);
   }
 
+  // We can have a global view with an integer type in the case of method
+  // pointers. With the Itanium ABI, the #cir.method attribute is lowered to a
+  // #cir.global_view with a pointer-sized integer representing the address of
+  // the method.
   if (auto intTy = mlir::dyn_cast<cir::IntType>(globalAttr.getType())) {
     mlir::Type llvmDstTy = converter->convertType(globalAttr.getType());
     return mlir::LLVM::PtrToIntOp::create(rewriter, parentOp->getLoc(),
