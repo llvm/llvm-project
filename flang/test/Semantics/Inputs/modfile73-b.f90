@@ -1,6 +1,6 @@
 module modfile73ba
   use modfile73a, only: re_alloc, de_alloc
-  charactermod_name
+  character mod_name
   type lData1D
      integer refCount
      character   id
@@ -42,7 +42,7 @@ end
 
 module modfile73bb
   use modfile73a, only: re_alloc, de_alloc
-  charactermod_name
+  character mod_name
   type lData1D
      integer refCount
      character   id

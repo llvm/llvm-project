@@ -1,7 +1,7 @@
 MODULE modfile73a
 PUBLIC re_alloc, defaults
-integersp
-integerselected_real_kind0
+integer sp
+integer selected_real_kind0
 integer:: i8b = selected_int_kind(8)
 interface
    subroutine alloc_error_report_interf(str,code)
@@ -13,12 +13,12 @@ procedure()alloc_error_report
 procedure()alloc_memory_event
   interface de_alloc
   end interface
-  charactercharacter, DEFAULT_ROUTINE
+  character character, DEFAULT_ROUTINE
   type allocDefaults
     logical copy
     logical shrink
     integer imin
-    characterroutine
+    character routine
   end type
   type(allocDefaults)DEFAULT
   integer IERR

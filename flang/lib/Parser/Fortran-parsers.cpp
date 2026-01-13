@@ -206,15 +206,15 @@ TYPE_CONTEXT_PARSER("declaration type spec"_en_US,
 TYPE_CONTEXT_PARSER("intrinsic type spec"_en_US,
     first(construct<IntrinsicTypeSpec>(integerTypeSpec),
         construct<IntrinsicTypeSpec>(
-            construct<IntrinsicTypeSpec::Real>("REAL" >> maybe(kindSelector))),
+            construct<IntrinsicTypeSpec::Real>("REAL"_kw >> maybe(kindSelector))),
         construct<IntrinsicTypeSpec>("DOUBLE PRECISION" >>
             construct<IntrinsicTypeSpec::DoublePrecision>()),
         construct<IntrinsicTypeSpec>(construct<IntrinsicTypeSpec::Complex>(
-            "COMPLEX" >> maybe(kindSelector))),
+            "COMPLEX"_kw >> maybe(kindSelector))),
         construct<IntrinsicTypeSpec>(construct<IntrinsicTypeSpec::Character>(
-            "CHARACTER" >> maybe(Parser<CharSelector>{}))),
+            "CHARACTER"_kw >> maybe(Parser<CharSelector>{}))),
         construct<IntrinsicTypeSpec>(construct<IntrinsicTypeSpec::Logical>(
-            "LOGICAL" >> maybe(kindSelector))),
+            "LOGICAL"_kw >> maybe(kindSelector))),
         construct<IntrinsicTypeSpec>(unsignedTypeSpec),
         extension<LanguageFeature::DoubleComplex>(
             "nonstandard usage: DOUBLE COMPLEX"_port_en_US,
@@ -222,7 +222,7 @@ TYPE_CONTEXT_PARSER("intrinsic type spec"_en_US,
                 construct<IntrinsicTypeSpec::DoubleComplex>())),
         extension<LanguageFeature::Byte>("nonstandard usage: BYTE"_port_en_US,
             construct<IntrinsicTypeSpec>(construct<IntegerTypeSpec>(
-                "BYTE" >> construct<std::optional<KindSelector>>(pure(1)))))))
+                "BYTE"_kw >> construct<std::optional<KindSelector>>(pure(1)))))))
 
 // Extension: Vector type
 // VECTOR(intrinsic-type-spec) | __VECTOR_PAIR | __VECTOR_QUAD
@@ -241,13 +241,13 @@ TYPE_PARSER(construct<IntrinsicVectorTypeSpec>("VECTOR" >>
     parenthesized(construct<VectorElementType>(integerTypeSpec) ||
         construct<VectorElementType>(unsignedTypeSpec) ||
         construct<VectorElementType>(construct<IntrinsicTypeSpec::Real>(
-            "REAL" >> maybe(kindSelector))))))
+            "REAL"_kw >> maybe(kindSelector))))))
 
 // UNSIGNED type
-TYPE_PARSER(construct<UnsignedTypeSpec>("UNSIGNED" >> maybe(kindSelector)))
+TYPE_PARSER(construct<UnsignedTypeSpec>("UNSIGNED"_kw >> maybe(kindSelector)))
 
 // R705 integer-type-spec -> INTEGER [kind-selector]
-TYPE_PARSER(construct<IntegerTypeSpec>("INTEGER" >> maybe(kindSelector)))
+TYPE_PARSER(construct<IntegerTypeSpec>("INTEGER"_kw >> maybe(kindSelector)))
 
 // R706 kind-selector -> ( [KIND =] scalar-int-constant-expr )
 // Legacy extension: kind-selector -> * digit-string

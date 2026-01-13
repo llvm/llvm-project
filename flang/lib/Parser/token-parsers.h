@@ -85,7 +85,12 @@ inline void MissingSpace(ParseState &state) {
   }
 }
 
-struct SpaceCheck {
+// SpaceCheck verifies proper spacing after keywords.
+// When IsTypeKeyword is true, emits an error for type keywords (REAL, INTEGER,
+// etc.) that cannot be followed by an identifier without a separator.
+// When IsTypeKeyword is false, calls MissingSpace which emits a portability
+// warning for general keywords that can be combined (e.g., ENDSUBROUTINE).
+template <bool IsTypeKeyword = false> struct SpaceCheck {
   using resultType = Success;
   constexpr SpaceCheck() {}
   static std::optional<Success> Parse(ParseState &state) {
@@ -96,13 +101,21 @@ struct SpaceCheck {
         return space.Parse(state);
       }
       if (IsLegalInIdentifier(ch)) {
-        MissingSpace(state);
+        if constexpr (IsTypeKeyword) {
+          if (!state.inFixedForm()) {
+            state.Say(
+                "Unexpected syntax while parsing the statement-function statement"_err_en_US);
+          }
+        } else {
+          MissingSpace(state);
+        }
       }
     }
     return {Success{}};
   }
 };
-constexpr SpaceCheck spaceCheck;
+constexpr SpaceCheck<> spaceCheck;
+constexpr SpaceCheck<true> typeKeywordSpaceCheck;
 
 // Matches a token string.  Spaces in the token string denote where
 // spaces may appear in the source; they can be made mandatory for
@@ -115,7 +128,10 @@ constexpr SpaceCheck spaceCheck;
 // when a string literal appears before the sequencing operator >> or
 // after the sequencing operator /.  The literal "..."_id parses a
 // token that cannot be a prefix of a longer identifier.
-template <bool MandatoryFreeFormSpace = false, bool MustBeComplete = false>
+// The literal "..."_kw parses a type keyword that requires a space
+// before an identifier in free form (emits error).
+template <bool MandatoryFreeFormSpace = false, bool MustBeComplete = false,
+    bool IsTypeKeyword = false>
 class TokenStringMatch {
 public:
   using resultType = Success;
@@ -168,7 +184,11 @@ public:
     }
     state.set_anyTokenMatched();
     if (IsLegalInIdentifier(p[-1])) {
-      return spaceCheck.Parse(state);
+      if constexpr (IsTypeKeyword) {
+        return typeKeywordSpaceCheck.Parse(state);
+      } else {
+        return spaceCheck.Parse(state);
+      }
     } else {
       return space.Parse(state);
     }
@@ -189,6 +209,11 @@ constexpr TokenStringMatch<true> operator""_sptok(
 }
 
 constexpr TokenStringMatch<false, true> operator""_id(
+    const char str[], std::size_t n) {
+  return {str, n};
+}
+
+constexpr TokenStringMatch<false, false, true> operator""_kw(
     const char str[], std::size_t n) {
   return {str, n};
 }
