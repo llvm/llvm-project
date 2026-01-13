@@ -82,7 +82,7 @@
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"
 #include "Plugins/SymbolFile/PDB/PDBASTParser.h"
-#include "Plugins/SymbolFile/NativePDB/PdbAstBuilder.h"
+#include "Plugins/SymbolFile/NativePDB/PdbAstBuilderClang.h"
 
 #include <cstdio>
 
@@ -9159,7 +9159,8 @@ PDBASTParser *TypeSystemClang::GetPDBParser() {
 
 npdb::PdbAstBuilder *TypeSystemClang::GetNativePDBParser() {
   if (!m_native_pdb_ast_parser_up)
-    m_native_pdb_ast_parser_up = std::make_unique<npdb::PdbAstBuilder>(*this);
+    m_native_pdb_ast_parser_up =
+        std::make_unique<npdb::PdbAstBuilderClang>(*this);
   return m_native_pdb_ast_parser_up.get();
 }
 
