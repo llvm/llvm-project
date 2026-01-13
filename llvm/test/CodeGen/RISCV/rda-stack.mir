@@ -121,7 +121,7 @@ body:             |
   ; CHECK-NEXT: 3: PseudoBR %bb.3
   ; CHECK-EMPTY: 
   ; CHECK-NEXT: %bb.2:
-  ; CHECK-NEXT: $x10:{ 0 }
+  ; CHECK-NEXT: $x10:{ }
   ; CHECK-NEXT: 4: $x10 = ADDI $x10, 2
   ; CHECK-EMPTY: 
   ; CHECK-NEXT: $x10:{ 4 }
