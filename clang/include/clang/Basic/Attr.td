@@ -949,7 +949,6 @@ public:
   SourceLocation getEqLoc() const { return EqLoc; }
   void setEqLoc(SourceLocation Loc) { EqLoc = Loc; }
   }];
-
   let HasCustomParsing = 1;
   let TemplateDependent = 1;
   let MeaningfulToClassTemplateDefinition = 1;

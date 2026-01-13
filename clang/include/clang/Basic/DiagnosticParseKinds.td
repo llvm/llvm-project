@@ -461,6 +461,8 @@ def ext_warn_gnu_final : ExtWarn<
 // Declarations.
 def err_typename_requires_specqual : Error<
   "type name requires a specifier or qualifier">;
+def err_annotation_used_on : Error<
+  "annotations are not permitted on %select{defining-type-id}0">;
 def err_typename_invalid_storageclass : Error<
   "type name does not allow storage class to be specified">;
 def err_typename_invalid_functionspec : Error<

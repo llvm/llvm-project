@@ -2097,6 +2097,7 @@ private:
     DiagnoseProhibitedAttributes(Attrs, FixItLoc);
     Attrs.clearListOnly();
   }
+
   void DiagnoseProhibitedAttributes(const ParsedAttributesView &Attrs,
                                     SourceLocation FixItLoc);
 

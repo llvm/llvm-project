@@ -10,14 +10,19 @@ struct [[=1]] f1 {};
 struct [[=1, =F{true}, =f]] f2 {};
 struct [[=1]] [[=2]] f3 {};
 // Declaration
-const [[=1]] F f4{};
+[[=1]] const F f4{};
+const F [[=1]] f40{};
 void f41([[=F{false}]]int i) {} // function parameters
 template<class T> [[=3]] void f42(T t); // non dep on template decl
 // Redeclaration
 [[=2, =3, =2]] void f5();
 void f5 [[=4, =2]] ();
-
+// Alias
+using A1 [[=1]] = int;
 // Error case
+// Right hand side of a alias declaration
+using A2 = [[=2]] int;  // expected-error {{an attribute list cannot appear here}}
+using A3 = int [[=2]];  // expected-error {{annotations are not permitted on defining-type-id}}
 // Mixing annotation and attributes, with or without trailing characters
 struct [[nodiscard, =1]] f6 {};  // expected-error {{attribute specifier cannot contain both attributes and annotations}}
 struct [[nodiscard, =1,]] f7 {};  // expected-error {{attribute specifier cannot contain both attributes and annotations}}
