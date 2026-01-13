@@ -456,7 +456,7 @@ createIRLevelProfileFlagVar(Module &M,
     ProfileVersion |= VARIANT_MASK_INSTR_ENTRY;
   if (PGOInstrumentLoopEntries)
     ProfileVersion |= VARIANT_MASK_INSTR_LOOP_ENTRIES;
-  if (DebugInfoCorrelate || ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO)
+  if (ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO)
     ProfileVersion |= VARIANT_MASK_DBG_CORRELATE;
   if (PGOFunctionEntryCoverage)
     ProfileVersion |=
@@ -734,7 +734,7 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
   FunctionHash = (((uint64_t)JCH.getCRC()) << 28) + JC.getCRC();
 
   // Reserve bit 60-63 for other information purpose.
-  FunctionHash &= 0x0FFFFFFFFFFFFFFF;
+  FunctionHash &= NamedInstrProfRecord::FUNC_HASH_MASK;
   if (IsCS)
     NamedInstrProfRecord::setCSFlagInHash(FunctionHash);
   LLVM_DEBUG(dbgs() << "Function Hash Computation for " << F.getName() << ":\n"
@@ -1957,7 +1957,7 @@ static bool InstrumentAllFunctions(
     function_ref<BlockFrequencyInfo *(Function &)> LookupBFI,
     function_ref<LoopInfo *(Function &)> LookupLI,
     PGOInstrumentationType InstrumentationType) {
-  // For the context-sensitve instrumentation, we should have a separated pass
+  // For the context-sensitive instrumentation, we should have a separated pass
   // (before LTO/ThinLTO linking) to create these variables.
   if (InstrumentationType == PGOInstrumentationType::FDO)
     createIRLevelProfileFlagVar(M, InstrumentationType);
@@ -2248,7 +2248,7 @@ static bool annotateAllFunctions(
       Func.populateCoverage();
       continue;
     }
-    // When PseudoKind is set to a vaule other than InstrProfRecord::NotPseudo,
+    // When PseudoKind is set to a value other than InstrProfRecord::NotPseudo,
     // it means the profile for the function is unrepresentative and this
     // function is actually hot / warm. We will reset the function hot / cold
     // attribute and drop all the profile counters.

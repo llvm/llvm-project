@@ -112,3 +112,46 @@ TEST(ObjCLanguage, InvalidMethodNameParsing) {
     EXPECT_FALSE(lax_method.has_value());
   }
 }
+
+struct ObjCMethodTestCase {
+  llvm::StringRef name;
+  bool is_valid;
+};
+
+struct ObjCMethodNameTextFiture
+    : public testing::TestWithParam<ObjCMethodTestCase> {};
+
+static ObjCMethodTestCase g_objc_method_name_test_cases[] = {
+    {"", false},
+    {"+[Uh oh!", false},
+    {"-[Definitely not...", false},
+    {"[Nice try ] :)", false},
+    {"+MaybeIfYouSquintYourEyes]", false},
+    {"?[Tricky]", false},
+    {"[]", false},
+    {"-[a", false},
+    {"+[a", false},
+    {"-]a]", false},
+    {"+]a]", false},
+
+    // FIXME: should these count as valid?
+    {"+[]", true},
+    {"-[]", true},
+    {"-[[]", true},
+    {"+[[]", true},
+    {"+[a ]", true},
+    {"-[a ]", true},
+
+    // Valid names
+    {"+[a a]", true},
+    {"-[a a]", true},
+};
+
+TEST_P(ObjCMethodNameTextFiture, TestIsPossibleObjCMethodName) {
+  // Tests ObjCLanguage::IsPossibleObjCMethodName
+  auto [name, expect_valid] = GetParam();
+  EXPECT_EQ(ObjCLanguage::IsPossibleObjCMethodName(name), expect_valid);
+}
+
+INSTANTIATE_TEST_SUITE_P(ObjCMethodNameTests, ObjCMethodNameTextFiture,
+                         testing::ValuesIn(g_objc_method_name_test_cases));

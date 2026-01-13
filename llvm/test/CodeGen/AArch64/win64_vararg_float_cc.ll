@@ -34,7 +34,7 @@ define win64cc void @float_va_fn(float %a, i32 %b, ...) nounwind {
 ; O0-LABEL: float_va_fn:
 ; O0:       // %bb.0: // %entry
 ; O0-NEXT:    sub sp, sp, #80
-; O0-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; O0-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; O0-NEXT:    str x7, [sp, #72]
 ; O0-NEXT:    str x6, [sp, #64]
 ; O0-NEXT:    str x5, [sp, #56]
@@ -46,7 +46,7 @@ define win64cc void @float_va_fn(float %a, i32 %b, ...) nounwind {
 ; O0-NEXT:    str x8, [sp, #8]
 ; O0-NEXT:    ldr x0, [sp, #8]
 ; O0-NEXT:    bl f_va_list
-; O0-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; O0-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; O0-NEXT:    add sp, sp, #80
 ; O0-NEXT:    ret
 entry:
@@ -84,7 +84,7 @@ define win64cc void @double_va_fn(double %a, i32 %b, ...) nounwind {
 ; O0-LABEL: double_va_fn:
 ; O0:       // %bb.0: // %entry
 ; O0-NEXT:    sub sp, sp, #80
-; O0-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; O0-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; O0-NEXT:    str x7, [sp, #72]
 ; O0-NEXT:    str x6, [sp, #64]
 ; O0-NEXT:    str x5, [sp, #56]
@@ -96,7 +96,7 @@ define win64cc void @double_va_fn(double %a, i32 %b, ...) nounwind {
 ; O0-NEXT:    str x8, [sp, #8]
 ; O0-NEXT:    ldr x0, [sp, #8]
 ; O0-NEXT:    bl d_va_list
-; O0-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; O0-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; O0-NEXT:    add sp, sp, #80
 ; O0-NEXT:    ret
 entry:

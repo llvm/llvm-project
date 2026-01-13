@@ -1949,8 +1949,7 @@ define float @v_fneg_self_minimumnum_f32_ieee(float %a) #0 {
 ; GCN-LABEL: v_fneg_self_minimumnum_f32_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
-; GCN-NEXT:    v_max_f32_e32 v0, v0, v0
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %min = call float @llvm.minimumnum.f32(float %a, float %a)
   %min.fneg = fneg float %min
@@ -1961,7 +1960,7 @@ define float @v_fneg_self_minimumnum_f32_no_ieee(float %a) #4 {
 ; GCN-LABEL: v_fneg_self_minimumnum_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_max_f32_e64 v0, -v0, -v0
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %min = call float @llvm.minimumnum.f32(float %a, float %a)
   %min.fneg = fneg float %min
@@ -2285,8 +2284,7 @@ define float @v_fneg_self_maximumnum_f32_ieee(float %a) #0 {
 ; GCN-LABEL: v_fneg_self_maximumnum_f32_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v0, -1.0, v0
-; GCN-NEXT:    v_min_f32_e32 v0, v0, v0
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %max = call float @llvm.maximumnum.f32(float %a, float %a)
   %max.fneg = fneg float %max
@@ -2297,7 +2295,7 @@ define float @v_fneg_self_maximumnum_f32_no_ieee(float %a) #4 {
 ; GCN-LABEL: v_fneg_self_maximumnum_f32_no_ieee:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_min_f32_e64 v0, -v0, -v0
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %max = call float @llvm.maximumnum.f32(float %a, float %a)
   %max.fneg = fneg float %max
@@ -3511,7 +3509,7 @@ define float @v_fneg_inlineasm_f32(float %a, float %b, float %c, i32 %d) #0 {
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul float %a, %b
   %fneg = fneg float %mul
-  call void asm sideeffect "; use $0", "v"(float %fneg) #0
+  call void asm sideeffect "; use $0", "v"(float %fneg)
   ret float %fneg
 }
 
@@ -3532,7 +3530,7 @@ define float @v_fneg_inlineasm_multi_use_src_f32(ptr addrspace(1) %out, float %a
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul float %a, %b
   %fneg = fneg float %mul
-  call void asm sideeffect "; use $0", "v"(float %fneg) #0
+  call void asm sideeffect "; use $0", "v"(float %fneg)
   ret float %mul
 }
 

@@ -1,4 +1,4 @@
-// RUN: %clang %s -g -c -o %t --target=x86_64-apple-macosx
+// RUN: %clangxx %s -g -c -o %t --target=x86_64-apple-macosx
 // RUN: lldb-test symbols --name=A::foo --find=variable %t | FileCheck %s
 
 // CHECK: Found 1 variables:

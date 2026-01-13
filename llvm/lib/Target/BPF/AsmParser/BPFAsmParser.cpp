@@ -172,7 +172,7 @@ public:
       break;
     case Register:
       OS << "<register x";
-      OS << getReg() << ">";
+      OS << getReg().id() << ">";
       break;
     case Token:
       OS << "'" << getToken() << "'";

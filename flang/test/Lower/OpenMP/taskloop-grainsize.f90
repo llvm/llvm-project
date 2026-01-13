@@ -27,7 +27,7 @@
 ! CHECK:          %[[GRAINSIZE:.*]] = arith.constant 10 : i32
 subroutine test_grainsize
    integer :: i, x
-   ! CHECK:          omp.taskloop grainsize(%[[GRAINSIZE]]: i32) 
+   ! CHECK:          omp.taskloop grainsize(%[[GRAINSIZE]]: i32)
    ! CHECK-SAME:        private(@[[X_FIRSTPRIVATE]] %[[DECL_X]]#0 -> %[[ARG0:.*]], @[[I_PRIVATE]] %[[DECL_I]]#0 -> %[[ARG1:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
    ! CHECK:            omp.loop_nest (%[[ARG2:.*]]) : i32 = (%{{.*}}) to (%{{.*}}) inclusive step (%{{.*}}) {
    !$omp taskloop grainsize(10)

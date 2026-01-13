@@ -202,6 +202,8 @@ def : ProcessorModel<"la664", NoSchedModel, [Feature64Bit,
 // Define the LoongArch target.
 //===----------------------------------------------------------------------===//
 
+defm : RemapAllTargetPseudoPointerOperands<GPR>;
+
 def LoongArchInstrInfo : InstrInfo {
   let guessInstructionProperties = 0;
 }

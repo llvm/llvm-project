@@ -151,45 +151,41 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, _CharT __value)
   }
 }
 
+template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
+_LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value) {
 #  if _LIBCPP_HAS_UNICODE
-template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
-  requires(same_as<_CharT, char>)
-_LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value) {
-  std::size_t __bytes = std::countl_one(static_cast<unsigned char>(__value.__data[0]));
-  if (__bytes == 0)
-    return __formatter::__fill(std::move(__out_it), __n, __value.__data[0]);
+  if constexpr (same_as<_CharT, char>) {
+    std::size_t __bytes = std::countl_one(static_cast<unsigned char>(__value.__data[0]));
+    if (__bytes == 0)
+      return __formatter::__fill(std::move(__out_it), __n, __value.__data[0]);
 
-  for (size_t __i = 0; __i < __n; ++__i)
-    __out_it = __formatter::__copy(
-        std::addressof(__value.__data[0]), std::addressof(__value.__data[0]) + __bytes, std::move(__out_it));
-  return __out_it;
-}
-
+    for (size_t __i = 0; __i < __n; ++__i)
+      __out_it = __formatter::__copy(
+          std::addressof(__value.__data[0]), std::addressof(__value.__data[0]) + __bytes, std::move(__out_it));
+    return __out_it;
 #    if _LIBCPP_HAS_WIDE_CHARACTERS
-template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
-  requires(same_as<_CharT, wchar_t> && sizeof(wchar_t) == 2)
-_LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value) {
-  if (!__unicode::__is_high_surrogate(__value.__data[0]))
-    return __formatter::__fill(std::move(__out_it), __n, __value.__data[0]);
+  } else if constexpr (same_as<_CharT, wchar_t>) {
+    if constexpr (sizeof(wchar_t) == 2) {
+      if (!__unicode::__is_high_surrogate(__value.__data[0]))
+        return __formatter::__fill(std::move(__out_it), __n, __value.__data[0]);
 
-  for (size_t __i = 0; __i < __n; ++__i)
-    __out_it = __formatter::__copy(
-        std::addressof(__value.__data[0]), std::addressof(__value.__data[0]) + 2, std::move(__out_it));
-  return __out_it;
-}
-
-template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
-  requires(same_as<_CharT, wchar_t> && sizeof(wchar_t) == 4)
-_LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value) {
-  return __formatter::__fill(std::move(__out_it), __n, __value.__data[0]);
-}
+      for (size_t __i = 0; __i < __n; ++__i)
+        __out_it = __formatter::__copy(
+            std::addressof(__value.__data[0]), std::addressof(__value.__data[0]) + 2, std::move(__out_it));
+      return __out_it;
+    } else if constexpr (sizeof(wchar_t) == 4) {
+      return __formatter::__fill(std::move(__out_it), __n, __value.__data[0]);
+    } else {
+      static_assert(false, "expected sizeof(wchar_t) to be 2 or 4");
+    }
 #    endif // _LIBCPP_HAS_WIDE_CHARACTERS
-#  else    // _LIBCPP_HAS_UNICODE
-template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
-_LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value) {
+  } else {
+    static_assert(false, "Unexpected CharT");
+  }
+#  else  // _LIBCPP_HAS_UNICODE
   return __formatter::__fill(std::move(__out_it), __n, __value.__data[0]);
+#  endif // _LIBCPP_HAS_UNICODE
 }
-#  endif   // _LIBCPP_HAS_UNICODE
 
 /// Writes the input to the output with the required padding.
 ///

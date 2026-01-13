@@ -78,9 +78,20 @@ public:
 /// printed, this synthesizes the string into a temporary buffer provided and
 /// returns whether or not it is big enough.
 
+namespace detail {
+template <typename T> struct decay_if_c_char_array {
+  using type = T;
+};
+template <std::size_t N> struct decay_if_c_char_array<char[N]> {
+  using type = const char *;
+};
+template <typename T>
+using decay_if_c_char_array_t = typename decay_if_c_char_array<T>::type;
+} // namespace detail
+
 template <typename... Ts>
 class format_object final : public format_object_base {
-  std::tuple<Ts...> Vals;
+  std::tuple<detail::decay_if_c_char_array_t<Ts>...> Vals;
 
   template <std::size_t... Is>
   int snprint_tuple(char *Buffer, unsigned BufferSize,
@@ -96,7 +107,7 @@ public:
   format_object(const char *fmt, const Ts &... vals)
       : format_object_base(fmt), Vals(vals...) {
     static_assert(
-        (std::is_scalar_v<Ts> && ...),
+        (std::is_scalar_v<detail::decay_if_c_char_array_t<Ts>> && ...),
         "format can't be used with non fundamental / non pointer type");
   }
 

@@ -121,16 +121,9 @@ size_type max_size() {
 }
 
 // CHECK: cir.func{{.*}} @_Z8max_sizev() -> !u64i
-// CHECK:   %0 = cir.alloca !u64i, !cir.ptr<!u64i>, ["__retval"] {alignment = 8 : i64}
-// CHECK:   %1 = cir.const #cir.int<0> : !s32i
-// CHECK:   %2 = cir.unary(not, %1) : !s32i, !s32i
-// CHECK:   %3 = cir.cast integral %2 : !s32i -> !u64i
-// CHECK:   %4 = cir.const #cir.int<8> : !u64i
-// CHECK:   %5 = cir.binop(div, %3, %4) : !u64i
-// CHECK:   cir.store{{.*}} %5, %0 : !u64i, !cir.ptr<!u64i>
-// CHECK:   %6 = cir.load{{.*}} %0 : !cir.ptr<!u64i>, !u64i
-// CHECK:   cir.return %6 : !u64i
-// CHECK:   }
+// CHECK:   %[[NOT_ZERO:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
+// CHECK:   %[[SIZE_OF_TP:.*]] = cir.const #cir.int<8> : !u64i
+// CHECK:   %[[RESULT:.*]] = cir.binop(div, %[[NOT_ZERO]], %[[SIZE_OF_TP]]) : !u64i
 
 void ref_arg(int &x) {
   int y = x;

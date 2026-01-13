@@ -22,4 +22,4 @@ end module
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Name = 'blk'
 !PARSE-TREE: | OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'b'
 !PARSE-TREE: | OmpClauseList ->
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}

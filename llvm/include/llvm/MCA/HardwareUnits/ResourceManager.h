@@ -121,7 +121,7 @@ public:
   DefaultResourceStrategy(uint64_t UnitMask)
       : ResourceUnitMask(UnitMask), NextInSequenceMask(UnitMask),
         RemovedFromNextInSequence(0) {}
-  virtual ~DefaultResourceStrategy() = default;
+  ~DefaultResourceStrategy() override = default;
 
   uint64_t select(uint64_t ReadyMask) override;
   void used(uint64_t Mask) override;

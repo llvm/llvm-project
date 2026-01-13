@@ -528,13 +528,10 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
     if (dim == seqTy.getUnknownExtent()) {
       // This path is taken for both assumed size array or when the size of the
       // array is variable. In the case of variable size, we create a variable
-      // to use as countAttr. Note that fir has a constant size of -1 for
-      // assumed size array. So !optint check makes sure we don't generate
-      // variable in that case.
+      // to use as countAttr.
       if (declOp && declOp.getShape().size() > index) {
-        std::optional<std::int64_t> optint =
-            getIntIfConstant(declOp.getShape()[index]);
-        if (!optint)
+        if (!llvm::isa_and_nonnull<fir::AssumedSizeExtentOp>(
+                declOp.getShape()[index].getDefiningOp()))
           countAttr = generateArtificialVariable(
               context, declOp.getShape()[index], fileAttr, scope, declOp);
       }
@@ -721,6 +718,31 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
     return convertRecordType(recTy, fileAttr, scope, declOp);
   } else if (auto tupleTy = mlir::dyn_cast_if_present<mlir::TupleType>(Ty)) {
     return convertTupleType(tupleTy, fileAttr, scope, declOp);
+  } else if (mlir::isa<mlir::FunctionType>(Ty)) {
+    // Handle function types - these represent procedure pointers after the
+    // BoxedProcedure pass has run and unwrapped the fir.boxproc type, as well
+    // as dummy procedures (which are represented as function types in FIR)
+    llvm::SmallVector<mlir::LLVM::DITypeAttr> types;
+
+    auto funcTy = mlir::cast<mlir::FunctionType>(Ty);
+    // Add return type (or void if no return type)
+    if (funcTy.getNumResults() == 0)
+      types.push_back(mlir::LLVM::DINullTypeAttr::get(context));
+    else
+      types.push_back(
+          convertType(funcTy.getResult(0), fileAttr, scope, declOp));
+
+    for (mlir::Type paramTy : funcTy.getInputs())
+      types.push_back(convertType(paramTy, fileAttr, scope, declOp));
+
+    auto subroutineTy = mlir::LLVM::DISubroutineTypeAttr::get(
+        context, /*callingConvention=*/0, types);
+
+    return mlir::LLVM::DIDerivedTypeAttr::get(
+        context, llvm::dwarf::DW_TAG_pointer_type,
+        mlir::StringAttr::get(context, ""), subroutineTy,
+        /*sizeInBits=*/ptrSize * 8, /*alignInBits=*/0, /*offset=*/0,
+        /*optional<address space>=*/std::nullopt, /*extra data=*/nullptr);
   } else if (auto refTy = mlir::dyn_cast_if_present<fir::ReferenceType>(Ty)) {
     auto elTy = refTy.getEleTy();
     return convertPointerLikeType(elTy, fileAttr, scope, declOp,

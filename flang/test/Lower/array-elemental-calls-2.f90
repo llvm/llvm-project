@@ -172,7 +172,7 @@ end subroutine
 subroutine check_parentheses_derived(a)
   type t
     integer :: i
-  end type  
+  end type
   interface
     integer elemental function elem_func_derived(x)
       import :: t

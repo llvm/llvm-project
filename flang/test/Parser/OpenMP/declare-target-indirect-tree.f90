@@ -20,7 +20,7 @@ contains
     !CHECK-NEXT: | OmpClause -> Indirect -> OmpIndirectClause -> Scalar -> Logical -> Expr = '.true._4'
     !CHECK-NEXT: | | LiteralConstant -> LogicalLiteralConstant
     !CHECK-NEXT: | | | bool = 'true'
-    !CHECK-NEXT: | Flags = None
+    !CHECK-NEXT: | Flags = {}
     character(1) :: i
     i = 'a'
     return
@@ -33,7 +33,7 @@ contains
     !CHECK-NEXT: | OmpClauseList -> OmpClause -> Enter -> OmpEnterClause
     !CHECK-NEXT: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'func2'
     !CHECK-NEXT: | OmpClause -> Indirect -> OmpIndirectClause ->
-    !CHECK-NEXT: | Flags = None
+    !CHECK-NEXT: | Flags = {}
     character(1) :: i
     i = 'b'
     return
