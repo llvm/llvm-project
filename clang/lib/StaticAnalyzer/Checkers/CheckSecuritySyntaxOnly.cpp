@@ -1158,17 +1158,14 @@ void ento::registerDeprecatedOrUnsafeBufferHandling(CheckerManager &Mgr) {
   // Parse ReportMode option (defaults to C11Only for backward compatibility)
   StringRef ReportModeStr = Mgr.getAnalyzerOptions().getCheckerStringOption(
       Mgr.getCurrentCheckerName(), "ReportMode");
-  if (ReportModeStr == "all")
-    Checker->filter.ReportMode = ReportPolicy::All;
-  else if (ReportModeStr == "actionable")
-    Checker->filter.ReportMode = ReportPolicy::Actionable;
-  else if (ReportModeStr == "c11-only")
-    Checker->filter.ReportMode = ReportPolicy::C11Only;
-  else
-    Mgr.reportInvalidCheckerOptionValue(
-        Checker, "ReportMode",
-        "ReportMode should be one of the following values: \"all\", "
-        "\"actionable\" or \"c11-only\" (the default)");
+  Checker->filter.ReportMode =
+      llvm::StringSwitch<ReportPolicy>(ReportModeStr)
+          .Case("all", ReportPolicy::All)
+          .Case("actionable", ReportPolicy::Actionable)
+          .Case("c11-only", ReportPolicy::C11Only)
+          .DefaultUnreachable("ReportMode checker option should be one of the "
+                              "following values: \"all\", "
+                              "\"actionable\" or \"c11-only\" (the default)");
 }
 
 bool ento::shouldRegisterDeprecatedOrUnsafeBufferHandling(
