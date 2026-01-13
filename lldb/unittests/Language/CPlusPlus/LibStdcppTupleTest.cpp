@@ -159,7 +159,7 @@ TEST_F(LibStdcppTupleTest, UpdateHandlesNullChild) {
       formatters::LibStdcppTupleSyntheticFrontEndCreator(nullptr, valobj_sp);
   ASSERT_NE(frontend, nullptr);
 
-  // If we get here, the null check worked
+  // If we get here, the null check worked.
   auto num_children = frontend->CalculateNumChildren();
   ASSERT_TRUE(static_cast<bool>(num_children));
 
