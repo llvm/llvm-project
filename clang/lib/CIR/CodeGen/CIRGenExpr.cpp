@@ -1203,7 +1203,6 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
     idx = builder.createMul(cgm.getLoc(e->getExprLoc()), idx, numElements,
                             overflowBehavior);
 
-    assert(!cir::MissingFeatures::emitCheckedInBoundsGEP());
     addr = emitArraySubscriptPtr(*this, cgm.getLoc(e->getBeginLoc()),
                                  cgm.getLoc(e->getEndLoc()), addr, e->getType(),
                                  idx, cgm.getLoc(e->getExprLoc()),
