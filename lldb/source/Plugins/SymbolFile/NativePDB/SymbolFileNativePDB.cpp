@@ -503,7 +503,7 @@ Block *SymbolFileNativePDB::CreateBlock(PdbCompilandSymId block_id) {
           block_id.modi, block_id.offset, block_base,
           block_base + block.CodeSize, func_base);
     }
-    ast_builder->GetOrCreateBlockDecl(block_id);
+    ast_builder->EnsureBlock(block_id);
     m_blocks.insert({opaque_block_uid, child_block});
     break;
   }
@@ -516,7 +516,7 @@ Block *SymbolFileNativePDB::CreateBlock(PdbCompilandSymId block_id) {
     if (!parent_block)
       return nullptr;
     BlockSP child_block = parent_block->CreateChild(opaque_block_uid);
-    ast_builder->GetOrCreateInlinedFunctionDecl(block_id);
+    ast_builder->EnsureInlinedFunction(block_id);
     // Copy ranges from InlineSite to Block.
     for (size_t i = 0; i < inline_site->ranges.GetSize(); ++i) {
       auto *entry = inline_site->ranges.GetEntryAtIndex(i);
@@ -587,7 +587,7 @@ lldb::FunctionSP SymbolFileNativePDB::CreateFunction(PdbCompilandSymId func_id,
   auto ts = *ts_or_err;
   if (!ts)
     return func_sp;
-  ts->GetNativePDBParser()->GetOrCreateFunctionDecl(func_id);
+  ts->GetNativePDBParser()->EnsureFunction(func_id);
 
   return func_sp;
 }
@@ -1023,7 +1023,7 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
   if (!ts)
     return nullptr;
 
-  ts->GetNativePDBParser()->GetOrCreateVariableDecl(var_id);
+  ts->GetNativePDBParser()->EnsureVariable(var_id);
 
   ModuleSP module_sp = GetObjectFile()->GetModule();
   DWARFExpressionList location(
@@ -2237,7 +2237,7 @@ VariableSP SymbolFileNativePDB::CreateLocalVariable(PdbCompilandSymId scope_id,
     if (!ts)
       return nullptr;
 
-    ts->GetNativePDBParser()->GetOrCreateVariableDecl(scope_id, var_id);
+    ts->GetNativePDBParser()->EnsureVariable(scope_id, var_id);
   }
   m_local_variables[toOpaqueUid(var_id)] = var_sp;
   return var_sp;
@@ -2267,11 +2267,9 @@ TypeSP SymbolFileNativePDB::CreateTypedef(PdbGlobalSymId id) {
   if (!ts)
     return nullptr;
 
-  auto *typedef_decl = ts->GetNativePDBParser()->GetOrCreateTypedefDecl(id);
-
-  CompilerType ct = target_type->GetForwardCompilerType();
-  if (auto *clang = llvm::dyn_cast_or_null<TypeSystemClang>(ts.get()))
-    ct = clang->GetType(clang->getASTContext().getTypeDeclType(typedef_decl));
+  CompilerType ct = ts->GetNativePDBParser()->GetOrCreateTypedefType(id);
+  if (!ct)
+    ct = target_type->GetForwardCompilerType();
 
   Declaration decl;
   return MakeType(toOpaqueUid(id), ConstString(udt.Name),

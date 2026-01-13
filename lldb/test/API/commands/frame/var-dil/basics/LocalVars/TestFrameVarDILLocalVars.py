@@ -7,10 +7,6 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 from lldbsuite.test import lldbutil
 
-import os
-import shutil
-import time
-
 
 class TestFrameVarDILLocalVars(TestBase):
     # If your test case doesn't stress debug info, then
