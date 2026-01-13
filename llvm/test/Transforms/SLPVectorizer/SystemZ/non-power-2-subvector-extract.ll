@@ -9,12 +9,12 @@ define void @p() {
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr getelementptr inbounds nuw (i8, ptr @c, i64 52), align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP0]], i32 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor <4 x i32> [[TMP0]], splat (i32 1)
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr getelementptr inbounds nuw (i8, ptr @c, i64 52), align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <7 x i32>, ptr getelementptr inbounds nuw (i8, ptr @c, i64 200), align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <7 x i32> [[TMP4]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[TMP0]], i32 0
 ; CHECK-NEXT:    [[OR_1_5_I_3:%.*]] = or i32 [[TMP1]], [[TMP5]]
 ; CHECK-NEXT:    store i32 [[OR_1_5_I_3]], ptr @j.0, align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <7 x i32> [[TMP4]], i32 5
