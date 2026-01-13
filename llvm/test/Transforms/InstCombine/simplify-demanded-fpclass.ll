@@ -1009,10 +1009,23 @@ define nofpclass(ninf nnorm nsub nzero) float @ret_nofpclass_negatives__select_c
 }
 
 ; Can fold to ret +0
-define nofpclass(nan ninf nnorm nsub nzero) float @ret_nofpclass_nan_negatives__select_clamp_pos_to_zero(float %x) {
+define nofpclass(nan ninf nnorm nsub nzero) float @ret_nofpclass_nan_negatives__select_clamp_pos_to_zero(float noundef %x) {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @ret_nofpclass_nan_negatives__select_clamp_pos_to_zero
-; CHECK-SAME: (float [[X:%.*]]) {
+; CHECK-SAME: (float noundef [[X:%.*]]) {
 ; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %is.gt.zero = fcmp ogt float %x, 0.0
+  %select = select i1 %is.gt.zero, float 0.0, float %x
+  ret float %select
+}
+
+; Cannot fold due to undef
+define nofpclass(nan ninf nnorm nsub nzero) float @ret_nofpclass_nan_negatives__select_clamp_pos_to_zero__maybe_undef(float %x) {
+; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @ret_nofpclass_nan_negatives__select_clamp_pos_to_zero__maybe_undef
+; CHECK-SAME: (float [[X:%.*]]) {
+; CHECK-NEXT:    [[IS_GT_ZERO:%.*]] = fcmp ogt float [[X]], 0.000000e+00
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_GT_ZERO]], float 0.000000e+00, float [[X]]
+; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %is.gt.zero = fcmp ogt float %x, 0.0
   %select = select i1 %is.gt.zero, float 0.0, float %x
@@ -1517,9 +1530,9 @@ define nofpclass(zero) <3 x float> @partially_defined_0_splat_to_poison() {
 
 ; The select must be 0, so the exp should fold to 1. This requires
 ; analysis of the select condition.
-define nofpclass(nan) float @exp_select_must_be_0(float %arg, float nofpclass(inf sub norm) %zero.or.nan) {
+define nofpclass(nan) float @exp_select_must_be_0(float noundef %arg, float nofpclass(inf sub norm) %zero.or.nan) {
 ; CHECK-LABEL: define nofpclass(nan) float @exp_select_must_be_0
-; CHECK-SAME: (float [[ARG:%.*]], float nofpclass(inf sub norm) [[ZERO_OR_NAN:%.*]]) {
+; CHECK-SAME: (float noundef [[ARG:%.*]], float nofpclass(inf sub norm) [[ZERO_OR_NAN:%.*]]) {
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
   %not.zero = fcmp one float %arg, 0.0
@@ -1530,9 +1543,9 @@ define nofpclass(nan) float @exp_select_must_be_0(float %arg, float nofpclass(in
 
 ; The select must be 0, so the exp should fold to 1. This requires
 ; analysis of the select condition.
-define nofpclass(nan) float @exp_select_must_be_0_commute(float %arg, float nofpclass(inf sub norm) %zero.or.nan) {
+define nofpclass(nan) float @exp_select_must_be_0_commute(float noundef %arg, float nofpclass(inf sub norm) %zero.or.nan) {
 ; CHECK-LABEL: define nofpclass(nan) float @exp_select_must_be_0_commute
-; CHECK-SAME: (float [[ARG:%.*]], float nofpclass(inf sub norm) [[ZERO_OR_NAN:%.*]]) {
+; CHECK-SAME: (float noundef [[ARG:%.*]], float nofpclass(inf sub norm) [[ZERO_OR_NAN:%.*]]) {
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
   %is.zero = fcmp oeq float %arg, 0.0

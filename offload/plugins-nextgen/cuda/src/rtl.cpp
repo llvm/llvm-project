@@ -34,6 +34,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Program.h"
 
+using namespace llvm::offload::debug;
 using namespace error;
 
 extern std::unique_ptr<llvm::omp::target::plugin::GenericProfilerTy>
@@ -1555,13 +1556,13 @@ struct CUDAPluginTy final : public GenericPluginTy {
     CUresult Res = cuInit(0);
     if (Res == CUDA_ERROR_INVALID_HANDLE) {
       // Cannot call cuGetErrorString if dlsym failed.
-      DP("Failed to load CUDA shared library\n");
+      ODBG(OLDT_Init) << "Failed to load CUDA shared library";
       return 0;
     }
 
     if (Res == CUDA_ERROR_NO_DEVICE) {
       // Do not initialize if there are no devices.
-      DP("There are no devices supporting CUDA.\n");
+      ODBG(OLDT_Init) << "There are no devices supporting CUDA.";
       return 0;
     }
 
@@ -1576,7 +1577,7 @@ struct CUDAPluginTy final : public GenericPluginTy {
 
     // Do not initialize if there are no devices.
     if (NumDevices == 0)
-      DP("There are no devices supporting CUDA.\n");
+      ODBG(OLDT_Init) << "There are no devices supporting CUDA.";
 
     return NumDevices;
   }
@@ -1702,7 +1703,7 @@ Error CUDADeviceTy::dataExchangeImpl(const void *SrcPtr,
         if (Res == CUDA_ERROR_TOO_MANY_PEERS) {
           // Resources may be exhausted due to many P2P links.
           CanAccessPeer = 0;
-          DP("Too many P2P so fall back to D2D memcpy");
+          ODBG(OLDT_DataTransfer) << "Too many P2P so fall back to D2D memcpy";
         } else if (auto Err =
                        Plugin::check(Res, "error in cuCtxEnablePeerAccess: %s"))
           return Err;
