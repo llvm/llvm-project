@@ -138,11 +138,11 @@ cmake_path(NORMAL_PATH FLANG_RT_INSTALL_RESOURCE_LIB_PATH)
 # with this prefix will be forwarded in bootstrap builds.
 
 # TODO: Support tests for the GPU target.
-set(flang_rt_test_support ${LLVM_INCLUDE_TESTS})
+set(FLANG_RT_INCLUDE_TESTS_default ${LLVM_INCLUDE_TESTS})
 if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn|^nvptx")
-  set(flang_rt_test_support OFF)
+  set(FLANG_RT_INCLUDE_TESTS_default OFF)
 endif()
-option(FLANG_RT_INCLUDE_TESTS "Generate build targets for the flang-rt unit and regression-tests." "${flang_rt_test_support}")
+option(FLANG_RT_INCLUDE_TESTS "Generate build targets for the flang-rt unit and regression-tests." "${FLANG_RT_INCLUDE_TESTS_default}")
 
 # Provide an interface to link against the LLVM libc/libc++ projects directly.
 set(FLANG_RT_SUPPORTED_PROVIDERS system llvm)
