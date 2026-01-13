@@ -12,6 +12,8 @@
 #include "InterpHelpers.h"
 #include "PrimType.h"
 #include "Program.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/InferAlloc.h"
 #include "clang/AST/OSLog.h"
 #include "clang/AST/RecordLayout.h"
@@ -1250,6 +1252,8 @@ static bool interp__builtin_assume_aligned(InterpState &S, CodePtr OpPC,
                                            const CallExpr *Call) {
   assert(Call->getNumArgs() == 2 || Call->getNumArgs() == 3);
 
+  ASTContext &ASTCtx = S.getASTContext();
+
   std::optional<APSInt> ExtraOffset;
   if (Call->getNumArgs() == 3)
     ExtraOffset = popToAPSInt(S.Stk, *S.Ctx.classify(Call->getArg(2)));
@@ -1263,9 +1267,12 @@ static bool interp__builtin_assume_aligned(InterpState &S, CodePtr OpPC,
   if (Ptr.isBlockPointer()) {
     CharUnits BaseAlignment;
     if (const auto *VD = Ptr.getDeclDesc()->asValueDecl())
-      BaseAlignment = S.getASTContext().getDeclAlign(VD);
+      BaseAlignment = ASTCtx.getDeclAlign(VD);
+    else if (Ptr.block()->isDynamic())
+      BaseAlignment = ASTCtx.toCharUnitsFromBits(
+          Ptr.getDeclDesc()->computeAlignForDynamicAlloc(ASTCtx));
     else if (const auto *E = Ptr.getDeclDesc()->asExpr())
-      BaseAlignment = GetAlignOfExpr(S.getASTContext(), E, UETT_AlignOf);
+      BaseAlignment = GetAlignOfExpr(ASTCtx, E, UETT_AlignOf);
 
     if (BaseAlignment < Align) {
       S.CCEDiag(Call->getArg(0),

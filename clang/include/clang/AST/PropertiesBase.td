@@ -502,6 +502,10 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
     let Conditional = [{ hasBase && isDynamicAlloc }];
     let Read = [{ node.getLValueBase().get<DynamicAllocLValue>().getIndex() }];
   }
+  def : Property<"dynamicAlign", UInt64> {
+    let Conditional = [{ hasBase && isDynamicAlloc }];
+    let Read = [{ node.getLValueBase().get<DynamicAllocLValue>().getAlign() }];
+  }
   def : Property<"type", QualType> {
     let Conditional = [{ hasBase && (isTypeInfo || isDynamicAlloc) }];
     let Read = [{
@@ -544,7 +548,7 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
             TypeInfoLValue(typeInfo->getTypePtr()), *type);
       } else if (isDynamicAlloc) {
         base = APValue::LValueBase::getDynamicAlloc(
-            DynamicAllocLValue(*dynamicAlloc), *type);
+            DynamicAllocLValue(*dynamicAlloc, *dynamicAlign), *type);
       } else if (isExpr) {
         base = APValue::LValueBase(cast<Expr>(*stmt),
                                    *callIndex, *version);

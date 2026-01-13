@@ -20,6 +20,7 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/AlignOf.h"
 
 namespace clang {
@@ -63,30 +64,48 @@ public:
 
 /// Symbolic representation of a dynamic allocation.
 class DynamicAllocLValue {
-  unsigned Index;
+  // lower NumAlignmentBits: alignment exponent
+  // remaining bits: allocation index incremented by one
+  // value of zero indicates distinct empty state
+  unsigned AlignAndIndex;
 
 public:
-  DynamicAllocLValue() : Index(0) {}
-  explicit DynamicAllocLValue(unsigned Index) : Index(Index + 1) {}
-  unsigned getIndex() { return Index - 1; }
+  DynamicAllocLValue() : AlignAndIndex(0) {}
+  explicit DynamicAllocLValue(unsigned Index, uint64_t Align) {
+    assert(Align > 0 && "Invalid alignment for DynamicAllocLValue constructor");
+    AlignAndIndex =
+        ((Index + 1) << NumAlignmentBits) + llvm::countr_zero(Align);
+  }
+  unsigned getIndex() const { return (AlignAndIndex >> NumAlignmentBits) - 1; }
+  unsigned getAlignExponent() const {
+    return AlignAndIndex & ((1U << NumAlignmentBits) - 1);
+  }
+  uint64_t getAlign() const {
+    const unsigned AlignExponent = getAlignExponent();
+    assert(AlignExponent < 64 && "Invalid alignment in DynamicAllocLValue.");
+    return uint64_t{1} << AlignExponent;
+  }
 
-  explicit operator bool() const { return Index != 0; }
+  explicit operator bool() const { return AlignAndIndex != 0; }
 
   const void *getOpaqueValue() const {
-    return reinterpret_cast<const void *>(static_cast<uintptr_t>(Index)
+    return reinterpret_cast<const void *>(static_cast<uintptr_t>(AlignAndIndex)
                                           << NumLowBitsAvailable);
   }
   static DynamicAllocLValue getFromOpaqueValue(const void *Value) {
     DynamicAllocLValue V;
-    V.Index = reinterpret_cast<uintptr_t>(Value) >> NumLowBitsAvailable;
+    V.AlignAndIndex = reinterpret_cast<uintptr_t>(Value) >> NumLowBitsAvailable;
     return V;
   }
 
   static unsigned getMaxIndex() {
-    return (std::numeric_limits<unsigned>::max() >> NumLowBitsAvailable) - 1;
+    return (std::numeric_limits<unsigned>::max() >>
+            (NumLowBitsAvailable + NumAlignmentBits)) -
+           1;
   }
 
   static constexpr int NumLowBitsAvailable = 3;
+  static constexpr int NumAlignmentBits = 5;
 };
 }
 
