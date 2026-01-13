@@ -57,7 +57,7 @@ inline Error readAMDGPUMetaDataFromImage(
       MemBuffer, KernelInfoMap, ELFABIVersion);
   if (!Err)
     return Err;
-  ODBG(OLDT_Module) << "ELFABIVERSION Version: " << ELFABIVersion;
+  DP("ELFABIVERSION Version: %u\n", ELFABIVersion);
   return Err;
 }
 
