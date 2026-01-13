@@ -585,10 +585,8 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
       // the same operand. If all the indeces are constant, the chance is higher
       // that we can create a lookup table. Otherwise, we could pessimize the
       // path.
-      if ((isa<Constant>(FirstInst->getOperand(Op)) &&
-           !isa<Constant>(GEP->getOperand(Op))) ||
-          (!isa<Constant>(FirstInst->getOperand(Op)) &&
-           isa<Constant>(GEP->getOperand(Op))))
+      if (isa<Constant>(FirstInst->getOperand(Op)) !=
+          isa<Constant>(GEP->getOperand(Op)))
         return nullptr;
 
       if (FirstInst->getOperand(Op)->getType() !=
