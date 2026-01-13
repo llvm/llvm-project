@@ -140,7 +140,8 @@ public:
   ///
   /// \return
   ///     \b true if we should stop, \b false otherwise.
-  bool ShouldStop(StoppointCallbackContext *context, lldb::break_id_t breakID);
+  bool ShouldStop(StoppointCallbackContext *context, lldb::break_id_t breakID,
+                  lldb::BreakpointLocationSP &bp_loc_sp);
 
   /// Returns the number of elements in this breakpoint location list.
   ///

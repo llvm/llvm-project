@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VECustomDAG.h"
+#include "VESelectionDAGInfo.h"
 
 #ifndef DEBUG_TYPE
 #define DEBUG_TYPE "vecustomdag"

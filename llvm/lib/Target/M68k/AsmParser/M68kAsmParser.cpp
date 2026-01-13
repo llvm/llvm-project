@@ -690,9 +690,9 @@ bool M68kAsmParser::parseRegisterName(MCRegister &RegNo, SMLoc Loc,
     } else {
       // Floating point control register.
       RegNo = StringSwitch<unsigned>(RegisterNameLower)
-                  .Cases("fpc", "fpcr", M68k::FPC)
-                  .Cases("fps", "fpsr", M68k::FPS)
-                  .Cases("fpi", "fpiar", M68k::FPIAR)
+                  .Cases({"fpc", "fpcr"}, M68k::FPC)
+                  .Cases({"fps", "fpsr"}, M68k::FPS)
+                  .Cases({"fpi", "fpiar"}, M68k::FPIAR)
                   .Default(M68k::NoRegister);
       assert(RegNo != M68k::NoRegister &&
              "Unrecognized FP control register name");

@@ -243,6 +243,9 @@ TEST(ManglerTest, Arm64EC) {
       // public: int __cdecl Wrapper<struct A>::GetValue(struct WW<struct
       // A>::Z)const
       "?GetValue@?$Wrapper@UA@@@@$$hQEBAHUZ@?$WW@UA@@@@@Z",
+
+      // MD5 symbol
+      "??@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@$$h@",
   };
 
   for (const auto &Arm64ECName : Arm64ECNames) {

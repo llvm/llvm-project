@@ -101,9 +101,7 @@ public:
   /// for (const Remark &R : RL.remarks() { [...] }
   using iterator = pointee_iterator<decltype(Remarks)::const_iterator>;
 
-  iterator_range<iterator> remarks() const {
-    return {Remarks.begin(), Remarks.end()};
-  }
+  iterator_range<iterator> remarks() const { return Remarks; }
 };
 
 /// Returns a buffer with the contents of the remarks section depending on the

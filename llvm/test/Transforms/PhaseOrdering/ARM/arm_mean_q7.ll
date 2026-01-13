@@ -9,13 +9,11 @@ target triple = "thumbv6m-none-none-eabi"
 define void @arm_mean_q7(ptr noundef %pSrc, i32 noundef %blockSize, ptr noundef %pResult) #0 {
 ; CHECK-LABEL: @arm_mean_q7(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP_NOT10:%.*]] = icmp ult i32 [[BLOCKSIZE:%.*]], 16
-; CHECK-NEXT:    br i1 [[CMP_NOT10]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
-; CHECK:       while.body.preheader:
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[BLOCKSIZE]], 4
-; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[BLOCKSIZE:%.*]], 4
+; CHECK-NEXT:    [[CMP_NOT10:%.*]] = icmp eq i32 [[SHR]], 0
+; CHECK-NEXT:    br i1 [[CMP_NOT10]], label [[WHILE_END:%.*]], label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
-; CHECK-NEXT:    [[SUM_013:%.*]] = phi i32 [ [[TMP2:%.*]], [[WHILE_BODY]] ], [ 0, [[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[SUM_013:%.*]] = phi i32 [ [[TMP2:%.*]], [[WHILE_BODY]] ], [ 0, [[WHILE_BODY_PREHEADER:%.*]] ]
 ; CHECK-NEXT:    [[PSRC_ADDR_012:%.*]] = phi ptr [ [[ADD_PTR:%.*]], [[WHILE_BODY]] ], [ [[PSRC:%.*]], [[WHILE_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[BLKCNT_011:%.*]] = phi i32 [ [[DEC:%.*]], [[WHILE_BODY]] ], [ [[SHR]], [[WHILE_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[PSRC_ADDR_012]], align 1
@@ -30,14 +28,14 @@ define void @arm_mean_q7(ptr noundef %pSrc, i32 noundef %blockSize, ptr noundef 
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[PSRC]], i32 [[TMP3]]
 ; CHECK-NEXT:    br label [[WHILE_END]]
 ; CHECK:       while.end:
-; CHECK-NEXT:    [[PSRC_ADDR_0_LCSSA:%.*]] = phi ptr [ [[PSRC]], [[ENTRY:%.*]] ], [ [[SCEVGEP]], [[WHILE_END_LOOPEXIT]] ]
-; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP2]], [[WHILE_END_LOOPEXIT]] ]
+; CHECK-NEXT:    [[PSRC_ADDR_0_LCSSA:%.*]] = phi ptr [ [[PSRC]], [[WHILE_BODY_PREHEADER]] ], [ [[SCEVGEP]], [[WHILE_END_LOOPEXIT]] ]
+; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ 0, [[WHILE_BODY_PREHEADER]] ], [ [[TMP2]], [[WHILE_END_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[BLOCKSIZE]], 15
 ; CHECK-NEXT:    [[CMP2_NOT15:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    br i1 [[CMP2_NOT15]], label [[WHILE_END5:%.*]], label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = tail call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 0, i32 [[AND]])
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = tail call <16 x i8> @llvm.masked.load.v16i8.p0(ptr [[PSRC_ADDR_0_LCSSA]], i32 1, <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = tail call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[PSRC_ADDR_0_LCSSA]], <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext <16 x i8> [[WIDE_MASKED_LOAD]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i32> [[TMP4]], <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP5]])
@@ -133,7 +131,7 @@ declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 declare i32 @llvm.arm.mve.addv.v16i8(<16 x i8>, i32) #2
 declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
-attributes #0 = { nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="cortex-m55" "target-features"="+armv8.1-m.main,+dsp,+fp-armv8d16,+fp-armv8d16sp,+fp16,+fp64,+fullfp16,+hwdiv,+lob,+mve,+mve.fp,+ras,+strict-align,+thumb-mode,+vfp2,+vfp2sp,+vfp3d16,+vfp3d16sp,+vfp4d16,+vfp4d16sp,-aes,-bf16,-cdecp0,-cdecp1,-cdecp2,-cdecp3,-cdecp4,-cdecp5,-cdecp6,-cdecp7,-crc,-crypto,-d32,-dotprod,-fp-armv8,-fp-armv8sp,-fp16fml,-hwdiv-arm,-i8mm,-neon,-pacbti,-sb,-sha2,-vfp3,-vfp3sp,-vfp4,-vfp4sp" "unsafe-fp-math"="true" }
+attributes #0 = { nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="cortex-m55" "target-features"="+armv8.1-m.main,+dsp,+fp-armv8d16,+fp-armv8d16sp,+fp16,+fp64,+fullfp16,+hwdiv,+lob,+mve,+mve.fp,+ras,+strict-align,+thumb-mode,+vfp2,+vfp2sp,+vfp3d16,+vfp3d16sp,+vfp4d16,+vfp4d16sp,-aes,-bf16,-cdecp0,-cdecp1,-cdecp2,-cdecp3,-cdecp4,-cdecp5,-cdecp6,-cdecp7,-crc,-crypto,-d32,-dotprod,-fp-armv8,-fp-armv8sp,-fp16fml,-hwdiv-arm,-i8mm,-neon,-pacbti,-sb,-sha2,-vfp3,-vfp3sp,-vfp4,-vfp4sp" }
 attributes #1 = { argmemonly nocallback nofree nosync nounwind willreturn }
 attributes #2 = { nounwind readnone }
 attributes #3 = { nounwind }

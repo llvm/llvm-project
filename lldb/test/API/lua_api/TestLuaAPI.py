@@ -158,7 +158,9 @@ class TestLuaAPI(TestBase):
         return tests
 
     def test_lua_api(self):
-        if "LUA_EXECUTABLE" not in os.environ or len(os.environ["LUA_EXECUTABLE"]) == 0:
+        if "LUA_EXECUTABLE" not in os.environ or not os.path.exists(
+            os.environ["LUA_EXECUTABLE"]
+        ):
             self.skipTest("Lua API tests could not find Lua executable.")
             return
         lua_executable = os.environ["LUA_EXECUTABLE"]

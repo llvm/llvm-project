@@ -112,11 +112,10 @@ void BufferDerefCheck::checkBuffers(ArrayRef<const Type *> BufferTypes,
       for (auto It = Indirections.rbegin(); It != Indirections.rend(); ++It) {
         if (!IndirectionDesc.empty())
           IndirectionDesc += "->";
-        if (*It == IndirectionType::Pointer) {
+        if (*It == IndirectionType::Pointer)
           IndirectionDesc += "pointer";
-        } else {
+        else
           IndirectionDesc += "array";
-        }
       }
 
       const auto Loc = BufferExprs[I]->getSourceRange().getBegin();

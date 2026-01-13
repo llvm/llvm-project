@@ -1,10 +1,10 @@
 # Test if lit_config.per_test_coverage in lit.cfg sets individual test case coverage.
 
-# RUN: %{lit} -a -vv -Dexecute_external=False \
+# RUN: %{lit} -a -Dexecute_external=False \
 # RUN:     %{inputs}/per-test-coverage-by-lit-cfg/per-test-coverage-by-lit-cfg.py | \
 # RUN:   FileCheck -DOUT=stdout %s
 
-# RUN: %{lit} -a -vv -Dexecute_external=True \
+# RUN: %{lit} -a -Dexecute_external=True \
 # RUN:     %{inputs}/per-test-coverage-by-lit-cfg/per-test-coverage-by-lit-cfg.py | \
 # RUN:   FileCheck -DOUT=stderr %s
 

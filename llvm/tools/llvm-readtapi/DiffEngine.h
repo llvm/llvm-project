@@ -39,7 +39,7 @@ enum DiffAttrKind {
 class AttributeDiff {
 public:
   AttributeDiff(DiffAttrKind Kind) : Kind(Kind){};
-  virtual ~AttributeDiff(){};
+  virtual ~AttributeDiff() = default;
   DiffAttrKind getKind() const { return Kind; }
 
 private:

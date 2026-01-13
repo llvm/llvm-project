@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: availability-filesystem-missing
 
 // These tests require locale for non-char paths
 // UNSUPPORTED: no-localization
@@ -33,6 +32,7 @@
 #include <type_traits>
 #include <string_view>
 #include <cassert>
+#include <utility>
 
 // On Windows, the append function converts all inputs (pointers, iterators)
 // to an intermediate path object, causing allocations in cases where no

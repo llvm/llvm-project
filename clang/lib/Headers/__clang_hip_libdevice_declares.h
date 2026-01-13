@@ -309,34 +309,29 @@ __device__ __attribute__((pure)) __2f16 __ocml_log_2f16(__2f16);
 __device__ __attribute__((pure)) __2f16 __ocml_log10_2f16(__2f16);
 __device__ __attribute__((pure)) __2f16 __ocml_log2_2f16(__2f16);
 
-#if HIP_VERSION_MAJOR * 100 + HIP_VERSION_MINOR >= 560
-#define __DEPRECATED_SINCE_HIP_560(X) __attribute__((deprecated(X)))
-#else
-#define __DEPRECATED_SINCE_HIP_560(X)
-#endif
-
-// Deprecated, should be removed when rocm releases using it are no longer
-// relevant.
-__DEPRECATED_SINCE_HIP_560("use ((_Float16)1.0) / ")
-__device__ inline _Float16 __llvm_amdgcn_rcp_f16(_Float16 x) {
-  return ((_Float16)1.0f) / x;
-}
-
-__DEPRECATED_SINCE_HIP_560("use ((__2f16)1.0) / ")
-__device__ inline __2f16
-__llvm_amdgcn_rcp_2f16(__2f16 __x)
-{
-  return ((__2f16)1.0f) / __x;
-}
-
-#undef __DEPRECATED_SINCE_HIP_560
-
 __device__ __attribute__((const)) __2f16 __ocml_rint_2f16(__2f16);
 __device__ __attribute__((const)) __2f16 __ocml_rsqrt_2f16(__2f16);
 __device__ __2f16 __ocml_sin_2f16(__2f16);
 __device__ __attribute__((const)) __2f16 __ocml_sqrt_2f16(__2f16);
 __device__ __attribute__((const)) __2f16 __ocml_trunc_2f16(__2f16);
 __device__ __attribute__((const)) __2f16 __ocml_pown_2f16(__2f16, __2i16);
+
+__device__ void __asan_poison_memory_region(const void *addr,
+                                            __SIZE_TYPE__ size);
+__device__ void __asan_unpoison_memory_region(const void *addr,
+                                              __SIZE_TYPE__ size);
+__device__ int __asan_address_is_poisoned(const void *addr);
+__device__ void *__asan_region_is_poisoned(void *beg, __SIZE_TYPE__ size);
+
+#if __has_feature(address_sanitizer)
+#define ASAN_POISON_MEMORY_REGION(addr, size)                                  \
+  __asan_poison_memory_region((addr), (size))
+#define ASAN_UNPOISON_MEMORY_REGION(addr, size)                                \
+  __asan_unpoison_memory_region((addr), (size))
+#else
+#define ASAN_POISON_MEMORY_REGION(addr, size) ((void)(addr), (void)(size))
+#define ASAN_UNPOISON_MEMORY_REGION(addr, size) ((void)(addr), (void)(size))
+#endif
 
 #ifdef __cplusplus
 } // extern "C"

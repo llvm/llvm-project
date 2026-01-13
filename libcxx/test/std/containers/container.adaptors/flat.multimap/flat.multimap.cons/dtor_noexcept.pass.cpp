@@ -16,6 +16,7 @@
 #include <deque>
 #include <flat_map>
 #include <functional>
+#include <type_traits>
 #include <vector>
 
 #include "test_macros.h"

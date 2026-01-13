@@ -102,7 +102,7 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
   WebAssemblyOperand(SMLoc Start, SMLoc End, CaLOp C)
       : Kind(CatchList), StartLoc(Start), EndLoc(End), CaL(C) {}
 
-  ~WebAssemblyOperand() {
+  ~WebAssemblyOperand() override {
     if (isBrList())
       BrL.~BrLOp();
     if (isCatchList())

@@ -1924,13 +1924,23 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (Src0Ty != Src1Ty)
       report("Source operands must be the same type", MI);
 
-    if (Src0Ty.getScalarType() != DstTy.getScalarType())
+    if (Src0Ty.getScalarType() != DstTy.getScalarType()) {
       report("G_SHUFFLE_VECTOR cannot change element type", MI);
+      break;
+    }
+    if (!Src0Ty.isVector()) {
+      report("G_SHUFFLE_VECTOR must have vector src", MI);
+      break;
+    }
+    if (!DstTy.isVector()) {
+      report("G_SHUFFLE_VECTOR must have vector dst", MI);
+      break;
+    }
 
     // Don't check that all operands are vector because scalars are used in
     // place of 1 element vectors.
-    int SrcNumElts = Src0Ty.isVector() ? Src0Ty.getNumElements() : 1;
-    int DstNumElts = DstTy.isVector() ? DstTy.getNumElements() : 1;
+    int SrcNumElts = Src0Ty.getNumElements();
+    int DstNumElts = DstTy.getNumElements();
 
     ArrayRef<int> MaskIdxes = MaskOp.getShuffleMask();
 
@@ -2266,6 +2276,16 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       report("addr operand must be a pointer", &AddrOp, 1);
     break;
   }
+  case TargetOpcode::G_SMIN:
+  case TargetOpcode::G_SMAX:
+  case TargetOpcode::G_UMIN:
+  case TargetOpcode::G_UMAX: {
+    const LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    if (DstTy.isPointerOrPointerVector())
+      report("Generic smin/smax/umin/umax does not support pointer operands",
+             MI);
+    break;
+  }
   default:
     break;
   }
@@ -2416,6 +2436,46 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
         OS << "Def Size = " << DstSize << ", Src Size = " << SrcSize << '\n';
       }
     }
+    break;
+  }
+  case TargetOpcode::COPY_LANEMASK: {
+    const MachineOperand &DstOp = MI->getOperand(0);
+    const MachineOperand &SrcOp = MI->getOperand(1);
+    const MachineOperand &LaneMaskOp = MI->getOperand(2);
+    const Register SrcReg = SrcOp.getReg();
+    const LaneBitmask LaneMask = LaneMaskOp.getLaneMask();
+    LaneBitmask SrcMaxLaneMask = LaneBitmask::getAll();
+
+    if (DstOp.getSubReg())
+      report("COPY_LANEMASK must not use a subregister index", &DstOp, 0);
+
+    if (SrcOp.getSubReg())
+      report("COPY_LANEMASK must not use a subregister index", &SrcOp, 1);
+
+    if (LaneMask.none())
+      report("COPY_LANEMASK must read at least one lane", MI);
+
+    if (SrcReg.isPhysical()) {
+      const TargetRegisterClass *SrcRC = TRI->getMinimalPhysRegClass(SrcReg);
+      if (SrcRC)
+        SrcMaxLaneMask = SrcRC->getLaneMask();
+    } else {
+      SrcMaxLaneMask = MRI->getMaxLaneMaskForVReg(SrcReg);
+    }
+
+    // COPY_LANEMASK should be used only for partial copy. For full
+    // copy, one should strictly use the COPY instruction.
+    if (SrcMaxLaneMask == LaneMask)
+      report("COPY_LANEMASK cannot be used to do full copy", MI);
+
+    // If LaneMask is greater than the SrcMaxLaneMask, it implies
+    // COPY_LANEMASK is attempting to read from the lanes that
+    // don't exists in the source register.
+    if (SrcMaxLaneMask < LaneMask)
+      report("COPY_LANEMASK attempts to read from the lanes that "
+             "don't exist in the source register",
+             MI);
+
     break;
   }
   case TargetOpcode::STATEPOINT: {
@@ -2574,6 +2634,14 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
       report("Extra explicit operand on non-variadic instruction", MO, MONum);
   }
 
+  // Verify earlyClobber def operand
+  if (MCID.getOperandConstraint(MONum, MCOI::EARLY_CLOBBER) != -1) {
+    if (!MO->isReg())
+      report("Early clobber must be a register", MI);
+    if (!MO->isEarlyClobber())
+      report("Missing earlyClobber flag", MI);
+  }
+
   switch (MO->getType()) {
   case MachineOperand::MO_Register: {
     // Verify debug flag on debug instructions. Check this first because reg0
@@ -2639,8 +2707,7 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
         return;
       }
       if (MONum < MCID.getNumOperands()) {
-        if (const TargetRegisterClass *DRC =
-                TII->getRegClass(MCID, MONum, TRI)) {
+        if (const TargetRegisterClass *DRC = TII->getRegClass(MCID, MONum)) {
           if (!DRC->contains(Reg)) {
             report("Illegal physical register for instruction", MO, MONum);
             OS << printReg(Reg, TRI) << " is not a "
@@ -2724,12 +2791,11 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
         // has register class constraint, the virtual register must
         // comply to it.
         if (!isPreISelGenericOpcode(MCID.getOpcode()) &&
-            MONum < MCID.getNumOperands() &&
-            TII->getRegClass(MCID, MONum, TRI)) {
+            MONum < MCID.getNumOperands() && TII->getRegClass(MCID, MONum)) {
           report("Virtual register does not match instruction constraint", MO,
                  MONum);
           OS << "Expect register class "
-             << TRI->getRegClassName(TII->getRegClass(MCID, MONum, TRI))
+             << TRI->getRegClassName(TII->getRegClass(MCID, MONum))
              << " but got nothing\n";
           return;
         }
@@ -2755,8 +2821,7 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
         }
       }
       if (MONum < MCID.getNumOperands()) {
-        if (const TargetRegisterClass *DRC =
-                TII->getRegClass(MCID, MONum, TRI)) {
+        if (const TargetRegisterClass *DRC = TII->getRegClass(MCID, MONum)) {
           if (SubIdx) {
             const TargetRegisterClass *SuperRC =
                 TRI->getLargestLegalSuperClass(RC, *MF);
@@ -3549,9 +3614,9 @@ void MachineVerifier::verifyLiveIntervals() {
   }
 
   // Verify all the cached regunit intervals.
-  for (unsigned i = 0, e = TRI->getNumRegUnits(); i != e; ++i)
-    if (const LiveRange *LR = LiveInts->getCachedRegUnit(i))
-      verifyLiveRange(*LR, VirtRegOrUnit(i));
+  for (MCRegUnit Unit : TRI->regunits())
+    if (const LiveRange *LR = LiveInts->getCachedRegUnit(Unit))
+      verifyLiveRange(*LR, VirtRegOrUnit(Unit));
 }
 
 void MachineVerifier::verifyLiveRangeValue(const LiveRange &LR,

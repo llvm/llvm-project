@@ -71,7 +71,6 @@ define <vscale x 1 x i8> @cttz_nxv1i8(<vscale x 1 x i8> %va) {
   %a = call <vscale x 1 x i8> @llvm.cttz.nxv1i8(<vscale x 1 x i8> %va, i1 false)
   ret <vscale x 1 x i8> %a
 }
-declare <vscale x 1 x i8> @llvm.cttz.nxv1i8(<vscale x 1 x i8>, i1)
 
 define <vscale x 2 x i8> @cttz_nxv2i8(<vscale x 2 x i8> %va) {
 ; CHECK-ZVE64X-LABEL: cttz_nxv2i8:
@@ -136,7 +135,6 @@ define <vscale x 2 x i8> @cttz_nxv2i8(<vscale x 2 x i8> %va) {
   %a = call <vscale x 2 x i8> @llvm.cttz.nxv2i8(<vscale x 2 x i8> %va, i1 false)
   ret <vscale x 2 x i8> %a
 }
-declare <vscale x 2 x i8> @llvm.cttz.nxv2i8(<vscale x 2 x i8>, i1)
 
 define <vscale x 4 x i8> @cttz_nxv4i8(<vscale x 4 x i8> %va) {
 ; CHECK-ZVE64X-LABEL: cttz_nxv4i8:
@@ -201,7 +199,6 @@ define <vscale x 4 x i8> @cttz_nxv4i8(<vscale x 4 x i8> %va) {
   %a = call <vscale x 4 x i8> @llvm.cttz.nxv4i8(<vscale x 4 x i8> %va, i1 false)
   ret <vscale x 4 x i8> %a
 }
-declare <vscale x 4 x i8> @llvm.cttz.nxv4i8(<vscale x 4 x i8>, i1)
 
 define <vscale x 8 x i8> @cttz_nxv8i8(<vscale x 8 x i8> %va) {
 ; CHECK-ZVE64X-LABEL: cttz_nxv8i8:
@@ -266,7 +263,6 @@ define <vscale x 8 x i8> @cttz_nxv8i8(<vscale x 8 x i8> %va) {
   %a = call <vscale x 8 x i8> @llvm.cttz.nxv8i8(<vscale x 8 x i8> %va, i1 false)
   ret <vscale x 8 x i8> %a
 }
-declare <vscale x 8 x i8> @llvm.cttz.nxv8i8(<vscale x 8 x i8>, i1)
 
 define <vscale x 16 x i8> @cttz_nxv16i8(<vscale x 16 x i8> %va) {
 ; CHECK-ZVE64X-LABEL: cttz_nxv16i8:
@@ -331,7 +327,6 @@ define <vscale x 16 x i8> @cttz_nxv16i8(<vscale x 16 x i8> %va) {
   %a = call <vscale x 16 x i8> @llvm.cttz.nxv16i8(<vscale x 16 x i8> %va, i1 false)
   ret <vscale x 16 x i8> %a
 }
-declare <vscale x 16 x i8> @llvm.cttz.nxv16i8(<vscale x 16 x i8>, i1)
 
 define <vscale x 32 x i8> @cttz_nxv32i8(<vscale x 32 x i8> %va) {
 ; CHECK-LABEL: cttz_nxv32i8:
@@ -362,7 +357,6 @@ define <vscale x 32 x i8> @cttz_nxv32i8(<vscale x 32 x i8> %va) {
   %a = call <vscale x 32 x i8> @llvm.cttz.nxv32i8(<vscale x 32 x i8> %va, i1 false)
   ret <vscale x 32 x i8> %a
 }
-declare <vscale x 32 x i8> @llvm.cttz.nxv32i8(<vscale x 32 x i8>, i1)
 
 define <vscale x 64 x i8> @cttz_nxv64i8(<vscale x 64 x i8> %va) {
 ; CHECK-LABEL: cttz_nxv64i8:
@@ -393,7 +387,6 @@ define <vscale x 64 x i8> @cttz_nxv64i8(<vscale x 64 x i8> %va) {
   %a = call <vscale x 64 x i8> @llvm.cttz.nxv64i8(<vscale x 64 x i8> %va, i1 false)
   ret <vscale x 64 x i8> %a
 }
-declare <vscale x 64 x i8> @llvm.cttz.nxv64i8(<vscale x 64 x i8>, i1)
 
 define <vscale x 1 x i16> @cttz_nxv1i16(<vscale x 1 x i16> %va) {
 ; CHECK-ZVE64X-LABEL: cttz_nxv1i16:
@@ -459,7 +452,6 @@ define <vscale x 1 x i16> @cttz_nxv1i16(<vscale x 1 x i16> %va) {
   %a = call <vscale x 1 x i16> @llvm.cttz.nxv1i16(<vscale x 1 x i16> %va, i1 false)
   ret <vscale x 1 x i16> %a
 }
-declare <vscale x 1 x i16> @llvm.cttz.nxv1i16(<vscale x 1 x i16>, i1)
 
 define <vscale x 2 x i16> @cttz_nxv2i16(<vscale x 2 x i16> %va) {
 ; CHECK-ZVE64X-LABEL: cttz_nxv2i16:
@@ -525,7 +517,6 @@ define <vscale x 2 x i16> @cttz_nxv2i16(<vscale x 2 x i16> %va) {
   %a = call <vscale x 2 x i16> @llvm.cttz.nxv2i16(<vscale x 2 x i16> %va, i1 false)
   ret <vscale x 2 x i16> %a
 }
-declare <vscale x 2 x i16> @llvm.cttz.nxv2i16(<vscale x 2 x i16>, i1)
 
 define <vscale x 4 x i16> @cttz_nxv4i16(<vscale x 4 x i16> %va) {
 ; CHECK-ZVE64X-LABEL: cttz_nxv4i16:
@@ -591,7 +582,6 @@ define <vscale x 4 x i16> @cttz_nxv4i16(<vscale x 4 x i16> %va) {
   %a = call <vscale x 4 x i16> @llvm.cttz.nxv4i16(<vscale x 4 x i16> %va, i1 false)
   ret <vscale x 4 x i16> %a
 }
-declare <vscale x 4 x i16> @llvm.cttz.nxv4i16(<vscale x 4 x i16>, i1)
 
 define <vscale x 8 x i16> @cttz_nxv8i16(<vscale x 8 x i16> %va) {
 ; CHECK-ZVE64X-LABEL: cttz_nxv8i16:
@@ -657,7 +647,6 @@ define <vscale x 8 x i16> @cttz_nxv8i16(<vscale x 8 x i16> %va) {
   %a = call <vscale x 8 x i16> @llvm.cttz.nxv8i16(<vscale x 8 x i16> %va, i1 false)
   ret <vscale x 8 x i16> %a
 }
-declare <vscale x 8 x i16> @llvm.cttz.nxv8i16(<vscale x 8 x i16>, i1)
 
 define <vscale x 16 x i16> @cttz_nxv16i16(<vscale x 16 x i16> %va) {
 ; CHECK-ZVE64X-LABEL: cttz_nxv16i16:
@@ -723,7 +712,6 @@ define <vscale x 16 x i16> @cttz_nxv16i16(<vscale x 16 x i16> %va) {
   %a = call <vscale x 16 x i16> @llvm.cttz.nxv16i16(<vscale x 16 x i16> %va, i1 false)
   ret <vscale x 16 x i16> %a
 }
-declare <vscale x 16 x i16> @llvm.cttz.nxv16i16(<vscale x 16 x i16>, i1)
 
 define <vscale x 32 x i16> @cttz_nxv32i16(<vscale x 32 x i16> %va) {
 ; CHECK-LABEL: cttz_nxv32i16:
@@ -761,7 +749,6 @@ define <vscale x 32 x i16> @cttz_nxv32i16(<vscale x 32 x i16> %va) {
   %a = call <vscale x 32 x i16> @llvm.cttz.nxv32i16(<vscale x 32 x i16> %va, i1 false)
   ret <vscale x 32 x i16> %a
 }
-declare <vscale x 32 x i16> @llvm.cttz.nxv32i16(<vscale x 32 x i16>, i1)
 
 define <vscale x 1 x i32> @cttz_nxv1i32(<vscale x 1 x i32> %va) {
 ; CHECK-ZVE64X-LABEL: cttz_nxv1i32:
@@ -831,7 +818,6 @@ define <vscale x 1 x i32> @cttz_nxv1i32(<vscale x 1 x i32> %va) {
   %a = call <vscale x 1 x i32> @llvm.cttz.nxv1i32(<vscale x 1 x i32> %va, i1 false)
   ret <vscale x 1 x i32> %a
 }
-declare <vscale x 1 x i32> @llvm.cttz.nxv1i32(<vscale x 1 x i32>, i1)
 
 define <vscale x 2 x i32> @cttz_nxv2i32(<vscale x 2 x i32> %va) {
 ; CHECK-ZVE64X-LABEL: cttz_nxv2i32:
@@ -901,7 +887,6 @@ define <vscale x 2 x i32> @cttz_nxv2i32(<vscale x 2 x i32> %va) {
   %a = call <vscale x 2 x i32> @llvm.cttz.nxv2i32(<vscale x 2 x i32> %va, i1 false)
   ret <vscale x 2 x i32> %a
 }
-declare <vscale x 2 x i32> @llvm.cttz.nxv2i32(<vscale x 2 x i32>, i1)
 
 define <vscale x 4 x i32> @cttz_nxv4i32(<vscale x 4 x i32> %va) {
 ; CHECK-ZVE64X-LABEL: cttz_nxv4i32:
@@ -971,7 +956,6 @@ define <vscale x 4 x i32> @cttz_nxv4i32(<vscale x 4 x i32> %va) {
   %a = call <vscale x 4 x i32> @llvm.cttz.nxv4i32(<vscale x 4 x i32> %va, i1 false)
   ret <vscale x 4 x i32> %a
 }
-declare <vscale x 4 x i32> @llvm.cttz.nxv4i32(<vscale x 4 x i32>, i1)
 
 define <vscale x 8 x i32> @cttz_nxv8i32(<vscale x 8 x i32> %va) {
 ; CHECK-ZVE64X-LABEL: cttz_nxv8i32:
@@ -1041,7 +1025,6 @@ define <vscale x 8 x i32> @cttz_nxv8i32(<vscale x 8 x i32> %va) {
   %a = call <vscale x 8 x i32> @llvm.cttz.nxv8i32(<vscale x 8 x i32> %va, i1 false)
   ret <vscale x 8 x i32> %a
 }
-declare <vscale x 8 x i32> @llvm.cttz.nxv8i32(<vscale x 8 x i32>, i1)
 
 define <vscale x 16 x i32> @cttz_nxv16i32(<vscale x 16 x i32> %va) {
 ; CHECK-ZVE64X-LABEL: cttz_nxv16i32:
@@ -1112,7 +1095,6 @@ define <vscale x 16 x i32> @cttz_nxv16i32(<vscale x 16 x i32> %va) {
   %a = call <vscale x 16 x i32> @llvm.cttz.nxv16i32(<vscale x 16 x i32> %va, i1 false)
   ret <vscale x 16 x i32> %a
 }
-declare <vscale x 16 x i32> @llvm.cttz.nxv16i32(<vscale x 16 x i32>, i1)
 
 define <vscale x 1 x i64> @cttz_nxv1i64(<vscale x 1 x i64> %va) {
 ; RV32I-LABEL: cttz_nxv1i64:
@@ -1236,7 +1218,6 @@ define <vscale x 1 x i64> @cttz_nxv1i64(<vscale x 1 x i64> %va) {
   %a = call <vscale x 1 x i64> @llvm.cttz.nxv1i64(<vscale x 1 x i64> %va, i1 false)
   ret <vscale x 1 x i64> %a
 }
-declare <vscale x 1 x i64> @llvm.cttz.nxv1i64(<vscale x 1 x i64>, i1)
 
 define <vscale x 2 x i64> @cttz_nxv2i64(<vscale x 2 x i64> %va) {
 ; RV32I-LABEL: cttz_nxv2i64:
@@ -1360,7 +1341,6 @@ define <vscale x 2 x i64> @cttz_nxv2i64(<vscale x 2 x i64> %va) {
   %a = call <vscale x 2 x i64> @llvm.cttz.nxv2i64(<vscale x 2 x i64> %va, i1 false)
   ret <vscale x 2 x i64> %a
 }
-declare <vscale x 2 x i64> @llvm.cttz.nxv2i64(<vscale x 2 x i64>, i1)
 
 define <vscale x 4 x i64> @cttz_nxv4i64(<vscale x 4 x i64> %va) {
 ; RV32I-LABEL: cttz_nxv4i64:
@@ -1484,7 +1464,6 @@ define <vscale x 4 x i64> @cttz_nxv4i64(<vscale x 4 x i64> %va) {
   %a = call <vscale x 4 x i64> @llvm.cttz.nxv4i64(<vscale x 4 x i64> %va, i1 false)
   ret <vscale x 4 x i64> %a
 }
-declare <vscale x 4 x i64> @llvm.cttz.nxv4i64(<vscale x 4 x i64>, i1)
 
 define <vscale x 8 x i64> @cttz_nxv8i64(<vscale x 8 x i64> %va) {
 ; RV32I-LABEL: cttz_nxv8i64:
@@ -1608,7 +1587,6 @@ define <vscale x 8 x i64> @cttz_nxv8i64(<vscale x 8 x i64> %va) {
   %a = call <vscale x 8 x i64> @llvm.cttz.nxv8i64(<vscale x 8 x i64> %va, i1 false)
   ret <vscale x 8 x i64> %a
 }
-declare <vscale x 8 x i64> @llvm.cttz.nxv8i64(<vscale x 8 x i64>, i1)
 
 define <vscale x 1 x i8> @cttz_zero_undef_nxv1i8(<vscale x 1 x i8> %va) {
 ; CHECK-ZVE64X-LABEL: cttz_zero_undef_nxv1i8:

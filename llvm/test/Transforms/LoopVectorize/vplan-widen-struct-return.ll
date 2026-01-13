@@ -20,16 +20,16 @@ define void @struct_return_f32_widen(ptr noalias %in, ptr noalias writeonly %out
 ; CHECK-NEXT:      EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%in>, vp<[[STEPS]]>
-; CHECK-NEXT:      vp<[[IN_VEC_PTR:%.+]]> = vector-pointer ir<%arrayidx>
+; CHECK-NEXT:      vp<[[IN_VEC_PTR:%.+]]> = vector-pointer inbounds ir<%arrayidx>
 ; CHECK-NEXT:      WIDEN ir<%in_val> = load vp<[[IN_VEC_PTR]]>
 ; CHECK-NEXT:      WIDEN-CALL ir<%call> = call  @foo(ir<%in_val>) (using library function: fixed_vec_foo)
 ; CHECK-NEXT:      WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
 ; CHECK-NEXT:      WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
 ; CHECK-NEXT:      CLONE ir<%arrayidx2> = getelementptr inbounds ir<%out_a>, vp<[[STEPS]]>
-; CHECK-NEXT:      vp<[[OUT_A_VEC_PTR:%.+]]> = vector-pointer ir<%arrayidx2>
+; CHECK-NEXT:      vp<[[OUT_A_VEC_PTR:%.+]]> = vector-pointer inbounds ir<%arrayidx2>
 ; CHECK-NEXT:      WIDEN store vp<[[OUT_A_VEC_PTR]]>, ir<%extract_a>
 ; CHECK-NEXT:      CLONE ir<%arrayidx4> = getelementptr inbounds ir<%out_b>, vp<[[STEPS]]>
-; CHECK-NEXT:      vp<[[OUT_B_VEC_PTR:%.+]]> = vector-pointer ir<%arrayidx4>
+; CHECK-NEXT:      vp<[[OUT_B_VEC_PTR:%.+]]> = vector-pointer inbounds ir<%arrayidx4>
 ; CHECK-NEXT:      WIDEN store vp<[[OUT_B_VEC_PTR]]>, ir<%extract_b>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VTC]]>
@@ -76,16 +76,16 @@ define void @struct_return_f32_replicate(ptr noalias %in, ptr noalias writeonly 
 ; CHECK-NEXT:      EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]
 ; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%in>, vp<[[STEPS]]>
-; CHECK-NEXT:      vp<[[IN_VEC_PTR:%.+]]> = vector-pointer ir<%arrayidx>
+; CHECK-NEXT:      vp<[[IN_VEC_PTR:%.+]]> = vector-pointer inbounds ir<%arrayidx>
 ; CHECK-NEXT:      WIDEN ir<%in_val> = load vp<[[IN_VEC_PTR]]>
 ; CHECK-NEXT:      REPLICATE ir<%call> = call @foo(ir<%in_val>)
 ; CHECK-NEXT:      WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
 ; CHECK-NEXT:      WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
 ; CHECK-NEXT:      CLONE ir<%arrayidx2> = getelementptr inbounds ir<%out_a>, vp<[[STEPS]]>
-; CHECK-NEXT:      vp<[[OUT_A_VEC_PTR:%.+]]> = vector-pointer ir<%arrayidx2>
+; CHECK-NEXT:      vp<[[OUT_A_VEC_PTR:%.+]]> = vector-pointer inbounds ir<%arrayidx2>
 ; CHECK-NEXT:      WIDEN store vp<[[OUT_A_VEC_PTR]]>, ir<%extract_a>
 ; CHECK-NEXT:      CLONE ir<%arrayidx4> = getelementptr inbounds ir<%out_b>, vp<[[STEPS]]>
-; CHECK-NEXT:      vp<[[OUT_B_VEC_PTR:%.+]]> = vector-pointer ir<%arrayidx4>
+; CHECK-NEXT:      vp<[[OUT_B_VEC_PTR:%.+]]> = vector-pointer inbounds ir<%arrayidx4>
 ; CHECK-NEXT:      WIDEN store vp<[[OUT_B_VEC_PTR]]>, ir<%extract_b>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VTC]]>

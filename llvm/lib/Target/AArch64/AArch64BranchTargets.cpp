@@ -18,6 +18,7 @@
 
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64Subtarget.h"
+#include "Utils/AArch64BaseInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
@@ -47,6 +48,8 @@ public:
   StringRef getPassName() const override { return AARCH64_BRANCH_TARGETS_NAME; }
 
 private:
+  const AArch64Subtarget *Subtarget;
+
   void addBTI(MachineBasicBlock &MBB, bool CouldCall, bool CouldJump,
               bool NeedsWinCFI);
 };
@@ -75,6 +78,8 @@ bool AArch64BranchTargets::runOnMachineFunction(MachineFunction &MF) {
                     << "********** Function: " << MF.getName() << '\n');
   const Function &F = MF.getFunction();
 
+  Subtarget = &MF.getSubtarget<AArch64Subtarget>();
+
   // LLVM does not consider basic blocks which are the targets of jump tables
   // to be address-taken (the address can't escape anywhere else), but they are
   // used for indirect branches, so need BTI instructions.
@@ -100,9 +105,8 @@ bool AArch64BranchTargets::runOnMachineFunction(MachineFunction &MF) {
     // a BTI, and pointing the indirect branch at that. For non-ELF targets we
     // can't rely on that, so we assume that `CouldCall` is _always_ true due
     // to the risk of long-branch thunks at link time.
-    if (&MBB == &*MF.begin() &&
-        (!MF.getSubtarget<AArch64Subtarget>().isTargetELF() ||
-         (F.hasAddressTaken() || !F.hasLocalLinkage())))
+    if (&MBB == &*MF.begin() && (!Subtarget->isTargetELF() ||
+                                 (F.hasAddressTaken() || !F.hasLocalLinkage())))
       CouldCall = true;
 
     // If the block itself is address-taken, it could be indirectly branched
@@ -132,16 +136,7 @@ void AArch64BranchTargets::addBTI(MachineBasicBlock &MBB, bool CouldCall,
                     << (CouldCall ? "c" : "") << " to " << MBB.getName()
                     << "\n");
 
-  const AArch64InstrInfo *TII = static_cast<const AArch64InstrInfo *>(
-      MBB.getParent()->getSubtarget().getInstrInfo());
-
-  unsigned HintNum = 32;
-  if (CouldCall)
-    HintNum |= 2;
-  if (CouldJump)
-    HintNum |= 4;
-  assert(HintNum != 32 && "No target kinds!");
-
+  unsigned HintNum = getBTIHintNum(CouldCall, CouldJump);
   auto MBBI = MBB.begin();
 
   // If the block starts with EH_LABEL(s), skip them first.
@@ -155,12 +150,15 @@ void AArch64BranchTargets::addBTI(MachineBasicBlock &MBB, bool CouldCall,
        ++MBBI)
     ;
 
-  // SCTLR_EL1.BT[01] is set to 0 by default which means
-  // PACI[AB]SP are implicitly BTI C so no BTI C instruction is needed there.
+  // PACI[AB]SP are implicitly BTI c so insertion of a BTI can be skipped in
+  // this case. Depending on the runtime value of SCTLR_EL1.BT[01], they are not
+  // equivalent to a BTI jc, which still requires an additional BTI.
   if (MBBI != MBB.end() && ((HintNum & BTIMask) == BTIC) &&
       (MBBI->getOpcode() == AArch64::PACIASP ||
        MBBI->getOpcode() == AArch64::PACIBSP))
     return;
+
+  const AArch64InstrInfo *TII = Subtarget->getInstrInfo();
 
   // Insert BTI exactly at the first executable instruction.
   const DebugLoc DL = MBB.findDebugLoc(MBBI);

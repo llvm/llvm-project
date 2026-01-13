@@ -32,6 +32,26 @@ func.func @transfer_write(%t: tensor<?x?xf32>, %o1: index,
 
 // -----
 
+// CHECK-LABEL: func @scatter(
+//  CHECK-SAME:     %[[base:.*]]: tensor<16x16xf32>, %[[v:.*]]: vector<16xi32>,
+//  CHECK-SAME:     %[[mask:.*]]: vector<16xi1>, %[[value:.*]]: vector<16xf32>) -> tensor<16x16xf32>
+//       CHECK:   %[[buf:.*]] = bufferization.to_buffer %[[base]] : tensor<16x16xf32> to memref<16x16xf32>
+//       CHECK:   %[[c0:.*]] = arith.constant 0 : index
+//       CHECK:   %[[alloc:.*]] = memref.alloc() {alignment = 64 : i64} : memref<16x16xf32>
+//       CHECK:   memref.copy %[[buf]], %[[alloc]] : memref<16x16xf32> to memref<16x16xf32>
+//       CHECK:   vector.scatter %[[alloc]][%[[c0]], %[[c0]]] [%[[v]]], %[[mask]], %[[value]] : memref<16x16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32>
+//       CHECK:   %[[tensor:.*]] = bufferization.to_tensor %[[alloc]] : memref<16x16xf32> to tensor<16x16xf32>
+//       CHECK:   return %[[tensor]] : tensor<16x16xf32>
+func.func @scatter(%base: tensor<16x16xf32>, %v: vector<16xi32>, 
+                  %mask: vector<16xi1>, %value: vector<16xf32>) -> tensor<16x16xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = vector.scatter %base[%c0, %c0][%v], %mask, %value
+      : tensor<16x16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> -> tensor<16x16xf32>
+  return %0 : tensor<16x16xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @gather(
 //  CHECK-SAME:     %[[base:.*]]: tensor<?x?xf32>, %[[v:.*]]: vector<16xi32>,
 //  CHECK-SAME:     %[[mask:.*]]: vector<16xi1>, %[[pass_thru:.*]]: vector<16xf32>)

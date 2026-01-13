@@ -940,7 +940,7 @@ bool IfConverter::ValidForkedDiamond(
     FalseReversed = true;
     reverseBranchCondition(FalseBBI);
   }
-  auto UnReverseOnExit = make_scope_exit([&]() {
+  llvm::scope_exit UnReverseOnExit([&]() {
     if (FalseReversed)
       reverseBranchCondition(FalseBBI);
   });
@@ -1498,7 +1498,7 @@ static void UpdatePredRedefs(MachineInstr &MI, LivePhysRegs &Redefs) {
   // Before stepping forward past MI, remember which regs were live
   // before MI. This is needed to set the Undef flag only when reg is
   // dead.
-  SparseSet<MCPhysReg, identity<MCPhysReg>> LiveBeforeMI;
+  SparseSet<MCPhysReg, MCPhysReg> LiveBeforeMI;
   LiveBeforeMI.setUniverse(TRI->getNumRegs());
   for (unsigned Reg : Redefs)
     LiveBeforeMI.insert(Reg);

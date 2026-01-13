@@ -314,6 +314,11 @@ The timing data is stored in the `test_exec_root` in a file named
   place of this option, which is especially useful in environments where the
   call to ``lit`` is issued indirectly.
 
+.. option:: --filter-failed
+
+  Run only those tests that previously failed. Tests that have been newly added
+  but not yet run are not included.
+
 .. option:: --xfail LIST
 
   Treat those tests whose name is in the semicolon separated list ``LIST`` as
@@ -628,7 +633,7 @@ TestRunner.py:
  %{fs-src-root}          root component of file system paths pointing to the LLVM checkout
  %{fs-tmp-root}          root component of file system paths pointing to the test's temporary directory
  %{fs-sep}               file system path separator
- %t                      temporary file name unique to the test
+ %t                      a path unique to the test (which may be used to make files or directories)
  %basename_t             The last path component of %t but without the ``.tmp`` extension (deprecated, use ``%{t:stem}`` instead)
  %%                      %
  %/s                     %s but ``\`` is replaced by ``/``
@@ -641,7 +646,6 @@ TestRunner.py:
  %{S:real}               %S after expanding all symbolic links and substitute drives
  %{p:real}               %p after expanding all symbolic links and substitute drives
  %{t:real}               %t after expanding all symbolic links and substitute drives
- %{T:real}               %T after expanding all symbolic links and substitute drives
  %{/s:real}              %/s after expanding all symbolic links and substitute drives
  %{/S:real}              %/S after expanding all symbolic links and substitute drives
  %{/p:real}              %/p after expanding all symbolic links and substitute drives

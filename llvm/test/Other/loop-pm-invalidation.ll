@@ -16,11 +16,6 @@
 ; RUN: opt -disable-output -disable-verify -verify-analysis-invalidation=0  -debug-pass-manager %s -aa-pipeline= 2>&1 \
 ; RUN:     -passes='loop(no-op-loop,loop-deletion),invalidate<scalar-evolution>,loop(no-op-loop)' \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-SCEV-INV-AFTER-DELETE
-;
-; Test that BFI is invalidated after the loop adapter if any of the loop passes
-; invalidated it.
-; RUN: opt -disable-output -disable-verify -verify-analysis-invalidation=0  -debug-pass-manager %s -aa-pipeline= 2>&1 \
-; RUN:     -O1 | FileCheck %s --check-prefix=CHECK-BFI-INV
 
 define void @no_loops() {
 ; CHECK-LOOP-INV: Running pass: LoopSimplifyPass
@@ -247,28 +242,3 @@ l0.header:
 exit:
   ret void
 }
-
-; CHECK-BFI-INV-LABEL: Running analysis: OuterAnalysisManagerProxy<{{.*}}> on loop %l0.header in function simplifiable_loop
-; CHECK-BFI-INV-NEXT: Running pass: LoopInstSimplifyPass on loop %l0.header in function simplifiable_loop
-; CHECK-BFI-INV-NEXT: Running pass: LoopSimplifyCFGPass on loop %l0.header in function simplifiable_loop
-; CHECK-BFI-INV-NEXT: Running pass: LICMPass on loop %l0.header in function simplifiable_loop
-; CHECK-BFI-INV-NEXT: Running pass: LoopRotatePass on loop %l0.header in function simplifiable_loop
-; CHECK-BFI-INV-NEXT: Running pass: LICMPass on loop %l0.header in function simplifiable_loop
-; CHECK-BFI-INV-NEXT: Running pass: SimpleLoopUnswitchPass on loop %l0.header in function simplifiable_loop
-; CHECK-BFI-INV-NEXT: Invalidating analysis: PostDominatorTreeAnalysis on simplifiable_loop
-; CHECK-BFI-INV-NEXT: Invalidating analysis: BranchProbabilityAnalysis on simplifiable_loop
-; CHECK-BFI-INV-NEXT: Invalidating analysis: BlockFrequencyAnalysis on simplifiable_loop
-; CHECK-BFI-INV-NEXT: Running pass: SimplifyCFGPass on simplifiable_loop (5 instructions)
-
-define void @simplifiable_loop(i1 %c) !prof !0 {
-entry:
-  br label %l0.header
-
-l0.header:
-  br label %l0.latch
-
-l0.latch:
-  br i1 %c, label %l0.header, label %l0.latch
-}
-
-!0 = !{!"function_entry_count", i64 1}
