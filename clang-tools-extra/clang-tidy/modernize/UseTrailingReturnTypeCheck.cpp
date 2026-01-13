@@ -8,8 +8,11 @@
 
 #include "UseTrailingReturnTypeCheck.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTTypeTraits.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/FixIt.h"
 #include "llvm/ADT/StringExtras.h"
@@ -455,6 +458,7 @@ static void keepSpecifiers(std::string &ReturnType, std::string &Auto,
 UseTrailingReturnTypeCheck::UseTrailingReturnTypeCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
+      WarnOnNonTrailingVoid(Options.get("WarnOnNonTrailingVoid", false)),
       TransformFunctions(Options.get("TransformFunctions", true)),
       TransformLambdas(Options.get("TransformLambdas", TransformLambda::All)) {
   if (TransformFunctions == false && TransformLambdas == TransformLambda::None)
@@ -466,18 +470,23 @@ UseTrailingReturnTypeCheck::UseTrailingReturnTypeCheck(
 
 void UseTrailingReturnTypeCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "WarnOnNonTrailingVoid", WarnOnNonTrailingVoid);
   Options.store(Opts, "TransformFunctions", TransformFunctions);
   Options.store(Opts, "TransformLambdas", TransformLambdas);
 }
 
 void UseTrailingReturnTypeCheck::registerMatchers(MatchFinder *Finder) {
+  const auto HasNoWrittenReturnType =
+      anyOf(cxxConversionDecl(), cxxConstructorDecl(), cxxDestructorDecl());
+
   auto F =
-      functionDecl(
-          unless(anyOf(
-              hasTrailingReturn(), returns(voidType()), cxxConversionDecl(),
+      traverse(
+          TK_IgnoreUnlessSpelledInSource,
+          functionDecl(unless(anyOf(
+              hasTrailingReturn(), HasNoWrittenReturnType,
+              WarnOnNonTrailingVoid ? unless(anything()) : returns(voidType()),
               cxxMethodDecl(
-                  anyOf(isImplicit(),
-                        hasParent(cxxRecordDecl(hasParent(lambdaExpr()))))))))
+                  hasParent(cxxRecordDecl(hasParent(lambdaExpr()))))))))
           .bind("Func");
 
   if (TransformFunctions) {

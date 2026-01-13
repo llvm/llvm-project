@@ -1,4 +1,12 @@
-// RUN: %check_clang_tidy -std=c++14-or-later %s modernize-use-trailing-return-type %t -- -- -fdeclspec -fexceptions -DCOMMAND_LINE_INT=int
+// RUN: %check_clang_tidy                                                            \
+// RUN:   -std=c++14-or-later %s modernize-use-trailing-return-type %t --            \
+// RUN:   -- -fdeclspec -fexceptions -DCOMMAND_LINE_INT=int
+// RUN: %check_clang_tidy -check-suffixes=,WARN-ON-NONTRAILING-VOID                            \
+// RUN:   -std=c++14-or-later %s modernize-use-trailing-return-type %t --            \
+// RUN:   -config="{CheckOptions: {                                                  \
+// RUN:              modernize-use-trailing-return-type.WarnOnNonTrailingVoid: true, \
+// RUN:            }}"                                                               \
+// RUN:   -- -fdeclspec -fexceptions -DCOMMAND_LINE_INT=int
 
 namespace std {
     template <typename T>
@@ -567,6 +575,24 @@ ostream& operator<<(ostream& ostream, int i);
 // CHECK-FIXES: ostream& operator<<(ostream& ostream, int i);
 
 //
+// WarnOnNonTrailingVoid option
+//
+
+void leadingVoid();
+// CHECK-MESSAGES-WARN-ON-NONTRAILING-VOID: :[[@LINE-1]]:6: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
+// CHECK-FIXES-WARN-ON-NONTRAILING-VOID: {{^}}auto leadingVoid() -> void;{{$}}
+void leadingVoid(int arg);
+// CHECK-MESSAGES-WARN-ON-NONTRAILING-VOID: :[[@LINE-1]]:6: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
+// CHECK-FIXES-WARN-ON-NONTRAILING-VOID: {{^}}auto leadingVoid(int arg) -> void;{{$}}
+void leadingVoid(int arg) { return; }
+// CHECK-MESSAGES-WARN-ON-NONTRAILING-VOID: :[[@LINE-1]]:6: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
+// CHECK-FIXES-WARN-ON-NONTRAILING-VOID: {{^}}auto leadingVoid(int arg) -> void { return; }{{$}}
+
+auto trailingVoid() -> void;
+auto trailingVoid(int arg) -> void;
+auto trailingVoid(int arg) -> void { return; }
+
+//
 // Samples which do not trigger the check
 //
 
@@ -578,10 +604,6 @@ auto f(int arg1, int arg2, int arg3, ...) -> int;
 template <typename T> auto f(T t) -> int;
 
 auto ff();
-
-void c();
-void c(int arg);
-void c(int arg) { return; }
 
 struct D2 : B {
     D2();

@@ -664,6 +664,11 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-using>` check to correctly provide fix-its
   for typedefs of pointers or references to array types.
 
+- Improved :doc:`modernize-use-trailing-return-type
+  <clang-tidy/checks/modernize/use-trailing-return-type>` check by adding the
+  option `WarnOnNonTrailingVoid` that applies the check to ``void``-returning
+  functions that by default are excluded from this check.
+
 - Improved :doc:`performance-unnecessary-copy-initialization
   <clang-tidy/checks/performance/unnecessary-copy-initialization>` by printing
   the type of the diagnosed variable.
