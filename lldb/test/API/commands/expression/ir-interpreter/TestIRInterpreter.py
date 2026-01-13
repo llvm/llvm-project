@@ -195,21 +195,21 @@ class IRInterpreterTestCase(TestBase):
         ]
 
         expressions = [
-            "$i + $f",
-            "$d - $n",
-            "$u + $f",
-            "$u + $d",
-            "(int)$d",
-            "(int)$f",
-            "(long)$d",
-            "(short)$f",
-            "(long)$nf",
-            "(unsigned short)$f",
-            "(unsigned)$d",
-            "(unsigned long)$d",
-            "(float)$d",
-            "(double)$f",
-            "(double)$nf",
+            "$i + $f",  # sitofp i32 to float
+            "$d - $n",  # sitofp i32 to double
+            "$u + $f",  # uitofp i32 to float
+            "$u + $d",  # uitofp i32 to double
+            "(int)$d",  # fptosi double to i32
+            "(int)$f",  # fptosi float to i32
+            "(long)$d",  # fptosi double to i64
+            "(short)$f",  # fptosi float to i16
+            "(long)$nf",  # fptosi float to i64
+            "(unsigned short)$f",  # fptoui float to i16
+            "(unsigned)$d",  # fptoui double to i32
+            "(unsigned long)$d",  # fptoui double to i64
+            "(float)$d",  # fptrunc double to float
+            "(double)$f",  # fpext float to double
+            "(double)$nf",  # fpext float to double
         ]
 
         for expression in set_up_expressions:
