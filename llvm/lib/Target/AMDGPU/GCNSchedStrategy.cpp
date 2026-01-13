@@ -1396,7 +1396,7 @@ bool PreRARematStage::initGCNSchedStage() {
   });
 
   SmallVector<ScoredRemat> ScoredRemats;
-  for (const RematReg &Remat : RematRegs)
+  for (RematReg &Remat : RematRegs)
     ScoredRemats.emplace_back(&Remat, FreqInfo, DAG);
 
 // Rematerialize registers in successive rounds until all RP targets are
