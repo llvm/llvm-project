@@ -804,7 +804,7 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       InstRate = getFullRateInstrCost();
 
     static const auto ValidSatTys = {MVT::v2i16, MVT::v4i16};
-    if (any_of(ValidSatTys, [&LT](MVT M) { return M == LT.second; }))
+    if (any_of(ValidSatTys, equal_to(LT.second)))
       NElts = 1;
     break;
   }

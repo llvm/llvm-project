@@ -27501,7 +27501,7 @@ static SDValue formSplatFromShuffles(ShuffleVectorSDNode *OuterShuf,
 
     CombinedMask[i] = InnerMaskElt;
   }
-  assert((all_of(CombinedMask, [](int M) { return M == -1; }) ||
+  assert((all_of(CombinedMask, equal_to(-1)) ||
           getSplatIndex(CombinedMask) != -1) &&
          "Expected a splat mask");
 

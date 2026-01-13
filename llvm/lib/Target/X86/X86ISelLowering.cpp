@@ -3798,8 +3798,7 @@ static bool isUndefOrZero(int Val) {
 /// Return true if every element in Mask, beginning from position Pos and ending
 /// in Pos+Size is the undef sentinel value.
 static bool isUndefInRange(ArrayRef<int> Mask, unsigned Pos, unsigned Size) {
-  return llvm::all_of(Mask.slice(Pos, Size),
-                      [](int M) { return M == SM_SentinelUndef; });
+  return llvm::all_of(Mask.slice(Pos, Size), equal_to(SM_SentinelUndef));
 }
 
 /// Return true if the mask creates a vector whose lower half is undefined.
@@ -3827,7 +3826,7 @@ static bool isAnyInRange(ArrayRef<int> Mask, int Low, int Hi) {
 
 /// Return true if the value of any element in Mask is the zero sentinel value.
 static bool isAnyZero(ArrayRef<int> Mask) {
-  return llvm::any_of(Mask, [](int M) { return M == SM_SentinelZero; });
+  return llvm::any_of(Mask, equal_to(SM_SentinelZero));
 }
 
 /// Return true if Val is undef or if its value falls within the
@@ -41672,7 +41671,7 @@ static SDValue combineX86ShufflesRecursively(
   resolveTargetShuffleInputsAndMask(Ops, Mask);
 
   // Handle the all undef/zero/ones cases early.
-  if (all_of(Mask, [](int Idx) { return Idx == SM_SentinelUndef; }))
+  if (all_of(Mask, equal_to(SM_SentinelUndef)))
     return DAG.getUNDEF(RootVT);
   if (all_of(Mask, [](int Idx) { return Idx < 0; }))
     return getZeroVector(RootVT, Subtarget, DAG, DL);

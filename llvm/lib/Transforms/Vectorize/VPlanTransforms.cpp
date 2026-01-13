@@ -5028,8 +5028,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     // ops.
     auto *Member0 = InterleaveR->getStoredValues()[0];
     if (isAlreadyNarrow(Member0) &&
-        all_of(InterleaveR->getStoredValues(),
-               [Member0](VPValue *VPV) { return Member0 == VPV; })) {
+        all_of(InterleaveR->getStoredValues(), equal_to(Member0))) {
       StoreGroups.push_back(InterleaveR);
       continue;
     }

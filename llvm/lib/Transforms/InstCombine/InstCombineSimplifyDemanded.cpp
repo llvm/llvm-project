@@ -1641,7 +1641,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
                            ->getNumElements();
     // Handle trivial case of a splat. Only check the first element of LHS
     // operand.
-    if (all_of(Shuffle->getShuffleMask(), [](int Elt) { return Elt == 0; }) &&
+    if (all_of(Shuffle->getShuffleMask(), equal_to(0)) &&
         DemandedElts.isAllOnes()) {
       if (!isa<PoisonValue>(I->getOperand(1))) {
         I->setOperand(1, PoisonValue::get(I->getOperand(1)->getType()));
