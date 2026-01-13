@@ -169,11 +169,6 @@ public:
       std::pair<KnownBits, KnownBits> KB = computeKnownBitsAddrSpaceCast(
           CastI->getDestAddressSpace(), *CastI->getPointerOperand());
       FromPtrBits = KB.second;
-    } else if (FromAS == 0 &&
-               PatternMatch::match(&PtrOp, PatternMatch::m_Zero())) {
-      // For addrspace 0, we know that a null pointer has the value 0.
-      FromPtrBits = KnownBits::makeConstant(
-          APInt::getZero(DL.getPointerSizeInBits(FromAS)));
     } else {
       FromPtrBits = computeKnownBits(&PtrOp, DL, nullptr);
     }
