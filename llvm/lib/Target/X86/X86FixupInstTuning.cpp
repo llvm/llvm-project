@@ -25,8 +25,11 @@
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 
 using namespace llvm;
 
@@ -35,11 +38,24 @@ using namespace llvm;
 STATISTIC(NumInstChanges, "Number of instructions changes");
 
 namespace {
-class X86FixupInstTuningPass : public MachineFunctionPass {
+class X86FixupInstTuningImpl {
+public:
+  bool runOnMachineFunction(MachineFunction &MF);
+
+private:
+  bool processInstruction(MachineFunction &MF, MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator &I);
+
+  const X86InstrInfo *TII = nullptr;
+  const X86Subtarget *ST = nullptr;
+  const MCSchedModel *SM = nullptr;
+};
+
+class X86FixupInstTuningLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  X86FixupInstTuningPass() : MachineFunctionPass(ID) {}
+  X86FixupInstTuningLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return "X86 Fixup Inst Tuning"; }
 
@@ -51,20 +67,15 @@ public:
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().setNoVRegs();
   }
-
-private:
-  const X86InstrInfo *TII = nullptr;
-  const X86Subtarget *ST = nullptr;
-  const MCSchedModel *SM = nullptr;
 };
 } // end anonymous namespace
 
-char X86FixupInstTuningPass::ID = 0;
+char X86FixupInstTuningLegacy ::ID = 0;
 
-INITIALIZE_PASS(X86FixupInstTuningPass, DEBUG_TYPE, DEBUG_TYPE, false, false)
+INITIALIZE_PASS(X86FixupInstTuningLegacy, DEBUG_TYPE, DEBUG_TYPE, false, false)
 
-FunctionPass *llvm::createX86FixupInstTuning() {
-  return new X86FixupInstTuningPass();
+FunctionPass *llvm::createX86FixupInstTuningLegacyPass() {
+  return new X86FixupInstTuningLegacy();
 }
 
 template <typename T>
@@ -75,7 +86,7 @@ static std::optional<bool> CmpOptionals(T NewVal, T CurVal) {
   return std::nullopt;
 }
 
-bool X86FixupInstTuningPass::processInstruction(
+bool X86FixupInstTuningImpl::processInstruction(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator &I) {
   MachineInstr &MI = *I;
@@ -622,7 +633,7 @@ bool X86FixupInstTuningPass::processInstruction(
   }
 }
 
-bool X86FixupInstTuningPass::runOnMachineFunction(MachineFunction &MF) {
+bool X86FixupInstTuningImpl::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "Start X86FixupInstTuning\n";);
   bool Changed = false;
   ST = &MF.getSubtarget<X86Subtarget>();
@@ -639,4 +650,19 @@ bool X86FixupInstTuningPass::runOnMachineFunction(MachineFunction &MF) {
   }
   LLVM_DEBUG(dbgs() << "End X86FixupInstTuning\n";);
   return Changed;
+}
+
+bool X86FixupInstTuningLegacy::runOnMachineFunction(MachineFunction &MF) {
+  X86FixupInstTuningImpl Impl;
+  return Impl.runOnMachineFunction(MF);
+}
+
+PreservedAnalyses
+X86FixupInstTuningPass::run(MachineFunction &MF,
+                            MachineFunctionAnalysisManager &MFAM) {
+  X86FixupInstTuningImpl Impl;
+  return Impl.runOnMachineFunction(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }

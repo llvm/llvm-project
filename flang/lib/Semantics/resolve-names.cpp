@@ -9876,6 +9876,9 @@ void ResolveNamesVisitor::FinishSpecificationPart(
   misparsedStmtFuncFound_ = false;
   funcResultStack().CompleteFunctionResultType();
   CheckImports();
+  if (inInterfaceBlock()) {
+    FinishNamelists(); // NAMELIST is useless in an interface, but allowed
+  }
   for (auto &pair : currScope()) {
     auto &symbol{*pair.second};
     if (inInterfaceBlock()) {
