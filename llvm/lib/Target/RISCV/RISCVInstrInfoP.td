@@ -389,7 +389,8 @@ class RVPBinary_rr<bits<4> f, bits<2> w, bits<3> funct3, string opcodestr,
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVPWideningBinary_rr<bits<4> f, bits<2> w, string opcodestr>
+class RVPWideningBinary_rr<bits<4> f, bits<2> w, string opcodestr,
+                           bit Commutable = 0>
     : RVPWideningBase<f, w, 0b1, (outs GPRPairRV32:$rd),
                       (ins GPR:$rs1, GPR:$rs2), opcodestr> {
   let isCommutable = Commutable;
