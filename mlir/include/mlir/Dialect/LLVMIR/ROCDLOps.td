@@ -625,12 +625,30 @@ class ROCDL_Mfma_IntrOp<string mnemonic, Type AB, Type CD> :
   }];
 }
 
+class ROCDL_Mfma_Scale_IntrOp<string mnemonic, Type AB, Type CD> :
+  ROCDL_IntrOp<mnemonic, [], [0, 1], [], 1, 0, 0, 0, [3, 4, 5, 7], ["cbsz", "blgp", "opselA", "opselB"]>,
+  Arguments<(ins
+             LLVM_VectorOf<AB>:$a,
+             LLVM_VectorOf<AB>:$b,
+             LLVM_VectorOf<CD>:$c,
+             I32Attr:$cbsz,
+             I32Attr:$blgp,
+             I32Attr:$opselA,
+             I32:$scaleA,
+             I32Attr:$opselB,
+             I32:$scaleB)> {
+  let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
+  let assemblyFormat = [{
+    $a `,` $b `,` $c `,` $cbsz `,` $blgp `,` $opselA `,` $scaleA `,` $opselB `,` $scaleB attr-dict `:` functional-type(operands, $res)
+  }];
+}
+
 class ROCDL_Smfmac_IntrOp<string mnemonic, Type AB, Type CD> :
   ROCDL_IntrOp<mnemonic, [], [], [], 1, 0, 0, 0, [4, 5], ["cbsz", "abid"]>,
   Arguments<(ins
-             LLVM_ScalarOrVectorOf<AB>:$a,
-             LLVM_ScalarOrVectorOf<AB>:$b,
-             LLVM_ScalarOrVectorOf<CD>:$c,
+             LLVM_VectorOf<AB>:$a,
+             LLVM_VectorOf<AB>:$b,
+             LLVM_VectorOf<CD>:$c,
              I32:$index,
              I32Attr:$cbsz,
              I32Attr:$abid)> {
@@ -638,16 +656,6 @@ class ROCDL_Smfmac_IntrOp<string mnemonic, Type AB, Type CD> :
   let assemblyFormat = [{
     $a `,` $b `,` $c `,` $index `,` $cbsz `,` $abid attr-dict `:` functional-type(operands, $res)
   }];
-}
-
-//===---------------------------------------------------------------------===//
-// MFMA intrinsics with overloaded operands
-class ROCDL_Mfma_OO_IntrOp<string mnemonic, list<int> overloadedOperands,
-                        list<Trait> traits = []> :
-  ROCDL_IntrOp<mnemonic, [], overloadedOperands, traits, 1>,
-  Arguments<(ins Variadic<LLVM_Type>:$args)> {
-  let assemblyFormat =
-    "$args attr-dict `:` functional-type($args, $res)";
 }
 
 // Available on all CDNA.
@@ -701,8 +709,9 @@ def ROCDL_mfma_f32_16x16x32_f16 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x32.f16", F16
 def ROCDL_mfma_f32_32x32x16_bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.bf16", BF16, F32>;
 def ROCDL_mfma_i32_32x32x32_i8 : ROCDL_Mfma_IntrOp<"mfma.i32.32x32x32.i8", I32, I32>;
 def ROCDL_mfma_f32_32x32x16_f16 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.f16", F16, F32>;
-def ROCDL_mfma_scale_f32_16x16x128_f8f6f4 : ROCDL_Mfma_OO_IntrOp<"mfma.scale.f32.16x16x128.f8f6f4", [0,1]>;
-def ROCDL_mfma_scale_f32_32x32x64_f8f6f4 : ROCDL_Mfma_OO_IntrOp<"mfma.scale.f32.32x32x64.f8f6f4", [0,1]>;
+
+def ROCDL_mfma_scale_f32_16x16x128_f8f6f4 : ROCDL_Mfma_Scale_IntrOp<"mfma.scale.f32.16x16x128.f8f6f4", I32, F32>;
+def ROCDL_mfma_scale_f32_32x32x64_f8f6f4 : ROCDL_Mfma_Scale_IntrOp<"mfma.scale.f32.32x32x64.f8f6f4", I32, F32>;
 
 // 2:4 Sparsity ops (GFX94x)
 def ROCDL_smfmac_f32_16x16x32_f16 : ROCDL_Smfmac_IntrOp<"smfmac.f32.16x16x32.f16", F16, F32>;
