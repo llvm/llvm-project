@@ -2176,6 +2176,8 @@ Error Object::updateSectionData(SecPtr &Sec, ArrayRef<uint8_t> Data) {
     // calling addSection, so that it can be safely passed into replaceSections.
     SectionBase *Replaced = Sec.get();
     SectionBase *Modified = &addSection<OwnedDataSection>(*Sec, Data);
+    // replaceSections deletes the replaced section internally,
+    // so we don't need to do so here.
     return replaceSections({{Replaced, Modified}});
   }
 
