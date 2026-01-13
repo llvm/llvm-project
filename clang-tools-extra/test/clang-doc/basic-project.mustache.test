@@ -42,7 +42,7 @@ HTML-SHAPE:             <ul>
 HTML-SHAPE:                 <li>
 HTML-SHAPE:                     <details open>
 HTML-SHAPE:                         <summary class="sidebar-section">
-HTML-SHAPE:                             <a class="sidebar-item" href="#PublicMethods">Public Method</a>
+HTML-SHAPE:                             <a class="sidebar-item" href="#PublicMethods">Public Methods</a>
 HTML-SHAPE:                         </summary>
 HTML-SHAPE:                         <ul>
 HTML-SHAPE:                             <li class="sidebar-item-container">
@@ -167,7 +167,7 @@ HTML-CALC:                 </li>
 HTML-CALC:                 <li>
 HTML-CALC:                     <details open>
 HTML-CALC:                         <summary class="sidebar-section">
-HTML-CALC:                             <a class="sidebar-item" href="#PublicMethods">Public Method</a>
+HTML-CALC:                             <a class="sidebar-item" href="#PublicMethods">Public Methods</a>
 HTML-CALC:                         </summary>
 HTML-CALC:                         <ul>
 HTML-CALC:                             <li class="sidebar-item-container">
@@ -366,7 +366,7 @@ HTML-RECTANGLE:             <ul>
 HTML-RECTANGLE:                 <li>
 HTML-RECTANGLE:                     <details open>
 HTML-RECTANGLE:                         <summary class="sidebar-section">
-HTML-RECTANGLE:                             <a class="sidebar-item" href="#PublicMethods">Public Method</a>
+HTML-RECTANGLE:                             <a class="sidebar-item" href="#PublicMethods">Public Methods</a>
 HTML-RECTANGLE:                         </summary>
 HTML-RECTANGLE:                         <ul>
 HTML-RECTANGLE:                             <li class="sidebar-item-container">
@@ -480,7 +480,7 @@ HTML-CIRCLE:             <ul>
 HTML-CIRCLE:                 <li>
 HTML-CIRCLE:                     <details open>
 HTML-CIRCLE:                         <summary class="sidebar-section">
-HTML-CIRCLE:                             <a class="sidebar-item" href="#PublicMethods">Public Method</a>
+HTML-CIRCLE:                             <a class="sidebar-item" href="#PublicMethods">Public Methods</a>
 HTML-CIRCLE:                         </summary>
 HTML-CIRCLE:                         <ul>
 HTML-CIRCLE:                             <li class="sidebar-item-container">
