@@ -15,3 +15,8 @@ set(LLVM_TARGET_DEFINITIONS XeGPUAttrs.td)
 mlir_tablegen(XeGPUAttrInterface.h.inc -gen-attr-interface-decls)
 mlir_tablegen(XeGPUAttrInterface.cpp.inc -gen-attr-interface-defs)
 add_mlir_dialect_tablegen_target(MLIRXeGPUAttrInterfaceIncGen)
+
+set(LLVM_TARGET_DEFINITIONS XeGPUAttrs.td)
+mlir_tablegen(XeGPUOpInterface.h.inc -gen-op-interface-decls)
+mlir_tablegen(XeGPUOpInterface.cpp.inc -gen-op-interface-defs)
+add_mlir_dialect_tablegen_target(MLIRXeGPUOpInterfaceIncGen)

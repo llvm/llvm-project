@@ -68,8 +68,8 @@ Nesting level
 ^^^^^^^^^^^^^
 
 While by itself the nesting level does not change the function's Cognitive
-Complexity metric, it is tracked, and is used by the next, third building block.
-The following structures increase the nesting level (by `1`):
+Complexity metric, it is tracked, and is used by the next, third building
+block. The following structures increase the nesting level (by `1`):
 
 * Conditional operators:
 

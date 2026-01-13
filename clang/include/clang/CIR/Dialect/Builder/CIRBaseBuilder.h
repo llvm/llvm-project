@@ -97,6 +97,10 @@ public:
     return getConstPtrAttr(t, 0);
   }
 
+  mlir::TypedAttr getNullDataMemberAttr(cir::DataMemberType ty) {
+    return cir::DataMemberAttr::get(ty);
+  }
+
   mlir::TypedAttr getZeroInitAttr(mlir::Type ty) {
     if (mlir::isa<cir::IntType>(ty))
       return cir::IntAttr::get(ty, 0);
@@ -112,6 +116,8 @@ public:
       return getConstNullPtrAttr(ptrTy);
     if (auto recordTy = mlir::dyn_cast<cir::RecordType>(ty))
       return cir::ZeroAttr::get(recordTy);
+    if (auto dataMemberTy = mlir::dyn_cast<cir::DataMemberType>(ty))
+      return getNullDataMemberAttr(dataMemberTy);
     if (mlir::isa<cir::BoolType>(ty)) {
       return getFalseAttr();
     }
@@ -126,6 +132,22 @@ public:
 
   cir::BoolType getBoolTy() { return cir::BoolType::get(getContext()); }
   cir::VoidType getVoidTy() { return cir::VoidType::get(getContext()); }
+
+  cir::IntType getUIntNTy(int n) {
+    return cir::IntType::get(getContext(), n, false);
+  }
+
+  static unsigned getCIRIntOrFloatBitWidth(mlir::Type eltTy) {
+    if (auto intType = mlir::dyn_cast<cir::IntTypeInterface>(eltTy))
+      return intType.getWidth();
+    if (auto floatType = mlir::dyn_cast<cir::FPTypeInterface>(eltTy))
+      return floatType.getWidth();
+
+    llvm_unreachable("Unsupported type in getCIRIntOrFloatBitWidth");
+  }
+  cir::IntType getSIntNTy(int n) {
+    return cir::IntType::get(getContext(), n, true);
+  }
 
   cir::PointerType getPointerTo(mlir::Type ty) {
     return cir::PointerType::get(ty);
@@ -189,7 +211,8 @@ public:
                          bool isVolatile = false, uint64_t alignment = 0) {
     mlir::IntegerAttr alignmentAttr = getAlignmentAttr(alignment);
     return cir::LoadOp::create(*this, loc, ptr, /*isDeref=*/false, isVolatile,
-                               alignmentAttr, cir::MemOrderAttr{});
+                               alignmentAttr, cir::SyncScopeKindAttr{},
+                               cir::MemOrderAttr{});
   }
 
   mlir::Value createAlignedLoad(mlir::Location loc, mlir::Value ptr,
@@ -292,26 +315,44 @@ public:
     return cir::GlobalViewAttr::get(type, symbol, indices);
   }
 
-  mlir::Value createGetGlobal(mlir::Location loc, cir::GlobalOp global) {
+  mlir::Value createGetGlobal(mlir::Location loc, cir::GlobalOp global,
+                              bool threadLocal = false) {
     assert(!cir::MissingFeatures::addressSpace());
-    return cir::GetGlobalOp::create(
-        *this, loc, getPointerTo(global.getSymType()), global.getSymName());
+    return cir::GetGlobalOp::create(*this, loc,
+                                    getPointerTo(global.getSymType()),
+                                    global.getSymNameAttr(), threadLocal);
   }
 
-  mlir::Value createGetGlobal(cir::GlobalOp global) {
-    return createGetGlobal(global.getLoc(), global);
+  mlir::Value createGetGlobal(cir::GlobalOp global, bool threadLocal = false) {
+    return createGetGlobal(global.getLoc(), global, threadLocal);
   }
 
   /// Create a copy with inferred length.
-  cir::CopyOp createCopy(mlir::Value dst, mlir::Value src) {
-    return cir::CopyOp::create(*this, dst.getLoc(), dst, src);
+  cir::CopyOp createCopy(mlir::Value dst, mlir::Value src,
+                         bool isVolatile = false) {
+    return cir::CopyOp::create(*this, dst.getLoc(), dst, src, isVolatile);
   }
 
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, mlir::Value dst,
                            bool isVolatile = false,
                            mlir::IntegerAttr align = {},
+                           cir::SyncScopeKindAttr scope = {},
                            cir::MemOrderAttr order = {}) {
-    return cir::StoreOp::create(*this, loc, val, dst, isVolatile, align, order);
+    return cir::StoreOp::create(*this, loc, val, dst, isVolatile, align, scope,
+                                order);
+  }
+
+  /// Emit a load from an boolean flag variable.
+  cir::LoadOp createFlagLoad(mlir::Location loc, mlir::Value addr) {
+    mlir::Type boolTy = getBoolTy();
+    if (boolTy != mlir::cast<cir::PointerType>(addr.getType()).getPointee())
+      addr = createPtrBitcast(addr, boolTy);
+    return createLoad(loc, addr, /*isVolatile=*/false, /*alignment=*/1);
+  }
+
+  cir::StoreOp createFlagStore(mlir::Location loc, bool val, mlir::Value dst) {
+    mlir::Value flag = getBool(val, loc);
+    return CIRBaseBuilderTy::createStore(loc, flag, dst);
   }
 
   [[nodiscard]] cir::GlobalOp createGlobal(mlir::ModuleOp mlirModule,
@@ -336,7 +377,7 @@ public:
     auto addr = createAlloca(loc, getPointerTo(type), type, {}, alignmentAttr);
     return cir::LoadOp::create(*this, loc, addr, /*isDeref=*/false,
                                /*isVolatile=*/false, alignmentAttr,
-                               /*mem_order=*/{});
+                               /*sync_scope=*/{}, /*mem_order=*/{});
   }
 
   cir::PtrStrideOp createPtrStride(mlir::Location loc, mlir::Value base,
@@ -374,23 +415,10 @@ public:
                         resOperands, attrs);
   }
 
-  cir::CallOp createTryCallOp(
-      mlir::Location loc, mlir::SymbolRefAttr callee = mlir::SymbolRefAttr(),
-      mlir::Type returnType = cir::VoidType(),
-      mlir::ValueRange operands = mlir::ValueRange(),
-      [[maybe_unused]] cir::SideEffect sideEffect = cir::SideEffect::All) {
-    assert(!cir::MissingFeatures::opCallCallConv());
-    assert(!cir::MissingFeatures::opCallSideEffect());
-    return createCallOp(loc, callee, returnType, operands);
-  }
-
-  cir::CallOp createTryCallOp(
-      mlir::Location loc, cir::FuncOp callee, mlir::ValueRange operands,
-      [[maybe_unused]] cir::SideEffect sideEffect = cir::SideEffect::All) {
-    assert(!cir::MissingFeatures::opCallCallConv());
-    assert(!cir::MissingFeatures::opCallSideEffect());
-    return createTryCallOp(loc, mlir::SymbolRefAttr::get(callee),
-                           callee.getFunctionType().getReturnType(), operands);
+  cir::CallOp createCallOp(mlir::Location loc, mlir::SymbolRefAttr callee,
+                           mlir::ValueRange operands = mlir::ValueRange(),
+                           llvm::ArrayRef<mlir::NamedAttribute> attrs = {}) {
+    return createCallOp(loc, callee, cir::VoidType(), operands, attrs);
   }
 
   //===--------------------------------------------------------------------===//
@@ -443,6 +471,20 @@ public:
   mlir::Value createPtrBitcast(mlir::Value src, mlir::Type newPointeeTy) {
     assert(mlir::isa<cir::PointerType>(src.getType()) && "expected ptr src");
     return createBitcast(src, getPointerTo(newPointeeTy));
+  }
+
+  mlir::Value createPtrIsNull(mlir::Value ptr) {
+    mlir::Value nullPtr = getNullPtr(ptr.getType(), ptr.getLoc());
+    return createCompare(ptr.getLoc(), cir::CmpOpKind::eq, ptr, nullPtr);
+  }
+
+  mlir::Value createAddrSpaceCast(mlir::Location loc, mlir::Value src,
+                                  mlir::Type newTy) {
+    return createCast(loc, cir::CastKind::address_space, src, newTy);
+  }
+
+  mlir::Value createAddrSpaceCast(mlir::Value src, mlir::Type newTy) {
+    return createAddrSpaceCast(src.getLoc(), src, newTy);
   }
 
   //===--------------------------------------------------------------------===//
@@ -552,7 +594,17 @@ public:
 
   cir::CmpOp createCompare(mlir::Location loc, cir::CmpOpKind kind,
                            mlir::Value lhs, mlir::Value rhs) {
-    return cir::CmpOp::create(*this, loc, getBoolTy(), kind, lhs, rhs);
+    return cir::CmpOp::create(*this, loc, kind, lhs, rhs);
+  }
+
+  cir::VecCmpOp createVecCompare(mlir::Location loc, cir::CmpOpKind kind,
+                                 mlir::Value lhs, mlir::Value rhs) {
+    VectorType vecCast = mlir::cast<VectorType>(lhs.getType());
+    IntType integralTy =
+        getSIntNTy(getCIRIntOrFloatBitWidth(vecCast.getElementType()));
+    VectorType integralVecTy =
+        cir::VectorType::get(integralTy, vecCast.getSize());
+    return cir::VecCmpOp::create(*this, loc, integralVecTy, kind, lhs, rhs);
   }
 
   mlir::Value createIsNaN(mlir::Location loc, mlir::Value operand) {
@@ -636,6 +688,12 @@ public:
 
   mlir::IntegerAttr getSizeFromCharUnits(clang::CharUnits size) {
     return getI64IntegerAttr(size.getQuantity());
+  }
+
+  // Creates constant nullptr for pointer type ty.
+  cir::ConstantOp getNullPtr(mlir::Type ty, mlir::Location loc) {
+    assert(!cir::MissingFeatures::targetCodeGenInfoGetNullPointer());
+    return cir::ConstantOp::create(*this, loc, getConstPtrAttr(ty, 0));
   }
 
   /// Create a loop condition.

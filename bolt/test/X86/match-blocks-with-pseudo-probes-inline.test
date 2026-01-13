@@ -30,7 +30,7 @@ functions:
         insns:           11
         hash:            0x1
         exec:            1
-        probes:          [ { blx: 9 } ]
+        probes:          [ { blk: [ 1, 4 ] } ]
     inline_tree:     [ {  } ]
   - name:            foo
     fid:             10
@@ -43,7 +43,7 @@ functions:
         hash:            0x2
         exec:            1
         succ:            [ { bid: 3, cnt: 0 } ]
-        probes:          [ { blx: 3 } ]
+        probes:          [ { blk: [ 1, 2 ] } ]
     inline_tree:     [ { g: 1 }, { g: 0, cs: 8 } ]
   - name:            main
     fid:             11
@@ -56,7 +56,7 @@ functions:
         hash:            0x3
         exec:            1
         succ:            [ { bid: 3, cnt: 0 } ]
-        probes:          [ { blx: 3, id: 1 }, { blx: 1 } ]
+        probes:          [ { blk: [ 1, 2 ], ids: [ 1 ] }, { blk: [ 1 ] } ]
     inline_tree:     [ { g: 2 }, { g: 1, cs: 2 }, { g: 0, p: 1, cs: 8 } ]
 pseudo_probe_desc:
   gs:              [ 0xE413754A191DB537, 0x5CF8C24CDB18BDAC, 0xDB956436E78DD5FA ]

@@ -1812,6 +1812,11 @@ union Union {};
 union UnionIncomplete;
 struct StructIncomplete; // #StructIncomplete
 
+#if __cplusplus >= 201402L
+template<class _Base, class _Derived>
+inline constexpr bool IsPointerInterconvertibleBaseOfV = __is_pointer_interconvertible_base_of(_Base, _Derived);
+#endif
+
 void is_pointer_interconvertible_base_of(int n)
 {
   static_assert(__is_pointer_interconvertible_base_of(Base, Derived));
@@ -1880,6 +1885,11 @@ void is_pointer_interconvertible_base_of(int n)
   static_assert(!__is_pointer_interconvertible_base_of(void(&)(int), void(&)(char)));
   static_assert(!__is_pointer_interconvertible_base_of(void(*)(int), void(*)(int)));
   static_assert(!__is_pointer_interconvertible_base_of(void(*)(int), void(*)(char)));
+
+#if __cplusplus >= 201402L
+  static_assert(IsPointerInterconvertibleBaseOfV<const Base, Base>);
+  static_assert(IsPointerInterconvertibleBaseOfV<const Base, Derived>);
+#endif
 }
 }
 
@@ -2066,7 +2076,28 @@ public:
     UserProvidedConstructor(const UserProvidedConstructor&)            = delete;
     UserProvidedConstructor& operator=(const UserProvidedConstructor&) = delete;
 };
+struct Ctr {
+  Ctr();
+};
+struct Ctr2 {
+  Ctr2();
+private:
+  NoEligibleTrivialContructor inner;
+};
 
+struct NonCopyable{
+    NonCopyable() = default;
+    NonCopyable(const NonCopyable&) = delete;
+};
+
+class C {
+    NonCopyable nc;
+};
+
+static_assert(__builtin_is_implicit_lifetime(Ctr));
+static_assert(!__builtin_is_implicit_lifetime(Ctr2));
+static_assert(__builtin_is_implicit_lifetime(C));
+static_assert(!__builtin_is_implicit_lifetime(NoEligibleTrivialContructor));
 static_assert(__builtin_is_implicit_lifetime(NonAggregate));
 static_assert(!__builtin_is_implicit_lifetime(DataMemberInitializer));
 static_assert(!__builtin_is_implicit_lifetime(UserProvidedConstructor));
@@ -2076,9 +2107,27 @@ template <typename T>
 class Tpl {
     Tpl() requires false = default ;
 };
-static_assert(!__builtin_is_implicit_lifetime(Tpl<int>));
+static_assert(__builtin_is_implicit_lifetime(Tpl<int>));
+
+template <typename>
+class MultipleDefaults {
+  MultipleDefaults() {};
+  MultipleDefaults() requires true = default;
+};
+static_assert(__builtin_is_implicit_lifetime(MultipleDefaults<int>));
+template <typename>
+class MultipleDefaults2 {
+  MultipleDefaults2() requires true {};
+  MultipleDefaults2() = default;
+};
+
+static_assert(__builtin_is_implicit_lifetime(MultipleDefaults2<int>));
+
 
 #endif
+
+
+
 }
 
 void is_signed()

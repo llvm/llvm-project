@@ -1568,13 +1568,3 @@ define i64 @test_rint_ui64(float %x) nounwind {
   ret i64 %b
 }
 
-declare float @llvm.floor.f32(float)
-declare float @llvm.ceil.f32(float)
-declare float @llvm.trunc.f32(float)
-declare float @llvm.round.f32(float)
-declare float @llvm.roundeven.f32(float)
-declare float @llvm.rint.f32(float)
-declare i32 @llvm.fptosi.sat.i32.f32(float)
-declare i64 @llvm.fptosi.sat.i64.f32(float)
-declare i32 @llvm.fptoui.sat.i32.f32(float)
-declare i64 @llvm.fptoui.sat.i64.f32(float)

@@ -101,14 +101,10 @@ static cl::opt<bool> EnablePrecomputePhysRegs(
 static bool EnablePrecomputePhysRegs = false;
 #endif // NDEBUG
 
-namespace llvm {
-
-cl::opt<bool> UseSegmentSetForPhysRegs(
+cl::opt<bool> llvm::UseSegmentSetForPhysRegs(
     "use-segment-set-for-physregs", cl::Hidden, cl::init(true),
     cl::desc(
         "Use segment set for the computation of the live ranges of physregs."));
-
-} // end namespace llvm
 
 void LiveIntervalsWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
@@ -177,8 +173,8 @@ void LiveIntervals::analyze(MachineFunction &fn) {
   if (EnablePrecomputePhysRegs) {
     // For stress testing, precompute live ranges of all physical register
     // units, including reserved registers.
-    for (unsigned i = 0, e = TRI->getNumRegUnits(); i != e; ++i)
-      getRegUnit(i);
+    for (MCRegUnit Unit : TRI->regunits())
+      getRegUnit(Unit);
   }
 }
 
@@ -188,7 +184,8 @@ void LiveIntervals::print(raw_ostream &OS) const {
   // Dump the regunits.
   for (unsigned Unit = 0, UnitE = RegUnitRanges.size(); Unit != UnitE; ++Unit)
     if (LiveRange *LR = RegUnitRanges[Unit])
-      OS << printRegUnit(Unit, TRI) << ' ' << *LR << '\n';
+      OS << printRegUnit(static_cast<MCRegUnit>(Unit), TRI) << ' ' << *LR
+         << '\n';
 
   // Dump the virtregs.
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
@@ -309,7 +306,7 @@ void LiveIntervals::computeRegMasks() {
 /// Compute the live range of a register unit, based on the uses and defs of
 /// aliasing registers.  The range should be empty, or contain only dead
 /// phi-defs from ABI blocks.
-void LiveIntervals::computeRegUnitRange(LiveRange &LR, unsigned Unit) {
+void LiveIntervals::computeRegUnitRange(LiveRange &LR, MCRegUnit Unit) {
   assert(LICalc && "LICalc not initialized.");
   LICalc->reset(MF, getSlotIndexes(), DomTree, &getVNInfoAllocator());
 
@@ -358,7 +355,7 @@ void LiveIntervals::computeLiveInRegUnits() {
   LLVM_DEBUG(dbgs() << "Computing live-in reg-units in ABI blocks.\n");
 
   // Keep track of the live range sets allocated.
-  SmallVector<unsigned, 8> NewRanges;
+  SmallVector<MCRegUnit, 8> NewRanges;
 
   // Check all basic blocks for live-ins.
   for (const MachineBasicBlock &MBB : *MF) {
@@ -371,10 +368,11 @@ void LiveIntervals::computeLiveInRegUnits() {
     LLVM_DEBUG(dbgs() << Begin << "\t" << printMBBReference(MBB));
     for (const auto &LI : MBB.liveins()) {
       for (MCRegUnit Unit : TRI->regunits(LI.PhysReg)) {
-        LiveRange *LR = RegUnitRanges[Unit];
+        LiveRange *LR = RegUnitRanges[static_cast<unsigned>(Unit)];
         if (!LR) {
           // Use segment set to speed-up initial computation of the live range.
-          LR = RegUnitRanges[Unit] = new LiveRange(UseSegmentSetForPhysRegs);
+          LR = RegUnitRanges[static_cast<unsigned>(Unit)] =
+              new LiveRange(UseSegmentSetForPhysRegs);
           NewRanges.push_back(Unit);
         }
         VNInfo *VNI = LR->createDeadDef(Begin, getVNInfoAllocator());
@@ -387,8 +385,8 @@ void LiveIntervals::computeLiveInRegUnits() {
   LLVM_DEBUG(dbgs() << "Created " << NewRanges.size() << " new intervals.\n");
 
   // Compute the 'normal' part of the ranges.
-  for (unsigned Unit : NewRanges)
-    computeRegUnitRange(*RegUnitRanges[Unit], Unit);
+  for (MCRegUnit Unit : NewRanges)
+    computeRegUnitRange(*RegUnitRanges[static_cast<unsigned>(Unit)], Unit);
 }
 
 static void createSegmentsForValues(LiveRange &LR,
@@ -665,7 +663,10 @@ void LiveIntervals::extendToIndices(LiveRange &LR,
 void LiveIntervals::pruneValue(LiveRange &LR, SlotIndex Kill,
                                SmallVectorImpl<SlotIndex> *EndPoints) {
   LiveQueryResult LRQ = LR.Query(Kill);
-  VNInfo *VNI = LRQ.valueOutOrDead();
+  // LR may have liveness reachable from early clobber slot, which may be
+  // only live-in instead of live-out of the instruction.
+  // For example, LR =[1r, 3r), Kill = 3e, we have to prune [3e, 3r) of LR.
+  VNInfo *VNI = LRQ.valueOutOrDead() ? LRQ.valueOutOrDead() : LRQ.valueIn();
   if (!VNI)
     return;
 
@@ -1043,7 +1044,7 @@ public:
   // physregs, even those that aren't needed for regalloc, in order to update
   // kill flags. This is wasteful. Eventually, LiveVariables will strip all kill
   // flags, and postRA passes will use a live register utility instead.
-  LiveRange *getRegUnitLI(unsigned Unit) {
+  LiveRange *getRegUnitLI(MCRegUnit Unit) {
     if (UpdateFlags && !MRI.isReservedRegUnit(Unit))
       return &LIS.getRegUnit(Unit);
     return LIS.getCachedRegUnit(Unit);

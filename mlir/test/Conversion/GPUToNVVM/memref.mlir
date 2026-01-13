@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -convert-gpu-to-nvvm | FileCheck %s
+// RUN: mlir-opt %s -convert-gpu-to-nvvm="allow-pattern-rollback=0" | FileCheck %s
 // RUN: mlir-opt %s -convert-gpu-to-nvvm='use-bare-ptr-memref-call-conv=1' \
 // RUN: | FileCheck %s --check-prefix=BARE
 

@@ -22,7 +22,7 @@ AST_MATCHER_P(TemplateTypeParmDecl, hasUnnamedDefaultArgument,
       Node.getDefaultArgument().getArgument().isNull())
     return false;
 
-  TypeLoc DefaultArgTypeLoc =
+  const TypeLoc DefaultArgTypeLoc =
       Node.getDefaultArgument().getTypeSourceInfo()->getTypeLoc();
   return InnerMatcher.matches(DefaultArgTypeLoc, Finder, Builder);
 }
@@ -51,7 +51,7 @@ void IncorrectEnableIfCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   const SourceManager &SM = *Result.SourceManager;
-  SourceLocation RAngleLoc =
+  const SourceLocation RAngleLoc =
       SM.getExpansionLoc(EnableIfSpecializationLoc->getRAngleLoc());
 
   auto Diag = diag(EnableIf->getBeginLoc(),

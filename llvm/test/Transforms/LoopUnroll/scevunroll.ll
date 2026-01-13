@@ -320,8 +320,8 @@ define void @nsw_latch(ptr %a) nounwind {
 ; CHECK:       for.cond.1:
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[B_03_LCSSA:%.*]] = phi i32 [ 0, [[FOR_COND]] ], [ 8, [[FOR_BODY_1]] ], [ 0, [[FOR_COND_1]] ]
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 0, [[FOR_COND]] ], [ 1, [[FOR_BODY_1]] ], [ 0, [[FOR_COND_1]] ]
+; CHECK-NEXT:    [[B_03_LCSSA:%.*]] = phi i32 [ 0, [[FOR_COND_1]] ], [ 0, [[FOR_COND]] ], [ 8, [[FOR_BODY_1]] ]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 0, [[FOR_COND_1]] ], [ 0, [[FOR_COND]] ], [ 1, [[FOR_BODY_1]] ]
 ; CHECK-NEXT:    store i32 [[B_03_LCSSA]], ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -465,8 +465,7 @@ define void @peel_int_eq_condition(i32 %start) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT_PEEL]], [[ENTRY_PEEL_NEWPH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[C_0:%.*]] = icmp eq i32 [[IV]], [[START]]
-; CHECK-NEXT:    br i1 [[C_0]], label [[IF_THEN:%.*]], label [[LOOP_LATCH]]
+; CHECK-NEXT:    br i1 false, label [[IF_THEN:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    call void @fn(i32 [[IV]])
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]

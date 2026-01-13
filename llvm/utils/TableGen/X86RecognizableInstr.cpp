@@ -365,6 +365,8 @@ InstructionContext RecognizableInstr::insnContext() const {
       insnContext = IC_64BIT_XD;
     else if (OpPrefix == X86Local::XS)
       insnContext = IC_64BIT_XS;
+    else if (HasREX_W && ExplicitREX2Prefix)
+      insnContext = IC_64BIT_REX2_REXW;
     else if (ExplicitREX2Prefix)
       insnContext = IC_64BIT_REX2;
     else if (HasREX_W)
@@ -1139,7 +1141,6 @@ OperandType RecognizableInstr::typeFromString(StringRef Str, bool hasREX_W,
           .Case("vz64mem", TYPE_MVSIBZ)
           .Case("BNDR", TYPE_BNDR)
           .Case("TILE", TYPE_TMM)
-          .Case("TILEPair", TYPE_TMM_PAIR)
           .Default(TYPE_NONE);
   // clang-format on
 

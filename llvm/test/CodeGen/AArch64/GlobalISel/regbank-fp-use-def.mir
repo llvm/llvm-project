@@ -96,7 +96,7 @@ body:             |
     ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:fpr(s32) = G_SITOFP [[COPY1]](s32)
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:fpr(s32) = COPY [[COPY2]](s32)
     ; CHECK-NEXT: [[SELECT:%[0-9]+]]:fpr(s32) = G_SELECT [[COPY2]](s32), [[COPY3]], [[SITOFP]]
-    ; CHECK-NEXT: [[FPTOSI:%[0-9]+]]:gpr(s32) = G_FPTOSI [[SELECT]](s32)
+    ; CHECK-NEXT: [[FPTOSI:%[0-9]+]]:fpr(s32) = G_FPTOSI [[SELECT]](s32)
     %0:_(s32) = COPY $w0
     %2:_(s32) = COPY $w1
     %3:_(s32) = COPY $w2

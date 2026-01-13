@@ -1,6 +1,6 @@
 ## Test the cat command.
 #
-# RUN: not %{lit} -a -v %{inputs}/shtest-cat \
+# RUN: not %{lit} -v %{inputs}/shtest-cat \
 # RUN: | FileCheck -match-full-lines %s
 # END.
 

@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s --test-loop-unrolling="unroll-factor=3" -split-input-file -canonicalize | FileCheck %s
 // RUN: mlir-opt %s --test-loop-unrolling="unroll-factor=1" -split-input-file -canonicalize | FileCheck %s --check-prefix UNROLL-BY-1
-// RUN: mlir-opt %s --test-loop-unrolling="unroll-full=true" -split-input-file -canonicalize | FileCheck %s --check-prefix UNROLL-FULL
+// RUN: mlir-opt %s --test-loop-unrolling="unroll-factor=-1" -split-input-file -canonicalize | FileCheck %s --check-prefix UNROLL-FULL
 
 // CHECK-LABEL: scf_loop_unroll_single
 func.func @scf_loop_unroll_single(%arg0 : f32, %arg1 : f32) -> f32 {

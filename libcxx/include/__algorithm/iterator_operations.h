@@ -219,6 +219,9 @@ private:
 template <class _AlgPolicy, class _Iter>
 using __policy_iter_diff_t _LIBCPP_NODEBUG = typename _IterOps<_AlgPolicy>::template __difference_type<_Iter>;
 
+template <class _AlgPolicy, class _Iter>
+using __policy_value_type _LIBCPP_NODEBUG = typename _IterOps<_AlgPolicy>::template __value_type<_Iter>;
+
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

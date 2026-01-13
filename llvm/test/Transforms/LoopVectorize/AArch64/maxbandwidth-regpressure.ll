@@ -6,8 +6,7 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-none-unknown-elf"
 
 define i32 @dotp(ptr %a, ptr %b) #0 {
-; CHECK-REGS-VP-NOT: LV(REG): Not considering vector loop of width vscale x 16 because it uses too many registers
-; CHECK-REGS-VP: LV: Selecting VF: vscale x 8.
+; CHECK-REGS-VP: LV: Selecting VF: vscale x 16.
 ;
 ; CHECK-NOREGS-VP: LV(REG): Not considering vector loop of width vscale x 8 because it uses too many registers
 ; CHECK-NOREGS-VP: LV(REG): Not considering vector loop of width vscale x 16 because it uses too many registers

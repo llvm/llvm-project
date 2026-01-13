@@ -113,7 +113,7 @@ optimization passes shall preserve PC sections metadata as follows:
     3. Merging will preserve PC sections metadata of one of the two
        instructions (no guarantee on which instruction's metadata is used).
 
-    4. Deletions will loose PC sections metadata.
+    4. Deletions will lose PC sections metadata.
 
 This is similar to debug info, and the ``BuildMI()`` helper provides a
 convenient way to propagate debug info and ``!pcsections`` metadata in the

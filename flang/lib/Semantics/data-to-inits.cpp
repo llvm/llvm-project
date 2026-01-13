@@ -179,13 +179,14 @@ bool DataInitializationCompiler<DSV>::Scan(
 template <typename DSV>
 bool DataInitializationCompiler<DSV>::Scan(const parser::DataImpliedDo &ido) {
   const auto &bounds{std::get<parser::DataImpliedDo::Bounds>(ido.t)};
-  auto name{bounds.name.thing.thing};
-  const auto *lowerExpr{
-      GetExpr(exprAnalyzer_.context(), bounds.lower.thing.thing)};
-  const auto *upperExpr{
-      GetExpr(exprAnalyzer_.context(), bounds.upper.thing.thing)};
+  const auto &name{parser::UnwrapRef<parser::Name>(bounds.name)};
+  const auto *lowerExpr{GetExpr(
+      exprAnalyzer_.context(), parser::UnwrapRef<parser::Expr>(bounds.lower))};
+  const auto *upperExpr{GetExpr(
+      exprAnalyzer_.context(), parser::UnwrapRef<parser::Expr>(bounds.upper))};
   const auto *stepExpr{bounds.step
-          ? GetExpr(exprAnalyzer_.context(), bounds.step->thing.thing)
+          ? GetExpr(exprAnalyzer_.context(),
+                parser::UnwrapRef<parser::Expr>(bounds.step))
           : nullptr};
   if (lowerExpr && upperExpr) {
     // Fold the bounds expressions (again) in case any of them depend
@@ -240,7 +241,9 @@ bool DataInitializationCompiler<DSV>::Scan(
   return common::visit(
       common::visitors{
           [&](const parser::Scalar<common::Indirection<parser::Designator>>
-                  &var) { return Scan(var.thing.value()); },
+                  &var) {
+            return Scan(parser::UnwrapRef<parser::Designator>(var));
+          },
           [&](const common::Indirection<parser::DataImpliedDo> &ido) {
             return Scan(ido.value());
           },
@@ -860,6 +863,14 @@ static bool ProcessScopes(const Scope &scope,
       if (std::find_if(associated.begin(), associated.end(), [](SymbolRef ref) {
             return IsInitialized(*ref);
           }) != associated.end()) {
+        // If a symbol whose size has not been computed it is possible to get an
+        // assertion failure when trying to contruct the initializer. The lack
+        // of a size is assumed to be because there was an error reported that
+        // blocked computing the size. As of writing this comment, this is only
+        // called after all of semantics analysis has run without errors. If
+        // this needs to be called earlier, then we need to skip equivalence
+        // checking if there are any sizeless symbols and assert that there is
+        // an error reported.
         result &=
             CombineEquivalencedInitialization(associated, exprAnalyzer, inits);
       }
@@ -941,8 +952,8 @@ void ConstructInitializer(const Symbol &symbol,
   }
 }
 
-void ConvertToInitializers(
-    DataInitializations &inits, evaluate::ExpressionAnalyzer &exprAnalyzer) {
+void ConvertToInitializers(DataInitializations &inits,
+    evaluate::ExpressionAnalyzer &exprAnalyzer, bool forDerivedTypesOnly) {
   // Process DATA-style component /initializers/ now, so that they appear as
   // default values in time for EQUIVALENCE processing in ProcessScopes.
   for (auto &[symbolPtr, initialization] : inits) {
@@ -950,7 +961,8 @@ void ConvertToInitializers(
       ConstructInitializer(*symbolPtr, initialization, exprAnalyzer);
     }
   }
-  if (ProcessScopes(
+  if (!forDerivedTypesOnly &&
+      ProcessScopes(
           exprAnalyzer.context().globalScope(), exprAnalyzer, inits)) {
     for (auto &[symbolPtr, initialization] : inits) {
       if (!symbolPtr->owner().IsDerivedType()) {

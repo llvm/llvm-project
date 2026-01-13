@@ -240,11 +240,10 @@ define void @subprogram() !dbg !3 {
 define void @func_loc() !dbg !3 {
   ret void
 }
-; CHECK-DAG: #[[NAME_LOC:.+]] = loc("func_loc")
 ; CHECK-DAG: #[[FILE_LOC:.+]] = loc("debug-info.ll":42:0)
 ; CHECK-DAG: #[[SP:.+]] =  #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #{{.*}}, scope = #{{.*}}, name = "func_loc", file = #{{.*}}, line = 42, subprogramFlags = Definition>
 
-; CHECK: loc(fused<#[[SP]]>[#[[NAME_LOC]], #[[FILE_LOC]]]
+; CHECK: loc(fused<#[[SP]]>[#[[FILE_LOC]]]
 
 !llvm.dbg.cu = !{!1}
 !llvm.module.flags = !{!0}

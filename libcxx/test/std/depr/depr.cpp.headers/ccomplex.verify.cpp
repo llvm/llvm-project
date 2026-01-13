@@ -14,12 +14,11 @@
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: clang-modules-build
 
-#include "test_macros.h"
+// FIXME: using `#warning` causes diagnostics from system headers which include deprecated headers. This can only be
+// enabled again once https://github.com/llvm/llvm-project/pull/168041 (or a similar feature) has landed, since that
+// allows suppression in system headers.
+// XFAIL: *
 
 #include <ccomplex>
 
-#if TEST_STD_VER >= 20
-// expected-warning@ccomplex:* {{'__standard_header_ccomplex' is deprecated: removed in C++20. Include <complex> instead.}}
-#else
-// expected-warning@ccomplex:* {{'__standard_header_ccomplex' is deprecated: Include <complex> instead.}}
-#endif
+// expected-warning@ccomplex:* {{<ccomplex> is deprecated in C++17 and removed in C++20. Include <complex> instead.}}

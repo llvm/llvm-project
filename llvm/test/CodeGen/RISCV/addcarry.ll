@@ -4,9 +4,6 @@
 ; Test ADDCARRY node expansion on a target that does not currently support ADDCARRY.
 ; Signed fixed point multiplication eventually expands down to an ADDCARRY.
 
-declare  i64 @llvm.smul.fix.i64  (i64, i64, i32)
-declare { i32, i1 } @llvm.uadd.with.overflow.i32(i32, i32)
-
 define i64 @addcarry(i64 %x, i64 %y) nounwind {
 ; RISCV32-LABEL: addcarry:
 ; RISCV32:       # %bb.0:

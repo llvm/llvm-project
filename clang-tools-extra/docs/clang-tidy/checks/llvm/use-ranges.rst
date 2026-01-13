@@ -12,7 +12,7 @@ Example
 .. code-block:: c++
 
   auto it = std::find(vec.begin(), vec.end(), value);
-  bool all = std::all_of(vec.begin(), vec.end(), 
+  bool all = std::all_of(vec.begin(), vec.end(),
                          [](int x) { return x > 0; });
 
 Transforms to:

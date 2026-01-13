@@ -1729,3 +1729,61 @@ define i32 @test_ret_only_capture() {
   %v = load i32, ptr %a
   ret i32 %v
 }
+
+declare ptr @captures_address_only(ptr captures(address))
+
+; Can transform: Only one address captured.
+define void @test_captures_address_captures_none() {
+; CHECK-LABEL: define void @test_captures_address_captures_none() {
+; CHECK-NEXT:    [[SRC:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
+; CHECK-NEXT:    store [[STRUCT_FOO]] { i32 10, i32 20, i32 30 }, ptr [[SRC]], align 4
+; CHECK-NEXT:    call void @captures_address_only(ptr [[SRC]])
+; CHECK-NEXT:    call void @use_nocapture(ptr [[SRC]])
+; CHECK-NEXT:    ret void
+;
+  %src = alloca %struct.Foo, align 4
+  %dst = alloca %struct.Foo, align 4
+  store %struct.Foo { i32 10, i32 20, i32 30 }, ptr %src
+  call void @captures_address_only(ptr %src)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %dst, ptr align 4 %src, i64 12, i1 false)
+  call void @use_nocapture(ptr %dst)
+  ret void
+}
+
+; Can transform: Only one address captured.
+define void @test_captures_none_and_captures_address() {
+; CHECK-LABEL: define void @test_captures_none_and_captures_address() {
+; CHECK-NEXT:    [[SRC:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
+; CHECK-NEXT:    store [[STRUCT_FOO]] { i32 10, i32 20, i32 30 }, ptr [[SRC]], align 4
+; CHECK-NEXT:    call void @use_nocapture(ptr [[SRC]])
+; CHECK-NEXT:    call void @captures_address_only(ptr [[SRC]])
+; CHECK-NEXT:    ret void
+;
+  %src = alloca %struct.Foo, align 4
+  %dst = alloca %struct.Foo, align 4
+  store %struct.Foo { i32 10, i32 20, i32 30 }, ptr %src
+  call void @use_nocapture(ptr %src)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %dst, ptr align 4 %src, i64 12, i1 false)
+  call void @captures_address_only(ptr %dst)
+  ret void
+}
+
+; Cannot transform: Both addresses captured.
+define void @test_captures_address_and_captures_address() {
+; CHECK-LABEL: define void @test_captures_address_and_captures_address() {
+; CHECK-NEXT:    [[SRC:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
+; CHECK-NEXT:    [[DST:%.*]] = alloca [[STRUCT_FOO]], align 4
+; CHECK-NEXT:    store [[STRUCT_FOO]] { i32 10, i32 20, i32 30 }, ptr [[SRC]], align 4
+; CHECK-NEXT:    call void @captures_address_only(ptr [[SRC]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[DST]], ptr align 4 [[SRC]], i64 12, i1 false)
+; CHECK-NEXT:    call void @captures_address_only(ptr [[DST]])
+; CHECK-NEXT:    ret void
+;
+  %src = alloca %struct.Foo, align 4
+  %dst = alloca %struct.Foo, align 4
+  store %struct.Foo { i32 10, i32 20, i32 30 }, ptr %src
+  call void @captures_address_only(ptr %src)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %dst, ptr align 4 %src, i64 12, i1 false)
+  call void @captures_address_only(ptr %dst)
+  ret void
+}

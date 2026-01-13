@@ -38,7 +38,9 @@ namespace CodeGen {
 class ABIInfo;
 class CallArgList;
 class CodeGenFunction;
+class CGHLSLOffsetInfo;
 class CGBlockInfo;
+class CGHLSLOffsetInfo;
 class SwiftABIInfo;
 
 /// TargetCodeGenInfo - This class organizes various target-specific
@@ -442,11 +444,19 @@ public:
   }
 
   /// Return an LLVM type that corresponds to a HLSL type
-  virtual llvm::Type *
-  getHLSLType(CodeGenModule &CGM, const Type *T,
-              const SmallVector<int32_t> *Packoffsets = nullptr) const {
+  virtual llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *T,
+                                  const CGHLSLOffsetInfo &OffsetInfo) const {
     return nullptr;
   }
+
+  /// Return an LLVM type that corresponds to padding in HLSL types
+  virtual llvm::Type *getHLSLPadding(CodeGenModule &CGM,
+                                     CharUnits NumBytes) const {
+    return nullptr;
+  }
+
+  /// Return true if this is an HLSL padding type.
+  virtual bool isHLSLPadding(llvm::Type *Ty) const { return false; }
 
   // Set the Branch Protection Attributes of the Function accordingly to the
   // BPI. Remove attributes that contradict with current BPI.
@@ -483,7 +493,6 @@ enum class AArch64ABIKind {
   DarwinPCS,
   Win64,
   AAPCSSoft,
-  PAuthTest,
 };
 
 std::unique_ptr<TargetCodeGenInfo>

@@ -116,7 +116,7 @@ bool PopulateSwitch::prepare(const Selection &Sel) {
   EnumT = Cond->getType()->getAsCanonical<EnumType>();
   if (!EnumT)
     return false;
-  EnumD = EnumT->getOriginalDecl()->getDefinitionOrSelf();
+  EnumD = EnumT->getDecl()->getDefinitionOrSelf();
   if (EnumD->isDependentType())
     return false;
 
