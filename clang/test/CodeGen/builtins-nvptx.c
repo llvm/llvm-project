@@ -272,6 +272,27 @@ __device__ void nvvm_math(float f1, float f2, double d1, double d2) {
   __syncthreads();
 }
 
+__device__ int nvvm_bar0_reductions(int i) {
+  // CHECK-LABEL: nvvm_bar0_reductions
+
+  int ret = 0;
+  // CHECK: %[[NE:[0-9]+]] = icmp ne i32 %{{[0-9]+}}, 0
+  // CHECK: %[[AND:[0-9]+]] = call i1 @llvm.nvvm.barrier.cta.red.and.aligned.all(i32 0, i1 %[[NE]])
+  // CHECK: zext i1 %[[AND]] to i32
+  ret += __nvvm_bar0_and(i);
+
+  // CHECK: %[[NE:[0-9]+]] = icmp ne i32 %{{[0-9]+}}, 0
+  // CHECK: %[[OR:[0-9]+]] = call i1 @llvm.nvvm.barrier.cta.red.or.aligned.all(i32 0, i1 %[[NE]])
+  // CHECK: zext i1 %[[OR]] to i32
+  ret += __nvvm_bar0_or(i);
+
+  // CHECK: %[[NE:[0-9]+]] = icmp ne i32 %{{[0-9]+}}, 0
+  // CHECK: %[[POPC:[0-9]+]] = call i32 @llvm.nvvm.barrier.cta.red.popc.aligned.all(i32 0, i1 %[[NE]])
+  ret += __nvvm_bar0_popc(i);
+
+  return ret;
+}
+
 __device__ int di;
 __shared__ int si;
 __device__ long dl;
@@ -1517,5 +1538,44 @@ __device__ void nvvm_min_max_sm86() {
   // CHECK_PTX72_SM86: call float @llvm.nvvm.fmax.ftz.nan.xorsign.abs.f
   __nvvm_fmax_ftz_nan_xorsign_abs_f(-0.1f, (float)NAN32);
 #endif
+  // CHECK: ret void
+}
+
+// CHECK-LABEL: nvvm_add_fma_f32_sat
+__device__ void nvvm_add_fma_f32_sat() {
+  // CHECK: call float @llvm.nvvm.add.rn.sat.f
+  __nvvm_add_rn_sat_f(1.0f, 2.0f);
+  // CHECK: call float @llvm.nvvm.add.rn.ftz.sat.f
+  __nvvm_add_rn_ftz_sat_f(1.0f, 2.0f);
+  // CHECK: call float @llvm.nvvm.add.rz.sat.f
+  __nvvm_add_rz_sat_f(1.0f, 2.0f);
+  // CHECK: call float @llvm.nvvm.add.rz.ftz.sat.f
+  __nvvm_add_rz_ftz_sat_f(1.0f, 2.0f);
+  // CHECK: call float @llvm.nvvm.add.rm.sat.f
+  __nvvm_add_rm_sat_f(1.0f, 2.0f);
+  // CHECK: call float @llvm.nvvm.add.rm.ftz.sat.f
+  __nvvm_add_rm_ftz_sat_f(1.0f, 2.0f);
+  // CHECK: call float @llvm.nvvm.add.rp.sat.f
+  __nvvm_add_rp_sat_f(1.0f, 2.0f);
+  // CHECK: call float @llvm.nvvm.add.rp.ftz.sat.f
+  __nvvm_add_rp_ftz_sat_f(1.0f, 2.0f);
+
+  // CHECK: call float @llvm.nvvm.fma.rn.sat.f
+  __nvvm_fma_rn_sat_f(1.0f, 2.0f, 3.0f);
+  // CHECK: call float @llvm.nvvm.fma.rn.ftz.sat.f
+  __nvvm_fma_rn_ftz_sat_f(1.0f, 2.0f, 3.0f);
+  // CHECK: call float @llvm.nvvm.fma.rz.sat.f
+  __nvvm_fma_rz_sat_f(1.0f, 2.0f, 3.0f);
+  // CHECK: call float @llvm.nvvm.fma.rz.ftz.sat.f
+  __nvvm_fma_rz_ftz_sat_f(1.0f, 2.0f, 3.0f);
+  // CHECK: call float @llvm.nvvm.fma.rm.sat.f
+  __nvvm_fma_rm_sat_f(1.0f, 2.0f, 3.0f);
+  // CHECK: call float @llvm.nvvm.fma.rm.ftz.sat.f
+  __nvvm_fma_rm_ftz_sat_f(1.0f, 2.0f, 3.0f);
+  // CHECK: call float @llvm.nvvm.fma.rp.sat.f
+  __nvvm_fma_rp_sat_f(1.0f, 2.0f, 3.0f);
+  // CHECK: call float @llvm.nvvm.fma.rp.ftz.sat.f
+  __nvvm_fma_rp_ftz_sat_f(1.0f, 2.0f, 3.0f);
+
   // CHECK: ret void
 }

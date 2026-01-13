@@ -130,7 +130,9 @@ public:
     LaneBitmask LaneMask;
 
     RegisterMaskPair(MCRegister PhysReg, LaneBitmask LaneMask)
-        : PhysReg(PhysReg), LaneMask(LaneMask) {}
+        : PhysReg(PhysReg), LaneMask(LaneMask) {
+      assert(PhysReg.isPhysical());
+    }
 
     bool operator==(const RegisterMaskPair &other) const {
       return PhysReg == other.PhysReg && LaneMask == other.LaneMask;
@@ -228,6 +230,12 @@ private:
   /// since getSymbol is a relatively heavy-weight operation, the symbol
   /// is only computed once and is cached.
   mutable MCSymbol *CachedMCSymbol = nullptr;
+
+  /// Contains the callsite indices in this block that are targets of code
+  /// prefetching. The index `i` specifies the `i`th call, with zero
+  /// representing the beginning of the block and 1 representing the first call.
+  /// Must be in ascending order and without duplicates.
+  SmallVector<unsigned> PrefetchTargetCallsiteIndexes;
 
   /// Cached MCSymbol for this block (used if IsEHContTarget).
   mutable MCSymbol *CachedEHContMCSymbol = nullptr;
@@ -710,6 +718,14 @@ public:
 
   std::optional<UniqueBBID> getBBID() const { return BBID; }
 
+  const SmallVector<unsigned> &getPrefetchTargetCallsiteIndexes() const {
+    return PrefetchTargetCallsiteIndexes;
+  }
+
+  void setPrefetchTargetCallsiteIndexes(const SmallVector<unsigned> &V) {
+    PrefetchTargetCallsiteIndexes = V;
+  }
+
   /// Returns the section ID of this basic block.
   MBBSectionID getSectionID() const { return SectionID; }
 
@@ -986,13 +1002,6 @@ public:
   /// return instruction.
   bool isEHScopeReturnBlock() const {
     return !empty() && back().isEHScopeReturn();
-  }
-
-  /// Convenience function that returns true if the block exits the function
-  /// without returning.
-  bool isNoReturnBlock() const {
-    return !empty() && succ_empty() && !back().isReturn() &&
-           !back().isIndirectBranch();
   }
 
   /// Split a basic block into 2 pieces at \p SplitPoint. A new block will be

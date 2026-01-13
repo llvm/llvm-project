@@ -207,6 +207,7 @@ OPENMP_MAP_MODIFIER_KIND(ompx_hold)
 
 // Modifiers for 'to' or 'from' clause.
 OPENMP_MOTION_MODIFIER_KIND(mapper)
+OPENMP_MOTION_MODIFIER_KIND(iterator)
 OPENMP_MOTION_MODIFIER_KIND(present)
 
 // Static attributes for 'dist_schedule' clause.

@@ -2864,7 +2864,7 @@ ExpressionResults Target::EvaluateExpression(
   // We shouldn't run stop hooks in expressions.
   bool old_suppress_value = m_suppress_stop_hooks;
   m_suppress_stop_hooks = true;
-  auto on_exit = llvm::make_scope_exit([this, old_suppress_value]() {
+  llvm::scope_exit on_exit([this, old_suppress_value]() {
     m_suppress_stop_hooks = old_suppress_value;
   });
 
@@ -3200,7 +3200,7 @@ bool Target::RunStopHooks(bool at_initial_stop) {
   }
 
   StreamSP output_sp = m_debugger.GetAsyncOutputStream();
-  auto on_exit = llvm::make_scope_exit([output_sp] { output_sp->Flush(); });
+  llvm::scope_exit on_exit([output_sp] { output_sp->Flush(); });
 
   size_t num_hooks_with_output = llvm::count_if(
       active_hooks, [](auto h) { return !h->GetSuppressOutput(); });
@@ -3718,6 +3718,61 @@ Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
     }
   }
   return error;
+}
+
+llvm::Expected<uint32_t> Target::AddScriptedFrameProviderDescriptor(
+    const ScriptedFrameProviderDescriptor &descriptor) {
+  if (!descriptor.IsValid())
+    return llvm::createStringError("invalid frame provider descriptor");
+
+  llvm::StringRef name = descriptor.GetName();
+  if (name.empty())
+    return llvm::createStringError(
+        "frame provider descriptor has no class name");
+
+  std::lock_guard<std::recursive_mutex> guard(
+      m_frame_provider_descriptors_mutex);
+
+  uint32_t descriptor_id = descriptor.GetID();
+  m_frame_provider_descriptors[descriptor_id] = descriptor;
+
+  // Clear frame providers on existing threads so they reload with new config.
+  if (ProcessSP process_sp = GetProcessSP())
+    for (ThreadSP thread_sp : process_sp->Threads())
+      thread_sp->ClearScriptedFrameProvider();
+
+  return descriptor_id;
+}
+
+bool Target::RemoveScriptedFrameProviderDescriptor(uint32_t id) {
+  std::lock_guard<std::recursive_mutex> guard(
+      m_frame_provider_descriptors_mutex);
+  bool removed = m_frame_provider_descriptors.erase(id);
+
+  if (removed)
+    if (ProcessSP process_sp = GetProcessSP())
+      for (ThreadSP thread_sp : process_sp->Threads())
+        thread_sp->ClearScriptedFrameProvider();
+
+  return removed;
+}
+
+void Target::ClearScriptedFrameProviderDescriptors() {
+  std::lock_guard<std::recursive_mutex> guard(
+      m_frame_provider_descriptors_mutex);
+
+  m_frame_provider_descriptors.clear();
+
+  if (ProcessSP process_sp = GetProcessSP())
+    for (ThreadSP thread_sp : process_sp->Threads())
+      thread_sp->ClearScriptedFrameProvider();
+}
+
+const llvm::DenseMap<uint32_t, ScriptedFrameProviderDescriptor> &
+Target::GetScriptedFrameProviderDescriptors() const {
+  std::lock_guard<std::recursive_mutex> guard(
+      m_frame_provider_descriptors_mutex);
+  return m_frame_provider_descriptors;
 }
 
 void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
@@ -5090,17 +5145,17 @@ void TargetProperties::SetProcessLaunchInfo(
   const FileAction *input_file_action =
       launch_info.GetFileActionForFD(STDIN_FILENO);
   if (input_file_action) {
-    SetStandardInputPath(input_file_action->GetPath());
+    SetStandardInputPath(input_file_action->GetFileSpec().GetPath());
   }
   const FileAction *output_file_action =
       launch_info.GetFileActionForFD(STDOUT_FILENO);
   if (output_file_action) {
-    SetStandardOutputPath(output_file_action->GetPath());
+    SetStandardOutputPath(output_file_action->GetFileSpec().GetPath());
   }
   const FileAction *error_file_action =
       launch_info.GetFileActionForFD(STDERR_FILENO);
   if (error_file_action) {
-    SetStandardErrorPath(error_file_action->GetPath());
+    SetStandardErrorPath(error_file_action->GetFileSpec().GetPath());
   }
   SetDetachOnError(launch_info.GetFlags().Test(lldb::eLaunchFlagDetachOnError));
   SetDisableASLR(launch_info.GetFlags().Test(lldb::eLaunchFlagDisableASLR));

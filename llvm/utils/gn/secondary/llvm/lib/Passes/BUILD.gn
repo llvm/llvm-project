@@ -26,7 +26,6 @@ static_library("Passes") {
     "PassBuilder.cpp",
     "PassBuilderBindings.cpp",
     "PassBuilderPipelines.cpp",
-    "PassPlugin.cpp",
     "StandardInstrumentations.cpp",
   ]
 }

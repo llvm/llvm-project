@@ -66,6 +66,9 @@ translateSymbolCUFDataAttribute(mlir::MLIRContext *mlirContext,
 /// there is a conversion. Return null otherwise.
 hlfir::ElementalOp isTransferWithConversion(mlir::Value rhs);
 
+/// Check if the value is an allocatable with double descriptor.
+bool hasDoubleDescriptor(mlir::Value);
+
 } // end namespace Fortran::lower
 
 #endif // FORTRAN_LOWER_CUDA_H

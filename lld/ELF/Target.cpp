@@ -24,6 +24,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Target.h"
+#include "Arch/RISCVInternalRelocations.h"
 #include "InputFiles.h"
 #include "OutputSections.h"
 #include "RelocScan.h"
@@ -40,6 +41,14 @@ using namespace lld::elf;
 
 std::string elf::toStr(Ctx &ctx, RelType type) {
   StringRef s = getELFRelocationTypeName(ctx.arg.emachine, type);
+  if (ctx.arg.emachine == EM_RISCV && s == "Unknown") {
+    auto VendorString = getRISCVVendorString(type);
+    if (VendorString)
+      s = getRISCVVendorRelocationTypeName(type & ~INTERNAL_RISCV_VENDOR_MASK,
+                                           *VendorString);
+    if (s == "Unknown")
+      return ("Unknown vendor-specific (" + Twine(type) + ")").str();
+  }
   if (s == "Unknown")
     return ("Unknown (" + Twine(type) + ")").str();
   return std::string(s);

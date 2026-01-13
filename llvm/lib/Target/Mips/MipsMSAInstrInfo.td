@@ -30,26 +30,38 @@ def SDT_INSVE : SDTypeProfile<1, 4, [SDTCisVec<0>, SDTCisSameAs<0, 1>,
                                      SDTCisVT<2, i32>, SDTCisSameAs<0, 3>,
                                      SDTCisVT<4, i32>]>;
 
+// Vector comparisons.
+// These take a vector and return a boolean.
 def MipsVAllNonZero : SDNode<"MipsISD::VALL_NONZERO", SDT_MipsVecCond>;
 def MipsVAnyNonZero : SDNode<"MipsISD::VANY_NONZERO", SDT_MipsVecCond>;
 def MipsVAllZero : SDNode<"MipsISD::VALL_ZERO", SDT_MipsVecCond>;
 def MipsVAnyZero : SDNode<"MipsISD::VANY_ZERO", SDT_MipsVecCond>;
+
+// Combined (XOR (OR $a, $b), -1)
 def MipsVNOR : SDNode<"MipsISD::VNOR", SDTIntBinOp,
                       [SDNPCommutative, SDNPAssociative]>;
-def MipsVSHF : SDNode<"MipsISD::VSHF", SDT_VSHF>;
-def MipsSHF : SDNode<"MipsISD::SHF", SDT_SHF>;
-def MipsILVEV : SDNode<"MipsISD::ILVEV", SDT_ILV>;
-def MipsILVOD : SDNode<"MipsISD::ILVOD", SDT_ILV>;
-def MipsILVL  : SDNode<"MipsISD::ILVL",  SDT_ILV>;
-def MipsILVR  : SDNode<"MipsISD::ILVR",  SDT_ILV>;
-def MipsPCKEV : SDNode<"MipsISD::PCKEV", SDT_ILV>;
-def MipsPCKOD : SDNode<"MipsISD::PCKOD", SDT_ILV>;
+
+// Vector Shuffle with mask as an operand
+def MipsVSHF : SDNode<"MipsISD::VSHF", SDT_VSHF>;  // Generic shuffle
+def MipsSHF : SDNode<"MipsISD::SHF", SDT_SHF>;     // 4-element set shuffle.
+def MipsILVEV : SDNode<"MipsISD::ILVEV", SDT_ILV>; // Interleave even elements
+def MipsILVOD : SDNode<"MipsISD::ILVOD", SDT_ILV>; // Interleave odd elements
+def MipsILVL  : SDNode<"MipsISD::ILVL",  SDT_ILV>; // Interleave left elements
+def MipsILVR  : SDNode<"MipsISD::ILVR",  SDT_ILV>; // Interleave right elements
+def MipsPCKEV : SDNode<"MipsISD::PCKEV", SDT_ILV>; // Pack even elements
+def MipsPCKOD : SDNode<"MipsISD::PCKOD", SDT_ILV>; // Pack odd elements
+
+// Vector Lane Copy
+// Copy element from one vector to another
 def MipsINSVE : SDNode<"MipsISD::INSVE", SDT_INSVE>;
+
+// Vector Floating Point Multiply and Subtract
 def MipsFMS   : SDNode<"MipsISD::FMS", SDTFPTernaryOp>;
 
 def vsetcc : SDNode<"ISD::SETCC", SDT_VSetCC>;
 def vfsetcc : SDNode<"ISD::SETCC", SDT_VFSetCC>;
 
+// Extended vector element extraction
 def MipsVExtractSExt : SDNode<"MipsISD::VEXTRACT_SEXT_ELT",
     SDTypeProfile<1, 3, [SDTCisPtrTy<2>]>, []>;
 def MipsVExtractZExt : SDNode<"MipsISD::VEXTRACT_ZEXT_ELT",

@@ -132,7 +132,7 @@ void RTDEF(CUFRegisterAllocator)() {
       kUnifiedAllocatorPos, {&CUFAllocUnified, CUFFreeUnified});
 }
 
-cudaStream_t RTDECL(CUFAssociatedGetStream)(void *p) {
+cudaStream_t RTDECL(CUFGetAssociatedStream)(void *p) {
   int pos = findAllocation(p);
   if (pos >= 0) {
     cudaStream_t stream = deviceAllocations[pos].stream;

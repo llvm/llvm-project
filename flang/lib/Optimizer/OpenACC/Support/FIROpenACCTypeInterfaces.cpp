@@ -1014,4 +1014,114 @@ template bool OpenACCPointerLikeModel<fir::LLVMPointerType>::genCopy(
     mlir::TypedValue<mlir::acc::PointerLikeType> source,
     mlir::Type varType) const;
 
+template <typename Ty>
+mlir::Value OpenACCPointerLikeModel<Ty>::genLoad(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::PointerLikeType> srcPtr,
+    mlir::Type valueType) const {
+
+  // Unwrap to get the pointee type.
+  mlir::Type pointeeTy = fir::dyn_cast_ptrEleTy(pointer);
+  assert(pointeeTy && "expected pointee type to be extractable");
+
+  // Box types contain both a descriptor and referenced data. The genLoad API
+  // handles simple loads and cannot properly manage both parts.
+  if (fir::isa_box_type(pointeeTy))
+    return {};
+
+  // Unlimited polymorphic (class(*)) cannot be handled because type is unknown.
+  if (fir::isUnlimitedPolymorphicType(pointeeTy))
+    return {};
+
+  // Return empty for dynamic size types because the load logic
+  // cannot be determined simply from the type.
+  if (fir::hasDynamicSize(pointeeTy))
+    return {};
+
+  mlir::Value loadedValue = fir::LoadOp::create(builder, loc, srcPtr);
+
+  // If valueType is provided and differs from the loaded type, insert a convert
+  if (valueType && loadedValue.getType() != valueType)
+    return fir::ConvertOp::create(builder, loc, valueType, loadedValue);
+
+  return loadedValue;
+}
+
+template mlir::Value OpenACCPointerLikeModel<fir::ReferenceType>::genLoad(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::PointerLikeType> srcPtr,
+    mlir::Type valueType) const;
+
+template mlir::Value OpenACCPointerLikeModel<fir::PointerType>::genLoad(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::PointerLikeType> srcPtr,
+    mlir::Type valueType) const;
+
+template mlir::Value OpenACCPointerLikeModel<fir::HeapType>::genLoad(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::PointerLikeType> srcPtr,
+    mlir::Type valueType) const;
+
+template mlir::Value OpenACCPointerLikeModel<fir::LLVMPointerType>::genLoad(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::PointerLikeType> srcPtr,
+    mlir::Type valueType) const;
+
+template <typename Ty>
+bool OpenACCPointerLikeModel<Ty>::genStore(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::Value valueToStore,
+    mlir::TypedValue<mlir::acc::PointerLikeType> destPtr) const {
+
+  // Unwrap to get the pointee type.
+  mlir::Type pointeeTy = fir::dyn_cast_ptrEleTy(pointer);
+  assert(pointeeTy && "expected pointee type to be extractable");
+
+  // Box types contain both a descriptor and referenced data. The genStore API
+  // handles simple stores and cannot properly manage both parts.
+  if (fir::isa_box_type(pointeeTy))
+    return false;
+
+  // Unlimited polymorphic (class(*)) cannot be handled because type is unknown.
+  if (fir::isUnlimitedPolymorphicType(pointeeTy))
+    return false;
+
+  // Return false for dynamic size types because the store logic
+  // cannot be determined simply from the type.
+  if (fir::hasDynamicSize(pointeeTy))
+    return false;
+
+  // Get the type from the value being stored
+  mlir::Type valueType = valueToStore.getType();
+  mlir::Value convertedValue = valueToStore;
+
+  // If the value type differs from the pointee type, insert a convert
+  if (valueType != pointeeTy)
+    convertedValue =
+        fir::ConvertOp::create(builder, loc, pointeeTy, valueToStore);
+
+  fir::StoreOp::create(builder, loc, convertedValue, destPtr);
+  return true;
+}
+
+template bool OpenACCPointerLikeModel<fir::ReferenceType>::genStore(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::Value valueToStore,
+    mlir::TypedValue<mlir::acc::PointerLikeType> destPtr) const;
+
+template bool OpenACCPointerLikeModel<fir::PointerType>::genStore(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::Value valueToStore,
+    mlir::TypedValue<mlir::acc::PointerLikeType> destPtr) const;
+
+template bool OpenACCPointerLikeModel<fir::HeapType>::genStore(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::Value valueToStore,
+    mlir::TypedValue<mlir::acc::PointerLikeType> destPtr) const;
+
+template bool OpenACCPointerLikeModel<fir::LLVMPointerType>::genStore(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::Value valueToStore,
+    mlir::TypedValue<mlir::acc::PointerLikeType> destPtr) const;
+
 } // namespace fir::acc

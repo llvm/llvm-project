@@ -107,6 +107,13 @@ def : Pat<(rotr I32:$lhs, (and I32:$rhs, 31)), (ROTR_I32 I32:$lhs, I32:$rhs)>;
 def : Pat<(rotl I64:$lhs, (and I64:$rhs, 63)), (ROTL_I64 I64:$lhs, I64:$rhs)>;
 def : Pat<(rotr I64:$lhs, (and I64:$rhs, 63)), (ROTR_I64 I64:$lhs, I64:$rhs)>;
 
+def : Pat<(shl I64:$lhs, (zext (and I32:$rhs, 63))),
+                               (SHL_I64 I64:$lhs, (I64_EXTEND_U_I32 I32:$rhs))>;
+def : Pat<(sra I64:$lhs, (zext (and I32:$rhs, 63))),
+                               (SHR_S_I64 I64:$lhs, (I64_EXTEND_U_I32 I32:$rhs))>;
+def : Pat<(srl I64:$lhs, (zext (and I32:$rhs, 63))),
+                               (SHR_U_I64 I64:$lhs, (I64_EXTEND_U_I32 I32:$rhs))>;
+
 defm SELECT_I32 : I<(outs I32:$dst), (ins I32:$lhs, I32:$rhs, I32:$cond),
                     (outs), (ins),
                     [(set I32:$dst, (select I32:$cond, I32:$lhs, I32:$rhs))],

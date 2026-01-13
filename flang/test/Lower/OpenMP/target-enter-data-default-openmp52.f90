@@ -22,6 +22,6 @@ contains
   !CHECK-52: omp.map.info var_ptr(%2 : !fir.ref<!fir.box<!fir.heap<f32>>>, !fir.box<!fir.heap<f32>>) map_clauses(from) capture(ByRef) members(%4 : [0] : !fir.llvm_ptr<!fir.ref<f32>>) -> !fir.ref<!fir.box<!fir.heap<f32>>> {name = "a"}
   !CHECK-51: from, release and delete map types are permitted
   deallocate(A)
-  
+
   end subroutine finalize
 end module test

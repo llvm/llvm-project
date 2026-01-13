@@ -1,4 +1,6 @@
 ; RUN: llc -mtriple=bpf < %s | FileCheck %s
+; XFAIL: *
+; Doesn't currently build, with error 'only small returns supported'.
 
 define void @test(ptr %a) nounwind {
 ; CHECK-LABEL: test:

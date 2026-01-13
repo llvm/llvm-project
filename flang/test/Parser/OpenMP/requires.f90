@@ -8,7 +8,7 @@
 !PARSE-TREE: OpenMPDeclarativeConstruct -> OpenMPRequiresConstruct -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = requires
 !PARSE-TREE: | OmpClauseList -> OmpClause -> AtomicDefaultMemOrder -> OmpAtomicDefaultMemOrderClause -> OmpMemoryOrderType = Seq_Cst
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
 !$omp requires unified_shared_memory unified_address
 
@@ -18,7 +18,7 @@
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = requires
 !PARSE-TREE: | OmpClauseList -> OmpClause -> UnifiedSharedMemory
 !PARSE-TREE: | OmpClause -> UnifiedAddress
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
 !$omp requires dynamic_allocators reverse_offload
 
@@ -28,7 +28,7 @@
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = requires
 !PARSE-TREE: | OmpClauseList -> OmpClause -> DynamicAllocators
 !PARSE-TREE: | OmpClause -> ReverseOffload
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
 !$omp requires self_maps(.true.) unified_address(.false.)
 
@@ -42,7 +42,7 @@
 !PARSE-TREE: | OmpClause -> UnifiedAddress -> OmpUnifiedAddressClause -> Scalar -> Logical -> Constant -> Expr = '.false._4'
 !PARSE-TREE: | | LiteralConstant -> LogicalLiteralConstant
 !PARSE-TREE: | | | bool = 'false'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
 !$omp requires device_safesync
 
@@ -51,6 +51,6 @@
 !PARSE-TREE: OpenMPDeclarativeConstruct -> OpenMPRequiresConstruct -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = requires
 !PARSE-TREE: | OmpClauseList -> OmpClause -> DeviceSafesync
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
 end

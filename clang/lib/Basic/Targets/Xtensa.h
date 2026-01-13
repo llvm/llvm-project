@@ -50,7 +50,7 @@ public:
     WIntType = UnsignedInt;
     UseZeroLengthBitfieldAlignment = true;
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 32;
-    resetDataLayout("e-m:e-p:32:32-i8:8:32-i16:16:32-i64:64-n32");
+    resetDataLayout();
   }
 
   void getTargetDefines(const LangOptions &Opts,
