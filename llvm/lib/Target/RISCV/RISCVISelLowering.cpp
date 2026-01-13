@@ -9735,7 +9735,6 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   }
 
   // Lower vector SELECTs to VSELECTs by splatting the condition.
-  // P extension packed types are handled like scalars below.
   if (VT.isVector()) {
     MVT SplatCondVT = VT.changeVectorElementType(MVT::i1);
     SDValue CondSplat = DAG.getSplat(SplatCondVT, DL, CondV);
