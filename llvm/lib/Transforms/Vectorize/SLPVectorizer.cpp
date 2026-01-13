@@ -23919,8 +23919,80 @@ bool SLPVectorizerPass::vectorizeStores(
   bool Changed = false;
 
   auto TryToVectorize = [&](const RelatedStoreInsts::DistToInstMap &StoreSeq) {
-    auto VectorizeOperands = [&](BoUpSLP::ValueList &RawOperands,
-                                 bool Strided) -> void {
+    struct OperandsT {
+      BoUpSLP::ValueList Ops;
+      unsigned Stride;
+      OperandsT(std::initializer_list<Value *> Ops, unsigned Stride)
+          : Ops(Ops), Stride(Stride) {};
+
+      bool operator<(const OperandsT &Other) const {
+        auto GetScore = [](const OperandsT &Ops) -> unsigned {
+          return Ops.Ops.size() / ((Ops.Stride == 1) ? 1 : 2);
+        };
+        return GetScore(*this) > GetScore(Other);
+      }
+    };
+    SmallVector<OperandsT> AllOperands;
+    // All chains that we're still building
+    // - bool: Has been added to AllOperands, if just single operand, don't add
+    // yet
+    // - unsigned: Idx into either AllOperands or Stores depending on if added
+    // already
+    // - unsigned: Stride size
+    SmallVector<SmallVector<std::tuple<bool, unsigned, unsigned>, 1>> Chains(
+        MaxProfitableStride + 2);
+    auto GetChainsKey = [&](int64_t Query) -> unsigned {
+      // Just modulo function, get the index into Chains for a given query
+      int64_t Rem = (Query % (int64_t)Chains.size());
+      if (Rem < 0)
+        Rem += (int64_t)Chains.size();
+      return (unsigned)Rem;
+    };
+    int64_t LastDist;
+    for (auto [Idx, Data] : enumerate(StoreSeq)) {
+      auto &[Dist, InstIdx] = Data;
+      // Clean up chains that can't be continued
+      if (Idx > 0)
+        for (int64_t D = LastDist; D < Dist; ++D) {
+          Chains[GetChainsKey(D)].clear();
+        }
+      LastDist = Dist;
+
+      // Track which stride lengths we found existing chains for
+      // Don't have to add new entries for these
+      SmallVector<bool> FoundStrides(MaxProfitableStride + 1, false);
+      for (auto [IsAllOpsIdx, OpIdx, Stride] : Chains[GetChainsKey(Dist)]) {
+        if (IsAllOpsIdx) {
+          // Chain already in AllOperands()
+          AllOperands[OpIdx].Ops.push_back(Stores[InstIdx]);
+        } else {
+          // Chain just a single element, not yet in AllOperands()
+          AllOperands.emplace_back(
+              std::initializer_list<Value *>{Stores[OpIdx], Stores[InstIdx]},
+              Stride);
+          OpIdx = AllOperands.size() - 1;
+        }
+        unsigned Key = GetChainsKey(Stride + Dist);
+        Chains[Key].push_back({true, OpIdx, Stride});
+        FoundStrides[Stride] = true;
+      }
+
+      // For any stride lengths that we didn't append to a chain for,
+      // instead start a new chain
+      for (auto Stride : seq<unsigned>(
+               1, (EnableStridedStores ? MaxProfitableStride : 1) + 1)) {
+        if (FoundStrides[Stride])
+          continue;
+        unsigned Key = GetChainsKey(Dist + Stride);
+        Chains[Key].push_back({false, InstIdx, Stride});
+      }
+    }
+
+    // Try longer chains first
+    std::sort(AllOperands.begin(), AllOperands.end());
+    for (auto &[RawOperands, Stride] : AllOperands) {
+      bool Strided = Stride != 1;
+
       unsigned FirstAlive = RawOperands.size();
       for (unsigned Idx : seq<unsigned>(RawOperands.size()))
         if (!R.isDeleted(cast<Instruction>(RawOperands[Idx]))) {
@@ -24198,81 +24270,7 @@ bool SLPVectorizerPass::vectorizeStores(
         // attempts were unsuccessful because of the cost issues.
         CandidateVFs.push_back(VF);
       }
-    };
-
-    struct OperandsT {
-      BoUpSLP::ValueList Ops;
-      unsigned Stride;
-      OperandsT(std::initializer_list<Value *> Ops, unsigned Stride)
-          : Ops(Ops), Stride(Stride) {};
-
-      bool operator<(const OperandsT &Other) const {
-        auto GetScore = [](const OperandsT &Ops) -> unsigned {
-          return Ops.Ops.size() / ((Ops.Stride == 1) ? 1 : 2);
-        };
-        return GetScore(*this) > GetScore(Other);
-      }
-    };
-    SmallVector<OperandsT> AllOperands;
-    // All chains that we're still building
-    // - bool: Has been added to AllOperands, if just single operand, don't add
-    // yet
-    // - unsigned: Idx into either AllOperands or Stores depending on if added
-    // already
-    // - unsigned: Stride size
-    SmallVector<SmallVector<std::tuple<bool, unsigned, unsigned>, 1>> Chains(
-        MaxProfitableStride + 2);
-    auto GetChainsKey = [&](int64_t Query) -> unsigned {
-      // Just modulo function, get the index into Chains for a given query
-      int64_t Rem = (Query % (int64_t)Chains.size());
-      if (Rem < 0)
-        Rem += (int64_t)Chains.size();
-      return (unsigned)Rem;
-    };
-    int64_t LastDist;
-    for (auto [Idx, Data] : enumerate(StoreSeq)) {
-      auto &[Dist, InstIdx] = Data;
-      // Clean up chains that can't be continued
-      if (Idx > 0)
-        for (int64_t D = LastDist; D < Dist; ++D) {
-          Chains[GetChainsKey(D)].clear();
-        }
-      LastDist = Dist;
-
-      // Track which stride lengths we found existing chains for
-      // Don't have to add new entries for these
-      SmallVector<bool> FoundStrides(MaxProfitableStride + 1, false);
-      for (auto [IsAllOpsIdx, OpIdx, Stride] : Chains[GetChainsKey(Dist)]) {
-        if (IsAllOpsIdx) {
-          // Chain already in AllOperands()
-          AllOperands[OpIdx].Ops.push_back(Stores[InstIdx]);
-        } else {
-          // Chain just a single element, not yet in AllOperands()
-          AllOperands.emplace_back(
-              std::initializer_list<Value *>{Stores[OpIdx], Stores[InstIdx]},
-              Stride);
-          OpIdx = AllOperands.size() - 1;
-        }
-        unsigned Key = GetChainsKey(Stride + Dist);
-        Chains[Key].push_back({true, OpIdx, Stride});
-        FoundStrides[Stride] = true;
-      }
-
-      // For any stride lengths that we didn't append to a chain for,
-      // instead start a new chain
-      for (auto Stride : seq<unsigned>(
-               1, (EnableStridedStores ? MaxProfitableStride : 1) + 1)) {
-        if (FoundStrides[Stride])
-          continue;
-        unsigned Key = GetChainsKey(Dist + Stride);
-        Chains[Key].push_back({false, InstIdx, Stride});
-      }
     }
-
-    // Try longer chains first
-    std::sort(AllOperands.begin(), AllOperands.end());
-    for (auto &Operands : AllOperands)
-      VectorizeOperands(Operands.Ops, /*Strided=*/Operands.Stride != 1);
   };
 
   /// Groups of stores to vectorize
