@@ -755,14 +755,18 @@ bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
       // source memref is static and the value in the target memref is the
       // same. They are also compatible if either one is dynamic (see
       // description of MemRefCastOp for details).
+      // Note that for dimensions of size 1, the stride can differ.
       auto checkCompatible = [](int64_t a, int64_t b) {
         return (ShapedType::isDynamic(a) || ShapedType::isDynamic(b) || a == b);
       };
       if (!checkCompatible(aOffset, bOffset))
         return false;
-      for (const auto &aStride : enumerate(aStrides))
-        if (!checkCompatible(aStride.value(), bStrides[aStride.index()]))
+      for (const auto &[index, aStride] : enumerate(aStrides)) {
+        if (aT.getDimSize(index) == 1)
+          continue;
+        if (!checkCompatible(aStride, bStrides[index]))
           return false;
+      }
     }
     if (aT.getMemorySpace() != bT.getMemorySpace())
       return false;
@@ -2580,7 +2584,7 @@ void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                 MLIRContext *context) {
   results.add<
       ComposeReassociativeReshapeOps<ExpandShapeOp, ReshapeOpKind::kExpand>,
-      ComposeExpandOfCollapseOp<ExpandShapeOp, CollapseShapeOp>,
+      ComposeExpandOfCollapseOp<ExpandShapeOp, CollapseShapeOp, CastOp>,
       ExpandShapeOpMemRefCastFolder>(context);
 }
 
