@@ -393,7 +393,7 @@ class CheckRunner:
                 continue
             # Matches the beginning of a clang-tidy diagnostic line,
             # which starts with "file_path:line:col: ".
-            match = re.match(r"^([^:]+):\d+:\d+: ", line)
+            match = re.match(r"^(.+):\d+:\d+: ", line)
             if match:
                 abs_path = os.path.normcase(os.path.abspath(match.group(1)))
                 current_file = abs_path if abs_path in header_messages else ""
