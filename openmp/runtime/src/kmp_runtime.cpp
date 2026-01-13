@@ -6747,7 +6747,7 @@ void __kmp_register_library_startup(void) {
         }
       }
       if (__kmp_shm_available && shm_preexist == 0) { // SHM created, set size
-        if (ftruncate(fd1, SHM_SIZE) == -1) { // error occured setting size;
+        if (ftruncate(fd1, SHM_SIZE) == -1) { // error occurred setting size;
           KMP_WARNING(FunctionError, "Can't set size of SHM");
           __kmp_shm_available = false;
         }
@@ -6796,7 +6796,7 @@ void __kmp_register_library_startup(void) {
       }
       if (__kmp_tmp_available && tmp_preexist == 0) {
         // we created /tmp file now set size
-        if (ftruncate(fd1, SHM_SIZE) == -1) { // error occured setting size;
+        if (ftruncate(fd1, SHM_SIZE) == -1) { // error occurred setting size;
           KMP_WARNING(FunctionError, "Can't set size of /tmp file");
           __kmp_tmp_available = false;
         }

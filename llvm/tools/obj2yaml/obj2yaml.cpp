@@ -94,7 +94,6 @@ static void reportError(StringRef Input, Error Err) {
   std::string ErrMsg;
   raw_string_ostream OS(ErrMsg);
   logAllUnhandledErrors(std::move(Err), OS);
-  OS.flush();
   errs() << "Error reading file: " << Input << ": " << ErrMsg;
   errs().flush();
 }
