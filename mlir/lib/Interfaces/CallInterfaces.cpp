@@ -15,15 +15,24 @@ using namespace mlir;
 // Argument and result attributes utilities
 //===----------------------------------------------------------------------===//
 
-static ParseResult
-parseTypeAndAttrList(OpAsmParser &parser, SmallVectorImpl<Type> &types,
-                     SmallVectorImpl<DictionaryAttr> &attrs) {
+static inline ParseResult defaultTypeParser(AsmParser &parser, Type &ty) {
+  return parser.parseType(ty);
+}
+
+static inline void defaultTypePrinter(AsmPrinter &printer, Type ty) {
+  printer << ty;
+}
+
+static ParseResult parseTypeAndAttrList(
+    OpAsmParser &parser, SmallVectorImpl<Type> &types,
+    SmallVectorImpl<DictionaryAttr> &attrs,
+    function_ref<ParseResult(AsmParser &, Type &)> typeParser) {
   // Parse individual function results.
   return parser.parseCommaSeparatedList([&]() -> ParseResult {
     types.emplace_back();
     attrs.emplace_back();
     NamedAttrList attrList;
-    if (parser.parseType(types.back()) ||
+    if (typeParser(parser, types.back()) ||
         parser.parseOptionalAttrDict(attrList))
       return failure();
     attrs.back() = attrList.getDictionary(parser.getContext());
@@ -33,12 +42,16 @@ parseTypeAndAttrList(OpAsmParser &parser, SmallVectorImpl<Type> &types,
 
 ParseResult call_interface_impl::parseFunctionResultList(
     OpAsmParser &parser, SmallVectorImpl<Type> &resultTypes,
-    SmallVectorImpl<DictionaryAttr> &resultAttrs) {
+    SmallVectorImpl<DictionaryAttr> &resultAttrs,
+    function_ref<ParseResult(AsmParser &, Type &)> typeParser) {
+  if (!typeParser)
+    typeParser = defaultTypeParser;
+
   if (failed(parser.parseOptionalLParen())) {
     // We already know that there is no `(`, so parse a type.
     // Because there is no `(`, it cannot be a function type.
     Type ty;
-    if (parser.parseType(ty))
+    if (typeParser(parser, ty))
       return failure();
     resultTypes.push_back(ty);
     resultAttrs.emplace_back();
@@ -48,7 +61,7 @@ ParseResult call_interface_impl::parseFunctionResultList(
   // Special case for an empty set of parens.
   if (succeeded(parser.parseOptionalRParen()))
     return success();
-  if (parseTypeAndAttrList(parser, resultTypes, resultAttrs))
+  if (parseTypeAndAttrList(parser, resultTypes, resultAttrs, typeParser))
     return failure();
   return parser.parseRParen();
 }
@@ -57,20 +70,24 @@ ParseResult call_interface_impl::parseFunctionSignature(
     OpAsmParser &parser, SmallVectorImpl<Type> &argTypes,
     SmallVectorImpl<DictionaryAttr> &argAttrs,
     SmallVectorImpl<Type> &resultTypes,
-    SmallVectorImpl<DictionaryAttr> &resultAttrs, bool mustParseEmptyResult) {
+    SmallVectorImpl<DictionaryAttr> &resultAttrs, bool mustParseEmptyResult,
+    function_ref<ParseResult(AsmParser &, Type &)> typeParser) {
+  if (!typeParser)
+    typeParser = defaultTypeParser;
+
   // Parse arguments.
   if (parser.parseLParen())
     return failure();
   if (failed(parser.parseOptionalRParen())) {
-    if (parseTypeAndAttrList(parser, argTypes, argAttrs))
+    if (parseTypeAndAttrList(parser, argTypes, argAttrs, typeParser))
       return failure();
     if (parser.parseRParen())
       return failure();
   }
   // Parse results.
   if (succeeded(parser.parseOptionalArrow()))
-    return call_interface_impl::parseFunctionResultList(parser, resultTypes,
-                                                        resultAttrs);
+    return call_interface_impl::parseFunctionResultList(
+        parser, resultTypes, resultAttrs, typeParser);
   if (mustParseEmptyResult)
     return failure();
   return success();
@@ -78,8 +95,12 @@ ParseResult call_interface_impl::parseFunctionSignature(
 
 /// Print a function result list. The provided `attrs` must either be null, or
 /// contain a set of DictionaryAttrs of the same arity as `types`.
-static void printFunctionResultList(OpAsmPrinter &p, TypeRange types,
-                                    ArrayAttr attrs) {
+static void
+printFunctionResultList(OpAsmPrinter &p, TypeRange types, ArrayAttr attrs,
+                        function_ref<void(AsmPrinter &, Type)> typePrinter) {
+  if (!typePrinter)
+    typePrinter = defaultTypePrinter;
+
   assert(!types.empty() && "Should not be called for empty result list.");
   assert((!attrs || attrs.size() == types.size()) &&
          "Invalid number of attributes.");
@@ -90,7 +111,7 @@ static void printFunctionResultList(OpAsmPrinter &p, TypeRange types,
   if (needsParens)
     os << '(';
   llvm::interleaveComma(llvm::seq<size_t>(0, types.size()), os, [&](size_t i) {
-    p.printType(types[i]);
+    typePrinter(p, types[i]);
     if (attrs)
       p.printOptionalAttrDict(llvm::cast<DictionaryAttr>(attrs[i]).getValue());
   });
@@ -101,11 +122,15 @@ static void printFunctionResultList(OpAsmPrinter &p, TypeRange types,
 void call_interface_impl::printFunctionSignature(
     OpAsmPrinter &p, TypeRange argTypes, ArrayAttr argAttrs, bool isVariadic,
     TypeRange resultTypes, ArrayAttr resultAttrs, Region *body,
-    bool printEmptyResult) {
+    bool printEmptyResult,
+    function_ref<void(AsmPrinter &, Type)> typePrinter) {
+  if (!typePrinter)
+    typePrinter = defaultTypePrinter;
+
   bool isExternal = !body || body->empty();
   if (!isExternal && !isVariadic && !argAttrs && !resultAttrs &&
       printEmptyResult) {
-    p.printFunctionalType(argTypes, resultTypes);
+    p.printFunctionalType(argTypes, resultTypes, typePrinter);
     return;
   }
 
@@ -118,9 +143,10 @@ void call_interface_impl::printFunctionSignature(
       ArrayRef<NamedAttribute> attrs;
       if (argAttrs)
         attrs = llvm::cast<DictionaryAttr>(argAttrs[i]).getValue();
-      p.printRegionArgument(body->getArgument(i), attrs);
+      p.printRegionArgument(body->getArgument(i), attrs, /*omitType=*/false,
+                            typePrinter);
     } else {
-      p.printType(argTypes[i]);
+      typePrinter(p, argTypes[i]);
       if (argAttrs)
         p.printOptionalAttrDict(
             llvm::cast<DictionaryAttr>(argAttrs[i]).getValue());
@@ -137,7 +163,7 @@ void call_interface_impl::printFunctionSignature(
 
   if (!resultTypes.empty()) {
     p << " -> ";
-    printFunctionResultList(p, resultTypes, resultAttrs);
+    printFunctionResultList(p, resultTypes, resultAttrs, typePrinter);
   } else if (printEmptyResult) {
     p << " -> ()";
   }

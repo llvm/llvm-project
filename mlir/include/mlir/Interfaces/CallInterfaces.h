@@ -37,6 +37,8 @@ Operation *resolveCallable(CallOpInterface call,
                            SymbolTableCollection *symbolTable = nullptr);
 
 /// Parse a function or call result list.
+/// You can override the default type parsing behavior using the typeParser
+/// parameter.
 ///
 ///   function-result-list ::= function-result-list-parens
 ///                          | non-function-type
@@ -45,31 +47,39 @@ Operation *resolveCallable(CallOpInterface call,
 ///   function-result-list-no-parens ::= function-result (`,` function-result)*
 ///   function-result ::= type attribute-dict?
 ///
-ParseResult
-parseFunctionResultList(OpAsmParser &parser, SmallVectorImpl<Type> &resultTypes,
-                        SmallVectorImpl<DictionaryAttr> &resultAttrs);
+ParseResult parseFunctionResultList(
+    OpAsmParser &parser, SmallVectorImpl<Type> &resultTypes,
+    SmallVectorImpl<DictionaryAttr> &resultAttrs,
+    function_ref<ParseResult(AsmParser &, Type &)> typeParser = {});
 
 /// Parses a function signature using `parser`. This does not deal with function
 /// signatures containing SSA region arguments (to parse these signatures, use
 /// function_interface_impl::parseFunctionSignature). When
 /// `mustParseEmptyResult`, `-> ()` is expected when there is no result type.
+/// You can override the default type parsing behavior using the typeParser
+/// parameter.
+///
 ///
 ///   no-ssa-function-signature ::= `(` no-ssa-function-arg-list `)`
 ///                               -> function-result-list
 ///   no-ssa-function-arg-list  ::= no-ssa-function-arg
 ///                               (`,` no-ssa-function-arg)*
 ///   no-ssa-function-arg       ::= type attribute-dict?
-ParseResult parseFunctionSignature(OpAsmParser &parser,
-                                   SmallVectorImpl<Type> &argTypes,
-                                   SmallVectorImpl<DictionaryAttr> &argAttrs,
-                                   SmallVectorImpl<Type> &resultTypes,
-                                   SmallVectorImpl<DictionaryAttr> &resultAttrs,
-                                   bool mustParseEmptyResult = true);
+ParseResult parseFunctionSignature(
+    OpAsmParser &parser, SmallVectorImpl<Type> &argTypes,
+    SmallVectorImpl<DictionaryAttr> &argAttrs,
+    SmallVectorImpl<Type> &resultTypes,
+    SmallVectorImpl<DictionaryAttr> &resultAttrs,
+    bool mustParseEmptyResult = true,
+    function_ref<ParseResult(AsmParser &, Type &)> typeParser = {});
 
 /// Print a function signature for a call or callable operation. If a body
 /// region is provided, the SSA arguments are printed in the signature. When
 /// `printEmptyResult` is false, `-> function-result-list` is omitted when
 /// `resultTypes` is empty.
+/// You can override the default type printing behavior using the typePrinter
+/// parameter.
+///
 ///
 ///   function-signature     ::= ssa-function-signature
 ///                            | no-ssa-function-signature
@@ -77,11 +87,11 @@ ParseResult parseFunctionSignature(OpAsmParser &parser,
 ///                            -> function-result-list
 ///   ssa-function-arg-list  ::= ssa-function-arg (`,` ssa-function-arg)*
 ///   ssa-function-arg       ::= `%`name `:` type attribute-dict?
-void printFunctionSignature(OpAsmPrinter &p, TypeRange argTypes,
-                            ArrayAttr argAttrs, bool isVariadic,
-                            TypeRange resultTypes, ArrayAttr resultAttrs,
-                            Region *body = nullptr,
-                            bool printEmptyResult = true);
+void printFunctionSignature(
+    OpAsmPrinter &p, TypeRange argTypes, ArrayAttr argAttrs, bool isVariadic,
+    TypeRange resultTypes, ArrayAttr resultAttrs, Region *body = nullptr,
+    bool printEmptyResult = true,
+    function_ref<void(AsmPrinter &, Type)> typePrinter = {});
 
 /// Adds argument and result attributes, provided as `argAttrs` and
 /// `resultAttrs` arguments, to the list of operation attributes in `result`.
