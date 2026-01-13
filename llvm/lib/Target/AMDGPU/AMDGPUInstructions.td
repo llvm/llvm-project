@@ -854,7 +854,7 @@ class NeverNaNPats<dag ops, list<dag> frags> : PatFrags<ops, frags> {
     return CurDAG->isKnownNeverNaN(SDValue(N,0));
   }];
   let GISelPredicateCode = [{
-    return isKnownNeverNaN(MI.getOperand(0).getReg(), MRI);
+    return isKnownNeverNaN(MI.getOperand(0).getReg(), MRI, VT);
   }];
 }
 
