@@ -102,8 +102,7 @@ public:
   llvm::ScanInfo *scanInfo = nullptr;
   /// Map reduction variables to their LLVM types.
   std::unique_ptr<llvm::DenseMap<llvm::Value *, llvm::Type *>>
-      reductionVarToType =
-          std::make_unique<llvm::DenseMap<llvm::Value *, llvm::Type *>>();
+      reductionVarToType = nullptr;
 };
 
 /// Custom error class to signal translation errors that don't need reporting,
@@ -614,6 +613,9 @@ findReductionVarTypes(LLVM::ModuleTranslation &moduleTranslation) {
   llvm::DenseMap<llvm::Value *, llvm::Type *> *reductionVarToType = nullptr;
   moduleTranslation.stackWalk<OpenMPLoopInfoStackFrame>(
       [&](OpenMPLoopInfoStackFrame &frame) {
+        if (!frame.reductionVarToType)
+          frame.reductionVarToType =
+              std::make_unique<llvm::DenseMap<llvm::Value *, llvm::Type *>>();
         reductionVarToType = frame.reductionVarToType.get();
         return WalkResult::interrupt();
       });
@@ -1388,7 +1390,8 @@ initReductionVars(OP op, ArrayRef<BlockArgument> reductionArgs,
                   SmallVectorImpl<llvm::Value *> &privateReductionVariables,
                   DenseMap<Value, llvm::Value *> &reductionVariableMap,
                   llvm::ArrayRef<bool> isByRef,
-                  SmallVectorImpl<DeferredStore> &deferredStores) {
+                  SmallVectorImpl<DeferredStore> &deferredStores,
+                  bool isInScanRegion = false) {
   if (op.getNumReductionVars() == 0)
     return success();
 
@@ -1427,7 +1430,7 @@ initReductionVars(OP op, ArrayRef<BlockArgument> reductionArgs,
     SmallVector<llvm::Value *, 1> phis;
     llvm::Type *reductionType =
         moduleTranslation.convertType(reductionDecls[i].getType());
-    if (reductionVarToType != nullptr)
+    if (isInScanRegion && reductionVarToType != nullptr)
       (*reductionVarToType)[privateReductionVariables[i]] = reductionType;
 
     // map block argument to initializer region
@@ -1504,8 +1507,6 @@ static void collectReductionInfo(
 
   // Collect the reduction information.
   reductionInfos.reserve(numReductions);
-  llvm::DenseMap<llvm::Value *, llvm::Type *> *reductionVarToType =
-      findReductionVarTypes(moduleTranslation);
   for (unsigned i = 0; i < numReductions; ++i) {
     llvm::OpenMPIRBuilder::ReductionGenAtomicCBTy atomicGen = nullptr;
     if (owningAtomicReductionGens[i])
@@ -1522,12 +1523,9 @@ static void collectReductionInfo(
       return mlir::WalkResult::advance();
     });
 
-    llvm::Type *reductionType =
-        moduleTranslation.convertType(reductionDecls[i].getType());
-    if (reductionVarToType != nullptr)
-      (*reductionVarToType)[privateReductionVariables[i]] = reductionType;
     reductionInfos.push_back(
-        {reductionType, variable, privateReductionVariables[i],
+        {moduleTranslation.convertType(reductionDecls[i].getType()), variable,
+         privateReductionVariables[i],
          /*EvaluationKind=*/llvm::OpenMPIRBuilder::EvalKind::Scalar,
          owningReductionGens[i],
          /*ReductionGenClang=*/nullptr, atomicGen,
@@ -2761,11 +2759,14 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
     return failure();
 
   assert(afterAllocas.get()->getSinglePredecessor());
-  if (failed(initReductionVars(wsloopOp, reductionArgs, builder,
-                               moduleTranslation,
-                               afterAllocas.get()->getSinglePredecessor(),
-                               reductionDecls, privateReductionVariables,
-                               reductionVariableMap, isByRef, deferredStores)))
+  bool isInScanRegion =
+      wsloopOp.getReductionMod() && (wsloopOp.getReductionMod().value() ==
+                                     mlir::omp::ReductionModifier::inscan);
+  if (failed(initReductionVars(
+          wsloopOp, reductionArgs, builder, moduleTranslation,
+          afterAllocas.get()->getSinglePredecessor(), reductionDecls,
+          privateReductionVariables, reductionVariableMap, isByRef,
+          deferredStores, isInScanRegion)))
     return failure();
 
   // TODO: Handle doacross loops when the ordered clause has a parameter.
@@ -2773,9 +2774,6 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   std::optional<omp::ScheduleModifier> scheduleMod = wsloopOp.getScheduleMod();
   bool isSimd = wsloopOp.getScheduleSimd();
   bool loopNeedsBarrier = !wsloopOp.getNowait();
-  bool isInScanRegion =
-      wsloopOp.getReductionMod() && (wsloopOp.getReductionMod().value() ==
-                                     mlir::omp::ReductionModifier::inscan);
   if (isInScanRegion)
     assert(wsloopOp.getLinearVars().empty() &&
            "Linear clause support is not enabled with scan reduction");
