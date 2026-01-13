@@ -3303,6 +3303,8 @@ void JoinVals::pruneValues(JoinVals &Other,
       break;
     case CR_Replace: {
       // This value takes precedence over the value in Other.LR.
+
+
       LIS->pruneValue(Other.LR, Def, &EndPoints);
       // Check if we're replacing an IMPLICIT_DEF value. The IMPLICIT_DEF
       // instructions are only inserted to provide a live-out value for PHI
@@ -3311,6 +3313,34 @@ void JoinVals::pruneValues(JoinVals &Other,
       Val &OtherV = Other.Vals[Vals[i].OtherVNI->id];
       bool EraseImpDef =
           OtherV.ErasableImplicitDef && OtherV.Resolution == CR_Keep;
+
+      // Even if OtherVNI is an erasable IMPLICIT_DEF, we need to check if
+      // Other subranges of the Other register are live at Def. If so, this
+      // def is a partial redef and the undef flag should be cleared.
+      bool OtherSubrangeLive = false;
+      if (EraseImpDef && TrackSubRegLiveness) {
+        LiveInterval &OtherLI = LIS->getInterval(Other.Reg);
+        if (OtherLI.hasSubRanges()) {
+          // Get the lane mask of the IMPLICIT_DEF being erased, composed
+          // with Other's SubIdx.
+          LaneBitmask ErasedLanes =
+              TRI->composeSubRegIndexLaneMask(Other.SubIdx, OtherV.WriteLanes);
+          for (const LiveInterval::SubRange &SR : OtherLI.subranges()) {
+            // Compose SR's lane mask with Other's SubIdx.
+            LaneBitmask SRLanes =
+                TRI->composeSubRegIndexLaneMask(Other.SubIdx, SR.LaneMask);
+            // Skip if this is the lane being erased.
+            if ((SRLanes & ErasedLanes).any())
+              continue;
+            // Check if this subrange is live at Def.
+            if (SR.liveAt(Def)) {
+              OtherSubrangeLive = true;
+              break;
+            }
+          }
+        }
+      }
+
       if (!Def.isBlock()) {
         if (changeInstrs) {
           // Remove <def,read-undef> flags. This def is now a partial redef.
@@ -3319,7 +3349,10 @@ void JoinVals::pruneValues(JoinVals &Other,
           for (MachineOperand &MO :
                Indexes->getInstructionFromIndex(Def)->all_defs()) {
             if (MO.getReg() == Reg) {
-              if (MO.getSubReg() != 0 && MO.isUndef() && !EraseImpDef)
+              // Clear undef if EraseImpDef is false or other subranges are
+              // live at Def.
+              if (MO.getSubReg() != 0 && MO.isUndef() &&
+                  (!EraseImpDef || OtherSubrangeLive))
                 MO.setIsUndef(false);
               MO.setIsDead(false);
             }
@@ -3780,7 +3813,7 @@ bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
   // registers to require trimming.
   SmallVector<Register, 8> ShrinkRegs;
   LHSVals.eraseInstrs(ErasedInstrs, ShrinkRegs, &LHS);
-  RHSVals.eraseInstrs(ErasedInstrs, ShrinkRegs);
+  RHSVals.eraseInstrs(ErasedInstrs, ShrinkRegs, &RHS);
   while (!ShrinkRegs.empty())
     shrinkToUses(&LIS->getInterval(ShrinkRegs.pop_back_val()));
 
