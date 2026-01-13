@@ -531,7 +531,7 @@ private:
 
     /// This only initializes state-independent characteristics of \p Remat, not
     /// the actual score.
-    ScoredRemat(const RematReg *Remat, const FreqInfo &Freq,
+    ScoredRemat(RematReg *Remat, const FreqInfo &Freq,
                 const GCNScheduleDAGMILive &DAG);
 
     /// Updates the rematerialization's score w.r.t. the current \p RPTargets.

@@ -2215,8 +2215,7 @@ PreRARematStage::ScoredRemat::FreqInfo::FreqInfo(
   }
 }
 
-PreRARematStage::ScoredRemat::ScoredRemat(const RematReg *Remat,
-                                          const FreqInfo &Freq,
+PreRARematStage::ScoredRemat::ScoredRemat(RematReg *Remat, const FreqInfo &Freq,
                                           const GCNScheduleDAGMILive &DAG)
     : Remat(Remat), NumRegs(getNumRegs(DAG)), FreqDiff(getFreqDiff(Freq)) {}
 
