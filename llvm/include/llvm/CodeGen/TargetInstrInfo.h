@@ -1031,8 +1031,7 @@ public:
   /// @param         MI Select instruction to analyze.
   /// @param Optimizable Returned as true if MI is optimizable.
   /// @returns False on success.
-  virtual bool analyzeSelect(const MachineInstr &MI,
-                             bool &Optimizable) const {
+  virtual bool analyzeSelect(const MachineInstr &MI, bool &Optimizable) const {
     assert(MI.getDesc().isSelect() && "MI must be a select instruction");
     return true;
   }
