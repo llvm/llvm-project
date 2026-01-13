@@ -729,8 +729,16 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
       // with non-disjoint constant bits.
       // TODO: The design should be updated to support partial constant
       // extraction.
-      if (BO->getOpcode() == Instruction::Xor)
+      if (BO->getOpcode() == Instruction::Xor) {
+        if (auto *ConstIOther = dyn_cast<ConstantInt>(TheOther)) {
+          const APInt &DisjointBits = extractDisjointBitsFromXor(BO);
+          const APInt &ConstantValue = ConstIOther->getValue();
+          const APInt &NonDisjointBits = ConstantValue & (~DisjointBits);
+          BO->setOperand(1 - OpNo,
+                         ConstantInt::get(BO->getType(), NonDisjointBits));
+        }
         return BO;
+      }
 
       // If NextInChain is 0 and not the LHS of a sub, we can simplify the
       // sub-expression to be just TheOther.
@@ -796,12 +804,7 @@ APInt ConstantOffsetExtractor::extractDisjointBitsFromXor(
   ConstantInt *XorConstant;
 
   // Match pattern: xor BaseOperand, Constant.
-  // Restricting the BaseOperand to a compile time unknown.
-  // TODO : Formally prove the safety of BaseOperand to be compile time constant
-  // and extend the optimization for those cases.
-  if (!match(XorInst,
-             m_Xor(m_Value(BaseOperand), m_ConstantInt(XorConstant))) ||
-      (match(BaseOperand, m_ConstantInt())))
+  if (!match(XorInst, m_Xor(m_Value(BaseOperand), m_ConstantInt(XorConstant))))
     return APInt::getZero(BitWidth);
 
   // Compute known bits for the base operand.
