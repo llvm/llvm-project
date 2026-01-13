@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags 
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags
 ! Semantic checks on hint clauses, as they appear on critical construct
 
 program sample
@@ -9,35 +9,35 @@ program sample
     logical :: z
     real :: k
     integer :: p(1)
-    
+
     !$omp critical (name) hint(1)
         y = 2
     !$omp end critical (name)
-    
+
     !$omp critical (name) hint(2)
         y = 2
     !$omp end critical (name)
-     
+
     !ERROR: The synchronization hint is not valid
     !$omp critical (name) hint(3)
         y = 2
     !$omp end critical (name)
-    
+
     !$omp critical (name)  hint(5)
         y = 2
     !$omp end critical (name)
-    
+
     !ERROR: The synchronization hint is not valid
     !$omp critical (name) hint(7)
         y = 2
     !$omp end critical (name)
-   
+
     !ERROR: Synchronization hint must be a constant integer value
     !ERROR: Must be a constant value
     !$omp critical (name) hint(x)
         y = 2
     !$omp end critical (name)
-    
+
     !$omp critical (name) hint(4)
         y = 2
     !$omp end critical (name)
@@ -53,10 +53,10 @@ program sample
     !$omp critical (name) hint(omp_lock_hint_speculative)
         y = 2
     !$omp end critical (name)
-    
+
     !ERROR: Synchronization hint must be a constant integer value
     !ERROR: Must be a constant value
-    !$omp critical (name) hint(omp_sync_hint_uncontended + omp_sync_hint) 
+    !$omp critical (name) hint(omp_sync_hint_uncontended + omp_sync_hint)
         y = 2
     !$omp end critical (name)
 
@@ -96,7 +96,7 @@ program sample
 
     !ERROR: Synchronization hint must be a constant integer value
     !ERROR: Must have INTEGER type, but is REAL(4)
-    !$omp critical (name) hint(1.0) 
+    !$omp critical (name) hint(1.0)
         y = 2
     !$omp end critical (name)
 
@@ -118,4 +118,3 @@ program sample
         y = 2
     !$omp end critical (name)
 end program
-

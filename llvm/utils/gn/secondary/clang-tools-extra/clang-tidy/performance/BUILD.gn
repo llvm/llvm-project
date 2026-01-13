@@ -31,7 +31,7 @@ static_library("performance") {
     "PerformanceTidyModule.cpp",
     "TriviallyDestructibleCheck.cpp",
     "TypePromotionInMathFnCheck.cpp",
-    "UnnecessaryCopyInitialization.cpp",
+    "UnnecessaryCopyInitializationCheck.cpp",
     "UnnecessaryValueParamCheck.cpp",
   ]
 }

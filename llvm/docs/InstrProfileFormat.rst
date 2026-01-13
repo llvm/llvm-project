@@ -80,7 +80,7 @@ of all the sections ahead of it.
 
 .. note::
    Sections might be padded to meet specific alignment requirements. For
-   simplicity, header fields and data sections solely for padding purpose are
+   simplicity, header fields and data sections solely for padding purposes are
    omitted in the data layout graph above and the rest of this document.
 
 Header
@@ -195,7 +195,7 @@ The fields are documented as follows:
 
 ``FuncHash``
   A checksum of the function's IR, taking control flow graph and instrumented
-  value sites into accounts. See `computeCFGHash`_ for details.
+  value sites into account. See `computeCFGHash`_ for details.
 
 .. _`computeCFGHash`: https://github.com/llvm/llvm-project/blob/7c3b67d2038cfb48a80299089f6a1308eee1df7f/llvm/lib/Transforms/Instrumentation/PGOInstrumentation.cpp#L616-L685
 
@@ -210,7 +210,7 @@ The fields are documented as follows:
 .. _`commit a1532ed`: https://github.com/llvm/llvm-project/commit/a1532ed27582038e2d9588108ba0fe8237f01844
 
   .. note::
-    ``CounterPtr`` might represent a different value for non-IRPGO use case. For
+    ``CounterPtr`` might represent a different value for non-IRPGO use cases. For
     example, for `binary profile correlation`_, it represents the absolute address of counter.
     When in doubt, check source code.
 
@@ -221,7 +221,7 @@ The fields are documented as follows:
   corresponding bitmap.
 
   .. note::
-    Similar to `CounterPtr`_, this field may represent a different value for non-IRPGO use case.
+    Similar to `CounterPtr`_, this field may represent a different value for non-IRPGO use cases.
 
 ``FunctionPointer``
   Records the function address when instrumented binary runs. This is used to

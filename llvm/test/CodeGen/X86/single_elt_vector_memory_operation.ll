@@ -20,25 +20,22 @@ define void @load_single_128bit_elt_vector(ptr %in, ptr %off, ptr %out) nounwind
 ; AVX-LABEL: load_single_128bit_elt_vector:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovaps (%rdi), %xmm0
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vmovaps %xmm1, 16(%rdx)
-; AVX-NEXT:    vmovaps %xmm0, (%rdx)
+; AVX-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: load_single_128bit_elt_vector:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovaps (%rdi), %xmm0
-; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vmovaps %xmm1, 16(%rdx)
-; AVX2-NEXT:    vmovaps %xmm0, (%rdx)
+; AVX2-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: load_single_128bit_elt_vector:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps (%rdi), %xmm0
-; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vmovaps %xmm1, 16(%rdx)
-; AVX512F-NEXT:    vmovaps %xmm0, (%rdx)
+; AVX512F-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
   %i0 = load <16 x i8>, ptr %in, align 64
   %i1 = bitcast <16 x i8> %i0 to <1 x i128>
@@ -112,9 +109,7 @@ define void @load_single_256bit_elt_vector(ptr %in, ptr %off, ptr %out) nounwind
 ; AVX512F-LABEL: load_single_256bit_elt_vector:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps (%rdi), %ymm0
-; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vmovaps %ymm1, 32(%rdx)
-; AVX512F-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX512F-NEXT:    vmovaps %zmm0, (%rdx)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
   %i0 = load <32 x i8>, ptr %in, align 64

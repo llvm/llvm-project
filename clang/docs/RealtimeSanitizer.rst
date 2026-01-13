@@ -187,7 +187,7 @@ A **partial** list of flags RealtimeSanitizer respects:
    * - ``abort_on_error``
      - OS dependent
      - boolean
-     - If true, the tool calls ``abort()`` instead of ``_exit()`` after printing the error report. On some OSes (MacOS, for example) this is beneficial because a better stack trace is emitted on crash.
+     - If true, the tool calls ``abort()`` instead of ``_exit()`` after printing the error report. On some OSes (macOS, for example) this is beneficial because a better stack trace is emitted on crash.
    * - ``symbolize``
      - ``true``
      - boolean

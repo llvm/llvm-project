@@ -117,7 +117,7 @@ int largeZ();
 #else // Vertex and Pixel only beyond here
 // expected-error-re@+1 {{attribute 'numthreads' is unsupported in '{{[A-Za-z]+}}' shaders, requires one of the following: compute, amplification, mesh}}
 [numthreads(1,1,1)]
-int main() {
+int main() : A {
  return 1;
 }
 

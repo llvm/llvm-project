@@ -25,7 +25,7 @@ define i32 @dead_i32(i1 %cond, i32 %x, ptr addrspace(1) %ptr1) #0 {
 ; ASM-DAG-NEXT:    global_store_b32 v[2:3], v0, off
 ; ASM-DAG-NEXT:    ; implicit-def: $vgpr0
 ; ASM-DAG-NEXT:  .LBB0_2: ; %if.end
-; ASM-DAG-NEXT:    s_wait_alu 0xfffe
+; ASM-DAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; ASM-DAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; ASM-DAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -48,7 +48,7 @@ define i32 @dead_i32(i1 %cond, i32 %x, ptr addrspace(1) %ptr1) #0 {
 ; ASM-GISEL-TRUE16-NEXT:    global_store_b32 v[2:3], v0, off
 ; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0
 ; ASM-GISEL-TRUE16-NEXT:  .LBB0_2: ; %if.end
-; ASM-GISEL-TRUE16-NEXT:    s_wait_alu 0xfffe
+; ASM-GISEL-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; ASM-GISEL-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; ASM-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -71,7 +71,7 @@ define i32 @dead_i32(i1 %cond, i32 %x, ptr addrspace(1) %ptr1) #0 {
 ; ASM-GISEL-FAKE16-NEXT:    global_store_b32 v[2:3], v0, off
 ; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr0
 ; ASM-GISEL-FAKE16-NEXT:  .LBB0_2: ; %if.end
-; ASM-GISEL-FAKE16-NEXT:    s_wait_alu 0xfffe
+; ASM-GISEL-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; ASM-GISEL-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; ASM-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -120,7 +120,7 @@ define %trivial_types @dead_struct(i1 %cond, %trivial_types %x, ptr addrspace(1)
 ; ASM-DAG-NEXT:    global_store_b32 v[17:18], v0, off
 ; ASM-DAG-NEXT:    ; implicit-def: $vgpr0
 ; ASM-DAG-NEXT:  .LBB1_2: ; %if.end
-; ASM-DAG-NEXT:    s_wait_alu 0xfffe
+; ASM-DAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; ASM-DAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; ASM-DAG-NEXT:    v_dual_mov_b32 v1, v2 :: v_dual_mov_b32 v2, v3
 ; ASM-DAG-NEXT:    v_dual_mov_b32 v3, v4 :: v_dual_mov_b32 v4, v5
@@ -149,11 +149,11 @@ define %trivial_types @dead_struct(i1 %cond, %trivial_types %x, ptr addrspace(1)
 ; ASM-GISEL-TRUE16-NEXT:  ; %bb.1: ; %if.then
 ; ASM-GISEL-TRUE16-NEXT:    s_mov_b32 s4, 0
 ; ASM-GISEL-TRUE16-NEXT:    s_mov_b32 s1, 0x3fc00000
-; ASM-GISEL-TRUE16-NEXT:    s_wait_alu 0xfffe
+; ASM-GISEL-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; ASM-GISEL-TRUE16-NEXT:    s_mov_b32 s7, s4
 ; ASM-GISEL-TRUE16-NEXT:    s_mov_b32 s5, s4
 ; ASM-GISEL-TRUE16-NEXT:    s_mov_b32 s6, s4
-; ASM-GISEL-TRUE16-NEXT:    s_wait_alu 0xfffe
+; ASM-GISEL-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; ASM-GISEL-TRUE16-NEXT:    v_dual_mov_b32 v14, s7 :: v_dual_mov_b32 v13, s6
 ; ASM-GISEL-TRUE16-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_add_nc_u32 v0, 15, v19
 ; ASM-GISEL-TRUE16-NEXT:    v_dual_mov_b32 v12, s5 :: v_dual_mov_b32 v11, s4
@@ -166,7 +166,7 @@ define %trivial_types @dead_struct(i1 %cond, %trivial_types %x, ptr addrspace(1)
 ; ASM-GISEL-TRUE16-NEXT:    global_store_b32 v[17:18], v0, off
 ; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0
 ; ASM-GISEL-TRUE16-NEXT:  .LBB1_2: ; %if.end
-; ASM-GISEL-TRUE16-NEXT:    s_wait_alu 0xfffe
+; ASM-GISEL-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; ASM-GISEL-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; ASM-GISEL-TRUE16-NEXT:    v_dual_mov_b32 v2, v3 :: v_dual_mov_b32 v3, v4
 ; ASM-GISEL-TRUE16-NEXT:    v_dual_mov_b32 v4, v5 :: v_dual_mov_b32 v5, v6
@@ -194,11 +194,11 @@ define %trivial_types @dead_struct(i1 %cond, %trivial_types %x, ptr addrspace(1)
 ; ASM-GISEL-FAKE16-NEXT:  ; %bb.1: ; %if.then
 ; ASM-GISEL-FAKE16-NEXT:    s_mov_b32 s4, 0
 ; ASM-GISEL-FAKE16-NEXT:    s_mov_b32 s1, 0x3fc00000
-; ASM-GISEL-FAKE16-NEXT:    s_wait_alu 0xfffe
+; ASM-GISEL-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; ASM-GISEL-FAKE16-NEXT:    s_mov_b32 s7, s4
 ; ASM-GISEL-FAKE16-NEXT:    s_mov_b32 s5, s4
 ; ASM-GISEL-FAKE16-NEXT:    s_mov_b32 s6, s4
-; ASM-GISEL-FAKE16-NEXT:    s_wait_alu 0xfffe
+; ASM-GISEL-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; ASM-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v14, s7 :: v_dual_mov_b32 v13, s6
 ; ASM-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_add_nc_u32 v0, 15, v19
 ; ASM-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v12, s5 :: v_dual_mov_b32 v11, s4
@@ -211,7 +211,7 @@ define %trivial_types @dead_struct(i1 %cond, %trivial_types %x, ptr addrspace(1)
 ; ASM-GISEL-FAKE16-NEXT:    global_store_b32 v[17:18], v0, off
 ; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr0
 ; ASM-GISEL-FAKE16-NEXT:  .LBB1_2: ; %if.end
-; ASM-GISEL-FAKE16-NEXT:    s_wait_alu 0xfffe
+; ASM-GISEL-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; ASM-GISEL-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; ASM-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v2, v3 :: v_dual_mov_b32 v3, v4
 ; ASM-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v4, v5 :: v_dual_mov_b32 v5, v6
@@ -340,7 +340,7 @@ define [32 x i32] @dead_array(i1 %cond, [32 x i32] %x, ptr addrspace(1) %ptr1, i
 ; ASM-DAG-NEXT:    global_store_b32 v[34:35], v0, off
 ; ASM-DAG-NEXT:    ; implicit-def: $vgpr0
 ; ASM-DAG-NEXT:  .LBB2_2: ; %if.end
-; ASM-DAG-NEXT:    s_wait_alu 0xfffe
+; ASM-DAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; ASM-DAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; ASM-DAG-NEXT:    s_wait_loadcnt 0x0
 ; ASM-DAG-NEXT:    v_dual_mov_b32 v1, v2 :: v_dual_mov_b32 v2, v3
@@ -398,7 +398,7 @@ define [32 x i32] @dead_array(i1 %cond, [32 x i32] %x, ptr addrspace(1) %ptr1, i
 ; ASM-GISEL-TRUE16-NEXT:    s_mov_b32 s1, 15
 ; ASM-GISEL-TRUE16-NEXT:    s_mov_b32 s2, 13
 ; ASM-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; ASM-GISEL-TRUE16-NEXT:    s_wait_alu 0xfffe
+; ASM-GISEL-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; ASM-GISEL-TRUE16-NEXT:    v_dual_mov_b32 v7, s1 :: v_dual_add_nc_u32 v0, 15, v35
 ; ASM-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v6, s2
 ; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr1
@@ -433,7 +433,7 @@ define [32 x i32] @dead_array(i1 %cond, [32 x i32] %x, ptr addrspace(1) %ptr1, i
 ; ASM-GISEL-TRUE16-NEXT:    global_store_b32 v[33:34], v0, off
 ; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0
 ; ASM-GISEL-TRUE16-NEXT:  .LBB2_2: ; %if.end
-; ASM-GISEL-TRUE16-NEXT:    s_wait_alu 0xfffe
+; ASM-GISEL-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; ASM-GISEL-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; ASM-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; ASM-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -476,7 +476,7 @@ define [32 x i32] @dead_array(i1 %cond, [32 x i32] %x, ptr addrspace(1) %ptr1, i
 ; ASM-GISEL-FAKE16-NEXT:    s_mov_b32 s1, 15
 ; ASM-GISEL-FAKE16-NEXT:    s_mov_b32 s2, 13
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; ASM-GISEL-FAKE16-NEXT:    s_wait_alu 0xfffe
+; ASM-GISEL-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; ASM-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v7, s1 :: v_dual_add_nc_u32 v0, 15, v35
 ; ASM-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v6, s2
 ; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr1
@@ -511,7 +511,7 @@ define [32 x i32] @dead_array(i1 %cond, [32 x i32] %x, ptr addrspace(1) %ptr1, i
 ; ASM-GISEL-FAKE16-NEXT:    global_store_b32 v[33:34], v0, off
 ; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr0
 ; ASM-GISEL-FAKE16-NEXT:  .LBB2_2: ; %if.end
-; ASM-GISEL-FAKE16-NEXT:    s_wait_alu 0xfffe
+; ASM-GISEL-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; ASM-GISEL-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; ASM-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
@@ -652,7 +652,7 @@ define %non_trivial_types @dead_non_trivial(i1 %cond, %non_trivial_types %x, ptr
 ; ASM-GISEL-TRUE16-NEXT:    s_mov_b32 s1, 0
 ; ASM-GISEL-TRUE16-NEXT:    s_movk_i32 s2, 0x3e00
 ; ASM-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; ASM-GISEL-TRUE16-NEXT:    s_wait_alu 0xfffe
+; ASM-GISEL-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; ASM-GISEL-TRUE16-NEXT:    v_dual_mov_b32 v8, s1 :: v_dual_add_nc_u32 v1, 15, v68
 ; ASM-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v4.l, s2
 ; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr2
@@ -696,7 +696,7 @@ define %non_trivial_types @dead_non_trivial(i1 %cond, %non_trivial_types %x, ptr
 ; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr67
 ; ASM-GISEL-TRUE16-NEXT:    global_store_b32 v[31:32], v1, off
 ; ASM-GISEL-TRUE16-NEXT:  .LBB3_2: ; %if.end
-; ASM-GISEL-TRUE16-NEXT:    s_wait_alu 0xfffe
+; ASM-GISEL-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; ASM-GISEL-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; ASM-GISEL-TRUE16-NEXT:    s_clause 0x16
 ; ASM-GISEL-TRUE16-NEXT:    scratch_store_b8 v0, v2, off
@@ -802,7 +802,7 @@ define %non_trivial_types @dead_non_trivial(i1 %cond, %non_trivial_types %x, ptr
 ; ASM-GISEL-FAKE16-NEXT:    s_mov_b32 s1, 0
 ; ASM-GISEL-FAKE16-NEXT:    s_movk_i32 s2, 0x3e00
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; ASM-GISEL-FAKE16-NEXT:    s_wait_alu 0xfffe
+; ASM-GISEL-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; ASM-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v4, s2 :: v_dual_add_nc_u32 v1, 15, v68
 ; ASM-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v8, s1
 ; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr2
@@ -846,7 +846,7 @@ define %non_trivial_types @dead_non_trivial(i1 %cond, %non_trivial_types %x, ptr
 ; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr67
 ; ASM-GISEL-FAKE16-NEXT:    global_store_b32 v[31:32], v1, off
 ; ASM-GISEL-FAKE16-NEXT:  .LBB3_2: ; %if.end
-; ASM-GISEL-FAKE16-NEXT:    s_wait_alu 0xfffe
+; ASM-GISEL-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; ASM-GISEL-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; ASM-GISEL-FAKE16-NEXT:    s_clause 0x16
 ; ASM-GISEL-FAKE16-NEXT:    scratch_store_b8 v0, v2, off

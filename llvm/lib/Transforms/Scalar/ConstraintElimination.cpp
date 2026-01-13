@@ -614,6 +614,16 @@ static Decomposition decompose(Value *V,
     return {V, IsKnownNonNegative};
   }
 
+  if (match(V, m_Add(m_Value(Op0), m_ConstantInt(CI))) && CI->isNegative() &&
+      canUseSExt(CI)) {
+    Preconditions.emplace_back(
+        CmpInst::ICMP_UGE, Op0,
+        ConstantInt::get(Op0->getType(), CI->getSExtValue() * -1));
+    if (auto Decomp = MergeResults(Op0, CI, true))
+      return *Decomp;
+    return {V, IsKnownNonNegative};
+  }
+
   if (match(V, m_NSWAdd(m_Value(Op0), m_Value(Op1)))) {
     if (!isKnownNonNegative(Op0, DL))
       Preconditions.emplace_back(CmpInst::ICMP_SGE, Op0,
@@ -623,16 +633,6 @@ static Decomposition decompose(Value *V,
                                  ConstantInt::get(Op1->getType(), 0));
 
     if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
-      return *Decomp;
-    return {V, IsKnownNonNegative};
-  }
-
-  if (match(V, m_Add(m_Value(Op0), m_ConstantInt(CI))) && CI->isNegative() &&
-      canUseSExt(CI)) {
-    Preconditions.emplace_back(
-        CmpInst::ICMP_UGE, Op0,
-        ConstantInt::get(Op0->getType(), CI->getSExtValue() * -1));
-    if (auto Decomp = MergeResults(Op0, CI, true))
       return *Decomp;
     return {V, IsKnownNonNegative};
   }
@@ -1512,7 +1512,7 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
   // about the constraint.
   for (auto &Row : R.ExtraInfo)
     CSToUse.addVariableRow(Row);
-  auto InfoRestorer = make_scope_exit([&]() {
+  llvm::scope_exit InfoRestorer([&]() {
     for (unsigned I = 0; I < R.ExtraInfo.size(); ++I)
       CSToUse.popLastConstraint();
   });
@@ -1683,7 +1683,7 @@ static bool checkOrAndOpImpliedByOther(
     return false;
 
   unsigned OldSize = DFSInStack.size();
-  auto InfoRestorer = make_scope_exit([&]() {
+  llvm::scope_exit InfoRestorer([&]() {
     // Remove entries again.
     while (OldSize < DFSInStack.size()) {
       StackEntry E = DFSInStack.back();

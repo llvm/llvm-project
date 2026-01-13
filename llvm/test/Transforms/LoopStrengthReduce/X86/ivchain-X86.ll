@@ -234,16 +234,17 @@ define void @extrastride(ptr nocapture %main, i32 %main_stride, ptr nocapture %r
 ; X32-NEXT:    .p2align 4
 ; X32-NEXT:  .LBB2_2: # %for.body
 ; X32-NEXT:    # =>This Inner Loop Header: Depth=1
-; X32-NEXT:    movl (%ebx,%esi), %ebp
-; X32-NEXT:    addl (%ebx), %ebp
-; X32-NEXT:    addl %esi, %ebx
-; X32-NEXT:    addl (%esi,%ebx), %ebp
-; X32-NEXT:    addl %esi, %ebx
-; X32-NEXT:    addl (%esi,%ebx), %ebp
-; X32-NEXT:    addl %esi, %ebx
-; X32-NEXT:    addl (%esi,%ebx), %ebp
-; X32-NEXT:    movl %ebp, (%edx)
-; X32-NEXT:    addl %esi, %ebx
+; X32-NEXT:    movl %ebx, %ebp
+; X32-NEXT:    movl (%ebx,%esi), %ebx
+; X32-NEXT:    addl (%ebp), %ebx
+; X32-NEXT:    addl %esi, %ebp
+; X32-NEXT:    addl (%esi,%ebp), %ebx
+; X32-NEXT:    addl %esi, %ebp
+; X32-NEXT:    addl (%esi,%ebp), %ebx
+; X32-NEXT:    addl %esi, %ebp
+; X32-NEXT:    addl (%esi,%ebp), %ebx
+; X32-NEXT:    movl %ebx, (%edx)
+; X32-NEXT:    leal (%ebp,%esi), %ebx
 ; X32-NEXT:    addl %edi, %ebx
 ; X32-NEXT:    addl %ecx, %edx
 ; X32-NEXT:    decl %eax

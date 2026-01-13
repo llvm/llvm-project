@@ -40,7 +40,7 @@ function ishftc_test(i, j, k)
     ! CHECK: return %[[VAL_36]] : i32
     ishftc_test = ishftc(i, j, k)
   end
-  
+
   ! Test cases where the size argument presence can only be know at runtime
   module test_ishftc
   contains
@@ -67,9 +67,9 @@ function ishftc_test(i, j, k)
     ! CHECK:  %[[VAL_19:.*]] = arith.xori %[[VAL_9]], %[[VAL_18]] : i32
     ! CHECK:  %[[VAL_20:.*]] = arith.subi %[[VAL_19]], %[[VAL_18]] : i32
     ! CHECK:  %[[VAL_21:.*]] = arith.subi %[[VAL_11]], %[[VAL_20]] : i32
-    ! ... as in non optional case 
+    ! ... as in non optional case
   end subroutine
-  
+
   ! CHECK-LABEL: func @_QMtest_ishftcPdyn_optional_array_scalar(
   ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "i"},
   ! CHECK-SAME:  %[[VAL_1:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "shift"},
@@ -90,11 +90,11 @@ function ishftc_test(i, j, k)
   ! CHECK:      %[[VAL_26:.*]] = arith.constant 32 : i32
   ! CHECK:      fir.result %[[VAL_26]] : i32
   ! CHECK:    }
-  ! ... as in non optional case 
+  ! ... as in non optional case
   ! CHECK:  }
     print *, ishftc(i, shift, size)
   end subroutine
-  
+
   ! CHECK-LABEL: func @_QMtest_ishftcPdyn_optional_array(
   ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "i"},
   ! CHECK-SAME:  %[[VAL_1:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "shift"},
@@ -117,22 +117,22 @@ function ishftc_test(i, j, k)
   ! CHECK:      %[[VAL_32:.*]] = arith.constant 32 : i32
   ! CHECK:      fir.result %[[VAL_32]] : i32
   ! CHECK:    }
-  ! ... as in non optional case 
+  ! ... as in non optional case
   ! CHECK:    }
     print *, ishftc(i, shift, size)
   end subroutine
   end module
-  
+
     use test_ishftc
     integer :: i(4) = [333, 334, 335, 336]
     integer :: shift(4) = [2, 1, -1, -2]
     integer :: size(4) = [2, 4, 8, 16]
     call dyn_optional_scalar(i(1), shift(1))
     call dyn_optional_scalar(i(1), shift(1), size(1))
-  
+
     call dyn_optional_array_scalar(i, shift)
     call dyn_optional_array_scalar(i, shift, size(1))
-  
+
     call dyn_optional_array(i, shift)
     call dyn_optional_array(i, shift, size)
   end

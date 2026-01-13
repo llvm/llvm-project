@@ -300,13 +300,12 @@ body: |
     ; GFX7-LABEL: name: test_icmp_v3s32
     ; GFX7: liveins: $vgpr0_vgpr1_vgpr2
     ; GFX7-NEXT: {{  $}}
-    ; GFX7-NEXT: [[DEF:%[0-9]+]]:_(<3 x s32>) = G_IMPLICIT_DEF
+    ; GFX7-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; GFX7-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
-    ; GFX7-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<3 x s32>)
-    ; GFX7-NEXT: [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
-    ; GFX7-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV]](s32), [[UV3]]
-    ; GFX7-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](s32), [[UV4]]
-    ; GFX7-NEXT: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV2]](s32), [[UV5]]
+    ; GFX7-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
+    ; GFX7-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[DEF]](s32), [[UV]]
+    ; GFX7-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[DEF]](s32), [[UV1]]
+    ; GFX7-NEXT: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[DEF]](s32), [[UV2]]
     ; GFX7-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s1)
     ; GFX7-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP1]](s1)
     ; GFX7-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP2]](s1)
@@ -320,13 +319,12 @@ body: |
     ; GFX8-LABEL: name: test_icmp_v3s32
     ; GFX8: liveins: $vgpr0_vgpr1_vgpr2
     ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[DEF:%[0-9]+]]:_(<3 x s32>) = G_IMPLICIT_DEF
+    ; GFX8-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
-    ; GFX8-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<3 x s32>)
-    ; GFX8-NEXT: [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
-    ; GFX8-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV]](s32), [[UV3]]
-    ; GFX8-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](s32), [[UV4]]
-    ; GFX8-NEXT: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV2]](s32), [[UV5]]
+    ; GFX8-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
+    ; GFX8-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[DEF]](s32), [[UV]]
+    ; GFX8-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[DEF]](s32), [[UV1]]
+    ; GFX8-NEXT: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[DEF]](s32), [[UV2]]
     ; GFX8-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s1)
     ; GFX8-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP1]](s1)
     ; GFX8-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP2]](s1)
@@ -340,13 +338,12 @@ body: |
     ; GFX9-LABEL: name: test_icmp_v3s32
     ; GFX9: liveins: $vgpr0_vgpr1_vgpr2
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[DEF:%[0-9]+]]:_(<3 x s32>) = G_IMPLICIT_DEF
+    ; GFX9-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
-    ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<3 x s32>)
-    ; GFX9-NEXT: [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
-    ; GFX9-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV]](s32), [[UV3]]
-    ; GFX9-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](s32), [[UV4]]
-    ; GFX9-NEXT: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV2]](s32), [[UV5]]
+    ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
+    ; GFX9-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[DEF]](s32), [[UV]]
+    ; GFX9-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[DEF]](s32), [[UV1]]
+    ; GFX9-NEXT: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[DEF]](s32), [[UV2]]
     ; GFX9-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s1)
     ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; GFX9-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C]]

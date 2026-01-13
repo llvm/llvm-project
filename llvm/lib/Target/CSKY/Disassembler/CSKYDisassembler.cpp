@@ -166,7 +166,7 @@ static DecodeStatus DecodeFPR64RegisterClass(MCInst &Inst, uint64_t RegNo,
 }
 
 // TODO
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 static DecodeStatus DecodesFPR128RegisterClass(MCInst &Inst, uint64_t RegNo,
                                                uint64_t Address,
                                                const MCDisassembler *Decoder) {

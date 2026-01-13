@@ -1,8 +1,10 @@
 // RUN: %clang_cc1 -verify -fopenmp -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=60 -DOMP60 -ast-print %s | FileCheck %s --check-prefix=CHECK60
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -verify %s -ast-print | FileCheck %s
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=60 -DOMP60 -ast-print %s | FileCheck %s --check-prefix=CHECK60
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -verify %s -ast-print | FileCheck %s
 // expected-no-diagnostics
@@ -87,6 +89,20 @@ int main(int argc, char **argv) {
   // CHECK-NEXT: #pragma omp cancel taskgroup
   // CHECK-NEXT: #pragma omp cancellation point taskgroup
   // CHECK-NEXT: foo();
+#ifdef OMP60
+#pragma omp taskloop threadset(omp_team)
+  for (int i = 0; i < 10; ++i) {
+#pragma omp taskloop threadset(omp_pool)
+  for (int j = 0; j < 10; ++j) {
+    foo();
+  }
+}
+#endif
+ // CHECK60: #pragma omp taskloop threadset(omp_team)
+ // CHECK60-NEXT: for (int i = 0; i < 10; ++i) {
+ // CHECK60: #pragma omp taskloop threadset(omp_pool)
+ // CHECK60-NEXT: for (int j = 0; j < 10; ++j) {
+ // CHECK60-NEXT: foo();
   return (tmain<int, 5>(argc) + tmain<char, 1>(argv[0][0]));
 }
 

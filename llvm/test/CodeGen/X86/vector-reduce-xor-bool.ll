@@ -397,8 +397,8 @@ define i1 @trunc_v16i16_v16i1(<16 x i16>) nounwind {
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    movl %eax, %ecx
-; AVX512F-NEXT:    shrl $8, %ecx
-; AVX512F-NEXT:    xorb %al, %cl
+; AVX512F-NEXT:    shrl $8, %eax
+; AVX512F-NEXT:    xorb %cl, %al
 ; AVX512F-NEXT:    setnp %al
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -409,8 +409,8 @@ define i1 @trunc_v16i16_v16i1(<16 x i16>) nounwind {
 ; AVX512BW-NEXT:    vpmovw2m %zmm0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
 ; AVX512BW-NEXT:    movl %eax, %ecx
-; AVX512BW-NEXT:    shrl $8, %ecx
-; AVX512BW-NEXT:    xorb %al, %cl
+; AVX512BW-NEXT:    shrl $8, %eax
+; AVX512BW-NEXT:    xorb %cl, %al
 ; AVX512BW-NEXT:    setnp %al
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
@@ -421,8 +421,8 @@ define i1 @trunc_v16i16_v16i1(<16 x i16>) nounwind {
 ; AVX512VL-NEXT:    vpmovw2m %ymm0, %k0
 ; AVX512VL-NEXT:    kmovd %k0, %eax
 ; AVX512VL-NEXT:    movl %eax, %ecx
-; AVX512VL-NEXT:    shrl $8, %ecx
-; AVX512VL-NEXT:    xorb %al, %cl
+; AVX512VL-NEXT:    shrl $8, %eax
+; AVX512VL-NEXT:    xorb %cl, %al
 ; AVX512VL-NEXT:    setnp %al
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
@@ -722,8 +722,8 @@ define i1 @trunc_v16i32_v16i1(<16 x i32>) nounwind {
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    movl %eax, %ecx
-; AVX512F-NEXT:    shrl $8, %ecx
-; AVX512F-NEXT:    xorb %al, %cl
+; AVX512F-NEXT:    shrl $8, %eax
+; AVX512F-NEXT:    xorb %cl, %al
 ; AVX512F-NEXT:    setnp %al
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -734,8 +734,8 @@ define i1 @trunc_v16i32_v16i1(<16 x i32>) nounwind {
 ; AVX512BW-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
 ; AVX512BW-NEXT:    movl %eax, %ecx
-; AVX512BW-NEXT:    shrl $8, %ecx
-; AVX512BW-NEXT:    xorb %al, %cl
+; AVX512BW-NEXT:    shrl $8, %eax
+; AVX512BW-NEXT:    xorb %cl, %al
 ; AVX512BW-NEXT:    setnp %al
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
@@ -746,8 +746,8 @@ define i1 @trunc_v16i32_v16i1(<16 x i32>) nounwind {
 ; AVX512VL-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; AVX512VL-NEXT:    kmovd %k0, %eax
 ; AVX512VL-NEXT:    movl %eax, %ecx
-; AVX512VL-NEXT:    shrl $8, %ecx
-; AVX512VL-NEXT:    xorb %al, %cl
+; AVX512VL-NEXT:    shrl $8, %eax
+; AVX512VL-NEXT:    xorb %cl, %al
 ; AVX512VL-NEXT:    setnp %al
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
@@ -974,13 +974,13 @@ define i1 @trunc_v64i8_v64i1(<64 x i8>) nounwind {
 ; AVX512BW-NEXT:    vpsllw $7, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpmovb2m %zmm0, %k0
 ; AVX512BW-NEXT:    kmovq %k0, %rax
-; AVX512BW-NEXT:    movq %rax, %rcx
-; AVX512BW-NEXT:    shrq $32, %rcx
-; AVX512BW-NEXT:    xorl %eax, %ecx
-; AVX512BW-NEXT:    movl %ecx, %eax
-; AVX512BW-NEXT:    shrl $16, %eax
+; AVX512BW-NEXT:    movl %eax, %ecx
+; AVX512BW-NEXT:    shrq $32, %rax
 ; AVX512BW-NEXT:    xorl %ecx, %eax
-; AVX512BW-NEXT:    xorb %ah, %al
+; AVX512BW-NEXT:    movl %eax, %ecx
+; AVX512BW-NEXT:    shrl $16, %ecx
+; AVX512BW-NEXT:    xorl %eax, %ecx
+; AVX512BW-NEXT:    xorb %ch, %cl
 ; AVX512BW-NEXT:    setnp %al
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
@@ -990,13 +990,13 @@ define i1 @trunc_v64i8_v64i1(<64 x i8>) nounwind {
 ; AVX512VL-NEXT:    vpsllw $7, %zmm0, %zmm0
 ; AVX512VL-NEXT:    vpmovb2m %zmm0, %k0
 ; AVX512VL-NEXT:    kmovq %k0, %rax
-; AVX512VL-NEXT:    movq %rax, %rcx
-; AVX512VL-NEXT:    shrq $32, %rcx
-; AVX512VL-NEXT:    xorl %eax, %ecx
-; AVX512VL-NEXT:    movl %ecx, %eax
-; AVX512VL-NEXT:    shrl $16, %eax
+; AVX512VL-NEXT:    movl %eax, %ecx
+; AVX512VL-NEXT:    shrq $32, %rax
 ; AVX512VL-NEXT:    xorl %ecx, %eax
-; AVX512VL-NEXT:    xorb %ah, %al
+; AVX512VL-NEXT:    movl %eax, %ecx
+; AVX512VL-NEXT:    shrl $16, %ecx
+; AVX512VL-NEXT:    xorl %eax, %ecx
+; AVX512VL-NEXT:    xorb %ch, %cl
 ; AVX512VL-NEXT:    setnp %al
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
@@ -1211,8 +1211,8 @@ define i1 @icmp0_v16i8_v16i1(<16 x i8>) nounwind {
 ; AVX512BW-NEXT:    vptestnmb %zmm0, %zmm0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
 ; AVX512BW-NEXT:    movl %eax, %ecx
-; AVX512BW-NEXT:    shrl $8, %ecx
-; AVX512BW-NEXT:    xorb %al, %cl
+; AVX512BW-NEXT:    shrl $8, %eax
+; AVX512BW-NEXT:    xorb %cl, %al
 ; AVX512BW-NEXT:    setnp %al
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
@@ -1222,8 +1222,8 @@ define i1 @icmp0_v16i8_v16i1(<16 x i8>) nounwind {
 ; AVX512VL-NEXT:    vptestnmb %xmm0, %xmm0, %k0
 ; AVX512VL-NEXT:    kmovd %k0, %eax
 ; AVX512VL-NEXT:    movl %eax, %ecx
-; AVX512VL-NEXT:    shrl $8, %ecx
-; AVX512VL-NEXT:    xorb %al, %cl
+; AVX512VL-NEXT:    shrl $8, %eax
+; AVX512VL-NEXT:    xorb %cl, %al
 ; AVX512VL-NEXT:    setnp %al
 ; AVX512VL-NEXT:    retq
   %a = icmp eq <16 x i8> %0, zeroinitializer
@@ -1427,8 +1427,8 @@ define i1 @icmp0_v16i16_v16i1(<16 x i16>) nounwind {
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    movl %eax, %ecx
-; AVX512F-NEXT:    shrl $8, %ecx
-; AVX512F-NEXT:    xorb %al, %cl
+; AVX512F-NEXT:    shrl $8, %eax
+; AVX512F-NEXT:    xorb %cl, %al
 ; AVX512F-NEXT:    setnp %al
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -1439,8 +1439,8 @@ define i1 @icmp0_v16i16_v16i1(<16 x i16>) nounwind {
 ; AVX512BW-NEXT:    vptestnmw %zmm0, %zmm0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
 ; AVX512BW-NEXT:    movl %eax, %ecx
-; AVX512BW-NEXT:    shrl $8, %ecx
-; AVX512BW-NEXT:    xorb %al, %cl
+; AVX512BW-NEXT:    shrl $8, %eax
+; AVX512BW-NEXT:    xorb %cl, %al
 ; AVX512BW-NEXT:    setnp %al
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
@@ -1450,8 +1450,8 @@ define i1 @icmp0_v16i16_v16i1(<16 x i16>) nounwind {
 ; AVX512VL-NEXT:    vptestnmw %ymm0, %ymm0, %k0
 ; AVX512VL-NEXT:    kmovd %k0, %eax
 ; AVX512VL-NEXT:    movl %eax, %ecx
-; AVX512VL-NEXT:    shrl $8, %ecx
-; AVX512VL-NEXT:    xorb %al, %cl
+; AVX512VL-NEXT:    shrl $8, %eax
+; AVX512VL-NEXT:    xorb %cl, %al
 ; AVX512VL-NEXT:    setnp %al
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
@@ -1756,8 +1756,8 @@ define i1 @icmp0_v16i32_v16i1(<16 x i32>) nounwind {
 ; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    movl %eax, %ecx
-; AVX512F-NEXT:    shrl $8, %ecx
-; AVX512F-NEXT:    xorb %al, %cl
+; AVX512F-NEXT:    shrl $8, %eax
+; AVX512F-NEXT:    xorb %cl, %al
 ; AVX512F-NEXT:    setnp %al
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -1767,8 +1767,8 @@ define i1 @icmp0_v16i32_v16i1(<16 x i32>) nounwind {
 ; AVX512BW-NEXT:    vptestnmd %zmm0, %zmm0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
 ; AVX512BW-NEXT:    movl %eax, %ecx
-; AVX512BW-NEXT:    shrl $8, %ecx
-; AVX512BW-NEXT:    xorb %al, %cl
+; AVX512BW-NEXT:    shrl $8, %eax
+; AVX512BW-NEXT:    xorb %cl, %al
 ; AVX512BW-NEXT:    setnp %al
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
@@ -1778,8 +1778,8 @@ define i1 @icmp0_v16i32_v16i1(<16 x i32>) nounwind {
 ; AVX512VL-NEXT:    vptestnmd %zmm0, %zmm0, %k0
 ; AVX512VL-NEXT:    kmovd %k0, %eax
 ; AVX512VL-NEXT:    movl %eax, %ecx
-; AVX512VL-NEXT:    shrl $8, %ecx
-; AVX512VL-NEXT:    xorb %al, %cl
+; AVX512VL-NEXT:    shrl $8, %eax
+; AVX512VL-NEXT:    xorb %cl, %al
 ; AVX512VL-NEXT:    setnp %al
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
@@ -2010,13 +2010,13 @@ define i1 @icmp0_v64i8_v64i1(<64 x i8>) nounwind {
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vptestnmb %zmm0, %zmm0, %k0
 ; AVX512BW-NEXT:    kmovq %k0, %rax
-; AVX512BW-NEXT:    movq %rax, %rcx
-; AVX512BW-NEXT:    shrq $32, %rcx
-; AVX512BW-NEXT:    xorl %eax, %ecx
-; AVX512BW-NEXT:    movl %ecx, %eax
-; AVX512BW-NEXT:    shrl $16, %eax
+; AVX512BW-NEXT:    movl %eax, %ecx
+; AVX512BW-NEXT:    shrq $32, %rax
 ; AVX512BW-NEXT:    xorl %ecx, %eax
-; AVX512BW-NEXT:    xorb %ah, %al
+; AVX512BW-NEXT:    movl %eax, %ecx
+; AVX512BW-NEXT:    shrl $16, %ecx
+; AVX512BW-NEXT:    xorl %eax, %ecx
+; AVX512BW-NEXT:    xorb %ch, %cl
 ; AVX512BW-NEXT:    setnp %al
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
@@ -2025,13 +2025,13 @@ define i1 @icmp0_v64i8_v64i1(<64 x i8>) nounwind {
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vptestnmb %zmm0, %zmm0, %k0
 ; AVX512VL-NEXT:    kmovq %k0, %rax
-; AVX512VL-NEXT:    movq %rax, %rcx
-; AVX512VL-NEXT:    shrq $32, %rcx
-; AVX512VL-NEXT:    xorl %eax, %ecx
-; AVX512VL-NEXT:    movl %ecx, %eax
-; AVX512VL-NEXT:    shrl $16, %eax
+; AVX512VL-NEXT:    movl %eax, %ecx
+; AVX512VL-NEXT:    shrq $32, %rax
 ; AVX512VL-NEXT:    xorl %ecx, %eax
-; AVX512VL-NEXT:    xorb %ah, %al
+; AVX512VL-NEXT:    movl %eax, %ecx
+; AVX512VL-NEXT:    shrl $16, %ecx
+; AVX512VL-NEXT:    xorl %eax, %ecx
+; AVX512VL-NEXT:    xorb %ch, %cl
 ; AVX512VL-NEXT:    setnp %al
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
@@ -2240,8 +2240,8 @@ define i1 @icmp_v16i8_v16i1(<16 x i8>, <16 x i8>) nounwind {
 ; AVX512BW-NEXT:    vpcmpeqb %zmm1, %zmm0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
 ; AVX512BW-NEXT:    movl %eax, %ecx
-; AVX512BW-NEXT:    shrl $8, %ecx
-; AVX512BW-NEXT:    xorb %al, %cl
+; AVX512BW-NEXT:    shrl $8, %eax
+; AVX512BW-NEXT:    xorb %cl, %al
 ; AVX512BW-NEXT:    setnp %al
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
@@ -2251,8 +2251,8 @@ define i1 @icmp_v16i8_v16i1(<16 x i8>, <16 x i8>) nounwind {
 ; AVX512VL-NEXT:    vpcmpeqb %xmm1, %xmm0, %k0
 ; AVX512VL-NEXT:    kmovd %k0, %eax
 ; AVX512VL-NEXT:    movl %eax, %ecx
-; AVX512VL-NEXT:    shrl $8, %ecx
-; AVX512VL-NEXT:    xorb %al, %cl
+; AVX512VL-NEXT:    shrl $8, %eax
+; AVX512VL-NEXT:    xorb %cl, %al
 ; AVX512VL-NEXT:    setnp %al
 ; AVX512VL-NEXT:    retq
   %a = icmp eq <16 x i8> %0, %1
@@ -2504,8 +2504,8 @@ define i1 @icmp_v16i16_v16i1(<16 x i16>, <16 x i16>) nounwind {
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    movl %eax, %ecx
-; AVX512F-NEXT:    shrl $8, %ecx
-; AVX512F-NEXT:    xorb %al, %cl
+; AVX512F-NEXT:    shrl $8, %eax
+; AVX512F-NEXT:    xorb %cl, %al
 ; AVX512F-NEXT:    setnp %al
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -2517,8 +2517,8 @@ define i1 @icmp_v16i16_v16i1(<16 x i16>, <16 x i16>) nounwind {
 ; AVX512BW-NEXT:    vpcmpeqw %zmm1, %zmm0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
 ; AVX512BW-NEXT:    movl %eax, %ecx
-; AVX512BW-NEXT:    shrl $8, %ecx
-; AVX512BW-NEXT:    xorb %al, %cl
+; AVX512BW-NEXT:    shrl $8, %eax
+; AVX512BW-NEXT:    xorb %cl, %al
 ; AVX512BW-NEXT:    setnp %al
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
@@ -2528,8 +2528,8 @@ define i1 @icmp_v16i16_v16i1(<16 x i16>, <16 x i16>) nounwind {
 ; AVX512VL-NEXT:    vpcmpeqw %ymm1, %ymm0, %k0
 ; AVX512VL-NEXT:    kmovd %k0, %eax
 ; AVX512VL-NEXT:    movl %eax, %ecx
-; AVX512VL-NEXT:    shrl $8, %ecx
-; AVX512VL-NEXT:    xorb %al, %cl
+; AVX512VL-NEXT:    shrl $8, %eax
+; AVX512VL-NEXT:    xorb %cl, %al
 ; AVX512VL-NEXT:    setnp %al
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
@@ -2845,8 +2845,8 @@ define i1 @icmp_v16i32_v16i1(<16 x i32>, <16 x i32>) nounwind {
 ; AVX512F-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    movl %eax, %ecx
-; AVX512F-NEXT:    shrl $8, %ecx
-; AVX512F-NEXT:    xorb %al, %cl
+; AVX512F-NEXT:    shrl $8, %eax
+; AVX512F-NEXT:    xorb %cl, %al
 ; AVX512F-NEXT:    setnp %al
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -2856,8 +2856,8 @@ define i1 @icmp_v16i32_v16i1(<16 x i32>, <16 x i32>) nounwind {
 ; AVX512BW-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
 ; AVX512BW-NEXT:    movl %eax, %ecx
-; AVX512BW-NEXT:    shrl $8, %ecx
-; AVX512BW-NEXT:    xorb %al, %cl
+; AVX512BW-NEXT:    shrl $8, %eax
+; AVX512BW-NEXT:    xorb %cl, %al
 ; AVX512BW-NEXT:    setnp %al
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
@@ -2867,8 +2867,8 @@ define i1 @icmp_v16i32_v16i1(<16 x i32>, <16 x i32>) nounwind {
 ; AVX512VL-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
 ; AVX512VL-NEXT:    kmovd %k0, %eax
 ; AVX512VL-NEXT:    movl %eax, %ecx
-; AVX512VL-NEXT:    shrl $8, %ecx
-; AVX512VL-NEXT:    xorb %al, %cl
+; AVX512VL-NEXT:    shrl $8, %eax
+; AVX512VL-NEXT:    xorb %cl, %al
 ; AVX512VL-NEXT:    setnp %al
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
@@ -3097,13 +3097,13 @@ define i1 @icmp_v64i8_v64i1(<64 x i8>, <64 x i8>) nounwind {
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpcmpeqb %zmm1, %zmm0, %k0
 ; AVX512BW-NEXT:    kmovq %k0, %rax
-; AVX512BW-NEXT:    movq %rax, %rcx
-; AVX512BW-NEXT:    shrq $32, %rcx
-; AVX512BW-NEXT:    xorl %eax, %ecx
-; AVX512BW-NEXT:    movl %ecx, %eax
-; AVX512BW-NEXT:    shrl $16, %eax
+; AVX512BW-NEXT:    movl %eax, %ecx
+; AVX512BW-NEXT:    shrq $32, %rax
 ; AVX512BW-NEXT:    xorl %ecx, %eax
-; AVX512BW-NEXT:    xorb %ah, %al
+; AVX512BW-NEXT:    movl %eax, %ecx
+; AVX512BW-NEXT:    shrl $16, %ecx
+; AVX512BW-NEXT:    xorl %eax, %ecx
+; AVX512BW-NEXT:    xorb %ch, %cl
 ; AVX512BW-NEXT:    setnp %al
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
@@ -3112,13 +3112,13 @@ define i1 @icmp_v64i8_v64i1(<64 x i8>, <64 x i8>) nounwind {
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpcmpeqb %zmm1, %zmm0, %k0
 ; AVX512VL-NEXT:    kmovq %k0, %rax
-; AVX512VL-NEXT:    movq %rax, %rcx
-; AVX512VL-NEXT:    shrq $32, %rcx
-; AVX512VL-NEXT:    xorl %eax, %ecx
-; AVX512VL-NEXT:    movl %ecx, %eax
-; AVX512VL-NEXT:    shrl $16, %eax
+; AVX512VL-NEXT:    movl %eax, %ecx
+; AVX512VL-NEXT:    shrq $32, %rax
 ; AVX512VL-NEXT:    xorl %ecx, %eax
-; AVX512VL-NEXT:    xorb %ah, %al
+; AVX512VL-NEXT:    movl %eax, %ecx
+; AVX512VL-NEXT:    shrl $16, %ecx
+; AVX512VL-NEXT:    xorl %eax, %ecx
+; AVX512VL-NEXT:    xorb %ch, %cl
 ; AVX512VL-NEXT:    setnp %al
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq

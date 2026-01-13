@@ -262,7 +262,7 @@ define aarch64_sve_vector_pcs void @streaming_compatible_caller_conditional_mode
 ; CHECK:    .cfi_def_cfa_offset 48
 ; CHECK:    cntd x9
 ; CHECK:    stp x28, x19, [sp, #32] // 16-byte Folded Spill
-; CHECK:    str x9, [sp, #16] // 8-byte Folded Spill
+; CHECK:    str x9, [sp, #16] // 8-byte Spill
 ; CHECK:    mov x29, sp
 ; CHECK:    .cfi_def_cfa w29, 48
 ; CHECK:    .cfi_offset vg, -32

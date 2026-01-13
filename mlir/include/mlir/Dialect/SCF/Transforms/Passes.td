@@ -23,7 +23,6 @@ def SCFForLoopCanonicalization
 
 def SCFForLoopPeeling : Pass<"scf-for-loop-peeling"> {
   let summary = "Peel `for` loops at their upper bounds.";
-  let constructor = "mlir::createForLoopPeelingPass()";
   let options = [
     Option<"peelFront", "peel-front", "bool",
            /*default=*/"false",

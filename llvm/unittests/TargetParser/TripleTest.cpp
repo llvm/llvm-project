@@ -614,6 +614,24 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::WASI, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
+  T = Triple("wasm32-unknown-wasip1");
+  EXPECT_EQ(Triple::wasm32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::WASIp1, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("wasm32-unknown-wasip2");
+  EXPECT_EQ(Triple::wasm32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::WASIp2, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("wasm32-unknown-wasip3");
+  EXPECT_EQ(Triple::wasm32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::WASIp3, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
   T = Triple("wasm64-unknown-unknown");
   EXPECT_EQ(Triple::wasm64, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
@@ -624,6 +642,24 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::wasm64, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::WASI, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("wasm64-unknown-wasip1");
+  EXPECT_EQ(Triple::wasm64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::WASIp1, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("wasm64-unknown-wasip2");
+  EXPECT_EQ(Triple::wasm64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::WASIp2, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("wasm64-unknown-wasip3");
+  EXPECT_EQ(Triple::wasm64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::WASIp3, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
   T = Triple("avr-unknown-unknown");
@@ -2628,6 +2664,17 @@ TEST(TripleTest, isMacOSVersionLT) {
   EXPECT_TRUE(T.isMacOSXVersionLT(11, 1, 0));
   EXPECT_FALSE(T.isMacOSXVersionLT(11, 0, 0));
   EXPECT_FALSE(T.isMacOSXVersionLT(10, 15, 0));
+}
+
+TEST(TripleTest, isMacOSVersionGE) {
+  Triple T = Triple("x86_64-apple-macos11");
+  EXPECT_FALSE(T.isMacOSXVersionGE(11, 1, 0));
+  EXPECT_TRUE(T.isMacOSXVersionGE(10, 15, 0));
+
+  T = Triple("x86_64-apple-darwin20");
+  EXPECT_FALSE(T.isMacOSXVersionGE(11, 1, 0));
+  EXPECT_TRUE(T.isMacOSXVersionGE(11, 0, 0));
+  EXPECT_TRUE(T.isMacOSXVersionGE(10, 15, 0));
 }
 
 TEST(TripleTest, CanonicalizeOSVersion) {
