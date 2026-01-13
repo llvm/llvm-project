@@ -4604,13 +4604,6 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   }
 
-  // FIXME: There's a bug in SelectionDAG legalization for some data types
-  // between a select and an extract when using this intrinsic for X86 without
-  // AVX512.
-  if (IID == Intrinsic::experimental_vector_extract_last_active &&
-      !ST->hasAVX512())
-    return InstructionCost::getInvalid();
-
   if (ISD != ISD::DELETED_NODE) {
     auto adjustTableCost = [&](int ISD, unsigned Cost,
                                std::pair<InstructionCost, MVT> LT,
