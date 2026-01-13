@@ -1270,6 +1270,12 @@ constexpr std::array<std::string_view, 5> g_known_eplicit_module_prefixes = {
     "-fno-implicit-modules", "-fno-implicit-module-maps"};
 }
 
+static std::optional<bool> UsesCC1Options(const swift::ClangImporterOptions &opts) {
+  if (!opts.ExtraArgs.size())
+    return {};
+  return opts.ExtraArgs.front() == "-cc1";
+}
+
 /// Retrieve the serialized AST data blobs and initialize the compiler
 /// invocation with the concatenated search paths from the blobs.
 /// \returns true if an error was encountered.
@@ -1405,13 +1411,33 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
 
       /// Initialize the compiler invocation with it the search paths from a
       /// serialized AST.
-      auto deserializeCompilerFlags = [&](swift::CompilerInvocation &invocation) {
+      auto deserializeCompilerFlags = [&](swift::CompilerInvocation
+                                              &invocation) {
+        // Detect mix & match of cc1 & driver options.
+        if (std::optional<bool> uses_cc1_options =
+                UsesCC1Options(invocation.getClangImporterOptions())) {
+          swift::CompilerInvocation tmp_invocation;
+          auto result = tmp_invocation.loadFromSerializedAST(moduleData);
+          if (result != swift::serialization::Status::Valid) {
+            error << "Could not deserialize " << info.name << ":\n"
+                  << getImportFailureString(result) << "\n";
+            return false;
+          }
+          std::optional<bool> deserialized =
+              UsesCC1Options(tmp_invocation.getClangImporterOptions());
+          if (deserialized && *deserialized != *uses_cc1_options) {
+            error << "Mixing and matching of cc1 and driver options detected";
+            return false;
+          }
+        }
+        // If compatible, perform an additive deserialization.
         auto result = invocation.loadFromSerializedAST(moduleData);
         if (result != swift::serialization::Status::Valid) {
           error << "Could not deserialize " << info.name << ":\n"
                 << getImportFailureString(result) << "\n";
           return false;
         }
+
         if (discover_implicit_search_paths) {
           for (auto &searchPath : searchPaths) {
             std::string path = remap(searchPath.Path);
@@ -4128,7 +4154,7 @@ SwiftASTContext::GetModule(const SourceModule &module, bool *cached) {
       if (auto *memory_loader = GetMemoryBufferModuleLoader())
         unloaded = memory_loader->unregisterMemoryBuffer(module_name);
     }
-    HEALTH_LOG_PRINTF("found explicit module \"%s\"%s", path.c_str(),
+    HEALTH_LOG_PRINTF("found explicitly tracked module \"%s\"%s", path.c_str(),
                       unloaded ? "; replacing AST section module" : "");
   }
 
