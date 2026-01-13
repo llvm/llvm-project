@@ -2549,9 +2549,8 @@ define <4 x i32> @fcmnv4xfloat(<4 x float> %A, <4 x float> %B) {
 ;
 ; CHECK-GI-LABEL: fcmnv4xfloat:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #0 // =0x0
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    mov v0.s[1], w8
+; CHECK-GI-NEXT:    movi d0, #0000000000000000
+; CHECK-GI-NEXT:    mov v0.s[1], wzr
 ; CHECK-GI-NEXT:    mov v0.d[1], v0.d[0]
 ; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #31
 ; CHECK-GI-NEXT:    cmlt v0.4s, v0.4s, #0
