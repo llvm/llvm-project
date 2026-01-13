@@ -295,6 +295,9 @@
 #define _LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE _LIBCPP_INTRODUCED_IN_LLVM_21
 // No attribute, since we've had bad_function_call::what() in the headers before
 
+// This controls whether `std::__next_prime_impl` is available in the dylib, which is used for `__hash_table`.
+#define _LIBCPP_AVAILABILITY_HAS_NEXT_PRIME_IMPL _LIBCPP_INTRODUCED_IN_LLVM_22
+
 // Define availability attributes that depend on both
 // _LIBCPP_HAS_EXCEPTIONS and _LIBCPP_HAS_RTTI.
 #if !_LIBCPP_HAS_EXCEPTIONS || !_LIBCPP_HAS_RTTI
