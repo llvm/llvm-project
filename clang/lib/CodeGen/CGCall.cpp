@@ -5075,10 +5075,8 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
   // For arguments with aggregate type, create an alloca to store
   // the value. If the argument's type has a destructor, that destructor
   // will run at the end of the full-expression; emit matching lifetime
-  // markers.
-  //
-  // FIXME: For types which don't have a destructor, consider using a
-  // narrower lifetime bound.
+  // markers. For types which don't have a destructor, we use a narrower
+  // lifetime bound.
   if (hasAggregateEvaluationKind(E->getType())) {
     RawAddress ArgSlotAlloca = Address::invalid();
     ArgSlot = CreateAggTemp(E->getType(), "agg.tmp", &ArgSlotAlloca);

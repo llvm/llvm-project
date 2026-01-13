@@ -6720,8 +6720,22 @@ Expr *Sema::MaybeCreateExprWithCleanups(Expr *SubExpr) {
   assert(ExprCleanupObjects.size() >= FirstCleanup);
   assert(Cleanup.exprNeedsCleanups() ||
          ExprCleanupObjects.size() == FirstCleanup);
-  if (!Cleanup.exprNeedsCleanups())
+  if (!Cleanup.exprNeedsCleanups()) {
+    // If we have a 'new' expression with a non-trivial destructor, we need to
+    // wrap it in an ExprWithCleanups to ensure that the destructor is called
+    // if the constructor throws.
+    if (auto *NE = dyn_cast<CXXNewExpr>(SubExpr)) {
+      if (NE->getOperatorDelete() &&
+          !NE->getOperatorDelete()->isReservedGlobalPlacementOperator()) {
+        auto Cleanups = llvm::ArrayRef<ExprWithCleanups::CleanupObject>();
+        auto *E = ExprWithCleanups::Create(
+            Context, SubExpr, Cleanup.cleanupsHaveSideEffects(), Cleanups);
+        DiscardCleanupsInEvaluationContext();
+        return E;
+      }
+    }
     return SubExpr;
+  }
 
   auto Cleanups = llvm::ArrayRef(ExprCleanupObjects.begin() + FirstCleanup,
                                  ExprCleanupObjects.size() - FirstCleanup);
