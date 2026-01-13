@@ -117,6 +117,7 @@ private:
   };
   std::map<lldb::break_id_t, WatchpointInfo> m_watchpoints;
   std::vector<lldb::break_id_t> m_watchpoint_ids;
+  std::shared_ptr<PTY> m_pty;
 };
 } // namespace lldb_private
 
