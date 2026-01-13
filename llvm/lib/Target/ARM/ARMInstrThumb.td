@@ -1613,7 +1613,9 @@ def tLDRLIT_ga_abs : PseudoInst<(outs tGPR:$dst), (ins i32imm:$src),
                                 IIC_iLoad_i,
                                 [(set tGPR:$dst,
                                       (ARMWrapper tglobaladdr:$src))]>,
-                     Requires<[IsThumb, DontUseMovt, DontGenExecuteOnly]>;
+                     Requires<[IsThumb, DontUseMovt, DontGenExecuteOnly]> {
+  let Size = 6;  // 1 instruction + constant.
+}
 
 // 32-bit immediate using mov/add with the 4 :lower0_7: to :upper8_15:
 // relocations.
