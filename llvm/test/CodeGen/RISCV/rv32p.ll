@@ -238,7 +238,7 @@ define i64 @cls_i64_2(i64 %x) {
 define i32 @cls_i32_knownbits(i32 %x) {
 ; CHECK-LABEL: cls_i32_knownbits:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cls	a0, a0
+; CHECK-NEXT:    cls a0, a0
 ; CHECK-NEXT:    ret
   %a = ashr i32 %x, 31
   %b = xor i32 %x, %a
@@ -267,7 +267,7 @@ define i32 @cls_i32_knownbits_2(i16 signext %x) {
 define i32 @cls_i32_knownbits_3(i8 signext %x) {
 ; CHECK-LABEL: cls_i32_knownbits_3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cls	a0, a0
+; CHECK-NEXT:    cls a0, a0
 ; CHECK-NEXT:    ret
   %sext = sext i8 %x to i32
   %a = ashr i32 %sext, 31
@@ -283,11 +283,11 @@ define i32 @cls_i32_knownbits_3(i8 signext %x) {
 define i32 @cls_i32_knownbits_4(i32 signext %x) {
 ; CHECK-LABEL: cls_i32_knownbits_4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT: slli a0, a0, 1
-; CHECK-NEXT: srai a0, a0, 1
-; CHECK-NEXT: cls a0, a0 
-; CHECK-NEXT: ori a0, a0, 1 
-; CHECK-NEXT: ret 
+; CHECK-NEXT:    slli a0, a0, 1
+; CHECK-NEXT:    srai a0, a0, 1
+; CHECK-NEXT:    cls a0, a0
+; CHECK-NEXT:    ori a0, a0, 1
+; CHECK-NEXT:    ret
   %shl = shl i32 %x, 1
   %ashr = ashr i32 %shl, 1
   %a = ashr i32 %ashr, 31
@@ -297,16 +297,16 @@ define i32 @cls_i32_knownbits_4(i32 signext %x) {
   %e = or i32 %d, 1
   ret i32 %e
  }
- 
+
 ; Negative test. Check that the number of sign bits is not
 ; overestimated. If it is, the orr disappears.
 define i32 @cls_i32_knownbits_no_overestimate(i32 signext %x) {
 ; CHECK-LABEL: cls_i32_knownbits_no_overestimate:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:   srai a0, a0, 15
-; CHECK-NEXT:	  cls a0, a0 
-; CHECK-NEXT:	  ori a0, a0, 16
-; CHECK-NEXT:	  ret
+; CHECK-NEXT:    srai a0, a0, 15
+; CHECK-NEXT:    cls a0, a0
+; CHECK-NEXT:    ori a0, a0, 16
+; CHECK-NEXT:    ret
   %ashr = ashr i32 %x, 15
   %a = ashr i32 %ashr, 31
   %b = xor i32 %ashr, %a
