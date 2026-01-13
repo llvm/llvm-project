@@ -70,6 +70,13 @@ static std::string PrintType(const Type *type, bool truncate = false) {
   return s;
 }
 
+static std::string PrintScalar(const lldb_private::Scalar &value) {
+  std::string s;
+  raw_string_ostream rso(s);
+  rso << value;
+  return s;
+}
+
 static bool CanIgnoreCall(const CallInst *call) {
   const llvm::Function *called_function = call->getCalledFunction();
 
@@ -477,6 +484,8 @@ static const char *timeout_error =
     "Reached timeout while interpreting expression";
 static const char *too_many_functions_error =
     "Interpreter doesn't handle modules with multiple function bodies.";
+static const char *bad_conversion_error =
+    "Interpreter couldn't convert a value";
 
 static bool CanResolveConstant(llvm::Constant *constant) {
   switch (constant->getValueID()) {
@@ -1288,8 +1297,16 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       assert(S.GetType() == lldb_private::Scalar::e_float &&
              "Unexpected source type");
       bool isExact;
-      S.GetAPFloat().convertToInteger(result, llvm::APFloat::rmTowardZero,
-                                      &isExact);
+      llvm::APFloatBase::opStatus status = S.GetAPFloat().convertToInteger(
+          result, llvm::APFloat::rmTowardZero, &isExact);
+      // Casting floating point values that are out of bounds of the target type
+      // is undefined behaviour.
+      if (status & llvm::APFloatBase::opInvalidOp) {
+        LLDB_LOGF(log, "Couldn't convert %s to %s", PrintScalar(S).c_str(),
+                  PrintType(inst->getType()).c_str());
+        error = lldb_private::Status::FromErrorString(bad_conversion_error);
+        return false;
+      }
       lldb_private::Scalar R(result);
 
       frame.AssignValue(inst, R, module);

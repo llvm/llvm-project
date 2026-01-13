@@ -238,3 +238,34 @@ class IRInterpreterTestCase(TestBase):
                 jit_result.GetTypeName(),
                 "Types match for " + expression,
             )
+
+    def test_fpconv_ub(self):
+        target = self.dbg.GetDummyTarget()
+
+        set_up_expressions = [
+            "float $f = 3e9",
+            "double $d = 1e20",
+            "float $nf = -1.5",
+        ]
+
+        expressions = [
+            "(int)$f",
+            "(long)$d",
+            "(unsigned)$nf",
+        ]
+
+        for expression in set_up_expressions:
+            target.EvaluateExpression(expression)
+
+        # The IR Interpreter returns an error if a value cannot be converted.
+        for expression in expressions:
+            result = target.EvaluateExpression(expression)
+            self.assertIn(
+                "Interpreter couldn't convert a value", str(result.GetError())
+            )
+
+        # The conversion should succeed if the destination type can represent the result.
+        self.expect_expr(
+            "(unsigned)$f", result_type="unsigned int", result_value="3000000000"
+        )
+        self.expect_expr("(int)$nf", result_type="int", result_value="-1")
