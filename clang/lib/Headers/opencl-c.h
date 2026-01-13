@@ -17,13 +17,6 @@
 #endif //cl_khr_depth_images
 #endif //defined(__opencl_c_images)
 
-#if defined(cl_khr_depth_images) || defined(__OPENCL_CPP_VERSION__) ||         \
-    (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
-// Internal feature macro to provide depth image builtins.
-#define __opencl_depth_image_builtins 1
-#endif // defined(cl_khr_depth_images) || defined(__OPENCL_CPP_VERSION__) ||
-       // (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
-
 #if __OPENCL_C_VERSION__ < CL_VERSION_2_0
 #ifdef cl_khr_3d_image_writes
 #pragma OPENCL EXTENSION cl_khr_3d_image_writes : enable
@@ -18728,11 +18721,5 @@ int __ovld arm_dot_acc_sat(char4, char4, int);
 
 #undef __cnfn
 #undef __ovld
-
-#if defined(cl_khr_depth_images) || defined(__OPENCL_CPP_VERSION__) ||         \
-    (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
-#undef __opencl_depth_image_builtins
-#endif // defined(cl_khr_depth_images) || defined(__OPENCL_CPP_VERSION__) ||
-       // (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
 
 #endif //_OPENCL_H_

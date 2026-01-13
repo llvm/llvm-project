@@ -50,6 +50,7 @@ typedef char char2 __attribute__((ext_vector_type(2)));
 typedef char char4 __attribute__((ext_vector_type(4)));
 typedef uchar uchar4 __attribute__((ext_vector_type(4)));
 typedef uchar uchar16 __attribute__((ext_vector_type(16)));
+typedef float float2 __attribute__((ext_vector_type(2)));
 typedef float float4 __attribute__((ext_vector_type(4)));
 typedef float float16 __attribute__((ext_vector_type(16)));
 typedef half half4 __attribute__((ext_vector_type(4)));
@@ -81,6 +82,7 @@ typedef struct {int a;} ndrange_t;
 #define cl_khr_subgroup_clustered_reduce 1
 #define __opencl_c_read_write_images 1
 #define __opencl_subgroup_builtins 1
+#define __opencl_depth_image_builtins 1
 #endif
 
 #if (__OPENCL_CPP_VERSION__ == 100 || __OPENCL_C_VERSION__ == 200)
@@ -314,6 +316,180 @@ kernel void basic_subgroup(global uint *out) {
 #if !defined(NO_HEADER) && (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
   sub_group_barrier(CLK_GLOBAL_MEM_FENCE, memory_scope_device);
 #endif
+}
+
+kernel void basic_image_readonly_depth(read_only image2d_depth_t image_read_only_image2d_depth) {
+  int2 i2;
+  float f;
+  float2 f2;
+  sampler_t sampler;
+  float resf;
+
+  resf = read_imagef(image_read_only_image2d_depth, sampler, f2);
+  resf = read_imagef(image_read_only_image2d_depth, sampler, i2);
+  resf = read_imagef(image_read_only_image2d_depth, sampler, f2, f);
+  resf = read_imagef(image_read_only_image2d_depth, sampler, f2, f2, f2);
+  resf = read_imagef(image_read_only_image2d_depth, sampler, i2);
+}
+
+kernel void basic_image_readonly_array_depth(read_only image2d_array_depth_t image_read_only_image2d_array_depth) {
+  int4 i4;
+  float f;
+  float2 f2;
+  float4 f4;
+  sampler_t sampler;
+  float resf;
+
+  resf = read_imagef(image_read_only_image2d_array_depth, sampler, f4);
+  resf = read_imagef(image_read_only_image2d_array_depth, sampler, i4);
+  resf = read_imagef(image_read_only_image2d_array_depth, sampler, f4, f);
+  resf = read_imagef(image_read_only_image2d_array_depth, sampler, f4, f2, f2);
+  resf = read_imagef(image_read_only_image2d_array_depth, sampler, i4);
+}
+
+kernel void basic_image_readwrite_depth(read_write image2d_depth_t image_read_write_image2d_depth) {
+#if __OPENCL_C_VERSION__ < CL_VERSION_2_0 && !defined(__OPENCL_CPP_VERSION__)
+  // expected-error@-2{{access qualifier 'read_write' cannot be used for '__read_write image2d_depth_t' prior to OpenCL C version 2.0 or in version 3.0 and without __opencl_c_read_write_images feature}}
+#endif
+  int2 i2;
+  float f;
+  float2 f2;
+  sampler_t sampler;
+  float resf;
+
+  resf = read_imagef(image_read_write_image2d_depth, i2);
+}
+
+kernel void basic_image_readwrite_array_depth(read_write image2d_array_depth_t image_read_write_image2d_array_depth) {
+#if __OPENCL_C_VERSION__ < CL_VERSION_2_0 && !defined(__OPENCL_CPP_VERSION__)
+  // expected-error@-2{{access qualifier 'read_write' cannot be used for '__read_write image2d_array_depth_t' prior to OpenCL C version 2.0 or in version 3.0 and without __opencl_c_read_write_images feature}}
+#endif
+  int4 i4;
+  float f;
+  float2 f2;
+  float4 f4;
+  sampler_t sampler;
+  float resf;
+
+  resf = read_imagef(image_read_write_image2d_array_depth, i4);
+}
+
+kernel void basic_image_write_writeonly_depth(write_only image2d_depth_t image_write_only_image2d_depth) {
+  int i;
+  int2 i2;
+  float f;
+
+  write_imagef(image_write_only_image2d_depth, i2, f);
+  write_imagef(image_write_only_image2d_depth, i2, i, f);
+}
+
+kernel void basic_image_write_readwrite_depth(read_write image2d_depth_t image_read_write_image2d_depth) {
+#if __OPENCL_C_VERSION__ < CL_VERSION_2_0 && !defined(__OPENCL_CPP_VERSION__)
+  // expected-error@-2{{access qualifier 'read_write' cannot be used for '__read_write image2d_depth_t' prior to OpenCL C version 2.0 or in version 3.0 and without __opencl_c_read_write_images feature}}
+#endif
+  int i;
+  int2 i2;
+  float f;
+
+  write_imagef(image_read_write_image2d_depth, i2, f);
+}
+
+kernel void basic_image_write_writeonly_array_depth(write_only image2d_array_depth_t image_write_only_image2d_array_depth) {
+  int i;
+  int4 i4;
+  float f;
+  float resf;
+
+  write_imagef(image_write_only_image2d_array_depth, i4, f);
+  write_imagef(image_write_only_image2d_array_depth, i4, i, f);
+}
+
+kernel void basic_image_write_readwrite_array_depth(read_write image2d_array_depth_t image_read_write_image2d_array_depth) {
+#if __OPENCL_C_VERSION__ < CL_VERSION_2_0 && !defined(__OPENCL_CPP_VERSION__)
+  // expected-error@-2{{access qualifier 'read_write' cannot be used for '__read_write image2d_array_depth_t' prior to OpenCL C version 2.0 or in version 3.0 and without __opencl_c_read_write_images feature}}
+#endif
+  int i;
+  int4 i4;
+  float f;
+  float resf;
+
+  write_imagef(image_read_write_image2d_array_depth, i4, f);
+}
+
+kernel void basic_image_query_read_only_depth(read_only image2d_depth_t image_read_only_image2d_depth, read_only image2d_array_depth_t image_read_only_image2d_array_depth) {
+  int i;
+  int2 i2;
+  i = get_image_width(image_read_only_image2d_depth);
+  i = get_image_width(image_read_only_image2d_array_depth);
+
+  i = get_image_height(image_read_only_image2d_depth);
+  i = get_image_height(image_read_only_image2d_array_depth);
+
+  i = get_image_num_mip_levels(image_read_only_image2d_depth);
+  i = get_image_num_mip_levels(image_read_only_image2d_array_depth);
+
+  i = get_image_channel_order(image_read_only_image2d_depth);
+  i = get_image_channel_order(image_read_only_image2d_array_depth);
+
+  i = get_image_channel_data_type(image_read_only_image2d_depth);
+  i = get_image_channel_data_type(image_read_only_image2d_array_depth);
+
+  i2 = get_image_dim(image_read_only_image2d_depth);
+  i2 = get_image_dim(image_read_only_image2d_array_depth);
+
+  size_t s = get_image_array_size(image_read_only_image2d_array_depth);
+}
+
+kernel void basic_image_query_write_only_depth(write_only image2d_depth_t image_write_only_image2d_depth, write_only image2d_array_depth_t image_write_only_image2d_array_depth) {
+  int i;
+  int2 i2;
+  i = get_image_width(image_write_only_image2d_depth);
+  i = get_image_width(image_write_only_image2d_array_depth);
+
+  i = get_image_height(image_write_only_image2d_depth);
+  i = get_image_height(image_write_only_image2d_array_depth);
+
+  i = get_image_num_mip_levels(image_write_only_image2d_depth);
+  i = get_image_num_mip_levels(image_write_only_image2d_array_depth);
+
+  i = get_image_channel_data_type(image_write_only_image2d_depth);
+  i = get_image_channel_data_type(image_write_only_image2d_array_depth);
+
+  i = get_image_channel_order(image_write_only_image2d_depth);
+  i = get_image_channel_order(image_write_only_image2d_array_depth);
+
+  i2 = get_image_dim(image_write_only_image2d_depth);
+  i2 = get_image_dim(image_write_only_image2d_array_depth);
+
+  size_t s = get_image_array_size(image_write_only_image2d_array_depth);
+}
+
+kernel void basic_image_query_read_write_depth(read_write image2d_depth_t image_read_write_image2d_depth, read_write image2d_array_depth_t image_read_write_image2d_array_depth) {
+#if __OPENCL_C_VERSION__ < CL_VERSION_2_0 && !defined(__OPENCL_CPP_VERSION__)
+  // expected-error@-2{{access qualifier 'read_write' cannot be used for '__read_write image2d_depth_t' prior to OpenCL C version 2.0 or in version 3.0 and without __opencl_c_read_write_images feature}}
+  // expected-error@-3{{access qualifier 'read_write' cannot be used for '__read_write image2d_array_depth_t' prior to OpenCL C version 2.0 or in version 3.0 and without __opencl_c_read_write_images feature}}
+#endif
+  int i;
+  int2 i2;
+  i = get_image_width(image_read_write_image2d_depth);
+  i = get_image_width(image_read_write_image2d_array_depth);
+
+  i = get_image_height(image_read_write_image2d_depth);
+  i = get_image_height(image_read_write_image2d_array_depth);
+
+  i = get_image_num_mip_levels(image_read_write_image2d_depth);
+  i = get_image_num_mip_levels(image_read_write_image2d_array_depth);
+
+  i = get_image_channel_data_type(image_read_write_image2d_depth);
+  i = get_image_channel_data_type(image_read_write_image2d_array_depth);
+
+  i = get_image_channel_order(image_read_write_image2d_depth);
+  i = get_image_channel_order(image_read_write_image2d_array_depth);
+
+  i2 = get_image_dim(image_read_write_image2d_depth);
+  i2 = get_image_dim(image_read_write_image2d_array_depth);
+
+  size_t s = get_image_array_size(image_read_write_image2d_array_depth);
 }
 
 kernel void extended_subgroup(global uint4 *out, global int *scalar, global char2 *c2) {
