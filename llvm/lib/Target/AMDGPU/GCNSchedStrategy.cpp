@@ -2357,9 +2357,9 @@ void PreRARematStage::rollback(const RollbackInfo &Rollback,
   Register Reg = RematMI->getOperand(0).getReg();
   Register OriginalReg = Remat->DefMI->getOperand(0).getReg();
   Remat->UseMI->substituteRegister(Reg, OriginalReg, 0, *DAG.TRI);
-  DAG.deleteMI(Remat->UseRegion, RematMI);
   REMAT_DEBUG(dbgs() << '[' << Remat->UseRegion
                      << "] Deleting rematerialization " << *RematMI);
+  DAG.deleteMI(Remat->UseRegion, RematMI);
 
   // Regenerate the original register's interval as slot indices may have
   // changed slightly from before re-scheduling, and re-add it as a

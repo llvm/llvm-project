@@ -1278,12 +1278,20 @@ public:
   /// the new bitwidth, then return truncated APInt. Else, return max value.
   LLVM_ABI APInt truncUSat(unsigned width) const;
 
-  /// Truncate to new width with signed saturation.
+  /// Truncate to new width with signed saturation to signed result.
   ///
   /// If this APInt, treated as signed integer, can be losslessly truncated to
   /// the new bitwidth, then return truncated APInt. Else, return either
   /// signed min value if the APInt was negative, or signed max value.
   LLVM_ABI APInt truncSSat(unsigned width) const;
+
+  /// Truncate to new width with signed saturation to unsigned result.
+  ///
+  /// If this APInt, treated as signed integer, can be losslessly truncated to
+  /// the new bitwidth, then return truncated APInt. Else, return either
+  /// zero if the APInt was negative, or unsigned max value.
+  /// If \p width matches the current bit width then no changes are made.
+  LLVM_ABI APInt truncSSatU(unsigned width) const;
 
   /// Sign extend to a new width.
   ///

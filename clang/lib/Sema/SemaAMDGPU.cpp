@@ -44,6 +44,10 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     constexpr const int SizeIdx = 2;
     llvm::APSInt Size;
     Expr *ArgExpr = TheCall->getArg(SizeIdx);
+    // Check for instantiation-dependent expressions (e.g., involving template
+    // parameters). These will be checked again during template instantiation.
+    if (ArgExpr->isInstantiationDependent())
+      return false;
     [[maybe_unused]] ExprResult R =
         SemaRef.VerifyIntegerConstantExpression(ArgExpr, &Size);
     assert(!R.isInvalid());
