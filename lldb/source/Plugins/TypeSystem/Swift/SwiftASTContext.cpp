@@ -913,26 +913,21 @@ static std::string GetClangModulesCacheProperty() {
   return std::string(path);
 }
 
-/// This function implements various heuristics to find a CAS
-/// configuration file.
-static void ConfigureCASStorage(const std::string &m_description,
-                                SwiftASTContext *m_ast_context,
-                                const SymbolContext &sc) {
+void SwiftASTContext::ConfigureCASStorage(const SymbolContext &sc) {
   auto cas = ModuleList::GetOrCreateCAS(sc.module_sp);
   if (!cas) {
     HEALTH_LOG_PRINTF("Did not create CAS: %s",
                       toString(cas.takeError()).c_str());
     return;
   }
-  m_ast_context->SetCASStorage(std::move(cas->object_store),
-                               std::move(cas->action_cache));
-  m_ast_context->GetCASOptions().CASOpts.CASPath = cas->configuration.CASPath;
-  m_ast_context->GetCASOptions().CASOpts.PluginPath =
-      cas->configuration.PluginPath;
-  m_ast_context->GetCASOptions().CASOpts.PluginOptions =
-      cas->configuration.PluginOptions;
+  SetCASStorage(std::move(cas->object_store), std::move(cas->action_cache));
+  swift::CASOptions &cas_options = GetCASOptions();
+  cas_options.CASOpts.CASPath = cas->configuration.CASPath;
+  cas_options.CASOpts.PluginPath = cas->configuration.PluginPath;
+  cas_options.CASOpts.PluginOptions = cas->configuration.PluginOptions;
+  m_cas_initialized = true;
   LOG_PRINTF(GetLog(LLDBLog::Types),
-             "Setup CAS from module list properties with cas path: %s",
+             "Setup CAS from module list properties with CAS path: %s",
              cas->configuration.CASPath.c_str());
 }
 
@@ -2644,7 +2639,7 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
 
   SymbolContext sc;
   module.CalculateSymbolContext(&sc);
-  ConfigureCASStorage(m_description, swift_ast_sp.get(), sc);
+  swift_ast_sp->ConfigureCASStorage(sc);
 
   // The serialized triple is the triple of the last binary
   // __swiftast section that was processed. Instead of relying on
@@ -3127,7 +3122,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
     }
   }
 
-  ConfigureCASStorage(m_description, swift_ast_sp.get(), sc);
+  swift_ast_sp->ConfigureCASStorage(sc);
 
   std::string resource_dir = HostInfo::GetSwiftResourceDir(
       triple, swift_ast_sp->GetPlatformSDKPath());

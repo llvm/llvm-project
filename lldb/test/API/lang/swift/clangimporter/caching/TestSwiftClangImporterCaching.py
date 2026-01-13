@@ -12,14 +12,21 @@ class TestSwiftClangImporterCaching(TestBase):
     @swiftTest
     def test(self):
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "break here",
-                                          lldb.SBFileSpec('main.swift'))
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec('main.swift')
+        )
         log = self.getBuildArtifact("types.log")
         self.runCmd("settings set target.swift-clang-override-options +-DADDED=1")
         self.runCmd("settings set target.swift-extra-clang-flags -- -DEXTRA=1")
         self.expect('log enable lldb types symbols -f "%s"' % log)
         self.expect("expression obj", DATA_TYPES_DISPLAYED_CORRECTLY,
                     substrs=["b ="])
+
+        frame = thread.frames[0]
+        data = frame.GetLanguageSpecificData()
+        has_cas = data.GetValueForKey("SwiftHasCAS").GetBooleanValue()
+        self.assertTrue(has_cas)
+                
         self.filecheck('platform shell cat "%s"' % log, __file__)
 #       CHECK Loading module ClangB from CAS at llvmcas://
 ### -cc1 should be round-tripped so there is no more `-cc1` in the extra args. Look for `-triple` which is a cc1 flag.
