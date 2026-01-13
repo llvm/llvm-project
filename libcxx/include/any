@@ -140,10 +140,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 class any;
 
 template <class _ValueType>
-_LIBCPP_HIDE_FROM_ABI add_pointer_t<add_const_t<_ValueType>> any_cast(any const*) _NOEXCEPT;
+_LIBCPP_HIDE_FROM_ABI add_pointer_t<add_const_t<_ValueType>> any_cast(any const*) noexcept;
 
 template <class _ValueType>
-_LIBCPP_HIDE_FROM_ABI add_pointer_t<_ValueType> any_cast(any*) _NOEXCEPT;
+_LIBCPP_HIDE_FROM_ABI add_pointer_t<_ValueType> any_cast(any*) noexcept;
 
 namespace __any_imp {
 inline constexpr size_t __small_buffer_size      = 3 * sizeof(void*);
@@ -153,7 +153,7 @@ template <class _Tp>
 using _IsSmallObject _LIBCPP_NODEBUG =
     integral_constant<bool,
                       sizeof(_Tp) <= __small_buffer_size && alignof(_Tp) <= __small_buffer_alignment &&
-                          is_nothrow_move_constructible<_Tp>::value >;
+                          is_nothrow_move_constructible_v<_Tp>>;
 
 enum class _Action { _Destroy, _Copy, _Move, _Get, _TypeInfo };
 
@@ -189,14 +189,14 @@ using _Handler _LIBCPP_NODEBUG = conditional_t< _IsSmallObject<_Tp>::value, _Sma
 class any {
 public:
   // construct/destruct
-  _LIBCPP_HIDE_FROM_ABI constexpr any() _NOEXCEPT : __h_(nullptr) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr any() noexcept : __h_(nullptr) {}
 
   _LIBCPP_HIDE_FROM_ABI any(any const& __other) : __h_(nullptr) {
     if (__other.__h_)
       __other.__call(_Action::_Copy, this);
   }
 
-  _LIBCPP_HIDE_FROM_ABI any(any&& __other) _NOEXCEPT : __h_(nullptr) {
+  _LIBCPP_HIDE_FROM_ABI any(any&& __other) noexcept : __h_(nullptr) {
     if (__other.__h_)
       __other.__call(_Action::_Move, this);
   }
@@ -235,7 +235,7 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI any& operator=(any&& __rhs) _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI any& operator=(any&& __rhs) noexcept {
     any(std::move(__rhs)).swap(*this);
     return *this;
   }
@@ -269,18 +269,31 @@ public:
   }
 
   // 6.3.3 any modifiers
-  _LIBCPP_HIDE_FROM_ABI void reset() _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI void reset() noexcept {
     if (__h_)
       this->__call(_Action::_Destroy);
   }
 
-  _LIBCPP_HIDE_FROM_ABI void swap(any& __rhs) _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI void swap(any& __rhs) noexcept {
+    if (this == &__rhs)
+      return;
+    if (__h_ && __rhs.__h_) {
+      any __tmp;
+      __rhs.__call(_Action::_Move, &__tmp);
+      this->__call(_Action::_Move, &__rhs);
+      __tmp.__call(_Action::_Move, this);
+    } else if (__h_) {
+      this->__call(_Action::_Move, &__rhs);
+    } else if (__rhs.__h_) {
+      __rhs.__call(_Action::_Move, this);
+    }
+  }
 
   // 6.3.4 any observers
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool has_value() const _NOEXCEPT { return __h_ != nullptr; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool has_value() const noexcept { return __h_ != nullptr; }
 
 #    if _LIBCPP_HAS_RTTI
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const type_info& type() const _NOEXCEPT {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const type_info& type() const noexcept {
     if (__h_) {
       return *static_cast<type_info const*>(this->__call(_Action::_TypeInfo));
     } else {
@@ -317,10 +330,10 @@ private:
   friend struct __any_imp::_LargeHandler;
 
   template <class _ValueType>
-  friend add_pointer_t<add_const_t<_ValueType>> any_cast(any const*) _NOEXCEPT;
+  friend add_pointer_t<add_const_t<_ValueType>> any_cast(any const*) noexcept;
 
   template <class _ValueType>
-  friend add_pointer_t<_ValueType> any_cast(any*) _NOEXCEPT;
+  friend add_pointer_t<_ValueType> any_cast(any*) noexcept;
 
   _HandleFuncPtr __h_ = nullptr;
   _Storage __s_;
@@ -454,24 +467,9 @@ private:
 
 } // namespace __any_imp
 
-inline _LIBCPP_HIDE_FROM_ABI void any::swap(any& __rhs) _NOEXCEPT {
-  if (this == &__rhs)
-    return;
-  if (__h_ && __rhs.__h_) {
-    any __tmp;
-    __rhs.__call(_Action::_Move, &__tmp);
-    this->__call(_Action::_Move, &__rhs);
-    __tmp.__call(_Action::_Move, this);
-  } else if (__h_) {
-    this->__call(_Action::_Move, &__rhs);
-  } else if (__rhs.__h_) {
-    __rhs.__call(_Action::_Move, this);
-  }
-}
-
 // 6.4 Non-member functions
 
-inline _LIBCPP_HIDE_FROM_ABI void swap(any& __lhs, any& __rhs) _NOEXCEPT { __lhs.swap(__rhs); }
+inline _LIBCPP_HIDE_FROM_ABI void swap(any& __lhs, any& __rhs) noexcept { __lhs.swap(__rhs); }
 
 template <class _Tp, class... _Args>
 [[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI any make_any(_Args&&... __args) {
@@ -486,7 +484,7 @@ template <class _Tp, class _Up, class... _Args>
 template <class _ValueType>
 [[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI _ValueType any_cast(any const& __v) {
   using _RawValueType = __remove_cvref_t<_ValueType>;
-  static_assert(is_constructible<_ValueType, _RawValueType const&>::value,
+  static_assert(is_constructible_v<_ValueType, _RawValueType const&>,
                 "ValueType is required to be a const lvalue reference "
                 "or a CopyConstructible type");
   auto __tmp = std::any_cast<add_const_t<_RawValueType>>(&__v);
@@ -498,7 +496,7 @@ template <class _ValueType>
 template <class _ValueType>
 [[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI _ValueType any_cast(any& __v) {
   using _RawValueType = __remove_cvref_t<_ValueType>;
-  static_assert(is_constructible<_ValueType, _RawValueType&>::value,
+  static_assert(is_constructible_v<_ValueType, _RawValueType&>,
                 "ValueType is required to be an lvalue reference "
                 "or a CopyConstructible type");
   auto __tmp = std::any_cast<_RawValueType>(&__v);
@@ -510,7 +508,7 @@ template <class _ValueType>
 template <class _ValueType>
 [[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI _ValueType any_cast(any&& __v) {
   using _RawValueType = __remove_cvref_t<_ValueType>;
-  static_assert(is_constructible<_ValueType, _RawValueType>::value,
+  static_assert(is_constructible_v<_ValueType, _RawValueType>,
                 "ValueType is required to be an rvalue reference "
                 "or a CopyConstructible type");
   auto __tmp = std::any_cast<_RawValueType>(&__v);
@@ -520,17 +518,17 @@ template <class _ValueType>
 }
 
 template <class _ValueType>
-[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI add_pointer_t<add_const_t<_ValueType>> any_cast(any const* __any) _NOEXCEPT {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI add_pointer_t<add_const_t<_ValueType>> any_cast(any const* __any) noexcept {
   static_assert(!is_void_v<_ValueType>, "_ValueType may not be void.");
-  static_assert(!is_reference<_ValueType>::value, "_ValueType may not be a reference.");
+  static_assert(!is_reference_v<_ValueType>, "_ValueType may not be a reference.");
   return std::any_cast<_ValueType>(const_cast<any*>(__any));
 }
 
 template <class _ValueType>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI add_pointer_t<_ValueType> any_cast(any* __any) _NOEXCEPT {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI add_pointer_t<_ValueType> any_cast(any* __any) noexcept {
   using __any_imp::_Action;
   static_assert(!is_void_v<_ValueType>, "_ValueType may not be void.");
-  static_assert(!is_reference<_ValueType>::value, "_ValueType may not be a reference.");
+  static_assert(!is_reference_v<_ValueType>, "_ValueType may not be a reference.");
   if constexpr (!is_function_v<_ValueType>) {
     using _ReturnType = add_pointer_t<_ValueType>;
     if (__any && __any->__h_) {

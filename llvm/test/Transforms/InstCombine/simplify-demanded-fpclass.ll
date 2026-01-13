@@ -383,7 +383,7 @@ define nofpclass(inf) float @ret_nofpclass_inf__select_multi_use_pinf_lhs(i1 %co
 ; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float 0x7FF0000000000000, float [[X]]
 ; CHECK-NEXT:    store float [[SELECT]], ptr [[PTR]], align 4
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float [[X]]
 ;
   %select = select i1 %cond, float 0x7FF0000000000000, float %x
   store float %select, ptr %ptr
@@ -1098,13 +1098,11 @@ define nofpclass(nan inf nzero nsub nnorm) float @test_powr_issue64870_2(float n
 ; CHECK-LABEL: define nofpclass(nan inf nzero nsub nnorm) float @test_powr_issue64870_2
 ; CHECK-SAME: (float nofpclass(nan inf) [[ARG:%.*]], float nofpclass(nan inf) [[ARG1:%.*]]) {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I:%.*]] = fcmp olt float [[ARG]], 0.000000e+00
-; CHECK-NEXT:    [[I2:%.*]] = select i1 [[I]], float 0x7FF8000000000000, float [[ARG]]
-; CHECK-NEXT:    [[I3:%.*]] = tail call float @llvm.log2.f32(float noundef [[I2]])
+; CHECK-NEXT:    [[I3:%.*]] = tail call float @llvm.log2.f32(float noundef [[ARG]])
 ; CHECK-NEXT:    [[I5:%.*]] = fmul float [[ARG1]], [[I3]]
 ; CHECK-NEXT:    [[I6:%.*]] = tail call noundef nofpclass(ninf nzero nsub nnorm) float @llvm.exp2.f32(float noundef [[I5]])
-; CHECK-NEXT:    [[I10:%.*]] = fcmp oeq float [[I2]], 0.000000e+00
-; CHECK-NEXT:    [[I12:%.*]] = select i1 [[I10]], float 0.000000e+00, float [[I6]]
+; CHECK-NEXT:    [[TMP0:%.*]] = fcmp oeq float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    [[I12:%.*]] = select i1 [[TMP0]], float 0.000000e+00, float [[I6]]
 ; CHECK-NEXT:    ret float [[I12]]
 ;
 bb:
@@ -1541,4 +1539,56 @@ define nofpclass(nan) float @exp_select_must_be_0_commute(float %arg, float nofp
   %select = select i1 %is.zero, float %arg, float %zero.or.nan
   %exp = call float @llvm.exp.f32(float %select)
   ret float %exp
+}
+
+; Select has multiple uses, with the same user
+define nofpclass(nan) float @ret_nonan_fmul_select_fmul_select_nan_multiple_use(i1 %cond, float noundef %x) {
+; CHECK-LABEL: define nofpclass(nan) float @ret_nonan_fmul_select_fmul_select_nan_multiple_use
+; CHECK-SAME: (i1 [[COND:%.*]], float noundef [[X:%.*]]) {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[X]], [[X]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %select = select i1 %cond, float %x, float 0x7FF8000000000000
+  %fmul = fmul float %select, %select
+  ret float %fmul
+}
+
+define nofpclass(nan) float @ret_nonan_fmul_select_fmul_select_nan_multiple_use_commute(i1 %cond, float noundef %x) {
+; CHECK-LABEL: define nofpclass(nan) float @ret_nonan_fmul_select_fmul_select_nan_multiple_use_commute
+; CHECK-SAME: (i1 [[COND:%.*]], float noundef [[X:%.*]]) {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[X]], [[X]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %select = select i1 %cond, float 0x7FF8000000000000, float %x
+  %fmul = fmul float %select, %select
+  ret float %fmul
+}
+
+; Select has a second, unrelated use
+define nofpclass(nan) float @ret_nonan_fmul_select_nan_other_use(i1 %cond, float noundef %x, float %y, ptr %ptr) {
+; CHECK-LABEL: define nofpclass(nan) float @ret_nonan_fmul_select_nan_other_use
+; CHECK-SAME: (i1 [[COND:%.*]], float noundef [[X:%.*]], float [[Y:%.*]], ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[X]], float 0x7FF8000000000000
+; CHECK-NEXT:    store float [[SELECT]], ptr [[PTR]], align 4
+; CHECK-NEXT:    [[NAN_USER:%.*]] = fmul float [[X]], [[Y]]
+; CHECK-NEXT:    ret float [[NAN_USER]]
+;
+  %select = select i1 %cond, float %x, float 0x7FF8000000000000
+  store float %select, ptr %ptr
+  %nan.user = fmul float %select, %y
+  ret float %nan.user
+}
+
+define nofpclass(nan) float @ret_nonan_fmul_select_nan_other_use_commute(i1 %cond, float noundef %x, float %y, ptr %ptr) {
+; CHECK-LABEL: define nofpclass(nan) float @ret_nonan_fmul_select_nan_other_use_commute
+; CHECK-SAME: (i1 [[COND:%.*]], float noundef [[X:%.*]], float [[Y:%.*]], ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float 0x7FF8000000000000, float [[X]]
+; CHECK-NEXT:    store float [[SELECT]], ptr [[PTR]], align 4
+; CHECK-NEXT:    [[NAN_USER:%.*]] = fmul float [[X]], [[Y]]
+; CHECK-NEXT:    ret float [[NAN_USER]]
+;
+  %select = select i1 %cond, float 0x7FF8000000000000, float %x
+  store float %select, ptr %ptr
+  %nan.user = fmul float %select, %y
+  ret float %nan.user
 }
