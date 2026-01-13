@@ -169,6 +169,8 @@ private:
 
 /// CodeGenRegister - Represents a register definition.
 class CodeGenRegister {
+  friend class CodeGenRegBank;
+
 public:
   const Record *TheDef;
   unsigned EnumValue;
@@ -256,6 +258,10 @@ public:
   // Get the list of register units.
   // This is only valid after computeSubRegs() completes.
   const RegUnitList &getRegUnits() const { return RegUnits; }
+
+  void setNewRegUnits(const RegUnitList &NewRegUnits) {
+    RegUnits = NewRegUnits;
+  }
 
   ArrayRef<LaneBitmask> getRegUnitLaneMasks() const {
     return ArrayRef(RegUnitLaneMasks).slice(0, NativeRegUnits.count());
@@ -692,6 +698,9 @@ class CodeGenRegBank {
 
   // Compute a weight for each register unit created during getSubRegs.
   void computeRegUnitWeights();
+
+  // Enforce that all registers are intervals of regunits if requested.
+  void enforceRegUnitIntervals();
 
   // Create a RegUnitSet for each RegClass and infer superclasses.
   void computeRegUnitSets();

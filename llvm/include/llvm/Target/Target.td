@@ -1935,6 +1935,11 @@ class Target {
   // setting hasExtraDefRegAllocReq and hasExtraSrcRegAllocReq to 1
   // for all opcodes if this flag is set to 0.
   int AllowRegisterRenaming = 0;
+
+  // RegistersAreIntervals - Controls whether this target requires
+  // all Registers to have RegUnit intervals. Will attempt to reorder
+  // RegUnits to enforce this, and if a solution is not found, will error.
+  bit RegistersAreIntervals = 0;
 }
 
 //===----------------------------------------------------------------------===//
