@@ -44,9 +44,9 @@ define i64 @test(ptr %arg1, i64 %alloca.promoted344, i8 %load.311.i, i1 %load1.i
 ; CHECK:       [[BB8_3_I]]:
 ; CHECK-NEXT:    br label %[[BB12_3_I]]
 ; CHECK:       [[BB12_3_I]]:
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <8 x i8> [[TMP4]], i32 1
-; CHECK-NEXT:    [[ICMP5_4_I:%.*]] = icmp eq i8 [[TMP18]], 0
-; CHECK-NEXT:    br i1 [[ICMP5_4_I]], label %[[BB12_4_I:.*]], label %[[BB8_4_I:.*]]
+; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <8 x i8> [[TMP4]], i32 1
+; CHECK-NEXT:    [[ICMP5_7_I:%.*]] = icmp eq i8 [[TMP20]], 0
+; CHECK-NEXT:    br i1 [[ICMP5_7_I]], label %[[BB12_4_I:.*]], label %[[BB8_4_I:.*]]
 ; CHECK:       [[BB8_4_I]]:
 ; CHECK-NEXT:    br label %[[BB12_4_I]]
 ; CHECK:       [[BB12_4_I]]:
@@ -56,15 +56,15 @@ define i64 @test(ptr %arg1, i64 %alloca.promoted344, i8 %load.311.i, i1 %load1.i
 ; CHECK:       [[BB8_5_I]]:
 ; CHECK-NEXT:    br label %[[BB12_5_I]]
 ; CHECK:       [[BB12_5_I]]:
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <8 x i8> [[TMP4]], i32 3
-; CHECK-NEXT:    [[ICMP5_7_I:%.*]] = icmp eq i8 [[TMP20]], 0
-; CHECK-NEXT:    br i1 [[ICMP5_7_I]], label %[[BB12_7_I:.*]], label %[[BB8_7_I:.*]]
+; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <8 x i8> [[TMP4]], i32 3
+; CHECK-NEXT:    [[ICMP5_8_I:%.*]] = icmp eq i8 [[TMP21]], 0
+; CHECK-NEXT:    br i1 [[ICMP5_8_I]], label %[[BB12_7_I:.*]], label %[[BB8_7_I:.*]]
 ; CHECK:       [[BB8_7_I]]:
 ; CHECK-NEXT:    br label %[[BB12_7_I]]
 ; CHECK:       [[BB12_7_I]]:
-; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <8 x i8> [[TMP4]], i32 4
-; CHECK-NEXT:    [[ICMP5_8_I:%.*]] = icmp eq i8 [[TMP21]], 0
-; CHECK-NEXT:    br i1 [[ICMP5_8_I]], label %[[BB12_8_I]], label %[[BB8_8_I:.*]]
+; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <8 x i8> [[TMP4]], i32 4
+; CHECK-NEXT:    [[ICMP5_8_I1:%.*]] = icmp eq i8 [[TMP30]], 0
+; CHECK-NEXT:    br i1 [[ICMP5_8_I1]], label %[[BB12_8_I]], label %[[BB8_8_I:.*]]
 ; CHECK:       [[BB8_8_I]]:
 ; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i8> [[TMP1]], i8 [[LOAD_8_I]], i32 1
 ; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x i8> poison, i8 [[LOAD_8_I]], i32 0

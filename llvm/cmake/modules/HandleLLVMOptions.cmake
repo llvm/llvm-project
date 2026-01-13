@@ -1165,8 +1165,8 @@ endif()
 if(MSVC)
   # Remove flags here, for exceptions and RTTI.
   # Each target property or source property should be responsible to control
-  # them.
-  # CL.EXE complains to override flags like "/GR /GR-".
+  # them (see llvm_update_compile_flags).
+  # CL.EXE complains to override flags like "/GR /GR-". CMake adds them by default.
   string(REGEX REPLACE "(^| ) */EH[-cs]+ *( |$)" "\\1 \\2" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
   string(REGEX REPLACE "(^| ) */GR-? *( |$)" "\\1 \\2" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 endif()

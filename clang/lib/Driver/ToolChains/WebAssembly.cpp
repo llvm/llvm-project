@@ -265,6 +265,12 @@ WebAssembly::WebAssembly(const Driver &D, const llvm::Triple &Triple,
     }
     getFilePaths().push_back(SysRoot + "/lib/" + MultiarchTriple);
   }
+
+  if (getTriple().getOS() == llvm::Triple::WASI) {
+    D.Diag(diag::warn_drv_deprecated_custom)
+        << "--target=wasm32-wasi"
+        << "use --target=wasm32-wasip1 instead";
+  }
 }
 
 const char *WebAssembly::getDefaultLinker() const {
