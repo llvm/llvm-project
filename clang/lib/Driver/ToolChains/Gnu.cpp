@@ -514,8 +514,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
       AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
 
-      // For SYCL compilations, pass the linker option '-lsycl' by default to
-      // the clang-linker-wrapper tool which links the SYCL runtime library.
+      // For SYCL compilations, pass -lsycl to the platform linker by default.
       if (Args.hasArg(options::OPT_fsycl) &&
           !Args.hasArg(options::OPT_nolibsycl)) {
         CmdArgs.push_back("-lsycl");
