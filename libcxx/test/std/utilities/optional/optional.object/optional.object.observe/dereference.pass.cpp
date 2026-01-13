@@ -18,6 +18,7 @@
 #include <cassert>
 #include <memory>
 #include <optional>
+#include <utility>
 
 #include "test_macros.h"
 #if TEST_STD_VER >= 26
