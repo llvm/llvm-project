@@ -2870,12 +2870,18 @@ entry:
 }
 
 define <8 x i8> @and_dup_not_v8i8(<8 x i8> %a, i8 %m) {
-; CHECK-LABEL: and_dup_not_v8i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    dup v1.8b, w8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: and_dup_not_v8i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    dup v1.8b, w0
+; CHECK-SD-NEXT:    bic v0.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: and_dup_not_v8i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mvn w8, w0
+; CHECK-GI-NEXT:    dup v1.8b, w8
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    ret
   %not = xor i8 %m, -1
   %insert = insertelement <8 x i8> poison, i8 %not, i64 0
   %shuffle = shufflevector <8 x i8> %insert, <8 x i8> poison, <8 x i32> zeroinitializer
@@ -2884,12 +2890,18 @@ define <8 x i8> @and_dup_not_v8i8(<8 x i8> %a, i8 %m) {
 }
 
 define <8 x i8> @and_dup_not_v8i8_swapped(<8 x i8> %a, i8 %m) {
-; CHECK-LABEL: and_dup_not_v8i8_swapped:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    dup v1.8b, w8
-; CHECK-NEXT:    and v0.8b, v1.8b, v0.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: and_dup_not_v8i8_swapped:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    dup v1.8b, w0
+; CHECK-SD-NEXT:    bic v0.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: and_dup_not_v8i8_swapped:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mvn w8, w0
+; CHECK-GI-NEXT:    dup v1.8b, w8
+; CHECK-GI-NEXT:    and v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    ret
   %not = xor i8 %m, -1
   %insert = insertelement <8 x i8> poison, i8 %not, i64 0
   %shuffle = shufflevector <8 x i8> %insert, <8 x i8> poison, <8 x i32> zeroinitializer
@@ -2898,12 +2910,18 @@ define <8 x i8> @and_dup_not_v8i8_swapped(<8 x i8> %a, i8 %m) {
 }
 
 define <16 x i8> @and_dup_not_v16i8(<16 x i8> %a, i8 %m) {
-; CHECK-LABEL: and_dup_not_v16i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    dup v1.16b, w8
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: and_dup_not_v16i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    dup v1.16b, w0
+; CHECK-SD-NEXT:    bic v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: and_dup_not_v16i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mvn w8, w0
+; CHECK-GI-NEXT:    dup v1.16b, w8
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    ret
   %not = xor i8 %m, -1
   %insert = insertelement <16 x i8> poison, i8 %not, i64 0
   %shuffle = shufflevector <16 x i8> %insert, <16 x i8> poison, <16 x i32> zeroinitializer
@@ -2912,12 +2930,18 @@ define <16 x i8> @and_dup_not_v16i8(<16 x i8> %a, i8 %m) {
 }
 
 define <16 x i8> @and_dup_not_v16i8_swapped(<16 x i8> %a, i8 %m) {
-; CHECK-LABEL: and_dup_not_v16i8_swapped:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    dup v1.16b, w8
-; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: and_dup_not_v16i8_swapped:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    dup v1.16b, w0
+; CHECK-SD-NEXT:    bic v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: and_dup_not_v16i8_swapped:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mvn w8, w0
+; CHECK-GI-NEXT:    dup v1.16b, w8
+; CHECK-GI-NEXT:    and v0.16b, v1.16b, v0.16b
+; CHECK-GI-NEXT:    ret
   %not = xor i8 %m, -1
   %insert = insertelement <16 x i8> poison, i8 %not, i64 0
   %shuffle = shufflevector <16 x i8> %insert, <16 x i8> poison, <16 x i32> zeroinitializer
@@ -2926,12 +2950,18 @@ define <16 x i8> @and_dup_not_v16i8_swapped(<16 x i8> %a, i8 %m) {
 }
 
 define <4 x i16> @and_dup_not_v4i16(<4 x i16> %a, i16 %m) {
-; CHECK-LABEL: and_dup_not_v4i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    dup v1.4h, w8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: and_dup_not_v4i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    dup v1.4h, w0
+; CHECK-SD-NEXT:    bic v0.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: and_dup_not_v4i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mvn w8, w0
+; CHECK-GI-NEXT:    dup v1.4h, w8
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    ret
   %not = xor i16 %m, -1
   %insert = insertelement <4 x i16> poison, i16 %not, i64 0
   %shuffle = shufflevector <4 x i16> %insert, <4 x i16> poison, <4 x i32> zeroinitializer
@@ -2940,12 +2970,18 @@ define <4 x i16> @and_dup_not_v4i16(<4 x i16> %a, i16 %m) {
 }
 
 define <4 x i16> @and_dup_not_v4i16_swapped(<4 x i16> %a, i16 %m) {
-; CHECK-LABEL: and_dup_not_v4i16_swapped:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    dup v1.4h, w8
-; CHECK-NEXT:    and v0.8b, v1.8b, v0.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: and_dup_not_v4i16_swapped:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    dup v1.4h, w0
+; CHECK-SD-NEXT:    bic v0.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: and_dup_not_v4i16_swapped:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mvn w8, w0
+; CHECK-GI-NEXT:    dup v1.4h, w8
+; CHECK-GI-NEXT:    and v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    ret
   %not = xor i16 %m, -1
   %insert = insertelement <4 x i16> poison, i16 %not, i64 0
   %shuffle = shufflevector <4 x i16> %insert, <4 x i16> poison, <4 x i32> zeroinitializer
@@ -2954,12 +2990,18 @@ define <4 x i16> @and_dup_not_v4i16_swapped(<4 x i16> %a, i16 %m) {
 }
 
 define <8 x i16> @and_dup_not_v8i16(<8 x i16> %a, i16 %m) {
-; CHECK-LABEL: and_dup_not_v8i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    dup v1.8h, w8
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: and_dup_not_v8i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    dup v1.8h, w0
+; CHECK-SD-NEXT:    bic v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: and_dup_not_v8i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mvn w8, w0
+; CHECK-GI-NEXT:    dup v1.8h, w8
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    ret
   %not = xor i16 %m, -1
   %insert = insertelement <8 x i16> poison, i16 %not, i64 0
   %shuffle = shufflevector <8 x i16> %insert, <8 x i16> poison, <8 x i32> zeroinitializer
@@ -2968,12 +3010,18 @@ define <8 x i16> @and_dup_not_v8i16(<8 x i16> %a, i16 %m) {
 }
 
 define <8 x i16> @and_dup_not_v8i16_swapped(<8 x i16> %a, i16 %m) {
-; CHECK-LABEL: and_dup_not_v8i16_swapped:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    dup v1.8h, w8
-; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: and_dup_not_v8i16_swapped:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    dup v1.8h, w0
+; CHECK-SD-NEXT:    bic v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: and_dup_not_v8i16_swapped:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mvn w8, w0
+; CHECK-GI-NEXT:    dup v1.8h, w8
+; CHECK-GI-NEXT:    and v0.16b, v1.16b, v0.16b
+; CHECK-GI-NEXT:    ret
   %not = xor i16 %m, -1
   %insert = insertelement <8 x i16> poison, i16 %not, i64 0
   %shuffle = shufflevector <8 x i16> %insert, <8 x i16> poison, <8 x i32> zeroinitializer
@@ -2984,9 +3032,8 @@ define <8 x i16> @and_dup_not_v8i16_swapped(<8 x i16> %a, i16 %m) {
 define <2 x i32> @and_dup_not_v2i32(<2 x i32> %a, i32 %m) {
 ; CHECK-LABEL: and_dup_not_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    dup v1.2s, w8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    dup v1.2s, w0
+; CHECK-NEXT:    bic v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %not = xor i32 %m, -1
   %insert = insertelement <2 x i32> poison, i32 %not, i64 0
@@ -2998,9 +3045,8 @@ define <2 x i32> @and_dup_not_v2i32(<2 x i32> %a, i32 %m) {
 define <2 x i32> @and_dup_not_v2i32_swapped(<2 x i32> %a, i32 %m) {
 ; CHECK-LABEL: and_dup_not_v2i32_swapped:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    dup v1.2s, w8
-; CHECK-NEXT:    and v0.8b, v1.8b, v0.8b
+; CHECK-NEXT:    dup v1.2s, w0
+; CHECK-NEXT:    bic v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %not = xor i32 %m, -1
   %insert = insertelement <2 x i32> poison, i32 %not, i64 0
@@ -3012,9 +3058,8 @@ define <2 x i32> @and_dup_not_v2i32_swapped(<2 x i32> %a, i32 %m) {
 define <4 x i32> @and_dup_not_v4i32(<4 x i32> %a, i32 %m) {
 ; CHECK-LABEL: and_dup_not_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    dup v1.4s, w8
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    dup v1.4s, w0
+; CHECK-NEXT:    bic v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %not = xor i32 %m, -1
   %insert = insertelement <4 x i32> poison, i32 %not, i64 0
@@ -3026,9 +3071,8 @@ define <4 x i32> @and_dup_not_v4i32(<4 x i32> %a, i32 %m) {
 define <4 x i32> @and_dup_not_v4i32_swapped(<4 x i32> %a, i32 %m) {
 ; CHECK-LABEL: and_dup_not_v4i32_swapped:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    dup v1.4s, w8
-; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    dup v1.4s, w0
+; CHECK-NEXT:    bic v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %not = xor i32 %m, -1
   %insert = insertelement <4 x i32> poison, i32 %not, i64 0
@@ -3040,9 +3084,8 @@ define <4 x i32> @and_dup_not_v4i32_swapped(<4 x i32> %a, i32 %m) {
 define <2 x i64> @and_dup_not_v2i64(<2 x i64> %a, i64 %m) {
 ; CHECK-LABEL: and_dup_not_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn x8, x0
-; CHECK-NEXT:    dup v1.2d, x8
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    dup v1.2d, x0
+; CHECK-NEXT:    bic v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %not = xor i64 %m, -1
   %insert = insertelement <2 x i64> poison, i64 %not, i64 0
@@ -3052,12 +3095,18 @@ define <2 x i64> @and_dup_not_v2i64(<2 x i64> %a, i64 %m) {
 }
 
 define <8 x i8> @or_dup_not_v8i8(<8 x i8> %a, i8 %m) {
-; CHECK-LABEL: or_dup_not_v8i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    dup v1.8b, w8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: or_dup_not_v8i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    dup v1.8b, w0
+; CHECK-SD-NEXT:    orn v0.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: or_dup_not_v8i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mvn w8, w0
+; CHECK-GI-NEXT:    dup v1.8b, w8
+; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    ret
   %not = xor i8 %m, -1
   %insert = insertelement <8 x i8> poison, i8 %not, i64 0
   %shuffle = shufflevector <8 x i8> %insert, <8 x i8> poison, <8 x i32> zeroinitializer
@@ -3066,12 +3115,18 @@ define <8 x i8> @or_dup_not_v8i8(<8 x i8> %a, i8 %m) {
 }
 
 define <8 x i8> @or_dup_not_v8i8_swapped(<8 x i8> %a, i8 %m) {
-; CHECK-LABEL: or_dup_not_v8i8_swapped:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    dup v1.8b, w8
-; CHECK-NEXT:    orr v0.8b, v1.8b, v0.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: or_dup_not_v8i8_swapped:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    dup v1.8b, w0
+; CHECK-SD-NEXT:    orn v0.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: or_dup_not_v8i8_swapped:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mvn w8, w0
+; CHECK-GI-NEXT:    dup v1.8b, w8
+; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    ret
   %not = xor i8 %m, -1
   %insert = insertelement <8 x i8> poison, i8 %not, i64 0
   %shuffle = shufflevector <8 x i8> %insert, <8 x i8> poison, <8 x i32> zeroinitializer
@@ -3080,12 +3135,18 @@ define <8 x i8> @or_dup_not_v8i8_swapped(<8 x i8> %a, i8 %m) {
 }
 
 define <16 x i8> @or_dup_not_v16i8(<16 x i8> %a, i8 %m) {
-; CHECK-LABEL: or_dup_not_v16i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    dup v1.16b, w8
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: or_dup_not_v16i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    dup v1.16b, w0
+; CHECK-SD-NEXT:    orn v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: or_dup_not_v16i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mvn w8, w0
+; CHECK-GI-NEXT:    dup v1.16b, w8
+; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    ret
   %not = xor i8 %m, -1
   %insert = insertelement <16 x i8> poison, i8 %not, i64 0
   %shuffle = shufflevector <16 x i8> %insert, <16 x i8> poison, <16 x i32> zeroinitializer
@@ -3094,12 +3155,18 @@ define <16 x i8> @or_dup_not_v16i8(<16 x i8> %a, i8 %m) {
 }
 
 define <16 x i8> @or_dup_not_v16i8_swapped(<16 x i8> %a, i8 %m) {
-; CHECK-LABEL: or_dup_not_v16i8_swapped:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    dup v1.16b, w8
-; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: or_dup_not_v16i8_swapped:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    dup v1.16b, w0
+; CHECK-SD-NEXT:    orn v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: or_dup_not_v16i8_swapped:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mvn w8, w0
+; CHECK-GI-NEXT:    dup v1.16b, w8
+; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-GI-NEXT:    ret
   %not = xor i8 %m, -1
   %insert = insertelement <16 x i8> poison, i8 %not, i64 0
   %shuffle = shufflevector <16 x i8> %insert, <16 x i8> poison, <16 x i32> zeroinitializer
@@ -3108,12 +3175,18 @@ define <16 x i8> @or_dup_not_v16i8_swapped(<16 x i8> %a, i8 %m) {
 }
 
 define <4 x i16> @or_dup_not_v4i16(<4 x i16> %a, i16 %m) {
-; CHECK-LABEL: or_dup_not_v4i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    dup v1.4h, w8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: or_dup_not_v4i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    dup v1.4h, w0
+; CHECK-SD-NEXT:    orn v0.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: or_dup_not_v4i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mvn w8, w0
+; CHECK-GI-NEXT:    dup v1.4h, w8
+; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    ret
   %not = xor i16 %m, -1
   %insert = insertelement <4 x i16> poison, i16 %not, i64 0
   %shuffle = shufflevector <4 x i16> %insert, <4 x i16> poison, <4 x i32> zeroinitializer
@@ -3122,12 +3195,18 @@ define <4 x i16> @or_dup_not_v4i16(<4 x i16> %a, i16 %m) {
 }
 
 define <4 x i16> @or_dup_not_v4i16_swapped(<4 x i16> %a, i16 %m) {
-; CHECK-LABEL: or_dup_not_v4i16_swapped:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    dup v1.4h, w8
-; CHECK-NEXT:    orr v0.8b, v1.8b, v0.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: or_dup_not_v4i16_swapped:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    dup v1.4h, w0
+; CHECK-SD-NEXT:    orn v0.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: or_dup_not_v4i16_swapped:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mvn w8, w0
+; CHECK-GI-NEXT:    dup v1.4h, w8
+; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    ret
   %not = xor i16 %m, -1
   %insert = insertelement <4 x i16> poison, i16 %not, i64 0
   %shuffle = shufflevector <4 x i16> %insert, <4 x i16> poison, <4 x i32> zeroinitializer
@@ -3136,12 +3215,18 @@ define <4 x i16> @or_dup_not_v4i16_swapped(<4 x i16> %a, i16 %m) {
 }
 
 define <8 x i16> @or_dup_not_v8i16(<8 x i16> %a, i16 %m) {
-; CHECK-LABEL: or_dup_not_v8i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    dup v1.8h, w8
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: or_dup_not_v8i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    dup v1.8h, w0
+; CHECK-SD-NEXT:    orn v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: or_dup_not_v8i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mvn w8, w0
+; CHECK-GI-NEXT:    dup v1.8h, w8
+; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    ret
   %not = xor i16 %m, -1
   %insert = insertelement <8 x i16> poison, i16 %not, i64 0
   %shuffle = shufflevector <8 x i16> %insert, <8 x i16> poison, <8 x i32> zeroinitializer
@@ -3150,12 +3235,18 @@ define <8 x i16> @or_dup_not_v8i16(<8 x i16> %a, i16 %m) {
 }
 
 define <8 x i16> @or_dup_not_v8i16_swapped(<8 x i16> %a, i16 %m) {
-; CHECK-LABEL: or_dup_not_v8i16_swapped:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    dup v1.8h, w8
-; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: or_dup_not_v8i16_swapped:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    dup v1.8h, w0
+; CHECK-SD-NEXT:    orn v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: or_dup_not_v8i16_swapped:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mvn w8, w0
+; CHECK-GI-NEXT:    dup v1.8h, w8
+; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-GI-NEXT:    ret
   %not = xor i16 %m, -1
   %insert = insertelement <8 x i16> poison, i16 %not, i64 0
   %shuffle = shufflevector <8 x i16> %insert, <8 x i16> poison, <8 x i32> zeroinitializer
@@ -3166,9 +3257,8 @@ define <8 x i16> @or_dup_not_v8i16_swapped(<8 x i16> %a, i16 %m) {
 define <2 x i32> @or_dup_not_v2i32(<2 x i32> %a, i32 %m) {
 ; CHECK-LABEL: or_dup_not_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    dup v1.2s, w8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    dup v1.2s, w0
+; CHECK-NEXT:    orn v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %not = xor i32 %m, -1
   %insert = insertelement <2 x i32> poison, i32 %not, i64 0
@@ -3180,9 +3270,8 @@ define <2 x i32> @or_dup_not_v2i32(<2 x i32> %a, i32 %m) {
 define <2 x i32> @or_dup_not_v2i32_swapped(<2 x i32> %a, i32 %m) {
 ; CHECK-LABEL: or_dup_not_v2i32_swapped:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    dup v1.2s, w8
-; CHECK-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-NEXT:    dup v1.2s, w0
+; CHECK-NEXT:    orn v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %not = xor i32 %m, -1
   %insert = insertelement <2 x i32> poison, i32 %not, i64 0
@@ -3194,9 +3283,8 @@ define <2 x i32> @or_dup_not_v2i32_swapped(<2 x i32> %a, i32 %m) {
 define <4 x i32> @or_dup_not_v4i32(<4 x i32> %a, i32 %m) {
 ; CHECK-LABEL: or_dup_not_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    dup v1.4s, w8
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    dup v1.4s, w0
+; CHECK-NEXT:    orn v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %not = xor i32 %m, -1
   %insert = insertelement <4 x i32> poison, i32 %not, i64 0
@@ -3208,9 +3296,8 @@ define <4 x i32> @or_dup_not_v4i32(<4 x i32> %a, i32 %m) {
 define <4 x i32> @or_dup_not_v4i32_swapped(<4 x i32> %a, i32 %m) {
 ; CHECK-LABEL: or_dup_not_v4i32_swapped:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    dup v1.4s, w8
-; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    dup v1.4s, w0
+; CHECK-NEXT:    orn v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %not = xor i32 %m, -1
   %insert = insertelement <4 x i32> poison, i32 %not, i64 0
@@ -3222,9 +3309,8 @@ define <4 x i32> @or_dup_not_v4i32_swapped(<4 x i32> %a, i32 %m) {
 define <2 x i64> @or_dup_not_v2i64(<2 x i64> %a, i64 %m) {
 ; CHECK-LABEL: or_dup_not_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn x8, x0
-; CHECK-NEXT:    dup v1.2d, x8
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    dup v1.2d, x0
+; CHECK-NEXT:    orn v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %not = xor i64 %m, -1
   %insert = insertelement <2 x i64> poison, i64 %not, i64 0
