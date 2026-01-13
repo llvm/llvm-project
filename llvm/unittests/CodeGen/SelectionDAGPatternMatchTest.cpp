@@ -718,6 +718,9 @@ TEST_F(SelectionDAGPatternMatchTest, matchIntrinsicWOChain) {
   // Intrinsic operations should match
   EXPECT_TRUE(sd_match(WasmBitmask, m_IntrinsicWOChain<Intrinsic::wasm_bitmask>(m_Value(H0))));
   EXPECT_TRUE(sd_match(X86Aadd32, m_IntrinsicWOChain<Intrinsic::x86_aadd32>(m_Value(H1), m_Value(H2))));
+  EXPECT_TRUE(H0 == Op0);
+  EXPECT_TRUE(H1 == PtrOp);
+  EXPECT_TRUE(H2 == Op1);
 
   // Intrinsic operations with incorrect IntrinsicId should not match
   EXPECT_FALSE(sd_match(X86Aadd32, m_IntrinsicWOChain<Intrinsic::wasm_bitmask>(m_Value(H3), m_Value(H4))));
