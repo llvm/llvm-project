@@ -1017,4 +1017,3 @@ void ::mlir::populateXeVMToLLVMConversionPatterns(ConversionTarget &target,
                SubgroupOpWorkitemOpToOCLPattern<SubgroupSizeOp>>(
       patterns.getContext());
 }
-
