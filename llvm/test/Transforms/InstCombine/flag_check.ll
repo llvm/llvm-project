@@ -40,6 +40,14 @@ entry:
 }
 
 define i1 @or_icmp_3_no_shift(i6 noundef %type) {
+; CHECK-LABEL: define i1 @or_icmp_3_no_shift(
+; CHECK-SAME: i6 noundef [[TYPE:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = zext i6 [[TYPE]] to i64
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i64 -9223372036854767608, [[SWITCH_CAST]]
+; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i64 [[SWITCH_DOWNSHIFT]] to i1
+; CHECK-NEXT:    ret i1 [[SWITCH_MASKED]]
+;
 entry:
   %cmp = icmp eq i6 %type,  63
   %cmp1 = icmp eq i6 %type, 3
