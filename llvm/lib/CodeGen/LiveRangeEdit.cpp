@@ -52,8 +52,16 @@ LiveInterval &LiveRangeEdit::createEmptyIntervalFrom(Register OldReg,
   return LI;
 }
 
-Register LiveRangeEdit::createFrom(Register OldReg) {
+Register LiveRangeEdit::createFrom(Register OldReg,
+                                   const TargetRegisterClass *RC) {
   Register VReg = MRI.cloneVirtualRegister(OldReg);
+
+  // If RC is given, set it now. This is needed for cloning a new VReg with a
+  // smaller RC from its original virtual register, mainly used for subreg
+  // reload. The cloning is done first to ensure the vreg flags are preserved.
+  if (RC)
+    MRI.setRegClass(VReg, RC);
+
   if (VRM) {
     VRM->setIsSplitFromReg(VReg, VRM->getOriginal(OldReg));
   }
