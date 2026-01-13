@@ -2597,112 +2597,112 @@ _mm256_maskz_getexp_ps (__mmask8 __U, __m256 __A) {
                (__mmask8) __U);
 }
 
-static __inline__ __m128d __DEFAULT_FN_ATTRS128
+static __inline__ __m128d __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_mask_max_pd(__m128d __W, __mmask8 __U, __m128d __A, __m128d __B) {
   return (__m128d)__builtin_ia32_selectpd_128((__mmask8)__U,
                                               (__v2df)_mm_max_pd(__A, __B),
                                               (__v2df)__W);
 }
 
-static __inline__ __m128d __DEFAULT_FN_ATTRS128
+static __inline__ __m128d __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_maskz_max_pd(__mmask8 __U, __m128d __A, __m128d __B) {
   return (__m128d)__builtin_ia32_selectpd_128((__mmask8)__U,
                                               (__v2df)_mm_max_pd(__A, __B),
                                               (__v2df)_mm_setzero_pd());
 }
 
-static __inline__ __m256d __DEFAULT_FN_ATTRS256
+static __inline__ __m256d __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_mask_max_pd(__m256d __W, __mmask8 __U, __m256d __A, __m256d __B) {
   return (__m256d)__builtin_ia32_selectpd_256((__mmask8)__U,
                                               (__v4df)_mm256_max_pd(__A, __B),
                                               (__v4df)__W);
 }
 
-static __inline__ __m256d __DEFAULT_FN_ATTRS256
+static __inline__ __m256d __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_maskz_max_pd(__mmask8 __U, __m256d __A, __m256d __B) {
   return (__m256d)__builtin_ia32_selectpd_256((__mmask8)__U,
                                               (__v4df)_mm256_max_pd(__A, __B),
                                               (__v4df)_mm256_setzero_pd());
 }
 
-static __inline__ __m128 __DEFAULT_FN_ATTRS128
+static __inline__ __m128 __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_mask_max_ps(__m128 __W, __mmask8 __U, __m128 __A, __m128 __B) {
   return (__m128)__builtin_ia32_selectps_128((__mmask8)__U,
                                              (__v4sf)_mm_max_ps(__A, __B),
                                              (__v4sf)__W);
 }
 
-static __inline__ __m128 __DEFAULT_FN_ATTRS128
+static __inline__ __m128 __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_maskz_max_ps(__mmask8 __U, __m128 __A, __m128 __B) {
   return (__m128)__builtin_ia32_selectps_128((__mmask8)__U,
                                              (__v4sf)_mm_max_ps(__A, __B),
                                              (__v4sf)_mm_setzero_ps());
 }
 
-static __inline__ __m256 __DEFAULT_FN_ATTRS256
+static __inline__ __m256 __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_mask_max_ps(__m256 __W, __mmask8 __U, __m256 __A, __m256 __B) {
   return (__m256)__builtin_ia32_selectps_256((__mmask8)__U,
                                              (__v8sf)_mm256_max_ps(__A, __B),
                                              (__v8sf)__W);
 }
 
-static __inline__ __m256 __DEFAULT_FN_ATTRS256
+static __inline__ __m256 __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_maskz_max_ps(__mmask8 __U, __m256 __A, __m256 __B) {
   return (__m256)__builtin_ia32_selectps_256((__mmask8)__U,
                                              (__v8sf)_mm256_max_ps(__A, __B),
                                              (__v8sf)_mm256_setzero_ps());
 }
 
-static __inline__ __m128d __DEFAULT_FN_ATTRS128
+static __inline__ __m128d __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_mask_min_pd(__m128d __W, __mmask8 __U, __m128d __A, __m128d __B) {
   return (__m128d)__builtin_ia32_selectpd_128((__mmask8)__U,
                                               (__v2df)_mm_min_pd(__A, __B),
                                               (__v2df)__W);
 }
 
-static __inline__ __m128d __DEFAULT_FN_ATTRS128
+static __inline__ __m128d __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_maskz_min_pd(__mmask8 __U, __m128d __A, __m128d __B) {
   return (__m128d)__builtin_ia32_selectpd_128((__mmask8)__U,
                                               (__v2df)_mm_min_pd(__A, __B),
                                               (__v2df)_mm_setzero_pd());
 }
 
-static __inline__ __m256d __DEFAULT_FN_ATTRS256
+static __inline__ __m256d __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_mask_min_pd(__m256d __W, __mmask8 __U, __m256d __A, __m256d __B) {
   return (__m256d)__builtin_ia32_selectpd_256((__mmask8)__U,
                                               (__v4df)_mm256_min_pd(__A, __B),
                                               (__v4df)__W);
 }
 
-static __inline__ __m256d __DEFAULT_FN_ATTRS256
+static __inline__ __m256d __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_maskz_min_pd(__mmask8 __U, __m256d __A, __m256d __B) {
   return (__m256d)__builtin_ia32_selectpd_256((__mmask8)__U,
                                               (__v4df)_mm256_min_pd(__A, __B),
                                               (__v4df)_mm256_setzero_pd());
 }
 
-static __inline__ __m128 __DEFAULT_FN_ATTRS128
+static __inline__ __m128 __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_mask_min_ps(__m128 __W, __mmask8 __U, __m128 __A, __m128 __B) {
   return (__m128)__builtin_ia32_selectps_128((__mmask8)__U,
                                              (__v4sf)_mm_min_ps(__A, __B),
                                              (__v4sf)__W);
 }
 
-static __inline__ __m128 __DEFAULT_FN_ATTRS128
+static __inline__ __m128 __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_maskz_min_ps(__mmask8 __U, __m128 __A, __m128 __B) {
   return (__m128)__builtin_ia32_selectps_128((__mmask8)__U,
                                              (__v4sf)_mm_min_ps(__A, __B),
                                              (__v4sf)_mm_setzero_ps());
 }
 
-static __inline__ __m256 __DEFAULT_FN_ATTRS256
+static __inline__ __m256 __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_mask_min_ps(__m256 __W, __mmask8 __U, __m256 __A, __m256 __B) {
   return (__m256)__builtin_ia32_selectps_256((__mmask8)__U,
                                              (__v8sf)_mm256_min_ps(__A, __B),
                                              (__v8sf)__W);
 }
 
-static __inline__ __m256 __DEFAULT_FN_ATTRS256
+static __inline__ __m256 __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_maskz_min_ps(__mmask8 __U, __m256 __A, __m256 __B) {
   return (__m256)__builtin_ia32_selectps_256((__mmask8)__U,
                                              (__v8sf)_mm256_min_ps(__A, __B),
