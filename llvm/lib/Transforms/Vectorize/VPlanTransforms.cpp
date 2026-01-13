@@ -2533,7 +2533,28 @@ void VPlanTransforms::cse(VPlan &Plan) {
 
 /// Move loop-invariant recipes out of the vector loop region in \p Plan.
 static void licm(VPlan &Plan) {
+  VPBasicBlock *Preheader = Plan.getVectorPreheader();
+
+  // Hoist any loop invariant recipes from the vector loop region to the
+  // preheader. Preform a shallow traversal of the vector loop region, to
+  // exclude recipes in replicate regions. Since the top-level blocks in the
+  // vector loop region are guaranteed to execute if the vector pre-header is,
+  // we don't need to check speculation safety.
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  assert(Preheader->getSingleSuccessor() == LoopRegion &&
+         "Expected vector prehader's successor to be the vector loop region");
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(LoopRegion->getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      if (cannotHoistOrSinkRecipe(R))
+        continue;
+      if (any_of(R.operands(), [](VPValue *Op) {
+            return !Op->isDefinedOutsideLoopRegions();
+          }))
+        continue;
+      R.moveBefore(*Preheader, Preheader->end());
+    }
+  }
 
   // Collect loop regions in preorder.
   SmallSetVector<VPRegionBlock *, 4> WorklistForSink;
@@ -2581,28 +2602,6 @@ static void licm(VPlan &Plan) {
           continue;
         Def->moveBefore(*SingleExit, SingleExit->getFirstNonPhi());
       }
-    }
-  }
-
-  VPBasicBlock *Preheader = LoopRegion->getPlan()->getVectorPreheader();
-
-  // Hoist any loop invariant recipes from the vector loop region to the
-  // preheader. Preform a shallow traversal of the vector loop region, to
-  // exclude recipes in replicate regions. Since the top-level blocks in the
-  // vector loop region are guaranteed to execute if the vector pre-header is,
-  // we don't need to check speculation safety.
-  assert(Preheader->getSingleSuccessor() == LoopRegion &&
-         "Expected vector prehader's successor to be the vector loop region");
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_shallow(LoopRegion->getEntry()))) {
-    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      if (cannotHoistOrSinkRecipe(R))
-        continue;
-      if (any_of(R.operands(), [](VPValue *Op) {
-            return !Op->isDefinedOutsideLoopRegions();
-          }))
-        continue;
-      R.moveBefore(*Preheader, Preheader->end());
     }
   }
 }
