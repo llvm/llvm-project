@@ -1856,7 +1856,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   setMaxDivRemBitWidthSupported(Subtarget.is64Bit() ? 128 : 64);
 
-  setMaxLargeFPConvertBitWidthSupported(128);
+  setMaxLargeFPConvertBitWidthSupported(Subtarget.is64Bit() ? 128 : 64);
 
   // Disable strict node mutation.
   IsStrictFPEnabled = true;
