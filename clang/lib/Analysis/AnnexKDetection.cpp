@@ -1,5 +1,4 @@
-//==- AnnexKDetection.cpp - Annex K availability detection --------*- C++
-//-*-==//
+//==- AnnexKDetection.cpp - Annex K availability detection -------*- C++ -*-==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
