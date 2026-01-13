@@ -4,8 +4,8 @@
 
 ; RUN: llc < %s -mtriple=nvptx -mattr=+ptx73 -mcpu=sm_52 | FileCheck %s --check-prefixes=CHECK-32
 ; RUN: llc < %s -mtriple=nvptx64 -mattr=+ptx73 -mcpu=sm_52 | FileCheck %s --check-prefixes=CHECK-64
-; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -mtriple=nvptx -mattr=+ptx73 -mcpu=sm_52 | %ptxas-verify %}
-; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mattr=+ptx73 -mcpu=sm_52 | %ptxas-verify %}
+; RUN: %if ptxas-isa-7.3 && ptxas-ptr32 %{ llc < %s -mtriple=nvptx -mattr=+ptx73 -mcpu=sm_52 | %ptxas-verify %}
+; RUN: %if ptxas-isa-7.3 %{ llc < %s -mtriple=nvptx64 -mattr=+ptx73 -mcpu=sm_52 | %ptxas-verify %}
 
 ; CHECK-FAILS: in function test_dynamic_stackalloc{{.*}}: Support for dynamic alloca introduced in PTX ISA version 7.3 and requires target sm_52.
 

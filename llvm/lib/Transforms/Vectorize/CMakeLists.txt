@@ -1,5 +1,4 @@
 add_llvm_component_library(LLVMVectorize
-  EVLIndVarSimplify.cpp
   LoadStoreVectorizer.cpp
   LoopIdiomVectorize.cpp
   LoopVectorizationLegality.cpp

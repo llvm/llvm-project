@@ -1,4 +1,4 @@
-//===--- ExceptionSpecAnalyzer.h - clang-tidy -------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_EXCEPTION_SPEC_ANALYZER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_EXCEPTION_SPEC_ANALYZER_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_EXCEPTIONSPECANALYZER_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_EXCEPTIONSPECANALYZER_H
 
 #include "clang/AST/DeclCXX.h"
 #include "llvm/ADT/DenseMap.h"
@@ -86,4 +86,4 @@ private:
 
 } // namespace clang::tidy::utils
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_EXCEPTION_SPEC_ANALYZER_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_EXCEPTIONSPECANALYZER_H

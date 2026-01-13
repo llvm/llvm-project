@@ -43,7 +43,7 @@ cl::opt<std::string> AllowFiles(
     "sbvec-allow-files", cl::init(".*"), cl::Hidden,
     cl::desc("Run the vectorizer only on file paths that match any in the "
              "list of comma-separated regex's."));
-static constexpr const char AllowFilesDelim = ',';
+static constexpr char AllowFilesDelim = ',';
 
 SandboxVectorizerPass::SandboxVectorizerPass() : FPM("fpm") {
   if (UserDefinedPassPipeline == DefaultPipelineMagicStr) {

@@ -9,8 +9,8 @@ subroutine test_simd()
   integer :: i
 
   ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-  ! CHECK: OmpLoopDirective -> llvm::omp::Directive = simd
-  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
+  ! CHECK: OmpDirectiveName -> llvm::omp::Directive = simd
+  ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
   !$omp simd
   do i = 1, 100
   end do
@@ -21,8 +21,8 @@ subroutine test_do_simd()
   integer :: i
 
   ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-  ! CHECK: OmpLoopDirective -> llvm::omp::Directive = do simd
-  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
+  ! CHECK: OmpDirectiveName -> llvm::omp::Directive = do simd
+  ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
   !$omp do simd
   do i = 1, 100
   end do
@@ -34,8 +34,8 @@ subroutine test_parallel_do_simd()
   integer :: i
 
   ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-  ! CHECK: OmpLoopDirective -> llvm::omp::Directive = parallel do simd
-  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
+  ! CHECK: OmpDirectiveName -> llvm::omp::Directive = parallel do simd
+  ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
   !$omp parallel do simd
   do i = 1, 100
   end do
@@ -47,7 +47,7 @@ subroutine test_simd_scan()
   real :: sum
 
   ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-  ! CHECK: OmpLoopDirective -> llvm::omp::Directive = simd
+  ! CHECK: OmpDirectiveName -> llvm::omp::Directive = simd
   !$omp simd reduction(inscan,+:sum)
   do i = 1, N
     sum = sum + a(i)
@@ -64,8 +64,8 @@ subroutine test_simd_atomic()
   integer :: i, x
 
   ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-  ! CHECK: OmpLoopDirective -> llvm::omp::Directive = simd
-  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
+  ! CHECK: OmpDirectiveName -> llvm::omp::Directive = simd
+  ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
   !$omp simd
   do i = 1, 100
   ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPAtomicConstruct
@@ -80,7 +80,7 @@ subroutine test_do()
   integer :: i
 
   ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-  ! CHECK-NOT: OmpLoopDirective -> llvm::omp::Directive = do
+  ! CHECK-NOT: OmpDirectiveName -> llvm::omp::Directive = do
   ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
   !$omp parallel do
   do i = 1, 100
@@ -92,7 +92,7 @@ subroutine test_do_nested()
   integer :: i
 
   ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-  ! CHECK-NOT: OmpLoopDirective -> llvm::omp::Directive = parallel do
+  ! CHECK-NOT: OmpDirectiveName -> llvm::omp::Directive = parallel do
   ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
   ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
   !$omp parallel do
@@ -107,7 +107,7 @@ subroutine test_target()
   integer :: i
 
   ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockct
-  ! CHECK-NOT: OmpLoopDirective -> llvm::omp::Directive = target
+  ! CHECK-NOT: OmpDirectiveName -> llvm::omp::Directive = target
   ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
   !$omp target
   do i = 1, 100
@@ -120,7 +120,7 @@ subroutine test_target_teams_distribute()
   integer :: i
 
   ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-  ! CHECK-NOT: OmpLoopDirective -> llvm::omp::Directive = target teams distribute
+  ! CHECK-NOT: OmpDirectiveName -> llvm::omp::Directive = target teams distribute
   ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
   !$omp target teams distribute
   do i = 1, 100
@@ -132,7 +132,7 @@ end subroutine
 ! CHECK-LABEL: Name = 'test_target_data'
 subroutine test_target_data()
   ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
-  ! CHECK-NOT: OmpLoopDirective -> llvm::omp::Directive = target data
+  ! CHECK-NOT: OmpDirectiveName -> llvm::omp::Directive = target data
   ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
   !$omp target data map(to: A) map(tofrom: B)
   do i = 1, 100
@@ -145,7 +145,7 @@ subroutine test_loop()
   integer :: i
 
   ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-  ! CHECK-NOT: OmpLoopDirective -> llvm::omp::Directive = loop
+  ! CHECK-NOT: OmpDirectiveName -> llvm::omp::Directive = loop
   ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
   !$omp loop bind(thread)
   do i = 1, 100
@@ -157,7 +157,7 @@ subroutine test_unroll()
   integer :: i
 
   ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-  ! CHECK-NOT: OmpLoopDirective -> llvm::omp::Directive = unroll
+  ! CHECK-NOT: OmpDirectiveName -> llvm::omp::Directive = unroll
   ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
   !$omp unroll
   do i = 1, 100
@@ -170,12 +170,12 @@ subroutine test_do_ordered()
   x = 0
 
   ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-  ! CHECK-NOT: OmpLoopDirective -> llvm::omp::Directive = do
+  ! CHECK-NOT: OmpDirectiveName -> llvm::omp::Directive = do
   ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
   !$omp do ordered
   do i = 1, 100
   ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
-  ! CHECK-NOT: OmpLoopDirective -> llvm::omp::Directive = ordered
+  ! CHECK-NOT: OmpDirectiveName -> llvm::omp::Directive = ordered
   !$omp ordered
   x = x + 1
   !$omp end ordered
@@ -188,17 +188,17 @@ subroutine test_cancel()
   x = 0
 
   ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-  ! CHECK-NOT: OmpLoopDirective -> llvm::omp::Directive = parallel do
+  ! CHECK-NOT: OmpDirectiveName -> llvm::omp::Directive = parallel do
   ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
   !$omp parallel do
   do i = 1, 100
   if (i == 10) then
     ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPCancelConstruct -> OmpDirectiveSpecification
-    ! CHECK-NOT: OmpLoopDirective -> llvm::omp::Directive = cancel
+    ! CHECK-NOT: OmpDirectiveName -> llvm::omp::Directive = cancel
     !$omp cancel do
   end if
   ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPCancellationPointConstruct -> OmpDirectiveSpecification
-  ! CHECK-NOT: OmpLoopDirective -> llvm::omp::Directive = cancellation point
+  ! CHECK-NOT: OmpDirectiveName -> llvm::omp::Directive = cancellation point
   !$omp cancellation point do
   end do
 end subroutine
@@ -208,7 +208,7 @@ subroutine test_scan()
   integer :: i, sum
 
   ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-  ! CHECK-NOT: OmpLoopDirective -> llvm::omp::Directive = parallel do
+  ! CHECK-NOT: OmpDirectiveName -> llvm::omp::Directive = parallel do
   ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
   !$omp parallel do reduction(inscan, +: sum)
   do i = 1, n
@@ -225,7 +225,7 @@ subroutine test_target_map()
   integer :: array(10)
 
   ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
-  ! CHECK-NOT: OmpLoopDirective -> llvm::omp::Directive = target
+  ! CHECK-NOT: OmpDirectiveName -> llvm::omp::Directive = target
   !$omp target map(tofrom: array(2:10))
     array(2) = array(2) * 2
   !$omp end target

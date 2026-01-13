@@ -59,8 +59,44 @@ public:
 
   std::optional<lldb_private::CompilerDecl>
   GetOrCreateDeclForUid(PdbSymUid uid);
-  clang::DeclContext *GetOrCreateDeclContextForUid(PdbSymUid uid);
-  clang::DeclContext *GetParentDeclContext(PdbSymUid uid);
+  lldb_private::CompilerDeclContext GetOrCreateDeclContextForUid(PdbSymUid uid);
+  clang::DeclContext *GetOrCreateClangDeclContextForUid(PdbSymUid uid);
+  lldb_private::CompilerDeclContext GetParentDeclContext(PdbSymUid uid);
+  clang::DeclContext *GetParentClangDeclContext(PdbSymUid uid);
+
+  void EnsureFunction(PdbCompilandSymId func_id);
+  void EnsureInlinedFunction(PdbCompilandSymId inlinesite_id);
+  void EnsureBlock(PdbCompilandSymId block_id);
+  void EnsureVariable(PdbCompilandSymId scope_id, PdbCompilandSymId var_id);
+  void EnsureVariable(PdbGlobalSymId var_id);
+  CompilerType GetOrCreateTypedefType(PdbGlobalSymId id);
+  void ParseDeclsForContext(lldb_private::CompilerDeclContext context);
+
+  clang::QualType GetBasicType(lldb::BasicType type);
+  clang::QualType GetOrCreateClangType(PdbTypeSymId type);
+  CompilerType GetOrCreateType(PdbTypeSymId type);
+
+  bool CompleteTagDecl(clang::TagDecl &tag);
+  bool CompleteType(CompilerType ct);
+
+  CompilerDecl ToCompilerDecl(clang::Decl *decl);
+  CompilerType ToCompilerType(clang::QualType qt);
+  CompilerDeclContext ToCompilerDeclContext(clang::DeclContext *context);
+  clang::QualType FromCompilerType(CompilerType ct);
+  clang::Decl *FromCompilerDecl(CompilerDecl decl);
+  clang::DeclContext *FromCompilerDeclContext(CompilerDeclContext context);
+
+  TypeSystemClang &clang() { return m_clang; }
+  ClangASTImporter &GetClangASTImporter() { return m_importer; }
+
+  void Dump(Stream &stream, llvm::StringRef filter, bool show_color);
+
+  lldb_private::CompilerDeclContext
+  FindNamespaceDecl(lldb_private::CompilerDeclContext parent_ctx,
+                    llvm::StringRef name);
+
+private:
+  clang::Decl *TryGetDecl(PdbSymUid uid) const;
 
   clang::FunctionDecl *GetOrCreateFunctionDecl(PdbCompilandSymId func_id);
   clang::FunctionDecl *
@@ -69,31 +105,6 @@ public:
   clang::VarDecl *GetOrCreateVariableDecl(PdbCompilandSymId scope_id,
                                           PdbCompilandSymId var_id);
   clang::VarDecl *GetOrCreateVariableDecl(PdbGlobalSymId var_id);
-  clang::TypedefNameDecl *GetOrCreateTypedefDecl(PdbGlobalSymId id);
-  void ParseDeclsForContext(clang::DeclContext &context);
-
-  clang::QualType GetBasicType(lldb::BasicType type);
-  clang::QualType GetOrCreateType(PdbTypeSymId type);
-
-  bool CompleteTagDecl(clang::TagDecl &tag);
-  bool CompleteType(clang::QualType qt);
-
-  CompilerDecl ToCompilerDecl(clang::Decl &decl);
-  CompilerType ToCompilerType(clang::QualType qt);
-  CompilerDeclContext ToCompilerDeclContext(clang::DeclContext &context);
-  clang::Decl *FromCompilerDecl(CompilerDecl decl);
-  clang::DeclContext *FromCompilerDeclContext(CompilerDeclContext context);
-
-  TypeSystemClang &clang() { return m_clang; }
-  ClangASTImporter &GetClangASTImporter() { return m_importer; }
-
-  void Dump(Stream &stream, llvm::StringRef filter);
-
-  clang::NamespaceDecl *FindNamespaceDecl(const clang::DeclContext *parent,
-                                          llvm::StringRef name);
-
-private:
-  clang::Decl *TryGetDecl(PdbSymUid uid) const;
 
   using TypeIndex = llvm::codeview::TypeIndex;
 

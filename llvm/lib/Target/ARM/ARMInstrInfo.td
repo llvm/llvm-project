@@ -40,7 +40,7 @@ def SDT_ARMCMov : SDTypeProfile<1, 4, [
   SDTCisVT<4, FlagsVT>,    // in flags
 ]>;
 
-def SDT_ARMBrcond : SDTypeProfile<0, 2, [
+def SDT_ARMBrcond : SDTypeProfile<0, 3, [
   SDTCisVT<0, OtherVT>,    // target basic block
   SDTCisVT<1, CondCodeVT>, // condition code
   SDTCisVT<2, FlagsVT>,    // in flags
@@ -133,9 +133,16 @@ def SDT_ARMIntShiftParts : SDTypeProfile<2, 3, [SDTCisSameAs<0, 1>,
                                               SDTCisInt<0>,
                                               SDTCisInt<4>]>;
 
+// Signed multiply accumulate long dual
 def ARMSmlald        : SDNode<"ARMISD::SMLALD", SDT_LongMac>;
+
+// Signed multiply accumulate long dual exchange
 def ARMSmlaldx       : SDNode<"ARMISD::SMLALDX", SDT_LongMac>;
+
+// Signed multiply subtract long dual
 def ARMSmlsld        : SDNode<"ARMISD::SMLSLD", SDT_LongMac>;
+
+// Signed multiply subtract long dual exchange
 def ARMSmlsldx       : SDNode<"ARMISD::SMLSLDX", SDT_LongMac>;
 
 def SDT_ARMCSel : SDTypeProfile<1, 4, [
@@ -146,8 +153,13 @@ def SDT_ARMCSel : SDTypeProfile<1, 4, [
   SDTCisVT<3, FlagsVT>     // in flags
 ]>;
 
+// Conditional select invert.
 def ARMcsinv : SDNode<"ARMISD::CSINV", SDT_ARMCSel>;
+
+// Conditional select negate.
 def ARMcsneg : SDNode<"ARMISD::CSNEG", SDT_ARMCSel>;
+
+// Conditional select increment.
 def ARMcsinc : SDNode<"ARMISD::CSINC", SDT_ARMCSel>;
 
 def SDT_MulHSR       : SDTypeProfile<1, 3, [SDTCisVT<0,i32>,
@@ -155,110 +167,197 @@ def SDT_MulHSR       : SDTypeProfile<1, 3, [SDTCisVT<0,i32>,
                                             SDTCisSameAs<0, 2>,
                                             SDTCisSameAs<0, 3>]>;
 
+// Signed multiply long, round and add
 def ARMsmmlar      : SDNode<"ARMISD::SMMLAR", SDT_MulHSR>;
+
+// Signed multiply long, subtract and round
 def ARMsmmlsr      : SDNode<"ARMISD::SMMLSR", SDT_MulHSR>;
 
-// Node definitions.
+
+// Wrapper - A wrapper node for TargetConstantPool,
+// TargetExternalSymbol, and TargetGlobalAddress.
 def ARMWrapper       : SDNode<"ARMISD::Wrapper",     SDTIntUnaryOp>;
+
+// WrapperPIC - A wrapper node for TargetGlobalAddress in
+// PIC mode.
 def ARMWrapperPIC    : SDNode<"ARMISD::WrapperPIC",  SDTIntUnaryOp>;
+
+// WrapperJT - A wrapper node for TargetJumpTable
 def ARMWrapperJT     : SDNode<"ARMISD::WrapperJT",   SDTIntUnaryOp>;
 
 def ARMcallseq_start : SDNode<"ISD::CALLSEQ_START", SDT_ARMCallSeqStart,
                               [SDNPHasChain, SDNPOutGlue]>;
 def ARMcallseq_end   : SDNode<"ISD::CALLSEQ_END",   SDT_ARMCallSeqEnd,
                               [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
+
+// Add pseudo op to model memcpy for struct byval.
 def ARMcopystructbyval : SDNode<"ARMISD::COPY_STRUCT_BYVAL" ,
                                 SDT_ARMStructByVal,
                                 [SDNPHasChain, SDNPInGlue, SDNPOutGlue,
                                  SDNPMayStore, SDNPMayLoad]>;
 
+// Function call.
 def ARMcall          : SDNode<"ARMISD::CALL", SDT_ARMcall,
                               [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                SDNPVariadic]>;
+
+// Function call that's predicable.
 def ARMcall_pred    : SDNode<"ARMISD::CALL_PRED", SDT_ARMcall,
                               [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                SDNPVariadic]>;
+
+// Function call with branch not branch-and-link.
 def ARMcall_nolink   : SDNode<"ARMISD::CALL_NOLINK", SDT_ARMcall,
                               [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                SDNPVariadic]>;
 
+// Return with a flag operand.
 def ARMretglue       : SDNode<"ARMISD::RET_GLUE", SDTNone,
                               [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
+// CMSE Entry function return with a flag operand.
 def ARMseretglue     : SDNode<"ARMISD::SERET_GLUE", SDTNone,
                               [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
+// Interrupt return with an LR-offset and a flag operand.
 def ARMintretglue    : SDNode<"ARMISD::INTRET_GLUE", SDT_ARMcall,
                               [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
+// ARM conditional move instructions.
 def ARMcmov          : SDNode<"ARMISD::CMOV", SDT_ARMCMov>;
 
+// Signed saturation
 def ARMssat   : SDNode<"ARMISD::SSAT", SDTIntSatNoShOp, []>;
 
+// Unsigned saturation
 def ARMusat   : SDNode<"ARMISD::USAT", SDTIntSatNoShOp, []>;
 
+// Conditional branch.
 def ARMbrcond        : SDNode<"ARMISD::BRCOND", SDT_ARMBrcond, [SDNPHasChain]>;
 
+// Jumptable branch.
 def ARMbrjt          : SDNode<"ARMISD::BR_JT", SDT_ARMBrJT,
                               [SDNPHasChain]>;
+
+// Jumptable branch (2 level - jumptable entry is a jump).
 def ARMbr2jt         : SDNode<"ARMISD::BR2_JT", SDT_ARMBr2JT,
                               [SDNPHasChain]>;
 
 def ARMBcci64        : SDNode<"ARMISD::BCC_i64", SDT_ARMBCC_i64,
                               [SDNPHasChain]>;
 
+// ARM compare instructions.
 def ARMcmp           : SDNode<"ARMISD::CMP", SDT_ARMCmp>;
 
+// ARM CMN instructions.
 def ARMcmn           : SDNode<"ARMISD::CMN", SDT_ARMCmp>;
 
+// ARM compare that sets only Z flag.
 def ARMcmpZ          : SDNode<"ARMISD::CMPZ", SDT_ARMCmp, [SDNPCommutative]>;
 
+// Add with a PC operand and a PIC label.
 def ARMpic_add       : SDNode<"ARMISD::PIC_ADD", SDT_ARMPICAdd>;
 
+// MVE long arithmetic shift right.
 def ARMasrl          : SDNode<"ARMISD::ASRL", SDT_ARMIntShiftParts, []>;
+
+// MVE long shift right.
 def ARMlsrl          : SDNode<"ARMISD::LSRL", SDT_ARMIntShiftParts, []>;
+
+// MVE long shift left.
 def ARMlsll          : SDNode<"ARMISD::LSLL", SDT_ARMIntShiftParts, []>;
 
+// Flag-setting logical shift right by one bit.
 def ARMlsrs1 : SDNode<"ARMISD::LSRS1", SDTIntUnaryOpWithFlagsOut>;
+
+// Flag-setting arithmetic shift right by one bit.
 def ARMasrs1 : SDNode<"ARMISD::ASRS1", SDTIntUnaryOpWithFlagsOut>;
+
+// Shift right one bit with carry in.
 def ARMrrx   : SDNode<"ARMISD::RRX"  , SDTIntUnaryOpWithFlagsIn>;
 
+// Add with carry
 def ARMaddc          : SDNode<"ARMISD::ADDC",  SDTBinaryArithWithFlags,
                               [SDNPCommutative]>;
+
+// Sub with carry
 def ARMsubc          : SDNode<"ARMISD::SUBC",  SDTBinaryArithWithFlags>;
+
+// Flag-setting shift left.
 def ARMlsls          : SDNode<"ARMISD::LSLS",  SDTBinaryArithWithFlags>;
+
+// Add using carry
 def ARMadde          : SDNode<"ARMISD::ADDE",  SDTBinaryArithWithFlagsInOut>;
+
+// Sub using carry
 def ARMsube          : SDNode<"ARMISD::SUBE",  SDTBinaryArithWithFlagsInOut>;
 
 def ARMthread_pointer: SDNode<"ARMISD::THREAD_POINTER", SDT_ARMThreadPointer>;
+
+// SjLj exception handling setjmp.
 def ARMeh_sjlj_setjmp: SDNode<"ARMISD::EH_SJLJ_SETJMP",
                                SDT_ARMEH_SJLJ_Setjmp,
                                [SDNPHasChain, SDNPSideEffect]>;
+
+// SjLj exception handling longjmp.
 def ARMeh_sjlj_longjmp: SDNode<"ARMISD::EH_SJLJ_LONGJMP",
                                SDT_ARMEH_SJLJ_Longjmp,
                                [SDNPHasChain, SDNPSideEffect]>;
+
+// SjLj exception handling setup_dispatch.
 def ARMeh_sjlj_setup_dispatch: SDNode<"ARMISD::EH_SJLJ_SETUP_DISPATCH",
                                       SDT_ARMEH_SJLJ_SetupDispatch,
                                       [SDNPHasChain, SDNPSideEffect]>;
 
+// Memory barrier (MCR)
 def ARMMemBarrierMCR  : SDNode<"ARMISD::MEMBARRIER_MCR", SDT_ARMMEMBARRIER,
                                [SDNPHasChain, SDNPSideEffect]>;
+
+// Preload
 def ARMPreload        : SDNode<"ARMISD::PRELOAD", SDT_ARMPREFETCH,
                                [SDNPHasChain, SDNPMayLoad, SDNPMayStore]>;
 
+// Tail call return pseudo.
 def ARMtcret         : SDNode<"ARMISD::TC_RETURN", SDT_ARMTCRET,
                         [SDNPHasChain,  SDNPOptInGlue, SDNPVariadic]>;
 
+// Bit-field insert
 def ARMbfi           : SDNode<"ARMISD::BFI", SDT_ARMBFI>;
 
+// Pseudo-instruction representing a memory copy using ldm/stm instructions.
 def ARMmemcopy : SDNode<"ARMISD::MEMCPY", SDT_ARMMEMCPY,
                         [SDNPHasChain, SDNPInGlue, SDNPOutGlue,
                          SDNPMayStore, SDNPMayLoad]>;
 
+// Signed multiply word by half word, bottom
 def ARMsmulwb       : SDNode<"ARMISD::SMULWB", SDTIntBinOp, []>;
+
+// Signed multiply word by half word, top
 def ARMsmulwt       : SDNode<"ARMISD::SMULWT", SDTIntBinOp, []>;
+
+// 64bit Unsigned Accumulate Multiply
+def ARMumlal : SDNode<"ARMISD::UMLAL", SDT_LongMac>;
+
+// 64bit Signed Accumulate Multiply
+def ARMsmlal : SDNode<"ARMISD::SMLAL", SDT_LongMac>;
+
+// 64-bit Unsigned Accumulate Accumulate Multiply
+def ARMumaal : SDNode<"ARMISD::UMAAL", SDT_LongMac>;
+
+// 64-bit signed accumulate multiply bottom, bottom 16
 def ARMsmlalbb      : SDNode<"ARMISD::SMLALBB", SDT_LongMac, []>;
+
+// 64-bit signed accumulate multiply bottom, top 16
 def ARMsmlalbt      : SDNode<"ARMISD::SMLALBT", SDT_LongMac, []>;
+
+// 64-bit signed accumulate multiply top, bottom 16
 def ARMsmlaltb      : SDNode<"ARMISD::SMLALTB", SDT_LongMac, []>;
+
+// 64-bit signed accumulate multiply top, top 16
 def ARMsmlaltt      : SDNode<"ARMISD::SMLALTT", SDT_LongMac, []>;
 
+// Single Lane QADD8 and QADD16. Only the bottom lane. That's what the b
+// stands for.
 def ARMqadd8b       : SDNode<"ARMISD::QADD8b", SDT_ARMAnd, []>;
 def ARMqsub8b       : SDNode<"ARMISD::QSUB8b", SDT_ARMAnd, []>;
 def ARMqadd16b      : SDNode<"ARMISD::QADD16b", SDT_ARMAnd, []>;
@@ -270,13 +369,15 @@ def ARMuqadd16b      : SDNode<"ARMISD::UQADD16b", SDT_ARMAnd, []>;
 def ARMuqsub16b      : SDNode<"ARMISD::UQSUB16b", SDT_ARMAnd, []>;
 
 def SDT_ARMldrd     : SDTypeProfile<2, 1, [SDTCisVT<0, i32>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
-def ARMldrd         : SDNode<"ARMISD::LDRD", SDT_ARMldrd, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-
 def SDT_ARMstrd     : SDTypeProfile<0, 3, [SDTCisVT<0, i32>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
+
+// Load/Store of dual registers
+def ARMldrd         : SDNode<"ARMISD::LDRD", SDT_ARMldrd, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def ARMstrd         : SDNode<"ARMISD::STRD", SDT_ARMstrd, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 // Vector operations shared between NEON and MVE
 
+// Vector duplicate
 def ARMvdup      : SDNode<"ARMISD::VDUP", SDTypeProfile<1, 1, [SDTCisVec<0>]>>;
 
 // VDUPLANE can produce a quad-register result from a double-register source,
@@ -287,40 +388,65 @@ def ARMvduplane  : SDNode<"ARMISD::VDUPLANE",
 
 def SDTARMVIDUP  : SDTypeProfile<2, 2, [SDTCisVec<0>, SDTCisVT<1, i32>,
                                           SDTCisVT<2, i32>, SDTCisVT<3, i32>]>;
+
+// MVE VIDUP instruction, taking a start value and increment.
 def ARMvidup    : SDNode<"ARMISD::VIDUP", SDTARMVIDUP>;
 
 def SDTARMVSHUF   : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisSameAs<0, 1>]>;
+
+// reverse elements within 64-bit doublewords
 def ARMvrev64    : SDNode<"ARMISD::VREV64", SDTARMVSHUF>;
+
+// reverse elements within 32-bit words
 def ARMvrev32    : SDNode<"ARMISD::VREV32", SDTARMVSHUF>;
+
+// reverse elements within 16-bit halfwords
 def ARMvrev16    : SDNode<"ARMISD::VREV16", SDTARMVSHUF>;
 
 def SDTARMVGETLN  : SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisVec<1>,
                                          SDTCisVT<2, i32>]>;
+
+// Vector get lane (VMOV scalar to ARM core register)
+// (These are used for 8- and 16-bit element types only.)
 def ARMvgetlaneu : SDNode<"ARMISD::VGETLANEu", SDTARMVGETLN>;
 def ARMvgetlanes : SDNode<"ARMISD::VGETLANEs", SDTARMVGETLN>;
 
 def SDTARMVMOVIMM : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVT<1, i32>]>;
+
+// Vector move immediate and move negated immediate
 def ARMvmovImm   : SDNode<"ARMISD::VMOVIMM", SDTARMVMOVIMM>;
 def ARMvmvnImm   : SDNode<"ARMISD::VMVNIMM", SDTARMVMOVIMM>;
+
+// Vector move f32 immediate
 def ARMvmovFPImm : SDNode<"ARMISD::VMOVFPIMM", SDTARMVMOVIMM>;
 
 def SDTARMVORRIMM : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<0, 1>,
                                            SDTCisVT<2, i32>]>;
+
+// Vector OR with immediate
 def ARMvorrImm   : SDNode<"ARMISD::VORRIMM", SDTARMVORRIMM>;
+
+// Vector AND with NOT of immediate
 def ARMvbicImm   : SDNode<"ARMISD::VBICIMM", SDTARMVORRIMM>;
 
 def SDTARMVSHIMM : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisSameAs<0, 1>,
                                         SDTCisVT<2, i32>]>;
 def SDTARMVSH : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisSameAs<0, 1>,
                                      SDTCisSameAs<0, 2>,]>;
+
+// Vector shift by immediate
 def ARMvshlImm   : SDNode<"ARMISD::VSHLIMM", SDTARMVSHIMM>;
 def ARMvshrsImm  : SDNode<"ARMISD::VSHRsIMM", SDTARMVSHIMM>;
 def ARMvshruImm  : SDNode<"ARMISD::VSHRuIMM", SDTARMVSHIMM>;
+
+// Vector shift by vector
 def ARMvshls     : SDNode<"ARMISD::VSHLs", SDTARMVSH>;
 def ARMvshlu     : SDNode<"ARMISD::VSHLu", SDTARMVSH>;
 
 def SDTARMVMULL   : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisInt<1>,
                                          SDTCisSameAs<1, 2>]>;
+
+// Vector multiply long
 def ARMvmulls    : SDNode<"ARMISD::VMULLs", SDTARMVMULL>;
 def ARMvmullu    : SDNode<"ARMISD::VMULLu", SDTARMVMULL>;
 
@@ -328,9 +454,13 @@ def SDTARMVCMP    : SDTypeProfile<1, 3, [SDTCisInt<0>, SDTCisSameAs<1, 2>,
                                          SDTCisInt<3>]>;
 def SDTARMVCMPZ   : SDTypeProfile<1, 2, [SDTCisInt<2>]>;
 
+// Vector compare.
 def ARMvcmp      : SDNode<"ARMISD::VCMP", SDTARMVCMP>;
+
+// Vector compare to zero.
 def ARMvcmpz     : SDNode<"ARMISD::VCMPZ", SDTARMVCMPZ>;
 
+// Reinterpret the current contents of a vector register
 // 'VECTOR_REG_CAST' is an operation that reinterprets the contents of a
 // vector register as a different vector type, without changing the contents of
 // the register. It differs from 'bitconvert' in that bitconvert reinterprets
@@ -473,15 +603,15 @@ def xor_su : PatFrag<(ops node:$lhs, node:$rhs), (xor node:$lhs, node:$rhs)>;
 
 // An 'fmul' node with a single use.
 let HasOneUse = 1 in
-def fmul_su : PatFrag<(ops node:$lhs, node:$rhs), (fmul node:$lhs, node:$rhs)>;
+def fmul_su : PatFrag<(ops node:$lhs, node:$rhs), (any_fmul node:$lhs, node:$rhs)>;
 
 // An 'fadd' node which checks for single non-hazardous use.
-def fadd_mlx : PatFrag<(ops node:$lhs, node:$rhs),(fadd node:$lhs, node:$rhs),[{
+def fadd_mlx : PatFrag<(ops node:$lhs, node:$rhs),(any_fadd node:$lhs, node:$rhs),[{
   return hasNoVMLxHazardUse(N);
 }]>;
 
 // An 'fsub' node which checks for single non-hazardous use.
-def fsub_mlx : PatFrag<(ops node:$lhs, node:$rhs),(fsub node:$lhs, node:$rhs),[{
+def fsub_mlx : PatFrag<(ops node:$lhs, node:$rhs),(any_fsub node:$lhs, node:$rhs),[{
   return hasNoVMLxHazardUse(N);
 }]>;
 
@@ -5186,12 +5316,6 @@ def SB : AInoP<(outs), (ins), MiscFrm, NoItinerary, "sb", "", []>,
 }
 
 let usesCustomInserter = 1, Defs = [CPSR], hasNoSchedulingInfo = 1 in {
-  // Pseudo instruction that combines movs + predicated rsbmi
-  // to implement integer ABS
-  def ABS : ARMPseudoInst<(outs GPR:$dst), (ins GPR:$src), 8, NoItinerary, []>;
-}
-
-let usesCustomInserter = 1, Defs = [CPSR], hasNoSchedulingInfo = 1 in {
     def COPY_STRUCT_BYVAL_I32 : PseudoInst<
       (outs), (ins GPR:$dst, GPR:$src, i32imm:$size, i32imm:$alignment),
       NoItinerary,
@@ -5900,13 +6024,17 @@ def MSRbanked : ABI<0b0001, (outs), (ins banked_reg:$banked, GPRnopc:$Rn),
 // The main point of having separate instruction are extra unmodelled effects
 // (compared to ordinary calls) like stack pointer change.
 
+// Windows' __chkstk call to do stack probing.
 def win__chkstk : SDNode<"ARMISD::WIN__CHKSTK", SDTNone,
                       [SDNPHasChain, SDNPSideEffect]>;
+
 let usesCustomInserter = 1, Uses = [R4], Defs = [R4, SP], hasNoSchedulingInfo = 1 in
   def WIN__CHKSTK : PseudoInst<(outs), (ins), NoItinerary, [(win__chkstk)]>;
 
+// Windows' divide by zero check
 def win__dbzchk : SDNode<"ARMISD::WIN__DBZCHK", SDT_WIN__DBZCHK,
                          [SDNPHasChain, SDNPSideEffect, SDNPOutGlue]>;
+
 let usesCustomInserter = 1, Defs = [CPSR], hasNoSchedulingInfo = 1 in
   def WIN__DBZCHK : PseudoInst<(outs), (ins tGPR:$divisor), NoItinerary,
                                [(win__dbzchk tGPR:$divisor)]>;
@@ -6540,6 +6668,38 @@ def CMP_SWAP_64 : PseudoInst<(outs GPRPair:$Rd, GPRPair:$addr_temp_out),
 }
 
 def : Pat<(atomic_fence (timm), 0), (MEMBARRIER)>;
+
+//===----------------------------------------------------------------------===//
+// KCFI check pseudo-instruction.
+//===----------------------------------------------------------------------===//
+// KCFI_CHECK pseudo-instruction for Kernel Control-Flow Integrity.
+// Expands to a sequence that verifies the function pointer's type hash.
+// Different sizes for different architectures due to different expansions.
+
+def KCFI_CHECK_ARM
+    : PseudoInst<(outs), (ins GPR:$ptr, i32imm:$type), NoItinerary, []>,
+      Sched<[]>,
+      Requires<[IsARM]> {
+  let Size = 40; // worst-case 10 instructions @ 4 bytes each
+                 // (push, bic, ldr, 4x eor, pop, beq, udf)
+}
+
+def KCFI_CHECK_Thumb2
+    : PseudoInst<(outs), (ins GPR:$ptr, i32imm:$type), NoItinerary, []>,
+      Sched<[]>,
+      Requires<[IsThumb2]> {
+  let Size = 34; // worst-case (push.w[2], bic[4], ldr[4], 4x eor[16], pop.w[2],
+                 // beq.w[4], udf[2])
+}
+
+def KCFI_CHECK_Thumb1
+    : PseudoInst<(outs), (ins GPR:$ptr, i32imm:$type), NoItinerary, []>,
+      Sched<[]>,
+      Requires<[IsThumb1Only]> {
+  let Size = 38; // worst-case 19 instructions @ 2 bytes each
+                 // (2x push, 3x bic-helper, subs+ldr, 13x type-building, cmp,
+                 // 2x pop, beq, bkpt)
+}
 
 //===----------------------------------------------------------------------===//
 // Instructions used for emitting unwind opcodes on Windows.

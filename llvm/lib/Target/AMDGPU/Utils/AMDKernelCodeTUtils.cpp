@@ -40,34 +40,23 @@ using namespace llvm::AMDGPU;
 //     returns.
 #define GEN_HAS_MEMBER(member)                                                 \
   class HasMember##member {                                                    \
-  private:                                                                     \
-    struct KnownWithMember {                                                   \
-      int member;                                                              \
-    };                                                                         \
-    class AmbiguousDerived : public AMDGPUMCKernelCodeT,                       \
-                             public KnownWithMember {};                        \
     template <typename U>                                                      \
-    static constexpr std::false_type Test(decltype(U::member) *);              \
-    template <typename U> static constexpr std::true_type Test(...);           \
+    using check_member = decltype(std::declval<U>().member);                   \
                                                                                \
   public:                                                                      \
     static constexpr bool RESULT =                                             \
-        std::is_same_v<decltype(Test<AmbiguousDerived>(nullptr)),              \
-                       std::true_type>;                                        \
+        llvm::is_detected<check_member, AMDGPUMCKernelCodeT>::value;           \
   };                                                                           \
   class IsMCExpr##member {                                                     \
-    template <typename U,                                                      \
-              typename std::enable_if_t<                                       \
-                  HasMember##member::RESULT &&                                 \
-                      std::is_same_v<decltype(U::member), const MCExpr *>,     \
-                  U> * = nullptr>                                              \
-    static constexpr std::true_type HasMCExprType(decltype(U::member) *);      \
+    template <typename U>                                                      \
+    static constexpr auto HasMCExprType(int) -> std::bool_constant<            \
+        HasMember##member::RESULT &&                                           \
+        std::is_same_v<decltype(U::member), const MCExpr *>>;                  \
     template <typename U> static constexpr std::false_type HasMCExprType(...); \
                                                                                \
   public:                                                                      \
     static constexpr bool RESULT =                                             \
-        std::is_same_v<decltype(HasMCExprType<AMDGPUMCKernelCodeT>(nullptr)),  \
-                       std::true_type>;                                        \
+        decltype(HasMCExprType<AMDGPUMCKernelCodeT>(0))::value;                \
   };                                                                           \
   class GetMember##member {                                                    \
   public:                                                                      \

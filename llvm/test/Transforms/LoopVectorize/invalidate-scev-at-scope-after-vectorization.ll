@@ -10,8 +10,8 @@
 define void @test_invalidate_scevs_at_scope(ptr %p) {
 ; CHECK-LABEL: define void @test_invalidate_scevs_at_scope(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -20,24 +20,22 @@ define void @test_invalidate_scevs_at_scope(ptr %p) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[INDEX_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 100, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_1:.*]]
 ; CHECK:       [[LOOP_1]]:
-; CHECK-NEXT:    [[IV_1:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_1_NEXT:%.*]], %[[LOOP_1]] ]
+; CHECK-NEXT:    [[IV_1:%.*]] = phi i32 [ 100, %[[SCALAR_PH]] ], [ [[IV_1_NEXT:%.*]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add i32 [[TMP4]], [[IV_1]]
 ; CHECK-NEXT:    [[IV_1_NEXT]] = add i32 [[IV_1]], 1
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i32 [[IV_1]], 100
 ; CHECK-NEXT:    br i1 [[C_1]], label %[[EXIT_1:.*]], label %[[LOOP_1]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT_1]]:
-; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[TMP4]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[ADD_LCSSA1:%.*]] = phi i32 [ [[ADD_1]], %[[LOOP_1]] ]
-; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = add i32 [[DOTLCSSA]], 100
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = add i32 [[TMP4]], 100
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[ADD_LCSSA]], i32 100)
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[SMAX]], -100
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i32 [[TMP3]], [[DOTLCSSA]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i32 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP5]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nuw nsw i64 [[TMP6]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP7]], 4
@@ -59,10 +57,10 @@ define void @test_invalidate_scevs_at_scope(ptr %p) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP7]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT_2:.*]], label %[[SCALAR_PH1]]
 ; CHECK:       [[SCALAR_PH1]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL7:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK6]] ], [ 0, %[[EXIT_1]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK6]] ], [ 0, %[[EXIT_1]] ]
 ; CHECK-NEXT:    br label %[[LOOP_2:.*]]
 ; CHECK:       [[LOOP_2]]:
-; CHECK-NEXT:    [[IV_2:%.*]] = phi i64 [ [[BC_RESUME_VAL7]], %[[SCALAR_PH1]] ], [ [[IV_2_NEXT:%.*]], %[[LOOP_2]] ]
+; CHECK-NEXT:    [[IV_2:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH1]] ], [ [[IV_2_NEXT:%.*]], %[[LOOP_2]] ]
 ; CHECK-NEXT:    [[IV_2_TRUNC:%.*]] = trunc i64 [[IV_2]] to i32
 ; CHECK-NEXT:    [[IV_2_NEXT]] = add i64 [[IV_2]], 1
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 [[IV_2]]

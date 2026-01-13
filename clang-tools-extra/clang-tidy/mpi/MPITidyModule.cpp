@@ -1,4 +1,4 @@
-//===--- MPITidyModule.cpp - clang-tidy -----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,12 +8,12 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "BufferDerefCheck.h"
 #include "TypeMismatchCheck.h"
 
 namespace clang::tidy {
 namespace mpi {
+namespace {
 
 class MPIModule : public ClangTidyModule {
 public:
@@ -23,6 +23,7 @@ public:
   }
 };
 
+} // namespace
 } // namespace mpi
 
 // Register the MPITidyModule using this statically initialized variable.

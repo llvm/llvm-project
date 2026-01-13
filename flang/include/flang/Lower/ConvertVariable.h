@@ -18,6 +18,8 @@
 #define FORTRAN_LOWER_CONVERT_VARIABLE_H
 
 #include "flang/Lower/Support/Utils.h"
+#include "flang/Lower/SymbolMap.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Semantics/symbol.h"
 #include "mlir/IR/Value.h"
@@ -26,13 +28,6 @@
 namespace cuf {
 class DataAttributeAttr;
 }
-
-namespace fir {
-class ExtendedValue;
-class FirOpBuilder;
-class GlobalOp;
-class FortranVariableFlagsAttr;
-} // namespace fir
 
 namespace Fortran {
 namespace semantics {
@@ -92,10 +87,14 @@ void defineCommonBlocks(
 /// The COMMON block is a global structure. \p commonValue is the base address
 /// of the COMMON block. As the offset from the symbol \p sym, generate the
 /// COMMON block member value (commonValue + offset) for the symbol.
+/// \p commonSize specifies the syze of the COMMON block in bytes.
+/// The size is used to represent a COMMON block reference as
+/// a !fir.ref<!fir.array<SIZExi8>>.
 mlir::Value genCommonBlockMember(AbstractConverter &converter,
                                  mlir::Location loc,
                                  const Fortran::semantics::Symbol &sym,
-                                 mlir::Value commonValue);
+                                 mlir::Value commonValue,
+                                 std::size_t commonSize);
 
 /// Lower a symbol attributes given an optional storage \p and add it to the
 /// provided symbol map. If \preAlloc is not provided, a temporary storage will

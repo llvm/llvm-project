@@ -1,5 +1,5 @@
 # REQUIRES: asserts
-# RUN: llc -mtriple=amdgcn-- -verify-machineinstrs -debug-only=regalloc -run-pass=greedy -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn-- -verify-machineinstrs -debug-only=regalloc -run-pass=greedy -filetype=null %s 2>&1 | FileCheck %s
 
 ---
 # Check that physreg candidate is not used since cannot be spilled in a block,

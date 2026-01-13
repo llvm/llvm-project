@@ -431,7 +431,8 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
                        OptionalAttr<DictArrayAttr>:$workgroup_attrib_attrs,
                        OptionalAttr<DictArrayAttr>:$private_attrib_attrs,
                        GPU_OptionalDimSizeHintAttr:$known_block_size,
-                       GPU_OptionalDimSizeHintAttr:$known_grid_size);
+                       GPU_OptionalDimSizeHintAttr:$known_grid_size,
+                       GPU_OptionalDimSizeHintAttr:$known_cluster_size);
   let regions = (region AnyRegion:$body);
 
   let skipDefaultBuilders = 1;
@@ -584,7 +585,7 @@ def GPU_DynamicSharedMemoryOp : GPU_Op<"dynamic_shared_memory", [Pure]>
     This operation provides a memref pointer to the start of dynamic shared
     memory, often referred to as workgroup memory. It's important to note that
     this dynamic shared memory needs to be allocated at kernel launch. One can
-    conveniently utilize `the dynamic_shared_memory_size` parameter of
+    conveniently utilize the `dynamic_shared_memory_size` parameter of
     `gpu.launch` for this purpose.
 
     Examples:
@@ -1872,7 +1873,7 @@ def GPU_SubgroupMmaStoreMatrixOp : GPU_Op<"subgroup_mma_store_matrix",
     ```
   }];
 
-  let arguments = (ins Arg<MMAMatrixOf<[SI8, UI8, I32, F16, F32]>>:$src,
+  let arguments = (ins Arg<MMAMatrixOf<[SI8, UI8, I32, F16, F32, F64]>>:$src,
                   Arg<GPU_MMAMemRef, "",[MemWriteAt<0, FullEffect>]>:$dstMemref,
                   Variadic<Index>:$indices,
                   IndexAttr:$leadDimension,
@@ -1919,9 +1920,9 @@ def GPU_SubgroupMmaComputeOp
     ```
   }];
 
-  let arguments = (ins Arg<MMAMatrixOf<[SI8, UI8, F16, F32]>>:$opA,
-                  Arg<MMAMatrixOf<[SI8, UI8, F16, F32]>>:$opB,
-                  Arg<MMAMatrixOf<[I32, F16, F32]>>:$opC,
+  let arguments = (ins Arg<MMAMatrixOf<[SI8, UI8, F16, F32, F64]>>:$opA,
+                  Arg<MMAMatrixOf<[SI8, UI8, F16, F32, F64]>>:$opB,
+                  Arg<MMAMatrixOf<[I32, F16, F32, F64]>>:$opC,
                   OptionalAttr<UnitAttr>:$a_transpose,
                   OptionalAttr<UnitAttr>:$b_transpose);
 
@@ -3219,8 +3220,7 @@ def GPU_BroadcastType : I32EnumAttr<"BroadcastType",
     "a lane to broadcast from",
     [
       I32EnumAttrCase<"first_active_lane", 0>,
-      I32EnumAttrCase<"any_lane", 1>,
-      I32EnumAttrCase<"specific_lane", 2>
+      I32EnumAttrCase<"specific_lane", 1>
     ]>{
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::gpu";
@@ -3248,18 +3248,12 @@ def GPU_SubgroupBroadcastOp : GPU_Op<"subgroup_broadcast",
       must be uniform and within the subgroup size. The result is poison if the
       lane index is invalid, non subgroup-uniform, or if the source lane is not
       active.
-      * `any_lane` - broadcasts the value from any lane of the subgroup,
-      assuming the input is already subgroup uniform. The result is poison if
-      the input is not uniform. This is useful to convey uniformity to the
-      compiler to enable more optimizations. Also, it allows more speculation
-      opportunities than `first_active_lane` since `first_active_lane` results
-      can depend on active lanes which may change during speculation across
-      control flow.
   }];
   let results = (outs AnyType:$result);
   let assemblyFormat = [{
     $src `,` $broadcast_type ($lane^)? attr-dict `:` type($result)
   }];
+  let hasFolder = 1;
   let hasVerifier = 1;
 }
 

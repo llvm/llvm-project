@@ -1,6 +1,11 @@
 // RUN: mlir-translate -no-implicit-module -test-spirv-roundtrip %s | FileCheck %s
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+// RUN: %if spirv-tools %{ rm -rf %t %}
+// RUN: %if spirv-tools %{ mkdir %t %}
+// RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
+// RUN: %if spirv-tools %{ spirv-val %t %}
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
   spirv.func @math(%arg0 : f32, %arg1 : f32, %arg2 : i32) "None" {
     // CHECK: {{%.*}} = spirv.GL.Exp {{%.*}} : f32
     %0 = spirv.GL.Exp %arg0 : f32
@@ -140,6 +145,14 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %0 = spirv.GL.UnpackHalf2x16 %arg0 : i32 -> vector<2xf32>
     // CHECK: {{%.*}} = spirv.GL.PackHalf2x16 {{%.*}} : vector<2xf32> -> i32
     %1 = spirv.GL.PackHalf2x16 %0 : vector<2xf32> -> i32
+    spirv.Return
+  }
+
+  spirv.func @pack_snorm_4x8(%arg0 : i32) "None" {
+    // CHECK: {{%.*}} = spirv.GL.UnpackSnorm4x8 {{%.*}} : i32 -> vector<4xf32>
+    %0 = spirv.GL.UnpackSnorm4x8 %arg0 : i32 -> vector<4xf32>
+    // CHECK: {{%.*}} = spirv.GL.PackSnorm4x8 {{%.*}} : vector<4xf32> -> i32
+    %1 = spirv.GL.PackSnorm4x8 %0 : vector<4xf32> -> i32
     spirv.Return
   }
 }

@@ -13,7 +13,7 @@ class PrintInstructionCount final : public RegionPass {
 public:
   PrintInstructionCount() : RegionPass("null") {}
   bool runOnRegion(Region &R, const Analyses &A) final {
-    outs() << "InstructionCount: " << std::distance(R.begin(), R.end()) << "\n";
+    outs() << "InstructionCount: " << llvm::size(R) << "\n";
     return false;
   }
 };

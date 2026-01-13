@@ -266,6 +266,25 @@ void DFAPacketizerEmitter::emitForItineraries(
   }
   OS << "  " << ScheduleClasses.size() << "\n};\n\n";
 
+  // Output the mapping from proc ID to ResourceIndexStart
+  Idx = 1;
+  OS << "int " << TargetName << DFAName
+     << "GetResourceIndex(unsigned ProcID) { \n"
+     << "  static const unsigned " << TargetName << DFAName
+     << "ProcIdToProcResourceIdxTable[][2] = {\n";
+  for (const CodeGenProcModel *Model : ProcModels) {
+    OS << "    { " << Model->Index << ",  " << Idx++ << " }, // "
+       << Model->ModelName << "\n";
+  }
+  OS << "  };\n"
+     << "  auto It = llvm::lower_bound(" << TargetName << DFAName
+     << "ProcIdToProcResourceIdxTable, ProcID,\n"
+     << "      [](const unsigned LHS[], unsigned Val) { return LHS[0] < Val; "
+        "});\n"
+     << "  assert(*It[0] == ProcID);\n"
+     << "  return (*It)[1];\n"
+     << "}\n\n";
+
   // The type of a state in the nondeterministic automaton we're defining.
   using NfaStateTy = uint64_t;
 
@@ -339,16 +358,17 @@ void DFAPacketizerEmitter::emitForItineraries(
 
   std::string SubTargetClassName = TargetName + "GenSubtargetInfo";
   OS << "namespace llvm {\n";
-  OS << "DFAPacketizer *" << SubTargetClassName << "::"
-     << "create" << DFAName
+  OS << "DFAPacketizer *" << SubTargetClassName << "::" << "create" << DFAName
      << "DFAPacketizer(const InstrItineraryData *IID) const {\n"
      << "  static Automaton<uint64_t> A(ArrayRef<" << TargetAndDFAName
      << "Transition>(" << TargetAndDFAName << "Transitions), "
      << TargetAndDFAName << "TransitionInfo);\n"
+     << "  unsigned Index = " << TargetName << DFAName
+     << "GetResourceIndex(IID->SchedModel.ProcID);\n"
      << "  unsigned ProcResIdxStart = " << TargetAndDFAName
-     << "ProcResourceIndexStart[IID->SchedModel.ProcID];\n"
+     << "ProcResourceIndexStart[Index];\n"
      << "  unsigned ProcResIdxNum = " << TargetAndDFAName
-     << "ProcResourceIndexStart[IID->SchedModel.ProcID + 1] - "
+     << "ProcResourceIndexStart[Index + 1] - "
         "ProcResIdxStart;\n"
      << "  return new DFAPacketizer(IID, A, {&" << TargetAndDFAName
      << "ResourceIndices[ProcResIdxStart], ProcResIdxNum});\n"

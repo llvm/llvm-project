@@ -391,6 +391,34 @@ TEST(StringRefTest, ConsumeFront) {
   EXPECT_TRUE(Str.consume_front(""));
 }
 
+TEST(StringRefTest, ConsumeFrontChar) {
+  {
+    StringRef Str("hello");
+    EXPECT_EQ("hello", Str);
+    EXPECT_TRUE(Str.consume_front('h'));
+    EXPECT_EQ("ello", Str);
+    EXPECT_FALSE(Str.consume_front('h'));
+    EXPECT_EQ("ello", Str);
+  }
+
+  {
+    StringRef Str("\0");
+    EXPECT_FALSE(Str.consume_front('\0'));
+    EXPECT_EQ("", Str);
+    EXPECT_FALSE(Str.consume_front('\0'));
+    EXPECT_EQ("", Str);
+  }
+
+  {
+    char Prefix = 'h';
+    StringRef Str("h");
+    EXPECT_TRUE(Str.consume_front(Prefix));
+    EXPECT_EQ("", Str);
+    EXPECT_FALSE(Str.consume_front('\0'));
+    EXPECT_EQ("", Str);
+  }
+}
+
 TEST(StringRefTest, ConsumeFrontInsensitive) {
   StringRef Str("heLLo");
   EXPECT_TRUE(Str.consume_front_insensitive(""));
@@ -1124,14 +1152,13 @@ TEST(StringRefTest, StringLiteral) {
   constexpr StringRef StringRefs[] = {"Foo", "Bar"};
   EXPECT_EQ(StringRef("Foo"), StringRefs[0]);
   EXPECT_EQ(3u, (std::integral_constant<size_t, StringRefs[0].size()>::value));
-  EXPECT_EQ(false,
-            (std::integral_constant<bool, StringRefs[0].empty()>::value));
+  EXPECT_EQ(false, (std::bool_constant<StringRefs[0].empty()>::value));
   EXPECT_EQ(StringRef("Bar"), StringRefs[1]);
 
   constexpr StringLiteral Strings[] = {"Foo", "Bar"};
   EXPECT_EQ(StringRef("Foo"), Strings[0]);
   EXPECT_EQ(3u, (std::integral_constant<size_t, Strings[0].size()>::value));
-  EXPECT_EQ(false, (std::integral_constant<bool, Strings[0].empty()>::value));
+  EXPECT_EQ(false, (std::bool_constant<Strings[0].empty()>::value));
   EXPECT_EQ(StringRef("Bar"), Strings[1]);
 }
 

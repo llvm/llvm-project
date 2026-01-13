@@ -10,13 +10,11 @@
 
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/expression.h"
-#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/openmp-modifiers.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/symbol.h"
-
-#include "llvm/Frontend/OpenMP/OMPConstants.h"
 
 #include <list>
 #include <optional>
@@ -106,6 +104,7 @@ Object makeObject(const parser::Name &name,
 Object makeObject(const parser::Designator &dsg,
                   semantics::SemanticsContext &semaCtx) {
   evaluate::ExpressionAnalyzer ea{semaCtx};
+  auto restore{ea.AllowWholeAssumedSizeArray(true)};
   SymbolWithDesignator sd = getSymbolAndDesignator(ea.Analyze(dsg));
   SymbolAndDesignatorExtractor::verify(sd);
   return Object{std::get<0>(sd), std::move(std::get<1>(sd))};
@@ -114,6 +113,7 @@ Object makeObject(const parser::Designator &dsg,
 Object makeObject(const parser::StructureComponent &comp,
                   semantics::SemanticsContext &semaCtx) {
   evaluate::ExpressionAnalyzer ea{semaCtx};
+  auto restore{ea.AllowWholeAssumedSizeArray(true)};
   SymbolWithDesignator sd = getSymbolAndDesignator(ea.Analyze(comp));
   SymbolAndDesignatorExtractor::verify(sd);
   return Object{std::get<0>(sd), std::move(std::get<1>(sd))};
@@ -129,6 +129,11 @@ Object makeObject(const parser::OmpObject &object,
   }
   // OmpObject is std::variant<Designator, /*common block*/ Name>;
   return makeObject(std::get<parser::Designator>(object.u), semaCtx);
+}
+
+Object makeObject(const parser::EntityDecl &decl,
+                  semantics::SemanticsContext &semaCtx) {
+  return makeObject(std::get<parser::ObjectName>(decl.t), semaCtx);
 }
 
 ObjectList makeObjects(const parser::OmpArgumentList &objects,
@@ -194,6 +199,24 @@ std::optional<Object> getBaseObject(const Object &object,
   return std::nullopt;
 }
 
+StylizedInstance makeStylizedInstance(const parser::OmpStylizedInstance &inp,
+                                      semantics::SemanticsContext &semaCtx) {
+  ObjectList variables;
+  llvm::transform(std::get<std::list<parser::OmpStylizedDeclaration>>(inp.t),
+                  std::back_inserter(variables),
+                  [&](const parser::OmpStylizedDeclaration &s) {
+                    return makeObject(s.var, semaCtx);
+                  });
+
+  SomeExpr instance = [&]() {
+    if (auto &&expr = semantics::omp::MakeEvaluateExpr(inp))
+      return std::move(*expr);
+    llvm_unreachable("Expecting expression instance");
+  }();
+
+  return StylizedInstance{{std::move(variables), std::move(instance)}};
+}
+
 // Helper macros
 #define MAKE_EMPTY_CLASS(cls, from_cls)                                        \
   cls make(const parser::OmpClause::from_cls &,                                \
@@ -219,7 +242,6 @@ MAKE_EMPTY_CLASS(AcqRel, AcqRel);
 MAKE_EMPTY_CLASS(Acquire, Acquire);
 MAKE_EMPTY_CLASS(Capture, Capture);
 MAKE_EMPTY_CLASS(Compare, Compare);
-MAKE_EMPTY_CLASS(DynamicAllocators, DynamicAllocators);
 MAKE_EMPTY_CLASS(Full, Full);
 MAKE_EMPTY_CLASS(Inbranch, Inbranch);
 MAKE_EMPTY_CLASS(Mergeable, Mergeable);
@@ -235,13 +257,9 @@ MAKE_EMPTY_CLASS(OmpxBare, OmpxBare);
 MAKE_EMPTY_CLASS(Read, Read);
 MAKE_EMPTY_CLASS(Relaxed, Relaxed);
 MAKE_EMPTY_CLASS(Release, Release);
-MAKE_EMPTY_CLASS(ReverseOffload, ReverseOffload);
 MAKE_EMPTY_CLASS(SeqCst, SeqCst);
 MAKE_EMPTY_CLASS(Simd, Simd);
 MAKE_EMPTY_CLASS(Threads, Threads);
-MAKE_EMPTY_CLASS(UnifiedAddress, UnifiedAddress);
-MAKE_EMPTY_CLASS(UnifiedSharedMemory, UnifiedSharedMemory);
-MAKE_EMPTY_CLASS(SelfMaps, SelfMaps);
 MAKE_EMPTY_CLASS(Unknown, Unknown);
 MAKE_EMPTY_CLASS(Untied, Untied);
 MAKE_EMPTY_CLASS(Weak, Weak);
@@ -250,11 +268,26 @@ MAKE_EMPTY_CLASS(Write, Write);
 // Artificial clauses
 MAKE_EMPTY_CLASS(Depobj, Depobj);
 MAKE_EMPTY_CLASS(Flush, Flush);
+MAKE_EMPTY_CLASS(Groupprivate, Groupprivate);
 MAKE_EMPTY_CLASS(MemoryOrder, MemoryOrder);
 MAKE_EMPTY_CLASS(Threadprivate, Threadprivate);
 
 MAKE_INCOMPLETE_CLASS(AdjustArgs, AdjustArgs);
 MAKE_INCOMPLETE_CLASS(AppendArgs, AppendArgs);
+MAKE_INCOMPLETE_CLASS(Apply, Apply);
+MAKE_INCOMPLETE_CLASS(Collector, Collector);
+MAKE_INCOMPLETE_CLASS(Counts, Counts);
+MAKE_INCOMPLETE_CLASS(GraphId, GraphId);
+MAKE_INCOMPLETE_CLASS(GraphReset, GraphReset);
+MAKE_INCOMPLETE_CLASS(Induction, Induction);
+MAKE_INCOMPLETE_CLASS(Inductor, Inductor);
+MAKE_INCOMPLETE_CLASS(InitComplete, InitComplete);
+MAKE_INCOMPLETE_CLASS(Interop, Interop);
+MAKE_INCOMPLETE_CLASS(Local, Local);
+MAKE_INCOMPLETE_CLASS(Memscope, Memscope);
+MAKE_INCOMPLETE_CLASS(Replayable, Replayable);
+MAKE_INCOMPLETE_CLASS(Safesync, Safesync);
+MAKE_INCOMPLETE_CLASS(Transparent, Transparent);
 
 List<IteratorSpecifier>
 makeIteratorSpecifiers(const parser::OmpIteratorSpecifier &inp,
@@ -276,12 +309,10 @@ makeIteratorSpecifiers(const parser::OmpIteratorSpecifier &inp,
   auto &tds = std::get<parser::TypeDeclarationStmt>(inp.t);
   auto &entities = std::get<std::list<parser::EntityDecl>>(tds.t);
   for (const parser::EntityDecl &ed : entities) {
-    auto &name = std::get<parser::ObjectName>(ed.t);
-    assert(name.symbol && "Expecting symbol for iterator variable");
-    auto *stype = name.symbol->GetType();
-    assert(stype && "Expecting symbol type");
-    IteratorSpecifier spec{{evaluate::DynamicType::From(*stype),
-                            makeObject(name, semaCtx), range}};
+    auto *symbol = std::get<parser::ObjectName>(ed.t).symbol;
+    auto *type = DEREF(symbol).GetType();
+    IteratorSpecifier spec{{evaluate::DynamicType::From(DEREF(type)),
+                            makeObject(ed, semaCtx), range}};
     specifiers.emplace_back(std::move(spec));
   }
 
@@ -396,8 +427,6 @@ makePrescriptiveness(parser::OmpPrescriptiveness::Value v) {
   switch (v) {
   case parser::OmpPrescriptiveness::Value::Strict:
     return clause::Prescriptiveness::Strict;
-  case parser::OmpPrescriptiveness::Value::Fallback:
-    return clause::Prescriptiveness::Fallback;
   }
   llvm_unreachable("Unexpected prescriptiveness");
 }
@@ -430,8 +459,8 @@ Affinity make(const parser::OmpClause::Affinity &inp,
 
 Align make(const parser::OmpClause::Align &inp,
            semantics::SemanticsContext &semaCtx) {
-  // inp -> empty
-  llvm_unreachable("Empty: align");
+  // inp.v -> OmpAlignClause
+  return Align{/*Alignment=*/makeExpr(inp.v.v, semaCtx)};
 }
 
 Aligned make(const parser::OmpClause::Aligned &inp,
@@ -485,8 +514,16 @@ Allocator make(const parser::OmpClause::Allocator &inp,
 
 At make(const parser::OmpClause::At &inp,
         semantics::SemanticsContext &semaCtx) {
-  // inp -> empty
-  llvm_unreachable("Empty: at");
+  // inp.v -> OmpAtClause
+  CLAUSET_ENUM_CONVERT( //
+      convertActionTime, parser::OmpAtClause::ActionTime, At::ActionTime,
+      // clang-format off
+      MS(Compilation, Compilation)
+      MS(Execution,   Execution)
+      // clang-format om
+  );
+
+  return At{/*ActionTime=*/convertActionTime(inp.v.v)};
 }
 
 // Never called, but needed for using "make" as a Clause visitor.
@@ -548,6 +585,17 @@ Collapse make(const parser::OmpClause::Collapse &inp,
               semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::ScalarIntConstantExpr
   return Collapse{/*N=*/makeExpr(inp.v, semaCtx)};
+}
+
+Combiner make(const parser::OmpClause::Combiner &inp,
+              semantics::SemanticsContext &semaCtx) {
+  const parser::OmpCombinerExpression &cexpr = inp.v.v;
+  Combiner combiner;
+
+  for (const parser::OmpStylizedInstance &sinst : cexpr.v)
+    combiner.v.push_back(makeStylizedInstance(sinst, semaCtx));
+
+  return combiner;
 }
 
 // Compare: empty
@@ -740,6 +788,18 @@ Device make(const parser::OmpClause::Device &inp,
                  /*DeviceDescription=*/makeExpr(t1, semaCtx)}};
 }
 
+DeviceSafesync make(const parser::OmpClause::DeviceSafesync &inp,
+                    semantics::SemanticsContext &semaCtx) {
+  // inp.v -> std::optional<parser::OmpDeviceSafesyncClause>
+  auto &&maybeRequired = maybeApply(
+      [&](const parser::OmpDeviceSafesyncClause &c) {
+        return makeExpr(c.v, semaCtx);
+      },
+      inp.v);
+
+  return DeviceSafesync{/*Required=*/std::move(maybeRequired)};
+}
+
 DeviceType make(const parser::OmpClause::DeviceType &inp,
                 semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpDeviceTypeClause
@@ -770,27 +830,48 @@ Doacross make(const parser::OmpClause::Doacross &inp,
   return makeDoacross(inp.v.v, semaCtx);
 }
 
-// DynamicAllocators: empty
+DynamicAllocators make(const parser::OmpClause::DynamicAllocators &inp,
+                       semantics::SemanticsContext &semaCtx) {
+  // inp.v -> td::optional<arser::OmpDynamicAllocatorsClause>
+  auto &&maybeRequired = maybeApply(
+      [&](const parser::OmpDynamicAllocatorsClause &c) {
+        return makeExpr(c.v, semaCtx);
+      },
+      inp.v);
+
+  return DynamicAllocators{/*Required=*/std::move(maybeRequired)};
+}
+
 
 DynGroupprivate make(const parser::OmpClause::DynGroupprivate &inp,
                      semantics::SemanticsContext &semaCtx) {
   // imp.v -> OmpDyngroupprivateClause
   CLAUSET_ENUM_CONVERT( //
-      convert, parser::OmpAccessGroup::Value, DynGroupprivate::AccessGroup,
+      makeAccessGroup, parser::OmpAccessGroup::Value,
+      DynGroupprivate::AccessGroup,
       // clang-format off
       MS(Cgroup,  Cgroup)
       // clang-format on
   );
 
+  CLAUSET_ENUM_CONVERT( //
+      makeFallback, parser::OmpFallbackModifier::Value,
+      DynGroupprivate::Fallback,
+      // clang-format off
+      MS(Abort,       Abort)
+      MS(Default_Mem, Default_Mem)
+      MS(Null,        Null)
+      // clang-format on
+  );
+
   auto &mods = semantics::OmpGetModifiers(inp.v);
   auto *m0 = semantics::OmpGetUniqueModifier<parser::OmpAccessGroup>(mods);
-  auto *m1 = semantics::OmpGetUniqueModifier<parser::OmpPrescriptiveness>(mods);
+  auto *m1 = semantics::OmpGetUniqueModifier<parser::OmpFallbackModifier>(mods);
   auto &size = std::get<parser::ScalarIntExpr>(inp.v.t);
 
-  return DynGroupprivate{
-      {/*AccessGroup=*/maybeApplyToV(convert, m0),
-       /*Prescriptiveness=*/maybeApplyToV(makePrescriptiveness, m1),
-       /*Size=*/makeExpr(size, semaCtx)}};
+  return DynGroupprivate{{/*AccessGroup=*/maybeApplyToV(makeAccessGroup, m0),
+                          /*Fallback=*/maybeApplyToV(makeFallback, m1),
+                          /*Size=*/makeExpr(size, semaCtx)}};
 }
 
 Enter make(const parser::OmpClause::Enter &inp,
@@ -951,7 +1032,13 @@ Init make(const parser::OmpClause::Init &inp,
 
 Initializer make(const parser::OmpClause::Initializer &inp,
                  semantics::SemanticsContext &semaCtx) {
-  llvm_unreachable("Empty: initializer");
+  const parser::OmpInitializerExpression &iexpr = inp.v.v;
+  Initializer initializer;
+
+  for (const parser::OmpStylizedInstance &sinst : iexpr.v)
+    initializer.v.push_back(makeStylizedInstance(sinst, semaCtx));
+
+  return initializer;
 }
 
 InReduction make(const parser::OmpClause::InReduction &inp,
@@ -1031,6 +1118,14 @@ Link make(const parser::OmpClause::Link &inp,
   return Link{/*List=*/makeObjects(inp.v, semaCtx)};
 }
 
+Looprange make(const parser::OmpClause::Looprange &inp,
+               semantics::SemanticsContext &semaCtx) {
+  // inp.v -> OmpLooprangeClause
+  auto &[begin, count]{inp.v.t};
+  return Looprange{
+      {/*Begin=*/makeExpr(begin, semaCtx), /*Count=*/makeExpr(count, semaCtx)}};
+}
+
 Map make(const parser::OmpClause::Map &inp,
          semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpMapClause
@@ -1055,6 +1150,15 @@ Map make(const parser::OmpClause::Map &inp,
       MS(Close,     Close)
       MS(Ompx_Hold, OmpxHold)
       MS(Present,   Present)
+      // clang-format on
+  );
+
+  CLAUSET_ENUM_CONVERT( //
+      convertAttachMod, parser::OmpAttachModifier::Value, Map::AttachModifier,
+      // clang-format off
+      MS(Always,  Always)
+      MS(Auto,    Auto)
+      MS(Never,   Never)
       // clang-format on
   );
 
@@ -1105,6 +1209,13 @@ Map make(const parser::OmpClause::Map &inp,
   if (!modSet.empty())
     maybeTypeMods = Map::MapTypeModifiers(modSet.begin(), modSet.end());
 
+  auto attachMod = [&]() -> std::optional<Map::AttachModifier> {
+    if (auto *t =
+            semantics::OmpGetUniqueModifier<parser::OmpAttachModifier>(mods))
+      return convertAttachMod(t->v);
+    return std::nullopt;
+  }();
+
   auto refMod = [&]() -> std::optional<Map::RefModifier> {
     if (auto *t = semantics::OmpGetUniqueModifier<parser::OmpRefModifier>(mods))
       return convertRefMod(t->v);
@@ -1125,6 +1236,7 @@ Map make(const parser::OmpClause::Map &inp,
 
   return Map{{/*MapType=*/std::move(type),
               /*MapTypeModifiers=*/std::move(maybeTypeMods),
+              /*AttachModifier=*/std::move(attachMod),
               /*RefModifier=*/std::move(refMod), /*Mapper=*/std::move(mappers),
               /*Iterator=*/std::move(iterator),
               /*LocatorList=*/makeObjects(t2, semaCtx)}};
@@ -1140,8 +1252,8 @@ Match make(const parser::OmpClause::Match &inp,
 
 Message make(const parser::OmpClause::Message &inp,
              semantics::SemanticsContext &semaCtx) {
-  // inp -> empty
-  llvm_unreachable("Empty: message");
+  // inp.v -> OmpMessageClause
+  return Message{/*MsgString=*/makeExpr(inp.v.v, semaCtx)};
 }
 
 Nocontext make(const parser::OmpClause::Nocontext &inp,
@@ -1184,16 +1296,20 @@ NumTasks make(const parser::OmpClause::NumTasks &inp,
 
 NumTeams make(const parser::OmpClause::NumTeams &inp,
               semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::ScalarIntExpr
+  // inp.v -> parser::OmpNumTeamsClause
+  auto &t1 = std::get<std::list<parser::ScalarIntExpr>>(inp.v.t);
+  assert(!t1.empty());
   List<NumTeams::Range> v{{{/*LowerBound=*/std::nullopt,
-                            /*UpperBound=*/makeExpr(inp.v, semaCtx)}}};
+                            /*UpperBound=*/makeExpr(t1.front(), semaCtx)}}};
   return NumTeams{/*List=*/v};
 }
 
 NumThreads make(const parser::OmpClause::NumThreads &inp,
                 semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::ScalarIntExpr
-  return NumThreads{/*Nthreads=*/makeExpr(inp.v, semaCtx)};
+  // inp.v -> parser::OmpNumThreadsClause
+  auto &t1 = std::get<std::list<parser::ScalarIntExpr>>(inp.v.t);
+  assert(!t1.empty());
+  return NumThreads{/*Nthreads=*/makeExpr(t1.front(), semaCtx)};
 }
 
 // OmpxAttribute: empty
@@ -1311,7 +1427,18 @@ Reduction make(const parser::OmpClause::Reduction &inp,
 
 // Relaxed: empty
 // Release: empty
-// ReverseOffload: empty
+
+ReverseOffload make(const parser::OmpClause::ReverseOffload &inp,
+                    semantics::SemanticsContext &semaCtx) {
+  // inp.v -> std::optional<parser::OmpReverseOffloadClause>
+  auto &&maybeRequired = maybeApply(
+      [&](const parser::OmpReverseOffloadClause &c) {
+        return makeExpr(c.v, semaCtx);
+      },
+      inp.v);
+
+  return ReverseOffload{/*Required=*/std::move(maybeRequired)};
+}
 
 Safelen make(const parser::OmpClause::Safelen &inp,
              semantics::SemanticsContext &semaCtx) {
@@ -1364,10 +1491,29 @@ Schedule make(const parser::OmpClause::Schedule &inp,
 
 // SeqCst: empty
 
+SelfMaps make(const parser::OmpClause::SelfMaps &inp,
+              semantics::SemanticsContext &semaCtx) {
+  // inp.v -> std::optional<parser::OmpSelfMapsClause>
+  auto &&maybeRequired = maybeApply(
+      [&](const parser::OmpSelfMapsClause &c) {
+        return makeExpr(c.v, semaCtx);
+      },
+      inp.v);
+
+  return SelfMaps{/*Required=*/std::move(maybeRequired)};
+}
+
 Severity make(const parser::OmpClause::Severity &inp,
               semantics::SemanticsContext &semaCtx) {
-  // inp -> empty
-  llvm_unreachable("Empty: severity");
+  // inp.v -> OmpSeverityClause
+  CLAUSET_ENUM_CONVERT( //
+      convertSevLevel, parser::OmpSeverityClause::SevLevel, Severity::SevLevel,
+      // clang-format off
+      MS(Fatal,   Fatal)
+      MS(Warning, Warning)
+      // clang-format om
+  );
+  return Severity{/*SevLevel=*/convertSevLevel(inp.v.v)};
 }
 
 Shared make(const parser::OmpClause::Shared &inp,
@@ -1412,8 +1558,25 @@ TaskReduction make(const parser::OmpClause::TaskReduction &inp,
 
 ThreadLimit make(const parser::OmpClause::ThreadLimit &inp,
                  semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::ScalarIntExpr
-  return ThreadLimit{/*Threadlim=*/makeExpr(inp.v, semaCtx)};
+  // inp.v -> parser::OmpThreadLimitClause
+  auto &t1 = std::get<std::list<parser::ScalarIntExpr>>(inp.v.t);
+  assert(!t1.empty());
+  return ThreadLimit{/*Threadlim=*/makeExpr(t1.front(), semaCtx)};
+}
+
+Threadset make(const parser::OmpClause::Threadset &inp,
+               semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpThreadsetClause
+  using wrapped = parser::OmpThreadsetClause;
+
+  CLAUSET_ENUM_CONVERT( //
+      convert, wrapped::ThreadsetPolicy, Threadset::ThreadsetPolicy,
+      // clang-format off
+      MS(Omp_Pool, Omp_Pool)
+      MS(Omp_Team, Omp_Team)
+      // clang-format on
+  );
+  return Threadset{/*ThreadsetPolicy=*/convert(inp.v.v)};
 }
 
 // Threadprivate: empty
@@ -1453,8 +1616,29 @@ To make(const parser::OmpClause::To &inp,
              /*LocatorList=*/makeObjects(t3, semaCtx)}};
 }
 
-// UnifiedAddress: empty
-// UnifiedSharedMemory: empty
+UnifiedAddress make(const parser::OmpClause::UnifiedAddress &inp,
+                    semantics::SemanticsContext &semaCtx) {
+  // inp.v -> std::optional<parser::OmpUnifiedAddressClause>
+  auto &&maybeRequired = maybeApply(
+      [&](const parser::OmpUnifiedAddressClause &c) {
+        return makeExpr(c.v, semaCtx);
+      },
+      inp.v);
+
+  return UnifiedAddress{/*Required=*/std::move(maybeRequired)};
+}
+
+UnifiedSharedMemory make(const parser::OmpClause::UnifiedSharedMemory &inp,
+                         semantics::SemanticsContext &semaCtx) {
+  // inp.v -> std::optional<parser::OmpUnifiedSharedMemoryClause>
+  auto &&maybeRequired = maybeApply(
+      [&](const parser::OmpUnifiedSharedMemoryClause &c) {
+        return makeExpr(c.v, semaCtx);
+      },
+      inp.v);
+
+  return UnifiedSharedMemory{/*Required=*/std::move(maybeRequired)};
+}
 
 Uniform make(const parser::OmpClause::Uniform &inp,
              semantics::SemanticsContext &semaCtx) {
@@ -1479,8 +1663,8 @@ Update make(const parser::OmpClause::Update &inp,
 
 Use make(const parser::OmpClause::Use &inp,
          semantics::SemanticsContext &semaCtx) {
-  // inp -> empty
-  llvm_unreachable("Empty: use");
+  // inp.v -> OmpUseClause
+  return Use{/*InteropVar=*/makeObject(inp.v.v, semaCtx)};
 }
 
 UseDeviceAddr make(const parser::OmpClause::UseDeviceAddr &inp,

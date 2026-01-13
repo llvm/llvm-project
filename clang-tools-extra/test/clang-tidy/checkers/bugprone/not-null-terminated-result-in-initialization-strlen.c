@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s bugprone-not-null-terminated-result %t -- \
+// RUN: %check_clang_tidy %s bugprone-not-null-terminated-result %t -- \
 // RUN: -- -I %S/Inputs/not-null-terminated-result
 
 #include "not-null-terminated-result-c.h"
@@ -40,7 +40,7 @@ int bad_strncmp_1(char *str1, const char *str2) {
   int length = strlen(str1) + 1;
   return strncmp(str1, str2, length);
   // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: comparison length is too long and might lead to a buffer overflow [bugprone-not-null-terminated-result]
-  // CHECK-FIXES: strncmp(str1, str2, length - 1);
+  // CHECK-FIXES: return strncmp(str1, str2, length - 1);
 }
 
 int good_strncmp_1(char *str1, const char *str2) {
@@ -51,13 +51,13 @@ int good_strncmp_1(char *str1, const char *str2) {
 int bad_strncmp_2(char *str2) {
   return strncmp(str2, "foobar", (strlen("foobar") + 1));
   // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: comparison length is too long and might lead to a buffer overflow [bugprone-not-null-terminated-result]
-  // CHECK-FIXES: strncmp(str2, "foobar", (strlen("foobar")));
+  // CHECK-FIXES: return strncmp(str2, "foobar", (strlen("foobar")));
 }
 
 int bad_strncmp_3(char *str3) {
   return strncmp(str3, "foobar", 1 + strlen("foobar"));
   // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: comparison length is too long and might lead to a buffer overflow [bugprone-not-null-terminated-result]
-  // CHECK-FIXES: strncmp(str3, "foobar", strlen("foobar"));
+  // CHECK-FIXES: return strncmp(str3, "foobar", strlen("foobar"));
 }
 
 int good_strncmp_2_3(char *str) {

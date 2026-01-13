@@ -1,4 +1,4 @@
-//===--- SuspiciousMemoryComparisonCheck.cpp - clang-tidy -----------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -44,10 +44,10 @@ void SuspiciousMemoryComparisonCheck::check(
 
   for (unsigned int ArgIndex = 0; ArgIndex < 2; ++ArgIndex) {
     const Expr *ArgExpr = CE->getArg(ArgIndex);
-    QualType ArgType = ArgExpr->IgnoreImplicit()->getType();
+    const QualType ArgType = ArgExpr->IgnoreImplicit()->getType();
     const Type *PointeeType = ArgType->getPointeeOrArrayElementType();
     assert(PointeeType != nullptr && "PointeeType should always be available.");
-    QualType PointeeQualifiedType(PointeeType, 0);
+    const QualType PointeeQualifiedType(PointeeType, 0);
 
     if (PointeeType->isRecordType()) {
       if (const RecordDecl *RD =
@@ -65,7 +65,7 @@ void SuspiciousMemoryComparisonCheck::check(
     }
 
     if (!PointeeType->isIncompleteType()) {
-      uint64_t PointeeSize = Ctx.getTypeSize(PointeeType);
+      const uint64_t PointeeSize = Ctx.getTypeSize(PointeeType);
       if (ComparedBits && *ComparedBits >= PointeeSize &&
           !Ctx.hasUniqueObjectRepresentations(PointeeQualifiedType)) {
         diag(CE->getBeginLoc(),

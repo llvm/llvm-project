@@ -108,7 +108,7 @@ getBinaryStringSelectors() {
 static const llvm::StringMap<RangeSelectorOp<RangeSelector, RangeSelector>> &
 getBinaryRangeSelectors() {
   static const llvm::StringMap<RangeSelectorOp<RangeSelector, RangeSelector>>
-      M = {{"enclose", enclose}, {"between", between}};
+      M = {{"enclose", enclose}, {"between", between}, {"merge", merge}};
   return M;
 }
 

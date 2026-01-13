@@ -100,7 +100,7 @@ LIBC_INLINE ErrorOr<void *> alloc_stack(size_t stacksize, size_t guardsize) {
       -1,                          // Not backed by any file
       0                            // No offset
   );
-  if (mmap_result < 0 && (uintptr_t(mmap_result) >= UINTPTR_MAX - size))
+  if (!linux_utils::is_valid_mmap(mmap_result))
     return Error{int(-mmap_result)};
 
   if (guardsize) {

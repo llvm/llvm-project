@@ -12,7 +12,7 @@ void f2() {
 // CIR-LABEL: cir.func{{.*}} @_Z2f2v
 // CIR:         cir.call @_Z2f1v() : () -> ()
 
-// LLVM-LABEL: define{{.*}} void @_Z2f2v() {
+// LLVM-LABEL: define{{.*}} void @_Z2f2v(){{.*}} {
 // LLVM:         call void @_Z2f1v()
 
 int f3() { return 2; }
@@ -25,7 +25,7 @@ int f4() {
 // CIR-LABEL: cir.func{{.*}} @_Z2f4v() -> !s32i
 // CIR:         cir.call @_Z2f3v() : () -> !s32i
 
-// LLVM-LABEL: define{{.*}} i32 @_Z2f4v() {
+// LLVM-LABEL: define{{.*}} i32 @_Z2f4v(){{.*}} {
 // LLVM:         %{{.+}} = call i32 @_Z2f3v()
 
 int f5(int a, int *b, bool c);
@@ -40,7 +40,7 @@ int f6() {
 // CIR-NEXT:    %[[#c:]] = cir.const #false
 // CIR-NEXT:    %{{.+}} = cir.call @_Z2f5iPib(%[[#a]], %[[#b:]], %[[#c]]) : (!s32i, !cir.ptr<!s32i>, !cir.bool) -> !s32i
 
-// LLVM-LABEL: define{{.*}} i32 @_Z2f6v() {
+// LLVM-LABEL: define{{.*}} i32 @_Z2f6v(){{.*}} {
 // LLVM:         %{{.+}} = call i32 @_Z2f5iPib(i32 2, ptr %{{.+}}, i1 false)
 
 int f7(int (*ptr)(int, int)) {
@@ -67,7 +67,7 @@ void f9() {
 // CIR:         cir.call @_Z2f8iz(%{{.+}}) : (!s32i) -> ()
 // CIR:         cir.call @_Z2f8iz(%{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}) : (!s32i, !s32i, !s32i, !s32i) -> ()
 
-// LLVM-LABEL: define{{.*}} void @_Z2f9v()
+// LLVM-LABEL: define{{.*}} void @_Z2f9v(){{.*}}
 // LLVM:         call void (i32, ...) @_Z2f8iz(i32 1)
 // LLVM:         call void (i32, ...) @_Z2f8iz(i32 1, i32 2, i32 3, i32 4)
 
@@ -85,7 +85,7 @@ void f11() {
 // CIR:         %[[#s:]] = cir.call @_Z3f10v() : () -> !rec_S
 // CIR-NEXT:    cir.store align(4) %[[#s]], %{{.+}} : !rec_S, !cir.ptr<!rec_S>
 
-// LLVM-LABEL: define{{.*}} void @_Z3f11v()
+// LLVM-LABEL: define{{.*}} void @_Z3f11v(){{.*}}
 // LLVM:         %[[#s:]] = call %struct.S @_Z3f10v()
 // LLVM-NEXT:    store %struct.S %[[#s]], ptr %{{.+}}, align 4
 
@@ -98,7 +98,7 @@ void f12() {
 // CIR-NEXT:    %[[#ret:]] = cir.call @_Z3f10v() : () -> !rec_S
 // CIR-NEXT:    cir.store align(4) %[[#ret]], %[[#slot]] : !rec_S, !cir.ptr<!rec_S>
 
-// LLVM-LABEL: define{{.*}} void @_Z3f12v() {
+// LLVM-LABEL: define{{.*}} void @_Z3f12v(){{.*}} {
 // LLVM:         %[[#slot:]] = alloca %struct.S, i64 1, align 4
 // LLVM-NEXT:    %[[#ret:]] = call %struct.S @_Z3f10v()
 // LLVM-NEXT:    store %struct.S %[[#ret]], ptr %[[#slot]], align 4
@@ -112,7 +112,7 @@ void f14() {
 // CIR:         cir.call @_Z3f13v() nothrow : () -> ()
 // CIR:       }
 
-// LLVM-LABEL: define{{.+}} void @_Z3f14v()
+// LLVM-LABEL: define{{.+}} void @_Z3f14v(){{.*}}
 // LLVM:         call void @_Z3f13v() #[[LLVM_ATTR_0:.+]]
 // LLVM:       }
 
@@ -126,7 +126,7 @@ void f16() {
 // CIR-NEXT:    %{{.+}} = cir.call @_Z3f15v() : () -> !s32i
 // CIR:       }
 
-// LLVM-LABEL: define{{.+}} void @_Z3f16v() {
+// LLVM-LABEL: define{{.+}} void @_Z3f16v(){{.*}} {
 // LLVM-NEXT:    %{{.+}} = call i32 @_Z3f15v()
 // LLVM:       }
 

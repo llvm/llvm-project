@@ -1,5 +1,5 @@
-# RUN: not --crash llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx90a -run-pass=machineverifier -o /dev/null %s 2>&1 | FileCheck -check-prefix=GFX90A-ERR %s
-# RUN: not --crash llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx90a --passes='machine-function(verify)' -o /dev/null %s 2>&1 | FileCheck -check-prefix=GFX90A-ERR %s
+# RUN: not --crash llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx90a -run-pass=machineverifier -filetype=null %s 2>&1 | FileCheck -check-prefix=GFX90A-ERR %s
+# RUN: not --crash llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx90a --passes='machine-function(verify)' -filetype=null %s 2>&1 | FileCheck -check-prefix=GFX90A-ERR %s
 
 # GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for vaddr operand of image instructions ***
 # GFX90A-ERR: %4:vgpr_32 = IMAGE_SAMPLE_V1_V1_gfx90a %0.sub1:vreg_128_align2

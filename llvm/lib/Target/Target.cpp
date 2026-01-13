@@ -23,9 +23,6 @@
 
 using namespace llvm;
 
-// Avoid including "llvm-c/Core.h" for compile time, fwd-declare this instead.
-extern "C" LLVMContextRef LLVMGetGlobalContext(void);
-
 inline TargetLibraryInfoImpl *unwrap(LLVMTargetLibraryInfoRef P) {
   return reinterpret_cast<TargetLibraryInfoImpl*>(P);
 }
@@ -37,6 +34,7 @@ inline LLVMTargetLibraryInfoRef wrap(const TargetLibraryInfoImpl *P) {
 
 void llvm::initializeTarget(PassRegistry &Registry) {
   initializeTargetLibraryInfoWrapperPassPass(Registry);
+  initializeRuntimeLibraryInfoWrapperPass(Registry);
   initializeTargetTransformInfoWrapperPassPass(Registry);
 }
 
@@ -79,11 +77,12 @@ unsigned LLVMPointerSizeForAS(LLVMTargetDataRef TD, unsigned AS) {
 }
 
 LLVMTypeRef LLVMIntPtrType(LLVMTargetDataRef TD) {
-  return wrap(unwrap(TD)->getIntPtrType(*unwrap(LLVMGetGlobalContext())));
+  return wrap(unwrap(TD)->getIntPtrType(*unwrap(getGlobalContextForCAPI())));
 }
 
 LLVMTypeRef LLVMIntPtrTypeForAS(LLVMTargetDataRef TD, unsigned AS) {
-  return wrap(unwrap(TD)->getIntPtrType(*unwrap(LLVMGetGlobalContext()), AS));
+  return wrap(
+      unwrap(TD)->getIntPtrType(*unwrap(getGlobalContextForCAPI()), AS));
 }
 
 LLVMTypeRef LLVMIntPtrTypeInContext(LLVMContextRef C, LLVMTargetDataRef TD) {

@@ -24,6 +24,34 @@ void pointee_uninit(void) {
   doStuff_pointerToConstInt(p); // expected-warning{{1st function call argument is a pointer to uninitialized value [core.CallAndMessage]}}
 }
 
+typedef struct S {
+  int a;
+  short b;
+} S;
+
+void doStuff_pointerToConstStruct(const S *s){};
+void pointee_uninit_struct(void) {
+  S s;
+  S *p = &s;
+  doStuff_pointerToConstStruct(p); // expected-warning{{1st function call argument points to an uninitialized value (e.g., field: 'a') [core.CallAndMessage]}}
+}
+void pointee_uninit_struct_1(void) {
+  S s;
+  s.a = 2;
+  doStuff_pointerToConstStruct(&s); // expected-warning{{1st function call argument points to an uninitialized value (e.g., field: 'b') [core.CallAndMessage]}}
+}
+void pointee_uninit_struct_2(void) {
+  S s = {};
+  doStuff_pointerToConstStruct(&s);
+}
+void pointee_uninit_struct_3(S *s) {
+  doStuff_pointerToConstStruct(s);
+}
+void pointee_uninit_struct_4(void) {
+  S s = {1, 2};
+  doStuff_pointerToConstStruct(&s);
+}
+
 // TODO: If this hash ever changes, turn
 // core.CallAndMessage:ArgPointeeInitializedness from a checker option into a
 // checker, as described in the CallAndMessage comments!

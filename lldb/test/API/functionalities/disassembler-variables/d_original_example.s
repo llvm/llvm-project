@@ -1,6 +1,6 @@
 /* Original C (for context):
 * #include <stdio.h>
-* 
+*
 * int main(int argc, char **argv) {
 *   for (int i = 1; i < argc; ++i)
 *     puts(argv[i]);
@@ -8,6 +8,7 @@
 * }
 */
 	.file	"d_original_example.c"
+	.att_syntax
 	.text
 	.globl	main                            # -- Begin function main
 	.p2align	4

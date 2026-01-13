@@ -6,12 +6,14 @@ R"(
 
 __NAMESPACE_OPEN__
 
+__OP_VERIFIER_HELPERS__
+
 __OP_BUILD_DEFS__
 
-void __OP_CPP_NAME__::build(::mlir::OpBuilder &odsBuilder, 
-                            ::mlir::OperationState &odsState, 
-                            ::mlir::TypeRange resultTypes, 
-                            ::mlir::ValueRange operands, 
+void __OP_CPP_NAME__::build(::mlir::OpBuilder &odsBuilder,
+                            ::mlir::OperationState &odsState,
+                            ::mlir::TypeRange resultTypes,
+                            ::mlir::ValueRange operands,
                             ::llvm::ArrayRef<::mlir::NamedAttribute> attributes)
 {
   assert(operands.size() == __OP_OPERAND_COUNT__);
@@ -19,6 +21,9 @@ void __OP_CPP_NAME__::build(::mlir::OpBuilder &odsBuilder,
   odsState.addOperands(operands);
   odsState.addAttributes(attributes);
   odsState.addTypes(resultTypes);
+  for (unsigned i = 0; i != __OP_REGION_COUNT__; ++i) {
+    (void)odsState.addRegion();
+  }
 }
 
 __OP_CPP_NAME__
@@ -44,6 +49,7 @@ __OP_CPP_NAME__::create(::mlir::ImplicitLocOpBuilder &odsBuilder,
   return create(odsBuilder, odsBuilder.getLoc(), resultTypes, operands, attributes);
 }
 
+__OP_VERIFIER__
 
 __NAMESPACE_CLOSE__
 

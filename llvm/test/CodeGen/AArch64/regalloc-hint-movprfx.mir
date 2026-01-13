@@ -1,0 +1,67 @@
+# RUN: llc -mtriple=aarch64 -mattr=+sve -start-before=greedy -stop-after=virtregrewriter -debug-only=regalloc %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=DBG
+# REQUIRES: asserts
+
+# Check that the register allocator gets hints to reuse registers of one of it's operands.
+---
+name:            prioritize_movprfx_hints
+tracksRegLiveness: true
+isSSA:           false
+noVRegs:         false
+body:             |
+  bb.0.entry:
+    liveins: $z0, $z1, $z2, $z3, $p0
+
+    ; DBG: Machine code for function prioritize_movprfx_hints
+    ;
+    ; DBG: selectOrSplit ZPR:%4
+    ; DBG-NEXT: hints: $z0 $z1{{$}}
+    ;
+    ; DBG: selectOrSplit ZPR:%5
+    ; DBG-NEXT: hints: $z2 $z3{{$}}
+    ;
+    ; DBG: [%0 -> $z3] ZPR
+    ; DBG: [%1 -> $z2] ZPR
+    ; DBG: [%2 -> $z1] ZPR
+    ; DBG: [%3 -> $z0] ZPR
+    ; DBG: [%4 -> $z0] ZPR
+    ; DBG: [%5 -> $z2] ZPR
+    ; DBG: [%6 -> $z0] ZPR
+    %0:zpr = COPY $z3
+    %1:zpr = COPY $z2
+    %2:zpr = COPY $z1
+    %3:zpr = COPY $z0
+    %4:zpr = SDIV_ZPZZ_D_UNDEF $p0, %3:zpr, %2:zpr
+    %5:zpr = MUL_ZPZZ_D_UNDEF $p0, %1:zpr, %0:zpr
+    %6:zpr = MUL_ZPZZ_D_UNDEF $p0, %5:zpr, %4:zpr
+    $z0 = COPY %6:zpr
+    RET_ReallyLR implicit $z0
+...
+
+# Check that the register allocator prioritises hints that are set by the register
+# allocator itself (i.e. to use z4 for the result register).
+---
+name:            prioritize_regalloc_hints
+isSSA:           false
+noVRegs:         false
+body:             |
+  bb.0.entry:
+    %0:zpr = FDUP_ZI_S 0, implicit $vg
+    %1:zpr = FDUP_ZI_S 16, implicit $vg
+    %2:zpr = FDUP_ZI_S 32, implicit $vg
+    %3:ppr_3b = PTRUE_S 31, implicit $vg
+
+    ; DBG: Machine code for function prioritize_regalloc_hints
+    ;
+    ; DBG: selectOrSplit ZPR:%4
+    ; DBG-NEXT: hints: $z4{{$}}
+    ;
+    ; DBG: [%0 -> $z0] ZPR
+    ; DBG: [%1 -> $z1] ZPR
+    ; DBG: [%2 -> $z2] ZPR
+    ; DBG: [%3 -> $p0] PPR_3b
+    ; DBG: [%4 -> $z4] ZPR
+
+    %4:zpr = FMLA_ZPZZZ_S_UNDEF %3, %0, %1, %2
+    $z4 = COPY %4
+    RET_ReallyLR implicit $z4
+...

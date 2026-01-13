@@ -15,7 +15,7 @@ int2 test_select_vector_vals_not_vecs(bool2 p0, int t0,
 }
 
 int1 test_select_vector_vals_wrong_size(bool2 p0, int1 t0, int1 f0) {
-  return select<int,1>(p0, t0, f0); // expected-warning{{implicit conversion truncates vector: 'bool2' (aka 'vector<bool, 2>') to 'vector<bool, 1>' (vector of 1 'bool' value)}}
+  return select<int1>(p0, t0, f0); // No diagnostic expected.
 }
 
 int test_select_no_args() {

@@ -74,7 +74,7 @@ void test_qualifiers(const int y) {
   static auto c = 1UL;
   int* pa = &a; // expected-warning {{initializing 'int *' with an expression of type 'const int *' discards qualifiers}}
   const int* pb = &b;
-  int* pc = &c; // expected-warning {{incompatible pointer types initializing 'int *' with an expression of type 'unsigned long *'}}
+  int* pc = &c; // expected-error {{incompatible pointer types initializing 'int *' with an expression of type 'unsigned long *'}}
 
   _Static_assert(_Generic(a, int : 1));
   _Static_assert(_Generic(b, int : 1));

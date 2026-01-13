@@ -77,7 +77,7 @@ def ConditionOp : SCF_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 def ExecuteRegionOp : SCF_Op<"execute_region", [
-    DeclareOpInterfaceMethods<RegionBranchOpInterface>]> {
+    DeclareOpInterfaceMethods<RegionBranchOpInterface>, RecursiveMemoryEffects]> {
   let summary = "operation that executes its region exactly once";
   let description = [{
     The `scf.execute_region` operation is used to allow multiple blocks within SCF
@@ -152,9 +152,10 @@ def ForOp : SCF_Op<"for",
       [AutomaticAllocationScope, DeclareOpInterfaceMethods<LoopLikeOpInterface,
        ["getInitsMutable", "getLoopResults", "getRegionIterArgs",
         "getLoopInductionVars", "getLoopLowerBounds", "getLoopSteps",
-        "getLoopUpperBounds", "getYieldedValuesMutable",
+        "getLoopUpperBounds", "getStaticTripCount", "getYieldedValuesMutable",
         "promoteIfSingleIteration", "replaceWithAdditionalYields",
-        "yieldTiledValuesAndReplace"]>,
+        "yieldTiledValuesAndReplace", "isValidInductionVarType",
+        "setLoopLowerBounds", "setLoopUpperBounds", "setLoopSteps"]>,
        AllTypesMatch<["lowerBound", "upperBound", "step"]>,
        ConditionallySpeculatable,
        DeclareOpInterfaceMethods<RegionBranchOpInterface,
@@ -613,6 +614,11 @@ def ForallOp : SCF_Op<"forall", [
                                     getNumDynamicControlOperands() + getRank());
     }
 
+    BlockArgument getTiedBlockArgument(OpResult opResult) {
+      assert(opResult.getDefiningOp() == getOperation()  && "invalid OpResult");
+      return getBody()->getArgument(getRank() + opResult.getResultNumber());
+    }
+
     ::mlir::Value getInductionVar(int64_t idx) {
       return getInductionVars()[idx];
     }
@@ -644,6 +650,13 @@ def ForallOp : SCF_Op<"forall", [
 
     /// Returns true if the mapping specified for this forall op is linear.
     bool usesLinearMapping();
+
+    /// RegionBranchOpInterface
+
+    OperandRange getEntrySuccessorOperands(RegionSuccessor successor) {
+      return getInits();
+    }
+
   }];
 }
 
@@ -654,7 +667,7 @@ def ForallOp : SCF_Op<"forall", [
 def InParallelOp : SCF_Op<"forall.in_parallel", [
        Pure,
        Terminator,
-       DeclareOpInterfaceMethods<ParallelCombiningOpInterface>,
+       DeclareOpInterfaceMethods<InParallelOpInterface>,
        HasParent<"ForallOp">,
       ] # GraphRegionNoTerminator.traits> {
   let summary = "terminates a `forall` block";
@@ -679,8 +692,6 @@ def InParallelOp : SCF_Op<"forall.in_parallel", [
     OpBuilder<(ins)>,
   ];
 
-  // TODO: Add a `InParallelOpInterface` interface for ops that can
-  // appear inside in_parallel.
   let extraClassDeclaration = [{
     ::llvm::SmallVector<::mlir::BlockArgument> getDests();
     ::llvm::iterator_range<::mlir::Block::iterator> getYieldingOps();

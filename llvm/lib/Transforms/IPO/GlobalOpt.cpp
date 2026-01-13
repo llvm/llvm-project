@@ -47,6 +47,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -98,6 +99,11 @@ static cl::opt<bool>
                           cl::desc("Statically resolve calls to versioned "
                                    "functions from non-versioned callers."),
                           cl::init(true), cl::Hidden);
+
+static cl::opt<unsigned> MaxIFuncVersions(
+    "max-ifunc-versions", cl::Hidden, cl::init(5),
+    cl::desc("Maximum number of caller/callee versions that is allowed for "
+             "using the expensive (cubic) static resolution algorithm."));
 
 static cl::opt<bool>
     EnableColdCCStressTest("enable-coldcc-stress-test",
@@ -1303,8 +1309,10 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
       Instruction *NSI;
       if (IsOneZero)
         NSI = new ZExtInst(NLI, LI->getType(), "", LI->getIterator());
-      else
+      else {
         NSI = SelectInst::Create(NLI, OtherVal, InitVal, "", LI->getIterator());
+        setExplicitlyUnknownBranchWeightsIfProfiled(*NSI, DEBUG_TYPE);
+      }
       NSI->takeName(LI);
       // Since LI is split into two instructions, NLI and NSI both inherit the
       // same DebugLoc
@@ -1680,7 +1688,9 @@ processGlobal(GlobalValue &GV,
 /// FastCC.
 static void ChangeCalleesToFastCall(Function *F) {
   for (User *U : F->users())
-    cast<CallBase>(U)->setCallingConv(CallingConv::Fast);
+    if (auto *Call = dyn_cast<CallBase>(U))
+      if (Call->getCalledOperand() == F)
+        Call->setCallingConv(CallingConv::Fast);
 }
 
 static AttributeList StripAttr(LLVMContext &C, AttributeList Attrs,
@@ -1766,10 +1776,12 @@ isValidCandidateForColdCC(Function &F,
     return false;
 
   for (User *U : F.users()) {
-    CallBase &CB = cast<CallBase>(*U);
-    Function *CallerFunc = CB.getParent()->getParent();
+    CallBase *CB = dyn_cast<CallBase>(U);
+    if (!CB || CB->getCalledOperand() != &F)
+      continue;
+    Function *CallerFunc = CB->getParent()->getParent();
     BlockFrequencyInfo &CallerBFI = GetBFI(*CallerFunc);
-    if (!isColdCallSite(CB, CallerBFI))
+    if (!isColdCallSite(*CB, CallerBFI))
       return false;
     if (!llvm::is_contained(AllCallsCold, CallerFunc))
       return false;
@@ -1779,7 +1791,9 @@ isValidCandidateForColdCC(Function &F,
 
 static void changeCallSitesToColdCC(Function *F) {
   for (User *U : F->users())
-    cast<CallBase>(U)->setCallingConv(CallingConv::Cold);
+    if (auto *Call = dyn_cast<CallBase>(U))
+      if (Call->getCalledOperand() == F)
+        Call->setCallingConv(CallingConv::Cold);
 }
 
 // This function iterates over all the call instructions in the input Function
@@ -2012,12 +2026,15 @@ OptimizeFunctions(Module &M,
 
     if (hasChangeableCC(&F, ChangeableCCCache)) {
       // If this function has a calling convention worth changing, is not a
-      // varargs function, and is only called directly, promote it to use the
-      // Fast calling convention.
-      F.setCallingConv(CallingConv::Fast);
-      ChangeCalleesToFastCall(&F);
-      ++NumFastCallFns;
-      Changed = true;
+      // varargs function, is only called directly, and is supported by the
+      // target, promote it to use the Fast calling convention.
+      TargetTransformInfo &TTI = GetTTI(F);
+      if (TTI.useFastCCForInternalCall(F)) {
+        F.setCallingConv(CallingConv::Fast);
+        ChangeCalleesToFastCall(&F);
+        ++NumFastCallFns;
+        Changed = true;
+      }
     }
 
     if (F.getAttributes().hasAttrSomewhere(Attribute::Nest) &&
@@ -2130,9 +2147,10 @@ static void setUsedInitializer(GlobalVariable &V,
 
   Module *M = V.getParent();
   V.removeFromParent();
-  GlobalVariable *NV =
-      new GlobalVariable(*M, ATy, false, GlobalValue::AppendingLinkage,
-                         ConstantArray::get(ATy, UsedArray), "");
+  GlobalVariable *NV = new GlobalVariable(
+      *M, ATy, false, GlobalValue::AppendingLinkage,
+      ConstantArray::get(ATy, UsedArray), "", nullptr,
+      GlobalVariable::NotThreadLocal, V.getType()->getAddressSpace());
   NV->takeName(&V);
   NV->setSection("llvm.metadata");
   delete &V;
@@ -2482,20 +2500,21 @@ DeleteDeadIFuncs(Module &M,
 // Follows the use-def chain of \p V backwards until it finds a Function,
 // in which case it collects in \p Versions. Return true on successful
 // use-def chain traversal, false otherwise.
-static bool collectVersions(TargetTransformInfo &TTI, Value *V,
-                            SmallVectorImpl<Function *> &Versions) {
+static bool
+collectVersions(Value *V, SmallVectorImpl<Function *> &Versions,
+                function_ref<TargetTransformInfo &(Function &)> GetTTI) {
   if (auto *F = dyn_cast<Function>(V)) {
-    if (!TTI.isMultiversionedFunction(*F))
+    if (!GetTTI(*F).isMultiversionedFunction(*F))
       return false;
     Versions.push_back(F);
   } else if (auto *Sel = dyn_cast<SelectInst>(V)) {
-    if (!collectVersions(TTI, Sel->getTrueValue(), Versions))
+    if (!collectVersions(Sel->getTrueValue(), Versions, GetTTI))
       return false;
-    if (!collectVersions(TTI, Sel->getFalseValue(), Versions))
+    if (!collectVersions(Sel->getFalseValue(), Versions, GetTTI))
       return false;
   } else if (auto *Phi = dyn_cast<PHINode>(V)) {
     for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I)
-      if (!collectVersions(TTI, Phi->getIncomingValue(I), Versions))
+      if (!collectVersions(Phi->getIncomingValue(I), Versions, GetTTI))
         return false;
   } else {
     // Unknown instruction type. Bail.
@@ -2504,31 +2523,45 @@ static bool collectVersions(TargetTransformInfo &TTI, Value *V,
   return true;
 }
 
-// Bypass the IFunc Resolver of MultiVersioned functions when possible. To
-// deduce whether the optimization is legal we need to compare the target
-// features between caller and callee versions. The criteria for bypassing
-// the resolver are the following:
+// Try to statically resolve calls to versioned functions when possible. First
+// we identify the function versions which are associated with an IFUNC symbol.
+// We do that by examining the resolver function of the IFUNC. Once we have
+// collected all the function versions, we sort them in decreasing priority
+// order. This is necessary for determining the most suitable callee version
+// for each caller version. We then collect all the callsites to versioned
+// functions. The static resolution is performed by comparing the feature sets
+// between callers and callees. Specifically:
+// * Start a walk over caller and callee lists simultaneously in order of
+//   decreasing priority.
+// * Statically resolve calls from the current caller to the current callee,
+//   iff the caller feature bits are a superset of the callee feature bits.
+// * For FMV callers, as long as the caller feature bits are a subset of the
+//   callee feature bits, advance to the next callee. This effectively prevents
+//   considering the current callee as a candidate for static resolution by
+//   following callers (explanation: preceding callers would not have been
+//   selected in a hypothetical runtime execution).
+// * Advance to the next caller.
 //
-// * If the callee's feature set is a subset of the caller's feature set,
-//   then the callee is a candidate for direct call.
-//
-// * Among such candidates the one of highest priority is the best match
-//   and it shall be picked, unless there is a version of the callee with
-//   higher priority than the best match which cannot be picked from a
-//   higher priority caller (directly or through the resolver).
-//
-// * For every higher priority callee version than the best match, there
-//   is a higher priority caller version whose feature set availability
-//   is implied by the callee's feature set.
-//
+// Presentation in EuroLLVM2025:
+// https://www.youtube.com/watch?v=k54MFimPz-A&t=867s
 static bool OptimizeNonTrivialIFuncs(
     Module &M, function_ref<TargetTransformInfo &(Function &)> GetTTI) {
   bool Changed = false;
 
-  // Cache containing the mask constructed from a function's target features.
+  // Map containing the feature bits for a given function.
   DenseMap<Function *, APInt> FeatureMask;
+  // Map containing the priority bits for a given function.
+  DenseMap<Function *, APInt> PriorityMask;
+  // Map containing all the function versions corresponding to an IFunc symbol.
+  DenseMap<GlobalIFunc *, SmallVector<Function *>> VersionedFuncs;
+  // Map containing the IFunc symbol a function is version of.
+  DenseMap<Function *, GlobalIFunc *> VersionOf;
+  // List of all the interesting IFuncs found in the module.
+  SmallVector<GlobalIFunc *> IFuncs;
 
   for (GlobalIFunc &IF : M.ifuncs()) {
+    LLVM_DEBUG(dbgs() << "Examining IFUNC " << IF.getName() << "\n");
+
     if (IF.isInterposable())
       continue;
 
@@ -2539,106 +2572,175 @@ static bool OptimizeNonTrivialIFuncs(
     if (Resolver->isInterposable())
       continue;
 
-    TargetTransformInfo &TTI = GetTTI(*Resolver);
-
-    // Discover the callee versions.
-    SmallVector<Function *> Callees;
-    if (any_of(*Resolver, [&TTI, &Callees](BasicBlock &BB) {
+    SmallVector<Function *> Versions;
+    // Discover the versioned functions.
+    if (any_of(*Resolver, [&](BasicBlock &BB) {
           if (auto *Ret = dyn_cast_or_null<ReturnInst>(BB.getTerminator()))
-            if (!collectVersions(TTI, Ret->getReturnValue(), Callees))
+            if (!collectVersions(Ret->getReturnValue(), Versions, GetTTI))
               return true;
           return false;
         }))
       continue;
 
-    assert(!Callees.empty() && "Expecting successful collection of versions");
+    if (Versions.empty())
+      continue;
+
+    for (Function *V : Versions) {
+      VersionOf.insert({V, &IF});
+      auto [FeatIt, FeatInserted] = FeatureMask.try_emplace(V);
+      if (FeatInserted)
+        FeatIt->second = GetTTI(*V).getFeatureMask(*V);
+      auto [PriorIt, PriorInserted] = PriorityMask.try_emplace(V);
+      if (PriorInserted)
+        PriorIt->second = GetTTI(*V).getPriorityMask(*V);
+    }
+
+    // Sort function versions in decreasing priority order.
+    sort(Versions, [&](auto *LHS, auto *RHS) {
+      return PriorityMask[LHS].ugt(PriorityMask[RHS]);
+    });
+
+    IFuncs.push_back(&IF);
+    VersionedFuncs.try_emplace(&IF, std::move(Versions));
+  }
+
+  for (GlobalIFunc *CalleeIF : IFuncs) {
+    SmallVector<Function *> NonFMVCallers;
+    DenseSet<GlobalIFunc *> CallerIFuncs;
+    DenseMap<Function *, SmallVector<CallBase *>> CallSites;
+
+    // Find the callsites.
+    for (User *U : CalleeIF->users()) {
+      if (auto *CB = dyn_cast<CallBase>(U)) {
+        if (CB->getCalledOperand() == CalleeIF) {
+          Function *Caller = CB->getFunction();
+          GlobalIFunc *CallerIF = nullptr;
+          TargetTransformInfo &TTI = GetTTI(*Caller);
+          bool CallerIsFMV = TTI.isMultiversionedFunction(*Caller);
+          // The caller is a version of a known IFunc.
+          if (auto It = VersionOf.find(Caller); It != VersionOf.end())
+            CallerIF = It->second;
+          else if (!CallerIsFMV && OptimizeNonFMVCallers) {
+            // The caller is non-FMV.
+            auto [It, Inserted] = FeatureMask.try_emplace(Caller);
+            if (Inserted)
+              It->second = TTI.getFeatureMask(*Caller);
+          } else
+            // The caller is none of the above, skip.
+            continue;
+          auto [It, Inserted] = CallSites.try_emplace(Caller);
+          if (Inserted) {
+            if (CallerIsFMV)
+              CallerIFuncs.insert(CallerIF);
+            else
+              NonFMVCallers.push_back(Caller);
+          }
+          It->second.push_back(CB);
+        }
+      }
+    }
+
+    if (CallSites.empty())
+      continue;
 
     LLVM_DEBUG(dbgs() << "Statically resolving calls to function "
-                      << Resolver->getName() << "\n");
+                      << CalleeIF->getResolverFunction()->getName() << "\n");
 
-    // Cache the feature mask for each callee.
-    for (Function *Callee : Callees) {
-      auto [It, Inserted] = FeatureMask.try_emplace(Callee);
-      if (Inserted)
-        It->second = TTI.getFeatureMask(*Callee);
-    }
+    // The complexity of this algorithm is linear: O(NumCallers + NumCallees)
+    // if NumCallers > MaxIFuncVersions || NumCallees > MaxIFuncVersions,
+    // otherwise it is cubic: O((NumCallers ^ 2) x NumCallees).
+    auto staticallyResolveCalls = [&](ArrayRef<Function *> Callers,
+                                      ArrayRef<Function *> Callees,
+                                      bool CallerIsFMV) {
+      bool AllowExpensiveChecks = CallerIsFMV &&
+                                  Callers.size() <= MaxIFuncVersions &&
+                                  Callees.size() <= MaxIFuncVersions;
+      // Index to the highest callee candidate.
+      unsigned J = 0;
 
-    // Sort the callee versions in decreasing priority order.
-    sort(Callees, [&](auto *LHS, auto *RHS) {
-      return FeatureMask[LHS].ugt(FeatureMask[RHS]);
-    });
+      for (unsigned I = 0, E = Callers.size(); I < E; ++I) {
+        // There are no callee candidates left.
+        if (J == Callees.size())
+          break;
 
-    // Find the callsites and cache the feature mask for each caller.
-    SmallVector<Function *> Callers;
-    DenseMap<Function *, SmallVector<CallBase *>> CallSites;
-    for (User *U : IF.users()) {
-      if (auto *CB = dyn_cast<CallBase>(U)) {
-        if (CB->getCalledOperand() == &IF) {
-          Function *Caller = CB->getFunction();
-          auto [FeatIt, FeatInserted] = FeatureMask.try_emplace(Caller);
-          if (FeatInserted)
-            FeatIt->second = TTI.getFeatureMask(*Caller);
-          auto [CallIt, CallInserted] = CallSites.try_emplace(Caller);
-          if (CallInserted)
-            Callers.push_back(Caller);
-          CallIt->second.push_back(CB);
-        }
-      }
-    }
+        Function *Caller = Callers[I];
+        APInt CallerBits = FeatureMask[Caller];
 
-    // Sort the caller versions in decreasing priority order.
-    sort(Callers, [&](auto *LHS, auto *RHS) {
-      return FeatureMask[LHS].ugt(FeatureMask[RHS]);
-    });
-
-    auto implies = [](APInt A, APInt B) { return B.isSubsetOf(A); };
-
-    // Index to the highest priority candidate.
-    unsigned I = 0;
-    // Now try to redirect calls starting from higher priority callers.
-    for (Function *Caller : Callers) {
-      assert(I < Callees.size() && "Found callers of equal priority");
-
-      Function *Callee = Callees[I];
-      APInt CallerBits = FeatureMask[Caller];
-      APInt CalleeBits = FeatureMask[Callee];
-
-      // In the case of FMV callers, we know that all higher priority callers
-      // than the current one did not get selected at runtime, which helps
-      // reason about the callees (if they have versions that mandate presence
-      // of the features which we already know are unavailable on this target).
-      if (TTI.isMultiversionedFunction(*Caller)) {
-        // If the feature set of the caller implies the feature set of the
-        // highest priority candidate then it shall be picked. In case of
-        // identical sets advance the candidate index one position.
-        if (CallerBits == CalleeBits)
-          ++I;
-        else if (!implies(CallerBits, CalleeBits)) {
-          // Keep advancing the candidate index as long as the caller's
-          // features are a subset of the current candidate's.
-          while (implies(CalleeBits, CallerBits)) {
-            if (++I == Callees.size())
-              break;
-            CalleeBits = FeatureMask[Callees[I]];
+        // Compare the feature bits of the best callee candidate with all the
+        // caller versions preceeding the current one. For each prior caller
+        // discard feature bits that are known to be available in the current
+        // caller. As long as the known missing feature bits are a subset of the
+        // callee feature bits, advance to the next callee and start over.
+        auto eliminateAvailableFeatures = [&](unsigned BestCandidate) {
+          unsigned K = 0;
+          while (K < I && BestCandidate < Callees.size()) {
+            APInt MissingBits = FeatureMask[Callers[K]] & ~CallerBits;
+            if (MissingBits.isSubsetOf(FeatureMask[Callees[BestCandidate]])) {
+              ++BestCandidate;
+              // Start over.
+              K = 0;
+            } else
+              ++K;
           }
+          return BestCandidate;
+        };
+
+        unsigned BestCandidate =
+            AllowExpensiveChecks ? eliminateAvailableFeatures(J) : J;
+        // No callee candidate was found for this caller.
+        if (BestCandidate == Callees.size())
           continue;
+
+        LLVM_DEBUG(dbgs() << "   Examining "
+                          << (CallerIsFMV ? "FMV" : "regular") << " caller "
+                          << Caller->getName() << "\n");
+
+        Function *Callee = Callees[BestCandidate];
+        APInt CalleeBits = FeatureMask[Callee];
+
+        // Statically resolve calls from the current caller to the current
+        // callee, iff the caller feature bits are a superset of the callee
+        // feature bits.
+        if (CalleeBits.isSubsetOf(CallerBits)) {
+          // Not all caller versions are necessarily users of the callee IFUNC.
+          if (auto It = CallSites.find(Caller); It != CallSites.end()) {
+            for (CallBase *CS : It->second) {
+              LLVM_DEBUG(dbgs() << "   Redirecting call " << Caller->getName()
+                                << " -> " << Callee->getName() << "\n");
+              CS->setCalledOperand(Callee);
+            }
+            Changed = true;
+          }
         }
-      } else {
-        // We can't reason much about non-FMV callers. Just pick the highest
-        // priority callee if it matches, otherwise bail.
-        if (!OptimizeNonFMVCallers || I > 0 || !implies(CallerBits, CalleeBits))
+
+        // Nothing else to do about non-FMV callers.
+        if (!CallerIsFMV)
           continue;
+
+        // For FMV callers, as long as the caller feature bits are a subset of
+        // the callee feature bits, advance to the next callee. This effectively
+        // prevents considering the current callee as a candidate for static
+        // resolution by following callers.
+        while (CallerBits.isSubsetOf(FeatureMask[Callees[J]]) &&
+               ++J < Callees.size())
+          ;
       }
-      auto &Calls = CallSites[Caller];
-      for (CallBase *CS : Calls) {
-        LLVM_DEBUG(dbgs() << "Redirecting call " << Caller->getName() << " -> "
-                          << Callee->getName() << "\n");
-        CS->setCalledOperand(Callee);
-      }
-      Changed = true;
+    };
+
+    auto &Callees = VersionedFuncs[CalleeIF];
+
+    // Optimize non-FMV calls.
+    if (OptimizeNonFMVCallers)
+      staticallyResolveCalls(NonFMVCallers, Callees, /*CallerIsFMV=*/false);
+
+    // Optimize FMV calls.
+    for (GlobalIFunc *CallerIF : CallerIFuncs) {
+      auto &Callers = VersionedFuncs[CallerIF];
+      staticallyResolveCalls(Callers, Callees, /*CallerIsFMV=*/true);
     }
-    if (IF.use_empty() ||
-        all_of(IF.users(), [](User *U) { return isa<GlobalAlias>(U); }))
+
+    if (CalleeIF->use_empty() ||
+        all_of(CalleeIF->users(), [](User *U) { return isa<GlobalAlias>(U); }))
       NumIFuncsResolved++;
   }
   return Changed;

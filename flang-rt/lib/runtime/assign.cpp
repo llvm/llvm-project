@@ -366,7 +366,7 @@ RT_API_ATTRS int AssignTicket::Begin(WorkQueue &workQueue) {
                                    "assignment to unallocated allocatable",
           to_.rank(), from_->rank());
     }
-  } else if (!to_.IsAllocated()) {
+  } else if (!to_.IsAllocated() && to_.Elements()) {
     workQueue.terminator().Crash(
         "Assign: left-hand side variable is neither allocated nor allocatable");
   }
@@ -648,7 +648,8 @@ RT_API_ATTRS int DerivedAssignTicket<IS_COMPONENTWISE>::Continue(
         }
       }
       break;
-    case typeInfo::Component::Genre::Pointer: {
+    case typeInfo::Component::Genre::Pointer:
+    case typeInfo::Component::Genre::PointerDevice: {
       std::size_t componentByteSize{
           this->component_->SizeInBytes(this->instance_)};
       if (IS_COMPONENTWISE && toIsContiguous_ && fromIsContiguous_) {
@@ -680,6 +681,7 @@ RT_API_ATTRS int DerivedAssignTicket<IS_COMPONENTWISE>::Continue(
       }
     } break;
     case typeInfo::Component::Genre::Allocatable:
+    case typeInfo::Component::Genre::AllocatableDevice:
     case typeInfo::Component::Genre::Automatic: {
       auto *toDesc{reinterpret_cast<Descriptor *>(
           this->instance_.template Element<char>(this->subscripts_) +

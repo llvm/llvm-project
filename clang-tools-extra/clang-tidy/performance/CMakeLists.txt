@@ -23,7 +23,7 @@ add_clang_library(clangTidyPerformanceModule STATIC
   PerformanceTidyModule.cpp
   TriviallyDestructibleCheck.cpp
   TypePromotionInMathFnCheck.cpp
-  UnnecessaryCopyInitialization.cpp
+  UnnecessaryCopyInitializationCheck.cpp
   UnnecessaryValueParamCheck.cpp
 
   LINK_LIBS

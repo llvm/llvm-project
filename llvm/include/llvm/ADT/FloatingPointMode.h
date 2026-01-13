@@ -153,6 +153,11 @@ struct DenormalMode {
            Input == DenormalModeKind::PositiveZero;
   }
 
+  /// Return true if input denormals may be implicitly treated as 0.
+  constexpr bool inputsMayBeZero() const {
+    return inputsAreZero() || Input == DenormalMode::Dynamic;
+  }
+
   /// Return true if output denormals should be flushed to 0.
   constexpr bool outputsAreZero() const {
     return Output == DenormalModeKind::PreserveSign ||
@@ -191,7 +196,7 @@ inline DenormalMode::DenormalModeKind
 parseDenormalFPAttributeComponent(StringRef Str) {
   // Assume ieee on unspecified attribute.
   return StringSwitch<DenormalMode::DenormalModeKind>(Str)
-      .Cases("", "ieee", DenormalMode::IEEE)
+      .Cases({"", "ieee"}, DenormalMode::IEEE)
       .Case("preserve-sign", DenormalMode::PreserveSign)
       .Case("positive-zero", DenormalMode::PositiveZero)
       .Case("dynamic", DenormalMode::Dynamic)

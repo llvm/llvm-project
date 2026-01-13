@@ -261,6 +261,11 @@ static cl::opt<bool> ClIgnorePersonalityRoutine(
              "list, do not create a wrapper for it."),
     cl::Hidden, cl::init(false));
 
+static cl::opt<bool> ClAddGlobalNameSuffix(
+    "dfsan-add-global-name-suffix",
+    cl::desc("Whether to add .dfsan suffix to global names"), cl::Hidden,
+    cl::init(true));
+
 static StringRef getGlobalTypeString(const GlobalValue &G) {
   // Types of GlobalVariables are always pointer types.
   Type *GType = G.getValueType();
@@ -572,7 +577,8 @@ class DataFlowSanitizer {
   const uint64_t NumOfElementsInArgOrgTLS = ArgTLSSize / OriginWidthBytes;
 
 public:
-  DataFlowSanitizer(const std::vector<std::string> &ABIListFiles);
+  DataFlowSanitizer(const std::vector<std::string> &ABIListFiles,
+                    IntrusiveRefCntPtr<vfs::FileSystem> FS);
 
   bool runImpl(Module &M,
                llvm::function_ref<TargetLibraryInfo &(Function &)> GetTLI);
@@ -867,12 +873,11 @@ bool LibAtomicFunction(const Function &F) {
 } // end anonymous namespace
 
 DataFlowSanitizer::DataFlowSanitizer(
-    const std::vector<std::string> &ABIListFiles) {
+    const std::vector<std::string> &ABIListFiles,
+    IntrusiveRefCntPtr<vfs::FileSystem> FS) {
   std::vector<std::string> AllABIListFiles(std::move(ABIListFiles));
   llvm::append_range(AllABIListFiles, ClABIListFiles);
-  // FIXME: should we propagate vfs::FileSystem to this constructor?
-  ABIList.set(
-      SpecialCaseList::createOrDie(AllABIListFiles, *vfs::getRealFileSystem()));
+  ABIList.set(SpecialCaseList::createOrDie(AllABIListFiles, *FS));
 
   CombineTaintLookupTableNames.insert_range(ClCombineTaintLookupTables);
 }
@@ -1256,6 +1261,9 @@ DataFlowSanitizer::WrapperKind DataFlowSanitizer::getWrapperKind(Function *F) {
 }
 
 void DataFlowSanitizer::addGlobalNameSuffix(GlobalValue *GV) {
+  if (!ClAddGlobalNameSuffix)
+    return;
+
   std::string GVName = std::string(GV->getName()), Suffix = ".dfsan";
   GV->setName(GVName + Suffix);
 
@@ -1784,10 +1792,8 @@ bool DataFlowSanitizer::runImpl(
 }
 
 Value *DFSanFunction::getArgTLS(Type *T, unsigned ArgOffset, IRBuilder<> &IRB) {
-  Value *Base = IRB.CreatePointerCast(DFS.ArgTLS, DFS.IntptrTy);
-  if (ArgOffset)
-    Base = IRB.CreateAdd(Base, ConstantInt::get(DFS.IntptrTy, ArgOffset));
-  return IRB.CreateIntToPtr(Base, PointerType::get(*DFS.Ctx, 0), "_dfsarg");
+  return IRB.CreatePtrAdd(DFS.ArgTLS, ConstantInt::get(DFS.IntptrTy, ArgOffset),
+                          "_dfsarg");
 }
 
 Value *DFSanFunction::getRetvalTLS(Type *T, IRBuilder<> &IRB) {
@@ -1951,8 +1957,12 @@ Value *DataFlowSanitizer::getShadowAddress(Value *Addr,
 Value *DataFlowSanitizer::getShadowAddress(Value *Addr,
                                            BasicBlock::iterator Pos) {
   IRBuilder<> IRB(Pos->getParent(), Pos);
-  Value *ShadowOffset = getShadowOffset(Addr, IRB);
-  return getShadowAddress(Addr, Pos, ShadowOffset);
+  Value *ShadowAddr = getShadowOffset(Addr, IRB);
+  uint64_t ShadowBase = MapParams->ShadowBase;
+  if (ShadowBase != 0)
+    ShadowAddr =
+        IRB.CreateAdd(ShadowAddr, ConstantInt::get(IntptrTy, ShadowBase));
+  return getShadowAddress(Addr, Pos, ShadowAddr);
 }
 
 Value *DFSanFunction::combineShadowsThenConvert(Type *T, Value *V1, Value *V2,
@@ -2181,8 +2191,16 @@ std::pair<Value *, Value *> DFSanFunction::loadShadowFast(
       // and then the entire shadow for the second origin pointer (which will be
       // chosen by combineOrigins() iff the least-significant half of the wide
       // shadow was empty but the other half was not).
-      Value *WideShadowLo = IRB.CreateShl(
-          WideShadow, ConstantInt::get(WideShadowTy, WideShadowBitWidth / 2));
+      Value *WideShadowLo =
+          F->getParent()->getDataLayout().isLittleEndian()
+              ? IRB.CreateShl(
+                    WideShadow,
+                    ConstantInt::get(WideShadowTy, WideShadowBitWidth / 2))
+              : IRB.CreateAnd(
+                    WideShadow,
+                    ConstantInt::get(WideShadowTy,
+                                     (1 - (1 << (WideShadowBitWidth / 2)))
+                                         << (WideShadowBitWidth / 2)));
       Shadows.push_back(WideShadow);
       Origins.push_back(DFS.loadNextOrigin(Pos, OriginAlign, &OriginAddr));
 
@@ -3471,7 +3489,7 @@ PreservedAnalyses DataFlowSanitizerPass::run(Module &M,
         AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
     return FAM.getResult<TargetLibraryAnalysis>(F);
   };
-  if (!DataFlowSanitizer(ABIListFiles).runImpl(M, GetTLI))
+  if (!DataFlowSanitizer(ABIListFiles, FS).runImpl(M, GetTLI))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA = PreservedAnalyses::none();

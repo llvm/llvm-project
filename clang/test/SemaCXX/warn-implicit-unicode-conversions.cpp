@@ -14,7 +14,7 @@ void test(char8_t u8, char16_t u16, char32_t u32) {
     c16(u32); // expected-warning {{implicit conversion from 'char32_t' to 'char16_t' may lose precision and change the meaning of the represented code unit}}
 
     c32(u8);  // expected-warning {{implicit conversion from 'char8_t' to 'char32_t' may change the meaning of the represented code unit}}
-    c32(u16); // expected-warning {{implicit conversion from 'char16_t' to 'char32_t' may change the meaning of the represented code unit}}
+    c32(u16);
     c32(u32);
 
 
@@ -30,7 +30,7 @@ void test(char8_t u8, char16_t u16, char32_t u32) {
     c16(char32_t(0x7f));
     c16(char32_t(0x80));
     c16(char32_t(0xD7FF));
-    c16(char32_t(0xD800)); // expected-warning {{implicit conversion from 'char32_t' to 'char16_t' changes the meaning of the code unit '<0xD800>'}}
+    c16(char32_t(0xD800));
     c16(char32_t(0xE000));
     c16(char32_t(U'🐉')); // expected-warning {{implicit conversion from 'char32_t' to 'char16_t' changes the meaning of the code point '🐉'}}
 
@@ -44,8 +44,8 @@ void test(char8_t u8, char16_t u16, char32_t u32) {
     c32(char16_t(0x80));
 
     c32(char16_t(0xD7FF));
-    c32(char16_t(0xD800)); // expected-warning {{implicit conversion from 'char16_t' to 'char32_t' changes the meaning of the code unit '<0xD800>'}}
-    c32(char16_t(0xDFFF)); // expected-warning {{implicit conversion from 'char16_t' to 'char32_t' changes the meaning of the code unit '<0xDFFF>'}}
+    c32(char16_t(0xD800));
+    c32(char16_t(0xDFFF));
     c32(char16_t(0xE000));
     c32(char16_t(u'☕'));
 

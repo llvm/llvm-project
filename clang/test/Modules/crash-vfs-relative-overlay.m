@@ -1,4 +1,5 @@
-// REQUIRES: crash-recovery, shell
+// UNSUPPORTED: system-windows
+// REQUIRES: crash-recovery
 
 // FIXME: This XFAIL is cargo-culted from crash-report.c. Do we need it?
 // XFAIL: target={{.*-windows-gnu}}
@@ -52,7 +53,7 @@
 // Test that reading the YAML file will yield the correct path after
 // the overlay dir is prefixed to access headers in .cache/vfs directory.
 
-// RUN: unset FORCE_CLANG_DIAGNOSTICS_CRASH
+// RUN: env -u FORCE_CLANG_DIAGNOSTICS_CRASH \
 // RUN: %clang -E %s -I %S/Inputs/crash-recovery/usr/include -isysroot %/t/i/ \
 // RUN:     -ivfsoverlay %t/crash-vfs-*.cache/vfs/vfs.yaml -fmodules \
 // RUN:     -fmodules-cache-path=%t/m/ 2>&1 \

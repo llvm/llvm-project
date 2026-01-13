@@ -7,11 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "SymbolFileDWARF.h"
+#include "clang/Basic/ABI.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Threading.h"
@@ -23,6 +26,7 @@
 #include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/Value.h"
+#include "lldb/Expression/Expression.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/RegularExpression.h"
@@ -79,6 +83,7 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -789,12 +794,12 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
     } else {
       ModuleSP module_sp(m_objfile_sp->GetModule());
       if (module_sp) {
-        auto initialize_cu = [&](lldb::SupportFileSP support_file_sp,
+        auto initialize_cu = [&](SupportFileNSP support_file_nsp,
                                  LanguageType cu_language,
                                  SupportFileList &&support_files = {}) {
           BuildCuTranslationTable();
           cu_sp = std::make_shared<CompileUnit>(
-              module_sp, &dwarf_cu, support_file_sp,
+              module_sp, &dwarf_cu, support_file_nsp,
               *GetDWARFUnitIndex(dwarf_cu.GetID()), cu_language,
               eLazyBoolCalculate, std::move(support_files));
 
@@ -1555,8 +1560,8 @@ bool SymbolFileDWARF::HasForwardDeclForCompilerType(
   auto clang_type_system = compiler_type.GetTypeSystem<TypeSystemClang>();
   if (!clang_type_system)
     return false;
-  DWARFASTParserClang *ast_parser =
-      static_cast<DWARFASTParserClang *>(clang_type_system->GetDWARFParser());
+  auto *ast_parser =
+      llvm::cast<DWARFASTParserClang>(clang_type_system->GetDWARFParser());
   return ast_parser->GetClangASTImporter().CanImport(compiler_type);
 }
 
@@ -1564,8 +1569,8 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   auto clang_type_system = compiler_type.GetTypeSystem<TypeSystemClang>();
   if (clang_type_system) {
-    DWARFASTParserClang *ast_parser =
-        static_cast<DWARFASTParserClang *>(clang_type_system->GetDWARFParser());
+    auto *ast_parser =
+        llvm::cast<DWARFASTParserClang>(clang_type_system->GetDWARFParser());
     if (ast_parser &&
         ast_parser->GetClangASTImporter().CanImport(compiler_type))
       return ast_parser->GetClangASTImporter().CompleteType(compiler_type);
@@ -1609,8 +1614,7 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
 
   if (decl_die != def_die) {
     GetDIEToType()[def_die.GetDIE()] = type;
-    DWARFASTParserClang *ast_parser =
-        static_cast<DWARFASTParserClang *>(dwarf_ast);
+    auto *ast_parser = llvm::cast<DWARFASTParserClang>(dwarf_ast);
     ast_parser->MapDeclDIEToDefDIE(decl_die, def_die);
   }
 
@@ -1930,11 +1934,11 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
   }
 
   const lldb::offset_t file_offset = 0;
-  DataBufferSP dwo_file_data_sp;
+  DataExtractorSP dwo_file_extractor_sp;
   lldb::offset_t dwo_file_data_offset = 0;
   ObjectFileSP dwo_obj_file = ObjectFile::FindPlugin(
       GetObjectFile()->GetModule(), &dwo_file, file_offset,
-      FileSystem::Instance().GetByteSize(dwo_file), dwo_file_data_sp,
+      FileSystem::Instance().GetByteSize(dwo_file), dwo_file_extractor_sp,
       dwo_file_data_offset);
   if (dwo_obj_file == nullptr) {
     unit.SetDwoError(Status::FromErrorStringWithFormatv(
@@ -2013,7 +2017,7 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
     }
 
     Status error = ModuleList::GetSharedModule(dwo_module_spec, module_sp,
-                                               nullptr, nullptr, nullptr);
+                                               nullptr, nullptr);
     if (!module_sp) {
       // ReportWarning also rate-limits based on the warning string,
       // but in a -gmodules build, each object file has a similar DAG
@@ -2336,7 +2340,7 @@ void SymbolFileDWARF::FindGlobalVariables(
   bool name_is_mangled = Mangled::GetManglingScheme(name.GetStringRef()) !=
                          Mangled::eManglingSchemeNone;
 
-  if (!CPlusPlusLanguage::ExtractContextAndIdentifier(name.GetCString(),
+  if (!CPlusPlusLanguage::ExtractContextAndIdentifier(name.GetStringRef(),
                                                       context, basename))
     basename = name.GetStringRef();
 
@@ -2477,40 +2481,157 @@ bool SymbolFileDWARF::ResolveFunction(const DWARFDIE &orig_die,
         sc.block = function_block.FindBlockByID(inlined_die.GetOffset());
     }
 
-    sc_list.Append(sc);
+    sc_list.AppendIfUnique(sc, /*merge_symbol_into_function=*/true);
     return true;
   }
 
   return false;
 }
 
-DWARFDIE
-SymbolFileDWARF::FindFunctionDefinition(const FunctionCallLabel &label) {
-  DWARFDIE definition;
-  Module::LookupInfo info(ConstString(label.lookup_name),
-                          lldb::eFunctionNameTypeFull,
-                          lldb::eLanguageTypeUnknown);
+static llvm::StringRef ClangToItaniumCtorKind(clang::CXXCtorType kind) {
+  switch (kind) {
+  case clang::CXXCtorType::Ctor_Complete:
+    return "C1";
+  case clang::CXXCtorType::Ctor_Base:
+    return "C2";
+  case clang::CXXCtorType::Ctor_Unified:
+    return "C4";
+  case clang::CXXCtorType::Ctor_CopyingClosure:
+  case clang::CXXCtorType::Ctor_DefaultClosure:
+  case clang::CXXCtorType::Ctor_Comdat:
+    llvm_unreachable("Unexpected constructor kind.");
+  }
+  llvm_unreachable("Fully covered switch above");
+}
 
-  m_index->GetFunctions(info, *this, {}, [&](DWARFDIE entry) {
-    if (entry.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0))
-      return IterationAction::Continue;
+static llvm::StringRef ClangToItaniumDtorKind(clang::CXXDtorType kind) {
+  switch (kind) {
+  case clang::CXXDtorType::Dtor_Deleting:
+    return "D0";
+  case clang::CXXDtorType::Dtor_Complete:
+    return "D1";
+  case clang::CXXDtorType::Dtor_Base:
+    return "D2";
+  case clang::CXXDtorType::Dtor_Unified:
+    return "D4";
+  case clang::CXXDtorType::Dtor_Comdat:
+  case clang::CXXDtorType::Dtor_VectorDeleting:
+    llvm_unreachable("Unexpected destructor kind.");
+  }
+  llvm_unreachable("Fully covered switch above");
+}
 
-    // We don't check whether the specification DIE for this function
-    // corresponds to the declaration DIE because the declaration might be in
-    // a type-unit but the definition in the compile-unit (and it's
-    // specifcation would point to the declaration in the compile-unit). We
-    // rely on the mangled name within the module to be enough to find us the
-    // unique definition.
-    definition = entry;
-    return IterationAction::Stop;
-  });
+static llvm::StringRef
+GetItaniumCtorDtorVariant(llvm::StringRef discriminator) {
+  const bool is_ctor = discriminator.consume_front("C");
+  if (!is_ctor && !discriminator.consume_front("D"))
+    return {};
+
+  uint64_t structor_kind;
+  if (!llvm::to_integer(discriminator, structor_kind))
+    return {};
+
+  if (is_ctor) {
+    if (structor_kind > clang::CXXCtorType::Ctor_Unified)
+      return {};
+
+    return ClangToItaniumCtorKind(
+        static_cast<clang::CXXCtorType>(structor_kind));
+  }
+
+  if (structor_kind > clang::CXXDtorType::Dtor_Unified)
+    return {};
+
+  return ClangToItaniumDtorKind(static_cast<clang::CXXDtorType>(structor_kind));
+}
+
+llvm::Expected<DWARFDIE>
+SymbolFileDWARF::FindFunctionDefinition(const FunctionCallLabel &label,
+                                        const DWARFDIE &declaration) {
+  auto do_lookup = [this](llvm::StringRef lookup_name) -> DWARFDIE {
+    DWARFDIE found;
+    auto lookup_infos = Module::LookupInfo::MakeLookupInfos(
+        ConstString(lookup_name), lldb::eFunctionNameTypeFull,
+        lldb::eLanguageTypeUnknown);
+
+    m_index->GetFunctions(lookup_infos, *this, {}, [&](DWARFDIE entry) {
+      if (entry.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0))
+        return IterationAction::Continue;
+
+      found = entry;
+      return IterationAction::Stop;
+    });
+
+    return found;
+  };
+
+  DWARFDIE definition = do_lookup(label.lookup_name);
+  if (definition.IsValid())
+    return definition;
+
+  // This is not a structor lookup. Nothing else to be done here.
+  if (label.discriminator.empty())
+    return llvm::createStringError(
+        "no definition DIE found in this SymbolFile");
+
+  // We're doing a structor lookup. Maybe we didn't find the structor variant
+  // because the complete object structor was aliased to the base object
+  // structor. Try finding the alias instead.
+  //
+  // TODO: there are other reasons for why a subprogram definition might be
+  // missing. Ideally DWARF would tell us more details about which structor
+  // variant a DIE corresponds to and whether it's an alias.
+  auto subst_or_err =
+      CPlusPlusLanguage::SubstituteStructorAliases_ItaniumMangle(
+          label.lookup_name);
+  if (!subst_or_err)
+    return subst_or_err.takeError();
+
+  definition = do_lookup(*subst_or_err);
+
+  if (!definition.IsValid())
+    return llvm::createStringError(
+        "failed to find definition DIE for structor alias in fallback lookup");
 
   return definition;
 }
 
 llvm::Expected<SymbolContext>
-SymbolFileDWARF::ResolveFunctionCallLabel(const FunctionCallLabel &label) {
+SymbolFileDWARF::ResolveFunctionCallLabel(FunctionCallLabel &label) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+
+  if (!label.discriminator.empty()) {
+    llvm::StringRef from = label.discriminator[0] == 'C' ? "C4" : "D4";
+
+    llvm::StringRef variant = GetItaniumCtorDtorVariant(label.discriminator);
+    if (variant.empty())
+      return llvm::createStringError(
+          "failed to get Itanium variant for discriminator");
+
+    if (from == variant)
+      return llvm::createStringError(
+          "tried substituting unified structor variant into label");
+
+    // If we failed to substitute unified mangled name, don't try to do a lookup
+    // using the unified name because there may be multiple definitions for it
+    // in the index, and we wouldn't know which one to choose.
+    auto subst_or_err = CPlusPlusLanguage::SubstituteStructor_ItaniumMangle(
+        label.lookup_name, from, variant);
+    if (!subst_or_err)
+      return llvm::joinErrors(
+          llvm::createStringError(llvm::formatv(
+              "failed to substitute {0} for {1} in mangled name {2}:", from,
+              variant, label.lookup_name)),
+          subst_or_err.takeError());
+
+    if (!*subst_or_err)
+      return llvm::createStringError(
+          llvm::formatv("got invalid substituted mangled named (substituted "
+                        "{0} for {1} in mangled name {2})",
+                        from, variant, label.lookup_name));
+
+    label.lookup_name = subst_or_err->GetStringRef();
+  }
 
   DWARFDIE die = GetDIE(label.symbol_id);
   if (!die.IsValid())
@@ -2520,11 +2641,13 @@ SymbolFileDWARF::ResolveFunctionCallLabel(const FunctionCallLabel &label) {
   // Label was created using a declaration DIE. Need to fetch the definition
   // to resolve the function call.
   if (die.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0)) {
-    auto definition = FindFunctionDefinition(label);
-    if (!definition)
-      return llvm::createStringError("failed to find definition DIE");
+    auto die_or_err = FindFunctionDefinition(label, die);
+    if (!die_or_err)
+      return llvm::joinErrors(
+          llvm::createStringError("failed to find definition DIE:"),
+          die_or_err.takeError());
 
-    die = std::move(definition);
+    die = std::move(*die_or_err);
   }
 
   SymbolContextList sc_list;
@@ -2614,8 +2737,8 @@ void SymbolFileDWARF::FindFunctions(const Module::LookupInfo &lookup_info,
     if (it != llvm::StringRef::npos) {
       const llvm::StringRef name_no_template_params = name_ref.slice(0, it);
 
-      Module::LookupInfo no_tp_lookup_info(lookup_info);
-      no_tp_lookup_info.SetLookupName(ConstString(name_no_template_params));
+      Module::LookupInfo no_tp_lookup_info(
+          lookup_info, ConstString(name_no_template_params));
       m_index->GetFunctions(no_tp_lookup_info, *this, parent_decl_ctx,
                             [&](DWARFDIE die) {
                               if (resolved_dies.insert(die.GetDIE()).second)
@@ -4204,7 +4327,8 @@ void SymbolFileDWARF::Dump(lldb_private::Stream &s) {
   m_index->Dump(s);
 }
 
-void SymbolFileDWARF::DumpClangAST(Stream &s, llvm::StringRef filter) {
+void SymbolFileDWARF::DumpClangAST(Stream &s, llvm::StringRef filter,
+                                   bool show_color) {
   auto ts_or_err = GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
   if (!ts_or_err)
     return;
@@ -4212,7 +4336,7 @@ void SymbolFileDWARF::DumpClangAST(Stream &s, llvm::StringRef filter) {
   TypeSystemClang *clang = llvm::dyn_cast_or_null<TypeSystemClang>(ts.get());
   if (!clang)
     return;
-  clang->Dump(s.AsRawOstream(), filter);
+  clang->Dump(s.AsRawOstream(), filter, show_color);
 }
 
 bool SymbolFileDWARF::GetSeparateDebugInfo(StructuredData::Dictionary &d,
@@ -4351,12 +4475,12 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
     }
     if (FileSystem::Instance().Exists(dwp_filespec)) {
       LLDB_LOG(log, "Found DWP file: \"{0}\"", dwp_filespec);
-      DataBufferSP dwp_file_data_sp;
+      DataExtractorSP dwp_file_extractor_sp;
       lldb::offset_t dwp_file_data_offset = 0;
       ObjectFileSP dwp_obj_file = ObjectFile::FindPlugin(
           GetObjectFile()->GetModule(), &dwp_filespec, 0,
-          FileSystem::Instance().GetByteSize(dwp_filespec), dwp_file_data_sp,
-          dwp_file_data_offset);
+          FileSystem::Instance().GetByteSize(dwp_filespec),
+          dwp_file_extractor_sp, dwp_file_data_offset);
       if (dwp_obj_file) {
         m_dwp_symfile = std::make_shared<SymbolFileDWARFDwo>(
             *this, dwp_obj_file, DIERef::k_file_index_mask);
@@ -4502,9 +4626,8 @@ void SymbolFileDWARF::GetCompileOptions(
   }
 }
 
-std::pair<uint32_t, uint32_t> SymbolFileDWARF::GetDwoFileCounts() {
-  uint32_t total_dwo_count = 0;
-  uint32_t loaded_dwo_count = 0;
+DWOStats SymbolFileDWARF::GetDwoStats() {
+  DWOStats stats;
 
   DWARFDebugInfo &info = DebugInfo();
   const size_t num_cus = info.GetNumUnits();
@@ -4517,16 +4640,21 @@ std::pair<uint32_t, uint32_t> SymbolFileDWARF::GetDwoFileCounts() {
     if (!dwarf_cu->GetDWOId().has_value())
       continue;
 
-    total_dwo_count++;
+    stats.dwo_file_count++;
 
     // If we have a DWO symbol file, that means we were able to successfully
     // load it.
     SymbolFile *dwo_symfile =
         dwarf_cu->GetDwoSymbolFile(/*load_all_debug_info=*/false);
     if (dwo_symfile) {
-      loaded_dwo_count++;
+      stats.loaded_dwo_file_count++;
     }
+
+    // Check if this unit has a DWO load error, false by default.
+    const Status &dwo_error = dwarf_cu->GetDwoError();
+    if (dwo_error.Fail())
+      stats.dwo_error_count++;
   }
 
-  return {loaded_dwo_count, total_dwo_count};
+  return stats;
 }

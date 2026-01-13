@@ -61,9 +61,6 @@ static bool useCompactUnwind(const Triple &T) {
 }
 
 void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
-  // MachO
-  SupportsWeakOmittedEHFrame = false;
-
   EHFrameSection = Ctx->getMachOSection(
       "__TEXT", "__eh_frame",
       MachO::S_COALESCED | MachO::S_ATTR_NO_TOC |
@@ -553,7 +550,8 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   SFrameSection =
       Ctx->getELFSection(".sframe", ELF::SHT_GNU_SFRAME, ELF::SHF_ALLOC);
 
-  CallGraphSection = Ctx->getELFSection(".callgraph", ELF::SHT_PROGBITS, 0);
+  CallGraphSection =
+      Ctx->getELFSection(".llvm.callgraph", ELF::SHT_LLVM_CALL_GRAPH, 0);
 
   StackSizesSection = Ctx->getELFSection(".stack_sizes", ELF::SHT_PROGBITS, 0);
 
@@ -776,10 +774,18 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
       ".debug_loc.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
                             COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                             COFF::IMAGE_SCN_MEM_READ);
+  DwarfLoclistsDWOSection = Ctx->getCOFFSection(
+      ".debug_loclists.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                                 COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                                 COFF::IMAGE_SCN_MEM_READ);
   DwarfStrOffDWOSection = Ctx->getCOFFSection(
       ".debug_str_offsets.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
                                     COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                     COFF::IMAGE_SCN_MEM_READ);
+  DwarfRnglistsDWOSection = Ctx->getCOFFSection(
+      ".debug_rnglists.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                                 COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                                 COFF::IMAGE_SCN_MEM_READ);
   DwarfAddrSection = Ctx->getCOFFSection(
       ".debug_addr", COFF::IMAGE_SCN_MEM_DISCARDABLE |
                          COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
@@ -1081,7 +1087,6 @@ void MCObjectFileInfo::initMCObjectFileInfo(MCContext &MCCtx, bool PIC,
   Ctx = &MCCtx;
 
   // Common.
-  SupportsWeakOmittedEHFrame = true;
   SupportsCompactUnwindWithoutEHFrame = false;
   OmitDwarfIfHaveCompactUnwind = false;
 
@@ -1163,8 +1168,8 @@ MCObjectFileInfo::getCallGraphSection(const MCSection &TextSec) const {
   }
 
   return Ctx->getELFSection(
-      ".callgraph", ELF::SHT_PROGBITS, Flags, 0, GroupName, true,
-      ElfSec.getUniqueID(),
+      ".llvm.callgraph", ELF::SHT_LLVM_CALL_GRAPH, Flags, 0, GroupName,
+      /*IsComdat=*/true, ElfSec.getUniqueID(),
       static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
 }
 

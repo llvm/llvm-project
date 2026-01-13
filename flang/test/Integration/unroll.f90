@@ -3,7 +3,7 @@
 ! CHECK-LABEL: unroll_dir
 subroutine unroll_dir
   integer :: a(10)
-  !dir$ unroll 
+  !dir$ unroll
   ! CHECK:   br i1 {{.*}}, label {{.*}}, label {{.*}}
   ! CHECK-NOT: !llvm.loop
   ! CHECK:   br label {{.*}}, !llvm.loop ![[UNROLL_ENABLE_FULL_ANNO:.*]]

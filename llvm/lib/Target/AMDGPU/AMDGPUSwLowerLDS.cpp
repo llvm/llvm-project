@@ -271,7 +271,7 @@ void AMDGPUSwLowerLDS::getNonKernelsWithLDSArguments(const CallGraph &CG) {
       Function *CalledFunc = CallerCGN->getFunction();
       if (!CalledFunc || CalledFunc->isDeclaration())
         continue;
-      if (AMDGPU::isKernelLDS(CalledFunc))
+      if (AMDGPU::isKernel(*CalledFunc))
         continue;
       for (auto AI = CalledFunc->arg_begin(), E = CalledFunc->arg_end();
            AI != E; ++AI) {
@@ -297,7 +297,7 @@ void AMDGPUSwLowerLDS::getUsesOfLDSByNonKernels() {
     for (User *V : GV->users()) {
       if (auto *I = dyn_cast<Instruction>(V)) {
         Function *F = I->getFunction();
-        if (!isKernelLDS(F) && !F->isDeclaration())
+        if (!isKernel(*F) && !F->isDeclaration())
           FuncLDSAccessInfo.NonKernelToLDSAccessMap[F].insert(GV);
       }
     }
@@ -523,7 +523,7 @@ static void replacesUsesOfGlobalInFunction(Function *Func, GlobalVariable *GV,
   auto ReplaceUsesLambda = [Func](const Use &U) -> bool {
     auto *V = U.getUser();
     if (auto *Inst = dyn_cast<Instruction>(V)) {
-      auto *Func1 = Inst->getParent()->getParent();
+      auto *Func1 = Inst->getFunction();
       if (Func == Func1)
         return true;
     }
@@ -1169,7 +1169,7 @@ bool AMDGPUSwLowerLDS::run() {
       if (!F || K.second.empty())
         continue;
 
-      assert(isKernelLDS(F));
+      assert(isKernel(*F));
 
       // Only inserts if key isn't already in the map.
       FuncLDSAccessInfo.KernelToLDSParametersMap.insert(

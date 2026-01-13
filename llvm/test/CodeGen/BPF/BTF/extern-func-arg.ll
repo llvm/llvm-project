@@ -8,9 +8,9 @@
 ;   clang -target bpf -O2 -g -S -emit-llvm test.c
 
 ; Function Attrs: nounwind
-define dso_local i32 @test() local_unnamed_addr #0 !dbg !13 {
+define dso_local i32 @test() local_unnamed_addr !dbg !13 {
 entry:
-  %call = tail call i32 @global_func(i8 signext 0) #2, !dbg !16
+  %call = tail call i32 @global_func(i8 signext 0), !dbg !16
   ret i32 %call, !dbg !17
 }
 
@@ -49,11 +49,7 @@ entry:
 ; CHECK:             .ascii  "char"                  # string offset=55
 ; CHECK:             .ascii  "global_func"           # string offset=60
 
-declare !dbg !4 dso_local i32 @global_func(i8 signext) local_unnamed_addr #1
-
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { nounwind }
+declare !dbg !4 dso_local i32 @global_func(i8 signext) local_unnamed_addr
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!9, !10, !11}

@@ -10,8 +10,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zicbop,+zihintntl -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64ZICBOPZIHINTNTL %s
 
-declare void @llvm.prefetch(ptr, i32, i32, i32)
-
 define void @test_prefetch_read_locality_0(ptr %a) nounwind {
 ; RV32I-LABEL: test_prefetch_read_locality_0:
 ; RV32I:       # %bb.0:
@@ -263,7 +261,6 @@ define void @test_prefetch_instruction_locality_2(ptr %a) nounwind {
   call void @llvm.prefetch(ptr %a, i32 0, i32 2, i32 0)
   ret void
 }
-
 
 define void @test_prefetch_read_locality_3(ptr %a) nounwind {
 ; RV32I-LABEL: test_prefetch_read_locality_3:

@@ -98,6 +98,7 @@ size_t ProcessWasm::ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
         "Wasm read failed for invalid address 0x%" PRIx64, vm_addr);
     return 0;
   }
+  llvm_unreachable("Fully covered switch above");
 }
 
 llvm::Expected<std::vector<lldb::addr_t>>

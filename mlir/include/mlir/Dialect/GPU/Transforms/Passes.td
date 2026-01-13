@@ -39,8 +39,19 @@ def GpuMapParallelLoopsPass
     encountered to the local workgroup. Within each mapping, the first three
     dimensions are mapped to x/y/z hardware ids and all following dimensions are
     mapped to sequential loops.
+
+    Ordering of the loop mapping against the different dimensions is controlled
+    by the `mapping-policy` option.
+    Two policies are supported:
+       1. `outermost-first` (default): the outermost loop maps to X, then Y
+          and finally Z.
+       2. `innermost-first`: the innermost loop maps to X, then Y and finally Z.
   }];
   let dependentDialects = ["mlir::gpu::GPUDialect"];
+  let options = [Option<"mappingPolicyStr", "mapping-policy", "std::string",
+                        /*default=*/"\"outermost-first\"",
+                        "Policy outlining how to assign loops to GPU dimensions."
+                        "Supported values are `outermost-first` and `innermost-first`.">];
 }
 
 def GpuEliminateBarriers
@@ -135,8 +146,8 @@ def GpuNVVMAttachTarget: Pass<"nvvm-attach-target", ""> {
            /*default=*/"\"sm_50\"",
            "Target chip.">,
     Option<"features", "features", "std::string",
-           /*default=*/"\"+ptx60\"",
-           "Target features.">,
+           /*default=*/"\"\"",
+           "Target features, default is to use the minimum PTX ISA version for the SM target.">,
     Option<"optLevel", "O", "unsigned",
            /*default=*/"2",
            "Optimization level.">,

@@ -11,11 +11,11 @@
 define void @foo(i64 %n, i64 %m, i64 %o, ptr nocapture %A) #0 {
 ; CHECK-LABEL: 'foo'
 ; CHECK-NEXT:  Inst: store i32 1, ptr %arrayidx11.us.us, align 4
-; CHECK-NEXT:  In Loop with Header: for.k
 ; CHECK-NEXT:  AccessFunction: {{\{\{\{}}(28 + (4 * (-4 + (3 * %m)) * %o)),+,(8 * %m * %o)}<%for.i>,+,(12 * %o)}<%for.j>,+,20}<%for.k>
 ; CHECK-NEXT:  Base offset: %A
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][%m][%o] with elements of 4 bytes.
 ; CHECK-NEXT:  ArrayRef[{3,+,2}<nuw><%for.i>][{-4,+,3}<nw><%for.j>][{7,+,5}<nw><%for.k>]
+; CHECK-NEXT:  Delinearization validation: Failed
 ;
 entry:
   %cmp32 = icmp sgt i64 %n, 0

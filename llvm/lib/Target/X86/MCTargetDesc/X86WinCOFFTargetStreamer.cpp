@@ -55,6 +55,7 @@ struct FPOInstruction {
     StackAlign,
     SetFrame,
   } Op;
+  // FIXME: This should be a union of MCRegister and unsigned.
   unsigned RegOrOffset;
 };
 
@@ -215,7 +216,7 @@ bool X86WinCOFFTargetStreamer::emitFPOSetFrame(MCRegister Reg, SMLoc L) {
   FPOInstruction Inst;
   Inst.Label = emitFPOLabel();
   Inst.Op = FPOInstruction::SetFrame;
-  Inst.RegOrOffset = Reg;
+  Inst.RegOrOffset = Reg.id();
   CurFPOData->Instructions.push_back(Inst);
   return false;
 }
@@ -226,7 +227,7 @@ bool X86WinCOFFTargetStreamer::emitFPOPushReg(MCRegister Reg, SMLoc L) {
   FPOInstruction Inst;
   Inst.Label = emitFPOLabel();
   Inst.Op = FPOInstruction::PushReg;
-  Inst.RegOrOffset = Reg;
+  Inst.RegOrOffset = Reg.id();
   CurFPOData->Instructions.push_back(Inst);
   return false;
 }

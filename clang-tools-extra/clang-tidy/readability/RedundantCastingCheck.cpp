@@ -1,4 +1,4 @@
-//===--- RedundantCastingCheck.cpp - clang-tidy ---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,6 +9,7 @@
 #include "RedundantCastingCheck.h"
 #include "../utils/FixItHintUtils.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 
@@ -25,11 +26,11 @@ static bool areTypesEqual(QualType S, QualType D) {
   if (TS != TD)
     return false;
 
-  QualType PtrS = S->getPointeeType();
-  QualType PtrD = D->getPointeeType();
+  const QualType PtrS = S->getPointeeType();
+  const QualType PtrD = D->getPointeeType();
 
   if (!PtrS.isNull() && !PtrD.isNull())
-    return areTypesEqual(PtrS, PtrD);
+    return areTypesEqual(PtrS.IgnoreParens(), PtrD.IgnoreParens());
 
   const DeducedType *DT = S->getContainedDeducedType();
   if (DT && DT->isDeduced())
@@ -76,24 +77,21 @@ static bool areBinaryOperatorOperandsTypesEqualToOperatorResultType(
 
 static const Decl *getSourceExprDecl(const Expr *SourceExpr) {
   const Expr *CleanSourceExpr = SourceExpr->IgnoreParenImpCasts();
-  if (const auto *E = dyn_cast<DeclRefExpr>(CleanSourceExpr)) {
+  if (const auto *E = dyn_cast<DeclRefExpr>(CleanSourceExpr))
     return E->getDecl();
-  }
 
-  if (const auto *E = dyn_cast<CallExpr>(CleanSourceExpr)) {
+  if (const auto *E = dyn_cast<CallExpr>(CleanSourceExpr))
     return E->getCalleeDecl();
-  }
 
-  if (const auto *E = dyn_cast<MemberExpr>(CleanSourceExpr)) {
+  if (const auto *E = dyn_cast<MemberExpr>(CleanSourceExpr))
     return E->getMemberDecl();
-  }
   return nullptr;
 }
 
 RedundantCastingCheck::RedundantCastingCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)),
+      IgnoreMacros(Options.get("IgnoreMacros", true)),
       IgnoreTypeAliases(Options.get("IgnoreTypeAliases", false)) {}
 
 void RedundantCastingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {

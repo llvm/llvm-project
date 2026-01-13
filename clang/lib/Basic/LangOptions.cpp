@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/LangStandard.h"
 #include "llvm/Support/Path.h"
 
 using namespace clang;
@@ -128,10 +129,15 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
   Opts.WChar = Std.isCPlusPlus();
   Opts.Digraphs = Std.hasDigraphs();
   Opts.RawStringLiterals = Std.hasRawStringLiterals();
+  Opts.NamedLoops = Std.isC2y();
 
   Opts.HLSL = Lang == Language::HLSL;
-  if (Opts.HLSL && Opts.IncludeDefaultHeader)
-    Includes.push_back("hlsl.h");
+  if (Opts.HLSL) {
+    if (Opts.IncludeDefaultHeader)
+      Includes.push_back("hlsl.h");
+    // Set maximum matrix dimension to 4 for HLSL
+    Opts.MaxMatrixDimension = 4;
+  }
 
   // Set OpenCL Version.
   Opts.OpenCL = Std.isOpenCL();
@@ -241,4 +247,47 @@ LLVM_DUMP_METHOD void FPOptionsOverride::dump() {
     llvm::errs() << "\n " #NAME " Override is " << get##NAME##Override();
 #include "clang/Basic/FPOptions.def"
   llvm::errs() << "\n";
+}
+
+std::optional<uint32_t> LangOptions::getCPlusPlusLangStd() const {
+  if (!CPlusPlus)
+    return std::nullopt;
+
+  LangStandard::Kind Std;
+  if (CPlusPlus26)
+    Std = LangStandard::lang_cxx26;
+  else if (CPlusPlus23)
+    Std = LangStandard::lang_cxx23;
+  else if (CPlusPlus20)
+    Std = LangStandard::lang_cxx20;
+  else if (CPlusPlus17)
+    Std = LangStandard::lang_cxx17;
+  else if (CPlusPlus14)
+    Std = LangStandard::lang_cxx14;
+  else if (CPlusPlus11)
+    Std = LangStandard::lang_cxx11;
+  else
+    Std = LangStandard::lang_cxx98;
+
+  return LangStandard::getLangStandardForKind(Std).getVersion();
+}
+
+std::optional<uint32_t> LangOptions::getCLangStd() const {
+  LangStandard::Kind Std;
+  if (C2y)
+    Std = LangStandard::lang_c2y;
+  else if (C23)
+    Std = LangStandard::lang_c23;
+  else if (C17)
+    Std = LangStandard::lang_c17;
+  else if (C11)
+    Std = LangStandard::lang_c11;
+  else if (C99)
+    Std = LangStandard::lang_c99;
+  else if (!GNUMode && Digraphs)
+    Std = LangStandard::lang_c94;
+  else
+    return std::nullopt;
+
+  return LangStandard::getLangStandardForKind(Std).getVersion();
 }
