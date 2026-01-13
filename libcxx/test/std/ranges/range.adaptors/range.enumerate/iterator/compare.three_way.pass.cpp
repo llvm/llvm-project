@@ -61,14 +61,12 @@ constexpr bool test() {
     using EnumerateView = std::ranges::enumerate_view<Subrange>;
     static_assert(std::three_way_comparable<std::ranges::iterator_t<EnumerateView>>);
 
-    RangeView const range(buff, buff + 4);
+    const RangeView range(buff, buff + 4);
 
     std::same_as<View> decltype(auto) ev = std::views::enumerate(range);
 
     const auto it1 = ev.begin();
     const auto it2 = it1 + 1;
-
-    static_assert(noexcept(operator<=>(it1, it2)));
 
     compareOperatorTest(it1, it2);
 
@@ -76,6 +74,8 @@ constexpr bool test() {
     assert((it1 <=> it1) == std::strong_ordering::equal);
     assert((it2 <=> it2) == std::strong_ordering::equal);
     assert((it2 <=> it1) == std::strong_ordering::greater);
+
+    static_assert(noexcept(operator<=>(it1, it2)));
   }
 
   // Test an old-school iterator with no operator<=>
@@ -87,19 +87,19 @@ constexpr bool test() {
     using EnumerateView = std::ranges::enumerate_view<Subrange>;
     static_assert(std::three_way_comparable<std::ranges::iterator_t<EnumerateView>>);
 
-    auto ev  = Subrange{Iterator{buff}, Iterator{buff + 3}} | std::views::enumerate;
+    auto subrange  = Subrange{Iterator{buff}, Iterator{buff + 3}};
+    auto ev        = subrange | std::views::enumerate;
     const auto it1 = ev.begin();
     const auto it2 = it1 + 1;
 
-    static_assert(noexcept(operator<=>(it1, it2)));
-    
     compareOperatorTest(it1, it2);
-
 
     assert((it1 <=> it2) == std::strong_ordering::less);
     assert((it1 <=> it1) == std::strong_ordering::equal);
     assert((it2 <=> it2) == std::strong_ordering::equal);
     assert((it2 <=> it1) == std::strong_ordering::greater);
+
+    static_assert(noexcept(operator<=>(it1, it2)));
   }
 
   return true;

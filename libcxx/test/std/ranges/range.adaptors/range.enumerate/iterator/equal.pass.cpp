@@ -16,6 +16,7 @@
 
 // friend constexpr bool operator==(const iterator& x, const iterator& y) noexcept;
 
+#include <cstddef>
 #include <cassert>
 #include <ranges>
 
@@ -24,32 +25,33 @@
 #include "../types.h"
 
 constexpr bool test() {
-  int buff[] = {0, 1, 2, 3, 5};
-  {
-    using View = std::ranges::enumerate_view<RangeView>;
-    RangeView const range(buff, buff + 5);
+  constexpr std::size_t arrSize = 3uz;
+  int buff[arrSize]             = {94, 82, 49};
 
-    std::same_as<View> decltype(auto) ev = std::views::enumerate(range);
+  using EnumerateView = std::ranges::enumerate_view<RangeView>;
+  const RangeView range(buff, buff + arrSize);
 
-    auto it1 = ev.begin();
-    auto it2 = it1 + 5;
+  std::same_as<EnumerateView> decltype(auto) ev = std::views::enumerate(range);
 
-    static_assert(noexcept(it1 == it1));
-    static_assert(noexcept(it1 != it2));
+  auto it1 = ev.begin();
+  auto it2 = it1 + arrSize; // End of the array.
 
-    assert(it1 == it1);
-    assert(it1 != it2);
-    assert(it2 != it1);
-    assert(it2 == ev.end());
-    assert(ev.end() == it2);
+  assert(it1 == it1);
+  assert(it1 != it2);
+  assert(it2 != it1);
+  assert(it2 == ev.end());
+  assert(ev.end() == it2);
 
-    for (std::size_t index = 0; index != 5; ++index) {
-      ++it1;
-    }
+  // Increment x3 to the end of the array.
+  ++it1;
+  ++it1;
+  ++it1;
 
-    assert(it1 == it2);
-    assert(it2 == it1);
-  }
+  assert(it1 == ev.end());
+  assert(ev.end() == it1);
+
+  static_assert(noexcept(it1 == it1));
+  static_assert(noexcept(it1 != it2));
 
   return true;
 }

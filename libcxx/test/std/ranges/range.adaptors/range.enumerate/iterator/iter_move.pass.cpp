@@ -43,7 +43,8 @@ constexpr void test() {
 
   auto&& result = iter_move(it);
 
-  static_assert(std::is_same_v<decltype(result), std::tuple<std::iter_difference_t<EnumerateIterator>, int&&>&&>);
+  using DifferenceT = std::iter_difference_t<EnumerateIterator>;
+  static_assert(std::is_same_v<decltype(result), std::tuple<DifferenceT, int&&>&&>);
 
   assert(get<0>(result) == 0);
   assert(&get<1>(result) == std::to_address(base(array.begin())));
