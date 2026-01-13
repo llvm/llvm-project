@@ -40,6 +40,7 @@
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cassert>
 #include <cstdint>
@@ -49,7 +50,7 @@
 using namespace llvm;
 using namespace object;
 
-void ModuleSymbolTable::addModule(Module *M) {
+void ModuleSymbolTable::addModule(Module *M, const TargetMachine *TM) {
   if (FirstMod)
     assert(FirstMod->getTargetTriple() == M->getTargetTriple());
   else
@@ -58,15 +59,18 @@ void ModuleSymbolTable::addModule(Module *M) {
   for (GlobalValue &GV : M->global_values())
     SymTab.push_back(&GV);
 
-  CollectAsmSymbols(*M, [this](StringRef Name, BasicSymbolRef::Flags Flags) {
-    SymTab.push_back(new (AsmSymbols.Allocate())
-                         AsmSymbol(std::string(Name), Flags));
-  });
+  CollectAsmSymbols(
+      *M,
+      [this](StringRef Name, BasicSymbolRef::Flags Flags) {
+        SymTab.push_back(new (AsmSymbols.Allocate())
+                             AsmSymbol(std::string(Name), Flags));
+      },
+      TM);
 }
 
-static void
-initializeRecordStreamer(const Module &M,
-                         function_ref<void(RecordStreamer &)> Init) {
+static void initializeRecordStreamer(const Module &M,
+                                     function_ref<void(RecordStreamer &)> Init,
+                                     const TargetMachine *TM = nullptr) {
   // This function may be called twice, once for ModuleSummaryIndexAnalysis and
   // the other when writing the IR symbol table. If parsing inline assembly has
   // caused errors in the first run, suppress the second run.
@@ -86,9 +90,14 @@ initializeRecordStreamer(const Module &M,
     return;
 
   MCTargetOptions MCOptions;
+  if (TM)
+    MCOptions = TM->Options.MCOptions;
+
   std::unique_ptr<MCAsmInfo> MAI(T->createMCAsmInfo(*MRI, TT, MCOptions));
   if (!MAI)
     return;
+  if (TM)
+    MCOptions = TM->Options.MCOptions;
 
   std::unique_ptr<MCSubtargetInfo> STI(T->createMCSubtargetInfo(TT, "", ""));
   if (!STI)
@@ -102,6 +111,7 @@ initializeRecordStreamer(const Module &M,
       MemoryBuffer::getMemBuffer(InlineAsm, "<inline asm>"));
   SourceMgr SrcMgr;
   SrcMgr.AddNewSourceBuffer(std::move(Buffer), SMLoc());
+  SrcMgr.setIncludeDirs(MCOptions.IASSearchPaths);
 
   MCContext MCCtx(TT, MAI.get(), MRI.get(), STI.get(), &SrcMgr);
   std::unique_ptr<MCObjectFileInfo> MOFI(
@@ -138,39 +148,43 @@ initializeRecordStreamer(const Module &M,
 
 void ModuleSymbolTable::CollectAsmSymbols(
     const Module &M,
-    function_ref<void(StringRef, BasicSymbolRef::Flags)> AsmSymbol) {
-  initializeRecordStreamer(M, [&](RecordStreamer &Streamer) {
-    Streamer.flushSymverDirectives();
+    function_ref<void(StringRef, BasicSymbolRef::Flags)> AsmSymbol,
+    const TargetMachine *TM) {
+  initializeRecordStreamer(
+      M,
+      [&](RecordStreamer &Streamer) {
+        Streamer.flushSymverDirectives();
 
-    for (auto &KV : Streamer) {
-      StringRef Key = KV.first();
-      RecordStreamer::State Value = KV.second;
-      // FIXME: For now we just assume that all asm symbols are executable.
-      uint32_t Res = BasicSymbolRef::SF_Executable;
-      switch (Value) {
-      case RecordStreamer::NeverSeen:
-        llvm_unreachable("NeverSeen should have been replaced earlier");
-      case RecordStreamer::DefinedGlobal:
-        Res |= BasicSymbolRef::SF_Global;
-        break;
-      case RecordStreamer::Defined:
-        break;
-      case RecordStreamer::Global:
-      case RecordStreamer::Used:
-        Res |= BasicSymbolRef::SF_Undefined;
-        Res |= BasicSymbolRef::SF_Global;
-        break;
-      case RecordStreamer::DefinedWeak:
-        Res |= BasicSymbolRef::SF_Weak;
-        Res |= BasicSymbolRef::SF_Global;
-        break;
-      case RecordStreamer::UndefinedWeak:
-        Res |= BasicSymbolRef::SF_Weak;
-        Res |= BasicSymbolRef::SF_Undefined;
-      }
-      AsmSymbol(Key, BasicSymbolRef::Flags(Res));
-    }
-  });
+        for (auto &KV : Streamer) {
+          StringRef Key = KV.first();
+          RecordStreamer::State Value = KV.second;
+          // FIXME: For now we just assume that all asm symbols are executable.
+          uint32_t Res = BasicSymbolRef::SF_Executable;
+          switch (Value) {
+          case RecordStreamer::NeverSeen:
+            llvm_unreachable("NeverSeen should have been replaced earlier");
+          case RecordStreamer::DefinedGlobal:
+            Res |= BasicSymbolRef::SF_Global;
+            break;
+          case RecordStreamer::Defined:
+            break;
+          case RecordStreamer::Global:
+          case RecordStreamer::Used:
+            Res |= BasicSymbolRef::SF_Undefined;
+            Res |= BasicSymbolRef::SF_Global;
+            break;
+          case RecordStreamer::DefinedWeak:
+            Res |= BasicSymbolRef::SF_Weak;
+            Res |= BasicSymbolRef::SF_Global;
+            break;
+          case RecordStreamer::UndefinedWeak:
+            Res |= BasicSymbolRef::SF_Weak;
+            Res |= BasicSymbolRef::SF_Undefined;
+          }
+          AsmSymbol(Key, BasicSymbolRef::Flags(Res));
+        }
+      },
+      TM);
 
   // In ELF, object code generated for x86-32 and some code models of x86-64 may
   // reference the special symbol _GLOBAL_OFFSET_TABLE_ that is not used in the

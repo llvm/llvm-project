@@ -8,8 +8,11 @@
 
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Bitcode/BitcodeWriterPass.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/Constants.h"
@@ -20,6 +23,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include "llvm/Transforms/IPO/FunctionImport.h"
@@ -543,7 +547,8 @@ bool requiresSplit(Module &M) {
 bool writeThinLTOBitcode(raw_ostream &OS, raw_ostream *ThinLinkOS,
                          function_ref<AAResults &(Function &)> AARGetter,
                          Module &M, const ModuleSummaryIndex *Index,
-                         const bool ShouldPreserveUseListOrder) {
+                         const bool ShouldPreserveUseListOrder,
+                         const TargetMachine *TM = nullptr) {
   std::unique_ptr<ModuleSummaryIndex> NewIndex = nullptr;
   // See if this module needs to be split. If so, we try to split it
   // or at least promote type ids to enable WPD.
@@ -567,7 +572,7 @@ bool writeThinLTOBitcode(raw_ostream &OS, raw_ostream *ThinLinkOS,
       // buildModuleSummaryIndex when Module(s) are ready.
       ProfileSummaryInfo PSI(M);
       NewIndex = std::make_unique<ModuleSummaryIndex>(
-          buildModuleSummaryIndex(M, nullptr, &PSI));
+          buildModuleSummaryIndex(M, nullptr, &PSI, TM));
       Index = NewIndex.get();
     }
   }
@@ -579,12 +584,12 @@ bool writeThinLTOBitcode(raw_ostream &OS, raw_ostream *ThinLinkOS,
   // produced for the full link.
   ModuleHash ModHash = {{0}};
   WriteBitcodeToFile(M, OS, ShouldPreserveUseListOrder, Index,
-                     /*GenerateHash=*/true, &ModHash);
+                     /*GenerateHash=*/true, &ModHash, TM);
   // If a minimized bitcode module was requested for the thin link, only
   // the information that is needed by thin link will be written in the
   // given OS.
   if (ThinLinkOS && Index)
-    writeThinLinkBitcodeToFile(M, *ThinLinkOS, *Index, ModHash);
+    writeThinLinkBitcodeToFile(M, *ThinLinkOS, *Index, ModHash, TM);
   return false;
 }
 
@@ -592,18 +597,32 @@ bool writeThinLTOBitcode(raw_ostream &OS, raw_ostream *ThinLinkOS,
 
 PreservedAnalyses
 llvm::ThinLTOBitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
-  FunctionAnalysisManager &FAM =
-      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
 
   M.removeDebugIntrinsicDeclarations();
 
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  ProfileSummaryInfo &PSI = AM.getResult<ProfileSummaryAnalysis>(M);
+  bool NeedSSI = needsParamAccessSummary(M);
+  std::unique_ptr<ModuleSummaryIndex> NewIndex = nullptr;
+  NewIndex = std::make_unique<ModuleSummaryIndex>(buildModuleSummaryIndex(
+      M,
+      [&FAM](const Function &F) {
+        return &FAM.getResult<BlockFrequencyAnalysis>(
+            *const_cast<Function *>(&F));
+      },
+      &PSI, TM,
+      [&FAM, NeedSSI](const Function &F) -> const StackSafetyInfo * {
+        return NeedSSI ? &FAM.getResult<StackSafetyAnalysis>(
+                             const_cast<Function &>(F))
+                       : nullptr;
+      }));
   bool Changed = writeThinLTOBitcode(
       OS, ThinLinkOS,
       [&FAM](Function &F) -> AAResults & {
         return FAM.getResult<AAManager>(F);
       },
-      M, &AM.getResult<ModuleSummaryIndexAnalysis>(M),
-      ShouldPreserveUseListOrder);
+      M, NewIndex.get(), ShouldPreserveUseListOrder, TM);
 
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }

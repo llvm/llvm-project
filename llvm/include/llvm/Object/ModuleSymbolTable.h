@@ -30,6 +30,7 @@ namespace llvm {
 
 class GlobalValue;
 class Module;
+class TargetMachine;
 
 class ModuleSymbolTable {
 public:
@@ -45,7 +46,7 @@ private:
 
 public:
   ArrayRef<Symbol> symbols() const { return SymTab; }
-  LLVM_ABI void addModule(Module *M);
+  LLVM_ABI void addModule(Module *M, const TargetMachine *TM = nullptr);
 
   LLVM_ABI void printSymbolName(raw_ostream &OS, Symbol S) const;
   LLVM_ABI uint32_t getSymbolFlags(Symbol S) const;
@@ -57,7 +58,8 @@ public:
   /// and the associated flags.
   LLVM_ABI static void CollectAsmSymbols(
       const Module &M,
-      function_ref<void(StringRef, object::BasicSymbolRef::Flags)> AsmSymbol);
+      function_ref<void(StringRef, object::BasicSymbolRef::Flags)> AsmSymbol,
+      const TargetMachine *TM = nullptr);
 
   /// Parse inline ASM and collect the symvers directives that are defined in
   /// the current module.

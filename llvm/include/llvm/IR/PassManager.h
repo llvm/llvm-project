@@ -59,6 +59,7 @@ namespace llvm {
 
 class Function;
 class Module;
+class TargetMachine;
 
 // Forward declare the analysis manager template.
 template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
