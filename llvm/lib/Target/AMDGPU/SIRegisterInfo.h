@@ -346,6 +346,8 @@ public:
   ArrayRef<int16_t> getRegSplitParts(const TargetRegisterClass *RC,
                                      unsigned EltSize) const;
 
+  bool shouldEnableSubRegReload(unsigned SubReg) const override;
+
   unsigned getRegPressureLimit(const TargetRegisterClass *RC,
                                MachineFunction &MF) const override;
 
@@ -368,6 +370,9 @@ public:
   getRegClassForTypeOnBank(LLT Ty, const RegisterBank &Bank) const {
     return getRegClassForSizeOnBank(Ty.getSizeInBits(), Bank);
   }
+
+  const TargetRegisterClass *
+  getConstrainedRegClass(const TargetRegisterClass *RC) const override;
 
   const TargetRegisterClass *
   getConstrainedRegClassForOperand(const MachineOperand &MO,

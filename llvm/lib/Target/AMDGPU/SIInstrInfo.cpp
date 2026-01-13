@@ -1886,12 +1886,23 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   const DebugLoc &DL = MBB.findDebugLoc(MI);
   unsigned SpillSize = RI.getSpillSize(*RC);
 
+  unsigned SubRegIdx = 0;
+  if (SubReg) {
+    uint64_t Mask = RI.getSubRegIndexLaneMask(SubReg).getAsInteger();
+    assert(llvm::popcount(Mask) % 2 == 0 &&
+           "expected only 32-bit subreg access");
+
+    // For subreg reload, identify the start offset. Each 32-bit register
+    // consists of two regunits and eventually two bits in the Lanemask.
+    SubRegIdx = llvm::countr_zero(Mask) / 2;
+  }
+
   MachinePointerInfo PtrInfo
     = MachinePointerInfo::getFixedStack(*MF, FrameIndex);
 
-  MachineMemOperand *MMO = MF->getMachineMemOperand(
-      PtrInfo, MachineMemOperand::MOLoad, FrameInfo.getObjectSize(FrameIndex),
-      FrameInfo.getObjectAlign(FrameIndex));
+  MachineMemOperand *MMO =
+      MF->getMachineMemOperand(PtrInfo, MachineMemOperand::MOLoad, SpillSize,
+                               FrameInfo.getObjectAlign(FrameIndex));
 
   if (RI.isSGPRClass(RC)) {
     MFI->setHasSpilledSGPRs();
@@ -1911,19 +1922,22 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       FrameInfo.setStackID(FrameIndex, TargetStackID::SGPRSpill);
     BuildMI(MBB, MI, DL, OpDesc, DestReg)
         .addFrameIndex(FrameIndex) // addr
-        .addImm(0)                 // offset
+        .addImm(SubRegIdx)         // offset
         .addMemOperand(MMO)
         .addReg(MFI->getStackPtrOffsetReg(), RegState::Implicit);
 
     return;
   }
 
+  // Convert the subreg index to stack offset.
+  SubRegIdx *= 4;
+
   unsigned Opcode = getVectorRegSpillRestoreOpcode(VReg ? VReg : DestReg, RC,
                                                    SpillSize, *MFI);
   BuildMI(MBB, MI, DL, get(Opcode), DestReg)
       .addFrameIndex(FrameIndex)           // vaddr
       .addReg(MFI->getStackPtrOffsetReg()) // scratch_offset
-      .addImm(0)                           // offset
+      .addImm(SubRegIdx)                   // offset
       .addMemOperand(MMO);
 }
 

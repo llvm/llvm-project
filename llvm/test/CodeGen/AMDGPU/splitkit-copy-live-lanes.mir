@@ -312,9 +312,9 @@ body:             |
     ; CHECK-NEXT: [[COPY67:%[0-9]+]].sub1:vreg_128 = COPY [[V_LSHRREV_B32_e32_26]].sub1
     ; CHECK-NEXT: [[COPY67:%[0-9]+]].sub3:vreg_128 = COPY [[V_LSHRREV_B32_e32_26]].sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET [[COPY67]], [[S_MOV_B32_]], 0, 224, 0, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
-    ; CHECK-NEXT: [[SI_SPILL_V128_RESTORE:%[0-9]+]]:vreg_128 = SI_SPILL_V128_RESTORE %stack.10, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.10, align 4, addrspace 5)
-    ; CHECK-NEXT: undef [[COPY68:%[0-9]+]].sub0:vreg_128 = COPY [[SI_SPILL_V128_RESTORE]].sub0 {
-    ; CHECK-NEXT:   internal [[COPY68]].sub2:vreg_128 = COPY [[SI_SPILL_V128_RESTORE]].sub2
+    ; CHECK-NEXT: [[SI_SPILL_V96_RESTORE:%[0-9]+]]:vreg_96 = SI_SPILL_V96_RESTORE %stack.10, $sgpr32, 0, implicit $exec :: (load (s96) from %stack.10, align 4, addrspace 5)
+    ; CHECK-NEXT: undef [[COPY68:%[0-9]+]].sub0:vreg_128 = COPY [[SI_SPILL_V96_RESTORE]].sub0 {
+    ; CHECK-NEXT:   internal [[COPY68]].sub2:vreg_128 = COPY [[SI_SPILL_V96_RESTORE]].sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: undef [[COPY69:%[0-9]+]].sub0:vreg_128 = COPY [[COPY68]].sub0 {
     ; CHECK-NEXT:   internal [[COPY69]].sub2:vreg_128 = COPY [[COPY68]].sub2
@@ -331,9 +331,9 @@ body:             |
     ; CHECK-NEXT: [[COPY71:%[0-9]+]].sub1:vreg_128 = COPY [[V_LSHRREV_B32_e32_26]].sub1
     ; CHECK-NEXT: [[COPY71:%[0-9]+]].sub3:vreg_128 = COPY [[V_LSHRREV_B32_e32_26]].sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET [[COPY71]], [[S_MOV_B32_]], 0, 192, 0, 0, implicit $exec :: (store (s128), align 64, addrspace 1)
-    ; CHECK-NEXT: [[SI_SPILL_V128_RESTORE1:%[0-9]+]]:vreg_128 = SI_SPILL_V128_RESTORE %stack.9, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.9, align 4, addrspace 5)
-    ; CHECK-NEXT: undef [[COPY72:%[0-9]+]].sub0:vreg_128 = COPY [[SI_SPILL_V128_RESTORE1]].sub0 {
-    ; CHECK-NEXT:   internal [[COPY72]].sub2:vreg_128 = COPY [[SI_SPILL_V128_RESTORE1]].sub2
+    ; CHECK-NEXT: [[SI_SPILL_V96_RESTORE1:%[0-9]+]]:vreg_96 = SI_SPILL_V96_RESTORE %stack.9, $sgpr32, 0, implicit $exec :: (load (s96) from %stack.9, align 4, addrspace 5)
+    ; CHECK-NEXT: undef [[COPY72:%[0-9]+]].sub0:vreg_128 = COPY [[SI_SPILL_V96_RESTORE1]].sub0 {
+    ; CHECK-NEXT:   internal [[COPY72]].sub2:vreg_128 = COPY [[SI_SPILL_V96_RESTORE1]].sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: undef [[COPY73:%[0-9]+]].sub0:vreg_128 = COPY [[COPY72]].sub0 {
     ; CHECK-NEXT:   internal [[COPY73]].sub2:vreg_128 = COPY [[COPY72]].sub2
@@ -341,9 +341,9 @@ body:             |
     ; CHECK-NEXT: [[COPY73:%[0-9]+]].sub1:vreg_128 = COPY [[V_LSHRREV_B32_e32_26]].sub1
     ; CHECK-NEXT: [[COPY73:%[0-9]+]].sub3:vreg_128 = COPY [[V_LSHRREV_B32_e32_26]].sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET [[COPY73]], [[S_MOV_B32_]], 0, 208, 0, 0, implicit $exec :: (store (s128), addrspace 1)
-    ; CHECK-NEXT: [[SI_SPILL_V128_RESTORE2:%[0-9]+]]:vreg_128 = SI_SPILL_V128_RESTORE %stack.11, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.11, align 4, addrspace 5)
-    ; CHECK-NEXT: undef [[COPY74:%[0-9]+]].sub0:vreg_128 = COPY [[SI_SPILL_V128_RESTORE2]].sub0 {
-    ; CHECK-NEXT:   internal [[COPY74]].sub2:vreg_128 = COPY [[SI_SPILL_V128_RESTORE2]].sub2
+    ; CHECK-NEXT: [[SI_SPILL_V96_RESTORE2:%[0-9]+]]:vreg_96 = SI_SPILL_V96_RESTORE %stack.11, $sgpr32, 0, implicit $exec :: (load (s96) from %stack.11, align 4, addrspace 5)
+    ; CHECK-NEXT: undef [[COPY74:%[0-9]+]].sub0:vreg_128 = COPY [[SI_SPILL_V96_RESTORE2]].sub0 {
+    ; CHECK-NEXT:   internal [[COPY74]].sub2:vreg_128 = COPY [[SI_SPILL_V96_RESTORE2]].sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: undef [[COPY75:%[0-9]+]].sub0:vreg_128 = COPY [[COPY74]].sub0 {
     ; CHECK-NEXT:   internal [[COPY75]].sub2:vreg_128 = COPY [[COPY74]].sub2
@@ -351,9 +351,9 @@ body:             |
     ; CHECK-NEXT: [[COPY75:%[0-9]+]].sub1:vreg_128 = COPY [[V_LSHRREV_B32_e32_26]].sub1
     ; CHECK-NEXT: [[COPY75:%[0-9]+]].sub3:vreg_128 = COPY [[V_LSHRREV_B32_e32_26]].sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET [[COPY75]], [[S_MOV_B32_]], 0, 160, 0, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
-    ; CHECK-NEXT: [[SI_SPILL_V128_RESTORE3:%[0-9]+]]:vreg_128 = SI_SPILL_V128_RESTORE %stack.8, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.8, align 4, addrspace 5)
-    ; CHECK-NEXT: undef [[COPY76:%[0-9]+]].sub0:vreg_128 = COPY [[SI_SPILL_V128_RESTORE3]].sub0 {
-    ; CHECK-NEXT:   internal [[COPY76]].sub2:vreg_128 = COPY [[SI_SPILL_V128_RESTORE3]].sub2
+    ; CHECK-NEXT: [[SI_SPILL_V96_RESTORE3:%[0-9]+]]:vreg_96 = SI_SPILL_V96_RESTORE %stack.8, $sgpr32, 0, implicit $exec :: (load (s96) from %stack.8, align 4, addrspace 5)
+    ; CHECK-NEXT: undef [[COPY76:%[0-9]+]].sub0:vreg_128 = COPY [[SI_SPILL_V96_RESTORE3]].sub0 {
+    ; CHECK-NEXT:   internal [[COPY76]].sub2:vreg_128 = COPY [[SI_SPILL_V96_RESTORE3]].sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: undef [[COPY77:%[0-9]+]].sub0:vreg_128 = COPY [[COPY76]].sub0 {
     ; CHECK-NEXT:   internal [[COPY77]].sub2:vreg_128 = COPY [[COPY76]].sub2
@@ -379,9 +379,9 @@ body:             |
     ; CHECK-NEXT: [[COPY81:%[0-9]+]].sub1:vreg_128 = COPY [[V_LSHRREV_B32_e32_26]].sub1
     ; CHECK-NEXT: [[COPY81:%[0-9]+]].sub3:vreg_128 = COPY [[V_LSHRREV_B32_e32_26]].sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET [[COPY81]], [[S_MOV_B32_]], 0, 144, 0, 0, implicit $exec :: (store (s128), addrspace 1)
-    ; CHECK-NEXT: [[SI_SPILL_V128_RESTORE4:%[0-9]+]]:vreg_128 = SI_SPILL_V128_RESTORE %stack.6, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.6, align 4, addrspace 5)
-    ; CHECK-NEXT: undef [[COPY82:%[0-9]+]].sub0:vreg_128 = COPY [[SI_SPILL_V128_RESTORE4]].sub0 {
-    ; CHECK-NEXT:   internal [[COPY82]].sub2:vreg_128 = COPY [[SI_SPILL_V128_RESTORE4]].sub2
+    ; CHECK-NEXT: [[SI_SPILL_V96_RESTORE4:%[0-9]+]]:vreg_96 = SI_SPILL_V96_RESTORE %stack.6, $sgpr32, 0, implicit $exec :: (load (s96) from %stack.6, align 4, addrspace 5)
+    ; CHECK-NEXT: undef [[COPY82:%[0-9]+]].sub0:vreg_128 = COPY [[SI_SPILL_V96_RESTORE4]].sub0 {
+    ; CHECK-NEXT:   internal [[COPY82]].sub2:vreg_128 = COPY [[SI_SPILL_V96_RESTORE4]].sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: undef [[COPY83:%[0-9]+]].sub0:vreg_128 = COPY [[COPY82]].sub0 {
     ; CHECK-NEXT:   internal [[COPY83]].sub2:vreg_128 = COPY [[COPY82]].sub2
@@ -389,9 +389,9 @@ body:             |
     ; CHECK-NEXT: [[COPY83:%[0-9]+]].sub1:vreg_128 = COPY [[V_LSHRREV_B32_e32_26]].sub1
     ; CHECK-NEXT: [[COPY83:%[0-9]+]].sub3:vreg_128 = COPY [[V_LSHRREV_B32_e32_26]].sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET [[COPY83]], [[S_MOV_B32_]], 0, 96, 0, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
-    ; CHECK-NEXT: [[SI_SPILL_V128_RESTORE5:%[0-9]+]]:vreg_128 = SI_SPILL_V128_RESTORE %stack.7, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.7, align 4, addrspace 5)
-    ; CHECK-NEXT: undef [[COPY84:%[0-9]+]].sub0:vreg_128 = COPY [[SI_SPILL_V128_RESTORE5]].sub0 {
-    ; CHECK-NEXT:   internal [[COPY84]].sub2:vreg_128 = COPY [[SI_SPILL_V128_RESTORE5]].sub2
+    ; CHECK-NEXT: [[SI_SPILL_V96_RESTORE5:%[0-9]+]]:vreg_96 = SI_SPILL_V96_RESTORE %stack.7, $sgpr32, 0, implicit $exec :: (load (s96) from %stack.7, align 4, addrspace 5)
+    ; CHECK-NEXT: undef [[COPY84:%[0-9]+]].sub0:vreg_128 = COPY [[SI_SPILL_V96_RESTORE5]].sub0 {
+    ; CHECK-NEXT:   internal [[COPY84]].sub2:vreg_128 = COPY [[SI_SPILL_V96_RESTORE5]].sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: undef [[COPY85:%[0-9]+]].sub0:vreg_128 = COPY [[COPY84]].sub0 {
     ; CHECK-NEXT:   internal [[COPY85]].sub2:vreg_128 = COPY [[COPY84]].sub2
@@ -399,9 +399,9 @@ body:             |
     ; CHECK-NEXT: [[COPY85:%[0-9]+]].sub1:vreg_128 = COPY [[V_LSHRREV_B32_e32_26]].sub1
     ; CHECK-NEXT: [[COPY85:%[0-9]+]].sub3:vreg_128 = COPY [[V_LSHRREV_B32_e32_26]].sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET [[COPY85]], [[S_MOV_B32_]], 0, 112, 0, 0, implicit $exec :: (store (s128), addrspace 1)
-    ; CHECK-NEXT: [[SI_SPILL_V128_RESTORE6:%[0-9]+]]:vreg_128 = SI_SPILL_V128_RESTORE %stack.5, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.5, align 4, addrspace 5)
-    ; CHECK-NEXT: undef [[COPY86:%[0-9]+]].sub0:vreg_128 = COPY [[SI_SPILL_V128_RESTORE6]].sub0 {
-    ; CHECK-NEXT:   internal [[COPY86]].sub2:vreg_128 = COPY [[SI_SPILL_V128_RESTORE6]].sub2
+    ; CHECK-NEXT: [[SI_SPILL_V96_RESTORE6:%[0-9]+]]:vreg_96 = SI_SPILL_V96_RESTORE %stack.5, $sgpr32, 0, implicit $exec :: (load (s96) from %stack.5, align 4, addrspace 5)
+    ; CHECK-NEXT: undef [[COPY86:%[0-9]+]].sub0:vreg_128 = COPY [[SI_SPILL_V96_RESTORE6]].sub0 {
+    ; CHECK-NEXT:   internal [[COPY86]].sub2:vreg_128 = COPY [[SI_SPILL_V96_RESTORE6]].sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: undef [[COPY87:%[0-9]+]].sub0:vreg_128 = COPY [[COPY86]].sub0 {
     ; CHECK-NEXT:   internal [[COPY87]].sub2:vreg_128 = COPY [[COPY86]].sub2
@@ -409,9 +409,9 @@ body:             |
     ; CHECK-NEXT: [[COPY87:%[0-9]+]].sub1:vreg_128 = COPY [[V_LSHRREV_B32_e32_26]].sub1
     ; CHECK-NEXT: [[COPY87:%[0-9]+]].sub3:vreg_128 = COPY [[V_LSHRREV_B32_e32_26]].sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET [[COPY87]], [[S_MOV_B32_]], 0, 64, 0, 0, implicit $exec :: (store (s128), align 64, addrspace 1)
-    ; CHECK-NEXT: [[SI_SPILL_V128_RESTORE7:%[0-9]+]]:vreg_128 = SI_SPILL_V128_RESTORE %stack.4, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.4, align 4, addrspace 5)
-    ; CHECK-NEXT: undef [[COPY88:%[0-9]+]].sub0:vreg_128 = COPY [[SI_SPILL_V128_RESTORE7]].sub0 {
-    ; CHECK-NEXT:   internal [[COPY88]].sub2:vreg_128 = COPY [[SI_SPILL_V128_RESTORE7]].sub2
+    ; CHECK-NEXT: [[SI_SPILL_V96_RESTORE7:%[0-9]+]]:vreg_96 = SI_SPILL_V96_RESTORE %stack.4, $sgpr32, 0, implicit $exec :: (load (s96) from %stack.4, align 4, addrspace 5)
+    ; CHECK-NEXT: undef [[COPY88:%[0-9]+]].sub0:vreg_128 = COPY [[SI_SPILL_V96_RESTORE7]].sub0 {
+    ; CHECK-NEXT:   internal [[COPY88]].sub2:vreg_128 = COPY [[SI_SPILL_V96_RESTORE7]].sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: undef [[COPY89:%[0-9]+]].sub0:vreg_128 = COPY [[COPY88]].sub0 {
     ; CHECK-NEXT:   internal [[COPY89]].sub2:vreg_128 = COPY [[COPY88]].sub2
@@ -419,9 +419,9 @@ body:             |
     ; CHECK-NEXT: [[COPY89:%[0-9]+]].sub1:vreg_128 = COPY [[V_LSHRREV_B32_e32_26]].sub1
     ; CHECK-NEXT: [[COPY89:%[0-9]+]].sub3:vreg_128 = COPY [[V_LSHRREV_B32_e32_26]].sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET [[COPY89]], [[S_MOV_B32_]], 0, 80, 0, 0, implicit $exec :: (store (s128), addrspace 1)
-    ; CHECK-NEXT: [[SI_SPILL_V128_RESTORE8:%[0-9]+]]:vreg_128 = SI_SPILL_V128_RESTORE %stack.3, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.3, align 4, addrspace 5)
-    ; CHECK-NEXT: undef [[COPY90:%[0-9]+]].sub0:vreg_128 = COPY [[SI_SPILL_V128_RESTORE8]].sub0 {
-    ; CHECK-NEXT:   internal [[COPY90]].sub2:vreg_128 = COPY [[SI_SPILL_V128_RESTORE8]].sub2
+    ; CHECK-NEXT: [[SI_SPILL_V96_RESTORE8:%[0-9]+]]:vreg_96 = SI_SPILL_V96_RESTORE %stack.3, $sgpr32, 0, implicit $exec :: (load (s96) from %stack.3, align 4, addrspace 5)
+    ; CHECK-NEXT: undef [[COPY90:%[0-9]+]].sub0:vreg_128 = COPY [[SI_SPILL_V96_RESTORE8]].sub0 {
+    ; CHECK-NEXT:   internal [[COPY90]].sub2:vreg_128 = COPY [[SI_SPILL_V96_RESTORE8]].sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: undef [[COPY91:%[0-9]+]].sub0:vreg_128 = COPY [[COPY90]].sub0 {
     ; CHECK-NEXT:   internal [[COPY91]].sub2:vreg_128 = COPY [[COPY90]].sub2
@@ -429,9 +429,9 @@ body:             |
     ; CHECK-NEXT: [[COPY91:%[0-9]+]].sub1:vreg_128 = COPY [[V_LSHRREV_B32_e32_26]].sub1
     ; CHECK-NEXT: [[COPY91:%[0-9]+]].sub3:vreg_128 = COPY [[V_LSHRREV_B32_e32_26]].sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET [[COPY91]], [[S_MOV_B32_]], 0, 32, 0, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
-    ; CHECK-NEXT: [[SI_SPILL_V128_RESTORE9:%[0-9]+]]:vreg_128 = SI_SPILL_V128_RESTORE %stack.2, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.2, align 4, addrspace 5)
-    ; CHECK-NEXT: undef [[COPY92:%[0-9]+]].sub0:vreg_128 = COPY [[SI_SPILL_V128_RESTORE9]].sub0 {
-    ; CHECK-NEXT:   internal [[COPY92]].sub2:vreg_128 = COPY [[SI_SPILL_V128_RESTORE9]].sub2
+    ; CHECK-NEXT: [[SI_SPILL_V96_RESTORE9:%[0-9]+]]:vreg_96 = SI_SPILL_V96_RESTORE %stack.2, $sgpr32, 0, implicit $exec :: (load (s96) from %stack.2, align 4, addrspace 5)
+    ; CHECK-NEXT: undef [[COPY92:%[0-9]+]].sub0:vreg_128 = COPY [[SI_SPILL_V96_RESTORE9]].sub0 {
+    ; CHECK-NEXT:   internal [[COPY92]].sub2:vreg_128 = COPY [[SI_SPILL_V96_RESTORE9]].sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: undef [[COPY93:%[0-9]+]].sub0:vreg_128 = COPY [[COPY92]].sub0 {
     ; CHECK-NEXT:   internal [[COPY93]].sub2:vreg_128 = COPY [[COPY92]].sub2
@@ -439,9 +439,9 @@ body:             |
     ; CHECK-NEXT: [[COPY93:%[0-9]+]].sub1:vreg_128 = COPY [[V_LSHRREV_B32_e32_26]].sub1
     ; CHECK-NEXT: [[COPY93:%[0-9]+]].sub3:vreg_128 = COPY [[V_LSHRREV_B32_e32_26]].sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET [[COPY93]], [[S_MOV_B32_]], 0, 48, 0, 0, implicit $exec :: (store (s128), addrspace 1)
-    ; CHECK-NEXT: [[SI_SPILL_V128_RESTORE10:%[0-9]+]]:vreg_128 = SI_SPILL_V128_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.1, align 4, addrspace 5)
-    ; CHECK-NEXT: undef [[COPY94:%[0-9]+]].sub0:vreg_128 = COPY [[SI_SPILL_V128_RESTORE10]].sub0 {
-    ; CHECK-NEXT:   internal [[COPY94]].sub2:vreg_128 = COPY [[SI_SPILL_V128_RESTORE10]].sub2
+    ; CHECK-NEXT: [[SI_SPILL_V96_RESTORE10:%[0-9]+]]:vreg_96 = SI_SPILL_V96_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s96) from %stack.1, align 4, addrspace 5)
+    ; CHECK-NEXT: undef [[COPY94:%[0-9]+]].sub0:vreg_128 = COPY [[SI_SPILL_V96_RESTORE10]].sub0 {
+    ; CHECK-NEXT:   internal [[COPY94]].sub2:vreg_128 = COPY [[SI_SPILL_V96_RESTORE10]].sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: undef [[COPY95:%[0-9]+]].sub0:vreg_128 = COPY [[COPY94]].sub0 {
     ; CHECK-NEXT:   internal [[COPY95]].sub2:vreg_128 = COPY [[COPY94]].sub2
@@ -449,9 +449,9 @@ body:             |
     ; CHECK-NEXT: [[COPY95:%[0-9]+]].sub1:vreg_128 = COPY [[V_LSHRREV_B32_e32_26]].sub1
     ; CHECK-NEXT: [[COPY95:%[0-9]+]].sub3:vreg_128 = COPY [[V_LSHRREV_B32_e32_26]].sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET [[COPY95]], [[S_MOV_B32_]], 0, 0, 0, 0, implicit $exec :: (store (s128), align 512, addrspace 1)
-    ; CHECK-NEXT: [[SI_SPILL_V128_RESTORE11:%[0-9]+]]:vreg_128 = SI_SPILL_V128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
-    ; CHECK-NEXT: undef [[COPY96:%[0-9]+]].sub0:vreg_128 = COPY [[SI_SPILL_V128_RESTORE11]].sub0 {
-    ; CHECK-NEXT:   internal [[COPY96]].sub2:vreg_128 = COPY [[SI_SPILL_V128_RESTORE11]].sub2
+    ; CHECK-NEXT: [[SI_SPILL_V96_RESTORE11:%[0-9]+]]:vreg_96 = SI_SPILL_V96_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s96) from %stack.0, align 4, addrspace 5)
+    ; CHECK-NEXT: undef [[COPY96:%[0-9]+]].sub0:vreg_128 = COPY [[SI_SPILL_V96_RESTORE11]].sub0 {
+    ; CHECK-NEXT:   internal [[COPY96]].sub2:vreg_128 = COPY [[SI_SPILL_V96_RESTORE11]].sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: undef [[COPY97:%[0-9]+]].sub0:vreg_128 = COPY [[COPY96]].sub0 {
     ; CHECK-NEXT:   internal [[COPY97]].sub2:vreg_128 = COPY [[COPY96]].sub2

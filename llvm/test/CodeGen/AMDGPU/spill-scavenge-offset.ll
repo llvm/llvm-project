@@ -10150,41 +10150,35 @@ define amdgpu_kernel void @test_limited_sgpr(ptr addrspace(1) %out, ptr addrspac
 ; GFX6-NEXT:    ;;#ASMEND
 ; GFX6-NEXT:  .LBB1_2: ; %ret
 ; GFX6-NEXT:    s_or_b64 exec, exec, vcc
-; GFX6-NEXT:    s_mov_b64 s[4:5], exec
-; GFX6-NEXT:    s_mov_b64 exec, 15
+; GFX6-NEXT:    s_mov_b64 s[0:1], exec
+; GFX6-NEXT:    s_mov_b64 exec, 3
 ; GFX6-NEXT:    buffer_store_dword v4, off, s[40:43], 0
-; GFX6-NEXT:    s_mov_b32 s6, 0x80400
+; GFX6-NEXT:    s_mov_b32 s2, 0x80400
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
-; GFX6-NEXT:    buffer_load_dword v4, off, s[40:43], s6 ; 4-byte Folded Reload
+; GFX6-NEXT:    buffer_load_dword v4, off, s[40:43], s2 ; 4-byte Folded Reload
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
-; GFX6-NEXT:    v_readlane_b32 s0, v4, 0
-; GFX6-NEXT:    v_readlane_b32 s1, v4, 1
-; GFX6-NEXT:    v_readlane_b32 s2, v4, 2
-; GFX6-NEXT:    v_readlane_b32 s3, v4, 3
+; GFX6-NEXT:    v_readlane_b32 s36, v4, 0
+; GFX6-NEXT:    v_readlane_b32 s37, v4, 1
 ; GFX6-NEXT:    buffer_load_dword v4, off, s[40:43], 0
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
-; GFX6-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX6-NEXT:    s_mov_b64 s[36:37], s[0:1]
-; GFX6-NEXT:    s_mov_b64 s[4:5], exec
-; GFX6-NEXT:    s_mov_b64 exec, 15
+; GFX6-NEXT:    s_mov_b64 exec, s[0:1]
+; GFX6-NEXT:    s_mov_b64 s[0:1], exec
+; GFX6-NEXT:    s_mov_b64 exec, 3
 ; GFX6-NEXT:    buffer_store_dword v4, off, s[40:43], 0
-; GFX6-NEXT:    s_mov_b32 s6, 0x80800
+; GFX6-NEXT:    s_mov_b32 s2, 0x80800
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
-; GFX6-NEXT:    buffer_load_dword v4, off, s[40:43], s6 ; 4-byte Folded Reload
+; GFX6-NEXT:    buffer_load_dword v4, off, s[40:43], s2 ; 4-byte Folded Reload
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
-; GFX6-NEXT:    v_readlane_b32 s0, v4, 0
-; GFX6-NEXT:    v_readlane_b32 s1, v4, 1
-; GFX6-NEXT:    v_readlane_b32 s2, v4, 2
-; GFX6-NEXT:    v_readlane_b32 s3, v4, 3
+; GFX6-NEXT:    v_readlane_b32 s38, v4, 2
+; GFX6-NEXT:    v_readlane_b32 s39, v4, 3
 ; GFX6-NEXT:    buffer_load_dword v4, off, s[40:43], 0
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
-; GFX6-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX6-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX6-NEXT:    s_mov_b32 s0, 0x86a00
 ; GFX6-NEXT:    buffer_load_dword v7, off, s[40:43], s0 ; 4-byte Folded Reload
 ; GFX6-NEXT:    buffer_load_dword v8, off, s[40:43], s0 offset:4 ; 4-byte Folded Reload
 ; GFX6-NEXT:    buffer_load_dword v9, off, s[40:43], s0 offset:8 ; 4-byte Folded Reload
 ; GFX6-NEXT:    buffer_load_dword v10, off, s[40:43], s0 offset:12 ; 4-byte Folded Reload
-; GFX6-NEXT:    s_mov_b64 s[38:39], s[2:3]
 ; GFX6-NEXT:    s_mov_b32 s0, 0x86600
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_store_dwordx4 v[7:10], v[5:6], s[36:39], 0 addr64 offset:240
