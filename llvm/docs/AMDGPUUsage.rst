@@ -6596,7 +6596,7 @@ Execution Barriers
 
 Threads can synchronize execution by performing barrier operations on barrier *objects* as described below:
 
-* Barrier *objects* have the following state:
+* Each barrier *objects* has the following state:
 
   * An unsigned non-zero positive integer *expected count*: counts the number of *signal* operations
     expected for this barrier *object*.
@@ -6612,8 +6612,14 @@ Threads can synchronize execution by performing barrier operations on barrier *o
 
   * Barrier *init*.
   * Barrier *join*.
-  * Barrier *leave*: decrements *expected count* of the barrier *object* by one.
-  * Barrier *signal*: increments *signal count* of the barrier *object* by one.
+  * Barrier *leave*.
+
+    * Decrements *expected count* of the barrier *object* by one.
+
+  * Barrier *signal*.
+
+    * Increments *signal count* of the barrier *object* by one.
+
   * Barrier *wait*.
 
 * Barrier modification operations are barrier operations that modify the barrier *object* state:
@@ -6635,7 +6641,7 @@ Threads can synchronize execution by performing barrier operations on barrier *o
     * Let ``A`` and ``B`` be two barrier modification operations where ``A -> B`` in
       *thread-barrier-order<BO>*, then ``A -> B`` in *barrier-modification-order<BO>*.
     * The first element in *barrier-modification-order<BO>* is a barrier *init*.
-      There is only one barrier *init* in *barrier-modification-order<BO>*
+      There is only one barrier *init* in *barrier-modification-order<BO>*.
 
   * *Barrier-joined-before<BO>* is a strict partial order over barrier operations on ``BO``.
     A barrier *join* ``J`` is *barrier-joined-before<BO>* a barrier operation ``X`` if and only if all
@@ -6655,10 +6661,10 @@ Threads can synchronize execution by performing barrier operations on barrier *o
 
   * *Barrier-participates-in<BO>* is consistent with *happens-before*.
 
-* Let ``S`` be the set of barrier operations that *barrier-participates-in<BO>* a barrier *wait* ``W`` for some
+* Let ``S`` be the set of barrier operations that *barrier-participate-in<BO>* a barrier *wait* ``W`` for some
   barrier *object* ``BO``, then all of the following is true:
 
-  * ``S`` cannot be empty. :sup:`WIP`
+  * ``S`` cannot be empty.
   * The elements of ``S`` all exist in a continuous interval of *barrier-modification-order<BO>*.
   * Let ``A`` be the first operation of ``S`` in *barrier-modification-order<BO>*, then the *signal count* of ``BO``
     is zero before ``A`` is performed.
@@ -6666,10 +6672,8 @@ Threads can synchronize execution by performing barrier operations on barrier *o
     *expected count* of ``BO`` are equal after ``B`` is performed. ``B`` is the only barrier operation in ``S``
     that causes the *signal count* and *expected count* of ``BO`` to be equal.
 
-* For every barrier *init* ``I`` performed on a barrier *object* ``B0``:
-
-  * There is no barrier operation ``X`` such that ``X -> I`` in *thread-barrier-order<BO>*. :sup:`WIP`
-
+* For every barrier operation ``X``, there is a barrier *init* ``I`` such that ``I -> X`` in
+  *thread-barrier-order<BO>*.
 * For every barrier *signal* ``S`` performed on a barrier *object* ``BO``:
 
   * The immediate successor of ``S`` in *thread-barrier-order<BO>* is a barrier *wait*. :sup:`WIP`
@@ -6680,16 +6684,10 @@ Threads can synchronize execution by performing barrier operations on barrier *o
 
 * For every barrier *join* ``J`` performed on a barrier *object* ``BO``:
 
-  * There is a barrier *init* ``I`` such that ``I -> J`` in *thread-barrier-ordered<BO>*, **or** is no other
-    barrier operation *thread-barrier-ordered<BO>* before ``J``. :sup:`WIP`
   * ``J`` is not *barrier-joined-before<BO>* another barrier *join*.
 
-* For every barrier *leave* ``L`` performed on a barrier *object* ``BO``:
-
-  * There is no other barrier operation *thread-barrier-ordered<BO>* after ``L``. :sup:`WIP`
-
-* *Barrier-executes-before* is a strict partial order of all barrier operations. It is the transitive closure of all
-  the following orders:
+* *Barrier-executes-before* is a strict partial order defined over the union of all barrier operations
+  performed by all threads on all barriers. It is the transitive closure of all the following orders:
 
   * *Thread-barrier-order<BO>* for every barrier object ``BO``.
   * *Barrier-participates-in<BO>* for every barrier object ``BO``.
@@ -6699,16 +6697,11 @@ Threads can synchronize execution by performing barrier operations on barrier *o
 
   * *Barrier-modification-order<BO>* is consistent with *barrier-executes-before*.
 
-*Barrier-executes-before* represents the order in which barrier operations will complete by relating the
-dynamic instances of operations from different threads together.
-For example, if ``A -> B`` in *barrier-executes-before*, then the execution of ``A`` must complete
-before the execution of ``B`` can complete.
-
   .. note::
 
-    Barriers only synchronize execution, not memory: ``S -> W`` in *barrier-executes-before* does not imply
-    ``S`` *happens-before* ``W``. Refer to the :ref:`execution barriers memory model<amdgpu-amdhsa-execution-barriers-memory-model>`
-    to also synchronize memory.
+    Barriers only synchronize execution and do not affect the visibility of memory operations between threads.
+    Refer to the :ref:`execution barriers memory model<amdgpu-amdhsa-execution-barriers-memory-model>`
+    to determine how to synchronize memory operations through *barrier-executes-before*.
 
 Target-Specific Properties
 ++++++++++++++++++++++++++
@@ -6744,7 +6737,7 @@ Workgroup Barrier Operations
 
 .. note::
 
-  This section only applies when it is referenced by one of the target code sequence table below.
+  This section only applies to entries of the target code sequence tables below that reference this section.
 
 This section covers properties of barrier operation on *workgroup barrier objects* implemented in AMDGPU
 hardware.
@@ -6771,9 +6764,12 @@ the workgroup have launched.
 Informational Notes
 +++++++++++++++++++
 
-Informally, we can deduce from the above formal model that execution barrier behave as follow:
+Informally, we can deduce from the above formal model that execution barriers behave as follows:
 
 * Synchronization of threads always happens at a wavefront granularity.
+* *Barrier-executes-before* relates the dynamic instances of operations from different threads together.
+  For example, if ``A -> B`` in *barrier-executes-before*, then the execution of ``A`` must complete
+  before the execution of ``B`` can complete.
 * When a barrier *signal* or *leave* causes the *signal count* of a barrier *object* to be identical to the
   *expected count*, the *signal count* is reset to zero, and threads that have *joined* the barrier *object*
   will:
