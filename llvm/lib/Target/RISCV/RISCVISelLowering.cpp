@@ -9722,14 +9722,6 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   MVT VT = Op.getSimpleValueType();
   MVT XLenVT = Subtarget.getXLenVT();
 
-  // Lower vector SELECTs to VSELECTs by splatting the condition.
-  // P extension packed types are handled like scalars below.
-  if (VT.isVector() && !isPExtPackedType(VT, Subtarget)) {
-    MVT SplatCondVT = VT.changeVectorElementType(MVT::i1);
-    SDValue CondSplat = DAG.getSplat(SplatCondVT, DL, CondV);
-    return DAG.getNode(ISD::VSELECT, DL, VT, CondSplat, TrueV, FalseV);
-  }
-
   // Handle P extension packed types by bitcasting to XLenVT for selection,
   // e.g. select i1 %cond, <2 x i16> %TrueV, <2 x i16> %FalseV
   // These types fit in a single GPR so can use the same selection mechanism
@@ -9740,6 +9732,14 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     SDValue ResultInt =
         DAG.getNode(ISD::SELECT, DL, XLenVT, CondV, TrueVInt, FalseVInt);
     return DAG.getBitcast(VT, ResultInt);
+  }
+
+  // Lower vector SELECTs to VSELECTs by splatting the condition.
+  // P extension packed types are handled like scalars below.
+  if (VT.isVector()) {
+    MVT SplatCondVT = VT.changeVectorElementType(MVT::i1);
+    SDValue CondSplat = DAG.getSplat(SplatCondVT, DL, CondV);
+    return DAG.getNode(ISD::VSELECT, DL, VT, CondSplat, TrueV, FalseV);
   }
 
   // Try some other optimizations before falling back to generic lowering.
