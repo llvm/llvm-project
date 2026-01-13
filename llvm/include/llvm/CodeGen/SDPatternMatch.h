@@ -597,12 +597,6 @@ m_c_TernaryOp(unsigned Opc, const T0_P &Op0, const T1_P &Op1, const T2_P &Op2) {
   return TernaryOpc_match<T0_P, T1_P, T2_P, true>(Opc, Op0, Op1, Op2);
 }
 
-template <typename T0_P, typename T1_P, typename T2_P>
-inline TernaryOpc_match<T0_P, T1_P, T2_P, true>
-m_IntrinsicWOChain(const T0_P &IntrinsicId, const T1_P &Op0, const T2_P &Op1) {
-  return TernaryOpc_match<T0_P, T1_P, T2_P, true>(ISD::INTRINSIC_WO_CHAIN, IntrinsicId, Op0, Op1);
-}
-
 template <typename LTy, typename RTy, typename TTy, typename FTy, typename CCTy>
 inline auto m_SelectCC(const LTy &L, const RTy &R, const TTy &T, const FTy &F,
                        const CCTy &CC) {
@@ -979,11 +973,6 @@ inline BinaryOpc_match<LHS, RHS> m_ExtractSubvector(const LHS &Vec,
   return BinaryOpc_match<LHS, RHS>(ISD::EXTRACT_SUBVECTOR, Vec, Idx);
 }
 
-template <typename LHS, typename RHS>
-inline BinaryOpc_match<LHS, RHS> m_IntrinsicWOChain(const LHS &IntrinsicId, const RHS &Op) {
-    return BinaryOpc_match<LHS, RHS>(ISD::INTRINSIC_WO_CHAIN, IntrinsicId, Op);
-}
-
 // === Unary operations ===
 template <typename Opnd_P, bool ExcludeChain = false> struct UnaryOpc_match {
   unsigned Opcode;
@@ -1061,10 +1050,6 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_Abs(const Opnd &Op) {
 
 template <typename Opnd> inline UnaryOpc_match<Opnd> m_FAbs(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::FABS, Op);
-}
-
-template <typename Opnd> inline UnaryOpc_match<Opnd> m_IntrinsicWOChain(const Opnd &IntrinsicId) {
-  return UnaryOpc_match<Opnd>(ISD::INTRINSIC_WO_CHAIN, IntrinsicId);
 }
 
 /// Match a zext or identity
@@ -1321,6 +1306,20 @@ inline BinaryOpc_match<Zero_match, ValTy, false> m_Neg(const ValTy &V) {
 template <typename ValTy>
 inline BinaryOpc_match<ValTy, AllOnes_match, true> m_Not(const ValTy &V) {
   return m_Xor(V, m_AllOnes());
+}
+
+// Match Intrinsics
+template <unsigned IntrinsicId> inline UnaryOpc_match<SpecificInt_match> m_IntrinsicWOChain() {
+  return UnaryOpc_match<SpecificInt_match>(ISD::INTRINSIC_WO_CHAIN, m_SpecificInt(IntrinsicId));
+}
+
+template <unsigned IntrinsicId, typename Opnd> inline BinaryOpc_match<SpecificInt_match, Opnd> m_IntrinsicWOChain(const Opnd &Op) {
+  return BinaryOpc_match<SpecificInt_match, Opnd>(ISD::INTRINSIC_WO_CHAIN, m_SpecificInt(IntrinsicId), Op);
+}
+
+template <unsigned IntrinsicId, typename LHS, typename RHS>
+inline TernaryOpc_match<SpecificInt_match, LHS, RHS> m_IntrinsicWOChain(const LHS &Op0, const RHS &Op1) {
+  return TernaryOpc_match<SpecificInt_match, LHS, RHS>(ISD::INTRINSIC_WO_CHAIN, m_SpecificInt(IntrinsicId), Op0, Op1);
 }
 
 struct SpecificNeg_match {
