@@ -43,10 +43,6 @@ def get_branches_from_open_prs(github_token) -> list[str]:
     variables = {"after": None}
     while has_next_page:
         _, res_data = gh.requester.graphql_query(query, variables=variables)
-        import json
-
-        with open("/tmp/test.json", "w") as test_file:
-            json.dump(res_data, test_file)
         page_info = res_data["data"]["search"]["pageInfo"]
         has_next_page = page_info["hasNextPage"]
         if has_next_page:
