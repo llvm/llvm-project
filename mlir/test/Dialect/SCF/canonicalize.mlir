@@ -762,6 +762,33 @@ func.func @replace_single_iteration_const_diff(%arg0 : index) {
 
 // -----
 
+func.func @replace_single_iteration_loop_unsigned_cmp() {
+// CHECK-LABEL:   func.func @replace_single_iteration_loop_unsigned_cmp() {
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant -100 : i32
+// CHECK:           %[[CONSTANT_2:.*]] = arith.constant 2147483647 : i32
+// CHECK:           %[[VAL_0:.*]] = "test.init"() : () -> i32
+// CHECK:           %[[FOR_0:.*]] = scf.for unsigned %[[VAL_1:.*]] = %[[CONSTANT_0]] to %[[CONSTANT_1]] step %[[CONSTANT_2]] iter_args(%[[VAL_2:.*]] = %[[VAL_0]]) -> (i32)  : i32 {
+// CHECK:             %[[VAL_3:.*]] = "test.op"(%[[VAL_1]], %[[VAL_2]]) : (i32, i32) -> i32
+// CHECK:             scf.yield %[[VAL_3]] : i32
+// CHECK:           }
+// CHECK:           "test.consume"(%[[FOR_0]]) : (i32) -> ()
+// CHECK:           return
+// CHECK:         }
+  %lowerBound = arith.constant 0 : i32
+  %upperBound = arith.constant -100 : i32
+  %step = arith.constant 2147483647 : i32
+  %init = "test.init"() : () -> i32
+  %0 = scf.for unsigned %i = %lowerBound to %upperBound step %step iter_args(%arg = %init) -> (i32) : i32 {
+    %1 = "test.op"(%i, %arg) : (i32, i32) -> i32
+    scf.yield %1 : i32
+  }
+  "test.consume"(%0) : (i32) -> ()
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @remove_empty_parallel_loop
 func.func @remove_empty_parallel_loop(%lb: index, %ub: index, %s: index) {
   // CHECK: %[[INIT:.*]] = "test.init"
@@ -1071,17 +1098,17 @@ func.func @invariant_loop_args_in_same_order(%f_arg0: tensor<i32>) -> (tensor<i3
 // CHECK:    %[[ZERO:.*]] = arith.constant dense<0>
 // CHECK:    %[[ONE:.*]] = arith.constant dense<1>
 // CHECK:    %[[CST42:.*]] = arith.constant dense<42>
-// CHECK:    %[[WHILE:.*]]:3 = scf.while (%[[ARG0:.*]] = %[[ZERO]], %[[ARG2:.*]] = %[[ONE]], %[[ARG3:.*]] = %[[ONE]])
+// CHECK:    %[[WHILE:.*]]:2 = scf.while (%[[ARG0:.*]] = %[[ZERO]], %[[ARG2:.*]] = %[[ONE]]) : (tensor<i32>, tensor<i32>) -> (tensor<i32>, tensor<i32>)
 // CHECK:       arith.cmpi slt, %[[ARG0]], %{{.*}}
 // CHECK:       tensor.extract %{{.*}}[]
-// CHECK:       scf.condition(%{{.*}}) %[[ARG0]], %[[ARG2]], %[[ARG3]]
+// CHECK:       scf.condition(%{{.*}}) %[[ARG0]], %[[ARG2]]
 // CHECK:    } do {
-// CHECK:     ^{{.*}}(%[[ARG0:.*]]: tensor<i32>, %[[ARG2:.*]]: tensor<i32>, %[[ARG3:.*]]: tensor<i32>):
+// CHECK:     ^{{.*}}(%[[ARG0:.*]]: tensor<i32>, %[[ARG2:.*]]: tensor<i32>):
 // CHECK:       %[[VAL0:.*]] = arith.addi %[[ARG0]], %[[FUNC_ARG0]]
-// CHECK:       %[[VAL1:.*]] = arith.addi %[[ARG2]], %[[ARG3]]
-// CHECK:       scf.yield %[[VAL0]], %[[VAL1]], %[[VAL1]]
+// CHECK:       %[[VAL1:.*]] = arith.addi %[[ARG2]], %[[ARG2]]
+// CHECK:       scf.yield %[[VAL0]], %[[VAL1]]
 // CHECK:    }
-// CHECK:    return %[[WHILE]]#0, %[[FUNC_ARG0]], %[[WHILE]]#1, %[[WHILE]]#2, %[[ZERO]]
+// CHECK:    return %[[WHILE]]#0, %[[FUNC_ARG0]], %[[WHILE]]#1, %[[WHILE]]#1, %[[ZERO]]
 
 // CHECK-LABEL: @while_loop_invariant_argument_different_order
 func.func @while_loop_invariant_argument_different_order(%arg : tensor<i32>) -> (tensor<i32>, tensor<i32>, tensor<i32>, tensor<i32>, tensor<i32>, tensor<i32>) {
@@ -1736,11 +1763,11 @@ module {
 
 // Test case with multiple scf.yield ops with at least one different operand, then no change.
 
-// CHECK:           %[[VAL_3:.*]]:2 = scf.execute_region -> (memref<1x60xui8>, memref<1x120xui8>) no_inline {
+// CHECK:           %[[VAL_3:.*]] = scf.execute_region -> memref<1x120xui8> no_inline {
 // CHECK:           ^bb1:
-// CHECK:             scf.yield %{{.*}}, %{{.*}} : memref<1x60xui8>, memref<1x120xui8>
+// CHECK:             scf.yield %{{.*}} : memref<1x120xui8>
 // CHECK:           ^bb2:
-// CHECK:             scf.yield %{{.*}}, %{{.*}} : memref<1x60xui8>, memref<1x120xui8>
+// CHECK:             scf.yield  %{{.*}} : memref<1x120xui8>
 // CHECK:           }
 
 module {
@@ -2178,16 +2205,14 @@ func.func @scf_for_all_step_size_0()  {
 //  CHECK-SAME:     %[[arg0:.*]]: index
 //   CHECK-DAG:   %[[c10:.*]] = arith.constant 10
 //   CHECK-DAG:   %[[c11:.*]] = arith.constant 11
-//       CHECK:   %[[switch:.*]] = scf.index_switch %[[arg0]] -> index
+//       CHECK:   scf.index_switch %[[arg0]]
 //       CHECK:   case 1 {
 //       CHECK:     memref.store %[[c10]]
-//       CHECK:     scf.yield %[[arg0]] : index
 //       CHECK:   } 
 //       CHECK:   default {
 //       CHECK:     memref.store %[[c11]]
-//       CHECK:     scf.yield %[[arg0]] : index
 //       CHECK:   }
-//       CHECK:   return %[[switch]]
+//       CHECK:   return %[[arg0]]
 func.func @dead_index_switch_result(%arg0 : index, %arg1 : memref<i32>) -> index {
   %non_live, %live = scf.index_switch %arg0 -> i32, index
   case 1 {
@@ -2201,4 +2226,40 @@ func.func @dead_index_switch_result(%arg0 : index, %arg1 : memref<i32>) -> index
     scf.yield %c11, %arg0 : i32, index
   }
   return %live : index
+}
+
+// -----
+
+func.func private @side_effect()
+
+// CHECK-LABEL: func @iter_args_cycles
+//  CHECK-SAME:   (%[[LB:.*]]: index, %[[UB:.*]]: index, %[[STEP:.*]]: index, %[[A:.*]]: i32, %[[B:.*]]: i64, %[[C:.*]]: f32)
+//       CHECK:   scf.for %[[IV:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] {
+//       CHECK:   func.call @side_effect()
+//   CHECK-NOT:   yield
+//       CHECK:   return %[[A]], %[[B]], %[[A]], %[[B]], %[[B]], %[[C]] : i32, i64, i32, i64, i64, f32
+func.func @iter_args_cycles(%lb : index, %ub : index, %step : index, %a : i32, %b : i64, %c : f32) -> (i32, i64, i32, i64, i64, f32) {
+  %res:6 = scf.for %i = %lb to %ub step %step iter_args(%0 = %a, %1 = %b, %2 = %a, %3 = %b, %4 = %b, %5 = %c) -> (i32, i64, i32, i64, i64, f32) {
+    func.call @side_effect() : () -> ()
+    scf.yield %2, %4, %0, %1, %3, %5 : i32, i64, i32, i64, i64, f32
+  }
+  return %res#0, %res#1, %res#2, %res#3, %res#4, %res#5 : i32, i64, i32, i64, i64, f32
+}
+
+// -----
+
+func.func private @side_effect(i32)
+
+// CHECK-LABEL: func @iter_args_cycles_non_cycle_start
+//  CHECK-SAME:   (%[[LB:.*]]: index, %[[UB:.*]]: index, %[[STEP:.*]]: index, %[[A:.*]]: i32, %[[B:.*]]: i32)
+//       CHECK:   %[[RES:.*]] = scf.for %[[IV:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] iter_args(%[[ITER_ARG:.*]] = %[[A]]) -> (i32) {
+//       CHECK:   func.call @side_effect(%[[ITER_ARG]])
+//       CHECK:   yield %[[B]] : i32
+//       CHECK:   return %[[RES]], %[[B]], %[[B]] : i32, i32, i32
+func.func @iter_args_cycles_non_cycle_start(%lb : index, %ub : index, %step : index, %a : i32, %b : i32) -> (i32, i32, i32) {
+  %res:3 = scf.for %i = %lb to %ub step %step iter_args(%0 = %a, %1 = %b, %2 = %b) -> (i32, i32, i32) {
+    func.call @side_effect(%0) : (i32) -> ()
+    scf.yield %1, %2, %1 : i32, i32, i32
+  }
+  return %res#0, %res#1, %res#2 : i32, i32, i32
 }

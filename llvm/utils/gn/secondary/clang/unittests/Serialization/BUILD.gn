@@ -18,7 +18,6 @@ unittest("SerializationTests") {
     "InMemoryModuleCacheTest.cpp",
     "LoadSpecLazilyTest.cpp",
     "ModuleCacheTest.cpp",
-    "NamespaceLookupTest.cpp",
     "NoCommentsTest.cpp",
     "PreambleInNamedModulesTest.cpp",
     "SourceLocationEncodingTest.cpp",

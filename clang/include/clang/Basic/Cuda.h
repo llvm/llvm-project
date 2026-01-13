@@ -84,6 +84,12 @@ CudaVersion ToCudaVersion(llvm::VersionTuple);
 bool CudaFeatureEnabled(llvm::VersionTuple, CudaFeature);
 bool CudaFeatureEnabled(CudaVersion, CudaFeature);
 
+/// Get the numeric ID (e.g. 700) of a CUDA architecture.
+unsigned CudaArchToID(OffloadArch Arch);
+
+/// Check if the CUDA architecture is an accelerated variant (e.g. sm_90a).
+bool IsNVIDIAAcceleratedOffloadArch(OffloadArch Arch);
+
 } // namespace clang
 
 #endif
