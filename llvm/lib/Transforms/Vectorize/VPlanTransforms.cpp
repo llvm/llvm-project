@@ -2556,52 +2556,41 @@ static void licm(VPlan &Plan) {
     }
   }
 
-  // Collect loop regions in preorder.
-  SmallSetVector<VPRegionBlock *, 4> WorklistForSink;
-  WorklistForSink.insert(LoopRegion);
-  for (VPRegionBlock *R : VPBlockUtils::blocksOnly<VPRegionBlock>(
-           vp_depth_first_deep(LoopRegion->getEntry()))) {
-    if (!R->isReplicator())
-      WorklistForSink.insert(R);
-  }
-
   VPDominatorTree VPDT(Plan);
   // Sink recipes with no users inside the vector loop region into a dedicated
   // exit block.
-  while (!WorklistForSink.empty()) {
-    VPRegionBlock *CurLoop = WorklistForSink.pop_back_val();
-    auto *SingleExit =
-        cast_or_null<VPBasicBlock>(CurLoop->getSingleSuccessor());
-    // Check whether there is a unique dedicated exit block.
-    // TODO: Should check all predecessors of the exit block.
-    if (!SingleExit || SingleExit->getSinglePredecessor() != CurLoop)
+  // TODO: Extend to sink recipes from inner loops.
+  auto *SingleExit =
+      cast_or_null<VPBasicBlock>(LoopRegion->getSingleSuccessor());
+  // Check whether there is a unique dedicated exit block.
+  // TODO: Should check all predecessors of the exit block.
+  if (!SingleExit || SingleExit->getSinglePredecessor() != LoopRegion)
+    return;
+
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_post_order_shallow(LoopRegion->getEntry()))) {
+    // Skip the basic block that is not dominates the exit block.
+    if (!VPDT.properlyDominates(VPBB, SingleExit))
       continue;
 
-    for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-             vp_post_order_shallow(CurLoop->getEntry()))) {
-      // Skip the basic block that is not dominates the exit block.
-      if (!VPDT.properlyDominates(VPBB, SingleExit))
+    for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
+      if (isDeadRecipe(R)) {
+        R.eraseFromParent();
+        continue;
+      }
+      if (cannotHoistOrSinkRecipe(R) || R.mayHaveSideEffects())
         continue;
 
-      for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-        if (isDeadRecipe(R)) {
-          R.eraseFromParent();
-          continue;
-        }
-        if (cannotHoistOrSinkRecipe(R) || R.mayHaveSideEffects())
-          continue;
-
-        auto *Def = cast<VPSingleDefRecipe>(&R);
-        // Cannot sink the recipe if any user is defined in the same loop or in
-        // any nested inner loop region.
-        if (any_of(Def->users(), [&](VPUser *U) {
-              VPRegionBlock *ParentL =
-                  cast<VPRecipeBase>(U)->getParent()->getEnclosingLoopRegion();
-              return ParentL && !WorklistForSink.contains(ParentL);
-            }))
-          continue;
-        Def->moveBefore(*SingleExit, SingleExit->getFirstNonPhi());
-      }
+      auto *Def = cast<VPSingleDefRecipe>(&R);
+      // Cannot sink the recipe if any user is defined in the same loop or in
+      // any nested inner loop region.
+      if (any_of(Def->users(), [&](VPUser *U) {
+            VPRegionBlock *ParentL =
+                cast<VPRecipeBase>(U)->getParent()->getEnclosingLoopRegion();
+            return ParentL;
+          }))
+        continue;
+      Def->moveBefore(*SingleExit, SingleExit->getFirstNonPhi());
     }
   }
 }
