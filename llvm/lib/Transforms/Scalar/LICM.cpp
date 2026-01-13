@@ -215,6 +215,11 @@ static void moveInstructionBefore(Instruction &I, BasicBlock::iterator Dest,
                                   ICFLoopSafetyInfo &SafetyInfo,
                                   MemorySSAUpdater &MSSAU, ScalarEvolution *SE);
 
+static bool sinkUnusedInvariantsFromPreheaderToExit(
+    Loop *L, AAResults *AA, ICFLoopSafetyInfo *SafetyInfo,
+    MemorySSAUpdater &MSSAU, ScalarEvolution *SE, DominatorTree *DT,
+    SinkAndHoistLICMFlags &SinkFlags, OptimizationRemarkEmitter *ORE);
+
 static void foreachMemoryAccess(MemorySSA *MSSA, Loop *L,
                                 function_ref<void(Instruction *)> Fn);
 using PointersAndHasReadsOutsideSet =
@@ -471,6 +476,12 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
                                     TLI, TTI, L, MSSAU, &SafetyInfo, Flags, ORE)
             : sinkRegion(DT->getNode(L->getHeader()), AA, LI, DT, TLI, TTI, L,
                          MSSAU, &SafetyInfo, Flags, ORE);
+
+  // sink pre-header defs that are unused in-loop into the unique exit to reduce
+  // pressure.
+  Changed |= sinkUnusedInvariantsFromPreheaderToExit(L, AA, &SafetyInfo, MSSAU,
+                                                     SE, DT, Flags, ORE);
+
   Flags.setIsSink(false);
   if (Preheader)
     Changed |= hoistRegion(DT->getNode(L->getHeader()), AA, LI, DT, AC, TLI, L,
@@ -1467,6 +1478,92 @@ static void moveInstructionBefore(Instruction &I, BasicBlock::iterator Dest,
                       MemorySSA::BeforeTerminator);
   if (SE)
     SE->forgetBlockAndLoopDispositions(&I);
+}
+
+// If there's a single exit block, sink any loop-invariant values that were
+// defined in the preheader but not used inside the loop into the exit block
+// to reduce register pressure in the loop.
+static bool sinkUnusedInvariantsFromPreheaderToExit(
+    Loop *L, AAResults *AA, ICFLoopSafetyInfo *SafetyInfo,
+    MemorySSAUpdater &MSSAU, ScalarEvolution *SE, DominatorTree *DT,
+    SinkAndHoistLICMFlags &SinkFlags, OptimizationRemarkEmitter *ORE) {
+  BasicBlock *ExitBlock = L->getExitBlock();
+  if (!ExitBlock)
+    return false;
+
+  BasicBlock *Preheader = L->getLoopPreheader();
+  if (!Preheader)
+    return false;
+
+  bool MadeAnyChanges = false;
+  MemoryAccess *ExitDef = nullptr;
+  MemorySSA *MSSA = MSSAU.getMemorySSA();
+
+  for (Instruction &I : llvm::make_early_inc_range(llvm::reverse(*Preheader))) {
+    // Skip terminator.
+    if (I.isTerminator())
+      continue;
+
+    // New instructions were inserted at the end of the preheader.
+    if (isa<PHINode>(I))
+      break;
+
+    // Don't move instructions which might have side effects, since the side
+    // effects need to complete before instructions inside the loop. Note that
+    // it's okay if the instruction might have undefined behavior: LoopSimplify
+    // guarantees that the preheader dominates the exit block.
+    if (I.mayHaveSideEffects())
+      continue;
+
+    if (!canSinkOrHoistInst(I, AA, DT, L, MSSAU, true, SinkFlags, nullptr))
+      continue;
+
+    // Determine if there is a use in or before the loop (direct or
+    // otherwise).
+    bool UsedInLoopOrPreheader = llvm::any_of(I.uses(), [Preheader, L](Use &U) {
+      auto *UserI = cast<Instruction>(U.getUser());
+      BasicBlock *UseBB = UserI->getParent();
+      if (auto *PN = dyn_cast<PHINode>(UserI))
+        UseBB = PN->getIncomingBlock(U);
+      return UseBB == Preheader || L->contains(UseBB);
+    });
+    if (UsedInLoopOrPreheader)
+      continue;
+
+    // Move the instruction.
+    SafetyInfo->removeInstruction(&I);
+    SafetyInfo->insertInstructionTo(&I, ExitBlock);
+    I.moveBefore(*ExitBlock, ExitBlock->getFirstInsertionPt());
+    if (SE)
+      SE->forgetValue(&I);
+
+    // Update MemorySSA.
+    if (auto *OldMA = MSSA->getMemoryAccess(&I)) {
+      // avoiding the expensive getPreviousDefRecursive call by manually
+      // setting the defining access.
+      auto FindExitDef = [MSSA, Preheader]() -> MemoryAccess * {
+        if (auto *Accesses = MSSA->getBlockAccesses(Preheader)) {
+          if (Accesses->empty())
+            return nullptr;
+          MemoryAccess *Back = const_cast<MemoryAccess *>(&Accesses->back());
+          if (!isa<MemoryUse>(Back))
+            return Back;
+          return MSSA->getWalker()->getClobberingMemoryAccess(Back);
+        }
+        return nullptr;
+      };
+      if (!ExitDef)
+        ExitDef = FindExitDef();
+      MemoryAccess *NewMA = MSSAU.createMemoryAccessInBB(&I, ExitDef, ExitBlock,
+                                                         MemorySSA::Beginning);
+      OldMA->replaceAllUsesWith(NewMA);
+      MSSAU.removeMemoryAccess(OldMA);
+    }
+
+    MadeAnyChanges = true;
+  }
+
+  return MadeAnyChanges;
 }
 
 static Instruction *sinkThroughTriviallyReplaceablePHI(
