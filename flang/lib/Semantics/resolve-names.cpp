@@ -9913,6 +9913,13 @@ void ResolveNamesVisitor::FinishSpecificationPart(
         SetBindNameOn(symbol);
       }
     }
+    // -gpu=mem:managed: implicitly treat allocatable arrays as managed.
+    // This is done after all explicit CUDA attributes have been processed.
+    if (context().languageFeatures().IsEnabled(
+            common::LanguageFeature::CudaManaged))
+      if (auto *object{symbol.detailsIf<ObjectEntityDetails>()})
+        if (IsAllocatable(symbol) && !object->cudaDataAttr())
+          object->set_cudaDataAttr(common::CUDADataAttr::Managed);
   }
   currScope().InstantiateDerivedTypes();
   for (const auto &decl : decls) {
