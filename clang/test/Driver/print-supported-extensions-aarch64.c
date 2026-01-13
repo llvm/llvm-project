@@ -8,7 +8,6 @@
 // CHECK-NEXT:     bf16                FEAT_BF16                                              Enable BFloat16 Extension
 // CHECK-NEXT:     brbe                FEAT_BRBE                                              Enable Branch Record Buffer Extension
 // CHECK-NEXT:     bti                 FEAT_BTI                                               Enable Branch Target Identification
-// CHECK-NEXT:     btie                FEAT_BTIE                                              Enable Enhanced Branch Target Identification extension
 // CHECK-NEXT:     cmh                 FEAT_CMH                                               Enable Armv9.7-A Contention Management Hints
 // CHECK-NEXT:     cmpbr               FEAT_CMPBR                                             Enable Armv9.6-A base compare and branch instructions
 // CHECK-NEXT:     fcma                FEAT_FCMA                                              Enable Armv8.3-A Floating-point complex number support
