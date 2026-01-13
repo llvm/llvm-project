@@ -9,6 +9,7 @@
 #include "ConcatOutputSection.h"
 #include "Config.h"
 #include "OutputSegment.h"
+#include "Sections.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
@@ -122,25 +123,65 @@ DenseMap<Symbol *, ThunkInfo> lld::macho::thunkMap;
 bool TextOutputSection::needsThunks() const {
   if (!target->usesThunks())
     return false;
-  uint64_t isecAddr = addr;
-  for (ConcatInputSection *isec : inputs)
-    isecAddr = alignToPowerOf2(isecAddr, isec->align) + isec->getSize();
-  // Other sections besides __text might be small enough to pass this
-  // test but nevertheless need thunks for calling into other sections.
-  // An imperfect heuristic to use in this case is that if a section
-  // we've already processed in this segment needs thunks, so do the
-  // rest.
+
+  // Other sections besides __text might be small enough to pass a per-section
+  // range test but nevertheless need thunks for calling into other code
+  // sections in the same segment. We track this at the segment level: once any
+  // code section in a segment needs thunks, all subsequent code sections do
+  // too.
   bool needsThunks = parent && parent->needsThunks;
 
-  // Calculate the total size of all branch target sections
-  uint64_t branchTargetsSize = in.stubs->getSize();
+  auto estimateTextEndVA = [](const TextOutputSection *osec, uint64_t startVA) {
+    uint64_t endVA = startVA;
+    for (ConcatInputSection *isec : osec->inputs)
+      endVA = alignToPowerOf2(endVA, isec->align) + isec->getSize();
+    return endVA;
+  };
 
-  // Add the size of __objc_stubs section if it exists
-  if (in.objcStubs && in.objcStubs->isNeeded())
-    branchTargetsSize += in.objcStubs->getSize();
+  // Compute the end address of the last section in this segment that can be a
+  // target of a BRANCH relocation. If the distance from the start of this text
+  // section to that end address fits in the branch range, then all branch
+  // relocations originating from this section are guaranteed to be in-range.
+  uint64_t curVA = estimateTextEndVA(this, addr);
+  uint64_t lastBranchTargetEndVA =
+      (sections::isCodeSection(name, segment_names::text, flags) ||
+       name == section_names::stubs || name == section_names::objcStubs)
+          ? curVA
+          : addr;
+
+  if (parent) {
+    bool foundThis = false;
+    for (OutputSection *osec : parent->getSections()) {
+      if (!osec->isNeeded())
+        continue;
+      if (!foundThis) {
+        if (osec != this)
+          continue;
+        foundThis = true;
+        continue;
+      }
+
+      curVA = alignToPowerOf2(curVA, osec->align);
+
+      uint64_t endVA;
+      if (auto *textOsec = dyn_cast<TextOutputSection>(osec)) {
+        endVA = estimateTextEndVA(textOsec, curVA);
+      } else {
+        endVA = curVA + osec->getSize();
+      }
+
+      if (sections::isCodeSection(osec->name, segment_names::text,
+                                  osec->flags) ||
+          osec->name == section_names::stubs ||
+          osec->name == section_names::objcStubs)
+        lastBranchTargetEndVA = endVA;
+
+      curVA = endVA;
+    }
+  }
 
   if (!needsThunks &&
-      isecAddr - addr + branchTargetsSize <=
+      lastBranchTargetEndVA - addr <=
           std::min(target->backwardBranchRange, target->forwardBranchRange))
     return false;
   // Yes, this program is large enough to need thunks.
