@@ -355,7 +355,7 @@ struct ComposeCollapseOfExpandOp : public OpRewritePattern<CollapseOpTy> {
   }
 };
 
-template <typename ExpandOpTy, typename CollapseOpTy>
+template <typename ExpandOpTy, typename CollapseOpTy, typename CastOpTy>
 struct ComposeExpandOfCollapseOp : public OpRewritePattern<ExpandOpTy> {
   using OpRewritePattern<ExpandOpTy>::OpRewritePattern;
   LogicalResult matchAndRewrite(ExpandOpTy expandOp,
@@ -369,8 +369,14 @@ struct ComposeExpandOfCollapseOp : public OpRewritePattern<ExpandOpTy> {
 
     if (hasNonIdentityLayout(expandOp.getSrc().getType()) ||
         hasNonIdentityLayout(collapseOp.getSrc().getType()) ||
-        hasNonIdentityLayout(collapseOp.getResult().getType()))
+        hasNonIdentityLayout(collapseOp.getResult().getType())) {
+      if (CastOpTy::areCastCompatible(srcType, resultType)) {
+        rewriter.replaceOpWithNewOp<CastOpTy>(expandOp, resultType,
+                                              collapseOp.getSrc());
+        return success();
+      }
       return failure();
+    }
 
     int64_t srcRank = srcType.getRank();
     int64_t resultRank = resultType.getRank();
@@ -490,7 +496,7 @@ getLinearizedDimensions(ArrayRef<ReassociationIndices> reassociationIndices);
 ///    %4 = tensor.extract_slice %0 [%3#0, %3#1, %3#2, 0] [1, 1, 1, 10] [1, 1, 1, 1] :
 ///          tensor<3x7x11x10xf32> to tensor<1x1x1x10xf32>
 ///
-///    %5 = tensor.collapse_shape %4 [[0, 1, 2], [3]] : 
+///    %5 = tensor.collapse_shape %4 [[0, 1, 2], [3]] :
 ///          tensor<1x1x1x10xf32> into tensor<1x10xf32>
 ///    %6 = tensor.insert_slice %5 into %arg0 [%iv, 0] [1, 10] [1, 1] :
 ///          tensor<1x10xf32> into tensor<10x10xf32>

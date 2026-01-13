@@ -53,7 +53,6 @@ AttributeMacros: [
                   '_LIBCPP_TRY_ACQUIRE_CAPABILITY',
                   '_LIBCPP_TRY_ACQUIRE_SHARED_CAPABILITY',
                   '_LIBCPP_USING_IF_EXISTS',
-                  '_LIBCPP_WEAK',
                  ]
 BinPackArguments: false
 BinPackParameters: false

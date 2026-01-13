@@ -22,30 +22,18 @@
 int main(int argc, char** argv) {
   auto std_find    = [](auto first, auto last, auto const& value) { return std::find(first, last, value); };
   auto std_find_if = [](auto first, auto last, auto const& value) {
-    return std::find_if(first, last, [&](auto element) {
-      benchmark::DoNotOptimize(element);
-      return element == value;
-    });
+    return std::find_if(first, last, [&](auto element) { return element == value; });
   };
   auto std_find_if_not = [](auto first, auto last, auto const& value) {
-    return std::find_if_not(first, last, [&](auto element) {
-      benchmark::DoNotOptimize(element);
-      return element != value;
-    });
+    return std::find_if_not(first, last, [&](auto element) { return element != value; });
   };
 
   auto ranges_find    = [](auto first, auto last, auto const& value) { return std::ranges::find(first, last, value); };
   auto ranges_find_if = [](auto first, auto last, auto const& value) {
-    return std::ranges::find_if(first, last, [&](auto element) {
-      benchmark::DoNotOptimize(element);
-      return element == value;
-    });
+    return std::ranges::find_if(first, last, [&](auto element) { return element == value; });
   };
   auto ranges_find_if_not = [](auto first, auto last, auto const& value) {
-    return std::ranges::find_if_not(first, last, [&](auto element) {
-      benchmark::DoNotOptimize(element);
-      return element != value;
-    });
+    return std::ranges::find_if_not(first, last, [&](auto element) { return element != value; });
   };
 
   auto register_benchmarks = [&](auto bm, std::string comment) {

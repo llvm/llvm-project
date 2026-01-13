@@ -429,6 +429,40 @@ std::optional<SmallVector<OpFoldResult>> ForOp::getLoopUpperBounds() {
   return SmallVector<OpFoldResult>{OpFoldResult(getUpperBound())};
 }
 
+bool ForOp::isValidInductionVarType(Type type) {
+  return type.isIndex() || type.isSignlessInteger();
+}
+
+LogicalResult ForOp::setLoopLowerBounds(ArrayRef<OpFoldResult> bounds) {
+  if (bounds.size() != 1)
+    return failure();
+  if (auto val = dyn_cast<Value>(bounds[0])) {
+    setLowerBound(val);
+    return success();
+  }
+  return failure();
+}
+
+LogicalResult ForOp::setLoopUpperBounds(ArrayRef<OpFoldResult> bounds) {
+  if (bounds.size() != 1)
+    return failure();
+  if (auto val = dyn_cast<Value>(bounds[0])) {
+    setUpperBound(val);
+    return success();
+  }
+  return failure();
+}
+
+LogicalResult ForOp::setLoopSteps(ArrayRef<OpFoldResult> steps) {
+  if (steps.size() != 1)
+    return failure();
+  if (auto val = dyn_cast<Value>(steps[0])) {
+    setStep(val);
+    return success();
+  }
+  return failure();
+}
+
 std::optional<ResultRange> ForOp::getLoopResults() { return getResults(); }
 
 /// Promotes the loop body of a forOp to its containing block if the forOp
