@@ -18,9 +18,9 @@
 // function is irrelevant; and the unconditional path within the function is
 // trivial and wouldn't have any note tags anyway.)
 //
-// I also attempted to implement this checker in Clang Tidy, but the AST
-// matching is simply not powerful enough to express this "no branching on the
-// path" relationship -- I would have needed to reinvent the wheel.
+// However, the AST matching framework of Clang Tidy is not powerful enough to
+// express this "no branching on the execution path" relationship, at least not
+// without reimplementing a crude and fragile form of symbolic execution.
 //
 //===----------------------------------------------------------------------===//
 
