@@ -1248,12 +1248,6 @@ MDNode *MDNode::getMergedProfMetadata(MDNode *A, MDNode *B,
     return A ? A : B;
   }
 
-  if (A == B && !ProfcheckDisableMetadataFixes) {
-    // For calls, we want to sum the weights even if identical.
-    if (!isa<CallInst>(AInstr))
-      return A;
-  }
-
   assert(AInstr->getMetadata(LLVMContext::MD_prof) == A &&
          "Caller should guarantee");
   assert(BInstr->getMetadata(LLVMContext::MD_prof) == B &&
@@ -1266,6 +1260,9 @@ MDNode *MDNode::getMergedProfMetadata(MDNode *A, MDNode *B,
   if (ACall && BCall && ACall->getCalledFunction() &&
       BCall->getCalledFunction())
     return mergeDirectCallProfMetadata(A, B, AInstr, BInstr);
+
+  if (A == B && !ProfcheckDisableMetadataFixes)
+    return A;
 
   // The rest of the cases are not implemented but could be added
   // when there are use cases.
