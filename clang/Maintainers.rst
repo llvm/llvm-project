@@ -206,6 +206,9 @@ Code Coverage
 | Takumi Nakamura
 | geek4civic\@gmail.com (email), chapuni(GitHub), chapuni (Discord), chapuni (Discourse)
 
+| Alan Phipps
+| a-phipps\@ti.com (email), evodius96 (GitHub), evodius96 (Discourse)
+
 
 Tools
 -----
