@@ -33103,44 +33103,28 @@ static SDValue LowerCLMUL(SDValue Op, const X86Subtarget &Subtarget,
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
 
-  if (Subtarget.is64Bit()) {
-    if (VT != MVT::i64) {
-      LHS = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, LHS);
-      RHS = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, RHS);
-    }
+  // On 64-bit, use i64/v2i64. On 32-bit, i64 is not legal, use i32/v4i32.
+  MVT ScalarVT = Subtarget.is64Bit() ? MVT::i64 : MVT::i32;
+  MVT VecVT = Subtarget.is64Bit() ? MVT::v2i64 : MVT::v4i32;
 
-    SDValue Vec1 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i64, LHS);
-    SDValue Vec2 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i64, RHS);
-    SDValue Result = DAG.getNode(X86ISD::PCLMULQDQ, DL, MVT::v2i64, Vec1, Vec2,
-                                 DAG.getTargetConstant(0, DL, MVT::i8));
-    Result = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Result,
-                         DAG.getVectorIdxConstant(0, DL));
-
-    if (VT != MVT::i64)
-      Result = DAG.getNode(ISD::TRUNCATE, DL, VT, Result);
-
-    return Result;
+  if (VT != ScalarVT) {
+    LHS = DAG.getNode(ISD::ANY_EXTEND, DL, ScalarVT, LHS);
+    RHS = DAG.getNode(ISD::ANY_EXTEND, DL, ScalarVT, RHS);
   }
 
-  // On 32-bit, i64 is not legal. Use i32 and v4i32 instead.
-  if (VT != MVT::i32) {
-    LHS = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, LHS);
-    RHS = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, RHS);
-  }
+  LHS = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, LHS);
+  RHS = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, RHS);
+  LHS = DAG.getBitcast(MVT::v2i64, LHS);
+  RHS = DAG.getBitcast(MVT::v2i64, RHS);
 
-  SDValue Vec1 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i32, LHS);
-  SDValue Vec2 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i32, RHS);
-  Vec1 = DAG.getBitcast(MVT::v2i64, Vec1);
-  Vec2 = DAG.getBitcast(MVT::v2i64, Vec2);
-
-  SDValue Result = DAG.getNode(X86ISD::PCLMULQDQ, DL, MVT::v2i64, Vec1, Vec2,
+  SDValue Result = DAG.getNode(X86ISD::PCLMULQDQ, DL, MVT::v2i64, LHS, RHS,
                                DAG.getTargetConstant(0, DL, MVT::i8));
 
-  Result = DAG.getBitcast(MVT::v4i32, Result);
-  Result = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Result,
+  Result = DAG.getBitcast(VecVT, Result);
+  Result = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, Result,
                        DAG.getVectorIdxConstant(0, DL));
 
-  if (VT != MVT::i32)
+  if (VT != ScalarVT)
     Result = DAG.getNode(ISD::TRUNCATE, DL, VT, Result);
 
   return Result;
