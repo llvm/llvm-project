@@ -199,10 +199,11 @@ static cl::opt<unsigned> MaxProfitableStride(
     "slp-max-stride", cl::init(8), cl::Hidden,
     cl::desc("The maximum stride, considered to be profitable."));
 
-static cl::opt<bool> EnableStridedStores(
-    "slp-enable-strided-stores", cl::init(false), cl::Hidden,
-    cl::desc("Enable SLP trees to be built from strided "
-             "store chains."));
+static cl::opt<bool>
+    EnableStridedStores("slp-enable-strided-stores", cl::init(false),
+                        cl::Hidden,
+                        cl::desc("Enable SLP trees to be built from strided "
+                                 "store chains."));
 
 static cl::opt<bool>
     DisableTreeReorder("slp-disable-tree-reorder", cl::init(false), cl::Hidden,
@@ -7071,8 +7072,8 @@ bool BoUpSLP::isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
   if (IsAnyPointerUsedOutGraph ||
       (AbsoluteDiff > Sz &&
        (Sz > MinProfitableStridedMemOps ||
-        (AbsoluteDiff <= MaxProfitableStride * Sz &&
-         AbsoluteDiff % Sz == 0 && has_single_bit(AbsoluteDiff / Sz)))) ||
+        (AbsoluteDiff <= MaxProfitableStride * Sz && AbsoluteDiff % Sz == 0 &&
+         has_single_bit(AbsoluteDiff / Sz)))) ||
       Diff == -(static_cast<int64_t>(Sz) - 1)) {
     int64_t Stride = Diff / static_cast<int64_t>(Sz - 1);
     if (Diff != Stride * static_cast<int64_t>(Sz - 1))
@@ -24002,8 +24003,7 @@ bool SLPVectorizerPass::vectorizeStores(
         }
       auto Operands = ArrayRef(RawOperands).slice(FirstAlive);
       if (Operands.size() <= 1 ||
-          (Operands.size() < MinProfitableStridedMemOps &&
-           Strided) ||
+          (Operands.size() < MinProfitableStridedMemOps && Strided) ||
           !Visited
                .insert({Operands.front(),
                         cast<StoreInst>(Operands.front())->getValueOperand(),
