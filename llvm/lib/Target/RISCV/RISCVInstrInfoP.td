@@ -443,7 +443,7 @@ class RVPTernary_rrr<bits<4> f, bits<2> w, bits<3> funct3, string opcodestr>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPWideningTernary_rrr<bits<4> f, bits<2> w, string opcodestr>
     : RVPWideningBase<f, w, 0b1, (outs GPRPairRV32:$rd_wb),
-                     (ins GPRPairRV32:$rd, GPR:$rs1, GPR:$rs2), opcodestr> {
+                      (ins GPRPairRV32:$rd, GPR:$rs1, GPR:$rs2), opcodestr> {
   let Constraints = "$rd = $rd_wb";
 }
 
