@@ -26,6 +26,7 @@ namespace llvm {
 namespace orc {
 
 char ResourceTrackerDefunct::ID = 0;
+char JITDylibDefunct::ID = 0;
 char FailedToMaterialize::ID = 0;
 char SymbolsNotFound::ID = 0;
 char SymbolsCouldNotBeRemoved::ID = 0;
@@ -77,6 +78,15 @@ std::error_code ResourceTrackerDefunct::convertToErrorCode() const {
 
 void ResourceTrackerDefunct::log(raw_ostream &OS) const {
   OS << "Resource tracker " << (void *)RT.get() << " became defunct";
+}
+
+std::error_code JITDylibDefunct::convertToErrorCode() const {
+  return orcError(OrcErrorCode::UnknownORCError);
+}
+
+void JITDylibDefunct::log(raw_ostream &OS) const {
+  OS << "JITDylib " << JD->getName() << " (" << (void *)JD.get()
+     << ") is defunct";
 }
 
 FailedToMaterialize::FailedToMaterialize(

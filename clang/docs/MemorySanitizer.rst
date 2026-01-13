@@ -101,6 +101,40 @@ positives and therefore should be used with care, and only if absolutely
 required; for example for certain code that cannot tolerate any instrumentation
 and resulting side-effects. This attribute overrides ``no_sanitize("memory")``.
 
+Conditional Sanitizer Checks with ``__builtin_allow_sanitize_check``
+--------------------------------------------------------------------
+
+The ``__builtin_allow_sanitize_check("memory")`` builtin can be used to
+conditionally execute code only when MemorySanitizer is active for the current
+function (after inlining). This is particularly useful for inserting explicit,
+sanitizer-specific checks around operations like syscalls or inline assembly,
+which might otherwise be unchecked by the sanitizer.
+
+Example:
+
+.. code-block:: c
+
+    inline __attribute__((always_inline))
+    void copy_to_device(void *addr, size_t size) {
+      if (__builtin_allow_sanitize_check("memory")) {
+        // Custom checks if `data` is initialized.
+      }
+      // ... actual device memory copy logic, potentially a syscall ...
+    }
+
+    void instrumented_function() {
+      ...
+      copy_to_device(buf, sizeof(buf)); // checks are active
+      ...
+    }
+
+    __attribute__((no_sanitize("memory")))
+    void uninstrumented_function() {
+      ...
+      copy_to_device(buf, sizeof(buf)); // checks are skipped
+      ...
+    }
+
 Ignorelist
 ----------
 
