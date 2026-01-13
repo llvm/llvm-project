@@ -1,4 +1,4 @@
-# RUN: not --crash llc -verify-machineinstrs -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: aarch64-registered-target
 
 --- |
@@ -30,7 +30,7 @@ registers:
   - { id: 0, class: _ }
 body: |
   bb.0:
-   ; CHECK: *** Bad machine code: Generic virtual register must have a bank in a RegBankSelected function ***
+   ; CHECK: Bad machine code: Generic virtual register must have a bank in a RegBankSelected function
    ; CHECK: function: regbankselected_track
    ; CHECK: instruction: DBG_VALUE %0:_
    ; CHECK: operand 0: %0

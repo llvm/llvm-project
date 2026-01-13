@@ -20,10 +20,10 @@ entry:
   br label %for.body
 
 for.body:
-  %p = phi float* [ %g, %entry ], [ %q, %for.body ]
-  %q = phi float* [ %h, %entry ], [ %p, %for.body ]
-  %0 = load float, float* %p, align 4
-  store float %f, float* %q, align 4
+  %p = phi ptr [ %g, %entry ], [ %q, %for.body ]
+  %q = phi ptr [ %h, %entry ], [ %p, %for.body ]
+  %0 = load float, ptr %p, align 4
+  store float %f, ptr %q, align 4
   %branch_cond = fcmp ugt float %0, 0.0
   br i1 %branch_cond, label %for.cond.cleanup, label %for.body
 
@@ -47,10 +47,10 @@ entry:
 
 for.body:
   %i = phi i32 [0, %entry ], [ %inc, %for.body ]
-  %p = phi float* [ %g, %entry ], [ %q, %for.body ]
-  %q = phi float* [ %h, %entry ], [ %p, %for.body ]
-  %0 = load float, float* %p, align 4
-  store float 0.0, float* %q, align 4
+  %p = phi ptr [ %g, %entry ], [ %q, %for.body ]
+  %q = phi ptr [ %h, %entry ], [ %p, %for.body ]
+  %0 = load float, ptr %p, align 4
+  store float 0.0, ptr %q, align 4
   %inc = add nuw i32 %i, 1
   %branch_cond = icmp ult i32 %i, %n
   br i1 %branch_cond, label %for.body, label %for.cond.cleanup

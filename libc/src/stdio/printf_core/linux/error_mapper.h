@@ -40,6 +40,9 @@ LIBC_INLINE static int internal_error_to_errno(int internal_error) {
     return ENOMEM;
   case OVERFLOW_ERROR:
     return EOVERFLOW;
+  case ILLEGAL_WIDE_CHAR:
+  case MB_CONVERSION_ERROR:
+    return EILSEQ;
   default:
     LIBC_ASSERT(
         false &&

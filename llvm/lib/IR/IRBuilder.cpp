@@ -1115,10 +1115,13 @@ Value *IRBuilderBase::CreateVectorSplice(Value *V1, Value *V2, int64_t Imm,
 
   if (auto *VTy = dyn_cast<ScalableVectorType>(V1->getType())) {
     Module *M = BB->getParent()->getParent();
-    Function *F =
-        Intrinsic::getOrInsertDeclaration(M, Intrinsic::vector_splice, VTy);
+    Function *F = Intrinsic::getOrInsertDeclaration(
+        M,
+        Imm >= 0 ? Intrinsic::vector_splice_left
+                 : Intrinsic::vector_splice_right,
+        VTy);
 
-    Value *Ops[] = {V1, V2, getInt32(Imm)};
+    Value *Ops[] = {V1, V2, getInt32(std::abs(Imm))};
     return Insert(CallInst::Create(F, Ops), Name);
   }
 

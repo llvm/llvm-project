@@ -227,6 +227,20 @@ def testIntegerType():
         print("signed:", IntegerType.get_signed(8))
         # CHECK: unsigned: ui64
         print("unsigned:", IntegerType.get_unsigned(64))
+        # CHECK: signless: i8
+        print("signless:", IntegerType.get(8))
+        # CHECK: signless: i16
+        print("signless:", IntegerType.get(16, IntegerType.SIGNLESS))
+        # CHECK: signed: si8
+        print("signed:", IntegerType.get(8, IntegerType.SIGNED))
+        # CHECK: unsigned: ui64
+        print("unsigned:", IntegerType.get(64, IntegerType.UNSIGNED))
+        # CHECK: SIGNLESS
+        print(IntegerType.get(8).signedness)
+        # CHECK: SIGNED
+        print(IntegerType.get(8, IntegerType.SIGNED).signedness)
+        # CHECK: UNSIGNED
+        print(IntegerType.get(8, IntegerType.UNSIGNED).signedness)
 
 
 # CHECK-LABEL: TEST: testIndexType
@@ -743,6 +757,49 @@ def testTypeIDs():
         vector_type = Type.parse("vector<2x3xf32>")
         # CHECK: True
         print(ShapedType(vector_type).typeid == vector_type.typeid)
+
+
+# CHECK-LABEL: TEST: testTypeName
+@run
+def testTypeName():
+    with Context():
+        # CHECK: builtin.integer
+        print(IntegerType.type_name)
+        # CHECK: builtin.index
+        print(IndexType.type_name)
+
+        # CHECK: builtin.f32
+        print(F32Type.type_name)
+        # CHECK: builtin.bf16
+        print(BF16Type.type_name)
+
+        # CHECK: builtin.none
+        print(NoneType.type_name)
+
+        # CHECK: builtin.complex
+        print(ComplexType.type_name)
+
+        # CHECK: builtin.vector
+        print(VectorType.type_name)
+
+        # CHECK: builtin.tensor
+        print(RankedTensorType.type_name)
+        # CHECK: builtin.unranked_tensor
+        print(UnrankedTensorType.type_name)
+
+        # CHECK: builtin.memref
+        print(MemRefType.type_name)
+        # CHECK: builtin.unranked_memref
+        print(UnrankedMemRefType.type_name)
+
+        # CHECK: builtin.tuple
+        print(TupleType.type_name)
+
+        # CHECK: builtin.function
+        print(FunctionType.type_name)
+
+        # CHECK: builtin.opaque
+        print(OpaqueType.type_name)
 
 
 # CHECK-LABEL: TEST: testConcreteTypesRoundTrip

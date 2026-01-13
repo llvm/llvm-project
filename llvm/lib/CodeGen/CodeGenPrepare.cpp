@@ -2965,7 +2965,7 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
     EVI = dyn_cast<ExtractValueInst>(V);
     if (EVI) {
       V = EVI->getOperand(0);
-      if (!llvm::all_of(EVI->indices(), [](unsigned idx) { return idx == 0; }))
+      if (!llvm::all_of(EVI->indices(), equal_to(0)))
         return false;
     }
 
@@ -6078,8 +6078,8 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
         }
 
         if (AddrMode.Scale != 1)
-          V = Builder.CreateMul(V, ConstantInt::get(IntPtrTy, AddrMode.Scale),
-                                "sunkaddr");
+          V = Builder.CreateMul(
+              V, ConstantInt::getSigned(IntPtrTy, AddrMode.Scale), "sunkaddr");
         if (ResultIndex)
           ResultIndex = Builder.CreateAdd(ResultIndex, V, "sunkaddr");
         else
@@ -6188,8 +6188,8 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
         return Modified;
       }
       if (AddrMode.Scale != 1)
-        V = Builder.CreateMul(V, ConstantInt::get(IntPtrTy, AddrMode.Scale),
-                              "sunkaddr");
+        V = Builder.CreateMul(
+            V, ConstantInt::getSigned(IntPtrTy, AddrMode.Scale), "sunkaddr");
       if (Result)
         Result = Builder.CreateAdd(Result, V, "sunkaddr");
       else
