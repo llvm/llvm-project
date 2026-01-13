@@ -618,14 +618,14 @@ class ROCDL_Mfma_IntrOp<string mnemonic, list<Trait> traits = []> :
 }
 
 class ROCDL_Mfma_IntrOpV0<string mnemonic, Type AB, Type CD> :
-  ROCDL_IntrOp<mnemonic, [], [], [], 1, 0, 0, 0, [], []>,
+  ROCDL_IntrOp<mnemonic, [], [], [], 1, 0, 0, 0, [3, 4, 5], ["cbsz", "abid", "blgp"]>,
   Arguments<(ins
              LLVM_ScalarOrVectorOf<AB>:$a,
              LLVM_ScalarOrVectorOf<AB>:$b,
              LLVM_ScalarOrVectorOf<CD>:$c,
-             I32:$cbsz,
-             I32:$abid,
-             I32:$blgp)> {
+             I32Attr:$cbsz,
+             I32Attr:$abid,
+             I32Attr:$blgp)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
     $a `,` $b `,` $c `,` $cbsz `,` $abid `,` $blgp attr-dict `:` functional-type(operands, $res)

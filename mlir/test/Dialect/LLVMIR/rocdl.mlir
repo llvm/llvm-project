@@ -142,191 +142,154 @@ func.func @rocdl.xdlops(%arg0 : f32, %arg1 : f32,
                    %arg14 : i64, %arg15 : vector<2xf32>,
                    %arg16: vector<8xbf16>, %arg17 : vector<8xf16>) {
   // CHECK-LABEL: rocdl.xdlops
-  // CHECK: rocdl.mfma.f32.32x32x1f32 {{.*}} : (f32, f32, vector<32xf32>, i32, i32, i32) -> vector<32xf32>
-  %r0 = rocdl.mfma.f32.32x32x1f32 %arg0, %arg1, %arg2, %arg3, %arg3, %arg3 :
-                            (f32, f32, vector<32xf32>,
-                            i32, i32, i32) -> vector<32xf32>
+  // CHECK: rocdl.mfma.f32.32x32x1f32 {{.*}} : (f32, f32, vector<32xf32>) -> vector<32xf32>
+  %r0 = rocdl.mfma.f32.32x32x1f32 %arg0, %arg1, %arg2, 0, 0, 0 :
+                            (f32, f32, vector<32xf32>) -> vector<32xf32>
 
-  // CHECK: rocdl.mfma.f32.16x16x1f32 {{.*}} : (f32, f32, vector<16xf32>, i32, i32, i32) -> vector<16xf32>
-  %r1 = rocdl.mfma.f32.16x16x1f32 %arg0, %arg1, %arg4, %arg3, %arg3, %arg3 :
-                            (f32, f32, vector<16xf32>,
-                            i32, i32, i32) -> vector<16xf32>
+  // CHECK: rocdl.mfma.f32.16x16x1f32 {{.*}} : (f32, f32, vector<16xf32>) -> vector<16xf32>
+  %r1 = rocdl.mfma.f32.16x16x1f32 %arg0, %arg1, %arg4, 0, 0, 0 :
+                            (f32, f32, vector<16xf32>) -> vector<16xf32>
 
-  // CHECK: rocdl.mfma.f32.4x4x1f32 {{.*}} : (f32, f32, vector<4xf32>, i32, i32, i32) -> vector<4xf32>
-  %r2 = rocdl.mfma.f32.4x4x1f32 %arg0, %arg1, %arg5, %arg3, %arg3, %arg3 :
-                            (f32, f32, vector<4xf32>,
-                            i32, i32, i32) -> vector<4xf32>
+  // CHECK: rocdl.mfma.f32.4x4x1f32 {{.*}} : (f32, f32, vector<4xf32>) -> vector<4xf32>
+  %r2 = rocdl.mfma.f32.4x4x1f32 %arg0, %arg1, %arg5, 0, 0, 0 :
+                            (f32, f32, vector<4xf32>) -> vector<4xf32>
 
-  // CHECK: rocdl.mfma.f32.32x32x2f32 {{.*}} : (f32, f32, vector<16xf32>, i32, i32, i32) -> vector<16xf32>
-  %r3= rocdl.mfma.f32.32x32x2f32 %arg0, %arg1, %arg4, %arg3, %arg3, %arg3 :
-                            (f32, f32, vector<16xf32>,
-                            i32, i32, i32) -> vector<16xf32>
+  // CHECK: rocdl.mfma.f32.32x32x2f32 {{.*}} : (f32, f32, vector<16xf32>) -> vector<16xf32>
+  %r3= rocdl.mfma.f32.32x32x2f32 %arg0, %arg1, %arg4, 0, 0, 0 :
+                            (f32, f32, vector<16xf32>) -> vector<16xf32>
 
-  // CHECK: rocdl.mfma.f32.16x16x4f32 {{.*}} : (f32, f32, vector<4xf32>, i32, i32, i32) -> vector<4xf32>
-  %r4 = rocdl.mfma.f32.16x16x4f32 %arg0, %arg1, %arg5, %arg3, %arg3, %arg3 :
-                            (f32, f32, vector<4xf32>,
-                            i32, i32, i32) -> vector<4xf32>
+  // CHECK: rocdl.mfma.f32.16x16x4f32 {{.*}} : (f32, f32, vector<4xf32>) -> vector<4xf32>
+  %r4 = rocdl.mfma.f32.16x16x4f32 %arg0, %arg1, %arg5, 0, 0, 0 :
+                            (f32, f32, vector<4xf32>) -> vector<4xf32>
 
-  // CHECK: rocdl.mfma.f32.32x32x4f16 {{.*}} : (vector<4xf16>, vector<4xf16>, vector<32xf32>, i32, i32, i32) -> vector<32xf32>
-  %r5 = rocdl.mfma.f32.32x32x4f16 %arg6, %arg6, %arg2, %arg3, %arg3, %arg3 :
-                            (vector<4xf16>, vector<4xf16>, vector<32xf32>,
-                            i32, i32, i32) -> vector<32xf32>
+  // CHECK: rocdl.mfma.f32.32x32x4f16 {{.*}} : (vector<4xf16>, vector<4xf16>, vector<32xf32>) -> vector<32xf32>
+  %r5 = rocdl.mfma.f32.32x32x4f16 %arg6, %arg6, %arg2, 0, 0, 0 :
+                            (vector<4xf16>, vector<4xf16>, vector<32xf32>) -> vector<32xf32>
 
-  // CHECK: rocdl.mfma.f32.16x16x4f16 {{.*}} : (vector<4xf16>, vector<4xf16>, vector<16xf32>, i32, i32, i32) -> vector<16xf32>
-  %r6 = rocdl.mfma.f32.16x16x4f16 %arg6, %arg6, %arg4, %arg3, %arg3, %arg3 :
-                            (vector<4xf16>, vector<4xf16>, vector<16xf32>,
-                            i32, i32, i32) -> vector<16xf32>
+  // CHECK: rocdl.mfma.f32.16x16x4f16 {{.*}} : (vector<4xf16>, vector<4xf16>, vector<16xf32>) -> vector<16xf32>
+  %r6 = rocdl.mfma.f32.16x16x4f16 %arg6, %arg6, %arg4, 0, 0, 0 :
+                            (vector<4xf16>, vector<4xf16>, vector<16xf32>) -> vector<16xf32>
 
-  // CHECK: rocdl.mfma.f32.4x4x4f16 {{.*}} : (vector<4xf16>, vector<4xf16>, vector<4xf32>, i32, i32, i32) -> vector<4xf32>
-  %r7 = rocdl.mfma.f32.4x4x4f16 %arg6, %arg6, %arg5, %arg3, %arg3, %arg3 :
-                            (vector<4xf16>, vector<4xf16>, vector<4xf32>,
-                            i32, i32, i32) -> vector<4xf32>
+  // CHECK: rocdl.mfma.f32.4x4x4f16 {{.*}} : (vector<4xf16>, vector<4xf16>, vector<4xf32>) -> vector<4xf32>
+  %r7 = rocdl.mfma.f32.4x4x4f16 %arg6, %arg6, %arg5, 0, 0, 0 :
+                            (vector<4xf16>, vector<4xf16>, vector<4xf32>) -> vector<4xf32>
 
-  // CHECK: rocdl.mfma.f32.32x32x8f16 {{.*}} : (vector<4xf16>, vector<4xf16>, vector<16xf32>, i32, i32, i32) -> vector<16xf32>
-  %r8 = rocdl.mfma.f32.32x32x8f16 %arg6, %arg6, %arg4, %arg3, %arg3, %arg3 :
-                            (vector<4xf16>, vector<4xf16>, vector<16xf32>,
-                            i32, i32, i32) -> vector<16xf32>
+  // CHECK: rocdl.mfma.f32.32x32x8f16 {{.*}} : (vector<4xf16>, vector<4xf16>, vector<16xf32>) -> vector<16xf32>
+  %r8 = rocdl.mfma.f32.32x32x8f16 %arg6, %arg6, %arg4, 0, 0, 0 :
+                            (vector<4xf16>, vector<4xf16>, vector<16xf32>) -> vector<16xf32>
 
-  // CHECK: rocdl.mfma.f32.16x16x16f16 {{.*}} : (vector<4xf16>, vector<4xf16>, vector<4xf32>, i32, i32, i32) -> vector<4xf32>
-  %r9 = rocdl.mfma.f32.16x16x16f16 %arg6, %arg6, %arg5, %arg3, %arg3, %arg3 :
-                            (vector<4xf16>, vector<4xf16>, vector<4xf32>,
-                            i32, i32, i32) -> vector<4xf32>
+  // CHECK: rocdl.mfma.f32.16x16x16f16 {{.*}} : (vector<4xf16>, vector<4xf16>, vector<4xf32>) -> vector<4xf32>
+  %r9 = rocdl.mfma.f32.16x16x16f16 %arg6, %arg6, %arg5, 0, 0, 0 :
+                            (vector<4xf16>, vector<4xf16>, vector<4xf32>) -> vector<4xf32>
 
-  // CHECK: rocdl.mfma.i32.32x32x4i8 {{.*}} : (i32, i32, vector<32xi32>, i32, i32, i32) -> vector<32xi32>
-  %r10 = rocdl.mfma.i32.32x32x4i8 %arg3, %arg3, %arg7, %arg3, %arg3, %arg3 :
-                            (i32, i32, vector<32xi32>,
-                            i32, i32, i32) -> vector<32xi32>
+  // CHECK: rocdl.mfma.i32.32x32x4i8 {{.*}} : (i32, i32, vector<32xi32>) -> vector<32xi32>
+  %r10 = rocdl.mfma.i32.32x32x4i8 %arg3, %arg3, %arg7, 0, 0, 0 :
+                            (i32, i32, vector<32xi32>) -> vector<32xi32>
 
-  // CHECK: rocdl.mfma.i32.16x16x4i8 {{.*}} : (i32, i32, vector<16xi32>, i32, i32, i32) -> vector<16xi32>
-  %r11 = rocdl.mfma.i32.16x16x4i8 %arg3, %arg3, %arg8, %arg3, %arg3, %arg3 :
-                            (i32, i32, vector<16xi32>,
-                            i32, i32, i32) -> vector<16xi32>
+  // CHECK: rocdl.mfma.i32.16x16x4i8 {{.*}} : (i32, i32, vector<16xi32>) -> vector<16xi32>
+  %r11 = rocdl.mfma.i32.16x16x4i8 %arg3, %arg3, %arg8, 0, 0, 0 :
+                            (i32, i32, vector<16xi32>) -> vector<16xi32>
 
-  // CHECK: rocdl.mfma.i32.4x4x4i8 {{.*}} : (i32, i32, vector<4xi32>, i32, i32, i32) -> vector<4xi32>
-  %r12 = rocdl.mfma.i32.4x4x4i8 %arg3, %arg3, %arg9, %arg3, %arg3, %arg3 :
-                            (i32, i32, vector<4xi32>,
-                            i32, i32, i32) -> vector<4xi32>
+  // CHECK: rocdl.mfma.i32.4x4x4i8 {{.*}} : (i32, i32, vector<4xi32>) -> vector<4xi32>
+  %r12 = rocdl.mfma.i32.4x4x4i8 %arg3, %arg3, %arg9, 0, 0, 0 :
+                            (i32, i32, vector<4xi32>) -> vector<4xi32>
 
-  // CHECK: rocdl.mfma.i32.32x32x8i8 {{.*}} : (i32, i32, vector<16xi32>, i32, i32, i32) -> vector<16xi32>
-  %r13 = rocdl.mfma.i32.32x32x8i8 %arg3, %arg3, %arg8, %arg3, %arg3, %arg3 :
-                            (i32, i32, vector<16xi32>,
-                            i32, i32, i32) -> vector<16xi32>
+  // CHECK: rocdl.mfma.i32.32x32x8i8 {{.*}} : (i32, i32, vector<16xi32>) -> vector<16xi32>
+  %r13 = rocdl.mfma.i32.32x32x8i8 %arg3, %arg3, %arg8, 0, 0, 0 :
+                            (i32, i32, vector<16xi32>) -> vector<16xi32>
 
-  // CHECK: rocdl.mfma.i32.16x16x16i8 {{.*}} : (i32, i32, vector<4xi32>, i32, i32, i32) -> vector<4xi32>
-  %r14 = rocdl.mfma.i32.16x16x16i8 %arg3, %arg3, %arg9, %arg3, %arg3, %arg3 :
-                            (i32, i32, vector<4xi32>,
-                            i32, i32, i32) -> vector<4xi32>
+  // CHECK: rocdl.mfma.i32.16x16x16i8 {{.*}} : (i32, i32, vector<4xi32>) -> vector<4xi32>
+  %r14 = rocdl.mfma.i32.16x16x16i8 %arg3, %arg3, %arg9, 0, 0, 0 :
+                            (i32, i32, vector<4xi32>) -> vector<4xi32>
 
-  // CHECK: rocdl.mfma.f32.32x32x2bf16 {{.*}} : (vector<2xi16>, vector<2xi16>, vector<32xf32>, i32, i32, i32) -> vector<32xf32>
-  %r15 = rocdl.mfma.f32.32x32x2bf16 %arg10, %arg10, %arg2, %arg3, %arg3, %arg3 :
-                            (vector<2xi16>, vector<2xi16>, vector<32xf32>,
-                            i32, i32, i32) -> vector<32xf32>
+  // CHECK: rocdl.mfma.f32.32x32x2bf16 {{.*}} : (vector<2xi16>, vector<2xi16>, vector<32xf32>) -> vector<32xf32>
+  %r15 = rocdl.mfma.f32.32x32x2bf16 %arg10, %arg10, %arg2, 0, 0, 0 :
+                            (vector<2xi16>, vector<2xi16>, vector<32xf32>) -> vector<32xf32>
 
-  // CHECK: rocdl.mfma.f32.16x16x2bf16 {{.*}} : (vector<2xi16>, vector<2xi16>, vector<16xf32>, i32, i32, i32) -> vector<16xf32>
-  %r16 = rocdl.mfma.f32.16x16x2bf16 %arg10, %arg10, %arg4, %arg3, %arg3, %arg3 :
-                            (vector<2xi16>, vector<2xi16>, vector<16xf32>,
-                            i32, i32, i32) -> vector<16xf32>
+  // CHECK: rocdl.mfma.f32.16x16x2bf16 {{.*}} : (vector<2xi16>, vector<2xi16>, vector<16xf32>) -> vector<16xf32>
+  %r16 = rocdl.mfma.f32.16x16x2bf16 %arg10, %arg10, %arg4, 0, 0, 0 :
+                            (vector<2xi16>, vector<2xi16>, vector<16xf32>) -> vector<16xf32>
 
-  // CHECK: rocdl.mfma.f32.4x4x2bf16 {{.*}} : (vector<2xi16>, vector<2xi16>, vector<4xf32>, i32, i32, i32) -> vector<4xf32>
-  %r17 = rocdl.mfma.f32.4x4x2bf16 %arg10, %arg10, %arg5, %arg3, %arg3, %arg3 :
-                            (vector<2xi16>, vector<2xi16>, vector<4xf32>,
-                            i32, i32, i32) -> vector<4xf32>
+  // CHECK: rocdl.mfma.f32.4x4x2bf16 {{.*}} : (vector<2xi16>, vector<2xi16>, vector<4xf32>) -> vector<4xf32>
+  %r17 = rocdl.mfma.f32.4x4x2bf16 %arg10, %arg10, %arg5, 0, 0, 0 :
+                            (vector<2xi16>, vector<2xi16>, vector<4xf32>) -> vector<4xf32>
 
-  // CHECK: rocdl.mfma.f32.32x32x4bf16 {{.*}} : (vector<2xi16>, vector<2xi16>, vector<16xf32>, i32, i32, i32) -> vector<16xf32>
-  %r18 = rocdl.mfma.f32.32x32x4bf16 %arg10, %arg10, %arg4, %arg3, %arg3, %arg3 :
-                            (vector<2xi16>, vector<2xi16>, vector<16xf32>,
-                            i32, i32, i32) -> vector<16xf32>
+  // CHECK: rocdl.mfma.f32.32x32x4bf16 {{.*}} : (vector<2xi16>, vector<2xi16>, vector<16xf32>) -> vector<16xf32>
+  %r18 = rocdl.mfma.f32.32x32x4bf16 %arg10, %arg10, %arg4, 0, 0, 0 :
+                            (vector<2xi16>, vector<2xi16>, vector<16xf32>) -> vector<16xf32>
 
-  // CHECK: rocdl.mfma.f32.16x16x8bf16 {{.*}} : (vector<2xi16>, vector<2xi16>, vector<4xf32>, i32, i32, i32) -> vector<4xf32>
-  %r19 = rocdl.mfma.f32.16x16x8bf16 %arg10, %arg10, %arg5, %arg3, %arg3, %arg3 :
-                            (vector<2xi16>, vector<2xi16>, vector<4xf32>,
-                            i32, i32, i32) -> vector<4xf32>
+  // CHECK: rocdl.mfma.f32.16x16x8bf16 {{.*}} : (vector<2xi16>, vector<2xi16>, vector<4xf32>) -> vector<4xf32>
+  %r19 = rocdl.mfma.f32.16x16x8bf16 %arg10, %arg10, %arg5, 0, 0, 0 :
+                            (vector<2xi16>, vector<2xi16>, vector<4xf32>) -> vector<4xf32>
 
 
-  // CHECK: rocdl.mfma.f32.32x32x4bf16.1k {{.*}} : (vector<4xi16>, vector<4xi16>, vector<32xf32>, i32, i32, i32) -> vector<32xf32>
-  %r20 = rocdl.mfma.f32.32x32x4bf16.1k %arg11, %arg11, %arg2, %arg3, %arg3, %arg3 :
-                            (vector<4xi16>, vector<4xi16>, vector<32xf32>,
-                            i32, i32, i32) -> vector<32xf32>
+  // CHECK: rocdl.mfma.f32.32x32x4bf16.1k {{.*}} : (vector<4xi16>, vector<4xi16>, vector<32xf32>) -> vector<32xf32>
+  %r20 = rocdl.mfma.f32.32x32x4bf16.1k %arg11, %arg11, %arg2, 0, 0, 0 :
+                            (vector<4xi16>, vector<4xi16>, vector<32xf32>) -> vector<32xf32>
 
-  // CHECK: rocdl.mfma.f32.16x16x4bf16.1k {{.*}} : (vector<4xi16>, vector<4xi16>, vector<16xf32>, i32, i32, i32) -> vector<16xf32>
-  %r21 = rocdl.mfma.f32.16x16x4bf16.1k %arg11, %arg11, %arg4, %arg3, %arg3, %arg3 :
-                            (vector<4xi16>, vector<4xi16>, vector<16xf32>,
-                            i32, i32, i32) -> vector<16xf32>
+  // CHECK: rocdl.mfma.f32.16x16x4bf16.1k {{.*}} : (vector<4xi16>, vector<4xi16>, vector<16xf32>) -> vector<16xf32>
+  %r21 = rocdl.mfma.f32.16x16x4bf16.1k %arg11, %arg11, %arg4, 0, 0, 0 :
+                            (vector<4xi16>, vector<4xi16>, vector<16xf32>) -> vector<16xf32>
 
-  // CHECK: rocdl.mfma.f32.4x4x4bf16.1k {{.*}} : (vector<4xi16>, vector<4xi16>, vector<4xf32>, i32, i32, i32) -> vector<4xf32>
-  %r22 = rocdl.mfma.f32.4x4x4bf16.1k %arg11, %arg11, %arg5, %arg3, %arg3, %arg3 :
-                            (vector<4xi16>, vector<4xi16>, vector<4xf32>,
-                            i32, i32, i32) -> vector<4xf32>
+  // CHECK: rocdl.mfma.f32.4x4x4bf16.1k {{.*}} : (vector<4xi16>, vector<4xi16>, vector<4xf32>) -> vector<4xf32>
+  %r22 = rocdl.mfma.f32.4x4x4bf16.1k %arg11, %arg11, %arg5, 0, 0, 0 :
+                            (vector<4xi16>, vector<4xi16>, vector<4xf32>) -> vector<4xf32>
 
-  // CHECK: rocdl.mfma.f32.32x32x8bf16.1k {{.*}} : (vector<4xi16>, vector<4xi16>, vector<16xf32>, i32, i32, i32) -> vector<16xf32>
-  %r23 = rocdl.mfma.f32.32x32x8bf16.1k %arg11, %arg11, %arg4, %arg3, %arg3, %arg3 :
-                            (vector<4xi16>, vector<4xi16>, vector<16xf32>,
-                            i32, i32, i32) -> vector<16xf32>
+  // CHECK: rocdl.mfma.f32.32x32x8bf16.1k {{.*}} : (vector<4xi16>, vector<4xi16>, vector<16xf32>) -> vector<16xf32>
+  %r23 = rocdl.mfma.f32.32x32x8bf16.1k %arg11, %arg11, %arg4, 0, 0, 0 :
+                            (vector<4xi16>, vector<4xi16>, vector<16xf32>) -> vector<16xf32>
 
-  // CHECK: rocdl.mfma.f32.16x16x16bf16.1k {{.*}} : (vector<4xi16>, vector<4xi16>, vector<4xf32>, i32, i32, i32) -> vector<4xf32>
-  %r24 = rocdl.mfma.f32.16x16x16bf16.1k %arg11, %arg11, %arg5, %arg3, %arg3, %arg3 :
-                            (vector<4xi16>, vector<4xi16>, vector<4xf32>,
-                            i32, i32, i32) -> vector<4xf32>
+  // CHECK: rocdl.mfma.f32.16x16x16bf16.1k {{.*}} : (vector<4xi16>, vector<4xi16>, vector<4xf32>) -> vector<4xf32>
+  %r24 = rocdl.mfma.f32.16x16x16bf16.1k %arg11, %arg11, %arg5, 0, 0, 0 :
+                            (vector<4xi16>, vector<4xi16>, vector<4xf32>) -> vector<4xf32>
 
-  // CHECK: rocdl.mfma.f64.16x16x4f64 {{.*}} : (f64, f64, vector<4xf64>, i32, i32, i32) -> vector<4xf64>
-  %r25 = rocdl.mfma.f64.16x16x4f64 %arg13, %arg13, %arg12, %arg3, %arg3, %arg3 :
-                            (f64, f64, vector<4xf64>,
-                            i32, i32, i32) -> vector<4xf64>
+  // CHECK: rocdl.mfma.f64.16x16x4f64 {{.*}} : (f64, f64, vector<4xf64>) -> vector<4xf64>
+  %r25 = rocdl.mfma.f64.16x16x4f64 %arg13, %arg13, %arg12, 0, 0, 0 :
+                            (f64, f64, vector<4xf64>) -> vector<4xf64>
 
-  // CHECK: rocdl.mfma.f64.4x4x4f64 {{.*}} : (f64, f64, f64, i32, i32, i32) -> f64
-  %r26 = rocdl.mfma.f64.4x4x4f64 %arg13, %arg13, %arg13, %arg3, %arg3, %arg3 :
-                            (f64, f64, f64,
-                            i32, i32, i32) -> f64
+  // CHECK: rocdl.mfma.f64.4x4x4f64 {{.*}} : (f64, f64, f64) -> f64
+  %r26 = rocdl.mfma.f64.4x4x4f64 %arg13, %arg13, %arg13, 0, 0, 0 :
+                            (f64, f64, f64) -> f64
 
-  // CHECK: rocdl.mfma.i32.16x16x32.i8 {{.*}} : (i64, i64, vector<4xi32>, i32, i32, i32) -> vector<4xi32>
-  %r27 = rocdl.mfma.i32.16x16x32.i8 %arg14, %arg14, %arg9, %arg3, %arg3, %arg3 :
-                            (i64, i64, vector<4xi32>,
-                            i32, i32, i32) -> vector<4xi32>
+  // CHECK: rocdl.mfma.i32.16x16x32.i8 {{.*}} : (i64, i64, vector<4xi32>) -> vector<4xi32>
+  %r27 = rocdl.mfma.i32.16x16x32.i8 %arg14, %arg14, %arg9, 0, 0, 0 :
+                            (i64, i64, vector<4xi32>) -> vector<4xi32>
 
-  // CHECK: rocdl.mfma.i32.32x32x16.i8 {{.*}} : (i64, i64, vector<16xi32>, i32, i32, i32) -> vector<16xi32>
-  %r28 = rocdl.mfma.i32.32x32x16.i8 %arg14, %arg14, %arg8, %arg3, %arg3, %arg3 :
-                            (i64, i64, vector<16xi32>,
-                            i32, i32, i32) -> vector<16xi32>
+  // CHECK: rocdl.mfma.i32.32x32x16.i8 {{.*}} : (i64, i64, vector<16xi32>) -> vector<16xi32>
+  %r28 = rocdl.mfma.i32.32x32x16.i8 %arg14, %arg14, %arg8, 0, 0, 0 :
+                            (i64, i64, vector<16xi32>) -> vector<16xi32>
 
-  // CHECK: rocdl.mfma.f32.16x16x8.xf32 {{.*}} : (vector<2xf32>, vector<2xf32>, vector<4xf32>, i32, i32, i32) -> vector<4xf32>
-  %r29 = rocdl.mfma.f32.16x16x8.xf32 %arg15, %arg15, %arg5, %arg3, %arg3, %arg3 :
-                            (vector<2xf32>, vector<2xf32>, vector<4xf32>,
-                            i32, i32, i32) -> vector<4xf32>
+  // CHECK: rocdl.mfma.f32.16x16x8.xf32 {{.*}} : (vector<2xf32>, vector<2xf32>, vector<4xf32>) -> vector<4xf32>
+  %r29 = rocdl.mfma.f32.16x16x8.xf32 %arg15, %arg15, %arg5, 0, 0, 0 :
+                            (vector<2xf32>, vector<2xf32>, vector<4xf32>) -> vector<4xf32>
 
-  // CHECK: rocdl.mfma.f32.32x32x4.xf32 {{.*}} : (vector<2xf32>, vector<2xf32>, vector<16xf32>, i32, i32, i32) -> vector<16xf32>
-  %r30 = rocdl.mfma.f32.32x32x4.xf32 %arg15, %arg15, %arg4, %arg3, %arg3, %arg3 :
-                            (vector<2xf32>, vector<2xf32>, vector<16xf32>,
-                            i32, i32, i32) -> vector<16xf32>
+  // CHECK: rocdl.mfma.f32.32x32x4.xf32 {{.*}} : (vector<2xf32>, vector<2xf32>, vector<16xf32>) -> vector<16xf32>
+  %r30 = rocdl.mfma.f32.32x32x4.xf32 %arg15, %arg15, %arg4, 0, 0, 0 :
+                            (vector<2xf32>, vector<2xf32>, vector<16xf32>) -> vector<16xf32>
 
-  // CHECK: rocdl.mfma.f32.16x16x32.bf16 {{.*}} : (vector<8xbf16>, vector<8xbf16>, vector<4xf32>, i32, i32, i32) -> vector<4xf32>
-  %r31 = rocdl.mfma.f32.16x16x32.bf16 %arg16, %arg16, %arg5, %arg3, %arg3, %arg3 :
-                              (vector<8xbf16>, vector<8xbf16>, vector<4xf32>,
-                               i32, i32, i32) -> vector<4xf32>
+  // CHECK: rocdl.mfma.f32.16x16x32.bf16 {{.*}} : (vector<8xbf16>, vector<8xbf16>, vector<4xf32>) -> vector<4xf32>
+  %r31 = rocdl.mfma.f32.16x16x32.bf16 %arg16, %arg16, %arg5, 0, 0, 0 :
+                              (vector<8xbf16>, vector<8xbf16>, vector<4xf32>) -> vector<4xf32>
 
-  // CHECK: rocdl.mfma.i32.16x16x64.i8 {{.*}} : (vector<4xi32>, vector<4xi32>, vector<4xi32>, i32, i32, i32) -> vector<4xi32>
-  %r32 = rocdl.mfma.i32.16x16x64.i8 %arg9, %arg9, %arg9, %arg3, %arg3, %arg3 :
-                              (vector<4xi32>, vector<4xi32>, vector<4xi32>,
-                               i32, i32, i32) -> vector<4xi32>
+  // CHECK: rocdl.mfma.i32.16x16x64.i8 {{.*}} : (vector<4xi32>, vector<4xi32>, vector<4xi32>) -> vector<4xi32>
+  %r32 = rocdl.mfma.i32.16x16x64.i8 %arg9, %arg9, %arg9, 0, 0, 0 :
+                              (vector<4xi32>, vector<4xi32>, vector<4xi32>) -> vector<4xi32>
 
-  // CHECK: rocdl.mfma.f32.16x16x32.f16 {{.*}} : (vector<8xf16>, vector<8xf16>, vector<4xf32>, i32, i32, i32) -> vector<4xi32>
-  %r33 = rocdl.mfma.f32.16x16x32.f16 %arg17, %arg17, %arg5, %arg3, %arg3, %arg3 :
-                               (vector<8xf16>, vector<8xf16>, vector<4xf32>,
-                                i32, i32, i32) -> vector<4xf32>
+  // CHECK: rocdl.mfma.f32.16x16x32.f16 {{.*}} : (vector<8xf16>, vector<8xf16>, vector<4xf32>) -> vector<4xf32>
+  %r33 = rocdl.mfma.f32.16x16x32.f16 %arg17, %arg17, %arg5, 0, 0, 0 :
+                               (vector<8xf16>, vector<8xf16>, vector<4xf32>) -> vector<4xf32>
 
-  // CHECK: rocdl.mfma.f32.32x32x16.bf16 {{.*}} : (vector<8xbf16>, vector<8xbf16>, vector<16xf32>, i32, i32, i32) -> vector<16xf32>
-  %r34 = rocdl.mfma.f32.32x32x16.bf16 %arg16, %arg16, %arg4, %arg3, %arg3, %arg3 :
-                               (vector<8xbf16>, vector<8xbf16>, vector<16xf32>,
-                                i32, i32, i32) -> vector<16xf32>
+  // CHECK: rocdl.mfma.f32.32x32x16.bf16 {{.*}} : (vector<8xbf16>, vector<8xbf16>, vector<16xf32>) -> vector<16xf32>
+  %r34 = rocdl.mfma.f32.32x32x16.bf16 %arg16, %arg16, %arg4, 0, 0, 0 :
+                               (vector<8xbf16>, vector<8xbf16>, vector<16xf32>) -> vector<16xf32>
 
-  // CHECK: rocdl.mfma.i32.32x32x32.i8 {{.*}} : (vector<4xi32>, vector<4xi32>, vector<16xi32>, i32, i32, i32) -> vector<16xi32>
-  %r35 = rocdl.mfma.i32.32x32x32.i8 %arg9, %arg9, %arg8, %arg3, %arg3, %arg3 :
-                               (vector<4xi32>, vector<4xi32>, vector<16xi32>,
-                                i32, i32, i32) -> vector<16xi32>
+  // CHECK: rocdl.mfma.i32.32x32x32.i8 {{.*}} : (vector<4xi32>, vector<4xi32>, vector<16xi32>) -> vector<16xi32>
+  %r35 = rocdl.mfma.i32.32x32x32.i8 %arg9, %arg9, %arg8, 0, 0, 0 :
+                               (vector<4xi32>, vector<4xi32>, vector<16xi32>) -> vector<16xi32>
 
-  // CHECK: rocdl.mfma.f32.32x32x16.f16 {{.*}} : (vector<8xf16>, vector<8xf16>, vector<16xf32>, i32, i32, i32) -> vector<16xf32>
-  %r36 = rocdl.mfma.f32.32x32x16.f16 %arg17, %arg17, %arg4, %arg3, %arg3, %arg3 :
-                               (vector<8xf16>, vector<8xf16>, vector<16xf32>,
-                                i32, i32, i32) -> vector<16xf32>
+  // CHECK: rocdl.mfma.f32.32x32x16.f16 {{.*}} : (vector<8xf16>, vector<8xf16>, vector<16xf32>) -> vector<16xf32>
+  %r36 = rocdl.mfma.f32.32x32x16.f16 %arg17, %arg17, %arg4, 0, 0, 0 :
+                               (vector<8xf16>, vector<8xf16>, vector<16xf32>) -> vector<16xf32>
 
   llvm.return
 }
