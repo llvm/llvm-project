@@ -430,6 +430,9 @@ public:
     return SubRegIndexLaneMasks[SubIdx];
   }
 
+  /// Try to find a matching subreg from the given lanemask.
+  unsigned getSubRegIdxFromLaneMask(LaneBitmask LaneMask) const;
+
   /// Try to find one or more subregister indexes to cover \p LaneMask.
   ///
   /// If this is possible, returns true and appends the best matching set of
