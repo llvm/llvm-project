@@ -214,6 +214,16 @@ public:
               ///< larger debug info than `Basic`.
   };
 
+  enum class BoolFromMem {
+    Strict,   ///< In-memory bool values are assumed to be 0 or 1, and any other
+              ///< value is UB.
+    Truncate, ///< Convert in-memory bools to i1 by checking if the least
+              ///< significant bit is 1.
+    NonZero,  ///< Convert in-memory bools to i1 by checking if any bit is set
+              ///< to 1.
+    NonStrictDefault = NonZero
+  };
+
   /// The code model to use (-mcmodel).
   std::string CodeModel;
 
@@ -659,6 +669,22 @@ public:
   // loader?
   bool isLoaderReplaceableFunctionName(StringRef FuncName) const {
     return llvm::is_contained(LoaderReplaceableFunctionNames, FuncName);
+  }
+
+  /// Are we building at -O1 or higher?
+  bool isOptimizedBuild() const { return OptimizationLevel > 0; }
+
+  /// When loading a bool from a storage unit larger than i1, should it
+  /// be converted to i1 by comparing to 0 or by truncating to i1?
+  bool isConvertingBoolWithCmp0() const {
+    switch (getLoadBoolFromMem()) {
+    case BoolFromMem::Strict:
+    case BoolFromMem::Truncate:
+      return false;
+
+    case BoolFromMem::NonZero:
+      return true;
+    }
   }
 };
 

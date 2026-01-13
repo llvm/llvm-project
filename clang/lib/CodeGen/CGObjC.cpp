@@ -1209,7 +1209,12 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
     uint64_t retTySize = CGM.getDataLayout().getTypeSizeInBits(retTy);
     if (ivarSize > retTySize) {
       bitcastType = llvm::Type::getIntNTy(getLLVMContext(), retTySize);
-      ivarVal = Builder.CreateTrunc(ivarVal, bitcastType);
+      if (getterMethod->getReturnType()->hasBooleanRepresentation() &&
+          CGM.getCodeGenOpts().isConvertingBoolWithCmp0())
+        ivarVal = Builder.CreateICmpNE(
+            ivarVal, llvm::Constant::getNullValue(ivarVal->getType()));
+      else
+        ivarVal = Builder.CreateTrunc(ivarVal, bitcastType);
     }
     Builder.CreateStore(ivarVal, ReturnValue.withElementType(bitcastType));
 
