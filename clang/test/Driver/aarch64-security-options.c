@@ -32,6 +32,36 @@
 
 // WARN-NOT: warning: ignoring '-mbranch-protection=' option because the 'aarch64' architecture does not support it [-Wbranch-protection]
 
+// RUN: %clang -target aarch64 -c %s -### -mharden-pac-ret=none 2>&1 | \
+// RUN: FileCheck %s --check-prefixes=NO-RA-HARDEN
+
+// RUN: %clang -target aarch64 -c %s -### -mharden-pac-ret=load-return-address 2>&1 | \
+// RUN: FileCheck %s --check-prefixes=NO-RA-HARDEN
+
+// RUN: %clang -target aarch64 -c %s -### -mbranch-protection=none -mharden-pac-ret=none 2>&1 | \
+// RUN: FileCheck %s --check-prefixes=NO-RA-HARDEN
+
+// RUN: %clang -target aarch64 -c %s -### -mbranch-protection=none -mharden-pac-ret=load-return-address 2>&1 | \
+// RUN: FileCheck %s --check-prefixes=NO-RA-HARDEN
+
+// RUN: %clang -target aarch64 -c %s -### -mbranch-protection=pac-ret -mharden-pac-ret=none 2>&1 | \
+// RUN: FileCheck %s --check-prefixes=RA-HARDEN-NONE
+
+// RUN: %clang -target aarch64 -c %s -### -mbranch-protection=pac-ret -mharden-pac-ret=load-return-address 2>&1 | \
+// RUN: FileCheck %s --check-prefixes=RA-HARDEN-LRA
+
+// RUN: %clang -target aarch64 -c %s -### -mbranch-protection=standard -mharden-pac-ret=none 2>&1 | \
+// RUN: FileCheck %s --check-prefixes=RA-HARDEN-NONE
+
+// RUN: %clang -target aarch64 -c %s -### -mbranch-protection=standard -mharden-pac-ret=load-return-address 2>&1 | \
+// RUN: FileCheck %s --check-prefixes=RA-HARDEN-LRA
+
+// NO-RA-HARDEN:        ignoring '-mharden-pac-ret' as it requires return address signing
+// NO-RA-HARDEN-NOT:    "-mharden-pac-ret"
+// NO-RA-HARDEN-LRA:    ignoring '-mharden-pac-ret' as it requires return address signing
+// RA-HARDEN-NONE:      "-mharden-pac-ret=none"
+// RA-HARDEN-LRA:       "-mharden-pac-ret=load-return-address"
+
 // RA-OFF: "-msign-return-address=none"
 // RA-NON-LEAF: "-msign-return-address=non-leaf"
 // RA-ALL: "-msign-return-address=all"
