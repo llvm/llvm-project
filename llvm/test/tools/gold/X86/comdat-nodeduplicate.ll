@@ -1,6 +1,9 @@
 ;; Keep __profd_foo in a nodeduplicate comdat, despite a comdat of the same name
 ;; in a previous object file.
 
+; --start-lib is not supported by ld.bfd, use gold instead.
+; REQUIRES: gold_plugin
+
 ;; Regular LTO
 
 ; RUN: rm -rf %t && split-file %s %t

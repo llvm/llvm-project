@@ -5,6 +5,9 @@
 ; RUN:     --section-ordering-file=%t/order
 ; RUN: llvm-readelf -s %t.exe | FileCheck %s
 
+; --section-ordering-file is not supported by ld.bfd, use gold instead.
+; REQUIRES: gold_plugin
+
 ; Check that the order of the sections is tin -> _start -> pat.
 
 ; CHECK:      00000000004000d0     1 FUNC    LOCAL  DEFAULT    1 pat

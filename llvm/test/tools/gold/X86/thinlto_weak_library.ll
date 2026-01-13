@@ -2,6 +2,9 @@
 ; final native link based on the linker's determination of which
 ; object within a static library contains the prevailing def of a symbol.
 
+; --start-lib is not supported by ld.bfd, use gold instead.
+; REQUIRES: gold_plugin
+
 ; First generate bitcode with a module summary index for each file
 ; RUN: opt -module-summary %s -o %t.o
 ; RUN: opt -module-summary %p/Inputs/thinlto_weak_library1.ll -o %t2.o
