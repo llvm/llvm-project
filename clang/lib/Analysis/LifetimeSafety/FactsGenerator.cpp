@@ -71,6 +71,26 @@ static const PathLoan *createLoan(FactManager &FactMgr,
   return nullptr;
 }
 
+/// Creates a loan for the storage location of a temporary object.
+/// \param MTE The MaterializeTemporaryExpr that represents the temporary
+/// binding. \return The new Loan.
+static const PathLoan *createLoan(FactManager &FactMgr,
+                                  const MaterializeTemporaryExpr *MTE) {
+  AccessPath Path(MTE);
+  return FactMgr.getLoanMgr().createLoan<PathLoan>(Path, MTE);
+}
+
+/// Try to find a CXXBindTemporaryExpr that descends from MTE, stripping away
+/// any implicit casts.
+/// \param MTE MaterializeTemporaryExpr whose descendants we are interested in.
+/// \return Pointer to descendant CXXBindTemporaryExpr or nullptr when not
+/// found.
+static const CXXBindTemporaryExpr *
+getChildBinding(const MaterializeTemporaryExpr *MTE) {
+  const Expr *Child = MTE->getSubExpr()->IgnoreImpCasts();
+  return dyn_cast<CXXBindTemporaryExpr>(Child);
+}
+
 void FactsGenerator::run() {
   llvm::TimeTraceScope TimeProfile("FactGenerator");
   const CFG &Cfg = *AC.getCFG();
@@ -90,6 +110,9 @@ void FactsGenerator::run() {
       else if (std::optional<CFGLifetimeEnds> LifetimeEnds =
                    Element.getAs<CFGLifetimeEnds>())
         handleLifetimeEnds(*LifetimeEnds);
+      else if (std::optional<CFGTemporaryDtor> TemporaryDtor =
+                   Element.getAs<CFGTemporaryDtor>())
+        handleTemporaryDtor(*TemporaryDtor);
     }
     CurrentBlockFacts.append(EscapesInCurrentBlock.begin(),
                              EscapesInCurrentBlock.end());
@@ -336,21 +359,26 @@ void FactsGenerator::VisitInitListExpr(const InitListExpr *ILE) {
 
 void FactsGenerator::VisitMaterializeTemporaryExpr(
     const MaterializeTemporaryExpr *MTE) {
+  assert(MTE->isGLValue());
+  // We defer from handling lifetime extended materializations.
+  if (MTE->getStorageDuration() != SD_FullExpression)
+    return;
   OriginList *MTEList = getOriginsList(*MTE);
   if (!MTEList)
     return;
   OriginList *SubExprList = getOriginsList(*MTE->getSubExpr());
-  if (MTE->isGLValue()) {
-    assert(!SubExprList ||
-           MTEList->getLength() == SubExprList->getLength() + 1 &&
-               "MTE top level origin should contain a loan to the MTE itself");
-    MTEList = getRValueOrigins(MTE, MTEList);
-    // TODO: Issue a loan to the MTE.
-    flow(MTEList, SubExprList, /*Kill=*/true);
-  } else {
-    assert(MTE->isXValue());
-    flow(MTEList, SubExprList, /*Kill=*/true);
+  assert(!SubExprList ||
+         MTEList->getLength() == SubExprList->getLength() + 1 &&
+             "MTE top level origin should contain a loan to the MTE itself");
+  MTEList = getRValueOrigins(MTE, MTEList);
+  if (getChildBinding(MTE)) {
+    // Issue a loan to MTE for the storage location represented by MTE.
+    const Loan *L = createLoan(FactMgr, MTE);
+    OriginList *List = getOriginsList(*MTE);
+    CurrentBlockFacts.push_back(
+        FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
   }
+  flow(MTEList, SubExprList, /*Kill=*/true);
 }
 
 void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
@@ -363,9 +391,34 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
     if (const auto *BL = dyn_cast<PathLoan>(Loan)) {
       // Check if the loan is for a stack variable and if that variable
       // is the one being destructed.
-      if (BL->getAccessPath().D == LifetimeEndsVD)
+      const AccessPath AP = BL->getAccessPath();
+      const ValueDecl *Path = AP.getAsValueDecl();
+      if (Path == LifetimeEndsVD)
         CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
             BL->getID(), LifetimeEnds.getTriggerStmt()->getEndLoc()));
+    }
+  }
+}
+
+void FactsGenerator::handleTemporaryDtor(
+    const CFGTemporaryDtor &TemporaryDtor) {
+  const CXXBindTemporaryExpr *ExpiringBTE =
+      TemporaryDtor.getBindTemporaryExpr();
+  if (!ExpiringBTE)
+    return;
+  // Iterate through all loans to see if any expire.
+  for (const auto *Loan : FactMgr.getLoanMgr().getLoans()) {
+    if (const auto *PL = dyn_cast<PathLoan>(Loan)) {
+      // Check if the loan is for a temporary materialization and if that
+      // storage location is the one being destructed.
+      const AccessPath &AP = PL->getAccessPath();
+      const MaterializeTemporaryExpr *Path = AP.getAsMaterializeTemporaryExpr();
+      if (!Path)
+        continue;
+      if (ExpiringBTE == getChildBinding(Path)) {
+        CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
+            PL->getID(), TemporaryDtor.getBindTemporaryExpr()->getEndLoc()));
+      }
     }
   }
 }
