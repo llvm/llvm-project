@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/XRay/FDRRecords.h"
 
-namespace llvm {
-namespace xray {
+using namespace llvm;
+using namespace llvm::xray;
 
 Error RecordInitializer::visit(BufferExtents &R) {
   if (!E.isValidOffsetForDataOfSize(OffsetPtr, sizeof(uint64_t)))
@@ -426,6 +426,3 @@ Error RecordInitializer::visit(FunctionRecord &R) {
   assert(FunctionRecord::kFunctionRecordSize == (OffsetPtr - BeginOffset));
   return Error::success();
 }
-
-} // namespace xray
-} // namespace llvm

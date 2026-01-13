@@ -4,8 +4,10 @@ abseil-duration-division
 ========================
 
 ``absl::Duration`` arithmetic works like it does with integers. That means that
-division of two ``absl::Duration`` objects returns an ``int64`` with any fractional
-component truncated toward 0. See `this link <https://github.com/abseil/abseil-cpp/blob/29ff6d4860070bf8fcbd39c8805d0c32d56628a3/absl/time/time.h#L137>`_ for more information on arithmetic with ``absl::Duration``.
+division of two ``absl::Duration`` objects returns an ``int64`` with any
+fractional component truncated toward 0.
+See `this link <https://github.com/abseil/abseil-cpp/blob/29ff6d4860070bf8fcbd39c8805d0c32d56628a3/absl/time/time.h#L137>`_
+for more information on arithmetic with ``absl::Duration``.
 
 For example:
 

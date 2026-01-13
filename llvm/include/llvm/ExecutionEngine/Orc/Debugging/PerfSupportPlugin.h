@@ -32,7 +32,7 @@ public:
                     ExecutorAddr RegisterPerfEndAddr,
                     ExecutorAddr RegisterPerfImplAddr, bool EmitDebugInfo,
                     bool EmitUnwindInfo);
-  ~PerfSupportPlugin();
+  ~PerfSupportPlugin() override;
 
   void modifyPassConfig(MaterializationResponsibility &MR,
                         jitlink::LinkGraph &G,

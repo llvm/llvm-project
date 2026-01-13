@@ -1,0 +1,32 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s  
+
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+
+module {
+
+cir.func @catch_param_inside_catch() {
+  cir.scope {
+    cir.try {
+      cir.yield
+    } catch all {
+      %exception = cir.catch_param : !cir.ptr<!void>
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// CHECK: cir.func @catch_param_inside_catch() {
+// CHECK:   cir.scope {
+// CHECK:     cir.try {
+// CHECK:       cir.yield
+// CHECK:     } catch all {
+// CHECK:       %[[EXCEPTION:.*]] = cir.catch_param : !cir.ptr<!void> 
+// CHECK:       cir.yield
+// CHECK:     }
+// CHECK:   }
+// CHECK:   cir.return
+// CHECK: }
+
+}

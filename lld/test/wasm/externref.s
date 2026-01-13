@@ -35,7 +35,7 @@ _start:
 # CHECK-NEXT:        Mutable:         true
 # CHECK-NEXT:        InitExpr:
 # CHECK-NEXT:          Opcode:          I32_CONST
-# CHECK-NEXT:          Value:           66560
+# CHECK-NEXT:          Value:           65536
 # CHECK-NEXT:      - Index:           1
 # CHECK-NEXT:        Type:            EXTERNREF
 # CHECK-NEXT:        Mutable:         true

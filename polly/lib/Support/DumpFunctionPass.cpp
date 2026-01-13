@@ -13,7 +13,6 @@
 #include "polly/Support/DumpFunctionPass.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassInstrumentation.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -82,50 +81,10 @@ static void runDumpFunction(llvm::Function &F, StringRef Suffix) {
   Out->keep();
   LLVM_DEBUG(dbgs() << "Dump file " << Dumpfile << " written successfully\n");
 }
-
-class DumpFunctionWrapperPass final : public FunctionPass {
-private:
-  DumpFunctionWrapperPass(const DumpFunctionWrapperPass &) = delete;
-  const DumpFunctionWrapperPass &
-  operator=(const DumpFunctionWrapperPass &) = delete;
-
-  std::string Suffix;
-
-public:
-  static char ID;
-
-  explicit DumpFunctionWrapperPass() : FunctionPass(ID), Suffix("-dump") {}
-
-  explicit DumpFunctionWrapperPass(std::string Suffix)
-      : FunctionPass(ID), Suffix(std::move(Suffix)) {}
-
-  /// @name FunctionPass interface
-  //@{
-  void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-  }
-
-  bool runOnFunction(llvm::Function &F) override {
-    runDumpFunction(F, Suffix);
-    return false;
-  }
-  //@}
-};
-
-char DumpFunctionWrapperPass::ID;
 } // namespace
-
-FunctionPass *polly::createDumpFunctionWrapperPass(std::string Suffix) {
-  return new DumpFunctionWrapperPass(std::move(Suffix));
-}
 
 llvm::PreservedAnalyses DumpFunctionPass::run(Function &F,
                                               FunctionAnalysisManager &AM) {
   runDumpFunction(F, Suffix);
   return PreservedAnalyses::all();
 }
-
-INITIALIZE_PASS_BEGIN(DumpFunctionWrapperPass, "polly-dump-function",
-                      "Polly - Dump Function", false, false)
-INITIALIZE_PASS_END(DumpFunctionWrapperPass, "polly-dump-function",
-                    "Polly - Dump Function", false, false)

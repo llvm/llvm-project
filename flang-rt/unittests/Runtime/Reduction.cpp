@@ -672,3 +672,19 @@ TEST(Reductions, ReduceInt4Dim) {
   EXPECT_EQ(*sums.ZeroBasedIndexedElement<std::int32_t>(1), 6);
   sums.Destroy();
 }
+
+TEST(Reductions, InfSums) {
+  float inf{1.0f / 0.0f};
+  auto inf0{MakeArray<TypeCategory::Real, 4>(
+      std::vector<int>{2, 3}, std::vector<float>{inf, 0.0f})};
+  auto t1{RTNAME(SumReal4)(*inf0, __FILE__, __LINE__)};
+  EXPECT_EQ(t1, inf) << t1;
+  auto infMinusInf{MakeArray<TypeCategory::Real, 4>(
+      std::vector<int>{2, 3}, std::vector<float>{inf, -inf})};
+  auto t2{RTNAME(SumReal4)(*infMinusInf, __FILE__, __LINE__)};
+  EXPECT_NE(t2, t2) << t2;
+  auto minusInfInf{MakeArray<TypeCategory::Real, 4>(
+      std::vector<int>{2, 3}, std::vector<float>{-inf, inf})};
+  auto t3{RTNAME(SumReal4)(*infMinusInf, __FILE__, __LINE__)};
+  EXPECT_NE(t3, t3) << t3;
+}

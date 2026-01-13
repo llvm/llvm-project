@@ -246,8 +246,7 @@ SparcFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   }
 }
 
-static bool LLVM_ATTRIBUTE_UNUSED verifyLeafProcRegUse(MachineRegisterInfo *MRI)
-{
+[[maybe_unused]] static bool verifyLeafProcRegUse(MachineRegisterInfo *MRI) {
 
   for (unsigned reg = SP::I0; reg <= SP::I7; ++reg)
     if (MRI->isPhysRegUsed(reg))

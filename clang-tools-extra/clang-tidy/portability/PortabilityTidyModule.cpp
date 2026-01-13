@@ -8,7 +8,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "AvoidPragmaOnceCheck.h"
 #include "RestrictSystemIncludesCheck.h"
 #include "SIMDIntrinsicsCheck.h"
@@ -17,6 +16,7 @@
 
 namespace clang::tidy {
 namespace portability {
+namespace {
 
 class PortabilityModule : public ClangTidyModule {
 public:
@@ -33,6 +33,8 @@ public:
         "portability-template-virtual-member-function");
   }
 };
+
+} // namespace
 
 // Register the PortabilityModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<PortabilityModule>

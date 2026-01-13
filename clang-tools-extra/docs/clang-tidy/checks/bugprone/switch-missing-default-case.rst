@@ -9,8 +9,8 @@ on covering cases with non-enums where the compiler may not issue warnings.
 Switch statements without a default case can lead to unexpected
 behavior and incomplete handling of all possible cases. When a switch statement
 lacks a default case, if a value is encountered that does not match any of the
-specified cases, the program will continue execution without any defined
-behavior or handling.
+specified cases, the switch statement will do nothing and the program will
+continue execution without handling the value.
 
 This check helps identify switch statements that are missing a default case,
 allowing developers to ensure that all possible cases are handled properly.
@@ -51,6 +51,6 @@ Example:
    on non-enum types where the compiler warnings may not be present.
 
 .. seealso::
-   The `CppCoreGuideline ES.79 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Res-default>`_
+   The `CppCoreGuideline ES.79 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#res-default>`_
    provide guidelines on switch statements, including the recommendation to
    always provide a default case.

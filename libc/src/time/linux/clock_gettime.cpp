@@ -15,8 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 // TODO(michaelrj): Move this into time/linux with the other syscalls.
-LLVM_LIBC_FUNCTION(int, clock_gettime,
-                   (clockid_t clockid, struct timespec *ts)) {
+LLVM_LIBC_FUNCTION(int, clock_gettime, (clockid_t clockid, timespec *ts)) {
   auto result = internal::clock_gettime(clockid, ts);
 
   // A negative return value indicates an error with the magnitude of the

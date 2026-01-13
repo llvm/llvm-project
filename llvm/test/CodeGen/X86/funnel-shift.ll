@@ -262,9 +262,9 @@ define i32 @fshl_i32_const_overshift(i32 %x, i32 %y) nounwind {
 define i64 @fshl_i64_const_overshift(i64 %x, i64 %y) nounwind {
 ; X86-SSE2-LABEL: fshl_i64_const_overshift:
 ; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-SSE2-NEXT:    shldl $9, %ecx, %edx
 ; X86-SSE2-NEXT:    shrdl $23, %ecx, %eax
 ; X86-SSE2-NEXT:    retl
@@ -574,9 +574,9 @@ define <4 x i32> @fshl_v4i32_undef1_cst(<4 x i32> %a0) nounwind {
 ; X86-SSE2-LABEL: fshl_v4i32_undef1_cst:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [512,1024,2048,4096]
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1 # [1024,u,4096,u]
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X86-SSE2-NEXT:    retl
@@ -746,9 +746,9 @@ define <4 x i32> @fshr_v4i32_undef1_cst(<4 x i32> %a0) nounwind {
 ; X86-SSE2-LABEL: fshr_v4i32_undef1_cst:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [8388608,4194304,2097152,1048576]
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1 # [4194304,u,1048576,u]
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X86-SSE2-NEXT:    retl
@@ -1004,9 +1004,9 @@ define i32 @fshr_i32_const_overshift(i32 %x, i32 %y) nounwind {
 define i64 @fshr_i64_const_overshift(i64 %x, i64 %y) nounwind {
 ; X86-SSE2-LABEL: fshr_i64_const_overshift:
 ; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    shrdl $9, %ecx, %eax
 ; X86-SSE2-NEXT:    shldl $23, %ecx, %edx
 ; X86-SSE2-NEXT:    retl

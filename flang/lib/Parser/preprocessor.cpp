@@ -43,6 +43,9 @@ Definition::Definition(const std::string &predefined, AllSources &sources)
       replacement_{
           predefined, sources.AddCompilerInsertion(predefined).start()} {}
 
+Definition::Definition(const TokenSequence &repl)
+    : isPredefined_{true}, replacement_{repl} {}
+
 bool Definition::set_isDisabled(bool disable) {
   bool was{isDisabled_};
   isDisabled_ = disable;
@@ -371,40 +374,66 @@ TokenSequence Preprocessor::TokenizeMacroBody(const std::string &str) {
   Provenance provenance{allSources_.AddCompilerInsertion(str).start()};
   auto end{str.size()};
   for (std::string::size_type at{0}; at < end;) {
-    // Alternate between tokens that are identifiers (and therefore subject
-    // to argument replacement) and those that are not.
-    auto start{str.find_first_of(idChars, at)};
-    if (start == str.npos) {
-      tokens.Put(str.substr(at), provenance + at);
-      break;
-    } else if (start > at) {
-      tokens.Put(str.substr(at, start - at), provenance + at);
+    char ch{str.at(at)};
+    if (IsWhiteSpace(ch)) {
+      ++at;
+      continue;
     }
-    at = str.find_first_not_of(idChars, start + 1);
-    if (at == str.npos) {
+    std::string::size_type start{at};
+    if (IsLegalIdentifierStart(ch)) {
+      for (++at; at < end && IsLegalInIdentifier(str.at(at)); ++at) {
+      }
+    } else if (IsDecimalDigit(ch) || ch == '.') {
+      for (++at; at < end; ++at) {
+        ch = str.at(at);
+        if (!IsDecimalDigit(ch) && ch != '.') {
+          break;
+        }
+      }
+      if (at < end) {
+        ch = ToUpperCaseLetter(str.at(at));
+        if (ch == 'E' || ch == 'D' || ch == 'Q') {
+          if (++at < end) {
+            ch = str.at(at);
+            if (ch == '+' || ch == '-') {
+              ++at;
+            }
+            for (; at < end && IsDecimalDigit(str.at(at)); ++at) {
+            }
+          }
+        }
+      }
+    } else if (ch == '\'' || ch == '"') {
+      for (++at; at < end && str.at(at) != ch; ++at) {
+      }
+      if (at < end) {
+        ++at;
+      }
+    } else {
+      ++at; // single-character token
+    }
+    if (at >= end || at == str.npos) {
       tokens.Put(str.substr(start), provenance + start);
       break;
-    } else {
-      tokens.Put(str.substr(start, at - start), provenance + start);
     }
+    tokens.Put(str.substr(start, at - start), provenance + start);
   }
   return tokens;
 }
 
 void Preprocessor::Define(const std::string &macro, const std::string &value) {
+  TokenSequence rhs{TokenizeMacroBody(value)};
   if (auto lhs{TokenizeMacroNameAndArgs(macro)}) {
     // function-like macro
     CharBlock macroName{SaveTokenAsName(lhs->front())};
     auto iter{lhs->begin()};
     ++iter;
     std::vector<std::string> argNames{iter, lhs->end()};
-    auto rhs{TokenizeMacroBody(value)};
     definitions_.emplace(std::make_pair(macroName,
         Definition{
             argNames, rhs, 0, rhs.SizeInTokens(), /*isVariadic=*/false}));
   } else { // keyword macro
-    definitions_.emplace(
-        SaveTokenAsName(macro), Definition{value, allSources_});
+    definitions_.emplace(SaveTokenAsName(macro), Definition{rhs});
   }
 }
 

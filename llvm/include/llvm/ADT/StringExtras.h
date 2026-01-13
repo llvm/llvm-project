@@ -354,11 +354,6 @@ inline std::string toString(const APSInt &I, unsigned Radix) {
   return toString(I, Radix, I.isSigned());
 }
 
-/// StrInStrNoCase - Portable version of strcasestr.  Locates the first
-/// occurrence of string 's1' in string 's2', ignoring case.  Returns
-/// the offset of s2 in s1 or npos if s2 cannot be found.
-LLVM_ABI StringRef::size_type StrInStrNoCase(StringRef s1, StringRef s2);
-
 /// getToken - This function extracts one token from source, ignoring any
 /// leading characters that appear in the Delimiters string, and ending the
 /// token at any of the characters that appear in the Delimiters string.  If
@@ -529,16 +524,19 @@ inline std::string join_items(Sep Separator, Args &&... Items) {
 class ListSeparator {
   bool First = true;
   StringRef Separator;
+  StringRef Prefix;
 
 public:
-  ListSeparator(StringRef Separator = ", ") : Separator(Separator) {}
+  ListSeparator(StringRef Separator = ", ", StringRef Prefix = "")
+      : Separator(Separator), Prefix(Prefix) {}
   operator StringRef() {
     if (First) {
       First = false;
-      return {};
+      return Prefix;
     }
     return Separator;
   }
+  bool unused() { return First; }
 };
 
 /// A forward iterator over partitions of string over a separator.

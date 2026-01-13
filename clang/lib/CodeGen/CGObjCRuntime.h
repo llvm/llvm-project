@@ -117,7 +117,8 @@ public:
   virtual ~CGObjCRuntime();
 
   std::string getSymbolNameForMethod(const ObjCMethodDecl *method,
-                                     bool includeCategoryName = true);
+                                     bool includeCategoryName = true,
+                                     bool includePrefixByte = true);
 
   /// Generate the function required to register all Objective-C components in
   /// this compilation unit with the runtime library.
@@ -225,6 +226,12 @@ public:
   virtual llvm::Function *GenerateMethod(const ObjCMethodDecl *OMD,
                                          const ObjCContainerDecl *CD) = 0;
 
+  /// Generates precondition checks for direct Objective-C Methods.
+  /// This includes [self self] for class methods and nil checks.
+  virtual void GenerateDirectMethodsPreconditionCheck(
+      CodeGenFunction &CGF, llvm::Function *Fn, const ObjCMethodDecl *OMD,
+      const ObjCContainerDecl *CD) = 0;
+
   /// Generates prologue for direct Objective-C Methods.
   virtual void GenerateDirectMethodPrologue(CodeGenFunction &CGF,
                                             llvm::Function *Fn,
@@ -322,10 +329,12 @@ public:
   MessageSendInfo getMessageSendInfo(const ObjCMethodDecl *method,
                                      QualType resultType,
                                      CallArgList &callArgs);
+
   bool canMessageReceiverBeNull(CodeGenFunction &CGF,
                                 const ObjCMethodDecl *method, bool isSuper,
                                 const ObjCInterfaceDecl *classReceiver,
                                 llvm::Value *receiver);
+
   static bool isWeakLinkedClass(const ObjCInterfaceDecl *cls);
 
   /// Destroy the callee-destroyed arguments of the given method,

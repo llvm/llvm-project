@@ -55,7 +55,7 @@ bb3:
 ; CHECK-LABEL: bb3
 ; CHECK: %tmp = phi i32 [ 1, %NodeBlock ], [ 0, %bb2 ], [ 1, %LeafBlock3 ]
   %tmp = phi i32 [ 1, %bb1 ], [ 0, %bb2 ], [ 1, %bb1 ], [ 1, %bb1 ]
-; CHECK-NEXT: %tmp2 = phi i32 [ 2, %NodeBlock ], [ 5, %bb2 ], [ 2, %LeafBlock3 ]
+; CHECK-NEXT: %tmp2 = phi i32 [ 2, %NodeBlock ], [ 2, %LeafBlock3 ], [ 5, %bb2 ]
   %tmp2 = phi i32 [ 2, %bb1 ], [ 2, %bb1 ], [ 5, %bb2 ], [ 2, %bb1 ]
   br label %exit
 
@@ -293,7 +293,7 @@ cleanup10:
 
 for.inc:
 ; CHECK: for.inc:
-; CHECK-NEXT: phi i16 [ 0, %cleanup10.thread ], [ undef, %cleanup10 ]
+; CHECK-NEXT: phi i16 [ undef, %cleanup10 ], [ 0, %cleanup10.thread ]
 %0 = phi i16 [ undef, %cleanup10 ], [ 0, %cleanup10.thread ], [ undef, %cleanup10 ]
   unreachable
 

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes -std=c++11-or-later %s bugprone-incorrect-enable-shared-from-this %t
+// RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-incorrect-enable-shared-from-this %t
 
 // NOLINTBEGIN
 namespace std {
@@ -8,15 +8,15 @@ namespace std {
 
 class BadClassExample : std::enable_shared_from_this<BadClassExample> {};
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'BadClassExample' is not publicly inheriting from 'std::enable_shared_from_this', which will cause unintended behaviour when using 'shared_from_this'; make the inheritance public [bugprone-incorrect-enable-shared-from-this]
-// CHECK-FIXES: public std::enable_shared_from_this<BadClassExample>
+// CHECK-FIXES: class BadClassExample : public std::enable_shared_from_this<BadClassExample> {};
 
 class BadClass2Example : private std::enable_shared_from_this<BadClass2Example> {};
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'BadClass2Example' is not publicly inheriting from 'std::enable_shared_from_this', which will cause unintended behaviour when using 'shared_from_this'; make the inheritance public [bugprone-incorrect-enable-shared-from-this]
-// CHECK-FIXES: public std::enable_shared_from_this<BadClass2Example>
+// CHECK-FIXES: class BadClass2Example : public std::enable_shared_from_this<BadClass2Example> {};
 
 struct BadStructExample : private std::enable_shared_from_this<BadStructExample> {};
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: 'BadStructExample' is not publicly inheriting from 'std::enable_shared_from_this', which will cause unintended behaviour when using 'shared_from_this'; make the inheritance public [bugprone-incorrect-enable-shared-from-this]
-// CHECK-FIXES: public std::enable_shared_from_this<BadStructExample>
+// CHECK-FIXES: struct BadStructExample : public std::enable_shared_from_this<BadStructExample> {};
 
 class GoodClassExample : public std::enable_shared_from_this<GoodClassExample> {};
 
@@ -29,15 +29,15 @@ class dummy_class2 {};
 
 class BadMultiClassExample : std::enable_shared_from_this<BadMultiClassExample>, dummy_class1 {};
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'BadMultiClassExample' is not publicly inheriting from 'std::enable_shared_from_this', which will cause unintended behaviour when using 'shared_from_this'; make the inheritance public [bugprone-incorrect-enable-shared-from-this]
-// CHECK-FIXES: public std::enable_shared_from_this<BadMultiClassExample>, dummy_class1
+// CHECK-FIXES: class BadMultiClassExample : public std::enable_shared_from_this<BadMultiClassExample>, dummy_class1 {};
 
 class BadMultiClass2Example : dummy_class1, std::enable_shared_from_this<BadMultiClass2Example>, dummy_class2 {};
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'BadMultiClass2Example' is not publicly inheriting from 'std::enable_shared_from_this', which will cause unintended behaviour when using 'shared_from_this'; make the inheritance public [bugprone-incorrect-enable-shared-from-this]
-// CHECK-FIXES: dummy_class1, public std::enable_shared_from_this<BadMultiClass2Example>, dummy_class2
+// CHECK-FIXES: class BadMultiClass2Example : dummy_class1, public std::enable_shared_from_this<BadMultiClass2Example>, dummy_class2 {};
 
 class BadMultiClass3Example : dummy_class1, dummy_class2, std::enable_shared_from_this<BadMultiClass3Example> {};
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'BadMultiClass3Example' is not publicly inheriting from 'std::enable_shared_from_this', which will cause unintended behaviour when using 'shared_from_this'; make the inheritance public [bugprone-incorrect-enable-shared-from-this]
-// CHECK-FIXES: dummy_class1, dummy_class2, public std::enable_shared_from_this<BadMultiClass3Example>
+// CHECK-FIXES: class BadMultiClass3Example : dummy_class1, dummy_class2, public std::enable_shared_from_this<BadMultiClass3Example> {};
 
 class ClassBase : public std::enable_shared_from_this<ClassBase> {};
 class PrivateInheritClassBase : private ClassBase {};

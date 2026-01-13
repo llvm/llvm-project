@@ -315,4 +315,11 @@ template <int, int = 0> KW SmearedNTTPDefArgs;
 // PRINT-CXX-NEXT: template <int = 0, int> [[KW]] SmearedNTTPDefArgs;
 template <int = 0, int> KW SmearedNTTPDefArgs;
 
+// PRINT-CXX-LABEL: Tpl
+template <int> KW Tpl;
+// PRINT-CXX-NEXT: template <template <int> class, template <int> class = Tpl> [[KW]] SmearedTplDefArgs;
+template <template <int> class, template <int> class = Tpl> KW SmearedTplDefArgs;
+// PRINT-CXX-NEXT: template <template <int> class = Tpl, template <int> class> [[KW]] SmearedTplDefArgs;
+template <template <int> class = Tpl, template <int> class> KW SmearedTplDefArgs;
+
 #endif

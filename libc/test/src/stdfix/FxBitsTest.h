@@ -8,7 +8,6 @@
 
 #include "test/UnitTest/Test.h"
 
-#include "include/llvm-libc-types/stdfix-types.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/fixed_point/fx_bits.h"
 

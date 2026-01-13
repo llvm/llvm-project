@@ -322,15 +322,17 @@ void MachineInstr::setExtraInfo(MachineFunction &MF,
                                 MCSymbol *PreInstrSymbol,
                                 MCSymbol *PostInstrSymbol,
                                 MDNode *HeapAllocMarker, MDNode *PCSections,
-                                uint32_t CFIType, MDNode *MMRAs) {
+                                uint32_t CFIType, MDNode *MMRAs, Value *DS) {
   bool HasPreInstrSymbol = PreInstrSymbol != nullptr;
   bool HasPostInstrSymbol = PostInstrSymbol != nullptr;
   bool HasHeapAllocMarker = HeapAllocMarker != nullptr;
   bool HasPCSections = PCSections != nullptr;
   bool HasCFIType = CFIType != 0;
   bool HasMMRAs = MMRAs != nullptr;
+  bool HasDS = DS != nullptr;
   int NumPointers = MMOs.size() + HasPreInstrSymbol + HasPostInstrSymbol +
-                    HasHeapAllocMarker + HasPCSections + HasCFIType + HasMMRAs;
+                    HasHeapAllocMarker + HasPCSections + HasCFIType + HasMMRAs +
+                    HasDS;
 
   // Drop all extra info if there is none.
   if (NumPointers <= 0) {
@@ -343,10 +345,10 @@ void MachineInstr::setExtraInfo(MachineFunction &MF,
   // 32-bit pointers.
   // FIXME: Maybe we should make the symbols in the extra info mutable?
   else if (NumPointers > 1 || HasMMRAs || HasHeapAllocMarker || HasPCSections ||
-           HasCFIType) {
+           HasCFIType || HasDS) {
     Info.set<EIIK_OutOfLine>(
         MF.createMIExtraInfo(MMOs, PreInstrSymbol, PostInstrSymbol,
-                             HeapAllocMarker, PCSections, CFIType, MMRAs));
+                             HeapAllocMarker, PCSections, CFIType, MMRAs, DS));
     return;
   }
 
@@ -365,7 +367,7 @@ void MachineInstr::dropMemRefs(MachineFunction &MF) {
 
   setExtraInfo(MF, {}, getPreInstrSymbol(), getPostInstrSymbol(),
                getHeapAllocMarker(), getPCSections(), getCFIType(),
-               getMMRAMetadata());
+               getMMRAMetadata(), getDeactivationSymbol());
 }
 
 void MachineInstr::setMemRefs(MachineFunction &MF,
@@ -377,7 +379,7 @@ void MachineInstr::setMemRefs(MachineFunction &MF,
 
   setExtraInfo(MF, MMOs, getPreInstrSymbol(), getPostInstrSymbol(),
                getHeapAllocMarker(), getPCSections(), getCFIType(),
-               getMMRAMetadata());
+               getMMRAMetadata(), getDeactivationSymbol());
 }
 
 void MachineInstr::addMemOperand(MachineFunction &MF,
@@ -488,7 +490,7 @@ void MachineInstr::setPreInstrSymbol(MachineFunction &MF, MCSymbol *Symbol) {
 
   setExtraInfo(MF, memoperands(), Symbol, getPostInstrSymbol(),
                getHeapAllocMarker(), getPCSections(), getCFIType(),
-               getMMRAMetadata());
+               getMMRAMetadata(), getDeactivationSymbol());
 }
 
 void MachineInstr::setPostInstrSymbol(MachineFunction &MF, MCSymbol *Symbol) {
@@ -504,7 +506,7 @@ void MachineInstr::setPostInstrSymbol(MachineFunction &MF, MCSymbol *Symbol) {
 
   setExtraInfo(MF, memoperands(), getPreInstrSymbol(), Symbol,
                getHeapAllocMarker(), getPCSections(), getCFIType(),
-               getMMRAMetadata());
+               getMMRAMetadata(), getDeactivationSymbol());
 }
 
 void MachineInstr::setHeapAllocMarker(MachineFunction &MF, MDNode *Marker) {
@@ -513,7 +515,8 @@ void MachineInstr::setHeapAllocMarker(MachineFunction &MF, MDNode *Marker) {
     return;
 
   setExtraInfo(MF, memoperands(), getPreInstrSymbol(), getPostInstrSymbol(),
-               Marker, getPCSections(), getCFIType(), getMMRAMetadata());
+               Marker, getPCSections(), getCFIType(), getMMRAMetadata(),
+               getDeactivationSymbol());
 }
 
 void MachineInstr::setPCSections(MachineFunction &MF, MDNode *PCSections) {
@@ -523,7 +526,7 @@ void MachineInstr::setPCSections(MachineFunction &MF, MDNode *PCSections) {
 
   setExtraInfo(MF, memoperands(), getPreInstrSymbol(), getPostInstrSymbol(),
                getHeapAllocMarker(), PCSections, getCFIType(),
-               getMMRAMetadata());
+               getMMRAMetadata(), getDeactivationSymbol());
 }
 
 void MachineInstr::setCFIType(MachineFunction &MF, uint32_t Type) {
@@ -532,7 +535,8 @@ void MachineInstr::setCFIType(MachineFunction &MF, uint32_t Type) {
     return;
 
   setExtraInfo(MF, memoperands(), getPreInstrSymbol(), getPostInstrSymbol(),
-               getHeapAllocMarker(), getPCSections(), Type, getMMRAMetadata());
+               getHeapAllocMarker(), getPCSections(), Type, getMMRAMetadata(),
+               getDeactivationSymbol());
 }
 
 void MachineInstr::setMMRAMetadata(MachineFunction &MF, MDNode *MMRAs) {
@@ -541,7 +545,18 @@ void MachineInstr::setMMRAMetadata(MachineFunction &MF, MDNode *MMRAs) {
     return;
 
   setExtraInfo(MF, memoperands(), getPreInstrSymbol(), getPostInstrSymbol(),
-               getHeapAllocMarker(), getPCSections(), getCFIType(), MMRAs);
+               getHeapAllocMarker(), getPCSections(), getCFIType(), MMRAs,
+               getDeactivationSymbol());
+}
+
+void MachineInstr::setDeactivationSymbol(MachineFunction &MF, Value *DS) {
+  // Do nothing if old and new symbols are the same.
+  if (DS == getDeactivationSymbol())
+    return;
+
+  setExtraInfo(MF, memoperands(), getPreInstrSymbol(), getPostInstrSymbol(),
+               getHeapAllocMarker(), getPCSections(), getCFIType(),
+               getMMRAMetadata(), DS);
 }
 
 void MachineInstr::cloneInstrSymbols(MachineFunction &MF,
@@ -729,6 +744,8 @@ bool MachineInstr::isIdenticalTo(const MachineInstr &Other,
     return false;
   // Call instructions with different CFI types are not identical.
   if (isCall() && getCFIType() != Other.getCFIType())
+    return false;
+  if (getDeactivationSymbol() != Other.getDeactivationSymbol())
     return false;
 
   return true;
@@ -978,7 +995,7 @@ MachineInstr::getRegClassConstraint(unsigned OpIdx,
   assert(getMF() && "Can't have an MF reference here!");
   // Most opcodes have fixed constraints in their MCInstrDesc.
   if (!isInlineAsm())
-    return TII->getRegClass(getDesc(), OpIdx, TRI);
+    return TII->getRegClass(getDesc(), OpIdx);
 
   if (!getOperand(OpIdx).isReg())
     return nullptr;
@@ -1547,10 +1564,14 @@ bool MachineInstr::mayAlias(BatchAAResults *AA, const MachineInstr &Other,
 
   // Check each pair of memory operands from both instructions, which can't
   // alias only if all pairs won't alias.
-  for (auto *MMOa : memoperands())
-    for (auto *MMOb : Other.memoperands())
+  for (auto *MMOa : memoperands()) {
+    for (auto *MMOb : Other.memoperands()) {
+      if (!MMOa->isStore() && !MMOb->isStore())
+        continue;
       if (MemOperandsHaveAlias(MFI, AA, UseTBAA, MMOa, MMOb))
         return true;
+    }
+  }
 
   return false;
 }
@@ -1990,7 +2011,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   // operands.
   if (MCSymbol *PreInstrSymbol = getPreInstrSymbol()) {
     if (!FirstOp) {
-      FirstOp = false;
       OS << ',';
     }
     OS << " pre-instr-symbol ";
@@ -1998,7 +2018,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
   if (MCSymbol *PostInstrSymbol = getPostInstrSymbol()) {
     if (!FirstOp) {
-      FirstOp = false;
       OS << ',';
     }
     OS << " post-instr-symbol ";
@@ -2006,7 +2025,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
   if (MDNode *HeapAllocMarker = getHeapAllocMarker()) {
     if (!FirstOp) {
-      FirstOp = false;
       OS << ',';
     }
     OS << " heap-alloc-marker ";
@@ -2014,7 +2032,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
   if (MDNode *PCSections = getPCSections()) {
     if (!FirstOp) {
-      FirstOp = false;
       OS << ',';
     }
     OS << " pcsections ";
@@ -2022,7 +2039,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
   if (MDNode *MMRA = getMMRAMetadata()) {
     if (!FirstOp) {
-      FirstOp = false;
       OS << ',';
     }
     OS << " mmra ";
@@ -2033,6 +2049,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
       OS << ',';
     OS << " cfi-type " << CFIType;
   }
+  if (getDeactivationSymbol())
+    OS << ", deactivation-symbol " << getDeactivationSymbol()->getName();
 
   if (DebugInstrNum) {
     if (!FirstOp)

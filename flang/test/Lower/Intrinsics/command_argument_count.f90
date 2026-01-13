@@ -1,6 +1,6 @@
 ! RUN: bbc -emit-fir %s -o - | FileCheck %s
 ! bbc doesn't have a way to set the default kinds so we use flang driver
-! RUN: flang -fc1 -fdefault-integer-8 -emit-fir %s -o - | FileCheck --check-prefixes=CHECK,CHECK-64  %s
+! RUN: %flang_fc1 -fdefault-integer-8 -emit-fir %s -o - | FileCheck --check-prefixes=CHECK,CHECK-64  %s
 
 ! CHECK-LABEL: argument_count_test
 subroutine argument_count_test()

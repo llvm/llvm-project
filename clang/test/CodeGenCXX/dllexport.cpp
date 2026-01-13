@@ -633,8 +633,9 @@ struct __declspec(dllexport) Y {
 };
 
 struct __declspec(dllexport) Z { virtual ~Z() {} };
-// The scalar deleting dtor does not get exported:
-// M32-DAG: define linkonce_odr dso_local x86_thiscallcc ptr @"??_GZ@@UAEPAXI@Z"
+// The deleting dtor does not get exported, but we emit body of vector deleting
+// destructor:
+// M32-DAG: define weak dso_local x86_thiscallcc ptr @"??_EZ@@UAEPAXI@Z"
 
 
 // The user-defined dtor does get exported:
@@ -1130,5 +1131,6 @@ public:
 class __declspec(dllexport) ACE_Service_Object : public ACE_Shared_Object {};
 // Implicit move constructor declaration.
 // MSVC2015-DAG: define weak_odr dso_local dllexport {{.+}}ACE_Service_Object@@Q{{.+}}@$$Q
+// PS-DAG: define weak_odr dllexport void @_ZN18ACE_Service_ObjectC1EOS_
 // The declarations should not be exported.
 // MSVC2013-NOT: define weak_odr dso_local dllexport {{.+}}ACE_Service_Object@@Q{{.+}}@$$Q
