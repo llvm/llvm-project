@@ -15,6 +15,7 @@
 
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64InstrInfo.h"
+#include "AArch64PointerAuth.h"
 #include "AArch64Subtarget.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/Constants.h"
@@ -96,18 +97,6 @@ static bool ShouldSignWithBKey(const Function &F, const AArch64Subtarget &STI) {
   return Key == "b_key";
 }
 
-static bool hasELFSignedGOTHelper(const Function &F,
-                                  const AArch64Subtarget *STI) {
-  if (!STI->getTargetTriple().isOSBinFormatELF())
-    return false;
-  const Module *M = F.getParent();
-  const auto *Flag = mdconst::extract_or_null<ConstantInt>(
-      M->getModuleFlag("ptrauth-elf-got"));
-  if (Flag && Flag->getZExtValue() == 1)
-    return true;
-  return false;
-}
-
 AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
                                          const AArch64Subtarget *STI) {
   // If we already know that the function doesn't have a redzone, set
@@ -116,7 +105,7 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
     HasRedZone = false;
   SignCondition = GetSignReturnAddress(F);
   SignWithBKey = ShouldSignWithBKey(F, *STI);
-  HasELFSignedGOT = hasELFSignedGOTHelper(F, STI);
+  HasELFSignedGOT = AArch64PAuth::hasELFSignedGOT(*F.getParent());
   // TODO: skip functions that have no instrumented allocas for optimization
   IsMTETagged = F.hasFnAttribute(Attribute::SanitizeMemTag);
 

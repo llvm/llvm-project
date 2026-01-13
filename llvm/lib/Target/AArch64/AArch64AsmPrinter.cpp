@@ -14,6 +14,7 @@
 #include "AArch64.h"
 #include "AArch64MCInstLower.h"
 #include "AArch64MachineFunctionInfo.h"
+#include "AArch64PointerAuth.h"
 #include "AArch64RegisterInfo.h"
 #include "AArch64Subtarget.h"
 #include "AArch64TargetObjectFile.h"
@@ -104,6 +105,7 @@ class AArch64AsmPrinter : public AsmPrinter {
   bool EnableImportCallOptimization = false;
   DenseMap<MCSection *, std::vector<std::pair<MCSymbol *, MCSymbol *>>>
       SectionToImportedFunctionCalls;
+  bool IsELFSignedGOT = false;
   unsigned PAuthIFuncNextUniqueID = 1;
 
 public:
@@ -114,6 +116,14 @@ public:
         MCInstLowering(OutContext, *this), FM(*this) {}
 
   StringRef getPassName() const override { return "AArch64 Assembly Printer"; }
+
+  bool doInitialization(Module &M) override {
+    if (AsmPrinter::doInitialization(M))
+      return true;
+
+    IsELFSignedGOT = AArch64PAuth::hasELFSignedGOT(M);
+    return false;
+  }
 
   /// Wrapper for MCInstLowering.lowerOperand() for the
   /// tblgen'erated pseudo lowering.
@@ -243,7 +253,7 @@ public:
 
   void emitAddImm(MCRegister Val, int64_t Addend, MCRegister Tmp);
   void emitAddress(MCRegister Reg, const MCExpr *Expr, MCRegister Tmp,
-                   bool DSOLocal, const MCSubtargetInfo &STI);
+                   bool DSOLocal);
 
   const MCExpr *emitPAuthRelocationAsIRelative(
       const MCExpr *Target, uint64_t Disc, AArch64PACKey::ID KeyID,
@@ -1038,9 +1048,7 @@ void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
     // corresponding R_AARCH64_AUTH_GLOB_DAT dynamic reloc. To avoid that, force
     // all function symbols used in the module to have STT_FUNC type. See
     // https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst#default-signing-schema
-    const auto *PtrAuthELFGOTFlag = mdconst::extract_or_null<ConstantInt>(
-        M.getModuleFlag("ptrauth-elf-got"));
-    if (PtrAuthELFGOTFlag && PtrAuthELFGOTFlag->getZExtValue() == 1)
+    if (AArch64PAuth::hasELFSignedGOT(M))
       for (const GlobalValue &GV : M.global_values())
         if (!GV.use_empty() && isa<Function>(GV) &&
             !GV.getName().starts_with("llvm."))
@@ -2403,8 +2411,7 @@ void AArch64AsmPrinter::emitAddImm(MCRegister Reg, int64_t Addend,
 }
 
 void AArch64AsmPrinter::emitAddress(MCRegister Reg, const MCExpr *Expr,
-                                    MCRegister Tmp, bool DSOLocal,
-                                    const MCSubtargetInfo &STI) {
+                                    MCRegister Tmp, bool DSOLocal) {
   MCValue Val;
   if (!Expr->evaluateAsRelocatable(Val, nullptr))
     report_fatal_error("emitAddress could not evaluate");
@@ -2423,17 +2430,51 @@ void AArch64AsmPrinter::emitAddress(MCRegister Reg, const MCExpr *Expr,
   } else {
     auto *SymRef =
         MCSymbolRefExpr::create(Val.getAddSym(), OutStreamer->getContext());
-    EmitToStreamer(
-        MCInstBuilder(AArch64::ADRP)
-            .addReg(Reg)
-            .addExpr(MCSpecifierExpr::create(SymRef, AArch64::S_GOT_PAGE,
-                                             OutStreamer->getContext())));
-    EmitToStreamer(
-        MCInstBuilder(AArch64::LDRXui)
-            .addReg(Reg)
-            .addReg(Reg)
-            .addExpr(MCSpecifierExpr::create(SymRef, AArch64::S_GOT_LO12,
-                                             OutStreamer->getContext())));
+    if (IsELFSignedGOT) {
+      EmitToStreamer(
+          MCInstBuilder(AArch64::ADRP)
+              .addReg(Tmp)
+              .addExpr(MCSpecifierExpr::create(SymRef, AArch64::S_GOT_AUTH_PAGE,
+                                               OutStreamer->getContext())));
+      EmitToStreamer(
+          MCInstBuilder(AArch64::ADDXri)
+              .addReg(Tmp)
+              .addReg(Tmp)
+              .addExpr(MCSpecifierExpr::create(SymRef, AArch64::S_GOT_AUTH_LO12,
+                                               OutStreamer->getContext()))
+              .addImm(0));
+
+      EmitToStreamer(
+          MCInstBuilder(AArch64::LDRXui).addReg(Reg).addReg(Tmp).addImm(0));
+
+      auto *GV = MMI->getModule()->getNamedGlobal(Val.getAddSym()->getName());
+      assert(GV && GV->getValueType());
+      unsigned AuthOpcode =
+          GV->getValueType()->isFunctionTy() ? AArch64::AUTIA : AArch64::AUTDA;
+
+      EmitToStreamer(
+          MCInstBuilder(AuthOpcode).addReg(Reg).addReg(Reg).addReg(Tmp));
+
+      if (!STI->hasFPAC()) {
+        auto AuthKey = (AuthOpcode == AArch64::AUTIA ? AArch64PACKey::IA
+                                                     : AArch64PACKey::DA);
+
+        emitPtrauthCheckAuthenticatedValue(Reg, Tmp, AuthKey,
+                                           AArch64PAuth::AuthCheckMethod::XPAC);
+      }
+    } else {
+      EmitToStreamer(
+          MCInstBuilder(AArch64::ADRP)
+              .addReg(Reg)
+              .addExpr(MCSpecifierExpr::create(SymRef, AArch64::S_GOT_PAGE,
+                                               OutStreamer->getContext())));
+      EmitToStreamer(
+          MCInstBuilder(AArch64::LDRXui)
+              .addReg(Reg)
+              .addReg(Reg)
+              .addExpr(MCSpecifierExpr::create(SymRef, AArch64::S_GOT_LO12,
+                                               OutStreamer->getContext())));
+    }
     emitAddImm(Reg, Val.getConstant(), Tmp);
   }
 }
@@ -2540,15 +2581,14 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
                                      .addImm(0),
                                  STI);
   } else {
-    emitAddress(AArch64::X0, Target, AArch64::X16, IsDSOLocal, STI);
+    emitAddress(AArch64::X0, Target, AArch64::X16, IsDSOLocal);
   }
   if (HasAddressDiversity) {
     auto *PlacePlusDisc = MCBinaryExpr::createAdd(
         MCSymbolRefExpr::create(Place, OutStreamer->getContext()),
         MCConstantExpr::create(Disc, OutStreamer->getContext()),
         OutStreamer->getContext());
-    emitAddress(AArch64::X1, PlacePlusDisc, AArch64::X16, /*IsDSOLocal=*/true,
-                STI);
+    emitAddress(AArch64::X1, PlacePlusDisc, AArch64::X16, /*IsDSOLocal=*/true);
   } else {
     if (!isUInt<16>(Disc)) {
       OutContext.reportError(SMLoc(), "AArch64 PAC Discriminator '" +
@@ -2715,10 +2755,6 @@ void AArch64AsmPrinter::LowerLOADauthptrstatic(const MachineInstr &MI) {
 
 void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
   const bool IsGOTLoad = MI.getOpcode() == AArch64::LOADgotPAC;
-  const bool IsELFSignedGOT = MI.getParent()
-                                  ->getParent()
-                                  ->getInfo<AArch64FunctionInfo>()
-                                  ->hasELFSignedGOT();
   MachineOperand GAOp = MI.getOperand(0);
   const uint64_t KeyC = MI.getOperand(1).getImm();
   assert(KeyC <= AArch64PACKey::LAST &&

@@ -104,6 +104,9 @@ enum class AuthCheckMethod {
 /// Returns the number of bytes added by checkAuthenticatedRegister.
 unsigned getCheckerSizeInBytes(AuthCheckMethod Method);
 
+/// Returns whether the GOT entries of the module are signed.
+bool hasELFSignedGOT(const Module &M);
+
 } // end namespace AArch64PAuth
 } // end namespace llvm
 
