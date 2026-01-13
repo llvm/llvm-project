@@ -2657,7 +2657,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .Case({NotNull(0),
                    ArgumentCondition(1, WithinRange, Range(1, SizeMax)),
-                   ReturnValueCondition(BO_EQ, ArgNo(0))},
+                   ReturnValueCondition(BO_EQ, ArgNo(0)), NotNull(Ret)},
                   ErrnoMustNotBeChecked, GenericSuccessMsg)
             .Case({NotNull(0),
                    ArgumentCondition(1, WithinRange, SingleValue(0)),

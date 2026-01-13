@@ -321,6 +321,8 @@ namespace std {
     void emplace_back(Args&&... args);
     void pop_back();
 
+    T *data();
+
     iterator insert(const_iterator position, const value_type &val);
     iterator insert(const_iterator position, size_type n,
                     const value_type &val);
