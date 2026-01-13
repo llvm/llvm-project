@@ -74,9 +74,6 @@ struct UseDeviceHostDataHoisting : public OpRewritePattern<acc::HostDataOp> {
 
   LogicalResult matchAndRewrite(acc::HostDataOp op,
                                 PatternRewriter &rewriter) const override {
-
-    // Check if any of the data operands are acc.use_device results
-    bool hasUseDeviceOperand = false;
     SmallVector<Value> usedOperands;
     SmallVector<Value> unusedUseDeviceOperands;
     SmallVector<acc::UseDeviceOp> refToBoxUseDeviceOps;
@@ -85,7 +82,6 @@ struct UseDeviceHostDataHoisting : public OpRewritePattern<acc::HostDataOp> {
     for (Value operand : op.getDataClauseOperands()) {
       if (acc::UseDeviceOp useDeviceOp =
               operand.getDefiningOp<acc::UseDeviceOp>()) {
-        hasUseDeviceOperand = true;
         if (fir::isBoxAddress(useDeviceOp.getVar().getType())) {
           if (!llvm::hasSingleElement(useDeviceOp->getUsers()))
             refToBoxUseDeviceOps.push_back(useDeviceOp);
@@ -130,31 +126,17 @@ struct UseDeviceHostDataHoisting : public OpRewritePattern<acc::HostDataOp> {
       return success();
     }
 
-    bool patternModified = false;
-    if (!refToBoxUseDeviceOps.empty()) {
-      // Handle pointer to box types
-      for (acc::UseDeviceOp useDeviceOp : refToBoxUseDeviceOps) {
-        patternModified =
-            hoistRefToBox(rewriter, useDeviceOp.getResult(), useDeviceOp, op);
-        break; // Only handle one at a time to avoid iterator invalidation
-      }
-      return patternModified ? success() : failure();
-    }
+    // Handle references to box types
+    bool modified = false;
+    for (acc::UseDeviceOp useDeviceOp : refToBoxUseDeviceOps)
+      modified |=
+          hoistRefToBox(rewriter, useDeviceOp.getResult(), useDeviceOp, op);
 
-    if (!boxUseDeviceOps.empty()) {
-      // Handle box types
-      for (acc::UseDeviceOp useDeviceOp : boxUseDeviceOps) {
-        patternModified =
-            hoistBox(rewriter, useDeviceOp.getResult(), useDeviceOp, op);
-        break; // Only handle one at a time to avoid iterator invalidation
-      }
-      return patternModified ? success() : failure();
-    }
+    // Handle box types
+    for (acc::UseDeviceOp useDeviceOp : boxUseDeviceOps)
+      modified |= hoistBox(rewriter, useDeviceOp.getResult(), useDeviceOp, op);
 
-    if (!hasUseDeviceOperand)
-      return failure();
-
-    return patternModified ? success() : failure();
+    return modified ? success() : failure();
   }
 
 private:
