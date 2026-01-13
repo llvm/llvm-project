@@ -610,10 +610,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_CONSTEXPR_SINCE_CXX26
 #  endif
 
-#  ifndef _LIBCPP_WEAK
-#    define _LIBCPP_WEAK __attribute__((__weak__))
-#  endif
-
 // Thread API
 // clang-format off
 #  if _LIBCPP_HAS_THREADS &&                                                                                           \
