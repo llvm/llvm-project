@@ -98,14 +98,14 @@ void UnconditionalVAArgChecker::checkEndFunction(const ReturnStmt *,
 void UnconditionalVAArgChecker::checkBranchCondition(const Stmt *Condition,
                                                      CheckerContext &C) const {
   // After evaluating a branch condition, the analyzer (which examines
-  // execution paths individually) won't be able to conclude that the function
-  // _unconditionally_ uses va_arg() -- so this callback resets the field
-  // HasUnconditionalPath in the state.
+  // execution paths individually) won't be able to find a va_arg() expression
+  // that is _unconditionally_ reached -- so this callback resets the state
+  // trait HasUnconditionalPath.
   // NOTES:
   // 1. This is the right thing to do even if the analyzer sees that _in the
   // current state_ the execution can only continue in one direction. For
   // example, if the variadic function isn't the entrypont, then the parameters
-  // recieved from the caller may guarantee that va_arg() is uses -- but this
+  // recieved from the caller may guarantee that va_arg() is used -- but this
   // does not mean that the function _unconditionally_ uses va_arg().
   // 2. After other kinds of state splits (e.g. EagerlyAssueme, callbacks of
   // StdLibraryFunctions separating different cases for the behavior of a
