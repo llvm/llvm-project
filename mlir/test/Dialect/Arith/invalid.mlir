@@ -74,7 +74,7 @@ func.func @constant_out_of_range() {
 
 func.func @constant_invalid_scalable_1d_vec_initialization() {
 ^bb0:
-  // expected-error@+1 {{'arith.constant' op intializing scalable vectors with elements attribute is not supported unless it's a vector splat}}
+  // expected-error@+1 {{'arith.constant' op initializing scalable vectors with elements attribute is not supported unless it's a vector splat}}
   %c = arith.constant dense<[0, 1]> : vector<[2] x i32>
   return
 }
@@ -83,7 +83,7 @@ func.func @constant_invalid_scalable_1d_vec_initialization() {
 
 func.func @constant_invalid_scalable_2d_vec_initialization() {
 ^bb0:
-  // expected-error@+1 {{'arith.constant' op intializing scalable vectors with elements attribute is not supported unless it's a vector splat}}
+  // expected-error@+1 {{'arith.constant' op initializing scalable vectors with elements attribute is not supported unless it's a vector splat}}
   %c = arith.constant dense<[[3, 3], [1, 1]]> : vector<2 x [2] x i32>
   return
 }

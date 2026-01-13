@@ -717,37 +717,20 @@ Doacross makeDoacross(const parser::OmpDoacross &doa,
   return common::visit(common::visitors{visitSink, visitSource}, doa.u);
 }
 
-Depend make(const parser::OmpClause::Depend &inp,
-            semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::OmpDependClause
-  using wrapped = parser::OmpDependClause;
-  using Variant = decltype(Depend::u);
+Depend makeDepend(const parser::OmpDependClause::TaskDep &inp,
+                  semantics::SemanticsContext &semaCtx) {
+  auto &mods = semantics::OmpGetModifiers(inp);
+  auto *m0 = semantics::OmpGetUniqueModifier<parser::OmpIterator>(mods);
+  auto *m1 =
+      semantics::OmpGetUniqueModifier<parser::OmpTaskDependenceType>(mods);
+  auto &t1 = std::get<parser::OmpObjectList>(inp.t);
+  assert(m1 && "expecting task dependence type");
 
-  auto visitTaskDep = [&](const wrapped::TaskDep &s) -> Variant {
-    auto &mods = semantics::OmpGetModifiers(s);
-    auto *m0 = semantics::OmpGetUniqueModifier<parser::OmpIterator>(mods);
-    auto *m1 =
-        semantics::OmpGetUniqueModifier<parser::OmpTaskDependenceType>(mods);
-    auto &t1 = std::get<parser::OmpObjectList>(s.t);
-    assert(m1 && "expecting task dependence type");
-
-    auto &&maybeIter =
-        m0 ? makeIterator(*m0, semaCtx) : std::optional<Iterator>{};
-    return Depend::TaskDep{{/*DependenceType=*/makeDepType(*m1),
-                            /*Iterator=*/std::move(maybeIter),
-                            /*LocatorList=*/makeObjects(t1, semaCtx)}};
-  };
-
-  return Depend{common::visit( //
-      common::visitors{
-          // Doacross
-          [&](const parser::OmpDoacross &s) -> Variant {
-            return makeDoacross(s, semaCtx);
-          },
-          // Depend::TaskDep
-          visitTaskDep,
-      },
-      inp.v.u)};
+  auto &&maybeIter =
+      m0 ? makeIterator(*m0, semaCtx) : std::optional<Iterator>{};
+  return Depend{{/*DependenceType=*/makeDepType(*m1),
+                 /*Iterator=*/std::move(maybeIter),
+                 /*LocatorList=*/makeObjects(t1, semaCtx)}};
 }
 
 // Depobj: empty
@@ -1701,12 +1684,28 @@ Clause makeClause(const parser::OmpClause &cls,
       common::visitors{
           [&](const parser::OmpClause::Default &s) {
             using DSA = parser::OmpDefaultClause::DataSharingAttribute;
+            using ODS = common::Indirection<parser::OmpDirectiveSpecification>;
             if (std::holds_alternative<DSA>(s.v.u)) {
               return makeClause(llvm::omp::Clause::OMPC_default,
                                 clause::makeDefault(s, semaCtx), cls.source);
-            } else {
+            } else if (std::holds_alternative<ODS>(s.v.u)) {
               return makeClause(llvm::omp::Clause::OMPC_otherwise,
                                 clause::makeOtherwise(s, semaCtx), cls.source);
+            } else {
+              llvm_unreachable("Unexpected alternative");
+            }
+          },
+          [&](const parser::OmpClause::Depend &s) {
+            using TaskDep = parser::OmpDependClause::TaskDep;
+            if (auto *dep = std::get_if<TaskDep>(&s.v.u)) {
+              return makeClause(llvm::omp::Clause::OMPC_depend,
+                                clause::makeDepend(*dep, semaCtx), cls.source);
+            } else if (auto *doa = std::get_if<parser::OmpDoacross>(&s.v.u)) {
+              return makeClause(llvm::omp::Clause::OMPC_doacross,
+                                clause::makeDoacross(*doa, semaCtx),
+                                cls.source);
+            } else {
+              llvm_unreachable("Unexpected alternative");
             }
           },
           [&](auto &&s) {

@@ -680,7 +680,7 @@ genOutlineArrayLit(Fortran::lower::AbstractConverter &converter,
   fir::GlobalOp global = builder.getNamedGlobal(globalName);
   if (!global) {
     // Using a dense attribute for the initial value instead of creating an
-    // intialization body speeds up MLIR/LLVM compilation, but this is not
+    // initialization body speeds up MLIR/LLVM compilation, but this is not
     // always possible.
     if constexpr (T::category == Fortran::common::TypeCategory::Logical ||
                   T::category == Fortran::common::TypeCategory::Integer ||

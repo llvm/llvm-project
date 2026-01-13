@@ -202,10 +202,10 @@ parseCrossTUIndex(StringRef IndexPath) {
     SmallString<32> FilePath(FilePathInIndex);
     llvm::sys::path::native(FilePath, llvm::sys::path::Style::posix);
 
-    bool InsertionOccured;
-    std::tie(std::ignore, InsertionOccured) =
+    bool InsertionOccurred;
+    std::tie(std::ignore, InsertionOccurred) =
         Result.try_emplace(LookupName, FilePath.begin(), FilePath.end());
-    if (!InsertionOccured)
+    if (!InsertionOccurred)
       return llvm::make_error<IndexError>(
           index_error_code::multiple_definitions, IndexPath.str(), LineNo);
 

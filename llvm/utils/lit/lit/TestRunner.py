@@ -1921,14 +1921,6 @@ def applySubstitutions(script, substitutions, conditions={}, recursion_limit=Non
             # seems reasonable.
             ln = _caching_re_compile(a).sub(str(b), escapePercents(ln))
 
-        # TODO(boomanaiden154): Remove when we branch LLVM 22 so people on the
-        # release branch will have sufficient time to migrate.
-        if bool(_caching_re_compile("%T").search(ln)):
-            raise ValueError(
-                "%T is no longer supported. Please create directories with names "
-                "based on %t."
-            )
-
         # Strip the trailing newline and any extra whitespace.
         return ln.strip()
 

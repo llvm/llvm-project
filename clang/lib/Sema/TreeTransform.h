@@ -5365,7 +5365,7 @@ bool TreeTransform<Derived>::PreparePackForExpansion(TemplateArgumentLoc In,
   //   };
   //   TupleWithInt<int>::type y;
   // At this point we will see the `__builtin_dedup_pack<int, int>` with a known
-  // lenght and run `ComputeInfo()` to provide the necessary information to our
+  // length and run `ComputeInfo()` to provide the necessary information to our
   // caller.
   //
   // Note that we may still have situations where builtin is not going to be

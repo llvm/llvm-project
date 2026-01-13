@@ -1021,17 +1021,11 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
                                     mlir::omp::DependClauseOps &result) const {
   auto process = [&](const omp::clause::Depend &clause,
                      const parser::CharBlock &) {
-    using Depend = omp::clause::Depend;
-    if (!std::holds_alternative<Depend::TaskDep>(clause.u)) {
-      TODO(converter.getCurrentLocation(),
-           "DEPEND clause with SINK or SOURCE is not supported yet");
-    }
-    auto &taskDep = std::get<Depend::TaskDep>(clause.u);
-    auto depType = std::get<clause::DependenceType>(taskDep.t);
-    auto &objects = std::get<omp::ObjectList>(taskDep.t);
+    auto depType = std::get<clause::DependenceType>(clause.t);
+    auto &objects = std::get<omp::ObjectList>(clause.t);
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
-    if (std::get<std::optional<omp::clause::Iterator>>(taskDep.t)) {
+    if (std::get<std::optional<omp::clause::Iterator>>(clause.t)) {
       TODO(converter.getCurrentLocation(),
            "Support for iterator modifiers is not implemented yet");
     }

@@ -3235,7 +3235,7 @@ static SDValue performBitcastCombine(SDNode *N,
 
   // bitcast <N x i1>(setcc ...) to concat iN, where N = 32 and 64 (illegal)
   if (NumElts == 32 || NumElts == 64) {
-    // Strategy: We will setcc them seperately in v16i8 -> v16i1
+    // Strategy: We will setcc them separately in v16i8 -> v16i1
     // Bitcast them to i16, extend them to either i32 or i64.
     // Add them together, shifting left 1 by 1.
     SDValue Concat, SetCCVector;

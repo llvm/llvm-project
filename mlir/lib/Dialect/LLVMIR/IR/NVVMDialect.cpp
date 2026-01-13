@@ -4544,6 +4544,8 @@ static void nvvmInferResultRanges(Operation *op, Value result,
   if (auto rangeAttr = op->getAttrOfType<LLVM::ConstantRangeAttr>("range")) {
     setResultRanges(result, {rangeAttr.getLower(), rangeAttr.getUpper(),
                              rangeAttr.getLower(), rangeAttr.getUpper()});
+  } else {
+    setResultRanges(result, IntegerValueRange::getMaxRange(result).getValue());
   }
 }
 
