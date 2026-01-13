@@ -1778,5 +1778,28 @@ TEST_F(LifetimeAnalysisTest, TrackFirstArgument_StdAnyCast) {
   EXPECT_THAT(Origin("r"), HasLoansTo({"a"}, "p1"));
 }
 
+TEST_F(LifetimeAnalysisTest, DerivedToBaseThisArg) {
+  SetupTest(R"(
+    template <typename T>
+    struct OperatorBase {
+      const T& value() const& [[clang::lifetimebound]];
+      const T&& value() const&& [[clang::lifetimebound]];
+    };
+
+    template <typename T>
+    class StatusOr : private OperatorBase<T> {
+      public:
+        using StatusOr::OperatorBase::value;
+    };
+
+    void target() {
+      View view;
+      StatusOr<MyObj> my_obj_or;
+      view = my_obj_or.value();
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("view"), HasLoansTo({"my_obj_or"}, "p1"));
+}
 } // anonymous namespace
 } // namespace clang::lifetimes::internal

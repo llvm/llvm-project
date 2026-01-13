@@ -219,6 +219,8 @@ void FactsGenerator::VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
   case CK_NoOp:
   case CK_ConstructorConversion:
   case CK_UserDefinedConversion:
+  case CK_UncheckedDerivedToBase:
+  case CK_DerivedToBase:
     flow(Dest, SrcList, /*Kill=*/true);
     return;
   case CK_FunctionToPointerDecay:
