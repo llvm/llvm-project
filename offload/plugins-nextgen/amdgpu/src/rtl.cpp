@@ -558,7 +558,7 @@ struct AMDGPUKernelTy : public GenericKernelTy {
 
     ImplicitArgsSize =
         hsa_utils::getImplicitArgsSize(AMDImage.getELFABIVersion());
-    OBDG(OLDT_Module) << "ELFABIVersion: " << AMDImage.getELFABIVersion();
+    DP("ELFABIVersion: %d\n", AMDImage.getELFABIVersion());
 
     // Get additional kernel info read from image
     KernelInfo = AMDImage.getKernelInfo(getName());
@@ -3488,7 +3488,7 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     hsa_status_t Status = hsa_init();
     if (Status != HSA_STATUS_SUCCESS) {
       // Cannot call hsa_success_string.
-      ODBG(OLDT_Init) << "Failed to initialize AMDGPU's HSA library";
+      DP("Failed to initialize AMDGPU's HSA library\n");
       return 0;
     }
 
@@ -3533,7 +3533,7 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     int32_t NumDevices = KernelAgents.size();
     if (NumDevices == 0) {
       // Do not initialize if there are no devices.
-      ODBG(OLDT_Init) << "There are no devices supporting AMDGPU.";
+      DP("There are no devices supporting AMDGPU.\n");
       return 0;
     }
 
