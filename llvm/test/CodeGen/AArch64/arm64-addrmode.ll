@@ -43,6 +43,7 @@ define void @t4(ptr %object) {
 ; CHECK-LABEL: t4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #32768 // =0x8000
+; CHECK-NEXT:    // kill: def $x8 killed $w8
 ; CHECK-NEXT:    ldr xzr, [x0, x8]
 ; CHECK-NEXT:    ret
   %incdec.ptr = getelementptr inbounds i64, ptr %object, i64 4096
@@ -69,6 +70,7 @@ define void @t6(i64 %a, ptr %object) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add x8, x1, x0, lsl #3
 ; CHECK-NEXT:    mov w9, #32768 // =0x8000
+; CHECK-NEXT:    // kill: def $x9 killed $w9
 ; CHECK-NEXT:    ldr xzr, [x8, x9]
 ; CHECK-NEXT:    ret
   %tmp1 = getelementptr inbounds i64, ptr %object, i64 %a
@@ -82,6 +84,7 @@ define void @t7(i64 %a) {
 ; CHECK-LABEL: t7:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #65535 // =0xffff
+; CHECK-NEXT:    // kill: def $x8 killed $w8
 ; CHECK-NEXT:    ldr xzr, [x0, x8]
 ; CHECK-NEXT:    ret
   %1 = add i64 %a, 65535   ;0xffff
@@ -131,6 +134,7 @@ define void @t11(i64 %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #17767 // =0x4567
 ; CHECK-NEXT:    movk w8, #291, lsl #16
+; CHECK-NEXT:    // kill: def $x8 killed $w8
 ; CHECK-NEXT:    ldr xzr, [x0, x8]
 ; CHECK-NEXT:    ret
   %1 = add i64 %a, 19088743   ;0x1234567
@@ -214,8 +218,10 @@ define void @t17(i64 %a) {
 define i8 @LdOffset_i8(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, #253, lsl #12 // =1036288
-; CHECK-NEXT:    ldrb w0, [x8, #3704]
+; CHECK-NEXT:    mov w8, #56952 // =0xde78
+; CHECK-NEXT:    movk w8, #15, lsl #16
+; CHECK-NEXT:    // kill: def $x8 killed $w8
+; CHECK-NEXT:    ldrb w0, [x0, x8]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i8, ptr %a, i64 1039992
   %val = load i8, ptr %arrayidx, align 1
@@ -226,8 +232,10 @@ define i8 @LdOffset_i8(ptr %a)  {
 define i32 @LdOffset_i8_zext32(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i8_zext32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, #253, lsl #12 // =1036288
-; CHECK-NEXT:    ldrb w0, [x8, #3704]
+; CHECK-NEXT:    mov w8, #56952 // =0xde78
+; CHECK-NEXT:    movk w8, #15, lsl #16
+; CHECK-NEXT:    // kill: def $x8 killed $w8
+; CHECK-NEXT:    ldrb w0, [x0, x8]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i8, ptr %a, i64 1039992
   %val = load i8, ptr %arrayidx, align 1
@@ -239,8 +247,10 @@ define i32 @LdOffset_i8_zext32(ptr %a)  {
 define i32 @LdOffset_i8_sext32(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i8_sext32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, #253, lsl #12 // =1036288
-; CHECK-NEXT:    ldrsb w0, [x8, #3704]
+; CHECK-NEXT:    mov w8, #56952 // =0xde78
+; CHECK-NEXT:    movk w8, #15, lsl #16
+; CHECK-NEXT:    // kill: def $x8 killed $w8
+; CHECK-NEXT:    ldrsb w0, [x0, x8]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i8, ptr %a, i64 1039992
   %val = load i8, ptr %arrayidx, align 1
@@ -252,8 +262,11 @@ define i32 @LdOffset_i8_sext32(ptr %a)  {
 define i64 @LdOffset_i8_zext64(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i8_zext64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, #253, lsl #12 // =1036288
-; CHECK-NEXT:    ldrb w0, [x8, #3704]
+; CHECK-NEXT:    mov w8, #56952 // =0xde78
+; CHECK-NEXT:    movk w8, #15, lsl #16
+; CHECK-NEXT:    // kill: def $x8 killed $w8
+; CHECK-NEXT:    ldrb w8, [x0, x8]
+; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i8, ptr %a, i64 1039992
   %val = load i8, ptr %arrayidx, align 1
@@ -265,8 +278,10 @@ define i64 @LdOffset_i8_zext64(ptr %a)  {
 define i64 @LdOffset_i8_sext64(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i8_sext64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, #253, lsl #12 // =1036288
-; CHECK-NEXT:    ldrsb x0, [x8, #3704]
+; CHECK-NEXT:    mov w8, #56952 // =0xde78
+; CHECK-NEXT:    movk w8, #15, lsl #16
+; CHECK-NEXT:    // kill: def $x8 killed $w8
+; CHECK-NEXT:    ldrsb x0, [x0, x8]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i8, ptr %a, i64 1039992
   %val = load i8, ptr %arrayidx, align 1
@@ -278,8 +293,10 @@ define i64 @LdOffset_i8_sext64(ptr %a)  {
 define i16 @LdOffset_i16(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, #506, lsl #12 // =2072576
-; CHECK-NEXT:    ldrh w0, [x8, #7408]
+; CHECK-NEXT:    mov w8, #48368 // =0xbcf0
+; CHECK-NEXT:    movk w8, #31, lsl #16
+; CHECK-NEXT:    // kill: def $x8 killed $w8
+; CHECK-NEXT:    ldrh w0, [x0, x8]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i16, ptr %a, i64 1039992
   %val = load i16, ptr %arrayidx, align 2
@@ -290,8 +307,10 @@ define i16 @LdOffset_i16(ptr %a)  {
 define i32 @LdOffset_i16_zext32(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i16_zext32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, #506, lsl #12 // =2072576
-; CHECK-NEXT:    ldrh w0, [x8, #7408]
+; CHECK-NEXT:    mov w8, #48368 // =0xbcf0
+; CHECK-NEXT:    movk w8, #31, lsl #16
+; CHECK-NEXT:    // kill: def $x8 killed $w8
+; CHECK-NEXT:    ldrh w0, [x0, x8]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i16, ptr %a, i64 1039992
   %val = load i16, ptr %arrayidx, align 2
@@ -303,8 +322,10 @@ define i32 @LdOffset_i16_zext32(ptr %a)  {
 define i32 @LdOffset_i16_sext32(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i16_sext32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, #506, lsl #12 // =2072576
-; CHECK-NEXT:    ldrsh w0, [x8, #7408]
+; CHECK-NEXT:    mov w8, #48368 // =0xbcf0
+; CHECK-NEXT:    movk w8, #31, lsl #16
+; CHECK-NEXT:    // kill: def $x8 killed $w8
+; CHECK-NEXT:    ldrsh w0, [x0, x8]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i16, ptr %a, i64 1039992
   %val = load i16, ptr %arrayidx, align 2
@@ -316,8 +337,11 @@ define i32 @LdOffset_i16_sext32(ptr %a)  {
 define i64 @LdOffset_i16_zext64(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i16_zext64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, #506, lsl #12 // =2072576
-; CHECK-NEXT:    ldrh w0, [x8, #7408]
+; CHECK-NEXT:    mov w8, #48368 // =0xbcf0
+; CHECK-NEXT:    movk w8, #31, lsl #16
+; CHECK-NEXT:    // kill: def $x8 killed $w8
+; CHECK-NEXT:    ldrh w8, [x0, x8]
+; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i16, ptr %a, i64 1039992
   %val = load i16, ptr %arrayidx, align 2
@@ -329,8 +353,10 @@ define i64 @LdOffset_i16_zext64(ptr %a)  {
 define i64 @LdOffset_i16_sext64(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i16_sext64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, #506, lsl #12 // =2072576
-; CHECK-NEXT:    ldrsh x0, [x8, #7408]
+; CHECK-NEXT:    mov w8, #48368 // =0xbcf0
+; CHECK-NEXT:    movk w8, #31, lsl #16
+; CHECK-NEXT:    // kill: def $x8 killed $w8
+; CHECK-NEXT:    ldrsh x0, [x0, x8]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i16, ptr %a, i64 1039992
   %val = load i16, ptr %arrayidx, align 2
@@ -342,8 +368,10 @@ define i64 @LdOffset_i16_sext64(ptr %a)  {
 define i32 @LdOffset_i32(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, #1012, lsl #12 // =4145152
-; CHECK-NEXT:    ldr w0, [x8, #14816]
+; CHECK-NEXT:    mov w8, #31200 // =0x79e0
+; CHECK-NEXT:    movk w8, #63, lsl #16
+; CHECK-NEXT:    // kill: def $x8 killed $w8
+; CHECK-NEXT:    ldr w0, [x0, x8]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 1039992
   %val = load i32, ptr %arrayidx, align 4
@@ -354,8 +382,11 @@ define i32 @LdOffset_i32(ptr %a)  {
 define i64 @LdOffset_i32_zext64(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i32_zext64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, #1012, lsl #12 // =4145152
-; CHECK-NEXT:    ldr w0, [x8, #14816]
+; CHECK-NEXT:    mov w8, #31200 // =0x79e0
+; CHECK-NEXT:    movk w8, #63, lsl #16
+; CHECK-NEXT:    // kill: def $x8 killed $w8
+; CHECK-NEXT:    ldr w8, [x0, x8]
+; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 1039992
   %val = load i32, ptr %arrayidx, align 2
@@ -367,8 +398,10 @@ define i64 @LdOffset_i32_zext64(ptr %a)  {
 define i64 @LdOffset_i32_sext64(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i32_sext64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, #1012, lsl #12 // =4145152
-; CHECK-NEXT:    ldrsw x0, [x8, #14816]
+; CHECK-NEXT:    mov w8, #31200 // =0x79e0
+; CHECK-NEXT:    movk w8, #63, lsl #16
+; CHECK-NEXT:    // kill: def $x8 killed $w8
+; CHECK-NEXT:    ldrsw x0, [x0, x8]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 1039992
   %val = load i32, ptr %arrayidx, align 2
@@ -380,8 +413,10 @@ define i64 @LdOffset_i32_sext64(ptr %a)  {
 define i64 @LdOffset_i64(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, #2024, lsl #12 // =8290304
-; CHECK-NEXT:    ldr x0, [x8, #29632]
+; CHECK-NEXT:    mov w8, #62400 // =0xf3c0
+; CHECK-NEXT:    movk w8, #126, lsl #16
+; CHECK-NEXT:    // kill: def $x8 killed $w8
+; CHECK-NEXT:    ldr x0, [x0, x8]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i64, ptr %a, i64 1039992
   %val = load i64, ptr %arrayidx, align 4
@@ -392,8 +427,10 @@ define i64 @LdOffset_i64(ptr %a)  {
 define <2 x i32> @LdOffset_v2i32(ptr %a)  {
 ; CHECK-LABEL: LdOffset_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, #2024, lsl #12 // =8290304
-; CHECK-NEXT:    ldr d0, [x8, #29632]
+; CHECK-NEXT:    mov w8, #62400 // =0xf3c0
+; CHECK-NEXT:    movk w8, #126, lsl #16
+; CHECK-NEXT:    // kill: def $x8 killed $w8
+; CHECK-NEXT:    ldr d0, [x0, x8]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds <2 x i32>, ptr %a, i64 1039992
   %val = load <2 x i32>, ptr %arrayidx, align 4
@@ -404,8 +441,10 @@ define <2 x i32> @LdOffset_v2i32(ptr %a)  {
 define <2 x i64> @LdOffset_v2i64(ptr %a)  {
 ; CHECK-LABEL: LdOffset_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, #4048, lsl #12 // =16580608
-; CHECK-NEXT:    ldr q0, [x8, #59264]
+; CHECK-NEXT:    mov w8, #59264 // =0xe780
+; CHECK-NEXT:    movk w8, #253, lsl #16
+; CHECK-NEXT:    // kill: def $x8 killed $w8
+; CHECK-NEXT:    ldr q0, [x0, x8]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds <2 x i64>, ptr %a, i64 1039992
   %val = load <2 x i64>, ptr %arrayidx, align 4
@@ -416,8 +455,10 @@ define <2 x i64> @LdOffset_v2i64(ptr %a)  {
 define double @LdOffset_i8_f64(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i8_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, #253, lsl #12 // =1036288
-; CHECK-NEXT:    ldrsb w8, [x8, #3704]
+; CHECK-NEXT:    mov w8, #56952 // =0xde78
+; CHECK-NEXT:    movk w8, #15, lsl #16
+; CHECK-NEXT:    // kill: def $x8 killed $w8
+; CHECK-NEXT:    ldrsb w8, [x0, x8]
 ; CHECK-NEXT:    scvtf d0, w8
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i8, ptr %a, i64 1039992
@@ -430,8 +471,10 @@ define double @LdOffset_i8_f64(ptr %a)  {
 define double @LdOffset_i16_f64(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i16_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, #506, lsl #12 // =2072576
-; CHECK-NEXT:    ldrsh w8, [x8, #7408]
+; CHECK-NEXT:    mov w8, #48368 // =0xbcf0
+; CHECK-NEXT:    movk w8, #31, lsl #16
+; CHECK-NEXT:    // kill: def $x8 killed $w8
+; CHECK-NEXT:    ldrsh w8, [x0, x8]
 ; CHECK-NEXT:    scvtf d0, w8
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i16, ptr %a, i64 1039992
@@ -444,8 +487,10 @@ define double @LdOffset_i16_f64(ptr %a)  {
 define double @LdOffset_i32_f64(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i32_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, #1012, lsl #12 // =4145152
-; CHECK-NEXT:    ldr s0, [x8, #14816]
+; CHECK-NEXT:    mov w8, #31200 // =0x79e0
+; CHECK-NEXT:    movk w8, #63, lsl #16
+; CHECK-NEXT:    // kill: def $x8 killed $w8
+; CHECK-NEXT:    ldr s0, [x0, x8]
 ; CHECK-NEXT:    ucvtf d0, d0
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 1039992
@@ -458,8 +503,10 @@ define double @LdOffset_i32_f64(ptr %a)  {
 define double @LdOffset_i64_f64(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i64_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, #2024, lsl #12 // =8290304
-; CHECK-NEXT:    ldr d0, [x8, #29632]
+; CHECK-NEXT:    mov w8, #62400 // =0xf3c0
+; CHECK-NEXT:    movk w8, #126, lsl #16
+; CHECK-NEXT:    // kill: def $x8 killed $w8
+; CHECK-NEXT:    ldr d0, [x0, x8]
 ; CHECK-NEXT:    scvtf d0, d0
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i64, ptr %a, i64 1039992
@@ -507,6 +554,7 @@ define i32 @LdOffset_i16_odd_offset(ptr nocapture noundef readonly %a)  {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #56953 // =0xde79
 ; CHECK-NEXT:    movk w8, #15, lsl #16
+; CHECK-NEXT:    // kill: def $x8 killed $w8
 ; CHECK-NEXT:    ldrsh w0, [x0, x8]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i8, ptr %a, i64 1039993
@@ -520,6 +568,7 @@ define i8 @LdOffset_i8_movnwi(ptr %a)  {
 ; CHECK-LABEL: LdOffset_i8_movnwi:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #16777215 // =0xffffff
+; CHECK-NEXT:    // kill: def $x8 killed $w8
 ; CHECK-NEXT:    ldrb w0, [x0, x8]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i8, ptr %a, i64 16777215
@@ -533,6 +582,7 @@ define i8 @LdOffset_i8_too_large(ptr %a)  {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    movk w8, #256, lsl #16
+; CHECK-NEXT:    // kill: def $x8 killed $w8
 ; CHECK-NEXT:    ldrb w0, [x0, x8]
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i8, ptr %a, i64 16777217
