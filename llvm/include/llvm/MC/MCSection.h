@@ -619,7 +619,7 @@ public:
   }
 
   Align getAlignmentForObjectFile(uint64_t Size) const;
-  
+
   unsigned getOrdinal() const { return Ordinal; }
   void setOrdinal(unsigned Value) { Ordinal = Value; }
 
