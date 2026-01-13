@@ -443,6 +443,8 @@
 
 #if LLVM_HAS_CPP_ATTRIBUTE(no_unique_address)
 #define LLVM_NO_UNIQUE_ADDRESS [[no_unique_address]]
+#elif LLVM_HAS_CPP_ATTRIBUTE(msvc::no_unique_address)
+#define LLVM_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
 #else
 #define LLVM_NO_UNIQUE_ADDRESS
 #endif
