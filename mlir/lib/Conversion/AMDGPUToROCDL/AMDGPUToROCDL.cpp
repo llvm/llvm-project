@@ -627,17 +627,17 @@ struct LDSBarrierOpLowering : public ConvertOpToLLVMPattern<LDSBarrierOp> {
   }
 };
 
-struct LDSBarrierSignalOpLowering
-    : public ConvertOpToLLVMPattern<LDSBarrierSignalOp> {
-  LDSBarrierSignalOpLowering(const LLVMTypeConverter &converter,
+struct BarrierSignalLDSOpLowering
+    : public ConvertOpToLLVMPattern<BarrierSignalLDSOp> {
+  BarrierSignalLDSOpLowering(const LLVMTypeConverter &converter,
                              Chipset chipset)
-      : ConvertOpToLLVMPattern<LDSBarrierSignalOp>(converter),
+      : ConvertOpToLLVMPattern<BarrierSignalLDSOp>(converter),
         chipset(chipset) {}
 
   Chipset chipset;
 
   LogicalResult
-  matchAndRewrite(LDSBarrierSignalOp op, LDSBarrierSignalOp::Adaptor adaptor,
+  matchAndRewrite(BarrierSignalLDSOp op, BarrierSignalLDSOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
 
@@ -656,15 +656,15 @@ struct LDSBarrierSignalOpLowering
   }
 };
 
-struct LDSBarrierWaitOpLowering
-    : public ConvertOpToLLVMPattern<LDSBarrierWaitOp> {
-  LDSBarrierWaitOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
-      : ConvertOpToLLVMPattern<LDSBarrierWaitOp>(converter), chipset(chipset) {}
+struct BarrierWaitLDSOpLowering
+    : public ConvertOpToLLVMPattern<BarrierWaitLDSOp> {
+  BarrierWaitLDSOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<BarrierWaitLDSOp>(converter), chipset(chipset) {}
 
   Chipset chipset;
 
   LogicalResult
-  matchAndRewrite(LDSBarrierWaitOp op, LDSBarrierWaitOp::Adaptor adaptor,
+  matchAndRewrite(BarrierWaitLDSOp op, BarrierWaitLDSOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
 
@@ -3622,7 +3622,7 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
            RawBufferOpLowering<RawBufferAtomicCmpswapOp,
                                ROCDL::RawPtrBufferAtomicCmpSwap>,
            AMDGPUDPPLowering, MemoryCounterWaitOpLowering, LDSBarrierOpLowering,
-           LDSBarrierSignalOpLowering, LDSBarrierWaitOpLowering,
+           BarrierSignalLDSOpLowering, BarrierWaitLDSOpLowering,
            SchedBarrierOpLowering, MFMAOpLowering, ScaledMFMAOpLowering,
            SparseMFMAOpLowering, WMMAOpLowering, ScaledWMMAOpLowering,
            ExtPackedFp8OpLowering, ScaledExtPackedMatrixOpLowering,

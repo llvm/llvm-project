@@ -454,8 +454,8 @@ func.func @lds_barrier() {
   func.return
 }
 
-// CHECK-LABEL: func @lds_barrier_signal
-func.func @lds_barrier_signal() {
+// CHECK-LABEL: func @barrier_signal_lds
+func.func @barrier_signal_lds() {
   // For gfx < 12, signal converts to full lds_barrier.
   // GFX908: llvm.fence syncscope("workgroup") release {llvm.mmra = #[[$MMRA_TAG]]}
   // GFX908-NEXT: llvm.inline_asm has_side_effects asm_dialect = att
@@ -478,12 +478,12 @@ func.func @lds_barrier_signal() {
   // GFX12-NEXT: rocdl.s.barrier.signal id = -1
   // GFX1250: llvm.fence syncscope("workgroup") release {llvm.mmra = #[[$MMRA_TAG]]}
   // GFX1250-NEXT: rocdl.s.barrier.signal id = -1
-  amdgpu.lds_barrier_signal
+  amdgpu.barrier_signal_lds
   func.return
 }
 
-// CHECK-LABEL: func @lds_barrier_wait
-func.func @lds_barrier_wait() {
+// CHECK-LABEL: func @barrier_wait_lds
+func.func @barrier_wait_lds() {
   // For gfx < 12, wait is erased (noop, since signal already did full barrier).
   // GFX908-NOT: llvm.fence
   // GFX908-NOT: rocdl
@@ -500,12 +500,12 @@ func.func @lds_barrier_wait() {
   // GFX12-NEXT: llvm.fence syncscope("workgroup") acquire {llvm.mmra = #[[$MMRA_TAG]]}
   // GFX1250: rocdl.s.barrier.wait id = -1
   // GFX1250-NEXT: llvm.fence syncscope("workgroup") acquire {llvm.mmra = #[[$MMRA_TAG]]}
-  amdgpu.lds_barrier_wait
+  amdgpu.barrier_wait_lds
   func.return
 }
 
-// CHECK-LABEL: func @lds_barrier_split
-func.func @lds_barrier_split() {
+// CHECK-LABEL: func @barrier_split_lds
+func.func @barrier_split_lds() {
   // Test combined signal + wait pattern.
   // For gfx < 12: signal becomes full barrier, wait is erased.
   // GFX908: llvm.fence syncscope("workgroup") release {llvm.mmra = #[[$MMRA_TAG]]}
@@ -524,8 +524,8 @@ func.func @lds_barrier_split() {
   // GFX1250-NEXT: rocdl.s.barrier.signal id = -1
   // GFX1250-NEXT: rocdl.s.barrier.wait id = -1
   // GFX1250-NEXT: llvm.fence syncscope("workgroup") acquire {llvm.mmra = #[[$MMRA_TAG]]}
-  amdgpu.lds_barrier_signal
-  amdgpu.lds_barrier_wait
+  amdgpu.barrier_signal_lds
+  amdgpu.barrier_wait_lds
   func.return
 }
 

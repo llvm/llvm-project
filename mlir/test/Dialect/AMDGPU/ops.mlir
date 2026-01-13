@@ -549,26 +549,26 @@ func.func @lds_barrier() {
   func.return
 }
 
-// CHECK-LABEL: func @lds_barrier_signal
-func.func @lds_barrier_signal() {
-  // CHECK: amdgpu.lds_barrier_signal
-  amdgpu.lds_barrier_signal
+// CHECK-LABEL: func @barrier_signal_lds
+func.func @barrier_signal_lds() {
+  // CHECK: amdgpu.barrier_signal_lds
+  amdgpu.barrier_signal_lds
   func.return
 }
 
-// CHECK-LABEL: func @lds_barrier_wait
-func.func @lds_barrier_wait() {
-  // CHECK: amdgpu.lds_barrier_wait
-  amdgpu.lds_barrier_wait
+// CHECK-LABEL: func @barrier_wait_lds
+func.func @barrier_wait_lds() {
+  // CHECK: amdgpu.barrier_wait_lds
+  amdgpu.barrier_wait_lds
   func.return
 }
 
-// CHECK-LABEL: func @lds_barrier_split
-func.func @lds_barrier_split() {
-  // CHECK: amdgpu.lds_barrier_signal
-  amdgpu.lds_barrier_signal
-  // CHECK: amdgpu.lds_barrier_wait
-  amdgpu.lds_barrier_wait
+// CHECK-LABEL: func @barrier_split_lds
+func.func @barrier_split_lds() {
+  // CHECK: amdgpu.barrier_signal_lds
+  amdgpu.barrier_signal_lds
+  // CHECK: amdgpu.barrier_wait_lds
+  amdgpu.barrier_wait_lds
   func.return
 }
 
