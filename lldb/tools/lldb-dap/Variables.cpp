@@ -217,8 +217,7 @@ std::vector<protocol::Scope> Variables::ReadyFrame(const uint64_t dap_frame_id,
   scopes.push_back(CreateScope(
       eScopeKind::Globals, globals_ref,
       GetScope(dap_frame_id, eScopeKind::Globals)->GetSize(), false));
-  m_scope_kinds[globals_ref] =
-      std::make_pair(eScopeKind::Globals, dap_frame_id);
+  m_scope_kinds.try_emplace(globals_ref, eScopeKind::Globals, dap_frame_id);
 
   int64_t registers_ref = GetNewVariableReference(false);
   scopes.push_back(CreateScope(
