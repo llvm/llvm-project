@@ -357,21 +357,18 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     Type *FromTy = Src->getType();
 
     auto *S_VT = dyn_cast<FixedVectorType>(FromTy);
-    auto *D_ST = dyn_cast<StructType>(ToTy);
     auto *D_VT = dyn_cast<FixedVectorType>(ToTy);
     auto *D_AT = dyn_cast<ArrayType>(ToTy);
 
     B.SetInsertPoint(BadStore);
-    if (D_ST && isTypeFirstElementAggregate(FromTy, D_ST))
-      storeToFirstValueAggregate(B, Src, Dst, D_ST, Alignment);
+    if (isTypeFirstElementAggregate(FromTy, ToTy))
+      storeToFirstValueAggregate(B, Src, Dst, ToTy, Alignment);
     else if (D_VT && S_VT)
       storeVectorFromVector(B, Src, Dst, Alignment);
     else if (D_VT && !S_VT && FromTy == D_VT->getElementType())
       storeToFirstValueAggregate(B, Src, Dst, D_VT, Alignment);
     else if (D_AT && S_VT && S_VT->getElementType() == D_AT->getElementType())
       storeArrayFromVector(B, Src, Dst, D_AT, Alignment);
-    else if (D_AT && D_AT->getElementType() == FromTy)
-      storeToFirstValueAggregate(B, Src, Dst, D_AT, Alignment);
     else
       llvm_unreachable("Unsupported ptrcast use in store. Please fix.");
 
