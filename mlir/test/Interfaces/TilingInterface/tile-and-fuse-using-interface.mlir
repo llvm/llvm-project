@@ -576,15 +576,12 @@ module attributes {transform.with_named_sequence} {
 // CHECK-LABEL: func @pad_producer_fusion
 //  CHECK-SAME:     %[[ARG0:.+]]: tensor<10xf32>
 //       CHECK:   %[[FOR_RESULT:.+]] = scf.for
-//       CHECK:     %[[IF_RESULT:.+]] = scf.if
-//       CHECK:     else
-//       CHECK:       %[[SLICE:.+]] = tensor.extract_slice %[[ARG0]]
-//       CHECK:       %[[GENERIC:.+]] = linalg.generic
-//  CHECK-SAME:           ins(%[[SLICE]] :
-//       CHECK:       %[[PAD:.+]] = tensor.pad %[[GENERIC]]
-//       CHECK:       %[[CAST:.+]] = tensor.cast %[[PAD]]
-//       CHECK:       scf.yield %[[CAST]]
-//       CHECK:     %[[INSERT_SLICE:.+]] = tensor.insert_slice %[[IF_RESULT]]
+//       CHECK:     %[[SLICE:.+]] = tensor.extract_slice %[[ARG0]]
+//       CHECK:     %[[GENERIC:.+]] = linalg.generic
+//  CHECK-SAME:         ins(%[[SLICE]] :
+//       CHECK:     %[[PAD:.+]] = tensor.pad %[[GENERIC]]
+//       CHECK:     %[[CAST:.+]] = tensor.cast %[[PAD]]
+//       CHECK:     %[[INSERT_SLICE:.+]] = tensor.insert_slice %[[CAST]]
 //       CHECK:     scf.yield %[[INSERT_SLICE]]
 //       CHECK:   return %[[FOR_RESULT]]
 

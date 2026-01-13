@@ -34,12 +34,9 @@ module attributes {transform.with_named_sequence} {
 //   CHECK-DAG:   %[[C3:.+]] = arith.constant 3 : index
 //       CHECK:   %[[RESULT:[a-zA-Z0-9]+]] = scf.for %[[IV0:[a-zA-Z0-9]+]] = %[[C0]] to %[[DIM0]] step %[[C2]]
 //       CHECK:     scf.for {{.*}} = %[[C0]] to %[[DIM1]] step %[[C3]] iter_args(%[[INNER_OUT:.*]] =
-//       CHECK:       %[[SWAP_RESULT:.*]] = scf.if
-//       CHECK:         tensor.generate
-//       CHECK:       else
-//       CHECK:         %[[SLICE:.*]] = tensor.extract_slice %[[IN]][{{.*}}, {{.*}}] [{{.*}}, {{.*}}] [1, 1]
-//       CHECK:         %[[PAD:.*]] = tensor.pad %[[SLICE]]
-//       CHECK:       tensor.insert_slice %[[SWAP_RESULT]] into %[[INNER_OUT]][{{.*}}, {{.*}}] [{{.*}}, {{.*}}] [1, 1]
+//       CHECK:        %[[SLICE:.*]] = tensor.extract_slice %[[IN]][{{.*}}, {{.*}}] [{{.*}}, {{.*}}] [1, 1]
+//       CHECK:        %[[PAD:.*]] = tensor.pad %[[SLICE]]
+//       CHECK:       tensor.insert_slice %[[PAD]] into %[[INNER_OUT]][{{.*}}, {{.*}}] [{{.*}}, {{.*}}] [1, 1]
 //       CHECK:   return %[[RESULT]]
 
 // -----
@@ -74,12 +71,9 @@ module attributes {transform.with_named_sequence} {
 //   CHECK-DAG:   %[[DIM1:.*]] = affine.apply #[[MAP1]]()[%[[DIM_IN1]]]
 //   CHECK-DAG:   %[[C3:.*]] = arith.constant 3 : index
 //       CHECK:   %[[RESULT:.*]] = scf.for {{.*}} = %[[C0]] to %[[DIM1]] step %[[C3]] iter_args(%[[INNER_OUT:.*]] =
-//       CHECK:     %[[SWAP_RESULT:.*]] = scf.if
-//       CHECK:       tensor.generate
-//       CHECK:     else
-//       CHECK:       %[[SLICE:.*]] = tensor.extract_slice %[[IN]][{{.*}}, {{.*}}] [{{.*}}, {{.*}}] [1, 1]
-//       CHECK:       %[[PAD:.*]] = tensor.pad %[[SLICE]] low[3, %{{.*}}] high[{{.*}}, {{.*}}]
-//       CHECK:     tensor.insert_slice %[[SWAP_RESULT]] into %[[INNER_OUT]][0, {{.*}}] [%[[DIM0]], {{.*}}] [1, 1]
+//       CHECK:     %[[SLICE:.*]] = tensor.extract_slice %[[IN]][{{.*}}, {{.*}}] [{{.*}}, {{.*}}] [1, 1]
+//       CHECK:     %[[PAD:.*]] = tensor.pad %[[SLICE]] low[3, %{{.*}}] high[{{.*}}, {{.*}}]
+//       CHECK:     tensor.insert_slice %[[PAD]] into %[[INNER_OUT]][0, {{.*}}] [%[[DIM0]], {{.*}}] [1, 1]
 //       CHECK:   return %[[RESULT]]
 
 // -----
@@ -111,12 +105,9 @@ module attributes {transform.with_named_sequence} {
 //   CHECK-DAG:   %[[C3:.*]] = arith.constant 3 : index
 //       CHECK:   %[[RESULT:.*]] = scf.for {{.*}} = %[[C0]] to %[[C15]] step %[[C2]]
 //       CHECK:     scf.for {{.*}} = %[[C0]] to %[[C16]] step %[[C3]] iter_args(%[[INNER_OUT:.*]] =
-//       CHECK:       %[[SWAP_RESULT:.*]] = scf.if
-//       CHECK:         tensor.generate
-//       CHECK:       else
-//       CHECK:         %[[SLICE:.*]] = tensor.extract_slice %[[IN]][{{.*}}, {{.*}}] [{{.*}}, {{.*}}] [1, 1]
-//       CHECK:         %[[PAD:.*]] = tensor.pad %[[SLICE]]
-//       CHECK:       tensor.insert_slice %[[SWAP_RESULT]] into %[[INNER_OUT]][{{.*}}, {{.*}}] [{{.*}}, {{.*}}] [1, 1]
+//       CHECK:        %[[SLICE:.*]] = tensor.extract_slice %[[IN]][{{.*}}, {{.*}}] [{{.*}}, {{.*}}] [1, 1]
+//       CHECK:        %[[PAD:.*]] = tensor.pad %[[SLICE]]
+//       CHECK:       tensor.insert_slice %[[PAD]] into %[[INNER_OUT]][{{.*}}, {{.*}}] [{{.*}}, {{.*}}] [1, 1]
 //       CHECK:   return %[[RESULT]]
 
 // -----
@@ -145,12 +136,9 @@ module attributes {transform.with_named_sequence} {
 //   CHECK-DAG:   %[[C3:.*]] = arith.constant 3 : index
 //   CHECK-DAG:   %[[C16:.*]] = arith.constant 16 : index
 //       CHECK:   %[[RESULT:.*]] = scf.for {{.*}} = %[[C0]] to %[[C16]] step %[[C3]] iter_args(%[[INNER_OUT:.*]] =
-//       CHECK:     %[[SWAP_RESULT:.*]] = scf.if
-//       CHECK:       tensor.generate
-//       CHECK:     else
-//       CHECK:       %[[SLICE:.*]] = tensor.extract_slice %[[IN]][0, {{.*}}] [7, {{.*}}] [1, 1]
-//       CHECK:       %[[PAD:.*]] = tensor.pad %[[SLICE]] low[3, %{{.*}}] high[5, {{.*}}]
-//       CHECK:     tensor.insert_slice %[[SWAP_RESULT]] into %[[INNER_OUT]][0, {{.*}}] [15, {{.*}}] [1, 1]
+//       CHECK:     %[[SLICE:.*]] = tensor.extract_slice %[[IN]][0, {{.*}}] [7, {{.*}}] [1, 1]
+//       CHECK:     %[[PAD:.*]] = tensor.pad %[[SLICE]] low[3, %{{.*}}] high[5, {{.*}}]
+//       CHECK:     tensor.insert_slice %[[PAD]] into %[[INNER_OUT]][0, {{.*}}] [15, {{.*}}] [1, 1]
 //       CHECK:   return %[[RESULT]]
 
 /// Rest of the tests only check that they dont fail.

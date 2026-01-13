@@ -47,8 +47,8 @@ struct PadOpTiling : public TilingInterface::ExternalModel<PadOpTiling, PadOp> {
   getTiledImplementation(Operation *op, OpBuilder &b,
                          ArrayRef<OpFoldResult> offsets,
                          ArrayRef<OpFoldResult> sizes) const {
-    FailureOr<TilingResult> result =
-        tensor::bubbleUpPadSlice(b, cast<PadOp>(op), offsets, sizes);
+    FailureOr<TilingResult> result = tensor::bubbleUpPadSlice(
+        b, cast<PadOp>(op), offsets, sizes, /*generateZeroSliceGuard=*/false);
     if (failed(result))
       return failure();
     return result.value();

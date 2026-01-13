@@ -140,10 +140,7 @@ func.func @tile_tensor_pad(
     -> tensor<20x40xf32>
 {
   // CHECK: scf.forall
-  // CHECK:   scf.if
-  // CHECK:     tensor.generate
-  // CHECK:   else
-  // CHECK:     tensor.pad {{.*}} nofold
+  // CHECK:   tensor.pad {{.*}} nofold
   %0 = tensor.pad %arg0 nofold low[%low, %low] high[%high, %high] {
         ^bb0(%arg9: index, %arg10: index):
           tensor.yield %cst : f32
