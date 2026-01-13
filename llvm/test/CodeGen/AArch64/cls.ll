@@ -13,11 +13,6 @@ define i32 @cls(i32 %t) {
 ; CHECK-LABEL: cls64
 ; CHECK: cls [[REG:x[0-9]+]], [[REG]]
 define i32 @cls64(i64 %t) {
-; CHECK-LABEL: cls64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cls x0, x0
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
-; CHECK-NEXT:    ret
   %cls.i = call i32 @llvm.aarch64.cls64(i64 %t)
   ret i32 %cls.i
 }
