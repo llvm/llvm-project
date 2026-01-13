@@ -104,12 +104,16 @@ void ExitHandler::Configure(bool mifEnabled) {
   multiImageFeatureEnabled = mifEnabled;
 }
 
-void ExitHandler::Exit(int exitCode) {
+void ExitHandler::NormalExit(int exitCode) {
   if (multiImageFeatureEnabled)
-    if (exitCode == EXIT_SUCCESS)
-      SynchronizeImagesOfNormalEnd(exitCode);
-    else
-      NotifyOtherImagesOfErrorTermination(exitCode);
+    NotifyOtherImagesOfErrorTermination(exitCode);
+  else
+    std::exit(exitCode);
+}
+
+void ExitHandler::ErrorExit(int exitCode) {
+  if (multiImageFeatureEnabled)
+    SynchronizeImagesOfNormalEnd(exitCode);
   else
     std::exit(exitCode);
 }

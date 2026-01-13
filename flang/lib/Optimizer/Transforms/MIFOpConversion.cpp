@@ -166,7 +166,6 @@ mlir::Value genTerminationOperationWrapper(fir::FirOpBuilder &builder,
     mlir::OpBuilder::InsertPoint saveInsertPoint = builder.saveInsertionPoint();
     builder.setInsertionPointToStart(funcWrapperOp.addEntryBlock());
 
-    mlir::Type i32Ty = builder.getI32Type();
     if (termKind == TerminationKind::Normal) {
       mlir::Value quiet = builder.createBool(loc, true);
       genPRIFStopErrorStop(builder, loc, quiet, funcWrapperOp.getArgument(0),
@@ -246,43 +245,6 @@ struct MIFInitOpConversion : public mlir::OpRewritePattern<mif::InitOp> {
         fir::runtime::createArguments(builder, loc, ftype, result);
     fir::CallOp::create(builder, loc, funcOp, args);
     rewriter.replaceOpWithNewOp<fir::LoadOp>(op, result);
-    return mlir::success();
-  }
-};
-
-/// Convert mif.stop operation to runtime call of 'prif_stop'
-struct MIFStopOpConversion : public mlir::OpRewritePattern<mif::StopOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(mif::StopOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    auto mod = op->template getParentOfType<mlir::ModuleOp>();
-    fir::FirOpBuilder builder(rewriter, mod);
-    mlir::Location loc = op.getLoc();
-
-    fir::CallOp callOp =
-        genPRIFStopErrorStop(builder, loc, op.getQuiet(), op.getStopCode());
-    rewriter.replaceOp(op, callOp);
-    return mlir::success();
-  }
-};
-
-/// Convert mif.error_stop operation to runtime call of 'prif_error_stop'
-struct MIFErrorStopOpConversion
-    : public mlir::OpRewritePattern<mif::ErrorStopOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(mif::ErrorStopOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    auto mod = op->template getParentOfType<mlir::ModuleOp>();
-    fir::FirOpBuilder builder(rewriter, mod);
-    mlir::Location loc = op.getLoc();
-
-    fir::CallOp callOp = genPRIFStopErrorStop(
-        builder, loc, op.getQuiet(), op.getStopCode(), /*isError*/ true);
-    rewriter.replaceOp(op, callOp);
     return mlir::success();
   }
 };
@@ -876,8 +838,7 @@ public:
 } // namespace
 
 void mif::populateMIFOpConversionPatterns(mlir::RewritePatternSet &patterns) {
-  patterns.insert<MIFInitOpConversion, MIFStopOpConversion,
-                  MIFErrorStopOpConversion, MIFThisImageOpConversion,
+  patterns.insert<MIFInitOpConversion, MIFThisImageOpConversion,
                   MIFNumImagesOpConversion, MIFSyncAllOpConversion,
                   MIFSyncImagesOpConversion, MIFSyncMemoryOpConversion,
                   MIFSyncTeamOpConversion, MIFCoBroadcastOpConversion,

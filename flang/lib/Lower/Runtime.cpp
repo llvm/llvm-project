@@ -60,9 +60,6 @@ void Fortran::lower::genStopStatement(
                        Fortran::parser::StopStmt::Kind::ErrorStop;
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Location loc = converter.getCurrentLocation();
-  bool coarrayIsEnabled =
-      converter.getFoldingContext().languageFeatures().IsEnabled(
-          Fortran::common::LanguageFeature::Coarray);
 
   Fortran::lower::StatementContext stmtCtx;
   llvm::SmallVector<mlir::Value> operands;
