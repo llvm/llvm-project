@@ -219,9 +219,9 @@ omp_interop_val_t *__tgt_interop_get(ident_t *LocRef, int32_t InteropType,
 
   auto DeviceOrErr = PM->getDevice(DeviceNum);
   if (!DeviceOrErr) {
+    [[maybe_unused]] std::string ErrStr = toString(DeviceOrErr.takeError());
     ODBG(ODT_Interface) << "Couldn't find device " << DeviceNum
-                        << " while constructing interop object: "
-                        << toString(DeviceOrErr.takeError());
+                        << " while constructing interop object: " << ErrStr;
     return omp_interop_none;
   }
   auto &Device = *DeviceOrErr;

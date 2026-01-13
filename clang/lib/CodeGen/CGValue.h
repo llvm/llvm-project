@@ -210,6 +210,9 @@ class LValue {
     const CGBitFieldInfo *BitFieldInfo;
   };
 
+  // Note: Only meaningful when isMatrixRow() and the row is swizzled.
+  llvm::Constant *MatrixRowElts = nullptr;
+
   QualType Type;
 
   // 'const' is unused here
@@ -287,6 +290,9 @@ public:
   bool isGlobalReg() const { return LVType == GlobalReg; }
   bool isMatrixElt() const { return LVType == MatrixElt; }
   bool isMatrixRow() const { return LVType == MatrixRow; }
+  bool isMatrixRowSwizzle() const {
+    return isMatrixRow() && MatrixRowElts != nullptr;
+  }
 
   bool isVolatileQualified() const { return Quals.hasVolatile(); }
   bool isRestrictQualified() const { return Quals.hasRestrict(); }
@@ -391,7 +397,7 @@ public:
   }
 
   Address getMatrixAddress() const {
-    assert(isMatrixElt());
+    assert(isMatrixElt() || isMatrixRow());
     return Addr;
   }
   llvm::Value *getMatrixPointer() const {
@@ -406,6 +412,11 @@ public:
   llvm::Value *getMatrixRowIdx() const {
     assert(isMatrixRow());
     return MatrixRowIdx;
+  }
+
+  llvm::Constant *getMatrixRowElts() const {
+    assert(isMatrixRowSwizzle() && "not a matrix row swizzle lvalue");
+    return MatrixRowElts;
   }
 
   // extended vector elements.
@@ -502,7 +513,22 @@ public:
     LValue LV;
     LV.LVType = MatrixRow;
     LV.MatrixRowIdx = RowIdx; // store the row index here
+    LV.MatrixRowElts = nullptr; // use sequential indexing
     LV.Initialize(MatrixTy, MatrixTy.getQualifiers(), Addr, BaseInfo, TBAAInfo);
+    return LV;
+  }
+
+  static LValue MakeMatrixRowSwizzle(Address MatAddr, llvm::Value *RowIdx,
+                                     llvm::Constant *Cols, QualType MatrixTy,
+                                     LValueBaseInfo BaseInfo,
+                                     TBAAAccessInfo TBAAInfo) {
+    LValue LV;
+    LV.LVType = MatrixRow;
+    LV.Addr = MatAddr;
+    LV.MatrixRowIdx = RowIdx;
+    LV.MatrixRowElts = Cols; // use indices in list order
+    LV.Initialize(MatrixTy, MatrixTy.getQualifiers(), MatAddr, BaseInfo,
+                  TBAAInfo);
     return LV;
   }
 

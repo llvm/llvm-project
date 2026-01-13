@@ -192,7 +192,7 @@ bool VirtualNearMissCheck::isPossibleToBeOverridden(
 
 bool VirtualNearMissCheck::isOverriddenByDerivedClass(
     const CXXMethodDecl *BaseMD, const CXXRecordDecl *DerivedRD) {
-  auto Key = std::make_pair(BaseMD, DerivedRD);
+  const std::pair Key(BaseMD, DerivedRD);
   auto Iter = OverriddenMap.find(Key);
   if (Iter != OverriddenMap.end())
     return Iter->second;

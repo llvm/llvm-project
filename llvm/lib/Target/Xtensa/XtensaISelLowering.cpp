@@ -964,7 +964,7 @@ SDValue XtensaTargetLowering::LowerImmediate(SDValue Op,
         isShiftedInt<8, 8>(Value))
       return Op;
     Type *Ty = Type::getInt32Ty(*DAG.getContext());
-    Constant *CV = ConstantInt::get(Ty, Value);
+    Constant *CV = ConstantInt::getSigned(Ty, Value);
     SDValue CP = DAG.getConstantPool(CV, MVT::i32);
     SDValue Res =
         DAG.getLoad(MVT::i32, DL, DAG.getEntryNode(), CP, MachinePointerInfo());

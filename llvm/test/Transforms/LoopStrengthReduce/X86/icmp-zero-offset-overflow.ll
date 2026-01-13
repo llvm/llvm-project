@@ -45,4 +45,35 @@ exit:
   ret i16 %iv2.inc
 }
 
+define i16 @test2(i16 %arg1, i16 %arg2) {
+; CHECK-LABEL: define i16 @test2(
+; CHECK-SAME: i16 [[ARG1:%.*]], i16 [[ARG2:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i16 [[ARG2]], [[ARG1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[TMP0]], -1
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i16 [ [[LSR_IV_NEXT:%.*]], %[[LOOP]] ], [ [[TMP1]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LSR_IV]], -2
+; CHECK-NEXT:    call void @use(i1 [[CMP]])
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i16 [[LSR_IV]], 1
+; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i16 [[LSR_IV_NEXT]]
+;
+entry:
+  %start = add i16 %arg1, %arg2
+  br label %loop
+
+loop:
+  %iv = phi i16 [ %start, %entry ], [ %iv.inc, %loop ]
+  %iv.inc = add i16 %iv, 1
+  %cmp = icmp eq i16 %iv.inc, 0
+  call void @use(i1 %cmp)
+  br i1 false, label %exit, label %loop
+
+exit:
+  ret i16 %iv
+}
+
 attributes #0 = { "target-cpu"="x86-64" }
