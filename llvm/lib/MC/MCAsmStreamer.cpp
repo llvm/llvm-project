@@ -69,6 +69,9 @@ class MCAsmStreamer final : public MCStreamer {
                                raw_svector_ostream &OS) const;
   void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
   void emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
+  void emitBundleAlignMode(Align Alignment) override;
+  void emitBundleLock(bool AlignToEnd, const MCSubtargetInfo &STI) override;
+  void emitBundleUnlock(const MCSubtargetInfo &STI) override;
 
 public:
   MCAsmStreamer(MCContext &Context, std::unique_ptr<formatted_raw_ostream> os,
@@ -2487,6 +2490,24 @@ void MCAsmStreamer::emitPseudoProbe(uint64_t Guid, uint64_t Index,
   OS << " ";
   FnSym->print(OS, MAI);
 
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitBundleAlignMode(Align Alignment) {
+  OS << "\t.bundle_align_mode " << Log2(Alignment);
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitBundleLock(bool AlignToEnd,
+                                   const MCSubtargetInfo &STI) {
+  OS << "\t.bundle_lock";
+  if (AlignToEnd)
+    OS << " align_to_end";
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitBundleUnlock(const MCSubtargetInfo &STI) {
+  OS << "\t.bundle_unlock";
   EmitEOL();
 }
 

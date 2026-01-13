@@ -79,8 +79,23 @@ void MCELFStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCFragment &F,
     Symbol->setType(ELF::STT_TLS);
 }
 
+// If bundle alignment is used and there are any instructions in the section, it
+// needs to be aligned to at least the bundle size.
+static void setSectionAlignmentForBundling(const MCAssembler &Assembler,
+                                           MCSection *Section) {
+  if (Assembler.isBundlingEnabled() && Section->hasInstructions())
+    Section->ensureMinAlignment(Align(Assembler.getBundleAlignSize()));
+}
+
 void MCELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   MCAssembler &Asm = getAssembler();
+  if (auto *F = getCurrentFragment()) {
+    if (isBundleLocked())
+      report_fatal_error("Unterminated .bundle_lock when changing a section");
+
+    // Ensure the previous section gets aligned if necessary.
+    setSectionAlignmentForBundling(Asm, F->getParent());
+  }
   auto *SectionELF = static_cast<const MCSectionELF *>(Section);
   const MCSymbol *Grp = SectionELF->getGroup();
   if (Grp)
@@ -315,6 +330,78 @@ void MCELFStreamer::emitIdent(StringRef IdentString) {
   emitBytes(IdentString);
   emitInt8(0);
   popSection();
+}
+
+void MCELFStreamer::emitBundleAlignMode(Align Alignment) {
+  assert(Log2(Alignment) <= 30 && "Invalid bundle alignment");
+  MCAssembler &Assembler = getAssembler();
+  setAllowAutoPadding(true);
+
+  if (Alignment > 1 && (Assembler.getBundleAlignSize() == 0 ||
+                        Assembler.getBundleAlignSize() == Alignment.value()))
+    Assembler.setBundleAlignSize(Alignment.value());
+  else
+    report_fatal_error(".bundle_align_mode cannot be changed once set");
+}
+
+void MCELFStreamer::emitBundleLock(bool AlignToEnd,
+                                   const MCSubtargetInfo &STI) {
+  MCSection &Sec = *getCurrentSectionOnly();
+  auto &Asm = getAssembler();
+
+  if (!Asm.isBundlingEnabled())
+    report_fatal_error(".bundle_lock forbidden when bundling is disabled");
+
+  Sec.enterBundleLock();
+
+  // Early exit for nested locks.
+  if (Sec.isNestedBundleLock()) {
+    assert(BundleBA);
+    // An inner bundle that aligns to the end forces outer bundle (if existed)
+    // to be align_to_end. It might be potentially better to raise an error.
+    if (AlignToEnd != BundleBA->isAlignToEnd())
+      BundleBA->setAlignToEnd(true);
+    return;
+  }
+
+  auto AlignBoundary = Asm.getBundleAlignSize();
+  BundleBA =
+      newSpecialFragment<MCBoundaryAlignFragment>(Align(AlignBoundary), STI);
+  BundleBA->setAlignToEnd(AlignToEnd);
+}
+
+void MCELFStreamer::emitBundleUnlock(const MCSubtargetInfo &STI) {
+  MCSection &Sec = *getCurrentSectionOnly();
+
+  if (!getAssembler().isBundlingEnabled())
+    report_fatal_error(".bundle_unlock forbidden when bundling is disabled");
+  else if (!isBundleLocked())
+    report_fatal_error(".bundle_unlock without matching lock");
+
+  Sec.exitBundleLock();
+
+  // Delay BundleBA until the outermost bundle lock.
+  if (Sec.isBundleLocked())
+    return;
+
+  MCFragment *CF = getCurrentFragment();
+  BundleBA->setLastFragment(CF);
+  // Bundle overflow check.
+  uint64_t AlignedSize = 0;
+  for (const MCFragment *F = BundleBA->getNext();; F = F->getNext()) {
+    AlignedSize += getAssembler().computeFragmentSize(*F);
+    if (F == BundleBA->getLastFragment())
+      break;
+  }
+  BundleBA = nullptr;
+
+  if (AlignedSize > getAssembler().getBundleAlignSize())
+    report_fatal_error("Fragment can't be larger than a bundle size");
+
+  newFragment();
+
+  CF->getParent()->ensureMinAlignment(
+      Align(getAssembler().getBundleAlignSize()));
 }
 
 void MCELFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *Sym,

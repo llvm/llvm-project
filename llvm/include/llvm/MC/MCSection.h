@@ -489,9 +489,12 @@ class MCBoundaryAlignFragment : public MCFragment {
   /// is not meaningful before that.
   uint64_t Size = 0;
 
+  bool AlignToEnd : 1;
+
 public:
   MCBoundaryAlignFragment(Align AlignBoundary, const MCSubtargetInfo &STI)
-      : MCFragment(FT_BoundaryAlign), AlignBoundary(AlignBoundary) {
+      : MCFragment(FT_BoundaryAlign), AlignBoundary(AlignBoundary),
+        AlignToEnd(false) {
     this->STI = &STI;
   }
 
@@ -500,6 +503,9 @@ public:
 
   Align getAlignment() const { return AlignBoundary; }
   void setAlignment(Align Value) { AlignBoundary = Value; }
+
+  bool isAlignToEnd() const { return AlignToEnd; }
+  void setAlignToEnd(bool Value) { AlignToEnd = Value; }
 
   const MCFragment *getLastFragment() const { return LastFragment; }
   void setLastFragment(const MCFragment *F) {
@@ -552,6 +558,9 @@ private:
   // subsection. When present, the offset between two locations crossing this
   // fragment may not be fully resolved.
   unsigned FirstLinkerRelaxable = -1u;
+
+  /// Current nesting depth of bundle_lock directives.
+  unsigned BundleLockNestingDepth = 0;
 
   /// Whether this section has had instructions emitted into it.
   bool HasInstructions : 1;
@@ -618,6 +627,11 @@ public:
   unsigned firstLinkerRelaxable() const { return FirstLinkerRelaxable; }
   bool isLinkerRelaxable() const { return FirstLinkerRelaxable != -1u; }
   void setFirstLinkerRelaxable(unsigned Order) { FirstLinkerRelaxable = Order; }
+
+  void enterBundleLock();
+  void exitBundleLock();
+  bool isBundleLocked() const { return BundleLockNestingDepth > 0; }
+  bool isNestedBundleLock() const { return BundleLockNestingDepth > 1; }
 
   MCFragment &getDummyFragment() { return DummyFragment; }
 
