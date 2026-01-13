@@ -26,6 +26,7 @@ add_clang_library(clangTidyModernizeModule STATIC
   RedundantVoidArgCheck.cpp
   ReplaceAutoPtrCheck.cpp
   ReplaceDisallowCopyAndAssignMacroCheck.cpp
+  ReplaceMemcpyWithStdCopy.cpp
   ReplaceRandomShuffleCheck.cpp
   ReturnBracedInitListCheck.cpp
   ShrinkToFitCheck.cpp

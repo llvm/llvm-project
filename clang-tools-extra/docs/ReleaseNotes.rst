@@ -654,6 +654,11 @@ Changes in existing checks
   when the format string is converted to a different type by an implicit
   constructor call.
 
+- New :doc:`modernize-replace-memcpy-with-stdcopy
+  <clang-tidy/checks/modernize-replace-memcpy-by-stdcopy>` check.
+
+  Replaces all occurrences of the C ``memcpy`` function by ``std::copy``.
+
 - Improved :doc:`modernize-use-std-print
   <clang-tidy/checks/modernize/use-std-print>` check to correctly match
   when the format string is converted to a different type by an implicit
