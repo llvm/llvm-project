@@ -847,8 +847,7 @@ define i1 @pow2_though_zext(i32 %x, i16 %y) {
 ; CHECK-NEXT:    movl $4, %eax
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shll %cl, %eax
-; CHECK-NEXT:    andl %edi, %eax
-; CHECK-NEXT:    testl $65535, %eax # imm = 0xFFFF
+; CHECK-NEXT:    testl %eax, %edi
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
   %dd = shl nuw nsw i16 4, %y
