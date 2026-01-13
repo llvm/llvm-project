@@ -101,8 +101,7 @@ struct UseDeviceHostDataHoisting : public OpRewritePattern<acc::HostDataOp> {
         else
           usedOperands.push_back(useDeviceOp.getResult());
       } else {
-        // use_device operands that don't need hoisting, they are passed as
-        // is to __tgt_acc_get_deviceptr.
+        // Operand is not an `acc.use_device` result, keep it as is.
         usedOperands.push_back(operand);
       }
     }
