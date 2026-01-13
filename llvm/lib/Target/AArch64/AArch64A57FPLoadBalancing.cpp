@@ -38,6 +38,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -108,7 +109,7 @@ class Chain;
 class AArch64A57FPLoadBalancing : public MachineFunctionPass {
   MachineRegisterInfo *MRI;
   const TargetRegisterInfo *TRI;
-  RegisterClassInfo RCI;
+  RegisterClassInfo *RCI = nullptr;
 
 public:
   static char ID;
@@ -126,6 +127,8 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addRequired<MachineRegisterClassInfoWrapperPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -149,6 +152,7 @@ char AArch64A57FPLoadBalancing::ID = 0;
 
 INITIALIZE_PASS_BEGIN(AArch64A57FPLoadBalancing, DEBUG_TYPE,
                       "AArch64 A57 FP Load-Balancing", false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
 INITIALIZE_PASS_END(AArch64A57FPLoadBalancing, DEBUG_TYPE,
                     "AArch64 A57 FP Load-Balancing", false, false)
 
@@ -314,7 +318,7 @@ bool AArch64A57FPLoadBalancing::runOnMachineFunction(MachineFunction &F) {
 
   MRI = &F.getRegInfo();
   TRI = F.getRegInfo().getTargetRegisterInfo();
-  RCI.runOnMachineFunction(F);
+  RCI = &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
 
   for (auto &MBB : F) {
     Changed |= runOnBasicBlock(MBB);
@@ -514,7 +518,7 @@ int AArch64A57FPLoadBalancing::scavengeRegister(Chain *G, Color C,
 
   // Make sure we allocate in-order, to get the cheapest registers first.
   unsigned RegClassID = ChainBegin->getDesc().operands()[0].RegClass;
-  auto Ord = RCI.getOrder(TRI->getRegClass(RegClassID));
+  auto Ord = RCI->getOrder(TRI->getRegClass(RegClassID));
   for (auto Reg : Ord) {
     if (!Units.available(Reg))
       continue;
