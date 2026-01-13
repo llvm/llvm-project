@@ -983,7 +983,11 @@ void SeparateConstOffsetFromGEP::lowerToSingleIndexGEPs(
 
   // Create a GEP with the constant offset index.
   if (AccumulativeByteOffset != 0) {
-    Value *Offset = ConstantInt::getSigned(PtrIndexTy, AccumulativeByteOffset);
+    // TODO: GEP indices have sext-or-trunc semantics, so implicit truncation
+    // is fine here. However, we should really be doing this in APInt,
+    // otherwise there may be signed integer overflow.
+    Value *Offset = ConstantInt::getSigned(PtrIndexTy, AccumulativeByteOffset,
+                                           /*ImplicitTrunc=*/true);
     ResultPtr = Builder.CreatePtrAdd(ResultPtr, Offset, "uglygep");
   } else
     isSwapCandidate = false;
