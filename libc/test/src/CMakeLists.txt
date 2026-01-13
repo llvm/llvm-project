@@ -96,6 +96,7 @@ add_subdirectory(assert)
 add_subdirectory(compiler)
 add_subdirectory(dirent)
 add_subdirectory(locale)
+add_subdirectory(nl_types)
 add_subdirectory(signal)
 add_subdirectory(spawn)
 

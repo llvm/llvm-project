@@ -65,7 +65,6 @@ LLVM_DUMP_METHOD void ModuleFile::dump() {
 
   llvm::errs() << "  Base macro ID: " << BaseMacroID << '\n'
                << "  Number of macros: " << LocalNumMacros << '\n';
-  dumpLocalRemap("Macro ID local -> global map", MacroRemap);
 
   llvm::errs() << "  Base submodule ID: " << BaseSubmoduleID << '\n'
                << "  Number of submodules: " << LocalNumSubmodules << '\n';
@@ -79,8 +78,6 @@ LLVM_DUMP_METHOD void ModuleFile::dump() {
                << '\n'
                << "  Number of preprocessed entities: "
                << NumPreprocessedEntities << '\n';
-  dumpLocalRemap("Preprocessed entity ID local -> global map",
-                 PreprocessedEntityRemap);
 
   llvm::errs() << "  Base type index: " << BaseTypeIndex << '\n'
                << "  Number of types: " << LocalNumTypes << '\n';

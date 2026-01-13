@@ -24,4 +24,4 @@ int main(int argc, char **argv) {
 // CHECK:      (lldb) target create "{{.*}}break-by-line.cpp.tmp.exe"
 // CHECK:      Current executable set to '{{.*}}break-by-line.cpp.tmp.exe'
 // CHECK:      (lldb) break set -f break-by-line.cpp -l 15
-// CHECK:      Breakpoint 1: where = break-by-line.cpp.tmp.exe`NS::NamespaceFn + {{[0-9]+}} at break-by-line.cpp:15
+// CHECK:      Breakpoint 1: where = break-by-line.cpp.tmp.exe`int NS::NamespaceFn(int) + {{[0-9]+}} at break-by-line.cpp:15

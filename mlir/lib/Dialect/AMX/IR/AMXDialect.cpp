@@ -80,10 +80,22 @@ static SmallVector<Value> getTileSizes(Location loc, amx::TileType tType,
       LLVM::ConstantOp::create(rewriter, loc, llvmInt16Type, nattr)};
 }
 
+/// Returns stride expressed in number of bytes for the given `elementStride`
+/// stride encoded in number of elements of the type `mType`.
+static Value computeStrideInBytes(Location loc, MemRefType mType,
+                                  Value elementStride, RewriterBase &rewriter) {
+  Type llvmInt64Type = rewriter.getIntegerType(64);
+  unsigned bytes = mType.getElementType().getIntOrFloatBitWidth() / 8;
+  auto attr = rewriter.getI64IntegerAttr(bytes);
+  Value scale = LLVM::ConstantOp::create(rewriter, loc, llvmInt64Type, attr);
+  return LLVM::MulOp::create(rewriter, loc, llvmInt64Type, scale, elementStride)
+      .getResult();
+}
+
 /// Maps the 2-dim memref shape to the 64-bit stride. Note that the buffer
 /// shape may "envelop" the actual tile shape, and may be dynamically sized.
-static Value getStride(Location loc, MemRefType mType, Value base,
-                       RewriterBase &rewriter) {
+static Value inferStride(Location loc, MemRefType mType, Value base,
+                         RewriterBase &rewriter) {
   assert(mType.getRank() >= 2 && "Invalid shape for AMX strides");
   int64_t preLast = mType.getRank() - 2;
   Type llvmInt64Type = rewriter.getIntegerType(64);
@@ -94,11 +106,8 @@ static Value getStride(Location loc, MemRefType mType, Value base,
   if (strides[preLast] == ShapedType::kDynamic) {
     // Dynamic stride needs code to compute the stride at runtime.
     MemRefDescriptor memrefDescriptor(base);
-    auto attr = rewriter.getI64IntegerAttr(bytes);
-    Value scale = LLVM::ConstantOp::create(rewriter, loc, llvmInt64Type, attr);
-    return LLVM::MulOp::create(rewriter, loc, llvmInt64Type, scale,
-                               memrefDescriptor.stride(rewriter, loc, preLast))
-        .getResult();
+    return computeStrideInBytes(
+        loc, mType, memrefDescriptor.stride(rewriter, loc, preLast), rewriter);
   }
   // Use direct constant for static stride.
   auto attr = rewriter.getI64IntegerAttr(strides[preLast] * bytes);
@@ -117,20 +126,38 @@ amx::TileZeroOp::getIntrinsicOperands(ArrayRef<Value> operands,
   return getTileSizes(getLoc(), getTileType(), rewriter);
 }
 
-LogicalResult amx::TileLoadOp::verify() {
-  MemRefType memrefTy = getMemRefType();
+template <typename OpTy,
+          typename = std::enable_if_t<std::is_same_v<OpTy, amx::TileLoadOp> ||
+                                      std::is_same_v<OpTy, amx::TileStoreOp>>>
+static LogicalResult tileTransferVerifier(OpTy op) {
+  MemRefType memrefTy = op.getMemRefType();
   unsigned rank = memrefTy.getRank();
-  if (rank < 2)
-    return emitOpError("requires at least 2D memref");
-  if (getIndices().size() != rank)
-    return emitOpError("requires ") << rank << " indices";
-  SmallVector<int64_t> strides;
-  int64_t offset;
-  if (failed(memrefTy.getStridesAndOffset(strides, offset)) ||
-      strides.back() != 1)
-    return emitOpError("requires memref with unit innermost stride");
-  return verifyTileSize(*this, getTileType());
+  if (op.getIndices().size() != rank)
+    return op.emitOpError("requires ") << rank << " indices";
+
+  if (failed(verifyTileSize(op, op.getTileType())))
+    return failure();
+
+  // Validate basic buffer properties when the stride is implicit.
+  if (!op.getStride()) {
+    if (rank < 2)
+      return op.emitOpError("requires at least 2D memref");
+    SmallVector<int64_t> strides;
+    int64_t offset;
+    if (failed(memrefTy.getStridesAndOffset(strides, offset)) ||
+        strides.back() != 1)
+      return op.emitOpError("requires memref with unit innermost stride");
+  }
+
+  return success();
 }
+
+void amx::TileLoadOp::build(OpBuilder &builder, OperationState &state, Type res,
+                            Value base, ValueRange indices) {
+  build(builder, state, res, base, indices, /*stride=*/nullptr);
+}
+
+LogicalResult amx::TileLoadOp::verify() { return tileTransferVerifier(*this); }
 
 SmallVector<Value>
 amx::TileLoadOp::getIntrinsicOperands(ArrayRef<Value> operands,
@@ -144,26 +171,22 @@ amx::TileLoadOp::getIntrinsicOperands(ArrayRef<Value> operands,
   intrinsicOperands.push_back(
       LLVM::getStridedElementPtr(rewriter, loc, typeConverter, getMemRefType(),
                                  adaptor.getBase(), adaptor.getIndices()));
-  intrinsicOperands.push_back(
-      getStride(loc, getMemRefType(), adaptor.getBase(), rewriter));
+  if (Value stride = adaptor.getStride())
+    intrinsicOperands.push_back(
+        computeStrideInBytes(loc, getMemRefType(), stride, rewriter));
+  else
+    intrinsicOperands.push_back(
+        inferStride(loc, getMemRefType(), adaptor.getBase(), rewriter));
 
   return intrinsicOperands;
 }
 
-LogicalResult amx::TileStoreOp::verify() {
-  MemRefType memrefTy = getMemRefType();
-  unsigned rank = memrefTy.getRank();
-  if (rank < 2)
-    return emitOpError("requires at least 2D memref");
-  if (getIndices().size() != rank)
-    return emitOpError("requires ") << rank << " indices";
-  SmallVector<int64_t> strides;
-  int64_t offset;
-  if (failed(memrefTy.getStridesAndOffset(strides, offset)) ||
-      strides.back() != 1)
-    return emitOpError("requires memref with unit innermost stride");
-  return verifyTileSize(*this, getTileType());
+void amx::TileStoreOp::build(OpBuilder &builder, OperationState &state,
+                             Value base, ValueRange indices, Value val) {
+  build(builder, state, base, indices, val, /*stride=*/nullptr);
 }
+
+LogicalResult amx::TileStoreOp::verify() { return tileTransferVerifier(*this); }
 
 SmallVector<Value>
 amx::TileStoreOp::getIntrinsicOperands(ArrayRef<Value> operands,
@@ -177,8 +200,12 @@ amx::TileStoreOp::getIntrinsicOperands(ArrayRef<Value> operands,
   intrinsicOperands.push_back(
       LLVM::getStridedElementPtr(rewriter, loc, typeConverter, getMemRefType(),
                                  adaptor.getBase(), adaptor.getIndices()));
-  intrinsicOperands.push_back(
-      getStride(loc, getMemRefType(), adaptor.getBase(), rewriter));
+  if (Value stride = adaptor.getStride())
+    intrinsicOperands.push_back(
+        computeStrideInBytes(loc, getMemRefType(), stride, rewriter));
+  else
+    intrinsicOperands.push_back(
+        inferStride(loc, getMemRefType(), adaptor.getBase(), rewriter));
   intrinsicOperands.push_back(adaptor.getVal());
 
   return intrinsicOperands;

@@ -1041,7 +1041,7 @@ RedeclarePropertyAccessor(ASTContext &Context, ObjCImplementationDecl *Impl,
       Decl->getSelector(), Decl->getReturnType(),
       Decl->getReturnTypeSourceInfo(), Impl, Decl->isInstanceMethod(),
       Decl->isVariadic(), Decl->isPropertyAccessor(),
-      /* isSynthesized*/ true, Decl->isImplicit(), Decl->isDefined(),
+      /*isSynthesizedAccessorStub=*/true, Decl->isImplicit(), Decl->isDefined(),
       Decl->getImplementationControl(), Decl->hasRelatedResultType());
   ImplDecl->getMethodFamily();
   if (Decl->hasAttrs())

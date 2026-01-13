@@ -5,9 +5,10 @@ mpi-buffer-deref
 
 This check verifies if a buffer passed to an MPI (Message Passing Interface)
 function is sufficiently dereferenced. Buffers should be passed as a single
-pointer or array. As MPI function signatures specify ``void *`` for their buffer
-types, insufficiently dereferenced buffers can be passed, like for example as
-double pointers or multidimensional arrays, without a compiler warning emitted.
+pointer or array. As MPI function signatures specify ``void *`` for their
+buffer types, insufficiently dereferenced buffers can be passed, like for
+example as double pointers or multidimensional arrays, without a compiler
+warning emitted.
 
 Examples:
 

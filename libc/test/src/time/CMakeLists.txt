@@ -124,6 +124,21 @@ add_libc_test(
     libc.src.time.clock_getres
 )
 
+add_libc_test(
+  clock_settime_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    clock_settime_test.cpp
+  DEPENDS
+    libc.src.time.clock_settime
+    libc.hdr.types.time_t
+    libc.hdr.types.struct_timespec
+    libc.hdr.time_macros
+    libc.hdr.errno_macros
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
 add_libc_unittest(
   difftime_test
   SUITE

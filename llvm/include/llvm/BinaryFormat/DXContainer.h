@@ -201,7 +201,7 @@ enum class RootParameterType : uint32_t {
 
 LLVM_ABI ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
 
-bool isValidParameterType(uint32_t V);
+LLVM_ABI_FOR_TEST bool isValidParameterType(uint32_t V);
 
 bool isValidRangeType(uint32_t V);
 
@@ -247,6 +247,12 @@ enum class StaticBorderColor : uint32_t {
 };
 
 bool isValidBorderColor(uint32_t V);
+
+bool isValidRootDesciptorFlags(uint32_t V);
+
+bool isValidDescriptorRangeFlags(uint32_t V);
+
+bool isValidStaticSamplerFlags(uint32_t V);
 
 LLVM_ABI ArrayRef<EnumEntry<StaticBorderColor>> getStaticBorderColors();
 

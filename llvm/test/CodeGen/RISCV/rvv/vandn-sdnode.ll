@@ -2234,8 +2234,6 @@ identity:
   ret <vscale x 1 x i8> %x
 }
 
-declare i64 @llvm.vscale.i64()
-
 define void @vand_vx_loop_hoisted_not(ptr %a, i32 noundef signext %mask) {
 ; CHECK-RV32-LABEL: vand_vx_loop_hoisted_not:
 ; CHECK-RV32:       # %bb.0: # %entry

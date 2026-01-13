@@ -16,7 +16,6 @@ define void @abs_v16i8(ptr %x) {
   store <16 x i8> %b, ptr %x
   ret void
 }
-declare <16 x i8> @llvm.abs.v16i8(<16 x i8>, i1)
 
 define void @abs_v8i16(ptr %x) {
 ; CHECK-LABEL: abs_v8i16:
@@ -32,7 +31,6 @@ define void @abs_v8i16(ptr %x) {
   store <8 x i16> %b, ptr %x
   ret void
 }
-declare <8 x i16> @llvm.abs.v8i16(<8 x i16>, i1)
 
 define void @abs_v6i16(ptr %x) {
 ; CHECK-LABEL: abs_v6i16:
@@ -48,7 +46,6 @@ define void @abs_v6i16(ptr %x) {
   store <6 x i16> %b, ptr %x
   ret void
 }
-declare <6 x i16> @llvm.abs.v6i16(<6 x i16>, i1)
 
 define void @abs_v4i32(ptr %x) {
 ; CHECK-LABEL: abs_v4i32:
@@ -64,7 +61,6 @@ define void @abs_v4i32(ptr %x) {
   store <4 x i32> %b, ptr %x
   ret void
 }
-declare <4 x i32> @llvm.abs.v4i32(<4 x i32>, i1)
 
 define void @abs_v2i64(ptr %x) {
 ; CHECK-LABEL: abs_v2i64:
@@ -80,7 +76,6 @@ define void @abs_v2i64(ptr %x) {
   store <2 x i64> %b, ptr %x
   ret void
 }
-declare <2 x i64> @llvm.abs.v2i64(<2 x i64>, i1)
 
 define void @abs_v32i8(ptr %x) {
 ; CHECK-LABEL: abs_v32i8:
@@ -97,7 +92,6 @@ define void @abs_v32i8(ptr %x) {
   store <32 x i8> %b, ptr %x
   ret void
 }
-declare <32 x i8> @llvm.abs.v32i8(<32 x i8>, i1)
 
 define void @abs_v16i16(ptr %x) {
 ; CHECK-LABEL: abs_v16i16:
@@ -113,7 +107,6 @@ define void @abs_v16i16(ptr %x) {
   store <16 x i16> %b, ptr %x
   ret void
 }
-declare <16 x i16> @llvm.abs.v16i16(<16 x i16>, i1)
 
 define void @abs_v8i32(ptr %x) {
 ; CHECK-LABEL: abs_v8i32:
@@ -129,7 +122,6 @@ define void @abs_v8i32(ptr %x) {
   store <8 x i32> %b, ptr %x
   ret void
 }
-declare <8 x i32> @llvm.abs.v8i32(<8 x i32>, i1)
 
 define void @abs_v4i64(ptr %x) {
 ; CHECK-LABEL: abs_v4i64:
@@ -145,7 +137,6 @@ define void @abs_v4i64(ptr %x) {
   store <4 x i64> %b, ptr %x
   ret void
 }
-declare <4 x i64> @llvm.abs.v4i64(<4 x i64>, i1)
 
 define void @abs_v4i64_of_sext_v4i8(ptr %x) {
 ; CHECK-LABEL: abs_v4i64_of_sext_v4i8:

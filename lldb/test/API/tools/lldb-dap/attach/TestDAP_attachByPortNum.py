@@ -99,7 +99,7 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
             pid=pid,
             gdbRemotePort=port,
             sourceInitFile=True,
-            expectFailure=True,
+            waitForResponse=True,
         )
         self.assertFalse(
             response["success"], "The user can't specify both pid and port"
@@ -115,7 +115,10 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
 
         port = 0
         response = self.attach(
-            program=program, gdbRemotePort=port, sourceInitFile=True, expectFailure=True
+            program=program,
+            gdbRemotePort=port,
+            sourceInitFile=True,
+            waitForResponse=True,
         )
         self.assertFalse(
             response["success"],
@@ -138,7 +141,10 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         )
 
         response = self.attach(
-            program=program, gdbRemotePort=port, sourceInitFile=True, expectFailure=True
+            program=program,
+            gdbRemotePort=port,
+            sourceInitFile=True,
+            waitForResponse=True,
         )
         self.assertFalse(
             response["success"],

@@ -28,7 +28,7 @@ func.func @float_constant_splat() -> vector<8xf32> {
 // CHECK: test.reflect_bounds {smax = 5 : index, smin = 4 : index, umax = 5 : index, umin = 4 : index}
 func.func @vector_splat() -> vector<4xindex> {
   %0 = test.with_bounds { umin = 4 : index, umax = 5 : index, smin = 4 : index, smax = 5 : index } : index
-  %1 = vector.splat %0 : vector<4xindex>
+  %1 = vector.broadcast %0 : index to vector<4xindex>
   %2 = test.reflect_bounds %1 : vector<4xindex>
   func.return %2 : vector<4xindex>
 }

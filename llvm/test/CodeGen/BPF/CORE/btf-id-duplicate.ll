@@ -13,7 +13,7 @@
 %struct.s1 = type { i32, i32 }
 
 ; Function Attrs: nounwind
-define dso_local i32 @foo(ptr %arg) #0 !dbg !7 {
+define dso_local i32 @foo(ptr %arg) !dbg !7 {
 entry:
   %arg.addr = alloca ptr, align 8
   store ptr %arg, ptr %arg.addr, align 8, !tbaa !18
@@ -24,13 +24,13 @@ entry:
 }
 
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 ; Function Attrs: nounwind readnone
-declare i64 @llvm.bpf.btf.type.id(i32, i64) #2
+declare i64 @llvm.bpf.btf.type.id(i32, i64)
 
 ; Function Attrs: nounwind
-define dso_local i32 @bar(ptr %arg) #0 !dbg !25 {
+define dso_local i32 @bar(ptr %arg) !dbg !25 {
 entry:
   %arg.addr = alloca ptr, align 8
   store ptr %arg, ptr %arg.addr, align 8, !tbaa !18
@@ -57,10 +57,6 @@ entry:
 ; CHECK-NEXT:        .long   2
 ; CHECK-NEXT:        .long   26
 ; CHECK-NEXT:        .long   6
-
-attributes #0 = { nounwind "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nofree nosync nounwind readnone speculatable willreturn }
-attributes #2 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

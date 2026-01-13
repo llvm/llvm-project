@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s abseil-no-namespace %t -- -- -I %S/Inputs
+// RUN: %check_clang_tidy %s abseil-no-namespace %t -- -header-filter='' -- -I %S/Inputs
 // RUN: clang-tidy -checks='-*, abseil-no-namespace' -header-filter='.*' %s -- -I %S/Inputs 2>&1 | FileCheck %s
 
 /// Warning will not be triggered on internal Abseil code that is included.

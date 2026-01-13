@@ -237,10 +237,14 @@ std::optional<ConstantRange> Float2IntPass::calcRange(Instruction *I) {
       // OK, it's representable. Now get it.
       APSInt Int(MaxIntegerBW+1, false);
       bool Exact;
-      CF->getValueAPF().convertToInteger(Int,
-                                         APFloat::rmNearestTiesToEven,
-                                         &Exact);
-      OpRanges.push_back(ConstantRange(Int));
+      APFloat::opStatus Status = CF->getValueAPF().convertToInteger(
+          Int, APFloat::rmNearestTiesToEven, &Exact);
+      // Although the round above is loseless, we still need to check if the
+      // floating-point value can be represented in the integer type.
+      if (Status == APFloat::opOK || Status == APFloat::opInexact)
+        OpRanges.push_back(ConstantRange(Int));
+      else
+        return badRange();
     } else {
       llvm_unreachable("Should have already marked this as badRange!");
     }

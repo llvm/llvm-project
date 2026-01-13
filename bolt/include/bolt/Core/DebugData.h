@@ -326,8 +326,8 @@ public:
   /// Write out entries in to .debug_addr section for CUs.
   virtual std::optional<uint64_t> finalize(const size_t BufferSize);
 
-  /// Return buffer with all the entries in .debug_addr already writen out using
-  /// update(...).
+  /// Return buffer with all the entries in .debug_addr already written out
+  /// using update(...).
   virtual std::unique_ptr<AddressSectionBuffer> releaseBuffer() {
     return std::move(Buffer);
   }
@@ -409,7 +409,7 @@ protected:
   std::mutex WriterMutex;
   std::unique_ptr<AddressSectionBuffer> Buffer;
   std::unique_ptr<raw_svector_ostream> AddressStream;
-  /// Used to track sections that were not modified so that they can be re-used.
+  /// Used to track sections that were not modified so that they can be reused.
   static DenseMap<uint64_t, uint64_t> UnmodifiedAddressOffsets;
 };
 
@@ -471,6 +471,12 @@ public:
     return std::move(StrOffsetsBuffer);
   }
 
+  /// Returns strings of .debug_str_offsets.
+  StringRef getBufferStr() {
+    return StringRef(reinterpret_cast<const char *>(StrOffsetsBuffer->data()),
+                     StrOffsetsBuffer->size());
+  }
+
   /// Initializes Buffer and Stream.
   void initialize(DWARFUnit &Unit);
 
@@ -505,6 +511,12 @@ public:
   }
   std::unique_ptr<DebugStrBufferVector> releaseBuffer() {
     return std::move(StrBuffer);
+  }
+
+  /// Returns strings of .debug_str.
+  StringRef getBufferStr() {
+    return StringRef(reinterpret_cast<const char *>(StrBuffer->data()),
+                     StrBuffer->size());
   }
 
   /// Adds string to .debug_str.
