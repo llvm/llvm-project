@@ -45,30 +45,17 @@ define void @vec_reduce_xor_v16i16(ptr %src, ptr %dst) nounwind {
 }
 
 define void @vec_reduce_xor_v8i32(ptr %src, ptr %dst) nounwind {
-; LA32-LABEL: vec_reduce_xor_v8i32:
-; LA32:       # %bb.0:
-; LA32-NEXT:    xvld $xr0, $a0, 0
-; LA32-NEXT:    xvpermi.q $xr1, $xr0, 1
-; LA32-NEXT:    vxor.v $vr0, $vr0, $vr1
-; LA32-NEXT:    vbsrl.v $vr1, $vr0, 8
-; LA32-NEXT:    vxor.v $vr0, $vr1, $vr0
-; LA32-NEXT:    vbsrl.v $vr1, $vr0, 4
-; LA32-NEXT:    vxor.v $vr0, $vr1, $vr0
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; LA32-NEXT:    st.w $a0, $a1, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: vec_reduce_xor_v8i32:
-; LA64:       # %bb.0:
-; LA64-NEXT:    xvld $xr0, $a0, 0
-; LA64-NEXT:    xvpermi.q $xr1, $xr0, 1
-; LA64-NEXT:    vxor.v $vr0, $vr0, $vr1
-; LA64-NEXT:    vbsrl.v $vr1, $vr0, 8
-; LA64-NEXT:    vxor.v $vr0, $vr1, $vr0
-; LA64-NEXT:    vbsrl.v $vr1, $vr0, 4
-; LA64-NEXT:    vxor.v $vr0, $vr1, $vr0
-; LA64-NEXT:    vstelm.w $vr0, $a1, 0, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: vec_reduce_xor_v8i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvld $xr0, $a0, 0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 8
+; CHECK-NEXT:    vxor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 4
+; CHECK-NEXT:    vxor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vstelm.w $vr0, $a1, 0, 0
+; CHECK-NEXT:    ret
   %v = load <8 x i32>, ptr %src
   %res = call i32 @llvm.vector.reduce.xor.v8i32(<8 x i32> %v)
   store i32 %res, ptr %dst

@@ -72,8 +72,7 @@ define void @vec_reduce_add_v8i32(ptr %src, ptr %dst) nounwind {
 ; LA32-NEXT:    xvhaddw.q.d $xr0, $xr0, $xr0
 ; LA32-NEXT:    xvpermi.d $xr1, $xr0, 2
 ; LA32-NEXT:    xvadd.d $xr0, $xr1, $xr0
-; LA32-NEXT:    xvpickve2gr.w $a0, $xr0, 0
-; LA32-NEXT:    st.w $a0, $a1, 0
+; LA32-NEXT:    xvstelm.w $xr0, $a1, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: vec_reduce_add_v8i32:
