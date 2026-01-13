@@ -1193,7 +1193,6 @@ static Value createNeutralAccumulator(ConversionPatternRewriter &rewriter,
   case vector::CombiningKind::ADD:
   case vector::CombiningKind::XOR:
   case vector::CombiningKind::OR:
-  case vector::CombiningKind::MAXUI:
     return arith::ConstantOp::create(
         rewriter, loc, type,
         DenseElementsAttr::get(type, rewriter.getZeroAttr(elemTy)));
