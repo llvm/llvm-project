@@ -195,6 +195,7 @@ Fixed Point Support in Clang
 
 AST Matchers
 ------------
+- Add ``functionTypeLoc`` matcher for matching ``FunctionTypeLoc``.
 
 clang-format
 ------------
