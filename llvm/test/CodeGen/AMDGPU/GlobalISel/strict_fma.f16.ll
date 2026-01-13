@@ -312,17 +312,168 @@ define void @v_constained_fma_v3f16_fpexcept_strict_div(<3 x half> %x, <3 x half
   ret void
 }
 
-;define void @v_constained_fma_v4f16_fpexcept_strict_uni(<4 x half> inreg %x, <4 x half> inreg %y, <4 x half> inreg %z, ptr addrspace(1) %out) #0 {
-;  %val = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> %x, <4 x half> %y, <4 x half> %z, metadata !"round.tonearest", metadata !"fpexcept.strict")
-;  store <4 x half> %val, ptr addrspace(1) %out
-;  ret void
-;}
+define void @v_constained_fma_v4f16_fpexcept_strict_uni(<4 x half> inreg %x, <4 x half> inreg %y, <4 x half> inreg %z, ptr addrspace(1) %out) #0 {
+; GFX8-LABEL: v_constained_fma_v4f16_fpexcept_strict_uni:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_mov_b32_e32 v2, s18
+; GFX8-NEXT:    v_mov_b32_e32 v3, s20
+; GFX8-NEXT:    s_lshr_b32 s6, s18, 16
+; GFX8-NEXT:    s_lshr_b32 s8, s20, 16
+; GFX8-NEXT:    v_fma_f16 v2, s16, v2, v3
+; GFX8-NEXT:    s_lshr_b32 s4, s16, 16
+; GFX8-NEXT:    v_readfirstlane_b32 s10, v2
+; GFX8-NEXT:    v_mov_b32_e32 v2, s6
+; GFX8-NEXT:    v_mov_b32_e32 v3, s8
+; GFX8-NEXT:    v_fma_f16 v2, s4, v2, v3
+; GFX8-NEXT:    v_readfirstlane_b32 s4, v2
+; GFX8-NEXT:    v_mov_b32_e32 v2, s19
+; GFX8-NEXT:    v_mov_b32_e32 v3, s21
+; GFX8-NEXT:    s_lshr_b32 s7, s19, 16
+; GFX8-NEXT:    s_lshr_b32 s9, s21, 16
+; GFX8-NEXT:    v_fma_f16 v2, s17, v2, v3
+; GFX8-NEXT:    s_lshr_b32 s5, s17, 16
+; GFX8-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX8-NEXT:    v_mov_b32_e32 v2, s7
+; GFX8-NEXT:    v_mov_b32_e32 v3, s9
+; GFX8-NEXT:    v_fma_f16 v2, s5, v2, v3
+; GFX8-NEXT:    v_readfirstlane_b32 s5, v2
+; GFX8-NEXT:    s_and_b32 s4, 0xffff, s4
+; GFX8-NEXT:    s_and_b32 s7, 0xffff, s10
+; GFX8-NEXT:    s_lshl_b32 s4, s4, 16
+; GFX8-NEXT:    s_and_b32 s5, 0xffff, s5
+; GFX8-NEXT:    s_or_b32 s4, s7, s4
+; GFX8-NEXT:    s_and_b32 s6, 0xffff, s6
+; GFX8-NEXT:    s_lshl_b32 s5, s5, 16
+; GFX8-NEXT:    s_or_b32 s5, s6, s5
+; GFX8-NEXT:    v_mov_b32_e32 v2, s4
+; GFX8-NEXT:    v_mov_b32_e32 v3, s5
+; GFX8-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-;define void @v_constained_fma_v4f16_fpexcept_strict_div(<4 x half> %x, <4 x half> %y, <4 x half> %z, ptr addrspace(1) %out) #0 {
-;  %val = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> %x, <4 x half> %y, <4 x half> %z, metadata !"round.tonearest", metadata !"fpexcept.strict")
-;  store <4 x half> %val, ptr addrspace(1) %out
-;  ret void
-;}
+; GFX900-LABEL: v_constained_fma_v4f16_fpexcept_strict_uni:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_mov_b32_e32 v2, s18
+; GFX900-NEXT:    v_mov_b32_e32 v3, s20
+; GFX900-NEXT:    v_pk_fma_f16 v2, s16, v2, v3
+; GFX900-NEXT:    v_mov_b32_e32 v3, s19
+; GFX900-NEXT:    v_mov_b32_e32 v4, s21
+; GFX900-NEXT:    v_pk_fma_f16 v3, s17, v3, v4
+; GFX900-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
+; GFX900-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-LABEL: v_constained_fma_v4f16_fpexcept_strict_uni:
+; GFX942:       ; %bb.0:
+; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-NEXT:    v_mov_b32_e32 v3, s16
+; GFX942-NEXT:    v_pk_fma_f16 v2, s0, v2, v3
+; GFX942-NEXT:    v_mov_b32_e32 v3, s3
+; GFX942-NEXT:    v_mov_b32_e32 v4, s17
+; GFX942-NEXT:    v_pk_fma_f16 v3, s1, v3, v4
+; GFX942-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_constained_fma_v4f16_fpexcept_strict_uni:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_dual_mov_b32 v2, s16 :: v_dual_mov_b32 v3, s17
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_pk_fma_f16 v2, s0, s2, v2
+; GFX11-NEXT:    v_pk_fma_f16 v3, s1, s3, v3
+; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_constained_fma_v4f16_fpexcept_strict_uni:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 s4, s0, 16
+; GFX12-NEXT:    s_lshr_b32 s5, s2, 16
+; GFX12-NEXT:    s_lshr_b32 s6, s16, 16
+; GFX12-NEXT:    s_fmac_f16 s16, s0, s2
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_fmac_f16 s6, s4, s5
+; GFX12-NEXT:    s_lshr_b32 s0, s1, 16
+; GFX12-NEXT:    s_lshr_b32 s2, s3, 16
+; GFX12-NEXT:    s_lshr_b32 s4, s17, 16
+; GFX12-NEXT:    s_fmac_f16 s17, s1, s3
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_fmac_f16 s4, s0, s2
+; GFX12-NEXT:    s_pack_ll_b32_b16 s0, s16, s6
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_pack_ll_b32_b16 s1, s17, s4
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
+; GFX12-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %val = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> %x, <4 x half> %y, <4 x half> %z, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  store <4 x half> %val, ptr addrspace(1) %out
+  ret void
+}
+
+define void @v_constained_fma_v4f16_fpexcept_strict_div(<4 x half> %x, <4 x half> %y, <4 x half> %z, ptr addrspace(1) %out) #0 {
+; GFX8-LABEL: v_constained_fma_v4f16_fpexcept_strict_div:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_lshrrev_b32_e32 v8, 16, v0
+; GFX8-NEXT:    v_lshrrev_b32_e32 v10, 16, v2
+; GFX8-NEXT:    v_lshrrev_b32_e32 v12, 16, v4
+; GFX8-NEXT:    v_lshrrev_b32_e32 v9, 16, v1
+; GFX8-NEXT:    v_lshrrev_b32_e32 v11, 16, v3
+; GFX8-NEXT:    v_lshrrev_b32_e32 v13, 16, v5
+; GFX8-NEXT:    v_fma_f16 v0, v0, v2, v4
+; GFX8-NEXT:    v_fma_f16 v2, v8, v10, v12
+; GFX8-NEXT:    v_fma_f16 v1, v1, v3, v5
+; GFX8-NEXT:    v_fma_f16 v3, v9, v11, v13
+; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX8-NEXT:    v_or_b32_e32 v0, v0, v2
+; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
+; GFX8-NEXT:    v_or_b32_e32 v1, v1, v2
+; GFX8-NEXT:    flat_store_dwordx2 v[6:7], v[0:1]
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_constained_fma_v4f16_fpexcept_strict_div:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_pk_fma_f16 v0, v0, v2, v4
+; GFX9-NEXT:    v_pk_fma_f16 v1, v1, v3, v5
+; GFX9-NEXT:    global_store_dwordx2 v[6:7], v[0:1], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_constained_fma_v4f16_fpexcept_strict_div:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_pk_fma_f16 v0, v0, v2, v4
+; GFX11-NEXT:    v_pk_fma_f16 v1, v1, v3, v5
+; GFX11-NEXT:    global_store_b64 v[6:7], v[0:1], off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_constained_fma_v4f16_fpexcept_strict_div:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_pk_fma_f16 v0, v0, v2, v4
+; GFX12-NEXT:    v_pk_fma_f16 v1, v1, v3, v5
+; GFX12-NEXT:    global_store_b64 v[6:7], v[0:1], off
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %val = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> %x, <4 x half> %y, <4 x half> %z, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  store <4 x half> %val, ptr addrspace(1) %out
+  ret void
+}
 
 define void @v_constained_fma_f16_fpexcept_strict_fneg_uni(half inreg %x, half inreg %y, half inreg %z, ptr addrspace(1) %out) #0 {
 ; GFX8-LABEL: v_constained_fma_f16_fpexcept_strict_fneg_uni:
