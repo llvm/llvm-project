@@ -49,6 +49,7 @@ to learn about the defaults for your platform and target.
     - ``LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320``: Use an alternative printf float implementation based on 320-bit floats
     - ``LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE``: Use large table for better printf long double performance.
     - ``LIBC_CONF_PRINTF_RUNTIME_DISPATCH``: Use dynamic dispatch for the output mechanism to reduce code size.
+    - ``LIBC_CONF_PRINTF_DISABLE_WIDE``: Disable handling of %lc and %ls on unsupported platforms.
 * **"pthread" options**
     - ``LIBC_CONF_RAW_MUTEX_DEFAULT_SPIN_COUNT``: Default number of spins before blocking if a mutex is in contention (default to 100).
     - ``LIBC_CONF_RWLOCK_DEFAULT_SPIN_COUNT``: Default number of spins before blocking if a rwlock is in contention (default to 100).

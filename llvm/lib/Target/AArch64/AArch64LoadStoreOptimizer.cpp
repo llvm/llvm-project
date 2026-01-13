@@ -833,10 +833,10 @@ static bool isMergeableIndexLdSt(MachineInstr &MI, int &Scale) {
   }
 }
 
-static bool isRewritableImplicitDef(unsigned Opc) {
-  switch (Opc) {
+static bool isRewritableImplicitDef(const MachineOperand &MO) {
+  switch (MO.getParent()->getOpcode()) {
   default:
-    return false;
+    return MO.isRenamable();
   case AArch64::ORRWrs:
   case AArch64::ADDWri:
     return true;
@@ -1047,7 +1047,7 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
                         MI.getRegClassConstraint(OpIdx, TII, TRI))
                   MatchingReg = GetMatchingSubReg(RC);
                 else {
-                  if (!isRewritableImplicitDef(MI.getOpcode()))
+                  if (!isRewritableImplicitDef(MOP))
                     continue;
                   MatchingReg = GetMatchingSubReg(
                       TRI->getMinimalPhysRegClass(MOP.getReg()));
@@ -1739,7 +1739,7 @@ static bool canRenameMOP(const MachineOperand &MOP,
     // them must be known. For example, in ORRWrs the implicit-def
     // corresponds to the result register.
     if (MOP.isImplicit() && MOP.isDef()) {
-      if (!isRewritableImplicitDef(MOP.getParent()->getOpcode()))
+      if (!isRewritableImplicitDef(MOP))
         return false;
       return TRI->isSuperOrSubRegisterEq(
           MOP.getParent()->getOperand(0).getReg(), MOP.getReg());
