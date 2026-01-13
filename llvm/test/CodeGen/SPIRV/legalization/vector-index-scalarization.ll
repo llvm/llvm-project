@@ -1,7 +1,12 @@
 ; RUN: llc -O0 -mtriple=spirv1.6-unknown-vulkan1.3-compute %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.6-unknown-vulkan1.3-compute %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 
+; CHECK-DAG: OpName %[[#idx:]] "idx"
+; CHECK-DAG: OpName %[[#idx2:]] "idx2"
+; CHECK-DAG: OpName %[[#val:]] "val"
+
 ; CHECK-DAG: %[[#int:]] = OpTypeInt 32 0
+; CHECK-DAG: %[[#long:]] = OpTypeInt 64 0
 ; CHECK-DAG: %[[#c6:]] = OpConstant %[[#int]] 6
 ; CHECK-DAG: %[[#arr6int:]] = OpTypeArray %[[#int]] %[[#c6]]
 ; CHECK-DAG: %[[#ptr_arr6int:]] = OpTypePointer Function %[[#arr6int]]
@@ -26,14 +31,13 @@
 ; CHECK: %[[#test_full:]] = OpFunction %[[#]] None %[[#]]
 define void @test_full() #0 {
   ; CHECK:      %[[#label:]] = OpLabel
-  ; CHECK-DAG:  %[[#V_INS:]] = OpVariable %[[#ptr_arr6int]] Function
-  ; CHECK-DAG:  %[[#V_EXT:]] = OpVariable %[[#ptr_arr6int]] Function
-  ; CHECK-DAG:  %[[#]] = OpLoad %[[#int]] %[[#]]
-  ; CHECK-DAG:  %[[#]] = OpLoad %[[#int]] %[[#]]
-  ; CHECK-DAG:  %[[#VAL:]] = OpLoad %[[#int]] %[[#]]
-  ; CHECK-DAG:  %[[#IDX64:]] = OpUConvert %[[#]] %[[#]]
-  ; CHECK-DAG:  %[[#IDX2_64:]] = OpUConvert %[[#]] %[[#]]
-
+  ; CHECK-DAG:  %[[#v_ins:]] = OpVariable %[[#ptr_arr6int]] Function
+  ; CHECK-DAG:  %[[#v_ext:]] = OpVariable %[[#ptr_arr6int]] Function
+  ; CHECK-DAG:  %[[#i0:]] = OpLoad %[[#int]] %[[#idx]]
+  ; CHECK-DAG:  %[[#i1:]] = OpLoad %[[#int]] %[[#idx2]]
+  ; CHECK-DAG:  %[[#val_val:]] = OpLoad %[[#int]] %[[#val]]
+  ; CHECK-DAG:  %[[#idx64:]] = OpUConvert %[[#long]] %[[#i0]]
+  ; CHECK-DAG:  %[[#idx2_64:]] = OpUConvert %[[#long]] %[[#i1]]
 
   %idx = load i32, ptr addrspace(10) @idx
   %idx2 = load i32, ptr addrspace(10) @idx2
@@ -45,54 +49,54 @@ define void @test_full() #0 {
   %idx2_64 = zext i32 %idx2 to i64
 
   ; Insertelement with dynamic index spills to stack
-; CHECK:  %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_INS]] %[[#c0]]
-; CHECK:  OpStore %[[#]] %[[#undef]] Aligned 32
-; CHECK:  %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_INS]] %[[#c1]]
-; CHECK:  OpStore %[[#]] %[[#undef]] Aligned 4
-; CHECK:  %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_INS]] %[[#c2]]
-; CHECK:  OpStore %[[#]] %[[#undef]] Aligned 8
-; CHECK:  %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_INS]] %[[#c3]]
-; CHECK:  OpStore %[[#]] %[[#undef]] Aligned 4
-; CHECK:  %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_INS]] %[[#c4]]
-; CHECK:  OpStore %[[#]] %[[#undef]] Aligned 16
-; CHECK:  %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_INS]] %[[#c5]]
-; CHECK:  OpStore %[[#]] %[[#undef]] Aligned 4
-; CHECK:  %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_INS]] %[[#IDX64]]
-; CHECK:  OpStore %[[#]] %[[#VAL]] Aligned 4
-; CHECK:  %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_INS]] %[[#c0]]
-; CHECK:  %[[#V0:]] = OpLoad %[[#int]] %[[#]] Aligned 32
-; CHECK:  %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_INS]] %[[#c1]]
-; CHECK:  %[[#V1:]] = OpLoad %[[#int]] %[[#]] Aligned 4
-; CHECK:  %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_INS]] %[[#c2]]
-; CHECK:  %[[#V2:]] = OpLoad %[[#int]] %[[#]] Aligned 8
-; CHECK:  %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_INS]] %[[#c3]]
-; CHECK:  %[[#V3:]] = OpLoad %[[#int]] %[[#]] Aligned 4
-; CHECK:  %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_INS]] %[[#c4]]
-; CHECK:  %[[#V4:]] = OpLoad %[[#int]] %[[#]] Aligned 16
-; CHECK:  %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_INS]] %[[#c5]]
-; CHECK:  %[[#V5:]] = OpLoad %[[#int]] %[[#]] Aligned 4
+; CHECK:  %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_ins]] %[[#c0]]
+; CHECK:  OpStore %[[#ac]] %[[#undef]] Aligned 32
+; CHECK:  %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_ins]] %[[#c1]]
+; CHECK:  OpStore %[[#ac]] %[[#undef]] Aligned 4
+; CHECK:  %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_ins]] %[[#c2]]
+; CHECK:  OpStore %[[#ac]] %[[#undef]] Aligned 8
+; CHECK:  %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_ins]] %[[#c3]]
+; CHECK:  OpStore %[[#ac]] %[[#undef]] Aligned 4
+; CHECK:  %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_ins]] %[[#c4]]
+; CHECK:  OpStore %[[#ac]] %[[#undef]] Aligned 16
+; CHECK:  %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_ins]] %[[#c5]]
+; CHECK:  OpStore %[[#ac]] %[[#undef]] Aligned 4
+; CHECK:  %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_ins]] %[[#idx64]]
+; CHECK:  OpStore %[[#ac]] %[[#val_val]] Aligned 4
+; CHECK:  %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_ins]] %[[#c0]]
+; CHECK:  %[[#v0:]] = OpLoad %[[#int]] %[[#ac]] Aligned 32
+; CHECK:  %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_ins]] %[[#c1]]
+; CHECK:  %[[#v1:]] = OpLoad %[[#int]] %[[#ac]] Aligned 4
+; CHECK:  %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_ins]] %[[#c2]]
+; CHECK:  %[[#v2:]] = OpLoad %[[#int]] %[[#ac]] Aligned 8
+; CHECK:  %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_ins]] %[[#c3]]
+; CHECK:  %[[#v3:]] = OpLoad %[[#int]] %[[#ac]] Aligned 4
+; CHECK:  %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_ins]] %[[#c4]]
+; CHECK:  %[[#v4:]] = OpLoad %[[#int]] %[[#ac]] Aligned 16
+; CHECK:  %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_ins]] %[[#c5]]
+; CHECK:  %[[#v5:]] = OpLoad %[[#int]] %[[#ac]] Aligned 4
   %inserted = insertelement <6 x i32> %loaded, i32 %val, i64 %idx64
 
   ; Extractelement with dynamic index spills to stack
 
 
-; CHECK:  %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_EXT]] %[[#c0]]
-; CHECK:  OpStore %[[#]] %[[#V0]] Aligned 32
-; CHECK:  %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_EXT]] %[[#c1]]
-; CHECK:  OpStore %[[#]] %[[#V1]] Aligned 4
-; CHECK:  %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_EXT]] %[[#c2]]
-; CHECK:  OpStore %[[#]] %[[#V2]] Aligned 8
-; CHECK:  %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_EXT]] %[[#c3]]
-; CHECK:  OpStore %[[#]] %[[#V3]] Aligned 4
-; CHECK:  %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_EXT]] %[[#c4]]
-; CHECK:  OpStore %[[#]] %[[#V4]] Aligned 16
-; CHECK:  %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_EXT]] %[[#c5]]
-; CHECK:  OpStore %[[#]] %[[#V5]] Aligned 4
-; CHECK:  %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_EXT]] %[[#IDX2_64]]
-; CHECK:  %[[#EXTRACTED:]] = OpLoad %[[#int]] %[[#]] Aligned 4
+; CHECK:  %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_ext]] %[[#c0]]
+; CHECK:  OpStore %[[#ac]] %[[#v0]] Aligned 32
+; CHECK:  %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_ext]] %[[#c1]]
+; CHECK:  OpStore %[[#ac]] %[[#v1]] Aligned 4
+; CHECK:  %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_ext]] %[[#c2]]
+; CHECK:  OpStore %[[#ac]] %[[#v2]] Aligned 8
+; CHECK:  %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_ext]] %[[#c3]]
+; CHECK:  OpStore %[[#ac]] %[[#v3]] Aligned 4
+; CHECK:  %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_ext]] %[[#c4]]
+; CHECK:  OpStore %[[#ac]] %[[#v4]] Aligned 16
+; CHECK:  %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_ext]] %[[#c5]]
+; CHECK:  OpStore %[[#ac]] %[[#v5]] Aligned 4
+; CHECK:  %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_ext]] %[[#idx2_64]]
+; CHECK:  %[[#extracted:]] = OpLoad %[[#int]] %[[#ac]] Aligned 4
   %extracted = extractelement <6 x i32> %inserted, i64 %idx2_64
 
-  ; CHECK: OpStore %[[#out]] %[[#EXTRACTED]]
+  ; CHECK: OpStore %[[#out]] %[[#extracted]]
   store i32 %extracted, ptr addrspace(10) @out
   ret void
 }
@@ -100,27 +104,27 @@ define void @test_full() #0 {
 ; CHECK: %[[#test_undef:]] = OpFunction %[[#]] None %[[#]]
 define void @test_undef() #0 {
   ; CHECK:      %[[#label:]] = OpLabel
-  ; CHECK:      %[[#V_UNDEF:]] = OpVariable %[[#ptr_arr6int]] Function
-  ; CHECK-DAG:  %[[#IDX:]] = OpLoad %[[#int]] %[[#]]
-  ; CHECK-DAG:  %[[#VAL:]] = OpLoad %[[#int]] %[[#]]
-  ; CHECK:      %[[#IDX64:]] = OpUConvert %[[#]] %[[#IDX]]
-  ; CHECK:      %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_UNDEF]] %[[#c0]]
-  ; CHECK:      OpStore %[[#]] %[[#undef]] Aligned 32
-  ; CHECK:      %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_UNDEF]] %[[#c1]]
-  ; CHECK:      OpStore %[[#]] %[[#undef]] Aligned 4
-  ; CHECK:      %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_UNDEF]] %[[#c2]]
-  ; CHECK:      OpStore %[[#]] %[[#undef]] Aligned 8
-  ; CHECK:      %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_UNDEF]] %[[#c3]]
-  ; CHECK:      OpStore %[[#]] %[[#undef]] Aligned 4
-  ; CHECK:      %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_UNDEF]] %[[#c4]]
-  ; CHECK:      OpStore %[[#]] %[[#undef]] Aligned 16
-  ; CHECK:      %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_UNDEF]] %[[#c5]]
-  ; CHECK:      OpStore %[[#]] %[[#undef]] Aligned 4
-  ; CHECK:      %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_UNDEF]] %[[#IDX64]]
-  ; CHECK:      OpStore %[[#]] %[[#VAL]] Aligned 4
-  ; CHECK:      %[[#PTR0:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_UNDEF]] %[[#c0]]
-  ; CHECK:      %[[#RES:]] = OpLoad %[[#int]] %[[#PTR0]] Aligned 32
-  ; CHECK:      OpStore %[[#out]] %[[#RES]]
+  ; CHECK:      %[[#v_undef:]] = OpVariable %[[#ptr_arr6int]] Function
+  ; CHECK-DAG:  %[[#idx_val:]] = OpLoad %[[#int]] %[[#idx]]
+  ; CHECK-DAG:  %[[#val_val:]] = OpLoad %[[#int]] %[[#val]]
+  ; CHECK:      %[[#idx64:]] = OpUConvert %[[#long]] %[[#idx_val]]
+  ; CHECK:      %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_undef]] %[[#c0]]
+  ; CHECK:      OpStore %[[#ac]] %[[#undef]] Aligned 32
+  ; CHECK:      %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_undef]] %[[#c1]]
+  ; CHECK:      OpStore %[[#ac]] %[[#undef]] Aligned 4
+  ; CHECK:      %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_undef]] %[[#c2]]
+  ; CHECK:      OpStore %[[#ac]] %[[#undef]] Aligned 8
+  ; CHECK:      %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_undef]] %[[#c3]]
+  ; CHECK:      OpStore %[[#ac]] %[[#undef]] Aligned 4
+  ; CHECK:      %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_undef]] %[[#c4]]
+  ; CHECK:      OpStore %[[#ac]] %[[#undef]] Aligned 16
+  ; CHECK:      %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_undef]] %[[#c5]]
+  ; CHECK:      OpStore %[[#ac]] %[[#undef]] Aligned 4
+  ; CHECK:      %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_undef]] %[[#idx64]]
+  ; CHECK:      OpStore %[[#ac]] %[[#val_val]] Aligned 4
+  ; CHECK:      %[[#ptr0:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_undef]] %[[#c0]]
+  ; CHECK:      %[[#res:]] = OpLoad %[[#int]] %[[#ptr0]] Aligned 32
+  ; CHECK:      OpStore %[[#out]] %[[#res]]
   %idx = load i32, ptr addrspace(10) @idx
   %val = load i32, ptr addrspace(10) @val
   %idx64 = zext i32 %idx to i64
@@ -133,27 +137,27 @@ define void @test_undef() #0 {
 ; CHECK: %[[#test_zero:]] = OpFunction %[[#]] None %[[#]]
 define void @test_zero() #0 {
   ; CHECK:      %[[#label:]] = OpLabel
-  ; CHECK:      %[[#V_ZERO:]] = OpVariable %[[#ptr_arr6int]] Function
-  ; CHECK-DAG:  %[[#IDX:]] = OpLoad %[[#int]] %[[#]]
-  ; CHECK-DAG:  %[[#VAL:]] = OpLoad %[[#int]] %[[#]]
-  ; CHECK:      %[[#IDX64:]] = OpUConvert %[[#]] %[[#IDX]]
-  ; CHECK:      %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_ZERO]] %[[#c0]]
-  ; CHECK:      OpStore %[[#]] %[[#c0]] Aligned 32
-  ; CHECK:      %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_ZERO]] %[[#c1]]
-  ; CHECK:      OpStore %[[#]] %[[#c0]] Aligned 4
-  ; CHECK:      %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_ZERO]] %[[#c2]]
-  ; CHECK:      OpStore %[[#]] %[[#c0]] Aligned 8
-  ; CHECK:      %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_ZERO]] %[[#c3]]
-  ; CHECK:      OpStore %[[#]] %[[#c0]] Aligned 4
-  ; CHECK:      %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_ZERO]] %[[#c4]]
-  ; CHECK:      OpStore %[[#]] %[[#c0]] Aligned 16
-  ; CHECK:      %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_ZERO]] %[[#c5]]
-  ; CHECK:      OpStore %[[#]] %[[#c0]] Aligned 4
-  ; CHECK:      %[[#]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_ZERO]] %[[#IDX64]]
-  ; CHECK:      OpStore %[[#]] %[[#VAL]] Aligned 4
-  ; CHECK:      %[[#PTR0:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#V_ZERO]] %[[#c0]]
-  ; CHECK:      %[[#RES:]] = OpLoad %[[#int]] %[[#PTR0]] Aligned 32
-  ; CHECK:      OpStore %[[#out]] %[[#RES]]
+  ; CHECK:      %[[#v_zero:]] = OpVariable %[[#ptr_arr6int]] Function
+  ; CHECK-DAG:  %[[#idx_val:]] = OpLoad %[[#int]] %[[#idx]]
+  ; CHECK-DAG:  %[[#val_val:]] = OpLoad %[[#int]] %[[#val]]
+  ; CHECK:      %[[#idx64:]] = OpUConvert %[[#long]] %[[#idx_val]]
+  ; CHECK:      %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_zero]] %[[#c0]]
+  ; CHECK:      OpStore %[[#ac]] %[[#c0]] Aligned 32
+  ; CHECK:      %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_zero]] %[[#c1]]
+  ; CHECK:      OpStore %[[#ac]] %[[#c0]] Aligned 4
+  ; CHECK:      %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_zero]] %[[#c2]]
+  ; CHECK:      OpStore %[[#ac]] %[[#c0]] Aligned 8
+  ; CHECK:      %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_zero]] %[[#c3]]
+  ; CHECK:      OpStore %[[#ac]] %[[#c0]] Aligned 4
+  ; CHECK:      %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_zero]] %[[#c4]]
+  ; CHECK:      OpStore %[[#ac]] %[[#c0]] Aligned 16
+  ; CHECK:      %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_zero]] %[[#c5]]
+  ; CHECK:      OpStore %[[#ac]] %[[#c0]] Aligned 4
+  ; CHECK:      %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_zero]] %[[#idx64]]
+  ; CHECK:      OpStore %[[#ac]] %[[#val_val]] Aligned 4
+  ; CHECK:      %[[#ptr0:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_zero]] %[[#c0]]
+  ; CHECK:      %[[#res:]] = OpLoad %[[#int]] %[[#ptr0]] Aligned 32
+  ; CHECK:      OpStore %[[#out]] %[[#res]]
   %idx = load i32, ptr addrspace(10) @idx
   %val = load i32, ptr addrspace(10) @val
   %idx64 = zext i32 %idx to i64
