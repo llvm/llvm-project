@@ -25,9 +25,8 @@ template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
 
 /// A match functor that can be used as a UnaryPredicate in functional
 /// algorithms like all_of.
-template <typename Val, typename Pattern>
-constexpr auto match_fn(const Pattern &P) {
-  return bind_back<match<Val, Pattern>>(P);
+template <typename Val, typename Pattern> auto match_fn(const Pattern &P) {
+  return bind_back(match<Val, Pattern>, P);
 }
 
 template <typename Pattern> bool match(VPUser *U, const Pattern &P) {
@@ -36,8 +35,8 @@ template <typename Pattern> bool match(VPUser *U, const Pattern &P) {
 }
 
 /// Match functor for VPUser.
-template <typename Pattern> constexpr auto match_fn(const Pattern &P) {
-  return bind_back<match<Pattern>>(P);
+template <typename Pattern> auto match_fn(const Pattern &P) {
+  return bind_back(match<Pattern>, P);
 }
 
 template <typename Pattern> bool match(VPSingleDefRecipe *R, const Pattern &P) {
