@@ -447,6 +447,7 @@ CodeGenFunction::generateAwaitSuspendWrapper(Twine const &CoroName,
 
   Fn->setMustProgress();
   Fn->addFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
+  Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
 
   StartFunction(GlobalDecl(), ReturnTy, Fn, FI, args);
 
