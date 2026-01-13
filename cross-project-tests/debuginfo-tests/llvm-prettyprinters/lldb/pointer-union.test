@@ -1,0 +1,103 @@
+# REQUIRES: lldb-formatters-compatibility
+#
+# RUN: split-file %s %t
+# RUN: lldb -x \
+# RUN:   -o 'command script import %llvm_src_root/utils/lldbDataFormatters.py' \
+# RUN:   -s %t/commands.input %llvm_tools_dir/check-lldb-llvm-support-pointer-union \
+# RUN:   -o quit \
+# RUN:   | FileCheck %t/checks
+
+#--- commands.input
+break set -p "Break here"
+run
+
+p &f
+p &a
+p &z
+p &derived
+p &dv
+v -T z_float
+v -T raw_z_float
+v -T long_int_float
+v -T z_only
+v -T union_int_pair
+p z_float.Pointer
+p union_int_pair.Pointer
+p union_int_pair.Pointer.Pointer
+
+continue
+
+v -T z_float
+
+continue
+
+v -T virtual_float
+p virtual_float.Pointer
+
+#--- checks
+# CHECK:      (lldb) p &f
+# CHECK-NEXT: (float *) [[PTR_F:0x[0-9a-zA-Z]+]]
+
+# CHECK:      (lldb) p &a
+# CHECK-NEXT: (int *) [[PTR_A:0x[0-9a-zA-Z]+]]
+
+# CHECK:      (lldb) p &z
+# CHECK-NEXT: (Z *) [[PTR_Z:0x[0-9a-zA-Z]+]]
+
+# CHECK:      (lldb) p &derived
+# CHECK-NEXT: (Derived *) [[PTR_DERIVED:0x[0-9a-zA-Z]+]]
+
+# CHECK:      (lldb) p &dv
+# CHECK-NEXT: (DerivedWithVirtual *) [[PTR_DV:0x[0-9a-zA-Z]+]]
+
+# CHECK:      (lldb) v -T z_float
+# CHECK-NEXT: (llvm::PointerUnion<Z *, float *>) z_float = {
+# CHECK-NEXT:   (float *) Pointer = [[PTR_F]]
+# CHECK-NEXT: }
+
+# CHECK:      (lldb) v -T raw_z_float
+# CHECK-NEXT: (llvm::PointerUnion<Z *, float *>) raw_z_float = {
+# CHECK-NEXT:   (Z *) Pointer = nullptr
+# CHECK-NEXT: }
+
+# CHECK:      (lldb) v -T long_int_float
+# CHECK-NEXT: (llvm::PointerUnion<long long *, int *, float *>) long_int_float = {
+# CHECK-NEXT:   (int *) Pointer = [[PTR_A]]
+# CHECK-NEXT: }
+
+# CHECK:      (lldb) v -T z_only
+# CHECK-NEXT: (llvm::PointerUnion<Z *>) z_only = {
+# CHECK-NEXT:   (Z *) Pointer = [[PTR_Z]]
+# CHECK-NEXT: }
+
+# CHECK:      (lldb) v -T union_int_pair
+# CHECK-NEXT: (llvm::PointerIntPair<llvm::PointerUnion<Z *, float *>, 1>) union_int_pair = {
+# CHECK-NEXT:   (llvm::PointerUnion<Z *, float *>) Pointer = {
+# CHECK-NEXT:     (float *) Pointer = [[PTR_F]]
+# CHECK-NEXT:   }
+# CHECK-NEXT:   (unsigned int) Int = 1
+# CHECK-NEXT: }
+
+# CHECK:      (lldb) p z_float.Pointer
+# CHECK-NEXT: (float *) [[PTR_F]]
+
+# CHECK:      (lldb) p union_int_pair.Pointer
+# CHECK-NEXT: (llvm::PointerUnion<Z *, float *>) {
+# CHECK-NEXT:   Pointer = [[PTR_F]]
+# CHECK-NEXT: }
+
+# CHECK:      (lldb) p union_int_pair.Pointer.Pointer
+# CHECK-NEXT: (float *) [[PTR_F]]
+
+# CHECK:      (lldb) v -T z_float
+# CHECK-NEXT: (llvm::PointerUnion<Z *, float *>) z_float = {
+# CHECK-NEXT:   (Z *) Pointer = [[PTR_DERIVED]]
+# CHECK-NEXT: }
+
+# CHECK:      (lldb) v -T virtual_float
+# CHECK-NEXT: (llvm::PointerUnion<HasVirtual *, float *>) virtual_float = {
+# CHECK-NEXT:   (DerivedWithVirtual *) Pointer = [[PTR_DV]]
+# CHECK-NEXT: }
+
+# CHECK:      (lldb) p virtual_float.Pointer
+# CHECK-NEXT: (DerivedWithVirtual *) [[PTR_DV]]

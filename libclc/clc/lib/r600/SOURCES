@@ -1,2 +1,2 @@
 math/clc_native_rsqrt.cl
-math/clc_rsqrt_override.cl
+math/clc_rsqrt.cl

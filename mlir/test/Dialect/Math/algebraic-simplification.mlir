@@ -22,6 +22,18 @@ func.func @pow_square(%arg0: f32, %arg1 : vector<4xf32>) -> (f32, vector<4xf32>)
   return %0, %1 : f32, vector<4xf32>
 }
 
+// CHECK-LABEL: @pow_square_fast
+func.func @pow_square_fast(%arg0: f32, %arg1 : vector<4xf32>) -> (f32, vector<4xf32>) {
+  // CHECK: %[[SCALAR:.*]] = arith.mulf %arg0, %arg0 fastmath<fast>
+  // CHECK: %[[VECTOR:.*]] = arith.mulf %arg1, %arg1 fastmath<fast>
+  // CHECK: return %[[SCALAR]], %[[VECTOR]]
+  %c = arith.constant 2.0 : f32
+  %v = arith.constant dense <2.0> : vector<4xf32>
+  %0 = math.powf %arg0, %c fastmath<fast> : f32
+  %1 = math.powf %arg1, %v fastmath<fast> : vector<4xf32>
+  return %0, %1 : f32, vector<4xf32>
+}
+
 // CHECK-LABEL: @pow_cube
 func.func @pow_cube(%arg0: f32, %arg1 : vector<4xf32>) -> (f32, vector<4xf32>) {
   // CHECK: %[[TMP_S:.*]] = arith.mulf %arg0, %arg0
@@ -33,6 +45,20 @@ func.func @pow_cube(%arg0: f32, %arg1 : vector<4xf32>) -> (f32, vector<4xf32>) {
   %v = arith.constant dense <3.0> : vector<4xf32>
   %0 = math.powf %arg0, %c : f32
   %1 = math.powf %arg1, %v : vector<4xf32>
+  return %0, %1 : f32, vector<4xf32>
+}
+
+// CHECK-LABEL: @pow_cube_fast
+func.func @pow_cube_fast(%arg0: f32, %arg1 : vector<4xf32>) -> (f32, vector<4xf32>) {
+  // CHECK: %[[TMP_S:.*]] = arith.mulf %arg0, %arg0 fastmath<fast>
+  // CHECK: %[[SCALAR:.*]] = arith.mulf %arg0, %[[TMP_S]] fastmath<fast>
+  // CHECK: %[[TMP_V:.*]] = arith.mulf %arg1, %arg1 fastmath<fast>
+  // CHECK: %[[VECTOR:.*]] = arith.mulf %arg1, %[[TMP_V]] fastmath<fast>
+  // CHECK: return %[[SCALAR]], %[[VECTOR]]
+  %c = arith.constant 3.0 : f32
+  %v = arith.constant dense <3.0> : vector<4xf32>
+  %0 = math.powf %arg0, %c fastmath<fast> : f32
+  %1 = math.powf %arg1, %v fastmath<fast> : vector<4xf32>
   return %0, %1 : f32, vector<4xf32>
 }
 
@@ -50,6 +76,20 @@ func.func @pow_recip(%arg0: f32, %arg1 : vector<4xf32>) -> (f32, vector<4xf32>) 
   return %0, %1 : f32, vector<4xf32>
 }
 
+// CHECK-LABEL: @pow_recip_fast
+func.func @pow_recip_fast(%arg0: f32, %arg1 : vector<4xf32>) -> (f32, vector<4xf32>) {
+  // CHECK-DAG: %[[CST_S:.*]] = arith.constant 1.0{{.*}} : f32
+  // CHECK-DAG: %[[CST_V:.*]] = arith.constant dense<1.0{{.*}}> : vector<4xf32>
+  // CHECK: %[[SCALAR:.*]] = arith.divf %[[CST_S]], %arg0 fastmath<fast>
+  // CHECK: %[[VECTOR:.*]] = arith.divf %[[CST_V]], %arg1 fastmath<fast>
+  // CHECK: return %[[SCALAR]], %[[VECTOR]]
+  %c = arith.constant -1.0 : f32
+  %v = arith.constant dense <-1.0> : vector<4xf32>
+  %0 = math.powf %arg0, %c fastmath<fast> : f32
+  %1 = math.powf %arg1, %v fastmath<fast> : vector<4xf32>
+  return %0, %1 : f32, vector<4xf32>
+}
+
 // CHECK-LABEL: @pow_sqrt
 func.func @pow_sqrt(%arg0: f32, %arg1 : vector<4xf32>) -> (f32, vector<4xf32>) {
   // CHECK: %[[SCALAR:.*]] = math.sqrt %arg0
@@ -62,6 +102,18 @@ func.func @pow_sqrt(%arg0: f32, %arg1 : vector<4xf32>) -> (f32, vector<4xf32>) {
   return %0, %1 : f32, vector<4xf32>
 }
 
+// CHECK-LABEL: @pow_sqrt_fast
+func.func @pow_sqrt_fast(%arg0: f32, %arg1 : vector<4xf32>) -> (f32, vector<4xf32>) {
+  // CHECK: %[[SCALAR:.*]] = math.sqrt %arg0 fastmath<fast>
+  // CHECK: %[[VECTOR:.*]] = math.sqrt %arg1 fastmath<fast>
+  // CHECK: return %[[SCALAR]], %[[VECTOR]]
+  %c = arith.constant 0.5 : f32
+  %v = arith.constant dense <0.5> : vector<4xf32>
+  %0 = math.powf %arg0, %c fastmath<fast> : f32
+  %1 = math.powf %arg1, %v fastmath<fast> : vector<4xf32>
+  return %0, %1 : f32, vector<4xf32>
+}
+
 // CHECK-LABEL: @pow_rsqrt
 func.func @pow_rsqrt(%arg0: f32, %arg1 : vector<4xf32>) -> (f32, vector<4xf32>) {
   // CHECK: %[[SCALAR:.*]] = math.rsqrt %arg0
@@ -71,6 +123,18 @@ func.func @pow_rsqrt(%arg0: f32, %arg1 : vector<4xf32>) -> (f32, vector<4xf32>) 
   %v = arith.constant dense <-0.5> : vector<4xf32>
   %0 = math.powf %arg0, %c : f32
   %1 = math.powf %arg1, %v : vector<4xf32>
+  return %0, %1 : f32, vector<4xf32>
+}
+
+// CHECK-LABEL: @pow_rsqrt_fast
+func.func @pow_rsqrt_fast(%arg0: f32, %arg1 : vector<4xf32>) -> (f32, vector<4xf32>) {
+  // CHECK: %[[SCALAR:.*]] = math.rsqrt %arg0 fastmath<fast>
+  // CHECK: %[[VECTOR:.*]] = math.rsqrt %arg1 fastmath<fast>
+  // CHECK: return %[[SCALAR]], %[[VECTOR]]
+  %c = arith.constant -0.5 : f32
+  %v = arith.constant dense <-0.5> : vector<4xf32>
+  %0 = math.powf %arg0, %c fastmath<fast> : f32
+  %1 = math.powf %arg1, %v fastmath<fast> : vector<4xf32>
   return %0, %1 : f32, vector<4xf32>
 }
 
@@ -87,6 +151,22 @@ func.func @pow_0_75(%arg0: f32, %arg1 : vector<4xf32>) -> (f32, vector<4xf32>) {
   %v = arith.constant dense <0.75> : vector<4xf32>
   %0 = math.powf %arg0, %c : f32
   %1 = math.powf %arg1, %v : vector<4xf32>
+  return %0, %1 : f32, vector<4xf32>
+}
+
+// CHECK-LABEL: @pow_0_75_fast
+func.func @pow_0_75_fast(%arg0: f32, %arg1 : vector<4xf32>) -> (f32, vector<4xf32>) {
+  // CHECK: %[[SQRT1S:.*]] = math.sqrt %arg0 fastmath<fast>
+  // CHECK: %[[SQRT2S:.*]] = math.sqrt %[[SQRT1S]] fastmath<fast>
+  // CHECK: %[[SCALAR:.*]] = arith.mulf %[[SQRT1S]], %[[SQRT2S]] fastmath<fast>
+  // CHECK: %[[SQRT1V:.*]] = math.sqrt %arg1 fastmath<fast>
+  // CHECK: %[[SQRT2V:.*]] = math.sqrt %[[SQRT1V]] fastmath<fast>
+  // CHECK: %[[VECTOR:.*]] = arith.mulf %[[SQRT1V]], %[[SQRT2V]] fastmath<fast>
+  // CHECK: return %[[SCALAR]], %[[VECTOR]]
+  %c = arith.constant 0.75 : f32
+  %v = arith.constant dense <0.75> : vector<4xf32>
+  %0 = math.powf %arg0, %c fastmath<fast> : f32
+  %1 = math.powf %arg1, %v fastmath<fast> : vector<4xf32>
   return %0, %1 : f32, vector<4xf32>
 }
 

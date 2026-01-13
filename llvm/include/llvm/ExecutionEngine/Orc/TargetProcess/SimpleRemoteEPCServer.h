@@ -145,7 +145,7 @@ public:
   /// returns an error, which should be reported and treated as a 'Disconnect'.
   Expected<HandleMessageAction>
   handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo, ExecutorAddr TagAddr,
-                SimpleRemoteEPCArgBytesVector ArgBytes) override;
+                shared::WrapperFunctionBuffer ArgBytes) override;
 
   Error waitForDisconnect();
 
@@ -159,9 +159,9 @@ private:
                          StringMap<ExecutorAddr> BootstrapSymbols);
 
   Error handleResult(uint64_t SeqNo, ExecutorAddr TagAddr,
-                     SimpleRemoteEPCArgBytesVector ArgBytes);
+                     shared::WrapperFunctionBuffer ArgBytes);
   void handleCallWrapper(uint64_t RemoteSeqNo, ExecutorAddr TagAddr,
-                         SimpleRemoteEPCArgBytesVector ArgBytes);
+                         shared::WrapperFunctionBuffer ArgBytes);
 
   shared::WrapperFunctionBuffer
   doJITDispatch(const void *FnTag, const char *ArgData, size_t ArgSize);

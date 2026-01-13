@@ -657,6 +657,9 @@ struct ElementwiseOpFusionResult {
   Operation *fusedOp;
   llvm::DenseMap<Value, Value> replacements;
 };
+/// This transformation is intended to be used with a top-down traversal
+/// (from producer to consumer). In that way fusion logic can safely handle
+/// producers with multiple users.
 FailureOr<ElementwiseOpFusionResult>
 fuseElementwiseOps(RewriterBase &rewriter, OpOperand *fusedOperand);
 
