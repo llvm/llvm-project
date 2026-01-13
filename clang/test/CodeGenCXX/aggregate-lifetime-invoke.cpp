@@ -14,6 +14,42 @@ struct Trivial {
 
 void func_that_throws(Trivial t);
 
+// TIGHT-LABEL: define dso_local void @test(
+// TIGHT-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] personality ptr @__gxx_personality_v0 {
+// TIGHT-NEXT:  [[ENTRY:.*:]]
+// TIGHT-NEXT:    [[AGG_TMP:%.*]] = alloca [[STRUCT_TRIVIAL:%.*]], align 8
+// TIGHT-NEXT:    [[AGG_TMP2:%.*]] = alloca [[STRUCT_TRIVIAL]], align 8
+// TIGHT-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[AGG_TMP]]) #[[ATTR4:[0-9]+]]
+// TIGHT-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(400) [[AGG_TMP]], i8 0, i64 400, i1 false)
+// TIGHT-NEXT:    invoke void @func_that_throws(ptr noundef nonnull byval([[STRUCT_TRIVIAL]]) align 8 [[AGG_TMP]])
+// TIGHT-NEXT:            to label %[[INVOKE_CONT:.*]] unwind label %[[LPAD1:.*]]
+// TIGHT:       [[INVOKE_CONT]]:
+// TIGHT-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AGG_TMP]]) #[[ATTR4]]
+// TIGHT-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[AGG_TMP2]]) #[[ATTR4]]
+// TIGHT-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(400) [[AGG_TMP2]], i8 0, i64 400, i1 false)
+// TIGHT-NEXT:    invoke void @func_that_throws(ptr noundef nonnull byval([[STRUCT_TRIVIAL]]) align 8 [[AGG_TMP2]])
+// TIGHT-NEXT:            to label %[[INVOKE_CONT5:.*]] unwind label %[[LPAD4:.*]]
+// TIGHT:       [[INVOKE_CONT5]]:
+// TIGHT-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AGG_TMP2]]) #[[ATTR4]]
+// TIGHT-NEXT:    br label %[[TRY_CONT:.*]]
+// TIGHT:       [[LPAD1]]:
+// TIGHT-NEXT:    [[TMP0:%.*]] = landingpad { ptr, i32 }
+// TIGHT-NEXT:            catch ptr null
+// TIGHT-NEXT:    br label %[[EHCLEANUP:.*]]
+// TIGHT:       [[LPAD4]]:
+// TIGHT-NEXT:    [[TMP1:%.*]] = landingpad { ptr, i32 }
+// TIGHT-NEXT:            catch ptr null
+// TIGHT-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AGG_TMP2]]) #[[ATTR4]]
+// TIGHT-NEXT:    br label %[[EHCLEANUP]]
+// TIGHT:       [[EHCLEANUP]]:
+// TIGHT-NEXT:    [[DOTPN:%.*]] = phi { ptr, i32 } [ [[TMP1]], %[[LPAD4]] ], [ [[TMP0]], %[[LPAD1]] ]
+// TIGHT-NEXT:    [[EXN_SLOT_0:%.*]] = extractvalue { ptr, i32 } [[DOTPN]], 0
+// TIGHT-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AGG_TMP]]) #[[ATTR4]]
+// TIGHT-NEXT:    [[TMP2:%.*]] = tail call ptr @__cxa_begin_catch(ptr [[EXN_SLOT_0]]) #[[ATTR4]]
+// TIGHT-NEXT:    tail call void @__cxa_end_catch()
+// TIGHT-NEXT:    br label %[[TRY_CONT]]
+// TIGHT:       [[TRY_CONT]]:
+// TIGHT-NEXT:    ret void
 // CHECK-LABEL: define dso_local void @test(
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] personality ptr @__gxx_personality_v0 {
 // CHECK-NEXT:  [[ENTRY:.*:]]
