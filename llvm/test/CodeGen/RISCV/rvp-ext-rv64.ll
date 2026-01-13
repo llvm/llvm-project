@@ -2805,9 +2805,7 @@ define void @test_vselect_v4i16(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr, ptr %c_ptr
 ; CHECK-NEXT:    ld a2, 0(a2)
 ; CHECK-NEXT:    ld a3, 0(a3)
 ; CHECK-NEXT:    pmseq.h a1, a1, a2
-; CHECK-NEXT:    andn a2, a2, a1
-; CHECK-NEXT:    and a1, a3, a1
-; CHECK-NEXT:    or a1, a1, a2
+; CHECK-NEXT:    merge a1, a2, a3
 ; CHECK-NEXT:    sd a1, 0(a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, ptr %a_ptr
@@ -2826,9 +2824,7 @@ define void @test_vselect_v8i8(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr, ptr %c_ptr)
 ; CHECK-NEXT:    ld a2, 0(a2)
 ; CHECK-NEXT:    ld a3, 0(a3)
 ; CHECK-NEXT:    pmsltu.b a1, a1, a2
-; CHECK-NEXT:    andn a2, a2, a1
-; CHECK-NEXT:    and a1, a3, a1
-; CHECK-NEXT:    or a1, a1, a2
+; CHECK-NEXT:    merge a1, a2, a3
 ; CHECK-NEXT:    sd a1, 0(a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x i8>, ptr %a_ptr
@@ -2847,9 +2843,7 @@ define void @test_vselect_v2i32(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr, ptr %c_ptr
 ; CHECK-NEXT:    ld a2, 0(a2)
 ; CHECK-NEXT:    ld a3, 0(a3)
 ; CHECK-NEXT:    pmslt.w a1, a2, a1
-; CHECK-NEXT:    andn a2, a2, a1
-; CHECK-NEXT:    and a1, a3, a1
-; CHECK-NEXT:    or a1, a1, a2
+; CHECK-NEXT:    merge a1, a2, a3
 ; CHECK-NEXT:    sd a1, 0(a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x i32>, ptr %a_ptr
