@@ -4478,16 +4478,27 @@ LogicalResult DeclareSimdOp::verify() {
     return emitOpError()
            << "'omp.declare_simd' must be nested inside a function";
 
-  // omp.declare_simd must appear in the entry block of the enclosing function
-  Block &entry = func.getFunctionBody().front();
-  if (getOperation()->getBlock() != &entry)
-    return emitError()
-           << "must appear in the entry block of the enclosing function";
-
   if (verifyAlignedClause(*this, getAlignments(), getAlignedVars()).failed())
     return failure();
 
   return success();
+}
+
+namespace mlir {
+namespace omp {
+// A non-default resource to indicate that omp.declare_simd has side effects.
+struct DeclareSimdResource
+    : public SideEffects::Resource::Base<DeclareSimdResource> {
+  StringRef getName() final { return "omp.declare_simd.resource"; }
+};
+} // namespace omp
+} // namespace mlir
+
+void DeclareSimdOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Allocate::get(),
+                       DeclareSimdResource::get());
 }
 
 #define GET_ATTRDEF_CLASSES
