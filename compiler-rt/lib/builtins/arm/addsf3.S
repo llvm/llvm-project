@@ -170,7 +170,7 @@ LOCAL_LABEL(do_substraction):
   movs r6, r4
   cmp  r2, 0
   beq  LOCAL_LABEL(form_result) // if a's exp is 0, no need to normalize.
-  // If partial cancellation occured, we need to left-shift the result
+  // If partial cancellation occurred, we need to left-shift the result
   // and adjust the exponent:
   lsrs r6, r6, #(significandBits + 3)
   bne LOCAL_LABEL(form_result)

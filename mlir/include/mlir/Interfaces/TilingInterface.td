@@ -439,7 +439,7 @@ def PartialReductionOpInterface :
           reduction dimension are converted to parallel dimensions with a size
           less or equal to the tile size. This is meant to be used with
           `mergeReductions` method which will combine the partial reductions.
-          The method recieves the `offset` and `sizes` for all iteration space
+          The method receives the `offset` and `sizes` for all iteration space
           dimensions, as well as the iteration number of the tiled reduction
           dimensions (which is the induction variable of the inter-tile loop
           for the reduction dimension divided by the step of the loop) in
@@ -485,7 +485,7 @@ def PartialReductionOpInterface :
           the tiled operation. This is same as
           TilingInterface:::getResultTilePosition, but determines the result
           tile position for partial reduction.
-          The method recieves the `offset` and `sizes` for all iteration space
+          The method receives the `offset` and `sizes` for all iteration space
           dimensions, as well as the iteration number of the tiled reduction
           dimensions (which is the induction variable of the inter-tile loop
           for the reduction dimension divided by the tile size specified) in
