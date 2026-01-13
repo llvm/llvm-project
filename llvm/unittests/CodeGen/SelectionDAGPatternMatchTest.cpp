@@ -474,7 +474,7 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
 
   SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int32VT);
   SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int64VT);
-  SDValue Op2 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, FloatVT);
+  SDValue Op2 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, FloatVT);  
   SDValue Op3 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 3, Int32VT);
 
   SDValue ZExt = DAG->getNode(ISD::ZERO_EXTEND, DL, Int64VT, Op0);
@@ -717,7 +717,7 @@ TEST_F(SelectionDAGPatternMatchTest, matchIntrinsicWOChain) {
   SDValue Add = DAG->getNode(ISD::ADD, DL, Int32VT, Op2, Op3);
 
   using namespace SDPatternMatch;
-  SDValue H0, H1, H2, H3, H4, H5, H6;
+  SDValue H0, H1, H2;
 
   // Intrinsic operations should match
   EXPECT_TRUE(sd_match(
@@ -730,11 +730,11 @@ TEST_F(SelectionDAGPatternMatchTest, matchIntrinsicWOChain) {
 
   // Intrinsic operations with incorrect IntrinsicId should not match
   EXPECT_FALSE(sd_match(X86Aadd32, m_IntrinsicWOChain<Intrinsic::wasm_bitmask>(
-                                       m_Value(H3), m_Value(H4))));
+                                       m_Value(), m_Value())));
 
   // Add operation shouldn't match
   EXPECT_FALSE(sd_match(Add, m_IntrinsicWOChain<Intrinsic::x86_aadd32>(
-                                 m_Value(H5), m_Value(H6))));
+                                 m_Value(), m_Value())));
 }
 
 namespace {
