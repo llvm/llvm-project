@@ -203,8 +203,7 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
       ->appendRecipe(new VPInstruction(
           VPInstruction::BranchOnCond,
           {Plan->getOrAddLiveIn(ConstantInt::getTrue(F->getContext()))}));
-  VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
-      *Plan, [](PHINode *P) { return nullptr; }, TLI);
+  VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(*Plan, TLI);
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_EQ(0u, Entry->getNumPredecessors());
