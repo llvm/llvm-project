@@ -16,6 +16,7 @@
 #include <cassert>
 
 using namespace clang::ast_matchers;
+using namespace clang::ast_matchers::internal;
 
 namespace clang::tidy::misc {
 
@@ -33,6 +34,10 @@ AST_MATCHER(ReferenceType, isSpelledAsLValue) {
   return Node.isSpelledAsLValue();
 }
 AST_MATCHER(Type, isDependentType) { return Node.isDependentType(); }
+
+AST_MATCHER(TypeLoc, hasContainedAutoType) {
+  return !Node.getContainedAutoTypeLoc().isNull();
+}
 } // namespace
 
 ConstCorrectnessCheck::ConstCorrectnessCheck(StringRef Name,
@@ -41,6 +46,8 @@ ConstCorrectnessCheck::ConstCorrectnessCheck(StringRef Name,
       AnalyzePointers(Options.get("AnalyzePointers", true)),
       AnalyzeReferences(Options.get("AnalyzeReferences", true)),
       AnalyzeValues(Options.get("AnalyzeValues", true)),
+      AnalyzeAutoVariables(Options.get("AnalyzeAutoVariables", true)),
+      AnalyzeLambdas(Options.get("AnalyzeLambdas", true)),
 
       WarnPointersAsPointers(Options.get("WarnPointersAsPointers", true)),
       WarnPointersAsValues(Options.get("WarnPointersAsValues", false)),
@@ -66,6 +73,8 @@ void ConstCorrectnessCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AnalyzePointers", AnalyzePointers);
   Options.store(Opts, "AnalyzeReferences", AnalyzeReferences);
   Options.store(Opts, "AnalyzeValues", AnalyzeValues);
+  Options.store(Opts, "AnalyzeAutoVariables", AnalyzeAutoVariables);
+  Options.store(Opts, "AnalyzeLambdas", AnalyzeLambdas);
 
   Options.store(Opts, "WarnPointersAsPointers", WarnPointersAsPointers);
   Options.store(Opts, "WarnPointersAsValues", WarnPointersAsValues);
@@ -98,16 +107,12 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
       hasType(referenceType(pointee(hasCanonicalType(templateTypeParmType())))),
       hasType(referenceType(pointee(substTemplateTypeParmType()))));
 
-  auto AllowedTypeDecl = namedDecl(anyOf(
+  const auto AllowedTypeDecl = namedDecl(anyOf(
       matchers::matchesAnyListedRegexName(AllowedTypes), usingShadowDecl()));
 
   const auto AllowedType = hasType(qualType(
       anyOf(hasDeclaration(AllowedTypeDecl), references(AllowedTypeDecl),
             pointerType(pointee(hasDeclaration(AllowedTypeDecl))))));
-
-  const auto AutoTemplateType = varDecl(
-      anyOf(hasType(autoType()), hasType(referenceType(pointee(autoType()))),
-            hasType(pointerType(pointee(autoType())))));
 
   const auto FunctionPointerRef =
       hasType(hasCanonicalType(referenceType(pointee(functionType()))));
@@ -117,10 +122,14 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   const auto LocalValDecl = varDecl(
       isLocal(), hasInitializer(anything()),
       unless(anyOf(ConstType, ConstReference, TemplateType,
-                   hasInitializer(isInstantiationDependent()), AutoTemplateType,
-                   RValueReference, FunctionPointerRef,
-                   hasType(cxxRecordDecl(isLambda())), isImplicit(),
-                   AllowedType)));
+                   hasInitializer(isInstantiationDependent()), RValueReference,
+                   FunctionPointerRef, isImplicit(), AllowedType)),
+      AnalyzeLambdas
+          ? Matcher<VarDecl>(anything())
+          : Matcher<VarDecl>(unless(hasType(cxxRecordDecl(isLambda())))),
+      AnalyzeAutoVariables
+          ? Matcher<VarDecl>(anything())
+          : Matcher<VarDecl>(unless(hasTypeLoc(hasContainedAutoType()))));
 
   // Match the function scope for which the analysis of all local variables
   // shall be run.

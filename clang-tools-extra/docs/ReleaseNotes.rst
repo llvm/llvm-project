@@ -587,6 +587,10 @@ Changes in existing checks
   - Fixed false positives when the address of a variable is taken to be passed
     to a function.
 
+  - Enabled the check for variables declared with ``auto`` (configurable
+    via the `AnalyzeAutoVariables` option) and lambdas (configurable
+    via `AnalyzeLambdas`).
+
 - Improved :doc:`misc-coroutine-hostile-raii
   <clang-tidy/checks/misc/coroutine-hostile-raii>` check by adding the option
   `AllowedCallees`, that allows exempting safely awaitable callees from the

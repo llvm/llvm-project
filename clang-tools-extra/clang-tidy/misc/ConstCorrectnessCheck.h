@@ -41,6 +41,8 @@ private:
   const bool AnalyzePointers;
   const bool AnalyzeReferences;
   const bool AnalyzeValues;
+  const bool AnalyzeAutoVariables;
+  const bool AnalyzeLambdas;
 
   const bool WarnPointersAsPointers;
   const bool WarnPointersAsValues;

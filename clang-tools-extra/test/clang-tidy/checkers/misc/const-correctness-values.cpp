@@ -27,10 +27,24 @@ int np_anonymous_global;
 int p_anonymous_global = 43;
 } // namespace
 
-// Lambdas should be ignored, because they do not follow the normal variable
-// semantic (e.g. the type is only known to the compiler).
 void lambdas() {
   auto Lambda = [](int i) { return i < 0; };
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'Lambda' of type '{{.*}}' can be declared 'const'
+  // CHECK-FIXES: auto const Lambda = [](int i) { return i < 0; };
+
+  auto LambdaWithMutableCallOperator = []() mutable {};
+  LambdaWithMutableCallOperator();
+
+#if __cplusplus >= 202002L
+  auto ReassignedLambda = [] {};
+  ReassignedLambda = {};
+#endif
+
+  int x = 0;
+  auto LambdaModifyingCapture = [&x] { ++x; };
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'LambdaModifyingCapture' of type '{{.*}}' can be declared 'const'
+  // CHECK-FIXES: auto const LambdaModifyingCapture = [&x] { ++x; };
+  LambdaModifyingCapture();
 }
 
 void some_function(double, wchar_t);
@@ -83,6 +97,11 @@ void nested_scopes() {
 void ignore_reference_to_pointers() {
   int *np_local0 = nullptr;
   int *&np_local1 = np_local0;
+}
+
+void ignore_rvalue_references() {
+  int &&np_local0 = 42;
+  auto &&np_local1 = 42;
 }
 
 void some_lambda_environment_capture_all_by_reference(double np_arg0) {
@@ -965,25 +984,36 @@ template <typename T>
 T *return_ptr() { return &return_ref<T>(); }
 
 void auto_usage_variants() {
+  auto auto_int = int{};
+  // CHECK-MESSAGES:[[@LINE-1]]:3: warning: variable 'auto_int' of type 'int' can be declared 'const'
+  // CHECK-FIXES: auto const auto_int = int{};
+
   auto auto_val0 = int{};
-  // CHECK-FIXES-NOT: auto const auto_val0
+  // CHECK-FIXES-NOT: auto const auto_val0 = int{};
   auto &auto_val1 = auto_val0;
+  // CHECK-MESSAGES:[[@LINE-1]]:3: warning: variable 'auto_val1' of type 'int &' can be declared 'const'
+  // CHECK-FIXES: auto  const&auto_val1 = auto_val0;
   auto *auto_val2 = &auto_val0;
 
   auto auto_ref0 = return_ref<int>();
-  // CHECK-FIXES-NOT: auto const auto_ref0
-  auto &auto_ref1 = return_ref<int>(); // Bad
+  // CHECK-MESSAGES:[[@LINE-1]]:3: warning: variable 'auto_ref0' of type 'int' can be declared 'const'
+  // CHECK-FIXES: auto const auto_ref0 = return_ref<int>();
+  auto &auto_ref1 = return_ref<int>();
+  // CHECK-MESSAGES:[[@LINE-1]]:3: warning: variable 'auto_ref1' of type 'int &' can be declared 'const'
+  // CHECK-FIXES: auto  const&auto_ref1 = return_ref<int>();
   auto *auto_ref2 = return_ptr<int>();
 
   auto auto_ptr0 = return_ptr<int>();
-  // CHECK-FIXES-NOT: auto const auto_ptr0
+  // CHECK-FIXES-NOT: auto const auto_ptr0 = return_ptr<int>();
   auto &auto_ptr1 = auto_ptr0;
   auto *auto_ptr2 = return_ptr<int>();
 
   using MyTypedef = int;
   auto auto_td0 = MyTypedef{};
-  // CHECK-FIXES-NOT: auto const auto_td0
+  // CHECK-FIXES-NOT: auto const auto_td0 = MyTypedef{};
   auto &auto_td1 = auto_td0;
+  // CHECK-MESSAGES:[[@LINE-1]]:3: warning: variable 'auto_td1' of type 'MyTypedef &' (aka 'int &') can be declared 'const'
+  // CHECK-FIXES: auto  const&auto_td1 = auto_td0;
   auto *auto_td2 = &auto_td0;
 }
 
