@@ -2627,6 +2627,7 @@ defm XOR  : XForm_6r<31, 316, (outs gprc:$RA), (ins gprc:$RST, gprc:$RB),
                      "xor", "$RA, $RST, $RB", IIC_IntSimple,
                      [(set i32:$RA, (xor i32:$RST, i32:$RB))]>;
 } // isCommutable
+
 defm SLW  : XForm_6r<31,  24, (outs gprc:$RA), (ins gprc:$RST, gprc:$RB),
                      "slw", "$RA, $RST, $RB", IIC_IntGeneral,
                      [(set i32:$RA, (PPCshl i32:$RST, i32:$RB))]>, ZExt32To64;
@@ -5598,3 +5599,6 @@ def : Pat<(int_ppc_dcbtt ForceXForm:$dst),
 
 def : Pat<(int_ppc_stfiw ForceXForm:$dst, f64:$XT),
           (STFIWX f64:$XT, ForceXForm:$dst)>;
+
+def : Pat<(xor (not i32:$A), i32:$B), (EQV i32:$A, i32:$B)>;
+def : Pat<(xor i32:$A, (not i32:$B)), (EQV i32:$A, i32:$B)>;
