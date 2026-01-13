@@ -125,7 +125,8 @@ void UnconditionalVAArgChecker::checkBranchCondition(const Stmt *Condition,
 void UnconditionalVAArgChecker::checkPreStmt(const VAArgExpr *VAA,
                                              CheckerContext &C) const {
   ProgramStateRef State = C.getState();
-  const FunctionDecl *PathFrom = State->get<HasUnconditionalPath>();//getCurrentFunction(C);
+  const FunctionDecl *PathFrom =
+      State->get<HasUnconditionalPath>(); // getCurrentFunction(C);
   if (PathFrom) {
     // Reset this field in the state to ensure that multiple consecutive
     // va_arg() calls don't produce repeated warnings.
@@ -152,8 +153,9 @@ void UnconditionalVAArgChecker::checkPreStmt(const VAArgExpr *VAA,
     if (getCurrentFunction(C) != PathFrom) {
       SourceRange DefSR = PathFrom->getSourceRange();
       PathDiagnosticLocation DefPDL(DefSR.getBegin(),
-                               C.getASTContext().getSourceManager());
-      std::string NoteMsg = formatv("Variadic function '{0}' is defined here", FN);
+                                    C.getASTContext().getSourceManager());
+      std::string NoteMsg =
+          formatv("Variadic function '{0}' is defined here", FN);
       R->addNote(NoteMsg, DefPDL, DefSR);
     }
     R->addRange(SR);
