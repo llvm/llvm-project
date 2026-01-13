@@ -21,13 +21,13 @@ jobs:
     timeout-minutes: 10
 
     steps:
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           repository: compnerd/ids
           path: ${{ github.workspace }}/ids
           ref: b3bf35dd13d7ff244a6a6d106fe58d0eedb5743e # main
 
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           path: ${{ github.workspace }}/llvm-project
           fetch-depth: 2
