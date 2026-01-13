@@ -5631,6 +5631,12 @@ bool AArch64InstructionSelector::selectIndexedStore(GIndexedStore &I,
   LLT ValTy = MRI.getType(Val);
   assert(ValTy.getSizeInBits() <= 128 && "Unexpected type for indexed store");
 
+  LocationSize MemSize = I.getMMO().getSize();
+  unsigned MemSizeInBytes = MemSize.getValue();
+
+  assert(MemSizeInBytes && MemSizeInBytes <= 16 && "Unexpected indexed store size");
+  unsigned MemSizeLog2 = Log2_32(MemSizeInBytes);
+
   unsigned Opc = 0;
   if (I.isPre()) {
     static constexpr unsigned GPROpcodes[] = {
@@ -5640,10 +5646,11 @@ bool AArch64InstructionSelector::selectIndexedStore(GIndexedStore &I,
         AArch64::STRBpre, AArch64::STRHpre, AArch64::STRSpre, AArch64::STRDpre,
         AArch64::STRQpre};
 
-    if (RBI.getRegBank(Val, MRI, TRI)->getID() == AArch64::FPRRegBankID)
-      Opc = FPROpcodes[Log2_32(ValTy.getSizeInBytes())];
-    else
-      Opc = GPROpcodes[Log2_32(ValTy.getSizeInBytes())];
+    if (RBI.getRegBank(Val, MRI, TRI)->getID() == AArch64::FPRRegBankID) {
+      Opc = FPROpcodes[MemSizeLog2];
+    } else {
+      Opc = GPROpcodes[MemSizeLog2];
+    }
   } else {
     static constexpr unsigned GPROpcodes[] = {
         AArch64::STRBBpost, AArch64::STRHHpost, AArch64::STRWpost,
@@ -5652,10 +5659,11 @@ bool AArch64InstructionSelector::selectIndexedStore(GIndexedStore &I,
         AArch64::STRBpost, AArch64::STRHpost, AArch64::STRSpost,
         AArch64::STRDpost, AArch64::STRQpost};
 
-    if (RBI.getRegBank(Val, MRI, TRI)->getID() == AArch64::FPRRegBankID)
-      Opc = FPROpcodes[Log2_32(ValTy.getSizeInBytes())];
-    else
-      Opc = GPROpcodes[Log2_32(ValTy.getSizeInBytes())];
+    if (RBI.getRegBank(Val, MRI, TRI)->getID() == AArch64::FPRRegBankID) {
+      Opc = FPROpcodes[MemSizeLog2];
+    } else {
+      Opc = GPROpcodes[MemSizeLog2];
+    }
   }
 
   auto Cst = getIConstantVRegVal(Offset, MRI);
