@@ -787,7 +787,6 @@ MemRefInfo FIRToMemRef::getMemRefInfo(Value firMemref,
   }
 
   if (auto declareOp = dyn_cast<fir::DeclareOp>(memrefOp)) {
-    rewriter.setInsertionPoint(memOp);
     FailureOr<Value> converted =
         getFIRConvert(memOp, declareOp, rewriter, typeConverter);
     if (failed(converted)) {
@@ -961,15 +960,10 @@ void FIRToMemRef::rewriteLoadOp(fir::LoadOp load, PatternRewriter &rewriter,
              loadOp.dump(); assert(succeeded(verify(loadOp))));
 
   if (isa<fir::LogicalType>(originalType)) {
-    SmallVector<Operation *> loadUsers(
-        loadOp.getOperation()->getUsers().begin(),
-        loadOp.getOperation()->getUsers().end());
     Value logicalVal =
         fir::ConvertOp::create(rewriter, loadOp.getLoc(), originalType, loadOp);
-    for (Operation *user : loadUsers)
-      for (auto &operand : user->getOpOperands())
-        if (operand.get() == loadOp)
-          operand.set(logicalVal);
+    loadOp.getResult().replaceAllUsesExcept(logicalVal,
+                                            logicalVal.getDefiningOp());
   }
 
   if (!isa<fir::LogicalType>(originalType))
@@ -1046,13 +1040,6 @@ void FIRToMemRef::runOnOperation() {
       rewriteLoadOp(loadOp, rewriter, typeConverter);
     else if (fir::StoreOp storeOp = dyn_cast<fir::StoreOp>(op))
       rewriteStoreOp(storeOp, rewriter, typeConverter);
-  });
-
-  SmallVector<Operation *> worklist;
-  op->walk([&worklist](Operation *arithOp) {
-    if (llvm::isa<arith::ArithDialect>(arithOp->getDialect()))
-      if (arithOp->use_empty())
-        worklist.push_back(arithOp);
   });
 
   for (auto eraseOp : eraseOps)
