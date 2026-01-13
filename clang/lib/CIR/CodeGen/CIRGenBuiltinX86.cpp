@@ -1393,13 +1393,6 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   }
   case X86::BI__builtin_ia32_palignr128:
   case X86::BI__builtin_ia32_palignr256:
-  case X86::BI__builtin_ia32_palignr512:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented X86 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
-  case X86::BI__builtin_ia32_palignr128:
-  case X86::BI__builtin_ia32_palignr256:
   case X86::BI__builtin_ia32_palignr512: {
     uint32_t shiftVal = getZExtIntValueFromConstOp(ops[2]) & 0xff;
 
