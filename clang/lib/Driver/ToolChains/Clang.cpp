@@ -6255,7 +6255,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       if ((Triple.isX86() || Triple.isAArch64()) && Triple.isOSBinFormatELF()) {
         A->render(Args, CmdArgs);
         CmdArgs.push_back("-mllvm");
-        CmdArgs.push_back("-memprof-annotate-static-data-prefix");
+        CmdArgs.push_back("-memprof-annotate-static-data-type=readonly");
       } else
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << A->getAsString(Args) << TripleStr;
