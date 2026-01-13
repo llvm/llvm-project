@@ -724,20 +724,24 @@ llvm::json::Object CreateRunInTerminalReverseRequest(
     req_args.push_back("--debugger-pid");
     req_args.push_back(std::to_string(debugger_pid));
   }
-  req_args.push_back("--launch-target");
-  req_args.push_back(program.str());
+
   if (!stdio.empty()) {
-    req_args.push_back("--stdio");
+    req_args.emplace_back("--stdio");
+
     std::stringstream ss;
+    std::string_view delimiter;
     for (const std::optional<std::string> &file : stdio) {
+      ss << std::exchange(delimiter, ":");
       if (file)
         ss << *file;
-      ss << ":";
     }
-    std::string files = ss.str();
-    files.pop_back();
-    req_args.push_back(std::move(files));
+    req_args.push_back(ss.str());
   }
+
+  // WARNING: Any argument added after `launch-target` is passed to to the
+  // target.
+  req_args.emplace_back("--launch-target");
+  req_args.push_back(program.str());
   req_args.insert(req_args.end(), args.begin(), args.end());
   run_in_terminal_args.try_emplace("args", req_args);
 

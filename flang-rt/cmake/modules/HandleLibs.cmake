@@ -43,8 +43,4 @@ elseif (FLANG_RT_LIBCXX_PROVIDER STREQUAL "llvm")
   if (CXX_SUPPORTS_NOSTDINCXX_FLAG)
     target_compile_options(flang-rt-libc-headers INTERFACE $<$<COMPILE_LANGUAGE:CXX,C>:-nostdinc++>)
   endif ()
-
-  if (FLANG_RT_HAS_STDLIB_FLAG)
-    target_compile_options(flang-rt-libc-headers INTERFACE $<$<COMPILE_LANGUAGE:CXX,C>:-stdlib=libc++>)
-  endif ()
 endif ()

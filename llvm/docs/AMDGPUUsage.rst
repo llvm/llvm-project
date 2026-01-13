@@ -2017,6 +2017,12 @@ The AMDGPU backend supports the following LLVM IR attributes.
 
                                                       This is only relevant on GFX12+.
 
+     "amdgpu-expand-waitcnt-profiling"                Enable expansion of s_waitcnt instructions for profiling purposes.
+                                                      When enabled, each s_waitcnt instruction that waits on multiple counter
+                                                      types is expanded into a sequence of s_waitcnt instructions, each waiting
+                                                      on a single counter type. This allows PC-sampling based profilers to
+                                                      attribute wait cycles to specific counter types (e.g., VMEM, LDS, EXP).
+
      ================================================ ==========================================================
 
 Calling Conventions
