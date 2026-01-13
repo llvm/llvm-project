@@ -7748,6 +7748,23 @@ def : DUPWithTruncPat<v16i8, v4i32, i32, DUPv16i8lane, VecIndex_x4>;
 def : DUPWithTruncPat<v4i16, v4i32, i32, DUPv4i16lane, VecIndex_x2>;
 def : DUPWithTruncPat<v8i16, v4i32, i32, DUPv8i16lane, VecIndex_x2>;
 
+multiclass BicOrnDupGpr<ValueType vectype, RegisterClass regtype> {
+  defvar vecreg = !cast<RegisterOperand>("V" # vectype.Size);
+  defvar bvectype = "v" # !srl(vectype.Size, 3) # "i8";
+  def : Pat<(vectype (and vecreg:$Rn, (AArch64dup (not regtype:$Rm)))),
+            (!cast<Instruction>("BIC" # bvectype) vectype:$Rn, (!cast<Instruction>("DUP" # vectype # "gpr") regtype:$Rm))>;
+  def : Pat<(vectype (or  vecreg:$Rn, (AArch64dup (not regtype:$Rm)))),
+            (!cast<Instruction>("ORN" # bvectype) vectype:$Rn, (!cast<Instruction>("DUP" # vectype # "gpr") regtype:$Rm))>;
+}
+
+defm : BicOrnDupGpr<v8i8,  GPR32>;
+defm : BicOrnDupGpr<v16i8, GPR32>;
+defm : BicOrnDupGpr<v4i16, GPR32>;
+defm : BicOrnDupGpr<v8i16, GPR32>;
+defm : BicOrnDupGpr<v2i32, GPR32>;
+defm : BicOrnDupGpr<v4i32, GPR32>;
+defm : BicOrnDupGpr<v2i64, GPR64>;
+
 // SMOV and UMOV definitions, with some extra patterns for convenience
 defm SMOV : SMov;
 defm UMOV : UMov;
