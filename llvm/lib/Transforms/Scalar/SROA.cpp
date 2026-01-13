@@ -2700,20 +2700,20 @@ static Value *insertVector(IRBuilderTy &IRB, Value *Old, Value *V,
   // incoming vector.
   SmallVector<int, 8> Mask;
   Mask.reserve(NumElements);
-  for (unsigned i = 0; i != NumElements; ++i)
-    if (i >= BeginIndex && i < EndIndex)
-      Mask.push_back(i - BeginIndex);
+  for (unsigned Idx = 0; Idx != NumElements; ++Idx)
+    if (Idx >= BeginIndex && Idx < EndIndex)
+      Mask.push_back(Idx - BeginIndex);
     else
       Mask.push_back(-1);
   V = IRB.CreateShuffleVector(V, Mask, Name + ".expand");
   LLVM_DEBUG(dbgs() << "    shuffle: " << *V << "\n");
 
   Mask.clear();
-  for (unsigned i = 0; i != NumElements; ++i)
-    if (i >= BeginIndex && i < EndIndex)
-      Mask.push_back(i);
+  for (unsigned Idx = 0; Idx != NumElements; ++Idx)
+    if (Idx >= BeginIndex && Idx < EndIndex)
+      Mask.push_back(Idx);
     else
-      Mask.push_back(i + NumElements);
+      Mask.push_back(Idx + NumElements);
   V = IRB.CreateShuffleVector(V, Old, Mask, Name + "blend");
   LLVM_DEBUG(dbgs() << "    blend: " << *V << "\n");
   return V;
