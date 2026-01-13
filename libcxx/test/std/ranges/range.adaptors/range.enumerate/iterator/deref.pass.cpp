@@ -35,7 +35,7 @@ constexpr void test() {
   using EnumerateView     = std::ranges::enumerate_view<View>;
   using EnumerateIterator = std::ranges::iterator_t<EnumerateView>;
 
-  using Result = std::tuple<typename EnumerateIterator::difference_type,
+  using Result = std::tuple<std::iter_difference_t<EnumerateIterator>,
                             std::ranges::range_reference_t<MinimalView<Iterator, Sentinel>>>;
 
   std::array array{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};

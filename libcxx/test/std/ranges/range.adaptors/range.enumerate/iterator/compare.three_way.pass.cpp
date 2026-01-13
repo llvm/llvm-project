@@ -65,8 +65,10 @@ constexpr bool test() {
 
     std::same_as<View> decltype(auto) ev = std::views::enumerate(range);
 
-    auto it1 = ev.begin();
-    auto it2 = it1 + 1;
+    const auto it1 = ev.begin();
+    const auto it2 = it1 + 1;
+
+    static_assert(noexcept(operator<=>(it1, it2)));
 
     compareOperatorTest(it1, it2);
 
@@ -86,10 +88,13 @@ constexpr bool test() {
     static_assert(std::three_way_comparable<std::ranges::iterator_t<EnumerateView>>);
 
     auto ev  = Subrange{Iterator{buff}, Iterator{buff + 3}} | std::views::enumerate;
-    auto it1 = ev.begin();
-    auto it2 = it1 + 1;
+    const auto it1 = ev.begin();
+    const auto it2 = it1 + 1;
 
+    static_assert(noexcept(operator<=>(it1, it2)));
+    
     compareOperatorTest(it1, it2);
+
 
     assert((it1 <=> it2) == std::strong_ordering::less);
     assert((it1 <=> it1) == std::strong_ordering::equal);

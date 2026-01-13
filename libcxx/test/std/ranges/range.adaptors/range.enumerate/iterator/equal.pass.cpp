@@ -34,12 +34,12 @@ constexpr bool test() {
     auto it1 = ev.begin();
     auto it2 = it1 + 5;
 
+    static_assert(noexcept(it1 == it1));
+    static_assert(noexcept(it1 != it2));
+
     assert(it1 == it1);
-    ASSERT_NOEXCEPT(it1 == it1);
     assert(it1 != it2);
-    ASSERT_NOEXCEPT(it1 != it2);
     assert(it2 != it1);
-    ASSERT_NOEXCEPT(it2 != it1);
     assert(it2 == ev.end());
     assert(ev.end() == it2);
 
