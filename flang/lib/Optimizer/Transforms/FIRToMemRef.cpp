@@ -349,6 +349,11 @@ bool FIRToMemRef::memrefIsOptional(Operation *op) const {
       if (isa<fir::IsPresentOp>(userOp))
         return true;
 
+  // TODO: If `op` is not a `fir.declare`, OPTIONAL information may still be
+  // present on a related `fir.declare` reached by tracing the address/box
+  // through common forwarding ops (e.g. `fir.convert`, `fir.rebox`,
+  // `fir.embox`, `fir.box_addr`), then checking `declare.isOptional()`. Add the
+  // search after FIR improves on it.
   return false;
 }
 
