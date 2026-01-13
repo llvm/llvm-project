@@ -1352,7 +1352,12 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
         {A, Plan->getConstantInt(APC->getBitWidth(), APC->exactLogBase2())},
         *cast<VPRecipeWithIRFlags>(Def), Def->getDebugLoc()));
 
-  if (match(Def, m_UDiv(m_VPValue(A), m_APInt(APC))) && APC->isPowerOf2())
+  // Don't convert udiv to lshr inside a replicate region, as VPInstructions are
+  // not allowed in them.
+  const VPRegionBlock *ParentRegion = Def->getParent()->getParent();
+  bool IsInReplicateRegion = ParentRegion && ParentRegion->isReplicator();
+  if (!IsInReplicateRegion && match(Def, m_UDiv(m_VPValue(A), m_APInt(APC))) &&
+      APC->isPowerOf2())
     return Def->replaceAllUsesWith(Builder.createNaryOp(
         Instruction::LShr,
         {A, Plan->getConstantInt(APC->getBitWidth(), APC->exactLogBase2())}, {},
@@ -1517,6 +1522,14 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   // below.
   if (!Plan->isUnrolled())
     return;
+
+  // Simplify extract-lane(%lane_num, %scalar_val) -> %scalar_val.
+  // After unrolling, extract-lane may be used to extract values from multiple
+  // scalar sources. Only simplify when extracting from a single scalar source.
+  if (match(Def, m_ExtractLane(m_VPValue(), m_VPValue(A))) &&
+      vputils::isSingleScalar(A)) {
+    return Def->replaceAllUsesWith(A);
+  }
 
   // Hoist an invariant increment Y of a phi X, by having X start at Y.
   if (match(Def, m_c_Add(m_VPValue(X), m_VPValue(Y))) && isa<VPIRValue>(Y) &&
@@ -3194,7 +3207,7 @@ void VPlanTransforms::addExplicitVectorLength(
                                "safe_avl");
   }
   auto *VPEVL = Builder.createNaryOp(VPInstruction::ExplicitVectorLength, AVL,
-                                     DebugLoc::getUnknown());
+                                     DebugLoc::getUnknown(), "evl");
 
   auto *CanonicalIVIncrement =
       cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());

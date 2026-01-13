@@ -2463,7 +2463,8 @@ private:
 
   // __erase_external_with_move is invoked for erase() invocations where
   // `n ~= npos`, likely requiring memory moves on the string data.
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE void __erase_external_with_move(size_type __pos, size_type __n);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE void
+  __erase_external_with_move(size_type __pos, size_type __n) _NOEXCEPT;
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __copy_assign_alloc(const basic_string& __str) {
     __copy_assign_alloc(
@@ -3329,7 +3330,7 @@ basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos, size_type __
 // Does not check __pos against size()
 template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE void
-basic_string<_CharT, _Traits, _Allocator>::__erase_external_with_move(size_type __pos, size_type __n) {
+basic_string<_CharT, _Traits, _Allocator>::__erase_external_with_move(size_type __pos, size_type __n) _NOEXCEPT {
   if (__n == 0)
     return;
 
