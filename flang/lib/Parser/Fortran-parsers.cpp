@@ -206,7 +206,7 @@ TYPE_CONTEXT_PARSER("declaration type spec"_en_US,
 TYPE_CONTEXT_PARSER("intrinsic type spec"_en_US,
     first(construct<IntrinsicTypeSpec>(integerTypeSpec),
         construct<IntrinsicTypeSpec>(construct<IntrinsicTypeSpec::Real>(
-                "REAL"_kw >> maybe(kindSelector))),
+            "REAL"_kw >> maybe(kindSelector))),
         construct<IntrinsicTypeSpec>("DOUBLE PRECISION" >>
             construct<IntrinsicTypeSpec::DoublePrecision>()),
         construct<IntrinsicTypeSpec>(construct<IntrinsicTypeSpec::Complex>(
