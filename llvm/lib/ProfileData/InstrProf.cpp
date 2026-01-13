@@ -654,9 +654,12 @@ StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {
   //
   // Leverage the common canonicalization logic from FunctionSamples. Instead of
   // removing all suffixes except ".__uniq.", explicitly specify the ones to be
-  // removed. This avoids the issue of colliding the canonical names of split
-  // coroutine function. i.e. foo, foo.resume, foo.cleanup are all canonicalized
-  // to foo otherwise, which can make the symtab lookup return unexpected
+  // removed. This avoids the issue of colliding the canonical names of
+  // coroutine function with its await suspend wrappers or with its post-split
+  // clones. i.e. coro function foo, its wrappers
+  // (foo.__await_suspend_wrapper__init, and foo.__await_suspend_wrapper__final)
+  // and its post-split clones (foo.resume, foo.cleanup) are all canonicalized
+  // to "foo" otherwise, which can make the symtab lookup return unexpected
   // result.
   const SmallVector<StringRef> SuffixesToRemove{".llvm.", ".part."};
   return FunctionSamples::getCanonicalFnName(PGOName, SuffixesToRemove);

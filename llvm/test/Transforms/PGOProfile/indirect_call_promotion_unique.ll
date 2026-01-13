@@ -89,11 +89,11 @@ entry:
   ret i32 3
 }
 
-; IR has post-split coro function names, "func7" and "func7.resume",
-; Profile only has the pre-split coro function name func7.
-; func7.resume is defined before func7 to be matched first.
+; IR has coro function "func7" and await suspend wrapper "func7.__await_suspend_wrapper__init",
+; Profile only has the coro function name func7.
+; func7.__await_suspend_wrapper__init is defined before func7 to be matched first.
 ; Note: ignore the incomplete function body, we only care about the names for test purpose.
-define i32 @func7.resume() {
+define i32 @func7.__await_suspend_wrapper__init() {
 entry:
   ret i32 3
 }
