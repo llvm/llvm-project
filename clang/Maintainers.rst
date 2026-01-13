@@ -201,6 +201,12 @@ Function Effect Analysis
 | aeternalmail\@gmail.com (email), Sirraide (GitHub), Ætérnal (Discord), Sirraide (Discourse)
 
 
+Code Coverage
+~~~~~~~~~~~~~
+| Takumi Nakamura
+| geek4civic\@gmail.com (email), chapuni(GitHub), chapuni (Discord), chapuni (Discourse)
+
+
 Tools
 -----
 These maintainers are responsible for user-facing tools under the Clang
