@@ -234,7 +234,8 @@ void SystemZHLASMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
 
   // Emit label and ENTRY statement only if not implied by CSECT. Do not emit a
   // label if the symbol is on a PR section.
-  bool EmitLabelAndEntry = !static_cast<MCSectionGOFF *>(getCurrentSectionOnly())->isPR();
+  bool EmitLabelAndEntry =
+      !static_cast<MCSectionGOFF *>(getCurrentSectionOnly())->isPR();
   if (!Sym->isTemporary() && Sym->isInEDSection()) {
     EmitLabelAndEntry =
         Sym->getName() !=
