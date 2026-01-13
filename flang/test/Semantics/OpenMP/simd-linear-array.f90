@@ -2,7 +2,6 @@
 ! OpenMP Version 5.2
 ! Test that arrays in LINEAR clause are rejected on SIMD directive
 ! This test addresses issue #171007 - crash with array in LINEAR clause
-! XFAIL: *
 subroutine test_1d_array_in_linear()
   implicit none
   integer :: j, arr(2)
@@ -75,6 +74,6 @@ subroutine test_declare_simd_ref_array_valid(arr)
   implicit none
   integer, intent(in) :: arr(:)
   
-  !$omp declare simd linear(ref(arr))
+  !$omp declare simd linear(arr : ref)
   ! No error expected - REF modifier allows assumed-shape arrays
 end subroutine
