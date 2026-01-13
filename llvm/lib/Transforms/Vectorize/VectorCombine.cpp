@@ -1574,8 +1574,8 @@ bool VectorCombine::foldSelectsFromBitcast(Instruction &I) {
   if (!BC)
     return false;
 
-  auto *SrcVecTy = dyn_cast<FixedVectorType>(BC->getSrcTy());
-  auto *DstVecTy = dyn_cast<FixedVectorType>(BC->getDestTy());
+  FixedVectorType *SrcVecTy = dyn_cast<FixedVectorType>(BC->getSrcTy());
+  FixedVectorType *DstVecTy = dyn_cast<FixedVectorType>(BC->getDestTy());
   if (!SrcVecTy || !DstVecTy)
     return false;
 
