@@ -308,6 +308,8 @@ private:
     for (mlir::Operation *user : usersToUpdate)
       user->replaceUsesOfWith(useDeviceOp.getResult(), newMemLoc);
 
+    assert(useDeviceOp.getResult().use_empty() &&
+           "expected all uses of use_device to be replaced");
     rewriter.eraseOp(useDeviceOp);
     return true;
   }
@@ -383,11 +385,13 @@ private:
                << "  box with device pointer: "
                << *newBoxWithDevicePtr.getDefiningOp() << "\n");
 
-    // Replace all uses of the original useDeviceOp inside the host_data region
-    // with the new box containing device pointer
+    // Replace all uses of the original `acc.use_device` operation inside the
+    // `acc.host_data` region with the new box containing device pointer
     for (mlir::Operation *user : usersToUpdate)
       user->replaceUsesOfWith(useDeviceOp.getResult(), newBoxWithDevicePtr);
 
+    assert(useDeviceOp.getResult().use_empty() &&
+           "expected all uses of use_device to be replaced");
     rewriter.eraseOp(useDeviceOp);
     return true;
   }
