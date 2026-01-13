@@ -1929,6 +1929,21 @@ let Predicates = [hasSM<100>, hasPTX<86>, doNoF32FTZ] in {
 // Sub
 //
 
+def sub_rn_sat : SDNode<"NVPTXISD::SUB_RN_SAT", SDTFPBinOp>;
+def sub_rn_ftz_sat : 
+  SDNode<"NVPTXISD::SUB_RN_FTZ_SAT", SDTFPBinOp>;
+  
+class INT_NVVM_SUB_RN<RegTyInfo TyInfo, string variant> :
+  BasicNVPTXInst<(outs TyInfo.RC:$dst), (ins TyInfo.RC:$a, TyInfo.RC:$b),
+    !subst("_", ".", "sub.rn" # variant # "." # TyInfo.PtxType),
+    [(set TyInfo.Ty:$dst, 
+     (!cast<SDNode>("sub_rn" # variant) TyInfo.Ty:$a, TyInfo.Ty:$b))]>;
+
+def INT_NVVM_SUB_RN_SAT_F16 : INT_NVVM_SUB_RN<F16RT, "_sat">;
+def INT_NVVM_SUB_RN_FTZ_SAT_F16 : INT_NVVM_SUB_RN<F16RT, "_ftz_sat">;
+def INT_NVVM_SUB_RN_SAT_F16X2 : INT_NVVM_SUB_RN<F16X2RT, "_sat">;
+def INT_NVVM_SUB_RN_FTZ_SAT_F16X2 : INT_NVVM_SUB_RN<F16X2RT, "_ftz_sat">;
+
 foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
   foreach ftz = ["", "_ftz"] in {
     foreach sat = ["", "_sat"] in {
@@ -1969,25 +1984,6 @@ let Predicates = [hasSM<100>, hasPTX<86>, doNoF32FTZ] in {
   def : Pat<(f32 (fsub (f32 (fpextend bf16:$a)), f32:$b)),
             (INT_NVVM_MIXED_SUB_rn_f32_bf16 B16:$a, B32:$b)>;
 }
-
-//
-// Sub
-//
-
-def sub_rn_sat : SDNode<"NVPTXISD::SUB_RN_SAT", SDTFPBinOp>;
-def sub_rn_ftz_sat : 
-  SDNode<"NVPTXISD::SUB_RN_FTZ_SAT", SDTFPBinOp>;
-  
-class INT_NVVM_SUB_RN<RegTyInfo TyInfo, string variant> :
-  BasicNVPTXInst<(outs TyInfo.RC:$dst), (ins TyInfo.RC:$a, TyInfo.RC:$b),
-    !subst("_", ".", "sub.rn" # variant # "." # TyInfo.PtxType),
-    [(set TyInfo.Ty:$dst, 
-     (!cast<SDNode>("sub_rn" # variant) TyInfo.Ty:$a, TyInfo.Ty:$b))]>;
-
-def INT_NVVM_SUB_RN_SAT_F16 : INT_NVVM_SUB_RN<F16RT, "_sat">;
-def INT_NVVM_SUB_RN_FTZ_SAT_F16 : INT_NVVM_SUB_RN<F16RT, "_ftz_sat">;
-def INT_NVVM_SUB_RN_SAT_F16X2 : INT_NVVM_SUB_RN<F16X2RT, "_sat">;
-def INT_NVVM_SUB_RN_FTZ_SAT_F16X2 : INT_NVVM_SUB_RN<F16X2RT, "_ftz_sat">;
 
 //
 // BFIND
