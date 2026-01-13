@@ -20,27 +20,27 @@ using namespace llvm;
 TEST(CaptureTracking, MaxUsesToExplore) {
   StringRef Assembly = R"(
     ; Function Attrs: nounwind ssp uwtable
-    declare void @doesnt_capture(i8* nocapture, i8* nocapture, i8* nocapture, 
-                                 i8* nocapture, i8* nocapture)
+    declare void @doesnt_capture(ptr nocapture, ptr nocapture, ptr nocapture,
+                                 ptr nocapture, ptr nocapture)
 
     ; %arg has 5 uses
-    define void @test_few_uses(i8* %arg) {
-      call void @doesnt_capture(i8* %arg, i8* %arg, i8* %arg, i8* %arg, i8* %arg)
+    define void @test_few_uses(ptr %arg) {
+      call void @doesnt_capture(ptr %arg, ptr %arg, ptr %arg, ptr %arg, ptr %arg)
       ret void
     }
 
     ; %arg has 50 uses
-    define void @test_many_uses(i8* %arg) {
-      call void @doesnt_capture(i8* %arg, i8* %arg, i8* %arg, i8* %arg, i8* %arg)
-      call void @doesnt_capture(i8* %arg, i8* %arg, i8* %arg, i8* %arg, i8* %arg)
-      call void @doesnt_capture(i8* %arg, i8* %arg, i8* %arg, i8* %arg, i8* %arg)
-      call void @doesnt_capture(i8* %arg, i8* %arg, i8* %arg, i8* %arg, i8* %arg)
-      call void @doesnt_capture(i8* %arg, i8* %arg, i8* %arg, i8* %arg, i8* %arg)
-      call void @doesnt_capture(i8* %arg, i8* %arg, i8* %arg, i8* %arg, i8* %arg)
-      call void @doesnt_capture(i8* %arg, i8* %arg, i8* %arg, i8* %arg, i8* %arg)
-      call void @doesnt_capture(i8* %arg, i8* %arg, i8* %arg, i8* %arg, i8* %arg)
-      call void @doesnt_capture(i8* %arg, i8* %arg, i8* %arg, i8* %arg, i8* %arg)
-      call void @doesnt_capture(i8* %arg, i8* %arg, i8* %arg, i8* %arg, i8* %arg)
+    define void @test_many_uses(ptr %arg) {
+      call void @doesnt_capture(ptr %arg, ptr %arg, ptr %arg, ptr %arg, ptr %arg)
+      call void @doesnt_capture(ptr %arg, ptr %arg, ptr %arg, ptr %arg, ptr %arg)
+      call void @doesnt_capture(ptr %arg, ptr %arg, ptr %arg, ptr %arg, ptr %arg)
+      call void @doesnt_capture(ptr %arg, ptr %arg, ptr %arg, ptr %arg, ptr %arg)
+      call void @doesnt_capture(ptr %arg, ptr %arg, ptr %arg, ptr %arg, ptr %arg)
+      call void @doesnt_capture(ptr %arg, ptr %arg, ptr %arg, ptr %arg, ptr %arg)
+      call void @doesnt_capture(ptr %arg, ptr %arg, ptr %arg, ptr %arg, ptr %arg)
+      call void @doesnt_capture(ptr %arg, ptr %arg, ptr %arg, ptr %arg, ptr %arg)
+      call void @doesnt_capture(ptr %arg, ptr %arg, ptr %arg, ptr %arg, ptr %arg)
+      call void @doesnt_capture(ptr %arg, ptr %arg, ptr %arg, ptr %arg, ptr %arg)
       ret void
     }
   )";
@@ -85,12 +85,12 @@ struct CollectingCaptureTracker : public CaptureTracker {
 
 TEST(CaptureTracking, MultipleUsesInSameInstruction) {
   StringRef Assembly = R"(
-    declare void @call(i8*, i8*, i8*)
+    declare void @call(ptr, ptr, ptr)
 
-    define void @test(i8* %arg, i8** %ptr) {
-      call void @call(i8* %arg, i8* nocapture %arg, i8* %arg) [ "bundle"(i8* %arg) ]
-      cmpxchg i8** %ptr, i8* %arg, i8* %arg acq_rel monotonic
-      icmp eq i8* %arg, %arg
+    define void @test(ptr %arg, ptr %ptr) {
+      call void @call(ptr %arg, ptr nocapture %arg, ptr %arg) [ "bundle"(ptr %arg) ]
+      cmpxchg ptr %ptr, ptr %arg, ptr %arg acq_rel monotonic
+      icmp eq ptr %arg, %arg
       ret void
     }
   )";

@@ -21,6 +21,9 @@
 
 namespace llvm {
 
+/// The "value type" of StringSet represented as an empty struct.
+struct EmptyStringSetTag {};
+
 /// StringMapEntryBase - Shared base class of StringMapEntry instances.
 class StringMapEntryBase {
   size_t keyLength;
@@ -85,14 +88,13 @@ public:
 };
 
 template <>
-class StringMapEntryStorage<std::nullopt_t> : public StringMapEntryBase {
+class StringMapEntryStorage<EmptyStringSetTag> : public StringMapEntryBase {
 public:
-  explicit StringMapEntryStorage(size_t keyLength,
-                                 std::nullopt_t = std::nullopt)
+  explicit StringMapEntryStorage(size_t keyLength, EmptyStringSetTag = {})
       : StringMapEntryBase(keyLength) {}
   StringMapEntryStorage(StringMapEntryStorage &entry) = delete;
 
-  std::nullopt_t getValue() const { return std::nullopt; }
+  EmptyStringSetTag getValue() const { return {}; }
 };
 
 /// StringMapEntry - This is used to represent one value that is inserted into

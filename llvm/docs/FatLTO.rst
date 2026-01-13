@@ -38,7 +38,7 @@ This pipeline will:
 
    Previously, we conservatively ran independent pipelines on separate copies
    of the LLVM module to generate the bitcode section and the object code,
-   which happen to be identical to those used outside of FatLTO. While that
+   which happened to be identical to those used outside of FatLTO. While that
    resulted in  compiled artifacts that were identical to those produced by the
    default and (Thin)LTO pipelines, module cloning led to some cases of
    miscompilation, and we have moved away from trying to keep bitcode

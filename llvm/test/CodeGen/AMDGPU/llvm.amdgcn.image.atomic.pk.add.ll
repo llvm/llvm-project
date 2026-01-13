@@ -41,15 +41,13 @@ main_body:
 define amdgpu_ps float @atomic_pk_add_f16_1d_v2_noret(<8 x i32> inreg %rsrc, <2 x half> %data, i32 %s) {
 ; GFX12-SDAG-LABEL: atomic_pk_add_f16_1d_v2_noret:
 ; GFX12-SDAG:       ; %bb.0: ; %main_body
-; GFX12-SDAG-NEXT:    image_atomic_pk_add_f16 v0, v1, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN
-; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX12-SDAG-NEXT:    image_atomic_pk_add_f16 v0, v1, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 1.0
 ; GFX12-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-LABEL: atomic_pk_add_f16_1d_v2_noret:
 ; GFX12-GISEL:       ; %bb.0: ; %main_body
-; GFX12-GISEL-NEXT:    image_atomic_pk_add_f16 v0, v1, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GISEL-NEXT:    image_atomic_pk_add_f16 v0, v1, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, 1.0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
 main_body:
@@ -79,15 +77,13 @@ main_body:
 define amdgpu_ps float @atomic_pk_add_f16_1d_v4_noret(<8 x i32> inreg %rsrc, <4 x half> %data, i32 %s) {
 ; GFX12-SDAG-LABEL: atomic_pk_add_f16_1d_v4_noret:
 ; GFX12-SDAG:       ; %bb.0: ; %main_body
-; GFX12-SDAG-NEXT:    image_atomic_pk_add_f16 v[0:1], v2, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN
-; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX12-SDAG-NEXT:    image_atomic_pk_add_f16 v[0:1], v2, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 1.0
 ; GFX12-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-LABEL: atomic_pk_add_f16_1d_v4_noret:
 ; GFX12-GISEL:       ; %bb.0: ; %main_body
-; GFX12-GISEL-NEXT:    image_atomic_pk_add_f16 v[0:1], v2, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GISEL-NEXT:    image_atomic_pk_add_f16 v[0:1], v2, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, 1.0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
 main_body:
@@ -126,15 +122,13 @@ main_body:
 define amdgpu_ps float @atomic_pk_add_bf16_1d_v2_noret(<8 x i32> inreg %rsrc, <2 x bfloat> %data, i32 %s) {
 ; GFX12-SDAG-LABEL: atomic_pk_add_bf16_1d_v2_noret:
 ; GFX12-SDAG:       ; %bb.0: ; %main_body
-; GFX12-SDAG-NEXT:    image_atomic_pk_add_bf16 v0, v1, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN
-; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX12-SDAG-NEXT:    image_atomic_pk_add_bf16 v0, v1, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 1.0
 ; GFX12-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-LABEL: atomic_pk_add_bf16_1d_v2_noret:
 ; GFX12-GISEL:       ; %bb.0: ; %main_body
-; GFX12-GISEL-NEXT:    image_atomic_pk_add_bf16 v0, v1, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GISEL-NEXT:    image_atomic_pk_add_bf16 v0, v1, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, 1.0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
 main_body:
@@ -173,15 +167,13 @@ main_body:
 define amdgpu_ps float @atomic_pk_add_bf16_1d_v4_noret(<8 x i32> inreg %rsrc, <4 x bfloat> %data, i32 %s) {
 ; GFX12-SDAG-LABEL: atomic_pk_add_bf16_1d_v4_noret:
 ; GFX12-SDAG:       ; %bb.0: ; %main_body
-; GFX12-SDAG-NEXT:    image_atomic_pk_add_bf16 v[0:1], v2, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN
-; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX12-SDAG-NEXT:    image_atomic_pk_add_bf16 v[0:1], v2, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 1.0
 ; GFX12-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-LABEL: atomic_pk_add_bf16_1d_v4_noret:
 ; GFX12-GISEL:       ; %bb.0: ; %main_body
-; GFX12-GISEL-NEXT:    image_atomic_pk_add_bf16 v[0:1], v2, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GISEL-NEXT:    image_atomic_pk_add_bf16 v[0:1], v2, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, 1.0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
 main_body:
@@ -192,15 +184,13 @@ main_body:
 define amdgpu_ps float @atomic_pk_add_bf16_1d_v4_nt(<8 x i32> inreg %rsrc, <4 x bfloat> %data, i32 %s) {
 ; GFX12-SDAG-LABEL: atomic_pk_add_bf16_1d_v4_nt:
 ; GFX12-SDAG:       ; %bb.0: ; %main_body
-; GFX12-SDAG-NEXT:    image_atomic_pk_add_bf16 v[0:1], v2, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_NT_RETURN
-; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX12-SDAG-NEXT:    image_atomic_pk_add_bf16 v[0:1], v2, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_NT
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 1.0
 ; GFX12-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-LABEL: atomic_pk_add_bf16_1d_v4_nt:
 ; GFX12-GISEL:       ; %bb.0: ; %main_body
-; GFX12-GISEL-NEXT:    image_atomic_pk_add_bf16 v[0:1], v2, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_NT_RETURN
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GISEL-NEXT:    image_atomic_pk_add_bf16 v[0:1], v2, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_NT
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, 1.0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
 main_body:

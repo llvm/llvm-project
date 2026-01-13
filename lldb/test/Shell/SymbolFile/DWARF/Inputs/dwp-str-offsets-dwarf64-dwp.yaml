@@ -1,0 +1,44 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            .debug_abbrev.dwo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_EXCLUDE ]
+    AddressAlign:    0x1
+    Content:         01110125251305032576250000022E01111B1206401803253A0B3B0B49133F190000030500021803253A0B3B0B4913000004240003253E0B0B0B0000050F00491300000626004913000000
+  - Name:            .debug_str.dwo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_EXCLUDE, SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         6D61696E00696E74006172676300617267760063686172004170706C6520636C616E672076657273696F6E2031372E302E302028636C616E672D313730302E342E342E3129006D61696E2E6D696E696D616C2E637070006D61696E2E6D696E696D616C2E64776F00
+  - Name:            .debug_str_offsets.dwo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_EXCLUDE ]
+    AddressAlign:    0x1
+    Content:         'FFFFFFFF4400000000000000050000000000000000000000050000000000000009000000000000000E000000000000001300000000000000180000000000000046000000000000005700000000000000'
+  - Name:            .debug_info.dwo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_EXCLUDE ]
+    AddressAlign:    0x1
+    Content:         54000000050005080000000099E97383BBC6980B0105210006070200160000000156000001400000000302917802000140000000030291700300014400000000040105040549000000054E00000006530000000404060100
+  - Name:            .debug_cu_index
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         05000000030000000100000002000000000000000000000099E97383BBC6980B0000000001000000010000000300000006000000000000000000000000000000580000004B00000028000000
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            .debug_abbrev.dwo
+      - Name:            .debug_str.dwo
+      - Name:            .debug_str_offsets.dwo
+      - Name:            .debug_info.dwo
+      - Name:            .debug_cu_index
+      - Name:            .symtab
+Symbols:         []
+...

@@ -41,6 +41,9 @@ if default_asan_opts_str:
 config.substitutions.append(
     ("%env_asan_opts=", "env ASAN_OPTIONS=" + default_asan_opts_str)
 )
+config.substitutions.append(
+    ("%export_asan_opts=", "export ASAN_OPTIONS=" + default_asan_opts_str)
+)
 
 # Setup source root.
 config.test_source_root = os.path.dirname(__file__)

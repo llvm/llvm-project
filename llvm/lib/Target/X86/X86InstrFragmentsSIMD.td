@@ -71,6 +71,8 @@ def X86fhadd   : SDNode<"X86ISD::FHADD",     SDTFPBinOp>;
 def X86fhsub   : SDNode<"X86ISD::FHSUB",     SDTFPBinOp>;
 def X86hadd    : SDNode<"X86ISD::HADD",      SDTIntBinOp>;
 def X86hsub    : SDNode<"X86ISD::HSUB",      SDTIntBinOp>;
+def X86hadds   : SDNode<"X86ISD::HADDS",     SDTIntBinOp>;
+def X86hsubs   : SDNode<"X86ISD::HSUBS",     SDTIntBinOp>;
 def X86comi    : SDNode<"X86ISD::COMI",      SDTX86FCmp>;
 def X86ucomi   : SDNode<"X86ISD::UCOMI",     SDTX86FCmp>;
 def X86comi512       : SDNode<"X86ISD::COMX",      SDTX86FCmp>;

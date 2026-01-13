@@ -301,3 +301,12 @@ TEST(BarvinokTest, computeNumTermsPolytope) {
   gf = count[0].second;
   EXPECT_EQ(gf.getNumerators().size(), 24u);
 }
+
+TEST(BarvinokTest, solveParametricEquations) {
+  FracMatrix equations = makeFracMatrix(2, 3, {{2, 3, -4}, {2, 6, -7}});
+  auto maybeSolution = solveParametricEquations(equations);
+  ASSERT_TRUE(maybeSolution.has_value());
+  FracMatrix solution = *maybeSolution;
+  EXPECT_EQ(solution.at(0, 0), Fraction(1, 2));
+  EXPECT_EQ(solution.at(1, 0), 1);
+}

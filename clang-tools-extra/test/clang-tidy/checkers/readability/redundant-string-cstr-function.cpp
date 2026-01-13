@@ -27,12 +27,12 @@ namespace notfmt {
 void fmt_print(const std::string &s1, const std::string &s2, const std::string &s3) {
   fmt::print("One:{}\n", s1.c_str());
   // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
-  // CHECK-FIXES: {{^  }}fmt::print("One:{}\n", s1);
+  // CHECK-FIXES: fmt::print("One:{}\n", s1);
 
   fmt::print("One:{} Two:{} Three:{}\n", s1.c_str(), s2, s3.c_str());
   // CHECK-MESSAGES: :[[@LINE-1]]:42: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
   // CHECK-MESSAGES: :[[@LINE-2]]:58: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
-  // CHECK-FIXES: {{^  }}fmt::print("One:{} Two:{} Three:{}\n", s1, s2, s3);
+  // CHECK-FIXES: fmt::print("One:{} Two:{} Three:{}\n", s1, s2, s3);
 }
 
 // There's no c_str() call here, so it shouldn't be touched
@@ -48,12 +48,12 @@ void not_fmt_print(const std::string &s1) {
 void fmt_format(const std::string &s1, const std::string &s2, const std::string &s3) {
   auto r1 = fmt::format("One:{}\n", s1.c_str());
   // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
-  // CHECK-FIXES: {{^  }}auto r1 = fmt::format("One:{}\n", s1);
+  // CHECK-FIXES: auto r1 = fmt::format("One:{}\n", s1);
 
   auto r2 = fmt::format("One:{} Two:{} Three:{}\n", s1.c_str(), s2, s3.c_str());
   // CHECK-MESSAGES: :[[@LINE-1]]:53: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
   // CHECK-MESSAGES: :[[@LINE-2]]:69: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
-  // CHECK-FIXES: {{^  }}auto r2 = fmt::format("One:{} Two:{} Three:{}\n", s1, s2, s3);
+  // CHECK-FIXES: auto r2 = fmt::format("One:{} Two:{} Three:{}\n", s1, s2, s3);
 }
 
 // There's are c_str() calls here, so it shouldn't be touched
@@ -87,25 +87,25 @@ void logger1(const std::string &s1, const std::string &s2, const std::string &s3
   LOGGER("%s\n", s1.c_str(), s2, s3.c_str());
   // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
   // CHECK-MESSAGES: :[[@LINE-2]]:34: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
-  // CHECK-FIXES: {{^  }}LOGGER("%s\n", s1, s2, s3);
+  // CHECK-FIXES: LOGGER("%s\n", s1, s2, s3);
 
   DerivedLogger LOGGER2;
   LOGGER2("%d %s\n", 42, s1.c_str(), s2.c_str(), s3);
   // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
   // CHECK-MESSAGES: :[[@LINE-2]]:38: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
-  // CHECK-FIXES: {{^  }}LOGGER2("%d %s\n", 42, s1, s2, s3);
+  // CHECK-FIXES: LOGGER2("%d %s\n", 42, s1, s2, s3);
 
   DoubleDerivedLogger LOGGERD;
   LOGGERD("%d %s\n", 42, s1.c_str(), s2, s3.c_str());
   // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
   // CHECK-MESSAGES: :[[@LINE-2]]:42: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
-  // CHECK-FIXES: {{^  }}LOGGERD("%d %s\n", 42, s1, s2, s3);
+  // CHECK-FIXES: LOGGERD("%d %s\n", 42, s1, s2, s3);
 
   TypedefDerivedLogger LOGGERT;
   LOGGERT("%d %s\n", 42, s1.c_str(), s2, s3.c_str());
   // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
   // CHECK-MESSAGES: :[[@LINE-2]]:42: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
-  // CHECK-FIXES: {{^  }}LOGGERT("%d %s\n", 42, s1, s2, s3);
+  // CHECK-FIXES: LOGGERT("%d %s\n", 42, s1, s2, s3);
 }
 
 void logger2(const std::string &s1, const std::string &s2) {
@@ -114,13 +114,13 @@ void logger2(const std::string &s1, const std::string &s2) {
   LOGGER3.Log("%s\n", s1.c_str(), s2.c_str());
   // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
   // CHECK-MESSAGES: :[[@LINE-2]]:35: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
-  // CHECK-FIXES: {{^  }}LOGGER3.Log("%s\n", s1, s2);
+  // CHECK-FIXES: LOGGER3.Log("%s\n", s1, s2);
 
   DerivedLogger LOGGER4;
   LOGGER4.Log("%d %s\n", 42, s1.c_str(), s2.c_str());
   // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
   // CHECK-MESSAGES: :[[@LINE-2]]:42: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
-  // CHECK-FIXES: {{^  }}LOGGER4.Log("%d %s\n", 42, s1, s2);
+  // CHECK-FIXES: LOGGER4.Log("%d %s\n", 42, s1, s2);
 }
 
 class NotLogger {

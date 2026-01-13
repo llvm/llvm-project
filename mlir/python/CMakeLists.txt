@@ -3,6 +3,8 @@ include(AddMLIRPython)
 # Specifies that all MLIR packages are co-located under the `MLIR_PYTHON_PACKAGE_PREFIX.`
 # top level package (the API has been embedded in a relocatable way).
 add_compile_definitions("MLIR_PYTHON_PACKAGE_PREFIX=${MLIR_PYTHON_PACKAGE_PREFIX}.")
+set(MLIRPythonModules_ROOT_PREFIX "${MLIR_BINARY_DIR}/${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}")
+set(PYTHON_SOURCE_DIR "${MLIR_SOURCE_DIR}/lib/Bindings/Python")
 
 ################################################################################
 # Structural groupings.
@@ -133,6 +135,16 @@ declare_mlir_dialect_python_bindings(
   SOURCES
     dialects/func.py
   DIALECT_NAME func)
+
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/OpenACCOps.td
+  SOURCES
+    dialects/openacc.py
+  DIALECT_NAME acc
+  DEPENDS acc_common_td
+  )
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -312,6 +324,15 @@ declare_mlir_dialect_extension_python_bindings(
     "../../include/mlir/Dialect/Vector/Transforms/VectorTransformsBase.td"
 )
 
+declare_mlir_dialect_extension_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/XeGPUTransformOps.td
+  SOURCES
+    dialects/transform/xegpu.py
+  DIALECT_NAME transform
+  EXTENSION_NAME xegpu_transform)
+
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
@@ -335,6 +356,15 @@ declare_mlir_dialect_python_bindings(
   SOURCES
     dialects/memref.py
   DIALECT_NAME memref)
+
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/ShardOps.td
+  SOURCES
+    dialects/shard.py
+  DIALECT_NAME shard
+  GEN_ENUM_BINDINGS)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -496,7 +526,6 @@ declare_mlir_dialect_python_bindings(
 # dependencies.
 ################################################################################
 
-set(PYTHON_SOURCE_DIR "${MLIR_SOURCE_DIR}/lib/Bindings/Python")
 declare_mlir_python_extension(MLIRPythonExtension.Core
   MODULE_NAME _mlir
   ADD_TO_PARENT MLIRPythonSources.Core
@@ -504,19 +533,12 @@ declare_mlir_python_extension(MLIRPythonExtension.Core
   SOURCES
     MainModule.cpp
     IRAffine.cpp
-    IRAttributes.cpp
-    IRCore.cpp
     IRInterfaces.cpp
-    IRModule.cpp
-    IRTypes.cpp
     Pass.cpp
     Rewrite.cpp
 
     # Headers must be included explicitly so they are installed.
-    Globals.h
-    IRModule.h
     Pass.h
-    NanobindUtils.h
     Rewrite.h
   PRIVATE_LINK_LIBS
     LLVMSupport
@@ -586,6 +608,8 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.LLVM.Nanobind
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPILLVM
+    # Misnomer - this is only the LLVMIR translation target.
+    MLIRCAPITarget
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.Quant.Nanobind
@@ -722,8 +746,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.SMT.Nanobind
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
     DialectSMT.cpp
-    # Headers must be included explicitly so they are installed.
-    NanobindUtils.h
   PRIVATE_LINK_LIBS
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
@@ -755,6 +777,20 @@ declare_mlir_python_extension(MLIRPythonExtension.TransformInterpreter
   EMBED_CAPI_LINK_LIBS
     MLIRCAPITransformDialectTransforms
 )
+
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.AMDGPU.Nanobind
+  MODULE_NAME _mlirDialectsAMDGPU
+  ADD_TO_PARENT MLIRPythonSources.Dialects.amdgpu
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  SOURCES
+    DialectAMDGPU.cpp
+  PRIVATE_LINK_LIBS
+    LLVMSupport
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIIR
+    MLIRCAPIAMDGPU
+)
+
 
 # TODO: Figure out how to put this in the test tree.
 # This should not be included in the main Python extension. However,
@@ -802,6 +838,18 @@ if(MLIR_INCLUDE_TESTS)
   )
 endif()
 
+declare_mlir_python_extension(MLIRPythonExtension.MLIRPythonSupport
+  _PRIVATE_SUPPORT_LIB
+  MODULE_NAME MLIRPythonSupport
+  ADD_TO_PARENT MLIRPythonSources.Core
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  SOURCES
+    Globals.cpp
+    IRAttributes.cpp
+    IRCore.cpp
+    IRTypes.cpp
+)
+
 ################################################################################
 # Common CAPI dependency DSO.
 # All python extensions must link through one DSO which exports the CAPI, and
@@ -815,7 +863,6 @@ endif()
 # once ready.
 ################################################################################
 
-set(MLIRPythonModules_ROOT_PREFIX "${MLIR_BINARY_DIR}/${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}")
 add_mlir_python_common_capi_library(MLIRPythonCAPI
   INSTALL_COMPONENT MLIRPythonModules
   INSTALL_DESTINATION "${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}/_mlir_libs"
@@ -834,17 +881,8 @@ add_mlir_python_common_capi_library(MLIRPythonCAPI
 ################################################################################
 
 _flatten_mlir_python_targets(mlir_python_sources_deps MLIRPythonSources)
-add_custom_target("mlir-python-sources" DEPENDS ${mlir_python_sources_deps})
-if(NOT LLVM_ENABLE_IDE)
-  add_llvm_install_targets(install-mlir-python-sources
-    DEPENDS mlir-python-sources
-    COMPONENT mlir-python-sources
-  )
-endif()
 
-# Stubgen doesn't work when cross-compiling (stubgen will run in the host interpreter and then fail
-# to find the extension module for the host arch).
-if(NOT CMAKE_CROSSCOMPILING)
+if(MLIR_PYTHON_STUBGEN_ENABLED)
   # _mlir stubgen
   # Note: All this needs to come before add_mlir_python_modules(MLIRPythonModules so that the install targets for the
   # generated type stubs get created.
@@ -897,6 +935,7 @@ if(NOT CMAKE_CROSSCOMPILING)
     ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}/type_stubs"
     SOURCES "${_core_type_stub_sources}"
   )
+  list(APPEND mlir_python_sources_deps MLIRPythonExtension.Core.type_stub_gen)
 
   # _mlirPythonTestNanobind stubgen
 
@@ -927,13 +966,21 @@ if(NOT CMAKE_CROSSCOMPILING)
   endif()
 endif()
 
+add_custom_target("mlir-python-sources" DEPENDS ${mlir_python_sources_deps})
+if(NOT LLVM_ENABLE_IDE)
+  add_llvm_install_targets(install-mlir-python-sources
+    DEPENDS mlir-python-sources
+    COMPONENT mlir-python-sources
+  )
+endif()
+
 ################################################################################
 # The fully assembled package of modules.
 # This must come last.
 ################################################################################
 
 set(_declared_sources MLIRPythonSources MLIRPythonExtension.RegisterEverything)
-if(NOT CMAKE_CROSSCOMPILING)
+if(MLIR_PYTHON_STUBGEN_ENABLED)
   list(APPEND _declared_sources MLIRPythonExtension.Core.type_stub_gen)
 endif()
 
@@ -946,7 +993,7 @@ add_mlir_python_modules(MLIRPythonModules
   COMMON_CAPI_LINK_LIBS
     MLIRPythonCAPI
 )
-if(NOT CMAKE_CROSSCOMPILING)
+if(MLIR_PYTHON_STUBGEN_ENABLED)
   add_dependencies(MLIRPythonModules "${_mlir_typestub_gen_target}")
   if(MLIR_INCLUDE_TESTS)
     add_dependencies(MLIRPythonModules "${_mlirPythonTestNanobind_typestub_gen_target}")

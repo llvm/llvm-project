@@ -10,8 +10,6 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -global-isel  \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
 
-declare double @llvm.sqrt.f64(double)
-
 define double @sqrt_f64(double %a) nounwind {
 ; CHECKIFD-LABEL: sqrt_f64:
 ; CHECKIFD:       # %bb.0:
@@ -81,8 +79,6 @@ define double @powi_f64(double %a, i32 %b) nounwind {
   ret double %1
 }
 
-declare double @llvm.sin.f64(double)
-
 define double @sin_f64(double %a) nounwind {
 ; RV32IFD-LABEL: sin_f64:
 ; RV32IFD:       # %bb.0:
@@ -122,8 +118,6 @@ define double @sin_f64(double %a) nounwind {
   %1 = call double @llvm.sin.f64(double %a)
   ret double %1
 }
-
-declare double @llvm.cos.f64(double)
 
 define double @cos_f64(double %a) nounwind {
 ; RV32IFD-LABEL: cos_f64:
@@ -257,8 +251,6 @@ define double @sincos_f64(double %a) nounwind {
   ret double %3
 }
 
-declare double @llvm.pow.f64(double, double)
-
 define double @pow_f64(double %a, double %b) nounwind {
 ; RV32IFD-LABEL: pow_f64:
 ; RV32IFD:       # %bb.0:
@@ -299,8 +291,6 @@ define double @pow_f64(double %a, double %b) nounwind {
   ret double %1
 }
 
-declare double @llvm.exp.f64(double)
-
 define double @exp_f64(double %a) nounwind {
 ; RV32IFD-LABEL: exp_f64:
 ; RV32IFD:       # %bb.0:
@@ -340,8 +330,6 @@ define double @exp_f64(double %a) nounwind {
   %1 = call double @llvm.exp.f64(double %a)
   ret double %1
 }
-
-declare double @llvm.exp2.f64(double)
 
 define double @exp2_f64(double %a) nounwind {
 ; RV32IFD-LABEL: exp2_f64:
@@ -423,8 +411,6 @@ define double @exp10_f64(double %a) nounwind {
   ret double %1
 }
 
-declare double @llvm.log.f64(double)
-
 define double @log_f64(double %a) nounwind {
 ; RV32IFD-LABEL: log_f64:
 ; RV32IFD:       # %bb.0:
@@ -464,8 +450,6 @@ define double @log_f64(double %a) nounwind {
   %1 = call double @llvm.log.f64(double %a)
   ret double %1
 }
-
-declare double @llvm.log10.f64(double)
 
 define double @log10_f64(double %a) nounwind {
 ; RV32IFD-LABEL: log10_f64:
@@ -507,8 +491,6 @@ define double @log10_f64(double %a) nounwind {
   ret double %1
 }
 
-declare double @llvm.log2.f64(double)
-
 define double @log2_f64(double %a) nounwind {
 ; RV32IFD-LABEL: log2_f64:
 ; RV32IFD:       # %bb.0:
@@ -549,8 +531,6 @@ define double @log2_f64(double %a) nounwind {
   ret double %1
 }
 
-declare double @llvm.fma.f64(double, double, double)
-
 define double @fma_f64(double %a, double %b, double %c) nounwind {
 ; CHECKIFD-LABEL: fma_f64:
 ; CHECKIFD:       # %bb.0:
@@ -577,8 +557,6 @@ define double @fma_f64(double %a, double %b, double %c) nounwind {
   %1 = call double @llvm.fma.f64(double %a, double %b, double %c)
   ret double %1
 }
-
-declare double @llvm.fmuladd.f64(double, double, double)
 
 define double @fmuladd_f64(double %a, double %b, double %c) nounwind {
 ; CHECKIFD-LABEL: fmuladd_f64:
@@ -621,8 +599,6 @@ define double @fmuladd_f64(double %a, double %b, double %c) nounwind {
   ret double %1
 }
 
-declare double @llvm.fabs.f64(double)
-
 define double @fabs_f64(double %a) nounwind {
 ; CHECKIFD-LABEL: fabs_f64:
 ; CHECKIFD:       # %bb.0:
@@ -643,8 +619,6 @@ define double @fabs_f64(double %a) nounwind {
   %1 = call double @llvm.fabs.f64(double %a)
   ret double %1
 }
-
-declare double @llvm.minnum.f64(double, double)
 
 define double @minnum_f64(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: minnum_f64:
@@ -673,8 +647,6 @@ define double @minnum_f64(double %a, double %b) nounwind {
   ret double %1
 }
 
-declare double @llvm.maxnum.f64(double, double)
-
 define double @maxnum_f64(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: maxnum_f64:
 ; CHECKIFD:       # %bb.0:
@@ -702,8 +674,6 @@ define double @maxnum_f64(double %a, double %b) nounwind {
   ret double %1
 }
 
-declare double @llvm.copysign.f64(double, double)
-
 define double @copysign_f64(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: copysign_f64:
 ; CHECKIFD:       # %bb.0:
@@ -730,8 +700,6 @@ define double @copysign_f64(double %a, double %b) nounwind {
   %1 = call double @llvm.copysign.f64(double %a, double %b)
   ret double %1
 }
-
-declare double @llvm.floor.f64(double)
 
 define double @floor_f64(double %a) nounwind {
 ; RV32IFD-LABEL: floor_f64:
@@ -773,8 +741,6 @@ define double @floor_f64(double %a) nounwind {
   ret double %1
 }
 
-declare double @llvm.ceil.f64(double)
-
 define double @ceil_f64(double %a) nounwind {
 ; RV32IFD-LABEL: ceil_f64:
 ; RV32IFD:       # %bb.0:
@@ -814,8 +780,6 @@ define double @ceil_f64(double %a) nounwind {
   %1 = call double @llvm.ceil.f64(double %a)
   ret double %1
 }
-
-declare double @llvm.trunc.f64(double)
 
 define double @trunc_f64(double %a) nounwind {
 ; RV32IFD-LABEL: trunc_f64:
@@ -857,8 +821,6 @@ define double @trunc_f64(double %a) nounwind {
   ret double %1
 }
 
-declare double @llvm.rint.f64(double)
-
 define double @rint_f64(double %a) nounwind {
 ; RV32IFD-LABEL: rint_f64:
 ; RV32IFD:       # %bb.0:
@@ -898,8 +860,6 @@ define double @rint_f64(double %a) nounwind {
   %1 = call double @llvm.rint.f64(double %a)
   ret double %1
 }
-
-declare double @llvm.nearbyint.f64(double)
 
 define double @nearbyint_f64(double %a) nounwind {
 ; RV32IFD-LABEL: nearbyint_f64:
@@ -941,8 +901,6 @@ define double @nearbyint_f64(double %a) nounwind {
   ret double %1
 }
 
-declare double @llvm.round.f64(double)
-
 define double @round_f64(double %a) nounwind {
 ; RV32IFD-LABEL: round_f64:
 ; RV32IFD:       # %bb.0:
@@ -982,8 +940,6 @@ define double @round_f64(double %a) nounwind {
   %1 = call double @llvm.round.f64(double %a)
   ret double %1
 }
-
-declare double @llvm.roundeven.f64(double)
 
 define double @roundeven_f64(double %a) nounwind {
 ; RV32IFD-LABEL: roundeven_f64:
@@ -1025,7 +981,6 @@ define double @roundeven_f64(double %a) nounwind {
   ret double %1
 }
 
-declare i1 @llvm.is.fpclass.f64(double, i32)
 define i1 @isnan_d_fpclass(double %x) {
 ; CHECKIFD-LABEL: isnan_d_fpclass:
 ; CHECKIFD:       # %bb.0:

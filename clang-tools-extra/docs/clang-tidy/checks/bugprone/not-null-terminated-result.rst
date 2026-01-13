@@ -3,10 +3,11 @@
 bugprone-not-null-terminated-result
 ===================================
 
-Finds function calls where it is possible to cause a not null-terminated result.
-Usually the proper length of a string is ``strlen(src) + 1`` or equal length of
-this expression, because the null terminator needs an extra space. Without the
-null terminator it can result in undefined behavior when the string is read.
+Finds function calls where it is possible to cause a not null-terminated
+result. Usually the proper length of a string is ``strlen(src) + 1`` or equal
+length of this expression, because the null terminator needs an extra space.
+Without the null terminator it can result in undefined behavior when the
+string is read.
 
 The following and their respective ``wchar_t`` based functions are checked:
 
@@ -25,8 +26,8 @@ of the allocated memory is not enough to hold the null terminator.
     return result;
   }
 
-In addition to issuing warnings, fix-it rewrites all the necessary code. It also
-tries to adjust the capacity of the destination array:
+In addition to issuing warnings, fix-it rewrites all the necessary code.
+It also tries to adjust the capacity of the destination array:
 
 .. code-block:: c
 
@@ -62,8 +63,8 @@ Rewrite based on the destination array
   the safe version (ending with ``cpy_s``).
 
 - If the new function is could be safe version and C++ files are analyzed and
-  the destination array is plain ``char``/``wchar_t`` without ``un/signed`` then
-  the length of the destination array can be omitted.
+  the destination array is plain ``char``/``wchar_t`` without ``un/signed``
+  then the length of the destination array can be omitted.
 
 - If the new function is could be safe version and the destination array is
   ``un/signed`` it needs to be casted to plain ``char *``/``wchar_t *``.
@@ -76,8 +77,9 @@ Rewrite based on the length of the source string
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - If the given length is ``strlen(source)`` or equal length of this expression
-  then the new function should be the older copy function (ending with ``cpy``),
-  as it is more efficient than the safe version (ending with ``cpy_s``).
+  then the new function should be the older copy function (ending with
+  ``cpy``), as it is more efficient than the safe version (ending with
+  ``cpy_s``).
 
 - Otherwise we assume that the programmer wanted to copy 'N' characters, so the
   new function is ``ncpy``-like which copies 'N' characters.

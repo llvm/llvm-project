@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/Passes.h"
+#include "mlir/Dialect/Affine/Transforms/Passes.h"
 
 #include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
@@ -27,7 +27,7 @@
 namespace mlir {
 namespace affine {
 #define GEN_PASS_DEF_AFFINEPIPELINEDATATRANSFER
-#include "mlir/Dialect/Affine/Passes.h.inc"
+#include "mlir/Dialect/Affine/Transforms/Passes.h.inc"
 } // namespace affine
 } // namespace mlir
 
@@ -82,7 +82,7 @@ static bool doubleBuffer(Value oldMemRef, AffineForOp forOp) {
     ArrayRef<int64_t> oldShape = oldMemRefType.getShape();
     SmallVector<int64_t, 4> newShape(1 + oldMemRefType.getRank());
     newShape[0] = 2;
-    std::copy(oldShape.begin(), oldShape.end(), newShape.begin() + 1);
+    llvm::copy(oldShape, newShape.begin() + 1);
     return MemRefType::Builder(oldMemRefType).setShape(newShape).setLayout({});
   };
 

@@ -18,9 +18,6 @@
 
 namespace clang::sema {
 
-// Tells whether the type is annotated with [[gsl::Pointer]].
-bool isGLSPointerType(QualType QT);
-
 /// Describes an entity that is being assigned.
 struct AssignedEntity {
   // The left-hand side expression of the assignment.

@@ -231,8 +231,11 @@ public:
     // "assign" property doesn't retain even under ARC so treat it as unsafe.
     bool ignoreARC =
         !PD->isReadOnly() && PD->getSetterKind() == ObjCPropertyDecl::Assign;
+    bool IsWeak =
+        PD->getPropertyAttributes() & ObjCPropertyAttribute::kind_weak;
+    bool HasSafeAttr = PD->isRetaining() || IsWeak;
     auto IsUnsafePtr = isUnsafePtr(QT, ignoreARC);
-    return {IsUnsafePtr && *IsUnsafePtr, PropType};
+    return {IsUnsafePtr && *IsUnsafePtr && !HasSafeAttr, PropType};
   }
 
   bool shouldSkipDecl(const RecordDecl *RD) const {
@@ -363,6 +366,8 @@ public:
   }
 
   std::optional<bool> isUnsafePtr(QualType QT, bool ignoreARC) const final {
+    if (QT.hasStrongOrWeakObjCLifetime())
+      return false;
     return RTC->isUnretained(QT, ignoreARC);
   }
 

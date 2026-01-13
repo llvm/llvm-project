@@ -46,7 +46,7 @@ class TestDAP_cancel(lldbdap_testcase.DAPTestCaseBase):
 
         # Use a relatively short timeout since this is only to ensure the
         # following request is queued.
-        blocking_seq = self.async_blocking_request(duration=1.0)
+        blocking_seq = self.async_blocking_request(duration=self.DEFAULT_TIMEOUT / 10)
         # Use a longer timeout to ensure we catch if the request was interrupted
         # properly.
         pending_seq = self.async_blocking_request(duration=self.DEFAULT_TIMEOUT / 2)

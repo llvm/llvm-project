@@ -1192,4 +1192,42 @@ def int_loongarch_lasx_xvstelm_w
 def int_loongarch_lasx_xvstelm_d
   : VecInt<[], [llvm_v4i64_ty, llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty],
            [IntrWriteMem, IntrArgMemOnly, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]>;
+
+// LASX and LSX conversion
+def int_loongarch_lasx_cast_128_s
+  : VecInt<[llvm_v8f32_ty], [llvm_v4f32_ty], [IntrNoMem]>;
+def int_loongarch_lasx_cast_128_d
+  : VecInt<[llvm_v4f64_ty], [llvm_v2f64_ty], [IntrNoMem]>;
+def int_loongarch_lasx_cast_128
+  : VecInt<[llvm_v4i64_ty], [llvm_v2i64_ty], [IntrNoMem]>;
+def int_loongarch_lasx_concat_128_s
+  : VecInt<[llvm_v8f32_ty], [llvm_v4f32_ty, llvm_v4f32_ty], [IntrNoMem]>;
+def int_loongarch_lasx_concat_128_d
+  : VecInt<[llvm_v4f64_ty], [llvm_v2f64_ty, llvm_v2f64_ty], [IntrNoMem]>;
+def int_loongarch_lasx_concat_128
+  : VecInt<[llvm_v4i64_ty], [llvm_v2i64_ty, llvm_v2i64_ty], [IntrNoMem]>;
+def int_loongarch_lasx_extract_128_lo_s
+  : VecInt<[llvm_v4f32_ty], [llvm_v8f32_ty], [IntrNoMem]>;
+def int_loongarch_lasx_extract_128_lo_d
+  : VecInt<[llvm_v2f64_ty], [llvm_v4f64_ty], [IntrNoMem]>;
+def int_loongarch_lasx_extract_128_lo
+  : VecInt<[llvm_v2i64_ty], [llvm_v4i64_ty], [IntrNoMem]>;
+def int_loongarch_lasx_extract_128_hi_s
+  : VecInt<[llvm_v4f32_ty], [llvm_v8f32_ty], [IntrNoMem]>;
+def int_loongarch_lasx_extract_128_hi_d
+  : VecInt<[llvm_v2f64_ty], [llvm_v4f64_ty], [IntrNoMem]>;
+def int_loongarch_lasx_extract_128_hi
+  : VecInt<[llvm_v2i64_ty], [llvm_v4i64_ty], [IntrNoMem]>;
+def int_loongarch_lasx_insert_128_lo_s
+  : VecInt<[llvm_v8f32_ty], [llvm_v8f32_ty, llvm_v4f32_ty], [IntrNoMem]>;
+def int_loongarch_lasx_insert_128_lo_d
+  : VecInt<[llvm_v4f64_ty], [llvm_v4f64_ty, llvm_v2f64_ty], [IntrNoMem]>;
+def int_loongarch_lasx_insert_128_lo
+  : VecInt<[llvm_v4i64_ty], [llvm_v4i64_ty, llvm_v2i64_ty], [IntrNoMem]>;
+def int_loongarch_lasx_insert_128_hi_s
+  : VecInt<[llvm_v8f32_ty], [llvm_v8f32_ty, llvm_v4f32_ty], [IntrNoMem]>;
+def int_loongarch_lasx_insert_128_hi_d
+  : VecInt<[llvm_v4f64_ty], [llvm_v4f64_ty, llvm_v2f64_ty], [IntrNoMem]>;
+def int_loongarch_lasx_insert_128_hi
+  : VecInt<[llvm_v4i64_ty], [llvm_v4i64_ty, llvm_v2i64_ty], [IntrNoMem]>;
 } // TargetPrefix = "loongarch"

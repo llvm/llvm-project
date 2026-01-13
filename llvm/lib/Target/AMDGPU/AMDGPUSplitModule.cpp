@@ -314,9 +314,7 @@ public:
 #endif
 
   bool empty() const { return Nodes.empty(); }
-  const iterator_range<nodes_iterator> nodes() const {
-    return {Nodes.begin(), Nodes.end()};
-  }
+  iterator_range<nodes_iterator> nodes() const { return Nodes; }
   const Node &getNode(unsigned ID) const { return *Nodes[ID]; }
 
   unsigned getNumNodes() const { return Nodes.size(); }

@@ -1,0 +1,28 @@
+# Tests the case where a DW_TAG_subprogram for a method declaration
+# got uniqued into a DW_TAG_subprogram with the same linkage name (but
+# different DW_AT_name). Make sure the DW_TAG_subprogram DIE for the
+# definition, which previously pointed to the now de-deduplicated declaration,
+# gets inserted into the .debug_names table using the DW_AT_name of the canonical
+# declaration DW_TAG_subprogram.
+#
+# Object files compiled as follows:
+#   clang -g -c -o 1.o Inputs/odr-uniquing-DW_AT_name-conflict/lib1.cpp
+#   clang -g -c -o 2.o Inputs/odr-uniquing-DW_AT_name-conflict/lib2.cpp
+
+# RUN: dsymutil -f -oso-prepend-path=%p/../Inputs/odr-uniquing-DW_AT_name-conflict -y %p/dummy-debug-map-arm64.map -o - \
+# RUN:     | llvm-dwarfdump --verify - | FileCheck %s
+
+# RUN: dsymutil --linker parallel -f -oso-prepend-path=%p/../Inputs/odr-uniquing-DW_AT_name-conflict -y %p/dummy-debug-map-arm64.map -o - \
+# RUN:     | not llvm-dwarfdump --verify - | FileCheck %s --check-prefix=PARALLEL-ODR
+
+# RUN: dsymutil -f -oso-prepend-path=%p/../Inputs/odr-uniquing-DW_AT_name-conflict -y %p/dummy-debug-map-arm64.map -no-odr -o - \
+# RUN:     | llvm-dwarfdump --verify - | FileCheck %s
+
+# RUN: dsymutil --linker parallel -f -oso-prepend-path=%p/../Inputs/odr-uniquing-DW_AT_name-conflict -y %p/dummy-debug-map-arm64.map -no-odr -o - \
+# RUN:     | llvm-dwarfdump --verify - | FileCheck %s
+
+# CHECK: No errors.
+
+# FIXME: parallel DWARFLinker uses wrong DW_AT_name when inserting uniqued subprogram into .debug_names
+# PARALLEL-ODR:      Verifying .debug_names...
+# PARALLEL-ODR-NEXT: error: Name Index {{.*}} mismatched Name of DIE

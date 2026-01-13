@@ -81,7 +81,7 @@ private:
 struct PerfCounterNotFullyEnabled
     : public ErrorInfo<PerfCounterNotFullyEnabled> {
   static char ID;
-  PerfCounterNotFullyEnabled() {}
+  PerfCounterNotFullyEnabled() = default;
 
   void log(raw_ostream &OS) const override;
 

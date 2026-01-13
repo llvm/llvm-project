@@ -1,3 +1,7 @@
+conversion/convert_float2float.cl
+conversion/convert_float2int.cl
+conversion/convert_int2float.cl
+conversion/convert_integer.cl
 math/fma.cl
 shared/vstore_half.cl
 subnormal_config.cl

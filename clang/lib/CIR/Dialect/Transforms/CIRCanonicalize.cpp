@@ -26,6 +26,11 @@
 using namespace mlir;
 using namespace cir;
 
+namespace mlir {
+#define GEN_PASS_DEF_CIRCANONICALIZE
+#include "clang/CIR/Dialect/Passes.h.inc"
+} // namespace mlir
+
 namespace {
 
 /// Removes branches between two blocks if it is the only branch.
@@ -47,7 +52,7 @@ struct RemoveRedundantBranches : public OpRewritePattern<BrOp> {
     Block *block = op.getOperation()->getBlock();
     Block *dest = op.getDest();
 
-    if (isa<cir::LabelOp>(dest->front()))
+    if (isa<cir::LabelOp, cir::IndirectBrOp>(dest->front()))
       return failure();
     // Single edge between blocks: merge it.
     if (block->getNumSuccessors() == 1 &&
@@ -61,47 +66,12 @@ struct RemoveRedundantBranches : public OpRewritePattern<BrOp> {
   }
 };
 
-struct RemoveEmptyScope : public OpRewritePattern<ScopeOp> {
-  using OpRewritePattern<ScopeOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(ScopeOp op,
-                                PatternRewriter &rewriter) const final {
-    // TODO: Remove this logic once CIR uses MLIR infrastructure to remove
-    // trivially dead operations
-    if (op.isEmpty()) {
-      rewriter.eraseOp(op);
-      return success();
-    }
-
-    Region &region = op.getScopeRegion();
-    if (region.getBlocks().front().getOperations().size() == 1 &&
-        isa<YieldOp>(region.getBlocks().front().front())) {
-      rewriter.eraseOp(op);
-      return success();
-    }
-
-    return failure();
-  }
-};
-
-struct RemoveEmptySwitch : public OpRewritePattern<SwitchOp> {
-  using OpRewritePattern<SwitchOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(SwitchOp op,
-                                PatternRewriter &rewriter) const final {
-    if (!(op.getBody().empty() || isa<YieldOp>(op.getBody().front().front())))
-      return failure();
-
-    rewriter.eraseOp(op);
-    return success();
-  }
-};
-
 //===----------------------------------------------------------------------===//
 // CIRCanonicalizePass
 //===----------------------------------------------------------------------===//
 
-struct CIRCanonicalizePass : public CIRCanonicalizeBase<CIRCanonicalizePass> {
+struct CIRCanonicalizePass
+    : public impl::CIRCanonicalizeBase<CIRCanonicalizePass> {
   using CIRCanonicalizeBase::CIRCanonicalizeBase;
 
   // The same operation rewriting done here could have been performed
@@ -118,8 +88,7 @@ struct CIRCanonicalizePass : public CIRCanonicalizeBase<CIRCanonicalizePass> {
 void populateCIRCanonicalizePatterns(RewritePatternSet &patterns) {
   // clang-format off
   patterns.add<
-    RemoveRedundantBranches,
-    RemoveEmptyScope
+    RemoveRedundantBranches
   >(patterns.getContext());
   // clang-format on
 }
@@ -132,7 +101,6 @@ void CIRCanonicalizePass::runOnOperation() {
   // Collect operations to apply patterns.
   llvm::SmallVector<Operation *, 16> ops;
   getOperation()->walk([&](Operation *op) {
-    assert(!cir::MissingFeatures::switchOp());
     assert(!cir::MissingFeatures::tryOp());
     assert(!cir::MissingFeatures::callOp());
 

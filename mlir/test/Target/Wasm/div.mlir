@@ -66,61 +66,61 @@
 )
 */
 
-// CHECK-LABEL:   wasmssa.func @div_u_i32() -> i32 {
+// CHECK-LABEL:   wasmssa.func exported @div_u_i32() -> i32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 10 : i32
 // CHECK:           %[[VAL_1:.*]] = wasmssa.const 2 : i32
 // CHECK:           %[[VAL_2:.*]] = wasmssa.div_ui %[[VAL_0]] %[[VAL_1]] : i32
 // CHECK:           wasmssa.return %[[VAL_2]] : i32
 
-// CHECK-LABEL:   wasmssa.func @div_u_i32_zero() -> i32 {
+// CHECK-LABEL:   wasmssa.func exported @div_u_i32_zero() -> i32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 10 : i32
 // CHECK:           %[[VAL_1:.*]] = wasmssa.const 0 : i32
 // CHECK:           %[[VAL_2:.*]] = wasmssa.div_ui %[[VAL_0]] %[[VAL_1]] : i32
 // CHECK:           wasmssa.return %[[VAL_2]] : i32
 
-// CHECK-LABEL:   wasmssa.func @div_s_i32() -> i32 {
+// CHECK-LABEL:   wasmssa.func exported @div_s_i32() -> i32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 10 : i32
 // CHECK:           %[[VAL_1:.*]] = wasmssa.const 2 : i32
 // CHECK:           %[[VAL_2:.*]] = wasmssa.div_si %[[VAL_0]] %[[VAL_1]] : i32
 // CHECK:           wasmssa.return %[[VAL_2]] : i32
 
-// CHECK-LABEL:   wasmssa.func @div_s_i32_zero() -> i32 {
+// CHECK-LABEL:   wasmssa.func exported @div_s_i32_zero() -> i32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 10 : i32
 // CHECK:           %[[VAL_1:.*]] = wasmssa.const 0 : i32
 // CHECK:           %[[VAL_2:.*]] = wasmssa.div_si %[[VAL_0]] %[[VAL_1]] : i32
 // CHECK:           wasmssa.return %[[VAL_2]] : i32
 
-// CHECK-LABEL:   wasmssa.func @div_u_i64() -> i64 {
+// CHECK-LABEL:   wasmssa.func exported @div_u_i64() -> i64 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 10 : i64
 // CHECK:           %[[VAL_1:.*]] = wasmssa.const 2 : i64
 // CHECK:           %[[VAL_2:.*]] = wasmssa.div_ui %[[VAL_0]] %[[VAL_1]] : i64
 // CHECK:           wasmssa.return %[[VAL_2]] : i64
 
-// CHECK-LABEL:   wasmssa.func @div_u_i64_zero() -> i64 {
+// CHECK-LABEL:   wasmssa.func exported @div_u_i64_zero() -> i64 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 10 : i64
 // CHECK:           %[[VAL_1:.*]] = wasmssa.const 0 : i64
 // CHECK:           %[[VAL_2:.*]] = wasmssa.div_ui %[[VAL_0]] %[[VAL_1]] : i64
 // CHECK:           wasmssa.return %[[VAL_2]] : i64
 
-// CHECK-LABEL:   wasmssa.func @div_s_i64() -> i64 {
+// CHECK-LABEL:   wasmssa.func exported @div_s_i64() -> i64 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 10 : i64
 // CHECK:           %[[VAL_1:.*]] = wasmssa.const 2 : i64
 // CHECK:           %[[VAL_2:.*]] = wasmssa.div_si %[[VAL_0]] %[[VAL_1]] : i64
 // CHECK:           wasmssa.return %[[VAL_2]] : i64
 
-// CHECK-LABEL:   wasmssa.func @div_s_i64_zero() -> i64 {
+// CHECK-LABEL:   wasmssa.func exported @div_s_i64_zero() -> i64 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 10 : i64
 // CHECK:           %[[VAL_1:.*]] = wasmssa.const 0 : i64
 // CHECK:           %[[VAL_2:.*]] = wasmssa.div_si %[[VAL_0]] %[[VAL_1]] : i64
 // CHECK:           wasmssa.return %[[VAL_2]] : i64
 
-// CHECK-LABEL:   wasmssa.func @div_f32() -> f32 {
+// CHECK-LABEL:   wasmssa.func exported @div_f32() -> f32 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 1.000000e+01 : f32
 // CHECK:           %[[VAL_1:.*]] = wasmssa.const 2.000000e+00 : f32
 // CHECK:           %[[VAL_2:.*]] = wasmssa.div %[[VAL_0]] %[[VAL_1]] : f32
 // CHECK:           wasmssa.return %[[VAL_2]] : f32
 
-// CHECK-LABEL:   wasmssa.func @div_f64() -> f64 {
+// CHECK-LABEL:   wasmssa.func exported @div_f64() -> f64 {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 1.000000e+01 : f64
 // CHECK:           %[[VAL_1:.*]] = wasmssa.const 2.000000e+00 : f64
 // CHECK:           %[[VAL_2:.*]] = wasmssa.div %[[VAL_0]] %[[VAL_1]] : f64

@@ -49,7 +49,7 @@ protected:
   }
   PassManager(const PassManager &) = delete;
   PassManager(PassManager &&) = default;
-  virtual ~PassManager() = default;
+  ~PassManager() override = default;
   PassManager &operator=(const PassManager &) = delete;
 
 public:
@@ -59,10 +59,10 @@ public:
     Passes.push_back(std::move(Pass));
   }
 
-  static constexpr const char EndToken = '\0';
-  static constexpr const char BeginArgsToken = '<';
-  static constexpr const char EndArgsToken = '>';
-  static constexpr const char PassDelimToken = ',';
+  static constexpr char EndToken = '\0';
+  static constexpr char BeginArgsToken = '<';
+  static constexpr char EndArgsToken = '>';
+  static constexpr char PassDelimToken = ',';
 
   /// Parses \p Pipeline as a comma-separated sequence of pass names and sets
   /// the pass pipeline, using \p CreatePass to instantiate passes by name.

@@ -28,7 +28,8 @@ framework module FWPrivate { header "private.h" }
 // CHECK:                "-fmodule-name=FWPrivate",
 // CHECK:              ],
 // CHECK:              "file-deps": [
-// CHECK-NEXT:           "[[PREFIX]]/tu.m"
+// CHECK-NEXT:           "[[PREFIX]]/tu.m",
+// CHECK-NEXT:           "[[PREFIX]]/frameworks/FW.framework/Modules/module.private.modulemap"
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "input-file": "[[PREFIX]]/tu.m"
 // CHECK-NEXT:       }
