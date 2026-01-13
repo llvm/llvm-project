@@ -6,8 +6,8 @@ define void @_Z3foov() !dbg !9 {
   ret void
 }
 
-; CHECK: !named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19}
-!named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !17, !19, !20, !21}
+; CHECK: !named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !20}
+!named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !17, !19, !20, !21, !22}
 
 !0 = !{null}
 !1 = distinct !DICompositeType(tag: DW_TAG_structure_type)
@@ -92,3 +92,6 @@ define void @_Z3foov() !dbg !9 {
 !19 = distinct !DISubprogram(name: "subroutine2", scope: !1, file: !2, line: 5, type: !18, scopeLine: 6, spFlags: DISPFlagDefinition | DISPFlagElemental, unit: !8, retainedNodes: !6)
 !20 = distinct !DISubprogram(name: "subroutine3", scope: !1, file: !2, line: 9, type: !18, scopeLine: 10, spFlags: DISPFlagDefinition | DISPFlagRecursive, unit: !8, retainedNodes: !6)
 !21 = distinct !DISubprogram(name: "subroutine4", scope: !1, file: !2, line: 13, type: !18, scopeLine: 14, spFlags: DISPFlagDefinition | DISPFlagPure | DISPFlagElemental | DISPFlagRecursive, unit: !8, retainedNodes: !6)
+
+; CHECK: !DISubprogram({{.*}}SimpleFunc{{.*}}, flags: DIFlagPrototyped | DIFlagNameIsSimplified,
+!22 = distinct !DISubprogram(name: "SimpleFunc", linkageName: "_Z10SimpleFuncIiEvv", scope: !1, file: !2, type: !3, flags: DIFlagPrototyped | DIFlagNameIsSimplified, spFlags: DISPFlagDefinition, unit: !8, templateParams: !5)
