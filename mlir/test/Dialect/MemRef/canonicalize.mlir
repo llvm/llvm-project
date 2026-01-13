@@ -1331,6 +1331,25 @@ func.func @collapse_expand_fold_to_cast(%m: memref<?xf32, strided<[1]>, 3>, %sz0
 
 // -----
 
+// CHECK-LABEL: func @expand_collapse_fold_to_cast(
+//  CHECK-SAME:     %[[m:.*]]: memref<1x1x384x384xui8, strided<[1179648, 147456, 384, 1]>>
+//       CHECK:   %[[casted:.*]] = memref.cast %[[m]] : memref<1x1x384x384xui8, strided<[1179648, 147456, 384, 1]>> to memref<1x1x384x384xui8, strided<[1179648, 1179648, 384, 1]>>
+//       CHECK:   return %[[casted]]
+
+func.func @expand_collapse_fold_to_cast(%m: memref<1x1x384x384xui8, strided<[1179648, 147456, 384, 1]>>)
+    -> (memref<1x1x384x384xui8, strided<[1179648, 1179648, 384, 1]>>)
+  {
+  %0 = memref.collapse_shape %m [[0, 1], [2], [3]]
+      : memref<1x1x384x384xui8, strided<[1179648, 147456, 384, 1]>>
+        into memref<1x384x384xui8, strided<[1179648, 384, 1]>>
+  %1 = memref.expand_shape %0 [[0, 1], [2], [3]] output_shape [1, 1, 384, 384]
+      : memref<1x384x384xui8, strided<[1179648, 384, 1]>>
+        into memref<1x1x384x384xui8, strided<[1179648, 1179648, 384, 1]>>
+  return %1 : memref<1x1x384x384xui8, strided<[1179648, 1179648, 384, 1]>>
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_trivial_subviews(
 //  CHECK-SAME:     %[[m:.*]]: memref<?xf32, strided<[?], offset: ?>>
 //       CHECK:   %[[subview:.*]] = memref.subview %[[m]][5]
