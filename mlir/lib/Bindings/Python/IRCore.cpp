@@ -198,6 +198,7 @@ nb::typed<nb::object, PyRegion> PyRegionIterator::dunderNext() {
   operation->checkValid();
   if (nextIndex >= mlirOperationGetNumRegions(operation->get())) {
     PyErr_SetNone(PyExc_StopIteration);
+    // python functions should return NULL after setting any exception
     return nb::object();
   }
   MlirRegion region = mlirOperationGetRegion(operation->get(), nextIndex++);
@@ -249,6 +250,7 @@ nb::typed<nb::object, PyBlock> PyBlockIterator::dunderNext() {
   operation->checkValid();
   if (mlirBlockIsNull(next)) {
     PyErr_SetNone(PyExc_StopIteration);
+    // python functions should return NULL after setting any exception
     return nb::object();
   }
 
@@ -330,6 +332,7 @@ nb::typed<nb::object, PyOpView> PyOperationIterator::dunderNext() {
   parentOperation->checkValid();
   if (mlirOperationIsNull(next)) {
     PyErr_SetNone(PyExc_StopIteration);
+    // python functions should return NULL after setting any exception
     return nb::object();
   }
 
@@ -416,6 +419,7 @@ void PyOpOperand::bind(nb::module_ &m) {
 nb::typed<nb::object, PyOpOperand> PyOpOperandIterator::dunderNext() {
   if (mlirOpOperandIsNull(opOperand)) {
     PyErr_SetNone(PyExc_StopIteration);
+    // python functions should return NULL after setting any exception
     return nb::object();
   }
 
