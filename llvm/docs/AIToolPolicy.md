@@ -27,6 +27,23 @@ the work. For instance, use a commit message trailer like Assisted-by: <name of
 code assistant>. This transparency helps the community develop best practices
 and understand the role of these new tools.
 
+This policy includes, but is not limited to, the following kinds of
+contributions:
+
+- Code, usually in the form of a pull request
+- RFCs or design proposals
+- Issues or security vulnerabilities
+- Comments and feedback on pull requests
+
+## Details
+
+To ensure sufficient self review and understanding of the work, it is strongly
+recommended that contributors write PR descriptions themselves (if needed,
+using tools for translation or copy-editing). The description should explain
+the motivation, implementation approach, expected impact, and any open
+questions or uncertainties to the same extent as a contribution made without
+tool assistance.
+
 An important implication of this policy is that it bans agents that take action
 in our digital spaces without human approval, such as the GitHub [`@claude`
 agent](https://github.com/claude/). Similarly, automated review tools that
@@ -36,13 +53,15 @@ As another example, using an LLM to generate documentation, which a contributor
 manually reviews for correctness, edits, and then posts as a PR, is an approved
 use of tools under this policy.
 
-This policy includes, but is not limited to, the following kinds of
-contributions:
+AI tools must not be used to fix GitHub issues labelled [`good first
+issue`][good-first-issue]. These issues are generally not urgent, and are
+intended to be learning opportunities for new contributors to get familiar with
+the codebase. Whether you are a newcomer or not, fully automating the process
+of fixing this issue squanders the learning opportunity and doesn't add much
+value to the project. **Using AI tools to fix issues labelled as "good first
+issues" is forbidden**.
 
-- Code, usually in the form of a pull request
-- RFCs or design proposals
-- Issues or security vulnerabilities
-- Comments and feedback on pull requests
+[good-first-issue]: https://github.com/llvm/llvm-project/issues/?q=is%3Aissue%20state%3Aopen%20label%3A%22good%20first%20issue%22
 
 ## Extractive Contributions
 

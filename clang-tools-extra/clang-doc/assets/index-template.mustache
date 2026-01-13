@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+{{>HeadPartial}}
+<body>
+    <header>
+        {{>NavbarPartial}}
+    </header>
+    <main>
+        <div class="container">
+            <div class="sidebar">
+                <h2>{{ProjectName}}</h2>
+                <ul>
+                    <li>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#Index">Index</a>
+                            </summary>
+                            <ul>
+                                {{#Index}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                                </li>
+                                {{/Index}}
+                            </ul>
+                        </details>
+                    </li>
+                </ul>
+            </div>
+            <div class="resizer" id="resizer"></div>
+            <div class="content">
+                <section id="Index" class="section-container">
+                    <h2>Index</h2>
+                    {{#Index}}
+                    <div>
+                        <a href="{{#Path}}{{Path}}/{{/Path}}{{Name}}/index.html">
+                            <pre><code id="{{USR}}" class="language-cpp code-clang-doc">namespace {{Name}}</code></pre>
+                        </a>
+                    </div>
+                    {{/Index}}
+                </section>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

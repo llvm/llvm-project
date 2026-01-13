@@ -3,4 +3,5 @@
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 from ._shard_ops_gen import *
+from ._shard_ops_gen import _Dialect
 from ._shard_enum_gen import *

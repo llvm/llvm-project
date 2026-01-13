@@ -16,6 +16,7 @@
 
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -173,8 +174,23 @@ LogicalResult verifyRegionBranchWeights(Operation *op);
 
 namespace detail {
 /// Verify that types match along control flow edges described the given op.
-LogicalResult verifyTypesAlongControlFlowEdges(Operation *op);
+LogicalResult verifyRegionBranchOpInterface(Operation *op);
 } //  namespace detail
+
+/// A mapping from successor operands to successor inputs.
+///
+/// * A successor operand is an operand of a region branch op or region
+///   branch terminator, that is forwarded to a successor input.
+/// * A successor input is a block argument of a region or a result of the
+///   region branch op, that is populated by a successor operand.
+///
+/// The mapping is 1:N. Each successor operand may be forwarded to multiple
+/// successor inputs. (Because the control flow can dispatch to multiple
+/// possible successors.) Operands that not forwarded at all are not present in
+/// the mapping.
+using RegionBranchSuccessorMapping = DenseMap<OpOperand *, SmallVector<Value>>;
+using RegionBranchInverseSuccessorMapping =
+    DenseMap<Value, SmallVector<OpOperand *>>;
 
 /// This class represents a successor of a region. A region successor can either
 /// be another region, or the parent operation. If the successor is a region,
@@ -336,6 +352,12 @@ Region *getEnclosingRepetitiveRegion(Operation *op);
 /// repetitively as per RegionBranchOpInterface or `nullptr` if no such region
 /// exists.
 Region *getEnclosingRepetitiveRegion(Value value);
+
+/// Populate canonicalization patterns that simplify successor operands/inputs
+/// of region branch operations. Only operations with the given name are
+/// matched.
+void populateRegionBranchOpInterfaceCanonicalizationPatterns(
+    RewritePatternSet &patterns, StringRef opName, PatternBenefit benefit = 1);
 
 //===----------------------------------------------------------------------===//
 // ControlFlow Traits
