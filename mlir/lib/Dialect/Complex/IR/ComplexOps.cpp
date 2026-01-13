@@ -373,6 +373,8 @@ OpFoldResult MulOp::fold(FoldAdaptor adaptor) {
 OpFoldResult DivOp::fold(FoldAdaptor adaptor) {
   auto rhs = adaptor.getRhs();
   auto lhs = adaptor.getLhs();
+
+  // We can't fold without knowing that LHS isn't NaN
   if (!rhs || !lhs)
     return {};
 
