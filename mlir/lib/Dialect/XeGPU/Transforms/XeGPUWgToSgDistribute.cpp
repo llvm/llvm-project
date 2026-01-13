@@ -1260,10 +1260,8 @@ static Value createNeutralAccumulator(ConversionPatternRewriter &rewriter,
           DenseElementsAttr::get(type, rewriter.getFloatAttr(elemTy, negInf)));
     }
     return nullptr;
-
-  default:
-    return nullptr; // Unsupported reduction kind
   }
+  return nullptr;
 }
 
 /// This function converts multi-dimensional subgroup indices into a single
