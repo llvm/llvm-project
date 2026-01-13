@@ -1900,6 +1900,10 @@ struct AllocateObject {
 // R936 upper-bound-expr -> scalar-int-expr
 using BoundExpr = ScalarIntExpr;
 
+// R937 lower-bounds-expr -> int-expr
+// R939 upper-bounds-expr -> int-expr
+using BoundsExpr = IntExpr;
+
 // R934 allocate-shape-spec -> [lower-bound-expr :] upper-bound-expr
 // R938 allocate-coshape-spec -> [lower-bound-expr :] upper-bound-expr
 struct AllocateShapeSpec {
@@ -1916,14 +1920,49 @@ struct AllocateCoarraySpec {
   std::tuple<std::list<AllocateCoshapeSpec>, std::optional<BoundExpr>> t;
 };
 
-// R932 allocation ->
+// R933 allocation ->
 //        allocate-object [( allocate-shape-spec-list )]
 //        [lbracket allocate-coarray-spec rbracket]
+//      | allocate-object ( allocate-shape-spec-array )
+//        [lbracket allocate-coarray-spec rbracket]
+// allocate-shape-spec-array -> [ lower-bounds-expr : ] upper-bounds-expr
+struct AllocateShapeSpecArray {
+  TUPLE_CLASS_BOILERPLATE(AllocateShapeSpecArray);
+  std::tuple<
+    std::optional<BoundsExpr>, 
+    BoundsExpr> 
+  t;
+};
+
+struct AllocateShapeSpecArrayList {
+  UNION_CLASS_BOILERPLATE(AllocateShapeSpecArrayList);
+  std::variant<
+    std::list<AllocateShapeSpec>, 
+    AllocateShapeSpecArray> 
+  u;
+};
 struct Allocation {
   TUPLE_CLASS_BOILERPLATE(Allocation);
-  std::tuple<AllocateObject, std::list<AllocateShapeSpec>,
-      std::optional<AllocateCoarraySpec>>
-      t;
+    // What was previously there but I formatted it.
+    // std::tuple<
+    //   AllocateObject, 
+    //   std::list<AllocateShapeSpec>,
+    //   std::optional<AllocateCoarraySpec>
+    // >
+  // I think this is what I want but can't have nested tuples.
+  // Use a wrapper on innermost tuple.
+  // std::tuple<
+  //   AllocateObject, 
+  //   std::variant<
+  //     std::list<AllocateShapeSpec>, 
+  //     std::tuple<std::optional<BoundsExpr>, BoundsExpr>,
+  //   std::optional<AllocateCoarraySpec>>
+  //     t;
+  std::tuple<
+    AllocateObject, 
+    AllocateShapeSpecArrayList,
+    std::optional<AllocateCoarraySpec>>
+  t;
 };
 
 // R929 stat-variable -> scalar-int-variable

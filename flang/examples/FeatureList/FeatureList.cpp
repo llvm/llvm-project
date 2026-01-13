@@ -117,6 +117,8 @@ public:
   READ_FEATURE(AllocatableStmt)
   READ_FEATURE(AllocateCoarraySpec)
   READ_FEATURE(AllocateObject)
+  READ_FEATURE(AllocateShapeSpecArray)
+  READ_FEATURE(AllocateShapeSpecArrayList)
   READ_FEATURE(AllocateShapeSpec)
   READ_FEATURE(AllocateStmt)
   READ_FEATURE(Allocation)

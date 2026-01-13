@@ -337,7 +337,8 @@ private:
       return unwrapSymbol(getAllocObj());
     }
     const std::list<Fortran::parser::AllocateShapeSpec> &getShapeSpecs() const {
-      return std::get<std::list<Fortran::parser::AllocateShapeSpec>>(alloc.t);
+      return std::get<std::list<Fortran::parser::AllocateShapeSpec>>((std::get<Fortran::parser::AllocateShapeSpecArrayList>(alloc.t)).u);
+      // return std::get<std::list<Fortran::parser::AllocateShapeSpec>>(alloc.t);
     }
   };
 
