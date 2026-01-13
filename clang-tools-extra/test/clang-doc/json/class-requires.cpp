@@ -23,7 +23,6 @@ struct MyClass;
 // CHECK-NEXT:        "End": true,
 // CHECK-NEXT:        "Expression": "Addable<T>",
 // CHECK-NEXT:        "Name": "Addable",
-// CHECK-NEXT:        "Path": "",
 // CHECK-NEXT:        "QualName": "Addable",
 // CHECK-NEXT:        "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:      }

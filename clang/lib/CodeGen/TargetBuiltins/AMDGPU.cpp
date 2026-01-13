@@ -1665,6 +1665,20 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     if (AppendFalseForOpselArg)
       Args.push_back(Builder.getFalse());
 
+    // Handle the optional clamp argument of the following two builtins.
+    if (BuiltinID == AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x64_iu8) {
+      if (Args.size() == 7)
+        Args.push_back(Builder.getFalse());
+      assert(Args.size() == 8 && "Expected 8 arguments");
+      Args[7] = Builder.CreateZExtOrTrunc(Args[7], Builder.getInt1Ty());
+    } else if (BuiltinID ==
+               AMDGPU::BI__builtin_amdgcn_swmmac_i32_16x16x128_iu8) {
+      if (Args.size() == 8)
+        Args.push_back(Builder.getFalse());
+      assert(Args.size() == 9 && "Expected 9 arguments");
+      Args[8] = Builder.CreateZExtOrTrunc(Args[8], Builder.getInt1Ty());
+    }
+
     SmallVector<llvm::Type *, 6> ArgTypes;
     if (NeedReturnType)
       ArgTypes.push_back(ConvertType(E->getType()));

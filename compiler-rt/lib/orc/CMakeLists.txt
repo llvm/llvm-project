@@ -4,6 +4,7 @@
 set(ORC_COMMON_SOURCES
   debug.cpp
   dlfcn_wrapper.cpp
+  reoptimize.cpp
   rtti.cpp
   log_error_to_stderr.cpp
   run_program_wrapper.cpp

@@ -177,18 +177,15 @@ void PredicateExpander::expandPredicateSequence(
     return expandPredicate(OS, Sequence[0]);
 
   // Okay, there is more than one predicate in the set.
-  bool First = true;
+  ListSeparator LS(IsCheckAll ? "&& " : "|| ");
   OS << (shouldNegate() ? "!(" : "(");
   ++Indent;
 
   bool OldValue = shouldNegate();
   setNegatePredicate(false);
   for (const Record *Rec : Sequence) {
-    OS << '\n' << Indent;
-    if (!First)
-      OS << (IsCheckAll ? "&& " : "|| ");
+    OS << '\n' << Indent << LS;
     expandPredicate(OS, Rec);
-    First = false;
   }
   --Indent;
   OS << '\n' << Indent << ')';

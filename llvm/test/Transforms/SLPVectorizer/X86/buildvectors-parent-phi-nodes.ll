@@ -5,21 +5,21 @@ define void @test(ptr %0, float %1) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[TMP0:%.*]], float [[TMP1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> <float 0.000000e+00, float poison>, float [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, float [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> poison, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    br label %[[BB8:.*]]
-; CHECK:       [[BB8]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = phi <4 x float> [ [[TMP15:%.*]], %[[BB8]] ], [ [[TMP5]], [[TMP2:%.*]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = phi <2 x float> [ [[TMP7]], %[[BB8]] ], [ [[TMP4]], [[TMP2]] ]
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x float> [[TMP10]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 0>
+; CHECK-NEXT:    br label %[[BB5:.*]]
+; CHECK:       [[BB5]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = phi float [ [[TMP1]], %[[BB5]] ], [ [[TMP3]], [[TMP2:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi float [ [[TMP1]], %[[BB5]] ], [ 0.000000e+00, [[TMP2]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <4 x float> [ [[TMP15:%.*]], %[[BB5]] ], [ [[TMP5]], [[TMP2]] ]
 ; CHECK-NEXT:    [[TMP12:%.*]] = fmul <4 x float> [[TMP9]], zeroinitializer
 ; CHECK-NEXT:    [[TMP13:%.*]] = fadd <4 x float> [[TMP12]], zeroinitializer
 ; CHECK-NEXT:    store <4 x float> [[TMP13]], ptr [[TMP0]], align 16
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x float> poison, float [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x float> [[TMP16]], float [[TMP6]], i32 1
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x float> [[TMP17]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 0>
 ; CHECK-NEXT:    [[TMP14:%.*]] = fmul <4 x float> [[TMP11]], zeroinitializer
 ; CHECK-NEXT:    [[TMP15]] = fadd <4 x float> [[TMP14]], zeroinitializer
-; CHECK-NEXT:    br label %[[BB8]]
+; CHECK-NEXT:    br label %[[BB5]]
 ;
   %3 = load float, ptr %0, align 4
   br label %4
