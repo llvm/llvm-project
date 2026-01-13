@@ -3757,44 +3757,44 @@ void VPlanTransforms::expandBranchOnTwoConds(VPlan &Plan) {
       WorkList.push_back(cast<VPInstruction>(&VPBB->back()));
   }
 
-  // Expand BranchOnTwoConds instructions into explicit CFG with
-  // single-condition branches, by introducing a new branch in VPBB that jumps
-  // to a new intermediate block if either condition is true and to the
-  // third successor otherwise. The intermediate block jumps to the first or
-  // second successor, depending on the first condition.
+  // Expand BranchOnTwoConds instructions into explicit CFG with two new
+  // single-condition branches:
+  // 1. A branch that replaces BranchOnTwoConds, jumps to the first successor if
+  //    the first condition is true, and otherwise jumps to a new interim block.
+  // 2. A branch that ends the interim block, jumps to the second successor if
+  //    the second condition is true, and otherwise jumps to the third
+  //    successor.
   for (VPInstruction *Br : WorkList) {
     assert(Br->getNumOperands() == 2 &&
            "BranchOnTwoConds must have exactly 2 conditions");
     DebugLoc DL = Br->getDebugLoc();
-    VPBasicBlock *Latch = Br->getParent();
-    const auto Successors = to_vector(Latch->getSuccessors());
+    VPBasicBlock *BrOnTwoCondsBB = Br->getParent();
+    const auto Successors = to_vector(BrOnTwoCondsBB->getSuccessors());
     assert(Successors.size() == 3 &&
            "BranchOnTwoConds must have exactly 3 successors");
 
     for (VPBlockBase *Succ : Successors)
-      VPBlockUtils::disconnectBlocks(Latch, Succ);
+      VPBlockUtils::disconnectBlocks(BrOnTwoCondsBB, Succ);
 
-    VPValue *EarlyExitingCond = Br->getOperand(0);
-    VPValue *LateExitingCond = Br->getOperand(1);
-    VPBlockBase *EarlyExitBB = Successors[0];
-    VPBlockBase *LateExitBB = Successors[1];
-    VPBlockBase *Header = Successors[2];
+    VPValue *Cond0 = Br->getOperand(0);
+    VPValue *Cond1 = Br->getOperand(1);
+    VPBlockBase *Succ0 = Successors[0];
+    VPBlockBase *Succ1 = Successors[1];
+    VPBlockBase *Succ2 = Successors[2];
+    assert(!Succ0->getParent() && !Succ1->getParent() && !Succ2->getParent() &&
+           !BrOnTwoCondsBB->getParent() && "regions must already be dissolved");
 
-    VPBasicBlock *MiddleSplit = Plan.createVPBasicBlock("middle.split");
-    MiddleSplit->setParent(LateExitBB->getParent());
+    VPBasicBlock *InterimBB =
+        Plan.createVPBasicBlock(BrOnTwoCondsBB->getName() + ".interim");
 
-    VPBuilder Builder(Latch);
-    VPValue *AnyExitTaken = Builder.createNaryOp(
-        Instruction::Or, {EarlyExitingCond, LateExitingCond}, DL);
-    Builder.createNaryOp(VPInstruction::BranchOnCond, {AnyExitTaken}, DL);
-    VPBlockUtils::connectBlocks(Latch, MiddleSplit);
-    VPBlockUtils::connectBlocks(Latch, Header);
+    VPBuilder(BrOnTwoCondsBB)
+        .createNaryOp(VPInstruction::BranchOnCond, {Cond0}, DL);
+    VPBlockUtils::connectBlocks(BrOnTwoCondsBB, Succ0);
+    VPBlockUtils::connectBlocks(BrOnTwoCondsBB, InterimBB);
 
-    VPBuilder(MiddleSplit)
-        .createNaryOp(VPInstruction::BranchOnCond, {EarlyExitingCond}, DL);
-    VPBlockUtils::connectBlocks(MiddleSplit, EarlyExitBB);
-    VPBlockUtils::connectBlocks(MiddleSplit, LateExitBB);
-
+    VPBuilder(InterimBB).createNaryOp(VPInstruction::BranchOnCond, {Cond1}, DL);
+    VPBlockUtils::connectBlocks(InterimBB, Succ1);
+    VPBlockUtils::connectBlocks(InterimBB, Succ2);
     Br->eraseFromParent();
   }
 }
