@@ -199,3 +199,76 @@ merge:
   %phi = phi ptr [ %gep0, %f0], [ %gep1, %f1 ]
   ret ptr %phi
 }
+
+define ptr @gep_different_offset_types_canonicalized(i1 %cond, i1 %end, ptr %ptr, i64 %off0, i32 %off1) {
+; CHECK-LABEL: define ptr @gep_different_offset_types_canonicalized(
+; CHECK-SAME: i1 [[COND:%.*]], i1 [[END:%.*]], ptr [[PTR:%.*]], i64 [[OFF0:%.*]], i32 [[OFF1:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[OFF1]] to i64
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[OFF0_PN:%.*]] = phi i64 [ [[OFF0]], %[[F0:.*]] ], [ [[TMP0]], %[[F1:.*]] ], [ [[OFF0]], %[[ENTRY]] ]
+; CHECK-NEXT:    br i1 [[COND]], label %[[F1]], label %[[F0]]
+; CHECK:       [[F0]]:
+; CHECK-NEXT:    br i1 [[END]], label %[[MERGE:.*]], label %[[LOOP]]
+; CHECK:       [[F1]]:
+; CHECK-NEXT:    br i1 [[END]], label %[[MERGE]], label %[[LOOP]]
+; CHECK:       [[MERGE]]:
+; CHECK-NEXT:    [[PHI:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 [[OFF0_PN]]
+; CHECK-NEXT:    ret ptr [[PHI]]
+;
+entry:
+  %gep0 = getelementptr inbounds <3 x i8>, ptr %ptr, i64 0, i64 %off0
+  %gep1 = getelementptr inbounds <3 x i8>, ptr %ptr, i64 0, i32 %off1
+  br label %loop
+
+loop:
+  %phi = phi ptr [ %gep0, %f0 ], [ %gep1, %f1 ], [ %gep0, %entry ]
+  br i1 %cond, label %f1, label %f0
+
+f0:
+  br i1 %end, label %merge, label %loop
+
+f1:
+  br i1 %end, label %merge, label %loop
+
+merge:
+  ret ptr %phi
+}
+
+define ptr @gep_different_offset_types_negative(i1 %cond, i1 %end, ptr %ptr, i64 %off0, i32 %off1) {
+; CHECK-LABEL: define ptr @gep_different_offset_types_negative(
+; CHECK-SAME: i1 [[COND:%.*]], i1 [[END:%.*]], ptr [[PTR:%.*]], i64 [[OFF0:%.*]], i32 [[OFF1:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[GEP0:%.*]], %[[F0:.*]] ], [ [[GEP1:%.*]], %[[F1:.*]] ], [ null, %[[ENTRY]] ]
+; CHECK-NEXT:    br i1 [[COND]], label %[[F1]], label %[[F0]]
+; CHECK:       [[F0]]:
+; CHECK-NEXT:    [[GEP0]] = getelementptr inbounds i8, ptr [[PTR]], i64 [[OFF0]]
+; CHECK-NEXT:    br i1 [[END]], label %[[MERGE:.*]], label %[[LOOP]]
+; CHECK:       [[F1]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[OFF1]] to i64
+; CHECK-NEXT:    [[GEP1]] = getelementptr inbounds i8, ptr [[PTR]], i64 [[TMP0]]
+; CHECK-NEXT:    br i1 [[END]], label %[[MERGE]], label %[[LOOP]]
+; CHECK:       [[MERGE]]:
+; CHECK-NEXT:    ret ptr [[PHI]]
+;
+entry:
+  br label %loop
+
+loop:
+  %phi = phi ptr [ %gep0, %f0 ], [ %gep1, %f1 ], [ zeroinitializer, %entry ]
+  %gep0 = getelementptr inbounds <3 x i8>, ptr %ptr, i64 0, i64 %off0
+  %gep1 = getelementptr inbounds <3 x i8>, ptr %ptr, i64 0, i32 %off1
+  br i1 %cond, label %f1, label %f0
+
+f0:
+  br i1 %end, label %merge, label %loop
+
+f1:
+  br i1 %end, label %merge, label %loop
+
+merge:
+  ret ptr %phi
+}
