@@ -59,6 +59,8 @@ private:
 
   void handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds);
 
+  void handleTemporaryDtor(const CFGTemporaryDtor &TemporaryDtor);
+
   void handleGSLPointerConstruction(const CXXConstructExpr *CCE);
 
   /// Checks if a call-like expression creates a borrow by passing a value to a
