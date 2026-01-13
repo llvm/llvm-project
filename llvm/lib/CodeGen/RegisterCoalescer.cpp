@@ -2876,7 +2876,10 @@ JoinVals::ConflictResolution JoinVals::analyzeValue(unsigned ValNo,
         //
         // Clearing the valid lanes is deferred until it is sure this can be
         // erased.
-        V.ErasableImplicitDef = true;
+        // IMPLICIT_DEF can also be used to intialize the undef sub-parts of a tuple  
+        // We want to retain those IMPLICIT_DEF.
+        if (DefMI->getOperand(0).getSubReg() == 0)
+          V.ErasableImplicitDef = true;
       }
     }
   }
