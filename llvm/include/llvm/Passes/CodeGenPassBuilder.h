@@ -16,7 +16,6 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -24,16 +23,13 @@
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
-#include "llvm/CodeGen/AssignmentTrackingAnalysis.h"
 #include "llvm/CodeGen/BranchFoldingPass.h"
 #include "llvm/CodeGen/CallBrPrepare.h"
 #include "llvm/CodeGen/CodeGenPrepare.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
 #include "llvm/CodeGen/DetectDeadLanes.h"
 #include "llvm/CodeGen/DwarfEHPrepare.h"
-#include "llvm/CodeGen/EarlyIfConversion.h"
-#include "llvm/CodeGen/ExpandFp.h"
-#include "llvm/CodeGen/ExpandLargeDivRem.h"
+#include "llvm/CodeGen/ExpandIRInsts.h"
 #include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/ExpandPostRAPseudos.h"
 #include "llvm/CodeGen/ExpandReductions.h"
@@ -47,7 +43,6 @@
 #include "llvm/CodeGen/InitUndef.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
-#include "llvm/CodeGen/JMCInstrumenter.h"
 #include "llvm/CodeGen/LiveDebugValuesPass.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveVariables.h"
@@ -114,7 +109,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Transforms/CFGuard.h"
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar/ConstantHoisting.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
@@ -283,12 +277,17 @@ protected:
 
   void requireCGSCCOrder(PassManagerWrapper &PMW) const {
     assert(!AddInCGSCCOrder);
-    flushFPMsToMPM(PMW);
+    assert(PMW.FPM.isEmpty() && PMW.MFPM.isEmpty() &&
+           "Requiring CGSCC ordering requires flushing the current function "
+           "pipelines to the MPM.");
     AddInCGSCCOrder = true;
   }
+
   void stopAddingInCGSCCOrder(PassManagerWrapper &PMW) const {
     assert(AddInCGSCCOrder);
-    flushFPMsToMPM(PMW);
+    assert(PMW.FPM.isEmpty() && PMW.MFPM.isEmpty() &&
+           "Stopping CGSCC ordering requires flushing the current function "
+           "pipelines to the MPM.");
     AddInCGSCCOrder = false;
   }
 
@@ -486,6 +485,8 @@ protected:
   /// Add standard basic block placement passes.
   void addBlockPlacement(PassManagerWrapper &PMW) const;
 
+  void addPostBBSections(PassManagerWrapper &PMW) const {}
+
   using CreateMCStreamer =
       std::function<Expected<std::unique_ptr<MCStreamer>>(MCContext &)>;
   void addAsmPrinter(PassManagerWrapper &PMW, CreateMCStreamer) const {
@@ -678,8 +679,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addISelPasses(
     addModulePass(LowerEmuTLSPass(), PMW);
 
   addModulePass(PreISelIntrinsicLoweringPass(&TM), PMW);
-  addFunctionPass(ExpandLargeDivRemPass(TM), PMW);
-  addFunctionPass(ExpandFpPass(TM, getOptLevel()), PMW);
+  addFunctionPass(ExpandIRInstsPass(TM, getOptLevel()), PMW);
 
   derived().addIRPasses(PMW);
   derived().addCodeGenPrepare(PMW);
@@ -728,7 +728,6 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
     flushFPMsToMPM(PMW);
     addModulePass(ShadowStackGCLoweringPass(), PMW);
   }
-  addFunctionPass(LowerConstantIntrinsicsPass(), PMW);
 
   // Make sure that no unreachable blocks are instruction selected.
   addFunctionPass(UnreachableBlockElimPass(), PMW);
@@ -1063,6 +1062,8 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
     }
   }
 
+  derived().addPostBBSections(PMW);
+
   addMachineFunctionPass(StackFrameLayoutAnalysisPass(), PMW);
 
   // Add passes that directly emit MI after all other MI passes.
@@ -1252,6 +1253,9 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
     // addRegAssignmentOptimized did not add a reg alloc pass, so do nothing.
     return;
   }
+
+  addMachineFunctionPass(StackSlotColoringPass(), PMW);
+
   // Allow targets to expand pseudo instructions depending on the choice of
   // registers before MachineCopyPropagation.
   derived().addPostRewrite(PMW);
@@ -1274,6 +1278,9 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
 template <typename Derived, typename TargetMachineT>
 void CodeGenPassBuilder<Derived, TargetMachineT>::addMachineLateOptimization(
     PassManagerWrapper &PMW) const {
+  // Cleanup of redundant (identical) address/immediate loads.
+  addMachineFunctionPass(MachineLateInstrsCleanupPass(), PMW);
+
   // Branch folding must be run after regalloc and prolog/epilog insertion.
   addMachineFunctionPass(BranchFolderPass(Opt.EnableTailMerge), PMW);
 
@@ -1283,9 +1290,6 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addMachineLateOptimization(
   // In addition it can also make CFG irreducible. Thus we disable it.
   if (!TM.requiresStructuredCFG())
     addMachineFunctionPass(TailDuplicatePass(), PMW);
-
-  // Cleanup of redundant (identical) address/immediate loads.
-  addMachineFunctionPass(MachineLateInstrsCleanupPass(), PMW);
 
   // Copy propagation.
   addMachineFunctionPass(MachineCopyPropagationPass(), PMW);

@@ -248,7 +248,7 @@ public:
     if (auto *Receiver = E->getInstanceReceiver()) {
       Receiver = Receiver->IgnoreParenCasts();
       if (isUnknownType(E->getReceiverType()))
-        reportUnknownRecieverType(Receiver, DeclWithIssue);
+        reportUnknownReceiverType(Receiver, DeclWithIssue);
     }
 
     auto *MethodDecl = E->getMethodDecl();
@@ -332,7 +332,7 @@ public:
               Param->getType());
   }
 
-  void reportUnknownRecieverType(const Expr *Receiver,
+  void reportUnknownReceiverType(const Expr *Receiver,
                                  const Decl *DeclWithIssue) const {
     assert(Receiver);
     reportBug(Receiver->getExprLoc(), Receiver->getSourceRange(), DeclWithIssue,

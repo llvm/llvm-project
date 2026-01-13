@@ -880,7 +880,7 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
 void StoreDiags::flushLastDiag() {
   if (!LastDiag)
     return;
-  auto Finish = llvm::make_scope_exit([&, NDiags(Output.size())] {
+  llvm::scope_exit Finish([&, NDiags(Output.size())] {
     if (Output.size() == NDiags) // No new diag emitted.
       vlog("Dropped diagnostic: {0}: {1}", LastDiag->File, LastDiag->Message);
     LastDiag.reset();

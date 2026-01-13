@@ -5915,6 +5915,11 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     if (AccumLT.second.getScalarType() == MVT::i64 &&
         InputLT.second.getScalarType() == MVT::i16)
       return Cost;
+    // i16 -> i32 is natively supported with SVE2p1
+    if (AccumLT.second.getScalarType() == MVT::i32 &&
+        InputLT.second.getScalarType() == MVT::i16 &&
+        (ST->hasSVE2p1() || ST->hasSME2()))
+      return Cost;
     // i8 -> i64 is supported with an extra level of extends
     if (AccumLT.second.getScalarType() == MVT::i64 &&
         InputLT.second.getScalarType() == MVT::i8)
@@ -6588,6 +6593,8 @@ static bool shouldSinkVScale(Value *Op, SmallVectorImpl<Use *> &Ops) {
   return false;
 }
 
+static bool isFNeg(Value *Op) { return match(Op, m_FNeg(m_Value())); }
+
 /// Check if sinking \p I's operands to I's basic block is profitable, because
 /// the operands can be folded into a target instruction, e.g.
 /// shufflevectors extracts and/or sext/zext can be folded into (u,s)subl(2).
@@ -6611,6 +6618,12 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
           cast<VectorType>(I->getType())->getElementType()->isHalfTy() &&
           !ST->hasFullFP16())
         return false;
+
+      if (isFNeg(II->getOperand(0)))
+        Ops.push_back(&II->getOperandUse(0));
+      if (isFNeg(II->getOperand(1)))
+        Ops.push_back(&II->getOperandUse(1));
+
       [[fallthrough]];
     case Intrinsic::aarch64_neon_sqdmull:
     case Intrinsic::aarch64_neon_sqdmulh:
@@ -6747,12 +6760,23 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     Ops.push_back(&I->getOperandUse(0));
     return true;
   }
+  case Instruction::FMul:
+    // fmul with contract flag can be combined with fadd into fma.
+    // Sinking fneg into this block enables fmls pattern.
+    if (cast<FPMathOperator>(I)->hasAllowContract()) {
+      if (isFNeg(I->getOperand(0)))
+        Ops.push_back(&I->getOperandUse(0));
+      if (isFNeg(I->getOperand(1)))
+        Ops.push_back(&I->getOperandUse(1));
+    }
+    break;
+
   default:
     break;
   }
 
   if (!I->getType()->isVectorTy())
-    return false;
+    return !Ops.empty();
 
   switch (I->getOpcode()) {
   case Instruction::Sub:
@@ -6924,11 +6948,11 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
   case Instruction::FMul: {
     // For SVE the lane-indexing is within 128-bits, so we can't fold splats.
     if (I->getType()->isScalableTy())
-      return false;
+      return !Ops.empty();
 
     if (cast<VectorType>(I->getType())->getElementType()->isHalfTy() &&
         !ST->hasFullFP16())
-      return false;
+      return !Ops.empty();
 
     // Sink splats for index lane variants
     if (isSplatShuffle(I->getOperand(0)))

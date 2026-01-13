@@ -9,6 +9,7 @@
 #include "lldb/DataFormatters/TypeSummary.h"
 
 #include "FormatterBytecode.h"
+#include "lldb/Core/FormatEntity.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
 
@@ -105,9 +106,9 @@ bool StringSummaryFormat::FormatObject(ValueObject *valobj, std::string &retval,
     retval = std::string(s.GetString());
     return true;
   } else {
-    if (FormatEntity::Format(m_format, s, &sc, &exe_ctx,
-                             &sc.line_entry.range.GetBaseAddress(), valobj,
-                             false, false)) {
+    if (FormatEntity::Formatter(
+            &sc, &exe_ctx, &sc.line_entry.range.GetBaseAddress(), false, false)
+            .Format(m_format, s, valobj)) {
       retval.assign(std::string(s.GetString()));
       return true;
     } else {

@@ -2211,7 +2211,7 @@ public:
                                    LoadOp1->getParent() == StoreParent;
       for (unsigned Idx = 0; Idx != LifetimeEnds.size();) {
         IntrinsicInst *End = LifetimeEnds[Idx];
-        auto Inc = make_scope_exit([&Idx]() { Idx++; });
+        llvm::scope_exit Inc([&Idx]() { Idx++; });
         // If the lifetime.end is guaranteed to be before the loads or after the
         // store, it won't interfere with fusion.
         if (DT->dominates(End, LoadOp0) && DT->dominates(End, LoadOp1))

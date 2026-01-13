@@ -22,6 +22,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -36,7 +37,6 @@
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ELFTypes.h"
-#include "llvm/Object/Error.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/RelocationResolver.h"
 #include "llvm/Object/SFrameParser.h"
@@ -182,6 +182,16 @@ struct GroupSection {
   std::vector<GroupMember> Members;
 };
 
+// Per-function call graph information.
+struct FunctionCallgraphInfo {
+  uint64_t FunctionAddress;
+  uint8_t FormatVersionNumber;
+  bool IsIndirectTarget;
+  uint64_t FunctionTypeId;
+  SmallSet<uint64_t, 4> DirectCallees;
+  SmallSet<uint64_t, 4> IndirectTypeIDs;
+};
+
 namespace {
 
 struct NoteType {
@@ -295,6 +305,7 @@ protected:
                   const Elf_Shdr &Sec, const Elf_Shdr *SymTab);
   void printDynamicReloc(const Relocation<ELFT> &R);
   void printDynamicRelocationsHelper();
+  StringRef getRelocTypeName(uint32_t Type, SmallString<32> &RelocName);
   void printRelocationsHelper(const Elf_Shdr &Sec);
   void forEachRelocationDo(
       const Elf_Shdr &Sec,
@@ -402,6 +413,15 @@ protected:
   const Elf_Shdr *SymbolVersionNeedSection = nullptr; // .gnu.version_r
   const Elf_Shdr *SymbolVersionDefSection = nullptr; // .gnu.version_d
 
+  // Used for tracking the current RISCV vendor name when printing relocations.
+  // When an R_RISCV_VENDOR relocation is encountered, we record the symbol name
+  // and offset so that the immediately following R_RISCV_CUSTOM* relocation at
+  // the same offset can be resolved to its vendor-specific name. Per RISC-V
+  // psABI, R_RISCV_VENDOR must be placed immediately before the vendor-specific
+  // relocation and both must be at the same offset.
+  std::string CurrentRISCVVendorSymbol;
+  uint64_t CurrentRISCVVendorOffset = 0;
+
   std::string getFullSymbolName(const Elf_Sym &Symbol, unsigned SymIndex,
                                 DataRegion<Elf_Word> ShndxTable,
                                 std::optional<StringRef> StrTable,
@@ -431,6 +451,15 @@ protected:
       const SFrameParser<ELFT::Endianness> &Parser,
       const typename SFrameParser<ELFT::Endianness>::FDERange::iterator FDE,
       ArrayRef<Relocation<ELFT>> Relocations, const Elf_Shdr *RelocSymTab);
+  // Callgraph - Main data structure to maintain per function callgraph
+  // information.
+  SmallVector<FunctionCallgraphInfo, 16> FuncCGInfos;
+
+  // Read the SHT_LLVM_CALL_GRAPH type section and process its contents to
+  // populate call graph related data structures which will be used to dump call
+  // graph info. Returns false if there is no SHT_LLVM_CALL_GRAPH type section
+  // in the input file.
+  bool processCallGraphSection(const Elf_Shdr *CGSection);
 
 private:
   mutable SmallVector<std::optional<VersionEntry>, 0> VersionMap;
@@ -729,6 +758,7 @@ public:
   void printVersionDefinitionSection(const Elf_Shdr *Sec) override;
   void printVersionDependencySection(const Elf_Shdr *Sec) override;
   void printCGProfile() override;
+  void printCallGraphInfo() override;
   void printBBAddrMaps(bool PrettyPGOAnalysis) override;
   void printAddrsig() override;
   void printNotes() override;
@@ -3532,12 +3562,58 @@ template <class ELFT>
 void ELFDumper<ELFT>::printReloc(const Relocation<ELFT> &R, unsigned RelIndex,
                                  const Elf_Shdr &Sec, const Elf_Shdr *SymTab) {
   Expected<RelSymbol<ELFT>> Target = getRelocationTarget(R, SymTab);
-  if (!Target)
+  if (!Target) {
     reportUniqueWarning("unable to print relocation " + Twine(RelIndex) +
                         " in " + describe(Sec) + ": " +
                         toString(Target.takeError()));
-  else
-    printRelRelaReloc(R, *Target);
+    return;
+  }
+
+  // Track RISCV vendor symbol for resolving vendor-specific relocations.
+  // Per RISC-V psABI, R_RISCV_VENDOR must be placed immediately before the
+  // vendor-specific relocation at the same offset.
+  if (Obj.getHeader().e_machine == ELF::EM_RISCV) {
+    if (R.Type == ELF::R_RISCV_VENDOR) {
+      // Store vendor symbol name and offset for the next relocation.
+      CurrentRISCVVendorSymbol = Target->Name;
+      CurrentRISCVVendorOffset = R.Offset;
+    } else if (!CurrentRISCVVendorSymbol.empty()) {
+      // We have a pending vendor symbol. Clear it if this relocation doesn't
+      // form a valid pair: either the offset doesn't match or this is not a
+      // vendor-specific (CUSTOM) relocation.
+      if (R.Offset != CurrentRISCVVendorOffset ||
+          R.Type < ELF::R_RISCV_CUSTOM192 || R.Type > ELF::R_RISCV_CUSTOM255) {
+        CurrentRISCVVendorSymbol.clear();
+      }
+      // If it IS a valid CUSTOM relocation at matching offset,
+      // getRelocTypeName will use and clear the vendor symbol.
+    }
+  }
+
+  printRelRelaReloc(R, *Target);
+}
+
+template <class ELFT>
+StringRef ELFDumper<ELFT>::getRelocTypeName(uint32_t Type,
+                                            SmallString<32> &RelocName) {
+  Obj.getRelocationTypeName(Type, RelocName);
+
+  // For RISCV vendor-specific relocations, use the vendor-specific name
+  // if we have a vendor symbol from a preceding R_RISCV_VENDOR relocation.
+  // Per RISC-V psABI, R_RISCV_VENDOR must be placed immediately before the
+  // vendor-specific relocation, so we consume the vendor symbol after use.
+  if (Obj.getHeader().e_machine == ELF::EM_RISCV &&
+      Type >= ELF::R_RISCV_CUSTOM192 && Type <= ELF::R_RISCV_CUSTOM255 &&
+      !CurrentRISCVVendorSymbol.empty()) {
+    StringRef VendorRelocName =
+        getRISCVVendorRelocationTypeName(Type, CurrentRISCVVendorSymbol);
+    CurrentRISCVVendorSymbol.clear();
+    // Only use the vendor-specific name if the vendor is known.
+    // Otherwise, keep the generic R_RISCV_CUSTOM* name.
+    if (VendorRelocName != "Unknown")
+      return VendorRelocName;
+  }
+  return RelocName;
 }
 
 template <class ELFT>
@@ -3907,8 +3983,7 @@ void GNUELFDumper<ELFT>::printRelRelaReloc(const Relocation<ELFT> &R,
   Fields[1].Str = to_string(format_hex_no_prefix(R.Info, Width));
 
   SmallString<32> RelocName;
-  this->Obj.getRelocationTypeName(R.Type, RelocName);
-  Fields[2].Str = RelocName.c_str();
+  Fields[2].Str = this->getRelocTypeName(R.Type, RelocName);
 
   if (RelSym.Sym)
     Fields[3].Str =
@@ -5260,6 +5335,158 @@ void GNUELFDumper<ELFT>::printHashHistogramStats(size_t NBucket,
 
 template <class ELFT> void GNUELFDumper<ELFT>::printCGProfile() {
   OS << "GNUStyle::printCGProfile not implemented\n";
+}
+
+namespace callgraph {
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
+enum Flags : uint8_t {
+  None = 0,
+  IsIndirectTarget = 1u << 0,
+  HasDirectCallees = 1u << 1,
+  HasIndirectCallees = 1u << 2,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue*/ HasIndirectCallees)
+};
+} // namespace callgraph
+
+template <class ELFT>
+bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
+  Expected<ArrayRef<uint8_t>> SectionBytesOrErr =
+      Obj.getSectionContents(*CGSection);
+  if (!SectionBytesOrErr) {
+    reportWarning(
+        createError("unable to read the SHT_LLVM_CALL_GRAPH type section " +
+                    toString(SectionBytesOrErr.takeError())),
+        FileName);
+    return false;
+  }
+
+  DataExtractor Data(SectionBytesOrErr.get(), Obj.isLE(),
+                     ObjF.getBytesInAddress());
+  DataExtractor::Cursor C(0);
+  uint64_t UnknownCount = 0;
+  while (C && C.tell() < CGSection->sh_size) {
+    uint8_t FormatVersionNumber = Data.getU8(C);
+    if (!C) {
+      reportWarning(createError("failed while reading FormatVersionNumber " +
+                                toString(C.takeError())),
+                    FileName);
+      return false;
+    }
+    if (FormatVersionNumber != 0) {
+      reportWarning(createError("unknown format version value [" +
+                                std::to_string(FormatVersionNumber) +
+                                "] in SHT_LLVM_CALL_GRAPH type section"),
+                    FileName);
+      return false;
+    }
+
+    uint8_t FlagsVal = Data.getU8(C);
+    if (!C) {
+      reportWarning(
+          createError("failed while reading call graph info's Flags " +
+                      toString(C.takeError())),
+          FileName);
+      return false;
+    }
+    callgraph::Flags CGFlags = static_cast<callgraph::Flags>(FlagsVal);
+    constexpr callgraph::Flags ValidFlags = callgraph::IsIndirectTarget |
+                                            callgraph::HasDirectCallees |
+                                            callgraph::HasIndirectCallees;
+    constexpr uint8_t ValidMask = static_cast<uint8_t>(ValidFlags);
+    if ((FlagsVal & ~ValidMask) != 0) {
+      reportWarning(createError("unexpected Flags value [" +
+                                std::to_string(FlagsVal) + "] "),
+                    FileName);
+      return false;
+    }
+
+    uint64_t FuncAddrOffset = C.tell();
+    uint64_t FuncAddr =
+        static_cast<uint64_t>(Data.getUnsigned(C, sizeof(typename ELFT::uint)));
+    if (!C) {
+      reportWarning(
+          createError(
+              "failed while reading call graph info function entry PC " +
+              toString(C.takeError())),
+          FileName);
+      return false;
+    }
+
+    bool IsETREL = this->Obj.getHeader().e_type == ELF::ET_REL;
+    // Create a new entry for this function.
+    FunctionCallgraphInfo CGInfo;
+    CGInfo.FunctionAddress = IsETREL ? FuncAddrOffset : FuncAddr;
+    CGInfo.FormatVersionNumber = FormatVersionNumber;
+    bool IsIndirectTarget =
+        (CGFlags & callgraph::IsIndirectTarget) != callgraph::None;
+    CGInfo.IsIndirectTarget = IsIndirectTarget;
+    uint64_t TypeId = Data.getU64(C);
+    if (!C) {
+      reportWarning(createError("failed while reading function type ID " +
+                                toString(C.takeError())),
+                    FileName);
+      return false;
+    }
+    CGInfo.FunctionTypeId = TypeId;
+    if (IsIndirectTarget && TypeId == 0)
+      ++UnknownCount;
+
+    if (CGFlags & callgraph::HasDirectCallees) {
+      // Read number of direct call sites for this function.
+      uint64_t NumDirectCallees = Data.getULEB128(C);
+      if (!C) {
+        reportWarning(
+            createError("failed while reading number of direct callees " +
+                        toString(C.takeError())),
+            FileName);
+        return false;
+      }
+      // Read unique direct callees and populate FuncCGInfos.
+      for (uint64_t I = 0; I < NumDirectCallees; ++I) {
+        uint64_t CalleeOffset = C.tell();
+        uint64_t Callee = static_cast<uint64_t>(
+            Data.getUnsigned(C, sizeof(typename ELFT::uint)));
+        if (!C) {
+          reportWarning(createError("failed while reading direct callee " +
+                                    toString(C.takeError())),
+                        FileName);
+          return false;
+        }
+        CGInfo.DirectCallees.insert((IsETREL ? CalleeOffset : Callee));
+      }
+    }
+
+    if (CGFlags & callgraph::HasIndirectCallees) {
+      uint64_t NumIndirectTargetTypeIDs = Data.getULEB128(C);
+      if (!C) {
+        reportWarning(
+            createError(
+                "failed while reading number of indirect target type IDs " +
+                toString(C.takeError())),
+            FileName);
+        return false;
+      }
+      // Read unique indirect target type IDs and populate FuncCGInfos.
+      for (uint64_t I = 0; I < NumIndirectTargetTypeIDs; ++I) {
+        uint64_t TargetType = Data.getU64(C);
+        if (!C) {
+          reportWarning(
+              createError("failed while reading indirect target type ID " +
+                          toString(C.takeError())),
+              FileName);
+          return false;
+        }
+        CGInfo.IndirectTypeIDs.insert(TargetType);
+      }
+    }
+    FuncCGInfos.push_back(CGInfo);
+  }
+
+  if (UnknownCount)
+    reportUniqueWarning(
+        "SHT_LLVM_CALL_GRAPH type section has unknown type id for " +
+        std::to_string(UnknownCount) + " indirect targets");
+  return true;
 }
 
 template <class ELFT>
@@ -7576,12 +7803,12 @@ void LLVMELFDumper<ELFT>::printRelRelaReloc(const Relocation<ELFT> &R,
   if (RelSym.Sym && RelSym.Name.empty())
     SymbolName = "<null>";
   SmallString<32> RelocName;
-  this->Obj.getRelocationTypeName(R.Type, RelocName);
+  StringRef RelocTypeName = this->getRelocTypeName(R.Type, RelocName);
 
   if (opts::ExpandRelocs) {
-    printExpandedRelRelaReloc(R, SymbolName, RelocName);
+    printExpandedRelRelaReloc(R, SymbolName, RelocTypeName);
   } else {
-    printDefaultRelRelaReloc(R, SymbolName, RelocName);
+    printDefaultRelRelaReloc(R, SymbolName, RelocTypeName);
   }
 }
 
@@ -8090,6 +8317,110 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCGProfile() {
       }
       W.printNumber("Weight", CGPE.cgp_weight);
     }
+  }
+}
+
+template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
+  // Call graph section is of type SHT_LLVM_CALL_GRAPH. Typically named
+  // ".llvm.callgraph". First fetch the section by its type.
+  using Elf_Shdr = typename ELFT::Shdr;
+  Expected<MapVector<const Elf_Shdr *, const Elf_Shdr *>> MapOrErr =
+      this->Obj.getSectionAndRelocations([](const Elf_Shdr &Sec) {
+        return Sec.sh_type == ELF::SHT_LLVM_CALL_GRAPH;
+      });
+  if (!MapOrErr || MapOrErr->empty()) {
+    reportWarning(createError("no SHT_LLVM_CALL_GRAPH section found " +
+                              toString(MapOrErr.takeError())),
+                  this->FileName);
+    return;
+  }
+  if (!this->processCallGraphSection(MapOrErr->begin()->first) ||
+      this->FuncCGInfos.empty())
+    return;
+
+  std::vector<Relocation<ELFT>> Relocations;
+  const Elf_Shdr *RelocSymTab = nullptr;
+  if (this->Obj.getHeader().e_type == ELF::ET_REL) {
+    const Elf_Shdr *CGRelSection = MapOrErr->front().second;
+    if (CGRelSection) {
+      this->forEachRelocationDo(
+          *CGRelSection, [&](const Relocation<ELFT> &R, unsigned Ndx,
+                             const Elf_Shdr &Sec, const Elf_Shdr *SymTab) {
+            RelocSymTab = SymTab;
+            Relocations.push_back(R);
+          });
+      llvm::stable_sort(Relocations, [](const auto &LHS, const auto &RHS) {
+        return LHS.Offset < RHS.Offset;
+      });
+    }
+  }
+
+  auto GetFunctionNames = [&](uint64_t FuncAddr) {
+    SmallVector<uint32_t> FuncSymIndexes =
+        this->getSymbolIndexesForFunctionAddress(FuncAddr, std::nullopt);
+    SmallVector<std::string> FuncSymNames;
+    FuncSymNames.reserve(FuncSymIndexes.size());
+    for (uint32_t Index : FuncSymIndexes)
+      FuncSymNames.push_back(this->getStaticSymbolName(Index));
+    return FuncSymNames;
+  };
+
+  auto PrintNonRelocatableFuncSymbol = [&](uint64_t FuncEntryPC) {
+    SmallVector<std::string> FuncSymNames = GetFunctionNames(FuncEntryPC);
+    if (!FuncSymNames.empty())
+      W.printList("Names", FuncSymNames);
+    W.printHex("Address", FuncEntryPC);
+  };
+
+  auto PrintRelocatableFuncSymbol = [&](uint64_t RelocOffset) {
+    auto R = llvm::find_if(Relocations, [&](const Relocation<ELFT> &R) {
+      return R.Offset == RelocOffset;
+    });
+    if (R == Relocations.end()) {
+      this->reportUniqueWarning("unknown relocation at offset " +
+                                Twine(RelocOffset));
+      return;
+    }
+    Expected<RelSymbol<ELFT>> RelSymOrErr =
+        this->getRelocationTarget(*R, RelocSymTab);
+    if (!RelSymOrErr) {
+      this->reportUniqueWarning(RelSymOrErr.takeError());
+      return;
+    }
+    if (!RelSymOrErr->Name.empty())
+      W.printString("Name", RelSymOrErr->Name);
+  };
+
+  auto PrintFunc = [&](uint64_t FuncPC) {
+    uint64_t FuncEntryPC = FuncPC;
+    // Clear Thumb bit if it was set before symbol lookup.
+    if (this->Obj.getHeader().e_machine == ELF::EM_ARM)
+      FuncEntryPC = FuncPC & ~1;
+    if (this->Obj.getHeader().e_type == ELF::ET_REL)
+      PrintRelocatableFuncSymbol(FuncEntryPC);
+    else
+      PrintNonRelocatableFuncSymbol(FuncEntryPC);
+  };
+
+  ListScope CGI(W, "CallGraph");
+  for (const auto &CGInfo : this->FuncCGInfos) {
+    DictScope D(W, "Function");
+    PrintFunc(CGInfo.FunctionAddress);
+    W.printNumber("Version", CGInfo.FormatVersionNumber);
+    W.printBoolean("IsIndirectTarget", CGInfo.IsIndirectTarget);
+    W.printHex("TypeId", CGInfo.FunctionTypeId);
+    W.printNumber("NumDirectCallees", CGInfo.DirectCallees.size());
+    {
+      ListScope DCs(W, "DirectCallees");
+      for (auto CalleePC : CGInfo.DirectCallees) {
+        DictScope D(W);
+        PrintFunc(CalleePC);
+      }
+    }
+    W.printNumber("NumIndirectTargetTypeIDs", CGInfo.IndirectTypeIDs.size());
+    SmallVector<uint64_t, 4> IndirectTypeIdsList(CGInfo.IndirectTypeIDs.begin(),
+                                                 CGInfo.IndirectTypeIDs.end());
+    W.printHexList("IndirectTypeIDs", ArrayRef(IndirectTypeIdsList));
   }
 }
 

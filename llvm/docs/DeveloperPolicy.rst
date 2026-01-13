@@ -793,6 +793,9 @@ for llvm users and not imposing a big burden on llvm developers:
   it is to drop it. That is not very user friendly and a bit more effort is
   expected, but no promises are made.
 
+* Legacy bitcode may have degraded performance when compared to
+  the compiled output with the legacy compiler.
+
 C API Changes
 -------------
 
@@ -1500,3 +1503,9 @@ review all generated code before sending it for review to verify its
 correctness and to understand it so that they can answer questions during code
 review. Reviewing and maintaining generated code that the original contributor
 does not understand is not a good use of limited project resources.
+
+The one exception we reserve is for GitHub issues labelled with the
+"good first issue" label. These issues are selected by LLVM contributors
+to help newcomers get familiar with the code base. Thus, it makes no sense to
+fix them using AI tools. **Using AI tools to fix issues labelled as
+"good first issues" is forbidden**.
