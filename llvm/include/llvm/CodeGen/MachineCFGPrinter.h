@@ -12,6 +12,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/Support/DOTGraphTraits.h"
 
 namespace llvm {
@@ -89,4 +90,15 @@ struct DOTGraphTraits<DOTMachineFuncInfo *> : public DefaultDOTGraphTraits {
            "' function";
   }
 };
+
+class MachineCFGPrinterPass : public PassInfoMixin<MachineCFGPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit MachineCFGPrinterPass(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
+};
+
 } // namespace llvm
