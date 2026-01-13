@@ -129,7 +129,7 @@ private:
 class IdDynMatcher : public DynMatcherInterface {
 public:
   IdDynMatcher(StringRef ID,
-               IntrusiveRefCntPtr<DynMatcherInterface> InnerMatcher)
+               IntrusiveRefCntPtr<const DynMatcherInterface> InnerMatcher)
       : ID(ID), InnerMatcher(std::move(InnerMatcher)) {}
 
   bool dynMatches(const DynTypedNode &DynNode, ASTMatchFinder *Finder,
@@ -145,7 +145,7 @@ public:
 
 private:
   const std::string ID;
-  const IntrusiveRefCntPtr<DynMatcherInterface> InnerMatcher;
+  const IntrusiveRefCntPtr<const DynMatcherInterface> InnerMatcher;
 };
 
 /// A matcher that always returns true.
@@ -167,7 +167,7 @@ class DynTraversalMatcherImpl : public DynMatcherInterface {
 public:
   explicit DynTraversalMatcherImpl(
       clang::TraversalKind TK,
-      IntrusiveRefCntPtr<DynMatcherInterface> InnerMatcher)
+      IntrusiveRefCntPtr<const DynMatcherInterface> InnerMatcher)
       : TK(TK), InnerMatcher(std::move(InnerMatcher)) {}
 
   bool dynMatches(const DynTypedNode &DynNode, ASTMatchFinder *Finder,
@@ -181,7 +181,7 @@ public:
 
 private:
   clang::TraversalKind TK;
-  IntrusiveRefCntPtr<DynMatcherInterface> InnerMatcher;
+  IntrusiveRefCntPtr<const DynMatcherInterface> InnerMatcher;
 };
 
 } // namespace
@@ -466,6 +466,95 @@ HasOverloadOpNameMatcher
 hasAnyOverloadedOperatorNameFunc(ArrayRef<const StringRef *> NameRefs) {
   return HasOverloadOpNameMatcher(vectorFromRefs(NameRefs));
 }
+
+static std::vector<Matcher<Stmt>>
+vectorFromMatcherRefs(ArrayRef<const Matcher<Stmt> *> MatcherRefs) {
+  std::vector<Matcher<Stmt>> Matchers;
+  Matchers.reserve(MatcherRefs.size());
+  for (auto *Matcher : MatcherRefs)
+    Matchers.push_back(*Matcher);
+  return Matchers;
+}
+
+/// Creates a new BoundNodesTreeBuilder that extends the given builder.
+/// This is a helper to simplify the pattern of creating a new builder,
+/// adding the current builder's matches to it, and then using it for matching.
+static BoundNodesTreeBuilder extendBuilder(BoundNodesTreeBuilder &&Builder) {
+  BoundNodesTreeBuilder Extended;
+  Extended.addMatch(std::move(Builder));
+  return Extended;
+}
+
+ForEachAdjacentSubstatementsMatcherType
+forEachAdjSubstatementsFunc(ArrayRef<const Matcher<Stmt> *> MatcherRefs) {
+  return ForEachAdjacentSubstatementsMatcherType(
+      vectorFromMatcherRefs(MatcherRefs));
+}
+
+template <typename T, typename ArgT>
+bool ForEachAdjacentSubstatementsMatcher<T, ArgT>::matches(
+    const T &Node, ASTMatchFinder *Finder,
+    BoundNodesTreeBuilder *Builder) const {
+  const CompoundStmt *CS = CompoundStmtMatcher<T>::get(Node);
+  if (!CS)
+    return false;
+
+  if (Matchers.empty())
+    return false;
+
+  // Create a DynTypedMatcher wrapper for this matcher instance to use for
+  // memoization. The matcher sequence is implicitly part of the matcher
+  // instance, so using 'this' pointer provides a unique identifier.
+  DynTypedMatcher MatcherWrapper(this);
+
+  // Use memoization to avoid re-running the same matcher on the same node.
+  return Finder->matchesChildOf(
+      static_cast<const Stmt &>(*CS), MatcherWrapper, Builder,
+      ASTMatchFinder::BK_All,
+      [this, CS, Finder](BoundNodesTreeBuilder *MemoBuilder) -> bool {
+        // Search for all sequences of adjacent substatements that match the
+        // matchers
+        const auto BodyBegin = CS->body_begin();
+        const auto BodyEnd = CS->body_end();
+
+        bool FoundAny = false;
+
+        // Try each possible starting position
+        for (auto StartIt = BodyBegin; StartIt != BodyEnd; ++StartIt) {
+          // Check if there are enough statements remaining
+          if (std::distance(StartIt, BodyEnd) <
+              static_cast<ptrdiff_t>(Matchers.size()))
+            break;
+
+          // Start with a fresh builder for this sequence
+          BoundNodesTreeBuilder SequenceBuilder;
+
+          // Use enumerate to iterate over matchers and statements
+          // simultaneously
+          auto StmtRange = llvm::make_range(StartIt, StartIt + Matchers.size());
+          for (auto [Idx, Matcher, StmtPtr] :
+               llvm::enumerate(Matchers, StmtRange)) {
+            // Extend the builder before matching each statement
+            SequenceBuilder = extendBuilder(std::move(SequenceBuilder));
+            if (!Matcher.matches(*StmtPtr, Finder, &SequenceBuilder))
+              break;
+
+            // If this is the last iteration and we matched, add the match
+            if (Idx == Matchers.size() - 1) {
+              MemoBuilder->addMatch(SequenceBuilder);
+              FoundAny = true;
+            }
+          }
+        }
+
+        return FoundAny;
+      });
+}
+
+template bool ForEachAdjacentSubstatementsMatcher<CompoundStmt>::matches(
+    const CompoundStmt &, ASTMatchFinder *, BoundNodesTreeBuilder *) const;
+template bool ForEachAdjacentSubstatementsMatcher<StmtExpr>::matches(
+    const StmtExpr &, ASTMatchFinder *, BoundNodesTreeBuilder *) const;
 
 HasNameMatcher::HasNameMatcher(std::vector<std::string> N)
     : UseUnqualifiedMatch(
@@ -1054,6 +1143,10 @@ const internal::VariadicFunction<internal::Matcher<NamedDecl>, StringRef,
 const internal::VariadicFunction<internal::HasOpNameMatcher, StringRef,
                                  internal::hasAnyOperatorNameFunc>
     hasAnyOperatorName = {};
+const internal::VariadicFunction<
+    internal::ForEachAdjacentSubstatementsMatcherType, internal::Matcher<Stmt>,
+    internal::forEachAdjSubstatementsFunc>
+    forEachAdjacentSubstatements = {};
 const internal::VariadicFunction<internal::HasOverloadOpNameMatcher, StringRef,
                                  internal::hasAnyOverloadedOperatorNameFunc>
     hasAnyOverloadedOperatorName = {};

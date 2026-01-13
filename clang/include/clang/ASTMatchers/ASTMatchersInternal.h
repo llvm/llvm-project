@@ -47,6 +47,7 @@
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/ASTMatchers/ASTMatchersMacros.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "llvm/ADT/APFloat.h"
@@ -410,7 +411,7 @@ class DynTypedMatcher {
 public:
   /// Takes ownership of the provided implementation pointer.
   template <typename T>
-  DynTypedMatcher(MatcherInterface<T> *Implementation)
+  DynTypedMatcher(const MatcherInterface<T> *Implementation)
       : SupportedKind(ASTNodeKind::getFromNodeKind<T>()),
         RestrictKind(SupportedKind), Implementation(Implementation) {}
 
@@ -541,7 +542,7 @@ public:
 
 private:
   DynTypedMatcher(ASTNodeKind SupportedKind, ASTNodeKind RestrictKind,
-                  IntrusiveRefCntPtr<DynMatcherInterface> Implementation)
+                  IntrusiveRefCntPtr<const DynMatcherInterface> Implementation)
       : SupportedKind(SupportedKind), RestrictKind(RestrictKind),
         Implementation(std::move(Implementation)) {}
 
@@ -553,7 +554,7 @@ private:
   /// It allows to perform implicit and dynamic cast of matchers without
   /// needing to change \c Implementation.
   ASTNodeKind RestrictKind;
-  IntrusiveRefCntPtr<DynMatcherInterface> Implementation;
+  IntrusiveRefCntPtr<const DynMatcherInterface> Implementation;
 };
 
 /// Wrapper of a MatcherInterface<T> *that allows copying.
@@ -742,6 +743,23 @@ public:
                                       bool Directly) = 0;
 
   template <typename T>
+  bool matchesChildOf(
+      const T &Node, const DynTypedMatcher &Matcher,
+      BoundNodesTreeBuilder *Builder, BindKind Bind,
+      llvm::function_ref<bool(BoundNodesTreeBuilder *)> MatchCallback) {
+    static_assert(std::is_base_of<Decl, T>::value ||
+                      std::is_base_of<Stmt, T>::value ||
+                      std::is_base_of<NestedNameSpecifier, T>::value ||
+                      std::is_base_of<NestedNameSpecifierLoc, T>::value ||
+                      std::is_base_of<TypeLoc, T>::value ||
+                      std::is_base_of<QualType, T>::value ||
+                      std::is_base_of<Attr, T>::value,
+                  "unsupported type for recursive matching");
+    return matchesChildOf(DynTypedNode::create(Node), getASTContext(), Matcher,
+                          Builder, Bind, MatchCallback);
+  }
+
+  template <typename T>
   bool matchesChildOf(const T &Node, const DynTypedMatcher &Matcher,
                       BoundNodesTreeBuilder *Builder, BindKind Bind) {
     static_assert(std::is_base_of<Decl, T>::value ||
@@ -795,6 +813,11 @@ public:
   bool isTraversalIgnoringImplicitNodes() const;
 
 protected:
+  virtual bool matchesChildOf(
+      const DynTypedNode &Node, ASTContext &Ctx, const DynTypedMatcher &Matcher,
+      BoundNodesTreeBuilder *Builder, BindKind Bind,
+      llvm::function_ref<bool(BoundNodesTreeBuilder *)> MatchCallback) = 0;
+
   virtual bool matchesChildOf(const DynTypedNode &Node, ASTContext &Ctx,
                               const DynTypedMatcher &Matcher,
                               BoundNodesTreeBuilder *Builder,
@@ -809,6 +832,7 @@ protected:
                                  const DynTypedMatcher &Matcher,
                                  BoundNodesTreeBuilder *Builder,
                                  AncestorMatchMode MatchMode) = 0;
+
 private:
   friend struct ASTChildrenNotSpelledInSourceScope;
   virtual bool isMatchingChildrenNotSpelledInSource() const = 0;
@@ -2282,6 +2306,38 @@ using HasOpNameMatcher =
                        std::vector<std::string>>;
 
 HasOpNameMatcher hasAnyOperatorNameFunc(ArrayRef<const StringRef *> NameRefs);
+
+/// Matches nodes of type T (CompoundStmt or StmtExpr) that contain sequences
+/// of consecutive substatements matching the provided matchers in order.
+///
+/// See \c forEachAdjacentSubstatements() in ASTMatchers.h for details.
+template <typename T, typename ArgT = std::vector<Matcher<Stmt>>>
+class ForEachAdjacentSubstatementsMatcher : public MatcherInterface<T> {
+  static_assert(std::is_same<T, CompoundStmt>::value ||
+                    std::is_same<T, StmtExpr>::value,
+                "Matcher only supports `CompoundStmt` and `StmtExpr`");
+  static_assert(std::is_same<ArgT, std::vector<Matcher<Stmt>>>::value,
+                "Matcher ArgT must be std::vector<Matcher<Stmt>>");
+
+public:
+  explicit ForEachAdjacentSubstatementsMatcher(
+      std::vector<Matcher<Stmt>> Matchers)
+      : Matchers(std::move(Matchers)) {}
+
+  bool matches(const T &Node, ASTMatchFinder *Finder,
+               BoundNodesTreeBuilder *Builder) const override;
+
+private:
+  std::vector<Matcher<Stmt>> Matchers;
+};
+
+using ForEachAdjacentSubstatementsMatcherType =
+    PolymorphicMatcher<ForEachAdjacentSubstatementsMatcher,
+                       AST_POLYMORPHIC_SUPPORTED_TYPES(CompoundStmt, StmtExpr),
+                       std::vector<Matcher<Stmt>>>;
+
+ForEachAdjacentSubstatementsMatcherType
+forEachAdjSubstatementsFunc(ArrayRef<const Matcher<Stmt> *> MatcherRefs);
 
 using HasOverloadOpNameMatcher =
     PolymorphicMatcher<HasOverloadedOperatorNameMatcher,

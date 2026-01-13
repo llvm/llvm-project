@@ -593,14 +593,14 @@ public:
     return RecursiveASTVisitor<MatchASTVisitor>::dataTraverseNode(S, Queue);
   }
 
-  // Matches children or descendants of 'Node' with 'BaseMatcher'.
-  bool memoizedMatchesRecursively(const DynTypedNode &Node, ASTContext &Ctx,
-                                  const DynTypedMatcher &Matcher,
-                                  BoundNodesTreeBuilder *Builder, int MaxDepth,
-                                  BindKind Bind) {
+  // Matches children or descendants of 'Node' with a custom callback.
+  bool memoizedMatchesRecursively(
+      const DynTypedNode &Node, ASTContext &Ctx, const DynTypedMatcher &Matcher,
+      BoundNodesTreeBuilder *Builder, int MaxDepth, BindKind Bind,
+      llvm::function_ref<bool(BoundNodesTreeBuilder *)> MatchCallback) {
     // For AST-nodes that don't have an identity, we can't memoize.
     if (!Node.getMemoizationData() || !Builder->isComparable())
-      return matchesRecursively(Node, Matcher, Builder, MaxDepth, Bind);
+      return MatchCallback(Builder);
 
     MatchKey Key;
     Key.MatcherID = Matcher.getID();
@@ -618,8 +618,7 @@ public:
 
     MemoizedMatchResult Result;
     Result.Nodes = *Builder;
-    Result.ResultOfMatch =
-        matchesRecursively(Node, Matcher, &Result.Nodes, MaxDepth, Bind);
+    Result.ResultOfMatch = MatchCallback(&Result.Nodes);
 
     MemoizedMatchResult &CachedResult = ResultCache[Key];
     CachedResult = std::move(Result);
@@ -668,13 +667,27 @@ public:
                               bool Directly) override;
 
 public:
-  // Implements ASTMatchFinder::matchesChildOf.
+  // Implements ASTMatchFinder::matchesChildOf (with callback).
+  bool matchesChildOf(const DynTypedNode &Node, ASTContext &Ctx,
+                      const DynTypedMatcher &Matcher,
+                      BoundNodesTreeBuilder *Builder, BindKind Bind,
+                      llvm::function_ref<bool(BoundNodesTreeBuilder *)>
+                          MatchCallback) override {
+    if (ResultCache.size() > MaxMemoizationEntries)
+      ResultCache.clear();
+    return memoizedMatchesRecursively(Node, Ctx, Matcher, Builder, 1, Bind,
+                                      MatchCallback);
+  }
+
+  // Implements ASTMatchFinder::matchesChildOf (without callback).
   bool matchesChildOf(const DynTypedNode &Node, ASTContext &Ctx,
                       const DynTypedMatcher &Matcher,
                       BoundNodesTreeBuilder *Builder, BindKind Bind) override {
-    if (ResultCache.size() > MaxMemoizationEntries)
-      ResultCache.clear();
-    return memoizedMatchesRecursively(Node, Ctx, Matcher, Builder, 1, Bind);
+    return matchesChildOf(
+        Node, Ctx, Matcher, Builder, Bind,
+        [this, &Node, &Matcher, Bind](BoundNodesTreeBuilder *Nodes) -> bool {
+          return matchesRecursively(Node, Matcher, Nodes, 1, Bind);
+        });
   }
   // Implements ASTMatchFinder::matchesDescendantOf.
   bool matchesDescendantOf(const DynTypedNode &Node, ASTContext &Ctx,
@@ -683,8 +696,11 @@ public:
                            BindKind Bind) override {
     if (ResultCache.size() > MaxMemoizationEntries)
       ResultCache.clear();
-    return memoizedMatchesRecursively(Node, Ctx, Matcher, Builder, INT_MAX,
-                                      Bind);
+    return memoizedMatchesRecursively(
+        Node, Ctx, Matcher, Builder, INT_MAX, Bind,
+        [this, &Node, &Matcher, Bind](BoundNodesTreeBuilder *Nodes) -> bool {
+          return matchesRecursively(Node, Matcher, Nodes, INT_MAX, Bind);
+        });
   }
   // Implements ASTMatchFinder::matchesAncestorOf.
   bool matchesAncestorOf(const DynTypedNode &Node, ASTContext &Ctx,
