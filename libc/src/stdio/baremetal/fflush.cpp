@@ -13,6 +13,10 @@
 namespace LIBC_NAMESPACE_DECL {
 
 // Baremetal uses unbuffered I/O, so there is nothing to flush.
-LLVM_LIBC_FUNCTION(int, fflush, (::FILE * /* stream */)) { return 0; }
+LLVM_LIBC_FUNCTION(int, fflush, (::FILE * stream )) {
+    (void) stream;
+    // TODO: Shall we have an embedding API for fflush?
+    return 0;
+}
 
 } // namespace LIBC_NAMESPACE_DECL

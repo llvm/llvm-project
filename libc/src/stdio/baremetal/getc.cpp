@@ -7,12 +7,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/getc.h"
-#include "src/stdio/fgetc.h"
 
+#include "hdr/stdio_macros.h" // for EOF.
+#include "hdr/types/FILE.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
+#include "src/__support/macros/config.h"
+#include "src/stdio/baremetal/file_internal.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, getc, (::FILE * stream)) { return fgetc(stream); }
+LLVM_LIBC_FUNCTION(int, getc, (::FILE * stream)) {
+  unsigned char c;
+  auto result = read_internal(reinterpret_cast<char *>(&c), 1, stream);
+  if (result.has_error())
+    libc_errno = result.error;
+
+  if (result.value != 1)
+    return EOF;
+  return c;
+}
 
 } // namespace LIBC_NAMESPACE_DECL
