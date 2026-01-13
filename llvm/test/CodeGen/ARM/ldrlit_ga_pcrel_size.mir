@@ -68,10 +68,15 @@ machineFunctionInfo:
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: f
-    ; CHECK: dead $r0 = SPACE 2036, undef $r0
+    ; CHECK: liveins: $lr
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: frame-setup tPUSH 14 /* CC::al */, $noreg, killed $lr, implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 4
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $lr, -4
+    ; CHECK-NEXT: dead $r0 = SPACE 2036, undef $r0
     ; CHECK-NEXT: renamable $r0 = tLDRLIT_ga_pcrel target-flags(arm-got) @.str
     ; CHECK-NEXT: renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load (s32) from got)
-    ; CHECK-NEXT: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    ; CHECK-NEXT: frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $pc, implicit-def $sp, implicit $sp, implicit $r0
     dead $r0 = SPACE 2036, undef $r0
     renamable $r0 = tLDRLIT_ga_pcrel target-flags(arm-got) @.str
     renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load (s32) from got)
