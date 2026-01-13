@@ -228,6 +228,7 @@ PyArrayAttribute::PyArrayAttributeIterator::dunderNext() {
       mlirArrayAttrGetNumElements(
           PyArrayAttribute::PyArrayAttributeIterator::attr.get())) {
     PyErr_SetNone(PyExc_StopIteration);
+    // python functions should return NULL after setting any exception
     return nb::object();
   }
   return PyAttribute(
