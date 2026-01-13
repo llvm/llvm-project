@@ -735,6 +735,8 @@ UnwindPlanSP ABISysV_riscv::CreateFunctionEntryUnwindPlan() {
   plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("riscv function-entry unwind plan");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
+
   return plan_sp;
 }
 
@@ -761,6 +763,8 @@ UnwindPlanSP ABISysV_riscv::CreateDefaultUnwindPlan() {
   plan_sp->SetSourceName("riscv default unwind plan");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
+
   return plan_sp;
 }
 
