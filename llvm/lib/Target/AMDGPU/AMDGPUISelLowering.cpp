@@ -3844,6 +3844,8 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT_SAT(const SDValue Op,
 
   // Promote sub-i32 dst to i32 with sub-i32 saturation
   if (DstWidth < 32) {
+    // Note: this triggers SatWidth < DstWidth above to generate saturated
+    // truncate by requesting MVT::i32 destination with SatWidth < 32.
     SDValue FpToInt32 = DAG.getNode(OpOpcode, DL, MVT::i32, Src, SatVTOp);
     return DAG.getNode(ISD::TRUNCATE, DL, DstVT, FpToInt32);
   }
