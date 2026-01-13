@@ -137,9 +137,19 @@ struct KnownFPClass {
     return isKnownNever(fcPositive) && isKnownNeverLogicalNegZero(Mode);
   }
 
-  KnownFPClass intersectWith(const KnownFPClass &RHS) {
-    return KnownFPClass(~(~KnownFPClasses & ~RHS.KnownFPClasses),
+  KnownFPClass intersectWith(const KnownFPClass &RHS) const {
+    return KnownFPClass(KnownFPClasses | RHS.KnownFPClasses,
                         SignBit == RHS.SignBit ? SignBit : std::nullopt);
+  }
+
+  KnownFPClass unionWith(const KnownFPClass &RHS) const {
+    std::optional<bool> MergedSignBit;
+    if (SignBit && !RHS.SignBit)
+      MergedSignBit = SignBit;
+    else if (!SignBit && RHS.SignBit)
+      MergedSignBit = RHS.SignBit;
+
+    return KnownFPClass(KnownFPClasses & RHS.KnownFPClasses, MergedSignBit);
   }
 
   KnownFPClass &operator|=(const KnownFPClass &RHS) {

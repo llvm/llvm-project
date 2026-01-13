@@ -259,11 +259,9 @@ llvm::LogicalResult RemarkEngine::initialize(
     std::unique_ptr<MLIRRemarkStreamerBase> streamer,
     std::unique_ptr<RemarkEmittingPolicyBase> remarkEmittingPolicy,
     std::string *errMsg) {
-
   remarkStreamer = std::move(streamer);
 
-  auto reportFunc =
-      std::bind(&RemarkEngine::reportImpl, this, std::placeholders::_1);
+  auto reportFunc = llvm::bind_front<&RemarkEngine::reportImpl>(this);
   remarkEmittingPolicy->initialize(ReportFn(std::move(reportFunc)));
 
   this->remarkEmittingPolicy = std::move(remarkEmittingPolicy);

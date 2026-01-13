@@ -638,11 +638,10 @@ int main(int argc, char **argv) {
         Fortran::common::LanguageFeature::CudaWarpMatchFunction, false);
   }
 
-  if (enableGPUMode == "managed" || enableGPUMode == "mem:managed") {
+  if (enableGPUMode == "managed")
     options.features.Enable(Fortran::common::LanguageFeature::CudaManaged);
-  } else if (enableGPUMode == "unified" || enableGPUMode == "mem:unified") {
+  else if (enableGPUMode == "unified")
     options.features.Enable(Fortran::common::LanguageFeature::CudaUnified);
-  }
 
   if (fixedForm) {
     options.isFixedForm = fixedForm;

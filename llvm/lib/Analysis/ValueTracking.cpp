@@ -4885,11 +4885,17 @@ void llvm::adjustKnownFPClassForSelectArm(KnownFPClass &Known, Value *Cond,
                                           Value *Arm, bool Invert,
                                           const SimplifyQuery &SQ,
                                           unsigned Depth) {
+
+  KnownFPClass KnownSrc;
   computeKnownFPClassFromCond(Arm, Cond,
-                              /*CondIsTrue=*/!Invert, SQ.CxtI, Known,
+                              /*CondIsTrue=*/!Invert, SQ.CxtI, KnownSrc,
                               Depth + 1);
-  // TODO: Do we need to check isGuaranteedNotToBeUndef, like the KnownBits
-  // case?
+  KnownSrc = KnownSrc.unionWith(Known);
+  if (KnownSrc.isUnknown())
+    return;
+
+  if (isGuaranteedNotToBeUndef(Arm, SQ.AC, SQ.CxtI, SQ.DT, Depth + 1))
+    Known = KnownSrc;
 }
 
 void computeKnownFPClass(const Value *V, const APInt &DemandedElts,

@@ -9913,7 +9913,7 @@ void ResolveNamesVisitor::FinishSpecificationPart(
         SetBindNameOn(symbol);
       }
     }
-    // -gpu=mem:managed: implicitly treat allocatable arrays as managed.
+    // Implicitly treat allocatable arrays as managed when feature is enabled.
     // This is done after all explicit CUDA attributes have been processed.
     if (context().languageFeatures().IsEnabled(
             common::LanguageFeature::CudaManaged))
