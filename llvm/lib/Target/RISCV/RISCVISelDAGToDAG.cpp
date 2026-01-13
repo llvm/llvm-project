@@ -4085,6 +4085,7 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
     case RISCV::ROLW:
     case RISCV::RORW:
     case RISCV::RORIW:
+    case RISCV::CLSW:
     case RISCV::CLZW:
     case RISCV::CTZW:
     case RISCV::CPOPW:

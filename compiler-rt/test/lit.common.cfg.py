@@ -90,6 +90,12 @@ def push_dynamic_library_lookup_path(config, new_path):
     new_ld_library_path = os.path.pathsep.join(
         (new_path, config.environment.get(dynamic_library_lookup_var, ""))
     )
+
+    if platform.system() == "Darwin":
+        # Workaround an issue in LD which does not use the correct libLTO
+        # if the DYLD_LIBRARY_PATH is not normalized.
+        new_ld_library_path = os.path.normpath(new_ld_library_path)
+
     config.environment[dynamic_library_lookup_var] = new_ld_library_path
 
     if platform.system() == "FreeBSD":
@@ -411,7 +417,7 @@ if emulator:
     lit_config.warning("%device_rm is not implemented")
     config.substitutions.append(("%device_rm", "echo "))
     config.compile_wrapper = ""
-elif config.target_os == "Darwin" and config.apple_platform != "osx":
+elif config.target_os == "Darwin" and not config.apple_target_is_host:
     # Darwin tests can be targetting macOS, a device or a simulator. All devices
     # are declared as "ios", even for iOS derivatives (tvOS, watchOS). Similarly,
     # all simulators are "iossim". See the table below.
@@ -419,18 +425,25 @@ elif config.target_os == "Darwin" and config.apple_platform != "osx":
     # =========================================================================
     # Target             | Feature set
     # =========================================================================
-    # macOS              | darwin
-    # iOS device         | darwin, ios
-    # iOS simulator      | darwin, ios, iossim
-    # tvOS device        | darwin, ios, tvos
-    # tvOS simulator     | darwin, ios, iossim, tvos, tvossim
-    # watchOS device     | darwin, ios, watchos
-    # watchOS simulator  | darwin, ios, iossim, watchos, watchossim
+    # macOS host         | darwin
+    # macOS device       | darwin, darwin-remote
+    # iOS device         | darwin, darwin-remote, ios
+    # iOS simulator      | darwin, darwin-remote, ios, iossim
+    # tvOS device        | darwin, darwin-remote, ios, tvos
+    # tvOS simulator     | darwin, darwin-remote, ios, iossim, tvos, tvossim
+    # watchOS device     | darwin, darwin-remote, ios, watchos
+    # watchOS simulator  | darwin, darwin-remote, ios, iossim, watchos, watchossim
     # =========================================================================
+
+    # All suites that aren't running on the host get the darwin-remote feature.
+    config.available_features.add("darwin-remote")
+
+    # All non-OSX targets have the ios feature (see the above table)
+    if config.apple_platform != "osx":
+        config.available_features.add("ios")
 
     ios_or_iossim = "iossim" if config.apple_platform.endswith("sim") else "ios"
 
-    config.available_features.add("ios")
     device_id_env = "SANITIZER_" + ios_or_iossim.upper() + "_TEST_DEVICE_IDENTIFIER"
     if ios_or_iossim == "iossim":
         config.available_features.add("iossim")

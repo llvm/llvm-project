@@ -1197,6 +1197,27 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(
         CGM.getIntrinsic(Intrinsic::nvvm_barrier_cta_sync_count),
         {EmitScalarExpr(E->getArg(0)), EmitScalarExpr(E->getArg(1))});
+  case NVPTX::BI__nvvm_bar0_and:
+    return Builder.CreateZExt(
+        Builder.CreateIntrinsic(
+            Intrinsic::nvvm_barrier_cta_red_and_aligned_all, {},
+            {Builder.getInt32(0),
+             Builder.CreateICmpNE(EmitScalarExpr(E->getArg(0)),
+                                  Builder.getInt32(0))}),
+        Builder.getInt32Ty());
+  case NVPTX::BI__nvvm_bar0_or:
+    return Builder.CreateZExt(
+        Builder.CreateIntrinsic(
+            Intrinsic::nvvm_barrier_cta_red_or_aligned_all, {},
+            {Builder.getInt32(0),
+             Builder.CreateICmpNE(EmitScalarExpr(E->getArg(0)),
+                                  Builder.getInt32(0))}),
+        Builder.getInt32Ty());
+  case NVPTX::BI__nvvm_bar0_popc:
+    return Builder.CreateIntrinsic(
+        Intrinsic::nvvm_barrier_cta_red_popc_aligned_all, {},
+        {Builder.getInt32(0), Builder.CreateICmpNE(EmitScalarExpr(E->getArg(0)),
+                                                   Builder.getInt32(0))});
   default:
     return nullptr;
   }

@@ -54,8 +54,8 @@ struct __search_n {
       }
 
       if constexpr (random_access_iterator<_Iter1>) {
-        auto __ret = std::__search_n_random_access_impl<_RangeAlgPolicy>(
-            __first, __last, __count, __value, __pred, __proj, __size);
+        auto __ret =
+            std::__search_n_random_access_impl<_RangeAlgPolicy>(__first, __count, __value, __pred, __proj, __size);
         return {std::move(__ret.first), std::move(__ret.second)};
       }
     }
