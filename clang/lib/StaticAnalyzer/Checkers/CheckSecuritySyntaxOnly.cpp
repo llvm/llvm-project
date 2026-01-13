@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -72,26 +73,6 @@ struct ChecksFilter {
   CheckerNameRef checkName_decodeValueOfObjCType;
 };
 
-// Determine whether to report Annex K related checks based on the
-// reporting policy.
-[[nodiscard]] bool shouldReportAnnexKRelated(BugReporter &BR,
-                                             const ChecksFilter &Filter) {
-  const bool IsAnnexKAvailable = analysis::isAnnexKAvailable(
-      &BR.getPreprocessor(), BR.getContext().getLangOpts());
-  const bool IsC11OrLaterStandard = BR.getContext().getLangOpts().C11;
-
-  switch (Filter.ReportMode) {
-  case ReportPolicy::All:
-    return true;
-  case ReportPolicy::Actionable:
-    return IsAnnexKAvailable;
-  case ReportPolicy::C11Only:
-    return IsC11OrLaterStandard;
-  default:
-    llvm_unreachable("Unknown ReportPolicy value");
-  }
-};
-
 class WalkAST : public StmtVisitor<WalkAST> {
   BugReporter &BR;
   AnalysisDeclContext* AC;
@@ -100,17 +81,15 @@ class WalkAST : public StmtVisitor<WalkAST> {
 
   const bool CheckRand;
 
-  // Cache the result of Annex K availability check.
+  const ChecksFilter &filter;
   const bool ShouldReportAnnexKRelated;
 
-  const ChecksFilter &filter;
-
 public:
-  WalkAST(BugReporter &br, AnalysisDeclContext *ac, const ChecksFilter &f)
+  WalkAST(BugReporter &br, AnalysisDeclContext *ac, const ChecksFilter &f,
+          bool shouldReportAnnexKRelated)
       : BR(br), AC(ac), II_setid(),
-        CheckRand(isArc4RandomAvailable(BR.getContext())),
-        ShouldReportAnnexKRelated(shouldReportAnnexKRelated(br, f)), filter(f) {
-  }
+        CheckRand(isArc4RandomAvailable(BR.getContext())), filter(f),
+        ShouldReportAnnexKRelated(shouldReportAnnexKRelated) {}
 
   // Statement visitor methods.
   void VisitCallExpr(CallExpr *CE);
@@ -1100,13 +1079,41 @@ void WalkAST::checkUncheckedReturnValue(CallExpr *CE) {
 //===----------------------------------------------------------------------===//
 
 namespace {
+
+// Determine whether to report Annex K related checks based on the
+// reporting policy.
+[[nodiscard]] bool shouldReportAnnexKRelated(BugReporter &BR,
+                                             const ChecksFilter &Filter) {
+  const bool IsAnnexKAvailable = analysis::isAnnexKAvailable(
+      &BR.getPreprocessor(), BR.getContext().getLangOpts());
+  const bool IsC11OrLaterStandard = BR.getContext().getLangOpts().C11;
+
+  switch (Filter.ReportMode) {
+  case ReportPolicy::All:
+    return true;
+  case ReportPolicy::Actionable:
+    return IsAnnexKAvailable;
+  case ReportPolicy::C11Only:
+    return IsC11OrLaterStandard;
+  default:
+    llvm_unreachable("Unknown ReportPolicy value");
+  }
+};
+
 class SecuritySyntaxChecker : public Checker<check::ASTCodeBody> {
 public:
   ChecksFilter filter;
+  mutable std::optional<bool> CachedShouldReportAnnexKRelated;
 
   void checkASTCodeBody(const Decl *D, AnalysisManager& mgr,
                         BugReporter &BR) const {
-    WalkAST walker(BR, mgr.getAnalysisDeclContext(D), filter);
+    // Compute ShouldReportAnnexKRelated once per translation unit.
+    if (!CachedShouldReportAnnexKRelated.has_value()) {
+      CachedShouldReportAnnexKRelated = shouldReportAnnexKRelated(BR, filter);
+    }
+
+    WalkAST walker(BR, mgr.getAnalysisDeclContext(D), filter,
+                   *CachedShouldReportAnnexKRelated);
     walker.Visit(D->getBody());
   }
 };
