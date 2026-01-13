@@ -568,6 +568,13 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
 
   const TypeSize PartSize = PartTy.getSizeInBits();
 
+  if (PartSize == SrcTy.getSizeInBits() && DstRegs.size() == 1) {
+    // TODO: Handle int<->ptr casts. It just happens the ABI lowering
+    // assignments are not pointer aware.
+    B.buildBitcast(DstRegs[0], SrcReg);
+    return;
+  }
+
   if (PartTy.isVector() == SrcTy.isVector() &&
       PartTy.getScalarSizeInBits() > SrcTy.getScalarSizeInBits()) {
     assert(DstRegs.size() == 1);
@@ -576,9 +583,11 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   }
 
   if (SrcTy.isVector() && !PartTy.isVector() &&
-      TypeSize::isKnownGT(PartSize, SrcTy.getElementType().getSizeInBits())) {
+      TypeSize::isKnownGT(PartSize, SrcTy.getElementType().getSizeInBits()) &&
+      SrcTy.getElementCount() == ElementCount::getFixed(DstRegs.size())) {
     // Vector was scalarized, and the elements extended.
     auto UnmergeToEltTy = B.buildUnmerge(SrcTy.getElementType(), SrcReg);
+
     for (int i = 0, e = DstRegs.size(); i != e; ++i)
       B.buildAnyExt(DstRegs[i], UnmergeToEltTy.getReg(i));
     return;
@@ -645,8 +654,21 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
     }
   }
 
-  if (LCMTy.isVector() && CoveringSize != SrcSize)
+  if (LCMTy.isVector() && CoveringSize != SrcSize) {
     UnmergeSrc = B.buildPadVectorWithUndefElements(LCMTy, SrcReg).getReg(0);
+
+    unsigned ExcessBits = CoveringSize - DstSize * DstRegs.size();
+    if (ExcessBits != 0) {
+      SmallVector<Register, 8> PaddedDstRegs(DstRegs.begin(), DstRegs.end());
+
+      MachineRegisterInfo &MRI = *B.getMRI();
+      for (unsigned I = 0; I != ExcessBits; I += PartSize)
+        PaddedDstRegs.push_back(MRI.createGenericVirtualRegister(PartTy));
+
+      B.buildUnmerge(PaddedDstRegs, UnmergeSrc);
+      return;
+    }
+  }
 
   B.buildUnmerge(DstRegs, UnmergeSrc);
 }
