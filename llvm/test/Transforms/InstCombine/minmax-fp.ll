@@ -118,7 +118,7 @@ define float @fmin_fmin_zero_mismatch(float %x) {
 }
 
 ; max(max(x, -0.0), -0.0) --> max(x, -0.0)
-define float @fmax_fmax_zero_mismatch(float %x) {
+define float @fmax_fmax_zero_mismatch(float noundef %x) {
 ; CHECK-LABEL: @fmax_fmax_zero_mismatch(
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[MAX1:%.*]] = select i1 [[CMP1]], float [[X]], float -0.000000e+00
