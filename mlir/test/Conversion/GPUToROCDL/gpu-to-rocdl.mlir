@@ -859,3 +859,15 @@ func.func @broadcast_4xi16(%arg0 : vector<4xi16>) -> vector<4xi16> {
   func.return %0 : vector<4xi16>
 }
 }
+
+// -----
+
+gpu.module @test_module {
+// CHECK-LABEL: func @unifprm
+//  CHECK-SAME:   (%[[ARG:.*]]: i64)
+func.func @unifprm(%arg0 : index) -> index {
+//       CHECK:   %{{.*}} = rocdl.readfirstlane %[[ARG]] : i64
+  %0 = gpu.subgroup_uniform %arg0 : index
+  func.return %0 : index
+}
+}
