@@ -206,7 +206,8 @@ TYPE_CONTEXT_PARSER("declaration type spec"_en_US,
 TYPE_CONTEXT_PARSER("intrinsic type spec"_en_US,
     first(construct<IntrinsicTypeSpec>(integerTypeSpec),
         construct<IntrinsicTypeSpec>(
-            construct<IntrinsicTypeSpec::Real>("REAL"_kw >> maybe(kindSelector))),
+            construct<IntrinsicTypeSpec::Real>(
+                "REAL"_kw >> maybe(kindSelector))),
         construct<IntrinsicTypeSpec>("DOUBLE PRECISION" >>
             construct<IntrinsicTypeSpec::DoublePrecision>()),
         construct<IntrinsicTypeSpec>(construct<IntrinsicTypeSpec::Complex>(
@@ -221,8 +222,8 @@ TYPE_CONTEXT_PARSER("intrinsic type spec"_en_US,
             construct<IntrinsicTypeSpec>("DOUBLE COMPLEX"_sptok >>
                 construct<IntrinsicTypeSpec::DoubleComplex>())),
         extension<LanguageFeature::Byte>("nonstandard usage: BYTE"_port_en_US,
-            construct<IntrinsicTypeSpec>(construct<IntegerTypeSpec>(
-                "BYTE"_kw >> construct<std::optional<KindSelector>>(pure(1)))))))
+            construct<IntrinsicTypeSpec>(construct<IntegerTypeSpec>("BYTE"_kw >>
+                construct<std::optional<KindSelector>>(pure(1)))))))
 
 // Extension: Vector type
 // VECTOR(intrinsic-type-spec) | __VECTOR_PAIR | __VECTOR_QUAD
