@@ -2511,8 +2511,8 @@ vectorizePadOpPrecondition(tensor::PadOp padOp,
   // which is zero here. Hence we will load the pad value which is what we want
   // in this case. If the low pad is dynamically zero then the lowering is
   // correct as well as no shifts are necessary.
-  if (llvm::any_of(llvm::enumerate(padOp.getLow()), [&](const auto &en) {
-        Value padValue = en.value();
+  if (llvm::any_of(llvm::enumerate(padOp.getMixedLowPad()), [&](const auto &en) {
+        OpFoldResult padValue = en.value();
         unsigned pos = en.index();
         std::optional<int64_t> pad = getConstantIntValue(padValue);
         return (!pad.has_value() || pad.value() != 0) &&
