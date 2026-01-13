@@ -41,7 +41,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <list>
 #include <memory>
 #include <string>
 #include <system_error>
@@ -1058,8 +1057,10 @@ struct NamedInstrProfRecord : InstrProfRecord {
   StringRef Name;
   uint64_t Hash;
 
-  // We reserve this bit as the flag for context sensitive profile record.
-  static const int CS_FLAG_IN_FUNC_HASH = 60;
+  // We reserve the highest 4 bits as flags.
+  static constexpr uint64_t FUNC_HASH_MASK = 0x0FFF'FFFF'FFFF'FFFF;
+  // The 60th bit is for context sensitive profile record.
+  static constexpr unsigned CS_FLAG_IN_FUNC_HASH = 60;
 
   NamedInstrProfRecord() = default;
   NamedInstrProfRecord(StringRef Name, uint64_t Hash,
@@ -1174,7 +1175,9 @@ enum ProfVersion {
   Version11 = 11,
   // VTable profiling, decision record and bitmap are modified for mcdc.
   Version12 = 12,
-  // The current version is 12.
+  // In this version, the frontend PGO stable hash algorithm defaults to V4.
+  Version13 = 13,
+  // The current version is 13.
   CurrentVersion = INSTR_PROF_INDEX_VERSION
 };
 const uint64_t Version = ProfVersion::CurrentVersion;

@@ -35,9 +35,8 @@ define void @ham() #1 {
 ; CHECK-NEXT:  [[SNORK_EXIT:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr inttoptr (i64 48 to ptr), align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i64 [[TMP0]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> zeroinitializer, <vscale x 4 x float> zeroinitializer, i64 0)
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[TMP1]], <vscale x 16 x float> [[TMP2]], <vscale x 16 x float> undef
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 4 x float> @llvm.vector.extract.nxv4f32.nxv16f32(<vscale x 16 x float> [[SPEC_SELECT]], i64 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 4 x float> @llvm.vector.extract.nxv4f32.nxv16f32(<vscale x 16 x float> undef, i64 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], <vscale x 4 x float> zeroinitializer, <vscale x 4 x float> [[TMP2]]
 ; CHECK-NEXT:    tail call void @llvm.aarch64.sme.mopa.nxv4f32(i32 0, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> zeroinitializer, <vscale x 4 x float> [[TMP3]])
 ; CHECK-NEXT:    ret void
 ;

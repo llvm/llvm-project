@@ -5,7 +5,7 @@ import("//llvm/version.gni")
 tablegen("Options") {
   visibility = [ ":lldb-dap" ]
   args = [ "-gen-opt-parser-defs" ]
-  td_file = "../Options.td"
+  td_file = "Options.td"
 }
 
 if (host_os == "mac") {

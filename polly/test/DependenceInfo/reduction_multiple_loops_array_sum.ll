@@ -1,6 +1,6 @@
-; RUN: opt -aa-pipeline=basic-aa %loadNPMPolly '-passes=print<polly-dependences>' -disable-output < %s | FileCheck %s
-; RUN: opt -aa-pipeline=basic-aa %loadNPMPolly '-passes=print<polly-dependences>' -polly-dependences-analysis-level=reference-wise -disable-output < %s | FileCheck %s
-; RUN: opt -aa-pipeline=basic-aa %loadNPMPolly '-passes=print<polly-dependences>' -polly-dependences-analysis-level=access-wise -disable-output < %s | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa %loadNPMPolly '-passes=polly-custom<deps>' -polly-print-deps -disable-output < %s | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa %loadNPMPolly '-passes=polly-custom<deps>' -polly-print-deps -polly-dependences-analysis-level=reference-wise -disable-output < %s | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa %loadNPMPolly '-passes=polly-custom<deps>' -polly-print-deps -polly-dependences-analysis-level=access-wise -disable-output < %s | FileCheck %s
 ;
 ; Verify that only the inner reduction like accesses cause reduction dependences
 ;

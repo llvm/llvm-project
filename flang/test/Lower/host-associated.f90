@@ -135,7 +135,7 @@ subroutine test3(p,q,i)
   if (p(2) .ne. -42.0) then
      print *, "failed"
   end if
-  
+
 contains
   ! CHECK-LABEL: func private @_QFtest3Ptest3_inner(
   ! CHECK-SAME: %[[tup:.*]]: !fir.ref<tuple<!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>>> {fir.host_assoc}) attributes {fir.host_symbol = {{.*}}, llvm.linkage = #llvm.linkage<internal>} {
@@ -182,7 +182,7 @@ subroutine test3a(p)
   if (p(1) .ne. -42.0) then
      print *, "failed"
   end if
-  
+
 contains
   ! CHECK: func private @_QFtest3aPtest3a_inner(
   ! CHECK-SAME: %[[tup:.*]]: !fir.ref<tuple<!fir.box<!fir.array<10xf32>>, !fir.box<!fir.array<10xf32>>>> {fir.host_assoc}) attributes {fir.host_symbol = {{.*}}, llvm.linkage = #llvm.linkage<internal>} {
@@ -226,7 +226,7 @@ subroutine test4
   if (p .ne. -42.0) then
      print *, "failed"
   end if
-  
+
 contains
   ! CHECK-LABEL: func private @_QFtest4Ptest4_inner(
   ! CHECK-SAME:%[[tup:.*]]: !fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>>> {fir.host_assoc}) attributes {fir.host_symbol = {{.*}}, llvm.linkage = #llvm.linkage<internal>} {
@@ -268,7 +268,7 @@ subroutine test5
   if (p(1) .ne. -42.0) then
      print *, "failed"
   end if
-  
+
 contains
   ! CHECK-LABEL: func private @_QFtest5Ptest5_inner(
   ! CHECK-SAME:%[[tup:.*]]: !fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>> {fir.host_assoc}) attributes {fir.host_symbol = {{.*}}, llvm.linkage = #llvm.linkage<internal>} {
@@ -420,7 +420,7 @@ contains
 subroutine bar()
   ! CHECK: %[[tupAddr:.*]] = fir.coordinate_of %[[tup]], %c0{{.*}} : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>>
   ! CHECK: fir.load %[[tupAddr]] : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>>
-  read (88, NML = a_namelist) 
+  read (88, NML = a_namelist)
 end subroutine
 end subroutine
 
@@ -642,7 +642,7 @@ end subroutine test_proc_dummy_char
 function get_message(a)
   character(40) :: get_message
   character(*) :: a
-  get_message = "message is: " // a() 
+  get_message = "message is: " // a()
 end function get_message
 
 ! CHECK-LABEL: func @_QPtest_11a() {

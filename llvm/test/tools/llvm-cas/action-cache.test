@@ -1,0 +1,14 @@
+RUN: rm -rf %t %t.cas
+RUN: mkdir %t
+
+RUN: llvm-cas --cas %t.cas --make-blob \
+RUN:   --data %S/Inputs/oneline >%t/oneline.casid
+RUN: llvm-cas --cas %t.cas --make-blob \
+RUN:   --data %S/Inputs/oneline-nonewline >%t/oneline-nonewline.casid
+
+RUN: llvm-cas --cas %t.cas --put-cache-key @%t/oneline.casid @%t/oneline-nonewline.casid
+RUN: llvm-cas --cas %t.cas --get-cache-result @%t/oneline.casid > %t/result.casid
+RUN: diff %t/oneline-nonewline.casid %t/result.casid
+
+RUN: not llvm-cas --cas %t.cas --get-cache-result @%t/oneline-nonewline.casid 2>&1 | FileCheck %s
+CHECK: result not found

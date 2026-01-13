@@ -40,8 +40,8 @@ struct ExtensionComparator {
 
 /// OrderedExtensionMap is std::map, it's specialized to keep entries
 /// in canonical order of extension.
-typedef std::map<std::string, ExtensionVersion, ExtensionComparator>
-    OrderedExtensionMap;
+using OrderedExtensionMap =
+    std::map<std::string, ExtensionVersion, ExtensionComparator>;
 
 } // namespace RISCVISAUtils
 

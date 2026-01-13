@@ -261,7 +261,7 @@ template <> struct format_provider<bool> {
                   .Case("y", B ? "yes" : "no")
                   .CaseLower("D", B ? "1" : "0")
                   .Case("T", B ? "TRUE" : "FALSE")
-                  .Cases("t", "", B ? "true" : "false")
+                  .Cases({"t", ""}, B ? "true" : "false")
                   .Default(B ? "1" : "0");
   }
 };

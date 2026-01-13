@@ -23,7 +23,7 @@ entry:
 
 define dso_local double @testDouble(double %a, double %b) local_unnamed_addr  {
 entry:
-;CHECK: call __hexagon_divdf3
+;CHECK: jump __hexagon_divdf3
   %div = fdiv double %a, %b
   ret double %div
 }

@@ -1,16 +1,16 @@
-<!--===- docs/OptionComparison.md 
-  
+<!--===- docs/OptionComparison.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 # Compiler options comparison
 
-This document catalogs the options processed by F18's peers/competitors.  Much of the document is taken up by a set of tables that list the options categorized into different topics.  Some of the table headings link to more information about the contents of the tables.  For example, the table on **Standards conformance** options links to <a href=#standards">notes on Standards conformance</a>.
+This document catalogs the options processed by Flang's peers/competitors.  Much of the document is taken up by a set of tables that list the options categorized into different topics.  Some of the table headings link to more information about the contents of the tables.  For example, the table on **Standards conformance** options links to <a href="#standards">notes on Standards conformance</a>.
 
-**There's also important information in the ___[Appendix section](#appendix)___ near the end of the document on how this data was gathered and what ___is___ and ___is not___ included in this document.**  
+**There's also important information in the ___[Appendix section](#appendix)___ near the end of the document on how this data was gathered and what ___is___ and ___is not___ included in this document.**
 
 Note that compilers may support language features without having an option for them.  Such cases are frequently, but not always noted in this document.
 
@@ -28,7 +28,7 @@ Note that compilers may support language features without having an option for t
    <td><strong>IBM</strong> </td>
    <td><strong>Intel</strong> </td>
    <td><strong>PGI</strong> </td>
-   <td><strong>Flang</strong> </td>
+   <td><strong>Classic Flang</strong> </td>
   </tr>
   <tr>
    <td>Overall conformance </td>
@@ -37,9 +37,9 @@ Note that compilers may support language features without having an option for t
 eN
    </td>
    <td>std=<em>level</em> </td>
-   <td><a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=210">qlanglvl</a>, <a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=257">qsaa</a>
+   <td>qlanglvl, qsaa
    </td>
-   <td><a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-stand">stand level</a>
+   <td>stand level
    </td>
    <td>Mstandard
    </td>
@@ -55,33 +55,33 @@ eN
 <p>
 fall-intrinsics
    </td>
-   <td><a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=297">qxlf77</a>,
+   <td>qxlf77,
 <p>
-<a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=299">qxlf90</a>,
+qxlf90,
 <p>
-<a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=301">qxlf2003</a>,
+qxlf2003,
 <p>
-<a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=305">qxfl2008</a>,
+qxfl2008,
 <p>
-<a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=245">qport</a>
+qport
    </td>
-   <td><a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-f66">f66</a>,
+   <td>f66,
 <p>
-<a href="https://software.intel.com/node/a8bfa478-22d5-4000-b0ac-b881804a7611">f77rtl</a>,
+f77rtl,
 <p>
-<a href="https://software.intel.com/node/647820a0-fc53-4252-a858-46feb012a281">fpscomp</a>,
+fpscomp,
 <p>
-<a href="https://software.intel.com/node/e610682a-00fe-4881-9cf7-8eee08c5f2a2">Intconstant</a>,
+Intconstant,
 <p>
-<a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-standard-realloc-lhs">nostandard-realloc-lhs</a>,
+nostandard-realloc-lhs,
 <p>
-<a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-standard-semantics">standard-semantics</a>,
+standard-semantics,
 <p>
-<a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-assume">assume nostd_intent_in</a>,
+assume nostd_intent_in,
 <p>
-<a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-assume">assume nostd_value</a>,
+assume nostd_value,
 <p>
-<a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-assume">assume norealloc_lhs</a>
+assume norealloc_lhs
    </td>
    <td>Mallocatable=95|03
    </td>
@@ -112,7 +112,7 @@ fall-intrinsics
    </td>
    <td><strong>PGI</strong>
    </td>
-   <td><strong>Flang</strong>
+   <td><strong>Classic Flang</strong>
    </td>
   </tr>
   <tr>
@@ -126,13 +126,13 @@ f fixed
 <p>
 ffixed-form
    </td>
-   <td><a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=179">qfree</a>,
+   <td>qfree,
 <p>
-<a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=169">qfixed</a>
+qfixed
    </td>
-   <td><a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-fixed">fixed</a>,
+   <td>fixed,
 <p>
-<a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-free">free</a>
+free
    </td>
    <td>Mfree,
 <p>
@@ -152,9 +152,9 @@ Mfixed
 <p>
 ffree-line-length-n
    </td>
-   <td><a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=169">qfixed=n</a>
+   <td>qfixed=n
    </td>
-   <td><a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-extend-source">extend-source [size]</a>
+   <td>extend-source [size]
    </td>
    <td>Mextend
    </td>
@@ -172,11 +172,11 @@ fd-lines-as-comments
    </td>
    <td>D,
 <p>
-<a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=161">qdlines</a>,
+qdlines,
 <p>
-<a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=306">qxlines</a>
+qxlines
    </td>
-   <td><a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-d-lines-qd-lines">d-lines</a>
+   <td>d-lines
    </td>
    <td>Mdlines
    </td>
@@ -190,7 +190,7 @@ fd-lines-as-comments
    </td>
    <td>N/A
    </td>
-   <td><a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=153">qnocr</a>
+   <td>qnocr
    </td>
    <td>N/A
    </td>
@@ -206,11 +206,11 @@ fd-lines-as-comments
    </td>
    <td>N/A
    </td>
-   <td><a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=282">qsuffix</a>
+   <td>qsuffix
    </td>
-   <td><a href="https://software.intel.com/node/84174680-3c7d-4225-9611-6083f496aa9b">extfor</a>,
+   <td>extfor,
 <p>
-<a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-tf">Tf filename</a>
+Tf filename
    </td>
    <td>N/A
    </td>
@@ -241,7 +241,7 @@ fd-lines-as-comments
    </td>
    <td><strong>PGI</strong>
    </td>
-   <td><strong>Flang</strong>
+   <td><strong>Classic Flang</strong>
    </td>
   </tr>
   <tr>
@@ -281,7 +281,7 @@ fd-lines-as-comments
    </td>
    <td>eQ
    </td>
-   <td>N/A 
+   <td>N/A
    </td>
    <td>N/A
    </td>
@@ -299,9 +299,9 @@ fd-lines-as-comments
    </td>
    <td>N/A
    </td>
-   <td><a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=296">U</a>
+   <td>U
    </td>
-   <td><a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-names">names=keyword</a>
+   <td>names=keyword
    </td>
    <td>Mupcase
    </td>
@@ -315,9 +315,9 @@ fd-lines-as-comments
    </td>
    <td>fbackslash
    </td>
-   <td><a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=163">qescape</a>
+   <td>qescape
    </td>
-   <td><a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-assume">assume bscc</a>
+   <td>assume bscc
    </td>
    <td>Mbackslash
    </td>
@@ -331,7 +331,7 @@ fd-lines-as-comments
    </td>
    <td>N/A
    </td>
-   <td><a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=223">qmbcs</a>
+   <td>qmbcs
    </td>
    <td>N/A
    </td>
@@ -347,7 +347,7 @@ fd-lines-as-comments
    </td>
    <td>N/A
    </td>
-   <td><a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=228">qnullterm</a>
+   <td>qnullterm
    </td>
    <td>N/A
    </td>
@@ -381,7 +381,7 @@ fd-lines-as-comments
    </td>
    <td>N/A
    </td>
-   <td><a href="https://software.intel.com/node/42e8ec08-64cc-44ba-a636-20ed50c682cd">altparam</a>
+   <td>altparam
    </td>
    <td>N?A
    </td>
@@ -410,7 +410,7 @@ fd-lines-as-comments
    </td>
    <td><strong>PGI</strong>
    </td>
-   <td><strong>Flang</strong>
+   <td><strong>Classic Flang</strong>
    </td>
   </tr>
   <tr>
@@ -420,15 +420,15 @@ fd-lines-as-comments
    </td>
    <td>N/A
    </td>
-   <td><a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=113">1</a>,
+   <td>1,
 <p>
-<a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=231">qonetrip</a>
+qonetrip
    </td>
-   <td><a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-f66">f66</a>
+   <td>f66
    </td>
    <td>Monetrip
    </td>
-   <td>N/A 
+   <td>N/A
    </td>
   </tr>
   <tr>
@@ -471,7 +471,7 @@ fd-lines-as-comments
    </td>
    <td><strong>PGI</strong>
    </td>
-   <td><strong>Flang</strong>
+   <td><strong>Classic Flang</strong>
    </td>
   </tr>
   <tr>
@@ -487,9 +487,9 @@ s default64
    </td>
    <td>fdefault-real-[8|10|16]
    </td>
-   <td><a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=252">qrealsize=[4|8]</a>
+   <td>qrealsize=[4|8]
    </td>
-   <td><a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-real-size">real-size [32|64|128]</a>
+   <td>real-size [32|64|128]
    </td>
    <td>r[4|8]
    </td>
@@ -507,7 +507,7 @@ fdefault-real-8
    </td>
    <td>N/A
    </td>
-   <td><a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-double-size">double-size[64|128]</a>
+   <td>double-size[64|128]
    </td>
    <td>N/A
    </td>
@@ -521,7 +521,7 @@ fdefault-real-8
    </td>
    <td>N/A
    </td>
-   <td><a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=161">qdpc</a>
+   <td>qdpc
    </td>
    <td>N/A
    </td>
@@ -537,7 +537,7 @@ fdefault-real-8
    </td>
    <td>freal-[4|8]-real[4|8|10|16]
    </td>
-   <td><a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=144">qautodbl=size</a>
+   <td>qautodbl=size
    </td>
    <td>N/A
    </td>
@@ -555,9 +555,9 @@ Mr8intrinsics
    </td>
    <td>N/A
    </td>
-   <td><a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=190">qieee</a>
+   <td>qieee
    </td>
-   <td><a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-assume">assume std_minus0_rounding</a>
+   <td>assume std_minus0_rounding
    </td>
    <td>N/A
    </td>
@@ -573,7 +573,7 @@ Mr8intrinsics
    </td>
    <td>N/A
    </td>
-   <td><a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-assume">assume minus0</a>
+   <td>assume minus0
    </td>
    <td>
    </td>
@@ -604,7 +604,7 @@ Mr8intrinsics
    </td>
    <td><strong>PGI</strong>
    </td>
-   <td><strong>Flang</strong>
+   <td><strong>Classic Flang</strong>
    </td>
   </tr>
   <tr>
@@ -620,9 +620,9 @@ s default64
    </td>
    <td>fdefault-integer-8
    </td>
-   <td><a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=202">qintsize=[2|4|8]</a>
+   <td>qintsize=[2|4|8]
    </td>
-   <td><a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-integer-size">integer-size [32|64|128]</a>
+   <td>integer-size [32|64|128]
    </td>
    <td>I[2|4|8],
 <p>
@@ -690,9 +690,9 @@ fdefault-integer-8
    </td>
    <td>N/A
    </td>
-   <td><a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=297">qxlf77 oldboz</a>
+   <td>qxlf77 oldboz
    </td>
-   <td><a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-assume">assume old_boz</a>
+   <td>assume old_boz
    </td>
    <td>N/A
    </td>
@@ -708,7 +708,7 @@ fdefault-integer-8
    </td>
    <td>N/A
    </td>
-   <td><a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-assume">assume old_logical_assign</a>
+   <td>assume old_logical_assign
    </td>
    <td>N/A
    </td>
@@ -739,7 +739,7 @@ fdefault-integer-8
    </td>
    <td><strong>PGI</strong>
    </td>
-   <td><strong>Flang</strong>
+   <td><strong>Classic Flang</strong>
    </td>
   </tr>
   <tr>
@@ -781,7 +781,7 @@ fdefault-integer-8
    </td>
    <td>N/A
    </td>
-   <td><a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=153">qctyplss</a>
+   <td>qctyplss
    </td>
    <td>N/A
    </td>
@@ -810,7 +810,7 @@ fdefault-integer-8
    </td>
    <td><strong>PGI</strong>
    </td>
-   <td><strong>Flang</strong>
+   <td><strong>Classic Flang</strong>
    </td>
   </tr>
   <tr>
@@ -820,9 +820,9 @@ fdefault-integer-8
    </td>
    <td>fimplicit-none
    </td>
-   <td>u, <a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=291">qundef</a>
+   <td>u, qundef
    </td>
-   <td><a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-warn">warn declarations</a>
+   <td>warn declarations
    </td>
    <td>Mdclchk
    </td>
@@ -840,21 +840,21 @@ fdefault-integer-8
    </td>
    <td>N/A
    </td>
-   <td><a href="https://www.pgroup.com/doc/pgi15fortref.pdf#page=86">default</a>
+   <td>default
    </td>
    <td>N/A
    </td>
   </tr>
   <tr>
-   <td>Enable <a href="https://support.hpe.com/hpesc/public/docDisplay?docId=a00113911en_us&docLocale=en_US&page=Types.html">Cray pointers</a>
+   <td>Enable Cray pointers
    </td>
    <td>default
    </td>
    <td>fcray-pointer
    </td>
-   <td><a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024776&aid=1#page=432">Default (near equivalent)</a>
+   <td>Default (near equivalent)
    </td>
-   <td><a href="https://www.intel.com/content/www/us/en/develop/documentation/fortran-compiler-oneapi-dev-guide-and-reference/top/language-reference/a-to-z-reference/o-to-p/pointer-integer.html">Default (near equivalent)</a>
+   <td>Default (near equivalent)
    </td>
    <td>Mcray
    </td>
@@ -868,7 +868,7 @@ fdefault-integer-8
    </td>
    <td>N/A
    </td>
-   <td><a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=201">qintlog</a>
+   <td>qintlog
    </td>
    <td>N/A
    </td>
@@ -884,11 +884,11 @@ fdefault-integer-8
    </td>
    <td>fdec-static
    </td>
-   <td>Default, see <a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024776&aid=1#page=393">IMPLICIT STATIC</a> and <a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024776&aid=1#page=393">IMPLICIT AUTOMATIC</a>
+   <td>Default, see IMPLICIT STATIC and IMPLICIT AUTOMATIC
    </td>
-   <td>Default, see <a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-automatic">AUTOMATIC</a> and <a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-static-1#408BC4E6-7AA7-4475-A280-205D34AE2E4F">STATIC</a>
+   <td>Default, see AUTOMATIC and STATIC
    </td>
-   <td><a href="https://www.pgroup.com/doc/pgi15fortref.pdf#page=86">Default</a>
+   <td>Default
    </td>
    <td>N/A
    </td>
@@ -900,11 +900,11 @@ fdefault-integer-8
    </td>
    <td>fno-automatic
    </td>
-   <td><a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=258">qsave</a>
+   <td>qsave
    </td>
-   <td><a href="https://software.intel.com/node/3ed16417-6eed-4e09-9edd-4ae03e77c6cf">save</a>,
+   <td>save,
 <p>
-<a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-auto">noauto</a>
+noauto
    </td>
    <td>Mnorecursive,
 <p>
@@ -920,11 +920,11 @@ Msave
    </td>
    <td>frecursive
    </td>
-   <td><a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=254">q recur</a>
+   <td>q recur
    </td>
-   <td><a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-assume">assume recursion</a>,
+   <td>assume recursion,
 <p>
-<a href="https://software.intel.com/node/1c3820b4-42a1-48ea-887a-2cf39a41ce53">recursive</a>
+recursive
    </td>
    <td>Mrecursive
    </td>
@@ -952,7 +952,7 @@ Msave
    </td>
    <td><strong>PGI</strong>
    </td>
-   <td><strong>Flang</strong>
+   <td><strong>Classic Flang</strong>
    </td>
   </tr>
   <tr>
@@ -965,7 +965,7 @@ Msave
    </td>
    <td>N/A
    </td>
-   <td><a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-coarray-qcoarray">coarray[=keyword]</a>
+   <td>coarray[=keyword]
    </td>
    <td>N/A
    </td>
@@ -979,9 +979,9 @@ Msave
    </td>
    <td>N/A
    </td>
-   <td><a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=142">qassert=contig</a>
+   <td>qassert=contig
    </td>
-   <td><a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-assume">assume contiguous_pointer</a>
+   <td>assume contiguous_pointer
    </td>
    <td>N/A
    </td>
@@ -995,9 +995,9 @@ Msave
    </td>
    <td>frepack-arrays
    </td>
-   <td><a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=142">qassert=contig</a>
+   <td>qassert=contig
    </td>
-   <td><a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-assume">assume contiguous_assumed_shape</a>
+   <td>assume contiguous_assumed_shape
    </td>
    <td>N/A
    </td>
@@ -1027,13 +1027,13 @@ Msave
    </td>
    <td><strong>PGI</strong>
    </td>
-   <td><strong>Flang</strong>
+   <td><strong>Classic Flang</strong>
    </td>
   </tr>
   <tr>
    <td>Enable OpenACC
    </td>
-   <td> <a href="https://pubs.cray.com/content/S-3901/8.7/cray-fortran-reference-manual/program-model-specific-options">h acc</a>
+   <td>h acc
    </td>
    <td>fopenacc
    </td>
@@ -1041,7 +1041,7 @@ Msave
    </td>
    <td>N/A
    </td>
-   <td><a href="https://www.pgroup.com/resources/docs/19.1/x86/pgi-ref-guide/index.htm#acc">acc</a>
+   <td>acc
    </td>
    <td>N/A
    </td>
@@ -1049,27 +1049,27 @@ Msave
   <tr>
    <td>Enable OpenMP
    </td>
-   <td> <a href="https://pubs.cray.com/content/S-3901/8.7/cray-fortran-reference-manual/program-model-specific-options">h omp</a>
+   <td>h omp
    </td>
    <td>fopenmp
    </td>
-   <td><a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=285">qswapomp</a>
+   <td>qswapomp
    </td>
-   <td><a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-qopenmp-qopenmp">qopenmp</a>,
+   <td>qopenmp,
 <p>
-<a href="https://software.intel.com/node/26d2aef3-9c68-4ef2-9241-bce168a48629">qopenmp-lib</a>,
+qopenmp-lib,
 <p>
-<a href="https://software.intel.com/node/f8d22e40-7ed0-4ec6-8e80-d4d27010ca8b">qopenmp-link</a>,
+qopenmp-link,
 <p>
-<a href="https://software.intel.com/node/2cc99a64-9605-44e2-b40a-1409ba459a62">qopenmp-offload</a>,
+qopenmp-offload,
 <p>
-<a href="https://software.intel.com/node/02ef8658-3e66-4634-8a11-68eec60322c1">qopenmp-simd</a>,
+qopenmp-simd,
 <p>
-<a href="https://software.intel.com/node/088272f2-5eae-42c2-a053-20f42022343d">qopenmp-stubs</a>,
+qopenmp-stubs,
 <p>
-<a href="https://software.intel.com/node/0ed8bee0-62b4-4266-8cbb-f25b585d4800">qopenmp-threadprivate</a>
+qopenmp-threadprivate
    </td>
-   <td><a href="https://www.pgroup.com/resources/docs/19.1/x86/pgi-ref-guide/index.htm#mp">mp</a>,
+   <td>mp,
 <p>
 Mcuda
    </td>
@@ -1098,7 +1098,7 @@ Mcuda
    </td>
    <td><strong>PGI</strong>
    </td>
-   <td><strong>Flang</strong>
+   <td><strong>Classic Flang</strong>
    </td>
   </tr>
   <tr>
@@ -1187,16 +1187,16 @@ Mcuda
 
 ## Notes
 
-**<a name="standards"></a>Standards conformance:** 
+**<a name="standards"></a>Standards conformance:**
 
 All conformance options are similar -- they issue warnings if non-standard features are used.  All defaults are to allow extensions without warnings.  The GNU, IBM, and Intel compilers allow multiple standard levels to be specified.
 
 
 
-*   **Cray**: The capital "-eN" option specifies to issue error messages for non-compliance rather than warnings.  
+*   **Cray**: The capital "-eN" option specifies to issue error messages for non-compliance rather than warnings.
 *   **GNU:** The "std=_level_" option specifies the standard to which the program is expected to conform.   The default value for std is 'gnu', which specifies a superset of the latest Fortran standard that includes all of the extensions supported by GNU Fortran, although warnings will be given for obsolete extensions not recommended for use in new code. The 'legacy' value is equivalent but without the warnings for obsolete extensions. The 'f95', 'f2003', 'f2008', and 'f2018' values specify strict conformance to the respective standards.  Errors are given for all extensions beyond the relevant language standard, and warnings are given for the Fortran 77 features that are permitted but obsolescent in later standards. '-std=f2008ts' allows the Fortran 2008 standard including the additions of the Technical Specification (TS) 29113 on Further Interoperability of Fortran with C and TS 18508 on Additional Parallel Features in Fortran.  Values for "_level_" are f_95, f2003, f2008, f2008ts, f2018, gnu,_ and _legacy._
 
-**<a name="source"></a>Source format:** 
+**<a name="source"></a>Source format:**
 
 **Fixed or free source:**  Cray, IBM, and Intel default the source format based on the source file suffix as follows:
 
@@ -1220,7 +1220,7 @@ IBM Fortran's options allow the source line length to be specified with the opti
 *   **GNU:** For both "ffixed-line-length-_n_" and "ffree-line-length-_n_" options, characters are ignored after the specified length.  The default for fixed is 72.  The default for free is 132.  For free, you can specify 'none' as the length, which means that all characters in the line are meaningful.
 *   **IBM:** For **fixed**, the default is 72.  For **free**, there's no default, but the maximum length for either form is 132.
 *   **Intel:** The default is 72 for **fixed** and 132 for **free**.
-*   **PGI, Flang:** 
+*   **PGI, Classic Flang:**
     * in free form, it is an error if the line is longer than 1000 characters
     * in fixed form by default, characters after column 72 are ignored
     * in fixed form with -Mextend, characters after column 132 are ignored
@@ -1233,7 +1233,7 @@ IBM Fortran's options allow the source line length to be specified with the opti
 *   **GNU:** The "-fbackslash" option the interpretation of backslashes in string literals from a single backslash character to "C-style" escape characters. The following combinations are expanded \a, \b, \f, \n, \r, \t, \v, \\, and \0 to the ASCII characters alert, backspace, form feed, newline, carriage return, horizontal tab, vertical tab, backslash, and NUL, respectively. Additionally, \xnn, \unnnn and \Unnnnnnnn (where each n is a hexadecimal digit) are translated into the Unicode characters corresponding to the specified code points. All other combinations of a character preceded by \ are unexpanded.
 *   **Intel:** The option "-assume bscc" tells the compiler to treat the backslash character (\) as a C-style control (escape) character syntax in character literals. "nobscc" specifies that the backslash character is treated as a normal character in character literals.  This is the default.
 
-**"$" in symbol names:** Allowing "$" in names is controlled by an option in GNU and is the default behavior in IBM and Intel.  Presumably, these compilers issue warnings when standard conformance options are enabled.  Dollar signs in names don't seem to be allowed in Cray, PGI, or Flang.
+**"$" in symbol names:** Allowing "$" in names is controlled by an option in GNU and is the default behavior in IBM and Intel.  Presumably, these compilers issue warnings when standard conformance options are enabled.  Dollar signs in names don't seem to be allowed in Cray, PGI, or Classic Flang.
 
 **<a name="do"></a>DO loop handling**
 
@@ -1242,7 +1242,7 @@ IBM Fortran's options allow the source line length to be specified with the opti
 
 
 *   **IBM:** IBM has two options that do the same thing: "-1" and "-qonetrip".
-*   **Intel:** Intel used to support a "-onetrip" option, but it has been removed.  Intel now supports a "-f66" option that ensures that DO loops are executed at least once in addition to [several other Fortran 66 semantic features](https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-f66#320D769C-7C41-4A84-AE0E-50A72296A838).
+*   **Intel:** Intel used to support a "-onetrip" option, but it has been removed.  Intel now supports a "-f66" option that ensures that DO loops are executed at least once in addition to several other Fortran 66 semantic features.
 
 **<a name="real"></a>REAL, DOUBLE PRECISION, and COMPLEX Data**
 
@@ -1264,7 +1264,7 @@ These size options affect the sizes of variables, literals, and intrinsic functi
 **Promote or demote REAL type sizes:** These options change the meaning of data types specified by declarations of the form REAL(KIND=_N_), except, perhaps for PGI.
 
 *   **GNU:** The allowable combinations are "-freal-4-real-8", "-freal-4-real-10", "-freal-4-real-16", "-freal-8-real-4", "-freal-8-real-10", and "-freal-8-real-16".
-*   **IBM:** The "-qautodbl" option  is documented [here](https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=144).
+*   **IBM:** The "-qautodbl" option controls automatic promotion of REAL types.
 *   **PGI:** The "-Mr8" option promotes REAL variables and constants to DOUBLE PRECISION variables and constants, respectively. DOUBLE PRECISION elements are 8 bytes in length.  The "-Mr8intrinsics" option promotes the intrinsics CMPLX and REAL as DCMPLX and DBLE, respectively.
 
 **<a name="integer"></a>INTEGER and LOGICAL Data**
@@ -1322,15 +1322,15 @@ Here's the list of compilers surveyed, hot linked to the source of data on it.  
 
 
 *   [Cray Fortran Reference Manual version 8.7](https://pubs.cray.com/content/S-3901/8.7/cray-fortran-reference-manual/compiler-command-line-options)
-*   IBM  (XLF) version 14.1 -- [Compiler Referenc](https://www-01.ibm.com/support/docview.wss?uid=swg27024803&aid=1#page=93)e, [Language Reference](https://www-01.ibm.com/support/docview.wss?uid=swg27024776&aid=1)
+*   IBM  (XLF) version 14.1 -- [Compiler Reference](https://www.ibm.com/support/pages/compiler-reference-xl-fortran-linux-v141#page=93), [Compiler Reference direct PDF](https://www.ibm.com/support/pages/system/files/support/swg/swgdocs.nsf/0/94c58d010e922f6d852579de00261d61/$FILE/compiler.pdf) [Language Reference](https://www.ibm.com/support/pages/language-reference-xl-fortran-linux-v141), [Language Reference direct PDF](https://www.ibm.com/support/pages/system/files/support/swg/swgdocs.nsf/0/7e46ea600b6646d0852579dc00331978/$FILE/langref.pdf)
 *   [Intel Fortran version 19.0](https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-alphabetical-list-of-compiler-options)
 *   [GNU Fortran Compiler version 8.3.0](https://gcc.gnu.org/onlinedocs/gcc-8.3.0/gfortran/Option-Summary.html)
 *   [NAG Fortran Release 6.2](https://www.nag.co.uk/nagware/np/r62_doc/manual/compiler_2_4.html)
 *   [Oracle Fortran version 819-0492-10](https://docs.oracle.com/cd/E19059-01/stud.10/819-0492/3_options.html)
 *   PGI -- [Compiler Reference version 19.1](https://www.pgroup.com/resources/docs/19.1/x86/pgi-ref-guide/index.htm#cmdln-options-ref), [Fortran Reference Guide version 17](https://www.pgroup.com/doc/pgi17fortref.pdf)
-*   [Flang](https://github.com/flang-compiler/flang/wiki/Using-Flang) -- information from GitHub
+*   [Classic Flang](https://github.com/flang-compiler/flang/wiki/Using-Flang) -- information from GitHub
 
-This document has been kept relatively small by providing links to much of the information about options rather than duplicating that information.  For IBM, Intel, and some PGI options, there are direct links.  But direct links were not possible for Cray, GNU and some PGI options.
+This document has been kept relatively small by providing links to much of the information about options rather than duplicating that information.  For some PGI options, there are direct links.  But direct links were not possible for the remaining PGI options and those of other compilers
 
 Many compilers have options that can either be enabled or disabled.  Some compilers indicate this by the presence or absence of the letters "no" in the option name (IBM, Intel, and PGI) while Cray precedes many options with either "e" for enabled or "d" for disabled.  This document only includes the enabled version of the option specification.
 

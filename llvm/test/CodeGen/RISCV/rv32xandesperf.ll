@@ -490,3 +490,50 @@ define i64 @sexti32_i64_2(i32 %a) {
   %1 = sext i32 %a to i64
   ret i64 %1
 }
+
+; NDS.FFB/NDS.FFZMISM/NDS.FFMISM/NDS.FLMISM
+
+declare i32 @llvm.riscv.nds.ffb.i32(i32, i32)
+declare i32 @llvm.riscv.nds.ffzmism.i32(i32, i32)
+declare i32 @llvm.riscv.nds.ffmism.i32(i32, i32)
+declare i32 @llvm.riscv.nds.flmism.i32(i32, i32)
+
+define i32 @ffb(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: ffb:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    nds.ffb a0, a0, a1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.riscv.nds.ffb.i32(i32 %a, i32 %b)
+  ret i32 %0
+}
+
+define i32 @ffzmism(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: ffzmism:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    nds.ffzmism a0, a0, a1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.riscv.nds.ffzmism.i32(i32 %a, i32 %b)
+  ret i32 %0
+}
+
+define i32 @ffmism(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: ffmism:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    nds.ffmism a0, a0, a1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.riscv.nds.ffmism.i32(i32 %a, i32 %b)
+  ret i32 %0
+}
+
+define i32 @flmism(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: flmism:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    nds.flmism a0, a0, a1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i32 @llvm.riscv.nds.flmism.i32(i32 %a, i32 %b)
+  ret i32 %0
+}

@@ -1,0 +1,188 @@
+# Test to ensure that variable "__last" is properly recovered at the end of the livedebugvalues pass when Instruction Referencing-based LiveDebugValues is used.
+# This testcase was obtained by looking at FileCheck.cpp and reducing it down via llvm-reduce.
+# This test is the same as llvm/test/DebugInfo/AArch64/instr-ref-target-hooks.ll, however, the output is taken just before the livedebugvalues pass, and then a clobber
+# to the stack slot has been added after the first LDRXui in bb.2.if.then13, the livedebugvalues pass should still recover the value, as it was loaded into $x8 before the clobber.
+
+# RUN: llc -o - %s -start-before=livedebugvalues -stop-after=livedebugvalues -mtriple=aarch64-apple-darwin | FileCheck %s
+
+# CHECK: ![[LOC:[0-9]+]] = !DILocalVariable(name: "__last",
+# CHECK-LABEL: bb.2.if.then13
+# CHECK: STRXui $xzr, $sp, 1
+# CHECK-NEXT: DBG_VALUE_LIST ![[LOC]], !DIExpression(DW_OP_LLVM_arg, 0), $x8
+
+--- |
+  ; ModuleID = '/Users/srastogi/Development/llvm-project/llvm/test/DebugInfo/AArch64/instr-ref-target-hooks.ll'
+  source_filename = "/Users/srastogi/Development/llvm-project/llvm/test/DebugInfo/AArch64/instr-ref-target-hooks.ll"
+  target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
+  
+  declare void @_ZdlPvm()
+  
+  define fastcc void @"_ZNSt3__111__introsortINS_17_ClassicAlgPolicyERZL18DumpAnnotatedInputRN4llvm11raw_ostreamERKNS2_16FileCheckRequestE20DumpInputFilterValuejNS2_9StringRefERNS_6vectorI15InputAnnotationNS_9allocatorISB_EEEEjE3$_0PSB_Lb0EEEvT1_SJ_T0_NS_15iterator_traitsISJ_E15difference_typeEb"(ptr %__first, ptr %__last, i1 %cmp, ptr %__first.addr.0, ptr %Label3.i.i.i241, ptr %__pivot.sroa.9113.8.copyload.i, ptr %0, ptr %1) !dbg !4 {
+    br label %while.cond
+  
+  while.cond:                                       ; preds = %if.end16, %2
+    br i1 %cmp, label %if.then13, label %if.end16
+  
+  if.then13:                                        ; preds = %while.cond
+    %cmp.i = icmp eq ptr %__first, %__last
+    %or.cond.i = select i1 %cmp.i, i1 false, i1 false
+      #dbg_value(ptr %__last, !10, !DIExpression(), !16)
+    br i1 %or.cond.i, label %common.ret, label %for.body.i, !dbg !20
+  
+  common.ret:                                       ; preds = %for.body.i, %if.then13
+    ret void
+  
+  for.body.i:                                       ; preds = %if.then13
+    %InputLine.i.i = getelementptr i8, ptr %__first.addr.0, i64 132
+    br label %common.ret
+  
+  if.end16:                                         ; preds = %while.cond
+    %__pivot.sroa.13.8.copyload.i = load i64, ptr null, align 8
+    call void @_ZdlPvm()
+    store ptr %__pivot.sroa.9113.8.copyload.i, ptr %0, align 8
+    store i64 %__pivot.sroa.13.8.copyload.i, ptr %1, align 8
+    store i64 0, ptr %__first, align 8
+    store i32 0, ptr %__first.addr.0, align 8
+    store i32 1, ptr %Label3.i.i.i241, align 4
+    br label %while.cond
+  }
+  
+  !llvm.module.flags = !{!0}
+  !llvm.dbg.cu = !{!1}
+  
+  !0 = !{i32 2, !"Debug Info Version", i32 3}
+  !1 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !2, producer: "clang version 22.0.0git (git@github.com:llvm/llvm-project.git 46a3b4d5dc6dd9449ec7c0c9065552368cdf41d6)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !3, retainedTypes: !3, globals: !3, imports: !3, splitDebugInlining: false, nameTableKind: Apple, sysroot: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.3.sdk", sdk: "MacOSX15.3.sdk")
+  !2 = !DIFile(filename: "/Users/shubhamrastogi/Development/llvm-project-instr-ref/llvm-project/llvm/utils/FileCheck/FileCheck.cpp", directory: "/Users/shubhamrastogi/Development/llvm-project-instr-ref/llvm-project/build-instr-ref-stage2", checksumkind: CSK_MD5, checksum: "fa5f53f1b5782eb8b92fadec416b8941")
+  !3 = !{}
+  !4 = distinct !DISubprogram(name: "__introsort<std::__1::_ClassicAlgPolicy, (lambda at /Users/shubhamrastogi/Development/llvm-project-instr-ref/llvm-project/llvm/utils/FileCheck/FileCheck.cpp:544:14) &, InputAnnotation *, false>", linkageName: "_ZNSt3__111__introsortINS_17_ClassicAlgPolicyERZL18DumpAnnotatedInputRN4llvm11raw_ostreamERKNS2_16FileCheckRequestE20DumpInputFilterValuejNS2_9StringRefERNS_6vectorI15InputAnnotationNS_9allocatorISB_EEEEjE3$_0PSB_Lb0EEEvT1_SJ_T0_NS_15iterator_traitsISJ_E15difference_typeEb", scope: !6, file: !5, line: 758, type: !8, scopeLine: 762, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized, unit: !1, templateParams: !3, retainedNodes: !3, keyInstructions: true)
+  !5 = !DIFile(filename: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.3.sdk/usr/include/c++/v1/__algorithm/sort.h", directory: "")
+  !6 = !DINamespace(name: "__1", scope: !7, exportSymbols: true)
+  !7 = !DINamespace(name: "std", scope: null)
+  !8 = !DISubroutineType(cc: DW_CC_nocall, types: !9)
+  !9 = !{null}
+  !10 = !DILocalVariable(name: "__last", arg: 2, scope: !11, file: !5, line: 284, type: !13)
+  !11 = distinct !DISubprogram(name: "__insertion_sort<std::__1::_ClassicAlgPolicy, (lambda at /Users/shubhamrastogi/Development/llvm-project-instr-ref/llvm-project/llvm/utils/FileCheck/FileCheck.cpp:544:14) &, InputAnnotation *>", linkageName: "_ZNSt3__116__insertion_sortB8nn180100INS_17_ClassicAlgPolicyERZL18DumpAnnotatedInputRN4llvm11raw_ostreamERKNS2_16FileCheckRequestE20DumpInputFilterValuejNS2_9StringRefERNS_6vectorI15InputAnnotationNS_9allocatorISB_EEEEjE3$_0PSB_EEvT1_SJ_T0_", scope: !6, file: !5, line: 284, type: !12, scopeLine: 284, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized, unit: !1, templateParams: !3, retainedNodes: !3, keyInstructions: true)
+  !12 = distinct !DISubroutineType(types: !9)
+  !13 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !14, size: 64)
+  !14 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "InputAnnotation", file: !15, line: 323, size: 768, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !3, identifier: "_ZTS15InputAnnotation")
+  !15 = !DIFile(filename: "llvm/utils/FileCheck/FileCheck.cpp", directory: "/Users/shubhamrastogi/Development/llvm-project-instr-ref/llvm-project", checksumkind: CSK_MD5, checksum: "fa5f53f1b5782eb8b92fadec416b8941")
+  !16 = !DILocation(line: 0, scope: !11, inlinedAt: !17)
+  !17 = distinct !DILocation(line: 800, column: 9, scope: !18)
+  !18 = distinct !DILexicalBlock(scope: !19, file: !5, line: 799, column: 23)
+  !19 = distinct !DILexicalBlock(scope: !4, file: !5, line: 770, column: 16)
+  !20 = !DILocation(line: 288, column: 15, scope: !21, inlinedAt: !17, atomGroup: 1, atomRank: 1)
+  !21 = distinct !DILexicalBlock(scope: !11, file: !5, line: 288, column: 7)
+...
+---
+name:            '_ZNSt3__111__introsortINS_17_ClassicAlgPolicyERZL18DumpAnnotatedInputRN4llvm11raw_ostreamERKNS2_16FileCheckRequestE20DumpInputFilterValuejNS2_9StringRefERNS_6vectorI15InputAnnotationNS_9allocatorISB_EEEEjE3$_0PSB_Lb0EEEvT1_SJ_T0_NS_15iterator_traitsISJ_E15difference_typeEb'
+alignment:       4
+tracksRegLiveness: true
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+hasFakeUses:     false
+debugInstrRef:   true
+tracksDebugUserValues: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$w2' }
+  - { reg: '$x3' }
+  - { reg: '$x4' }
+  - { reg: '$x5' }
+  - { reg: '$x6' }
+  - { reg: '$x7' }
+frameInfo:
+  stackSize:       112
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+  isCalleeSavedInfoValid: true
+stack:
+  - { id: 0, type: spill-slot, offset: -104, size: 8, alignment: 8 }
+  - { id: 1, type: spill-slot, offset: -8, size: 8, alignment: 8, callee-saved-register: '$lr' }
+  - { id: 2, type: spill-slot, offset: -16, size: 8, alignment: 8, callee-saved-register: '$fp' }
+  - { id: 3, type: spill-slot, offset: -24, size: 8, alignment: 8, callee-saved-register: '$x19' }
+  - { id: 4, type: spill-slot, offset: -32, size: 8, alignment: 8, callee-saved-register: '$x20' }
+  - { id: 5, type: spill-slot, offset: -40, size: 8, alignment: 8, callee-saved-register: '$x21' }
+  - { id: 6, type: spill-slot, offset: -48, size: 8, alignment: 8, callee-saved-register: '$x22' }
+  - { id: 7, type: spill-slot, offset: -56, size: 8, alignment: 8, callee-saved-register: '$x23' }
+  - { id: 8, type: spill-slot, offset: -64, size: 8, alignment: 8, callee-saved-register: '$x24' }
+  - { id: 9, type: spill-slot, offset: -72, size: 8, alignment: 8, callee-saved-register: '$x25' }
+  - { id: 10, type: spill-slot, offset: -80, size: 8, alignment: 8, callee-saved-register: '$x26' }
+  - { id: 11, type: spill-slot, offset: -88, size: 8, alignment: 8, callee-saved-register: '$x27' }
+  - { id: 12, type: spill-slot, offset: -96, size: 8, alignment: 8, callee-saved-register: '$x28' }
+machineFunctionInfo:
+  hasRedZone:      false
+  stackSizeZPR:    0
+  stackSizePPR:    0
+  hasStackFrame:   true
+body:             |
+  bb.0 (%ir-block.2):
+    successors: %bb.2(0x04000000), %bb.3(0x7c000000)
+    liveins: $w2, $x0, $x1, $x3, $x4, $x5, $x6, $x7, $x27, $x28, $x25, $x26, $x23, $x24, $x21, $x22, $x19, $x20, $lr
+  
+    $sp = frame-setup SUBXri $sp, 112, 0
+    frame-setup STPXi killed $x28, killed $x27, $sp, 2 :: (store (s64) into %stack.12), (store (s64) into %stack.11)
+    frame-setup STPXi killed $x26, killed $x25, $sp, 4 :: (store (s64) into %stack.10), (store (s64) into %stack.9)
+    frame-setup STPXi killed $x24, killed $x23, $sp, 6 :: (store (s64) into %stack.8), (store (s64) into %stack.7)
+    frame-setup STPXi killed $x22, killed $x21, $sp, 8 :: (store (s64) into %stack.6), (store (s64) into %stack.5)
+    frame-setup STPXi killed $x20, killed $x19, $sp, 10 :: (store (s64) into %stack.4), (store (s64) into %stack.3)
+    frame-setup STPXi $fp, killed $lr, $sp, 12 :: (store (s64) into %stack.2), (store (s64) into %stack.1)
+    frame-setup CFI_INSTRUCTION def_cfa_offset 112
+    frame-setup CFI_INSTRUCTION offset $w30, -8
+    frame-setup CFI_INSTRUCTION offset $w29, -16
+    frame-setup CFI_INSTRUCTION offset $w19, -24
+    frame-setup CFI_INSTRUCTION offset $w20, -32
+    frame-setup CFI_INSTRUCTION offset $w21, -40
+    frame-setup CFI_INSTRUCTION offset $w22, -48
+    frame-setup CFI_INSTRUCTION offset $w23, -56
+    frame-setup CFI_INSTRUCTION offset $w24, -64
+    frame-setup CFI_INSTRUCTION offset $w25, -72
+    frame-setup CFI_INSTRUCTION offset $w26, -80
+    frame-setup CFI_INSTRUCTION offset $w27, -88
+    frame-setup CFI_INSTRUCTION offset $w28, -96
+    DBG_PHI $x1, 1
+    $x19 = ORRXrs $xzr, killed $x7, 0
+    $x20 = ORRXrs $xzr, killed $x6, 0
+    $x21 = ORRXrs $xzr, killed $x5, 0
+    $x22 = ORRXrs $xzr, killed $x4, 0
+    $x23 = ORRXrs $xzr, killed $x3, 0
+    $w25 = ORRWrs $wzr, killed $w2, 0
+    $x26 = ORRXrs $xzr, killed $x0, 0
+    renamable $w27 = MOVZWi 1, 0
+    STRXui killed $x1, $sp, 1 :: (store (s64) into %stack.0)
+    TBNZW renamable $w25, 0, %bb.2
+  
+  bb.3.if.end16:
+    successors: %bb.2(0x04000000), %bb.3(0x7c000000)
+    liveins: $w25, $w27, $x19, $x20, $x21, $x22, $x23, $x26
+  
+    $x28 = ORRXrs $xzr, $xzr, 0
+    renamable $x24 = LDRXui killed renamable $x28, 0 :: (load (s64) from `ptr null`)
+    BL @_ZdlPvm, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    STRXui renamable $x21, renamable $x20, 0 :: (store (s64) into %ir.0)
+    STRXui killed renamable $x24, renamable $x19, 0 :: (store (s64) into %ir.1)
+    STRXui $xzr, renamable $x26, 0 :: (store (s64) into %ir.__first)
+    STRWui $wzr, renamable $x23, 0 :: (store (s32) into %ir.__first.addr.0, align 8)
+    STRWui renamable $w27, renamable $x22, 0 :: (store (s32) into %ir.Label3.i.i.i241)
+    TBZW renamable $w25, 0, %bb.3
+  
+  bb.2.if.then13:
+    liveins: $x26
+  
+    DBG_INSTR_REF !10, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !16
+    renamable $x8 = LDRXui $sp, 1 :: (load (s64) from %stack.0)
+  ; Clobber the stack slot that contains the value we care about, to ensure that LDV can still recover it from $x8 above
+    STRXui $xzr, $sp, 1 :: (store (s64) into %stack.0)
+    $fp, $lr = frame-destroy LDPXi $sp, 12 :: (load (s64) from %stack.2), (load (s64) from %stack.1)
+    $x20, $x19 = frame-destroy LDPXi $sp, 10 :: (load (s64) from %stack.4), (load (s64) from %stack.3)
+    $xzr = SUBSXrs killed renamable $x26, killed renamable $x8, 0, implicit-def $nzcv, debug-location !20
+    $x22, $x21 = frame-destroy LDPXi $sp, 8 :: (load (s64) from %stack.6), (load (s64) from %stack.5)
+    $x24, $x23 = frame-destroy LDPXi $sp, 6 :: (load (s64) from %stack.8), (load (s64) from %stack.7)
+    $x26, $x25 = frame-destroy LDPXi $sp, 4 :: (load (s64) from %stack.10), (load (s64) from %stack.9)
+    $x28, $x27 = frame-destroy LDPXi $sp, 2 :: (load (s64) from %stack.12), (load (s64) from %stack.11)
+    $sp = frame-destroy ADDXri $sp, 112, 0
+    RET undef $lr
+...

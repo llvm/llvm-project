@@ -13,18 +13,18 @@ target triple = "x86_64-unknown-linux-gnu"
 @C = common dso_local local_unnamed_addr global [1536 x [1536 x float]] zeroinitializer, align 16
 
 ; Function Attrs: noinline nounwind uwtable
-define dso_local void @init_array() local_unnamed_addr #0 {
+define dso_local void @init_array() local_unnamed_addr {
 entry:
   %polly.par.userContext = alloca {}, align 8
   %polly.par.userContext1 = bitcast {}* %polly.par.userContext to i8*
-  call void @GOMP_parallel_loop_runtime_start(void (i8*)* nonnull @init_array_polly_subfn, i8* nonnull %polly.par.userContext1, i32 0, i64 0, i64 1536, i64 1) #3
-  call void @init_array_polly_subfn(i8* nonnull %polly.par.userContext1) #3
-  call void @GOMP_parallel_end() #3
+  call void @GOMP_parallel_loop_runtime_start(void (i8*)* nonnull @init_array_polly_subfn, i8* nonnull %polly.par.userContext1, i32 0, i64 0, i64 1536, i64 1)
+  call void @init_array_polly_subfn(i8* nonnull %polly.par.userContext1)
+  call void @GOMP_parallel_end()
   ret void
 }
 
 ; Function Attrs: noinline nounwind uwtable
-define dso_local void @print_array() local_unnamed_addr #1 {
+define dso_local void @print_array() local_unnamed_addr {
 entry:
   br label %for.cond1.preheader
 
@@ -39,7 +39,7 @@ for.body3:                                        ; preds = %for.inc, %for.cond1
   %arrayidx5 = getelementptr inbounds [1536 x [1536 x float]], [1536 x [1536 x float]]* @C, i64 0, i64 %indvars.iv6, i64 %indvars.iv
   %2 = load float, float* %arrayidx5, align 4
   %conv = fpext float %2 to double
-  %call = tail call i32 (%struct._IO_FILE*, i8*, ...) @fprintf(%struct._IO_FILE* %1, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i64 0, i64 0), double %conv) #3
+  %call = tail call i32 (%struct._IO_FILE*, i8*, ...) @fprintf(%struct._IO_FILE* %1, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i64 0, i64 0), double %conv)
   %3 = trunc i64 %indvars.iv to i32
   %rem = urem i32 %3, 80
   %cmp6 = icmp eq i32 %rem, 79
@@ -67,27 +67,27 @@ for.end12:                                        ; preds = %for.end
 }
 
 ; Function Attrs: nounwind
-declare dso_local i32 @fprintf(%struct._IO_FILE* nocapture, i8* nocapture readonly, ...) local_unnamed_addr #2
+declare dso_local i32 @fprintf(%struct._IO_FILE* nocapture, i8* nocapture readonly, ...) local_unnamed_addr
 
 ; Function Attrs: noinline nounwind uwtable
-define dso_local i32 @main() local_unnamed_addr #0 {
+define dso_local i32 @main() local_unnamed_addr {
 entry:
   %polly.par.userContext3 = alloca {}, align 8
   tail call void @init_array()
   %polly.par.userContext1 = bitcast {}* %polly.par.userContext3 to i8*
-  call void @GOMP_parallel_loop_runtime_start(void (i8*)* nonnull @main_polly_subfn, i8* nonnull %polly.par.userContext1, i32 0, i64 0, i64 1536, i64 1) #3
-  call void @main_polly_subfn(i8* nonnull %polly.par.userContext1) #3
-  call void @GOMP_parallel_end() #3
-  call void @GOMP_parallel_loop_runtime_start(void (i8*)* nonnull @main_polly_subfn_1, i8* nonnull %polly.par.userContext1, i32 0, i64 0, i64 1536, i64 64) #3
-  call void @main_polly_subfn_1(i8* nonnull %polly.par.userContext1) #3
-  call void @GOMP_parallel_end() #3
+  call void @GOMP_parallel_loop_runtime_start(void (i8*)* nonnull @main_polly_subfn, i8* nonnull %polly.par.userContext1, i32 0, i64 0, i64 1536, i64 1)
+  call void @main_polly_subfn(i8* nonnull %polly.par.userContext1)
+  call void @GOMP_parallel_end()
+  call void @GOMP_parallel_loop_runtime_start(void (i8*)* nonnull @main_polly_subfn_1, i8* nonnull %polly.par.userContext1, i32 0, i64 0, i64 1536, i64 64)
+  call void @main_polly_subfn_1(i8* nonnull %polly.par.userContext1)
+  call void @GOMP_parallel_end()
   ret i32 0
 }
 
 ; Function Attrs: nounwind
-declare i32 @fputc(i32, %struct._IO_FILE* nocapture) local_unnamed_addr #3
+declare i32 @fputc(i32, %struct._IO_FILE* nocapture) local_unnamed_addr
 
-define internal void @init_array_polly_subfn(i8* nocapture readnone %polly.par.userContext) #4 {
+define internal void @init_array_polly_subfn(i8* nocapture readnone %polly.par.userContext) {
 polly.par.setup:
   %polly.par.LBPtr = alloca i64, align 8
   %polly.par.UBPtr = alloca i64, align 8
@@ -146,7 +146,7 @@ declare void @GOMP_parallel_loop_runtime_start(void (i8*)*, i8*, i32, i64, i64, 
 
 declare void @GOMP_parallel_end() local_unnamed_addr
 
-define internal void @main_polly_subfn(i8* nocapture readnone %polly.par.userContext) #4 {
+define internal void @main_polly_subfn(i8* nocapture readnone %polly.par.userContext) {
 polly.par.setup:
   %polly.par.LBPtr = alloca i64, align 8
   %polly.par.UBPtr = alloca i64, align 8
@@ -175,7 +175,7 @@ polly.par.loadIVBounds:                           ; preds = %polly.par.setup, %p
   br i1 %7, label %polly.par.exit, label %polly.par.loadIVBounds
 }
 
-define internal void @main_polly_subfn_1(i8* nocapture readnone %polly.par.userContext) #4 {
+define internal void @main_polly_subfn_1(i8* nocapture readnone %polly.par.userContext) {
 polly.par.setup:
   %polly.par.LBPtr = alloca i64, align 8
   %polly.par.UBPtr = alloca i64, align 8
@@ -363,14 +363,7 @@ vector.ph:                                        ; preds = %polly.loop_header14
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1) #5
-
-attributes #0 = { noinline nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "polly-optimized" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { noinline nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #3 = { nounwind }
-attributes #4 = { "polly.skip.fn" }
-attributes #5 = { argmemonly nounwind }
+declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1)
 
 !llvm.module.flags = !{!0}
 !llvm.ident = !{!1}

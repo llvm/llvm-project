@@ -31,9 +31,12 @@
 
 %StructEvent = type { target("spirv.Event") }
 
+@G_r = global target("spirv.Event") poison
+
 define spir_kernel void @test_half(ptr addrspace(3) %_arg1, ptr addrspace(1) %_arg2) {
 entry:
   %r = tail call spir_func target("spirv.Event") @_Z22__spirv_GroupAsyncCopyjPU3AS3Dv2_DF16_PU3AS1KS_mm9ocl_event(i32 2, ptr addrspace(3) %_arg1, ptr addrspace(1) %_arg2, i64 16, i64 10, target("spirv.Event") zeroinitializer)
+  store target("spirv.Event") %r, ptr @G_r
   ret void
 }
 
@@ -42,7 +45,6 @@ declare dso_local spir_func target("spirv.Event") @_Z22__spirv_GroupAsyncCopyjPU
 ; CHECK: OpFunction
 ; CHECK: OpFunctionParameter
 ; CHECK: %[[#Src:]] = OpFunctionParameter
-; CHECK: OpVariable %[[#TyStructPtr]] Function
 ; CHECK: %[[#EventVar:]] = OpVariable %[[#TyEventPtr]] Function
 ; CHECK: %[[#Dest:]] = OpInBoundsPtrAccessChain
 ; CHECK: %[[#CopyRes:]] = OpGroupAsyncCopy %[[#TyEvent]] %[[#]] %[[#Dest]] %[[#Src]] %[[#]] %[[#]] %[[#ConstEvent]]

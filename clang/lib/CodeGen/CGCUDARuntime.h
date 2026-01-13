@@ -88,6 +88,10 @@ public:
                          ReturnValueSlot ReturnValue,
                          llvm::CallBase **CallOrInvoke = nullptr);
 
+  virtual RValue EmitCUDADeviceKernelCallExpr(
+      CodeGenFunction &CGF, const CUDAKernelCallExpr *E,
+      ReturnValueSlot ReturnValue, llvm::CallBase **CallOrInvoke = nullptr);
+
   /// Emits a kernel launch stub.
   virtual void emitDeviceStub(CodeGenFunction &CGF, FunctionArgList &Args) = 0;
 

@@ -127,13 +127,13 @@ subroutine acc_routine16()
 end subroutine
 
 subroutine acc_routine17()
-  !$acc routine device_type(host) worker dtype(multicore) vector 
+  !$acc routine device_type(host) worker dtype(multicore) vector
 end subroutine
 
 subroutine acc_routine18()
-  !$acc routine device_type(host) bind(acc_routine17) dtype(multicore) bind(acc_routine16) 
+  !$acc routine device_type(host) bind(acc_routine17) dtype(multicore) bind(acc_routine16)
 end subroutine
 
 subroutine acc_routine19()
-  !$acc routine device_type(host,default) bind(acc_routine17) dtype(multicore) bind(acc_routine16) 
+  !$acc routine device_type(host,default) bind(acc_routine17) dtype(multicore) bind(acc_routine16)
 end subroutine

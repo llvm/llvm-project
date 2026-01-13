@@ -65,22 +65,26 @@ def my_node_3 : SDNode<
 // CHECK-NEXT:    "MyTargetISD::NODE_3\0"
 // CHECK-NEXT:    ;
 
-// CHECK:       static const SDTypeConstraint MyTargetSDTypeConstraints[] = {
-// CHECK-NEXT:    /* 0 */ {SDTCisVT, 1, 0, MVT::i2},
-// CHECK-SAME:            {SDTCisVT, 0, 0, MVT::i1},
-// CHECK-NEXT:    /* 2 */ {SDTCisSameSizeAs, 19, 18, MVT::INVALID_SIMPLE_VALUE_TYPE},
-// CHECK-SAME:            {SDTCisSameNumEltsAs, 17, 16, MVT::INVALID_SIMPLE_VALUE_TYPE},
-// CHECK-SAME:            {SDTCVecEltisVT, 15, 0, MVT::i32},
-// CHECK-SAME:            {SDTCisSubVecOfVec, 14, 13, MVT::INVALID_SIMPLE_VALUE_TYPE},
-// CHECK-SAME:            {SDTCisEltOfVec, 12, 11, MVT::INVALID_SIMPLE_VALUE_TYPE},
-// CHECK-SAME:            {SDTCisOpSmallerThanOp, 10, 9, MVT::INVALID_SIMPLE_VALUE_TYPE},
-// CHECK-SAME:            {SDTCisVTSmallerThanOp, 8, 7, MVT::INVALID_SIMPLE_VALUE_TYPE},
-// CHECK-SAME:            {SDTCisSameAs, 6, 5, MVT::INVALID_SIMPLE_VALUE_TYPE},
-// CHECK-SAME:            {SDTCisVec, 4, 0, MVT::INVALID_SIMPLE_VALUE_TYPE},
-// CHECK-SAME:            {SDTCisFP, 3, 0, MVT::INVALID_SIMPLE_VALUE_TYPE},
-// CHECK-SAME:            {SDTCisInt, 2, 0, MVT::INVALID_SIMPLE_VALUE_TYPE},
-// CHECK-SAME:            {SDTCisPtrTy, 1, 0, MVT::INVALID_SIMPLE_VALUE_TYPE},
-// CHECK-SAME:            {SDTCisVT, 0, 0, MVT::i1},
+// CHECK:       static const VTByHwModePair MyTargetVTByHwModeTable[] = {
+// CHECK-NEXT:   /* dummy */ {0, MVT::INVALID_SIMPLE_VALUE_TYPE}
+// CHECK-NEXT:  };
+// CHECK-EMPTY:
+// CHECK-NEXT:  static const SDTypeConstraint MyTargetSDTypeConstraints[] = {
+// CHECK-NEXT:    /* 0 */ {SDTCisVT, 1, 0, 0, MVT::i2},
+// CHECK-SAME:            {SDTCisVT, 0, 0, 0, MVT::i1},
+// CHECK-NEXT:    /* 2 */ {SDTCisSameSizeAs, 19, 18, 0, MVT::INVALID_SIMPLE_VALUE_TYPE},
+// CHECK-SAME:            {SDTCisSameNumEltsAs, 17, 16, 0, MVT::INVALID_SIMPLE_VALUE_TYPE},
+// CHECK-SAME:            {SDTCVecEltisVT, 15, 0, 0, MVT::i32},
+// CHECK-SAME:            {SDTCisSubVecOfVec, 14, 13, 0, MVT::INVALID_SIMPLE_VALUE_TYPE},
+// CHECK-SAME:            {SDTCisEltOfVec, 12, 11, 0, MVT::INVALID_SIMPLE_VALUE_TYPE},
+// CHECK-SAME:            {SDTCisOpSmallerThanOp, 10, 9, 0, MVT::INVALID_SIMPLE_VALUE_TYPE},
+// CHECK-SAME:            {SDTCisVTSmallerThanOp, 8, 7, 0, MVT::INVALID_SIMPLE_VALUE_TYPE},
+// CHECK-SAME:            {SDTCisSameAs, 6, 5, 0, MVT::INVALID_SIMPLE_VALUE_TYPE},
+// CHECK-SAME:            {SDTCisVec, 4, 0, 0, MVT::INVALID_SIMPLE_VALUE_TYPE},
+// CHECK-SAME:            {SDTCisFP, 3, 0, 0, MVT::INVALID_SIMPLE_VALUE_TYPE},
+// CHECK-SAME:            {SDTCisInt, 2, 0, 0, MVT::INVALID_SIMPLE_VALUE_TYPE},
+// CHECK-SAME:            {SDTCisPtrTy, 1, 0, 0, MVT::INVALID_SIMPLE_VALUE_TYPE},
+// CHECK-SAME:            {SDTCisVT, 0, 0, 0, MVT::i1},
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static const SDNodeDesc MyTargetSDNodeDescs[] = {
@@ -90,5 +94,5 @@ def my_node_3 : SDNode<
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT: static const SDNodeInfo MyTargetGenSDNodeInfo(
-// CHECK-NEXT:     /*NumOpcodes=*/3, MyTargetSDNodeDescs,
-// CHECK-NEXT:     MyTargetSDNodeNames, MyTargetSDTypeConstraints);
+// CHECK-NEXT:     /*NumOpcodes=*/3, MyTargetSDNodeDescs, MyTargetSDNodeNames,
+// CHECK-NEXT:     MyTargetVTByHwModeTable, MyTargetSDTypeConstraints);

@@ -59,10 +59,10 @@ public:
 
 private:
   // Private constructor.
-  IterationGraphSorter(SmallVector<Value> &&ins,
-                       SmallVector<AffineMap> &&loop2InsLvl, Value out,
+  IterationGraphSorter(SmallVector<Value> &&insArg,
+                       SmallVector<AffineMap> &&loop2InsLvlArg, Value out,
                        AffineMap loop2OutLvl,
-                       SmallVector<utils::IteratorType> &&iterTypes,
+                       SmallVector<utils::IteratorType> &&iterTypesArg,
                        sparse_tensor::LoopOrderingStrategy strategy =
                            sparse_tensor::LoopOrderingStrategy::kDefault);
 

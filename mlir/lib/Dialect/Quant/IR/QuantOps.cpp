@@ -14,6 +14,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Transforms/InliningUtils.h"
 
 #include "mlir/Dialect/Quant/IR/QuantOpsDialect.cpp.inc"
 
@@ -183,6 +184,14 @@ LogicalResult verifyQuantizationOp(Operation *op, QuantizedType quantizedType,
   return success();
 }
 
+struct QuantInlinerInterface : public DialectInlinerInterface {
+  using DialectInlinerInterface::DialectInlinerInterface;
+  /// All quant dialect ops can be inlined.
+  bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
+    return true;
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -197,6 +206,7 @@ void QuantDialect::initialize() {
 #include "mlir/Dialect/Quant/IR/QuantOps.cpp.inc"
       >();
   detail::addBytecodeInterface(this);
+  addInterfaces<QuantInlinerInterface>();
 }
 
 //===----------------------------------------------------------------------===//

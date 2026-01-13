@@ -6,6 +6,7 @@ executable("clang-check") {
     "//clang/lib/Driver",
     "//clang/lib/Frontend",
     "//clang/lib/Frontend/Rewrite",
+    "//clang/lib/Options",
     "//clang/lib/StaticAnalyzer/Frontend",
     "//clang/lib/Tooling",
     "//clang/lib/Tooling/Syntax",
