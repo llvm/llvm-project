@@ -169,6 +169,44 @@ void ScopeReductionCheck::check(
 
   // Step 5: Check if current var declaration is broader than necessary
   if (InnermostScope) {
+    // Check if variable uses span multiple case labels in the same switch
+    // If so, the only common scope would be the switch body, which is invalid
+    // for declarations
+    std::set<const SwitchCase *> CaseLabels;
+    bool UsesInSwitch = false;
+
+    for (const auto *Use : Uses) {
+      const Stmt *Current = Use;
+      const SwitchCase *ContainingCase = nullptr;
+
+      // Walk up to find containing case label
+      while (Current) {
+        auto ParentNodes = Parents.getParents(*Current);
+        if (ParentNodes.empty())
+          break;
+
+        const Stmt *Parent = ParentNodes[0].get<Stmt>();
+        if (!Parent)
+          break;
+
+        if (const auto *CaseStmt = dyn_cast<SwitchCase>(Parent)) {
+          ContainingCase = CaseStmt;
+          UsesInSwitch = true;
+          break;
+        }
+        Current = Parent;
+      }
+
+      if (ContainingCase)
+        CaseLabels.insert(ContainingCase);
+    }
+
+    // If uses span multiple case labels, skip analysis
+    if (UsesInSwitch && CaseLabels.size() > 1) {
+      return; // Cannot declare variables in switch body when used across
+              // multiple cases
+    }
+
     // Find the compound statement containing the variable declaration
     const DynTypedNode Current = DynTypedNode::create(*Var);
     const CompoundStmt *VarScope = nullptr;

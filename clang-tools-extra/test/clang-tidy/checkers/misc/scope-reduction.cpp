@@ -91,7 +91,6 @@ void test_switch_case(int value) {
 // Variable used across multiple switch cases - should NOT warn
 void test_switch_multiple_cases(int value) {
   int accumulator = 0;
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'accumulator' can be declared in a smaller scope
   switch (value) {
     case 1:
       accumulator += 10;
@@ -254,5 +253,62 @@ void test_unused_empty_scope() {
   int unused = 42; // Should NOT warn - this checker only handles scope reduction
   if (true) {
     // empty scope, variable not used here
+  }
+}
+
+// Variable used in switch and other scope - should warn if common scope allows
+void test_switch_mixed_usage(int value) {
+  int mixed = 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'mixed' can be declared in a smaller scope
+  if (true) {
+    switch (value) {
+      case 1:
+        mixed = 10;
+        break;
+    }
+    mixed += 5; // Also used outside switch
+  }
+}
+
+// Variable in nested switch - should warn for single case
+void test_nested_switch(int outer, int inner) {
+  int nested = 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'nested' can be declared in a smaller scope
+  switch (outer) {
+    case 1:
+      switch (inner) {
+        case 1:
+          nested = 42;
+          break;
+      }
+      break;
+  }
+}
+
+// Variable used in switch default only - should warn
+void test_switch_default_only(int value) {
+  int def = 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: variable 'def' can be declared in a smaller scope
+  switch (value) {
+    case 1:
+      break;
+    default:
+      def = 100;
+      break;
+  }
+}
+
+// Variable used in multiple switches - should NOT warn
+void test_multiple_switches(int v1, int v2) {
+  int multi = 0; // Should NOT warn - used across different switches
+  switch (v1) {
+    case 1:
+      multi = 10;
+      break;
+  }
+  switch (v2) {
+    case 1:
+      multi = 20;
+      break;
   }
 }
