@@ -57,9 +57,3 @@ entry:
   ret ptr @bar_weak_extern
 }
 
-!llvm.module.flags = !{!0, !1, !2}
-
-!0 = !{i32 1, !"wchar_size", i32 4}
-!1 = !{i32 8, !"PIC Level", i32 2}
-!2 = !{i32 7, !"frame-pointer", i32 2}
-
