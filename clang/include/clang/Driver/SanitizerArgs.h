@@ -28,6 +28,7 @@ class SanitizerArgs {
   SanitizerSet MergeHandlers;
   SanitizerMaskCutoffs SkipHotCutoffs;
   SanitizerSet AnnotateDebugInfo;
+  SanitizerSet SuppressUBSanFeature;
 
   std::vector<std::string> UserIgnorelistFiles;
   std::vector<std::string> SystemIgnorelistFiles;
