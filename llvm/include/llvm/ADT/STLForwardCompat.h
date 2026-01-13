@@ -18,6 +18,7 @@
 #define LLVM_ADT_STLFORWARDCOMPAT_H
 
 #include <optional>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 
@@ -145,6 +146,15 @@ template <class Ptr> auto to_address(const Ptr &P) { return P.operator->(); }
 template <class T> constexpr T *to_address(T *P) {
   static_assert(!std::is_function_v<T>);
   return P;
+}
+
+/// C++20 constexpr invoke. This uses `std::apply` (constexpr in C++17) to
+/// achieve constexpr invocation.
+template <typename FnT, typename... ArgsT>
+constexpr std::invoke_result_t<FnT, ArgsT...>
+invoke(FnT &&Fn, ArgsT &&...Args) { // NOLINT(readability-identifier-naming)
+  return std::apply(std::forward<FnT>(Fn),
+                    std::forward_as_tuple(std::forward<ArgsT>(Args)...));
 }
 
 //===----------------------------------------------------------------------===//

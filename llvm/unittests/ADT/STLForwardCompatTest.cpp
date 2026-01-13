@@ -205,4 +205,62 @@ TEST(STLForwardCompatTest, IdentityCxx20) {
   static_assert(std::is_same_v<int &&, decltype(identity(int(5)))>);
 }
 
+TEST(STLForwardCompatTest, InvokePerfectForwarding) {
+  auto CheckArgs = [](auto &&A, auto &&B, auto &&C) {
+    static_assert(std::is_same_v<decltype(A), int &>);
+    static_assert(std::is_same_v<decltype(B), const int &>);
+    static_assert(std::is_same_v<decltype(C), int &&>);
+    return A + B + C;
+  };
+
+  int X = 1;
+  const int Y = 2;
+  EXPECT_EQ(llvm::invoke(CheckArgs, X, Y, 3), 6);
+  // Make sure the result produced by std::invoke is identical --
+  // the only meaningful difference is that std::invoke became
+  // constexpr in C++20.
+  EXPECT_EQ(std::invoke(CheckArgs, X, Y, 3), 6);
+}
+
+namespace {
+struct InvokeTest {
+  int Value;
+  constexpr int scale(int Factor) const { return Value * Factor; }
+  constexpr int &getRef() { return Value; }
+};
+} // namespace
+
+TEST(STLForwardCompatTest, InvokeMemberPointers) {
+  InvokeTest Obj{10};
+
+  // Member function pointer.
+  EXPECT_EQ(llvm::invoke(&InvokeTest::scale, Obj, 3), 30);
+  EXPECT_EQ(llvm::invoke(&InvokeTest::scale, &Obj, 3), 30);
+
+  // Member data pointer.
+  EXPECT_EQ(llvm::invoke(&InvokeTest::Value, Obj), 10);
+  EXPECT_EQ(llvm::invoke(&InvokeTest::Value, &Obj), 10);
+
+  // Member function returning reference - args are forwarded, not copied.
+  llvm::invoke(&InvokeTest::getRef, Obj) = 20;
+  EXPECT_EQ(Obj.Value, 20); // Lvalue forwarded by reference.
+  llvm::invoke(&InvokeTest::getRef, &Obj) = 30;
+  EXPECT_EQ(Obj.Value, 30); // Pointer also works.
+}
+
+TEST(STLForwardCompatTest, InvokeConstexpr) {
+  // Regular function.
+  static constexpr int A =
+      llvm::invoke([](int X, int Y) { return X + Y; }, 1, 2);
+  static_assert(A == 3);
+
+  // Member data pointer.
+  static constexpr int B = llvm::invoke(&InvokeTest::Value, InvokeTest{42});
+  static_assert(B == 42);
+
+  // Member function pointer.
+  static constexpr int C = llvm::invoke(&InvokeTest::scale, InvokeTest{5}, 3);
+  static_assert(C == 15);
+}
+
 } // namespace
