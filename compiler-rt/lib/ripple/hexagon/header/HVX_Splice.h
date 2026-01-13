@@ -13,13 +13,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
 #define _decl_hvx_splice(ct, t)                                                \
-  ({                                                                           \
     __attribute__((used, always_inline, weak)) extern ct hvx_splice_##t(       \
         ct left, ct right, size_t start);                                      \
     __attribute__((used, always_inline, weak)) extern ct hvx_lsplice_##t(      \
-        ct left, ct right, size_t start);                                      \
-  })
+        ct left, ct right, size_t start);
+
 _decl_hvx_splice(int8_t, i8);
 _decl_hvx_splice(int16_t, i16);
 _decl_hvx_splice(int32_t, i32);

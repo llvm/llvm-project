@@ -7932,15 +7932,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         // Collect all the ripple's runtime libs (.bc files) available for the
         // target.
         std::vector<std::string> TargetRTLibs;
-        llvm::SmallString<256> RippleRTLibPath;
-        // Toolchain::getRuntimePath() returns an optional, but it's always valid except on Darwin.
-        if (auto RuntimePathOpt = TC.getRuntimePath()) {
-          RippleRTLibPath = *RuntimePathOpt;
-          llvm::sys::path::append(RippleRTLibPath, "ripple");
-          // On Hexagon, libraries are versioned by architecture.
-          if (TargetTriple.isHexagon())
-            llvm::sys::path::append(RippleRTLibPath, toolchains::HexagonToolChain::GetTargetCPUVersion(Args));
-        }
+        llvm::SmallString<256> RippleRTLibPath(
+            getToolChain().getDriver().ResourceDir);
+        llvm::sys::path::append(
+            RippleRTLibPath, "lib",
+            llvm::Triple::getOSTypeName(TargetTriple.getOS()), "ripple");
+        // On Hexagon, libraries are versioned by architecture.
+        if (TargetTriple.isHexagon())
+          llvm::sys::path::append(
+              RippleRTLibPath,
+              toolchains::HexagonToolChain::GetTargetCPUVersion(Args));
         if (llvm::sys::fs::is_directory(RippleRTLibPath)) {
           std::error_code EC;
           for (llvm::sys::fs::directory_iterator File(RippleRTLibPath, EC),

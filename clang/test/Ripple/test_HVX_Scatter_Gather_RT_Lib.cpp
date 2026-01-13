@@ -1,5 +1,5 @@
-// REQUIRES: hexagon-registered-target, has-ripple-hexagon-rtlib
-// RUN: %clang++ -ffreestanding -g -S -fenable-ripple --target=hexagon -mhvx -mv79 -emit-llvm %s -o - -mllvm -ripple-disable-link 2>&1 | FileCheck %s
+// REQUIRES: target=hexagon-{{.*}}, has-ripple-hexagon-rtlib
+// RUN: %clang++ -ffreestanding -g -S -fenable-ripple -mhvx -mv79 -emit-llvm %s -o - -mllvm -ripple-disable-link 2>&1 | FileCheck %s
 
 #include <ripple.h>
 #include <ripple_math.h>
