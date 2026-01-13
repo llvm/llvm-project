@@ -111,7 +111,6 @@ lldb::ChildCacheState GenericBitsetFrontEnd::Update() {
 
     size_str.consume_front("bitset<");
     size_str.consume_back(">");
-    size_str = size_str.trim();
     if (size_str.getAsInteger(10, size))
       return lldb::ChildCacheState::eRefetch;
   }
