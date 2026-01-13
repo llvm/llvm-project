@@ -23925,7 +23925,7 @@ bool SLPVectorizerPass::vectorizeStores(
       OperandsT(std::initializer_list<Value *> Ops, unsigned Stride)
           : Ops(Ops), Stride(Stride) {};
 
-      bool operator<(const OperandsT &Other) const {
+      bool operator>(const OperandsT &Other) const {
         auto GetScore = [](const OperandsT &Ops) -> unsigned {
           return Ops.Ops.size() / ((Ops.Stride == 1) ? 1 : 2);
         };
@@ -23989,7 +23989,8 @@ bool SLPVectorizerPass::vectorizeStores(
     }
 
     // Try longer chains first
-    std::sort(AllOperands.begin(), AllOperands.end());
+    std::sort(AllOperands.begin(), AllOperands.end(),
+              std::greater<OperandsT>());
     for (auto &[RawOperands, Stride] : AllOperands) {
       bool Strided = Stride != 1;
 
