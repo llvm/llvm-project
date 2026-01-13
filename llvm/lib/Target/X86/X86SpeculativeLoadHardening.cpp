@@ -230,8 +230,8 @@ bool X86SpeculativeLoadHardeningPass::runOnMachineFunction(
   LLVM_DEBUG(dbgs() << "********** " << getPassName() << " : " << MF.getName()
                     << " **********\n");
 
-  X86SpeculativeLoadHardeningImpl impl(MF);
-  bool ret = impl.run();
+  X86SpeculativeLoadHardeningImpl Impl(MF);
+  bool ret = Impl.run();
   LLVM_DEBUG(dbgs() << "Final speculative load hardened function:\n"; MF.dump();
              dbgs() << "\n"; MF.verify(this));
   return ret;
