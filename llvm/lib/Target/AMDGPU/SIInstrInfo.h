@@ -1392,6 +1392,9 @@ public:
     return RI.getRegSizeInBits(*getOpRegClass(MI, OpNo)) / 8;
   }
 
+  /// Return the number of registers spilled/reloaded by the spill instruction.
+  unsigned getNumSubRegsForSpillOp(const MachineInstr &MI) const;
+
   /// Legalize the \p OpIndex operand of this instruction by inserting
   /// a MOV.  For example:
   /// ADD_I32_e32 VGPR0, 15
