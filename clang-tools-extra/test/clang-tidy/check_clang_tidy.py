@@ -126,8 +126,8 @@ class CheckRunner:
         self.header_dir: str = self.temp_file_name + ".headers"
         if self.check_headers:
             self.check_header_map = {
-                os.path.abspath(
-                    os.path.join(self.header_dir, os.path.basename(h))
+                os.path.normcase(
+                    os.path.abspath(os.path.join(self.header_dir, os.path.basename(h)))
                 ): os.path.abspath(h)
                 for h in self.check_headers
             }
@@ -395,7 +395,7 @@ class CheckRunner:
             # which starts with "file_path:line:col: ".
             match = re.match(r"^([^:]+):\d+:\d+: ", line)
             if match:
-                abs_path = os.path.abspath(match.group(1))
+                abs_path = os.path.normcase(os.path.abspath(match.group(1)))
                 current_file = abs_path if abs_path in header_messages else ""
 
             header_messages.get(current_file, remaining_lines).append(line)
