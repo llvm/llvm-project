@@ -9,18 +9,19 @@ define void @bt(i64 %val) {
 ; CHECK-NEXT:    mov w8, #123 // =0x7b
 ; CHECK-NEXT:    lsr x8, x8, x0
 ; CHECK-NEXT:    tbz w8, #0, .LBB0_2
-; CHECK-NEXT:  // %bb.1: // %t
+; CHECK-NEXT:  // %bb.1: // %common.ret
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB0_2: // %t
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    mov x0, xzr
 ; CHECK-NEXT:    bl f
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:  .LBB0_2: // %common.ret
 ; CHECK-NEXT:    ret
-  %shl = shl i64 1, %val
-  %and = and i64 123, %shl
-  %cmp = icmp ne i64 %and, 0
+  %shl = shl nuw i64 1, %val
+  %and = and i64 %shl, 123
+  %cmp = icmp eq i64 %and, 0
   br i1 %cmp, label %t, label %f
 
 t:
@@ -37,7 +38,9 @@ define void @bt_shl_use(i64 %val) {
 ; CHECK-NEXT:    mov w8, #123 // =0x7b
 ; CHECK-NEXT:    lsr x8, x8, x0
 ; CHECK-NEXT:    tbz w8, #0, .LBB1_2
-; CHECK-NEXT:  // %bb.1: // %t
+; CHECK-NEXT:  // %bb.1: // %common.ret
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB1_2: // %t
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
@@ -45,11 +48,10 @@ define void @bt_shl_use(i64 %val) {
 ; CHECK-NEXT:    lsl x0, x8, x0
 ; CHECK-NEXT:    bl f
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:  .LBB1_2: // %common.ret
 ; CHECK-NEXT:    ret
-  %shl = shl i64 1, %val
-  %and = and i64 123, %shl
-  %cmp = icmp ne i64 %and, 0
+  %shl = shl nuw i64 1, %val
+  %and = and i64 %shl, 123
+  %cmp = icmp eq i64 %and, 0
   br i1 %cmp, label %t, label %f
 
 t:
@@ -66,7 +68,9 @@ define void @bt_and_use(i64 %val) {
 ; CHECK-NEXT:    mov w8, #123 // =0x7b
 ; CHECK-NEXT:    lsr x9, x8, x0
 ; CHECK-NEXT:    tbz w9, #0, .LBB2_2
-; CHECK-NEXT:  // %bb.1: // %t
+; CHECK-NEXT:  // %bb.1: // %common.ret
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB2_2: // %t
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
@@ -75,11 +79,10 @@ define void @bt_and_use(i64 %val) {
 ; CHECK-NEXT:    and x0, x9, x8
 ; CHECK-NEXT:    bl f
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:  .LBB2_2: // %common.ret
 ; CHECK-NEXT:    ret
-  %shl = shl i64 1, %val
-  %and = and i64 123, %shl
-  %cmp = icmp ne i64 %and, 0
+  %shl = shl nuw i64 1, %val
+  %and = and i64 %shl, 123
+  %cmp = icmp eq i64 %and, 0
   br i1 %cmp, label %t, label %f
 
 t:

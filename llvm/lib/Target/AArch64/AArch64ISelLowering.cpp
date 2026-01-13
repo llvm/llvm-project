@@ -11179,10 +11179,9 @@ std::pair<SDValue, uint64_t> lookThroughSignExtension(SDValue Val) {
 
 // Op is an SDValue that is being compared to 0. If the comparison is a bit
 // test, optimize it to a TBZ or TBNZ.
-static SDValue optimizeBitTest(SDValue Op, SDValue Chain, SDValue Dest,
-                               unsigned Opcode, SelectionDAG &DAG) {
-  SDLoc DL(Op);
-
+static SDValue optimizeBitTest(SDLoc DL, SDValue Op, SDValue Chain,
+                               SDValue Dest, unsigned Opcode,
+                               SelectionDAG &DAG) {
   if (Op.getOpcode() != ISD::AND)
     return SDValue();
 
@@ -11271,13 +11270,13 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
     if (RHSC && RHSC->getZExtValue() == 0 && ProduceNonFlagSettingCondBr) {
       if (CC == ISD::SETEQ) {
         if (SDValue Result =
-                optimizeBitTest(LHS, Chain, Dest, AArch64ISD::TBZ, DAG))
+                optimizeBitTest(DL, LHS, Chain, Dest, AArch64ISD::TBZ, DAG))
           return Result;
 
         return DAG.getNode(AArch64ISD::CBZ, DL, MVT::Other, Chain, LHS, Dest);
       } else if (CC == ISD::SETNE) {
         if (SDValue Result =
-                optimizeBitTest(LHS, Chain, Dest, AArch64ISD::TBNZ, DAG))
+                optimizeBitTest(DL, LHS, Chain, Dest, AArch64ISD::TBNZ, DAG))
           return Result;
 
         return DAG.getNode(AArch64ISD::CBNZ, DL, MVT::Other, Chain, LHS, Dest);
