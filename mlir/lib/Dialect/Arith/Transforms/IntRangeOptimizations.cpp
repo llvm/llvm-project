@@ -16,6 +16,7 @@
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/IntegerRangeAnalysis.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
@@ -48,6 +49,19 @@ static std::optional<APInt> getMaybeConstantValue(DataFlowSolver &solver,
   return inferredRange.getConstantValue();
 }
 
+static bool isPoison(DataFlowSolver &solver, Value value) {
+  auto *maybeInferredRange =
+      solver.lookupState<IntegerValueRangeLattice>(value);
+  if (!maybeInferredRange || maybeInferredRange->getValue().isUninitialized())
+    return false;
+  const ConstantIntRanges &inferredRange =
+      maybeInferredRange->getValue().getValue();
+
+  // Only generate poison if both signed and unsigned ranges are guranteed to be
+  // poison.
+  return inferredRange.isSignedPoison() && inferredRange.isUnsignedPoison();
+}
+
 static void copyIntegerRange(DataFlowSolver &solver, Value oldVal,
                              Value newVal) {
   assert(oldVal.getType() == newVal.getType() &&
@@ -65,6 +79,17 @@ LogicalResult maybeReplaceWithConstant(DataFlowSolver &solver,
                                        RewriterBase &rewriter, Value value) {
   if (value.use_empty())
     return failure();
+
+  if (isPoison(solver, value)) {
+    Value poison =
+        ub::PoisonOp::create(rewriter, value.getLoc(), value.getType());
+    if (solver.lookupState<dataflow::IntegerValueRangeLattice>(poison))
+      solver.eraseState(poison);
+    copyIntegerRange(solver, value, poison);
+    rewriter.replaceAllUsesWith(value, poison);
+    return success();
+  }
+
   std::optional<APInt> maybeConstValue = getMaybeConstantValue(solver, value);
   if (!maybeConstValue.has_value())
     return failure();
@@ -133,7 +158,8 @@ struct MaterializeKnownConstantValues : public RewritePattern {
       return failure();
 
     auto needsReplacing = [&](Value v) {
-      return getMaybeConstantValue(solver, v).has_value() && !v.use_empty();
+      return (getMaybeConstantValue(solver, v) || isPoison(solver, v)) &&
+             !v.use_empty();
     };
     bool hasConstantResults = llvm::any_of(op->getResults(), needsReplacing);
     if (op->getNumRegions() == 0)

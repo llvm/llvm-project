@@ -116,3 +116,20 @@ func.func @vector_step() -> vector<8xindex> {
   %1 = test.reflect_bounds %0 : vector<8xindex>
   func.return %1 : vector<8xindex>
 }
+
+// CHECK-LABEL: func @poison_vector_insert
+// CHECK: test.reflect_bounds {smax = 4 : index, smin = 1 : index, umax = 4 : index, umin = 1 : index}
+func.func @poison_vector_insert() -> vector<4xindex> {
+  %0 = ub.poison : vector<4xindex>
+  %1 = test.with_bounds { umin = 1 : index, umax = 1 : index, smin = 1 : index, smax = 1 : index } : index
+  %2 = test.with_bounds { umin = 2 : index, umax = 2 : index, smin = 2 : index, smax = 2 : index } : index
+  %3 = test.with_bounds { umin = 3 : index, umax = 3 : index, smin = 3 : index, smax = 3 : index } : index
+  %4 = test.with_bounds { umin = 4 : index, umax = 4 : index, smin = 4 : index, smax = 4 : index } : index
+  %5 = vector.insert %1, %0[0] : index into vector<4xindex>
+  %6 = vector.insert %2, %5[1] : index into vector<4xindex>
+  %7 = vector.insert %3, %6[2] : index into vector<4xindex>
+  %8 = vector.insert %4, %7[3] : index into vector<4xindex>
+
+  %9 = test.reflect_bounds %8 : vector<4xindex>
+  func.return %9 : vector<4xindex>
+}
