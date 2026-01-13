@@ -5492,7 +5492,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(std::to_string(FunctionAlignment)));
   }
 
-  if (const Arg *A = Args.getLastArg(options::OPT_fpreferred_function_alignment_EQ)) {
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_fpreferred_function_alignment_EQ)) {
     unsigned Value = 0;
     if (StringRef(A->getValue()).getAsInteger(10, Value) || Value > 65536 ||
         !llvm::isPowerOf2_32(Value))
@@ -5503,7 +5504,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(
         std::to_string(llvm::Log2_32_Ceil(std::min(Value, 65536u)))));
   }
-  
+
   // We support -falign-loops=N where N is a power of 2. GCC supports more
   // forms.
   if (const Arg *A = Args.getLastArg(options::OPT_falign_loops_EQ)) {
