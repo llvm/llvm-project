@@ -5,14 +5,15 @@ static_library("Scalable") {
     "//clang/lib/AST",
     "//clang/lib/ASTMatchers",
     "//clang/lib/Basic",
+    "//clang/lib/Frontend",
     "//clang/lib/Index",
     "//clang/lib/Lex",
-    "//clang/lib/Frontend",
     "//llvm/lib/Support",
   ]
   sources = [
     "ASTEntityMapping.cpp",
     "Model/BuildNamespace.cpp",
+    "Model/EntityIdTable.cpp",
     "Model/EntityName.cpp",
   ]
 }

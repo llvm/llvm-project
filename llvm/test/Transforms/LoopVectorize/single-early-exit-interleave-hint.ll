@@ -35,8 +35,8 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; VF4IC4-NEXT:    [[TMP11:%.*]] = or <4 x i1> [[TMP16]], [[TMP17]]
 ; VF4IC4-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP11]])
 ; VF4IC4-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
-; VF4IC4-NEXT:    [[TMP5:%.*]] = or i1 [[TMP3]], [[TMP4]]
-; VF4IC4-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_SPLIT:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; VF4IC4-NEXT:    [[TMP18:%.*]] = or i1 [[TMP3]], [[TMP4]]
+; VF4IC4-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_SPLIT:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF4IC4:       [[MIDDLE_SPLIT]]:
 ; VF4IC4-NEXT:    br i1 [[TMP3]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[MIDDLE_BLOCK:.*]]
 ; VF4IC4:       [[MIDDLE_BLOCK]]:

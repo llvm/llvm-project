@@ -3,6 +3,8 @@
 
 ! RUN: %flang -fsyntax-only -### %s -o %t 2>&1 \
 ! RUN:     -finput-charset=utf-8 \
+! RUN:     -fdefault-integer-4 \
+! RUN:     -fdefault-real-4 \
 ! RUN:     -fdefault-double-8 \
 ! RUN:     -fdefault-integer-8 \
 ! RUN:     -fdefault-real-8 \
@@ -35,6 +37,8 @@
 
 ! CHECK: "-P"
 ! CHECK: "-finput-charset=utf-8"
+! CHECK: "-fdefault-integer-4"
+! CHECK: "-fdefault-real-4"
 ! CHECK: "-fdefault-double-8"
 ! CHECK: "-fdefault-integer-8"
 ! CHECK: "-fdefault-real-8"

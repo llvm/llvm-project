@@ -154,6 +154,7 @@ struct MissingFeatures {
   static bool coroOutsideFrameMD() { return false; }
   static bool coroCoReturn() { return false; }
   static bool coroCoYield() { return false; }
+  static bool coroutineExceptions() { return false; };
 
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }
@@ -263,6 +264,7 @@ struct MissingFeatures {
   static bool ehCleanupScope() { return false; }
   static bool ehCleanupScopeRequiresEHCleanup() { return false; }
   static bool ehCleanupBranchFixups() { return false; }
+  static bool ehScopeFilter() { return false; }
   static bool ehstackBranches() { return false; }
   static bool emitBranchThroughCleanup() { return false; }
   static bool emitCheckedInBoundsGEP() { return false; }
@@ -300,6 +302,8 @@ struct MissingFeatures {
   static bool makeTripleAlwaysPresent() { return false; }
   static bool maybeHandleStaticInExternC() { return false; }
   static bool mergeAllConstants() { return false; }
+  static bool memberFuncPtrAuthInfo() { return false; }
+  static bool memberFuncPtrCast() { return false; }
   static bool metaDataNode() { return false; }
   static bool moduleNameHash() { return false; }
   static bool msabi() { return false; }
@@ -376,7 +380,6 @@ struct MissingFeatures {
   static bool tryOp() { return false; }
   static bool vecTernaryOp() { return false; }
   static bool zextOp() { return false; }
-  static bool catchParamOp() { return false; }
 
   // Future CIR attributes
   static bool optInfoAttr() { return false; }

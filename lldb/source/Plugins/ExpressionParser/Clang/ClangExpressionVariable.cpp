@@ -59,6 +59,6 @@ ClangExpressionVariable::ClangExpressionVariable(
 }
 
 TypeFromUser ClangExpressionVariable::GetTypeFromUser() {
-  TypeFromUser tfu(GetValueObject()->GetCompilerType());
+  TypeFromUser tfu(m_frozen_sp->GetCompilerType());
   return tfu;
 }

@@ -47,7 +47,7 @@ void test_global_max_f64(__global double *addr, double x){
 }
 
 // CHECK-LABEL: test_flat_add_local_f64
-// CHECK: = atomicrmw fadd ptr addrspace(3) %{{.+}}, double %{{.+}} syncscope("agent") monotonic, align 8{{$}}
+// CHECK: = atomicrmw fadd ptr %{{.+}}, double %{{.+}} syncscope("agent") monotonic, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
 
 // GFX90A-LABEL:  test_flat_add_local_f64$local
 // GFX90A:  ds_add_rtn_f64
@@ -57,7 +57,7 @@ void test_flat_add_local_f64(__local double *addr, double x){
 }
 
 // CHECK-LABEL: test_flat_global_add_f64
-// CHECK: = atomicrmw fadd ptr addrspace(1) {{.+}}, double %{{.+}} syncscope("agent") monotonic, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+// CHECK: = atomicrmw fadd ptr {{.+}}, double %{{.+}} syncscope("agent") monotonic, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
 
 // GFX90A-LABEL:  test_flat_global_add_f64$local
 // GFX90A:  global_atomic_add_f64
@@ -77,10 +77,10 @@ void test_flat_min_flat_f64(__generic double *addr, double x){
 }
 
 // CHECK-LABEL: test_flat_global_min_f64
-// CHECK: = atomicrmw fmin ptr addrspace(1) {{.+}}, double %{{.+}} syncscope("agent") monotonic, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+// CHECK: = atomicrmw fmin ptr {{.+}}, double %{{.+}} syncscope("agent") monotonic, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
 
 // GFX90A:  test_flat_global_min_f64$local
-// GFX90A:  global_atomic_min_f64
+// GFX90A:  flat_atomic_min_f64
 void test_flat_global_min_f64(__global double *addr, double x){
   double *rtn;
   *rtn = __builtin_amdgcn_flat_atomic_fmin_f64(addr, x);
@@ -97,10 +97,10 @@ void test_flat_max_flat_f64(__generic double *addr, double x){
 }
 
 // CHECK-LABEL: test_flat_global_max_f64
-// CHECK: = atomicrmw fmax ptr addrspace(1) {{.+}}, double %{{.+}} syncscope("agent") monotonic, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+// CHECK: = atomicrmw fmax ptr {{.+}}, double %{{.+}} syncscope("agent") monotonic, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
 
 // GFX90A-LABEL:  test_flat_global_max_f64$local
-// GFX90A:  global_atomic_max_f64
+// GFX90A:  flat_atomic_max_f64
 void test_flat_global_max_f64(__global double *addr, double x){
   double *rtn;
   *rtn = __builtin_amdgcn_flat_atomic_fmax_f64(addr, x);

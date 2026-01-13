@@ -10,6 +10,7 @@ on:
       - 'users/**'
     paths:
       - 'clang-tools-extra/clang-tidy/**'
+      - 'clang-tools-extra/docs/clang-tidy/**'
       - '.github/workflows/pr-code-lint.yml'
 
 jobs:
@@ -33,7 +34,7 @@ jobs:
       
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@24d32ffd492484c1d75e0c0b894501ddb9d30d62 # v47.0.0
+        uses: tj-actions/changed-files@e0021407031f5be11a464abee9a0776171c79891 # v47.0.1
         with:
           separator: ","
           skip_initial_fetch: true
@@ -71,12 +72,12 @@ jobs:
                 -DLLVM_INCLUDE_TESTS=OFF \
                 -DCLANG_INCLUDE_TESTS=OFF \
                 -DCMAKE_BUILD_TYPE=Release
-          
+
           ninja -C build \
                 clang-tablegen-targets \
                 genconfusable               # for "ConfusableIdentifierCheck.h"
 
-      - name: Run code linter
+      - name: Run code linters
         env:
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
@@ -91,7 +92,7 @@ jobs:
             --changed-files "$CHANGED_FILES"
       
       - name: Upload results
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: workflow-args
