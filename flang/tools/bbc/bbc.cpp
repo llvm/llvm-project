@@ -638,9 +638,9 @@ int main(int argc, char **argv) {
         Fortran::common::LanguageFeature::CudaWarpMatchFunction, false);
   }
 
-  if (enableGPUMode == "managed") {
+  if (enableGPUMode == "managed" || enableGPUMode == "mem:managed") {
     options.features.Enable(Fortran::common::LanguageFeature::CudaManaged);
-  } else if (enableGPUMode == "unified") {
+  } else if (enableGPUMode == "unified" || enableGPUMode == "mem:unified") {
     options.features.Enable(Fortran::common::LanguageFeature::CudaUnified);
   }
 
