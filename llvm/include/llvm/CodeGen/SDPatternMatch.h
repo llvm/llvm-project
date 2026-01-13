@@ -1323,6 +1323,13 @@ inline auto m_IntrinsicWOChain(const LHS &Op0, const RHS &Op1) {
   return m_Node(ISD::INTRINSIC_WO_CHAIN, m_SpecificInt(IntrinsicId), Op0, Op1);
 }
 
+template <unsigned IntrinsicId, typename T0_P, typename T1_P, typename T2_P>
+inline auto m_IntrinsicWOChain(const T0_P &Op0, const T1_P &Op1,
+                               const T2_P &Op2) {
+  return m_Node(ISD::INTRINSIC_WO_CHAIN, m_SpecificInt(IntrinsicId), Op0, Op1,
+                Op2);
+}
+
 struct SpecificNeg_match {
   SDValue V;
 
