@@ -85,8 +85,6 @@ class CFIInstrInserter : public MachineFunctionPass {
     bool Processed = false;
   };
 
-#define INVALID_REG UINT_MAX
-#define INVALID_OFFSET INT_MAX
   /// contains the location where CSR register is saved.
   class CSRSavedLocation {
   public:
