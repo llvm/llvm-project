@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   commit-access-review:
@@ -32,3 +33,11 @@ jobs:
         with:
           name: triagers
           path: triagers.log
+
+      - name: Create the issue
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          # There is a limit to the number of mentions you can have in one comment, so
+          # we need to limit the number of users we mention.
+          cat triagers.log | head -n 25 | python3 .github/workflows/commit-create-issue.py $GITHUB_TOKEN

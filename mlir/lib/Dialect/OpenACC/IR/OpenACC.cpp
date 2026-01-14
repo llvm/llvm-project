@@ -411,7 +411,7 @@ getSingleRegionOpSuccessorRegions(Operation *op, Region &region,
     return;
   }
 
-  regions.push_back(RegionSuccessor(op, op->getResults()));
+  regions.push_back(RegionSuccessor::parent(op->getResults()));
 }
 
 void KernelsOp::getSuccessorRegions(RegionBranchPoint point,
@@ -460,13 +460,13 @@ void LoopOp::getSuccessorRegions(RegionBranchPoint point,
       regions.push_back(RegionSuccessor(&getRegion()));
       return;
     }
-    regions.push_back(RegionSuccessor(getOperation(), getResults()));
+    regions.push_back(RegionSuccessor::parent(getResults()));
     return;
   }
 
   // Structured loops: model a loop-shaped region graph similar to scf.for.
   regions.push_back(RegionSuccessor(&getRegion()));
-  regions.push_back(RegionSuccessor(getOperation(), getResults()));
+  regions.push_back(RegionSuccessor::parent(getResults()));
 }
 
 //===----------------------------------------------------------------------===//
