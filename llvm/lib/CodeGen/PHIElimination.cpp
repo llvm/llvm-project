@@ -129,7 +129,7 @@ public:
     auto *MLIWrapper = P->getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
     auto *MDTWrapper =
         P->getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
-    auto *PDTWrapper =
+    auto *PDTWrapper = 
         P->getAnalysisIfAvailable<MachinePostDominatorTreeWrapperPass>();
     auto *MBPIWrapper =
         P->getAnalysisIfAvailable<MachineBranchProbabilityInfoWrapperPass>();
@@ -224,8 +224,6 @@ void PHIElimination::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addPreserved<MachinePostDominatorTreeWrapperPass>();
   AU.addPreserved<MachineLoopInfoWrapperPass>();
-  AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
-  AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
   AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
