@@ -443,8 +443,6 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
     setFunctionDeclAttributes(FD, F, M);
   if (!getABIInfo().getCodeGenOpts().EmitIEEENaNCompliantInsts)
     F->addFnAttr("amdgpu-ieee", "false");
-  if (getABIInfo().getCodeGenOpts().AMDGPUExpandWaitcntProfiling)
-    F->addFnAttr("amdgpu-expand-waitcnt-profiling");
 }
 
 unsigned AMDGPUTargetCodeGenInfo::getDeviceKernelCallingConv() const {
