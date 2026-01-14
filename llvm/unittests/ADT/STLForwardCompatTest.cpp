@@ -299,7 +299,7 @@ TEST(STLForwardCompatTest, BindFrontReferences) {
     ++DArg;
   };
 
-  bind_front(TestTypes, A, B, std::move(C))(D, E, std::move(F));
+  llvm::bind_front(TestTypes, A, B, std::move(C))(D, E, std::move(F));
   EXPECT_EQ(A, 1); // A was copied, original unchanged.
   EXPECT_EQ(D, 5); // D was passed by reference and incremented.
 }
@@ -335,7 +335,7 @@ TEST(STLForwardCompatTest, BindBackReferences) {
     ++DArg;
   };
 
-  bind_back(TestTypes, D, E, std::move(F))(A, B, std::move(C));
+  llvm::bind_back(TestTypes, D, E, std::move(F))(A, B, std::move(C));
   EXPECT_EQ(A, 2); // A was passed by reference and incremented.
   EXPECT_EQ(D, 4); // D was copied, original unchanged.
 }
@@ -350,7 +350,7 @@ TEST(STLForwardCompatTest, BindBoundArgsForwarding) {
   EXPECT_EQ(CountCopyAndMove::TotalMoves(), 0);
 
   // Creating the wrapper should copy the bound args once.
-  auto Bound = bind_front(Fn, Arg);
+  auto Bound = llvm::bind_front(Fn, Arg);
   EXPECT_EQ(CountCopyAndMove::TotalCopies(), 1);
   EXPECT_EQ(CountCopyAndMove::TotalMoves(), 0);
 
@@ -365,7 +365,7 @@ TEST(STLForwardCompatTest, BindCallArgsForwarding) {
   auto Fn = [](int, CountCopyAndMove &&A) -> int { return A.val; };
 
   CountCopyAndMove::ResetCounts();
-  auto Bound = bind_front(Fn, 1);
+  auto Bound = llvm::bind_front(Fn, 1);
   EXPECT_EQ(CountCopyAndMove::TotalCopies(), 0);
   EXPECT_EQ(CountCopyAndMove::TotalMoves(), 0);
 
@@ -387,7 +387,7 @@ TEST(STLForwardCompatTest, BindCallableForwarding) {
   EXPECT_EQ(CountCopyAndMove::TotalMoves(), 0);
 
   // Moving lambda into bind should move, not copy.
-  auto Bound = bind_front(std::move(Fn));
+  auto Bound = llvm::bind_front(std::move(Fn));
   EXPECT_EQ(CountCopyAndMove::TotalCopies(), 1);
   EXPECT_EQ(CountCopyAndMove::TotalMoves(), 1);
 
@@ -414,7 +414,7 @@ TEST(STLForwardCompatTest, BindMoveBoundArgs) {
   CountCopyAndMove Arg(42);
 
   // Moving into bind should move, not copy.
-  auto Bound = bind_front(Fn, std::move(Arg));
+  auto Bound = llvm::bind_front(Fn, std::move(Arg));
   EXPECT_EQ(CountCopyAndMove::TotalCopies(), 0);
   EXPECT_EQ(CountCopyAndMove::TotalMoves(), 1);
 
@@ -434,7 +434,7 @@ TEST(STLForwardCompatTest, BindFrontMutableStorage) {
     ExtraCheckFn(AArg, BArg);
   };
 
-  auto BoundA = bind_front(TestMutation, A, 42);
+  auto BoundA = llvm::bind_front(TestMutation, A, 42);
   BoundA([](int AVal, int BVal) {
     EXPECT_EQ(AVal, 2); // Stored copy incremented from 1.
     EXPECT_EQ(BVal, 43);
@@ -459,7 +459,7 @@ TEST(STLForwardCompatTest, BindBackMutableStorage) {
     ExtraCheckFn(AArg, BArg);
   };
 
-  auto BoundA = bind_back(TestMutation, A, 42);
+  auto BoundA = llvm::bind_back(TestMutation, A, 42);
   BoundA([](int AVal, int BVal) {
     EXPECT_EQ(AVal, 2); // Stored copy incremented from 1.
     EXPECT_EQ(BVal, 43);
@@ -477,33 +477,57 @@ TEST(STLForwardCompatTest, BindBackMutableStorage) {
 static int subtract(int A, int B) { return A - B; }
 
 TEST(STLForwardCompatTest, BindFrontConstexprCallable) {
-  // Test compile-time callable with bind_front.
-  auto TimesFive = bind_front<subtract>(5);
+  // Test compile-time callable with llvm::bind_front.
+  auto TimesFive = llvm::bind_front<subtract>(5);
   EXPECT_EQ(TimesFive(3), 2);
 
-  // Test compile-time callable with bind_back.
-  auto FiveTimesX = bind_back<subtract>(5);
+  // Test compile-time callable with llvm::bind_back.
+  auto FiveTimesX = llvm::bind_back<subtract>(5);
   EXPECT_EQ(FiveTimesX(3), -2);
 }
 
 TEST(STLForwardCompatTest, BindFrontBackNoBoundArgs) {
-  auto Fn1 = bind_front([](int A, int B) { return A + B; });
+  auto Fn1 = llvm::bind_front([](int A, int B) { return A + B; });
   EXPECT_EQ(Fn1(3, 4), 7);
-  auto Fn2 = bind_back([](int A, int B) { return A + B; });
+  auto Fn2 = llvm::bind_back([](int A, int B) { return A + B; });
   EXPECT_EQ(Fn2(3, 4), 7);
 }
 
 TEST(STLForwardCompatTest, BindFrontBindBackConstexpr) {
-  static constexpr auto Fn1 = bind_front([](int A, int B) { return A + B; }, 1);
+  static constexpr auto Fn1 =
+      llvm::bind_front([](int A, int B) { return A + B; }, 1);
   static_assert(Fn1(3) == 4);
-  static constexpr auto Fn2 = bind_back([](int A, int B) { return A + B; }, 1);
+  static constexpr auto Fn2 =
+      llvm::bind_back([](int A, int B) { return A + B; }, 1);
   static_assert(Fn2(3) == 4);
+}
+
+// Test that reference return types are preserved (with `decltype(auto)`).
+TEST(STLForwardCompatTest, BindPreservesReferenceReturn) {
+  int X = 10;
+  auto GetRef = [&X]() -> int & { return X; };
+
+  auto BoundFront = llvm::bind_front(GetRef);
+  static_assert(std::is_same_v<decltype(BoundFront()), int &>);
+  BoundFront() = 20;
+  EXPECT_EQ(X, 20);
+
+  const auto BoundFrontConst = llvm::bind_front(GetRef);
+  static_assert(std::is_same_v<decltype(BoundFrontConst()), int &>);
+
+  auto BoundBack = llvm::bind_back(GetRef);
+  static_assert(std::is_same_v<decltype(BoundBack()), int &>);
+  BoundBack() = 30;
+  EXPECT_EQ(X, 30);
+
+  const auto BoundBackConst = llvm::bind_back(GetRef);
+  static_assert(std::is_same_v<decltype(BoundBackConst()), int &>);
 }
 
 // Use std::ref/std::cref to bind references (bound args are decay-copied).
 TEST(STLForwardCompatTest, BindWithReferenceWrapper) {
   int X = 1;
-  auto Increment = bind_front([](int &Val) { ++Val; }, std::ref(X));
+  auto Increment = llvm::bind_front([](int &Val) { ++Val; }, std::ref(X));
   Increment();
   EXPECT_EQ(X, 2);
   Increment();
@@ -512,7 +536,7 @@ TEST(STLForwardCompatTest, BindWithReferenceWrapper) {
 
 // The callable itself can have mutable state.
 TEST(STLForwardCompatTest, BindMutableCallable) {
-  auto Counter = bind_front([N = 0]() mutable { return ++N; });
+  auto Counter = llvm::bind_front([N = 0]() mutable { return ++N; });
   EXPECT_EQ(Counter(), 1);
   EXPECT_EQ(Counter(), 2);
   EXPECT_EQ(Counter(), 3);
@@ -529,19 +553,19 @@ TEST(STLForwardCompatTest, BindMembers) {
   // Member function pointer support via std::apply (with std::invoke used
   // internally).
   MemberTest Obj{10};
-  auto ScaleObj = bind_front(&MemberTest::scale, Obj);
+  auto ScaleObj = llvm::bind_front(&MemberTest::scale, Obj);
   EXPECT_EQ(ScaleObj(3), 30);
-  auto ScaleBy5 = bind_back(&MemberTest::scale, 5);
+  auto ScaleBy5 = llvm::bind_back(&MemberTest::scale, 5);
   EXPECT_EQ(ScaleBy5(Obj), 50);
 
   // Member data pointer support via std::apply (with std::invoke used
   // internally).
-  auto GetValue = bind_front(&MemberTest::Value);
+  auto GetValue = llvm::bind_front(&MemberTest::Value);
   EXPECT_EQ(GetValue(Obj), 10);
 
   // Make sure we can use member data pointers for constexpr callables.
   static constexpr int MemberVal =
-      bind_front(&MemberTest::Value)(MemberTest{10});
+      llvm::bind_front(&MemberTest::Value)(MemberTest{10});
   EXPECT_EQ(MemberVal, 10);
 }
 
@@ -551,10 +575,10 @@ TEST(STLForwardCompatTest, BindFrontBindBack) {
   auto MulAdd1 = [](const int &A, const int &B, const int &C) {
     return A * (B + C) == 12;
   };
-  auto Mul0 = bind_back(MulAdd, 4, 2);
-  auto MulL = bind_front(MulAdd1, 2, 4);
-  auto Mul20 = bind_back(MulAdd, 4);
-  auto Mul21 = bind_front(MulAdd1, 2);
+  auto Mul0 = llvm::bind_back(MulAdd, 4, 2);
+  auto MulL = llvm::bind_front(MulAdd1, 2, 4);
+  auto Mul20 = llvm::bind_back(MulAdd, 4);
+  auto Mul21 = llvm::bind_front(MulAdd1, 2);
   EXPECT_TRUE(all_of(V, Mul0));
   EXPECT_TRUE(all_of(V, MulL));
 
@@ -567,8 +591,8 @@ TEST(STLForwardCompatTest, BindFrontBindBack) {
   EXPECT_TRUE(all_of(V, Mul0));
   EXPECT_TRUE(all_of(V, MulL));
 
-  auto Spec0 = bind_front(Mul20, 2);
-  auto Spec1 = bind_back(Mul21, 4);
+  auto Spec0 = llvm::bind_front(Mul20, 2);
+  auto Spec1 = llvm::bind_back(Mul21, 4);
   EXPECT_TRUE(all_of(V, Spec0));
   EXPECT_TRUE(all_of(V, Spec1));
 
