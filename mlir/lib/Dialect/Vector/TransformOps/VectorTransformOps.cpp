@@ -235,6 +235,11 @@ void transform::ApplyInnerOuterDimReductionConversionPatternsOp::
       patterns, vectorTransformOptions.vectorMultiReductionLowering);
 }
 
+void transform::ApplyUnrollMultiReductionPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorUnrollMultiReduction(patterns);
+}
+
 //===----------------------------------------------------------------------===//
 // Transform op registration
 //===----------------------------------------------------------------------===//

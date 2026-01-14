@@ -16,4 +16,3 @@ func.func @inner_outer_dim_reduction_conversion(%arg0: vector<2x3x5x7xf32>, %acc
   // CHECK: return %[[RES]]
   return %1 : vector<3x5xf32>
 }
-

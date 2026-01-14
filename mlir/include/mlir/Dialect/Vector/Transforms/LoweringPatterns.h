@@ -331,6 +331,10 @@ void populateVectorTransposeToFlatTranspose(RewritePatternSet &patterns,
 void populateVectorInnerOuterDimReductionConversionPatterns(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
     PatternBenefit benefit = 1);
+
+void populateVectorUnrollMultiReduction(RewritePatternSet &patterns,
+                                        PatternBenefit benefit = 1);
+
 } // namespace vector
 } // namespace mlir
 
