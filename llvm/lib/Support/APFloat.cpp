@@ -3946,8 +3946,7 @@ void IEEEFloat::initFromIEEEAPInt(const APInt &api) {
 
   sign = static_cast<unsigned int>(last_word >> ((S.sizeInBits - 1) % 64));
 
-  bool all_zero_significand =
-      llvm::all_of(mysignificand, [](integerPart bits) { return bits == 0; });
+  bool all_zero_significand = llvm::all_of(mysignificand, equal_to(0));
 
   bool is_zero = myexponent == 0 && all_zero_significand;
 

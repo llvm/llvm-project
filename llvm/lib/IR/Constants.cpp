@@ -1760,8 +1760,7 @@ Constant *Constant::getSplatValue(bool AllowPoison) const {
       Constant *SplatVal = IElt->getOperand(1);
       ConstantInt *Index = dyn_cast<ConstantInt>(IElt->getOperand(2));
 
-      if (Index && Index->getValue() == 0 &&
-          llvm::all_of(Mask, [](int I) { return I == 0; }))
+      if (Index && Index->getValue() == 0 && llvm::all_of(Mask, equal_to(0)))
         return SplatVal;
     }
   }
