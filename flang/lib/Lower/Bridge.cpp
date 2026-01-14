@@ -2133,8 +2133,12 @@ private:
       }
     }
     if (!labelList.empty()) {
-      auto selectExpr =
+      mlir::Value selectExpr =
           fir::LoadOp::create(*builder, loc, getSymbolAddress(symbol));
+      if (Fortran::semantics::IsAllocatableOrPointer(symbol)) {
+        selectExpr = fir::BoxAddrOp::create(*builder, loc, selectExpr);
+        selectExpr = fir::LoadOp::create(*builder, loc, selectExpr);
+      }
       // Add a default error target in case the goto is nonconforming.
       mlir::Block *errorBlock =
           builder->getBlock()->splitBlock(builder->getInsertionPoint());
