@@ -1245,13 +1245,13 @@ static bool
 functionContainsExprNotSafeForStreamingMode(CodeGenModule &CGM,
                                             const FunctionDecl *FD) {
   return CGM.getContext()
-      .AArch64ContansExprNotSafeForStreamingFunctions.contains(FD);
+      .AArch64ContainsExprNotSafeForStreamingFunctions.contains(FD);
 }
 
 static void
 setFunctionContainsExprNotSafeForStreamingMode(CodeGenModule &CGM,
                                                const FunctionDecl *FD) {
-  CGM.getContext().AArch64ContansExprNotSafeForStreamingFunctions.insert(FD);
+  CGM.getContext().AArch64ContainsExprNotSafeForStreamingFunctions.insert(FD);
 }
 
 /// Determines if there are any Arm SME ABI issues with inlining \p Callee into

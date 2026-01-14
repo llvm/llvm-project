@@ -84,7 +84,7 @@ public:
   void CheckSMEFunctionDefAttributes(const FunctionDecl *FD);
 
   void setFunctionContainsExprNotSafeForStreamingMode(const FunctionDecl *FD) {
-    getASTContext().AArch64ContansExprNotSafeForStreamingFunctions.insert(FD);
+    getASTContext().AArch64ContainsExprNotSafeForStreamingFunctions.insert(FD);
   }
 
   /// Return true if the given types are an SVE builtin and a VectorType that

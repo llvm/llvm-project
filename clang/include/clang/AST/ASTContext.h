@@ -1373,7 +1373,7 @@ public:
   /// Keep track of functions that contain expressions that are not valid in
   /// streaming mode on AArch64. This is used to check inlining validity.
   llvm::DenseSet<const FunctionDecl *>
-      AArch64ContansExprNotSafeForStreamingFunctions;
+      AArch64ContainsExprNotSafeForStreamingFunctions;
 
   ASTContext(LangOptions &LOpts, SourceManager &SM, IdentifierTable &idents,
              SelectorTable &sels, Builtin::Context &builtins,
