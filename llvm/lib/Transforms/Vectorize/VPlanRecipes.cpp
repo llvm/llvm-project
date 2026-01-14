@@ -2174,8 +2174,42 @@ void VPIRFlags::printFlags(raw_ostream &O) const {
     break;
   case OperationType::ReductionOp: {
     RecurKind RK = getRecurKind();
-    O << " ("
-      << Instruction::getOpcodeName(RecurrenceDescriptor::getOpcode(RK));
+    O << " (";
+    switch (RK) {
+    case RecurKind::SMax:
+      O << "smax";
+      break;
+    case RecurKind::SMin:
+      O << "smin";
+      break;
+    case RecurKind::UMax:
+      O << "umax";
+      break;
+    case RecurKind::UMin:
+      O << "umin";
+      break;
+    case RecurKind::FMinNum:
+      O << "fminnum";
+      break;
+    case RecurKind::FMaxNum:
+      O << "fmaxnum";
+      break;
+    case RecurKind::FMinimum:
+      O << "fminimum";
+      break;
+    case RecurKind::FMaximum:
+      O << "fmaximum";
+      break;
+    case RecurKind::FMinimumNum:
+      O << "fminimumnum";
+      break;
+    case RecurKind::FMaximumNum:
+      O << "fmaximumnum";
+      break;
+    default:
+      O << Instruction::getOpcodeName(RecurrenceDescriptor::getOpcode(RK));
+      break;
+    }
     if (isReductionInLoop())
       O << ", in-loop";
     if (isReductionOrdered())

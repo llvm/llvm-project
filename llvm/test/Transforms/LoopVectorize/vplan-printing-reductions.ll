@@ -1204,7 +1204,7 @@ define i32 @print_umax_reduction(ptr %y) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[RED_RES:%.+]]> = compute-reduction-result (icmp) ir<%red.next>
+; CHECK-NEXT:   EMIT vp<[[RED_RES:%.+]]> = compute-reduction-result (umax) ir<%red.next>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<100>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
