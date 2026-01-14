@@ -47,6 +47,10 @@ public:
       cir::DataMemberAttr attr, const mlir::DataLayout &layout,
       const mlir::TypeConverter &typeConverter) const override;
 
+  mlir::TypedAttr
+  lowerMethodConstant(cir::MethodAttr attr, const mlir::DataLayout &layout,
+                      const mlir::TypeConverter &typeConverter) const override;
+
   mlir::Operation *
   lowerGetRuntimeMember(cir::GetRuntimeMemberOp op, mlir::Type loweredResultTy,
                         mlir::Value loweredAddr, mlir::Value loweredMember,
@@ -127,6 +131,54 @@ mlir::TypedAttr LowerItaniumCXXABI::lowerDataMemberConstant(
 
   mlir::Type abiTy = lowerDataMemberType(attr.getType(), typeConverter);
   return cir::IntAttr::get(abiTy, memberOffset);
+}
+
+mlir::TypedAttr LowerItaniumCXXABI::lowerMethodConstant(
+    cir::MethodAttr attr, const mlir::DataLayout &layout,
+    const mlir::TypeConverter &typeConverter) const {
+  cir::IntType ptrdiffCIRTy = getPtrDiffCIRTy(lm);
+
+  // lowerMethodType returns the CIR type used to represent the method pointer
+  // in an ABI-specific way. That's why lowerMethodType returns cir::RecordType
+  // here.
+  auto loweredMethodTy = mlir::cast<cir::RecordType>(
+      lowerMethodType(attr.getType(), typeConverter));
+
+  auto zero = cir::IntAttr::get(ptrdiffCIRTy, 0);
+
+  // Itanium C++ ABI 2.3.2:
+  //   In all representations, the basic ABI properties of member function
+  //   pointer types are those of the following class, where fnptr_t is the
+  //   appropriate function-pointer type for a member function of this type:
+  //
+  //   struct {
+  //     fnptr_t ptr;
+  //     ptrdiff_t adj;
+  //   };
+
+  if (attr.isNull()) {
+    // Itanium C++ ABI 2.3.2:
+    //
+    //   In the standard representation, a null member function pointer is
+    //   represented with ptr set to a null pointer. The value of adj is
+    //   unspecified for null member function pointers.
+    //
+    // clang CodeGen emits struct{null, null} for null member function pointers.
+    // Let's do the same here.
+    return cir::ConstRecordAttr::get(
+        loweredMethodTy, mlir::ArrayAttr::get(attr.getContext(), {zero, zero}));
+  }
+
+  assert(!cir::MissingFeatures::virtualMethodAttr());
+
+  // Itanium C++ ABI 2.3.2:
+  //
+  //   A member function pointer for a non-virtual member function is
+  //   represented with ptr set to a pointer to the function, using the base
+  //   ABI's representation of function pointers.
+  auto ptr = cir::GlobalViewAttr::get(ptrdiffCIRTy, attr.getSymbol().value());
+  return cir::ConstRecordAttr::get(
+      loweredMethodTy, mlir::ArrayAttr::get(attr.getContext(), {ptr, zero}));
 }
 
 mlir::Operation *LowerItaniumCXXABI::lowerGetRuntimeMember(

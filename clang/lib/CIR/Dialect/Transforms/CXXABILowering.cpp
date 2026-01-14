@@ -143,6 +143,15 @@ mlir::LogicalResult CIRConstantOpABILowering::matchAndRewrite(
     return mlir::success();
   }
 
+  if (mlir::isa<cir::MethodType>(op.getType())) {
+    auto method = mlir::cast<cir::MethodAttr>(op.getValue());
+    mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
+    mlir::TypedAttr abiValue = lowerModule->getCXXABI().lowerMethodConstant(
+        method, layout, *getTypeConverter());
+    rewriter.replaceOpWithNewOp<ConstantOp>(op, abiValue);
+    return mlir::success();
+  }
+
   llvm_unreachable("constant operand is not an CXXABI-dependent type");
 }
 

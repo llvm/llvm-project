@@ -8634,7 +8634,7 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // If the callee is a GlobalAddress/ExternalSymbol node, turn it into a
   // TargetGlobalAddress/TargetExternalSymbol node so that legalize won't
-  // split it and then direct call can be matched by PseudoCALL.
+  // split it and then direct call can be matched by PseudoCALL_SMALL.
   if (GlobalAddressSDNode *S = dyn_cast<GlobalAddressSDNode>(Callee)) {
     const GlobalValue *GV = S->getGlobal();
     unsigned OpFlags = getTargetMachine().shouldAssumeDSOLocal(GV)
@@ -8680,7 +8680,6 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
     Op = IsTailCall ? LoongArchISD::TAIL : LoongArchISD::CALL;
     break;
   case CodeModel::Medium:
-    assert(Subtarget.is64Bit() && "Medium code model requires LA64");
     Op = IsTailCall ? LoongArchISD::TAIL_MEDIUM : LoongArchISD::CALL_MEDIUM;
     break;
   case CodeModel::Large:

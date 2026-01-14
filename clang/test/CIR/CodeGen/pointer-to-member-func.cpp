@@ -12,28 +12,29 @@ struct Foo {
   virtual void m3(int);
 };
 
-void unused_pointer_to_member_func(void (Foo::*func)(int)) {
+auto make_non_virtual() -> void (Foo::*)(int) {
+  return &Foo::m1;
 }
 
-// CIR-BEFORE: cir.func {{.*}} @_Z29unused_pointer_to_member_funcM3FooFviE(%[[ARG:.*]]: !cir.method<!cir.func<(!s32i)> in !rec_Foo>)
-// CIR-BEFORE:   %[[FUNC:.*]] = cir.alloca !cir.method<!cir.func<(!s32i)> in !rec_Foo>, !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Foo>>, ["func", init]
+// CIR-BEFORE: cir.func {{.*}} @_Z16make_non_virtualv() -> !cir.method<!cir.func<(!s32i)> in !rec_Foo>
+// CIR-BEFORE:   %[[RETVAL:.*]] = cir.alloca !cir.method<!cir.func<(!s32i)> in !rec_Foo>, !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Foo>>, ["__retval"]
+// CIR-BEFORE:   %[[METHOD_PTR:.*]] = cir.const #cir.method<@_ZN3Foo2m1Ei> : !cir.method<!cir.func<(!s32i)> in !rec_Foo>
+// CIR-BEFORE:   cir.store %[[METHOD_PTR]], %[[RETVAL]]
+// CIR-BEFORE:   %[[RET:.*]] = cir.load %[[RETVAL]]
+// CIR-BEFORE:   cir.return %[[RET]] : !cir.method<!cir.func<(!s32i)> in !rec_Foo>
 
-// CIR-AFTER: !rec_anon_struct = !cir.record<struct  {!s64i, !s64i}>
-// CIR-AFTER: cir.func {{.*}} @_Z29unused_pointer_to_member_funcM3FooFviE(%[[ARG:.*]]: !rec_anon_struct {{.*}})
-// CIR-AFTER    %[[FUNC:.*]] = cir.alloca !rec_anon_struct, !cir.ptr<!rec_anon_struct>, ["func", init]
+// CIR-AFTER: cir.func {{.*}} @_Z16make_non_virtualv() -> !rec_anon_struct {
+// CIR-AFTER:   %[[RETVAL:.*]] = cir.alloca !rec_anon_struct, !cir.ptr<!rec_anon_struct>, ["__retval"]
+// CIR-AFTER:   %[[METHOD_PTR:.*]] = cir.const #cir.const_record<{#cir.global_view<@_ZN3Foo2m1Ei> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct
+// CIR-AFTER:   cir.store %[[METHOD_PTR]], %[[RETVAL]]
+// CIR-AFTER:   %[[RET:.*]] = cir.load %[[RETVAL]]
+// CIR-AFTER:   cir.return %[[RET]] : !rec_anon_struct
 
-// NOTE: The difference between LLVM and OGCG are due to the lack of calling convention handling in CIR.
+// LLVM: define {{.*}} { i64, i64 } @_Z16make_non_virtualv()
+// LLVM:   %[[RETVAL:.*]] = alloca { i64, i64 }
+// LLVM:   store { i64, i64 } { i64 ptrtoint (ptr @_ZN3Foo2m1Ei to i64), i64 0 }, ptr %[[RETVAL]]
+// LLVM:   %[[RET:.*]] = load { i64, i64 }, ptr %[[RETVAL]]
+// LLVM:   ret { i64, i64 } %[[RET]]
 
-// LLVM: define {{.*}} void @_Z29unused_pointer_to_member_funcM3FooFviE({ i64, i64 } %[[ARG:.*]])
-// LLVM:   %[[FUNC:.*]] = alloca { i64, i64 }
-// LLVM:   store { i64, i64 } %[[ARG]], ptr %[[FUNC]]
-
-// OGCG: define {{.*}} void @_Z29unused_pointer_to_member_funcM3FooFviE(i64 %[[FUNC_COERCE0:.*]], i64 %[[FUNC_COERCE1:.*]])
-// OGCG:   %[[FUNC:.*]] = alloca { i64, i64 }
-// OGCG:   %[[FUNC_ADDR:.*]] = alloca { i64, i64 }
-// OGCG:   %[[FUNC_0:.*]] = getelementptr inbounds nuw { i64, i64 }, ptr %[[FUNC]], i32 0, i32 0
-// OGCG:   store i64 %[[FUNC_COERCE0]], ptr %[[FUNC_0]]
-// OGCG:   %[[FUNC_1:.*]] = getelementptr inbounds nuw { i64, i64 }, ptr %[[FUNC]], i32 0, i32 1
-// OGCG:   store i64 %[[FUNC_COERCE1]], ptr %[[FUNC_1]]
-// OGCG:   %[[FUNC1:.*]] = load { i64, i64 }, ptr %[[FUNC]]
-// OGCG:   store { i64, i64 } %[[FUNC1]], ptr %[[FUNC_ADDR]]
+// OGCG: define {{.*}} { i64, i64 } @_Z16make_non_virtualv()
+// OGCG:   ret { i64, i64 } { i64 ptrtoint (ptr @_ZN3Foo2m1Ei to i64), i64 0 }
