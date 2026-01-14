@@ -139,6 +139,11 @@ Changes to the LoongArch Backend
 Changes to the MIPS Backend
 ---------------------------
 
+Changes to the NVPTX Backend
+----------------------------
+
+* The default SM version has been changed from `sm_30` to `sm_75`.
+
 Changes to the PowerPC Backend
 ------------------------------
 
