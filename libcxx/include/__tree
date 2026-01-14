@@ -1478,18 +1478,6 @@ private:
       // so we must copy it to not perform undefined behavior which
       // is disallowed during constant evaluation.
 
-      // Furthermore, `const_cast` is not allowed during constant evaluation.
-      // We get around this by deleting `__lhs` and creating a new node in-place
-      // to avoid the `const_cast` when attempting to assign to `__lhs.first`.
-
-      // We create a sfinae wrapper method here, because if the body of the `true_type` overload for
-      // `__assign_value_sfinae()` gets template instantiated within `__assign_value`,
-      // the code will fail to compile when
-      // the value is not copy_constructible (even for runtime execution); unless we use `if constexpr`.
-      // Given that the copy-constructible code path will be a performance regression,
-      // we want to restrict it to only execute during constant evaluation
-      //, we need to delay the template instantiation.
-
       __assign_value_sfinae(std::integral_constant<bool, std::is_copy_constructible_v<decltype(__rhs.first)>>(),
                             std::forward<decltype(__lhs)>(__lhs),
                             std::forward<decltype(__rhs)>(__rhs));
