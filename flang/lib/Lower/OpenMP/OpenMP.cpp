@@ -177,6 +177,7 @@ public:
 
     parallelApplied = true;
     clauseOps.numThreadsDimsValues = ops.numThreadsDimsValues;
+    clauseOps.numThreadsNumDims = ops.numThreadsNumDims;
     return true;
   }
 
