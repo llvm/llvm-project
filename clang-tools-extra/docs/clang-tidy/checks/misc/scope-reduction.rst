@@ -3,8 +3,7 @@
 misc-scope-reduction
 ====================
 
-Detects local variables in functions whose scopes can be minimized. This check
-covers guidelines described by SEI DCL19-C.
+Detects local variables in functions whose scopes can be minimized.
 
 Examples:
 
@@ -23,14 +22,13 @@ Examples:
       }
     }
 
-    void test_switch_multiple_cases(int value) {
-      int accumulator = 0; // 'accumulator' can be declared in a smaller scope
+    void test_switch_case(int value) {
+      int result = 0; // 'result' can be declared in a smaller scope
       switch (value) {
         case 1:
-          accumulator += 10;
+          result = 10;
           break;
-        case 2:
-          accumulator += 20;
+        default:
           break;
       }
     }
@@ -42,9 +40,36 @@ Examples:
       }
     }
 
+Limitations
+-----------
+
+This checker cannot currently detect when a variable's previous value affects
+subsequent iterations, resulting in false positives in some cases. This can
+be addressed by implementing a pattern matcher that recognizes this
+accumulator pattern across loop iterations or by using clang's builtin
+Lifetime analysis.
+
+.. code-block:: cpp
+
+    void test_while_loop() {
+      // falsely detects 'counter' can be moved to smaller scope
+      int counter = 0;
+      while (true) {
+        counter++;
+        if (counter > 10) break;
+      }
+    }
+
+    void test_for_loop_reuse() {
+      int temp = 0; // falsely detects 'temp' can be moved to smaller scope
+      for (int i = 0; i<10; i++) {
+        temp += i;
+      }
+    }
+
 References
 ----------
 
-This check corresponds to the CERT C Coding Standard rules
+This check corresponds to the CERT C Coding Standard rule.
 `DCL19-C. Minimize the scope of variables and functions
 <https://wiki.sei.cmu.edu/confluence/spaces/c/pages/87152335/DCL19-C.+Minimize+the+scope+of+variables+and+functions>`_.
