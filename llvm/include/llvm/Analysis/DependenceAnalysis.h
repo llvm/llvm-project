@@ -643,10 +643,9 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
   /// Sets appropriate direction and distance.
-  bool strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
-                     const SCEV *DstConst, const Loop *CurrentSrcLoop,
-                     const Loop *CurrentDstLoop, unsigned Level,
-                     FullDependence &Result, bool UnderRuntimeAssumptions);
+  bool strongSIVtest(const SCEVAddRecExpr *Src, const SCEVAddRecExpr *Dst,
+                     unsigned Level, FullDependence &Result,
+                     bool UnderRuntimeAssumptions);
 
   /// weakCrossingSIVtest - Tests the weak-crossing SIV subscript pair
   /// (Src and Dst) for dependence.
@@ -850,6 +849,17 @@ private:
   /// checkDstSubscript to avoid duplicate code
   bool checkSubscript(const SCEV *Expr, const Loop *LoopNest,
                       SmallBitVector &Loops, bool IsSrc);
+
+  /// Return true if \p Expr is monotonic over the domain \p Domain with respect
+  /// to \p OutermostLoop.
+  bool isMonotonic(const SCEV *Expr, const Loop *OutermostLoop,
+                   SCEVMonotonicityDomain Domain) const;
+
+  /// Returns isMonotonic(\p Expr0, \p OutermostLoop, \p Domain) &&
+  /// isMonotonic(\p Expr1, \p OutermostLoop, \p Domain).
+  bool isMonotonicPair(const SCEV *Expr0, const SCEV *Expr1,
+                       const Loop *OutermostLoop,
+                       SCEVMonotonicityDomain Domain) const;
 }; // class DependenceInfo
 
 /// AnalysisPass to compute dependence information in a function
