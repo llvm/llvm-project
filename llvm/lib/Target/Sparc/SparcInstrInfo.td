@@ -1095,7 +1095,7 @@ def CPBCONDA : CPBranchSPA<(ins brtarget:$imm22, CCOp:$cond),
 
 // Section B.24 - Call and Link Instruction, p. 125
 // This is the only Format 1 instruction
-let Uses = [O6],
+let Uses = [O6], Defs = [O7],
     hasDelaySlot = 1, isCall = 1 in {
   def CALL : InstSP<(outs), (ins calltarget:$disp, variable_ops),
                     "call $disp",

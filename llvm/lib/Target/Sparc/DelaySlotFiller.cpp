@@ -471,10 +471,6 @@ static bool combineRestoreOR(MachineBasicBlock &MBB,
        OrMI->getOperand(2).getReg() == SP::O7))
     return false;
 
-  if (IsCall && OrMI->getOpcode() == SP::ORrr &&
-      OrMI->getOperand(1).getReg() == SP::O7)
-    return false;
-
   // Erase RESTORE.
   RestoreMI->eraseFromParent();
 
@@ -555,11 +551,9 @@ bool Filler::tryCombineRestoreWithPrevInst(MachineBasicBlock &MBB,
   case SP::ADDrr:
   case SP::ADDri:
     return combineRestoreADD(MBB, MBBI, PrevInst, TII);
-    break;
   case SP::ORrr:
   case SP::ORri:
     return combineRestoreOR(MBB, MBBI, PrevInst, TII);
-    break;
   case SP::SETHIi: return combineRestoreSETHIi(MBBI, PrevInst, TII); break;
   }
   // It cannot combine with the previous instruction.
