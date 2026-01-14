@@ -1242,7 +1242,8 @@ bool StackColoring::run(MachineFunction &Func, bool OnlyRemoveMarkers) {
   LLVM_DEBUG(dbgs() << "Total Stack size: " << TotalSize << " bytes\n\n");
 
   // Don't continue because there are not enough lifetime markers, or the
-  // stack is too small, or we are told not to optimize the slots.
+  // stack is too small, or we are told not to optimize the slots, or
+  // opt-bisect-limit is skipping this pass.
   if (NumMarkers < 2 || TotalSize < 16 || DisableColoring ||
       OnlyRemoveMarkers) {
     LLVM_DEBUG(dbgs() << "Will not try to merge slots.\n");
