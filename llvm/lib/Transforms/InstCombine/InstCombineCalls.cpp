@@ -3965,8 +3965,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
             Value *V = Builder.CreateBitCast(
                 Vect, Builder.getIntNTy(FTy->getNumElements()));
             Value *Res = Builder.CreateUnaryIntrinsic(Intrinsic::ctpop, V);
-            if (Res->getType() != II->getType())
-              Res = Builder.CreateZExtOrTrunc(Res, II->getType());
+            Res = Builder.CreateZExtOrTrunc(Res, II->getType());
             if (Arg != Vect &&
                 cast<Instruction>(Arg)->getOpcode() == Instruction::SExt)
               Res = Builder.CreateNeg(Res);
@@ -4041,8 +4040,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if (auto *VTy = dyn_cast<VectorType>(Vect->getType()))
           if (VTy->getElementType() == Builder.getInt1Ty()) {
             Value *Res = Builder.CreateAndReduce(Vect);
-            if (Res->getType() != II->getType())
-              Res = Builder.CreateZExt(Res, II->getType());
+            Res = Builder.CreateZExt(Res, II->getType());
             return replaceInstUsesWith(CI, Res);
           }
       }
