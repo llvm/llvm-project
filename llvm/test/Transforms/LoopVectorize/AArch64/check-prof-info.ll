@@ -184,7 +184,7 @@ define void @foo_i8(i64 %n) {
 ; CHECK-V2-IC1:  [[VEC_EPILOG_PH]]:
 ; CHECK-V2-IC1:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-V2-IC1:  [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-V2-IC1:    br i1 [[TMP11:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK-V2-IC1:    br i1 [[TMP9:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK-V2-IC1:  [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-V2-IC1:    br i1 [[CMP_N7:%.*]], label %[[FOR_COND_CLEANUP]], label %[[VEC_EPILOG_SCALAR_PH]], !prof [[PROF6]]
 ; CHECK-V2-IC1:  [[VEC_EPILOG_SCALAR_PH]]:
@@ -346,7 +346,7 @@ for.cond.cleanup:                                 ; preds = %for.body
 ; CHECK-V1-IC1: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK-V1-IC1: [[META4]] = !{!"llvm.loop.estimated_trip_count", i32 128}
 ; CHECK-V1-IC1: [[PROF5]] = !{!"branch_weights", i32 1, i32 7}
-; CHECK-V1-IC1: [[PROF6]] = !{!"branch_weights", i32 0, i32 0}
+; CHECK-V1-IC1: [[PROF6]] = !{!"branch_weights", i32 1, i32 0}
 ; CHECK-V1-IC1: [[LOOP7]] = distinct !{[[LOOP7]], [[META3]], [[META2]], [[META8:![0-9]+]]}
 ; CHECK-V1-IC1: [[META8]] = !{!"llvm.loop.estimated_trip_count", i32 0}
 ; CHECK-V1-IC1: [[PROF9]] = !{!"branch_weights", i32 1, i32 31}
@@ -369,7 +369,7 @@ for.cond.cleanup:                                 ; preds = %for.body
 ; CHECK-V1-IC1-FORCE-EPI4: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META8:![0-9]+]], [[META3]]}
 ; CHECK-V1-IC1-FORCE-EPI4: [[META8]] = !{!"llvm.loop.estimated_trip_count", i32 0}
 ; CHECK-V1-IC1-FORCE-EPI4: [[PROF9]] = !{!"branch_weights", i32 1, i32 3}
-; CHECK-V1-IC1-FORCE-EPI4: [[PROF10]] = !{!"branch_weights", i32 0, i32 0}
+; CHECK-V1-IC1-FORCE-EPI4: [[PROF10]] = !{!"branch_weights", i32 1, i32 0}
 ; CHECK-V1-IC1-FORCE-EPI4: [[LOOP11]] = distinct !{[[LOOP11]], [[META3]], [[META2]], [[META8]]}
 ; CHECK-V1-IC1-FORCE-EPI4: [[PROF12]] = !{!"branch_weights", i32 1, i32 31}
 ; CHECK-V1-IC1-FORCE-EPI4: [[LOOP13]] = distinct !{[[LOOP13]], [[META2]], [[META3]], [[META14:![0-9]+]]}
@@ -388,7 +388,7 @@ for.cond.cleanup:                                 ; preds = %for.body
 ; CHECK-V2-IC1: [[META4]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK-V2-IC1: [[META5]] = !{!"llvm.loop.estimated_trip_count", i32 256}
 ; CHECK-V2-IC1: [[PROF6]] = !{!"branch_weights", i32 1, i32 3}
-; CHECK-V2-IC1: [[PROF7]] = !{!"branch_weights", i32 0, i32 0}
+; CHECK-V2-IC1: [[PROF7]] = !{!"branch_weights", i32 1, i32 0}
 ; CHECK-V2-IC1: [[LOOP8]] = distinct !{[[LOOP8]], [[META4]], [[META3]], [[META9:![0-9]+]]}
 ; CHECK-V2-IC1: [[META9]] = !{!"llvm.loop.estimated_trip_count", i32 0}
 ; CHECK-V2-IC1: [[PROF10]] = !{!"branch_weights", i32 1, i32 63}
@@ -412,7 +412,7 @@ for.cond.cleanup:                                 ; preds = %for.body
 ; CHECK-V2-IC4: [[LOOP8]] = distinct !{[[LOOP8]], [[META3]], [[META9:![0-9]+]], [[META4]]}
 ; CHECK-V2-IC4: [[META9]] = !{!"llvm.loop.estimated_trip_count", i32 0}
 ; CHECK-V2-IC4: [[PROF10]] = !{!"branch_weights", i32 1, i32 3}
-; CHECK-V2-IC4: [[PROF11]] = !{!"branch_weights", i32 0, i32 0}
+; CHECK-V2-IC4: [[PROF11]] = !{!"branch_weights", i32 1, i32 0}
 ; CHECK-V2-IC4: [[LOOP12]] = distinct !{[[LOOP12]], [[META4]], [[META3]], [[META9]]}
 ; CHECK-V2-IC4: [[LOOP13]] = distinct !{[[LOOP13]], [[META3]], [[META4]], [[META14:![0-9]+]]}
 ; CHECK-V2-IC4: [[META14]] = !{!"llvm.loop.estimated_trip_count", i32 16}

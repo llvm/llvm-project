@@ -126,8 +126,8 @@ OriginList *OriginManager::getOrCreateList(const Expr *E) {
   if (auto *ParenIgnored = E->IgnoreParens(); ParenIgnored != E)
     return getOrCreateList(ParenIgnored);
   // We do not see CFG stmts for ExprWithCleanups. Simply peel them.
-  if (auto *EC = dyn_cast<ExprWithCleanups>(E))
-    return getOrCreateList(EC->getSubExpr());
+  if (const ExprWithCleanups *EWC = dyn_cast<ExprWithCleanups>(E))
+    return getOrCreateList(EWC->getSubExpr());
 
   if (!hasOrigins(E))
     return nullptr;
