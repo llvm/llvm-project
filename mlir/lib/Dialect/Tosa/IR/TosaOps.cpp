@@ -4913,6 +4913,15 @@ LogicalResult tosa::ConcatShapeOp::verify() {
       cast<tosa::shapeType>(getResult().getType());
   const int64_t outputRank = outShapeType.getRank();
   const Operation::operand_range inputList = getInput();
+
+  if (inputList.size() == 0)
+    return emitOpError("requires at least one input shape");
+
+  if (llvm::any_of(inputList, [](Value v) {
+        return cast<tosa::shapeType>(v.getType()).getRank() == 0;
+      }))
+    return emitOpError("requires all inputs shapes have a rank greater than 0");
+
   const int64_t inputsRank =
       llvm::accumulate(inputList, 0, [](int64_t acc, const Value &input) {
         const tosa::shapeType inShapeType =
