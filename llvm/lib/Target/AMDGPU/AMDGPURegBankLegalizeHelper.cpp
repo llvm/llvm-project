@@ -19,6 +19,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
@@ -716,6 +717,131 @@ bool RegBankLegalizeHelper::lowerSplitTo16(MachineInstr &MI) {
   return true;
 }
 
+bool RegBankLegalizeHelper::lowerUniMAD64(MachineInstr &MI) {
+  Register Dst0 = MI.getOperand(0).getReg();
+  Register Dst1 = MI.getOperand(1).getReg();
+  Register Src0 = MI.getOperand(2).getReg();
+  Register Src1 = MI.getOperand(3).getReg();
+  Register Src2 = MI.getOperand(4).getReg();
+
+  bool IsUnsigned = MI.getOpcode() == AMDGPU::G_AMDGPU_MAD_U64_U32;
+
+  bool DstOnValu = MRI.getRegBankOrNull(Src2) == VgprRB;
+  bool Accumulate = true;
+
+  if (!DstOnValu) {
+    if (mi_match(Src2, MRI, MIPatternMatch::m_ZeroInt()))
+      Accumulate = false;
+  }
+
+  // Keep the multiplication on the SALU.
+  Register DstHi;
+  Register DstLo = B.buildMul({SgprRB, S32}, Src0, Src1).getReg(0);
+  bool MulHiInVgpr = false;
+
+  const GCNSubtarget &ST = B.getMF().getSubtarget<GCNSubtarget>();
+  unsigned MulHOpc = IsUnsigned ? AMDGPU::G_UMULH : AMDGPU::G_SMULH;
+
+  if (ST.hasScalarMulHiInsts()) {
+    DstHi = B.buildInstr(MulHOpc, {{SgprRB, S32}}, {Src0, Src1}).getReg(0);
+  } else {
+    Register VSrc0 = B.buildCopy({VgprRB, S32}, Src0).getReg(0);
+    Register VSrc1 = B.buildCopy({VgprRB, S32}, Src1).getReg(0);
+
+    DstHi = B.buildInstr(MulHOpc, {{VgprRB, S32}}, {VSrc0, VSrc1}).getReg(0);
+
+    if (!DstOnValu) {
+      Register DstHiSgpr =
+          MRI.createVirtualRegister({SgprRB, MRI.getType(DstHi)});
+      buildReadAnyLane(B, DstHiSgpr, DstHi, RBI);
+      DstHi = DstHiSgpr;
+    } else {
+      MulHiInVgpr = true;
+    }
+  }
+
+  // Accumulate and produce the "carry-out" bit.
+
+  // The "carry-out" is defined as bit 64 of the result when computed as a
+  // big integer. For unsigned multiply-add, this matches the usual
+  // definition of carry-out. For signed multiply-add, bit 64 is the sign
+  // bit of the result, which is determined as:
+  //   sign(Src0 * Src1) + sign(Src2) + carry-out from unsigned 64-bit add
+  LLT CarryType = DstOnValu ? S1 : S32;
+  const RegisterBank &CarryBank = DstOnValu ? *VccRB : *SgprRB;
+  const RegisterBank &DstBank = DstOnValu ? *VgprRB : *SgprRB;
+  Register Carry;
+  Register Zero;
+
+  if (!IsUnsigned) {
+    // Register Zero, Carry;
+
+    if (MulHiInVgpr) {
+      Zero = MRI.createVirtualRegister({VgprRB, S32});
+      Carry = MRI.createVirtualRegister({VccRB, S1});
+    } else {
+      Zero = MRI.createVirtualRegister({SgprRB, S32});
+      Carry = MRI.createVirtualRegister({SgprRB, S32});
+    }
+
+    B.buildConstant(Zero, 0);
+    B.buildICmp(CmpInst::ICMP_SLT, Carry, DstHi, Zero);
+
+    if (DstOnValu && !MulHiInVgpr) {
+      Carry = B.buildTrunc({VccRB, S1}, Carry).getReg(0);
+    }
+  }
+
+  if (Accumulate) {
+    if (DstOnValu) {
+      DstLo = B.buildCopy({VgprRB, S32}, DstLo).getReg(0);
+      DstHi = B.buildCopy({VgprRB, S32}, DstHi).getReg(0);
+    }
+
+    Register Src2Lo = MRI.createVirtualRegister({&DstBank, S32});
+    Register Src2Hi = MRI.createVirtualRegister({&DstBank, S32});
+    B.buildUnmerge({Src2Lo, Src2Hi}, Src2);
+
+    if (!IsUnsigned) {
+      Register Src2Sign = MRI.createVirtualRegister({&CarryBank, CarryType});
+      Register XorCarry = MRI.createVirtualRegister({&CarryBank, CarryType});
+      B.buildICmp(CmpInst::ICMP_SLT, Src2Sign, Src2Hi, Zero);
+      Carry = B.buildXor(XorCarry, Carry, Src2Sign).getReg(0);
+    }
+    Register AddLo = MRI.createVirtualRegister({&DstBank, S32});
+    Register CarryLo = MRI.createVirtualRegister({&CarryBank, CarryType});
+    DstLo = B.buildUAddo(AddLo, CarryLo, DstLo, Src2Lo).getReg(0);
+
+    Register AddHi = MRI.createVirtualRegister({&DstBank, S32});
+    Register CarryHi = MRI.createVirtualRegister({&CarryBank, CarryType});
+
+    DstHi = B.buildUAdde(AddHi, CarryHi, DstHi, Src2Hi, CarryLo).getReg(0);
+
+    if (IsUnsigned) {
+      Carry = CarryHi;
+    } else {
+      Register CarryXor = MRI.createVirtualRegister({&CarryBank, CarryType});
+      Carry = B.buildXor(CarryXor, Carry, CarryHi).getReg(0);
+    }
+  } else {
+    if (IsUnsigned) {
+      Register CarryZero = MRI.createVirtualRegister({&CarryBank, CarryType});
+      Carry = B.buildConstant(CarryZero, 0).getReg(0);
+    }
+  }
+
+  B.buildMergeLikeInstr(Dst0, {DstLo, DstHi});
+
+  if (DstOnValu) {
+    B.buildCopy(Dst1, Carry);
+  } else {
+    if (!MRI.use_empty(Dst1))
+      B.buildTrunc(Dst1, Carry);
+  }
+  MI.eraseFromParent();
+  return true;
+}
+
 bool RegBankLegalizeHelper::lowerSplitTo32Select(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
   LLT DstTy = MRI.getType(Dst);
@@ -857,6 +983,8 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     return lowerV_BFE(MI);
   case S_BFE:
     return lowerS_BFE(MI);
+  case UniMAD64:
+    return lowerUniMAD64(MI);
   case SplitTo32:
     return lowerSplitTo32(MI);
   case SplitTo32Select:
@@ -933,6 +1061,7 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
 
 LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   switch (ID) {
+  case SgprS1:
   case Vcc:
   case UniInVcc:
     return LLT::scalar(1);
@@ -1058,6 +1187,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   switch (ID) {
   case Vcc:
     return VccRB;
+  case SgprS1:
   case Sgpr16:
   case Sgpr32:
   case Sgpr32_WF:
@@ -1146,6 +1276,7 @@ bool RegBankLegalizeHelper::applyMappingDst(
     switch (MethodIDs[OpIdx]) {
     // vcc, sgpr and vgpr scalars, pointers and vectors
     case Vcc:
+    case SgprS1:
     case Sgpr16:
     case Sgpr32:
     case Sgpr64:

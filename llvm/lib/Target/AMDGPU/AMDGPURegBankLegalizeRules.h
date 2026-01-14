@@ -134,6 +134,7 @@ enum RegBankLLTMappingApplyID {
   Vcc,
 
   // sgpr scalars, pointers, vectors and B-types
+  SgprS1,
   Sgpr16,
   Sgpr32,
   Sgpr64,
@@ -225,6 +226,7 @@ enum LoweringMethodID {
   S_BFE,
   V_BFE,
   VgprToVccCopy,
+  UniMAD64,
   SplitTo32,
   ScalarizeToS16,
   SplitTo32Select,
