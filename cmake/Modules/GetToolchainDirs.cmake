@@ -1,12 +1,3 @@
-#===-- cmake/modules/GetToolchainDirs.cmake --------------------------------===#
-#
-# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-# See https://llvm.org/LICENSE.txt for license information.
-# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-#
-#===------------------------------------------------------------------------===#
-
-
 # Determine the subdirectory relative to Clang's resource dir/sysroot where to
 # install target-specific libraries, to be found by Clang/Flang driver. This was
 # adapted from Compiler-RT's mechanism to find the path for
