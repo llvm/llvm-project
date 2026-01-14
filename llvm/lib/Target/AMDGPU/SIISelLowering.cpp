@@ -12965,6 +12965,9 @@ SDValue SITargetLowering::lowerFSQRTF64(SDValue Op, SelectionDAG &DAG) const {
 }
 
 SDValue SITargetLowering::LowerTrig(SDValue Op, SelectionDAG &DAG) const {
+  unsigned OpC = Op.getOpcode();
+  assert((OpC == ISD::FCOS || OpC == ISD::FSIN) && "Wrong trig opcode");
+
   SDLoc DL(Op);
   EVT VT = Op.getValueType();
   SDValue Arg = Op.getOperand(0);
@@ -12978,19 +12981,19 @@ SDValue SITargetLowering::LowerTrig(SDValue Op, SelectionDAG &DAG) const {
 
   if (Subtarget->hasTrigReducedRange()) {
     SDValue MulVal = DAG.getNode(ISD::FMUL, DL, VT, Arg, OneOver2Pi, Flags);
-    TrigVal = DAG.getNode(AMDGPUISD::FRACT, DL, VT, MulVal, Flags);
+    SDValue FractId =
+        DAG.getTargetConstant(Intrinsic::amdgcn_fract, DL, MVT::i32);
+    TrigVal =
+        DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT, FractId, MulVal, Flags);
   } else {
     TrigVal = DAG.getNode(ISD::FMUL, DL, VT, Arg, OneOver2Pi, Flags);
   }
 
-  switch (Op.getOpcode()) {
-  case ISD::FCOS:
-    return DAG.getNode(AMDGPUISD::COS_HW, SDLoc(Op), VT, TrigVal, Flags);
-  case ISD::FSIN:
-    return DAG.getNode(AMDGPUISD::SIN_HW, SDLoc(Op), VT, TrigVal, Flags);
-  default:
-    llvm_unreachable("Wrong trig opcode");
-  }
+  Intrinsic::AMDGCNIntrinsics Intrinsic =
+      OpC == ISD::FSIN ? Intrinsic::amdgcn_sin : Intrinsic::amdgcn_cos;
+  SDValue TrigId = DAG.getTargetConstant(Intrinsic, DL, MVT::i32);
+  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SDLoc(Op), VT, TrigId, TrigVal,
+                     Flags);
 }
 
 SDValue SITargetLowering::LowerATOMIC_CMP_SWAP(SDValue Op,
