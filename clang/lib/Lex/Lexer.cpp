@@ -1929,13 +1929,16 @@ static const char *fastParseASCIIIdentifierScalar(const char *CurPtr) {
 }
 
 // Fast path for lexing ASCII identifiers using SSE4.2 instructions.
-// Only enabled on x86/x86_64 when building with a compiler that supports
-// the 'target' attribute, which is used for runtime dispatch. Otherwise, we
-// fall back to the scalar implementation.
+// Only enabled on x86/x86_64 when building with __SSE4_2__ enabled, or with a
+// compiler that supports the 'target' attribute, used for runtime dispatch.
+// Otherwise, we fall back to the scalar implementation.
+// We avoid runtime check on Windows because it is not yet well-supported.
 #if defined(__SSE4_2__) || (defined(__i386__) || defined(__x86_64__)) &&       \
                                defined(__has_attribute) &&                     \
                                __has_attribute(target) && !defined(_WIN32)
-__attribute__((target("sse4.2"))) static const char *
+// "used" is a hack to suppress a false-positive warning due to a bug in
+// clang-18 and less. See PR175452.
+__attribute__((target("sse4.2"), used)) static const char *
 fastParseASCIIIdentifier(const char *CurPtr, const char *BufferEnd) {
   alignas(16) static constexpr char AsciiIdentifierRange[16] = {
       '_', '_', 'A', 'Z', 'a', 'z', '0', '9',
@@ -1965,9 +1968,7 @@ __attribute__((target("default")))
 #endif
 #endif
 #ifndef __SSE4_2__
-static const char *
-fastParseASCIIIdentifier(const char *CurPtr,
-                         [[maybe_unused]] const char *BufferEnd) {
+static const char *fastParseASCIIIdentifier(const char *CurPtr, const char *) {
   return fastParseASCIIIdentifierScalar(CurPtr);
 }
 #endif
