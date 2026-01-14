@@ -19,14 +19,16 @@
 // RUN:   --no-offload-new-driver %t/libSDL.a \
 // RUN: 2>&1 | FileCheck -check-prefixes=ALL,SDL %s
 
-// RUN: %clang --offload-new-driver -fgpu-rdc --offload=spirv64-unknown-hipspv \
+// RUN: %clang --offload-new-driver -fgpu-rdc \
+// RUN:   --offload=spirv64-unknown-chipstar \
 // RUN:   -nogpuinc -nogpulib %s -c -o %t/tu0.o
-// RUN: %clang --offload-new-driver -fgpu-rdc --offload=spirv64-unknown-hipspv \
+// RUN: %clang --offload-new-driver -fgpu-rdc \
+// RUN:   --offload=spirv64-unknown-chipstar \
 // RUN:   -nogpuinc -nogpulib %s -c -o %t/tu1.o
 // RUN: llvm-ar cr %t/libSDL2.a %t/tu1.o
 
 // RUN: %clang --offload-new-driver -fgpu-rdc \
-// RUN:   -Xoffload-compiler-spirv64-unknown-hipspv \
+// RUN:   -Xoffload-compiler-spirv64-unknown-chipstar \
 // RUN:   --hip-path=%S/Inputs/hipspv -no-hip-rt %t/tu0.o %t/libSDL2.a \
 // A hacky trick to print clang commands invoked by clang-linker-wrapper
 // RUN:   -v -Xlinker --emit-fatbin-only -Xoffload-compiler '-###' \

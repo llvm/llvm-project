@@ -17,27 +17,27 @@
 // RUN: 2>&1 | FileCheck --check-prefixes=ALL,NO-PLUGIN %s
 
 // RUN: %clang --offload-new-driver -nogpuinc -nogpulib \
-// RUN:   --offload=spirv64-unknown-hipspv \
+// RUN:   --offload=spirv64-unknown-chipstar \
 // RUN:   --hip-path=%S/Inputs/hipspv -Xoffload-compiler \
 // RUN:   '-###' -c %s -o /dev/null 2>&1 \
 // RUN: | FileCheck %s --check-prefixes=ALL,FROM-HIP-PATH
 
 // RUN: %clang --offload-new-driver -nogpuinc -nogpulib \
-// RUN:   --offload=spirv64-unknown-hipspv \
-// RUN:   -Xoffload-compiler-spirv64-unknown-hipspv \
+// RUN:   --offload=spirv64-unknown-chipstar \
+// RUN:   -Xoffload-compiler-spirv64-unknown-chipstar \
 // RUN:   --hipspv-pass-plugin=%S/Inputs/pass-plugin.so -Xoffload-compiler \
 // RUN:   '-###' -c %s -o /dev/null 2>&1 \
 // RUN: | FileCheck %s --check-prefixes=ALL,FROM-OPTION
 
 // RUN: not %clang --offload-new-driver -nogpuinc -nogpulib \
-// RUN:   --offload=spirv64-unknown-hipspv \
-// RUN:   -Xoffload-compiler-spirv64-unknown-hipspv \
+// RUN:   --offload=spirv64-unknown-chipstar \
+// RUN:   -Xoffload-compiler-spirv64-unknown-chipstar \
 // RUN:   --hipspv-pass-plugin=foo.so -Xoffload-compiler \
 // RUN:   '-###' -c %s -o /dev/null 2>&1 \
 // RUN: | FileCheck %s --check-prefixes=ALL,FROM-OPTION-INVALID
 
 // RUN: %clang --offload-new-driver -nogpuinc -nogpulib \
-// RUN:   --offload=spirv64-unknown-hipspv -Xoffload-compiler \
+// RUN:   --offload=spirv64-unknown-chipstar -Xoffload-compiler \
 // RUN:   '-###' -c %s -o /dev/null 2>&1 \
 // RUN: | FileCheck %s --check-prefixes=ALL,NO-PLUGIN
 

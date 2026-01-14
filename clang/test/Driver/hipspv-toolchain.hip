@@ -5,10 +5,11 @@
 // RUN: 2>&1 | FileCheck --check-prefixes=CHECK,OLD \
 // RUN:   -DTRIPLE=spirv64 %s
 
-// RUN: %clang -### -target x86_64-linux-gnu --offload=spirv64-unknown-hipspv \
+// RUN: %clang -### -target x86_64-linux-gnu \
+// RUN:   --offload=spirv64-unknown-chipstar \
 // RUN:   --offload-new-driver --hip-path=%S/Inputs/hipspv -nohipwrapperinc %s \
 // RUN: 2>&1 | FileCheck --check-prefixes=CHECK,NEW \
-// RUN:   -DTRIPLE=spirv64-unknown-hipspv -DHIP_PATH=%S/Inputs/hipspv %s
+// RUN:   -DTRIPLE=spirv64-unknown-chipstar -DHIP_PATH=%S/Inputs/hipspv %s
 
 // CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "[[TRIPLE]]"
 // CHECK-SAME: "-aux-triple" "{{.*}}" "-emit-llvm-bc"
@@ -52,39 +53,7 @@
 
 //------------------------------------------------------------------------------
 // Check the clang command, invoked by the linker wrapper, selects the HIPSPV
-// toolchain.
-
-// RUN: %clang --offload-new-driver -nogpuinc -nogpulib \
-// RUN:   --offload=spirv64-unknown-hipspv \
-// RUN:   --hip-path=%S/Inputs/hipspv -Xoffload-compiler \
-// RUN:   '-###' -c %s -o /dev/null 2>&1 \
-// RUN: | FileCheck %s --check-prefix=HIPSPV
-
-//      HIPSPV: {{".*llvm-link"}}
-// HIPSPV-SAME: "{{[^ ]*.o}}" "-o" [[LINK_BC:".*bc"]]
-
-//      HIPSPV: {{".*opt"}} [[LINK_BC]] "-load-pass-plugin"
-// HIPSPV-SAME: {{".*/hipspv/lib/libLLVMHipSpvPasses.so"}}
-// HIPSPV-SAME: "-passes=hip-post-link-passes" "-o" [[LOWER_BC:".*bc"]]
-
-//      HIPSPV: {{".*llvm-spirv"}} "--spirv-max-version=1.1"
-// HIPSPV-SAME: "--spirv-ext=+all" [[LOWER_BC]] "-o" "[[SPIRV_OUT:.*img]]"
-
-// RUN: %clang --offload-new-driver -nogpuinc -nogpulib \
-// RUN:   --offload=spirv64v1.3-unknown-hipspv \
-// RUN:   --hip-path=%S/Inputs/hipspv -Xoffload-compiler \
-// RUN:   '-###' -c %s -o /dev/null 2>&1 \
-// RUN: | FileCheck %s --check-prefix=HIPSPV_SUBARCH
-
-//      HIPSPV_SUBARCH: {{".*llvm-link"}}
-// HIPSPV_SUBARCH-SAME: "{{[^ ]*.o}}" "-o" [[LINK_BC:".*bc"]]
-
-//      HIPSPV_SUBARCH: {{".*opt"}} [[LINK_BC]] "-load-pass-plugin"
-// HIPSPV_SUBARCH-SAME: {{".*/hipspv/lib/libLLVMHipSpvPasses.so"}}
-// HIPSPV_SUBARCH-SAME: "-passes=hip-post-link-passes" "-o" [[LOWER_BC:".*bc"]]
-
-//      HIPSPV_SUBARCH: {{".*llvm-spirv"}}
-// HIPSPV_SUBARCH-SAME: "--spirv-ext=+all" [[LOWER_BC]] "-o" "[[SPIRV_OUT:.*img]]"
+// toolchain for the new offload driver.
 
 // RUN: %clang --offload-new-driver -nogpuinc -nogpulib \
 // RUN:   --offload=spirv64-unknown-chipstar \
@@ -93,7 +62,7 @@
 // RUN: | FileCheck %s --check-prefix=CHIPSTAR
 
 //      CHIPSTAR: {{".*llvm-link"}}
-// CHIPSTAR-SAME: "{{[^ ]*.o}}" "-o" [[LINK_BC:".*bc"]]
+// CHIPSTAR-SAME: "-o" [[LINK_BC:".*bc"]] "{{[^ ]*.o}}"
 
 //      CHIPSTAR: {{".*opt"}} [[LINK_BC]] "-load-pass-plugin"
 // CHIPSTAR-SAME: {{".*/hipspv/lib/libLLVMHipSpvPasses.so"}}
@@ -110,7 +79,7 @@
 // RUN: | FileCheck %s --check-prefix=CHIPSTAR_SUBARCH
 
 //      CHIPSTAR_SUBARCH: {{".*llvm-link"}}
-// CHIPSTAR_SUBARCH-SAME: "{{[^ ]*.o}}" "-o" [[LINK_BC:".*bc"]]
+// CHIPSTAR_SUBARCH-SAME: "-o" [[LINK_BC:".*bc"]] "{{[^ ]*.o}}"
 
 //      CHIPSTAR_SUBARCH: {{".*opt"}} [[LINK_BC]] "-load-pass-plugin"
 // CHIPSTAR_SUBARCH-SAME: {{".*/hipspv/lib/libLLVMHipSpvPasses.so"}}
@@ -132,7 +101,7 @@
 // RUN:   --check-prefix=VERSIONED %s
 
 // RUN: env "PATH=%t/versioned" %clang --offload-new-driver -nogpuinc \
-// RUN:   -nogpulib --offload=spirv64-unknown-hipspv \
+// RUN:   -nogpulib --offload=spirv64-unknown-chipstar \
 // RUN:   --hip-path=%S/Inputs/hipspv -Xoffload-compiler '-###' -c %s \
 // RUN:   -o /dev/null 2>&1 \
 // RUN: | FileCheck -DVERSION=%llvm-version-major --check-prefix=VERSIONED %s

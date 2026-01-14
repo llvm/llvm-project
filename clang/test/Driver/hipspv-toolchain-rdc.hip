@@ -7,12 +7,12 @@
 // RUN: 2>&1 | FileCheck --check-prefix=OLD %s
 
 // RUN: %clang -### -x hip -target x86_64-linux-gnu \
-// RUN:   --offload=spirv64-unknown-hipspv --offload-new-driver -fgpu-rdc \
+// RUN:   --offload=spirv64-unknown-chipstar --offload-new-driver -fgpu-rdc \
 // RUN:   --hip-path=%S/Inputs/hipspv -nohipwrapperinc -no-hip-rt \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck --check-prefix=NEW \
-// RUN:   -DOFFLOAD_TRIPLE=spirv64-unknown-hipspv -DHIP_PATH=%S/Inputs/hipspv %s
+// RUN:   -DOFFLOAD_TRIPLE=spirv64-unknown-chipstar -DHIP_PATH=%S/Inputs/hipspv %s
 
 // Emit objects for host side path
 // OLD: [[CLANG:".*clang.*"]] "-cc1" "-triple" "x86_64-unknown-linux-gnu"
@@ -72,7 +72,7 @@
 // NEW-SAME: "-emit-llvm-bc"
 // NEW-SAME: "-fcuda-is-device" "-fcuda-allow-variadic-functions"
 // NEW-SAME: "-fvisibility=hidden" "-fapply-global-visibility-to-externs"
-// NEW-SAME: "-mlink-builtin-bitcode" "[[HIP_PATH]]/lib/hip-device-lib/hipspv-spirv64-unknown-hipspv.bc"
+// NEW-SAME: "-mlink-builtin-bitcode" "[[HIP_PATH]]/lib/hip-device-lib/hipspv-spirv64-unknown-chipstar.bc"
 // NEW-SAME: "-fgpu-rdc"
 // NEW-SAME: "-o" "[[A_DEV_BC:.*bc]]" "-x" "hip"
 // NEW-SAME: "[[A_SRC:.*a.cu]]"
@@ -92,7 +92,7 @@
 // NEW-SAME: "-emit-llvm-bc"
 // NEW-SAME: "-fcuda-is-device" "-fcuda-allow-variadic-functions"
 // NEW-SAME: "-fvisibility=hidden" "-fapply-global-visibility-to-externs"
-// NEW-SAME: "-mlink-builtin-bitcode" "[[HIP_PATH]]/lib/hip-device-lib/hipspv-spirv64-unknown-hipspv.bc"
+// NEW-SAME: "-mlink-builtin-bitcode" "[[HIP_PATH]]/lib/hip-device-lib/hipspv-spirv64-unknown-chipstar.bc"
 // NEW-SAME: "-fgpu-rdc"
 // NEW-SAME: "-o" "[[B_DEV_BC:.*bc]]" "-x" "hip"
 // NEW-SAME: "[[B_SRC:.*b.hip]]"
