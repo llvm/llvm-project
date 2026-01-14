@@ -192,6 +192,9 @@ def __builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f64 : AMDGPUBuiltin<"double(doub
 def __builtin_amdgcn_raw_ptr_buffer_load_lds : AMDGPUBuiltin<"void(__amdgpu_buffer_rsrc_t, void address_space<3> *, _Constant unsigned int, int, int, _Constant int, _Constant int)", [], "vmem-to-lds-load-insts">;
 def __builtin_amdgcn_struct_ptr_buffer_load_lds : AMDGPUBuiltin<"void(__amdgpu_buffer_rsrc_t, void address_space<3> *, _Constant unsigned int, int, int, int, _Constant int, _Constant int)", [], "vmem-to-lds-load-insts">;
 
+def __builtin_amdgcn_global_load_b128 : AMDGPUBuiltin<"_ExtVector<4, unsigned int>(_ExtVector<4, unsigned int address_space<1> *>, char const *)", [], "gfx9-insts">;
+def __builtin_amdgcn_global_store_b128 : AMDGPUBuiltin<"void(_ExtVector<4, unsigned int address_space<1> *>, _ExtVector<4, unsigned int>, char const *)", [], "gfx9-insts">;
+
 //===----------------------------------------------------------------------===//
 // Ballot builtins.
 //===----------------------------------------------------------------------===//
@@ -379,6 +382,11 @@ def __builtin_amdgcn_endpgm : AMDGPUBuiltin<"void()", [NoReturn]>;
 
 def __builtin_amdgcn_get_fpenv : AMDGPUBuiltin<"uint64_t()">;
 def __builtin_amdgcn_set_fpenv : AMDGPUBuiltin<"void(uint64_t)">;
+
+// These are special FE only builtins intended for forwarding the requirements
+// to the ME.
+def __builtin_amdgcn_processor_is : AMDGPUBuiltin<"__amdgpu_feature_predicate_t(char const *)", [Const, CustomTypeChecking, UnevaluatedArguments]>;
+def __builtin_amdgcn_is_invocable : AMDGPUBuiltin<"__amdgpu_feature_predicate_t()", [Const, CustomTypeChecking, UnevaluatedArguments]>;
 
 //===----------------------------------------------------------------------===//
 
