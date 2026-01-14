@@ -740,7 +740,7 @@ bool GlobalMergeImpl::run(Module &M) {
     // already run).
     if (GV.hasMetadataOtherThanDebugLoc())
       continue;
-    
+
     Type *Ty = GV.getValueType();
     TypeSize AllocSize = DL.getTypeAllocSize(Ty);
     bool CanMerge = AllocSize < Opt.MaxOffset && AllocSize >= Opt.MinSize;
