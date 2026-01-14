@@ -838,8 +838,13 @@ namespace MultiDimConstructExpr {
 }
 
 namespace GH175432 {
-  constexpr const int *foo[][2] = {
-      {nullptr, int}, // both-error {{expected '(' for function-style cast or type construction}}
+  // Test that we don't crash when checking initialization of
+  // pointer arrays with invalid initializers
+  constexpr const int *foo[][2] = { // expected-error {{must be initialized by a constant expression}} \
+                                    // expected-note {{declared here}}
+      {nullptr, int}, // expected-error {{expected '(' for function-style cast or type construction}}
   };
-  static_assert(foo[0][0] == nullptr, ""); // both-error {{not an integral constant expression}}
+
+  static_assert(foo[0][0] == nullptr, ""); // expected-error {{not an integral constant expression}} \
+                                           // expected-note {{initializer of 'foo' is unknown}}
 }
