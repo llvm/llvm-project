@@ -1294,25 +1294,25 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     return false;
 
   // We want to create the following nodes:
-  // vec.body:
-  //   ...new PHI introduced to keep the mask value for the latest iteration
-  //      where any lane was active.
-  //   mask.phi = phi <VF x i1> [ all.false, vec.ph ], [ new.mask, vec.body ]
+  // vector.body:
+  //   ...new WidenPHI recipe introduced to keep the mask value for the latest
+  //      iteration where any lane was active.
+  //   mask.phi = phi [ ir<false>, vector.ph ], [ vp<new.mask>, vector.body ]
   //   ...data.phi (a VPReductionPHIRecipe for a FindLast reduction) already
   //      exists, but needs updating to use 'new.data' for the backedge value.
-  //   data.phi = phi <VF x Ty> [ default.val, vec.ph ], [ new.data, vec.body ]
+  //   data.phi = phi ir<default.val>, vp<new.data>
   //
   //   ...'data' and 'compare' created by existing nodes...
   //
   //   ...new recipes introduced to determine whether to update the reduction
   //      values or keep the current one.
-  //   any_active = i1 any_of_reduction(compare)
-  //   new.mask = select any_active, compare, mask.phi
-  //   new.data = select any_active, data, data.phi
+  //   any.active = i1 any-of ir<compare>
+  //   new.mask = select vp<any.active>, ir<compare>, vp<mask.phi>
+  //   new.data = select vp<any.active>, ir<data>, ir<data.phi>
   //
   // middle.block:
   //   ...extract-last-active replaces compute-reduction-result.
-  //   result = extract-last-active new.data, new.mask, default.val
+  //   result = extract-last-active vp<new.data>, vp<new.mask>, ir<default.val>
 
   for (auto &Phi : Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
     auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&Phi);
@@ -1346,9 +1346,9 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
 
     // Find final reduction computation and replace it with an
     // extract.last.active intrinsic.
-    auto *RdxResult = findUserOf<VPInstruction::ComputeReductionResult>(PhiR);
-    if (!RdxResult)
-      return false;
+    auto *RdxResult =
+        findUserOf<VPInstruction::ComputeReductionResult>(DataSelect);
+    assert(RdxResult && "Unable to find reduction result recipe");
     Builder.setInsertPoint(RdxResult);
     auto *ExtractLastActive =
         Builder.createNaryOp(VPInstruction::ExtractLastActive,

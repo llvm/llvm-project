@@ -1137,7 +1137,6 @@ public:
     /// Explicit user for the resume phi of the canonical induction in the main
     /// VPlan, used by the epilogue vector loop.
     ResumeForEpilogue,
-
     /// Extracts the lane from the first operand corresponding to the last
     /// active (non-zero) lane in the mask (second operand), or if no lanes
     /// were active in the mask, returns the default value (third operand).
