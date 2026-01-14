@@ -123,6 +123,7 @@ public:
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register DstReg,
       int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+      unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   using TargetInstrInfo::foldMemoryOperandImpl;
@@ -371,6 +372,9 @@ namespace RISCV {
 // Returns true if the given MI is an RVV instruction opcode for which we may
 // expect to see a FrameIndex operand.
 bool isRVVSpill(const MachineInstr &MI);
+
+/// Return true if \p MI is a copy that will be lowered to one or more vmvNr.vs.
+bool isVectorCopy(const TargetRegisterInfo *TRI, const MachineInstr &MI);
 
 std::optional<std::pair<unsigned, unsigned>>
 isRVVSpillForZvlsseg(unsigned Opcode);

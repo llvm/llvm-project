@@ -769,6 +769,31 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
                               DL.getIntPtrType(GO->getType()),
                               RangeLikeMetadataKind::AbsoluteSymbol);
     }
+
+    if (GO->hasMetadata(LLVMContext::MD_implicit_ref)) {
+      Check(!GO->isDeclaration(),
+            "ref metadata must not be placed on a declaration", GO);
+
+      SmallVector<MDNode *> MDs;
+      GO->getMetadata(LLVMContext::MD_implicit_ref, MDs);
+      for (const MDNode *MD : MDs) {
+        Check(MD->getNumOperands() == 1, "ref metadata must have one operand",
+              &GV, MD);
+        const Metadata *Op = MD->getOperand(0).get();
+        const auto *VM = dyn_cast_or_null<ValueAsMetadata>(Op);
+        Check(VM, "ref metadata must be ValueAsMetadata", GO, MD);
+        if (VM) {
+          Check(isa<PointerType>(VM->getValue()->getType()),
+                "ref value must be pointer typed", GV, MD);
+
+          const Value *Stripped = VM->getValue()->stripPointerCastsAndAliases();
+          Check(isa<GlobalObject>(Stripped) || isa<Constant>(Stripped),
+                "ref metadata must point to a GlobalObject", GO, Stripped);
+          Check(Stripped != GO, "values should not reference themselves", GO,
+                MD);
+        }
+      }
+    }
   }
 
   Check(!GV.hasAppendingLinkage() || isa<GlobalVariable>(GV),
@@ -6741,6 +6766,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "stream argument to llvm.aarch64.prefetch must be 0 or 1", Call);
     Check(cast<ConstantInt>(Call.getArgOperand(4))->getZExtValue() < 2,
           "isdata argument to llvm.aarch64.prefetch must be 0 or 1", Call);
+    break;
+  }
+  case Intrinsic::aarch64_range_prefetch: {
+    Check(cast<ConstantInt>(Call.getArgOperand(1))->getZExtValue() < 2,
+          "write argument to llvm.aarch64.range.prefetch must be 0 or 1", Call);
+    Check(cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue() < 2,
+          "stream argument to llvm.aarch64.range.prefetch must be 0 or 1",
+          Call);
     break;
   }
   case Intrinsic::callbr_landingpad: {
