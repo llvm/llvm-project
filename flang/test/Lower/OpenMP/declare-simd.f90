@@ -1,4 +1,4 @@
-! This test CHECKs the lowering of the OpenMP `declare simd` directive with
+! This test checks the lowering of the OpenMP `declare simd` directive with
 ! different clauses (e.g. aligned, linear, simdlen). It also verifies that
 ! the `omp.declare_simd` operation is emitted after the function prologue,
 ! since the directive requires access to function arguments.
@@ -12,8 +12,7 @@ subroutine declare_simd_no_clause()
 end subroutine declare_simd_no_clause
 
 ! CHECK-LABEL: func.func @_QPdeclare_simd_no_clause()
-! CHECK: omp.declare_simd
-! CHECK-NOT: {{omp\.declare_simd[[:space:]]*(aligned|linear|simdlen)\(}}
+! CHECK: omp.declare_simd{{$}}
 ! CHECK: return
 
 subroutine declare_simd_aligned(x, y, n, i)

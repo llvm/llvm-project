@@ -3815,7 +3815,6 @@ static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
        semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
        const parser::OpenMPDeclareSimdConstruct &declareSimdConstruct) {
-  mlir::Location loc = converter.getCurrentLocation();
   const parser::OmpDirectiveSpecification &beginSpec = declareSimdConstruct.v;
   List<Clause> clauses = makeClauses(beginSpec.Clauses(), semaCtx);
 
@@ -3827,7 +3826,16 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   cp.processTODO<clause::Uniform>(converter.getCurrentLocation(),
                                   llvm::omp::Directive::OMPD_declare_simd);
 
-  mlir::omp::DeclareSimdOp::create(converter.getFirOpBuilder(), loc, clauseOps);
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  mlir::Location loc = converter.getCurrentLocation();
+  auto *ctx = firOpBuilder.getContext();
+  mlir::ArrayAttr alignments;
+  if (!clauseOps.alignments.empty())
+    alignments = mlir::ArrayAttr::get(ctx, clauseOps.alignments);
+  mlir::omp::DeclareSimdOp::create(firOpBuilder, loc, clauseOps.alignedVars,
+                                   alignments, clauseOps.linearVars,
+                                   clauseOps.linearStepVars,
+                                   clauseOps.linearVarTypes, clauseOps.simdlen);
 }
 
 static void genOpenMPDeclareMapperImpl(

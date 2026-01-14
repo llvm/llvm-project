@@ -2265,12 +2265,9 @@ def DeclareSimdOp
       ...
     }
     ```
-  }]#clausesDescription;
+  }] # clausesDescription;
 
   let arguments = clausesArgs;
-
-  let builders = [OpBuilder<(
-      ins CArg<"const DeclareSimdOperands &">:$clauses)>];
 
   let assemblyFormat =
       clausesReqAssemblyFormat#" oilist("#clausesOptAssemblyFormat#") "#"attr-"

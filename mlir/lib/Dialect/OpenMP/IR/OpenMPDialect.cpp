@@ -4462,15 +4462,6 @@ LogicalResult WorkdistributeOp::verify() {
 // Declare simd [7.7]
 //===----------------------------------------------------------------------===//
 
-void DeclareSimdOp::build(OpBuilder &odsBuilder, OperationState &odsState,
-                          const DeclareSimdOperands &clauses) {
-  MLIRContext *ctx = odsBuilder.getContext();
-  DeclareSimdOp::build(odsBuilder, odsState, clauses.alignedVars,
-                       makeArrayAttr(ctx, clauses.alignments),
-                       clauses.linearVars, clauses.linearStepVars,
-                       clauses.linearVarTypes, clauses.simdlen);
-}
-
 LogicalResult DeclareSimdOp::verify() {
   // Must be nested inside a function-like op
   auto func = (*this)->getParentOfType<mlir::FunctionOpInterface>();
