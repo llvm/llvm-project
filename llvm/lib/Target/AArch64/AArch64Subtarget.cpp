@@ -322,6 +322,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case Ampere1:
   case Ampere1A:
   case Ampere1B:
+  case Ampere1C:
     CacheLineSize = 64;
     PrefFunctionAlignment = Align(64);
     PrefLoopAlignment = Align(64);
@@ -399,7 +400,17 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
   if (ReservedRegNames.count("X29") || ReservedRegNames.count("FP"))
     ReserveXRegisterForRA.set(29);
 
-  EnableSubregLiveness = EnableSubregLivenessTracking.getValue();
+  // To benefit from SME2's strided-register multi-vector load/store
+  // instructions we'll need to enable subreg liveness. Our longer
+  // term aim is to make this the default, regardless of streaming
+  // mode, but there are still some outstanding issues, see:
+  //  https://github.com/llvm/llvm-project/pull/174188
+  // and:
+  //  https://github.com/llvm/llvm-project/pull/168353
+  if (IsStreaming)
+    EnableSubregLiveness = true;
+  else
+    EnableSubregLiveness = EnableSubregLivenessTracking.getValue();
 }
 
 const CallLowering *AArch64Subtarget::getCallLowering() const {

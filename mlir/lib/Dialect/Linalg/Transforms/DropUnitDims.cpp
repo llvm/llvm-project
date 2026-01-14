@@ -362,7 +362,12 @@ static UnitExtentReplacementInfo dropUnitExtentFromOperandMetadata(
     // Handle the other case where the shape is 1, and is accessed using a
     // constant 0.
     if (operandShape[dim] == 1) {
-      auto constAffineExpr = dyn_cast<AffineConstantExpr>(exprs[dim]);
+      // Use the new expression after replacing dimensions that will be dropped
+      // here to handle cases where an affine expression with multiple
+      // dimensions (e.g., `d0 + d2`) can be simplified to 0 after dropping all
+      // dimensions used in the expression (`d0` and `d2` in this example).
+      AffineExpr newExpr = exprs[dim].replaceDims(dimReplacements);
+      auto constAffineExpr = dyn_cast<AffineConstantExpr>(newExpr);
       return constAffineExpr && constAffineExpr.getValue() == 0;
     }
     return false;
