@@ -128,14 +128,9 @@ define i64 @uniform_load_outside_use(ptr noalias nocapture %a, ptr noalias nocap
 ; SCALABLE-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; SCALABLE-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; SCALABLE:       [[MIDDLE_BLOCK]]:
-; SCALABLE-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[TMP5]], 1
-; SCALABLE-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; SCALABLE-NEXT:    [[TMP11:%.*]] = mul nuw i64 [[TMP7]], 2
-; SCALABLE-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP11]], 0
-; SCALABLE-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 2 x i64> [[BROADCAST_SPLAT]], i64 [[LAST_ACTIVE_LANE]]
 ; SCALABLE-NEXT:    br label %[[FOR_END:.*]]
 ; SCALABLE:       [[FOR_END]]:
-; SCALABLE-NEXT:    ret i64 [[TMP12]]
+; SCALABLE-NEXT:    ret i64 [[TMP6]]
 ;
 ; FIXEDLEN-LABEL: define i64 @uniform_load_outside_use(
 ; FIXEDLEN-SAME: ptr noalias captures(none) [[A:%.*]], ptr noalias captures(none) [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
@@ -192,14 +187,9 @@ define i64 @uniform_load_outside_use(ptr noalias nocapture %a, ptr noalias nocap
 ; TF-SCALABLE-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; TF-SCALABLE-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; TF-SCALABLE:       [[MIDDLE_BLOCK]]:
-; TF-SCALABLE-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[TMP5]], 1
-; TF-SCALABLE-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; TF-SCALABLE-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 2
-; TF-SCALABLE-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 0
-; TF-SCALABLE-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 2 x i64> [[BROADCAST_SPLAT]], i64 [[LAST_ACTIVE_LANE]]
 ; TF-SCALABLE-NEXT:    br label %[[FOR_END:.*]]
 ; TF-SCALABLE:       [[FOR_END]]:
-; TF-SCALABLE-NEXT:    ret i64 [[TMP12]]
+; TF-SCALABLE-NEXT:    ret i64 [[V]]
 ;
 entry:
   br label %for.body

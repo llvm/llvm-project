@@ -535,6 +535,19 @@ inline bool isDebugEnabled() { return false; }
 
 #endif
 
+// Common debug types in offload.
+constexpr const char *OLDT_Init = "Init";
+constexpr const char *OLDT_Kernel = "Kernel";
+constexpr const char *OLDT_DataTransfer = "DataTransfer";
+constexpr const char *OLDT_Sync = "Sync";
+constexpr const char *OLDT_Deinit = "Deinit";
+constexpr const char *OLDT_Error = "Error";
+constexpr const char *OLDT_Device = "Device";
+constexpr const char *OLDT_Interface = "Interface";
+constexpr const char *OLDT_Alloc = "Alloc";
+constexpr const char *OLDT_Tool = "Tool";
+constexpr const char *OLDT_Module = "Module";
+
 } // namespace llvm::offload::debug
 
 namespace llvm::omp::target::debug {
@@ -550,23 +563,25 @@ enum OmpDebugLevel : uint32_t {
 };
 
 /* Debug types to use in libomptarget */
-constexpr const char *ODT_Init = "Init";
+constexpr const char *ODT_Init = OLDT_Init;
 constexpr const char *ODT_Mapping = "Mapping";
-constexpr const char *ODT_Kernel = "Kernel";
-constexpr const char *ODT_DataTransfer = "DataTransfer";
-constexpr const char *ODT_Sync = "Sync";
-constexpr const char *ODT_Deinit = "Deinit";
-constexpr const char *ODT_Error = "Error";
+constexpr const char *ODT_Kernel = OLDT_Kernel;
+constexpr const char *ODT_DataTransfer = OLDT_DataTransfer;
+constexpr const char *ODT_Sync = OLDT_Sync;
+constexpr const char *ODT_Deinit = OLDT_Deinit;
+constexpr const char *ODT_Error = OLDT_Error;
 constexpr const char *ODT_KernelArgs = "KernelArgs";
 constexpr const char *ODT_MappingExists = "MappingExists";
 constexpr const char *ODT_DumpTable = "DumpTable";
 constexpr const char *ODT_MappingChanged = "MappingChanged";
 constexpr const char *ODT_PluginKernel = "PluginKernel";
 constexpr const char *ODT_EmptyMapping = "EmptyMapping";
-constexpr const char *ODT_Device = "Device";
-constexpr const char *ODT_Interface = "Interface";
-constexpr const char *ODT_Alloc = "Alloc";
-constexpr const char *ODT_Tool = "Tool";
+constexpr const char *ODT_Device = OLDT_Device;
+constexpr const char *ODT_Interface = OLDT_Interface;
+constexpr const char *ODT_Alloc = OLDT_Alloc;
+constexpr const char *ODT_Tool = OLDT_Tool;
+constexpr const char *ODT_Module = OLDT_Module;
+constexpr const char *ODT_Interop = "Interop";
 
 static inline odbg_ostream reportErrorStream() {
 #ifdef OMPTARGET_DEBUG
@@ -605,17 +620,6 @@ static inline odbg_ostream reportErrorStream() {
 
 #define DP(...) ODBG() << FORMAT_TO_STR(__VA_ARGS__);
 
-#define REPORT_INT_OLD(...)                                                    \
-  do {                                                                         \
-    if (::llvm::offload::debug::isDebugEnabled()) {                            \
-      ODBG(::llvm::omp::target::debug::ODT_Error,                              \
-           ::llvm::omp::target::debug::ODL_Error)                              \
-          << FORMAT_TO_STR(__VA_ARGS__);                                       \
-    } else {                                                                   \
-      FAILURE_MESSAGE(__VA_ARGS__);                                            \
-    }                                                                          \
-  } while (false)
-
 // Define default format for pointers
 static inline raw_ostream &operator<<(raw_ostream &Os, void *Ptr) {
   Os << ::llvm::format(DPxMOD, DPxPTR(Ptr));
@@ -626,14 +630,10 @@ static inline raw_ostream &operator<<(raw_ostream &Os, void *Ptr) {
 #define DP(...)                                                                \
   {                                                                            \
   }
-#define REPORT_INT_OLD(...) FAILURE_MESSAGE(__VA_ARGS__);
 #endif // OMPTARGET_DEBUG
 
-// This is used for the new style REPORT macro
-#define REPORT_INT() ::llvm::omp::target::debug::reportErrorStream()
-
-// Make REPORT compatible with old and new syntax
-#define REPORT(...) REPORT_INT##__VA_OPT__(_OLD)(__VA_ARGS__)
+// New REPORT macro in the same style as ODBG
+#define REPORT() ::llvm::omp::target::debug::reportErrorStream()
 
 } // namespace llvm::omp::target::debug
 

@@ -1572,6 +1572,10 @@ SDValue SelectionDAG::getZeroExtendInReg(SDValue Op, const SDLoc &DL, EVT VT) {
   assert(VT.bitsLE(OpVT) && "Not extending!");
   if (OpVT == VT)
     return Op;
+  // TODO: Use computeKnownBits instead of AssertZext.
+  if (Op.getOpcode() == ISD::AssertZext &&
+      cast<VTSDNode>(Op.getOperand(1))->getVT().bitsLE(VT))
+    return Op;
   APInt Imm = APInt::getLowBitsSet(OpVT.getScalarSizeInBits(),
                                    VT.getScalarSizeInBits());
   return getNode(ISD::AND, DL, OpVT, Op, getConstant(Imm, DL, OpVT));
@@ -9160,6 +9164,32 @@ SelectionDAG::getMemcmp(SDValue Chain, const SDLoc &dl, SDValue Mem0,
           TLI->getLibcallImplCallingConv(MemcmpImpl),
           Type::getInt32Ty(*getContext()),
           getExternalSymbol(MemcmpImpl, TLI->getPointerTy(getDataLayout())),
+          std::move(Args))
+      .setTailCall(IsTailCall);
+
+  return TLI->LowerCallTo(CLI);
+}
+
+std::pair<SDValue, SDValue> SelectionDAG::getStrcpy(SDValue Chain,
+                                                    const SDLoc &dl,
+                                                    SDValue Dst, SDValue Src,
+                                                    const CallInst *CI) {
+  RTLIB::LibcallImpl LCImpl = TLI->getLibcallImpl(RTLIB::STRCPY);
+  if (LCImpl == RTLIB::Unsupported)
+    return {};
+
+  PointerType *PT = PointerType::getUnqual(*getContext());
+  TargetLowering::ArgListTy Args = {{Dst, PT}, {Src, PT}};
+
+  TargetLowering::CallLoweringInfo CLI(*this);
+  bool IsTailCall =
+      isInTailCallPositionWrapper(CI, this, /*AllowReturnsFirstArg=*/true);
+
+  CLI.setDebugLoc(dl)
+      .setChain(Chain)
+      .setLibCallee(
+          TLI->getLibcallImplCallingConv(LCImpl), CI->getType(),
+          getExternalSymbol(LCImpl, TLI->getPointerTy(getDataLayout())),
           std::move(Args))
       .setTailCall(IsTailCall);
 

@@ -27,6 +27,7 @@
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/LogicalResult.h"
 
 using namespace mlir;
@@ -323,7 +324,7 @@ void cir::ConditionOp::getSuccessorRegions(
   // Parent is a loop: condition may branch to the body or to the parent op.
   if (auto loopOp = dyn_cast<LoopOpInterface>(getOperation()->getParentOp())) {
     regions.emplace_back(&loopOp.getBody(), loopOp.getBody().getArguments());
-    regions.emplace_back(getOperation(), loopOp->getResults());
+    regions.push_back(RegionSuccessor::parent(loopOp->getResults()));
   }
 
   // Parent is an await: condition may branch to resume or suspend regions.
@@ -357,9 +358,9 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return success();
   }
 
-  if (isa<cir::DataMemberAttr>(attrType)) {
+  if (isa<cir::DataMemberAttr, cir::MethodAttr>(attrType)) {
     // More detailed type verifications are already done in
-    // DataMemberAttr::verify. Don't need to repeat here.
+    // DataMemberAttr::verify or MethodAttr::verify. Don't need to repeat here.
     return success();
   }
 
@@ -1167,8 +1168,7 @@ void cir::IfOp::getSuccessorRegions(mlir::RegionBranchPoint point,
                                     SmallVectorImpl<RegionSuccessor> &regions) {
   // The `then` and the `else` region branch back to the parent operation.
   if (!point.isParent()) {
-    regions.push_back(
-        RegionSuccessor(getOperation(), getOperation()->getResults()));
+    regions.push_back(RegionSuccessor::parent(getOperation()->getResults()));
     return;
   }
 
@@ -1218,7 +1218,7 @@ void cir::ScopeOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   // The only region always branch back to the parent operation.
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor(getOperation(), getODSResults(0)));
+    regions.push_back(RegionSuccessor::parent(getODSResults(0)));
     return;
   }
 
@@ -1383,8 +1383,7 @@ Block *cir::BrCondOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
 void cir::CaseOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   if (!point.isParent()) {
-    regions.push_back(
-        RegionSuccessor(getOperation(), getOperation()->getResults()));
+    regions.push_back(RegionSuccessor::parent(getOperation()->getResults()));
     return;
   }
   regions.push_back(RegionSuccessor(&getCaseRegion()));
@@ -1410,8 +1409,7 @@ void cir::CaseOp::build(OpBuilder &builder, OperationState &result,
 void cir::SwitchOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &region) {
   if (!point.isParent()) {
-    region.push_back(
-        RegionSuccessor(getOperation(), getOperation()->getResults()));
+    region.push_back(RegionSuccessor::parent(getOperation()->getResults()));
     return;
   }
 
@@ -1625,8 +1623,7 @@ void cir::GlobalOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   // The `ctor` and `dtor` regions always branch back to the parent operation.
   if (!point.isParent()) {
-    regions.push_back(
-        RegionSuccessor(getOperation(), getOperation()->getResults()));
+    regions.push_back(RegionSuccessor::parent(getOperation()->getResults()));
     return;
   }
 
@@ -2311,7 +2308,7 @@ void cir::TernaryOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   // The `true` and the `false` region branch back to the parent operation.
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor(getOperation(), this->getODSResults(0)));
+    regions.push_back(RegionSuccessor::parent(this->getODSResults(0)));
     return;
   }
 
@@ -2479,6 +2476,72 @@ OpFoldResult cir::UnaryOp::fold(FoldAdaptor adaptor) {
       if (isBoolNot(previous))
         return previous.getInput();
 
+  // Avoid introducing unnecessary duplicate constants in cases where we are
+  // just folding the operation to its input value. If we return the
+  // input attribute from the adapter, a new constant is materialized, but
+  // if we return the input value directly, it avoids that.
+  if (auto srcConst = getInput().getDefiningOp<cir::ConstantOp>()) {
+    if (getKind() == cir::UnaryOpKind::Plus ||
+        (mlir::isa<cir::BoolType>(srcConst.getType()) &&
+         getKind() == cir::UnaryOpKind::Minus))
+      return srcConst.getResult();
+  }
+
+  // Fold unary operations with constant inputs. If the input is a ConstantOp,
+  // it "folds" to its value attribute. If it was some other operation that
+  // was folded, it will be an mlir::Attribute that hasn't yet been
+  // materialized. If it was a value that couldn't be folded, it will be null.
+  if (mlir::Attribute attr = adaptor.getInput()) {
+    // For now, we only attempt to fold simple scalar values.
+    OpFoldResult result =
+        llvm::TypeSwitch<mlir::Attribute, OpFoldResult>(attr)
+            .Case<cir::IntAttr>([&](cir::IntAttr attrT) {
+              switch (getKind()) {
+              case cir::UnaryOpKind::Not: {
+                APInt val = attrT.getValue();
+                val.flipAllBits();
+                return cir::IntAttr::get(getType(), val);
+              }
+              case cir::UnaryOpKind::Plus:
+                return attrT;
+              case cir::UnaryOpKind::Minus: {
+                APInt val = attrT.getValue();
+                val.negate();
+                return cir::IntAttr::get(getType(), val);
+              }
+              default:
+                return cir::IntAttr{};
+              }
+            })
+            .Case<cir::FPAttr>([&](cir::FPAttr attrT) {
+              switch (getKind()) {
+              case cir::UnaryOpKind::Plus:
+                return attrT;
+              case cir::UnaryOpKind::Minus: {
+                APFloat val = attrT.getValue();
+                val.changeSign();
+                return cir::FPAttr::get(getType(), val);
+              }
+              default:
+                return cir::FPAttr{};
+              }
+            })
+            .Case<cir::BoolAttr>([&](cir::BoolAttr attrT) {
+              switch (getKind()) {
+              case cir::UnaryOpKind::Not:
+                return cir::BoolAttr::get(getContext(), !attrT.getValue());
+              case cir::UnaryOpKind::Plus:
+              case cir::UnaryOpKind::Minus:
+                return attrT;
+              default:
+                return cir::BoolAttr{};
+              }
+            })
+            .Default([&](auto attrT) { return mlir::Attribute{}; });
+    if (result)
+      return result;
+  }
+
   return {};
 }
 
@@ -2550,8 +2613,7 @@ void cir::AwaitOp::getSuccessorRegions(
   // If any index all the underlying regions branch back to the parent
   // operation.
   if (!point.isParent()) {
-    regions.push_back(
-        RegionSuccessor(getOperation(), getOperation()->getResults()));
+    regions.push_back(RegionSuccessor::parent(getOperation()->getResults()));
     return;
   }
 
@@ -3465,8 +3527,7 @@ void cir::TryOp::getSuccessorRegions(
     llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
   // The `try` and the `catchers` region branch back to the parent operation.
   if (!point.isParent()) {
-    regions.push_back(
-        RegionSuccessor(getOperation(), getOperation()->getResults()));
+    regions.push_back(RegionSuccessor::parent(getOperation()->getResults()));
     return;
   }
 
