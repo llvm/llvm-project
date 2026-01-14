@@ -322,7 +322,7 @@ struct DAPSession {
   lldb::user_id_t targetId;
 
   /// ID of an existing debugger instance to use.
-  int debuggerId;
+  lldb::user_id_t debuggerId;
 };
 bool fromJSON(const llvm::json::Value &, DAPSession &, llvm::json::Path);
 
