@@ -8767,6 +8767,12 @@ static void chainLoadsAndStoresForMemcpy(SelectionDAG &DAG, const SDLoc &dl,
   }
 }
 
+// Forward declaration - defined later in this file. Default argument is on
+// the definition.
+static MachinePointerInfo InferPointerInfo(const MachinePointerInfo &Info,
+                                           SelectionDAG &DAG, SDValue Ptr,
+                                           int64_t Offset);
+
 static SDValue
 getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
                         SDValue Dst, SDValue Src, uint64_t Size,
@@ -8881,20 +8887,24 @@ getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
       }
       Value = getMemsetStringVal(VT, dl, DAG, TLI, SubSlice);
       if (Value.getNode()) {
+        SDValue DstPtrOff =
+            DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff));
+
+        // Infer pointer info from DAG if not provided (e.g., for stack slots).
+        MachinePointerInfo DstPI = DstPtrInfo.getWithOffset(DstOff);
+        if (DstPI.V.isNull())
+          DstPI = InferPointerInfo(DstPI, DAG, DstPtrOff, 0);
+
         // Create store MMO explicitly to allow targets to record cache hints.
-        MachineMemOperand *StoreMMO =
-            MF.getMachineMemOperand(DstPtrInfo.getWithOffset(DstOff),
-                                    MMOFlags | MachineMemOperand::MOStore,
-                                    VTSize, Alignment, NewAAInfo);
+        MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
+            DstPI, MMOFlags | MachineMemOperand::MOStore, VTSize, Alignment,
+            NewAAInfo);
         // Call hook for target-specific cache hint recording (operand 0 =
         // dest).
         if (CI)
           TLI.recordTargetMMOInfo(StoreMMO, *CI, /*OperandNo=*/0);
 
-        Store = DAG.getStore(
-            Chain, dl, Value,
-            DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff)),
-            StoreMMO);
+        Store = DAG.getStore(Chain, dl, Value, DstPtrOff, StoreMMO);
         OutChains.push_back(Store);
       }
     }
@@ -8916,33 +8926,41 @@ getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
       if (isConstant)
         SrcMMOFlags |= MachineMemOperand::MOInvariant;
 
+      // Compute pointer offsets for this iteration.
+      SDValue SrcPtrOff =
+          DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(SrcOff));
+      SDValue DstPtrOff =
+          DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff));
+
+      // Infer pointer info from DAG if not provided (e.g., for stack slots).
+      MachinePointerInfo SrcPI = SrcPtrInfo.getWithOffset(SrcOff);
+      if (SrcPI.V.isNull())
+        SrcPI = InferPointerInfo(SrcPI, DAG, SrcPtrOff, 0);
+      MachinePointerInfo DstPI = DstPtrInfo.getWithOffset(DstOff);
+      if (DstPI.V.isNull())
+        DstPI = InferPointerInfo(DstPI, DAG, DstPtrOff, 0);
+
       // Create load MMO explicitly to allow targets to record cache hints.
       MachineMemOperand *LoadMMO = MF.getMachineMemOperand(
-          SrcPtrInfo.getWithOffset(SrcOff),
-          SrcMMOFlags | MachineMemOperand::MOLoad, VTSize,
+          SrcPI, SrcMMOFlags | MachineMemOperand::MOLoad, VTSize,
           commonAlignment(*SrcAlign, SrcOff), NewAAInfo);
       // Call hook for target-specific cache hint recording (operand 1 = src).
       if (CI)
         TLI.recordTargetMMOInfo(LoadMMO, *CI, /*OperandNo=*/1);
 
-      Value = DAG.getExtLoad(
-          ISD::EXTLOAD, dl, NVT, Chain,
-          DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(SrcOff)), VT,
-          LoadMMO);
+      Value =
+          DAG.getExtLoad(ISD::EXTLOAD, dl, NVT, Chain, SrcPtrOff, VT, LoadMMO);
       OutLoadChains.push_back(Value.getValue(1));
 
       // Create store MMO explicitly to allow targets to record cache hints.
-      MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
-          DstPtrInfo.getWithOffset(DstOff),
-          MMOFlags | MachineMemOperand::MOStore, VTSize, Alignment, NewAAInfo);
+      MachineMemOperand *StoreMMO =
+          MF.getMachineMemOperand(DstPI, MMOFlags | MachineMemOperand::MOStore,
+                                  VTSize, Alignment, NewAAInfo);
       // Call hook for target-specific cache hint recording (operand 0 = dest).
       if (CI)
         TLI.recordTargetMMOInfo(StoreMMO, *CI, /*OperandNo=*/0);
 
-      Store = DAG.getTruncStore(
-          Chain, dl, Value,
-          DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff)), VT,
-          StoreMMO);
+      Store = DAG.getTruncStore(Chain, dl, Value, DstPtrOff, VT, StoreMMO);
       OutStoreChains.push_back(Store);
     }
     SrcOff += VTSize;
