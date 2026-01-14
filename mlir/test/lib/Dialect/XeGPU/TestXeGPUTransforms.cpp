@@ -247,6 +247,59 @@ struct TestXeGPUSGDistribute
   }
 };
 
+struct TestXeGPUSgToWiDistributeExperimental
+    : public PassWrapper<TestXeGPUSgToWiDistributeExperimental,
+                         OperationPass<gpu::GPUModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestXeGPUSgToWiDistributeExperimental)
+
+  StringRef getArgument() const final {
+    return "test-xegpu-sg-to-wi-distribute-experimental";
+  }
+
+  StringRef getDescription() const final {
+    return "Test the experimental implementation of XeGPU Subgroup to "
+           "Work-item Distribution";
+  }
+
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<arith::ArithDialect>();
+    registry.insert<memref::MemRefDialect>();
+    registry.insert<xegpu::XeGPUDialect>();
+    registry.insert<vector::VectorDialect>();
+    registry.insert<index::IndexDialect>();
+    registry.insert<gpu::GPUDialect>();
+  }
+
+  TestXeGPUSgToWiDistributeExperimental() = default;
+  TestXeGPUSgToWiDistributeExperimental(
+      const TestXeGPUSgToWiDistributeExperimental &pass) = default;
+
+  void runOnOperation() override {
+    MLIRContext *ctx = &getContext();
+
+    TypeConverter typeConverter;
+    // After distribution, there are no layouts associated with the tensor_desc
+    // types.
+    typeConverter.addConversion(
+        [](xegpu::TensorDescType type) { return type.dropLayouts(); });
+    typeConverter.addConversion([](Type type) { return type; });
+
+    ConversionTarget target(*ctx);
+    // CreateNdDescOp is legal only if its result type has no layout attribute.
+    target.addDynamicallyLegalOp<xegpu::CreateNdDescOp>(
+        [&](xegpu::CreateNdDescOp op) {
+          return !op.getType().getLayoutAttr();
+        });
+    RewritePatternSet patterns(ctx);
+    xegpu::populateXeGPUSgToWiDistributeExperimentalPatterns(patterns,
+                                                             typeConverter);
+    target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
+
+    (void)applyPartialConversion(getOperation(), target, std::move(patterns));
+  }
+};
+
 struct TestXeGPUMoveFuncBodyToWarpOp
     : public PassWrapper<TestXeGPUMoveFuncBodyToWarpOp,
                          OperationPass<gpu::GPUModuleOp>> {
@@ -341,6 +394,7 @@ void registerTestXeGPULowerings() {
   PassRegistration<TestXeGPUUnrollingPatterns>();
   PassRegistration<TestXeGPULayoutInterface>();
   PassRegistration<TestXeGPUSGDistribute>();
+  PassRegistration<TestXeGPUSgToWiDistributeExperimental>();
   PassRegistration<TestXeGPUMoveFuncBodyToWarpOp>();
 }
 } // namespace test

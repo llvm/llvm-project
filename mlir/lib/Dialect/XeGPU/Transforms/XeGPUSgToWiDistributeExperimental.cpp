@@ -13,6 +13,8 @@
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/LogicalResult.h"
 
 namespace mlir {
 namespace xegpu {
@@ -22,8 +24,29 @@ namespace xegpu {
 } // namespace mlir
 
 using namespace mlir;
+using namespace mlir::xegpu;
 
 namespace {
+
+struct CreateNdDescOpPattern
+    : public OpConversionPattern<xegpu::CreateNdDescOp> {
+  using OpConversionPattern<xegpu::CreateNdDescOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(xegpu::CreateNdDescOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto resultType = op.getType();
+    // If no layout, nothing to do.
+    if (!resultType.getLayout())
+      return failure();
+
+    auto newOp = xegpu::CreateNdDescOp::create(
+        rewriter, op.getLoc(), resultType.dropLayouts(), op->getOperands(),
+        op->getAttrs());
+    rewriter.replaceOp(op, newOp.getResult());
+    return success();
+  }
+};
 
 struct XeGPUSgToWiDistributeExperimentalPass
     : public xegpu::impl::XeGPUSgToWiDistributeExperimentalBase<
@@ -54,6 +77,6 @@ void XeGPUSgToWiDistributeExperimentalPass::runOnOperation() {
 }
 
 void xegpu::populateXeGPUSgToWiDistributeExperimentalPatterns(
-    RewritePatternSet &patterns) {
-  // TODO: Implement pattern population logic
+    RewritePatternSet &patterns, TypeConverter &typeConverter) {
+  patterns.add<CreateNdDescOpPattern>(typeConverter, patterns.getContext());
 }

@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_XEGPU_TRANSFORMS_TRANSFORMS_H
 
 #include "mlir/IR/Operation.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/LogicalResult.h"
 
@@ -73,7 +74,7 @@ void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns);
 /// Appends patterns for XeGPU subgroup to work-item distribution into
 /// `patterns`.
 void populateXeGPUSgToWiDistributeExperimentalPatterns(
-    RewritePatternSet &patterns);
+    RewritePatternSet &patterns, TypeConverter &typeConverter);
 
 /// Collect a set of patterns to unroll xegpu operations to a smaller shapes.
 /// Users can control whether an operation to be unrolled or not, as well as
