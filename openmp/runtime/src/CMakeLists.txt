@@ -153,19 +153,6 @@ libomp_get_asmflags(LIBOMP_CONFIGURED_ASMFLAGS)
 set_source_files_properties(${LIBOMP_CXXFILES} PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_CXXFLAGS}")
 set_source_files_properties(${LIBOMP_ASMFILES} ${LIBOMP_GNUASMFILES} PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_ASMFLAGS}")
 
-# Remove any cmake-automatic linking of the standard C++ library.
-# We neither need (nor want) the standard C++ library dependency even though we compile c++ files.
-if(NOT ${LIBOMP_USE_STDCPPLIB})
-  set(LIBOMP_LINKER_LANGUAGE C)
-  set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES)
-else()
-  set(LIBOMP_LINKER_LANGUAGE CXX)
-endif()
-
-if(UNIX)
-  set(LIBOMP_DL_LIBS ${CMAKE_DL_LIBS})
-endif()
-
 # Disable libstdc++ assertions, even in an LLVM_ENABLE_ASSERTIONS build, to
 # avoid an unwanted dependency on libstdc++.so.
 add_compile_definitions(_GLIBCXX_NO_ASSERTIONS)
@@ -174,17 +161,26 @@ if(NOT WIN32)
 endif()
 
 # Add the OpenMP library
-libomp_get_ldflags(LIBOMP_CONFIGURED_LDFLAGS)
 
+# First, create an OBJECT library with all the runtime sources.
+# This allows the unittests later to access internal symbols which don't export
+# in libomp.
+add_library(obj.omp OBJECT ${LIBOMP_SOURCE_FILES})
+set_property(TARGET obj.omp PROPERTY FOLDER "OpenMP/Libraries")
+set_property(TARGET obj.omp PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+libomp_get_ldflags(LIBOMP_CONFIGURED_LDFLAGS)
 libomp_get_libflags(LIBOMP_CONFIGURED_LIBFLAGS)
-# Build libomp library. Add LLVMSupport dependency if building in-tree with libomptarget profiling enabled.
+
+# Build libomp library. Add LLVMSupport dependency if building in-tree with
+# libomptarget profiling enabled.
 if(OPENMP_STANDALONE_BUILD OR (NOT OPENMP_ENABLE_LIBOMP_PROFILING))
-  add_library(omp ${LIBOMP_LIBRARY_KIND} ${LIBOMP_SOURCE_FILES})
+  add_library(omp ${LIBOMP_LIBRARY_KIND} $<TARGET_OBJECTS:obj.omp>)
   set_property(TARGET omp PROPERTY FOLDER "OpenMP/Libraries")
   # Linking command will include libraries in LIBOMP_CONFIGURED_LIBFLAGS
   target_link_libraries(omp ${LIBOMP_CONFIGURED_LIBFLAGS} ${LIBOMP_DL_LIBS})
 else()
-  add_llvm_library(omp ${LIBOMP_LIBRARY_KIND} ${LIBOMP_SOURCE_FILES} PARTIAL_SOURCES_INTENDED
+  add_llvm_library(omp ${LIBOMP_LIBRARY_KIND} $<TARGET_OBJECTS:obj.omp> PARTIAL_SOURCES_INTENDED
     LINK_LIBS ${LIBOMP_CONFIGURED_LIBFLAGS} ${LIBOMP_DL_LIBS}
     LINK_COMPONENTS Support
     BUILDTREE_ONLY
@@ -296,7 +292,7 @@ set(LIBOMPTARGET_OPENMP_HOST_RTL_FOLDER "${LIBOMP_LIBRARY_DIR}" CACHE STRING
 # objects depend on : .inc files
 add_custom_target(libomp-needed-headers DEPENDS kmp_i18n_id.inc kmp_i18n_default.inc)
 set_target_properties(libomp-needed-headers PROPERTIES FOLDER "OpenMP/Sourcegenning")
-add_dependencies(omp libomp-needed-headers)
+add_dependencies(obj.omp libomp-needed-headers)
 
 # Windows specific build rules
 if(WIN32)

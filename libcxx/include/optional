@@ -661,7 +661,7 @@ using __optional_sfinae_assign_base_t _LIBCPP_NODEBUG =
 template <class _Tp>
 class optional;
 
-#    if _LIBCPP_STD_VER >= 26
+#    if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
 template <class _Tp>
 constexpr bool ranges::enable_view<optional<_Tp>> = true;
 
@@ -709,7 +709,7 @@ inline constexpr bool __is_constructible_for_optional_initializer_list_v<_Tp&, _
 template <class _Tp, class = void>
 struct __optional_iterator {};
 
-#    if _LIBCPP_STD_VER >= 26
+#    if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
 
 template <class _Tp>
 struct __optional_iterator<_Tp, enable_if_t<is_object_v<_Tp>>> {
@@ -796,7 +796,7 @@ public:
   }
 };
 
-#    endif // _LIBCPP_STD_VER >= 26
+#    endif // _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
 
 template <class _Tp>
 class _LIBCPP_DECLSPEC_EMPTY_BASES optional

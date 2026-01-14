@@ -7,7 +7,7 @@ declare void @callee()
 
 define void @caller() nounwind {
 ; NOEXPAND-LABEL: name: caller
-; NOEXPAND: PseudoCALL target-flags{{.*}}callee
+; NOEXPAND: PseudoCALL_SMALL target-flags{{.*}}callee
 ;
 ; EXPAND-LABEL: name: caller
 ; EXPAND: BL target-flags{{.*}}callee

@@ -64,14 +64,12 @@ public:
   lldb_private::CompilerDeclContext GetParentDeclContext(PdbSymUid uid);
   clang::DeclContext *GetParentClangDeclContext(PdbSymUid uid);
 
-  clang::FunctionDecl *GetOrCreateFunctionDecl(PdbCompilandSymId func_id);
-  clang::FunctionDecl *
-  GetOrCreateInlinedFunctionDecl(PdbCompilandSymId inlinesite_id);
-  clang::BlockDecl *GetOrCreateBlockDecl(PdbCompilandSymId block_id);
-  clang::VarDecl *GetOrCreateVariableDecl(PdbCompilandSymId scope_id,
-                                          PdbCompilandSymId var_id);
-  clang::VarDecl *GetOrCreateVariableDecl(PdbGlobalSymId var_id);
-  clang::TypedefNameDecl *GetOrCreateTypedefDecl(PdbGlobalSymId id);
+  void EnsureFunction(PdbCompilandSymId func_id);
+  void EnsureInlinedFunction(PdbCompilandSymId inlinesite_id);
+  void EnsureBlock(PdbCompilandSymId block_id);
+  void EnsureVariable(PdbCompilandSymId scope_id, PdbCompilandSymId var_id);
+  void EnsureVariable(PdbGlobalSymId var_id);
+  CompilerType GetOrCreateTypedefType(PdbGlobalSymId id);
   void ParseDeclsForContext(lldb_private::CompilerDeclContext context);
 
   clang::QualType GetBasicType(lldb::BasicType type);
@@ -99,6 +97,14 @@ public:
 
 private:
   clang::Decl *TryGetDecl(PdbSymUid uid) const;
+
+  clang::FunctionDecl *GetOrCreateFunctionDecl(PdbCompilandSymId func_id);
+  clang::FunctionDecl *
+  GetOrCreateInlinedFunctionDecl(PdbCompilandSymId inlinesite_id);
+  clang::BlockDecl *GetOrCreateBlockDecl(PdbCompilandSymId block_id);
+  clang::VarDecl *GetOrCreateVariableDecl(PdbCompilandSymId scope_id,
+                                          PdbCompilandSymId var_id);
+  clang::VarDecl *GetOrCreateVariableDecl(PdbGlobalSymId var_id);
 
   using TypeIndex = llvm::codeview::TypeIndex;
 
