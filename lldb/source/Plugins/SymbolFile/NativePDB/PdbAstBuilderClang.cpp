@@ -996,10 +996,10 @@ PdbAstBuilderClang::CreateFunctionDeclFromId(PdbTypeSymId func_tid,
   SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
       m_clang.GetSymbolFile()->GetBackingSymbolFile());
   PdbIndex &index = pdb->GetIndex();
-	std::optional<CVType> func_cvt = index.ipi().typeCollection().tryGetType(
-		func_tid.index);
-	if (!func_cvt)
-		return nullptr;
+  std::optional<CVType> func_cvt =
+      index.ipi().typeCollection().tryGetType(func_tid.index);
+  if (!func_cvt)
+    return nullptr;
   llvm::StringRef func_name;
   TypeIndex func_ti;
   clang::DeclContext *parent = nullptr;
