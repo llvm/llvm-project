@@ -15,7 +15,10 @@ define void @nsw_under_loop_guard0(ptr %a) {
 ; CHECK-LABEL: 'nsw_under_loop_guard0'
 ; CHECK-NEXT:  Monotonicity check:
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
-; CHECK-NEXT:      Expr: {{\{\{}}0,+,1}<nuw><nsw><%loop.i.header>,+,1}<nuw><nsw><%loop.j>
+; CHECK-NEXT:    Expr: {{\{\{}}0,+,1}<nuw><nsw><%loop.i.header>,+,1}<nuw><nsw><%loop.j>
+; CHECK-NEXT:    Entire Domain:
+; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
+; CHECK-NEXT:    Effective Domain:
 ; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
@@ -59,7 +62,10 @@ define void @nsw_under_loop_guard1(ptr %a) {
 ; CHECK-LABEL: 'nsw_under_loop_guard1'
 ; CHECK-NEXT:  Monotonicity check:
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
-; CHECK-NEXT:      Expr: {{\{\{}}9223372036854775807,+,-1}<nsw><%loop.i.header>,+,1}<nuw><nsw><%loop.j>
+; CHECK-NEXT:    Expr: {{\{\{}}9223372036854775807,+,-1}<nsw><%loop.i.header>,+,1}<nuw><nsw><%loop.j>
+; CHECK-NEXT:    Entire Domain:
+; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
+; CHECK-NEXT:    Effective Domain:
 ; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
@@ -104,7 +110,10 @@ define void @nsw_under_loop_guard2(ptr %a, i64 %n, i64 %m, i64 %k) {
 ; CHECK-LABEL: 'nsw_under_loop_guard2'
 ; CHECK-NEXT:  Monotonicity check:
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
-; CHECK-NEXT:      Expr: {{\{\{}}0,+,1}<nuw><nsw><%loop.i.header>,+,1}<nuw><nsw><%loop.j>
+; CHECK-NEXT:    Expr: {{\{\{}}0,+,1}<nuw><nsw><%loop.i.header>,+,1}<nuw><nsw><%loop.j>
+; CHECK-NEXT:    Entire Domain:
+; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
+; CHECK-NEXT:    Effective Domain:
 ; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1

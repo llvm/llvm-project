@@ -224,8 +224,7 @@ namespace {
 ///
 ///   F(i_1, i_2, ..., i_N)
 ///
-/// The domain of i_k is the closed range [0, BTC_k], where BTC_k is the
-/// backedge-taken count of the k-th loop.
+/// For the domain of F, see the comment of SCEVMonotonicityDomain.
 ///
 /// A function F is said to be "monotonically increasing with respect to the
 /// k-th loop" if x <= y implies the following condition:
@@ -269,6 +268,37 @@ enum class SCEVMonotonicityType {
   MultivariateSignedMonotonic,
 };
 
+/// The domain of monotonicity. Monotonicity checking is a 2-ary function that
+/// recieves a function F and a domain D, and returns whether F is monotonic
+/// over D.
+///
+///
+/// Note: Let F be an N-ary function:
+///
+///   F(i_1, i_2, ..., i_N)
+///
+/// In other words, F is a SCEV defined within N-nested loops. Here, loops are
+/// numbered from outermost to innermost. That is, the first loop is the
+/// outermost loop and i_1 is its iteration number. Similarly, the N-th loop is
+/// the innermost loop and i_N is its iteration number.
+enum class SCEVMonotonicityDomain {
+  /// [0, BTC_1] x [0, BTC_2] x ... x [0, BTC_N], where BTC_k is the exact
+  /// backedge-taken count of the k-th loop. If either of BTC_k is unknown, the
+  /// entire domain is ill-defined for F.
+  Entire,
+
+  /// [L_1, U_1] x [L_2, U_2] x ... x [L_N, U_N], where L_k and U_k are the
+  /// natural numbers that satisfy the following conditions:
+  ///
+  ///   If F(c_1, ..., c_N) is "actually executed", then L_k <= c_k <= U_k.
+  ///
+  /// This means that the effective domain is a superset of where F is actually
+  /// executed. Notably, L_k and U_k are not explicitly computed. We only
+  /// require the existence of such L_k and U_k. Also, we do not require L_k and
+  /// U_k to be the tightest bounds.
+  Effective,
+};
+
 struct SCEVMonotonicity {
   SCEVMonotonicity(SCEVMonotonicityType Type,
                    const SCEV *FailurePoint = nullptr);
@@ -297,17 +327,23 @@ struct SCEVMonotonicityChecker
 
   SCEVMonotonicityChecker(ScalarEvolution *SE) : SE(SE) {}
 
-  /// Check the monotonicity of \p Expr. \p Expr must be integer type. If \p
-  /// OutermostLoop is not null, \p Expr must be defined in \p OutermostLoop or
-  /// one of its nested loops.
-  SCEVMonotonicity checkMonotonicity(const SCEV *Expr,
-                                     const Loop *OutermostLoop);
+  /// Check the monotonicity of \p Expr over \p Domain. \p Expr must be integer
+  /// type. If \p OutermostLoop is not null, \p Expr must be defined in \p
+  /// OutermostLoop or one of its nested loops.
+  /// TODO: The default value of \p Domain is temporary. Drop it once all the
+  /// calls are updated.
+  SCEVMonotonicity checkMonotonicity(
+      const SCEV *Expr, const Loop *OutermostLoop,
+      SCEVMonotonicityDomain Domain = SCEVMonotonicityDomain::Effective);
 
 private:
   ScalarEvolution *SE;
 
   /// The outermost loop that DA is analyzing.
   const Loop *OutermostLoop;
+
+  /// The domain of monotonicity being checked.
+  SCEVMonotonicityDomain Domain;
 
   /// A helper to classify \p Expr as either Invariant or Unknown.
   SCEVMonotonicity invariantOrUnknown(const SCEV *Expr);
@@ -491,10 +527,17 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
       const Loop *OutermostLoop = L ? L->getOutermostLoop() : nullptr;
       const SCEV *PtrSCEV = SE.getSCEVAtScope(Ptr, L);
       const SCEV *AccessFn = SE.removePointerBase(PtrSCEV);
-      SCEVMonotonicity Mon = Checker.checkMonotonicity(AccessFn, OutermostLoop);
       OS.indent(2) << "Inst: " << Inst << "\n";
-      OS.indent(4) << "Expr: " << *AccessFn << "\n";
-      Mon.print(OS, 4);
+      OS.indent(2) << "Expr: " << *AccessFn << "\n";
+      for (SCEVMonotonicityDomain D : {SCEVMonotonicityDomain::Entire,
+                                       SCEVMonotonicityDomain::Effective}) {
+        OS.indent(2) << (D == SCEVMonotonicityDomain::Entire ? "Entire"
+                                                             : "Effective")
+                     << " Domain:\n";
+        SCEVMonotonicity Mon =
+            Checker.checkMonotonicity(AccessFn, OutermostLoop, D);
+        Mon.print(OS, 4);
+      }
     }
     OS << "\n";
   }
@@ -733,11 +776,13 @@ SCEVMonotonicity SCEVMonotonicityChecker::invariantOrUnknown(const SCEV *Expr) {
 
 SCEVMonotonicity
 SCEVMonotonicityChecker::checkMonotonicity(const SCEV *Expr,
-                                           const Loop *OutermostLoop) {
+                                           const Loop *OutermostLoop,
+                                           SCEVMonotonicityDomain Domain) {
   assert((!OutermostLoop || OutermostLoop->isOutermost()) &&
          "OutermostLoop must be outermost");
   assert(Expr->getType()->isIntegerTy() && "Expr must be integer type");
   this->OutermostLoop = OutermostLoop;
+  this->Domain = Domain;
   return visit(Expr);
 }
 

@@ -10,7 +10,10 @@ define void @sext_nsw(ptr %a, i8 %start, i8 %step) {
 ; CHECK-LABEL: 'sext_nsw'
 ; CHECK-NEXT:  Monotonicity check:
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
-; CHECK-NEXT:      Expr: {(sext i8 %start to i64),+,(sext i8 %step to i64)}<nsw><%loop>
+; CHECK-NEXT:    Expr: {(sext i8 %start to i64),+,(sext i8 %step to i64)}<nsw><%loop>
+; CHECK-NEXT:    Entire Domain:
+; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
+; CHECK-NEXT:    Effective Domain:
 ; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
@@ -46,7 +49,11 @@ define void @sext_may_wrap(ptr %a, i8 %start, i8 %step) {
 ; CHECK-LABEL: 'sext_may_wrap'
 ; CHECK-NEXT:  Monotonicity check:
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
-; CHECK-NEXT:      Expr: (sext i8 {%start,+,%step}<%loop> to i64)
+; CHECK-NEXT:    Expr: (sext i8 {%start,+,%step}<%loop> to i64)
+; CHECK-NEXT:    Entire Domain:
+; CHECK-NEXT:      Monotonicity: Unknown
+; CHECK-NEXT:      Reason: (sext i8 {%start,+,%step}<%loop> to i64)
+; CHECK-NEXT:    Effective Domain:
 ; CHECK-NEXT:      Monotonicity: Unknown
 ; CHECK-NEXT:      Reason: (sext i8 {%start,+,%step}<%loop> to i64)
 ; CHECK-EMPTY:
@@ -78,7 +85,10 @@ define void @zext_pos(ptr %a) {
 ; CHECK-LABEL: 'zext_pos'
 ; CHECK-NEXT:  Monotonicity check:
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
-; CHECK-NEXT:      Expr: {0,+,1}<nuw><nsw><%loop>
+; CHECK-NEXT:    Expr: {0,+,1}<nuw><nsw><%loop>
+; CHECK-NEXT:    Entire Domain:
+; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
+; CHECK-NEXT:    Effective Domain:
 ; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
@@ -116,7 +126,11 @@ define void @zext_cross_zero(ptr %a) {
 ; CHECK-LABEL: 'zext_cross_zero'
 ; CHECK-NEXT:  Monotonicity check:
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
-; CHECK-NEXT:      Expr: (zext i8 {-1,+,1}<nsw><%loop> to i64)
+; CHECK-NEXT:    Expr: (zext i8 {-1,+,1}<nsw><%loop> to i64)
+; CHECK-NEXT:    Entire Domain:
+; CHECK-NEXT:      Monotonicity: Unknown
+; CHECK-NEXT:      Reason: (zext i8 {-1,+,1}<nsw><%loop> to i64)
+; CHECK-NEXT:    Effective Domain:
 ; CHECK-NEXT:      Monotonicity: Unknown
 ; CHECK-NEXT:      Reason: (zext i8 {-1,+,1}<nsw><%loop> to i64)
 ; CHECK-EMPTY:
@@ -150,7 +164,11 @@ define void @zext_nneg_nsw(ptr %a, i8 %step) {
 ; CHECK-LABEL: 'zext_nneg_nsw'
 ; CHECK-NEXT:  Monotonicity check:
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
-; CHECK-NEXT:      Expr: (zext i8 {0,+,%step}<nsw><%loop> to i64)
+; CHECK-NEXT:    Expr: (zext i8 {0,+,%step}<nsw><%loop> to i64)
+; CHECK-NEXT:    Entire Domain:
+; CHECK-NEXT:      Monotonicity: Unknown
+; CHECK-NEXT:      Reason: (zext i8 {0,+,%step}<nsw><%loop> to i64)
+; CHECK-NEXT:    Effective Domain:
 ; CHECK-NEXT:      Monotonicity: Unknown
 ; CHECK-NEXT:      Reason: (zext i8 {0,+,%step}<nsw><%loop> to i64)
 ; CHECK-EMPTY:
@@ -185,7 +203,11 @@ define void @offset_truncated_to_i1(ptr %a) {
 ; CHECK-LABEL: 'offset_truncated_to_i1'
 ; CHECK-NEXT:  Monotonicity check:
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
-; CHECK-NEXT:      Expr: (zext i1 {false,+,true}<%loop> to i64)
+; CHECK-NEXT:    Expr: (zext i1 {false,+,true}<%loop> to i64)
+; CHECK-NEXT:    Entire Domain:
+; CHECK-NEXT:      Monotonicity: Unknown
+; CHECK-NEXT:      Reason: (zext i1 {false,+,true}<%loop> to i64)
+; CHECK-NEXT:    Effective Domain:
 ; CHECK-NEXT:      Monotonicity: Unknown
 ; CHECK-NEXT:      Reason: (zext i1 {false,+,true}<%loop> to i64)
 ; CHECK-EMPTY:
