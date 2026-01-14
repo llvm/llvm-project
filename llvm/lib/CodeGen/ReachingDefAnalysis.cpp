@@ -549,7 +549,7 @@ void ReachingDefInfo::getGlobalReachingDefs(MachineInstr *MI, Register Reg,
                                             bool &HasLiveInPath) const {
   // If there's a local def before MI, return it.
   int DefInstrId = getReachingDef(MI, Reg);
-  if (DefInstrId == -1) {
+  if (DefInstrId == FunctionLiveInMarker) {
     HasLiveInPath = true;
     return;
   }
