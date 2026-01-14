@@ -9521,7 +9521,7 @@ bool SelectionDAGBuilder::visitStrstrCall(const CallInst &I) {
   const Value *Arg0 = I.getArgOperand(0), *Arg1 = I.getArgOperand(1);
   std::pair<SDValue, SDValue> Res = TSI.EmitTargetCodeForStrstr(
       DAG, getCurSDLoc(), DAG.getRoot(), getValue(Arg0), getValue(Arg1), &I);
-  if (Res.first.getNode()) {
+  if (Res.first) {
     processIntegerCallValue(I, Res.first, false);
     PendingLoads.push_back(Res.second);
     return true;
