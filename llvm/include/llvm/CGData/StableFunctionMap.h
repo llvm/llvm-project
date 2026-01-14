@@ -105,7 +105,7 @@ struct StableFunctionMap {
   using HashFuncsMapType = std::unordered_map<stable_hash, EntryStorage>;
 
   /// Get the HashToFuncs map for serialization.
-  const HashFuncsMapType &getFunctionMap() const;
+  LLVM_ABI_FOR_TEST const HashFuncsMapType &getFunctionMap() const;
 
   /// Get the NameToId vector for serialization.
   ArrayRef<std::string> getNames() const { return IdToName; }

@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 /// reasonable error handling for conversion errors.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/unchecked-string-to-number-conversion.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/unchecked-string-to-number-conversion.html
 class UncheckedStringToNumberConversionCheck : public ClangTidyCheck {
 public:
   UncheckedStringToNumberConversionCheck(StringRef Name,

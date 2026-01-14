@@ -111,6 +111,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.setjmp.setjmp
     libc.src.setjmp.siglongjmp
     libc.src.setjmp.sigsetjmp
+    libc.src.stdlib._Exit
   )
 endif()
 
@@ -633,6 +634,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.llogbbf16
   libc.src.math.llrintbf16
   libc.src.math.llroundbf16
+  libc.src.math.log_bf16
   libc.src.math.logbbf16
   libc.src.math.lrintbf16
   libc.src.math.lroundbf16

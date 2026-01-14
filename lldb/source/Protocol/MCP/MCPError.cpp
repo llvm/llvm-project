@@ -22,14 +22,7 @@ MCPError::MCPError(std::string message, int64_t error_code)
 void MCPError::log(llvm::raw_ostream &OS) const { OS << m_message; }
 
 std::error_code MCPError::convertToErrorCode() const {
-  return llvm::inconvertibleErrorCode();
-}
-
-lldb_protocol::mcp::Error MCPError::toProtocolError() const {
-  lldb_protocol::mcp::Error error;
-  error.code = m_error_code;
-  error.message = m_message;
-  return error;
+  return std::error_code(m_error_code, std::generic_category());
 }
 
 UnsupportedURI::UnsupportedURI(std::string uri) : m_uri(uri) {}

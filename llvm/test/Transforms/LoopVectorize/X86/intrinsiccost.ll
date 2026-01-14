@@ -32,9 +32,9 @@ define void @uaddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PSRC:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[OFFSET_IDX2:%.*]] = mul i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[PDST:%.*]], i64 [[OFFSET_IDX2]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i32 16
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i32 32
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i32 48
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i64 16
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i64 32
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i16>, ptr [[NEXT_GEP]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <16 x i16>, ptr [[TMP1]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <16 x i16>, ptr [[TMP2]], align 2
@@ -43,9 +43,9 @@ define void @uaddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <16 x i16> @llvm.uadd.sat.v16i16(<16 x i16> [[WIDE_LOAD4]], <16 x i16> [[BROADCAST_SPLAT]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <16 x i16> @llvm.uadd.sat.v16i16(<16 x i16> [[WIDE_LOAD5]], <16 x i16> [[BROADCAST_SPLAT]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x i16> @llvm.uadd.sat.v16i16(<16 x i16> [[WIDE_LOAD6]], <16 x i16> [[BROADCAST_SPLAT]])
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i16, ptr [[NEXT_GEP3]], i32 16
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i16, ptr [[NEXT_GEP3]], i32 32
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i16, ptr [[NEXT_GEP3]], i32 48
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i16, ptr [[NEXT_GEP3]], i64 16
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i16, ptr [[NEXT_GEP3]], i64 32
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i16, ptr [[NEXT_GEP3]], i64 48
 ; CHECK-NEXT:    store <16 x i16> [[TMP4]], ptr [[NEXT_GEP3]], align 2
 ; CHECK-NEXT:    store <16 x i16> [[TMP5]], ptr [[TMP8]], align 2
 ; CHECK-NEXT:    store <16 x i16> [[TMP6]], ptr [[TMP9]], align 2
@@ -63,8 +63,7 @@ define void @uaddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; CHECK-NEXT:    [[IND_END12:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = mul i64 [[N_VEC]], 2
 ; CHECK-NEXT:    [[IND_END15:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[TMP13]]
-; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[TMP0]], [[N_VEC]]
-; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], 8
+; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 8
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
@@ -161,9 +160,9 @@ define void @fshl(ptr nocapture readonly %pSrc, i8 signext %offset, ptr nocaptur
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PSRC:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[PDST:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 32
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 64
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 96
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 32
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 64
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 96
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <32 x i8>, ptr [[NEXT_GEP]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <32 x i8>, ptr [[TMP1]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <32 x i8>, ptr [[TMP2]], align 2
@@ -172,9 +171,9 @@ define void @fshl(ptr nocapture readonly %pSrc, i8 signext %offset, ptr nocaptur
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <32 x i8> @llvm.fshl.v32i8(<32 x i8> [[WIDE_LOAD3]], <32 x i8> [[WIDE_LOAD3]], <32 x i8> [[BROADCAST_SPLAT]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <32 x i8> @llvm.fshl.v32i8(<32 x i8> [[WIDE_LOAD4]], <32 x i8> [[WIDE_LOAD4]], <32 x i8> [[BROADCAST_SPLAT]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <32 x i8> @llvm.fshl.v32i8(<32 x i8> [[WIDE_LOAD5]], <32 x i8> [[WIDE_LOAD5]], <32 x i8> [[BROADCAST_SPLAT]])
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[NEXT_GEP2]], i32 32
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[NEXT_GEP2]], i32 64
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[NEXT_GEP2]], i32 96
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[NEXT_GEP2]], i64 32
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[NEXT_GEP2]], i64 64
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[NEXT_GEP2]], i64 96
 ; CHECK-NEXT:    store <32 x i8> [[TMP4]], ptr [[NEXT_GEP2]], align 2
 ; CHECK-NEXT:    store <32 x i8> [[TMP5]], ptr [[TMP8]], align 2
 ; CHECK-NEXT:    store <32 x i8> [[TMP6]], ptr [[TMP9]], align 2
@@ -190,8 +189,7 @@ define void @fshl(ptr nocapture readonly %pSrc, i8 signext %offset, ptr nocaptur
 ; CHECK-NEXT:    [[IND_END9:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST8]]
 ; CHECK-NEXT:    [[IND_END11:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[N_VEC]]
 ; CHECK-NEXT:    [[IND_END14:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[N_VEC]]
-; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[TMP0]], [[N_VEC]]
-; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], 8
+; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 8
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF7:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]

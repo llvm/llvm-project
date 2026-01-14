@@ -48,6 +48,4 @@ define i32 @test() nounwind {
   ret i32 0
 }
 
-declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1)
-
 declare void @test1(ptr)

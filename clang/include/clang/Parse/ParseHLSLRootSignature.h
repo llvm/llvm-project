@@ -130,6 +130,7 @@ private:
     std::optional<float> MaxLOD;
     std::optional<uint32_t> Space;
     std::optional<llvm::dxbc::ShaderVisibility> Visibility;
+    std::optional<llvm::dxbc::StaticSamplerFlags> Flags;
   };
   std::optional<ParsedStaticSamplerParams> parseStaticSamplerParams();
 
@@ -153,6 +154,8 @@ private:
   parseRootDescriptorFlags(RootSignatureToken::Kind Context);
   std::optional<llvm::dxbc::DescriptorRangeFlags>
   parseDescriptorRangeFlags(RootSignatureToken::Kind Context);
+  std::optional<llvm::dxbc::StaticSamplerFlags>
+  parseStaticSamplerFlags(RootSignatureToken::Kind Context);
 
   /// Use NumericLiteralParser to convert CurToken.NumSpelling into a unsigned
   /// 32-bit integer

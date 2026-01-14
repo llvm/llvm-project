@@ -32,10 +32,10 @@ body: |
     ; CHECK-NEXT: $x11 = ADDI $x2, 16
     ; CHECK-NEXT: VS4R_V $v0m4, $x11, implicit $v0_v1_v2_v3_v4_v5_v6 :: (store (<vscale x 1 x s256>) into %stack.0, align 8)
     ; CHECK-NEXT: $x12 = PseudoReadVLENB
-    ; CHECK-NEXT: $x13 = SLLI $x12, 2
-    ; CHECK-NEXT: $x11 = ADD killed $x11, killed $x13
+    ; CHECK-NEXT: $x12 = SLLI killed $x12, 2
+    ; CHECK-NEXT: $x11 = ADD killed $x11, $x12
     ; CHECK-NEXT: VS2R_V $v4m2, $x11, implicit $v0_v1_v2_v3_v4_v5_v6 :: (store (<vscale x 1 x s128>) into %stack.0, align 8)
-    ; CHECK-NEXT: $x12 = SLLI killed $x12, 1
+    ; CHECK-NEXT: $x12 = SRLI killed $x12, 1
     ; CHECK-NEXT: $x11 = ADD killed $x11, killed $x12
     ; CHECK-NEXT: VS1R_V $v6, killed $x11, implicit $v0_v1_v2_v3_v4_v5_v6 :: (store (<vscale x 1 x s64>) into %stack.0)
     ; CHECK-NEXT: $x11 = ADDI $x2, 16
@@ -93,10 +93,10 @@ body: |
     ; CHECK-NEXT: $x11 = ADDI $x2, 16
     ; CHECK-NEXT: $v10m2 = VL2RE8_V $x11 :: (load (<vscale x 1 x s128>) from %stack.0, align 8)
     ; CHECK-NEXT: $x12 = PseudoReadVLENB
-    ; CHECK-NEXT: $x13 = SLLI $x12, 1
-    ; CHECK-NEXT: $x11 = ADD killed $x11, killed $x13
+    ; CHECK-NEXT: $x12 = SLLI killed $x12, 1
+    ; CHECK-NEXT: $x11 = ADD killed $x11, $x12
     ; CHECK-NEXT: $v12m4 = VL4RE8_V $x11 :: (load (<vscale x 1 x s256>) from %stack.0, align 8)
-    ; CHECK-NEXT: $x12 = SLLI killed $x12, 2
+    ; CHECK-NEXT: $x12 = SLLI killed $x12, 1
     ; CHECK-NEXT: $x11 = ADD killed $x11, killed $x12
     ; CHECK-NEXT: $v16 = VL1RE8_V killed $x11 :: (load (<vscale x 1 x s64>) from %stack.0)
     ; CHECK-NEXT: VS1R_V killed $v10, killed renamable $x10

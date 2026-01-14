@@ -390,7 +390,7 @@ int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
   register_ompt_callback(ompt_callback_parallel_begin);
   register_ompt_callback(ompt_callback_parallel_end);
   register_ompt_callback(ompt_callback_work);
-  // register_ompt_callback(ompt_callback_dispatch);
+  register_ompt_callback(ompt_callback_dispatch);
   register_ompt_callback(ompt_callback_task_create);
   // register_ompt_callback(ompt_callback_dependences);
   // register_ompt_callback(ompt_callback_task_dependence);

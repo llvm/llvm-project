@@ -32,8 +32,12 @@ def SDT_MipsExtr : SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisSameAs<0, 1>,
                                         SDTCisVT<2, untyped>]>;
 def SDT_MipsShilo : SDTypeProfile<1, 2, [SDTCisVT<0, untyped>,
                                          SDTCisSameAs<0, 2>, SDTCisVT<1, i32>]>;
-def SDT_MipsDPA : SDTypeProfile<1, 3, [SDTCisVT<0, untyped>, SDTCisSameAs<0, 3>,
-                                       SDTCisVT<1, i32>, SDTCisSameAs<1, 2>]>;
+def SDT_MipsDPA_H : SDTypeProfile<1, 3, [SDTCisVT<0, untyped>, SDTCisSameAs<0, 3>,
+                                         SDTCisVT<1, v4i8>, SDTCisSameAs<1, 2>]>;
+def SDT_MipsDPA_W : SDTypeProfile<1, 3, [SDTCisVT<0, untyped>, SDTCisSameAs<0, 3>,
+                                         SDTCisVT<1, v2i16>, SDTCisSameAs<1, 2>]>;
+def SDT_MipsDPA_L : SDTypeProfile<1, 3, [SDTCisVT<0, untyped>, SDTCisSameAs<0, 3>,
+                                         SDTCisVT<1, i32>, SDTCisSameAs<1, 2>]>;
 def SDT_MipsSHIFT_DSP : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<0, 1>,
                                              SDTCisVT<2, i32>]>;
 
@@ -43,6 +47,7 @@ class MipsDSPBase<string Opc, SDTypeProfile Prof> :
 class MipsDSPSideEffectBase<string Opc, SDTypeProfile Prof> :
   SDNode<!strconcat("MipsISD::", Opc), Prof, [SDNPHasChain, SDNPSideEffect]>;
 
+// EXTR.W intrinsic nodes.
 def MipsEXTP : MipsDSPSideEffectBase<"EXTP", SDT_MipsExtr>;
 def MipsEXTPDP : MipsDSPSideEffectBase<"EXTPDP", SDT_MipsExtr>;
 def MipsEXTR_S_H : MipsDSPSideEffectBase<"EXTR_S_H", SDT_MipsExtr>;
@@ -53,40 +58,45 @@ def MipsEXTR_RS_W : MipsDSPSideEffectBase<"EXTR_RS_W", SDT_MipsExtr>;
 def MipsSHILO : MipsDSPBase<"SHILO", SDT_MipsShilo>;
 def MipsMTHLIP : MipsDSPSideEffectBase<"MTHLIP", SDT_MipsShilo>;
 
-def MipsMULSAQ_S_W_PH : MipsDSPSideEffectBase<"MULSAQ_S_W_PH", SDT_MipsDPA>;
-def MipsMAQ_S_W_PHL : MipsDSPSideEffectBase<"MAQ_S_W_PHL", SDT_MipsDPA>;
-def MipsMAQ_S_W_PHR : MipsDSPSideEffectBase<"MAQ_S_W_PHR", SDT_MipsDPA>;
-def MipsMAQ_SA_W_PHL : MipsDSPSideEffectBase<"MAQ_SA_W_PHL", SDT_MipsDPA>;
-def MipsMAQ_SA_W_PHR : MipsDSPSideEffectBase<"MAQ_SA_W_PHR", SDT_MipsDPA>;
+// DPA.W intrinsic nodes.
+def MipsMULSAQ_S_W_PH : MipsDSPSideEffectBase<"MULSAQ_S_W_PH", SDT_MipsDPA_W>;
+def MipsMAQ_S_W_PHL : MipsDSPSideEffectBase<"MAQ_S_W_PHL", SDT_MipsDPA_W>;
+def MipsMAQ_S_W_PHR : MipsDSPSideEffectBase<"MAQ_S_W_PHR", SDT_MipsDPA_W>;
+def MipsMAQ_SA_W_PHL : MipsDSPSideEffectBase<"MAQ_SA_W_PHL", SDT_MipsDPA_W>;
+def MipsMAQ_SA_W_PHR : MipsDSPSideEffectBase<"MAQ_SA_W_PHR", SDT_MipsDPA_W>;
 
-def MipsDPAU_H_QBL : MipsDSPBase<"DPAU_H_QBL", SDT_MipsDPA>;
-def MipsDPAU_H_QBR : MipsDSPBase<"DPAU_H_QBR", SDT_MipsDPA>;
-def MipsDPSU_H_QBL : MipsDSPBase<"DPSU_H_QBL", SDT_MipsDPA>;
-def MipsDPSU_H_QBR : MipsDSPBase<"DPSU_H_QBR", SDT_MipsDPA>;
-def MipsDPAQ_S_W_PH : MipsDSPSideEffectBase<"DPAQ_S_W_PH", SDT_MipsDPA>;
-def MipsDPSQ_S_W_PH : MipsDSPSideEffectBase<"DPSQ_S_W_PH", SDT_MipsDPA>;
-def MipsDPAQ_SA_L_W : MipsDSPSideEffectBase<"DPAQ_SA_L_W", SDT_MipsDPA>;
-def MipsDPSQ_SA_L_W : MipsDSPSideEffectBase<"DPSQ_SA_L_W", SDT_MipsDPA>;
+def MipsDPAU_H_QBL : MipsDSPBase<"DPAU_H_QBL", SDT_MipsDPA_H>;
+def MipsDPAU_H_QBR : MipsDSPBase<"DPAU_H_QBR", SDT_MipsDPA_H>;
+def MipsDPSU_H_QBL : MipsDSPBase<"DPSU_H_QBL", SDT_MipsDPA_H>;
+def MipsDPSU_H_QBR : MipsDSPBase<"DPSU_H_QBR", SDT_MipsDPA_H>;
+def MipsDPAQ_S_W_PH : MipsDSPSideEffectBase<"DPAQ_S_W_PH", SDT_MipsDPA_W>;
+def MipsDPSQ_S_W_PH : MipsDSPSideEffectBase<"DPSQ_S_W_PH", SDT_MipsDPA_W>;
+def MipsDPAQ_SA_L_W : MipsDSPSideEffectBase<"DPAQ_SA_L_W", SDT_MipsDPA_L>;
+def MipsDPSQ_SA_L_W : MipsDSPSideEffectBase<"DPSQ_SA_L_W", SDT_MipsDPA_L>;
 
-def MipsDPA_W_PH : MipsDSPBase<"DPA_W_PH", SDT_MipsDPA>;
-def MipsDPS_W_PH : MipsDSPBase<"DPS_W_PH", SDT_MipsDPA>;
-def MipsDPAQX_S_W_PH : MipsDSPSideEffectBase<"DPAQX_S_W_PH", SDT_MipsDPA>;
-def MipsDPAQX_SA_W_PH : MipsDSPSideEffectBase<"DPAQX_SA_W_PH", SDT_MipsDPA>;
-def MipsDPAX_W_PH : MipsDSPBase<"DPAX_W_PH", SDT_MipsDPA>;
-def MipsDPSX_W_PH : MipsDSPBase<"DPSX_W_PH", SDT_MipsDPA>;
-def MipsDPSQX_S_W_PH : MipsDSPSideEffectBase<"DPSQX_S_W_PH", SDT_MipsDPA>;
-def MipsDPSQX_SA_W_PH : MipsDSPSideEffectBase<"DPSQX_SA_W_PH", SDT_MipsDPA>;
-def MipsMULSA_W_PH : MipsDSPBase<"MULSA_W_PH", SDT_MipsDPA>;
+def MipsDPA_W_PH : MipsDSPBase<"DPA_W_PH", SDT_MipsDPA_W>;
+def MipsDPS_W_PH : MipsDSPBase<"DPS_W_PH", SDT_MipsDPA_W>;
+def MipsDPAQX_S_W_PH : MipsDSPSideEffectBase<"DPAQX_S_W_PH", SDT_MipsDPA_W>;
+def MipsDPAQX_SA_W_PH : MipsDSPSideEffectBase<"DPAQX_SA_W_PH", SDT_MipsDPA_W>;
+def MipsDPAX_W_PH : MipsDSPBase<"DPAX_W_PH", SDT_MipsDPA_W>;
+def MipsDPSX_W_PH : MipsDSPBase<"DPSX_W_PH", SDT_MipsDPA_W>;
+def MipsDPSQX_S_W_PH : MipsDSPSideEffectBase<"DPSQX_S_W_PH", SDT_MipsDPA_W>;
+def MipsDPSQX_SA_W_PH : MipsDSPSideEffectBase<"DPSQX_SA_W_PH", SDT_MipsDPA_W>;
+def MipsMULSA_W_PH : MipsDSPBase<"MULSA_W_PH", SDT_MipsDPA_W>;
 
-def MipsMULT : MipsDSPBase<"MULT", SDT_MipsDPA>;
-def MipsMULTU : MipsDSPBase<"MULTU", SDT_MipsDPA>;
-def MipsMADD_DSP : MipsDSPBase<"MADD_DSP", SDT_MipsDPA>;
-def MipsMADDU_DSP : MipsDSPBase<"MADDU_DSP", SDT_MipsDPA>;
-def MipsMSUB_DSP : MipsDSPBase<"MSUB_DSP", SDT_MipsDPA>;
-def MipsMSUBU_DSP : MipsDSPBase<"MSUBU_DSP", SDT_MipsDPA>;
+def MipsMULT : MipsDSPBase<"MULT", SDT_MipsDPA_L>;
+def MipsMULTU : MipsDSPBase<"MULTU", SDT_MipsDPA_L>;
+def MipsMADD_DSP : MipsDSPBase<"MADD_DSP", SDT_MipsDPA_L>;
+def MipsMADDU_DSP : MipsDSPBase<"MADDU_DSP", SDT_MipsDPA_L>;
+def MipsMSUB_DSP : MipsDSPBase<"MSUB_DSP", SDT_MipsDPA_L>;
+def MipsMSUBU_DSP : MipsDSPBase<"MSUBU_DSP", SDT_MipsDPA_L>;
+
+// DSP shift nodes.
 def MipsSHLL_DSP : MipsDSPBase<"SHLL_DSP", SDT_MipsSHIFT_DSP>;
 def MipsSHRA_DSP : MipsDSPBase<"SHRA_DSP", SDT_MipsSHIFT_DSP>;
 def MipsSHRL_DSP : MipsDSPBase<"SHRL_DSP", SDT_MipsSHIFT_DSP>;
+
+// DSP setcc and select_cc nodes.
 def MipsSETCC_DSP : MipsDSPBase<"SETCC_DSP", SDTSetCC>;
 def MipsSELECT_CC_DSP : MipsDSPBase<"SELECT_CC_DSP", SDTSelectCC>;
 
@@ -464,12 +474,12 @@ class WRDSP_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
   string BaseOpcode = instr_asm;
 }
 
-class DPA_W_PH_DESC_BASE<string instr_asm, SDPatternOperator OpNode> {
+class DPA_DESC_BASE<string instr_asm, SDPatternOperator OpNode, ValueType VT> {
   dag OutOperandList = (outs ACC64DSPOpnd:$ac);
-  dag InOperandList = (ins GPR32Opnd:$rs, GPR32Opnd:$rt, ACC64DSPOpnd:$acin);
+  dag InOperandList = (ins DSPROpnd:$rs, DSPROpnd:$rt, ACC64DSPOpnd:$acin);
   string AsmString = !strconcat(instr_asm, "\t$ac, $rs, $rt");
   list<dag> Pattern = [(set ACC64DSPOpnd:$ac,
-                        (OpNode GPR32Opnd:$rs, GPR32Opnd:$rt, ACC64DSPOpnd:$acin))];
+                        (OpNode VT:$rs, VT:$rt, ACC64DSPOpnd:$acin))];
   string Constraints = "$acin = $ac";
   string BaseOpcode = instr_asm;
 }
@@ -762,20 +772,20 @@ class MULQ_RS_PH_DESC : ADDU_QB_DESC_BASE<"mulq_rs.ph", int_mips_mulq_rs_ph,
                                           NoItinerary, DSPROpnd, DSPROpnd>,
                         IsCommutable, Defs<[DSPOutFlag21]>;
 
-class MULSAQ_S_W_PH_DESC : DPA_W_PH_DESC_BASE<"mulsaq_s.w.ph",
-                                              MipsMULSAQ_S_W_PH>,
+class MULSAQ_S_W_PH_DESC : DPA_DESC_BASE<"mulsaq_s.w.ph",
+                                         MipsMULSAQ_S_W_PH, v2i16>,
                            Defs<[DSPOutFlag16_19]>;
 
-class MAQ_S_W_PHL_DESC : DPA_W_PH_DESC_BASE<"maq_s.w.phl", MipsMAQ_S_W_PHL>,
+class MAQ_S_W_PHL_DESC : DPA_DESC_BASE<"maq_s.w.phl", MipsMAQ_S_W_PHL, v2i16>,
                          Defs<[DSPOutFlag16_19]>;
 
-class MAQ_S_W_PHR_DESC : DPA_W_PH_DESC_BASE<"maq_s.w.phr", MipsMAQ_S_W_PHR>,
+class MAQ_S_W_PHR_DESC : DPA_DESC_BASE<"maq_s.w.phr", MipsMAQ_S_W_PHR, v2i16>,
                          Defs<[DSPOutFlag16_19]>;
 
-class MAQ_SA_W_PHL_DESC : DPA_W_PH_DESC_BASE<"maq_sa.w.phl", MipsMAQ_SA_W_PHL>,
+class MAQ_SA_W_PHL_DESC : DPA_DESC_BASE<"maq_sa.w.phl", MipsMAQ_SA_W_PHL, v2i16>,
                           Defs<[DSPOutFlag16_19]>;
 
-class MAQ_SA_W_PHR_DESC : DPA_W_PH_DESC_BASE<"maq_sa.w.phr", MipsMAQ_SA_W_PHR>,
+class MAQ_SA_W_PHR_DESC : DPA_DESC_BASE<"maq_sa.w.phr", MipsMAQ_SA_W_PHR, v2i16>,
                           Defs<[DSPOutFlag16_19]>;
 
 // Move from/to hi/lo.
@@ -785,24 +795,24 @@ class MTHI_DESC : MTHI_DESC_BASE<"mthi", HI32DSPOpnd, NoItinerary>;
 class MTLO_DESC : MTHI_DESC_BASE<"mtlo", LO32DSPOpnd, NoItinerary>;
 
 // Dot product with accumulate/subtract
-class DPAU_H_QBL_DESC : DPA_W_PH_DESC_BASE<"dpau.h.qbl", MipsDPAU_H_QBL>;
+class DPAU_H_QBL_DESC : DPA_DESC_BASE<"dpau.h.qbl", MipsDPAU_H_QBL, v4i8>;
 
-class DPAU_H_QBR_DESC : DPA_W_PH_DESC_BASE<"dpau.h.qbr", MipsDPAU_H_QBR>;
+class DPAU_H_QBR_DESC : DPA_DESC_BASE<"dpau.h.qbr", MipsDPAU_H_QBR, v4i8>;
 
-class DPSU_H_QBL_DESC : DPA_W_PH_DESC_BASE<"dpsu.h.qbl", MipsDPSU_H_QBL>;
+class DPSU_H_QBL_DESC : DPA_DESC_BASE<"dpsu.h.qbl", MipsDPSU_H_QBL, v4i8>;
 
-class DPSU_H_QBR_DESC : DPA_W_PH_DESC_BASE<"dpsu.h.qbr", MipsDPSU_H_QBR>;
+class DPSU_H_QBR_DESC : DPA_DESC_BASE<"dpsu.h.qbr", MipsDPSU_H_QBR, v4i8>;
 
-class DPAQ_S_W_PH_DESC : DPA_W_PH_DESC_BASE<"dpaq_s.w.ph", MipsDPAQ_S_W_PH>,
+class DPAQ_S_W_PH_DESC : DPA_DESC_BASE<"dpaq_s.w.ph", MipsDPAQ_S_W_PH, v2i16>,
                          Defs<[DSPOutFlag16_19]>;
 
-class DPSQ_S_W_PH_DESC : DPA_W_PH_DESC_BASE<"dpsq_s.w.ph", MipsDPSQ_S_W_PH>,
+class DPSQ_S_W_PH_DESC : DPA_DESC_BASE<"dpsq_s.w.ph", MipsDPSQ_S_W_PH, v2i16>,
                          Defs<[DSPOutFlag16_19]>;
 
-class DPAQ_SA_L_W_DESC : DPA_W_PH_DESC_BASE<"dpaq_sa.l.w", MipsDPAQ_SA_L_W>,
+class DPAQ_SA_L_W_DESC : DPA_DESC_BASE<"dpaq_sa.l.w", MipsDPAQ_SA_L_W, i32>,
                          Defs<[DSPOutFlag16_19]>;
 
-class DPSQ_SA_L_W_DESC : DPA_W_PH_DESC_BASE<"dpsq_sa.l.w", MipsDPSQ_SA_L_W>,
+class DPSQ_SA_L_W_DESC : DPA_DESC_BASE<"dpsq_sa.l.w", MipsDPSQ_SA_L_W, i32>,
                          Defs<[DSPOutFlag16_19]>;
 
 class MULT_DSP_DESC  : MULT_DESC_BASE<"mult", MipsMult, NoItinerary>;
@@ -1034,29 +1044,29 @@ class MULQ_S_PH_DESC : ADDU_QB_DESC_BASE<"mulq_s.ph", int_mips_mulq_s_ph,
                        IsCommutable, Defs<[DSPOutFlag21]>;
 
 // Dot product with accumulate/subtract
-class DPA_W_PH_DESC : DPA_W_PH_DESC_BASE<"dpa.w.ph", MipsDPA_W_PH>;
+class DPA_W_PH_DESC : DPA_DESC_BASE<"dpa.w.ph", MipsDPA_W_PH, v2i16>;
 
-class DPS_W_PH_DESC : DPA_W_PH_DESC_BASE<"dps.w.ph", MipsDPS_W_PH>;
+class DPS_W_PH_DESC : DPA_DESC_BASE<"dps.w.ph", MipsDPS_W_PH, v2i16>;
 
-class DPAQX_S_W_PH_DESC : DPA_W_PH_DESC_BASE<"dpaqx_s.w.ph", MipsDPAQX_S_W_PH>,
+class DPAQX_S_W_PH_DESC : DPA_DESC_BASE<"dpaqx_s.w.ph", MipsDPAQX_S_W_PH, v2i16>,
                           Defs<[DSPOutFlag16_19]>;
 
-class DPAQX_SA_W_PH_DESC : DPA_W_PH_DESC_BASE<"dpaqx_sa.w.ph",
-                                              MipsDPAQX_SA_W_PH>,
+class DPAQX_SA_W_PH_DESC : DPA_DESC_BASE<"dpaqx_sa.w.ph",
+                                         MipsDPAQX_SA_W_PH, v2i16>,
                            Defs<[DSPOutFlag16_19]>;
 
-class DPAX_W_PH_DESC : DPA_W_PH_DESC_BASE<"dpax.w.ph", MipsDPAX_W_PH>;
+class DPAX_W_PH_DESC : DPA_DESC_BASE<"dpax.w.ph", MipsDPAX_W_PH, v2i16>;
 
-class DPSX_W_PH_DESC : DPA_W_PH_DESC_BASE<"dpsx.w.ph", MipsDPSX_W_PH>;
+class DPSX_W_PH_DESC : DPA_DESC_BASE<"dpsx.w.ph", MipsDPSX_W_PH, v2i16>;
 
-class DPSQX_S_W_PH_DESC : DPA_W_PH_DESC_BASE<"dpsqx_s.w.ph", MipsDPSQX_S_W_PH>,
+class DPSQX_S_W_PH_DESC : DPA_DESC_BASE<"dpsqx_s.w.ph", MipsDPSQX_S_W_PH, v2i16>,
                           Defs<[DSPOutFlag16_19]>;
 
-class DPSQX_SA_W_PH_DESC : DPA_W_PH_DESC_BASE<"dpsqx_sa.w.ph",
-                                              MipsDPSQX_SA_W_PH>,
+class DPSQX_SA_W_PH_DESC : DPA_DESC_BASE<"dpsqx_sa.w.ph",
+                                         MipsDPSQX_SA_W_PH, v2i16>,
                            Defs<[DSPOutFlag16_19]>;
 
-class MULSA_W_PH_DESC : DPA_W_PH_DESC_BASE<"mulsa.w.ph", MipsMULSA_W_PH>;
+class MULSA_W_PH_DESC : DPA_DESC_BASE<"mulsa.w.ph", MipsMULSA_W_PH, v2i16>;
 
 // Precision reduce/expand
 class PRECR_QB_PH_DESC : CMP_EQ_QB_R3_DESC_BASE<"precr.qb.ph",

@@ -81,4 +81,14 @@ LIBC_THREAD_MODE_EXTERNAL.
 #define LIBC_HAS_VECTOR_TYPE 0
 #endif
 
+#if __has_attribute(no_sanitize)
+// Disable regular and hardware-supported ASan for functions that may
+// intentionally make out-of-bounds access. Disable TSan as well, as it detects
+// out-of-bounds accesses to heap memory.
+#define LIBC_NO_SANITIZE_OOB_ACCESS                                            \
+  __attribute__((no_sanitize("address", "hwaddress", "thread")))
+#else
+#define LIBC_NO_SANITIZE_OOB_ACCESS
+#endif
+
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_ATTRIBUTES_H

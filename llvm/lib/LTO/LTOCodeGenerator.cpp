@@ -545,6 +545,7 @@ void LTOCodeGenerator::finishOptimizationRemarks() {
   if (DiagnosticOutputFile) {
     DiagnosticOutputFile->keep();
     // FIXME: LTOCodeGenerator dtor is not invoked on Darwin
+    DiagnosticOutputFile.finalize();
     DiagnosticOutputFile->os().flush();
   }
 }
@@ -698,7 +699,6 @@ void LTOCodeGenerator::DiagnosticHandler(const DiagnosticInfo &DI) {
   raw_string_ostream Stream(MsgStorage);
   DiagnosticPrinterRawOStream DP(Stream);
   DI.print(DP);
-  Stream.flush();
 
   // If this method has been called it means someone has set up an external
   // diagnostic handler. Assert on that.

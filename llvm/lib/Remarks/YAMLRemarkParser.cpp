@@ -31,7 +31,6 @@ static void handleDiagnostic(const SMDiagnostic &Diag, void *Ctx) {
   Diag.print(/*ProgName=*/nullptr, OS, /*ShowColors*/ false,
              /*ShowKindLabels*/ true);
   OS << '\n';
-  OS.flush();
 }
 
 YAMLParseError::YAMLParseError(StringRef Msg, SourceMgr &SM,
@@ -385,7 +384,11 @@ Expected<Argument> YAMLRemarkParser::parseArg(yaml::Node &Node) {
   if (!ValueStr)
     return error("argument value is missing.", *ArgMap);
 
-  return Argument{*KeyStr, *ValueStr, Loc};
+  Argument Arg;
+  Arg.Key = *KeyStr;
+  Arg.Val = *ValueStr;
+  Arg.Loc = Loc;
+  return Arg;
 }
 
 Expected<std::unique_ptr<Remark>> YAMLRemarkParser::next() {

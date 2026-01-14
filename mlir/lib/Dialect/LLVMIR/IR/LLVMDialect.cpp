@@ -29,6 +29,8 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/Error.h"
 
+#include "LLVMDialectBytecode.h"
+
 #include <numeric>
 #include <optional>
 
@@ -638,8 +640,6 @@ SuccessorOperands SwitchOp::getSuccessorOperands(unsigned index) {
 // Code for LLVM::GEPOp.
 //===----------------------------------------------------------------------===//
 
-constexpr int32_t GEPOp::kDynamicIndex;
-
 GEPIndicesAdaptor<ValueRange> GEPOp::getIndices() {
   return GEPIndicesAdaptor<ValueRange>(getRawConstantIndicesAttr(),
                                        getDynamicIndices());
@@ -696,7 +696,7 @@ static void destructureIndices(Type currType, ArrayRef<GEPArg> indices,
                        return structType.getBody()[memberIndex];
                      return nullptr;
                    })
-                   .Default(Type(nullptr));
+                   .Default(nullptr);
   }
 }
 
@@ -1898,6 +1898,27 @@ static Type getInsertExtractValueElementType(Type llvmType,
   return llvmType;
 }
 
+/// Extracts the element at the given index from an attribute. For
+/// `ElementsAttr` and `ArrayAttr`, returns the element at the specified index.
+/// For `ZeroAttr`, `UndefAttr`, and `PoisonAttr`, returns the attribute itself
+/// unchanged. Returns `nullptr` if the attribute is not one of these types or
+/// if the index is out of bounds.
+static Attribute extractElementAt(Attribute attr, size_t index) {
+  if (auto elementsAttr = dyn_cast<ElementsAttr>(attr)) {
+    if (index < static_cast<size_t>(elementsAttr.getNumElements()))
+      return elementsAttr.getValues<Attribute>()[index];
+    return nullptr;
+  }
+  if (auto arrayAttr = dyn_cast<ArrayAttr>(attr)) {
+    if (index < arrayAttr.getValue().size())
+      return arrayAttr[index];
+    return nullptr;
+  }
+  if (isa<ZeroAttr, UndefAttr, PoisonAttr>(attr))
+    return attr;
+  return nullptr;
+}
+
 OpFoldResult LLVM::ExtractValueOp::fold(FoldAdaptor adaptor) {
   if (auto extractValueOp = getContainer().getDefiningOp<ExtractValueOp>()) {
     SmallVector<int64_t, 4> newPos(extractValueOp.getPosition());
@@ -1907,22 +1928,11 @@ OpFoldResult LLVM::ExtractValueOp::fold(FoldAdaptor adaptor) {
     return getResult();
   }
 
-  {
-    DenseElementsAttr constval;
-    matchPattern(getContainer(), m_Constant(&constval));
-    if (constval && constval.getElementType() == getType()) {
-      if (isa<SplatElementsAttr>(constval))
-        return constval.getSplatValue<Attribute>();
-      if (getPosition().size() == 1)
-        return constval.getValues<Attribute>()[getPosition()[0]];
-    }
-  }
-
-  auto insertValueOp = getContainer().getDefiningOp<InsertValueOp>();
+  Operation *container = getContainer().getDefiningOp();
   OpFoldResult result = {};
   ArrayRef<int64_t> extractPos = getPosition();
   bool switchedToInsertedValue = false;
-  while (insertValueOp) {
+  while (auto insertValueOp = dyn_cast_if_present<InsertValueOp>(container)) {
     ArrayRef<int64_t> insertPos = insertValueOp.getPosition();
     auto extractPosSize = extractPos.size();
     auto insertPosSize = insertPos.size();
@@ -1945,7 +1955,7 @@ OpFoldResult LLVM::ExtractValueOp::fold(FoldAdaptor adaptor) {
     // In the above example, %4 is folded to %arg1.
     if (extractPosSize > insertPosSize &&
         extractPos.take_front(insertPosSize) == insertPos) {
-      insertValueOp = insertValueOp.getValue().getDefiningOp<InsertValueOp>();
+      container = insertValueOp.getValue().getDefiningOp();
       extractPos = extractPos.drop_front(insertPosSize);
       switchedToInsertedValue = true;
       continue;
@@ -1975,9 +1985,20 @@ OpFoldResult LLVM::ExtractValueOp::fold(FoldAdaptor adaptor) {
       getContainerMutable().assign(insertValueOp.getContainer());
       result = getResult();
     }
-    insertValueOp = insertValueOp.getContainer().getDefiningOp<InsertValueOp>();
+    container = insertValueOp.getContainer().getDefiningOp();
   }
-  return result;
+  if (!container)
+    return result;
+
+  Attribute containerAttr;
+  if (!matchPattern(container, m_Constant(&containerAttr)))
+    return nullptr;
+  for (int64_t pos : extractPos) {
+    containerAttr = extractElementAt(containerAttr, pos);
+    if (!containerAttr)
+      return nullptr;
+  }
+  return containerAttr;
 }
 
 LogicalResult ExtractValueOp::verify() {
@@ -2822,6 +2843,20 @@ LogicalResult ShuffleVectorOp::verify() {
       llvm::any_of(getMask(), [](int32_t v) { return v != 0; }))
     return emitOpError("expected a splat operation for scalable vectors");
   return success();
+}
+
+// Folding for shufflevector op when v1 is single element 1D vector
+// and the mask is a single zero. OpFoldResult will be v1 in this case.
+OpFoldResult ShuffleVectorOp::fold(FoldAdaptor adaptor) {
+  // Check if operand 0 is a single element vector.
+  auto vecType = llvm::dyn_cast<VectorType>(getV1().getType());
+  if (!vecType || vecType.getRank() != 1 || vecType.getNumElements() != 1)
+    return {};
+  // Check if the mask is a single zero.
+  // Note: The mask is guaranteed to be non-empty.
+  if (getMask().size() != 1 || getMask()[0] != 0)
+    return {};
+  return getV1();
 }
 
 //===----------------------------------------------------------------------===//
@@ -4086,6 +4121,25 @@ printIndirectBrOpSucessors(OpAsmPrinter &p, IndirectBrOp op, Type flagType,
 }
 
 //===----------------------------------------------------------------------===//
+// SincosOp (intrinsic)
+//===----------------------------------------------------------------------===//
+
+LogicalResult LLVM::SincosOp::verify() {
+  auto operandType = getOperand().getType();
+  auto resultType = getResult().getType();
+  auto resultStructType =
+      mlir::dyn_cast<mlir::LLVM::LLVMStructType>(resultType);
+  if (!resultStructType || resultStructType.getBody().size() != 2 ||
+      resultStructType.getBody()[0] != operandType ||
+      resultStructType.getBody()[1] != operandType) {
+    return emitOpError("expected result type to be an homogeneous struct with "
+                       "two elements matching the operand type, but got ")
+           << resultType;
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // AssumeOp (intrinsic)
 //===----------------------------------------------------------------------===//
 
@@ -4191,6 +4245,34 @@ LogicalResult InlineAsmOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// UDivOp
+//===----------------------------------------------------------------------===//
+Speculation::Speculatability UDivOp::getSpeculatability() {
+  // X / 0 => UB
+  Value divisor = getRhs();
+  if (matchPattern(divisor, m_IntRangeWithoutZeroU()))
+    return Speculation::Speculatable;
+
+  return Speculation::NotSpeculatable;
+}
+
+//===----------------------------------------------------------------------===//
+// SDivOp
+//===----------------------------------------------------------------------===//
+Speculation::Speculatability SDivOp::getSpeculatability() {
+  // This function conservatively assumes that all signed division by -1 are
+  // not speculatable.
+  // X / 0 => UB
+  // INT_MIN / -1 => UB
+  Value divisor = getRhs();
+  if (matchPattern(divisor, m_IntRangeWithoutZeroS()) &&
+      matchPattern(divisor, m_IntRangeWithoutNegOneS()))
+    return Speculation::Speculatable;
+
+  return Speculation::NotSpeculatable;
+}
+
+//===----------------------------------------------------------------------===//
 // LLVMDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
 
@@ -4218,6 +4300,7 @@ void LLVMDialect::initialize() {
   // Support unknown operations because not all LLVM operations are registered.
   allowUnknownOperations();
   declarePromisedInterface<DialectInlinerInterface, LLVMDialect>();
+  detail::addBytecodeInterface(this);
 }
 
 #define GET_OP_CLASSES

@@ -240,10 +240,10 @@ LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
         loc, forOp.getUpperBound().getType(), splitBound);
 
   // Peel the first iteration.
-  IRMapping map;
-  map.map(forOp.getUpperBound(), splitBound);
-  firstIteration = cast<ForOp>(b.clone(*forOp.getOperation(), map));
-
+  firstIteration = cast<ForOp>(b.clone(*forOp.getOperation()));
+  b.modifyOpInPlace(firstIteration, [&]() {
+    firstIteration.getUpperBoundMutable().assign(splitBound);
+  });
   // Update main loop with new lower bound.
   b.modifyOpInPlace(forOp, [&]() {
     forOp.getInitArgsMutable().assign(firstIteration->getResults());
@@ -337,6 +337,8 @@ struct ForLoopSpecialization
 };
 
 struct ForLoopPeeling : public impl::SCFForLoopPeelingBase<ForLoopPeeling> {
+  using impl::SCFForLoopPeelingBase<ForLoopPeeling>::SCFForLoopPeelingBase;
+
   void runOnOperation() override {
     auto *parentOp = getOperation();
     MLIRContext *ctx = parentOp->getContext();
@@ -359,8 +361,4 @@ std::unique_ptr<Pass> mlir::createParallelLoopSpecializationPass() {
 
 std::unique_ptr<Pass> mlir::createForLoopSpecializationPass() {
   return std::make_unique<ForLoopSpecialization>();
-}
-
-std::unique_ptr<Pass> mlir::createForLoopPeelingPass() {
-  return std::make_unique<ForLoopPeeling>();
 }

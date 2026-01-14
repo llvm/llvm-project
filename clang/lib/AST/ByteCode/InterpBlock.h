@@ -92,6 +92,8 @@ public:
   bool isInitialized() const { return IsInitialized; }
   /// The Evaluation ID this block was created in.
   unsigned getEvalID() const { return EvalID; }
+  /// Move all pointers from this block to \param B.
+  void movePointersTo(Block *B);
 
   /// Returns a pointer to the stored data.
   /// You are allowed to read Desc->getSize() bytes from this address.
@@ -115,8 +117,17 @@ public:
     return reinterpret_cast<const std::byte *>(this) + sizeof(Block);
   }
 
-  template <typename T> T deref() const {
+  template <typename T> const T &deref() const {
     return *reinterpret_cast<const T *>(data());
+  }
+  template <typename T> T &deref() { return *reinterpret_cast<T *>(data()); }
+
+  template <typename T> T &getBlockDesc() {
+    assert(sizeof(T) == getDescriptor()->getMetadataSize());
+    return *reinterpret_cast<T *>(rawData());
+  }
+  template <typename T> const T &getBlockDesc() const {
+    return const_cast<Block *>(this)->getBlockDesc<T>();
   }
 
   /// Invokes the constructor.

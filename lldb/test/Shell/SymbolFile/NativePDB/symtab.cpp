@@ -1,4 +1,4 @@
-// REQUIRES: x86
+// REQUIRES: lld, x86
 
 // Test symtab reading
 // RUN: %build --compiler=clang-cl --arch=64 --nodefaultlib -o %t.exe -- %s
@@ -42,18 +42,18 @@ int main(int argc, char **argv) {
   return ns::a_function() + b.b_func();
 }
 
-// CHECK-DAG: Code {{.*}} main
-// CHECK-DAG: Code {{.*}} ?b_func@?$B@F@ns@@QEBAHXZ
-// CHECK-DAG: Code {{.*}} ?something@A@@QEAAXXZ
-// CHECK-DAG: Code {{.*}} ??_GDyn@ns@@UEAAPEAXI@Z
-// CHECK-DAG: Code {{.*}} ??2@YAPEAX_K@Z
-// CHECK-DAG: Code {{.*}} ??3@YAXPEAX_K@Z
-// CHECK-DAG: Code {{.*}} ?static_fn@C@?$B@H@ns@@SAHXZ
-// CHECK-DAG: Code {{.*}} ?a_function@ns@@YAHXZ
-// CHECK-DAG: Code {{.*}} ?static_fn@C@?$B@_N@ns@@SAHXZ
-// CHECK-DAG: Code {{.*}} ??1Dyn@ns@@UEAA@XZ
-// CHECK-DAG: Code {{.*}} ??0Dyn@ns@@QEAA@XZ
-// CHECK-DAG: Data {{.*}} ?global_int@@3HA
-// CHECK-DAG: Data {{.*}} ??_7Dyn@ns@@6B@
-// CHECK-DAG: Data {{.*}} ?global_a@@3UA@@A
-// CHECK-DAG: Data {{.*}} ?global_c@@3UC@?$B@_J@ns@@A
+// CHECK-DAG: Code 0x{{[0-9a-f]+}} 0x{{0*[1-9a-f][0-9a-f]*}} 0x00000000 main
+// CHECK-DAG: Code 0x{{[0-9a-f]+}} 0x{{0*[1-9a-f][0-9a-f]*}} 0x00000000 ?b_func@?$B@F@ns@@QEBAHXZ
+// CHECK-DAG: Code 0x{{[0-9a-f]+}} 0x{{0*[1-9a-f][0-9a-f]*}} 0x00000000 ?something@A@@QEAAXXZ
+// CHECK-DAG: Code 0x{{[0-9a-f]+}} 0x{{0*[1-9a-f][0-9a-f]*}} 0x00000000 ??_GDyn@ns@@UEAAPEAXI@Z
+// CHECK-DAG: Code 0x{{[0-9a-f]+}} 0x{{0*[1-9a-f][0-9a-f]*}} 0x00000000 ??2@YAPEAX_K@Z
+// CHECK-DAG: Code 0x{{[0-9a-f]+}} 0x{{0*[1-9a-f][0-9a-f]*}} 0x00000000 ??3@YAXPEAX_K@Z
+// CHECK-DAG: Code 0x{{[0-9a-f]+}} 0x{{0*[1-9a-f][0-9a-f]*}} 0x00000000 ?static_fn@C@?$B@H@ns@@SAHXZ
+// CHECK-DAG: Code 0x{{[0-9a-f]+}} 0x{{0*[1-9a-f][0-9a-f]*}} 0x00000000 ?a_function@ns@@YAHXZ
+// CHECK-DAG: Code 0x{{[0-9a-f]+}} 0x{{0*[1-9a-f][0-9a-f]*}} 0x00000000 ?static_fn@C@?$B@_N@ns@@SAHXZ
+// CHECK-DAG: Code 0x{{[0-9a-f]+}} 0x{{0*[1-9a-f][0-9a-f]*}} 0x00000000 ??1Dyn@ns@@UEAA@XZ
+// CHECK-DAG: Code 0x{{[0-9a-f]+}} 0x{{0*[1-9a-f][0-9a-f]*}} 0x00000000 ??0Dyn@ns@@QEAA@XZ
+// CHECK-DAG: Data 0x{{[0-9a-f]+}} 0x{{0*[1-9a-f][0-9a-f]*}} 0x00000000 ?global_int@@3HA
+// CHECK-DAG: Data 0x{{[0-9a-f]+}} 0x{{0*[1-9a-f][0-9a-f]*}} 0x00000000 ??_7Dyn@ns@@6B@
+// CHECK-DAG: Data 0x{{[0-9a-f]+}} 0x{{0*[1-9a-f][0-9a-f]*}} 0x00000000 ?global_a@@3UA@@A
+// CHECK-DAG: Data 0x{{[0-9a-f]+}} 0x{{0*[1-9a-f][0-9a-f]*}} 0x00000000 ?global_c@@3UC@?$B@_J@ns@@A

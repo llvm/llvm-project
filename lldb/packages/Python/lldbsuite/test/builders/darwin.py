@@ -60,7 +60,7 @@ def get_triple_str(arch, vendor, os, version, env):
 
     component = [arch, vendor, os + version]
     if env:
-        components.append(env)
+        component.append(env)
     return "-".join(component)
 
 

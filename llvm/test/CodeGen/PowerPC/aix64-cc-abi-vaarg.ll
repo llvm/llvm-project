@@ -5,24 +5,24 @@
 define i32 @int_va_arg(i32 %a, ...) local_unnamed_addr  {
 ; CHECK-LABEL: int_va_arg:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi 11, 1, 56
 ; CHECK-NEXT:    std 4, 56(1)
-; CHECK-NEXT:    addi 4, 1, 56
-; CHECK-NEXT:    std 4, -16(1)
+; CHECK-NEXT:    addi 4, 1, 60
+; CHECK-NEXT:    std 11, -16(1)
+; CHECK-NEXT:    std 11, -8(1)
 ; CHECK-NEXT:    std 4, -8(1)
 ; CHECK-NEXT:    ld 4, -16(1)
-; CHECK-NEXT:    std 5, 64(1)
-; CHECK-NEXT:    addi 5, 1, 60
-; CHECK-NEXT:    std 5, -8(1)
-; CHECK-NEXT:    addi 5, 4, 4
 ; CHECK-NEXT:    std 6, 72(1)
+; CHECK-NEXT:    addi 6, 4, 4
+; CHECK-NEXT:    std 5, 64(1)
 ; CHECK-NEXT:    std 7, 80(1)
 ; CHECK-NEXT:    std 8, 88(1)
 ; CHECK-NEXT:    std 9, 96(1)
 ; CHECK-NEXT:    std 10, 104(1)
-; CHECK-NEXT:    std 5, -16(1)
-; CHECK-NEXT:    lwz 11, 56(1)
+; CHECK-NEXT:    std 6, -16(1)
+; CHECK-NEXT:    lwz 5, 56(1)
 ; CHECK-NEXT:    lwz 4, 0(4)
-; CHECK-NEXT:    add 3, 11, 3
+; CHECK-NEXT:    add 3, 5, 3
 ; CHECK-NEXT:    slwi 4, 4, 1
 ; CHECK-NEXT:    add 3, 3, 4
 ; CHECK-NEXT:    blr

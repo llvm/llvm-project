@@ -79,6 +79,9 @@ public:
   /// Return true if the value is the smallest signed value.
   LLVM_ABI bool isMinSignedValue() const;
 
+  /// Return true if the value is the largest signed value.
+  LLVM_ABI bool isMaxSignedValue() const;
+
   /// Return true if this is a finite and non-zero floating-point scalar
   /// constant or a fixed width vector constant with all finite and non-zero
   /// elements.

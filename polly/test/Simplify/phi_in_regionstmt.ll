@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly "-passes=scop(print<polly-simplify>)" -disable-output -aa-pipeline=basic-aa < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly '-passes=polly-custom<simplify>' -polly-print-simplify -disable-output -aa-pipeline=basic-aa < %s | FileCheck %s -match-full-lines
 ;
 ; The PHINode %cond91.sink.sink.us.sink.6 is in the middle of a region
 ; statement.
@@ -14,7 +14,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 @qmatrix = external local_unnamed_addr global [8 x ptr], align 16
 
 ; Function Attrs: nounwind uwtable
-define void @AssignQuantParam(ptr %pps) local_unnamed_addr #0 {
+define void @AssignQuantParam(ptr %pps) local_unnamed_addr {
 entry:
   br label %entry.split
 
@@ -46,8 +46,6 @@ if.else121.us.7:                                  ; preds = %if.else135.us.6, %i
   br label %if.end161
 }
 
-attributes #0 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-
 !llvm.ident = !{!0}
 
 !0 = !{!"clang version 6.0.0 (trunk 308961)"}
@@ -58,6 +56,5 @@ attributes #0 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="fals
 !5 = !{!"int", !3, i64 0}
 !6 = !{!"any pointer", !3, i64 0}
 !7 = !{!6, !6, i64 0}
-
 
 ; CHECK: SCoP could not be simplified

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import datetime
 import functools
 import os
 import pathlib
@@ -10,7 +11,10 @@ import subprocess
 import sys
 import tempfile
 
+import git
+import pandas
 import plotly
+import plotly.express
 import tqdm
 
 @functools.total_ordering
@@ -19,7 +23,7 @@ class Commit:
     This class represents a commit inside a given Git repository.
     """
 
-    def __init__(self, git_repo, sha):
+    def __init__(self, git_repo: git.Repo, sha: str):
         self._git_repo = git_repo
         self._sha = sha
 
@@ -37,16 +41,23 @@ class Commit:
         Return whether a commit is an ancestor of another commit in the Git repository.
         """
         # Is self._sha an ancestor of other._sha?
-        res = subprocess.run(['git', '-C', self._git_repo, 'merge-base', '--is-ancestor', self._sha, other._sha])
+        res = subprocess.run(['git', '-C', self._git_repo.git_dir, 'merge-base', '--is-ancestor', self._sha, other._sha])
         if res.returncode not in (0, 1):
             raise RuntimeError(f'Error when trying to obtain the commit order for {self._sha} and {other._sha}')
         return res.returncode == 0
 
+    def __hash__(self):
+        """
+        Return the full revision for this commit.
+        """
+        return hash(self.fullrev)
+
+    @functools.cache
     def show(self, include_diff=False):
         """
         Return the commit information equivalent to `git show` associated to this commit.
         """
-        cmd = ['git', '-C', self._git_repo, 'show', self._sha]
+        cmd = ['git', '-C', self._git_repo.git_dir, 'show', self._sha]
         if not include_diff:
             cmd.append('--no-patch')
         return subprocess.check_output(cmd, text=True)
@@ -56,14 +67,21 @@ class Commit:
         """
         Return the shortened version of the given SHA.
         """
-        return subprocess.check_output(['git', '-C', self._git_repo, 'rev-parse', '--short', self._sha], text=True).strip()
+        return subprocess.check_output(['git', '-C', self._git_repo.git_dir, 'rev-parse', '--short', self._sha], text=True).strip()
 
     @functools.cached_property
     def fullrev(self):
         """
         Return the full SHA associated to this commit.
         """
-        return subprocess.check_output(['git', '-C', self._git_repo, 'rev-parse', self._sha], text=True).strip()
+        return subprocess.check_output(['git', '-C', self._git_repo.git_dir, 'rev-parse', self._sha], text=True).strip()
+
+    @functools.cached_property
+    def commit_date(self):
+        """
+        Return the date of the commit as a `datetime.datetime` object.
+        """
+        return datetime.datetime.fromtimestamp(self._git_repo.commit(self._sha).committed_date)
 
     def prefetch(self):
         """
@@ -72,8 +90,10 @@ class Commit:
         This makes it possible to control when time is spent recovering that information from Git for
         e.g. better reporting to the user.
         """
-        self.shortrev
+        self.commit_date
         self.fullrev
+        self.shortrev
+        self.show()
 
     def __str__(self):
         return self._sha
@@ -91,25 +111,21 @@ def truncate_lines(string, n, marker=None):
     assert len(truncated) <= n, "broken post-condition"
     return '\n'.join(truncated)
 
-def create_plot(commits, benchmarks, data):
+def create_plot(data, metric, trendline=None, subtitle=None):
     """
-    Create a plot object showing the evolution of each benchmark throughout the given commits.
+    Create a plot object showing the evolution of each benchmark throughout the given commits for
+    the given metric.
     """
-    figure = plotly.graph_objects.Figure(layout_title_text=f'{commits[0].shortrev} to {commits[-1].shortrev}')
-
-    # Create the X axis and the hover information
-    x_axis = [commit.shortrev for commit in commits]
-    hover_info = [truncate_lines(commit.show(), 30, marker='...').replace('\n', '<br>') for commit in commits]
-
-    # For each benchmark, get the metric for that benchmark for each commit.
-    #
-    # Some commits may not have any data associated to a benchmark (e.g. runtime or compilation error).
-    # Use None, which is handled properly by plotly.
-    for benchmark in benchmarks:
-        series = [commit_data.get(benchmark, None) for commit_data in data]
-        scatter = plotly.graph_objects.Scatter(x=x_axis, y=series, text=hover_info, name=benchmark)
-        figure.add_trace(scatter)
-
+    data = data.sort_values(by=['revlist_order', 'benchmark'])
+    revlist = pandas.unique(data['commit']) # list of all commits in chronological order
+    hover_info = {c: truncate_lines(c.show(), 30, marker='...').replace('\n', '<br>') for c in revlist}
+    figure = plotly.express.scatter(data, title=f"{revlist[0].shortrev} to {revlist[-1].shortrev}",
+                                          subtitle=subtitle,
+                                          x='revlist_order', y=metric,
+                                          symbol='benchmark',
+                                          color='benchmark',
+                                          hover_name=[hover_info[c] for c in data['commit']],
+                                          trendline=trendline)
     return figure
 
 def directory_path(string):
@@ -118,25 +134,28 @@ def directory_path(string):
     else:
         raise NotADirectoryError(string)
 
-def parse_lnt(lines):
+def parse_lnt(lines, aggregate=statistics.median):
     """
-    Parse lines in LNT format and return a dictionnary of the form:
+    Parse lines in LNT format and return a list of dictionnaries of the form:
 
-        {
-            'benchmark1': {
-                'metric1': [float],
-                'metric2': [float],
+        [
+            {
+                'benchmark': <benchmark1>,
+                <metric1>: float,
+                <metric2>: float,
                 ...
             },
-            'benchmark2': {
-                'metric1': [float],
-                'metric2': [float],
+            {
+                'benchmark': <benchmark2>,
+                <metric1>: float,
+                <metric2>: float,
                 ...
             },
             ...
-        }
+        ]
 
-    Each metric may have multiple values.
+    If a metric has multiple values associated to it, they are aggregated into a single
+    value using the provided aggregation function.
     """
     results = {}
     for line in lines:
@@ -145,13 +164,30 @@ def parse_lnt(lines):
             continue
 
         (identifier, value) = line.split(' ')
-        (name, metric) = identifier.split('.')
-        if name not in results:
-            results[name] = {}
-        if metric not in results[name]:
-            results[name][metric] = []
-        results[name][metric].append(float(value))
-    return results
+        (benchmark, metric) = identifier.split('.')
+        if benchmark not in results:
+            results[benchmark] = {'benchmark': benchmark}
+
+        entry = results[benchmark]
+        if metric not in entry:
+            entry[metric] = []
+        entry[metric].append(float(value))
+
+    for (bm, entry) in results.items():
+        for metric in entry:
+            if isinstance(entry[metric], list):
+                entry[metric] = aggregate(entry[metric])
+
+    return list(results.values())
+
+def sorted_revlist(git_repo, commits):
+    """
+    Return the list of commits sorted by their chronological order (from oldest to newest) in the
+    provided Git repository. Items earlier in the list are older than items later in the list.
+    """
+    revlist_cmd = ['git', '-C', git_repo, 'rev-list', '--no-walk'] + list(commits)
+    revlist = subprocess.check_output(revlist_cmd, text=True).strip().splitlines()
+    return list(reversed(revlist))
 
 def main(argv):
     parser = argparse.ArgumentParser(
@@ -159,7 +195,7 @@ def main(argv):
         description='Visualize historical data in LNT format. This program generates a HTML file that embeds an '
                     'interactive plot with the provided data. The HTML file can then be opened in a browser to '
                     'visualize the data as a chart.',
-        epilog='This script depends on the `plotly` and the `tqdm` Python modules.')
+        epilog='This script depends on the modules listed in `libcxx/utils/requirements.txt`.')
     parser.add_argument('directory', type=directory_path,
         help='Path to a valid directory containing benchmark data in LNT format, each file being named <commit>.lnt. '
              'This is also the format generated by the `benchmark-historical` utility.')
@@ -176,48 +212,53 @@ def main(argv):
              'Since the chart is interactive, it generally makes most sense to include all the benchmarks '
              'and to then filter them in the browser, but in some cases producing a chart with a reduced '
              'number of data series is useful.')
+    parser.add_argument('--subtitle', type=str, required=False,
+        help='Optional subtitle for the chart. This can be used to help identify the contents of the chart.')
     parser.add_argument('--git-repo', type=directory_path, default=pathlib.Path(os.getcwd()),
         help='Path to the git repository to use for ordering commits in time. '
              'By default, the current working directory is used.')
     parser.add_argument('--open', action='store_true',
         help='Whether to automatically open the generated HTML file when finished. If no output file is provided, '
              'the resulting benchmark is opened automatically by default.')
+    parser.add_argument('--trendline', type=str, required=False, default=None, choices=('ols', 'lowess', 'expanding'),
+        help='Optional trendline to add on each series in the chart. See the documentation in '
+             'https://plotly.com/python-api-reference/generated/plotly.express.trendline_functions.html '
+             'details on each option.')
     args = parser.parse_args(argv)
+    repo = git.Repo(args.git_repo)
 
-    # Extract benchmark data from the directory and keep only the metric we're interested in.
-    #
-    # Some data points may have multiple values associated to the metric (e.g. if we performed
-    # multiple runs to reduce noise), in which case we aggregate them using a median.
-    historical_data = []
+    # Extract benchmark data from the directory.
+    data = {}
     files = [f for f in args.directory.glob('*.lnt')]
     for file in tqdm.tqdm(files, desc='Parsing LNT files'):
+        rows = parse_lnt(file.read_text().splitlines())
         (commit, _) = os.path.splitext(os.path.basename(file))
-        commit = Commit(args.git_repo, commit)
-        with open(file, 'r') as f:
-            lnt_data = parse_lnt(f.readlines())
-            commit_data = {}
-            for (bm, metrics) in lnt_data.items():
-                commit_data[bm] = statistics.median(metrics[args.metric]) if args.metric in metrics else None
-        historical_data.append((commit, commit_data))
+        commit = Commit(repo, commit)
+        data[commit] = rows
 
     # Obtain commit information which is then cached throughout the program. Do this
     # eagerly so we can provide a progress bar.
-    for (commit, _) in tqdm.tqdm(historical_data, desc='Prefetching Git information'):
+    for commit in tqdm.tqdm(data.keys(), desc='Prefetching Git information'):
         commit.prefetch()
 
-    # Sort the data based on the ordering of commits inside the provided Git repository
-    historical_data.sort(key=lambda x: x[0])
+    # Create a dataframe from the raw data and add some columns to it:
+    # - 'commit' represents the Commit object associated to the results in that row
+    # - `revlist_order` represents the order of the commit within the Git repository.
+    # - `date` represents the commit date
+    revlist = sorted_revlist(args.git_repo, [c.fullrev for c in data.keys()])
+    data = pandas.DataFrame([row | {'commit': c} for (c, rows) in data.items() for row in rows])
+    data = data.join(pandas.DataFrame([{'revlist_order': revlist.index(c.fullrev)} for c in data['commit']]))
+    data = data.join(pandas.DataFrame([{'date': c.commit_date} for c in data['commit']]))
 
-    # Filter the benchmarks if needed
-    benchmarks = {b for (_, commit_data) in historical_data for b in commit_data.keys()}
+    # Filter the benchmarks if needed.
     if args.filter is not None:
-        regex = re.compile(args.filter)
-        benchmarks = {b for b in benchmarks if regex.search(b)}
+        keeplist = [b for b in data['benchmark'] if re.search(args.filter, b) is not None]
+        data = data[data['benchmark'].isin(keeplist)]
+        if len(data) == 0:
+            raise RuntimeError(f'Filter "{args.filter}" resulted in empty data set -- nothing to plot')
 
-    # Plot the data for all the required benchmarks
-    figure = create_plot([commit for (commit, _) in historical_data],
-                         sorted(list(benchmarks)),
-                         [data for (_, data) in historical_data])
+    # Plot the data for all the required benchmarks.
+    figure = create_plot(data, args.metric, trendline=args.trendline, subtitle=args.subtitle)
     do_open = args.output is None or args.open
     output = args.output if args.output is not None else tempfile.NamedTemporaryFile(suffix='.html').name
     plotly.io.write_html(figure, file=output, auto_open=do_open)

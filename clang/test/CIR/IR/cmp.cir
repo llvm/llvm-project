@@ -1,4 +1,4 @@
-// RUN: cir-opt %s | cir-opt | FileCheck %s
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
 !s32i = !cir.int<s, 32>
 !u32i = !cir.int<u, 32>
 
@@ -274,39 +274,39 @@ module {
     cir.store %arg0, %0 : !cir.bool, !cir.ptr<!cir.bool>
     cir.store %arg1, %1 : !cir.bool, !cir.ptr<!cir.bool>
     %3 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
-    %4 = cir.cast(bool_to_int, %3 : !cir.bool), !s32i
+    %4 = cir.cast bool_to_int %3 : !cir.bool -> !s32i
     %5 = cir.load %1 : !cir.ptr<!cir.bool>, !cir.bool
-    %6 = cir.cast(bool_to_int, %5 : !cir.bool), !s32i
+    %6 = cir.cast bool_to_int %5 : !cir.bool -> !s32i
     %7 = cir.cmp(gt, %4, %6) : !s32i, !cir.bool
     cir.store %7, %2 : !cir.bool, !cir.ptr<!cir.bool>
     %8 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
-    %9 = cir.cast(bool_to_int, %8 : !cir.bool), !s32i
+    %9 = cir.cast bool_to_int %8 : !cir.bool -> !s32i
     %10 = cir.load %1 : !cir.ptr<!cir.bool>, !cir.bool
-    %11 = cir.cast(bool_to_int, %10 : !cir.bool), !s32i
+    %11 = cir.cast bool_to_int %10 : !cir.bool -> !s32i
     %12 = cir.cmp(lt, %9, %11) : !s32i, !cir.bool
     cir.store %12, %2 : !cir.bool, !cir.ptr<!cir.bool>
     %13 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
-    %14 = cir.cast(bool_to_int, %13 : !cir.bool), !s32i
+    %14 = cir.cast bool_to_int %13 : !cir.bool -> !s32i
     %15 = cir.load %1 : !cir.ptr<!cir.bool>, !cir.bool
-    %16 = cir.cast(bool_to_int, %15 : !cir.bool), !s32i
+    %16 = cir.cast bool_to_int %15 : !cir.bool -> !s32i
     %17 = cir.cmp(ge, %14, %16) : !s32i, !cir.bool
     cir.store %17, %2 : !cir.bool, !cir.ptr<!cir.bool>
     %18 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
-    %19 = cir.cast(bool_to_int, %18 : !cir.bool), !s32i
+    %19 = cir.cast bool_to_int %18 : !cir.bool -> !s32i
     %20 = cir.load %1 : !cir.ptr<!cir.bool>, !cir.bool
-    %21 = cir.cast(bool_to_int, %20 : !cir.bool), !s32i
+    %21 = cir.cast bool_to_int %20 : !cir.bool -> !s32i
     %22 = cir.cmp(le, %19, %21) : !s32i, !cir.bool
     cir.store %22, %2 : !cir.bool, !cir.ptr<!cir.bool>
     %23 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
-    %24 = cir.cast(bool_to_int, %23 : !cir.bool), !s32i
+    %24 = cir.cast bool_to_int %23 : !cir.bool -> !s32i
     %25 = cir.load %1 : !cir.ptr<!cir.bool>, !cir.bool
-    %26 = cir.cast(bool_to_int, %25 : !cir.bool), !s32i
+    %26 = cir.cast bool_to_int %25 : !cir.bool -> !s32i
     %27 = cir.cmp(eq, %24, %26) : !s32i, !cir.bool
     cir.store %27, %2 : !cir.bool, !cir.ptr<!cir.bool>
     %28 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
-    %29 = cir.cast(bool_to_int, %28 : !cir.bool), !s32i
+    %29 = cir.cast bool_to_int %28 : !cir.bool -> !s32i
     %30 = cir.load %1 : !cir.ptr<!cir.bool>, !cir.bool
-    %31 = cir.cast(bool_to_int, %30 : !cir.bool), !s32i
+    %31 = cir.cast bool_to_int %30 : !cir.bool -> !s32i
     %32 = cir.cmp(ne, %29, %31) : !s32i, !cir.bool
     cir.store %32, %2 : !cir.bool, !cir.ptr<!cir.bool>
     cir.return
@@ -319,39 +319,39 @@ module {
   // CHECK-NEXT:   cir.store %arg0, %0 : !cir.bool, !cir.ptr<!cir.bool>
   // CHECK-NEXT:   cir.store %arg1, %1 : !cir.bool, !cir.ptr<!cir.bool>
   // CHECK-NEXT:   %3 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
-  // CHECK-NEXT:   %4 = cir.cast(bool_to_int, %3 : !cir.bool), !s32i
+  // CHECK-NEXT:   %4 = cir.cast bool_to_int %3 : !cir.bool -> !s32i
   // CHECK-NEXT:   %5 = cir.load %1 : !cir.ptr<!cir.bool>, !cir.bool
-  // CHECK-NEXT:   %6 = cir.cast(bool_to_int, %5 : !cir.bool), !s32i
+  // CHECK-NEXT:   %6 = cir.cast bool_to_int %5 : !cir.bool -> !s32i
   // CHECK-NEXT:   %7 = cir.cmp(gt, %4, %6) : !s32i, !cir.bool
   // CHECK-NEXT:   cir.store %7, %2 : !cir.bool, !cir.ptr<!cir.bool>
   // CHECK-NEXT:   %8 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
-  // CHECK-NEXT:   %9 = cir.cast(bool_to_int, %8 : !cir.bool), !s32i
+  // CHECK-NEXT:   %9 = cir.cast bool_to_int %8 : !cir.bool -> !s32i
   // CHECK-NEXT:   %10 = cir.load %1 : !cir.ptr<!cir.bool>, !cir.bool
-  // CHECK-NEXT:   %11 = cir.cast(bool_to_int, %10 : !cir.bool), !s32i
+  // CHECK-NEXT:   %11 = cir.cast bool_to_int %10 : !cir.bool -> !s32i
   // CHECK-NEXT:   %12 = cir.cmp(lt, %9, %11) : !s32i, !cir.bool
   // CHECK-NEXT:   cir.store %12, %2 : !cir.bool, !cir.ptr<!cir.bool>
   // CHECK-NEXT:   %13 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
-  // CHECK-NEXT:   %14 = cir.cast(bool_to_int, %13 : !cir.bool), !s32i
+  // CHECK-NEXT:   %14 = cir.cast bool_to_int %13 : !cir.bool -> !s32i
   // CHECK-NEXT:   %15 = cir.load %1 : !cir.ptr<!cir.bool>, !cir.bool
-  // CHECK-NEXT:   %16 = cir.cast(bool_to_int, %15 : !cir.bool), !s32i
+  // CHECK-NEXT:   %16 = cir.cast bool_to_int %15 : !cir.bool -> !s32i
   // CHECK-NEXT:   %17 = cir.cmp(ge, %14, %16) : !s32i, !cir.bool
   // CHECK-NEXT:   cir.store %17, %2 : !cir.bool, !cir.ptr<!cir.bool>
   // CHECK-NEXT:   %18 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
-  // CHECK-NEXT:   %19 = cir.cast(bool_to_int, %18 : !cir.bool), !s32i
+  // CHECK-NEXT:   %19 = cir.cast bool_to_int %18 : !cir.bool -> !s32i
   // CHECK-NEXT:   %20 = cir.load %1 : !cir.ptr<!cir.bool>, !cir.bool
-  // CHECK-NEXT:   %21 = cir.cast(bool_to_int, %20 : !cir.bool), !s32i
+  // CHECK-NEXT:   %21 = cir.cast bool_to_int %20 : !cir.bool -> !s32i
   // CHECK-NEXT:   %22 = cir.cmp(le, %19, %21) : !s32i, !cir.bool
   // CHECK-NEXT:   cir.store %22, %2 : !cir.bool, !cir.ptr<!cir.bool>
   // CHECK-NEXT:   %23 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
-  // CHECK-NEXT:   %24 = cir.cast(bool_to_int, %23 : !cir.bool), !s32i
+  // CHECK-NEXT:   %24 = cir.cast bool_to_int %23 : !cir.bool -> !s32i
   // CHECK-NEXT:   %25 = cir.load %1 : !cir.ptr<!cir.bool>, !cir.bool
-  // CHECK-NEXT:   %26 = cir.cast(bool_to_int, %25 : !cir.bool), !s32i
+  // CHECK-NEXT:   %26 = cir.cast bool_to_int %25 : !cir.bool -> !s32i
   // CHECK-NEXT:   %27 = cir.cmp(eq, %24, %26) : !s32i, !cir.bool
   // CHECK-NEXT:   cir.store %27, %2 : !cir.bool, !cir.ptr<!cir.bool>
   // CHECK-NEXT:   %28 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
-  // CHECK-NEXT:   %29 = cir.cast(bool_to_int, %28 : !cir.bool), !s32i
+  // CHECK-NEXT:   %29 = cir.cast bool_to_int %28 : !cir.bool -> !s32i
   // CHECK-NEXT:   %30 = cir.load %1 : !cir.ptr<!cir.bool>, !cir.bool
-  // CHECK-NEXT:   %31 = cir.cast(bool_to_int, %30 : !cir.bool), !s32i
+  // CHECK-NEXT:   %31 = cir.cast bool_to_int %30 : !cir.bool -> !s32i
   // CHECK-NEXT:   %32 = cir.cmp(ne, %29, %31) : !s32i, !cir.bool
   // CHECK-NEXT:   cir.store %32, %2 : !cir.bool, !cir.ptr<!cir.bool>
   // CHECK-NEXT:   cir.return

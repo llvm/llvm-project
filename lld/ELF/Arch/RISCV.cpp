@@ -8,6 +8,8 @@
 
 #include "InputFiles.h"
 #include "OutputSections.h"
+#include "RISCVInternalRelocations.h"
+#include "RelocScan.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
@@ -38,12 +40,16 @@ public:
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
+  template <class ELFT, class RelTy>
+  void scanSectionImpl(InputSectionBase &, Relocs<RelTy>);
+  template <class ELFT> void scanSection1(InputSectionBase &);
+  void scanSection(InputSectionBase &) override;
   RelType getDynRel(RelType type) const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
-  void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
+  void relocateAlloc(InputSection &sec, uint8_t *buf) const override;
   bool relaxOnce(int pass) const override;
   template <class ELFT, class RelTy>
   bool synthesizeAlignForInput(uint64_t &dot, InputSection *sec,
@@ -278,6 +284,7 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
                           const uint8_t *loc) const {
   switch (type) {
   case R_RISCV_NONE:
+  case R_RISCV_VENDOR:
     return R_NONE;
   case R_RISCV_32:
   case R_RISCV_64:
@@ -339,8 +346,15 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
   case R_RISCV_SUB_ULEB128:
     return RE_RISCV_LEB128;
   default:
-    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
-             << ") against symbol " << &s;
+    if (type.v & INTERNAL_RISCV_VENDOR_MASK) {
+      Err(ctx) << getErrorLoc(ctx, loc)
+               << "unsupported vendor-specific relocation " << type
+               << " against symbol " << &s;
+      return R_NONE;
+    }
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation ("
+             << (type.v & ~INTERNAL_RISCV_VENDOR_MASK) << ") against symbol "
+             << &s;
     return R_NONE;
   }
 }
@@ -603,12 +617,8 @@ static void tlsdescToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
   }
 }
 
-void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
-  uint64_t secAddr = sec.getOutputSection()->addr;
-  if (auto *s = dyn_cast<InputSection>(&sec))
-    secAddr += s->outSecOff;
-  else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
-    secAddr += ehIn->getParent()->outSecOff;
+void RISCV::relocateAlloc(InputSection &sec, uint8_t *buf) const {
+  uint64_t secAddr = sec.getOutputSection()->addr + sec.outSecOff;
   uint64_t tlsdescVal = 0;
   bool tlsdescRelax = false, isToLe = false;
   const ArrayRef<Relocation> relocs = sec.relocs();
@@ -857,7 +867,7 @@ static bool relax(Ctx &ctx, int pass, InputSection &sec) {
 
   std::fill_n(aux.relocTypes.get(), relocs.size(), R_RISCV_NONE);
   aux.writes.clear();
-  for (auto [i, r] : llvm::enumerate(relocs)) {
+  for (auto [i, r] : llvm::enumerate(riscv_vendor_relocs(relocs))) {
     const uint64_t loc = secAddr + r.offset - delta;
     uint32_t &cur = aux.relocDeltas[i], remove = 0;
     switch (r.type) {
@@ -1480,3 +1490,79 @@ void elf::mergeRISCVAttributesSections(Ctx &ctx) {
 }
 
 void elf::setRISCVTargetInfo(Ctx &ctx) { ctx.target.reset(new RISCV(ctx)); }
+
+template <class ELFT, class RelTy>
+void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
+  RelocScan rs(ctx, &sec);
+  // Many relocations end up in sec.relocations.
+  sec.relocations.reserve(rels.size());
+
+  StringRef rvVendor;
+  for (auto it = rels.begin(); it != rels.end(); ++it) {
+    RelType type = it->getType(false);
+    uint32_t symIndex = it->getSymbol(false);
+    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIndex);
+    const uint8_t *loc = sec.content().data() + it->r_offset;
+
+    if (type == R_RISCV_VENDOR) {
+      if (!rvVendor.empty())
+        Err(ctx) << getErrorLoc(ctx, loc)
+                 << "malformed consecutive R_RISCV_VENDOR relocations";
+      rvVendor = sym.getName();
+      continue;
+    } else if (!rvVendor.empty()) {
+      uint32_t VendorFlag = getRISCVVendorRelMarker(rvVendor);
+      if (!VendorFlag) {
+        Err(ctx) << getErrorLoc(ctx, loc)
+                 << "unknown vendor-specific relocation (" << type.v
+                 << ") in namespace '" << rvVendor << "' against symbol '"
+                 << &sym << "'";
+        rvVendor = "";
+        continue;
+      }
+
+      rvVendor = "";
+      assert((type.v < 256) && "Out of range relocation detected!");
+      type.v |= VendorFlag;
+    }
+
+    rs.scan<ELFT, RelTy>(it, type, rs.getAddend<ELFT>(*it, type));
+  }
+
+  // Sort relocations by offset for more efficient searching for
+  // R_RISCV_PCREL_HI20.
+  llvm::stable_sort(sec.relocs(),
+                    [](const Relocation &lhs, const Relocation &rhs) {
+                      return lhs.offset < rhs.offset;
+                    });
+}
+
+template <class ELFT> void RISCV::scanSection1(InputSectionBase &sec) {
+  const RelsOrRelas<ELFT> rels = sec.template relsOrRelas<ELFT>();
+  if (rels.areRelocsCrel())
+    scanSectionImpl<ELFT>(sec, rels.crels);
+  else
+    scanSectionImpl<ELFT>(sec, rels.relas);
+}
+
+void RISCV::scanSection(InputSectionBase &sec) {
+  invokeELFT(scanSection1, sec);
+}
+
+namespace lld::elf {
+uint32_t getRISCVVendorRelMarker(StringRef rvVendor) {
+  return StringSwitch<uint32_t>(rvVendor)
+      .Case("QUALCOMM", INTERNAL_RISCV_VENDOR_QUALCOMM)
+      .Case("ANDES", INTERNAL_RISCV_VENDOR_ANDES)
+      .Default(0);
+}
+
+std::optional<StringRef> getRISCVVendorString(RelType ty) {
+  if ((ty.v & INTERNAL_RISCV_VENDOR_MASK) == INTERNAL_RISCV_VENDOR_QUALCOMM)
+    return "QUALCOMM";
+  if ((ty.v & INTERNAL_RISCV_VENDOR_MASK) == INTERNAL_RISCV_VENDOR_ANDES)
+    return "ANDES";
+  return std::nullopt;
+}
+
+} // namespace lld::elf

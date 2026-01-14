@@ -27,6 +27,7 @@
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/new.h"
+#include "src/__support/alloc-checker.h"
 #include "src/__support/threads/thread.h"
 
 #include "test/IntegrationTest/test.h"
@@ -108,14 +109,14 @@ static void *successThread(void *Arg) {
     volatile uint8_t *bytes_on_stack =
         (volatile uint8_t *)__builtin_alloca(test_stacksize);
 
-    for (size_t I = 0; I < test_stacksize; ++I) {
+    for (size_t i = 0; i < test_stacksize; ++i) {
       // Write permissions
-      bytes_on_stack[I] = static_cast<uint8_t>(I);
+      bytes_on_stack[i] = static_cast<uint8_t>(i);
     }
 
-    for (size_t I = 0; I < test_stacksize; ++I) {
+    for (size_t i = 0; i < test_stacksize; ++i) {
       // Read/write permissions
-      bytes_on_stack[I] += static_cast<uint8_t>(I);
+      bytes_on_stack[i] += static_cast<uint8_t>(i);
     }
   }
 

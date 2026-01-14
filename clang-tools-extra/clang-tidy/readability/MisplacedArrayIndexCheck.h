@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_MISPLACED_ARRAY_INDEX_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_MISPLACED_ARRAY_INDEX_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_MISPLACEDARRAYINDEXCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_MISPLACEDARRAYINDEXCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -17,7 +17,7 @@ namespace clang::tidy::readability {
 /// `array[index]`).
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/misplaced-array-index.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/misplaced-array-index.html
 class MisplacedArrayIndexCheck : public ClangTidyCheck {
 public:
   MisplacedArrayIndexCheck(StringRef Name, ClangTidyContext *Context)
@@ -28,4 +28,4 @@ public:
 
 } // namespace clang::tidy::readability
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_MISPLACED_ARRAY_INDEX_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_MISPLACEDARRAYINDEXCHECK_H

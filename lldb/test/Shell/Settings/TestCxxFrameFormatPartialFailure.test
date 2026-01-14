@@ -5,7 +5,7 @@
 # were successful.
 
 # RUN: split-file %s %t
-# RUN: %clang_host -g -gdwarf %t/main.cpp -o %t.out
+# RUN: %clangxx_host -g -gdwarf %t/main.cpp -o %t.out
 # RUN: %lldb -x -b -s %t/commands.input %t.out -o exit 2>&1 \
 # RUN:       | FileCheck %s
 

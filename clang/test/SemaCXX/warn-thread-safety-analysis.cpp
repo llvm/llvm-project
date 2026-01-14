@@ -1849,6 +1849,43 @@ struct TestScopedLockable {
   }
 };
 
+namespace test_function_param_lock_unlock {
+class A {
+ public:
+  A() EXCLUSIVE_LOCK_FUNCTION(mu_) { mu_.Lock(); }
+  ~A() UNLOCK_FUNCTION(mu_) { mu_.Unlock(); }
+ private:
+  Mutex mu_;
+};
+int do_something(A a) { return 0; }
+
+// Unlock in dtor without lock in ctor.
+// FIXME: We cannot detect that we are releasing a lock that was never held!
+class B {
+ public:
+  B() {}
+  B(int) {}
+  ~B() UNLOCK_FUNCTION(mu_) { mu_.Unlock(); }
+ private:
+  Mutex mu_;
+};
+int do_something(B b) { return 0; }
+
+class SCOPED_LOCKABLE MutexWrapper {
+public:
+  MutexWrapper(Mutex *mu) : mu_(mu) {}
+  ~MutexWrapper() UNLOCK_FUNCTION(mu_) { mu_->Unlock(); }
+  void Lock() EXCLUSIVE_LOCK_FUNCTION(mu_) { mu_->Lock(); }
+
+  Mutex *mu_;
+};
+// FIXME: This is a false-positive as the lock is released by the dtor.
+void do_something(MutexWrapper mw) {
+  mw.Lock(); // expected-note {{mutex acquired here}}
+}            // expected-warning {{mutex 'mw.mu_' is still held at the end of function}}
+
+} // namespace test_function_param_lock_unlock
+
 } // end namespace test_scoped_lockable
 
 
@@ -7288,6 +7325,15 @@ void testBasicPointerAlias(Foo *f) {
   ptr->mu.Unlock();       // unlock through alias
 }
 
+void testCastPointerAlias(Foo *f) {
+  // Cast to void* from unsigned long to test non-pointer cast indirection.
+  void *priv = (void *)(__UINTPTR_TYPE__)(&f->mu);
+  f->mu.Lock();
+  f->data = 42;
+  auto *mu = (Mutex *)priv;
+  mu->Unlock();
+}
+
 void testBasicPointerAliasNoInit(Foo *f) {
   Foo *ptr;
 
@@ -7463,6 +7509,7 @@ void testNestedAcquire(Container *c) EXCLUSIVE_LOCK_FUNCTION(&c->foo.mu) {
 
 struct ContainerOfPtr {
   Foo *foo_ptr;
+  ContainerOfPtr *next;
 };
 
 void testIndirectAccess(ContainerOfPtr *fc) {
@@ -7470,6 +7517,23 @@ void testIndirectAccess(ContainerOfPtr *fc) {
   ptr->mu.Lock();
   fc->foo_ptr->data = 42; // access via original
   ptr->mu.Unlock();
+}
+
+void testAliasChainUnrelatedReassignment1(ContainerOfPtr *list) {
+  Foo *eb = list->foo_ptr;
+  eb->mu.Lock();
+  list = list->next;
+  eb->data = 42;
+  eb->mu.Unlock();
+}
+
+void testAliasChainUnrelatedReassignment2(ContainerOfPtr *list) {
+  ContainerOfPtr *busyp = list;
+  Foo *eb = busyp->foo_ptr;
+  eb->mu.Lock();
+  busyp = busyp->next;
+  eb->data = 42;
+  eb->mu.Unlock();
 }
 
 void testControlFlowDoWhile(Foo *f, int x) {

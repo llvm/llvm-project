@@ -13,8 +13,8 @@
 
 #include <unordered_map>
 
-namespace llvm {
-namespace xray {
+using namespace llvm;
+using namespace xray;
 
 using HandlerType = std::function<Error()>;
 
@@ -31,12 +31,9 @@ CommandRegistration::CommandRegistration(cl::SubCommand *SC,
   getCommands()[SC] = Command;
 }
 
-HandlerType dispatch(cl::SubCommand *SC) {
+HandlerType xray::dispatch(cl::SubCommand *SC) {
   auto It = getCommands().find(SC);
   assert(It != getCommands().end() &&
          "Attempting to dispatch on un-registered SubCommand.");
   return It->second;
 }
-
-} // namespace xray
-} // namespace llvm

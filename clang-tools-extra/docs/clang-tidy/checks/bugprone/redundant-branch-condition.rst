@@ -16,9 +16,9 @@ Simple example:
       scream();
   }
 
-Here `onFire` is checked both in the outer ``if`` and the inner ``if`` statement
-without a possible change between the two checks. The check warns for this code
-and suggests removal of the second checking of variable `onFire`.
+Here `onFire` is checked both in the outer ``if`` and the inner ``if``
+statement without a possible change between the two checks. The check warns for
+this code and suggests removal of the second checking of variable `onFire`.
 
 The checker also detects redundant condition checks if the condition variable
 is an operand of a logical "and" (``&&``) or a logical "or" (``||``) operator:
@@ -44,8 +44,8 @@ condition variable and keep the other side of the ``&&``. In the second case
 (logical "or") the whole ``if`` is removed similarly to the simple case on the
 top.
 
-The condition of the outer ``if`` statement may also be a logical "and" (``&&``)
-expression:
+The condition of the outer ``if`` statement may also be a logical "and"
+(``&&``) expression:
 
 .. code-block:: c
 
@@ -62,8 +62,8 @@ The error is also detected if both the outer statement is a logical "and"
 The inner ``if`` statement does not have to be a direct descendant of the outer
 one.
 
-No error is detected if the condition variable may have been changed between the
-two checks:
+No error is detected if the condition variable may have been changed between
+the two checks:
 
 .. code-block:: c
 

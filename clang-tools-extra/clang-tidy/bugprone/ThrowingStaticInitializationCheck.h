@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 /// throw.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/throwing-static-initialization.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/throwing-static-initialization.html
 class ThrowingStaticInitializationCheck : public ClangTidyCheck {
 public:
   ThrowingStaticInitializationCheck(StringRef Name, ClangTidyContext *Context)

@@ -219,15 +219,20 @@ bool isLinearizableVector(VectorType type);
 
 /// Creates a TransferReadOp from `source`.
 ///
-/// The shape of the vector to read is specified via `inputVectorSizes`. If the
-/// shape of the output vector differs from the shape of the value being read,
-/// masking is used to avoid out-of-bounds accesses. Set
+/// If the shape of vector to read differs from the shape of the value being
+/// read, masking is used to avoid out-of-bounds accesses. Set
 /// `useInBoundsInsteadOfMasking` to `true` to use the "in_bounds" attribute
 /// instead of explicit masks.
 ///
 /// Note: all read offsets are set to 0.
 Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
-                             ArrayRef<int64_t> inputVectorSizes, Value padValue,
+                             const VectorType &vecToReadTy,
+                             std::optional<Value> padValue = std::nullopt,
+                             bool useInBoundsInsteadOfMasking = false);
+
+Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
+                             ArrayRef<int64_t> inputVectorSizes,
+                             std::optional<Value> padValue = std::nullopt,
                              bool useInBoundsInsteadOfMasking = false,
                              ArrayRef<bool> inputScalableVecDims = {});
 

@@ -13,7 +13,6 @@
 #include <__compare/compare_three_way.h>
 #include <__compare/ordering.h>
 #include <__config>
-#include <__math/exponential_functions.h>
 #include <__math/traits.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/decay.h>
@@ -53,38 +52,21 @@ struct __fn {
   template <class _Tp, class _Up, class _Dp = decay_t<_Tp>>
     requires is_same_v<_Dp, decay_t<_Up>> && is_floating_point_v<_Dp>
   _LIBCPP_HIDE_FROM_ABI static constexpr strong_ordering __go(_Tp&& __t, _Up&& __u, __priority_tag<1>) noexcept {
-    if constexpr (numeric_limits<_Dp>::is_iec559 && sizeof(_Dp) == sizeof(int32_t)) {
-      int32_t __rx = std::bit_cast<int32_t>(__t);
-      int32_t __ry = std::bit_cast<int32_t>(__u);
-      __rx         = (__rx < 0) ? (numeric_limits<int32_t>::min() - __rx - 1) : __rx;
-      __ry         = (__ry < 0) ? (numeric_limits<int32_t>::min() - __ry - 1) : __ry;
-      return (__rx <=> __ry);
-    } else if constexpr (numeric_limits<_Dp>::is_iec559 && sizeof(_Dp) == sizeof(int64_t)) {
-      int64_t __rx = std::bit_cast<int64_t>(__t);
-      int64_t __ry = std::bit_cast<int64_t>(__u);
-      __rx         = (__rx < 0) ? (numeric_limits<int64_t>::min() - __rx - 1) : __rx;
-      __ry         = (__ry < 0) ? (numeric_limits<int64_t>::min() - __ry - 1) : __ry;
+    if constexpr (numeric_limits<_Dp>::is_iec559 &&
+                  (sizeof(_Dp) == sizeof(int32_t) || sizeof(_Dp) == sizeof(int64_t))) {
+      using _IntT = conditional_t<sizeof(_Dp) == sizeof(int32_t), int32_t, int64_t>;
+      _IntT __rx  = std::bit_cast<_IntT>(__t);
+      _IntT __ry  = std::bit_cast<_IntT>(__u);
+      __rx        = (__rx < 0) ? (numeric_limits<_IntT>::min() - __rx - 1) : __rx;
+      __ry        = (__ry < 0) ? (numeric_limits<_IntT>::min() - __ry - 1) : __ry;
       return (__rx <=> __ry);
     } else if (__t < __u) {
       return strong_ordering::less;
     } else if (__t > __u) {
       return strong_ordering::greater;
     } else if (__t == __u) {
-      if constexpr (numeric_limits<_Dp>::radix == 2) {
-        return __math::signbit(__u) <=> __math::signbit(__t);
-      } else {
-        // This is bullet 3 of the IEEE754 algorithm, relevant
-        // only for decimal floating-point;
-        // see https://stackoverflow.com/questions/69068075/
-        if (__t == 0 || __math::isinf(__t)) {
-          return __math::signbit(__u) <=> __math::signbit(__t);
-        } else {
-          int __texp, __uexp;
-          (void)__math::frexp(__t, &__texp);
-          (void)__math::frexp(__u, &__uexp);
-          return (__t < 0) ? (__texp <=> __uexp) : (__uexp <=> __texp);
-        }
-      }
+      static_assert(numeric_limits<_Dp>::radix == 2, "floating point type with a radix other than 2?");
+      return __math::signbit(__u) <=> __math::signbit(__t);
     } else {
       // They're unordered, so one of them must be a NAN.
       // The order is -QNAN, -SNAN, numbers, +SNAN, +QNAN.
@@ -93,9 +75,9 @@ struct __fn {
       bool __t_is_negative = __math::signbit(__t);
       bool __u_is_negative = __math::signbit(__u);
       using _IntType =
-          conditional_t< sizeof(__t) == sizeof(int32_t),
-                         int32_t,
-                         conditional_t< sizeof(__t) == sizeof(int64_t), int64_t, void> >;
+          conditional_t<sizeof(__t) == sizeof(int32_t),
+                        int32_t,
+                        conditional_t<sizeof(__t) == sizeof(int64_t), int64_t, void>>;
       if constexpr (is_same_v<_IntType, void>) {
         static_assert(sizeof(_Dp) == 0, "std::strong_order is unimplemented for this floating-point type");
       } else if (__t_is_nan && __u_is_nan) {

@@ -47,6 +47,49 @@ cir::RecordType CIRGenVTables::getVTableType(const VTableLayout &layout) {
   return cgm.getBuilder().getAnonRecordTy(tys, /*incomplete=*/false);
 }
 
+/// At this point in the translation unit, does it appear that can we
+/// rely on the vtable being defined elsewhere in the program?
+///
+/// The response is really only definitive when called at the end of
+/// the translation unit.
+///
+/// The only semantic restriction here is that the object file should
+/// not contain a vtable definition when that vtable is defined
+/// strongly elsewhere.  Otherwise, we'd just like to avoid emitting
+/// vtables when unnecessary.
+/// TODO(cir): this should be merged into common AST helper for codegen.
+bool CIRGenVTables::isVTableExternal(const CXXRecordDecl *rd) {
+  assert(rd->isDynamicClass() && "Non-dynamic classes have no VTable.");
+
+  // We always synthesize vtables if they are needed in the MS ABI. MSVC doesn't
+  // emit them even if there is an explicit template instantiation.
+  if (cgm.getTarget().getCXXABI().isMicrosoft())
+    return false;
+
+  // If we have an explicit instantiation declaration (and not a
+  // definition), the vtable is defined elsewhere.
+  TemplateSpecializationKind tsk = rd->getTemplateSpecializationKind();
+  if (tsk == TSK_ExplicitInstantiationDeclaration)
+    return true;
+
+  // Otherwise, if the class is an instantiated template, the
+  // vtable must be defined here.
+  if (tsk == TSK_ImplicitInstantiation ||
+      tsk == TSK_ExplicitInstantiationDefinition)
+    return false;
+
+  // Otherwise, if the class doesn't have a key function (possibly
+  // anymore), the vtable must be defined here.
+  const CXXMethodDecl *keyFunction =
+      cgm.getASTContext().getCurrentKeyFunction(rd);
+  if (!keyFunction)
+    return false;
+
+  // Otherwise, if we don't have a definition of the key function, the
+  // vtable must be defined somewhere else.
+  return !keyFunction->hasBody();
+}
+
 /// This is a callback from Sema to tell us that a particular vtable is
 /// required to be emitted in this translation unit.
 ///
@@ -77,12 +120,6 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
   assert(!cir::MissingFeatures::vtableRelativeLayout());
 
   switch (component.getKind()) {
-  case VTableComponent::CK_CompleteDtorPointer:
-    cgm.errorNYI("getVTableComponent: CompleteDtorPointer");
-    return mlir::Attribute();
-  case VTableComponent::CK_DeletingDtorPointer:
-    cgm.errorNYI("getVTableComponent: DeletingDtorPointer");
-    return mlir::Attribute();
   case VTableComponent::CK_UnusedFunctionPointer:
     cgm.errorNYI("getVTableComponent: UnusedFunctionPointer");
     return mlir::Attribute();
@@ -105,8 +142,12 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
            "expected GlobalViewAttr or ConstPtrAttr");
     return rtti;
 
-  case VTableComponent::CK_FunctionPointer: {
-    GlobalDecl gd = component.getGlobalDecl();
+  case VTableComponent::CK_FunctionPointer:
+  case VTableComponent::CK_CompleteDtorPointer:
+  case VTableComponent::CK_DeletingDtorPointer: {
+    GlobalDecl gd = component.getGlobalDecl(
+        cgm.getASTContext().getTargetInfo().emitVectorDeletingDtors(
+            cgm.getASTContext().getLangOpts()));
 
     assert(!cir::MissingFeatures::cudaSupport());
 
@@ -284,9 +325,40 @@ cir::GlobalLinkageKind CIRGenModule::getVTableLinkage(const CXXRecordDecl *rd) {
       llvm_unreachable("Should not have been asked to emit this");
     }
   }
+  // -fapple-kext mode does not support weak linkage, so we must use
+  // internal linkage.
+  if (astContext.getLangOpts().AppleKext)
+    return cir::GlobalLinkageKind::InternalLinkage;
 
-  errorNYI(rd->getSourceRange(), "getVTableLinkage: no key function");
-  return cir::GlobalLinkageKind::ExternalLinkage;
+  auto discardableODRLinkage = cir::GlobalLinkageKind::LinkOnceODRLinkage;
+  auto nonDiscardableODRLinkage = cir::GlobalLinkageKind::WeakODRLinkage;
+  if (rd->hasAttr<DLLExportAttr>()) {
+    // Cannot discard exported vtables.
+    discardableODRLinkage = nonDiscardableODRLinkage;
+  } else if (rd->hasAttr<DLLImportAttr>()) {
+    // Imported vtables are available externally.
+    discardableODRLinkage = cir::GlobalLinkageKind::AvailableExternallyLinkage;
+    nonDiscardableODRLinkage =
+        cir::GlobalLinkageKind::AvailableExternallyLinkage;
+  }
+
+  switch (rd->getTemplateSpecializationKind()) {
+  case TSK_Undeclared:
+  case TSK_ExplicitSpecialization:
+  case TSK_ImplicitInstantiation:
+    return discardableODRLinkage;
+
+  case TSK_ExplicitInstantiationDeclaration: {
+    errorNYI(rd->getSourceRange(),
+             "getVTableLinkage: explicit instantiation declaration");
+    return cir::GlobalLinkageKind::ExternalLinkage;
+  }
+
+  case TSK_ExplicitInstantiationDefinition:
+    return nonDiscardableODRLinkage;
+  }
+
+  llvm_unreachable("Invalid TemplateSpecializationKind!");
 }
 
 cir::GlobalOp CIRGenVTables::getAddrOfVTT(const CXXRecordDecl *rd) {

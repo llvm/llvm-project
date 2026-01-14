@@ -37,7 +37,7 @@ config.substitutions.append(('%{link_flags}',
     '%{{lib}}/libunwind.a {}'.format(' '.join(link_flags))
 ))
 config.substitutions.append(('%{exec}',
-    '%{executor} --execdir %T -- '
+    '%{executor} --execdir %{temp} -- '
 ))
 
 import os, site

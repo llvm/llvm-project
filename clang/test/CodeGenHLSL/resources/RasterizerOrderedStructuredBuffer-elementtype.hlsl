@@ -1,23 +1,23 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s -check-prefixes=DXIL
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -fnative-int16-type -emit-llvm -o - %s | FileCheck %s -check-prefixes=DXIL
 
 struct MyStruct {
   float4 a;
   int2 b;
 };
 
-// DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer" = type { target("dx.RawBuffer", i16, 1, 1) }
-// DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer.0" = type { target("dx.RawBuffer", i16, 1, 1) }
-// DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer.1" = type { target("dx.RawBuffer", i32, 1, 1) }
-// DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer.2" = type { target("dx.RawBuffer", i32, 1, 1) }
-// DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer.3" = type { target("dx.RawBuffer", i64, 1, 1) }
-// DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer.4" = type { target("dx.RawBuffer", i64, 1, 1) }
-// DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer.5" = type { target("dx.RawBuffer", half, 1, 1)  }
-// DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer.6" = type { target("dx.RawBuffer", float, 1, 1) }
-// DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer.7" = type { target("dx.RawBuffer", double, 1, 1) }
-// DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer.8" = type { target("dx.RawBuffer", <4 x i16>, 1, 1) }
-// DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer.9" = type { target("dx.RawBuffer", <3 x i32>, 1, 1) }
-// DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer.10" = type { target("dx.RawBuffer", <2 x half>, 1, 1) }
-// DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer.11" = type { target("dx.RawBuffer", <3 x float>, 1, 1) }
+// DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer" = type { target("dx.RawBuffer", i16, 1, 1), target("dx.RawBuffer", i16, 1, 1) }
+// DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer.0" = type { target("dx.RawBuffer", i16, 1, 1), target("dx.RawBuffer", i16, 1, 1) }
+// DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer.1" = type { target("dx.RawBuffer", i32, 1, 1), target("dx.RawBuffer", i32, 1, 1) }
+// DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer.2" = type { target("dx.RawBuffer", i32, 1, 1), target("dx.RawBuffer", i32, 1, 1) }
+// DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer.3" = type { target("dx.RawBuffer", i64, 1, 1), target("dx.RawBuffer", i64, 1, 1) }
+// DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer.4" = type { target("dx.RawBuffer", i64, 1, 1), target("dx.RawBuffer", i64, 1, 1) }
+// DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer.5" = type { target("dx.RawBuffer", half, 1, 1), target("dx.RawBuffer", half, 1, 1)  }
+// DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer.6" = type { target("dx.RawBuffer", float, 1, 1), target("dx.RawBuffer", float, 1, 1) }
+// DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer.7" = type { target("dx.RawBuffer", double, 1, 1), target("dx.RawBuffer", double, 1, 1) }
+// DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer.8" = type { target("dx.RawBuffer", <4 x i16>, 1, 1), target("dx.RawBuffer", <4 x i16>, 1, 1) }
+// DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer.9" = type { target("dx.RawBuffer", <3 x i32>, 1, 1), target("dx.RawBuffer", <3 x i32>, 1, 1) }
+// DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer.10" = type { target("dx.RawBuffer", <2 x half>, 1, 1), target("dx.RawBuffer", <2 x half>, 1, 1) }
+// DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer.11" = type { target("dx.RawBuffer", <3 x float>, 1, 1), target("dx.RawBuffer", <3 x float>, 1, 1) }
 // DXIL: %struct.MyStruct = type <{ <4 x float>, <2 x i32> }>
 
 RasterizerOrderedStructuredBuffer<int16_t> BufI16;

@@ -30,10 +30,10 @@ define void @mat_vec_sext_i16(ptr nocapture readonly %A, ptr nocapture readonly 
 ; CHECK-NEXT:    [[TT6:%.*]] = getelementptr inbounds i16, ptr [[TT3]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.vctp32(i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP2]] = sub i32 [[TMP0]], 4
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr [[TT6]], i32 2, <4 x i1> [[TMP1]], <4 x i16> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr align 2 [[TT6]], <4 x i1> [[TMP1]], <4 x i16> undef)
 ; CHECK-NEXT:    [[TT9:%.*]] = sext <4 x i16> [[WIDE_MASKED_LOAD]] to <4 x i32>
 ; CHECK-NEXT:    [[TT10:%.*]] = getelementptr inbounds i16, ptr [[B:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD30:%.*]] = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr [[TT10]], i32 2, <4 x i1> [[TMP1]], <4 x i16> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD30:%.*]] = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr align 2 [[TT10]], <4 x i1> [[TMP1]], <4 x i16> undef)
 ; CHECK-NEXT:    [[TT12:%.*]] = sext <4 x i16> [[WIDE_MASKED_LOAD30]] to <4 x i32>
 ; CHECK-NEXT:    [[TT13:%.*]] = mul nsw <4 x i32> [[TT12]], [[TT9]]
 ; CHECK-NEXT:    [[TT14]] = add nsw <4 x i32> [[TT13]], [[VEC_PHI]]
@@ -132,9 +132,9 @@ define void @mat_vec_i32(ptr nocapture readonly %A, ptr nocapture readonly %B, p
 ; CHECK-NEXT:    [[TT6:%.*]] = getelementptr inbounds i32, ptr [[TT3]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.vctp32(i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP2]] = sub i32 [[TMP0]], 4
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[TT6]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TT6]], <4 x i1> [[TMP1]], <4 x i32> undef)
 ; CHECK-NEXT:    [[TT9:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD29:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[TT9]], i32 4, <4 x i1> [[TMP1]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD29:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TT9]], <4 x i1> [[TMP1]], <4 x i32> undef)
 ; CHECK-NEXT:    [[TT11:%.*]] = mul nsw <4 x i32> [[WIDE_MASKED_LOAD29]], [[WIDE_MASKED_LOAD]]
 ; CHECK-NEXT:    [[TT12]] = add nsw <4 x i32> [[VEC_PHI]], [[TT11]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4

@@ -1,7 +1,7 @@
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb           -polly-use-llvm-names=0 '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s -match-full-lines -check-prefix=IDX
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb           -polly-use-llvm-names=1 '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s -match-full-lines -check-prefix=BB
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=scalar-indep -polly-use-llvm-names=0 '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s -match-full-lines -check-prefix=IDX
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=scalar-indep -polly-use-llvm-names=1 '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s -match-full-lines -check-prefix=BB
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb -polly-use-llvm-names=0 '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -match-full-lines -check-prefix=IDX
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb -polly-use-llvm-names=1 '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -match-full-lines -check-prefix=BB
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=scalar-indep -polly-use-llvm-names=0 '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -match-full-lines -check-prefix=IDX
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=scalar-indep -polly-use-llvm-names=1 '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -match-full-lines -check-prefix=BB
 ;
 ; Check that the statement has the same name, regardless of how the
 ; basic block is split into multiple statements.
