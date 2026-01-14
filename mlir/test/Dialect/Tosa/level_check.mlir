@@ -390,7 +390,7 @@ func.func @test_pad_rank_invalid(%arg0: tensor<1x1x1x1x13x21x3xf32>) -> tensor<1
 
 func.func @test_reshape_rank_invalid(%arg0: tensor<13x21x3xf32>) -> tensor<1x1x1x1x1x1x819xf32> {
   %1 = tosa.const_shape {values = dense<[1, 1, 1, 1, 1, 1, 819]> : tensor<7xindex>} : () -> !tosa.shape<7>
-  // expected-error@+1 {{'tosa.reshape' op failed shape type level check: '!tosa.shape<7>' exceeds MAX_RANK}}
+  // expected-error@+1 {{'tosa.reshape' op failed level check: result rank(shape) <= MAX_RANK}}
   %0 = "tosa.reshape"(%arg0, %1) : (tensor<13x21x3xf32>, !tosa.shape<7>) -> tensor<1x1x1x1x1x1x819xf32>
   return %0 : tensor<1x1x1x1x1x1x819xf32>
 }
@@ -1665,22 +1665,22 @@ func.func @test_cast_to_block_scaled_invalid_rank(%arg0: tensor<1x2x3x4x5x6x7x32
 
 // -----
 
-func.func @test_add_shape_invalid_rank() -> !tosa.shape<13> {
-  %a = tosa.const_shape {values = dense<[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]> : tensor<13xindex>} : () -> !tosa.shape<13>
-  %b = tosa.const_shape {values = dense<[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]> : tensor<13xindex>} : () -> !tosa.shape<13>
-  // expected-error@+1 {{'tosa.add_shape' op failed shape type level check: '!tosa.shape<13>' exceeds MAX_RANK}}
-  %c = tosa.add_shape %a, %b : (!tosa.shape<13>, !tosa.shape<13>) -> !tosa.shape<13>
-  return %c : !tosa.shape<13>
+func.func @test_add_shape_invalid_rank() -> !tosa.shape<17> {
+  %a = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
+  %b = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
+  // expected-error@+1 {{'tosa.add_shape' op failed shape type level check: '!tosa.shape<17>' exceeds MAX_SHAPE_LEN}}
+  %c = tosa.add_shape %a, %b : (!tosa.shape<17>, !tosa.shape<17>) -> !tosa.shape<17>
+  return %c : !tosa.shape<17>
 }
 
 // -----
 
-func.func @test_div_floor_shape_invalid_rank() -> !tosa.shape<7> {
-  %a = tosa.const_shape {values = dense<[1, 2, 3, 4, 5, 6, 7]> : tensor<7xindex>} : () -> !tosa.shape<7>
-  %b = tosa.const_shape {values = dense<[1, 2, 3, 4, 5, 6, 7]> : tensor<7xindex>} : () -> !tosa.shape<7>
-  // expected-error@+1 {{'tosa.div_floor_shape' op failed shape type level check: '!tosa.shape<7>' exceeds MAX_RANK}}
-  %c = tosa.div_floor_shape %a, %b : (!tosa.shape<7>, !tosa.shape<7>) -> !tosa.shape<7>
-  return %c : !tosa.shape<7>
+func.func @test_div_floor_shape_invalid_rank() -> !tosa.shape<17> {
+  %a = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
+  %b = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
+  // expected-error@+1 {{'tosa.div_floor_shape' op failed shape type level check: '!tosa.shape<17>' exceeds MAX_SHAPE_LEN}}
+  %c = tosa.div_floor_shape %a, %b : (!tosa.shape<17>, !tosa.shape<17>) -> !tosa.shape<17>
+  return %c : !tosa.shape<17>
 }
 
 // -----
@@ -1721,37 +1721,37 @@ func.func @test_concat_shape_invalid_list_size() {
 
 // -----
 
-func.func @test_exp2_shape_invalid_rank() -> !tosa.shape<7> {
-  %0 = tosa.const_shape {values = dense<[1, 2, 3, 4, 5, 6, 7]> : tensor<7xindex>} : () -> !tosa.shape<7>
-  // expected-error@+1 {{'tosa.exp2_shape' op failed shape type level check: '!tosa.shape<7>' exceeds MAX_RANK}}
-  %1 = tosa.exp2_shape %0 : (!tosa.shape<7>) -> !tosa.shape<7>
-  return %1 : !tosa.shape<7>
+func.func @test_exp2_shape_invalid_rank() -> !tosa.shape<17> {
+  %0 = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
+  // expected-error@+1 {{'tosa.exp2_shape' op failed shape type level check: '!tosa.shape<17>' exceeds MAX_SHAPE_LEN}}
+  %1 = tosa.exp2_shape %0 : (!tosa.shape<17>) -> !tosa.shape<17>
+  return %1 : !tosa.shape<17>
 }
 
 // -----
 
-func.func @test_log2_floor_shape_invalid_rank() -> !tosa.shape<7> {
-  %0 = tosa.const_shape {values = dense<[1, 2, 3, 4, 5, 6, 7]> : tensor<7xindex>} : () -> !tosa.shape<7>
-  // expected-error@+1 {{'tosa.log2_floor_shape' op failed shape type level check: '!tosa.shape<7>' exceeds MAX_RANK}}
-  %1 = tosa.log2_floor_shape %0 : (!tosa.shape<7>) -> !tosa.shape<7>
-  return %1 : !tosa.shape<7>
+func.func @test_log2_floor_shape_invalid_rank() -> !tosa.shape<17> {
+  %0 = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
+  // expected-error@+1 {{'tosa.log2_floor_shape' op failed shape type level check: '!tosa.shape<17>' exceeds MAX_SHAPE_LEN}}
+  %1 = tosa.log2_floor_shape %0 : (!tosa.shape<17>) -> !tosa.shape<17>
+  return %1 : !tosa.shape<17>
 }
 
 // -----
 
-func.func @test_log2_ceil_shape_invalid_rank() -> !tosa.shape<7> {
-  %0 = tosa.const_shape {values = dense<[1, 2, 3, 4, 5, 6, 7]> : tensor<7xindex>} : () -> !tosa.shape<7>
-  // expected-error@+1 {{'tosa.log2_ceil_shape' op failed shape type level check: '!tosa.shape<7>' exceeds MAX_RANK}}
-  %1 = tosa.log2_ceil_shape %0 : (!tosa.shape<7>) -> !tosa.shape<7>
-  return %1 : !tosa.shape<7>
+func.func @test_log2_ceil_shape_invalid_rank() -> !tosa.shape<17> {
+  %0 = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
+  // expected-error@+1 {{'tosa.log2_ceil_shape' op failed shape type level check: '!tosa.shape<17>' exceeds MAX_SHAPE_LEN}}
+  %1 = tosa.log2_ceil_shape %0 : (!tosa.shape<17>) -> !tosa.shape<17>
+  return %1 : !tosa.shape<17>
 }
 
 // -----
 
-func.func @test_mod_shape_invalid_rank() -> !tosa.shape<9> {
-  %a = tosa.const_shape {values = dense<[1, 2, 3, 4, 5, 6, 7, 8, 9]> : tensor<9xindex>} : () -> !tosa.shape<9>
-  %b = tosa.const_shape {values = dense<[1, 2, 3, 4, 5, 6, 7, 8, 9]> : tensor<9xindex>} : () -> !tosa.shape<9>
-  // expected-error@+1 {{'tosa.mod_shape' op failed shape type level check: '!tosa.shape<9>' exceeds MAX_RANK}}
-  %c = tosa.mod_shape %a, %b : (!tosa.shape<9>, !tosa.shape<9>) -> !tosa.shape<9>
-  return %c : !tosa.shape<9>
+func.func @test_mod_shape_invalid_rank() -> !tosa.shape<17> {
+  %a = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
+  %b = tosa.const_shape {values = dense<0> : tensor<17xindex>} : () -> !tosa.shape<17>
+  // expected-error@+1 {{'tosa.mod_shape' op failed shape type level check: '!tosa.shape<17>' exceeds MAX_SHAPE_LEN}}
+  %c = tosa.mod_shape %a, %b : (!tosa.shape<17>, !tosa.shape<17>) -> !tosa.shape<17>
+  return %c : !tosa.shape<17>
 }
