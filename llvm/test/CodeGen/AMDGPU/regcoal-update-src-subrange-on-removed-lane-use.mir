@@ -1,0 +1,26 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -run-pass=register-coalescer -debug-only=regalloc -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=CHECK-DBG
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -run-pass=register-coalescer -o - %s | FileCheck %s --check-prefix=CHECK
+
+# CHECK-DBG: ********** REGISTER COALESCER **********
+# CHECK-DBG: ********** Function: test
+# CHECK-DBG: ********** JOINING INTERVALS ***********
+# CHECK-DBG: ********** INTERVALS **********
+# CHECK-DBG: %0 [16r,32r:0) 0@16r  weight:0.000000e+00
+# CHECK-DBG: %1 [32r,32d:0) 0@32r  L0000000000000003 [32r,32d:0) 0@32r  weight:0.000000e+00
+# CHECK-DBG: %2 [48r,64r:0) 0@48r  weight:0.000000e+00
+# CHECK-DBG: %3 [64r,64d:0) 0@64r  weight:0.000000e+00
+---
+name: test
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: test
+    ; CHECK: [[DST:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
+
+    %0:vgpr_32 = IMPLICIT_DEF
+    undef %9.sub0:sgpr_64 = V_READFIRSTLANE_B32 %0:vgpr_32, implicit $exec
+    %12:sgpr_32 = COPY %9.sub1:sgpr_64, implicit $exec
+    %16:vgpr_32 = V_MOV_B32_e32 %12:sgpr_32, implicit $exec
+
+    S_ENDPGM 0
+...

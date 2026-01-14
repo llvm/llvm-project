@@ -1770,13 +1770,15 @@ MachineInstr *RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
     return nullptr;
 
   SlotIndex Idx = LIS->getInstructionIndex(*CopyMI);
-  const LiveInterval &SrcLI = LIS->getInterval(SrcReg);
+  LiveInterval &SrcLI = LIS->getInterval(SrcReg);
+  bool subRegHasLiveSubrange = false;
   // CopyMI is undef iff SrcReg is not live before the instruction.
   if (SrcSubIdx != 0 && SrcLI.hasSubRanges()) {
     LaneBitmask SrcMask = TRI->getSubRegIndexLaneMask(SrcSubIdx);
     for (const LiveInterval::SubRange &SR : SrcLI.subranges()) {
       if ((SR.LaneMask & SrcMask).none())
         continue;
+      subRegHasLiveSubrange = true;
       if (SR.liveAt(Idx))
         return nullptr;
     }
@@ -1807,6 +1809,13 @@ MachineInstr *RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
     }
 
     CopyMI->setDesc(TII->get(TargetOpcode::IMPLICIT_DEF));
+    // If there wasn't a live subrange for this Src subregister, and it's at the
+    // end of the register segment, we need to update the live intervals of the
+    // Src reg.
+    if (SrcSubIdx != 0 && !subRegHasLiveSubrange &&
+        SrcLI.endIndex().getBaseIndex() == Idx) {
+      LIS->shrinkToUses(&SrcLI);
+    }
     LLVM_DEBUG(dbgs() << "\tReplaced copy of <undef> value with an "
                          "implicit def\n");
     return CopyMI;
