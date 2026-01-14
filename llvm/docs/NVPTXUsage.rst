@@ -1048,6 +1048,31 @@ space casted to this space), 1 is returned, otherwise 0 is returned.
 Narrow Floating-Point Conversion intrinsics
 -------------------------------------------
 
+These intrinsics perform conversions involving narrow floating-point formats.
+The following table describes the rounding modes used across these intrinsics:
+
+.. _narrow-fp-rounding-modes:
+
+.. table:: Narrow Floating-Point Conversion Rounding Modes
+   :widths: 30 60
+
+   +-----------------------+---------------------------------------------------+
+   | Rounding Mode         | Description                                       |
+   +=======================+===================================================+
+   |``rn`` (default)       | Round to nearest, with ties to even               |
+   +-----------------------+---------------------------------------------------+
+   |``rz``                 | Round towards zero                                |
+   +-----------------------+---------------------------------------------------+
+   |``rp``                 | Round towards positive infinity                   |
+   +-----------------------+---------------------------------------------------+
+   |``rs``                 | Stochastic rounding which is achieved through the |
+   |                       | use of the supplied random bits (``%rnd_bits``).  |
+   |                       | The result s rounded in the direction towards     |
+   |                       | zero or away from zero based on the carry out of  |
+   |                       | the integer addition of the of mantissa from      |
+   |                       | the input.                                        |
+   +-----------------------+---------------------------------------------------+
+
 ``fp8`` Conversion Intrinsics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1069,18 +1094,11 @@ Overview:
 """""""""
 
 These intrinsics perform conversions involving the ``e4m3`` and ``e5m2`` narrow 
-floating-point formats.
+floating-point formats. In case of two inputs, the value converted from input 
+``%a`` is stored in the upper 8-bits of the result, and the value converted 
+from input ``%b`` is stored in the lower 8-bits of the result.
 
-The ``rn`` rounding mode performs conversions while rounding to nearest, with 
-ties to even. This is the default rounding mode.
-The ``rz`` rounding mode performs conversions while rounding towards zero.
-The ``rp`` rounding mode performs conversions while rounding towards positive 
-infinity.
-The ``rs`` rounding mode performs stochastic rounding which is achieved through 
-the use of the supplied random bits (``%rnd_bits``). The result is rounded in 
-the direction towards zero or away from zero based on the carry out of the 
-integer addition of the supplied random bits to the truncated off (discarded) 
-bits of mantissa from the input.
+For rounding modes, see :ref:`narrow-fp-rounding-modes`.
 
 The ``relu`` modifier clamps negative results to 0.
 
@@ -1114,10 +1132,11 @@ Overview:
 """""""""
 
 These intrinsics perform conversions involving the ``s2f6`` narrow 
-floating-point format.
+floating-point format. In case of two inputs, the value converted from input 
+``%a`` is stored in the upper 8-bits of the result, and the value converted 
+from input ``%b`` is stored in the lower 8-bits of the result.
 
-The ``rn`` rounding mode performs conversions while rounding to nearest, with 
-ties to even.
+For rounding modes, see :ref:`narrow-fp-rounding-modes`.
 
 The ``relu`` modifier clamps negative results to 0.
 
@@ -1153,15 +1172,12 @@ Overview:
 """""""""
 
 These intrinsics perform conversions involving the ``e2m3`` and ``e3m2`` narrow 
-floating-point formats.
+floating-point formats. In case of two inputs, the value converted from input 
+``%a`` is stored in the upper 8-bits of the result, and the value converted 
+from input ``%b`` is stored in the lower 8-bits of the result with 2 MSBs 
+padded with 0s in both cases.
 
-The ``rn`` rounding mode performs conversions while rounding to nearest, with 
-ties to even.
-The ``rs`` rounding mode performs stochastic rounding which is achieved through 
-the use of the supplied random bits (``%rnd_bits``). The result is rounded in 
-the direction towards zero or away from zero based on the carry out of the 
-integer addition of the supplied random bits to the truncated off (discarded) 
-bits of mantissa from the input.
+For rounding modes, see :ref:`narrow-fp-rounding-modes`.
 
 The ``relu`` modifier clamps negative results to 0.
 
@@ -1193,14 +1209,11 @@ Overview:
 These intrinsics perform conversions involving the ``e2m1`` narrow 
 floating-point format. For conversions involving ``e2m1x2``, the packed 
 ``e2m1x2`` value is stored in the lower byte of the ``i16`` argument or result.
+In case of two inputs, the value converted from input 
+``%a`` is stored in the upper 4-bits of the result, and the value converted 
+from input ``%b`` is stored in the lower 4-bits of the result.
 
-The ``rn`` rounding mode performs conversions while rounding to nearest, with 
-ties to even.
-The ``rs`` rounding mode performs stochastic rounding which is achieved through 
-the use of the supplied random bits (``%rnd_bits``). The result is rounded in 
-the direction towards zero or away from zero based on the carry out of the 
-integer addition of the supplied random bits to the truncated off (discarded) 
-bits of mantissa from the input.
+For rounding modes, see :ref:`narrow-fp-rounding-modes`.
 
 The ``relu`` modifier clamps negative results to 0.
 
