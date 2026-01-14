@@ -130,43 +130,6 @@ std::vector<SemanticTokensEdit> diffTokens(llvm::ArrayRef<SemanticToken> Before,
 // are not included.
 std::vector<Range> getInactiveRegions(ParsedAST &AST);
 
-
-// Whether T is const in a loose sense - is a variable with this type readonly?
-bool isConst(QualType T);
-
-// Whether D is const in a loose sense (should it be highlighted as such?)
-// FIXME: This is separate from whether *a particular usage* can mutate D.
-//        We may want V in V.size() to be readonly even if V is mutable.
-bool isConst(const Decl *D);
-
-// "Static" means many things in C++, only some get the "static" modifier.
-//
-// Meanings that do:
-// - Members associated with the class rather than the instance.
-//   This is what 'static' most often means across languages.
-// - static local variables
-//   These are similarly "detached from their context" by the static keyword.
-//   In practice, these are rarely used inside classes, reducing confusion.
-//
-// Meanings that don't:
-// - Namespace-scoped variables, which have static storage class.
-//   This is implicit, so the keyword "static" isn't so strongly associated.
-//   If we want a modifier for these, "global scope" is probably the concept.
-// - Namespace-scoped variables/functions explicitly marked "static".
-//   There the keyword changes *linkage* , which is a totally different concept.
-//   If we want to model this, "file scope" would be a nice modifier.
-//
-// This is confusing, and maybe we should use another name, but because "static"
-// is a standard LSP modifier, having one with that name has advantages.
-bool isStatic(const Decl *D);
-// Indicates whether declaration D is abstract in cases where D is a struct or a
-// class.
-bool isAbstract(const Decl *D);
-// Indicates whether declaration D is virtual in cases where D is a method.
-bool isVirtual(const Decl *D);
-// Indicates whether declaration D is final in cases where D is a struct, class
-// or method.
-bool isFinal(const Decl *D);
 // Indicates whether declaration D is a unique definition (as opposed to a
 // declaration).
 bool isUniqueDefinition(const NamedDecl *Decl);

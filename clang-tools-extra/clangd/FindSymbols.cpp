@@ -36,43 +36,202 @@ SymbolTags toSymbolTagBitmask(const SymbolTag ST) {
 }
 } // namespace
 
+
+
+// "Static" means many things in C++, only some get the "static" modifier.
+//
+// Meanings that do:
+// - Members associated with the class rather than the instance.
+//   This is what 'static' most often means across languages.
+// - static local variables
+//   These are similarly "detached from their context" by the static keyword.
+//   In practice, these are rarely used inside classes, reducing confusion.
+//
+// Meanings that don't:
+// - Namespace-scoped variables, which have static storage class.
+//   This is implicit, so the keyword "static" isn't so strongly associated.
+//   If we want a modifier for these, "global scope" is probably the concept.
+// - Namespace-scoped variables/functions explicitly marked "static".
+//   There the keyword changes *linkage* , which is a totally different concept.
+//   If we want to model this, "file scope" would be a nice modifier.
+//
+// This is confusing, and maybe we should use another name, but because "static"
+// is a standard LSP modifier, having one with that name has advantages.
+bool isStatic(const Decl *D) {
+  if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D))
+    return CMD->isStatic();
+  if (const VarDecl *VD = llvm::dyn_cast<VarDecl>(D))
+    return VD->isStaticDataMember() || VD->isStaticLocal();
+  if (const auto *OPD = llvm::dyn_cast<ObjCPropertyDecl>(D))
+    return OPD->isClassProperty();
+  if (const auto *OMD = llvm::dyn_cast<ObjCMethodDecl>(D))
+    return OMD->isClassMethod();
+  if (const auto *FD = llvm::dyn_cast<FunctionDecl>(D))
+    return FD->isStatic();
+  return false;
+}
+
+// Whether T is const in a loose sense - is a variable with this type readonly?
+bool isConst(QualType T) {
+  if (T.isNull())
+    return false;
+  T = T.getNonReferenceType();
+  if (T.isConstQualified())
+    return true;
+  if (const auto *AT = T->getAsArrayTypeUnsafe())
+    return isConst(AT->getElementType());
+  if (isConst(T->getPointeeType()))
+    return true;
+  return false;
+}
+
+// Whether D is const in a loose sense (should it be highlighted as such?)
+// FIXME: This is separate from whether *a particular usage* can mutate D.
+//        We may want V in V.size() to be readonly even if V is mutable.
+bool isConst(const Decl *D) {
+  if (llvm::isa<EnumConstantDecl>(D) || llvm::isa<NonTypeTemplateParmDecl>(D))
+    return true;
+  if (llvm::isa<FieldDecl>(D) || llvm::isa<VarDecl>(D) ||
+      llvm::isa<MSPropertyDecl>(D) || llvm::isa<BindingDecl>(D)) {
+    if (isConst(llvm::cast<ValueDecl>(D)->getType()))
+      return true;
+      }
+  if (const auto *OCPD = llvm::dyn_cast<ObjCPropertyDecl>(D)) {
+    if (OCPD->isReadOnly())
+      return true;
+  }
+  if (const auto *MPD = llvm::dyn_cast<MSPropertyDecl>(D)) {
+    if (!MPD->hasSetter())
+      return true;
+  }
+  if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D)) {
+    if (CMD->isConst())
+      return true;
+  }
+  if (const auto *FD = llvm::dyn_cast<FunctionDecl>(D))
+    return isConst(FD->getReturnType());
+  return false;
+}
+
+// Indicates whether declaration D is abstract in cases where D is a struct or a
+// class.
+bool isAbstract(const Decl *D) {
+  if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D))
+    return CMD->isPureVirtual();
+  if (const auto *CRD = llvm::dyn_cast<CXXRecordDecl>(D))
+    return CRD->hasDefinition() && CRD->isAbstract();
+  return false;
+}
+
+// Indicates whether declaration D is virtual in cases where D is a method.
+bool isVirtual(const Decl *D) {
+  if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D))
+    return CMD->isVirtual();
+  return false;
+}
+
+// Indicates whether declaration D is final in cases where D is a struct, class
+// or method.
+bool isFinal(const Decl *D) {
+  if (const auto *CRD = dyn_cast<CXXMethodDecl>(D))
+    return CRD->hasAttr<FinalAttr>();
+
+  if (const auto *CRD = dyn_cast<CXXRecordDecl>(D))
+    return CRD->hasAttr<FinalAttr>();
+
+  return false;
+}
+
+
+bool isUniqueDefinition(const NamedDecl *Decl) {
+  if (auto *Func = dyn_cast<FunctionDecl>(Decl))
+    return Func->isThisDeclarationADefinition();
+  if (auto *Klass = dyn_cast<CXXRecordDecl>(Decl))
+    return Klass->isThisDeclarationADefinition();
+  if (auto *Iface = dyn_cast<ObjCInterfaceDecl>(Decl))
+    return Iface->isThisDeclarationADefinition();
+  if (auto *Proto = dyn_cast<ObjCProtocolDecl>(Decl))
+    return Proto->isThisDeclarationADefinition();
+  if (auto *Var = dyn_cast<VarDecl>(Decl))
+    return Var->isThisDeclarationADefinition();
+  return isa<TemplateTypeParmDecl>(Decl) ||
+         isa<NonTypeTemplateParmDecl>(Decl) ||
+         isa<TemplateTemplateParmDecl>(Decl) || isa<ObjCCategoryDecl>(Decl) ||
+         isa<ObjCImplDecl>(Decl);
+}
+
+// Backwards-compatible default behavior: determine whether this NamedDecl is
+// definition based on `isUniqueDefinition`, assuming that ND is a declaration.
+SymbolTags computeSymbolTags(const NamedDecl &ND) {
+  return computeSymbolTags(ND, true);
+}
+
+SymbolTags computeSymbolTags(const NamedDecl &ND, bool IsDecl) {
+  SymbolTags Result = 0;
+  const auto IsDef = isUniqueDefinition(&ND);
+
+  if (ND.isDeprecated())
+    Result |= toSymbolTagBitmask(SymbolTag::Deprecated);
+
+  if (isConst(&ND))
+    Result |= toSymbolTagBitmask(SymbolTag::ReadOnly);
+
+  if (isStatic(&ND))
+    Result |= toSymbolTagBitmask(SymbolTag::Static);
+
+  if (isVirtual(&ND))
+    Result |= toSymbolTagBitmask(SymbolTag::Virtual);
+
+  if (isAbstract(&ND))
+    Result |= toSymbolTagBitmask(SymbolTag::Abstract);
+
+  if (isFinal(&ND))
+    Result |= toSymbolTagBitmask(SymbolTag::Final);
+
+  if (IsDecl && not isa<UnresolvedUsingValueDecl>(ND)) {
+    // Do not treat an UnresolvedUsingValueDecl as a declaration.
+    // It's more common to think of it as a reference to the
+    // underlying declaration.
+    Result |= toSymbolTagBitmask(SymbolTag::Declaration);
+
+    if (IsDef)
+      Result |= toSymbolTagBitmask(SymbolTag::Definition);
+  }
+
+  switch (ND.getAccess()) {
+  case AS_public:
+    Result |= toSymbolTagBitmask(SymbolTag::Public);
+    break;
+  case AS_protected:
+    Result |= toSymbolTagBitmask(SymbolTag::Protected);
+    break;
+  case AS_private:
+    Result |= toSymbolTagBitmask(SymbolTag::Private);
+    break;
+  default:
+    break;
+  }
+
+  return Result;
+}
+
 std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND) {
-  const auto SymbolTags = computeSymbolTags(ND);
+  const auto symbolTags = computeSymbolTags(ND);
   std::vector<SymbolTag> Tags;
 
-  if (SymbolTags & toSymbolTagBitmask(SymbolTag::Deprecated))
-    Tags.push_back(SymbolTag::Deprecated);
+  if (symbolTags == 0)
+    return Tags;
 
-  if (SymbolTags & toSymbolTagBitmask(SymbolTag::ReadOnly))
-    Tags.push_back(SymbolTag::ReadOnly);
-
-  if (SymbolTags & toSymbolTagBitmask(SymbolTag::Static))
-    Tags.push_back(SymbolTag::Static);
-
-  if (SymbolTags & toSymbolTagBitmask(SymbolTag::Virtual))
-    Tags.push_back(SymbolTag::Virtual);
-
-  if (SymbolTags & toSymbolTagBitmask(SymbolTag::Abstract))
-    Tags.push_back(SymbolTag::Abstract);
-
-  if (SymbolTags & toSymbolTagBitmask(SymbolTag::Final))
-    Tags.push_back(SymbolTag::Final);
-
-  if (SymbolTags & toSymbolTagBitmask(SymbolTag::Definition))
-    Tags.push_back(SymbolTag::Definition);
-
-  if (SymbolTags & toSymbolTagBitmask(SymbolTag::Declaration))
-    Tags.push_back(SymbolTag::Declaration);
-
-  if (SymbolTags & toSymbolTagBitmask(SymbolTag::Public))
-    Tags.push_back(SymbolTag::Public);
-
-  if (SymbolTags & toSymbolTagBitmask(SymbolTag::Protected))
-    Tags.push_back(SymbolTag::Protected);
-
-  if (SymbolTags & toSymbolTagBitmask(SymbolTag::Private))
-    Tags.push_back(SymbolTag::Private);
-
+  // Iterate through SymbolTag enum values and collect any that are present in
+  // the bitmask. SymbolTag values are in the numeric range
+  // [Deprecated .. ReadOnly].
+  constexpr unsigned MinTag = static_cast<unsigned>(SymbolTag::Deprecated);
+  constexpr unsigned MaxTag = static_cast<unsigned>(SymbolTag::ReadOnly);
+  for (unsigned I = MinTag; I <= MaxTag; ++I) {
+    auto ST = static_cast<SymbolTag>(I);
+    if (symbolTags & toSymbolTagBitmask(ST))
+      Tags.push_back(ST);
+  }
   return Tags;
 }
 

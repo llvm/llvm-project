@@ -35,14 +35,18 @@ MATCHER_P(withName, N, "") { return arg.name == N; }
 MATCHER_P(withKind, Kind, "") { return arg.kind == Kind; }
 MATCHER_P(withDetail, Detail, "") { return arg.detail == Detail; }
 MATCHER_P(symRange, Range, "") { return arg.range == Range; }
-MATCHER_P(withSymbolTag, Tag, "") { return llvm::is_contained(arg.tags, Tag); }
-
 
 // GMock helpers for matching DocumentSymbol.
 MATCHER_P(symNameRange, Range, "") { return arg.selectionRange == Range; }
 template <class... ChildMatchers>
 ::testing::Matcher<DocumentSymbol> children(ChildMatchers... ChildrenM) {
   return Field(&DocumentSymbol::children, UnorderedElementsAre(ChildrenM...));
+}
+
+template <typename... Tags>
+::testing::Matcher<DocumentSymbol> withSymbolTags(Tags... tags) {
+  // Matches the tags vector ignoring element order.
+  return Field(&DocumentSymbol::tags, UnorderedElementsAre(tags...));
 }
 
 std::vector<SymbolInformation> getSymbols(TestTU &TU, llvm::StringRef Query,
@@ -1147,13 +1151,13 @@ TEST(DocumentSymbolsTest, SymbolTags) {
   EXPECT_THAT(
       Symbols,
       ElementsAre(AllOf(
-          withName("A"), withSymbolTag(SymbolTag::Abstract),
-          withSymbolTag(SymbolTag::Definition),
-          children(AllOf(withName("f"), withSymbolTag(SymbolTag::ReadOnly),
-                         withSymbolTag(SymbolTag::Virtual),
-                         withSymbolTag(SymbolTag::Abstract),
-                         withSymbolTag(SymbolTag::Declaration),
-                         withSymbolTag(SymbolTag::Private))))));
+          withName("A"), withSymbolTags(SymbolTag::Abstract, SymbolTag::Definition, SymbolTag::Declaration),
+          children(AllOf(withName("f"), 
+          withSymbolTags(SymbolTag::ReadOnly,
+            SymbolTag::Virtual,
+            SymbolTag::Abstract,
+            SymbolTag::Declaration,
+            SymbolTag::Private))))));
 }
 
 } // namespace

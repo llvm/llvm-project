@@ -619,9 +619,6 @@ public:
   QualType DeducedType;
 };
 
-SymbolTags toSymbolTagBitmask(const SymbolTag ST) {
-  return (1 << static_cast<unsigned>(ST));
-}
 } // namespace
 
 std::optional<QualType> getDeducedType(ASTContext &ASTCtx,
@@ -1119,59 +1116,5 @@ searchConstructorsInForwardingFunction(const FunctionDecl *FD) {
   return Result;
 }
 
-// Backwards-compatible default behavior: determine whether this NamedDecl is
-// definition based on `isUniqueDefinition`, assuming that ND is a declaration.
-SymbolTags computeSymbolTags(const NamedDecl &ND) {
-  const auto IsDef = isUniqueDefinition(&ND);
-  return computeSymbolTags(ND, true, IsDef);
-}
-
-SymbolTags computeSymbolTags(const NamedDecl &ND, bool IsDecl, bool IsDef) {
-  SymbolTags Result = 0;
-
-  if (ND.isDeprecated())
-    Result |= toSymbolTagBitmask(SymbolTag::Deprecated);
-
-  if (isConst(&ND))
-    Result |= toSymbolTagBitmask(SymbolTag::ReadOnly);
-
-  if (isStatic(&ND))
-    Result |= toSymbolTagBitmask(SymbolTag::Static);
-
-  if (isVirtual(&ND))
-    Result |= toSymbolTagBitmask(SymbolTag::Virtual);
-
-  if (isAbstract(&ND))
-    Result |= toSymbolTagBitmask(SymbolTag::Abstract);
-
-  if (isFinal(&ND))
-    Result |= toSymbolTagBitmask(SymbolTag::Final);
-
-  if (IsDecl && not isa<UnresolvedUsingValueDecl>(ND)) {
-    // Do not treat an UnresolvedUsingValueDecl as a declaration.
-    // It's more common to think of it as a reference to the
-    // underlying declaration.
-    Result |= toSymbolTagBitmask(SymbolTag::Declaration);
-
-    if (IsDef)
-      Result |= toSymbolTagBitmask(SymbolTag::Definition);
-  }
-
-  switch (ND.getAccess()) {
-  case AS_public:
-    Result |= toSymbolTagBitmask(SymbolTag::Public);
-    break;
-  case AS_protected:
-    Result |= toSymbolTagBitmask(SymbolTag::Protected);
-    break;
-  case AS_private:
-    Result |= toSymbolTagBitmask(SymbolTag::Private);
-    break;
-  default:
-    break;
-  }
-
-  return Result;
-}
 } // namespace clangd
 } // namespace clang

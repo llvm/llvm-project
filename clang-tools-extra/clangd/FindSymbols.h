@@ -22,6 +22,9 @@ namespace clangd {
 class ParsedAST;
 class SymbolIndex;
 
+/// A bitmask type representing symbol tags.
+using SymbolTags = uint32_t;
+
 /// Helper function for deriving an LSP Location from an index SymbolLocation.
 llvm::Expected<Location> indexToLSPLocation(const SymbolLocation &Loc,
                                             llvm::StringRef TUPath);
@@ -51,6 +54,14 @@ llvm::Expected<std::vector<DocumentSymbol>> getDocumentSymbols(ParsedAST &AST);
 /// Returns the symbol tags for the given declaration.
 /// \p ND The declaration to get tags for.
 std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND);
+
+
+/// Computes symbol tags for a given NamedDecl.
+SymbolTags computeSymbolTags(const NamedDecl &ND);
+
+/// Computes symbol tags for a given NamedDecl, with additional context about
+/// whether it's a declaration or definition.
+SymbolTags computeSymbolTags(const NamedDecl &ND, bool IsDecl);
 
 } // namespace clangd
 } // namespace clang

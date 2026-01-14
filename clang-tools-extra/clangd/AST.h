@@ -34,9 +34,6 @@ class HeuristicResolver;
 
 namespace clangd {
 
-/// A bitmask type representing symbol tags.
-using SymbolTags = uint32_t;
-
 /// Returns true if the declaration is considered implementation detail based on
 /// heuristics. For example, a declaration whose name is not explicitly spelled
 /// in code is considered implementation detail.
@@ -263,13 +260,6 @@ bool isLikelyForwardingFunction(const FunctionTemplateDecl *FT);
 /// constructors that might be forwarded to.
 SmallVector<const CXXConstructorDecl *, 1>
 searchConstructorsInForwardingFunction(const FunctionDecl *FD);
-
-/// Computes symbol tags for a given NamedDecl.
-SymbolTags computeSymbolTags(const NamedDecl &ND);
-
-/// Computes symbol tags for a given NamedDecl, with additional context about
-/// whether it's a declaration or definition.
-SymbolTags computeSymbolTags(const NamedDecl &ND, bool IsDecl, bool IsDef);
 
 } // namespace clangd
 } // namespace clang
