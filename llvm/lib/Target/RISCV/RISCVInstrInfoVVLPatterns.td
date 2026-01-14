@@ -2528,6 +2528,12 @@ foreach vti = AllBF16Vectors in {
                    vti.RegClass:$passthru, vti.RegClass:$rs1,
                    vti.ScalarRegClass:$rs2, (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW,
                    TAIL_AGNOSTIC)>;
+
+    def : Pat<(riscv_fclass_vl (vti.Vector vti.RegClass:$rs2),
+                               (vti.Mask VMV0:$vm), VLOpFrag),
+              (!cast<Instruction>("PseudoVFCLASS_ALT_V_"# vti.LMul.MX #"_MASK")
+                 (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,
+                 (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW, TA_MA)>;
   }
 }
 
