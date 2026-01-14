@@ -159,3 +159,73 @@ A:
   %6 = phi i32 [ %4, %3 ], [ 0, %A ]
   ret i32 %6
 }
+
+define dso_local i32 @test5(ptr readonly %0, i1 %cond, i32 %bytes) nofree nosync {
+; CHECK-LABEL: @test5(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP0:%.*]], i32 [[BYTES:%.*]]) ]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       B:
+; CHECK-NEXT:    br label [[A]]
+; CHECK:       A:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP0]], null
+; CHECK-NEXT:    br i1 [[TMP2]], label [[TMP4:%.*]], label [[TMP6:%.*]]
+; CHECK:       3:
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 4
+; CHECK-NEXT:    br label [[TMP4]]
+; CHECK:       5:
+; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ [[TMP3]], [[TMP6]] ], [ 0, [[A]] ]
+; CHECK-NEXT:    ret i32 [[TMP5]]
+;
+  call void @llvm.assume(i1 true) ["dereferenceable"(ptr %0, i32 %bytes)]
+  br i1 %cond, label %A, label %B
+
+B:
+  br label %A
+
+A:
+  %2 = icmp eq ptr %0, null
+  br i1 %2, label %5, label %3
+
+3:                                                ; preds = %1
+  %4 = load i32, ptr %0, align 4
+  br label %5
+
+5:                                                ; preds = %1, %3
+  %6 = phi i32 [ %4, %3 ], [ 0, %A ]
+  ret i32 %6
+}
+
+define dso_local i32 @test6(ptr readonly %0, i1 %cond) nofree nosync {
+; CHECK-LABEL: @test6(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP0:%.*]], i32 0) ]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       B:
+; CHECK-NEXT:    br label [[A]]
+; CHECK:       A:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP0]], null
+; CHECK-NEXT:    br i1 [[TMP2]], label [[TMP4:%.*]], label [[TMP6:%.*]]
+; CHECK:       3:
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 4
+; CHECK-NEXT:    br label [[TMP4]]
+; CHECK:       5:
+; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ [[TMP3]], [[TMP6]] ], [ 0, [[A]] ]
+; CHECK-NEXT:    ret i32 [[TMP5]]
+;
+  call void @llvm.assume(i1 true) ["dereferenceable"(ptr %0, i32 0)]
+  br i1 %cond, label %A, label %B
+
+B:
+  br label %A
+
+A:
+  %2 = icmp eq ptr %0, null
+  br i1 %2, label %5, label %3
+
+3:                                                ; preds = %1
+  %4 = load i32, ptr %0, align 4
+  br label %5
+
+5:                                                ; preds = %1, %3
+  %6 = phi i32 [ %4, %3 ], [ 0, %A ]
+  ret i32 %6
+}
