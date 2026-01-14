@@ -663,6 +663,32 @@ partitionOperation(ShardOp shardOp, IRMapping &partitionMap,
   return success();
 }
 
+// Check if the operation is correctly and fully annotated with sharding
+// information:
+//   - Operation results must have exactly one use (e.g. the shard operation).
+//   - All operands and all results must be annotated, e.g. they must be
+//     produced by/consumed by a shard.shard operation.
+//   - Result annotations must not include the 'annotate_for_users' attribute.
+//   - Operand annotations must include the 'annotate_for_users' attribute.
+// raises an error if the operation is not correctly and fully annotated.
+static void checkFullyAnnotated(Operation *op) {
+  // constant ops do not need to have sharding annotations
+  if (op->hasTrait<OpTrait::ConstantLike>())
+    return;
+  for (auto operand : op->getOperands()) {
+    if (!operand.getDefiningOp<ShardOp>())
+      op->emitError("Cannot partition: all operands must be produced by a "
+                    "shard.shard operation");
+  }
+  for (auto result : op->getResults()) {
+    if (!result.hasOneUse())
+      op->emitError("Cannot partition: all results must have exactly one use");
+    if (!(isa<ShardOp>(*result.user_begin())))
+      op->emitError(
+          "Cannot partition: all result users must be shard.shard operations");
+  }
+}
+
 static LogicalResult
 partitionOperation(Operation &op, IRMapping &partitionMap,
                    SymbolTableCollection &symbolTableCollection,
@@ -670,6 +696,7 @@ partitionOperation(Operation &op, IRMapping &partitionMap,
   if (isa<ShardingOp>(op)) {
     return success();
   }
+
   if (auto getShardingOp = dyn_cast<GetShardingOp>(op)) {
     auto shardOp = getShardingOp.getSource().getDefiningOp<ShardOp>();
     if (!shardOp) {
@@ -685,6 +712,9 @@ partitionOperation(Operation &op, IRMapping &partitionMap,
     return partitionOperation(shardOp, partitionMap, symbolTableCollection,
                               builder);
   }
+
+  // check if operation is correctly and fully annotated
+  checkFullyAnnotated(&op);
 
   SmallVector<Value> partitionedOperands;
   llvm::transform(op.getOperands(), std::back_inserter(partitionedOperands),
