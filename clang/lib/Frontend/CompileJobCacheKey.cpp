@@ -12,9 +12,8 @@
 #include "clang/CAS/IncludeTree.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "llvm/CAS/ActionCache.h"
-#include "llvm/CAS/HierarchicalTreeBuilder.h"
+#include "llvm/CAS/NamedValuesSchema.h"
 #include "llvm/CAS/ObjectStore.h"
-#include "llvm/CAS/TreeSchema.h"
 #include "llvm/CAS/Utils.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/StringSaver.h"
@@ -35,30 +34,27 @@ static llvm::cas::CASID createCompileJobCacheKeyForArgs(
     CommandLine.push_back(0);
   }
 
-  llvm::cas::HierarchicalTreeBuilder Builder;
+  llvm::cas::NamedValuesSchema::Builder Builder(CAS);
   switch (InputKind) {
   case CachingInputKind::IncludeTree:
-    Builder.push(InputRef, llvm::cas::TreeEntry::Regular, "include-tree");
+    Builder.add("include-tree", InputRef);
     break;
   case CachingInputKind::CachedCompilation:
-    // TODO: Pass a "ref" tree entry kind.
-    Builder.push(InputRef, llvm::cas::TreeEntry::Tree, "cache-key");
+    Builder.add("cache-key", InputRef);
     break;
   case CachingInputKind::Object:
-    // TODO: Pass a "ref" tree entry kind.
-    Builder.push(InputRef, llvm::cas::TreeEntry::Tree, "object");
+    Builder.add("object", InputRef);
     break;
   }
-  Builder.push(llvm::cantFail(CAS.storeFromString({}, CommandLine)),
-               llvm::cas::TreeEntry::Regular, "command-line");
-  Builder.push(llvm::cantFail(CAS.storeFromString({}, "-cc1")),
-               llvm::cas::TreeEntry::Regular, "computation");
+  Builder.add("command-line",
+              llvm::cantFail(CAS.storeFromString({}, CommandLine)));
+  Builder.add("computation", llvm::cantFail(CAS.storeFromString({}, "-cc1")));
 
   // FIXME: The version is maybe insufficient...
-  Builder.push(llvm::cantFail(CAS.storeFromString({}, getClangFullVersion())),
-               llvm::cas::TreeEntry::Regular, "version");
+  Builder.add("version",
+              llvm::cantFail(CAS.storeFromString({}, getClangFullVersion())));
 
-  return llvm::cantFail(Builder.create(CAS)).getID();
+  return llvm::cantFail(Builder.build()).getID();
 }
 
 static void canonicalizeForCacheKey(CompilerInvocation &CI) {
@@ -289,56 +285,40 @@ clang::createCompileJobCacheKey(ObjectStore &CAS, DiagnosticsEngine &Diags,
   return createCompileJobCacheKeyImpl(CAS, Diags, std::move(CI));
 }
 
-static Error printFileSystem(ObjectStore &CAS, ObjectRef Root,
-                             raw_ostream &OS) {
-  TreeSchema Schema(CAS);
-  return Schema.walkFileTreeRecursively(
-      CAS, Root, [&](const NamedTreeEntry &Entry, std::optional<TreeProxy> Tree) {
-        if (Entry.getKind() != TreeEntry::Tree || Tree->empty()) {
-          OS << "\n  ";
-          Entry.print(OS, CAS);
-        }
-        return Error::success();
-      });
-}
-
 static Error printCompileJobCacheKey(ObjectStore &CAS, ObjectProxy Node,
                                      raw_ostream &OS) {
   auto strError = [](const Twine &Err) {
     return createStringError(inconvertibleErrorCode(), Err);
   };
 
-  TreeSchema Schema(CAS);
-  Expected<TreeProxy> Tree = Schema.load(Node);
-  if (!Tree)
-    return Tree.takeError();
+  auto Schema = NamedValuesSchema::create(CAS);
+  if (!Schema)
+    return Schema.takeError();
+  Expected<NamedValuesProxy> Proxy = Schema->load(Node);
+  if (!Proxy)
+    return Proxy.takeError();
 
   // Not exhaustive, but quick check that this looks like a cache key.
-  if (!Tree->lookup("computation"))
+  if (!Proxy->lookup("computation"))
     return strError("cas object is not a valid cache key");
 
-  return Tree->forEachEntry([&](const NamedTreeEntry &E) -> Error {
-    OS << E.getName() << ": " << CAS.getID(E.getRef());
-    if (E.getKind() == TreeEntry::Tree)
-      return printFileSystem(CAS, E.getRef(), OS);
+  return Proxy->forEachEntry([&](const NamedValuesEntry &E) -> Error {
+    OS << E.Name << ": " << CAS.getID(E.Ref);
 
-    if (E.getKind() != TreeEntry::Regular)
-      return strError("expected blob for entry " + E.getName());
-
-    if (E.getName() == "include-tree") {
-      auto IncludeTree = IncludeTreeRoot::get(CAS, E.getRef());
+    if (E.Name == "include-tree") {
+      auto IncludeTree = IncludeTreeRoot::get(CAS, E.Ref);
       if (!IncludeTree)
         return IncludeTree.takeError();
       OS << '\n';
       return IncludeTree->print(OS, 2);
     }
 
-    auto Blob = CAS.getProxy(E.getRef());
+    auto Blob = CAS.getProxy(E.Ref);
     if (!Blob)
       return Blob.takeError();
 
     auto Data = Blob->getData();
-    if (E.getName() == "command-line") {
+    if (E.Name == "command-line") {
       StringRef Arg;
       StringRef Trailing;
       do {
@@ -363,8 +343,6 @@ Error clang::printCompileJobCacheKey(ObjectStore &CAS, const CASID &Key,
   auto H = CAS.getProxy(Key);
   if (!H)
     return H.takeError();
-  TreeSchema Schema(CAS);
-  if (!Schema.isNode(*H))
-    return createStringError("unexpected cache key schema");
+
   return ::printCompileJobCacheKey(CAS, *H, OS);
 }
