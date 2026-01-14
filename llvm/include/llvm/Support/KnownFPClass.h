@@ -176,6 +176,12 @@ struct KnownFPClass {
       SignBit = !*SignBit;
   }
 
+  static KnownFPClass fneg(const KnownFPClass &Src) {
+    KnownFPClass Known = Src;
+    Known.fneg();
+    return Known;
+  }
+
   void fabs() {
     if (KnownFPClasses & fcNegZero)
       KnownFPClasses |= fcPosZero;
@@ -190,12 +196,6 @@ struct KnownFPClass {
       KnownFPClasses |= fcPosNormal;
 
     signBitMustBeZero();
-  }
-
-  static KnownFPClass fneg(const KnownFPClass &Src) {
-    KnownFPClass Known = Src;
-    Known.fneg();
-    return Known;
   }
 
   static KnownFPClass fabs(const KnownFPClass &Src) {
