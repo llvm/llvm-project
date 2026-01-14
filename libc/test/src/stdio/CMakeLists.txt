@@ -137,6 +137,15 @@ if(LIBC_CONF_PRINTF_DISABLE_STRERROR)
   list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_STRERROR")
 endif()
 
+if(LIBC_CONF_PRINTF_DISABLE_WIDE)
+  set(wchar_deps "")
+else()
+  set(wchar_deps
+    libc.hdr.types.wint_t
+    libc.hdr.wchar_macros
+  )
+endif()
+
 add_fp_unittest(
   sprintf_test
   UNIT_TEST_ONLY
@@ -148,6 +157,7 @@ add_fp_unittest(
     libc.src.stdio.sprintf
     libc.src.__support.FPUtil.fp_bits
     libc.include.inttypes
+    ${wchar_deps}
   COMPILE_OPTIONS
     ${sprintf_test_copts}
 )
