@@ -9,7 +9,6 @@
 #ifndef LLDB_PROTOCOL_MCP_SERVER_H
 #define LLDB_PROTOCOL_MCP_SERVER_H
 
-#include "lldb/Host/JSONTransport.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Protocol/MCP/Protocol.h"
 #include "lldb/Protocol/MCP/Resource.h"
@@ -19,75 +18,66 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Signals.h"
-#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
 
 namespace lldb_protocol::mcp {
 
-class Server : public MCPTransport::MessageHandler {
-  using ClosedCallback = llvm::unique_function<void()>;
+class Server {
+
+  using MCPTransportUP = std::unique_ptr<lldb_protocol::mcp::MCPTransport>;
+
+  using ReadHandleUP = lldb_private::MainLoop::ReadHandleUP;
 
 public:
-  Server(std::string name, std::string version, MCPTransport &client,
-         LogCallback log_callback = {}, ClosedCallback closed_callback = {});
+  Server(std::string name, std::string version, LogCallback log_callback = {});
   ~Server() = default;
-
-  using NotificationHandler = std::function<void(const Notification &)>;
 
   void AddTool(std::unique_ptr<Tool> tool);
   void AddResourceProvider(std::unique_ptr<ResourceProvider> resource_provider);
-  void AddNotificationHandler(llvm::StringRef method,
-                              NotificationHandler handler);
+
+  llvm::Error Accept(lldb_private::MainLoop &, MCPTransportUP);
 
 protected:
+  MCPBinderUP Bind(MCPTransport &);
+
   ServerCapabilities GetCapabilities();
 
-  using RequestHandler =
-      std::function<llvm::Expected<Response>(const Request &)>;
+  llvm::Expected<InitializeResult> InitializeHandler(const InitializeParams &);
 
-  void AddRequestHandlers();
+  llvm::Expected<ListToolsResult> ToolsListHandler();
+  llvm::Expected<CallToolResult> ToolsCallHandler(const CallToolParams &);
 
-  void AddRequestHandler(llvm::StringRef method, RequestHandler handler);
+  llvm::Expected<ListResourcesResult> ResourcesListHandler();
+  llvm::Expected<ReadResourceResult>
+  ResourcesReadHandler(const ReadResourceParams &);
 
-  llvm::Expected<std::optional<Message>> HandleData(llvm::StringRef data);
-
-  llvm::Expected<Response> Handle(const Request &request);
-  void Handle(const Notification &notification);
-
-  llvm::Expected<Response> InitializeHandler(const Request &);
-
-  llvm::Expected<Response> ToolsListHandler(const Request &);
-  llvm::Expected<Response> ToolsCallHandler(const Request &);
-
-  llvm::Expected<Response> ResourcesListHandler(const Request &);
-  llvm::Expected<Response> ResourcesReadHandler(const Request &);
-
-  void Received(const Request &) override;
-  void Received(const Response &) override;
-  void Received(const Notification &) override;
-  void OnError(llvm::Error) override;
-  void OnClosed() override;
-
-protected:
-  void Log(llvm::StringRef);
+  template <typename... Ts> inline auto Logv(const char *Fmt, Ts &&...Vals) {
+    Log(llvm::formatv(Fmt, std::forward<Ts>(Vals)...).str());
+  }
+  void Log(llvm::StringRef message) {
+    if (m_log_callback)
+      m_log_callback(message);
+  }
 
 private:
   const std::string m_name;
   const std::string m_version;
 
-  MCPTransport &m_client;
   LogCallback m_log_callback;
-  ClosedCallback m_closed_callback;
+  struct Client {
+    ReadHandleUP handle;
+    MCPTransportUP transport;
+    MCPBinderUP binder;
+  };
+  std::map<MCPTransport *, Client> m_instances;
 
   llvm::StringMap<std::unique_ptr<Tool>> m_tools;
   std::vector<std::unique_ptr<ResourceProvider>> m_resource_providers;
-
-  llvm::StringMap<RequestHandler> m_request_handlers;
-  llvm::StringMap<NotificationHandler> m_notification_handlers;
 };
 
 class ServerInfoHandle;
@@ -121,7 +111,7 @@ public:
   ServerInfoHandle &operator=(const ServerInfoHandle &) = delete;
   /// @}
 
-  /// Remove the file.
+  /// Remove the file on disk, if one is tracked.
   void Remove();
 
 private:

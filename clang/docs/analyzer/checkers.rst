@@ -198,12 +198,56 @@ as error. Specifically on x86/x86-64 target if the pointer address space is
 dereference is not defined as error. See `X86/X86-64 Language Extensions
 <https://clang.llvm.org/docs/LanguageExtensions.html#memory-references-to-specified-segments>`__
 for reference.
-	
+
 If the analyzer option ``suppress-dereferences-from-any-address-space`` is set
 to true (the default value), then this checker never reports dereference of
 pointers with a specified address space. If the option is set to false, then
 reports from the specific x86 address spaces 256, 257 and 258 are still
 suppressed, but null dereferences from other address spaces are reported.
+
+.. _core-NullPointerArithm:
+
+core.NullPointerArithm (C, C++)
+"""""""""""""""""""""""""""""""
+Check for undefined arithmetic operations with null pointers.
+
+The checker can detect the following cases:
+
+  - ``p + x`` and ``x + p`` where ``p`` is a null pointer and ``x`` is a nonzero
+    integer value.
+  - ``p - x`` where ``p`` is a null pointer and ``x`` is a nonzero integer
+    value.
+  - ``p1 - p2`` where one of ``p1`` and ``p2`` is null and the other a
+    non-null pointer.
+
+Result of these operations is undefined according to the standard.
+In the above listed cases, the checker will warn even if the expression
+described to be "nonzero" or "non-null" has unknown value, because it is likely
+that it can have non-zero value during the program execution.
+
+.. code-block:: c
+
+ void test1(int *p, int offset) {
+   if (p)
+     return;
+
+   int *p1 = p + offset; // warn: 'p' is null, 'offset' is unknown but likely non-zero
+ }
+
+ void test2(int *p, int offset) {
+   if (p) { } // this indicates that it is possible for 'p' to be null
+   if (offset == 0)
+     return;
+
+   int *p1 = p - offset; // warn: 'p' is null, 'offset' is known to be non-zero
+ }
+
+ void test3(char *p1, char *p2) {
+   if (p1)
+     return;
+
+   int a = p1 - p2; // warn: 'p1' is null, 'p2' can be likely non-null
+ }
 
 .. _core-StackAddressEscape:
 
@@ -1619,6 +1663,23 @@ Warn on uses of the 'bzero' function.
  void test() {
    bzero(ptr, n); // warn
  }
+
+.. _security-insecureAPI-decodeValueOfObjCType:
+
+security.insecureAPI.decodeValueOfObjCType (C)
+""""""""""""""""""""""""""""""""""""""""""""""
+Warn on uses of the Objective-C method ``-decodeValueOfObjCType:at:``.
+
+.. code-block:: objc
+
+  void test(NSCoder *decoder) {
+    unsigned int x;
+    [decoder decodeValueOfObjCType:"I" at:&x]; // warn
+  }
+
+This diagnostic is emitted only on Apple platforms where the safer
+``-decodeValueOfObjCType:at:size:`` alternative is available
+(iOS 11+, macOS 10.13+, tvOS 11+, watchOS 4.0+).
 
 .. _security-insecureAPI-getpw:
 
@@ -3420,12 +3481,6 @@ Check for an out-of-bound pointer being returned to callers.
    int x;
    return x; // warn: undefined or garbage returned
  }
-
-
-alpha.security.cert
-^^^^^^^^^^^^^^^^^^^
-
-SEI CERT checkers which tries to find errors based on their `C coding rules <https://wiki.sei.cmu.edu/confluence/display/c/2+Rules>`_.
 
 alpha.unix
 ^^^^^^^^^^

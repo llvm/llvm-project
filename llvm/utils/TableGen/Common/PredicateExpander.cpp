@@ -14,7 +14,7 @@
 #include "CodeGenSchedule.h" // Definition of STIPredicateFunction.
 #include "llvm/TableGen/Record.h"
 
-namespace llvm {
+using namespace llvm;
 
 void PredicateExpander::expandTrue(raw_ostream &OS) { OS << "true"; }
 void PredicateExpander::expandFalse(raw_ostream &OS) { OS << "false"; }
@@ -177,18 +177,15 @@ void PredicateExpander::expandPredicateSequence(
     return expandPredicate(OS, Sequence[0]);
 
   // Okay, there is more than one predicate in the set.
-  bool First = true;
+  ListSeparator LS(IsCheckAll ? "&& " : "|| ");
   OS << (shouldNegate() ? "!(" : "(");
   ++Indent;
 
   bool OldValue = shouldNegate();
   setNegatePredicate(false);
   for (const Record *Rec : Sequence) {
-    OS << '\n' << Indent;
-    if (!First)
-      OS << (IsCheckAll ? "&& " : "|| ");
+    OS << '\n' << Indent << LS;
     expandPredicate(OS, Rec);
-    First = false;
   }
   --Indent;
   OS << '\n' << Indent << ')';
@@ -553,5 +550,3 @@ void STIPredicateExpander::expandSTIPredicate(raw_ostream &OS,
     expandEpilogue(OS, Fn);
   }
 }
-
-} // namespace llvm

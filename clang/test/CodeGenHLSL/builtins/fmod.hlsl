@@ -3,7 +3,7 @@
 // ---------- Native Half support test -----------
 //
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
+// RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -o - | FileCheck %s -DFNATTRS="hidden noundef nofpclass(nan inf)" \
 // RUN:   -DTYPE=half -DINT_TYPE=f16 --check-prefixes=DXCHECK
 
@@ -21,7 +21,7 @@
 // ---------- Native Half support test -----------
 //
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-compute %s -fnative-half-type \
+// RUN:   spirv-unknown-vulkan-compute %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -o - | FileCheck %s \
 // RUN:   -DFNATTRS="hidden spir_func noundef nofpclass(nan inf)" -DTYPE=half
 

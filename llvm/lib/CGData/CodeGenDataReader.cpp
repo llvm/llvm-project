@@ -26,13 +26,13 @@ static cl::opt<bool> IndexedCodeGenDataReadFunctionMapNames(
              "disabled to save memory and time for final consumption of the "
              "indexed CodeGenData in production."));
 
+namespace llvm {
+
 cl::opt<bool> IndexedCodeGenDataLazyLoading(
     "indexed-codegen-data-lazy-loading", cl::init(false), cl::Hidden,
     cl::desc(
         "Lazily load indexed CodeGenData. Enable to save memory and time "
         "for final consumption of the indexed CodeGenData in production."));
-
-namespace llvm {
 
 static Expected<std::unique_ptr<MemoryBuffer>>
 setupMemoryBuffer(const Twine &Filename, vfs::FileSystem &FS) {
@@ -125,7 +125,7 @@ Error IndexedCodeGenDataReader::read() {
     FunctionMapRecord.setReadStableFunctionMapNames(
         IndexedCodeGenDataReadFunctionMapNames);
     if (IndexedCodeGenDataLazyLoading)
-      FunctionMapRecord.lazyDeserialize(SharedDataBuffer,
+      FunctionMapRecord.lazyDeserialize(std::move(SharedDataBuffer),
                                         Header.StableFunctionMapOffset);
     else
       FunctionMapRecord.deserialize(Ptr);
@@ -169,8 +169,8 @@ bool IndexedCodeGenDataReader::hasFormat(const MemoryBuffer &DataBuffer) {
   if (DataBuffer.getBufferSize() < sizeof(IndexedCGData::Magic))
     return false;
 
-  uint64_t Magic = endian::read<uint64_t, llvm::endianness::little, aligned>(
-      DataBuffer.getBufferStart());
+  uint64_t Magic = endian::read<uint64_t, aligned>(DataBuffer.getBufferStart(),
+                                                   llvm::endianness::little);
   // Verify that it's magical.
   return Magic == IndexedCGData::Magic;
 }

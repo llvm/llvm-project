@@ -189,7 +189,7 @@ struct PadOpToConstant final : public OpRewritePattern<PadOp> {
               return constantFoldPadOp<llvm::APInt>(
                   rewriter, loc, inputAttr, integerAttr, *lowPad, *highPad);
             })
-            .Default(Value());
+            .Default(nullptr);
 
     if (!newOp)
       return rewriter.notifyMatchFailure(padTensorOp,

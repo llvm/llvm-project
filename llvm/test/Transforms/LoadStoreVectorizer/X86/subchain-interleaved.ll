@@ -86,7 +86,6 @@ define void  @chain_prefix_suffix(ptr noalias %ptr) {
 ; CHECK: store <2 x i32> zeroinitializer
 ; CHECK: load <3 x i32>
 ; CHECK: load i32
-; CHECK: load i32
 
 define void @interleave_get_longest(ptr noalias %ptr) {
   %tmp2 = getelementptr i32, ptr %ptr, i64 1
@@ -130,3 +129,4 @@ define void @interleave_get_longest_aligned(ptr noalias %ptr) {
 
   ret void
 }
+

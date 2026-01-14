@@ -16,6 +16,13 @@ pythonize_bool(COMPILER_RT_HAS_AARCH64_SME)
 
 pythonize_bool(COMPILER_RT_HAS_NO_DEFAULT_CONFIG_FLAG)
 
+if(LLVM_TREE_AVAILABLE OR NOT COMPILER_RT_STANDALONE_BUILD)
+  set(COMPILER_RT_BUILT_WITH_LLVM TRUE)
+else()
+  set(COMPILER_RT_BUILT_WITH_LLVM FALSE)
+endif()
+pythonize_bool(COMPILER_RT_BUILT_WITH_LLVM)
+
 configure_compiler_rt_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.common.configured.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.common.configured)
@@ -66,7 +73,10 @@ endfunction()
 # Run sanitizer tests only if we're sure that clang would produce
 # working binaries.
 if(COMPILER_RT_CAN_EXECUTE_TESTS)
-  if(COMPILER_RT_BUILD_BUILTINS)
+  # COMPILER_RT_TEST_EXTERNAL_BUILTINS allows running tests against builtins built
+  # in an independent build. This option is only indended to be used by
+  # LLVM_ENABLE_RUNTIMES-based builds.
+  if(COMPILER_RT_BUILD_BUILTINS OR COMPILER_RT_TEST_EXTERNAL_BUILTINS)
     add_subdirectory(builtins)
   endif()
   if(COMPILER_RT_BUILD_SANITIZERS)

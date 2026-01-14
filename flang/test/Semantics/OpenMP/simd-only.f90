@@ -10,7 +10,7 @@ subroutine test_simd()
 
   ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
   ! CHECK: OmpDirectiveName -> llvm::omp::Directive = simd
-  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
+  ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
   !$omp simd
   do i = 1, 100
   end do
@@ -22,7 +22,7 @@ subroutine test_do_simd()
 
   ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
   ! CHECK: OmpDirectiveName -> llvm::omp::Directive = do simd
-  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
+  ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
   !$omp do simd
   do i = 1, 100
   end do
@@ -35,7 +35,7 @@ subroutine test_parallel_do_simd()
 
   ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
   ! CHECK: OmpDirectiveName -> llvm::omp::Directive = parallel do simd
-  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
+  ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
   !$omp parallel do simd
   do i = 1, 100
   end do
@@ -65,7 +65,7 @@ subroutine test_simd_atomic()
 
   ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
   ! CHECK: OmpDirectiveName -> llvm::omp::Directive = simd
-  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
+  ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
   !$omp simd
   do i = 1, 100
   ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPAtomicConstruct

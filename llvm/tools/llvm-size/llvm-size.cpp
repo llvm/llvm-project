@@ -79,6 +79,7 @@ static bool DarwinLongFormat;
 static RadixTy Radix = RadixTy::decimal;
 static bool TotalSizes;
 static bool HasMachOFiles = false;
+static bool ExcludePageZero = false;
 
 static std::vector<std::string> InputFilenames;
 
@@ -130,7 +131,6 @@ static void error(llvm::Error E, StringRef FileName, const Archive::Child &C,
   std::string Buf;
   raw_string_ostream OS(Buf);
   logAllUnhandledErrors(std::move(E), OS);
-  OS.flush();
   errs() << ": " << Buf << "\n";
 }
 
@@ -148,7 +148,6 @@ static void error(llvm::Error E, StringRef FileName,
   std::string Buf;
   raw_string_ostream OS(Buf);
   logAllUnhandledErrors(std::move(E), OS);
-  OS.flush();
   errs() << ": " << Buf << "\n";
 }
 
@@ -313,7 +312,7 @@ static void printDarwinSegmentSizes(MachOObjectFile *MachO) {
           total_data += Seg.vmsize;
         else if (SegmentName == "__OBJC")
           total_objc += Seg.vmsize;
-        else
+        else if (!ExcludePageZero || SegmentName != "__PAGEZERO")
           total_others += Seg.vmsize;
       }
     } else if (Load.C.cmd == MachO::LC_SEGMENT) {
@@ -339,7 +338,7 @@ static void printDarwinSegmentSizes(MachOObjectFile *MachO) {
           total_data += Seg.vmsize;
         else if (SegmentName == "__OBJC")
           total_objc += Seg.vmsize;
-        else
+        else if (!ExcludePageZero || SegmentName != "__PAGEZERO")
           total_others += Seg.vmsize;
       }
     }
@@ -914,6 +913,7 @@ int llvm_size_main(int argc, char **argv, const llvm::ToolContext &) {
 
   ELFCommons = Args.hasArg(OPT_common);
   DarwinLongFormat = Args.hasArg(OPT_l);
+  ExcludePageZero = Args.hasArg(OPT_exclude_pagezero);
   TotalSizes = Args.hasArg(OPT_totals);
   StringRef V = Args.getLastArgValue(OPT_format_EQ, "berkeley");
   if (V == "berkeley")

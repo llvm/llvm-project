@@ -1722,16 +1722,19 @@ public:
     return Insert(BinOp, Name);
   }
 
-  Value *CreateLogicalAnd(Value *Cond1, Value *Cond2, const Twine &Name = "") {
+  Value *CreateLogicalAnd(Value *Cond1, Value *Cond2, const Twine &Name = "",
+                          Instruction *MDFrom = nullptr) {
     assert(Cond2->getType()->isIntOrIntVectorTy(1));
     return CreateSelect(Cond1, Cond2,
-                        ConstantInt::getNullValue(Cond2->getType()), Name);
+                        ConstantInt::getNullValue(Cond2->getType()), Name,
+                        MDFrom);
   }
 
-  Value *CreateLogicalOr(Value *Cond1, Value *Cond2, const Twine &Name = "") {
+  Value *CreateLogicalOr(Value *Cond1, Value *Cond2, const Twine &Name = "",
+                         Instruction *MDFrom = nullptr) {
     assert(Cond2->getType()->isIntOrIntVectorTy(1));
     return CreateSelect(Cond1, ConstantInt::getAllOnesValue(Cond2->getType()),
-                        Cond2, Name);
+                        Cond2, Name, MDFrom);
   }
 
   Value *CreateLogicalOp(Instruction::BinaryOps Opc, Value *Cond1, Value *Cond2,
@@ -1936,21 +1939,13 @@ public:
   Value *CreateConstGEP1_32(Type *Ty, Value *Ptr, unsigned Idx0,
                             const Twine &Name = "") {
     Value *Idx = ConstantInt::get(Type::getInt32Ty(Context), Idx0);
-
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idx, GEPNoWrapFlags::none()))
-      return V;
-
-    return Insert(GetElementPtrInst::Create(Ty, Ptr, Idx), Name);
+    return CreateGEP(Ty, Ptr, Idx, Name, GEPNoWrapFlags::none());
   }
 
   Value *CreateConstInBoundsGEP1_32(Type *Ty, Value *Ptr, unsigned Idx0,
                                     const Twine &Name = "") {
     Value *Idx = ConstantInt::get(Type::getInt32Ty(Context), Idx0);
-
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idx, GEPNoWrapFlags::inBounds()))
-      return V;
-
-    return Insert(GetElementPtrInst::CreateInBounds(Ty, Ptr, Idx), Name);
+    return CreateGEP(Ty, Ptr, Idx, Name, GEPNoWrapFlags::inBounds());
   }
 
   Value *CreateConstGEP2_32(Type *Ty, Value *Ptr, unsigned Idx0, unsigned Idx1,
@@ -1960,11 +1955,7 @@ public:
       ConstantInt::get(Type::getInt32Ty(Context), Idx0),
       ConstantInt::get(Type::getInt32Ty(Context), Idx1)
     };
-
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idxs, NWFlags))
-      return V;
-
-    return Insert(GetElementPtrInst::Create(Ty, Ptr, Idxs, NWFlags), Name);
+    return CreateGEP(Ty, Ptr, Idxs, Name, NWFlags);
   }
 
   Value *CreateConstInBoundsGEP2_32(Type *Ty, Value *Ptr, unsigned Idx0,
@@ -1973,31 +1964,19 @@ public:
       ConstantInt::get(Type::getInt32Ty(Context), Idx0),
       ConstantInt::get(Type::getInt32Ty(Context), Idx1)
     };
-
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idxs, GEPNoWrapFlags::inBounds()))
-      return V;
-
-    return Insert(GetElementPtrInst::CreateInBounds(Ty, Ptr, Idxs), Name);
+    return CreateGEP(Ty, Ptr, Idxs, Name, GEPNoWrapFlags::inBounds());
   }
 
   Value *CreateConstGEP1_64(Type *Ty, Value *Ptr, uint64_t Idx0,
                             const Twine &Name = "") {
     Value *Idx = ConstantInt::get(Type::getInt64Ty(Context), Idx0);
-
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idx, GEPNoWrapFlags::none()))
-      return V;
-
-    return Insert(GetElementPtrInst::Create(Ty, Ptr, Idx), Name);
+    return CreateGEP(Ty, Ptr, Idx, Name, GEPNoWrapFlags::none());
   }
 
   Value *CreateConstInBoundsGEP1_64(Type *Ty, Value *Ptr, uint64_t Idx0,
                                     const Twine &Name = "") {
     Value *Idx = ConstantInt::get(Type::getInt64Ty(Context), Idx0);
-
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idx, GEPNoWrapFlags::inBounds()))
-      return V;
-
-    return Insert(GetElementPtrInst::CreateInBounds(Ty, Ptr, Idx), Name);
+    return CreateGEP(Ty, Ptr, Idx, Name, GEPNoWrapFlags::inBounds());
   }
 
   Value *CreateConstGEP2_64(Type *Ty, Value *Ptr, uint64_t Idx0, uint64_t Idx1,
@@ -2006,11 +1985,7 @@ public:
       ConstantInt::get(Type::getInt64Ty(Context), Idx0),
       ConstantInt::get(Type::getInt64Ty(Context), Idx1)
     };
-
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idxs, GEPNoWrapFlags::none()))
-      return V;
-
-    return Insert(GetElementPtrInst::Create(Ty, Ptr, Idxs), Name);
+    return CreateGEP(Ty, Ptr, Idxs, Name, GEPNoWrapFlags::none());
   }
 
   Value *CreateConstInBoundsGEP2_64(Type *Ty, Value *Ptr, uint64_t Idx0,
@@ -2019,11 +1994,7 @@ public:
       ConstantInt::get(Type::getInt64Ty(Context), Idx0),
       ConstantInt::get(Type::getInt64Ty(Context), Idx1)
     };
-
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idxs, GEPNoWrapFlags::inBounds()))
-      return V;
-
-    return Insert(GetElementPtrInst::CreateInBounds(Ty, Ptr, Idxs), Name);
+    return CreateGEP(Ty, Ptr, Idxs, Name, GEPNoWrapFlags::inBounds());
   }
 
   Value *CreateStructGEP(Type *Ty, Value *Ptr, unsigned Idx,
@@ -2188,7 +2159,7 @@ public:
                       FMFSource);
   }
   Value *CreatePtrToAddr(Value *V, const Twine &Name = "") {
-    return CreateCast(Instruction::PtrToInt, V,
+    return CreateCast(Instruction::PtrToAddr, V,
                       BB->getDataLayout().getAddressType(V->getType()), Name);
   }
   Value *CreatePtrToInt(Value *V, Type *DestTy,
@@ -2544,6 +2515,17 @@ public:
       Function *Callee, ArrayRef<Value *> Args, const Twine &Name = "",
       std::optional<RoundingMode> Rounding = std::nullopt,
       std::optional<fp::ExceptionBehavior> Except = std::nullopt);
+
+  LLVM_ABI Value *CreateSelectWithUnknownProfile(Value *C, Value *True,
+                                                 Value *False,
+                                                 StringRef PassName,
+                                                 const Twine &Name = "");
+
+  LLVM_ABI Value *CreateSelectFMFWithUnknownProfile(Value *C, Value *True,
+                                                    Value *False,
+                                                    FMFSource FMFSource,
+                                                    StringRef PassName,
+                                                    const Twine &Name = "");
 
   LLVM_ABI Value *CreateSelect(Value *C, Value *True, Value *False,
                                const Twine &Name = "",

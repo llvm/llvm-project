@@ -66,7 +66,7 @@ define void @inline_me() !dbg !13 {
 !10 = !DIBasicType(name: "ty32", size: 32, encoding: DW_ATE_unsigned)
 !11 = !DILocation(line: 1, column: 1, scope: !6)
 !12 = !DILabel(scope: !6, name: "bye", file: !1, line: 28)
-!13 = distinct !DISubprogram(name: "inline_me", linkageName: "inline_me", scope: null, file: !1, line: 1, type: !7, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: true, unit: !0, retainedNodes: !8)
+!13 = distinct !DISubprogram(name: "inline_me", linkageName: "inline_me", scope: null, file: !1, line: 1, type: !7, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: true, unit: !0, retainedNodes: !2)
 !14 = !DILabel(scope: !13, name: "label_in_@inline_me", file: !1, line: 29)
 !15 = !DILocation(line: 2, column: 2, scope: !13, inlinedAt: !11)
 !16 = !DILabel(scope: !17, name: "scoped_label_in_foo", file: !1, line: 30)

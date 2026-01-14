@@ -11,5 +11,5 @@ struct Simple : public Base {
   // CHECK-MESSAGES-NOT: warning:
   virtual void f();
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer using
-  // CHECK-FIXES: {{^}}  void f() override;
+  // CHECK-FIXES: void f() override;
 };

@@ -36,7 +36,7 @@ class SparcDisassembler : public MCDisassembler {
 public:
   SparcDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx)
       : MCDisassembler(STI, Ctx) {}
-  virtual ~SparcDisassembler() = default;
+  ~SparcDisassembler() override = default;
 
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,

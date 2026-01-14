@@ -42,7 +42,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
 #include <functional>
@@ -834,10 +833,10 @@ static bool isMergeableIndexLdSt(MachineInstr &MI, int &Scale) {
   }
 }
 
-static bool isRewritableImplicitDef(unsigned Opc) {
-  switch (Opc) {
+static bool isRewritableImplicitDef(const MachineOperand &MO) {
+  switch (MO.getParent()->getOpcode()) {
   default:
-    return false;
+    return MO.isRenamable();
   case AArch64::ORRWrs:
   case AArch64::ADDWri:
     return true;
@@ -1048,7 +1047,7 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
                         MI.getRegClassConstraint(OpIdx, TII, TRI))
                   MatchingReg = GetMatchingSubReg(RC);
                 else {
-                  if (!isRewritableImplicitDef(MI.getOpcode()))
+                  if (!isRewritableImplicitDef(MOP))
                     continue;
                   MatchingReg = GetMatchingSubReg(
                       TRI->getMinimalPhysRegClass(MOP.getReg()));
@@ -1386,6 +1385,25 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
       if (MOP.isReg() && MOP.isKill())
         DefinedInBB.addReg(MOP.getReg());
 
+  // Copy over any implicit-def operands. This is like MI.copyImplicitOps, but
+  // only copies implicit defs and makes sure that each operand is only added
+  // once in case of duplicates.
+  auto CopyImplicitOps = [&](MachineBasicBlock::iterator MI1,
+                             MachineBasicBlock::iterator MI2) {
+    SmallSetVector<Register, 4> Ops;
+    for (const MachineOperand &MO :
+         llvm::drop_begin(MI1->operands(), MI1->getDesc().getNumOperands()))
+      if (MO.isReg() && MO.isImplicit() && MO.isDef())
+        Ops.insert(MO.getReg());
+    for (const MachineOperand &MO :
+         llvm::drop_begin(MI2->operands(), MI2->getDesc().getNumOperands()))
+      if (MO.isReg() && MO.isImplicit() && MO.isDef())
+        Ops.insert(MO.getReg());
+    for (auto Op : Ops)
+      MIB.addDef(Op, RegState::Implicit);
+  };
+  CopyImplicitOps(I, Paired);
+
   // Erase the old instructions.
   I->eraseFromParent();
   Paired->eraseFromParent();
@@ -1721,7 +1739,7 @@ static bool canRenameMOP(const MachineOperand &MOP,
     // them must be known. For example, in ORRWrs the implicit-def
     // corresponds to the result register.
     if (MOP.isImplicit() && MOP.isDef()) {
-      if (!isRewritableImplicitDef(MOP.getParent()->getOpcode()))
+      if (!isRewritableImplicitDef(MOP))
         return false;
       return TRI->isSuperOrSubRegisterEq(
           MOP.getParent()->getOperand(0).getReg(), MOP.getReg());

@@ -46,8 +46,11 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
+
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/ModRef.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -56,6 +59,10 @@
 #include <vector>
 
 using namespace llvm;
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
 
 MetadataAsValue::MetadataAsValue(Type *Ty, Metadata *MD)
     : Value(Ty, MetadataAsValueVal), MD(MD) {
@@ -1254,6 +1261,9 @@ MDNode *MDNode::getMergedProfMetadata(MDNode *A, MDNode *B,
       BCall->getCalledFunction())
     return mergeDirectCallProfMetadata(A, B, AInstr, BInstr);
 
+  if (A == B && !ProfcheckDisableMetadataFixes)
+    return A;
+
   // The rest of the cases are not implemented but could be added
   // when there are use cases.
   return nullptr;
@@ -1433,6 +1443,40 @@ MDNode *MDNode::getMostGenericAlignmentOrDereferenceable(MDNode *A, MDNode *B) {
   if (AVal->getZExtValue() < BVal->getZExtValue())
     return A;
   return B;
+}
+
+CaptureComponents MDNode::toCaptureComponents(const MDNode *MD) {
+  if (!MD)
+    return CaptureComponents::All;
+
+  CaptureComponents CC = CaptureComponents::None;
+  for (Metadata *Op : MD->operands()) {
+    CaptureComponents Component =
+        StringSwitch<CaptureComponents>(cast<MDString>(Op)->getString())
+            .Case("address", CaptureComponents::Address)
+            .Case("address_is_null", CaptureComponents::AddressIsNull)
+            .Case("provenance", CaptureComponents::Provenance)
+            .Case("read_provenance", CaptureComponents::ReadProvenance);
+    CC |= Component;
+  }
+  return CC;
+}
+
+MDNode *MDNode::fromCaptureComponents(LLVMContext &Ctx, CaptureComponents CC) {
+  assert(!capturesNothing(CC) && "Can't encode captures(none)");
+  if (capturesAll(CC))
+    return nullptr;
+
+  SmallVector<Metadata *> Components;
+  if (capturesAddressIsNullOnly(CC))
+    Components.push_back(MDString::get(Ctx, "address_is_null"));
+  else if (capturesAddress(CC))
+    Components.push_back(MDString::get(Ctx, "address"));
+  if (capturesReadProvenanceOnly(CC))
+    Components.push_back(MDString::get(Ctx, "read_provenance"));
+  else if (capturesFullProvenance(CC))
+    Components.push_back(MDString::get(Ctx, "provenance"));
+  return MDNode::get(Ctx, Components);
 }
 
 //===----------------------------------------------------------------------===//

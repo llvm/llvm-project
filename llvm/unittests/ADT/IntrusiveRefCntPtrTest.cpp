@@ -25,9 +25,9 @@ struct SimpleRefCounted : Base<SimpleRefCounted<Base>> {
 
 template <typename T> struct IntrusiveRefCntPtrTest : testing::Test {};
 
-typedef ::testing::Types<SimpleRefCounted<RefCountedBase>,
-                         SimpleRefCounted<ThreadSafeRefCountedBase>>
-    IntrusiveRefCntTypes;
+using IntrusiveRefCntTypes =
+    ::testing::Types<SimpleRefCounted<RefCountedBase>,
+                     SimpleRefCounted<ThreadSafeRefCountedBase>>;
 TYPED_TEST_SUITE(IntrusiveRefCntPtrTest, IntrusiveRefCntTypes, );
 
 TYPED_TEST(IntrusiveRefCntPtrTest, RefCountedBaseCopyDoesNotLeak) {

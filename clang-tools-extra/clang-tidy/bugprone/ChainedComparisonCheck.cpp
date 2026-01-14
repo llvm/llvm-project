@@ -11,7 +11,6 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include <algorithm>
 
 using namespace clang::ast_matchers;
 
@@ -50,6 +49,8 @@ private:
   void extract(const BinaryOperator *Op);
   void extract(const CXXOperatorCallExpr *Op);
 };
+
+} // namespace
 
 void ChainedComparisonData::add(const Expr *Operand) {
   if (!Name.empty())
@@ -111,7 +112,14 @@ void ChainedComparisonData::extract(const Expr *Op) {
   }
 }
 
-} // namespace
+ChainedComparisonCheck::ChainedComparisonCheck(StringRef Name,
+                                               ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      IgnoreMacros(Options.get("IgnoreMacros", false)) {}
+
+void ChainedComparisonCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoreMacros", IgnoreMacros);
+}
 
 void ChainedComparisonCheck::registerMatchers(MatchFinder *Finder) {
   const auto OperatorMatcher = expr(anyOf(
@@ -128,6 +136,9 @@ void ChainedComparisonCheck::registerMatchers(MatchFinder *Finder) {
 
 void ChainedComparisonCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedOperator = Result.Nodes.getNodeAs<Expr>("op");
+
+  if (IgnoreMacros && MatchedOperator->getBeginLoc().isMacroID())
+    return;
 
   ChainedComparisonData Data(MatchedOperator);
   if (Data.Operands.empty())

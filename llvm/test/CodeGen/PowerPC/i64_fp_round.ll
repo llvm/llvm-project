@@ -4,10 +4,9 @@
 ; for minor code generation differences.
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=-fpcvt < %s | FileCheck %s
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=-fpcvt -mattr=-isel < %s | FileCheck %s --check-prefix=CHECK-NO-ISEL
-; Also check that with -enable-unsafe-fp-math we do not get that extra
+; Also check that with fpexcept.ignore we do not get that extra
 ; code sequence.  Simply verify that there is no "isel" present.
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=-fpcvt -enable-unsafe-fp-math < %s | FileCheck %s -check-prefix=CHECK-UNSAFE
-; CHECK-UNSAFE-NOT: isel
+
 target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v128:128:128-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -15,9 +14,8 @@ define float @test(i64 %x) nounwind readnone {
 ; Verify that we get the code sequence needed to avoid double-rounding.
 ; Note that only parts of the sequence are checked for here, to allow
 ; for minor code generation differences.
-; Also check that with -enable-unsafe-fp-math we do not get that extra
+; Also check that with fpexcept.ignore we do not get that extra
 ; code sequence.  Simply verify that there is no "isel" present.
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=-fpcvt -enable-unsafe-fp-math < %s | FileCheck %s -check-prefix=CHECK-UNSAFE
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    clrldi 4, 3, 53
@@ -51,18 +49,10 @@ define float @test(i64 %x) nounwind readnone {
 ; CHECK-NO-ISEL-NEXT:    xscvsxddp 0, 0
 ; CHECK-NO-ISEL-NEXT:    frsp 1, 0
 ; CHECK-NO-ISEL-NEXT:    blr
-;
-; CHECK-UNSAFE-LABEL: test:
-; CHECK-UNSAFE:       # %bb.0: # %entry
-; CHECK-UNSAFE-NEXT:    std 3, -8(1)
-; CHECK-UNSAFE-NEXT:    lfd 0, -8(1)
-; CHECK-UNSAFE-NEXT:    xscvsxddp 0, 0
-; CHECK-UNSAFE-NEXT:    frsp 1, 0
-; CHECK-UNSAFE-NEXT:    blr
 
 entry:
   %conv = sitofp i64 %x to float
   ret float %conv
 }
 
-
+; TODO: Add sitofp afn test.

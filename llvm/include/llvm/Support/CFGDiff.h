@@ -21,7 +21,6 @@
 #include "llvm/Support/type_traits.h"
 #include <cassert>
 #include <cstddef>
-#include <iterator>
 
 // Two booleans are used to define orders in graphs:
 // InverseGraph defines when we need to reverse the whole graph and is as such

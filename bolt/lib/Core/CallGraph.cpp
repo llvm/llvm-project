@@ -22,7 +22,7 @@
 #undef USE_SSECRC
 #endif
 
-static LLVM_ATTRIBUTE_UNUSED inline size_t hash_int64_fallback(int64_t k) {
+[[maybe_unused]] static inline size_t hash_int64_fallback(int64_t k) {
   uint64_t key = (unsigned long long)k;
   // "64 bit Mix Functions", from Thomas Wang's "Integer Hash Function."
   // http://www.concentric.net/~ttwang/tech/inthash.htm
@@ -35,7 +35,7 @@ static LLVM_ATTRIBUTE_UNUSED inline size_t hash_int64_fallback(int64_t k) {
   return static_cast<size_t>(static_cast<uint32_t>(key));
 }
 
-static LLVM_ATTRIBUTE_UNUSED inline size_t hash_int64(int64_t k) {
+[[maybe_unused]] static inline size_t hash_int64(int64_t k) {
 #if defined(USE_SSECRC) && defined(__SSE4_2__)
   size_t h = 0;
   __asm("crc32q %1, %0\n" : "+r"(h) : "rm"(k));

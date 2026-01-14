@@ -18,6 +18,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Transforms/WalkPatternRewriteDriver.h"
 
 using namespace mlir;
 
@@ -68,6 +69,17 @@ MlirBlock mlirRewriterBaseGetInsertionBlock(MlirRewriterBase rewriter) {
 
 MlirBlock mlirRewriterBaseGetBlock(MlirRewriterBase rewriter) {
   return wrap(unwrap(rewriter)->getBlock());
+}
+
+MlirOperation
+mlirRewriterBaseGetOperationAfterInsertion(MlirRewriterBase rewriter) {
+  mlir::RewriterBase *base = unwrap(rewriter);
+  mlir::Block *block = base->getInsertionBlock();
+  mlir::Block::iterator it = base->getInsertionPoint();
+  if (it == block->end())
+    return {nullptr};
+
+  return wrap(std::addressof(*it));
 }
 
 //===----------------------------------------------------------------------===//
@@ -259,61 +271,251 @@ void mlirIRRewriterDestroy(MlirRewriterBase rewriter) {
 /// RewritePatternSet and FrozenRewritePatternSet API
 //===----------------------------------------------------------------------===//
 
-inline mlir::RewritePatternSet &unwrap(MlirRewritePatternSet module) {
-  assert(module.ptr && "unexpected null module");
-  return *(static_cast<mlir::RewritePatternSet *>(module.ptr));
-}
-
-inline MlirRewritePatternSet wrap(mlir::RewritePatternSet *module) {
-  return {module};
-}
-
-inline mlir::FrozenRewritePatternSet *
-unwrap(MlirFrozenRewritePatternSet module) {
-  assert(module.ptr && "unexpected null module");
-  return static_cast<mlir::FrozenRewritePatternSet *>(module.ptr);
-}
-
-inline MlirFrozenRewritePatternSet wrap(mlir::FrozenRewritePatternSet *module) {
-  return {module};
-}
-
-MlirFrozenRewritePatternSet mlirFreezeRewritePattern(MlirRewritePatternSet op) {
-  auto *m = new mlir::FrozenRewritePatternSet(std::move(unwrap(op)));
-  op.ptr = nullptr;
+MlirFrozenRewritePatternSet
+mlirFreezeRewritePattern(MlirRewritePatternSet set) {
+  auto *m = new mlir::FrozenRewritePatternSet(std::move(*unwrap(set)));
+  set.ptr = nullptr;
   return wrap(m);
 }
 
-void mlirFrozenRewritePatternSetDestroy(MlirFrozenRewritePatternSet op) {
-  delete unwrap(op);
-  op.ptr = nullptr;
+void mlirFrozenRewritePatternSetDestroy(MlirFrozenRewritePatternSet set) {
+  delete unwrap(set);
+  set.ptr = nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+/// GreedyRewriteDriverConfig API
+//===----------------------------------------------------------------------===//
+
+inline mlir::GreedyRewriteConfig *unwrap(MlirGreedyRewriteDriverConfig config) {
+  assert(config.ptr && "unexpected null config");
+  return static_cast<mlir::GreedyRewriteConfig *>(config.ptr);
+}
+
+inline MlirGreedyRewriteDriverConfig wrap(mlir::GreedyRewriteConfig *config) {
+  return {config};
+}
+
+MlirGreedyRewriteDriverConfig mlirGreedyRewriteDriverConfigCreate() {
+  return wrap(new mlir::GreedyRewriteConfig());
+}
+
+void mlirGreedyRewriteDriverConfigDestroy(
+    MlirGreedyRewriteDriverConfig config) {
+  delete unwrap(config);
+}
+
+void mlirGreedyRewriteDriverConfigSetMaxIterations(
+    MlirGreedyRewriteDriverConfig config, int64_t maxIterations) {
+  unwrap(config)->setMaxIterations(maxIterations);
+}
+
+void mlirGreedyRewriteDriverConfigSetMaxNumRewrites(
+    MlirGreedyRewriteDriverConfig config, int64_t maxNumRewrites) {
+  unwrap(config)->setMaxNumRewrites(maxNumRewrites);
+}
+
+void mlirGreedyRewriteDriverConfigSetUseTopDownTraversal(
+    MlirGreedyRewriteDriverConfig config, bool useTopDownTraversal) {
+  unwrap(config)->setUseTopDownTraversal(useTopDownTraversal);
+}
+
+void mlirGreedyRewriteDriverConfigEnableFolding(
+    MlirGreedyRewriteDriverConfig config, bool enable) {
+  unwrap(config)->enableFolding(enable);
+}
+
+void mlirGreedyRewriteDriverConfigSetStrictness(
+    MlirGreedyRewriteDriverConfig config,
+    MlirGreedyRewriteStrictness strictness) {
+  mlir::GreedyRewriteStrictness cppStrictness;
+  switch (strictness) {
+  case MLIR_GREEDY_REWRITE_STRICTNESS_ANY_OP:
+    cppStrictness = mlir::GreedyRewriteStrictness::AnyOp;
+    break;
+  case MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_AND_NEW_OPS:
+    cppStrictness = mlir::GreedyRewriteStrictness::ExistingAndNewOps;
+    break;
+  case MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_OPS:
+    cppStrictness = mlir::GreedyRewriteStrictness::ExistingOps;
+    break;
+  }
+  unwrap(config)->setStrictness(cppStrictness);
+}
+
+void mlirGreedyRewriteDriverConfigSetRegionSimplificationLevel(
+    MlirGreedyRewriteDriverConfig config, MlirGreedySimplifyRegionLevel level) {
+  mlir::GreedySimplifyRegionLevel cppLevel;
+  switch (level) {
+  case MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_DISABLED:
+    cppLevel = mlir::GreedySimplifyRegionLevel::Disabled;
+    break;
+  case MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_NORMAL:
+    cppLevel = mlir::GreedySimplifyRegionLevel::Normal;
+    break;
+  case MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_AGGRESSIVE:
+    cppLevel = mlir::GreedySimplifyRegionLevel::Aggressive;
+    break;
+  }
+  unwrap(config)->setRegionSimplificationLevel(cppLevel);
+}
+
+void mlirGreedyRewriteDriverConfigEnableConstantCSE(
+    MlirGreedyRewriteDriverConfig config, bool enable) {
+  unwrap(config)->enableConstantCSE(enable);
+}
+
+int64_t mlirGreedyRewriteDriverConfigGetMaxIterations(
+    MlirGreedyRewriteDriverConfig config) {
+  return unwrap(config)->getMaxIterations();
+}
+
+int64_t mlirGreedyRewriteDriverConfigGetMaxNumRewrites(
+    MlirGreedyRewriteDriverConfig config) {
+  return unwrap(config)->getMaxNumRewrites();
+}
+
+bool mlirGreedyRewriteDriverConfigGetUseTopDownTraversal(
+    MlirGreedyRewriteDriverConfig config) {
+  return unwrap(config)->getUseTopDownTraversal();
+}
+
+bool mlirGreedyRewriteDriverConfigIsFoldingEnabled(
+    MlirGreedyRewriteDriverConfig config) {
+  return unwrap(config)->isFoldingEnabled();
+}
+
+MlirGreedyRewriteStrictness mlirGreedyRewriteDriverConfigGetStrictness(
+    MlirGreedyRewriteDriverConfig config) {
+  mlir::GreedyRewriteStrictness cppStrictness = unwrap(config)->getStrictness();
+  switch (cppStrictness) {
+  case mlir::GreedyRewriteStrictness::AnyOp:
+    return MLIR_GREEDY_REWRITE_STRICTNESS_ANY_OP;
+  case mlir::GreedyRewriteStrictness::ExistingAndNewOps:
+    return MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_AND_NEW_OPS;
+  case mlir::GreedyRewriteStrictness::ExistingOps:
+    return MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_OPS;
+  }
+}
+
+MlirGreedySimplifyRegionLevel
+mlirGreedyRewriteDriverConfigGetRegionSimplificationLevel(
+    MlirGreedyRewriteDriverConfig config) {
+  mlir::GreedySimplifyRegionLevel cppLevel =
+      unwrap(config)->getRegionSimplificationLevel();
+  switch (cppLevel) {
+  case mlir::GreedySimplifyRegionLevel::Disabled:
+    return MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_DISABLED;
+  case mlir::GreedySimplifyRegionLevel::Normal:
+    return MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_NORMAL;
+  case mlir::GreedySimplifyRegionLevel::Aggressive:
+    return MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_AGGRESSIVE;
+  }
+}
+
+bool mlirGreedyRewriteDriverConfigIsConstantCSEEnabled(
+    MlirGreedyRewriteDriverConfig config) {
+  return unwrap(config)->isConstantCSEEnabled();
 }
 
 MlirLogicalResult
 mlirApplyPatternsAndFoldGreedily(MlirModule op,
                                  MlirFrozenRewritePatternSet patterns,
-                                 MlirGreedyRewriteDriverConfig) {
-  return wrap(mlir::applyPatternsGreedily(unwrap(op), *unwrap(patterns)));
+                                 MlirGreedyRewriteDriverConfig config) {
+  return wrap(mlir::applyPatternsGreedily(unwrap(op), *unwrap(patterns),
+                                          *unwrap(config)));
 }
 
 MlirLogicalResult
 mlirApplyPatternsAndFoldGreedilyWithOp(MlirOperation op,
                                        MlirFrozenRewritePatternSet patterns,
-                                       MlirGreedyRewriteDriverConfig) {
-  return wrap(mlir::applyPatternsGreedily(unwrap(op), *unwrap(patterns)));
+                                       MlirGreedyRewriteDriverConfig config) {
+  return wrap(mlir::applyPatternsGreedily(unwrap(op), *unwrap(patterns),
+                                          *unwrap(config)));
+}
+
+void mlirWalkAndApplyPatterns(MlirOperation op,
+                              MlirFrozenRewritePatternSet patterns) {
+  mlir::walkAndApplyPatterns(unwrap(op), *unwrap(patterns));
 }
 
 //===----------------------------------------------------------------------===//
 /// PatternRewriter API
 //===----------------------------------------------------------------------===//
 
-inline mlir::PatternRewriter *unwrap(MlirPatternRewriter rewriter) {
-  assert(rewriter.ptr && "unexpected null rewriter");
-  return static_cast<mlir::PatternRewriter *>(rewriter.ptr);
+MlirRewriterBase mlirPatternRewriterAsBase(MlirPatternRewriter rewriter) {
+  return wrap(static_cast<mlir::RewriterBase *>(unwrap(rewriter)));
 }
 
-inline MlirPatternRewriter wrap(mlir::PatternRewriter *rewriter) {
-  return {rewriter};
+//===----------------------------------------------------------------------===//
+/// RewritePattern API
+//===----------------------------------------------------------------------===//
+
+namespace mlir {
+
+class ExternalRewritePattern : public mlir::RewritePattern {
+public:
+  ExternalRewritePattern(MlirRewritePatternCallbacks callbacks, void *userData,
+                         StringRef rootName, PatternBenefit benefit,
+                         MLIRContext *context,
+                         ArrayRef<StringRef> generatedNames)
+      : RewritePattern(rootName, benefit, context, generatedNames),
+        callbacks(callbacks), userData(userData) {
+    if (callbacks.construct)
+      callbacks.construct(userData);
+  }
+
+  ~ExternalRewritePattern() {
+    if (callbacks.destruct)
+      callbacks.destruct(userData);
+  }
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    return unwrap(callbacks.matchAndRewrite(
+        wrap(static_cast<const mlir::RewritePattern *>(this)), wrap(op),
+        wrap(&rewriter), userData));
+  }
+
+private:
+  MlirRewritePatternCallbacks callbacks;
+  void *userData;
+};
+
+} // namespace mlir
+
+MlirRewritePattern mlirOpRewritePatternCreate(
+    MlirStringRef rootName, unsigned benefit, MlirContext context,
+    MlirRewritePatternCallbacks callbacks, void *userData,
+    size_t nGeneratedNames, MlirStringRef *generatedNames) {
+  std::vector<mlir::StringRef> generatedNamesVec;
+  generatedNamesVec.reserve(nGeneratedNames);
+  for (size_t i = 0; i < nGeneratedNames; ++i) {
+    generatedNamesVec.push_back(unwrap(generatedNames[i]));
+  }
+  return wrap(new mlir::ExternalRewritePattern(
+      callbacks, userData, unwrap(rootName), PatternBenefit(benefit),
+      unwrap(context), generatedNamesVec));
+}
+
+//===----------------------------------------------------------------------===//
+/// RewritePatternSet API
+//===----------------------------------------------------------------------===//
+
+MlirRewritePatternSet mlirRewritePatternSetCreate(MlirContext context) {
+  return wrap(new mlir::RewritePatternSet(unwrap(context)));
+}
+
+void mlirRewritePatternSetDestroy(MlirRewritePatternSet set) {
+  delete unwrap(set);
+}
+
+void mlirRewritePatternSetAdd(MlirRewritePatternSet set,
+                              MlirRewritePattern pattern) {
+  std::unique_ptr<mlir::RewritePattern> patternPtr(
+      const_cast<mlir::RewritePattern *>(unwrap(pattern)));
+  pattern.ptr = nullptr;
+  unwrap(set)->add(std::move(patternPtr));
 }
 
 //===----------------------------------------------------------------------===//
@@ -321,15 +523,6 @@ inline MlirPatternRewriter wrap(mlir::PatternRewriter *rewriter) {
 //===----------------------------------------------------------------------===//
 
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
-inline mlir::PDLPatternModule *unwrap(MlirPDLPatternModule module) {
-  assert(module.ptr && "unexpected null module");
-  return static_cast<mlir::PDLPatternModule *>(module.ptr);
-}
-
-inline MlirPDLPatternModule wrap(mlir::PDLPatternModule *module) {
-  return {module};
-}
-
 MlirPDLPatternModule mlirPDLPatternModuleFromModule(MlirModule op) {
   return wrap(new mlir::PDLPatternModule(
       mlir::OwningOpRef<mlir::ModuleOp>(unwrap(op))));
@@ -345,22 +538,6 @@ mlirRewritePatternSetFromPDLPatternModule(MlirPDLPatternModule op) {
   auto *m = new mlir::RewritePatternSet(std::move(*unwrap(op)));
   op.ptr = nullptr;
   return wrap(m);
-}
-
-inline const mlir::PDLValue *unwrap(MlirPDLValue value) {
-  assert(value.ptr && "unexpected null PDL value");
-  return static_cast<const mlir::PDLValue *>(value.ptr);
-}
-
-inline MlirPDLValue wrap(const mlir::PDLValue *value) { return {value}; }
-
-inline mlir::PDLResultList *unwrap(MlirPDLResultList results) {
-  assert(results.ptr && "unexpected null PDL results");
-  return static_cast<mlir::PDLResultList *>(results.ptr);
-}
-
-inline MlirPDLResultList wrap(mlir::PDLResultList *results) {
-  return {results};
 }
 
 MlirValue mlirPDLValueAsValue(MlirPDLValue value) {

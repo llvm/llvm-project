@@ -186,9 +186,6 @@ def access_kind_subobject : TextSubstitution<
 def access_kind_volatile : TextSubstitution<
   "%select{read of|read of|assignment to|increment of|decrement of|"
   "<ERROR>|<ERROR>|<ERROR>|<ERROR>|<ERROR>|<ERROR>}0">;
-def note_constexpr_lifetime_ended : Note<
-  "%sub{access_kind}0 %select{temporary|variable}1 whose "
-  "%plural{8:storage duration|:lifetime}0 has ended">;
 def note_constexpr_access_uninit : Note<
   "%sub{access_kind_subobject}0 "
   "%select{object outside its lifetime|uninitialized object}1 "
@@ -403,6 +400,12 @@ def note_constexpr_assumption_failed : Note<
 def note_constexpr_countzeroes_zero : Note<
   "evaluation of %select{__builtin_elementwise_clzg|__builtin_elementwise_ctzg}0 "
   "with a zero value is undefined">;
+def note_constexpr_infer_alloc_token_type_inference_failed : Note<
+  "could not infer allocation type for __builtin_infer_alloc_token">;
+def note_constexpr_infer_alloc_token_no_metadata : Note<
+  "could not get token metadata for inferred type">;
+def note_constexpr_infer_alloc_token_stateful_mode : Note<
+  "stateful alloc token mode not supported in constexpr">;
 def err_experimental_clang_interp_failed : Error<
   "the experimental clang interpreter failed to evaluate an expression">;
 
@@ -1033,6 +1036,9 @@ def warn_npot_ms_struct : Warning<
   "ms_struct may not produce Microsoft-compatible layouts with fundamental "
   "data types with sizes that aren't a power of two">,
   DefaultError, InGroup<IncompatibleMSStruct>;
+
+def err_itanium_layout_unimplemented : Error<
+  "Itanium-compatible layout for the Microsoft C++ ABI is not yet supported">;
 
 // -Wpadded-bitfield
 def warn_padded_struct_bitfield : Warning<

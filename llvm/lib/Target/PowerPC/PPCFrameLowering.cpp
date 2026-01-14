@@ -2520,11 +2520,11 @@ bool PPCFrameLowering::spillCalleeSavedRegisters(
         // saved vector registers.
         if (Subtarget.needsSwapsForVSXMemOps() &&
             !MF->getFunction().hasFnAttribute(Attribute::NoUnwind))
-          TII.storeRegToStackSlotNoUpd(MBB, MI, Reg, !IsLiveIn,
-                                       I.getFrameIdx(), RC, TRI);
+          TII.storeRegToStackSlotNoUpd(MBB, MI, Reg, !IsLiveIn, I.getFrameIdx(),
+                                       RC);
         else
           TII.storeRegToStackSlot(MBB, MI, Reg, !IsLiveIn, I.getFrameIdx(), RC,
-                                  TRI, Register());
+                                  Register());
       }
     }
   }
@@ -2690,10 +2690,9 @@ bool PPCFrameLowering::restoreCalleeSavedRegisters(
         // saved vector registers.
         if (Subtarget.needsSwapsForVSXMemOps() &&
             !MF->getFunction().hasFnAttribute(Attribute::NoUnwind))
-          TII.loadRegFromStackSlotNoUpd(MBB, I, Reg, CSI[i].getFrameIdx(), RC,
-                                        TRI);
+          TII.loadRegFromStackSlotNoUpd(MBB, I, Reg, CSI[i].getFrameIdx(), RC);
         else
-          TII.loadRegFromStackSlot(MBB, I, Reg, CSI[i].getFrameIdx(), RC, TRI,
+          TII.loadRegFromStackSlot(MBB, I, Reg, CSI[i].getFrameIdx(), RC,
                                    Register());
 
         assert(I != MBB.begin() &&

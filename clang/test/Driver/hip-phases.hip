@@ -33,32 +33,33 @@
 // BIN-DAG: [[P4:[0-9]+]]: preprocessor, {[[P3]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH]])
 // BIN-DAG: [[P5:[0-9]+]]: compiler, {[[P4]]}, ir, (device-[[T]], [[ARCH]])
 // OLDN-DAG: [[P6:[0-9]+]]: backend, {[[P5]]}, assembler, (device-[[T]], [[ARCH]])
-// NEW-DAG: [[P6:[0-9]+]]: backend, {[[P5]]}, ir, (device-[[T]], [[ARCH]])
 // OLDN-DAG: [[P7:[0-9]+]]: assembler, {[[P6]]}, object, (device-[[T]], [[ARCH]])
 // OLDR-DAG: [[P7:[0-9]+]]: backend, {[[P5]]}, ir, (device-[[T]], [[ARCH]])
 // OLD-DAG: [[P8:[0-9]+]]: linker, {[[P7]]}, image, (device-[[T]], [[ARCH]])
 // OLD-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P8]]}, image
-// NEW-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P6]]}, ir
+// NEW-DAG: [[P6:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P5]]}, ir
 // OLDN-DAG: [[P10:[0-9]+]]: linker, {[[P9]]}, hip-fatbin, (device-[[T]])
-// NEW-DAG: [[P10:[0-9]+]]: clang-offload-packager, {[[P9]]}, image, (device-[[T]])
+// NEW-DAG: [[P7:[0-9]+]]: llvm-offload-binary, {[[P6]]}, image, (device-[[T]])
+// NEWN-DAG: [[P8:[0-9]+]]: clang-linker-wrapper, {[[P7]]}, hip-fatbin, (device-[[T]])
+// NEWLTO-DAG: [[P8:[0-9]+]]: clang-linker-wrapper, {[[P7]]}, hip-fatbin, (device-[[T]])
 // OLDR-DAG: [[P10:[0-9]+]]: linker, {[[P9]]}, object, (device-[[T]])
 
 // OLDN-DAG: [[P11:[0-9]+]]: offload, "host-[[T]] (x86_64-unknown-linux-gnu)" {[[P2]]}, "device-[[T]] (amdgcn-amd-amdhsa)" {[[P10]]}, ir
-// NEW-DAG: [[P11:[0-9]+]]: offload, "host-[[T]] (x86_64-unknown-linux-gnu)" {[[P2]]}, "device-[[T]] (x86_64-unknown-linux-gnu)" {[[P10]]}, ir
+// NEWN-DAG: [[P9:[0-9]+]]: offload, "host-[[T]] (x86_64-unknown-linux-gnu)" {[[P2]]}, "device-[[T]] (amdgcn-amd-amdhsa)" {[[P8]]}, ir
+// NEWLTO-DAG: [[P9:[0-9]+]]: offload, "host-[[T]] (x86_64-unknown-linux-gnu)" {[[P2]]}, "device-[[T]] (amdgcn-amd-amdhsa)" {[[P8]]}, ir
+// NEWR-DAG: [[P8:[0-9]+]]: offload, "host-[[T]] (x86_64-unknown-linux-gnu)" {[[P2]]}, "device-[[T]] (x86_64-unknown-linux-gnu)" {[[P7]]}, ir
 // OLDR-DAG: [[P11:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa)" {[[P10]]}, object
 // OLDN-DAG: [[P12:[0-9]+]]: backend, {[[P11]]}, assembler, (host-[[T]])
 // OLDN-DAG: [[P13:[0-9]+]]: assembler, {[[P12]]}, object, (host-[[T]])
-// NEWN-DAG: [[P12:[0-9]+]]: backend, {[[P11]]}, assembler, (host-[[T]])
-// NEWN-DAG: [[P13:[0-9]+]]: assembler, {[[P12]]}, object, (host-[[T]])
-// NEWLTO-DAG: [[P13:[0-9]+]]: backend, {[[P11]]}, lto-bc, (host-hip)
-// NEWR-DAG: [[P12:[0-9]+]]: backend, {[[P11]]}, assembler, (host-[[T]])
-// NEWR-DAG: [[P13:[0-9]+]]: assembler, {[[P12]]}, object, (host-[[T]])
+// NEWN-DAG: [[P10:[0-9]+]]: backend, {[[P9]]}, assembler, (host-[[T]])
+// NEWN-DAG: [[P11:[0-9]+]]: assembler, {[[P10]]}, object, (host-[[T]])
+// NEWLTO-DAG: [[P10:[0-9]+]]: backend, {[[P9]]}, lto-bc, (host-hip)
+// NEWR-DAG: [[P9:[0-9]+]]: backend, {[[P8]]}, assembler, (host-[[T]])
+// NEWR-DAG: [[P10:[0-9]+]]: assembler, {[[P9]]}, object, (host-[[T]])
 // OLDN-DAG: [[P14:[0-9]+]]: linker, {[[P13]]}, image, (host-[[T]])
-// NEWN-DAG: [[P14:[0-9]+]]: clang-linker-wrapper, {[[P13]]}, object, (host-[[T]])
-// NEWLTO-DAG: [[P14:[0-9]+]]: clang-linker-wrapper, {[[P13]]}, object, (host-[[T]])
+// NEWN-DAG: [[P12:[0-9]+]]: clang-linker-wrapper, {[[P11]]}, image, (host-[[T]])
 // OLDR-DAG: [[P14:[0-9]+]]: linker, {[[P13]], [[P11]]}, image, (host-[[T]])
-// NEWR-DAG: [[P14:[0-9]+]]: clang-linker-wrapper, {[[P13]]}, image, (host-[[T]])
-// NEWN-DAG: [[P15:[0-9]+]]: linker, {[[P14]]}, image
+// NEWR-DAG: [[P11:[0-9]+]]: clang-linker-wrapper, {[[P10]]}, image, (host-[[T]])
 
 //
 // Test single gpu architecture up to the assemble phase.
@@ -613,7 +614,6 @@
 // MIXED-DAG: input, "{{.*}}empty.hip", hip, (device-hip, gfx803)
 // MIXED-DAG: input, "{{.*}}empty.hip", hip, (device-hip, gfx900)
 // MIXED-DAG: input, "{{.*}}empty.cpp", c++
-// MIXED-NEG-NOT: input, "{{.*}}empty.cpp", c++, (host-hip)
 // MIXED-NEG-NOT: input, "{{.*}}empty.cpp", c++, (device-hip
 
 // MIXED2-DAG: input, "{{.*}}empty.hip", hip, (host-hip)
@@ -658,17 +658,15 @@
 // LTO-NEXT: 3: input, "[[INPUT]]", hip, (device-hip, gfx908)
 // LTO-NEXT: 4: preprocessor, {3}, hip-cpp-output, (device-hip, gfx908)
 // LTO-NEXT: 5: compiler, {4}, ir, (device-hip, gfx908)
-// LTO-NEXT: 6: backend, {5}, lto-bc, (device-hip, gfx908)
-// LTO-NEXT: 7: offload, "device-hip (amdgcn-amd-amdhsa:gfx908)" {6}, lto-bc
-// LTO-NEXT: 8: input, "[[INPUT]]", hip, (device-hip, gfx90a)
-// LTO-NEXT: 9: preprocessor, {8}, hip-cpp-output, (device-hip, gfx90a)
-// LTO-NEXT: 10: compiler, {9}, ir, (device-hip, gfx90a)
-// LTO-NEXT: 11: backend, {10}, lto-bc, (device-hip, gfx90a)
-// LTO-NEXT: 12: offload, "device-hip (amdgcn-amd-amdhsa:gfx90a)" {11}, lto-bc
-// LTO-NEXT: 13: clang-offload-packager, {7, 12}, image, (device-hip)
-// LTO-NEXT: 14: offload, "host-hip (x86_64-unknown-linux-gnu)" {2}, "device-hip (x86_64-unknown-linux-gnu)" {13}, ir
-// LTO-NEXT: 15: backend, {14}, assembler, (host-hip)
-// LTO-NEXT: 16: assembler, {15}, object, (host-hip)
+// LTO-NEXT: 6: offload, "device-hip (amdgcn-amd-amdhsa:gfx908)" {5}, ir
+// LTO-NEXT: 7: input, "[[INPUT]]", hip, (device-hip, gfx90a)
+// LTO-NEXT: 8: preprocessor, {7}, hip-cpp-output, (device-hip, gfx90a)
+// LTO-NEXT: 9: compiler, {8}, ir, (device-hip, gfx90a)
+// LTO-NEXT: 10: offload, "device-hip (amdgcn-amd-amdhsa:gfx90a)" {9}, ir
+// LTO-NEXT: 11: llvm-offload-binary, {6, 10}, image, (device-hip)
+// LTO-NEXT: 12: offload, "host-hip (x86_64-unknown-linux-gnu)" {2}, "device-hip (x86_64-unknown-linux-gnu)" {11}, ir
+// LTO-NEXT: 13: backend, {12}, assembler, (host-hip)
+// LTO-NEXT: 14: assembler, {13}, object, (host-hip)
 
 //
 // Test the new driver when not bundling

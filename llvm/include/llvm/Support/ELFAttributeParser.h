@@ -17,7 +17,7 @@ namespace llvm {
 
 class ELFAttributeParser {
 public:
-  virtual ~ELFAttributeParser() {}
+  virtual ~ELFAttributeParser() = default;
 
   virtual Error parse(ArrayRef<uint8_t> Section, llvm::endianness Endian) {
     return llvm::Error::success();

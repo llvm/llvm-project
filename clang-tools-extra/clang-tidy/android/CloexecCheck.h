@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXECCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXECCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -29,9 +29,9 @@ public:
       : ClangTidyCheck(Name, Context) {}
 
 protected:
-  void
-  registerMatchersImpl(ast_matchers::MatchFinder *Finder,
-                       ast_matchers::internal::Matcher<FunctionDecl> Function);
+  void registerMatchersImpl(
+      ast_matchers::MatchFinder *Finder,
+      const ast_matchers::internal::Matcher<FunctionDecl> &Function);
 
   /// Currently, we have three types of fixes.
   ///
@@ -82,19 +82,19 @@ protected:
   /// \param Mode The required mode char.
   /// \param ArgPos The 0-based position of the flag argument.
   void insertStringFlag(const ast_matchers::MatchFinder::MatchResult &Result,
-                        const char Mode, const int ArgPos);
+                        char Mode, int ArgPos);
 
   /// Helper function to get the spelling of a particular argument.
   StringRef getSpellingArg(const ast_matchers::MatchFinder::MatchResult &Result,
                            int N) const;
 
   /// Binding name of the FuncDecl of a function call.
-  static const char *FuncDeclBindingStr;
+  static constexpr char FuncDeclBindingStr[] = "funcDecl";
 
   /// Binding name of the function call expression.
-  static const char *FuncBindingStr;
+  static constexpr char FuncBindingStr[] = "func";
 };
 
 } // namespace clang::tidy::android
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXECCHECK_H

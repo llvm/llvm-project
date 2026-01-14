@@ -20,7 +20,7 @@
 #include "test_macros.h"
 
 template <class... Args>
-void check_invariant(const std::flat_multiset<Args...>& m) {
+constexpr void check_invariant(const std::flat_multiset<Args...>& m) {
   assert(std::is_sorted(m.begin(), m.end(), m.key_comp()));
 }
 

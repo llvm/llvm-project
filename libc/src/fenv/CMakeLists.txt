@@ -6,8 +6,6 @@ add_entrypoint_object(
     fegetround.h
   DEPENDS
     libc.src.__support.FPUtil.fenv_impl
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -18,8 +16,6 @@ add_entrypoint_object(
     fesetround.h
   DEPENDS
     libc.src.__support.FPUtil.fenv_impl
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -30,8 +26,6 @@ add_entrypoint_object(
     feclearexcept.h
   DEPENDS
     libc.src.__support.FPUtil.fenv_impl
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -42,8 +36,6 @@ add_entrypoint_object(
     feraiseexcept.h
   DEPENDS
     libc.src.__support.FPUtil.fenv_impl
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -54,8 +46,6 @@ add_entrypoint_object(
     fetestexcept.h
   DEPENDS
     libc.src.__support.FPUtil.fenv_impl
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -67,8 +57,6 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.fexcept_t
     libc.src.__support.FPUtil.fenv_impl
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -80,8 +68,6 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.fenv_t
     libc.src.__support.FPUtil.fenv_impl
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -93,8 +79,6 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.fenv_t
     libc.src.__support.FPUtil.fenv_impl
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -107,8 +91,6 @@ add_entrypoint_object(
     libc.hdr.fenv_macros
     libc.hdr.types.fexcept_t
     libc.src.__support.FPUtil.fenv_impl
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -119,8 +101,6 @@ add_entrypoint_object(
     fesetexcept.h
   DEPENDS
     libc.src.__support.FPUtil.fenv_impl
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -133,8 +113,6 @@ add_entrypoint_object(
     libc.hdr.fenv_macros
     libc.hdr.types.fexcept_t
     libc.src.__support.FPUtil.fenv_impl
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -147,8 +125,6 @@ add_entrypoint_object(
     libc.hdr.fenv_macros
     libc.hdr.types.fenv_t
     libc.src.__support.FPUtil.fenv_impl
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -161,8 +137,6 @@ add_entrypoint_object(
     libc.hdr.fenv_macros
     libc.hdr.types.fenv_t
     libc.src.__support.FPUtil.fenv_impl
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -173,8 +147,6 @@ add_entrypoint_object(
     feenableexcept.h
   DEPENDS
     libc.src.__support.FPUtil.fenv_impl
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -185,8 +157,6 @@ add_entrypoint_object(
     fedisableexcept.h
   DEPENDS
     libc.src.__support.FPUtil.fenv_impl
-  COMPILE_OPTIONS
-    -O2
 )
 
 add_entrypoint_object(
@@ -197,6 +167,4 @@ add_entrypoint_object(
     fegetexcept.h
   DEPENDS
     libc.src.__support.FPUtil.fenv_impl
-  COMPILE_OPTIONS
-    -O2
 )

@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name objc-general.m %s -o - -emit-llvm -fblocks -fprofile-instrument=clang | FileCheck -check-prefix=PGOGEN %s
 
 // RUN: llvm-profdata merge %S/Inputs/objc-general.proftext -o %t.profdata
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name objc-general.m %s -o - -emit-llvm -fblocks -fprofile-instrument-use-path=%t.profdata 2>&1 | FileCheck -check-prefix=PGOUSE %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name objc-general.m %s -o - -emit-llvm -fblocks -fprofile-instrument-use=clang -fprofile-instrument-use-path=%t.profdata 2>&1 | FileCheck -check-prefix=PGOUSE %s
 
 // PGOUSE-NOT: warning: profile data may be out of date
 

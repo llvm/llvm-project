@@ -31,7 +31,7 @@ static scudo::u16 computeHardwareChecksum(scudo::u32 Seed, scudo::uptr *Array,
 typedef scudo::u16 (*ComputeChecksum)(scudo::u32, scudo::uptr *, scudo::uptr);
 
 // This verifies that flipping bits in the data being checksummed produces a
-// different checksum. We do not use random data to avoid flakyness.
+// different checksum. We do not use random data to avoid flakiness.
 template <ComputeChecksum F> static void verifyChecksumFunctionBitFlip() {
   scudo::uptr Array[sizeof(scudo::u64) / sizeof(scudo::uptr)];
   const scudo::uptr ArraySize = ARRAY_SIZE(Array);

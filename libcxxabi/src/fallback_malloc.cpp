@@ -16,7 +16,7 @@
 #endif
 #endif
 
-#include <__memory/aligned_alloc.h>
+#include "include/aligned_alloc.h" // from libc++
 #include <__assert>
 #include <stdlib.h> // for malloc, calloc, free
 #include <string.h> // for memset

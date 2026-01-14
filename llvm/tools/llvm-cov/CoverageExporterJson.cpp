@@ -118,6 +118,7 @@ json::Value renderCondState(const coverage::MCDCRecord::CondState CondState) {
   case coverage::MCDCRecord::MCDC_False:
     return json::Value(false);
   }
+  llvm_unreachable("Unknown llvm::coverage::MCDCRecord::CondState enum");
 }
 
 json::Array gatherTestVectors(coverage::MCDCRecord &Record) {

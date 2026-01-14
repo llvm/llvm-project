@@ -15,10 +15,10 @@
 ; RUN: llc %s -o - -O0 -mtriple=aarch64-unknown -mcpu=ampere1b      | FileCheck %s
 
 
-define void @test_cmp_bcc_fusion(i32 %x, i32 %y, i32* %arr) {
+define void @test_cmp_bcc_fusion(i32 %x, i32 %y, ptr %arr) {
 entry:
   %cmp = icmp eq i32 %x, %y
-  store i32 %x, i32* %arr, align 4
+  store i32 %x, ptr %arr, align 4
   br i1 %cmp, label %if_true, label %if_false
 
 if_true:

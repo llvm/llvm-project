@@ -35,10 +35,10 @@ class X86InstrMappingEmitter {
   // to make the search more efficient
   std::map<uint64_t, std::vector<const CodeGenInstruction *>> CompressedInsts;
 
-  typedef std::pair<const CodeGenInstruction *, const CodeGenInstruction *>
-      Entry;
-  typedef std::map<StringRef, std::vector<const CodeGenInstruction *>>
-      PredicateInstMap;
+  using Entry =
+      std::pair<const CodeGenInstruction *, const CodeGenInstruction *>;
+  using PredicateInstMap =
+      std::map<StringRef, std::vector<const CodeGenInstruction *>>;
 
   // Hold all compressed instructions that need to check predicate
   PredicateInstMap PredicateInsts;
@@ -66,6 +66,7 @@ private:
   void printTable(ArrayRef<Entry> Table, StringRef Name, StringRef Macro,
                   raw_ostream &OS);
 };
+} // namespace
 
 void X86InstrMappingEmitter::printClassDef(raw_ostream &OS) {
   OS << "struct X86TableEntry {\n"
@@ -106,6 +107,7 @@ void X86InstrMappingEmitter::printTable(ArrayRef<Entry> Table, StringRef Name,
   printMacroEnd(Macro, OS);
 }
 
+namespace {
 class IsMatch {
   const CodeGenInstruction *OldInst;
 
@@ -146,6 +148,7 @@ public:
     return true;
   }
 };
+} // namespace
 
 static bool isInteresting(const Record *Rec) {
   // _REV instruction should not appear before encoding optimization
@@ -186,13 +189,14 @@ void X86InstrMappingEmitter::emitCompressEVEXTable(
     RecognizableInstrBase RI(*Inst);
 
     bool IsND = RI.OpMap == X86Local::T_MAP4 && RI.HasEVEX_B && RI.HasVEX_4V;
+    bool IsSETZUCCm = Name == "SETZUCCm";
     // Add VEX encoded instructions to one of CompressedInsts vectors according
     // to it's opcode.
     if (RI.Encoding == X86Local::VEX)
       CompressedInsts[RI.Opcode].push_back(Inst);
     // Add relevant EVEX encoded instructions to PreCompressionInsts
     else if (RI.Encoding == X86Local::EVEX && !RI.HasEVEX_K && !RI.HasEVEX_L2 &&
-             (!RI.HasEVEX_B || IsND))
+             (!RI.HasEVEX_B || IsND || IsSETZUCCm))
       PreCompressionInsts.push_back(Inst);
   }
 
@@ -368,7 +372,6 @@ void X86InstrMappingEmitter::run(raw_ostream &OS) {
   emitND2NonNDTable(Insts, OS);
   emitSSE2AVXTable(Insts, OS);
 }
-} // namespace
 
 static TableGen::Emitter::OptClass<X86InstrMappingEmitter>
     X("gen-x86-instr-mapping", "Generate X86 instruction mapping");

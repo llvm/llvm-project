@@ -17,4 +17,3 @@ bb:
   ret void
 }
 
-declare void @llvm.vp.scatter.nxv2i32.nxv2p0(<vscale x 2 x i32>, <vscale x 2 x ptr>, <vscale x 2 x i1>, i32)

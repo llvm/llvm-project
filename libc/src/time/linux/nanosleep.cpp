@@ -18,8 +18,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, nanosleep,
-                   (const struct timespec *req, struct timespec *rem)) {
+LLVM_LIBC_FUNCTION(int, nanosleep, (const timespec *req, timespec *rem)) {
 #if SYS_nanosleep
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_nanosleep, req, rem);
 #elif defined(SYS_clock_nanosleep_time64)

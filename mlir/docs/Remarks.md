@@ -1,22 +1,23 @@
 # Remark Infrastructure
 
 Remarks are **structured, human- and machine-readable notes** emitted by the
-compiler to explain:
+compiler to communicate:
 
-- What was transformed
-- What was missed
-- Why it happened
+- What transformations were applied
+- What optimizations were missed
+- Why certain decisions were made
 
-The **`RemarkEngine`** collects finalized remarks during compilation and sends
-them to a pluggable **streamer**. By default, MLIR integrates with LLVM’s
-[`llvm::remarks`](https://llvm.org/docs/Remarks.html), allowing you to:
+The **`RemarkEngine`** collects remarks during compilation and routes them to a
+pluggable **streamer**. By default, MLIR integrates with LLVM's
+[`llvm::remarks`](https://llvm.org/docs/Remarks.html) infrastructure, enabling
+you to:
 
 - Stream remarks as passes run
-- Serialize them to **YAML** or **LLVM bitstream** for tooling
+- Serialize to **YAML** or **LLVM Bitstream** 
 
 ***
 
-## Key Points
+## Overview
 
 - **Opt-in** – Disabled by default; zero overhead unless enabled.
 - **Per-context** – Configured on `MLIRContext`.
@@ -26,66 +27,69 @@ them to a pluggable **streamer**. By default, MLIR integrates with LLVM’s
 
 ***
 
-## How It Works
+## Architecture
 
-Two main components:
+The remark system consists of two main components:
 
-- **`RemarkEngine`** (owned by `MLIRContext`): Receives finalized
-  `InFlightRemark`s, optionally mirrors them to the `DiagnosticEngine`, and
-  dispatches to the installed streamer.
+### RemarkEngine
 
-- **`MLIRRemarkStreamerBase`** (abstract): Backend interface with a single hook:
+Owned by `MLIRContext`, the engine:
 
-  ```c++
-  virtual void streamOptimizationRemark(const Remark &remark) = 0;
-  ```
+- Receives finalized `InFlightRemark` objects
+- Optionally mirrors remarks to the `DiagnosticEngine`
+- Dispatches to the installed streamer
 
-**Default backend – `MLIRLLVMRemarkStreamer`** Adapts `mlir::Remark` to LLVM’s
-remark format and writes YAML/bitstream via `llvm::remarks::RemarkStreamer`.
+### MLIRRemarkStreamerBase
 
-**Ownership flow:** `MLIRContext` → `RemarkEngine` → `MLIRRemarkStreamerBase`
+An abstract backend interface with a single hook:
+
+```c++
+virtual void streamOptimizationRemark(const Remark &remark) = 0;
+```
+
+The default implementation, **`MLIRLLVMRemarkStreamer`**, adapts `mlir::Remark`
+to LLVM's remark format and writes YAML or Bitstream via
+`llvm::remarks::RemarkStreamer`.
+
+**Ownership chain:** `MLIRContext` → `RemarkEngine` → `MLIRRemarkStreamerBase`
 
 ***
 
-## Categories
+## Remark Categories
 
-MLIR provides four built-in remark categories (extendable if needed):
+MLIR provides four built-in categories:
 
-#### 1. **Passed**
+### Passed
 
-Optimization/transformation succeeded.
+An optimization or transformation succeeded.
 
 ```
 [Passed] RemarkName | Category:Vectorizer:myPass1 | Function=foo | Remark="vectorized loop", tripCount=128
 ```
 
-#### 2. **Missed**
+### Missed
 
-Optimization/transformation didn’t apply — ideally with actionable feedback.
+An optimization didn't apply and produces ideally an actionable feedback.
 
 ```
 [Missed]  | Category:Unroll | Function=foo | Reason="tripCount=4 < threshold=256", Suggestion="increase unroll to 128"
 ```
 
-#### 3. **Failure**
+### Failure
 
-Optimization/transformation attempted but failed. This is slightly different
-from the `Missed` category.
+An optimization was attempted but failed. Unlike `Missed`, this indicates an
+active attempt that couldn't complete.
 
-For example, the user specifies `-use-max-register=100` when invoking the
-compiler, but the attempt fails for some reason:
-
-```bash
-$ your-compiler -use-max-register=100 mycode.xyz
-```
+For example, when a user requests `--use-max-register=100` but the allocator
+cannot satisfy the constraint:
 
 ```
 [Failed] Category:RegisterAllocator | Reason="Limiting to use-max-register=100 failed; it now uses 104 registers for better performance"
 ```
 
-#### 4. **Analysis**
+### Analysis
 
-Neutral analysis results.
+Neutral informational output—useful for profiling and debugging.
 
 ```
 [Analysis] Category:Register | Remark="Kernel uses 168 registers"
@@ -96,20 +100,21 @@ Neutral analysis results.
 
 ## Emitting Remarks
 
-The `remark::*` helpers return an **in-flight remark**.
-You append strings or key–value metrics using `<<`.
+Use the `remark::*` helpers to create an **in-flight remark**, then append
+content with the `<<` operator.
 
-### Remark Options
+### Configuring Remark Options
 
-When constructing a remark, you typically provide four fields that are `StringRef`:
+Each remark accepts four fields (all `StringRef`):
 
-1. **Remark name** – identifiable name
-2. **Category** – high-level classification
-3. **Sub-category** – more fine-grained classification
-4. **Function name** – the function where the remark originates
+| Field          | Description                                    |
+|***************-|************************************************|
+| **Name**       | Identifiable name for the remark               |
+| **Category**   | High-level classification                      |
+| **Sub-category** | Fine-grained classification                  |
+| **Function**   | The function where the remark originates       |
 
-
-### Example
+### Basic Example
 
 ```c++
 #include "mlir/IR/Remarks.h"
@@ -117,29 +122,28 @@ When constructing a remark, you typically provide four fields that are `StringRe
 LogicalResult MyPass::runOnOperation() {
   Location loc = getOperation()->getLoc();
 
-  remark::RemarkOpts opts = remark::RemarkOpts::name(MyRemarkName1)
-                                .category(categoryVectorizer)
-                                .function(fName)
-                                .subCategory(myPassname1);
+  auto opts = remark::RemarkOpts::name("VectorizeLoop")
+                  .category("Vectorizer")
+                  .subCategory("MyPass")
+                  .function("foo");
 
-  // PASSED
+  // Passed: transformation succeeded
   remark::passed(loc, opts)
       << "vectorized loop"
       << remark::metric("tripCount", 128);
 
-  // ANALYSIS
+  // Analysis: informational output
   remark::analysis(loc, opts)
       << "Kernel uses 168 registers";
 
-  // MISSED (with reason + suggestion)
-  int tripBad = 4, threshold = 256, target = 128;
+  // Missed: optimization skipped (with reason and suggestion)
   remark::missed(loc, opts)
-      << remark::reason("tripCount={0} < threshold={1}", tripBad, threshold)
-      << remark::suggest("increase unroll to {0}", target);
+      << remark::reason("tripCount={0} < threshold={1}", 4, 256)
+      << remark::suggest("increase unroll factor to {0}", 128);
 
-  // FAILURE
+  // Failure: optimization attempted but failed
   remark::failed(loc, opts)
-      << remark::reason("failed due to unsupported pattern");
+      << remark::reason("unsupported pattern encountered");
 
   return success();
 }
@@ -147,113 +151,151 @@ LogicalResult MyPass::runOnOperation() {
 
 ***
 
-### Metrics and Shortcuts
+## Metrics and Helpers
 
-Helper functions accept
-[LLVM format](https://llvm.org/docs/ProgrammersManual.html#formatting-strings-the-formatv-function)
-style strings. This format builds lazily, so remarks are zero-cost when
-disabled.
+All helper functions accept
+[LLVM format strings](https://llvm.org/docs/ProgrammersManual.html#formatting-strings-the-formatv-function),
+which build lazily—ensuring zero cost when remarks are disabled.
 
-#### Adding Remarks
+| Helper                         | Description                              |
+|******************************--|******************************************|
+| `remark::metric(key, value)`   | Adds a structured key–value pair         |
+| `remark::add(fmt, ...)`        | Shortcut for `metric("Remark", ...)`     |
+| `remark::reason(fmt, ...)`     | Shortcut for `metric("Reason", ...)`     |
+| `remark::suggest(fmt, ...)`    | Shortcut for `metric("Suggestion", ...)` |
 
-- **`remark::add(fmt, ...)`** – Shortcut for `metric("Remark", ...)`.
+### String Shorthand
 
-#### Adding Reasons
+Appending a plain string:
 
-- **`remark::reason(fmt, ...)`** – Shortcut for `metric("Reason", ...)`. Used to
-  explain why a remark was missed or failed.
-
-#### Adding Suggestions
-
-- **`remark::suggest(fmt, ...)`** – Shortcut for `metric("Suggestion", ...)`.
-  Used to provide actionable feedback.
-
-#### Adding Custom Metrics
-
-- **`remark::metric(key, value)`** – Adds a structured key–value metric.
-
-Example: tracking `TripCount`. When exported to YAML, it appears under `args`
-for machine readability:
-
-```cpp
-remark::metric("TripCount", value)
+```c++
+remark::passed(loc, opts) << "vectorized loop";
 ```
 
-#### String Metrics
+is equivalent to:
 
-Passing a plain string (e.g. `<< "vectorized loop"`) is equivalent to:
-
-```cpp
-metric("Remark", "vectorized loop")
+```c++
+remark::passed(loc, opts) << remark::metric("Remark", "vectorized loop");
 ```
+
+### Custom Metrics
+
+Add structured data for machine readability:
+
+```c++
+remark::passed(loc, opts)
+    << "loop optimized"
+    << remark::metric("TripCount", 128)
+    << remark::metric("VectorWidth", 4);
+```
+
+***
+
+## Emitting Policies
+
+The `RemarkEngine` supports pluggable policies that control which remarks are
+emitted.
+
+### RemarkEmittingPolicyAll
+
+Emits **all** remarks unconditionally.
+
+### RemarkEmittingPolicyFinal
+
+Emits only the **final** remark for each location. This is useful in multi-pass
+compilers where an early pass may report a failure, but a later pass succeeds.
+
+**Example:** Only the successful remark is emitted:
+
+```c++
+auto opts = remark::RemarkOpts::name("Unroller").category("LoopUnroll");
+
+// First pass: reports failure
+remark::failed(loc, opts) << "Loop could not be unrolled";
+
+// Later pass: reports success (this is the one emitted)
+remark::passed(loc, opts) << "Loop unrolled successfully";
+```
+
+You can also implement custom policies by inheriting from the policy interface.
 
 ***
 
 ## Enabling Remarks
 
-### 1. **With LLVMRemarkStreamer (YAML or Bitstream)**
+### Option 1: LLVM Remark Streamer (YAML or Bitstream)
 
-Persists remarks to a file in the chosen format.
+Persist remarks to a file for post-processing:
 
 ```c++
-mlir::remark::RemarkCategories cats{/*passed=*/categoryLoopunroll,
-                                     /*missed=*/std::nullopt,
-                                     /*analysis=*/std::nullopt,
-                                     /*failed=*/categoryLoopunroll};
+// Setup categories
+remark::RemarkCategories cats{
+    /*passed=*/   "LoopUnroll",
+    /*missed=*/   std::nullopt,
+    /*analysis=*/ std::nullopt,
+    /*failed=*/   "LoopUnroll"
+};
 
-mlir::remark::enableOptimizationRemarksWithLLVMStreamer(
-    context, yamlFile, llvm::remarks::Format::YAML, cats);
+// Use final policy
+std::unique_ptr<remark::RemarkEmittingPolicyFinal> policy =
+        std::make_unique<remark::RemarkEmittingPolicyFinal>();
+
+remark::enableOptimizationRemarksWithLLVMStreamer(
+    context, outputFile, llvm::remarks::Format::YAML, std::move(policy), cats);
 ```
 
-**YAML format** – human-readable, easy to diff:
+**YAML output** (human-readable):
 
 ```yaml
---- !Passed
-pass:            Category:SubCategory
-name:            MyRemarkName1
-function:        myFunc
-loc:             myfile.mlir:12:3
+*** !Passed
+pass:     Vectorizer:MyPass
+name:     VectorizeLoop
+function: foo
+loc:      input.mlir:12:3
 args:
-  - Remark:          vectorized loop
-  - tripCount:       128
+  - Remark:    vectorized loop
+  - tripCount: 128
 ```
 
-**Bitstream format** – compact binary for large runs.
+**Bitstream format** — compact binary for large-scale analysis.
 
-***
+### Option 2: Diagnostic Engine (No Streamer)
 
-### 2. **With `mlir::emitRemarks` (No Streamer)**
-
-If the streamer isn't passed, the remarks are mirrored to the `DiagnosticEngine`
-using `mlir::emitRemarks`
+Mirror remarks to the standard diagnostic output:
 
 ```c++
-mlir::remark::RemarkCategories cats{/*passed=*/categoryLoopunroll,
-                                     /*missed=*/std::nullopt,
-                                     /*analysis=*/std::nullopt,
-                                     /*failed=*/categoryLoopunroll};
+// Setup categories
+remark::RemarkCategories cats{
+    /*passed=*/   "LoopUnroll",
+    /*missed=*/   std::nullopt,
+    /*analysis=*/ std::nullopt,
+    /*failed=*/   "LoopUnroll"
+};
+
+// Use final policy
+std::unique_ptr<remark::RemarkEmittingPolicyFinal> policy =
+        std::make_unique<remark::RemarkEmittingPolicyFinal>();
+
 remark::enableOptimizationRemarks(
-    /*streamer=*/nullptr, cats,
-    /*printAsEmitRemarks=*/true);
+    context,
+    /*streamer=*/ nullptr,
+    /*policy=*/ std::move(policy),
+    cats,
+    /*printAsEmitRemarks=*/ true);
 ```
 
-***
+### Option 3: Custom Streamer
 
-### 3. **With a Custom Streamer**
-
-You can implement a custom streamer by inheriting `MLIRRemarkStreamerBase` to
-consume remarks in any format.
+Implement your own backend for specialized output formats:
 
 ```c++
 class MyStreamer : public MLIRRemarkStreamerBase {
 public:
   void streamOptimizationRemark(const Remark &remark) override {
-    // Convert and write remark to your custom format
+    // Custom serialization logic
   }
 };
 
-auto myStreamer = std::make_unique<MyStreamer>();
-remark::enableOptimizationRemarks(
-    /*streamer=*/myStreamer, cats,
-    /*printAsEmitRemarks=*/true);
+auto streamer = std::make_unique<MyStreamer>();
+remark::enableOptimizationRemarks(context, std::move(streamer), cats);
 ```

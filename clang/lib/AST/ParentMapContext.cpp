@@ -20,36 +20,6 @@
 
 using namespace clang;
 
-ParentMapContext::ParentMapContext(ASTContext &Ctx) : ASTCtx(Ctx) {}
-
-ParentMapContext::~ParentMapContext() = default;
-
-void ParentMapContext::clear() { Parents.reset(); }
-
-const Expr *ParentMapContext::traverseIgnored(const Expr *E) const {
-  return traverseIgnored(const_cast<Expr *>(E));
-}
-
-Expr *ParentMapContext::traverseIgnored(Expr *E) const {
-  if (!E)
-    return nullptr;
-
-  switch (Traversal) {
-  case TK_AsIs:
-    return E;
-  case TK_IgnoreUnlessSpelledInSource:
-    return E->IgnoreUnlessSpelledInSource();
-  }
-  llvm_unreachable("Invalid Traversal type!");
-}
-
-DynTypedNode ParentMapContext::traverseIgnored(const DynTypedNode &N) const {
-  if (const auto *E = N.get<Expr>()) {
-    return DynTypedNode::create(*traverseIgnored(E));
-  }
-  return N;
-}
-
 template <typename T, typename... U>
 static std::tuple<bool, DynTypedNodeList, const T *, const U *...>
 matchParents(const DynTypedNodeList &NodeList,
@@ -332,6 +302,36 @@ std::tuple<bool, DynTypedNodeList, const T *, const U *...>
 matchParents(const DynTypedNodeList &NodeList,
              ParentMapContext::ParentMap *ParentMap) {
   return MatchParents<T, U...>::match(NodeList, ParentMap);
+}
+
+ParentMapContext::ParentMapContext(ASTContext &Ctx) : ASTCtx(Ctx) {}
+
+ParentMapContext::~ParentMapContext() = default;
+
+void ParentMapContext::clear() { Parents.reset(); }
+
+const Expr *ParentMapContext::traverseIgnored(const Expr *E) const {
+  return traverseIgnored(const_cast<Expr *>(E));
+}
+
+Expr *ParentMapContext::traverseIgnored(Expr *E) const {
+  if (!E)
+    return nullptr;
+
+  switch (Traversal) {
+  case TK_AsIs:
+    return E;
+  case TK_IgnoreUnlessSpelledInSource:
+    return E->IgnoreUnlessSpelledInSource();
+  }
+  llvm_unreachable("Invalid Traversal type!");
+}
+
+DynTypedNode ParentMapContext::traverseIgnored(const DynTypedNode &N) const {
+  if (const auto *E = N.get<Expr>()) {
+    return DynTypedNode::create(*traverseIgnored(E));
+  }
+  return N;
 }
 
 /// Template specializations to abstract away from pointers and TypeLocs.

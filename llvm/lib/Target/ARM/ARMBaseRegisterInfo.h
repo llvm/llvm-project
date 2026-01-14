@@ -158,11 +158,6 @@ public:
                       const TargetRegisterClass *NewRC,
                       LiveIntervals &LIS) const override;
 
-  bool shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
-                            unsigned DefSubReg,
-                            const TargetRegisterClass *SrcRC,
-                            unsigned SrcSubReg) const override;
-
   int getSEHRegNum(unsigned i) const { return getEncodingValue(i); }
 };
 
