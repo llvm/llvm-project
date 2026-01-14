@@ -640,6 +640,11 @@ struct SpecificCmp_match {
       : Predicate(Pred), Op0(LHS), Op1(RHS) {}
 
   bool match(const VPValue *V) const {
+    auto *DefR = V->getDefiningRecipe();
+    return DefR && match(DefR);
+  }
+
+  bool match(const VPRecipeBase *V) const {
     CmpPredicate CurrentPred;
     return Cmp_match<Op0_t, Op1_t, Opcodes...>(CurrentPred, Op0, Op1)
                .match(V) &&

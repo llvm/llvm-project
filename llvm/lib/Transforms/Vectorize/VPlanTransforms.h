@@ -264,6 +264,15 @@ struct VPlanTransforms {
   addExplicitVectorLength(VPlan &Plan,
                           const std::optional<unsigned> &MaxEVLSafeElements);
 
+  /// Optimize recipes which use an EVL-based header mask to VP intrinsics, for
+  /// example:
+  ///
+  /// %mask = icmp ult step-vector, EVL
+  /// %load = load %ptr, %mask
+  /// -->
+  /// %load = vp.load %ptr, EVL
+  static void optimizeEVLMasks(VPlan &Plan);
+
   // For each Interleave Group in \p InterleaveGroups replace the Recipes
   // widening its memory instructions with a single VPInterleaveRecipe at its
   // insertion point.
