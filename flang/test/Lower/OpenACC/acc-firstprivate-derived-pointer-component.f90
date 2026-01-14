@@ -3,7 +3,7 @@
 
 ! TODO: ensure pointer components are initialized to NULL for private.
 
-! RUN: not bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
+! RUN: not bbc -fopenacc -emit-hlfir %s -o - 2>&1 | FileCheck %s
 
 ! CHECK: not yet implemented: OpenACC: privatizing derived type with pointer components
 
