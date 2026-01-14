@@ -214,6 +214,7 @@ set(files
   __atomic/atomic_lock_free.h
   __atomic/atomic_ref.h
   __atomic/atomic_sync.h
+  __atomic/atomic_waitable_traits.h
   __atomic/check_memory_order.h
   __atomic/contention_t.h
   __atomic/fence.h

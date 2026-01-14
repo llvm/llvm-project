@@ -593,7 +593,7 @@ performActions(raw_ostream &os,
 
   // Generate reproducers if requested
   if (!config.getReproducerFilename().empty()) {
-    StringRef anchorName = pm.getAnyOpAnchorName();
+    StringRef anchorName = pm.getOpAnchorName();
     const auto &passes = pm.getPasses();
     makeReproducer(anchorName, passes, op.get(),
                    config.getReproducerFilename());
