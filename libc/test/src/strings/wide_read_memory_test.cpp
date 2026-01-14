@@ -13,8 +13,6 @@
 // unreadable, the middle usable normally. By placing test data at the edges
 // between the middle page and the others, we can test for bad accesses.
 
-#include <type_traits>
-
 #include "src/__support/CPP/array.h"
 #include "src/string/memory_utils/inline_memset.h"
 #include "src/string/string_utils.h"
@@ -28,6 +26,9 @@
 namespace LIBC_NAMESPACE_DECL {
 
 using TwoKilobyteBuffer = cpp::array<char, 2048>;
+// This could be smaller on a target-basis, but that adds complexity and the
+// extra testing is fine.
+static constexpr unsigned long kLargestTestVectorSize = 512;
 
 class LlvmLibcWideAccessMemoryTest : public testing::Test {
   char *page0_;
@@ -62,15 +63,13 @@ public:
   template <typename TestFunc>
   void TestMemoryAccess(const TwoKilobyteBuffer &buf, TestFunc func) {
     // Run func on data near the start boundary of valid memory.
-    for (unsigned long offset = 0;
-         offset < std::alignment_of<max_align_t>::value; ++offset) {
+    for (unsigned long offset = 0; offset < kLargestTestVectorSize; ++offset) {
       char *test_addr = page1_ + offset;
       inline_memcpy(test_addr, buf.data(), buf.size());
       func(test_addr);
     }
     // Run func on data near the end boundary of valid memory.
-    for (unsigned long offset = 0;
-         offset < std::alignment_of<max_align_t>::value; ++offset) {
+    for (unsigned long offset = 0; offset < kLargestTestVectorSize; ++offset) {
       char *test_addr = page2_ - buf.size() - offset - 1;
       ASSERT_LE(test_addr + buf.size(), page2_);
       inline_memcpy(test_addr, buf.data(), buf.size());
