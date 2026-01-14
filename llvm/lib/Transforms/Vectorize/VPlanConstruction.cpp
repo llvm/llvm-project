@@ -718,10 +718,10 @@ void VPlanTransforms::createInLoopReductionRecipes(
       continue;
 
     RecurKind Kind = PhiR->getRecurrenceKind();
-    assert(
-        !RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
-        !RecurrenceDescriptor::isFindIVRecurrenceKind(Kind) &&
-        "AnyOf and FindIV reductions are not allowed for in-loop reductions");
+    assert(!RecurrenceDescriptor::isFindLastRecurrenceKind(Kind) &&
+           !RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
+           !RecurrenceDescriptor::isFindIVRecurrenceKind(Kind) &&
+           "AnyOf and Find reductions are not allowed for in-loop reductions");
 
     bool IsFPRecurrence =
         RecurrenceDescriptor::isFloatingPointRecurrenceKind(Kind);
@@ -1298,6 +1298,78 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   VPValue *NewCond =
       MiddleBuilder.createAnd(MiddleCond, MiddleBuilder.createNot(AnyNaNLane));
   MiddleTerm->setOperand(0, NewCond);
+  return true;
+}
+
+bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
+  if (Plan.hasScalarVFOnly())
+    return false;
+
+  // We want to create the following nodes:
+  // vector.body:
+  //   ...new WidenPHI recipe introduced to keep the mask value for the latest
+  //      iteration where any lane was active.
+  //   mask.phi = phi [ ir<false>, vector.ph ], [ vp<new.mask>, vector.body ]
+  //   ...data.phi (a VPReductionPHIRecipe for a FindLast reduction) already
+  //      exists, but needs updating to use 'new.data' for the backedge value.
+  //   data.phi = phi ir<default.val>, vp<new.data>
+  //
+  //   ...'data' and 'compare' created by existing nodes...
+  //
+  //   ...new recipes introduced to determine whether to update the reduction
+  //      values or keep the current one.
+  //   any.active = i1 any-of ir<compare>
+  //   new.mask = select vp<any.active>, ir<compare>, vp<mask.phi>
+  //   new.data = select vp<any.active>, ir<data>, ir<data.phi>
+  //
+  // middle.block:
+  //   ...extract-last-active replaces compute-reduction-result.
+  //   result = extract-last-active vp<new.data>, vp<new.mask>, ir<default.val>
+
+  for (auto &Phi : Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
+    auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&Phi);
+    if (!PhiR || !RecurrenceDescriptor::isFindLastRecurrenceKind(
+                     PhiR->getRecurrenceKind()))
+      continue;
+
+    // Find the condition for the select.
+    auto *SelectR = cast<VPSingleDefRecipe>(&PhiR->getBackedgeRecipe());
+    VPValue *Cond = nullptr, *Op1 = nullptr, *Op2 = nullptr;
+    if (!match(SelectR,
+               m_Select(m_VPValue(Cond), m_VPValue(Op1), m_VPValue(Op2))))
+      return false;
+
+    // Add mask phi.
+    VPBuilder Builder = VPBuilder::getToInsertAfter(PhiR);
+    auto *MaskPHI = new VPWidenPHIRecipe(nullptr, /*Start=*/Plan.getFalse());
+    Builder.insert(MaskPHI);
+
+    // Add select for mask.
+    Builder.setInsertPoint(SelectR);
+    VPValue *AnyOf = Builder.createNaryOp(VPInstruction::AnyOf, {Cond});
+    VPValue *MaskSelect = Builder.createSelect(AnyOf, Cond, MaskPHI);
+    MaskPHI->addOperand(MaskSelect);
+
+    // Replace select for data.
+    VPValue *DataSelect =
+        Builder.createSelect(AnyOf, Op1, Op2, SelectR->getDebugLoc());
+    SelectR->replaceAllUsesWith(DataSelect);
+    SelectR->eraseFromParent();
+
+    // Find final reduction computation and replace it with an
+    // extract.last.active intrinsic.
+    auto *RdxResult =
+        findUserOf<VPInstruction::ComputeReductionResult>(DataSelect);
+    assert(RdxResult && "Unable to find reduction result recipe");
+    Builder.setInsertPoint(RdxResult);
+    auto *ExtractLastActive =
+        Builder.createNaryOp(VPInstruction::ExtractLastActive,
+                             {DataSelect, MaskSelect, PhiR->getStartValue()},
+                             RdxResult->getDebugLoc());
+    RdxResult->replaceAllUsesWith(ExtractLastActive);
+    RdxResult->eraseFromParent();
+  }
+
   return true;
 }
 
