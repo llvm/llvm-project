@@ -81,7 +81,8 @@ define void @nested_loop_nsw0(ptr %a, i64 %n, i64 %m) {
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
 ; CHECK-NEXT:    Expr: {{\{\{}}0,+,1}<nuw><nsw><%loop.i.header>,+,1}<nuw><nsw><%loop.j>
 ; CHECK-NEXT:    Entire Domain:
-; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
+; CHECK-NEXT:      Monotonicity: Unknown
+; CHECK-NEXT:      Reason: {{\{\{}}0,+,1}<nuw><nsw><%loop.i.header>,+,1}<nuw><nsw><%loop.j>
 ; CHECK-NEXT:    Effective Domain:
 ; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
 ; CHECK-EMPTY:
@@ -128,7 +129,8 @@ define void @nested_loop_nsw1(ptr %a, i64 %n, i64 %m) {
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
 ; CHECK-NEXT:    Expr: {{\{\{}}(-1 + %n),+,-1}<nsw><%loop.i.header>,+,1}<nsw><%loop.j>
 ; CHECK-NEXT:    Entire Domain:
-; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
+; CHECK-NEXT:      Monotonicity: Unknown
+; CHECK-NEXT:      Reason: {{\{\{}}(-1 + %n),+,-1}<nsw><%loop.i.header>,+,1}<nsw><%loop.j>
 ; CHECK-NEXT:    Effective Domain:
 ; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
 ; CHECK-EMPTY:
@@ -175,7 +177,8 @@ define void @nested_loop_nsw2(ptr %a, i64 %n, i64 %m) {
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
 ; CHECK-NEXT:    Expr: {{\{\{}}0,+,1}<nuw><nsw><%loop.i.header>,+,-1}<nsw><%loop.j>
 ; CHECK-NEXT:    Entire Domain:
-; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
+; CHECK-NEXT:      Monotonicity: Unknown
+; CHECK-NEXT:      Reason: {{\{\{}}0,+,1}<nuw><nsw><%loop.i.header>,+,-1}<nsw><%loop.j>
 ; CHECK-NEXT:    Effective Domain:
 ; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
 ; CHECK-EMPTY:
@@ -225,10 +228,10 @@ define void @nested_loop_nuw(ptr %a, i64 %begin0, i64 %end0, i64 %begin1, i64 %e
 ; CHECK-NEXT:    Expr: {{\{\{}}(%begin0 + %begin1),+,1}<nw><%loop.i.header>,+,1}<nw><%loop.j>
 ; CHECK-NEXT:    Entire Domain:
 ; CHECK-NEXT:      Monotonicity: Unknown
-; CHECK-NEXT:      Reason: {{\{\{}}(%begin0 + %begin1),+,1}<nw><%loop.i.header>,+,1}<nw><%loop.j>
+; CHECK-NEXT:      Reason: {(%begin0 + %begin1),+,1}<nw><%loop.i.header>
 ; CHECK-NEXT:    Effective Domain:
 ; CHECK-NEXT:      Monotonicity: Unknown
-; CHECK-NEXT:      Reason: {{\{\{}}(%begin0 + %begin1),+,1}<nw><%loop.i.header>,+,1}<nw><%loop.j>
+; CHECK-NEXT:      Reason: {(%begin0 + %begin1),+,1}<nw><%loop.i.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
 ; CHECK-NEXT:    da analyze - confused!
@@ -281,7 +284,8 @@ define void @nested_loop_step(ptr %a, i64 %n, i64 %m, i64 %step) {
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
 ; CHECK-NEXT:    Expr: {{\{\{}}0,+,1}<nuw><nsw><%loop.i.header>,+,%step}<nsw><%loop.j>
 ; CHECK-NEXT:    Entire Domain:
-; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
+; CHECK-NEXT:      Monotonicity: Unknown
+; CHECK-NEXT:      Reason: {{\{\{}}0,+,1}<nuw><nsw><%loop.i.header>,+,%step}<nsw><%loop.j>
 ; CHECK-NEXT:    Effective Domain:
 ; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
 ; CHECK-EMPTY:
@@ -503,7 +507,8 @@ define void @conditional_store1(ptr %a, i64 %n, i64 %m) {
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
 ; CHECK-NEXT:    Expr: {{\{\{}}0,+,1}<nuw><nsw><%loop.i.header>,+,1}<nuw><nsw><%loop.j.header>
 ; CHECK-NEXT:    Entire Domain:
-; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
+; CHECK-NEXT:      Monotonicity: Unknown
+; CHECK-NEXT:      Reason: {{\{\{}}0,+,1}<nuw><nsw><%loop.i.header>,+,1}<nuw><nsw><%loop.j.header>
 ; CHECK-NEXT:    Effective Domain:
 ; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
 ; CHECK-EMPTY:

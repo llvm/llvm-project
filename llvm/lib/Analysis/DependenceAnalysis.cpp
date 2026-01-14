@@ -345,6 +345,10 @@ private:
   /// The domain of monotonicity being checked.
   SCEVMonotonicityDomain Domain;
 
+  /// Set to true if we have found an addrec of the innermost loop during the
+  /// visit.
+  bool FoundInnermostLoop = false;
+
   /// A helper to classify \p Expr as either Invariant or Unknown.
   SCEVMonotonicity invariantOrUnknown(const SCEV *Expr);
 
@@ -356,6 +360,9 @@ private:
   SCEVMonotonicity createUnknown(const SCEV *FailurePoint) {
     return SCEVMonotonicity(SCEVMonotonicityType::Unknown, FailurePoint);
   }
+
+  /// An auxiliary function for visitAddRecExpr.
+  SCEVMonotonicity visitAddRecExprAux(const SCEVAddRecExpr *Expr);
 
   SCEVMonotonicity visitAddRecExpr(const SCEVAddRecExpr *Expr);
 
@@ -783,6 +790,7 @@ SCEVMonotonicityChecker::checkMonotonicity(const SCEV *Expr,
   assert(Expr->getType()->isIntegerTy() && "Expr must be integer type");
   this->OutermostLoop = OutermostLoop;
   this->Domain = Domain;
+  FoundInnermostLoop = false;
   return visit(Expr);
 }
 
@@ -798,21 +806,57 @@ SCEVMonotonicityChecker::checkMonotonicity(const SCEV *Expr,
 /// applies when Y is non-positive, leading to a monotonically decreasing
 /// AddRec.
 SCEVMonotonicity
-SCEVMonotonicityChecker::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
-  if (!Expr->isAffine() || !Expr->hasNoSignedWrap())
-    return createUnknown(Expr);
-
+SCEVMonotonicityChecker::visitAddRecExprAux(const SCEVAddRecExpr *Expr) {
+  // To update FoundInnermostLoop correctly, call visit on Start first.
   const SCEV *Start = Expr->getStart();
-  const SCEV *Step = Expr->getStepRecurrence(*SE);
-
   SCEVMonotonicity StartMon = visit(Start);
   if (StartMon.isUnknown())
     return StartMon;
 
+  if (!Expr->isAffine() || !Expr->hasNoSignedWrap())
+    return createUnknown(Expr);
+
+  const SCEV *Step = Expr->getStepRecurrence(*SE);
+  const Loop *L = Expr->getLoop();
+
   if (!isLoopInvariant(Step))
     return createUnknown(Expr);
 
+  switch (Domain) {
+  case SCEVMonotonicityDomain::Entire:
+    // If this is not the innermost loop, only checking nowrap is not enough.
+    // Consider the following pseudo code:
+    //
+    //   for (int i = 0; i < INT32_MAX; i++)
+    //     if (i < 42)
+    //       for (int j = 0; j < 100; j++)
+    //         A[i + j] = 0;
+    //
+    // In this case, the SCEV for the subscript expression `i + j` will have nsw
+    // flags, but it is not monotonic over the entire domain. To handle
+    // non-innermost loops, we need to check loop-guards. At the moment, simply
+    // bail out if the loop is not innermost.
+    if (FoundInnermostLoop)
+      return createUnknown(Expr);
+
+    // We also need to make sure that the loop has an exact backedge-taken
+    // count.
+    if (!SE->hasLoopInvariantBackedgeTakenCount(L))
+      return createUnknown(Expr);
+    break;
+  case SCEVMonotonicityDomain::Effective:
+    // Nothing to do for now.
+    break;
+  }
+
   return SCEVMonotonicity(SCEVMonotonicityType::MultivariateSignedMonotonic);
+}
+
+SCEVMonotonicity
+SCEVMonotonicityChecker::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
+  SCEVMonotonicity Res = visitAddRecExprAux(Expr);
+  FoundInnermostLoop = true;
+  return Res;
 }
 
 //===----------------------------------------------------------------------===//

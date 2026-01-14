@@ -2,10 +2,6 @@
 ; RUN: opt < %s -disable-output -passes="print<da>" -da-dump-monotonicity-report \
 ; RUN:     -da-enable-monotonicity-check 2>&1 | FileCheck %s
 
-; FIXME: These cases are not monotonic because currently we define the domain
-; of monotonicity as "entire iteration space". However, the nsw property is
-; actually valid only under the loop guard conditions.
-
 ; for (i = 0; i < INT64_MAX - 1; i++)
 ;   if (i < 1000)
 ;     for (j = 0; j < 2000; j++)
@@ -17,7 +13,8 @@ define void @nsw_under_loop_guard0(ptr %a) {
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
 ; CHECK-NEXT:    Expr: {{\{\{}}0,+,1}<nuw><nsw><%loop.i.header>,+,1}<nuw><nsw><%loop.j>
 ; CHECK-NEXT:    Entire Domain:
-; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
+; CHECK-NEXT:      Monotonicity: Unknown
+; CHECK-NEXT:      Reason: {{\{\{}}0,+,1}<nuw><nsw><%loop.i.header>,+,1}<nuw><nsw><%loop.j>
 ; CHECK-NEXT:    Effective Domain:
 ; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
 ; CHECK-EMPTY:
@@ -64,7 +61,8 @@ define void @nsw_under_loop_guard1(ptr %a) {
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
 ; CHECK-NEXT:    Expr: {{\{\{}}9223372036854775807,+,-1}<nsw><%loop.i.header>,+,1}<nuw><nsw><%loop.j>
 ; CHECK-NEXT:    Entire Domain:
-; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
+; CHECK-NEXT:      Monotonicity: Unknown
+; CHECK-NEXT:      Reason: {{\{\{}}9223372036854775807,+,-1}<nsw><%loop.i.header>,+,1}<nuw><nsw><%loop.j>
 ; CHECK-NEXT:    Effective Domain:
 ; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
 ; CHECK-EMPTY:
@@ -112,7 +110,8 @@ define void @nsw_under_loop_guard2(ptr %a, i64 %n, i64 %m, i64 %k) {
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
 ; CHECK-NEXT:    Expr: {{\{\{}}0,+,1}<nuw><nsw><%loop.i.header>,+,1}<nuw><nsw><%loop.j>
 ; CHECK-NEXT:    Entire Domain:
-; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
+; CHECK-NEXT:      Monotonicity: Unknown
+; CHECK-NEXT:      Reason: {{\{\{}}0,+,1}<nuw><nsw><%loop.i.header>,+,1}<nuw><nsw><%loop.j>
 ; CHECK-NEXT:    Effective Domain:
 ; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
 ; CHECK-EMPTY:
