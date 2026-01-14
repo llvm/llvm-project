@@ -1,4 +1,5 @@
 add_flang_library(FIROpenACCTransforms
+  ACCUseDeviceCanonicalizer.cpp
   ACCInitializeFIRAnalyses.cpp
   ACCRecipeBufferization.cpp
 
@@ -7,6 +8,7 @@ add_flang_library(FIROpenACCTransforms
 
   LINK_LIBS
   FIRAnalysis
+  FIRBuilder
   FIRDialect
   FIROpenACCAnalysis
   HLFIRDialect
@@ -16,4 +18,5 @@ add_flang_library(FIROpenACCTransforms
   MLIRPass
   MLIROpenACCDialect
   MLIROpenACCUtils
+  MLIRTransformUtils
 )

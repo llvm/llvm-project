@@ -23,26 +23,24 @@ template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
   return P.match(V);
 }
 
+/// A match functor that can be used as a UnaryPredicate in functional
+/// algorithms like all_of.
+template <typename Val, typename Pattern> auto match_fn(const Pattern &P) {
+  return bind_back<match<Val, Pattern>>(P);
+}
+
 template <typename Pattern> bool match(VPUser *U, const Pattern &P) {
   auto *R = dyn_cast<VPRecipeBase>(U);
   return R && match(R, P);
 }
 
-template <typename Pattern> bool match(VPSingleDefRecipe *R, const Pattern &P) {
-  return P.match(static_cast<const VPRecipeBase *>(R));
+/// Match functor for VPUser.
+template <typename Pattern> auto match_fn(const Pattern &P) {
+  return bind_back<match<Pattern>>(P);
 }
 
-template <typename Val, typename Pattern> struct VPMatchFunctor {
-  const Pattern &P;
-  VPMatchFunctor(const Pattern &P) : P(P) {}
-  bool operator()(Val *V) const { return match(V, P); }
-};
-
-/// A match functor that can be used as a UnaryPredicate in functional
-/// algorithms like all_of.
-template <typename Val = VPUser, typename Pattern>
-VPMatchFunctor<Val, Pattern> match_fn(const Pattern &P) {
-  return P;
+template <typename Pattern> bool match(VPSingleDefRecipe *R, const Pattern &P) {
+  return P.match(static_cast<const VPRecipeBase *>(R));
 }
 
 template <typename Class> struct class_match {
@@ -642,6 +640,11 @@ struct SpecificCmp_match {
       : Predicate(Pred), Op0(LHS), Op1(RHS) {}
 
   bool match(const VPValue *V) const {
+    auto *DefR = V->getDefiningRecipe();
+    return DefR && match(DefR);
+  }
+
+  bool match(const VPRecipeBase *V) const {
     CmpPredicate CurrentPred;
     return Cmp_match<Op0_t, Op1_t, Opcodes...>(CurrentPred, Op0, Op1)
                .match(V) &&

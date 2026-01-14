@@ -29,6 +29,7 @@ DUMMY_FUNCTION_PASS("x86-winehstate", WinEHStatePass())
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+MACHINE_FUNCTION_PASS("x86-argument-stack-slot", X86ArgumentStackSlotPass())
 MACHINE_FUNCTION_PASS("x86-avoid-sfb", X86AvoidStoreForwardingBlocksPass())
 MACHINE_FUNCTION_PASS("x86-avoid-trailing-call", X86AvoidTrailingCallPass())
 MACHINE_FUNCTION_PASS("x86-cf-opt", X86CallFrameOptimizationPass())
@@ -64,5 +65,4 @@ DUMMY_MACHINE_FUNCTION_PASS("x86-return-thunks", X86ReturnThunks())
 DUMMY_MACHINE_FUNCTION_PASS("x86-seses", X86SpeculativeExecutionSideEffectSuppression())
 DUMMY_MACHINE_FUNCTION_PASS("x86-slh", X86SpeculativeLoadHardeningPass())
 DUMMY_MACHINE_FUNCTION_PASS("x86-wineh-unwindv2", X86WinEHUnwindV2())
-DUMMY_MACHINE_FUNCTION_PASS("x86argumentstackrebase", X86ArgumentStackSlotPass())
 #undef DUMMY_MACHINE_FUNCTION_PASS
