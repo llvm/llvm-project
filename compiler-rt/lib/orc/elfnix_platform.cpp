@@ -512,13 +512,11 @@ Error ELFNixPlatformRuntimeState::runFinis(
 
   JDStatesLock.unlock();
 
-  // Run in REVERSE order (LIFO semantics)
-  for (size_t I = FiniSections.size(); I > 0; --I) {
-    auto &Sec = FiniSections[I - 1];
-    for (size_t J = Sec.size(); J > 0; --J) {
-      Sec[J - 1]();
-    }
-  }
+  // Run in forward order - sections are already sorted correctly by the JIT:
+  // .dtors first (in order), then .fini_array (in descending priority order)
+  for (auto Sec : FiniSections)
+    for (auto *Fini : Sec)
+      Fini();
 
   JDStatesLock.lock();
 
