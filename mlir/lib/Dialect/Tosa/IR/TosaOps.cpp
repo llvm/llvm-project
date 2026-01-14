@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
 #include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
@@ -2126,13 +2127,11 @@ LogicalResult tosa::PadOp::verify() {
   if (!inputType || !outputType)
     return success();
 
-  auto inputRank = inputType.getRank();
-  auto outputRank = outputType.getRank();
-  if (inputRank != outputRank)
-    return emitOpError() << "expect same input and output tensor rank, but got "
-                         << "inputRank: " << inputRank
-                         << ", outputRank: " << outputRank;
+  if (failed(verifyRanksMatch(getOperation(), inputType, outputType, "input",
+                              "output")))
+    return failure();
 
+  auto inputRank = inputType.getRank();
   DenseIntElementsAttr paddingAttr;
   if (!matchPattern(getPadding(), m_Constant(&paddingAttr))) {
     return failure();
@@ -2373,9 +2372,9 @@ LogicalResult tosa::TableOp::verify() {
   if (!inputType.hasRank() || !outputType.hasRank())
     return success();
 
-  if (inputType.getRank() != outputType.getRank())
-    return emitOpError()
-           << "expected input tensor rank to equal result tensor rank";
+  if (failed(verifyRanksMatch(getOperation(), inputType, outputType, "input",
+                              "result")))
+    return failure();
 
   auto inputDims = inputType.getShape();
   auto outputDims = outputType.getShape();
@@ -2465,8 +2464,10 @@ LogicalResult tosa::TileOp::verify() {
     if (inputType.getRank() != multiplesRank)
       return emitOpError("expect 'multiples' to have rank ")
              << inputType.getRank() << " but got " << multiplesRank << ".";
-    if (outputType.hasRank() && inputType.getRank() != outputType.getRank())
-      return emitOpError("expect same input and output tensor rank.");
+    if (outputType.hasRank() &&
+        failed(verifyRanksMatch(getOperation(), inputType, outputType, "input",
+                                "output")))
+      return failure();
   } else if (outputType.hasRank() && outputType.getRank() != multiplesRank)
     return emitOpError("expect 'multiples' array to have length ")
            << outputType.getRank() << " but got " << multiplesRank << ".";
