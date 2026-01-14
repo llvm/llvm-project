@@ -3103,19 +3103,21 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
   HeaderMask->replaceAllUsesWith(EVLMask);
 }
 
-/// Converts a tail folded vector loop region to step by @llvm.get.vector.length
-/// elements instead of VF elements each iteration.
+/// Converts a tail folded vector loop region to step by
+/// VPInstruction::ExplicitVectorLength elements instead of VF elements each
+/// iteration.
 ///
 /// - Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and
-/// replaces all uses except the canonical IV increment of
-/// VPCanonicalIVPHIRecipe with a VPEVLBasedIVPHIRecipe. VPCanonicalIVPHIRecipe
-/// is used only for loop iterations counting after this transformation.
+///   replaces all uses except the canonical IV increment of
+///   VPCanonicalIVPHIRecipe with a VPEVLBasedIVPHIRecipe.
+///   VPCanonicalIVPHIRecipe is used only for loop iterations counting after
+///   this transformation.
 ///
 /// - The header mask is replaced with a header mask based on the EVL.
 ///
 /// - Plans with FORs have a new phi added to keep track of the EVL of the
-/// previous iteration, and VPFirstOrderRecurrencePHIRecipes are replaced with
-/// @llvm.vp.splice.
+///   previous iteration, and VPFirstOrderRecurrencePHIRecipes are replaced with
+///   @llvm.vp.splice.
 ///
 /// The function uses the following definitions:
 ///  %StartV is the canonical induction start value.
