@@ -1,11 +1,9 @@
 // RUN: %clang_analyze_cc1 -triple hexagon-unknown-linux -verify %s \
 // RUN:   -analyzer-checker=core,optin.core.UnconditionalVAArg \
-// RUN:   -analyzer-disable-checker=core.CallAndMessage \
 // RUN:   -analyzer-output=text
 //
 // RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -verify %s \
 // RUN:   -analyzer-checker=core,optin.core.UnconditionalVAArg \
-// RUN:   -analyzer-disable-checker=core.CallAndMessage \
 // RUN:   -analyzer-output=text
 
 #include "Inputs/system-header-simulator-for-valist.h"
