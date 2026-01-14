@@ -106,32 +106,48 @@ Create Release Branch and Update LLVM Version
 
 Branch the Git trunk using the following procedure:
 
-#. Remind developers that the release branching is imminent and to refrain from
-   committing patches that might break the build, e.g., new features, large
-   patches for works in progress, an overhaul of the type system, an exciting
-   new TableGen feature, etc.
+#. Verify the current git trunk is in decent shape by examining the status
+   checks on the `most recent commits <https://github.com/llvm/llvm-project/commits/main>`_
 
-#. Verify that the current git trunk is in decent shape by
-   examining nightly tester and buildbot results.
+#. Bump the version in trunk to ``N.0.0git`` and clear the release notes: ::
 
-#. Bump the version in trunk to ``N.0.0git`` with the script in
-   ``llvm/utils/release/bump-version.py``, and tag the commit with ``llvmorg-N-init``.
-   If ``X`` is the version to be released, then ``N`` is ``X + 1``. ::
+    $ llvm/utils/release/bump-version.py --git N.0.0
+    $ llvm/utils/release/clear-release-notes.py
+    $ git commit -am "Bump version to N.0.0git"
+    $ git push origin main
 
-    $ git tag -sa llvmorg-N-init
+   If the push fails, rebase if necessary and try again.
 
-#. Clear the release notes in trunk with the script in
-   ``llvm/utils/release/clear-release-notes.py``.
+#. Tag the commit bumping the version on trunk with ``llvmorg-N-init``. If
+   ``X`` is the version to be released, then ``N`` is ``X + 1``. ::
 
-#. Create the release branch from the last known good revision from before the
-   version bump.  The branch's name is ``release/X.x`` where ``X`` is the major version
-   number and ``x`` is just the letter ``x``.
+    $ GPG_TTY=$(tty) git tag -sa llvmorg-N-init -m "llvmorg-N-init"
+    $ git push origin llvmorg-N-init
 
-#. On the newly-created release branch, immediately bump the version
-   to ``X.1.0git`` (where ``X`` is the major version of the branch.)
+#. Create the release branch from the last known good revision before the
+   version bump. The branch name is ``release/X.x`` where ``X`` is the major
+   version number and ``x`` is just the letter ``x``. Assuming the revision
+   before the version bump is ok, this would be: ::
 
-#. All tags and branches need to be created in both the ``llvm/llvm-project`` and
-   ``llvm/llvm-test-suite`` repos.
+    $ git checkout -b release/X.x llvmorg-N-init^
+
+#. On the newly-created release branch, immediately bump the version to
+   ``X.1.0git`` (where ``X`` is the major version number): ::
+
+    $ llvm/utils/release/bump-version.py --git X.1.0
+    $ git commit -am "Bump version to X.1.0git"
+
+#. Push release branch: ::
+
+    $ git push -u origin release/X.x
+
+#. And finally, create the release branch in ``llvm-test-suite`` repo: ::
+
+    $ cd <llvm-test-suite>
+    $ git checkout main
+    $ git pull
+    $ git checkout -b release/X.x
+    $ git push -u origin release/X.x
 
 Tagging the LLVM Release Candidates
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
