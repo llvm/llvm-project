@@ -840,6 +840,18 @@ bool TargetInfo::validateOutputConstraint(ConstraintInfo &Info) const {
     case 'E':
     case 'F':
       break;  // Pass them.
+    case '{': {
+      // First, check the target parser in case it validates
+      // the {...} constraint differently.
+      if (validateAsmConstraint(Name, Info))
+        return true;
+
+      // If not, that's okay, we will try to validate it
+      // using a target agnostic implementation.
+      if (!validateHardRegisterAsmConstraint(Name, Info))
+        return false;
+      break;
+    }
     }
 
     Name++;
@@ -853,6 +865,36 @@ bool TargetInfo::validateOutputConstraint(ConstraintInfo &Info) const {
   // If a constraint allows neither memory nor register operands it contains
   // only modifiers. Reject it.
   return Info.allowsMemory() || Info.allowsRegister();
+}
+
+bool TargetInfo::validateHardRegisterAsmConstraint(
+    const char *&Name, TargetInfo::ConstraintInfo &Info) const {
+  // First, swallow the '{'.
+  Name++;
+
+  // Mark the start of the possible register name.
+  const char *Start = Name;
+
+  // Loop through rest of "Name".
+  // In this loop, we check whether we have a closing curly brace which
+  // validates the constraint. Also, this allows us to get the correct bounds to
+  // set our register name.
+  while (*Name && *Name != '}')
+    Name++;
+
+  // Missing '}', return false.
+  if (!*Name)
+    return false;
+
+  // Now we set the register name.
+  std::string Register(Start, Name - Start);
+
+  // We validate whether its a valid register to be used.
+  if (!isValidGCCRegisterName(Register))
+    return false;
+
+  Info.setAllowsRegister();
+  return true;
 }
 
 bool TargetInfo::resolveSymbolicName(const char *&Name,
@@ -987,6 +1029,18 @@ bool TargetInfo::validateInputConstraint(
     case '!': // Disparage severely.
     case '*': // Ignore for choosing register preferences.
       break;  // Pass them.
+    case '{': {
+      // First, check the target parser in case it validates
+      // the {...} constraint differently.
+      if (validateAsmConstraint(Name, Info))
+        return true;
+
+      // If not, that's okay, we will try to validate it
+      // using a target agnostic implementation.
+      if (!validateHardRegisterAsmConstraint(Name, Info))
+        return false;
+      break;
+    }
     }
 
     Name++;
@@ -1068,6 +1122,14 @@ void TargetInfo::copyAuxTarget(const TargetInfo *Aux) {
 std::string
 TargetInfo::simplifyConstraint(StringRef Constraint,
                                SmallVectorImpl<ConstraintInfo> *OutCons) const {
+  // If we have only the {...} constraint, do not do any simplifications. This
+  // already maps to the lower level LLVM inline assembly IR that tells the
+  // backend to allocate a specific register. Any validations would have already
+  // been done in the Sema stage or will be done in the AddVariableConstraints
+  // function.
+  if (Constraint[0] == '{' || (Constraint[0] == '&' && Constraint[1] == '{'))
+    return std::string(Constraint);
+
   std::string Result;
 
   for (const char *I = Constraint.begin(), *E = Constraint.end(); I < E; I++) {
