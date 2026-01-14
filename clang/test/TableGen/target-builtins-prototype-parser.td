@@ -63,6 +63,12 @@ def : Builtin {
   let Spellings = ["__builtin_09"];
 }
 
+def : Builtin {
+// CHECK: Builtin::Info{{.*}} __builtin_10 {{.*}} /* V2i*0 */
+  let Prototype = "_Vector<2, int address_space<0> *>()";
+  let Spellings = ["__builtin_10"];
+}
+
 #ifdef ERROR_EXPECTED_LANES
 def : Builtin {
 // ERROR_EXPECTED_LANES: :[[# @LINE + 1]]:7: error: Expected number of lanes after '_ExtVector<'

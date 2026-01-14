@@ -75,13 +75,13 @@ endfunction(add_header)
 function(add_gen_header target_name)
   cmake_parse_arguments(
     "ADD_GEN_HDR"
-    "PUBLIC" # No optional arguments
+    "PROXY;PUBLIC" # No optional arguments
     "YAML_FILE;GEN_HDR" # Single value arguments
     "DEPENDS"     # Multi value arguments
     ${ARGN}
   )
   get_fq_target_name(${target_name} fq_target_name)
-  if(NOT LLVM_LIBC_FULL_BUILD)
+  if(NOT LLVM_LIBC_FULL_BUILD AND NOT ADD_GEN_HDR_PROXY)
     add_library(${fq_target_name} INTERFACE)
     return()
   endif()
@@ -94,7 +94,12 @@ function(add_gen_header target_name)
 
   set(absolute_path ${CMAKE_CURRENT_SOURCE_DIR}/${ADD_GEN_HDR_GEN_HDR})
   file(RELATIVE_PATH relative_path ${LIBC_INCLUDE_SOURCE_DIR} ${absolute_path})
-  set(out_file ${LIBC_INCLUDE_DIR}/${relative_path})
+  if (ADD_GEN_HDR_PROXY)
+    set(out_file ${LIBC_BUILD_DIR}/hdr/${relative_path})
+    set(proxy_arg "--proxy")
+  else()
+    set(out_file ${LIBC_INCLUDE_DIR}/${relative_path})
+  endif()
   set(dep_file "${out_file}.d")
   set(yaml_file ${CMAKE_SOURCE_DIR}/${ADD_GEN_HDR_YAML_FILE})
   
@@ -113,6 +118,7 @@ function(add_gen_header target_name)
             --output ${out_file}
             --depfile ${dep_file}
             --write-if-changed
+            ${proxy_arg}
             ${entry_points}
             ${yaml_file}
     DEPENDS ${yaml_file}

@@ -22,7 +22,7 @@ using namespace llvm::orc;
 static void freeVoidVoid() {}
 
 TEST(CallableTraitsHelperTest, FreeVoidVoid) {
-  (void)freeVoidVoid;
+  freeVoidVoid();
   typedef CallableArgInfo<decltype(freeVoidVoid)> CAI;
   static_assert(std::is_void_v<CAI::ReturnType>);
   static_assert(std::is_same_v<CAI::ArgsTupleType, std::tuple<>>);
@@ -31,7 +31,7 @@ TEST(CallableTraitsHelperTest, FreeVoidVoid) {
 static int freeBinaryOp(int, float) { return 0; }
 
 TEST(CallableTraitsHelperTest, FreeBinaryOp) {
-  (void)freeBinaryOp;
+  freeBinaryOp(1, 2.0f);
   typedef CallableArgInfo<decltype(freeBinaryOp)> CAI;
   static_assert(std::is_same_v<CAI::ReturnType, int>);
   static_assert(std::is_same_v<CAI::ArgsTupleType, std::tuple<int, float>>);

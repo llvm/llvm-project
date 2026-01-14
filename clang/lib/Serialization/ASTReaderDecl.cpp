@@ -2107,8 +2107,9 @@ void ASTDeclMerger::MergeDefinitionData(
     auto *Def = DD.Definition;
     DD = std::move(MergeDD);
     DD.Definition = Def;
-    for (auto *D : Def->redecls())
-      cast<CXXRecordDecl>(D)->DefinitionData = &DD;
+    for (auto *R = Reader.getMostRecentExistingDecl(Def); R;
+         R = R->getPreviousDecl())
+      cast<CXXRecordDecl>(R)->DefinitionData = &DD;
     return;
   }
 
@@ -3641,23 +3642,9 @@ template<>
 void ASTDeclReader::attachPreviousDeclImpl(ASTReader &Reader,
                                            Redeclarable<VarDecl> *D,
                                            Decl *Previous, Decl *Canon) {
-  auto *VD = static_cast<VarDecl *>(D);
   auto *PrevVD = cast<VarDecl>(Previous);
   D->RedeclLink.setPrevious(PrevVD);
   D->First = PrevVD->First;
-
-  // We should keep at most one definition on the chain.
-  // FIXME: Cache the definition once we've found it. Building a chain with
-  // N definitions currently takes O(N^2) time here.
-  if (VD->isThisDeclarationADefinition() == VarDecl::Definition) {
-    for (VarDecl *CurD = PrevVD; CurD; CurD = CurD->getPreviousDecl()) {
-      if (CurD->isThisDeclarationADefinition() == VarDecl::Definition) {
-        Reader.mergeDefinitionVisibility(CurD, VD);
-        VD->demoteThisDefinitionToDeclaration();
-        break;
-      }
-    }
-  }
 }
 
 static bool isUndeducedReturnType(QualType T) {

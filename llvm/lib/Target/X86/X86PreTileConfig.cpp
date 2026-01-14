@@ -28,6 +28,7 @@
 #include "X86MachineFunctionInfo.h"
 #include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -42,7 +43,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "tile-pre-config"
+#define DEBUG_TYPE "x86-pre-tile-config"
 
 static void emitErrorMsg(MachineFunction &MF) {
   LLVMContext &Context = MF.getFunction().getContext();
@@ -97,7 +98,8 @@ struct BBInfo {
   bool NeedTileCfgLiveIn = false;
 };
 
-class X86PreTileConfig : public MachineFunctionPass {
+class X86PreTileConfigImpl {
+  std::function<MachineLoopInfo *()> GetMLI;
   MachineRegisterInfo *MRI = nullptr;
   const MachineLoopInfo *MLI = nullptr;
   SmallPtrSet<MachineInstr *, 8> DefVisited;
@@ -188,8 +190,22 @@ class X86PreTileConfig : public MachineFunctionPass {
     return true;
   }
 
+  /// Clear MF related structures.
+  void releaseMemory() {
+    ShapeBBs.clear();
+    DefVisited.clear();
+    BBVisitedInfo.clear();
+  }
+
 public:
-  X86PreTileConfig() : MachineFunctionPass(ID) {}
+  X86PreTileConfigImpl(std::function<MachineLoopInfo *()> GetMLI)
+      : GetMLI(GetMLI) {}
+  bool runOnMachineFunction(MachineFunction &MF);
+};
+
+class X86PreTileConfigLegacy : public MachineFunctionPass {
+public:
+  X86PreTileConfigLegacy() : MachineFunctionPass(ID) {}
 
   /// Return the pass name.
   StringRef getPassName() const override {
@@ -203,13 +219,6 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
-  /// Clear MF related structures.
-  void releaseMemory() override {
-    ShapeBBs.clear();
-    DefVisited.clear();
-    BBVisitedInfo.clear();
-  }
-
   /// Perform ldtilecfg instructions inserting.
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -218,15 +227,15 @@ public:
 
 } // end anonymous namespace
 
-char X86PreTileConfig::ID = 0;
+char X86PreTileConfigLegacy::ID = 0;
 
-INITIALIZE_PASS_BEGIN(X86PreTileConfig, "tilepreconfig",
+INITIALIZE_PASS_BEGIN(X86PreTileConfigLegacy, "tilepreconfig",
                       "Tile Register Pre-configure", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
-INITIALIZE_PASS_END(X86PreTileConfig, "tilepreconfig",
+INITIALIZE_PASS_END(X86PreTileConfigLegacy, "tilepreconfig",
                     "Tile Register Pre-configure", false, false)
 
-void X86PreTileConfig::collectShapeInfo(MachineInstr &MI) {
+void X86PreTileConfigImpl::collectShapeInfo(MachineInstr &MI) {
   auto RecordShape = [&](MachineInstr *MI, MachineBasicBlock *MBB) {
     MIRef MIR(MI, MBB);
     auto &Refs = ShapeBBs[MBB];
@@ -257,7 +266,9 @@ void X86PreTileConfig::collectShapeInfo(MachineInstr &MI) {
   }
 }
 
-bool X86PreTileConfig::runOnMachineFunction(MachineFunction &MF) {
+bool X86PreTileConfigImpl::runOnMachineFunction(MachineFunction &MF) {
+  scope_exit ClearStateOnExit([this] { releaseMemory(); });
+
   X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
   // Early exit in the common case of non-AMX code.
   if (X86FI->getAMXProgModel() != AMXProgModelEnum::ManagedRA)
@@ -274,7 +285,7 @@ bool X86PreTileConfig::runOnMachineFunction(MachineFunction &MF) {
 
   // Iterate MF to collect information.
   MRI = &MF.getRegInfo();
-  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  MLI = GetMLI();
   SmallSet<MIRef, 8> CfgNeedInsert;
   SmallVector<MachineBasicBlock *, 8> CfgLiveInBBs;
   for (auto &MBB : MF) {
@@ -436,6 +447,23 @@ bool X86PreTileConfig::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-FunctionPass *llvm::createX86PreTileConfigPass() {
-  return new X86PreTileConfig();
+FunctionPass *llvm::createX86PreTileConfigLegacyPass() {
+  return new X86PreTileConfigLegacy();
+}
+
+bool X86PreTileConfigLegacy::runOnMachineFunction(MachineFunction &MF) {
+  X86PreTileConfigImpl Impl(
+      [this]() { return &getAnalysis<MachineLoopInfoWrapperPass>().getLI(); });
+  return Impl.runOnMachineFunction(MF);
+}
+
+PreservedAnalyses
+X86PreTileConfigPass::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
+  X86PreTileConfigImpl Impl(
+      [&MFAM, &MF]() { return &MFAM.getResult<MachineLoopAnalysis>(MF); });
+  return Impl.runOnMachineFunction(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }

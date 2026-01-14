@@ -71,8 +71,7 @@ int foo(int a, int b) {
 // CIR: }) : (!cir.bool) -> !s32i
 // CIR: [[CAST:%.+]] = cir.cast int_to_bool [[TERNARY_RES]] : !s32i -> !cir.bool
 // CIR: cir.if [[CAST]] {
-// CIR: [[ONE:%.+]] = cir.const #cir.int<1> : !s32i
-// CIR: [[MINUS_ONE:%.+]] = cir.unary(minus, [[ONE]]) nsw : !s32i, !s32i
+// CIR: [[MINUS_ONE:%.+]] = cir.const #cir.int<-1> : !s32i
 // CIR: cir.store [[MINUS_ONE]], [[RETVAL]] : !s32i, !cir.ptr<!s32i>
 // CIR: [[RETVAL_VAL:%.+]] = cir.load [[RETVAL]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.return [[RETVAL_VAL]] : !s32i

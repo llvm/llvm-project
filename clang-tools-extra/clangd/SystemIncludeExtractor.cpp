@@ -332,7 +332,7 @@ std::optional<std::string> run(llvm::ArrayRef<llvm::StringRef> Argv,
          EC.message());
     return std::nullopt;
   }
-  auto CleanUp = llvm::make_scope_exit(
+  llvm::scope_exit CleanUp(
       [&OutputPath]() { llvm::sys::fs::remove(OutputPath); });
 
   std::optional<llvm::StringRef> Redirects[] = {{""}, {""}, {""}};

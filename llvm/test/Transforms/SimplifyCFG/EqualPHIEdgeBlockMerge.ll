@@ -114,7 +114,7 @@ define i8 @testmergesome(i32 %u, ptr %A) {
 ; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
 ; CHECK-NEXT:    br label [[Y]]
 ; CHECK:       Y:
-; CHECK-NEXT:    [[VAL_0:%.*]] = phi i8 [ 2, [[W]] ], [ 1, [[Z]] ], [ 1, [[V:%.*]] ]
+; CHECK-NEXT:    [[VAL_0:%.*]] = phi i8 [ 1, [[V:%.*]] ], [ 2, [[W]] ], [ 1, [[Z]] ]
 ; CHECK-NEXT:    ret i8 [[VAL_0]]
 ;
 V:
@@ -156,7 +156,7 @@ define i8 @testmergesome2(i32 %u, ptr %A) {
 ; CHECK-NEXT:    store i32 1, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    br label [[Y]]
 ; CHECK:       Y:
-; CHECK-NEXT:    [[VAL_0:%.*]] = phi i8 [ 1, [[V:%.*]] ], [ 2, [[W]] ], [ 1, [[V]] ], [ 1, [[V]] ]
+; CHECK-NEXT:    [[VAL_0:%.*]] = phi i8 [ 1, [[V:%.*]] ], [ 1, [[V]] ], [ 2, [[W]] ], [ 1, [[V]] ]
 ; CHECK-NEXT:    ret i8 [[VAL_0]]
 ;
 V:
