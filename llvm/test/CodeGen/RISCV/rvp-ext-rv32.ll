@@ -2313,3 +2313,42 @@ define void @test_umax_b(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
   store <4 x i8> %max, ptr %ret_ptr
   ret void
 }
+
+; Test vselect operations
+define void @test_vselect_v2i16(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr, ptr %c_ptr) {
+; CHECK-LABEL: test_vselect_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    lw a2, 0(a2)
+; CHECK-NEXT:    lw a3, 0(a3)
+; CHECK-NEXT:    pmslt.h a1, a2, a1
+; CHECK-NEXT:    merge a1, a2, a3
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i16>, ptr %a_ptr
+  %b = load <2 x i16>, ptr %b_ptr
+  %c = load <2 x i16>, ptr %c_ptr
+  %mask = icmp sgt <2 x i16> %a, %b
+  %res = select <2 x i1> %mask, <2 x i16> %c, <2 x i16> %b
+  store <2 x i16> %res, ptr %ret_ptr
+  ret void
+}
+
+define void @test_vselect_v4i8(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr, ptr %c_ptr) {
+; CHECK-LABEL: test_vselect_v4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 0(a1)
+; CHECK-NEXT:    lw a2, 0(a2)
+; CHECK-NEXT:    lw a3, 0(a3)
+; CHECK-NEXT:    pmseq.b a1, a1, a2
+; CHECK-NEXT:    merge a1, a2, a3
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x i8>, ptr %a_ptr
+  %b = load <4 x i8>, ptr %b_ptr
+  %c = load <4 x i8>, ptr %c_ptr
+  %mask = icmp eq <4 x i8> %a, %b
+  %res = select <4 x i1> %mask, <4 x i8> %c, <4 x i8> %b
+  store <4 x i8> %res, ptr %ret_ptr
+  ret void
+}
