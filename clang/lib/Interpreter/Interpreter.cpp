@@ -35,15 +35,18 @@
 #include "clang/FrontendTool/Utils.h"
 #include "clang/Interpreter/IncrementalExecutor.h"
 #include "clang/Interpreter/Interpreter.h"
+#include "clang/Interpreter/ThreadSafeContext.h"
 #include "clang/Interpreter/Value.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Options/OptionUtils.h"
 #include "clang/Options/Options.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
+#ifndef __EMSCRIPTEN__
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#endif // __EMSCRIPTEN__
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -255,7 +258,7 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
   CI = std::move(Instance);
   llvm::ErrorAsOutParameter EAO(&ErrOut);
   auto LLVMCtx = std::make_unique<llvm::LLVMContext>();
-  TSCtx = std::make_unique<llvm::orc::ThreadSafeContext>(std::move(LLVMCtx));
+  TSCtx = std::make_unique<clang::ThreadSafeContext>(std::move(LLVMCtx));
 
   Act = TSCtx->withContextDo([&](llvm::LLVMContext *Ctx) {
     return std::make_unique<IncrementalAction>(*CI, *Ctx, ErrOut, *this,
@@ -542,7 +545,7 @@ llvm::Error Interpreter::ParseAndExecute(llvm::StringRef Code, Value *V) {
   return llvm::Error::success();
 }
 
-llvm::Expected<llvm::orc::ExecutorAddr>
+llvm::Expected<clang::ExecutorAddress>
 Interpreter::getSymbolAddress(GlobalDecl GD) const {
   if (!IncrExecutor)
     return llvm::make_error<llvm::StringError>("Operation failed. "
@@ -552,7 +555,7 @@ Interpreter::getSymbolAddress(GlobalDecl GD) const {
   return getSymbolAddress(MangledName);
 }
 
-llvm::Expected<llvm::orc::ExecutorAddr>
+llvm::Expected<clang::ExecutorAddress>
 Interpreter::getSymbolAddress(llvm::StringRef IRName) const {
   if (!IncrExecutor)
     return llvm::make_error<llvm::StringError>("Operation failed. "
@@ -562,7 +565,7 @@ Interpreter::getSymbolAddress(llvm::StringRef IRName) const {
   return IncrExecutor->getSymbolAddress(IRName, IncrementalExecutor::IRName);
 }
 
-llvm::Expected<llvm::orc::ExecutorAddr>
+llvm::Expected<clang::ExecutorAddress>
 Interpreter::getSymbolAddressFromLinkerName(llvm::StringRef Name) const {
   if (!IncrExecutor)
     return llvm::make_error<llvm::StringError>("Operation failed. "
@@ -579,11 +582,12 @@ llvm::Error Interpreter::Undo(unsigned N) {
                                                "No input left to undo",
                                                std::error_code());
   } else if (N > getEffectivePTUSize()) {
-    return llvm::make_error<llvm::StringError>(
-        llvm::formatv(
-            "Operation failed. Wanted to undo {0} inputs, only have {1}.", N,
-            getEffectivePTUSize()),
-        std::error_code());
+    {
+      std::string Msg = "Operation failed. Wanted to undo " +
+                        std::to_string(N) + " inputs, only have " +
+                        std::to_string(getEffectivePTUSize()) + ".";
+      return llvm::make_error<llvm::StringError>(Msg, std::error_code());
+    }
   }
 
   for (unsigned I = 0; I < N; I++) {

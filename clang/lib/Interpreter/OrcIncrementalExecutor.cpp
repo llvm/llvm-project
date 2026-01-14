@@ -11,7 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "OrcIncrementalExecutor.h"
+#include "clang/Interpreter/IncrementalExecutor.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
+#include "clang/Interpreter/ThreadSafeContext.h"
 
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
@@ -37,15 +39,20 @@ LLVM_ATTRIBUTE_USED void linkComponents() {
 
 namespace clang {
 OrcIncrementalExecutor::OrcIncrementalExecutor(
-    llvm::orc::ThreadSafeContext &TSC)
-    : TSCtx(TSC) {}
-
-OrcIncrementalExecutor::OrcIncrementalExecutor(
-    llvm::orc::ThreadSafeContext &TSC, llvm::orc::LLJITBuilder &JITBuilder,
+    clang::ThreadSafeContext &TSC, llvm::orc::LLJITBuilder &JITBuilder,
     llvm::Error &Err)
-    : TSCtx(TSC) {
+    : TSCtx(TSC), OrcTSCtx(nullptr) {
   using namespace llvm::orc;
   llvm::ErrorAsOutParameter EAO(&Err);
+
+  // Create an ORC ThreadSafeContext wrapping the same LLVMContext as the
+  // clang::ThreadSafeContext. This ensures all modules (compiled by clang
+  // using TSC's context) are compatible with the ORC JIT.
+  // We use a no-op deleter since the context is owned by clang::ThreadSafeContext.
+  TSC.withContextDo([this](llvm::LLVMContext *Ctx) {
+    this->OrcTSCtx = std::make_unique<llvm::orc::ThreadSafeContext>(
+        std::unique_ptr<llvm::LLVMContext>(Ctx, [](llvm::LLVMContext *) {}));
+  });
 
   if (auto JitOrErr = JITBuilder.create())
     Jit = std::move(*JitOrErr);
@@ -62,7 +69,7 @@ llvm::Error OrcIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
       Jit->getMainJITDylib().createResourceTracker();
   ResourceTrackers[&PTU] = RT;
 
-  return Jit->addIRModule(RT, {std::move(PTU.TheModule), TSCtx});
+  return Jit->addIRModule(RT, {std::move(PTU.TheModule), OrcTSCtx});
 }
 
 llvm::Error OrcIncrementalExecutor::removeModule(PartialTranslationUnit &PTU) {
@@ -87,7 +94,7 @@ llvm::Error OrcIncrementalExecutor::runCtors() const {
   return Jit->initialize(Jit->getMainJITDylib());
 }
 
-llvm::Expected<llvm::orc::ExecutorAddr>
+llvm::Expected<clang::ExecutorAddress>
 OrcIncrementalExecutor::getSymbolAddress(llvm::StringRef Name,
                                          SymbolNameKind NameKind) const {
   using namespace llvm::orc;
@@ -102,7 +109,7 @@ OrcIncrementalExecutor::getSymbolAddress(llvm::StringRef Name,
                                     : Jit->mangleAndIntern(Name));
   if (auto Err = SymOrErr.takeError())
     return std::move(Err);
-  return SymOrErr->getAddress();
+  return clang::ExecutorAddress(SymOrErr->getAddress().getValue());
 }
 
 llvm::Error OrcIncrementalExecutor::LoadDynamicLibrary(const char *name) {
