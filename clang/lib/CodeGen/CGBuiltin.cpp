@@ -121,6 +121,8 @@ static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
     return CGF->EmitHexagonBuiltinExpr(BuiltinID, E);
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
     return CGF->EmitRISCVBuiltinExpr(BuiltinID, E, ReturnValue);
   case llvm::Triple::spirv32:
   case llvm::Triple::spirv64:
@@ -4749,6 +4751,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                                    getContext().UnsignedIntTy);
     Function *F = CGM.getIntrinsic(Intrinsic::frameaddress, AllocaInt8PtrTy);
     return RValue::get(Builder.CreateCall(F, Depth));
+  }
+  case Builtin::BI__builtin_stack_address: {
+    return RValue::get(Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::stackaddress, AllocaInt8PtrTy)));
   }
   case Builtin::BI__builtin_extract_return_addr: {
     Value *Address = EmitScalarExpr(E->getArg(0));

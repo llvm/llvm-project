@@ -110,6 +110,7 @@ public:
       case llvm::Triple::mips64:
         return !(getVersion() >= VersionTuple(1, 9));
       case llvm::Triple::riscv64:
+      case llvm::Triple::riscv64be:
         return !(getVersion() >= VersionTuple(2, 2));
       default:
         return true;

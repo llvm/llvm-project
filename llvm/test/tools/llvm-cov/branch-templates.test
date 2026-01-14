@@ -2,6 +2,7 @@
 // RUN: llvm-cov show --show-expansions --show-branches=count %S/Inputs/branch-templates.o32l -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs | FileCheck %S/Inputs/branch-templates.cpp
 // RUN: llvm-cov report --show-branch-summary %S/Inputs/branch-templates.o32l -instr-profile %t.profdata -show-functions -path-equivalence=/tmp,%S/Inputs %S/Inputs/branch-templates.cpp | FileCheck %s -check-prefix=REPORT
 // RUN: llvm-cov report --show-branch-summary %S/Inputs/branch-templates.o32l -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs | FileCheck %s -check-prefix=REPORTFILE
+// RUN: llvm-cov report --show-branch-summary --show-function-summary=false %S/Inputs/branch-templates.o32l -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs | FileCheck %s -check-prefix=REPORT_NO_FUNCTION_SUMMARY
 
 // RUN: yaml2obj %S/Inputs/branch-templates-single.yaml -o %t.o
 // RUN: llvm-profdata merge %S/Inputs/branch-templates-single.proftext -o %t.profdata
@@ -29,3 +30,9 @@
 // REPORTFILE-NEXT: branch-templates.cpp          12                 3    75.00%           2                 0   100.00%          17                 4    76.47%           8                 4    50.00%
 // REPORTFILE-NEXT: ---
 // REPORTFILE-NEXT: TOTAL                         12                 3    75.00%           2                 0   100.00%          17                 4    76.47%           8                 4    50.00%
+
+// REPORT_NO_FUNCTION_SUMMARY:      Filename                 Regions    Missed Regions     Cover   Lines      Missed Lines     Cover    Branches   Missed Branches     Cover
+// REPORT_NO_FUNCTION_SUMMARY-NEXT: ---
+// REPORT_NO_FUNCTION_SUMMARY-NEXT: branch-templates.cpp          12                 3    75.00%   17                 4    76.47%           8                 4    50.00%
+// REPORT_NO_FUNCTION_SUMMARY-NEXT: ---
+// REPORT_NO_FUNCTION_SUMMARY-NEXT: TOTAL                         12                 3    75.00%   17                 4    76.47%           8                 4    50.00%

@@ -4635,8 +4635,8 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
     std::tie(Frame, Depth) =
         Info.getCallFrameAndDepth(LVal.getLValueCallIndex());
     if (!Frame) {
-      Info.FFDiag(E, diag::note_constexpr_lifetime_ended, 1)
-        << AK << LVal.Base.is<const ValueDecl*>();
+      Info.FFDiag(E, diag::note_constexpr_access_uninit, 1)
+          << AK << /*Indeterminate=*/false << E->getSourceRange();
       NoteLValueLocation(Info, LVal.Base);
       return CompleteObject();
     }
@@ -12280,6 +12280,42 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         return Success(APValue(ResultElements.data(), SourceLen), E);
       };
 
+  auto EvaluateFpBinOpExpr =
+      [&](llvm::function_ref<APFloat(const APFloat &, const APFloat &,
+                                     std::optional<APSInt>)>
+              Fn) {
+        assert(E->getNumArgs() == 2 || E->getNumArgs() == 3);
+        APValue A, B;
+        if (!EvaluateAsRValue(Info, E->getArg(0), A) ||
+            !EvaluateAsRValue(Info, E->getArg(1), B))
+          return false;
+
+        assert(A.isVector() && B.isVector());
+        assert(A.getVectorLength() == B.getVectorLength());
+
+        std::optional<APSInt> RoundingMode;
+        if (E->getNumArgs() == 3) {
+          APSInt Imm;
+          if (!EvaluateInteger(E->getArg(2), Imm, Info))
+            return false;
+          RoundingMode = Imm;
+        }
+
+        unsigned NumElems = A.getVectorLength();
+        SmallVector<APValue, 4> ResultElements;
+        ResultElements.reserve(NumElems);
+
+        for (unsigned EltNum = 0; EltNum < NumElems; ++EltNum) {
+          const APFloat &EltA = A.getVectorElt(EltNum).getFloat();
+          const APFloat &EltB = B.getVectorElt(EltNum).getFloat();
+          if (EltA.isNaN() || EltA.isInfinity() || EltA.isDenormal() ||
+              EltB.isNaN() || EltB.isInfinity() || EltB.isDenormal())
+            return false;
+          ResultElements.push_back(APValue(Fn(EltA, EltB, RoundingMode)));
+        }
+        return Success(APValue(ResultElements.data(), NumElems), E);
+      };
+
   auto EvalSelectScalar = [&](unsigned Len) -> bool {
     APSInt Mask;
     APValue AVal, WVal;
@@ -12629,12 +12665,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case X86::BI__builtin_ia32_packuswb256:
   case X86::BI__builtin_ia32_packuswb512:
     return evalPackBuiltin(E, Info, Result, [](const APSInt &Src) {
-      unsigned DstBits = Src.getBitWidth() / 2;
-      if (Src.isNegative())
-        return APInt::getZero(DstBits);
-      if (Src.isIntN(DstBits))
-        return APInt((Src).trunc(DstBits));
-      return APInt::getAllOnes(DstBits);
+      return APSInt(Src).truncSSatU(Src.getBitWidth() / 2);
     });
   case clang::X86::BI__builtin_ia32_selectss_128:
     return EvalSelectScalar(4);
@@ -14347,6 +14378,38 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return false;
     return Success(R, E);
   }
+
+  case clang::X86::BI__builtin_ia32_minps:
+  case clang::X86::BI__builtin_ia32_minpd:
+  case clang::X86::BI__builtin_ia32_minps256:
+  case clang::X86::BI__builtin_ia32_minpd256:
+  case clang::X86::BI__builtin_ia32_minps512:
+  case clang::X86::BI__builtin_ia32_minpd512:
+  case clang::X86::BI__builtin_ia32_minph128:
+  case clang::X86::BI__builtin_ia32_minph256:
+  case clang::X86::BI__builtin_ia32_minph512:
+    return EvaluateFpBinOpExpr(
+        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
+          if (A.isZero() && B.isZero())
+            return B;
+          return llvm::minimum(A, B);
+        });
+
+  case clang::X86::BI__builtin_ia32_maxps:
+  case clang::X86::BI__builtin_ia32_maxpd:
+  case clang::X86::BI__builtin_ia32_maxps256:
+  case clang::X86::BI__builtin_ia32_maxpd256:
+  case clang::X86::BI__builtin_ia32_maxps512:
+  case clang::X86::BI__builtin_ia32_maxpd512:
+  case clang::X86::BI__builtin_ia32_maxph128:
+  case clang::X86::BI__builtin_ia32_maxph256:
+  case clang::X86::BI__builtin_ia32_maxph512:
+    return EvaluateFpBinOpExpr(
+        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
+          if (A.isZero() && B.isZero())
+            return B;
+          return llvm::maximum(A, B);
+        });
 
   case clang::X86::BI__builtin_ia32_vcvtps2ph:
   case clang::X86::BI__builtin_ia32_vcvtps2ph256: {

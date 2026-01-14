@@ -1069,6 +1069,28 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
                   {options::OPT_D, options::OPT_U, options::OPT_I_Group,
                    options::OPT_F, options::OPT_embed_dir_EQ});
 
+  if (C.isOffloadingHostKind(Action::OFK_Cuda) ||
+      JA.isDeviceOffloading(Action::OFK_Cuda)) {
+    // Collect all enabled NVPTX architectures.
+    std::set<unsigned> ArchIDs;
+    for (auto &I : llvm::make_range(C.getOffloadToolChains(Action::OFK_Cuda))) {
+      const ToolChain *TC = I.second;
+      for (StringRef Arch :
+           D.getOffloadArchs(C, C.getArgs(), Action::OFK_Cuda, *TC)) {
+        OffloadArch OA = StringToOffloadArch(Arch);
+        if (IsNVIDIAOffloadArch(OA))
+          ArchIDs.insert(CudaArchToID(OA));
+      }
+    }
+
+    if (!ArchIDs.empty()) {
+      SmallString<128> List;
+      llvm::raw_svector_ostream OS(List);
+      llvm::interleave(ArchIDs, OS, ",");
+      CmdArgs.push_back(Args.MakeArgString("-D__CUDA_ARCH_LIST__=" + List));
+    }
+  }
+
   // Add -Wp, and -Xpreprocessor if using the preprocessor.
 
   // FIXME: There is a very unfortunate problem here, some troubled
@@ -1196,6 +1218,8 @@ static bool isSignedCharDefault(const llvm::Triple &Triple) {
   case llvm::Triple::ppc64le:
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
   case llvm::Triple::systemz:
   case llvm::Triple::xcore:
   case llvm::Triple::xtensa:
@@ -1542,6 +1566,8 @@ void Clang::RenderTargetOptions(const llvm::Triple &EffectiveTriple,
 
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
     AddRISCVTargetArgs(Args, CmdArgs);
     break;
 
@@ -5644,8 +5670,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
             << Name << Triple.getArchName();
     } else if (Name == "SLEEF" || Name == "ArmPL") {
       if (Triple.getArch() != llvm::Triple::aarch64 &&
-          Triple.getArch() != llvm::Triple::aarch64_be &&
-          Triple.getArch() != llvm::Triple::riscv64)
+          Triple.getArch() != llvm::Triple::aarch64_be && !Triple.isRISCV64())
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << Name << Triple.getArchName();
     }
@@ -8807,6 +8832,8 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
 
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
     AddRISCVTargetArgs(Args, CmdArgs);
     break;
 
