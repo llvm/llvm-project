@@ -28,44 +28,6 @@ static AsmFlavor inferFlavor(const CIRGenModule &cgm, const AsmStmt &s) {
   return isa<MSAsmStmt>(&s) ? AsmFlavor::x86_intel : gnuAsmFlavor;
 }
 
-///// FIXME(cir): This should be a common helper between CIRGen
-///// and traditional CodeGen
-///// Look at AsmExpr and if it is a variable declared
-///// as using a particular register add that as a constraint that will be used
-///// in this asm stmt.
-//static std::string
-//addVariableConstraints(const std::string &constraint, const Expr &asmExpr,
-//                       const TargetInfo &target, CIRGenModule &cgm,
-//                       const AsmStmt &stmt, const bool earlyClobber,
-//                       std::string *gccReg = nullptr) {
-//  const DeclRefExpr *asmDeclRef = dyn_cast<DeclRefExpr>(&asmExpr);
-//  if (!asmDeclRef)
-//    return constraint;
-//  const ValueDecl &value = *asmDeclRef->getDecl();
-//  const VarDecl *variable = dyn_cast<VarDecl>(&value);
-//  if (!variable)
-//    return constraint;
-//  if (variable->getStorageClass() != SC_Register)
-//    return constraint;
-//  AsmLabelAttr *attr = variable->getAttr<AsmLabelAttr>();
-//  if (!attr)
-//    return constraint;
-//  StringRef registerName = attr->getLabel();
-//  assert(target.isValidGCCRegisterName(registerName));
-//  // We're using validateOutputConstraint here because we only care if
-//  // this is a register constraint.
-//  TargetInfo::ConstraintInfo info(constraint, "");
-//  if (target.validateOutputConstraint(info) && !info.allowsRegister()) {
-//    cgm.errorUnsupported(&stmt, "__asm__");
-//    return constraint;
-//  }
-//  // Canonicalize the register here before returning it.
-//  registerName = target.getNormalizedGCCRegisterName(registerName);
-//  if (gccReg != nullptr)
-//    *gccReg = registerName.str();
-//  return (earlyClobber ? "&{" : "{") + registerName.str() + "}";
-//}
-
 static void collectClobbers(const CIRGenFunction &cgf, const AsmStmt &s,
                             std::string &constraints, bool &hasUnwindClobber,
                             bool &readOnly, bool readNone) {
