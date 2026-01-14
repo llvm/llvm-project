@@ -312,27 +312,11 @@ define <4 x float> @masked_gather_v4f32_ptr_v4i32(<4 x ptr> %ptr, i32 %trigger, 
 ;
 ; AVX2-GATHER-LABEL: masked_gather_v4f32_ptr_v4i32:
 ; AVX2-GATHER:       # %bb.0:
-; AVX2-GATHER-NEXT:    movl %edi, %eax
-; AVX2-GATHER-NEXT:    andl $1, %eax
-; AVX2-GATHER-NEXT:    negl %eax
-; AVX2-GATHER-NEXT:    vmovd %eax, %xmm2
-; AVX2-GATHER-NEXT:    movl %edi, %eax
-; AVX2-GATHER-NEXT:    shrb %al
-; AVX2-GATHER-NEXT:    movzbl %al, %eax
-; AVX2-GATHER-NEXT:    andl $1, %eax
-; AVX2-GATHER-NEXT:    negl %eax
-; AVX2-GATHER-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
-; AVX2-GATHER-NEXT:    movl %edi, %eax
-; AVX2-GATHER-NEXT:    shrb $2, %al
-; AVX2-GATHER-NEXT:    movzbl %al, %eax
-; AVX2-GATHER-NEXT:    andl $1, %eax
-; AVX2-GATHER-NEXT:    negl %eax
-; AVX2-GATHER-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
-; AVX2-GATHER-NEXT:    andb $8, %dil
-; AVX2-GATHER-NEXT:    shrb $3, %dil
-; AVX2-GATHER-NEXT:    movzbl %dil, %eax
-; AVX2-GATHER-NEXT:    negl %eax
-; AVX2-GATHER-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm2
+; AVX2-GATHER-NEXT:    vmovd %edi, %xmm2
+; AVX2-GATHER-NEXT:    vpbroadcastd %xmm2, %xmm2
+; AVX2-GATHER-NEXT:    vpmovsxbd {{.*#+}} xmm3 = [1,2,4,8]
+; AVX2-GATHER-NEXT:    vpand %xmm3, %xmm2, %xmm2
+; AVX2-GATHER-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2
 ; AVX2-GATHER-NEXT:    vgatherqps %xmm2, (,%ymm0), %xmm1
 ; AVX2-GATHER-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX2-GATHER-NEXT:    vzeroupper
@@ -2575,51 +2559,11 @@ define <8 x i32> @masked_gather_v8i32_v8i32(i8 %trigger) {
 ;
 ; AVX2-GATHER-LABEL: masked_gather_v8i32_v8i32:
 ; AVX2-GATHER:       # %bb.0:
-; AVX2-GATHER-NEXT:    movl %edi, %eax
-; AVX2-GATHER-NEXT:    shrb $5, %al
-; AVX2-GATHER-NEXT:    movzbl %al, %eax
-; AVX2-GATHER-NEXT:    andl $1, %eax
-; AVX2-GATHER-NEXT:    negl %eax
-; AVX2-GATHER-NEXT:    movl %edi, %ecx
-; AVX2-GATHER-NEXT:    shrb $4, %cl
-; AVX2-GATHER-NEXT:    movzbl %cl, %ecx
-; AVX2-GATHER-NEXT:    andl $1, %ecx
-; AVX2-GATHER-NEXT:    negl %ecx
-; AVX2-GATHER-NEXT:    vmovd %ecx, %xmm0
-; AVX2-GATHER-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
-; AVX2-GATHER-NEXT:    movl %edi, %eax
-; AVX2-GATHER-NEXT:    shrb $6, %al
-; AVX2-GATHER-NEXT:    movzbl %al, %eax
-; AVX2-GATHER-NEXT:    andl $1, %eax
-; AVX2-GATHER-NEXT:    negl %eax
-; AVX2-GATHER-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
-; AVX2-GATHER-NEXT:    movl %edi, %eax
-; AVX2-GATHER-NEXT:    shrb $7, %al
-; AVX2-GATHER-NEXT:    movzbl %al, %eax
-; AVX2-GATHER-NEXT:    negl %eax
-; AVX2-GATHER-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
-; AVX2-GATHER-NEXT:    movl %edi, %eax
-; AVX2-GATHER-NEXT:    andl $1, %eax
-; AVX2-GATHER-NEXT:    negl %eax
-; AVX2-GATHER-NEXT:    vmovd %eax, %xmm1
-; AVX2-GATHER-NEXT:    movl %edi, %eax
-; AVX2-GATHER-NEXT:    shrb %al
-; AVX2-GATHER-NEXT:    movzbl %al, %eax
-; AVX2-GATHER-NEXT:    andl $1, %eax
-; AVX2-GATHER-NEXT:    negl %eax
-; AVX2-GATHER-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
-; AVX2-GATHER-NEXT:    movl %edi, %eax
-; AVX2-GATHER-NEXT:    shrb $2, %al
-; AVX2-GATHER-NEXT:    movzbl %al, %eax
-; AVX2-GATHER-NEXT:    andl $1, %eax
-; AVX2-GATHER-NEXT:    negl %eax
-; AVX2-GATHER-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; AVX2-GATHER-NEXT:    shrb $3, %dil
-; AVX2-GATHER-NEXT:    movzbl %dil, %eax
-; AVX2-GATHER-NEXT:    andl $1, %eax
-; AVX2-GATHER-NEXT:    negl %eax
-; AVX2-GATHER-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
-; AVX2-GATHER-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX2-GATHER-NEXT:    vmovd %edi, %xmm0
+; AVX2-GATHER-NEXT:    vpbroadcastb %xmm0, %ymm0
+; AVX2-GATHER-NEXT:    vpmovzxbd {{.*#+}} ymm1 = [1,2,4,8,16,32,64,128]
+; AVX2-GATHER-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX2-GATHER-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
 ; AVX2-GATHER-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-GATHER-NEXT:    vmovdqa %ymm0, %ymm2
 ; AVX2-GATHER-NEXT:    vpxor %xmm3, %xmm3, %xmm3
