@@ -17,6 +17,7 @@
 #include "proper_version_checks.hpp"
 #include "robust_against_adl.hpp"
 #include "robust_against_operator_ampersand.hpp"
+#include "static_in_constexpr.hpp"
 #include "uglify_attributes.hpp"
 
 namespace {
@@ -32,6 +33,7 @@ public:
     check_factories.registerCheck<libcpp::robust_against_adl_check>("libcpp-robust-against-adl");
     check_factories.registerCheck<libcpp::robust_against_operator_ampersand>(
         "libcpp-robust-against-operator-ampersand");
+    check_factories.registerCheck<libcpp::static_in_constexpr>("libcpp-static-in-constexpr");
     check_factories.registerCheck<libcpp::uglify_attributes>("libcpp-uglify-attributes");
   }
 };
