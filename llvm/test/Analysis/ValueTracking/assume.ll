@@ -160,34 +160,34 @@ A:
   ret i32 %6
 }
 
-define dso_local i1 @test5(ptr readonly %0, i1 %cond, i32 %bytes) nofree nosync {
-; CHECK-LABEL: @test5(
+define i1 @test_dereferenceable_unknown_size_not_nonnull(ptr %ptr, i32 %bytes) {
+; CHECK-LABEL: @test_dereferenceable_unknown_size_not_nonnull(
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP0:%.*]], i32 [[BYTES:%.*]]) ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP0]], null
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
-  call void @llvm.assume(i1 true) ["dereferenceable"(ptr %0, i32 %bytes)]
-  %2 = icmp eq ptr %0, null
+  call void @llvm.assume(i1 true) ["dereferenceable"(ptr %ptr, i32 %bytes)]
+  %2 = icmp eq ptr %ptr, null
   ret i1 %2
 }
 
-define dso_local i1 @test6(ptr readonly %0, i1 %cond) nofree nosync {
-; CHECK-LABEL: @test6(
+define i1 @test_dereferenceable_zero_size_not_nonnull(ptr %ptr) {
+; CHECK-LABEL: @test_dereferenceable_zero_size_not_nonnull(
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP0:%.*]], i32 0) ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP0]], null
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
-  call void @llvm.assume(i1 true) ["dereferenceable"(ptr %0, i32 0)]
-  %2 = icmp eq ptr %0, null
+  call void @llvm.assume(i1 true) ["dereferenceable"(ptr %ptr, i32 0)]
+  %2 = icmp eq ptr %ptr, null
   ret i1 %2
 }
 
-define dso_local i1 @test7(ptr readonly %0, i1 %cond) nofree nosync {
-; CHECK-LABEL: @test7(
+define i1 @test_dereferenceable_non_zero_size_is_nonnull(ptr %ptr) {
+; CHECK-LABEL: @test_dereferenceable_non_zero_size_is_nonnull(
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP0:%.*]], i32 1) ]
 ; CHECK-NEXT:    ret i1 false
 ;
-  call void @llvm.assume(i1 true) ["dereferenceable"(ptr %0, i32 1)]
-  %2 = icmp eq ptr %0, null
+  call void @llvm.assume(i1 true) ["dereferenceable"(ptr %ptr, i32 1)]
+  %2 = icmp eq ptr %ptr, null
   ret i1 %2
 }
