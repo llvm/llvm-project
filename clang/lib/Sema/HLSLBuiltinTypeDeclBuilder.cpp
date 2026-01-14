@@ -191,9 +191,6 @@ public:
   BuiltinTypeMethodBuilder(BuiltinTypeDeclBuilder &DB, StringRef NameStr,
                            QualType ReturnTy, bool IsConst = false,
                            bool IsCtor = false, StorageClass SC = SC_None);
-
-  // converttype maybe? - qualtype or template parameter index
-
   BuiltinTypeMethodBuilder(const BuiltinTypeMethodBuilder &Other) = delete;
 
   ~BuiltinTypeMethodBuilder() { finalize(); }
@@ -1209,25 +1206,33 @@ BuiltinTypeDeclBuilder::addByteAddressBufferLoadMethods() {
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
   ASTContext &AST = SemaRef.getASTContext();
 
-  // Add uint Load methods
   auto addLoadMethod = [&](StringRef MethodName, QualType ReturnType) {
     IdentifierInfo &II = AST.Idents.get(MethodName, tok::TokenKind::identifier);
     DeclarationName Load(&II);
 
     // Load without status
+    BuiltinTypeMethodBuilder MMB(*this, Load, ReturnType);
+    if (ReturnType->isDependentType()) {
+      ReturnType = MMB.addTemplateTypeParam("element_type");
+      MMB.ReturnTy = ReturnType; // Update return type to template parameter
+    }
     QualType AddrSpaceElemTy =
         AST.getAddrSpaceQualType(ReturnType, LangAS::hlsl_device);
-    QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
-    BuiltinTypeMethodBuilder(*this, Load, ReturnType, /*IsConst=*/false)
-        .addParam("Index", AST.UnsignedIntTy)
-        .callBuiltin("__builtin_hlsl_resource_getpointer", ElemPtrTy,
-                     PH::Handle, PH::_0)
+
+    MMB.addParam("Index", AST.UnsignedIntTy)
+        .callBuiltin("__builtin_hlsl_resource_getpointer",
+                     AST.getPointerType(AddrSpaceElemTy), PH::Handle, PH::_0)
         .dereference(PH::LastStmt)
         .finalize();
 
     // Load with status
-    BuiltinTypeMethodBuilder(*this, Load, ReturnType, /*IsConst=*/false)
-        .addParam("Index", AST.UnsignedIntTy)
+    BuiltinTypeMethodBuilder MMB2(*this, Load, ReturnType);
+    if (ReturnType->isDependentType()) {
+      ReturnType = MMB2.addTemplateTypeParam("element_type");
+      MMB2.ReturnTy = ReturnType; // Update return type to template parameter
+    }
+
+    MMB2.addParam("Index", AST.UnsignedIntTy)
         .addParam("Status", AST.UnsignedIntTy,
                   HLSLParamModifierAttr::Keyword_out)
         .callBuiltin("__builtin_hlsl_resource_load_with_status", ReturnType,
@@ -1239,34 +1244,7 @@ BuiltinTypeDeclBuilder::addByteAddressBufferLoadMethods() {
   addLoadMethod("Load2", AST.getExtVectorType(AST.UnsignedIntTy, 2));
   addLoadMethod("Load3", AST.getExtVectorType(AST.UnsignedIntTy, 3));
   addLoadMethod("Load4", AST.getExtVectorType(AST.UnsignedIntTy, 4));
-
-  // Templated Load method
-  IdentifierInfo &II = AST.Idents.get("Load", tok::TokenKind::identifier);
-  DeclarationName Load(&II);
-
-  BuiltinTypeMethodBuilder MMB(*this, Load, AST.UnsignedIntTy,
-                               /*IsConst=*/false);
-  QualType ReturnType = MMB.addTemplateTypeParam("element_type");
-  MMB.ReturnTy = ReturnType; // Update return type to template parameter
-  QualType AddrSpaceElemTy =
-      AST.getAddrSpaceQualType(ReturnType, LangAS::hlsl_device);
-  QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
-  MMB.addParam("Index", AST.UnsignedIntTy)
-      .callBuiltin("__builtin_hlsl_resource_getpointer", ElemPtrTy, PH::Handle,
-                   PH::_0)
-      .dereference(PH::LastStmt)
-      .finalize();
-
-  // Templated Load with status method
-  BuiltinTypeMethodBuilder MMB2(*this, Load, AST.UnsignedIntTy,
-                                /*IsConst=*/false);
-  QualType ReturnType2 = MMB2.addTemplateTypeParam("element_type");
-  MMB2.ReturnTy = ReturnType2; // Update return type to template parameter
-  MMB2.addParam("Index", AST.UnsignedIntTy)
-      .addParam("Status", AST.UnsignedIntTy, HLSLParamModifierAttr::Keyword_out)
-      .callBuiltin("__builtin_hlsl_resource_load_with_status", ReturnType2,
-                   PH::Handle, PH::_0, PH::_1)
-      .finalize();
+  addLoadMethod("Load", AST.DependentTy); // Templated version
 
   return *this;
 }
@@ -1283,14 +1261,17 @@ BuiltinTypeDeclBuilder::addByteAddressBufferStoreMethods() {
     IdentifierInfo &II = AST.Idents.get(MethodName, tok::TokenKind::identifier);
     DeclarationName Store(&II);
 
+    BuiltinTypeMethodBuilder MMB(*this, Store, AST.VoidTy);
+    if (ValueType->isDependentType()) {
+      ValueType = MMB.addTemplateTypeParam("element_type");
+    }
     QualType AddrSpaceElemTy =
         AST.getAddrSpaceQualType(ValueType, LangAS::hlsl_device);
-    QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
-    BuiltinTypeMethodBuilder(*this, Store, AST.VoidTy, /*IsConst=*/false)
-        .addParam("Index", AST.UnsignedIntTy)
+
+    MMB.addParam("Index", AST.UnsignedIntTy)
         .addParam("Value", ValueType)
-        .callBuiltin("__builtin_hlsl_resource_getpointer", ElemPtrTy,
-                     PH::Handle, PH::_0)
+        .callBuiltin("__builtin_hlsl_resource_getpointer",
+                     AST.getPointerType(AddrSpaceElemTy), PH::Handle, PH::_0)
         .dereference(PH::LastStmt)
         .assign(PH::LastStmt, PH::_1)
         .finalize();
@@ -1300,23 +1281,7 @@ BuiltinTypeDeclBuilder::addByteAddressBufferStoreMethods() {
   addStoreMethod("Store2", AST.getExtVectorType(AST.UnsignedIntTy, 2));
   addStoreMethod("Store3", AST.getExtVectorType(AST.UnsignedIntTy, 3));
   addStoreMethod("Store4", AST.getExtVectorType(AST.UnsignedIntTy, 4));
-
-  // Templated Store method
-  IdentifierInfo &II = AST.Idents.get("Store", tok::TokenKind::identifier);
-  DeclarationName Store(&II);
-
-  BuiltinTypeMethodBuilder Builder(*this, Store, AST.VoidTy, /*IsConst=*/false);
-  QualType ValueType = Builder.addTemplateTypeParam("element_type");
-  QualType AddrSpaceElemTy =
-      AST.getAddrSpaceQualType(ValueType, LangAS::hlsl_device);
-  QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
-  Builder.addParam("Index", AST.UnsignedIntTy)
-      .addParam("Value", ValueType)
-      .callBuiltin("__builtin_hlsl_resource_getpointer", ElemPtrTy, PH::Handle,
-                   PH::_0)
-      .dereference(PH::LastStmt)
-      .assign(PH::LastStmt, PH::_1)
-      .finalize();
+  addStoreMethod("Store", AST.DependentTy); // Templated version
 
   return *this;
 }
