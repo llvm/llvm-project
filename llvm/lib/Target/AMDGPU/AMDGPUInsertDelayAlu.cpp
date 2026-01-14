@@ -325,6 +325,10 @@ public:
       for (auto I = MachineBasicBlock::instr_iterator(LastDelayAlu),
                 E = MachineBasicBlock::instr_iterator(MI);
            ++I != E;) {
+        if (I->getOpcode() == AMDGPU::S_SET_VGPR_MSB) {
+          Skip = 6;
+          break;
+        }
         if (!I->isBundle() && !I->isMetaInstruction())
           ++Skip;
       }
