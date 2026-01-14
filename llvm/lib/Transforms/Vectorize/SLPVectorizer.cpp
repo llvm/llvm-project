@@ -24296,13 +24296,11 @@ bool SLPVectorizerPass::vectorizeStores(
       // The `slice` and `drop_front` interfaces are convenient
       const auto RangeSizes = MutableArrayRef(RangeSizesStorage);
       DenseMap<Value *, std::pair<unsigned, unsigned>> NonSchedulable;
-      auto IsNotVectorized = [](bool First,
-                                const std::pair<unsigned, unsigned> &P) {
-        return First ? P.first > 0 : P.second > 0;
+      auto IsNotVectorized = [](const std::pair<unsigned, unsigned> &P) {
+        return P.first > 0;
       };
-      auto IsVectorized = [](bool First,
-                             const std::pair<unsigned, unsigned> &P) {
-        return First ? P.first == 0 : P.second == 0;
+      auto IsVectorized = [](const std::pair<unsigned, unsigned> &P) {
+        return P.first == 0;
       };
       auto VFIsProfitable = [](bool First, unsigned Size,
                                const std::pair<unsigned, unsigned> &P) {
@@ -24318,18 +24316,15 @@ bool SLPVectorizerPass::vectorizeStores(
         bool AnyProfitableGraph = false;
         for (unsigned VF : CandidateVFs) {
           AnyProfitableGraph = false;
-          unsigned FirstUnvecStore =
-              std::distance(RangeSizes.begin(),
-                            find_if(RangeSizes, std::bind(IsNotVectorized,
-                                                          VF >= MaxRegVF, _1)));
+          unsigned FirstUnvecStore = std::distance(
+              RangeSizes.begin(), find_if(RangeSizes, IsNotVectorized));
 
           // Form slices of size VF starting from FirstUnvecStore and try to
           // vectorize them.
           while (FirstUnvecStore < End) {
             unsigned FirstVecStore = std::distance(
                 RangeSizes.begin(),
-                find_if(RangeSizes.drop_front(FirstUnvecStore),
-                        std::bind(IsVectorized, VF >= MaxRegVF, _1)));
+                find_if(RangeSizes.drop_front(FirstUnvecStore), IsVectorized));
             unsigned MaxSliceEnd = FirstVecStore >= End ? End : FirstVecStore;
             for (unsigned SliceStartIdx = FirstUnvecStore;
                  SliceStartIdx + VF <= MaxSliceEnd;) {
@@ -24437,16 +24432,13 @@ bool SLPVectorizerPass::vectorizeStores(
               AnyProfitableGraph = true;
             FirstUnvecStore = std::distance(
                 RangeSizes.begin(),
-                find_if(RangeSizes.drop_front(MaxSliceEnd),
-                        std::bind(IsNotVectorized, VF >= MaxRegVF, _1)));
+                find_if(RangeSizes.drop_front(MaxSliceEnd), IsNotVectorized));
           }
           if (!AnyProfitableGraph && VF >= MaxRegVF && has_single_bit(VF))
             break;
         }
         // All values vectorized - exit.
-        if (all_of(RangeSizes, [](const std::pair<unsigned, unsigned> &P) {
-              return P.first == 0 && P.second == 0;
-            }))
+        if (all_of(RangeSizes, IsVectorized))
           break;
         // Check if tried all attempts or no need for the last attempts at all.
         if (Repeat >= MaxAttempts ||
@@ -24457,9 +24449,8 @@ bool SLPVectorizerPass::vectorizeStores(
             Operands.size(),
             static_cast<unsigned>(
                 End -
-                std::distance(
-                    RangeSizes.begin(),
-                    find_if(RangeSizes, std::bind(IsNotVectorized, true, _1))) +
+                std::distance(RangeSizes.begin(),
+                              find_if(RangeSizes, IsNotVectorized)) +
                 1));
         unsigned VF = bit_ceil(CandidateVFs.front()) * 2;
         unsigned Limit =
