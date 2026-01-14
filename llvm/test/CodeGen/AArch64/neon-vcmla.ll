@@ -31,10 +31,12 @@ define <4 x half> @test_16x4_lane_1(<4 x half> %a, <4 x half> %b, <4 x half> %c)
 ;
 ; CHECK-BE-LABEL: test_16x4_lane_1:
 ; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v2.2s, v2.2s
 ; CHECK-BE-NEXT:    rev64 v1.4h, v1.4h
 ; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
-; CHECK-BE-NEXT:    rev64 v2.2s, v2.2s
-; CHECK-BE-NEXT:    fcmla v0.4h, v1.4h, v2.h[1], #0
+; CHECK-BE-NEXT:    dup v2.2s, v2.s[1]
+; CHECK-BE-NEXT:    rev32 v2.4h, v2.4h
+; CHECK-BE-NEXT:    fcmla v0.4h, v1.4h, v2.4h, #0
 ; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
 ; CHECK-BE-NEXT:    ret
 entry:
@@ -73,10 +75,12 @@ define <4 x half> @test_rot90_16x4_lane_0(<4 x half> %a, <4 x half> %b, <4 x hal
 ;
 ; CHECK-BE-LABEL: test_rot90_16x4_lane_0:
 ; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v2.2s, v2.2s
 ; CHECK-BE-NEXT:    rev64 v1.4h, v1.4h
 ; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
-; CHECK-BE-NEXT:    rev64 v2.2s, v2.2s
-; CHECK-BE-NEXT:    fcmla v0.4h, v1.4h, v2.h[0], #90
+; CHECK-BE-NEXT:    dup v2.2s, v2.s[0]
+; CHECK-BE-NEXT:    rev32 v2.4h, v2.4h
+; CHECK-BE-NEXT:    fcmla v0.4h, v1.4h, v2.4h, #90
 ; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
 ; CHECK-BE-NEXT:    ret
 entry:
@@ -118,7 +122,9 @@ define <4 x half> @test_rot180_16x4_lane_0(<4 x half> %a, <4 x half> %b, <8 x ha
 ; CHECK-BE-NEXT:    rev64 v1.4h, v1.4h
 ; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
 ; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; CHECK-BE-NEXT:    fcmla v0.4h, v1.4h, v2.h[0], #180
+; CHECK-BE-NEXT:    dup v2.2s, v2.s[0]
+; CHECK-BE-NEXT:    rev32 v2.4h, v2.4h
+; CHECK-BE-NEXT:    fcmla v0.4h, v1.4h, v2.4h, #180
 ; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
 ; CHECK-BE-NEXT:    ret
 entry:
@@ -256,13 +262,15 @@ define <8 x half> @test_16x8_lane_0(<8 x half> %a, <8 x half> %b, <8 x half> %c)
 ;
 ; CHECK-BE-LABEL: test_16x8_lane_0:
 ; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
 ; CHECK-BE-NEXT:    rev64 v1.8h, v1.8h
 ; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
-; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
+; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; CHECK-BE-NEXT:    fcmla v0.8h, v1.8h, v2.h[0], #0
+; CHECK-BE-NEXT:    dup v2.4s, v2.s[0]
+; CHECK-BE-NEXT:    rev32 v2.8h, v2.8h
+; CHECK-BE-NEXT:    fcmla v0.8h, v1.8h, v2.8h, #0
 ; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ret
@@ -305,13 +313,15 @@ define <8 x half> @test_rot90_16x8_lane_1(<8 x half> %a, <8 x half> %b, <8 x hal
 ;
 ; CHECK-BE-LABEL: test_rot90_16x8_lane_1:
 ; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
 ; CHECK-BE-NEXT:    rev64 v1.8h, v1.8h
 ; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
-; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
+; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; CHECK-BE-NEXT:    fcmla v0.8h, v1.8h, v2.h[1], #90
+; CHECK-BE-NEXT:    dup v2.4s, v2.s[1]
+; CHECK-BE-NEXT:    rev32 v2.8h, v2.8h
+; CHECK-BE-NEXT:    fcmla v0.8h, v1.8h, v2.8h, #90
 ; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ret
@@ -354,13 +364,15 @@ define <8 x half> @test_rot180_16x8_lane_1(<8 x half> %a, <8 x half> %b, <8 x ha
 ;
 ; CHECK-BE-LABEL: test_rot180_16x8_lane_1:
 ; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
 ; CHECK-BE-NEXT:    rev64 v1.8h, v1.8h
 ; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
-; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
+; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; CHECK-BE-NEXT:    fcmla v0.8h, v1.8h, v2.h[1], #180
+; CHECK-BE-NEXT:    dup v2.4s, v2.s[1]
+; CHECK-BE-NEXT:    rev32 v2.8h, v2.8h
+; CHECK-BE-NEXT:    fcmla v0.8h, v1.8h, v2.8h, #180
 ; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ret
@@ -403,13 +415,15 @@ define <8 x half> @test_rot270_16x8_lane_0(<8 x half> %a, <8 x half> %b, <8 x ha
 ;
 ; CHECK-BE-LABEL: test_rot270_16x8_lane_0:
 ; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
 ; CHECK-BE-NEXT:    rev64 v1.8h, v1.8h
 ; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
-; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
+; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; CHECK-BE-NEXT:    fcmla v0.8h, v1.8h, v2.h[0], #270
+; CHECK-BE-NEXT:    dup v2.4s, v2.s[0]
+; CHECK-BE-NEXT:    rev32 v2.8h, v2.8h
+; CHECK-BE-NEXT:    fcmla v0.8h, v1.8h, v2.8h, #270
 ; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ret
@@ -452,12 +466,14 @@ define <4 x float> @test_32x4_lane_0(<4 x float> %a, <4 x float> %b, <4 x float>
 ;
 ; CHECK-BE-LABEL: test_32x4_lane_0:
 ; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
 ; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
-; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    dup v2.2d, v2.d[0]
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    fcmla v0.4s, v1.4s, v2.s[0], #0
+; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
+; CHECK-BE-NEXT:    fcmla v0.4s, v1.4s, v2.4s, #0
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ret
@@ -837,7 +853,9 @@ define <4 x half> @be_vcmla_lane_f16(<4 x half> %0, <4 x half> %1, <4 x i32> %2)
 ; CHECK-BE-NEXT:    rev64 v1.4h, v1.4h
 ; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
 ; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; CHECK-BE-NEXT:    fcmla v0.4h, v1.4h, v2.h[0], #0
+; CHECK-BE-NEXT:    dup v2.2s, v2.s[0]
+; CHECK-BE-NEXT:    rev32 v2.4h, v2.4h
+; CHECK-BE-NEXT:    fcmla v0.4h, v1.4h, v2.4h, #0
 ; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
 ; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
 ; CHECK-BE-NEXT:    ret

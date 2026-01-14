@@ -9169,9 +9169,9 @@ multiclass BaseSIMDThreeSameVectorBF16DotI<bit Q, bit U, string asm,
                       VTPair<ChangeElementTypeToInteger<AccumType>.VT, v4i32>] in {
     def : Pat<(AccumType (int_aarch64_neon_bfdot
                 (AccumType RegType:$Rd), (InputType RegType:$Rn),
-                (InputType (bitconvert
+                (InputType (nvcast
                   (DupTypes.VT0 (AArch64duplane32 (DupTypes.VT1
-                    (bitconvert (v8bf16 V128:$Rm))), VectorIndexS:$Idx)))))),
+                    (nvcast (v8bf16 V128:$Rm))), VectorIndexS:$Idx)))))),
               (!cast<Instruction>(NAME) $Rd, $Rn, $Rm, VectorIndexS:$Idx)>;
   }
 }
@@ -9243,7 +9243,7 @@ class BaseSIMDThreeSameVectorIndexS<bit Q, bit U, bits<2> size, bits<4> opc, str
         [(set (AccumType RegType:$dst),
               (AccumType (OpNode (AccumType RegType:$Rd),
                                  (InputType RegType:$Rn),
-                                 (InputType (bitconvert (AccumType
+                                 (InputType (nvcast (AccumType
                                     (AArch64duplane32 (v4i32 V128:$Rm),
                                         VIdx:$idx)))))))]> {
   bits<2> idx;
