@@ -231,27 +231,7 @@ Python Binding Changes
 
 OpenMP Support
 --------------
-- Added parsing and semantic analysis support for the ``need_device_addr``
-  modifier in the ``adjust_args`` clause.
-- Allow array length to be omitted in array section subscript expression.
-- Fixed non-contiguous strided update in the ``omp target update`` directive with the ``from`` clause.
-- Added support for threadset clause in task and taskloop directives.
 - Added support for ``transparent`` clause in task and taskloop directives.
-- Added parsing and semantic analysis support for the ``transparent``
-  clause in task and taskloop directives.
-- Properly handle array section/assumed-size array privatization in C/C++.
-- Added support to handle new syntax of the ``uses_allocators`` clause.
-- Added support for ``variable-category`` modifier in ``default clause``.
-- Added support for ``defaultmap`` directive implicit-behavior ``storage``.
-- Added support for ``defaultmap`` directive implicit-behavior ``private``.
-- Added parsing and semantic analysis support for ``groupprivate`` directive.
-- Added support for 'omp fuse' directive.
-- Updated parsing and semantic analysis support for ``nowait`` clause to accept
-  optional argument in OpenMP >= 60.
-- Added support for ``default`` clause on ``target`` directive.
-- Added parsing and semantic analysis support for ``need_device_ptr`` modifier
-  to accept an optional fallback argument (``fb_nullify`` or ``fb_preserve``)
-  with OpenMP >= 61.
 
 Improvements
 ^^^^^^^^^^^^
