@@ -2329,7 +2329,18 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     Known = KnownFPClass::fmul(KnownLHS, KnownRHS, Mode);
 
     FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
-    return getFPClassConstant(VTy, ValidResults, /*IsCanonicalizing=*/true);
+    if (Constant *SingleVal =
+            getFPClassConstant(VTy, ValidResults, /*IsCanonicalizing=*/true))
+      return SingleVal;
+
+    FastMathFlags InferredFMF =
+        inferFastMathValueFlagsBinOp(FMF, ValidResults, KnownLHS, KnownRHS);
+    if (InferredFMF != FMF) {
+      I->setFastMathFlags(InferredFMF);
+      return I;
+    }
+
+    return nullptr;
   }
   case Instruction::FPExt: {
     FPClassTest SrcDemandedMask = DemandedMask;

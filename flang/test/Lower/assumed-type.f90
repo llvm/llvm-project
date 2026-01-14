@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir %s -o - | FileCheck %s
 
 module assumed_type_test
 
@@ -23,7 +23,8 @@ contains
 
 ! CHECK-LABEL: func.func @_QMassumed_type_testPcall_assumed() {
 ! CHECK: %[[I:.*]] = fir.alloca i32 {bindc_name = "i", fir.target, uniq_name = "_QMassumed_type_testFcall_assumedEi"}
-! CHECK: %[[CONV:.*]] = fir.convert %[[I]] : (!fir.ref<i32>) -> !fir.ref<none>
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[I]] {{.*}}
+! CHECK: %[[CONV:.*]] = fir.convert %[[DECL]]#0 : (!fir.ref<i32>) -> !fir.ref<none>
 ! CHECK: fir.call @_QPassumed(%[[CONV]]) {{.*}}: (!fir.ref<none>) -> ()
 
   subroutine call_assumed_r()
@@ -33,7 +34,8 @@ contains
 
 ! CHECK-LABEL: func.func @_QMassumed_type_testPcall_assumed_r() {
 ! CHECK: %[[I:.*]] = fir.alloca !fir.array<10xi32> {bindc_name = "i", fir.target, uniq_name = "_QMassumed_type_testFcall_assumed_rEi"}
-! CHECK: %[[CONV:.*]] = fir.convert %[[I]] : (!fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.array<?xnone>>
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[I]]{{.*}}
+! CHECK: %[[CONV:.*]] = fir.convert %[[DECL]]#0 : (!fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.array<?xnone>>
 ! CHECK: fir.call @_QPassumed_r(%[[CONV]]) {{.*}} : (!fir.ref<!fir.array<?xnone>>) -> ()
 
   subroutine assumed_type_optional_to_intrinsic(a)
@@ -43,7 +45,8 @@ contains
 
 ! CHECK-LABEL: func.func @_QMassumed_type_testPassumed_type_optional_to_intrinsic(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?xnone>> {fir.bindc_name = "a", fir.optional}) {
-! CHECK: %{{.*}} = fir.is_present %[[ARG0]] : (!fir.box<!fir.array<?xnone>>) -> i1
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] {{.*}}
+! CHECK: %{{.*}} = fir.is_present %[[DECL]]#1 : (!fir.box<!fir.array<?xnone>>) -> i1
 
   subroutine assumed_type_lbound(a)
     type(*), optional :: a(:,:)
