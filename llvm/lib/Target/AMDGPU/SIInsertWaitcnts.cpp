@@ -370,13 +370,13 @@ public:
   // Transform a soft waitcnt into a normal one.
   bool promoteSoftWaitCnt(MachineInstr *Waitcnt) const;
 
-  // Generates new wait count instructions according to the  value of
+  // Generates new wait count instructions according to the value of
   // Wait, returning true if any new instructions were created.
-  // If ScoreBrackets is provided, it can be used for profiling expansion.
+  // ScoreBrackets is used for profiling expansion.
   virtual bool createNewWaitcnt(MachineBasicBlock &Block,
                                 MachineBasicBlock::instr_iterator It,
                                 AMDGPU::Waitcnt Wait,
-                                WaitcntBrackets *ScoreBrackets = nullptr) = 0;
+                                WaitcntBrackets *ScoreBrackets) = 0;
 
   // Returns an array of bit masks which can be used to map values in
   // WaitEventType to corresponding counter values in InstCounterType.
@@ -401,10 +401,7 @@ public:
 
 class WaitcntGeneratorPreGFX12 : public WaitcntGenerator {
 public:
-  WaitcntGeneratorPreGFX12() = default;
-  WaitcntGeneratorPreGFX12(const MachineFunction &MF,
-                           const AMDGPU::HardwareLimits *Limits)
-      : WaitcntGenerator(MF, NUM_NORMAL_INST_CNTS, Limits) {}
+  using WaitcntGenerator::WaitcntGenerator;
 
   bool
   applyPreexistingWaitcnt(WaitcntBrackets &ScoreBrackets,
@@ -414,7 +411,7 @@ public:
   bool createNewWaitcnt(MachineBasicBlock &Block,
                         MachineBasicBlock::instr_iterator It,
                         AMDGPU::Waitcnt Wait,
-                        WaitcntBrackets *ScoreBrackets = nullptr) override;
+                        WaitcntBrackets *ScoreBrackets) override;
 
   const unsigned *getWaitEventMask() const override {
     assert(ST);
@@ -459,7 +456,7 @@ public:
   bool createNewWaitcnt(MachineBasicBlock &Block,
                         MachineBasicBlock::instr_iterator It,
                         AMDGPU::Waitcnt Wait,
-                        WaitcntBrackets *ScoreBrackets = nullptr) override;
+                        WaitcntBrackets *ScoreBrackets) override;
 
   const unsigned *getWaitEventMask() const override {
     assert(ST);
@@ -1691,19 +1688,16 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
   const DebugLoc &DL = Block.findDebugLoc(It);
 
   // Helper to emit expanded waitcnt sequence for profiling.
-  // Emits waitcnts from (Outstanding-1) down to Target, or just Target if
-  // nothing to expand. The EmitWaitcnt callback emits a single waitcnt.
+  // Emits waitcnts from (Outstanding-1) down to Target.
+  // The EmitWaitcnt callback emits a single waitcnt.
   auto EmitExpandedWaitcnt = [&](unsigned Outstanding, unsigned Target,
                                  auto EmitWaitcnt) {
-    if (Outstanding > Target) {
-      for (unsigned i = Outstanding - 1; i >= Target && i != ~0u; --i) {
-        EmitWaitcnt(i);
-        Modified = true;
-      }
-    } else {
-      EmitWaitcnt(Target);
+    for (unsigned i = Outstanding - 1; i > Target && i != ~0u; --i) {
+      EmitWaitcnt(i);
       Modified = true;
     }
+    EmitWaitcnt(Target);
+    Modified = true;
   };
 
   // Waits for VMcnt, LKGMcnt and/or EXPcnt are encoded together into a
@@ -2092,15 +2086,12 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
   // Helper to emit expanded waitcnt sequence for profiling.
   auto EmitExpandedWaitcnt = [&](unsigned Outstanding, unsigned Target,
                                  auto EmitWaitcnt) {
-    if (Outstanding > Target) {
-      for (unsigned i = Outstanding - 1; i >= Target && i != ~0u; --i) {
-        EmitWaitcnt(i);
-        Modified = true;
-      }
-    } else {
-      EmitWaitcnt(Target);
+    for (unsigned i = Outstanding - 1; i > Target && i != ~0u; --i) {
+      EmitWaitcnt(i);
       Modified = true;
     }
+    EmitWaitcnt(Target);
+    Modified = true;
   };
 
   // For GFX12+, we use separate wait instructions, which makes expansion
@@ -2529,6 +2520,9 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
     Modified =
         WCG->applyPreexistingWaitcnt(ScoreBrackets, *OldWaitcntInstr, Wait, It);
 
+  // Save Wait before VINTERP merge may modify it. We need the original values
+  // for applyWaitcnt below, but createNewWaitcnt must be called before
+  // applyWaitcnt so profiling expansion can see the Outstanding counts.
   AMDGPU::Waitcnt WaitForScore = Wait;
 
   // ExpCnt can be merged into VINTERP.
@@ -3260,7 +3254,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   AMDGPU::IsaVersion IV = AMDGPU::getIsaVersion(ST->getCPU());
 
   // Initialize hardware limits first, as they're needed by the generators.
-  Limits = AMDGPU::HardwareLimits(IV, ST->hasExtendedWaitCounts());
+  Limits = AMDGPU::HardwareLimits(IV);
 
   if (ST->hasExtendedWaitCounts()) {
     IsExpertMode = ST->hasExpertSchedulingMode() &&
@@ -3275,7 +3269,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
     WCG = &WCGGFX12Plus;
   } else {
     MaxCounter = NUM_NORMAL_INST_CNTS;
-    WCGPreGFX12 = WaitcntGeneratorPreGFX12(MF, &Limits);
+    WCGPreGFX12 = WaitcntGeneratorPreGFX12(MF, NUM_NORMAL_INST_CNTS, &Limits);
     WCG = &WCGPreGFX12;
   }
 

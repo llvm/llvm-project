@@ -1785,8 +1785,8 @@ unsigned getStorecntBitMask(const IsaVersion &Version) {
   return (1 << getStorecntBitWidth(Version.Major)) - 1;
 }
 
-HardwareLimits::HardwareLimits(const IsaVersion &IV,
-                               bool HasExtendedWaitCounts) {
+HardwareLimits::HardwareLimits(const IsaVersion &IV) {
+  bool HasExtendedWaitCounts = IV.Major >= 12;
   if (HasExtendedWaitCounts) {
     LoadcntMax = getLoadcntBitMask(IV);
     DscntMax = getDscntBitMask(IV);
