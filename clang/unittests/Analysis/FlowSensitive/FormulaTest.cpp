@@ -9,10 +9,13 @@
 #include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/Arena.h"
 #include "clang/Analysis/FlowSensitive/FormulaSerialization.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <string>
 
 namespace {
 
@@ -94,7 +97,7 @@ protected:
     AtomMap[1] = Atom2;
   }
 
-  // Convenience wrapper for `testParseFormula`.
+  // Convenience wrapper for `parseFormula`.
   llvm::Expected<const Formula *> testParseFormula(llvm::StringRef Str) {
     return parseFormula(Str, A, AtomMap);
   }
@@ -194,6 +197,8 @@ TEST_F(ParseFormulaTest, MalformedFormulaFails) {
   EXPECT_THAT_EXPECTED(testParseFormula("|V0"), Failed());
   EXPECT_THAT_EXPECTED(testParseFormula(">V0"), Failed());
   EXPECT_THAT_EXPECTED(testParseFormula("=V0"), Failed());
+  // Too many operands
+  EXPECT_THAT_EXPECTED(testParseFormula("=V0V1V2"), Failed());
 }
 
 } // namespace
