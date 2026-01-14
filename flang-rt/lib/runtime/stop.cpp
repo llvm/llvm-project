@@ -147,7 +147,7 @@ static void EndPause() {
   std::fflush(nullptr);
   if (std::fgetc(stdin) == EOF) {
     CloseAllExternalUnits("PAUSE statement");
-    Fortran::runtime::exitHandler.NormalExit(EXIT_SUCCESS);
+    Fortran::runtime::exitHandler.ErrorExit(EXIT_SUCCESS);
   }
 }
 
