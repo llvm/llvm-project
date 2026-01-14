@@ -750,6 +750,31 @@ public:
 };
 } // namespace
 
+/// Extract the component reference from a designator expression, if any.
+/// For `data%array(i)`, this returns the Component for `data%array`.
+static std::optional<Fortran::evaluate::Component>
+extractComponentFromDesignator(
+    const Fortran::semantics::MaybeExpr &designator) {
+  if (!designator)
+    return std::nullopt;
+  std::optional<Fortran::evaluate::Component> componentRef;
+  if (std::optional<Fortran::evaluate::DataRef> dataRef =
+          Fortran::evaluate::ExtractDataRef(*designator)) {
+    Fortran::common::visit(
+        Fortran::common::visitors{
+            [&](const Fortran::evaluate::Component &component) {
+              componentRef = component;
+            },
+            [&](const Fortran::evaluate::ArrayRef &arrayRef) {
+              if (auto *comp = arrayRef.base().UnwrapComponent())
+                componentRef = *comp;
+            },
+            [](const auto &) {}},
+        dataRef->u);
+  }
+  return componentRef;
+}
+
 template <typename Op>
 static void
 genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
@@ -773,23 +798,10 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
 
     Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
 
-    std::optional<Fortran::evaluate::Component> componentRef;
     Fortran::semantics::MaybeExpr designator = Fortran::common::visit(
         [&](auto &&s) { return ea.Analyze(s); }, accObject.u);
-    if (std::optional<Fortran::evaluate::DataRef> dataRef =
-            Fortran::evaluate::ExtractDataRef(designator)) {
-      Fortran::common::visit(
-          Fortran::common::visitors{
-              [&](const Fortran::evaluate::Component &component) {
-                componentRef = component;
-              },
-              [&](const Fortran::evaluate::ArrayRef &arrayRef) {
-                if (auto *comp = arrayRef.base().UnwrapComponent())
-                  componentRef = *comp;
-              },
-              [](const auto &) {}},
-          dataRef->u);
-    }
+    std::optional<Fortran::evaluate::Component> componentRef =
+        extractComponentFromDesignator(designator);
 
     fir::factory::AddrAndBoundsInfo info =
         Fortran::lower::gatherDataOperandAddrAndBounds<
@@ -4856,12 +4868,11 @@ genACC(Fortran::lower::AbstractConverter &converter,
       modifier &&
       (*modifier).v == Fortran::parser::AccDataModifier::Modifier::ReadOnly;
 
-  Fortran::lower::StatementContext stmtCtx;
+  Fortran::lower::StatementContext &stmtCtx = converter.getFctCtx();
 
   for (const auto &accObject : accObjectList.v) {
     mlir::Location operandLocation = genOperandLocation(converter, accObject);
     Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
-
     std::stringstream asFortran;
 
     Fortran::evaluate::ExpressionAnalyzer ea{semanticsContext};
@@ -4869,19 +4880,22 @@ genACC(Fortran::lower::AbstractConverter &converter,
         [&](auto &&s) { return ea.Analyze(s); }, accObject.u);
 
     llvm::SmallVector<mlir::Value> bounds;
-    Fortran::lower::gatherDataOperandAddrAndBounds<mlir::acc::DataBoundsOp,
-                                                   mlir::acc::DataBoundsType>(
-        converter, builder, semanticsContext, stmtCtx, symbol, designator,
-        operandLocation, asFortran, bounds,
-        /*treatIndexAsSection=*/true, /*unwrapFirBox=*/false,
-        /*genDefaultBounds=*/false, /*strideIncludeLowerExtent=*/false,
-        /*loadAllocatableAndPointerComponent=*/false);
+    fir::factory::AddrAndBoundsInfo info =
+        Fortran::lower::gatherDataOperandAddrAndBounds<
+            mlir::acc::DataBoundsOp, mlir::acc::DataBoundsType>(
+            converter, builder, semanticsContext, stmtCtx, symbol, designator,
+            operandLocation, asFortran, bounds,
+            /*treatIndexAsSection=*/true, /*unwrapFirBox=*/false,
+            /*genDefaultBounds=*/false, /*strideIncludeLowerExtent=*/false,
+            /*loadAllocatableAndPointerComponent=*/false);
 
-    std::optional<fir::FortranVariableOpInterface> varDef =
-        converter.getSymbolMap().lookupVariableDefinition(symbol);
-    assert(varDef.has_value() && llvm::isa<hlfir::DeclareOp>(*varDef) &&
-           "expected symbol to be mapped to hlfir.declare");
-    mlir::Value base = varDef->getBase();
+    mlir::Value base = info.addr ? info.addr : info.rawInput;
+    if (!base && designator)
+      base = fir::getBase(
+          converter.genExprAddr(operandLocation, *designator, stmtCtx));
+
+    if (!base)
+      continue;
 
     mlir::acc::CacheOp cacheOp = createDataEntryOp<mlir::acc::CacheOp>(
         builder, operandLocation, base, asFortran, bounds,
@@ -4892,9 +4906,40 @@ genACC(Fortran::lower::AbstractConverter &converter,
         isReadonly ? mlir::acc::DataClauseModifier::readonly
                    : mlir::acc::DataClauseModifier::none);
 
-    fir::ExtendedValue hostExv = converter.getSymbolExtendedValue(symbol);
-    fir::ExtendedValue cacheExv = fir::substBase(hostExv, cacheOp.getAccVar());
-    converter.bindSymbol(symbol, cacheExv);
+    // Rebind the symbol so subsequent references use the cached value.
+    if (Fortran::lower::SymbolBox symBox =
+            converter.getSymbolMap().lookupSymbol(symbol)) {
+      // For simple variables, rebind the symbol directly.
+      fir::ExtendedValue hostExv = converter.getSymbolExtendedValue(symbol);
+      fir::ExtendedValue cacheExv =
+          fir::substBase(hostExv, cacheOp.getAccVar());
+      converter.bindSymbol(symbol, cacheExv);
+    } else if (designator) {
+      // For derived type components, extract the component reference and
+      // add a component override so subsequent accesses use the cached value.
+      std::optional<Fortran::evaluate::Component> componentRef =
+          extractComponentFromDesignator(designator);
+      if (componentRef) {
+        // Create an hlfir.declare for the cache result and add component
+        // override so subsequent accesses use the cached value.
+        llvm::SmallVector<mlir::Value> lenParams;
+        mlir::Value shape;
+        fir::FortranVariableFlagsAttr attrs;
+        // Try to get shape/typeparams from the defining designate op.
+        if (auto designate = base.getDefiningOp<hlfir::DesignateOp>()) {
+          shape = designate.getShape();
+          lenParams = llvm::SmallVector<mlir::Value>(
+              designate.getTypeparams().begin(),
+              designate.getTypeparams().end());
+          attrs = designate.getFortranAttrsAttr();
+        }
+        auto declareOp = hlfir::DeclareOp::create(
+            builder, operandLocation, cacheOp.getAccVar(), asFortran.str(),
+            shape, lenParams, /*dummyScope=*/nullptr, /*storage=*/nullptr,
+            /*storageOffset=*/0, attrs);
+        converter.getSymbolMap().addComponentOverride(*componentRef, declareOp);
+      }
+    }
   }
 }
 
