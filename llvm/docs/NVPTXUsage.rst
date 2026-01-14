@@ -1121,11 +1121,8 @@ Syntax:
 
 .. code-block:: llvm
 
-    declare i16 @llvm.nvvm.ff.to.s2f6x2.rn{.relu}.satfinite(float %a, float %b)
     declare i16 @llvm.nvvm.ff.to.s2f6x2.rn{.relu}.satfinite.scale.n2.ue8m0(float %a, float %b, i16 %scale_factor)
-    declare i16 @llvm.nvvm.bf16x2.to.s2f6x2.rn{.relu}.satfinite(<2 x bfloat> %a)
     declare i16 @llvm.nvvm.bf16x2.to.s2f6x2.rn{.relu}.satfinite.scale.n2.ue8m0(<2 x bfloat> %a, i16 %scale_factor)
-    declare <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn{.relu}{.satfinite}(i16 %a)
     declare <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn{.relu}{.satfinite}.scale.n2.ue8m0(i16 %a, i16 %scale_factor)
 
 Overview:
@@ -1146,11 +1143,11 @@ result is sign-preserved ``MAX_NORM`` of the destination format. Also, if the
 input is ``NaN``, then the result is the positive ``MAX_NORM`` of the 
 destination format.
 
-For conversions with ``scale.n2.ue8m0``, the operand ``%scale_factor`` stores 
-two packed scaling factors of type ``ue8m0``, one for each input. For down 
-conversion, inputs are divided by ``scale_factor`` and then the conversion is 
-performed. For up-conversion, inputs are converted to destination type and then 
-multiplied by ``scale_factor``.
+The operand ``%scale_factor`` stores two packed scaling factors of type 
+``ue8m0``, one for each input. For down conversion, inputs are divided by 
+``scale_factor`` and then the conversion is performed. For up-conversion, 
+inputs are converted to destination type and then multiplied by 
+``scale_factor``.
 
 For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cvt>`__.
 
