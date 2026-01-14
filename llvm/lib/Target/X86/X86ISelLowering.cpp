@@ -33101,6 +33101,7 @@ static SDValue LowerCLMUL(SDValue Op, const X86Subtarget &Subtarget,
     return SDValue();
 
   bool IsHigh = Op.getOpcode() == ISD::CLMULH;
+  assert((!IsHigh || Subtarget.is64Bit()) && "CLMULH requires 64-bit");
   SDLoc DL(Op);
   MVT VT = Op.getSimpleValueType();
   SDValue LHS = Op.getOperand(0);
