@@ -1308,6 +1308,11 @@ inline BinaryOpc_match<ValTy, AllOnes_match, true> m_Not(const ValTy &V) {
   return m_Xor(V, m_AllOnes());
 }
 
+template <unsigned IntrinsicId, typename... OpndPreds>
+inline auto m_IntrinsicWOChain(const OpndPreds &...Opnds) {
+  return m_Node(ISD::INTRINSIC_WO_CHAIN, m_SpecificInt(IntrinsicId), Opnds...);
+}
+
 struct SpecificNeg_match {
   SDValue V;
 
