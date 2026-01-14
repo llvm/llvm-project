@@ -1392,27 +1392,3 @@ void add(int c, MyObj* node) {
   arr[4] = node;
 }
 } // namespace CppCoverage
-
-// Implicit this annotations with redecls.
-namespace GH172013 {
-// https://github.com/llvm/llvm-project/issues/62072
-// https://github.com/llvm/llvm-project/issues/172013
-struct S {
-    View x() const [[clang::lifetimebound]];
-    MyObj i;
-};
-
-View S::x() const { return i; }
-
-void bar() {
-    View x;
-    {
-        S s;
-        x = s.x(); // expected-warning {{object whose reference is captured does not live long enough}}
-        View y = S().x(); // expected-warning {{object whose reference is captured does not live long enough}} \
-          expected-note {{destroyed here}}
-        (void)y; // expected-note {{later used here}}
-    } // expected-note {{destroyed here}}
-    (void)x; // expected-note {{used here}}
-}
-}

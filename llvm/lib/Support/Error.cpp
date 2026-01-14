@@ -144,7 +144,7 @@ StringError::StringError(const Twine &S, std::error_code EC)
     : Msg(S.str()), EC(EC), PrintMsgOnly(true) {}
 
 StringError::StringError(std::string &&S, std::error_code EC, bool PrintMsgOnly)
-    : Msg(S), EC(EC), PrintMsgOnly(PrintMsgOnly) {}
+    : Msg(std::move(S)), EC(EC), PrintMsgOnly(PrintMsgOnly) {}
 
 void StringError::log(raw_ostream &OS) const {
   if (PrintMsgOnly) {
@@ -161,7 +161,7 @@ std::error_code StringError::convertToErrorCode() const {
 }
 
 Error createStringError(std::string &&Msg, std::error_code EC) {
-  return make_error<StringError>(Msg, EC);
+  return make_error<StringError>(std::move(Msg), EC, true);
 }
 
 void report_fatal_error(Error Err, bool GenCrashDiag) {

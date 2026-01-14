@@ -34,7 +34,7 @@ using namespace llvm;
 #define DEBUG_TYPE DL_NAME
 
 static cl::opt<bool> UseFixedSizeArrayHeuristic(
-    "delinearize-use-fixed-size-array-heuristic", cl::init(false), cl::Hidden,
+    "delinearize-use-fixed-size-array-heuristic", cl::init(true), cl::Hidden,
     cl::desc("When printing analysis, use the heuristic for fixed-size arrays "
              "if the default delinearizetion fails."));
 

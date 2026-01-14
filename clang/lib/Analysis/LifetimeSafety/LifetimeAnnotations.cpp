@@ -52,28 +52,23 @@ bool isAssignmentOperatorLifetimeBound(const CXXMethodDecl *CMD) {
          CMD->getParamDecl(0)->hasAttr<clang::LifetimeBoundAttr>();
 }
 
-const LifetimeBoundAttr *
-getLifetimeBoundAttrFromFunctionType(const TypeSourceInfo &TSI) {
-  // Walk through the type layers looking for a lifetimebound attribute.
-  TypeLoc TL = TSI.getTypeLoc();
-  while (true) {
-    auto ATL = TL.getAsAdjusted<AttributedTypeLoc>();
-    if (!ATL)
-      break;
-    if (auto *LBAttr = ATL.getAttrAs<LifetimeBoundAttr>())
-      return LBAttr;
-    TL = ATL.getModifiedLoc();
-  }
-  return nullptr;
-}
-
 bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   FD = getDeclWithMergedLifetimeBoundAttrs(FD);
   const TypeSourceInfo *TSI = FD->getTypeSourceInfo();
   if (!TSI)
     return false;
-  return getLifetimeBoundAttrFromFunctionType(*TSI) != nullptr ||
-         isNormalAssignmentOperator(FD);
+  // Don't declare this variable in the second operand of the for-statement;
+  // GCC miscompiles that by ending its lifetime before evaluating the
+  // third operand. See gcc.gnu.org/PR86769.
+  AttributedTypeLoc ATL;
+  for (TypeLoc TL = TSI->getTypeLoc();
+       (ATL = TL.getAsAdjusted<AttributedTypeLoc>());
+       TL = ATL.getModifiedLoc()) {
+    if (ATL.getAttrAs<clang::LifetimeBoundAttr>())
+      return true;
+  }
+
+  return isNormalAssignmentOperator(FD);
 }
 
 bool isInStlNamespace(const Decl *D) {
