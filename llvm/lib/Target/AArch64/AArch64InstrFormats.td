@@ -10297,9 +10297,10 @@ multiclass SIMDScalarLShiftDTied<bit U, bits<5> opc, string asm,
   }
 }
 
-let mayStore = 0, mayLoad = 0, hasSideEffects = 0 in
 multiclass SIMDScalarRShiftBHS<bit U, bits<5> opc, string asm,
-                               SDPatternOperator OpNode = null_frag> {
+                               SDPatternOperator OpNode = null_frag,
+                               SDPatternOperator GOpNode = null_frag> {
+  let mayStore = 0, mayLoad = 0, hasSideEffects = 0 in {
   def b : BaseSIMDScalarShift<U, opc, {0,0,0,1,?,?,?},
                               FPR8, FPR16, vecshiftR8, asm, []> {
     let Inst{18-16} = imm{2-0};
@@ -10312,9 +10313,13 @@ multiclass SIMDScalarRShiftBHS<bit U, bits<5> opc, string asm,
 
   def s : BaseSIMDScalarShift<U, opc, {0,1,?,?,?,?,?},
                               FPR32, FPR64, vecshiftR32, asm,
-    [(set (i32 FPR32:$Rd), (OpNode (i64 FPR64:$Rn), vecshiftR32:$imm))]> {
+    [(set (f32 FPR32:$Rd), (OpNode (f64 FPR64:$Rn), vecshiftR32:$imm))]> {
     let Inst{20-16} = imm{4-0};
   }
+  }
+
+  def: Pat<(i32 (GOpNode (i64 FPR64:$Rd), vecshiftR32:$imm)),
+           (!cast<Instruction>(NAME # "s") FPR64:$Rd, vecshiftR32:$imm)>;
 }
 
 multiclass SIMDScalarLShiftBHSD<bit U, bits<5> opc, string asm,
