@@ -298,7 +298,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI basic_istream& ignore(streamsize __n, char_type __delim) {
     return ignore(__n, traits_type::to_int_type(__delim));
   }
-  [[__nodiscard__]] int_type peek();
+  int_type peek();
   basic_istream& read(char_type* __s, streamsize __n);
   streamsize readsome(char_type* __s, streamsize __n);
 
