@@ -328,6 +328,9 @@ void populateVectorContractToMatrixMultiply(RewritePatternSet &patterns,
 void populateVectorTransposeToFlatTranspose(RewritePatternSet &patterns,
                                             PatternBenefit benefit = 100);
 
+void populateVectorInnerOuterDimReductionConversionPatterns(
+    RewritePatternSet &patterns, VectorMultiReductionLowering options,
+    PatternBenefit benefit = 1);
 } // namespace vector
 } // namespace mlir
 
