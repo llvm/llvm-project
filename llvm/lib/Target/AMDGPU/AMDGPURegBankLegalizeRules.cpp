@@ -1082,22 +1082,24 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   bool hasSALUFloat = ST->hasSALUFloatInsts();
 
   addRulesForGOpcs({G_STRICT_FMA}, Standard)
-    .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16, Vgpr16}}, !hasSALUFloat)
-    .Uni(S16, {{Sgpr16}, {Sgpr16, Sgpr16, Sgpr16}}, hasSALUFloat)
-    .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16, Vgpr16}})
-    .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32, Vgpr32}}, !hasSALUFloat)
-    .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32, Sgpr32}}, hasSALUFloat) 
-    .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32}})
-    .Uni(S64, {{UniInVgprS64}, {Vgpr64, Vgpr64, Vgpr64}})
-    .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr64, Vgpr64}})
-    .Uni(V2S16, {{UniInVgprV2S16}, {VgprV2S16, VgprV2S16, VgprV2S16}}, !hasSALUFloat)
-    .Uni(V2S16, {{SgprV2S16}, {SgprV2S16, SgprV2S16, SgprV2S16}, ScalarizeToS16},
-	 hasSALUFloat)
-    .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16, VgprV2S16}})
-    .Any({{UniV2S32}, {{UniInVgprV2S32}, {VgprV2S32, VgprV2S32, VgprV2S32}}})
-    .Any({{UniV2S32}, {{UniInVgprV2S32}, {VgprV2S32, VgprV2S32, VgprV2S32}}})
-    .Any({{DivV2S32}, {{VgprV2S32}, {VgprV2S32, VgprV2S32, VgprV2S32}}});
-      
+      .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16, Vgpr16}}, !hasSALUFloat)
+      .Uni(S16, {{Sgpr16}, {Sgpr16, Sgpr16, Sgpr16}}, hasSALUFloat)
+      .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16, Vgpr16}})
+      .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32, Vgpr32}}, !hasSALUFloat)
+      .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32, Sgpr32}}, hasSALUFloat)
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32}})
+      .Uni(S64, {{UniInVgprS64}, {Vgpr64, Vgpr64, Vgpr64}})
+      .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr64, Vgpr64}})
+      .Uni(V2S16, {{UniInVgprV2S16}, {VgprV2S16, VgprV2S16, VgprV2S16}},
+           !hasSALUFloat)
+      .Uni(V2S16,
+           {{SgprV2S16}, {SgprV2S16, SgprV2S16, SgprV2S16}, ScalarizeToS16},
+           hasSALUFloat)
+      .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16, VgprV2S16}})
+      .Any({{UniV2S32}, {{UniInVgprV2S32}, {VgprV2S32, VgprV2S32, VgprV2S32}}})
+      .Any({{UniV2S32}, {{UniInVgprV2S32}, {VgprV2S32, VgprV2S32, VgprV2S32}}})
+      .Any({{DivV2S32}, {{VgprV2S32}, {VgprV2S32, VgprV2S32, VgprV2S32}}});
+
   addRulesForGOpcs({G_BLOCK_ADDR}).Any({{UniP0}, {{SgprP0}, {}}});
 
   addRulesForGOpcs({G_GLOBAL_VALUE})
