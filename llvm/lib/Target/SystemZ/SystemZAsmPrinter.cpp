@@ -1699,6 +1699,93 @@ void SystemZAsmPrinter::emitPPA2(Module &M) {
   OutStreamer->popSection();
 }
 
+void SystemZAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
+  auto *Sym = getSymbol(GV);
+  // This is currently done in the base emitGlobalVariable implementation
+  // but is guarded by hasDotTypeDotSizeDirective() which is set to false
+  // for z/OS
+  OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeObject);
+  AsmPrinter::emitGlobalVariable(GV);
+}
+
+void SystemZAsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
+  MCSymbol *Name = getSymbol(&GA);
+  bool IsFunc = isa<Function>(GA.getAliasee()->stripPointerCasts());
+  llvm::dbgs() << "TONY emitting alias for " << Name->getName() << "\n";
+
+  if (GA.hasExternalLinkage() || !MAI->getWeakRefDirective()) {
+    llvm::dbgs() << "TONY set global linkage\n";
+    OutStreamer->emitSymbolAttribute(Name, MCSA_Global);
+    }
+  else if (GA.hasWeakLinkage() || GA.hasLinkOnceLinkage()) {
+    llvm::dbgs() << "TONY set weak linkage\n";
+    OutStreamer->emitSymbolAttribute(Name, MCSA_WeakReference);
+  }
+  else
+    assert(GA.hasLocalLinkage() && "Invalid alias linkage");
+
+  emitVisibility(Name, GA.getVisibility());
+
+  const MCExpr *Expr;
+
+  // For XPLINK, create a VCON relocation in case of a function, and
+  // a direct reference else.
+  MCSymbol *Sym = getSymbol(GA.getAliaseeObject());
+  if (IsFunc) {
+    Expr = MCSpecifierExpr::create(MCSymbolRefExpr::create(Sym, OutContext),
+                                   SystemZ::S_VCon, OutContext);
+    llvm::dbgs() << "TONY create svcon\n";
+  }
+  else
+    Expr = MCSymbolRefExpr::create(Sym, OutContext);
+
+  OutStreamer->emitAssignment(Name, Expr);
+}
+
+const MCExpr *SystemZAsmPrinter::lowerConstant(const Constant *CV,
+                                               const Constant *BaseCV,
+                                               uint64_t Offset) {
+  const GlobalAlias *GA = dyn_cast<GlobalAlias>(CV);
+  const GlobalVariable *GV = dyn_cast<GlobalVariable>(CV);
+  const Function *FV = dyn_cast<Function>(CV);
+  bool IsFunc = !GV && (FV || (GA && isa<Function>(GA->getAliaseeObject())));
+
+  MCSymbol *Sym = NULL;
+
+  if (GA)
+    Sym = getSymbol(GA);
+  else if (IsFunc)
+    Sym = getSymbol(FV);
+  else if (GV)
+    Sym = getSymbol(GV);
+
+  if (IsFunc) {
+    OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
+    if (FV->hasExternalLinkage()) {
+      llvm::dbgs() << "TONY generating lower constant ext func for " << Sym->getName() << "\n";
+      return MCSpecifierExpr::create(MCSymbolRefExpr::create(Sym, OutContext),
+                                     SystemZ::S_VCon, OutContext);
+    }
+    // Trigger creation of function descriptor in ADA for internal
+    // functions.
+    unsigned Disp = ADATable.insert(Sym, SystemZII::MO_ADA_DIRECT_FUNC_DESC).second;
+    llvm::dbgs() << "TONY generating lower constant static func for " << Sym->getName() << "\n";
+    return MCBinaryExpr::createAdd(
+        MCSpecifierExpr::create(
+            MCSymbolRefExpr::create(
+                getObjFileLowering().getADASection()->getBeginSymbol(),
+                OutContext),
+            SystemZ::S_None, OutContext),
+        MCConstantExpr::create(Disp, OutContext), OutContext);
+  }
+  if (Sym) {
+    llvm::dbgs() << "TONY generating lower constant sym for " << Sym->getName() << "\n";
+    OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeObject);
+    return MCSymbolRefExpr::create(Sym, OutContext);
+  }
+  return AsmPrinter::lowerConstant(CV);
+}
+
 void SystemZAsmPrinter::emitFunctionEntryLabel() {
   const SystemZSubtarget &Subtarget = MF->getSubtarget<SystemZSubtarget>();
 
