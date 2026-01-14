@@ -592,6 +592,24 @@ bool SliceAttr::isSliceOf(const xegpu::DistributeLayoutAttr &other) {
                       [&](int64_t dim) { return thisDims.contains(dim); });
 }
 
+xegpu::SliceAttr SliceAttr::dropSliceDims(ArrayRef<int64_t> sliceDimsToDrop) {
+  if (sliceDimsToDrop.empty())
+    return *this;
+  SmallVector<int64_t> sliceDims{getDims().asArrayRef()};
+  for (auto dim : sliceDimsToDrop) {
+    auto foundIt = std::find(sliceDims.begin(), sliceDims.end(), dim);
+    assert(foundIt != sliceDims.end() &&
+           "Expected to find the specified reduction dim in slice dims");
+    sliceDims.erase(foundIt);
+  }
+
+  auto sliceWithoutDims = xegpu::SliceAttr::get(
+      this->getContext(), getParent(),
+      DenseI64ArrayAttr::get(this->getContext(), sliceDims));
+
+  return sliceWithoutDims;
+}
+
 bool SliceAttr::isEqualTo(const xegpu::DistributeLayoutAttr &other) {
   if (dyn_cast<xegpu::LayoutAttr>(other))
     return false;

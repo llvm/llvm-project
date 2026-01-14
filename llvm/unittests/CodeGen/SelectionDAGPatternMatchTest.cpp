@@ -8,6 +8,8 @@
 
 #include "SelectionDAGTestBase.h"
 #include "llvm/CodeGen/SDPatternMatch.h"
+#include "llvm/IR/IntrinsicsWebAssembly.h"
+#include "llvm/IR/IntrinsicsX86.h"
 
 using namespace llvm;
 
@@ -691,6 +693,48 @@ TEST_F(SelectionDAGPatternMatchTest, matchSelectLike) {
   EXPECT_TRUE(
       sd_match(VSelect, m_SelectLike(m_Specific(VCond), m_Specific(VTVal),
                                      m_Specific(VFVal))));
+}
+
+TEST_F(SelectionDAGPatternMatchTest, matchIntrinsicWOChain) {
+  SDLoc DL;
+  auto Int32VT = EVT::getIntegerVT(Context, 32);
+  auto Int64VT = EVT::getIntegerVT(Context, 64);
+
+  SDValue WasmBitmaskIntrinsicId =
+      DAG->getConstant(Intrinsic::wasm_bitmask, DL, Int32VT);
+  SDValue X86Aadd32IntrinsicId =
+      DAG->getConstant(Intrinsic::x86_aadd32, DL, Int32VT);
+  SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 0, Int32VT);
+  SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int32VT);
+  SDValue Op2 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 2, Int32VT);
+  SDValue PtrOp = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 3, Int64VT);
+  SDValue Op3 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 4, Int32VT);
+
+  SDValue WasmBitmask = DAG->getNode(ISD::INTRINSIC_WO_CHAIN, DL, Int32VT,
+                                     WasmBitmaskIntrinsicId, Op0);
+  SDValue X86Aadd32 = DAG->getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::Other,
+                                   X86Aadd32IntrinsicId, PtrOp, Op1);
+  SDValue Add = DAG->getNode(ISD::ADD, DL, Int32VT, Op2, Op3);
+
+  using namespace SDPatternMatch;
+  SDValue H0, H1, H2;
+
+  // Intrinsic operations should match
+  EXPECT_TRUE(sd_match(
+      WasmBitmask, m_IntrinsicWOChain<Intrinsic::wasm_bitmask>(m_Value(H0))));
+  EXPECT_TRUE(sd_match(X86Aadd32, m_IntrinsicWOChain<Intrinsic::x86_aadd32>(
+                                      m_Value(H1), m_Value(H2))));
+  EXPECT_TRUE(H0 == Op0);
+  EXPECT_TRUE(H1 == PtrOp);
+  EXPECT_TRUE(H2 == Op1);
+
+  // Intrinsic operations with incorrect IntrinsicId should not match
+  EXPECT_FALSE(sd_match(X86Aadd32, m_IntrinsicWOChain<Intrinsic::wasm_bitmask>(
+                                       m_Value(), m_Value())));
+
+  // Add operation shouldn't match
+  EXPECT_FALSE(sd_match(
+      Add, m_IntrinsicWOChain<Intrinsic::x86_aadd32>(m_Value(), m_Value())));
 }
 
 namespace {
