@@ -2424,7 +2424,7 @@ static Value *combineAndOrOfImmCmpToBitExtract(Instruction &Or,
 
   // TODO: Handle ConstantCompare.Extra case
   // If expanding an existing case, only adding one extra case is still good
-  if (!Index || !isGuaranteedNotToBeUndefOrPoison(Index) ||
+  if (!Index || !isGuaranteedNotToBeUndef(Index) ||
       (ConstantCompare.UsedICmps + ConstantCompare.ExpansionCase) < 3 ||
       ConstantCompare.Extra)
     return nullptr;
