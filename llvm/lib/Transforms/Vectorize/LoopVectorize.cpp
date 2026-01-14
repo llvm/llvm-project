@@ -8758,13 +8758,15 @@ void LoopVectorizationPlanner::addReductionResultComputation(
           Builder.createNaryOp(VPInstruction::ComputeAnyOfResult,
                                {PhiR, Start, NewExitingVPV}, ExitDL);
     } else {
-      VPIRFlags Flags =
+      FastMathFlags FMFs =
           RecurrenceDescriptor::isFloatingPointRecurrenceKind(RecurrenceKind)
-              ? VPIRFlags(RdxDesc.getFastMathFlags())
-              : VPIRFlags();
+              ? RdxDesc.getFastMathFlags()
+              : FastMathFlags();
+      VPIRFlags Flags(RecurrenceKind, PhiR->isOrdered(), PhiR->isInLoop(),
+                      FMFs);
       FinalReductionResult =
           Builder.createNaryOp(VPInstruction::ComputeReductionResult,
-                               {PhiR, NewExitingVPV}, Flags, ExitDL);
+                               {NewExitingVPV}, Flags, ExitDL);
     }
     // If the vector reduction can be performed in a smaller type, we truncate
     // then extend the loop exit value to enable InstCombine to evaluate the
@@ -8792,8 +8794,8 @@ void LoopVectorizationPlanner::addReductionResultComputation(
         PhiR->setOperand(1, Extnd->getVPSingleValue());
 
       // Update ComputeReductionResult with the truncated exiting value and
-      // extend its result.
-      FinalReductionResult->setOperand(1, Trunc);
+      // extend its result. Operand 0 provides the values to be reduced.
+      FinalReductionResult->setOperand(0, Trunc);
       FinalReductionResult =
           Builder.createScalarCast(ExtendOpc, FinalReductionResult, PhiTy, {});
     }
