@@ -190,7 +190,7 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
 
   auto M = partition(Tokens, [](auto &&T) { return T.starts_with('+'); });
 
-  if (std::any_of(M, Tokens.end(), [](auto &&T) { return T == "all"; }))
+  if (std::any_of(M, Tokens.end(), equal_to("all")))
     copy(make_second_range(SPIRVExtensionMap), std::inserter(Vals, Vals.end()));
 
   for (auto &&Token : make_range(Tokens.begin(), M)) {

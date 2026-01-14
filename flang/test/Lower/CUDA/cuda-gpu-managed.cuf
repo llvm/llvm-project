@@ -1,4 +1,4 @@
-! RUN: bbc -emit-hlfir -fcuda -gpu=mem:managed %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir -fcuda -gpu=managed %s -o - | FileCheck %s
 
 ! Test -gpu=managed flag: allocatable arrays without explicit CUDA attributes
 ! should be implicitly treated as managed.

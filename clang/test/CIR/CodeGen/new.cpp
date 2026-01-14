@@ -185,12 +185,8 @@ void t_new_constant_size() {
   auto p = new double[16];
 }
 
-// In this test, NUM_ELEMENTS isn't used because no cookie is needed and there
-//   are no constructor calls needed.
-
 // CHECK:   cir.func{{.*}} @_Z19t_new_constant_sizev()
 // CHECK:    %[[P_ADDR:.*]] = cir.alloca !cir.ptr<!cir.double>, !cir.ptr<!cir.ptr<!cir.double>>, ["p", init] {alignment = 8 : i64}
-// CHECK:    %[[#NUM_ELEMENTS:]] = cir.const #cir.int<16> : !u64i
 // CHECK:    %[[#ALLOCATION_SIZE:]] = cir.const #cir.int<128> : !u64i
 // CHECK:    %[[RAW_PTR:.*]] = cir.call @_Znam(%[[#ALLOCATION_SIZE]]) : (!u64i) -> !cir.ptr<!void>
 // CHECK:    %[[TYPED_PTR:.*]] = cir.cast bitcast %[[RAW_PTR]] : !cir.ptr<!void> -> !cir.ptr<!cir.double>
@@ -220,7 +216,6 @@ void t_constant_size_nontrivial() {
 // CHECK:  cir.func{{.*}} @_Z26t_constant_size_nontrivialv()
 // CHECK:    %[[P_ADDR:.*]] = cir.alloca !cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!rec_C>>, ["p", init] {alignment = 8 : i64}
 // CHECK:    %[[#NUM_ELEMENTS:]] = cir.const #cir.int<3> : !u64i
-// CHECK:    %[[#SIZE_WITHOUT_COOKIE:]] = cir.const #cir.int<3> : !u64i
 // CHECK:    %[[#ALLOCATION_SIZE:]] = cir.const #cir.int<11> : !u64i
 // CHECK:    %[[RAW_PTR:.*]] = cir.call @_Znam(%[[#ALLOCATION_SIZE]]) : (!u64i) -> !cir.ptr<!void>
 // CHECK:    %[[COOKIE_PTR_BASE:.*]] = cir.cast bitcast %[[RAW_PTR]] : !cir.ptr<!void> -> !cir.ptr<!cir.ptr<!u8i>>
@@ -258,13 +253,9 @@ void t_constant_size_nontrivial2() {
   auto p = new D[3];
 }
 
-// In this test SIZE_WITHOUT_COOKIE isn't used, but it would be if there were
-// an initializer.
-
 // CHECK:  cir.func{{.*}} @_Z27t_constant_size_nontrivial2v()
 // CHECK:    %[[P_ADDR:.*]] = cir.alloca !cir.ptr<!rec_D>, !cir.ptr<!cir.ptr<!rec_D>>, ["p", init] {alignment = 8 : i64}
 // CHECK:    %[[#NUM_ELEMENTS:]] = cir.const #cir.int<3> : !u64i
-// CHECK:    %[[#SIZE_WITHOUT_COOKIE:]] = cir.const #cir.int<12> : !u64i
 // CHECK:    %[[#ALLOCATION_SIZE:]] = cir.const #cir.int<20> : !u64i
 // CHECK:    %[[RAW_PTR:.*]] = cir.call @_Znam(%[[#ALLOCATION_SIZE]]) : (!u64i) -> !cir.ptr<!void>
 // CHECK:    %[[COOKIE_PTR_BASE:.*]] = cir.cast bitcast %[[RAW_PTR]] : !cir.ptr<!void> -> !cir.ptr<!cir.ptr<!u8i>>
@@ -297,7 +288,6 @@ void t_align16_nontrivial() {
 // CHECK:  cir.func{{.*}} @_Z20t_align16_nontrivialv()
 // CHECK:    %[[P_ADDR:.*]] = cir.alloca !cir.ptr<!rec_E>, !cir.ptr<!cir.ptr<!rec_E>>, ["p", init] {alignment = 8 : i64}
 // CHECK:    %[[#NUM_ELEMENTS:]] = cir.const #cir.int<2> : !u64i
-// CHECK:    %[[#SIZE_WITHOUT_COOKIE:]] = cir.const #cir.int<32> : !u64i
 // CHECK:    %[[#ALLOCATION_SIZE:]] = cir.const #cir.int<48> : !u64i
 // CHECK:    %[[RAW_PTR:.*]] = cir.call @_Znam(%[[#ALLOCATION_SIZE]]) : (!u64i) -> !cir.ptr<!void>
 // CHECK:    %[[COOKIE_PTR_BASE:.*]] = cir.cast bitcast %[[RAW_PTR]] : !cir.ptr<!void> -> !cir.ptr<!cir.ptr<!u8i>>
@@ -334,11 +324,8 @@ void t_new_multidim_constant_size() {
   auto p = new double[2][3][4];
 }
 
-// As above, NUM_ELEMENTS isn't used.
-
 // CHECK:   cir.func{{.*}} @_Z28t_new_multidim_constant_sizev()
 // CHECK:    %[[P_ADDR:.*]] = cir.alloca !cir.ptr<!cir.array<!cir.array<!cir.double x 4> x 3>>, !cir.ptr<!cir.ptr<!cir.array<!cir.array<!cir.double x 4> x 3>>>, ["p", init] {alignment = 8 : i64}
-// CHECK:    %[[#NUM_ELEMENTS:]] = cir.const #cir.int<24> : !u64i
 // CHECK:    %[[#ALLOCATION_SIZE:]] = cir.const #cir.int<192> : !u64i
 // CHECK:    %[[RAW_PTR:.*]] = cir.call @_Znam(%[[#ALLOCATION_SIZE]]) : (!u64i) -> !cir.ptr<!void>
 // CHECK:    %[[TYPED_PTR:.*]] = cir.cast bitcast %[[RAW_PTR]] : !cir.ptr<!void> -> !cir.ptr<!cir.array<!cir.array<!cir.double x 4> x 3>>

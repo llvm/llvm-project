@@ -3698,9 +3698,9 @@ ClusterDimsAttr ClusterDimsAttr::get(const Function &F) {
 
   if (!Attr.has_value())
     AttrKind = Kind::Unknown;
-  else if (all_of(*Attr, [](unsigned V) { return V == EncoNoCluster; }))
+  else if (all_of(*Attr, equal_to(EncoNoCluster)))
     AttrKind = Kind::NoCluster;
-  else if (all_of(*Attr, [](unsigned V) { return V == EncoVariableDims; }))
+  else if (all_of(*Attr, equal_to(EncoVariableDims)))
     AttrKind = Kind::VariableDims;
 
   ClusterDimsAttr A(AttrKind);
