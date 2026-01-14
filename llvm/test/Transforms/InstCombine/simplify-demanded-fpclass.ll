@@ -1077,7 +1077,7 @@ define nofpclass(nan inf nzero nsub nnorm) float @powr_issue64870(float nofpclas
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[I:%.*]] = tail call float @llvm.fabs.f32(float [[X]])
 ; CHECK-NEXT:    [[I1:%.*]] = tail call float @llvm.log2.f32(float [[I]])
-; CHECK-NEXT:    [[I2:%.*]] = fmul float [[I1]], [[Y]]
+; CHECK-NEXT:    [[I2:%.*]] = fmul nnan float [[I1]], [[Y]]
 ; CHECK-NEXT:    [[I3:%.*]] = tail call nofpclass(ninf nzero nsub nnorm) float @llvm.exp2.f32(float [[I2]])
 ; CHECK-NEXT:    [[I6:%.*]] = fcmp oeq float [[X]], 0.000000e+00
 ; CHECK-NEXT:    [[I7:%.*]] = select i1 [[I6]], float 0.000000e+00, float [[I3]]
@@ -1112,7 +1112,7 @@ define nofpclass(nan inf nzero nsub nnorm) float @test_powr_issue64870_2(float n
 ; CHECK-SAME: (float nofpclass(nan inf) [[ARG:%.*]], float nofpclass(nan inf) [[ARG1:%.*]]) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I3:%.*]] = tail call float @llvm.log2.f32(float noundef [[ARG]])
-; CHECK-NEXT:    [[I5:%.*]] = fmul float [[ARG1]], [[I3]]
+; CHECK-NEXT:    [[I5:%.*]] = fmul nnan float [[ARG1]], [[I3]]
 ; CHECK-NEXT:    [[I6:%.*]] = tail call noundef nofpclass(ninf nzero nsub nnorm) float @llvm.exp2.f32(float noundef [[I5]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = fcmp oeq float [[ARG]], 0.000000e+00
 ; CHECK-NEXT:    [[I12:%.*]] = select i1 [[TMP0]], float 0.000000e+00, float [[I6]]
@@ -1141,7 +1141,7 @@ define nofpclass(nan inf) float @pow_f32(float nofpclass(nan inf) %arg, float no
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = tail call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float noundef [[ARG]])
 ; CHECK-NEXT:    [[I2:%.*]] = tail call float @llvm.log2.f32(float noundef [[I]])
-; CHECK-NEXT:    [[I3:%.*]] = fmul float [[I2]], [[ARG1]]
+; CHECK-NEXT:    [[I3:%.*]] = fmul nnan float [[I2]], [[ARG1]]
 ; CHECK-NEXT:    [[I4:%.*]] = tail call noundef float @llvm.exp2.f32(float noundef [[I3]])
 ; CHECK-NEXT:    [[I5:%.*]] = tail call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float noundef [[ARG1]])
 ; CHECK-NEXT:    [[I6:%.*]] = tail call float @llvm.trunc.f32(float noundef [[I5]])
@@ -1583,7 +1583,7 @@ define nofpclass(nan) float @ret_nonan_fmul_select_nan_other_use(i1 %cond, float
 ; CHECK-SAME: (i1 [[COND:%.*]], float noundef [[X:%.*]], float [[Y:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[X]], float 0x7FF8000000000000
 ; CHECK-NEXT:    store float [[SELECT]], ptr [[PTR]], align 4
-; CHECK-NEXT:    [[NAN_USER:%.*]] = fmul float [[X]], [[Y]]
+; CHECK-NEXT:    [[NAN_USER:%.*]] = fmul nnan float [[X]], [[Y]]
 ; CHECK-NEXT:    ret float [[NAN_USER]]
 ;
   %select = select i1 %cond, float %x, float 0x7FF8000000000000
@@ -1597,7 +1597,7 @@ define nofpclass(nan) float @ret_nonan_fmul_select_nan_other_use_commute(i1 %con
 ; CHECK-SAME: (i1 [[COND:%.*]], float noundef [[X:%.*]], float [[Y:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float 0x7FF8000000000000, float [[X]]
 ; CHECK-NEXT:    store float [[SELECT]], ptr [[PTR]], align 4
-; CHECK-NEXT:    [[NAN_USER:%.*]] = fmul float [[X]], [[Y]]
+; CHECK-NEXT:    [[NAN_USER:%.*]] = fmul nnan float [[X]], [[Y]]
 ; CHECK-NEXT:    ret float [[NAN_USER]]
 ;
   %select = select i1 %cond, float 0x7FF8000000000000, float %x
