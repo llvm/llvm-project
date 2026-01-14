@@ -39,20 +39,20 @@ void f4() {
 void f() {
   // Basic examples of simplifiable/rebuildable names
   f1<>();
-  // CHECK: !DISubprogram(name: "_STN|f1|<>",
-  // SIMPLE: !DISubprogram(name: "f1",
+  // CHECK: !DISubprogram(name: "_STN|f1|<>", {{.*}}flags:{{.*}}DIFlagNameIsSimplified,
+  // SIMPLE: !DISubprogram(name: "f1", {{.*}}flags:{{.*}}DIFlagNameIsSimplified,
   // FULL: !DISubprogram(name: "f1<>",
   f1<int>();
-  // CHECK: !DISubprogram(name: "_STN|f1|<int>",
+  // CHECK: !DISubprogram(name: "_STN|f1|<int>", {{.*}}flags:{{.*}}DIFlagNameIsSimplified,
   f1<void()>();
-  // CHECK: !DISubprogram(name: "_STN|f1|<void ()>",
+  // CHECK: !DISubprogram(name: "_STN|f1|<void ()>", {{.*}}flags:{{.*}}DIFlagNameIsSimplified,
   f2<int, 42>();
-  // CHECK: !DISubprogram(name: "_STN|f2|<int, 42>",
+  // CHECK: !DISubprogram(name: "_STN|f2|<int, 42>", {{.*}}flags:{{.*}}DIFlagNameIsSimplified,
 
   // Check that even though the nested name can't be rebuilt, it'll carry its
   // full name and the outer name can be rebuilt from that.
   f1<t1<void() noexcept>>();
-  // CHECK: !DISubprogram(name: "_STN|f1|<t1<void () noexcept> >",
+  // CHECK: !DISubprogram(name: "_STN|f1|<t1<void () noexcept> >", {{.*}}flags:{{.*}}DIFlagNameIsSimplified,
 
   // Vector array types are encoded in DWARF but the decoding in llvm-dwarfdump
   // isn't implemented yet.
@@ -105,6 +105,7 @@ void f() {
   t2().operator t1<int>();
   // FIXME: This should be something like "operator t1<int><float>"
   // CHECK: !DISubprogram(name: "operator t1<float>",
+  // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "_STN|t1|<int>", {{.*}}flags:{{.*}}DIFlagNameIsSimplified,
 
   // Function pointer non-type-template parameters currently don't get any DWARF
   // value (GCC doesn't provide one either) and even if there was a value, if
@@ -113,25 +114,25 @@ void f() {
   // worry about seeing conversion operators as parameters to other templates.
 
   f3<t1>();
-  // CHECK: !DISubprogram(name: "_STN|f3|<t1>",
+  // CHECK: !DISubprogram(name: "_STN|f3|<t1>", {{.*}}flags:{{.*}}DIFlagNameIsSimplified,
 
   f1<_BitInt(3)>();
-  // CHECK: !DISubprogram(name: "_STN|f1|<_BitInt(3)>",
+  // CHECK: !DISubprogram(name: "_STN|f1|<_BitInt(3)>", {{.*}}flags:{{.*}}DIFlagNameIsSimplified,
 
   f1<const unsigned _BitInt(5)>();
-  // CHECK: !DISubprogram(name: "_STN|f1|<const unsigned _BitInt(5)>",
+  // CHECK: !DISubprogram(name: "_STN|f1|<const unsigned _BitInt(5)>", {{.*}}flags:{{.*}}DIFlagNameIsSimplified,
 
   f1<_BitInt(120)>();
-  // CHECK: !DISubprogram(name: "_STN|f1|<_BitInt(120)>",
+  // CHECK: !DISubprogram(name: "_STN|f1|<_BitInt(120)>", {{.*}}flags:{{.*}}DIFlagNameIsSimplified,
 
   f1<const unsigned _BitInt(120)>();
-  // CHECK: !DISubprogram(name: "_STN|f1|<const unsigned _BitInt(120)>",
+  // CHECK: !DISubprogram(name: "_STN|f1|<const unsigned _BitInt(120)>", {{.*}}flags:{{.*}}DIFlagNameIsSimplified,
 
   f2<_BitInt(2), 1>();
-  // CHECK: !DISubprogram(name: "_STN|f2|<_BitInt(2), (_BitInt(2))1>",
+  // CHECK: !DISubprogram(name: "_STN|f2|<_BitInt(2), (_BitInt(2))1>", {{.*}}flags:{{.*}}DIFlagNameIsSimplified,
 
   f2<_BitInt(64), 12>();
-  // CHECK: !DISubprogram(name: "_STN|f2|<_BitInt(64), (_BitInt(64))12>",
+  // CHECK: !DISubprogram(name: "_STN|f2|<_BitInt(64), (_BitInt(64))12>", {{.*}}flags:{{.*}}DIFlagNameIsSimplified,
 
   // FIXME: make block forms reconstitutable
   f2<_BitInt(65), 1>();
