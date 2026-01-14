@@ -13,7 +13,6 @@
 // unreadable, the middle usable normally. By placing test data at the edges
 // between the middle page and the others, we can test for bad accesses.
 
-#include <cstddef>
 #include <type_traits>
 
 #include "src/__support/CPP/array.h"
