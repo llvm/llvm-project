@@ -55,12 +55,8 @@ llvm::Expected<std::vector<DocumentSymbol>> getDocumentSymbols(ParsedAST &AST);
 /// \p ND The declaration to get tags for.
 std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND);
 
-
 /// Computes symbol tags for a given NamedDecl.
-SymbolTags computeSymbolTags(const NamedDecl &ND);
-
-/// Computes symbol tags for a given NamedDecl, with additional context about
-/// whether it's a declaration or definition.
+/// \p IsDecl indicates whether ND is a declaration (true).
 SymbolTags computeSymbolTags(const NamedDecl &ND, bool IsDecl);
 
 } // namespace clangd
