@@ -1,6 +1,8 @@
 name: "Check LLVM ABI annotations"
 on:
   pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
