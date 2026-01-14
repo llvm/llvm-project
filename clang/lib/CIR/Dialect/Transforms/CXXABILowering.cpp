@@ -59,7 +59,7 @@ public:
     // Do not match on operations that have dedicated ABI lowering rewrite rules
     if (llvm::isa<cir::AllocaOp, cir::BaseDataMemberOp, cir::ConstantOp,
                   cir::CmpOp, cir::DerivedDataMemberOp, cir::FuncOp,
-                  cir::GetRuntimeMemberOp, cir::GlobalOp>(op))
+                  cir::GetMethodOp, cir::GetRuntimeMemberOp, cir::GlobalOp>(op))
       return mlir::failure();
 
     const mlir::TypeConverter *typeConverter = getTypeConverter();
@@ -249,6 +249,16 @@ mlir::LogicalResult CIRDerivedDataMemberOpABILowering::matchAndRewrite(
   mlir::Value loweredResult = lowerModule->getCXXABI().lowerDerivedDataMember(
       op, adaptor.getSrc(), rewriter);
   rewriter.replaceOp(op, loweredResult);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRGetMethodOpABILowering::matchAndRewrite(
+    cir::GetMethodOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Value loweredResults[2];
+  lowerModule->getCXXABI().lowerGetMethod(
+      op, loweredResults, adaptor.getMethod(), adaptor.getObject(), rewriter);
+  rewriter.replaceOp(op, loweredResults);
   return mlir::success();
 }
 
