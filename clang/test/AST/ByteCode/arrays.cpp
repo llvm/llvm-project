@@ -835,3 +835,15 @@ namespace MultiDimConstructExpr {
   constexpr b d;
   static_assert(d.m[2][1].p == &d.m[2][1]);
 }
+
+namespace GH175432 {
+  // Test that we don't crash when checking initialization of
+  // pointer arrays with invalid initializers
+  constexpr const int *foo[][2] = { // expected-error {{must be initialized by a constant expression}} \
+                                    // expected-note {{declared here}}
+      {nullptr, int}, // expected-error {{expected '(' for function-style cast or type construction}}
+  };
+
+  static_assert(foo[0][0] == nullptr, ""); // expected-error {{not an integral constant expression}} \
+                                           // expected-note {{initializer of 'foo' is unknown}}
+}
