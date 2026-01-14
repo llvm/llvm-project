@@ -1173,3 +1173,55 @@ loop:
 exit:
   ret i64 %add
 }
+
+define i32 @print_umax_reduction(ptr %y) {
+; CHECK-LABEL: Checking a loop in 'print_umax_reduction'
+; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.]]> = VF
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
+; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
+; CHECK-NEXT: Live-in ir<100> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT: vector.ph:
+; CHECK-NEXT: Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT: vector.body:
+; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
+; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<%red> = phi ir<0>, ir<%red.next>
+; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
+; CHECK-NEXT:   CLONE ir<%gep> = getelementptr inbounds ir<%y>, vp<[[STEPS]]>
+; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer inbounds ir<%gep>
+; CHECK-NEXT:   WIDEN ir<%lv> = load vp<[[VEC_PTR]]>
+; CHECK-NEXT:   WIDEN-INTRINSIC ir<%red.next> = call llvm.umax(ir<%lv>, ir<%red>)
+; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
+; CHECK-NEXT: No successors
+; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT: middle.block:
+; CHECK-NEXT:   EMIT vp<[[RED_RES:%.+]]> = compute-reduction-result (umax) ir<%red.next>
+; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<100>, vp<[[VTC]]>
+; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
+; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %red = phi i32 [ 0, %entry ], [ %red.next, %loop ]
+  %gep = getelementptr inbounds i32, ptr %y, i64 %iv
+  %lv = load i32, ptr %gep, align 4
+  %red.next = call i32 @llvm.umax(i32 %lv, i32 %red)
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 100
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i32 %red.next
+}
