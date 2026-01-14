@@ -38,6 +38,8 @@ What's New in Libc++ 23.0.0?
 Implemented Papers
 ------------------
 
+- P1899: ``stride_view`` (`Github <https://github.com/llvm/llvm-project/issues/105198>` __)
+
 Improvements and New Features
 -----------------------------
 
