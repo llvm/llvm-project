@@ -83,6 +83,32 @@ static void ExpandResponseFiles(llvm::StringSaver &saver,
   }
 }
 
+static bool rejectAssemblyInputs(const llvm::opt::ArgList &Args,
+                                 clang::DiagnosticsEngine &Diags) {
+
+  for (const llvm::opt::Arg *Arg : Args) {
+    if (Arg->getOption().getKind() != llvm::opt::Option::InputClass)
+      continue;
+
+    llvm::StringRef Filename(Arg->getValue());
+
+    llvm::StringRef Ext = Filename.rsplit('.').second;
+
+    clang::driver::types::ID Type =
+        clang::driver::types::lookupTypeForExtension(Ext);
+
+    if (Type == clang::driver::types::TY_Asm ||
+        Type == clang::driver::types::TY_PP_Asm) {
+      Diags.Report(Diags.getCustomDiagID(
+          clang::DiagnosticsEngine::Error,
+          "flang does not support assembly files as input: '%0'"))
+          << Filename;
+      return true;
+    }
+  }
+  return false;
+}
+
 int main(int argc, const char **argv) {
 
   // Initialize variables to call the driver
@@ -147,30 +173,10 @@ int main(int argc, const char **argv) {
   llvm::SmallVector<std::pair<int, const clang::driver::Command *>, 4>
       failingCommands;
 
-  // Reject assembly files as flang does not support assembling
-  if (c) {
-    for (const llvm::opt::Arg *arg : c->getInputArgs()) {
-      if (arg->getOption().getKind() != llvm::opt::Option::InputClass)
-        continue;
-
-      llvm::StringRef filename(arg->getValue());
-
-      // Determine file type from extension
-      clang::driver::types::ID type =
-          clang::driver::types::lookupTypeForExtension(
-              filename.rsplit('.').second);
-
-      if (type == clang::driver::types::TY_Asm ||
-          type == clang::driver::types::TY_PP_Asm) {
-
-        diags.Report(diags.getCustomDiagID(
-            clang::DiagnosticsEngine::Error,
-            "flang does not support assembly files as input: '%0'"))
-            << filename;
-        return 1;
-      }
-    }
-  }
+  // Reject assembly files as flang does not support assembly inputs.
+  // TODO: Since clang supports this, flang should too.
+  if (rejectAssemblyInputs(c->getInputArgs(), diags))
+    return 1;
 
   // Set the environment variable, FLANG_COMPILER_OPTIONS_STRING, to contain all
   // the compiler options. This is intended for the frontend driver,
