@@ -110,7 +110,7 @@ void CIRCanonicalizePass::runOnOperation() {
             ComplexCreateOp, ComplexImagOp, ComplexRealOp, VecCmpOp,
             VecCreateOp, VecExtractOp, VecShuffleOp, VecShuffleDynamicOp,
             VecTernaryOp, BitClrsbOp, BitClzOp, BitCtzOp, BitFfsOp, BitParityOp,
-            BitPopcountOp, BitReverseOp, ByteSwapOp, RotateOp>(op))
+            BitPopcountOp, BitReverseOp, ByteSwapOp, RotateOp, ConstantOp>(op))
       ops.push_back(op);
   });
 
