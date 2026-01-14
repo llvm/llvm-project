@@ -20,7 +20,6 @@
 #include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/RecordLayout.h"
-#include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -462,7 +461,8 @@ void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
   curCGF = nullptr;
 
   setNonAliasAttributes(gd, funcOp);
-  setCIRFunctionAttributesForDefinition(funcDecl, funcOp);
+  setCIRFunctionAttributesForDefinition(funcDecl, funcOp,
+                                        cgf.hasEmittedBuiltinCall);
 
   auto getPriority = [this](const auto *attr) -> int {
     Expr *e = attr->getPriority();
@@ -2155,7 +2155,7 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
 }
 
 void CIRGenModule::setCIRFunctionAttributesForDefinition(
-    const clang::FunctionDecl *decl, cir::FuncOp f) {
+    const clang::FunctionDecl *decl, cir::FuncOp f, bool hasBuiltinCall) {
   assert(!cir::MissingFeatures::opFuncUnwindTablesAttr());
   assert(!cir::MissingFeatures::stackProtector());
 
@@ -2200,43 +2200,8 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
     // However, don't mark functions as noinline if they only contain
     // builtin calls that will become intrinsics - these simple wrappers
     // should be allowed to inline so the intrinsics can be optimized.
-    if (!isAlwaysInline) {
-      // Check if this function contains any builtin calls that will become
-      // intrinsics. If so, don't mark as noinline - let the optimizer handle
-      // it.
-      if (auto *fd = dyn_cast<FunctionDecl>(decl)) {
-        if (const Stmt *body = fd->getBody()) {
-          // Walk the function body to find any builtin calls
-          struct BuiltinCallFinder : public StmtVisitor<BuiltinCallFinder> {
-            bool foundBuiltin = false;
-            void VisitCallExpr(CallExpr *CE) {
-              if (auto *callee = CE->getDirectCallee())
-                if (callee->getBuiltinID())
-                  foundBuiltin = true;
-              for (auto *child : CE->children()) {
-                if (child)
-                  Visit(child);
-              }
-            }
-            void VisitStmt(Stmt *S) {
-              if (foundBuiltin)
-                return;
-              for (auto *child : S->children()) {
-                if (child)
-                  Visit(child);
-              }
-            }
-          };
-          BuiltinCallFinder finder;
-          finder.Visit(const_cast<Stmt *>(body));
-          // This function contains a builtin call that will become an
-          // intrinsic - don't mark as noinline.
-          if (finder.foundBuiltin)
-            return;
-        }
-      }
+    if (!isAlwaysInline && !hasBuiltinCall)
       f.setInlineKind(cir::InlineKind::NoInline);
-    }
   } else {
     // Otherwise, propagate the inline hint attribute and potentially use its
     // absence to mark things as noinline.
