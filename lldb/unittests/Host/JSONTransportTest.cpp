@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Failing on Windows, see https://github.com/llvm/llvm-project/issues/153446.
+#ifndef _WIN32
+
 #include "lldb/Host/JSONTransport.h"
 #include "TestingSupport/Host/JSONTransportTestUtilities.h"
 #include "TestingSupport/Host/PipeTestUtilities.h"
@@ -377,8 +380,6 @@ protected:
 
 } // namespace
 
-// Failing on Windows, see https://github.com/llvm/llvm-project/issues/153446.
-#ifndef _WIN32
 using namespace test_protocol;
 
 TEST_F(HTTPDelimitedJSONTransportTest, MalformedRequests) {
@@ -813,4 +814,4 @@ TEST_F(TransportBinderTest, InBoundEventsVoidParams) {
   EXPECT_TRUE(called);
 }
 
-#endif
+#endif // ifndef _WIN32

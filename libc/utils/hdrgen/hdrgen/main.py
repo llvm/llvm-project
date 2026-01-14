@@ -50,6 +50,12 @@ def main():
         default=False,
     )
     parser.add_argument(
+        "--proxy",
+        help="Generate a libc/hdr proxy header of a public header",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
         "-e",
         "--entry-point",
         help="Entry point to include; may be given many times",
@@ -116,9 +122,12 @@ def main():
     else:
         [yaml_file] = args.yaml_file
         header = load_header(yaml_file)
-        # The header_template path is relative to the containing YAML file.
-        template = header.template(yaml_file.parent, files_read)
-        contents = fill_public_api(header.public_api(), template)
+        if args.proxy:
+            contents = header.proxy_contents()
+        else:
+            # The header_template path is relative to the containing YAML file.
+            template = header.template(yaml_file.parent, files_read)
+            contents = fill_public_api(header.public_api(), template)
 
     write_depfile()
 

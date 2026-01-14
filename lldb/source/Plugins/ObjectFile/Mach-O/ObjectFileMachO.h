@@ -24,7 +24,8 @@
 // will export the ObjectFile protocol
 class ObjectFileMachO : public lldb_private::ObjectFile {
 public:
-  ObjectFileMachO(const lldb::ModuleSP &module_sp, lldb::DataBufferSP data_sp,
+  ObjectFileMachO(const lldb::ModuleSP &module_sp,
+                  lldb::DataExtractorSP extractor_sp,
                   lldb::offset_t data_offset,
                   const lldb_private::FileSpec *file, lldb::offset_t offset,
                   lldb::offset_t length);
@@ -47,9 +48,10 @@ public:
   }
 
   static lldb_private::ObjectFile *
-  CreateInstance(const lldb::ModuleSP &module_sp, lldb::DataBufferSP data_sp,
-                 lldb::offset_t data_offset, const lldb_private::FileSpec *file,
-                 lldb::offset_t file_offset, lldb::offset_t length);
+  CreateInstance(const lldb::ModuleSP &module_sp,
+                 lldb::DataExtractorSP extractor_sp, lldb::offset_t data_offset,
+                 const lldb_private::FileSpec *file, lldb::offset_t file_offset,
+                 lldb::offset_t length);
 
   static lldb_private::ObjectFile *CreateMemoryInstance(
       const lldb::ModuleSP &module_sp, lldb::WritableDataBufferSP data_sp,

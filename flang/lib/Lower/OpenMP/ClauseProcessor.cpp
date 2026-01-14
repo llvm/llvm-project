@@ -383,36 +383,36 @@ bool ClauseProcessor::processInclusive(
 }
 
 bool ClauseProcessor::processInitializer(
-    lower::SymMap &symMap, const parser::OmpClause::Initializer &inp,
+    lower::SymMap &symMap,
     ReductionProcessor::GenInitValueCBTy &genInitValueCB) const {
   if (auto *clause = findUniqueClause<omp::clause::Initializer>()) {
     genInitValueCB = [&, clause](fir::FirOpBuilder &builder, mlir::Location loc,
                                  mlir::Type type, mlir::Value ompOrig) {
       lower::SymMapScope scope(symMap);
-      const parser::OmpInitializerExpression &iexpr = inp.v.v;
-      const parser::OmpStylizedInstance &styleInstance = iexpr.v.front();
-      const std::list<parser::OmpStylizedDeclaration> &declList =
-          std::get<std::list<parser::OmpStylizedDeclaration>>(styleInstance.t);
       mlir::Value ompPrivVar;
-      for (const parser::OmpStylizedDeclaration &decl : declList) {
-        auto &name = std::get<parser::ObjectName>(decl.var.t);
-        assert(name.symbol && "Name does not have a symbol");
+      const StylizedInstance &inst = clause->v.front();
+
+      for (const Object &object :
+           std::get<StylizedInstance::Variables>(inst.t)) {
         mlir::Value addr = builder.createTemporary(loc, ompOrig.getType());
         fir::StoreOp::create(builder, loc, ompOrig, addr);
         fir::FortranVariableFlagsEnum extraFlags = {};
         fir::FortranVariableFlagsAttr attributes =
-            Fortran::lower::translateSymbolAttributes(builder.getContext(),
-                                                      *name.symbol, extraFlags);
-        auto declareOp = hlfir::DeclareOp::create(
-            builder, loc, addr, name.ToString(), nullptr, {}, nullptr, nullptr,
-            0, attributes);
-        if (name.ToString() == "omp_priv")
+            Fortran::lower::translateSymbolAttributes(
+                builder.getContext(), *object.sym(), extraFlags);
+        std::string name = object.sym()->name().ToString();
+        auto declareOp =
+            hlfir::DeclareOp::create(builder, loc, addr, name, nullptr, {},
+                                     nullptr, nullptr, 0, attributes);
+        if (name == "omp_priv")
           ompPrivVar = declareOp.getResult(0);
-        symMap.addVariableDefinition(*name.symbol, declareOp);
+        symMap.addVariableDefinition(*object.sym(), declareOp);
       }
+
       // Lower the expression/function call
       lower::StatementContext stmtCtx;
-      const semantics::SomeExpr &initExpr = clause->v.front();
+      const semantics::SomeExpr &initExpr =
+          std::get<StylizedInstance::Instance>(inst.t);
       mlir::Value result = common::visit(
           common::visitors{
               [&](const evaluate::ProcedureRef &procRef) -> mlir::Value {
@@ -439,7 +439,9 @@ bool ClauseProcessor::processInitializer(
     };
     return true;
   }
-  return false;
+  TODO(converter.getCurrentLocation(),
+       "declare reduction without an initializer clause is not yet "
+       "supported");
 }
 
 bool ClauseProcessor::processMergeable(

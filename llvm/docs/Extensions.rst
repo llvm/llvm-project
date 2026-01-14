@@ -416,7 +416,13 @@ as offsets relative to prior addresses.
 The following versioning schemes are currently supported (newer versions support
 features of the older versions).
 
-Version 4 (newest): Capable of encoding basic block hashes. This feature is
+Version 5 (newest): Capable of encoding Post-Link CFG information, which
+provides basic block and edge frequencies obtained from a post-link tool like
+Propeller, reflecting the final binary layout. This feature is enabled by the 8th
+bit of the feature entry.
+The feature data will be two bytes long to accommodate future extensions.
+
+Version 4: Capable of encoding basic block hashes. This feature is
 enabled by the 7th bit of the feature byte.
 
 Example:
@@ -525,6 +531,13 @@ those bits are:
    taken from MBPI analysis. This value is the numerator for a fixed point ratio
    defined in ``llvm/Support/BranchProbability.h``. It indicates the probability
    that the block is followed by a given successor block during execution.
+
+#. Post-Link CFG - When enabled, the PGO Analysis Map will include CFG
+   information obtained from a post-link tool, such as Propeller. This feature
+   is enabled with the ``-pgo-analysis-map-emit-bb-sections-cfg`` flag. When
+   this option is active, the map will contain basic block and edge frequencies
+   from the basic block sections profile. This provides more accurate profiling
+   information that reflects the final binary layout.
 
 This extra data requires version 2 or above. This is necessary since successors
 of basic blocks won't know their index but will know their BB ID.
