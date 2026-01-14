@@ -171,7 +171,7 @@ matze@braunis.de (email), [MatzeB](https://github.com/MatzeB) (GitHub)
 #### VLIW Instruction Scheduling, Packetization
 
 Sergei Larin \
-slarin@codeaurora.org (email)
+slarin@qti.qualcomm.com (email), [SergeiYLarin](https://github.com/SergeiYLarin) (GitHub)
 
 #### Register allocation
 
