@@ -668,7 +668,10 @@ private:
   };
   /// Holds reduction-specific flags: RecurKind, IsOrdered, IsInLoop, and FMFs.
   struct ReductionFlagsTy {
-    unsigned char Kind : 6; // RecurKind has ~26 values, needs 5 bits
+    // RecurKind has ~26 values, needs 5 bits but uses 6 bits to account for
+    // additional kinds.
+    unsigned char Kind : 6;
+    // TODO: Derive order/in-loop from plan and remove here.
     unsigned char IsOrdered : 1;
     unsigned char IsInLoop : 1;
     FastMathFlagsTy FMFs;
@@ -796,6 +799,7 @@ public:
       break;
     case OperationType::FPMathOp:
     case OperationType::FCmp:
+    case OperationType::ReductionOp:
       getFMFsRef().NoNaNs = false;
       getFMFsRef().NoInfs = false;
       break;
@@ -803,7 +807,6 @@ public:
       NonNegFlags.NonNeg = false;
       break;
     case OperationType::Cmp:
-    case OperationType::ReductionOp:
     case OperationType::Other:
       break;
     }
@@ -844,8 +847,10 @@ public:
     case OperationType::NonNegOp:
       I.setNonNeg(NonNegFlags.NonNeg);
       break;
-    case OperationType::Cmp:
     case OperationType::ReductionOp:
+      llvm_unreachable("reduction ops should not use applyFlags");
+      [[fallthrough]];
+    case OperationType::Cmp:
     case OperationType::Other:
       break;
     }
@@ -1184,6 +1189,11 @@ public:
     /// Explicit user for the resume phi of the canonical induction in the main
     /// VPlan, used by the epilogue vector loop.
     ResumeForEpilogue,
+    /// Extracts the lane from the first operand corresponding to the last
+    /// active (non-zero) lane in the mask (second operand), or if no lanes
+    /// were active in the mask, returns the default value (third operand).
+    ExtractLastActive,
+
     /// Returns the value for vscale.
     VScale,
     OpsEnd = VScale,
@@ -2375,6 +2385,10 @@ public:
 
   /// Generate the phi/select nodes.
   void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPWidenPHIRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

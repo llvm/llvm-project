@@ -192,8 +192,7 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
   CALL_ZE_RET_ERROR(zeDeviceGetCacheProperties, zeDevice, &Count,
                     &CacheProperties);
 
-  DeviceName =
-      std::string(DeviceProperties.name, sizeof(DeviceProperties.name));
+  DeviceName = std::string(DeviceProperties.name);
 
   ODBG(OLDT_Device) << "Found a GPU device, Name = " << DeviceProperties.name;
 
