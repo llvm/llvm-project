@@ -1,7 +1,4 @@
 ! RUN: bbc -emit-hlfir %s -o - | FileCheck %s
-! RUN: bbc -emit-hlfir -fwrapv %s -o - | FileCheck %s
-! Note: with the old lowering, -fwrapv made a differents in FIR output.
-! With lowering to HLFIR, there's no difference at HLFIR level.
 
 subroutine assumed_size_test(a)
   integer :: a(10,*)
