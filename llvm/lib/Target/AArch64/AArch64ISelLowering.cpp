@@ -254,10 +254,13 @@ static inline bool isPackedPredicateType(EVT VT, SelectionDAG &DAG) {
   return VT == MVT::nxv16i1;
 }
 
-/// Returns true if VT's elements aren't placed back to back in its associated
-/// register class.
+/// Returns true if the conceptual representation for \p VT does not map
+/// directly to its physical register representation, meaning there are gaps
+/// between elements in the register. In practice, the vector elements will be
+/// strided by a power of two and placed starting from lane 0. For example,
+/// nxv8i1 or nxv2f32 are unpacked types.
 ///
-/// For example, nxv8i1 or nxv2f32 are unpacked types.
+///\pre VT is a legal type.
 static inline bool isUnpackedType(EVT VT, SelectionDAG &DAG) {
   bool Res = !isPackedVectorType(VT, DAG) && !isPackedPredicateType(VT, DAG);
   assert((!Res || VT.isScalableVector()) &&
