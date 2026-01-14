@@ -7261,26 +7261,29 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   // Verify that the VPlan-based and legacy cost models agree, except for
   // * VPlans with early exits,
   // * VPlans with additional VPlan simplifications,
-  // * EVL-based VPlans with gather/scatters (the VPlan-based cost model uses
-  //   vp_scatter/vp_gather).
+  // * EVL-based VPlans with widened memory recipes (the VPlan-based cost model
+  //   uses vp_load/vp_store/vp_gather/vp_scatter).
   // The legacy cost model doesn't properly model costs for such loops.
-  bool UsesEVLGatherScatter =
-      any_of(VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_shallow(
-                 BestPlan.getVectorLoopRegion()->getEntry())),
-             [](VPBasicBlock *VPBB) {
-               return any_of(*VPBB, [](VPRecipeBase &R) {
-                 return isa<VPWidenLoadEVLRecipe, VPWidenStoreEVLRecipe>(&R) &&
-                        !cast<VPWidenMemoryRecipe>(&R)->isConsecutive();
-               });
-             });
-  assert(
-      (BestFactor.Width == LegacyVF.Width || BestPlan.hasEarlyExit() ||
-       !Legal->getLAI()->getSymbolicStrides().empty() || UsesEVLGatherScatter ||
-       planContainsAdditionalSimplifications(
-           getPlanFor(BestFactor.Width), CostCtx, OrigLoop, BestFactor.Width) ||
-       planContainsAdditionalSimplifications(
-           getPlanFor(LegacyVF.Width), CostCtx, OrigLoop, LegacyVF.Width)) &&
-      " VPlan cost model and legacy cost model disagreed");
+  auto HasEVLLoadStore = [](VPlan &P) {
+    return any_of(
+        VPBlockUtils::blocksOnly<VPBasicBlock>(
+            vp_depth_first_shallow(P.getVectorLoopRegion()->getEntry())),
+        [](VPBasicBlock *VPBB) {
+          return any_of(*VPBB, [](VPRecipeBase &R) {
+            return isa<VPWidenLoadEVLRecipe, VPWidenStoreEVLRecipe>(&R);
+          });
+        });
+  };
+  bool UsesEVLLoadStore =
+      HasEVLLoadStore(BestPlan) || HasEVLLoadStore(getPlanFor(LegacyVF.Width));
+  assert((BestFactor.Width == LegacyVF.Width || BestPlan.hasEarlyExit() ||
+          !Legal->getLAI()->getSymbolicStrides().empty() || UsesEVLLoadStore ||
+          planContainsAdditionalSimplifications(getPlanFor(BestFactor.Width),
+                                                CostCtx, OrigLoop,
+                                                BestFactor.Width) ||
+          planContainsAdditionalSimplifications(
+              getPlanFor(LegacyVF.Width), CostCtx, OrigLoop, LegacyVF.Width)) &&
+         " VPlan cost model and legacy cost model disagreed");
   assert((BestFactor.Width.isScalar() || BestFactor.ScalarCost > 0) &&
          "when vectorizing, the scalar cost must be computed.");
 #endif
