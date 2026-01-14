@@ -133,8 +133,10 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
                          Res = PromoteIntRes_VECTOR_REVERSE(N); break;
   case ISD::VECTOR_SHUFFLE:
                          Res = PromoteIntRes_VECTOR_SHUFFLE(N); break;
-  case ISD::VECTOR_SPLICE:
-                         Res = PromoteIntRes_VECTOR_SPLICE(N); break;
+  case ISD::VECTOR_SPLICE_LEFT:
+  case ISD::VECTOR_SPLICE_RIGHT:
+    Res = PromoteIntRes_VECTOR_SPLICE(N);
+    break;
   case ISD::VECTOR_INTERLEAVE:
   case ISD::VECTOR_DEINTERLEAVE:
     Res = PromoteIntRes_VECTOR_INTERLEAVE_DEINTERLEAVE(N);
@@ -1722,15 +1724,23 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VPFunnelShift(SDNode *N) {
 
 SDValue DAGTypeLegalizer::PromoteIntRes_CLMUL(SDNode *N) {
   unsigned Opcode = N->getOpcode();
-  SDValue X = ZExtPromotedInteger(N->getOperand(0));
-  SDValue Y = ZExtPromotedInteger(N->getOperand(1));
 
   SDLoc DL(N);
   EVT OldVT = N->getOperand(0).getValueType();
-  EVT VT = X.getValueType();
+  EVT VT = TLI.getTypeToTransformTo(*DAG.getContext(), OldVT);
 
-  if (Opcode == ISD::CLMUL)
+  if (Opcode == ISD::CLMUL) {
+    if (!TLI.isOperationLegalOrCustomOrPromote(ISD::CLMUL, VT)) {
+      if (SDValue Res = TLI.expandCLMUL(N, DAG))
+        return DAG.getNode(ISD::ANY_EXTEND, DL, VT, Res);
+    }
+    SDValue X = GetPromotedInteger(N->getOperand(0));
+    SDValue Y = GetPromotedInteger(N->getOperand(1));
     return DAG.getNode(ISD::CLMUL, DL, VT, X, Y);
+  }
+
+  SDValue X = ZExtPromotedInteger(N->getOperand(0));
+  SDValue Y = ZExtPromotedInteger(N->getOperand(1));
 
   unsigned OldBits = OldVT.getScalarSizeInBits();
   unsigned NewBits = VT.getScalarSizeInBits();
@@ -5986,7 +5996,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_SPLICE(SDNode *N) {
   SDValue V1 = GetPromotedInteger(N->getOperand(1));
   EVT OutVT = V0.getValueType();
 
-  return DAG.getNode(ISD::VECTOR_SPLICE, dl, OutVT, V0, V1, N->getOperand(2));
+  return DAG.getNode(N->getOpcode(), dl, OutVT, V0, V1, N->getOperand(2));
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_INTERLEAVE_DEINTERLEAVE(SDNode *N) {

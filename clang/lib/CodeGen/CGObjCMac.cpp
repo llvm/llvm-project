@@ -847,9 +847,19 @@ protected:
   /// this translation unit.
   llvm::DenseMap<const ObjCMethodDecl *, llvm::Function *> MethodDefinitions;
 
+  /// Information about a direct method definition
+  struct DirectMethodInfo {
+    llvm::Function
+        *Implementation;   // The true implementation (where body is emitted)
+    llvm::Function *Thunk; // The nil-check thunk (nullptr if not generated)
+
+    DirectMethodInfo(llvm::Function *Impl, llvm::Function *Thunk = nullptr)
+        : Implementation(Impl), Thunk(Thunk) {}
+  };
+
   /// DirectMethodDefinitions - map of direct methods which have been defined in
   /// this translation unit.
-  llvm::DenseMap<const ObjCMethodDecl *, llvm::Function *>
+  llvm::DenseMap<const ObjCMethodDecl *, DirectMethodInfo>
       DirectMethodDefinitions;
 
   /// PropertyNames - uniqued method variable names.
@@ -1053,8 +1063,19 @@ public:
   GenerateMethod(const ObjCMethodDecl *OMD,
                  const ObjCContainerDecl *CD = nullptr) override;
 
-  llvm::Function *GenerateDirectMethod(const ObjCMethodDecl *OMD,
-                                       const ObjCContainerDecl *CD);
+  DirectMethodInfo &GenerateDirectMethod(const ObjCMethodDecl *OMD,
+                                         const ObjCContainerDecl *CD);
+
+  /// Generate class realization code: [self self]
+  /// This is used for class methods to ensure the class is initialized.
+  /// Returns the realized class object.
+  llvm::Value *GenerateClassRealization(CodeGenFunction &CGF,
+                                        llvm::Value *classObject,
+                                        const ObjCInterfaceDecl *OID);
+
+  void GenerateDirectMethodsPreconditionCheck(
+      CodeGenFunction &CGF, llvm::Function *Fn, const ObjCMethodDecl *OMD,
+      const ObjCContainerDecl *CD) override;
 
   void GenerateDirectMethodPrologue(CodeGenFunction &CGF, llvm::Function *Fn,
                                     const ObjCMethodDecl *OMD,
@@ -2080,7 +2101,8 @@ CodeGen::RValue CGObjCCommonMac::EmitMessageSend(
   llvm::FunctionCallee Fn = nullptr;
   if (Method && Method->isDirectMethod()) {
     assert(!IsSuper);
-    Fn = GenerateDirectMethod(Method, Method->getClassInterface());
+    auto Info = GenerateDirectMethod(Method, Method->getClassInterface());
+    Fn = Info.Implementation;
     // Direct methods will synthesize the proper `_cmd` internally,
     // so just don't bother with setting the `_cmd` argument.
     RequiresSelValue = false;
@@ -3847,7 +3869,9 @@ llvm::Function *CGObjCCommonMac::GenerateMethod(const ObjCMethodDecl *OMD,
   llvm::Function *Method;
 
   if (OMD->isDirectMethod()) {
-    Method = GenerateDirectMethod(OMD, CD);
+    // Returns DirectMethodInfo& containing both Implementation and Thunk
+    DirectMethodInfo &Info = GenerateDirectMethod(OMD, CD);
+    Method = Info.Implementation; // Extract implementation for body generation
   } else {
     auto Name = getSymbolNameForMethod(OMD);
 
@@ -3863,7 +3887,7 @@ llvm::Function *CGObjCCommonMac::GenerateMethod(const ObjCMethodDecl *OMD,
   return Method;
 }
 
-llvm::Function *
+CGObjCCommonMac::DirectMethodInfo &
 CGObjCCommonMac::GenerateDirectMethod(const ObjCMethodDecl *OMD,
                                       const ObjCContainerDecl *CD) {
   auto *COMD = OMD->getCanonicalDecl();
@@ -3882,7 +3906,7 @@ CGObjCCommonMac::GenerateDirectMethod(const ObjCMethodDecl *OMD,
     // a new one that has the proper type below.
     if (!OMD->getBody() || COMD->getReturnType() == OMD->getReturnType())
       return I->second;
-    OldFn = I->second;
+    OldFn = I->second.Implementation;
   }
 
   CodeGenTypes &Types = CGM.getTypes();
@@ -3896,20 +3920,42 @@ CGObjCCommonMac::GenerateDirectMethod(const ObjCMethodDecl *OMD,
     OldFn->replaceAllUsesWith(Fn);
     OldFn->eraseFromParent();
 
-    // Replace the cached function in the map.
-    I->second = Fn;
+    // Replace the cached implementation in the map.
+    I->second.Implementation = Fn;
+
   } else {
     auto Name = getSymbolNameForMethod(OMD, /*include category*/ false);
 
     Fn = llvm::Function::Create(MethodTy, llvm::GlobalValue::ExternalLinkage,
                                 Name, &CGM.getModule());
-    DirectMethodDefinitions.insert(std::make_pair(COMD, Fn));
+    auto [It, inserted] = DirectMethodDefinitions.insert(
+        std::make_pair(COMD, DirectMethodInfo(Fn)));
+    I = It;
   }
 
-  return Fn;
+  // Return reference to DirectMethodInfo (contains both Implementation and
+  // Thunk)
+  return I->second;
 }
 
-void CGObjCCommonMac::GenerateDirectMethodPrologue(
+llvm::Value *
+CGObjCCommonMac::GenerateClassRealization(CodeGenFunction &CGF,
+                                          llvm::Value *classObject,
+                                          const ObjCInterfaceDecl *OID) {
+  // Generate: self = [self self]
+  // This forces class lazy initialization
+  Selector SelfSel = GetNullarySelector("self", CGM.getContext());
+  auto ResultType = CGF.getContext().getObjCIdType();
+  CallArgList Args;
+
+  RValue result = GeneratePossiblySpecializedMessageSend(
+      CGF, ReturnValueSlot(), ResultType, SelfSel, classObject, Args, OID,
+      nullptr, true);
+
+  return result.getScalarVal();
+}
+
+void CGObjCCommonMac::GenerateDirectMethodsPreconditionCheck(
     CodeGenFunction &CGF, llvm::Function *Fn, const ObjCMethodDecl *OMD,
     const ObjCContainerDecl *CD) {
   auto &Builder = CGF.Builder;
@@ -3926,18 +3972,11 @@ void CGObjCCommonMac::GenerateDirectMethodPrologue(
   // if (self == nil) {
   //     return (ReturnType){ };
   // }
-  //
-  // _cmd = @selector(...)
-  // ...
 
   if (OMD->isClassMethod()) {
     const ObjCInterfaceDecl *OID = cast<ObjCInterfaceDecl>(CD);
     assert(OID &&
            "GenerateDirectMethod() should be called with the Class Interface");
-    Selector SelfSel = GetNullarySelector("self", CGM.getContext());
-    auto ResultType = CGF.getContext().getObjCIdType();
-    RValue result;
-    CallArgList Args;
 
     // TODO: If this method is inlined, the caller might know that `self` is
     // already initialized; for example, it might be an ordinary Objective-C
@@ -3946,10 +3985,10 @@ void CGObjCCommonMac::GenerateDirectMethodPrologue(
     //
     // We should find a way to eliminate this unnecessary initialization in such
     // cases in LLVM.
-    result = GeneratePossiblySpecializedMessageSend(
-        CGF, ReturnValueSlot(), ResultType, SelfSel, selfValue, Args, OID,
-        nullptr, true);
-    Builder.CreateStore(result.getScalarVal(), selfAddr);
+
+    // Perform class realization using the helper function
+    llvm::Value *realizedClass = GenerateClassRealization(CGF, selfValue, OID);
+    Builder.CreateStore(realizedClass, selfAddr);
 
     // Nullable `Class` expressions cannot be messaged with a direct method
     // so the only reason why the receive can be null would be because
@@ -3957,6 +3996,7 @@ void CGObjCCommonMac::GenerateDirectMethodPrologue(
     ReceiverCanBeNull = isWeakLinkedClass(OID);
   }
 
+  // Generate nil check
   if (ReceiverCanBeNull) {
     llvm::BasicBlock *SelfIsNilBlock =
         CGF.createBasicBlock("objc_direct_method.self_is_nil");
@@ -3986,8 +4026,17 @@ void CGObjCCommonMac::GenerateDirectMethodPrologue(
     CGF.EmitBlock(ContBlock);
     Builder.SetInsertPoint(ContBlock);
   }
+}
 
-  // only synthesize _cmd if it's referenced
+void CGObjCCommonMac::GenerateDirectMethodPrologue(
+    CodeGenFunction &CGF, llvm::Function *Fn, const ObjCMethodDecl *OMD,
+    const ObjCContainerDecl *CD) {
+  // Generate precondition checks (class realization + nil check) if needed
+  GenerateDirectMethodsPreconditionCheck(CGF, Fn, OMD, CD);
+
+  auto &Builder = CGF.Builder;
+  // Only synthesize _cmd if it's referenced
+  // This is the actual "prologue" work that always happens
   if (OMD->getCmdDecl()->isUsed()) {
     // `_cmd` is not a parameter to direct methods, so storage must be
     // explicitly declared for it.

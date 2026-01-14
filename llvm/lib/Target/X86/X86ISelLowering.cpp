@@ -1,3 +1,4 @@
+// I
 //===-- X86ISelLowering.cpp - X86 DAG Lowering Implementation -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -717,8 +718,16 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FCANONICALIZE, MVT::f16, Custom);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Custom);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Custom);
+
+    setOperationAction(ISD::LLROUND, MVT::f16, Expand);
+    setOperationAction(ISD::LROUND, MVT::f16, Expand);
     setOperationAction(ISD::LRINT, MVT::f16, Expand);
     setOperationAction(ISD::LLRINT, MVT::f16, Expand);
+
+    setOperationAction(ISD::STRICT_LLROUND, MVT::f16, Promote);
+    setOperationAction(ISD::STRICT_LROUND, MVT::f16, Promote);
+    setOperationAction(ISD::STRICT_LRINT, MVT::f16, Promote);
+    setOperationAction(ISD::STRICT_LLRINT, MVT::f16, Promote);
 
     // Lower this to MOVMSK plus an AND.
     setOperationAction(ISD::FGETSIGN, MVT::i64, Custom);
@@ -3789,8 +3798,7 @@ static bool isUndefOrZero(int Val) {
 /// Return true if every element in Mask, beginning from position Pos and ending
 /// in Pos+Size is the undef sentinel value.
 static bool isUndefInRange(ArrayRef<int> Mask, unsigned Pos, unsigned Size) {
-  return llvm::all_of(Mask.slice(Pos, Size),
-                      [](int M) { return M == SM_SentinelUndef; });
+  return llvm::all_of(Mask.slice(Pos, Size), equal_to(SM_SentinelUndef));
 }
 
 /// Return true if the mask creates a vector whose lower half is undefined.
@@ -3818,7 +3826,7 @@ static bool isAnyInRange(ArrayRef<int> Mask, int Low, int Hi) {
 
 /// Return true if the value of any element in Mask is the zero sentinel value.
 static bool isAnyZero(ArrayRef<int> Mask) {
-  return llvm::any_of(Mask, [](int M) { return M == SM_SentinelZero; });
+  return llvm::any_of(Mask, equal_to(SM_SentinelZero));
 }
 
 /// Return true if Val is undef or if its value falls within the
@@ -31292,14 +31300,14 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     Amt = DAG.getBitcast(VT, Amt);
 
     if (Opc == ISD::SHL || Opc == ISD::SRL) {
-      if (MinLZ < 2) {
+      if (MinLZ < 1) {
         // r = VSELECT(r, shift(r, 4), a);
         SDValue M = DAG.getNode(Opc, dl, VT, R, DAG.getConstant(4, dl, VT));
         R = SignBitSelect(VT, Amt, M, R);
         // a += a
         Amt = DAG.getNode(ISD::ADD, dl, VT, Amt, Amt);
       }
-      if (MinLZ < 1) {
+      if (MinLZ < 2) {
         // r = VSELECT(r, shift(r, 2), a);
         SDValue M = DAG.getNode(Opc, dl, VT, R, DAG.getConstant(2, dl, VT));
         R = SignBitSelect(VT, Amt, M, R);
@@ -31326,7 +31334,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       RHi = DAG.getBitcast(ExtVT, RHi);
 
       SDValue MLo, MHi;
-      if (MinLZ < 2) {
+      if (MinLZ < 1) {
         // r = VSELECT(r, shift(r, 4), a);
         MLo = getTargetVShiftByConstNode(X86OpcI, dl, ExtVT, RLo, 4, DAG);
         MHi = getTargetVShiftByConstNode(X86OpcI, dl, ExtVT, RHi, 4, DAG);
@@ -31336,7 +31344,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
         ALo = DAG.getNode(ISD::ADD, dl, ExtVT, ALo, ALo);
         AHi = DAG.getNode(ISD::ADD, dl, ExtVT, AHi, AHi);
       }
-      if (MinLZ < 1) {
+      if (MinLZ < 2) {
         // r = VSELECT(r, shift(r, 2), a);
         MLo = getTargetVShiftByConstNode(X86OpcI, dl, ExtVT, RLo, 2, DAG);
         MHi = getTargetVShiftByConstNode(X86OpcI, dl, ExtVT, RHi, 2, DAG);
@@ -35898,6 +35906,7 @@ bool X86TargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
   if (!Subtarget.hasAnyFMA())
     return false;
 
+  bool IsVector = VT.isVector();
   VT = VT.getScalarType();
 
   if (!VT.isSimple())
@@ -35906,6 +35915,10 @@ bool X86TargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
   switch (VT.getSimpleVT().SimpleTy) {
   case MVT::f16:
     return Subtarget.hasFP16();
+  case MVT::bf16:
+    return (!IsVector &&
+            (Subtarget.hasBF16() || Subtarget.hasAVXNECONVERT())) ||
+           Subtarget.hasAVX10_2();
   case MVT::f32:
   case MVT::f64:
     return true;
@@ -41658,7 +41671,7 @@ static SDValue combineX86ShufflesRecursively(
   resolveTargetShuffleInputsAndMask(Ops, Mask);
 
   // Handle the all undef/zero/ones cases early.
-  if (all_of(Mask, [](int Idx) { return Idx == SM_SentinelUndef; }))
+  if (all_of(Mask, equal_to(SM_SentinelUndef)))
     return DAG.getUNDEF(RootVT);
   if (all_of(Mask, [](int Idx) { return Idx < 0; }))
     return getZeroVector(RootVT, Subtarget, DAG, DL);
@@ -50699,12 +50712,7 @@ static SDValue combineVectorPack(SDNode *N, SelectionDAG &DAG,
           // Source values less than zero are saturated to zero.
           // Source values greater than dst maxuint are saturated to maxuint.
           // NOTE: This is different from APInt::truncUSat.
-          if (Val.isIntN(DstBitsPerElt))
-            Val = Val.trunc(DstBitsPerElt);
-          else if (Val.isNegative())
-            Val = APInt::getZero(DstBitsPerElt);
-          else
-            Val = APInt::getAllOnes(DstBitsPerElt);
+          Val = Val.truncSSatU(DstBitsPerElt);
         }
         Bits[Lane * NumDstEltsPerLane + Elt] = Val;
       }
@@ -52966,26 +52974,32 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
   // Combine OR(X,KSHIFTL(Y,Elts/2)) -> CONCAT_VECTORS(X,Y) == KUNPCK(X,Y).
   // Combine OR(KSHIFTL(X,Elts/2),Y) -> CONCAT_VECTORS(Y,X) == KUNPCK(Y,X).
   // iff the upper elements of the non-shifted arg are zero.
-  // KUNPCK require 16+ bool vector elements.
   if (N0.getOpcode() == X86ISD::KSHIFTL || N1.getOpcode() == X86ISD::KSHIFTL) {
+    using namespace SDPatternMatch;
     unsigned NumElts = VT.getVectorNumElements();
     unsigned HalfElts = NumElts / 2;
-    APInt UpperElts = APInt::getHighBitsSet(NumElts, HalfElts);
-    if (NumElts >= 16 && N1.getOpcode() == X86ISD::KSHIFTL &&
-        N1.getConstantOperandAPInt(1) == HalfElts &&
-        DAG.MaskedVectorIsZero(N0, UpperElts)) {
-      return DAG.getNode(
-          ISD::CONCAT_VECTORS, dl, VT,
-          extractSubVector(N0, 0, DAG, dl, HalfElts),
-          extractSubVector(N1.getOperand(0), 0, DAG, dl, HalfElts));
-    }
-    if (NumElts >= 16 && N0.getOpcode() == X86ISD::KSHIFTL &&
-        N0.getConstantOperandAPInt(1) == HalfElts &&
-        DAG.MaskedVectorIsZero(N1, UpperElts)) {
-      return DAG.getNode(
-          ISD::CONCAT_VECTORS, dl, VT,
-          extractSubVector(N1, 0, DAG, dl, HalfElts),
-          extractSubVector(N0.getOperand(0), 0, DAG, dl, HalfElts));
+    SDValue X, Y;
+    if (sd_match(N, m_Or(m_Value(X), m_BinOp(X86ISD::KSHIFTL, m_Value(Y),
+                                             m_SpecificInt(HalfElts))))) {
+      // If we can locate the original half subvectors, then see if we can
+      // concat the operands directly.
+      MVT HalfVT = VT.getSimpleVT().getHalfNumVectorElementsVT();
+      if (sd_match(
+              X, m_InsertSubvector(m_Zero(), m_SpecificVT(HalfVT), m_Zero())) &&
+          sd_match(Y, m_InsertSubvector(m_Undef(), m_SpecificVT(HalfVT),
+                                        m_Zero()))) {
+        if (SDValue Concat = combineConcatVectorOps(
+                dl, VT.getSimpleVT(), {X.getOperand(1), Y.getOperand(1)}, DAG,
+                Subtarget))
+          return Concat;
+      }
+      // KUNPCK require 16+ bool vector elements.
+      APInt UpperElts = APInt::getHighBitsSet(NumElts, HalfElts);
+      if (NumElts >= 16 && DAG.MaskedVectorIsZero(X, UpperElts)) {
+        return DAG.getNode(ISD::CONCAT_VECTORS, dl, VT,
+                           extractSubVector(X, 0, DAG, dl, HalfElts),
+                           extractSubVector(Y, 0, DAG, dl, HalfElts));
+      }
     }
   }
 
@@ -58330,7 +58344,8 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
   //               (extract_elt Mul, 3),
   //               (extract_elt Mul, 5),
   //                   ...
-  // and identify Mul.
+  // and identify Mul. Mul must be either ISD::MUL, or can be ISD::SIGN_EXTEND
+  // in which case we add a trivial multiplication by 1.
   SDValue Mul;
   for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; i += 2) {
     SDValue Op0L = Op0->getOperand(i), Op1L = Op1->getOperand(i),
@@ -58361,7 +58376,8 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
       // with 2X number of vector elements than the BUILD_VECTOR.
       // Both extracts must be from same MUL.
       Mul = Vec0L;
-      if (Mul.getOpcode() != ISD::MUL ||
+      if ((Mul.getOpcode() != ISD::MUL &&
+           Mul.getOpcode() != ISD::SIGN_EXTEND) ||
           Mul.getValueType().getVectorNumElements() != 2 * e)
         return SDValue();
     }
@@ -58370,16 +58386,30 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
       return SDValue();
   }
 
-  // Check if the Mul source can be safely shrunk.
-  ShrinkMode Mode;
-  if (!canReduceVMulWidth(Mul.getNode(), DAG, Mode) ||
-      Mode == ShrinkMode::MULU16)
-    return SDValue();
-
   EVT TruncVT = EVT::getVectorVT(*DAG.getContext(), MVT::i16,
                                  VT.getVectorNumElements() * 2);
-  SDValue N0 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, Mul.getOperand(0));
-  SDValue N1 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, Mul.getOperand(1));
+
+  SDValue N0, N1;
+  if (Mul.getOpcode() == ISD::MUL) {
+    // Check if the Mul source can be safely shrunk.
+    ShrinkMode Mode;
+    if (!canReduceVMulWidth(Mul.getNode(), DAG, Mode) ||
+        Mode == ShrinkMode::MULU16)
+      return SDValue();
+
+    N0 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, Mul.getOperand(0));
+    N1 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, Mul.getOperand(1));
+  } else {
+    assert(Mul.getOpcode() == ISD::SIGN_EXTEND);
+
+    // Add a trivial multiplication with 1 so that we can make use of VPMADDWD.
+    N0 = Mul.getOperand(0);
+
+    if (N0.getValueType() != TruncVT)
+      return SDValue();
+
+    N1 = DAG.getConstant(1, DL, TruncVT);
+  }
 
   auto PMADDBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
                          ArrayRef<SDValue> Ops) {
@@ -59199,11 +59229,19 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       bool AllConstants = true;
       bool AllSubs = true;
       unsigned VecSize = VT.getSizeInBits();
-      SDValue BC0 = peekThroughBitcasts(SubOps[0].getOperand(Op));
-      if (isa<LoadSDNode>(BC0) && all_of(SubOps, [&](SDValue SubOp) {
-            return BC0 == peekThroughBitcasts(SubOp.getOperand(Op));
-          }))
-        return true;
+      SDValue SubOp0 = SubOps[0].getOperand(Op);
+      if (all_of(SubOps, [&](SDValue SubOp) {
+            return SubOp0 == SubOp.getOperand(Op);
+          })) {
+        SDValue Src = SubOp0;
+        while (Src.getOpcode() == ISD::BITCAST ||
+               Src.getOpcode() == ISD::EXTRACT_SUBVECTOR)
+          Src = Src.getOperand(0);
+        if (ISD::isNormalLoad(Src.getNode()) ||
+            Src.getOpcode() == X86ISD::VBROADCAST_LOAD ||
+            Src.getOpcode() == X86ISD::SUBV_BROADCAST_LOAD)
+          return true;
+      }
       SmallVector<SDValue> Subs;
       for (unsigned I = 0, E = SubOps.size(); I != E; ++I) {
         Subs.push_back(SubOps[I].getOperand(Op));
