@@ -771,7 +771,7 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
     alloc = builder.createTemporary(loc, baseType, varName, tempExtents,
                                     typeParams);
   }
-  // Step3: Assign the inital value to the privatized part if any.
+  // Step3: Assign the initial value to the privatized part if any.
   if (initVal) {
     mlir::Value tempEntity = alloc;
     if (fir::hasDynamicSize(baseType))
