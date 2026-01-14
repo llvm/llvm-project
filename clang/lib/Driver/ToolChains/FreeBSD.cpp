@@ -212,6 +212,14 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-m");
     CmdArgs.push_back("elf64lriscv");
     break;
+  case llvm::Triple::riscv32be:
+    CmdArgs.push_back("-m");
+    CmdArgs.push_back("elf32briscv");
+    break;
+  case llvm::Triple::riscv64be:
+    CmdArgs.push_back("-m");
+    CmdArgs.push_back("elf64briscv");
+    break;
   case llvm::Triple::loongarch64:
     CmdArgs.push_back("-m");
     CmdArgs.push_back("elf64loongarch");

@@ -505,8 +505,6 @@ Transforms/PreISelIntrinsicLowering/AArch64/expand-exp.ll
 Transforms/PreISelIntrinsicLowering/AArch64/expand-log.ll
 Transforms/PreISelIntrinsicLowering/PowerPC/memset-pattern.ll
 Transforms/PreISelIntrinsicLowering/RISCV/memset-pattern.ll
-Transforms/SampleProfile/pseudo-probe-profile-mismatch-thinlto.ll
-Transforms/SampleProfile/remarks-hotness.ll
 Transforms/ScalarizeMaskedMemIntrin/AArch64/expand-masked-load.ll
 Transforms/ScalarizeMaskedMemIntrin/AArch64/expand-masked-store.ll
 Transforms/ScalarizeMaskedMemIntrin/AArch64/streaming-compatible-expand-masked-gather-scatter.ll
