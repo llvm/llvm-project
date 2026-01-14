@@ -16,7 +16,7 @@
 # RUN: %lldb %t/main -s %t/lldb.script 2>&1 | FileCheck %s --check-prefix=CAS-FALLBACK --check-prefix=CHECK
 
 # CAS-FALLBACK:  cannot be loaded from CAS using key:
-# CAS-LOAD:      ConfigureCASStorage() -- Setup CAS from module list properties with cas path
+# CAS-LOAD:      ConfigureCASStorage() -- Setup CAS from module list properties with CAS path
 # CHECK:         LogConfiguration() --   Extra clang arguments
 # CHECK-COUNT-1: LogConfiguration() --     -triple
 # CAS-LOAD:      LogConfiguration() --     -fmodule-file-cache-key

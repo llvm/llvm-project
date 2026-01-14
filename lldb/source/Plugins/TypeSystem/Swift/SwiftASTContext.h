@@ -575,6 +575,7 @@ public:
   void LogConfiguration(bool repl = false, bool playground = false);
   bool HasTarget();
   bool HasExplicitModules() const { return m_has_explicit_modules; }
+  bool HasCAS() const { return m_cas_initialized; }
   bool CheckProcessChanged();
 
   // FIXME: this should be removed once we figure out who should really own the
@@ -896,6 +897,10 @@ public:
   swift::Mangle::ManglingFlavor GetManglingFlavor();
 
 protected:
+  /// This function implements various heuristics to find a CAS
+  /// configuration file.
+  void ConfigureCASStorage(const SymbolContext &sc);
+
   bool GetCompileUnitImportsImpl(
       const SymbolContext &sc, lldb::ProcessSP process_sp,
       llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
@@ -1022,6 +1027,7 @@ protected:
   bool m_initialized_search_path_options = false;
   bool m_initialized_clang_importer_options = false;
   bool m_has_explicit_modules = false;
+  bool m_cas_initialized = false;
   mutable bool m_reported_fatal_error = false;
   mutable bool m_logged_fatal_error = false;
   bool m_post_first_import = false;
