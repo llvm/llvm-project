@@ -43,7 +43,7 @@ Examples:
 Limitations
 -----------
 
-This checker cannot currently detect when a variable's previous value affects
+This check cannot currently detect when a variable's previous value affects
 subsequent iterations, resulting in false positives in some cases. This can
 be addressed by implementing a pattern matcher that recognizes this
 accumulator pattern across loop iterations or by using clang's builtin
