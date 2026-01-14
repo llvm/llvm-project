@@ -7552,7 +7552,7 @@ EnableIfAttr *Sema::CheckEnableIf(FunctionDecl *Function,
 
   SFINAETrap Trap(*this);
   // Switching the DC to ensure the immediate access control checking.
-  ContextRAII _(*this, Function->getDeclContext());
+  ContextRAII SavedContext(*this, Function->getDeclContext());
   SmallVector<Expr *, 16> ConvertedArgs;
   // FIXME: We should look into making enable_if late-parsed.
   Expr *DiscardedThis;
