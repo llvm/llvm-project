@@ -11,9 +11,11 @@ option(OFFLOAD_ENABLE_EMISSARY_APIS "Enable build of GPU Emissary APIs" ON)
 if(OFFLOAD_ENABLE_EMISSARY_APIS)
   add_definitions(-DOFFLOAD_ENABLE_EMISSARY_APIS)
   set(emissary_sources
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/EmissaryFortrt.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/EmissaryPrint.cpp
   )
+  if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+    list(APPEND emissary_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/EmissaryFortrt.cpp)
+  endif()
 endif()
 
 set(src_files

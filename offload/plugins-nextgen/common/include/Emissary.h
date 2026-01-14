@@ -26,7 +26,8 @@ EmissaryReturn_t Emissary(char *data, emisArgBuf_t *ab,
                           std::unordered_map<void *, void *> *D2HAddrList);
 
 /// Called by Emissary for all Fortrt emissary functions
-EmissaryReturn_t
+/// Declared weak in case built without flangrt.
+EmissaryReturn_t __attribute((weak))
 EmissaryFortrt(char *data, emisArgBuf_t *ab,
                std::unordered_map<void *, void *> *D2HAddrList);
 

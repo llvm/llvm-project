@@ -10,9 +10,11 @@ add_public_tablegen_target(PluginErrcodes)
 if(OFFLOAD_ENABLE_EMISSARY_APIS)
   set(emissary_sources
     src/Emissary.cpp
-    src/EmissaryFortrt.cpp
     src/EmissaryPrint.cpp
   )
+  if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+    list(APPEND emissary_sources src/EmissaryFortrt.cpp)
+  endif()
   set(emissary_headers ${CMAKE_CURRENT_SOURCE_DIR}/../../../openmp/device/include)
 endif()
 
@@ -45,8 +47,10 @@ endif()
 include(FindLibcCommonUtils)
 target_link_libraries(PluginCommon PRIVATE llvm-libc-common-utilities)
 if(OFFLOAD_ENABLE_EMISSARY_APIS)
-  target_link_libraries(PluginCommon PRIVATE flang_rt.runtime
-    -L${CMAKE_BINARY_DIR}/../../lib -L${CMAKE_INSTALL_PREFIX}/lib)
+  if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+    target_link_libraries(PluginCommon PRIVATE flang_rt.runtime
+      -L${CMAKE_BINARY_DIR}/../../lib -L${CMAKE_INSTALL_PREFIX}/lib)
+  endif()
 endif()
 
 # Define the TARGET_NAME and DEBUG_PREFIX.

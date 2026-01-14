@@ -19,24 +19,6 @@
 #include "Debug.h"
 #include "EmissaryIds.h"
 
-#if 0
-__attribute__((flatten, always_inline)) void f90print_(char *s) {
-  _emissary_exec(_PACK_EMIS_IDS(EMIS_ID_PRINT, _printf_idx,0,0), "%s\n", s);
-}
-__attribute__((flatten, always_inline)) void f90printi_(char *s, int *i) {
-  _emissary_exec(_PACK_EMIS_IDS(EMIS_ID_PRINT, _printf_idx,0,0), "%s $d\n", s, *i);
-}
-__attribute__((flatten, always_inline)) void f90printl_(char *s, long *i) {
-  _emissary_exec(_PACK_EMIS_IDS(EMIS_ID_PRINT, _printf_idx,0,0), "%s %ld\n", s, *i);
-}
-__attribute__((flatten, always_inline)) void f90printf_(char *s, float *f) {
-  _emissary_exec(_PACK_EMIS_IDS(EMIS_ID_PRINT, _printf_idx,0,0), "%s %f\n", s, *f);
-}
-__attribute__((flatten, always_inline)) void f90printd_(char *s, double *d) {
-  _emissary_exec(_PACK_EMIS_IDS(EMIS_ID_PRINT, _printf_idx,0,0), "%s %g\n", s, *d);
-}
-#endif
-
 // This definition of __ockl_devmem_request and __ockl_sanitizer_report needs to
 // override the weak symbol for __ockl_devmem_request and
 // __ockl_sanitizer_report in rocm device lib ockl.bc because ockl uses
