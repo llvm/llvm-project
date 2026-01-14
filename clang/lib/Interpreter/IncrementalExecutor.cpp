@@ -11,7 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Interpreter/IncrementalExecutor.h"
+#ifndef __EMSCRIPTEN__
 #include "OrcIncrementalExecutor.h"
+#endif // __EMSCRIPTEN__
 #ifdef __EMSCRIPTEN__
 #include "Wasm.h"
 #endif // __EMSCRIPTEN__
@@ -26,6 +28,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 
+#ifndef __EMSCRIPTEN__
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupport.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
@@ -37,6 +40,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
+#endif // __EMSCRIPTEN__
 
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -61,7 +65,13 @@
 #endif
 
 namespace clang {
-IncrementalExecutorBuilder::~IncrementalExecutorBuilder() = default;
+
+#ifndef __EMSCRIPTEN__
+// ============================================================================
+// Native (ORC JIT) Executor Builder Implementation
+// ============================================================================
+
+OrcIncrementalExecutorBuilder::~OrcIncrementalExecutorBuilder() = default;
 
 static llvm::Expected<llvm::orc::JITTargetMachineBuilder>
 createJITTargetMachineBuilder(const llvm::Triple &TT) {
@@ -307,7 +317,7 @@ connectTCPSocket(llvm::StringRef NetworkAddress, bool UseSharedMemory,
       std::move(S), *SockFD, *SockFD);
 #endif
 }
-#endif // _WIN32
+#endif // LLVM_ON_UNIX && LLVM_ENABLE_THREADS
 
 static llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
 createLLJITBuilder(std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC,
@@ -328,25 +338,25 @@ createLLJITBuilder(std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC,
 
 static llvm::Expected<
     std::pair<std::unique_ptr<llvm::orc::LLJITBuilder>, uint32_t>>
-outOfProcessJITBuilder(const IncrementalExecutorBuilder &IncrExecutorBuilder) {
+outOfProcessJITBuilder(const OrcIncrementalExecutorBuilder &Builder) {
   std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC;
   uint32_t childPid = -1;
-  if (!IncrExecutorBuilder.OOPExecutor.empty()) {
+  if (!Builder.OOPExecutor.empty()) {
     // Launch an out-of-process executor locally in a child process.
-    auto ResultOrErr = launchExecutor(IncrExecutorBuilder.OOPExecutor,
-                                      IncrExecutorBuilder.UseSharedMemory,
-                                      IncrExecutorBuilder.SlabAllocateSize,
-                                      IncrExecutorBuilder.CustomizeFork);
+    auto ResultOrErr = launchExecutor(Builder.OOPExecutor,
+                                      Builder.UseSharedMemory,
+                                      Builder.SlabAllocateSize,
+                                      Builder.CustomizeFork);
     if (!ResultOrErr)
       return ResultOrErr.takeError();
     childPid = ResultOrErr->second;
     auto EPCOrErr = std::move(ResultOrErr->first);
     EPC = std::move(EPCOrErr);
-  } else if (IncrExecutorBuilder.OOPExecutorConnect != "") {
+  } else if (Builder.OOPExecutorConnect != "") {
 #if LLVM_ON_UNIX && LLVM_ENABLE_THREADS
-    auto EPCOrErr = connectTCPSocket(IncrExecutorBuilder.OOPExecutorConnect,
-                                     IncrExecutorBuilder.UseSharedMemory,
-                                     IncrExecutorBuilder.SlabAllocateSize);
+    auto EPCOrErr = connectTCPSocket(Builder.OOPExecutorConnect,
+                                     Builder.UseSharedMemory,
+                                     Builder.SlabAllocateSize);
     if (!EPCOrErr)
       return EPCOrErr.takeError();
     EPC = std::move(*EPCOrErr);
@@ -360,7 +370,7 @@ outOfProcessJITBuilder(const IncrementalExecutorBuilder &IncrExecutorBuilder) {
   std::unique_ptr<llvm::orc::LLJITBuilder> JB;
   if (EPC) {
     auto JBOrErr =
-        createLLJITBuilder(std::move(EPC), IncrExecutorBuilder.OrcRuntimePath);
+        createLLJITBuilder(std::move(EPC), Builder.OrcRuntimePath);
     if (!JBOrErr)
       return JBOrErr.takeError();
     JB = std::move(*JBOrErr);
@@ -370,8 +380,8 @@ outOfProcessJITBuilder(const IncrementalExecutorBuilder &IncrExecutorBuilder) {
 }
 
 llvm::Expected<std::unique_ptr<IncrementalExecutor>>
-IncrementalExecutorBuilder::create(llvm::orc::ThreadSafeContext &TSC,
-                                   const clang::TargetInfo &TI) {
+OrcIncrementalExecutorBuilder::create(clang::ThreadSafeContext &TSC,
+                                       const clang::TargetInfo &TI) {
   if (IE)
     return std::move(IE);
   llvm::Triple TT = TI.getTriple();
@@ -402,12 +412,8 @@ IncrementalExecutorBuilder::create(llvm::orc::ThreadSafeContext &TSC,
   }
 
   llvm::Error Err = llvm::Error::success();
-  std::unique_ptr<IncrementalExecutor> Executor;
-#ifdef __EMSCRIPTEN__
-  Executor = std::make_unique<WasmIncrementalExecutor>(Err);
-#else
-  Executor = std::make_unique<OrcIncrementalExecutor>(TSC, *JITBuilder, Err);
-#endif
+  std::unique_ptr<IncrementalExecutor> Executor =
+      std::make_unique<OrcIncrementalExecutor>(TSC, *JITBuilder, Err);
 
   if (Err)
     return std::move(Err);
@@ -415,7 +421,7 @@ IncrementalExecutorBuilder::create(llvm::orc::ThreadSafeContext &TSC,
   return std::move(Executor);
 }
 
-llvm::Error IncrementalExecutorBuilder::UpdateOrcRuntimePath(
+llvm::Error OrcIncrementalExecutorBuilder::UpdateOrcRuntimePath(
     const clang::driver::Compilation &C) {
   if (!IsOutOfProcess)
     return llvm::Error::success();
@@ -511,5 +517,30 @@ llvm::Error IncrementalExecutorBuilder::UpdateOrcRuntimePath(
           .str(),
       llvm::inconvertibleErrorCode());
 }
+
+#else // __EMSCRIPTEN__
+// ============================================================================
+// WebAssembly (Emscripten) Executor Builder Implementation
+// ============================================================================
+
+WasmIncrementalExecutorBuilder::~WasmIncrementalExecutorBuilder() = default;
+
+llvm::Expected<std::unique_ptr<IncrementalExecutor>>
+WasmIncrementalExecutorBuilder::create(clang::ThreadSafeContext &TSC,
+                                       const clang::TargetInfo &TI) {
+  if (IE)
+    return std::move(IE);
+  
+  llvm::Error Err = llvm::Error::success();
+  std::unique_ptr<IncrementalExecutor> Executor =
+      std::make_unique<WasmIncrementalExecutor>(Err);
+
+  if (Err)
+    return std::move(Err);
+
+  return std::move(Executor);
+}
+
+#endif // __EMSCRIPTEN__
 
 } // end namespace clang
