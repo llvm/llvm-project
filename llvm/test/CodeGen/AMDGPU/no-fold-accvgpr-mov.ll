@@ -6,8 +6,8 @@ define amdgpu_kernel void @matmul_kernel(i32 %a0, i32 %a1) {
 ; GFX942-LABEL: matmul_kernel:
 ; GFX942:       ; %bb.0: ; %entry
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX942-NEXT:    s_mov_b32 s2, 0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, 0
+; GFX942-NEXT:    s_mov_b32 s2, 0
 ; GFX942-NEXT:    v_accvgpr_write_b32 a1, 0
 ; GFX942-NEXT:    s_mov_b32 s3, 0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
