@@ -55,7 +55,7 @@ void ExecuteOp::getSuccessorRegions(RegionBranchPoint point,
   if (!point.isParent() &&
       point.getTerminatorPredecessorOrNull()->getParentRegion() ==
           &getBodyRegion()) {
-    regions.push_back(RegionSuccessor(getOperation(), getBodyResults()));
+    regions.push_back(RegionSuccessor::parent(getBodyResults()));
     return;
   }
 

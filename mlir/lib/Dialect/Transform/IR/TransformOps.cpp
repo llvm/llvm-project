@@ -118,7 +118,7 @@ void transform::AlternativesOp::getSuccessorRegions(
                                            : Block::BlockArgListType());
   }
   if (!point.isParent())
-    regions.emplace_back(getOperation(), getOperation()->getResults());
+    regions.push_back(RegionSuccessor::parent(getResults()));
 }
 
 void transform::AlternativesOp::getRegionInvocationBounds(
@@ -1747,7 +1747,7 @@ void transform::ForeachOp::getSuccessorRegions(
              &getBody() &&
          "unexpected region index");
   regions.emplace_back(bodyRegion, bodyRegion->getArguments());
-  regions.emplace_back(getOperation(), getOperation()->getResults());
+  regions.push_back(RegionSuccessor::parent(getResults()));
 }
 
 OperandRange
@@ -2978,7 +2978,7 @@ void transform::SequenceOp::getSuccessorRegions(
   assert(point.getTerminatorPredecessorOrNull()->getParentRegion() ==
              &getBody() &&
          "unexpected region index");
-  regions.emplace_back(getOperation(), getOperation()->getResults());
+  regions.push_back(RegionSuccessor::parent(getResults()));
 }
 
 void transform::SequenceOp::getRegionInvocationBounds(
