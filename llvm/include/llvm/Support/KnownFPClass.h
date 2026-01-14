@@ -32,7 +32,7 @@ struct KnownFPClass {
 
   KnownFPClass(FPClassTest Known = fcAllFlags, std::optional<bool> Sign = {})
       : KnownFPClasses(Known), SignBit(Sign) {}
-  KnownFPClass(const APFloat &C);
+  LLVM_ABI KnownFPClass(const APFloat &C);
 
   bool operator==(KnownFPClass Other) const {
     return KnownFPClasses == Other.KnownFPClasses && SignBit == Other.SignBit;
@@ -137,9 +137,19 @@ struct KnownFPClass {
     return isKnownNever(fcPositive) && isKnownNeverLogicalNegZero(Mode);
   }
 
-  KnownFPClass intersectWith(const KnownFPClass &RHS) {
-    return KnownFPClass(~(~KnownFPClasses & ~RHS.KnownFPClasses),
+  KnownFPClass intersectWith(const KnownFPClass &RHS) const {
+    return KnownFPClass(KnownFPClasses | RHS.KnownFPClasses,
                         SignBit == RHS.SignBit ? SignBit : std::nullopt);
+  }
+
+  KnownFPClass unionWith(const KnownFPClass &RHS) const {
+    std::optional<bool> MergedSignBit;
+    if (SignBit && !RHS.SignBit)
+      MergedSignBit = SignBit;
+    else if (!SignBit && RHS.SignBit)
+      MergedSignBit = RHS.SignBit;
+
+    return KnownFPClass(KnownFPClasses & RHS.KnownFPClasses, MergedSignBit);
   }
 
   KnownFPClass &operator|=(const KnownFPClass &RHS) {
@@ -201,6 +211,16 @@ struct KnownFPClass {
   LLVM_ABI static KnownFPClass
   canonicalize(const KnownFPClass &Src,
                DenormalMode DenormMode = DenormalMode::getDynamic());
+
+  /// Report known values for fadd
+  LLVM_ABI static KnownFPClass
+  fadd(const KnownFPClass &LHS, const KnownFPClass &RHS,
+       DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Report known values for fadd x, x
+  LLVM_ABI static KnownFPClass
+  fadd_self(const KnownFPClass &Src,
+            DenormalMode Mode = DenormalMode::getDynamic());
 
   /// Report known values for fmul
   LLVM_ABI static KnownFPClass

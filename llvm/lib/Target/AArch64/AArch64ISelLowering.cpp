@@ -248,6 +248,26 @@ static inline bool isPackedVectorType(EVT VT, SelectionDAG &DAG) {
          VT.getSizeInBits().getKnownMinValue() == AArch64::SVEBitsPerBlock;
 }
 
+static inline bool isPackedPredicateType(EVT VT, SelectionDAG &DAG) {
+  assert(VT.isVector() && DAG.getTargetLoweringInfo().isTypeLegal(VT) &&
+         "Expected legal type!");
+  return VT == MVT::nxv16i1;
+}
+
+/// Returns true if the conceptual representation for \p VT does not map
+/// directly to its physical register representation, meaning there are gaps
+/// between elements in the register. In practice, the vector elements will be
+/// strided by a power of two and placed starting from lane 0. For example,
+/// nxv8i1 or nxv2f32 are unpacked types.
+///
+///\pre VT is a legal type.
+static inline bool isUnpackedType(EVT VT, SelectionDAG &DAG) {
+  bool Res = !isPackedVectorType(VT, DAG) && !isPackedPredicateType(VT, DAG);
+  assert((!Res || VT.isScalableVector()) &&
+         "Unexpected fixed-size unpacked type.");
+  return Res;
+}
+
 // Returns true for ####_MERGE_PASSTHRU opcodes, whose operands have a leading
 // predicate and end with a passthru value matching the result type.
 static bool isMergePassthruOpcode(unsigned Opc) {
@@ -4594,11 +4614,14 @@ static SDValue lowerADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG,
 }
 
 static SDValue lowerIntNeonIntrinsic(SDValue Op, unsigned Opcode,
-                                     SelectionDAG &DAG) {
+                                     SelectionDAG &DAG,
+                                     bool LastOperandIsImm = false) {
   if (Op.getValueType().isVector())
     return SDValue();
 
   SDLoc DL(Op);
+  SmallVector<SDValue, 2> NewOps;
+  const unsigned NumOperands = Op.getNumOperands();
   auto getFloatVT = [](EVT VT) {
     assert((VT == MVT::i32 || VT == MVT::i64) && "Unexpected VT");
     return VT == MVT::i32 ? MVT::f32 : MVT::f64;
@@ -4606,11 +4629,13 @@ static SDValue lowerIntNeonIntrinsic(SDValue Op, unsigned Opcode,
   auto bitcastToFloat = [&](SDValue Val) {
     return DAG.getBitcast(getFloatVT(Val.getValueType()), Val);
   };
-  SmallVector<SDValue, 2> NewOps;
-  NewOps.reserve(Op.getNumOperands() - 1);
 
-  for (unsigned I = 1, E = Op.getNumOperands(); I < E; ++I)
-    NewOps.push_back(bitcastToFloat(Op.getOperand(I)));
+  // Skip first operand as it is intrinsic ID.
+  for (unsigned I = 1; I < NumOperands; ++I) {
+    SDValue Val = Op.getOperand(I);
+    const bool KeepInt = LastOperandIsImm && (I == NumOperands - 1);
+    NewOps.push_back(KeepInt ? Val : bitcastToFloat(Val));
+  }
   EVT OrigVT = Op.getValueType();
   SDValue OpNode = DAG.getNode(Opcode, DL, getFloatVT(OrigVT), NewOps);
   return DAG.getBitcast(OrigVT, OpNode);
@@ -6452,42 +6477,48 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                          DAG.getNode(AArch64ISD::VASHR, DL,
                                      Op.getOperand(1).getValueType(),
                                      Op.getOperand(1), Op.getOperand(2)));
-    return SDValue();
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::SQSHRN, DAG,
+                                 /*LastOperandIsImm=*/true);
   case Intrinsic::aarch64_neon_sqshrun:
     if (Op.getValueType().isVector())
       return DAG.getNode(ISD::TRUNCATE_SSAT_U, DL, Op.getValueType(),
                          DAG.getNode(AArch64ISD::VASHR, DL,
                                      Op.getOperand(1).getValueType(),
                                      Op.getOperand(1), Op.getOperand(2)));
-    return SDValue();
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::SQSHRUN, DAG,
+                                 /*LastOperandIsImm=*/true);
   case Intrinsic::aarch64_neon_uqshrn:
     if (Op.getValueType().isVector())
       return DAG.getNode(ISD::TRUNCATE_USAT_U, DL, Op.getValueType(),
                          DAG.getNode(AArch64ISD::VLSHR, DL,
                                      Op.getOperand(1).getValueType(),
                                      Op.getOperand(1), Op.getOperand(2)));
-    return SDValue();
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::UQSHRN, DAG,
+                                 /*LastOperandIsImm=*/true);
   case Intrinsic::aarch64_neon_sqrshrn:
     if (Op.getValueType().isVector())
       return DAG.getNode(ISD::TRUNCATE_SSAT_S, DL, Op.getValueType(),
                          DAG.getNode(AArch64ISD::SRSHR_I, DL,
                                      Op.getOperand(1).getValueType(),
                                      Op.getOperand(1), Op.getOperand(2)));
-    return SDValue();
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::SQRSHRN, DAG,
+                                 /*LastOperandIsImm=*/true);
   case Intrinsic::aarch64_neon_sqrshrun:
     if (Op.getValueType().isVector())
       return DAG.getNode(ISD::TRUNCATE_SSAT_U, DL, Op.getValueType(),
                          DAG.getNode(AArch64ISD::SRSHR_I, DL,
                                      Op.getOperand(1).getValueType(),
                                      Op.getOperand(1), Op.getOperand(2)));
-    return SDValue();
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::SQRSHRUN, DAG,
+                                 /*LastOperandIsImm=*/true);
   case Intrinsic::aarch64_neon_uqrshrn:
     if (Op.getValueType().isVector())
       return DAG.getNode(ISD::TRUNCATE_USAT_U, DL, Op.getValueType(),
                          DAG.getNode(AArch64ISD::URSHR_I, DL,
                                      Op.getOperand(1).getValueType(),
                                      Op.getOperand(1), Op.getOperand(2)));
-    return SDValue();
+    return lowerIntNeonIntrinsic(Op, AArch64ISD::UQRSHRN, DAG,
+                                 /*LastOperandIsImm=*/true);
   case Intrinsic::aarch64_neon_sqdmulh:
     return lowerIntNeonIntrinsic(Op, AArch64ISD::SQDMULH, DAG);
   case Intrinsic::aarch64_neon_sqrdmulh:
@@ -11264,6 +11295,39 @@ std::pair<SDValue, uint64_t> lookThroughSignExtension(SDValue Val) {
   return {Val, Val.getValueSizeInBits() - 1};
 }
 
+// Op is an SDValue that is being compared to 0. If the comparison is a bit
+// test, optimize it to a TBZ or TBNZ.
+static SDValue optimizeBitTest(SDLoc DL, SDValue Op, SDValue Chain,
+                               SDValue Dest, unsigned Opcode,
+                               SelectionDAG &DAG) {
+  if (Op.getOpcode() != ISD::AND)
+    return SDValue();
+
+  // See if we can use a TBZ to fold in an AND as well.
+  // TBZ has a smaller branch displacement than CBZ.  If the offset is
+  // out of bounds, a late MI-layer pass rewrites branches.
+  // 403.gcc is an example that hits this case.
+  if (isa<ConstantSDNode>(Op.getOperand(1)) &&
+      isPowerOf2_64(Op.getConstantOperandVal(1))) {
+    SDValue Test = Op.getOperand(0);
+    uint64_t Mask = Op.getConstantOperandVal(1);
+    return DAG.getNode(Opcode, DL, MVT::Other, Chain, Test,
+                       DAG.getConstant(Log2_64(Mask), DL, MVT::i64), Dest);
+  }
+
+  if (Op.getOperand(0).getOpcode() == ISD::SHL) {
+    auto Op00 = Op.getOperand(0).getOperand(0);
+    if (isa<ConstantSDNode>(Op00) && Op00->getAsZExtVal() == 1) {
+      auto Shr = DAG.getNode(ISD::SRL, DL, Op00.getValueType(),
+                             Op.getOperand(1), Op.getOperand(0).getOperand(1));
+      return DAG.getNode(Opcode, DL, MVT::Other, Chain, Shr,
+                         DAG.getConstant(0, DL, MVT::i64), Dest);
+    }
+  }
+
+  return SDValue();
+}
+
 SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
@@ -11323,35 +11387,15 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
     const ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS);
     if (RHSC && RHSC->getZExtValue() == 0 && ProduceNonFlagSettingCondBr) {
       if (CC == ISD::SETEQ) {
-        // See if we can use a TBZ to fold in an AND as well.
-        // TBZ has a smaller branch displacement than CBZ.  If the offset is
-        // out of bounds, a late MI-layer pass rewrites branches.
-        // 403.gcc is an example that hits this case.
-        if (LHS.getOpcode() == ISD::AND &&
-            isa<ConstantSDNode>(LHS.getOperand(1)) &&
-            isPowerOf2_64(LHS.getConstantOperandVal(1))) {
-          SDValue Test = LHS.getOperand(0);
-          uint64_t Mask = LHS.getConstantOperandVal(1);
-          return DAG.getNode(AArch64ISD::TBZ, DL, MVT::Other, Chain, Test,
-                             DAG.getConstant(Log2_64(Mask), DL, MVT::i64),
-                             Dest);
-        }
+        if (SDValue Result =
+                optimizeBitTest(DL, LHS, Chain, Dest, AArch64ISD::TBZ, DAG))
+          return Result;
 
         return DAG.getNode(AArch64ISD::CBZ, DL, MVT::Other, Chain, LHS, Dest);
       } else if (CC == ISD::SETNE) {
-        // See if we can use a TBZ to fold in an AND as well.
-        // TBZ has a smaller branch displacement than CBZ.  If the offset is
-        // out of bounds, a late MI-layer pass rewrites branches.
-        // 403.gcc is an example that hits this case.
-        if (LHS.getOpcode() == ISD::AND &&
-            isa<ConstantSDNode>(LHS.getOperand(1)) &&
-            isPowerOf2_64(LHS.getConstantOperandVal(1))) {
-          SDValue Test = LHS.getOperand(0);
-          uint64_t Mask = LHS.getConstantOperandVal(1);
-          return DAG.getNode(AArch64ISD::TBNZ, DL, MVT::Other, Chain, Test,
-                             DAG.getConstant(Log2_64(Mask), DL, MVT::i64),
-                             Dest);
-        }
+        if (SDValue Result =
+                optimizeBitTest(DL, LHS, Chain, Dest, AArch64ISD::TBNZ, DAG))
+          return Result;
 
         return DAG.getNode(AArch64ISD::CBNZ, DL, MVT::Other, Chain, LHS, Dest);
       } else if (CC == ISD::SETLT && LHS.getOpcode() != ISD::AND) {
@@ -18462,7 +18506,7 @@ bool AArch64TargetLowering::lowerInterleavedStore(Instruction *Store,
   // Sanity check if all the indices are NOT in range.
   // If mask is `poison`, `Mask` may be a vector of -1s.
   // If all of them are `poison`, OOB read will happen later.
-  if (llvm::all_of(Mask, [](int Idx) { return Idx == PoisonMaskElem; })) {
+  if (llvm::all_of(Mask, equal_to(PoisonMaskElem))) {
     return false;
   }
   // A 64bit st2 which does not start at element 0 will involved adding extra
@@ -21144,6 +21188,22 @@ static SDValue performConcatVectorsCombine(SDNode *N,
   EVT VT = N->getValueType(0);
   SDValue N0 = N->getOperand(0), N1 = N->getOperand(1);
   unsigned N0Opc = N0->getOpcode(), N1Opc = N1->getOpcode();
+
+  // For unpacked types:
+  // concat(zip1(a, b), zip2(a, b)) => trn1(a, b)
+  if (DCI.isAfterLegalizeDAG() && isUnpackedType(N0.getValueType(), DAG) &&
+      N->getNumOperands() == 2 && N0Opc == AArch64ISD::ZIP1 &&
+      N1Opc == AArch64ISD::ZIP2 && N0.getOperand(0) == N1.getOperand(0) &&
+      N0.getOperand(1) == N1.getOperand(1)) {
+    // If the type is unpacked, then each element is separated by a gap at least
+    // as big as the element size. It is therefore safe to re-interpret the
+    // inputs with double the elements and ignore odd elements (hence TRN1).
+    SDValue Op0MoreElems =
+        DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, VT, N0.getOperand(0));
+    SDValue Op1MoreElems =
+        DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, VT, N0.getOperand(1));
+    return DAG.getNode(AArch64ISD::TRN1, DL, VT, Op0MoreElems, Op1MoreElems);
+  }
 
   if (VT.isScalableVector())
     return SDValue();
@@ -31411,8 +31471,10 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
   }
 
   // Are multi-register zip instructions available?
+  // If so, use them for packed types. Interleaves of unpacked types can be
+  // selected using trn1.
   if (Subtarget->hasSME2() && Subtarget->isStreaming() &&
-      OpVT.isScalableVector() && OpVT.getVectorElementType() != MVT::i1) {
+      OpVT.isScalableVector() && isPackedVectorType(OpVT, DAG)) {
     Intrinsic::ID IntID;
     switch (Op->getNumOperands()) {
     default:

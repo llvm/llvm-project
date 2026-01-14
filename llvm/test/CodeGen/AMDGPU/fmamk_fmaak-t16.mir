@@ -1,0 +1,31 @@
+# RUN: not llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -run-pass=none -filetype=null %s 2>&1 | FileCheck -check-prefix=GFX11 %s
+# RUN: not llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -start-before=greedy,0 -stop-after=virtregrewriter,2 -o - %s 2>&1 | FileCheck -check-prefix=GFX11 %s
+
+# FIXME: There is no allocatable 16-bit VGPR class and these instructions
+#        do not have VOP3 forms for allocatable VGPR_16 to be used.
+
+# GFX11: Cannot use non-allocatable class 'VGPR_16_Lo128' for virtual register
+
+---
+name:            v_fmamk_f16
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    %0:vgpr_32_lo128 = COPY $vgpr0
+    %1:vgpr_32_lo128 = COPY $vgpr1
+    %2:vgpr_16_lo128 = nofpexcept V_FMAMK_F16_t16 %0.lo16, 1, %1.hi16, implicit $exec, implicit $mode
+    S_ENDPGM 0, implicit %2
+...
+
+---
+name:            v_fmaak_f16
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    %0:vgpr_32_lo128 = COPY $vgpr0
+    %1:vgpr_32_lo128 = COPY $vgpr1
+    %2:vgpr_16_lo128 = nofpexcept V_FMAAK_F16_t16 %0.lo16, %1.hi16, 1, implicit $exec, implicit $mode
+    S_ENDPGM 0, implicit %2
+...
