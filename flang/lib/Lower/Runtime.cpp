@@ -11,7 +11,6 @@
 #include "flang/Lower/OpenACC.h"
 #include "flang/Lower/OpenMP.h"
 #include "flang/Lower/StatementContext.h"
-#include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
