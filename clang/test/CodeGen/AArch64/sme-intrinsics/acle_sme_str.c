@@ -9,7 +9,7 @@
 // CHECK-C-LABEL: @test_svstr_vnum_za(
 // CHECK-CXX-LABEL: @_Z18test_svstr_vnum_zajPv(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.str(i32 [[SLICE_BASE:%.*]], ptr [[PTR:%.*]], i32 0)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.str(i32 [[SLICE_BASE:%.*]], ptr [[PTR:%.*]], i64 0)
 // CHECK-NEXT:    ret void
 //
 void test_svstr_vnum_za(uint32_t slice_base, void *ptr) __arm_in("za") {
@@ -19,7 +19,7 @@ void test_svstr_vnum_za(uint32_t slice_base, void *ptr) __arm_in("za") {
 // CHECK-C-LABEL: @test_svstr_vnum_za_1(
 // CHECK-CXX-LABEL: @_Z20test_svstr_vnum_za_1jPv(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.str(i32 [[SLICE_BASE:%.*]], ptr [[PTR:%.*]], i32 15)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.str(i32 [[SLICE_BASE:%.*]], ptr [[PTR:%.*]], i64 15)
 // CHECK-NEXT:    ret void
 //
 void test_svstr_vnum_za_1(uint32_t slice_base, void *ptr) __arm_in("za") {
@@ -29,7 +29,7 @@ void test_svstr_vnum_za_1(uint32_t slice_base, void *ptr) __arm_in("za") {
 // CHECK-C-LABEL: @test_svstr_za(
 // CHECK-CXX-LABEL: @_Z13test_svstr_zajPv(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.str(i32 [[SLICE_BASE:%.*]], ptr [[PTR:%.*]], i32 0)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.str(i32 [[SLICE_BASE:%.*]], ptr [[PTR:%.*]], i64 0)
 // CHECK-NEXT:    ret void
 //
 void test_svstr_za(uint32_t slice_base, void *ptr) __arm_in("za") {
@@ -39,8 +39,7 @@ void test_svstr_za(uint32_t slice_base, void *ptr) __arm_in("za") {
 // CHECK-C-LABEL: @test_svstr_vnum_za_var(
 // CHECK-CXX-LABEL: @_Z22test_svstr_vnum_za_varjPvl(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[VNUM:%.*]] to i32
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.str(i32 [[SLICE_BASE:%.*]], ptr [[PTR:%.*]], i32 [[TMP0:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.str(i32 [[SLICE_BASE:%.*]], ptr [[PTR:%.*]], i64 [[VNUM:%.*]])
 // CHECK-NEXT:    ret void
 //
 void test_svstr_vnum_za_var(uint32_t slice_base, void *ptr, int64_t vnum) __arm_in("za") {
@@ -50,7 +49,7 @@ void test_svstr_vnum_za_var(uint32_t slice_base, void *ptr, int64_t vnum) __arm_
 // CHECK-C-LABEL: @test_svstr_vnum_za_2(
 // CHECK-CXX-LABEL: @_Z20test_svstr_vnum_za_2jPv(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.str(i32 [[SLICE_BASE:%.*]], ptr [[PTR:%.*]], i32 16)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.str(i32 [[SLICE_BASE:%.*]], ptr [[PTR:%.*]], i64 16)
 // CHECK-NEXT:    ret void
 //
 void test_svstr_vnum_za_2(uint32_t slice_base, void *ptr) __arm_in("za") {

@@ -6124,7 +6124,7 @@ SDValue LowerSMELdrStr(SDValue N, SelectionDAG &DAG, bool IsLoad) {
   SDValue TileSlice = N->getOperand(2);
   SDValue Base = N->getOperand(3);
   SDValue VecNum = N->getOperand(4);
-  int32_t ConstAddend = 0;
+  int64_t ConstAddend = 0;
   SDValue VarAddend = VecNum;
 
   // If the vnum is an add of an immediate, we can fold it into the instruction
@@ -6138,10 +6138,10 @@ SDValue LowerSMELdrStr(SDValue N, SelectionDAG &DAG, bool IsLoad) {
   }
 
   int32_t ImmAddend = ConstAddend % 16;
-  if (int32_t C = (ConstAddend - ImmAddend)) {
-    SDValue CVal = DAG.getTargetConstant(C, DL, MVT::i32);
+  if (int64_t C = (ConstAddend - ImmAddend)) {
+    SDValue CVal = DAG.getTargetConstant(C, DL, MVT::i64);
     VarAddend = VarAddend
-                    ? DAG.getNode(ISD::ADD, DL, MVT::i32, {VarAddend, CVal})
+                    ? DAG.getNode(ISD::ADD, DL, MVT::i64, {VarAddend, CVal})
                     : CVal;
   }
 
@@ -6151,12 +6151,12 @@ SDValue LowerSMELdrStr(SDValue N, SelectionDAG &DAG, bool IsLoad) {
                            DAG.getConstant(1, DL, MVT::i32));
 
     // Multiply SVL and vnum then add it to the base
-    SDValue Mul = DAG.getNode(
-        ISD::MUL, DL, MVT::i64,
-        {SVL, DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, VarAddend)});
+    SDValue Mul = DAG.getNode(ISD::MUL, DL, MVT::i64, {SVL, VarAddend});
     Base = DAG.getNode(ISD::ADD, DL, MVT::i64, {Base, Mul});
+
     // Just add vnum to the tileslice
-    TileSlice = DAG.getNode(ISD::ADD, DL, MVT::i32, {TileSlice, VarAddend});
+    SDValue VarAddend32 = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, VarAddend);
+    TileSlice = DAG.getNode(ISD::ADD, DL, MVT::i32, {TileSlice, VarAddend32});
   }
 
   return DAG.getNode(IsLoad ? AArch64ISD::SME_ZA_LDR : AArch64ISD::SME_ZA_STR,

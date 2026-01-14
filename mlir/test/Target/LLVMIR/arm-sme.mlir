@@ -190,6 +190,7 @@ llvm.func @arm_sme_store(%nxv1i1  : vector<[1]xi1>,
                          %nxv16i1 : vector<[16]xi1>,
                          %ptr    : !llvm.ptr) {
   %c0 = llvm.mlir.constant(0 : index) : i32
+  %c0_i64 = llvm.mlir.constant(0 : i64) : i64
   // CHECK: call void @llvm.aarch64.sme.st1q.horiz
   "arm_sme.intr.st1q.horiz"(%nxv1i1, %ptr, %c0) <{tile_id = 0 : i32}> :
               (vector<[1]xi1>, !llvm.ptr, i32) -> ()
@@ -221,7 +222,7 @@ llvm.func @arm_sme_store(%nxv1i1  : vector<[1]xi1>,
   "arm_sme.intr.st1b.vert"(%nxv16i1, %ptr, %c0) <{tile_id = 0 : i32}> :
               (vector<[16]xi1>, !llvm.ptr, i32) -> ()
   // CHECK: call void @llvm.aarch64.sme.str
-  "arm_sme.intr.str"(%c0, %ptr, %c0) : (i32, !llvm.ptr, i32) -> ()
+  "arm_sme.intr.str"(%c0, %ptr, %c0_i64) : (i32, !llvm.ptr, i64) -> ()
   llvm.return
 }
 

@@ -252,7 +252,7 @@ define void @str(ptr %ptr) {
 ; CHECK-NEXT:    mov w12, wzr
 ; CHECK-NEXT:    str za[w12, 0], [x0]
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.str(i32 0, ptr %ptr, i32 0)
+  call void @llvm.aarch64.sme.str(i32 0, ptr %ptr, i64 0)
   ret void;
 }
 
@@ -264,7 +264,7 @@ define void @str_with_off_15(ptr %ptr) {
 ; CHECK-NEXT:    str za[w12, 0], [x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr i8, ptr %ptr, i64 15
-  call void @llvm.aarch64.sme.str(i32 15, ptr %base, i32 0)
+  call void @llvm.aarch64.sme.str(i32 15, ptr %base, i64 0)
   ret void;
 }
 
@@ -278,7 +278,7 @@ define void @str_with_off_15mulvl(ptr %ptr) {
   %vscale = call i64 @llvm.vscale.i64()
   %mulvl = mul i64 %vscale, 240
   %base = getelementptr i8, ptr %ptr, i64 %mulvl
-  call void @llvm.aarch64.sme.str(i32 15, ptr %base, i32 0)
+  call void @llvm.aarch64.sme.str(i32 15, ptr %base, i64 0)
   ret void;
 }
 
@@ -292,20 +292,19 @@ define void @str_with_off_16mulvl(ptr %ptr) {
   %vscale = call i64 @llvm.vscale.i64()
   %mulvl = mul i64 %vscale, 256
   %base = getelementptr i8, ptr %ptr, i64 %mulvl
-  call void @llvm.aarch64.sme.str(i32 16, ptr %base, i32 0)
+  call void @llvm.aarch64.sme.str(i32 16, ptr %base, i64 0)
   ret void;
 }
 
-define void @str_with_off_var(ptr %base, i32 %off) {
+define void @str_with_off_var(ptr %base, i64 %off) {
 ; CHECK-LABEL: str_with_off_var:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sxtw x8, w1
-; CHECK-NEXT:    rdsvl x9, #1
+; CHECK-NEXT:    rdsvl x8, #1
 ; CHECK-NEXT:    add w12, w1, #16
-; CHECK-NEXT:    madd x8, x9, x8, x0
+; CHECK-NEXT:    madd x8, x8, x1, x0
 ; CHECK-NEXT:    str za[w12, 0], [x8]
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.str(i32 16, ptr %base, i32 %off)
+  call void @llvm.aarch64.sme.str(i32 16, ptr %base, i64 %off)
   ret void;
 }
 
@@ -317,7 +316,7 @@ define void @str_with_off_15imm(ptr %ptr) {
 ; CHECK-NEXT:    str za[w12, 15], [x8, #15, mul vl]
 ; CHECK-NEXT:    ret
   %base = getelementptr i8, ptr %ptr, i64 15
-  call void @llvm.aarch64.sme.str(i32 15, ptr %base, i32 15)
+  call void @llvm.aarch64.sme.str(i32 15, ptr %base, i64 15)
   ret void;
 }
 
@@ -331,7 +330,7 @@ define void @str_with_off_16imm(ptr %ptr) {
 ; CHECK-NEXT:    str za[w12, 0], [x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr i8, ptr %ptr, i64 15
-  call void @llvm.aarch64.sme.str(i32 15, ptr %base, i32 16)
+  call void @llvm.aarch64.sme.str(i32 15, ptr %base, i64 16)
   ret void;
 }
 
@@ -345,10 +344,10 @@ define void @str_with_off_many_imm(i32 %tile_slice, ptr %ptr) {
 ; CHECK-NEXT:    str za[w12, 4], [x1, #4, mul vl]
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 1)
-  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 2)
-  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 3)
-  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 4)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i64 1)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i64 2)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i64 3)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i64 4)
   ret void
 }
 
@@ -365,10 +364,10 @@ define void @str_with_off_many_imm_15_18(i32 %tile_slice, ptr %ptr) {
 ; CHECK-NEXT:    str za[w12, 2], [x8, #2, mul vl]
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 15)
-  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 16)
-  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 17)
-  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 18)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i64 15)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i64 16)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i64 17)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i64 18)
   ret void
 }
 
@@ -384,10 +383,10 @@ define void @str_with_off_many_imm_16_19(i32 %tile_slice, ptr %ptr) {
 ; CHECK-NEXT:    str za[w12, 3], [x8, #3, mul vl]
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 16)
-  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 17)
-  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 18)
-  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 19)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i64 16)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i64 17)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i64 18)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i64 19)
   ret void
 }
 
@@ -405,10 +404,10 @@ define void @str_with_off_many_imm_31_34(i32 %tile_slice, ptr %ptr) {
 ; CHECK-NEXT:    str za[w13, 2], [x8, #2, mul vl]
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 31)
-  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 32)
-  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 33)
-  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 34)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i64 31)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i64 32)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i64 33)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i64 34)
   ret void
 }
 
@@ -424,61 +423,56 @@ define void @str_with_off_many_imm_32_35(i32 %tile_slice, ptr %ptr) {
 ; CHECK-NEXT:    str za[w12, 3], [x8, #3, mul vl]
 ; CHECK-NEXT:    ret
 entry:
-  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 32)
-  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 33)
-  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 34)
-  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 35)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i64 32)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i64 33)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i64 34)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i64 35)
   ret void
 }
 
 define void @str_with_off_many_var(i32 %tile_slice, ptr %ptr, i64 %vnum) {
 ; CHECK-LABEL: str_with_off_many_var:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sxtw x8, w2
-; CHECK-NEXT:    rdsvl x9, #1
+; CHECK-NEXT:    rdsvl x8, #1
 ; CHECK-NEXT:    add w12, w0, w2
-; CHECK-NEXT:    madd x8, x9, x8, x1
+; CHECK-NEXT:    madd x8, x8, x2, x1
 ; CHECK-NEXT:    str za[w12, 0], [x8]
 ; CHECK-NEXT:    str za[w12, 1], [x8, #1, mul vl]
 ; CHECK-NEXT:    str za[w12, 2], [x8, #2, mul vl]
 ; CHECK-NEXT:    str za[w12, 3], [x8, #3, mul vl]
 ; CHECK-NEXT:    ret
 entry:
-  %0 = trunc i64 %vnum to i32
-  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 %0)
-  %1 = add i32 %0, 1
-  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 %1)
-  %2 = add i32 %0, 2
-  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 %2)
-  %3 = add i32 %0, 3
-  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 %3)
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i64 %vnum)
+  %1 = add i64 %vnum, 1
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i64 %1)
+  %2 = add i64 %vnum, 2
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i64 %2)
+  %3 = add i64 %vnum, 3
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i64 %3)
   ret void
 }
 
 define void @str_with_off_many_var_high(i32 %tile_slice, ptr %ptr, i64 %vnum) {
 ; CHECK-LABEL: str_with_off_many_var_high:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    add w8, w2, #32
-; CHECK-NEXT:    rdsvl x10, #1
-; CHECK-NEXT:    mov w9, w8
-; CHECK-NEXT:    add w12, w0, w8
-; CHECK-NEXT:    sxtw x9, w9
-; CHECK-NEXT:    madd x9, x10, x9, x1
-; CHECK-NEXT:    str za[w12, 1], [x9, #1, mul vl]
-; CHECK-NEXT:    str za[w12, 2], [x9, #2, mul vl]
-; CHECK-NEXT:    str za[w12, 3], [x9, #3, mul vl]
-; CHECK-NEXT:    str za[w12, 4], [x9, #4, mul vl]
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    add x9, x2, #32
+; CHECK-NEXT:    madd x8, x8, x9, x1
+; CHECK-NEXT:    add w12, w0, w9
+; CHECK-NEXT:    str za[w12, 1], [x8, #1, mul vl]
+; CHECK-NEXT:    str za[w12, 2], [x8, #2, mul vl]
+; CHECK-NEXT:    str za[w12, 3], [x8, #3, mul vl]
+; CHECK-NEXT:    str za[w12, 4], [x8, #4, mul vl]
 ; CHECK-NEXT:    ret
 entry:
-  %0 = trunc i64 %vnum to i32
-  %1 = add i32 %0, 33
-  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 %1)
-  %2 = add i32 %0, 34
-  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 %2)
-  %3 = add i32 %0, 35
-  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 %3)
-  %4 = add i32 %0, 36
-  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i32 %4)
+  %1 = add i64 %vnum, 33
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i64 %1)
+  %2 = add i64 %vnum, 34
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i64 %2)
+  %3 = add i64 %vnum, 35
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i64 %3)
+  %4 = add i64 %vnum, 36
+  tail call void @llvm.aarch64.sme.str(i32 %tile_slice, ptr %ptr, i64 %4)
   ret void
 }
 
@@ -527,5 +521,5 @@ declare void @llvm.aarch64.sme.st1w.vert(<vscale x 4 x i1>, ptr, i32, i32)
 declare void @llvm.aarch64.sme.st1d.vert(<vscale x 2 x i1>, ptr, i32, i32)
 declare void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1>, ptr, i32, i32)
 
-declare void @llvm.aarch64.sme.str(i32, ptr, i32)
+declare void @llvm.aarch64.sme.str(i32, ptr, i64)
 declare i64 @llvm.vscale.i64()

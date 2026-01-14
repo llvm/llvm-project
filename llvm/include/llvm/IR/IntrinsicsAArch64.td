@@ -2958,7 +2958,7 @@ let TargetPrefix = "aarch64" in {
 
   // Spill + fill
   class SME_LDR_STR_ZA_Intrinsic
-    : DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_ptr_ty, llvm_i32_ty], [IntrInaccessibleMemOrArgMemOnly]>;
+    : DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_ptr_ty, llvm_i64_ty], [IntrInaccessibleMemOrArgMemOnly]>;
   def int_aarch64_sme_ldr : SME_LDR_STR_ZA_Intrinsic;
   def int_aarch64_sme_str : SME_LDR_STR_ZA_Intrinsic;
 
