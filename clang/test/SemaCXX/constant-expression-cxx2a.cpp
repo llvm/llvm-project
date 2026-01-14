@@ -1195,13 +1195,13 @@ namespace dtor_call {
 
   constexpr void destroy_after_lifetime2() {
     A *p = []{ A a; return &a; }(); // expected-warning {{}} expected-note {{declared here}}
-    p->~A(); // expected-note {{destruction of variable whose lifetime has ended}}
+    p->~A(); // expected-note {{destruction of object outside its lifetime}}
   }
   static_assert((destroy_after_lifetime2(), true)); // expected-error {{}} expected-note {{in call}}
 
   constexpr void destroy_after_lifetime3() {
     A *p = []{ return &(A&)(A&&)A(); }(); // expected-warning {{}} expected-note {{temporary created here}}
-    p->~A(); // expected-note {{destruction of temporary whose lifetime has ended}}
+    p->~A(); // expected-note {{destruction of object outside its lifetime}}
   }
   static_assert((destroy_after_lifetime3(), true)); // expected-error {{}} expected-note {{in call}}
 

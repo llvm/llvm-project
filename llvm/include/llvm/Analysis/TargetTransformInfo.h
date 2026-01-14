@@ -555,6 +555,18 @@ public:
 
   LLVM_ABI bool isNoopAddrSpaceCast(unsigned FromAS, unsigned ToAS) const;
 
+  // Given an address space cast of the given pointer value, calculate the known
+  // bits of the source pointer in the source addrspace and the destination
+  // pointer in the destination addrspace.
+  LLVM_ABI std::pair<KnownBits, KnownBits>
+  computeKnownBitsAddrSpaceCast(unsigned ToAS, const Value &PtrOp) const;
+
+  // Given an address space cast, calculate the known bits of the resulting ptr
+  // in the destination addrspace using the known bits of the source pointer in
+  // the source addrspace.
+  LLVM_ABI KnownBits computeKnownBitsAddrSpaceCast(
+      unsigned FromAS, unsigned ToAS, const KnownBits &FromPtrBits) const;
+
   /// Return true if globals in this address space can have initializers other
   /// than `undef`.
   LLVM_ABI bool
