@@ -264,15 +264,15 @@ static mlir::Value emitX86MaskTest(CIRGenBuilderTy &builder, mlir::Location loc,
                              mlir::ValueRange{lhsVec, rhsVec});
 }
 
-// TODO: The cgf parameter should be removed when all the NYI cases are
-// implemented.
-static std::optional<mlir::Value>
-emitX86MaskedCompareResult(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
-                           mlir::Value cmp, unsigned numElts,
-                           mlir::Value maskIn, mlir::Location loc) {
+static mlir::Value emitX86MaskedCompareResult(CIRGenBuilderTy &builder,
+                                              mlir::Value cmp, unsigned numElts,
+                                              mlir::Value maskIn,
+                                              mlir::Location loc) {
   if (maskIn) {
-    cgf.cgm.errorNYI(loc, "emitX86MaskedCompareResult");
-    return {};
+    auto c = mlir::dyn_cast_or_null<cir::ConstantOp>(maskIn.getDefiningOp());
+    if (!c || !c.isAllOnesValue())
+      cmp = builder.createAnd(loc, cmp,
+                              getMaskVecValue(builder, loc, maskIn, numElts));
   }
   if (numElts < 8) {
     llvm::SmallVector<mlir::Attribute> indices;
@@ -340,7 +340,7 @@ emitX86MaskedCompare(CIRGenFunction &cgf, CIRGenBuilderTy &builder, unsigned cc,
   if (ops.size() == 4)
     maskIn = ops[3];
 
-  return emitX86MaskedCompareResult(cgf, builder, cmp, numElts, maskIn, loc);
+  return emitX86MaskedCompareResult(builder, cmp, numElts, maskIn, loc);
 }
 
 // TODO: The cgf parameter should be removed when all the NYI cases are
@@ -1315,7 +1315,12 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
                                     mask);
   }
   case X86::BI__builtin_ia32_pmovqd512_mask:
-  case X86::BI__builtin_ia32_pmovwb512_mask:
+  case X86::BI__builtin_ia32_pmovwb512_mask: {
+    mlir::Value Res =
+        builder.createIntCast(ops[0], cast<cir::VectorType>(ops[1].getType()));
+    return emitX86Select(builder, getLoc(expr->getExprLoc()), ops[2], Res,
+                         ops[1]);
+  }
   case X86::BI__builtin_ia32_pblendw128:
   case X86::BI__builtin_ia32_blendpd:
   case X86::BI__builtin_ia32_blendps:
@@ -1371,11 +1376,21 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_permdi256:
   case X86::BI__builtin_ia32_permdf256:
   case X86::BI__builtin_ia32_permdi512:
-  case X86::BI__builtin_ia32_permdf512:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented X86 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+  case X86::BI__builtin_ia32_permdf512: {
+    unsigned imm =
+        ops[1].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue();
+    unsigned numElts = cast<cir::VectorType>(ops[0].getType()).getSize();
+
+    // These intrinsics operate on 256-bit lanes of four 64-bit elements.
+    int64_t Indices[8];
+
+    for (unsigned l = 0; l != numElts; l += 4)
+      for (unsigned i = 0; i != 4; ++i)
+        Indices[l + i] = l + ((imm >> (2 * i)) & 0x3);
+
+    return builder.createVecShuffle(getLoc(expr->getExprLoc()), ops[0],
+                                    ArrayRef(Indices, numElts));
+  }
   case X86::BI__builtin_ia32_palignr128:
   case X86::BI__builtin_ia32_palignr256:
   case X86::BI__builtin_ia32_palignr512: {
@@ -1835,12 +1850,66 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_fpclasspd128_mask:
   case X86::BI__builtin_ia32_fpclasspd256_mask:
   case X86::BI__builtin_ia32_fpclasspd512_mask:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case X86::BI__builtin_ia32_vp2intersect_q_512:
   case X86::BI__builtin_ia32_vp2intersect_q_256:
   case X86::BI__builtin_ia32_vp2intersect_q_128:
   case X86::BI__builtin_ia32_vp2intersect_d_512:
   case X86::BI__builtin_ia32_vp2intersect_d_256:
-  case X86::BI__builtin_ia32_vp2intersect_d_128:
+  case X86::BI__builtin_ia32_vp2intersect_d_128: {
+    unsigned numElts = cast<cir::VectorType>(ops[0].getType()).getSize();
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    StringRef intrinsicName;
+
+    switch (builtinID) {
+    default:
+      llvm_unreachable("Unexpected builtin");
+    case X86::BI__builtin_ia32_vp2intersect_q_512:
+      intrinsicName = "x86.avx512.vp2intersect.q.512";
+      break;
+    case X86::BI__builtin_ia32_vp2intersect_q_256:
+      intrinsicName = "x86.avx512.vp2intersect.q.256";
+      break;
+    case X86::BI__builtin_ia32_vp2intersect_q_128:
+      intrinsicName = "x86.avx512.vp2intersect.q.128";
+      break;
+    case X86::BI__builtin_ia32_vp2intersect_d_512:
+      intrinsicName = "x86.avx512.vp2intersect.d.512";
+      break;
+    case X86::BI__builtin_ia32_vp2intersect_d_256:
+      intrinsicName = "x86.avx512.vp2intersect.d.256";
+      break;
+    case X86::BI__builtin_ia32_vp2intersect_d_128:
+      intrinsicName = "x86.avx512.vp2intersect.d.128";
+      break;
+    }
+
+    auto resVector = cir::VectorType::get(builder.getBoolTy(), numElts);
+
+    cir::RecordType resRecord =
+        cir::RecordType::get(&getMLIRContext(), {resVector, resVector}, false,
+                             false, cir::RecordType::RecordKind::Struct);
+
+    mlir::Value call =
+        emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()), intrinsicName,
+                            resRecord, mlir::ValueRange{ops[0], ops[1]});
+    mlir::Value result =
+        cir::ExtractMemberOp::create(builder, loc, resVector, call, 0);
+    result = emitX86MaskedCompareResult(builder, result, numElts, nullptr, loc);
+    Address addr = Address(
+        ops[2], clang::CharUnits::fromQuantity(std::max(1U, numElts / 8)));
+    builder.createStore(loc, result, addr);
+
+    result = cir::ExtractMemberOp::create(builder, loc, resVector, call, 1);
+    result = emitX86MaskedCompareResult(builder, result, numElts, nullptr, loc);
+    addr = Address(ops[3],
+                   clang::CharUnits::fromQuantity(std::max(1U, numElts / 8)));
+    builder.createStore(loc, result, addr);
+    return mlir::Value{};
+  }
   case X86::BI__builtin_ia32_vpmultishiftqb128:
   case X86::BI__builtin_ia32_vpmultishiftqb256:
   case X86::BI__builtin_ia32_vpmultishiftqb512:

@@ -664,7 +664,6 @@ int main(int argc, char **argv) {
                         << ", use -skip-unsupported-instructions=lack-sched to "
                            "ignore these on the input.\n";
                   IP->printInst(&IE.Inst, 0, "", *STI, SS);
-                  SS.flush();
                   WithColor::note()
                       << "instruction: " << InstructionStr << '\n';
                 })) {

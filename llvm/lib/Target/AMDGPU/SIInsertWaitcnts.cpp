@@ -484,6 +484,12 @@ public:
   AMDGPU::Waitcnt getAllZeroWaitcnt(bool IncludeVSCnt) const override;
 };
 
+// Flags indicating which counters should be flushed in a loop preheader.
+struct PreheaderFlushFlags {
+  bool FlushVmCnt = false;
+  bool FlushDsCnt = false;
+};
+
 class SIInsertWaitcnts {
 public:
   const GCNSubtarget *ST;
@@ -497,7 +503,7 @@ public:
 
 private:
   DenseMap<const Value *, MachineBasicBlock *> SLoadAddresses;
-  DenseMap<MachineBasicBlock *, bool> PreheadersToFlush;
+  DenseMap<MachineBasicBlock *, PreheaderFlushFlags> PreheadersToFlush;
   MachineLoopInfo *MLI;
   MachinePostDominatorTree *PDT;
   AliasAnalysis *AA = nullptr;
@@ -540,10 +546,13 @@ public:
 
   const AMDGPU::HardwareLimits &getLimits() const { return Limits; }
 
-  bool shouldFlushVmCnt(MachineLoop *ML, const WaitcntBrackets &Brackets);
-  bool isPreheaderToFlush(MachineBasicBlock &MBB,
-                          const WaitcntBrackets &ScoreBrackets);
+  PreheaderFlushFlags getPreheaderFlushFlags(MachineLoop *ML,
+                                             const WaitcntBrackets &Brackets);
+  PreheaderFlushFlags isPreheaderToFlush(MachineBasicBlock &MBB,
+                                         const WaitcntBrackets &ScoreBrackets);
   bool isVMEMOrFlatVMEM(const MachineInstr &MI) const;
+  bool isDSRead(const MachineInstr &MI) const;
+  bool mayStoreIncrementingDSCNT(const MachineInstr &MI) const;
   bool run(MachineFunction &MF);
 
   void setForceEmitWaitcnt() {
@@ -624,7 +633,7 @@ public:
   bool generateWaitcntInstBefore(MachineInstr &MI,
                                  WaitcntBrackets &ScoreBrackets,
                                  MachineInstr *OldWaitcntInstr,
-                                 bool FlushVmCnt);
+                                 PreheaderFlushFlags FlushFlags);
   bool generateWaitcnt(AMDGPU::Waitcnt Wait,
                        MachineBasicBlock::instr_iterator It,
                        MachineBasicBlock &Block, WaitcntBrackets &ScoreBrackets,
@@ -718,8 +727,6 @@ public:
   void simplifyWaitcnt(const AMDGPU::Waitcnt &CheckWait,
                        AMDGPU::Waitcnt &UpdateWait) const;
   void simplifyWaitcnt(InstCounterType T, unsigned &Count) const;
-  bool hasRedundantXCntWithKmCnt(const AMDGPU::Waitcnt &Wait) const;
-  bool canOptimizeXCntWithLoadCnt(const AMDGPU::Waitcnt &Wait) const;
   void simplifyXcnt(const AMDGPU::Waitcnt &CheckWait,
                     AMDGPU::Waitcnt &UpdateWait) const;
   void simplifyVmVsrc(const AMDGPU::Waitcnt &CheckWait,
@@ -910,9 +917,7 @@ private:
     // Bitmask of the VmemTypes of VMEM instructions for this VGPR.
     unsigned VMEMTypes = 0;
 
-    bool empty() const {
-      return all_of(Scores, [](unsigned K) { return K == 0; }) && !VMEMTypes;
-    }
+    bool empty() const { return all_of(Scores, equal_to(0)) && !VMEMTypes; }
   };
 
   struct SGPRInfo {
@@ -1445,23 +1450,6 @@ void WaitcntBrackets::applyWaitcnt(InstCounterType T, unsigned Count) {
   }
 }
 
-bool WaitcntBrackets::hasRedundantXCntWithKmCnt(
-    const AMDGPU::Waitcnt &Wait) const {
-  // Wait on XCNT is redundant if we are already waiting for a load to complete.
-  // SMEM can return out of order, so only omit XCNT wait if we are waiting till
-  // zero.
-  return Wait.KmCnt == 0 && hasPendingEvent(SMEM_GROUP);
-}
-
-bool WaitcntBrackets::canOptimizeXCntWithLoadCnt(
-    const AMDGPU::Waitcnt &Wait) const {
-  // If we have pending store we cannot optimize XCnt because we do not wait for
-  // stores. VMEM loads retun in order, so if we only have loads XCnt is
-  // decremented to the same number as LOADCnt.
-  return Wait.LoadCnt != ~0u && hasPendingEvent(VMEM_GROUP) &&
-         !hasPendingEvent(STORE_CNT);
-}
-
 void WaitcntBrackets::simplifyXcnt(const AMDGPU::Waitcnt &CheckWait,
                                    AMDGPU::Waitcnt &UpdateWait) const {
   // Try to simplify xcnt further by checking for joint kmcnt and loadcnt
@@ -1469,10 +1457,16 @@ void WaitcntBrackets::simplifyXcnt(const AMDGPU::Waitcnt &CheckWait,
   // be pending SMEM and VMEM events active at the same time.
   // In such cases, only clear one active event at a time.
   // TODO: Revisit xcnt optimizations for gfx1250.
-  if (hasRedundantXCntWithKmCnt(CheckWait))
+  // Wait on XCNT is redundant if we are already waiting for a load to complete.
+  // SMEM can return out of order, so only omit XCNT wait if we are waiting till
+  // zero.
+  if (CheckWait.KmCnt == 0 && hasPendingEvent(SMEM_GROUP))
     UpdateWait.XCnt = ~0u;
-  if (canOptimizeXCntWithLoadCnt(CheckWait) &&
-      CheckWait.XCnt >= CheckWait.LoadCnt)
+  // If we have pending store we cannot optimize XCnt because we do not wait for
+  // stores. VMEM loads retun in order, so if we only have loads XCnt is
+  // decremented to the same number as LOADCnt.
+  if (CheckWait.LoadCnt != ~0u && hasPendingEvent(VMEM_GROUP) &&
+      !hasPendingEvent(STORE_CNT) && CheckWait.XCnt >= CheckWait.LoadCnt)
     UpdateWait.XCnt = ~0u;
   simplifyWaitcnt(X_CNT, UpdateWait.XCnt);
 }
@@ -1581,7 +1575,7 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
 
   LLVM_DEBUG({
     dbgs() << "PreGFX12::applyPreexistingWaitcnt at: ";
-    if (It == OldWaitcntInstr.getParent()->instr_end())
+    if (It.isEnd())
       dbgs() << "end of block\n";
     else
       dbgs() << *It;
@@ -1657,13 +1651,12 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
     Wait.ExpCnt = ~0u;
     Wait.DsCnt = ~0u;
 
-    LLVM_DEBUG(It == WaitcntInstr->getParent()->end()
-                   ? dbgs()
-                         << "applied pre-existing waitcnt\n"
-                         << "New Instr at block end: " << *WaitcntInstr << '\n'
-                   : dbgs() << "applied pre-existing waitcnt\n"
-                            << "Old Instr: " << *It
-                            << "New Instr: " << *WaitcntInstr << '\n');
+    LLVM_DEBUG(It.isEnd() ? dbgs() << "applied pre-existing waitcnt\n"
+                                   << "New Instr at block end: "
+                                   << *WaitcntInstr << '\n'
+                          : dbgs() << "applied pre-existing waitcnt\n"
+                                   << "Old Instr: " << *It
+                                   << "New Instr: " << *WaitcntInstr << '\n');
   }
 
   if (WaitcntVsCntInstr) {
@@ -1674,7 +1667,7 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
     ScoreBrackets.applyWaitcnt(STORE_CNT, Wait.StoreCnt);
     Wait.StoreCnt = ~0u;
 
-    LLVM_DEBUG(It == WaitcntVsCntInstr->getParent()->end()
+    LLVM_DEBUG(It.isEnd()
                    ? dbgs() << "applied pre-existing waitcnt\n"
                             << "New Instr at block end: " << *WaitcntVsCntInstr
                             << '\n'
@@ -1828,7 +1821,7 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
 
   LLVM_DEBUG({
     dbgs() << "GFX12Plus::applyPreexistingWaitcnt at: ";
-    if (It == OldWaitcntInstr.getParent()->instr_end())
+    if (It.isEnd())
       dbgs() << "end of block\n";
     else
       dbgs() << *It;
@@ -1956,13 +1949,12 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       Wait.LoadCnt = ~0u;
       Wait.DsCnt = ~0u;
 
-      LLVM_DEBUG(It == OldWaitcntInstr.getParent()->end()
-                     ? dbgs() << "applied pre-existing waitcnt\n"
-                              << "New Instr at block end: "
-                              << *CombinedLoadDsCntInstr << '\n'
-                     : dbgs() << "applied pre-existing waitcnt\n"
-                              << "Old Instr: " << *It << "New Instr: "
-                              << *CombinedLoadDsCntInstr << '\n');
+      LLVM_DEBUG(It.isEnd() ? dbgs() << "applied pre-existing waitcnt\n"
+                                     << "New Instr at block end: "
+                                     << *CombinedLoadDsCntInstr << '\n'
+                            : dbgs() << "applied pre-existing waitcnt\n"
+                                     << "Old Instr: " << *It << "New Instr: "
+                                     << *CombinedLoadDsCntInstr << '\n');
     } else {
       CombinedLoadDsCntInstr->eraseFromParent();
       Modified = true;
@@ -1981,13 +1973,12 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       Wait.StoreCnt = ~0u;
       Wait.DsCnt = ~0u;
 
-      LLVM_DEBUG(It == OldWaitcntInstr.getParent()->end()
-                     ? dbgs() << "applied pre-existing waitcnt\n"
-                              << "New Instr at block end: "
-                              << *CombinedStoreDsCntInstr << '\n'
-                     : dbgs() << "applied pre-existing waitcnt\n"
-                              << "Old Instr: " << *It << "New Instr: "
-                              << *CombinedStoreDsCntInstr << '\n');
+      LLVM_DEBUG(It.isEnd() ? dbgs() << "applied pre-existing waitcnt\n"
+                                     << "New Instr at block end: "
+                                     << *CombinedStoreDsCntInstr << '\n'
+                            : dbgs() << "applied pre-existing waitcnt\n"
+                                     << "Old Instr: " << *It << "New Instr: "
+                                     << *CombinedStoreDsCntInstr << '\n');
     } else {
       CombinedStoreDsCntInstr->eraseFromParent();
       Modified = true;
@@ -2040,7 +2031,7 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       ScoreBrackets.applyWaitcnt(CT, NewCnt);
       setNoWait(Wait, CT);
 
-      LLVM_DEBUG(It == OldWaitcntInstr.getParent()->end()
+      LLVM_DEBUG(It.isEnd()
                      ? dbgs() << "applied pre-existing waitcnt\n"
                               << "New Instr at block end: " << *WaitInstrs[CT]
                               << '\n'
@@ -2073,13 +2064,12 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
     if (Enc != (unsigned)AMDGPU::DepCtr::getDefaultDepCtrEncoding(*ST)) {
       Modified |= updateOperandIfDifferent(*WaitcntDepctrInstr,
                                            AMDGPU::OpName::simm16, Enc);
-      LLVM_DEBUG(It == OldWaitcntInstr.getParent()->end()
-                     ? dbgs() << "applyPreexistingWaitcnt\n"
-                              << "New Instr at block end: "
-                              << *WaitcntDepctrInstr << '\n'
-                     : dbgs() << "applyPreexistingWaitcnt\n"
-                              << "Old Instr: " << *It
-                              << "New Instr: " << *WaitcntDepctrInstr << '\n');
+      LLVM_DEBUG(It.isEnd() ? dbgs() << "applyPreexistingWaitcnt\n"
+                                     << "New Instr at block end: "
+                                     << *WaitcntDepctrInstr << '\n'
+                            : dbgs() << "applyPreexistingWaitcnt\n"
+                                     << "Old Instr: " << *It << "New Instr: "
+                                     << *WaitcntDepctrInstr << '\n');
     } else {
       WaitcntDepctrInstr->eraseFromParent();
       Modified = true;
@@ -2220,12 +2210,12 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
 ///  and if so what the value of each counter is.
 ///  The "score bracket" is bound by the lower bound and upper bound
 ///  scores (*_score_LB and *_score_ub respectively).
-///  If FlushVmCnt is true, that means that we want to generate a s_waitcnt to
-///  flush the vmcnt counter here.
-bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
-                                                 WaitcntBrackets &ScoreBrackets,
-                                                 MachineInstr *OldWaitcntInstr,
-                                                 bool FlushVmCnt) {
+///  If FlushFlags.FlushVmCnt is true, we want to flush the vmcnt counter here.
+///  If FlushFlags.FlushDsCnt is true, we want to flush the dscnt counter here
+///  (GFX12+ only, where DS_CNT is a separate counter).
+bool SIInsertWaitcnts::generateWaitcntInstBefore(
+    MachineInstr &MI, WaitcntBrackets &ScoreBrackets,
+    MachineInstr *OldWaitcntInstr, PreheaderFlushFlags FlushFlags) {
   setForceEmitWaitcnt();
 
   assert(!MI.isMetaInstruction());
@@ -2507,7 +2497,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
       Wait.VmVsrc = 0;
   }
 
-  if (FlushVmCnt) {
+  if (FlushFlags.FlushVmCnt) {
     if (ScoreBrackets.hasPendingEvent(LOAD_CNT))
       Wait.LoadCnt = 0;
     if (ScoreBrackets.hasPendingEvent(SAMPLE_CNT))
@@ -2515,6 +2505,9 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
     if (ScoreBrackets.hasPendingEvent(BVH_CNT))
       Wait.BvhCnt = 0;
   }
+
+  if (FlushFlags.FlushDsCnt && ScoreBrackets.hasPendingEvent(DS_CNT))
+    Wait.DsCnt = 0;
 
   if (ForceEmitZeroLoadFlag && Wait.LoadCnt != ~0u)
     Wait.LoadCnt = 0;
@@ -2935,12 +2928,13 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
       continue;
     }
 
-    bool FlushVmCnt = Block.getFirstTerminator() == Inst &&
-                      isPreheaderToFlush(Block, ScoreBrackets);
+    PreheaderFlushFlags FlushFlags;
+    if (Block.getFirstTerminator() == Inst)
+      FlushFlags = isPreheaderToFlush(Block, ScoreBrackets);
 
     // Generate an s_waitcnt instruction to be placed before Inst, if needed.
     Modified |= generateWaitcntInstBefore(Inst, ScoreBrackets, OldWaitcntInstr,
-                                          FlushVmCnt);
+                                          FlushFlags);
     OldWaitcntInstr = nullptr;
 
     // Restore vccz if it's not known to be correct already.
@@ -3014,17 +3008,21 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     ++Iter;
   }
 
-  // Flush the LOADcnt, SAMPLEcnt and BVHcnt counters at the end of the block if
-  // needed.
+  // Flush counters at the end of the block if needed (for preheaders with no
+  // terminator).
   AMDGPU::Waitcnt Wait;
-  if (Block.getFirstTerminator() == Block.end() &&
-      isPreheaderToFlush(Block, ScoreBrackets)) {
-    if (ScoreBrackets.hasPendingEvent(LOAD_CNT))
-      Wait.LoadCnt = 0;
-    if (ScoreBrackets.hasPendingEvent(SAMPLE_CNT))
-      Wait.SampleCnt = 0;
-    if (ScoreBrackets.hasPendingEvent(BVH_CNT))
-      Wait.BvhCnt = 0;
+  if (Block.getFirstTerminator() == Block.end()) {
+    PreheaderFlushFlags FlushFlags = isPreheaderToFlush(Block, ScoreBrackets);
+    if (FlushFlags.FlushVmCnt) {
+      if (ScoreBrackets.hasPendingEvent(LOAD_CNT))
+        Wait.LoadCnt = 0;
+      if (ScoreBrackets.hasPendingEvent(SAMPLE_CNT))
+        Wait.SampleCnt = 0;
+      if (ScoreBrackets.hasPendingEvent(BVH_CNT))
+        Wait.BvhCnt = 0;
+    }
+    if (FlushFlags.FlushDsCnt && ScoreBrackets.hasPendingEvent(DS_CNT))
+      Wait.DsCnt = 0;
   }
 
   // Combine or remove any redundant waitcnts at the end of the block.
@@ -3040,29 +3038,29 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
   return Modified;
 }
 
-// Return true if the given machine basic block is a preheader of a loop in
-// which we want to flush the vmcnt counter, and false otherwise.
-bool SIInsertWaitcnts::isPreheaderToFlush(
-    MachineBasicBlock &MBB, const WaitcntBrackets &ScoreBrackets) {
-  auto [Iterator, IsInserted] = PreheadersToFlush.try_emplace(&MBB, false);
+// Return flags indicating which counters should be flushed in the preheader.
+PreheaderFlushFlags
+SIInsertWaitcnts::isPreheaderToFlush(MachineBasicBlock &MBB,
+                                     const WaitcntBrackets &ScoreBrackets) {
+  auto [Iterator, IsInserted] =
+      PreheadersToFlush.try_emplace(&MBB, PreheaderFlushFlags());
   if (!IsInserted)
     return Iterator->second;
 
   MachineBasicBlock *Succ = MBB.getSingleSuccessor();
   if (!Succ)
-    return false;
+    return PreheaderFlushFlags();
 
   MachineLoop *Loop = MLI->getLoopFor(Succ);
   if (!Loop)
-    return false;
+    return PreheaderFlushFlags();
 
-  if (Loop->getLoopPreheader() == &MBB &&
-      shouldFlushVmCnt(Loop, ScoreBrackets)) {
-    Iterator->second = true;
-    return true;
+  if (Loop->getLoopPreheader() == &MBB) {
+    Iterator->second = getPreheaderFlushFlags(Loop, ScoreBrackets);
+    return Iterator->second;
   }
 
-  return false;
+  return PreheaderFlushFlags();
 }
 
 bool SIInsertWaitcnts::isVMEMOrFlatVMEM(const MachineInstr &MI) const {
@@ -3071,51 +3069,104 @@ bool SIInsertWaitcnts::isVMEMOrFlatVMEM(const MachineInstr &MI) const {
   return SIInstrInfo::isVMEM(MI);
 }
 
-// Return true if it is better to flush the vmcnt counter in the preheader of
-// the given loop. We currently decide to flush in two situations:
+bool SIInsertWaitcnts::isDSRead(const MachineInstr &MI) const {
+  return SIInstrInfo::isDS(MI) && MI.mayLoad() && !MI.mayStore();
+}
+
+// Check if instruction is a store to LDS that is counted via DSCNT
+// (where that counter exists).
+bool SIInsertWaitcnts::mayStoreIncrementingDSCNT(const MachineInstr &MI) const {
+  if (!MI.mayStore())
+    return false;
+  if (SIInstrInfo::isDS(MI))
+    return true;
+  return false;
+}
+
+// Return flags indicating which counters should be flushed in the preheader of
+// the given loop. We currently decide to flush in a few situations:
+// For VMEM (FlushVmCnt):
 // 1. The loop contains vmem store(s), no vmem load and at least one use of a
 //    vgpr containing a value that is loaded outside of the loop. (Only on
 //    targets with no vscnt counter).
 // 2. The loop contains vmem load(s), but the loaded values are not used in the
 //    loop, and at least one use of a vgpr containing a value that is loaded
 //    outside of the loop.
-bool SIInsertWaitcnts::shouldFlushVmCnt(MachineLoop *ML,
-                                        const WaitcntBrackets &Brackets) {
+// For DS (FlushDsCnt, GFX12+ only):
+// 3. The loop contains no DS reads, and at least one use of a vgpr containing
+//    a value that is DS loaded outside of the loop.
+// 4. The loop contains DS read(s), loaded values are not used in the same
+//    iteration but in the next iteration (prefetch pattern), and at least one
+//    use of a vgpr containing a value that is DS loaded outside of the loop.
+//    Flushing in preheader reduces wait overhead if the wait requirement in
+//    iteration 1 would otherwise be more strict.
+PreheaderFlushFlags
+SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
+                                         const WaitcntBrackets &Brackets) {
+  PreheaderFlushFlags Flags;
   bool HasVMemLoad = false;
   bool HasVMemStore = false;
-  bool UsesVgprLoadedOutside = false;
+  bool SeenDSStoreInLoop = false;
+  bool UsesVgprLoadedOutsideVMEM = false;
+  bool UsesVgprLoadedOutsideDS = false;
+  bool VMemInvalidated = false;
+  // DS optimization only applies to GFX12+ where DS_CNT is separate.
+  bool DSInvalidated = !ST->hasExtendedWaitCounts();
   DenseSet<MCRegUnit> VgprUse;
-  DenseSet<MCRegUnit> VgprDef;
+  DenseSet<MCRegUnit> VgprDefVMEM;
+  DenseSet<MCRegUnit> VgprDefDS;
 
   for (MachineBasicBlock *MBB : ML->blocks()) {
+    bool SeenDSStoreInCurrMBB = false;
     for (MachineInstr &MI : *MBB) {
       if (isVMEMOrFlatVMEM(MI)) {
         HasVMemLoad |= MI.mayLoad();
         HasVMemStore |= MI.mayStore();
       }
-
+      if (mayStoreIncrementingDSCNT(MI))
+        SeenDSStoreInCurrMBB = true;
+      // Stores postdominated by a barrier will have a wait at the barrier
+      // and thus no need to be waited at the loop header. Barrier found
+      // later in the same MBB during in-order traversal is used here as a
+      // cheaper alternative to postdomination check.
+      if (MI.getOpcode() == AMDGPU::S_BARRIER)
+        SeenDSStoreInCurrMBB = false;
       for (const MachineOperand &Op : MI.all_uses()) {
         if (Op.isDebug() || !TRI->isVectorRegister(*MRI, Op.getReg()))
           continue;
         // Vgpr use
         for (MCRegUnit RU : TRI->regunits(Op.getReg().asMCReg())) {
           // If we find a register that is loaded inside the loop, 1. and 2.
-          // are invalidated and we can exit.
-          if (VgprDef.contains(RU))
-            return false;
+          // are invalidated.
+          if (VgprDefVMEM.contains(RU))
+            VMemInvalidated = true;
+
+          // Check for DS loads used inside the loop
+          if (VgprDefDS.contains(RU))
+            DSInvalidated = true;
+
+          // Early exit if both optimizations are invalidated
+          if (VMemInvalidated && DSInvalidated)
+            return Flags;
+
           VgprUse.insert(RU);
-          // If at least one of Op's registers is in the score brackets, the
-          // value is likely loaded outside of the loop.
+          // Check if this register has a pending VMEM load from outside the
+          // loop (value loaded outside and used inside).
           VMEMID ID = toVMEMID(RU);
-          if (Brackets.getVMemScore(ID, LOAD_CNT) >
+          bool HasPendingVMEM =
+              Brackets.getVMemScore(ID, LOAD_CNT) >
                   Brackets.getScoreLB(LOAD_CNT) ||
               Brackets.getVMemScore(ID, SAMPLE_CNT) >
                   Brackets.getScoreLB(SAMPLE_CNT) ||
-              Brackets.getVMemScore(ID, BVH_CNT) >
-                  Brackets.getScoreLB(BVH_CNT)) {
-            UsesVgprLoadedOutside = true;
-            break;
-          }
+              Brackets.getVMemScore(ID, BVH_CNT) > Brackets.getScoreLB(BVH_CNT);
+          if (HasPendingVMEM)
+            UsesVgprLoadedOutsideVMEM = true;
+          // Check if loaded outside the loop via DS (not VMEM/FLAT).
+          // Only consider it a DS load if there's no pending VMEM load for
+          // this register, since FLAT can set both counters.
+          if (!HasPendingVMEM &&
+              Brackets.getVMemScore(ID, DS_CNT) > Brackets.getScoreLB(DS_CNT))
+            UsesVgprLoadedOutsideDS = true;
         }
       }
 
@@ -3124,18 +3175,51 @@ bool SIInsertWaitcnts::shouldFlushVmCnt(MachineLoop *ML,
         for (const MachineOperand &Op : MI.all_defs()) {
           for (MCRegUnit RU : TRI->regunits(Op.getReg().asMCReg())) {
             // If we find a register that is loaded inside the loop, 1. and 2.
-            // are invalidated and we can exit.
+            // are invalidated.
             if (VgprUse.contains(RU))
-              return false;
-            VgprDef.insert(RU);
+              VMemInvalidated = true;
+            VgprDefVMEM.insert(RU);
+          }
+        }
+        // Early exit if both optimizations are invalidated
+        if (VMemInvalidated && DSInvalidated)
+          return Flags;
+      }
+
+      // DS read vgpr def
+      // Note: Unlike VMEM, we DON'T invalidate when VgprUse.contains(RegNo).
+      // If USE comes before DEF, it's the prefetch pattern (use value from
+      // previous iteration, load for next iteration). We should still flush
+      // in preheader so iteration 1 doesn't need to wait inside the loop.
+      // Only invalidate when DEF comes before USE (same-iteration consumption,
+      // checked above when processing uses).
+      if (isDSRead(MI)) {
+        for (const MachineOperand &Op : MI.all_defs()) {
+          for (MCRegUnit RU : TRI->regunits(Op.getReg().asMCReg())) {
+            VgprDefDS.insert(RU);
           }
         }
       }
     }
+    // Accumulate unprotected DS stores from this MBB
+    SeenDSStoreInLoop |= SeenDSStoreInCurrMBB;
   }
-  if (!ST->hasVscnt() && HasVMemStore && !HasVMemLoad && UsesVgprLoadedOutside)
-    return true;
-  return HasVMemLoad && UsesVgprLoadedOutside && ST->hasVmemWriteVgprInOrder();
+
+  // VMEM flush decision
+  if (!VMemInvalidated && UsesVgprLoadedOutsideVMEM &&
+      ((!ST->hasVscnt() && HasVMemStore && !HasVMemLoad) ||
+       (HasVMemLoad && ST->hasVmemWriteVgprInOrder())))
+    Flags.FlushVmCnt = true;
+
+  // DS flush decision: flush if loop uses DS-loaded values from outside
+  // and either has no DS reads in the loop, or DS reads whose results
+  // are not used in the loop.
+  // DSInvalidated is pre-set to true on non-GFX12+ targets where DS_CNT
+  // is LGKM_CNT which also tracks FLAT/SMEM.
+  if (!DSInvalidated && !SeenDSStoreInLoop && UsesVgprLoadedOutsideDS)
+    Flags.FlushDsCnt = true;
+
+  return Flags;
 }
 
 bool SIInsertWaitcntsLegacy::runOnMachineFunction(MachineFunction &MF) {
