@@ -607,7 +607,6 @@ set(files
   __memory/unique_temporary_buffer.h
   __memory/uses_allocator.h
   __memory/uses_allocator_construction.h
-  __memory/valid_range.h
   __memory_resource/memory_resource.h
   __memory_resource/monotonic_buffer_resource.h
   __memory_resource/polymorphic_allocator.h
@@ -932,6 +931,7 @@ set(files
   __utility/in_place.h
   __utility/integer_sequence.h
   __utility/is_pointer_in_range.h
+  __utility/is_valid_range.h
   __utility/lazy_synth_three_way_comparator.h
   __utility/move.h
   __utility/no_destroy.h
