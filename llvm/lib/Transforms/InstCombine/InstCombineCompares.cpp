@@ -4301,6 +4301,40 @@ Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
                             II->getArgOperand(1));
     }
     break;
+  case Intrinsic::abs: {
+    if (!Cmp.getOperand(0)->hasOneUse())
+      return nullptr;
+
+    Value *X = II->getArgOperand(0);
+    APInt IntMinIsPoison =
+        dyn_cast<ConstantInt>(II->getArgOperand(1))->getValue();
+
+    // abs(X) u> K --> K >= 0 ? `X + K u> 2 * K` : `false`
+    if (Pred == CmpInst::ICMP_UGT) {
+      if (C.isNegative()) {
+        Cmp.replaceAllUsesWith(ConstantInt::getFalse(Ty));
+        return nullptr;
+      }
+
+      return new ICmpInst(ICmpInst::ICMP_UGT,
+                          Builder.CreateAdd(X, ConstantInt::get(Ty, C)),
+                          ConstantInt::get(Ty, 2 * C));
+    }
+
+    // abs(X) u< K --> K >= 1 ? `X + (K - 1) u<= 2 * (K - 1)` : K != 0
+    if (Pred == CmpInst::ICMP_ULT) {
+      if (C.slt(1)) {
+        Cmp.replaceAllUsesWith(ConstantInt::getBool(Ty, !C.isZero()));
+        return nullptr;
+      }
+
+      return new ICmpInst(ICmpInst::ICMP_ULE,
+                          Builder.CreateAdd(X, ConstantInt::get(Ty, C - 1)),
+                          ConstantInt::get(Ty, 2 * (C - 1)));
+    }
+
+    break;
+  }
   default:
     break;
   }
