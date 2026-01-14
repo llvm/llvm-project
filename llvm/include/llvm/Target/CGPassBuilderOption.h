@@ -76,6 +76,7 @@ struct CGPassBuilderOption {
   bool DisableCFIFixup = false;
   bool PrintAfterISel = false;
   bool PrintISelInput = false;
+  bool PrintRegUsage = false;
   bool RequiresCodeGenSCCOrder = false;
 
   RunOutliner EnableMachineOutliner = RunOutliner::TargetDefault;

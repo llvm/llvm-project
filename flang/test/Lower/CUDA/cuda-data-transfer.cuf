@@ -588,3 +588,19 @@ end subroutine
 ! CHECK: %{{.*}} = cuf.alloc !fir.type<_QMmod1Tt3{spheres:!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMmod1Ts{c:!fir.array<3xf32>}>>>>}> {bindc_name = "t", data_attr = #cuf.cuda<managed>, uniq_name = "_QFsub30Et"} -> !fir.ref<!fir.type<_QMmod1Tt3{spheres:!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMmod1Ts{c:!fir.array<3xf32>}>>>>}>>
 ! CHECK: hlfir.assign 
 ! CHECK-NOT: cuf.data_transfer
+
+! Test that assigment with only managed variables on both rhs and lhs is done
+! on the host.
+
+subroutine sub31()
+  type :: t30
+    real, managed, allocatable :: q(:)
+  end type
+  type(t30), managed, allocatable :: x(:)
+  x(4)%q = x(3)%q
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub31()
+! CHECK: cuf.alloc !fir.box<!fir.heap<!fir.array<?x!fir.type<_QFsub31Tt30{q:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>>> 
+! CHECK: hlfir.assign 
+! CHECK-NOT: cuf.data_transfer

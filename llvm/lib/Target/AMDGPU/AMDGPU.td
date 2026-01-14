@@ -495,6 +495,12 @@ def FeatureCvtPkF16F32Inst : SubtargetFeature<"cvt-pk-f16-f32-inst",
   "Has cvt_pk_f16_f32 instruction"
 >;
 
+def FeatureMcastLoadInsts : SubtargetFeature<"mcast-load-insts",
+  "HasMcastLoadInsts",
+  "true",
+  "Has multicast load instructions"
+>;
+
 def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
   "GFX950Insts",
   "true",
@@ -1262,6 +1268,12 @@ def Feature1024AddressableVGPRs : SubtargetFeature<"1024-addressable-vgprs",
   "Has1024AddressableVGPRs",
   "true",
   "Has 1024 addressable VGPRs"
+>;
+
+def FeatureSetregVGPRMSBFixup : SubtargetFeature<"setreg-vgpr-msb-fixup",
+  "HasSetregVGPRMSBFixup",
+  "true",
+  "S_SETREG to MODE clobbers VGPR MSB bits, requires fixup"
 >;
 
 def FeatureWaitXcnt : SubtargetFeature<"wait-xcnt",
@@ -2218,12 +2230,14 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureQsadInsts,
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
-   FeatureCvtPkNormVOP3Insts
+   FeatureCvtPkNormVOP3Insts,
+   FeatureMcastLoadInsts
 ]>;
 
 def FeatureISAVersion12_50 : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
-  [FeatureAddressableLocalMemorySize327680])>;
+  [FeatureAddressableLocalMemorySize327680,
+   FeatureSetregVGPRMSBFixup])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
@@ -3024,6 +3038,9 @@ def Has64BitLiterals : Predicate<"Subtarget->has64BitLiterals()">,
 
 def Has1024AddressableVGPRs : Predicate<"Subtarget->has1024AddressableVGPRs()">,
   AssemblerPredicate<(all_of Feature1024AddressableVGPRs)>;
+
+def HasMcastLoadInsts : Predicate<"Subtarget->hasMcastLoadInsts()">,
+  AssemblerPredicate<(all_of FeatureMcastLoadInsts)>;
 
 def HasWaitXcnt : Predicate<"Subtarget->hasWaitXcnt()">,
   AssemblerPredicate<(all_of FeatureWaitXcnt)>;
