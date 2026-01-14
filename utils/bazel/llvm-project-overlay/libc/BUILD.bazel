@@ -4821,7 +4821,6 @@ libc_math_function(
     name = "logf16",
     additional_deps = [
         ":__support_math_logf16",
-        ":errno",
     ],
 )
 
