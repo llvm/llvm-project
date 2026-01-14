@@ -28,6 +28,16 @@ add_flang_library(FIRTransforms
   DebugTypeGenerator.cpp
   ExternalNameConversion.cpp
   FIRToSCF.cpp
+  FIRToMemRef.cpp
+  MemoryUtils.cpp
+  MemoryAllocation.cpp
+  StackArrays.cpp
+  MemRefDataFlowOpt.cpp
+  SimplifyRegionLite.cpp
+  AlgebraicSimplification.cpp
+  SimplifyIntrinsics.cpp
+  AddDebugInfo.cpp
+  PolymorphicOpConversion.cpp
   FunctionAttr.cpp
   GenRuntimeCallsForTest.cpp
   LoopInvariantCodeMotion.cpp

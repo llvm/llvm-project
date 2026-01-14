@@ -215,6 +215,15 @@ def MemRefDataFlowOpt : Pass<"fir-memref-dataflow-opt", "::mlir::func::FuncOp"> 
   ];
 }
 
+def FIRToMemRef : Pass<"fir-to-memref", "::mlir::func::FuncOp"> {
+  let summary = "Convert FIR memory operations to MemRef dialect";
+  let description = [{
+    Lower FIR memory operations (`fir.alloca`, `fir.load`, `fir.store`, 'fir.array_coor', and etc.) to MLIR's MemRef core dialect.
+  }];
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::arith::ArithDialect",
+                           "mlir::memref::MemRefDialect"];
+}
+
 // This needs to be a "mlir::ModuleOp" pass, because we are creating debug for
 // the module in this pass.
 def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
