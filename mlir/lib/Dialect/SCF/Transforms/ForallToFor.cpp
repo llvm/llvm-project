@@ -30,6 +30,12 @@ mlir::scf::forallToForLoop(RewriterBase &rewriter, scf::ForallOp forallOp,
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(forallOp);
 
+  if (!forallOp.getOutputs().empty()) {
+    forallOp.emitWarning()
+        << "skipping scf.forall with outputs, currently not supported";
+    return success();
+  }
+
   Location loc = forallOp.getLoc();
   SmallVector<Value> lbs = forallOp.getLowerBound(rewriter);
   SmallVector<Value> ubs = forallOp.getUpperBound(rewriter);
