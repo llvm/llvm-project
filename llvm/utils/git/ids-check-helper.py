@@ -140,14 +140,14 @@ View the diff from {self.name} here.
                 "llvm/include/llvm/Demangle/",
             ],
             "export_macro": "LLVM_ABI",
-            "include_header": "llvm/include/llvm/Support/Compiler.h",
+            "include_header": "llvm/Support/Compiler.h",
         },
         {
             "name": "LLVM-C headers",
             "patterns": ["llvm/include/llvm-c/**/*.h"],
             "excludes": [],
             "export_macro": "LLVM_C_ABI",
-            "include_header": "llvm/include/llvm-c/Visibility.h",
+            "include_header": "llvm-c/Visibility.h",
         },
         {
             "name": "LLVM Demangle headers",

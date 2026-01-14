@@ -94,7 +94,7 @@ static const unsigned ZvfbfaOps[] = {
     ISD::FNEG,        ISD::FABS,        ISD::FCOPYSIGN, ISD::FADD,
     ISD::FSUB,        ISD::FMUL,        ISD::FMINNUM,   ISD::FMAXNUM,
     ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM, ISD::FMINIMUM,  ISD::FMAXIMUM,
-    ISD::FMA};
+    ISD::FMA,         ISD::IS_FPCLASS};
 
 RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                                          const RISCVSubtarget &STI)
@@ -556,6 +556,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                        VTs, Expand);
     setOperationAction({ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX}, VTs,
                        Legal);
+    setOperationAction(ISD::SELECT, VTs, Custom);
+    setOperationAction(ISD::SELECT_CC, VTs, Expand);
     setOperationAction(ISD::SETCC, VTs, Legal);
     setCondCodeAction({ISD::SETNE, ISD::SETGT, ISD::SETGE, ISD::SETUGT,
                        ISD::SETUGE, ISD::SETULE, ISD::SETLE},
@@ -1140,7 +1142,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                                                 ISD::FROUNDEVEN,
                                                 ISD::FRINT,
                                                 ISD::FNEARBYINT,
-                                                ISD::IS_FPCLASS,
                                                 ISD::SETCC,
                                                 ISD::STRICT_FADD,
                                                 ISD::STRICT_FSUB,
@@ -1341,6 +1342,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           {ISD::FMINNUM, ISD::FMAXNUM, ISD::FMAXIMUMNUM, ISD::FMINIMUMNUM}, VT,
           Legal);
       setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, VT, Custom);
+      setOperationAction(ISD::IS_FPCLASS, VT, Custom);
       setOperationAction(ISD::EXPERIMENTAL_VP_SPLICE, VT, Custom);
       setOperationAction(ISD::EXPERIMENTAL_VP_REVERSE, VT, Custom);
 
@@ -9702,6 +9704,16 @@ foldBinOpIntoSelectIfProfitable(SDNode *BO, SelectionDAG &DAG,
   return DAG.getSelect(DL, VT, Sel.getOperand(0), NewT, NewF);
 }
 
+// Returns true if VT is a P extension packed SIMD type that fits in XLen.
+static bool isPExtPackedType(MVT VT, const RISCVSubtarget &Subtarget) {
+  if (!Subtarget.enablePExtSIMDCodeGen())
+    return false;
+
+  if (Subtarget.is64Bit())
+    return VT == MVT::v8i8 || VT == MVT::v4i16 || VT == MVT::v2i32;
+  return VT == MVT::v4i8 || VT == MVT::v2i16;
+}
+
 SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   SDValue CondV = Op.getOperand(0);
   SDValue TrueV = Op.getOperand(1);
@@ -9709,6 +9721,18 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   MVT VT = Op.getSimpleValueType();
   MVT XLenVT = Subtarget.getXLenVT();
+
+  // Handle P extension packed types by bitcasting to XLenVT for selection,
+  // e.g. select i1 %cond, <2 x i16> %TrueV, <2 x i16> %FalseV
+  // These types fit in a single GPR so can use the same selection mechanism
+  // as scalars.
+  if (isPExtPackedType(VT, Subtarget)) {
+    SDValue TrueVInt = DAG.getBitcast(XLenVT, TrueV);
+    SDValue FalseVInt = DAG.getBitcast(XLenVT, FalseV);
+    SDValue ResultInt =
+        DAG.getNode(ISD::SELECT, DL, XLenVT, CondV, TrueVInt, FalseVInt);
+    return DAG.getBitcast(VT, ResultInt);
+  }
 
   // Lower vector SELECTs to VSELECTs by splatting the condition.
   if (VT.isVector()) {

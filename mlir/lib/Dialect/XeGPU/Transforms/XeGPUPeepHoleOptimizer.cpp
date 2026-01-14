@@ -1,4 +1,4 @@
-//===- XeGPUOptimizeBlockLoads.cpp - XeGPU optimize block loads -*- C++ -*-===//
+//===- XeGPUPeepHoleOptimizer.cpp - XeGPU optimize block loads -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -30,12 +30,12 @@
 
 namespace mlir {
 namespace xegpu {
-#define GEN_PASS_DEF_XEGPUOPTIMIZEBLOCKLOADS
+#define GEN_PASS_DEF_XEGPUPEEPHOLEOPTIMIZER
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h.inc"
 } // namespace xegpu
 } // namespace mlir
 
-#define DEBUG_TYPE "xegpu-optimize-block-loads"
+#define DEBUG_TYPE "xegpu-optimize-peephole"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 
 using namespace mlir;
@@ -416,19 +416,104 @@ public:
   }
 };
 
+/// Performs a reduction over 2 dimensions by decomposing it into two 1D
+/// reductions ordered based on layout to minimize cross-lane communication.
+class MultiRed2dOpPattern
+    : public OpConversionPattern<vector::MultiDimReductionOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(vector::MultiDimReductionOp reductionOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto sourceVecType = reductionOp.getSourceVectorType();
+    if (reductionOp.getReductionDims().size() != 2 ||
+        sourceVecType.getRank() != 2)
+      return rewriter.notifyMatchFailure(
+          reductionOp, "Expected 2D multi reduction of a 2D source");
+    auto resLayout = xegpu::getDistributeLayoutAttr(reductionOp.getResult());
+    // Retrieve and order dims for 1D decomposition (prefer intra-lane first).
+    auto dims = llvm::to_vector(reductionOp.getReductionDims());
+    auto [intraLaneDim, crossLaneDim] = getReductionDimOrder(dims, resLayout);
+    // Order does not matter
+    if (intraLaneDim == -1 || crossLaneDim == -1) {
+      intraLaneDim = dims[0];
+      crossLaneDim = dims[1];
+    }
+    auto loc = reductionOp.getLoc();
+    auto acc = reductionOp.getAcc();
+
+    // The first reduction's dist attribute does not have the cross lane dim.
+    auto resSliceLayoutAttr = cast<xegpu::SliceAttr>(resLayout);
+    SmallVector<int64_t> dropDims{crossLaneDim};
+    auto intraLaneRedResLayout = resSliceLayoutAttr.dropSliceDims(dropDims);
+
+    SmallVector<int64_t> accShape(sourceVecType.getShape());
+    accShape.erase(accShape.begin() + intraLaneDim);
+    if (acc) {
+      acc = vector::BroadcastOp::create(
+          rewriter, loc,
+          VectorType::get(accShape, sourceVecType.getElementType()), acc);
+      xegpu::setDistributeLayoutAttr(
+          llvm::dyn_cast<OpResult>(acc),
+          cast<xegpu::DistributeLayoutAttr>(intraLaneRedResLayout));
+    }
+    Value intraLaneReduced = vector::MultiDimReductionOp::create(
+        rewriter, loc, reductionOp.getKind(), reductionOp.getSource(), acc,
+        ArrayRef<int64_t>(intraLaneDim));
+    xegpu::setDistributeLayoutAttr(
+        llvm::dyn_cast<OpResult>(intraLaneReduced),
+        cast<xegpu::DistributeLayoutAttr>(intraLaneRedResLayout));
+
+    Value crossLaneReduced = vector::ReductionOp::create(
+        rewriter, loc, reductionOp.getKind(), intraLaneReduced, nullptr);
+    xegpu::setDistributeLayoutAttr(
+        llvm::dyn_cast<OpResult>(crossLaneReduced),
+        cast<xegpu::DistributeLayoutAttr>(resLayout));
+    assert(crossLaneReduced.getType() == reductionOp.getResult().getType() &&
+           "Type mismatch");
+    rewriter.replaceOp(reductionOp, crossLaneReduced);
+    return success();
+  }
+
+private:
+  std::pair<int64_t, int64_t>
+  getReductionDimOrder(ArrayRef<int64_t> reductionDims,
+                       xegpu::DistributeLayoutAttr layout) const {
+    assert(layout.isForSubgroup() && "Must know the lane layout");
+    assert(reductionDims.size() == 2 && "Expected 2D reduction");
+    int64_t intra, cross = -1;
+    xegpu::LayoutAttr layoutAttr = dyn_cast<xegpu::LayoutAttr>(layout);
+    if (auto layoutSliceAttr = dyn_cast<xegpu::SliceAttr>(layout))
+      layoutAttr =
+          dyn_cast<xegpu::LayoutAttr>(layoutSliceAttr.flatten().getParent());
+    assert(layoutAttr);
+    SmallVector<int64_t> laneLayout = layoutAttr.getEffectiveLaneLayoutAsInt();
+
+    assert(laneLayout.size() && "Expected a non-empty layout");
+    // try to pick a dim that does not communicate
+    for (auto dim : reductionDims) {
+      if (laneLayout[dim] == 1)
+        intra = dim;
+      else
+        cross = dim;
+    }
+    return {intra, cross};
+  }
+};
+
 } // namespace
 
-void xegpu::populateXeGPUOptimizeBlockLoadsPatterns(
+void xegpu::populateXeGPUPeepHoleOptimizerPatterns(
     RewritePatternSet &patterns) {
   patterns.add<XeGPUCreateNdDescOpPattern, XeGPULoadNdDescOpPattern,
-               VectorExtractOpPattern>(patterns.getContext());
+               VectorExtractOpPattern, MultiRed2dOpPattern>(
+      patterns.getContext());
 }
 
 namespace {
 
-struct XeGPUOptimizeBlockLoadsPass final
-    : public xegpu::impl::XeGPUOptimizeBlockLoadsBase<
-          XeGPUOptimizeBlockLoadsPass> {
+struct XeGPUPeepHoleOptimizerPass final
+    : public xegpu::impl::XeGPUPeepHoleOptimizerBase<
+          XeGPUPeepHoleOptimizerPass> {
   void runOnOperation() override {
     MLIRContext &context = getContext();
     TypeConverter converter;
@@ -445,7 +530,7 @@ struct XeGPUOptimizeBlockLoadsPass final
     });
 
     if (!isTargetSupported) {
-      DBGS() << "XeGPUOptimizeBlockLoadsPass only supports PVC and BMG targets."
+      DBGS() << "XeGPUPeepHoleOptimizerPass only supports PVC and BMG targets."
              << "\n";
       return;
     }
@@ -473,13 +558,24 @@ struct XeGPUOptimizeBlockLoadsPass final
           auto laneData = layout.getEffectiveLaneDataAsInt();
           return !canBeOptimizedForTranspose(laneLayout, laneData);
         });
+
+    target.addDynamicallyLegalOp<vector::MultiDimReductionOp>(
+        [=](Operation *op) -> bool {
+          auto layout = xegpu::getDistributeLayoutAttr(op->getResult(0));
+          if (!layout || !layout.isForSubgroup())
+            return true;
+          if (auto reductionOp = dyn_cast<vector::MultiDimReductionOp>(op))
+            return reductionOp.getReductionDims().size() != 2;
+          return true;
+        });
+
     converter.addConversion([](Type type) { return type; });
 
     target.addLegalDialect<arith::ArithDialect, memref::MemRefDialect,
                            vector::VectorDialect>();
     scf::populateSCFStructuralTypeConversionsAndLegality(converter, patterns,
                                                          target);
-    xegpu::populateXeGPUOptimizeBlockLoadsPatterns(patterns);
+    xegpu::populateXeGPUPeepHoleOptimizerPatterns(patterns);
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns)))) {
       DBGS() << "Optimize block loads pass failed.\n";
