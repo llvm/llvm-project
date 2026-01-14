@@ -105,16 +105,19 @@ program test_size
       print *, lbound(assumedRank, dim=2)
       print *, ubound(assumedRank, dim=2)
     end select
-   contains
-    subroutine inner
-      !ERROR: A dim= argument is required for 'size' when the array is assumed-size
-      print *, size(arg)
-      print *, size(arg, dim=1) ! ok
-      !ERROR: A dim= argument is required for 'ubound' when the array is assumed-size
-      print *, ubound(arg)
-      print *, ubound(arg, dim=1) ! ok
-      !ERROR: The 'source=' argument to the intrinsic function 'shape' may not be assumed-size
-      print *, shape(arg)
-    end
-  end subroutine
+  end
+end
+subroutine test2(arg)
+  real, dimension(5, *) :: arg
+ contains
+  subroutine inner
+    !ERROR: A dim= argument is required for 'size' when the array is assumed-size
+    print *, size(arg)
+    print *, size(arg, dim=1) ! ok
+    !ERROR: A dim= argument is required for 'ubound' when the array is assumed-size
+    print *, ubound(arg)
+    print *, ubound(arg, dim=1) ! ok
+    !ERROR: The 'source=' argument to the intrinsic function 'shape' may not be assumed-size
+    print *, shape(arg)
+  end
 end
