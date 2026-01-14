@@ -5595,10 +5595,10 @@ bool AArch64InstructionSelector::selectIndexedLoad(MachineInstr &MI,
     static constexpr unsigned FPROpcodes[] = {
         AArch64::LDRBpre, AArch64::LDRHpre, AArch64::LDRSpre, AArch64::LDRDpre,
         AArch64::LDRQpre};
-    if (RBI.getRegBank(Dst, MRI, TRI)->getID() == AArch64::FPRRegBankID)
-      Opc = FPROpcodes[Log2_32(MemSize)];
-    else
-      Opc = GPROpcodes[Log2_32(MemSize)];
+    Opc = (RBI.getRegBank(Dst, MRI, TRI)->getID() == AArch64::FPRRegBankID)
+              ? FPROpcodes[Log2_32(MemSize)]
+              : GPROpcodes[Log2_32(MemSize)];
+    ;
   } else {
     static constexpr unsigned GPROpcodes[] = {
         AArch64::LDRBBpost, AArch64::LDRHHpost, AArch64::LDRWpost,
@@ -5606,10 +5606,10 @@ bool AArch64InstructionSelector::selectIndexedLoad(MachineInstr &MI,
     static constexpr unsigned FPROpcodes[] = {
         AArch64::LDRBpost, AArch64::LDRHpost, AArch64::LDRSpost,
         AArch64::LDRDpost, AArch64::LDRQpost};
-    if (RBI.getRegBank(Dst, MRI, TRI)->getID() == AArch64::FPRRegBankID)
-      Opc = FPROpcodes[Log2_32(MemSize)];
-    else
-      Opc = GPROpcodes[Log2_32(MemSize)];
+    Opc = (RBI.getRegBank(Dst, MRI, TRI)->getID() == AArch64::FPRRegBankID)
+              ? FPROpcodes[Log2_32(MemSize)]
+              : GPROpcodes[Log2_32(MemSize)];
+    ;
   }
   auto Cst = getIConstantVRegVal(Offset, MRI);
   if (!Cst)
