@@ -224,10 +224,10 @@ bool AArch64SRLTDefineSuperRegs::runOnMachineFunction(MachineFunction &MF) {
       for (Register R : SuperRegs) {
         LLVM_DEBUG(dbgs() << "  " << printReg(R, TRI) << "\n");
         bool IsRenamable = any_of(MI.defs(), [&](const MachineOperand &MO) {
-          return TRI->regsOverlap(MO.getReg(), R) && MO.isRenamable();
+          return MO.isRenamable() && TRI->regsOverlap(MO.getReg(), R);
         });
         bool IsDead = any_of(MI.defs(), [&](const MachineOperand &MO) {
-          return TRI->regsOverlap(MO.getReg(), R) && MO.isDead();
+          return MO.isDead() && TRI->regsOverlap(MO.getReg(), R);
         });
         MachineOperand DefOp = MachineOperand::CreateReg(
             R, /*isDef=*/true, /*isImp=*/true, /*isKill=*/false,
