@@ -299,7 +299,6 @@ define void @ldr_with_off_16mulvl(ptr %ptr) {
 define void @ldr_with_off_var(ptr %base, i32 %off) {
 ; CHECK-LABEL: ldr_with_off_var:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    sxtw x8, w1
 ; CHECK-NEXT:    rdsvl x9, #1
 ; CHECK-NEXT:    add w12, w1, #16
@@ -457,8 +456,9 @@ define void @ldr_with_off_many_var_high(i32 %tile_slice, ptr %ptr, i64 %vnum) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    add w8, w2, #32
 ; CHECK-NEXT:    rdsvl x10, #1
-; CHECK-NEXT:    sxtw x9, w8
+; CHECK-NEXT:    mov w9, w8
 ; CHECK-NEXT:    add w12, w0, w8
+; CHECK-NEXT:    sxtw x9, w9
 ; CHECK-NEXT:    madd x9, x10, x9, x1
 ; CHECK-NEXT:    ldr za[w12, 1], [x9, #1, mul vl]
 ; CHECK-NEXT:    ldr za[w12, 2], [x9, #2, mul vl]
