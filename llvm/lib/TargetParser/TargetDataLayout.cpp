@@ -357,6 +357,9 @@ static std::string computeSystemZDataLayout(const Triple &TT) {
   // Big endian.
   Ret += "E";
 
+  // The natural stack alignment is 64 bits.
+  Ret += "-S64";
+
   // Data mangling.
   Ret += getManglingComponent(TT);
 
