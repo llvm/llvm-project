@@ -4550,7 +4550,7 @@ DiagnosedSilenceableFailure transform::DecomposeWinogradOp::applyToOne(
 /// \returns The first hoistable tensor::ExtractOp found, or nullptr if none
 ///          exists
 static tensor::ExtractOp
-findNextHoistableExtract(linalg::GenericOp &genericOp,
+findNextHoistableExtract(linalg::GenericOp genericOp,
                          SmallVector<AffineExpr> &opIndices,
                          OpBuilder &builder) {
   Block &body = genericOp.getRegion().front();
@@ -4638,8 +4638,8 @@ findNextHoistableExtract(linalg::GenericOp &genericOp,
 }
 
 static linalg::GenericOp
-hoistExtractToArgument(tensor::ExtractOp &hoistedOp, OpBuilder &builder,
-                       linalg::GenericOp &genericOp,
+hoistExtractToArgument(tensor::ExtractOp hoistedOp, OpBuilder &builder,
+                       linalg::GenericOp genericOp,
                        SmallVector<AffineExpr> &opIndices,
                        RewriterBase &rewriter) {
   // Get the source tensor that is being extracted from

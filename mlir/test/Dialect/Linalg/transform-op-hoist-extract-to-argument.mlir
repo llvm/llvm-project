@@ -1,19 +1,22 @@
-// RUN: mlir-opt --transform-interpreter %s 2>&1 | FileCheck %s
+// RUN: mlir-opt --transform-interpreter %s | FileCheck %s
 
 // CHECK-LABEL: func.func @hoist_1dim_simple(
 // CHECK-SAME:    %[[ARG0:.*]]: tensor<4xf32>, %[[ARG1:.*]]: tensor<4xf32>)
 // CHECK:         %[[RES:.*]] = linalg.generic
-// CHECK-SAME:    ins(%[[ARG0]] : tensor<4xf32>)
+// CHECK-SAME:    {indexing_maps = [#map, #map, #map], iterator_types = ["parallel"]}
+// CHECK-SAME:    ins(%[[ARG0]], %[[ARG0]] : tensor<4xf32>, tensor<4xf32>)
 // CHECK-SAME:    outs(%[[ARG1]] : tensor<4xf32>)
-// CHECK:         ^bb0(%[[VAL_IN:.*]]: f32, %[[VAL_OUT:.*]]: f32):
-// CHECK:           linalg.yield %[[VAL_IN]] : f32
+// CHECK:         ^bb0(%[[VAL_IN:.*]]: f32, %[[VAL_IN_0:.*]]: f32, %[[VAL_OUT:.*]]: f32):
+// CHECK:           linalg.yield %[[VAL_IN_0]] : f32
 func.func @hoist_1dim_simple(%arg0: tensor<4xf32>, %arg1: tensor<4xf32>) -> tensor<4xf32> {
   %0 = linalg.generic {
     indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>],
     iterator_types = ["parallel"]
   } ins(%arg0 : tensor<4xf32>) outs(%arg1 : tensor<4xf32>) {
     ^bb0(%in: f32, %out: f32):
-      linalg.yield %in : f32
+      %id0 = linalg.index 0 : index
+      %extracted = tensor.extract %arg0[%id0] : tensor<4xf32>
+      linalg.yield %extracted : f32
   } -> tensor<4xf32>
   return %0 : tensor<4xf32>
 }
