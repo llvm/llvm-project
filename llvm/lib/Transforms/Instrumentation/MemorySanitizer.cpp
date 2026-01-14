@@ -5362,20 +5362,22 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // - <16 x *> is a 2x8 matrix and 8x2 matrix respectively
   //
   // The general shadow propagation approach is:
-  // 1) get the shadows of the input matrices
+  // 1) get the shadows of the input matrices %X and %Y
   // 2) change the shadow values to 0x1 if the corresponding value is fully
   //    initialized, and 0x0 otherwise
-  // 3) perform a matrix multiplication on the shadows. The output will be a 2x2
-  //    matrix, where a value of 0x8 means all the inputs were clean.
+  // 3) perform a matrix multiplication on the shadows of %X and %Y. The output
+  //    will be a 2x2 matrix; for each element, a value of 0x8 means all the
+  //    corresponding inputs were clean.
+  // 4) blend in the shadow of %R
   //
   // TODO: consider allowing multiplication of zero with an uninitialized value
   //       to result in an initialized value.
   //
-  // TODO: a vector cast of shadows to floating-point is required for:
+  // TODO: handle floating-point matrix multiply using ummla on the shadows:
   //   case Intrinsic::aarch64_neon_bfmmla:
   //     handleNEONMatrixMultiply(I, /*ARows=*/ 2, /*ACols=*/ 4,
   //                                 /*BRows=*/ 4, /*BCols=*/ 2);
-  // Additionally, comparisons need to tolerate floating-point error.
+  //
   void handleNEONMatrixMultiply(IntrinsicInst &I, unsigned int ARows,
                                 unsigned int ACols, unsigned int BRows,
                                 unsigned int BCols) {
