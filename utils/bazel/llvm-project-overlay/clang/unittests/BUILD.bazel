@@ -687,7 +687,7 @@ cc_test(
     args = [
         # TODO: some tests fail with: "JIT session error: Symbols not found:
         # [ _ZnwmPv26__clang_Interpreter_NewTag, __clang_Interpreter_SetValueWithAlloc ]
-        "--gtest_filter=-InterpreterTest.*:InterpreterTestBase.*",
+        "--gtest_filter=-InterpreterTest.*:OutOfProcessInterpreterTest.*",
     ],
     deps = [
         "//clang:ast",

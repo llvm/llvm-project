@@ -10,8 +10,13 @@ struct [[gsl::Owner]] MyObj {
   View getView() const [[clang::lifetimebound]];
 };
 
+struct [[gsl::Owner]] MyTrivialObj {
+  int id;
+};
+
 struct [[gsl::Pointer()]] View {
   View(const MyObj&); // Borrows from MyObj
+  View(const MyTrivialObj &); // Borrows from MyTrivialObj
   View();
   void use() const;
 };
@@ -19,6 +24,13 @@ struct [[gsl::Pointer()]] View {
 class TriviallyDestructedClass {
   View a, b;
 };
+
+MyObj non_trivially_destructed_temporary();
+MyTrivialObj trivially_destructed_temporary();
+View construct_view(const MyObj &obj [[clang::lifetimebound]]) {
+  return View(obj);
+}
+void use(View);
 
 //===----------------------------------------------------------------------===//
 // Basic Definite Use-After-Free (-W...permissive)
@@ -1064,6 +1076,28 @@ void parentheses(bool cond) {
               : &(((cond ? c : d)))));  // expected-warning 2 {{object whose reference is captured does not live long enough}}.
   }  // expected-note 4 {{destroyed here}}
   (void)*p;  // expected-note 4 {{later used here}}
+
+}
+
+void use_temporary_after_destruction() {
+  View a;
+  a = non_trivially_destructed_temporary(); // expected-warning {{object whose reference is captured does not live long enough}} \
+                  expected-note {{destroyed here}}
+  use(a); // expected-note {{later used here}}
+}
+
+void passing_temporary_to_lifetime_bound_function() {
+  View a = construct_view(non_trivially_destructed_temporary()); // expected-warning {{object whose reference is captured does not live long enough}} \
+                expected-note {{destroyed here}}
+  use(a); // expected-note {{later used here}}
+}
+
+// FIXME: We expect to be warned of use-after-free at use(a), but this is not the
+// case as current analysis does not handle trivially destructed temporaries.
+void use_trivial_temporary_after_destruction() {
+  View a;
+  a = trivially_destructed_temporary();
+  use(a);
 }
 
 namespace GH162834 {
