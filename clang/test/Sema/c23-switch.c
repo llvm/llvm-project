@@ -3,12 +3,12 @@
 typedef enum : long { E0 } E;
 void test1(E e) {
   auto v = E0;
-  switch (v) { } // expected-warning {{enumeration value 'E0' not handled in switch}}
+  switch (v) { } // expected-warning {{enumeration value 'E0' not handled in switch}} expected-note {{add missing switch cases}}
 }
 
 void test2(E e) {
   __auto_type v = E0;
-  switch (v) { } // expected-warning {{enumeration value 'E0' not handled in switch}}
+  switch (v) { } // expected-warning {{enumeration value 'E0' not handled in switch}} expected-note {{add missing switch cases}}
 }
 
 void test3(_Bool b, E e) {
@@ -16,5 +16,5 @@ void test3(_Bool b, E e) {
   if (b) {
     v = e;
   }
-  switch (v) { } // expected-warning {{enumeration value 'E0' not handled in switch}}
+  switch (v) { } // expected-warning {{enumeration value 'E0' not handled in switch}} expected-note {{add missing switch cases}}
 }
