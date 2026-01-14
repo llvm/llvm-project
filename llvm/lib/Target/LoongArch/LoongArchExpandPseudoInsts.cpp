@@ -161,10 +161,10 @@ bool LoongArchPreRAExpandPseudo::expandMI(
     return expandLoadAddressTLSDesc(MBB, MBBI, NextMBBI);
   case LoongArch::PseudoLA_TLS_DESC_LARGE:
     return expandLoadAddressTLSDesc(MBB, MBBI, NextMBBI, /*Large=*/true);
-  case LoongArch::PseudoCALL:
+  case LoongArch::PseudoCALL_SMALL:
   case LoongArch::PseudoCALL_LARGE:
     return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/false);
-  case LoongArch::PseudoTAIL:
+  case LoongArch::PseudoTAIL_SMALL:
   case LoongArch::PseudoTAIL_LARGE:
     return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/true);
   case LoongArch::PseudoBRIND:
@@ -784,25 +784,36 @@ bool LoongArchExpandPseudo::expandFunctionCALL(
     report_fatal_error("Unexpected code model");
     break;
   case CodeModel::Medium: {
+    // for la32 expands to:
     // CALL:
-    // pcaddu18i $ra, %call36(func)
-    // jirl      $ra, $ra, 0
+    //   pcaddu12i $ra, %call30(func)
+    //   jirl      $ra, $ra, 0
     // TAIL:
-    // pcaddu18i $t8, %call36(func)
-    // jirl      $r0, $t8, 0
+    //   pcaddu12i $t8, %call30(func)
+    //   jirl      $r0, $t8, 0
+    //
+    // for la64 expands to:
+    // CALL:
+    //   pcaddu18i $ra, %call36(func)
+    //   jirl      $ra, $ra, 0
+    // TAIL:
+    //   pcaddu18i $t8, %call36(func)
+    //   jirl      $r0, $t8, 0
     Opcode =
         IsTailCall ? LoongArch::PseudoJIRL_TAIL : LoongArch::PseudoJIRL_CALL;
     Register ScratchReg = IsTailCall ? LoongArch::R20 : LoongArch::R1;
-    MachineInstrBuilder MIB =
-        BuildMI(MBB, MBBI, DL, TII->get(LoongArch::PCADDU18I), ScratchReg);
+    bool Is64Bit = MF->getSubtarget<LoongArchSubtarget>().is64Bit();
+    unsigned PC = Is64Bit ? LoongArch::PCADDU18I : LoongArch::PCADDU12I;
+    unsigned MO = Is64Bit ? LoongArchII::MO_CALL36 : LoongArchII::MO_CALL30;
+    MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(PC), ScratchReg);
 
     CALL =
         BuildMI(MBB, MBBI, DL, TII->get(Opcode)).addReg(ScratchReg).addImm(0);
 
     if (Func.isSymbol())
-      MIB.addExternalSymbol(Func.getSymbolName(), LoongArchII::MO_CALL36);
+      MIB.addExternalSymbol(Func.getSymbolName(), MO);
     else
-      MIB.addDisp(Func, 0, LoongArchII::MO_CALL36);
+      MIB.addDisp(Func, 0, MO);
     break;
   }
   }

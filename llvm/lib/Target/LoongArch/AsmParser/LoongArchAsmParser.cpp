@@ -1576,11 +1576,18 @@ bool LoongArchAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   case LoongArch::PseudoLI_D:
     emitLoadImm(Inst, IDLoc, Out);
     return false;
+  case LoongArch::PseudoCALL:
+    emitFuncCall(Inst, IDLoc, Out, /*IsTailCall=*/false,
+                 /*IsCall36=*/is64Bit());
+    return false;
   case LoongArch::PseudoCALL30:
     emitFuncCall(Inst, IDLoc, Out, /*IsTailCall=*/false, /*IsCall36=*/false);
     return false;
   case LoongArch::PseudoCALL36:
     emitFuncCall(Inst, IDLoc, Out, /*IsTailCall=*/false, /*IsCall36=*/true);
+    return false;
+  case LoongArch::PseudoTAIL:
+    emitFuncCall(Inst, IDLoc, Out, /*IsTailCall=*/true, /*IsCall36=*/is64Bit());
     return false;
   case LoongArch::PseudoTAIL30:
     emitFuncCall(Inst, IDLoc, Out, /*IsTailCall=*/true, /*IsCall36=*/false);
