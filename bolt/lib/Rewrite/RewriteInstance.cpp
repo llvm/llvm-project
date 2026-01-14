@@ -286,13 +286,23 @@ static cl::opt<bool> WriteBoltInfoSection(
     "bolt-info", cl::desc("write bolt info section in the output binary"),
     cl::init(true), cl::Hidden, cl::cat(BoltOutputCategory));
 
-cl::bits<GadgetScannerKind> GadgetScannersToRun(
-    "scanners", cl::desc("which gadget scanners to run"),
+static cl::list<GadgetScannerKind> GadgetScannersToRun(
+    "scanners", cl::desc("Which gadget scanners to run"),
     cl::values(
-        clEnumValN(GS_PACRET, "pacret",
-                   "pac-ret: return address protection (subset of \"pauth\")"),
-        clEnumValN(GS_PAUTH, "pauth", "All Pointer Authentication scanners"),
-        clEnumValN(GS_ALL, "all", "All implemented scanners")),
+        clEnumValN(GS_PTRAUTH_RETURN_TARGETS, "ptrauth-pac-ret",
+                   "Unprotected returns (pac-ret)"),
+        clEnumValN(GS_PTRAUTH_TAIL_CALLS, "ptrauth-tail-calls",
+                   "Tail calls performed with unprotected link register"),
+        clEnumValN(GS_PTRAUTH_BRANCH_AND_CALL_TARGETS, "ptrauth-forward-cf",
+                   "Unprotected calls and branches (forward control-flow)"),
+        clEnumValN(GS_PTRAUTH_SIGN_ORACLES, "ptrauth-sign-oracles",
+                   "Signing of untrusted pointers (signing oracles)"),
+        clEnumValN(GS_PTRAUTH_AUTH_ORACLES, "ptrauth-auth-oracles",
+                   "Authentication oracles"),
+
+        clEnumValN(GS_PTRAUTH_ALL_MASK, "ptrauth-all",
+                   "All Pointer Authentication scanners"),
+        clEnumValN(GS_ALL_MASK, "all", "All implemented scanners")),
     cl::ZeroOrMore, cl::CommaSeparated, cl::cat(BinaryAnalysisCategory));
 
 // Primary targets for hooking runtime library initialization hooking
@@ -3853,16 +3863,13 @@ void RewriteInstance::runBinaryAnalyses() {
   using PAuthScanner = PAuthGadgetScanner::Analysis;
 
   // If no command line option was given, act as if "all" was specified.
-  bool RunAll = !opts::GadgetScannersToRun.getBits() ||
-                opts::GadgetScannersToRun.isSet(GSK::GS_ALL);
+  uint64_t AnalysesMask = 0;
+  for (uint64_t Submask : opts::GadgetScannersToRun)
+    AnalysesMask |= Submask;
 
-  if (RunAll || opts::GadgetScannersToRun.isSet(GSK::GS_PAUTH)) {
-    Manager.registerPass(
-        std::make_unique<PAuthScanner>(/*OnlyPacRetChecks=*/false));
-  } else if (RunAll || opts::GadgetScannersToRun.isSet(GSK::GS_PACRET)) {
-    Manager.registerPass(
-        std::make_unique<PAuthScanner>(/*OnlyPacRetChecks=*/true));
-  }
+  uint64_t PAuthAnalysesMask = AnalysesMask & GSK::GS_PTRAUTH_ALL_MASK;
+  if (PAuthAnalysesMask)
+    Manager.registerPass(std::make_unique<PAuthScanner>(PAuthAnalysesMask));
 
   BC->logBOLTErrorsAndQuitOnFatal(Manager.runPasses());
 }
