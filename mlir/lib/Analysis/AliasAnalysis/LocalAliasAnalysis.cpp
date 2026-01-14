@@ -109,7 +109,7 @@ static void collectUnderlyingAddressValues(OpResult result, unsigned maxDepth,
   if (auto branch = dyn_cast<RegionBranchOpInterface>(op)) {
     LDBG() << "  Processing region branch operation";
     return collectUnderlyingAddressValues2(
-        branch, RegionSuccessor(op, op->getResults()), result,
+        branch, RegionSuccessor::parent(op->getResults()), result,
         result.getResultNumber(), maxDepth, visited, output);
   }
 

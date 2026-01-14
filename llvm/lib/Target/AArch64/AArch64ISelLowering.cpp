@@ -248,6 +248,26 @@ static inline bool isPackedVectorType(EVT VT, SelectionDAG &DAG) {
          VT.getSizeInBits().getKnownMinValue() == AArch64::SVEBitsPerBlock;
 }
 
+static inline bool isPackedPredicateType(EVT VT, SelectionDAG &DAG) {
+  assert(VT.isVector() && DAG.getTargetLoweringInfo().isTypeLegal(VT) &&
+         "Expected legal type!");
+  return VT == MVT::nxv16i1;
+}
+
+/// Returns true if the conceptual representation for \p VT does not map
+/// directly to its physical register representation, meaning there are gaps
+/// between elements in the register. In practice, the vector elements will be
+/// strided by a power of two and placed starting from lane 0. For example,
+/// nxv8i1 or nxv2f32 are unpacked types.
+///
+///\pre VT is a legal type.
+static inline bool isUnpackedType(EVT VT, SelectionDAG &DAG) {
+  bool Res = !isPackedVectorType(VT, DAG) && !isPackedPredicateType(VT, DAG);
+  assert((!Res || VT.isScalableVector()) &&
+         "Unexpected fixed-size unpacked type.");
+  return Res;
+}
+
 // Returns true for ####_MERGE_PASSTHRU opcodes, whose operands have a leading
 // predicate and end with a passthru value matching the result type.
 static bool isMergePassthruOpcode(unsigned Opc) {
@@ -21158,6 +21178,22 @@ static SDValue performConcatVectorsCombine(SDNode *N,
   SDValue N0 = N->getOperand(0), N1 = N->getOperand(1);
   unsigned N0Opc = N0->getOpcode(), N1Opc = N1->getOpcode();
 
+  // For unpacked types:
+  // concat(zip1(a, b), zip2(a, b)) => trn1(a, b)
+  if (DCI.isAfterLegalizeDAG() && isUnpackedType(N0.getValueType(), DAG) &&
+      N->getNumOperands() == 2 && N0Opc == AArch64ISD::ZIP1 &&
+      N1Opc == AArch64ISD::ZIP2 && N0.getOperand(0) == N1.getOperand(0) &&
+      N0.getOperand(1) == N1.getOperand(1)) {
+    // If the type is unpacked, then each element is separated by a gap at least
+    // as big as the element size. It is therefore safe to re-interpret the
+    // inputs with double the elements and ignore odd elements (hence TRN1).
+    SDValue Op0MoreElems =
+        DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, VT, N0.getOperand(0));
+    SDValue Op1MoreElems =
+        DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, VT, N0.getOperand(1));
+    return DAG.getNode(AArch64ISD::TRN1, DL, VT, Op0MoreElems, Op1MoreElems);
+  }
+
   if (VT.isScalableVector())
     return SDValue();
 
@@ -31424,8 +31460,10 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
   }
 
   // Are multi-register zip instructions available?
+  // If so, use them for packed types. Interleaves of unpacked types can be
+  // selected using trn1.
   if (Subtarget->hasSME2() && Subtarget->isStreaming() &&
-      OpVT.isScalableVector() && OpVT.getVectorElementType() != MVT::i1) {
+      OpVT.isScalableVector() && isPackedVectorType(OpVT, DAG)) {
     Intrinsic::ID IntID;
     switch (Op->getNumOperands()) {
     default:

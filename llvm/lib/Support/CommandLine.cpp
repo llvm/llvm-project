@@ -2556,7 +2556,7 @@ public:
 namespace {
 class VersionPrinter {
 public:
-  void print(std::vector<VersionPrinterTy> ExtraPrinters = {}) {
+  void print(const std::vector<VersionPrinterTy> &ExtraPrinters) {
     raw_ostream &OS = outs();
 #ifdef PACKAGE_VENDOR
     OS << PACKAGE_VENDOR << " ";
