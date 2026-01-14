@@ -58,11 +58,13 @@ public:
 
   /// \returns true if \p MI only defines FPRs.
   bool onlyDefinesFP(const MachineInstr &MI, const MachineRegisterInfo &MRI,
-                     const WebAssemblyRegisterInfo &TRI, unsigned Depth = 0) const;
+                     const WebAssemblyRegisterInfo &TRI,
+                     unsigned Depth = 0) const;
 
   /// \returns true if \p MI can take both fpr and gpr uses, but prefers fp.
   bool prefersFPUse(const MachineInstr &MI, const MachineRegisterInfo &MRI,
-                    const WebAssemblyRegisterInfo &TRI, unsigned Depth = 0) const;
+                    const WebAssemblyRegisterInfo &TRI,
+                    unsigned Depth = 0) const;
 };
 } // end namespace llvm
 #endif

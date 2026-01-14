@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyCallLowering.h"
-#include "GISel/WebAssemblyRegisterBankInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "Utils/WasmAddressSpaces.h"
 #include "WebAssemblyISelLowering.h"
@@ -42,9 +41,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/MC/MCSymbolWasm.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <cassert>
 
 #define DEBUG_TYPE "wasm-call-lowering"
 
@@ -523,7 +520,7 @@ bool WebAssemblyCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
       for (unsigned Part = 0; Part < NumParts; ++Part) {
         auto NewOutReg = MRI.createGenericVirtualRegister(NewLLT);
         assert(RBI.constrainGenericRegister(NewOutReg, NewRegClass, MRI) &&
-                "Couldn't constrain brand-new register?");
+               "Couldn't constrain brand-new register?");
         MIRBuilder.buildCopy(NewOutReg, Arg.Regs[Part]);
         MIB.addUse(NewOutReg);
       }

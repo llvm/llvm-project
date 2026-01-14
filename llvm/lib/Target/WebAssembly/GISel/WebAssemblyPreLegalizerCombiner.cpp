@@ -1,4 +1,4 @@
-//=== WebAssemblyPreLegalizerCombiner.cpp ---------------------------------------===//
+//=== WebAssemblyPreLegalizerCombiner.cpp ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -92,7 +92,9 @@ public:
 
   WebAssemblyPreLegalizerCombiner();
 
-  StringRef getPassName() const override { return "WebAssemblyPreLegalizerCombiner"; }
+  StringRef getPassName() const override {
+    return "WebAssemblyPreLegalizerCombiner";
+  }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -103,7 +105,8 @@ private:
 };
 } // end anonymous namespace
 
-void WebAssemblyPreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
+void WebAssemblyPreLegalizerCombiner::getAnalysisUsage(
+    AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
@@ -122,7 +125,8 @@ WebAssemblyPreLegalizerCombiner::WebAssemblyPreLegalizerCombiner()
     report_fatal_error("Invalid rule identifier");
 }
 
-bool WebAssemblyPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
+bool WebAssemblyPreLegalizerCombiner::runOnMachineFunction(
+    MachineFunction &MF) {
   if (MF.getProperties().hasFailedISel())
     return false;
   auto &TPC = getAnalysis<TargetPassConfig>();
@@ -151,21 +155,21 @@ bool WebAssemblyPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) 
   // This is the first Combiner, so the input IR might contain dead
   // instructions.
   CInfo.EnableFullDCE = true;
-  WebAssemblyPreLegalizerCombinerImpl Impl(MF, CInfo, &TPC, *VT, CSEInfo, RuleConfig,
-                                     ST, MDT, LI);
+  WebAssemblyPreLegalizerCombinerImpl Impl(MF, CInfo, &TPC, *VT, CSEInfo,
+                                           RuleConfig, ST, MDT, LI);
   return Impl.combineMachineInstrs();
 }
 
 char WebAssemblyPreLegalizerCombiner::ID = 0;
 INITIALIZE_PASS_BEGIN(WebAssemblyPreLegalizerCombiner, DEBUG_TYPE,
-                      "Combine WebAssembly machine instrs before legalization", false,
-                      false)
+                      "Combine WebAssembly machine instrs before legalization",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)
 INITIALIZE_PASS_END(WebAssemblyPreLegalizerCombiner, DEBUG_TYPE,
-                    "Combine WebAssembly machine instrs before legalization", false,
-                    false)
+                    "Combine WebAssembly machine instrs before legalization",
+                    false, false)
 
 FunctionPass *llvm::createWebAssemblyPreLegalizerCombiner() {
   return new WebAssemblyPreLegalizerCombiner();

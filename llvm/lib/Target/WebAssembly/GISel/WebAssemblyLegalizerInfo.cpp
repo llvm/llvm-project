@@ -16,7 +16,6 @@
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
-#include "llvm/IR/DerivedTypes.h"
 
 #define DEBUG_TYPE "wasm-legalinfo"
 
@@ -573,7 +572,6 @@ bool WebAssemblyLegalizerInfo::legalizeCustom(
       Value.setReg(ExtValueReg);
       return true;
     }
-
 
     MachineIRBuilder B(MI);
     assert(MI.getNumMemOperands() == 1);

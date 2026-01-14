@@ -25,7 +25,8 @@ class WebAssemblyLegalizerInfo : public LegalizerInfo {
 public:
   WebAssemblyLegalizerInfo(const WebAssemblySubtarget &ST);
 
-  bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI, LostDebugLocObserver &LocObserver) const override;
+  bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
+                      LostDebugLocObserver &LocObserver) const override;
 };
 } // namespace llvm
 #endif

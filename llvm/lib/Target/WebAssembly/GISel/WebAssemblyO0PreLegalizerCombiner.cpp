@@ -100,7 +100,8 @@ private:
 };
 } // end anonymous namespace
 
-void WebAssemblyO0PreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
+void WebAssemblyO0PreLegalizerCombiner::getAnalysisUsage(
+    AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
@@ -115,7 +116,8 @@ WebAssemblyO0PreLegalizerCombiner::WebAssemblyO0PreLegalizerCombiner()
     report_fatal_error("Invalid rule identifier");
 }
 
-bool WebAssemblyO0PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
+bool WebAssemblyO0PreLegalizerCombiner::runOnMachineFunction(
+    MachineFunction &MF) {
   if (MF.getProperties().hasFailedISel())
     return false;
   auto &TPC = getAnalysis<TargetPassConfig>();
@@ -134,7 +136,8 @@ bool WebAssemblyO0PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF
   CInfo.MaxIterations = 1;
 
   WebAssemblyO0PreLegalizerCombinerImpl Impl(MF, CInfo, &TPC, *VT,
-                                       /*CSEInfo*/ nullptr, RuleConfig, ST);
+                                             /*CSEInfo*/ nullptr, RuleConfig,
+                                             ST);
   return Impl.combineMachineInstrs();
 }
 
@@ -146,8 +149,8 @@ INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)
 INITIALIZE_PASS_END(WebAssemblyO0PreLegalizerCombiner, DEBUG_TYPE,
-                    "Combine WebAssembly machine instrs before legalization", false,
-                    false)
+                    "Combine WebAssembly machine instrs before legalization",
+                    false, false)
 
 FunctionPass *llvm::createWebAssemblyO0PreLegalizerCombiner() {
   return new WebAssemblyO0PreLegalizerCombiner();

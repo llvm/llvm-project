@@ -1,4 +1,4 @@
-//=== WebAssemblyPostLegalizerCombiner.cpp --------------------------*- C++ -*-===//
+//=== WebAssemblyPostLegalizerCombiner.cpp ----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -104,7 +104,8 @@ private:
 };
 } // end anonymous namespace
 
-void WebAssemblyPostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
+void WebAssemblyPostLegalizerCombiner::getAnalysisUsage(
+    AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
@@ -123,7 +124,8 @@ WebAssemblyPostLegalizerCombiner::WebAssemblyPostLegalizerCombiner()
     report_fatal_error("Invalid rule identifier");
 }
 
-bool WebAssemblyPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
+bool WebAssemblyPostLegalizerCombiner::runOnMachineFunction(
+    MachineFunction &MF) {
   if (MF.getProperties().hasFailedISel())
     return false;
   assert(MF.getProperties().hasLegalized() && "Expected a legalized function?");
@@ -146,20 +148,20 @@ bool WebAssemblyPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF)
   CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, EnableOpt, F.hasOptSize(),
                      F.hasMinSize());
-  WebAssemblyPostLegalizerCombinerImpl Impl(MF, CInfo, TPC, *VT, CSEInfo, RuleConfig,
-                                      ST, MDT, LI);
+  WebAssemblyPostLegalizerCombinerImpl Impl(MF, CInfo, TPC, *VT, CSEInfo,
+                                            RuleConfig, ST, MDT, LI);
   return Impl.combineMachineInstrs();
 }
 
 char WebAssemblyPostLegalizerCombiner::ID = 0;
 INITIALIZE_PASS_BEGIN(WebAssemblyPostLegalizerCombiner, DEBUG_TYPE,
-                      "Combine WebAssembly MachineInstrs after legalization", false,
-                      false)
+                      "Combine WebAssembly MachineInstrs after legalization",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_END(WebAssemblyPostLegalizerCombiner, DEBUG_TYPE,
-                    "Combine WebAssembly MachineInstrs after legalization", false,
-                    false)
+                    "Combine WebAssembly MachineInstrs after legalization",
+                    false, false)
 
 FunctionPass *llvm::createWebAssemblyPostLegalizerCombiner() {
   return new WebAssemblyPostLegalizerCombiner();
