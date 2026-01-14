@@ -102,8 +102,7 @@ define i64 @vscale_4096(<vscale x 16 x i8> %a) #1 {
 ; CHECK-NEXT:    umax z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    umaxv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    sub w8, w9, w8
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    sub w0, w9, w8
 ; CHECK-NEXT:    ret
   %res = call i64 @llvm.experimental.cttz.elts.i64.nxv16i8(<vscale x 16 x i8> %a, i1 0)
   ret i64 %res
@@ -132,7 +131,6 @@ define i64 @vscale_4096_poison(<vscale x 16 x i8> %a) #1 {
 ; CHECK-NEXT:    umaxv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    sub w8, w9, w8
-; CHECK-NEXT:    // kill: def $x8 killed $w8
 ; CHECK-NEXT:    and x0, x8, #0xffff
 ; CHECK-NEXT:    ret
   %res = call i64 @llvm.experimental.cttz.elts.i64.nxv16i8(<vscale x 16 x i8> %a, i1 1)
