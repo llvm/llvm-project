@@ -2067,7 +2067,7 @@ define nofpclass(snan) float @simplify_multiple_use_minimumnum(ptr %ptr) {
 ; CHECK-NEXT:    [[NEGATIVE:%.*]] = call float @returns_negative()
 ; CHECK-NEXT:    [[MIN:%.*]] = call float @llvm.minimumnum.f32(float [[POSITIVE_OR_NAN]], float [[NEGATIVE]])
 ; CHECK-NEXT:    store float [[MIN]], ptr [[PTR]], align 4
-; CHECK-NEXT:    ret float [[MIN]]
+; CHECK-NEXT:    ret float [[NEGATIVE]]
 ;
   %positive.or.nan = call float @returns_positive_or_nan()
   %negative = call float @returns_negative()
@@ -2083,7 +2083,7 @@ define nofpclass(snan) float @simplify_multiple_use_minimumnum_commute(ptr %ptr)
 ; CHECK-NEXT:    [[NEGATIVE:%.*]] = call float @returns_negative()
 ; CHECK-NEXT:    [[MIN:%.*]] = call float @llvm.minimumnum.f32(float [[NEGATIVE]], float [[POSITIVE_OR_NAN]])
 ; CHECK-NEXT:    store float [[MIN]], ptr [[PTR]], align 4
-; CHECK-NEXT:    ret float [[MIN]]
+; CHECK-NEXT:    ret float [[NEGATIVE]]
 ;
   %positive.or.nan = call float @returns_positive_or_nan()
   %negative = call float @returns_negative()
@@ -2099,7 +2099,7 @@ define nofpclass(snan) float @nsz_fold_negative_or_zero__positive_or_zero_0__mul
 ; CHECK-NEXT:    [[MUST_BE_POSITIVE_OR_ZERO:%.*]] = call float @returns_positive_or_zero()
 ; CHECK-NEXT:    [[RESULT:%.*]] = call nsz float @llvm.minimumnum.f32(float [[MUST_BE_NEGATIVE_OR_ZERO]], float [[MUST_BE_POSITIVE_OR_ZERO]])
 ; CHECK-NEXT:    store float [[RESULT]], ptr [[PTR]], align 4
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float [[MUST_BE_NEGATIVE_OR_ZERO]]
 ;
   %must.be.negative.or.zero = call float @returns_negative_or_zero()
   %must.be.positive.or.zero = call float @returns_positive_or_zero()
@@ -2115,7 +2115,7 @@ define nofpclass(snan) float @nsz_fold_negative_or_zero__positive_or_zero_1__mul
 ; CHECK-NEXT:    [[MUST_BE_NEGATIVE_OR_ZERO:%.*]] = call float @returns_negative_or_zero()
 ; CHECK-NEXT:    [[RESULT:%.*]] = call nsz float @llvm.minimumnum.f32(float [[MUST_BE_POSITIVE_OR_ZERO]], float [[MUST_BE_NEGATIVE_OR_ZERO]])
 ; CHECK-NEXT:    store float [[RESULT]], ptr [[PTR]], align 4
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float [[MUST_BE_NEGATIVE_OR_ZERO]]
 ;
   %must.be.positive.or.zero = call float @returns_positive_or_zero()
   %must.be.negative.or.zero = call float @returns_negative_or_zero()
