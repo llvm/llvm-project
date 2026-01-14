@@ -43,80 +43,46 @@ constexpr bool test() {
   // Test that `std::views::stride` is a range adaptor.
   // Check various forms of
 
-  // view | stride
-  // two tests: first with stride of 1; second with stride of 2.
+  // Test `view | views::stride`
   {
-    using View                                                          = BasicTestView<cpp17_input_iterator<int*>>;
-    auto view                                                           = make_input_view(arr, arr + N);
-    std::same_as<std::ranges::stride_view<View>> decltype(auto) strided = view | std::views::stride(1);
-    auto strided_iter                                                   = strided.begin();
+    using View                               = std::ranges::stride_view<BasicTestView<cpp17_input_iterator<int*>>>;
+    auto view                                = make_input_view(arr, arr + N);
+    std::same_as<View> decltype(auto) result = view | std::views::stride(2);
+    auto it                                  = result.begin();
 
-    // Check that the begin() iter views arr[0]
-    assert(*strided_iter == arr[0]);
-
-    // Check that the strided_iter, after advancing it 2 * 1 steps, views arr[2].
-    std::ranges::advance(strided_iter, 2);
-    assert(*strided_iter == arr[2]);
-  }
-  {
-    using View                                                          = BasicTestView<cpp17_input_iterator<int*>>;
-    auto view                                                           = make_input_view(arr, arr + N);
-    std::same_as<std::ranges::stride_view<View>> decltype(auto) strided = view | std::views::stride(2);
-    auto strided_iter                                                   = strided.begin();
-
-    assert(*strided_iter == arr[0]);
-    std::ranges::advance(strided_iter, 1);
-    assert(*strided_iter == arr[2]);
+    assert(*it == arr[0]);
+    std::ranges::advance(it, 1);
+    assert(*it == arr[2]);
   }
 
-  // adaptor | stride
-  // two tests: first with stride of 1; second with stride of 2.
-  const auto i2 = [](int i) { return i * 2; };
+  // Test `adaptor | views::stride`
+  auto twice = [](int i) { return i * 2; };
   {
-    auto view                           = make_input_view(arr, arr + N);
-    const auto transform_stride_partial = std::views::transform(i2) | std::views::stride(1);
+    using View = std::ranges::stride_view<
+        std::ranges::transform_view<BasicTestView<cpp17_input_iterator<int*>>, decltype(twice)>>;
+    auto view          = make_input_view(arr, arr + N);
+    const auto partial = std::views::transform(twice) | std::views::stride(2);
 
-    auto transform_stride_applied      = transform_stride_partial(view);
-    auto transform_stride_applied_iter = transform_stride_applied.begin();
+    std::same_as<View> decltype(auto) result = partial(view);
+    auto it                                  = result.begin();
 
-    assert(*transform_stride_applied_iter == i2(arr[0]));
-    std::ranges::advance(transform_stride_applied_iter, 2);
-    assert(*transform_stride_applied_iter == i2(arr[2]));
+    assert(*it == twice(arr[0]));
+    std::ranges::advance(it, 1);
+    assert(*it == twice(arr[2]));
   }
 
+  // Test `views::stride | adaptor`
   {
-    auto view                           = make_input_view(arr, arr + N);
-    const auto transform_stride_partial = std::views::transform(i2) | std::views::stride(2);
+    using View = std::ranges::transform_view< std::ranges::stride_view<BasicTestView<cpp17_input_iterator<int*>>>,
+                                              decltype(twice)>;
+    auto view  = make_input_view(arr, arr + N);
+    std::same_as<View> decltype(auto) result = std::views::stride(view, 2) | std::views::transform(twice);
 
-    const auto transform_stride_applied = transform_stride_partial(view);
-    auto transform_stride_applied_iter  = transform_stride_applied.begin();
+    auto it = result.begin();
 
-    assert(*transform_stride_applied_iter == i2(arr[0]));
-    std::ranges::advance(transform_stride_applied_iter, 1);
-    assert(*transform_stride_applied_iter == i2(arr[2]));
-  }
-
-  // stride | adaptor
-  // two tests: first with stride of 1; second with stride of 2.
-  {
-    auto view                   = make_input_view(arr, arr + N);
-    const auto stride_transform = std::views::stride(view, 1) | std::views::transform(i2);
-
-    auto stride_transform_iter = stride_transform.begin();
-
-    assert(*stride_transform_iter == i2(arr[0]));
-    std::ranges::advance(stride_transform_iter, 2);
-    assert(*stride_transform_iter == i2(arr[2]));
-  }
-  {
-    auto view                   = make_input_view(arr, arr + N);
-    const auto stride_transform = std::views::stride(view, 2) | std::views::transform(i2);
-
-    auto stride_transform_iter = stride_transform.begin();
-
-    assert(*stride_transform_iter == i2(arr[0]));
-    std::ranges::advance(stride_transform_iter, 1);
-    assert(*stride_transform_iter == i2(arr[2]));
+    assert(*it == twice(arr[0]));
+    std::ranges::advance(it, 1);
+    assert(*it == twice(arr[2]));
   }
 
   // Check SFINAE friendliness
