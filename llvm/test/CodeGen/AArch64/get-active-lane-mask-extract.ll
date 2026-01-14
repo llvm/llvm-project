@@ -18,8 +18,6 @@ define void @test_2x8bit_mask_with_32bit_index_and_trip_count(i32 %i, i32 %n) #0
 ; CHECK-SVE2p1-SME2:       // %bb.0:
 ; CHECK-SVE2p1-SME2-NEXT:    mov w8, w1
 ; CHECK-SVE2p1-SME2-NEXT:    mov w9, w0
-; CHECK-SVE2p1-SME2-NEXT:    // kill: def $x8 killed $w8
-; CHECK-SVE2p1-SME2-NEXT:    // kill: def $x9 killed $w9
 ; CHECK-SVE2p1-SME2-NEXT:    whilelo { p0.h, p1.h }, x9, x8
 ; CHECK-SVE2p1-SME2-NEXT:    b use
     %r = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 %i, i32 %n)
@@ -181,7 +179,6 @@ define void @test_fixed_extract(i64 %i, i64 %n) #0 {
 ; CHECK-SVE-NEXT:    cset w8, mi
 ; CHECK-SVE-NEXT:    mov z1.s, p0/z, #1 // =0x1
 ; CHECK-SVE-NEXT:    fmov s0, w8
-; CHECK-SVE-NEXT:    // kill: def $q0 killed $d0
 ; CHECK-SVE-NEXT:    mov v0.s[1], v1.s[1]
 ; CHECK-SVE-NEXT:    ext z1.b, z1.b, z1.b, #8
 ; CHECK-SVE-NEXT:    b use
@@ -192,7 +189,6 @@ define void @test_fixed_extract(i64 %i, i64 %n) #0 {
 ; CHECK-SVE2p1-NEXT:    cset w8, mi
 ; CHECK-SVE2p1-NEXT:    mov z1.s, p0/z, #1 // =0x1
 ; CHECK-SVE2p1-NEXT:    fmov s0, w8
-; CHECK-SVE2p1-NEXT:    // kill: def $q0 killed $d0
 ; CHECK-SVE2p1-NEXT:    mov v0.s[1], v1.s[1]
 ; CHECK-SVE2p1-NEXT:    ext z1.b, z1.b, z1.b, #8
 ; CHECK-SVE2p1-NEXT:    b use
@@ -263,8 +259,6 @@ define void @test_2x16bit_mask_with_32bit_index_and_trip_count(i32 %i, i32 %n) #
 ; CHECK-SVE2p1-SME2:       // %bb.0:
 ; CHECK-SVE2p1-SME2-NEXT:    mov w8, w1
 ; CHECK-SVE2p1-SME2-NEXT:    mov w9, w0
-; CHECK-SVE2p1-SME2-NEXT:    // kill: def $x8 killed $w8
-; CHECK-SVE2p1-SME2-NEXT:    // kill: def $x9 killed $w9
 ; CHECK-SVE2p1-SME2-NEXT:    whilelo { p0.b, p1.b }, x9, x8
 ; CHECK-SVE2p1-SME2-NEXT:    b use
   %r = call <vscale x 32 x i1> @llvm.get.active.lane.mask.nxv32i1.i32(i32 %i, i32 %n)
@@ -297,11 +291,8 @@ define void @test_2x32bit_mask_with_32bit_index_and_trip_count(i32 %i, i32 %n) #
 ; CHECK-SVE2p1-SME2-NEXT:    mov w9, w1
 ; CHECK-SVE2p1-SME2-NEXT:    mov w10, w0
 ; CHECK-SVE2p1-SME2-NEXT:    adds w8, w0, w8
-; CHECK-SVE2p1-SME2-NEXT:    // kill: def $x9 killed $w9
-; CHECK-SVE2p1-SME2-NEXT:    // kill: def $x10 killed $w10
 ; CHECK-SVE2p1-SME2-NEXT:    csinv w8, w8, wzr, lo
 ; CHECK-SVE2p1-SME2-NEXT:    whilelo { p0.b, p1.b }, x10, x9
-; CHECK-SVE2p1-SME2-NEXT:    // kill: def $x8 killed $w8
 ; CHECK-SVE2p1-SME2-NEXT:    whilelo { p2.b, p3.b }, x8, x9
 ; CHECK-SVE2p1-SME2-NEXT:    b use
   %r = call <vscale x 64 x i1> @llvm.get.active.lane.mask.nxv64i1.i32(i32 %i, i32 %n)

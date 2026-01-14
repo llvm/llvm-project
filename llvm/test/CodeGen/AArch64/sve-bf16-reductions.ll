@@ -224,7 +224,6 @@ define float @promoted_fadd(<vscale x 4 x bfloat> %a) {
 ; SVE-NEXT:    ptrue p0.s
 ; SVE-NEXT:    faddv s0, p0, z0.s
 ; SVE-NEXT:    bfcvt h0, s0
-; SVE-NEXT:    // kill: def $d0 killed $h0
 ; SVE-NEXT:    shll v0.4s, v0.4h, #16
 ; SVE-NEXT:    ret
 ;
@@ -234,7 +233,6 @@ define float @promoted_fadd(<vscale x 4 x bfloat> %a) {
 ; SME-NEXT:    ptrue p0.s
 ; SME-NEXT:    faddv s0, p0, z0.s
 ; SME-NEXT:    bfcvt h0, s0
-; SME-NEXT:    // kill: def $s0 killed $h0
 ; SME-NEXT:    fmov w8, s0
 ; SME-NEXT:    lsl w8, w8, #16
 ; SME-NEXT:    fmov s0, w8
