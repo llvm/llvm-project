@@ -212,11 +212,10 @@ protected:
   /// Given an operation with region control-flow, the lattices of the operands,
   /// and a region successor, compute the lattice values for block arguments
   /// that are not accounted for by the branching control flow (ex. the bounds
-  /// of loops).
+  /// of loops)
   virtual void visitNonControlFlowArgumentsImpl(
       Operation *op, const RegionSuccessor &successor,
-      ValueRange successorInputs, ArrayRef<AbstractSparseLattice *> argLattices,
-      unsigned firstIndex) = 0;
+      ArrayRef<AbstractSparseLattice *> argLattices) = 0;
 
   /// Get the lattice element of a value.
   virtual AbstractSparseLattice *getLatticeElement(Value value) = 0;
@@ -325,13 +324,31 @@ public:
   /// operands, and a region successor, compute the lattice values for block
   /// arguments that are not accounted for by the branching control flow (ex.
   /// the bounds of loops). By default, this method marks all such lattice
-  /// elements as having reached a pessimistic fixpoint. `firstIndex` is the
-  /// index of the first element of `argLattices` that is set by control-flow.
+  /// elements as having reached a pessimistic fixpoint. If the given operation
+  /// does not implement the `RegionBranchOpInterface`, this method marks all
+  /// lattice elements as having reached a pessimistic fixpoint.
   virtual void visitNonControlFlowArguments(Operation *op,
                                             const RegionSuccessor &successor,
-                                            ValueRange successorInputs,
-                                            ArrayRef<StateT *> argLattices,
-                                            unsigned firstIndex) {
+                                            ArrayRef<StateT *> argLattices) {
+    auto regionBranchOp = dyn_cast<RegionBranchOpInterface>(op);
+    if (!regionBranchOp) {
+      // There are no forwarded arguments. Mark all lattice elements as having
+      // reached a pessimistic fixpoint.
+      setAllToEntryStates(argLattices);
+      return;
+    }
+
+    // Mark only the lattice elements that are not forwarded as having reached
+    // a pessimistic fixpoint.
+    ValueRange successorInputs = regionBranchOp.getSuccessorInputs(successor);
+    unsigned firstIndex = 0;
+    if (!successorInputs.empty() &&
+        isa<BlockArgument>(successorInputs.front())) {
+      firstIndex = cast<BlockArgument>(successorInputs.front()).getArgNumber();
+    } else if (!successorInputs.empty() &&
+               isa<OpResult>(successorInputs.front())) {
+      firstIndex = cast<OpResult>(successorInputs.front()).getResultNumber();
+    }
     setAllToEntryStates(argLattices.take_front(firstIndex));
     setAllToEntryStates(
         argLattices.drop_front(firstIndex + successorInputs.size()));
@@ -385,13 +402,11 @@ private:
   }
   void visitNonControlFlowArgumentsImpl(
       Operation *op, const RegionSuccessor &successor,
-      ValueRange successorInputs, ArrayRef<AbstractSparseLattice *> argLattices,
-      unsigned firstIndex) override {
+      ArrayRef<AbstractSparseLattice *> argLattices) override {
     visitNonControlFlowArguments(
-        op, successor, successorInputs,
+        op, successor,
         {reinterpret_cast<StateT *const *>(argLattices.begin()),
-         argLattices.size()},
-        firstIndex);
+         argLattices.size()});
   }
   void setToEntryState(AbstractSparseLattice *lattice) override {
     return setToEntryState(reinterpret_cast<StateT *>(lattice));

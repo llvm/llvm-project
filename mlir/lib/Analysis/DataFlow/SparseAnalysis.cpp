@@ -187,8 +187,7 @@ void AbstractSparseForwardDataFlowAnalysis::visitBlock(Block *block) {
 
     // Otherwise, we can't reason about the data-flow.
     return visitNonControlFlowArgumentsImpl(
-        block->getParentOp(), RegionSuccessor(block->getParent()), ValueRange(),
-        argLattices, /*firstIndex=*/0);
+        block->getParentOp(), RegionSuccessor(block->getParent()), argLattices);
   }
 
   // Iterate over the predecessors of the non-entry block.
@@ -314,18 +313,14 @@ void AbstractSparseForwardDataFlowAnalysis::visitRegionSuccessors(
       if (!point->isBlockStart()) {
         if (!inputs.empty())
           firstIndex = cast<OpResult>(inputs.front()).getResultNumber();
-        visitNonControlFlowArgumentsImpl(
-            branch, RegionSuccessor::parent(),
-            branch->getResults().slice(firstIndex, inputs.size()), lattices,
-            firstIndex);
+        visitNonControlFlowArgumentsImpl(branch, RegionSuccessor::parent(),
+                                         lattices);
       } else {
         if (!inputs.empty())
           firstIndex = cast<BlockArgument>(inputs.front()).getArgNumber();
         Region *region = point->getBlock()->getParent();
-        visitNonControlFlowArgumentsImpl(
-            branch, RegionSuccessor(region),
-            region->getArguments().slice(firstIndex, inputs.size()), lattices,
-            firstIndex);
+        visitNonControlFlowArgumentsImpl(branch, RegionSuccessor(region),
+                                         lattices);
       }
     }
 
