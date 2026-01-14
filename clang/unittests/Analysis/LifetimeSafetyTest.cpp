@@ -1839,5 +1839,17 @@ TEST_F(LifetimeAnalysisTest, DerivedToBaseThisArg) {
   )");
   EXPECT_THAT(Origin("view"), HasLoansTo({"my_obj_or"}, "p1"));
 }
+
+TEST_F(LifetimeAnalysisTest, DerivedViewWithNoAnnotation) {
+  SetupTest(R"(
+    struct DerivedView : View {};
+    View target() {
+      DerivedView derived;
+      return derived;
+    }
+  )");
+  // EXPECT_THAT(Origin("view"), HasLoansTo({"my_obj_or"}, "p1"));
+}
+
 } // anonymous namespace
 } // namespace clang::lifetimes::internal
