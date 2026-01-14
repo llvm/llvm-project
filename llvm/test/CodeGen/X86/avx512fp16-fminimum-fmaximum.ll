@@ -13,14 +13,9 @@ declare <32 x half> @llvm.maximum.v32f16(<32 x half>, <32 x half>)
 define half @test_fminimum(half %x, half %y) {
 ; CHECK-LABEL: test_fminimum:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovw %xmm0, %eax
-; CHECK-NEXT:    testw %ax, %ax
-; CHECK-NEXT:    sets %al
-; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    vmovaps %xmm1, %xmm2
-; CHECK-NEXT:    vmovsh %xmm0, %xmm0, %xmm2 {%k1}
-; CHECK-NEXT:    vmovsh %xmm1, %xmm0, %xmm0 {%k1}
-; CHECK-NEXT:    vminsh %xmm2, %xmm0, %xmm1
+; CHECK-NEXT:    vminsh %xmm1, %xmm0, %xmm2
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm1 = (xmm1 & xmm0) | xmm2
 ; CHECK-NEXT:    vcmpunordsh %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vmovsh %xmm0, %xmm0, %xmm1 {%k1}
 ; CHECK-NEXT:    vmovaps %xmm1, %xmm0
@@ -92,16 +87,12 @@ define half @test_fminimum_combine_cmps(half %x, half %y) {
 define half @test_fmaximum(half %x, half %y) {
 ; CHECK-LABEL: test_fmaximum:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovw %xmm0, %eax
-; CHECK-NEXT:    testw %ax, %ax
-; CHECK-NEXT:    sets %al
-; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    vmovaps %xmm0, %xmm2
-; CHECK-NEXT:    vmovsh %xmm1, %xmm0, %xmm2 {%k1}
+; CHECK-NEXT:    vmaxsh %xmm1, %xmm0, %xmm2
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm1 = xmm2 & (xmm1 | xmm0)
+; CHECK-NEXT:    vcmpunordsh %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vmovsh %xmm0, %xmm0, %xmm1 {%k1}
-; CHECK-NEXT:    vmaxsh %xmm2, %xmm1, %xmm0
-; CHECK-NEXT:    vcmpunordsh %xmm1, %xmm1, %k1
-; CHECK-NEXT:    vmovsh %xmm1, %xmm0, %xmm0 {%k1}
+; CHECK-NEXT:    vmovaps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %r = call half @llvm.maximum.f16(half %x, half %y)
   ret half %r
@@ -196,10 +187,9 @@ define <16 x half> @test_fmaximum_v16f16_nans(<16 x half> %x, <16 x half> %y) "n
 define <32 x half> @test_fminimum_v32f16_szero(<32 x half> %x, <32 x half> %y) "no-nans-fp-math"="true" {
 ; CHECK-LABEL: test_fminimum_v32f16_szero:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpmovw2m %zmm0, %k1
-; CHECK-NEXT:    vpblendmw %zmm0, %zmm1, %zmm2 {%k1}
-; CHECK-NEXT:    vmovdqu16 %zmm1, %zmm0 {%k1}
-; CHECK-NEXT:    vminph %zmm2, %zmm0, %zmm0
+; CHECK-NEXT:    vminph %zmm1, %zmm0, %zmm1
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} zmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    vpternlogq {{.*#+}} zmm0 = (zmm0 & zmm2) | zmm1
 ; CHECK-NEXT:    retq
   %r = call <32 x half> @llvm.minimum.v32f16(<32 x half> %x, <32 x half> %y)
   ret <32 x half> %r
@@ -208,12 +198,12 @@ define <32 x half> @test_fminimum_v32f16_szero(<32 x half> %x, <32 x half> %y) "
 define <32 x half> @test_fmaximum_v32f16_nans_szero(<32 x half> %x, <32 x half> %y) {
 ; CHECK-LABEL: test_fmaximum_v32f16_nans_szero:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpmovw2m %zmm0, %k1
-; CHECK-NEXT:    vpblendmw %zmm1, %zmm0, %zmm2 {%k1}
+; CHECK-NEXT:    vmaxph %zmm1, %zmm0, %zmm2
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} zmm1 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
+; CHECK-NEXT:    vpternlogq {{.*#+}} zmm1 = zmm2 & (zmm1 | zmm0)
+; CHECK-NEXT:    vcmpunordph %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vmovdqu16 %zmm0, %zmm1 {%k1}
-; CHECK-NEXT:    vmaxph %zmm2, %zmm1, %zmm0
-; CHECK-NEXT:    vcmpunordph %zmm1, %zmm1, %k1
-; CHECK-NEXT:    vmovdqu16 %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %r = call <32 x half> @llvm.maximum.v32f16(<32 x half> %x, <32 x half> %y)
   ret <32 x half> %r
