@@ -804,6 +804,9 @@ namespace llvm {
     GF2P8AFFINEQB,
     GF2P8MULB,
 
+    // Carry-less multiplication
+    PCLMULQDQ,
+
     // LWP insert record.
     LWPINS,
 
