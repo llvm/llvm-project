@@ -23,7 +23,7 @@
 
 int main(int argc, char const *argv[]) {
 #ifdef NO_MTE
-  *(char *)(0) = 0;
+  __builtin_trap();
 #endif
 
   if (prctl(PR_SET_TAGGED_ADDR_CTRL,

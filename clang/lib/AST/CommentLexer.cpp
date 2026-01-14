@@ -214,7 +214,7 @@ bool isCommandNameStartCharacter(char C) {
 }
 
 bool isCommandNameCharacter(char C) {
-  return isAlphanumeric(C);
+  return isAsciiIdentifierContinue(C, false);
 }
 
 const char *skipCommandName(const char *BufferPtr, const char *BufferEnd) {

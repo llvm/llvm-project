@@ -67,18 +67,17 @@ FailureOr<Operation *> transposeConv2DHelper(RewriterBase &rewriter,
   Value input;
   if (isTensorOp) {
 
-    input = rewriter.create<tensor::EmptyOp>(loc, newFilterShape, elementTy)
+    input = tensor::EmptyOp::create(rewriter, loc, newFilterShape, elementTy)
                 .getResult();
   } else {
-    input = rewriter
-                .create<memref::AllocOp>(
-                    loc, MemRefType::get(newFilterShape, elementTy))
+    input = memref::AllocOp::create(rewriter, loc,
+                                    MemRefType::get(newFilterShape, elementTy))
                 .getResult();
   }
 
   // We can then construct the transposition on our filter.
   auto transpose =
-      rewriter.create<linalg::TransposeOp>(loc, filter, input, filterPerm);
+      linalg::TransposeOp::create(rewriter, loc, filter, input, filterPerm);
 
   Value newFilter;
   if (isTensorOp) {
@@ -98,8 +97,8 @@ FailureOr<Operation *> transposeConv2DHelper(RewriterBase &rewriter,
     resultTy.push_back(op->getResult(0).getType());
   }
   auto newConv =
-      rewriter.create<HWCFConvOp>(loc, resultTy, newInputs, op.getOutputs(),
-                                  op.getStrides(), op.getDilations());
+      HWCFConvOp::create(rewriter, loc, resultTy, newInputs, op.getOutputs(),
+                         op.getStrides(), op.getDilations());
   rewriter.replaceOp(op, newConv);
   return newConv.getOperation();
 }

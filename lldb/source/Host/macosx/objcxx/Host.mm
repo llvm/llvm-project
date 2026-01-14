@@ -1013,20 +1013,29 @@ static Status LaunchProcessXPC(const char *exe_path,
   xpc_dictionary_set_int64(message, LauncherXPCServicePosixspawnFlagsKey,
                            GetPosixspawnFlags(launch_info));
   const FileAction *file_action = launch_info.GetFileActionForFD(STDIN_FILENO);
-  if (file_action && !file_action->GetPath().empty()) {
+  std::string file_action_path;
+  if (file_action)
+    file_action_path = file_action->GetFileSpec().GetPath();
+
+  if (!file_action_path.empty())
     xpc_dictionary_set_string(message, LauncherXPCServiceStdInPathKeyKey,
-                              file_action->GetPath().str().c_str());
-  }
+                              file_action_path.c_str());
+
   file_action = launch_info.GetFileActionForFD(STDOUT_FILENO);
-  if (file_action && !file_action->GetPath().empty()) {
+  if (file_action)
+    file_action_path = file_action->GetFileSpec().GetPath();
+
+  if (!file_action_path.empty())
     xpc_dictionary_set_string(message, LauncherXPCServiceStdOutPathKeyKey,
-                              file_action->GetPath().str().c_str());
-  }
+                              file_action_path.c_str());
+
   file_action = launch_info.GetFileActionForFD(STDERR_FILENO);
-  if (file_action && !file_action->GetPath().empty()) {
+  if (file_action)
+    file_action_path = file_action->GetFileSpec().GetPath();
+
+  if (!file_action_path.empty())
     xpc_dictionary_set_string(message, LauncherXPCServiceStdErrPathKeyKey,
-                              file_action->GetPath().str().c_str());
-  }
+                              file_action_path.c_str());
 
   xpc_object_t reply =
       xpc_connection_send_message_with_reply_sync(conn, message);
@@ -1135,16 +1144,16 @@ static bool AddPosixSpawnFileAction(void *_file_actions, const FileAction *info,
       if (oflag & O_CREAT)
         mode = 0640;
 
-      error = Status(::posix_spawn_file_actions_addopen(
-                         file_actions, info->GetFD(),
-                         info->GetPath().str().c_str(), oflag, mode),
-                     eErrorTypePOSIX);
+      const std::string file_path(info->GetFileSpec().GetPath());
+      error = Status(
+          ::posix_spawn_file_actions_addopen(file_actions, info->GetFD(),
+                                             file_path.c_str(), oflag, mode),
+          eErrorTypePOSIX);
       if (error.Fail())
         LLDB_LOG(log,
                  "error: {0}, posix_spawn_file_actions_addopen (action={1}, "
                  "fd={2}, path='{3}', oflag={4}, mode={5})",
-                 error, file_actions, info->GetFD(), info->GetPath(), oflag,
-                 mode);
+                 error, file_actions, info->GetFD(), file_path, oflag, mode);
     }
     break;
   }
@@ -1207,6 +1216,38 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
       LLDB_LOG(log, "error: {0}, setup_posix_spawn_responsible_flag(&attr)",
                error);
       return error;
+    }
+  }
+
+  if (launch_info.GetFlags().Test(eLaunchFlagMemoryTagging)) {
+    // The following function configures the spawn attributes to launch the
+    // process with memory tagging explicitly enabled.  We look it up
+    // dynamically since it is only available on newer OS.  Does nothing on
+    // hardware which does not support MTE.
+    //
+    //   int posix_spawnattr_set_use_sec_transition_shims_np(
+    //       posix_spawnattr_t *attr, uint32_t flags);
+    //
+    using posix_spawnattr_set_use_sec_transition_shims_np_t =
+        int (*)(posix_spawnattr_t *attr, uint32_t flags);
+    auto posix_spawnattr_enable_memory_tagging_fn =
+        (posix_spawnattr_set_use_sec_transition_shims_np_t)dlsym(
+            RTLD_DEFAULT, "posix_spawnattr_set_use_sec_transition_shims_np");
+    if (posix_spawnattr_enable_memory_tagging_fn) {
+      error = Status(posix_spawnattr_enable_memory_tagging_fn(&attr, 0),
+                     eErrorTypePOSIX);
+      if (error.Fail()) {
+        LLDB_LOG(log,
+                 "error: {0}, "
+                 "posix_spawnattr_set_use_sec_transition_shims_np(&attr, 0)",
+                 error);
+        return error;
+      }
+    } else {
+      LLDB_LOG(log,
+               "error: posix_spawnattr_set_use_sec_transition_shims_np not "
+               "available",
+               error);
     }
   }
 

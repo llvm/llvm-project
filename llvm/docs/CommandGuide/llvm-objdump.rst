@@ -140,23 +140,29 @@ OPTIONS
   debug information for stripped binaries. Multiple instances of this argument
   are searched in the order given.
 
+.. option:: --debug-indent=<width>
+
+  Distance to indent the source-level variable or inlined function display,
+  relative to the start of the disassembly. Defaults to 52 characters.
+
+.. option:: --debug-inlined-funcs[=<format>]
+
+  Print the locations of inlined functions alongside disassembly.
+  ``format`` may be ``ascii``, ``limits-only``, or ``unicode``, defaulting to
+  ``unicode`` if omitted.
+
+.. option:: --debug-vars[=<format>]
+
+  Print the locations (in registers or memory) of source-level variables
+  alongside disassembly. ``format`` may be ``ascii`` or ``unicode``, defaulting
+  to ``unicode`` if omitted.
+
 .. option:: --debuginfod, --no-debuginfod
 
   Whether or not to try debuginfod lookups for debug binaries. Unless specified,
   debuginfod is only enabled if libcurl was compiled in (``LLVM_ENABLE_CURL``)
   and at least one server URL was provided by the environment variable
   ``DEBUGINFOD_URLS``.
-
-.. option:: --debug-vars=<format>
-
-  Print the locations (in registers or memory) of source-level variables
-  alongside disassembly. ``format`` may be ``unicode`` or ``ascii``, defaulting
-  to ``unicode`` if omitted.
-
-.. option:: --debug-vars-indent=<width>
-
-  Distance to indent the source-level variable display, relative to the start
-  of the disassembly. Defaults to 52 characters.
 
 .. option:: -j, --section=<section1[,section2,...]>
 

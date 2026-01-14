@@ -9,7 +9,6 @@ define double @foo(double %x) nounwind {
   ; CHECK-NEXT:   liveins: $x10, $x11, $x8, $x9, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $x2 = frame-setup ADDI $x2, -64
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 64
   ; CHECK-NEXT:   frame-setup SW killed $x8, $x2, 60 :: (store (s32) into %stack.1)
   ; CHECK-NEXT:   frame-setup SW killed $x9, $x2, 56 :: (store (s32) into %stack.2)
   ; CHECK-NEXT:   frame-setup SW killed $x18, $x2, 52 :: (store (s32) into %stack.3)
@@ -22,18 +21,6 @@ define double @foo(double %x) nounwind {
   ; CHECK-NEXT:   frame-setup SW killed $x25, $x2, 24 :: (store (s32) into %stack.10)
   ; CHECK-NEXT:   frame-setup SW killed $x26, $x2, 20 :: (store (s32) into %stack.11)
   ; CHECK-NEXT:   frame-setup SW killed $x27, $x2, 16 :: (store (s32) into %stack.12)
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $x8, -4
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $x9, -8
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $x18, -12
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $x19, -16
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $x20, -20
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $x21, -24
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $x22, -28
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $x23, -32
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $x24, -36
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $x25, -40
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $x26, -44
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $x27, -48
   ; CHECK-NEXT:   renamable $x10_x11 = nofpexcept FADD_D_IN32X killed renamable $x10_x11, renamable $x10_x11, 7, implicit $frm
   ; CHECK-NEXT:   PseudoRV32ZdinxSD killed renamable $x10_x11, $x2, 8 :: (store (s64) into %stack.0, align 4)
   ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $x6, 12 /* clobber */, implicit-def dead early-clobber $x7, 12 /* clobber */, implicit-def dead early-clobber $x8, 12 /* clobber */, implicit-def dead early-clobber $x9, 12 /* clobber */, implicit-def dead early-clobber $x10, 12 /* clobber */, implicit-def dead early-clobber $x11, 12 /* clobber */, implicit-def dead early-clobber $x12, 12 /* clobber */, implicit-def dead early-clobber $x13, 12 /* clobber */, implicit-def dead early-clobber $x14, 12 /* clobber */, implicit-def dead early-clobber $x15, 12 /* clobber */, implicit-def dead early-clobber $x16, 12 /* clobber */, implicit-def dead early-clobber $x17, 12 /* clobber */, implicit-def dead early-clobber $x18, 12 /* clobber */, implicit-def dead early-clobber $x19, 12 /* clobber */, implicit-def dead early-clobber $x20, 12 /* clobber */, implicit-def dead early-clobber $x21, 12 /* clobber */, implicit-def dead early-clobber $x22, 12 /* clobber */, implicit-def dead early-clobber $x23, 12 /* clobber */, implicit-def dead early-clobber $x24, 12 /* clobber */, implicit-def dead early-clobber $x25, 12 /* clobber */, implicit-def dead early-clobber $x26, 12 /* clobber */, implicit-def dead early-clobber $x27, 12 /* clobber */, implicit-def dead early-clobber $x28, 12 /* clobber */, implicit-def dead early-clobber $x29, 12 /* clobber */, implicit-def dead early-clobber $x31
@@ -50,20 +37,7 @@ define double @foo(double %x) nounwind {
   ; CHECK-NEXT:   $x25 = frame-destroy LW $x2, 24 :: (load (s32) from %stack.10)
   ; CHECK-NEXT:   $x26 = frame-destroy LW $x2, 20 :: (load (s32) from %stack.11)
   ; CHECK-NEXT:   $x27 = frame-destroy LW $x2, 16 :: (load (s32) from %stack.12)
-  ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION restore $x8
-  ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION restore $x9
-  ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION restore $x18
-  ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION restore $x19
-  ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION restore $x20
-  ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION restore $x21
-  ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION restore $x22
-  ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION restore $x23
-  ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION restore $x24
-  ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION restore $x25
-  ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION restore $x26
-  ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION restore $x27
   ; CHECK-NEXT:   $x2 = frame-destroy ADDI $x2, 64
-  ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION def_cfa_offset 0
   ; CHECK-NEXT:   PseudoRET implicit $x10, implicit $x11
   %a = fadd double %x, %x
   call void asm sideeffect "", "~{x6},~{x7},~{x8},~{x9},~{x10},~{x11},~{x12},~{x13},~{x14},~{x15},~{x16},~{x17},~{x18},~{x19},~{x20},~{x21},~{x22},~{x23},~{x24},~{x25},~{x26},~{x27},~{x28},~{x29},~{xr0},~{x31}"()

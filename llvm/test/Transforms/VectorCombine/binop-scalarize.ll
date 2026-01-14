@@ -20,3 +20,22 @@ define <4 x i8> @udiv_ub(i8 %x, i8 %y) {
   %v = udiv <4 x i8> %x.insert, %y.insert
   ret <4 x i8> %v
 }
+
+
+; Unfoldable constant expression may cause infinite loop between 
+; scalarizing insertelement and folding binop(insert(x,a,idx),insert(y,b,idx))
+@val = external hidden global ptr, align 8
+
+define <2 x i64> @pr153012(i64 %idx) #0 {
+; CHECK-LABEL: define <2 x i64> @pr153012(
+; CHECK-SAME: i64 [[IDX:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A:%.*]] = insertelement <2 x i64> <i64 5, i64 ptrtoint (ptr @val to i64)>, i64 [[IDX]], i32 0
+; CHECK-NEXT:    [[B:%.*]] = or disjoint <2 x i64> splat (i64 2), [[A]]
+; CHECK-NEXT:    ret <2 x i64> [[B]]
+;
+entry:
+  %a = insertelement <2 x i64> <i64 5, i64 ptrtoint (ptr @val to i64)>, i64 %idx, i32 0
+  %b = or disjoint <2 x i64> splat (i64 2), %a
+  ret <2 x i64> %b
+}

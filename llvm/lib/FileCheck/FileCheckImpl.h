@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/FileCheck/FileCheck.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/SourceMgr.h"
 #include <map>
@@ -88,23 +89,24 @@ public:
   /// \returns a wildcard regular expression string that matches any value in
   /// the format represented by this instance and no other value, or an error
   /// if the format is NoFormat.
-  Expected<std::string> getWildcardRegex() const;
+  LLVM_ABI_FOR_TEST Expected<std::string> getWildcardRegex() const;
 
   /// \returns the string representation of \p Value in the format represented
   /// by this instance, or an error if conversion to this format failed or the
   /// format is NoFormat.
-  Expected<std::string> getMatchingString(APInt Value) const;
+  LLVM_ABI_FOR_TEST Expected<std::string> getMatchingString(APInt Value) const;
 
   /// \returns the value corresponding to string representation \p StrVal
   /// according to the matching format represented by this instance.
-  APInt valueFromStringRepr(StringRef StrVal, const SourceMgr &SM) const;
+  LLVM_ABI_FOR_TEST APInt valueFromStringRepr(StringRef StrVal,
+                                              const SourceMgr &SM) const;
 };
 
 /// Class to represent an overflow error that might result when manipulating a
 /// value.
 class OverflowError : public ErrorInfo<OverflowError> {
 public:
-  static char ID;
+  LLVM_ABI_FOR_TEST static char ID;
 
   std::error_code convertToErrorCode() const override {
     return std::make_error_code(std::errc::value_too_large);
@@ -115,10 +117,14 @@ public:
 
 /// Performs operation and \returns its result or an error in case of failure,
 /// such as if an overflow occurs.
-Expected<APInt> exprAdd(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
-Expected<APInt> exprSub(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
-Expected<APInt> exprMul(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
-Expected<APInt> exprDiv(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
+LLVM_ABI_FOR_TEST Expected<APInt> exprAdd(const APInt &Lhs, const APInt &Rhs,
+                                          bool &Overflow);
+LLVM_ABI_FOR_TEST Expected<APInt> exprSub(const APInt &Lhs, const APInt &Rhs,
+                                          bool &Overflow);
+LLVM_ABI_FOR_TEST Expected<APInt> exprMul(const APInt &Lhs, const APInt &Rhs,
+                                          bool &Overflow);
+LLVM_ABI_FOR_TEST Expected<APInt> exprDiv(const APInt &Lhs, const APInt &Rhs,
+                                          bool &Overflow);
 Expected<APInt> exprMax(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
 Expected<APInt> exprMin(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
 
@@ -169,7 +175,7 @@ private:
   StringRef VarName;
 
 public:
-  static char ID;
+  LLVM_ABI_FOR_TEST static char ID;
 
   UndefVarError(StringRef VarName) : VarName(VarName) {}
 
@@ -277,7 +283,7 @@ public:
 
 /// Class representing the use of a numeric variable in the AST of an
 /// expression.
-class NumericVariableUse : public ExpressionAST {
+class LLVM_ABI_FOR_TEST NumericVariableUse : public ExpressionAST {
 private:
   /// Pointer to the class instance for the variable this use is about.
   NumericVariable *Variable;
@@ -299,7 +305,7 @@ public:
 using binop_eval_t = Expected<APInt> (*)(const APInt &, const APInt &, bool &);
 
 /// Class representing a single binary operation in the AST of an expression.
-class BinaryOperation : public ExpressionAST {
+class LLVM_ABI_FOR_TEST BinaryOperation : public ExpressionAST {
 private:
   /// Left operand.
   std::unique_ptr<ExpressionAST> LeftOperand;
@@ -377,7 +383,7 @@ public:
   virtual Expected<std::string> getResultForDiagnostics() const = 0;
 };
 
-class StringSubstitution : public Substitution {
+class LLVM_ABI_FOR_TEST StringSubstitution : public Substitution {
 public:
   StringSubstitution(FileCheckPatternContext *Context, StringRef VarName,
                      size_t InsertIdx)
@@ -393,7 +399,7 @@ public:
   Expected<std::string> getResultForDiagnostics() const override;
 };
 
-class NumericSubstitution : public Substitution {
+class LLVM_ABI_FOR_TEST NumericSubstitution : public Substitution {
 private:
   /// Pointer to the class representing the expression whose value is to be
   /// substituted.
@@ -463,24 +469,24 @@ private:
 public:
   /// \returns the value of string variable \p VarName or an error if no such
   /// variable has been defined.
-  Expected<StringRef> getPatternVarValue(StringRef VarName);
+  LLVM_ABI_FOR_TEST Expected<StringRef> getPatternVarValue(StringRef VarName);
 
   /// Defines string and numeric variables from definitions given on the
   /// command line, passed as a vector of [#]VAR=VAL strings in
   /// \p CmdlineDefines. \returns an error list containing diagnostics against
   /// \p SM for all definition parsing failures, if any, or Success otherwise.
-  Error defineCmdlineVariables(ArrayRef<StringRef> CmdlineDefines,
-                               SourceMgr &SM);
+  LLVM_ABI_FOR_TEST Error
+  defineCmdlineVariables(ArrayRef<StringRef> CmdlineDefines, SourceMgr &SM);
 
   /// Create @LINE pseudo variable. Value is set when pattern are being
   /// matched.
-  void createLineVariable();
+  LLVM_ABI_FOR_TEST void createLineVariable();
 
   /// Undefines local variables (variables whose name does not start with a '$'
   /// sign), i.e. removes them from GlobalVariableTable and from
   /// GlobalNumericVariableTable and also clears the value of numeric
   /// variables.
-  void clearLocalVars();
+  LLVM_ABI_FOR_TEST void clearLocalVars();
 
 private:
   /// Makes a new numeric variable and registers it for destruction when the
@@ -506,7 +512,7 @@ private:
   SMRange Range;
 
 public:
-  static char ID;
+  LLVM_ABI_FOR_TEST static char ID;
 
   ErrorDiagnostic(SMDiagnostic &&Diag, SMRange Range)
       : Diagnostic(Diag), Range(Range) {}
@@ -522,7 +528,7 @@ public:
   SMRange getRange() const { return Range; }
 
   static Error get(const SourceMgr &SM, SMLoc Loc, const Twine &ErrMsg,
-                   SMRange Range = std::nullopt) {
+                   SMRange Range = {}) {
     return make_error<ErrorDiagnostic>(
         SM.GetMessage(Loc, SourceMgr::DK_Error, ErrMsg), Range);
   }
@@ -536,7 +542,7 @@ public:
 
 class NotFoundError : public ErrorInfo<NotFoundError> {
 public:
-  static char ID;
+  LLVM_ABI_FOR_TEST static char ID;
 
   std::error_code convertToErrorCode() const override {
     return inconvertibleErrorCode();
@@ -660,7 +666,7 @@ public:
   FileCheckPatternContext *getContext() const { return Context; }
 
   /// \returns whether \p C is a valid first character for a variable name.
-  static bool isValidVarNameStart(char C);
+  LLVM_ABI_FOR_TEST static bool isValidVarNameStart(char C);
 
   /// Parsing information about a variable.
   struct VariableProperties {
@@ -673,8 +679,8 @@ public:
   /// is the name of a pseudo variable, or an error holding a diagnostic
   /// against \p SM if parsing fail. If parsing was successful, also strips
   /// \p Str from the variable name.
-  static Expected<VariableProperties> parseVariable(StringRef &Str,
-                                                    const SourceMgr &SM);
+  LLVM_ABI_FOR_TEST static Expected<VariableProperties>
+  parseVariable(StringRef &Str, const SourceMgr &SM);
   /// Parses \p Expr for a numeric substitution block at line \p LineNumber,
   /// or before input is parsed if \p LineNumber is None. Parameter
   /// \p IsLegacyLineExpr indicates whether \p Expr should be a legacy @LINE
@@ -685,7 +691,8 @@ public:
   /// successful, sets \p DefinedNumericVariable to point to the class
   /// representing the numeric variable defined in this numeric substitution
   /// block, or std::nullopt if this block does not define any variable.
-  static Expected<std::unique_ptr<Expression>> parseNumericSubstitutionBlock(
+  LLVM_ABI_FOR_TEST static Expected<std::unique_ptr<Expression>>
+  parseNumericSubstitutionBlock(
       StringRef Expr, std::optional<NumericVariable *> &DefinedNumericVariable,
       bool IsLegacyLineExpr, std::optional<size_t> LineNumber,
       FileCheckPatternContext *Context, const SourceMgr &SM);
@@ -696,8 +703,9 @@ public:
   /// global options that influence the parsing such as whitespace
   /// canonicalization, \p SM provides the SourceMgr used for error reports.
   /// \returns true in case of an error, false otherwise.
-  bool parsePattern(StringRef PatternStr, StringRef Prefix, SourceMgr &SM,
-                    const FileCheckRequest &Req);
+  LLVM_ABI_FOR_TEST bool parsePattern(StringRef PatternStr, StringRef Prefix,
+                                      SourceMgr &SM,
+                                      const FileCheckRequest &Req);
   struct Match {
     size_t Pos;
     size_t Len;
@@ -721,7 +729,8 @@ public:
   /// GlobalNumericVariableTable StringMap in the same class provides the
   /// current values of FileCheck numeric variables and is updated if this
   /// match defines new numeric values.
-  MatchResult match(StringRef Buffer, const SourceMgr &SM) const;
+  LLVM_ABI_FOR_TEST MatchResult match(StringRef Buffer,
+                                      const SourceMgr &SM) const;
   /// Prints the value of successful substitutions.
   void printSubstitutions(const SourceMgr &SM, StringRef Buffer,
                           SMRange MatchRange, FileCheckDiag::MatchType MatchTy,
@@ -732,8 +741,9 @@ public:
   bool hasVariable() const {
     return !(Substitutions.empty() && VariableDefs.empty());
   }
-  void printVariableDefs(const SourceMgr &SM, FileCheckDiag::MatchType MatchTy,
-                         std::vector<FileCheckDiag> *Diags) const;
+  LLVM_ABI_FOR_TEST void
+  printVariableDefs(const SourceMgr &SM, FileCheckDiag::MatchType MatchTy,
+                    std::vector<FileCheckDiag> *Diags) const;
 
   Check::FileCheckType getCheckTy() const { return CheckTy; }
 

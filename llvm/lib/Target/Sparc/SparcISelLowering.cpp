@@ -33,6 +33,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -115,7 +116,8 @@ static bool Analyze_CC_Sparc64_Full(bool IsReturn, unsigned &ValNo, MVT &ValVT,
 
   // Stack space is allocated for all arguments starting from [%fp+BIAS+128].
   unsigned size      = (LocVT == MVT::f128) ? 16 : 8;
-  Align alignment = (LocVT == MVT::f128) ? Align(16) : Align(8);
+  Align alignment =
+      (LocVT == MVT::f128 || ArgFlags.isSplit()) ? Align(16) : Align(8);
   unsigned Offset = State.AllocateStack(size, alignment);
   unsigned Reg = 0;
 
@@ -438,6 +440,7 @@ SDValue SparcTargetLowering::LowerFormalArguments_32(
   MachineFunction &MF = DAG.getMachineFunction();
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
   SparcMachineFunctionInfo *FuncInfo = MF.getInfo<SparcMachineFunctionInfo>();
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
 
   // Assign locations to all of the incoming arguments.
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -451,6 +454,7 @@ SDValue SparcTargetLowering::LowerFormalArguments_32(
   unsigned InIdx = 0;
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i, ++InIdx) {
     CCValAssign &VA = ArgLocs[i];
+    EVT LocVT = VA.getLocVT();
 
     if (Ins[InIdx].Flags.isSRet()) {
       if (InIdx != 0)
@@ -464,6 +468,7 @@ SDValue SparcTargetLowering::LowerFormalArguments_32(
       continue;
     }
 
+    SDValue Arg;
     if (VA.isRegLoc()) {
       if (VA.needsCustom()) {
         assert(VA.getLocVT() == MVT::f64 || VA.getLocVT() == MVT::v2i32);
@@ -498,76 +503,85 @@ SDValue SparcTargetLowering::LowerFormalArguments_32(
       }
       Register VReg = RegInfo.createVirtualRegister(&SP::IntRegsRegClass);
       MF.getRegInfo().addLiveIn(VA.getLocReg(), VReg);
-      SDValue Arg = DAG.getCopyFromReg(Chain, dl, VReg, MVT::i32);
-      if (VA.getLocVT() == MVT::f32)
-        Arg = DAG.getNode(ISD::BITCAST, dl, MVT::f32, Arg);
-      else if (VA.getLocVT() != MVT::i32) {
-        Arg = DAG.getNode(ISD::AssertSext, dl, MVT::i32, Arg,
-                          DAG.getValueType(VA.getLocVT()));
-        Arg = DAG.getNode(ISD::TRUNCATE, dl, VA.getLocVT(), Arg);
+      Arg = DAG.getCopyFromReg(Chain, dl, VReg, MVT::i32);
+      if (VA.getLocInfo() != CCValAssign::Indirect) {
+        if (VA.getLocVT() == MVT::f32)
+          Arg = DAG.getNode(ISD::BITCAST, dl, MVT::f32, Arg);
+        else if (VA.getLocVT() != MVT::i32) {
+          Arg = DAG.getNode(ISD::AssertSext, dl, MVT::i32, Arg,
+                            DAG.getValueType(VA.getLocVT()));
+          Arg = DAG.getNode(ISD::TRUNCATE, dl, VA.getLocVT(), Arg);
+        }
+        InVals.push_back(Arg);
+        continue;
       }
-      InVals.push_back(Arg);
-      continue;
-    }
+    } else {
+      assert(VA.isMemLoc());
 
-    assert(VA.isMemLoc());
+      unsigned Offset = VA.getLocMemOffset() + StackOffset;
 
-    unsigned Offset = VA.getLocMemOffset()+StackOffset;
-    auto PtrVT = getPointerTy(DAG.getDataLayout());
+      if (VA.needsCustom()) {
+        assert(VA.getValVT() == MVT::f64 || VA.getValVT() == MVT::v2i32);
+        // If it is double-word aligned, just load.
+        if (Offset % 8 == 0) {
+          int FI = MF.getFrameInfo().CreateFixedObject(8, Offset, true);
+          SDValue FIPtr = DAG.getFrameIndex(FI, PtrVT);
+          SDValue Load = DAG.getLoad(VA.getValVT(), dl, Chain, FIPtr,
+                                     MachinePointerInfo());
+          InVals.push_back(Load);
+          continue;
+        }
 
-    if (VA.needsCustom()) {
-      assert(VA.getValVT() == MVT::f64 || VA.getValVT() == MVT::v2i32);
-      // If it is double-word aligned, just load.
-      if (Offset % 8 == 0) {
-        int FI = MF.getFrameInfo().CreateFixedObject(8,
-                                                     Offset,
-                                                     true);
+        int FI = MF.getFrameInfo().CreateFixedObject(4, Offset, true);
         SDValue FIPtr = DAG.getFrameIndex(FI, PtrVT);
-        SDValue Load =
-            DAG.getLoad(VA.getValVT(), dl, Chain, FIPtr, MachinePointerInfo());
-        InVals.push_back(Load);
+        SDValue HiVal =
+            DAG.getLoad(MVT::i32, dl, Chain, FIPtr, MachinePointerInfo());
+        int FI2 = MF.getFrameInfo().CreateFixedObject(4, Offset + 4, true);
+        SDValue FIPtr2 = DAG.getFrameIndex(FI2, PtrVT);
+
+        SDValue LoVal =
+            DAG.getLoad(MVT::i32, dl, Chain, FIPtr2, MachinePointerInfo());
+
+        if (IsLittleEndian)
+          std::swap(LoVal, HiVal);
+
+        SDValue WholeValue =
+            DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, LoVal, HiVal);
+        WholeValue = DAG.getNode(ISD::BITCAST, dl, VA.getValVT(), WholeValue);
+        InVals.push_back(WholeValue);
         continue;
       }
 
-      int FI = MF.getFrameInfo().CreateFixedObject(4,
-                                                   Offset,
-                                                   true);
+      int FI = MF.getFrameInfo().CreateFixedObject(LocVT.getSizeInBits() / 8,
+                                                   Offset, true);
       SDValue FIPtr = DAG.getFrameIndex(FI, PtrVT);
-      SDValue HiVal =
-          DAG.getLoad(MVT::i32, dl, Chain, FIPtr, MachinePointerInfo());
-      int FI2 = MF.getFrameInfo().CreateFixedObject(4,
-                                                    Offset+4,
-                                                    true);
-      SDValue FIPtr2 = DAG.getFrameIndex(FI2, PtrVT);
-
-      SDValue LoVal =
-          DAG.getLoad(MVT::i32, dl, Chain, FIPtr2, MachinePointerInfo());
-
-      if (IsLittleEndian)
-        std::swap(LoVal, HiVal);
-
-      SDValue WholeValue =
-        DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, LoVal, HiVal);
-      WholeValue = DAG.getNode(ISD::BITCAST, dl, VA.getValVT(), WholeValue);
-      InVals.push_back(WholeValue);
-      continue;
+      SDValue Load = DAG.getLoad(LocVT, dl, Chain, FIPtr,
+                                 MachinePointerInfo::getFixedStack(MF, FI));
+      if (VA.getLocInfo() != CCValAssign::Indirect) {
+        InVals.push_back(Load);
+        continue;
+      }
+      Arg = Load;
     }
 
-    int FI = MF.getFrameInfo().CreateFixedObject(4,
-                                                 Offset,
-                                                 true);
-    SDValue FIPtr = DAG.getFrameIndex(FI, PtrVT);
-    SDValue Load ;
-    if (VA.getValVT() == MVT::i32 || VA.getValVT() == MVT::f32) {
-      Load = DAG.getLoad(VA.getValVT(), dl, Chain, FIPtr, MachinePointerInfo());
-    } else if (VA.getValVT() == MVT::f128) {
-      report_fatal_error("SPARCv8 does not handle f128 in calls; "
-                         "pass indirectly");
-    } else {
-      // We shouldn't see any other value types here.
-      llvm_unreachable("Unexpected ValVT encountered in frame lowering.");
+    assert(VA.getLocInfo() == CCValAssign::Indirect);
+
+    SDValue ArgValue =
+        DAG.getLoad(VA.getValVT(), dl, Chain, Arg, MachinePointerInfo());
+    InVals.push_back(ArgValue);
+
+    unsigned ArgIndex = Ins[InIdx].OrigArgIndex;
+    assert(Ins[InIdx].PartOffset == 0);
+    while (i + 1 != e && Ins[InIdx + 1].OrigArgIndex == ArgIndex) {
+      CCValAssign &PartVA = ArgLocs[i + 1];
+      unsigned PartOffset = Ins[InIdx + 1].PartOffset;
+      SDValue Address = DAG.getMemBasePlusOffset(
+          ArgValue, TypeSize::getFixed(PartOffset), dl);
+      InVals.push_back(DAG.getLoad(PartVA.getValVT(), dl, Chain, Address,
+                                   MachinePointerInfo()));
+      ++i;
+      ++InIdx;
     }
-    InVals.push_back(Load);
   }
 
   if (MF.getFunction().hasStructRetAttr()) {
@@ -834,6 +848,8 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
   CallingConv::ID CallConv              = CLI.CallConv;
   bool isVarArg                         = CLI.IsVarArg;
   MachineFunction &MF = DAG.getMachineFunction();
+  LLVMContext &Ctx = *DAG.getContext();
+  EVT PtrVT = getPointerTy(MF.getDataLayout());
 
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -912,7 +928,9 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
     // Promote the value if needed.
     switch (VA.getLocInfo()) {
     default: llvm_unreachable("Unknown loc info!");
-    case CCValAssign::Full: break;
+    case CCValAssign::Full:
+    case CCValAssign::Indirect:
+      break;
     case CCValAssign::SExt:
       Arg = DAG.getNode(ISD::SIGN_EXTEND, dl, VA.getLocVT(), Arg);
       break;
@@ -1009,6 +1027,49 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
             DAG.getStore(Chain, dl, Part1, PtrOff, MachinePointerInfo()));
       }
       continue;
+    }
+
+    if (VA.getLocInfo() == CCValAssign::Indirect) {
+      // Store the argument in a stack slot and pass its address.
+      unsigned ArgIndex = Outs[realArgIdx].OrigArgIndex;
+      assert(Outs[realArgIdx].PartOffset == 0);
+
+      EVT SlotVT;
+      if (i + 1 != e && Outs[realArgIdx + 1].OrigArgIndex == ArgIndex) {
+        Type *OrigArgType = CLI.Args[ArgIndex].Ty;
+        EVT OrigArgVT = getValueType(MF.getDataLayout(), OrigArgType);
+        MVT PartVT =
+            getRegisterTypeForCallingConv(Ctx, CLI.CallConv, OrigArgVT);
+        unsigned N =
+            getNumRegistersForCallingConv(Ctx, CLI.CallConv, OrigArgVT);
+        SlotVT = EVT::getIntegerVT(Ctx, PartVT.getSizeInBits() * N);
+      } else {
+        SlotVT = Outs[realArgIdx].VT;
+      }
+
+      SDValue SpillSlot = DAG.CreateStackTemporary(SlotVT);
+      int FI = cast<FrameIndexSDNode>(SpillSlot)->getIndex();
+      MemOpChains.push_back(
+          DAG.getStore(Chain, dl, Arg, SpillSlot,
+                       MachinePointerInfo::getFixedStack(MF, FI)));
+      // If the original argument was split (e.g. f128), we need
+      // to store all parts of it here (and pass just one address).
+      while (i + 1 != e && Outs[realArgIdx + 1].OrigArgIndex == ArgIndex) {
+        SDValue PartValue = OutVals[realArgIdx + 1];
+        unsigned PartOffset = Outs[realArgIdx + 1].PartOffset;
+        SDValue Address = DAG.getMemBasePlusOffset(
+            DAG.getFrameIndex(FI, PtrVT), TypeSize::getFixed(PartOffset), dl);
+        MemOpChains.push_back(
+            DAG.getStore(Chain, dl, PartValue, Address,
+                         MachinePointerInfo::getFixedStack(MF, FI)));
+        assert((PartOffset + PartValue.getValueType().getStoreSize() <=
+                SlotVT.getStoreSize()) &&
+               "Not enough space for argument part!");
+        ++i;
+        ++realArgIdx;
+      }
+
+      Arg = SpillSlot;
     }
 
     // Arguments that can be passed on register must be kept at
@@ -1179,7 +1240,7 @@ static void fixupVariableFloatArgs(SmallVectorImpl<CCValAssign> &ArgLocs,
     if (!VA.isRegLoc() || (ValTy != MVT::f64 && ValTy != MVT::f128))
       continue;
     // The fixed arguments to a varargs function still go in FP registers.
-    if (Outs[VA.getValNo()].IsFixed)
+    if (!Outs[VA.getValNo()].Flags.isVarArg())
       continue;
 
     // This floating point argument should be reassigned.
@@ -1571,7 +1632,7 @@ static SPCC::CondCodes FPCondCCodeToFCC(ISD::CondCode CC) {
 
 SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
                                          const SparcSubtarget &STI)
-    : TargetLowering(TM), Subtarget(&STI) {
+    : TargetLowering(TM, STI), Subtarget(&STI) {
   MVT PtrVT = MVT::getIntegerVT(TM.getPointerSizeInBits(0));
 
   // Instructions which use registers as conditionals examine all the
@@ -1793,18 +1854,20 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FSIN , MVT::f128, Expand);
   setOperationAction(ISD::FCOS , MVT::f128, Expand);
   setOperationAction(ISD::FSINCOS, MVT::f128, Expand);
-  setOperationAction(ISD::FREM , MVT::f128, Expand);
+  setOperationAction(ISD::FREM, MVT::f128, LibCall);
   setOperationAction(ISD::FMA  , MVT::f128, Expand);
   setOperationAction(ISD::FSIN , MVT::f64, Expand);
   setOperationAction(ISD::FCOS , MVT::f64, Expand);
   setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
-  setOperationAction(ISD::FREM , MVT::f64, Expand);
-  setOperationAction(ISD::FMA  , MVT::f64, Expand);
+  setOperationAction(ISD::FREM, MVT::f64, LibCall);
+  setOperationAction(ISD::FMA, MVT::f64,
+                     Subtarget->isUA2007() ? Legal : Expand);
   setOperationAction(ISD::FSIN , MVT::f32, Expand);
   setOperationAction(ISD::FCOS , MVT::f32, Expand);
   setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
-  setOperationAction(ISD::FREM , MVT::f32, Expand);
-  setOperationAction(ISD::FMA, MVT::f32, Expand);
+  setOperationAction(ISD::FREM, MVT::f32, LibCall);
+  setOperationAction(ISD::FMA, MVT::f32,
+                     Subtarget->isUA2007() ? Legal : Expand);
   setOperationAction(ISD::ROTL , MVT::i32, Expand);
   setOperationAction(ISD::ROTR , MVT::i32, Expand);
   setOperationAction(ISD::BSWAP, MVT::i32, Expand);
@@ -1828,16 +1891,8 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
     // .umul works for both signed and unsigned
     setOperationAction(ISD::SMUL_LOHI, MVT::i32, Expand);
     setOperationAction(ISD::UMUL_LOHI, MVT::i32, Expand);
-    setLibcallImpl(RTLIB::MUL_I32, RTLIB::sparc_umul);
-
     setOperationAction(ISD::SDIV, MVT::i32, Expand);
-    setLibcallImpl(RTLIB::SDIV_I32, RTLIB::sparc_div);
-
     setOperationAction(ISD::UDIV, MVT::i32, Expand);
-    setLibcallImpl(RTLIB::UDIV_I32, RTLIB::sparc_udiv);
-
-    setLibcallImpl(RTLIB::SREM_I32, RTLIB::sparc_rem);
-    setLibcallImpl(RTLIB::UREM_I32, RTLIB::sparc_urem);
   }
 
   if (Subtarget->is64Bit()) {
@@ -1896,14 +1951,6 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FNEG, MVT::f128, Custom);
       setOperationAction(ISD::FABS, MVT::f128, Custom);
     }
-
-    if (!Subtarget->is64Bit()) {
-      setLibcallImpl(RTLIB::FPTOSINT_F128_I64, RTLIB::_Q_qtoll);
-      setLibcallImpl(RTLIB::FPTOUINT_F128_I64, RTLIB::_Q_qtoull);
-      setLibcallImpl(RTLIB::SINTTOFP_I64_F128, RTLIB::_Q_lltoq);
-      setLibcallImpl(RTLIB::UINTTOFP_I64_F128, RTLIB::_Q_ulltoq);
-    }
-
   } else {
     // Custom legalize f128 operations.
 
@@ -1917,46 +1964,7 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::FP_EXTEND, MVT::f128, Custom);
     setOperationAction(ISD::FP_ROUND,  MVT::f64, Custom);
-    setOperationAction(ISD::FP_ROUND,  MVT::f32, Custom);
-
-    // Setup Runtime library names.
-    if (Subtarget->is64Bit() && !Subtarget->useSoftFloat()) {
-      setLibcallImpl(RTLIB::ADD_F128, RTLIB::_Qp_add);
-      setLibcallImpl(RTLIB::SUB_F128, RTLIB::_Qp_sub);
-      setLibcallImpl(RTLIB::MUL_F128, RTLIB::_Qp_mul);
-      setLibcallImpl(RTLIB::DIV_F128, RTLIB::_Qp_div);
-      setLibcallImpl(RTLIB::SQRT_F128, RTLIB::_Qp_sqrt);
-      setLibcallImpl(RTLIB::FPTOSINT_F128_I32, RTLIB::_Qp_qtoi);
-      setLibcallImpl(RTLIB::FPTOUINT_F128_I32, RTLIB::_Qp_qtoui);
-      setLibcallImpl(RTLIB::SINTTOFP_I32_F128, RTLIB::_Qp_itoq);
-      setLibcallImpl(RTLIB::UINTTOFP_I32_F128, RTLIB::_Qp_uitoq);
-      setLibcallImpl(RTLIB::FPTOSINT_F128_I64, RTLIB::_Qp_qtox);
-      setLibcallImpl(RTLIB::FPTOUINT_F128_I64, RTLIB::_Qp_qtoux);
-      setLibcallImpl(RTLIB::SINTTOFP_I64_F128, RTLIB::_Qp_xtoq);
-      setLibcallImpl(RTLIB::UINTTOFP_I64_F128, RTLIB::_Qp_uxtoq);
-      setLibcallImpl(RTLIB::FPEXT_F32_F128, RTLIB::_Qp_stoq);
-      setLibcallImpl(RTLIB::FPEXT_F64_F128, RTLIB::_Qp_dtoq);
-      setLibcallImpl(RTLIB::FPROUND_F128_F32, RTLIB::_Qp_qtos);
-      setLibcallImpl(RTLIB::FPROUND_F128_F64, RTLIB::_Qp_qtod);
-    } else if (!Subtarget->useSoftFloat()) {
-      setLibcallImpl(RTLIB::ADD_F128, RTLIB::_Q_add);
-      setLibcallImpl(RTLIB::SUB_F128, RTLIB::_Q_sub);
-      setLibcallImpl(RTLIB::MUL_F128, RTLIB::_Q_mul);
-      setLibcallImpl(RTLIB::DIV_F128, RTLIB::_Q_div);
-      setLibcallImpl(RTLIB::SQRT_F128, RTLIB::_Q_sqrt);
-      setLibcallImpl(RTLIB::FPTOSINT_F128_I32, RTLIB::_Q_qtoi);
-      setLibcallImpl(RTLIB::FPTOUINT_F128_I32, RTLIB::_Q_qtou);
-      setLibcallImpl(RTLIB::SINTTOFP_I32_F128, RTLIB::_Q_itoq);
-      setLibcallImpl(RTLIB::UINTTOFP_I32_F128, RTLIB::_Q_utoq);
-      setLibcallImpl(RTLIB::FPTOSINT_F128_I64, RTLIB::_Q_qtoll);
-      setLibcallImpl(RTLIB::FPTOUINT_F128_I64, RTLIB::_Q_qtoull);
-      setLibcallImpl(RTLIB::SINTTOFP_I64_F128, RTLIB::_Q_lltoq);
-      setLibcallImpl(RTLIB::UINTTOFP_I64_F128, RTLIB::_Q_ulltoq);
-      setLibcallImpl(RTLIB::FPEXT_F32_F128, RTLIB::_Q_stoq);
-      setLibcallImpl(RTLIB::FPEXT_F64_F128, RTLIB::_Q_dtoq);
-      setLibcallImpl(RTLIB::FPROUND_F128_F32, RTLIB::_Q_qtos);
-      setLibcallImpl(RTLIB::FPROUND_F128_F64, RTLIB::_Q_qtod);
-    }
+    setOperationAction(ISD::FP_ROUND, MVT::f32, Custom);
   }
 
   if (Subtarget->fixAllFDIVSQRT()) {
@@ -2015,6 +2023,14 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   }
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
+
+  // Some processors have no branch predictor and have pipelines longer than
+  // what can be covered by the delay slot. This results in a stall, so mark
+  // branches to be expensive on those processors.
+  setJumpIsExpensive(Subtarget->hasNoPredictor());
+  // The high cost of branching means that using conditional moves will
+  // still be profitable even if the condition is predictable.
+  PredictableSelectIsExpensive = !isJumpExpensive();
 
   setMinFunctionAlignment(Align(4));
 
@@ -2221,7 +2237,7 @@ SDValue SparcTargetLowering::LowerGlobalTLSAddress(SDValue Op,
     SDValue Chain = DAG.getEntryNode();
     SDValue InGlue;
 
-    Chain = DAG.getCALLSEQ_START(Chain, 1, 0, DL);
+    Chain = DAG.getCALLSEQ_START(Chain, 0, 0, DL);
     Chain = DAG.getCopyToReg(Chain, DL, SP::O0, Argument, InGlue);
     InGlue = Chain.getValue(1);
     SDValue Callee = DAG.getTargetExternalSymbol("__tls_get_addr", PtrVT);
@@ -2239,7 +2255,7 @@ SDValue SparcTargetLowering::LowerGlobalTLSAddress(SDValue Op,
                      InGlue};
     Chain = DAG.getNode(SPISD::TLS_CALL, DL, NodeTys, Ops);
     InGlue = Chain.getValue(1);
-    Chain = DAG.getCALLSEQ_END(Chain, 1, 0, InGlue, DL);
+    Chain = DAG.getCALLSEQ_END(Chain, 0, 0, InGlue, DL);
     InGlue = Chain.getValue(1);
     SDValue Ret = DAG.getCopyFromReg(Chain, DL, SP::O0, PtrVT, InGlue);
 
@@ -2298,21 +2314,15 @@ SDValue SparcTargetLowering::LowerF128_LibCallArg(SDValue Chain,
   EVT ArgVT = Arg.getValueType();
   Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
 
-  ArgListEntry Entry;
-  Entry.Node = Arg;
-  Entry.Ty   = ArgTy;
-
   if (ArgTy->isFP128Ty()) {
     // Create a stack object and pass the pointer to the library function.
     int FI = MFI.CreateStackObject(16, Align(8), false);
     SDValue FIPtr = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
-    Chain = DAG.getStore(Chain, DL, Entry.Node, FIPtr, MachinePointerInfo(),
-                         Align(8));
-
-    Entry.Node = FIPtr;
-    Entry.Ty = PointerType::getUnqual(ArgTy->getContext());
+    Chain = DAG.getStore(Chain, DL, Arg, FIPtr, MachinePointerInfo(), Align(8));
+    Args.emplace_back(FIPtr, PointerType::getUnqual(ArgTy->getContext()));
+  } else {
+    Args.emplace_back(Arg, ArgTy);
   }
-  Args.push_back(Entry);
   return Chain;
 }
 
@@ -2334,11 +2344,9 @@ SparcTargetLowering::LowerF128Op(SDValue Op, SelectionDAG &DAG,
 
   if (RetTy->isFP128Ty()) {
     // Create a Stack Object to receive the return value of type f128.
-    ArgListEntry Entry;
     int RetFI = MFI.CreateStackObject(16, Align(8), false);
     RetPtr = DAG.getFrameIndex(RetFI, PtrVT);
-    Entry.Node = RetPtr;
-    Entry.Ty = PointerType::getUnqual(RetTy->getContext());
+    ArgListEntry Entry(RetPtr, PointerType::getUnqual(RetTy->getContext()));
     if (!Subtarget->is64Bit()) {
       Entry.IsSRet = true;
       Entry.IndirectType = RetTy;
@@ -3536,7 +3544,7 @@ void SparcTargetLowering::ReplaceNodeResults(SDNode *N,
 
 // Override to enable LOAD_STACK_GUARD lowering on Linux.
 bool SparcTargetLowering::useLoadStackGuardNode(const Module &M) const {
-  if (!Subtarget->isTargetLinux())
+  if (!Subtarget->getTargetTriple().isOSLinux())
     return TargetLowering::useLoadStackGuardNode(M);
   return true;
 }
@@ -3570,10 +3578,9 @@ bool SparcTargetLowering::isCheapToSpeculateCttz(Type *Ty) const {
   return isCheapToSpeculateCtlz(Ty);
 }
 
-// Override to disable global variable loading on Linux.
-void SparcTargetLowering::insertSSPDeclarations(Module &M) const {
-  if (!Subtarget->isTargetLinux())
-    return TargetLowering::insertSSPDeclarations(M);
+bool SparcTargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
+                                                     EVT VT) const {
+  return Subtarget->isUA2007() && !Subtarget->useSoftFloat();
 }
 
 void SparcTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
@@ -3582,4 +3589,29 @@ void SparcTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
   // If the result is dead, replace it with %g0.
   if (!Node->hasAnyUseOfValue(0))
     MI.getOperand(0).setReg(SP::G0);
+}
+
+Instruction *SparcTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
+                                                   Instruction *Inst,
+                                                   AtomicOrdering Ord) const {
+  bool HasStoreSemantics =
+      isa<AtomicCmpXchgInst, AtomicRMWInst, StoreInst>(Inst);
+  if (HasStoreSemantics && isReleaseOrStronger(Ord))
+    return Builder.CreateFence(AtomicOrdering::Release);
+  return nullptr;
+}
+
+Instruction *SparcTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
+                                                    Instruction *Inst,
+                                                    AtomicOrdering Ord) const {
+  // V8 loads already come with implicit acquire barrier so there's no need to
+  // emit it again.
+  bool HasLoadSemantics = isa<AtomicCmpXchgInst, AtomicRMWInst, LoadInst>(Inst);
+  if (Subtarget->isV9() && HasLoadSemantics && isAcquireOrStronger(Ord))
+    return Builder.CreateFence(AtomicOrdering::Acquire);
+
+  // SC plain stores would need a trailing full barrier.
+  if (isa<StoreInst>(Inst) && Ord == AtomicOrdering::SequentiallyConsistent)
+    return Builder.CreateFence(Ord);
+  return nullptr;
 }

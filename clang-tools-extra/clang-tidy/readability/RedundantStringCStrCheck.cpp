@@ -1,12 +1,8 @@
-//===- RedundantStringCStrCheck.cpp - Check for redundant c_str calls -----===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-//
-//  This file implements a check for redundant calls of c_str() on strings.
 //
 //===----------------------------------------------------------------------===//
 
@@ -171,10 +167,10 @@ void RedundantStringCStrCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Call = Result.Nodes.getNodeAs<CallExpr>("call");
   const auto *Arg = Result.Nodes.getNodeAs<Expr>("arg");
   const auto *Member = Result.Nodes.getNodeAs<MemberExpr>("member");
-  bool Arrow = Member->isArrow();
+  const bool Arrow = Member->isArrow();
   // Replace the "call" node with the "arg" node, prefixed with '*'
   // if the call was using '->' rather than '.'.
-  std::string ArgText =
+  const std::string ArgText =
       Arrow ? utils::fixit::formatDereference(*Arg, *Result.Context)
             : tooling::fixit::getText(*Arg, *Result.Context).str();
   if (ArgText.empty())

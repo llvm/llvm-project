@@ -15,7 +15,7 @@
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
-#include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Interfaces/RuntimeVerifiableOpInterface.h"
 
 using namespace mlir;
@@ -38,30 +38,33 @@ Value generateInBoundsCheck(OpBuilder &builder, Location loc, Value value,
 struct AssumeAlignmentOpInterface
     : public RuntimeVerifiableOpInterface::ExternalModel<
           AssumeAlignmentOpInterface, AssumeAlignmentOp> {
-  void generateRuntimeVerification(Operation *op, OpBuilder &builder,
-                                   Location loc) const {
+  void
+  generateRuntimeVerification(Operation *op, OpBuilder &builder, Location loc,
+                              function_ref<std::string(Operation *, StringRef)>
+                                  generateErrorMessage) const {
     auto assumeOp = cast<AssumeAlignmentOp>(op);
-    Value ptr = builder.create<ExtractAlignedPointerAsIndexOp>(
-        loc, assumeOp.getMemref());
-    Value rest = builder.create<arith::RemUIOp>(
-        loc, ptr,
-        builder.create<arith::ConstantIndexOp>(loc, assumeOp.getAlignment()));
-    Value isAligned = builder.create<arith::CmpIOp>(
-        loc, arith::CmpIPredicate::eq, rest,
-        builder.create<arith::ConstantIndexOp>(loc, 0));
-    builder.create<cf::AssertOp>(
-        loc, isAligned,
-        RuntimeVerifiableOpInterface::generateErrorMessage(
-            op, "memref is not aligned to " +
-                    std::to_string(assumeOp.getAlignment())));
+    Value ptr = ExtractAlignedPointerAsIndexOp::create(builder, loc,
+                                                       assumeOp.getMemref());
+    Value rest = arith::RemUIOp::create(
+        builder, loc, ptr,
+        arith::ConstantIndexOp::create(builder, loc, assumeOp.getAlignment()));
+    Value isAligned =
+        arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::eq, rest,
+                              arith::ConstantIndexOp::create(builder, loc, 0));
+    cf::AssertOp::create(
+        builder, loc, isAligned,
+        generateErrorMessage(op, "memref is not aligned to " +
+                                     std::to_string(assumeOp.getAlignment())));
   }
 };
 
 struct CastOpInterface
     : public RuntimeVerifiableOpInterface::ExternalModel<CastOpInterface,
                                                          CastOp> {
-  void generateRuntimeVerification(Operation *op, OpBuilder &builder,
-                                   Location loc) const {
+  void
+  generateRuntimeVerification(Operation *op, OpBuilder &builder, Location loc,
+                              function_ref<std::string(Operation *, StringRef)>
+                                  generateErrorMessage) const {
     auto castOp = cast<CastOp>(op);
     auto srcType = cast<BaseMemRefType>(castOp.getSource().getType());
 
@@ -72,15 +75,13 @@ struct CastOpInterface
 
     if (isa<UnrankedMemRefType>(srcType)) {
       // Check rank.
-      Value srcRank = builder.create<RankOp>(loc, castOp.getSource());
+      Value srcRank = RankOp::create(builder, loc, castOp.getSource());
       Value resultRank =
-          builder.create<arith::ConstantIndexOp>(loc, resultType.getRank());
-      Value isSameRank = builder.create<arith::CmpIOp>(
-          loc, arith::CmpIPredicate::eq, srcRank, resultRank);
-      builder.create<cf::AssertOp>(
-          loc, isSameRank,
-          RuntimeVerifiableOpInterface::generateErrorMessage(op,
-                                                             "rank mismatch"));
+          arith::ConstantIndexOp::create(builder, loc, resultType.getRank());
+      Value isSameRank = arith::CmpIOp::create(
+          builder, loc, arith::CmpIPredicate::eq, srcRank, resultRank);
+      cf::AssertOp::create(builder, loc, isSameRank,
+                           generateErrorMessage(op, "rank mismatch"));
     }
 
     // Get source offset and strides. We do not have an op to get offsets and
@@ -96,8 +97,9 @@ struct CastOpInterface
         MemRefType::get(dynamicShape, resultType.getElementType(),
                         stridedLayout, resultType.getMemorySpace());
     Value helperCast =
-        builder.create<CastOp>(loc, dynStridesType, castOp.getSource());
-    auto metadataOp = builder.create<ExtractStridedMetadataOp>(loc, helperCast);
+        CastOp::create(builder, loc, dynStridesType, castOp.getSource());
+    auto metadataOp =
+        ExtractStridedMetadataOp::create(builder, loc, helperCast);
 
     // Check dimension sizes.
     for (const auto &it : llvm::enumerate(resultType.getShape())) {
@@ -111,15 +113,15 @@ struct CastOpInterface
         continue;
 
       Value srcDimSz =
-          builder.create<DimOp>(loc, castOp.getSource(), it.index());
+          DimOp::create(builder, loc, castOp.getSource(), it.index());
       Value resultDimSz =
-          builder.create<arith::ConstantIndexOp>(loc, it.value());
-      Value isSameSz = builder.create<arith::CmpIOp>(
-          loc, arith::CmpIPredicate::eq, srcDimSz, resultDimSz);
-      builder.create<cf::AssertOp>(
-          loc, isSameSz,
-          RuntimeVerifiableOpInterface::generateErrorMessage(
-              op, "size mismatch of dim " + std::to_string(it.index())));
+          arith::ConstantIndexOp::create(builder, loc, it.value());
+      Value isSameSz = arith::CmpIOp::create(
+          builder, loc, arith::CmpIPredicate::eq, srcDimSz, resultDimSz);
+      cf::AssertOp::create(
+          builder, loc, isSameSz,
+          generateErrorMessage(op, "size mismatch of dim " +
+                                       std::to_string(it.index())));
     }
 
     // Get result offset and strides.
@@ -133,13 +135,11 @@ struct CastOpInterface
       // Static/dynamic offset -> dynamic offset does not need verification.
       Value srcOffset = metadataOp.getResult(1);
       Value resultOffsetVal =
-          builder.create<arith::ConstantIndexOp>(loc, resultOffset);
-      Value isSameOffset = builder.create<arith::CmpIOp>(
-          loc, arith::CmpIPredicate::eq, srcOffset, resultOffsetVal);
-      builder.create<cf::AssertOp>(
-          loc, isSameOffset,
-          RuntimeVerifiableOpInterface::generateErrorMessage(
-              op, "offset mismatch"));
+          arith::ConstantIndexOp::create(builder, loc, resultOffset);
+      Value isSameOffset = arith::CmpIOp::create(
+          builder, loc, arith::CmpIPredicate::eq, srcOffset, resultOffsetVal);
+      cf::AssertOp::create(builder, loc, isSameOffset,
+                           generateErrorMessage(op, "offset mismatch"));
     }
 
     // Check strides.
@@ -151,13 +151,13 @@ struct CastOpInterface
       Value srcStride =
           metadataOp.getResult(2 + resultType.getRank() + it.index());
       Value resultStrideVal =
-          builder.create<arith::ConstantIndexOp>(loc, it.value());
-      Value isSameStride = builder.create<arith::CmpIOp>(
-          loc, arith::CmpIPredicate::eq, srcStride, resultStrideVal);
-      builder.create<cf::AssertOp>(
-          loc, isSameStride,
-          RuntimeVerifiableOpInterface::generateErrorMessage(
-              op, "stride mismatch of dim " + std::to_string(it.index())));
+          arith::ConstantIndexOp::create(builder, loc, it.value());
+      Value isSameStride = arith::CmpIOp::create(
+          builder, loc, arith::CmpIPredicate::eq, srcStride, resultStrideVal);
+      cf::AssertOp::create(
+          builder, loc, isSameStride,
+          generateErrorMessage(op, "stride mismatch of dim " +
+                                       std::to_string(it.index())));
     }
   }
 };
@@ -165,8 +165,10 @@ struct CastOpInterface
 struct CopyOpInterface
     : public RuntimeVerifiableOpInterface::ExternalModel<CopyOpInterface,
                                                          CopyOp> {
-  void generateRuntimeVerification(Operation *op, OpBuilder &builder,
-                                   Location loc) const {
+  void
+  generateRuntimeVerification(Operation *op, OpBuilder &builder, Location loc,
+                              function_ref<std::string(Operation *, StringRef)>
+                                  generateErrorMessage) const {
     auto copyOp = cast<CopyOp>(op);
     BaseMemRefType sourceType = copyOp.getSource().getType();
     BaseMemRefType targetType = copyOp.getTarget().getType();
@@ -187,21 +189,19 @@ struct CopyOpInterface
       auto getDimSize = [&](Value memRef, MemRefType type,
                             int64_t dim) -> Value {
         return type.isDynamicDim(dim)
-                   ? builder.create<DimOp>(loc, memRef, dim).getResult()
-                   : builder
-                         .create<arith::ConstantIndexOp>(loc,
-                                                         type.getDimSize(dim))
+                   ? DimOp::create(builder, loc, memRef, dim).getResult()
+                   : arith::ConstantIndexOp::create(builder, loc,
+                                                    type.getDimSize(dim))
                          .getResult();
       };
       Value sourceDim = getDimSize(copyOp.getSource(), rankedSourceType, i);
       Value targetDim = getDimSize(copyOp.getTarget(), rankedTargetType, i);
-      Value sameDimSize = builder.create<arith::CmpIOp>(
-          loc, arith::CmpIPredicate::eq, sourceDim, targetDim);
-      builder.create<cf::AssertOp>(
-          loc, sameDimSize,
-          RuntimeVerifiableOpInterface::generateErrorMessage(
-              op, "size of " + std::to_string(i) +
-                      "-th source/target dim does not match"));
+      Value sameDimSize = arith::CmpIOp::create(
+          builder, loc, arith::CmpIPredicate::eq, sourceDim, targetDim);
+      cf::AssertOp::create(
+          builder, loc, sameDimSize,
+          generateErrorMessage(op, "size of " + std::to_string(i) +
+                                       "-th source/target dim does not match"));
     }
   }
 };
@@ -209,15 +209,17 @@ struct CopyOpInterface
 struct DimOpInterface
     : public RuntimeVerifiableOpInterface::ExternalModel<DimOpInterface,
                                                          DimOp> {
-  void generateRuntimeVerification(Operation *op, OpBuilder &builder,
-                                   Location loc) const {
+  void
+  generateRuntimeVerification(Operation *op, OpBuilder &builder, Location loc,
+                              function_ref<std::string(Operation *, StringRef)>
+                                  generateErrorMessage) const {
     auto dimOp = cast<DimOp>(op);
-    Value rank = builder.create<RankOp>(loc, dimOp.getSource());
-    Value zero = builder.create<arith::ConstantIndexOp>(loc, 0);
-    builder.create<cf::AssertOp>(
-        loc, generateInBoundsCheck(builder, loc, dimOp.getIndex(), zero, rank),
-        RuntimeVerifiableOpInterface::generateErrorMessage(
-            op, "index is out of bounds"));
+    Value rank = RankOp::create(builder, loc, dimOp.getSource());
+    Value zero = arith::ConstantIndexOp::create(builder, loc, 0);
+    cf::AssertOp::create(
+        builder, loc,
+        generateInBoundsCheck(builder, loc, dimOp.getIndex(), zero, rank),
+        generateErrorMessage(op, "index is out of bounds"));
   }
 };
 
@@ -227,8 +229,10 @@ template <typename LoadStoreOp>
 struct LoadStoreOpInterface
     : public RuntimeVerifiableOpInterface::ExternalModel<
           LoadStoreOpInterface<LoadStoreOp>, LoadStoreOp> {
-  void generateRuntimeVerification(Operation *op, OpBuilder &builder,
-                                   Location loc) const {
+  void
+  generateRuntimeVerification(Operation *op, OpBuilder &builder, Location loc,
+                              function_ref<std::string(Operation *, StringRef)>
+                                  generateErrorMessage) const {
     auto loadStoreOp = cast<LoadStoreOp>(op);
 
     auto memref = loadStoreOp.getMemref();
@@ -238,7 +242,7 @@ struct LoadStoreOpInterface
     }
     auto indices = loadStoreOp.getIndices();
 
-    auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
+    auto zero = arith::ConstantIndexOp::create(builder, loc, 0);
     Value assertCond;
     for (auto i : llvm::seq<int64_t>(0, rank)) {
       Value dimOp = builder.createOrFold<memref::DimOp>(loc, memref, i);
@@ -248,58 +252,103 @@ struct LoadStoreOpInterface
           i > 0 ? builder.createOrFold<arith::AndIOp>(loc, assertCond, inBounds)
                 : inBounds;
     }
-    builder.create<cf::AssertOp>(
-        loc, assertCond,
-        RuntimeVerifiableOpInterface::generateErrorMessage(
-            op, "out-of-bounds access"));
+    cf::AssertOp::create(builder, loc, assertCond,
+                         generateErrorMessage(op, "out-of-bounds access"));
   }
 };
 
 struct SubViewOpInterface
     : public RuntimeVerifiableOpInterface::ExternalModel<SubViewOpInterface,
                                                          SubViewOp> {
-  void generateRuntimeVerification(Operation *op, OpBuilder &builder,
-                                   Location loc) const {
+  void
+  generateRuntimeVerification(Operation *op, OpBuilder &builder, Location loc,
+                              function_ref<std::string(Operation *, StringRef)>
+                                  generateErrorMessage) const {
     auto subView = cast<SubViewOp>(op);
     MemRefType sourceType = subView.getSource().getType();
 
     // For each dimension, assert that:
-    // 0 <= offset < dim_size
-    // 0 <= offset + (size - 1) * stride < dim_size
-    Value zero = builder.create<arith::ConstantIndexOp>(loc, 0);
-    Value one = builder.create<arith::ConstantIndexOp>(loc, 1);
+    // For empty slices (size == 0)   : 0 <= offset <= dim_size
+    // For non-empty slices (size > 0): 0 <= offset < dim_size
+    //                                  0 <= offset + (size - 1) * stride
+    //                                  dim_size
+    Value zero = arith::ConstantIndexOp::create(builder, loc, 0);
+    Value one = arith::ConstantIndexOp::create(builder, loc, 1);
+
     auto metadataOp =
-        builder.create<ExtractStridedMetadataOp>(loc, subView.getSource());
-    for (int64_t i = 0, e = sourceType.getRank(); i < e; ++i) {
+        ExtractStridedMetadataOp::create(builder, loc, subView.getSource());
+
+    for (int64_t i : llvm::seq<int64_t>(0, sourceType.getRank())) {
+      // Reset insertion point to before the operation for each dimension.
+      builder.setInsertionPoint(subView);
+
       Value offset = getValueOrCreateConstantIndexOp(
           builder, loc, subView.getMixedOffsets()[i]);
       Value size = getValueOrCreateConstantIndexOp(builder, loc,
                                                    subView.getMixedSizes()[i]);
       Value stride = getValueOrCreateConstantIndexOp(
           builder, loc, subView.getMixedStrides()[i]);
-
-      // Verify that offset is in-bounds.
       Value dimSize = metadataOp.getSizes()[i];
-      Value offsetInBounds =
-          generateInBoundsCheck(builder, loc, offset, zero, dimSize);
-      builder.create<cf::AssertOp>(
-          loc, offsetInBounds,
-          RuntimeVerifiableOpInterface::generateErrorMessage(
-              op, "offset " + std::to_string(i) + " is out-of-bounds"));
 
-      // Verify that slice does not run out-of-bounds.
-      Value sizeMinusOne = builder.create<arith::SubIOp>(loc, size, one);
-      Value sizeMinusOneTimesStride =
-          builder.create<arith::MulIOp>(loc, sizeMinusOne, stride);
-      Value lastPos =
-          builder.create<arith::AddIOp>(loc, offset, sizeMinusOneTimesStride);
-      Value lastPosInBounds =
-          generateInBoundsCheck(builder, loc, lastPos, zero, dimSize);
-      builder.create<cf::AssertOp>(
-          loc, lastPosInBounds,
-          RuntimeVerifiableOpInterface::generateErrorMessage(
-              op, "subview runs out-of-bounds along dimension " +
-                      std::to_string(i)));
+      // Verify that offset is in-bounds (conditional on slice size).
+      Value sizeIsZero = arith::CmpIOp::create(
+          builder, loc, arith::CmpIPredicate::eq, size, zero);
+      auto offsetCheckIf = scf::IfOp::create(
+          builder, loc, sizeIsZero,
+          [&](OpBuilder &b, Location loc) {
+            // For empty slices, offset can be at the boundary: 0 <= offset <=
+            // dimSize.
+            Value offsetGEZero = arith::CmpIOp::create(
+                b, loc, arith::CmpIPredicate::sge, offset, zero);
+            Value offsetLEDimSize = arith::CmpIOp::create(
+                b, loc, arith::CmpIPredicate::sle, offset, dimSize);
+            Value emptyOffsetValid =
+                arith::AndIOp::create(b, loc, offsetGEZero, offsetLEDimSize);
+            scf::YieldOp::create(b, loc, emptyOffsetValid);
+          },
+          [&](OpBuilder &b, Location loc) {
+            // For non-empty slices, offset must be a valid index: 0 <= offset
+            // dimSize.
+            Value offsetInBounds =
+                generateInBoundsCheck(b, loc, offset, zero, dimSize);
+            scf::YieldOp::create(b, loc, offsetInBounds);
+          });
+
+      Value offsetCondition = offsetCheckIf.getResult(0);
+      cf::AssertOp::create(builder, loc, offsetCondition,
+                           generateErrorMessage(op, "offset " +
+                                                        std::to_string(i) +
+                                                        " is out-of-bounds"));
+
+      // Verify that the slice endpoint is in-bounds (only for non-empty
+      // slices).
+      Value sizeIsNonZero = arith::CmpIOp::create(
+          builder, loc, arith::CmpIPredicate::sgt, size, zero);
+      auto ifOp = scf::IfOp::create(
+          builder, loc, sizeIsNonZero,
+          [&](OpBuilder &b, Location loc) {
+            // Verify that slice does not run out-of-bounds.
+            Value sizeMinusOne = arith::SubIOp::create(b, loc, size, one);
+            Value sizeMinusOneTimesStride =
+                arith::MulIOp::create(b, loc, sizeMinusOne, stride);
+            Value lastPos =
+                arith::AddIOp::create(b, loc, offset, sizeMinusOneTimesStride);
+            Value lastPosInBounds =
+                generateInBoundsCheck(b, loc, lastPos, zero, dimSize);
+            scf::YieldOp::create(b, loc, lastPosInBounds);
+          },
+          [&](OpBuilder &b, Location loc) {
+            Value trueVal =
+                arith::ConstantOp::create(b, loc, b.getBoolAttr(true));
+            scf::YieldOp::create(b, loc, trueVal);
+          });
+
+      Value finalCondition = ifOp.getResult(0);
+      cf::AssertOp::create(
+          builder, loc, finalCondition,
+          generateErrorMessage(op,
+                               "subview runs out-of-bounds along dimension " +
+                                   std::to_string(i)));
     }
   }
 };
@@ -307,8 +356,10 @@ struct SubViewOpInterface
 struct ExpandShapeOpInterface
     : public RuntimeVerifiableOpInterface::ExternalModel<ExpandShapeOpInterface,
                                                          ExpandShapeOp> {
-  void generateRuntimeVerification(Operation *op, OpBuilder &builder,
-                                   Location loc) const {
+  void
+  generateRuntimeVerification(Operation *op, OpBuilder &builder, Location loc,
+                              function_ref<std::string(Operation *, StringRef)>
+                                  generateErrorMessage) const {
     auto expandShapeOp = cast<ExpandShapeOp>(op);
 
     // Verify that the expanded dim sizes are a product of the collapsed dim
@@ -316,7 +367,7 @@ struct ExpandShapeOpInterface
     for (const auto &it :
          llvm::enumerate(expandShapeOp.getReassociationIndices())) {
       Value srcDimSz =
-          builder.create<DimOp>(loc, expandShapeOp.getSrc(), it.index());
+          DimOp::create(builder, loc, expandShapeOp.getSrc(), it.index());
       int64_t groupSz = 1;
       bool foundDynamicDim = false;
       for (int64_t resultDim : it.value()) {
@@ -331,18 +382,17 @@ struct ExpandShapeOpInterface
         groupSz *= expandShapeOp.getResultType().getDimSize(resultDim);
       }
       Value staticResultDimSz =
-          builder.create<arith::ConstantIndexOp>(loc, groupSz);
+          arith::ConstantIndexOp::create(builder, loc, groupSz);
       // staticResultDimSz must divide srcDimSz evenly.
       Value mod =
-          builder.create<arith::RemSIOp>(loc, srcDimSz, staticResultDimSz);
-      Value isModZero = builder.create<arith::CmpIOp>(
-          loc, arith::CmpIPredicate::eq, mod,
-          builder.create<arith::ConstantIndexOp>(loc, 0));
-      builder.create<cf::AssertOp>(
-          loc, isModZero,
-          RuntimeVerifiableOpInterface::generateErrorMessage(
-              op, "static result dims in reassoc group do not "
-                  "divide src dim evenly"));
+          arith::RemSIOp::create(builder, loc, srcDimSz, staticResultDimSz);
+      Value isModZero = arith::CmpIOp::create(
+          builder, loc, arith::CmpIPredicate::eq, mod,
+          arith::ConstantIndexOp::create(builder, loc, 0));
+      cf::AssertOp::create(
+          builder, loc, isModZero,
+          generateErrorMessage(op, "static result dims in reassoc group do not "
+                                   "divide src dim evenly"));
     }
   }
 };

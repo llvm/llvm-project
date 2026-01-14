@@ -66,29 +66,26 @@ class TestFrameVarDILArraySubscript(TestBase):
         self.expect(
             "frame var 'int_arr[1.0]'",
             error=True,
-            substrs=["expected 'r_square', got: <'.'"],
+            substrs=["failed to parse integer constant: <'1.0' (float_constant)>"],
+        )
+
+        # Test accessing bits in scalar types.
+        self.expect_var_path("idx_1[0]", value="1")
+        self.expect_var_path("idx_1[1]", value="0")
+        self.expect_var_path("1[0]", value="1")
+
+        # Bit access not valid for a reference.
+        self.expect(
+            "frame var 'idx_1_ref[0]'",
+            error=True,
+            substrs=["bitfield range 0-0 is not valid"],
         )
 
         # Base should be a "pointer to T" and index should be of an integral type.
         self.expect(
-            "frame var 'idx_1[0]'",
-            error=True,
-            substrs=["subscripted value is not an array or pointer"],
-        )
-        self.expect(
-            "frame var 'idx_1_ref[0]'",
-            error=True,
-            substrs=["subscripted value is not an array or pointer"],
-        )
-        self.expect(
             "frame var 'int_arr[int_ptr]'",
             error=True,
             substrs=["failed to parse integer constant"],
-        )
-        self.expect(
-            "frame var '1[2]'",
-            error=True,
-            substrs=["Unexpected token"],
         )
 
         # Base should not be a pointer to void
@@ -98,7 +95,6 @@ class TestFrameVarDILArraySubscript(TestBase):
             substrs=["subscript of pointer to incomplete type 'void'"],
         )
 
-    @expectedFailureAll(oslist=["windows"])
     def test_subscript_synthetic(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -106,6 +102,8 @@ class TestFrameVarDILArraySubscript(TestBase):
         )
 
         self.runCmd("settings set target.experimental.use-DIL true")
+        self.runCmd("script from myArraySynthProvider import *")
+        self.runCmd("type synth add -l myArraySynthProvider myArray")
 
         # Test synthetic value subscription
         self.expect_var_path("vector[1]", value="2")
@@ -113,4 +111,8 @@ class TestFrameVarDILArraySubscript(TestBase):
             "frame var 'vector[100]'",
             error=True,
             substrs=["array index 100 is not valid"],
+        )
+        self.expect(
+            "frame var 'ma_ptr[0]'",
+            substrs=["(myArray) ma_ptr[0] = ([0] = 7, [1] = 8, [2] = 9, [3] = 10)"],
         )

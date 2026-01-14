@@ -16,19 +16,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+xtheadbb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64XTHEADBB
 
-declare i8 @llvm.cttz.i8(i8, i1)
-declare i16 @llvm.cttz.i16(i16, i1)
-declare i32 @llvm.cttz.i32(i32, i1)
-declare i64 @llvm.cttz.i64(i64, i1)
-declare i8 @llvm.ctlz.i8(i8, i1)
-declare i16 @llvm.ctlz.i16(i16, i1)
-declare i32 @llvm.ctlz.i32(i32, i1)
-declare i64 @llvm.ctlz.i64(i64, i1)
-declare i8 @llvm.ctpop.i8(i8)
-declare i16 @llvm.ctpop.i16(i16)
-declare i32 @llvm.ctpop.i32(i32)
-declare i64 @llvm.ctpop.i64(i64)
-
 define i8 @test_cttz_i8(i8 %a) nounwind {
 ; RV32_NOZBB-LABEL: test_cttz_i8:
 ; RV32_NOZBB:       # %bb.0:
@@ -63,7 +50,7 @@ define i8 @test_cttz_i8(i8 %a) nounwind {
 ; RV64NOZBB-NEXT:    and a0, a0, a1
 ; RV64NOZBB-NEXT:    srli a1, a0, 1
 ; RV64NOZBB-NEXT:    andi a1, a1, 85
-; RV64NOZBB-NEXT:    subw a0, a0, a1
+; RV64NOZBB-NEXT:    sub a0, a0, a1
 ; RV64NOZBB-NEXT:    andi a1, a0, 51
 ; RV64NOZBB-NEXT:    srli a0, a0, 2
 ; RV64NOZBB-NEXT:    andi a0, a0, 51
@@ -262,7 +249,7 @@ define i32 @test_cttz_i32(i32 %a) nounwind {
 ; RV64I-NEXT:    sext.w a1, a0
 ; RV64I-NEXT:    beqz a1, .LBB2_2
 ; RV64I-NEXT:  # %bb.1: # %cond.false
-; RV64I-NEXT:    negw a1, a0
+; RV64I-NEXT:    neg a1, a0
 ; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    slli a1, a0, 6
 ; RV64I-NEXT:    slli a2, a0, 8
@@ -270,16 +257,16 @@ define i32 @test_cttz_i32(i32 %a) nounwind {
 ; RV64I-NEXT:    slli a4, a0, 12
 ; RV64I-NEXT:    add a1, a1, a2
 ; RV64I-NEXT:    slli a2, a0, 16
-; RV64I-NEXT:    subw a3, a3, a4
+; RV64I-NEXT:    sub a3, a3, a4
 ; RV64I-NEXT:    slli a4, a0, 18
-; RV64I-NEXT:    subw a2, a2, a4
+; RV64I-NEXT:    sub a2, a2, a4
 ; RV64I-NEXT:    slli a4, a0, 4
-; RV64I-NEXT:    subw a4, a0, a4
+; RV64I-NEXT:    sub a4, a0, a4
 ; RV64I-NEXT:    add a1, a4, a1
 ; RV64I-NEXT:    slli a4, a0, 14
-; RV64I-NEXT:    subw a3, a3, a4
+; RV64I-NEXT:    sub a3, a3, a4
 ; RV64I-NEXT:    slli a4, a0, 23
-; RV64I-NEXT:    subw a2, a2, a4
+; RV64I-NEXT:    sub a2, a2, a4
 ; RV64I-NEXT:    slli a0, a0, 27
 ; RV64I-NEXT:    add a1, a1, a3
 ; RV64I-NEXT:    add a0, a2, a0
@@ -318,7 +305,7 @@ define i32 @test_cttz_i32(i32 %a) nounwind {
 ; RV64M-NEXT:    sext.w a1, a0
 ; RV64M-NEXT:    beqz a1, .LBB2_2
 ; RV64M-NEXT:  # %bb.1: # %cond.false
-; RV64M-NEXT:    negw a1, a0
+; RV64M-NEXT:    neg a1, a0
 ; RV64M-NEXT:    and a0, a0, a1
 ; RV64M-NEXT:    lui a1, 30667
 ; RV64M-NEXT:    addi a1, a1, 1329
@@ -393,8 +380,8 @@ define i64 @test_cttz_i64(i64 %a) nounwind {
 ; RV32I-NEXT:  # %bb.1: # %cond.false
 ; RV32I-NEXT:    neg a1, a0
 ; RV32I-NEXT:    and a1, a0, a1
-; RV32I-NEXT:    lui a2, 30667
-; RV32I-NEXT:    addi s2, a2, 1329
+; RV32I-NEXT:    lui s2, 30667
+; RV32I-NEXT:    addi s2, s2, 1329
 ; RV32I-NEXT:    mv s4, a0
 ; RV32I-NEXT:    mv a0, a1
 ; RV32I-NEXT:    mv a1, s2
@@ -415,14 +402,13 @@ define i64 @test_cttz_i64(i64 %a) nounwind {
 ; RV32I-NEXT:    j .LBB3_5
 ; RV32I-NEXT:  .LBB3_3:
 ; RV32I-NEXT:    li a0, 64
-; RV32I-NEXT:    j .LBB3_6
+; RV32I-NEXT:    j .LBB3_5
 ; RV32I-NEXT:  .LBB3_4:
 ; RV32I-NEXT:    srli s1, s1, 27
 ; RV32I-NEXT:    add s1, s3, s1
 ; RV32I-NEXT:    lbu a0, 0(s1)
-; RV32I-NEXT:  .LBB3_5: # %cond.false
+; RV32I-NEXT:  .LBB3_5: # %cond.end
 ; RV32I-NEXT:    li a1, 0
-; RV32I-NEXT:  .LBB3_6: # %cond.end
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -460,8 +446,8 @@ define i64 @test_cttz_i64(i64 %a) nounwind {
 ; RV32M-NEXT:    or a2, a0, a1
 ; RV32M-NEXT:    beqz a2, .LBB3_3
 ; RV32M-NEXT:  # %bb.1: # %cond.false
-; RV32M-NEXT:    lui a2, 30667
-; RV32M-NEXT:    addi a3, a2, 1329
+; RV32M-NEXT:    lui a3, 30667
+; RV32M-NEXT:    addi a3, a3, 1329
 ; RV32M-NEXT:    lui a2, %hi(.LCPI3_0)
 ; RV32M-NEXT:    addi a2, a2, %lo(.LCPI3_0)
 ; RV32M-NEXT:    bnez a0, .LBB3_4
@@ -476,8 +462,8 @@ define i64 @test_cttz_i64(i64 %a) nounwind {
 ; RV32M-NEXT:    li a1, 0
 ; RV32M-NEXT:    ret
 ; RV32M-NEXT:  .LBB3_3:
-; RV32M-NEXT:    li a1, 0
 ; RV32M-NEXT:    li a0, 64
+; RV32M-NEXT:    li a1, 0
 ; RV32M-NEXT:    ret
 ; RV32M-NEXT:  .LBB3_4:
 ; RV32M-NEXT:    neg a1, a0
@@ -540,8 +526,8 @@ define i64 @test_cttz_i64(i64 %a) nounwind {
 ; RV32XTHEADBB-NEXT:    li a1, 64
 ; RV32XTHEADBB-NEXT:    j .LBB3_5
 ; RV32XTHEADBB-NEXT:  .LBB3_3:
-; RV32XTHEADBB-NEXT:    li a1, 0
 ; RV32XTHEADBB-NEXT:    li a0, 64
+; RV32XTHEADBB-NEXT:    li a1, 0
 ; RV32XTHEADBB-NEXT:    ret
 ; RV32XTHEADBB-NEXT:  .LBB3_4:
 ; RV32XTHEADBB-NEXT:    addi a1, a0, -1
@@ -597,7 +583,7 @@ define i8 @test_cttz_i8_zero_undef(i8 %a) nounwind {
 ; RV64NOZBB-NEXT:    and a0, a0, a1
 ; RV64NOZBB-NEXT:    srli a1, a0, 1
 ; RV64NOZBB-NEXT:    andi a1, a1, 85
-; RV64NOZBB-NEXT:    subw a0, a0, a1
+; RV64NOZBB-NEXT:    sub a0, a0, a1
 ; RV64NOZBB-NEXT:    andi a1, a0, 51
 ; RV64NOZBB-NEXT:    srli a0, a0, 2
 ; RV64NOZBB-NEXT:    andi a0, a0, 51
@@ -743,7 +729,7 @@ define i32 @test_cttz_i32_zero_undef(i32 %a) nounwind {
 ;
 ; RV64I-LABEL: test_cttz_i32_zero_undef:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    negw a1, a0
+; RV64I-NEXT:    neg a1, a0
 ; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    slli a1, a0, 6
 ; RV64I-NEXT:    slli a2, a0, 8
@@ -751,16 +737,16 @@ define i32 @test_cttz_i32_zero_undef(i32 %a) nounwind {
 ; RV64I-NEXT:    slli a4, a0, 12
 ; RV64I-NEXT:    add a1, a1, a2
 ; RV64I-NEXT:    slli a2, a0, 16
-; RV64I-NEXT:    subw a3, a3, a4
+; RV64I-NEXT:    sub a3, a3, a4
 ; RV64I-NEXT:    slli a4, a0, 18
-; RV64I-NEXT:    subw a2, a2, a4
+; RV64I-NEXT:    sub a2, a2, a4
 ; RV64I-NEXT:    slli a4, a0, 4
-; RV64I-NEXT:    subw a4, a0, a4
+; RV64I-NEXT:    sub a4, a0, a4
 ; RV64I-NEXT:    add a1, a4, a1
 ; RV64I-NEXT:    slli a4, a0, 14
-; RV64I-NEXT:    subw a3, a3, a4
+; RV64I-NEXT:    sub a3, a3, a4
 ; RV64I-NEXT:    slli a4, a0, 23
-; RV64I-NEXT:    subw a2, a2, a4
+; RV64I-NEXT:    sub a2, a2, a4
 ; RV64I-NEXT:    slli a0, a0, 27
 ; RV64I-NEXT:    add a1, a1, a3
 ; RV64I-NEXT:    add a0, a2, a0
@@ -788,7 +774,7 @@ define i32 @test_cttz_i32_zero_undef(i32 %a) nounwind {
 ;
 ; RV64M-LABEL: test_cttz_i32_zero_undef:
 ; RV64M:       # %bb.0:
-; RV64M-NEXT:    negw a1, a0
+; RV64M-NEXT:    neg a1, a0
 ; RV64M-NEXT:    and a0, a0, a1
 ; RV64M-NEXT:    lui a1, 30667
 ; RV64M-NEXT:    addi a1, a1, 1329
@@ -847,8 +833,8 @@ define i64 @test_cttz_i64_zero_undef(i64 %a) nounwind {
 ; RV32I-NEXT:    mv s2, a0
 ; RV32I-NEXT:    neg a0, a0
 ; RV32I-NEXT:    and a0, s2, a0
-; RV32I-NEXT:    lui a1, 30667
-; RV32I-NEXT:    addi s3, a1, 1329
+; RV32I-NEXT:    lui s3, 30667
+; RV32I-NEXT:    addi s3, s3, 1329
 ; RV32I-NEXT:    mv a1, s3
 ; RV32I-NEXT:    call __mulsi3
 ; RV32I-NEXT:    mv s0, a0
@@ -900,8 +886,8 @@ define i64 @test_cttz_i64_zero_undef(i64 %a) nounwind {
 ;
 ; RV32M-LABEL: test_cttz_i64_zero_undef:
 ; RV32M:       # %bb.0:
-; RV32M-NEXT:    lui a2, 30667
-; RV32M-NEXT:    addi a3, a2, 1329
+; RV32M-NEXT:    lui a3, 30667
+; RV32M-NEXT:    addi a3, a3, 1329
 ; RV32M-NEXT:    lui a2, %hi(.LCPI7_0)
 ; RV32M-NEXT:    addi a2, a2, %lo(.LCPI7_0)
 ; RV32M-NEXT:    bnez a0, .LBB7_2
@@ -1039,7 +1025,7 @@ define i8 @test_ctlz_i8(i8 %a) nounwind {
 ; RV64NOZBB-NEXT:    not a0, a0
 ; RV64NOZBB-NEXT:    srli a1, a0, 1
 ; RV64NOZBB-NEXT:    andi a1, a1, 85
-; RV64NOZBB-NEXT:    subw a0, a0, a1
+; RV64NOZBB-NEXT:    sub a0, a0, a1
 ; RV64NOZBB-NEXT:    andi a1, a0, 51
 ; RV64NOZBB-NEXT:    srli a0, a0, 2
 ; RV64NOZBB-NEXT:    andi a0, a0, 51
@@ -1375,9 +1361,9 @@ define i32 @test_ctlz_i32(i32 %a) nounwind {
 ;
 ; RV64XTHEADBB-LABEL: test_ctlz_i32:
 ; RV64XTHEADBB:       # %bb.0:
-; RV64XTHEADBB-NEXT:    not a0, a0
-; RV64XTHEADBB-NEXT:    slli a0, a0, 32
-; RV64XTHEADBB-NEXT:    th.ff0 a0, a0
+; RV64XTHEADBB-NEXT:    th.extu a0, a0, 31, 0
+; RV64XTHEADBB-NEXT:    th.ff1 a0, a0
+; RV64XTHEADBB-NEXT:    addi a0, a0, -32
 ; RV64XTHEADBB-NEXT:    ret
   %tmp = call i32 @llvm.ctlz.i32(i32 %a, i1 false)
   ret i32 %tmp
@@ -1427,8 +1413,8 @@ define i64 @test_ctlz_i64(i64 %a) nounwind {
 ; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB11_3:
-; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    li a0, 64
+; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB11_4:
 ; RV32I-NEXT:    srli a0, a1, 1
@@ -1553,8 +1539,8 @@ define i64 @test_ctlz_i64(i64 %a) nounwind {
 ; RV32M-NEXT:    li a1, 0
 ; RV32M-NEXT:    ret
 ; RV32M-NEXT:  .LBB11_3:
-; RV32M-NEXT:    li a1, 0
 ; RV32M-NEXT:    li a0, 64
+; RV32M-NEXT:    li a1, 0
 ; RV32M-NEXT:    ret
 ; RV32M-NEXT:  .LBB11_4:
 ; RV32M-NEXT:    srli a0, a1, 1
@@ -1711,7 +1697,7 @@ define i8 @test_ctlz_i8_zero_undef(i8 %a) nounwind {
 ; RV64NOZBB-NEXT:    not a0, a0
 ; RV64NOZBB-NEXT:    srli a1, a0, 1
 ; RV64NOZBB-NEXT:    andi a1, a1, 85
-; RV64NOZBB-NEXT:    subw a0, a0, a1
+; RV64NOZBB-NEXT:    sub a0, a0, a1
 ; RV64NOZBB-NEXT:    andi a1, a0, 51
 ; RV64NOZBB-NEXT:    srli a0, a0, 2
 ; RV64NOZBB-NEXT:    andi a0, a0, 51
@@ -2004,9 +1990,8 @@ define i32 @test_ctlz_i32_zero_undef(i32 %a) nounwind {
 ;
 ; RV64XTHEADBB-LABEL: test_ctlz_i32_zero_undef:
 ; RV64XTHEADBB:       # %bb.0:
-; RV64XTHEADBB-NEXT:    not a0, a0
 ; RV64XTHEADBB-NEXT:    slli a0, a0, 32
-; RV64XTHEADBB-NEXT:    th.ff0 a0, a0
+; RV64XTHEADBB-NEXT:    th.ff1 a0, a0
 ; RV64XTHEADBB-NEXT:    ret
   %tmp = call i32 @llvm.ctlz.i32(i32 %a, i1 true)
   ret i32 %tmp
@@ -2296,7 +2281,7 @@ define i8 @test_ctpop_i8(i8 %a) nounwind {
 ; RV64NOZBB:       # %bb.0:
 ; RV64NOZBB-NEXT:    srli a1, a0, 1
 ; RV64NOZBB-NEXT:    andi a1, a1, 85
-; RV64NOZBB-NEXT:    subw a0, a0, a1
+; RV64NOZBB-NEXT:    sub a0, a0, a1
 ; RV64NOZBB-NEXT:    andi a1, a0, 51
 ; RV64NOZBB-NEXT:    srli a0, a0, 2
 ; RV64NOZBB-NEXT:    andi a0, a0, 51
@@ -2336,7 +2321,7 @@ define i8 @test_ctpop_i8(i8 %a) nounwind {
 ; RV64XTHEADBB:       # %bb.0:
 ; RV64XTHEADBB-NEXT:    srli a1, a0, 1
 ; RV64XTHEADBB-NEXT:    andi a1, a1, 85
-; RV64XTHEADBB-NEXT:    subw a0, a0, a1
+; RV64XTHEADBB-NEXT:    sub a0, a0, a1
 ; RV64XTHEADBB-NEXT:    andi a1, a0, 51
 ; RV64XTHEADBB-NEXT:    srli a0, a0, 2
 ; RV64XTHEADBB-NEXT:    andi a0, a0, 51

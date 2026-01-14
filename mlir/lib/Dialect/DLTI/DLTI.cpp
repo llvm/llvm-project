@@ -17,8 +17,6 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
 
 using namespace mlir;
 
@@ -607,11 +605,6 @@ FailureOr<Attribute> dlti::query(Operation *op, ArrayRef<StringRef> keys,
 
   return dlti::query(op, entryKeys, emitError);
 }
-
-constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutAttrName;
-constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutEndiannessKey;
-constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutEndiannessBig;
-constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutEndiannessLittle;
 
 namespace {
 class TargetDataLayoutInterface : public DataLayoutDialectInterface {

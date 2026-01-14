@@ -905,8 +905,8 @@ static void computeMemoryOpIndices(Operation *op, AffineMap map,
   for (auto resultExpr : map.getResults()) {
     auto singleResMap =
         AffineMap::get(map.getNumDims(), map.getNumSymbols(), resultExpr);
-    auto afOp = state.builder.create<AffineApplyOp>(op->getLoc(), singleResMap,
-                                                    mapOperands);
+    auto afOp = AffineApplyOp::create(state.builder, op->getLoc(), singleResMap,
+                                      mapOperands);
     results.push_back(afOp);
   }
 }
@@ -961,7 +961,7 @@ static arith::ConstantOp vectorizeConstant(arith::ConstantOp constOp,
   auto vecForOp = cast<AffineForOp>(parentOp);
   state.builder.setInsertionPointToStart(vecForOp.getBody());
   auto newConstOp =
-      state.builder.create<arith::ConstantOp>(constOp.getLoc(), vecAttr);
+      arith::ConstantOp::create(state.builder, constOp.getLoc(), vecAttr);
 
   // Register vector replacement for future uses in the scope.
   state.registerOpVectorReplacement(constOp, newConstOp);
@@ -978,16 +978,15 @@ static Operation *vectorizeAffineApplyOp(AffineApplyOp applyOp,
       LLVM_DEBUG(
           dbgs() << "\n[early-vect]+++++ affine.apply on vector operand\n");
       return nullptr;
-    } else {
-      Value updatedOperand = state.valueScalarReplacement.lookupOrNull(operand);
-      if (!updatedOperand)
-        updatedOperand = operand;
-      updatedOperands.push_back(updatedOperand);
     }
+    Value updatedOperand = state.valueScalarReplacement.lookupOrNull(operand);
+    if (!updatedOperand)
+      updatedOperand = operand;
+    updatedOperands.push_back(updatedOperand);
   }
 
-  auto newApplyOp = state.builder.create<AffineApplyOp>(
-      applyOp.getLoc(), applyOp.getAffineMap(), updatedOperands);
+  auto newApplyOp = AffineApplyOp::create(
+      state.builder, applyOp.getLoc(), applyOp.getAffineMap(), updatedOperands);
 
   // Register the new affine.apply result.
   state.registerValueScalarReplacement(applyOp.getResult(),
@@ -1010,7 +1009,7 @@ static arith::ConstantOp createInitialVector(arith::AtomicRMWKind reductionKind,
   auto vecTy = getVectorType(scalarTy, state.strategy);
   auto vecAttr = DenseElementsAttr::get(vecTy, valueAttr);
   auto newConstOp =
-      state.builder.create<arith::ConstantOp>(oldOperand.getLoc(), vecAttr);
+      arith::ConstantOp::create(state.builder, oldOperand.getLoc(), vecAttr);
 
   return newConstOp;
 }
@@ -1062,11 +1061,11 @@ static Value createMask(AffineForOp vecForOp, VectorizationState &state) {
   AffineMap ubMap = vecForOp.getUpperBoundMap();
   Value ub;
   if (ubMap.getNumResults() == 1)
-    ub = state.builder.create<AffineApplyOp>(loc, vecForOp.getUpperBoundMap(),
-                                             vecForOp.getUpperBoundOperands());
+    ub = AffineApplyOp::create(state.builder, loc, vecForOp.getUpperBoundMap(),
+                               vecForOp.getUpperBoundOperands());
   else
-    ub = state.builder.create<AffineMinOp>(loc, vecForOp.getUpperBoundMap(),
-                                           vecForOp.getUpperBoundOperands());
+    ub = AffineMinOp::create(state.builder, loc, vecForOp.getUpperBoundMap(),
+                             vecForOp.getUpperBoundOperands());
   // Then we compute the number of (original) iterations left in the loop.
   AffineExpr subExpr =
       state.builder.getAffineDimExpr(0) - state.builder.getAffineDimExpr(1);
@@ -1080,7 +1079,7 @@ static Value createMask(AffineForOp vecForOp, VectorizationState &state) {
   Type maskTy = VectorType::get(state.strategy->vectorSizes,
                                 state.builder.getIntegerType(1));
   Value mask =
-      state.builder.create<vector::CreateMaskOp>(loc, maskTy, itersLeft);
+      vector::CreateMaskOp::create(state.builder, loc, maskTy, itersLeft);
 
   LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ creating a mask:\n"
                     << itersLeft << "\n"
@@ -1107,10 +1106,7 @@ static bool isUniformDefinition(Value value,
       return false;
   }
 
-  if (!value.getType().isIntOrIndexOrFloat())
-    return false;
-
-  return true;
+  return value.getType().isIntOrIndexOrFloat();
 }
 
 /// Generates a broadcast op for the provided uniform value using the
@@ -1123,8 +1119,8 @@ static Operation *vectorizeUniform(Value uniformVal,
   state.builder.setInsertionPointAfterValue(uniformScalarRepl);
 
   auto vectorTy = getVectorType(uniformVal.getType(), state.strategy);
-  auto bcastOp = state.builder.create<BroadcastOp>(uniformVal.getLoc(),
-                                                   vectorTy, uniformScalarRepl);
+  auto bcastOp = BroadcastOp::create(state.builder, uniformVal.getLoc(),
+                                     vectorTy, uniformScalarRepl);
   state.registerValueVectorReplacement(uniformVal, bcastOp);
   return bcastOp;
 }
@@ -1256,8 +1252,8 @@ static Operation *vectorizeAffineLoad(AffineLoadOp loadOp,
   LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ permutationMap: ");
   LLVM_DEBUG(permutationMap.print(dbgs()));
 
-  auto transfer = state.builder.create<vector::TransferReadOp>(
-      loadOp.getLoc(), vectorType, loadOp.getMemRef(), indices,
+  auto transfer = vector::TransferReadOp::create(
+      state.builder, loadOp.getLoc(), vectorType, loadOp.getMemRef(), indices,
       /*padding=*/std::nullopt, permutationMap);
 
   // Register replacement for future uses in the scope.
@@ -1303,9 +1299,9 @@ static Operation *vectorizeAffineStore(AffineStoreOp storeOp,
   LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ permutationMap: ");
   LLVM_DEBUG(permutationMap.print(dbgs()));
 
-  auto transfer = state.builder.create<vector::TransferWriteOp>(
-      storeOp.getLoc(), vectorValue, storeOp.getMemRef(), indices,
-      permutationMap);
+  auto transfer = vector::TransferWriteOp::create(
+      state.builder, storeOp.getLoc(), vectorValue, storeOp.getMemRef(),
+      indices, permutationMap);
   LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ vectorized store: " << transfer);
 
   // Register replacement for future uses in the scope.
@@ -1322,7 +1318,7 @@ static bool isNeutralElementConst(arith::AtomicRMWKind reductionKind,
     return false;
   Attribute valueAttr = getIdentityValueAttr(reductionKind, scalarTy,
                                              state.builder, value.getLoc());
-  if (auto constOp = dyn_cast_or_null<arith::ConstantOp>(value.getDefiningOp()))
+  if (auto constOp = value.getDefiningOp<arith::ConstantOp>())
     return constOp.getValue() == valueAttr;
   return false;
 }
@@ -1387,10 +1383,10 @@ static Operation *vectorizeAffineForOp(AffineForOp forOp,
     }
   }
 
-  auto vecForOp = state.builder.create<AffineForOp>(
-      forOp.getLoc(), forOp.getLowerBoundOperands(), forOp.getLowerBoundMap(),
-      forOp.getUpperBoundOperands(), forOp.getUpperBoundMap(), newStep,
-      vecIterOperands,
+  auto vecForOp = AffineForOp::create(
+      state.builder, forOp.getLoc(), forOp.getLowerBoundOperands(),
+      forOp.getLowerBoundMap(), forOp.getUpperBoundOperands(),
+      forOp.getUpperBoundMap(), newStep, vecIterOperands,
       /*bodyBuilder=*/[](OpBuilder &, Location, Value, ValueRange) {
         // Make sure we don't create a default terminator in the loop body as
         // the proper terminator will be added during vectorization.
@@ -1512,8 +1508,8 @@ static Operation *vectorizeAffineYieldOp(AffineYieldOp yieldOp,
       // IterOperands are neutral element vectors.
       Value neutralVal = cast<AffineForOp>(newParentOp).getInits()[i];
       state.builder.setInsertionPoint(combinerOps.back());
-      Value maskedReducedVal = state.builder.create<arith::SelectOp>(
-          reducedVal.getLoc(), mask, reducedVal, neutralVal);
+      Value maskedReducedVal = arith::SelectOp::create(
+          state.builder, reducedVal.getLoc(), mask, reducedVal, neutralVal);
       LLVM_DEBUG(
           dbgs() << "\n[early-vect]+++++ masking an input to a binary op that"
                     "produces value for a yield Op: "
@@ -1864,7 +1860,6 @@ verifyLoopNesting(const std::vector<SmallVector<AffineForOp, 2>> &loops) {
 
   return success();
 }
-
 
 /// External utility to vectorize affine loops in 'loops' using the n-D
 /// vectorization factors in 'vectorSizes'. By default, each vectorization

@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy -std=c++14 %s modernize-type-traits %t -check-suffixes=',MACRO'
 // RUN: %check_clang_tidy -std=c++14 %s modernize-type-traits %t -- \
 // RUN:   -config='{CheckOptions: {modernize-type-traits.IgnoreMacros: true}}'
-// RUN: %check_clang_tidy -std=c++17 %s modernize-type-traits %t -check-suffixes=',CXX17,MACRO,CXX17MACRO'
+// RUN: %check_clang_tidy -std=c++17-or-later %s modernize-type-traits %t -check-suffixes=',CXX17,MACRO,CXX17MACRO'
 
 namespace std {
   template <typename>
@@ -14,9 +14,28 @@ namespace std {
     static constexpr bool value = true;
   };
 
+  template <typename T, typename U>
+  static constexpr bool is_same_v = is_same<T, U>::value;  // NOLINT
+
   template<bool, typename T = void>
   struct enable_if {
     using type = T;
+  };
+
+  template <bool B, typename T = void>
+  using enable_if_t = typename enable_if<B, T>::type;  // NOLINT
+
+  template <typename T>
+  struct remove_reference {
+    using type = T;
+  };
+
+  template <typename T>
+  using remove_reference_t = typename remove_reference<T>::type;  // NOLINT
+
+  template <typename...>
+  struct common_type {
+    using type = int;
   };
 
 inline namespace __std_lib_version1 {
@@ -65,6 +84,10 @@ std::enable_if<true>::type noTemplateOrTypename();
 using UsingNoTypename = std::enable_if<true>::type;
 // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: use c++14 style type templates
 // CHECK-FIXES: using UsingNoTypename = std::enable_if_t<true>;
+
+using VariadicTrait = std::common_type<int, long, bool>::type;
+// CHECK-MESSAGES: :[[@LINE-1]]:23: warning: use c++14 style type templates
+// CHECK-FIXES: using VariadicTrait = std::common_type_t<int, long, bool>;
 
 using UsingSpace = std::enable_if <true>::type;
 // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: use c++14 style type templates
@@ -117,3 +140,13 @@ namespace my_std = std;
 using Alias = my_std::add_const<bool>::type;
 // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: use c++14 style type templates
 // CHECK-FIXES: using Alias = my_std::add_const_t<bool>;
+
+template <typename T>
+struct ImplicitlyInstantiatedConstructor {
+  template <typename U, typename = std::enable_if_t<std::is_same_v<U, T>>>
+  ImplicitlyInstantiatedConstructor(U) {}
+};
+
+const ImplicitlyInstantiatedConstructor<int> ImplicitInstantiation(std::remove_reference<int>::type(123));
+// CHECK-MESSAGES: :[[@LINE-1]]:68: warning: use c++14 style type templates
+// CHECK-FIXES: const ImplicitlyInstantiatedConstructor<int> ImplicitInstantiation(std::remove_reference_t<int>(123));

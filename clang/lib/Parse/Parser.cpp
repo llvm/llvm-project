@@ -515,7 +515,6 @@ void Parser::Initialize() {
   Ident_abstract = nullptr;
   Ident_override = nullptr;
   Ident_trivially_relocatable_if_eligible = nullptr;
-  Ident_replaceable_if_eligible = nullptr;
   Ident_GNU_final = nullptr;
   Ident_import = nullptr;
   Ident_module = nullptr;
@@ -708,7 +707,7 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
     }
 
     // Late template parsing can begin.
-    Actions.SetLateTemplateParser(LateTemplateParserCallback, nullptr, this);
+    Actions.SetLateTemplateParser(LateTemplateParserCallback, this);
     Actions.ActOnEndOfTranslationUnit();
     //else don't tell Sema that we ended parsing: more input might come.
     return true;
@@ -1083,7 +1082,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
          "expected uninitialised source range");
   DS.SetRangeStart(DeclSpecAttrs.Range.getBegin());
   DS.SetRangeEnd(DeclSpecAttrs.Range.getEnd());
-  DS.takeAttributesFrom(DeclSpecAttrs);
+  DS.takeAttributesAppendingingFrom(DeclSpecAttrs);
 
   ParsedTemplateInfo TemplateInfo;
   MaybeParseMicrosoftAttributes(DS.getAttributes());
@@ -1100,30 +1099,25 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
   // C99 6.7.2.3p6: Handle "struct-or-union identifier;", "enum { X };"
   // declaration-specifiers init-declarator-list[opt] ';'
   if (Tok.is(tok::semi)) {
-    auto LengthOfTSTToken = [](DeclSpec::TST TKind) {
-      assert(DeclSpec::isDeclRep(TKind));
-      switch(TKind) {
-      case DeclSpec::TST_class:
-        return 5;
-      case DeclSpec::TST_struct:
-        return 6;
-      case DeclSpec::TST_union:
-        return 5;
-      case DeclSpec::TST_enum:
-        return 4;
-      case DeclSpec::TST_interface:
-        return 9;
-      default:
-        llvm_unreachable("we only expect to get the length of the class/struct/union/enum");
+    // Suggest correct location to fix '[[attrib]] struct' to 'struct
+    // [[attrib]]'
+    SourceLocation CorrectLocationForAttributes{};
+    TypeSpecifierType TKind = DS.getTypeSpecType();
+    if (DeclSpec::isDeclRep(TKind)) {
+      if (TKind == DeclSpec::TST_enum) {
+        if (const auto *ED = dyn_cast_or_null<EnumDecl>(DS.getRepAsDecl())) {
+          CorrectLocationForAttributes =
+              PP.getLocForEndOfToken(ED->getEnumKeyRange().getEnd());
+        }
       }
-
-    };
-    // Suggest correct location to fix '[[attrib]] struct' to 'struct [[attrib]]'
-    SourceLocation CorrectLocationForAttributes =
-        DeclSpec::isDeclRep(DS.getTypeSpecType())
-            ? DS.getTypeSpecTypeLoc().getLocWithOffset(
-                  LengthOfTSTToken(DS.getTypeSpecType()))
-            : SourceLocation();
+      if (CorrectLocationForAttributes.isInvalid()) {
+        const auto &Policy = Actions.getASTContext().getPrintingPolicy();
+        unsigned Offset =
+            StringRef(DeclSpec::getSpecifierName(TKind, Policy)).size();
+        CorrectLocationForAttributes =
+            DS.getTypeSpecTypeLoc().getLocWithOffset(Offset);
+      }
+    }
     ProhibitAttributes(Attrs, CorrectLocationForAttributes);
     ConsumeToken();
     RecordDecl *AnonRecord = nullptr;
@@ -1155,7 +1149,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
     }
 
     DS.abort();
-    DS.takeAttributesFrom(Attrs);
+    DS.takeAttributesAppendingingFrom(Attrs);
 
     const char *PrevSpec = nullptr;
     unsigned DiagID;
@@ -1272,7 +1266,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   // tokens and store them for late parsing at the end of the translation unit.
   if (getLangOpts().DelayedTemplateParsing && Tok.isNot(tok::equal) &&
       TemplateInfo.Kind == ParsedTemplateKind::Template &&
-      Actions.canDelayFunctionBody(D)) {
+      LateParsedAttrs->empty() && Actions.canDelayFunctionBody(D)) {
     MultiTemplateParamsArg TemplateParameterLists(*TemplateInfo.TemplateParams);
 
     ParseScope BodyScope(this, Scope::FnScope | Scope::DeclScope |
@@ -1301,10 +1295,8 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     }
     return DP;
   }
-  else if (CurParsedObjCImpl &&
-           !TemplateInfo.TemplateParams &&
-           (Tok.is(tok::l_brace) || Tok.is(tok::kw_try) ||
-            Tok.is(tok::colon)) &&
+  if (CurParsedObjCImpl && !TemplateInfo.TemplateParams &&
+      (Tok.is(tok::l_brace) || Tok.is(tok::kw_try) || Tok.is(tok::colon)) &&
       Actions.CurContext->isTranslationUnit()) {
     ParseScope BodyScope(this, Scope::FnScope | Scope::DeclScope |
                                    Scope::CompoundStmtScope);
@@ -1418,6 +1410,11 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     // parameter list was specified.
     CurTemplateDepthTracker.addDepth(1);
 
+  // Late attributes are parsed in the same scope as the function body.
+  if (LateParsedAttrs)
+    ParseLexedAttributeList(*LateParsedAttrs, Res, /*EnterScope=*/false,
+                            /*OnDefinition=*/true);
+
   if (SkipFunctionBodies && (!Res || Actions.canSkipFunctionBody(Res)) &&
       trySkippingFunctionBody()) {
     BodyScope.Exit();
@@ -1441,10 +1438,6 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     }
   } else
     Actions.ActOnDefaultCtorInitializers(Res);
-
-  // Late attributes are parsed in the same scope as the function body.
-  if (LateParsedAttrs)
-    ParseLexedAttributeList(*LateParsedAttrs, Res, false, true);
 
   return ParseFunctionStatementBody(Res, BodyScope);
 }
@@ -1774,9 +1767,9 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
     /// An Objective-C object type followed by '<' is a specialization of
     /// a parameterized class type or a protocol-qualified type.
     ParsedType Ty = Classification.getType();
+    QualType T = Actions.GetTypeFromParser(Ty);
     if (getLangOpts().ObjC && NextToken().is(tok::less) &&
-        (Ty.get()->isObjCObjectType() ||
-         Ty.get()->isObjCObjectPointerType())) {
+        (T->isObjCObjectType() || T->isObjCObjectPointerType())) {
       // Consume the name.
       SourceLocation IdentifierLoc = ConsumeToken();
       SourceLocation NewEndLoc;
@@ -1838,7 +1831,8 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
 
   case NameClassificationKind::TypeTemplate:
     if (Next.isNot(tok::less)) {
-      // This may be a type template being used as a template template argument.
+      // This may be a type or variable template being used as a template
+      // template argument.
       if (SS.isNotEmpty())
         AnnotateScopeToken(SS, !WasScopeAnnotation);
       return AnnotatedNameKind::TemplateName;
@@ -1852,10 +1846,10 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
         Classification.getKind() == NameClassificationKind::Concept;
     // We have a template name followed by '<'. Consume the identifier token so
     // we reach the '<' and annotate it.
-    if (Next.is(tok::less))
-      ConsumeToken();
     UnqualifiedId Id;
     Id.setIdentifier(Name, NameLoc);
+    if (Next.is(tok::less))
+      ConsumeToken();
     if (AnnotateTemplateIdToken(
             TemplateTy::make(Classification.getTemplateName()),
             Classification.getTemplateNameKind(), SS, SourceLocation(), Id,
@@ -2031,11 +2025,12 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(
       if (SS.isNotEmpty()) // it was a C++ qualified type name.
         BeginLoc = SS.getBeginLoc();
 
+      QualType T = Actions.GetTypeFromParser(Ty);
+
       /// An Objective-C object type followed by '<' is a specialization of
       /// a parameterized class type or a protocol-qualified type.
       if (getLangOpts().ObjC && NextToken().is(tok::less) &&
-          (Ty.get()->isObjCObjectType() ||
-           Ty.get()->isObjCObjectPointerType())) {
+          (T->isObjCObjectType() || T->isObjCObjectPointerType())) {
         // Consume the name.
         SourceLocation IdentifierLoc = ConsumeToken();
         SourceLocation NewEndLoc;
@@ -2361,9 +2356,10 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
   // Parse a global-module-fragment, if present.
   if (getLangOpts().CPlusPlusModules && Tok.is(tok::semi)) {
     SourceLocation SemiLoc = ConsumeToken();
-    if (!Introducer.isFirstPPToken()) {
+    if (ImportState != Sema::ModuleImportState::FirstDecl ||
+        Introducer.hasSeenNoTrivialPPDirective()) {
       Diag(StartLoc, diag::err_global_module_introducer_not_at_start)
-        << SourceRange(StartLoc, SemiLoc);
+          << SourceRange(StartLoc, SemiLoc);
       return nullptr;
     }
     if (MDK == Sema::ModuleDeclKind::Interface) {
@@ -2418,7 +2414,8 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
   ExpectAndConsumeSemi(diag::err_module_expected_semi);
 
   return Actions.ActOnModuleDecl(StartLoc, ModuleLoc, MDK, Path, Partition,
-                                 ImportState, Introducer.isFirstPPToken());
+                                 ImportState,
+                                 Introducer.hasSeenNoTrivialPPDirective());
 }
 
 Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
@@ -2519,6 +2516,7 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
     break;
   }
   ExpectAndConsumeSemi(diag::err_module_expected_semi);
+  TryConsumeToken(tok::eod);
 
   if (SeenError)
     return nullptr;

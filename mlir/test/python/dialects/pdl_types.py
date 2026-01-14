@@ -148,3 +148,16 @@ def test_value_type():
     print(parsedType)
     # CHECK: !pdl.value
     print(constructedType)
+
+
+# CHECK-LABEL: TEST: test_type_without_context
+@run
+def test_type_without_context():
+    # Constructing a type without the surrounding ir.Context context manager
+    # should raise an exception but not crash.
+    try:
+        constructedType = pdl.ValueType.get()
+    except TypeError:
+        pass
+    else:
+        assert False, "Expected TypeError to be raised."

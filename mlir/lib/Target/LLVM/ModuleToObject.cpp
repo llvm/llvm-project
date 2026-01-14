@@ -56,8 +56,9 @@ ModuleToObject::getOrCreateTargetMachine() {
     return targetMachine.get();
   // Load the target.
   std::string error;
+  llvm::Triple parsedTriple(triple);
   const llvm::Target *target =
-      llvm::TargetRegistry::lookupTarget(triple, error);
+      llvm::TargetRegistry::lookupTarget(parsedTriple, error);
   if (!target) {
     getOperation().emitError()
         << "Failed to lookup target for triple '" << triple << "' " << error;
@@ -65,8 +66,8 @@ ModuleToObject::getOrCreateTargetMachine() {
   }
 
   // Create the target machine using the target.
-  targetMachine.reset(target->createTargetMachine(llvm::Triple(triple), chip,
-                                                  features, {}, {}));
+  targetMachine.reset(
+      target->createTargetMachine(parsedTriple, chip, features, {}, {}));
   if (!targetMachine)
     return std::nullopt;
   return targetMachine.get();
@@ -204,9 +205,9 @@ LogicalResult ModuleToObject::optimizeModule(llvm::Module &module,
   return success();
 }
 
-std::optional<std::string>
-ModuleToObject::translateToISA(llvm::Module &llvmModule,
-                               llvm::TargetMachine &targetMachine) {
+FailureOr<std::string> ModuleToObject::translateModuleToISA(
+    llvm::Module &llvmModule, llvm::TargetMachine &targetMachine,
+    function_ref<InFlightDiagnostic()> emitError) {
   std::string targetISA;
   llvm::raw_string_ostream stream(targetISA);
 
@@ -216,7 +217,7 @@ ModuleToObject::translateToISA(llvm::Module &llvmModule,
 
     if (targetMachine.addPassesToEmitFile(codegenPasses, pstream, nullptr,
                                           llvm::CodeGenFileType::AssemblyFile))
-      return std::nullopt;
+      return emitError() << "Target machine cannot emit assembly";
 
     codegenPasses.run(llvmModule);
   }

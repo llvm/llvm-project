@@ -12,3 +12,56 @@
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(AMDGPU, amdgpu,
                                       mlir::amdgpu::AMDGPUDialect)
+
+using namespace mlir;
+using namespace mlir::amdgpu;
+
+//===---------------------------------------------------------------------===//
+// TDMBaseType
+//===---------------------------------------------------------------------===//
+
+bool mlirTypeIsAAMDGPUTDMBaseType(MlirType type) {
+  return isa<amdgpu::TDMBaseType>(unwrap(type));
+}
+
+MlirTypeID mlirAMDGPUTDMBaseTypeGetTypeID() {
+  return wrap(amdgpu::TDMBaseType::getTypeID());
+}
+
+MlirType mlirAMDGPUTDMBaseTypeGet(MlirContext ctx, MlirType elementType) {
+  return wrap(amdgpu::TDMBaseType::get(unwrap(ctx), unwrap(elementType)));
+}
+
+//===---------------------------------------------------------------------===//
+// TDMDescriptorType
+//===---------------------------------------------------------------------===//
+
+bool mlirTypeIsAAMDGPUTDMDescriptorType(MlirType type) {
+  return isa<amdgpu::TDMDescriptorType>(unwrap(type));
+}
+
+MlirTypeID mlirAMDGPUTDMDescriptorTypeGetTypeID() {
+  return wrap(amdgpu::TDMDescriptorType::getTypeID());
+}
+
+MlirType mlirAMDGPUTDMDescriptorTypeGet(MlirContext ctx) {
+  return wrap(amdgpu::TDMDescriptorType::get(unwrap(ctx)));
+}
+
+//===---------------------------------------------------------------------===//
+// TDMGatherBaseType
+//===---------------------------------------------------------------------===//
+
+bool mlirTypeIsAAMDGPUTDMGatherBaseType(MlirType type) {
+  return isa<amdgpu::TDMGatherBaseType>(unwrap(type));
+}
+
+MlirTypeID mlirAMDGPUTDMGatherBaseTypeGetTypeID() {
+  return wrap(amdgpu::TDMGatherBaseType::getTypeID());
+}
+
+MlirType mlirAMDGPUTDMGatherBaseTypeGet(MlirContext ctx, MlirType elementType,
+                                        MlirType indexType) {
+  return wrap(amdgpu::TDMGatherBaseType::get(unwrap(ctx), unwrap(elementType),
+                                             unwrap(indexType)));
+}

@@ -111,6 +111,7 @@ ENUM_CLASS(KindCode, none, defaultIntegerKind,
     atomicIntKind, // atomic_int_kind from iso_fortran_env
     atomicIntOrLogicalKind, // atomic_int_kind or atomic_logical_kind
     sameAtom, // same type and kind as atom
+    extensibleOrUnlimitedType, // extensible or unlimited polymorphic type
 )
 
 struct TypePattern {
@@ -160,7 +161,8 @@ static constexpr TypePattern AnyChar{CharType, KindCode::any};
 static constexpr TypePattern AnyLogical{LogicalType, KindCode::any};
 static constexpr TypePattern AnyRelatable{RelatableType, KindCode::any};
 static constexpr TypePattern AnyIntrinsic{IntrinsicType, KindCode::any};
-static constexpr TypePattern ExtensibleDerived{DerivedType, KindCode::any};
+static constexpr TypePattern ExtensibleDerived{
+    DerivedType, KindCode::extensibleOrUnlimitedType};
 static constexpr TypePattern AnyData{AnyType, KindCode::any};
 
 // Type is irrelevant, but not BOZ (for PRESENT(), OPTIONAL(), &c.)
@@ -340,6 +342,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"acos", {{"x", SameFloating}}, SameFloating},
     {"acosd", {{"x", SameFloating}}, SameFloating},
     {"acosh", {{"x", SameFloating}}, SameFloating},
+    {"acospi", {{"x", SameFloating}}, SameFloating},
     {"adjustl", {{"string", SameChar}}, SameChar},
     {"adjustr", {{"string", SameChar}}, SameChar},
     {"aimag", {{"z", SameComplex}}, SameReal},
@@ -358,6 +361,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"asin", {{"x", SameFloating}}, SameFloating},
     {"asind", {{"x", SameFloating}}, SameFloating},
     {"asinh", {{"x", SameFloating}}, SameFloating},
+    {"asinpi", {{"x", SameFloating}}, SameFloating},
     {"associated",
         {{"pointer", AnyPointer, Rank::anyOrAssumedRank, Optionality::required,
              common::Intent::In, {ArgFlag::canBeNullPointer}},
@@ -428,6 +432,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"conjg", {{"z", SameComplex}}, SameComplex},
     {"cos", {{"x", SameFloating}}, SameFloating},
     {"cosd", {{"x", SameFloating}}, SameFloating},
+    {"cospi", {{"x", SameFloating}}, SameFloating},
     {"cosh", {{"x", SameFloating}}, SameFloating},
     {"coshape", {{"coarray", AnyData, Rank::coarray}, SizeDefaultKIND}, KINDInt,
         Rank::vector, IntrinsicClass::inquiryFunction},
@@ -459,6 +464,10 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"vector_b", AnyNumeric, Rank::vector}},
         ResultNumeric, Rank::scalar, IntrinsicClass::transformationalFunction},
     {"dprod", {{"x", DefaultReal}, {"y", DefaultReal}}, DoublePrecision},
+    {"dsecnds",
+        {{"refTime", TypePattern{RealType, KindCode::exactKind, 8},
+            Rank::scalar}},
+        TypePattern{RealType, KindCode::exactKind, 8}, Rank::scalar},
     {"dshiftl",
         {{"i", SameIntOrUnsigned},
             {"j", SameIntOrUnsigned, Rank::elementalOrBOZ}, {"shift", AnyInt}},
@@ -645,6 +654,11 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         {{"i", OperandUnsigned}, {"j", OperandUnsigned, Rank::elementalOrBOZ}},
         OperandUnsigned},
     {"ior", {{"i", BOZ}, {"j", SameIntOrUnsigned}}, SameIntOrUnsigned},
+    {"irand",
+        {{"i", TypePattern{IntType, KindCode::exactKind, 4}, Rank::scalar,
+            Optionality::optional}},
+        TypePattern{IntType, KindCode::exactKind, 4}, Rank::scalar,
+        IntrinsicClass::impureFunction},
     {"ishft", {{"i", SameIntOrUnsigned}, {"shift", AnyInt}}, SameIntOrUnsigned},
     {"ishftc",
         {{"i", SameIntOrUnsigned}, {"shift", AnyInt},
@@ -663,7 +677,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         DefaultInt, Rank::elemental, IntrinsicClass::inquiryFunction},
     {"lbound",
-        {{"array", AnyData, Rank::anyOrAssumedRank}, RequiredDIM,
+        {{"array", AnyData, Rank::arrayOrAssumedRank}, RequiredDIM,
             SizeDefaultKIND},
         KINDInt, Rank::scalar, IntrinsicClass::inquiryFunction},
     {"lbound", {{"array", AnyData, Rank::arrayOrAssumedRank}, SizeDefaultKIND},
@@ -863,6 +877,11 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             common::Intent::In,
             {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         DefaultInt, Rank::scalar, IntrinsicClass::inquiryFunction},
+    {"rand",
+        {{"i", TypePattern{IntType, KindCode::exactKind, 4}, Rank::scalar,
+            Optionality::optional}},
+        TypePattern{RealType, KindCode::exactKind, 4}, Rank::scalar,
+        IntrinsicClass::impureFunction},
     {"range",
         {{"x", AnyNumeric, Rank::anyOrAssumedRank, Optionality::required,
             common::Intent::In,
@@ -918,6 +937,10 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"back", AnyLogical, Rank::elemental, Optionality::optional},
             DefaultingKIND},
         KINDInt},
+    {"secnds",
+        {{"refTime", TypePattern{RealType, KindCode::exactKind, 4},
+            Rank::scalar}},
+        TypePattern{RealType, KindCode::exactKind, 4}, Rank::scalar},
     {"second", {}, DefaultReal, Rank::scalar},
     {"selected_char_kind", {{"name", DefaultChar, Rank::scalar}}, DefaultInt,
         Rank::scalar, IntrinsicClass::transformationalFunction},
@@ -956,6 +979,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"sin", {{"x", SameFloating}}, SameFloating},
     {"sind", {{"x", SameFloating}}, SameFloating},
     {"sinh", {{"x", SameFloating}}, SameFloating},
+    {"sinpi", {{"x", SameFloating}}, SameFloating},
     {"size",
         {{"array", AnyData, Rank::arrayOrAssumedRank},
             OptionalDIM, // unless array is assumed-size
@@ -987,6 +1011,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"tan", {{"x", SameFloating}}, SameFloating},
     {"tand", {{"x", SameFloating}}, SameFloating},
     {"tanh", {{"x", SameFloating}}, SameFloating},
+    {"tanpi", {{"x", SameFloating}}, SameFloating},
     {"team_number", {OptionalTEAM}, DefaultInt, Rank::scalar,
         IntrinsicClass::transformationalFunction},
     {"this_image",
@@ -1015,12 +1040,21 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"mold", SameType, Rank::anyOrAssumedRank},
             {"size", AnyInt, Rank::scalar}},
         SameType, Rank::vector, IntrinsicClass::transformationalFunction},
+    // TRANSFER(BOZ, MOLD=integer or real scalar) extension
+    {"transfer",
+        {{"source", AnyNumeric, Rank::elementalOrBOZ},
+            {"mold", SameInt, Rank::scalar}},
+        SameInt, Rank::scalar, IntrinsicClass::transformationalFunction},
+    {"transfer",
+        {{"source", AnyNumeric, Rank::elementalOrBOZ},
+            {"mold", SameReal, Rank::scalar}},
+        SameReal, Rank::scalar, IntrinsicClass::transformationalFunction},
     {"transpose", {{"matrix", SameType, Rank::matrix}}, SameType, Rank::matrix,
         IntrinsicClass::transformationalFunction},
     {"trim", {{"string", SameCharNoLen, Rank::scalar}}, SameCharNoLen,
         Rank::scalar, IntrinsicClass::transformationalFunction},
     {"ubound",
-        {{"array", AnyData, Rank::anyOrAssumedRank}, RequiredDIM,
+        {{"array", AnyData, Rank::arrayOrAssumedRank}, RequiredDIM,
             SizeDefaultKIND},
         KINDInt, Rank::scalar, IntrinsicClass::inquiryFunction},
     {"ubound", {{"array", AnyData, Rank::arrayOrAssumedRank}, SizeDefaultKIND},
@@ -1573,6 +1607,10 @@ static const IntrinsicInterface intrinsicSubroutine[]{
     {"exit", {{"status", DefaultInt, Rank::scalar, Optionality::optional}}, {},
         Rank::elemental, IntrinsicClass::impureSubroutine},
     {"free", {{"ptr", Addressable}}, {}},
+    {"flush",
+        {{"unit", AnyInt, Rank::scalar, Optionality::optional,
+            common::Intent::In}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"fseek",
         {{"unit", AnyInt, Rank::scalar}, {"offset", AnyInt, Rank::scalar},
             {"whence", AnyInt, Rank::scalar},
@@ -1652,7 +1690,7 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"to", SameIntOrUnsigned, Rank::elemental, Optionality::required,
                 common::Intent::Out},
             {"topos", AnyInt}},
-        {}, Rank::elemental, IntrinsicClass::elementalSubroutine}, // elemental
+        {}, Rank::elemental, IntrinsicClass::elementalSubroutine},
     {"random_init",
         {{"repeatable", AnyLogical, Rank::scalar},
             {"image_distinct", AnyLogical, Rank::scalar}},
@@ -1677,6 +1715,8 @@ static const IntrinsicInterface intrinsicSubroutine[]{
         {}, Rank::scalar, IntrinsicClass::impureSubroutine},
     {"second", {{"time", DefaultReal, Rank::scalar}}, {}, Rank::scalar,
         IntrinsicClass::impureSubroutine},
+    {"__builtin_show_descriptor", {{"d", AnyData, Rank::anyOrAssumedRank}}, {},
+        Rank::elemental, IntrinsicClass::impureSubroutine},
     {"system",
         {{"command", DefaultChar, Rank::scalar},
             {"exitstat", DefaultInt, Rank::scalar, Optionality::optional,
@@ -2081,9 +2121,13 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       }
       return std::nullopt;
     } else if (!d.typePattern.categorySet.test(type->category())) {
+      const char *expected{
+          d.typePattern.kindCode == KindCode::extensibleOrUnlimitedType
+              ? ", expected extensible or unlimited polymorphic type"
+              : ""};
       messages.Say(arg->sourceLocation(),
-          "Actual argument for '%s=' has bad type '%s'"_err_en_US, d.keyword,
-          type->AsFortran());
+          "Actual argument for '%s=' has bad type '%s'%s"_err_en_US, d.keyword,
+          type->AsFortran(), expected);
       return std::nullopt; // argument has invalid type category
     }
     bool argOk{false};
@@ -2222,6 +2266,17 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         return std::nullopt;
       }
       break;
+    case KindCode::extensibleOrUnlimitedType:
+      argOk = type->IsUnlimitedPolymorphic() ||
+          (type->category() == TypeCategory::Derived &&
+              IsExtensibleType(GetDerivedTypeSpec(type)));
+      if (!argOk) {
+        messages.Say(arg->sourceLocation(),
+            "Actual argument for '%s=' has type '%s', but was expected to be an extensible or unlimited polymorphic type"_err_en_US,
+            d.keyword, type->AsFortran());
+        return std::nullopt;
+      }
+      break;
     default:
       CRASH_NO_CASE;
     }
@@ -2242,7 +2297,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   for (std::size_t j{0}; j < dummies; ++j) {
     const IntrinsicDummyArgument &d{dummy[std::min(j, dummyArgPatterns - 1)]};
     if (const ActualArgument *arg{actualForDummy[j]}) {
-      bool isAssumedRank{IsAssumedRank(*arg)};
+      bool isAssumedRank{semantics::IsAssumedRank(*arg)};
       if (isAssumedRank && d.rank != Rank::anyOrAssumedRank &&
           d.rank != Rank::arrayOrAssumedRank) {
         messages.Say(arg->sourceLocation(),
@@ -2493,7 +2548,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       CHECK(kindDummyArg);
       CHECK(result.categorySet == CategorySet{*category});
       if (kindArg) {
-        if (auto *expr{kindArg->UnwrapExpr()}) {
+        auto *expr{kindArg->UnwrapExpr()};
+        if (expr) {
           CHECK(expr->Rank() == 0);
           if (auto code{ToInt64(Fold(context, common::Clone(*expr)))}) {
             if (context.targetCharacteristics().IsTypeEnabled(
@@ -2507,8 +2563,16 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             }
           }
         }
-        messages.Say(
-            "'kind=' argument must be a constant scalar integer whose value is a supported kind for the intrinsic result type"_err_en_US);
+        if (context.analyzingPDTComponentKindSelector() && expr &&
+            IsConstantExpr(*expr)) {
+          // Don't emit an error about a KIND= actual argument value when
+          // processing a kind selector in a PDT component declaration before
+          // it is instantianted, so long as it's a constant expression.
+          // It will be renanalyzed later during instantiation.
+        } else {
+          messages.Say(
+              "'kind=' argument must be a constant scalar integer whose value is a supported kind for the intrinsic result type"_err_en_US);
+        }
         // use default kind below for error recovery
       } else if (kindDummyArg->flags.test(ArgFlag::defaultsToSameKind)) {
         CHECK(sameArg);
@@ -2603,15 +2667,12 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         if (const Symbol *whole{
                 UnwrapWholeSymbolOrComponentDataRef(actualForDummy[*dimArg])}) {
           if (IsOptional(*whole) || IsAllocatableOrObjectPointer(whole)) {
-            if (context.languageFeatures().ShouldWarn(
-                    common::UsageWarning::OptionalMustBePresent)) {
-              if (rank == Rank::scalarIfDim || arrayRank.value_or(-1) == 1) {
-                messages.Say(common::UsageWarning::OptionalMustBePresent,
-                    "The actual argument for DIM= is optional, pointer, or allocatable, and it is assumed to be present and equal to 1 at execution time"_warn_en_US);
-              } else {
-                messages.Say(common::UsageWarning::OptionalMustBePresent,
-                    "The actual argument for DIM= is optional, pointer, or allocatable, and may not be absent during execution; parenthesize to silence this warning"_warn_en_US);
-              }
+            if (rank == Rank::scalarIfDim || arrayRank.value_or(-1) == 1) {
+              context.Warn(common::UsageWarning::OptionalMustBePresent,
+                  "The actual argument for DIM= is optional, pointer, or allocatable, and it is assumed to be present and equal to 1 at execution time"_warn_en_US);
+            } else {
+              context.Warn(common::UsageWarning::OptionalMustBePresent,
+                  "The actual argument for DIM= is optional, pointer, or allocatable, and may not be absent during execution; parenthesize to silence this warning"_warn_en_US);
             }
           }
         }
@@ -2777,7 +2838,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             name, characteristics::Procedure{std::move(dummyArgs), attrs}},
         std::move(rearranged)};
   } else {
-    attrs.set(characteristics::Procedure::Attr::Pure);
+    if (intrinsicClass != IntrinsicClass::impureFunction /* RAND and IRAND */)
+      attrs.set(characteristics::Procedure::Attr::Pure);
     characteristics::TypeAndShape typeAndShape{resultType.value(), resultRank};
     characteristics::FunctionResult funcResult{std::move(typeAndShape)};
     characteristics::Procedure chars{
@@ -2884,7 +2946,7 @@ bool IntrinsicProcTable::Implementation::IsDualIntrinsic(
   // Collection for some intrinsics with function and subroutine form,
   // in order to pass the semantic check.
   static const std::string dualIntrinsic[]{{"chdir"}, {"etime"}, {"fseek"},
-      {"ftell"}, {"getcwd"}, {"hostnm"}, {"putenv"s}, {"rename"}, {"second"},
+      {"ftell"}, {"getcwd"}, {"hostnm"}, {"putenv"}, {"rename"}, {"second"},
       {"system"}, {"unlink"}};
   return llvm::is_contained(dualIntrinsic, name);
 }
@@ -2988,7 +3050,7 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
       mold = nullptr;
     }
     if (mold) {
-      if (IsAssumedRank(*arguments[0])) {
+      if (semantics::IsAssumedRank(*arguments[0])) {
         context.messages().Say(arguments[0]->sourceLocation(),
             "MOLD= argument to NULL() must not be assumed-rank"_err_en_US);
       }
@@ -3063,10 +3125,11 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
     ActualArguments &arguments, FoldingContext &context) const {
   characteristics::Procedure::Attrs attrs;
   attrs.set(characteristics::Procedure::Attr::Subroutine);
-  static const char *const keywords[]{"cptr", "fptr", "shape", nullptr};
+  static const char *const keywords[]{
+      "cptr", "fptr", "shape", "lower", nullptr};
   characteristics::DummyArguments dummies;
-  if (CheckAndRearrangeArguments(arguments, context.messages(), keywords, 1)) {
-    CHECK(arguments.size() == 3);
+  if (CheckAndRearrangeArguments(arguments, context.messages(), keywords, 2)) {
+    CHECK(arguments.size() == 4);
     if (const auto *expr{arguments[0].value().UnwrapExpr()}) {
       // General semantic checks will catch an actual argument that's not
       // scalar.
@@ -3093,37 +3156,6 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
         if (type->HasDeferredTypeParameter()) {
           context.messages().Say(at,
               "FPTR= argument to C_F_POINTER() may not have a deferred type parameter"_err_en_US);
-        } else if (type->category() == TypeCategory::Derived) {
-          if (context.languageFeatures().ShouldWarn(
-                  common::UsageWarning::Interoperability) &&
-              type->IsUnlimitedPolymorphic()) {
-            context.messages().Say(common::UsageWarning::Interoperability, at,
-                "FPTR= argument to C_F_POINTER() should not be unlimited polymorphic"_warn_en_US);
-          } else if (!type->GetDerivedTypeSpec().typeSymbol().attrs().test(
-                         semantics::Attr::BIND_C) &&
-              context.languageFeatures().ShouldWarn(
-                  common::UsageWarning::Portability)) {
-            context.messages().Say(common::UsageWarning::Portability, at,
-                "FPTR= argument to C_F_POINTER() should not have a derived type that is not BIND(C)"_port_en_US);
-          }
-        } else if (!IsInteroperableIntrinsicType(
-                       *type, &context.languageFeatures())
-                        .value_or(true)) {
-          if (type->category() == TypeCategory::Character &&
-              type->kind() == 1) {
-            if (context.languageFeatures().ShouldWarn(
-                    common::UsageWarning::CharacterInteroperability)) {
-              context.messages().Say(
-                  common::UsageWarning::CharacterInteroperability, at,
-                  "FPTR= argument to C_F_POINTER() should not have the non-interoperable character length %s"_warn_en_US,
-                  type->AsFortran());
-            }
-          } else if (context.languageFeatures().ShouldWarn(
-                         common::UsageWarning::Interoperability)) {
-            context.messages().Say(common::UsageWarning::Interoperability, at,
-                "FPTR= argument to C_F_POINTER() should not have the non-interoperable intrinsic type or kind %s"_warn_en_US,
-                type->AsFortran());
-          }
         }
         if (ExtractCoarrayRef(*expr)) {
           context.messages().Say(at,
@@ -3159,11 +3191,30 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
           }
         }
       }
+      if (arguments[3] && fptrRank == 0) {
+        context.messages().Say(arguments[3]->sourceLocation(),
+            "LOWER= argument to C_F_POINTER() may not appear when FPTR= is scalar"_err_en_US);
+      } else if (arguments[3]) {
+        if (const auto *argExpr{arguments[3].value().UnwrapExpr()}) {
+          if (argExpr->Rank() > 1) {
+            context.messages().Say(arguments[3]->sourceLocation(),
+                "LOWER= argument to C_F_POINTER() must be a rank-one array."_err_en_US);
+          } else if (argExpr->Rank() == 1) {
+            if (auto constShape{GetConstantShape(context, *argExpr)}) {
+              if (constShape->At(ConstantSubscripts{1}).ToInt64() != fptrRank) {
+                context.messages().Say(arguments[3]->sourceLocation(),
+                    "LOWER= argument to C_F_POINTER() must have size equal to the rank of FPTR="_err_en_US);
+              }
+            }
+          }
+        }
+      }
     }
   }
   if (dummies.size() == 2) {
+    // Handle SHAPE
     DynamicType shapeType{TypeCategory::Integer, defaults_.sizeIntegerKind()};
-    if (arguments[2]) {
+    if (arguments.size() >= 3 && arguments[2]) {
       if (auto type{arguments[2]->GetType()}) {
         if (type->category() == TypeCategory::Integer) {
           shapeType = *type;
@@ -3175,6 +3226,22 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
     shape.intent = common::Intent::In;
     shape.attrs.set(characteristics::DummyDataObject::Attr::Optional);
     dummies.emplace_back("shape"s, std::move(shape));
+
+    // Handle LOWER
+    DynamicType lowerType{TypeCategory::Integer, defaults_.sizeIntegerKind()};
+    if (arguments.size() >= 4 && arguments[3]) {
+      if (auto type{arguments[3]->GetType()}) {
+        if (type->category() == TypeCategory::Integer) {
+          lowerType = *type;
+        }
+      }
+    }
+    characteristics::DummyDataObject lower{
+        characteristics::TypeAndShape{lowerType, 1}};
+    lower.intent = common::Intent::In;
+    lower.attrs.set(characteristics::DummyDataObject::Attr::Optional);
+    dummies.emplace_back("lower"s, std::move(lower));
+
     return SpecificCall{
         SpecificIntrinsic{"__builtin_c_f_pointer"s,
             characteristics::Procedure{std::move(dummies), attrs}},
@@ -3224,16 +3291,11 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
         if (typeAndShape->type().category() == TypeCategory::Character &&
             typeAndShape->type().kind() == 1) {
           // Default character kind, but length is not known to be 1
-          if (context.languageFeatures().ShouldWarn(
-                  common::UsageWarning::CharacterInteroperability)) {
-            context.messages().Say(
-                common::UsageWarning::CharacterInteroperability,
-                arguments[0]->sourceLocation(),
-                "C_LOC() argument has non-interoperable character length"_warn_en_US);
-          }
-        } else if (context.languageFeatures().ShouldWarn(
-                       common::UsageWarning::Interoperability)) {
-          context.messages().Say(common::UsageWarning::Interoperability,
+          context.Warn(common::UsageWarning::CharacterInteroperability,
+              arguments[0]->sourceLocation(),
+              "C_LOC() argument has non-interoperable character length"_warn_en_US);
+        } else {
+          context.Warn(common::UsageWarning::Interoperability,
               arguments[0]->sourceLocation(),
               "C_LOC() argument has non-interoperable intrinsic type or kind"_warn_en_US);
         }
@@ -3291,16 +3353,11 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Devloc(
         if (typeAndShape->type().category() == TypeCategory::Character &&
             typeAndShape->type().kind() == 1) {
           // Default character kind, but length is not known to be 1
-          if (context.languageFeatures().ShouldWarn(
-                  common::UsageWarning::CharacterInteroperability)) {
-            context.messages().Say(
-                common::UsageWarning::CharacterInteroperability,
-                arguments[0]->sourceLocation(),
-                "C_DEVLOC() argument has non-interoperable character length"_warn_en_US);
-          }
-        } else if (context.languageFeatures().ShouldWarn(
-                       common::UsageWarning::Interoperability)) {
-          context.messages().Say(common::UsageWarning::Interoperability,
+          context.Warn(common::UsageWarning::CharacterInteroperability,
+              arguments[0]->sourceLocation(),
+              "C_DEVLOC() argument has non-interoperable character length"_warn_en_US);
+        } else {
+          context.Warn(common::UsageWarning::Interoperability,
               arguments[0]->sourceLocation(),
               "C_DEVLOC() argument has non-interoperable intrinsic type or kind"_warn_en_US);
         }
@@ -3540,8 +3597,13 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
           // presence of DIM=, use messages from a later entry if
           // the messages from an earlier entry complain about the
           // DIM= argument and it wasn't specified with a keyword.
+          // Also prefer later messages when earlier ones are about
+          // argument count mismatches, as a later entry that accepts
+          // the right number of arguments will give more specific errors.
+          bool preferLaterError{false};
           for (const auto &m : buffer.messages()) {
-            if (m.ToString().find("'dim='") != std::string::npos) {
+            std::string text{m.ToString()};
+            if (text.find("'dim='") != std::string::npos) {
               bool hadDimKeyword{false};
               for (const auto &a : arguments) {
                 if (a) {
@@ -3552,10 +3614,19 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
                 }
               }
               if (!hadDimKeyword) {
-                buffer = std::move(localBuffer);
+                preferLaterError = true;
               }
               break;
+            } else if (text.find("too many actual arguments") !=
+                std::string::npos) {
+              // Prefer messages from an entry that matched the argument
+              // count, as those will be more specific about what's wrong
+              preferLaterError = true;
+              break;
             }
+          }
+          if (preferLaterError) {
+            buffer = std::move(localBuffer);
           }
           localBuffer.clear();
         }
@@ -3623,15 +3694,10 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
                        genericType.category() == TypeCategory::Real) &&
                       (newType.category() == TypeCategory::Integer ||
                           newType.category() == TypeCategory::Real))) {
-                if (context.languageFeatures().ShouldWarn(
-                        common::LanguageFeature::
-                            UseGenericIntrinsicWhenSpecificDoesntMatch)) {
-                  context.messages().Say(
-                      common::LanguageFeature::
-                          UseGenericIntrinsicWhenSpecificDoesntMatch,
-                      "Argument types do not match specific intrinsic '%s' requirements; using '%s' generic instead and converting the result to %s if needed"_port_en_US,
-                      call.name, genericName, newType.AsFortran());
-                }
+                context.Warn(common::LanguageFeature::
+                                 UseGenericIntrinsicWhenSpecificDoesntMatch,
+                    "Argument types do not match specific intrinsic '%s' requirements; using '%s' generic instead and converting the result to %s if needed"_port_en_US,
+                    call.name, genericName, newType.AsFortran());
                 specificCall->specificIntrinsic.name = call.name;
                 specificCall->specificIntrinsic.characteristics.value()
                     .functionResult.value()
@@ -3734,6 +3800,9 @@ bool IntrinsicProcTable::IsIntrinsicFunction(const std::string &name) const {
 }
 bool IntrinsicProcTable::IsIntrinsicSubroutine(const std::string &name) const {
   return DEREF(impl_.get()).IsIntrinsicSubroutine(name);
+}
+bool IntrinsicProcTable::IsDualIntrinsic(const std::string &name) const {
+  return DEREF(impl_.get()).IsDualIntrinsic(name);
 }
 
 IntrinsicClass IntrinsicProcTable::GetIntrinsicClass(

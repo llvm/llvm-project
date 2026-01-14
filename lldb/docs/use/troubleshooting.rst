@@ -97,3 +97,59 @@ for any source file and line breakpoints that the IDE set using:
 ::
 
    (lldb) breakpoint list --verbose
+
+How Do I Find Out Which Features My Copy Of LLDB Has?
+-----------------------------------------------------
+
+Some features such as XML parsing are optional and must be enabled when LLDB is
+built. To check which features your copy of LLDB has enabled, use the ``version``
+command from within LLDB:
+
+::
+
+   (lldb) version -v
+
+.. note::
+   This feature was added in LLDB 22. If you are using an earlier version, you
+   can use one of the methods below.
+
+If your LLDB has a scripting langauge enabled, you can also use this command to
+print the same information:
+
+::
+
+   (lldb) script lldb.debugger.GetBuildConfiguration()
+
+This command will fail if no scripting langauge was enabled. In that case, you
+can instead check the shared library dependencies of LLDB.
+
+For example on Linux you can use the following command:
+
+::
+
+   $ readelf -d <path-to-lldb> | grep NEEDED
+   0x0000000000000001 (NEEDED)             Shared library: [liblldb.so.22.0git]
+   0x0000000000000001 (NEEDED)             Shared library: [libxml2.so.2]
+   0x0000000000000001 (NEEDED)             Shared library: [libedit.so.2]
+   <...>
+
+The output above shows us that this particular copy of LLDB has XML parsing
+(``libxml2``) and editline (``libedit``) enabled.
+
+.. note::
+
+   ``readelf -d`` as used above only shows direct dependencies of the binary.
+   Libraries loaded by a library will not be shown. An example of this is Python.
+   ``lldb`` requires ``liblldb`` and it is ``liblldb`` that would require ``libpython``.
+   The same ``readelf`` command can be used on ``liblldb`` to see if it does
+   depend on Python.
+
+   ``ldd`` will show you the full dependency tree of ``lldb`` but **do not**
+   use it unless you trust the ``lldb`` binary. As some versions of ``ldd`` may
+   execute the binary in the process of inspecting it.
+
+On Windows, use ``dumpbin /dependents <path-to-lldb>``. The same caveat from
+Linux applies to Windows. To find dependencies like Python, you need to run
+``dumpbin`` on ``liblldb.dll`` too.
+
+On MacOS, use ``otool -l <path-to-lldb>``.

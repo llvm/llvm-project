@@ -64,7 +64,9 @@ GlobalCompilationDatabase::getFallbackCommand(PathRef File) const {
   if (FileExtension.empty() || FileExtension == ".h")
     Argv.push_back("-xobjective-c++-header");
   Argv.push_back(std::string(File));
-  tooling::CompileCommand Cmd(llvm::sys::path::parent_path(File),
+  tooling::CompileCommand Cmd(FallbackWorkingDirectory
+                                  ? *FallbackWorkingDirectory
+                                  : llvm::sys::path::parent_path(File),
                               llvm::sys::path::filename(File), std::move(Argv),
                               /*Output=*/"");
   Cmd.Heuristic = "clangd fallback";
@@ -349,7 +351,8 @@ bool DirectoryBasedGlobalCompilationDatabase::DirectoryCache::load(
 
 DirectoryBasedGlobalCompilationDatabase::
     DirectoryBasedGlobalCompilationDatabase(const Options &Opts)
-    : Opts(Opts), Broadcaster(std::make_unique<BroadcastThread>(*this)) {
+    : GlobalCompilationDatabase(Opts.FallbackWorkingDirectory), Opts(Opts),
+      Broadcaster(std::make_unique<BroadcastThread>(*this)) {
   if (!this->Opts.ContextProvider)
     this->Opts.ContextProvider = [](llvm::StringRef) {
       return Context::current().clone();
@@ -458,6 +461,21 @@ DirectoryBasedGlobalCompilationDatabase::lookupCDB(
   if (ShouldBroadcast)
     broadcastCDB(Result);
   return Result;
+}
+
+void DirectoryBasedGlobalCompilationDatabase::Options::
+    applyFallbackWorkingDirectory(
+        std::optional<std::string> FallbackWorkingDirectory) {
+  if (FallbackWorkingDirectory)
+    this->FallbackWorkingDirectory = *FallbackWorkingDirectory;
+  else {
+    // Clangd is running in strong workspace mode but the client didn't
+    // specify a workspace path in the `initialize` request.
+    // Fallback to current working directory.
+    SmallString<256> CWD;
+    llvm::sys::fs::current_path(CWD);
+    this->FallbackWorkingDirectory = std::string(CWD);
+  }
 }
 
 // The broadcast thread announces files with new compile commands to the world.
@@ -759,9 +777,10 @@ DirectoryBasedGlobalCompilationDatabase::getProjectModules(PathRef File) const {
 
 OverlayCDB::OverlayCDB(const GlobalCompilationDatabase *Base,
                        std::vector<std::string> FallbackFlags,
-                       CommandMangler Mangler)
-    : DelegatingCDB(Base), Mangler(std::move(Mangler)),
-      FallbackFlags(std::move(FallbackFlags)) {}
+                       CommandMangler Mangler,
+                       std::optional<std::string> FallbackWorkingDirectory)
+    : DelegatingCDB(Base, FallbackWorkingDirectory),
+      Mangler(std::move(Mangler)), FallbackFlags(std::move(FallbackFlags)) {}
 
 std::optional<tooling::CompileCommand>
 OverlayCDB::getCompileCommand(PathRef File) const {
@@ -833,6 +852,10 @@ bool OverlayCDB::setCompileCommand(PathRef File,
 std::unique_ptr<ProjectModules>
 OverlayCDB::getProjectModules(PathRef File) const {
   auto MDB = DelegatingCDB::getProjectModules(File);
+  if (!MDB) {
+    log("Failed to get compilation Database for {0}", File);
+    return {};
+  }
   MDB->setCommandMangler([&Mangler = Mangler](tooling::CompileCommand &Command,
                                               PathRef CommandPath) {
     Mangler(Command, CommandPath);
@@ -840,16 +863,20 @@ OverlayCDB::getProjectModules(PathRef File) const {
   return MDB;
 }
 
-DelegatingCDB::DelegatingCDB(const GlobalCompilationDatabase *Base)
-    : Base(Base) {
+DelegatingCDB::DelegatingCDB(
+    const GlobalCompilationDatabase *Base,
+    std::optional<std::string> FallbackWorkingDirectory)
+    : GlobalCompilationDatabase(FallbackWorkingDirectory), Base(Base) {
   if (Base)
     BaseChanged = Base->watch([this](const std::vector<std::string> Changes) {
       OnCommandChanged.broadcast(Changes);
     });
 }
 
-DelegatingCDB::DelegatingCDB(std::unique_ptr<GlobalCompilationDatabase> Base)
-    : DelegatingCDB(Base.get()) {
+DelegatingCDB::DelegatingCDB(
+    std::unique_ptr<GlobalCompilationDatabase> Base,
+    std::optional<std::string> FallbackWorkingDirectory)
+    : DelegatingCDB(Base.get(), FallbackWorkingDirectory) {
   BaseOwner = std::move(Base);
 }
 

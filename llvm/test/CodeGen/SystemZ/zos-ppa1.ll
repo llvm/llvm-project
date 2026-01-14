@@ -1,5 +1,4 @@
 ; RUN: llc -mtriple s390x-ibm-zos < %s | FileCheck %s
-; REQUIRES: systemz-registered-target
 
 ; CHECK: L#EPM_void_test_0: * @void_test
 ; CHECK: * XPLINK Routine Layout Entry

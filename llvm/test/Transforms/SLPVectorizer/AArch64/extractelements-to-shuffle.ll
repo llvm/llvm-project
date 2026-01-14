@@ -655,10 +655,10 @@ define i1 @tryMapToRange(ptr %values, ptr %result, <2 x i64> %hi, <2 x i64> %lo)
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[A1]], <16 x i8> [[A2]], <2 x i32> <i32 8, i32 24>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i8> [[A1]], <16 x i8> [[A2]], <2 x i32> <i32 0, i32 16>
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i8> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i8> [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i8> [[TMP3]], i32 1
-; CHECK-NEXT:    [[O3:%.*]] = or i8 [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[O3]], 0
+; CHECK-NEXT:    [[O3:%.*]] = extractelement <2 x i8> [[TMP3]], i32 0
+; CHECK-NEXT:    [[O2:%.*]] = extractelement <2 x i8> [[TMP3]], i32 1
+; CHECK-NEXT:    [[O4:%.*]] = or i8 [[O3]], [[O2]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[O4]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %l = load <2 x i64>, ptr %values, align 8

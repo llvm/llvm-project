@@ -3,12 +3,11 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-USE_LIBSTDCPP = "USE_LIBSTDCPP"
-USE_LIBCPP = "USE_LIBCPP"
-
 
 class GenericOptionalDataFormatterTestCase(TestBase):
-    def do_test_with_run_command(self, stdlib_type):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
+    def do_test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
 
         # This is the function to remove the custom formats in order to have a
@@ -21,7 +20,6 @@ class GenericOptionalDataFormatterTestCase(TestBase):
 
         self.addTearDownHook(cleanup)
 
-        self.build(dictionary={stdlib_type: "1"})
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         bkpt = self.target().FindBreakpointByID(
@@ -59,7 +57,11 @@ class GenericOptionalDataFormatterTestCase(TestBase):
         self.expect(
             "frame var numbers",
             substrs=[
-                "(optional_int_vect) numbers =  Has Value=true  {",
+                (
+                    "(std::optional<std::vector<int, std::allocator<int>>>) numbers =  Has Value=true  {"
+                    if self.getDebugInfo() == "pdb"
+                    else "(optional_int_vect) numbers =  Has Value=true  {"
+                ),
                 "Value = size=4 {",
                 "[0] = 1",
                 "[1] = 2",
@@ -73,7 +75,11 @@ class GenericOptionalDataFormatterTestCase(TestBase):
         self.expect(
             "frame var ostring",
             substrs=[
-                "(optional_string) ostring =  Has Value=true  {",
+                (
+                    "(std::optional<std::basic_string<char, std::char_traits<char>, std::allocator<char>>>) ostring =  Has Value=true  {"
+                    if self.getDebugInfo() == "pdb"
+                    else "(optional_string) ostring =  Has Value=true  {"
+                ),
                 'Value = "hello"',
                 "}",
             ],
@@ -100,7 +106,8 @@ class GenericOptionalDataFormatterTestCase(TestBase):
     ## We are skipping gcc version less that 5.1 since this test requires -std=c++17
     @skipIf(compiler="gcc", compiler_version=["<", "5.1"])
     def test_with_run_command_libcpp(self):
-        self.do_test_with_run_command(USE_LIBCPP)
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test_with_run_command()
 
     @add_test_categories(["libstdcxx"])
     ## Clang 7.0 is the oldest Clang that can reliably parse newer libc++ versions
@@ -109,4 +116,11 @@ class GenericOptionalDataFormatterTestCase(TestBase):
     ## We are skipping gcc version less that 5.1 since this test requires -std=c++17
     @skipIf(compiler="gcc", compiler_version=["<", "5.1"])
     def test_with_run_command_libstdcpp(self):
-        self.do_test_with_run_command(USE_LIBSTDCPP)
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test_with_run_command()
+
+    @add_test_categories(["msvcstl"])
+    def test_with_run_command_msvcstl(self):
+        # No flags, because the "msvcstl" category checks that the MSVC STL is used by default.
+        self.build()
+        self.do_test_with_run_command()

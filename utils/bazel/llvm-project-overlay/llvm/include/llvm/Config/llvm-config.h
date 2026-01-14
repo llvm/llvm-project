@@ -117,12 +117,18 @@
 /* Define if exporting LLVM public interface for shared library */
 /* LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS defined in Bazel */
 
+/* Define if exporting LLVM-C public interface for shared library */
+/* LLVM_ENABLE_LLVM_C_EXPORT_ANNOTATIONS */
+
 /* Define if building LLVM with LLVM_FORCE_USE_OLD_TOOLCHAIN_LIBS */
 /* #undef LLVM_FORCE_USE_OLD_TOOLCHAIN ${LLVM_FORCE_USE_OLD_TOOLCHAIN} */
 
 /* Define if llvm_unreachable should be optimized with undefined behavior
  * in non assert builds */
 #define LLVM_UNREACHABLE_OPTIMIZE 1
+
+/* Define if building LLVM with LLVM_ENABLE_IO_SANDBOX */
+/* LLVM_ENABLE_IO_SANDBOX */
 
 /* Define to 1 if you have the DIA SDK installed, and to 0 if you don't. */
 #define LLVM_ENABLE_DIA_SDK 0

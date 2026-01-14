@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++23 -verify=expected,nointerpreter %s
-// RUN: %clang_cc1 -std=c++23 -verify=expected,interpreter %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++23 -verify=expected,nointerpreter -Winvalid-constexpr %s
+// RUN: %clang_cc1 -std=c++23 -verify=expected,interpreter %s -fexperimental-new-constant-interpreter -Winvalid-constexpr
 
 using size_t = decltype(sizeof(0));
 
@@ -44,7 +44,7 @@ void splash(Swim& swam) {                 // nointerpreter-note {{declared here}
   static_assert(how_many(swam) == 28);    // ok
   static_assert(Swim().lochte() == 12);   // ok
   static_assert(swam.lochte() == 12);     // expected-error {{static assertion expression is not an integral constant expression}} \
-                                          // nointerpreter-note {{virtual function called on object 'swam' whose dynamic type is not constant}}
+                                          // expected-note {{virtual function called on object 'swam' whose dynamic type is not constant}}
   static_assert(swam.coughlin == 12);     // expected-error {{static assertion expression is not an integral constant expression}} \
                                           // nointerpreter-note {{read of variable 'swam' whose value is not known}}
 }
@@ -278,11 +278,13 @@ namespace dropped_note {
 namespace dynamic {
   struct A {virtual ~A();};
   struct B : A {};
-  void f(A& a) {
+  void f(A& a) { // interpreter-note 2{{declared here}}
     constexpr B* b = dynamic_cast<B*>(&a); // expected-error {{must be initialized by a constant expression}} \
-                                           // nointerpreter-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}}
+                                           // nointerpreter-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}} \
+                                           // interpreter-note {{pointer to 'a' is not a constant expression}}
     constexpr void* b2 = dynamic_cast<void*>(&a); // expected-error {{must be initialized by a constant expression}} \
-                                                  // nointerpreter-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}}
+                                                  // nointerpreter-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}} \
+                                                  // interpreter-note {{pointer to 'a' is not a constant expression}}
   }
 }
 
@@ -319,7 +321,7 @@ namespace casting {
 }
 
 namespace pointer_comparisons {
-  extern int &extern_n; // interpreter-note 2 {{declared here}}
+  extern int &extern_n; // interpreter-note 4 {{declared here}}
   extern int &extern_n2;
   constexpr int f1(bool b, int& n) {
     if (b) {
@@ -330,14 +332,102 @@ namespace pointer_comparisons {
   // FIXME: interpreter incorrectly rejects; both sides are the same constexpr-unknown value.
   static_assert(f1(false, extern_n)); // interpreter-error {{static assertion expression is not an integral constant expression}} \
                                       // interpreter-note {{initializer of 'extern_n' is unknown}}
-  // FIXME: We should diagnose this: we don't know if the references bind
-  // to the same object.
-  static_assert(&extern_n != &extern_n2); // interpreter-error {{static assertion expression is not an integral constant expression}} \
+  static_assert(&extern_n != &extern_n2); // expected-error {{static assertion expression is not an integral constant expression}} \
+                                          // nointerpreter-note {{comparison between pointers to unrelated objects '&extern_n' and '&extern_n2' has unspecified value}} \
                                           // interpreter-note {{initializer of 'extern_n' is unknown}}
   void f2(const int &n) {
-    // FIXME: We should not diagnose this: the two objects provably have
-    // different addresses because the lifetime of "n" extends across
-    // the initialization.
-    constexpr int x = &x == &n; // nointerpreter-error {{must be initialized by a constant expression}}
+    constexpr int x = &x == &n; // nointerpreter-error {{must be initialized by a constant expression}} \
+                                // nointerpreter-note {{comparison between pointers to unrelated objects '&x' and '&n' has unspecified value}}
+    // Distinct variables are not equal, even if they're local variables.
+    constexpr int y = &x == &y;
+    static_assert(!y);
   }
+  constexpr int f3() {
+    int x;
+    return &x == &extern_n; // nointerpreter-note {{comparison between pointers to unrelated objects '&x' and '&extern_n' has unspecified value}} \
+                            // interpreter-note {{initializer of 'extern_n' is unknown}}
+  }
+  static_assert(!f3()); // expected-error {{static assertion expression is not an integral constant expression}} \
+                        // expected-note {{in call to 'f3()'}}
+  constexpr int f4() {
+    int *p = new int;
+    bool b = p == &extern_n; // nointerpreter-note {{comparison between pointers to unrelated objects '&{*new int#0}' and '&extern_n' has unspecified value}} \
+                             // interpreter-note {{initializer of 'extern_n' is unknown}}
+    delete p;
+    return b;
+  }
+  static_assert(!f4()); // expected-error {{static assertion expression is not an integral constant expression}} \
+                        // expected-note {{in call to 'f4()'}}
+}
+
+namespace GH149188 {
+namespace enable_if_1 {
+  template <__SIZE_TYPE__ N>
+  constexpr void foo(const char (&Str)[N])
+  __attribute((enable_if(__builtin_strlen(Str), ""))) {}
+
+  void x() {
+      foo("1234");
+  }
+}
+
+namespace enable_if_2 {
+  constexpr const char (&f())[];
+  extern const char (&Str)[];
+  constexpr int foo()
+  __attribute((enable_if(__builtin_strlen(Str), "")))
+  {return __builtin_strlen(Str);}
+
+  constexpr const char (&f())[] {return "a";}
+  constexpr const char (&Str)[] = f();
+  void x() {
+      constexpr int x = foo();
+  }
+}
+}
+
+namespace GH150015 {
+  extern int (& c)[8]; // interpreter-note {{declared here}}
+  constexpr int x = c <= c+8; // interpreter-error {{constexpr variable 'x' must be initialized by a constant expression}} \
+                              // interpreter-note {{initializer of 'c' is unknown}}
+
+  struct X {};
+  struct Y {};
+  struct Z : X, Y {};
+  extern Z &z; // interpreter-note{{declared here}}
+  constexpr int bases = (void*)(X*)&z <= (Y*)&z; // expected-error {{constexpr variable 'bases' must be initialized by a constant expression}} \
+                                                 // nointerpreter-note {{comparison of addresses of subobjects of different base classes has unspecified value}} \
+                                                 // interpreter-note {{initializer of 'z' is unknown}}
+}
+
+namespace InvalidConstexprFn {
+  // Make sure we don't trigger -Winvalid-constexpr incorrectly.
+  constexpr bool same_address(const int &a, const int &b) { return &a == &b; }
+  constexpr int next_element(const int &p) { return (&p)[2]; }
+
+  struct Base {};
+  struct Derived : Base { int n; };
+  constexpr int get_derived_member(const Base& b) { return static_cast<const Derived&>(b).n; }
+
+  struct PolyBase {
+    constexpr virtual int get() const { return 0; }
+  };
+  struct PolyDerived : PolyBase {
+    constexpr int get() const override { return 1; }
+  };
+  constexpr int virtual_call(const PolyBase& b) { return b.get(); }
+  constexpr auto* type(const PolyBase& b) { return &typeid(b); }
+  constexpr const void* dyncast(const PolyBase& b) { return dynamic_cast<const void*>(&b); }
+  constexpr int sub(const int (&a)[], const int (&b)[]) { return a-b; }
+  constexpr const int* add(const int &a) { return &a+3; }
+
+  constexpr int arr[3]{0, 1, 2};
+  static_assert(same_address(arr[1], arr[1]));
+  static_assert(next_element(arr[0]) == 2);
+  static_assert(get_derived_member(Derived{}) == 0);
+  static_assert(virtual_call(PolyDerived{}) == 1);
+  static_assert(type(PolyDerived{}) != nullptr);
+  static_assert(dyncast(PolyDerived{}) != nullptr);
+  static_assert(sub(arr, arr) == 0);
+  static_assert(add(arr[0]) == &arr[3]);
 }

@@ -227,31 +227,12 @@ struct UserProvidedMoveAssign {
 };
 
 struct Empty{};
-static_assert(__builtin_is_replaceable(Empty));
-struct S1 replaceable_if_eligible{};
-static_assert(__builtin_is_replaceable(S1));
-
-static_assert(__builtin_is_replaceable(DefaultedMove));
-static_assert(__builtin_is_replaceable(DefaultedCopy));
-static_assert(__builtin_is_replaceable(DefaultedMoveAssign));
-
-static_assert(!__builtin_is_replaceable(DeletedMove));
-static_assert(!__builtin_is_replaceable(DeletedCopy));
-static_assert(!__builtin_is_replaceable(DeletedMoveAssign));
-static_assert(!__builtin_is_replaceable(DeletedDtr));
-
-static_assert(!__builtin_is_replaceable(UserProvidedMove));
-static_assert(!__builtin_is_replaceable(UserProvidedCopy));
-static_assert(!__builtin_is_replaceable(UserProvidedMoveAssign));
 
 struct DeletedCopyTpl {
     template <typename U>
     DeletedCopyTpl(const U&) = delete;
 };
-static_assert(__builtin_is_replaceable(DeletedCopyTpl));
 
-
-using NotReplaceable = DeletedMove;
 
 template <typename T>
 struct WithBase : T{};
@@ -265,59 +246,23 @@ struct WithVirtual {
     WithVirtual& operator=(WithVirtual&&) = default;
 };
 
-static_assert(__builtin_is_replaceable(S<int>));
-static_assert(!__builtin_is_replaceable(S<volatile int>));
-static_assert(!__builtin_is_replaceable(S<const int>));
-static_assert(!__builtin_is_replaceable(S<const int&>));
-static_assert(!__builtin_is_replaceable(S<int&>));
-static_assert(__builtin_is_replaceable(S<int[2]>));
-static_assert(!__builtin_is_replaceable(S<const int[2]>));
-static_assert(__builtin_is_replaceable(WithBase<S<int>>));
-static_assert(!__builtin_is_replaceable(WithBase<S<const int>>));
-static_assert(!__builtin_is_replaceable(WithBase<UserProvidedMove>));
-static_assert(__builtin_is_replaceable(WithVBase<S<int>>));
-static_assert(!__builtin_is_replaceable(WithVBase<S<const int>>));
-static_assert(!__builtin_is_replaceable(WithVBase<UserProvidedMove>));
-static_assert(__builtin_is_replaceable(WithVirtual));
-
-int n = 4; // expected-note 2{{declared here}}
+int n = 4; // expected-note {{declared here}}
 static_assert(!__builtin_is_cpp_trivially_relocatable(int[n]));
 // expected-warning@-1 {{variable length arrays in C++ are a Clang extension}}
 // expected-note@-2 {{read of non-const variable 'n' is not allowed in a constant expression}}
-static_assert(!__builtin_is_replaceable(int[n]));
-// expected-warning@-1 {{variable length arrays in C++ are a Clang extension}}
-// expected-note@-2 {{read of non-const variable 'n' is not allowed in a constant expression}}
 
 
-struct U1 replaceable_if_eligible {
-    ~U1() = delete;
-    U1(U1&&) = default;
-    U1& operator=(U1&&) = default;
-
-};
-static_assert(!__builtin_is_replaceable(U1));
-
-struct U2 replaceable_if_eligible {
-    U2(const U2&) = delete;
-};
-static_assert(!__builtin_is_replaceable(U2));
-
-
-template <typename T>
-struct WithVBaseExplicit replaceable_if_eligible : virtual T{};
-static_assert(__builtin_is_replaceable(WithVBaseExplicit<S<int>>));
-
-struct S42 trivially_relocatable_if_eligible replaceable_if_eligible {
+struct S42 trivially_relocatable_if_eligible {
     S42(S42&&);
     S42& operator=(S42&&) = default;
 };
-struct S43 trivially_relocatable_if_eligible replaceable_if_eligible {
+struct S43 trivially_relocatable_if_eligible {
     S43(S43&&) = default;
     S43& operator=(S43&&);
 };
 
 
-struct Copyable1Explicit replaceable_if_eligible {
+struct Copyable1Explicit {
    Copyable1Explicit(Copyable1Explicit const &) = default;
 };
 
@@ -326,7 +271,7 @@ struct Copyable1 {
 };
 
 
-struct CopyAssign1Explicit replaceable_if_eligible {
+struct CopyAssign1Explicit {
    CopyAssign1Explicit & operator=(const CopyAssign1Explicit&) = default;
 };
 
@@ -338,26 +283,22 @@ struct UserDeleted1 {
     UserDeleted1(const UserDeleted1&) = delete;
 };
 static_assert(!__builtin_is_cpp_trivially_relocatable(UserDeleted1));
-static_assert(!__builtin_is_replaceable(UserDeleted1));
 
 struct UserDeleted2 {
     UserDeleted2(UserDeleted2&&) = delete;
 };
 static_assert(!__builtin_is_cpp_trivially_relocatable(UserDeleted2));
-static_assert(!__builtin_is_replaceable(UserDeleted2));
 
 
 struct UserDeleted3 {
     UserDeleted3 operator=(UserDeleted3);
 };
 static_assert(!__builtin_is_cpp_trivially_relocatable(UserDeleted3));
-static_assert(!__builtin_is_replaceable(UserDeleted3));
 
 struct UserDeleted4 {
     UserDeleted4 operator=(UserDeleted4&&);
 };
 static_assert(!__builtin_is_cpp_trivially_relocatable(UserDeleted4));
-static_assert(!__builtin_is_replaceable(UserDeleted4));
 
 }
 
@@ -372,7 +313,7 @@ void test__builtin_trivially_relocate() {
     __builtin_trivially_relocate((S*)0, 0, 0); //expected-error {{argument to '__builtin_trivially_relocate' must be relocatable}}
     __builtin_trivially_relocate((int*)0, 0, 0); //expected-error {{first and second arguments to '__builtin_trivially_relocate' must be of the same type}}
 
-    __builtin_trivially_relocate((int*)0, (int*)0, (int*)0); // expected-error-re {{cannot initialize a value of type '{{.*}}' with an rvalue of type 'int *'}}
+    __builtin_trivially_relocate((int*)0, (int*)0, (int*)0); // expected-error-re {{cannot initialize a value of type '__size_t' (aka '{{.*}}') with an rvalue of type 'int *'}}
     __builtin_trivially_relocate((int*)0, (int*)0, 0);
     __builtin_trivially_relocate((R*)0, (R*)0, 0);
 }
@@ -396,53 +337,43 @@ struct A { ~A (); };
 A::~A () = default;
 
 static_assert (!__builtin_is_cpp_trivially_relocatable(A));
-static_assert (!__builtin_is_replaceable(A));
 
 struct B { B(const B&); };
 B::B (const B&) = default;
 
 static_assert (!__builtin_is_cpp_trivially_relocatable(B));
-static_assert (!__builtin_is_replaceable(B));
 
 struct C { C& operator=(const C&); };
 C& C::operator=(const C&) = default;
 
 static_assert (!__builtin_is_cpp_trivially_relocatable(C));
-static_assert (!__builtin_is_replaceable(C));
 }
 
 namespace GH144232 {
 
-struct E trivially_relocatable_if_eligible replaceable_if_eligible {
+struct E trivially_relocatable_if_eligible {
   E (E &&);
   E &operator= (E &&) = default;
 };
 
-struct F trivially_relocatable_if_eligible replaceable_if_eligible {
+struct F trivially_relocatable_if_eligible {
   F (F &&) = default;
   F &operator= (F &&);
 };
 
-struct G trivially_relocatable_if_eligible replaceable_if_eligible { G (G const &) = default; };
+struct G trivially_relocatable_if_eligible { G (G const &) = default; };
 
-struct I trivially_relocatable_if_eligible replaceable_if_eligible { I &operator= (const I &) = default; };
+struct I trivially_relocatable_if_eligible { I &operator= (const I &) = default; };
 
-struct J trivially_relocatable_if_eligible replaceable_if_eligible { J (J const &); };
-struct K trivially_relocatable_if_eligible replaceable_if_eligible { K (K const &); };
+struct J trivially_relocatable_if_eligible { J (J const &); };
+struct K trivially_relocatable_if_eligible { K (K const &); };
 
 
-
-static_assert (__builtin_is_replaceable (E));
 static_assert (__builtin_is_cpp_trivially_relocatable(E));
-static_assert (__builtin_is_replaceable (F));
 static_assert (__builtin_is_cpp_trivially_relocatable(F));
-static_assert (__builtin_is_replaceable (G));
 static_assert (__builtin_is_cpp_trivially_relocatable(G));
-static_assert (__builtin_is_replaceable (I));
 static_assert (__builtin_is_cpp_trivially_relocatable(I));
-static_assert (__builtin_is_replaceable (J));
 static_assert (__builtin_is_cpp_trivially_relocatable(J));
-static_assert (__builtin_is_replaceable (K));
 static_assert (__builtin_is_cpp_trivially_relocatable(K));
 
 }

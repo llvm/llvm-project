@@ -389,13 +389,20 @@ SourceLocation CXIndexDataConsumer::CXXBasesListInfo::getBaseLoc(
   if (QualifiedTypeLoc QL = TL.getAs<QualifiedTypeLoc>())
     TL = QL.getUnqualifiedLoc();
 
-  if (ElaboratedTypeLoc EL = TL.getAs<ElaboratedTypeLoc>())
-    return EL.getNamedTypeLoc().getBeginLoc();
-  if (DependentNameTypeLoc DL = TL.getAs<DependentNameTypeLoc>())
-    return DL.getNameLoc();
-  if (DependentTemplateSpecializationTypeLoc DTL =
-          TL.getAs<DependentTemplateSpecializationTypeLoc>())
-    return DTL.getTemplateNameLoc();
+  // FIXME: Factor this out, a lot of TypeLoc users seem to need a generic
+  // TypeLoc::getNameLoc()
+  if (auto TTL = TL.getAs<DependentNameTypeLoc>())
+    return TTL.getNameLoc();
+  if (auto TTL = TL.getAs<TemplateSpecializationTypeLoc>())
+    return TTL.getTemplateNameLoc();
+  if (auto TTL = TL.getAs<TagTypeLoc>())
+    return TTL.getNameLoc();
+  if (auto TTL = TL.getAs<TypedefTypeLoc>())
+    return TTL.getNameLoc();
+  if (auto TTL = TL.getAs<UnresolvedUsingTypeLoc>())
+    return TTL.getNameLoc();
+  if (auto TTL = TL.getAs<UsingTypeLoc>())
+    return TTL.getNameLoc();
 
   return Loc;
 }
@@ -415,9 +422,9 @@ const char *ScratchAlloc::copyCStr(StringRef Str) {
   return buf;
 }
 
-void CXIndexDataConsumer::setASTContext(ASTContext &ctx) {
-  Ctx = &ctx;
-  cxtu::getASTUnit(CXTU)->setASTContext(&ctx);
+void CXIndexDataConsumer::setASTContext(IntrusiveRefCntPtr<ASTContext> ctx) {
+  Ctx = ctx.get();
+  cxtu::getASTUnit(CXTU)->setASTContext(std::move(ctx));
 }
 
 void CXIndexDataConsumer::setPreprocessor(std::shared_ptr<Preprocessor> PP) {
@@ -1232,6 +1239,7 @@ static CXIdxEntityKind getEntityKindFromSymbolKind(SymbolKind K, SymbolLanguage 
   case SymbolKind::TemplateTypeParm:
   case SymbolKind::TemplateTemplateParm:
   case SymbolKind::NonTypeTemplateParm:
+  case SymbolKind::IncludeDirective:
     return CXIdxEntity_Unexposed;
 
   case SymbolKind::Enum: return CXIdxEntity_Enum;

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s google-objc-avoid-nsobject-new %t
+// RUN: %check_clang_tidy %s google-objc-avoid-nsobject-new %t
 
 @interface NSObject
 + (instancetype)new;
@@ -25,18 +25,18 @@
 void CheckSpecificInitRecommendations(void) {
   NSObject *object = [NSObject new];
   // CHECK-MESSAGES: [[@LINE-1]]:22: warning: do not create objects with +new [google-objc-avoid-nsobject-new]
-  // CHECK-FIXES: [NSObject alloc] init];
+  // CHECK-FIXES: NSObject *object = {{[[][[]}}NSObject alloc] init];
 
   NSDate *correctDate = [NSDate date];
   NSDate *incorrectDate = [NSDate new];
   // CHECK-MESSAGES: [[@LINE-1]]:27: warning: do not create objects with +new [google-objc-avoid-nsobject-new]
-  // CHECK-FIXES: [NSDate date];
+  // CHECK-FIXES: NSDate *incorrectDate = [NSDate date];
 
   NSObject *macroCreated = ALLOCATE_OBJECT(NSObject);  // Shouldn't warn on macros.
 
   NSMutableDictionary *dict = [NSMutableDictionary<NSString *, NSString *> new];
   // CHECK-MESSAGES: [[@LINE-1]]:31: warning: do not create objects with +new [google-objc-avoid-nsobject-new]
-  // CHECK-FIXES: [NSMutableDictionary<NSString *, NSString *> alloc] init];
+  // CHECK-FIXES: NSMutableDictionary *dict = {{[[][[]}}NSMutableDictionary<NSString *, NSString *> alloc] init];
 }
 
 @interface Foo : NSObject

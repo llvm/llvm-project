@@ -111,6 +111,12 @@ static cl::opt<std::string> DTLTOCompiler(
     "dtlto-compiler",
     cl::desc("Compiler to use for DTLTO ThinLTO backend compilations."));
 
+static cl::list<std::string> DTLTOCompilerPrependArgs(
+    "dtlto-compiler-prepend-arg", cl::CommaSeparated,
+    cl::desc("Prepend arguments to pass to the remote compiler for backend "
+             "compilations."),
+    cl::value_desc("arg"));
+
 static cl::list<std::string> DTLTOCompilerArgs(
     "dtlto-compiler-arg", cl::CommaSeparated,
     cl::desc("Arguments to pass to the remote compiler for backend "
@@ -198,9 +204,16 @@ static cl::list<std::string>
     PassPlugins("load-pass-plugin",
                 cl::desc("Load passes from plugin library"));
 
-static cl::opt<std::string> UnifiedLTOMode("unified-lto", cl::Optional,
-                                           cl::desc("Set LTO mode"),
-                                           cl::value_desc("mode"));
+static cl::opt<LTO::LTOKind> UnifiedLTOMode(
+    "unified-lto", cl::Optional,
+    cl::desc("Set LTO mode with the following options:"),
+    cl::values(clEnumValN(LTO::LTOK_UnifiedThin, "thin",
+                          "ThinLTO with Unified LTO enabled"),
+               clEnumValN(LTO::LTOK_UnifiedRegular, "full",
+                          "Regular LTO with Unified LTO enabled"),
+               clEnumValN(LTO::LTOK_Default, "default",
+                          "Any LTO mode without Unified LTO")),
+    cl::value_desc("mode"), cl::init(LTO::LTOK_Default));
 
 static cl::opt<bool> EnableFreestanding(
     "lto-freestanding",
@@ -364,6 +377,9 @@ static int run(int argc, char **argv) {
                     "with -dtlto-distributor\n";
   auto DTLTODistributorArgsSV = llvm::to_vector<0>(llvm::map_range(
       DTLTODistributorArgs, [](const std::string &S) { return StringRef(S); }));
+  auto DTLTOCompilerPrependArgsSV = llvm::to_vector<0>(
+      llvm::map_range(DTLTOCompilerPrependArgs,
+                      [](const std::string &S) { return StringRef(S); }));
   auto DTLTOCompilerArgsSV = llvm::to_vector<0>(llvm::map_range(
       DTLTOCompilerArgs, [](const std::string &S) { return StringRef(S); }));
 
@@ -381,7 +397,7 @@ static int run(int argc, char **argv) {
         llvm::heavyweight_hardware_concurrency(Threads),
         /*OnWrite=*/{}, ThinLTOEmitIndexes, ThinLTOEmitImports, OutputFilename,
         DTLTODistributor, DTLTODistributorArgsSV, DTLTOCompiler,
-        DTLTOCompilerArgsSV, SaveTemps);
+        DTLTOCompilerPrependArgsSV, DTLTOCompilerArgsSV, SaveTemps);
   } else
     Backend = createInProcessThinBackend(
         llvm::heavyweight_hardware_concurrency(Threads),
@@ -394,8 +410,7 @@ static int run(int argc, char **argv) {
   // behavior. Instead, we don't exit in the multi-threaded case, but we make
   // sure to report the error and then at the end (after joining cleanly)
   // exit(1).
-  std::atomic<bool> HasErrors;
-  std::atomic_init(&HasErrors, false);
+  std::atomic<bool> HasErrors{false};
   Conf.DiagHandler = [&](const DiagnosticInfo &DI) {
     DiagnosticPrinterRawOStream DP(errs());
     DI.print(DP);
@@ -404,18 +419,7 @@ static int run(int argc, char **argv) {
       HasErrors = true;
   };
 
-  LTO::LTOKind LTOMode = LTO::LTOK_Default;
-
-  if (UnifiedLTOMode == "full") {
-    LTOMode = LTO::LTOK_UnifiedRegular;
-  } else if (UnifiedLTOMode == "thin") {
-    LTOMode = LTO::LTOK_UnifiedThin;
-  } else if (UnifiedLTOMode == "default") {
-    LTOMode = LTO::LTOK_Default;
-  } else if (!UnifiedLTOMode.empty()) {
-    llvm::errs() << "invalid LTO mode\n";
-    return 1;
-  }
+  LTO::LTOKind LTOMode = UnifiedLTOMode;
 
   LTO Lto(std::move(Conf), std::move(Backend), 1, LTOMode);
 
@@ -578,7 +582,8 @@ static int dumpSymtab(int argc, char **argv) {
       }
 
       if (TT.isOSBinFormatCOFF() && Sym.isWeak() && Sym.isIndirect())
-        outs() << "         fallback " << Sym.getCOFFWeakExternalFallback() << '\n';
+        outs() << "         fallback " << Sym.getCOFFWeakExternalFallback()
+               << '\n';
 
       if (!Sym.getSectionName().empty())
         outs() << "         section " << Sym.getSectionName() << "\n";
@@ -614,6 +619,10 @@ int main(int argc, char **argv) {
     // Note the name of the function we're calling: this won't return the right
     // answer for internal linkage symbols.
     outs() << GlobalValue::getGUIDAssumingExternalLinkage(argv[2]) << '\n';
+    return 0;
+  }
+  if (Subcommand == "--version") {
+    cl::PrintVersionMessage();
     return 0;
   }
   return usage();

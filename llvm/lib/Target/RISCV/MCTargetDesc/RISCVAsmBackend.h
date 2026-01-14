@@ -35,16 +35,8 @@ class RISCVAsmBackend : public MCAsmBackend {
 
 public:
   RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
-                  const MCTargetOptions &Options);
+                  bool IsLittleEndian, const MCTargetOptions &Options);
   ~RISCVAsmBackend() override = default;
-
-  // Return Size with extra Nop Bytes for alignment directive in code section.
-  bool shouldInsertExtraNopBytesForCodeAlign(const MCAlignFragment &AF,
-                                             unsigned &Size) override;
-
-  // Insert target specific fixup type for alignment directive in code section.
-  bool shouldInsertFixupForCodeAlign(MCAssembler &Asm,
-                                     MCAlignFragment &AF) override;
 
   std::optional<bool> evaluateFixup(const MCFragment &, MCFixup &, MCValue &,
                                     uint64_t &) override;
@@ -54,13 +46,13 @@ public:
   void maybeAddVendorReloc(const MCFragment &, const MCFixup &);
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
-                  MutableArrayRef<char> Data, uint64_t Value,
-                  bool IsResolved) override;
+                  uint8_t *Data, uint64_t Value, bool IsResolved) override;
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
 
-  bool fixupNeedsRelaxationAdvanced(const MCFixup &, const MCValue &, uint64_t,
+  bool fixupNeedsRelaxationAdvanced(const MCFragment &, const MCFixup &,
+                                    const MCValue &, uint64_t,
                                     bool) const override;
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
@@ -72,11 +64,10 @@ public:
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;
 
-  bool relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
-                          bool &WasRelaxed) const override;
-  bool relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
-                     bool &WasRelaxed) const override;
-  std::pair<bool, bool> relaxLEB128(MCLEBFragment &LF,
+  bool relaxAlign(MCFragment &F, unsigned &Size) override;
+  bool relaxDwarfLineAddr(MCFragment &) const override;
+  bool relaxDwarfCFA(MCFragment &) const override;
+  std::pair<bool, bool> relaxLEB128(MCFragment &LF,
                                     int64_t &Value) const override;
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,

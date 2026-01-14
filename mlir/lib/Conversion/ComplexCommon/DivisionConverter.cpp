@@ -23,41 +23,43 @@ void mlir::complex::convertDivToLLVMUsingAlgebraic(
     ConversionPatternRewriter &rewriter, Location loc, Value lhsRe, Value lhsIm,
     Value rhsRe, Value rhsIm, LLVM::FastmathFlagsAttr fmf, Value *resultRe,
     Value *resultIm) {
-  Value rhsSqNorm = rewriter.create<LLVM::FAddOp>(
-      loc, rewriter.create<LLVM::FMulOp>(loc, rhsRe, rhsRe, fmf),
-      rewriter.create<LLVM::FMulOp>(loc, rhsIm, rhsIm, fmf), fmf);
+  Value rhsSqNorm = LLVM::FAddOp::create(
+      rewriter, loc, LLVM::FMulOp::create(rewriter, loc, rhsRe, rhsRe, fmf),
+      LLVM::FMulOp::create(rewriter, loc, rhsIm, rhsIm, fmf), fmf);
 
-  Value realNumerator = rewriter.create<LLVM::FAddOp>(
-      loc, rewriter.create<LLVM::FMulOp>(loc, lhsRe, rhsRe, fmf),
-      rewriter.create<LLVM::FMulOp>(loc, lhsIm, rhsIm, fmf), fmf);
+  Value realNumerator = LLVM::FAddOp::create(
+      rewriter, loc, LLVM::FMulOp::create(rewriter, loc, lhsRe, rhsRe, fmf),
+      LLVM::FMulOp::create(rewriter, loc, lhsIm, rhsIm, fmf), fmf);
 
-  Value imagNumerator = rewriter.create<LLVM::FSubOp>(
-      loc, rewriter.create<LLVM::FMulOp>(loc, lhsIm, rhsRe, fmf),
-      rewriter.create<LLVM::FMulOp>(loc, lhsRe, rhsIm, fmf), fmf);
+  Value imagNumerator = LLVM::FSubOp::create(
+      rewriter, loc, LLVM::FMulOp::create(rewriter, loc, lhsIm, rhsRe, fmf),
+      LLVM::FMulOp::create(rewriter, loc, lhsRe, rhsIm, fmf), fmf);
 
-  *resultRe = rewriter.create<LLVM::FDivOp>(loc, realNumerator, rhsSqNorm, fmf);
-  *resultIm = rewriter.create<LLVM::FDivOp>(loc, imagNumerator, rhsSqNorm, fmf);
+  *resultRe =
+      LLVM::FDivOp::create(rewriter, loc, realNumerator, rhsSqNorm, fmf);
+  *resultIm =
+      LLVM::FDivOp::create(rewriter, loc, imagNumerator, rhsSqNorm, fmf);
 }
 
 void mlir::complex::convertDivToStandardUsingAlgebraic(
     ConversionPatternRewriter &rewriter, Location loc, Value lhsRe, Value lhsIm,
     Value rhsRe, Value rhsIm, arith::FastMathFlagsAttr fmf, Value *resultRe,
     Value *resultIm) {
-  Value rhsSqNorm = rewriter.create<arith::AddFOp>(
-      loc, rewriter.create<arith::MulFOp>(loc, rhsRe, rhsRe, fmf),
-      rewriter.create<arith::MulFOp>(loc, rhsIm, rhsIm, fmf), fmf);
+  Value rhsSqNorm = arith::AddFOp::create(
+      rewriter, loc, arith::MulFOp::create(rewriter, loc, rhsRe, rhsRe, fmf),
+      arith::MulFOp::create(rewriter, loc, rhsIm, rhsIm, fmf), fmf);
 
-  Value realNumerator = rewriter.create<arith::AddFOp>(
-      loc, rewriter.create<arith::MulFOp>(loc, lhsRe, rhsRe, fmf),
-      rewriter.create<arith::MulFOp>(loc, lhsIm, rhsIm, fmf), fmf);
-  Value imagNumerator = rewriter.create<arith::SubFOp>(
-      loc, rewriter.create<arith::MulFOp>(loc, lhsIm, rhsRe, fmf),
-      rewriter.create<arith::MulFOp>(loc, lhsRe, rhsIm, fmf), fmf);
+  Value realNumerator = arith::AddFOp::create(
+      rewriter, loc, arith::MulFOp::create(rewriter, loc, lhsRe, rhsRe, fmf),
+      arith::MulFOp::create(rewriter, loc, lhsIm, rhsIm, fmf), fmf);
+  Value imagNumerator = arith::SubFOp::create(
+      rewriter, loc, arith::MulFOp::create(rewriter, loc, lhsIm, rhsRe, fmf),
+      arith::MulFOp::create(rewriter, loc, lhsRe, rhsIm, fmf), fmf);
 
   *resultRe =
-      rewriter.create<arith::DivFOp>(loc, realNumerator, rhsSqNorm, fmf);
+      arith::DivFOp::create(rewriter, loc, realNumerator, rhsSqNorm, fmf);
   *resultIm =
-      rewriter.create<arith::DivFOp>(loc, imagNumerator, rhsSqNorm, fmf);
+      arith::DivFOp::create(rewriter, loc, imagNumerator, rhsSqNorm, fmf);
 }
 
 // Smith's algorithm to divide complex numbers. It is just a bit smarter
@@ -94,181 +96,185 @@ void mlir::complex::convertDivToLLVMUsingRangeReduction(
   auto elementType = cast<FloatType>(rhsRe.getType());
 
   Value rhsRealImagRatio =
-      rewriter.create<LLVM::FDivOp>(loc, rhsRe, rhsIm, fmf);
-  Value rhsRealImagDenom = rewriter.create<LLVM::FAddOp>(
-      loc, rhsIm,
-      rewriter.create<LLVM::FMulOp>(loc, rhsRealImagRatio, rhsRe, fmf), fmf);
-  Value realNumerator1 = rewriter.create<LLVM::FAddOp>(
-      loc, rewriter.create<LLVM::FMulOp>(loc, lhsRe, rhsRealImagRatio, fmf),
-      lhsIm, fmf);
-  Value resultReal1 =
-      rewriter.create<LLVM::FDivOp>(loc, realNumerator1, rhsRealImagDenom, fmf);
-  Value imagNumerator1 = rewriter.create<LLVM::FSubOp>(
-      loc, rewriter.create<LLVM::FMulOp>(loc, lhsIm, rhsRealImagRatio, fmf),
-      lhsRe, fmf);
-  Value resultImag1 =
-      rewriter.create<LLVM::FDivOp>(loc, imagNumerator1, rhsRealImagDenom, fmf);
+      LLVM::FDivOp::create(rewriter, loc, rhsRe, rhsIm, fmf);
+  Value rhsRealImagDenom = LLVM::FAddOp::create(
+      rewriter, loc, rhsIm,
+      LLVM::FMulOp::create(rewriter, loc, rhsRealImagRatio, rhsRe, fmf), fmf);
+  Value realNumerator1 = LLVM::FAddOp::create(
+      rewriter, loc,
+      LLVM::FMulOp::create(rewriter, loc, lhsRe, rhsRealImagRatio, fmf), lhsIm,
+      fmf);
+  Value resultReal1 = LLVM::FDivOp::create(rewriter, loc, realNumerator1,
+                                           rhsRealImagDenom, fmf);
+  Value imagNumerator1 = LLVM::FSubOp::create(
+      rewriter, loc,
+      LLVM::FMulOp::create(rewriter, loc, lhsIm, rhsRealImagRatio, fmf), lhsRe,
+      fmf);
+  Value resultImag1 = LLVM::FDivOp::create(rewriter, loc, imagNumerator1,
+                                           rhsRealImagDenom, fmf);
 
   Value rhsImagRealRatio =
-      rewriter.create<LLVM::FDivOp>(loc, rhsIm, rhsRe, fmf);
-  Value rhsImagRealDenom = rewriter.create<LLVM::FAddOp>(
-      loc, rhsRe,
-      rewriter.create<LLVM::FMulOp>(loc, rhsImagRealRatio, rhsIm, fmf), fmf);
-  Value realNumerator2 = rewriter.create<LLVM::FAddOp>(
-      loc, lhsRe,
-      rewriter.create<LLVM::FMulOp>(loc, lhsIm, rhsImagRealRatio, fmf), fmf);
-  Value resultReal2 =
-      rewriter.create<LLVM::FDivOp>(loc, realNumerator2, rhsImagRealDenom, fmf);
-  Value imagNumerator2 = rewriter.create<LLVM::FSubOp>(
-      loc, lhsIm,
-      rewriter.create<LLVM::FMulOp>(loc, lhsRe, rhsImagRealRatio, fmf), fmf);
-  Value resultImag2 =
-      rewriter.create<LLVM::FDivOp>(loc, imagNumerator2, rhsImagRealDenom, fmf);
+      LLVM::FDivOp::create(rewriter, loc, rhsIm, rhsRe, fmf);
+  Value rhsImagRealDenom = LLVM::FAddOp::create(
+      rewriter, loc, rhsRe,
+      LLVM::FMulOp::create(rewriter, loc, rhsImagRealRatio, rhsIm, fmf), fmf);
+  Value realNumerator2 = LLVM::FAddOp::create(
+      rewriter, loc, lhsRe,
+      LLVM::FMulOp::create(rewriter, loc, lhsIm, rhsImagRealRatio, fmf), fmf);
+  Value resultReal2 = LLVM::FDivOp::create(rewriter, loc, realNumerator2,
+                                           rhsImagRealDenom, fmf);
+  Value imagNumerator2 = LLVM::FSubOp::create(
+      rewriter, loc, lhsIm,
+      LLVM::FMulOp::create(rewriter, loc, lhsRe, rhsImagRealRatio, fmf), fmf);
+  Value resultImag2 = LLVM::FDivOp::create(rewriter, loc, imagNumerator2,
+                                           rhsImagRealDenom, fmf);
 
   // Consider corner cases.
   // Case 1. Zero denominator, numerator contains at most one NaN value.
-  Value zero = rewriter.create<LLVM::ConstantOp>(
-      loc, elementType, rewriter.getZeroAttr(elementType));
-  Value rhsRealAbs = rewriter.create<LLVM::FAbsOp>(loc, rhsRe, fmf);
-  Value rhsRealIsZero = rewriter.create<LLVM::FCmpOp>(
-      loc, LLVM::FCmpPredicate::oeq, rhsRealAbs, zero);
-  Value rhsImagAbs = rewriter.create<LLVM::FAbsOp>(loc, rhsIm, fmf);
-  Value rhsImagIsZero = rewriter.create<LLVM::FCmpOp>(
-      loc, LLVM::FCmpPredicate::oeq, rhsImagAbs, zero);
-  Value lhsRealIsNotNaN =
-      rewriter.create<LLVM::FCmpOp>(loc, LLVM::FCmpPredicate::ord, lhsRe, zero);
-  Value lhsImagIsNotNaN =
-      rewriter.create<LLVM::FCmpOp>(loc, LLVM::FCmpPredicate::ord, lhsIm, zero);
+  Value zero = LLVM::ConstantOp::create(rewriter, loc, elementType,
+                                        rewriter.getZeroAttr(elementType));
+  Value rhsRealAbs = LLVM::FAbsOp::create(rewriter, loc, rhsRe, fmf);
+  Value rhsRealIsZero = LLVM::FCmpOp::create(
+      rewriter, loc, LLVM::FCmpPredicate::oeq, rhsRealAbs, zero);
+  Value rhsImagAbs = LLVM::FAbsOp::create(rewriter, loc, rhsIm, fmf);
+  Value rhsImagIsZero = LLVM::FCmpOp::create(
+      rewriter, loc, LLVM::FCmpPredicate::oeq, rhsImagAbs, zero);
+  Value lhsRealIsNotNaN = LLVM::FCmpOp::create(
+      rewriter, loc, LLVM::FCmpPredicate::ord, lhsRe, zero);
+  Value lhsImagIsNotNaN = LLVM::FCmpOp::create(
+      rewriter, loc, LLVM::FCmpPredicate::ord, lhsIm, zero);
   Value lhsContainsNotNaNValue =
-      rewriter.create<LLVM::OrOp>(loc, lhsRealIsNotNaN, lhsImagIsNotNaN);
-  Value resultIsInfinity = rewriter.create<LLVM::AndOp>(
-      loc, lhsContainsNotNaNValue,
-      rewriter.create<LLVM::AndOp>(loc, rhsRealIsZero, rhsImagIsZero));
-  Value inf = rewriter.create<LLVM::ConstantOp>(
-      loc, elementType,
+      LLVM::OrOp::create(rewriter, loc, lhsRealIsNotNaN, lhsImagIsNotNaN);
+  Value resultIsInfinity = LLVM::AndOp::create(
+      rewriter, loc, lhsContainsNotNaNValue,
+      LLVM::AndOp::create(rewriter, loc, rhsRealIsZero, rhsImagIsZero));
+  Value inf = LLVM::ConstantOp::create(
+      rewriter, loc, elementType,
       rewriter.getFloatAttr(elementType,
                             APFloat::getInf(elementType.getFloatSemantics())));
   Value infWithSignOfrhsReal =
-      rewriter.create<LLVM::CopySignOp>(loc, inf, rhsRe);
+      LLVM::CopySignOp::create(rewriter, loc, inf, rhsRe);
   Value infinityResultReal =
-      rewriter.create<LLVM::FMulOp>(loc, infWithSignOfrhsReal, lhsRe, fmf);
+      LLVM::FMulOp::create(rewriter, loc, infWithSignOfrhsReal, lhsRe, fmf);
   Value infinityResultImag =
-      rewriter.create<LLVM::FMulOp>(loc, infWithSignOfrhsReal, lhsIm, fmf);
+      LLVM::FMulOp::create(rewriter, loc, infWithSignOfrhsReal, lhsIm, fmf);
 
   // Case 2. Infinite numerator, finite denominator.
-  Value rhsRealFinite = rewriter.create<LLVM::FCmpOp>(
-      loc, LLVM::FCmpPredicate::one, rhsRealAbs, inf);
-  Value rhsImagFinite = rewriter.create<LLVM::FCmpOp>(
-      loc, LLVM::FCmpPredicate::one, rhsImagAbs, inf);
+  Value rhsRealFinite = LLVM::FCmpOp::create(
+      rewriter, loc, LLVM::FCmpPredicate::one, rhsRealAbs, inf);
+  Value rhsImagFinite = LLVM::FCmpOp::create(
+      rewriter, loc, LLVM::FCmpPredicate::one, rhsImagAbs, inf);
   Value rhsFinite =
-      rewriter.create<LLVM::AndOp>(loc, rhsRealFinite, rhsImagFinite);
-  Value lhsRealAbs = rewriter.create<LLVM::FAbsOp>(loc, lhsRe, fmf);
-  Value lhsRealInfinite = rewriter.create<LLVM::FCmpOp>(
-      loc, LLVM::FCmpPredicate::oeq, lhsRealAbs, inf);
-  Value lhsImagAbs = rewriter.create<LLVM::FAbsOp>(loc, lhsIm, fmf);
-  Value lhsImagInfinite = rewriter.create<LLVM::FCmpOp>(
-      loc, LLVM::FCmpPredicate::oeq, lhsImagAbs, inf);
+      LLVM::AndOp::create(rewriter, loc, rhsRealFinite, rhsImagFinite);
+  Value lhsRealAbs = LLVM::FAbsOp::create(rewriter, loc, lhsRe, fmf);
+  Value lhsRealInfinite = LLVM::FCmpOp::create(
+      rewriter, loc, LLVM::FCmpPredicate::oeq, lhsRealAbs, inf);
+  Value lhsImagAbs = LLVM::FAbsOp::create(rewriter, loc, lhsIm, fmf);
+  Value lhsImagInfinite = LLVM::FCmpOp::create(
+      rewriter, loc, LLVM::FCmpPredicate::oeq, lhsImagAbs, inf);
   Value lhsInfinite =
-      rewriter.create<LLVM::OrOp>(loc, lhsRealInfinite, lhsImagInfinite);
+      LLVM::OrOp::create(rewriter, loc, lhsRealInfinite, lhsImagInfinite);
   Value infNumFiniteDenom =
-      rewriter.create<LLVM::AndOp>(loc, lhsInfinite, rhsFinite);
-  Value one = rewriter.create<LLVM::ConstantOp>(
-      loc, elementType, rewriter.getFloatAttr(elementType, 1));
-  Value lhsRealIsInfWithSign = rewriter.create<LLVM::CopySignOp>(
-      loc, rewriter.create<LLVM::SelectOp>(loc, lhsRealInfinite, one, zero),
-      lhsRe);
-  Value lhsImagIsInfWithSign = rewriter.create<LLVM::CopySignOp>(
-      loc, rewriter.create<LLVM::SelectOp>(loc, lhsImagInfinite, one, zero),
-      lhsIm);
+      LLVM::AndOp::create(rewriter, loc, lhsInfinite, rhsFinite);
+  Value one = LLVM::ConstantOp::create(rewriter, loc, elementType,
+                                       rewriter.getFloatAttr(elementType, 1));
+  Value lhsRealIsInfWithSign = LLVM::CopySignOp::create(
+      rewriter, loc,
+      LLVM::SelectOp::create(rewriter, loc, lhsRealInfinite, one, zero), lhsRe);
+  Value lhsImagIsInfWithSign = LLVM::CopySignOp::create(
+      rewriter, loc,
+      LLVM::SelectOp::create(rewriter, loc, lhsImagInfinite, one, zero), lhsIm);
   Value lhsRealIsInfWithSignTimesrhsReal =
-      rewriter.create<LLVM::FMulOp>(loc, lhsRealIsInfWithSign, rhsRe, fmf);
+      LLVM::FMulOp::create(rewriter, loc, lhsRealIsInfWithSign, rhsRe, fmf);
   Value lhsImagIsInfWithSignTimesrhsImag =
-      rewriter.create<LLVM::FMulOp>(loc, lhsImagIsInfWithSign, rhsIm, fmf);
-  Value resultReal3 = rewriter.create<LLVM::FMulOp>(
-      loc, inf,
-      rewriter.create<LLVM::FAddOp>(loc, lhsRealIsInfWithSignTimesrhsReal,
-                                    lhsImagIsInfWithSignTimesrhsImag, fmf),
+      LLVM::FMulOp::create(rewriter, loc, lhsImagIsInfWithSign, rhsIm, fmf);
+  Value resultReal3 = LLVM::FMulOp::create(
+      rewriter, loc, inf,
+      LLVM::FAddOp::create(rewriter, loc, lhsRealIsInfWithSignTimesrhsReal,
+                           lhsImagIsInfWithSignTimesrhsImag, fmf),
       fmf);
   Value lhsRealIsInfWithSignTimesrhsImag =
-      rewriter.create<LLVM::FMulOp>(loc, lhsRealIsInfWithSign, rhsIm, fmf);
+      LLVM::FMulOp::create(rewriter, loc, lhsRealIsInfWithSign, rhsIm, fmf);
   Value lhsImagIsInfWithSignTimesrhsReal =
-      rewriter.create<LLVM::FMulOp>(loc, lhsImagIsInfWithSign, rhsRe, fmf);
-  Value resultImag3 = rewriter.create<LLVM::FMulOp>(
-      loc, inf,
-      rewriter.create<LLVM::FSubOp>(loc, lhsImagIsInfWithSignTimesrhsReal,
-                                    lhsRealIsInfWithSignTimesrhsImag, fmf),
+      LLVM::FMulOp::create(rewriter, loc, lhsImagIsInfWithSign, rhsRe, fmf);
+  Value resultImag3 = LLVM::FMulOp::create(
+      rewriter, loc, inf,
+      LLVM::FSubOp::create(rewriter, loc, lhsImagIsInfWithSignTimesrhsReal,
+                           lhsRealIsInfWithSignTimesrhsImag, fmf),
       fmf);
 
   // Case 3: Finite numerator, infinite denominator.
-  Value lhsRealFinite = rewriter.create<LLVM::FCmpOp>(
-      loc, LLVM::FCmpPredicate::one, lhsRealAbs, inf);
-  Value lhsImagFinite = rewriter.create<LLVM::FCmpOp>(
-      loc, LLVM::FCmpPredicate::one, lhsImagAbs, inf);
+  Value lhsRealFinite = LLVM::FCmpOp::create(
+      rewriter, loc, LLVM::FCmpPredicate::one, lhsRealAbs, inf);
+  Value lhsImagFinite = LLVM::FCmpOp::create(
+      rewriter, loc, LLVM::FCmpPredicate::one, lhsImagAbs, inf);
   Value lhsFinite =
-      rewriter.create<LLVM::AndOp>(loc, lhsRealFinite, lhsImagFinite);
-  Value rhsRealInfinite = rewriter.create<LLVM::FCmpOp>(
-      loc, LLVM::FCmpPredicate::oeq, rhsRealAbs, inf);
-  Value rhsImagInfinite = rewriter.create<LLVM::FCmpOp>(
-      loc, LLVM::FCmpPredicate::oeq, rhsImagAbs, inf);
+      LLVM::AndOp::create(rewriter, loc, lhsRealFinite, lhsImagFinite);
+  Value rhsRealInfinite = LLVM::FCmpOp::create(
+      rewriter, loc, LLVM::FCmpPredicate::oeq, rhsRealAbs, inf);
+  Value rhsImagInfinite = LLVM::FCmpOp::create(
+      rewriter, loc, LLVM::FCmpPredicate::oeq, rhsImagAbs, inf);
   Value rhsInfinite =
-      rewriter.create<LLVM::OrOp>(loc, rhsRealInfinite, rhsImagInfinite);
+      LLVM::OrOp::create(rewriter, loc, rhsRealInfinite, rhsImagInfinite);
   Value finiteNumInfiniteDenom =
-      rewriter.create<LLVM::AndOp>(loc, lhsFinite, rhsInfinite);
-  Value rhsRealIsInfWithSign = rewriter.create<LLVM::CopySignOp>(
-      loc, rewriter.create<LLVM::SelectOp>(loc, rhsRealInfinite, one, zero),
-      rhsRe);
-  Value rhsImagIsInfWithSign = rewriter.create<LLVM::CopySignOp>(
-      loc, rewriter.create<LLVM::SelectOp>(loc, rhsImagInfinite, one, zero),
-      rhsIm);
+      LLVM::AndOp::create(rewriter, loc, lhsFinite, rhsInfinite);
+  Value rhsRealIsInfWithSign = LLVM::CopySignOp::create(
+      rewriter, loc,
+      LLVM::SelectOp::create(rewriter, loc, rhsRealInfinite, one, zero), rhsRe);
+  Value rhsImagIsInfWithSign = LLVM::CopySignOp::create(
+      rewriter, loc,
+      LLVM::SelectOp::create(rewriter, loc, rhsImagInfinite, one, zero), rhsIm);
   Value rhsRealIsInfWithSignTimeslhsReal =
-      rewriter.create<LLVM::FMulOp>(loc, lhsRe, rhsRealIsInfWithSign, fmf);
+      LLVM::FMulOp::create(rewriter, loc, lhsRe, rhsRealIsInfWithSign, fmf);
   Value rhsImagIsInfWithSignTimeslhsImag =
-      rewriter.create<LLVM::FMulOp>(loc, lhsIm, rhsImagIsInfWithSign, fmf);
-  Value resultReal4 = rewriter.create<LLVM::FMulOp>(
-      loc, zero,
-      rewriter.create<LLVM::FAddOp>(loc, rhsRealIsInfWithSignTimeslhsReal,
-                                    rhsImagIsInfWithSignTimeslhsImag, fmf),
+      LLVM::FMulOp::create(rewriter, loc, lhsIm, rhsImagIsInfWithSign, fmf);
+  Value resultReal4 = LLVM::FMulOp::create(
+      rewriter, loc, zero,
+      LLVM::FAddOp::create(rewriter, loc, rhsRealIsInfWithSignTimeslhsReal,
+                           rhsImagIsInfWithSignTimeslhsImag, fmf),
       fmf);
   Value rhsRealIsInfWithSignTimeslhsImag =
-      rewriter.create<LLVM::FMulOp>(loc, lhsIm, rhsRealIsInfWithSign, fmf);
+      LLVM::FMulOp::create(rewriter, loc, lhsIm, rhsRealIsInfWithSign, fmf);
   Value rhsImagIsInfWithSignTimeslhsReal =
-      rewriter.create<LLVM::FMulOp>(loc, lhsRe, rhsImagIsInfWithSign, fmf);
-  Value resultImag4 = rewriter.create<LLVM::FMulOp>(
-      loc, zero,
-      rewriter.create<LLVM::FSubOp>(loc, rhsRealIsInfWithSignTimeslhsImag,
-                                    rhsImagIsInfWithSignTimeslhsReal, fmf),
+      LLVM::FMulOp::create(rewriter, loc, lhsRe, rhsImagIsInfWithSign, fmf);
+  Value resultImag4 = LLVM::FMulOp::create(
+      rewriter, loc, zero,
+      LLVM::FSubOp::create(rewriter, loc, rhsRealIsInfWithSignTimeslhsImag,
+                           rhsImagIsInfWithSignTimeslhsReal, fmf),
       fmf);
 
-  Value realAbsSmallerThanImagAbs = rewriter.create<LLVM::FCmpOp>(
-      loc, LLVM::FCmpPredicate::olt, rhsRealAbs, rhsImagAbs);
-  Value resultReal5 = rewriter.create<LLVM::SelectOp>(
-      loc, realAbsSmallerThanImagAbs, resultReal1, resultReal2);
-  Value resultImag5 = rewriter.create<LLVM::SelectOp>(
-      loc, realAbsSmallerThanImagAbs, resultImag1, resultImag2);
-  Value resultRealSpecialCase3 = rewriter.create<LLVM::SelectOp>(
-      loc, finiteNumInfiniteDenom, resultReal4, resultReal5);
-  Value resultImagSpecialCase3 = rewriter.create<LLVM::SelectOp>(
-      loc, finiteNumInfiniteDenom, resultImag4, resultImag5);
-  Value resultRealSpecialCase2 = rewriter.create<LLVM::SelectOp>(
-      loc, infNumFiniteDenom, resultReal3, resultRealSpecialCase3);
-  Value resultImagSpecialCase2 = rewriter.create<LLVM::SelectOp>(
-      loc, infNumFiniteDenom, resultImag3, resultImagSpecialCase3);
-  Value resultRealSpecialCase1 = rewriter.create<LLVM::SelectOp>(
-      loc, resultIsInfinity, infinityResultReal, resultRealSpecialCase2);
-  Value resultImagSpecialCase1 = rewriter.create<LLVM::SelectOp>(
-      loc, resultIsInfinity, infinityResultImag, resultImagSpecialCase2);
+  Value realAbsSmallerThanImagAbs = LLVM::FCmpOp::create(
+      rewriter, loc, LLVM::FCmpPredicate::olt, rhsRealAbs, rhsImagAbs);
+  Value resultReal5 = LLVM::SelectOp::create(
+      rewriter, loc, realAbsSmallerThanImagAbs, resultReal1, resultReal2);
+  Value resultImag5 = LLVM::SelectOp::create(
+      rewriter, loc, realAbsSmallerThanImagAbs, resultImag1, resultImag2);
+  Value resultRealSpecialCase3 = LLVM::SelectOp::create(
+      rewriter, loc, finiteNumInfiniteDenom, resultReal4, resultReal5);
+  Value resultImagSpecialCase3 = LLVM::SelectOp::create(
+      rewriter, loc, finiteNumInfiniteDenom, resultImag4, resultImag5);
+  Value resultRealSpecialCase2 = LLVM::SelectOp::create(
+      rewriter, loc, infNumFiniteDenom, resultReal3, resultRealSpecialCase3);
+  Value resultImagSpecialCase2 = LLVM::SelectOp::create(
+      rewriter, loc, infNumFiniteDenom, resultImag3, resultImagSpecialCase3);
+  Value resultRealSpecialCase1 =
+      LLVM::SelectOp::create(rewriter, loc, resultIsInfinity,
+                             infinityResultReal, resultRealSpecialCase2);
+  Value resultImagSpecialCase1 =
+      LLVM::SelectOp::create(rewriter, loc, resultIsInfinity,
+                             infinityResultImag, resultImagSpecialCase2);
 
-  Value resultRealIsNaN = rewriter.create<LLVM::FCmpOp>(
-      loc, LLVM::FCmpPredicate::uno, resultReal5, zero);
-  Value resultImagIsNaN = rewriter.create<LLVM::FCmpOp>(
-      loc, LLVM::FCmpPredicate::uno, resultImag5, zero);
+  Value resultRealIsNaN = LLVM::FCmpOp::create(
+      rewriter, loc, LLVM::FCmpPredicate::uno, resultReal5, zero);
+  Value resultImagIsNaN = LLVM::FCmpOp::create(
+      rewriter, loc, LLVM::FCmpPredicate::uno, resultImag5, zero);
   Value resultIsNaN =
-      rewriter.create<LLVM::AndOp>(loc, resultRealIsNaN, resultImagIsNaN);
+      LLVM::AndOp::create(rewriter, loc, resultRealIsNaN, resultImagIsNaN);
 
-  *resultRe = rewriter.create<LLVM::SelectOp>(
-      loc, resultIsNaN, resultRealSpecialCase1, resultReal5);
-  *resultIm = rewriter.create<LLVM::SelectOp>(
-      loc, resultIsNaN, resultImagSpecialCase1, resultImag5);
+  *resultRe = LLVM::SelectOp::create(rewriter, loc, resultIsNaN,
+                                     resultRealSpecialCase1, resultReal5);
+  *resultIm = LLVM::SelectOp::create(rewriter, loc, resultIsNaN,
+                                     resultImagSpecialCase1, resultImag5);
 }
 
 void mlir::complex::convertDivToStandardUsingRangeReduction(
@@ -278,179 +284,187 @@ void mlir::complex::convertDivToStandardUsingRangeReduction(
   auto elementType = cast<FloatType>(rhsRe.getType());
 
   Value rhsRealImagRatio =
-      rewriter.create<arith::DivFOp>(loc, rhsRe, rhsIm, fmf);
-  Value rhsRealImagDenom = rewriter.create<arith::AddFOp>(
-      loc, rhsIm,
-      rewriter.create<arith::MulFOp>(loc, rhsRealImagRatio, rhsRe, fmf), fmf);
-  Value realNumerator1 = rewriter.create<arith::AddFOp>(
-      loc, rewriter.create<arith::MulFOp>(loc, lhsRe, rhsRealImagRatio, fmf),
-      lhsIm, fmf);
-  Value resultReal1 = rewriter.create<arith::DivFOp>(loc, realNumerator1,
-                                                     rhsRealImagDenom, fmf);
-  Value imagNumerator1 = rewriter.create<arith::SubFOp>(
-      loc, rewriter.create<arith::MulFOp>(loc, lhsIm, rhsRealImagRatio, fmf),
-      lhsRe, fmf);
-  Value resultImag1 = rewriter.create<arith::DivFOp>(loc, imagNumerator1,
-                                                     rhsRealImagDenom, fmf);
+      arith::DivFOp::create(rewriter, loc, rhsRe, rhsIm, fmf);
+  Value rhsRealImagDenom = arith::AddFOp::create(
+      rewriter, loc, rhsIm,
+      arith::MulFOp::create(rewriter, loc, rhsRealImagRatio, rhsRe, fmf), fmf);
+  Value realNumerator1 = arith::AddFOp::create(
+      rewriter, loc,
+      arith::MulFOp::create(rewriter, loc, lhsRe, rhsRealImagRatio, fmf), lhsIm,
+      fmf);
+  Value resultReal1 = arith::DivFOp::create(rewriter, loc, realNumerator1,
+                                            rhsRealImagDenom, fmf);
+  Value imagNumerator1 = arith::SubFOp::create(
+      rewriter, loc,
+      arith::MulFOp::create(rewriter, loc, lhsIm, rhsRealImagRatio, fmf), lhsRe,
+      fmf);
+  Value resultImag1 = arith::DivFOp::create(rewriter, loc, imagNumerator1,
+                                            rhsRealImagDenom, fmf);
 
   Value rhsImagRealRatio =
-      rewriter.create<arith::DivFOp>(loc, rhsIm, rhsRe, fmf);
-  Value rhsImagRealDenom = rewriter.create<arith::AddFOp>(
-      loc, rhsRe,
-      rewriter.create<arith::MulFOp>(loc, rhsImagRealRatio, rhsIm, fmf), fmf);
-  Value realNumerator2 = rewriter.create<arith::AddFOp>(
-      loc, lhsRe,
-      rewriter.create<arith::MulFOp>(loc, lhsIm, rhsImagRealRatio, fmf), fmf);
-  Value resultReal2 = rewriter.create<arith::DivFOp>(loc, realNumerator2,
-                                                     rhsImagRealDenom, fmf);
-  Value imagNumerator2 = rewriter.create<arith::SubFOp>(
-      loc, lhsIm,
-      rewriter.create<arith::MulFOp>(loc, lhsRe, rhsImagRealRatio, fmf), fmf);
-  Value resultImag2 = rewriter.create<arith::DivFOp>(loc, imagNumerator2,
-                                                     rhsImagRealDenom, fmf);
+      arith::DivFOp::create(rewriter, loc, rhsIm, rhsRe, fmf);
+  Value rhsImagRealDenom = arith::AddFOp::create(
+      rewriter, loc, rhsRe,
+      arith::MulFOp::create(rewriter, loc, rhsImagRealRatio, rhsIm, fmf), fmf);
+  Value realNumerator2 = arith::AddFOp::create(
+      rewriter, loc, lhsRe,
+      arith::MulFOp::create(rewriter, loc, lhsIm, rhsImagRealRatio, fmf), fmf);
+  Value resultReal2 = arith::DivFOp::create(rewriter, loc, realNumerator2,
+                                            rhsImagRealDenom, fmf);
+  Value imagNumerator2 = arith::SubFOp::create(
+      rewriter, loc, lhsIm,
+      arith::MulFOp::create(rewriter, loc, lhsRe, rhsImagRealRatio, fmf), fmf);
+  Value resultImag2 = arith::DivFOp::create(rewriter, loc, imagNumerator2,
+                                            rhsImagRealDenom, fmf);
 
   // Consider corner cases.
   // Case 1. Zero denominator, numerator contains at most one NaN value.
-  Value zero = rewriter.create<arith::ConstantOp>(
-      loc, elementType, rewriter.getZeroAttr(elementType));
-  Value rhsRealAbs = rewriter.create<math::AbsFOp>(loc, rhsRe, fmf);
-  Value rhsRealIsZero = rewriter.create<arith::CmpFOp>(
-      loc, arith::CmpFPredicate::OEQ, rhsRealAbs, zero);
-  Value rhsImagAbs = rewriter.create<math::AbsFOp>(loc, rhsIm, fmf);
-  Value rhsImagIsZero = rewriter.create<arith::CmpFOp>(
-      loc, arith::CmpFPredicate::OEQ, rhsImagAbs, zero);
-  Value lhsRealIsNotNaN = rewriter.create<arith::CmpFOp>(
-      loc, arith::CmpFPredicate::ORD, lhsRe, zero);
-  Value lhsImagIsNotNaN = rewriter.create<arith::CmpFOp>(
-      loc, arith::CmpFPredicate::ORD, lhsIm, zero);
+  Value zero = arith::ConstantOp::create(rewriter, loc, elementType,
+                                         rewriter.getZeroAttr(elementType));
+  Value rhsRealAbs = math::AbsFOp::create(rewriter, loc, rhsRe, fmf);
+  Value rhsRealIsZero = arith::CmpFOp::create(
+      rewriter, loc, arith::CmpFPredicate::OEQ, rhsRealAbs, zero);
+  Value rhsImagAbs = math::AbsFOp::create(rewriter, loc, rhsIm, fmf);
+  Value rhsImagIsZero = arith::CmpFOp::create(
+      rewriter, loc, arith::CmpFPredicate::OEQ, rhsImagAbs, zero);
+  Value lhsRealIsNotNaN = arith::CmpFOp::create(
+      rewriter, loc, arith::CmpFPredicate::ORD, lhsRe, zero);
+  Value lhsImagIsNotNaN = arith::CmpFOp::create(
+      rewriter, loc, arith::CmpFPredicate::ORD, lhsIm, zero);
   Value lhsContainsNotNaNValue =
-      rewriter.create<arith::OrIOp>(loc, lhsRealIsNotNaN, lhsImagIsNotNaN);
-  Value resultIsInfinity = rewriter.create<arith::AndIOp>(
-      loc, lhsContainsNotNaNValue,
-      rewriter.create<arith::AndIOp>(loc, rhsRealIsZero, rhsImagIsZero));
-  Value inf = rewriter.create<arith::ConstantOp>(
-      loc, elementType,
+      arith::OrIOp::create(rewriter, loc, lhsRealIsNotNaN, lhsImagIsNotNaN);
+  Value resultIsInfinity = arith::AndIOp::create(
+      rewriter, loc, lhsContainsNotNaNValue,
+      arith::AndIOp::create(rewriter, loc, rhsRealIsZero, rhsImagIsZero));
+  Value inf = arith::ConstantOp::create(
+      rewriter, loc, elementType,
       rewriter.getFloatAttr(elementType,
                             APFloat::getInf(elementType.getFloatSemantics())));
   Value infWithSignOfRhsReal =
-      rewriter.create<math::CopySignOp>(loc, inf, rhsRe);
+      math::CopySignOp::create(rewriter, loc, inf, rhsRe);
   Value infinityResultReal =
-      rewriter.create<arith::MulFOp>(loc, infWithSignOfRhsReal, lhsRe, fmf);
+      arith::MulFOp::create(rewriter, loc, infWithSignOfRhsReal, lhsRe, fmf);
   Value infinityResultImag =
-      rewriter.create<arith::MulFOp>(loc, infWithSignOfRhsReal, lhsIm, fmf);
+      arith::MulFOp::create(rewriter, loc, infWithSignOfRhsReal, lhsIm, fmf);
 
   // Case 2. Infinite numerator, finite denominator.
-  Value rhsRealFinite = rewriter.create<arith::CmpFOp>(
-      loc, arith::CmpFPredicate::ONE, rhsRealAbs, inf);
-  Value rhsImagFinite = rewriter.create<arith::CmpFOp>(
-      loc, arith::CmpFPredicate::ONE, rhsImagAbs, inf);
+  Value rhsRealFinite = arith::CmpFOp::create(
+      rewriter, loc, arith::CmpFPredicate::ONE, rhsRealAbs, inf);
+  Value rhsImagFinite = arith::CmpFOp::create(
+      rewriter, loc, arith::CmpFPredicate::ONE, rhsImagAbs, inf);
   Value rhsFinite =
-      rewriter.create<arith::AndIOp>(loc, rhsRealFinite, rhsImagFinite);
-  Value lhsRealAbs = rewriter.create<math::AbsFOp>(loc, lhsRe, fmf);
-  Value lhsRealInfinite = rewriter.create<arith::CmpFOp>(
-      loc, arith::CmpFPredicate::OEQ, lhsRealAbs, inf);
-  Value lhsImagAbs = rewriter.create<math::AbsFOp>(loc, lhsIm, fmf);
-  Value lhsImagInfinite = rewriter.create<arith::CmpFOp>(
-      loc, arith::CmpFPredicate::OEQ, lhsImagAbs, inf);
+      arith::AndIOp::create(rewriter, loc, rhsRealFinite, rhsImagFinite);
+  Value lhsRealAbs = math::AbsFOp::create(rewriter, loc, lhsRe, fmf);
+  Value lhsRealInfinite = arith::CmpFOp::create(
+      rewriter, loc, arith::CmpFPredicate::OEQ, lhsRealAbs, inf);
+  Value lhsImagAbs = math::AbsFOp::create(rewriter, loc, lhsIm, fmf);
+  Value lhsImagInfinite = arith::CmpFOp::create(
+      rewriter, loc, arith::CmpFPredicate::OEQ, lhsImagAbs, inf);
   Value lhsInfinite =
-      rewriter.create<arith::OrIOp>(loc, lhsRealInfinite, lhsImagInfinite);
+      arith::OrIOp::create(rewriter, loc, lhsRealInfinite, lhsImagInfinite);
   Value infNumFiniteDenom =
-      rewriter.create<arith::AndIOp>(loc, lhsInfinite, rhsFinite);
-  Value one = rewriter.create<arith::ConstantOp>(
-      loc, elementType, rewriter.getFloatAttr(elementType, 1));
-  Value lhsRealIsInfWithSign = rewriter.create<math::CopySignOp>(
-      loc, rewriter.create<arith::SelectOp>(loc, lhsRealInfinite, one, zero),
+      arith::AndIOp::create(rewriter, loc, lhsInfinite, rhsFinite);
+  Value one = arith::ConstantOp::create(rewriter, loc, elementType,
+                                        rewriter.getFloatAttr(elementType, 1));
+  Value lhsRealIsInfWithSign = math::CopySignOp::create(
+      rewriter, loc,
+      arith::SelectOp::create(rewriter, loc, lhsRealInfinite, one, zero),
       lhsRe);
-  Value lhsImagIsInfWithSign = rewriter.create<math::CopySignOp>(
-      loc, rewriter.create<arith::SelectOp>(loc, lhsImagInfinite, one, zero),
+  Value lhsImagIsInfWithSign = math::CopySignOp::create(
+      rewriter, loc,
+      arith::SelectOp::create(rewriter, loc, lhsImagInfinite, one, zero),
       lhsIm);
   Value lhsRealIsInfWithSignTimesRhsReal =
-      rewriter.create<arith::MulFOp>(loc, lhsRealIsInfWithSign, rhsRe, fmf);
+      arith::MulFOp::create(rewriter, loc, lhsRealIsInfWithSign, rhsRe, fmf);
   Value lhsImagIsInfWithSignTimesRhsImag =
-      rewriter.create<arith::MulFOp>(loc, lhsImagIsInfWithSign, rhsIm, fmf);
-  Value resultReal3 = rewriter.create<arith::MulFOp>(
-      loc, inf,
-      rewriter.create<arith::AddFOp>(loc, lhsRealIsInfWithSignTimesRhsReal,
-                                     lhsImagIsInfWithSignTimesRhsImag, fmf),
+      arith::MulFOp::create(rewriter, loc, lhsImagIsInfWithSign, rhsIm, fmf);
+  Value resultReal3 = arith::MulFOp::create(
+      rewriter, loc, inf,
+      arith::AddFOp::create(rewriter, loc, lhsRealIsInfWithSignTimesRhsReal,
+                            lhsImagIsInfWithSignTimesRhsImag, fmf),
       fmf);
   Value lhsRealIsInfWithSignTimesRhsImag =
-      rewriter.create<arith::MulFOp>(loc, lhsRealIsInfWithSign, rhsIm, fmf);
+      arith::MulFOp::create(rewriter, loc, lhsRealIsInfWithSign, rhsIm, fmf);
   Value lhsImagIsInfWithSignTimesRhsReal =
-      rewriter.create<arith::MulFOp>(loc, lhsImagIsInfWithSign, rhsRe, fmf);
-  Value resultImag3 = rewriter.create<arith::MulFOp>(
-      loc, inf,
-      rewriter.create<arith::SubFOp>(loc, lhsImagIsInfWithSignTimesRhsReal,
-                                     lhsRealIsInfWithSignTimesRhsImag, fmf),
+      arith::MulFOp::create(rewriter, loc, lhsImagIsInfWithSign, rhsRe, fmf);
+  Value resultImag3 = arith::MulFOp::create(
+      rewriter, loc, inf,
+      arith::SubFOp::create(rewriter, loc, lhsImagIsInfWithSignTimesRhsReal,
+                            lhsRealIsInfWithSignTimesRhsImag, fmf),
       fmf);
 
   // Case 3: Finite numerator, infinite denominator.
-  Value lhsRealFinite = rewriter.create<arith::CmpFOp>(
-      loc, arith::CmpFPredicate::ONE, lhsRealAbs, inf);
-  Value lhsImagFinite = rewriter.create<arith::CmpFOp>(
-      loc, arith::CmpFPredicate::ONE, lhsImagAbs, inf);
+  Value lhsRealFinite = arith::CmpFOp::create(
+      rewriter, loc, arith::CmpFPredicate::ONE, lhsRealAbs, inf);
+  Value lhsImagFinite = arith::CmpFOp::create(
+      rewriter, loc, arith::CmpFPredicate::ONE, lhsImagAbs, inf);
   Value lhsFinite =
-      rewriter.create<arith::AndIOp>(loc, lhsRealFinite, lhsImagFinite);
-  Value rhsRealInfinite = rewriter.create<arith::CmpFOp>(
-      loc, arith::CmpFPredicate::OEQ, rhsRealAbs, inf);
-  Value rhsImagInfinite = rewriter.create<arith::CmpFOp>(
-      loc, arith::CmpFPredicate::OEQ, rhsImagAbs, inf);
+      arith::AndIOp::create(rewriter, loc, lhsRealFinite, lhsImagFinite);
+  Value rhsRealInfinite = arith::CmpFOp::create(
+      rewriter, loc, arith::CmpFPredicate::OEQ, rhsRealAbs, inf);
+  Value rhsImagInfinite = arith::CmpFOp::create(
+      rewriter, loc, arith::CmpFPredicate::OEQ, rhsImagAbs, inf);
   Value rhsInfinite =
-      rewriter.create<arith::OrIOp>(loc, rhsRealInfinite, rhsImagInfinite);
+      arith::OrIOp::create(rewriter, loc, rhsRealInfinite, rhsImagInfinite);
   Value finiteNumInfiniteDenom =
-      rewriter.create<arith::AndIOp>(loc, lhsFinite, rhsInfinite);
-  Value rhsRealIsInfWithSign = rewriter.create<math::CopySignOp>(
-      loc, rewriter.create<arith::SelectOp>(loc, rhsRealInfinite, one, zero),
+      arith::AndIOp::create(rewriter, loc, lhsFinite, rhsInfinite);
+  Value rhsRealIsInfWithSign = math::CopySignOp::create(
+      rewriter, loc,
+      arith::SelectOp::create(rewriter, loc, rhsRealInfinite, one, zero),
       rhsRe);
-  Value rhsImagIsInfWithSign = rewriter.create<math::CopySignOp>(
-      loc, rewriter.create<arith::SelectOp>(loc, rhsImagInfinite, one, zero),
+  Value rhsImagIsInfWithSign = math::CopySignOp::create(
+      rewriter, loc,
+      arith::SelectOp::create(rewriter, loc, rhsImagInfinite, one, zero),
       rhsIm);
   Value rhsRealIsInfWithSignTimesLhsReal =
-      rewriter.create<arith::MulFOp>(loc, lhsRe, rhsRealIsInfWithSign, fmf);
+      arith::MulFOp::create(rewriter, loc, lhsRe, rhsRealIsInfWithSign, fmf);
   Value rhsImagIsInfWithSignTimesLhsImag =
-      rewriter.create<arith::MulFOp>(loc, lhsIm, rhsImagIsInfWithSign, fmf);
-  Value resultReal4 = rewriter.create<arith::MulFOp>(
-      loc, zero,
-      rewriter.create<arith::AddFOp>(loc, rhsRealIsInfWithSignTimesLhsReal,
-                                     rhsImagIsInfWithSignTimesLhsImag, fmf),
+      arith::MulFOp::create(rewriter, loc, lhsIm, rhsImagIsInfWithSign, fmf);
+  Value resultReal4 = arith::MulFOp::create(
+      rewriter, loc, zero,
+      arith::AddFOp::create(rewriter, loc, rhsRealIsInfWithSignTimesLhsReal,
+                            rhsImagIsInfWithSignTimesLhsImag, fmf),
       fmf);
   Value rhsRealIsInfWithSignTimesLhsImag =
-      rewriter.create<arith::MulFOp>(loc, lhsIm, rhsRealIsInfWithSign, fmf);
+      arith::MulFOp::create(rewriter, loc, lhsIm, rhsRealIsInfWithSign, fmf);
   Value rhsImagIsInfWithSignTimesLhsReal =
-      rewriter.create<arith::MulFOp>(loc, lhsRe, rhsImagIsInfWithSign, fmf);
-  Value resultImag4 = rewriter.create<arith::MulFOp>(
-      loc, zero,
-      rewriter.create<arith::SubFOp>(loc, rhsRealIsInfWithSignTimesLhsImag,
-                                     rhsImagIsInfWithSignTimesLhsReal, fmf),
+      arith::MulFOp::create(rewriter, loc, lhsRe, rhsImagIsInfWithSign, fmf);
+  Value resultImag4 = arith::MulFOp::create(
+      rewriter, loc, zero,
+      arith::SubFOp::create(rewriter, loc, rhsRealIsInfWithSignTimesLhsImag,
+                            rhsImagIsInfWithSignTimesLhsReal, fmf),
       fmf);
 
-  Value realAbsSmallerThanImagAbs = rewriter.create<arith::CmpFOp>(
-      loc, arith::CmpFPredicate::OLT, rhsRealAbs, rhsImagAbs);
-  Value resultReal5 = rewriter.create<arith::SelectOp>(
-      loc, realAbsSmallerThanImagAbs, resultReal1, resultReal2);
-  Value resultImag5 = rewriter.create<arith::SelectOp>(
-      loc, realAbsSmallerThanImagAbs, resultImag1, resultImag2);
-  Value resultRealSpecialCase3 = rewriter.create<arith::SelectOp>(
-      loc, finiteNumInfiniteDenom, resultReal4, resultReal5);
-  Value resultImagSpecialCase3 = rewriter.create<arith::SelectOp>(
-      loc, finiteNumInfiniteDenom, resultImag4, resultImag5);
-  Value resultRealSpecialCase2 = rewriter.create<arith::SelectOp>(
-      loc, infNumFiniteDenom, resultReal3, resultRealSpecialCase3);
-  Value resultImagSpecialCase2 = rewriter.create<arith::SelectOp>(
-      loc, infNumFiniteDenom, resultImag3, resultImagSpecialCase3);
-  Value resultRealSpecialCase1 = rewriter.create<arith::SelectOp>(
-      loc, resultIsInfinity, infinityResultReal, resultRealSpecialCase2);
-  Value resultImagSpecialCase1 = rewriter.create<arith::SelectOp>(
-      loc, resultIsInfinity, infinityResultImag, resultImagSpecialCase2);
+  Value realAbsSmallerThanImagAbs = arith::CmpFOp::create(
+      rewriter, loc, arith::CmpFPredicate::OLT, rhsRealAbs, rhsImagAbs);
+  Value resultReal5 = arith::SelectOp::create(
+      rewriter, loc, realAbsSmallerThanImagAbs, resultReal1, resultReal2);
+  Value resultImag5 = arith::SelectOp::create(
+      rewriter, loc, realAbsSmallerThanImagAbs, resultImag1, resultImag2);
+  Value resultRealSpecialCase3 = arith::SelectOp::create(
+      rewriter, loc, finiteNumInfiniteDenom, resultReal4, resultReal5);
+  Value resultImagSpecialCase3 = arith::SelectOp::create(
+      rewriter, loc, finiteNumInfiniteDenom, resultImag4, resultImag5);
+  Value resultRealSpecialCase2 = arith::SelectOp::create(
+      rewriter, loc, infNumFiniteDenom, resultReal3, resultRealSpecialCase3);
+  Value resultImagSpecialCase2 = arith::SelectOp::create(
+      rewriter, loc, infNumFiniteDenom, resultImag3, resultImagSpecialCase3);
+  Value resultRealSpecialCase1 =
+      arith::SelectOp::create(rewriter, loc, resultIsInfinity,
+                              infinityResultReal, resultRealSpecialCase2);
+  Value resultImagSpecialCase1 =
+      arith::SelectOp::create(rewriter, loc, resultIsInfinity,
+                              infinityResultImag, resultImagSpecialCase2);
 
-  Value resultRealIsNaN = rewriter.create<arith::CmpFOp>(
-      loc, arith::CmpFPredicate::UNO, resultReal5, zero);
-  Value resultImagIsNaN = rewriter.create<arith::CmpFOp>(
-      loc, arith::CmpFPredicate::UNO, resultImag5, zero);
+  Value resultRealIsNaN = arith::CmpFOp::create(
+      rewriter, loc, arith::CmpFPredicate::UNO, resultReal5, zero);
+  Value resultImagIsNaN = arith::CmpFOp::create(
+      rewriter, loc, arith::CmpFPredicate::UNO, resultImag5, zero);
   Value resultIsNaN =
-      rewriter.create<arith::AndIOp>(loc, resultRealIsNaN, resultImagIsNaN);
+      arith::AndIOp::create(rewriter, loc, resultRealIsNaN, resultImagIsNaN);
 
-  *resultRe = rewriter.create<arith::SelectOp>(
-      loc, resultIsNaN, resultRealSpecialCase1, resultReal5);
-  *resultIm = rewriter.create<arith::SelectOp>(
-      loc, resultIsNaN, resultImagSpecialCase1, resultImag5);
+  *resultRe = arith::SelectOp::create(rewriter, loc, resultIsNaN,
+                                      resultRealSpecialCase1, resultReal5);
+  *resultIm = arith::SelectOp::create(rewriter, loc, resultIsNaN,
+                                      resultImagSpecialCase1, resultImag5);
 }

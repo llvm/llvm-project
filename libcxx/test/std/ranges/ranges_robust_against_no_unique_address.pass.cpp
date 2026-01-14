@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // Test that views that use __movable_box do not overwrite overlapping subobjects.
-// https://github.com/llvm/llvm-project/issues/70506
+// https://llvm.org/PR70506
 
 #include <cassert>
 #include <ranges>
@@ -56,8 +56,10 @@ constexpr bool test() {
   testOne<std::ranges::single_view<Pred>>();
 
 #if TEST_STD_VER >= 23
+  testOne<std::ranges::adjacent_view<View, 5>>();
   testOne<std::ranges::chunk_by_view<View, Pred>>();
   testOne<std::ranges::repeat_view<Pred>>();
+  testOne<std::ranges::zip_transform_view<Pred, View>>();
 #endif
   return true;
 }

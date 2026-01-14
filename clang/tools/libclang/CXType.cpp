@@ -118,7 +118,6 @@ static CXTypeKind GetTypeKind(QualType T) {
     TKCASE(ExtVector);
     TKCASE(MemberPointer);
     TKCASE(Auto);
-    TKCASE(Elaborated);
     TKCASE(Pipe);
     TKCASE(Attributed);
     TKCASE(BTFTagAttributed);
@@ -225,6 +224,11 @@ FindTemplateArgumentTypeAt(ArrayRef<TemplateArgument> TA, unsigned index) {
   return std::nullopt;
 }
 
+static CXType getTypeDeclType(const ASTContext &Context, CXTranslationUnit TU,
+                              const TypeDecl *TD) {
+  return MakeCXType(Context.getTypeDeclType(TD), TU);
+}
+
 CXType clang_getCursorType(CXCursor C) {
   using namespace cxcursor;
 
@@ -244,7 +248,7 @@ CXType clang_getCursorType(CXCursor C) {
       return MakeCXType(QualType(), TU);
 
     if (const TypeDecl *TD = dyn_cast<TypeDecl>(D))
-      return MakeCXType(Context.getTypeDeclType(TD), TU);
+      return getTypeDeclType(Context, TU, TD);
     if (const ObjCInterfaceDecl *ID = dyn_cast<ObjCInterfaceDecl>(D))
       return MakeCXType(Context.getObjCInterfaceType(ID), TU);
     if (const DeclaratorDecl *DD = dyn_cast<DeclaratorDecl>(D))
@@ -271,11 +275,8 @@ CXType clang_getCursorType(CXCursor C) {
       return MakeCXType(T, TU);
     }
 
-    case CXCursor_TypeRef: {
-      QualType T = Context.getTypeDeclType(getCursorTypeRef(C).first);
-      return MakeCXType(T, TU);
-
-    }
+    case CXCursor_TypeRef:
+      return getTypeDeclType(Context, TU, getCursorTypeRef(C).first);
 
     case CXCursor_CXXBaseSpecifier:
       return cxtype::MakeCXType(getCursorCXXBaseSpecifier(C)->getType(), TU);
@@ -566,11 +567,7 @@ try_again:
     D = cast<InjectedClassNameType>(TP)->getDecl();
     break;
 
-  // FIXME: Template type parameters!      
-
-  case Type::Elaborated:
-    TP = cast<ElaboratedType>(TP)->getNamedType().getTypePtrOrNull();
-    goto try_again;
+    // FIXME: Template type parameters!
 
   default:
     break;
@@ -990,7 +987,7 @@ CXType clang_Type_getClassType(CXType CT) {
   const Type *TP = T.getTypePtrOrNull();
 
   if (TP && TP->getTypeClass() == Type::MemberPointer) {
-    ET = Ctx.getTypeDeclType(
+    ET = Ctx.getCanonicalTagType(
         cast<MemberPointerType>(TP)->getMostRecentCXXRecordDecl());
   }
   return MakeCXType(ET, GetTU(CT));
@@ -1390,10 +1387,9 @@ unsigned clang_Cursor_isInlineNamespace(CXCursor C) {
 
 CXType clang_Type_getNamedType(CXType CT){
   QualType T = GetQualType(CT);
-  const Type *TP = T.getTypePtrOrNull();
 
-  if (TP && TP->getTypeClass() == Type::Elaborated)
-    return MakeCXType(cast<ElaboratedType>(TP)->getNamedType(), GetTU(CT));
+  if (!T.isNull() && !T.isCanonical())
+    return MakeCXType(T, GetTU(CT));
 
   return MakeCXType(QualType(), GetTU(CT));
 }

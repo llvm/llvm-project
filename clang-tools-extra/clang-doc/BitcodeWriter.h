@@ -16,12 +16,9 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_BITCODEWRITER_H
 
 #include "Representation.h"
-#include "clang/AST/AST.h"
+#include "clang/Basic/Diagnostic.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
-#include <initializer_list>
 #include <vector>
 
 namespace clang {
@@ -126,6 +123,7 @@ enum RecordId {
   RECORD_LOCATION,
   RECORD_TAG_TYPE,
   RECORD_IS_TYPE_DEF,
+  RECORD_MANGLED_NAME,
   BASE_RECORD_USR,
   BASE_RECORD_NAME,
   BASE_RECORD_PATH,
@@ -139,6 +137,7 @@ enum RecordId {
   REFERENCE_TYPE,
   REFERENCE_PATH,
   REFERENCE_FIELD,
+  REFERENCE_FILE,
   TEMPLATE_PARAM_CONTENTS,
   TEMPLATE_SPECIALIZATION_OF,
   TYPEDEF_USR,
@@ -177,7 +176,8 @@ enum class FieldId {
 
 class ClangDocBitcodeWriter {
 public:
-  ClangDocBitcodeWriter(llvm::BitstreamWriter &Stream) : Stream(Stream) {
+  ClangDocBitcodeWriter(llvm::BitstreamWriter &Stream, DiagnosticsEngine &Diags)
+      : Stream(Stream), Diags(Diags) {
     emitHeader();
     emitBlockInfoBlock();
     emitVersionBlock();
@@ -262,6 +262,7 @@ private:
   SmallVector<uint32_t, BitCodeConstants::RecordSize> Record;
   llvm::BitstreamWriter &Stream;
   AbbreviationMap Abbrevs;
+  DiagnosticsEngine &Diags;
 };
 
 } // namespace doc

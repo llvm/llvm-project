@@ -69,6 +69,7 @@ class XeVM_Op<string mnemonic, list<Trait> traits = []>
 }
 
 def XeVM_ElemType : AnyTypeOf<[AnyI8, AnyI16, AnyI32, F32, TF32, F16, BF16]>;
+def XeVM_1DBlockElemType : AnyTypeOf<[I8, I16, I32, I64]>;
 
 //===----------------------------------------------------------------------===//
 // XeVM Load Cache Control
@@ -187,6 +188,84 @@ def XeVM_StoreCacheControlAttr
   let assemblyFormat = "`<` $value `>`";
 }
 
+def XeVM_BlockLoadOp
+    : XeVM_Op<"blockload">,
+      Results<(outs AnyTypeOf<
+          [XeVM_1DBlockElemType,
+           FixedVectorOfRankAndType<[1], [XeVM_1DBlockElemType]>]>:$res)>,
+      Arguments<(ins Arg<LLVM_AnyPointer, "", [MemRead]>:$ptr,
+          OptionalAttr<XeVM_LoadCacheControlAttr>:$cache_control)> {
+  let summary = "subgroup block load";
+  let description = [{
+    Reads one or more components of Result data for each invocation
+    in the subgroup from the specified `ptr` as a block operation.
+    The data is read strided, so the first value read is:
+    ```
+      ptr[ SubgroupLocalInvocationId ]
+    ```
+    and the second value read is:
+    ```
+      ptr[ SubgroupLocalInvocationId + SubgroupMaxSize ]
+    ```
+    Result type may be a scalar or vector type of scalar element type.
+
+    The parameters are:
+      * `ptr` - the base address to load from. Must be uniform across subgroup.
+      * `cache_control` - an enumerator that sets the cache behaviour
+
+    Example:
+    ```mlir
+      %loaded_a = xevm.blockload %src,
+                      <{cache_control=#xevm.load_cache_control<L1uc_L2uc_L3uc>}>
+                    : (!llvm.ptr<1>) -> vector<4xi16>
+    ```
+  }];
+  let assemblyFormat = [{
+    operands prop-dict attr-dict `:` functional-type(operands, results)
+  }];
+  let hasVerifier = 1;
+}
+
+def XeVM_BlockStoreOp
+    : XeVM_Op<"blockstore">,
+      Arguments<(ins Arg<LLVM_AnyPointer, "", [MemWrite]>:$ptr,
+          AnyTypeOf<[XeVM_1DBlockElemType,
+                     FixedVectorOfRankAndType<[1],
+                                              [XeVM_1DBlockElemType]>]>:$val,
+          OptionalAttr<XeVM_StoreCacheControlAttr>:$cache_control)> {
+  let summary = "subgroup block store";
+  let description = [{
+    Writes one or more components of `val` for each invocation
+    in the subgroup to the specified `ptr` as a block operation.
+    The data is written strided, so the first value is written to:
+    ```
+      ptr[ SubgroupLocalInvocationId ]
+    ```
+    and the second value is written to:
+    ```
+      ptr[ SubgroupLocalInvocationId + SubgroupMaxSize ]
+    ```
+    `val` type may be a scalar or vector type of scalar element type.
+
+    The parameters are:
+      * `ptr` - the base address to store to. Must be uniform across subgroup.
+      * `val` - the value to store
+      * `cache_control` - an enumerator that sets the cache behaviour
+
+    Example:
+    ```mlir
+      xevm.blockstore %ptr, %val
+        <{cache_control=#xevm.store_cache_control<L1uc_L2uc_L3uc>}>
+        : (!llvm.ptr<1>, vector<4xi16>)
+    ```
+  }];
+
+  let assemblyFormat = [{
+    operands prop-dict attr-dict `:` `(` type(operands) `)`
+  }];
+  let hasVerifier = 1;
+}
+
 def XeVM_BlockLoad2dOp
     : XeVM_Op<"blockload2d">,
       Results<(outs FixedVectorOfRankAndType<[1], [XeVM_ElemType]>:$res)>,
@@ -201,25 +280,25 @@ def XeVM_BlockLoad2dOp
   let description = [{
     The `xevm.blockload2d` operation loads a two dimensional matrix tile
     from a base matrix residing in global memory. The parameters are:
-      $ptr - the base address of the base matrix containing the tile to load
-      $base_width - the width of the base matrix in number of bytes.
-      $base_height - the number of rows in the base matrix
-      $base_pitch - the physical stride between the first columns of the current
-         row and the subsequent row in number of bytes.
-      $x, $y, $tile_width, $tile_height - the starting offsets and shape of
-      the tile to load in number of elements.
-      $elem_size_in_bits - the size in bits of the matrix element type
+      * `ptr` - the base address of the base matrix containing the tile to load
+      * `base_width` - the width of the base matrix in number of bytes.
+      * `base_height` - the number of rows in the base matrix
+      * `base_pitch` - the physical stride between the first columns of the current
+        row and the subsequent row in number of bytes.
+      * `x`, `y`, `tile_width`, `tile_height` - the starting offsets and shape of
+        the tile to load in number of elements.
+      * `elem_size_in_bits` - the size in bits of the matrix element type
         - 32 for f32, tf32
         - 16 for f16, int16, bf16
         - 8 for int8
-      $v_blocks - number of consecutive tiles in innermost dimension direction to load
-      $transpose - transpose the tile in registers (useful for 32 bit element type)
-      $pack_register - pack element types narrower than register bit width.
+      * `v_blocks` - number of consecutive tiles in innermost dimension direction to load
+      * `transpose` - transpose the tile in registers (useful for 32 bit element type)
+      * `pack_register` - pack element types narrower than register bit width.
         [M, N] => [M/factor, N, factor] where factor is register_size_in_bits / elem_size_in_bits
-      $cache_control - an enumerator that sets the cache behaviour
+      * `cache_control` - an enumerator that sets the cache behaviour
 
     Notes:
-      - the $transpose and $pack_register parameters are mutual exclusive
+      - the `transpose` and `pack_register` parameters are mutual exclusive
       - transposing the tile loaded is used for A matrix in backward path or used for the B matrix operand
         (D = C + A * B), where A has row-major layout and B should have column-major layout in memory.
       - if the tile loaded contains out of bound elements of the matrix, they are filled with 0.
@@ -262,19 +341,19 @@ def XeVM_BlockStore2dOp
   let description = [{
     The `xevm.blockstore2d` operation stores a two dimensional tile into a
     larger matrix residing in global memory. The parameters are:
-      $ptr - the base address of the target matrix where to store the tile
-      $base_width - the width of the base matrix in number of bytes.
-      $base_height - the number of rows in the base matrix
-      $base_pitch - the physical stride between the first columns of the current
-         row and the subsequent row in number of bytes.
-      $x, $y, $tile_width, $tile_height - the starting offsets and shape of the tile to store
+      * `ptr` - the base address of the target matrix where to store the tile
+      * `base_width` - the width of the base matrix in number of bytes.
+      * `base_height` - the number of rows in the base matrix
+      * `base_pitch` - the physical stride between the first columns of the current
+        row and the subsequent row in number of bytes.
+      * `x`, `y`, `tile_width`, `tile_height` - the starting offsets and shape of the tile to store
       in number of elements.
-      $elem_size_in_bits - the size in bits of the matrix element
+      * `elem_size_in_bits` - the size in bits of the matrix element
         - 32 for f32, tf32
         - 16 for f16, int16, bf16
         - 8 for int8
-      $cache_control - an enumerator that sets the cache behaviour
-      $stored_val - the tile to store
+      * `cache_control` - an enumerator that sets the cache behaviour
+      * `stored_val` - the tile to store
 
     Example:
     ```mlir
@@ -351,10 +430,10 @@ def XeVM_MemfenceOp
     This operation ensures that all prior memory accesses of this
     work-item to `addrspace` are visible to all other work-items in `scope`.
     Parameters description:
-    $scope - specify the memory scope at which all other work-items should observe
-                memory operations prior to the fence.
-    $addrspace - specify the address space of work-item's memory accesses
-                to be affected by the fence.
+      * `scope` - specify the memory scope at which all other work-items should observe
+        memory operations prior to the fence.
+      * `addrspace` - specify the address space of work-item's memory accesses
+        to be affected by the fence.
   }];
   let assemblyFormat = [{prop-dict  attr-dict}];
 
@@ -370,9 +449,9 @@ def XeVM_PrefetchOp
   let summary = "Prefetch data into a cache subsystem.";
   let description = [{
     Work-item issues a prefetch from global memory to cache:
-    $ptr - LLVM pointer with address space. Address space must be 1 (global)
-      or 4 (generic)
-    $cache_control - specify caching options
+      * `ptr` - LLVM pointer with address space. Address space must be 1 (global)
+        or 4 (generic)
+      * `cache_control` - specify caching options
   }];
   let assemblyFormat = [{
     operands prop-dict attr-dict `:` `(` type(operands) `)`
@@ -384,10 +463,9 @@ def XeVM_PrefetchOp
 
 def XeVM_BlockPrefetch2dOp
     : XeVM_Op<"blockprefetch2d">,
-      Arguments<(ins Arg<LLVM_AnyPointer, "", [MemRead]>:$ptr, I32:$base_width,
-          I32:$base_height, I32:$base_pitch, I32:$x, I32:$y,
-          I32Attr:$elem_size_in_bits, I32Attr:$tile_width, I32Attr:$tile_height,
-          I32Attr:$v_blocks,
+      Arguments<(ins LLVM_AnyPointer:$ptr, I32:$base_width, I32:$base_height,
+          I32:$base_pitch, I32:$x, I32:$y, I32Attr:$elem_size_in_bits,
+          I32Attr:$tile_width, I32Attr:$tile_height, I32Attr:$v_blocks,
           OptionalAttr<XeVM_LoadCacheControlAttr>:$cache_control)> {
 
   let summary = "2D block prefetch";
@@ -395,19 +473,19 @@ def XeVM_BlockPrefetch2dOp
   let description = [{
     The `xevm.blockprefetch2d` operation prefetches a two dimensional tile
     from a larger base matrix residing in global memory. The parameters are:
-      $ptr - the base address of the base matrix containing the tile to prefetch
-      $base_width - the width of the base matrix in number of bytes.
-      $base_height - the number of rows in the base matrix
-      $base_pitch - the physical stride between the first columns of the current
-         row and the subsequent row in number of bytes.
-      $x, $y, $tile_width, $tile_height - the starting offsets and shape of tile
-      to prefetch in number of elements.
-      $elem_size_in_bits - the size in bits of the matrix element
-      - 32 for f32, bf32
-      - 16 for f16, int16, bf16
-      - 8 for int8, int4, int2
-      $v_blocks - number of tiles in innermost dimension direction to prefetch
-      $cache_control - an enumerator that sets the cache behaviour
+      * `ptr` - the base address of the base matrix containing the tile to prefetch
+      * `base_width` - the width of the base matrix in number of bytes.
+      * `base_height` - the number of rows in the base matrix
+      * `base_pitch` - the physical stride between the first columns of the current
+        row and the subsequent row in number of bytes.
+      * `x`, `y`, `tile_width`, `tile_height` - the starting offsets and shape of tile
+        to prefetch in number of elements.
+      * `elem_size_in_bits` - the size in bits of the matrix element
+        - 32 for f32, bf32
+        - 16 for f16, int16, bf16
+        - 8 for int8, int4, int2
+      * `v_blocks` - number of tiles in innermost dimension direction to prefetch
+      * `cache_control` - an enumerator that sets the cache behaviour
 
     Example:
     ```mlir
@@ -452,9 +530,9 @@ def XeVM_ElemTypeAttr : I32EnumAttr<"ElemType", "XeVM element type",
 def XeVM_MMAShapeAttr : XeVM_Attr<"MMAShape", "mma_shape"> {
   let description = [{
     MMA operation is represented as D=AxB+C, where
-      A has the shape MxK.
-      B has the shape KxN.
-      D and C have the shape MxN.
+      - A has the shape MxK.
+      - B has the shape KxN.
+      - D and C have the shape MxN.
     This attribute encodes the shape of all matrices that participate in MMA.
   }];
   let parameters = (ins "int":$m, "int":$n, "int":$k);
@@ -484,17 +562,17 @@ def XeVM_MMAOp
       D = C + A x B
 
       where the A, B, C input matrices and the result D have shapes:
-        D : MxN
-        C : MxN
-        A : MxK
-        B : KxN
+        - D : MxN
+        - C : MxN
+        - A : MxK
+        - B : KxN
 
     Parameters:
-      `a` - vector of matrix A elements.
-      `b` - vector of matrix B elements.
-      `c` - (optional) vector of matrix C elements.
-      `shape` - the shape of the matrices, specified as `M`, `N`, and `K` values.
-      `types` - the data types of the matrices, specified as `D`, `A`, `B`, and optionally `C`.
+      * `a` - vector of matrix A elements.
+      * `b` - vector of matrix B elements.
+      * `c` - (optional) vector of matrix C elements.
+      * `shape` - the shape of the matrices, specified as `M`, `N`, and `K` values.
+      * `types` - the data types of the matrices, specified as `D`, `A`, `B`, and optionally `C`.
 
     Example:
     ```mlir
@@ -557,5 +635,38 @@ def XeVM_TargetAttr : XeVM_Attr<"XeVMTarget", "target"> {
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// XeVM special register op definitions
+//===----------------------------------------------------------------------===//
+
+class XeVM_SpecialIdRegisterOp<string mnemonic, list<Trait> traits = []>
+    : XeVM_Op<mnemonic, traits>,
+      Results<(outs AnyTypeOf<[I32, I64]>:$res)>,
+      Arguments<(ins OptionalAttr<LLVM_ConstantRangeAttr>:$range)> {
+  let assemblyFormat = "(`range` $range^)? attr-dict `:` type($res)";
+}
+
+multiclass XeVM_SpecialRegisterXYZ<string mnemonic, list<Trait> traits = []> {
+  def XOp : XeVM_SpecialIdRegisterOp<!strconcat(mnemonic, ".x"), traits>;
+  def YOp : XeVM_SpecialIdRegisterOp<!strconcat(mnemonic, ".y"), traits>;
+  def ZOp : XeVM_SpecialIdRegisterOp<!strconcat(mnemonic, ".z"), traits>;
+}
+
+//===----------------------------------------------------------------------===//
+// Workitem index and range
+defm XeVM_WorkitemId : XeVM_SpecialRegisterXYZ<"local_id">;
+defm XeVM_WorkgroupDim : XeVM_SpecialRegisterXYZ<"local_size">;
+
+//===----------------------------------------------------------------------===//
+// Workgroup index and range
+defm XeVM_WorkgroupId : XeVM_SpecialRegisterXYZ<"group_id">;
+defm XeVM_GridDim : XeVM_SpecialRegisterXYZ<"group_count">;
+
+//===----------------------------------------------------------------------===//
+// Lane, Subgroup index and range
+def XeVM_LaneIdOp : XeVM_SpecialIdRegisterOp<"lane_id">;
+def XeVM_SubgroupIdOp : XeVM_SpecialIdRegisterOp<"subgroup_id">;
+def XeVM_SubgroupSizeOp : XeVM_SpecialIdRegisterOp<"subgroup_size">;
 
 #endif // XEVMIR_OPS

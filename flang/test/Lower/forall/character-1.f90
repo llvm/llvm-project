@@ -29,7 +29,9 @@ end program test
 ! CHECK: %[[esval:.*]] = load i64, ptr %[[elesize]]
 ! CHECK: %[[mul:.*]] = mul i64 1, %[[esval]]
 ! CHECK: %[[mul2:.*]] = mul i64 %[[mul]], %[[extval]]
-! CHECK: %[[buff:.*]] = call ptr @malloc(i64 %[[mul2]])
+! CHECK: %[[cmp:.*]] = icmp sgt i64 %[[mul2]], 0
+! CHECK: %[[size:.*]] = select i1 %[[cmp]], i64 %[[mul2]], i64 1
+! CHECK: %[[buff:.*]] = call ptr @malloc(i64 %[[size]])
 ! CHECK: %[[to:.*]] = getelementptr i8, ptr %[[buff]], i64 %
 ! CHECK: call void @llvm.memmove.p0.p0.i64(ptr %[[to]], ptr %{{.*}}, i64 %{{.*}}, i1 false)
 ! CHECK: call void @free(ptr %[[buff]])

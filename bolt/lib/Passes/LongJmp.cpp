@@ -304,7 +304,7 @@ void LongJmpPass::tentativeBBLayout(const BinaryFunction &Func) {
 }
 
 uint64_t LongJmpPass::tentativeLayoutRelocColdPart(
-    const BinaryContext &BC, std::vector<BinaryFunction *> &SortedFunctions,
+    const BinaryContext &BC, BinaryFunctionListType &SortedFunctions,
     uint64_t DotAddress) {
   DotAddress = alignTo(DotAddress, llvm::Align(opts::AlignFunctions));
   for (BinaryFunction *Func : SortedFunctions) {
@@ -325,9 +325,10 @@ uint64_t LongJmpPass::tentativeLayoutRelocColdPart(
   return DotAddress;
 }
 
-uint64_t LongJmpPass::tentativeLayoutRelocMode(
-    const BinaryContext &BC, std::vector<BinaryFunction *> &SortedFunctions,
-    uint64_t DotAddress) {
+uint64_t
+LongJmpPass::tentativeLayoutRelocMode(const BinaryContext &BC,
+                                      BinaryFunctionListType &SortedFunctions,
+                                      uint64_t DotAddress) {
   // Compute hot cold frontier
   int64_t LastHotIndex = -1u;
   uint32_t CurrentIndex = 0;
@@ -398,8 +399,8 @@ uint64_t LongJmpPass::tentativeLayoutRelocMode(
   return DotAddress;
 }
 
-void LongJmpPass::tentativeLayout(
-    const BinaryContext &BC, std::vector<BinaryFunction *> &SortedFunctions) {
+void LongJmpPass::tentativeLayout(const BinaryContext &BC,
+                                  BinaryFunctionListType &SortedFunctions) {
   uint64_t DotAddress = BC.LayoutStartAddress;
 
   if (!BC.HasRelocations) {
@@ -895,6 +896,10 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
 
 Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
 
+  assert((opts::CompactCodeModel ||
+          opts::SplitStrategy != opts::SplitFunctionsStrategy::CDSplit) &&
+         "LongJmp cannot work with functions split in more than two fragments");
+
   if (opts::CompactCodeModel) {
     BC.outs()
         << "BOLT-INFO: relaxing branches for compact code model (<128MB)\n";
@@ -916,7 +921,7 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
   }
 
   BC.outs() << "BOLT-INFO: Starting stub-insertion pass\n";
-  std::vector<BinaryFunction *> Sorted = BC.getSortedFunctions();
+  BinaryFunctionListType Sorted = BC.getOutputBinaryFunctions();
   bool Modified;
   uint32_t Iterations = 0;
   do {

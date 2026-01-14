@@ -36,7 +36,6 @@ class BasicBlock;
 class BranchInst;
 class CallBase;
 class CallInst;
-class DbgVariableIntrinsic;
 class DIBuilder;
 class DomTreeUpdater;
 class Function;
@@ -275,36 +274,23 @@ LLVM_ABI CallInst *changeToCall(InvokeInst *II, DomTreeUpdater *DTU = nullptr);
 LLVM_ABI void InsertDebugValueAtStoreLoc(DbgVariableRecord *DVR, StoreInst *SI,
                                          DIBuilder &Builder);
 
-/// Creates and inserts an llvm.dbg.value intrinsic before a store
-/// that has an associated llvm.dbg.value intrinsic.
-LLVM_ABI void InsertDebugValueAtStoreLoc(DbgVariableIntrinsic *DII,
-                                         StoreInst *SI, DIBuilder &Builder);
-
-/// Inserts a llvm.dbg.value intrinsic before a store to an alloca'd value
-/// that has an associated llvm.dbg.declare intrinsic.
-LLVM_ABI void ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
-                                              StoreInst *SI,
-                                              DIBuilder &Builder);
+/// Inserts a dbg.value record before a store to an alloca'd value
+/// that has an associated dbg.declare record.
 LLVM_ABI void ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR,
                                               StoreInst *SI,
                                               DIBuilder &Builder);
 
-/// Inserts a llvm.dbg.value intrinsic before a load of an alloca'd value
-/// that has an associated llvm.dbg.declare intrinsic.
-LLVM_ABI void ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
-                                              LoadInst *LI, DIBuilder &Builder);
+/// Inserts a dbg.value record before a load of an alloca'd value
+/// that has an associated dbg.declare record.
 LLVM_ABI void ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR,
                                               LoadInst *LI, DIBuilder &Builder);
 
-/// Inserts a llvm.dbg.value intrinsic after a phi that has an associated
-/// llvm.dbg.declare intrinsic.
-LLVM_ABI void ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
-                                              PHINode *LI, DIBuilder &Builder);
+/// Inserts a dbg.value record after a phi that has an associated
+/// llvm.dbg.declare record.
 LLVM_ABI void ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR,
                                               PHINode *LI, DIBuilder &Builder);
 
-/// Lowers llvm.dbg.declare intrinsics into appropriate set of
-/// llvm.dbg.value intrinsics.
+/// Lowers dbg.declare records into appropriate set of dbg.value records.
 LLVM_ABI bool LowerDbgDeclare(Function &F);
 
 /// Propagate dbg.value intrinsics through the newly inserted PHIs.
@@ -312,7 +298,7 @@ LLVM_ABI void
 insertDebugValuesForPHIs(BasicBlock *BB,
                          SmallVectorImpl<PHINode *> &InsertedPHIs);
 
-/// Replaces llvm.dbg.declare instruction when the address it
+/// Replaces dbg.declare record when the address it
 /// describes is replaced with a new value. If Deref is true, an
 /// additional DW_OP_deref is prepended to the expression. If Offset
 /// is non-zero, a constant displacement is added to the expression
@@ -321,10 +307,10 @@ LLVM_ABI bool replaceDbgDeclare(Value *Address, Value *NewAddress,
                                 DIBuilder &Builder, uint8_t DIExprFlags,
                                 int Offset);
 
-/// Replaces multiple llvm.dbg.value instructions when the alloca it describes
+/// Replaces multiple dbg.value records when the alloca it describes
 /// is replaced with a new value. If Offset is non-zero, a constant displacement
 /// is added to the expression (after the mandatory Deref). Offset can be
-/// negative. New llvm.dbg.value instructions are inserted at the locations of
+/// negative. New dbg.value records are inserted at the locations of
 /// the instructions they replace.
 LLVM_ABI void replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
                                        DIBuilder &Builder, int Offset = 0);
@@ -339,7 +325,6 @@ LLVM_ABI void salvageDebugInfo(Instruction &I);
 /// Mark undef if salvaging cannot be completed.
 LLVM_ABI void
 salvageDebugInfoForDbgValues(Instruction &I,
-                             ArrayRef<DbgVariableIntrinsic *> Insns,
                              ArrayRef<DbgVariableRecord *> DPInsns);
 
 /// Given an instruction \p I and DIExpression \p DIExpr operating on
@@ -467,6 +452,11 @@ LLVM_ABI unsigned replaceDominatedUsesWith(Value *From, Value *To,
 LLVM_ABI unsigned replaceDominatedUsesWith(Value *From, Value *To,
                                            DominatorTree &DT,
                                            const BasicBlock *BB);
+/// Replace each use of 'From' with 'To' if that use is dominated by the
+/// given instruction. Returns the number of replacements made.
+LLVM_ABI unsigned replaceDominatedUsesWith(Value *From, Value *To,
+                                           DominatorTree &DT,
+                                           const Instruction *I);
 /// Replace each use of 'From' with 'To' if that use is dominated by
 /// the given edge and the callback ShouldReplace returns true. Returns the
 /// number of replacements made.
@@ -478,6 +468,12 @@ LLVM_ABI unsigned replaceDominatedUsesWithIf(
 /// Returns the number of replacements made.
 LLVM_ABI unsigned replaceDominatedUsesWithIf(
     Value *From, Value *To, DominatorTree &DT, const BasicBlock *BB,
+    function_ref<bool(const Use &U, const Value *To)> ShouldReplace);
+/// Replace each use of 'From' with 'To' if that use is dominated by
+/// the given instruction and the callback ShouldReplace returns true. Returns
+/// the number of replacements made.
+LLVM_ABI unsigned replaceDominatedUsesWithIf(
+    Value *From, Value *To, DominatorTree &DT, const Instruction *I,
     function_ref<bool(const Use &U, const Value *To)> ShouldReplace);
 
 /// Return true if this call calls a gc leaf function.

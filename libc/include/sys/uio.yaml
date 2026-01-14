@@ -1,15 +1,13 @@
 header: sys/uio.h
-header_template: uio.h.def
-macros: []
+standards:
+  - posix
 types:
   - type_name: struct_iovec
   - type_name: ssize_t
-enums: []
-objects: []
 functions:
   - name: writev
     standards:
-      - POSIX
+      - posix
     return_type: ssize_t
     arguments:
       - type: int
@@ -17,7 +15,7 @@ functions:
       - type: int
   - name: readv
     standards:
-      - POSIX
+      - posix
     return_type: ssize_t
     arguments:
       - type: int

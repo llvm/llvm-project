@@ -36,7 +36,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include <list>
-#include <map>
 #include <plugin-api.h>
 #include <string>
 #include <system_error>

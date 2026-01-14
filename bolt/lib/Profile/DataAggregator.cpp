@@ -45,17 +45,29 @@ using namespace bolt;
 namespace opts {
 
 static cl::opt<bool>
-    BasicAggregation("nl",
-                     cl::desc("aggregate basic samples (without LBR info)"),
+    BasicAggregation("basic-events",
+                     cl::desc("aggregate basic events (without brstack info)"),
                      cl::cat(AggregatorCategory));
+
+static cl::alias BasicAggregationAlias("ba",
+                                       cl::desc("Alias for --basic-events"),
+                                       cl::aliasopt(BasicAggregation));
+
+static cl::opt<bool> DeprecatedBasicAggregationNl(
+    "nl", cl::desc("Alias for --basic-events (deprecated. Use --ba)"),
+    cl::cat(AggregatorCategory), cl::ReallyHidden,
+    cl::callback([](const bool &Enabled) {
+      errs()
+          << "BOLT-WARNING: '-nl' is deprecated, please use '--ba' instead.\n";
+      BasicAggregation = Enabled;
+    }));
 
 cl::opt<bool> ArmSPE("spe", cl::desc("Enable Arm SPE mode."),
                      cl::cat(AggregatorCategory));
 
-static cl::opt<std::string>
-    ITraceAggregation("itrace",
-                      cl::desc("Generate LBR info with perf itrace argument"),
-                      cl::cat(AggregatorCategory));
+static cl::opt<std::string> ITraceAggregation(
+    "itrace", cl::desc("Generate brstack info with perf itrace argument"),
+    cl::cat(AggregatorCategory));
 
 static cl::opt<bool>
 FilterMemProfile("filter-mem-profile",
@@ -76,6 +88,11 @@ FilterPID("pid",
   cl::init(0),
   cl::Optional,
   cl::cat(AggregatorCategory));
+
+static cl::opt<bool> ImputeTraceFallthrough(
+    "impute-trace-fall-through",
+    cl::desc("impute missing fall-throughs for branch-only traces"),
+    cl::Optional, cl::cat(AggregatorCategory));
 
 static cl::opt<bool>
 IgnoreBuildID("ignore-build-id",
@@ -142,8 +159,6 @@ std::vector<SectionNameAndRange> getTextSections(const BinaryContext *BC) {
 }
 }
 
-constexpr uint64_t DataAggregator::KernelBaseAddr;
-
 DataAggregator::~DataAggregator() { deleteTempFiles(); }
 
 namespace {
@@ -196,7 +211,7 @@ void DataAggregator::start() {
   }
 
   if (opts::BasicAggregation) {
-    launchPerfProcess("events without LBR", MainEventsPPI,
+    launchPerfProcess("events without brstack", MainEventsPPI,
                       "script -F pid,event,ip");
   } else if (!opts::ITraceAggregation.empty()) {
     // Disable parsing memory profile from trace data, unless requested by user.
@@ -513,6 +528,69 @@ void DataAggregator::parsePerfData(BinaryContext &BC) {
   deleteTempFiles();
 }
 
+void DataAggregator::imputeFallThroughs() {
+  if (Traces.empty())
+    return;
+
+  std::pair PrevBranch(Trace::EXTERNAL, Trace::EXTERNAL);
+  uint64_t AggregateCount = 0;
+  uint64_t AggregateFallthroughSize = 0;
+  uint64_t InferredTraces = 0;
+
+  // Helper map with whether the instruction is a call/ret/unconditional branch
+  std::unordered_map<uint64_t, bool> IsUncondCTMap;
+  auto checkUnconditionalControlTransfer = [&](const uint64_t Addr) {
+    auto isUncondCT = [&](const MCInst &MI) -> bool {
+      return BC->MIB->isUnconditionalControlTransfer(MI);
+    };
+    return testAndSet<bool>(Addr, isUncondCT, IsUncondCTMap).value_or(true);
+  };
+
+  // Traces are sorted by their component addresses (Branch, From, To).
+  // assert(is_sorted(Traces));
+
+  // Traces corresponding to the top-of-stack branch entry with a missing
+  // fall-through have BR_ONLY(-1ULL/UINT64_MAX) in To field, meaning that for
+  // fixed values of Branch and From branch-only traces are stored after all
+  // traces with valid fall-through.
+  //
+  // Group traces by (Branch, From) and compute weighted average fall-through
+  // length for the top-of-stack trace (closing the group) by accumulating the
+  // fall-through lengths of traces with valid fall-throughs earlier in the
+  // group.
+  for (auto &[Trace, Info] : Traces) {
+    // Skip fall-throughs in external code.
+    if (Trace.From == Trace::EXTERNAL)
+      continue;
+    if (std::pair CurrentBranch(Trace.Branch, Trace.From);
+        CurrentBranch != PrevBranch) {
+      // New group: reset aggregates.
+      AggregateCount = AggregateFallthroughSize = 0;
+      PrevBranch = CurrentBranch;
+    }
+    // BR_ONLY must be the last trace in the group
+    if (Trace.To == Trace::BR_ONLY) {
+      // If the group is not empty, use aggregate values, otherwise 0-length
+      // for unconditional jumps (call/ret/uncond branch) or 1-length for others
+      uint64_t InferredBytes =
+          AggregateFallthroughSize
+              ? AggregateFallthroughSize / AggregateCount
+              : !checkUnconditionalControlTransfer(Trace.From);
+      Trace.To = Trace.From + InferredBytes;
+      LLVM_DEBUG(dbgs() << "imputed " << Trace << " (" << InferredBytes
+                        << " bytes)\n");
+      ++InferredTraces;
+    } else {
+      // Only use valid fall-through lengths
+      if (Trace.To != Trace::EXTERNAL)
+        AggregateFallthroughSize += (Trace.To - Trace.From) * Info.TakenCount;
+      AggregateCount += Info.TakenCount;
+    }
+  }
+  if (opts::Verbosity >= 1)
+    outs() << "BOLT-INFO: imputed " << InferredTraces << " traces\n";
+}
+
 Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   this->BC = &BC;
 
@@ -524,6 +602,9 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
 
   // Sort parsed traces for faster processing.
   llvm::sort(Traces, llvm::less_first());
+
+  if (opts::ImputeTraceFallthrough)
+    imputeFallThroughs();
 
   if (opts::HeatmapMode) {
     if (std::error_code EC = printLBRHeatMap())
@@ -726,22 +807,10 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
 }
 
 bool DataAggregator::checkReturn(uint64_t Addr) {
-  auto isReturn = [&](auto MI) { return MI && BC->MIB->isReturn(*MI); };
-  if (llvm::is_contained(Returns, Addr))
-    return true;
-
-  BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr);
-  if (!Func)
-    return false;
-
-  const uint64_t Offset = Addr - Func->getAddress();
-  if (Func->hasInstructions()
-          ? isReturn(Func->getInstructionAtOffset(Offset))
-          : isReturn(Func->disassembleInstructionAtOffset(Offset))) {
-    Returns.emplace(Addr);
-    return true;
-  }
-  return false;
+  auto isReturn = [&](const MCInst &MI) -> bool {
+    return BC->MIB->isReturn(MI);
+  };
+  return testAndSet<bool>(Addr, isReturn, Returns).value_or(false);
 }
 
 bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
@@ -847,10 +916,9 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace,
   if (BF.isPseudo())
     return Branches;
 
-  if (!BF.isSimple())
+  // Can only record traces in CFG state
+  if (!BF.hasCFG())
     return std::nullopt;
-
-  assert(BF.hasCFG() && "can only record traces in CFG state");
 
   const BinaryBasicBlock *FromBB = BF.getBasicBlockContainingOffset(From);
   const BinaryBasicBlock *ToBB = BF.getBasicBlockContainingOffset(To);
@@ -1011,7 +1079,7 @@ ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
   if (std::error_code EC = Rest.getError())
     return EC;
   if (Rest.get().size() < 5) {
-    reportError("expected rest of LBR entry");
+    reportError("expected rest of brstack entry");
     Diag << "Found: " << Rest.get() << "\n";
     return make_error_code(llvm::errc::io_error);
   }
@@ -1251,7 +1319,8 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     }
 
     using SSI = StringSwitch<int>;
-    AddrNum = SSI(Str).Cases("T", "R", 3).Case("S", 1).Case("E", 0).Default(2);
+    AddrNum =
+        SSI(Str).Cases({"T", "R"}, 3).Case("S", 1).Case("E", 0).Default(2);
     CounterNum = SSI(Str).Case("B", 2).Case("E", 0).Default(1);
   }
 
@@ -1331,7 +1400,7 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     if (!Addr[0]->Offset)
       Addr[0]->Offset = Trace::FT_EXTERNAL_RETURN;
     else
-      Returns.emplace(Addr[0]->Offset);
+      Returns.emplace(Addr[0]->Offset, true);
   }
 
   /// Record a trace.
@@ -1375,8 +1444,8 @@ std::error_code DataAggregator::printLBRHeatMap() {
       errs() << "HEATMAP-ERROR: no basic event samples detected in profile. "
                 "Cannot build heatmap.";
     } else {
-      errs() << "HEATMAP-ERROR: no LBR traces detected in profile. "
-                "Cannot build heatmap. Use -nl for building heatmap from "
+      errs() << "HEATMAP-ERROR: no brstack traces detected in profile. "
+                "Cannot build heatmap. Use -ba for building heatmap from "
                 "basic events.\n";
     }
     exit(1);
@@ -1514,7 +1583,7 @@ void DataAggregator::printBranchStacksDiagnostics(
 
 std::error_code DataAggregator::parseBranchEvents() {
   std::string BranchEventTypeStr =
-      opts::ArmSPE ? "SPE branch events in LBR-format" : "branch events";
+      opts::ArmSPE ? "SPE branch events in brstack-format" : "branch events";
   outs() << "PERF2BOLT: parse " << BranchEventTypeStr << "...\n";
   NamedRegionTimer T("parseBranch", "Parsing branch events", TimerGroupName,
                      TimerGroupDesc, opts::TimeAggregator);
@@ -1562,7 +1631,7 @@ std::error_code DataAggregator::parseBranchEvents() {
   clear(TraceMap);
 
   outs() << "PERF2BOLT: read " << NumSamples << " samples and " << NumEntries
-         << " LBR entries\n";
+         << " brstack entries\n";
   if (NumTotalSamples) {
     if (NumSamples && NumSamplesNoLBR == NumSamples) {
       // Note: we don't know if perf2bolt is being used to parse memory samples
@@ -1570,8 +1639,10 @@ std::error_code DataAggregator::parseBranchEvents() {
       if (!opts::ArmSPE)
         errs()
             << "PERF2BOLT-WARNING: all recorded samples for this binary lack "
-               "LBR. Record profile with perf record -j any or run perf2bolt "
-               "in no-LBR mode with -nl (the performance improvement in -nl "
+               "brstack. Record profile with perf record -j any or run "
+               "perf2bolt "
+               "in non-brstack mode with -ba (the performance improvement in "
+               "-ba "
                "mode may be limited)\n";
       else
         errs()
@@ -1592,7 +1663,7 @@ void DataAggregator::processBranchEvents() {
   NamedRegionTimer T("processBranch", "Processing branch events",
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
 
-  Returns.emplace(Trace::FT_EXTERNAL_RETURN);
+  Returns.emplace(Trace::FT_EXTERNAL_RETURN, true);
   for (const auto &[Trace, Info] : Traces) {
     bool IsReturn = checkReturn(Trace.Branch);
     // Ignore returns.
@@ -1606,7 +1677,7 @@ void DataAggregator::processBranchEvents() {
 }
 
 std::error_code DataAggregator::parseBasicEvents() {
-  outs() << "PERF2BOLT: parsing basic events (without LBR)...\n";
+  outs() << "PERF2BOLT: parsing basic events (without brstack)...\n";
   NamedRegionTimer T("parseBasic", "Parsing basic events", TimerGroupName,
                      TimerGroupDesc, opts::TimeAggregator);
   while (hasData()) {
@@ -1630,7 +1701,7 @@ std::error_code DataAggregator::parseBasicEvents() {
 }
 
 void DataAggregator::processBasicEvents() {
-  outs() << "PERF2BOLT: processing basic events (without LBR)...\n";
+  outs() << "PERF2BOLT: processing basic events (without brstack)...\n";
   NamedRegionTimer T("processBasic", "Processing basic events", TimerGroupName,
                      TimerGroupDesc, opts::TimeAggregator);
   uint64_t OutOfRangeSamples = 0;
@@ -1719,7 +1790,8 @@ std::error_code DataAggregator::parsePreAggregatedLBRSamples() {
     ++AggregatedLBRs;
   }
 
-  outs() << "PERF2BOLT: read " << AggregatedLBRs << " aggregated LBR entries\n";
+  outs() << "PERF2BOLT: read " << AggregatedLBRs
+         << " aggregated brstack entries\n";
 
   return std::error_code();
 }
@@ -2142,7 +2214,7 @@ DataAggregator::writeAggregatedFile(StringRef OutputFilename) const {
     OutFile << "boltedcollection\n";
   if (opts::BasicAggregation) {
     OutFile << "no_lbr";
-    for (const StringMapEntry<std::nullopt_t> &Entry : EventNames)
+    for (const StringMapEntry<EmptyStringSetTag> &Entry : EventNames)
       OutFile << " " << Entry.getKey();
     OutFile << "\n";
 
@@ -2218,7 +2290,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
 
   ListSeparator LS(",");
   raw_string_ostream EventNamesOS(BP.Header.EventNames);
-  for (const StringMapEntry<std::nullopt_t> &EventEntry : EventNames)
+  for (const StringMapEntry<EmptyStringSetTag> &EventEntry : EventNames)
     EventNamesOS << LS << EventEntry.first().str();
 
   BP.Header.Flags = opts::BasicAggregation ? BinaryFunction::PF_BASIC
@@ -2325,10 +2397,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
             PseudoProbeDecoder->getAddress2ProbesMap();
         BinaryFunction::FragmentsSetTy Fragments(BF->Fragments);
         Fragments.insert(BF);
-        DenseMap<
-            uint32_t,
-            std::vector<std::reference_wrapper<const MCDecodedPseudoProbe>>>
-            BlockProbes;
+        DenseMap<uint32_t, YAMLProfileWriter::BlockProbeCtx> BlockCtx;
         for (const BinaryFunction *F : Fragments) {
           const uint64_t FuncAddr = F->getAddress();
           for (const MCDecodedPseudoProbe &Probe :
@@ -2336,15 +2405,14 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
             const uint32_t OutputAddress = Probe.getAddress();
             const uint32_t InputOffset = BAT->translate(
                 FuncAddr, OutputAddress - FuncAddr, /*IsBranchSrc=*/true);
-            const unsigned BlockIndex = getBlock(InputOffset).second;
-            BlockProbes[BlockIndex].emplace_back(Probe);
+            const auto &[BlockOffset, BlockIndex] = getBlock(InputOffset);
+            BlockCtx[BlockIndex].addBlockProbe(InlineTreeNodeId, Probe,
+                                               InputOffset - BlockOffset);
           }
         }
 
-        for (auto &[Block, Probes] : BlockProbes) {
-          YamlBF.Blocks[Block].PseudoProbes =
-              YAMLProfileWriter::writeBlockProbes(Probes, InlineTreeNodeId);
-        }
+        for (auto &[Block, Ctx] : BlockCtx)
+          Ctx.finalize(YamlBF.Blocks[Block]);
       }
       // Skip printing if there's no profile data
       llvm::erase_if(
@@ -2368,7 +2436,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
 void DataAggregator::dump() const { DataReader::dump(); }
 
 void DataAggregator::dump(const PerfBranchSample &Sample) const {
-  Diag << "Sample LBR entries: " << Sample.LBR.size() << "\n";
+  Diag << "Sample brstack entries: " << Sample.LBR.size() << "\n";
   for (const LBREntry &LBR : Sample.LBR)
     Diag << LBR << '\n';
 }

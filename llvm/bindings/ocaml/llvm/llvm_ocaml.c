@@ -239,7 +239,9 @@ value llvm_dispose_context(value C) {
 }
 
 /* unit -> llcontext */
-value llvm_global_context(value Unit) { return to_val(LLVMGetGlobalContext()); }
+value llvm_global_context(value Unit) {
+  return to_val(LLVMGetGlobalContext());
+}
 
 /* llcontext -> string -> int */
 value llvm_mdkind_id(value C, value Name) {

@@ -182,14 +182,12 @@ static DisassembledInstruction ConvertSBInstructionToDisassembledInstruction(
 /// `supportsDisassembleRequest` is true.
 llvm::Expected<DisassembleResponseBody>
 DisassembleRequestHandler::Run(const DisassembleArguments &args) const {
-  std::optional<lldb::addr_t> addr_opt =
-      DecodeMemoryReference(args.memoryReference);
-  if (!addr_opt.has_value())
-    return llvm::make_error<DAPError>("Malformed memory reference: " +
-                                      args.memoryReference);
-
-  lldb::addr_t addr_ptr = *addr_opt;
-  addr_ptr += args.offset.value_or(0);
+  if (args.memoryReference == LLDB_INVALID_ADDRESS) {
+    std::vector<DisassembledInstruction> invalid_instructions(
+        args.instructionCount, GetInvalidInstruction());
+    return DisassembleResponseBody{std::move(invalid_instructions)};
+  }
+  const lldb::addr_t addr_ptr = args.memoryReference + args.offset;
   lldb::SBAddress addr(addr_ptr, dap.target);
   if (!addr.IsValid())
     return llvm::make_error<DAPError>(
@@ -197,7 +195,7 @@ DisassembleRequestHandler::Run(const DisassembleArguments &args) const {
 
   // Offset (in instructions) to be applied after the byte offset (if any)
   // before disassembling. Can be negative.
-  int64_t instruction_offset = args.instructionOffset.value_or(0);
+  const int64_t instruction_offset = args.instructionOffset;
 
   // Calculate a sufficient address to start disassembling from.
   lldb::SBAddress disassemble_start_addr =
@@ -212,8 +210,8 @@ DisassembleRequestHandler::Run(const DisassembleArguments &args) const {
     return llvm::make_error<DAPError>(
         "Unexpected error while disassembling instructions.");
 
-  // Conver the found instructions to the DAP format.
-  const bool resolve_symbols = args.resolveSymbols.value_or(false);
+  // Convert the found instructions to the DAP format.
+  const bool resolve_symbols = args.resolveSymbols;
   std::vector<DisassembledInstruction> instructions;
   size_t original_address_index = args.instructionCount;
   for (size_t i = 0; i < insts.GetSize(); ++i) {

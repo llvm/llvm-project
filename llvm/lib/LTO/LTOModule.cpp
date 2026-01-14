@@ -203,8 +203,10 @@ LTOModule::makeLTOModule(MemoryBufferRef Buffer, const TargetOptions &options,
   // find machine architecture for this module
   std::string errMsg;
   const Target *march = TargetRegistry::lookupTarget(Triple, errMsg);
-  if (!march)
+  if (!march) {
+    Context.emitError(errMsg);
     return make_error_code(object::object_error::arch_not_found);
+  }
 
   // construct LTOModule, hand over ownership of module and target
   SubtargetFeatures Features;
@@ -618,13 +620,11 @@ void LTOModule::parseSymbols() {
   }
 
   // make symbols for all undefines
-  for (StringMap<NameAndAttributes>::iterator u =_undefines.begin(),
-         e = _undefines.end(); u != e; ++u) {
+  for (const auto &[Key, Value] : _undefines) {
     // If this symbol also has a definition, then don't make an undefine because
     // it is a tentative definition.
-    if (_defines.count(u->getKey())) continue;
-    NameAndAttributes info = u->getValue();
-    _symbols.push_back(info);
+    if (!_defines.contains(Key))
+      _symbols.push_back(Value);
   }
 }
 

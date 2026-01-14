@@ -105,8 +105,8 @@ def CombineConvertTruncOptPattern
            (IntPred $arg, $irm), (SmallerWidthPred $arg, $irm)]>;
 
 def createConstantOp
-    : NativeCodeCall<"$_builder.create<mlir::arith::ConstantOp>"
-                     "($_loc, $_builder.getIndexType(), "
+    : NativeCodeCall<"mlir::arith::ConstantOp::create"
+                     "($_builder, $_loc, $_builder.getIndexType(), "
                      "rewriter.getIndexAttr("
                      "mlir::dyn_cast<mlir::IntegerAttr>($1).getInt()))">;
 

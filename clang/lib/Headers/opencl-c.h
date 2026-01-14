@@ -13736,8 +13736,8 @@ half __ovld atomic_fetch_min_explicit(volatile atomic_half *,
                                       half, memory_order, memory_scope);
 half __ovld atomic_fetch_max_explicit(volatile atomic_half *,
                                       half, memory_order, memory_scope);
-#endif // defined(__opencl_c_ext_fp16_global_atomic_min_max) &&                \
-    defined(__opencl_c_ext_fp16_local_atomic_min_max)
+#endif // defined(__opencl_c_ext_fp16_global_atomic_min_max) &&
+       // defined(__opencl_c_ext_fp16_local_atomic_min_max)
 
 #if defined(__opencl_c_ext_fp32_global_atomic_min_max)
 float __ovld atomic_fetch_min(volatile __global atomic_float *, float);
@@ -13777,8 +13777,8 @@ float __ovld atomic_fetch_min_explicit(volatile atomic_float *,
                                        float, memory_order, memory_scope);
 float __ovld atomic_fetch_max_explicit(volatile atomic_float *,
                                        float, memory_order, memory_scope);
-#endif // defined(__opencl_c_ext_fp32_global_atomic_min_max) &&                \
-    defined(__opencl_c_ext_fp32_local_atomic_min_max)
+#endif // defined(__opencl_c_ext_fp32_global_atomic_min_max) &&
+       // defined(__opencl_c_ext_fp32_local_atomic_min_max)
 
 #if defined(cl_khr_int64_base_atomics) && defined(cl_khr_int64_extended_atomics)
 #if defined(__opencl_c_ext_fp64_global_atomic_min_max)
@@ -13819,10 +13819,10 @@ double __ovld atomic_fetch_min_explicit(volatile atomic_double *,
                                         double, memory_order, memory_scope);
 double __ovld atomic_fetch_max_explicit(volatile atomic_double *,
                                         double, memory_order, memory_scope);
-#endif // defined(__opencl_c_ext_fp64_global_atomic_min_max) &&                \
-    defined(__opencl_c_ext_fp64_local_atomic_min_max)
-#endif // defined(cl_khr_int64_base_atomics) &&                                \
-    defined(cl_khr_int64_extended_atomics)
+#endif // defined(__opencl_c_ext_fp64_global_atomic_min_max) &&
+       // defined(__opencl_c_ext_fp64_local_atomic_min_max)
+#endif // defined(cl_khr_int64_base_atomics) &&
+       // defined(cl_khr_int64_extended_atomics)
 
 #if defined(__opencl_c_ext_fp16_global_atomic_add)
 half __ovld atomic_fetch_add(volatile __global atomic_half *, half);
@@ -13862,8 +13862,8 @@ half __ovld atomic_fetch_add_explicit(volatile atomic_half *,
                                       half, memory_order, memory_scope);
 half __ovld atomic_fetch_sub_explicit(volatile atomic_half *,
                                       half, memory_order, memory_scope);
-#endif // defined(__opencl_c_ext_fp16_global_atomic_add) &&                    \
-    defined(__opencl_c_ext_fp16_local_atomic_add)
+#endif // defined(__opencl_c_ext_fp16_global_atomic_add) &&
+       // defined(__opencl_c_ext_fp16_local_atomic_add)
 
 #if defined(__opencl_c_ext_fp32_global_atomic_add)
 float __ovld atomic_fetch_add(volatile __global atomic_float *, float);
@@ -13903,8 +13903,8 @@ float __ovld atomic_fetch_add_explicit(volatile atomic_float *,
                                        float, memory_order, memory_scope);
 float __ovld atomic_fetch_sub_explicit(volatile atomic_float *,
                                        float, memory_order, memory_scope);
-#endif // defined(__opencl_c_ext_fp32_global_atomic_add) &&                    \
-    defined(__opencl_c_ext_fp32_local_atomic_add)
+#endif // defined(__opencl_c_ext_fp32_global_atomic_add) &&
+       // defined(__opencl_c_ext_fp32_local_atomic_add)
 
 #if defined(cl_khr_int64_base_atomics) && defined(cl_khr_int64_extended_atomics)
 #if defined(__opencl_c_ext_fp64_global_atomic_add)
@@ -13945,10 +13945,10 @@ double __ovld atomic_fetch_add_explicit(volatile atomic_double *,
                                         double, memory_order, memory_scope);
 double __ovld atomic_fetch_sub_explicit(volatile atomic_double *,
                                         double, memory_order, memory_scope);
-#endif // defined(__opencl_c_ext_fp64_global_atomic_add) &&                    \
-    defined(__opencl_c_ext_fp64_local_atomic_add)
-#endif // defined(cl_khr_int64_base_atomics) &&                                \
-    defined(cl_khr_int64_extended_atomics)
+#endif // defined(__opencl_c_ext_fp64_global_atomic_add) &&
+       // defined(__opencl_c_ext_fp64_local_atomic_add)
+#endif // defined(cl_khr_int64_base_atomics) &&
+       // defined(cl_khr_int64_extended_atomics)
 
 #endif // cl_ext_float_atomics
 
@@ -17525,6 +17525,13 @@ void       __ovld __conv intel_sub_group_block_write_ui8( __global uint* p, uint
 
 #endif // defined(cl_intel_subgroups_char) || defined(cl_intel_subgroups_short) ||
        // defined(cl_intel_subgroups_long)
+
+#if defined(cl_intel_subgroup_buffer_prefetch)
+void       __ovld __conv intel_sub_group_block_prefetch_ui(const __global uint *p);
+void       __ovld __conv intel_sub_group_block_prefetch_ui2(const __global uint *p);
+void       __ovld __conv intel_sub_group_block_prefetch_ui4(const __global uint *p);
+void       __ovld __conv intel_sub_group_block_prefetch_ui8(const __global uint *p);
+#endif // defined(cl_intel_subgroup_buffer_prefetch)
 #endif // cl_intel_subgroups
 
 #if defined(cl_intel_subgroups_short)
@@ -17660,6 +17667,14 @@ void        __ovld __conv intel_sub_group_block_write_us2( __global ushort* p, u
 void        __ovld __conv intel_sub_group_block_write_us4( __global ushort* p, ushort4 data );
 void        __ovld __conv intel_sub_group_block_write_us8( __global ushort* p, ushort8 data );
 void        __ovld __conv intel_sub_group_block_write_us16( __global ushort* p, ushort16 data );
+
+#if defined(cl_intel_subgroup_buffer_prefetch)
+void        __ovld __conv intel_sub_group_block_prefetch_us(const __global ushort *p);
+void        __ovld __conv intel_sub_group_block_prefetch_us2(const __global ushort *p);
+void        __ovld __conv intel_sub_group_block_prefetch_us4(const __global ushort *p);
+void        __ovld __conv intel_sub_group_block_prefetch_us8(const __global ushort *p);
+void        __ovld __conv intel_sub_group_block_prefetch_us16(const __global ushort *p);
+#endif // defined(cl_intel_subgroup_buffer_prefetch)
 #endif // cl_intel_subgroups_short
 
 #if defined(cl_intel_subgroups_char)
@@ -17795,6 +17810,14 @@ void        __ovld __conv intel_sub_group_block_write_uc2( __global uchar* p, uc
 void        __ovld __conv intel_sub_group_block_write_uc4( __global uchar* p, uchar4 data );
 void        __ovld __conv intel_sub_group_block_write_uc8( __global uchar* p, uchar8 data );
 void        __ovld __conv intel_sub_group_block_write_uc16( __global uchar* p, uchar16 data );
+
+#if defined(cl_intel_subgroup_buffer_prefetch)
+void        __ovld __conv intel_sub_group_block_prefetch_uc(const __global uchar *p);
+void        __ovld __conv intel_sub_group_block_prefetch_uc2(const __global uchar *p);
+void        __ovld __conv intel_sub_group_block_prefetch_uc4(const __global uchar *p);
+void        __ovld __conv intel_sub_group_block_prefetch_uc8(const __global uchar *p);
+void        __ovld __conv intel_sub_group_block_prefetch_uc16(const __global uchar *p);
+#endif // defined(cl_intel_subgroup_buffer_prefetch)
 #endif // cl_intel_subgroups_char
 
 #if defined(cl_intel_subgroups_long)
@@ -17839,6 +17862,13 @@ void        __ovld __conv intel_sub_group_block_write_ul(  __global ulong* p, ul
 void        __ovld __conv intel_sub_group_block_write_ul2( __global ulong* p, ulong2 data );
 void        __ovld __conv intel_sub_group_block_write_ul4( __global ulong* p, ulong4 data );
 void        __ovld __conv intel_sub_group_block_write_ul8( __global ulong* p, ulong8 data);
+
+#if defined(cl_intel_subgroup_buffer_prefetch)
+void        __ovld __conv intel_sub_group_block_prefetch_ul(const __global ulong *p);
+void        __ovld __conv intel_sub_group_block_prefetch_ul2(const __global ulong *p);
+void        __ovld __conv intel_sub_group_block_prefetch_ul4(const __global ulong *p);
+void        __ovld __conv intel_sub_group_block_prefetch_ul8(const __global ulong *p);
+#endif // defined(cl_intel_subgroup_buffer_prefetch)
 #endif // cl_intel_subgroups_long
 
 #if defined(cl_intel_subgroup_local_block_io)
@@ -18409,6 +18439,22 @@ intel_sub_group_avc_mce_convert_to_sic_result(
     intel_sub_group_avc_mce_result_t result);
 #pragma OPENCL EXTENSION cl_intel_device_side_avc_motion_estimation : end
 #endif // cl_intel_device_side_avc_motion_estimation
+
+#if defined(cl_intel_bfloat16_conversions)
+ushort __ovld intel_convert_bfloat16_as_ushort(float source);
+ushort2 __ovld intel_convert_bfloat162_as_ushort2(float2 source);
+ushort3 __ovld intel_convert_bfloat163_as_ushort3(float3 source);
+ushort4 __ovld intel_convert_bfloat164_as_ushort4(float4 source);
+ushort8 __ovld intel_convert_bfloat168_as_ushort8(float8 source);
+ushort16 __ovld intel_convert_bfloat1616_as_ushort16(float16 source);
+
+float __ovld intel_convert_as_bfloat16_float(ushort source);
+float2 __ovld intel_convert_as_bfloat162_float2(ushort2 source);
+float3 __ovld intel_convert_as_bfloat163_float3(ushort3 source);
+float4 __ovld intel_convert_as_bfloat164_float4(ushort4 source);
+float8 __ovld intel_convert_as_bfloat168_float8(ushort8 source);
+float16 __ovld intel_convert_as_bfloat1616_float16(ushort16 source);
+#endif // cl_intel_bfloat16_conversions
 
 #ifdef cl_amd_media_ops
 uint __ovld amd_bitalign(uint, uint, uint);

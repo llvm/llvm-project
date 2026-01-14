@@ -43,11 +43,11 @@ static LogicalResult convertLoad(OpBuilder &builder, llvm::Instruction *inst,
   if (failed(addr))
     return failure();
   // Create the LoadOp
-  Value loadOp = builder.create<LLVM::LoadOp>(
-      moduleImport.translateLoc(inst->getDebugLoc()),
+  Value loadOp = LLVM::LoadOp::create(
+      builder, moduleImport.translateLoc(inst->getDebugLoc()),
       moduleImport.convertType(inst->getType()), *addr);
-  moduleImport.mapValue(inst) = builder.create<SameOperandElementTypeOp>(
-      loadOp.getLoc(), loadOp.getType(), loadOp, loadOp);
+  moduleImport.mapValue(inst) = SameOperandElementTypeOp::create(
+      builder, loadOp.getLoc(), loadOp.getType(), loadOp, loadOp);
   return success();
 }
 

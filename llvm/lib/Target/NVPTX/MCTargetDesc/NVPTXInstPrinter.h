@@ -40,13 +40,14 @@ public:
                     StringRef Modifier = {});
   void printCmpMode(const MCInst *MI, int OpNum, raw_ostream &O,
                     StringRef Modifier = {});
-  void printLdStCode(const MCInst *MI, int OpNum, raw_ostream &O,
-                     StringRef Modifier = {});
+  void printAtomicCode(const MCInst *MI, int OpNum, raw_ostream &O,
+                       StringRef Modifier = {});
   void printMmaCode(const MCInst *MI, int OpNum, raw_ostream &O,
                     StringRef Modifier = {});
   void printMemOperand(const MCInst *MI, int OpNum, raw_ostream &O,
                        StringRef Modifier = {});
-  void printOffseti32imm(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printUsedBytesMaskPragma(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printRegisterOrSinkSymbol(const MCInst *MI, int OpNum, raw_ostream &O);
   void printHexu32imm(const MCInst *MI, int OpNum, raw_ostream &O);
   void printProtoIdent(const MCInst *MI, int OpNum, raw_ostream &O);
   void printPrmtMode(const MCInst *MI, int OpNum, raw_ostream &O);
@@ -54,6 +55,7 @@ public:
   void printCTAGroup(const MCInst *MI, int OpNum, raw_ostream &O);
   void printCallOperand(const MCInst *MI, int OpNum, raw_ostream &O,
                         StringRef Modifier = {});
+  void printFTZFlag(const MCInst *MI, int OpNum, raw_ostream &O);
 };
 
 }

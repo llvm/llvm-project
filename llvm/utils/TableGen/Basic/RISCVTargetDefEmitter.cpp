@@ -68,13 +68,14 @@ static void emitRISCVExtensions(const RecordKeeper &Records, raw_ostream &OS) {
   if (!Extensions.empty()) {
     OS << "\nstatic constexpr ImpliedExtsEntry ImpliedExts[] = {\n";
     for (const Record *Ext : Extensions) {
-      auto ImpliesList = Ext->getValueAsListOfDefs("Implies");
+      std::vector<const Record *> ImpliesList =
+          Ext->getValueAsListOfDefs("Implies");
       if (ImpliesList.empty())
         continue;
 
       StringRef Name = getExtensionName(Ext);
 
-      for (auto *ImpliedExt : ImpliesList) {
+      for (const Record *ImpliedExt : ImpliesList) {
         if (!ImpliedExt->isSubClassOf("RISCVExtension"))
           continue;
 
@@ -150,11 +151,12 @@ static void emitRISCVProfiles(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "#ifdef GET_SUPPORTED_PROFILES\n";
   OS << "#undef GET_SUPPORTED_PROFILES\n\n";
 
-  auto Profiles = Records.getAllDerivedDefinitionsIfDefined("RISCVProfile");
+  ArrayRef<const Record *> Profiles =
+      Records.getAllDerivedDefinitionsIfDefined("RISCVProfile");
 
   if (!Profiles.empty()) {
     printProfileTable(OS, Profiles, /*Experimental=*/false);
-    bool HasExperimentalProfiles = any_of(Profiles, [&](auto &Rec) {
+    bool HasExperimentalProfiles = any_of(Profiles, [&](const Record *Rec) {
       return Rec->getValueAsBit("Experimental");
     });
     if (HasExperimentalProfiles)
@@ -173,15 +175,17 @@ static void emitRISCVProcs(const RecordKeeper &RK, raw_ostream &OS) {
   // Iterate on all definition records.
   for (const Record *Rec :
        RK.getAllDerivedDefinitionsIfDefined("RISCVProcessorModel")) {
-    const std::vector<const Record *> &Features =
+    std::vector<const Record *> Features =
         Rec->getValueAsListOfDefs("Features");
-    bool FastScalarUnalignedAccess = any_of(Features, [&](auto &Feature) {
-      return Feature->getValueAsString("Name") == "unaligned-scalar-mem";
-    });
+    bool FastScalarUnalignedAccess =
+        any_of(Features, [&](const Record *Feature) {
+          return Feature->getValueAsString("Name") == "unaligned-scalar-mem";
+        });
 
-    bool FastVectorUnalignedAccess = any_of(Features, [&](auto &Feature) {
-      return Feature->getValueAsString("Name") == "unaligned-vector-mem";
-    });
+    bool FastVectorUnalignedAccess =
+        any_of(Features, [&](const Record *Feature) {
+          return Feature->getValueAsString("Name") == "unaligned-vector-mem";
+        });
 
     OS << "PROC(" << Rec->getName() << ", {\"" << Rec->getValueAsString("Name")
        << "\"}, {\"";

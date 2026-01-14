@@ -47,7 +47,7 @@ def SDTMipsLoadLR  : SDTypeProfile<1, 2,
                                    [SDTCisInt<0>, SDTCisPtrTy<1>,
                                     SDTCisSameAs<0, 2>]>;
 
-// Call
+// Jump and link (call)
 def MipsJmpLink : SDNode<"MipsISD::JmpLink",SDT_MipsJmpLink,
                          [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
                           SDNPVariadic]>;
@@ -63,26 +63,37 @@ def MipsTailCall : SDNode<"MipsISD::TailCall", SDT_MipsJmpLink,
 // Hi is the odd node out, on MIPS64 it can expand to either daddiu when
 // using static relocations with 64 bit symbols, or lui when using 32 bit
 // symbols.
+// Get the Higher (47-32) 16 bits from a 64-bit immediate
 def MipsHigher : SDNode<"MipsISD::Higher", SDTIntUnaryOp>;
+
+// Get the Highest (63-48) 16 bits from a 64-bit immediate
 def MipsHighest : SDNode<"MipsISD::Highest", SDTIntUnaryOp>;
+
+// Get the High 16 bits from a 32/64-bit immediate
+// No relation with Mips Hi register
 def MipsHi    : SDNode<"MipsISD::Hi", SDTIntUnaryOp>;
+
+// Get the Lower 16 bits from a 32/64-bit immediate
+// No relation with Mips Lo register
 def MipsLo    : SDNode<"MipsISD::Lo", SDTIntUnaryOp>;
 
+// Handle gp_rel (small data/bss sections) relocation.
 def MipsGPRel : SDNode<"MipsISD::GPRel", SDTIntUnaryOp>;
 
-// Hi node for accessing the GOT.
+// Get the High 16 bits from a 32 bit immediate for accessing the GOT.
 def MipsGotHi : SDNode<"MipsISD::GotHi", SDTIntUnaryOp>;
 
-// Hi node for handling TLS offsets
+// Get the High 16 bits from a 32-bit immediate for accessing TLS.
 def MipsTlsHi   : SDNode<"MipsISD::TlsHi", SDTIntUnaryOp>;
 
-// Thread pointer
+// Thread Pointer
 def MipsThreadPointer: SDNode<"MipsISD::ThreadPointer", SDT_MipsThreadPointer>;
 
 // Return
 def MipsRet : SDNode<"MipsISD::Ret", SDTNone,
                      [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
+// Interrupt, exception, error trap Return
 def MipsERet : SDNode<"MipsISD::ERet", SDTNone,
                       [SDNPHasChain, SDNPOptInGlue, SDNPSideEffect]>;
 
@@ -136,6 +147,7 @@ def MipsExt :  SDNode<"MipsISD::Ext", SDT_Ext>;
 def MipsIns :  SDNode<"MipsISD::Ins", SDT_Ins>;
 def MipsCIns : SDNode<"MipsISD::CIns", SDT_Ext>;
 
+// Load/Store Left/Right nodes.
 def MipsLWL : SDNode<"MipsISD::LWL", SDTMipsLoadLR,
                      [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def MipsLWR : SDNode<"MipsISD::LWR", SDTMipsLoadLR,
@@ -156,6 +168,8 @@ def MipsSDR : SDNode<"MipsISD::SDR", SDTStore,
 //===----------------------------------------------------------------------===//
 // Mips Instruction Predicate Definitions.
 //===----------------------------------------------------------------------===//
+// FIXME: Move to Mips.td
+
 def HasMips2     :    Predicate<"Subtarget->hasMips2()">,
                       AssemblerPredicate<(all_of FeatureMips2)>;
 def HasMips3_32  :    Predicate<"Subtarget->hasMips3_32()">,
@@ -188,10 +202,6 @@ def IsGP64bit    :    Predicate<"Subtarget->isGP64bit()">,
                       AssemblerPredicate<(all_of FeatureGP64Bit)>;
 def IsGP32bit    :    Predicate<"!Subtarget->isGP64bit()">,
                       AssemblerPredicate<(all_of (not FeatureGP64Bit))>;
-def IsPTR64bit    :   Predicate<"Subtarget->isABI_N64()">,
-                      AssemblerPredicate<(all_of FeaturePTR64Bit)>;
-def IsPTR32bit    :   Predicate<"!Subtarget->isABI_N64()">,
-                      AssemblerPredicate<(all_of (not FeaturePTR64Bit))>;
 def HasMips64    :    Predicate<"Subtarget->hasMips64()">,
                       AssemblerPredicate<(all_of FeatureMips64)>;
 def NotMips64    :    Predicate<"!Subtarget->hasMips64()">,
@@ -236,7 +246,6 @@ def NotInMicroMips :  Predicate<"!Subtarget->inMicroMipsMode()">,
                       AssemblerPredicate<(all_of (not FeatureMicroMips))>;
 def IsLE           :  Predicate<"Subtarget->isLittle()">;
 def IsBE           :  Predicate<"!Subtarget->isLittle()">;
-def IsNotNaCl    :    Predicate<"!Subtarget->isTargetNaCl()">;
 def UseTCCInDIV    :  AssemblerPredicate<(all_of FeatureUseTCCInDIV)>;
 def HasEVA       :    Predicate<"Subtarget->hasEVA()">,
                       AssemblerPredicate<(all_of FeatureEVA)>;
@@ -858,6 +867,16 @@ def calltarget  : Operand<iPTR> {
 
 def imm64: Operand<i64>;
 
+def ConstantImmAsmOperandClass : AsmOperandClass {
+  let Name = "ConstantImm";
+  let PredicateMethod = "isConstantImm";
+  let RenderMethod = "addImmOperands";
+}
+
+def ConstantImm64: Operand<i64> {
+  let ParserMatchClass = ConstantImmAsmOperandClass;
+}
+
 def simm19_lsl2 : Operand<i32> {
   let EncoderMethod = "getSimm19Lsl2Encoding";
   let DecoderMethod = "DecodeSimm19Lsl2";
@@ -1126,7 +1145,7 @@ def InvertedImOperand64 : Operand<i64> {
 
 class mem_generic : Operand<iPTR> {
   let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops ptr_rc, simm16);
+  let MIOperandInfo = (ops mips_ptr_rc, simm16);
   let EncoderMethod = "getMemEncoding";
   let ParserMatchClass = MipsMemAsmOperand;
   let OperandType = "OPERAND_MEMORY";
@@ -1137,7 +1156,7 @@ def mem : mem_generic;
 
 // MSA specific address operand
 def mem_msa : mem_generic {
-  let MIOperandInfo = (ops ptr_rc, simm10);
+  let MIOperandInfo = (ops mips_ptr_rc, simm10);
   let EncoderMethod = "getMSAMemEncoding";
 }
 
@@ -1146,7 +1165,7 @@ def simm12 : Operand<i32> {
 }
 
 def mem_simm9_exp : mem_generic {
-  let MIOperandInfo = (ops ptr_rc, simm9);
+  let MIOperandInfo = (ops mips_ptr_rc, simm9);
   let ParserMatchClass = MipsMemSimmPtrAsmOperand;
   let OperandNamespace = "MipsII";
   let OperandType = "OPERAND_MEM_SIMM9";
@@ -1154,13 +1173,13 @@ def mem_simm9_exp : mem_generic {
 
 foreach I = {9, 10, 11, 12, 16} in
   def mem_simm # I : mem_generic {
-    let MIOperandInfo = (ops ptr_rc, !cast<Operand>("simm" # I));
+    let MIOperandInfo = (ops mips_ptr_rc, !cast<Operand>("simm" # I));
     let ParserMatchClass = MipsMemSimmAsmOperand<I>;
   }
 
 foreach I = {1, 2, 3} in
   def mem_simm10_lsl # I : mem_generic {
-    let MIOperandInfo = (ops ptr_rc, !cast<Operand>("simm10_lsl" # I));
+    let MIOperandInfo = (ops mips_ptr_rc, !cast<Operand>("simm10_lsl" # I));
     let EncoderMethod = "getMemEncoding<" # I  # ">";
     let ParserMatchClass = MipsMemSimmAsmOperand<10, I>;
   }
@@ -1171,13 +1190,13 @@ def mem_simmptr : mem_generic {
 
 def mem_ea : Operand<iPTR> {
   let PrintMethod = "printMemOperandEA";
-  let MIOperandInfo = (ops ptr_rc, simm16);
+  let MIOperandInfo = (ops mips_ptr_rc, simm16);
   let EncoderMethod = "getMemEncoding";
   let OperandType = "OPERAND_MEMORY";
 }
 
 def PtrRC : Operand<iPTR> {
-  let MIOperandInfo = (ops ptr_rc);
+  let MIOperandInfo = (ops mips_ptr_rc);
   let DecoderMethod = "DecodePtrRegisterClass";
   let ParserMatchClass = GPR32AsmOperand;
 }
@@ -2326,6 +2345,7 @@ def PseudoReturn : PseudoReturnBase<GPR32Opnd>;
 // the offset and return address respectively.
 def SDT_MipsEHRET : SDTypeProfile<0, 2, [SDTCisInt<0>, SDTCisPtrTy<1>]>;
 
+// Software Exception Return.
 def MIPSehret : SDNode<"MipsISD::EH_RETURN", SDT_MipsEHRET,
                       [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
@@ -2950,10 +2970,10 @@ def : MipsInstAlias<"nor\t$rs, $imm", (NORImm GPR32Opnd:$rs, GPR32Opnd:$rs,
 
 let hasDelaySlot = 1, isCTI = 1 in {
 def BneImm : MipsAsmPseudoInst<(outs GPR32Opnd:$rt),
-                               (ins imm64:$imm64, brtarget:$offset),
+                               (ins ConstantImm64:$imm64, brtarget:$offset),
                                "bne\t$rt, $imm64, $offset">;
 def BeqImm : MipsAsmPseudoInst<(outs GPR32Opnd:$rt),
-                               (ins imm64:$imm64, brtarget:$offset),
+                               (ins ConstantImm64:$imm64, brtarget:$offset),
                                "beq\t$rt, $imm64, $offset">;
 
 class CondBranchPseudo<string instr_asm> :
@@ -2981,7 +3001,7 @@ def BGTUL: CondBranchPseudo<"bgtul">, ISA_MIPS2_NOT_32R6_64R6;
 
 let isCTI = 1 in
 class CondBranchImmPseudo<string instr_asm> :
-  MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rs, imm64:$imm, brtarget:$offset),
+  MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rs, ConstantImm64:$imm, brtarget:$offset),
                     !strconcat(instr_asm, "\t$rs, $imm, $offset")>;
 
 def BEQLImmMacro : CondBranchImmPseudo<"beql">, ISA_MIPS2_NOT_32R6_64R6;

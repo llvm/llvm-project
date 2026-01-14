@@ -17,12 +17,12 @@ define <2 x i32> @test(i32 %arg) {
 ; AARCH64-LABEL: define <2 x i32> @test(
 ; AARCH64-SAME: i32 [[ARG:%.*]]) {
 ; AARCH64-NEXT:  bb:
-; AARCH64-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 poison, i32 1>, i32 [[ARG]], i32 0
-; AARCH64-NEXT:    [[TMP1:%.*]] = mul <2 x i32> [[TMP0]], zeroinitializer
-; AARCH64-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; AARCH64-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; AARCH64-NEXT:    [[TMP2:%.*]] = or i32 [[ARG]], 0
+; AARCH64-NEXT:    [[TMP3:%.*]] = mul i32 0, 1
 ; AARCH64-NEXT:    [[MUL1:%.*]] = mul i32 [[TMP2]], [[TMP3]]
 ; AARCH64-NEXT:    [[CMP:%.*]] = icmp ugt i32 0, [[MUL1]]
+; AARCH64-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[TMP2]], i32 0
+; AARCH64-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[TMP3]], i32 1
 ; AARCH64-NEXT:    ret <2 x i32> [[TMP1]]
 ;
 bb:

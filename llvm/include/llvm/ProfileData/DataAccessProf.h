@@ -42,7 +42,7 @@ struct SourceLocation {
       : FileName(FileNameRef.str()), Line(Line) {}
 
   // Empty constructor is used in yaml conversion.
-  SourceLocation() {}
+  SourceLocation() = default;
   /// The filename where the data is located.
   std::string FileName;
   /// The line number in the source code.
@@ -116,9 +116,9 @@ public:
       Locations.emplace_back(Loc.FileName, Loc.Line);
   }
   // Empty constructor is used in yaml conversion.
-  DataAccessProfRecord() : AccessCount(0) {}
+  DataAccessProfRecord() = default;
   SymbolHandle SymHandle;
-  uint64_t AccessCount;
+  uint64_t AccessCount = 0;
   // The locations of data in the source code. Optional.
   SmallVector<SourceLocation> Locations;
 };
@@ -184,6 +184,10 @@ public:
   }
   ArrayRef<uint64_t> getKnownColdHashes() const {
     return KnownColdHashes.getArrayRef();
+  }
+  [[nodiscard]] bool empty() const {
+    return Records.empty() && KnownColdSymbols.empty() &&
+           KnownColdHashes.empty();
   }
 
 private:

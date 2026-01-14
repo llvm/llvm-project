@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 def NeoverseN3Model : SchedMachineModel {
-    let IssueWidth            =  10; // Micro-ops dispatched at a time.
+    let IssueWidth            =   5; // Micro-ops dispatched at a time.
     let MicroOpBufferSize     = 160; // Entries in micro-op re-order buffer. NOTE: Copied from N2.
     let LoadLatency           =   4; // Optimistic load latency.
     let MispredictPenalty     =  10; // Extra cycles for mispredicted branch. NOTE: Copied from N2.
@@ -49,6 +49,12 @@ def N3UnitM : ProcResGroup<[N3UnitM0, N3UnitM1]>;
 def N3UnitL : ProcResGroup<[N3UnitL01, N3UnitL2]>;
 def N3UnitI : ProcResGroup<[N3UnitS, N3UnitM0, N3UnitM1]>;
 
+// Group required for modelling SVE gather loads throughput
+def N3UnitVL : ProcResGroup<[N3UnitL01, N3UnitV0, N3UnitV1]>;
+// Unused group to fix: "error: proc resource group overlaps with N3UnitVL but
+// no supergroup contains both."
+def : ProcResGroup<[N3UnitL01, N3UnitL2, N3UnitV0, N3UnitV1]>;
+
 //===----------------------------------------------------------------------===//
 
 def : ReadAdvance<ReadI,       0>;
@@ -75,7 +81,7 @@ def : WriteRes<WriteHint,    []> { let Latency = 1; }
 
 def N3Write_0c : SchedWriteRes<[]> {
     let Latency = 0;
-    let NumMicroOps = 0;
+    let NumMicroOps = 1;
 }
 
 def N3Write_4c : SchedWriteRes<[]> {
@@ -321,6 +327,12 @@ def N3Write_6c_2I_2L : SchedWriteRes<[N3UnitI, N3UnitI, N3UnitL, N3UnitL]> {
     let NumMicroOps = 4;
 }
 
+def N3Write_6c_2L01_2V : SchedWriteRes<[N3UnitVL]> {
+    let Latency = 6;
+    let NumMicroOps = 4;
+    let ReleaseAtCycles = [5];
+}
+
 def N3Write_6c_4V0 : SchedWriteRes<[N3UnitV0, N3UnitV0, N3UnitV0, N3UnitV0]> {
     let Latency = 6;
     let NumMicroOps = 4;
@@ -553,6 +565,126 @@ def N3Write_16c_16V0 : SchedWriteRes<[N3UnitV0, N3UnitV0, N3UnitV0, N3UnitV0,
     let NumMicroOps = 16;
 }
 
+
+//===----------------------------------------------------------------------===//
+// Define predicate-controlled types
+
+def N3Write_0or1c_1I : SchedWriteVariant<[
+                      SchedVar<NeoverseZeroMove, [N3Write_0c]>,
+                      SchedVar<NoSchedPred,      [N3Write_1c_1I]>]>;
+
+def N3Write_0or2c_1V : SchedWriteVariant<[
+                      SchedVar<NeoverseZeroMove, [N3Write_0c]>,
+                      SchedVar<NoSchedPred,      [N3Write_2c_1V]>]>;
+
+def N3Write_0or2c_1M : SchedWriteVariant<[
+                      SchedVar<NeoverseAllActivePredicate, [N3Write_0c]>,
+                      SchedVar<NoSchedPred,                [N3Write_2c_1M]>]>;
+
+def N3Write_0or3c_1M0 : SchedWriteVariant<[
+                      SchedVar<NeoverseZeroMove, [N3Write_0c]>,
+                      SchedVar<NoSchedPred,      [N3Write_3c_1M0]>]>;
+//===----------------------------------------------------------------------===//
+// Define forwarded types
+// NOTE: SOG, p. 19, n. 2: Accumulator forwarding is not supported for
+// consumers of 64 bit multiply high operations?
+
+def N3Wr_FMA : SchedWriteRes<[N3UnitV]> { let Latency = 4; }
+def N3Rd_FMA : SchedReadAdvance<2, [WriteFMul, N3Wr_FMA]>;
+
+def N3Wr_VMA : SchedWriteRes<[N3UnitV0]> { let Latency = 4; }
+def N3Rd_VMA : SchedReadAdvance<3, [N3Wr_VMA]>;
+
+def N3Wr_VMAL : SchedWriteRes<[N3UnitV0]> { let Latency = 4; }
+def N3Rd_VMAL : SchedReadAdvance<3, [N3Wr_VMAL]>;
+
+def N3Wr_VMAH : SchedWriteRes<[N3UnitV0]> { let Latency = 4; }
+def N3Rd_VMAH : SchedReadAdvance<2, [N3Wr_VMAH]>;
+
+def N3Wr_VMASL : SchedWriteRes<[N3UnitV0]> { let Latency = 4; }
+def N3Rd_VMASL : SchedReadAdvance<2, [N3Wr_VMASL]>;
+
+def N3Wr_ADA : SchedWriteRes<[N3UnitV1]> { let Latency = 4; }
+def N3Rd_ADA : SchedReadAdvance<3, [N3Wr_ADA]>;
+
+def N3Wr_VDOT : SchedWriteRes<[N3UnitV]> { let Latency = 3; }
+def N3Rd_VDOT : SchedReadAdvance<2, [N3Wr_VDOT]>;
+
+def N3Wr_VMMA : SchedWriteRes<[N3UnitV]> { let Latency = 3; }
+def N3Rd_VMMA : SchedReadAdvance<2, [N3Wr_VMMA]>;
+
+def N3Wr_FCMA : SchedWriteRes<[N3UnitV]> { let Latency = 4; }
+def N3Rd_FCMA : SchedReadAdvance<2, [N3Wr_FCMA]>;
+
+def N3Wr_FPM : SchedWriteRes<[N3UnitV]> { let Latency = 3; }
+def N3Wr_FPMA : SchedWriteRes<[N3UnitV]> { let Latency = 4; }
+def N3Rd_FPMA : SchedReadAdvance<2, [N3Wr_FPM, N3Wr_FPMA]>;
+
+def N3Wr_FPMAL : SchedWriteRes<[N3UnitV]> { let Latency = 4; }
+def N3Rd_FPMAL : SchedReadAdvance<2, [N3Wr_FPMAL]>;
+
+def N3Wr_BFD : SchedWriteRes<[N3UnitV]> { let Latency = 4; }
+def N3Rd_BFD : SchedReadAdvance<2, [N3Wr_BFD]>;
+
+def N3Wr_BFMMA : SchedWriteRes<[N3UnitV]> { let Latency = 5; }
+def N3Rd_BFMMA : SchedReadAdvance<2, [N3Wr_BFMMA]>;
+
+def N3Wr_BFMLA : SchedWriteRes<[N3UnitV]> { let Latency = 4; }
+def N3Rd_BFMLA : SchedReadAdvance<2, [N3Wr_BFMLA]>;
+
+def N3Wr_CRC : SchedWriteRes<[N3UnitM0]> { let Latency = 2; }
+def N3Rd_CRC : SchedReadAdvance<1, [N3Wr_CRC]>;
+
+def N3Wr_ZA  : SchedWriteRes<[N3UnitV1]> { let Latency = 4; }
+def N3Rd_ZA  : SchedReadAdvance<3, [N3Wr_ZA]>;
+def N3Wr_ZPA : SchedWriteRes<[N3UnitV1]> { let Latency = 4; }
+def N3Rd_ZPA : SchedReadAdvance<3, [N3Wr_ZPA]>;
+def N3Wr_ZSA : SchedWriteRes<[N3UnitV1]> { let Latency = 4; }
+def N3Rd_ZSA : SchedReadAdvance<3, [N3Wr_ZSA]>;
+
+def N3Wr_ZDOTB : SchedWriteRes<[N3UnitV]>   { let Latency = 3; }
+def N3Rd_ZDOTB : SchedReadAdvance<2, [N3Wr_ZDOTB]>;
+def N3Wr_ZDOTH : SchedWriteRes<[N3UnitV0]> { let Latency = 4; }
+def N3Rd_ZDOTH : SchedReadAdvance<3, [N3Wr_ZDOTH]>;
+
+def N3Wr_ZCMABHS : SchedWriteRes<[N3UnitV0]> { let Latency = 4; }
+def N3Rd_ZCMABHS : SchedReadAdvance<3, [N3Wr_ZCMABHS]>;
+def N3Wr_ZCMAD   : SchedWriteRes<[N3UnitV0, N3UnitV0]> { let Latency = 5; }
+def N3Rd_ZCMAD   : SchedReadAdvance<2, [N3Wr_ZCMAD]>;
+
+def N3Wr_ZMMA : SchedWriteRes<[N3UnitV]> { let Latency = 3; }
+def N3Rd_ZMMA : SchedReadAdvance<2, [N3Wr_ZMMA]>;
+
+def N3Wr_ZMABHS : SchedWriteRes<[N3UnitV0]> { let Latency = 4; }
+def N3Rd_ZMABHS : SchedReadAdvance<3, [N3Wr_ZMABHS]>;
+def N3Wr_ZMAD  : SchedWriteRes<[N3UnitV0, N3UnitV0]> { let Latency = 5; }
+def N3Rd_ZMAD  : SchedReadAdvance<2, [N3Wr_ZMAD]>;
+
+def N3Wr_ZMAL : SchedWriteRes<[N3UnitV0]> { let Latency = 4; }
+def N3Rd_ZMAL : SchedReadAdvance<3, [N3Wr_ZMAL]>;
+
+def N3Wr_ZMASQL   : SchedWriteRes<[N3UnitV0]>            { let Latency = 4; }
+def N3Wr_ZMASQBHS : SchedWriteRes<[N3UnitV0]>            { let Latency = 4; }
+def N3Wr_ZMASQD   : SchedWriteRes<[N3UnitV0, N3UnitV0]> { let Latency = 5; }
+def N3Rd_ZMASQ    : SchedReadAdvance<2, [N3Wr_ZMASQL, N3Wr_ZMASQBHS,
+                                        N3Wr_ZMASQD]>;
+
+def N3Wr_ZFCMA : SchedWriteRes<[N3UnitV]> { let Latency = 4; }
+def N3Rd_ZFCMA : SchedReadAdvance<2, [N3Wr_ZFCMA]>;
+
+def N3Wr_ZFMA : SchedWriteRes<[N3UnitV]> { let Latency = 4; }
+def N3Rd_ZFMA : SchedReadAdvance<2, [N3Wr_ZFMA]>;
+
+def N3Wr_ZFMAL : SchedWriteRes<[N3UnitV]> { let Latency = 4; }
+def N3Rd_ZFMAL : SchedReadAdvance<2, [N3Wr_ZFMAL]>;
+
+def N3Wr_ZBFDOT : SchedWriteRes<[N3UnitV]> { let Latency = 4; }
+def N3Rd_ZBFDOT : SchedReadAdvance<2, [N3Wr_ZBFDOT]>;
+def N3Wr_ZBFMMA : SchedWriteRes<[N3UnitV]> { let Latency = 5; }
+def N3Rd_ZBFMMA : SchedReadAdvance<2, [N3Wr_ZBFMMA]>;
+def N3Wr_ZBFMAL : SchedWriteRes<[N3UnitV]> { let Latency = 4; }
+def N3Rd_ZBFMAL : SchedReadAdvance<2, [N3Wr_ZBFMAL]>;
+
 // Miscellaneous
 // -----------------------------------------------------------------------------
 
@@ -581,6 +713,7 @@ def : InstRW<[N3Write_1c_1B_1S], (instrs BL, BLR)>;
 // Conditional compare
 // Conditional select
 def : SchedAlias<WriteI, N3Write_1c_1I>;
+def : InstRW<[N3Write_0or1c_1I], (instregex "^MOVZ[WX]i$")>;
 
 // ALU, extend and shift
 def : SchedAlias<WriteIEReg, N3Write_2c_1M>;
@@ -610,7 +743,8 @@ def : InstRW<[N3Write_1c_1I], (instrs GMI, SUBP, SUBPS)>;
 
 // Logical, shift, no flagset
 def : InstRW<[N3Write_1c_1I],
-             (instregex "^(AND|BIC|EON|EOR|ORN|ORR)[WX]rs$")>;
+             (instregex "^(AND|BIC|EON|EOR|ORN)[WX]rs$")>;
+def : InstRW<[N3Write_0or1c_1I], (instregex "^ORR[WX]rs$")>;
 
 // Logical, shift, flagset
 def : InstRW<[N3Write_2c_1M], (instregex "^(AND|BIC)S[WX]rs$")>;
@@ -832,10 +966,11 @@ def : SchedAlias<WriteFDiv , N3Write_7c_1V0>;
 def : InstRW<[N3Write_12c_1V0], (instrs FDIVDrr, FSQRTDr)>;
 
 // FP multiply
-def : SchedAlias<WriteFMul, N3Write_3c_1V>;
+def : WriteRes<WriteFMul, [N3UnitV]> { let Latency = 3; }
 
 // FP multiply accumulate
-def : InstRW<[N3Write_4c_1V], (instregex "^(FMADD|FMSUB|FNMADD|FNMSUB)[DHS]rrr$")>;
+def : InstRW<[N3Wr_FMA, ReadDefault, ReadDefault, N3Rd_FMA],
+             (instregex "^(FMADD|FMSUB|FNMADD|FNMSUB)[DHS]rrr$")>;
 
 // FP round to integral
 def : InstRW<[N3Write_3c_1V0], (instregex "^FRINT([AIMNPXZ]|32X|64X|32Z|64Z)[DHS]r$")>;
@@ -855,10 +990,11 @@ def : SchedAlias<WriteFCvt, N3Write_3c_1V0>;
 def : SchedAlias<WriteFImm, N3Write_2c_1V>;
 
 // FP move, register
-def : InstRW<[N3Write_2c_1V], (instrs FMOVHr, FMOVSr, FMOVDr)>;
+def : InstRW<[N3Write_2c_1V], (instrs FMOVHr)>;
+def : InstRW<[N3Write_0c], (instrs FMOVSr, FMOVDr)>;
 
 // FP transfer, from gen to low half of vec reg
-def : InstRW<[N3Write_3c_1M0], (instrs FMOVWHr, FMOVXHr, FMOVWSr, FMOVXDr)>;
+def : InstRW<[N3Write_0or3c_1M0], (instrs FMOVWHr, FMOVXHr, FMOVWSr, FMOVXDr)>;
 
 // FP transfer, from gen to high half of vec reg
 def : InstRW<[N3Write_5c_1M0_1V], (instrs FMOVXDHighr)>;
@@ -962,6 +1098,8 @@ def : InstRW<[WriteAdr, N3Write_2c_1L01_1V_1I], (instregex "^STP[SDQ](post|pre)$
 // ASIMD compare
 // ASIMD logical
 // ASIMD max/min, basic and pair-wise
+def : InstRW<[N3Write_0or2c_1V], (instrs ORRv16i8, ORRv8i8)>;
+
 def : SchedAlias<WriteVd, N3Write_2c_1V>;
 def : SchedAlias<WriteVq, N3Write_2c_1V>;
 
@@ -969,9 +1107,9 @@ def : SchedAlias<WriteVq, N3Write_2c_1V>;
 // ASIMD absolute diff accum long
 // ASIMD pairwise add and accumulate long
 // ASIMD shift accumulate
-def : InstRW<[N3Write_4c_1V1], (instregex "^[SU]ABAL?v",
+def : InstRW<[N3Wr_ADA, N3Rd_ADA], (instregex "^[SU]ABAL?v",
                                           "^[SU]ADALPv",
-                                          "^[SU]R?SRAv")>;
+                                          "^[SU]R?SRA(v|d)")>;
 
 // ASIMD arith, reduce, 4H/4S
 def : InstRW<[N3Write_3c_1V1], (instregex "^[SU]?ADDL?Vv4i(16|32)v$")>;
@@ -984,10 +1122,11 @@ def : InstRW<[N3Write_6c_2V1], (instregex "^[SU]?ADDL?Vv16i8v$")>;
 
 // ASIMD dot product
 // ASIMD dot product using signed and unsigned integers
-def : InstRW<[N3Write_3c_1V], (instregex "^([SU]|SU|US)DOT(lane)?(v8|v16)i8$")>;
+def : InstRW<[N3Wr_VDOT, N3Rd_VDOT],
+             (instregex "^([SU]|SU|US)DOT(lane)?(v8|v16)i8$")>;
 
 // ASIMD matrix multiply-accumulate
-def : InstRW<[N3Write_3c_1V], (instrs SMMLA, UMMLA, USMMLA)>;
+def : InstRW<[N3Wr_VMMA, N3Rd_VMMA], (instrs SMMLA, UMMLA, USMMLA)>;
 
 // ASIMD max/min, reduce, 4H/4S
 def : InstRW<[N3Write_3c_1V1], (instregex "^[SU](MAX|MIN)Vv4i(16|32)v$")>;
@@ -1002,39 +1141,39 @@ def : InstRW<[N3Write_6c_2V1], (instregex "[SU](MAX|MIN)Vv16i8v$")>;
 def : InstRW<[N3Write_4c_1V0], (instregex "^MULv", "^SQ(R)?DMULHv")>;
 
 // ASIMD multiply accumulate
-def : InstRW<[N3Write_4c_1V0], (instregex "^MLAv", "^MLSv")>;
+def : InstRW<[N3Wr_VMA, N3Rd_VMA], (instregex "^MLAv", "^MLSv")>;
 
 // ASIMD multiply accumulate high
-def : InstRW<[N3Write_4c_1V0], (instregex "^SQRDMLAHv", "^SQRDMLSHv")>;
+def : InstRW<[N3Wr_VMAH, N3Rd_VMAH], (instregex "^SQRDMLAHv", "^SQRDMLSHv")>;
 
 // ASIMD multiply accumulate long
-def : InstRW<[N3Write_4c_1V0], (instregex "^[SU]MLALv", "^[SU]MLSLv")>;
+def : InstRW<[N3Wr_VMAL, N3Rd_VMAL], (instregex "^[SU]MLALv", "^[SU]MLSLv")>;
 
 // ASIMD multiply accumulate saturating long
-def : InstRW<[N3Write_4c_1V0], (instregex "^SQDMLALv", "^SQDMLSLv")>;
+def : InstRW<[N3Wr_VMASL, N3Rd_VMASL], (instregex "^SQDMLAL(v|i16|i32)", "^SQDMLSL(v|i16|i32)")>;
 
 // ASIMD multiply/multiply long (8x8) polynomial, D-form
 // ASIMD multiply/multiply long (8x8) polynomial, Q-form
 def : InstRW<[N3Write_2c_1V0], (instregex "^PMULL?(v8i8|v16i8)$")>;
 
 // ASIMD multiply long
-def : InstRW<[N3Write_4c_1V0], (instregex "^[SU]MULLv", "^SQDMULLv")>;
+def : InstRW<[N3Write_4c_1V0], (instregex "^[SU]MULLv", "^SQDMULL(v|i16|i32)")>;
 
 // ASIMD shift by immed, basic
-def : InstRW<[N3Write_2c_1V1], (instregex "^SHLv", "^SHLLv", "^SHRNv",
-                                          "^SSHLLv", "^SSHRv", "^USHLLv",
-                                          "^USHRv")>;
+def : InstRW<[N3Write_2c_1V1], (instregex "^SHL(v|d)", "^SHLLv", "^SHRNv",
+                                          "^SSHLLv", "^SSHR(v|d)", "^USHLLv",
+                                          "^USHR(v|d)")>;
 
 // ASIMD shift by immed and insert, basic
-def : InstRW<[N3Write_2c_1V1], (instregex "^SLIv", "^SRIv")>;
+def : InstRW<[N3Write_2c_1V1], (instregex "^SLI(v|d)", "^SRI(v|d)")>;
 
 // ASIMD shift by immed, complex
 def : InstRW<[N3Write_4c_1V1],
-             (instregex "^RSHRNv", "^SQRSHRNv", "^SQRSHRUNv",
+             (instregex "^RSHRNv", "^SQRSHRN[vbhs]", "^SQRSHRUN[vbhs]",
                         "^(SQSHLU?|UQSHL)[bhsd]$",
                         "^(SQSHLU?|UQSHL)(v8i8|v16i8|v4i16|v8i16|v2i32|v4i32|v2i64)_shift$",
-                        "^SQSHRNv", "^SQSHRUNv", "^SRSHRv", "^UQRSHRNv",
-                        "^UQSHRNv", "^URSHRv")>;
+                        "^SQSHRN[vbhs]", "^SQSHRUN[vbhs]", "^SRSHR(v|d)",
+                        "^UQRSHRN[vbhs]", "^UQSHRN[vbhs]","^URSHR(v|d)")>;
 
 // ASIMD shift by register, basic
 def : InstRW<[N3Write_2c_1V1], (instregex "^[SU]SHLv")>;
@@ -1058,7 +1197,7 @@ def : InstRW<[N3Write_4c_1V1],
 def : InstRW<[N3Write_3c_1V], (instregex "^FCADDv")>;
 
 // ASIMD FP complex multiply add
-def : InstRW<[N3Write_4c_1V], (instregex "^FCMLAv")>;
+def : InstRW<[N3Wr_FCMA, N3Rd_FCMA], (instregex "^FCMLAv")>;
 
 // ASIMD FP convert, long (F16 to F32)
 def : InstRW<[N3Write_4c_2V0], (instregex "^FCVTL(v4|v8)i16")>;
@@ -1070,16 +1209,16 @@ def : InstRW<[N3Write_3c_1V0], (instregex "^FCVTL(v2|v4)i32")>;
 def : InstRW<[N3Write_4c_2V0], (instregex "^FCVTN(v4|v8)i16")>;
 
 // ASIMD FP convert, narrow (F64 to F32)
-def : InstRW<[N3Write_3c_1V0], (instregex "^FCVTN(v2|v4)i32",
+def : InstRW<[N3Write_3c_1V0], (instregex "^FCVTN(v2|v4)i32", "^FCVTXNv1i64",
                                           "^FCVTXN(v2|v4)f32")>;
 
 // ASIMD FP convert, other, D-form F32 and Q-form F64
-def : InstRW<[N3Write_3c_1V0], (instregex "^[FSU]CVT[AMNPZ][SU]v2f(32|64)$",
-                                          "^[SU]CVTFv2f(32|64)$")>;
+def : InstRW<[N3Write_3c_1V0], (instregex "^[FSU]CVT[AMNPZ][SU](v2f(32|64)|s|d|v1i32|v1i64|v2i32_shift|v2i64_shift)$",
+                                          "^[SU]CVTF(v2f(32|64)|s|d|v1i32|v1i64|v2i32_shift|v2i64_shift)$")>;
 
 // ASIMD FP convert, other, D-form F16 and Q-form F32
-def : InstRW<[N3Write_4c_2V0], (instregex "^[FSU]CVT[AMNPZ][SU]v4f(16|32)$",
-                                          "^[SU]CVTFv4f(16|32)$")>;
+def : InstRW<[N3Write_4c_2V0], (instregex "^[FSU]CVT[AMNPZ][SU](v4f(16|32)|v4i(16|32)_shift)$",
+                                          "^[SU]CVTF(v4f(16|32)|v4i(16|32)_shift)$")>;
 
 // ASIMD FP convert, other, Q-form F16
 def : InstRW<[N3Write_6c_4V0], (instregex "^[FSU]CVT[AMNPZ][SU]v8f16$",
@@ -1114,13 +1253,13 @@ def : InstRW<[N3Write_4c_2V], (instregex "^(FMAX|FMIN)(NM)?Vv4(i16|i32)v$")>;
 def : InstRW<[N3Write_6c_3V], (instregex "^(FMAX|FMIN)(NM)?Vv8i16v$")>;
 
 // ASIMD FP multiply
-def : InstRW<[N3Write_3c_1V], (instregex "^FMULv", "^FMULXv")>;
+def : InstRW<[N3Wr_FPM], (instregex "^FMULv", "^FMULX(v|32|64)")>;
 
 // ASIMD FP multiply accumulate
-def : InstRW<[N3Write_4c_1V], (instregex "^FMLAv", "^FMLSv")>;
+def : InstRW<[N3Wr_FPMA, N3Rd_FPMA], (instregex "^FMLAv", "^FMLSv")>;
 
 // ASIMD FP multiply accumulate long
-def : InstRW<[N3Write_4c_1V], (instregex "^FMLALv", "^FMLSLv")>;
+def : InstRW<[N3Wr_FPMAL, N3Rd_FPMAL], (instregex "^FMLALv", "^FMLSLv")>;
 
 // ASIMD FP round, D-form F32 and Q-form F64
 def : InstRW<[N3Write_3c_1V0],
@@ -1157,13 +1296,14 @@ def : InstRW<[N3Write_13c_2V0], (instrs FSQRTv2f64)>;
 def : InstRW<[N3Write_4c_2V0], (instrs BFCVTN, BFCVTN2)>;
 
 // ASIMD dot product
-def : InstRW<[N3Write_4c_1V], (instrs BFDOTv4bf16, BFDOTv8bf16)>;
+def : InstRW<[N3Wr_BFD, N3Rd_BFD], (instrs BFDOTv4bf16, BFDOTv8bf16)>;
 
 // ASIMD matrix multiply accumulate
-def : InstRW<[N3Write_5c_1V], (instrs BFMMLA)>;
+def : InstRW<[N3Wr_BFMMA, N3Rd_BFMMA], (instrs BFMMLA)>;
 
 // ASIMD multiply accumulate long
-def : InstRW<[N3Write_4c_1V], (instrs BFMLALB, BFMLALBIdx, BFMLALT, BFMLALTIdx)>;
+def : InstRW<[N3Wr_BFMLA, N3Rd_BFMLA],
+             (instrs BFMLALB, BFMLALBIdx, BFMLALT, BFMLALTIdx)>;
 
 // Scalar convert, F32 to BF16
 def : InstRW<[N3Write_3c_1V0], (instrs BFCVT)>;
@@ -1186,6 +1326,7 @@ def : InstRW<[N3Write_3c_1V0], (instrs BFCVT)>;
 // ASIMD transpose
 // ASIMD unzip/zip
 // Covered by WriteV[dq]
+def : InstRW<[N3Write_0or2c_1V], (instrs MOVID, MOVIv2d_ns)>;
 
 // ASIMD duplicate, gen reg
 def : InstRW<[N3Write_3c_1M0], (instregex "^DUPv.+gpr")>;
@@ -1201,9 +1342,9 @@ def : InstRW<[N3Write_4c_2V0], (instrs URECPEv4i32, URSQRTEv4i32)>;
 
 // ASIMD reciprocal and square root estimate, D-form F32 and scalar forms
 def : InstRW<[N3Write_3c_1V0], (instrs FRECPEv1f16, FRECPEv1i32,
-                                       FRECPEv1i64, FRECPEv2f32,
+                                       FRECPEv1i64, FRECPEv2f32, FRECPEv2f64,
                                        FRSQRTEv1f16, FRSQRTEv1i32,
-                                       FRSQRTEv1i64, FRSQRTEv2f32)>;
+                                       FRSQRTEv1i64, FRSQRTEv2f32, FRSQRTEv2f64)>;
 
 // ASIMD reciprocal and square root estimate, D-form F16 and Q-form F32
 def : InstRW<[N3Write_4c_2V0], (instrs FRECPEv4f16, FRECPEv4f32,
@@ -1216,7 +1357,7 @@ def : InstRW<[N3Write_6c_4V0], (instrs FRECPEv8f16, FRSQRTEv8f16)>;
 def : InstRW<[N3Write_3c_1V0], (instregex "^FRECPXv")>;
 
 // ASIMD reciprocal step
-def : InstRW<[N3Write_4c_1V], (instregex "^FRECPSv", "^FRSQRTSv")>;
+def : InstRW<[N3Write_4c_1V], (instregex "^FRECPS(v|32|64)", "^FRSQRTS(v|32|64)")>;
 
 // ASIMD table lookup, 3 table regs
 def : InstRW<[N3Write_4c_2V], (instrs TBLv8i8Three, TBLv16i8Three)>;
@@ -1502,7 +1643,7 @@ def : InstRW<[N3Write_4c_1V0], (instrs SM4E, SM4ENCKEY)>;
 // -----------------------------------------------------------------------------
 
 // CRC checksum ops
-def : InstRW<[N3Write_2c_1M0], (instregex "^CRC32")>;
+def : InstRW<[N3Wr_CRC, N3Rd_CRC], (instregex "^CRC32")>;
 
 // SVE Predicate instructions
 // -----------------------------------------------------------------------------
@@ -1564,16 +1705,17 @@ def : InstRW<[N3Write_2c_1M], (instregex "^REV_PP_[BHSD]")>;
 def : InstRW<[N3Write_1c_1M], (instrs SEL_PPPP)>;
 
 // Predicate set
-def : InstRW<[N3Write_2c_1M], (instregex "^PFALSE", "^PTRUE_[BHSD]")>;
+def : InstRW<[N3Write_0c], (instrs PFALSE)>;
+def : InstRW<[N3Write_0or2c_1M], (instregex "^PTRUE_[BHSD]")>;
 
 // Predicate set/initialize, set flags
-def : InstRW<[N3Write_2c_1M], (instregex "^PTRUES_[BHSD]")>;
+def : InstRW<[N3Write_0or2c_1M], (instregex "^PTRUES_[BHSD]")>;
 
 // Predicate find first/next
 def : InstRW<[N3Write_2c_1M], (instregex "^PFIRST_B$", "^PNEXT_[BHSD]$")>;
 
 // Predicate test
-def : InstRW<[N3Write_1c_1M], (instrs PTEST_PP)>;
+def : InstRW<[N3Write_1c_1M], (instrs PTEST_PP, PTEST_PP_ANY, PTEST_PP_FIRST)>;
 
 // Predicate transpose
 def : InstRW<[N3Write_2c_1M], (instregex "^TRN[12]_PPP_[BHSDQ]$")>;
@@ -1592,10 +1734,10 @@ def : InstRW<[N3Write_2c_1V], (instregex "^[SU]ABD_ZPmZ_[BHSD]",
                                          "^[SU]ABD_ZPZZ_[BHSD]")>;
 
 // Arithmetic, absolute diff accum
-def : InstRW<[N3Write_4c_1V1], (instregex "^[SU]ABA_ZZZ_[BHSD]$")>;
+def : InstRW<[N3Wr_ZA, N3Rd_ZA], (instregex "^[SU]ABA_ZZZ_[BHSD]$")>;
 
 // Arithmetic, absolute diff accum long
-def : InstRW<[N3Write_4c_1V1], (instregex "^[SU]ABAL[TB]_ZZZ_[HSD]$")>;
+def : InstRW<[N3Wr_ZA, N3Rd_ZA], (instregex "^[SU]ABAL[TB]_ZZZ_[HSD]$")>;
 
 // Arithmetic, absolute diff long
 def : InstRW<[N3Write_2c_1V], (instregex "^[SU]ABDL[TB]_ZZZ_[HSD]$")>;
@@ -1610,7 +1752,7 @@ def : InstRW<[N3Write_2c_1V],
                         "^ADR_LSL_ZZZ_[SD]_[0123]",
                         "^[SU](ADD|SUB)[LW][BT]_ZZZ_[HSD]",
                         "^SADDLBT_ZZZ_[HSD]",
-                        "^[SU]H(ADD|SUB|SUBR)_ZPmZ_[BHSD]",
+                        "^[SU]H(ADD|SUB|SUBR)_(ZPmZ|ZPZZ)_[BHSD]",
                         "^SSUBL(BT|TB)_ZZZ_[HSD]")>;
 
 // Arithmetic, complex
@@ -1629,7 +1771,8 @@ def : InstRW<[N3Write_2c_1V], (instregex "^(AD|SB)CL[BT]_ZZZ_[SD]$")>;
 def : InstRW<[N3Write_2c_1V], (instregex "^ADDP_ZPmZ_[BHSD]$")>;
 
 // Arithmetic, pairwise add and accum long
-def : InstRW<[N3Write_4c_1V1], (instregex "^[SU]ADALP_ZPmZ_[HSD]$")>;
+def : InstRW<[N3Wr_ZPA, ReadDefault, N3Rd_ZPA],
+             (instregex "^[SU]ADALP_ZPmZ_[HSD]$")>;
 
 // Arithmetic, shift
 def : InstRW<[N3Write_2c_1V1],
@@ -1642,7 +1785,7 @@ def : InstRW<[N3Write_2c_1V1],
                         "^(ASRR|LSLR|LSRR)_ZPmZ_[BHSD]")>;
 
 // Arithmetic, shift and accumulate
-def : InstRW<[N3Write_4c_1V1],
+def : InstRW<[N3Wr_ZSA, N3Rd_ZSA],
              (instregex "^(SRSRA|SSRA|URSRA|USRA)_ZZI_[BHSD]$")>;
 
 // Arithmetic, shift by immediate
@@ -1688,16 +1831,17 @@ def : InstRW<[N3Write_2c_1V],
 def : InstRW<[N3Write_2c_1V], (instregex "^(SQ)?CADD_ZZI_[BHSD]$")>;
 
 // Complex dot product 8-bit element
-def : InstRW<[N3Write_3c_1V], (instrs CDOT_ZZZ_S, CDOT_ZZZI_S)>;
+def : InstRW<[N3Wr_ZDOTB, N3Rd_ZDOTB], (instrs CDOT_ZZZ_S, CDOT_ZZZI_S)>;
 
 // Complex dot product 16-bit element
-def : InstRW<[N3Write_4c_1V0], (instrs CDOT_ZZZ_D, CDOT_ZZZI_D)>;
+def : InstRW<[N3Wr_ZDOTH, N3Rd_ZDOTH], (instrs CDOT_ZZZ_D, CDOT_ZZZI_D)>;
 
 // Complex multiply-add B, H, S element size
-def : InstRW<[N3Write_4c_1V0], (instregex "^CMLA_ZZZ_[BHS]$", "^CMLA_ZZZI_[HS]$")>;
+def : InstRW<[N3Wr_ZCMABHS, N3Rd_ZCMABHS],
+             (instregex "^CMLA_ZZZ_[BHS]$", "^CMLA_ZZZI_[HS]$")>;
 
 // Complex multiply-add D element size
-def : InstRW<[N3Write_5c_2V0], (instrs CMLA_ZZZ_D)>;
+def : InstRW<[N3Wr_ZCMAD, N3Rd_ZCMAD], (instrs CMLA_ZZZ_D)>;
 
 // Conditional extract operations, scalar form
 def : InstRW<[N3Write_8c_1M0_1V], (instregex "^CLAST[AB]_RPZ_[BHSD]$")>;
@@ -1736,13 +1880,14 @@ def : InstRW<[N3Write_16c_16V0], (instregex "^[SU]DIVR?_ZPmZ_D",
                                             "^[SU]DIV_ZPZZ_D")>;
 
 // Dot product, 8 bit
-def : InstRW<[N3Write_3c_1V], (instregex "^[SU]DOT_ZZZI?_S$")>;
+def : InstRW<[N3Wr_ZDOTB, N3Rd_ZDOTB], (instregex "^[SU]DOT_ZZZI?_BtoS$")>;
 
 // Dot product, 8 bit, using signed and unsigned integers
-def : InstRW<[N3Write_3c_1V], (instrs SUDOT_ZZZI, USDOT_ZZZI, USDOT_ZZZ)>;
+def : InstRW<[N3Wr_ZDOTB, N3Rd_ZDOTB],
+             (instrs SUDOT_ZZZI, USDOT_ZZZI, USDOT_ZZZ)>;
 
 // Dot product, 16 bit
-def : InstRW<[N3Write_4c_1V0], (instregex "^[SU]DOT_ZZZI?_D$")>;
+def : InstRW<[N3Wr_ZDOTH, N3Rd_ZDOTH], (instregex "^[SU]DOT_ZZZI?_HtoD$")>;
 
 // Duplicate, immediate and indexed form
 def : InstRW<[N3Write_2c_1V], (instregex "^DUP_ZI_[BHSD]$",
@@ -1757,7 +1902,7 @@ def : InstRW<[N3Write_2c_1V], (instregex "^[SU]XTB_ZPmZ_[HSD]",
                                          "^[SU]XTW_ZPmZ_[D]")>;
 
 // Extract
-def : InstRW<[N3Write_2c_1V], (instrs EXT_ZZI, EXT_ZZI_B)>;
+def : InstRW<[N3Write_2c_1V], (instrs EXT_ZZI, EXT_ZZI_CONSTRUCTIVE, EXT_ZZI_B)>;
 
 // Extract narrow saturating
 def : InstRW<[N3Write_4c_1V1], (instregex "^[SU]QXTN[BT]_ZZ_[BHS]$",
@@ -1790,10 +1935,11 @@ def : InstRW<[N3Write_5c_1M0_1V], (instregex "^INDEX_(IR|RI|RR)_D$")>;
 // Logical
 def : InstRW<[N3Write_2c_1V],
              (instregex "^(AND|EOR|ORR)_ZI",
-                        "^(AND|BIC|EOR|ORR)_ZZZ",
+                        "^(AND|BIC|EOR)_ZZZ",
                         "^EOR(BT|TB)_ZZZ_[BHSD]",
                         "^(AND|BIC|EOR|NOT|ORR)_(ZPmZ|ZPZZ)_[BHSD]",
                         "^NOT_ZPmZ_[BHSD]")>;
+def : InstRW<[N3Write_0or2c_1V], (instrs ORR_ZZZ)>;
 
 // Max/min, basic and pairwise
 def : InstRW<[N3Write_2c_1V], (instregex "^[SU](MAX|MIN)_ZI_[BHSD]",
@@ -1804,7 +1950,7 @@ def : InstRW<[N3Write_2c_1V], (instregex "^[SU](MAX|MIN)_ZI_[BHSD]",
 def : InstRW<[N3Write_2c_1V], (instregex "^N?MATCH_PPzZZ_[BH]$")>;
 
 // Matrix multiply-accumulate
-def : InstRW<[N3Write_3c_1V], (instrs SMMLA_ZZZ, UMMLA_ZZZ, USMMLA_ZZZ)>;
+def : InstRW<[N3Wr_ZMMA, N3Rd_ZMMA], (instrs SMMLA_ZZZ, UMMLA_ZZZ, USMMLA_ZZZ)>;
 
 // Move prefix
 def : InstRW<[N3Write_2c_1V], (instregex "^MOVPRFX_ZP[mz]Z_[BHSD]$",
@@ -1827,20 +1973,22 @@ def : InstRW<[N3Write_4c_1V0], (instregex "^[SU]MULL[BT]_ZZZI_[SD]$",
                                           "^[SU]MULL[BT]_ZZZ_[HSD]$")>;
 
 // Multiply accumulate, B, H, S element size
-def : InstRW<[N3Write_4c_1V0], (instregex "^ML[AS]_ZZZI_[BHS]$",
-                                          "^(ML[AS]|MAD|MSB)_(ZPmZZ|ZPZZZ)_[BHS]")>;
+def : InstRW<[N3Wr_ZMABHS, ReadDefault, N3Rd_ZMABHS],
+             (instregex "^ML[AS]_ZZZI_[BHS]$",
+                        "^(ML[AS]|MAD|MSB)_(ZPmZZ|ZPZZZ)_[BHS]")>;
 
 // Multiply accumulate, D element size
-def : InstRW<[N3Write_5c_2V0], (instregex "^ML[AS]_ZZZI_D$",
+def : InstRW<[N3Wr_ZMAD, ReadDefault, N3Rd_ZMAD], (instregex "^ML[AS]_ZZZI_D$",
                                           "^(ML[AS]|MAD|MSB)_(ZPmZZ|ZPZZZ)_D")>;
 
 // Multiply accumulate long
-def : InstRW<[N3Write_4c_1V0], (instregex "^[SU]ML[AS]L[BT]_ZZZ_[HSD]$",
+def : InstRW<[N3Wr_ZMAL, N3Rd_ZMAL], (instregex "^[SU]ML[AS]L[BT]_ZZZ_[HSD]$",
                                           "^[SU]ML[AS]L[BT]_ZZZI_[SD]$")>;
 
 // Multiply accumulate saturating doubling long regular
-def : InstRW<[N3Write_4c_1V0], (instregex "^SQDML[AS](LB|LT|LBT)_ZZZ_[HSD]$",
-                                          "^SQDML[AS](LB|LT)_ZZZI_[SD]$")>;
+def : InstRW<[N3Wr_ZMASQL, N3Rd_ZMASQ],
+            (instregex "^SQDML[AS](LB|LT|LBT)_ZZZ_[HSD]$",
+                       "^SQDML[AS](LB|LT)_ZZZI_[SD]$")>;
 
 // Multiply saturating doubling high, B, H, S element size
 def : InstRW<[N3Write_4c_1V0], (instregex "^SQDMULH_ZZZ_[BHS]$",
@@ -1854,13 +2002,13 @@ def : InstRW<[N3Write_4c_1V0], (instregex "^SQDMULL[BT]_ZZZ_[HSD]$",
                                           "^SQDMULL[BT]_ZZZI_[SD]$")>;
 
 // Multiply saturating rounding doubling regular/complex accumulate, B, H, S element size
-def : InstRW<[N3Write_4c_1V0], (instregex "^SQRDML[AS]H_ZZZ_[BHS]$",
+def : InstRW<[N3Wr_ZMASQBHS, N3Rd_ZMASQ], (instregex "^SQRDML[AS]H_ZZZ_[BHS]$",
                                           "^SQRDCMLAH_ZZZ_[BHS]$",
                                           "^SQRDML[AS]H_ZZZI_[HS]$",
                                           "^SQRDCMLAH_ZZZI_[HS]$")>;
 
 // Multiply saturating rounding doubling regular/complex accumulate, D element size
-def : InstRW<[N3Write_5c_2V0], (instregex "^SQRDML[AS]H_ZZZI?_D$",
+def : InstRW<[N3Wr_ZMASQD, N3Rd_ZMASQ], (instregex "^SQRDML[AS]H_ZZZI?_D$",
                                           "^SQRDCMLAH_ZZZ_D$")>;
 
 // Multiply saturating rounding doubling regular/complex, B, H, S element size
@@ -1926,7 +2074,6 @@ def : InstRW<[N3Write_2c_1V], (instregex "^FAB[SD]_ZPmZ_[HSD]",
 // Floating point arithmetic
 def : InstRW<[N3Write_2c_1V], (instregex "^F(ADD|SUB)_(ZPm[IZ]|ZZZ)_[HSD]",
                                          "^F(ADD|SUB)_ZPZ[IZ]_[HSD]",
-                                         "^FADDP_ZPmZZ_[HSD]",
                                          "^FNEG_ZPmZ_[HSD]",
                                          "^FSUBR_ZPm[IZ]_[HSD]",
                                          "^FSUBR_(ZPZI|ZPZZ)_[HSD]")>;
@@ -1949,8 +2096,9 @@ def : InstRW<[N3Write_2c_1V], (instregex "^FAC(GE|GT)_PPzZZ_[HSD]$",
 def : InstRW<[N3Write_3c_1V], (instregex "^FCADD_ZPmZ_[HSD]$")>;
 
 // Floating point complex multiply add
-def : InstRW<[N3Write_4c_1V], (instregex "^FCMLA_ZPmZZ_[HSD]$",
-                                         "^FCMLA_ZZZI_[HS]$")>;
+def : InstRW<[N3Wr_ZFCMA, ReadDefault, N3Rd_ZFCMA],
+             (instregex "^FCMLA_ZPmZZ_[HSD]")>;
+def : InstRW<[N3Wr_ZFCMA, N3Rd_ZFCMA], (instregex "^FCMLA_ZZZI_[HS]")>;
 
 // Floating point convert, long or narrow (F16 to F32 or F32 to F16)
 def : InstRW<[N3Write_4c_2V0], (instregex "^FCVT_ZPmZ_(HtoS|StoH)",
@@ -2001,7 +2149,8 @@ def : InstRW<[N3Write_10c_4V0], (instregex "^FDIVR?_(ZPmZ|ZPZZ)_S")>;
 def : InstRW<[N3Write_13c_2V0], (instregex "^FDIVR?_(ZPmZ|ZPZZ)_D")>;
 
 // Floating point arith, min/max pairwise
-def : InstRW<[N3Write_3c_1V], (instregex "^F(MAX|MIN)(NM)?P_ZPmZZ_[HSD]")>;
+def : InstRW<[N3Write_3c_1V], (instregex "^FADDP_ZPmZZ_[HSD]",
+                                         "^F(MAX|MIN)(NM)?P_ZPmZZ_[HSD]")>;
 
 // Floating point min/max
 def : InstRW<[N3Write_2c_1V], (instregex "^F(MAX|MIN)(NM)?_ZPm[IZ]_[HSD]",
@@ -2014,12 +2163,15 @@ def : InstRW<[N3Write_3c_1V], (instregex "^(FSCALE|FMULX)_ZPmZ_[HSD]",
                                          "^FMUL_ZPZ[IZ]_[HSD]")>;
 
 // Floating point multiply accumulate
-def : InstRW<[N3Write_4c_1V], (instregex "^F(N?M(AD|SB)|N?ML[AS])_ZPmZZ_[HSD]$",
-                                         "^FN?ML[AS]_ZPZZZ_[HSD]",
-                                         "^FML[AS]_ZZZI_[HSD]$")>;
+def : InstRW<[N3Wr_ZFMA, ReadDefault, N3Rd_ZFMA],
+             (instregex "^FN?ML[AS]_ZPmZZ_[HSD]",
+                        "^FN?(MAD|MSB)_ZPmZZ_[HSD]")>;
+def : InstRW<[N3Wr_ZFMA, N3Rd_ZFMA],
+             (instregex "^FML[AS]_ZZZI_[HSD]",
+                        "^FN?ML[AS]_ZPZZZ_[HSD]")>;
 
 // Floating point multiply add/sub accumulate long
-def : InstRW<[N3Write_4c_1V], (instregex "^FML[AS]L[BT]_ZZZI?_SHH$")>;
+def : InstRW<[N3Wr_ZFMAL, N3Rd_ZFMAL], (instregex "^FML[AS]L[BT]_ZZZI?_SHH$")>;
 
 // Floating point reciprocal estimate, F16
 def : InstRW<[N3Write_6c_4V0], (instregex "^FR(ECP|SQRT)E_ZZ_H", "^FRECPX_ZPmZ_H")>;
@@ -2079,13 +2231,13 @@ def : InstRW<[N3Write_3c_1V], (instregex "^FTS(MUL|SEL)_ZZZ_[HSD]$")>;
 def : InstRW<[N3Write_4c_2V0], (instrs BFCVT_ZPmZ, BFCVTNT_ZPmZ)>;
 
 // Dot product
-def : InstRW<[N3Write_4c_1V], (instrs BFDOT_ZZI, BFDOT_ZZZ)>;
+def : InstRW<[N3Wr_ZBFDOT, N3Rd_ZBFDOT], (instrs BFDOT_ZZI, BFDOT_ZZZ)>;
 
 // Matrix multiply accumulate
-def : InstRW<[N3Write_5c_1V], (instrs BFMMLA_ZZZ)>;
+def : InstRW<[N3Wr_ZBFMMA, N3Rd_ZBFMMA], (instrs BFMMLA_ZZZ_HtoS)>;
 
 // Multiply accumulate long
-def : InstRW<[N3Write_4c_1V], (instregex "^BFMLAL[BT]_ZZZ(I)?$")>;
+def : InstRW<[N3Wr_ZBFMAL, N3Rd_ZBFMAL], (instregex "^BFMLAL[BT]_ZZZ(I)?$")>;
 
 // SVE Load instructions
 // -----------------------------------------------------------------------------
@@ -2130,8 +2282,8 @@ def : InstRW<[N3Write_7c_4L], (instregex "^LDNT1[BHW]_ZZR_S$",
                                          "^LDNT1S[BH]_ZZR_S$")>;
 
 // Non temporal gather load, vector + scalar 64-bit element size
-def : InstRW<[N3Write_6c_2L], (instregex "^LDNT1S?[BHW]_ZZR_D$")>;
-def : InstRW<[N3Write_6c_2L], (instrs LDNT1D_ZZR_D)>;
+def : InstRW<[N3Write_6c_2L01_2V], (instregex "^LDNT1S?[BHW]_ZZR_D$")>;
+def : InstRW<[N3Write_6c_2L01_2V], (instrs LDNT1D_ZZR_D)>;
 
 // Contiguous first faulting load, scalar + scalar
 def : InstRW<[N3Write_6c_1L], (instregex "^LDFF1[BHWD]$",
@@ -2180,11 +2332,11 @@ def : InstRW<[N3Write_7c_4L], (instregex "^GLD(FF)?1S?[BH]_S_IMM$",
                                          "^GLD(FF)?1W_IMM$")>;
 
 // Gather load, vector + imm, 64-bit element size
-def : InstRW<[N3Write_6c_2L], (instregex "^GLD(FF)?1S?[BHW]_D_IMM$",
+def : InstRW<[N3Write_6c_2L01_2V], (instregex "^GLD(FF)?1S?[BHW]_D_IMM$",
                                          "^GLD(FF)?1D_IMM$")>;
 
 // Gather load, 64-bit element size
-def : InstRW<[N3Write_6c_2L],
+def : InstRW<[N3Write_6c_2L01_2V],
              (instregex "^GLD(FF)?1S?[BHW]_D_[SU]XTW(_SCALED)?$",
                         "^GLD(FF)?1S?[BHW]_D(_SCALED)?$",
                         "^GLD(FF)?1D_[SU]XTW(_SCALED)?$",

@@ -20,8 +20,12 @@
 
 using namespace llvm;
 
+// There are numerous MCSymbol objects, so keeping sizeof(MCSymbol) small is
+// crucial for minimizing peak memory usage.
+static_assert(sizeof(MCSymbol) <= 24, "Keep the base symbol small");
+
 // Only the address of this fragment is ever actually used.
-static MCDataFragment SentinelFragment;
+static MCFragment SentinelFragment;
 
 // Sentinel value for the absolute pseudo fragment.
 MCFragment *MCSymbol::AbsolutePseudoFragment = &SentinelFragment;
@@ -44,13 +48,12 @@ void *MCSymbol::operator new(size_t s, const MCSymbolTableEntry *Name,
 }
 
 void MCSymbol::setVariableValue(const MCExpr *Value) {
-  assert(Value && "Invalid variable value!");
-  assert((SymbolContents == SymContentsUnset ||
-          SymbolContents == SymContentsVariable) &&
-         "Cannot give common/offset symbol a variable value");
+  assert(Value && "Invalid equated expression");
+  assert((kind == Kind::Regular || kind == Kind::Equated) &&
+         "Cannot equate a common symbol");
   this->Value = Value;
-  SymbolContents = SymContentsVariable;
-  setUndefined();
+  kind = Kind::Equated;
+  Fragment = nullptr;
 }
 
 void MCSymbol::print(raw_ostream &OS, const MCAsmInfo *MAI) const {
@@ -81,7 +84,21 @@ void MCSymbol::print(raw_ostream &OS, const MCAsmInfo *MAI) const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void MCSymbol::dump() const {
-  dbgs() << *this;
-}
+LLVM_DUMP_METHOD void MCSymbol::dump() const { dbgs() << *this; }
 #endif
+
+// Determine whether the offset between two labels can change at link time.
+// Currently, this function is used only in DWARF info emission logic, where it
+// helps generate more optimal debug info when the offset between labels is
+// constant at link time.
+bool llvm::isRangeRelaxable(const MCSymbol *Begin, const MCSymbol *End) {
+  assert(Begin && "Range without a begin symbol?");
+  assert(End && "Range without an end symbol?");
+  for (const auto *Fragment = Begin->getFragment();
+       Fragment != End->getFragment(); Fragment = Fragment->getNext()) {
+    assert(Fragment);
+    if (Fragment->isLinkerRelaxable())
+      return true;
+  }
+  return false;
+}

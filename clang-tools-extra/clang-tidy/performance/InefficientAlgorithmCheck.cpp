@@ -1,4 +1,4 @@
-//===--- InefficientAlgorithmCheck.cpp - clang-tidy------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -71,8 +71,8 @@ void InefficientAlgorithmCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Store if the key type of the container is compatible with the value
   // that is searched for.
-  QualType ValueType = AlgCall->getArg(2)->getType();
-  QualType KeyType =
+  const QualType ValueType = AlgCall->getArg(2)->getType();
+  const QualType KeyType =
       IneffCont->getTemplateArgs()[0].getAsType().getCanonicalType();
   const bool CompatibleTypes = areTypesCompatible(KeyType, ValueType);
 
@@ -104,8 +104,8 @@ void InefficientAlgorithmCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *IneffContExpr = Result.Nodes.getNodeAs<Expr>("IneffContExpr");
   FixItHint Hint;
 
-  SourceManager &SM = *Result.SourceManager;
-  LangOptions LangOpts = getLangOpts();
+  const SourceManager &SM = *Result.SourceManager;
+  const LangOptions LangOpts = getLangOpts();
 
   CharSourceRange CallRange =
       CharSourceRange::getTokenRange(AlgCall->getSourceRange());
@@ -128,13 +128,13 @@ void InefficientAlgorithmCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   if (!CallRange.getBegin().isMacroID() && !Maplike && CompatibleTypes) {
-    StringRef ContainerText = Lexer::getSourceText(
+    const StringRef ContainerText = Lexer::getSourceText(
         CharSourceRange::getTokenRange(IneffContExpr->getSourceRange()), SM,
         LangOpts);
-    StringRef ParamText = Lexer::getSourceText(
+    const StringRef ParamText = Lexer::getSourceText(
         CharSourceRange::getTokenRange(AlgParam->getSourceRange()), SM,
         LangOpts);
-    std::string ReplacementText =
+    const std::string ReplacementText =
         (llvm::Twine(ContainerText) + (PtrToContainer ? "->" : ".") +
          AlgDecl->getName() + "(" + ParamText + ")")
             .str();

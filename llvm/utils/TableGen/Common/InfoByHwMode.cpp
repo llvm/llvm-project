@@ -12,11 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "InfoByHwMode.h"
+#include "CodeGenRegisters.h"
 #include "CodeGenTarget.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <string>
 
@@ -28,13 +30,15 @@ std::string llvm::getModeName(unsigned Mode) {
   return (Twine('m') + Twine(Mode)).str();
 }
 
-ValueTypeByHwMode::ValueTypeByHwMode(const Record *R,
-                                     const CodeGenHwModes &CGH) {
+ValueTypeByHwMode::ValueTypeByHwMode(const Record *R, const CodeGenHwModes &CGH)
+    : InfoByHwMode<llvm::MVT>(R) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
-  for (const HwModeSelect::PairType &P : MS.Items) {
-    auto I = Map.try_emplace(P.first, MVT(llvm::getValueType(P.second)));
-    assert(I.second && "Duplicate entry?");
-    (void)I;
+  for (auto [ModeID, VT] : MS.Items) {
+    assert(VT && VT->isSubClassOf("ValueType"));
+    if (!Map.try_emplace(ModeID, MVT(llvm::getValueType(VT))).second)
+      PrintFatalError(R->getLoc(), "duplicate ValueType entry for HwMode " +
+                                       CGH.getModeName(ModeID, true) + ": " +
+                                       VT->getName());
   }
   if (R->isSubClassOf("PtrValueType"))
     PtrAddrSpace = R->getValueAsInt("AddrSpace");
@@ -139,12 +143,15 @@ void RegSizeInfo::writeToStream(raw_ostream &OS) const {
 }
 
 RegSizeInfoByHwMode::RegSizeInfoByHwMode(const Record *R,
-                                         const CodeGenHwModes &CGH) {
+                                         const CodeGenHwModes &CGH)
+    : InfoByHwMode<llvm::RegSizeInfo>(R) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
-  for (const HwModeSelect::PairType &P : MS.Items) {
-    auto I = Map.try_emplace(P.first, RegSizeInfo(P.second));
-    assert(I.second && "Duplicate entry?");
-    (void)I;
+  for (auto [ModeID, RegInfo] : MS.Items) {
+    assert(RegInfo && RegInfo->isSubClassOf("RegInfo"));
+    if (!Map.try_emplace(ModeID, RegSizeInfo(RegInfo)).second)
+      PrintFatalError(R->getLoc(), "duplicate RegInfo entry for HwMode " +
+                                       CGH.getModeName(ModeID, true) + ": " +
+                                       RegInfo->getName());
   }
 }
 
@@ -173,7 +180,7 @@ bool RegSizeInfoByHwMode::hasStricterSpillThan(
 }
 
 void RegSizeInfoByHwMode::writeToStream(raw_ostream &OS) const {
-  typedef typename decltype(Map)::value_type PairType;
+  using PairType = decltype(Map)::value_type;
   std::vector<const PairType *> Pairs;
   for (const auto &P : Map)
     Pairs.push_back(&P);
@@ -186,46 +193,66 @@ void RegSizeInfoByHwMode::writeToStream(raw_ostream &OS) const {
   OS << '}';
 }
 
+RegClassByHwMode::RegClassByHwMode(const Record *R, const CodeGenHwModes &CGH,
+                                   const CodeGenRegBank &RegBank)
+    : InfoByHwMode<const llvm::CodeGenRegisterClass *>(R) {
+  const HwModeSelect &MS = CGH.getHwModeSelect(R);
+
+  for (auto [ModeID, RegClassRec] : MS.Items) {
+    assert(RegClassRec && RegClassRec->isSubClassOf("RegisterClass") &&
+           "Register class must subclass RegisterClass");
+    const CodeGenRegisterClass *RegClass = RegBank.getRegClass(RegClassRec);
+    if (!Map.try_emplace(ModeID, RegClass).second)
+      PrintFatalError(R->getLoc(), "duplicate RegisterClass entry for HwMode " +
+                                       CGH.getModeName(ModeID, true) + ": " +
+                                       RegClass->getName());
+  }
+}
+
 SubRegRange::SubRegRange(const Record *R) {
   Size = R->getValueAsInt("Size");
   Offset = R->getValueAsInt("Offset");
 }
 
 SubRegRangeByHwMode::SubRegRangeByHwMode(const Record *R,
-                                         const CodeGenHwModes &CGH) {
+                                         const CodeGenHwModes &CGH)
+    : InfoByHwMode<llvm::SubRegRange>(R) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
-  for (const HwModeSelect::PairType &P : MS.Items) {
-    auto I = Map.try_emplace(P.first, SubRegRange(P.second));
-    assert(I.second && "Duplicate entry?");
-    (void)I;
+  for (auto [ModeID, Range] : MS.Items) {
+    assert(Range && Range->isSubClassOf("SubRegRange"));
+    if (!Map.try_emplace(ModeID, SubRegRange(Range)).second)
+      PrintFatalError(R->getLoc(), "duplicate SubRegRange entry for HwMode " +
+                                       CGH.getModeName(ModeID, true) + ": " +
+                                       Range->getName());
   }
 }
 
 EncodingInfoByHwMode::EncodingInfoByHwMode(const Record *R,
-                                           const CodeGenHwModes &CGH) {
+                                           const CodeGenHwModes &CGH)
+    : InfoByHwMode<const llvm::Record *>(R) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
-  for (const HwModeSelect::PairType &P : MS.Items) {
-    assert(P.second && P.second->isSubClassOf("InstructionEncoding") &&
+  for (auto [ModeID, Encoding] : MS.Items) {
+    assert(Encoding && Encoding->isSubClassOf("InstructionEncoding") &&
            "Encoding must subclass InstructionEncoding");
-    auto I = Map.try_emplace(P.first, P.second);
-    assert(I.second && "Duplicate entry?");
-    (void)I;
+    if (!Map.try_emplace(ModeID, Encoding).second)
+      PrintFatalError(R->getLoc(),
+                      "duplicate InstructionEncoding entry for HwMode " +
+                          CGH.getModeName(ModeID, true) + ": " +
+                          Encoding->getName());
   }
 }
 
-namespace llvm {
-raw_ostream &operator<<(raw_ostream &OS, const ValueTypeByHwMode &T) {
+raw_ostream &llvm::operator<<(raw_ostream &OS, const ValueTypeByHwMode &T) {
   T.writeToStream(OS);
   return OS;
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfo &T) {
+raw_ostream &llvm::operator<<(raw_ostream &OS, const RegSizeInfo &T) {
   T.writeToStream(OS);
   return OS;
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfoByHwMode &T) {
+raw_ostream &llvm::operator<<(raw_ostream &OS, const RegSizeInfoByHwMode &T) {
   T.writeToStream(OS);
   return OS;
 }
-} // namespace llvm

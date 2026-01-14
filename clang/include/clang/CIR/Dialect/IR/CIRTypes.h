@@ -10,12 +10,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_CIR_IR_CIRTYPES_H_
-#define MLIR_DIALECT_CIR_IR_CIRTYPES_H_
+#ifndef CLANG_CIR_DIALECT_IR_CIRTYPES_H
+#define CLANG_CIR_DIALECT_IR_CIRTYPES_H
 
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "clang/Basic/AddressSpaces.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Interfaces/CIRTypeInterfaces.h"
 
 namespace cir {
@@ -35,6 +40,15 @@ bool isValidFundamentalIntWidth(unsigned width);
 /// void, or abstract types.
 bool isSized(mlir::Type ty);
 
+//===----------------------------------------------------------------------===//
+// AddressSpace helpers
+//===----------------------------------------------------------------------===//
+cir::TargetAddressSpaceAttr toCIRTargetAddressSpace(mlir::MLIRContext &context,
+                                                    clang::LangAS langAS);
+
+bool isMatchingAddressSpace(cir::TargetAddressSpaceAttr cirAS,
+                            clang::LangAS as);
+
 } // namespace cir
 
 //===----------------------------------------------------------------------===//
@@ -50,4 +64,4 @@ namespace cir {
 #define GET_TYPEDEF_CLASSES
 #include "clang/CIR/Dialect/IR/CIROpsTypes.h.inc"
 
-#endif // MLIR_DIALECT_CIR_IR_CIRTYPES_H_
+#endif // CLANG_CIR_DIALECT_IR_CIRTYPES_H

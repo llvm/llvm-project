@@ -7,9 +7,6 @@
 ; Basic shift support is tested as part of ALU.ll. This file ensures that
 ; shifts which may not be supported natively are lowered properly.
 
-declare i64 @llvm.fshr.i64(i64, i64, i64)
-declare i128 @llvm.fshr.i128(i128, i128, i128)
-
 define i64 @lshr64(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: lshr64:
 ; RV32I:       # %bb.0:
@@ -383,7 +380,7 @@ define i64 @fshr64_minsize(i64 %a, i64 %b) minsize nounwind {
 ; RV64I-LABEL: fshr64_minsize:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srl a2, a0, a1
-; RV64I-NEXT:    negw a1, a1
+; RV64I-NEXT:    neg a1, a1
 ; RV64I-NEXT:    sll a0, a0, a1
 ; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    ret

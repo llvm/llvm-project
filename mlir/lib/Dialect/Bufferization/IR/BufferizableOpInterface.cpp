@@ -18,7 +18,6 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/Support/Debug.h"
 
 //===----------------------------------------------------------------------===//
 // BufferizableOpInterface
@@ -35,8 +34,6 @@ namespace bufferization {
 MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::bufferization::AnalysisState)
 
 #define DEBUG_TYPE "bufferizable-op-interface"
-#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << (X))
 
 using namespace mlir;
 using namespace bufferization;
@@ -170,8 +167,8 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
   if (llvm::isa<RankedTensorType>(shapedValue.getType())) {
     tensor = shapedValue;
   } else if (llvm::isa<MemRefType>(shapedValue.getType())) {
-    tensor = b.create<ToTensorOp>(
-        loc, memref::getTensorTypeFromMemRefType(shapedValue.getType()),
+    tensor = ToTensorOp::create(
+        b, loc, memref::getTensorTypeFromMemRefType(shapedValue.getType()),
         shapedValue);
   } else if (llvm::isa<UnrankedTensorType>(shapedValue.getType()) ||
              llvm::isa<UnrankedMemRefType>(shapedValue.getType())) {
@@ -209,8 +206,8 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
   }
 
   // Create AllocTensorOp.
-  auto allocTensorOp = b.create<AllocTensorOp>(loc, tensorType, dynamicSizes,
-                                               copy ? tensor : Value());
+  auto allocTensorOp = AllocTensorOp::create(b, loc, tensorType, dynamicSizes,
+                                             copy ? tensor : Value());
 
   // Add 'memory_space' attribute. Not needed if 'copy' operand is specified.
   if (copy)
@@ -341,11 +338,21 @@ bool OpFilter::isOpAllowed(Operation *op) const {
 namespace {
 
 /// Default function arg type converter: Use a fully dynamic layout map.
-BaseMemRefType
-defaultFunctionArgTypeConverter(TensorType type, Attribute memorySpace,
+BufferLikeType
+defaultFunctionArgTypeConverter(TensorLikeType type, Attribute memorySpace,
                                 func::FuncOp funcOp,
                                 const BufferizationOptions &options) {
-  return getMemRefTypeWithFullyDynamicLayout(type, memorySpace);
+  if (auto tensorType = mlir::dyn_cast<TensorType>(type)) {
+    return cast<BufferLikeType>(
+        getMemRefTypeWithFullyDynamicLayout(tensorType, memorySpace));
+  }
+
+  // If not builtin, fallback to TensorLikeType::getBufferType()
+  auto bufferType =
+      type.getBufferType(options, [&]() { return funcOp->emitError(); });
+  assert(succeeded(bufferType) &&
+         "a valid buffer is always expected at function boundary");
+  return *bufferType;
 }
 /// Default unknown type converter: Use a fully dynamic layout map.
 BaseMemRefType
@@ -388,14 +395,25 @@ BufferizationOptions::dynCastBufferizableOp(Value value) const {
 
 void BufferizationOptions::setFunctionBoundaryTypeConversion(
     LayoutMapOption layoutMapOption) {
-  functionArgTypeConverterFn = [=](TensorType tensorType, Attribute memorySpace,
+  functionArgTypeConverterFn = [=](TensorLikeType type, Attribute memorySpace,
                                    func::FuncOp funcOp,
                                    const BufferizationOptions &options) {
-    if (layoutMapOption == LayoutMapOption::IdentityLayoutMap)
-      return bufferization::getMemRefTypeWithStaticIdentityLayout(tensorType,
-                                                                  memorySpace);
-    return bufferization::getMemRefTypeWithFullyDynamicLayout(tensorType,
-                                                              memorySpace);
+    if (auto tensorType = mlir::dyn_cast<TensorType>(type)) {
+      if (layoutMapOption == LayoutMapOption::IdentityLayoutMap)
+        return cast<BufferLikeType>(
+            bufferization::getMemRefTypeWithStaticIdentityLayout(tensorType,
+                                                                 memorySpace));
+      return cast<BufferLikeType>(
+          bufferization::getMemRefTypeWithFullyDynamicLayout(tensorType,
+                                                             memorySpace));
+    }
+
+    // If not builtin, fallback to TensorLikeType::getBufferType()
+    auto bufferType =
+        type.getBufferType(options, [&]() { return funcOp->emitError(); });
+    assert(succeeded(bufferType) &&
+           "a valid buffer is always expected at function boundary");
+    return *bufferType;
   };
   inferFunctionResultLayout =
       layoutMapOption == LayoutMapOption::InferLayoutMap;
@@ -662,16 +680,6 @@ bool AnalysisState::hasUndefinedContents(OpOperand *opOperand) const {
   return false;
 }
 
-// bufferization.to_buffer is not allowed to change the rank.
-static void ensureToBufferOpIsValid(Value tensor, Type memrefType) {
-#ifndef NDEBUG
-  auto rankedTensorType = llvm::dyn_cast<RankedTensorType>(tensor.getType());
-  assert((!rankedTensorType || llvm::cast<MemRefType>(memrefType).getRank() ==
-                                   rankedTensorType.getRank()) &&
-         "to_buffer would be invalid: mismatching ranks");
-#endif
-}
-
 FailureOr<Value> bufferization::getBuffer(RewriterBase &rewriter, Value value,
                                           const BufferizationOptions &options,
                                           const BufferizationState &state) {
@@ -690,9 +698,9 @@ FailureOr<Value> bufferization::getBuffer(RewriterBase &rewriter, Value value,
   FailureOr<BufferLikeType> bufferType = getBufferType(value, options, state);
   if (failed(bufferType))
     return failure();
-  ensureToBufferOpIsValid(value, *bufferType);
-  return rewriter
-      .create<bufferization::ToBufferOp>(value.getLoc(), *bufferType, value)
+
+  return bufferization::ToBufferOp::create(rewriter, value.getLoc(),
+                                           *bufferType, value)
       .getResult();
 }
 
@@ -753,8 +761,8 @@ void bufferization::replaceOpWithBufferizedValues(RewriterBase &rewriter,
       // ToTensorOp. Throughout bufferization, this ToTensorOp will gradually
       // loose all of its users and eventually DCE away.
       rewriter.setInsertionPointAfter(op);
-      replacement = rewriter.create<bufferization::ToTensorOp>(
-          replacement.getLoc(), opResult.getType(), replacement);
+      replacement = bufferization::ToTensorOp::create(
+          rewriter, replacement.getLoc(), opResult.getType(), replacement);
     }
     replacements.push_back(replacement);
   }
@@ -775,11 +783,10 @@ FailureOr<Value> BufferizationOptions::createAlloc(OpBuilder &b, Location loc,
 
   // Default bufferallocation via AllocOp.
   if (bufferAlignment != 0)
-    return b
-        .create<memref::AllocOp>(loc, type, dynShape,
-                                 b.getI64IntegerAttr(bufferAlignment))
+    return memref::AllocOp::create(b, loc, type, dynShape,
+                                   b.getI64IntegerAttr(bufferAlignment))
         .getResult();
-  return b.create<memref::AllocOp>(loc, type, dynShape).getResult();
+  return memref::AllocOp::create(b, loc, type, dynShape).getResult();
 }
 
 /// Create a memory copy between two memref buffers.
@@ -788,7 +795,7 @@ LogicalResult BufferizationOptions::createMemCpy(OpBuilder &b, Location loc,
   if (memCpyFn)
     return (*memCpyFn)(b, loc, from, to);
 
-  b.create<memref::CopyOp>(loc, from, to);
+  memref::CopyOp::create(b, loc, from, to);
   return success();
 }
 

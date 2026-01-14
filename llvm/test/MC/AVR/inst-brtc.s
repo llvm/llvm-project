@@ -16,6 +16,9 @@ bar:
 ; CHECK: brtc bar            ; encoding: [0bAAAAA110,0b111101AA]
 
 ; INST-LABEL: <foo>:
-; INST-NEXT: d6 f4      brtc .+52
-; INST-NEXT: ce f4      brtc .+50
-; INST-NEXT: 06 f4      brtc .+0
+; INST-NEXT: fe f7      brtc .-2
+; INST-NEXT: R_AVR_7_PCREL .text+0x36
+; INST-NEXT: fe f7      brtc .-2
+; INST-NEXT: R_AVR_7_PCREL .text+0x36
+; INST-NEXT: fe f7      brtc .-2
+; INST-NEXT: R_AVR_7_PCREL .text+0x6

@@ -824,12 +824,6 @@ class SourceManager : public RefCountedBase<SourceManager> {
 
   mutable std::unique_ptr<SrcMgr::SLocEntry> FakeSLocEntryForRecovery;
 
-  /// Cache for filenames used in diagnostics. See 'getNameForDiagnostic()'.
-  mutable llvm::StringMap<StringRef> DiagNames;
-
-  /// Allocator for absolute/short names.
-  mutable llvm::BumpPtrAllocator DiagNameAlloc;
-
   /// Lazily computed map of macro argument chunks to their expanded
   /// source location.
   using MacroArgsMap = std::map<unsigned, SourceLocation>;
@@ -1292,16 +1286,7 @@ public:
   /// If the location is an expansion record, walk through it until we find
   /// the final location expanded.
   FileIDAndOffset getDecomposedExpansionLoc(SourceLocation Loc) const {
-    FileID FID = getFileID(Loc);
-    auto *E = getSLocEntryOrNull(FID);
-    if (!E)
-      return std::make_pair(FileID(), 0);
-
-    unsigned Offset = Loc.getOffset()-E->getOffset();
-    if (Loc.isFileID())
-      return std::make_pair(FID, Offset);
-
-    return getDecomposedExpansionLocSlowCase(E);
+    return getDecomposedLoc(getExpansionLoc(Loc));
   }
 
   /// Decompose the specified location into a raw FileID + Offset pair.
@@ -1309,15 +1294,7 @@ public:
   /// If the location is an expansion record, walk through it until we find
   /// its spelling record.
   FileIDAndOffset getDecomposedSpellingLoc(SourceLocation Loc) const {
-    FileID FID = getFileID(Loc);
-    auto *E = getSLocEntryOrNull(FID);
-    if (!E)
-      return std::make_pair(FileID(), 0);
-
-    unsigned Offset = Loc.getOffset()-E->getOffset();
-    if (Loc.isFileID())
-      return std::make_pair(FID, Offset);
-    return getDecomposedSpellingLocSlowCase(E, Offset);
+    return getDecomposedLoc(getSpellingLoc(Loc));
   }
 
   /// Returns the "included/expanded in" decomposed location of the given
@@ -1432,10 +1409,15 @@ public:
   /// before calling this method.
   unsigned getColumnNumber(FileID FID, unsigned FilePos,
                            bool *Invalid = nullptr) const;
+  unsigned getColumnNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
   unsigned getSpellingColumnNumber(SourceLocation Loc,
-                                   bool *Invalid = nullptr) const;
+                                   bool *Invalid = nullptr) const {
+    return getColumnNumber(getSpellingLoc(Loc), Invalid);
+  }
   unsigned getExpansionColumnNumber(SourceLocation Loc,
-                                    bool *Invalid = nullptr) const;
+                                    bool *Invalid = nullptr) const {
+    return getColumnNumber(getExpansionLoc(Loc), Invalid);
+  }
   unsigned getPresumedColumnNumber(SourceLocation Loc,
                                    bool *Invalid = nullptr) const;
 
@@ -1446,8 +1428,15 @@ public:
   /// MemoryBuffer, so this is not cheap: use only when about to emit a
   /// diagnostic.
   unsigned getLineNumber(FileID FID, unsigned FilePos, bool *Invalid = nullptr) const;
-  unsigned getSpellingLineNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
-  unsigned getExpansionLineNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
+  unsigned getLineNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
+  unsigned getSpellingLineNumber(SourceLocation Loc,
+                                 bool *Invalid = nullptr) const {
+    return getLineNumber(getSpellingLoc(Loc), Invalid);
+  }
+  unsigned getExpansionLineNumber(SourceLocation Loc,
+                                  bool *Invalid = nullptr) const {
+    return getLineNumber(getExpansionLoc(Loc), Invalid);
+  }
   unsigned getPresumedLineNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
 
   /// Return the filename or buffer identifier of the buffer the
@@ -1854,16 +1843,6 @@ public:
   /// \return Location of the top-level macro caller.
   SourceLocation getTopMacroCallerLoc(SourceLocation Loc) const;
 
-  /// Retrieve the name of a file suitable for diagnostics.
-  // FIXME: Passing in the DiagnosticOptions here is a workaround for the
-  // fact that installapi does some weird things with DiagnosticsEngines,
-  // which causes the 'Diag' member of SourceManager (or at least the
-  // DiagnosticsOptions member thereof) to be a dangling reference
-  // sometimes. We should probably fix that or decouple the two classes
-  // to avoid this issue entirely.
-  StringRef getNameForDiagnostic(StringRef Filename,
-                                 const DiagnosticOptions &Opts) const;
-
 private:
   friend class ASTReader;
   friend class ASTWriter;
@@ -1995,10 +1974,6 @@ private:
   SourceLocation getSpellingLocSlowCase(SourceLocation Loc) const;
   SourceLocation getFileLocSlowCase(SourceLocation Loc) const;
 
-  FileIDAndOffset
-  getDecomposedExpansionLocSlowCase(const SrcMgr::SLocEntry *E) const;
-  FileIDAndOffset getDecomposedSpellingLocSlowCase(const SrcMgr::SLocEntry *E,
-                                                   unsigned Offset) const;
   void computeMacroArgsCache(MacroArgsMap &MacroArgsCache, FileID FID) const;
   void associateFileChunkWithMacroArgExp(MacroArgsMap &MacroArgsCache,
                                          FileID FID,

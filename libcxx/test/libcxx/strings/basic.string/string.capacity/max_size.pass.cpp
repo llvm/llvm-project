@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 // <string>
 
 // This test ensures that the correct max_size() is returned depending on the platform.

@@ -12,20 +12,17 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/CastInterfaces.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/InterleavedRange.h"
 
 #define DEBUG_TYPE "transform-dialect"
-#define DEBUG_TYPE_FULL "transform-dialect-full"
 #define DEBUG_PRINT_AFTER_ALL "transform-dialect-print-top-level-after-all"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "] ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << (X))
-#define FULL_LDBG(X) DEBUG_WITH_TYPE(DEBUG_TYPE_FULL, (DBGS() << (X)))
+#define FULL_LDBG() LDBG(4)
 
 using namespace mlir;
 
@@ -49,8 +46,6 @@ static bool happensBefore(Operation *a, Operation *b) {
 //===----------------------------------------------------------------------===//
 // TransformState
 //===----------------------------------------------------------------------===//
-
-constexpr const Value transform::TransformState::kTopLevelValue;
 
 transform::TransformState::TransformState(
     Region *region, Operation *payloadRoot,
@@ -315,7 +310,7 @@ LogicalResult transform::TransformState::setParams(Value value,
 }
 
 template <typename Mapping, typename Key, typename Mapped>
-void dropMappingEntry(Mapping &mapping, Key key, Mapped mapped) {
+static void dropMappingEntry(Mapping &mapping, Key key, Mapped mapped) {
   auto it = mapping.find(key);
   if (it == mapping.end())
     return;
@@ -487,24 +482,20 @@ void transform::TransformState::recordOpHandleInvalidationOne(
       newlyInvalidated.count(otherHandle))
     return;
 
-  FULL_LDBG("--recordOpHandleInvalidationOne\n");
-  DEBUG_WITH_TYPE(DEBUG_TYPE_FULL, {
-    (DBGS() << "--ancestors: "
-            << llvm::interleaved(llvm::make_pointee_range(potentialAncestors))
-            << "\n");
-  });
+  FULL_LDBG() << "--recordOpHandleInvalidationOne";
+  FULL_LDBG() << "--ancestors: "
+              << llvm::interleaved(
+                     llvm::make_pointee_range(potentialAncestors));
 
   Operation *owner = consumingHandle.getOwner();
   unsigned operandNo = consumingHandle.getOperandNumber();
   for (Operation *ancestor : potentialAncestors) {
     // clang-format off
-    DEBUG_WITH_TYPE(DEBUG_TYPE_FULL,
-      { (DBGS() << "----handle one ancestor: " << *ancestor << "\n"); });
-    DEBUG_WITH_TYPE(DEBUG_TYPE_FULL,
-      { (DBGS() << "----of payload with name: "
-                << payloadOp->getName().getIdentifier() << "\n"); });
-    DEBUG_WITH_TYPE(DEBUG_TYPE_FULL,
-      { (DBGS() << "----of payload: " << *payloadOp << "\n"); });
+          FULL_LDBG() << "----handle one ancestor: " << *ancestor;;
+
+      FULL_LDBG() << "----of payload with name: "
+                << payloadOp->getName().getIdentifier();
+      FULL_LDBG() << "----of payload: " << *payloadOp;
     // clang-format on
     if (!ancestor->isAncestor(payloadOp))
       continue;
@@ -610,10 +601,8 @@ void transform::TransformState::recordOpHandleInvalidation(
     transform::TransformState::InvalidatedHandleMap &newlyInvalidated) const {
 
   if (potentialAncestors.empty()) {
-    DEBUG_WITH_TYPE(DEBUG_TYPE_FULL, {
-      (DBGS() << "----recording invalidation for empty handle: " << handle.get()
-              << "\n");
-    });
+    FULL_LDBG() << "----recording invalidation for empty handle: "
+                << handle.get();
 
     Operation *owner = handle.getOwner();
     unsigned operandNo = handle.getOperandNumber();
@@ -710,7 +699,7 @@ void transform::TransformState::recordValueHandleInvalidation(
 LogicalResult transform::TransformState::checkAndRecordHandleInvalidationImpl(
     transform::TransformOpInterface transform,
     transform::TransformState::InvalidatedHandleMap &newlyInvalidated) const {
-  FULL_LDBG("--Start checkAndRecordHandleInvalidation\n");
+  FULL_LDBG() << "--Start checkAndRecordHandleInvalidation";
   auto memoryEffectsIface =
       cast<MemoryEffectOpInterface>(transform.getOperation());
   SmallVector<MemoryEffects::EffectInstance> effects;
@@ -718,9 +707,7 @@ LogicalResult transform::TransformState::checkAndRecordHandleInvalidationImpl(
       transform::TransformMappingResource::get(), effects);
 
   for (OpOperand &target : transform->getOpOperands()) {
-    DEBUG_WITH_TYPE(DEBUG_TYPE_FULL, {
-      (DBGS() << "----iterate on handle: " << target.get() << "\n");
-    });
+    FULL_LDBG() << "----iterate on handle: " << target.get();
     // If the operand uses an invalidated handle, report it. If the operation
     // allows handles to point to repeated payload operations, only report
     // pre-existing invalidation errors. Otherwise, also report invalidations
@@ -728,14 +715,14 @@ LogicalResult transform::TransformState::checkAndRecordHandleInvalidationImpl(
     auto it = invalidatedHandles.find(target.get());
     auto nit = newlyInvalidated.find(target.get());
     if (it != invalidatedHandles.end()) {
-      FULL_LDBG("--End checkAndRecordHandleInvalidation, found already "
-                "invalidated -> FAILURE\n");
+      FULL_LDBG() << "--End checkAndRecordHandleInvalidation, found already "
+                     "invalidated -> FAILURE";
       return it->getSecond()(transform->getLoc()), failure();
     }
     if (!transform.allowsRepeatedHandleOperands() &&
         nit != newlyInvalidated.end()) {
-      FULL_LDBG("--End checkAndRecordHandleInvalidation, found newly "
-                "invalidated (by this op) -> FAILURE\n");
+      FULL_LDBG() << "--End checkAndRecordHandleInvalidation, found newly "
+                     "invalidated (by this op) -> FAILURE";
       return nit->getSecond()(transform->getLoc()), failure();
     }
 
@@ -746,27 +733,28 @@ LogicalResult transform::TransformState::checkAndRecordHandleInvalidationImpl(
              effect.getValue() == target.get();
     };
     if (llvm::any_of(effects, consumesTarget)) {
-      FULL_LDBG("----found consume effect\n");
+      FULL_LDBG() << "----found consume effect";
       if (llvm::isa<transform::TransformHandleTypeInterface>(
               target.get().getType())) {
-        FULL_LDBG("----recordOpHandleInvalidation\n");
+        FULL_LDBG() << "----recordOpHandleInvalidation";
         SmallVector<Operation *> payloadOps =
             llvm::to_vector(getPayloadOps(target.get()));
         recordOpHandleInvalidation(target, payloadOps, nullptr,
                                    newlyInvalidated);
       } else if (llvm::isa<transform::TransformValueHandleTypeInterface>(
                      target.get().getType())) {
-        FULL_LDBG("----recordValueHandleInvalidation\n");
+        FULL_LDBG() << "----recordValueHandleInvalidation";
         recordValueHandleInvalidation(target, newlyInvalidated);
       } else {
-        FULL_LDBG("----not a TransformHandle -> SKIP AND DROP ON THE FLOOR\n");
+        FULL_LDBG()
+            << "----not a TransformHandle -> SKIP AND DROP ON THE FLOOR";
       }
     } else {
-      FULL_LDBG("----no consume effect -> SKIP\n");
+      FULL_LDBG() << "----no consume effect -> SKIP";
     }
   }
 
-  FULL_LDBG("--End checkAndRecordHandleInvalidation -> SUCCESS\n");
+  FULL_LDBG() << "--End checkAndRecordHandleInvalidation -> SUCCESS";
   return success();
 }
 
@@ -781,7 +769,7 @@ LogicalResult transform::TransformState::checkAndRecordHandleInvalidation(
 }
 
 template <typename T>
-DiagnosedSilenceableFailure
+static DiagnosedSilenceableFailure
 checkRepeatedConsumptionInOperand(ArrayRef<T> payload,
                                   transform::TransformOpInterface transform,
                                   unsigned operandNumber) {
@@ -819,18 +807,14 @@ void transform::TransformState::compactOpHandles() {
 
 DiagnosedSilenceableFailure
 transform::TransformState::applyTransform(TransformOpInterface transform) {
-  LLVM_DEBUG({
-    DBGS() << "applying: ";
-    transform->print(llvm::dbgs(), OpPrintingFlags().skipRegions());
-    llvm::dbgs() << "\n";
-  });
-  DEBUG_WITH_TYPE(DEBUG_TYPE_FULL,
-                  DBGS() << "Top-level payload before application:\n"
-                         << *getTopLevel() << "\n");
+  LDBG() << "applying: "
+         << OpWithFlags(transform, OpPrintingFlags().skipRegions());
+  FULL_LDBG() << "Top-level payload before application:\n" << *getTopLevel();
   auto printOnFailureRAII = llvm::make_scope_exit([this] {
     (void)this;
-    LLVM_DEBUG(DBGS() << "Failing Top-level payload:\n"; getTopLevel()->print(
-        llvm::dbgs(), mlir::OpPrintingFlags().printGenericOpForm()););
+    LDBG() << "Failing Top-level payload:\n"
+           << OpWithFlags(getTopLevel(),
+                          OpPrintingFlags().printGenericOpForm());
   });
 
   // Set current transform op.
@@ -838,47 +822,45 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
 
   // Expensive checks to detect invalid transform IR.
   if (options.getExpensiveChecksEnabled()) {
-    FULL_LDBG("ExpensiveChecksEnabled\n");
+    FULL_LDBG() << "ExpensiveChecksEnabled";
     if (failed(checkAndRecordHandleInvalidation(transform)))
       return DiagnosedSilenceableFailure::definiteFailure();
 
     for (OpOperand &operand : transform->getOpOperands()) {
-      DEBUG_WITH_TYPE(DEBUG_TYPE_FULL, {
-        (DBGS() << "iterate on handle: " << operand.get() << "\n");
-      });
+      FULL_LDBG() << "iterate on handle: " << operand.get();
       if (!isHandleConsumed(operand.get(), transform)) {
-        FULL_LDBG("--handle not consumed -> SKIP\n");
+        FULL_LDBG() << "--handle not consumed -> SKIP";
         continue;
       }
       if (transform.allowsRepeatedHandleOperands()) {
-        FULL_LDBG("--op allows repeated handles -> SKIP\n");
+        FULL_LDBG() << "--op allows repeated handles -> SKIP";
         continue;
       }
-      FULL_LDBG("--handle is consumed\n");
+      FULL_LDBG() << "--handle is consumed";
 
       Type operandType = operand.get().getType();
       if (llvm::isa<TransformHandleTypeInterface>(operandType)) {
-        FULL_LDBG("--checkRepeatedConsumptionInOperand for Operation*\n");
+        FULL_LDBG() << "--checkRepeatedConsumptionInOperand for Operation*";
         DiagnosedSilenceableFailure check =
             checkRepeatedConsumptionInOperand<Operation *>(
                 getPayloadOpsView(operand.get()), transform,
                 operand.getOperandNumber());
         if (!check.succeeded()) {
-          FULL_LDBG("----FAILED\n");
+          FULL_LDBG() << "----FAILED";
           return check;
         }
       } else if (llvm::isa<TransformValueHandleTypeInterface>(operandType)) {
-        FULL_LDBG("--checkRepeatedConsumptionInOperand For Value\n");
+        FULL_LDBG() << "--checkRepeatedConsumptionInOperand For Value";
         DiagnosedSilenceableFailure check =
             checkRepeatedConsumptionInOperand<Value>(
                 getPayloadValuesView(operand.get()), transform,
                 operand.getOperandNumber());
         if (!check.succeeded()) {
-          FULL_LDBG("----FAILED\n");
+          FULL_LDBG() << "----FAILED";
           return check;
         }
       } else {
-        FULL_LDBG("--not a TransformHandle -> SKIP AND DROP ON THE FLOOR\n");
+        FULL_LDBG() << "--not a TransformHandle -> SKIP AND DROP ON THE FLOOR";
       }
     }
   }
@@ -1000,8 +982,7 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
 
   printOnFailureRAII.release();
   DEBUG_WITH_TYPE(DEBUG_PRINT_AFTER_ALL, {
-    DBGS() << "Top-level payload:\n";
-    getTopLevel()->print(llvm::dbgs());
+    LDBG() << "Top-level payload:\n" << *getTopLevel();
   });
   return result;
 }
@@ -1278,7 +1259,7 @@ void transform::TrackingListener::notifyMatchFailure(
   LLVM_DEBUG({
     Diagnostic diag(loc, DiagnosticSeverity::Remark);
     reasonCallback(diag);
-    DBGS() << "Match Failure : " << diag.str() << "\n";
+    LDBG() << "Match Failure : " << diag.str();
   });
 }
 
@@ -1514,8 +1495,7 @@ transform::detail::checkApplyToOne(Operation *transformOp,
 
 template <typename T>
 static SmallVector<T> castVector(ArrayRef<transform::MappedValue> range) {
-  return llvm::to_vector(llvm::map_range(
-      range, [](transform::MappedValue value) { return cast<T>(value); }));
+  return llvm::map_to_vector(range, llvm::CastTo<T>);
 }
 
 void transform::detail::setApplyToOneResults(

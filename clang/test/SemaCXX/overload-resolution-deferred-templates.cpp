@@ -102,7 +102,7 @@ static_assert(__is_constructible(Movable, int));
 // expected-error@-1 {{no matching constructor for initialization of 'Movable'}} \
 // expected-note@-1 2{{}}
 // expected-error@#err-self-constraint-1{{satisfaction of constraint '__is_constructible(Movable, T)' depends on itself}}
-// expected-note@#err-self-constraint-1 4{{}}
+// expected-note@#err-self-constraint-1 3{{}}
 // expected-note@#Movable  {{'Movable' defined here}}
 
 template <typename T>
@@ -200,7 +200,6 @@ void h(short n) { f(n); }
 // expected-note@-1{{while checking constraint satisfaction for template}}
 // expected-note@#GH62096-note1{{in instantiation}}
 // expected-note@#GH62096-note1{{while substituting template arguments into constraint expression here}}
-// expected-note@#GH62096-note2{{while substituting template arguments into constraint expression here}}
 // expected-note@#GH62096-note2{{while checking the satisfaction of concept}}
 // expected-note@#GH62096-err {{expression evaluates}}
 }
@@ -283,3 +282,31 @@ void f() {
 }
 
 #endif
+
+namespace GH147374 {
+
+struct String {};
+template <typename T> void operator+(T, String &&) = delete;
+
+struct Bar {
+    void operator+(String) const; // expected-note {{candidate function}}
+    friend void operator+(Bar, String) {};  // expected-note {{candidate function}}
+};
+
+struct Baz {
+    void operator+(String); // expected-note {{candidate function}}
+    friend void operator+(Baz, String) {}; // expected-note {{candidate function}}
+};
+
+void test() {
+    Bar a;
+    String b;
+    a + b;
+    //expected-error@-1 {{use of overloaded operator '+' is ambiguous (with operand types 'Bar' and 'String')}}
+
+    Baz z;
+    z + b;
+    //expected-error@-1 {{use of overloaded operator '+' is ambiguous (with operand types 'Baz' and 'String')}}
+}
+
+}

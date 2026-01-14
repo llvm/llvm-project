@@ -1,4 +1,4 @@
-//===--- FuchsiaTidyModule.cpp - clang-tidy -------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,11 +10,12 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "../google/UnnamedNamespaceInHeaderCheck.h"
+#include "../misc/MultipleInheritanceCheck.h"
 #include "DefaultArgumentsCallsCheck.h"
 #include "DefaultArgumentsDeclarationsCheck.h"
-#include "MultipleInheritanceCheck.h"
 #include "OverloadedOperatorCheck.h"
 #include "StaticallyConstructedObjectsCheck.h"
+#include "TemporaryObjectsCheck.h"
 #include "TrailingReturnCheck.h"
 #include "VirtualInheritanceCheck.h"
 
@@ -33,12 +34,14 @@ public:
         "fuchsia-default-arguments-declarations");
     CheckFactories.registerCheck<google::build::UnnamedNamespaceInHeaderCheck>(
         "fuchsia-header-anon-namespaces");
-    CheckFactories.registerCheck<MultipleInheritanceCheck>(
+    CheckFactories.registerCheck<misc::MultipleInheritanceCheck>(
         "fuchsia-multiple-inheritance");
     CheckFactories.registerCheck<OverloadedOperatorCheck>(
         "fuchsia-overloaded-operator");
     CheckFactories.registerCheck<StaticallyConstructedObjectsCheck>(
         "fuchsia-statically-constructed-objects");
+    CheckFactories.registerCheck<TemporaryObjectsCheck>(
+        "fuchsia-temporary-objects");
     CheckFactories.registerCheck<TrailingReturnCheck>(
         "fuchsia-trailing-return");
     CheckFactories.registerCheck<VirtualInheritanceCheck>(

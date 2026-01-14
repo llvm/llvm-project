@@ -327,6 +327,45 @@ TEST(RangeSelectorTest, EncloseOpGeneralParsed) {
   EXPECT_THAT_EXPECTED(select(*R, Match), HasValue("3, 7"));
 }
 
+TEST(RangeSelectorTest, MergeOp) {
+  StringRef Code = R"cc(
+    int f(int x, int y, int z) { return 3; }
+    int g() { return f(/* comment */ 3, 7 /* comment */, 9); }
+  )cc";
+  auto Matcher = callExpr(hasArgument(0, expr().bind("a0")),
+                          hasArgument(1, expr().bind("a1")),
+                          hasArgument(2, expr().bind("a2")));
+  RangeSelector R = merge(node("a0"), node("a1"));
+  TestMatch Match = matchCode(Code, Matcher);
+  EXPECT_THAT_EXPECTED(select(R, Match), HasValue("3, 7"));
+  // Test the merge of two non-contiguous and out-of-order token-ranges.
+  R = merge(node("a2"), node("a0"));
+  EXPECT_THAT_EXPECTED(select(R, Match), HasValue("3, 7 /* comment */, 9"));
+  // Test the merge of a token-range (expr node) with a char-range (before).
+  R = merge(node("a1"), before(node("a0")));
+  EXPECT_THAT_EXPECTED(select(R, Match), HasValue("3, 7"));
+  // Test the merge of two char-ranges.
+  R = merge(before(node("a0")), before(node("a1")));
+  EXPECT_THAT_EXPECTED(select(R, Match), HasValue("3, "));
+}
+
+TEST(RangeSelectorTest, MergeOpParsed) {
+  StringRef Code = R"cc(
+    int f(int x, int y, int z) { return 3; }
+    int g() { return f(/* comment */ 3, 7 /* comment */, 9); }
+  )cc";
+  auto Matcher = callExpr(hasArgument(0, expr().bind("a0")),
+                          hasArgument(1, expr().bind("a1")),
+                          hasArgument(2, expr().bind("a2")));
+  auto R = parseRangeSelector(R"rs(merge(node("a0"), node("a1")))rs");
+  ASSERT_THAT_EXPECTED(R, llvm::Succeeded());
+  TestMatch Match = matchCode(Code, Matcher);
+  EXPECT_THAT_EXPECTED(select(*R, Match), HasValue("3, 7"));
+  R = parseRangeSelector(R"rs(merge(node("a2"), node("a1")))rs");
+  ASSERT_THAT_EXPECTED(R, llvm::Succeeded());
+  EXPECT_THAT_EXPECTED(select(*R, Match), HasValue("7 /* comment */, 9"));
+}
+
 TEST(RangeSelectorTest, NodeOpStatement) {
   StringRef Code = "int f() { return 3; }";
   TestMatch Match = matchCode(Code, returnStmt().bind("id"));
@@ -337,6 +376,13 @@ TEST(RangeSelectorTest, NodeOpExpression) {
   StringRef Code = "int f() { return 3; }";
   TestMatch Match = matchCode(Code, expr().bind("id"));
   EXPECT_THAT_EXPECTED(select(node("id"), Match), HasValue("3"));
+}
+
+TEST(RangeSelectorTest, NodeOpTypeLoc) {
+  StringRef Code = "namespace ns {struct Foo{};} ns::Foo a;";
+  TestMatch Match =
+      matchCode(Code, varDecl(hasTypeLoc(typeLoc().bind("typeloc"))));
+  EXPECT_THAT_EXPECTED(select(node("typeloc"), Match), HasValue("ns::Foo"));
 }
 
 TEST(RangeSelectorTest, StatementOp) {
@@ -474,15 +520,15 @@ TEST(RangeSelectorTest, NameOpTypeLoc) {
   // Matches declaration of `a`
   TestMatch MatchA = matchCode(
       Code, varDecl(hasName("a"), hasTypeLoc(typeLoc().bind(CtorTy))));
-  EXPECT_THAT_EXPECTED(select(name(CtorTy), MatchA), HasValue("Foo"));
+  EXPECT_THAT_EXPECTED(select(name(CtorTy), MatchA), HasValue("ns::Foo"));
   // Matches call of Foo(int)
   TestMatch MatchB = matchCode(
       Code, cxxFunctionalCastExpr(hasTypeLoc(typeLoc().bind(CtorTy))));
-  EXPECT_THAT_EXPECTED(select(name(CtorTy), MatchB), HasValue("Foo"));
+  EXPECT_THAT_EXPECTED(select(name(CtorTy), MatchB), HasValue("ns::Foo"));
   // Matches call of Foo(int, int)
   TestMatch MatchC = matchCode(
       Code, cxxTemporaryObjectExpr(hasTypeLoc(typeLoc().bind(CtorTy))));
-  EXPECT_THAT_EXPECTED(select(name(CtorTy), MatchC), HasValue("Foo"));
+  EXPECT_THAT_EXPECTED(select(name(CtorTy), MatchC), HasValue("ns::Foo"));
 }
 
 TEST(RangeSelectorTest, NameOpTemplateSpecializationTypeLoc) {
@@ -525,6 +571,31 @@ TEST(RangeSelectorTest, NameOpDeclRefError) {
       Failed<StringError>(testing::Property(
           &StringError::getMessage,
           AllOf(HasSubstr(Ref), HasSubstr("requires property 'identifier'")))));
+}
+
+TEST(RangeSelectorTest, NameOpDeclInMacroArg) {
+  StringRef Code = R"cc(
+  #define MACRO(name) int name;
+  MACRO(x)
+  )cc";
+  const char *ID = "id";
+  TestMatch Match = matchCode(Code, varDecl().bind(ID));
+  EXPECT_THAT_EXPECTED(select(name(ID), Match), HasValue("x"));
+}
+
+TEST(RangeSelectorTest, NameOpDeclInMacroBodyError) {
+  StringRef Code = R"cc(
+  #define MACRO int x;
+  MACRO
+  )cc";
+  const char *ID = "id";
+  TestMatch Match = matchCode(Code, varDecl().bind(ID));
+  EXPECT_THAT_EXPECTED(
+      name(ID)(Match.Result),
+      Failed<StringError>(testing::Property(
+          &StringError::getMessage,
+          AllOf(HasSubstr("range selected by name(node id="),
+                HasSubstr("' is different from decl name 'x'")))));
 }
 
 TEST(RangeSelectorTest, CallArgsOp) {

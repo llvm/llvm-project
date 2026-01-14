@@ -19,6 +19,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include <cctype>
@@ -700,6 +701,55 @@ bool is_relative(const Twine &path, Style style) {
   return !is_absolute(path, style);
 }
 
+void make_absolute(const Twine &current_directory,
+                   SmallVectorImpl<char> &path) {
+  StringRef p(path.data(), path.size());
+
+  bool rootDirectory = has_root_directory(p);
+  bool rootName = has_root_name(p);
+
+  // Already absolute.
+  if ((rootName || is_style_posix(Style::native)) && rootDirectory)
+    return;
+
+  // All the following conditions will need the current directory.
+  SmallString<128> current_dir;
+  current_directory.toVector(current_dir);
+
+  // Relative path. Prepend the current directory.
+  if (!rootName && !rootDirectory) {
+    // Append path to the current directory.
+    append(current_dir, p);
+    // Set path to the result.
+    path.swap(current_dir);
+    return;
+  }
+
+  if (!rootName && rootDirectory) {
+    StringRef cdrn = root_name(current_dir);
+    SmallString<128> curDirRootName(cdrn.begin(), cdrn.end());
+    append(curDirRootName, p);
+    // Set path to the result.
+    path.swap(curDirRootName);
+    return;
+  }
+
+  if (rootName && !rootDirectory) {
+    StringRef pRootName = root_name(p);
+    StringRef bRootDirectory = root_directory(current_dir);
+    StringRef bRelativePath = relative_path(current_dir);
+    StringRef pRelativePath = relative_path(p);
+
+    SmallString<128> res;
+    append(res, pRootName, bRootDirectory, bRelativePath, pRelativePath);
+    path.swap(res);
+    return;
+  }
+
+  llvm_unreachable("All rootName and rootDirectory combinations should have "
+                   "occurred above!");
+}
+
 StringRef remove_leading_dotslash(StringRef Path, Style style) {
   // Remove leading "./" (or ".//" or "././" etc.)
   while (Path.size() > 2 && Path[0] == '.' && is_separator(Path[1], style)) {
@@ -785,6 +835,8 @@ bool remove_dots(SmallVectorImpl<char> &the_path, bool remove_dot_dot,
 namespace fs {
 
 std::error_code getUniqueID(const Twine Path, UniqueID &Result) {
+  sandbox::violationIfEnabled();
+
   file_status Status;
   std::error_code EC = status(Path, Status);
   if (EC)
@@ -903,56 +955,9 @@ getPotentiallyUniqueTempFileName(const Twine &Prefix, StringRef Suffix,
   return createTemporaryFile(Prefix, Suffix, Dummy, ResultPath, FS_Name);
 }
 
-void make_absolute(const Twine &current_directory,
-                   SmallVectorImpl<char> &path) {
-  StringRef p(path.data(), path.size());
-
-  bool rootDirectory = path::has_root_directory(p);
-  bool rootName = path::has_root_name(p);
-
-  // Already absolute.
-  if ((rootName || is_style_posix(Style::native)) && rootDirectory)
-    return;
-
-  // All of the following conditions will need the current directory.
-  SmallString<128> current_dir;
-  current_directory.toVector(current_dir);
-
-  // Relative path. Prepend the current directory.
-  if (!rootName && !rootDirectory) {
-    // Append path to the current directory.
-    path::append(current_dir, p);
-    // Set path to the result.
-    path.swap(current_dir);
-    return;
-  }
-
-  if (!rootName && rootDirectory) {
-    StringRef cdrn = path::root_name(current_dir);
-    SmallString<128> curDirRootName(cdrn.begin(), cdrn.end());
-    path::append(curDirRootName, p);
-    // Set path to the result.
-    path.swap(curDirRootName);
-    return;
-  }
-
-  if (rootName && !rootDirectory) {
-    StringRef pRootName      = path::root_name(p);
-    StringRef bRootDirectory = path::root_directory(current_dir);
-    StringRef bRelativePath  = path::relative_path(current_dir);
-    StringRef pRelativePath  = path::relative_path(p);
-
-    SmallString<128> res;
-    path::append(res, pRootName, bRootDirectory, bRelativePath, pRelativePath);
-    path.swap(res);
-    return;
-  }
-
-  llvm_unreachable("All rootName and rootDirectory combinations should have "
-                   "occurred above!");
-}
-
 std::error_code make_absolute(SmallVectorImpl<char> &path) {
+  sandbox::violationIfEnabled();
+
   if (path::is_absolute(path))
     return {};
 
@@ -960,7 +965,7 @@ std::error_code make_absolute(SmallVectorImpl<char> &path) {
   if (std::error_code ec = current_path(current_dir))
     return ec;
 
-  make_absolute(current_dir, path);
+  path::make_absolute(current_dir, path);
   return {};
 }
 
@@ -1045,6 +1050,8 @@ std::error_code copy_file(const Twine &From, int ToFD) {
 }
 
 ErrorOr<MD5::MD5Result> md5_contents(int FD) {
+  sandbox::violationIfEnabled();
+
   MD5 Hash;
 
   constexpr size_t BufSize = 4096;
@@ -1065,6 +1072,8 @@ ErrorOr<MD5::MD5Result> md5_contents(int FD) {
 }
 
 ErrorOr<MD5::MD5Result> md5_contents(const Twine &Path) {
+  sandbox::violationIfEnabled();
+
   int FD;
   if (auto EC = openFileForRead(Path, FD, OF_None))
     return EC;
@@ -1094,6 +1103,8 @@ bool is_directory(const basic_file_status &status) {
 }
 
 std::error_code is_directory(const Twine &path, bool &result) {
+  sandbox::violationIfEnabled();
+
   file_status st;
   if (std::error_code ec = status(path, st))
     return ec;
@@ -1106,6 +1117,8 @@ bool is_regular_file(const basic_file_status &status) {
 }
 
 std::error_code is_regular_file(const Twine &path, bool &result) {
+  sandbox::violationIfEnabled();
+
   file_status st;
   if (std::error_code ec = status(path, st))
     return ec;
@@ -1118,6 +1131,8 @@ bool is_symlink_file(const basic_file_status &status) {
 }
 
 std::error_code is_symlink_file(const Twine &path, bool &result) {
+  sandbox::violationIfEnabled();
+
   file_status st;
   if (std::error_code ec = status(path, st, false))
     return ec;
@@ -1132,6 +1147,8 @@ bool is_other(const basic_file_status &status) {
 }
 
 std::error_code is_other(const Twine &Path, bool &Result) {
+  sandbox::violationIfEnabled();
+
   file_status FileStatus;
   if (std::error_code EC = status(Path, FileStatus))
     return EC;
@@ -1149,6 +1166,8 @@ void directory_entry::replace_filename(const Twine &Filename, file_type Type,
 }
 
 ErrorOr<perms> getPermissions(const Twine &Path) {
+  sandbox::violationIfEnabled();
+
   file_status Status;
   if (std::error_code EC = status(Path, Status))
     return EC;
@@ -1173,6 +1192,8 @@ const char *mapped_file_region::const_data() const {
 
 Error readNativeFileToEOF(file_t FileHandle, SmallVectorImpl<char> &Buffer,
                           ssize_t ChunkSize) {
+  sandbox::violationIfEnabled();
+
   // Install a handler to truncate the buffer to the correct size on exit.
   size_t Size = Buffer.size();
   auto TruncateOnExit = make_scope_exit([&]() { Buffer.truncate(Size); });

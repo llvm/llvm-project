@@ -2,7 +2,13 @@
   "errno": {
     "LIBC_CONF_ERRNO_MODE": {
       "value": "LIBC_ERRNO_MODE_DEFAULT",
-      "doc": "The implementation used for errno, acceptable values are LIBC_ERRNO_MODE_DEFAULT, LIBC_ERRNO_MODE_UNDEFINED, LIBC_ERRNO_MODE_THREAD_LOCAL, LIBC_ERRNO_MODE_SHARED, LIBC_ERRNO_MODE_EXTERNAL, LIBC_ERRNO_MODE_SYSTEM, and LIBC_ERRNO_MODE_SYSTEM_INLINE."
+      "doc": "The implementation used for errno, acceptable values are LIBC_ERRNO_MODE_DEFAULT, LIBC_ERRNO_MODE_UNDEFINED, LIBC_ERRNO_MODE_THREAD_LOCAL, LIBC_ERRNO_MODE_SHARED, LIBC_ERRNO_MODE_EXTERNAL, and LIBC_ERRNO_MODE_SYSTEM_INLINE."
+    }
+  },
+  "threads": {
+    "LIBC_CONF_THREAD_MODE": {
+      "value": "LIBC_THREAD_MODE_PLATFORM",
+      "doc": "The implementation used for Mutex, acceptable values are LIBC_THREAD_MODE_PLATFORM, LIBC_THREAD_MODE_SINGLE, and LIBC_THREAD_MODE_EXTERNAL."
     }
   },
   "printf": {
@@ -34,6 +40,7 @@
       "value": false,
       "doc": "Use an alternative printf float implementation based on 320-bit floats"
     },
+
     "LIBC_CONF_PRINTF_DISABLE_FIXED_POINT": {
       "value": false,
       "doc": "Disable printing fixed point values in printf and friends."
@@ -58,9 +65,13 @@
     }
   },
   "string": {
-    "LIBC_CONF_STRING_UNSAFE_WIDE_READ": {
-      "value": false,
-      "doc": "Read more than a byte at a time to perform byte-string operations like strlen."
+    "LIBC_CONF_STRING_LENGTH_IMPL": {
+      "value": "element",
+      "doc": "Selects the implementation for string-length: 'element', 'word', 'clang_vector', or 'arch_vector'."
+    },
+    "LIBC_CONF_FIND_FIRST_CHARACTER_IMPL": {
+      "value": "element",
+      "doc": "Selects the implementation for find-first-character-related functions: 'element', 'word', 'clang_vector', or 'arch_vector'."
     },
     "LIBC_CONF_MEMSET_X86_USE_SOFTWARE_PREFETCHING": {
       "value": false,
@@ -123,6 +134,18 @@
     "LIBC_ADD_NULL_CHECKS": {
       "value": true,
       "doc": "Add nullptr checks in the library's implementations to some functions for which passing nullptr is undefined behavior."
+    }
+  },
+  "wctype": {
+    "LIBC_CONF_WCTYPE_MODE": {
+      "value": "LIBC_WCTYPE_MODE_ASCII",
+      "doc": "The implementation used for wctype, acceptable values are LIBC_WCTYPE_MODE_ASCII and LIBC_WCTYPE_MODE_UTF8."
+    }
+  },
+  "fenv": {
+    "LIBC_CONF_TRAP_ON_RAISE_FP_EXCEPT": {
+      "value": false,
+      "doc": "Trap with SIGFPE when feraiseexcept is called with unmasked floating point exceptions, similar to glibc's behavior.  This is currently working only on x86 with SSE."
     }
   }
 }

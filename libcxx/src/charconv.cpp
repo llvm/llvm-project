@@ -18,9 +18,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __itoa {
 
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wmissing-prototypes")
+// These functions exist for ABI compatibility, so we don't ever want a declaration prior to the definition.
 _LIBCPP_EXPORTED_FROM_ABI char* __u32toa(uint32_t value, char* buffer) noexcept { return __base_10_u32(buffer, value); }
-
 _LIBCPP_EXPORTED_FROM_ABI char* __u64toa(uint64_t value, char* buffer) noexcept { return __base_10_u64(buffer, value); }
+_LIBCPP_DIAGNOSTIC_POP
 
 } // namespace __itoa
 

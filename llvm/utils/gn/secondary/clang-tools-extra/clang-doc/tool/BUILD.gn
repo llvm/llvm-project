@@ -6,9 +6,11 @@ copy("assets") {
     "../assets/comment-template.mustache",
     "../assets/enum-template.mustache",
     "../assets/function-template.mustache",
+    "../assets/head-template.mustache",
     "../assets/index.js",
     "../assets/mustache-index.js",
     "../assets/namespace-template.mustache",
+    "../assets/navbar-template.mustache",
     "../assets/template.mustache",
   ]
   outputs = [ "$root_build_dir/share/clang-doc/{{source_file_part}}" ]

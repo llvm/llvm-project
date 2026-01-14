@@ -269,6 +269,12 @@ static bool enableUnifiedLTO(Module &M) {
 }
 #endif
 
+bool mustEmitToMergedModule(const GlobalValue *GV) {
+  // The __cfi_check definition is filled in by the CrossDSOCFI pass which
+  // runs only in the merged module.
+  return GV->getName() == "__cfi_check";
+}
+
 // If it's possible to split M into regular and thin LTO parts, do so and write
 // a multi-module bitcode file with the two parts to OS. Otherwise, write only a
 // regular LTO bitcode file to OS.
@@ -356,6 +362,8 @@ void splitAndWriteThinLTOBitcode(
         if (const auto *C = GV->getComdat())
           if (MergedMComdats.count(C))
             return true;
+        if (mustEmitToMergedModule(GV))
+          return true;
         if (auto *F = dyn_cast<Function>(GV))
           return EligibleVirtualFns.count(F);
         if (auto *GVar =
@@ -372,7 +380,7 @@ void splitAndWriteThinLTOBitcode(
   cloneUsedGlobalVariables(M, *MergedM, /*CompilerUsed*/ true);
 
   for (Function &F : *MergedM)
-    if (!F.isDeclaration()) {
+    if (!F.isDeclaration() && !mustEmitToMergedModule(&F)) {
       // Reset the linkage of all functions eligible for virtual constant
       // propagation. The canonical definitions live in the thin LTO module so
       // that they can be imported.
@@ -384,6 +392,10 @@ void splitAndWriteThinLTOBitcode(
   for (auto &F : M)
     if ((!F.hasLocalLinkage() || F.hasAddressTaken()) && HasTypeMetadata(&F))
       CfiFunctions.insert(&F);
+  for (auto &A : M.aliases())
+    if (auto *F = dyn_cast<Function>(A.getAliasee()))
+      if (HasTypeMetadata(F))
+        CfiFunctions.insert(&A);
 
   // Remove all globals with type metadata, globals with comdats that live in
   // MergedM, and aliases pointing to such globals from the thin LTO module.
@@ -394,6 +406,8 @@ void splitAndWriteThinLTOBitcode(
     if (const auto *C = GV->getComdat())
       if (MergedMComdats.count(C))
         return false;
+    if (mustEmitToMergedModule(GV))
+      return false;
     return true;
   });
 
@@ -403,12 +417,12 @@ void splitAndWriteThinLTOBitcode(
   auto &Ctx = MergedM->getContext();
   SmallVector<MDNode *, 8> CfiFunctionMDs;
   for (auto *V : CfiFunctions) {
-    Function &F = *cast<Function>(V);
+    Function &F = *cast<Function>(V->getAliaseeObject());
     SmallVector<MDNode *, 2> Types;
     F.getMetadata(LLVMContext::MD_type, Types);
 
     SmallVector<Metadata *, 4> Elts;
-    Elts.push_back(MDString::get(Ctx, F.getName()));
+    Elts.push_back(MDString::get(Ctx, V->getName()));
     CfiFunctionLinkage Linkage;
     if (lowertypetests::isJumpTableCanonical(&F))
       Linkage = CFL_Definition;
@@ -428,29 +442,24 @@ void splitAndWriteThinLTOBitcode(
       NMD->addOperand(MD);
   }
 
-  SmallVector<MDNode *, 8> FunctionAliases;
+  MapVector<Function *, std::vector<GlobalAlias *>> FunctionAliases;
   for (auto &A : M.aliases()) {
     if (!isa<Function>(A.getAliasee()))
       continue;
 
     auto *F = cast<Function>(A.getAliasee());
-
-    Metadata *Elts[] = {
-        MDString::get(Ctx, A.getName()),
-        MDString::get(Ctx, F->getName()),
-        ConstantAsMetadata::get(
-            ConstantInt::get(Type::getInt8Ty(Ctx), A.getVisibility())),
-        ConstantAsMetadata::get(
-            ConstantInt::get(Type::getInt8Ty(Ctx), A.isWeakForLinker())),
-    };
-
-    FunctionAliases.push_back(MDTuple::get(Ctx, Elts));
+    FunctionAliases[F].push_back(&A);
   }
 
   if (!FunctionAliases.empty()) {
     NamedMDNode *NMD = MergedM->getOrInsertNamedMetadata("aliases");
-    for (auto *MD : FunctionAliases)
-      NMD->addOperand(MD);
+    for (auto &Alias : FunctionAliases) {
+      SmallVector<Metadata *> Elts;
+      Elts.push_back(MDString::get(Ctx, Alias.first->getName()));
+      for (auto *A : Alias.second)
+        Elts.push_back(MDString::get(Ctx, A->getName()));
+      NMD->addOperand(MDTuple::get(Ctx, Elts));
+    }
   }
 
   SmallVector<MDNode *, 8> Symvers;
@@ -520,10 +529,12 @@ bool enableSplitLTOUnit(Module &M) {
   return EnableSplitLTOUnit;
 }
 
-// Returns whether this module needs to be split because it uses type metadata.
-bool hasTypeMetadata(Module &M) {
+// Returns whether this module needs to be split (if splitting is enabled).
+bool requiresSplit(Module &M) {
   for (auto &GO : M.global_objects()) {
     if (GO.hasMetadata(LLVMContext::MD_type))
+      return true;
+    if (mustEmitToMergedModule(&GO))
       return true;
   }
   return false;
@@ -534,9 +545,9 @@ bool writeThinLTOBitcode(raw_ostream &OS, raw_ostream *ThinLinkOS,
                          Module &M, const ModuleSummaryIndex *Index,
                          const bool ShouldPreserveUseListOrder) {
   std::unique_ptr<ModuleSummaryIndex> NewIndex = nullptr;
-  // See if this module has any type metadata. If so, we try to split it
+  // See if this module needs to be split. If so, we try to split it
   // or at least promote type ids to enable WPD.
-  if (hasTypeMetadata(M)) {
+  if (requiresSplit(M)) {
     if (enableSplitLTOUnit(M)) {
       splitAndWriteThinLTOBitcode(OS, ThinLinkOS, AARGetter, M,
                                   ShouldPreserveUseListOrder);
