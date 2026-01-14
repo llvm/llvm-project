@@ -293,7 +293,7 @@ void selfPtrPassedAsConstPointerToOpaqueCtorCall() {
   // We construct a "SpecialVector" that takes the address of itself
   // (or to a subobject somewhere itself) by a const-pointer.
   // Despite the var region "buf" is mentioned via a const argument, the opaque
-  // ctor cal should still take presecedent and invalidate the underlying object.
+  // ctor call should still take precedent and invalidate the underlying object.
   SpecialVector buf(&buf);
   buf.size();
 }
