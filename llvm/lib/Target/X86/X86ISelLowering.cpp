@@ -29733,7 +29733,7 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
     return DAG.getNode(MinMaxOp, DL, VT, NewX, NewY, Op->getFlags());
   }
 
-  EVT SVT = VT.getScalarType();
+  [[maybe_unused]] EVT SVT = VT.getScalarType();
   assert(VT.isFloatingPoint() &&
          (SVT == MVT::f16 || SVT == MVT::f32 || SVT == MVT::f64) &&
          "Unexpected type in LowerFMINIMUM_FMAXIMUM");
