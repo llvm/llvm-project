@@ -2478,6 +2478,7 @@ multiclass VOP3P_Real_LD_SCALE_gfx1250<bits<8> op> {
     VOP3P_Real_Gen<ps, GFX1250Gen, ps.Mnemonic>,
     VOP3Pe_gfx11_gfx12<op, ps.Pfl> {
       let Inst{58-50} = 0x100; // scale src2 = vgpr0 (dummy)
+      let PostEncoderMethod = "";
     }
 }
 
