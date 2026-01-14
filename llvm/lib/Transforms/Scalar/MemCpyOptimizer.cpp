@@ -1516,12 +1516,13 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   // Check that copy is full with static size.
   const DataLayout &DL = DestAlloca->getDataLayout();
   std::optional<TypeSize> SrcSize = SrcAlloca->getAllocationSize(DL);
-  if (!SrcSize || Size != *SrcSize) {
-    LLVM_DEBUG(dbgs() << "Stack Move: Source alloca size mismatch\n");
-    return false;
-  }
   std::optional<TypeSize> DestSize = DestAlloca->getAllocationSize(DL);
-  if (!DestSize || Size != *DestSize) {
+  if (!SrcSize || !DestSize)
+    return false;
+  if (*SrcSize != *DestSize)
+    if (!SrcSize->isFixed() || !DestSize->isFixed())
+      return false;
+  if (Size != *DestSize) {
     LLVM_DEBUG(dbgs() << "Stack Move: Destination alloca size mismatch\n");
     return false;
   }
@@ -1680,6 +1681,16 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   SrcAlloca->setAlignment(
       std::max(SrcAlloca->getAlign(), DestAlloca->getAlign()));
 
+  // Size the allocas appropriately.
+  if (*SrcSize != *DestSize) {
+    // Only possible if both sizes are fixed (due to earlier check)
+    // Set Src to the type and array size of Dest if Dest was larger
+    if (DestSize->getFixedValue() > SrcSize->getFixedValue()) {
+      SrcAlloca->setAllocatedType(DestAlloca->getAllocatedType());
+      SrcAlloca->setOperand(0, DestAlloca->getArraySize());
+    }
+  }
+
   // Merge the two allocas.
   DestAlloca->replaceAllUsesWith(SrcAlloca);
   eraseInstruction(DestAlloca);
@@ -1707,7 +1718,7 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
     I->setMetadata(LLVMContext::MD_tbaa_struct, nullptr);
   }
 
-  LLVM_DEBUG(dbgs() << "Stack Move: Performed staack-move optimization\n");
+  LLVM_DEBUG(dbgs() << "Stack Move: Performed stack-move optimization\n");
   NumStackMove++;
   return true;
 }
