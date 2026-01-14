@@ -97,6 +97,7 @@ def main(argv):
                         '--',
                         '-j1',
                         '--param', 'optimization=speed',
+                        '--param', 'std=c++26',
                         build_dir / 'micro/libcxx/test',
                         '--filter', 'benchmarks/(algorithms|containers|iterators|locale|memory|streams|numeric|utility)'])
 
