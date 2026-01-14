@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx950 %s 2>&1 | FileCheck -check-prefix=ERR %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx950 -mattr=+wavefrontsize32,-wavefrontsize64 %s 2>&1 | FileCheck -check-prefix=W32-ERR %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx950 %s -filetype=null 2>&1 | FileCheck -check-prefix=ERR %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx950 -mattr=+wavefrontsize32,-wavefrontsize64 %s -filetype=null 2>&1 | FileCheck -check-prefix=W32-ERR %s
 
 //===----------------------------------------------------------------------===//
 // v_mfma_f32_32x32x4_xf32

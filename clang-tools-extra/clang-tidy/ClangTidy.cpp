@@ -17,7 +17,7 @@
 #include "ClangTidy.h"
 #include "ClangTidyCheck.h"
 #include "ClangTidyDiagnosticConsumer.h"
-#include "ClangTidyModuleRegistry.h"
+#include "ClangTidyModule.h"
 #include "ClangTidyProfiling.h"
 #include "ExpandModularHeadersPPCallbacks.h"
 #include "clang-tidy-config.h"

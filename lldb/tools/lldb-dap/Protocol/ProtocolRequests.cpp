@@ -296,7 +296,7 @@ bool fromJSON(const json::Value &Params, Console &C, json::Path P) {
 bool fromJSON(const json::Value &Params, LaunchRequestArguments &LRA,
               json::Path P) {
   json::ObjectMapper O(Params, P);
-  bool success =
+  const bool success =
       O && fromJSON(Params, LRA.configuration, P) &&
       O.mapOptional("noDebug", LRA.noDebug) &&
       O.mapOptional("launchCommands", LRA.launchCommands) &&
@@ -310,6 +310,13 @@ bool fromJSON(const json::Value &Params, LaunchRequestArguments &LRA,
       O.mapOptional("stdio", LRA.stdio) && parseEnv(Params, LRA.env, P);
   if (!success)
     return false;
+
+  for (std::optional<std::string> &io_path : LRA.stdio) {
+    // set empty paths to null.
+    if (io_path && llvm::StringRef(*io_path).trim().empty())
+      io_path.reset();
+  }
+
   // Validate that we have a well formed launch request.
   if (!LRA.launchCommands.empty() &&
       LRA.console != protocol::eConsoleInternal) {
@@ -800,6 +807,24 @@ bool fromJSON(const llvm::json::Value &Params, RestartArguments &Args,
   Path.report(
       "failed to parse arguments, expected `launch` or `attach` arguments");
   return false;
+}
+
+bool fromJSON(const llvm::json::Value &Params, StackTraceArguments &Args,
+              llvm::json::Path Path) {
+  json::ObjectMapper O(Params, Path);
+  return O && O.map("threadId", Args.threadId) &&
+         O.mapOptional("startFrame", Args.startFrame) &&
+         O.mapOptional("levels", Args.levels) &&
+         O.mapOptional("format", Args.format);
+}
+
+llvm::json::Value toJSON(const StackTraceResponseBody &Body) {
+  json::Object result{{"stackFrames", Body.stackFrames}};
+
+  if (Body.totalFrames)
+    result.insert({"totalFrames", Body.totalFrames});
+
+  return result;
 }
 
 } // namespace lldb_dap::protocol

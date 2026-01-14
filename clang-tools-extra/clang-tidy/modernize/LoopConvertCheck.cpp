@@ -55,17 +55,17 @@ template <> struct OptionEnumMapping<modernize::VariableNamer::NamingStyle> {
 
 namespace modernize {
 
-static const char LoopNameArray[] = "forLoopArray";
-static const char LoopNameIterator[] = "forLoopIterator";
-static const char LoopNameReverseIterator[] = "forLoopReverseIterator";
-static const char LoopNamePseudoArray[] = "forLoopPseudoArray";
-static const char ConditionBoundName[] = "conditionBound";
-static const char InitVarName[] = "initVar";
-static const char BeginCallName[] = "beginCall";
-static const char EndCallName[] = "endCall";
-static const char EndVarName[] = "endVar";
-static const char DerefByValueResultName[] = "derefByValueResult";
-static const char DerefByRefResultName[] = "derefByRefResult";
+static constexpr char LoopNameArray[] = "forLoopArray";
+static constexpr char LoopNameIterator[] = "forLoopIterator";
+static constexpr char LoopNameReverseIterator[] = "forLoopReverseIterator";
+static constexpr char LoopNamePseudoArray[] = "forLoopPseudoArray";
+static constexpr char ConditionBoundName[] = "conditionBound";
+static constexpr char InitVarName[] = "initVar";
+static constexpr char BeginCallName[] = "beginCall";
+static constexpr char EndCallName[] = "endCall";
+static constexpr char EndVarName[] = "endVar";
+static constexpr char DerefByValueResultName[] = "derefByValueResult";
+static constexpr char DerefByRefResultName[] = "derefByRefResult";
 static const llvm::StringSet<> MemberNames{"begin",   "cbegin", "rbegin",
                                            "crbegin", "end",    "cend",
                                            "rend",    "crend",  "size"};
