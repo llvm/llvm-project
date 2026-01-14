@@ -2438,6 +2438,16 @@ void AArch64AsmPrinter::emitAddress(MCRegister Reg, const MCExpr *Expr,
   }
 }
 
+static bool targetSupportsIRelativeRelocation(const Triple &TT) {
+  // IFUNCs are ELF-only.
+  if (!TT.isOSBinFormatELF())
+    return false;
+
+  // IFUNCs are supported on glibc, bionic, and some but not all of the BSDs.
+  return TT.isOSGlibc() || TT.isAndroid() || TT.isOSFreeBSD() ||
+         TT.isOSDragonFly() || TT.isOSNetBSD();
+}
+
 // Emit an ifunc resolver that returns a signed pointer to the specified target,
 // and return a FUNCINIT reference to the resolver. In the linked binary, this
 // function becomes the target of an IRELATIVE relocation. This resolver is used
@@ -2493,6 +2503,14 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
     const MCExpr *Target, uint64_t Disc, AArch64PACKey::ID KeyID,
     bool HasAddressDiversity, bool IsDSOLocal, const MCExpr *DSExpr) {
   const Triple &TT = TM.getTargetTriple();
+
+  // We only emit an IRELATIVE relocation if the target supports IRELATIVE.
+  if (!targetSupportsIRelativeRelocation(TT))
+    return nullptr;
+
+  // For now, only the DA key is supported.
+  if (KeyID != AArch64PACKey::DA)
+    return nullptr;
 
   AArch64Subtarget STI(TT, TM.getTargetCPU(), TM.getTargetCPU(),
                        TM.getTargetFeatureString(), TM, true);
@@ -2617,11 +2635,10 @@ AArch64AsmPrinter::lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
   uint64_t Disc = CPA.getDiscriminator()->getZExtValue();
 
   // Check if we can represent this with an IRELATIVE and emit it if so.
-  if (TM.getObjFileLowering()->canEmitConstantPtrAuthAsIRelative(&CPA))
-    if (auto *IFuncSym = emitPAuthRelocationAsIRelative(
-            Sym, Disc, AArch64PACKey::ID(KeyID), CPA.hasAddressDiscriminator(),
-            BaseGVB && BaseGVB->isDSOLocal(), DSExpr))
-      return IFuncSym;
+  if (auto *IFuncSym = emitPAuthRelocationAsIRelative(
+          Sym, Disc, AArch64PACKey::ID(KeyID), CPA.hasAddressDiscriminator(),
+          BaseGVB && BaseGVB->isDSOLocal(), DSExpr))
+    return IFuncSym;
 
   if (!isUInt<16>(Disc)) {
     CPA.getContext().emitError("AArch64 PAC Discriminator '" + Twine(Disc) +

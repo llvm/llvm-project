@@ -227,17 +227,15 @@ void TargetLoweringObjectFile::emitPseudoProbeDescMetadata(
   }
 }
 
-static bool needsPtrAuthRelocation(const Constant *C,
-                                   const TargetLoweringObjectFile *TLOF) {
-  if (const auto *CPA = dyn_cast<ConstantPtrAuth>(C))
-    if (!TLOF->canEmitConstantPtrAuthAsIRelative(CPA))
-      return true;
+static bool containsConstantPtrAuth(const Constant *C) {
+  if (isa<ConstantPtrAuth>(C))
+    return true;
 
   if (isa<BlockAddress>(C) || isa<GlobalValue>(C))
     return false;
 
   for (const Value *Op : C->operands())
-    if (needsPtrAuthRelocation(cast<Constant>(Op), TLOF))
+    if (containsConstantPtrAuth(cast<Constant>(Op)))
       return true;
 
   return false;
@@ -345,7 +343,7 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
 
     } else {
       // The dynamic linker always needs to fix PtrAuth relocations up.
-      if (needsPtrAuthRelocation(C, TM.getObjFileLowering()))
+      if (containsConstantPtrAuth(C))
         return SectionKind::getReadOnlyWithRel();
 
       // In static, ROPI and RWPI relocation models, the linker will resolve
