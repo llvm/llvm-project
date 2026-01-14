@@ -1457,7 +1457,6 @@ void Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
       return;
     }
   } while (Tok.isNot(tok::eof));
-  PP.Lex(Tok);
   return;
 }
 
