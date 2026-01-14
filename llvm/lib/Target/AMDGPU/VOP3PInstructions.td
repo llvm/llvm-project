@@ -2276,9 +2276,9 @@ class VOP3PX2e <bits<8> op, bits<8> LdScaleOp, VOP3PWMMA_Profile P> : Enc128, VO
 
   let Inst{87-80} = op;
   let Inst{95-88} = 0xcc; //encoding
-  let Inst{104-96} = !if(P.HasSrc0, src0, 0);
-  let Inst{113-105} = !if(P.HasSrc1, src1, 0);
-  let Inst{122-114} = !if(P.HasSrc2, src2, 0);
+  let Inst{104-96} = !if(P.HasSrc0, src0, ?);
+  let Inst{113-105} = !if(P.HasSrc1, src1, ?);
+  let Inst{122-114} = !if(P.HasSrc2, src2, ?);
 
   // neg_lo
   let Inst{125} = !if(P.NegLo01, src0_modifiers{0}, 0);
