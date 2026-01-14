@@ -4928,9 +4928,9 @@ genACC(Fortran::lower::AbstractConverter &converter,
         // Try to get shape/typeparams from the defining designate op.
         if (auto designate = base.getDefiningOp<hlfir::DesignateOp>()) {
           shape = designate.getShape();
-          lenParams = llvm::SmallVector<mlir::Value>(
-              designate.getTypeparams().begin(),
-              designate.getTypeparams().end());
+          lenParams =
+              llvm::SmallVector<mlir::Value>(designate.getTypeparams().begin(),
+                                             designate.getTypeparams().end());
           attrs = designate.getFortranAttrsAttr();
         }
         auto declareOp = hlfir::DeclareOp::create(
