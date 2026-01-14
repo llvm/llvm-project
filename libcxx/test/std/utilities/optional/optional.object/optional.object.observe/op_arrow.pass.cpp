@@ -20,8 +20,6 @@
 
 #include "test_macros.h"
 
-using std::optional;
-
 struct X {
   constexpr int test() noexcept { return 3; }
   constexpr int test() const noexcept { return 4; }
@@ -49,40 +47,7 @@ constexpr void test_ref_contract() {
   ASSERT_NOEXCEPT(std::as_const(opt).operator->());
 }
 
-constexpr void test_ref() {
-  {
-    X x{};
-    std::optional<X&> opt(x);
-    ASSERT_SAME_TYPE(decltype(opt.operator->()), X*);
-    ASSERT_NOEXCEPT(opt.operator->());
-    assert(opt.operator->() == std::addressof(x));
-    assert(opt->test() == 3);
-  }
-  {
-    X x{};
-    std::optional<const X&> opt(x);
-    ASSERT_SAME_TYPE(decltype(opt.operator->()), const X*);
-    ASSERT_NOEXCEPT(opt.operator->());
-    assert(opt.operator->() == std::addressof(x));
-    assert(opt->test() == 4);
-  }
-  {
-    X x{};
-    const std::optional<X&> opt(x);
-    ASSERT_SAME_TYPE(decltype(opt.operator->()), X*);
-    ASSERT_NOEXCEPT(opt.operator->());
-    assert(opt.operator->() == std::addressof(x));
-    assert(opt->test() == 3);
-  }
-  {
-    X x{};
-    const std::optional<const X&> opt(x);
-    ASSERT_SAME_TYPE(decltype(opt.operator->()), const X*);
-    ASSERT_NOEXCEPT(opt.operator->());
-    assert(opt.operator->() == std::addressof(x));
-    assert(opt->test() == 4);
-  }
-}
+constexpr void test_ref() {}
 
 #endif
 
@@ -115,7 +80,38 @@ constexpr bool test() {
   test_ref_contract<const float>();
   test_ref_contract<const double>();
 
-  test_ref();
+  {
+    X x{};
+    std::optional<X&> o1(x);
+    ASSERT_SAME_TYPE(decltype(o1.operator->()), X*);
+    ASSERT_NOEXCEPT(o1.operator->());
+    assert(o1.operator->() == std::addressof(x));
+    assert(o1->test() == 3);
+  }
+  {
+    X x{};
+    std::optional<const X&> o2(x);
+    ASSERT_SAME_TYPE(decltype(o2.operator->()), const X*);
+    ASSERT_NOEXCEPT(o2.operator->());
+    assert(o2.operator->() == std::addressof(x));
+    assert(o2->test() == 4);
+  }
+  {
+    X x{};
+    const std::optional<X&> o3(x);
+    ASSERT_SAME_TYPE(decltype(o3.operator->()), X*);
+    ASSERT_NOEXCEPT(o3.operator->());
+    assert(o3.operator->() == std::addressof(x));
+    assert(o3->test() == 3);
+  }
+  {
+    X x{};
+    const std::optional<const X&> o4(x);
+    ASSERT_SAME_TYPE(decltype(o4.operator->()), const X*);
+    ASSERT_NOEXCEPT(o4.operator->());
+    assert(o4.operator->() == std::addressof(x));
+    assert(o4->test() == 4);
+  }
 #endif
 
   return true;

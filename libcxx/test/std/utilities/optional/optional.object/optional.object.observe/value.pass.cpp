@@ -22,9 +22,6 @@
 
 #include "test_macros.h"
 
-using std::bad_optional_access;
-using std::optional;
-
 struct X {
   constexpr X() = default;
   constexpr int test() const& { return 3; }
@@ -63,25 +60,6 @@ constexpr void test_ref_contract() {
   ASSERT_NOT_NOEXCEPT(std::move(opt).value());
   ASSERT_NOT_NOEXCEPT(std::move(std::as_const(opt)).value());
 }
-
-constexpr void test_ref() {
-  {
-    X x;
-    optional<X&> opt{x};
-    assert(opt.value().test() == 4);
-    assert(std::as_const(opt).value().test() == 4);
-    assert(std::move(opt).value().test() == 4);
-    assert(std::move(std::as_const(opt)).value().test() == 4);
-  }
-  {
-    X x;
-    optional<const X&> opt{x};
-    assert(opt.value().test() == 3);
-    assert(std::as_const(opt).value().test() == 3);
-    assert(std::move(opt).value().test() == 3);
-    assert(std::move(std::as_const(opt)).value().test() == 3);
-  }
-}
 #endif
 
 constexpr bool test() {
@@ -115,7 +93,22 @@ constexpr bool test() {
   test_ref_contract<const double>();
   test_ref_contract<const X>();
 
-  test_ref();
+  {
+    X x;
+    std::optional<X&> o1{x};
+    assert(o1.value().test() == 4);
+    assert(std::as_const(o1).value().test() == 4);
+    assert(std::move(o1).value().test() == 4);
+    assert(std::move(std::as_const(o1)).value().test() == 4);
+  }
+  {
+    X x;
+    std::optional<const X&> o2{x};
+    assert(o2.value().test() == 3);
+    assert(std::as_const(o2).value().test() == 3);
+    assert(std::move(o2).value().test() == 3);
+    assert(std::move(std::as_const(o2)).value().test() == 3);
+  }
 #endif
 
   return true;
@@ -126,55 +119,55 @@ int main(int, char**) {
   static_assert(test());
 #ifndef TEST_HAS_NO_EXCEPTIONS
   {
-    optional<X> opt;
+    std::optional<X> opt;
     try {
       (void)opt.value();
       assert(false);
-    } catch (const bad_optional_access&) {
+    } catch (const std::bad_optional_access&) {
     }
 
     try {
       (void)std::as_const(opt).value();
       assert(false);
-    } catch (const bad_optional_access&) {
+    } catch (const std::bad_optional_access&) {
     }
 
     try {
       (void)std::move(opt).value();
       assert(false);
-    } catch (const bad_optional_access&) {
+    } catch (const std::bad_optional_access&) {
     }
 
     try {
       (void)std::move(std::as_const(opt)).value();
       assert(false);
-    } catch (const bad_optional_access&) {
+    } catch (const std::bad_optional_access&) {
     }
   }
 
   {
-    optional<X> opt(X{});
+    std::optional<X> opt(X{});
     try {
       (void)opt.value();
-    } catch (const bad_optional_access&) {
+    } catch (const std::bad_optional_access&) {
       assert(false);
     }
 
     try {
       (void)std::as_const(opt).value();
-    } catch (const bad_optional_access&) {
+    } catch (const std::bad_optional_access&) {
       assert(false);
     }
 
     try {
       (void)std::move(opt).value();
-    } catch (const bad_optional_access&) {
+    } catch (const std::bad_optional_access&) {
       assert(false);
     }
 
     try {
       (void)std::move(std::as_const(opt)).value();
-    } catch (const bad_optional_access&) {
+    } catch (const std::bad_optional_access&) {
       assert(false);
     }
   }

@@ -25,8 +25,6 @@
 #  include "copy_move_types.h"
 #endif
 
-using std::optional;
-
 struct X {
   constexpr int test() const& { return 3; }
   constexpr int test() & { return 4; }
@@ -63,41 +61,6 @@ constexpr void test_ref_contract() {
   ASSERT_NOEXCEPT(*std::as_const(opt));
   ASSERT_NOEXCEPT(*std::move(std::as_const(opt)));
 }
-
-constexpr void test_ref() {
-  {
-    TracedCopyMove x{};
-    std::optional<TracedCopyMove&> opt(x);
-
-    assert(std::addressof(*opt) == std::addressof(x));
-    assert(std::addressof(*std::move(opt)) == std::addressof(x));
-    assert(std::addressof(*std::as_const(opt)) == std::addressof(x));
-    assert(std::addressof(*std::move(std::as_const(opt))) == std::addressof(x));
-    assert(x.constMove == 0);
-    assert(x.nonConstMove == 0);
-    assert(x.constCopy == 0);
-    assert(x.nonConstCopy == 0);
-  }
-
-  {
-    TracedCopyMove x{};
-    std::optional<const TracedCopyMove&> opt(x);
-
-    assert(std::addressof(*opt) == std::addressof(x));
-    assert(std::addressof(*std::move(opt)) == std::addressof(x));
-    assert(std::addressof(*std::as_const(opt)) == std::addressof(x));
-    assert(std::addressof(*std::move(std::as_const(opt))) == std::addressof(x));
-    assert(x.constMove == 0);
-    assert(x.nonConstMove == 0);
-    assert(x.constCopy == 0);
-    assert(x.nonConstCopy == 0);
-  }
-  {
-    X x{};
-    optional<X&> opt(x);
-    assert((*opt).test() == 4);
-  }
-}
 #endif
 
 constexpr bool test() {
@@ -128,7 +91,37 @@ constexpr bool test() {
   test_ref_contract<const double>();
   test_ref_contract<const X>();
 
-  test_ref();
+  {
+    TracedCopyMove x{};
+    std::optional<TracedCopyMove&> o1(x);
+
+    assert(std::addressof(*o1) == std::addressof(x));
+    assert(std::addressof(*std::move(o1)) == std::addressof(x));
+    assert(std::addressof(*std::as_const(o1)) == std::addressof(x));
+    assert(std::addressof(*std::move(std::as_const(o1))) == std::addressof(x));
+    assert(x.constMove == 0);
+    assert(x.nonConstMove == 0);
+    assert(x.constCopy == 0);
+    assert(x.nonConstCopy == 0);
+  }
+  {
+    TracedCopyMove x{};
+    std::optional<const TracedCopyMove&> o2(x);
+
+    assert(std::addressof(*o2) == std::addressof(x));
+    assert(std::addressof(*std::move(o2)) == std::addressof(x));
+    assert(std::addressof(*std::as_const(o2)) == std::addressof(x));
+    assert(std::addressof(*std::move(std::as_const(o2))) == std::addressof(x));
+    assert(x.constMove == 0);
+    assert(x.nonConstMove == 0);
+    assert(x.constCopy == 0);
+    assert(x.nonConstCopy == 0);
+  }
+  {
+    X x{};
+    std::optional<X&> o3(x);
+    assert((*o3).test() == 4);
+  }
 #endif
 
   return true;
