@@ -251,13 +251,13 @@ til::SExpr *SExprBuilder::translateVariable(const VarDecl *VD,
 
   // The closure captures state that is updated to correctly translate chains of
   // aliases. Restore it when we are done with recursive translation.
-  auto Cleanup = llvm::make_scope_exit(
-      [&, RestoreClosure =
-              VarsBeingTranslated.empty() ? LookupLocalVarExpr : nullptr] {
-        VarsBeingTranslated.erase(VD->getCanonicalDecl());
-        if (VarsBeingTranslated.empty())
-          LookupLocalVarExpr = RestoreClosure;
-      });
+  llvm::scope_exit Cleanup([&, RestoreClosure = VarsBeingTranslated.empty()
+                                                    ? LookupLocalVarExpr
+                                                    : nullptr] {
+    VarsBeingTranslated.erase(VD->getCanonicalDecl());
+    if (VarsBeingTranslated.empty())
+      LookupLocalVarExpr = RestoreClosure;
+  });
   VarsBeingTranslated.insert(VD->getCanonicalDecl());
 
   QualType Ty = VD->getType();

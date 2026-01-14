@@ -554,8 +554,7 @@ void transform::TransformState::recordValueHandleInvalidationByOpHandleOne(
       auto arg = llvm::cast<BlockArgument>(payloadValue);
       definingOp = arg.getParentBlock()->getParentOp();
       argumentNo = arg.getArgNumber();
-      blockNo = std::distance(arg.getOwner()->getParent()->begin(),
-                              arg.getOwner()->getIterator());
+      blockNo = arg.getOwner()->computeBlockNumber();
       regionNo = arg.getOwner()->getParent()->getRegionNumber();
     }
     assert(definingOp && "expected the value to be defined by an op as result "
@@ -810,7 +809,7 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
   LDBG() << "applying: "
          << OpWithFlags(transform, OpPrintingFlags().skipRegions());
   FULL_LDBG() << "Top-level payload before application:\n" << *getTopLevel();
-  auto printOnFailureRAII = llvm::make_scope_exit([this] {
+  llvm::scope_exit printOnFailureRAII([this] {
     (void)this;
     LDBG() << "Failing Top-level payload:\n"
            << OpWithFlags(getTopLevel(),

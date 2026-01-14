@@ -253,6 +253,34 @@ TEST(ELFTest, getELFRelocationTypeNameForLoongArch) {
             getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_64_PCREL));
   EXPECT_EQ("R_LARCH_CALL36",
             getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_CALL36));
+  EXPECT_EQ("R_LARCH_CALL30",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_CALL30));
+  EXPECT_EQ("R_LARCH_PCADD_HI20",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_PCADD_HI20));
+  EXPECT_EQ("R_LARCH_PCADD_LO12",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_PCADD_LO12));
+  EXPECT_EQ("R_LARCH_GOT_PCADD_HI20",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_GOT_PCADD_HI20));
+  EXPECT_EQ("R_LARCH_GOT_PCADD_LO12",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_GOT_PCADD_LO12));
+  EXPECT_EQ("R_LARCH_TLS_IE_PCADD_HI20",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_TLS_IE_PCADD_HI20));
+  EXPECT_EQ("R_LARCH_TLS_IE_PCADD_LO12",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_TLS_IE_PCADD_LO12));
+  EXPECT_EQ("R_LARCH_TLS_LD_PCADD_HI20",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_TLS_LD_PCADD_HI20));
+  EXPECT_EQ("R_LARCH_TLS_LD_PCADD_LO12",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_TLS_LD_PCADD_LO12));
+  EXPECT_EQ("R_LARCH_TLS_GD_PCADD_HI20",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_TLS_GD_PCADD_HI20));
+  EXPECT_EQ("R_LARCH_TLS_GD_PCADD_LO12",
+            getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_TLS_GD_PCADD_LO12));
+  EXPECT_EQ(
+      "R_LARCH_TLS_DESC_PCADD_HI20",
+      getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_TLS_DESC_PCADD_HI20));
+  EXPECT_EQ(
+      "R_LARCH_TLS_DESC_PCADD_LO12",
+      getELFRelocationTypeName(EM_LOONGARCH, R_LARCH_TLS_DESC_PCADD_LO12));
 }
 
 TEST(ELFTest, getRISCVVendorRelocationTypeName) {
@@ -267,6 +295,15 @@ TEST(ELFTest, getRISCVVendorRelocationTypeName) {
 
   EXPECT_EQ("R_RISCV_NDS_BRANCH_10",
             getRISCVVendorRelocationTypeName(R_RISCV_CUSTOM241, "ANDES"));
+
+  EXPECT_EQ("R_RISCV_CHERIOT1_COMPARTMENT_HI",
+            getRISCVVendorRelocationTypeName(R_RISCV_CUSTOM220, "CHERIOT1"));
+  EXPECT_EQ("R_RISCV_CHERIOT1_COMPARTMENT_LO_I",
+            getRISCVVendorRelocationTypeName(R_RISCV_CUSTOM221, "CHERIOT1"));
+  EXPECT_EQ("R_RISCV_CHERIOT1_COMPARTMENT_LO_S",
+            getRISCVVendorRelocationTypeName(R_RISCV_CUSTOM222, "CHERIOT1"));
+  EXPECT_EQ("R_RISCV_CHERIOT1_COMPARTMENT_SIZE",
+            getRISCVVendorRelocationTypeName(R_RISCV_CUSTOM223, "CHERIOT1"));
 }
 
 TEST(ELFTest, getELFRelativeRelocationType) {

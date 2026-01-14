@@ -22,6 +22,8 @@
 #include <__chrono/year_month.h>
 #include <__chrono/year_month_day.h>
 #include <__config>
+#include <__cstddef/size_t.h>
+#include <__functional/hash.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -279,6 +281,30 @@ year_month_weekday_last::operator-=(const years& __dy) noexcept {
 }
 
 } // namespace chrono
+
+#  if _LIBCPP_STD_VER >= 26
+
+template <>
+struct hash<chrono::year_month_weekday> {
+  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::year_month_weekday& __ymw) noexcept {
+    return std::__hash_combine(
+        hash<chrono::year>{}(__ymw.year()),
+        std::__hash_combine(
+            hash<chrono::month>{}(__ymw.month()), hash<chrono::weekday_indexed>{}(__ymw.weekday_indexed())));
+  }
+};
+
+template <>
+struct hash<chrono::year_month_weekday_last> {
+  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::year_month_weekday_last& __ymwl) noexcept {
+    return std::__hash_combine(
+        hash<chrono::year>{}(__ymwl.year()),
+        std::__hash_combine(
+            hash<chrono::month>{}(__ymwl.month()), hash<chrono::weekday_last>{}(__ymwl.weekday_last())));
+  }
+};
+
+#  endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_END_NAMESPACE_STD
 
