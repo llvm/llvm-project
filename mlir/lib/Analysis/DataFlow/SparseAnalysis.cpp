@@ -134,7 +134,7 @@ AbstractSparseForwardDataFlowAnalysis::visitOperation(Operation *op) {
   // The results of a region branch operation are determined by control-flow.
   if (auto branch = dyn_cast<RegionBranchOpInterface>(op)) {
     visitRegionSuccessors(getProgramPointAfter(branch), branch,
-                          /*successor=*/{branch, branch->getResults()},
+                          RegionSuccessor::parent(branch->getResults()),
                           resultLattices);
     return success();
   }
@@ -317,8 +317,8 @@ void AbstractSparseForwardDataFlowAnalysis::visitRegionSuccessors(
           firstIndex = cast<OpResult>(inputs.front()).getResultNumber();
         visitNonControlFlowArgumentsImpl(
             branch,
-            RegionSuccessor(
-                branch, branch->getResults().slice(firstIndex, inputs.size())),
+            RegionSuccessor::parent(
+                branch->getResults().slice(firstIndex, inputs.size())),
             lattices, firstIndex);
       } else {
         if (!inputs.empty())
