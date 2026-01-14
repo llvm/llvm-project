@@ -276,8 +276,9 @@ struct WgToSgLoadNdOp : public OpConversionPattern<xegpu::LoadNdOp> {
           dyn_cast<xegpu::TensorDescType>(src.getType());
       ArrayRef<int64_t> srcShape = tdescTy.getShape();
       VectorType newResTy = VectorType::get(srcShape, tdescTy.getElementType());
-      auto newLoadOp = xegpu::LoadNdOp::create(rewriter, op.getLoc(), newResTy,
-                                               src, op->getAttrs());
+      auto newLoadOp = xegpu::LoadNdOp::create(
+          rewriter, op.getLoc(), newResTy, src,
+          xegpu::dropSgLayoutAndDataOnAttrs(op->getAttrs()));
       newLoadOps.push_back(newLoadOp);
     }
     rewriter.replaceOpWithMultiple(op, {newLoadOps});
@@ -473,8 +474,9 @@ struct WgToSgPrefetchNdOp : public OpConversionPattern<xegpu::PrefetchNdOp> {
       return failure();
 
     for (auto src : adaptor.getTensorDesc())
-      xegpu::PrefetchNdOp::create(rewriter, op.getLoc(), TypeRange(), src,
-                                  op->getAttrs());
+      xegpu::PrefetchNdOp::create(
+          rewriter, op.getLoc(), TypeRange(), src,
+          xegpu::dropSgLayoutAndDataOnAttrs(op->getAttrs()));
     rewriter.eraseOp(op);
     return success();
   }
@@ -563,16 +565,7 @@ struct WgToSgElementwiseOp : public ConversionPattern {
       state.addTypes(newResultType);
       // Copy all attributes, but update "layout_result_0" to drop
       // sgLayout/sgData
-      for (auto attr : op->getAttrs()) {
-        if (auto layout =
-                dyn_cast<xegpu::DistributeLayoutAttr>(attr.getValue())) {
-          if (!layout.getEffectiveLaneLayoutAsInt().empty() ||
-              !layout.getEffectiveInstDataAsInt().empty())
-            state.addAttribute(attr.getName(), layout.dropSgLayoutAndData());
-        } else {
-          state.addAttribute(attr.getName(), attr.getValue());
-        }
-      }
+      state.addAttributes(xegpu::dropSgLayoutAndDataOnAttrs(op->getAttrs()));
       Operation *newOp = rewriter.create(state);
       newResults.push_back(newOp->getResult(0));
     }
@@ -1609,7 +1602,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   getOperation()->walk([](Operation *op) {
     for (OpResult result : op->getOpResults()) {
       std::string name = xegpu::getTemporaryLayoutName(result);
-      if (auto layout = op->getAttrOfType<xegpu::LayoutAttr>(name)) {
+      if (auto layout = op->getAttrOfType<xegpu::DistributeLayoutAttr>(name)) {
         op->removeAttr(name);
         if (!isa<scf::IfOp, scf::ForOp, scf::WhileOp, scf::ConditionOp>(op)) {
           if (auto newLayout = layout.dropSgLayoutAndData())

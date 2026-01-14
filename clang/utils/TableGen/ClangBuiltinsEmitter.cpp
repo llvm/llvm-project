@@ -200,7 +200,18 @@ private:
       // we cannot have nested _ExtVector.
       if (Current.starts_with("_ExtVector<") ||
           Current.starts_with("_Vector<")) {
-        const size_t EndTemplate = Current.find('>', 0);
+        size_t Pos = Current.find('<');
+        int Depth = 1;
+
+        // There may be a nested address_space<...> modifier on the type.
+        while (Depth > 0 && ++Pos < Current.size()) {
+          if (Current[Pos] == '<')
+            ++Depth;
+          else if (Current[Pos] == '>')
+            --Depth;
+        }
+
+        const size_t EndTemplate = Pos;
         ParseType(Current.substr(0, EndTemplate + 1));
         // Move the prototype beyond _ExtVector<...>
         I += EndTemplate + 1;
@@ -248,8 +259,6 @@ private:
       if (ArgStr.getAsInteger(10, Number))
         PrintFatalError(
             Loc, "Expected an integer argument to the address_space qualifier");
-      if (Number == 0)
-        PrintFatalError(Loc, "No need for a qualifier for address space `0`");
       return Number;
     };
 
@@ -331,6 +340,8 @@ private:
                                .Case("__float128", "LLd")
                                .Case("__fp16", "h")
                                .Case("__hlsl_resource_t", "Qr")
+                               .Case("__amdgpu_buffer_rsrc_t", "Qb")
+                               .Case("__amdgpu_texture_t", "Qt")
                                .Case("__int128_t", "LLLi")
                                .Case("_Float16", "x")
                                .Case("__bf16", "y")

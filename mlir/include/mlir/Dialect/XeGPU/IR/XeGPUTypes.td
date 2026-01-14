@@ -26,6 +26,8 @@ def XeGPU_OffsetType: FixedVectorOfNonZeroRankOf<[Index]>;
 def XeGPU_MaskType: FixedVectorOfNonZeroRankOf<[I1]>;
 def XeGPU_ValueType: FixedVectorOfNonZeroRankOf<[XeGPU_ScalarType]>;
 def XeGPU_VectorType: VectorOfRankAndType<[1,2,3,4,5,6], [XeGPU_ScalarType]>;
+def XeGPU_VectorOrOffsetVectorType
+    : VectorOfRankAndType<[1,2,3,4,5,6], [XeGPU_ScalarType, Index]>;
 def XeGPU_GatherScatterBaseAddrType
     : AnyTypeOf<[MemRefRankOf<[XeGPU_ScalarType], [1]>, XeGPU_PointerType]>;
 
@@ -293,7 +295,7 @@ def XeGPU_MemDesc: XeGPUTypeDef<"MemDesc", "mem_desc", [ShapedTypeInterface], "m
       return size;
     }
 
-    // Get strides as vector of integer. 
+    // Get strides as vector of integer.
     // If it contains block attribute, the strides are blocked strides.
     //
     // The blocking is applied to the base matrix shape derived from the
@@ -310,8 +312,8 @@ def XeGPU_MemDesc: XeGPUTypeDef<"MemDesc", "mem_desc", [ShapedTypeInterface], "m
     // for  `mem_desc<256x32xf16, @block=[8, 16]>` with default @stride[32, 1]
     // its memory layout tuple is ([32,2,8,16],[256,128,16,1])
     SmallVector<int64_t> getStrideShape();
-    
-    /// Generates instructions to compute the linearize offset 
+
+    /// Generates instructions to compute the linearize offset
     //  if the memory descriptor is blocked, it returns linearize offset based on the blocked layout
     //  the strides of memory descriptor is always considered regardless of blocked or not
     Value getLinearOffsets(OpBuilder &builder,

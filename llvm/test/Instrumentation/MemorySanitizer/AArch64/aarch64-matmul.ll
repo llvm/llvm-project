@@ -4,9 +4,6 @@
 ; Forked from llvm/test/CodeGen/AArch64/aarch64-matmul.ll
 ;
 ; Strictly handled:
-; - llvm.aarch64.neon.smmla.v4i32.v16i8
-; - llvm.aarch64.neon.ummla.v4i32.v16i8
-; - llvm.aarch64.neon.usmmla.v4i32.v16i8
 ; - llvm.aarch64.neon.usdot.v2i32.v8i8
 ; - llvm.aarch64.neon.usdot.v4i32.v16i8
 ;
@@ -23,21 +20,18 @@ define <4 x i32> @smmla.v4i32.v16i8(<4 x i32> %r, <16 x i8> %a, <16 x i8> %b) sa
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP0]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <16 x i8> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP4]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <16 x i8> [[TMP2]] to i128
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP5]], 0
-; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
-; CHECK-NEXT:    br i1 [[_MSOR3]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1:![0-9]+]]
-; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4:[0-9]+]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB7]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <16 x i8> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <16 x i1> [[TMP3]] to <16 x i8>
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <16 x i8> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <16 x i1> [[TMP5]] to <16 x i8>
+; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i32> @llvm.aarch64.neon.smmla.v4i32.v16i8(<4 x i32> zeroinitializer, <16 x i8> [[TMP4]], <16 x i8> [[TMP6]])
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <4 x i32> [[TMP7]], splat (i32 8)
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i1> [[TMP8]] to <4 x i32>
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne <4 x i32> [[TMP0]], zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = sext <4 x i1> [[TMP10]] to <4 x i32>
+; CHECK-NEXT:    [[TMP12:%.*]] = or <4 x i32> [[TMP9]], [[TMP11]]
 ; CHECK-NEXT:    [[VMMLA1_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.smmla.v4i32.v16i8(<4 x i32> [[R]], <16 x i8> [[A]], <16 x i8> [[B]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP12]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[VMMLA1_I]]
 ;
 entry:
@@ -53,21 +47,18 @@ define <4 x i32> @ummla.v4i32.v16i8(<4 x i32> %r, <16 x i8> %a, <16 x i8> %b) sa
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP0]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <16 x i8> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP4]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <16 x i8> [[TMP2]] to i128
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP5]], 0
-; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
-; CHECK-NEXT:    br i1 [[_MSOR3]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
-; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB7]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <16 x i8> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <16 x i1> [[TMP3]] to <16 x i8>
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <16 x i8> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <16 x i1> [[TMP5]] to <16 x i8>
+; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i32> @llvm.aarch64.neon.ummla.v4i32.v16i8(<4 x i32> zeroinitializer, <16 x i8> [[TMP4]], <16 x i8> [[TMP6]])
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <4 x i32> [[TMP7]], splat (i32 8)
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i1> [[TMP8]] to <4 x i32>
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne <4 x i32> [[TMP0]], zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = sext <4 x i1> [[TMP10]] to <4 x i32>
+; CHECK-NEXT:    [[TMP12:%.*]] = or <4 x i32> [[TMP9]], [[TMP11]]
 ; CHECK-NEXT:    [[VMMLA1_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.ummla.v4i32.v16i8(<4 x i32> [[R]], <16 x i8> [[A]], <16 x i8> [[B]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP12]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[VMMLA1_I]]
 ;
 entry:
@@ -83,21 +74,18 @@ define <4 x i32> @usmmla.v4i32.v16i8(<4 x i32> %r, <16 x i8> %a, <16 x i8> %b) s
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP0]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <16 x i8> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP4]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <16 x i8> [[TMP2]] to i128
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP5]], 0
-; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
-; CHECK-NEXT:    br i1 [[_MSOR3]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
-; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB7]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <16 x i8> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <16 x i1> [[TMP3]] to <16 x i8>
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <16 x i8> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <16 x i1> [[TMP5]] to <16 x i8>
+; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i32> @llvm.aarch64.neon.usmmla.v4i32.v16i8(<4 x i32> zeroinitializer, <16 x i8> [[TMP4]], <16 x i8> [[TMP6]])
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <4 x i32> [[TMP7]], splat (i32 8)
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i1> [[TMP8]] to <4 x i32>
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne <4 x i32> [[TMP0]], zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = sext <4 x i1> [[TMP10]] to <4 x i32>
+; CHECK-NEXT:    [[TMP12:%.*]] = or <4 x i32> [[TMP9]], [[TMP11]]
 ; CHECK-NEXT:    [[VUSMMLA1_I:%.*]] = tail call <4 x i32> @llvm.aarch64.neon.usmmla.v4i32.v16i8(<4 x i32> [[R]], <16 x i8> [[A]], <16 x i8> [[B]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP12]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[VUSMMLA1_I]]
 ;
 entry:
@@ -121,9 +109,9 @@ define <2 x i32> @usdot.v2i32.v8i8(<2 x i32> %r, <8 x i8> %a, <8 x i8> %b) sanit
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <8 x i8> [[TMP2]] to i64
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i64 [[TMP5]], 0
 ; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
-; CHECK-NEXT:    br i1 [[_MSOR3]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
+; CHECK-NEXT:    br i1 [[_MSOR3]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB7]]:
 ; CHECK-NEXT:    [[VUSDOT1_I:%.*]] = tail call <2 x i32> @llvm.aarch64.neon.usdot.v2i32.v8i8(<2 x i32> [[R]], <8 x i8> [[A]], <8 x i8> [[B]])

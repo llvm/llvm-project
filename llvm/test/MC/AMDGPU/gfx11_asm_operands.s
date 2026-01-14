@@ -32,19 +32,19 @@ s_add_i32 s0, s1, src_execz
 // GFX11-ERR: :[[@LINE-2]]:19: error: src_execz register not available on this GPU
 
 v_add_f64 v[0:1], execz, v[2:3]
-// GFX10: v_add_f64 v[0:1], src_execz, v[2:3]     ; encoding: [0x00,0x00,0x64,0xd5,0xfc,0x04,0x02,0x00]
+// GFX10: v_add_f64 v[0:1], src_execz, v[2:3]     ; encoding: [0x00,0x00,0x64,0xd5,0xfc,0x04,0x02,0x02]
 // GFX11-ERR: :[[@LINE-2]]:19: error: src_execz register not available on this GPU
 
 v_add_f64 v[0:1], src_execz, v[2:3]
-// GFX10: v_add_f64 v[0:1], src_execz, v[2:3]     ; encoding: [0x00,0x00,0x64,0xd5,0xfc,0x04,0x02,0x00]
+// GFX10: v_add_f64 v[0:1], src_execz, v[2:3]     ; encoding: [0x00,0x00,0x64,0xd5,0xfc,0x04,0x02,0x02]
 // GFX11-ERR: :[[@LINE-2]]:19: error: src_execz register not available on this GPU
 
 v_add_f64 v[0:1], v[1:2], execz
-// GFX10: v_add_f64 v[0:1], v[1:2], src_execz     ; encoding: [0x00,0x00,0x64,0xd5,0x01,0xf9,0x01,0x00]
+// GFX10: v_add_f64 v[0:1], v[1:2], src_execz     ; encoding: [0x00,0x00,0x64,0xd5,0x01,0xf9,0x01,0x02]
 // GFX11-ERR: :[[@LINE-2]]:27: error: src_execz register not available on this GPU
 
 v_add_f64 v[0:1], v[1:2], src_execz
-// GFX10: v_add_f64 v[0:1], v[1:2], src_execz     ; encoding: [0x00,0x00,0x64,0xd5,0x01,0xf9,0x01,0x00]
+// GFX10: v_add_f64 v[0:1], v[1:2], src_execz     ; encoding: [0x00,0x00,0x64,0xd5,0x01,0xf9,0x01,0x02]
 // GFX11-ERR: :[[@LINE-2]]:27: error: src_execz register not available on this GPU
 
 //---------------------------------------------------------------------------//
@@ -72,19 +72,19 @@ s_add_i32 s0, s1, src_vccz
 // GFX11-ERR: :[[@LINE-2]]:19: error: src_vccz register not available on this GPU
 
 v_add_f64 v[0:1], vccz, v[2:3]
-// GFX10: v_add_f64 v[0:1], src_vccz, v[2:3]      ; encoding: [0x00,0x00,0x64,0xd5,0xfb,0x04,0x02,0x00]
+// GFX10: v_add_f64 v[0:1], src_vccz, v[2:3]      ; encoding: [0x00,0x00,0x64,0xd5,0xfb,0x04,0x02,0x02]
 // GFX11-ERR: :[[@LINE-2]]:19: error: src_vccz register not available on this GPU
 
 v_add_f64 v[0:1], src_vccz, v[2:3]
-// GFX10: v_add_f64 v[0:1], src_vccz, v[2:3]      ; encoding: [0x00,0x00,0x64,0xd5,0xfb,0x04,0x02,0x00]
+// GFX10: v_add_f64 v[0:1], src_vccz, v[2:3]      ; encoding: [0x00,0x00,0x64,0xd5,0xfb,0x04,0x02,0x02]
 // GFX11-ERR: :[[@LINE-2]]:19: error: src_vccz register not available on this GPU
 
 v_add_f64 v[0:1], v[1:2], vccz
-// GFX10: v_add_f64 v[0:1], v[1:2], src_vccz      ; encoding: [0x00,0x00,0x64,0xd5,0x01,0xf7,0x01,0x00]
+// GFX10: v_add_f64 v[0:1], v[1:2], src_vccz      ; encoding: [0x00,0x00,0x64,0xd5,0x01,0xf7,0x01,0x02]
 // GFX11-ERR: :[[@LINE-2]]:27: error: src_vccz register not available on this GPU
 
 v_add_f64 v[0:1], v[1:2], src_vccz
-// GFX10: v_add_f64 v[0:1], v[1:2], src_vccz      ; encoding: [0x00,0x00,0x64,0xd5,0x01,0xf7,0x01,0x00]
+// GFX10: v_add_f64 v[0:1], v[1:2], src_vccz      ; encoding: [0x00,0x00,0x64,0xd5,0x01,0xf7,0x01,0x02]
 // GFX11-ERR: :[[@LINE-2]]:27: error: src_vccz register not available on this GPU
 
 //---------------------------------------------------------------------------//
@@ -128,17 +128,17 @@ s_add_i32 s0, s1, pops_exiting_wave_id
 // GFX11-ERR: :[[@LINE-2]]:19: error: src_pops_exiting_wave_id register not available on this GPU
 
 v_add_co_u32 v0, s0, pops_exiting_wave_id, v1
-// GFX10: v_add_co_u32 v0, s0, src_pops_exiting_wave_id, v1 ; encoding: [0x00,0x00,0x0f,0xd7,0xef,0x02,0x02,0x00]
+// GFX10: v_add_co_u32 v0, s0, src_pops_exiting_wave_id, v1 ; encoding: [0x00,0x00,0x0f,0xd7,0xef,0x02,0x02,0x02]
 // GFX11-ERR: :[[@LINE-2]]:22: error: src_pops_exiting_wave_id register not available on this GPU
 
 v_add_co_u32 v0, s0, src_pops_exiting_wave_id, v1
-// GFX10: v_add_co_u32 v0, s0, src_pops_exiting_wave_id, v1 ; encoding: [0x00,0x00,0x0f,0xd7,0xef,0x02,0x02,0x00]
+// GFX10: v_add_co_u32 v0, s0, src_pops_exiting_wave_id, v1 ; encoding: [0x00,0x00,0x0f,0xd7,0xef,0x02,0x02,0x02]
 // GFX11-ERR: :[[@LINE-2]]:22: error: src_pops_exiting_wave_id register not available on this GPU
 
 v_add_co_u32 v0, s0, v1, pops_exiting_wave_id
-// GFX10: v_add_co_u32 v0, s0, v1, src_pops_exiting_wave_id ; encoding: [0x00,0x00,0x0f,0xd7,0x01,0xdf,0x01,0x00]
+// GFX10: v_add_co_u32 v0, s0, v1, src_pops_exiting_wave_id ; encoding: [0x00,0x00,0x0f,0xd7,0x01,0xdf,0x01,0x02]
 // GFX11-ERR: :[[@LINE-2]]:26: error: src_pops_exiting_wave_id register not available on this GPU
 
 v_add_co_u32 v0, s0, v1, src_pops_exiting_wave_id
-// GFX10: v_add_co_u32 v0, s0, v1, src_pops_exiting_wave_id ; encoding: [0x00,0x00,0x0f,0xd7,0x01,0xdf,0x01,0x00]
+// GFX10: v_add_co_u32 v0, s0, v1, src_pops_exiting_wave_id ; encoding: [0x00,0x00,0x0f,0xd7,0x01,0xdf,0x01,0x02]
 // GFX11-ERR: :[[@LINE-2]]:26: error: src_pops_exiting_wave_id register not available on this GPU
