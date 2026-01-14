@@ -18,7 +18,7 @@
 #include "types.h"
 
 template <typename T>
-constexpr bool hasLValueQualifiedBase(T&& t) {
+constexpr bool has_lvalue_qualified_base(T&& t) {
   // Thanks to forwarding references, t's type is
   // preserved from the caller. No matter the type of
   // the argument, when it is used here, t is an l value
@@ -41,7 +41,7 @@ constexpr bool test() {
     const auto str(std::ranges::stride_view<CopyableInputView>(
         CopyableInputView(cpp17_input_iterator<int*>(buff), cpp17_input_iterator<int*>(buff + N)), 1));
 
-    static_assert(hasLValueQualifiedBase(str));
+    static_assert(has_lvalue_qualified_base(str));
 
     std::same_as<CopyableInputView> decltype(auto) s = str.base();
     assert(*s.begin() == *buff);
@@ -55,7 +55,7 @@ constexpr bool test() {
     std::same_as<CopyableInputView> decltype(auto) s = str.base();
     assert(*s.begin() == *buff);
 
-    static_assert(hasLValueQualifiedBase(str));
+    static_assert(has_lvalue_qualified_base(str));
   }
 
   // r-value ref qualified
@@ -64,7 +64,7 @@ constexpr bool test() {
     auto str(std::ranges::stride_view<CopyableInputView>(
         CopyableInputView(cpp17_input_iterator<int*>(buff), cpp17_input_iterator<int*>(buff + N)), 1));
 
-    static_assert(hasLValueQualifiedBase(str));
+    static_assert(has_lvalue_qualified_base(str));
 
     std::same_as<CopyableInputView> decltype(auto) s = std::move(str).base();
     assert(*s.begin() == *buff);
@@ -75,7 +75,7 @@ constexpr bool test() {
     const auto str_a(std::ranges::stride_view<CopyableInputView>(
         CopyableInputView(cpp17_input_iterator<int*>(buff), cpp17_input_iterator<int*>(buff + N)), 1));
 
-    static_assert(hasLValueQualifiedBase(str_a));
+    static_assert(has_lvalue_qualified_base(str_a));
 
     std::same_as<CopyableInputView> decltype(auto) s = std::move(str_a).base();
     assert(*s.begin() == *buff);
@@ -89,7 +89,7 @@ constexpr bool test() {
     // Because the base of the stride view is move only,
     // the const & version is not applicable and, therefore,
     // there is no l-value qualified base method.
-    static_assert(!hasLValueQualifiedBase(str));
+    static_assert(!has_lvalue_qualified_base(str));
 
     std::same_as<MoveOnlyInputView> decltype(auto) s = std::move(str).base();
     assert(*s.begin() == *buff);
