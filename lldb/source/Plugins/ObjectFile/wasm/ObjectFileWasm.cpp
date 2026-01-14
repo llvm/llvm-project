@@ -139,24 +139,27 @@ void ObjectFileWasm::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-ObjectFile *
-ObjectFileWasm::CreateInstance(const ModuleSP &module_sp, DataBufferSP data_sp,
-                               offset_t data_offset, const FileSpec *file,
-                               offset_t file_offset, offset_t length) {
+ObjectFile *ObjectFileWasm::CreateInstance(const ModuleSP &module_sp,
+                                           DataExtractorSP extractor_sp,
+                                           offset_t data_offset,
+                                           const FileSpec *file,
+                                           offset_t file_offset,
+                                           offset_t length) {
   Log *log = GetLog(LLDBLog::Object);
 
-  if (!data_sp) {
-    data_sp = MapFileData(*file, length, file_offset);
+  if (!extractor_sp || !extractor_sp->HasData()) {
+    DataBufferSP data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp) {
       LLDB_LOGF(log, "Failed to create ObjectFileWasm instance for file %s",
                 file->GetPath().c_str());
       return nullptr;
     }
+    extractor_sp = std::make_shared<DataExtractor>(data_sp);
     data_offset = 0;
   }
 
-  assert(data_sp);
-  if (!ValidateModuleHeader(data_sp)) {
+  assert(extractor_sp);
+  if (!ValidateModuleHeader(extractor_sp->GetSharedDataBuffer())) {
     LLDB_LOGF(log,
               "Failed to create ObjectFileWasm instance: invalid Wasm header");
     return nullptr;
@@ -164,19 +167,20 @@ ObjectFileWasm::CreateInstance(const ModuleSP &module_sp, DataBufferSP data_sp,
 
   // Update the data to contain the entire file if it doesn't contain it
   // already.
-  if (data_sp->GetByteSize() < length) {
-    data_sp = MapFileData(*file, length, file_offset);
+  if (extractor_sp->GetByteSize() < length) {
+    DataBufferSP data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp) {
       LLDB_LOGF(log,
                 "Failed to create ObjectFileWasm instance: cannot read file %s",
                 file->GetPath().c_str());
       return nullptr;
     }
+    extractor_sp = std::make_shared<DataExtractor>(data_sp);
     data_offset = 0;
   }
 
   std::unique_ptr<ObjectFileWasm> objfile_up(new ObjectFileWasm(
-      module_sp, data_sp, data_offset, file, file_offset, length));
+      module_sp, extractor_sp, data_offset, file, file_offset, length));
   ArchSpec spec = objfile_up->GetArchitecture();
   if (spec && objfile_up->SetModulesArchitecture(spec)) {
     LLDB_LOGF(log,
@@ -282,10 +286,11 @@ size_t ObjectFileWasm::GetModuleSpecifications(
   return 1;
 }
 
-ObjectFileWasm::ObjectFileWasm(const ModuleSP &module_sp, DataBufferSP data_sp,
+ObjectFileWasm::ObjectFileWasm(const ModuleSP &module_sp,
+                               DataExtractorSP extractor_sp,
                                offset_t data_offset, const FileSpec *file,
                                offset_t offset, offset_t length)
-    : ObjectFile(module_sp, file, offset, length, data_sp, data_offset),
+    : ObjectFile(module_sp, file, offset, length, extractor_sp, data_offset),
       m_arch("wasm32-unknown-unknown-wasm") {
   m_data_nsp->SetAddressByteSize(4);
 }
@@ -294,7 +299,8 @@ ObjectFileWasm::ObjectFileWasm(const lldb::ModuleSP &module_sp,
                                lldb::WritableDataBufferSP header_data_sp,
                                const lldb::ProcessSP &process_sp,
                                lldb::addr_t header_addr)
-    : ObjectFile(module_sp, process_sp, header_addr, header_data_sp),
+    : ObjectFile(module_sp, process_sp, header_addr,
+                 std::make_shared<DataExtractor>(header_data_sp)),
       m_arch("wasm32-unknown-unknown-wasm") {}
 
 bool ObjectFileWasm::ParseHeader() {
@@ -306,6 +312,41 @@ struct WasmFunction {
   lldb::offset_t section_offset = LLDB_INVALID_OFFSET;
   uint32_t size = 0;
 };
+
+static llvm::Expected<uint32_t> ParseImports(DataExtractor &import_data) {
+  // Currently this function just returns the number of imported functions.
+  // If we want to do anything with global names in the future, we'll also
+  // need to know those.
+  llvm::DataExtractor data = import_data.GetAsLLVM();
+  llvm::DataExtractor::Cursor c(0);
+
+  llvm::Expected<uint32_t> count = GetULEB32(data, c);
+  if (!count)
+    return count.takeError();
+
+  uint32_t function_imports = 0;
+  for (uint32_t i = 0; c && i < *count; ++i) {
+    // We don't need module and field names, so we can just get them as raw
+    // strings and discard.
+    if (!GetWasmString(data, c))
+      return llvm::createStringError("failed to parse module name");
+    if (!GetWasmString(data, c))
+      return llvm::createStringError("failed to parse field name");
+
+    uint8_t kind = data.getU8(c);
+    if (kind == llvm::wasm::WASM_EXTERNAL_FUNCTION)
+      function_imports++;
+
+    // For function imports, this is a type index. For others it's different.
+    // We don't need it, just need to parse it to advance the cursor.
+    data.getULEB128(c);
+  }
+
+  if (!c)
+    return c.takeError();
+
+  return function_imports;
+}
 
 static llvm::Expected<std::vector<WasmFunction>>
 ParseFunctions(DataExtractor &data) {
@@ -410,7 +451,8 @@ static llvm::Expected<std::vector<WasmSegment>> ParseData(DataExtractor &data) {
 static llvm::Expected<std::vector<Symbol>>
 ParseNames(SectionSP code_section_sp, DataExtractor &name_data,
            const std::vector<WasmFunction> &functions,
-           std::vector<WasmSegment> &segments) {
+           std::vector<WasmSegment> &segments,
+           uint32_t num_imported_functions) {
 
   llvm::DataExtractor data = name_data.GetAsLLVM();
   llvm::DataExtractor::Cursor c(0);
@@ -434,15 +476,29 @@ ParseNames(SectionSP code_section_sp, DataExtractor &name_data,
         llvm::Expected<std::string> name = GetWasmString(data, c);
         if (!name)
           return name.takeError();
-        if (*idx >= functions.size())
+        if (*idx >= num_imported_functions + functions.size())
           continue;
-        symbols.emplace_back(
-            symbols.size(), *name, lldb::eSymbolTypeCode,
-            /*external=*/false, /*is_debug=*/false, /*is_trampoline=*/false,
-            /*is_artificial=*/false, code_section_sp,
-            functions[i].section_offset, functions[i].size,
-            /*size_is_valid=*/true, /*contains_linker_annotations=*/false,
-            /*flags=*/0);
+
+        if (*idx < num_imported_functions) {
+          symbols.emplace_back(symbols.size(), *name, lldb::eSymbolTypeCode,
+                               /*external=*/true, /*is_debug=*/false,
+                               /*is_trampoline=*/false,
+                               /*is_artificial=*/false,
+                               /*section_sp=*/lldb::SectionSP(),
+                               /*value=*/0, /*size=*/0,
+                               /*size_is_valid=*/false,
+                               /*contains_linker_annotations=*/false,
+                               /*flags=*/0);
+        } else {
+          const WasmFunction &func = functions[*idx - num_imported_functions];
+          symbols.emplace_back(symbols.size(), *name, lldb::eSymbolTypeCode,
+                               /*external=*/false, /*is_debug=*/false,
+                               /*is_trampoline=*/false, /*is_artificial=*/false,
+                               code_section_sp, func.section_offset, func.size,
+                               /*size_is_valid=*/true,
+                               /*contains_linker_annotations=*/false,
+                               /*flags=*/0);
+        }
       }
     } break;
     case llvm::wasm::WASM_NAMES_DATA_SEGMENT: {
@@ -590,6 +646,20 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
     }
   }
 
+  // Parse the import section. The number of functions is needed because the
+  // function index space used in the name section includes imports.
+  if (std::optional<section_info> info =
+          GetSectionInfo(llvm::wasm::WASM_SEC_IMPORT)) {
+    DataExtractor import_data = ReadImageData(info->offset, info->size);
+    llvm::Expected<uint32_t> num_imports = ParseImports(import_data);
+    if (!num_imports) {
+      LLDB_LOG_ERROR(log, num_imports.takeError(),
+                     "Failed to parse Wasm import section: {0}");
+    } else {
+      m_num_imported_functions = *num_imports;
+    }
+  }
+
   // Parse the data section.
   std::optional<section_info> data_info =
       GetSectionInfo(llvm::wasm::WASM_SEC_DATA);
@@ -609,7 +679,7 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
     DataExtractor names_data = ReadImageData(info->offset, info->size);
     llvm::Expected<std::vector<Symbol>> symbols = ParseNames(
         m_sections_up->FindSectionByType(lldb::eSectionTypeCode, false),
-        names_data, functions, segments);
+        names_data, functions, segments, m_num_imported_functions);
     if (!symbols) {
       LLDB_LOG_ERROR(log, symbols.takeError(),
                      "Failed to parse Wasm names: {0}");
@@ -717,7 +787,7 @@ DataExtractor ObjectFileWasm::ReadImageData(offset_t offset, uint32_t size) {
           offset, data_up->GetBytes(), data_up->GetByteSize(), readmem_error);
       if (bytes_read > 0) {
         DataBufferSP buffer_sp(data_up.release());
-        data.SetData(buffer_sp, 0, buffer_sp->GetByteSize());
+        data.SetData(buffer_sp);
       }
     } else if (offset < m_data_nsp->GetByteSize()) {
       size = std::min(static_cast<uint64_t>(size),

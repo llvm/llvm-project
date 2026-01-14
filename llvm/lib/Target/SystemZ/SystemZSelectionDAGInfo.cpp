@@ -229,7 +229,7 @@ std::pair<SDValue, SDValue> SystemZSelectionDAGInfo::EmitTargetCodeForMemchr(
 std::pair<SDValue, SDValue> SystemZSelectionDAGInfo::EmitTargetCodeForStrcpy(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dest,
     SDValue Src, MachinePointerInfo DestPtrInfo, MachinePointerInfo SrcPtrInfo,
-    bool isStpcpy) const {
+    bool isStpcpy, const CallInst *CI) const {
   SDVTList VTs = DAG.getVTList(Dest.getValueType(), MVT::Other);
   SDValue EndDest = DAG.getNode(SystemZISD::STPCPY, DL, VTs, Chain, Dest, Src,
                                 DAG.getConstant(0, DL, MVT::i32));

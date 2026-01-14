@@ -367,7 +367,7 @@ struct A {
 // CIR:   cir.scope {
 // CIR:     %[[LAM_ADDR:.*]] = cir.alloca ![[REC_LAM_A]], !cir.ptr<![[REC_LAM_A]]>, ["ref.tmp0"]
 // CIR:     %[[STRUCT_A:.*]] = cir.get_member %[[LAM_ADDR]][0] {name = "this"} : !cir.ptr<![[REC_LAM_A]]> -> !cir.ptr<!rec_A>
-// CIR:     cir.call @_ZN1AC1ERKS_(%[[STRUCT_A]], %[[THIS]]){{.*}} : (!cir.ptr<!rec_A>, !cir.ptr<!rec_A>){{.*}} -> ()
+// CIR:     cir.copy %[[THIS]] to %[[STRUCT_A]] : !cir.ptr<!rec_A>
 // CIR:     %[[LAM_RET:.*]] = cir.call @_ZZN1A3fooEvENKUlvE_clEv(%[[LAM_ADDR]])
 // CIR:     cir.store{{.*}} %[[LAM_RET]], %[[RETVAL]]
 // CIR:   }
@@ -383,7 +383,7 @@ struct A {
 // LLVM:   br label %[[SCOPE_BB:.*]]
 // LLVM: [[SCOPE_BB]]:
 // LLVM:   %[[STRUCT_A:.*]] = getelementptr %[[REC_LAM_A]], ptr %[[LAM_ALLOCA]], i32 0, i32 0
-// LLVM:   call void @_ZN1AC1ERKS_(ptr %[[STRUCT_A]], ptr %[[THIS]])
+// LLVM:   call void @llvm.memcpy.p0.p0.i32(ptr %[[STRUCT_A]], ptr %[[THIS]], i32 4, i1 false)
 // LLVM:   %[[LAM_RET:.*]] = call i32 @_ZZN1A3fooEvENKUlvE_clEv(ptr %[[LAM_ALLOCA]])
 // LLVM:   store i32 %[[LAM_RET]], ptr %[[RETVAL]]
 // LLVM:   br label %[[RET_BB:.*]]

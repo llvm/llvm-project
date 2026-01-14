@@ -80,7 +80,7 @@ emitInfo(const VarDecl *D, const FullComment *FC, const Location &Loc,
 // memory (vs storing USRs directly).
 SymbolID hashUSR(llvm::StringRef USR);
 
-std::string serialize(std::unique_ptr<Info> &I);
+std::string serialize(std::unique_ptr<Info> &I, DiagnosticsEngine &Diags);
 
 } // namespace serialize
 } // namespace doc

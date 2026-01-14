@@ -149,7 +149,7 @@ void LoongArchInstrInfo::storeRegToStackSlot(
 
 void LoongArchInstrInfo::loadRegFromStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register DstReg,
-    int FI, const TargetRegisterClass *RC, Register VReg,
+    int FI, const TargetRegisterClass *RC, Register VReg, unsigned SubReg,
     MachineInstr::MIFlag Flags) const {
   MachineFunction *MF = MBB.getParent();
   MachineFrameInfo &MFI = MF->getFrameInfo();

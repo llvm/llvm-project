@@ -53,7 +53,7 @@ using namespace mlir::dataflow;
 
 namespace {
 
-enum class LayoutKind { Lane, InstData };
+enum class LayoutKind { Lane, InstData, Subgroup };
 
 //===----------------------------------------------------------------------===//
 // LayoutInfo
@@ -109,6 +109,12 @@ public:
 
   SmallVector<int> getInstData() const;
 
+  SmallVector<int> getSgLayout() const;
+
+  SmallVector<int> getSgData() const;
+
+  SmallVector<int> getOrder() const;
+
   bool isSliceLayout() const {
     if (!isAssigned())
       return false;
@@ -127,8 +133,6 @@ public:
 SmallVector<int> LayoutInfo::getLaneLayout() const {
   if (!isAssigned())
     return {};
-  assert(storage.getEffectiveLaneLayoutAsInt().size() &&
-         "Expected lane layout to be assigned");
   return llvm::map_to_vector(storage.getEffectiveLaneLayoutAsInt(),
                              [](int64_t val) { return static_cast<int>(val); });
 }
@@ -136,8 +140,6 @@ SmallVector<int> LayoutInfo::getLaneLayout() const {
 SmallVector<int> LayoutInfo::getLaneData() const {
   if (!isAssigned())
     return {};
-  assert(storage.getEffectiveLaneDataAsInt().size() &&
-         "Expected lane data to be assigned");
   return llvm::map_to_vector(storage.getEffectiveLaneDataAsInt(),
                              [](int64_t val) { return static_cast<int>(val); });
 }
@@ -146,6 +148,27 @@ SmallVector<int> LayoutInfo::getInstData() const {
   if (!isAssigned())
     return {};
   return llvm::map_to_vector(storage.getEffectiveInstDataAsInt(),
+                             [](int64_t val) { return static_cast<int>(val); });
+}
+
+SmallVector<int> LayoutInfo::getSgLayout() const {
+  if (!isAssigned())
+    return {};
+  return llvm::map_to_vector(storage.getEffectiveSgLayoutAsInt(),
+                             [](int64_t val) { return static_cast<int>(val); });
+}
+
+SmallVector<int> LayoutInfo::getSgData() const {
+  if (!isAssigned())
+    return {};
+  return llvm::map_to_vector(storage.getEffectiveSgDataAsInt(),
+                             [](int64_t val) { return static_cast<int>(val); });
+}
+
+SmallVector<int> LayoutInfo::getOrder() const {
+  if (!isAssigned() || !storage.getOrder())
+    return {};
+  return llvm::map_to_vector(storage.getOrder().asArrayRef(),
                              [](int64_t val) { return static_cast<int>(val); });
 }
 
@@ -188,6 +211,10 @@ LayoutInfo LayoutInfo::transpose(ArrayRef<int64_t> permutation) const {
   SmallVector<int32_t> laneLayout;
   SmallVector<int32_t> laneData;
   SmallVector<int32_t> instData;
+  SmallVector<int32_t> sgLayout;
+  SmallVector<int32_t> sgData;
+  SmallVector<int32_t> order;
+
   for (int64_t idx : permutation) {
     if (getLaneLayout().size()) {
       laneLayout.push_back(static_cast<int32_t>(getLaneLayout()[idx]));
@@ -195,13 +222,30 @@ LayoutInfo LayoutInfo::transpose(ArrayRef<int64_t> permutation) const {
     }
     if (getInstData().size())
       instData.push_back(static_cast<int32_t>(getInstData()[idx]));
+    if (getSgData().size()) {
+      sgLayout.push_back(static_cast<int32_t>(getSgLayout()[idx]));
+      sgData.push_back(static_cast<int32_t>(getSgData()[idx]));
+    }
+    if (getOrder().size()) {
+      order.push_back(static_cast<int32_t>(getOrder()[idx]));
+    }
   }
+  auto orderAttr = order.size()
+                       ? DenseI32ArrayAttr::get(storage.getContext(), order)
+                       : nullptr;
   xegpu::LayoutAttr layoutAttr;
   if (getLaneLayout().size())
     layoutAttr =
         xegpu::LayoutAttr::get(storage.getContext(), laneLayout, laneData);
   if (getInstData().size())
     layoutAttr = xegpu::LayoutAttr::get(storage.getContext(), instData);
+  if (getSgData().size())
+    layoutAttr = xegpu::LayoutAttr::get(
+        storage.getContext(),
+        DenseI32ArrayAttr::get(storage.getContext(), sgLayout),
+        DenseI32ArrayAttr::get(storage.getContext(), sgData),
+        /*inst_data =*/nullptr, /*lane_layout =*/nullptr,
+        /*lane_data =*/nullptr, orderAttr);
   return LayoutInfo(layoutAttr);
 }
 
@@ -405,6 +449,10 @@ public:
 
   void visitCallOperand(OpOperand &operand) override {};
 
+  void
+  visitNonControlFlowArguments(RegionSuccessor &successor,
+                               ArrayRef<BlockArgument> arguments) override {};
+
   void visitExternalCall(CallOpInterface call,
                          ArrayRef<LayoutInfoLattice *> operands,
                          ArrayRef<const LayoutInfoLattice *> results) override {
@@ -487,6 +535,9 @@ bool LayoutInfoPropagation::hasParamsOfLayoutKind(
   } else if (layoutKind == LayoutKind::Lane) {
     return !(anchorLayout.getEffectiveLaneLayoutAsInt().empty() ||
              anchorLayout.getEffectiveLaneDataAsInt().empty());
+  } else if (layoutKind == LayoutKind::Subgroup) {
+    return !(anchorLayout.getEffectiveSgLayoutAsInt().empty() ||
+             anchorLayout.getEffectiveSgDataAsInt().empty());
   }
   return false;
 }
@@ -517,8 +568,7 @@ void LayoutInfoPropagation::visitPrefetchNdOp(
     auto [bWidth, bHeight, bCount] = blockWHC.value();
     SmallVector<int> instData;
     int instWidth = xegpu::getLargestDivisor(
-        static_cast<int>(tdescTy.getDimSize(tdescTy.getRank() - 1)), bWidth,
-        bCount);
+        static_cast<int>(tdescTy.getDimSize(tdescTy.getRank() - 1)), bWidth);
     if (instWidth == -1)
       prefetch.emitWarning(
           "No suitable instruction multiple found for the given shape.");
@@ -581,23 +631,35 @@ void LayoutInfoPropagation::visitVectorBroadCastOp(
   // Only consider vector to vector broadcasts for now.
   VectorType resultTy = broadcast.getResultVectorType();
   VectorType sourceTy = dyn_cast<VectorType>(broadcast.getSourceType());
-  if (!sourceTy) {
-    broadcast.emitWarning("Expecting source type to be a vector type.");
+  // skip layout propagation for non-vector source operand.
+  if (!sourceTy)
     return;
-  }
 
-  // Only consider nD -> nD broadcast.
+  // Hanlding broadcast from low-rank to high-rank (e.g., 1D to 2D) case.
   if (sourceTy.getRank() != resultTy.getRank()) {
-    broadcast.emitWarning("Expecting source and result to have same rank.");
+    auto sourceDims = sourceTy.getShape();
+    auto resultDims = resultTy.getShape();
+    SmallVector<int64_t> bcastDims;
+    auto dimDiff = resultTy.getRank() - sourceTy.getRank();
+    // adding the missing leading dims
+    for (int i = 0; i < dimDiff; i++)
+      bcastDims.push_back(i);
+
+    // for the rest dims in the resultTy, if sourceTy dim is 1, then it's
+    // broadcasted dim
+    for (size_t i = 0; i < sourceDims.size(); i++)
+      if ((sourceDims[i] == 1) && (resultDims[i + dimDiff] != 1))
+        bcastDims.push_back(i + dimDiff);
+
+    // create a slice layout for the source
+    xegpu::SliceAttr sliceLayout = xegpu::SliceAttr::get(
+        broadcast->getContext(),
+        cast<xegpu::DistributeLayoutAttr>(resultLayout.get()),
+        DenseI64ArrayAttr::get(broadcast->getContext(), bcastDims));
+
+    propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(sliceLayout)));
     return;
   }
-  SetVector<int64_t> broadcastUnitDims = broadcast.computeBroadcastedUnitDims();
-  if (broadcastUnitDims.size() != 1) {
-    broadcast.emitWarning("Expecting source type to be nD vector only with "
-                          "one broadcasted dimension.");
-    return;
-  }
-  // Propagate the result layout to the source operand.
   propagateIfChanged(operands[0], operands[0]->meet(resultLayout));
 }
 
@@ -759,8 +821,7 @@ void LayoutInfoPropagation::visitStoreNdOp(
     auto [bWidth, bHeight, bCount] = blockWHC.value();
     SmallVector<int> instData;
     int instWidth = xegpu::getLargestDivisor(
-        static_cast<int>(dataTy.getDimSize(dataTy.getRank() - 1)), bWidth,
-        bCount);
+        static_cast<int>(dataTy.getDimSize(dataTy.getRank() - 1)), bWidth);
     if (instWidth == -1)
       store.emitWarning(
           "No suitable instruction multiple found for the given shape.");
@@ -919,7 +980,7 @@ void LayoutInfoPropagation::visitLoadGatherOp(
   } else {
 
     // The layout is strictly determined by the payload type.
-    auto payloadTy = dyn_cast<VectorType>(load.getValueType());
+    VectorType payloadTy = load.getValueType();
     if (!payloadTy) {
       load.emitWarning("Not propagating, non-vector payload supplied.");
       return;
@@ -989,7 +1050,7 @@ void LayoutInfoPropagation::visitStoreScatterOp(
     // Currently, for 2D StoreScatterOp we expect that the height dimension of
     // the tensor descriptor is equal to the subgroup size. This is ensured by
     // the op verifier.
-    auto payloadTy = dyn_cast<VectorType>(storeScatter.getValueType());
+    VectorType payloadTy = storeScatter.getValueType();
     if (!payloadTy) {
       storeScatter.emitWarning("Not propagating, non-vector payload supplied.");
       return;
@@ -1159,7 +1220,7 @@ static LogicalResult updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
     }
     // If the result is a vector type, add a temporary layout attribute to the
     // op.
-    xegpu::setDistributeLayoutAttr(result, layout, /*respectPermLayout*/ true);
+    xegpu::setDistributeLayoutAttr(result, layout);
   }
   return success();
 }
@@ -1191,20 +1252,15 @@ updateControlFlowOps(mlir::OpBuilder &builder,
                      mlir::RegionBranchTerminatorOpInterface terminator,
                      GetLayoutFnTy getLayoutOfValue) {
   // Only process if the terminator is inside a region branch op.
-  if (!mlir::isa<mlir::RegionBranchOpInterface>(terminator->getParentOp()))
+  auto branchOp = dyn_cast<RegionBranchOpInterface>(terminator->getParentOp());
+  if (!branchOp)
     return success();
 
-  llvm::SmallVector<mlir::RegionSuccessor> successors;
-  llvm::SmallVector<mlir::Attribute> operands(terminator->getNumOperands(),
-                                              nullptr);
-  terminator.getSuccessorRegions(operands, successors);
-
-  for (mlir::RegionSuccessor &successor : successors) {
-    mlir::OperandRange successorOperands =
-        terminator.getSuccessorOperands(successor);
-    mlir::ValueRange successorInputs = successor.getSuccessorInputs();
-    for (auto [successorOperand, successorInput] :
-         llvm::zip(successorOperands, successorInputs)) {
+  RegionBranchSuccessorMapping mapping;
+  branchOp.getSuccessorOperandInputMapping(mapping,
+                                           RegionBranchPoint(terminator));
+  for (const auto &[successorOperand, successorInputs] : mapping) {
+    for (Value successorInput : successorInputs) {
       Type inputType = successorInput.getType();
       // We only need to operate on tensor descriptor or vector types.
       if (!isa<xegpu::TensorDescType, VectorType>(inputType))
@@ -1212,13 +1268,13 @@ updateControlFlowOps(mlir::OpBuilder &builder,
       xegpu::DistributeLayoutAttr successorInputLayout =
           getLayoutOfValue(successorInput);
       xegpu::DistributeLayoutAttr successorOperandLayout =
-          getLayoutOfValue(successorOperand);
+          getLayoutOfValue(successorOperand->get());
 
       // If either of the layouts is not assigned, we cannot proceed.
       if (!successorOperandLayout) {
         LLVM_DEBUG(DBGS() << "No layout assigned for forwarded operand in "
                              "branch terminator: "
-                          << successorOperand << "\n");
+                          << successorOperand->get() << "\n");
         return failure();
       }
       // We expect the layouts to match.
@@ -1297,6 +1353,8 @@ void XeGPUPropagateLayoutPass::runOnOperation() {
     layoutKind = LayoutKind::Lane;
   } else if (this->layoutKind == "inst") {
     layoutKind = LayoutKind::InstData;
+  } else if (this->layoutKind == "subgroup") {
+    layoutKind = LayoutKind::Subgroup;
   } else {
     getOperation()->emitError("Unsupported layout kind option: " +
                               this->layoutKind);

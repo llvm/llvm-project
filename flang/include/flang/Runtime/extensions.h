@@ -107,7 +107,16 @@ int FORTRAN_PROCEDURE_NAME(mclock)();
 float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime);
 float RTNAME(Secnds)(float *refTime, const char *sourceFile, int line);
 
-// Extension subroutine SHOW_DESCRIPTOR(D)
+// GNU extension function IRAND(I)
+int RTNAME(Irand)(int *i);
+
+// GNU extension function RAND(I)
+float RTNAME(Rand)(int *i, const char *sourceFile, int line);
+
+// GNU extension subroutine SRAND(SEED)
+void FORTRAN_PROCEDURE_NAME(srand)(int *seed);
+
+// flang extension subroutine SHOW_DESCRIPTOR(D)
 void RTNAME(ShowDescriptor)(const Fortran::runtime::Descriptor *descr);
 
 } // extern "C"

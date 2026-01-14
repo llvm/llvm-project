@@ -340,8 +340,8 @@ define amdgpu_kernel void @s_uint_to_fp_v2i32_to_v2f64(ptr addrspace(1) %out, <2
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_cvt_f64_u32_e32 v[2:3], s3
 ; GCN-NEXT:    v_cvt_f64_u32_e32 v[0:1], s2
-; GCN-NEXT:    v_mov_b32_e32 v4, s0
 ; GCN-NEXT:    v_mov_b32_e32 v5, s1
+; GCN-NEXT:    v_mov_b32_e32 v4, s0
 ; GCN-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; GCN-NEXT:    s_endpgm
 ;

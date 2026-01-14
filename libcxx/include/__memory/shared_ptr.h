@@ -77,7 +77,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI bad_weak_ptr(const bad_weak_ptr&) _NOEXCEPT            = default;
   _LIBCPP_HIDE_FROM_ABI bad_weak_ptr& operator=(const bad_weak_ptr&) _NOEXCEPT = default;
   ~bad_weak_ptr() _NOEXCEPT override;
-  const char* what() const _NOEXCEPT override;
+  [[__nodiscard__]] const char* what() const _NOEXCEPT override;
 };
 
 [[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_weak_ptr() {
@@ -1423,7 +1423,7 @@ struct hash<shared_ptr<_Tp> > {
   _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(const shared_ptr<_Tp>& __ptr) const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t operator()(const shared_ptr<_Tp>& __ptr) const _NOEXCEPT {
     return hash<typename shared_ptr<_Tp>::element_type*>()(__ptr.get());
   }
 };
