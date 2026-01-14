@@ -480,7 +480,7 @@ void Instruction::dropPoisonGeneratingFlags() {
       case Intrinsic::ctlz:
       case Intrinsic::cttz:
       case Intrinsic::abs:
-        II->setOperand(1, ConstantInt::getFalse(this->getContext()));
+        II->setOperand(1, ConstantInt::getFalse(getContext()));
         break;
       }
     }
