@@ -4,6 +4,8 @@
 // RUN: %clang_cc1 -O1 -triple aarch64 -target-feature +sve  %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=SVE   %s
 
 typedef float float4 __attribute__((ext_vector_type(4)));
+typedef _Float16 half8 __attribute__((ext_vector_type(8)));
+
 typedef short int si8 __attribute__((ext_vector_type(8)));
 typedef unsigned int u4 __attribute__((ext_vector_type(4)));
 
@@ -160,6 +162,27 @@ void test_builtin_reduce_minimum(float4 vf1) {
   // CHECK-NEXT: [[RDX1:%.+]] = call float @llvm.vector.reduce.fminimum.v4f32(<4 x float> [[VF1_AS1]])
   // CHECK-NEXT: fpext float [[RDX1]] to double
   const double r4 = __builtin_reduce_minimum(vf1_as_one);
+}
+
+void test_builtin_reduce_addf(float4 vf1, half8 vf2) {
+  // CHECK-LABEL: define void @test_builtin_reduce_addf(
+
+  // CHECK:      [[V0:%.+]] = load <4 x float>, ptr %vf1.addr, align 16
+  // CHECK-NEXT: call reassoc float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[V0]])
+  float r1 = __builtin_reduce_addf(vf1);
+
+  // CHECK:      [[V1:%.+]] = load <4 x float>, ptr %vf1.addr, align 16
+  // CHECK-NEXT: call float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[V1]])
+  float r2 = __builtin_reduce_addf(vf1, 0.0f);
+
+  // CHECK:      [[V2:%.+]] = load <8 x half>, ptr %vf2.addr, align 16
+  // CHECK-NEXT: call reassoc half @llvm.vector.reduce.fadd.v8f16(half 0xH8000, <8 x half> [[V2:%.+]])
+  _Float16 r3 = __builtin_reduce_addf(vf2);
+
+  // CHECK:      [[V3:%.+]] = load <8 x half>, ptr %vf2.addr, align 16
+  // CHECK-NEXT: [[RDX:%.+]] = call half @llvm.vector.reduce.fadd.v8f16(half 0xH8000, <8 x half> [[V3]])
+  // CHECK-NEXT: fpext half [[RDX]] to float
+  float r4 = __builtin_reduce_addf(vf2, -0.0f);
 }
 
 #if defined(__ARM_FEATURE_SVE)

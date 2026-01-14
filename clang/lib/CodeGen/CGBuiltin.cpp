@@ -4215,6 +4215,28 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_reduce_minimum:
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, Intrinsic::vector_reduce_fminimum, "rdx.minimum"));
+  case Builtin::BI__builtin_reduce_addf: {
+    llvm::Value *Vector = EmitScalarExpr(E->getArg(0));
+    llvm::Type *ScalarTy = Vector->getType()->getScalarType();
+    llvm::Value *StartValue = nullptr;
+    if (E->getNumArgs() == 2)
+      StartValue = Builder.CreateFPCast(EmitScalarExpr(E->getArg(1)), ScalarTy);
+    llvm::Value *Args[] = {/*start_value=*/StartValue
+                               ? StartValue
+                               : llvm::ConstantFP::get(ScalarTy, -0.0F),
+                           /*vector=*/Vector};
+    llvm::Function *F =
+        CGM.getIntrinsic(Intrinsic::vector_reduce_fadd, Vector->getType());
+    llvm::CallBase *Reduce = Builder.CreateCall(F, Args, "rdx.addf");
+    if (!StartValue) {
+      // No start value means an unordered reduction, which requires the reassoc
+      // FMF flag.
+      llvm::FastMathFlags FMF;
+      FMF.setAllowReassoc();
+      cast<llvm::CallBase>(Reduce)->setFastMathFlags(FMF);
+    }
+    return RValue::get(Reduce);
+  }
 
   case Builtin::BI__builtin_matrix_transpose: {
     auto *MatrixTy = E->getArg(0)->getType()->castAs<ConstantMatrixType>();
