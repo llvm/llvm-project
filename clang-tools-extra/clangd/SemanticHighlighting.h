@@ -24,7 +24,6 @@
 
 #include "clang/AST/TypeBase.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace clang {
 class NamedDecl;
