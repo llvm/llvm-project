@@ -4117,7 +4117,6 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     case OPC_EmitNode0:
     case OPC_EmitNode1:
     case OPC_EmitNode2:
-    case OPC_EmitNode0None:
     case OPC_EmitNode1None:
     case OPC_EmitNode2None:
     case OPC_EmitNode0Chain:
@@ -4127,34 +4126,31 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     case OPC_MorphNodeTo0:
     case OPC_MorphNodeTo1:
     case OPC_MorphNodeTo2:
-    case OPC_MorphNodeTo0None:
     case OPC_MorphNodeTo1None:
     case OPC_MorphNodeTo2None:
     case OPC_MorphNodeTo0Chain:
     case OPC_MorphNodeTo1Chain:
     case OPC_MorphNodeTo2Chain:
-    case OPC_MorphNodeTo0GlueInput:
     case OPC_MorphNodeTo1GlueInput:
     case OPC_MorphNodeTo2GlueInput:
-    case OPC_MorphNodeTo0GlueOutput:
     case OPC_MorphNodeTo1GlueOutput:
     case OPC_MorphNodeTo2GlueOutput: {
       uint16_t TargetOpc = MatcherTable[MatcherIndex++];
       TargetOpc |= static_cast<uint16_t>(MatcherTable[MatcherIndex++]) << 8;
       unsigned EmitNodeInfo;
-      if (Opcode >= OPC_EmitNode0None && Opcode <= OPC_EmitNode2Chain) {
+      if (Opcode >= OPC_EmitNode1None && Opcode <= OPC_EmitNode2Chain) {
         if (Opcode >= OPC_EmitNode0Chain && Opcode <= OPC_EmitNode2Chain)
           EmitNodeInfo = OPFL_Chain;
         else
           EmitNodeInfo = OPFL_None;
-      } else if (Opcode >= OPC_MorphNodeTo0None &&
+      } else if (Opcode >= OPC_MorphNodeTo1None &&
                  Opcode <= OPC_MorphNodeTo2GlueOutput) {
         if (Opcode >= OPC_MorphNodeTo0Chain && Opcode <= OPC_MorphNodeTo2Chain)
           EmitNodeInfo = OPFL_Chain;
-        else if (Opcode >= OPC_MorphNodeTo0GlueInput &&
+        else if (Opcode >= OPC_MorphNodeTo1GlueInput &&
                  Opcode <= OPC_MorphNodeTo2GlueInput)
           EmitNodeInfo = OPFL_GlueInput;
-        else if (Opcode >= OPC_MorphNodeTo0GlueOutput &&
+        else if (Opcode >= OPC_MorphNodeTo1GlueOutput &&
                  Opcode <= OPC_MorphNodeTo2GlueOutput)
           EmitNodeInfo = OPFL_GlueOutput;
         else
@@ -4167,21 +4163,21 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       // on the Opcode. Otherwise read the next byte from the table.
       if (Opcode >= OPC_MorphNodeTo0 && Opcode <= OPC_MorphNodeTo2)
         NumVTs = Opcode - OPC_MorphNodeTo0;
-      else if (Opcode >= OPC_MorphNodeTo0None && Opcode <= OPC_MorphNodeTo2None)
-        NumVTs = Opcode - OPC_MorphNodeTo0None;
+      else if (Opcode >= OPC_MorphNodeTo1None && Opcode <= OPC_MorphNodeTo2None)
+        NumVTs = Opcode - OPC_MorphNodeTo1None + 1;
       else if (Opcode >= OPC_MorphNodeTo0Chain &&
                Opcode <= OPC_MorphNodeTo2Chain)
         NumVTs = Opcode - OPC_MorphNodeTo0Chain;
-      else if (Opcode >= OPC_MorphNodeTo0GlueInput &&
+      else if (Opcode >= OPC_MorphNodeTo1GlueInput &&
                Opcode <= OPC_MorphNodeTo2GlueInput)
-        NumVTs = Opcode - OPC_MorphNodeTo0GlueInput;
-      else if (Opcode >= OPC_MorphNodeTo0GlueOutput &&
+        NumVTs = Opcode - OPC_MorphNodeTo1GlueInput + 1;
+      else if (Opcode >= OPC_MorphNodeTo1GlueOutput &&
                Opcode <= OPC_MorphNodeTo2GlueOutput)
-        NumVTs = Opcode - OPC_MorphNodeTo0GlueOutput;
+        NumVTs = Opcode - OPC_MorphNodeTo1GlueOutput + 1;
       else if (Opcode >= OPC_EmitNode0 && Opcode <= OPC_EmitNode2)
         NumVTs = Opcode - OPC_EmitNode0;
-      else if (Opcode >= OPC_EmitNode0None && Opcode <= OPC_EmitNode2None)
-        NumVTs = Opcode - OPC_EmitNode0None;
+      else if (Opcode >= OPC_EmitNode1None && Opcode <= OPC_EmitNode2None)
+        NumVTs = Opcode - OPC_EmitNode1None + 1;
       else if (Opcode >= OPC_EmitNode0Chain && Opcode <= OPC_EmitNode2Chain)
         NumVTs = Opcode - OPC_EmitNode0Chain;
       else
