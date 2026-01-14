@@ -40,14 +40,14 @@ LLVM_ABI bool opt(const Config &Conf, TargetMachine *TM, unsigned Task,
                   ModuleSummaryIndex *ExportSummary,
                   const ModuleSummaryIndex *ImportSummary,
                   const std::vector<uint8_t> &CmdArgs,
-                  const SmallVector<StringRef> &BitcodeLibFuncs);
+                  ArrayRef<StringRef> BitcodeLibFuncs);
 
 /// Runs a regular LTO backend. The regular LTO backend can also act as the
 /// regular LTO phase of ThinLTO, which may need to access the combined index.
 LLVM_ABI Error backend(const Config &C, AddStreamFn AddStream,
                        unsigned ParallelCodeGenParallelismLevel, Module &M,
                        ModuleSummaryIndex &CombinedIndex,
-                       const SmallVector<StringRef> &BitcodeLibFuncs);
+                       ArrayRef<StringRef> BitcodeLibFuncs);
 
 /// Runs a ThinLTO backend.
 /// If \p ModuleMap is not nullptr, all the module files to be imported have
@@ -58,15 +58,14 @@ LLVM_ABI Error backend(const Config &C, AddStreamFn AddStream,
 /// the backend will skip optimization and only perform code generation. If
 /// \p IRAddStream is not nullptr, it will be called just before code generation
 /// to serialize the optimized IR.
-LLVM_ABI Error
-thinBackend(const Config &C, unsigned Task, AddStreamFn AddStream, Module &M,
-            const ModuleSummaryIndex &CombinedIndex,
-            const FunctionImporter::ImportMapTy &ImportList,
-            const GVSummaryMapTy &DefinedGlobals,
-            MapVector<StringRef, BitcodeModule> *ModuleMap, bool CodeGenOnly,
-            const SmallVector<StringRef> &BitcodeLibFuncs,
-            AddStreamFn IRAddStream = nullptr,
-            const std::vector<uint8_t> &CmdArgs = std::vector<uint8_t>());
+LLVM_ABI Error thinBackend(
+    const Config &C, unsigned Task, AddStreamFn AddStream, Module &M,
+    const ModuleSummaryIndex &CombinedIndex,
+    const FunctionImporter::ImportMapTy &ImportList,
+    const GVSummaryMapTy &DefinedGlobals,
+    MapVector<StringRef, BitcodeModule> *ModuleMap, bool CodeGenOnly,
+    ArrayRef<StringRef> BitcodeLibFuncs, AddStreamFn IRAddStream = nullptr,
+    const std::vector<uint8_t> &CmdArgs = std::vector<uint8_t>());
 
 LLVM_ABI Error finalizeOptimizationRemarks(LLVMRemarkFileHandle DiagOutputFile);
 

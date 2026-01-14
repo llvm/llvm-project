@@ -309,7 +309,7 @@ using ThinBackendFunction = std::function<std::unique_ptr<ThinBackendProc>(
     const Config &C, ModuleSummaryIndex &CombinedIndex,
     const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     AddStreamFn AddStream, FileCache Cache,
-    const SmallVector<StringRef> &BitcodeLibFuncs)>;
+    ArrayRef<StringRef> BitcodeLibFuncs)>;
 
 /// This type defines the behavior following the thin-link phase during ThinLTO.
 /// It encapsulates a backend function and a strategy for thread pool
@@ -325,7 +325,7 @@ struct ThinBackend {
       const Config &Conf, ModuleSummaryIndex &CombinedIndex,
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
       AddStreamFn AddStream, FileCache Cache,
-      const SmallVector<StringRef> &BitcodeLibFuncs) {
+      ArrayRef<StringRef> BitcodeLibFuncs) {
     assert(isValid() && "Invalid backend function");
     return Func(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
                 std::move(AddStream), std::move(Cache), BitcodeLibFuncs);
@@ -449,8 +449,7 @@ public:
   /// Set the list of functions implemented in bitcode across the link, whether
   /// extracted or not. Such functions may not be referenced if they were not
   /// extracted by the time LTO occurs.
-  LLVM_ABI void
-  setBitcodeLibFuncs(const SmallVector<StringRef> &BitcodeLibFuncs);
+  LLVM_ABI void setBitcodeLibFuncs(ArrayRef<StringRef> BitcodeLibFuncs);
 
   /// Returns an upper bound on the number of tasks that the client may expect.
   /// This may only be called after all IR object files have been added. For a

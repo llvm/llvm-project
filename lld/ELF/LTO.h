@@ -43,7 +43,7 @@ public:
 
   void add(BitcodeFile &f);
   SmallVector<std::unique_ptr<InputFile>, 0> compile();
-  void setBitcodeLibFuncs(const SmallVector<StringRef> &bitcodeLibFuncs);
+  void setBitcodeLibFuncs(ArrayRef<StringRef> bitcodeLibFuncs);
 
 private:
   Ctx &ctx;

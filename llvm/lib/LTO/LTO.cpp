@@ -789,8 +789,9 @@ Error LTO::add(std::unique_ptr<InputFile> InputPtr,
   return Error::success();
 }
 
-void LTO::setBitcodeLibFuncs(const SmallVector<StringRef> &BitcodeLibFuncs) {
-  this->BitcodeLibFuncs = BitcodeLibFuncs;
+void LTO::setBitcodeLibFuncs(ArrayRef<StringRef> BitcodeLibFuncs) {
+  this->BitcodeLibFuncs.clear();
+  this->BitcodeLibFuncs.append(BitcodeLibFuncs.begin(), BitcodeLibFuncs.end());
 }
 
 Expected<ArrayRef<SymbolResolution>>
@@ -1538,7 +1539,7 @@ public:
 class InProcessThinBackend : public CGThinBackend {
 protected:
   FileCache Cache;
-  const SmallVector<StringRef> &BitcodeLibFuncs;
+  ArrayRef<StringRef> BitcodeLibFuncs;
 
 public:
   InProcessThinBackend(
@@ -1547,7 +1548,7 @@ public:
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
       AddStreamFn AddStream, FileCache Cache, lto::IndexWriteCallback OnWrite,
       bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
-      const SmallVector<StringRef> &BitcodeLibFuncs)
+      ArrayRef<StringRef> BitcodeLibFuncs)
       : CGThinBackend(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
                       AddStream, OnWrite, ShouldEmitIndexFiles,
                       ShouldEmitImportsFiles, ThinLTOParallelism),
@@ -1658,7 +1659,7 @@ public:
       ThreadPoolStrategy ThinLTOParallelism,
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
       AddStreamFn CGAddStream, FileCache CGCache,
-      const SmallVector<StringRef> &BitcodeLibFuncs, AddStreamFn IRAddStream,
+      ArrayRef<StringRef> BitcodeLibFuncs, AddStreamFn IRAddStream,
       FileCache IRCache)
       : InProcessThinBackend(Conf, CombinedIndex, ThinLTOParallelism,
                              ModuleToDefinedGVSummaries, std::move(CGAddStream),
@@ -1754,7 +1755,7 @@ public:
       ThreadPoolStrategy ThinLTOParallelism,
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
       AddStreamFn AddStream, FileCache Cache,
-      const SmallVector<StringRef> &BitcodeLibFuncs,
+      ArrayRef<StringRef> BitcodeLibFuncs,
       std::unique_ptr<SmallVector<StringRef>> IRFiles,
       stable_hash CombinedCGDataHash)
       : InProcessThinBackend(Conf, CombinedIndex, ThinLTOParallelism,
@@ -1823,7 +1824,7 @@ ThinBackend lto::createInProcessThinBackend(ThreadPoolStrategy Parallelism,
       [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
           const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
           AddStreamFn AddStream, FileCache Cache,
-          const SmallVector<StringRef> &BitcodeLibFuncs) {
+          ArrayRef<StringRef> BitcodeLibFuncs) {
         return std::make_unique<InProcessThinBackend>(
             Conf, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
             AddStream, Cache, OnWrite, ShouldEmitIndexFiles,
@@ -1945,7 +1946,7 @@ ThinBackend lto::createWriteIndexesThinBackend(
       [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
           const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
           AddStreamFn AddStream, FileCache Cache,
-          const SmallVector<StringRef> &BitcodeLibFuncs) {
+          ArrayRef<StringRef> BitcodeLibFuncs) {
         return std::make_unique<WriteIndexesThinBackend>(
             Conf, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
             OldPrefix, NewPrefix, NativeObjectPrefix, ShouldEmitImportsFiles,
@@ -2710,7 +2711,7 @@ ThinBackend lto::createOutOfProcessThinBackend(
       [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
           const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
           AddStreamFn AddStream, FileCache Cache,
-          const SmallVector<StringRef> &BitcodeLibFuncs) {
+          ArrayRef<StringRef> BitcodeLibFuncs) {
         return std::make_unique<OutOfProcessThinBackend>(
             Conf, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
             AddStream, Cache, OnWrite, ShouldEmitIndexFiles,
