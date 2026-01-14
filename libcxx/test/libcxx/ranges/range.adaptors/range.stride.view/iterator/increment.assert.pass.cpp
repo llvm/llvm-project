@@ -41,5 +41,13 @@ int main(int, char**) {
     TEST_LIBCPP_ASSERT_FAILURE(it++, "Cannot increment an iterator already at the end.");
     TEST_LIBCPP_ASSERT_FAILURE(++it, "Cannot increment an iterator already at the end.");
   }
+  {
+    int range[] = {1, 2, 3};
+    using Base  = BasicTestView<forward_iterator<int*>, forward_iterator<int*>>;
+    auto view   = std::ranges::views::stride(Base(forward_iterator(range), forward_iterator(range + 3)), 3);
+    auto it     = view.end();
+    TEST_LIBCPP_ASSERT_FAILURE(it++, "Cannot increment an iterator already at the end.");
+    TEST_LIBCPP_ASSERT_FAILURE(++it, "Cannot increment an iterator already at the end.");
+  }
   return 0;
 }

@@ -30,5 +30,11 @@ int main(int, char**) {
     ++it;
     TEST_LIBCPP_ASSERT_FAILURE(*std::as_const(it), "Cannot dereference an iterator at the end.");
   }
+  {
+    int range[] = {1, 2, 3};
+    auto view   = std::ranges::views::stride(range, 4);
+    auto it     = view.end();
+    TEST_LIBCPP_ASSERT_FAILURE(*std::as_const(it), "Cannot dereference an iterator at the end.");
+  }
   return 0;
 }
