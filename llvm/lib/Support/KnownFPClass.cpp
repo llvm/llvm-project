@@ -400,7 +400,23 @@ KnownFPClass KnownFPClass::fdiv_self(const KnownFPClass &KnownSrc,
   // X / X is always exactly 1.0 or a NaN.
   KnownFPClass Known(fcNan | fcPosNormal);
 
-  // Known.propagateNaN(KnownSrc);
+  if (KnownSrc.isKnownNeverInfOrNaN() && KnownSrc.isKnownNeverLogicalZero(Mode))
+    Known.knownNot(fcNan);
+  else if (KnownSrc.isKnownNever(fcSNan))
+    Known.knownNot(fcSNan);
+
+  return Known;
+}
+KnownFPClass KnownFPClass::frem_self(const KnownFPClass &KnownSrc,
+                                     DenormalMode Mode) {
+  // X % X is always exactly [+-]0.0 or a NaN.
+  KnownFPClass Known(fcNan | fcZero);
+
+  if (KnownSrc.isKnownNeverInfOrNaN() && KnownSrc.isKnownNeverLogicalZero(Mode))
+    Known.knownNot(fcNan);
+  else if (KnownSrc.isKnownNever(fcSNan))
+    Known.knownNot(fcSNan);
+
   return Known;
 }
 

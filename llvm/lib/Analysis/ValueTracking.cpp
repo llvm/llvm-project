@@ -5656,13 +5656,12 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       const fltSemantics &FltSem =
           Op->getType()->getScalarType()->getFltSemantics();
 
-      if (KnownSrc.isKnownNeverInfOrNaN() &&
-          KnownSrc.isKnownNeverLogicalZero(F ? F->getDenormalMode(FltSem)
-                                             : DenormalMode::getDynamic()))
-        Known.knownNot(fcNan);
-      else if (KnownSrc.isKnownNever(fcSNan))
-        Known.knownNot(fcSNan);
+      DenormalMode Mode =
+          F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
 
+      Known = Op->getOpcode() == Instruction::FDiv
+                  ? KnownFPClass::fdiv_self(KnownSrc, Mode)
+                  : KnownFPClass::frem_self(KnownSrc, Mode);
       break;
     }
 

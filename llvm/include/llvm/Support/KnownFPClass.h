@@ -265,6 +265,11 @@ struct KnownFPClass {
   fdiv_self(const KnownFPClass &Src,
             DenormalMode Mode = DenormalMode::getDynamic());
 
+  /// Report known values for frem
+  LLVM_ABI static KnownFPClass
+  frem_self(const KnownFPClass &Src,
+            DenormalMode Mode = DenormalMode::getDynamic());
+
   /// Report known values for fma
   LLVM_ABI static KnownFPClass
   fma(const KnownFPClass &LHS, const KnownFPClass &RHS,
