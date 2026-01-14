@@ -137,6 +137,8 @@ Changes to the Debug Info
 Changes to the LLVM tools
 -------------------------
 
+* `llvm-objcopy` no longer corrupts the symbol table when `--update-section` is called for ELF files.
+
 Changes to LLDB
 ---------------
 
