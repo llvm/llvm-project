@@ -997,3 +997,211 @@ define i8 @abs_diff_sle_y_x(i8 %x, i8 %y) {
   %cond = select i1 %cmp, i8 %sub, i8 %sub1
   ret i8 %cond
 }
+
+define i1 @abs_cmp_ule_no_poison(i32 %x) {
+; CHECK-LABEL: @abs_cmp_ule_no_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 31
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], 63
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 0)
+  %cmp = icmp ule i32 %x.abs, 31
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_ule_no_poison_multiuse(i32 %x) {
+; CHECK-LABEL: @abs_cmp_ule_no_poison_multiuse(
+; CHECK-NEXT:    [[X_ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    call void @use(i32 [[X_ABS]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X_ABS]], 32
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 0)
+  call void @use(i32 %x.abs)
+  %cmp = icmp ule i32 %x.abs, 31
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_ule_poison(i32 %x) {
+; CHECK-LABEL: @abs_cmp_ule_poison(
+; CHECK-NEXT:    [[X_ABS_FREEZE:%.*]] = freeze i32 [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X_ABS_FREEZE]], 31
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], 63
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 1)
+  %x.abs.freeze = freeze i32 %x.abs
+  %cmp = icmp ule i32 %x.abs.freeze, 31
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_ule_poison_multiuse(i32 %x) {
+; CHECK-LABEL: @abs_cmp_ule_poison_multiuse(
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X:%.*]]
+; CHECK-NEXT:    [[X_ABS_FREEZE:%.*]] = call i32 @llvm.abs.i32(i32 [[X_FR]], i1 false)
+; CHECK-NEXT:    call void @use(i32 [[X_ABS_FREEZE]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X_ABS_FREEZE]], 32
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 1)
+  %x.abs.freeze = freeze i32 %x.abs
+  call void @use(i32 %x.abs.freeze)
+  %cmp = icmp ule i32 %x.abs.freeze, 31
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_ult_no_poison(i32 %x) {
+; CHECK-LABEL: @abs_cmp_ult_no_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 31
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], 63
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 0)
+  %cmp = icmp ult i32 %x.abs, 32
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_ult_no_poison_multiuse(i32 %x) {
+; CHECK-LABEL: @abs_cmp_ult_no_poison_multiuse(
+; CHECK-NEXT:    [[X_ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    call void @use(i32 [[X_ABS]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X_ABS]], 32
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 0)
+  call void @use(i32 %x.abs)
+  %cmp = icmp ult i32 %x.abs, 32
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_ult_poison(i32 %x) {
+; CHECK-LABEL: @abs_cmp_ult_poison(
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X_FR]], 31
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], 63
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 1)
+  %x.abs.freeze = freeze i32 %x.abs
+  %cmp = icmp ult i32 %x.abs.freeze, 32
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_ult_poison_multiuse(i32 %x) {
+; CHECK-LABEL: @abs_cmp_ult_poison_multiuse(
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X:%.*]]
+; CHECK-NEXT:    [[X_ABS_FREEZE:%.*]] = call i32 @llvm.abs.i32(i32 [[X_FR]], i1 false)
+; CHECK-NEXT:    call void @use(i32 [[X_ABS_FREEZE]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X_ABS_FREEZE]], 32
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 1)
+  %x.abs.freeze = freeze i32 %x.abs
+  call void @use(i32 %x.abs.freeze)
+  %cmp = icmp ult i32 %x.abs.freeze, 32
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_uge_no_poison(i32 %x) {
+; CHECK-LABEL: @abs_cmp_uge_no_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -31
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], -61
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 0)
+  %cmp = icmp ugt i32 %x.abs, 30
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_uge_no_poison_multiuse(i32 %x) {
+; CHECK-LABEL: @abs_cmp_uge_no_poison_multiuse(
+; CHECK-NEXT:    [[X_ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    call void @use(i32 [[X_ABS]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X_ABS]], 30
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 0)
+  call void @use(i32 %x.abs)
+  %cmp = icmp ugt i32 %x.abs, 30
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_uge_poison(i32 %x) {
+; CHECK-LABEL: @abs_cmp_uge_poison(
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X_FR]], -31
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], -61
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 1)
+  %x.abs.freeze = freeze i32 %x.abs
+  %cmp = icmp ugt i32 %x.abs.freeze, 30
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_uge_poison_multiuse(i32 %x) {
+; CHECK-LABEL: @abs_cmp_uge_poison_multiuse(
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X:%.*]]
+; CHECK-NEXT:    [[X_ABS_FREEZE:%.*]] = call i32 @llvm.abs.i32(i32 [[X_FR]], i1 false)
+; CHECK-NEXT:    call void @use(i32 [[X_ABS_FREEZE]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X_ABS_FREEZE]], 30
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 1)
+  %x.abs.freeze = freeze i32 %x.abs
+  call void @use(i32 %x.abs.freeze)
+  %cmp = icmp ugt i32 %x.abs.freeze, 30
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_ugt_no_poison(i32 %x) {
+; CHECK-LABEL: @abs_cmp_ugt_no_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], -63
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 0)
+  %cmp = icmp ugt i32 %x.abs, 31
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_ugt_no_poison_multiuse(i32 %x) {
+; CHECK-LABEL: @abs_cmp_ugt_no_poison_multiuse(
+; CHECK-NEXT:    [[X_ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X_ABS]], 31
+; CHECK-NEXT:    call void @use(i32 [[X_ABS]])
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 0)
+  %cmp = icmp ugt i32 %x.abs, 31
+  call void @use(i32 %x.abs)
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_ugt_poison(i32 %x) {
+; CHECK-LABEL: @abs_cmp_ugt_poison(
+; CHECK-NEXT:    [[X:%.*]] = freeze i32 [[X1:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X]], -32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], -63
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 1)
+  %x.abs.freeze = freeze i32 %x.abs
+  %cmp = icmp ugt i32 %x.abs.freeze, 31
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_ugt_poison_multiuse(i32 %x) {
+; CHECK-LABEL: @abs_cmp_ugt_poison_multiuse(
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X:%.*]]
+; CHECK-NEXT:    [[X_ABS_FREEZE:%.*]] = call i32 @llvm.abs.i32(i32 [[X_FR]], i1 false)
+; CHECK-NEXT:    call void @use(i32 [[X_ABS_FREEZE]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X_ABS_FREEZE]], 31
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 1)
+  %x.abs.freeze = freeze i32 %x.abs
+  call void @use(i32 %x.abs.freeze)
+  %cmp = icmp ugt i32 %x.abs.freeze, 31
+  ret i1 %cmp
+}
