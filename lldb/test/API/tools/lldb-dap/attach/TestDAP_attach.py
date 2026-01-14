@@ -105,7 +105,8 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         session = {"targetId": 99999}
         resp = self.attach(session=session, waitForResponse=True)
         self.assertFalse(resp["success"])
-        self.assertIn("missing value at arguments.session.debuggerId", 
+        self.assertIn(
+            "missing value at arguments.session.debuggerId",
             resp["body"]["error"]["format"],
         )
 

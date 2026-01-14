@@ -1319,7 +1319,8 @@ llvm::Error DAP::InitializeDebugger(const DAPSession &session) {
   }
 
   // Find the target within the debugger by its globally unique ID
-  lldb::SBTarget target = debugger.FindTargetByGloballyUniqueID(session.targetId);
+  lldb::SBTarget target =
+      debugger.FindTargetByGloballyUniqueID(session.targetId);
   if (!target.IsValid()) {
     return llvm::createStringError(
         "Unable to find existing target for target ID");
