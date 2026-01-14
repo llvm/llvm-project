@@ -87,6 +87,7 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -13703,12 +13704,17 @@ void BoUpSLP::transformNodes() {
       if (!canConvertToFMA(E.Scalars, E.getOperations(), *DT, *DL, *TTI, *TLI)
                .isValid())
         break;
-      // This node is a fmuladd node.
       E.CombinedOp = TreeEntry::FMulAdd;
       TreeEntry *FMulEntry = getOperandEntry(&E, 0);
-      if (FMulEntry->UserTreeIndex &&
+      // On AMDGPU with float type, always mark the FMul entry as CombinedVectorize
+      // when FMA is possible, regardless of UserTreeIndex, to prevent separate
+      // vectorization that would block FMA formation.
+      Triple TT(F->getParent()->getTargetTriple());
+      if (TT.isAMDGPU() && E.Scalars[0]->getType()->isFloatTy() &&
           FMulEntry->State == TreeEntry::Vectorize) {
-        // The FMul node is part of the combined fmuladd node.
+        FMulEntry->State = TreeEntry::CombinedVectorize;
+      } else if (FMulEntry->UserTreeIndex &&
+                 FMulEntry->State == TreeEntry::Vectorize) {
         FMulEntry->State = TreeEntry::CombinedVectorize;
       }
       break;
