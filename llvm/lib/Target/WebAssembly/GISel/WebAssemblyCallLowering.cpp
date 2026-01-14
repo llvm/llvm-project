@@ -816,7 +816,8 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   bool IsIndirect = false;
   Register IndirectIdx;
 
-  if (Info.Callee.isReg()) {
+  if (Info.Callee.isReg() ||
+      (Info.Callee.isGlobal() && Info.Callee.getGlobal()->isInterposable())) {
     IsIndirect = true;
     CallInst = MIRBuilder.buildInstr(Info.LoweredTailCall
                                          ? WebAssembly::RET_CALL_INDIRECT
@@ -986,7 +987,37 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     }
   } else {
     if (Info.Callee.isGlobal()) {
-      CallInst.addGlobalAddress(Info.Callee.getGlobal());
+      if (Info.Callee.getGlobal()->isInterposable()) {
+        // Placeholder for the type index.
+        // This gets replaced with the correct value in
+        // WebAssemblyMCInstLower.cpp
+        CallInst.addImm(0);
+
+        Type *PtrTy = PointerType::getUnqual(Ctx);
+        LLT PtrLLT = getLLTForType(*PtrTy, DL);
+        auto PtrSize = PtrLLT.getSizeInBits();
+        auto PtrIntLLT = LLT::scalar(PtrSize);
+
+        IndirectIdx =
+            MIRBuilder.buildGlobalValue(PtrLLT, Info.Callee.getGlobal())
+                .getReg(0);
+        IndirectIdx =
+            MIRBuilder.buildPtrToInt(PtrIntLLT, IndirectIdx).getReg(0);
+
+        auto *Table = WebAssembly::getOrCreateFunctionTableSymbol(
+            MF.getContext(), &Subtarget);
+        if (Subtarget.hasCallIndirectOverlong()) {
+          CallInst.addSym(Table);
+        } else {
+          // For the MVP there is at most one table whose number is 0, but we
+          // can't write a table symbol or issue relocations.  Instead we just
+          // ensure the table is live and write a zero.
+          Table->setNoStrip();
+          CallInst.addImm(0);
+        }
+      } else {
+        CallInst.addGlobalAddress(Info.Callee.getGlobal());
+      }
     } else if (Info.Callee.isSymbol()) {
       CallInst.addExternalSymbol(Info.Callee.getSymbolName());
     } else {
