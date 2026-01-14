@@ -713,6 +713,11 @@ Arm and AArch64 Support
 - More intrinsics for the following AArch64 instructions:
   FCVTZ[US], FCVTN[US], FCVTM[US], FCVTP[US], FCVTA[US]
 
+- Support level for Function Multi-Versioning (FMV) has been upgraded to Release in ACLE.
+  - Resolver functions can use the PAC and BTI hardening settings.
+  - Users can override function version priority.
+  - Unreachable functions versions are diagnosed and ignored.
+
 Android Support
 ^^^^^^^^^^^^^^^
 
