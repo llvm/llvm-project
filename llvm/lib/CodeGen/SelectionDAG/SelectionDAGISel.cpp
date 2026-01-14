@@ -3146,8 +3146,9 @@ static unsigned IsPredicateKnownToFail(
     return Index;
   case SelectionDAGISel::OPC_CheckType:
   case SelectionDAGISel::OPC_CheckTypeI32:
-  case SelectionDAGISel::OPC_CheckTypeI64: {
-    MVT::SimpleValueType VT;
+  case SelectionDAGISel::OPC_CheckTypeI64:
+  case SelectionDAGISel::OPC_CheckTypeByHwMode: {
+    MVT VT;
     switch (Opcode) {
     case SelectionDAGISel::OPC_CheckTypeI32:
       VT = MVT::i32;
@@ -3155,28 +3156,23 @@ static unsigned IsPredicateKnownToFail(
     case SelectionDAGISel::OPC_CheckTypeI64:
       VT = MVT::i64;
       break;
+    case SelectionDAGISel::OPC_CheckTypeByHwMode:
+      VT = getHwModeVT(Table, Index, SDISel);
+      break;
     default:
       VT = getSimpleVT(Table, Index);
       break;
     }
-    Result = !::CheckType(VT, N, SDISel.TLI, SDISel.CurDAG->getDataLayout());
-    return Index;
-  }
-  case SelectionDAGISel::OPC_CheckTypeByHwMode: {
-    MVT VT = getHwModeVT(Table, Index, SDISel);
     Result = !::CheckType(VT.SimpleTy, N, SDISel.TLI,
                           SDISel.CurDAG->getDataLayout());
     return Index;
   }
-  case SelectionDAGISel::OPC_CheckTypeRes: {
-    unsigned Res = Table[Index++];
-    Result = !::CheckType(getSimpleVT(Table, Index), N.getValue(Res),
-                          SDISel.TLI, SDISel.CurDAG->getDataLayout());
-    return Index;
-  }
+  case SelectionDAGISel::OPC_CheckTypeRes:
   case SelectionDAGISel::OPC_CheckTypeResByHwMode: {
     unsigned Res = Table[Index++];
-    MVT VT = getHwModeVT(Table, Index, SDISel);
+    MVT VT = Opcode == SelectionDAGISel::OPC_CheckTypeResByHwMode
+                 ? getHwModeVT(Table, Index, SDISel)
+                 : getSimpleVT(Table, Index);
     Result = !::CheckType(VT.SimpleTy, N.getValue(Res), SDISel.TLI,
                           SDISel.CurDAG->getDataLayout());
     return Index;
@@ -3204,8 +3200,16 @@ static unsigned IsPredicateKnownToFail(
   case SelectionDAGISel::OPC_CheckChild4TypeI64:
   case SelectionDAGISel::OPC_CheckChild5TypeI64:
   case SelectionDAGISel::OPC_CheckChild6TypeI64:
-  case SelectionDAGISel::OPC_CheckChild7TypeI64: {
-    MVT::SimpleValueType VT;
+  case SelectionDAGISel::OPC_CheckChild7TypeI64:
+  case SelectionDAGISel::OPC_CheckChild0TypeByHwMode:
+  case SelectionDAGISel::OPC_CheckChild1TypeByHwMode:
+  case SelectionDAGISel::OPC_CheckChild2TypeByHwMode:
+  case SelectionDAGISel::OPC_CheckChild3TypeByHwMode:
+  case SelectionDAGISel::OPC_CheckChild4TypeByHwMode:
+  case SelectionDAGISel::OPC_CheckChild5TypeByHwMode:
+  case SelectionDAGISel::OPC_CheckChild6TypeByHwMode:
+  case SelectionDAGISel::OPC_CheckChild7TypeByHwMode: {
+    MVT VT;
     unsigned ChildNo;
     if (Opcode >= SelectionDAGISel::OPC_CheckChild0TypeI32 &&
         Opcode <= SelectionDAGISel::OPC_CheckChild7TypeI32) {
@@ -3215,24 +3219,14 @@ static unsigned IsPredicateKnownToFail(
                Opcode <= SelectionDAGISel::OPC_CheckChild7TypeI64) {
       VT = MVT::i64;
       ChildNo = Opcode - SelectionDAGISel::OPC_CheckChild0TypeI64;
+    } else if (Opcode >= SelectionDAGISel::OPC_CheckChild0TypeByHwMode &&
+               Opcode <= SelectionDAGISel::OPC_CheckChild7TypeByHwMode) {
+      VT = getHwModeVT(Table, Index, SDISel);
+      ChildNo = Opcode - SelectionDAGISel::OPC_CheckChild0TypeByHwMode;
     } else {
       VT = getSimpleVT(Table, Index);
       ChildNo = Opcode - SelectionDAGISel::OPC_CheckChild0Type;
     }
-    Result = !::CheckChildType(VT, N, SDISel.TLI,
-                               SDISel.CurDAG->getDataLayout(), ChildNo);
-    return Index;
-  }
-  case SelectionDAGISel::OPC_CheckChild0TypeByHwMode:
-  case SelectionDAGISel::OPC_CheckChild1TypeByHwMode:
-  case SelectionDAGISel::OPC_CheckChild2TypeByHwMode:
-  case SelectionDAGISel::OPC_CheckChild3TypeByHwMode:
-  case SelectionDAGISel::OPC_CheckChild4TypeByHwMode:
-  case SelectionDAGISel::OPC_CheckChild5TypeByHwMode:
-  case SelectionDAGISel::OPC_CheckChild6TypeByHwMode:
-  case SelectionDAGISel::OPC_CheckChild7TypeByHwMode: {
-    MVT VT = getHwModeVT(Table, Index, SDISel);
-    unsigned ChildNo = Opcode - SelectionDAGISel::OPC_CheckChild0TypeByHwMode;
     Result = !::CheckChildType(VT.SimpleTy, N, SDISel.TLI,
                                SDISel.CurDAG->getDataLayout(), ChildNo);
     return Index;
@@ -3740,8 +3734,9 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
 
     case OPC_CheckType:
     case OPC_CheckTypeI32:
-    case OPC_CheckTypeI64: {
-      MVT::SimpleValueType VT;
+    case OPC_CheckTypeI64:
+    case OPC_CheckTypeByHwMode: {
+      MVT VT;
       switch (Opcode) {
       case OPC_CheckTypeI32:
         VT = MVT::i32;
@@ -3749,31 +3744,24 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       case OPC_CheckTypeI64:
         VT = MVT::i64;
         break;
+      case OPC_CheckTypeByHwMode:
+        VT = getHwModeVT(MatcherTable, MatcherIndex, *this);
+        break;
       default:
         VT = getSimpleVT(MatcherTable, MatcherIndex);
         break;
       }
-      if (!::CheckType(VT, N, TLI, CurDAG->getDataLayout()))
-        break;
-      continue;
-    }
-    case OPC_CheckTypeByHwMode: {
-      MVT VT = getHwModeVT(MatcherTable, MatcherIndex, *this);
       if (!::CheckType(VT.SimpleTy, N, TLI, CurDAG->getDataLayout()))
         break;
       continue;
     }
 
-    case OPC_CheckTypeRes: {
-      unsigned Res = MatcherTable[MatcherIndex++];
-      if (!::CheckType(getSimpleVT(MatcherTable, MatcherIndex), N.getValue(Res),
-                       TLI, CurDAG->getDataLayout()))
-        break;
-      continue;
-    }
+    case OPC_CheckTypeRes:
     case OPC_CheckTypeResByHwMode: {
       unsigned Res = MatcherTable[MatcherIndex++];
-      MVT VT = getHwModeVT(MatcherTable, MatcherIndex, *this);
+      MVT VT = Opcode == OPC_CheckTypeResByHwMode
+                   ? getHwModeVT(MatcherTable, MatcherIndex, *this)
+                   : getSimpleVT(MatcherTable, MatcherIndex);
       if (!::CheckType(VT.SimpleTy, N.getValue(Res), TLI,
                        CurDAG->getDataLayout()))
         break;
@@ -3968,8 +3956,9 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     case OPC_EmitIntegerI8:
     case OPC_EmitIntegerI16:
     case OPC_EmitIntegerI32:
-    case OPC_EmitIntegerI64: {
-      MVT::SimpleValueType VT;
+    case OPC_EmitIntegerI64:
+    case OPC_EmitIntegerByHwMode: {
+      MVT VT;
       switch (Opcode) {
       case OPC_EmitIntegerI8:
         VT = MVT::i8;
@@ -3983,20 +3972,13 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       case OPC_EmitIntegerI64:
         VT = MVT::i64;
         break;
+      case OPC_EmitIntegerByHwMode:
+        VT = getHwModeVT(MatcherTable, MatcherIndex, *this);
+        break;
       default:
         VT = getSimpleVT(MatcherTable, MatcherIndex);
         break;
       }
-      int64_t Val = GetSignedVBR(MatcherTable, MatcherIndex);
-      Val = SignExtend64(Val, MVT(VT).getFixedSizeInBits());
-      RecordedNodes.emplace_back(
-          CurDAG->getSignedConstant(Val, SDLoc(NodeToMatch), VT,
-                                    /*isTarget=*/true),
-          nullptr);
-      continue;
-    }
-    case OPC_EmitIntegerByHwMode: {
-      MVT VT = getHwModeVT(MatcherTable, MatcherIndex, *this);
       int64_t Val = GetSignedVBR(MatcherTable, MatcherIndex);
       Val = SignExtend64(Val, MVT(VT).getFixedSizeInBits());
       RecordedNodes.emplace_back(
@@ -4008,14 +3990,18 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
 
     case OPC_EmitRegister:
     case OPC_EmitRegisterI32:
-    case OPC_EmitRegisterI64: {
-      MVT::SimpleValueType VT;
+    case OPC_EmitRegisterI64:
+    case OPC_EmitRegisterByHwMode: {
+      MVT VT;
       switch (Opcode) {
       case OPC_EmitRegisterI32:
         VT = MVT::i32;
         break;
       case OPC_EmitRegisterI64:
         VT = MVT::i64;
+        break;
+      case OPC_EmitRegisterByHwMode:
+        VT = getHwModeVT(MatcherTable, MatcherIndex, *this);
         break;
       default:
         VT = getSimpleVT(MatcherTable, MatcherIndex);
@@ -4025,27 +4011,14 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       RecordedNodes.emplace_back(CurDAG->getRegister(RegNo, VT), nullptr);
       continue;
     }
-    case OPC_EmitRegisterByHwMode: {
-      MVT VT = getHwModeVT(MatcherTable, MatcherIndex, *this);
-      unsigned RegNo = MatcherTable[MatcherIndex++];
-      RecordedNodes.emplace_back(CurDAG->getRegister(RegNo, VT), nullptr);
-      continue;
-    }
-    case OPC_EmitRegister2: {
-      // For targets w/ more than 256 register names, the register enum
-      // values are stored in two bytes in the matcher table (just like
-      // opcodes).
-      MVT::SimpleValueType VT = getSimpleVT(MatcherTable, MatcherIndex);
-      unsigned RegNo = MatcherTable[MatcherIndex++];
-      RegNo |= MatcherTable[MatcherIndex++] << 8;
-      RecordedNodes.emplace_back(CurDAG->getRegister(RegNo, VT), nullptr);
-      continue;
-    }
+    case OPC_EmitRegister2:
     case OPC_EmitRegisterByHwMode2: {
       // For targets w/ more than 256 register names, the register enum
       // values are stored in two bytes in the matcher table (just like
       // opcodes).
-      MVT VT = getHwModeVT(MatcherTable, MatcherIndex, *this);
+      MVT VT = Opcode == OPC_EmitRegisterByHwMode2
+                   ? getHwModeVT(MatcherTable, MatcherIndex, *this)
+                   : getSimpleVT(MatcherTable, MatcherIndex);
       unsigned RegNo = MatcherTable[MatcherIndex++];
       RegNo |= MatcherTable[MatcherIndex++] << 8;
       RecordedNodes.emplace_back(CurDAG->getRegister(RegNo, VT), nullptr);
