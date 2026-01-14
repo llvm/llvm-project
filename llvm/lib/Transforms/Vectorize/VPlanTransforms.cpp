@@ -3007,11 +3007,13 @@ void VPlanTransforms::optimizeEVLMasks(VPlan &Plan) {
       OldRecipes.push_back(R);
     }
   }
-  // Erase the old recipes ourselves since removeDeadRecipes won't remove dead
-  // stores. Do this at the end so we don't invalidate TypeInfo.
-  for (VPRecipeBase *OldR : OldRecipes)
-    OldR->eraseFromParent();
-  removeDeadRecipes(Plan);
+  // Erase old recipes at the end so we don't invalidate TypeInfo.
+  for (VPRecipeBase *R : reverse(OldRecipes)) {
+    SmallVector<VPValue *> PossiblyDead(R->operands());
+    R->eraseFromParent();
+    for (VPValue *Op : PossiblyDead)
+      recursivelyDeleteDeadRecipes(Op);
+  }
 }
 
 /// After replacing the canonical IV with a EVL-based IV, fixup recipes that use
