@@ -81,7 +81,7 @@ for mode in ("none", "fast", "extensive", "debug"):
         #if defined(_LIBCPP_HARDENING_MODE)
             int main(int, char**) {{ return _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_{mode.upper()} ? 0 : 1; }}
         #else
-            int main(int, char**) {{ return 0; }}
+            int main(int, char**) {{ return 1; }}
         #endif
     """
     features.append(
