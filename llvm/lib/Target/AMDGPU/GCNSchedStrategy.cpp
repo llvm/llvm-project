@@ -93,7 +93,7 @@ static cl::opt<bool> PrintMaxRPRegUsageAfterScheduler(
 
 static cl::opt<bool> DisableRewriteMFMAFormSchedStage(
     "amdgpu-disable-rewrite-mfma-form-sched-stage", cl::Hidden,
-    cl::desc("Disable rewrie mfma rewrite scheduling stage."),
+    cl::desc("Disable rewrie mfma rewrite scheduling stage"),
     cl::init(false));
 
 const unsigned ScheduleMetrics::ScaleFactor = 100;
@@ -696,7 +696,8 @@ GCNMaxOccupancySchedStrategy::GCNMaxOccupancySchedStrategy(
     const MachineSchedContext *C, bool IsLegacyScheduler)
     : GCNSchedStrategy(C) {
   SchedStages.push_back(GCNSchedStageID::OccInitialSchedule);
-  SchedStages.push_back(GCNSchedStageID::RewriteMFMAForm);
+  if (!DisableRewriteMFMAFormSchedStage)
+    SchedStages.push_back(GCNSchedStageID::RewriteMFMAForm);
   SchedStages.push_back(GCNSchedStageID::UnclusteredHighRPReschedule);
   SchedStages.push_back(GCNSchedStageID::ClusteredLowOccupancyReschedule);
   SchedStages.push_back(GCNSchedStageID::PreRARematerialize);
@@ -1241,12 +1242,11 @@ void RewriteMFMAFormStage::findReachingDefs(
     return;
   }
 
-  SmallPtrSet<MachineBasicBlock *, 8> Visited;
+  SmallPtrSet<MachineBasicBlock *, 8> Visited = {UseMI->getParent()};
   SmallVector<MachineBasicBlock *, 8> Worklist;
-  Visited.insert(UseMI->getParent());
 
   // Mark the predecessor blocks for traversal
-  for (auto *PredMBB : UseMI->getParent()->predecessors()) {
+  for (MachineBasicBlock *PredMBB : UseMI->getParent()->predecessors()) {
     Worklist.push_back(PredMBB);
     Visited.insert(PredMBB);
   }
@@ -1266,7 +1266,7 @@ void RewriteMFMAFormStage::findReachingDefs(
       continue;
     }
 
-    for (auto *PredMBB : DefMBB->predecessors()) {
+    for (MachineBasicBlock *PredMBB : DefMBB->predecessors()) {
       if (Visited.insert(PredMBB).second)
         Worklist.push_back(PredMBB);
     }
@@ -1292,9 +1292,9 @@ void RewriteMFMAFormStage::findReachingUses(
 }
 
 bool RewriteMFMAFormStage::initGCNSchedStage() {
-  if (DisableRewriteMFMAFormSchedStage)
-    return false;
-
+  // We only need to run this pass if the architecture supports AGPRs.
+  // Additionally, we don't use AGPRs at occupancy levels above 1 so there
+  // is no need for this pass in that case, either.
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   if (!ST.hasGFX90AInsts() || MFI.getMinWavesPerEU() > 1)
     return false;
@@ -2041,19 +2041,27 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
   int64_t Cost = 0;
   uint64_t EntryFreq = MBFI.getEntryFreq().getFrequency();
 
+  std::pair<unsigned, unsigned> MaxVectorRegs =
+      ST.getMaxNumVectorRegs(MF.getFunction());
+  unsigned ArchVGPRThreshold = MaxVectorRegs.first;
+  unsigned AGPRThreshold = MaxVectorRegs.second;
+  unsigned CombinedThreshold = ST.getMaxNumVGPRs(MF);
+
   for (unsigned Region = 0; Region < DAG.Regions.size(); Region++) {
     if (!RegionsWithExcessArchVGPR[Region])
       continue;
 
     GCNRegPressure &PressureBefore = DAG.Pressure[Region];
-    unsigned SpillCostBefore = PressureBefore.getVGPRSpills(MF);
+    unsigned SpillCostBefore = PressureBefore.getVGPRSpills(
+        MF, ArchVGPRThreshold, AGPRThreshold, CombinedThreshold);
 
     // For the cases we care about (i.e. ArchVGPR usage is greater than the
     // addressable limit), rewriting alone should bring pressure to manageable
     // level. If we find any such region, then the rewrite is potentially
     // beneficial.
     GCNRegPressure PressureAfter = DAG.getRealRegPressure(Region);
-    unsigned SpillCostAfter = PressureAfter.getVGPRSpills(MF);
+    unsigned SpillCostAfter = PressureAfter.getVGPRSpills(
+        MF, ArchVGPRThreshold, AGPRThreshold, CombinedThreshold);
 
     uint64_t BlockFreq =
         MBFI.getBlockFreq(DAG.Regions[Region].first->getParent())
