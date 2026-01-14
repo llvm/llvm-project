@@ -82,7 +82,6 @@ define <vscale x 2 x i1> @whilele_d_ii_dont_fold_to_ptrue_larger_than_minvec() {
 ; CHECK-LABEL: whilele_d_ii_dont_fold_to_ptrue_larger_than_minvec:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #3 // =0x3
-; CHECK-NEXT:    // kill: def $x8 killed $w8
 ; CHECK-NEXT:    whilele p0.d, xzr, x8
 ; CHECK-NEXT:    ret
   %out = call <vscale x 2 x i1> @llvm.aarch64.sve.whilele.nxv2i1.i64(i64 0, i64 3)
@@ -102,7 +101,6 @@ define <vscale x 16 x i1> @whilele_b_ii_dont_fold_to_ptrue_nonexistent_vl9() {
 ; CHECK-LABEL: whilele_b_ii_dont_fold_to_ptrue_nonexistent_vl9:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #9 // =0x9
-; CHECK-NEXT:    // kill: def $x8 killed $w8
 ; CHECK-NEXT:    whilele p0.b, xzr, x8
 ; CHECK-NEXT:    ret
   %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilele.nxv16i1.i64(i64 0, i64 9)
@@ -219,7 +217,6 @@ define <vscale x 2 x i1> @whilelo_d_ii_dont_fold_to_ptrue_larger_than_minvec() {
 ; CHECK-LABEL: whilelo_d_ii_dont_fold_to_ptrue_larger_than_minvec:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #3 // =0x3
-; CHECK-NEXT:    // kill: def $x8 killed $w8
 ; CHECK-NEXT:    whilelo p0.d, xzr, x8
 ; CHECK-NEXT:    ret
   %out = call <vscale x 2 x i1> @llvm.aarch64.sve.whilelo.nxv2i1.i64(i64 0, i64 3)
@@ -239,7 +236,6 @@ define <vscale x 16 x i1> @whilelo_b_ii_dont_fold_to_ptrue_nonexistent_vl9() {
 ; CHECK-LABEL: whilelo_b_ii_dont_fold_to_ptrue_nonexistent_vl9:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #9 // =0x9
-; CHECK-NEXT:    // kill: def $x8 killed $w8
 ; CHECK-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NEXT:    ret
   %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilelo.nxv16i1.i64(i64 0, i64 9)
@@ -346,7 +342,6 @@ define <vscale x 2 x i1> @whilels_d_ii_dont_fold_to_ptrue_larger_than_minvec() {
 ; CHECK-LABEL: whilels_d_ii_dont_fold_to_ptrue_larger_than_minvec:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #3 // =0x3
-; CHECK-NEXT:    // kill: def $x8 killed $w8
 ; CHECK-NEXT:    whilels p0.d, xzr, x8
 ; CHECK-NEXT:    ret
   %out = call <vscale x 2 x i1> @llvm.aarch64.sve.whilels.nxv2i1.i64(i64 0, i64 3)
@@ -366,7 +361,6 @@ define <vscale x 16 x i1> @whilels_b_ii_dont_fold_to_ptrue_nonexistent_vl9() {
 ; CHECK-LABEL: whilels_b_ii_dont_fold_to_ptrue_nonexistent_vl9:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #9 // =0x9
-; CHECK-NEXT:    // kill: def $x8 killed $w8
 ; CHECK-NEXT:    whilels p0.b, xzr, x8
 ; CHECK-NEXT:    ret
   %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilels.nxv16i1.i64(i64 0, i64 9)
@@ -482,7 +476,6 @@ define <vscale x 2 x i1> @whilelt_d_ii_dont_fold_to_ptrue_larger_than_minvec() {
 ; CHECK-LABEL: whilelt_d_ii_dont_fold_to_ptrue_larger_than_minvec:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #3 // =0x3
-; CHECK-NEXT:    // kill: def $x8 killed $w8
 ; CHECK-NEXT:    whilelt p0.d, xzr, x8
 ; CHECK-NEXT:    ret
   %out = call <vscale x 2 x i1> @llvm.aarch64.sve.whilelt.nxv2i1.i64(i64 0, i64 3)
@@ -502,7 +495,6 @@ define <vscale x 16 x i1> @whilelt_b_ii_dont_fold_to_ptrue_nonexistent_vl9() {
 ; CHECK-LABEL: whilelt_b_ii_dont_fold_to_ptrue_nonexistent_vl9:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #9 // =0x9
-; CHECK-NEXT:    // kill: def $x8 killed $w8
 ; CHECK-NEXT:    whilelt p0.b, xzr, x8
 ; CHECK-NEXT:    ret
   %out = call <vscale x 16 x i1> @llvm.aarch64.sve.whilelt.nxv16i1.i64(i64 0, i64 9)

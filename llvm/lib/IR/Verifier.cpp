@@ -79,6 +79,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/EHPersonalities.h"
+#include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GCStrategy.h"
 #include "llvm/IR/GlobalAlias.h"
@@ -5970,6 +5971,81 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
         convertStrToRoundingMode(cast<MDString>(MD)->getString());
     Check(RoundMode && *RoundMode != RoundingMode::Dynamic,
           "unsupported rounding mode argument", Call);
+    break;
+  }
+  case Intrinsic::convert_to_arbitrary_fp: {
+    // Check that vector element counts are consistent.
+    Type *ValueTy = Call.getArgOperand(0)->getType();
+    Type *IntTy = Call.getType();
+
+    if (auto *ValueVecTy = dyn_cast<VectorType>(ValueTy)) {
+      auto *IntVecTy = dyn_cast<VectorType>(IntTy);
+      Check(IntVecTy,
+            "if floating-point operand is a vector, integer operand must also "
+            "be a vector",
+            Call);
+      Check(ValueVecTy->getElementCount() == IntVecTy->getElementCount(),
+            "floating-point and integer vector operands must have the same "
+            "element count",
+            Call);
+    }
+
+    // Check interpretation metadata (argoperand 1).
+    auto *InterpMAV = dyn_cast<MetadataAsValue>(Call.getArgOperand(1));
+    Check(InterpMAV, "missing interpretation metadata operand", Call);
+    auto *InterpStr = dyn_cast<MDString>(InterpMAV->getMetadata());
+    Check(InterpStr, "interpretation metadata operand must be a string", Call);
+    StringRef Interp = InterpStr->getString();
+
+    Check(!Interp.empty(), "interpretation metadata string must not be empty",
+          Call);
+
+    // Valid interpretation strings: mini-float format names.
+    Check(APFloatBase::isValidArbitraryFPFormat(Interp),
+          "unsupported interpretation metadata string", Call);
+
+    // Check rounding mode metadata (argoperand 2).
+    auto *RoundingMAV = dyn_cast<MetadataAsValue>(Call.getArgOperand(2));
+    Check(RoundingMAV, "missing rounding mode metadata operand", Call);
+    auto *RoundingStr = dyn_cast<MDString>(RoundingMAV->getMetadata());
+    Check(RoundingStr, "rounding mode metadata operand must be a string", Call);
+
+    std::optional<RoundingMode> RM =
+        convertStrToRoundingMode(RoundingStr->getString());
+    Check(RM && *RM != RoundingMode::Dynamic,
+          "unsupported rounding mode argument", Call);
+    break;
+  }
+  case Intrinsic::convert_from_arbitrary_fp: {
+    // Check that vector element counts are consistent.
+    Type *IntTy = Call.getArgOperand(0)->getType();
+    Type *ValueTy = Call.getType();
+
+    if (auto *ValueVecTy = dyn_cast<VectorType>(ValueTy)) {
+      auto *IntVecTy = dyn_cast<VectorType>(IntTy);
+      Check(IntVecTy,
+            "if floating-point operand is a vector, integer operand must also "
+            "be a vector",
+            Call);
+      Check(ValueVecTy->getElementCount() == IntVecTy->getElementCount(),
+            "floating-point and integer vector operands must have the same "
+            "element count",
+            Call);
+    }
+
+    // Check interpretation metadata (argoperand 1).
+    auto *InterpMAV = dyn_cast<MetadataAsValue>(Call.getArgOperand(1));
+    Check(InterpMAV, "missing interpretation metadata operand", Call);
+    auto *InterpStr = dyn_cast<MDString>(InterpMAV->getMetadata());
+    Check(InterpStr, "interpretation metadata operand must be a string", Call);
+    StringRef Interp = InterpStr->getString();
+
+    Check(!Interp.empty(), "interpretation metadata string must not be empty",
+          Call);
+
+    // Valid interpretation strings: mini-float format names.
+    Check(APFloatBase::isValidArbitraryFPFormat(Interp),
+          "unsupported interpretation metadata string", Call);
     break;
   }
 #define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:

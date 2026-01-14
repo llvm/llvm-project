@@ -1133,6 +1133,22 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison] in
   def int_fptrunc_round : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                 [ llvm_anyfloat_ty, llvm_metadata_ty ]>;
 
+  // Convert from native LLVM floating-point to arbitrary FP format
+  // Returns an integer containing the arbitrary FP bits
+  def int_convert_to_arbitrary_fp
+      : DefaultAttrsIntrinsic<
+            [ llvm_anyint_ty ],
+            [ llvm_anyfloat_ty, llvm_metadata_ty, llvm_metadata_ty, llvm_i1_ty ],
+            [ IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<3>> ]>;
+
+  // Convert from arbitrary FP format to native LLVM floating-point
+  // Takes an integer containing the arbitrary FP bits
+  def int_convert_from_arbitrary_fp
+      : DefaultAttrsIntrinsic<
+            [ llvm_anyfloat_ty ],
+            [ llvm_anyint_ty, llvm_metadata_ty ],
+            [ IntrNoMem, IntrSpeculatable ]>;
+
   def int_canonicalize : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>],
                                    [IntrNoMem]>;
   // Arithmetic fence intrinsic.

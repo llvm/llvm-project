@@ -481,7 +481,6 @@ define void @st4b_i8_invalid_imm_out_of_upper_bound(<vscale x 16 x i8> %v0, <vsc
 ; CHECK-NEXT:    rdvl x8, #1
 ; CHECK-NEXT:    mov w9, #512 // =0x200
 ; CHECK-NEXT:    lsr x8, x8, #4
-; CHECK-NEXT:    // kill: def $x9 killed $w9
 ; CHECK-NEXT:    mul x8, x8, x9
 ; CHECK-NEXT:    st4b { z0.b - z3.b }, p0, [x0, x8]
 ; CHECK-NEXT:    ret
