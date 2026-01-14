@@ -7559,9 +7559,8 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
       case Intrinsic::ctlz:
       case Intrinsic::cttz:
       case Intrinsic::abs:
-        if (cast<ConstantInt>(II->getArgOperand(1))->isNullValue())
-          return false;
-        break;
+        // We're not considering flags so it is safe to just return false.
+        return false;
       case Intrinsic::sshl_sat:
       case Intrinsic::ushl_sat:
         if (!includesPoison(Kind) ||
