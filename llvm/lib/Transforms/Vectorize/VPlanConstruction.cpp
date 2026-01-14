@@ -1491,14 +1491,13 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     //     correspond to the lanes matching the min/max reduction result.
     //
     // For example, this transforms
-    // vp<%min.result> = compute-reduction-result ir<%min.val>,
-    //                                            ir<%min.val.next>
+    // vp<%min.result> = compute-reduction-result ir<%min.val.next>
     // vp<%find.iv.result = compute-find-iv-result ir<%min.idx>, ir<0>,
     //                                             SENTINEL, vp<%min.idx.next>
     //
     // into:
     //
-    // vp<min.result> = compute-reduction-result ir<%min.val>, ir<%min.val.next>
+    // vp<min.result> = compute-reduction-result ir<%min.val.next>
     // vp<%final.min.cmp> = icmp eq ir<%min.val.next>, vp<min.result>
     // vp<%final.iv> = select vp<%final.min.cmp>, ir<%min.idx.next>, SENTINEL
     // vp<%find.iv.result> = compute-find-iv-result ir<%min.idx>, ir<0>,
