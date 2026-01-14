@@ -60,7 +60,7 @@ void test_encode(OutIt& out_it, char16_t value) {
     *out_it++ = static_cast<char>(0b10000000 | (value & 0b00111111));
   } else {
     *out_it++ = static_cast<char>(0b11100000 | (value >> 12));
-    *out_it++ = static_cast<char>(0b10000000 | ((value) >> 6 & 0b00111111));
+    *out_it++ = static_cast<char>(0b10000000 | ((value >> 6) & 0b00111111));
     *out_it++ = static_cast<char>(0b10000000 | (value & 0b00111111));
   }
 }
@@ -72,8 +72,8 @@ void test_encode(OutIt& out_it, char32_t value) {
     test_encode(out_it, static_cast<char16_t>(value));
   else {
     *out_it++ = static_cast<char>(0b11100000 | (value >> 18));
-    *out_it++ = static_cast<char>(0b10000000 | ((value) >> 12 & 0b00111111));
-    *out_it++ = static_cast<char>(0b10000000 | ((value) >> 6 & 0b00111111));
+    *out_it++ = static_cast<char>(0b10000000 | ((value >> 12) & 0b00111111));
+    *out_it++ = static_cast<char>(0b10000000 | ((value >> 6) & 0b00111111));
     *out_it++ = static_cast<char>(0b10000000 | (value & 0b00111111));
   }
 }

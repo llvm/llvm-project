@@ -1533,6 +1533,12 @@ def FeatureWaitsBeforeSystemScopeStores : SubtargetFeature<
   "Target requires waits for loads and atomics before system scope stores"
 >;
 
+def FeatureUseAddPC64Inst : SubtargetFeature<"use-add-pc64-inst",
+  "UseAddPC64Inst",
+  "true",
+  "Use s_add_pc_i64 instruction."
+>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
