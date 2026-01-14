@@ -1156,8 +1156,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::XOR, MVT::i128, Custom);
 
     if (Subtarget.hasPCLMUL()) {
-      if (Subtarget.is64Bit())
+      if (Subtarget.is64Bit()) {
         setOperationAction(ISD::CLMUL, MVT::i64, Custom);
+        setOperationAction(ISD::CLMULH, MVT::i64, Custom);
+      }
       setOperationAction(ISD::CLMUL, MVT::i32, Custom);
       setOperationAction(ISD::CLMUL, MVT::i16, Custom);
       setOperationAction(ISD::CLMUL, MVT::i8, Custom);
@@ -33098,6 +33100,7 @@ static SDValue LowerCLMUL(SDValue Op, const X86Subtarget &Subtarget,
           Attribute::NoImplicitFloat))
     return SDValue();
 
+  bool IsHigh = Op.getOpcode() == ISD::CLMULH;
   SDLoc DL(Op);
   MVT VT = Op.getSimpleValueType();
   SDValue LHS = Op.getOperand(0);
@@ -33120,9 +33123,12 @@ static SDValue LowerCLMUL(SDValue Op, const X86Subtarget &Subtarget,
   SDValue Result = DAG.getNode(X86ISD::PCLMULQDQ, DL, MVT::v2i64, LHS, RHS,
                                DAG.getTargetConstant(0, DL, MVT::i8));
 
+  // CLMUL: extract element 0 (low 64 bits)
+  // CLMULH: extract element 1 (high 64 bits)
+  unsigned ExtractIdx = IsHigh ? 1 : 0;
   Result = DAG.getBitcast(VecVT, Result);
   Result = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, Result,
-                       DAG.getVectorIdxConstant(0, DL));
+                       DAG.getVectorIdxConstant(ExtractIdx, DL));
 
   if (VT != ScalarVT)
     Result = DAG.getNode(ISD::TRUNCATE, DL, VT, Result);
@@ -33878,7 +33884,8 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ATOMIC_LOAD_AND:    return lowerAtomicArith(Op, DAG, Subtarget);
   case ISD::ATOMIC_STORE:       return LowerATOMIC_STORE(Op, DAG, Subtarget);
   case ISD::BITREVERSE:         return LowerBITREVERSE(Op, Subtarget, DAG);
-  case ISD::CLMUL:              return LowerCLMUL(Op, Subtarget, DAG);
+  case ISD::CLMUL:
+  case ISD::CLMULH:             return LowerCLMUL(Op, Subtarget, DAG);
   case ISD::PARITY:             return LowerPARITY(Op, Subtarget, DAG);
   case ISD::BUILD_VECTOR:       return LowerBUILD_VECTOR(Op, DAG);
   case ISD::CONCAT_VECTORS:     return LowerCONCAT_VECTORS(Op, Subtarget, DAG);

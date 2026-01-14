@@ -1966,65 +1966,11 @@ define i64 @clmulh_i64(i64 %a, i64 %b) nounwind {
 ;
 ; PCLMUL-LABEL: clmulh_i64:
 ; PCLMUL:       # %bb.0:
-; PCLMUL-NEXT:    bswapq %rsi
-; PCLMUL-NEXT:    movq %rsi, %rax
-; PCLMUL-NEXT:    shrq $4, %rax
-; PCLMUL-NEXT:    movabsq $1085102592571150095, %rdx # imm = 0xF0F0F0F0F0F0F0F
-; PCLMUL-NEXT:    andq %rdx, %rax
-; PCLMUL-NEXT:    andq %rdx, %rsi
-; PCLMUL-NEXT:    shlq $4, %rsi
-; PCLMUL-NEXT:    orq %rax, %rsi
-; PCLMUL-NEXT:    movabsq $3689348814741910323, %rcx # imm = 0x3333333333333333
-; PCLMUL-NEXT:    movq %rsi, %rax
-; PCLMUL-NEXT:    andq %rcx, %rax
-; PCLMUL-NEXT:    shrq $2, %rsi
-; PCLMUL-NEXT:    andq %rcx, %rsi
-; PCLMUL-NEXT:    leaq (%rsi,%rax,4), %rsi
-; PCLMUL-NEXT:    movabsq $6148914691236517205, %rax # imm = 0x5555555555555555
-; PCLMUL-NEXT:    movq %rsi, %r8
-; PCLMUL-NEXT:    andq %rax, %r8
-; PCLMUL-NEXT:    shrq %rsi
-; PCLMUL-NEXT:    andq %rax, %rsi
-; PCLMUL-NEXT:    leaq (%rsi,%r8,2), %rsi
-; PCLMUL-NEXT:    bswapq %rdi
 ; PCLMUL-NEXT:    movq %rsi, %xmm0
-; PCLMUL-NEXT:    movq %rdi, %rsi
-; PCLMUL-NEXT:    shrq $4, %rsi
-; PCLMUL-NEXT:    andq %rdx, %rsi
-; PCLMUL-NEXT:    andq %rdx, %rdi
-; PCLMUL-NEXT:    shlq $4, %rdi
-; PCLMUL-NEXT:    orq %rsi, %rdi
-; PCLMUL-NEXT:    movq %rdi, %rsi
-; PCLMUL-NEXT:    andq %rcx, %rsi
-; PCLMUL-NEXT:    shrq $2, %rdi
-; PCLMUL-NEXT:    andq %rcx, %rdi
-; PCLMUL-NEXT:    leaq (%rdi,%rsi,4), %rsi
-; PCLMUL-NEXT:    movq %rsi, %rdi
-; PCLMUL-NEXT:    andq %rax, %rdi
-; PCLMUL-NEXT:    shrq %rsi
-; PCLMUL-NEXT:    andq %rax, %rsi
-; PCLMUL-NEXT:    leaq (%rsi,%rdi,2), %rsi
-; PCLMUL-NEXT:    movq %rsi, %xmm1
+; PCLMUL-NEXT:    movq %rdi, %xmm1
 ; PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
-; PCLMUL-NEXT:    movq %xmm1, %rsi
-; PCLMUL-NEXT:    bswapq %rsi
-; PCLMUL-NEXT:    movq %rsi, %rdi
-; PCLMUL-NEXT:    shrq $4, %rdi
-; PCLMUL-NEXT:    andq %rdx, %rdi
-; PCLMUL-NEXT:    andq %rdx, %rsi
-; PCLMUL-NEXT:    shlq $4, %rsi
-; PCLMUL-NEXT:    orq %rdi, %rsi
-; PCLMUL-NEXT:    movq %rsi, %rdx
-; PCLMUL-NEXT:    andq %rcx, %rdx
-; PCLMUL-NEXT:    shrq $2, %rsi
-; PCLMUL-NEXT:    andq %rcx, %rsi
-; PCLMUL-NEXT:    leaq (%rsi,%rdx,4), %rcx
-; PCLMUL-NEXT:    andq %rcx, %rax
-; PCLMUL-NEXT:    shrq %rcx
-; PCLMUL-NEXT:    movabsq $6148914691236517204, %rdx # imm = 0x5555555555555554
-; PCLMUL-NEXT:    andq %rcx, %rdx
-; PCLMUL-NEXT:    leaq (%rdx,%rax,2), %rax
-; PCLMUL-NEXT:    shrq %rax
+; PCLMUL-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; PCLMUL-NEXT:    movq %xmm0, %rax
 ; PCLMUL-NEXT:    retq
   %a.ext = zext i64 %a to i128
   %b.ext = zext i64 %b to i128
