@@ -1402,14 +1402,16 @@ struct MFMAOpLowering : public ConvertOpToLLVMPattern<MFMAOp> {
     if (isScaled) {
       Value zero = createI32Constant(rewriter, loc, 0);
       auto [_scaledName, aTypeCode, bTypeCode] = *maybeScaledIntrinsic;
-      loweredOp.addOperands({createI32Constant(rewriter, loc, aTypeCode),
-                             createI32Constant(rewriter, loc, bTypeCode),
-                             /*scale A byte=*/zero, /*scale A=*/zero,
-                             /*scale B byte=*/zero, /*scale B=*/zero});
+      loweredOp.addOperands({/*scale A=*/zero, /*scale B=*/zero});
+      loweredOp.addAttributes({{"cbsz", rewriter.getI32IntegerAttr(aTypeCode)},
+                               {"blgp", rewriter.getI32IntegerAttr(bTypeCode)},
+                               {"opselA", rewriter.getI32IntegerAttr(0)},
+                               {"opselB", rewriter.getI32IntegerAttr(0)}});
     } else {
-      loweredOp.addOperands({createI32Constant(rewriter, loc, op.getCbsz()),
-                             createI32Constant(rewriter, loc, op.getAbid()),
-                             createI32Constant(rewriter, loc, getBlgpField)});
+      loweredOp.addAttributes(
+          {{"cbsz", rewriter.getI32IntegerAttr(op.getCbsz())},
+           {"abid", rewriter.getI32IntegerAttr(op.getAbid())},
+           {"blgp", rewriter.getI32IntegerAttr(getBlgpField)}});
     };
     Value lowered = rewriter.create(loweredOp)->getResult(0);
     if (outType != intrinsicOutType)
@@ -1446,19 +1448,17 @@ struct ScaledMFMAOpLowering : public ConvertOpToLLVMPattern<ScaledMFMAOp> {
         {packSmallFloatVectorOperand(rewriter, loc, adaptor.getSourceA()),
          packSmallFloatVectorOperand(rewriter, loc, adaptor.getSourceB()),
          adaptor.getDestC()});
-    Value scalesIdxA =
-        createI32Constant(rewriter, loc, adaptor.getScalesIdxA());
-    Value scalesIdxB =
-        createI32Constant(rewriter, loc, adaptor.getScalesIdxB());
     loweredOp.addOperands(
-        {createI32Constant(rewriter, loc, aTypeCode),
-         createI32Constant(rewriter, loc, bTypeCode),
-         /*scales idx A=*/scalesIdxA,
-         /*scales A*/
+        {/*scales A*/
          castScaleOperand(rewriter, loc, adaptor.getScalesA()),
-         /*scales idx B=*/scalesIdxB,
          /*scales B*/
          castScaleOperand(rewriter, loc, adaptor.getScalesB())});
+    loweredOp.addAttributes(
+        {{"cbsz", rewriter.getI32IntegerAttr(aTypeCode)},
+         {"blgp", rewriter.getI32IntegerAttr(bTypeCode)},
+         {"opselA", rewriter.getI32IntegerAttr(adaptor.getScalesIdxA())},
+         {"opselB", rewriter.getI32IntegerAttr(adaptor.getScalesIdxB())}});
+
     Value lowered = rewriter.create(loweredOp)->getResult(0);
     rewriter.replaceOp(op, lowered);
     return success();
@@ -1502,9 +1502,10 @@ struct SparseMFMAOpLowering : public ConvertOpToLLVMPattern<SparseMFMAOp> {
 
     OperationState loweredOp(loc, maybeIntrinsic.value());
     loweredOp.addTypes(outType);
-    loweredOp.addOperands({a, b, c, sparseIdx,
-                           createI32Constant(rewriter, loc, op.getCbsz()),
-                           createI32Constant(rewriter, loc, op.getAbid())});
+    loweredOp.addOperands({a, b, c, sparseIdx});
+    loweredOp.addAttributes(
+        {{"cbsz", rewriter.getI32IntegerAttr(op.getCbsz())},
+         {"abid", rewriter.getI32IntegerAttr(op.getAbid())}});
     Value lowered = rewriter.create(loweredOp)->getResult(0);
     rewriter.replaceOp(op, lowered);
     return success();
