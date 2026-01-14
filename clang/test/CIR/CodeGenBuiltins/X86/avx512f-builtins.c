@@ -845,9 +845,6 @@ __m128i test_mm512_extracti32x4_epi32(__m512i __A) {
   // CIR-LABEL: test_mm512_extracti32x4_epi32
   // CIR: [[POISON:%.*]] = cir.const #cir.poison : !cir.vector<16 x !s32i>
   // CIR: [[FULL_VEC:%.*]] = cir.vec.shuffle(%{{.*}}, [[POISON]] : !cir.vector<16 x !s32i>) [#cir.int<12> : !s32i, #cir.int<13> : !s32i, #cir.int<14> : !s32i, #cir.int<15> : !s32i] : !cir.vector<4 x !s32i>
-  // CIR: [[MASK_VEC:%.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
-  // CIR: [[FULL_MASK_VEC:%.*]] = cir.vec.shuffle([[MASK_VEC]], [[MASK_VEC]] : !cir.vector<8 x !cir.int<s, 1>>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !cir.int<s, 1>>
-  // CIR: cir.vec.ternary([[FULL_MASK_VEC]], [[FULL_VEC]], {{.*}}) : !cir.vector<4 x !cir.int<s, 1>>, !cir.vector<4 x !s32i>
 
   // LLVM-LABEL: test_mm512_extracti32x4_epi32
   // LLVM: shufflevector <16 x i32> %{{.*}}, <16 x i32> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
@@ -897,9 +894,6 @@ __m256i test_mm512_extracti64x4_epi64(__m512i __A) {
   // CIR-LABEL: test_mm512_extracti64x4_epi64
   // CIR: [[POISON:%.*]] = cir.const #cir.poison : !cir.vector<8 x !s64i>
   // CIR: [[FULL_VEC:%.*]] = cir.vec.shuffle(%{{.*}}, [[POISON]] : !cir.vector<8 x !s64i>) [#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i] : !cir.vector<4 x !s64i>
-  // CIR: [[MASK_VEC:%.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
-  // CIR: [[FULL_MASK_VEC:%.*]] = cir.vec.shuffle([[MASK_VEC]], [[MASK_VEC]] : !cir.vector<8 x !cir.int<s, 1>>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !cir.int<s, 1>>
-  // CIR: cir.vec.ternary([[FULL_MASK_VEC]], [[FULL_VEC]], {{.*}}) : !cir.vector<4 x !cir.int<s, 1>>, !cir.vector<4 x !s64i>
 
   // LLVM-LABEL: test_mm512_extracti64x4_epi64
   // LLVM: shufflevector <8 x i64> %{{.*}}, <8 x i64> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -1052,4 +1046,67 @@ int test_mm512_kortestz(__mmask16 __A, __mmask16 __B) {
   // OGCG: %[[CMP:.*]] = icmp eq i16 %[[CAST]], 0
   // OGCG: zext i1 %[[CMP]] to i32
   return _mm512_kortestz(__A,__B);
+}
+
+__m256i test_mm512_cvtepi64_epi32(__m512i __A) {
+  // CIR-LABEL: test_mm512_cvtepi64_epi32
+  // CIR: %[[TRUNC:.*]] = cir.cast integral {{.*}} : !cir.vector<8 x !s64i> -> !cir.vector<8 x !s32i>
+  // CIR: %[[RETBC:.*]] = cir.cast bitcast {{.*}} : !cir.vector<8 x !s32i> -> !cir.vector<4 x !s64i>
+  // CIR: cir.store %[[RETBC]], %[[RETPTR:.*]] : !cir.vector<4 x !s64i>, !cir.ptr<!cir.vector<4 x !s64i>>
+  // CIR: %[[RETLOAD:.*]] = cir.load %[[RETPTR]] : !cir.ptr<!cir.vector<4 x !s64i>>, !cir.vector<4 x !s64i>
+  // CIR: cir.return %[[RETLOAD]] : !cir.vector<4 x !s64i>
+  
+  // LLVM-LABEL: test_mm512_cvtepi64_epi32
+  // LLVM: %[[TRUNC:.*]] = trunc <8 x i64> %{{.*}} to <8 x i32>
+  // LLVM: bitcast <8 x i32> %[[TRUNC]] to <4 x i64>
+  
+  // OGCG-LABEL: test_mm512_cvtepi64_epi32
+  // OGCG: %[[TRUNC:.*]] = trunc <8 x i64> %{{.*}} to <8 x i32>
+  // OGCG: bitcast <8 x i32> %[[TRUNC]] to <4 x i64>
+  return _mm512_cvtepi64_epi32(__A);
+}
+
+__m256i test_mm512_mask_cvtepi64_epi32(__m256i __O, __mmask8 __M, __m512i __A) {
+  // CIR-LABEL: test_mm512_mask_cvtepi64_epi32
+  // CIR: %[[TRUNC:.*]] = cir.cast integral {{.*}} : !cir.vector<8 x !s64i> -> !cir.vector<8 x !s32i>
+  // CIR: %[[MASK_VEC:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: %[[TER:.*]] = cir.vec.ternary(%[[MASK_VEC]], %[[TRUNC]], {{.*}}) : !cir.vector<8 x !cir.int<s, 1>>, !cir.vector<8 x !s32i>
+  // CIR: %[[RETBC:.*]] = cir.cast bitcast %[[TER]] : !cir.vector<8 x !s32i> -> !cir.vector<4 x !s64i>
+  // CIR: cir.store %[[RETBC]], %[[RETPTR:.*]] : !cir.vector<4 x !s64i>, !cir.ptr<!cir.vector<4 x !s64i>>
+  // CIR: %[[RETLOAD:.*]] = cir.load %[[RETPTR]] : !cir.ptr<!cir.vector<4 x !s64i>>, !cir.vector<4 x !s64i>
+  // CIR: cir.return %[[RETLOAD]] : !cir.vector<4 x !s64i>
+  
+  // LLVM-LABEL: test_mm512_mask_cvtepi64_epi32
+  // LLVM: %[[TRUNC:.*]] = trunc <8 x i64> %{{.*}} to <8 x i32>
+  // LLVM: %[[MASK_VEC:.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // LLVM: %[[SEL:.*]] = select <8 x i1> %[[MASK_VEC]], <8 x i32> %[[TRUNC]], <8 x i32> %{{.*}}
+  // LLVM: bitcast <8 x i32> %[[SEL]] to <4 x i64>
+  
+  // OGCG-LABEL: test_mm512_mask_cvtepi64_epi32
+  // OGCG: %[[TRUNC:.*]] = trunc <8 x i64> %{{.*}} to <8 x i32>
+  // OGCG: %[[MASK_VEC:.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // OGCG: %[[SEL:.*]] = select <8 x i1> %[[MASK_VEC]], <8 x i32> %[[TRUNC]], <8 x i32> %{{.*}}
+  // OGCG: bitcast <8 x i32> %[[SEL]] to <4 x i64>
+  return _mm512_mask_cvtepi64_epi32(__O, __M, __A);
+}
+
+__m256i test_mm512_maskz_cvtepi64_epi32(__mmask8 __M, __m512i __A) {
+  // CIR-LABEL: test_mm512_maskz_cvtepi64_epi32
+  // CIR: %[[CALL:.*]] = cir.call {{.*}} : (!u8i, !cir.vector<8 x !s64i>) -> !cir.vector<4 x !s64i>
+  // CIR: cir.store %[[CALL]], %[[RETPTR:.*]] : !cir.vector<4 x !s64i>, !cir.ptr<!cir.vector<4 x !s64i>>
+  // CIR: %[[RETLOAD:.*]] = cir.load %[[RETPTR]] : !cir.ptr<!cir.vector<4 x !s64i>>, !cir.vector<4 x !s64i>
+  // CIR: cir.return %[[RETLOAD]] : !cir.vector<4 x !s64i>
+  
+  // LLVM-LABEL: test_mm512_maskz_cvtepi64_epi32
+  // LLVM: %[[TRUNC:.*]] = trunc <8 x i64> %{{.*}} to <8 x i32>
+  // LLVM: %[[MASK_VEC:.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // LLVM: %[[SEL:.*]] = select <8 x i1> %[[MASK_VEC]], <8 x i32> %[[TRUNC]], <8 x i32> {{.*}}
+  // LLVM: bitcast <8 x i32> %[[SEL]] to <4 x i64>
+  
+  // OGCG-LABEL: test_mm512_maskz_cvtepi64_epi32
+  // OGCG: %[[TRUNC:.*]] = trunc <8 x i64> %{{.*}} to <8 x i32>
+  // OGCG: %[[MASK_VEC:.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // OGCG: %[[SEL:.*]] = select <8 x i1> %[[MASK_VEC]], <8 x i32> %[[TRUNC]], <8 x i32> {{.*}}
+  // OGCG: bitcast <8 x i32> %[[SEL]] to <4 x i64>
+  return _mm512_maskz_cvtepi64_epi32(__M, __A);
 }

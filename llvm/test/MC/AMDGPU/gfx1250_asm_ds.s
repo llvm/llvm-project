@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s | FileCheck --check-prefixes=GFX1250 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX12-ERR %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -filetype=null %s 2>&1 | FileCheck --check-prefix=GFX12-ERR %s
 
 ds_nop
 // GFX1250: ds_nop                                  ; encoding: [0x00,0x00,0x50,0xd8,0x00,0x00,0x00,0x00]

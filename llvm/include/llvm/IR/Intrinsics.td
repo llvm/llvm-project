@@ -891,6 +891,7 @@ def int_addressofreturnaddress : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [], [In
 def int_frameaddress : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_i32_ty],
                                  [IntrNoMem, ImmArg<ArgIndex<0>>]>;
 def int_sponentry  : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [], [IntrNoMem]>;
+def int_stackaddress : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [], []>;
 def int_read_register  : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_metadata_ty],
                                    [IntrReadMem], "llvm.read_register">;
 def int_write_register : Intrinsic<[], [llvm_metadata_ty, llvm_anyint_ty],
@@ -1131,6 +1132,22 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison] in
   // Truncate a floating point number with a specific rounding mode
   def int_fptrunc_round : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                 [ llvm_anyfloat_ty, llvm_metadata_ty ]>;
+
+  // Convert from native LLVM floating-point to arbitrary FP format
+  // Returns an integer containing the arbitrary FP bits
+  def int_convert_to_arbitrary_fp
+      : DefaultAttrsIntrinsic<
+            [ llvm_anyint_ty ],
+            [ llvm_anyfloat_ty, llvm_metadata_ty, llvm_metadata_ty, llvm_i1_ty ],
+            [ IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<3>> ]>;
+
+  // Convert from arbitrary FP format to native LLVM floating-point
+  // Takes an integer containing the arbitrary FP bits
+  def int_convert_from_arbitrary_fp
+      : DefaultAttrsIntrinsic<
+            [ llvm_anyfloat_ty ],
+            [ llvm_anyint_ty, llvm_metadata_ty ],
+            [ IntrNoMem, IntrSpeculatable ]>;
 
   def int_canonicalize : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>],
                                    [IntrNoMem]>;

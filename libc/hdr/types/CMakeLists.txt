@@ -487,3 +487,339 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.gid_t
 )
+
+add_proxy_header_library(
+  Elf32_Addr
+  HDRS
+    Elf32_Addr.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf32_Addr
+)
+
+add_proxy_header_library(
+  Elf32_Chdr
+  HDRS
+    Elf32_Chdr.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf32_Chdr
+)
+
+add_proxy_header_library(
+  Elf32_Dyn
+  HDRS
+    Elf32_Dyn.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf32_Dyn
+)
+
+add_proxy_header_library(
+  Elf32_Ehdr
+  HDRS
+    Elf32_Ehdr.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf32_Ehdr
+)
+
+add_proxy_header_library(
+  Elf32_Half
+  HDRS
+    Elf32_Half.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf32_Half
+)
+
+add_proxy_header_library(
+  Elf32_Lword
+  HDRS
+    Elf32_Lword.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf32_Lword
+)
+
+add_proxy_header_library(
+  Elf32_Nhdr
+  HDRS
+    Elf32_Nhdr.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf32_Nhdr
+)
+
+add_proxy_header_library(
+  Elf32_Off
+  HDRS
+    Elf32_Off.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf32_Off
+)
+
+add_proxy_header_library(
+  Elf32_Phdr
+  HDRS
+    Elf32_Phdr.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf32_Phdr
+)
+
+add_proxy_header_library(
+  Elf32_Rela
+  HDRS
+    Elf32_Rela.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf32_Rela
+)
+
+add_proxy_header_library(
+  Elf32_Rel
+  HDRS
+    Elf32_Rel.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf32_Rel
+)
+
+add_proxy_header_library(
+  Elf32_Shdr
+  HDRS
+    Elf32_Shdr.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf32_Shdr
+)
+
+add_proxy_header_library(
+  Elf32_Sword
+  HDRS
+    Elf32_Sword.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf32_Sword
+)
+
+add_proxy_header_library(
+  Elf32_Sym
+  HDRS
+    Elf32_Sym.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf32_Sym
+)
+
+add_proxy_header_library(
+  Elf32_Verdaux
+  HDRS
+    Elf32_Verdaux.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf32_Verdaux
+)
+
+add_proxy_header_library(
+  Elf32_Verdef
+  HDRS
+    Elf32_Verdef.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf32_Verdef
+)
+
+add_proxy_header_library(
+  Elf32_Vernaux
+  HDRS
+    Elf32_Vernaux.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf32_Vernaux
+)
+
+add_proxy_header_library(
+  Elf32_Verneed
+  HDRS
+    Elf32_Verneed.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf32_Verneed
+)
+
+add_proxy_header_library(
+  Elf32_Versym
+  HDRS
+    Elf32_Versym.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf32_Versym
+)
+
+add_proxy_header_library(
+  Elf32_Word
+  HDRS
+    Elf32_Word.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf32_Word
+)
+
+add_proxy_header_library(
+  Elf64_Addr
+  HDRS
+    Elf64_Addr.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf64_Addr
+)
+
+add_proxy_header_library(
+  Elf64_Chdr
+  HDRS
+    Elf64_Chdr.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf64_Chdr
+)
+
+add_proxy_header_library(
+  Elf64_Dyn
+  HDRS
+    Elf64_Dyn.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf64_Dyn
+)
+
+add_proxy_header_library(
+  Elf64_Ehdr
+  HDRS
+    Elf64_Ehdr.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf64_Ehdr
+)
+
+add_proxy_header_library(
+  Elf64_Half
+  HDRS
+    Elf64_Half.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf64_Half
+)
+
+add_proxy_header_library(
+  Elf64_Lword
+  HDRS
+    Elf64_Lword.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf64_Lword
+)
+
+add_proxy_header_library(
+  Elf64_Nhdr
+  HDRS
+    Elf64_Nhdr.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf64_Nhdr
+)
+
+add_proxy_header_library(
+  Elf64_Off
+  HDRS
+    Elf64_Off.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf64_Off
+)
+
+add_proxy_header_library(
+  Elf64_Phdr
+  HDRS
+    Elf64_Phdr.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf64_Phdr
+)
+
+add_proxy_header_library(
+  Elf64_Rela
+  HDRS
+    Elf64_Rela.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf64_Rela
+)
+
+add_proxy_header_library(
+  Elf64_Rel
+  HDRS
+    Elf64_Rel.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf64_Rel
+)
+
+add_proxy_header_library(
+  Elf64_Shdr
+  HDRS
+    Elf64_Shdr.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf64_Shdr
+)
+
+add_proxy_header_library(
+  Elf64_Sword
+  HDRS
+    Elf64_Sword.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf64_Sword
+)
+
+add_proxy_header_library(
+  Elf64_Sxword
+  HDRS
+    Elf64_Sxword.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf64_Sxword
+)
+
+add_proxy_header_library(
+  Elf64_Sym
+  HDRS
+    Elf64_Sym.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf64_Sym
+)
+
+add_proxy_header_library(
+  Elf64_Word
+  HDRS
+    Elf64_Word.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf64_Word
+)
+
+add_proxy_header_library(
+  Elf64_Xword
+  HDRS
+    Elf64_Xword.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf64_Xword
+)
+
+add_proxy_header_library(
+  Elf64_Verdaux
+  HDRS
+    Elf64_Verdaux.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf64_Verdaux
+)
+
+add_proxy_header_library(
+  Elf64_Verdef
+  HDRS
+    Elf64_Verdef.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf64_Verdef
+)
+
+add_proxy_header_library(
+  Elf64_Vernaux
+  HDRS
+    Elf64_Vernaux.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf64_Vernaux
+)
+
+add_proxy_header_library(
+  Elf64_Verneed
+  HDRS
+    Elf64_Verneed.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf64_Verneed
+)
+
+add_proxy_header_library(
+  Elf64_Versym
+  HDRS
+    Elf64_Versym.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.Elf64_Versym
+)

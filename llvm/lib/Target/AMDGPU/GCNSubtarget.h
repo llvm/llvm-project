@@ -166,6 +166,7 @@ protected:
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
   bool HasFP8ConversionInsts = false;
+  bool HasMcastLoadInsts = false;
   bool HasCubeInsts = false;
   bool HasLerpInst = false;
   bool HasSadInsts = false;
@@ -300,6 +301,7 @@ protected:
 
   bool HasClusters = false;
   bool RequiresWaitsBeforeSystemScopeStores = false;
+  bool UseAddPC64Inst = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -873,6 +875,8 @@ public:
 
   bool hasFP8ConversionInsts() const { return HasFP8ConversionInsts; }
 
+  bool hasMcastLoadInsts() const { return HasMcastLoadInsts; }
+
   bool hasCubeInsts() const { return HasCubeInsts; }
 
   bool hasLerpInst() const { return HasLerpInst; }
@@ -1443,6 +1447,8 @@ public:
   bool hasTensorCvtLutInsts() const { return HasTensorCvtLutInsts; }
 
   bool hasAddPC64Inst() const { return GFX1250Insts; }
+
+  bool useAddPC64Inst() const { return UseAddPC64Inst; }
 
   bool has1024AddressableVGPRs() const { return Has1024AddressableVGPRs; }
 
