@@ -10013,6 +10013,23 @@ AArch64InstrInfo::getOutliningCandidateInfo(
                                    ->getInfo<AArch64FunctionInfo>()
                                    ->getSignReturnAddressCondition();
   if (RASignCondition != SignReturnAddress::None) {
+    // Candidates that have Return Address Signing Hardening enabled are
+    // discarded.
+    //
+    // In its current form, the machine outliner does not preserve X16/X17
+    // across outlined function calls, even though it should as they are
+    // caller-saved registers. And since the hardening based on load of return
+    // address clobbers one or both of these registers, if they are alive across
+    // a call their value would be lost due to the hardening mechanism.
+    llvm::erase_if(RepeatedSequenceLocs, [](outliner::Candidate &C) {
+      return C.getMF()
+          ->getInfo<AArch64FunctionInfo>()
+          ->shouldHardenSignReturnAddress();
+    });
+    // If the sequence doesn't have enough candidates left, then we're done.
+    if (RepeatedSequenceLocs.size() < MinRepeats)
+      return std::nullopt;
+
     // One PAC and one AUT instructions
     NumBytesToCreateFrame += 8;
 
@@ -10385,6 +10402,8 @@ void AArch64InstrInfo::mergeOutliningCandidateAttributes(
     F.addFnAttr(CFn.getFnAttribute("sign-return-address"));
   if (CFn.hasFnAttribute("sign-return-address-key"))
     F.addFnAttr(CFn.getFnAttribute("sign-return-address-key"));
+  if (CFn.hasFnAttribute("sign-return-address-harden"))
+    F.addFnAttr(CFn.getFnAttribute("sign-return-address-harden"));
 
   AArch64GenInstrInfo::mergeOutliningCandidateAttributes(F, Candidates);
 }
