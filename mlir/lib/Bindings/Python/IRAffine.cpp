@@ -118,12 +118,6 @@ public:
   static void bind(nb::module_ &m) {
     auto cls = ClassTy(m, DerivedTy::pyClassName);
     cls.def(nb::init<PyAffineExpr &>(), nb::arg("expr"));
-    cls.def_static(
-        "isinstance",
-        [](PyAffineExpr &otherAffineExpr) -> bool {
-          return DerivedTy::isaFunction(otherAffineExpr);
-        },
-        nb::arg("other"));
     DerivedTy::bindDerived(cls);
   }
 
@@ -199,14 +193,14 @@ public:
   static constexpr const char *pyClassName = "AffineBinaryExpr";
   using PyConcreteAffineExpr::PyConcreteAffineExpr;
 
-  PyAffineExpr lhs() {
+  nb::typed<nb::object, PyAffineExpr> lhs() {
     MlirAffineExpr lhsExpr = mlirAffineBinaryOpExprGetLHS(get());
-    return PyAffineExpr(getContext(), lhsExpr);
+    return PyAffineExpr(getContext(), lhsExpr).maybeDownCast();
   }
 
-  PyAffineExpr rhs() {
+  nb::typed<nb::object, PyAffineExpr> rhs() {
     MlirAffineExpr rhsExpr = mlirAffineBinaryOpExprGetRHS(get());
-    return PyAffineExpr(getContext(), rhsExpr);
+    return PyAffineExpr(getContext(), rhsExpr).maybeDownCast();
   }
 
   static void bindDerived(ClassTy &c) {
@@ -379,6 +373,27 @@ PyAffineExpr PyAffineExpr::createFromCapsule(const nb::object &capsule) {
   return PyAffineExpr(
       PyMlirContext::forContext(mlirAffineExprGetContext(rawAffineExpr)),
       rawAffineExpr);
+}
+
+nb::typed<nb::object, PyAffineExpr> PyAffineExpr::maybeDownCast() {
+  MlirAffineExpr expr = get();
+  if (mlirAffineExprIsAConstant(expr))
+    return nb::cast(PyAffineConstantExpr(getContext(), expr));
+  if (mlirAffineExprIsADim(expr))
+    return nb::cast(PyAffineDimExpr(getContext(), expr));
+  if (mlirAffineExprIsASymbol(expr))
+    return nb::cast(PyAffineSymbolExpr(getContext(), expr));
+  if (mlirAffineExprIsAAdd(expr))
+    return nb::cast(PyAffineAddExpr(getContext(), expr));
+  if (mlirAffineExprIsAMul(expr))
+    return nb::cast(PyAffineMulExpr(getContext(), expr));
+  if (mlirAffineExprIsAMod(expr))
+    return nb::cast(PyAffineModExpr(getContext(), expr));
+  if (mlirAffineExprIsAFloorDiv(expr))
+    return nb::cast(PyAffineFloorDivExpr(getContext(), expr));
+  if (mlirAffineExprIsACeilDiv(expr))
+    return nb::cast(PyAffineCeilDivExpr(getContext(), expr));
+  return nb::cast(*this);
 }
 
 //------------------------------------------------------------------------------
@@ -599,6 +614,7 @@ void populateIRAffine(nb::module_ &m) {
              return PyAffineExpr(self.getContext(),
                                  mlirAffineExprCompose(self, other));
            })
+      .def(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR, &PyAffineExpr::maybeDownCast)
       .def(
           "shift_dims",
           [](PyAffineExpr &self, uint32_t numDims, uint32_t shift,

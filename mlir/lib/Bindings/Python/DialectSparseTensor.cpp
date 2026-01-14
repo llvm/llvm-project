@@ -25,27 +25,28 @@ namespace python {
 namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 namespace sparse_tensor {
 
-enum PySparseTensorLevelFormat : std::underlying_type_t<
+enum class PySparseTensorLevelFormat : std::underlying_type_t<
     MlirSparseTensorLevelFormat> {
-  MLIR_SPARSE_TENSOR_LEVEL_DENSE = MLIR_SPARSE_TENSOR_LEVEL_DENSE,
-  MLIR_SPARSE_TENSOR_LEVEL_N_OUT_OF_M = MLIR_SPARSE_TENSOR_LEVEL_N_OUT_OF_M,
-  MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED = MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED,
-  MLIR_SPARSE_TENSOR_LEVEL_SINGLETON = MLIR_SPARSE_TENSOR_LEVEL_SINGLETON,
-  MLIR_SPARSE_TENSOR_LEVEL_LOOSE_COMPRESSED =
-      MLIR_SPARSE_TENSOR_LEVEL_LOOSE_COMPRESSED
+  DENSE = MLIR_SPARSE_TENSOR_LEVEL_DENSE,
+  N_OUT_OF_M = MLIR_SPARSE_TENSOR_LEVEL_N_OUT_OF_M,
+  COMPRESSED = MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED,
+  SINGLETON = MLIR_SPARSE_TENSOR_LEVEL_SINGLETON,
+  LOOSE_COMPRESSED = MLIR_SPARSE_TENSOR_LEVEL_LOOSE_COMPRESSED
 };
 
-enum PySparseTensorLevelPropertyNondefault : std::underlying_type_t<
+enum class PySparseTensorLevelPropertyNondefault : std::underlying_type_t<
     MlirSparseTensorLevelPropertyNondefault> {
-  MLIR_SPARSE_PROPERTY_NON_ORDERED = MLIR_SPARSE_PROPERTY_NON_ORDERED,
-  MLIR_SPARSE_PROPERTY_NON_UNIQUE = MLIR_SPARSE_PROPERTY_NON_UNIQUE,
-  MLIR_SPARSE_PROPERTY_SOA = MLIR_SPARSE_PROPERTY_SOA,
+  NON_ORDERED = MLIR_SPARSE_PROPERTY_NON_ORDERED,
+  NON_UNIQUE = MLIR_SPARSE_PROPERTY_NON_UNIQUE,
+  SOA = MLIR_SPARSE_PROPERTY_SOA,
 };
 
 struct EncodingAttr : PyConcreteAttribute<EncodingAttr> {
   static constexpr IsAFunctionTy isaFunction =
       mlirAttributeIsASparseTensorEncodingAttr;
   static constexpr const char *pyClassName = "EncodingAttr";
+  static inline const MlirStringRef name =
+      mlirSparseTensorEncodingAttrGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
@@ -121,21 +122,25 @@ struct EncodingAttr : PyConcreteAttribute<EncodingAttr> {
     c.def_prop_ro("pos_width", mlirSparseTensorEncodingAttrGetPosWidth);
     c.def_prop_ro("crd_width", mlirSparseTensorEncodingAttrGetCrdWidth);
 
-    c.def_prop_ro(
-        "explicit_val", [](EncodingAttr &self) -> std::optional<PyAttribute> {
-          MlirAttribute ret = mlirSparseTensorEncodingAttrGetExplicitVal(self);
-          if (mlirAttributeIsNull(ret))
-            return {};
-          return PyAttribute(self.getContext(), ret);
-        });
+    c.def_prop_ro("explicit_val",
+                  [](EncodingAttr &self)
+                      -> std::optional<nb::typed<nb::object, PyAttribute>> {
+                    MlirAttribute ret =
+                        mlirSparseTensorEncodingAttrGetExplicitVal(self);
+                    if (mlirAttributeIsNull(ret))
+                      return {};
+                    return PyAttribute(self.getContext(), ret).maybeDownCast();
+                  });
 
-    c.def_prop_ro(
-        "implicit_val", [](EncodingAttr &self) -> std::optional<PyAttribute> {
-          MlirAttribute ret = mlirSparseTensorEncodingAttrGetImplicitVal(self);
-          if (mlirAttributeIsNull(ret))
-            return {};
-          return PyAttribute(self.getContext(), ret);
-        });
+    c.def_prop_ro("implicit_val",
+                  [](EncodingAttr &self)
+                      -> std::optional<nb::typed<nb::object, PyAttribute>> {
+                    MlirAttribute ret =
+                        mlirSparseTensorEncodingAttrGetImplicitVal(self);
+                    if (mlirAttributeIsNull(ret))
+                      return {};
+                    return PyAttribute(self.getContext(), ret).maybeDownCast();
+                  });
 
     c.def_prop_ro("structured_n", [](const EncodingAttr &self) -> unsigned {
       const int lvlRank = mlirSparseTensorEncodingGetLvlRank(self);
@@ -165,16 +170,15 @@ struct EncodingAttr : PyConcreteAttribute<EncodingAttr> {
 static void populateDialectSparseTensorSubmodule(nb::module_ &m) {
   nb::enum_<PySparseTensorLevelFormat>(m, "LevelFormat", nb::is_arithmetic(),
                                        nb::is_flag())
-      .value("dense", MLIR_SPARSE_TENSOR_LEVEL_DENSE)
-      .value("n_out_of_m", MLIR_SPARSE_TENSOR_LEVEL_N_OUT_OF_M)
-      .value("compressed", MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED)
-      .value("singleton", MLIR_SPARSE_TENSOR_LEVEL_SINGLETON)
-      .value("loose_compressed", MLIR_SPARSE_TENSOR_LEVEL_LOOSE_COMPRESSED);
-
+      .value("dense", PySparseTensorLevelFormat::DENSE)
+      .value("n_out_of_m", PySparseTensorLevelFormat::N_OUT_OF_M)
+      .value("compressed", PySparseTensorLevelFormat::COMPRESSED)
+      .value("singleton", PySparseTensorLevelFormat::SINGLETON)
+      .value("loose_compressed", PySparseTensorLevelFormat::LOOSE_COMPRESSED);
   nb::enum_<PySparseTensorLevelPropertyNondefault>(m, "LevelProperty")
-      .value("non_ordered", MLIR_SPARSE_PROPERTY_NON_ORDERED)
-      .value("non_unique", MLIR_SPARSE_PROPERTY_NON_UNIQUE)
-      .value("soa", MLIR_SPARSE_PROPERTY_SOA);
+      .value("non_ordered", PySparseTensorLevelPropertyNondefault::NON_ORDERED)
+      .value("non_unique", PySparseTensorLevelPropertyNondefault::NON_UNIQUE)
+      .value("soa", PySparseTensorLevelPropertyNondefault::SOA);
 
   EncodingAttr::bind(m);
 }

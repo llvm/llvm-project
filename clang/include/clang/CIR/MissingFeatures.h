@@ -302,6 +302,8 @@ struct MissingFeatures {
   static bool makeTripleAlwaysPresent() { return false; }
   static bool maybeHandleStaticInExternC() { return false; }
   static bool mergeAllConstants() { return false; }
+  static bool memberFuncPtrAuthInfo() { return false; }
+  static bool memberFuncPtrCast() { return false; }
   static bool metaDataNode() { return false; }
   static bool moduleNameHash() { return false; }
   static bool msabi() { return false; }
@@ -345,6 +347,7 @@ struct MissingFeatures {
   static bool useEHCleanupForArray() { return false; }
   static bool vaArgABILowering() { return false; }
   static bool vectorConstants() { return false; }
+  static bool virtualMethodAttr() { return false; }
   static bool vlas() { return false; }
   static bool vtableInitialization() { return false; }
   static bool vtableEmitMetadata() { return false; }

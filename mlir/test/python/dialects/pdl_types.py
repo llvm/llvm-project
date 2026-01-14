@@ -17,17 +17,17 @@ def test_attribute_type():
         parsedType = Type.parse("!pdl.attribute")
         constructedType = pdl.AttributeType.get()
 
-        assert pdl.AttributeType.isinstance(parsedType)
-        assert not pdl.OperationType.isinstance(parsedType)
-        assert not pdl.RangeType.isinstance(parsedType)
-        assert not pdl.TypeType.isinstance(parsedType)
-        assert not pdl.ValueType.isinstance(parsedType)
+        assert isinstance(parsedType, pdl.AttributeType)
+        assert not isinstance(parsedType, pdl.OperationType)
+        assert not isinstance(parsedType, pdl.RangeType)
+        assert not isinstance(parsedType, pdl.TypeType)
+        assert not isinstance(parsedType, pdl.ValueType)
 
-        assert pdl.AttributeType.isinstance(constructedType)
-        assert not pdl.OperationType.isinstance(constructedType)
-        assert not pdl.RangeType.isinstance(constructedType)
-        assert not pdl.TypeType.isinstance(constructedType)
-        assert not pdl.ValueType.isinstance(constructedType)
+        assert isinstance(constructedType, pdl.AttributeType)
+        assert not isinstance(constructedType, pdl.OperationType)
+        assert not isinstance(constructedType, pdl.RangeType)
+        assert not isinstance(constructedType, pdl.TypeType)
+        assert not isinstance(constructedType, pdl.ValueType)
 
         assert parsedType == constructedType
 
@@ -44,17 +44,17 @@ def test_operation_type():
         parsedType = Type.parse("!pdl.operation")
         constructedType = pdl.OperationType.get()
 
-        assert not pdl.AttributeType.isinstance(parsedType)
-        assert pdl.OperationType.isinstance(parsedType)
-        assert not pdl.RangeType.isinstance(parsedType)
-        assert not pdl.TypeType.isinstance(parsedType)
-        assert not pdl.ValueType.isinstance(parsedType)
+        assert not isinstance(parsedType, pdl.AttributeType)
+        assert isinstance(parsedType, pdl.OperationType)
+        assert not isinstance(parsedType, pdl.RangeType)
+        assert not isinstance(parsedType, pdl.TypeType)
+        assert not isinstance(parsedType, pdl.ValueType)
 
-        assert not pdl.AttributeType.isinstance(constructedType)
-        assert pdl.OperationType.isinstance(constructedType)
-        assert not pdl.RangeType.isinstance(constructedType)
-        assert not pdl.TypeType.isinstance(constructedType)
-        assert not pdl.ValueType.isinstance(constructedType)
+        assert not isinstance(constructedType, pdl.AttributeType)
+        assert isinstance(constructedType, pdl.OperationType)
+        assert not isinstance(constructedType, pdl.RangeType)
+        assert not isinstance(constructedType, pdl.TypeType)
+        assert not isinstance(constructedType, pdl.ValueType)
 
         assert parsedType == constructedType
 
@@ -73,17 +73,17 @@ def test_range_type():
         constructedType = pdl.RangeType.get(typeType)
         elementType = constructedType.element_type
 
-        assert not pdl.AttributeType.isinstance(parsedType)
-        assert not pdl.OperationType.isinstance(parsedType)
-        assert pdl.RangeType.isinstance(parsedType)
-        assert not pdl.TypeType.isinstance(parsedType)
-        assert not pdl.ValueType.isinstance(parsedType)
+        assert not isinstance(parsedType, pdl.AttributeType)
+        assert not isinstance(parsedType, pdl.OperationType)
+        assert isinstance(parsedType, pdl.RangeType)
+        assert not isinstance(parsedType, pdl.TypeType)
+        assert not isinstance(parsedType, pdl.ValueType)
 
-        assert not pdl.AttributeType.isinstance(constructedType)
-        assert not pdl.OperationType.isinstance(constructedType)
-        assert pdl.RangeType.isinstance(constructedType)
-        assert not pdl.TypeType.isinstance(constructedType)
-        assert not pdl.ValueType.isinstance(constructedType)
+        assert not isinstance(constructedType, pdl.AttributeType)
+        assert not isinstance(constructedType, pdl.OperationType)
+        assert isinstance(constructedType, pdl.RangeType)
+        assert not isinstance(constructedType, pdl.TypeType)
+        assert not isinstance(constructedType, pdl.ValueType)
 
         assert parsedType == constructedType
         assert elementType == typeType
@@ -103,17 +103,17 @@ def test_type_type():
         parsedType = Type.parse("!pdl.type")
         constructedType = pdl.TypeType.get()
 
-        assert not pdl.AttributeType.isinstance(parsedType)
-        assert not pdl.OperationType.isinstance(parsedType)
-        assert not pdl.RangeType.isinstance(parsedType)
-        assert pdl.TypeType.isinstance(parsedType)
-        assert not pdl.ValueType.isinstance(parsedType)
+        assert not isinstance(parsedType, pdl.AttributeType)
+        assert not isinstance(parsedType, pdl.OperationType)
+        assert not isinstance(parsedType, pdl.RangeType)
+        assert isinstance(parsedType, pdl.TypeType)
+        assert not isinstance(parsedType, pdl.ValueType)
 
-        assert not pdl.AttributeType.isinstance(constructedType)
-        assert not pdl.OperationType.isinstance(constructedType)
-        assert not pdl.RangeType.isinstance(constructedType)
-        assert pdl.TypeType.isinstance(constructedType)
-        assert not pdl.ValueType.isinstance(constructedType)
+        assert not isinstance(constructedType, pdl.AttributeType)
+        assert not isinstance(constructedType, pdl.OperationType)
+        assert not isinstance(constructedType, pdl.RangeType)
+        assert isinstance(constructedType, pdl.TypeType)
+        assert not isinstance(constructedType, pdl.ValueType)
 
         assert parsedType == constructedType
 
@@ -130,17 +130,17 @@ def test_value_type():
         parsedType = Type.parse("!pdl.value")
         constructedType = pdl.ValueType.get()
 
-        assert not pdl.AttributeType.isinstance(parsedType)
-        assert not pdl.OperationType.isinstance(parsedType)
-        assert not pdl.RangeType.isinstance(parsedType)
-        assert not pdl.TypeType.isinstance(parsedType)
-        assert pdl.ValueType.isinstance(parsedType)
+        assert not isinstance(parsedType, pdl.AttributeType)
+        assert not isinstance(parsedType, pdl.OperationType)
+        assert not isinstance(parsedType, pdl.RangeType)
+        assert not isinstance(parsedType, pdl.TypeType)
+        assert isinstance(parsedType, pdl.ValueType)
 
-        assert not pdl.AttributeType.isinstance(constructedType)
-        assert not pdl.OperationType.isinstance(constructedType)
-        assert not pdl.RangeType.isinstance(constructedType)
-        assert not pdl.TypeType.isinstance(constructedType)
-        assert pdl.ValueType.isinstance(constructedType)
+        assert not isinstance(constructedType, pdl.AttributeType)
+        assert not isinstance(constructedType, pdl.OperationType)
+        assert not isinstance(constructedType, pdl.RangeType)
+        assert not isinstance(constructedType, pdl.TypeType)
+        assert isinstance(constructedType, pdl.ValueType)
 
         assert parsedType == constructedType
 
