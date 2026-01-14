@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/ilogbf128.h"
+
 #include "src/__support/math/ilogbf128.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, ilogbf128, (float128 x)) {
-  return math::ilogbf128(x);
-}
+LLVM_LIBC_FUNCTION(int, ilogbf128, (float128 x)) { return math::ilogbf128(x); }
 
 } // namespace LIBC_NAMESPACE_DECL

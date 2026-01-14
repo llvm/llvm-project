@@ -70,5 +70,4 @@
 #include "math/rsqrtf16.h"
 #include "math/sin.h"
 
-
 #endif // LLVM_LIBC_SHARED_MATH_H

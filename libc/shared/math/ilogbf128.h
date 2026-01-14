@@ -17,7 +17,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 namespace shared {
-    
+
 using math::ilogbf128;
 
 } // namespace shared
