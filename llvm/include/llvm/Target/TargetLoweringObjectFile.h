@@ -24,7 +24,6 @@ namespace llvm {
 struct Align;
 struct MachineJumpTableEntry;
 class Constant;
-class ConstantPtrAuth;
 class DataLayout;
 class Function;
 class GlobalObject;
@@ -306,8 +305,7 @@ public:
     return nullptr;
   }
 
-  virtual bool
-  canEmitConstantPtrAuthAsIRelative(const ConstantPtrAuth *CPA) const {
+  virtual bool canEmitConstantPtrAuthAsIRelative(const Constant *CPA) const {
     return false;
   }
 

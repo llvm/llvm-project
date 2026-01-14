@@ -198,13 +198,13 @@ static bool targetSupportsIRelativeRelocation(const Triple &TT) {
 }
 
 bool AArch64_ELFTargetObjectFile::canEmitConstantPtrAuthAsIRelative(
-    const ConstantPtrAuth *CPA) const {
+    const Constant *CPA) const {
   // We only emit an IRELATIVE relocation if the target supports IRELATIVE.
   if (!targetSupportsIRelativeRelocation(TM->getTargetTriple()))
     return false;
 
   // For now, only the DA key is supported.
-  if (CPA->getKey()->getZExtValue() != AArch64PACKey::DA)
+  if (cast<ConstantPtrAuth>(CPA)->getKey()->getZExtValue() != AArch64PACKey::DA)
     return false;
 
   return true;
