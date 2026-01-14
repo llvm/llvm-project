@@ -2511,7 +2511,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   //    1&p => p;     0&p => 0;     p&p => p;
   //
   //    S = (S1 & S2) | (V1 & S2) | (S1 & V2)
-  Value *handleBitwiseAnd(IRBuilder<> &IRB, Value *V1, Value *V2, Value *S1, Value *S2) {
+  Value *handleBitwiseAnd(IRBuilder<> &IRB, Value *V1, Value *V2, Value *S1,
+                          Value *S2) {
     Value *S1S2 = IRB.CreateAnd(S1, S2);
     Value *V1S2 = IRB.CreateAnd(V1, S2);
     Value *S1V2 = IRB.CreateAnd(S1, V2);
