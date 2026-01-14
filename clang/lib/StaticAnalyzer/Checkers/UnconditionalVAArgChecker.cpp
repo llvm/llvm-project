@@ -12,15 +12,14 @@
 // This checker is only partially path-sensitive: it relies on the symbolic
 // execution of the analyzer engine to follow the execution path from the
 // beginning of a function to a va_arg() call and determine whether there are
-// any branching points on that path -- but it produces BasicBug reports
+// any branching points on that path -- but it uses BasicBugReport reports
 // because report path wouldn't contain any useful information. (As this
-// checker detects a property of a certain function, the path before that
-// function is irrelevant; and the unconditional path within the function is
-// trivial and wouldn't have any note tags anyway.)
+// checker diagnoses a property of a variadic function, the path before that
+// function is irrelevant; then the unconditional part of path is trivial.)
 //
-// However, the AST matching framework of Clang Tidy is not powerful enough to
-// express this "no branching on the execution path" relationship, at least not
-// without reimplementing a crude and fragile form of symbolic execution.
+// The AST matching framework of Clang Tidy is not powerful enough to express
+// this "no branching on the execution path" relationship, at least not without
+// reimplementing a crude and fragile form of symbolic execution.
 //
 //===----------------------------------------------------------------------===//
 
@@ -125,8 +124,7 @@ void UnconditionalVAArgChecker::checkBranchCondition(const Stmt *Condition,
 void UnconditionalVAArgChecker::checkPreStmt(const VAArgExpr *VAA,
                                              CheckerContext &C) const {
   ProgramStateRef State = C.getState();
-  const FunctionDecl *PathFrom =
-      State->get<HasUnconditionalPath>(); // getCurrentFunction(C);
+  const FunctionDecl *PathFrom = State->get<HasUnconditionalPath>();
   if (PathFrom) {
     // Reset this field in the state to ensure that multiple consecutive
     // va_arg() calls don't produce repeated warnings.
@@ -145,12 +143,15 @@ void UnconditionalVAArgChecker::checkPreStmt(const VAArgExpr *VAA,
     PathDiagnosticLocation PDL(SR.getBegin(),
                                C.getASTContext().getSourceManager());
     // We create a non-path-sensitive report because the path wouldn't contain
-    // any useful information: the path leading to this function is actively
-    // ignored by the checker and the path within the function is trivial.
+    // any useful information: the path leading to the variadic function is
+    // actively ignored by the checker and the unconditional path from the
+    // start of the variadic function is trivial.
     auto R =
         std::make_unique<BasicBugReport>(BT, BT.getDescription(), FullMsg, PDL);
 
     if (getCurrentFunction(C) != PathFrom) {
+      // Highlight the definition of the variadic function in the rare case
+      // when the reached va_arg() expression is in another function.
       SourceRange DefSR = PathFrom->getSourceRange();
       PathDiagnosticLocation DefPDL(DefSR.getBegin(),
                                     C.getASTContext().getSourceManager());
