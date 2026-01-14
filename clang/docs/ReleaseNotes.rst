@@ -716,7 +716,7 @@ Arm and AArch64 Support
 - Support level for Function Multi-Versioning (FMV) has been upgraded to Release in ACLE.
   - Resolver functions can use the PAC and BTI hardening settings.
   - Users can override function version priority.
-  - Unreachable functions versions are diagnosed and ignored.
+  - Unreachable function versions are diagnosed and ignored.
 
 Android Support
 ^^^^^^^^^^^^^^^
