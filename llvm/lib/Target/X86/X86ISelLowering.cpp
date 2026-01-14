@@ -53514,10 +53514,12 @@ static SDValue canonicalizeBoolMask(unsigned Opcode, EVT VT, SDValue Mask,
       !DAG.getTargetLoweringInfo().isOperationLegalOrCustom(Opcode, VT))
     return SDValue();
 
+  EVT MaskVT = Mask.getValueType();
   EVT ExtMaskVT = VT.changeVectorElementTypeToInteger();
-  assert(ExtMaskVT.bitsGT(Mask.getValueType()) && "Unexpected extension type");
-  return combineToExtendBoolVectorInReg(ISD::SIGN_EXTEND, DL, ExtMaskVT, Mask,
-                                        DAG, DCI, Subtarget);
+  assert(ExtMaskVT.bitsGT(MaskVT) && "Unexpected extension type");
+  SDValue NewMask = combineToExtendBoolVectorInReg(
+      ISD::SIGN_EXTEND, DL, ExtMaskVT, Mask, DAG, DCI, Subtarget);
+  return DAG.getNode(ISD::TRUNCATE, DL, MaskVT, NewMask);
 }
 
 /// If V is a build vector of boolean constants and exactly one of those
@@ -53704,13 +53706,11 @@ static SDValue combineMaskedLoad(SDNode *N, SelectionDAG &DAG,
   // Attempt to convert a (vXi1 bitcast(iX Mask)) mask before it might get split
   // by legalization.
   if (SDValue NewMask =
-          canonicalizeBoolMask(ISD::MLOAD, VT, Mask, DL, DAG, DCI, Subtarget)) {
-    NewMask = DAG.getNode(ISD::TRUNCATE, DL, Mask.getValueType(), NewMask);
+          canonicalizeBoolMask(ISD::MLOAD, VT, Mask, DL, DAG, DCI, Subtarget))
     return DAG.getMaskedLoad(VT, DL, Mld->getChain(), Mld->getBasePtr(),
                              Mld->getOffset(), NewMask, Mld->getPassThru(),
                              Mld->getMemoryVT(), Mld->getMemOperand(),
                              Mld->getAddressingMode(), Mld->getExtensionType());
-  }
 
   // If the mask value has been legalized to a non-boolean vector, try to
   // simplify ops leading up to it. We only demand the MSB of each lane.
@@ -53817,14 +53817,12 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
 
   // Attempt to convert a (vXi1 bitcast(iX Mask)) mask before it might get split
   // by legalization.
-  if (SDValue NewMask = canonicalizeBoolMask(ISD::MSTORE, VT, Mask, DL, DAG,
-                                             DCI, Subtarget)) {
-    NewMask = DAG.getNode(ISD::TRUNCATE, DL, Mask.getValueType(), NewMask);
+  if (SDValue NewMask =
+          canonicalizeBoolMask(ISD::MSTORE, VT, Mask, DL, DAG, DCI, Subtarget))
     return DAG.getMaskedStore(Mst->getChain(), SDLoc(N), Mst->getValue(),
                               Mst->getBasePtr(), Mst->getOffset(), NewMask,
                               Mst->getMemoryVT(), Mst->getMemOperand(),
                               Mst->getAddressingMode());
-  }
 
   // If the mask value has been legalized to a non-boolean vector, try to
   // simplify ops leading up to it. We only demand the MSB of each lane.
@@ -57602,10 +57600,8 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
     // split by legalization.
     if (SDValue NewMask =
             canonicalizeBoolMask(GorS->getOpcode(), N->getValueType(0), Mask,
-                                 DL, DAG, DCI, Subtarget)) {
-      NewMask = DAG.getNode(ISD::TRUNCATE, DL, Mask.getValueType(), NewMask);
+                                 DL, DAG, DCI, Subtarget))
       return rebuildGatherScatter(GorS, Index, Base, NewMask, Scale, DAG);
-    }
   }
 
   // With vector masks we only demand the upper bit of the mask.
