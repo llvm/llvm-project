@@ -3115,6 +3115,7 @@ the behavior is undefined, unless one of the following exceptions applies:
 * ``dereferenceable(<n>)`` operand bundles only guarantee the pointer is
   dereferenceable at the point of the assumption. The pointer may not be
   dereferenceable at later pointers, e.g., because it could have been freed.
+  Only ``n > 0`` implies that the pointer is dereferenceable.
 
 In addition to allowing operand bundles encoding function and parameter
 attributes, an assume operand bundle may also encode a ``separate_storage``
@@ -14671,6 +14672,37 @@ Semantics:
 """"""""""
 
 Note this intrinsic is only verified on AArch64 and ARM.
+
+'``llvm.stackaddress``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare ptr @llvm.stackaddress.p0()
+
+Overview:
+"""""""""
+
+The '``llvm.stackaddress``' intrinsic returns the starting address of the
+stack region that may be used by called functions.
+
+Semantics:
+""""""""""
+
+This intrinsic returns the *logical* value of the stack pointer register, that
+is, the address separating the stack space of the current function from the
+stack space that may be modified by called functions. It corresponds to the
+address returned by '``llvm.sponentry``', offset by the size of the current
+function's stack frame.
+
+On certain targets (e.g. x86), the logical and actual (or physical) values of
+the stack pointer register are the same. However, on other architectures (e.g.
+SPARCv9), the logical value of the stack pointer register may differ from the
+physical value. '``llvm.stackaddress``' handles this discrepancy and returns
+the correct boundary address.
 
 '``llvm.frameaddress``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
