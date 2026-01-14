@@ -78,7 +78,7 @@ mlir::detail::getDefaultTypeSizeInBits(Type type, const DataLayout &dataLayout,
   if (auto vecType = dyn_cast<VectorType>(type)) {
     uint64_t baseSize = vecType.getNumElements() / vecType.getShape().back() *
                         llvm::PowerOf2Ceil(vecType.getShape().back()) *
-                        dataLayout.getTypeSize(vecType.getElementType()) * 8;
+                        dataLayout.getTypeSizeInBits(vecType.getElementType());
     return llvm::TypeSize::get(baseSize, vecType.isScalable());
   }
 
