@@ -329,10 +329,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (op.getBare())
       result = todo("ompx_bare");
   };
-  auto checkCollapse = [&todo](auto op, LogicalResult &result) {
-    if (op.getCollapseNumLoops() > 1)
-      result = todo("collapse");
-  };
   auto checkDepend = [&todo](auto op, LogicalResult &result) {
     if (!op.getDependVars().empty() || op.getDependKinds())
       result = todo("depend");
@@ -382,10 +378,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       .Case([&](omp::DistributeOp op) {
         checkAllocate(op, result);
         checkOrder(op, result);
-      })
-      .Case([&](omp::LoopNestOp op) {
-        if (mlir::isa<omp::TaskloopOp>(op.getOperation()->getParentOp()))
-          checkCollapse(op, result);
       })
       .Case([&](omp::OrderedRegionOp op) { checkParLevelSimd(op, result); })
       .Case([&](omp::SectionsOp op) {
@@ -2797,6 +2789,22 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
     return loopInfo;
   };
 
+  llvm::Value *ubVal = builder.getInt32(1);
+  Operation::operand_range lowerBounds = loopOp.getLoopLowerBounds();
+  Operation::operand_range upperBounds = loopOp.getLoopUpperBounds();
+  if (loopOp.getCollapseNumLoops() > 1) {
+    for (uint64_t i = 0; i < loopOp.getCollapseNumLoops(); i++) {
+      ubVal = builder.CreateMul(
+          ubVal,
+          builder.CreateSub(
+              moduleTranslation.lookupValue(upperBounds[i]),
+              builder.CreateSub(moduleTranslation.lookupValue(lowerBounds[i]),
+                                builder.getInt32(1))));
+    }
+  } else {
+    ubVal = moduleTranslation.lookupValue(upperBounds[0]);
+  }
+
   llvm::Value *ifCond = nullptr;
   llvm::Value *grainsize = nullptr;
   int sched = 0; // default
@@ -2830,14 +2838,14 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createTaskloop(
           ompLoc, allocaIP, bodyCB, loopInfo,
-          moduleTranslation.lookupValue(loopOp.getLoopLowerBounds()[0]),
-          moduleTranslation.lookupValue(loopOp.getLoopUpperBounds()[0]),
+          moduleTranslation.lookupValue(loopOp.getLoopLowerBounds()[0]), ubVal,
           moduleTranslation.lookupValue(loopOp.getLoopSteps()[0]),
           taskloopOp.getUntied(), ifCond, grainsize, taskloopOp.getNogroup(),
           sched, moduleTranslation.lookupValue(taskloopOp.getFinal()),
           taskloopOp.getMergeable(),
           moduleTranslation.lookupValue(taskloopOp.getPriority()),
-          taskDupOrNull, taskStructMgr.getStructPtr());
+          loopOp.getCollapseNumLoops(), taskDupOrNull,
+          taskStructMgr.getStructPtr());
 
   if (failed(handleError(afterIP, opInst)))
     return failure();

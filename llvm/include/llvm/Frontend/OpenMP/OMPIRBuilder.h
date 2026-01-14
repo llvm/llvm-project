@@ -1494,7 +1494,8 @@ public:
       Value *LBVal, Value *UBVal, Value *StepVal, bool Untied = false,
       Value *IfCond = nullptr, Value *GrainSize = nullptr, bool NoGroup = false,
       int Sched = 0, Value *Final = nullptr, bool Mergeable = false,
-      Value *Priority = nullptr, TaskDupCallbackTy DupCB = nullptr,
+      Value *Priority = nullptr, int NumOfCollapseLoops = 0,
+      TaskDupCallbackTy DupCB = nullptr,
       Value *TaskContextStructPtrVal = nullptr);
 
   /// Generator for `#omp task`
