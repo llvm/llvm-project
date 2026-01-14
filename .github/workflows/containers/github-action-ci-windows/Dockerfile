@@ -97,7 +97,7 @@ RUN powershell -Command \
     rm actions-runner-win.zip
 
 # Set the LLVM_VERSION environment variable
-ENV LLVM_VERSION=21.1.2
+ENV LLVM_VERSION=21.1.8
 
 # Download and extract Clang compiler.
 # Create directories, download, extract, and clean up all in one layer

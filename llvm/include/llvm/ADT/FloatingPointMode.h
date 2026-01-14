@@ -302,6 +302,40 @@ LLVM_ABI FPClassTest unknown_sign(FPClassTest Mask);
 /// Write a human readable form of \p Mask to \p OS
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, FPClassTest Mask);
 
+/// Returns true if all values in \p LHS must be less than or equal to those in
+/// \p RHS. That is, the comparison `fcmp ogt LHS, RHS` will always return
+/// false.
+///
+/// If \p OrderedZeroSign is true, -0 will be treated as ordered less than +0,
+/// unlike fcmp.
+LLVM_ABI bool cannotOrderStrictlyGreater(FPClassTest LHS, FPClassTest RHS,
+                                         bool OrderedZeroSign = false);
+
+/// Returns true if all values in \p LHS must be less than those in \p RHS. That
+/// is, the comparison `fcmp oge LHS, RHS` will always return false.
+//
+// If \p OrderedZeroSign is true, -0 will be treated as ordered less than +0,
+// unlike fcmp.
+LLVM_ABI bool cannotOrderStrictlyGreaterEq(FPClassTest LHS, FPClassTest RHS,
+                                           bool OrderedZeroSign = false);
+
+/// Returns true if all values in \p LHS must be greater than or equal to those
+/// in \p RHS. That is, the comparison `fcmp olt LHS, RHS` will always return
+/// false.
+///
+/// If \p OrderedZeroSign is true, -0 will be treated as ordered less than +0,
+/// unlike fcmp.
+LLVM_ABI bool cannotOrderStrictlyLess(FPClassTest LHS, FPClassTest RHS,
+                                      bool OrderedZeroSign = false);
+
+/// Returns true if all values in \p LHS must be greater than to those in \p
+/// RHS. That is, the comparison `fcmp ole LHS, RHS` will always return false.
+///
+/// If \p OrderedZeroSign is true, -0 will be treated as ordered less than +0,
+/// unlike fcmp.
+LLVM_ABI bool cannotOrderStrictlyLessEq(FPClassTest LHS, FPClassTest RHS,
+                                        bool OrderedZeroSign = false);
+
 } // namespace llvm
 
 #endif // LLVM_ADT_FLOATINGPOINTMODE_H
