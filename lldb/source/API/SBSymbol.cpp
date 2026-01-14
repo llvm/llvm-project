@@ -207,7 +207,7 @@ uint32_t SBSymbol::GetID() const {
 
   if (m_opaque_ptr)
     return m_opaque_ptr->GetID();
-  return 0;
+  return LLDB_INVALID_SYMBOL_ID;
 }
 
 bool SBSymbol::IsExternal() {

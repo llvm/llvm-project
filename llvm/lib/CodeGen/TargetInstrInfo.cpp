@@ -34,6 +34,7 @@
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -2048,14 +2049,7 @@ std::string TargetInstrInfo::createMIROperandComment(
   if (OpIdx == InlineAsm::MIOp_ExtraInfo) {
     // Print HasSideEffects, MayLoad, MayStore, IsAlignStack
     unsigned ExtraInfo = Op.getImm();
-    bool First = true;
-    for (StringRef Info : InlineAsm::getExtraInfoNames(ExtraInfo)) {
-      if (!First)
-        OS << " ";
-      First = false;
-      OS << Info;
-    }
-
+    OS << interleaved(InlineAsm::getExtraInfoNames(ExtraInfo), " ");
     return Flags;
   }
 

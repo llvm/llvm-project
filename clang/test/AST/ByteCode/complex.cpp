@@ -434,5 +434,9 @@ namespace Discard {
   }
   static_assert(test3() == 10, ""); // both-error {{not an integral constant expression}}
 
+  constexpr void V() {
+    (void)(1 + 2i);
+  }
+  static_assert((V(), true));
 
 }
