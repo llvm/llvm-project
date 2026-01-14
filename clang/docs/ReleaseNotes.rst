@@ -216,10 +216,8 @@ Static Analyzer
 New features
 ^^^^^^^^^^^^
 
-Crash and bug fixes
-^^^^^^^^^^^^^^^^^^^
-
-You probably want "Miscellaneous Clang Crashes Fixed" instead!
+Static Analyzer crash and bug fixes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Improvements
 ^^^^^^^^^^^^

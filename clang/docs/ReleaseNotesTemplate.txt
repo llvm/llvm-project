@@ -208,8 +208,8 @@ Static Analyzer
 New features
 ^^^^^^^^^^^^
 
-Crash and bug fixes
-^^^^^^^^^^^^^^^^^^^
+Static Analyzer crash and bug fixes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Improvements
 ^^^^^^^^^^^^
