@@ -219,6 +219,8 @@ New features
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
 
+You probably want "Miscellaneous Clang Crashes Fixed" instead!
+
 Improvements
 ^^^^^^^^^^^^
 
