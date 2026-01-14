@@ -99,7 +99,6 @@ define <2 x half> @load_v2f16(ptr %a) {
 ; CHECK-LABEL: load_v2f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    // kill: def $d0 killed $s0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: load_v2f16:
