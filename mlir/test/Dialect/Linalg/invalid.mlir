@@ -1068,7 +1068,7 @@ func.func @transpose_rank_permutation_size_mismatch(
 
 func.func @transpose_input_init_rank_mismatch(%input: tensor<16x32xf32>,
     %init: tensor<32x64x16xf32>) -> tensor<32x64x16xf32> {
-  // expected-error @+1 {{'linalg.transpose' op input rank 2 does not match init rank 3}}
+  // expected-error @+1 {{'linalg.transpose' op input rank (2) does not match init rank (3)}}
   %transpose = linalg.transpose
       ins(%input:tensor<16x32xf32>)
       outs(%init:tensor<32x64x16xf32>)
