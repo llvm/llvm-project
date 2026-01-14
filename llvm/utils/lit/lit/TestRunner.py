@@ -159,7 +159,7 @@ class TimeoutHelper(object):
             self._doneKillPass = True
 
 
-def executeShCmd(cmd, shenv, results, timeout=0):
+def executeShCmd(cmd, shenv, results, timeout=0, extra_inproc_builtins={}):
     """
     Wrapper around _executeShCmd that handles
     timeout
@@ -170,7 +170,9 @@ def executeShCmd(cmd, shenv, results, timeout=0):
     if timeout > 0:
         timeoutHelper.startTimer()
     try:
-        finalExitCode = _executeShCmd(cmd, shenv, results, timeoutHelper)
+        finalExitCode = _executeShCmd(
+            cmd, shenv, results, timeoutHelper, extra_inproc_builtins
+        )
     except InternalShellError:
         e = sys.exc_info()[1]
         finalExitCode = 127
@@ -211,7 +213,7 @@ def _expandLateSubstitutions(cmd, arguments, cwd, normalize_slashes=False):
     return arguments
 
 
-def _executeShCmd(cmd, shenv, results, timeoutHelper):
+def _executeShCmd(cmd, shenv, results, timeoutHelper, extra_inproc_builtins):
     if timeoutHelper.timeoutReached():
         # Prevent further recursion if the timeout has been hit
         # as we should try avoid launching more processes.
@@ -219,25 +221,37 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
 
     if isinstance(cmd, ShUtil.Seq):
         if cmd.op == ";":
-            res = _executeShCmd(cmd.lhs, shenv, results, timeoutHelper)
-            return _executeShCmd(cmd.rhs, shenv, results, timeoutHelper)
+            res = _executeShCmd(
+                cmd.lhs, shenv, results, timeoutHelper, extra_inproc_builtins
+            )
+            return _executeShCmd(
+                cmd.rhs, shenv, results, timeoutHelper, extra_inproc_builtins
+            )
 
         if cmd.op == "&":
             raise InternalShellError(cmd, "unsupported shell operator: '&'")
 
         if cmd.op == "||":
-            res = _executeShCmd(cmd.lhs, shenv, results, timeoutHelper)
+            res = _executeShCmd(
+                cmd.lhs, shenv, results, timeoutHelper, extra_inproc_builtins
+            )
             if res != 0:
-                res = _executeShCmd(cmd.rhs, shenv, results, timeoutHelper)
+                res = _executeShCmd(
+                    cmd.rhs, shenv, results, timeoutHelper, extra_inproc_builtins
+                )
             return res
 
         if cmd.op == "&&":
-            res = _executeShCmd(cmd.lhs, shenv, results, timeoutHelper)
+            res = _executeShCmd(
+                cmd.lhs, shenv, results, timeoutHelper, extra_inproc_builtins
+            )
             if res is None:
                 return res
 
             if res == 0:
-                res = _executeShCmd(cmd.rhs, shenv, results, timeoutHelper)
+                res = _executeShCmd(
+                    cmd.rhs, shenv, results, timeoutHelper, extra_inproc_builtins
+                )
             return res
 
         raise ValueError("Unknown shell command: %r" % cmd.op)
@@ -255,6 +269,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         os.path.dirname(os.path.abspath(__file__)), "builtin_commands"
     )
     inproc_builtins = get_default_inproc_builtins()
+    inproc_builtins.update(extra_inproc_builtins)
     # To avoid deadlock, we use a single stderr stream for piped
     # output. This is null until we have seen some output using
     # stderr.
@@ -680,7 +695,13 @@ def formatOutput(title, data, limit=None):
 # function), out contains only stdout from the script, err contains only stderr
 # from the script, and there is no execution trace.
 def executeScriptInternal(
-    test, litConfig, tmpBase, commands, cwd, debug=True
+    test,
+    litConfig,
+    tmpBase,
+    commands,
+    cwd,
+    debug=True,
+    extra_inproc_builtins={},
 ) -> tuple[str, str, int, str | None, str | None]:
     cmds = []
     update_output = None
@@ -725,7 +746,11 @@ def executeScriptInternal(
     shenv.env["LIT_CURRENT_TESTCASE"] = test.getFullName()
 
     exitCode, timeoutInfo = executeShCmd(
-        cmd, shenv, results, timeout=litConfig.maxIndividualTestTime
+        cmd,
+        shenv,
+        results,
+        timeout=litConfig.maxIndividualTestTime,
+        extra_inproc_builtins=extra_inproc_builtins,
     )
 
     out = err = ""
@@ -1831,7 +1856,14 @@ def parseIntegratedTestScript(test, additional_parsers=[], require_script=True):
     return script
 
 
-def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Result:
+def _runShTest(
+    test,
+    litConfig,
+    useExternalSh,
+    script,
+    tmpBase,
+    extra_inproc_builtins,
+) -> lit.Test.Result:
     # Always returns the tuple (out, err, exitCode, timeoutInfo, status).
     def runOnce(
         execdir,
@@ -1867,7 +1899,12 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
                 res = executeScript(test, litConfig, tmpBase, scriptCopy, execdir)
             else:
                 res = executeScriptInternal(
-                    test, litConfig, tmpBase, scriptCopy, execdir
+                    test,
+                    litConfig,
+                    tmpBase,
+                    scriptCopy,
+                    execdir,
+                    extra_inproc_builtins=extra_inproc_builtins,
                 )
         except ScriptFatal as e:
             out = f"# " + "\n# ".join(str(e).splitlines()) + "\n"
@@ -1944,7 +1981,12 @@ def _expandLateSubstitutionsExternal(commandLine):
     return commandLine
 
 def executeShTest(
-    test, litConfig, useExternalSh, extra_substitutions=[], preamble_commands=[]
+    test,
+    litConfig,
+    useExternalSh,
+    extra_substitutions=[],
+    preamble_commands=[],
+    extra_inproc_builtins={},
 ):
     if test.config.unsupported:
         return lit.Test.Result(Test.UNSUPPORTED, "Test is unsupported")
@@ -1981,4 +2023,6 @@ def executeShTest(
         for index, command in enumerate(script):
             script[index] = _expandLateSubstitutionsExternal(command)
 
-    return _runShTest(test, litConfig, useExternalSh, script, tmpBase)
+    return _runShTest(
+        test, litConfig, useExternalSh, script, tmpBase, extra_inproc_builtins
+    )
