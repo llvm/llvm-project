@@ -9,7 +9,6 @@ on:
       - "Code lint"
       - "CI Checks"
       - "Test Issue Write"
-      - "Check LLVM ABI annotations"
     types:
       - completed
 
