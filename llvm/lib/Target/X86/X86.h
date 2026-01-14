@@ -401,7 +401,7 @@ void initializeX86PartialReductionLegacyPass(PassRegistry &);
 void initializeX86PreTileConfigLegacyPass(PassRegistry &);
 void initializeX86ReturnThunksPass(PassRegistry &);
 void initializeX86SpeculativeExecutionSideEffectSuppressionPass(PassRegistry &);
-void initializeX86SpeculativeLoadHardeningLegacyPassPass(PassRegistry &);
+void initializeX86SpeculativeLoadHardeningLegacyPass(PassRegistry &);
 void initializeX86SuppressAPXForRelocationLegacyPass(PassRegistry &);
 void initializeX86TileConfigLegacyPass(PassRegistry &);
 void initializeX86WinEHUnwindV2Pass(PassRegistry &);

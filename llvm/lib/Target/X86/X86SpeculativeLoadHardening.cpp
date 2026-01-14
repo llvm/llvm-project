@@ -119,9 +119,9 @@ namespace {
 
 constexpr StringRef X86SLHPassName = "X86 speculative load hardening";
 
-class X86SpeculativeLoadHardeningLegacyPass : public MachineFunctionPass {
+class X86SpeculativeLoadHardeningLegacy : public MachineFunctionPass {
 public:
-  X86SpeculativeLoadHardeningLegacyPass() : MachineFunctionPass(ID) {}
+  X86SpeculativeLoadHardeningLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return X86SLHPassName; }
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -218,7 +218,7 @@ private:
 
 } // end anonymous namespace
 
-bool X86SpeculativeLoadHardeningLegacyPass::runOnMachineFunction(
+bool X86SpeculativeLoadHardeningLegacy::runOnMachineFunction(
     MachineFunction &MF) {
   X86SpeculativeLoadHardeningImpl Impl;
   bool Changed = Impl.run(MF);
@@ -227,9 +227,9 @@ bool X86SpeculativeLoadHardeningLegacyPass::runOnMachineFunction(
   return Changed;
 }
 
-char X86SpeculativeLoadHardeningLegacyPass::ID = 0;
+char X86SpeculativeLoadHardeningLegacy::ID = 0;
 
-void X86SpeculativeLoadHardeningLegacyPass::getAnalysisUsage(
+void X86SpeculativeLoadHardeningLegacy::getAnalysisUsage(
     AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -2282,11 +2282,11 @@ X86SpeculativeLoadHardeningPass::run(MachineFunction &MF,
                  : PreservedAnalyses::all();
 }
 
-INITIALIZE_PASS_BEGIN(X86SpeculativeLoadHardeningLegacyPass, PASS_KEY,
+INITIALIZE_PASS_BEGIN(X86SpeculativeLoadHardeningLegacy, PASS_KEY,
                       "X86 speculative load hardener", false, false)
-INITIALIZE_PASS_END(X86SpeculativeLoadHardeningLegacyPass, PASS_KEY,
+INITIALIZE_PASS_END(X86SpeculativeLoadHardeningLegacy, PASS_KEY,
                     "X86 speculative load hardener", false, false)
 
 FunctionPass *llvm::createX86SpeculativeLoadHardeningLegacyPass() {
-  return new X86SpeculativeLoadHardeningLegacyPass();
+  return new X86SpeculativeLoadHardeningLegacy();
 }

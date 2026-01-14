@@ -90,7 +90,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86DomainReassignmentLegacyPass(PR);
   initializeX86AvoidSFBLegacyPass(PR);
   initializeX86AvoidTrailingCallLegacyPassPass(PR);
-  initializeX86SpeculativeLoadHardeningLegacyPassPass(PR);
+  initializeX86SpeculativeLoadHardeningLegacyPass(PR);
   initializeX86SpeculativeExecutionSideEffectSuppressionPass(PR);
   initializeX86FlagsCopyLoweringLegacyPass(PR);
   initializeX86LoadValueInjectionLoadHardeningPassPass(PR);
