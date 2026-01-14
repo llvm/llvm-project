@@ -114,7 +114,9 @@ struct DilationsAndStrides {
 
 /// Given a linalg `op` this function returns DilationsAndStrides if it is a
 /// convolution op of type `ConvOpTy`, otherwise returns std::nullopt. The
-/// dilations and strides are inferred from the indexing maps.
+/// dilations and strides are inferred from the indexing maps. For ops like
+/// Conv1DOp, Conv2DOp and Conv3DOp that have no strides/dilations attributes,
+/// defaults of [1, ...] are returned for both.
 template <typename ConvOpTy>
 std::optional<DilationsAndStrides> matchConvolutionOpOfType(LinalgOp op);
 
