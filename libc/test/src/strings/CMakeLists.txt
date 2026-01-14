@@ -118,6 +118,11 @@ add_libc_test(
     wide_read_memory_test.cpp
   DEPENDS
     libc.src.string.strlen
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.mprotect
+    libc.src.sys.mman.munmap
+    libc.src.unistd.linux.getpagesize
+    libc.src.__support.CPP.array
 )
 
 add_libc_multi_impl_test(bcmp libc-strings-tests SRCS bcmp_test.cpp)

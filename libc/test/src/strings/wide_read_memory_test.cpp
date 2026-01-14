@@ -13,19 +13,22 @@
 // unreadable, the middle usable normally. By placing test data at the edges
 // between the middle page and the others, we can test for bad accesses.
 
-#include <assert.h>
 #include <cstddef>
 #include <type_traits>
 
-#include "src/unistd/getpagesize.h"
-#include "src/sys/mman/mmap.h"
-#include "src/sys/mman/munmap.h"
-#include "src/sys/mman/mprotect.h"
+#include "src/__support/CPP/array.h"
+#include "src/string/memory_utils/inline_memset.h"
 #include "src/string/string_utils.h"
+#include "src/sys/mman/mmap.h"
+#include "src/sys/mman/mprotect.h"
+#include "src/sys/mman/munmap.h"
+#include "src/unistd/getpagesize.h"
 #include "test/UnitTest/MemoryMatcher.h"
 #include "test/UnitTest/Test.h"
 
 namespace LIBC_NAMESPACE_DECL {
+
+using TwoKilobyteBuffer = cpp::array<char, 2048>;
 
 class LlvmLibcWideAccessMemoryTest : public testing::Test {
   char *page0_;
@@ -53,25 +56,25 @@ public:
   // under test accesses invalid memory.
   //
   // Func should test the function in question just as normal. Recommend making
-  // the amount of data just over 1.5k, which guarantees a wind-up, multiple
+  // the amount of test data at least 1.5k, which guarantees a wind-up, multiple
   // iterations of the inner loop, and a wind-down, even on systems with
   // 512-byte vectors. The termination condition, eg, end-of string or character
   // being searched for, should be near the end of the data.
   template <typename TestFunc>
-  void TestMemoryAccess(const std::vector<char> &buf, TestFunc func) {
+  void TestMemoryAccess(const TwoKilobyteBuffer &buf, TestFunc func) {
     // Run func on data near the start boundary of valid memory.
     for (unsigned long offset = 0;
-         offset < std::alignment_of<std::max_align_t>::value; ++offset) {
+         offset < std::alignment_of<max_align_t>::value; ++offset) {
       char *test_addr = page1_ + offset;
-      BasicMemCopy(test_addr, buf.data(), buf.size());
+      inline_memcpy(test_addr, buf.data(), buf.size());
       func(test_addr);
     }
     // Run func on data near the end boundary of valid memory.
     for (unsigned long offset = 0;
-         offset < std::alignment_of<std::max_align_t>::value; ++offset) {
+         offset < std::alignment_of<max_align_t>::value; ++offset) {
       char *test_addr = page2_ - buf.size() - offset - 1;
-      assert(test_addr + buf.size() < page2_);
-      BasicMemCopy(test_addr, buf.data(), buf.size());
+      ASSERT_LE(test_addr + buf.size(), page2_);
+      inline_memcpy(test_addr, buf.data(), buf.size());
       func(test_addr);
     }
   }
@@ -79,9 +82,10 @@ public:
 
 TEST_F(LlvmLibcWideAccessMemoryTest, StringLength) {
   // 1.5 k long vector of a's.
-  std::vector<char> buf(1536, 'a');
+  TwoKilobyteBuffer buf;
+  inline_memset(buf.data(), 'a', buf.size());
   // Make sure it is null terminated.
-  buf.push_back('\0');
+  buf[buf.size() - 1] = '\0';
   this->TestMemoryAccess(buf, [this, buf](const char *test_data) {
     // -1 for the null character.
     ASSERT_EQ(internal::string_length(test_data), size_t(buf.size() - 1));
