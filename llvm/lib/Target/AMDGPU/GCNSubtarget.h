@@ -166,6 +166,7 @@ protected:
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
   bool HasFP8ConversionInsts = false;
+  bool HasMcastLoadInsts = false;
   bool HasCubeInsts = false;
   bool HasLerpInst = false;
   bool HasSadInsts = false;
@@ -244,6 +245,7 @@ protected:
   bool HasRestrictedSOffset = false;
   bool Has64BitLiterals = false;
   bool Has1024AddressableVGPRs = false;
+  bool HasSetregVGPRMSBFixup = false;
   bool HasBitOp3Insts = false;
   bool HasTanhInsts = false;
   bool HasTensorCvtLutInsts = false;
@@ -872,6 +874,8 @@ public:
 
   bool hasFP8ConversionInsts() const { return HasFP8ConversionInsts; }
 
+  bool hasMcastLoadInsts() const { return HasMcastLoadInsts; }
+
   bool hasCubeInsts() const { return HasCubeInsts; }
 
   bool hasLerpInst() const { return HasLerpInst; }
@@ -1445,11 +1449,18 @@ public:
 
   bool has1024AddressableVGPRs() const { return Has1024AddressableVGPRs; }
 
+  bool hasSetregVGPRMSBFixup() const { return HasSetregVGPRMSBFixup; }
+
   bool hasMinimum3Maximum3PKF16() const {
     return HasMinimum3Maximum3PKF16;
   }
 
   bool hasTransposeLoadF4F6Insts() const { return HasTransposeLoadF4F6Insts; }
+
+  /// \returns true if the target supports expert scheduling mode 2 which relies
+  /// on the compiler to insert waits to avoid hazards between VMEM and VALU
+  /// instructions in some instances.
+  bool hasExpertSchedulingMode() const { return getGeneration() >= GFX12; }
 
   /// \returns true if the target has s_wait_xcnt insertion. Supported for
   /// GFX1250.

@@ -242,83 +242,86 @@ enum class PyGreedySimplifyRegionLevel : std::underlying_type_t<
 };
 
 /// Owning Wrapper around a GreedyRewriteDriverConfig.
-class PyGreedyRewriteDriverConfig {
+class PyGreedyRewriteConfig {
 public:
-  PyGreedyRewriteDriverConfig()
-      : config(mlirGreedyRewriteDriverConfigCreate()) {}
-  PyGreedyRewriteDriverConfig(PyGreedyRewriteDriverConfig &&other) noexcept
-      : config(other.config) {
-    other.config.ptr = nullptr;
+  PyGreedyRewriteConfig()
+      : config(mlirGreedyRewriteDriverConfigCreate().ptr,
+               PyGreedyRewriteConfig::customDeleter) {}
+  PyGreedyRewriteConfig(PyGreedyRewriteConfig &&other) noexcept
+      : config(std::move(other.config)) {}
+  PyGreedyRewriteConfig(const PyGreedyRewriteConfig &other) noexcept
+      : config(other.config) {}
+
+  MlirGreedyRewriteDriverConfig get() {
+    return MlirGreedyRewriteDriverConfig{config.get()};
   }
-  ~PyGreedyRewriteDriverConfig() {
-    if (config.ptr != nullptr)
-      mlirGreedyRewriteDriverConfigDestroy(config);
-  }
-  MlirGreedyRewriteDriverConfig get() { return config; }
 
   void setMaxIterations(int64_t maxIterations) {
-    mlirGreedyRewriteDriverConfigSetMaxIterations(config, maxIterations);
+    mlirGreedyRewriteDriverConfigSetMaxIterations(get(), maxIterations);
   }
 
   void setMaxNumRewrites(int64_t maxNumRewrites) {
-    mlirGreedyRewriteDriverConfigSetMaxNumRewrites(config, maxNumRewrites);
+    mlirGreedyRewriteDriverConfigSetMaxNumRewrites(get(), maxNumRewrites);
   }
 
   void setUseTopDownTraversal(bool useTopDownTraversal) {
-    mlirGreedyRewriteDriverConfigSetUseTopDownTraversal(config,
+    mlirGreedyRewriteDriverConfigSetUseTopDownTraversal(get(),
                                                         useTopDownTraversal);
   }
 
   void enableFolding(bool enable) {
-    mlirGreedyRewriteDriverConfigEnableFolding(config, enable);
+    mlirGreedyRewriteDriverConfigEnableFolding(get(), enable);
   }
 
   void setStrictness(PyGreedyRewriteStrictness strictness) {
     mlirGreedyRewriteDriverConfigSetStrictness(
-        config, static_cast<MlirGreedyRewriteStrictness>(strictness));
+        get(), static_cast<MlirGreedyRewriteStrictness>(strictness));
   }
 
   void setRegionSimplificationLevel(PyGreedySimplifyRegionLevel level) {
     mlirGreedyRewriteDriverConfigSetRegionSimplificationLevel(
-        config, static_cast<MlirGreedySimplifyRegionLevel>(level));
+        get(), static_cast<MlirGreedySimplifyRegionLevel>(level));
   }
 
   void enableConstantCSE(bool enable) {
-    mlirGreedyRewriteDriverConfigEnableConstantCSE(config, enable);
+    mlirGreedyRewriteDriverConfigEnableConstantCSE(get(), enable);
   }
 
   int64_t getMaxIterations() {
-    return mlirGreedyRewriteDriverConfigGetMaxIterations(config);
+    return mlirGreedyRewriteDriverConfigGetMaxIterations(get());
   }
 
   int64_t getMaxNumRewrites() {
-    return mlirGreedyRewriteDriverConfigGetMaxNumRewrites(config);
+    return mlirGreedyRewriteDriverConfigGetMaxNumRewrites(get());
   }
 
   bool getUseTopDownTraversal() {
-    return mlirGreedyRewriteDriverConfigGetUseTopDownTraversal(config);
+    return mlirGreedyRewriteDriverConfigGetUseTopDownTraversal(get());
   }
 
   bool isFoldingEnabled() {
-    return mlirGreedyRewriteDriverConfigIsFoldingEnabled(config);
+    return mlirGreedyRewriteDriverConfigIsFoldingEnabled(get());
   }
 
   PyGreedyRewriteStrictness getStrictness() {
     return static_cast<PyGreedyRewriteStrictness>(
-        mlirGreedyRewriteDriverConfigGetStrictness(config));
+        mlirGreedyRewriteDriverConfigGetStrictness(get()));
   }
 
   PyGreedySimplifyRegionLevel getRegionSimplificationLevel() {
     return static_cast<PyGreedySimplifyRegionLevel>(
-        mlirGreedyRewriteDriverConfigGetRegionSimplificationLevel(config));
+        mlirGreedyRewriteDriverConfigGetRegionSimplificationLevel(get()));
   }
 
   bool isConstantCSEEnabled() {
-    return mlirGreedyRewriteDriverConfigIsConstantCSEEnabled(config);
+    return mlirGreedyRewriteDriverConfigIsConstantCSEEnabled(get());
   }
 
 private:
-  MlirGreedyRewriteDriverConfig config;
+  std::shared_ptr<void> config;
+  static void customDeleter(void *c) {
+    mlirGreedyRewriteDriverConfigDestroy(MlirGreedyRewriteDriverConfig{c});
+  }
 };
 
 /// Create the `mlir.rewrite` here.
@@ -467,34 +470,32 @@ void populateRewriteSubmodule(nb::module_ &m) {
           nb::keep_alive<1, 3>());
 #endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH
 
-  nb::class_<PyGreedyRewriteDriverConfig>(m, "GreedyRewriteDriverConfig")
+  nb::class_<PyGreedyRewriteConfig>(m, "GreedyRewriteConfig")
       .def(nb::init<>(), "Create a greedy rewrite driver config with defaults")
-      .def_prop_rw("max_iterations",
-                   &PyGreedyRewriteDriverConfig::getMaxIterations,
-                   &PyGreedyRewriteDriverConfig::setMaxIterations,
+      .def_prop_rw("max_iterations", &PyGreedyRewriteConfig::getMaxIterations,
+                   &PyGreedyRewriteConfig::setMaxIterations,
                    "Maximum number of iterations")
       .def_prop_rw("max_num_rewrites",
-                   &PyGreedyRewriteDriverConfig::getMaxNumRewrites,
-                   &PyGreedyRewriteDriverConfig::setMaxNumRewrites,
+                   &PyGreedyRewriteConfig::getMaxNumRewrites,
+                   &PyGreedyRewriteConfig::setMaxNumRewrites,
                    "Maximum number of rewrites per iteration")
       .def_prop_rw("use_top_down_traversal",
-                   &PyGreedyRewriteDriverConfig::getUseTopDownTraversal,
-                   &PyGreedyRewriteDriverConfig::setUseTopDownTraversal,
+                   &PyGreedyRewriteConfig::getUseTopDownTraversal,
+                   &PyGreedyRewriteConfig::setUseTopDownTraversal,
                    "Whether to use top-down traversal")
-      .def_prop_rw("enable_folding",
-                   &PyGreedyRewriteDriverConfig::isFoldingEnabled,
-                   &PyGreedyRewriteDriverConfig::enableFolding,
+      .def_prop_rw("enable_folding", &PyGreedyRewriteConfig::isFoldingEnabled,
+                   &PyGreedyRewriteConfig::enableFolding,
                    "Enable or disable folding")
-      .def_prop_rw("strictness", &PyGreedyRewriteDriverConfig::getStrictness,
-                   &PyGreedyRewriteDriverConfig::setStrictness,
+      .def_prop_rw("strictness", &PyGreedyRewriteConfig::getStrictness,
+                   &PyGreedyRewriteConfig::setStrictness,
                    "Rewrite strictness level")
       .def_prop_rw("region_simplification_level",
-                   &PyGreedyRewriteDriverConfig::getRegionSimplificationLevel,
-                   &PyGreedyRewriteDriverConfig::setRegionSimplificationLevel,
+                   &PyGreedyRewriteConfig::getRegionSimplificationLevel,
+                   &PyGreedyRewriteConfig::setRegionSimplificationLevel,
                    "Region simplification level")
       .def_prop_rw("enable_constant_cse",
-                   &PyGreedyRewriteDriverConfig::isConstantCSEEnabled,
-                   &PyGreedyRewriteDriverConfig::enableConstantCSE,
+                   &PyGreedyRewriteConfig::isConstantCSEEnabled,
+                   &PyGreedyRewriteConfig::enableConstantCSE,
                    "Enable or disable constant CSE");
 
   nb::class_<PyFrozenRewritePatternSet>(m, "FrozenRewritePatternSet")
@@ -504,26 +505,31 @@ void populateRewriteSubmodule(nb::module_ &m) {
            &PyFrozenRewritePatternSet::createFromCapsule);
   m.def(
        "apply_patterns_and_fold_greedily",
-       [](PyModule &module, PyFrozenRewritePatternSet &set) {
-         auto status = mlirApplyPatternsAndFoldGreedily(
-             module.get(), set.get(), mlirGreedyRewriteDriverConfigCreate());
+       [](PyModule &module, PyFrozenRewritePatternSet &set,
+          std::optional<PyGreedyRewriteConfig> config) {
+         MlirLogicalResult status = mlirApplyPatternsAndFoldGreedily(
+             module.get(), set.get(),
+             config.has_value() ? config->get()
+                                : mlirGreedyRewriteDriverConfigCreate());
          if (mlirLogicalResultIsFailure(status))
            throw std::runtime_error("pattern application failed to converge");
        },
-       "module"_a, "set"_a,
+       "module"_a, "set"_a, "config"_a = nb::none(),
        "Applys the given patterns to the given module greedily while folding "
        "results.")
       .def(
           "apply_patterns_and_fold_greedily",
-          [](PyOperationBase &op, PyFrozenRewritePatternSet &set) {
-            auto status = mlirApplyPatternsAndFoldGreedilyWithOp(
+          [](PyOperationBase &op, PyFrozenRewritePatternSet &set,
+             std::optional<PyGreedyRewriteConfig> config) {
+            MlirLogicalResult status = mlirApplyPatternsAndFoldGreedilyWithOp(
                 op.getOperation(), set.get(),
-                mlirGreedyRewriteDriverConfigCreate());
+                config.has_value() ? config->get()
+                                   : mlirGreedyRewriteDriverConfigCreate());
             if (mlirLogicalResultIsFailure(status))
               throw std::runtime_error(
                   "pattern application failed to converge");
           },
-          "op"_a, "set"_a,
+          "op"_a, "set"_a, "config"_a = nb::none(),
           "Applys the given patterns to the given op greedily while folding "
           "results.")
       .def(

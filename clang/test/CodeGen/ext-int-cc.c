@@ -300,8 +300,6 @@ _BitInt(129) ReturnPassing5(void) { return 0; }
 // R600-NOT: define{{.*}} void @ReturnPassing5(ptr addrspace(5) noalias sret
 // ARC-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind inreg noalias writable sret
 // XCORE-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
-// RISCV64-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
-// RISCV32-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
 // WASM-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
 // SYSTEMZ-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
 // PPC64-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret

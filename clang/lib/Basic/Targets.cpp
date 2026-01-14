@@ -702,10 +702,17 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
         !Triple.isOSBinFormatWasm())
       return nullptr;
     switch (os) {
-      case llvm::Triple::WASI:
-      return std::make_unique<WASITargetInfo<WebAssembly32TargetInfo>>(Triple,
-                                                                       Opts);
-      case llvm::Triple::Emscripten:
+    case llvm::Triple::WASI: // Treat "wasi" as "wasip1" for now.
+    case llvm::Triple::WASIp1:
+      return std::make_unique<WASIP1TargetInfo<WebAssembly32TargetInfo>>(Triple,
+                                                                         Opts);
+    case llvm::Triple::WASIp2:
+      return std::make_unique<WASIP2TargetInfo<WebAssembly32TargetInfo>>(Triple,
+                                                                         Opts);
+    case llvm::Triple::WASIp3:
+      return std::make_unique<WASIP3TargetInfo<WebAssembly32TargetInfo>>(Triple,
+                                                                         Opts);
+    case llvm::Triple::Emscripten:
       return std::make_unique<EmscriptenTargetInfo<WebAssembly32TargetInfo>>(
           Triple, Opts);
 
@@ -724,10 +731,17 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
         !Triple.isOSBinFormatWasm())
       return nullptr;
     switch (os) {
-      case llvm::Triple::WASI:
-      return std::make_unique<WASITargetInfo<WebAssembly64TargetInfo>>(Triple,
-                                                                       Opts);
-      case llvm::Triple::Emscripten:
+    case llvm::Triple::WASI: // Treat "wasi" as "wasip1" for now.
+    case llvm::Triple::WASIp1:
+      return std::make_unique<WASIP1TargetInfo<WebAssembly64TargetInfo>>(Triple,
+                                                                         Opts);
+    case llvm::Triple::WASIp2:
+      return std::make_unique<WASIP2TargetInfo<WebAssembly64TargetInfo>>(Triple,
+                                                                         Opts);
+    case llvm::Triple::WASIp3:
+      return std::make_unique<WASIP3TargetInfo<WebAssembly64TargetInfo>>(Triple,
+                                                                         Opts);
+    case llvm::Triple::Emscripten:
       return std::make_unique<EmscriptenTargetInfo<WebAssembly64TargetInfo>>(
           Triple, Opts);
       case llvm::Triple::UnknownOS:

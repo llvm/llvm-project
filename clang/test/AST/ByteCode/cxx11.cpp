@@ -33,6 +33,10 @@ constexpr int b = b; // both-error {{must be initialized by a constant expressio
                                                       // both-note {{declared here}}
 
 
+  void func();
+  constexpr int (&fp4)() = (int(&)())func; // both-error {{constant expression}} \
+                                           // both-note {{reinterpret_cast}}
+
 struct S {
   int m;
 };
