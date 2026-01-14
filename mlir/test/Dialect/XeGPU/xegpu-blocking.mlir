@@ -353,6 +353,59 @@ gpu.module @test_kernel   {
 }
 
 // -----
+#l = #xegpu.layout<inst_data = [16]>
+gpu.module @test_kernel {
+  gpu.func @test_vector_constant_mask(%src: ui64, %dst: ui64) {
+    //CHECK: arith.constant dense<true> : vector<16xi1>
+    %mask = vector.constant_mask [32] {layout_result_0 = #l} : vector<32xi1>
+    %cst = arith.constant dense<[
+      0,   8,  16,  24,  32,  40,  48,  56,
+      64,  72,  80,  88,  96, 104, 112, 120,
+      128, 136, 144, 152, 160, 168, 176, 184,
+      192, 200, 208, 216, 224, 232, 240, 248
+    ]> : vector<32xindex>
+    %ld = xegpu.load %src[%cst], %mask {chunk_size = 1, layout = #l, l1_hint = #xegpu.cache_hint<cached>} : ui64, vector<32xindex>, vector<32xi1> -> vector<32xf32>
+    xegpu.store %ld, %dst[%cst], %mask {chunk_size = 1, layout = #l, l1_hint = #xegpu.cache_hint<cached>} : vector<32xf32>, ui64, vector<32xindex>, vector<32xi1>
+    gpu.return
+  }
+}
+
+// -----
+#l = #xegpu.layout<inst_data = [16]>
+gpu.module @test_kernel {
+  gpu.func @test_vector_create_mask(%src: ui64, %dst: ui64) {
+    %c16 = arith.constant 16 : index
+    //CHECK-COUNT-2: vector.create_mask {{.*}} : vector<16xi1>
+    %mask = vector.create_mask %c16 {layout_result_0 = #l} : vector<32xi1>
+    %cst = arith.constant dense<[
+      0,   8,  16,  24,  32,  40,  48,  56,
+      64,  72,  80,  88,  96, 104, 112, 120,
+      128, 136, 144, 152, 160, 168, 176, 184,
+      192, 200, 208, 216, 224, 232, 240, 248
+    ]> : vector<32xindex>
+    %ld = xegpu.load %src[%cst], %mask {chunk_size = 1, layout = #l, l1_hint = #xegpu.cache_hint<cached>} : ui64, vector<32xindex>, vector<32xi1> -> vector<32xf32>
+    xegpu.store %ld, %dst[%cst], %mask {chunk_size = 1, layout = #l, l1_hint = #xegpu.cache_hint<cached>} : vector<32xf32>, ui64, vector<32xindex>, vector<32xi1>
+    gpu.return
+  }
+}
+
+// -----
+#l = #xegpu.layout<inst_data = [16]>
+gpu.module @test_kernel {
+  gpu.func @test_vector_step(%src: ui64, %dst: ui64) {
+    %c16 = arith.constant 16 : index
+    //CHECK: [[cst:%.+]] = arith.constant dense<16> : vector<16xindex>
+    //CHECK: [[step:%.+]] = vector.step : vector<16xindex>
+    //CHECK: arith.addi [[step]], [[cst]] : vector<16xindex>
+    %step = vector.step {layout_result_0 = #l} : vector<32xindex>
+    %mask = vector.create_mask %c16 {layout_result_0 = #l} : vector<32xi1>
+    %ld = xegpu.load %src[%step], %mask {chunk_size = 1, layout = #l, l1_hint = #xegpu.cache_hint<cached>} : ui64, vector<32xindex>, vector<32xi1> -> vector<32xf32>
+    xegpu.store %ld, %dst[%step], %mask {chunk_size = 1, layout = #l, l1_hint = #xegpu.cache_hint<cached>} : vector<32xf32>, ui64, vector<32xindex>, vector<32xi1>
+    gpu.return
+  }
+}
+
+// -----
 
 gpu.module @test_kernel {
   // CHECK-LABEL: test_prefetch_load_store_update
