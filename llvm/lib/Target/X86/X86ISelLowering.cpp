@@ -53503,6 +53503,23 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Attempt to convert a (vXi1 bitcast(iX Mask)) mask before it might get split
+// by legalization.
+static SDValue canonicalizeBoolMask(unsigned Opcode, EVT VT, SDValue Mask,
+                                    const SDLoc &DL, SelectionDAG &DAG,
+                                    TargetLowering::DAGCombinerInfo &DCI,
+                                    const X86Subtarget &Subtarget) {
+  if (!DCI.isBeforeLegalizeOps() || Mask.getOpcode() != ISD::BITCAST ||
+      Mask.getScalarValueSizeInBits() != 1 || Subtarget.hasAVX512() ||
+      !DAG.getTargetLoweringInfo().isOperationLegalOrCustom(Opcode, VT))
+    return SDValue();
+
+  EVT ExtMaskVT = VT.changeVectorElementTypeToInteger();
+  assert(ExtMaskVT.bitsGT(Mask.getValueType()) && "Unexpected extension type");
+  return combineToExtendBoolVectorInReg(ISD::SIGN_EXTEND, DL, ExtMaskVT, Mask,
+                                        DAG, DCI, Subtarget);
+}
+
 /// If V is a build vector of boolean constants and exactly one of those
 /// constants is true, return the operand index of that true element.
 /// Otherwise, return -1.
@@ -53682,23 +53699,17 @@ static SDValue combineMaskedLoad(SDNode *N, SelectionDAG &DAG,
   EVT VT = Mld->getValueType(0);
   SDValue Mask = Mld->getMask();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDLoc DL(N);
 
   // Attempt to convert a (vXi1 bitcast(iX Mask)) mask before it might get split
   // by legalization.
-  if (DCI.isBeforeLegalizeOps() && Mask.getOpcode() == ISD::BITCAST &&
-      Mask.getScalarValueSizeInBits() == 1 && !Subtarget.hasAVX512() &&
-      TLI.isOperationLegalOrCustom(ISD::MLOAD, VT)) {
-    SDLoc DL(N);
-    EVT MaskVT = Mask.getValueType();
-    EVT ExtMaskVT = VT.changeVectorElementTypeToInteger();
-    if (SDValue NewMask = combineToExtendBoolVectorInReg(
-            ISD::SIGN_EXTEND, DL, ExtMaskVT, Mask, DAG, DCI, Subtarget)) {
-      NewMask = DAG.getNode(ISD::TRUNCATE, DL, MaskVT, NewMask);
-      return DAG.getMaskedLoad(
-          VT, DL, Mld->getChain(), Mld->getBasePtr(), Mld->getOffset(), NewMask,
-          Mld->getPassThru(), Mld->getMemoryVT(), Mld->getMemOperand(),
-          Mld->getAddressingMode(), Mld->getExtensionType());
-    }
+  if (SDValue NewMask =
+          canonicalizeBoolMask(ISD::MLOAD, VT, Mask, DL, DAG, DCI, Subtarget)) {
+    NewMask = DAG.getNode(ISD::TRUNCATE, DL, Mask.getValueType(), NewMask);
+    return DAG.getMaskedLoad(VT, DL, Mld->getChain(), Mld->getBasePtr(),
+                             Mld->getOffset(), NewMask, Mld->getPassThru(),
+                             Mld->getMemoryVT(), Mld->getMemOperand(),
+                             Mld->getAddressingMode(), Mld->getExtensionType());
   }
 
   // If the mask value has been legalized to a non-boolean vector, try to
@@ -53713,8 +53724,8 @@ static SDValue combineMaskedLoad(SDNode *N, SelectionDAG &DAG,
     if (SDValue NewMask =
             TLI.SimplifyMultipleUseDemandedBits(Mask, DemandedBits, DAG))
       return DAG.getMaskedLoad(
-          VT, SDLoc(N), Mld->getChain(), Mld->getBasePtr(), Mld->getOffset(),
-          NewMask, Mld->getPassThru(), Mld->getMemoryVT(), Mld->getMemOperand(),
+          VT, DL, Mld->getChain(), Mld->getBasePtr(), Mld->getOffset(), NewMask,
+          Mld->getPassThru(), Mld->getMemoryVT(), Mld->getMemOperand(),
           Mld->getAddressingMode(), Mld->getExtensionType());
   }
 
@@ -53806,19 +53817,13 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
 
   // Attempt to convert a (vXi1 bitcast(iX Mask)) mask before it might get split
   // by legalization.
-  if (DCI.isBeforeLegalizeOps() && Mask.getOpcode() == ISD::BITCAST &&
-      Mask.getScalarValueSizeInBits() == 1 && !Subtarget.hasAVX512() &&
-      TLI.isOperationLegalOrCustom(ISD::MSTORE, VT)) {
-    EVT MaskVT = Mask.getValueType();
-    EVT ExtMaskVT = VT.changeVectorElementTypeToInteger();
-    if (SDValue NewMask = combineToExtendBoolVectorInReg(
-            ISD::SIGN_EXTEND, DL, ExtMaskVT, Mask, DAG, DCI, Subtarget)) {
-      NewMask = DAG.getNode(ISD::TRUNCATE, DL, MaskVT, NewMask);
-      return DAG.getMaskedStore(Mst->getChain(), SDLoc(N), Mst->getValue(),
-                                Mst->getBasePtr(), Mst->getOffset(), NewMask,
-                                Mst->getMemoryVT(), Mst->getMemOperand(),
-                                Mst->getAddressingMode());
-    }
+  if (SDValue NewMask = canonicalizeBoolMask(ISD::MSTORE, VT, Mask, DL, DAG,
+                                             DCI, Subtarget)) {
+    NewMask = DAG.getNode(ISD::TRUNCATE, DL, Mask.getValueType(), NewMask);
+    return DAG.getMaskedStore(Mst->getChain(), SDLoc(N), Mst->getValue(),
+                              Mst->getBasePtr(), Mst->getOffset(), NewMask,
+                              Mst->getMemoryVT(), Mst->getMemOperand(),
+                              Mst->getAddressingMode());
   }
 
   // If the mask value has been legalized to a non-boolean vector, try to
@@ -57595,16 +57600,11 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
 
     // Attempt to convert a (vXi1 bitcast(iX Mask)) mask before it might get
     // split by legalization.
-    if (GorS->getOpcode() == ISD::MGATHER && Mask.getOpcode() == ISD::BITCAST &&
-        Mask.getScalarValueSizeInBits() == 1 && !Subtarget.hasAVX512() &&
-        TLI.isOperationLegalOrCustom(ISD::MGATHER, N->getValueType(0))) {
-      EVT MaskVT = Mask.getValueType();
-      EVT ExtMaskVT = N->getValueType(0).changeVectorElementTypeToInteger();
-      if (SDValue ExtMask = combineToExtendBoolVectorInReg(
-              ISD::SIGN_EXTEND, DL, ExtMaskVT, Mask, DAG, DCI, Subtarget)) {
-        ExtMask = DAG.getNode(ISD::TRUNCATE, DL, MaskVT, ExtMask);
-        return rebuildGatherScatter(GorS, Index, Base, ExtMask, Scale, DAG);
-      }
+    if (SDValue NewMask =
+            canonicalizeBoolMask(GorS->getOpcode(), N->getValueType(0), Mask,
+                                 DL, DAG, DCI, Subtarget)) {
+      NewMask = DAG.getNode(ISD::TRUNCATE, DL, Mask.getValueType(), NewMask);
+      return rebuildGatherScatter(GorS, Index, Base, NewMask, Scale, DAG);
     }
   }
 
