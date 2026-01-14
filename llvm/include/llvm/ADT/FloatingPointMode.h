@@ -164,6 +164,23 @@ struct DenormalMode {
            Output == DenormalModeKind::PositiveZero;
   }
 
+  /// Return true if output denormals may be implicitly treated as 0.
+  constexpr bool outputsMayBeZero() const {
+    return outputsAreZero() || Output == DenormalMode::Dynamic;
+  }
+
+  /// Return true if input denormals could be flushed to +0.
+  constexpr bool inputsMayBePositiveZero() const {
+    return Input == DenormalMode::PositiveZero ||
+           Input == DenormalMode::Dynamic;
+  }
+
+  /// Return true if output denormals could be flushed to +0.
+  constexpr bool outputsMayBePositiveZero() const {
+    return Output == DenormalMode::PositiveZero ||
+           Output == DenormalMode::Dynamic;
+  }
+
   /// Get the effective denormal mode if the mode if this caller calls into a
   /// function with \p Callee. This promotes dynamic modes to the mode of the
   /// caller.
@@ -284,6 +301,40 @@ LLVM_ABI FPClassTest unknown_sign(FPClassTest Mask);
 
 /// Write a human readable form of \p Mask to \p OS
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, FPClassTest Mask);
+
+/// Returns true if all values in \p LHS must be less than or equal to those in
+/// \p RHS. That is, the comparison `fcmp ogt LHS, RHS` will always return
+/// false.
+///
+/// If \p OrderedZeroSign is true, -0 will be treated as ordered less than +0,
+/// unlike fcmp.
+LLVM_ABI bool cannotOrderStrictlyGreater(FPClassTest LHS, FPClassTest RHS,
+                                         bool OrderedZeroSign = false);
+
+/// Returns true if all values in \p LHS must be less than those in \p RHS. That
+/// is, the comparison `fcmp oge LHS, RHS` will always return false.
+//
+// If \p OrderedZeroSign is true, -0 will be treated as ordered less than +0,
+// unlike fcmp.
+LLVM_ABI bool cannotOrderStrictlyGreaterEq(FPClassTest LHS, FPClassTest RHS,
+                                           bool OrderedZeroSign = false);
+
+/// Returns true if all values in \p LHS must be greater than or equal to those
+/// in \p RHS. That is, the comparison `fcmp olt LHS, RHS` will always return
+/// false.
+///
+/// If \p OrderedZeroSign is true, -0 will be treated as ordered less than +0,
+/// unlike fcmp.
+LLVM_ABI bool cannotOrderStrictlyLess(FPClassTest LHS, FPClassTest RHS,
+                                      bool OrderedZeroSign = false);
+
+/// Returns true if all values in \p LHS must be greater than to those in \p
+/// RHS. That is, the comparison `fcmp ole LHS, RHS` will always return false.
+///
+/// If \p OrderedZeroSign is true, -0 will be treated as ordered less than +0,
+/// unlike fcmp.
+LLVM_ABI bool cannotOrderStrictlyLessEq(FPClassTest LHS, FPClassTest RHS,
+                                        bool OrderedZeroSign = false);
 
 } // namespace llvm
 

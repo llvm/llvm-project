@@ -395,20 +395,20 @@ define i64 @test6(<4 x i64> %x, <4 x i64> %y, i64 %n) {
 define <4 x i32> @test_subvec_store() {
 ; CHECK-LABEL: @test_subvec_store(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_0_VECBLEND:%.*]] = select <4 x i1> <i1 true, i1 true, i1 false, i1 false>, <4 x i32> <i32 0, i32 0, i32 undef, i32 undef>, <4 x i32> undef
-; CHECK-NEXT:    [[A_4_VECBLEND:%.*]] = select <4 x i1> <i1 false, i1 true, i1 true, i1 false>, <4 x i32> <i32 undef, i32 1, i32 1, i32 undef>, <4 x i32> [[A_0_VECBLEND]]
-; CHECK-NEXT:    [[A_8_VECBLEND:%.*]] = select <4 x i1> <i1 false, i1 false, i1 true, i1 true>, <4 x i32> <i32 undef, i32 undef, i32 2, i32 2>, <4 x i32> [[A_4_VECBLEND]]
+; CHECK-NEXT:    [[A_0_VECBLEND:%.*]] = shufflevector <4 x i32> <i32 0, i32 0, i32 undef, i32 undef>, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    [[A_4_VECBLEND:%.*]] = shufflevector <4 x i32> <i32 undef, i32 1, i32 1, i32 undef>, <4 x i32> [[A_0_VECBLEND]], <4 x i32> <i32 4, i32 1, i32 2, i32 7>
+; CHECK-NEXT:    [[A_8_VECBLEND:%.*]] = shufflevector <4 x i32> <i32 undef, i32 undef, i32 2, i32 2>, <4 x i32> [[A_4_VECBLEND]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    [[A_12_VEC_INSERT:%.*]] = insertelement <4 x i32> [[A_8_VECBLEND]], i32 3, i32 3
 ; CHECK-NEXT:    ret <4 x i32> [[A_12_VEC_INSERT]]
 ;
 ; DEBUG-LABEL: @test_subvec_store(
 ; DEBUG-NEXT:  entry:
 ; DEBUG-NEXT:      #dbg_value(ptr poison, [[META178:![0-9]+]], !DIExpression(), [[META184:![0-9]+]])
-; DEBUG-NEXT:    [[A_0_VECBLEND:%.*]] = select <4 x i1> <i1 true, i1 true, i1 false, i1 false>, <4 x i32> <i32 0, i32 0, i32 undef, i32 undef>, <4 x i32> undef, !dbg [[DBG185:![0-9]+]]
+; DEBUG-NEXT:    [[A_0_VECBLEND:%.*]] = shufflevector <4 x i32> <i32 0, i32 0, i32 undef, i32 undef>, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 6, i32 7>, !dbg [[DBG185:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META179:![0-9]+]], !DIExpression(), [[META186:![0-9]+]])
-; DEBUG-NEXT:    [[A_4_VECBLEND:%.*]] = select <4 x i1> <i1 false, i1 true, i1 true, i1 false>, <4 x i32> <i32 undef, i32 1, i32 1, i32 undef>, <4 x i32> [[A_0_VECBLEND]], !dbg [[DBG187:![0-9]+]]
+; DEBUG-NEXT:    [[A_4_VECBLEND:%.*]] = shufflevector <4 x i32> <i32 undef, i32 1, i32 1, i32 undef>, <4 x i32> [[A_0_VECBLEND]], <4 x i32> <i32 4, i32 1, i32 2, i32 7>, !dbg [[DBG187:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META180:![0-9]+]], !DIExpression(), [[META188:![0-9]+]])
-; DEBUG-NEXT:    [[A_8_VECBLEND:%.*]] = select <4 x i1> <i1 false, i1 false, i1 true, i1 true>, <4 x i32> <i32 undef, i32 undef, i32 2, i32 2>, <4 x i32> [[A_4_VECBLEND]], !dbg [[DBG189:![0-9]+]]
+; DEBUG-NEXT:    [[A_8_VECBLEND:%.*]] = shufflevector <4 x i32> <i32 undef, i32 undef, i32 2, i32 2>, <4 x i32> [[A_4_VECBLEND]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>, !dbg [[DBG189:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META181:![0-9]+]], !DIExpression(), [[META190:![0-9]+]])
 ; DEBUG-NEXT:    [[A_12_VEC_INSERT:%.*]] = insertelement <4 x i32> [[A_8_VECBLEND]], i32 3, i32 3, !dbg [[DBG191:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(<4 x i32> [[A_12_VEC_INSERT]], [[META182:![0-9]+]], !DIExpression(), [[META192:![0-9]+]])
@@ -482,20 +482,20 @@ entry:
 define <4 x float> @test_subvec_memset() {
 ; CHECK-LABEL: @test_subvec_memset(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_0_VECBLEND:%.*]] = select <4 x i1> <i1 true, i1 true, i1 false, i1 false>, <4 x float> <float 0.000000e+00, float 0.000000e+00, float undef, float undef>, <4 x float> undef
-; CHECK-NEXT:    [[A_4_VECBLEND:%.*]] = select <4 x i1> <i1 false, i1 true, i1 true, i1 false>, <4 x float> <float undef, float 0x3820202020000000, float 0x3820202020000000, float undef>, <4 x float> [[A_0_VECBLEND]]
-; CHECK-NEXT:    [[A_8_VECBLEND:%.*]] = select <4 x i1> <i1 false, i1 false, i1 true, i1 true>, <4 x float> <float undef, float undef, float 0x3860606060000000, float 0x3860606060000000>, <4 x float> [[A_4_VECBLEND]]
+; CHECK-NEXT:    [[A_0_VECBLEND:%.*]] = shufflevector <4 x float> <float 0.000000e+00, float 0.000000e+00, float undef, float undef>, <4 x float> undef, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    [[A_4_VECBLEND:%.*]] = shufflevector <4 x float> <float undef, float 0x3820202020000000, float 0x3820202020000000, float undef>, <4 x float> [[A_0_VECBLEND]], <4 x i32> <i32 4, i32 1, i32 2, i32 7>
+; CHECK-NEXT:    [[A_8_VECBLEND:%.*]] = shufflevector <4 x float> <float undef, float undef, float 0x3860606060000000, float 0x3860606060000000>, <4 x float> [[A_4_VECBLEND]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    [[A_12_VEC_INSERT:%.*]] = insertelement <4 x float> [[A_8_VECBLEND]], float 0x38E0E0E0E0000000, i32 3
 ; CHECK-NEXT:    ret <4 x float> [[A_12_VEC_INSERT]]
 ;
 ; DEBUG-LABEL: @test_subvec_memset(
 ; DEBUG-NEXT:  entry:
 ; DEBUG-NEXT:      #dbg_value(ptr poison, [[META215:![0-9]+]], !DIExpression(), [[META220:![0-9]+]])
-; DEBUG-NEXT:    [[A_0_VECBLEND:%.*]] = select <4 x i1> <i1 true, i1 true, i1 false, i1 false>, <4 x float> <float 0.000000e+00, float 0.000000e+00, float undef, float undef>, <4 x float> undef, !dbg [[DBG221:![0-9]+]]
+; DEBUG-NEXT:    [[A_0_VECBLEND:%.*]] = shufflevector <4 x float> <float 0.000000e+00, float 0.000000e+00, float undef, float undef>, <4 x float> undef, <4 x i32> <i32 0, i32 1, i32 6, i32 7>, !dbg [[DBG221:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META216:![0-9]+]], !DIExpression(), [[META222:![0-9]+]])
-; DEBUG-NEXT:    [[A_4_VECBLEND:%.*]] = select <4 x i1> <i1 false, i1 true, i1 true, i1 false>, <4 x float> <float undef, float 0x3820202020000000, float 0x3820202020000000, float undef>, <4 x float> [[A_0_VECBLEND]], !dbg [[DBG223:![0-9]+]]
+; DEBUG-NEXT:    [[A_4_VECBLEND:%.*]] = shufflevector <4 x float> <float undef, float 0x3820202020000000, float 0x3820202020000000, float undef>, <4 x float> [[A_0_VECBLEND]], <4 x i32> <i32 4, i32 1, i32 2, i32 7>, !dbg [[DBG223:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META217:![0-9]+]], !DIExpression(), [[META224:![0-9]+]])
-; DEBUG-NEXT:    [[A_8_VECBLEND:%.*]] = select <4 x i1> <i1 false, i1 false, i1 true, i1 true>, <4 x float> <float undef, float undef, float 0x3860606060000000, float 0x3860606060000000>, <4 x float> [[A_4_VECBLEND]], !dbg [[DBG225:![0-9]+]]
+; DEBUG-NEXT:    [[A_8_VECBLEND:%.*]] = shufflevector <4 x float> <float undef, float undef, float 0x3860606060000000, float 0x3860606060000000>, <4 x float> [[A_4_VECBLEND]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>, !dbg [[DBG225:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META218:![0-9]+]], !DIExpression(), [[META226:![0-9]+]])
 ; DEBUG-NEXT:    [[A_12_VEC_INSERT:%.*]] = insertelement <4 x float> [[A_8_VECBLEND]], float 0x38E0E0E0E0000000, i32 3, !dbg [[DBG227:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(<4 x float> [[A_12_VEC_INSERT]], [[META219:![0-9]+]], !DIExpression(), [[META228:![0-9]+]])
@@ -525,13 +525,13 @@ define <4 x float> @test_subvec_memcpy(ptr %x, ptr %y, ptr %z, ptr %f, ptr %out)
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_0_COPYLOAD:%.*]] = load <2 x float>, ptr [[X:%.*]], align 1
 ; CHECK-NEXT:    [[A_0_VEC_EXPAND:%.*]] = shufflevector <2 x float> [[A_0_COPYLOAD]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[A_0_VECBLEND:%.*]] = select <4 x i1> <i1 true, i1 true, i1 false, i1 false>, <4 x float> [[A_0_VEC_EXPAND]], <4 x float> undef
+; CHECK-NEXT:    [[A_0_VECBLEND:%.*]] = shufflevector <4 x float> [[A_0_VEC_EXPAND]], <4 x float> undef, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
 ; CHECK-NEXT:    [[A_4_COPYLOAD:%.*]] = load <2 x float>, ptr [[Y:%.*]], align 1
 ; CHECK-NEXT:    [[A_4_VEC_EXPAND:%.*]] = shufflevector <2 x float> [[A_4_COPYLOAD]], <2 x float> poison, <4 x i32> <i32 poison, i32 0, i32 1, i32 poison>
-; CHECK-NEXT:    [[A_4_VECBLEND:%.*]] = select <4 x i1> <i1 false, i1 true, i1 true, i1 false>, <4 x float> [[A_4_VEC_EXPAND]], <4 x float> [[A_0_VECBLEND]]
+; CHECK-NEXT:    [[A_4_VECBLEND:%.*]] = shufflevector <4 x float> [[A_4_VEC_EXPAND]], <4 x float> [[A_0_VECBLEND]], <4 x i32> <i32 4, i32 1, i32 2, i32 7>
 ; CHECK-NEXT:    [[A_8_COPYLOAD:%.*]] = load <2 x float>, ptr [[Z:%.*]], align 1
 ; CHECK-NEXT:    [[A_8_VEC_EXPAND:%.*]] = shufflevector <2 x float> [[A_8_COPYLOAD]], <2 x float> poison, <4 x i32> <i32 poison, i32 poison, i32 0, i32 1>
-; CHECK-NEXT:    [[A_8_VECBLEND:%.*]] = select <4 x i1> <i1 false, i1 false, i1 true, i1 true>, <4 x float> [[A_8_VEC_EXPAND]], <4 x float> [[A_4_VECBLEND]]
+; CHECK-NEXT:    [[A_8_VECBLEND:%.*]] = shufflevector <4 x float> [[A_8_VEC_EXPAND]], <4 x float> [[A_4_VECBLEND]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    [[A_12_COPYLOAD:%.*]] = load float, ptr [[F:%.*]], align 1
 ; CHECK-NEXT:    [[A_12_VEC_INSERT:%.*]] = insertelement <4 x float> [[A_8_VECBLEND]], float [[A_12_COPYLOAD]], i32 3
 ; CHECK-NEXT:    [[A_8_VEC_EXTRACT:%.*]] = shufflevector <4 x float> [[A_12_VEC_INSERT]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
@@ -543,15 +543,15 @@ define <4 x float> @test_subvec_memcpy(ptr %x, ptr %y, ptr %z, ptr %f, ptr %out)
 ; DEBUG-NEXT:      #dbg_value(ptr poison, [[META232:![0-9]+]], !DIExpression(), [[META237:![0-9]+]])
 ; DEBUG-NEXT:    [[A_0_COPYLOAD:%.*]] = load <2 x float>, ptr [[X:%.*]], align 1, !dbg [[DBG238:![0-9]+]]
 ; DEBUG-NEXT:    [[A_0_VEC_EXPAND:%.*]] = shufflevector <2 x float> [[A_0_COPYLOAD]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>, !dbg [[DBG238]]
-; DEBUG-NEXT:    [[A_0_VECBLEND:%.*]] = select <4 x i1> <i1 true, i1 true, i1 false, i1 false>, <4 x float> [[A_0_VEC_EXPAND]], <4 x float> undef, !dbg [[DBG238]]
+; DEBUG-NEXT:    [[A_0_VECBLEND:%.*]] = shufflevector <4 x float> [[A_0_VEC_EXPAND]], <4 x float> undef, <4 x i32> <i32 0, i32 1, i32 6, i32 7>, !dbg [[DBG238]]
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META233:![0-9]+]], !DIExpression(), [[META239:![0-9]+]])
 ; DEBUG-NEXT:    [[A_4_COPYLOAD:%.*]] = load <2 x float>, ptr [[Y:%.*]], align 1, !dbg [[DBG240:![0-9]+]]
 ; DEBUG-NEXT:    [[A_4_VEC_EXPAND:%.*]] = shufflevector <2 x float> [[A_4_COPYLOAD]], <2 x float> poison, <4 x i32> <i32 poison, i32 0, i32 1, i32 poison>, !dbg [[DBG240]]
-; DEBUG-NEXT:    [[A_4_VECBLEND:%.*]] = select <4 x i1> <i1 false, i1 true, i1 true, i1 false>, <4 x float> [[A_4_VEC_EXPAND]], <4 x float> [[A_0_VECBLEND]], !dbg [[DBG240]]
+; DEBUG-NEXT:    [[A_4_VECBLEND:%.*]] = shufflevector <4 x float> [[A_4_VEC_EXPAND]], <4 x float> [[A_0_VECBLEND]], <4 x i32> <i32 4, i32 1, i32 2, i32 7>, !dbg [[DBG240]]
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META234:![0-9]+]], !DIExpression(), [[META241:![0-9]+]])
 ; DEBUG-NEXT:    [[A_8_COPYLOAD:%.*]] = load <2 x float>, ptr [[Z:%.*]], align 1, !dbg [[DBG242:![0-9]+]]
 ; DEBUG-NEXT:    [[A_8_VEC_EXPAND:%.*]] = shufflevector <2 x float> [[A_8_COPYLOAD]], <2 x float> poison, <4 x i32> <i32 poison, i32 poison, i32 0, i32 1>, !dbg [[DBG242]]
-; DEBUG-NEXT:    [[A_8_VECBLEND:%.*]] = select <4 x i1> <i1 false, i1 false, i1 true, i1 true>, <4 x float> [[A_8_VEC_EXPAND]], <4 x float> [[A_4_VECBLEND]], !dbg [[DBG242]]
+; DEBUG-NEXT:    [[A_8_VECBLEND:%.*]] = shufflevector <4 x float> [[A_8_VEC_EXPAND]], <4 x float> [[A_4_VECBLEND]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>, !dbg [[DBG242]]
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META235:![0-9]+]], !DIExpression(), [[META243:![0-9]+]])
 ; DEBUG-NEXT:    [[A_12_COPYLOAD:%.*]] = load float, ptr [[F:%.*]], align 1, !dbg [[DBG244:![0-9]+]]
 ; DEBUG-NEXT:    [[A_12_VEC_INSERT:%.*]] = insertelement <4 x float> [[A_8_VECBLEND]], float [[A_12_COPYLOAD]], i32 3, !dbg [[DBG244]]
@@ -1258,7 +1258,7 @@ define <4 x i32> @ptrLoadStoreTys(ptr %init, i32 %val2) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[VAL0]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64 [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    [[OBJ_0_VEC_EXPAND:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[OBJ_0_VECBLEND:%.*]] = select <4 x i1> <i1 true, i1 true, i1 false, i1 false>, <4 x i32> [[OBJ_0_VEC_EXPAND]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[OBJ_0_VECBLEND:%.*]] = shufflevector <4 x i32> [[OBJ_0_VEC_EXPAND]], <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
 ; CHECK-NEXT:    [[OBJ_8_VEC_INSERT:%.*]] = insertelement <4 x i32> [[OBJ_0_VECBLEND]], i32 [[VAL2:%.*]], i32 2
 ; CHECK-NEXT:    [[OBJ_12_VEC_INSERT:%.*]] = insertelement <4 x i32> [[OBJ_8_VEC_INSERT]], i32 131072, i32 3
 ; CHECK-NEXT:    ret <4 x i32> [[OBJ_12_VEC_INSERT]]
@@ -1270,7 +1270,7 @@ define <4 x i32> @ptrLoadStoreTys(ptr %init, i32 %val2) {
 ; DEBUG-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[VAL0]] to i64, !dbg [[DBG494:![0-9]+]]
 ; DEBUG-NEXT:    [[TMP2:%.*]] = bitcast i64 [[TMP1]] to <2 x i32>, !dbg [[DBG494]]
 ; DEBUG-NEXT:    [[OBJ_0_VEC_EXPAND:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>, !dbg [[DBG494]]
-; DEBUG-NEXT:    [[OBJ_0_VECBLEND:%.*]] = select <4 x i1> <i1 true, i1 true, i1 false, i1 false>, <4 x i32> [[OBJ_0_VEC_EXPAND]], <4 x i32> zeroinitializer, !dbg [[DBG494]]
+; DEBUG-NEXT:    [[OBJ_0_VECBLEND:%.*]] = shufflevector <4 x i32> [[OBJ_0_VEC_EXPAND]], <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 6, i32 7>, !dbg [[DBG494]]
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META489:![0-9]+]], !DIExpression(), [[META495:![0-9]+]])
 ; DEBUG-NEXT:    [[OBJ_8_VEC_INSERT:%.*]] = insertelement <4 x i32> [[OBJ_0_VECBLEND]], i32 [[VAL2:%.*]], i32 2, !dbg [[DBG496:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META490:![0-9]+]], !DIExpression(), [[META497:![0-9]+]])
@@ -1338,7 +1338,7 @@ define <4 x i32> @ptrLoadStoreTysAS3(ptr %init, i32 %val2) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[VAL0]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64 [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    [[OBJ_0_VEC_EXPAND:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[OBJ_0_VECBLEND:%.*]] = select <4 x i1> <i1 true, i1 true, i1 false, i1 false>, <4 x i32> [[OBJ_0_VEC_EXPAND]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[OBJ_0_VECBLEND:%.*]] = shufflevector <4 x i32> [[OBJ_0_VEC_EXPAND]], <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
 ; CHECK-NEXT:    [[OBJ_8_VEC_INSERT:%.*]] = insertelement <4 x i32> [[OBJ_0_VECBLEND]], i32 [[VAL2:%.*]], i32 2
 ; CHECK-NEXT:    [[OBJ_12_VEC_INSERT:%.*]] = insertelement <4 x i32> [[OBJ_8_VEC_INSERT]], i32 131072, i32 3
 ; CHECK-NEXT:    ret <4 x i32> [[OBJ_12_VEC_INSERT]]
@@ -1350,7 +1350,7 @@ define <4 x i32> @ptrLoadStoreTysAS3(ptr %init, i32 %val2) {
 ; DEBUG-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[VAL0]] to i64, !dbg [[DBG527:![0-9]+]]
 ; DEBUG-NEXT:    [[TMP2:%.*]] = bitcast i64 [[TMP1]] to <2 x i32>, !dbg [[DBG527]]
 ; DEBUG-NEXT:    [[OBJ_0_VEC_EXPAND:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>, !dbg [[DBG527]]
-; DEBUG-NEXT:    [[OBJ_0_VECBLEND:%.*]] = select <4 x i1> <i1 true, i1 true, i1 false, i1 false>, <4 x i32> [[OBJ_0_VEC_EXPAND]], <4 x i32> zeroinitializer, !dbg [[DBG527]]
+; DEBUG-NEXT:    [[OBJ_0_VECBLEND:%.*]] = shufflevector <4 x i32> [[OBJ_0_VEC_EXPAND]], <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 6, i32 7>, !dbg [[DBG527]]
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META522:![0-9]+]], !DIExpression(), [[META528:![0-9]+]])
 ; DEBUG-NEXT:    [[OBJ_8_VEC_INSERT:%.*]] = insertelement <4 x i32> [[OBJ_0_VECBLEND]], i32 [[VAL2:%.*]], i32 2, !dbg [[DBG529:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META523:![0-9]+]], !DIExpression(), [[META530:![0-9]+]])
