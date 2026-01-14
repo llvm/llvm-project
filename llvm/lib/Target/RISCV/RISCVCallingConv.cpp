@@ -246,7 +246,7 @@ static bool CC_RISCVAssign2XLen(unsigned XLen, CCState &State, CCValAssign VA1,
   if (MCRegister Reg = State.AllocateReg(ArgGPRs)) {
     // At least one half can be passed via register.
     State.addLoc(CCValAssign::getReg(VA1.getValNo(), VA1.getValVT(), Reg,
-                                     VA1.getLocVT(), CCValAssign::Full));
+                                     VA1.getValVT(), CCValAssign::Full));
   } else {
     // Both halves must be passed on the stack, with proper alignment.
     // TODO: To be compatible with GCC's behaviors, we force them to have 4-byte
@@ -257,22 +257,22 @@ static bool CC_RISCVAssign2XLen(unsigned XLen, CCState &State, CCValAssign VA1,
     State.addLoc(
         CCValAssign::getMem(VA1.getValNo(), VA1.getValVT(),
                             State.AllocateStack(XLenInBytes, StackAlign),
-                            VA1.getLocVT(), CCValAssign::Full));
+                            VA1.getValVT(), CCValAssign::Full));
     State.addLoc(CCValAssign::getMem(
         ValNo2, ValVT2, State.AllocateStack(XLenInBytes, Align(XLenInBytes)),
-        LocVT2, CCValAssign::Full));
+        ValVT2, CCValAssign::Full));
     return false;
   }
 
   if (MCRegister Reg = State.AllocateReg(ArgGPRs)) {
     // The second half can also be passed via register.
     State.addLoc(
-        CCValAssign::getReg(ValNo2, ValVT2, Reg, LocVT2, CCValAssign::Full));
+        CCValAssign::getReg(ValNo2, ValVT2, Reg, ValVT2, CCValAssign::Full));
   } else {
     // The second half is passed via the stack, without additional alignment.
     State.addLoc(CCValAssign::getMem(
         ValNo2, ValVT2, State.AllocateStack(XLenInBytes, Align(XLenInBytes)),
-        LocVT2, CCValAssign::Full));
+        ValVT2, CCValAssign::Full));
   }
 
   return false;
@@ -358,7 +358,8 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
 
   // Any return value split in to more than two values can't be returned
   // directly. Vectors are returned via the available vector registers.
-  if (!LocVT.isVector() && IsRet && ValNo > 1)
+  if ((!LocVT.isVector() || Subtarget.isPExtPackedType(ValVT)) && IsRet &&
+      ValNo > 1)
     return true;
 
   // UseGPRForF16_F32 if targeting one of the soft-float ABIs, if passing a
@@ -513,7 +514,8 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
   // Split arguments might be passed indirectly, so keep track of the pending
   // values. Split vectors are passed via a mix of registers and indirectly, so
   // treat them as we would any other argument.
-  if (ValVT.isScalarInteger() && (ArgFlags.isSplit() || !PendingLocs.empty())) {
+  if ((ValVT.isScalarInteger() || Subtarget.isPExtPackedType(ValVT)) &&
+      (ArgFlags.isSplit() || !PendingLocs.empty())) {
     LocVT = XLenVT;
     LocInfo = CCValAssign::Indirect;
     PendingLocs.push_back(
@@ -526,8 +528,8 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
 
   // If the split argument only had two elements, it should be passed directly
   // in registers or on the stack.
-  if (ValVT.isScalarInteger() && ArgFlags.isSplitEnd() &&
-      PendingLocs.size() <= 2) {
+  if ((ValVT.isScalarInteger() || Subtarget.isPExtPackedType(ValVT)) &&
+      ArgFlags.isSplitEnd() && PendingLocs.size() <= 2) {
     assert(PendingLocs.size() == 2 && "Unexpected PendingLocs.size()");
     // Apply the normal calling convention rules to the first half of the
     // split argument.
@@ -545,7 +547,10 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
   unsigned StoreSizeBytes = XLen / 8;
   Align StackAlign = Align(XLen / 8);
 
-  if (ValVT.isVector() || ValVT.isRISCVVectorTuple()) {
+  // FIXME: If P extension and V extension are enabled at the same time,
+  // who should go first?
+  if (!Subtarget.isPExtPackedType(ValVT) &&
+      (ValVT.isVector() || ValVT.isRISCVVectorTuple())) {
     Reg = allocateRVVReg(ValVT, ValNo, State, TLI);
     if (Reg) {
       // Fixed-length vectors are located in the corresponding scalable-vector
@@ -603,6 +608,7 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
   }
 
   assert(((ValVT.isFloatingPoint() && !ValVT.isVector()) || LocVT == XLenVT ||
+          Subtarget.isPExtPackedType(LocVT) ||
           (TLI.getSubtarget().hasVInstructions() &&
            (ValVT.isVector() || ValVT.isRISCVVectorTuple()))) &&
          "Expected an XLenVT or vector types at this stage");

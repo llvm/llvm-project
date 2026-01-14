@@ -158,6 +158,16 @@ bool RISCVSubtarget::enablePExtSIMDCodeGen() const {
   return HasStdExtP && EnablePExtSIMDCodeGen;
 }
 
+// Returns true if VT is a P extension packed SIMD type that fits in XLen.
+bool RISCVSubtarget::isPExtPackedType(MVT VT) const {
+  if (!enablePExtSIMDCodeGen())
+    return false;
+
+  if (is64Bit())
+    return VT == MVT::v8i8 || VT == MVT::v4i16 || VT == MVT::v2i32;
+  return VT == MVT::v4i8 || VT == MVT::v2i16;
+}
+
 unsigned RISCVSubtarget::getMaxBuildIntsCost() const {
   // Loading integer from constant pool needs two instructions (the reason why
   // the minimum cost is 2): an address calculation instruction and a load
