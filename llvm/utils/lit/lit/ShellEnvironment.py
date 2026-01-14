@@ -103,24 +103,25 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
 
     # Apply the redirections, we use (N,) as a sentinel to indicate stdin,
     # stdout, stderr for N equal to 0, 1, or 2 respectively. Redirects to or
-    # from a file are represented with a list [file, mode, file-object]
-    # where file-object is initially None.
+    # from a file are represented with a list [file, mode, file-object, clear]
+    # where file-object is initially None and clear determines whether the
+    # file should be cleared on opening (> redirect rather than >>).
     redirects = [(0,), (1,), (2,)]
     for op, filename in cmd.redirects:
         if op == (">", 2):
-            redirects[2] = [filename, "w", None]
+            redirects[2] = [filename, "ab", None, True]
         elif op == (">>", 2):
-            redirects[2] = [filename, "a", None]
+            redirects[2] = [filename, "ab", None, False]
         elif op == (">&", 2) and filename in "012":
             redirects[2] = redirects[int(filename)]
         elif op == (">&",) or op == ("&>",):
-            redirects[1] = redirects[2] = [filename, "w", None]
+            redirects[1] = redirects[2] = [filename, "ab", None, True]
         elif op == (">",):
-            redirects[1] = [filename, "w", None]
+            redirects[1] = [filename, "ab", None, True]
         elif op == (">>",):
-            redirects[1] = [filename, "a", None]
+            redirects[1] = [filename, "ab", None, False]
         elif op == ("<",):
-            redirects[0] = [filename, "r", None]
+            redirects[0] = [filename, "rb", None, False]
         else:
             raise InternalShellError(
                 cmd, "Unsupported redirect: %r" % ((op, filename),)
@@ -149,7 +150,7 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
             std_fds[index] = fd
             continue
 
-        filename, mode, fd = r
+        filename, mode, fd, clear_on_opening = r
 
         # Check if we already have an open fd. This can happen if stdout and
         # stderr go to the same place.
@@ -173,11 +174,17 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
         else:
             # Make sure relative paths are relative to the cwd.
             redir_filename = os.path.join(cmd_shenv.cwd, name)
-            fd = open(redir_filename, mode, encoding="utf-8")
+            fd = open(redir_filename, mode)
+
+            if clear_on_opening and filename != kDevNull:
+                # If the file was opened with a '>' redirect, clear it before
+                # using it.
+                fd.seek(0)
+                fd.truncate()
         # Workaround a Win32 and/or subprocess bug when appending.
         #
         # FIXME: Actually, this is probably an instance of PR6753.
-        if mode == "a":
+        if mode == "ab":
             fd.seek(0, 2)
         # Mutate the underlying redirect list so that we can redirect stdout
         # and stderr to the same place without opening the file twice.
