@@ -16,12 +16,14 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/Mutex.h"
 #include <cstdint>
@@ -31,6 +33,8 @@
 #include <optional>
 #include <string>
 #include <vector>
+
+#define DEBUG_TYPE "nvptx-utilities"
 
 namespace llvm {
 
@@ -376,5 +380,188 @@ bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM) {
          F->getFunctionType()->getReturnType()->isVoidTy() &&
          !isKernelFunction(*F);
 }
+
+namespace NVPTX {
+
+// Helper to parse L1 eviction policy from metadata string
+static std::optional<L1Eviction> parseL1Eviction(StringRef Str) {
+  return StringSwitch<std::optional<L1Eviction>>(Str)
+      .Case("normal", L1Eviction::Normal)
+      .Case("unchanged", L1Eviction::Unchanged)
+      .Case("first", L1Eviction::First)
+      .Case("last", L1Eviction::Last)
+      .Case("no_allocate", L1Eviction::NoAllocate)
+      .Default(std::nullopt);
+}
+
+// Helper to parse L2 eviction policy from metadata string
+static std::optional<L2Eviction> parseL2Eviction(StringRef Str) {
+  return StringSwitch<std::optional<L2Eviction>>(Str)
+      .Case("normal", L2Eviction::Normal)
+      .Case("first", L2Eviction::First)
+      .Case("last", L2Eviction::Last)
+      .Default(std::nullopt);
+}
+
+// Helper to parse L2 prefetch size from metadata string
+static std::optional<L2Prefetch> parseL2Prefetch(StringRef Str) {
+  return StringSwitch<std::optional<L2Prefetch>>(Str)
+      .Case("64B", L2Prefetch::Bytes64)
+      .Case("128B", L2Prefetch::Bytes128)
+      .Case("256B", L2Prefetch::Bytes256)
+      .Default(std::nullopt);
+}
+
+// Helper to find the metadata node matching a specific operand number.
+// The metadata structure is:
+// !mem.cache_hint = !{!node1, !node2, ...}
+// Each node contains key-value pairs (operand_no can be anywhere):
+// !node = !{!"operand_no", i32 N, !"nvvm.key1", value1, ...}
+// Returns the matching MDNode or nullptr if not found.
+static const MDNode *findCacheHintNode(const MDNode *MD, unsigned OperandNo) {
+  if (!MD)
+    return nullptr;
+
+  for (unsigned i = 0, e = MD->getNumOperands(); i < e; ++i) {
+    const MDNode *Node = dyn_cast<MDNode>(MD->getOperand(i));
+    if (!Node || Node->getNumOperands() < 2) {
+      LLVM_DEBUG(if (Node) dbgs()
+                 << "NVPTX: Skipping malformed cache hint node with "
+                 << Node->getNumOperands() << " operands\n");
+      continue;
+    }
+
+    // Search for operand_no in the node (can be at any position)
+    std::optional<unsigned> NodeOperandNo;
+    for (unsigned j = 0; j + 1 < Node->getNumOperands(); j += 2) {
+      const MDString *Key = dyn_cast<MDString>(Node->getOperand(j));
+      if (Key && Key->getString() == "operand_no") {
+        if (auto *OpNoMD =
+                dyn_cast<ConstantAsMetadata>(Node->getOperand(j + 1))) {
+          if (auto *OpNoCI = dyn_cast<ConstantInt>(OpNoMD->getValue()))
+            NodeOperandNo = OpNoCI->getZExtValue();
+          else
+            LLVM_DEBUG(dbgs()
+                       << "NVPTX: operand_no value is not ConstantInt\n");
+        } else {
+          LLVM_DEBUG(dbgs()
+                     << "NVPTX: operand_no value is not ConstantAsMetadata\n");
+        }
+        break;
+      }
+    }
+
+    if (!NodeOperandNo) {
+      LLVM_DEBUG(dbgs() << "NVPTX: Cache hint node missing operand_no\n");
+      continue;
+    }
+
+    if (*NodeOperandNo == OperandNo)
+      return Node;
+  }
+
+  return nullptr;
+}
+
+unsigned getCacheHintFromMetadata(const Instruction *I, unsigned OperandNo) {
+  if (!I)
+    return 0;
+
+  MDNode *MD = I->getMetadata("mem.cache_hint");
+  const MDNode *Node = findCacheHintNode(MD, OperandNo);
+  if (!Node)
+    return 0;
+
+  L1Eviction L1 = L1Eviction::Normal;
+  L2Eviction L2 = L2Eviction::Normal;
+  L2Prefetch Prefetch = L2Prefetch::None;
+
+  // Parse all key-value pairs from the matching node
+  for (unsigned j = 0; j + 1 < Node->getNumOperands(); j += 2) {
+    const MDString *Key = dyn_cast<MDString>(Node->getOperand(j));
+    if (!Key) {
+      LLVM_DEBUG(dbgs() << "NVPTX: Cache hint key at index " << j
+                        << " is not a string\n");
+      continue;
+    }
+
+    StringRef KeyStr = Key->getString();
+    if (KeyStr == "operand_no")
+      continue; // Already processed by findCacheHintNode
+
+    // For eviction and prefetch hints, value should be a string
+    const MDString *Val = dyn_cast<MDString>(Node->getOperand(j + 1));
+    if (!Val) {
+      // nvvm.l2_cache_hint uses i64, not string - skip here
+      if (KeyStr != "nvvm.l2_cache_hint") {
+        LLVM_DEBUG(dbgs() << "NVPTX: Value for '" << KeyStr
+                          << "' is not a string\n");
+      }
+      continue;
+    }
+
+    StringRef ValStr = Val->getString();
+    if (KeyStr == "nvvm.l1_eviction") {
+      if (auto Parsed = parseL1Eviction(ValStr))
+        L1 = *Parsed;
+      else
+        LLVM_DEBUG(dbgs() << "NVPTX: Unknown L1 eviction policy: " << ValStr
+                          << "\n");
+    } else if (KeyStr == "nvvm.l2_eviction") {
+      if (auto Parsed = parseL2Eviction(ValStr))
+        L2 = *Parsed;
+      else
+        LLVM_DEBUG(dbgs() << "NVPTX: Unknown L2 eviction policy: " << ValStr
+                          << "\n");
+    } else if (KeyStr == "nvvm.l2_prefetch_size") {
+      if (auto Parsed = parseL2Prefetch(ValStr))
+        Prefetch = *Parsed;
+      else
+        LLVM_DEBUG(dbgs() << "NVPTX: Unknown L2 prefetch size: " << ValStr
+                          << "\n");
+    }
+    // Unknown keys are silently ignored (may be target-specific extensions)
+  }
+
+  return encodeCacheHint(L1, L2, Prefetch);
+}
+
+std::optional<uint64_t> getCachePolicyFromMetadata(const Instruction *I,
+                                                   unsigned OperandNo) {
+  if (!I)
+    return std::nullopt;
+
+  MDNode *MD = I->getMetadata("mem.cache_hint");
+  const MDNode *Node = findCacheHintNode(MD, OperandNo);
+  if (!Node)
+    return std::nullopt;
+
+  // Look for nvvm.l2_cache_hint in the matching node
+  for (unsigned j = 0; j + 1 < Node->getNumOperands(); j += 2) {
+    const MDString *Key = dyn_cast<MDString>(Node->getOperand(j));
+    if (!Key || Key->getString() != "nvvm.l2_cache_hint")
+      continue;
+
+    // The value should be an i64 constant
+    auto *ValMD = dyn_cast<ConstantAsMetadata>(Node->getOperand(j + 1));
+    if (!ValMD) {
+      LLVM_DEBUG(dbgs() << "NVPTX: nvvm.l2_cache_hint value is not "
+                           "ConstantAsMetadata\n");
+      continue;
+    }
+    auto *ValCI = dyn_cast<ConstantInt>(ValMD->getValue());
+    if (!ValCI) {
+      LLVM_DEBUG(
+          dbgs() << "NVPTX: nvvm.l2_cache_hint value is not ConstantInt\n");
+      continue;
+    }
+
+    return ValCI->getZExtValue();
+  }
+
+  return std::nullopt;
+}
+
+} // namespace NVPTX
 
 } // namespace llvm

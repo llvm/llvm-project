@@ -7346,6 +7346,45 @@ void NVPTXTargetLowering::ReplaceNodeResults(
   }
 }
 
+MachineMemOperand::Flags
+NVPTXTargetLowering::getTargetMMOFlags(const Instruction &I) const {
+  // Cache policy info is now stored via recordTargetMMOInfo hook.
+  // This function is kept for compatibility but doesn't need to return
+  // anything special - the actual cache hints are stored per-MMO.
+  return MachineMemOperand::MONone;
+}
+
+void NVPTXTargetLowering::recordTargetMMOInfo(MachineMemOperand *MMO,
+                                              const Instruction &I,
+                                              unsigned OperandNo) const {
+  // Check for !mem.cache_hint metadata on memory-accessing instructions.
+  // Supported: LoadInst, StoreInst, and memory intrinsics like memcpy.
+  if (!I.mayReadOrWriteMemory())
+    return;
+
+  // Get cache hint from metadata using the specified operand number.
+  // For load/store: operand_no = 0
+  // For memcpy: operand_no = 0 (dest/store), operand_no = 1 (src/load)
+  unsigned CacheHint = NVPTX::getCacheHintFromMetadata(&I, OperandNo);
+
+  // Check for cache_policy (L2::cache_hint mode)
+  uint64_t CachePolicy = 0;
+  if (auto Policy = NVPTX::getCachePolicyFromMetadata(&I, OperandNo)) {
+    CachePolicy = *Policy;
+    // Set the L2CacheHintFlag to indicate policy mode
+    CacheHint |= NVPTX::L2CacheHintFlag;
+  }
+
+  // If no cache hints, nothing to store
+  if (CacheHint == 0 && CachePolicy == 0)
+    return;
+
+  // Store in per-function map keyed by MMO pointer
+  const Function *F = I.getFunction();
+  auto &Data = nvTM->getCachePolicyData(F);
+  Data.MMOMap[MMO] = {CachePolicy, CacheHint};
+}
+
 NVPTXTargetLowering::AtomicExpansionKind
 NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   Type *Ty = AI->getValOperand()->getType();

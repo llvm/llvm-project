@@ -15,16 +15,24 @@
 #define LLVM_LIB_TARGET_NVPTX_NVPTX_H
 
 #include "llvm/CodeGen/ISDOpcodes.h"
+
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
+#include <optional>
+
 namespace llvm {
+class Function;
 class FunctionPass;
+class MachineMemOperand;
 class MachineFunctionPass;
 class NVPTXTargetMachine;
 class PassRegistry;
+class Value;
 
 namespace NVPTXCC {
 enum CondCodes {
@@ -194,6 +202,122 @@ enum AddressSpace : AddressSpaceUnderlyingType {
   // NVPTX Backend Private:
   Param = 101
 };
+
+// Cache hint enums for !mem.cache_hint metadata
+// These correspond to PTX cache control qualifiers
+
+// L1 Eviction Policy - maps to PTX L1::evict_* qualifiers
+enum class L1Eviction : unsigned {
+  Normal = 0,     // Default behavior (no qualifier)
+  Unchanged = 1,  // L1::evict_unchanged
+  First = 2,      // L1::evict_first
+  Last = 3,       // L1::evict_last
+  NoAllocate = 4, // L1::no_allocate
+};
+
+// L2 Eviction Policy - maps to PTX L2::evict_* qualifiers
+enum class L2Eviction : unsigned {
+  Normal = 0, // Default behavior (no qualifier)
+  First = 1,  // L2::evict_first
+  Last = 2,   // L2::evict_last
+};
+
+// L2 Prefetch Size - maps to PTX L2::*B qualifiers
+enum class L2Prefetch : unsigned {
+  None = 0,     // No prefetch hint
+  Bytes64 = 1,  // L2::64B
+  Bytes128 = 2, // L2::128B
+  Bytes256 = 3, // L2::256B
+};
+
+// Bitfield layout for encoded cache hints:
+// Bits 0-2:  L1 Eviction (3 bits, 5 values)
+// Bits 3-4:  L2 Eviction (2 bits, 3 values)
+// Bits 5-6:  L2 Prefetch (2 bits, 4 values)
+// Bit 7:    L2::cache_hint mode flag (when set, use CachePolicy operand)
+// Bits 8-31: Reserved
+constexpr unsigned L1EvictionShift = 0;
+constexpr unsigned L1EvictionMask = 0x7;
+constexpr unsigned L2EvictionShift = 3;
+constexpr unsigned L2EvictionMask = 0x3;
+constexpr unsigned L2PrefetchShift = 5;
+constexpr unsigned L2PrefetchMask = 0x3;
+constexpr unsigned L2CacheHintFlag = 0x80; // Bit 7: L2::cache_hint mode
+
+inline unsigned encodeCacheHint(L1Eviction L1, L2Eviction L2, L2Prefetch P) {
+  return (static_cast<unsigned>(L1) << L1EvictionShift) |
+         (static_cast<unsigned>(L2) << L2EvictionShift) |
+         (static_cast<unsigned>(P) << L2PrefetchShift);
+}
+
+inline L1Eviction decodeL1Eviction(unsigned Hint) {
+  return static_cast<L1Eviction>((Hint >> L1EvictionShift) & L1EvictionMask);
+}
+
+inline L2Eviction decodeL2Eviction(unsigned Hint) {
+  return static_cast<L2Eviction>((Hint >> L2EvictionShift) & L2EvictionMask);
+}
+
+inline L2Prefetch decodeL2Prefetch(unsigned Hint) {
+  return static_cast<L2Prefetch>((Hint >> L2PrefetchShift) & L2PrefetchMask);
+}
+
+inline bool isL2CacheHintMode(unsigned Hint) {
+  return (Hint & L2CacheHintFlag) != 0;
+}
+
+// Cache policy data for a single memory operation.
+// Stored per-MMO to avoid pointer collisions when multiple memops share
+// the same pointer value but have different cache policies.
+struct MMOCachePolicyData {
+  uint64_t
+      Policy; // The 64-bit cache policy value for L2::cache_hint (0 if not set)
+  unsigned CacheHint; // Other cache hints (L1 eviction, L2 eviction, prefetch)
+};
+
+// Per-function cache policy data. Keyed by MachineMemOperand* for direct
+// lookup during instruction selection, ensuring each memop gets its own policy.
+struct FunctionCachePolicyData {
+  DenseMap<MachineMemOperand *, MMOCachePolicyData> MMOMap;
+
+  void clear() { MMOMap.clear(); }
+};
+
+// Operand indices for LD (load) machine instructions.
+// These match the operand order in NVPTXInstrInfo.td LD class.
+// Use LDOp::* for getOperand() (includes def), or subtract 1 for uses()
+// iterator.
+namespace LDOp {
+enum : unsigned {
+  Dst = 0,       // Output register (def)
+  Ordering = 1,  // Memory ordering (sem)
+  Scope = 2,     // Memory scope
+  AddrSpace = 3, // Address space
+  Sign = 4,      // Signedness
+  Width = 5,     // Load width in bits
+  UsedBytes = 6, // Used bytes mask
+  CacheHint = 7, // Cache hint flags
+  Base = 8,      // Base pointer (from ADDR)
+  Offset = 9,    // Offset (from ADDR)
+  Policy = 10    // Cache policy register
+};
+} // namespace LDOp
+
+// Operand indices for ST (store) machine instructions.
+// These match the operand order in NVPTXInstrInfo.td ST class.
+namespace STOp {
+enum : unsigned {
+  Value = 0,     // Value to store
+  Ordering = 1,  // Memory ordering (sem)
+  Scope = 2,     // Memory scope
+  AddrSpace = 3, // Address space
+  Width = 4,     // Store width in bits
+  CacheHint = 5, // Cache hint flags
+  Base = 6,      // Base pointer (from ADDR)
+  Offset = 7,    // Offset (from ADDR)
+  Policy = 8     // Cache policy register
+};
+} // namespace STOp
 
 namespace PTXLdStInstCode {
 enum FromType { Unsigned = 0, Signed, Float, Untyped };

@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_NVPTX_NVPTXTARGETMACHINE_H
 #define LLVM_LIB_TARGET_NVPTX_NVPTXTARGETMACHINE_H
 
+#include "NVPTX.h"
 #include "NVPTXSubtarget.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include <optional>
@@ -31,6 +32,18 @@ class NVPTXTargetMachine : public CodeGenTargetMachineImpl {
   // Hold Strings that can be free'd all together with NVPTXTargetMachine
   BumpPtrAllocator StrAlloc;
   UniqueStringSaver StrPool;
+
+  // Per-function cache policy storage for !mem.cache_hint metadata.
+  // Mutable because it's modified during const lowering operations.
+  // Data is keyed by Function* and each function is processed sequentially
+  // through the pipeline, so no synchronization is needed.
+  // IMPORTANT: Data must be cleared after instruction selection completes
+  // via clearCachePolicyData() in NVPTXDAGToDAGISel::runOnMachineFunction().
+  // The unique_ptr ensures cleanup even if clearCachePolicyData is not called,
+  // but explicit clearing prevents unbounded memory growth.
+  mutable DenseMap<const Function *,
+                   std::unique_ptr<NVPTX::FunctionCachePolicyData>>
+      CachePolicyData;
 
 public:
   NVPTXTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -76,6 +89,19 @@ public:
 
   std::pair<const Value *, unsigned>
   getPredicatedAddrSpace(const Value *V) const override;
+
+  // Cache policy data management for !mem.cache_hint metadata.
+  // These methods are const but modify mutable state.
+  NVPTX::FunctionCachePolicyData &getCachePolicyData(const Function *F) const {
+    auto &Data = CachePolicyData[F];
+    if (!Data)
+      Data = std::make_unique<NVPTX::FunctionCachePolicyData>();
+    return *Data;
+  }
+
+  void clearCachePolicyData(const Function *F) const {
+    CachePolicyData.erase(F);
+  }
 }; // NVPTXTargetMachine.
 
 class NVPTXTargetMachine32 : public NVPTXTargetMachine {

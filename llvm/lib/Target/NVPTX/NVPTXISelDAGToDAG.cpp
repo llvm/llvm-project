@@ -69,7 +69,14 @@ NVPTXDAGToDAGISel::NVPTXDAGToDAGISel(NVPTXTargetMachine &tm,
 bool NVPTXDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   Subtarget = &MF.getSubtarget<NVPTXSubtarget>();
   Scopes = NVPTXScopes(MF.getFunction().getContext());
-  return SelectionDAGISel::runOnMachineFunction(MF);
+
+  bool Result = SelectionDAGISel::runOnMachineFunction(MF);
+
+  // Clear per-function cache policy data after instruction selection completes
+  // to prevent memory growth over time.
+  TM.clearCachePolicyData(&MF.getFunction());
+
+  return Result;
 }
 
 NVPTX::DivPrecisionLevel
@@ -1110,6 +1117,113 @@ bool NVPTXDAGToDAGISel::SelectADDR(SDValue Addr, SDValue &Base,
   return true;
 }
 
+// Helper to extract cache hint from a MemSDNode via MMO lookup.
+// The cache hint is stored per-MMO by recordTargetMMOInfo().
+static unsigned getCacheHint(const MemSDNode *N, const Function &F,
+                             const NVPTXTargetMachine &TM) {
+  MachineMemOperand *MMO = N->getMemOperand();
+  if (!MMO)
+    return 0;
+
+  auto &Data = TM.getCachePolicyData(&F);
+  auto It = Data.MMOMap.find(MMO);
+  if (It == Data.MMOMap.end())
+    return 0;
+
+  return It->second.CacheHint;
+}
+
+// Helper to get cache policy value if present (for L2::cache_hint mode).
+// Returns the 64-bit policy descriptor stored per-MMO.
+static std::optional<uint64_t> getCachePolicy(const MemSDNode *N,
+                                              const Function &F,
+                                              const NVPTXTargetMachine &TM) {
+  MachineMemOperand *MMO = N->getMemOperand();
+  if (!MMO)
+    return std::nullopt;
+
+  auto &Data = TM.getCachePolicyData(&F);
+  auto It = Data.MMOMap.find(MMO);
+  if (It == Data.MMOMap.end())
+    return std::nullopt;
+
+  // Only return policy if L2CacheHintFlag is set (indicating policy mode)
+  if (!(It->second.CacheHint & NVPTX::L2CacheHintFlag))
+    return std::nullopt;
+
+  return It->second.Policy;
+}
+
+std::pair<unsigned, SDValue> NVPTXDAGToDAGISel::getCacheHintAndPolicyReg(
+    const MemSDNode *N, unsigned CodeAddrSpace, const SDLoc &DL) {
+  // Extract cache hint from MMO flags
+  unsigned CacheHint = getCacheHint(N, MF->getFunction(), TM);
+  SDValue PolicyReg;
+
+  // Apply SM version guards for cache hints (from PTX ISA documentation):
+  // - L1::evict_* requires SM 70+
+  // - L2::evict_* requires SM 70+
+  // - L2::64B and L2::128B require SM 75+
+  // - L2::256B requires SM 80+
+  // - L2::cache_hint requires SM 80+ and PTX 7.4+
+
+  // Check L1 eviction hint (SM 70+)
+  if (!Subtarget->hasL1EvictionHint()) {
+    CacheHint &= ~(NVPTX::L1EvictionMask << NVPTX::L1EvictionShift);
+  }
+
+  // Check L2 eviction hint (SM 70+)
+  if (!Subtarget->hasL2EvictionHint()) {
+    CacheHint &= ~(NVPTX::L2EvictionMask << NVPTX::L2EvictionShift);
+  }
+
+  // Check L2 prefetch hints (SM 75+ for 64B/128B, SM 80+ for 256B)
+  auto L2Prefetch = NVPTX::decodeL2Prefetch(CacheHint);
+  if (L2Prefetch != NVPTX::L2Prefetch::None) {
+    bool PrefetchSupported = false;
+    switch (L2Prefetch) {
+    case NVPTX::L2Prefetch::Bytes64:
+      PrefetchSupported = Subtarget->hasL2Prefetch64B();
+      break;
+    case NVPTX::L2Prefetch::Bytes128:
+      PrefetchSupported = Subtarget->hasL2Prefetch128B();
+      break;
+    case NVPTX::L2Prefetch::Bytes256:
+      PrefetchSupported = Subtarget->hasL2Prefetch256B();
+      break;
+    default:
+      break;
+    }
+    if (!PrefetchSupported) {
+      // Clear the prefetch bits if not supported
+      CacheHint &= ~(NVPTX::L2PrefetchMask << NVPTX::L2PrefetchShift);
+    }
+  }
+
+  // L2::cache_hint is only supported for global address space.
+  // Clear the flag for non-global address spaces.
+  if (CodeAddrSpace != NVPTX::AddressSpace::Global) {
+    CacheHint &= ~NVPTX::L2CacheHintFlag;
+  } else if (Subtarget->hasL2CacheHint()) {
+    // Check for L2::cache_hint with cache-policy (requires SM 80+ and PTX 7.4+)
+    if (auto CachePolicyVal = getCachePolicy(N, MF->getFunction(), TM)) {
+      SDValue PolicyConst =
+          CurDAG->getTargetConstant(*CachePolicyVal, DL, MVT::i64);
+      PolicyReg = SDValue(
+          CurDAG->getMachineNode(NVPTX::MOV_B64_i, DL, MVT::i64, PolicyConst),
+          0);
+    }
+  }
+
+  // If no policy or L2::cache_hint not supported, use NOREG and clear flag
+  if (!PolicyReg) {
+    PolicyReg = CurDAG->getRegister(NVPTX::NoRegister, MVT::i64);
+    CacheHint &= ~NVPTX::L2CacheHintFlag;
+  }
+
+  return {CacheHint, PolicyReg};
+}
+
 bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   MemSDNode *LD = cast<MemSDNode>(N);
   assert(LD->readMem() && "Expected load");
@@ -1152,19 +1266,24 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   assert(isPowerOf2_32(FromTypeWidth) && FromTypeWidth >= 8 &&
          FromTypeWidth <= 128 && "Invalid width for load");
 
-  // Create the machine instruction DAG
+  const MVT::SimpleValueType TargetVT = LD->getSimpleValueType(0).SimpleTy;
   const auto [Base, Offset] = selectADDR(N->getOperand(1), CurDAG);
+  const auto [CacheHint, PolicyReg] =
+      getCacheHintAndPolicyReg(LD, CodeAddrSpace, DL);
+
+  // Create the machine instruction DAG
   SDValue Ops[] = {getI32Imm(Ordering, DL),
                    getI32Imm(Scope, DL),
                    getI32Imm(CodeAddrSpace, DL),
                    getI32Imm(FromType, DL),
                    getI32Imm(FromTypeWidth, DL),
                    getI32Imm(UsedBytesMask, DL),
+                   getI32Imm(CacheHint, DL),
                    Base,
                    Offset,
+                   PolicyReg,
                    Chain};
 
-  const MVT::SimpleValueType TargetVT = LD->getSimpleValueType(0).SimpleTy;
   const std::optional<unsigned> Opcode =
       pickOpcodeForVT(TargetVT, NVPTX::LD_i16, NVPTX::LD_i32, NVPTX::LD_i64);
   if (!Opcode)
@@ -1225,6 +1344,8 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
 
   assert(!(EltVT.isVector() && ExtensionType != ISD::NON_EXTLOAD));
 
+  const auto [CacheHint, PolicyReg] =
+      getCacheHintAndPolicyReg(LD, CodeAddrSpace, DL);
   const auto [Base, Offset] = selectADDR(N->getOperand(1), CurDAG);
   SDValue Ops[] = {getI32Imm(Ordering, DL),
                    getI32Imm(Scope, DL),
@@ -1232,8 +1353,10 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
                    getI32Imm(FromType, DL),
                    getI32Imm(FromTypeWidth, DL),
                    getI32Imm(UsedBytesMask, DL),
+                   getI32Imm(CacheHint, DL),
                    Base,
                    Offset,
+                   PolicyReg,
                    Chain};
 
   std::optional<unsigned> Opcode;
@@ -1410,13 +1533,20 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
          "Invalid width for store");
 
   const auto [Base, Offset] = selectADDR(ST->getBasePtr(), CurDAG);
+
+  // Extract cache hint and policy register
+  const auto [CacheHint, PolicyReg] =
+      getCacheHintAndPolicyReg(ST, CodeAddrSpace, DL);
+
   SDValue Ops[] = {selectPossiblyImm(Value),
                    getI32Imm(Ordering, DL),
                    getI32Imm(Scope, DL),
                    getI32Imm(CodeAddrSpace, DL),
                    getI32Imm(ToTypeWidth, DL),
+                   getI32Imm(CacheHint, DL),
                    Base,
                    Offset,
+                   PolicyReg,
                    Chain};
 
   const std::optional<unsigned> Opcode =
@@ -1462,10 +1592,14 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   assert(isPowerOf2_32(ToTypeWidth) && ToTypeWidth >= 8 && ToTypeWidth <= 128 &&
          TotalWidth <= 256 && "Invalid width for store");
 
+  // Extract cache hint and policy register
+  const auto [CacheHint, PolicyReg] =
+      getCacheHintAndPolicyReg(ST, CodeAddrSpace, DL);
+
   const auto [Base, Offset] = selectADDR(Addr, CurDAG);
   Ops.append({getI32Imm(Ordering, DL), getI32Imm(Scope, DL),
-              getI32Imm(CodeAddrSpace, DL), getI32Imm(ToTypeWidth, DL), Base,
-              Offset, Chain});
+              getI32Imm(CodeAddrSpace, DL), getI32Imm(ToTypeWidth, DL),
+              getI32Imm(CacheHint, DL), Base, Offset, PolicyReg, Chain});
 
   const MVT::SimpleValueType EltVT =
       ST->getOperand(1).getSimpleValueType().SimpleTy;

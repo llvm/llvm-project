@@ -8767,11 +8767,13 @@ static void chainLoadsAndStoresForMemcpy(SelectionDAG &DAG, const SDLoc &dl,
   }
 }
 
-static SDValue getMemcpyLoadsAndStores(
-    SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
-    uint64_t Size, Align Alignment, bool isVol, bool AlwaysInline,
-    MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo,
-    const AAMDNodes &AAInfo, BatchAAResults *BatchAA) {
+static SDValue
+getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
+                        SDValue Dst, SDValue Src, uint64_t Size,
+                        Align Alignment, bool isVol, bool AlwaysInline,
+                        MachinePointerInfo DstPtrInfo,
+                        MachinePointerInfo SrcPtrInfo, const AAMDNodes &AAInfo,
+                        BatchAAResults *BatchAA, const CallInst *CI = nullptr) {
   // Turn a memcpy of undef to nop.
   // FIXME: We need to honor volatile even is Src is undef.
   if (Src.isUndef())
@@ -8879,10 +8881,20 @@ static SDValue getMemcpyLoadsAndStores(
       }
       Value = getMemsetStringVal(VT, dl, DAG, TLI, SubSlice);
       if (Value.getNode()) {
+        // Create store MMO explicitly to allow targets to record cache hints.
+        MachineMemOperand *StoreMMO =
+            MF.getMachineMemOperand(DstPtrInfo.getWithOffset(DstOff),
+                                    MMOFlags | MachineMemOperand::MOStore,
+                                    VTSize, Alignment, NewAAInfo);
+        // Call hook for target-specific cache hint recording (operand 0 =
+        // dest).
+        if (CI)
+          TLI.recordTargetMMOInfo(StoreMMO, *CI, /*OperandNo=*/0);
+
         Store = DAG.getStore(
             Chain, dl, Value,
             DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff)),
-            DstPtrInfo.getWithOffset(DstOff), Alignment, MMOFlags, NewAAInfo);
+            StoreMMO);
         OutChains.push_back(Store);
       }
     }
@@ -8904,17 +8916,33 @@ static SDValue getMemcpyLoadsAndStores(
       if (isConstant)
         SrcMMOFlags |= MachineMemOperand::MOInvariant;
 
+      // Create load MMO explicitly to allow targets to record cache hints.
+      MachineMemOperand *LoadMMO = MF.getMachineMemOperand(
+          SrcPtrInfo.getWithOffset(SrcOff),
+          SrcMMOFlags | MachineMemOperand::MOLoad, VTSize,
+          commonAlignment(*SrcAlign, SrcOff), NewAAInfo);
+      // Call hook for target-specific cache hint recording (operand 1 = src).
+      if (CI)
+        TLI.recordTargetMMOInfo(LoadMMO, *CI, /*OperandNo=*/1);
+
       Value = DAG.getExtLoad(
           ISD::EXTLOAD, dl, NVT, Chain,
-          DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(SrcOff)),
-          SrcPtrInfo.getWithOffset(SrcOff), VT,
-          commonAlignment(*SrcAlign, SrcOff), SrcMMOFlags, NewAAInfo);
+          DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(SrcOff)), VT,
+          LoadMMO);
       OutLoadChains.push_back(Value.getValue(1));
+
+      // Create store MMO explicitly to allow targets to record cache hints.
+      MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
+          DstPtrInfo.getWithOffset(DstOff),
+          MMOFlags | MachineMemOperand::MOStore, VTSize, Alignment, NewAAInfo);
+      // Call hook for target-specific cache hint recording (operand 0 = dest).
+      if (CI)
+        TLI.recordTargetMMOInfo(StoreMMO, *CI, /*OperandNo=*/0);
 
       Store = DAG.getTruncStore(
           Chain, dl, Value,
-          DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff)),
-          DstPtrInfo.getWithOffset(DstOff), VT, Alignment, MMOFlags, NewAAInfo);
+          DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff)), VT,
+          StoreMMO);
       OutStoreChains.push_back(Store);
     }
     SrcOff += VTSize;
@@ -9395,7 +9423,7 @@ SDValue SelectionDAG::getMemcpy(
 
     SDValue Result = getMemcpyLoadsAndStores(
         *this, dl, Chain, Dst, Src, ConstantSize->getZExtValue(), Alignment,
-        isVol, false, DstPtrInfo, SrcPtrInfo, AAInfo, BatchAA);
+        isVol, false, DstPtrInfo, SrcPtrInfo, AAInfo, BatchAA, CI);
     if (Result.getNode())
       return Result;
   }
@@ -9416,7 +9444,7 @@ SDValue SelectionDAG::getMemcpy(
     assert(ConstantSize && "AlwaysInline requires a constant size!");
     return getMemcpyLoadsAndStores(
         *this, dl, Chain, Dst, Src, ConstantSize->getZExtValue(), Alignment,
-        isVol, true, DstPtrInfo, SrcPtrInfo, AAInfo, BatchAA);
+        isVol, true, DstPtrInfo, SrcPtrInfo, AAInfo, BatchAA, CI);
   }
 
   checkAddrSpaceIsValidForLibcall(TLI, DstPtrInfo.getAddrSpace());
