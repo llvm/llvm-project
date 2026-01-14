@@ -1916,7 +1916,8 @@ define nofpclass(snan) half @ret__known_zero_or_nan__fdiv__not_nan(half nofpclas
 define nofpclass(snan) half @ret__known_zero_or_nan__fdiv_nsz__not_nan(half nofpclass(inf sub norm) %zero.or.nan, half nofpclass(nan) %not.nan) {
 ; CHECK-LABEL: define nofpclass(snan) half @ret__known_zero_or_nan__fdiv_nsz__not_nan(
 ; CHECK-SAME: half nofpclass(inf sub norm) [[ZERO_OR_NAN:%.*]], half nofpclass(nan) [[NOT_NAN:%.*]]) {
-; CHECK-NEXT:    ret half 0xH0000
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nsz contract half [[ZERO_OR_NAN]], [[NOT_NAN]]
+; CHECK-NEXT:    ret half [[DIV]]
 ;
   %div = fdiv nsz contract half %zero.or.nan, %not.nan
   ret half %div
@@ -1925,7 +1926,8 @@ define nofpclass(snan) half @ret__known_zero_or_nan__fdiv_nsz__not_nan(half nofp
 define nofpclass(snan) <2 x half> @ret__known_zero_or_nan__fdiv_nsz__not_nan_vec(<2 x half> nofpclass(inf sub norm) %zero.or.nan, <2 x half> nofpclass(nan) %not.nan) {
 ; CHECK-LABEL: define nofpclass(snan) <2 x half> @ret__known_zero_or_nan__fdiv_nsz__not_nan_vec(
 ; CHECK-SAME: <2 x half> nofpclass(inf sub norm) [[ZERO_OR_NAN:%.*]], <2 x half> nofpclass(nan) [[NOT_NAN:%.*]]) {
-; CHECK-NEXT:    ret <2 x half> zeroinitializer
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nsz contract <2 x half> [[ZERO_OR_NAN]], [[NOT_NAN]]
+; CHECK-NEXT:    ret <2 x half> [[DIV]]
 ;
   %div = fdiv nsz contract <2 x half> %zero.or.nan, %not.nan
   ret <2 x half> %div

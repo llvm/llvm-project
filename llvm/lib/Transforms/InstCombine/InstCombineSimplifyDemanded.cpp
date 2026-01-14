@@ -2597,7 +2597,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     }
 
     // nsz [+-]0 / x -> 0
-    if (FMF.noSignedZeros() && KnownLHS.isKnownAlways(fcZero | fcNan) &&
+    if (FMF.noSignedZeros() && KnownLHS.isKnownAlways(fcZero) &&
         (ResultNotNan || KnownRHS.isKnownNeverNaN()))
       return ConstantFP::getZero(VTy);
 
