@@ -668,9 +668,11 @@ public:
   /// other operand, try to fold the binary operator into the select arguments.
   /// This also works for Cast instructions, which obviously do not have a
   /// second operand.
+  /// If \p FoldWithoutSimplify is true, fold even if neither arm simplifies.
   Instruction *FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
                                 bool FoldWithMultiUse = false,
-                                bool SimplifyBothArms = false);
+                                bool SimplifyBothArms = false,
+                                bool FoldWithoutSimplify = false);
 
   Instruction *foldBinOpSelectBinOp(BinaryOperator &Op);
 

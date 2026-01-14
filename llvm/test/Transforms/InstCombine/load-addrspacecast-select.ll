@@ -5,13 +5,7 @@
 
 define i32 @load_addrspacecast_select_alloca(i1 %cond) {
 ; CHECK-LABEL: @load_addrspacecast_select_alloca(
-; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 42, ptr [[A]], align 4
-; CHECK-NEXT:    store i32 100, ptr [[B]], align 4
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], ptr [[A]], ptr [[B]]
-; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast ptr [[SEL]] to ptr addrspace(5)
-; CHECK-NEXT:    [[RESULT:%.*]] = load i32, ptr addrspace(5) [[CAST]], align 4
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[COND:%.*]], i32 42, i32 100
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
   %a = alloca i32, align 4
@@ -26,13 +20,7 @@ define i32 @load_addrspacecast_select_alloca(i1 %cond) {
 
 define <2 x i32> @load_addrspacecast_select_alloca_vec(i1 %cond) {
 ; CHECK-LABEL: @load_addrspacecast_select_alloca_vec(
-; CHECK-NEXT:    [[A:%.*]] = alloca <2 x i32>, align 8
-; CHECK-NEXT:    [[B:%.*]] = alloca <2 x i32>, align 8
-; CHECK-NEXT:    store <2 x i32> <i32 42, i32 43>, ptr [[A]], align 8
-; CHECK-NEXT:    store <2 x i32> <i32 100, i32 101>, ptr [[B]], align 8
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], ptr [[A]], ptr [[B]]
-; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast ptr [[SEL]] to ptr addrspace(5)
-; CHECK-NEXT:    [[RESULT:%.*]] = load <2 x i32>, ptr addrspace(5) [[CAST]], align 8
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[COND:%.*]], <2 x i32> <i32 42, i32 43>, <2 x i32> <i32 100, i32 101>
 ; CHECK-NEXT:    ret <2 x i32> [[RESULT]]
 ;
   %a = alloca <2 x i32>, align 8
