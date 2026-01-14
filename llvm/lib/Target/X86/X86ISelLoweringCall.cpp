@@ -2201,6 +2201,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // overwritten by the stores of the outgoing arguments. To avoid this, we
   // need to make a temporary copy of them in local stack space, then copy back
   // to the argument area.
+  // FIXME: There's potential to improve the code by using virtual registers for
+  // temporary storage, and letting the register allocator spill if needed.
   SmallVector<SDValue, 8> ByValTemporaries;
   SDValue ByValTempChain;
   if (isTailCall) {
@@ -2224,9 +2226,10 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
       // Destination: where this byval should live in the callee’s frame
       // after the tail call.
-      int32_t Offset = VA.getLocMemOffset() + FPDiff;
-      int Size = VA.getLocVT().getFixedSizeInBits() / 8;
-      int FI = MF.getFrameInfo().CreateFixedObject(Size, Offset, true);
+      int64_t Offset = VA.getLocMemOffset() + FPDiff;
+      uint64_t Size = VA.getLocVT().getFixedSizeInBits() / 8;
+      int FI = MF.getFrameInfo().CreateFixedObject(Size, Offset,
+                                                   /*IsImmutable=*/true);
       SDValue Dst = DAG.getFrameIndex(FI, PtrVT);
 
       ByValCopyKind Copy = ByValNeedsCopyForTailCall(DAG, Src, Dst, Flags);
