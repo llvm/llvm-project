@@ -68,3 +68,4 @@ LIBC_INLINE float16 hypotf16(float16 x, float16 y) {
 #endif // LIBC_TYPES_HAS_FLOAT16
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_HYPOTF16_H
+

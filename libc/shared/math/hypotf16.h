@@ -27,3 +27,4 @@ using math::hypotf16;
 #endif // LIBC_TYPES_HAS_FLOAT16
 
 #endif // LLVM_LIBC_SHARED_MATH_HYPOTF16_H
+
