@@ -337,7 +337,7 @@ module attributes {transform.with_named_sequence} {
 func.func @tensor_pad_non_zero_low_pad_mixed_dynamic_static(
   %0 : tensor<1x?xf32>, %low : index, %high : index)
     -> tensor<1x3xf32> {
-  // expected-error @+3 {{Attempted to vectorize, but failed}}
+  // expected-error @+2 {{Attempted to vectorize, but failed}}
   %cst = arith.constant 42.43 : f32
   %1 = tensor.pad %0 low[0, %low] high[0, %high]  {
     ^bb0(%i: index, %j: index):
