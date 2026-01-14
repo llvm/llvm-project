@@ -539,4 +539,19 @@ def ApplySinkVectorMemPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyInnerOuterDimReductionConversionPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.inner_outer_dim_reduction_conversion",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Converts vector.multi_reduction into inner-most/outer-most reduction form
+    by using vector.transpose.
+  }];
+
+  let arguments = (ins DefaultValuedAttr<VectorMultiReductionLoweringAttr,
+      "vector::VectorMultiReductionLowering::InnerParallel">:$lowering_strategy
+  );
+
+  let assemblyFormat = "attr-dict";
+}
+
 #endif // VECTOR_TRANSFORM_OPS

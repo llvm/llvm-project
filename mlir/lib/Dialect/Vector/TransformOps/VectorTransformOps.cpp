@@ -227,6 +227,14 @@ void transform::ApplySinkVectorMemPatternsOp::populatePatterns(
   vector::populateSinkVectorMemOpsPatterns(patterns);
 }
 
+void transform::ApplyInnerOuterDimReductionConversionPatternsOp::
+    populatePatterns(RewritePatternSet &patterns) {
+  vector::VectorTransformsOptions vectorTransformOptions;
+  vectorTransformOptions.setVectorMultiReductionLowering(getLoweringStrategy());
+  vector::populateVectorInnerOuterDimReductionConversionPatterns(
+      patterns, vectorTransformOptions.vectorMultiReductionLowering);
+}
+
 //===----------------------------------------------------------------------===//
 // Transform op registration
 //===----------------------------------------------------------------------===//
