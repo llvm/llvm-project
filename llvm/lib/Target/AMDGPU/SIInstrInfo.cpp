@@ -7303,11 +7303,15 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
         if (getOpRegClass(MI, 0) == &AMDGPU::VReg_1RegClass) {
           VRC = &AMDGPU::VReg_1RegClass;
         } else
-          VRC = RI.isAGPRClass(getOpRegClass(MI, 0))
+          VRC = RI.isVectorSuperClass(getOpRegClass(MI, 0))
+                    ? RI.getEquivalentAVClass(SRC)
+                : RI.isAGPRClass(getOpRegClass(MI, 0))
                     ? RI.getEquivalentAGPRClass(SRC)
                     : RI.getEquivalentVGPRClass(SRC);
       } else {
-        VRC = RI.isAGPRClass(getOpRegClass(MI, 0))
+        VRC = RI.isVectorSuperClass(getOpRegClass(MI, 0))
+                  ? RI.getEquivalentAVClass(VRC)
+              : RI.isAGPRClass(getOpRegClass(MI, 0))
                   ? RI.getEquivalentAGPRClass(VRC)
                   : RI.getEquivalentVGPRClass(VRC);
       }

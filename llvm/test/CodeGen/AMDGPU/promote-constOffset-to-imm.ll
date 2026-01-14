@@ -722,8 +722,8 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v2, vcc
 ; GFX90A-NEXT:    v_add_co_u32_e32 v2, vcc, 0x2800, v1
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
-; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x7f
 ; GFX90A-NEXT:    v_pk_mov_b32 v[4:5], 0, 0
+; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x7f
 ; GFX90A-NEXT:    s_movk_i32 s2, 0xf000
 ; GFX90A-NEXT:    s_movk_i32 s3, 0x1000
 ; GFX90A-NEXT:    s_movk_i32 s4, 0x2000
