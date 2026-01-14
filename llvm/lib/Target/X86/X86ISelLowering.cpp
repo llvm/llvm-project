@@ -54363,6 +54363,8 @@ static bool isHorizontalBinOp(unsigned HOpcode, SDValue &LHS, SDValue &RHS,
         ShuffleMask.assign(Mask.begin(), Mask.end());
       }
     }
+    if (all_of(ShuffleMask, isUndefOrZero))
+      ShuffleMask.clear();
   };
 
   // View LHS in the form
