@@ -6344,6 +6344,8 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
     break;
   case swift::TypeKind::BuiltinFixedArray:
     return eTypeIsBuiltIn | eTypeHasChildren;
+  case swift::TypeKind::BuiltinBorrow:
+    return eTypeIsBuiltIn;
   case swift::TypeKind::BuiltinVector:
     // TODO: OR in eTypeIsFloat or eTypeIsInteger as needed
     return eTypeIsBuiltIn | eTypeHasChildren | eTypeIsVector;
@@ -6516,6 +6518,7 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(opaque_compiler_type_t type) {
   case swift::TypeKind::ExistentialMetatype:
   case swift::TypeKind::DynamicSelf:
   case swift::TypeKind::Error:
+  case swift::TypeKind::BuiltinBorrow:
     return lldb::eTypeClassOther;
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
@@ -7002,6 +7005,7 @@ lldb::Encoding SwiftASTContext::GetEncoding(opaque_compiler_type_t type) {
   case swift::TypeKind::BuiltinFixedArray:
   case swift::TypeKind::BuiltinUnboundGeneric:
   case swift::TypeKind::BuiltinVector:
+  case swift::TypeKind::BuiltinBorrow:
   case swift::TypeKind::Tuple:
     break;
   case swift::TypeKind::UnmanagedStorage:
@@ -7113,6 +7117,7 @@ SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
 
   case swift::TypeKind::Enum:
   case swift::TypeKind::BoundGenericEnum:
+  case swift::TypeKind::BuiltinBorrow:
     return 0;
 
   case swift::TypeKind::BoundGenericStruct:
@@ -7245,6 +7250,7 @@ uint32_t SwiftASTContext::GetNumFields(opaque_compiler_type_t type,
 
   case swift::TypeKind::Enum:
   case swift::TypeKind::BoundGenericEnum:
+  case swift::TypeKind::BuiltinBorrow:
     return 0;
 
   case swift::TypeKind::Tuple:
@@ -7475,6 +7481,7 @@ CompilerType SwiftASTContext::GetFieldAtIndex(opaque_compiler_type_t type,
 
   case swift::TypeKind::Enum:
   case swift::TypeKind::BoundGenericEnum:
+  case swift::TypeKind::BuiltinBorrow:
     break;
 
   case swift::TypeKind::Tuple: {
@@ -7635,6 +7642,7 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(opaque_compiler_type_t type) {
   case swift::TypeKind::BuiltinDefaultActorStorage:
   case swift::TypeKind::BuiltinExecutor:
   case swift::TypeKind::BuiltinFixedArray:
+  case swift::TypeKind::BuiltinBorrow:
   case swift::TypeKind::BuiltinJob:
   case swift::TypeKind::BuiltinNonDefaultDistributedActorStorage:
   case swift::TypeKind::BuiltinPackIndex:
@@ -7834,6 +7842,7 @@ llvm::Expected<CompilerType> SwiftASTContext::GetChildCompilerTypeAtIndex(
   case swift::TypeKind::TypeVariable:
   case swift::TypeKind::UnboundGeneric:
   case swift::TypeKind::VariadicSequence:
+  case swift::TypeKind::BuiltinBorrow:
     break;
 
   case swift::TypeKind::UnmanagedStorage:
@@ -8230,6 +8239,7 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
     case swift::TypeKind::TypeVariable:
     case swift::TypeKind::UnboundGeneric:
     case swift::TypeKind::VariadicSequence:
+    case swift::TypeKind::BuiltinBorrow:
       break;
 
     case swift::TypeKind::UnmanagedStorage:
@@ -8607,6 +8617,7 @@ bool SwiftASTContext::DumpTypeValue(
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {
   case swift::TypeKind::BoundGenericStruct:
+  case swift::TypeKind::BuiltinBorrow:
   case swift::TypeKind::BuiltinDefaultActorStorage:
   case swift::TypeKind::BuiltinExecutor:
   case swift::TypeKind::BuiltinFixedArray:
