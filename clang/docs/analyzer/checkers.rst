@@ -860,7 +860,8 @@ This design rule is dictated by the SEI CERT rule `EXP47-C
 <https://wiki.sei.cmu.edu/confluence/display/c/EXP47-C.+Do+not+call+va_arg+with+an+argument+of+the+incorrect+type>`_,
 which describes several issues related to the use of ``va_arg()``. (The problem
 reported by this checker is shown in the second code example; the first,
-unrelated code example is covered by the clang diagnostic ``-Wvarargs``.)
+unrelated code example is covered by the clang diagnostic `-Wvarargs
+<https://clang.llvm.org/docs/DiagnosticsReference.html#wvarargs>`_.)
 
 .. code-block:: cpp
 
