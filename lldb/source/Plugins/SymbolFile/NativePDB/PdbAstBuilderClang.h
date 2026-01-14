@@ -54,7 +54,7 @@ class PdbAstBuilderClang : public PdbAstBuilder {
 public:
   PdbAstBuilderClang(TypeSystemClang &clang);
 
-  std::optional<CompilerDecl> GetOrCreateDeclForUid(PdbSymUid uid) override;
+  CompilerDecl GetOrCreateDeclForUid(PdbSymUid uid) override;
   CompilerDeclContext GetOrCreateDeclContextForUid(PdbSymUid uid) override;
   CompilerDeclContext GetParentDeclContext(PdbSymUid uid) override;
 

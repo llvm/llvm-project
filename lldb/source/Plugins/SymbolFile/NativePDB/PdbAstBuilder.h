@@ -16,7 +16,6 @@
 #include "llvm/ADT/StringRef.h"
 
 #include "PdbSymUid.h"
-#include <optional>
 
 namespace lldb_private {
 class Stream;
@@ -27,7 +26,7 @@ class PdbAstBuilder {
 public:
   virtual ~PdbAstBuilder() = default;
 
-  virtual std::optional<CompilerDecl> GetOrCreateDeclForUid(PdbSymUid uid) = 0;
+  virtual CompilerDecl GetOrCreateDeclForUid(PdbSymUid uid) = 0;
   virtual CompilerDeclContext GetOrCreateDeclContextForUid(PdbSymUid uid) = 0;
   virtual CompilerDeclContext GetParentDeclContext(PdbSymUid uid) = 0;
 

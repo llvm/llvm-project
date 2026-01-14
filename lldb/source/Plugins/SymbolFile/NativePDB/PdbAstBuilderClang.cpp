@@ -277,8 +277,7 @@ clang::Decl *PdbAstBuilderClang::GetOrCreateSymbolForId(PdbCompilandSymId id) {
   }
 }
 
-std::optional<CompilerDecl>
-PdbAstBuilderClang::GetOrCreateDeclForUid(PdbSymUid uid) {
+CompilerDecl PdbAstBuilderClang::GetOrCreateDeclForUid(PdbSymUid uid) {
   if (clang::Decl *result = TryGetDecl(uid))
     return ToCompilerDecl(result);
 
@@ -290,19 +289,19 @@ PdbAstBuilderClang::GetOrCreateDeclForUid(PdbSymUid uid) {
   case PdbSymUidKind::Type: {
     clang::QualType qt = GetOrCreateClangType(uid.asTypeSym());
     if (qt.isNull())
-      return std::nullopt;
+      return CompilerDecl();
     if (auto *tag = qt->getAsTagDecl()) {
       result = tag;
       break;
     }
-    return std::nullopt;
+    return CompilerDecl();
   }
   default:
-    return std::nullopt;
+    return CompilerDecl();
   }
 
   if (!result)
-    return std::nullopt;
+    return CompilerDecl();
   m_uid_to_decl[toOpaqueUid(uid)] = result;
   return ToCompilerDecl(result);
 }
@@ -313,10 +312,7 @@ PdbAstBuilderClang::GetOrCreateClangDeclContextForUid(PdbSymUid uid) {
     if (uid.asCompilandSym().offset == 0)
       return FromCompilerDeclContext(GetTranslationUnitDecl());
   }
-  auto option = GetOrCreateDeclForUid(uid);
-  if (!option)
-    return nullptr;
-  clang::Decl *decl = FromCompilerDecl(*option);
+  clang::Decl *decl = FromCompilerDecl(GetOrCreateDeclForUid(uid));
   if (!decl)
     return nullptr;
 
