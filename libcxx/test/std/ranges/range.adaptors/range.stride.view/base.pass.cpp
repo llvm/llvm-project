@@ -38,60 +38,60 @@ constexpr bool test() {
   // l-value ref qualified
   // const &
   {
-    const auto str(std::ranges::stride_view<CopyableInputView>(
-        CopyableInputView(cpp17_input_iterator<int*>(buff), cpp17_input_iterator<int*>(buff + N)), 1));
+    const std::ranges::stride_view<CopyableInputView> view(
+        CopyableInputView(cpp17_input_iterator<int*>(buff), cpp17_input_iterator<int*>(buff + N)), 1);
 
-    static_assert(has_lvalue_qualified_base(str));
+    static_assert(has_lvalue_qualified_base(view));
 
-    std::same_as<CopyableInputView> decltype(auto) s = str.base();
+    std::same_as<CopyableInputView> decltype(auto) s = view.base();
     assert(*s.begin() == *buff);
   }
 
   // &
   {
-    auto str(std::ranges::stride_view<CopyableInputView>(
-        CopyableInputView(cpp17_input_iterator<int*>(buff), cpp17_input_iterator<int*>(buff + N)), 1));
+    std::ranges::stride_view<CopyableInputView> view(
+        CopyableInputView(cpp17_input_iterator<int*>(buff), cpp17_input_iterator<int*>(buff + N)), 1);
 
-    std::same_as<CopyableInputView> decltype(auto) s = str.base();
+    std::same_as<CopyableInputView> decltype(auto) s = view.base();
     assert(*s.begin() == *buff);
 
-    static_assert(has_lvalue_qualified_base(str));
+    static_assert(has_lvalue_qualified_base(view));
   }
 
   // r-value ref qualified
   // &&
   {
-    auto str(std::ranges::stride_view<CopyableInputView>(
-        CopyableInputView(cpp17_input_iterator<int*>(buff), cpp17_input_iterator<int*>(buff + N)), 1));
+    std::ranges::stride_view<CopyableInputView> view(
+        CopyableInputView(cpp17_input_iterator<int*>(buff), cpp17_input_iterator<int*>(buff + N)), 1);
 
-    static_assert(has_lvalue_qualified_base(str));
+    static_assert(has_lvalue_qualified_base(view));
 
-    std::same_as<CopyableInputView> decltype(auto) s = std::move(str).base();
+    std::same_as<CopyableInputView> decltype(auto) s = std::move(view).base();
     assert(*s.begin() == *buff);
   }
 
   // const &&
   {
-    const auto str_a(std::ranges::stride_view<CopyableInputView>(
-        CopyableInputView(cpp17_input_iterator<int*>(buff), cpp17_input_iterator<int*>(buff + N)), 1));
+    const std::ranges::stride_view<CopyableInputView> view(
+        CopyableInputView(cpp17_input_iterator<int*>(buff), cpp17_input_iterator<int*>(buff + N)), 1);
 
-    static_assert(has_lvalue_qualified_base(str_a));
+    static_assert(has_lvalue_qualified_base(view));
 
-    std::same_as<CopyableInputView> decltype(auto) s = std::move(str_a).base();
+    std::same_as<CopyableInputView> decltype(auto) s = std::move(view).base();
     assert(*s.begin() == *buff);
   }
 
   // &&
   {
-    auto str(std::ranges::stride_view<MoveOnlyInputView>(
-        MoveOnlyInputView(cpp17_input_iterator<int*>(buff), cpp17_input_iterator<int*>(buff + N)), 1));
+    std::ranges::stride_view<MoveOnlyInputView> view(
+        MoveOnlyInputView(cpp17_input_iterator<int*>(buff), cpp17_input_iterator<int*>(buff + N)), 1);
 
     // Because the base of the stride view is move only,
     // the const & version is not applicable and, therefore,
     // there is no l-value qualified base method.
-    static_assert(!has_lvalue_qualified_base(str));
+    static_assert(!has_lvalue_qualified_base(view));
 
-    std::same_as<MoveOnlyInputView> decltype(auto) s = std::move(str).base();
+    std::same_as<MoveOnlyInputView> decltype(auto) s = std::move(view).base();
     assert(*s.begin() == *buff);
   }
   return true;
