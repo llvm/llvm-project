@@ -53517,9 +53517,10 @@ static SDValue canonicalizeBoolMask(unsigned Opcode, EVT VT, SDValue Mask,
   EVT MaskVT = Mask.getValueType();
   EVT ExtMaskVT = VT.changeVectorElementTypeToInteger();
   assert(ExtMaskVT.bitsGT(MaskVT) && "Unexpected extension type");
-  SDValue NewMask = combineToExtendBoolVectorInReg(
-      ISD::SIGN_EXTEND, DL, ExtMaskVT, Mask, DAG, DCI, Subtarget);
-  return DAG.getNode(ISD::TRUNCATE, DL, MaskVT, NewMask);
+  if (SDValue NewMask = combineToExtendBoolVectorInReg(
+          ISD::SIGN_EXTEND, DL, ExtMaskVT, Mask, DAG, DCI, Subtarget))
+    return DAG.getNode(ISD::TRUNCATE, DL, MaskVT, NewMask);
+  return SDValue();
 }
 
 /// If V is a build vector of boolean constants and exactly one of those
