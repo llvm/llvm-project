@@ -2201,9 +2201,12 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // overwritten by the stores of the outgoing arguments. To avoid this, we
   // need to make a temporary copy of them in local stack space, then copy back
   // to the argument area.
-  DenseMap<unsigned, SDValue> ByValTemporaries;
+  SmallVector<SDValue, 8> ByValTemporaries;
   SDValue ByValTempChain;
   if (isTailCall) {
+    // Use null SDValue to mean "no temporary recorded for this arg index".
+    ByValTemporaries.assign(OutVals.size(), SDValue());
+
     SmallVector<SDValue, 8> ByValCopyChains;
     for (const CCValAssign &VA : ArgLocs) {
       unsigned ArgIdx = VA.getValNo();
@@ -2520,18 +2523,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       FIN = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
 
       if (Flags.isByVal()) {
-        SDValue ByValSrc;
-        bool NeedsStackCopy;
-        if (auto It = ByValTemporaries.find(OutsIndex);
-            It != ByValTemporaries.end()) {
-          ByValSrc = It->second;
-          NeedsStackCopy = true;
-        } else {
-          ByValSrc = Arg;
-          NeedsStackCopy = false;
-        }
-
-        if (NeedsStackCopy) {
+        if (SDValue ByValSrc = ByValTemporaries[OutsIndex]) {
           auto PtrVT = getPointerTy(DAG.getDataLayout());
           SDValue DstAddr = DAG.getFrameIndex(FI, PtrVT);
 
