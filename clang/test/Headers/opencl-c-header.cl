@@ -1,8 +1,9 @@
 // RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify | FileCheck %s
 // RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify -cl-std=CL1.1 | FileCheck %s
 // RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify -cl-std=CL1.2 | FileCheck %s
-// RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify -cl-std=clc++ | FileCheck %s --check-prefix=CHECK20
+// RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify -cl-std=clc++1.0 | FileCheck %s --check-prefix=CHECK20
 // RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify -cl-std=CL3.0 | FileCheck %s
+// RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify -cl-std=clc++2021 | FileCheck %s
 
 // RUN: %clang_cc1 -O0 -triple spirv32-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify | FileCheck %s
 
@@ -60,7 +61,7 @@
 // CHECK20: _Z16convert_char_rtec
 char f(char x) {
 // Check functionality from OpenCL 2.0 onwards
-#if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ == CL_VERSION_2_0)
+#if (__OPENCL_CPP_VERSION__ == 100) || (__OPENCL_C_VERSION__ == CL_VERSION_2_0)
   ndrange_t t;
   x = ctz(x);
 #endif //__OPENCL_C_VERSION__
@@ -85,7 +86,7 @@ void test_atomics(__generic volatile unsigned int* a) {
 #endif
 
 // Verify that ATOMIC_VAR_INIT is defined.
-#if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ == CL_VERSION_2_0)
+#if (__OPENCL_CPP_VERSION__ == 100) || (__OPENCL_C_VERSION__ == CL_VERSION_2_0)
 global atomic_int z = ATOMIC_VAR_INIT(99);
 #endif //__OPENCL_C_VERSION__
 // CHECK-MOD: Reading modules
@@ -126,7 +127,9 @@ global atomic_int z = ATOMIC_VAR_INIT(99);
 #if cl_khr_subgroup_clustered_reduce != 1
 #error "Incorrectly defined cl_khr_subgroup_clustered_reduce"
 #endif
-#if XFAIL_THIS_DOG
+#if cl_khr_subgroup_rotate != 1
+#error "Incorrectly defined cl_khr_subgroup_rotate"
+#endif
 #if cl_khr_extended_bit_ops != 1
 #error "Incorrectly defined cl_khr_extended_bit_ops"
 #endif
@@ -139,9 +142,6 @@ global atomic_int z = ATOMIC_VAR_INIT(99);
 #if __opencl_c_integer_dot_product_input_4x8bit_packed != 1
 #error "Incorrectly defined __opencl_c_integer_dot_product_input_4x8bit_packed"
 #endif
-#endif
-
-#ifdef EXT_SUPPORTED
 #if cl_ext_float_atomics != 1
 #error "Incorrectly defined cl_ext_float_atomics"
 #endif
@@ -196,7 +196,6 @@ global atomic_int z = ATOMIC_VAR_INIT(99);
 #if __opencl_c_ext_image_unsigned_10x6_12x4_14x2 != 1
 #error "Incorrectly defined __opencl_c_ext_image_unsigned_10x6_12x4_14x2"
 #endif
-#endif //EXT_SUPPORTED ?
 
 #else
 
@@ -296,10 +295,8 @@ global atomic_int z = ATOMIC_VAR_INIT(99);
 // OpenCL C features.
 #if (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ == 300)
 
-#if XFAIL_THIS_PUPPY
 #if __opencl_c_atomic_scope_all_devices != 1
 #error "Incorrectly defined feature macro __opencl_c_atomic_scope_all_devices"
-#endif
 #endif
 
 #elif (__OPENCL_CPP_VERSION__ == 100 || __OPENCL_C_VERSION__ == 200)

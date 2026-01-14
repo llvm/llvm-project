@@ -121,7 +121,6 @@ int ignore_result_assign() {
 // CIR:         %[[VAL_123:.*]] = cir.const #cir.int<123> : !s32i
 // CIR:         cir.store{{.*}} %[[VAL_123]], %[[I]] : !s32i, !cir.ptr<!s32i>
 // CIR:         cir.store{{.*}} %[[VAL_123]], %[[J]] : !s32i, !cir.ptr<!s32i>
-// CIR:         %[[VAL_0:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:         %[[VAL_5:.*]] = cir.const #cir.int<5> : !s32i
 // CIR:         cir.store{{.*}} %[[VAL_5]], %[[I]] : !s32i, !cir.ptr<!s32i>
 // CIR:         %[[ARR_ELEM:.*]] = cir.get_element %[[ARR]][%[[VAL_5]] : !s32i] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
