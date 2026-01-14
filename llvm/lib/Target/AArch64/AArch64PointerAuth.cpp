@@ -117,7 +117,8 @@ void AArch64PointerAuth::signLR(MachineFunction &MF,
         ->setPreInstrSymbol(MF, MFnI.getSigningInstrLabel());
   } else {
     if (MFnI.branchProtectionPAuthLR()) {
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM)).setMIFlag(MachineInstr::FrameSetup);
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
+          .setMIFlag(MachineInstr::FrameSetup);
       emitPACCFI(MBB, MBBI, MachineInstr::FrameSetup, EmitCFI);
     }
     BuildMI(MBB, MBBI, DL,
@@ -173,7 +174,8 @@ void AArch64PointerAuth::authenticateLR(
     } else {
       if (MFnI->branchProtectionPAuthLR()) {
         emitPACSymOffsetIntoX16(*TII, MBB, MBBI, DL, PACSym);
-        BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM)).setMIFlag(MachineInstr::FrameDestroy);
+        BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
+            .setMIFlag(MachineInstr::FrameDestroy);
       }
       BuildMI(MBB, TI, DL, TII->get(UseBKey ? AArch64::RETAB : AArch64::RETAA))
           .copyImplicitOps(*MBBI)
@@ -192,7 +194,8 @@ void AArch64PointerAuth::authenticateLR(
     } else {
       if (MFnI->branchProtectionPAuthLR()) {
         emitPACSymOffsetIntoX16(*TII, MBB, MBBI, DL, PACSym);
-        BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM)).setMIFlag(MachineInstr::FrameDestroy);
+        BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
+            .setMIFlag(MachineInstr::FrameDestroy);
         emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
       }
       BuildMI(MBB, MBBI, DL,
