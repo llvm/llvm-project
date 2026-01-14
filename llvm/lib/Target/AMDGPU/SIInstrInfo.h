@@ -125,6 +125,11 @@ public:
       unsigned SubIdx, const TargetRegisterClass *SubRC) const;
 
 private:
+  bool optimizeSCC(MachineInstr *SCCValid, MachineInstr *SCCRedefine,
+                   bool NeedInversion) const;
+
+  bool invertSCCUse(MachineInstr *SCCDef) const;
+
   void swapOperands(MachineInstr &Inst) const;
 
   std::pair<bool, MachineBasicBlock *>

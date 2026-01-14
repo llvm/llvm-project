@@ -650,10 +650,11 @@ define void @shuffle_ext_byone_v4f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 80
 ; NONEON-NOSVE-NEXT:    stp q2, q1, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr d1, [sp]
-; NONEON-NOSVE-NEXT:    ldp d3, d2, [sp, #48]
+; NONEON-NOSVE-NEXT:    ldp d0, d2, [sp, #48]
+; NONEON-NOSVE-NEXT:    str d0, [sp, #72]
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #40]
 ; NONEON-NOSVE-NEXT:    stp d2, d1, [sp, #16]
-; NONEON-NOSVE-NEXT:    stp d0, d3, [sp, #64]
+; NONEON-NOSVE-NEXT:    str d0, [sp, #64]
 ; NONEON-NOSVE-NEXT:    ldr q1, [sp, #16]
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #64]
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [x0]

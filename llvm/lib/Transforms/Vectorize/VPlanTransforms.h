@@ -186,6 +186,13 @@ struct VPlanTransforms {
   /// this attempt was unsuccessful.
   static bool handleMaxMinNumReductions(VPlan &Plan);
 
+  /// Check if \p Plan contains any FindLast reductions. If it does, try to
+  /// update the vector loop to save the appropriate state using selects
+  /// for entire vectors for both the latest mask containing at least one active
+  /// element and the corresponding data vector. Return false if this attempt
+  /// was unsuccessful.
+  static bool handleFindLastReductions(VPlan &Plan);
+
   /// Clear NSW/NUW flags from reduction instructions if necessary.
   static void clearReductionWrapFlags(VPlan &Plan);
 
