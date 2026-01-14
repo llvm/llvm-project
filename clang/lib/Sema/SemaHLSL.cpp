@@ -3322,14 +3322,22 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     auto *ResourceTy =
         TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
-    QualType ContainedTy = ResourceTy->getContainedType();
-    // ByteAddressBuffer uses FunctionDecl return type instead of contained
+    QualType ElementTy = ResourceTy->getContainedType();
+    // ByteAddressBuffer uses the FunctionDecl types instead of the contained
     // type
-    if (ResourceTy->getAttrs().RawBuffer && ContainedTy->isChar8Type()) {
-      ContainedTy = dyn_cast<FunctionDecl>(SemaRef.CurContext)->getReturnType();
+    if (ResourceTy->getAttrs().RawBuffer && ElementTy->isChar8Type()) {
+      // Load method uses return type
+      FunctionDecl *FD = dyn_cast<FunctionDecl>(SemaRef.CurContext);
+      ElementTy = FD->getReturnType();
+      // Store method uses 2nd parameter type
+      if (ElementTy->isVoidType()) {
+        assert(FD->getNumParams() == 2 &&
+               "expected 2 parameters for Store method");
+        ElementTy = FD->getParamDecl(1)->getType();
+      }
     }
     auto ReturnType =
-        SemaRef.Context.getAddrSpaceQualType(ContainedTy, LangAS::hlsl_device);
+        SemaRef.Context.getAddrSpaceQualType(ElementTy, LangAS::hlsl_device);
     ReturnType = SemaRef.Context.getPointerType(ReturnType);
     TheCall->setType(ReturnType);
     TheCall->setValueKind(VK_LValue);
@@ -3349,8 +3357,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     auto *ResourceTy =
         TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
     QualType ReturnType = ResourceTy->getContainedType();
-    // ByteAddressBuffer uses FunctionDecl return type instead of contained
-    // type
+    // ByteAddressBuffer uses the FunctionDecl return type instead of the
+    // contained type
     if (ResourceTy->getAttrs().RawBuffer && ReturnType->isChar8Type()) {
       ReturnType = dyn_cast<FunctionDecl>(SemaRef.CurContext)->getReturnType();
     }
@@ -3358,18 +3366,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     break;
   }
-  case Builtin::BI__builtin_hlsl_resource_store: {
-    if (SemaRef.checkArgCount(TheCall, 3) ||
-        CheckResourceHandle(&SemaRef, TheCall, 0) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
-                            SemaRef.getASTContext().UnsignedIntTy))
-      return true;
 
-    // need to check anything for the 2nd parameter? not an array?
-
-    TheCall->setType(SemaRef.Context.VoidTy);
-    break;
-  }
   case Builtin::BI__builtin_hlsl_resource_uninitializedhandle: {
     assert(TheCall->getNumArgs() == 1 && "expected 1 arg");
     // Update return type to be the attributed resource type from arg0.

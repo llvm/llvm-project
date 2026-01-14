@@ -539,37 +539,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
 
     return LoadedValue;
   }
-  case Builtin::BI__builtin_hlsl_resource_store: {
-    Value *HandleOp = EmitScalarExpr(E->getArg(0));
-    Value *IndexOp = EmitScalarExpr(E->getArg(1));
-    RValue RVal = EmitAnyExpr(E->getArg(2));
-    Value *ValueOp =
-        RVal.isScalar()
-            ? RVal.getScalarVal()
-            : Builder.CreateLoad(RVal.getAggregateAddress(), "store_val");
-
-    QualType HandleTy = E->getArg(0)->getType();
-    const HLSLAttributedResourceType *RT =
-        HandleTy->getAs<HLSLAttributedResourceType>();
-    Intrinsic::ID IntrID = RT->getAttrs().RawBuffer
-                               ? llvm::Intrinsic::dx_resource_store_rawbuffer
-                               : llvm::Intrinsic::dx_resource_store_typedbuffer;
-
-    SmallVector<Value *, 4> Args;
-    Args.push_back(HandleOp);
-    Args.push_back(IndexOp);
-    if (RT->getAttrs().RawBuffer) {
-      Value *Offset = Builder.getInt32(0);
-      // Offset is poison for ByteAddressBuffer
-      if (RT->getContainedType()->isChar8Type())
-        Offset = llvm::PoisonValue::get(Builder.getInt32Ty());
-      Args.push_back(Offset);
-    }
-    Args.push_back(ValueOp);
-
-    return Builder.CreateIntrinsic(
-        IntrID, {HandleOp->getType(), ValueOp->getType()}, Args);
-  }
   case Builtin::BI__builtin_hlsl_resource_uninitializedhandle: {
     llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
     return llvm::PoisonValue::get(HandleTy);

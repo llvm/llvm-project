@@ -11970,11 +11970,6 @@ static std::optional<APValue> handleVectorUnaryOperator(ASTContext &Ctx,
 
 bool VectorExprEvaluator::VisitUnaryOperator(const UnaryOperator *E) {
   Expr *SubExpr = E->getSubExpr();
-  // solution #2?
-  // auto Pointee = SubExpr->getType();
-  // if (const auto *PT = SubExpr->getType()->getAs<clang::PointerType>())
-  //   Pointee = PT->getPointeeType();
-  // const auto *VD = Pointee->castAs<VectorType>();
   const auto *VD = SubExpr->getType()->castAs<VectorType>();
   // This result element type differs in the case of negating a floating point
   // vector, since the result type is the a vector of the equivilant sized
