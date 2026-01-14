@@ -91,7 +91,10 @@ jobs:
           # Fetch the latest commit SHA from the PR branch          
           PR_SHA=${{ github.event.pull_request.head.sha }}
           # Update the submodule pointer using cacheinfo
-          git update-index --cacheinfo 160000,$PR_SHA,compiler/amd-llvm                   
+          git update-index --cacheinfo 160000,$PR_SHA,compiler/amd-llvm
+          git config --global user.email "z1-cciauto@amd.com"
+          git config --global user.name "Z1 cciauto"
+          git commit -m "Update submodule reference for compiler/amd-llvm"
           # Verify the pointer update
           git submodule status
           git submodule
