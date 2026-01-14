@@ -2249,7 +2249,7 @@ class VOP3PX2e <bits<8> op, bits<8> LdScaleOp, VOP3PWMMA_Profile P> : Enc128, VO
   // Inst{7-0} = unused
   let Inst{10-8} = {0, matrix_b_scale_fmt{1-0}}; // neg_hi
   let Inst{11} = matrix_a_scale{0}; // scale_op_sel(0)
-  let Inst{12} = 0;                 // scale_op_sel(1)
+  let Inst{12} = matrix_b_scale{0}; // scale_op_sel(1)
   let Inst{13} = matrix_a_reuse;    // scale_op_sel(2)
   let Inst{14} = matrix_b_reuse;    // scale_op_sel_hi(2)
   let Inst{15} = 0; // scale_clamp
@@ -2258,7 +2258,7 @@ class VOP3PX2e <bits<8> op, bits<8> LdScaleOp, VOP3PWMMA_Profile P> : Enc128, VO
   let Inst{40-32} = scale_src0;
   let Inst{49-41} = scale_src1;
   let Inst{58-50} = 0x100; // scale src2 = vgpr0 (dummy)
-  let Inst{59}    = matrix_b_scale{0}; // scale_op_sel_hi(0)
+  let Inst{59}    = 0;                 // scale_op_sel_hi(0)
   let Inst{60}    = 0;                 // scale_op_sel_hi(1)
   let Inst{63-61} = {0, matrix_a_scale_fmt{1-0}}; // neg (lo)
 
