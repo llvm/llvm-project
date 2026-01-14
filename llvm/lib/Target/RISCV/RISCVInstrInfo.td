@@ -625,6 +625,7 @@ def LeadingOnesWMask : ImmLeaf<XLenVT, [{
 include "RISCVInstrFormats.td"
 include "RISCVInstrFormatsC.td"
 include "RISCVInstrFormatsV.td"
+include "RISCVInstrFormatsXAIF.td"
 
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
@@ -2382,6 +2383,7 @@ include "RISCVInstrInfoXMips.td"
 include "RISCVInstrInfoXRivos.td"
 include "RISCVInstrInfoXAndes.td"
 include "RISCVInstrInfoXSpacemiT.td"
+include "RISCVInstrInfoXAIF.td"
 
 //===----------------------------------------------------------------------===//
 // Global ISel

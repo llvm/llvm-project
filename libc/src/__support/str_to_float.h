@@ -124,7 +124,7 @@ eisel_lemire(ExpandedFloat<T> init_num,
   // Wider Approximation
   UInt128 final_approx;
   // The halfway constant is used to check if the bits that will be shifted away
-  // intially are all 1. For doubles this is 64 (bitstype size) - 52 (final
+  // initially are all 1. For doubles this is 64 (bitstype size) - 52 (final
   // mantissa size) - 3 (we shift away the last two bits separately for
   // accuracy, and the most significant bit is ignored.) = 9 bits. Similarly,
   // it's 6 bits for floats in this case.
@@ -262,7 +262,7 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
                                (final_approx_lower < approx_lower ? 1 : 0);
 
   // The halfway constant is used to check if the bits that will be shifted away
-  // intially are all 1. For 80 bit floats this is 128 (bitstype size) - 64
+  // initially are all 1. For 80 bit floats this is 128 (bitstype size) - 64
   // (final mantissa size) - 3 (we shift away the last two bits separately for
   // accuracy, and the most significant bit is ignored.) = 61 bits. Similarly,
   // it's 12 bits for 128 bit floats in this case.

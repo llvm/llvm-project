@@ -6021,12 +6021,12 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
       InstructionCost Cost = ScalarCost;
       InstWidening Decision = CM_Scalarize;
 
-      if (VectorCost <= Cost) {
+      if (VectorCost.isValid() && VectorCost <= Cost) {
         Cost = VectorCost;
         Decision = CM_VectorCall;
       }
 
-      if (IntrinsicCost <= Cost) {
+      if (IntrinsicCost.isValid() && IntrinsicCost <= Cost) {
         Cost = IntrinsicCost;
         Decision = CM_IntrinsicCall;
       }
@@ -8365,10 +8365,12 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       VPlanTransforms::runPass(VPlanTransforms::truncateToMinimalBitwidths,
                                *Plan, CM.getMinimalBitwidths());
       VPlanTransforms::runPass(VPlanTransforms::optimize, *Plan);
-      // TODO: try to put it close to addActiveLaneMask().
-      if (CM.foldTailWithEVL())
+      // TODO: try to put addExplicitVectorLength close to addActiveLaneMask
+      if (CM.foldTailWithEVL()) {
         VPlanTransforms::runPass(VPlanTransforms::addExplicitVectorLength,
                                  *Plan, CM.getMaxSafeElements());
+        VPlanTransforms::runPass(VPlanTransforms::optimizeEVLMasks, *Plan);
+      }
       assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
       VPlans.push_back(std::move(Plan));
     }
@@ -8647,6 +8649,12 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   auto Plan = VPlanTransforms::buildVPlan0(
       OrigLoop, *LI, Legal->getWidestInductionType(),
       getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE);
+
+  VPlanTransforms::createHeaderPhiRecipes(
+      *Plan, PSE, *OrigLoop, Legal->getInductionVars(),
+      MapVector<PHINode *, RecurrenceDescriptor>(),
+      SmallPtrSet<const PHINode *, 1>(), SmallPtrSet<PHINode *, 1>(),
+      /*AllowReordering=*/false);
   VPlanTransforms::handleEarlyExits(*Plan,
                                     /*HasUncountableExit*/ false);
   VPlanTransforms::addMiddleCheck(*Plan, /*RequiresScalarEpilogue*/ true,
@@ -8657,12 +8665,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   for (ElementCount VF : Range)
     Plan->addVF(VF);
 
-  if (!VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
-          *Plan,
-          [this](PHINode *P) {
-            return Legal->getIntOrFpInductionDescriptor(P);
-          },
-          *TLI))
+  if (!VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(*Plan, *TLI))
     return nullptr;
 
   // TODO: IVEndValues are not used yet in the native path, to optimize exit
@@ -8755,13 +8758,15 @@ void LoopVectorizationPlanner::addReductionResultComputation(
           Builder.createNaryOp(VPInstruction::ComputeAnyOfResult,
                                {PhiR, Start, NewExitingVPV}, ExitDL);
     } else {
-      VPIRFlags Flags =
+      FastMathFlags FMFs =
           RecurrenceDescriptor::isFloatingPointRecurrenceKind(RecurrenceKind)
-              ? VPIRFlags(RdxDesc.getFastMathFlags())
-              : VPIRFlags();
+              ? RdxDesc.getFastMathFlags()
+              : FastMathFlags();
+      VPIRFlags Flags(RecurrenceKind, PhiR->isOrdered(), PhiR->isInLoop(),
+                      FMFs);
       FinalReductionResult =
           Builder.createNaryOp(VPInstruction::ComputeReductionResult,
-                               {PhiR, NewExitingVPV}, Flags, ExitDL);
+                               {NewExitingVPV}, Flags, ExitDL);
     }
     // If the vector reduction can be performed in a smaller type, we truncate
     // then extend the loop exit value to enable InstCombine to evaluate the
@@ -8789,8 +8794,8 @@ void LoopVectorizationPlanner::addReductionResultComputation(
         PhiR->setOperand(1, Extnd->getVPSingleValue());
 
       // Update ComputeReductionResult with the truncated exiting value and
-      // extend its result.
-      FinalReductionResult->setOperand(1, Trunc);
+      // extend its result. Operand 0 provides the values to be reduced.
+      FinalReductionResult->setOperand(0, Trunc);
       FinalReductionResult =
           Builder.createScalarCast(ExtendOpc, FinalReductionResult, PhiTy, {});
     }

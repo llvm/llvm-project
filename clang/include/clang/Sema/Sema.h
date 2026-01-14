@@ -6988,7 +6988,7 @@ public:
                          const ObjCInterfaceDecl *UnknownObjCClass = nullptr,
                          bool ObjCPropertyAccess = false,
                          bool AvoidPartialAvailabilityChecks = false,
-                         ObjCInterfaceDecl *ClassReciever = nullptr,
+                         ObjCInterfaceDecl *ClassReceiver = nullptr,
                          bool SkipTrailingRequiresClause = false);
 
   /// Emit a note explaining that this function is deleted.

@@ -270,7 +270,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode &node) {
     return llvm::make_error<DILDiagnosticError>(m_expr, "invalid value object",
                                                 node.GetLocation());
   // Return the computed value-or-error. The caller is responsible for
-  // checking if an error occured during the evaluation.
+  // checking if an error occurred during the evaluation.
   return value_or_error;
 }
 

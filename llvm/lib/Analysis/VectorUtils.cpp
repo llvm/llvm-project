@@ -457,7 +457,7 @@ bool llvm::getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
     return true;
 
   // Simple case of a shuffle with zeroinitializer.
-  if (all_of(Mask, [](int Elt) { return Elt == 0; })) {
+  if (all_of(Mask, equal_to(0))) {
     DemandedLHS.setBit(0);
     return true;
   }

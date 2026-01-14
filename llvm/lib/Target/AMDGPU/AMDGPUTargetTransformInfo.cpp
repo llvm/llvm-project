@@ -804,7 +804,7 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       InstRate = getFullRateInstrCost();
 
     static const auto ValidSatTys = {MVT::v2i16, MVT::v4i16};
-    if (any_of(ValidSatTys, [&LT](MVT M) { return M == LT.second; }))
+    if (any_of(ValidSatTys, equal_to(LT.second)))
       NElts = 1;
     break;
   }
@@ -1149,41 +1149,6 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
     ConstantInt *NewVal = (TrueAS == NewAS) ?
       ConstantInt::getTrue(Ctx) : ConstantInt::getFalse(Ctx);
     return NewVal;
-  }
-  case Intrinsic::ptrmask: {
-    unsigned OldAS = OldV->getType()->getPointerAddressSpace();
-    unsigned NewAS = NewV->getType()->getPointerAddressSpace();
-    Value *MaskOp = II->getArgOperand(1);
-    Type *MaskTy = MaskOp->getType();
-
-    bool DoTruncate = false;
-
-    const GCNTargetMachine &TM =
-        static_cast<const GCNTargetMachine &>(getTLI()->getTargetMachine());
-    if (!TM.isNoopAddrSpaceCast(OldAS, NewAS)) {
-      // All valid 64-bit to 32-bit casts work by chopping off the high
-      // bits. Any masking only clearing the low bits will also apply in the new
-      // address space.
-      if (DL.getPointerSizeInBits(OldAS) != 64 ||
-          DL.getPointerSizeInBits(NewAS) != 32)
-        return nullptr;
-
-      // TODO: Do we need to thread more context in here?
-      KnownBits Known = computeKnownBits(MaskOp, DL, nullptr, II);
-      if (Known.countMinLeadingOnes() < 32)
-        return nullptr;
-
-      DoTruncate = true;
-    }
-
-    IRBuilder<> B(II);
-    if (DoTruncate) {
-      MaskTy = B.getInt32Ty();
-      MaskOp = B.CreateTrunc(MaskOp, MaskTy);
-    }
-
-    return B.CreateIntrinsic(Intrinsic::ptrmask, {NewV->getType(), MaskTy},
-                             {NewV, MaskOp});
   }
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
   case Intrinsic::amdgcn_flat_atomic_fmin_num: {

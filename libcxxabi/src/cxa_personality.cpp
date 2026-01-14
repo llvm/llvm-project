@@ -23,7 +23,7 @@
 
 #if __has_feature(ptrauth_calls)
 
-// CXXABI depends on defintions in libunwind as pointer auth couples the
+// CXXABI depends on definitions in libunwind as pointer auth couples the
 // definitions
 #  include "libunwind.h"
 

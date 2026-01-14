@@ -742,9 +742,22 @@ bool MachineInstr::isIdenticalTo(const MachineInstr &Other,
   if (getPreInstrSymbol() != Other.getPreInstrSymbol() ||
       getPostInstrSymbol() != Other.getPostInstrSymbol())
     return false;
-  // Call instructions with different CFI types are not identical.
-  if (isCall() && getCFIType() != Other.getCFIType())
-    return false;
+  if (isCall()) {
+    // Call instructions with different CFI types are not identical.
+    if (getCFIType() != Other.getCFIType())
+      return false;
+    // Even if the call instructions have the same ops, they are not identical
+    // if they are for different globals (this may happen with indirect calls).
+    if (isCandidateForAdditionalCallInfo()) {
+      MachineFunction::CalledGlobalInfo ThisCGI =
+          getParent()->getParent()->tryGetCalledGlobal(this);
+      MachineFunction::CalledGlobalInfo OtherCGI =
+          Other.getParent()->getParent()->tryGetCalledGlobal(&Other);
+      if (ThisCGI.Callee != OtherCGI.Callee ||
+          ThisCGI.TargetFlags != OtherCGI.TargetFlags)
+        return false;
+    }
+  }
   if (getDeactivationSymbol() != Other.getDeactivationSymbol())
     return false;
 

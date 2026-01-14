@@ -194,6 +194,28 @@ static DecodeStatus DecodeFPR128RegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeFPR256RegisterClass(MCInst &Inst, uint32_t RegNo,
+                                              uint64_t Address,
+                                              const void *Decoder) {
+  if (RegNo >= 32)
+    return MCDisassembler::Fail;
+
+  MCRegister Reg = RISCV::F0_Q2 + RegNo;
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeMRRegisterClass(MCInst &Inst, uint32_t RegNo,
+                                          uint64_t Address,
+                                          const void *Decoder) {
+  if (RegNo >= 8)
+    return MCDisassembler::Fail;
+
+  MCRegister Reg = RISCV::M0 + RegNo;
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus DecodeGPRX1RegisterClass(MCInst &Inst,
                                              const MCDisassembler *Decoder) {
   Inst.addOperand(MCOperand::createReg(RISCV::X1));
@@ -686,6 +708,8 @@ static constexpr FeatureBitset XAndesGroup = {
 
 static constexpr FeatureBitset XSMTGroup = {RISCV::FeatureVendorXSMTVDot};
 
+static constexpr FeatureBitset XAIFGroup = {RISCV::FeatureVendorXAIFET};
+
 static constexpr DecoderListEntry DecoderList32[]{
     // Vendor Extensions
     {DecoderTableXCV32, XCVFeatureGroup, "CORE-V extensions"},
@@ -701,6 +725,7 @@ static constexpr DecoderListEntry DecoderList32[]{
     {DecoderTableXMIPS32, XMIPSGroup, "Mips extensions"},
     {DecoderTableXAndes32, XAndesGroup, "Andes extensions"},
     {DecoderTableXSMT32, XSMTGroup, "SpacemiT extensions"},
+    {DecoderTableXAIF32, XAIFGroup, "AI Foundry extensions"},
     // Standard Extensions
     {DecoderTable32, {}, "standard 32-bit instructions"},
     {DecoderTableRV32Only32, {}, "RV32-only standard 32-bit instructions"},

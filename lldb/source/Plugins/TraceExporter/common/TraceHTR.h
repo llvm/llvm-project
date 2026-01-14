@@ -264,7 +264,7 @@ public:
   HTRBlock const *GetBlockById(size_t block_id) const;
 
   /// Get the block ID trace for this layer.
-  /// This block ID trace stores the block ID of each block that occured in the
+  /// This block ID trace stores the block ID of each block that occurred in the
   /// trace and the block defs map maps block ID to the corresponding \a
   /// HTRBlock.
   ///

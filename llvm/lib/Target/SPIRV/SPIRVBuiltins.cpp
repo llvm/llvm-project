@@ -3005,6 +3005,49 @@ static bool generateVectorLoadStoreInst(const SPIRV::IncomingCall *Call,
   return true;
 }
 
+static bool generateAFPInst(const SPIRV::IncomingCall *Call,
+                            MachineIRBuilder &MIRBuilder,
+                            SPIRVGlobalRegistry *GR) {
+  const auto *Builtin = Call->Builtin;
+  auto *MRI = MIRBuilder.getMRI();
+  unsigned Opcode =
+      SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+  const Type *RetTy = GR->getTypeForSPIRVType(Call->ReturnType);
+  bool IsVoid = RetTy->isVoidTy();
+  auto MIB = MIRBuilder.buildInstr(Opcode);
+  Register DestReg;
+  if (IsVoid) {
+    LLT PtrTy = MRI->getType(Call->Arguments[0]);
+    DestReg = MRI->createGenericVirtualRegister(PtrTy);
+    MRI->setRegClass(DestReg, &SPIRV::pIDRegClass);
+    SPIRVType *PointeeTy =
+        GR->getPointeeType(GR->getSPIRVTypeForVReg(Call->Arguments[0]));
+    MIB.addDef(DestReg);
+    MIB.addUse(GR->getSPIRVTypeID(PointeeTy));
+  } else {
+    MIB.addDef(Call->ReturnRegister);
+    MIB.addUse(GR->getSPIRVTypeID(Call->ReturnType));
+  }
+  for (unsigned i = IsVoid ? 1 : 0; i < Call->Arguments.size(); ++i) {
+    Register Arg = Call->Arguments[i];
+    MachineInstr *DefMI = MRI->getUniqueVRegDef(Arg);
+    if (DefMI->getOpcode() == TargetOpcode::G_CONSTANT &&
+        DefMI->getOperand(1).isCImm()) {
+      MIB.addImm(getConstFromIntrinsic(Arg, MRI));
+    } else {
+      MIB.addUse(Arg);
+    }
+  }
+  if (IsVoid) {
+    LLT PtrTy = MRI->getType(Call->Arguments[0]);
+    MachineMemOperand *MMO = MIRBuilder.getMF().getMachineMemOperand(
+        MachinePointerInfo(), MachineMemOperand::MOStore,
+        PtrTy.getSizeInBytes(), Align(4));
+    MIRBuilder.buildStore(DestReg, Call->Arguments[0], *MMO);
+  }
+  return true;
+}
+
 static bool generateLoadStoreInst(const SPIRV::IncomingCall *Call,
                                   MachineIRBuilder &MIRBuilder,
                                   SPIRVGlobalRegistry *GR) {
@@ -3217,6 +3260,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateAPFixedPointInst(Call.get(), MIRBuilder, GR);
   case SPIRV::ImageChannelDataTypes:
     return generateImageChannelDataTypeInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::ArbitraryFloatingPoint:
+    return generateAFPInst(Call.get(), MIRBuilder, GR);
   }
   return false;
 }

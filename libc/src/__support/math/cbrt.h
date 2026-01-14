@@ -35,7 +35,7 @@ using namespace fputil;
 // > P = fpminimax(x^(-2/3), 7, [|D...|], [1, 2]);
 // > dirtyinfnorm(P/x^(-2/3) - 1, [1, 2]);
 // 0x1.28...p-21
-LIBC_INLINE static double intial_approximation(double x) {
+LIBC_INLINE static double initial_approximation(double x) {
   constexpr double COEFFS[8] = {
       0x1.bc52aedead5c6p1,  -0x1.b52bfebf110b3p2,  0x1.1d8d71d53d126p3,
       -0x1.de2db9e81cf87p2, 0x1.0154ca06153bdp2,   -0x1.5973c66ee6da7p0,
@@ -194,7 +194,7 @@ LIBC_INLINE static constexpr double cbrt(double x) {
   double a = FPBits(a_bits).get_val();
 
   // Initial approximation of x_r^(-2/3).
-  double p = intial_approximation(x_r);
+  double p = initial_approximation(x_r);
 
   // Look up for 2^(-2*n/3) used for first approximation step.
   constexpr double EXP2_M2_OVER_3[3] = {1.0, 0x1.428a2f98d728bp-1,
