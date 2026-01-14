@@ -2126,6 +2126,16 @@ public:
   LLVM_ABI KnownBits computeKnownBits(SDValue Op, const APInt &DemandedElts,
                                       unsigned Depth = 0) const;
 
+  /// Determine the possible constant range of an integer or vector of integers.
+  LLVM_ABI ConstantRange computeConstantRange(SDValue Op,
+                                              const APInt &DemandedElts,
+                                              unsigned Depth = 0) const;
+
+  /// Combine constant ranges from computeConstantRange() and
+  /// computeKnownBits().
+  LLVM_ABI ConstantRange computeConstantRangeIncludingKnownBits(
+      SDValue Op, const APInt &DemandedElts, unsigned Depth = 0) const;
+
   /// Used to represent the possible overflow behavior of an operation.
   /// Never: the operation cannot overflow.
   /// Always: the operation will always overflow.
