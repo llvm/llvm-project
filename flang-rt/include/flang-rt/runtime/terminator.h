@@ -117,8 +117,8 @@ struct ExitHandler {
   ExitHandler() {};
 
   void Configure(bool multiImageFeatureEnabled);
-  void NormalExit(int exitCode);
-  void ErrorExit(int exitCode);
+  [[noreturn]] void NormalExit(int exitCode);
+  [[noreturn]] void ErrorExit(int exitCode);
 
   bool multiImageFeatureEnabled{false};
 };
