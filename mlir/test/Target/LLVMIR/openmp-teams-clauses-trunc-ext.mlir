@@ -349,5 +349,5 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
   }
   // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPnum_threads_arg_2_l{{.*}}..omp_par.{{.*}}
   // CHECK: %[[CONV_NT:.*]] = zext i16 %loadgep_ to i32
-  // CHE CK: call void @__kmpc_push_num_threads({{.*}}, {{.*}}, i32 %[[CONV_NT]])
+  // CHECK: call void @__kmpc_push_num_threads({{.*}}, {{.*}}, i32 %[[CONV_NT]])
 }
