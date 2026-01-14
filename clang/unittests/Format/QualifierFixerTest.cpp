@@ -65,6 +65,8 @@ TEST_F(QualifierFixerTest, RotateTokens) {
             tok::kw_extern);
   EXPECT_EQ(LeftRightQualifierAlignmentFixer::getTokenFromQualifier("mutable"),
             tok::kw_mutable);
+  EXPECT_EQ(LeftRightQualifierAlignmentFixer::getTokenFromQualifier("signed"),
+            tok::kw_signed);
   EXPECT_EQ(LeftRightQualifierAlignmentFixer::getTokenFromQualifier("unsigned"),
             tok::kw_unsigned);
   EXPECT_EQ(LeftRightQualifierAlignmentFixer::getTokenFromQualifier("long"),
@@ -1090,7 +1092,6 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
   ConfiguredTokens.push_back(tok::kw_mutable);
   ConfiguredTokens.push_back(tok::kw_unsigned);
   ConfiguredTokens.push_back(tok::kw_long);
-  ConfiguredTokens.push_back(tok::kw_short);
   ConfiguredTokens.push_back(tok::kw_explicit);
 
   TestLexer lexer{Allocator, Buffers};
@@ -1110,6 +1111,9 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
   // When unsigned is configured, signed is automatically added to
   // ConfiguredTokens to handle them at the same position
   ConfiguredTokens.push_back(tok::kw_signed);
+  // When long is configured, short is automatically added to
+  // ConfiguredTokens to handle them at the same position
+  ConfiguredTokens.push_back(tok::kw_short);
 
   for (size_t i = 0; i < 19; ++i) {
     EXPECT_TRUE(
@@ -1467,7 +1471,6 @@ TEST_F(QualifierFixerTest, NewQualifierSupport) {
   Style.QualifierOrder = {"unsigned", "type"};
   verifyFormat("unsigned int num;", "int unsigned num;", Style);
   verifyFormat("unsigned long long value;", "long long unsigned value;", Style);
-  // Verify that signed is handled at the same position as unsigned
   verifyFormat("signed int num;", "int signed num;", Style);
   verifyFormat("signed long long value;", "long long signed value;", Style);
 
@@ -1494,6 +1497,51 @@ TEST_F(QualifierFixerTest, NewQualifierSupport) {
                "volatile const extern constexpr thread_local static inline "
                "unsigned long int var;",
                Style);
+}
+
+TEST_F(QualifierFixerTest, PairedQualifiersSamePosition) {
+  FormatStyle Style = getLLVMStyle();
+  Style.QualifierAlignment = FormatStyle::QAS_Custom;
+
+  Style.QualifierOrder = {"unsigned", "type"};
+  verifyFormat("unsigned int x;", "int unsigned x;", Style);
+  verifyFormat("signed int x;", "int signed x;", Style);
+  verifyFormat("unsigned long int y;", "long unsigned int y;", Style);
+  verifyFormat("signed long int y;", "long signed int y;", Style);
+
+  Style.QualifierOrder = {"signed", "type"};
+  verifyFormat("signed int x;", "int signed x;", Style);
+  verifyFormat("unsigned int x;", "int unsigned x;", Style);
+
+  Style.QualifierOrder = {"long", "type"};
+  verifyFormat("long int x;", "int long x;", Style);
+  verifyFormat("short int x;", "int short x;", Style);
+  verifyFormat("long unsigned int y;", "unsigned long int y;", Style);
+  verifyFormat("short unsigned int y;", "unsigned short int y;", Style);
+
+  Style.QualifierOrder = {"short", "type"};
+  verifyFormat("short int x;", "int short x;", Style);
+  verifyFormat("long int x;", "int long x;", Style);
+
+  Style.QualifierOrder = {"type", "unsigned"};
+  verifyFormat("int unsigned x;", "unsigned int x;", Style);
+  verifyFormat("int signed x;", "signed int x;", Style);
+
+  Style.QualifierOrder = {"type", "long"};
+  verifyFormat("int long x;", "long int x;", Style);
+  verifyFormat("int short x;", "short int x;", Style);
+
+  Style.QualifierOrder = {"static", "unsigned", "long", "type"};
+  verifyFormat("static unsigned long int x;", "long unsigned static int x;",
+               Style);
+  verifyFormat("static signed short int x;", "short signed static int x;",
+               Style);
+
+  Style.QualifierOrder = {"unsigned", "signed", "type"};
+  verifyFormat("unsigned signed int x;", "signed unsigned int x;", Style);
+
+  Style.QualifierOrder = {"long", "short", "type"};
+  verifyFormat("long short int x;", "short long int x;", Style);
 }
 
 TEST_F(QualifierFixerTest, Ranges) {

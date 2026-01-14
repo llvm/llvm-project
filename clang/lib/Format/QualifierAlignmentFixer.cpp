@@ -555,6 +555,7 @@ tok::TokenKind LeftRightQualifierAlignmentFixer::getTokenFromQualifier(
       .Case("thread_local", tok::kw_thread_local)
       .Case("extern", tok::kw_extern)
       .Case("mutable", tok::kw_mutable)
+      .Case("signed", tok::kw_signed)
       .Case("unsigned", tok::kw_unsigned)
       .Case("long", tok::kw_long)
       .Case("short", tok::kw_short)
@@ -640,10 +641,30 @@ void prepareLeftRightOrderingForQualifierAlignmentFixer(
         LeftRightQualifierAlignmentFixer::getTokenFromQualifier(s);
     if (QualifierToken != tok::kw_typeof && QualifierToken != tok::identifier) {
       Qualifiers.push_back(QualifierToken);
-      // Handle signed and unsigned together: if unsigned is configured,
-      // also treat signed as configured at the same position.
+
+      // Ensure signed/unsigned and long/short qualifier pairs are positioned
+      // together by default unless the user has explicitly specified both in
+      // the QualifierOrder. This allows users to override the default pairing
+      // by listing both qualifiers in the order.
+      auto addPairedQualifier = [&](tok::TokenKind PairedToken,
+                                    const std::string &PairedName) {
+        if (!llvm::is_contained(Order, PairedName)) {
+          Qualifiers.push_back(PairedToken);
+          if (left)
+            LeftOrder.insert(LeftOrder.begin(), PairedName);
+          else
+            RightOrder.push_back(PairedName);
+        }
+      };
+
       if (QualifierToken == tok::kw_unsigned)
-        Qualifiers.push_back(tok::kw_signed);
+        addPairedQualifier(tok::kw_signed, "signed");
+      else if (QualifierToken == tok::kw_signed)
+        addPairedQualifier(tok::kw_unsigned, "unsigned");
+      else if (QualifierToken == tok::kw_long)
+        addPairedQualifier(tok::kw_short, "short");
+      else if (QualifierToken == tok::kw_short)
+        addPairedQualifier(tok::kw_long, "long");
     }
 
     if (left) {
