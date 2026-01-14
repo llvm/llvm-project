@@ -1421,16 +1421,16 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     // For example, this transforms
     // vp<%min.result> = compute-reduction-result ir<%min.val>,
     //                                            ir<%min.val.next>
-    // vp<%find.iv.result = compute-find-iv-result ir<0>,
-    //                                             SENTINEL, vp<%min.idx.next>
+    // vp<%find.iv.result = compute-find-iv-result ir<0>, SENTINEL,
+    //                                             vp<%min.idx.next>
     //
     // into:
     //
     // vp<min.result> = compute-reduction-result ir<%min.val>, ir<%min.val.next>
     // vp<%final.min.cmp> = icmp eq ir<%min.val.next>, vp<min.result>
     // vp<%final.iv> = select vp<%final.min.cmp>, ir<%min.idx.next>, SENTINEL
-    // vp<%find.iv.result> = compute-find-iv-result ir<0>,
-    //                                             SENTINEL, vp<%final.iv>
+    // vp<%find.iv.result> = compute-find-iv-result ir<0>, SENTINEL,
+    //                                              vp<%final.iv>
     VPInstruction *FindIVResult =
         findUserOf<VPInstruction::ComputeFindIVResult>(
             FindIVPhiR->getBackedgeValue());

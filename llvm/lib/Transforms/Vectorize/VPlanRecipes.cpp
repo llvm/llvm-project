@@ -725,20 +725,11 @@ Value *VPInstruction::generate(VPTransformState &State) {
                                 State.get(getOperand(1), VPLane(0)), OrigPhi);
   }
   case VPInstruction::ComputeFindIVResult: {
-    RecurKind RK = getRecurKind();
-    assert(RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
-           "Unexpected reduction kind");
-
     // The recipe's operands are the start value, the sentinel value, followed
     // by one operand for each part of the reduction.
     unsigned UF = getNumOperands() - 2;
     Value *ReducedPartRdx = State.get(getOperand(2));
-    RecurKind MinMaxKind;
-    bool IsSigned = RecurrenceDescriptor::isSignedRecurrenceKind(RK);
-    if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK))
-      MinMaxKind = IsSigned ? RecurKind::SMax : RecurKind::UMax;
-    else
-      MinMaxKind = IsSigned ? RecurKind::SMin : RecurKind::UMin;
+    RecurKind MinMaxKind = getRecurKind();
     for (unsigned Part = 1; Part < UF; ++Part)
       ReducedPartRdx = createMinMaxOp(Builder, MinMaxKind, ReducedPartRdx,
                                       State.get(getOperand(2 + Part)));
@@ -747,12 +738,13 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *Sentinel = getOperand(1)->getLiveInIRValue();
 
     // Reduce the vector to a scalar.
-    bool IsFindLast = RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK);
+    bool IsMaxRdx =
+        MinMaxKind == RecurKind::SMax || MinMaxKind == RecurKind::UMax;
+    bool IsSigned = RecurrenceDescriptor::isSignedRecurrenceKind(MinMaxKind);
     Value *ReducedIV =
         ReducedPartRdx->getType()->isVectorTy()
-            ? (IsFindLast
-                   ? Builder.CreateIntMaxReduce(ReducedPartRdx, IsSigned)
-                   : Builder.CreateIntMinReduce(ReducedPartRdx, IsSigned))
+            ? (IsMaxRdx ? Builder.CreateIntMaxReduce(ReducedPartRdx, IsSigned)
+                        : Builder.CreateIntMinReduce(ReducedPartRdx, IsSigned))
             : ReducedPartRdx;
     // Correct the final reduction result back to the start value if the
     // reduction result is the sentinel value.
@@ -2147,17 +2139,17 @@ void VPIRFlags::printFlags(raw_ostream &O) const {
     RecurKind RK = getRecurKind();
     O << " (";
     switch (RK) {
-    case RecurKind::FindLastIVUMax:
-      O << "find-last-iv-umax";
+    case RecurKind::SMax:
+      O << "smax";
       break;
-    case RecurKind::FindLastIVSMax:
-      O << "find-last-iv-smax";
+    case RecurKind::SMin:
+      O << "smin";
       break;
-    case RecurKind::FindFirstIVUMin:
-      O << "find-first-iv-umin";
+    case RecurKind::UMax:
+      O << "umax";
       break;
-    case RecurKind::FindFirstIVSMin:
-      O << "find-first-iv-smin";
+    case RecurKind::UMin:
+      O << "umin";
       break;
     default:
       O << Instruction::getOpcodeName(RecurrenceDescriptor::getOpcode(RK));

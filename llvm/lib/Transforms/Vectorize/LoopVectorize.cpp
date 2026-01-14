@@ -8749,7 +8749,14 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     if (RecurrenceDescriptor::isFindIVRecurrenceKind(RecurrenceKind)) {
       VPValue *Start = PhiR->getStartValue();
       VPValue *Sentinel = Plan->getOrAddLiveIn(RdxDesc.getSentinelValue());
-      VPIRFlags Flags(RecurrenceKind, /*IsOrdered=*/false, /*IsInLoop=*/false,
+      RecurKind MinMaxKind;
+      bool IsSigned =
+          RecurrenceDescriptor::isSignedRecurrenceKind(RecurrenceKind);
+      if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RecurrenceKind))
+        MinMaxKind = IsSigned ? RecurKind::SMax : RecurKind::UMax;
+      else
+        MinMaxKind = IsSigned ? RecurKind::SMin : RecurKind::UMin;
+      VPIRFlags Flags(MinMaxKind, /*IsOrdered=*/false, /*IsInLoop=*/false,
                       FastMathFlags());
       FinalReductionResult =
           Builder.createNaryOp(VPInstruction::ComputeFindIVResult,
