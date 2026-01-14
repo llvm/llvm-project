@@ -2,9 +2,12 @@
 
 template <class T> void clang_analyzer_dump(T);
 void clang_analyzer_eval(bool);
+void clang_analyzer_value(int);
 
 void usePointer(int * const *);
 void useReference(int * const &);
+
+template <typename... Ts> void opaque(Ts...);
 
 void testPointer() {
   int x;
@@ -298,3 +301,11 @@ void selfPtrPassedAsConstPointerToOpaqueCtorCall() {
   buf.size();
 }
 
+int aliasing_ptrs_via_mutable_and_const_ptrs() {
+  int x = 1;
+  opaque<const int*, int*>(&x, &x);
+  // expected-warning@+1 {{32s:1}} FIXME: We should not be sure it's 1.
+  clang_analyzer_value(x);
+  return 100 / (x - 1);
+  // expected-warning@-1 {{Division by zero}} FIXME: We shouldn't report this.
+}
