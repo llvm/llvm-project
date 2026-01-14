@@ -86,8 +86,8 @@
 # CHECK-NEXT:          }
 # CHECK-NEXT:        },
 # CHECK-NEXT:      "tags": [
-# CHECK-NEXT:        19,
-# CHECK-NEXT:        18
+# CHECK-NEXT:        18,
+# CHECK-NEXT:        19
 # CHECK-NEXT:      ]
 # CHECK-NEXT:      }
 # CHECK-NEXT:    ]
