@@ -230,14 +230,12 @@ bool3 getBoolVecMatrixDynamic(bool2x3 M, int index) {
     return M[index];
 }
 
-// CHECK-LABEL: define hidden noundef <4 x i1> @_Z24getBoolVecMatrixConstantu11matrix_typeILm4ELm4EbEi(
-// CHECK-SAME: <16 x i1> noundef [[M:%.*]], i32 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-LABEL: define hidden noundef <4 x i1> @_Z24getBoolVecMatrixConstantu11matrix_typeILm4ELm4EbE(
+// CHECK-SAME: <16 x i1> noundef [[M:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [16 x i32], align 4
-// CHECK-NEXT:    [[INDEX_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = zext <16 x i1> [[M]] to <16 x i32>
 // CHECK-NEXT:    store <16 x i32> [[TMP0]], ptr [[M_ADDR]], align 4
-// CHECK-NEXT:    store i32 [[INDEX]], ptr [[INDEX_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i32>, ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[MATRIX_ELEM:%.*]] = extractelement <16 x i32> [[TMP1]], i32 0
 // CHECK-NEXT:    [[MATRIX_ROW_INS:%.*]] = insertelement <4 x i32> poison, i32 [[MATRIX_ELEM]], i32 0
@@ -250,18 +248,16 @@ bool3 getBoolVecMatrixDynamic(bool2x3 M, int index) {
 // CHECK-NEXT:    [[LOADEDV:%.*]] = trunc <4 x i32> [[MATRIX_ROW_INS6]] to <4 x i1>
 // CHECK-NEXT:    ret <4 x i1> [[LOADEDV]]
 //
-bool4 getBoolVecMatrixConstant(bool4x4 M, int index) {
+bool4 getBoolVecMatrixConstant(bool4x4 M) {
     return M[0];
 }
 
-// CHECK-LABEL: define hidden noundef i1 @_Z27getBoolScalarMatrixConstantu11matrix_typeILm3ELm1EbEi(
-// CHECK-SAME: <3 x i1> noundef [[M:%.*]], i32 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-LABEL: define hidden noundef i1 @_Z27getBoolScalarMatrixConstantu11matrix_typeILm3ELm1EbE(
+// CHECK-SAME: <3 x i1> noundef [[M:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [3 x i32], align 4
-// CHECK-NEXT:    [[INDEX_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = zext <3 x i1> [[M]] to <3 x i32>
 // CHECK-NEXT:    store <3 x i32> [[TMP0]], ptr [[M_ADDR]], align 4
-// CHECK-NEXT:    store i32 [[INDEX]], ptr [[INDEX_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load <3 x i32>, ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[MATRIX_ELEM:%.*]] = extractelement <3 x i32> [[TMP1]], i32 1
 // CHECK-NEXT:    [[MATRIX_ROW_INS:%.*]] = insertelement <1 x i32> poison, i32 [[MATRIX_ELEM]], i32 0
@@ -269,6 +265,6 @@ bool4 getBoolVecMatrixConstant(bool4x4 M, int index) {
 // CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x i1> [[LOADEDV]], i32 0
 // CHECK-NEXT:    ret i1 [[CAST_VTRUNC]]
 //
-bool getBoolScalarMatrixConstant(bool3x1 M, int index) {
+bool getBoolScalarMatrixConstant(bool3x1 M) {
     return M[1];
 }

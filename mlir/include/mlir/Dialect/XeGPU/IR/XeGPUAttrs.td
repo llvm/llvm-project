@@ -520,9 +520,9 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
 
     /// Check if this is slice of some other layout.
     bool isSliceOf(const xegpu::DistributeLayoutAttr &other) { return false; }
-    
+
     /// Check if this is identical to some other layout.
-    bool isEqualTo(const xegpu::DistributeLayoutAttr &other); 
+    bool isEqualTo(const xegpu::DistributeLayoutAttr &other);
 
   }];
 
@@ -698,9 +698,12 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
 
     /// Check if this is slice of some other layout.
     bool isSliceOf(const xegpu::DistributeLayoutAttr &other);
-    
+
+    /// Drop the slice dims to get the original layout.
+    SliceAttr dropSliceDims(ArrayRef<int64_t> sliceDimsToDrop);
+
     /// Check if this is identical to some other layout.
-    bool isEqualTo(const xegpu::DistributeLayoutAttr &other); 
+    bool isEqualTo(const xegpu::DistributeLayoutAttr &other);
   }];
 
   let assemblyFormat = "`<` qualified($parent) `,` `dims` `=` $dims `>`";
@@ -782,13 +785,13 @@ def AnchorLayoutInterface : OpInterface<"AnchorLayoutInterface"> {
   let methods = [
     InterfaceMethod<
       /*desc=*/"Get the anchor layout attribute.",
-      /*retTy=*/"xegpu::DistributeLayoutAttr", 
+      /*retTy=*/"xegpu::DistributeLayoutAttr",
       /*methodName=*/"getAnchorLayout",
       /*args=*/(ins)
     >,
     InterfaceMethod<
       /*desc=*/"Set the anchor layout attribute.",
-      /*retTy=*/"void", 
+      /*retTy=*/"void",
       /*methodName=*/"setAnchorLayout",
       /*args=*/(ins "xegpu::DistributeLayoutAttr":$layout)
     >,
