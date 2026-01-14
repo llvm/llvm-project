@@ -193,6 +193,7 @@ struct MissingFeatures {
   // LowerModule handling
   static bool lowerModuleCodeGenOpts() { return false; }
   static bool lowerModuleLangOpts() { return false; }
+  static bool targetLoweringInfo() { return false; }
 
   // Misc
   static bool aarch64SIMDIntrinsics() { return false; }
