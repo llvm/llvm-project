@@ -2016,14 +2016,10 @@ define <2 x i32> @umulh_v2i32(<2 x i32> %op1, <2 x i32> %op2) {
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #32
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 32
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldp w11, w10, [sp, #16]
 ; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #8]
-; NONEON-NOSVE-NEXT:    // kill: def $x9 killed $w9
-; NONEON-NOSVE-NEXT:    // kill: def $x10 killed $w10
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
+; NONEON-NOSVE-NEXT:    ldp w11, w10, [sp, #16]
 ; NONEON-NOSVE-NEXT:    umull x9, w9, w10
-; NONEON-NOSVE-NEXT:    mov w10, w11
-; NONEON-NOSVE-NEXT:    umull x8, w8, w10
+; NONEON-NOSVE-NEXT:    umull x8, w8, w11
 ; NONEON-NOSVE-NEXT:    lsr x9, x9, #32
 ; NONEON-NOSVE-NEXT:    lsr x8, x8, #32
 ; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #24]
@@ -2058,27 +2054,19 @@ define <4 x i32> @umulh_v4i32(<4 x i32> %op1, <4 x i32> %op2) {
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldp d1, d0, [sp, #16]
 ; NONEON-NOSVE-NEXT:    ldp w10, w11, [sp, #32]
-; NONEON-NOSVE-NEXT:    // kill: def $x11 killed $w11
 ; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #40]
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #48]
-; NONEON-NOSVE-NEXT:    // kill: def $x9 killed $w9
-; NONEON-NOSVE-NEXT:    // kill: def $x10 killed $w10
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    ldp w13, w12, [sp, #48]
-; NONEON-NOSVE-NEXT:    // kill: def $x12 killed $w12
 ; NONEON-NOSVE-NEXT:    umull x11, w11, w12
-; NONEON-NOSVE-NEXT:    // kill: def $x13 killed $w13
 ; NONEON-NOSVE-NEXT:    ldp w14, w12, [sp, #56]
-; NONEON-NOSVE-NEXT:    // kill: def $x12 killed $w12
-; NONEON-NOSVE-NEXT:    umull x9, w9, w12
 ; NONEON-NOSVE-NEXT:    umull x10, w10, w13
 ; NONEON-NOSVE-NEXT:    lsr x11, x11, #32
-; NONEON-NOSVE-NEXT:    mov w12, w14
-; NONEON-NOSVE-NEXT:    umull x8, w8, w12
-; NONEON-NOSVE-NEXT:    lsr x9, x9, #32
+; NONEON-NOSVE-NEXT:    umull x9, w9, w12
+; NONEON-NOSVE-NEXT:    umull x8, w8, w14
 ; NONEON-NOSVE-NEXT:    lsr x10, x10, #32
-; NONEON-NOSVE-NEXT:    lsr x8, x8, #32
+; NONEON-NOSVE-NEXT:    lsr x9, x9, #32
 ; NONEON-NOSVE-NEXT:    stp w10, w11, [sp, #72]
+; NONEON-NOSVE-NEXT:    lsr x8, x8, #32
 ; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #64]
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #64]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #80
@@ -2128,46 +2116,30 @@ define void @umulh_v8i32(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #96]
 ; NONEON-NOSVE-NEXT:    ldp d1, d0, [sp, #16]
 ; NONEON-NOSVE-NEXT:    ldp w14, w15, [sp, #96]
-; NONEON-NOSVE-NEXT:    // kill: def $x14 killed $w14
-; NONEON-NOSVE-NEXT:    // kill: def $x15 killed $w15
 ; NONEON-NOSVE-NEXT:    ldp w12, w13, [sp, #104]
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #80]
 ; NONEON-NOSVE-NEXT:    ldp d1, d0, [sp, #64]
-; NONEON-NOSVE-NEXT:    // kill: def $x13 killed $w13
-; NONEON-NOSVE-NEXT:    // kill: def $x12 killed $w12
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
-; NONEON-NOSVE-NEXT:    // kill: def $x9 killed $w9
-; NONEON-NOSVE-NEXT:    // kill: def $x10 killed $w10
-; NONEON-NOSVE-NEXT:    // kill: def $x11 killed $w11
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #112]
 ; NONEON-NOSVE-NEXT:    ldp w17, w16, [sp, #112]
-; NONEON-NOSVE-NEXT:    // kill: def $x16 killed $w16
-; NONEON-NOSVE-NEXT:    // kill: def $x17 killed $w17
 ; NONEON-NOSVE-NEXT:    umull x15, w15, w16
-; NONEON-NOSVE-NEXT:    ldp w16, w2, [sp, #88]
+; NONEON-NOSVE-NEXT:    ldp w18, w16, [sp, #120]
 ; NONEON-NOSVE-NEXT:    umull x14, w14, w17
-; NONEON-NOSVE-NEXT:    // kill: def $x16 killed $w16
-; NONEON-NOSVE-NEXT:    ldp w17, w3, [sp, #80]
-; NONEON-NOSVE-NEXT:    ldp w18, w1, [sp, #120]
-; NONEON-NOSVE-NEXT:    // kill: def $x1 killed $w1
-; NONEON-NOSVE-NEXT:    // kill: def $x18 killed $w18
-; NONEON-NOSVE-NEXT:    umull x13, w13, w1
-; NONEON-NOSVE-NEXT:    // kill: def $x17 killed $w17
+; NONEON-NOSVE-NEXT:    ldp w17, w1, [sp, #80]
+; NONEON-NOSVE-NEXT:    umull x13, w13, w16
 ; NONEON-NOSVE-NEXT:    lsr x15, x15, #32
-; NONEON-NOSVE-NEXT:    lsr x14, x14, #32
 ; NONEON-NOSVE-NEXT:    umull x12, w12, w18
-; NONEON-NOSVE-NEXT:    mov w18, w2
-; NONEON-NOSVE-NEXT:    mov w1, w3
+; NONEON-NOSVE-NEXT:    lsr x14, x14, #32
+; NONEON-NOSVE-NEXT:    ldp w16, w18, [sp, #88]
 ; NONEON-NOSVE-NEXT:    umull x11, w11, w1
+; NONEON-NOSVE-NEXT:    lsr x13, x13, #32
 ; NONEON-NOSVE-NEXT:    stp w14, w15, [sp, #152]
 ; NONEON-NOSVE-NEXT:    umull x10, w10, w17
-; NONEON-NOSVE-NEXT:    lsr x13, x13, #32
-; NONEON-NOSVE-NEXT:    umull x9, w9, w18
 ; NONEON-NOSVE-NEXT:    lsr x12, x12, #32
+; NONEON-NOSVE-NEXT:    umull x9, w9, w18
 ; NONEON-NOSVE-NEXT:    umull x8, w8, w16
 ; NONEON-NOSVE-NEXT:    lsr x11, x11, #32
-; NONEON-NOSVE-NEXT:    lsr x10, x10, #32
 ; NONEON-NOSVE-NEXT:    stp w12, w13, [sp, #144]
+; NONEON-NOSVE-NEXT:    lsr x10, x10, #32
 ; NONEON-NOSVE-NEXT:    lsr x9, x9, #32
 ; NONEON-NOSVE-NEXT:    lsr x8, x8, #32
 ; NONEON-NOSVE-NEXT:    stp w10, w11, [sp, #136]

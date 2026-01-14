@@ -174,8 +174,6 @@ define <vscale x 16 x i1> @whilehs_b_ii() {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov w8, #2 // =0x2
 ; CHECK-NEXT:    mov w9, #8 // =0x8
-; CHECK-NEXT:    // kill: def $x8 killed $w8
-; CHECK-NEXT:    // kill: def $x9 killed $w9
 ; CHECK-NEXT:    whilehs p0.b, x9, x8
 ; CHECK-NEXT:    ret
 entry:
@@ -354,8 +352,6 @@ define <vscale x 16 x i1> @whilehi_b_ii() {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov w8, #2 // =0x2
 ; CHECK-NEXT:    mov w9, #8 // =0x8
-; CHECK-NEXT:    // kill: def $x8 killed $w8
-; CHECK-NEXT:    // kill: def $x9 killed $w9
 ; CHECK-NEXT:    whilehi p0.b, x9, x8
 ; CHECK-NEXT:    ret
 entry:

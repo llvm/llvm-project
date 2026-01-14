@@ -280,7 +280,6 @@ define void @select_v32i8(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    ldp q2, q1, [x0]
 ; CHECK-NEXT:    mov w8, #16 // =0x10
-; CHECK-NEXT:    // kill: def $x8 killed $w8
 ; CHECK-NEXT:    cmpne p1.b, p0/z, z1.b, z0.b
 ; CHECK-NEXT:    cmpne p0.b, p0/z, z2.b, z3.b
 ; CHECK-NEXT:    st1b { z0.b }, p1, [x0, x8]
@@ -977,12 +976,10 @@ define <2 x i64> @select_v2i64(<2 x i64> %op1, <2 x i64> %op2, <2 x i1> %mask) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 64
 ; NONEON-NOSVE-NEXT:    str d2, [sp, #40]
 ; NONEON-NOSVE-NEXT:    ldp w9, w8, [sp, #40]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [sp]
-; NONEON-NOSVE-NEXT:    // kill: def $x9 killed $w9
-; NONEON-NOSVE-NEXT:    sbfx x8, x8, #0, #1
 ; NONEON-NOSVE-NEXT:    ldr x10, [sp, #24]
 ; NONEON-NOSVE-NEXT:    ldr x11, [sp, #8]
+; NONEON-NOSVE-NEXT:    sbfx x8, x8, #0, #1
 ; NONEON-NOSVE-NEXT:    sbfx x9, x9, #0, #1
 ; NONEON-NOSVE-NEXT:    cmp x8, #0
 ; NONEON-NOSVE-NEXT:    csel x8, x11, x10, ne
