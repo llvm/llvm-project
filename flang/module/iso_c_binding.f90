@@ -78,7 +78,7 @@ module iso_c_binding
   integer, parameter, public :: &
     c_float = 4, &
     c_double = 8, &
-#if __x86_64__
+#if defined(__x86_64__)
     c_long_double = 10
 #elif defined(_WIN32) && defined(__aarch64__)
     c_long_double = 8
@@ -129,7 +129,7 @@ module iso_c_binding
     c_unsigned_long = c_uint64_t, &
 #endif
     c_unsigned_long_long = c_uint64_t, &
-#if __powerpc__ || defined(_WIN32)
+#if defined(__powerpc__) || defined(_WIN32)
     c_uintmax_t = c_uint64_t
 #else
     c_uintmax_t = c_uint128_t
