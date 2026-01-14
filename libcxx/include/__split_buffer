@@ -310,7 +310,8 @@ public:
     return __begin_[__size_ - 1];
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap_without_allocator(__split_buffer_size_layout& __other) _NOEXCEPT {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
+  __swap_without_allocator(__split_buffer_size_layout& __other) _NOEXCEPT {
     std::swap(__front_cap_, __other.__front_cap_);
     std::swap(__begin_, __other.__begin_);
     std::swap(__cap_, __other.__cap_);
