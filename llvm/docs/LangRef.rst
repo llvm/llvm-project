@@ -3115,6 +3115,7 @@ the behavior is undefined, unless one of the following exceptions applies:
 * ``dereferenceable(<n>)`` operand bundles only guarantee the pointer is
   dereferenceable at the point of the assumption. The pointer may not be
   dereferenceable at later pointers, e.g., because it could have been freed.
+  Only ``n > 0`` implies that the pointer is dereferenceable.
 
 In addition to allowing operand bundles encoding function and parameter
 attributes, an assume operand bundle may also encode a ``separate_storage``
