@@ -848,7 +848,7 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
             if (!RK.IRArgValue)
               return true;
 
-            if(auto* CI = dyn_cast<ConstantInt>(RK.IRArgValue))
+            if (auto *CI = dyn_cast<ConstantInt>(RK.IRArgValue))
               return !CI->isZero();
 
             return false;

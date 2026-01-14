@@ -1572,8 +1572,8 @@ Currently, only the following parameter attributes are defined:
     dereferenceability (consider a pointer to one element past the end of an
     array), however ``dereferenceable(<n>)`` does imply ``nonnull`` in
     ``addrspace(0)`` (which is the default address space), except if the
-    ``null_pointer_is_valid`` function attribute is present or ``n == 0``.
-    ``n`` should be a non-negative number. The pointer should be well defined,
+    ``null_pointer_is_valid`` function attribute is present.
+    ``n`` should be a positive number. The pointer should be well defined,
     otherwise it is undefined behavior. This means ``dereferenceable(<n>)``
     implies ``noundef``. When used in an assume operand bundle, more restricted
     semantics apply. See  :ref:`assume operand bundles <assume_opbundles>` for
@@ -3115,6 +3115,7 @@ the behavior is undefined, unless one of the following exceptions applies:
 * ``dereferenceable(<n>)`` operand bundles only guarantee the pointer is
   dereferenceable at the point of the assumption. The pointer may not be
   dereferenceable at later pointers, e.g., because it could have been freed.
+  Only ``n > 0`` implies that the pointer is dereferenceable.
 
 In addition to allowing operand bundles encoding function and parameter
 attributes, an assume operand bundle may also encode a ``separate_storage``
