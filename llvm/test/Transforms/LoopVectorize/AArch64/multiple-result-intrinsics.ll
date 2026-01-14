@@ -9,16 +9,16 @@
 ; CHECK-COST: LV: Found an estimated cost of 10 for VF 1 For instruction:   %call = tail call { float, float } @llvm.sincos.f32(float %in_val)
 ; CHECK-COST: Cost of 26 for VF 2: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
 ; CHECK-COST: Cost of 58 for VF 4: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
-; CHECK-COST: Cost of Invalid for VF vscale x 1: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
-; CHECK-COST: Cost of Invalid for VF vscale x 2: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
-; CHECK-COST: Cost of Invalid for VF vscale x 4: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
+; CHECK-COST: Cost of Invalid for VF vscale x 1: REPLICATE ir<%call> = call @llvm.sincos.f32(ir<%in_val>)
+; CHECK-COST: Cost of Invalid for VF vscale x 2: REPLICATE ir<%call> = call @llvm.sincos.f32(ir<%in_val>)
+; CHECK-COST: Cost of Invalid for VF vscale x 4: REPLICATE ir<%call> = call @llvm.sincos.f32(ir<%in_val>)
 
 ; CHECK-COST-ARMPL-LABEL: sincos_f32
 ; CHECK-COST-ARMPL: LV: Found an estimated cost of 10 for VF 1 For instruction:   %call = tail call { float, float } @llvm.sincos.f32(float %in_val)
 ; CHECK-COST-ARMPL: Cost of 26 for VF 2: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
 ; CHECK-COST-ARMPL: Cost of 12 for VF 4: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
-; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 1: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
-; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 2: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
+; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 1: REPLICATE ir<%call> = call @llvm.sincos.f32(ir<%in_val>)
+; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 2: REPLICATE ir<%call> = call @llvm.sincos.f32(ir<%in_val>)
 ; CHECK-COST-ARMPL: Cost of 13 for VF vscale x 4: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
 
 define void @sincos_f32(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
@@ -85,13 +85,13 @@ exit:
 ; CHECK-COST-LABEL: sincos_f64
 ; CHECK-COST: LV: Found an estimated cost of 10 for VF 1 For instruction:   %call = tail call { double, double } @llvm.sincos.f64(double %in_val)
 ; CHECK-COST: Cost of 26 for VF 2: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
-; CHECK-COST: Cost of Invalid for VF vscale x 1: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
-; CHECK-COST: Cost of Invalid for VF vscale x 2: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
+; CHECK-COST: Cost of Invalid for VF vscale x 1: REPLICATE ir<%call> = call @llvm.sincos.f64(ir<%in_val>)
+; CHECK-COST: Cost of Invalid for VF vscale x 2: REPLICATE ir<%call> = call @llvm.sincos.f64(ir<%in_val>)
 
 ; CHECK-COST-ARMPL-LABEL: sincos_f64
 ; CHECK-COST-ARMPL: LV: Found an estimated cost of 10 for VF 1 For instruction:   %call = tail call { double, double } @llvm.sincos.f64(double %in_val)
 ; CHECK-COST-ARMPL: Cost of 12 for VF 2: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
-; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 1: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
+; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 1: REPLICATE ir<%call> = call @llvm.sincos.f64(ir<%in_val>)
 ; CHECK-COST-ARMPL: Cost of 13 for VF vscale x 2: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
 
 define void @sincos_f64(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
@@ -159,16 +159,16 @@ exit:
 ; CHECK-COST: LV: Found an estimated cost of 10 for VF 1 For instruction:   %call = tail call { float, float } @llvm.sincos.f32(float %in_val)
 ; CHECK-COST: Cost of 26 for VF 2: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
 ; CHECK-COST: Cost of 58 for VF 4: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
-; CHECK-COST: Cost of Invalid for VF vscale x 1: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
-; CHECK-COST: Cost of Invalid for VF vscale x 2: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
-; CHECK-COST: Cost of Invalid for VF vscale x 4: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
+; CHECK-COST: Cost of Invalid for VF vscale x 1: REPLICATE ir<%call> = call @llvm.sincos.f32(ir<%in_val>)
+; CHECK-COST: Cost of Invalid for VF vscale x 2: REPLICATE ir<%call> = call @llvm.sincos.f32(ir<%in_val>)
+; CHECK-COST: Cost of Invalid for VF vscale x 4: REPLICATE ir<%call> = call @llvm.sincos.f32(ir<%in_val>)
 
 ; CHECK-COST-ARMPL-LABEL: predicated_sincos
 ; CHECK-COST-ARMPL: LV: Found an estimated cost of 10 for VF 1 For instruction:   %call = tail call { float, float } @llvm.sincos.f32(float %in_val)
 ; CHECK-COST-ARMPL: Cost of 26 for VF 2: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
 ; CHECK-COST-ARMPL: Cost of 12 for VF 4: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
-; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 1: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
-; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 2: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
+; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 1: REPLICATE ir<%call> = call @llvm.sincos.f32(ir<%in_val>)
+; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 2: REPLICATE ir<%call> = call @llvm.sincos.f32(ir<%in_val>)
 ; CHECK-COST-ARMPL: Cost of 13 for VF vscale x 4: WIDEN-INTRINSIC ir<%call> = call llvm.sincos(ir<%in_val>)
 
 define void @predicated_sincos(float %x, ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
@@ -231,16 +231,16 @@ for.end:
 ; CHECK-COST: LV: Found an estimated cost of 10 for VF 1 For instruction:   %call = tail call { float, float } @llvm.modf.f32(float %in_val)
 ; CHECK-COST: Cost of 26 for VF 2: WIDEN-INTRINSIC ir<%call> = call llvm.modf(ir<%in_val>)
 ; CHECK-COST: Cost of 58 for VF 4: WIDEN-INTRINSIC ir<%call> = call llvm.modf(ir<%in_val>)
-; CHECK-COST: Cost of Invalid for VF vscale x 1: WIDEN-INTRINSIC ir<%call> = call llvm.modf(ir<%in_val>)
-; CHECK-COST: Cost of Invalid for VF vscale x 2: WIDEN-INTRINSIC ir<%call> = call llvm.modf(ir<%in_val>)
-; CHECK-COST: Cost of Invalid for VF vscale x 4: WIDEN-INTRINSIC ir<%call> = call llvm.modf(ir<%in_val>)
+; CHECK-COST: Cost of Invalid for VF vscale x 1: REPLICATE ir<%call> = call @llvm.modf.f32(ir<%in_val>)
+; CHECK-COST: Cost of Invalid for VF vscale x 2: REPLICATE ir<%call> = call @llvm.modf.f32(ir<%in_val>)
+; CHECK-COST: Cost of Invalid for VF vscale x 4: REPLICATE ir<%call> = call @llvm.modf.f32(ir<%in_val>)
 
 ; CHECK-COST-ARMPL-LABEL: modf_f32
 ; CHECK-COST-ARMPL: LV: Found an estimated cost of 10 for VF 1 For instruction:   %call = tail call { float, float } @llvm.modf.f32(float %in_val)
 ; CHECK-COST-ARMPL: Cost of 26 for VF 2: WIDEN-INTRINSIC ir<%call> = call llvm.modf(ir<%in_val>)
 ; CHECK-COST-ARMPL: Cost of 11 for VF 4: WIDEN-INTRINSIC ir<%call> = call llvm.modf(ir<%in_val>)
-; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 1: WIDEN-INTRINSIC ir<%call> = call llvm.modf(ir<%in_val>)
-; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 2: WIDEN-INTRINSIC ir<%call> = call llvm.modf(ir<%in_val>)
+; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 1: REPLICATE ir<%call> = call @llvm.modf.f32(ir<%in_val>)
+; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 2: REPLICATE ir<%call> = call @llvm.modf.f32(ir<%in_val>)
 ; CHECK-COST-ARMPL: Cost of 12 for VF vscale x 4: WIDEN-INTRINSIC ir<%call> = call llvm.modf(ir<%in_val>)
 
 define void @modf_f32(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
@@ -307,13 +307,13 @@ exit:
 ; CHECK-COST-LABEL: modf_f64
 ; CHECK-COST: LV: Found an estimated cost of 10 for VF 1 For instruction:   %call = tail call { double, double } @llvm.modf.f64(double %in_val)
 ; CHECK-COST: Cost of 26 for VF 2: WIDEN-INTRINSIC ir<%call> = call llvm.modf(ir<%in_val>)
-; CHECK-COST: Cost of Invalid for VF vscale x 1: WIDEN-INTRINSIC ir<%call> = call llvm.modf(ir<%in_val>)
-; CHECK-COST: Cost of Invalid for VF vscale x 2: WIDEN-INTRINSIC ir<%call> = call llvm.modf(ir<%in_val>)
+; CHECK-COST: Cost of Invalid for VF vscale x 1: REPLICATE ir<%call> = call @llvm.modf.f64(ir<%in_val>)
+; CHECK-COST: Cost of Invalid for VF vscale x 2: REPLICATE ir<%call> = call @llvm.modf.f64(ir<%in_val>)
 
 ; CHECK-COST-ARMPL-LABEL: modf_f64
 ; CHECK-COST-ARMPL: LV: Found an estimated cost of 10 for VF 1 For instruction:   %call = tail call { double, double } @llvm.modf.f64(double %in_val)
 ; CHECK-COST-ARMPL: Cost of 11 for VF 2: WIDEN-INTRINSIC ir<%call> = call llvm.modf(ir<%in_val>)
-; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 1: WIDEN-INTRINSIC ir<%call> = call llvm.modf(ir<%in_val>)
+; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 1: REPLICATE ir<%call> = call @llvm.modf.f64(ir<%in_val>)
 ; CHECK-COST-ARMPL: Cost of 12 for VF vscale x 2: WIDEN-INTRINSIC ir<%call> = call llvm.modf(ir<%in_val>)
 
 define void @modf_f64(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
@@ -381,16 +381,16 @@ exit:
 ; CHECK-COST: LV: Found an estimated cost of 10 for VF 1 For instruction:   %call = tail call { float, float } @llvm.sincospi.f32(float %in_val)
 ; CHECK-COST: Cost of 26 for VF 2: WIDEN-INTRINSIC ir<%call> = call llvm.sincospi(ir<%in_val>)
 ; CHECK-COST: Cost of 58 for VF 4: WIDEN-INTRINSIC ir<%call> = call llvm.sincospi(ir<%in_val>)
-; CHECK-COST: Cost of Invalid for VF vscale x 1: WIDEN-INTRINSIC ir<%call> = call llvm.sincospi(ir<%in_val>)
-; CHECK-COST: Cost of Invalid for VF vscale x 2: WIDEN-INTRINSIC ir<%call> = call llvm.sincospi(ir<%in_val>)
-; CHECK-COST: Cost of Invalid for VF vscale x 4: WIDEN-INTRINSIC ir<%call> = call llvm.sincospi(ir<%in_val>)
+; CHECK-COST: Cost of Invalid for VF vscale x 1: REPLICATE ir<%call> = call @llvm.sincospi.f32(ir<%in_val>)
+; CHECK-COST: Cost of Invalid for VF vscale x 2: REPLICATE ir<%call> = call @llvm.sincospi.f32(ir<%in_val>)
+; CHECK-COST: Cost of Invalid for VF vscale x 4: REPLICATE ir<%call> = call @llvm.sincospi.f32(ir<%in_val>)
 
 ; CHECK-COST-ARMPL-LABEL: sincospi_f32
 ; CHECK-COST-ARMPL: LV: Found an estimated cost of 10 for VF 1 For instruction:   %call = tail call { float, float } @llvm.sincospi.f32(float %in_val)
 ; CHECK-COST-ARMPL: Cost of 26 for VF 2: WIDEN-INTRINSIC ir<%call> = call llvm.sincospi(ir<%in_val>)
 ; CHECK-COST-ARMPL: Cost of 12 for VF 4: WIDEN-INTRINSIC ir<%call> = call llvm.sincospi(ir<%in_val>)
-; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 1: WIDEN-INTRINSIC ir<%call> = call llvm.sincospi(ir<%in_val>)
-; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 2: WIDEN-INTRINSIC ir<%call> = call llvm.sincospi(ir<%in_val>)
+; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 1: REPLICATE ir<%call> = call @llvm.sincospi.f32(ir<%in_val>)
+; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 2: REPLICATE ir<%call> = call @llvm.sincospi.f32(ir<%in_val>)
 ; CHECK-COST-ARMPL: Cost of 13 for VF vscale x 4: WIDEN-INTRINSIC ir<%call> = call llvm.sincospi(ir<%in_val>)
 
 define void @sincospi_f32(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
@@ -457,13 +457,13 @@ exit:
 ; CHECK-COST-LABEL: sincospi_f64
 ; CHECK-COST: LV: Found an estimated cost of 10 for VF 1 For instruction:   %call = tail call { double, double } @llvm.sincospi.f64(double %in_val)
 ; CHECK-COST: Cost of 26 for VF 2: WIDEN-INTRINSIC ir<%call> = call llvm.sincospi(ir<%in_val>)
-; CHECK-COST: Cost of Invalid for VF vscale x 1: WIDEN-INTRINSIC ir<%call> = call llvm.sincospi(ir<%in_val>)
-; CHECK-COST: Cost of Invalid for VF vscale x 2: WIDEN-INTRINSIC ir<%call> = call llvm.sincospi(ir<%in_val>)
+; CHECK-COST: Cost of Invalid for VF vscale x 1: REPLICATE ir<%call> = call @llvm.sincospi.f64(ir<%in_val>)
+; CHECK-COST: Cost of Invalid for VF vscale x 2: REPLICATE ir<%call> = call @llvm.sincospi.f64(ir<%in_val>)
 
 ; CHECK-COST-ARMPL-LABEL: sincospi_f64
 ; CHECK-COST-ARMPL: LV: Found an estimated cost of 10 for VF 1 For instruction:   %call = tail call { double, double } @llvm.sincospi.f64(double %in_val)
 ; CHECK-COST-ARMPL: Cost of 12 for VF 2: WIDEN-INTRINSIC ir<%call> = call llvm.sincospi(ir<%in_val>)
-; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 1: WIDEN-INTRINSIC ir<%call> = call llvm.sincospi(ir<%in_val>)
+; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 1: REPLICATE ir<%call> = call @llvm.sincospi.f64(ir<%in_val>)
 ; CHECK-COST-ARMPL: Cost of 13 for VF vscale x 2: WIDEN-INTRINSIC ir<%call> = call llvm.sincospi(ir<%in_val>)
 
 define void @sincospi_f64(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
