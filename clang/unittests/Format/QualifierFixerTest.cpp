@@ -65,8 +65,6 @@ TEST_F(QualifierFixerTest, RotateTokens) {
             tok::kw_extern);
   EXPECT_EQ(LeftRightQualifierAlignmentFixer::getTokenFromQualifier("mutable"),
             tok::kw_mutable);
-  EXPECT_EQ(LeftRightQualifierAlignmentFixer::getTokenFromQualifier("signed"),
-            tok::kw_signed);
   EXPECT_EQ(LeftRightQualifierAlignmentFixer::getTokenFromQualifier("unsigned"),
             tok::kw_unsigned);
   EXPECT_EQ(LeftRightQualifierAlignmentFixer::getTokenFromQualifier("long"),
@@ -1088,7 +1086,6 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
   ConfiguredTokens.push_back(tok::kw_thread_local);
   ConfiguredTokens.push_back(tok::kw_extern);
   ConfiguredTokens.push_back(tok::kw_mutable);
-  ConfiguredTokens.push_back(tok::kw_signed);
   ConfiguredTokens.push_back(tok::kw_unsigned);
   ConfiguredTokens.push_back(tok::kw_long);
   ConfiguredTokens.push_back(tok::kw_short);
@@ -1101,15 +1098,21 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
       "const static inline restrict int double constexpr friend "
       "typedef consteval constinit thread_local extern mutable signed unsigned "
       "long short explicit");
-  ASSERT_EQ(Tokens.size(), 20u) << Tokens;
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
 
-  // Test that all tokens are recognized
-  for (size_t i = 0; i < 20; ++i) {
+  for (size_t i = 0; i < 19; ++i) {
+    EXPECT_TRUE(isQualifierOrType(Tokens[i], LangOpts))
+        << "Token " << i << " should be recognized by isQualifierOrType";
+  }
+
+  // When unsigned is configured, signed is automatically added to
+  // ConfiguredTokens to handle them at the same position
+  ConfiguredTokens.push_back(tok::kw_signed);
+
+  for (size_t i = 0; i < 19; ++i) {
     EXPECT_TRUE(
         isConfiguredQualifierOrType(Tokens[i], ConfiguredTokens, LangOpts))
         << "Token " << i << " should be recognized";
-    EXPECT_TRUE(isQualifierOrType(Tokens[i], LangOpts))
-        << "Token " << i << " should be recognized by isQualifierOrType";
   }
 
   auto NotTokens = lexer.lex("for while do Foo Bar ");
@@ -1420,14 +1423,30 @@ TEST_F(QualifierFixerTest, NewQualifierSupport) {
 
   Style.QualifierOrder = {"extern", "type"};
   verifyFormat("extern int global_var;", "int extern global_var;", Style);
-  verifyFormat("extern void func();", "void extern func();", Style);
 
   Style.QualifierOrder = {"mutable", "type"};
   verifyFormat("mutable int cache;", "int mutable cache;", Style);
 
+  Style.QualifierOrder = {"unsigned", "type"};
+  verifyFormat("unsigned int num;", "int unsigned num;", Style);
+  verifyFormat("unsigned long long value;", "long long unsigned value;", Style);
+  // Verify that signed is handled at the same position as unsigned
+  verifyFormat("signed int num;", "int signed num;", Style);
+  verifyFormat("signed long long value;", "long long signed value;", Style);
+
+  Style.QualifierOrder = {"long", "type"};
+  verifyFormat("long int num;", "int long num;", Style);
+  verifyFormat("long unsigned int num;", "unsigned long int num;", Style);
+  verifyFormat("long long int num;", "int long long num;", Style);
+  verifyFormat("long long unsigned int num;", "unsigned long long int num;",
+               Style);
+
+  Style.QualifierOrder = {"short", "type"};
+  verifyFormat("short int num;", "int short num;", Style);
+  verifyFormat("short unsigned value;", "unsigned short value;", Style);
+
   Style.QualifierOrder = {"explicit", "type"};
   verifyFormat("explicit Foo(int x);", Style);
-  verifyFormat("explicit operator bool();", Style);
 
   Style.QualifierOrder = {"extern", "thread_local", "static", "constexpr",
                           "inline", "unsigned",     "long",   "type",

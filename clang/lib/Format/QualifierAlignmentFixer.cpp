@@ -546,7 +546,6 @@ tok::TokenKind LeftRightQualifierAlignmentFixer::getTokenFromQualifier(
       .Case("thread_local", tok::kw_thread_local)
       .Case("extern", tok::kw_extern)
       .Case("mutable", tok::kw_mutable)
-      .Case("signed", tok::kw_signed)
       .Case("unsigned", tok::kw_unsigned)
       .Case("long", tok::kw_long)
       .Case("short", tok::kw_short)
@@ -630,8 +629,13 @@ void prepareLeftRightOrderingForQualifierAlignmentFixer(
 
     tok::TokenKind QualifierToken =
         LeftRightQualifierAlignmentFixer::getTokenFromQualifier(s);
-    if (QualifierToken != tok::kw_typeof && QualifierToken != tok::identifier)
+    if (QualifierToken != tok::kw_typeof && QualifierToken != tok::identifier) {
       Qualifiers.push_back(QualifierToken);
+      // Handle signed and unsigned together: if unsigned is configured,
+      // also treat signed as configured at the same position.
+      if (QualifierToken == tok::kw_unsigned)
+        Qualifiers.push_back(tok::kw_signed);
+    }
 
     if (left) {
       // Reverse the order for left aligned items.
