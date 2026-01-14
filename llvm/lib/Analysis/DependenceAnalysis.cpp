@@ -155,13 +155,6 @@ static cl::opt<DependenceTestType> EnableDependenceTest(
                clEnumValN(DependenceTestType::BanerjeeMIV, "banerjee-miv",
                           "Enable only Banerjee MIV test.")));
 
-// TODO: This flag is disabled by default because it is still under development.
-// Enable it or delete this flag when the feature is ready.
-static cl::opt<bool> EnableMonotonicityCheck(
-    "da-enable-monotonicity-check", cl::init(false), cl::Hidden,
-    cl::desc("Check if the subscripts are monotonic. If it's not, dependence "
-             "is reported as unknown."));
-
 static cl::opt<bool> DumpMonotonicityReport(
     "da-dump-monotonicity-report", cl::init(false), cl::Hidden,
     cl::desc(
@@ -330,11 +323,9 @@ struct SCEVMonotonicityChecker
   /// Check the monotonicity of \p Expr over \p Domain. \p Expr must be integer
   /// type. If \p OutermostLoop is not null, \p Expr must be defined in \p
   /// OutermostLoop or one of its nested loops.
-  /// TODO: The default value of \p Domain is temporary. Drop it once all the
-  /// calls are updated.
-  SCEVMonotonicity checkMonotonicity(
-      const SCEV *Expr, const Loop *OutermostLoop,
-      SCEVMonotonicityDomain Domain = SCEVMonotonicityDomain::Effective);
+  SCEVMonotonicity checkMonotonicity(const SCEV *Expr,
+                                     const Loop *OutermostLoop,
+                                     SCEVMonotonicityDomain Domain);
 
 private:
   ScalarEvolution *SE;
@@ -3367,19 +3358,10 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
   // resize Pair to contain as many pairs of subscripts as the delinearization
   // has found, and then initialize the pairs following the delinearization.
   Pair.resize(Size);
-  SCEVMonotonicityChecker MonChecker(SE);
-  const Loop *OutermostLoop = SrcLoop ? SrcLoop->getOutermostLoop() : nullptr;
   for (int I = 0; I < Size; ++I) {
     Pair[I].Src = SrcSubscripts[I];
     Pair[I].Dst = DstSubscripts[I];
     unifySubscriptType(&Pair[I]);
-
-    if (EnableMonotonicityCheck) {
-      if (MonChecker.checkMonotonicity(Pair[I].Src, OutermostLoop).isUnknown())
-        return false;
-      if (MonChecker.checkMonotonicity(Pair[I].Dst, OutermostLoop).isUnknown())
-        return false;
-    }
   }
 
   return true;
@@ -3638,14 +3620,6 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   SmallVector<Subscript, 2> Pair(Pairs);
   Pair[0].Src = SrcEv;
   Pair[0].Dst = DstEv;
-
-  SCEVMonotonicityChecker MonChecker(SE);
-  const Loop *OutermostLoop = SrcLoop ? SrcLoop->getOutermostLoop() : nullptr;
-  if (EnableMonotonicityCheck)
-    if (MonChecker.checkMonotonicity(Pair[0].Src, OutermostLoop).isUnknown() ||
-        MonChecker.checkMonotonicity(Pair[0].Dst, OutermostLoop).isUnknown())
-      return std::make_unique<Dependence>(Src, Dst,
-                                          SCEVUnionPredicate(Assume, *SE));
 
   if (Delinearize) {
     if (tryDelinearize(Src, Dst, Pair)) {
