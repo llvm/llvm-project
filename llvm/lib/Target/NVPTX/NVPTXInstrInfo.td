@@ -708,27 +708,15 @@ let hasSideEffects = false in {
   defm CVT_to_tf32_rz_relu_satf  : CVT_TO_TF32<"rz.relu.satfinite", [hasPTX<86>, hasSM<100>]>;
   
 let Predicates = [callSubtarget<"hasS2F6X2ConversionSupport">] in {
-  def CVT_s2f6x2_f32_sf : BasicFlagsNVPTXInst<(outs B16:$dst),
-      (ins B32:$src1, B32:$src2), (ins CvtMode:$mode),
-      "cvt${mode:base}.satfinite${mode:relu}.s2f6x2.f32">;
   def CVT_s2f6x2_f32_sf_scale : BasicFlagsNVPTXInst<(outs B16:$dst),
       (ins B32:$src1, B32:$src2, B16:$scale), (ins CvtMode:$mode),
       "cvt${mode:base}.satfinite${mode:relu}.scaled::n2::ue8m0.s2f6x2.f32">;
-  def CVT_s2f6x2_bf16x2_sf : BasicFlagsNVPTXInst<(outs B16:$dst),
-      (ins B32:$src), (ins CvtMode:$mode),
-      "cvt${mode:base}.satfinite${mode:relu}.s2f6x2.bf16x2">;
   def CVT_s2f6x2_bf16x2_sf_scale : BasicFlagsNVPTXInst<(outs B16:$dst),
       (ins B32:$src, B16:$scale), (ins CvtMode:$mode),
       "cvt${mode:base}.satfinite${mode:relu}.scaled::n2::ue8m0.s2f6x2.bf16x2">;
-  def CVT_bf16x2_s2f6x2 : BasicFlagsNVPTXInst<(outs B32:$dst),
-      (ins B16:$src), (ins CvtMode:$mode),
-      "cvt${mode:base}${mode:relu}.bf16x2.s2f6x2">;
   def CVT_bf16x2_s2f6x2_scale : BasicFlagsNVPTXInst<(outs B32:$dst),
       (ins B16:$src, B16:$scale), (ins CvtMode:$mode),
       "cvt${mode:base}${mode:relu}.scaled::n2::ue8m0.bf16x2.s2f6x2">;
-  def CVT_bf16x2_s2f6x2_sf : BasicFlagsNVPTXInst<(outs B32:$dst),
-      (ins B16:$src), (ins CvtMode:$mode),
-      "cvt${mode:base}.satfinite${mode:relu}.bf16x2.s2f6x2">;
   def CVT_bf16x2_s2f6x2_sf_scale : BasicFlagsNVPTXInst<(outs B32:$dst),
       (ins B16:$src, B16:$scale), (ins CvtMode:$mode),
       "cvt${mode:base}.satfinite${mode:relu}.scaled::n2::ue8m0.bf16x2.s2f6x2">;

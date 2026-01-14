@@ -2259,36 +2259,21 @@ let Predicates = [callSubtarget<"hasFP8ConversionSupport">] in {
 }
 
 let Predicates = [callSubtarget<"hasS2F6X2ConversionSupport">] in {
-  def : Pat<(int_nvvm_ff_to_s2f6x2_rn_satfinite f32:$a, f32:$b),
-            (CVT_s2f6x2_f32_sf $a, $b, CvtRN)>;
-  def : Pat<(int_nvvm_ff_to_s2f6x2_rn_relu_satfinite f32:$a, f32:$b),
-            (CVT_s2f6x2_f32_sf $a, $b, CvtRN_RELU)>;
   def : Pat<(int_nvvm_ff_to_s2f6x2_rn_satfinite_scale_n2_ue8m0 f32:$a, f32:$b, i16:$scale),
             (CVT_s2f6x2_f32_sf_scale $a, $b, $scale, CvtRN)>;
   def : Pat<(int_nvvm_ff_to_s2f6x2_rn_relu_satfinite_scale_n2_ue8m0 f32:$a, f32:$b, i16:$scale),
             (CVT_s2f6x2_f32_sf_scale $a, $b, $scale, CvtRN_RELU)>;
 
-  def : Pat<(int_nvvm_bf16x2_to_s2f6x2_rn_satfinite v2bf16:$a),
-            (CVT_s2f6x2_bf16x2_sf $a, CvtRN)>;
-  def : Pat<(int_nvvm_bf16x2_to_s2f6x2_rn_relu_satfinite v2bf16:$a),
-            (CVT_s2f6x2_bf16x2_sf $a, CvtRN_RELU)>;
   def : Pat<(int_nvvm_bf16x2_to_s2f6x2_rn_satfinite_scale_n2_ue8m0 v2bf16:$a, i16:$scale),
             (CVT_s2f6x2_bf16x2_sf_scale $a, $scale, CvtRN)>;
   def : Pat<(int_nvvm_bf16x2_to_s2f6x2_rn_relu_satfinite_scale_n2_ue8m0 v2bf16:$a, i16:$scale),
             (CVT_s2f6x2_bf16x2_sf_scale $a, $scale, CvtRN_RELU)>;
 
-  def : Pat<(int_nvvm_s2f6x2_to_bf16x2_rn i16:$a),
-            (CVT_bf16x2_s2f6x2 $a, CvtRN)>;
-  def : Pat<(int_nvvm_s2f6x2_to_bf16x2_rn_relu i16:$a),
-            (CVT_bf16x2_s2f6x2 $a, CvtRN_RELU)>;
   def : Pat<(int_nvvm_s2f6x2_to_bf16x2_rn_scale_n2_ue8m0 i16:$a, i16:$scale),
             (CVT_bf16x2_s2f6x2_scale $a, $scale, CvtRN)>;
   def : Pat<(int_nvvm_s2f6x2_to_bf16x2_rn_relu_scale_n2_ue8m0 i16:$a, i16:$scale),
             (CVT_bf16x2_s2f6x2_scale $a, $scale, CvtRN_RELU)>;
-  def : Pat<(int_nvvm_s2f6x2_to_bf16x2_rn_satfinite i16:$a),
-            (CVT_bf16x2_s2f6x2_sf $a, CvtRN)>;
-  def : Pat<(int_nvvm_s2f6x2_to_bf16x2_rn_relu_satfinite i16:$a),
-            (CVT_bf16x2_s2f6x2_sf $a, CvtRN_RELU)>;
+  
   def : Pat<(int_nvvm_s2f6x2_to_bf16x2_rn_satfinite_scale_n2_ue8m0 i16:$a, i16:$scale),
             (CVT_bf16x2_s2f6x2_sf_scale $a, $scale, CvtRN)>;
   def : Pat<(int_nvvm_s2f6x2_to_bf16x2_rn_relu_satfinite_scale_n2_ue8m0 i16:$a, i16:$scale),
