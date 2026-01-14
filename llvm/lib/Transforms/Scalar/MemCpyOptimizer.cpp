@@ -1530,6 +1530,13 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   if (!SrcAlloca->isStaticAlloca() || !DestAlloca->isStaticAlloca())
     return false;
 
+  // Check if it will be legal to combine allocas without breaking dominator.
+  bool MoveSrc = !DT->dominates(SrcAlloca, DestAlloca);
+  if (MoveSrc) {
+    if (!DT->dominates(DestAlloca, SrcAlloca))
+      return false;
+  }
+
   // Check that src and dest are never captured, unescaped allocas. Also
   // find the nearest common dominator and postdominator for all users in
   // order to shrink wrap the lifetimes, and instructions with noalias metadata
@@ -1537,7 +1544,6 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
 
   SmallVector<Instruction *, 4> LifetimeMarkers;
   SmallPtrSet<Instruction *, 4> AAMetadataInstrs;
-  bool SrcNotDom = false;
 
   auto CaptureTrackingWithModRef =
       [&](Instruction *AI, function_ref<bool(Instruction *)> ModRefCallback,
@@ -1551,10 +1557,6 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
       Instruction *I = Worklist.pop_back_val();
       for (const Use &U : I->uses()) {
         auto *UI = cast<Instruction>(U.getUser());
-        // If any use that isn't dominated by SrcAlloca exists, we move src
-        // alloca to the entry before the transformation.
-        if (!DT->dominates(SrcAlloca, UI))
-          SrcNotDom = true;
 
         if (Visited.size() >= MaxUsesToExplore) {
           LLVM_DEBUG(
@@ -1672,11 +1674,10 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   if (DestAddressCaptured && SrcAddressCaptured)
     return false;
 
-  // We can do the transformation. First, move the SrcAlloca to the start of the
-  // BB.
-  if (SrcNotDom)
-    SrcAlloca->moveBefore(*SrcAlloca->getParent(),
-                          SrcAlloca->getParent()->getFirstInsertionPt());
+  // We can now do the transformation. First move the Src if it was after Dest.
+  if (MoveSrc)
+    SrcAlloca->moveBefore(DestAlloca->getIterator());
+
   // Align the allocas appropriately.
   SrcAlloca->setAlignment(
       std::max(SrcAlloca->getAlign(), DestAlloca->getAlign()));
