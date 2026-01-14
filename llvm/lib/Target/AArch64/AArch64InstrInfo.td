@@ -10652,7 +10652,7 @@ let Predicates = [IsLE] in {
 
 // Make non-temporal store patterns have high complexity so they are prioritized
 // for non-temporal stores over temporal store patterns.
-let AddedComplexity = 100 in {
+let AddedComplexity = 18 in {
 
 def : Pat<(AArch64stnp FPR128:$Rt, FPR128:$Rt2, (am_indexed7s128 GPR64sp:$Rn, simm7s16:$offset)),
           (STNPQi FPR128:$Rt, FPR128:$Rt2, GPR64sp:$Rn, simm7s16:$offset)>;
