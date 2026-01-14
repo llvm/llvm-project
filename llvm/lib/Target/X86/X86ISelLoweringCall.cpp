@@ -2078,8 +2078,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   MachineFunction &MF = DAG.getMachineFunction();
   bool Is64Bit        = Subtarget.is64Bit();
-  bool IsWin64        = Subtarget.isCallingConvWin64(CallConv);
-  bool IsSibcall      = false;
+  bool IsWin64 = Subtarget.isCallingConvWin64(CallConv);
   bool ShouldGuaranteeTCO = shouldGuaranteeTCO(
       CallConv, MF.getTarget().Options.GuaranteedTailCallOpt);
   bool IsCalleePopSRet =
@@ -2142,16 +2141,18 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       isTailCall = false;
   }
 
+  // Check if this tail call is a "sibling" call, which is loosely defined to
+  // be a tail call that doesn't require heroics like moving the return address
+  // or swapping byval arguments.
+  bool IsSibcall = false;
   if (isTailCall) {
-    // Check if it's really possible to do a tail call.
+    // We believe that this should be a tail call, now check if that is really
+    // possible.
     IsSibcall = IsEligibleForTailCallOptimization(CLI, CCInfo, ArgLocs,
                                                   IsCalleePopSRet);
 
     if (!IsMustTail) {
       isTailCall = IsSibcall;
-
-      // Sibcalls are automatically detected tailcalls which do not require
-      // ABI changes.
       IsSibcall = IsSibcall && !ShouldGuaranteeTCO;
     }
 
