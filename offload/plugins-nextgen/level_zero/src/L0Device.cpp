@@ -64,8 +64,8 @@ constexpr int DeviceArchMapSize = sizeof(DeviceArchMap) / sizeof(DeviceArchMap[0
 DeviceArchTy L0DeviceTy::computeArch() const {
   const auto PCIDeviceId = getPCIId();
   if (PCIDeviceId == 0) {
-    ODBG(OLDT_Device) << "Warning: Cannot decide device arch for "
-                      << getNameCStr() << ".";
+    ODBG(OLDT_Device) << "Warning: Cannot decide device arch for " << getName()
+                      << ".";
     return DeviceArchTy::DeviceArch_None;
   }
 
@@ -80,8 +80,8 @@ DeviceArchTy L0DeviceTy::computeArch() const {
     }
   }
 
-  ODBG(OLDT_Device) << "Warning: Cannot decide device arch for "
-                    << getNameCStr() << ".";
+  ODBG(OLDT_Device) << "Warning: Cannot decide device arch for " << getName()
+                    << ".";
   return DeviceArchTy::DeviceArch_None;
 }
 
@@ -161,7 +161,7 @@ std::pair<uint32_t, uint32_t> L0DeviceTy::findCopyOrdinal(bool LinkCopy) {
 void L0DeviceTy::reportDeviceInfo() const {
   ODBG_OS(OLDT_Device, [&](llvm::raw_ostream &O) {
     O << "Device " << DeviceId << " information\n"
-      << "-- Name                         : " << getNameCStr() << "\n"
+      << "-- Name                         : " << getName() << "\n"
       << "-- PCI ID                       : "
       << llvm::format("0x%" PRIx32, getPCIId()) << "\n"
       << "-- UUID                         : " << getUuid().data() << "\n"
@@ -192,8 +192,7 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
   CALL_ZE_RET_ERROR(zeDeviceGetCacheProperties, zeDevice, &Count,
                     &CacheProperties);
 
-  DeviceName =
-      std::string(DeviceProperties.name, sizeof(DeviceProperties.name));
+  DeviceName = std::string(DeviceProperties.name);
 
   ODBG(OLDT_Device) << "Found a GPU device, Name = " << DeviceProperties.name;
 
