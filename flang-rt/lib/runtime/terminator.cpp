@@ -104,18 +104,20 @@ void ExitHandler::Configure(bool mifEnabled) {
   multiImageFeatureEnabled = mifEnabled;
 }
 
+[[noreturn]]
 void ExitHandler::NormalExit(int exitCode) {
   if (multiImageFeatureEnabled)
-    NotifyOtherImagesOfErrorTermination(exitCode);
-  else
-    std::exit(exitCode);
+    SynchronizeImagesOfNormalEnd(exitCode); // might never return
+
+  std::exit(exitCode);
 }
 
+[[noreturn]]
 void ExitHandler::ErrorExit(int exitCode) {
   if (multiImageFeatureEnabled)
-    SynchronizeImagesOfNormalEnd(exitCode);
-  else
-    std::exit(exitCode);
+    NotifyOtherImagesOfErrorTermination(exitCode); // might never return
+
+  std::exit(exitCode);
 }
 
 RT_API_ATTRS void SynchronizeImagesOfNormalEnd(int code) {
