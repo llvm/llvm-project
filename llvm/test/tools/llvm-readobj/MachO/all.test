@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s | llvm-readobj --all - | FileCheck %s
 
-# Make sure that --all at least doesn't crash.
+## Make sure that --all at least doesn't crash.
 
 # CHECK: Format: Mach-O arm
 # CHECK: Arch: arm
