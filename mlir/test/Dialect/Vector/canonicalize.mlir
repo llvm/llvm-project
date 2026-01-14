@@ -4027,3 +4027,45 @@ func.func @no_fold_insert_use_chain_mismatch_static_position(%arg : vector<4xf32
   %v_1 = vector.insert %val, %v_0[1] : f32 into vector<4xf32>
   return %v_1 : vector<4xf32>
 }
+
+// -----
+
+// CHECK-LABEL: extract_strided_slice_of_extract_strided_slice
+//  CHECK-SAME: %[[ARG0:.*]]: vector<4x8x16xf32>
+//       CHECK: %[[RESULT:.*]] = vector.extract_strided_slice %[[ARG0]]
+//  CHECK-SAME: {offsets = [1, 3], sizes = [2, 2], strides = [1, 1]}
+//  CHECK-SAME: : vector<4x8x16xf32> to vector<2x2x16xf32>
+//       CHECK: return %[[RESULT]]
+func.func @extract_strided_slice_of_extract_strided_slice(%arg0: vector<4x8x16xf32>) -> vector<2x2x16xf32> {
+  %0 = vector.extract_strided_slice %arg0 {offsets = [1, 2], sizes = [3, 4], strides = [1, 1]} : vector<4x8x16xf32> to vector<3x4x16xf32>
+  %1 = vector.extract_strided_slice %0 {offsets = [0, 1], sizes = [2, 2], strides = [1, 1]} : vector<3x4x16xf32> to vector<2x2x16xf32>
+  return %1 : vector<2x2x16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: extract_strided_slice_inner_shorter
+//  CHECK-SAME: %[[ARG0:.*]]: vector<4x8x16xf32>
+//       CHECK: %[[RESULT:.*]] = vector.extract_strided_slice %[[ARG0]]
+//  CHECK-SAME: {offsets = [1, 1, 2], sizes = [2, 2, 4], strides = [1, 1, 1]}
+//  CHECK-SAME: : vector<4x8x16xf32> to vector<2x2x4xf32>
+//       CHECK: return %[[RESULT]]
+func.func @extract_strided_slice_inner_shorter(%arg0: vector<4x8x16xf32>) -> vector<2x2x4xf32> {
+  %0 = vector.extract_strided_slice %arg0 {offsets = [1], sizes = [3], strides = [1]} : vector<4x8x16xf32> to vector<3x8x16xf32>
+  %1 = vector.extract_strided_slice %0 {offsets = [0, 1, 2], sizes = [2, 2, 4], strides = [1, 1, 1]} : vector<3x8x16xf32> to vector<2x2x4xf32>
+  return %1 : vector<2x2x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: extract_strided_slice_outer_shorter
+//  CHECK-SAME: %[[ARG0:.*]]: vector<4x8x16xf32>
+//       CHECK: %[[RESULT:.*]] = vector.extract_strided_slice %[[ARG0]]
+//  CHECK-SAME: {offsets = [1, 2], sizes = [2, 4], strides = [1, 1]}
+//  CHECK-SAME: : vector<4x8x16xf32> to vector<2x4x16xf32>
+//       CHECK: return %[[RESULT]]
+func.func @extract_strided_slice_outer_shorter(%arg0: vector<4x8x16xf32>) -> vector<2x4x16xf32> {
+  %0 = vector.extract_strided_slice %arg0 {offsets = [1, 2], sizes = [3, 4], strides = [1, 1]} : vector<4x8x16xf32> to vector<3x4x16xf32>
+  %1 = vector.extract_strided_slice %0 {offsets = [0], sizes = [2], strides = [1]} : vector<3x4x16xf32> to vector<2x4x16xf32>
+  return %1 : vector<2x4x16xf32>
+}
