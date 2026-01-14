@@ -81,7 +81,8 @@ private:
                    std::unique_ptr<llvm::MCContext> &&context_up,
                    std::unique_ptr<llvm::MCDisassembler> &&disasm_up,
                    std::unique_ptr<llvm::MCInstPrinter> &&instr_printer_up,
-                   std::unique_ptr<llvm::MCInstrAnalysis> &&instr_analysis_up);
+                   std::unique_ptr<llvm::MCInstrAnalysis> &&instr_analysis_up,
+                   DisassemblerLLVMC &owner);
 
   std::unique_ptr<llvm::MCInstrInfo> m_instr_info_up;
   std::unique_ptr<llvm::MCRegisterInfo> m_reg_info_up;
@@ -91,6 +92,7 @@ private:
   std::unique_ptr<llvm::MCDisassembler> m_disasm_up;
   std::unique_ptr<llvm::MCInstPrinter> m_instr_printer_up;
   std::unique_ptr<llvm::MCInstrAnalysis> m_instr_analysis_up;
+  DisassemblerLLVMC &m_owner;
 };
 
 namespace x86 {
@@ -1335,7 +1337,7 @@ DisassemblerLLVMC::MCDisasmInstance::Create(const char *triple_name,
       std::move(instr_info_up), std::move(reg_info_up),
       std::move(subtarget_info_up), std::move(asm_info_up),
       std::move(context_up), std::move(disasm_up), std::move(instr_printer_up),
-      std::move(instr_analysis_up)));
+      std::move(instr_analysis_up), owner));
 }
 
 DisassemblerLLVMC::MCDisasmInstance::MCDisasmInstance(
@@ -1346,14 +1348,15 @@ DisassemblerLLVMC::MCDisasmInstance::MCDisasmInstance(
     std::unique_ptr<llvm::MCContext> &&context_up,
     std::unique_ptr<llvm::MCDisassembler> &&disasm_up,
     std::unique_ptr<llvm::MCInstPrinter> &&instr_printer_up,
-    std::unique_ptr<llvm::MCInstrAnalysis> &&instr_analysis_up)
+    std::unique_ptr<llvm::MCInstrAnalysis> &&instr_analysis_up,
+    DisassemblerLLVMC &owner)
     : m_instr_info_up(std::move(instr_info_up)),
       m_reg_info_up(std::move(reg_info_up)),
       m_subtarget_info_up(std::move(subtarget_info_up)),
       m_asm_info_up(std::move(asm_info_up)),
       m_context_up(std::move(context_up)), m_disasm_up(std::move(disasm_up)),
       m_instr_printer_up(std::move(instr_printer_up)),
-      m_instr_analysis_up(std::move(instr_analysis_up)) {
+      m_instr_analysis_up(std::move(instr_analysis_up)), m_owner(owner) {
   assert(m_instr_info_up && m_reg_info_up && m_subtarget_info_up &&
          m_asm_info_up && m_context_up && m_disasm_up && m_instr_printer_up);
 }
@@ -1381,6 +1384,45 @@ void DisassemblerLLVMC::MCDisasmInstance::PrintMCInst(
 
   inst_stream.enable_colors(m_instr_printer_up->getUseColor());
   m_instr_printer_up->setCommentStream(comments_stream);
+
+#ifdef _AIX
+  SymbolContext sym_ctx;
+  Address target_address;
+  for (unsigned i = 0; i < mc_inst.getNumOperands(); ++i) {
+
+    const auto &op = mc_inst.getOperand(i);
+    const llvm::MCInstrDesc &desc = m_instr_info_up->get(mc_inst.getOpcode());
+
+    if (desc.isBranch() || desc.isCall()) {
+      Target *target =
+          m_owner.m_exe_ctx ? m_owner.m_exe_ctx->GetTargetPtr() : nullptr;
+
+      if (op.isImm() && target) {
+        // The branch immediate omits the lowest two bits (zeros) to make
+        // it word aligned. So we require left shift of 2 bytes to calculate
+        // the actual branch target.
+        lldb::addr_t target_addr = (lldb::addr_t)(pc + (op.getImm() << 2));
+        target_address.SetLoadAddress(target_addr, target);
+        target_address.CalculateSymbolContext(&sym_ctx);
+
+        if (sym_ctx.function && comments_string.empty()) {
+          const char *func_name = sym_ctx.function->GetName().AsCString();
+          if (sym_ctx.line_entry.IsValid()) {
+            const char *file =
+                sym_ctx.line_entry.GetFile().GetFilename().AsCString();
+            std::string line = std::to_string(sym_ctx.line_entry.line);
+            comments_stream << func_name << " at " << file << ":" << line;
+          } else
+            comments_stream << func_name;
+
+        } else if (sym_ctx.symbol && comments_string.empty()) {
+          comments_stream << "symbol stub for: "
+                          << sym_ctx.symbol->GetName().AsCString();
+        }
+      } // if(op.isImm() && target)
+    } // if (desc.isBranch() || desc.isCall())
+  } // loop ends
+#endif
   m_instr_printer_up->printInst(&mc_inst, pc, llvm::StringRef(),
                                 *m_subtarget_info_up, inst_stream);
   m_instr_printer_up->setCommentStream(llvm::nulls());
