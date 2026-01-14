@@ -2706,7 +2706,7 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
   // Capture the triple before moving the bitcode into the bitcode compiler.
   // Note that this assumes that the set of possible libfuncs is roughly
   // equivalent for all bitcode translation units.
-  std::optional<llvm::Triple> tt;
+  llvm::Triple tt;
   if (!ctx.bitcodeFiles.empty())
     tt = llvm::Triple(ctx.bitcodeFiles.front()->obj->getTargetTriple());
   // Compile bitcode files and replace bitcode symbols.
@@ -2720,7 +2720,7 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
     markBuffersAsDontNeed(ctx, skipLinkedOutput);
 
     SmallVector<StringRef> bitcodeLibFuncs;
-    for (StringRef libFunc : lto::LTO::getLibFuncSymbols(*tt, saver))
+    for (StringRef libFunc : lto::LTO::getLibFuncSymbols(tt, saver))
       if (Symbol *sym = ctx.symtab->find(libFunc);
           sym && isa<BitcodeFile>(sym->file))
         bitcodeLibFuncs.push_back(libFunc);
