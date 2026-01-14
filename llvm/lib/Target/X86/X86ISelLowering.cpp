@@ -53821,7 +53821,6 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-
   // If the mask value has been legalized to a non-boolean vector, try to
   // simplify ops leading up to it. We only demand the MSB of each lane.
   if (Mask.getScalarValueSizeInBits() != 1) {
