@@ -197,7 +197,7 @@ bool flattenFunction(Function &F, InlinerHelper &IH,
     // - Cannot inline functions that create new ZA/ZT0 state
     // For flatten, we respect the user's intent to inline as much as possible,
     // but these are fundamental ABI violations that cannot be worked around.
-    TargetTransformInfo &TTI = GetTTI(F);
+    TargetTransformInfo &TTI = GetTTI(*Callee);
     if (!TTI.areInlineCompatible(&F, Callee))
       continue;
 
