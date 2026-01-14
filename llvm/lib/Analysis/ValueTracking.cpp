@@ -844,14 +844,11 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
             if (NullPointerIsDefined(Q.CxtI->getFunction(),
                                      V->getType()->getPointerAddressSpace()))
               return false;
+            assert(RK.IRArgValue &&
+                   "Dereferenceable attribute without IR argument?");
 
-            if (!RK.IRArgValue)
-              return true;
-
-            if (auto *CI = dyn_cast<ConstantInt>(RK.IRArgValue))
-              return !CI->isZero();
-
-            return false;
+            auto *CI = dyn_cast<ConstantInt>(RK.IRArgValue);
+            return CI && !CI->isZero();
           }
 
           return false;
