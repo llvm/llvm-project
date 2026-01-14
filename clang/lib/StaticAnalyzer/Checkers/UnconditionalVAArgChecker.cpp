@@ -125,44 +125,45 @@ void UnconditionalVAArgChecker::checkPreStmt(const VAArgExpr *VAA,
                                              CheckerContext &C) const {
   ProgramStateRef State = C.getState();
   const FunctionDecl *PathFrom = State->get<HasUnconditionalPath>();
-  if (PathFrom) {
-    // Reset this field in the state to ensure that multiple consecutive
-    // va_arg() calls don't produce repeated warnings.
-    C.addTransition(State->set<HasUnconditionalPath>(nullptr));
+  if (!PathFrom)
+    return;
 
-    IdentifierInfo *II = PathFrom->getIdentifier();
-    if (!II)
-      return;
-    StringRef FN = II->getName();
+  // Reset this trait in the state to ensure that multiple consecutive
+  // va_arg() calls don't produce repeated warnings.
+  C.addTransition(State->set<HasUnconditionalPath>(nullptr));
 
-    std::string FullMsg = formatv(
-        "Calls to '{0}' always reach this va_arg() expression, so calling "
-        "'{0}' with no variadic arguments would be undefined behavior",
-        FN);
-    SourceRange SR = VAA->getSourceRange();
-    PathDiagnosticLocation PDL(SR.getBegin(),
-                               C.getASTContext().getSourceManager());
-    // We create a non-path-sensitive report because the path wouldn't contain
-    // any useful information: the path leading to the variadic function is
-    // actively ignored by the checker and the unconditional path from the
-    // start of the variadic function is trivial.
-    auto R =
-        std::make_unique<BasicBugReport>(BT, BT.getDescription(), FullMsg, PDL);
+  IdentifierInfo *II = PathFrom->getIdentifier();
+  if (!II)
+    return;
+  StringRef FN = II->getName();
 
-    if (getCurrentFunction(C) != PathFrom) {
-      // Highlight the definition of the variadic function in the rare case
-      // when the reached va_arg() expression is in another function.
-      SourceRange DefSR = PathFrom->getSourceRange();
-      PathDiagnosticLocation DefPDL(DefSR.getBegin(),
-                                    C.getASTContext().getSourceManager());
-      std::string NoteMsg =
-          formatv("Variadic function '{0}' is defined here", FN);
-      R->addNote(NoteMsg, DefPDL, DefSR);
-    }
-    R->addRange(SR);
-    R->setDeclWithIssue(PathFrom);
-    C.emitReport(std::move(R));
+  std::string FullMsg = formatv(
+      "Calls to '{0}' always reach this va_arg() expression, so calling "
+      "'{0}' with no variadic arguments would be undefined behavior",
+      FN);
+  SourceRange SR = VAA->getSourceRange();
+  PathDiagnosticLocation PDL(SR.getBegin(),
+                             C.getASTContext().getSourceManager());
+  // We create a non-path-sensitive report because the path wouldn't contain
+  // any useful information: the path leading to the variadic function is
+  // actively ignored by the checker and the unconditional path from the
+  // start of the variadic function is trivial.
+  auto R =
+      std::make_unique<BasicBugReport>(BT, BT.getDescription(), FullMsg, PDL);
+
+  if (getCurrentFunction(C) != PathFrom) {
+    // Highlight the definition of the variadic function in the rare case
+    // when the reached va_arg() expression is in another function.
+    SourceRange DefSR = PathFrom->getSourceRange();
+    PathDiagnosticLocation DefPDL(DefSR.getBegin(),
+                                  C.getASTContext().getSourceManager());
+    std::string NoteMsg =
+        formatv("Variadic function '{0}' is defined here", FN);
+    R->addNote(NoteMsg, DefPDL, DefSR);
   }
+  R->addRange(SR);
+  R->setDeclWithIssue(PathFrom);
+  C.emitReport(std::move(R));
 }
 
 void ento::registerUnconditionalVAArgChecker(CheckerManager &Mgr) {
