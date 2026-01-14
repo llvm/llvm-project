@@ -11,10 +11,43 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TypeBase.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
+#include "llvm/ADT/StringMap.h"
 
 namespace clang::lifetimes::internal {
+namespace {
+/// A utility class to traverse the function body in the analysis
+/// context and collect the count of expressions with missing origins.
+class MissingOriginCollector
+    : public RecursiveASTVisitor<MissingOriginCollector> {
+public:
+  MissingOriginCollector(
+      const llvm::DenseMap<const clang::Expr *, OriginList *> &ExprToOriginList,
+      LifetimeSafetyStats &LSStats)
+      : ExprToOriginList(ExprToOriginList), LSStats(LSStats) {}
+  bool VisitExpr(Expr *E) {
+    if (!hasOrigins(E))
+      return true;
+    // Check if we have an origin for this expression.
+    if (!ExprToOriginList.contains(E)) {
+      // No origin found: count this as missing origin.
+      LSStats.ExprTypeToMissingOriginCount[E->getType().getTypePtr()]++;
+      LSStats.ExprStmtClassToMissingOriginCount[std::string(
+          E->getStmtClassName())]++;
+    }
+    return true;
+  }
+
+private:
+  const llvm::DenseMap<const clang::Expr *, OriginList *> &ExprToOriginList;
+  LifetimeSafetyStats &LSStats;
+};
+} // namespace
 
 bool hasOrigins(QualType QT) {
   return QT->isPointerOrReferenceType() || isGslPointerType(QT);
@@ -92,6 +125,9 @@ OriginList *OriginManager::getOrCreateList(const ValueDecl *D) {
 OriginList *OriginManager::getOrCreateList(const Expr *E) {
   if (auto *ParenIgnored = E->IgnoreParens(); ParenIgnored != E)
     return getOrCreateList(ParenIgnored);
+  // We do not see CFG stmts for ExprWithCleanups. Simply peel them.
+  if (const ExprWithCleanups *EWC = dyn_cast<ExprWithCleanups>(E))
+    return getOrCreateList(EWC->getSubExpr());
 
   if (!hasOrigins(E))
     return nullptr;
@@ -155,6 +191,12 @@ void OriginManager::dump(OriginID OID, llvm::raw_ostream &OS) const {
 const Origin &OriginManager::getOrigin(OriginID ID) const {
   assert(ID.Value < AllOrigins.size());
   return AllOrigins[ID.Value];
+}
+
+void OriginManager::collectMissingOrigins(Stmt &FunctionBody,
+                                          LifetimeSafetyStats &LSStats) {
+  MissingOriginCollector Collector(this->ExprToList, LSStats);
+  Collector.TraverseStmt(const_cast<Stmt *>(&FunctionBody));
 }
 
 } // namespace clang::lifetimes::internal

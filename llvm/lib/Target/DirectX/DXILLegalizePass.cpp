@@ -265,16 +265,10 @@ static bool upcastI8AllocasAndUses(Instruction &I,
 
   auto ProcessLoad = [&](LoadInst *Load) {
     for (User *LU : Load->users()) {
-      Type *Ty = nullptr;
-      if (CastInst *Cast = dyn_cast<CastInst>(LU))
-        Ty = Cast->getType();
-      else if (CallInst *CI = dyn_cast<CallInst>(LU)) {
-        if (CI->getIntrinsicID() == Intrinsic::memset)
-          Ty = Type::getInt32Ty(CI->getContext());
-      }
-
-      if (!Ty)
+      CastInst *Cast = dyn_cast<CastInst>(LU);
+      if (!Cast)
         continue;
+      Type *Ty = Cast->getType();
 
       if (!SmallestType ||
           Ty->getPrimitiveSizeInBits() < SmallestType->getPrimitiveSizeInBits())
@@ -344,168 +338,6 @@ downcastI64toI32InsertExtractElements(Instruction &I,
     }
   }
   return false;
-}
-
-static void emitMemcpyExpansion(IRBuilder<> &Builder, Value *Dst, Value *Src,
-                                ConstantInt *Length) {
-
-  uint64_t ByteLength = Length->getZExtValue();
-  // If length to copy is zero, no memcpy is needed.
-  if (ByteLength == 0)
-    return;
-
-  const DataLayout &DL = Builder.GetInsertBlock()->getModule()->getDataLayout();
-
-  auto GetArrTyFromVal = [](Value *Val) -> ArrayType * {
-    assert(isa<AllocaInst>(Val) ||
-           isa<GlobalVariable>(Val) &&
-               "Expected Val to be an Alloca or Global Variable");
-    if (auto *Alloca = dyn_cast<AllocaInst>(Val))
-      return dyn_cast<ArrayType>(Alloca->getAllocatedType());
-    if (auto *GlobalVar = dyn_cast<GlobalVariable>(Val))
-      return dyn_cast<ArrayType>(GlobalVar->getValueType());
-    return nullptr;
-  };
-
-  ArrayType *DstArrTy = GetArrTyFromVal(Dst);
-  assert(DstArrTy && "Expected Dst of memcpy to be a Pointer to an Array Type");
-  if (auto *DstGlobalVar = dyn_cast<GlobalVariable>(Dst))
-    assert(!DstGlobalVar->isConstant() &&
-           "The Dst of memcpy must not be a constant Global Variable");
-  [[maybe_unused]] ArrayType *SrcArrTy = GetArrTyFromVal(Src);
-  assert(SrcArrTy && "Expected Src of memcpy to be a Pointer to an Array Type");
-
-  Type *DstElemTy = DstArrTy->getElementType();
-  uint64_t DstElemByteSize = DL.getTypeStoreSize(DstElemTy);
-  assert(DstElemByteSize > 0 && "Dst element type store size must be set");
-  Type *SrcElemTy = SrcArrTy->getElementType();
-  [[maybe_unused]] uint64_t SrcElemByteSize = DL.getTypeStoreSize(SrcElemTy);
-  assert(SrcElemByteSize > 0 && "Src element type store size must be set");
-
-  // This assumption simplifies implementation and covers currently-known
-  // use-cases for DXIL. It may be relaxed in the future if required.
-  assert(DstElemTy == SrcElemTy &&
-         "The element types of Src and Dst arrays must match");
-
-  [[maybe_unused]] uint64_t DstArrNumElems = DstArrTy->getArrayNumElements();
-  assert(DstElemByteSize * DstArrNumElems >= ByteLength &&
-         "Dst array size must be at least as large as the memcpy length");
-  [[maybe_unused]] uint64_t SrcArrNumElems = SrcArrTy->getArrayNumElements();
-  assert(SrcElemByteSize * SrcArrNumElems >= ByteLength &&
-         "Src array size must be at least as large as the memcpy length");
-
-  uint64_t NumElemsToCopy = ByteLength / DstElemByteSize;
-  assert(ByteLength % DstElemByteSize == 0 &&
-         "memcpy length must be divisible by array element type");
-  for (uint64_t I = 0; I < NumElemsToCopy; ++I) {
-    SmallVector<Value *, 2> Indices = {Builder.getInt32(0),
-                                       Builder.getInt32(I)};
-    Value *SrcPtr = Builder.CreateInBoundsGEP(SrcArrTy, Src, Indices, "gep");
-    Value *SrcVal = Builder.CreateLoad(SrcElemTy, SrcPtr);
-    Value *DstPtr = Builder.CreateInBoundsGEP(DstArrTy, Dst, Indices, "gep");
-    Builder.CreateStore(SrcVal, DstPtr);
-  }
-}
-
-static void emitMemsetExpansion(IRBuilder<> &Builder, Value *Dst, Value *Val,
-                                ConstantInt *SizeCI,
-                                DenseMap<Value *, Value *> &ReplacedValues) {
-  [[maybe_unused]] const DataLayout &DL =
-      Builder.GetInsertBlock()->getModule()->getDataLayout();
-  [[maybe_unused]] uint64_t OrigSize = SizeCI->getZExtValue();
-
-  AllocaInst *Alloca = dyn_cast<AllocaInst>(Dst);
-
-  assert(Alloca && "Expected memset on an Alloca");
-  assert(OrigSize == Alloca->getAllocationSize(DL)->getFixedValue() &&
-         "Expected for memset size to match DataLayout size");
-
-  Type *AllocatedTy = Alloca->getAllocatedType();
-  ArrayType *ArrTy = dyn_cast<ArrayType>(AllocatedTy);
-  assert(ArrTy && "Expected Alloca for an Array Type");
-
-  Type *ElemTy = ArrTy->getElementType();
-  uint64_t Size = ArrTy->getArrayNumElements();
-
-  [[maybe_unused]] uint64_t ElemSize = DL.getTypeStoreSize(ElemTy);
-
-  assert(ElemSize > 0 && "Size must be set");
-  assert(OrigSize == ElemSize * Size && "Size in bytes must match");
-
-  Value *TypedVal = Val;
-
-  if (Val->getType() != ElemTy) {
-    if (ReplacedValues[Val]) {
-      // Note for i8 replacements if we know them we should use them.
-      // Further if this is a constant ReplacedValues will return null
-      // so we will stick to TypedVal = Val
-      TypedVal = ReplacedValues[Val];
-
-    } else {
-      // This case Val is a ConstantInt so the cast folds away.
-      // However if we don't do the cast the store below ends up being
-      // an i8.
-      TypedVal = Builder.CreateIntCast(Val, ElemTy, false);
-    }
-  }
-
-  for (uint64_t I = 0; I < Size; ++I) {
-    Value *Zero = Builder.getInt32(0);
-    Value *Offset = Builder.getInt32(I);
-    Value *Ptr = Builder.CreateGEP(ArrTy, Dst, {Zero, Offset}, "gep");
-    Builder.CreateStore(TypedVal, Ptr);
-  }
-}
-
-// Expands the instruction `I` into corresponding loads and stores if it is a
-// memcpy call. In that case, the call instruction is added to the `ToRemove`
-// vector. `ReplacedValues` is unused.
-static bool legalizeMemCpy(Instruction &I,
-                           SmallVectorImpl<Instruction *> &ToRemove,
-                           DenseMap<Value *, Value *> &ReplacedValues) {
-
-  CallInst *CI = dyn_cast<CallInst>(&I);
-  if (!CI)
-    return false;
-
-  Intrinsic::ID ID = CI->getIntrinsicID();
-  if (ID != Intrinsic::memcpy)
-    return false;
-
-  IRBuilder<> Builder(&I);
-  Value *Dst = CI->getArgOperand(0);
-  Value *Src = CI->getArgOperand(1);
-  ConstantInt *Length = dyn_cast<ConstantInt>(CI->getArgOperand(2));
-  assert(Length && "Expected Length to be a ConstantInt");
-  [[maybe_unused]] ConstantInt *IsVolatile =
-      dyn_cast<ConstantInt>(CI->getArgOperand(3));
-  assert(IsVolatile && "Expected IsVolatile to be a ConstantInt");
-  assert(IsVolatile->getZExtValue() == 0 && "Expected IsVolatile to be false");
-  emitMemcpyExpansion(Builder, Dst, Src, Length);
-  ToRemove.push_back(CI);
-  return true;
-}
-
-static bool legalizeMemSet(Instruction &I,
-                           SmallVectorImpl<Instruction *> &ToRemove,
-                           DenseMap<Value *, Value *> &ReplacedValues) {
-
-  CallInst *CI = dyn_cast<CallInst>(&I);
-  if (!CI)
-    return false;
-
-  Intrinsic::ID ID = CI->getIntrinsicID();
-  if (ID != Intrinsic::memset)
-    return false;
-
-  IRBuilder<> Builder(&I);
-  Value *Dst = CI->getArgOperand(0);
-  Value *Val = CI->getArgOperand(1);
-  ConstantInt *Size = dyn_cast<ConstantInt>(CI->getArgOperand(2));
-  assert(Size && "Expected Size to be a ConstantInt");
-  emitMemsetExpansion(Builder, Dst, Val, Size, ReplacedValues);
-  ToRemove.push_back(CI);
-  return true;
 }
 
 static bool updateFnegToFsub(Instruction &I,
@@ -660,8 +492,6 @@ private:
     LegalizationPipeline[Stage1].push_back(fixI8UseChain);
     LegalizationPipeline[Stage1].push_back(legalizeGetHighLowi64Bytes);
     LegalizationPipeline[Stage1].push_back(legalizeFreeze);
-    LegalizationPipeline[Stage1].push_back(legalizeMemCpy);
-    LegalizationPipeline[Stage1].push_back(legalizeMemSet);
     LegalizationPipeline[Stage1].push_back(updateFnegToFsub);
     // Note: legalizeGetHighLowi64Bytes and
     // downcastI64toI32InsertExtractElements both modify extractelement, so they

@@ -431,7 +431,8 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
                        OptionalAttr<DictArrayAttr>:$workgroup_attrib_attrs,
                        OptionalAttr<DictArrayAttr>:$private_attrib_attrs,
                        GPU_OptionalDimSizeHintAttr:$known_block_size,
-                       GPU_OptionalDimSizeHintAttr:$known_grid_size);
+                       GPU_OptionalDimSizeHintAttr:$known_grid_size,
+                       GPU_OptionalDimSizeHintAttr:$known_cluster_size);
   let regions = (region AnyRegion:$body);
 
   let skipDefaultBuilders = 1;
@@ -455,7 +456,12 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
     unsigned getNumWorkgroupAttributions() {
       auto attr = (*this)->getAttrOfType<IntegerAttr>(
           getNumWorkgroupAttributionsAttrName());
-      return attr ? attr.getInt() : 0;
+      if (!attr)
+        return 0;
+      int64_t value = attr.getInt();
+      assert(value >= 0 && value < std::numeric_limits<uint32_t>::max() &&
+             "invalid workgroup attribution count");
+      return value;
     }
 
     /// Return the index of the first workgroup attribution in the block argument
@@ -1005,7 +1011,12 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     unsigned getNumWorkgroupAttributions() {
       auto attr = (*this)->getAttrOfType<IntegerAttr>(
           getNumWorkgroupAttributionsAttrName());
-      return attr ? attr.getInt() : 0;
+      if (!attr)
+        return 0;
+      int64_t value = attr.getInt();
+      assert(value >= 0 && value < std::numeric_limits<uint32_t>::max() &&
+             "invalid workgroup attribution count");
+      return value;
     }
 
     /// Returns a list of block arguments that correspond to buffers located in
@@ -3252,6 +3263,7 @@ def GPU_SubgroupBroadcastOp : GPU_Op<"subgroup_broadcast",
   let assemblyFormat = [{
     $src `,` $broadcast_type ($lane^)? attr-dict `:` type($result)
   }];
+  let hasFolder = 1;
   let hasVerifier = 1;
 }
 
