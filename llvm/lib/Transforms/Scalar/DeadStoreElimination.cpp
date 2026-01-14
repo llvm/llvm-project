@@ -1018,16 +1018,19 @@ struct DSEState {
     // Treat byval, inalloca or dead on return arguments the same as Allocas,
     // stores to them are dead at the end of the function.
     for (Argument &AI : F.args()) {
-      if (AI.hasPassPointeeByValueCopyAttr() ||
-          (AI.getType()->isPointerTy() &&
-           AI.getDeadOnReturnInfo().coversAllReachableMemory()))
+      if (AI.hasPassPointeeByValueCopyAttr()) {
         InvisibleToCallerAfterRet.insert({&AI, true});
-      if (AI.getType()->isPointerTy() &&
-          !AI.getDeadOnReturnInfo().coversAllReachableMemory()) {
-        if (uint64_t DeadOnReturnBytes =
-                AI.getDeadOnReturnInfo().getNumberOfDeadBytes())
-          InvisibleToCallerAfterRetBounded.insert({&AI, DeadOnReturnBytes});
+        continue;
       }
+
+      if (!AI.getType()->isPointerTy())
+        continue;
+
+      const DeadOnReturnInfo &Info = AI.getDeadOnReturnInfo();
+      if (Info.coversAllReachableMemory())
+        InvisibleToCallerAfterRet.insert({&AI, true});
+      else if (uint64_t DeadBytes = Info.getNumberOfDeadBytes())
+        InvisibleToCallerAfterRetBounded.insert({&AI, DeadBytes});
     }
 
     // Collect whether there is any irreducible control flow in the function.
@@ -1225,8 +1228,11 @@ struct DSEState {
       const Value *BaseValue =
           GetPointerBaseWithConstantOffset(Ptr, ValueOffset, DL);
       assert(BaseValue == V);
-      if (ValueOffset + StoreSize.toRaw() <
-          InvisibleToCallerAfterRetBounded[BaseValue])
+      // This store is only invisible after return if we are in bounds of the
+      // range marked dead.
+      if (ValueOffset + StoreSize.getValue() <=
+              InvisibleToCallerAfterRetBounded[BaseValue] &&
+          ValueOffset >= 0)
         return true;
     }
     if (I.second && isInvisibleToCallerOnUnwind(V) && isNoAliasCall(V))
@@ -1899,6 +1905,7 @@ struct DSEState {
               if (CapturedBeforeReturn.erase(UO))
                 ShouldIterateEndOfFunctionDSE = true;
               InvisibleToCallerAfterRet.erase(UO);
+              InvisibleToCallerAfterRetBounded.erase(UO);
             }
           }
         }
