@@ -267,6 +267,10 @@ searchConstructorsInForwardingFunction(const FunctionDecl *FD);
 /// Computes symbol tags for a given NamedDecl.
 SymbolTags computeSymbolTags(const NamedDecl &ND);
 
+/// Computes symbol tags for a given NamedDecl, with additional context about
+/// whether it's a declaration or definition.
+SymbolTags computeSymbolTags(const NamedDecl &ND, bool IsDecl, bool IsDef);
+
 } // namespace clangd
 } // namespace clang
 

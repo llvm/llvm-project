@@ -10,6 +10,7 @@
 #include "Config.h"
 #include "FindTarget.h"
 #include "ParsedAST.h"
+#include "AST.h"
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "support/Logger.h"
@@ -1062,7 +1063,7 @@ getSemanticHighlightings(ParsedAST &AST, bool IncludeInactiveRegionTokens) {
           if (auto Mod = scopeModifier(Decl))
             Tok.addModifier(*Mod);
 
-          const auto SymbolTags = computeSymbolTags(*Decl);
+          const auto SymbolTags = computeSymbolTags(*Decl, R.IsDecl, isUniqueDefinition(Decl));
 
           if (SymbolTags & toSymbolTagBitmask(SymbolTag::Deprecated))
             Tok.addModifier(HighlightingModifier::Deprecated);
@@ -1081,20 +1082,18 @@ getSemanticHighlightings(ParsedAST &AST, bool IncludeInactiveRegionTokens) {
 
           if (isDependent(Decl))
             Tok.addModifier(HighlightingModifier::DependentName);
+
           if (isDefaultLibrary(Decl))
             Tok.addModifier(HighlightingModifier::DefaultLibrary);
+
           if (isa<CXXConstructorDecl>(Decl))
             Tok.addModifier(HighlightingModifier::ConstructorOrDestructor);
 
-          if (R.IsDecl) {
-            // Do not treat an UnresolvedUsingValueDecl as a declaration.
-            // It's more common to think of it as a reference to the
-            // underlying declaration.
-            if (!isa<UnresolvedUsingValueDecl>(Decl))
-              Tok.addModifier(HighlightingModifier::Declaration);
-            if (isUniqueDefinition(Decl))
-              Tok.addModifier(HighlightingModifier::Definition);
-          }
+          if (SymbolTags & toSymbolTagBitmask(SymbolTag::Declaration))
+            Tok.addModifier(HighlightingModifier::Declaration);
+
+          if (SymbolTags & toSymbolTagBitmask(SymbolTag::Definition))
+            Tok.addModifier(HighlightingModifier::Definition);
         }
       },
       AST.getHeuristicResolver());

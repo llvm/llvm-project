@@ -34,7 +34,7 @@ namespace {
 SymbolTags toSymbolTagBitmask(const SymbolTag ST) {
   return (1 << static_cast<unsigned>(ST));
 }
-}
+} // namespace
 
 std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND) {
   const auto SymbolTags = computeSymbolTags(ND);
@@ -64,8 +64,8 @@ std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND) {
   if (SymbolTags & toSymbolTagBitmask(SymbolTag::Declaration))
     Tags.push_back(SymbolTag::Declaration);
 
-   if (SymbolTags & toSymbolTagBitmask(SymbolTag::Public))
-     Tags.push_back(SymbolTag::Public);
+  if (SymbolTags & toSymbolTagBitmask(SymbolTag::Public))
+    Tags.push_back(SymbolTag::Public);
 
   if (SymbolTags & toSymbolTagBitmask(SymbolTag::Protected))
     Tags.push_back(SymbolTag::Protected);

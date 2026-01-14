@@ -1119,50 +1119,59 @@ searchConstructorsInForwardingFunction(const FunctionDecl *FD) {
   return Result;
 }
 
+// Backwards-compatible default behavior: determine whether this NamedDecl is
+// definition based on `isUniqueDefinition`, assuming that ND is a declaration.
 SymbolTags computeSymbolTags(const NamedDecl &ND) {
-  SymbolTags result = 0;
+  const auto IsDef = isUniqueDefinition(&ND);
+  return computeSymbolTags(ND, true, IsDef);
+}
+
+SymbolTags computeSymbolTags(const NamedDecl &ND, bool IsDecl, bool IsDef) {
+  SymbolTags Result = 0;
 
   if (ND.isDeprecated())
-    result |= toSymbolTagBitmask(SymbolTag::Deprecated);
+    Result |= toSymbolTagBitmask(SymbolTag::Deprecated);
 
   if (isConst(&ND))
-    result |= toSymbolTagBitmask(SymbolTag::ReadOnly);
+    Result |= toSymbolTagBitmask(SymbolTag::ReadOnly);
 
   if (isStatic(&ND))
-    result |= toSymbolTagBitmask(SymbolTag::Static);
+    Result |= toSymbolTagBitmask(SymbolTag::Static);
 
   if (isVirtual(&ND))
-    result |= toSymbolTagBitmask(SymbolTag::Virtual);
+    Result |= toSymbolTagBitmask(SymbolTag::Virtual);
 
   if (isAbstract(&ND))
-    result |= toSymbolTagBitmask(SymbolTag::Abstract);
+    Result |= toSymbolTagBitmask(SymbolTag::Abstract);
 
   if (isFinal(&ND))
-    result |= toSymbolTagBitmask(SymbolTag::Final);
+    Result |= toSymbolTagBitmask(SymbolTag::Final);
 
-  // Do not treat an UnresolvedUsingValueDecl as a declaration.
-  // It's more common to think of it as a reference to the
-  // underlying declaration.
-  if (isUniqueDefinition(&ND))
-    result |= toSymbolTagBitmask(SymbolTag::Definition);
-  else if (!isa<UnresolvedUsingValueDecl>(ND))
-    result |= toSymbolTagBitmask(SymbolTag::Declaration);
+  if (IsDecl && not isa<UnresolvedUsingValueDecl>(ND)) {
+    // Do not treat an UnresolvedUsingValueDecl as a declaration.
+    // It's more common to think of it as a reference to the
+    // underlying declaration.
+    Result |= toSymbolTagBitmask(SymbolTag::Declaration);
+
+    if (IsDef)
+      Result |= toSymbolTagBitmask(SymbolTag::Definition);
+  }
 
   switch (ND.getAccess()) {
   case AS_public:
-    result |= toSymbolTagBitmask(SymbolTag::Public);
+    Result |= toSymbolTagBitmask(SymbolTag::Public);
     break;
   case AS_protected:
-    result |= toSymbolTagBitmask(SymbolTag::Protected);
+    Result |= toSymbolTagBitmask(SymbolTag::Protected);
     break;
   case AS_private:
-    result |= toSymbolTagBitmask(SymbolTag::Private);
+    Result |= toSymbolTagBitmask(SymbolTag::Private);
     break;
   default:
     break;
   }
 
-  return result;
+  return Result;
 }
 } // namespace clangd
 } // namespace clang
