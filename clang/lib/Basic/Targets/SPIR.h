@@ -363,9 +363,8 @@ public:
     assert(Triple.getArch() == llvm::Triple::spirv32 &&
            "Invalid architecture for 32-bit SPIR-V.");
     assert((getTriple().getOS() == llvm::Triple::UnknownOS ||
-            getTriple().getOS() == llvm::Triple::HIPSPV ||
             getTriple().getOS() == llvm::Triple::ChipStar) &&
-           "32-bit SPIR-V target must use unknown, hipspv or chipstar OS");
+           "32-bit SPIR-V target must use unknown or chipstar OS");
     assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
            "32-bit SPIR-V target must use unknown environment type");
     PointerWidth = PointerAlign = 32;
@@ -388,9 +387,8 @@ public:
     assert(Triple.getArch() == llvm::Triple::spirv64 &&
            "Invalid architecture for 64-bit SPIR-V.");
     assert((getTriple().getOS() == llvm::Triple::UnknownOS ||
-            getTriple().getOS() == llvm::Triple::HIPSPV ||
             getTriple().getOS() == llvm::Triple::ChipStar) &&
-           "64-bit SPIR-V target must use unknown, hipspv or chipstar OS");
+           "64-bit SPIR-V target must use unknown or chipstar OS");
     assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
            "64-bit SPIR-V target must use unknown environment type");
     PointerWidth = PointerAlign = 64;

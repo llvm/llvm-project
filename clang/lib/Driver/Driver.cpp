@@ -4944,7 +4944,6 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
       bool IsHIPSPV =
           OffloadTriple && OffloadTriple->isSPIRV() &&
           (OffloadTriple->getOS() == llvm::Triple::OSType::AMDHSA ||
-           OffloadTriple->getOS() == llvm::Triple::OSType::HIPSPV ||
            OffloadTriple->getOS() == llvm::Triple::OSType::ChipStar);
       bool UseSPIRVBackend = Args.hasFlag(options::OPT_use_spirv_backend,
                                           options::OPT_no_use_spirv_backend,
@@ -6967,7 +6966,6 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
     case llvm::Triple::ShaderModel:
       TC = std::make_unique<toolchains::HLSLToolChain>(*this, Target, Args);
       break;
-    case llvm::Triple::HIPSPV:
     case llvm::Triple::ChipStar:
       TC = std::make_unique<toolchains::HIPSPVToolChain>(*this, Target, Args);
       break;
