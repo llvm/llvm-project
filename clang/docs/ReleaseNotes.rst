@@ -133,6 +133,8 @@ Miscellaneous Bug Fixes
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Fixed a crash when attempting to jump over initialization of a variable with variably modified type. (#GH175540)
+
 OpenACC Specific Changes
 ------------------------
 
@@ -159,6 +161,9 @@ Windows Support
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
+
+- DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`
+  to be used together when building for the LoongArch platform.
 
 RISC-V Support
 ^^^^^^^^^^^^^^
@@ -192,6 +197,7 @@ Fixed Point Support in Clang
 
 AST Matchers
 ------------
+- Add ``functionTypeLoc`` matcher for matching ``FunctionTypeLoc``.
 
 clang-format
 ------------
