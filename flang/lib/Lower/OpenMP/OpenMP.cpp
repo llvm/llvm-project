@@ -193,6 +193,7 @@ public:
     clauseOps.numTeamsLower = ops.numTeamsLower;
     clauseOps.numTeamsUpper = ops.numTeamsUpper;
     clauseOps.threadLimitDimsValues = ops.threadLimitDimsValues;
+    clauseOps.threadLimitNumDims = ops.threadLimitNumDims;
     return true;
   }
 
