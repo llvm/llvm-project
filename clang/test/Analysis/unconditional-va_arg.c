@@ -113,6 +113,21 @@ void has_conditional_logic(int fst, ...) {
 }
 
 
+#define IS_FEATURE_ENABLED 1
+void has_constant_condition(int fst, ...) {
+  // This checker doesn't have special logic for recognizing and ignoring
+  // conditionals that can be resolved at compile time. This feature could be
+  // added in the future.
+  va_list va;
+  if (IS_FEATURE_ENABLED) {
+    va_start(va, fst);
+    (void)va_arg(va, int); // no-warning
+    va_end(va);
+  }
+}
+
+
+
 void caller_has_conditional_logic(int fst, ...) {
   // This function is identical to never_called(), but it is used by a function
   // that performs a state split before the call.
