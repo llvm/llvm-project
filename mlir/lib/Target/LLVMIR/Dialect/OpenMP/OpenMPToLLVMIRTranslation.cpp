@@ -2794,12 +2794,11 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
   Operation::operand_range upperBounds = loopOp.getLoopUpperBounds();
   if (loopOp.getCollapseNumLoops() > 1) {
     for (uint64_t i = 0; i < loopOp.getCollapseNumLoops(); i++) {
-      ubVal = builder.CreateMul(
-          ubVal,
-          builder.CreateSub(
-              moduleTranslation.lookupValue(upperBounds[i]),
-              builder.CreateSub(moduleTranslation.lookupValue(lowerBounds[i]),
-                                builder.getInt32(1))));
+      llvm::Value *lowerBoundMinusOne = builder.CreateSub(
+          moduleTranslation.lookupValue(lowerBounds[i]), builder.getInt32(1));
+      llvm::Value *loopTripCount = builder.CreateSub(
+          moduleTranslation.lookupValue(upperBounds[i]), lowerBoundMinusOne);
+      ubVal = builder.CreateMul(ubVal, loopTripCount);
     }
   } else {
     ubVal = moduleTranslation.lookupValue(upperBounds[0]);

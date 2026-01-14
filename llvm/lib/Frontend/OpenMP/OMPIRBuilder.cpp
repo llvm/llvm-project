@@ -2098,7 +2098,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     llvm::function_ref<llvm::Expected<llvm::CanonicalLoopInfo *>()> LoopInfo,
     Value *LBVal, Value *UBVal, Value *StepVal, bool Untied, Value *IfCond,
     Value *GrainSize, bool NoGroup, int Sched, Value *Final, bool Mergeable,
-    Value *Priority, int NumOfCollapseLoops, TaskDupCallbackTy DupCB,
+    Value *Priority, uint64_t NumOfCollapseLoops, TaskDupCallbackTy DupCB,
     Value *TaskContextStructPtrVal) {
 
   if (!updateToLocation(Loc))
@@ -2363,7 +2363,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
 
     if (NumOfCollapseLoops > 1) {
       // When using the collapse clause, the bounds of the loop have to be
-      // adjusted to
+      // adjusted to properly represent the iterator of the outer loop.
       Value *IVPlusTaskLB = Builder.CreateAdd(
           CLI->getIndVar(),
           Builder.CreateSub(CastedTaskLB, ConstantInt::get(IVTy, 1)));
