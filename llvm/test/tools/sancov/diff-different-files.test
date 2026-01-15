@@ -1,0 +1,7 @@
+REQUIRES: x86-registered-target && host-byteorder-little-endian
+RUN: rm -f %t.out.sancov
+RUN: sancov -diff --output=%t.out.sancov %p/Inputs/test-linux_x86_64.1.sancov %p/Inputs/test-linux_x86_64.0.sancov
+RUN: sancov -print %t.out.sancov | FileCheck %s 
+
+CHECK: 0x4e14c2
+CHECK: 0x4e178c

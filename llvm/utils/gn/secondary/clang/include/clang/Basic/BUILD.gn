@@ -144,6 +144,10 @@ clang_tablegen("BuiltinsBPF") {
   args = [ "-gen-clang-builtins" ]
 }
 
+clang_tablegen("BuiltinsAMDGPU") {
+  args = [ "-gen-clang-builtins" ]
+}
+
 clang_tablegen("BuiltinsDirectX") {
   args = [ "-gen-clang-builtins" ]
 }

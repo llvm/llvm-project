@@ -1327,7 +1327,18 @@ getUntiledProducerFromSliceSource(OpOperand *source,
   }
   if (loopIt == loops.rend())
     destinationIterArg = source;
-  return {dyn_cast<OpResult>(source->get()), destinationIterArg};
+
+  auto result = dyn_cast<OpResult>(source->get());
+  if (result) {
+    Operation *producer = result.getOwner();
+    Operation *innermostLoop = loops.back();
+    // If the producer is already inside the innermost loop (where the slice
+    // is), it has already been fused. Skip it to avoid infinite loops.
+    if (innermostLoop->isProperAncestor(producer))
+      return {OpResult(), std::nullopt};
+  }
+
+  return {result, destinationIterArg};
 }
 
 /// Implementation of fusing producer of a single slice by computing the
@@ -1754,8 +1765,8 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
   // the mutation of replacement values. To do this, we attach a listener to
   // update the replacements as they happen.
   OpBuilder::Listener *previousListener = rewriter.getListener();
-  auto resetListener =
-      llvm::make_scope_exit([&]() { rewriter.setListener(previousListener); });
+  llvm::scope_exit resetListener(
+      [&]() { rewriter.setListener(previousListener); });
   ReplacementListener replaceListener(replacements, previousListener);
   rewriter.setListener(&replaceListener);
 

@@ -1073,6 +1073,12 @@ The matrix type extension supports explicit casts. Implicit type conversion betw
     i = static_cast<matrix_5_5<int>>(d);
   }
 
+The matrix type extension supports column and row major memory layouts, but not
+all builtins are supported with row-major layout. The layout defaults to column
+major and can be specified using `-fmatrix-memory-layout`. To enable column 
+major layout, use `-fmatrix-memory-layout=column-major`, and for row major
+layout use `-fmatrix-memory-layout=row-major`
+
 Half-Precision Floating Point
 =============================
 
@@ -2044,8 +2050,6 @@ The following type trait primitives are supported by Clang. Those traits marked
   is trivially relocatable, as defined by the C++26 standard [meta.unary.prop].
   Note that when relocating the caller code should ensure that if the object is polymorphic,
   the dynamic type is of the most derived type. Padding bytes should not be copied.
-* ``__builtin_is_replaceable`` (C++): Returns true if an object
-  is replaceable, as defined by the C++26 standard [meta.unary.prop].
 * ``__is_trivially_equality_comparable`` (Clang): Returns true if comparing two
   objects of the provided type is known to be equivalent to comparing their
   object representations. Note that types containing padding bytes are never
@@ -4373,6 +4377,39 @@ implemented in a way where the counter assignment can happen automatically.
 **Note:** The value returned by ``__builtin_counted_by_ref`` cannot be assigned
 to a variable, have its address taken, or passed into or returned from a
 function, because doing so violates bounds safety conventions.
+
+.. _builtin_stack_address-doc:
+
+``__builtin_stack_address``
+---------------------------
+
+``__builtin_stack_address`` returns the address that separates the current
+function's (i.e. the one calling the builtin) stack space and the region of the
+stack that may be modified by called functions. The semantics match those of
+GCC's builtin of the same name.
+
+**Syntax**:
+
+.. code-block:: c++
+
+  void *__builtin_stack_address()
+
+**Example**:
+
+.. code-block:: c++
+
+  void *sp = __builtin_stack_address();
+
+**Description**:
+
+The address returned by ``__builtin_stack_address`` identifies the starting
+address of the stack region that may be used by called functions.
+
+On some architectures (e.g. x86), it's sufficient to return the value in the
+stack pointer register directly. On others (e.g. SPARCv9), adjustments are
+required to the value of the stack pointer register.
+``__builtin_stack_address`` performs the necessary adjustments and returns the
+correct boundary address.
 
 Multiprecision Arithmetic Builtins
 ----------------------------------

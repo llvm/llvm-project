@@ -33,32 +33,22 @@ using namespace llvm::opt;
 #define NULL_FILE "/dev/null"
 #endif
 
-void AMDGCN::Linker::constructLlvmLinkCommand(Compilation &C,
-                                         const JobAction &JA,
-                                         const InputInfoList &Inputs,
-                                         const InputInfo &Output,
-                                         const llvm::opt::ArgList &Args) const {
-  // Construct llvm-link command.
-  // The output from llvm-link is a bitcode file.
-  ArgStringList LlvmLinkArgs;
+void AMDGCN::Linker::constructLLVMLinkCommand(
+    Compilation &C, const JobAction &JA, const InputInfoList &Inputs,
+    const InputInfo &Output, const llvm::opt::ArgList &Args) const {
 
-  assert(!Inputs.empty() && "Must have at least one input.");
+  ArgStringList LinkerInputs;
 
-  LlvmLinkArgs.append({"-o", Output.getFilename()});
   for (auto Input : Inputs)
-    LlvmLinkArgs.push_back(Input.getFilename());
+    LinkerInputs.push_back(Input.getFilename());
 
   // Look for archive of bundled bitcode in arguments, and add temporary files
   // for the extracted archive of bitcode to inputs.
   auto TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);
-  AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, LlvmLinkArgs, "amdgcn",
+  AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, LinkerInputs, "amdgcn",
                              TargetID, /*IsBitCodeSDL=*/true);
-
-  const char *LlvmLink =
-    Args.MakeArgString(getToolChain().GetProgramPath("llvm-link"));
-  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
-                                         LlvmLink, LlvmLinkArgs, Inputs,
-                                         Output));
+  tools::constructLLVMLinkCommand(C, *this, JA, Inputs, LinkerInputs, Output,
+                                  Args);
 }
 
 void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
@@ -176,7 +166,7 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
       Args.hasFlag(options::OPT_use_spirv_backend,
                    options::OPT_no_use_spirv_backend, /*Default=*/false);
 
-  constructLlvmLinkCommand(C, JA, Inputs, LinkedBCFile, Args);
+  constructLLVMLinkCommand(C, JA, Inputs, LinkedBCFile, Args);
 
   if (UseSPIRVBackend) {
     // This code handles the case in the new driver when --offload-device-only
@@ -228,7 +218,7 @@ void AMDGCN::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                           Args, *this);
 
   if (JA.getType() == types::TY_LLVM_BC)
-    return constructLlvmLinkCommand(C, JA, Inputs, Output, Args);
+    return constructLLVMLinkCommand(C, JA, Inputs, Output, Args);
 
   if (getToolChain().getEffectiveTriple().isSPIRV())
     return constructLinkAndEmitSpirvCommand(C, JA, Inputs, Output, Args);
@@ -274,8 +264,7 @@ void HIPAMDToolChain::addClangTargetOptions(
   // Default to "hidden" visibility, as object level linking will not be
   // supported for the foreseeable future.
   if (!DriverArgs.hasArg(options::OPT_fvisibility_EQ,
-                         options::OPT_fvisibility_ms_compat) &&
-      !getDriver().IsFlangMode()) {
+                         options::OPT_fvisibility_ms_compat)) {
     CC1Args.append({"-fvisibility=hidden"});
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }

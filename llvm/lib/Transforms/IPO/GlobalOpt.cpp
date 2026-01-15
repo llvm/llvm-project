@@ -47,6 +47,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -1308,8 +1309,10 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
       Instruction *NSI;
       if (IsOneZero)
         NSI = new ZExtInst(NLI, LI->getType(), "", LI->getIterator());
-      else
+      else {
         NSI = SelectInst::Create(NLI, OtherVal, InitVal, "", LI->getIterator());
+        setExplicitlyUnknownBranchWeightsIfProfiled(*NSI, DEBUG_TYPE);
+      }
       NSI->takeName(LI);
       // Since LI is split into two instructions, NLI and NSI both inherit the
       // same DebugLoc
@@ -2144,9 +2147,10 @@ static void setUsedInitializer(GlobalVariable &V,
 
   Module *M = V.getParent();
   V.removeFromParent();
-  GlobalVariable *NV =
-      new GlobalVariable(*M, ATy, false, GlobalValue::AppendingLinkage,
-                         ConstantArray::get(ATy, UsedArray), "");
+  GlobalVariable *NV = new GlobalVariable(
+      *M, ATy, false, GlobalValue::AppendingLinkage,
+      ConstantArray::get(ATy, UsedArray), "", nullptr,
+      GlobalVariable::NotThreadLocal, V.getType()->getAddressSpace());
   NV->takeName(&V);
   NV->setSection("llvm.metadata");
   delete &V;

@@ -25,7 +25,7 @@
 "`P0074R0 <https://wg21.link/P0074R0>`__","Making ``std::owner_less``\  more flexible","2015-10 (Kona)","|Complete|","3.8","`#103623 <https://github.com/llvm/llvm-project/issues/103623>`__",""
 "`P0013R1 <https://wg21.link/P0013R1>`__","Logical type traits rev 2","2015-10 (Kona)","|Complete|","3.8","`#103624 <https://github.com/llvm/llvm-project/issues/103624>`__",""
 "","","","","","",""
-"`P0024R2 <https://wg21.link/P0024R2>`__","The Parallelism TS Should be Standardized","2016-02 (Jacksonville)","|Partial|","","`#99938 <https://github.com/llvm/llvm-project/issues/99938>`__",""
+"`P0024R2 <https://wg21.link/P0024R2>`__","The Parallelism TS Should be Standardized","2016-02 (Jacksonville)","|In Progress|","","`#99938 <https://github.com/llvm/llvm-project/issues/99938>`__","Progress is tracked `here <https://github.com/llvm/llvm-project/issues/99938>`__"
 "`P0226R1 <https://wg21.link/P0226R1>`__","Mathematical Special Functions for C++17","2016-02 (Jacksonville)","|In Progress|","","`#99939 <https://github.com/llvm/llvm-project/issues/99939>`__","Progress is tracked `here <https://github.com/llvm/llvm-project/issues/99939>`__"
 "`P0220R1 <https://wg21.link/P0220R1>`__","Adopt Library Fundamentals V1 TS Components for C++17","2016-02 (Jacksonville)","|Complete|","16","`#103625 <https://github.com/llvm/llvm-project/issues/103625>`__",""
 "`P0218R1 <https://wg21.link/P0218R1>`__","Adopt the File System TS for C++17","2016-02 (Jacksonville)","|Complete|","7","`#103626 <https://github.com/llvm/llvm-project/issues/103626>`__",""

@@ -35,6 +35,8 @@ void XeGPUDialect::initialize() {
 #include <mlir/Dialect/XeGPU/IR/XeGPUAttrs.cpp.inc>
       >();
 }
+#define GET_OP_INTERFACE_CLASSES
+#include "mlir/Dialect/XeGPU/IR/XeGPUOpInterface.cpp.inc"
 
 // A `srcShape` consists of N distribution units, each being `subShapesLayout` x
 // `subShape`. A `delinearizedId` is used to identify a particular `subShape`
@@ -588,6 +590,24 @@ bool SliceAttr::isSliceOf(const xegpu::DistributeLayoutAttr &other) {
       flattenedThis.getDims().asArrayRef().end());
   return llvm::all_of(flattenedOther.getDims().asArrayRef(),
                       [&](int64_t dim) { return thisDims.contains(dim); });
+}
+
+xegpu::SliceAttr SliceAttr::dropSliceDims(ArrayRef<int64_t> sliceDimsToDrop) {
+  if (sliceDimsToDrop.empty())
+    return *this;
+  SmallVector<int64_t> sliceDims{getDims().asArrayRef()};
+  for (auto dim : sliceDimsToDrop) {
+    auto foundIt = std::find(sliceDims.begin(), sliceDims.end(), dim);
+    assert(foundIt != sliceDims.end() &&
+           "Expected to find the specified reduction dim in slice dims");
+    sliceDims.erase(foundIt);
+  }
+
+  auto sliceWithoutDims = xegpu::SliceAttr::get(
+      this->getContext(), getParent(),
+      DenseI64ArrayAttr::get(this->getContext(), sliceDims));
+
+  return sliceWithoutDims;
 }
 
 bool SliceAttr::isEqualTo(const xegpu::DistributeLayoutAttr &other) {

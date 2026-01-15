@@ -35,6 +35,7 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
+#include <cstdint>
 #include <map>
 #include <optional>
 using namespace llvm;
@@ -785,7 +786,7 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
          ++phino) {
       OPN = PHIToResolve[phino];
       PHINode *PN = cast<PHINode>(VMap[OPN]);
-      for (unsigned pred = 0, e = NumPreds; pred != e; ++pred) {
+      for (int64_t pred = NumPreds - 1; pred >= 0; --pred) {
         Value *V = VMap.lookup(PN->getIncomingBlock(pred));
         if (BasicBlock *MappedBlock = cast_or_null<BasicBlock>(V)) {
           Value *InVal =
@@ -794,11 +795,9 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
           assert(InVal && "Unknown input value?");
           PN->setIncomingValue(pred, InVal);
           PN->setIncomingBlock(pred, MappedBlock);
-        } else {
-          PN->removeIncomingValue(pred, false);
-          --pred; // Revisit the next entry.
-          --e;
+          continue;
         }
+        PN->removeIncomingValue(pred, false);
       }
     }
 
@@ -812,23 +811,29 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
     if (NumPreds != PN->getNumIncomingValues()) {
       assert(NumPreds < PN->getNumIncomingValues());
       // Count how many times each predecessor comes to this block.
-      std::map<BasicBlock *, unsigned> PredCount;
+      DenseMap<BasicBlock *, unsigned> PredCount;
       for (BasicBlock *Pred : predecessors(NewBB))
-        --PredCount[Pred];
-
-      // Figure out how many entries to remove from each PHI.
-      for (BasicBlock *Pred : PN->blocks())
         ++PredCount[Pred];
 
-      // At this point, the excess predecessor entries are positive in the
-      // map.  Loop over all of the PHIs and remove excess predecessor
-      // entries.
       BasicBlock::iterator I = NewBB->begin();
+      DenseMap<BasicBlock *, unsigned> SeenPredCount;
+      SeenPredCount.reserve(PredCount.size());
       for (; (PN = dyn_cast<PHINode>(I)); ++I) {
-        for (const auto &[Pred, Count] : PredCount) {
-          for ([[maybe_unused]] unsigned _ : llvm::seq<unsigned>(Count))
-            PN->removeIncomingValue(Pred, false);
-        }
+        SeenPredCount.clear();
+        PN->removeIncomingValueIf(
+            [&](unsigned Idx) {
+              BasicBlock *IncomingBlock = PN->getIncomingBlock(Idx);
+              auto It = PredCount.find(IncomingBlock);
+              if (It == PredCount.end())
+                return true;
+              unsigned &SeenCount = SeenPredCount[IncomingBlock];
+              if (SeenCount < It->second) {
+                SeenCount++;
+                return false;
+              }
+              return true;
+            },
+            false);
       }
     }
 
