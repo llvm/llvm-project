@@ -848,7 +848,6 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
       auto One = B.buildConstant({VgprRB, Ty}, 1);
       B.buildAnd(BoolSrc, Src, One);
     }
-
     auto Zero = B.buildConstant({VgprRB, Ty}, 0);
     B.buildICmp(CmpInst::ICMP_NE, MI.getOperand(0).getReg(), BoolSrc, Zero);
     MI.eraseFromParent();
