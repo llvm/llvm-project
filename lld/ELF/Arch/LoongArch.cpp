@@ -650,11 +650,13 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   case R_LARCH_CALL30: {
     // This relocation is designed for adjacent pcaddu12i+jirl pairs that
     // are patched in one time.
-    // The relocation range is [-4G, +4G) (of course must be 4-byte aligned).
+    // The relocation range is [-2G, +2G) (of course must be 4-byte aligned).
     if ((int64_t)val != llvm::SignExtend64(val, 32))
       reportRangeError(ctx, loc, rel, Twine(val), llvm::minIntN(32),
                        llvm::maxIntN(32));
     checkAlignment(ctx, loc, val, 4, rel);
+    // Although jirl adds the immediate as a signed value, it is always positive
+    // in this case, so no adjustment is needed, unlink CALL36.
     uint32_t hi20 = extractBits(val, 31, 12);
     // Despite the name, the lower part is actually 12 bits with 4-byte aligned.
     uint32_t lo10 = extractBits(val, 11, 2);
@@ -738,7 +740,7 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   case R_LARCH_TLS_GD_PCADD_HI20:
   case R_LARCH_TLS_DESC_PCADD_HI20: {
     uint64_t hi = val + 0x800;
-    checkInt(ctx, loc, SignExtend64(hi, 32) >> 12, 20, rel);
+    checkInt(ctx, loc, val, 32, rel);
     write32le(loc, setJ20(read32le(loc), extractBits(hi, 31, 12)));
     return;
   }
