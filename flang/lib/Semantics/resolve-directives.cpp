@@ -1790,8 +1790,7 @@ Symbol *AccAttributeVisitor::ResolveAccCommonBlockName(
 
 void AccAttributeVisitor::AddUseDeviceObject(
     const Symbol &object, const parser::Name &name) {
-  auto result = useDeviceObjects_.insert(object);
-  if (!result.second) {
+  if (!useDeviceObjects_.insert(object).second) {
     context_.Say(name.source,
         "'%s' appears in more than one USE_DEVICE clause "
         "on the same HOST_DATA directive"_err_en_US,
