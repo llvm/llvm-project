@@ -430,12 +430,12 @@ bool Loop::isCanonical(ScalarEvolution &SE) const {
 
 // Check that 'BB' doesn't have any uses outside of the 'L'
 static bool isBlockInLCSSAForm(const Loop &L, const BasicBlock &BB,
-                               const DominatorTree &DT, bool IgnoreTokens) {
+                               const DominatorTree &DT, bool IgnoreEphemerals) {
   for (const Instruction &I : BB) {
     // Tokens can't be used in PHI nodes and live-out tokens prevent loop
     // optimizations, so for the purposes of considered LCSSA form, we
     // can ignore them.
-    if (IgnoreTokens && I.getType()->isTokenTy())
+    if (IgnoreEphemerals && I.getType()->isTokenTy())
       continue;
 
     for (const Use &U : I.uses()) {
@@ -447,6 +447,13 @@ static bool isBlockInLCSSAForm(const Loop &L, const BasicBlock &BB,
       // see the `phi` doc in LangRef and the LCSSA doc.
       if (const PHINode *P = dyn_cast<PHINode>(UI))
         UserBB = P->getIncomingBlock(U);
+
+      // lifetime intrinsics are also considered to be non-uses for
+      // the purposes of LCSSA form.
+      if (IgnoreEphemerals)
+        if (auto *II = dyn_cast<IntrinsicInst>(UI))
+          if (II->isLifetimeStartOrEnd())
+            continue;
 
       // Check the current block, as a fast-path, before checking whether
       // the use is anywhere in the loop.  Most values are used in the same

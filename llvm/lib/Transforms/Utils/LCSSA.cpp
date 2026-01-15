@@ -76,36 +76,6 @@ static bool isExitBlock(BasicBlock *BB,
 // expensive, and we're not mutating the loop structure.
 using LoopExitBlocksTy = SmallDenseMap<Loop *, SmallVector<BasicBlock *, 1>>;
 
-// If I is an alloca with lifetime intrinsics that are live out of the loop,
-// remove all the lifetime intrinsics for I.
-// This ensures we don't create a lifetime intrinsic based on an LCSSA phi,
-// and avoids potential lifetime inconsistencies.
-static void fixLifetimeIntrinsics(Instruction *I,
-                                  SmallVectorImpl<Use *> &UsesToRewrite) {
-  if (!isa<AllocaInst>(I))
-    return;
-  bool RemovedAny = false;
-  // First, remove lifetime intrinsics from UsesToRewrite.
-  llvm::erase_if(UsesToRewrite, [&](Use *U) {
-    if (auto *II = dyn_cast<IntrinsicInst>(U->getUser())) {
-      if (II->isLifetimeStartOrEnd()) {
-        RemovedAny = true;
-        return true;
-      }
-    }
-    return false;
-  });
-
-  // Ensure consistency in the simplest way, by removing all lifetime uses
-  // of I.
-  if (RemovedAny) {
-    for (auto *U : make_early_inc_range(I->users()))
-      if (auto *II = dyn_cast<IntrinsicInst>(U))
-        if (II->isLifetimeStartOrEnd())
-          II->eraseFromParent();
-  }
-}
-
 /// For every instruction from the worklist, check to see if it has any uses
 /// that are outside the current loop.  If so, insert LCSSA PHI nodes and
 /// rewrite the uses.
@@ -147,6 +117,13 @@ formLCSSAForInstructionsImpl(SmallVectorImpl<Instruction *> &Worklist,
         continue;
       }
 
+      // Ignore lifetime intrinsics, instead of creating LCSSA phis for them.
+      // The intrinsics can be removed later by a call to
+      // cleanupDanglingLifetimeUsers.
+      if (auto *II = dyn_cast<IntrinsicInst>(User))
+        if (II->isLifetimeStartOrEnd())
+          continue;
+
       // For practical purposes, we consider that the use in a PHI
       // occurs in the respective predecessor block. For more info,
       // see the `phi` doc in LangRef and the LCSSA doc.
@@ -156,8 +133,6 @@ formLCSSAForInstructionsImpl(SmallVectorImpl<Instruction *> &Worklist,
       if (InstBB != UserBB && !L->contains(UserBB))
         UsesToRewrite.push_back(&U);
     }
-
-    fixLifetimeIntrinsics(I, UsesToRewrite);
 
     // If there are no uses outside the loop, exit with no change.
     if (UsesToRewrite.empty())
@@ -390,6 +365,48 @@ static void computeBlocksDominatingExits(
     if (BlocksDominatingExits.insert(IDomBB))
       BBWorklist.push_back(IDomBB);
   }
+}
+
+/// Ensure strict LCSSA form for the given loop, by removing lifetime
+/// intrinsics that are used outside the loop.
+///
+/// Returns true if any modifications are made.
+bool llvm::cleanupDanglingLifetimeUsers(Loop *L, const DominatorTree &DT) {
+  SmallVector<BasicBlock *, 8> ExitBlocks;
+  L->getExitBlocks(ExitBlocks);
+
+  if (ExitBlocks.empty())
+    return false;
+
+  // Look only at allocas that dominate the loop exits.
+  SmallSetVector<BasicBlock *, 8> BlocksDominatingExits;
+  computeBlocksDominatingExits(*L, DT, ExitBlocks, BlocksDominatingExits);
+
+  SmallVector<Instruction *, 8> ToRemove;
+  bool Changed = false;
+
+  for (auto *BB : BlocksDominatingExits) {
+    for (auto &I : *BB) {
+      if (auto *AI = dyn_cast<AllocaInst>(&I)) {
+        for (Use &U : AI->uses()) {
+          auto *User = cast<Instruction>(U.getUser());
+
+          if (L->contains(User->getParent()))
+            continue;
+
+          if (User->isLifetimeStartOrEnd())
+            ToRemove.push_back(User);
+        }
+      }
+    }
+  }
+
+  for (Instruction *I : ToRemove) {
+    I->eraseFromParent();
+    Changed = true;
+  }
+
+  return Changed;
 }
 
 static bool formLCSSAImpl(Loop &L, const DominatorTree &DT, const LoopInfo *LI,

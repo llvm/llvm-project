@@ -1117,6 +1117,13 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
   SmallVector<std::pair<BasicBlock *, BasicBlock *>, 4> ExitEdges;
   L->getExitEdges(ExitEdges);
 
+  // LCSSA allows lifetime intrinsics and tokens to directly use loop
+  // instructions, as they cannot use a phi.
+  // Cloning loop blocks requires a phi join; just remove the problematic
+  // instructions.
+  if (cleanupDanglingLifetimeUsers(L, DT))
+    LLVM_DEBUG(dbgs() << "Peeling: removed dangling lifetime users.\n");
+
   // Remember dominators of blocks we might reach through exits to change them
   // later. Immediate dominator of such block might change, because we add more
   // routes which can lead to the exit: we can reach it from the peeled
