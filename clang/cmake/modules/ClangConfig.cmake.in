@@ -13,7 +13,9 @@ set(CLANG_LINK_CLANG_DYLIB "@CLANG_LINK_CLANG_DYLIB@")
 set(CLANG_DEFAULT_LINKER "@CLANG_DEFAULT_LINKER@")
 
 # Provide all our library targets to users.
-@CLANG_CONFIG_INCLUDE_EXPORTS@
+if(CMAKE_TARGET_SUPPORTS_SHARED_LIBS)
+  @CLANG_CONFIG_INCLUDE_EXPORTS@
+endif()
 
 # By creating clang-tablegen-targets here, subprojects that depend on Clang's
 # tablegen-generated headers can always depend on this target whether building
