@@ -65,9 +65,7 @@ define nofpclass(nan) half @extractvalue_not_frexp() {
 define nofpclass(snan inf norm sub zero) half @ret_only_qnan__frexp(half %unknown) {
 ; CHECK-LABEL: define nofpclass(snan inf zero sub norm) half @ret_only_qnan__frexp(
 ; CHECK-SAME: half [[UNKNOWN:%.*]]) {
-; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[UNKNOWN]])
-; CHECK-NEXT:    [[FREXP_MANT:%.*]] = extractvalue { half, i32 } [[FREXP]], 0
-; CHECK-NEXT:    ret half [[FREXP_MANT]]
+; CHECK-NEXT:    ret half [[UNKNOWN]]
 ;
   %frexp = call { half, i32 } @llvm.frexp.f16.i32(half %unknown)
   %frexp.mant = extractvalue { half, i32 } %frexp, 0
@@ -77,9 +75,7 @@ define nofpclass(snan inf norm sub zero) half @ret_only_qnan__frexp(half %unknow
 define nofpclass(qnan inf norm sub zero) half @ret_only_snan__frexp(half %unknown) {
 ; CHECK-LABEL: define nofpclass(qnan inf zero sub norm) half @ret_only_snan__frexp(
 ; CHECK-SAME: half [[UNKNOWN:%.*]]) {
-; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[UNKNOWN]])
-; CHECK-NEXT:    [[FREXP_MANT:%.*]] = extractvalue { half, i32 } [[FREXP]], 0
-; CHECK-NEXT:    ret half [[FREXP_MANT]]
+; CHECK-NEXT:    ret half [[UNKNOWN]]
 ;
   %frexp = call { half, i32 } @llvm.frexp.f16.i32(half %unknown)
   %frexp.mant = extractvalue { half, i32 } %frexp, 0
@@ -89,9 +85,7 @@ define nofpclass(qnan inf norm sub zero) half @ret_only_snan__frexp(half %unknow
 define nofpclass(inf norm sub zero) half @ret_only_nan__frexp(half %unknown) {
 ; CHECK-LABEL: define nofpclass(inf zero sub norm) half @ret_only_nan__frexp(
 ; CHECK-SAME: half [[UNKNOWN:%.*]]) {
-; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[UNKNOWN]])
-; CHECK-NEXT:    [[FREXP_MANT:%.*]] = extractvalue { half, i32 } [[FREXP]], 0
-; CHECK-NEXT:    ret half [[FREXP_MANT]]
+; CHECK-NEXT:    ret half 0xH7E00
 ;
   %frexp = call { half, i32 } @llvm.frexp.f16.i32(half %unknown)
   %frexp.mant = extractvalue { half, i32 } %frexp, 0
@@ -121,9 +115,7 @@ define nofpclass(nan pinf norm sub zero) half @ret_only_ninf__frexp(half %unknow
 define nofpclass(nan norm sub zero) half @ret_only_inf__frexp(half %unknown) {
 ; CHECK-LABEL: define nofpclass(nan zero sub norm) half @ret_only_inf__frexp(
 ; CHECK-SAME: half [[UNKNOWN:%.*]]) {
-; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[UNKNOWN]])
-; CHECK-NEXT:    [[FREXP_MANT:%.*]] = extractvalue { half, i32 } [[FREXP]], 0
-; CHECK-NEXT:    ret half [[FREXP_MANT]]
+; CHECK-NEXT:    ret half [[UNKNOWN]]
 ;
   %frexp = call { half, i32 } @llvm.frexp.f16.i32(half %unknown)
   %frexp.mant = extractvalue { half, i32 } %frexp, 0
@@ -206,8 +198,7 @@ define nofpclass(pinf) half @ret_nofpclass_pinf__frexp_select_unknown_or_pinf(i1
 ; CHECK-LABEL: define nofpclass(pinf) half @ret_nofpclass_pinf__frexp_select_unknown_or_pinf(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[ONLY_PINF:%.*]] = call half @returns_pinf()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[ONLY_PINF]]
-; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[SELECT]])
+; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[UNKNOWN]])
 ; CHECK-NEXT:    [[FREXP_MANT:%.*]] = extractvalue { half, i32 } [[FREXP]], 0
 ; CHECK-NEXT:    ret half [[FREXP_MANT]]
 ;
@@ -222,8 +213,7 @@ define nofpclass(pinf) half @ret_nofpclass_pinf__frexp_select_unknown_or_pinf__u
 ; CHECK-LABEL: define nofpclass(pinf) half @ret_nofpclass_pinf__frexp_select_unknown_or_pinf__use_other_output(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[ONLY_PINF:%.*]] = call half @returns_pinf()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[ONLY_PINF]]
-; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[SELECT]])
+; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[UNKNOWN]])
 ; CHECK-NEXT:    [[FREXP_MANT:%.*]] = extractvalue { half, i32 } [[FREXP]], 0
 ; CHECK-NEXT:    [[FREXP_EXP:%.*]] = extractvalue { half, i32 } [[FREXP]], 1
 ; CHECK-NEXT:    store i32 [[FREXP_EXP]], ptr [[PTR]], align 4
@@ -260,8 +250,7 @@ define nofpclass(pinf) half @ret_nofpclass_pinf__frexp_select_unknown_or_pinf__u
 ; CHECK-LABEL: define nofpclass(pinf) half @ret_nofpclass_pinf__frexp_select_unknown_or_pinf__use_struct(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[ONLY_PINF:%.*]] = call half @returns_pinf()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[ONLY_PINF]]
-; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[SELECT]])
+; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[UNKNOWN]])
 ; CHECK-NEXT:    [[FREXP_MANT:%.*]] = extractvalue { half, i32 } [[FREXP]], 0
 ; CHECK-NEXT:    store { half, i32 } [[FREXP]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret half [[FREXP_MANT]]
@@ -279,8 +268,7 @@ define nofpclass(ninf) half @ret_nofpclass_ninf__frexp_select_unknown_or_ninf(i1
 ; CHECK-LABEL: define nofpclass(ninf) half @ret_nofpclass_ninf__frexp_select_unknown_or_ninf(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[ONLY_NINF:%.*]] = call half @returns_ninf()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[ONLY_NINF]]
-; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[SELECT]])
+; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[UNKNOWN]])
 ; CHECK-NEXT:    [[FREXP_MANT:%.*]] = extractvalue { half, i32 } [[FREXP]], 0
 ; CHECK-NEXT:    ret half [[FREXP_MANT]]
 ;
@@ -295,8 +283,7 @@ define nofpclass(inf) half @ret_nofpclass_inf__frexp_select_unknown_or_inf(i1 %c
 ; CHECK-LABEL: define nofpclass(inf) half @ret_nofpclass_inf__frexp_select_unknown_or_inf(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[ONLY_INF:%.*]] = call half @returns_inf()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[ONLY_INF]]
-; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[SELECT]])
+; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[UNKNOWN]])
 ; CHECK-NEXT:    [[FREXP_MANT:%.*]] = extractvalue { half, i32 } [[FREXP]], 0
 ; CHECK-NEXT:    ret half [[FREXP_MANT]]
 ;
@@ -343,8 +330,7 @@ define nofpclass(nan) half @ret_nofpclass_nan__frexp_select_unknown_nan(i1 %cond
 ; CHECK-LABEL: define nofpclass(nan) half @ret_nofpclass_nan__frexp_select_unknown_nan(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[ONLY_NAN:%.*]] = call half @returns_nan()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[ONLY_NAN]]
-; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[SELECT]])
+; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[UNKNOWN]])
 ; CHECK-NEXT:    [[FREXP_MANT:%.*]] = extractvalue { half, i32 } [[FREXP]], 0
 ; CHECK-NEXT:    ret half [[FREXP_MANT]]
 ;
@@ -359,8 +345,7 @@ define nofpclass(pzero) half @ret_nofpclass_pzero__frexp_select_unknown_only_pze
 ; CHECK-LABEL: define nofpclass(pzero) half @ret_nofpclass_pzero__frexp_select_unknown_only_pzero(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[ONLY_PZERO:%.*]] = call half @returns_pzero()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[ONLY_PZERO]]
-; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[SELECT]])
+; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[UNKNOWN]])
 ; CHECK-NEXT:    [[FREXP_MANT:%.*]] = extractvalue { half, i32 } [[FREXP]], 0
 ; CHECK-NEXT:    ret half [[FREXP_MANT]]
 ;
@@ -375,8 +360,7 @@ define nofpclass(nzero) half @ret_nofpclass_nzero__frexp_select_unknown_or_not_n
 ; CHECK-LABEL: define nofpclass(nzero) half @ret_nofpclass_nzero__frexp_select_unknown_or_not_nzero(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[ONLY_NZERO:%.*]] = call half @returns_nzero()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[ONLY_NZERO]]
-; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[SELECT]])
+; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[UNKNOWN]])
 ; CHECK-NEXT:    [[FREXP_MANT:%.*]] = extractvalue { half, i32 } [[FREXP]], 0
 ; CHECK-NEXT:    ret half [[FREXP_MANT]]
 ;
@@ -505,8 +489,7 @@ define nofpclass(ninf nnorm nsub nzero) half @ret_only_positive_or_nan__frexp_se
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) half @ret_only_positive_or_nan__frexp_select_negative_or_unknown(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[NEGATIVE:%.*]] = call half @returns_negative()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[NEGATIVE]]
-; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[SELECT]])
+; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[UNKNOWN]])
 ; CHECK-NEXT:    [[FREXP_MANT:%.*]] = extractvalue { half, i32 } [[FREXP]], 0
 ; CHECK-NEXT:    ret half [[FREXP_MANT]]
 ;
@@ -521,8 +504,7 @@ define nofpclass(pinf pnorm psub pzero) half @ret_only_negative_or_nan__frexp_se
 ; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) half @ret_only_negative_or_nan__frexp_select_positive_or_unknown(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[POSITIVE:%.*]] = call half @returns_positive()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[POSITIVE]]
-; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[SELECT]])
+; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[UNKNOWN]])
 ; CHECK-NEXT:    [[FREXP_MANT:%.*]] = extractvalue { half, i32 } [[FREXP]], 0
 ; CHECK-NEXT:    ret half [[FREXP_MANT]]
 ;
@@ -549,9 +531,7 @@ define nofpclass(snan) half @src_only_inf__frexp() {
 define nofpclass(snan) half @src_only_nan__frexp() {
 ; CHECK-LABEL: define nofpclass(snan) half @src_only_nan__frexp() {
 ; CHECK-NEXT:    [[ONLY_NAN:%.*]] = call half @returns_nan()
-; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[ONLY_NAN]])
-; CHECK-NEXT:    [[FREXP_MANT:%.*]] = extractvalue { half, i32 } [[FREXP]], 0
-; CHECK-NEXT:    ret half [[FREXP_MANT]]
+; CHECK-NEXT:    ret half [[ONLY_NAN]]
 ;
   %only.nan = call half @returns_nan()
   %frexp = call { half, i32 } @llvm.frexp.f16.i32(half %only.nan)
@@ -601,9 +581,7 @@ define nofpclass(nan) half @ret_no_nan_src_only_inf__frexp() {
 define nofpclass(inf) half @ret_no_inf_src_only_nan__frexp() {
 ; CHECK-LABEL: define nofpclass(inf) half @ret_no_inf_src_only_nan__frexp() {
 ; CHECK-NEXT:    [[NAN:%.*]] = call half @returns_nan()
-; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[NAN]])
-; CHECK-NEXT:    [[FREXP_MANT:%.*]] = extractvalue { half, i32 } [[FREXP]], 0
-; CHECK-NEXT:    ret half [[FREXP_MANT]]
+; CHECK-NEXT:    ret half 0xH7E00
 ;
   %nan = call half @returns_nan()
   %frexp = call { half, i32 } @llvm.frexp.f16.i32(half %nan)

@@ -3014,6 +3014,55 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     Known = KnownLHS | KnownRHS;
     break;
   }
+  case Instruction::ExtractValue: {
+    ExtractValueInst *Extract = cast<ExtractValueInst>(I);
+    ArrayRef<unsigned> Indices = Extract->getIndices();
+    Value *Src = Extract->getAggregateOperand();
+    if (isa<StructType>(Src->getType()) && Indices.size() == 1 &&
+        Indices[0] == 0) {
+      if (auto *II = dyn_cast<IntrinsicInst>(Src)) {
+        switch (II->getIntrinsicID()) {
+        case Intrinsic::frexp: {
+          FPClassTest SrcDemandedMask = fcNone;
+          if (DemandedMask & fcNan)
+            SrcDemandedMask |= fcNan;
+          if (DemandedMask & fcNegFinite)
+            SrcDemandedMask |= fcNegFinite;
+          if (DemandedMask & fcPosFinite)
+            SrcDemandedMask |= fcPosFinite;
+          if (DemandedMask & fcPosInf)
+            SrcDemandedMask |= fcPosInf;
+          if (DemandedMask & fcNegInf)
+            SrcDemandedMask |= fcNegInf;
+
+          KnownFPClass KnownSrc;
+          if (SimplifyDemandedFPClass(II, 0, SrcDemandedMask, KnownSrc,
+                                      Depth + 1))
+            return I;
+
+          Type *EltTy = VTy->getScalarType();
+          DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+
+          Known = KnownFPClass::frexp_mant(KnownSrc, Mode);
+          Known.KnownFPClasses &= DemandedMask;
+
+          if (Constant *SingleVal =
+                  getFPClassConstant(VTy, Known.KnownFPClasses,
+                                     /*IsCanonicalizing=*/true))
+            return SingleVal;
+
+          if (Known.isKnownAlways(fcInf | fcNan))
+            return II->getArgOperand(0);
+
+          return nullptr;
+        }
+        default:
+          break;
+        }
+      }
+    }
+    [[fallthrough]];
+  }
   default:
     Known = computeKnownFPClass(I, DemandedMask, CxtI, Depth + 1);
     break;

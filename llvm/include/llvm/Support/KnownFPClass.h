@@ -342,6 +342,10 @@ struct KnownFPClass {
                                                bool IsTrunc,
                                                bool IsMultiUnitFPType);
 
+  /// Propagate known class for mantissa component of frexp
+  static LLVM_ABI KnownFPClass frexp_mant(
+      const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
+
   void resetAll() { *this = KnownFPClass(); }
 };
 
