@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains defintions for M68k code emitter.
+/// This file contains definitions for M68k code emitter.
 ///
 //===----------------------------------------------------------------------===//
 

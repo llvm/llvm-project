@@ -219,20 +219,21 @@ void FactsGenerator::VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
   OriginList *Dest = getOriginsList(*ICE);
   if (!Dest)
     return;
-  OriginList *SrcList = getOriginsList(*ICE->getSubExpr());
+  const Expr *SubExpr = ICE->getSubExpr();
+  OriginList *Src = getOriginsList(*SubExpr);
 
   switch (ICE->getCastKind()) {
   case CK_LValueToRValue:
     // TODO: Decide what to do for x-values here.
-    if (!ICE->getSubExpr()->isLValue())
+    if (!SubExpr->isLValue())
       return;
 
-    assert(SrcList && "LValue being cast to RValue has no origin list");
+    assert(Src && "LValue being cast to RValue has no origin list");
     // The result of an LValue-to-RValue cast on a pointer lvalue (like `q` in
     // `int *p, *q; p = q;`) should propagate the inner origin (what the pointer
     // points to), not the outer origin (the pointer's storage location). Strip
     // the outer lvalue origin.
-    flow(getOriginsList(*ICE), getRValueOrigins(ICE->getSubExpr(), SrcList),
+    flow(getOriginsList(*ICE), getRValueOrigins(SubExpr, Src),
          /*Kill=*/true);
     return;
   case CK_NullToPointer:
@@ -242,9 +243,14 @@ void FactsGenerator::VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
   case CK_NoOp:
   case CK_ConstructorConversion:
   case CK_UserDefinedConversion:
+    flow(Dest, Src, /*Kill=*/true);
+    return;
   case CK_UncheckedDerivedToBase:
   case CK_DerivedToBase:
-    flow(Dest, SrcList, /*Kill=*/true);
+    // It is possible that the derived class and base class have different
+    // gsl::Pointer annotations. Skip if their origin shape differ.
+    if (Dest && Src && Dest->getLength() == Src->getLength())
+      flow(Dest, Src, /*Kill=*/true);
     return;
   case CK_FunctionToPointerDecay:
   case CK_BuiltinFnToFnPtr:
@@ -479,6 +485,14 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
     }
     return PVD ? PVD->hasAttr<clang::LifetimeBoundAttr>() : false;
   };
+  auto shouldTrackPointerImplicitObjectArg = [FD](unsigned I) -> bool {
+    const auto *Method = dyn_cast<CXXMethodDecl>(FD);
+    if (!Method || !Method->isInstance())
+      return false;
+    return I == 0 &&
+           isGslPointerType(Method->getFunctionObjectParameterType()) &&
+           shouldTrackImplicitObjectArg(Method);
+  };
   if (Args.empty())
     return;
   bool KillSrc = true;
@@ -499,6 +513,14 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
         flow(CallList, ArgList, KillSrc);
         KillSrc = false;
       }
+    } else if (shouldTrackPointerImplicitObjectArg(I)) {
+      assert(ArgList->getLength() >= 2 &&
+             "Object arg of pointer type should have atleast two origins");
+      // See through the GSLPointer reference to see the pointer's value.
+      CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+          CallList->getOuterOriginID(),
+          ArgList->peelOuterOrigin()->getOuterOriginID(), KillSrc));
+      KillSrc = false;
     } else if (IsArgLifetimeBound(I)) {
       // Lifetimebound on a non-GSL-ctor function means the returned
       // pointer/reference itself must not outlive the arguments. This
