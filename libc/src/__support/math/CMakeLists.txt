@@ -1114,6 +1114,56 @@ add_header_library(
 )
 
 add_header_library(
+  log10
+  HDRS
+    log10.h
+  DEPENDS
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.integer_literals
+    libc.src.__support.macros.optimization
+    libc.src.__support.math.common_constants
+    libc.src.__support.math.log_range_reduction
+)
+
+add_header_library(
+  log1p
+  HDRS
+    log1p.h
+  DEPENDS
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.integer_literals
+    libc.src.__support.macros.optimization
+    libc.src.__support.math.common_constants
+)
+
+add_header_library(
+  log2
+  HDRS
+    log2.h
+  DEPENDS
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.integer_literals
+    libc.src.__support.macros.optimization
+    libc.src.__support.math.common_constants
+    libc.src.__support.math.log_range_reduction
+)
+
+add_header_library(
   logbf128
   HDRS
     logbf128.h
