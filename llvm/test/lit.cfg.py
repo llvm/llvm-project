@@ -31,8 +31,8 @@ if lit_shell_env:
 # testFormat: The test format to use to interpret tests.
 extra_substitutions = extra_substitutions = (
     [
-        (r"FileCheck .*", "cat > /dev/null"),
         (r"not FileCheck .*", "cat > /dev/null"),
+        (r"FileCheck .*", "cat > /dev/null"),
     ]
     if config.enable_profcheck
     else []

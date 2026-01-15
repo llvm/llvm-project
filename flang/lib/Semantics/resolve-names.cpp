@@ -9895,6 +9895,9 @@ void ResolveNamesVisitor::FinishSpecificationPart(
   misparsedStmtFuncFound_ = false;
   funcResultStack().CompleteFunctionResultType();
   CheckImports();
+  if (inInterfaceBlock()) {
+    FinishNamelists(); // NAMELIST is useless in an interface, but allowed
+  }
   for (auto &pair : currScope()) {
     auto &symbol{*pair.second};
     if (inInterfaceBlock()) {
@@ -9929,6 +9932,13 @@ void ResolveNamesVisitor::FinishSpecificationPart(
         SetBindNameOn(symbol);
       }
     }
+    // Implicitly treat allocatable arrays as managed when feature is enabled.
+    // This is done after all explicit CUDA attributes have been processed.
+    if (context().languageFeatures().IsEnabled(
+            common::LanguageFeature::CudaManaged))
+      if (auto *object{symbol.detailsIf<ObjectEntityDetails>()})
+        if (IsAllocatable(symbol) && !object->cudaDataAttr())
+          object->set_cudaDataAttr(common::CUDADataAttr::Managed);
   }
   currScope().InstantiateDerivedTypes();
   for (const auto &decl : decls) {
