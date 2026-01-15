@@ -13,6 +13,7 @@
 #include <__algorithm/equal.h>
 #include <__algorithm/fill_n.h>
 #include <__algorithm/for_each_n.h>
+#include <__algorithm/is_sorted.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__functional/not_fn.h>
@@ -385,6 +386,35 @@ struct __reduce<__default_backend_tag, _ExecutionPolicy> {
         std::move(__init),
         std::forward<_BinaryOperation>(__op),
         __identity{});
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __is_sorted<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Comp>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<bool>
+  operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Comp&& __comp) const noexcept {
+    if constexpr (__has_random_access_iterator_category<_ForwardIterator>::value) {
+      if (__first == __last)
+        return true; // Empty, sorted by definition
+      _ForwardIterator __first2 = __first + 1;
+      if (__first2 == __last)
+        return true; // Only one element, sorted by definition
+      --__last;
+      using _TransformReduce = __dispatch<__transform_reduce_binary, __current_configuration, _ExecutionPolicy>;
+      using _Ref             = __iterator_reference<_ForwardIterator>;
+      return _TransformReduce()(
+          __policy,
+          std::move(__first),
+          std::move(__last),
+          std::move(__first2),
+          true,
+          std::logical_and{},
+          [&](_Ref __first, _Ref __second) -> bool { return !__comp(__second, __first); });
+    } else {
+      // Currently anything outside random access iterators has to be processed serially
+      return std::is_sorted(std::move(__first), std::move(__last), std::forward<_Comp>(__comp));
+    }
   }
 };
 
