@@ -111,3 +111,45 @@ int foo(int xx, ...) {
   va_end(ap);
   return ret;
 }
+
+// CHECK-LABEL: define dso_local i64 @test_align(
+// CHECK-SAME: ptr noundef [[ARGS:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[ARGS_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    store ptr [[ARGS]], ptr [[ARGS_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARGS_ADDR]], align 4
+// CHECK-NEXT:    br label %[[VAARG_MAYBE_REG:.*]]
+// CHECK:       [[VAARG_MAYBE_REG]]:
+// CHECK-NEXT:    [[__CURRENT_SAVED_REG_AREA_POINTER_P:%.*]] = getelementptr inbounds nuw [[STRUCT___VA_LIST_TAG:%.*]], ptr [[TMP0]], i32 0, i32 0
+// CHECK-NEXT:    [[__CURRENT_SAVED_REG_AREA_POINTER:%.*]] = load ptr, ptr [[__CURRENT_SAVED_REG_AREA_POINTER_P]], align 4
+// CHECK-NEXT:    [[__SAVED_REG_AREA_END_POINTER_P:%.*]] = getelementptr inbounds nuw [[STRUCT___VA_LIST_TAG]], ptr [[TMP0]], i32 0, i32 1
+// CHECK-NEXT:    [[__SAVED_REG_AREA_END_POINTER:%.*]] = load ptr, ptr [[__SAVED_REG_AREA_END_POINTER_P]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[__CURRENT_SAVED_REG_AREA_POINTER]] to i32
+// CHECK-NEXT:    [[ALIGN_CURRENT_SAVED_REG_AREA_POINTER:%.*]] = add i32 [[TMP1]], 7
+// CHECK-NEXT:    [[ALIGN_CURRENT_SAVED_REG_AREA_POINTER1:%.*]] = and i32 [[ALIGN_CURRENT_SAVED_REG_AREA_POINTER]], -8
+// CHECK-NEXT:    [[ALIGN_CURRENT_SAVED_REG_AREA_POINTER2:%.*]] = inttoptr i32 [[ALIGN_CURRENT_SAVED_REG_AREA_POINTER1]] to ptr
+// CHECK-NEXT:    [[__NEW_SAVED_REG_AREA_POINTER:%.*]] = getelementptr i8, ptr [[ALIGN_CURRENT_SAVED_REG_AREA_POINTER2]], i32 8
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt ptr [[__NEW_SAVED_REG_AREA_POINTER]], [[__SAVED_REG_AREA_END_POINTER]]
+// CHECK-NEXT:    br i1 [[TMP2]], label %[[VAARG_ON_STACK:.*]], label %[[VAARG_IN_REG:.*]]
+// CHECK:       [[VAARG_IN_REG]]:
+// CHECK-NEXT:    store ptr [[__NEW_SAVED_REG_AREA_POINTER]], ptr [[__CURRENT_SAVED_REG_AREA_POINTER_P]], align 4
+// CHECK-NEXT:    br label %[[VAARG_END:.*]]
+// CHECK:       [[VAARG_ON_STACK]]:
+// CHECK-NEXT:    [[__OVERFLOW_AREA_POINTER_P:%.*]] = getelementptr inbounds nuw [[STRUCT___VA_LIST_TAG]], ptr [[TMP0]], i32 0, i32 2
+// CHECK-NEXT:    [[__OVERFLOW_AREA_POINTER:%.*]] = load ptr, ptr [[__OVERFLOW_AREA_POINTER_P]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[__OVERFLOW_AREA_POINTER]] to i32
+// CHECK-NEXT:    [[ALIGN_OVERFLOW_AREA_POINTER:%.*]] = add i32 [[TMP3]], 7
+// CHECK-NEXT:    [[ALIGN_OVERFLOW_AREA_POINTER3:%.*]] = and i32 [[ALIGN_OVERFLOW_AREA_POINTER]], -8
+// CHECK-NEXT:    [[ALIGN_OVERFLOW_AREA_POINTER4:%.*]] = inttoptr i32 [[ALIGN_OVERFLOW_AREA_POINTER3]] to ptr
+// CHECK-NEXT:    [[__OVERFLOW_AREA_POINTER_NEXT:%.*]] = getelementptr i8, ptr [[ALIGN_OVERFLOW_AREA_POINTER4]], i32 8
+// CHECK-NEXT:    store ptr [[__OVERFLOW_AREA_POINTER_NEXT]], ptr [[__OVERFLOW_AREA_POINTER_P]], align 4
+// CHECK-NEXT:    store ptr [[__OVERFLOW_AREA_POINTER_NEXT]], ptr [[__CURRENT_SAVED_REG_AREA_POINTER_P]], align 4
+// CHECK-NEXT:    br label %[[VAARG_END]]
+// CHECK:       [[VAARG_END]]:
+// CHECK-NEXT:    [[VAARG_ADDR:%.*]] = phi ptr [ [[ALIGN_CURRENT_SAVED_REG_AREA_POINTER2]], %[[VAARG_IN_REG]] ], [ [[ALIGN_OVERFLOW_AREA_POINTER4]], %[[VAARG_ON_STACK]] ]
+// CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr [[VAARG_ADDR]], align 8
+// CHECK-NEXT:    ret i64 [[TMP4]]
+//
+long long test_align(va_list args) {
+  return va_arg(args, long long);
+}
