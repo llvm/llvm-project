@@ -18757,11 +18757,13 @@ OMPClause *SemaOpenMP::ActOnOpenMPVarListClause(OpenMPClauseKind Kind,
         VarList, Locs);
     break;
   case OMPC_use_device_ptr:
+    assert(0 <= Data.ExtraModifier &&
+           Data.ExtraModifier <= OMPC_USE_DEVICE_PTR_FALLBACK_unknown &&
+           "Unexpected use_device_ptr fallback modifier.");
     Res = ActOnOpenMPUseDevicePtrClause(
         VarList, Locs,
-        static_cast<OpenMPUseDevicePtrFallbackModifier>(
-            Data.UseDevicePtrFallbackModifier),
-        Data.UseDevicePtrFallbackModifierLoc);
+        static_cast<OpenMPUseDevicePtrFallbackModifier>(Data.ExtraModifier),
+        Data.ExtraModifierLoc);
     break;
   case OMPC_use_device_addr:
     Res = ActOnOpenMPUseDeviceAddrClause(VarList, Locs);

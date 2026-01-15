@@ -1171,15 +1171,11 @@ public:
     SourceLocation RLoc;
     CXXScopeSpec ReductionOrMapperIdScopeSpec;
     DeclarationNameInfo ReductionOrMapperId;
-    int ExtraModifier = -1; ///< Additional modifier for linear, map, depend or
-                            ///< lastprivate clause.
+    int ExtraModifier = -1; ///< Additional modifier for linear, map, depend,
+                            ///< lastprivate, or use_device_ptr clause.
     int OriginalSharingModifier = 0; // Default is shared
     int NeedDevicePtrModifier = 0;
     SourceLocation NeedDevicePtrModifierLoc;
-    int UseDevicePtrFallbackModifier =
-        OMPC_USE_DEVICE_PTR_FALLBACK_unknown; ///< Fallback modifier for
-                                              ///< use_device_ptr clause.
-    SourceLocation UseDevicePtrFallbackModifierLoc;
     SmallVector<OpenMPMapModifierKind, NumberOfOMPMapClauseModifiers>
         MapTypeModifiers;
     SmallVector<SourceLocation, NumberOfOMPMapClauseModifiers>
