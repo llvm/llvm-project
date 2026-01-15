@@ -396,15 +396,7 @@ private:
 
   // Track use_device variables and check for duplicates.
   // Emits an error if the object was already added.
-  void AddUseDeviceObject(const Symbol &object, const parser::Name &name) {
-    auto result = useDeviceObjects_.insert(object);
-    if (!result.second) {
-      context_.Say(name.source,
-          "'%s' appears in more than one USE_DEVICE clause "
-          "on the same HOST_DATA directive"_err_en_US,
-          name.ToString());
-    }
-  }
+  void AddUseDeviceObject(const Symbol &, const parser::Name &);
   void ClearUseDeviceObjects() { useDeviceObjects_.clear(); }
   UnorderedSymbolSet useDeviceObjects_;
 
@@ -1794,6 +1786,17 @@ Symbol *AccAttributeVisitor::ResolveAccCommonBlockName(
     }
   }
   return nullptr;
+}
+
+void AccAttributeVisitor::AddUseDeviceObject(
+    const Symbol &object, const parser::Name &name) {
+  auto result = useDeviceObjects_.insert(object);
+  if (!result.second) {
+    context_.Say(name.source,
+        "'%s' appears in more than one USE_DEVICE clause "
+        "on the same HOST_DATA directive"_err_en_US,
+        name.ToString());
+  }
 }
 
 void AccAttributeVisitor::ResolveAccObjectList(
