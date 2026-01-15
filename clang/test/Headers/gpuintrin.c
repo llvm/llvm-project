@@ -446,12 +446,10 @@ __gpu_kernel void foo() {
 // AMDGPU-NEXT:    store i64 [[__LANE_MASK]], ptr [[__LANE_MASK_ADDR_ASCAST]], align 8
 // AMDGPU-NEXT:    [[STOREDV:%.*]] = zext i1 [[__X]] to i8
 // AMDGPU-NEXT:    store i8 [[STOREDV]], ptr [[__X_ADDR_ASCAST]], align 1
-// AMDGPU-NEXT:    [[TMP0:%.*]] = load i64, ptr [[__LANE_MASK_ADDR_ASCAST]], align 8
-// AMDGPU-NEXT:    [[TMP1:%.*]] = load i8, ptr [[__X_ADDR_ASCAST]], align 1
-// AMDGPU-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP1]] to i1
-// AMDGPU-NEXT:    [[TMP2:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 [[LOADEDV]])
-// AMDGPU-NEXT:    [[AND:%.*]] = and i64 [[TMP0]], [[TMP2]]
-// AMDGPU-NEXT:    ret i64 [[AND]]
+// AMDGPU-NEXT:    [[TMP0:%.*]] = load i8, ptr [[__X_ADDR_ASCAST]], align 1
+// AMDGPU-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// AMDGPU-NEXT:    [[TMP1:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 [[LOADEDV]])
+// AMDGPU-NEXT:    ret i64 [[TMP1]]
 //
 //
 // AMDGPU-LABEL: define internal void @__gpu_sync_threads(
@@ -1337,14 +1335,12 @@ __gpu_kernel void foo() {
 // SPIRV-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
 // SPIRV-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.spv.subgroup.ballot(i1 [[LOADEDV]])
 // SPIRV-NEXT:    store <4 x i32> [[TMP1]], ptr [[__MASK]], align 16
-// SPIRV-NEXT:    [[TMP2:%.*]] = load i64, ptr [[__LANE_MASK_ADDR]], align 8
+// SPIRV-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[__MASK]], align 16
 // SPIRV-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[__MASK]], align 16
-// SPIRV-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[__MASK]], align 16
-// SPIRV-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], <2 x i32> <i32 0, i32 1>
+// SPIRV-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], <2 x i32> <i32 0, i32 1>
 // SPIRV-NEXT:    store <2 x i32> [[SHUFFLE]], ptr [[REF_TMP]], align 8
-// SPIRV-NEXT:    [[TMP5:%.*]] = load i64, ptr [[REF_TMP]], align 8
-// SPIRV-NEXT:    [[AND:%.*]] = and i64 [[TMP2]], [[TMP5]]
-// SPIRV-NEXT:    ret i64 [[AND]]
+// SPIRV-NEXT:    [[TMP4:%.*]] = load i64, ptr [[REF_TMP]], align 8
+// SPIRV-NEXT:    ret i64 [[TMP4]]
 //
 //
 // SPIRV-LABEL: define internal spir_func void @__gpu_sync_threads(
