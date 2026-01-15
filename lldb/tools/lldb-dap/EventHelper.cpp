@@ -466,10 +466,11 @@ static void HandleTargetEvent(const lldb::SBEvent &event, Log &log) {
     // FindTargetByGloballyUniqueID.
     llvm::json::Object configuration;
     configuration.try_emplace("type", "lldb");
-    configuration.try_emplace("debuggerId",
-                              created_target.GetDebugger().GetID());
-    configuration.try_emplace("targetId", created_target.GetGloballyUniqueID());
     configuration.try_emplace("name", created_target.GetTargetSessionName());
+
+    json::Object session{{"targetId", created_target.GetGloballyUniqueID()},
+                         {"debuggerId", created_target.GetDebugger().GetID()}};
+    configuration.try_emplace("session", std::move(session));
 
     llvm::json::Object request;
     request.try_emplace("request", "attach");

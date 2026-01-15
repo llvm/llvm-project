@@ -432,12 +432,9 @@ struct DAP final : public DAPTransport::MessageHandler {
   /// Perform complete DAP initialization by reusing an existing debugger and
   /// target.
   ///
-  /// \param[in] debugger_id
-  ///     The ID of the existing debugger to reuse.
-  ///
-  /// \param[in] target_id
-  ///     The globally unique ID of the existing target to reuse.
-  llvm::Error InitializeDebugger(int debugger_id, lldb::user_id_t target_id);
+  /// \param[in] session
+  ///     A session consisting of an existing debugger and target.
+  llvm::Error InitializeDebugger(const protocol::DAPSession &session);
 
   /// Start event handling threads based on client capabilities.
   void StartEventThreads();
