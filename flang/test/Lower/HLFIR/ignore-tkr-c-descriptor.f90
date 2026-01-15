@@ -36,6 +36,20 @@ contains
     call pass_array_val(arr)
   end subroutine
 
+  ! CHECK-LABEL: func.func @_QMm_ignore_tkr_cPs3(
+  ! CHECK-SAME: %[[ARR:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  subroutine s3(arr)
+    real, allocatable :: arr(:)
+    procedure(pass_array_val), pointer :: p
+    p => pass_array_val
+    ! CHECK: %[[BOX_REF:.*]]:2 = hlfir.declare %[[ARR]]
+    ! CHECK: %[[P_REF:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMm_ignore_tkr_cFs3Ep"}
+    ! CHECK: %[[ADDR:.*]] = fir.load %[[P_REF]]#0 : !fir.ref<!fir.boxproc<(!fir.box<!fir.array<?xf32>>) -> ()>>
+    ! CHECK: %[[FUNC_ADDR:.*]] = fir.box_addr %[[ADDR]] : (!fir.boxproc<(!fir.box<!fir.array<?xf32>>) -> ()>) -> ((!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> ())
+    ! CHECK: fir.call %[[FUNC_ADDR]](%[[BOX_REF]]#0) {{.*}} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> ()
+    call p(arr)
+  end subroutine
+
   ! CHECK: func.func private @_QPpass_array_ptr(!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
   ! CHECK: func.func private @_QPpass_array_val(!fir.box<!fir.array<?xf32>>)
 end module
