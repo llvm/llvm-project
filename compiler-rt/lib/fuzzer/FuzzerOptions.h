@@ -28,6 +28,7 @@ struct FuzzingOptions {
   bool IgnoreOOMs = true;
   bool IgnoreCrashes = false;
   int MaxTotalTimeSec = 0;
+  int ExitOnTimeSec = 0;
   int RssLimitMb = 0;
   int MallocLimitMb = 0;
   bool DoCrossOver = true;

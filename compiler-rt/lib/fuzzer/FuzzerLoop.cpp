@@ -332,6 +332,8 @@ void Fuzzer::PrintStats(const char *Where, const char *End, size_t Units,
     Printf(" cov: %zd", N);
   if (size_t N = Features ? Features : Corpus.NumFeatures())
     Printf(" ft: %zd", N);
+  if (Options.ExitOnTimeSec > 0)
+    Printf(" wo_finds: %zd", secondsSinceLastNewCorpus());
   if (!Corpus.empty()) {
     Printf(" corp: %zd", Corpus.NumActiveUnits());
     if (size_t N = Corpus.SizeInBytes()) {
@@ -535,6 +537,7 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
   size_t NumNewFeatures = Corpus.NumFeatureUpdates() - NumUpdatesBefore;
   if (NumNewFeatures || ForceAddToCorpus) {
     TPC.UpdateObservedPCs();
+    LastNewCorpusTime = UnitStopTime;
     auto NewII =
         Corpus.AddToCorpus({Data, Data + Size}, NumNewFeatures, MayDeleteFile,
                            TPC.ObservedFocusFunction(), ForceAddToCorpus,
