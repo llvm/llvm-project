@@ -715,8 +715,9 @@ void ModuleDepCollectorPP::EndOfMainFile() {
   for (const Module *M : MDC.DirectModularDeps)
     handleTopLevelModule(M);
 
-  MDC.Consumer.handleContextHash(MDC.ScanInstance.getInvocation().getModuleHash(
-      MDC.ScanInstance.getDiagnostics()));
+  MDC.Consumer.handleContextHash(
+      MDC.ScanInstance.getInvocation().computeContextHash(
+          MDC.ScanInstance.getDiagnostics()));
 
   MDC.Consumer.handleDependencyOutputOpts(*MDC.Opts);
 
