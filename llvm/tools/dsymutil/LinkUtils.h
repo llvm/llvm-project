@@ -123,6 +123,10 @@ struct LinkOptions {
   bool IncludeSwiftModulesFromInterface = false;
   /// @}
 
+  /// Whether to allow emitting Mach-O where, within a single slice, section
+  /// header offsets (section.offset, 32-bit) exceed 4GB (non-standard).
+  bool AllowSectionHeaderOffsetOverflow = false;
+
   LinkOptions() = default;
 };
 

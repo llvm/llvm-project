@@ -182,6 +182,11 @@ static DisassembledInstruction ConvertSBInstructionToDisassembledInstruction(
 /// `supportsDisassembleRequest` is true.
 llvm::Expected<DisassembleResponseBody>
 DisassembleRequestHandler::Run(const DisassembleArguments &args) const {
+  if (args.memoryReference == LLDB_INVALID_ADDRESS) {
+    std::vector<DisassembledInstruction> invalid_instructions(
+        args.instructionCount, GetInvalidInstruction());
+    return DisassembleResponseBody{std::move(invalid_instructions)};
+  }
   const lldb::addr_t addr_ptr = args.memoryReference + args.offset;
   lldb::SBAddress addr(addr_ptr, dap.target);
   if (!addr.IsValid())

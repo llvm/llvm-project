@@ -146,7 +146,7 @@ Without Bridge Networking
 Without bridge networking you will have to forward individual ports from the VM
 to the host (refer to QEMU's manuals for the specific options).
 
-* At least one to connect to the intial ``lldb-server``.
+* At least one to connect to the initial ``lldb-server``.
 * One more if you want to use ``lldb-server`` in ``platform mode``, and have it
   start a ``gdbserver`` instance for you.
 

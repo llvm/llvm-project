@@ -510,7 +510,10 @@ public:
     return llvm::ConstantFP::get(VMContext, E->getValue());
   }
   Value *VisitCharacterLiteral(const CharacterLiteral *E) {
-    return llvm::ConstantInt::get(ConvertType(E->getType()), E->getValue());
+    // Character literals are always stored in an unsigned (even for signed
+    // char), so allow implicit truncation here.
+    return llvm::ConstantInt::get(ConvertType(E->getType()), E->getValue(),
+                                  /*IsSigned=*/false, /*ImplicitTrunc=*/true);
   }
   Value *VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *E) {
     return llvm::ConstantInt::get(ConvertType(E->getType()), E->getValue());
@@ -599,6 +602,7 @@ public:
   }
 
   Value *VisitArraySubscriptExpr(ArraySubscriptExpr *E);
+  Value *VisitMatrixSingleSubscriptExpr(MatrixSingleSubscriptExpr *E);
   Value *VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E);
   Value *VisitShuffleVectorExpr(ShuffleVectorExpr *E);
   Value *VisitConvertVectorExpr(ConvertVectorExpr *E);
@@ -2109,6 +2113,42 @@ Value *ScalarExprEmitter::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
   return Builder.CreateExtractElement(Base, Idx, "vecext");
 }
 
+Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
+    MatrixSingleSubscriptExpr *E) {
+  TestAndClearIgnoreResultAssign();
+
+  auto *MatrixTy = E->getBase()->getType()->castAs<ConstantMatrixType>();
+  unsigned NumRows = MatrixTy->getNumRows();
+  unsigned NumColumns = MatrixTy->getNumColumns();
+
+  // Row index
+  Value *RowIdx = CGF.EmitMatrixIndexExpr(E->getRowIdx());
+  llvm::MatrixBuilder MB(Builder);
+
+  // The row index must be in [0, NumRows)
+  if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0)
+    MB.CreateIndexAssumption(RowIdx, NumRows);
+
+  Value *FlatMatrix = Visit(E->getBase());
+  llvm::Type *ElemTy = CGF.ConvertTypeForMem(MatrixTy->getElementType());
+  auto *ResultTy = llvm::FixedVectorType::get(ElemTy, NumColumns);
+  Value *RowVec = llvm::PoisonValue::get(ResultTy);
+
+  for (unsigned Col = 0; Col != NumColumns; ++Col) {
+    Value *ColVal = llvm::ConstantInt::get(RowIdx->getType(), Col);
+    bool IsMatrixRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
+                            LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+    Value *EltIdx = MB.CreateIndex(RowIdx, ColVal, NumRows, NumColumns,
+                                   IsMatrixRowMajor, "matrix_row_idx");
+    Value *Elt =
+        Builder.CreateExtractElement(FlatMatrix, EltIdx, "matrix_elem");
+    Value *Lane = llvm::ConstantInt::get(Builder.getInt32Ty(), Col);
+    RowVec = Builder.CreateInsertElement(RowVec, Elt, Lane, "matrix_row_ins");
+  }
+
+  return CGF.EmitFromMemory(RowVec, E->getType());
+}
+
 Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
   TestAndClearIgnoreResultAssign();
 
@@ -2118,9 +2158,15 @@ Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
   Value *ColumnIdx = CGF.EmitMatrixIndexExpr(E->getColumnIdx());
 
   const auto *MatrixTy = E->getBase()->getType()->castAs<ConstantMatrixType>();
-  unsigned NumRows = MatrixTy->getNumRows();
   llvm::MatrixBuilder MB(Builder);
-  Value *Idx = MB.CreateIndex(RowIdx, ColumnIdx, NumRows);
+
+  Value *Idx;
+  unsigned NumCols = MatrixTy->getNumColumns();
+  unsigned NumRows = MatrixTy->getNumRows();
+  bool IsMatrixRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
+                          LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+  Idx = MB.CreateIndex(RowIdx, ColumnIdx, NumRows, NumCols, IsMatrixRowMajor);
+
   if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0)
     MB.CreateIndexAssumption(Idx, MatrixTy->getNumElementsFlattened());
 
@@ -2457,8 +2503,8 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
 // have to handle a more broad range of conversions than explicit casts, as they
 // handle things like function to ptr-to-function decay etc.
 Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
-  auto RestoreCurCast =
-      llvm::make_scope_exit([this, Prev = CGF.CurCast] { CGF.CurCast = Prev; });
+  llvm::scope_exit RestoreCurCast(
+      [this, Prev = CGF.CurCast] { CGF.CurCast = Prev; });
   CGF.CurCast = CE;
 
   Expr *E = CE->getSubExpr();
@@ -3287,7 +3333,10 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
       value = EmitOverflowCheckedBinOp(createBinOpInfoFromIncDec(
           E, value, isInc, E->getFPFeaturesInEffect(CGF.getLangOpts())));
     } else {
-      llvm::Value *amt = llvm::ConstantInt::get(value->getType(), amount, true);
+      // Treat positive amount as unsigned to support inc of i1 (needed for
+      // unsigned _BitInt(1)).
+      llvm::Value *amt =
+          llvm::ConstantInt::get(value->getType(), amount, !isInc);
       value = Builder.CreateAdd(value, amt, isInc ? "inc" : "dec");
     }
 
@@ -3335,7 +3384,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
   // Vector increment/decrement.
   } else if (type->isVectorType()) {
     if (type->hasIntegerRepresentation()) {
-      llvm::Value *amt = llvm::ConstantInt::get(value->getType(), amount);
+      llvm::Value *amt = llvm::ConstantInt::getSigned(value->getType(), amount);
 
       value = Builder.CreateAdd(value, amt, isInc ? "inc" : "dec");
     } else {
@@ -3435,7 +3484,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     CharUnits size = CGF.getContext().getTypeSizeInChars(OPT->getObjectType());
     if (!isInc) size = -size;
     llvm::Value *sizeValue =
-      llvm::ConstantInt::get(CGF.SizeTy, size.getQuantity());
+        llvm::ConstantInt::getSigned(CGF.SizeTy, size.getQuantity());
 
     if (CGF.getLangOpts().PointerOverflowDefined)
       value = Builder.CreateGEP(CGF.Int8Ty, value, sizeValue, "incdec.objptr");
@@ -5336,10 +5385,8 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
       CGF.incrementProfileCounter(E);
 
       // If the top of the logical operator nest, reset the MCDC temp to 0.
-      if (CGF.MCDCLogOpStack.empty())
+      if (CGF.isMCDCDecisionExpr(E))
         CGF.maybeResetMCDCCondBitmap(E);
-
-      CGF.MCDCLogOpStack.push_back(E);
 
       Value *RHSCond = CGF.EvaluateExprAsBool(E->getRHS());
 
@@ -5360,9 +5407,8 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
       } else
         CGF.markStmtMaybeUsed(E->getRHS());
 
-      CGF.MCDCLogOpStack.pop_back();
       // If the top of the logical operator nest, update the MCDC bitmap.
-      if (CGF.MCDCLogOpStack.empty())
+      if (CGF.isMCDCDecisionExpr(E))
         CGF.maybeUpdateMCDCTestVectorBitmap(E);
 
       // ZExt result to int or bool.
@@ -5377,10 +5423,8 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
   }
 
   // If the top of the logical operator nest, reset the MCDC temp to 0.
-  if (CGF.MCDCLogOpStack.empty())
+  if (CGF.isMCDCDecisionExpr(E))
     CGF.maybeResetMCDCCondBitmap(E);
-
-  CGF.MCDCLogOpStack.push_back(E);
 
   llvm::BasicBlock *ContBlock = CGF.createBasicBlock("land.end");
   llvm::BasicBlock *RHSBlock  = CGF.createBasicBlock("land.rhs");
@@ -5432,9 +5476,8 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
   // Insert an entry into the phi node for the edge with the value of RHSCond.
   PN->addIncoming(RHSCond, RHSBlock);
 
-  CGF.MCDCLogOpStack.pop_back();
   // If the top of the logical operator nest, update the MCDC bitmap.
-  if (CGF.MCDCLogOpStack.empty())
+  if (CGF.isMCDCDecisionExpr(E))
     CGF.maybeUpdateMCDCTestVectorBitmap(E);
 
   // Artificial location to preserve the scope information
@@ -5479,10 +5522,8 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
       CGF.incrementProfileCounter(E);
 
       // If the top of the logical operator nest, reset the MCDC temp to 0.
-      if (CGF.MCDCLogOpStack.empty())
+      if (CGF.isMCDCDecisionExpr(E))
         CGF.maybeResetMCDCCondBitmap(E);
-
-      CGF.MCDCLogOpStack.push_back(E);
 
       Value *RHSCond = CGF.EvaluateExprAsBool(E->getRHS());
 
@@ -5503,9 +5544,8 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
       } else
         CGF.markStmtMaybeUsed(E->getRHS());
 
-      CGF.MCDCLogOpStack.pop_back();
       // If the top of the logical operator nest, update the MCDC bitmap.
-      if (CGF.MCDCLogOpStack.empty())
+      if (CGF.isMCDCDecisionExpr(E))
         CGF.maybeUpdateMCDCTestVectorBitmap(E);
 
       // ZExt result to int or bool.
@@ -5520,10 +5560,8 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
   }
 
   // If the top of the logical operator nest, reset the MCDC temp to 0.
-  if (CGF.MCDCLogOpStack.empty())
+  if (CGF.isMCDCDecisionExpr(E))
     CGF.maybeResetMCDCCondBitmap(E);
-
-  CGF.MCDCLogOpStack.push_back(E);
 
   llvm::BasicBlock *ContBlock = CGF.createBasicBlock("lor.end");
   llvm::BasicBlock *RHSBlock = CGF.createBasicBlock("lor.rhs");
@@ -5575,9 +5613,8 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
   CGF.EmitBlock(ContBlock);
   PN->addIncoming(RHSCond, RHSBlock);
 
-  CGF.MCDCLogOpStack.pop_back();
   // If the top of the logical operator nest, update the MCDC bitmap.
-  if (CGF.MCDCLogOpStack.empty())
+  if (CGF.isMCDCDecisionExpr(E))
     CGF.maybeUpdateMCDCTestVectorBitmap(E);
 
   // ZExt result to int.
@@ -5743,8 +5780,8 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   }
 
   // If the top of the logical operator nest, reset the MCDC temp to 0.
-  if (CGF.MCDCLogOpStack.empty())
-    CGF.maybeResetMCDCCondBitmap(condExpr);
+  if (auto E = CGF.stripCond(condExpr); CGF.isMCDCDecisionExpr(E))
+    CGF.maybeResetMCDCCondBitmap(E);
 
   llvm::BasicBlock *LHSBlock = CGF.createBasicBlock("cond.true");
   llvm::BasicBlock *RHSBlock = CGF.createBasicBlock("cond.false");
@@ -5759,8 +5796,8 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   // If the top of the logical operator nest, update the MCDC bitmap for the
   // ConditionalOperator prior to visiting its LHS and RHS blocks, since they
   // may also contain a boolean expression.
-  if (CGF.MCDCLogOpStack.empty())
-    CGF.maybeUpdateMCDCTestVectorBitmap(condExpr);
+  if (auto E = CGF.stripCond(condExpr); CGF.isMCDCDecisionExpr(E))
+    CGF.maybeUpdateMCDCTestVectorBitmap(E);
 
   if (llvm::EnableSingleByteCoverage)
     CGF.incrementProfileCounter(lhsExpr);
@@ -5779,8 +5816,8 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   // If the top of the logical operator nest, update the MCDC bitmap for the
   // ConditionalOperator prior to visiting its LHS and RHS blocks, since they
   // may also contain a boolean expression.
-  if (CGF.MCDCLogOpStack.empty())
-    CGF.maybeUpdateMCDCTestVectorBitmap(condExpr);
+  if (auto E = CGF.stripCond(condExpr); CGF.isMCDCDecisionExpr(E))
+    CGF.maybeUpdateMCDCTestVectorBitmap(E);
 
   if (llvm::EnableSingleByteCoverage)
     CGF.incrementProfileCounter(rhsExpr);

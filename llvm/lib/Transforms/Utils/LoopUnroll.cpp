@@ -918,6 +918,12 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     Latches[i]->getTerminator()->replaceSuccessorWith(Headers[i], Headers[j]);
   }
 
+  // Remove loop metadata copied from the original loop latch to branches that
+  // are no longer latches.
+  for (unsigned I = 0, E = Latches.size() - (CompletelyUnroll ? 0 : 1); I < E;
+       ++I)
+    Latches[I]->getTerminator()->setMetadata(LLVMContext::MD_loop, nullptr);
+
   // Update dominators of blocks we might reach through exits.
   // Immediate dominator of such block might change, because we add more
   // routes which can lead to the exit: we can now reach it from the copied
@@ -1258,9 +1264,10 @@ llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
     return std::nullopt;
   RecurKind RK = RdxDesc.getRecurrenceKind();
   // Skip unsupported reductions.
-  // TODO: Handle additional reductions, including min-max reductions.
+  // TODO: Handle additional reductions, including FP and min-max
+  // reductions.
   if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
-      RecurrenceDescriptor::isFindIVRecurrenceKind(RK) ||
+      RecurrenceDescriptor::isFindRecurrenceKind(RK) ||
       RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))
     return std::nullopt;
 

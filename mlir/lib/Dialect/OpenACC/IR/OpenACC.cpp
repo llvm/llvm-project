@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -244,6 +245,12 @@ struct MemRefPointerLikeModel
     memref::StoreOp::create(builder, loc, valueToStore, memrefValue);
     return true;
   }
+
+  bool isDeviceData(Type pointer, Value var) const {
+    auto memrefTy = cast<T>(pointer);
+    Attribute memSpace = memrefTy.getMemorySpace();
+    return isa_and_nonnull<gpu::AddressSpaceAttr>(memSpace);
+  }
 };
 
 struct LLVMPointerPointerLikeModel
@@ -289,7 +296,17 @@ struct MemrefGlobalVariableModel
     // GlobalOp uses attributes for initialization, not regions
     return nullptr;
   }
+
+  bool isDeviceData(Operation *op) const {
+    auto globalOp = cast<memref::GlobalOp>(op);
+    Attribute memSpace = globalOp.getType().getMemorySpace();
+    return isa_and_nonnull<gpu::AddressSpaceAttr>(memSpace);
+  }
 };
+
+struct GPULaunchOffloadRegionModel
+    : public acc::OffloadRegionOpInterface::ExternalModel<
+          GPULaunchOffloadRegionModel, gpu::LaunchOp> {};
 
 /// Helper function for any of the times we need to modify an ArrayAttr based on
 /// a device type list.  Returns a new ArrayAttr with all of the
@@ -387,11 +404,12 @@ void OpenACCDialect::initialize() {
   memref::GetGlobalOp::attachInterface<MemrefAddressOfGlobalModel>(
       *getContext());
   memref::GlobalOp::attachInterface<MemrefGlobalVariableModel>(*getContext());
+  gpu::LaunchOp::attachInterface<GPULaunchOffloadRegionModel>(*getContext());
 }
 
 //===----------------------------------------------------------------------===//
 // RegionBranchOpInterface for acc.kernels / acc.parallel / acc.serial /
-// acc.kernel_environment / acc.data / acc.host_data
+// acc.kernel_environment / acc.data / acc.host_data / acc.loop
 //===----------------------------------------------------------------------===//
 
 /// Generic helper for single-region OpenACC ops that execute their body once
@@ -405,7 +423,7 @@ getSingleRegionOpSuccessorRegions(Operation *op, Region &region,
     return;
   }
 
-  regions.push_back(RegionSuccessor(op, op->getResults()));
+  regions.push_back(RegionSuccessor::parent(op->getResults()));
 }
 
 void KernelsOp::getSuccessorRegions(RegionBranchPoint point,
@@ -442,6 +460,35 @@ void HostDataOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
                                     regions);
+}
+
+void LoopOp::getSuccessorRegions(RegionBranchPoint point,
+                                 SmallVectorImpl<RegionSuccessor> &regions) {
+  // Unstructured loops: the body may contain arbitrary CFG and early exits.
+  // At the RegionBranch level, only model entry into the body and exit to the
+  // parent; any backedges are represented inside the region CFG.
+  if (getUnstructured()) {
+    if (point.isParent()) {
+      regions.push_back(RegionSuccessor(&getRegion()));
+      return;
+    }
+    regions.push_back(RegionSuccessor::parent(getResults()));
+    return;
+  }
+
+  // Structured loops: model a loop-shaped region graph similar to scf.for.
+  regions.push_back(RegionSuccessor(&getRegion()));
+  regions.push_back(RegionSuccessor::parent(getResults()));
+}
+
+//===----------------------------------------------------------------------===//
+// RegionBranchTerminatorOpInterface
+//===----------------------------------------------------------------------===//
+
+MutableOperandRange
+TerminatorOp::getMutableSuccessorOperands(RegionSuccessor /*point*/) {
+  // `acc.terminator` does not forward operands.
+  return MutableOperandRange(getOperation(), /*start=*/0, /*length=*/0);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1403,7 +1450,7 @@ static LogicalResult createDestroyRegion(OpBuilder &builder, Location loc,
       cast<TypedValue<PointerLikeType>>(destroyBlock->getArgument(1));
   if (isa<MappableType>(varType)) {
     auto mappableTy = cast<MappableType>(varType);
-    if (!mappableTy.generatePrivateDestroy(builder, loc, varToFree))
+    if (!mappableTy.generatePrivateDestroy(builder, loc, varToFree, bounds))
       return failure();
   } else {
     assert(isa<PointerLikeType>(varType) && "Expected PointerLikeType");
@@ -2854,9 +2901,17 @@ LogicalResult acc::HostDataOp::verify() {
     return emitError("at least one operand must appear on the host_data "
                      "operation");
 
-  for (mlir::Value operand : getDataClauseOperands())
-    if (!mlir::isa<acc::UseDeviceOp>(operand.getDefiningOp()))
+  llvm::SmallPtrSet<mlir::Value, 4> seenVars;
+  for (mlir::Value operand : getDataClauseOperands()) {
+    auto useDeviceOp =
+        mlir::dyn_cast<acc::UseDeviceOp>(operand.getDefiningOp());
+    if (!useDeviceOp)
       return emitError("expect data entry operation as defining op");
+
+    // Check for duplicate use_device clauses
+    if (!seenVars.insert(useDeviceOp.getVar()).second)
+      return emitError("duplicate use_device variable");
+  }
   return success();
 }
 

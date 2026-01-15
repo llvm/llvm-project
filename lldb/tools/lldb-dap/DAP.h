@@ -36,6 +36,7 @@
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -145,6 +146,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   ReplMode repl_mode;
   lldb::SBFormat frame_format;
   lldb::SBFormat thread_format;
+  llvm::unique_function<void()> on_configuration_done;
 
   /// This is used to allow request_evaluate to handle empty expressions
   /// (ie the user pressed 'return' and expects the previous expression to
@@ -270,7 +272,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   ///     either an expression or a statement, depending on the rest of
   ///     the expression.
   /// \return the expression mode
-  ReplMode DetectReplMode(lldb::SBFrame frame, std::string &expression,
+  ReplMode DetectReplMode(lldb::SBFrame &frame, std::string &expression,
                           bool partial_expression);
 
   /// Create a `protocol::Source` object as described in the debug adapter
@@ -430,12 +432,9 @@ struct DAP final : public DAPTransport::MessageHandler {
   /// Perform complete DAP initialization by reusing an existing debugger and
   /// target.
   ///
-  /// \param[in] debugger_id
-  ///     The ID of the existing debugger to reuse.
-  ///
-  /// \param[in] target_id
-  ///     The globally unique ID of the existing target to reuse.
-  llvm::Error InitializeDebugger(int debugger_id, lldb::user_id_t target_id);
+  /// \param[in] session
+  ///     A session consisting of an existing debugger and target.
+  llvm::Error InitializeDebugger(const protocol::DAPSession &session);
 
   /// Start event handling threads based on client capabilities.
   void StartEventThreads();

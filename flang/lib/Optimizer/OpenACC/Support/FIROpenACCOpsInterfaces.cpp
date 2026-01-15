@@ -12,6 +12,7 @@
 
 #include "flang/Optimizer/OpenACC/Support/FIROpenACCOpsInterfaces.h"
 
+#include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/InternalNames.h"
@@ -40,26 +41,34 @@ mlir::Value PartialEntityAccessModel<hlfir::DesignateOp>::getBaseEntity(
 
 mlir::Value PartialEntityAccessModel<fir::DeclareOp>::getBaseEntity(
     mlir::Operation *op) const {
-  return mlir::cast<fir::DeclareOp>(op).getStorage();
+  auto declareOp = mlir::cast<fir::DeclareOp>(op);
+  // If storage is present, return it (partial view case)
+  if (mlir::Value storage = declareOp.getStorage())
+    return storage;
+  // Otherwise return the memref (complete view case)
+  return declareOp.getMemref();
 }
 
 bool PartialEntityAccessModel<fir::DeclareOp>::isCompleteView(
     mlir::Operation *op) const {
-  // Return false (partial view) only if storage is present
-  // Return true (complete view) if storage is absent
-  return !getBaseEntity(op);
+  // Complete view if storage is absent
+  return !mlir::cast<fir::DeclareOp>(op).getStorage();
 }
 
 mlir::Value PartialEntityAccessModel<hlfir::DeclareOp>::getBaseEntity(
     mlir::Operation *op) const {
-  return mlir::cast<hlfir::DeclareOp>(op).getStorage();
+  auto declareOp = mlir::cast<hlfir::DeclareOp>(op);
+  // If storage is present, return it (partial view case)
+  if (mlir::Value storage = declareOp.getStorage())
+    return storage;
+  // Otherwise return the memref (complete view case)
+  return declareOp.getMemref();
 }
 
 bool PartialEntityAccessModel<hlfir::DeclareOp>::isCompleteView(
     mlir::Operation *op) const {
-  // Return false (partial view) only if storage is present
-  // Return true (complete view) if storage is absent
-  return !getBaseEntity(op);
+  // Complete view if storage is absent
+  return !mlir::cast<hlfir::DeclareOp>(op).getStorage();
 }
 
 mlir::SymbolRefAttr AddressOfGlobalModel::getSymbol(mlir::Operation *op) const {
@@ -74,6 +83,12 @@ bool GlobalVariableModel::isConstant(mlir::Operation *op) const {
 mlir::Region *GlobalVariableModel::getInitRegion(mlir::Operation *op) const {
   auto globalOp = mlir::cast<fir::GlobalOp>(op);
   return globalOp.hasInitializationBody() ? &globalOp.getRegion() : nullptr;
+}
+
+bool GlobalVariableModel::isDeviceData(mlir::Operation *op) const {
+  if (auto dataAttr = cuf::getDataAttr(op))
+    return cuf::isDeviceDataAttribute(dataAttr.getValue());
+  return false;
 }
 
 // Helper to recursively process address-of operations in derived type

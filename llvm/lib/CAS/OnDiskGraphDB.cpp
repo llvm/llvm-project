@@ -57,6 +57,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -1014,6 +1015,36 @@ Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
   });
 }
 
+Error OnDiskGraphDB::validateObjectID(ObjectID ExternalRef) {
+  auto formatError = [&](Twine Msg) {
+    return createStringError(
+        llvm::errc::illegal_byte_sequence,
+        "bad ref=0x" +
+            utohexstr(ExternalRef.getOpaqueData(), /*LowerCase=*/true) + ": " +
+            Msg.str());
+  };
+
+  if (ExternalRef.getOpaqueData() == 0)
+    return formatError("zero is not a valid ref");
+
+  InternalRef InternalRef = getInternalRef(ExternalRef);
+  auto I = getIndexProxyFromRef(InternalRef);
+  if (!I)
+    return formatError(llvm::toString(I.takeError()));
+  auto Hash = getDigest(*I);
+
+  OnDiskTrieRawHashMap::ConstOnDiskPtr P = Index.find(Hash);
+  if (!P)
+    return formatError("not found using hash " + toHex(Hash));
+  IndexProxy OtherI = getIndexProxyFromPointer(P);
+  ObjectID OtherRef = getExternalReference(makeInternalRef(OtherI.Offset));
+  if (OtherRef != ExternalRef)
+    return formatError("ref does not match indexed offset " +
+                       utohexstr(OtherRef.getOpaqueData(), /*LowerCase=*/true) +
+                       " for hash " + toHex(Hash));
+  return Error::success();
+}
+
 void OnDiskGraphDB::print(raw_ostream &OS) const {
   OS << "on-disk-root-path: " << RootPath << "\n";
 
@@ -1226,11 +1257,13 @@ OnDiskGraphDB::load(ObjectID ExternalRef) {
   SmallString<256> Path;
   getStandalonePath(TrieRecord::getStandaloneFilePrefix(Object.SK), *I, Path);
 
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   auto File = sys::fs::openNativeFileForRead(Path);
   if (!File)
     return createFileError(Path, File.takeError());
 
-  auto CloseFile = make_scope_exit([&]() { sys::fs::closeFile(*File); });
+  llvm::scope_exit CloseFile([&]() { sys::fs::closeFile(*File); });
 
   sys::fs::file_status Status;
   if (std::error_code EC = sys::fs::status(*File, Status))
@@ -1329,6 +1362,8 @@ OnDiskContent StandaloneDataInMemory::getContent() const {
 
 static Expected<MappedTempFile> createTempFile(StringRef FinalPath,
                                                uint64_t Size) {
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   assert(Size && "Unexpected request for an empty temp file");
   Expected<TempFile> File = TempFile::create(FinalPath + ".%%%%%%");
   if (!File)
@@ -1365,6 +1400,8 @@ Error OnDiskGraphDB::createStandaloneLeaf(IndexProxy &I, ArrayRef<char> Data) {
   SmallString<256> Path;
   int64_t FileSize = Data.size() + Leaf0;
   getStandalonePath(TrieRecord::getStandaloneFilePrefix(SK), I, Path);
+
+  auto BypassSandbox = sys::sandbox::scopedDisable();
 
   // Write the file. Don't reuse this mapped_file_region, which is read/write.
   // Let load() pull up one that's read-only.

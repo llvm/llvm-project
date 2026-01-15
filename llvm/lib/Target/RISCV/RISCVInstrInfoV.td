@@ -62,6 +62,8 @@ def VMaskOp : RegisterOperand<VMV0> {
   let PrintMethod = "printVMaskReg";
   let EncoderMethod = "getVMaskReg";
   let DecoderMethod = "decodeVMaskReg";
+  let OperandNamespace = "RISCVOp";
+  let OperandType = "OPERAND_VMASK";
 }
 
 def VMaskCarryInOp : RegisterOperand<VMV0> {

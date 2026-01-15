@@ -192,19 +192,29 @@ public:
     return remain;
   }
 
-  void CombineFailedParses(ParseState &&prev) {
-    if (prev.anyTokenMatched_) {
-      if (!anyTokenMatched_ || prev.p_ > p_) {
-        anyTokenMatched_ = true;
-        p_ = prev.p_;
-        messages_ = std::move(prev.messages_);
-      } else if (prev.p_ == p_) {
-        messages_.Merge(std::move(prev.messages_));
-      }
+  void CombineFailedParses(ParseState &&that) {
+    bool haveMessages{anyDeferredMessages_ || !messages_.empty()};
+    bool thatHasMessages{that.anyDeferredMessages_ || !that.messages_.empty()};
+    if (haveMessages && !thatHasMessages) {
+      // never discard messages
+    } else if (!that.anyTokenMatched_ && (haveMessages || !thatHasMessages)) {
+      // token matching is preferred
+    } else if ((!anyTokenMatched_ && that.anyTokenMatched_) ||
+        (!haveMessages && thatHasMessages) ||
+        that.p_ > p_) { // 'that' is better, or no worse and got further
+      anyTokenMatched_ = that.anyTokenMatched_;
+      p_ = that.p_;
+      messages_ = std::move(that.messages_);
+      anyDeferredMessages_ = that.anyDeferredMessages_;
+      anyConformanceViolation_ = that.anyConformanceViolation_;
+      anyErrorRecovery_ = that.anyErrorRecovery_;
+    } else if (that.p_ == p_) { // merge states
+      anyTokenMatched_ |= that.anyTokenMatched_;
+      messages_.Merge(std::move(that.messages_));
+      anyDeferredMessages_ |= that.anyDeferredMessages_;
+      anyConformanceViolation_ |= that.anyConformanceViolation_;
+      anyErrorRecovery_ |= that.anyErrorRecovery_;
     }
-    anyDeferredMessages_ |= prev.anyDeferredMessages_;
-    anyConformanceViolation_ |= prev.anyConformanceViolation_;
-    anyErrorRecovery_ |= prev.anyErrorRecovery_;
   }
 
 private:

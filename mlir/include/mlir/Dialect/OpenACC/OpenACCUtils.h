@@ -67,6 +67,23 @@ mlir::Value getBaseEntity(mlir::Value val);
 bool isValidSymbolUse(mlir::Operation *user, mlir::SymbolRefAttr symbol,
                       mlir::Operation **definingOpPtr = nullptr);
 
+/// Check if a value represents device data.
+/// This checks if the value represents device data via the
+/// MappableType, PointerLikeType, and GlobalVariableOpInterface interfaces.
+/// \param val The value to check
+/// \return true if the value is device data, false otherwise
+bool isDeviceValue(mlir::Value val);
+
+/// Check if a value use is valid in an OpenACC region.
+/// This is true if:
+/// - The value is produced by an ACC data entry operation
+/// - The value is device data
+/// - The value is only used by private clauses in the region
+/// \param val The value to check
+/// \param region The OpenACC region
+/// \return true if the value use is valid, false otherwise
+bool isValidValueUse(mlir::Value val, mlir::Region &region);
+
 /// Collects all data clauses that dominate the compute construct.
 /// This includes data clauses from:
 /// - The compute construct itself

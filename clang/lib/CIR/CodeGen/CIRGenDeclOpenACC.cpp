@@ -306,13 +306,15 @@ class OpenACCRoutineClauseEmitter final
   CIRGenModule &cgm;
   CIRGen::CIRGenBuilderTy &builder;
   mlir::acc::RoutineOp routineOp;
+  const clang::FunctionDecl *funcDecl;
   llvm::SmallVector<mlir::acc::DeviceType> lastDeviceTypeValues;
 
 public:
   OpenACCRoutineClauseEmitter(CIRGenModule &cgm,
                               CIRGen::CIRGenBuilderTy &builder,
-                              mlir::acc::RoutineOp routineOp)
-      : cgm(cgm), builder(builder), routineOp(routineOp) {}
+                              mlir::acc::RoutineOp routineOp,
+                              const clang::FunctionDecl *funcDecl)
+      : cgm(cgm), builder(builder), routineOp(routineOp), funcDecl(funcDecl) {}
 
   void emitClauses(ArrayRef<const OpenACCClause *> clauses) {
     this->VisitClauseList(clauses);
@@ -372,8 +374,12 @@ public:
                                value);
     } else {
       assert(clause.isIdentifierArgument());
-      cgm.errorNYI(clause.getSourceRange(),
-                   "Bind with an identifier argument is not yet supported");
+      std::string bindName = cgm.getOpenACCBindMangledName(
+          clause.getIdentifierArgument(), funcDecl);
+
+      routineOp.addBindIDName(
+          builder.getContext(), lastDeviceTypeValues,
+          mlir::SymbolRefAttr::get(builder.getContext(), bindName));
     }
   }
 };
@@ -416,6 +422,6 @@ void CIRGenModule::emitOpenACCRoutineDecl(
       mlir::acc::getRoutineInfoAttrName(),
       mlir::acc::RoutineInfoAttr::get(func.getContext(), funcRoutines));
 
-  OpenACCRoutineClauseEmitter emitter{*this, builder, routineOp};
+  OpenACCRoutineClauseEmitter emitter{*this, builder, routineOp, funcDecl};
   emitter.emitClauses(clauses);
 }
