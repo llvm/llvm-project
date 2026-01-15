@@ -2959,8 +2959,7 @@ compactShuffleOperand(Constant *ShuffleInput,
            CompactedElts = std::move(CompactedElts)](
               unsigned PaddedWidth,
               IRBuilder<InstSimplifyFolder> &Builder) -> Value * {
-
-            // Return the original if unchanged to guarantee fixpoint termination.
+            // Return original if unchanged to guarantee fixpoint termination.
             if (AlreadyCompacted && Width == PaddedWidth)
               return ShuffleInput;
 
@@ -3039,8 +3038,7 @@ compactShuffleOperand(ShuffleVectorInst *ShuffleInput,
            CompactedMask = std::move(CompactedMask)](
               unsigned PaddedWidth,
               IRBuilder<InstSimplifyFolder> &Builder) -> Value * {
-
-            // Return the original if unchanged to guarantee fixpoint termination.
+            // Return original if unchanged to guarantee fixpoint termination.
             if (AlreadyCompacted && Width == PaddedWidth)
               return ShuffleInput;
 

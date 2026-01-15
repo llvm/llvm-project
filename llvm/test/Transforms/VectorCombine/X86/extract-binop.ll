@@ -450,16 +450,10 @@ define <4 x float> @PR34724(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @PR34724(
 ; CHECK-NEXT:    [[A0:%.*]] = extractelement <4 x float> [[A:%.*]], i32 0
 ; CHECK-NEXT:    [[A1:%.*]] = extractelement <4 x float> [[A]], i32 1
-; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x float> [[A]], <4 x float> poison, <4 x i32> <i32 poison, i32 poison, i32 3, i32 poison>
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd <4 x float> [[A]], [[SHIFT]]
-; CHECK-NEXT:    [[SHIFT1:%.*]] = shufflevector <4 x float> [[B:%.*]], <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd <4 x float> [[B]], [[SHIFT1]]
-; CHECK-NEXT:    [[SHIFT2:%.*]] = shufflevector <4 x float> [[B]], <4 x float> poison, <4 x i32> <i32 poison, i32 poison, i32 poison, i32 2>
+; CHECK-NEXT:    [[SHIFT2:%.*]] = shufflevector <4 x float> [[A]], <4 x float> [[B1:%.*]], <4 x i32> <i32 poison, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[B:%.*]] = shufflevector <4 x float> [[A]], <4 x float> [[B1]], <4 x i32> <i32 poison, i32 3, i32 5, i32 7>
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <4 x float> [[SHIFT2]], [[B]]
-; CHECK-NEXT:    [[V1:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> <float undef, float undef, float undef, float poison>, <4 x i32> <i32 4, i32 2, i32 5, i32 6>
-; CHECK-NEXT:    [[V2:%.*]] = shufflevector <4 x float> [[V1]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 4, i32 3>
-; CHECK-NEXT:    [[V3:%.*]] = shufflevector <4 x float> [[V2]], <4 x float> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
-; CHECK-NEXT:    ret <4 x float> [[V3]]
+; CHECK-NEXT:    ret <4 x float> [[TMP3]]
 ;
   %a0 = extractelement <4 x float> %a, i32 0
   %a1 = extractelement <4 x float> %a, i32 1
@@ -475,7 +469,7 @@ define <4 x float> @PR34724(<4 x float> %a, <4 x float> %b) {
   %b01 = fadd float %b0, %b1
   %b23 = fadd float %b2, %b3
 
-  %v1 = insertelement <4 x float> undef, float %a23, i32 1
+  %v1 = insertelement <4 x float> poison, float %a23, i32 1
   %v2 = insertelement <4 x float> %v1, float %b01, i32 2
   %v3 = insertelement <4 x float> %v2, float %b23, i32 3
   ret <4 x float> %v3
