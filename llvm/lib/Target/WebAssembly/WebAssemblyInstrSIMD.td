@@ -340,7 +340,7 @@ defm "" : SIMDLoadLane<16, 0x55>;
 defm "" : SIMDLoadLane<32, 0x56>;
 defm "" : SIMDLoadLane<64, 0x57>;
 
-// Select loads with no constant offset.
+// Select loads, possibly including a constant offset.
 multiclass LoadLanePat<Vec vec, SDPatternOperator kind> {
   defvar load_lane_a32 = !cast<NI>("LOAD_LANE_"#vec.lane_bits#"_A32");
   defvar load_lane_a64 = !cast<NI>("LOAD_LANE_"#vec.lane_bits#"_A64");
