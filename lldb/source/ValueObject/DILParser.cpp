@@ -201,6 +201,10 @@ ASTNodeUP DILParser::ParsePostfixExpression() {
         assert(last_index && "ASTNodeUP must not contain a nullptr");
         lhs = std::make_unique<BitFieldExtractionNode>(
             loc, std::move(lhs), std::move(index), std::move(last_index));
+      } else if (CurToken().GetKind() == Token::minus) {
+        BailOut("use of '-' for bitfield range is deprecated; use ':' instead",
+                CurToken().GetLocation(), CurToken().GetSpelling().length());
+        return std::make_unique<ErrorNode>();
       } else {
         lhs = std::make_unique<ArraySubscriptNode>(loc, std::move(lhs),
                                                    std::move(index));

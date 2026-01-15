@@ -63,3 +63,8 @@ class TestFrameVarDILBitFieldExtraction(TestBase):
             error=True,
             substrs=["bit index is not an integer"],
         )
+        self.expect(
+            "frame var 'value[0-2]'",
+            error=True,
+            substrs=["use of '-' for bitfield range is deprecated; use ':' instead"],
+        )
