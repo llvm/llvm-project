@@ -726,7 +726,12 @@ static Relocation *getLoongArchPCAddHi20(Ctx &ctx,
   int64_t addend = loReloc.addend;
   Symbol *sym = loReloc.sym;
 
-  const Defined *d = cast<Defined>(sym);
+  const Defined *d = dyn_cast<Defined>(sym);
+  if (!d) {
+    Err(ctx) << loSec->getLocation(loReloc.offset)
+             << " points to undefined symbol";
+    return nullptr;
+  }
   if (!d->section) {
     Err(ctx)
         << loSec->getLocation(loReloc.offset)
@@ -736,11 +741,13 @@ static Relocation *getLoongArchPCAddHi20(Ctx &ctx,
   }
   InputSection *hiSec = cast<InputSection>(d->section);
 
-  if (hiSec != loSec)
+  if (hiSec != loSec) {
     Err(ctx) << loSec->getLocation(loReloc.offset)
              << ": R_LARCH_*PCADD_LO12 relocation points to a symbol '"
              << sym->getName() << "' in a different section '" << hiSec->name
              << "'";
+    return nullptr;
+  }
 
   if (addend != 0)
     Warn(ctx) << loSec->getLocation(loReloc.offset)
