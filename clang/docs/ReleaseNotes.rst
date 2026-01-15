@@ -241,6 +241,7 @@ Python Binding Changes
 
 OpenMP Support
 --------------
+- Added support for ``transparent`` clause in task and taskloop directives.
 
 Improvements
 ^^^^^^^^^^^^
