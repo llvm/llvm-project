@@ -739,4 +739,25 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 #endif
 // clang-format on
 
+/// \macro LLVM_UNLESS_SSE42
+/// Expands to its arguments only if SSE4.2 is not enabled.
+/// This can be used to annotate code that should only be compiled when SSE4.2
+/// is not available.
+#ifdef __SSE4_2__
+#define LLVM_UNLESS_SSE42(...)
+#else
+#define LLVM_UNLESS_SSE42(...) __VA_ARGS__
+#endif
+
+/// \macro LLVM_SUPPORTS_RUNTIME_SSE42_CHECK
+/// Expands to true if runtime detection of SSE4.2 is supported.
+/// This can be used to guard runtime checks for SSE4.2 support.
+#if defined(__SSE4_2__) ||                                                     \
+    ((defined(__i386__) || defined(__x86_64__)) && defined(__has_attribute) && \
+     __has_attribute(target) && !defined(_WIN32))
+#define LLVM_SUPPORTS_RUNTIME_SSE42_CHECK 1
+#else
+#define LLVM_SUPPORTS_RUNTIME_SSE42_CHECK 0
+#endif
+
 #endif
