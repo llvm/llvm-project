@@ -146,6 +146,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVRedundantCopyEliminationPass(*PR);
   initializeRISCVAsmPrinterPass(*PR);
   initializeRISCVPromoteConstantPass(*PR);
+  initializeRISCVCountLRSCPass(*PR);
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
@@ -587,6 +588,9 @@ void RISCVPassConfig::addPreEmitPass2() {
 
   if (EnableCFIInstrInserter)
     addPass(createCFIInstrInserter());
+
+  // add pass to count LR/SC instruction pairs...
+  addPass(createRISCVCountLRSCPass());
 }
 
 void RISCVPassConfig::addMachineSSAOptimization() {

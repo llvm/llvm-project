@@ -37,6 +37,9 @@ public:
 FunctionPass *createRISCVCodeGenPrepareLegacyPass();
 void initializeRISCVCodeGenPrepareLegacyPassPass(PassRegistry &);
 
+FunctionPass *createRISCVCountLRSCPass();
+void initializeRISCVCountLRSCPass(PassRegistry &);
+
 FunctionPass *createRISCVDeadRegisterDefinitionsPass();
 void initializeRISCVDeadRegisterDefinitionsPass(PassRegistry &);
 
