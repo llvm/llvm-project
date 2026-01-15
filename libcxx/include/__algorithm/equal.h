@@ -247,7 +247,7 @@ equal(_InputIterator1 __first1,
       _InputIterator2 __first2,
       _InputIterator2 __last2,
       _BinaryPredicate __pred) {
-  static constexpr bool __both_random_access =
+  constexpr bool __both_random_access =
       __has_random_access_iterator_category<_InputIterator1>::value &&
       __has_random_access_iterator_category<_InputIterator2>::value;
   if constexpr (__both_random_access) {

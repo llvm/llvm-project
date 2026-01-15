@@ -500,6 +500,28 @@ TEST(STLForwardCompatTest, BindFrontBindBackConstexpr) {
   static_assert(Fn2(3) == 4);
 }
 
+// Test that reference return types are preserved (with `decltype(auto)`).
+TEST(STLForwardCompatTest, BindPreservesReferenceReturn) {
+  int X = 10;
+  auto GetRef = [&X]() -> int & { return X; };
+
+  auto BoundFront = bind_front(GetRef);
+  static_assert(std::is_same_v<decltype(BoundFront()), int &>);
+  BoundFront() = 20;
+  EXPECT_EQ(X, 20);
+
+  const auto BoundFrontConst = bind_front(GetRef);
+  static_assert(std::is_same_v<decltype(BoundFrontConst()), int &>);
+
+  auto BoundBack = bind_back(GetRef);
+  static_assert(std::is_same_v<decltype(BoundBack()), int &>);
+  BoundBack() = 30;
+  EXPECT_EQ(X, 30);
+
+  const auto BoundBackConst = bind_back(GetRef);
+  static_assert(std::is_same_v<decltype(BoundBackConst()), int &>);
+}
+
 // Use std::ref/std::cref to bind references (bound args are decay-copied).
 TEST(STLForwardCompatTest, BindWithReferenceWrapper) {
   int X = 1;
