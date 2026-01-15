@@ -111,6 +111,20 @@ private:
 
 public:
   std::pair<bool, bool> getIsCounterPair(const Stmt *S) const;
+
+  bool isMCDCDecisionExpr(const Expr *E) const {
+    if (!RegionMCDCState)
+      return false;
+    auto I = RegionMCDCState->DecisionByStmt.find(E);
+    if (I == RegionMCDCState->DecisionByStmt.end())
+      return false;
+    return I->second.isValid();
+  }
+
+  bool isMCDCBranchExpr(const Expr *E) const {
+    return (RegionMCDCState && RegionMCDCState->BranchByStmt.contains(E));
+  }
+
   void emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
                                  bool UseFalsePath, bool UseBoth,
                                  llvm::Value *StepV);

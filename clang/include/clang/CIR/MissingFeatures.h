@@ -193,6 +193,7 @@ struct MissingFeatures {
   // LowerModule handling
   static bool lowerModuleCodeGenOpts() { return false; }
   static bool lowerModuleLangOpts() { return false; }
+  static bool targetLoweringInfo() { return false; }
 
   // Misc
   static bool aarch64SIMDIntrinsics() { return false; }
@@ -347,6 +348,7 @@ struct MissingFeatures {
   static bool useEHCleanupForArray() { return false; }
   static bool vaArgABILowering() { return false; }
   static bool vectorConstants() { return false; }
+  static bool virtualMethodAttr() { return false; }
   static bool vlas() { return false; }
   static bool vtableInitialization() { return false; }
   static bool vtableEmitMetadata() { return false; }
