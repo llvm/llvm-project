@@ -43,6 +43,11 @@ namespace RegState {
 
 // Keep this in sync with the table in MIRLangRef.rst.
 enum {
+  /// No Specific Flags
+  NoFlags = 0x0,
+  // Reserved value, to detect if someone is passing `true` rather than this
+  // enum.
+  _Reserved = 0x1,
   /// Register definition.
   Define = 0x2,
   /// Not emitted register (e.g. carry, or temporary result).
@@ -62,12 +67,59 @@ enum {
   InternalRead = 0x100,
   /// Register that may be renamed.
   Renamable = 0x200,
+  // Combinations of above flags
   DefineNoRead = Define | Undef,
   ImplicitDefine = Implicit | Define,
   ImplicitKill = Implicit | Kill
 };
 
 } // end namespace RegState
+
+constexpr unsigned getDefRegState(bool B) {
+  return B ? RegState::Define : RegState::NoFlags;
+}
+constexpr unsigned getImplRegState(bool B) {
+  return B ? RegState::Implicit : RegState::NoFlags;
+}
+constexpr unsigned getKillRegState(bool B) {
+  return B ? RegState::Kill : RegState::NoFlags;
+}
+constexpr unsigned getDeadRegState(bool B) {
+  return B ? RegState::Dead : RegState::NoFlags;
+}
+constexpr unsigned getUndefRegState(bool B) {
+  return B ? RegState::Undef : RegState::NoFlags;
+}
+constexpr unsigned getEarlyClobberRegState(bool B) {
+  return B ? RegState::EarlyClobber : RegState::NoFlags;
+}
+constexpr unsigned getDebugRegState(bool B) {
+  return B ? RegState::Debug : RegState::NoFlags;
+}
+constexpr unsigned getInternalReadRegState(bool B) {
+  return B ? RegState::InternalRead : RegState::NoFlags;
+}
+constexpr unsigned getRenamableRegState(bool B) {
+  return B ? RegState::Renamable : RegState::NoFlags;
+}
+
+constexpr bool hasRegState(unsigned Value, unsigned Test) {
+  return (Value & Test) == Test;
+}
+
+/// Get all register state flags from machine operand \p RegOp.
+inline unsigned getRegState(const MachineOperand &RegOp) {
+  assert(RegOp.isReg() && "Not a register operand");
+  return getDefRegState(RegOp.isDef()) | getImplRegState(RegOp.isImplicit()) |
+         getKillRegState(RegOp.isKill()) | getDeadRegState(RegOp.isDead()) |
+         getUndefRegState(RegOp.isUndef()) |
+         // FIXME: why is this not included
+         // getEarlyClobberRegState(RegOp.isEarlyClobber()) |
+         getInternalReadRegState(RegOp.isInternalRead()) |
+         getDebugRegState(RegOp.isDebug()) |
+         getRenamableRegState(RegOp.getReg().isPhysical() &&
+                              RegOp.isRenamable());
+}
 
 /// Set of metadata that should be preserved when using BuildMI(). This provides
 /// a more convenient way of preserving certain data from the original
@@ -138,21 +190,21 @@ public:
   Register getReg(unsigned Idx) const { return MI->getOperand(Idx).getReg(); }
 
   /// Add a new virtual register operand.
-  const MachineInstrBuilder &addReg(Register RegNo, unsigned flags = 0,
+  const MachineInstrBuilder &addReg(Register RegNo, unsigned Flags = 0,
                                     unsigned SubReg = 0) const {
-    assert((flags & 0x1) == 0 &&
+    assert(!hasRegState(Flags, RegState::_Reserved) &&
            "Passing in 'true' to addReg is forbidden! Use enums instead.");
-    MI->addOperand(*MF, MachineOperand::CreateReg(RegNo,
-                                               flags & RegState::Define,
-                                               flags & RegState::Implicit,
-                                               flags & RegState::Kill,
-                                               flags & RegState::Dead,
-                                               flags & RegState::Undef,
-                                               flags & RegState::EarlyClobber,
-                                               SubReg,
-                                               flags & RegState::Debug,
-                                               flags & RegState::InternalRead,
-                                               flags & RegState::Renamable));
+    MI->addOperand(*MF, MachineOperand::CreateReg(
+                            RegNo, hasRegState(Flags, RegState::Define),
+                            hasRegState(Flags, RegState::Implicit),
+                            hasRegState(Flags, RegState::Kill),
+                            hasRegState(Flags, RegState::Dead),
+                            hasRegState(Flags, RegState::Undef),
+                            hasRegState(Flags, RegState::EarlyClobber), SubReg,
+                            hasRegState(Flags, RegState::Debug),
+                            hasRegState(Flags, RegState::InternalRead),
+                            hasRegState(Flags, RegState::Renamable)));
+
     return *this;
   }
 
@@ -166,7 +218,7 @@ public:
   /// `RegState::Define` when calling this function.
   const MachineInstrBuilder &addUse(Register RegNo, unsigned Flags = 0,
                                     unsigned SubReg = 0) const {
-    assert(!(Flags & RegState::Define) &&
+    assert(!hasRegState(Flags, RegState::Define) &&
            "Misleading addUse defines register, use addReg instead.");
     return addReg(RegNo, Flags, SubReg);
   }
@@ -555,43 +607,6 @@ LLVM_ABI MachineInstr *buildDbgValueForSpill(
 /// modifying an instruction in place while iterating over a basic block.
 LLVM_ABI void updateDbgValueForSpill(MachineInstr &Orig, int FrameIndex,
                                      Register Reg);
-
-inline unsigned getDefRegState(bool B) {
-  return B ? RegState::Define : 0;
-}
-inline unsigned getImplRegState(bool B) {
-  return B ? RegState::Implicit : 0;
-}
-inline unsigned getKillRegState(bool B) {
-  return B ? RegState::Kill : 0;
-}
-inline unsigned getDeadRegState(bool B) {
-  return B ? RegState::Dead : 0;
-}
-inline unsigned getUndefRegState(bool B) {
-  return B ? RegState::Undef : 0;
-}
-inline unsigned getInternalReadRegState(bool B) {
-  return B ? RegState::InternalRead : 0;
-}
-inline unsigned getDebugRegState(bool B) {
-  return B ? RegState::Debug : 0;
-}
-inline unsigned getRenamableRegState(bool B) {
-  return B ? RegState::Renamable : 0;
-}
-
-/// Get all register state flags from machine operand \p RegOp.
-inline unsigned getRegState(const MachineOperand &RegOp) {
-  assert(RegOp.isReg() && "Not a register operand");
-  return getDefRegState(RegOp.isDef()) | getImplRegState(RegOp.isImplicit()) |
-         getKillRegState(RegOp.isKill()) | getDeadRegState(RegOp.isDead()) |
-         getUndefRegState(RegOp.isUndef()) |
-         getInternalReadRegState(RegOp.isInternalRead()) |
-         getDebugRegState(RegOp.isDebug()) |
-         getRenamableRegState(RegOp.getReg().isPhysical() &&
-                              RegOp.isRenamable());
-}
 
 /// Helper class for constructing bundles of MachineInstrs.
 ///
