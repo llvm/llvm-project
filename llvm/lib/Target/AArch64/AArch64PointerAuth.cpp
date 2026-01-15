@@ -332,8 +332,7 @@ bool AArch64PointerAuth::runOnMachineFunction(MachineFunction &MF) {
   return Modified;
 }
 
-bool AArch64PointerAuth::emitSignReturnAddressHardening(
-    MachineFunction &MF) {
+bool AArch64PointerAuth::emitSignReturnAddressHardening(MachineFunction &MF) {
   const auto *FI = MF.getInfo<AArch64FunctionInfo>();
   assert(FI && "FI can't be null");
   if (!FI->shouldSignReturnAddress(MF) || !FI->shouldHardenSignReturnAddress())
