@@ -578,11 +578,15 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::GlobalViewAttr globalAttr) {
                                   mlir::LLVM::GEPNoWrapFlags::none);
   }
 
-  // The incubator has handling here for the attribute having integer type, but
-  // the only test case I could find that reaches it is a direct CIR-to-LLVM IR
-  // lowering with no clear indication of how the CIR might have been generated.
-  // We'll hit the unreachable below if this happens.
-  assert(!cir::MissingFeatures::globalViewIntLowering());
+  // We can have a global view with an integer type in the case of method
+  // pointers. With the Itanium ABI, the #cir.method attribute is lowered to a
+  // #cir.global_view with a pointer-sized integer representing the address of
+  // the method.
+  if (auto intTy = mlir::dyn_cast<cir::IntType>(globalAttr.getType())) {
+    mlir::Type llvmDstTy = converter->convertType(globalAttr.getType());
+    return mlir::LLVM::PtrToIntOp::create(rewriter, parentOp->getLoc(),
+                                          llvmDstTy, addrOp);
+  }
 
   if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(globalAttr.getType())) {
     mlir::Type llvmEltTy =
@@ -1562,8 +1566,8 @@ mlir::LogicalResult CIRToLLVMAllocaOpLowering::matchAndRewrite(
   assert(!cir::MissingFeatures::addressSpace());
   assert(!cir::MissingFeatures::opAllocaAnnotations());
 
-  rewriter.replaceOpWithNewOp<mlir::LLVM::AllocaOp>(
-      op, resultTy, elementTy, size, op.getAlignmentAttr().getInt());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::AllocaOp>(op, resultTy, elementTy,
+                                                    size, op.getAlignment());
 
   return mlir::success();
 }
@@ -1723,13 +1727,17 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
 
   // TODO: nontemporal.
   assert(!cir::MissingFeatures::opLoadStoreNontemporal());
-  std::optional<llvm::StringRef> syncScope =
-      getLLVMSyncScope(op.getSyncScope());
+
+  std::optional<std::string> llvmSyncScope;
+  if (std::optional<cir::SyncScopeKind> syncScope = op.getSyncScope())
+    llvmSyncScope =
+        lowerMod->getTargetLoweringInfo().getLLVMSyncScope(*syncScope);
+
   mlir::LLVM::LoadOp newLoad = mlir::LLVM::LoadOp::create(
       rewriter, op->getLoc(), llvmTy, adaptor.getAddr(), alignment,
       op.getIsVolatile(), /*isNonTemporal=*/false,
       /*isInvariant=*/false, /*isInvariantGroup=*/false, ordering,
-      syncScope.value_or(llvm::StringRef()));
+      llvmSyncScope.value_or(std::string()));
 
   // Convert adapted result to its original type if needed.
   mlir::Value result =
@@ -1757,13 +1765,17 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
   // TODO: nontemporal.
   assert(!cir::MissingFeatures::opLoadStoreNontemporal());
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
-  std::optional<llvm::StringRef> syncScope =
-      getLLVMSyncScope(op.getSyncScope());
+
+  std::optional<std::string> llvmSyncScope;
+  if (std::optional<cir::SyncScopeKind> syncScope = op.getSyncScope())
+    llvmSyncScope =
+        lowerMod->getTargetLoweringInfo().getLLVMSyncScope(*syncScope);
+
   mlir::LLVM::StoreOp storeOp = mlir::LLVM::StoreOp::create(
       rewriter, op->getLoc(), value, adaptor.getAddr(), alignment,
       op.getIsVolatile(),
       /*isNonTemporal=*/false, /*isInvariantGroup=*/false, memorder,
-      syncScope.value_or(llvm::StringRef()));
+      llvmSyncScope.value_or(std::string()));
   rewriter.replaceOp(op, storeOp);
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
   return mlir::LogicalResult::success();
@@ -1802,7 +1814,10 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
   } else if (mlir::isa<cir::IntType>(op.getType())) {
     // Lower GlobalViewAttr to llvm.mlir.addressof + llvm.mlir.ptrtoint
     if (auto ga = mlir::dyn_cast<cir::GlobalViewAttr>(op.getValue())) {
-      // See the comment in visitCirAttr for why this isn't implemented.
+      // We can have a global view with an integer type in the case of method
+      // pointers, but the lowering of those doesn't go through this path.
+      // They are handled in the visitCirAttr. This is left as an error until
+      // we have a test case that reaches it.
       assert(!cir::MissingFeatures::globalViewIntLowering());
       op.emitError() << "global view with integer type";
       return mlir::failure();

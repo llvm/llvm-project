@@ -4807,7 +4807,10 @@ CFGBlock *CFGBuilder::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
   // Save local scope position before the addition of the implicit variables.
   SaveAndRestore save_scope_pos(ScopePos);
 
-  // Create local scopes and destructors for range, begin and end variables.
+  // Create local scopes and destructors for init, range, begin and end
+  // variables.
+  if (Stmt *Init = S->getInit())
+    addLocalScopeForStmt(Init);
   if (Stmt *Range = S->getRangeStmt())
     addLocalScopeForStmt(Range);
   if (Stmt *Begin = S->getBeginStmt())

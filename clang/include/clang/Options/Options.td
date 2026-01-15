@@ -2421,6 +2421,14 @@ def fsanitize_EQ : CommaJoined<["-"], "fsanitize=">, Group<f_clang_Group>,
                             "or suspicious behavior. See user manual for available checks">;
 def fno_sanitize_EQ : CommaJoined<["-"], "fno-sanitize=">, Group<f_clang_Group>,
                       Visibility<[ClangOption, CLOption]>;
+def fsanitize_ignore_for_ubsan_feature_EQ
+    : CommaJoined<["-"], "fsanitize-ignore-for-ubsan-feature=">,
+      Group<f_clang_Group>,
+      MetaVarName<"<check>">,
+      HelpText<
+          "Prevents `__has_feature(undefined_behavior_sanitizer)` from "
+          "evaluating true for "
+          "these UBSan checks. See user manual for available UBSan checks">;
 
 def fsanitize_ignorelist_EQ : Joined<["-"], "fsanitize-ignorelist=">,
   Group<f_clang_Group>, HelpText<"Path to ignorelist file for sanitizers">;
@@ -4676,7 +4684,7 @@ defm partition_static_data_sections: BoolFOption<"partition-static-data-sections
   CodeGenOpts<"PartitionStaticDataSections">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
   NegFlag<SetFalse, [], [ClangOption], "Disable">,
-  BothFlags<[], [ClangOption], " partition static data sections using profile information (x86 and aarch64 ELF)">>;
+  BothFlags<[], [ClangOption], " partition static data sections using PGO profile information and MemProf (x86 and aarch64 ELF). See LLVM MemProf doc for usage.">>;
 
 defm strict_return : BoolFOption<"strict-return",
   CodeGenOpts<"StrictReturn">, DefaultTrue,

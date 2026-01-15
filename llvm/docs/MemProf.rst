@@ -140,18 +140,29 @@ This feature uses a hybrid approach:
 
 To enable this feature, pass the following flags to the compiler:
 
-*   ``-memprof-annotate-static-data-prefix``: Enables annotation of global variables in IR.
-*   ``-split-static-data``: Enables partitioning of other data (like jump tables) in the backend.
-*   ``-Wl,-z,keep-data-section-prefix``: Instructs the linker (LLD) to group hot and cold data sections together.
+*   ``-fpartition-static-data-sections``: Instructs the compiler to generate `.hot` and `.unlikely` section prefixes for hot and cold static data respectively in the relocatable object files.
+*   ``-Wl,-z,keep-data-section-prefix``: Informs the LLD linker that `.data.rel.ro.hot` and `.data.rel.ro.unlikely` as relro sections. LLD requires all relro sections to be contiguous and this flag allows us to interleave the hotness-suffixed `.data.rel.ro` sections with other relro sections.
+*   ``-Wl,-script=<linker_script>``: Group hot and/or cold data sections, and order the data sections.
 
 .. code-block:: bash
 
-    clang++ -fmemory-profile-use=memprof.memprofdata -mllvm -memprof-annotate-static-data-prefix -mllvm -split-static-data -fuse-ld=lld -Wl,-z,keep-data-section-prefix -O2 source.cpp -o optimized_app
+    clang++ -fmemory-profile-use=memprof.memprofdata -fpartition-static-data-sections -fuse-ld=lld -Wl,-z,keep-data-section-prefix -O2 source.cpp -o optimized_app
 
 The optimized layout clusters hot static data, improving dTLB and cache efficiency.
 
 .. note::
-   For an LTO build -split-static-data needs to be passed to the LTO backend via the linker using ``-Wl,-mllvm,-split-static-data``.
+   When both PGO profiles and memory profiles are provided (using
+   ``-fprofile-use`` and ``-fmemory-profile-use``), global variable hotness are
+   inferred from a combination of PGO profile and data access profile:
+
+   * For data covered by both profiles (e.g., module-internal data with symbols
+     in the executable), the hotness is the max of PGO profile hotness and data
+     access profile hotness.
+
+   * For data covered by only one profile, the hotness is inferred from that
+     profile. Most notably, symbolizable data with external linkage is only
+     covered by data access profile, and module-internal unsymbolizable data is
+     only covered by PGO profile.
 
 Developer Manual
 ================
