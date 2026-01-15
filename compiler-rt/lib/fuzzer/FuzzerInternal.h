@@ -44,10 +44,18 @@ public:
         .count();
   }
 
+  size_t secondsSinceLastNewCorpus() {
+    return duration_cast<seconds>(system_clock::now() - LastNewCorpusTime)
+        .count();
+  }
+
   bool TimedOut() {
-    return Options.MaxTotalTimeSec > 0 &&
-           secondsSinceProcessStartUp() >
-               static_cast<size_t>(Options.MaxTotalTimeSec);
+    return (Options.MaxTotalTimeSec > 0 &&
+            secondsSinceProcessStartUp() >
+                static_cast<size_t>(Options.MaxTotalTimeSec)) ||
+           (Options.ExitOnTimeSec > 0 &&
+            secondsSinceLastNewCorpus() >
+                static_cast<size_t>(Options.ExitOnTimeSec));
   }
 
   size_t execPerSec() {
@@ -137,6 +145,7 @@ private:
   DataFlowTrace DFT;
 
   system_clock::time_point ProcessStartTime = system_clock::now();
+  system_clock::time_point LastNewCorpusTime = system_clock::now();
   system_clock::time_point UnitStartTime, UnitStopTime;
   long TimeOfLongestUnitInSeconds = 0;
   long EpochOfLastReadOfOutputCorpus = 0;
