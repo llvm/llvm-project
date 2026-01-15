@@ -637,3 +637,29 @@ subroutine test_cache_nested_derived_type()
 ! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%[[ARR_COORD]] : !fir.ref<!fir.array<50xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<50xf32>> {name = "obj%in%arr(i)", structured = false}
 ! CHECK: acc.yield
 end subroutine
+
+! Test cache with temporary in designator bounds - verifies local statement context
+! doesn't cause issues with temporary cleanup
+! CHECK-LABEL: func.func @_QPtest_cache_temp_in_designator(
+subroutine test_cache_temp_in_designator(data, a)
+  integer, parameter :: n = 100
+  real :: data(n)
+  real :: a(n)
+  integer :: i
+
+  !$acc loop
+  do i = 5, n - 4
+    !$acc cache(readonly: data(1:maxloc(a+a, dim=1)))
+    a(i) = data(i)
+  end do
+
+! CHECK: acc.loop
+! CHECK: %[[ELEMENTAL:.*]] = hlfir.elemental
+! CHECK: %[[MAXLOC:.*]] = hlfir.maxloc %[[ELEMENTAL]]
+! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound({{.*}}) upperbound({{.*}})
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}}) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xf32>> {modifiers = #acc<data_clause_modifier readonly>, name = "data(1:maxloc(a+a,dim=1_4))", structured = false}
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[CACHE]]
+! CHECK: hlfir.destroy %[[ELEMENTAL]]
+! CHECK: hlfir.designate %[[DECL]]#0
+! CHECK: acc.yield
+end subroutine
