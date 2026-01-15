@@ -21042,7 +21042,7 @@ ARMTargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
 // For the real atomic operations, we have ldrex/strex up to 32 bits,
 // and up to 64 bits on the non-M profiles
 TargetLowering::AtomicExpansionKind
-ARMTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+ARMTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   if (AI->isFloatingPointOperation())
     return AtomicExpansionKind::CmpXChg;
 
@@ -21070,7 +21070,8 @@ ARMTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
 // Similar to shouldExpandAtomicRMWInIR, ldrex/strex can be used  up to 32
 // bits, and up to 64 bits on the non-M profiles.
 TargetLowering::AtomicExpansionKind
-ARMTargetLowering::shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const {
+ARMTargetLowering::shouldExpandAtomicCmpXchgInIR(
+    const AtomicCmpXchgInst *AI) const {
   // At -O0, fast-regalloc cannot cope with the live vregs necessary to
   // implement cmpxchg without spilling. If the address being exchanged is also
   // on the stack and close enough to the spill slot, this can lead to a
