@@ -298,6 +298,52 @@ getResultLengthFromElementalOp(fir::FirOpBuilder &builder,
       lengths.push_back(len);
 }
 
+//
+static mlir::FunctionType getTypeWithIgnoreTkrC(mlir::FunctionType funcType,
+    Fortran::lower::CallerInterface &caller, mlir::MLIRContext* context) {
+  llvm::SmallVector<mlir::Type> newInputs =
+    llvm::to_vector(funcType.getInputs());
+  bool typeChanged = false;
+  for (const auto &arg : caller.getPassedArguments()) {
+    if (arg.firArgument >= 0 &&
+        arg.firArgument < static_cast<int>(newInputs.size())) {
+
+      // Only need to change the arg type for ignore_tkr(c)
+      if (!arg.testTKR(Fortran::common::IgnoreTKR::Contiguous))
+        continue;
+
+      mlir::Type expectedType = newInputs[arg.firArgument];
+      // Cast is only needed for descriptors
+      if (!fir::isa_box_type(expectedType))
+        continue;
+
+      // Handle ignore_tkr(c) for descriptors
+
+      mlir::Value actual = caller.getInput(arg);
+      if (!actual)
+        continue;
+      mlir::Type actualType = actual.getType();
+
+      if (fir::isBoxAddress(actualType)) {
+        newInputs[arg.firArgument] = fir::unwrapRefType(actualType);
+        typeChanged = true;
+      } else if (fir::isa_box_type(actualType)) {
+        newInputs[arg.firArgument] = actualType;
+        typeChanged = true;
+      }
+    }
+  }
+
+  if (typeChanged) {
+    // At least one of the arguments had its type changed, so need to
+    // create a new function type to be used in a cast.
+    funcType = mlir::FunctionType::get(context, newInputs,
+        funcType.getResults());
+  }
+
+  return funcType;
+}
+
 std::pair<Fortran::lower::LoweredResult, bool>
 Fortran::lower::genCallOpAndResult(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
