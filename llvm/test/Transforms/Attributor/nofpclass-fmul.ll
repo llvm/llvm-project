@@ -45,7 +45,7 @@ define float @ret_mul_exponent_f32_22(float %arg0) {
 }
 
 define float @ret_fmul_square_f32_src_no_nan(float noundef nofpclass(nan) %arg) {
-; CHECK-LABEL: define noundef nofpclass(ninf nzero nsub nnorm) float @ret_fmul_square_f32_src_no_nan(
+; CHECK-LABEL: define noundef nofpclass(nan ninf nzero nsub nnorm) float @ret_fmul_square_f32_src_no_nan(
 ; CHECK-SAME: float noundef nofpclass(nan) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG]], [[ARG]]
 ; CHECK-NEXT:    ret float [[FMUL]]
@@ -55,7 +55,7 @@ define float @ret_fmul_square_f32_src_no_nan(float noundef nofpclass(nan) %arg) 
 }
 
 define float @ret_fmul_square_f32_src_no_snan(float noundef nofpclass(snan) %arg) {
-; CHECK-LABEL: define noundef nofpclass(ninf nzero nsub nnorm) float @ret_fmul_square_f32_src_no_snan(
+; CHECK-LABEL: define noundef nofpclass(snan ninf nzero nsub nnorm) float @ret_fmul_square_f32_src_no_snan(
 ; CHECK-SAME: float noundef nofpclass(snan) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG]], [[ARG]]
 ; CHECK-NEXT:    ret float [[FMUL]]

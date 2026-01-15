@@ -175,7 +175,7 @@ define float @ret_fmul_square(float noundef %arg) #0 {
 }
 
 define float @ret_fmul_square_nnan(float noundef nofpclass(nan) %arg) #0 {
-; CHECK-LABEL: define noundef nofpclass(ninf nzero nsub nnorm) float @ret_fmul_square_nnan
+; CHECK-LABEL: define noundef nofpclass(nan ninf nzero nsub nnorm) float @ret_fmul_square_nnan
 ; CHECK-SAME: (float noundef nofpclass(nan) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG]], [[ARG]]
 ; CHECK-NEXT:    ret float [[FMUL]]
