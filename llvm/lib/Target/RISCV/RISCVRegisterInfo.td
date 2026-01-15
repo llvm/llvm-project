@@ -901,13 +901,7 @@ let RegAltNameIndices = [ABIRegAltName] in
 
 // The order of registers represents the preferred allocation sequence,
 // meaning caller-save regs are listed before callee-save.
-def FPR256 : RISCVRegisterClass<[v8i32, v8f32], 256,
-                                (add
-                                  (sequence "F%u_Q2", 0, 7),
-                                  (sequence "F%u_Q2", 10, 17),
-                                  (sequence "F%u_Q2", 28, 31),
-                                  (sequence "F%u_Q2", 8, 9),
-                                  (sequence "F%u_Q2", 18, 27))>;
+def FPR256 : FPRRegisterClass<[v8i32, v8f32], 256, "Q2">;
 
 // Mask registers m0 to m7
 foreach Index = 0-7 in
