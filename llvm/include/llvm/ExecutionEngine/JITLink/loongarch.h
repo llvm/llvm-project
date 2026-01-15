@@ -447,9 +447,14 @@ inline Symbol &createAnonymousPointerJumpStub(LinkGraph &G,
                                               Symbol &PointerSymbol) {
   Block &StubContentBlock = G.createContentBlock(
       StubSection, getStubBlockContent(G), orc::ExecutorAddr(), 4, 0);
-  StubContentBlock.addEdge(Page20, 0, PointerSymbol, 0);
-  StubContentBlock.addEdge(PageOffset12, 4, PointerSymbol, 0);
-  return G.addAnonymousSymbol(StubContentBlock, 0, StubEntrySize, true, false);
+  Symbol &StubSymbol =
+      G.addAnonymousSymbol(StubContentBlock, 0, StubEntrySize, true, false);
+  StubContentBlock.addEdge(G.getPointerSize() == 8 ? Page20 : PCAddHi20, 0,
+                           PointerSymbol, 0);
+  StubContentBlock.addEdge(
+      G.getPointerSize() == 8 ? PageOffset12 : PCAddLo12, 4,
+      G.getPointerSize() == 8 ? PointerSymbol : StubSymbol, 0);
+  return StubSymbol;
 }
 
 /// Global Offset Table Builder.
