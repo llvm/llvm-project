@@ -62,6 +62,7 @@
 #include "math/frexpf128.h"
 #include "math/frexpf16.h"
 #include "math/fsqrt.h"
+#include "math/fsqrtf128.h"
 #include "math/hypotf.h"
 #include "math/ilogbf16.h"
 #include "math/ldexpf.h"
