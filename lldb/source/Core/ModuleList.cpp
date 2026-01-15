@@ -1846,7 +1846,7 @@ llvm::Expected<bool> ModuleList::GetSharedModuleFromCAS(
   module_spec = std::move(*loaded);
 
   auto status = GetSharedModule(module_spec, module_sp, nullptr, nullptr,
-                                /*always_create=*/true);
+                                /*always_create=*/false);
   if (status.Success()) {
     if (module_sp) {
       // Enter the new module into the config cache.
