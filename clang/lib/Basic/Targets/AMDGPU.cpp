@@ -90,18 +90,16 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
 static constexpr int NumBuiltins =
     clang::AMDGPU::LastTSBuiltin - Builtin::FirstTSBuiltin;
 
-static constexpr llvm::StringTable BuiltinStrings =
-    CLANG_BUILTIN_STR_TABLE_START
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
-#include "clang/Basic/BuiltinsAMDGPU.def"
-    ;
+#define GET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsAMDGPU.inc"
+#undef GET_BUILTIN_STR_TABLE
 
-static constexpr auto BuiltinInfos = Builtin::MakeInfos<NumBuiltins>({
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsAMDGPU.def"
-});
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/BuiltinsAMDGPU.inc"
+#undef GET_BUILTIN_INFOS
+};
+static_assert(std::size(BuiltinInfos) == NumBuiltins);
 
 const char *const AMDGPUTargetInfo::GCCRegNames[] = {
   "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8",

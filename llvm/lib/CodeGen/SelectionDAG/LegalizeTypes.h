@@ -377,6 +377,7 @@ private:
   SDValue PromoteIntRes_Rotate(SDNode *N);
   SDValue PromoteIntRes_FunnelShift(SDNode *N);
   SDValue PromoteIntRes_VPFunnelShift(SDNode *N);
+  SDValue PromoteIntRes_CLMUL(SDNode *N);
   SDValue PromoteIntRes_IS_FPCLASS(SDNode *N);
   SDValue PromoteIntRes_PATCHPOINT(SDNode *N);
   SDValue PromoteIntRes_READ_REGISTER(SDNode *N);
@@ -514,6 +515,7 @@ private:
 
   void ExpandIntRes_Rotate            (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_FunnelShift       (SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandIntRes_CLMUL(SDNode *N, SDValue &Lo, SDValue &Hi);
 
   void ExpandIntRes_VSCALE            (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_READ_REGISTER(SDNode *N, SDValue &Lo, SDValue &Hi);
@@ -1157,6 +1159,7 @@ private:
   SDValue WidenVecOp_VP_REDUCE(SDNode *N);
   SDValue WidenVecOp_ExpOp(SDNode *N);
   SDValue WidenVecOp_VP_CttzElements(SDNode *N);
+  SDValue WidenVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N);
 
   /// Helper function to generate a set of operations to perform
   /// a vector operation for a wider type.

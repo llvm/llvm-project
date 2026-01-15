@@ -3240,13 +3240,9 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::print(
        << ")\n";
   if (!Clones.empty()) {
     OS << "\tClones: ";
-    bool First = true;
-    for (auto *C : Clones) {
-      if (!First)
-        OS << ", ";
-      First = false;
-      OS << C << " NodeId: " << C->NodeId;
-    }
+    ListSeparator LS;
+    for (auto *C : Clones)
+      OS << LS << C << " NodeId: " << C->NodeId;
     OS << "\n";
   } else if (CloneOf) {
     OS << "\tClone of " << CloneOf << " NodeId: " << CloneOf->NodeId << "\n";
@@ -3411,6 +3407,11 @@ struct DOTGraphTraits<const CallsiteContextGraph<DerivedCCG, FuncTy, CallTy> *>
       assert(Func != G->NodeToCallingFunc.end());
       LabelString +=
           G->getLabel(Func->second, Node->Call.call(), Node->Call.cloneNo());
+      for (auto &MatchingCall : Node->MatchingCalls) {
+        LabelString += "\n";
+        LabelString += G->getLabel(Func->second, MatchingCall.call(),
+                                   MatchingCall.cloneNo());
+      }
     } else {
       LabelString += "null call";
       if (Node->Recursive)
