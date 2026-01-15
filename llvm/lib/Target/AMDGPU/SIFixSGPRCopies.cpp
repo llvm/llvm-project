@@ -111,7 +111,7 @@ public:
   V2SCopyInfo(unsigned Id, MachineInstr *C, unsigned Width)
       : Copy(C), NumReadfirstlanes(Width / 32), ID(Id){};
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void dump() {
+  void dump() const {
     dbgs() << ID << " : " << *Copy << "\n\tS:" << SChain.size()
            << "\n\tSV:" << NumSVCopies << "\n\tSP: " << SiblingPenalty
            << "\nScore: " << Score << "\n";
@@ -1072,7 +1072,7 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
     unsigned CurID = LoweringWorklist.pop_back_val();
     auto *CurInfoIt = V2SCopies.find(CurID);
     if (CurInfoIt != V2SCopies.end()) {
-      V2SCopyInfo C = CurInfoIt->second;
+      const V2SCopyInfo &C = CurInfoIt->second;
       LLVM_DEBUG(dbgs() << "Processing ...\n"; C.dump());
       for (auto S : C.Siblings) {
         auto *SibInfoIt = V2SCopies.find(S);
@@ -1089,10 +1089,10 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
       }
       LLVM_DEBUG(dbgs() << "V2S copy " << *C.Copy
                         << " is being turned to VALU\n");
+      Copies.insert(C.Copy);
       // TODO: MapVector::erase is inefficient. Do bulk removal with remove_if
       // instead.
       V2SCopies.erase(C.ID);
-      Copies.insert(C.Copy);
     }
   }
 

@@ -458,7 +458,8 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
       S.FFDiag(Src, diag::note_constexpr_access_deleted_object) << AK;
     } else if (!S.checkingPotentialConstantExpression()) {
       bool IsTemp = Ptr.isTemporary();
-      S.FFDiag(Src, diag::note_constexpr_lifetime_ended, 1) << AK << !IsTemp;
+      S.FFDiag(Src, diag::note_constexpr_access_uninit)
+          << AK << /*uninitialized=*/false << S.Current->getRange(OpPC);
 
       if (IsTemp)
         S.Note(Ptr.getDeclLoc(), diag::note_constexpr_temporary_here);
@@ -1617,6 +1618,11 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
 }
 bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
           uint32_t VarArgSize) {
+
+  // C doesn't have constexpr functions.
+  if (!S.getLangOpts().CPlusPlus)
+    return Invalid(S, OpPC);
+
   assert(Func);
   auto cleanup = [&]() -> bool {
     cleanupAfterFunctionCall(S, OpPC, Func);
@@ -1868,6 +1874,15 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
           F->getDecl()->getType(), CalleeType->getPointeeType())) {
     return false;
   }
+
+  // We nedd to compile (and check) early for function pointer calls
+  // because the Call/CallVirt below might access the instance pointer
+  // but the Function's information about them is wrong.
+  if (!F->isFullyCompiled())
+    compileFunction(S, F);
+
+  if (!CheckCallable(S, OpPC, F))
+    return false;
 
   assert(ArgSize >= F->getWrittenArgSize());
   uint32_t VarArgSize = ArgSize - F->getWrittenArgSize();

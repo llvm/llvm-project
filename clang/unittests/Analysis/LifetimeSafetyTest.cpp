@@ -9,6 +9,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Loans.h"
 #include "clang/Testing/TestAST.h"
 #include "llvm/ADT/StringMap.h"
 #include "gmock/gmock.h"
@@ -122,13 +123,21 @@ public:
     std::vector<LoanID> LID;
     for (const Loan *L : Analysis.getFactManager().getLoanMgr().getLoans())
       if (const auto *BL = dyn_cast<PathLoan>(L))
-        if (BL->getAccessPath().D == VD)
+        if (BL->getAccessPath().getAsValueDecl() == VD)
           LID.push_back(L->getID());
     if (LID.empty()) {
       ADD_FAILURE() << "Loan for '" << VarName << "' not found.";
       return {};
     }
     return LID;
+  }
+
+  bool isLoanToATemporary(LoanID LID) {
+    const Loan *L = Analysis.getFactManager().getLoanMgr().getLoan(LID);
+    if (const auto *BL = dyn_cast<PathLoan>(L)) {
+      return BL->getAccessPath().getAsMaterializeTemporaryExpr() != nullptr;
+    }
+    return false;
   }
 
   // Gets the set of loans that are live at the given program point. A loan is
@@ -406,6 +415,34 @@ MATCHER_P(MaybeLiveAt, Annotation, "") {
 MATCHER_P(AreLiveAt, Annotation, "") {
   return ExplainMatchResult(AreLiveAtImpl(Annotation, LivenessKindFilter::All),
                             arg, result_listener);
+}
+
+MATCHER_P(HasLoanToATemporary, Annotation, "") {
+  const OriginInfo &Info = arg;
+  auto &Helper = Info.Helper;
+  std::optional<OriginID> OIDOpt = Helper.getOriginForDecl(Info.OriginVar);
+  if (!OIDOpt) {
+    *result_listener << "could not find origin for '" << Info.OriginVar.str()
+                     << "'";
+    return false;
+  }
+
+  std::optional<LoanSet> LoansSetOpt =
+      Helper.getLoansAtPoint(*OIDOpt, Annotation);
+  if (!LoansSetOpt) {
+    *result_listener << "could not get a valid loan set at point '"
+                     << Annotation << "'";
+    return false;
+  }
+
+  std::vector<LoanID> Loans(LoansSetOpt->begin(), LoansSetOpt->end());
+
+  for (LoanID LID : Loans)
+    if (Helper.isLoanToATemporary(LID))
+      return true;
+  *result_listener << "could not find loan to a temporary for '"
+                   << Info.OriginVar.str() << "'";
+  return false;
 }
 
 // Base test fixture to manage the runner and helper.
@@ -809,16 +846,18 @@ TEST_F(LifetimeAnalysisTest, ExtraParenthesis) {
   EXPECT_THAT(Origin("p"), HasLoansTo({"a"}, "p1"));
 }
 
-// FIXME: Handle temporaries.
 TEST_F(LifetimeAnalysisTest, ViewFromTemporary) {
   SetupTest(R"(
     MyObj temporary();
+    void use(View);
     void target() {
-      View v = temporary();
-      POINT(p1);
+        View a;
+        a = temporary();
+        POINT(p1);
+        use(a);
     }
   )");
-  EXPECT_THAT(Origin("v"), HasLoansTo({}, "p1"));
+  EXPECT_THAT(Origin("a"), HasLoanToATemporary("p1"));
 }
 
 TEST_F(LifetimeAnalysisTest, GslPointerWithConstAndAuto) {
@@ -1118,7 +1157,6 @@ TEST_F(LifetimeAnalysisTest, LifetimeboundTemplateFunctionReturnVal) {
 
     void target() {
       MyObj a;
-      // FIXME: Captures a reference to temporary MyObj returned by Identity.
       View v1 = Identity(a);
       POINT(p1);
 
@@ -1129,7 +1167,7 @@ TEST_F(LifetimeAnalysisTest, LifetimeboundTemplateFunctionReturnVal) {
       POINT(p2);
     }
   )");
-  EXPECT_THAT(Origin("v1"), HasLoansTo({}, "p1"));
+  EXPECT_THAT(Origin("v1"), HasLoanToATemporary("p1"));
 
   EXPECT_THAT(Origin("v2"), HasLoansTo({"b"}, "p2"));
   EXPECT_THAT(Origin("v3"), HasLoansTo({"v2"}, "p2"));
@@ -1713,6 +1751,56 @@ TEST_F(LifetimeAnalysisTest, TrackImplicitObjectArg_MapFind) {
   EXPECT_THAT(Origin("it"), HasLoansTo({"m"}, "p1"));
 }
 
+TEST_F(LifetimeAnalysisTest, TrackImplicitObjectArg_GSLPointerArg) {
+  SetupTest(R"(
+    namespace std {
+
+    template<typename T>
+    struct basic_string_view {
+      basic_string_view();
+      basic_string_view(const T *);
+      const T *begin() const;
+      const T *data() const;
+    };
+    using string_view = basic_string_view<char>;
+
+    template<typename T>
+    struct basic_string {
+      basic_string();
+      basic_string(const T *);
+      const T *c_str() const;
+      operator basic_string_view<T> () const;
+      const T *data() const;
+    };
+    using string = basic_string<char>;
+    }
+
+    void target() {
+      std::string s1;
+      std::string_view sv1 = s1;
+      
+      std::string s2;
+      const char* sv2 = std::string_view(s2).begin();
+      
+      std::string s3;
+      const char* sv3 = std::string_view(s3).data();
+      
+      std::string s4;
+      std::string_view sv4 = std::string_view{std::string_view(s4).data()};
+            
+      std::string s5;
+      const char* data5 = std::string_view(s5).data();
+      std::string_view sv5 = data5;
+      POINT(end);
+    }
+  )");
+  EXPECT_THAT(Origin("sv1"), HasLoansTo({"s1"}, "end"));
+  EXPECT_THAT(Origin("sv2"), HasLoansTo({"s2"}, "end"));
+  EXPECT_THAT(Origin("sv3"), HasLoansTo({"s3"}, "end"));
+  EXPECT_THAT(Origin("sv4"), HasLoansTo({"s4"}, "end"));
+  EXPECT_THAT(Origin("sv5"), HasLoansTo({"s5"}, "end"));
+}
+
 // ========================================================================= //
 //                    Tests for shouldTrackFirstArgument
 // ========================================================================= //
@@ -1776,6 +1864,41 @@ TEST_F(LifetimeAnalysisTest, TrackFirstArgument_StdAnyCast) {
     }
   )");
   EXPECT_THAT(Origin("r"), HasLoansTo({"a"}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, DerivedToBaseThisArg) {
+  SetupTest(R"(
+    template <typename T>
+    struct OperatorBase {
+      const T& value() const& [[clang::lifetimebound]];
+      const T&& value() const&& [[clang::lifetimebound]];
+    };
+
+    template <typename T>
+    class StatusOr : private OperatorBase<T> {
+      public:
+        using StatusOr::OperatorBase::value;
+    };
+
+    void target() {
+      View view;
+      StatusOr<MyObj> my_obj_or;
+      view = my_obj_or.value();
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("view"), HasLoansTo({"my_obj_or"}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, DerivedViewWithNoAnnotation) {
+  SetupTest(R"(
+    struct DerivedView : View {};
+    View target() {
+      DerivedView derived;
+      return derived;
+    }
+  )");
+  // EXPECT_THAT(Origin("view"), HasLoansTo({"my_obj_or"}, "p1"));
 }
 
 } // anonymous namespace
