@@ -76,7 +76,7 @@ static mlir::Value genStatPRIF(fir::FirOpBuilder &builder, mlir::Location loc,
 }
 
 static fir::CallOp genPRIFStopErrorStop(fir::FirOpBuilder &builder,
-                                        mlir::Location loc, mlir::Value quiet,
+                                        mlir::Location loc,
                                         mlir::Value stopCode,
                                         bool isError = false) {
   mlir::Type stopCharTy = fir::BoxCharType::get(builder.getContext(), 1);
@@ -93,17 +93,9 @@ static fir::CallOp genPRIFStopErrorStop(fir::FirOpBuilder &builder,
           ? builder.createFunction(loc, getPRIFProcName("error_stop"), ftype)
           : builder.createFunction(loc, getPRIFProcName("stop"), ftype);
 
-  // Default value of QUIET to false
-  mlir::Value q;
-  if (!quiet) {
-    q = builder.createBool(loc, false);
-    quiet = builder.createTemporary(loc, i1Ty);
-  } else {
-    q = quiet;
-    if (q.getType() != i1Ty)
-      q = fir::ConvertOp::create(builder, loc, i1Ty, q);
-    quiet = builder.createTemporary(loc, i1Ty);
-  }
+  // QUIET is managed in flang-rt, so its value is set to TRUE here.
+  mlir::Value q = builder.createBool(loc, true);
+  mlir::Value quiet = builder.createTemporary(loc, i1Ty);
   fir::StoreOp::create(builder, loc, q, quiet);
 
   mlir::Value stopCodeInt, stopCodeChar;
@@ -167,12 +159,10 @@ mlir::Value genTerminationOperationWrapper(fir::FirOpBuilder &builder,
     builder.setInsertionPointToStart(funcWrapperOp.addEntryBlock());
 
     if (termKind == TerminationKind::Normal) {
-      mlir::Value quiet = builder.createBool(loc, true);
-      genPRIFStopErrorStop(builder, loc, quiet, funcWrapperOp.getArgument(0),
+      genPRIFStopErrorStop(builder, loc, funcWrapperOp.getArgument(0),
                            /*isError*/ false);
     } else if (termKind == TerminationKind::Error) {
-      mlir::Value quiet = builder.createBool(loc, true);
-      genPRIFStopErrorStop(builder, loc, quiet, funcWrapperOp.getArgument(0),
+      genPRIFStopErrorStop(builder, loc, funcWrapperOp.getArgument(0),
                            /*isError*/ true);
     } else {
       mlir::func::FuncOp fOp = builder.createFunction(
