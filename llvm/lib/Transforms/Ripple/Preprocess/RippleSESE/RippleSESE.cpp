@@ -47,6 +47,7 @@
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Ripple/Ripple.h"
+#include "llvm/Transforms/Ripple/SubgraphCFG.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
@@ -63,6 +64,7 @@ class Value;
 }
 
 using namespace llvm;
+using namespace llvm::subgraphcfg;
 
 #define DEBUG_TYPE "ripple-sese"
 
@@ -97,14 +99,9 @@ void writeCFGToDotFile(Function &F, FunctionAnalysisManager &AM,
 /// @brief Returns a set "S" of basic blocks. A basic block "B" is in "S" iff
 /// "B" lies on a path from \p From to \p To. \p From and \p To are not elements
 /// of "S".
-/// @param PDomTree Post-dominator tree of the CFG for whom "S" is to be
-/// calculated.
 /// @param From Begin point of the path search.
 /// @param To End point of the path search.
-DenseSet<BasicBlock *>
-allBasicBlocksFromTo(PostDominatorTreeAnalysis::Result &PDomTree,
-                     BasicBlock *From, BasicBlock *To) {
-  assert(PDomTree.dominates(To, From));
+DenseSet<BasicBlock *> allBasicBlocksFromTo(BasicBlock *From, BasicBlock *To) {
   std::queue<BasicBlock *> ToProcess;
   DenseSet<BasicBlock *> Visited;
   ToProcess.push(From);
@@ -242,7 +239,8 @@ bool willSESEficationCloningTerminate(const BasicBlock *BranchBB,
 bool anyBBToBeClonedContainsIndirectBr(BasicBlock *BBWithExternalPred,
                                        BasicBlock *BranchBBPdom,
                                        PostDominatorTreeAnalysis::Result &PDT) {
-  auto BBsToClone = allBasicBlocksFromTo(PDT, BBWithExternalPred, BranchBBPdom);
+  assert(PDT.dominates(BranchBBPdom, BBWithExternalPred));
+  auto BBsToClone = allBasicBlocksFromTo(BBWithExternalPred, BranchBBPdom);
   auto DoesBBTerminateWithIndirectBr = [](BasicBlock *BBToCheck) {
     return isa<IndirectBrInst>(BBToCheck->getTerminator());
   };
@@ -327,8 +325,180 @@ Error fixCFGForSESE(TargetMachine *TM, Function &F, FunctionAnalysisManager &AM,
     }
 
     auto *BranchBB = *It;
-    BasicBlock *BranchPDom = PDomTree.getNode(BranchBB)->getIDom()->getBlock();
-    auto BBsInBetweenSet = allBasicBlocksFromTo(PDomTree, BranchBB, BranchPDom);
+    auto *Node = PDomTree.getNode(BranchBB)->getIDom();
+    if (PDomTree.isVirtualRoot(Node)) {
+      LLVM_DEBUG(dbgs() << "Pdom is virtual\n");
+      // Fix unreachable paths, if possible
+      SubgraphCFG CFGNoUnreachable(F, getAllBBsLeadingTo<UnreachableInst>(F));
+      auto *BranchBBInSubgraph = CFGNoUnreachable.get(BranchBB);
+      // TODO: we can probably support this case too but it will require a
+      // rework of the if-convert pass
+      if (!BranchBBInSubgraph) {
+        DiagnosticInfoOptimizationFailure Diag(
+            F, BranchBB->getTerminator()->getDebugLoc(),
+            "this vector conditional is part of a program path that always "
+            "leads to the function's exit through non-return paths (e.g., "
+            "assert); please make sure that at least one path leads to the "
+            "function exit");
+        F.getContext().diagnose(Diag);
+        return createStringError(inconvertibleErrorCode(),
+                                 "Cannot fix the CFG for unreachable");
+      }
+      PostDomTreeBase<SubgraphBB> FilteredPdomTree;
+      FilteredPdomTree.recalculate(CFGNoUnreachable);
+      LLVM_DEBUG(dbgs() << "PdomTree without unreachable paths:\n";
+                 FilteredPdomTree.print(dbgs()));
+      auto *BranchBBNodeIDom =
+          FilteredPdomTree.getNode(BranchBBInSubgraph)->getIDom();
+      if (FilteredPdomTree.isVirtualRoot(BranchBBNodeIDom)) {
+        DiagnosticInfoOptimizationFailure Diag(
+            F, BranchBB->getTerminator()->getDebugLoc(),
+            "this vector conditional has paths that will terminate the "
+            "function for some lanes and not for others; please make sure not "
+            "to use exceptions without catching before the function return "
+            "paths");
+        F.getContext().diagnose(Diag);
+        return createStringError(inconvertibleErrorCode(),
+                                 "Cannot fix the CFG for unreachable");
+      }
+      BasicBlock *NoUnreachPdom = BranchBBNodeIDom->getBlock()->BB;
+
+      auto BBsInBetweenSet = allBasicBlocksFromTo(BranchBB, NoUnreachPdom);
+      SmallPtrSet<BasicBlock *, 16> UnreachablePaths;
+      UnreachablePaths.insert_range(
+          llvm::make_filter_range(BBsInBetweenSet, [&](BasicBlock *BB) {
+            return !CFGNoUnreachable.get(BB);
+          }));
+      SmallPtrSet<BasicBlock *, 16> CloneForSubgraph;
+      for (auto *UnreachableBB : UnreachablePaths) {
+        LLVM_DEBUG(dbgs() << "BB part of unreachable path: " << *UnreachableBB
+                          << "\n");
+        // We need to clone the sub-graph if there is a path coming from outside
+        // this SESE region
+        for (auto *Pred : predecessors(UnreachableBB))
+          if (!BBsInBetweenSet.contains(Pred) && Pred != BranchBB)
+            CloneForSubgraph.insert(UnreachableBB);
+      }
+      bool Changed = !CloneForSubgraph.empty();
+      while (Changed) {
+        Changed = false;
+        for (auto *ToClone : CloneForSubgraph) {
+          for (auto *Succ : successors(ToClone)) {
+            assert(BBsInBetweenSet.contains(Succ));
+            CloneForSubgraph.insert(Succ);
+            Changed = true;
+          }
+          if (Changed)
+            break;
+        }
+      }
+
+      for ([[maybe_unused]] auto *ToClone : CloneForSubgraph)
+        LLVM_DEBUG(dbgs() << "BB needing clone of unreachable path: "
+                          << *ToClone << "\n");
+
+      if (!CloneForSubgraph.empty()) {
+        ValueToValueMapTy VMap;
+        // Clone
+        for (auto *BB : CloneForSubgraph)
+          VMap[BB] = CloneBasicBlock(BB, VMap, ".cloned", &F);
+        // Remap
+        for (auto *BB : CloneForSubgraph)
+          remapInstructionsInBlocks(cast<BasicBlock>(VMap[BB]), VMap);
+        // Updates to the Dom/Pdom trees for newly created nodes
+        for (auto *BB : CloneForSubgraph)
+          for (auto *Succ : successors(BB)) {
+            assert(llvm::find(CloneForSubgraph, Succ) !=
+                       CloneForSubgraph.end() &&
+                   "Did not clone the whole sub-graph");
+            DTU.applyUpdates({{DominatorTree::Insert, BB, Succ}});
+          }
+
+        // Fix the Phis
+        for (auto *BB : CloneForSubgraph) {
+          // Remove predes of the original BB for edges coming from this
+          // sub-graph and from the vector branch
+          auto comesFromRegion = [&](const BasicBlock *BB) -> bool {
+            return BBsInBetweenSet.contains(BB) || BB == BranchBB;
+          };
+          for (PHINode &Phi : BB->phis())
+            Phi.removeIncomingValueIf(
+                [&](unsigned Idx) {
+                  return comesFromRegion(Phi.getIncomingBlock(Idx));
+                },
+                /*RemovePhiIfEmpty*/ false);
+          // Remove values coming from outside this sub-graph
+          auto *ClonedBB = cast<BasicBlock>(VMap[BB]);
+          for (PHINode &Phi : ClonedBB->phis())
+            Phi.removeIncomingValueIf(
+                [&](unsigned Idx) {
+                  return not comesFromRegion(Phi.getIncomingBlock(Idx));
+                },
+                /*RemovePhiIfEmpty*/ false);
+        }
+
+        auto makeSubgraphPointToClones = [&](BasicBlock &BB) {
+          SmallPtrSet<BasicBlock *, 8> SuccsBefore;
+          SuccsBefore.insert_range(successors(&BB));
+
+          Instruction &Inst = *BB.getTerminator();
+          RemapDbgRecordRange(Inst.getModule(), Inst.getDbgRecordRange(), VMap,
+                              RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+          RemapInstruction(&Inst, VMap,
+                           RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+
+          SmallPtrSet<BasicBlock *, 8> SuccsAfter;
+          SuccsAfter.insert_range(successors(&BB));
+          for (auto *Before : SuccsBefore)
+            if (!SuccsAfter.contains(Before))
+              DTU.applyUpdates({{DominatorTree::Delete, &BB, Before}});
+          for (auto *After : SuccsAfter)
+            if (!SuccsBefore.contains(After))
+              DTU.applyUpdates({{DominatorTree::Insert, &BB, After}});
+        };
+        // Fix the branches in BBsInBetweenSet to point to the cloned BBs
+        for (auto BB : make_filter_range(BBsInBetweenSet, [&](auto *Basic) {
+               return !CloneForSubgraph.contains(Basic);
+             })) {
+          makeSubgraphPointToClones(*BB);
+        }
+        makeSubgraphPointToClones(*BranchBB);
+        for (auto *BB : CloneForSubgraph) {
+          UnreachablePaths.erase(BB);
+          UnreachablePaths.insert(cast<BasicBlock>(VMap[BB]));
+        }
+        // Now we have unreachable paths that only enter through the branch
+      }
+
+      for (auto *BB : UnreachablePaths) {
+        if (successors(BB).empty()) {
+          LLVM_DEBUG(dbgs() << "Fixing BB\n");
+          auto &Unreach = BB->back();
+          assert(isa<UnreachableInst>(Unreach));
+          IRBuilder<> IRB(BB);
+          IRB.CreateBr(NoUnreachPdom);
+          Unreach.eraseFromParent();
+          LLVM_DEBUG(dbgs() << "Fixed BB: " << *BB << "\n");
+          // This branch will never be taken but we have to fix the PHI to have
+          // a valid CFG for the if-conversion
+          for (auto &Phi : NoUnreachPdom->phis())
+            Phi.addIncoming(UndefValue::get(Phi.getType()), BB);
+          DTU.applyUpdates({{DominatorTree::Insert, BB, NoUnreachPdom}});
+        }
+      }
+      LLVM_DEBUG(dbgs() << "Function after unreachable fix:\n";
+                 F.print(dbgs()));
+      DTU.flush();
+      LLVM_DEBUG(assert(DomTree.verify()); DomTree.print(dbgs()));
+      LLVM_DEBUG(assert(PDomTree.verify()); PDomTree.print(dbgs()));
+      assert(!verifyFunction(F, &errs()));
+      Node = PDomTree.getNode(BranchBB)->getIDom();
+      if (PDomTree.isVirtualRoot(Node))
+        llvm_unreachable("It did not work haha");
+    }
+    BasicBlock *BranchPDom = Node->getBlock();
+    assert(PDomTree.dominates(BranchPDom, BranchBB));
+    auto BBsInBetweenSet = allBasicBlocksFromTo(BranchBB, BranchPDom);
     auto BBsInBetween = postDomOrderBasicBlocks(BBsInBetweenSet, PDomTree);
 
     for (auto *BB : BBsInBetween) {
@@ -354,7 +524,8 @@ Error fixCFGForSESE(TargetMachine *TM, Function &F, FunctionAnalysisManager &AM,
         StringRef ErrMsg =
             "SESE-fication via cloning will not terminate due to back-edges."
             " This violates the SESE requirement of Ripple.";
-        DiagnosticInfoOptimizationFailure Diag(F, {}, ErrMsg);
+        DiagnosticInfoOptimizationFailure Diag(
+            F, BranchBB->getTerminator()->getDebugLoc(), ErrMsg);
         F.getContext().diagnose(Diag);
         return createStringError(inconvertibleErrorCode(), ErrMsg);
       }
@@ -362,13 +533,15 @@ Error fixCFGForSESE(TargetMachine *TM, Function &F, FunctionAnalysisManager &AM,
         StringRef ErrMsg =
             "SESE-fication via cloning is not possible due to IndirectBrs "
             " on a cloning path. This violates the SESE requirement of Ripple.";
-        DiagnosticInfoOptimizationFailure Diag(F, {}, ErrMsg);
+        DiagnosticInfoOptimizationFailure Diag(
+            F, BranchBB->getTerminator()->getDebugLoc(), ErrMsg);
         F.getContext().diagnose(Diag);
         return createStringError(inconvertibleErrorCode(), ErrMsg);
       }
 
       // Clone the basic blocks on the path from BB to its PostDom.
-      auto BBsToClone = allBasicBlocksFromTo(PDomTree, BB, BranchPDom);
+      assert(PDomTree.dominates(BranchPDom, BB));
+      auto BBsToClone = allBasicBlocksFromTo(BB, BranchPDom);
       BBsToClone.insert(BB);
       ValueToValueMapTy VMap;
       DenseMap<BasicBlock *, BasicBlock *> Clones;
@@ -446,6 +619,7 @@ PreservedAnalyses RippleSESEPass::run(Function &F,
         F, {}, "ripple-sese failed for " + F.getName() + ".");
     F.getContext().diagnose(Diag);
     llvm::consumeError(std::move(E));
+    PS = Ripple::ProcessingStatus::SemanticsCheckFailure;
     return PA;
   }
 
@@ -460,6 +634,7 @@ PreservedAnalyses RippleSESEPass::run(Function &F,
       dbgs() << "Function verified successfully: " << F.getName() << "\n";
     }
   });
+  PS = Ripple::ProcessingStatus::Success;
 
   return PA;
 }

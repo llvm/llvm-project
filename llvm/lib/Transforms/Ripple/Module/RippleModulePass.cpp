@@ -47,6 +47,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ripple"
 
+llvm::cl::opt<bool> OnlySESE("ripple-run-only-sese", llvm::cl::init(false),
+                             cl::ReallyHidden,
+                             llvm::cl::desc("Run ripple SESE only (testing)"));
+
 PreservedAnalyses RippleModulePass::run(Module &M, ModuleAnalysisManager &MAM) {
   FunctionAnalysisManager &FAM =
       MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
@@ -62,8 +66,9 @@ PreservedAnalyses RippleModulePass::run(Module &M, ModuleAnalysisManager &MAM) {
   FunctionPassManager FPM;
   FPM.addPass(RippleSESEPass(TM, PS, SpecializationsPendingProcessing,
                              SpecializationsAvailable));
-  FPM.addPass(RipplePass(TM, PS, SpecializationsPendingProcessing,
-                         SpecializationsAvailable));
+  if (!OnlySESE)
+    FPM.addPass(RipplePass(TM, PS, SpecializationsPendingProcessing,
+                           SpecializationsAvailable));
 
   PreservedAnalyses PA = PreservedAnalyses::all();
 
