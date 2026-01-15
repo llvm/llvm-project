@@ -1782,7 +1782,7 @@ public:
   }
 
 private:
-  void ResolveMapperModifier(parser::OmpMapper &mapper);
+  void ResolveMapperModifier(const parser::OmpMapper &mapper);
   void ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
       const parser::OmpClauseList &clauses);
   void ProcessReductionSpecifier(const parser::OmpReductionSpecifier &spec,
@@ -1854,7 +1854,7 @@ void OmpVisitor::Post(const parser::OmpStylizedInstance &x) { //
 bool OmpVisitor::Pre(const parser::OmpMapClause &x) {
   auto &mods{OmpGetModifiers(x)};
   if (auto *mapper{OmpGetUniqueModifier<parser::OmpMapper>(mods)}) {
-    ResolveMapperModifier(const_cast<parser::OmpMapper &>(*mapper));
+    ResolveMapperModifier(*mapper);
   }
   return true;
 }
@@ -1862,7 +1862,7 @@ bool OmpVisitor::Pre(const parser::OmpMapClause &x) {
 bool OmpVisitor::Pre(const parser::OmpClause::To &x) {
   auto &mods{OmpGetModifiers(x.v)};
   if (auto *mapper{OmpGetUniqueModifier<parser::OmpMapper>(mods)}) {
-    ResolveMapperModifier(const_cast<parser::OmpMapper &>(*mapper));
+    ResolveMapperModifier(*mapper);
   }
   return true;
 }
@@ -1870,12 +1870,12 @@ bool OmpVisitor::Pre(const parser::OmpClause::To &x) {
 bool OmpVisitor::Pre(const parser::OmpClause::From &x) {
   auto &mods{OmpGetModifiers(x.v)};
   if (auto *mapper{OmpGetUniqueModifier<parser::OmpMapper>(mods)}) {
-    ResolveMapperModifier(const_cast<parser::OmpMapper &>(*mapper));
+    ResolveMapperModifier(*mapper);
   }
   return true;
 }
 
-void OmpVisitor::ResolveMapperModifier(parser::OmpMapper &mapper) {
+void OmpVisitor::ResolveMapperModifier(const parser::OmpMapper &mapper) {
   if (auto *symbol{FindSymbol(currScope(), mapper.v)}) {
     auto &ultimate{symbol->GetUltimate()};
     auto *misc{ultimate.detailsIf<MiscDetails>()};
@@ -1884,13 +1884,13 @@ void OmpVisitor::ResolveMapperModifier(parser::OmpMapper &mapper) {
       context().Say(mapper.v.source,
           "Name '%s' should be a mapper name"_err_en_US, mapper.v.source);
     else
-      mapper.v.symbol = symbol;
+      const_cast<parser::OmpMapper &>(mapper).v.symbol = symbol;
   } else {
     // Allow the special 'default' mapper identifier without prior
     // declaration so lowering can recognize and handle it. Emit an
     // error for any other missing mapper identifier.
     if (mapper.v.source.ToString() == "default") {
-      mapper.v.symbol =
+      const_cast<parser::OmpMapper &>(mapper).v.symbol =
           &MakeSymbol(mapper.v, MiscDetails{MiscDetails::Kind::ConstructName});
     } else {
       context().Say(

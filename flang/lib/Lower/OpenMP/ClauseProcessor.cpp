@@ -1458,28 +1458,19 @@ template <typename MapperType>
 static std::string
 getMapperIdentifier(lower::AbstractConverter &converter,
                     const std::optional<MapperType> &mapper) {
-  std::string mapperIdName = "__implicit_mapper";
-  if (mapper) {
-    const semantics::Symbol *mapperSym = nullptr;
+  if (!mapper)
+    return "__implicit_mapper";
 
-    // Handle different mapper types
-    if constexpr (std::is_same_v<MapperType, omp::clause::DefinedOperator>) {
-      // For To/From clauses: mapper is a DefinedOperator
-      assert(mapper->size() == 1 && "more than one mapper");
-      mapperSym = mapper->front().v.id().symbol;
-    } else {
-      // For Map clause: mappers is a vector
-      assert(mapper->size() == 1 && "more than one mapper");
-      mapperSym = mapper->front().v.id().symbol;
-    }
+  // Handle mapper types (both have the same structure)
+  assert(mapper->size() == 1 && "more than one mapper");
+  const semantics::Symbol *mapperSym = mapper->front().v.id().symbol;
 
-    mapperIdName = mapperSym->name().ToString();
-    if (mapperIdName != "default") {
-      // Mangle with the ultimate owner so that use-associated mapper
-      // identifiers resolve to the same symbol as their defining scope.
-      const semantics::Symbol &ultimate = mapperSym->GetUltimate();
-      mapperIdName = converter.mangleName(mapperIdName, ultimate.owner());
-    }
+  std::string mapperIdName = mapperSym->name().ToString();
+  if (mapperIdName != "default") {
+    // Mangle with the ultimate owner so that use-associated mapper
+    // identifiers resolve to the same symbol as their defining scope.
+    const semantics::Symbol &ultimate = mapperSym->GetUltimate();
+    mapperIdName = converter.mangleName(mapperIdName, ultimate.owner());
   }
   return mapperIdName;
 }
