@@ -1833,7 +1833,7 @@ public:
       } else if (StructType *ST = dyn_cast<StructType>(CurrentType)) {
         CurrentType = ST->getElementType(CI->getZExtValue());
       } else {
-        // FIXME?
+        // FIXME(Keenuts): add testing reaching those places once initial implementation has landed.
         assert(0);
       }
     }
