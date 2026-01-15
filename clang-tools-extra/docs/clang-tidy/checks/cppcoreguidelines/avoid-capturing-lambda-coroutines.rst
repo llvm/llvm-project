@@ -8,7 +8,7 @@ use-after-free errors and suggests avoiding captures or ensuring the lambda
 closure object has a guaranteed lifetime.
 
 This check implements `CP.51
-<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rcoro-capture>`_
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#rcoro-capture>`_
 from the C++ Core Guidelines.
 
 Using coroutine lambdas with non-empty capture lists can be risky, as capturing

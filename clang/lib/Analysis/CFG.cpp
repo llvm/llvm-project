@@ -52,6 +52,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <memory>
@@ -1666,6 +1667,12 @@ std::unique_ptr<CFG> CFGBuilder::buildCFG(const Decl *D, Stmt *Statement) {
   assert(Succ == &cfg->getExit());
   Block = nullptr;  // the EXIT block is empty.  Create all other blocks lazily.
 
+  // Add parameters to the initial scope to handle their dtos and lifetime ends.
+  LocalScope *paramScope = nullptr;
+  if (const auto *FD = dyn_cast_or_null<FunctionDecl>(D))
+    for (ParmVarDecl *PD : FD->parameters())
+      paramScope = addLocalScopeForVarDecl(PD, paramScope);
+
   if (BuildOpts.AddImplicitDtors)
     if (const CXXDestructorDecl *DD = dyn_cast_or_null<CXXDestructorDecl>(D))
       addImplicitDtorsForDestructor(DD);
@@ -2244,6 +2251,11 @@ LocalScope* CFGBuilder::addLocalScopeForVarDecl(VarDecl *VD,
 
   // Check if variable is local.
   if (!VD->hasLocalStorage())
+    return Scope;
+
+  // Reference parameters are aliases to objects that live elsewhere, so they
+  // don't require automatic destruction or lifetime tracking.
+  if (isa<ParmVarDecl>(VD) && VD->getType()->isReferenceType())
     return Scope;
 
   if (!BuildOpts.AddLifetime && !BuildOpts.AddScopes &&
@@ -4795,7 +4807,10 @@ CFGBlock *CFGBuilder::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
   // Save local scope position before the addition of the implicit variables.
   SaveAndRestore save_scope_pos(ScopePos);
 
-  // Create local scopes and destructors for range, begin and end variables.
+  // Create local scopes and destructors for init, range, begin and end
+  // variables.
+  if (Stmt *Init = S->getInit())
+    addLocalScopeForStmt(Init);
   if (Stmt *Range = S->getRangeStmt())
     addLocalScopeForStmt(Range);
   if (Stmt *Begin = S->getBeginStmt())
@@ -5348,6 +5363,7 @@ CFGBlock *CFG::createBlock() {
 /// buildCFG - Constructs a CFG from an AST.
 std::unique_ptr<CFG> CFG::buildCFG(const Decl *D, Stmt *Statement,
                                    ASTContext *C, const BuildOptions &BO) {
+  llvm::TimeTraceScope TimeProfile("BuildCFG");
   CFGBuilder Builder(C, BO);
   return Builder.buildCFG(D, Statement);
 }
@@ -5616,8 +5632,15 @@ public:
   bool handleDecl(const Decl *D, raw_ostream &OS) {
     DeclMapTy::iterator I = DeclMap.find(D);
 
-    if (I == DeclMap.end())
+    if (I == DeclMap.end()) {
+      // ParmVarDecls are not declared in the CFG itself, so they do not appear
+      // in DeclMap.
+      if (auto *PVD = dyn_cast_or_null<ParmVarDecl>(D)) {
+        OS << "[Parm: " << PVD->getNameAsString() << "]";
+        return true;
+      }
       return false;
+    }
 
     if (currentBlock >= 0 && I->second.first == (unsigned) currentBlock
                           && I->second.second == currStmt) {
@@ -6378,12 +6401,12 @@ const Expr *CFGBlock::getLastCondition() const {
   return cast<Expr>(Cond)->IgnoreParens();
 }
 
-Stmt *CFGBlock::getTerminatorCondition(bool StripParens) {
-  Stmt *Terminator = getTerminatorStmt();
+const Stmt *CFGBlock::getTerminatorCondition(bool StripParens) const {
+  const Stmt *Terminator = getTerminatorStmt();
   if (!Terminator)
     return nullptr;
 
-  Expr *E = nullptr;
+  const Expr *E = nullptr;
 
   switch (Terminator->getStmtClass()) {
     default:

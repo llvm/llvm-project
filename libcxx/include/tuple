@@ -576,7 +576,7 @@ __memberwise_forward_assign(_Dest& __dest, _Source&& __source, __type_list<_Up..
 
 template <class... _Tp>
 class _LIBCPP_NO_SPECIALIZATIONS tuple {
-  typedef __tuple_impl<__make_index_sequence<sizeof...(_Tp)>, _Tp...> _BaseT;
+  typedef __tuple_impl<__index_sequence_for<_Tp...>, _Tp...> _BaseT;
 
   _BaseT __base_;
 
@@ -858,7 +858,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
   operator=(_If<_And<is_copy_assignable<_Tp>...>::value, tuple, __nat> const& __tuple) noexcept(
       _And<is_nothrow_copy_assignable<_Tp>...>::value) {
-    std::__memberwise_copy_assign(*this, __tuple, __make_index_sequence<sizeof...(_Tp)>());
+    std::__memberwise_copy_assign(*this, __tuple, __index_sequence_for<_Tp...>());
     return *this;
   }
 
@@ -866,15 +866,14 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr const tuple& operator=(tuple const& __tuple) const
     requires(_And<is_copy_assignable<const _Tp>...>::value)
   {
-    std::__memberwise_copy_assign(*this, __tuple, __make_index_sequence<sizeof...(_Tp)>());
+    std::__memberwise_copy_assign(*this, __tuple, __index_sequence_for<_Tp...>());
     return *this;
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr const tuple& operator=(tuple&& __tuple) const
     requires(_And<is_assignable<const _Tp&, _Tp>...>::value)
   {
-    std::__memberwise_forward_assign(
-        *this, std::move(__tuple), __type_list<_Tp...>(), __make_index_sequence<sizeof...(_Tp)>());
+    std::__memberwise_forward_assign(*this, std::move(__tuple), __type_list<_Tp...>(), __index_sequence_for<_Tp...>());
     return *this;
   }
 #    endif // _LIBCPP_STD_VER >= 23
@@ -882,8 +881,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
   operator=(_If<_And<is_move_assignable<_Tp>...>::value, tuple, __nat>&& __tuple) noexcept(
       _And<is_nothrow_move_assignable<_Tp>...>::value) {
-    std::__memberwise_forward_assign(
-        *this, std::move(__tuple), __type_list<_Tp...>(), __make_index_sequence<sizeof...(_Tp)>());
+    std::__memberwise_forward_assign(*this, std::move(__tuple), __type_list<_Tp...>(), __index_sequence_for<_Tp...>());
     return *this;
   }
 
@@ -893,7 +891,7 @@ public:
                      int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
   operator=(tuple<_Up...> const& __tuple) noexcept(_And<is_nothrow_assignable<_Tp&, _Up const&>...>::value) {
-    std::__memberwise_copy_assign(*this, __tuple, __make_index_sequence<sizeof...(_Tp)>());
+    std::__memberwise_copy_assign(*this, __tuple, __index_sequence_for<_Tp...>());
     return *this;
   }
 
@@ -902,8 +900,7 @@ public:
                            int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
   operator=(tuple<_Up...>&& __tuple) noexcept(_And<is_nothrow_assignable<_Tp&, _Up>...>::value) {
-    std::__memberwise_forward_assign(
-        *this, std::move(__tuple), __type_list<_Up...>(), __make_index_sequence<sizeof...(_Tp)>());
+    std::__memberwise_forward_assign(*this, std::move(__tuple), __type_list<_Up...>(), __index_sequence_for<_Tp...>());
     return *this;
   }
 
@@ -912,7 +909,7 @@ public:
             enable_if_t< _And<_BoolConstant<sizeof...(_Tp) == sizeof...(_UTypes)>,
                               is_assignable<const _Tp&, const _UTypes&>...>::value>* = nullptr>
   _LIBCPP_HIDE_FROM_ABI constexpr const tuple& operator=(const tuple<_UTypes...>& __u) const {
-    std::__memberwise_copy_assign(*this, __u, __make_index_sequence<sizeof...(_Tp)>());
+    std::__memberwise_copy_assign(*this, __u, index_sequence_for<_Tp...>());
     return *this;
   }
 
@@ -920,7 +917,7 @@ public:
             enable_if_t< _And<_BoolConstant<sizeof...(_Tp) == sizeof...(_UTypes)>,
                               is_assignable<const _Tp&, _UTypes>...>::value>* = nullptr>
   _LIBCPP_HIDE_FROM_ABI constexpr const tuple& operator=(tuple<_UTypes...>&& __u) const {
-    std::__memberwise_forward_assign(*this, __u, __type_list<_UTypes...>(), __make_index_sequence<sizeof...(_Tp)>());
+    std::__memberwise_forward_assign(*this, __u, __type_list<_UTypes...>(), index_sequence_for<_Tp...>());
     return *this;
   }
 #    endif // _LIBCPP_STD_VER >= 23
@@ -986,7 +983,7 @@ public:
       __enable_if_t< _And< _BoolConstant<_Np == sizeof...(_Tp)>, is_assignable<_Tp&, _Up const&>... >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
   operator=(array<_Up, _Np> const& __array) noexcept(_And<is_nothrow_assignable<_Tp&, _Up const&>...>::value) {
-    std::__memberwise_copy_assign(*this, __array, __make_index_sequence<sizeof...(_Tp)>());
+    std::__memberwise_copy_assign(*this, __array, __index_sequence_for<_Tp...>());
     return *this;
   }
 
@@ -998,7 +995,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
   operator=(array<_Up, _Np>&& __array) noexcept(_And<is_nothrow_assignable<_Tp&, _Up>...>::value) {
     std::__memberwise_forward_assign(
-        *this, std::move(__array), __type_list<_If<true, _Up, _Tp>...>(), __make_index_sequence<sizeof...(_Tp)>());
+        *this, std::move(__array), __type_list<_If<true, _Up, _Tp>...>(), __index_sequence_for<_Tp...>());
     return *this;
   }
 
@@ -1116,28 +1113,32 @@ swap(const tuple<_Tp...>& __lhs,
 // get
 
 template <size_t _Ip, class... _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 typename tuple_element<_Ip, tuple<_Tp...> >::type&
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
+typename tuple_element<_Ip, tuple<_Tp...> >::type&
 get(tuple<_Tp...>& __t) _NOEXCEPT {
   using type _LIBCPP_NODEBUG = typename tuple_element<_Ip, tuple<_Tp...> >::type;
   return static_cast<__tuple_leaf<_Ip, type>&>(__t.__base_).get();
 }
 
 template <size_t _Ip, class... _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const typename tuple_element<_Ip, tuple<_Tp...> >::type&
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI
+_LIBCPP_CONSTEXPR_SINCE_CXX14 const typename tuple_element<_Ip, tuple<_Tp...> >::type&
 get(const tuple<_Tp...>& __t) _NOEXCEPT {
   using type _LIBCPP_NODEBUG = typename tuple_element<_Ip, tuple<_Tp...> >::type;
   return static_cast<const __tuple_leaf<_Ip, type>&>(__t.__base_).get();
 }
 
 template <size_t _Ip, class... _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 typename tuple_element<_Ip, tuple<_Tp...> >::type&&
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
+typename tuple_element<_Ip, tuple<_Tp...> >::type&&
 get(tuple<_Tp...>&& __t) _NOEXCEPT {
   using type _LIBCPP_NODEBUG = typename tuple_element<_Ip, tuple<_Tp...> >::type;
   return static_cast<type&&>(static_cast<__tuple_leaf<_Ip, type>&&>(__t.__base_).get());
 }
 
 template <size_t _Ip, class... _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const typename tuple_element<_Ip, tuple<_Tp...> >::type&&
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI
+_LIBCPP_CONSTEXPR_SINCE_CXX14 const typename tuple_element<_Ip, tuple<_Tp...> >::type&&
 get(const tuple<_Tp...>&& __t) _NOEXCEPT {
   using type _LIBCPP_NODEBUG = typename tuple_element<_Ip, tuple<_Tp...> >::type;
   return static_cast<const type&&>(static_cast<const __tuple_leaf<_Ip, type>&&>(__t.__base_).get());
@@ -1146,22 +1147,22 @@ get(const tuple<_Tp...>&& __t) _NOEXCEPT {
 #    if _LIBCPP_STD_VER >= 14
 
 template <class _T1, class... _Args>
-inline _LIBCPP_HIDE_FROM_ABI constexpr _T1& get(tuple<_Args...>& __tup) noexcept {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI constexpr _T1& get(tuple<_Args...>& __tup) noexcept {
   return std::get<__find_exactly_one_t<_T1, _Args...>::value>(__tup);
 }
 
 template <class _T1, class... _Args>
-inline _LIBCPP_HIDE_FROM_ABI constexpr _T1 const& get(tuple<_Args...> const& __tup) noexcept {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI constexpr _T1 const& get(tuple<_Args...> const& __tup) noexcept {
   return std::get<__find_exactly_one_t<_T1, _Args...>::value>(__tup);
 }
 
 template <class _T1, class... _Args>
-inline _LIBCPP_HIDE_FROM_ABI constexpr _T1&& get(tuple<_Args...>&& __tup) noexcept {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI constexpr _T1&& get(tuple<_Args...>&& __tup) noexcept {
   return std::get<__find_exactly_one_t<_T1, _Args...>::value>(std::move(__tup));
 }
 
 template <class _T1, class... _Args>
-inline _LIBCPP_HIDE_FROM_ABI constexpr _T1 const&& get(tuple<_Args...> const&& __tup) noexcept {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI constexpr _T1 const&& get(tuple<_Args...> const&& __tup) noexcept {
   return std::get<__find_exactly_one_t<_T1, _Args...>::value>(std::move(__tup));
 }
 
@@ -1170,18 +1171,19 @@ inline _LIBCPP_HIDE_FROM_ABI constexpr _T1 const&& get(tuple<_Args...> const&& _
 // tie
 
 template <class... _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 tuple<_Tp&...> tie(_Tp&... __t) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 tuple<_Tp&...> tie(_Tp&... __t) _NOEXCEPT {
   return tuple<_Tp&...>(__t...);
 }
 
 template <class... _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 tuple<__unwrap_ref_decay_t<_Tp>...>
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 tuple<__unwrap_ref_decay_t<_Tp>...>
 make_tuple(_Tp&&... __t) {
   return tuple<__unwrap_ref_decay_t<_Tp>...>(std::forward<_Tp>(__t)...);
 }
 
 template <class... _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 tuple<_Tp&&...> forward_as_tuple(_Tp&&... __t) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 tuple<_Tp&&...>
+forward_as_tuple(_Tp&&... __t) _NOEXCEPT {
   return tuple<_Tp&&...>(std::forward<_Tp>(__t)...);
 }
 
@@ -1303,7 +1305,7 @@ template <class... _Tuples>
 using __tuple_cat_return_t _LIBCPP_NODEBUG =
     typename __tuple_cat_return_impl<tuple<>, __remove_cvref_t<_Tuples>...>::type;
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 tuple<> tuple_cat() { return tuple<>(); }
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 tuple<> tuple_cat() { return tuple<>(); }
 
 template <class _Rp, class _Indices, class _Tuple0, class... _Tuples>
 struct __tuple_cat_return_ref_imp;
@@ -1371,7 +1373,7 @@ __tuple_cat_select_element_wise(_TupleSrc&& __src, __index_sequence<_Indices...>
 }
 
 template <class _Tuple0, class... _Tuples>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __tuple_cat_return_t<_Tuple0, _Tuples...>
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __tuple_cat_return_t<_Tuple0, _Tuples...>
 tuple_cat(_Tuple0&& __t0, _Tuples&&... __tpls) {
   using _T0 _LIBCPP_NODEBUG          = __libcpp_remove_reference_t<_Tuple0>;
   using _TRet _LIBCPP_NODEBUG        = __tuple_cat_return_t<_Tuple0, _Tuples...>;
@@ -1438,7 +1440,7 @@ template <class _Tp, class _Tuple>
 template <class _Tp, class _Tuple, class = enable_if_t<__can_make_from_tuple<_Tp, _Tuple>>> // strengthen
 #endif // _LIBCPP_STD_VER >= 20
 
-inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp make_from_tuple(_Tuple&& __t)
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp make_from_tuple(_Tuple&& __t)
   noexcept(noexcept(std::__make_from_tuple_impl<_Tp>(std::forward<_Tuple>(__t),
                     make_index_sequence<tuple_size_v<remove_reference_t<_Tuple>>>()))) {
 #if _LIBCPP_STD_VER >= 23

@@ -429,13 +429,18 @@ static_assert(!simple_view<NonSimpleSizedBidiNonCommonView>);
 
 namespace adltest {
 struct iter_move_swap_iterator {
-  std::reference_wrapper<int> iter_move_called_times;
-  std::reference_wrapper<int> iter_swap_called_times;
-  int i = 0;
+  int* iter_move_called_times = nullptr;
+  int* iter_swap_called_times = nullptr;
+  int i                       = 0;
 
-  using iterator_category = std::input_iterator_tag;
-  using value_type        = int;
-  using difference_type   = std::intptr_t;
+  constexpr iter_move_swap_iterator() = default;
+  constexpr iter_move_swap_iterator(int& iter_move_called_times_ref, int& iter_swap_called_times_ref)
+      : iter_move_called_times(&iter_move_called_times_ref),
+        iter_swap_called_times(&iter_swap_called_times_ref),
+        i(0) {}
+
+  using value_type      = int;
+  using difference_type = std::intptr_t;
 
   constexpr int operator*() const { return i; }
 
@@ -443,17 +448,24 @@ struct iter_move_swap_iterator {
     ++i;
     return *this;
   }
-  constexpr void operator++(int) { ++i; }
+  constexpr iter_move_swap_iterator operator++(int) {
+    auto tmp = *this;
+    ++*this;
+    return tmp;
+  }
 
   friend constexpr bool operator==(const iter_move_swap_iterator& x, std::default_sentinel_t) { return x.i == 5; }
+  friend constexpr bool operator==(const iter_move_swap_iterator& x, const iter_move_swap_iterator& y) {
+    return x.i == y.i;
+  }
 
   friend constexpr int iter_move(iter_move_swap_iterator const& it) {
-    ++it.iter_move_called_times;
+    ++*it.iter_move_called_times;
     return it.i;
   }
   friend constexpr void iter_swap(iter_move_swap_iterator const& x, iter_move_swap_iterator const& y) {
-    ++x.iter_swap_called_times;
-    ++y.iter_swap_called_times;
+    ++*x.iter_swap_called_times;
+    ++*y.iter_swap_called_times;
   }
 };
 
@@ -464,5 +476,82 @@ struct IterMoveSwapRange {
   constexpr auto end() const { return std::default_sentinel; }
 };
 } // namespace adltest
+
+template <class Base = int*>
+struct convertible_forward_sized_iterator {
+  Base it_ = nullptr;
+
+  using iterator_category = std::forward_iterator_tag;
+  using value_type        = int;
+  using difference_type   = std::intptr_t;
+
+  convertible_forward_sized_iterator() = default;
+  constexpr convertible_forward_sized_iterator(Base it) : it_(it) {}
+
+  template <std::convertible_to<Base> U>
+  constexpr convertible_forward_sized_iterator(const convertible_forward_sized_iterator<U>& it) : it_(it.it_) {}
+
+  constexpr decltype(*Base{}) operator*() const { return *it_; }
+
+  constexpr convertible_forward_sized_iterator& operator++() {
+    ++it_;
+    return *this;
+  }
+  constexpr convertible_forward_sized_iterator operator++(int) { return forward_sized_iterator(it_++); }
+
+  friend constexpr bool
+  operator==(const convertible_forward_sized_iterator&, const convertible_forward_sized_iterator&) = default;
+
+  friend constexpr difference_type
+  operator-(const convertible_forward_sized_iterator& x, const convertible_forward_sized_iterator& y) {
+    return x.it_ - y.it_;
+  }
+};
+static_assert(std::forward_iterator<convertible_forward_sized_iterator<>>);
+
+template <class Base>
+struct convertible_sized_sentinel {
+  Base base_;
+  explicit convertible_sized_sentinel() = default;
+  constexpr convertible_sized_sentinel(const Base& it) : base_(it) {}
+
+  template <std::convertible_to<Base> U>
+  constexpr convertible_sized_sentinel(const convertible_sized_sentinel<U>& other) : base_(other.base_) {}
+
+  template <class U>
+    requires(std::convertible_to<Base, U> || std::convertible_to<U, Base>)
+  friend constexpr bool operator==(const convertible_sized_sentinel& s, const U& base) {
+    return s.base_ == base;
+  }
+  template <class U>
+    requires(std::convertible_to<Base, U> || std::convertible_to<U, Base>)
+  friend constexpr auto operator-(const convertible_sized_sentinel& s, const U& i) {
+    return s.base_ - i;
+  }
+
+  template <class U>
+    requires(std::convertible_to<Base, U> || std::convertible_to<U, Base>)
+  friend constexpr auto operator-(const U& i, const convertible_sized_sentinel& s) {
+    return i - s.base_;
+  }
+};
+static_assert(std::sized_sentinel_for<convertible_sized_sentinel<convertible_forward_sized_iterator<>>,
+                                      convertible_forward_sized_iterator<>>);
+static_assert(std::sized_sentinel_for<convertible_sized_sentinel<convertible_forward_sized_iterator<const int*>>,
+                                      convertible_forward_sized_iterator<int*>>);
+static_assert(std::sized_sentinel_for<convertible_sized_sentinel<convertible_forward_sized_iterator<int*>>,
+                                      convertible_forward_sized_iterator<const int*>>);
+
+struct ConstCompatibleForwardSized : IntBufferView {
+  using IntBufferView::IntBufferView;
+
+  using iterator       = convertible_forward_sized_iterator<int*>;
+  using const_iterator = convertible_forward_sized_iterator<const int*>;
+
+  constexpr iterator begin() { return {buffer_}; }
+  constexpr const_iterator begin() const { return {buffer_}; }
+  constexpr convertible_sized_sentinel<iterator> end() { return iterator{buffer_ + size_}; }
+  constexpr convertible_sized_sentinel<const_iterator> end() const { return const_iterator{buffer_ + size_}; }
+};
 
 #endif //  TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_ADAPTOR_TYPES_H

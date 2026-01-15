@@ -673,7 +673,7 @@ define amdgpu_kernel void @test_writelane_vreg_lane_i32(ptr addrspace(1) %out, p
 ; GFX1010-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX1010-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1010-SDAG-NEXT:    global_load_dword v0, v0, s[2:3] offset:4
-; GFX1010-SDAG-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1010-SDAG-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1010-SDAG-NEXT:    s_load_dword s2, s[0:1], 0x0
 ; GFX1010-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1010-SDAG-NEXT:    v_mov_b32_e32 v1, s2
@@ -736,7 +736,7 @@ define amdgpu_kernel void @test_writelane_vreg_lane_i32(ptr addrspace(1) %out, p
 ; GFX1010-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX1010-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1010-GISEL-NEXT:    global_load_dword v0, v0, s[2:3] offset:4
-; GFX1010-GISEL-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1010-GISEL-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1010-GISEL-NEXT:    s_load_dword s2, s[0:1], 0x0
 ; GFX1010-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1010-GISEL-NEXT:    v_mov_b32_e32 v1, s2
@@ -811,7 +811,7 @@ define amdgpu_kernel void @test_writelane_vreg_lane_i64(ptr addrspace(1) %out, p
 ; GFX1010-SDAG-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1010-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1010-SDAG-NEXT:    global_load_dword v0, v0, s[2:3] offset:8
-; GFX1010-SDAG-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1010-SDAG-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1010-SDAG-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
 ; GFX1010-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1010-SDAG-NEXT:    v_mov_b32_e32 v1, s3
@@ -878,7 +878,7 @@ define amdgpu_kernel void @test_writelane_vreg_lane_i64(ptr addrspace(1) %out, p
 ; GFX1010-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GFX1010-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1010-GISEL-NEXT:    global_load_dwordx2 v[0:1], v0, s[2:3] offset:8
-; GFX1010-GISEL-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1010-GISEL-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1010-GISEL-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
 ; GFX1010-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX1010-GISEL-NEXT:    v_mov_b32_e32 v1, s2
@@ -958,7 +958,7 @@ define amdgpu_kernel void @test_writelane_vreg_lane_f64(ptr addrspace(1) %out, p
 ; GFX1010-SDAG-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1010-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1010-SDAG-NEXT:    global_load_dword v0, v0, s[2:3] offset:8
-; GFX1010-SDAG-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1010-SDAG-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1010-SDAG-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
 ; GFX1010-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1010-SDAG-NEXT:    v_mov_b32_e32 v1, s3
@@ -1029,7 +1029,7 @@ define amdgpu_kernel void @test_writelane_vreg_lane_f64(ptr addrspace(1) %out, p
 ; GFX1010-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GFX1010-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1010-GISEL-NEXT:    global_load_dwordx2 v[0:1], v0, s[2:3] offset:8
-; GFX1010-GISEL-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1010-GISEL-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1010-GISEL-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
 ; GFX1010-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX1010-GISEL-NEXT:    v_mov_b32_e32 v1, s2

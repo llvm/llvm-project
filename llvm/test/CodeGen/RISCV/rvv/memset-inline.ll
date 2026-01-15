@@ -9,9 +9,6 @@
 ; RUN:   | FileCheck %s --check-prefixes=RV64-BOTH,RV64-FAST
 %struct.x = type { i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8 }
 
-declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind
-declare void @llvm.memset.inline.p0.i64(ptr nocapture, i8, i64, i1) nounwind
-
 ; /////////////////////////////////////////////////////////////////////////////
 
 define void @memset_1(ptr %a, i8 %value) nounwind {
@@ -619,7 +616,6 @@ define void @aligned_memset_zero_8(ptr %a) nounwind {
   tail call void @llvm.memset.inline.p0.i64(ptr align 8 %a, i8 0, i64 8, i1 0)
   ret void
 }
-
 
 define void @aligned_memset_zero_16(ptr %a) nounwind {
 ; RV32-BOTH-LABEL: aligned_memset_zero_16:

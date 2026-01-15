@@ -10,7 +10,7 @@ $__llvm_profile_sampling = comdat any
 @__llvm_profile_filename = local_unnamed_addr constant [25 x i8] c"pass2/default_%m.profraw\00", comdat
 @__llvm_profile_raw_version = local_unnamed_addr constant i64 216172782113783812, comdat
 @__llvm_profile_sampling = thread_local global i16 0, comdat
-@llvm.used = appending global [1 x i8*] [i8* bitcast (i64* @__llvm_profile_sampling to i8*)], section "llvm.metadata"
+@llvm.used = appending global [1 x ptr] [ptr @__llvm_profile_sampling], section "llvm.metadata"
 
 define dso_local void @bar(i32 %n) !prof !30 {
 entry:
@@ -19,15 +19,15 @@ entry:
   br i1 %tobool, label %if.else, label %if.then, !prof !31
 
 if.then:
-  %0 = load i32, i32* @odd, align 4, !tbaa !32
+  %0 = load i32, ptr @odd, align 4, !tbaa !32
   %inc = add i32 %0, 1
-  store i32 %inc, i32* @odd, align 4, !tbaa !32
+  store i32 %inc, ptr @odd, align 4, !tbaa !32
   br label %if.end
 
 if.else:
-  %1 = load i32, i32* @even, align 4, !tbaa !32
+  %1 = load i32, ptr @even, align 4, !tbaa !32
   %inc1 = add i32 %1, 1
-  store i32 %inc1, i32* @even, align 4, !tbaa !32
+  store i32 %inc1, ptr @even, align 4, !tbaa !32
   br label %if.end
 
 if.end:

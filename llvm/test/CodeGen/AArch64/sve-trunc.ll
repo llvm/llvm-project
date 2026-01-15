@@ -56,6 +56,87 @@ entry:
   ret <vscale x 2 x i32> %out
 }
 
+; <vscale x 1 x ...> types are tricky because their element type cannot be
+; promoted to form a legal vector type. Instead, they need widening.
+; Note: The uzp1 operations are due to vector.insert(), which is required
+; to avoid relying on an undefined ABI.
+
+define <vscale x 4 x i32> @trunc_1i64toi32(<vscale x 2 x i64> %in) {
+; CHECK-LABEL: trunc_1i64toi32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    ret
+entry:
+  %subvec = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(<vscale x 2 x i64> %in, i64 0)
+  %out = trunc <vscale x 1 x i64> %subvec to <vscale x 1 x i32>
+  %out.legal = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.nxv1i32(<vscale x 4 x i32> poison, <vscale x 1 x i32> %out, i64 0)
+  ret <vscale x 4 x i32> %out.legal
+}
+
+define <vscale x 8 x i16> @trunc_1i64toi16(<vscale x 2 x i64> %in) {
+; CHECK-LABEL: trunc_1i64toi16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    ret
+entry:
+  %subvec = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(<vscale x 2 x i64> %in, i64 0)
+  %out = trunc <vscale x 1 x i64> %subvec to <vscale x 1 x i16>
+  %out.legal = call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.nxv1i16(<vscale x 8 x i16> poison, <vscale x 1 x i16> %out, i64 0)
+  ret <vscale x 8 x i16> %out.legal
+}
+
+define <vscale x 16 x i8> @trunc_1i64toi8(<vscale x 2 x i64> %in) {
+; CHECK-LABEL: trunc_1i64toi8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
+; CHECK-NEXT:    ret
+entry:
+  %subvec = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(<vscale x 2 x i64> %in, i64 0)
+  %out = trunc <vscale x 1 x i64> %subvec to <vscale x 1 x i8>
+  %out.legal = call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.nxv1i8(<vscale x 16 x i8> poison, <vscale x 1 x i8> %out, i64 0)
+  ret <vscale x 16 x i8> %out.legal
+}
+
+define <vscale x 8 x i16> @trunc_1i32toi16(<vscale x 4 x i32> %in) {
+; CHECK-LABEL: trunc_1i32toi16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    ret
+entry:
+  %subvec = call <vscale x 1 x i32> @llvm.vector.extract.nxv1i32.nxv4i32(<vscale x 4 x i32> %in, i64 0)
+  %out = trunc <vscale x 1 x i32> %subvec to <vscale x 1 x i16>
+  %out.legal = call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.nxv1i16(<vscale x 8 x i16> poison, <vscale x 1 x i16> %out, i64 0)
+  ret <vscale x 8 x i16> %out.legal
+}
+
+define <vscale x 16 x i8> @trunc_1i32toi8(<vscale x 4 x i32> %in) {
+; CHECK-LABEL: trunc_1i32toi8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
+; CHECK-NEXT:    ret
+entry:
+  %subvec = call <vscale x 1 x i32> @llvm.vector.extract.nxv1i32.nxv4i32(<vscale x 4 x i32> %in, i64 0)
+  %out = trunc <vscale x 1 x i32> %subvec to <vscale x 1 x i8>
+  %out.legal = call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.nxv1i8(<vscale x 16 x i8> poison, <vscale x 1 x i8> %out, i64 0)
+  ret <vscale x 16 x i8> %out.legal
+}
+
+define <vscale x 16 x i8> @trunc_1i16toi8(<vscale x 8 x i16> %in) {
+; CHECK-LABEL: trunc_1i16toi8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
+; CHECK-NEXT:    ret
+entry:
+  %subvec = call <vscale x 1 x i16> @llvm.vector.extract.nxv1i16.nxv8i16(<vscale x 8 x i16> %in, i64 0)
+  %out = trunc <vscale x 1 x i16> %subvec to <vscale x 1 x i8>
+  %out.legal = call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.nxv1i8(<vscale x 16 x i8> poison, <vscale x 1 x i8> %out, i64 0)
+  ret <vscale x 16 x i8> %out.legal
+}
+
 ; Truncating to i1 requires convert it to a cmp
 
 define <vscale x 2 x i1> @trunc_i64toi1(<vscale x 2 x i64> %in) {

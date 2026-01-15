@@ -71,6 +71,8 @@ def X86fhadd   : SDNode<"X86ISD::FHADD",     SDTFPBinOp>;
 def X86fhsub   : SDNode<"X86ISD::FHSUB",     SDTFPBinOp>;
 def X86hadd    : SDNode<"X86ISD::HADD",      SDTIntBinOp>;
 def X86hsub    : SDNode<"X86ISD::HSUB",      SDTIntBinOp>;
+def X86hadds   : SDNode<"X86ISD::HADDS",     SDTIntBinOp>;
+def X86hsubs   : SDNode<"X86ISD::HSUBS",     SDTIntBinOp>;
 def X86comi    : SDNode<"X86ISD::COMI",      SDTX86FCmp>;
 def X86ucomi   : SDNode<"X86ISD::UCOMI",     SDTX86FCmp>;
 def X86comi512       : SDNode<"X86ISD::COMX",      SDTX86FCmp>;
@@ -835,6 +837,9 @@ def X86dpfp16ps :      SDNode<"X86ISD::DPFP16PS",
 def X86GF2P8affineinvqb : SDNode<"X86ISD::GF2P8AFFINEINVQB", SDTBlend>;
 def X86GF2P8affineqb    : SDNode<"X86ISD::GF2P8AFFINEQB", SDTBlend>;
 def X86GF2P8mulb        : SDNode<"X86ISD::GF2P8MULB", SDTIntBinOp>;
+
+// carry-less multiplication
+def X86pclmulqdq : SDNode<"X86ISD::PCLMULQDQ", SDTBlend>;
 
 def SDTX86MaskedStore: SDTypeProfile<0, 3, [       // masked store
   SDTCisVec<0>, SDTCisPtrTy<1>, SDTCisVec<2>, SDTCisSameNumEltsAs<0, 2>

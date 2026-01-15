@@ -121,8 +121,7 @@ body:             |
     ; RV32-LABEL: name: store_common_value_double
     ; RV32: liveins: $x10, $x11, $x12, $x16, $x17
     ; RV32-NEXT: {{  $}}
-    ; RV32-NEXT: $x14 = ADDI $x16, 0
-    ; RV32-NEXT: $x15 = ADDI $x17, 0
+    ; RV32-NEXT: $x14_x15 = FSGNJ_D_IN32X $x16_x17, $x16_x17
     ; RV32-NEXT: SD_RV32 $x14_x15, killed renamable $x10, 0 :: (store (s64) into %ir.a)
     ; RV32-NEXT: SD_RV32 $x14_x15, killed renamable $x11, 0 :: (store (s64) into %ir.b)
     ; RV32-NEXT: SD_RV32 killed $x14_x15, killed renamable $x12, 0 :: (store (s64) into %ir.c)
@@ -143,8 +142,7 @@ body:             |
     ; RV32-LABEL: name: store_common_value_double_zero
     ; RV32: liveins: $x10, $x11, $x12
     ; RV32-NEXT: {{  $}}
-    ; RV32-NEXT: $x14 = ADDI $x0, 0
-    ; RV32-NEXT: $x15 = ADDI $x0, 0
+    ; RV32-NEXT: $x14_x15 = FSGNJ_D_IN32X $x0_pair, $x0_pair
     ; RV32-NEXT: SD_RV32 $x14_x15, killed renamable $x10, 0 :: (store (s64) into %ir.a)
     ; RV32-NEXT: SD_RV32 $x14_x15, killed renamable $x11, 0 :: (store (s64) into %ir.b)
     ; RV32-NEXT: SD_RV32 $x14_x15, killed renamable $x12, 0 :: (store (s64) into %ir.c)

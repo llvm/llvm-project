@@ -51,6 +51,7 @@ namespace {
   class FrameRef {
     MachineBasicBlock::iterator MI; // Instr referencing the frame
     int64_t LocalOffset;            // Local offset of the frame idx referenced
+    int64_t InstrOffset; // Offset of the instruction from the frame index
     int FrameIdx;                   // The frame index
 
     // Order reference instruction appears in program. Used to ensure
@@ -59,16 +60,20 @@ namespace {
     unsigned Order;
 
   public:
-    FrameRef(MachineInstr *I, int64_t Offset, int Idx, unsigned Ord) :
-      MI(I), LocalOffset(Offset), FrameIdx(Idx), Order(Ord) {}
+    FrameRef(MachineInstr *I, int64_t Offset, int64_t InstrOffset, int Idx,
+             unsigned Ord)
+        : MI(I), LocalOffset(Offset), InstrOffset(InstrOffset), FrameIdx(Idx),
+          Order(Ord) {}
 
     bool operator<(const FrameRef &RHS) const {
-      return std::tie(LocalOffset, FrameIdx, Order) <
-             std::tie(RHS.LocalOffset, RHS.FrameIdx, RHS.Order);
+      return std::tuple(LocalOffset + InstrOffset, FrameIdx, Order) <
+             std::tuple(RHS.LocalOffset + RHS.InstrOffset, RHS.FrameIdx,
+                        RHS.Order);
     }
 
     MachineBasicBlock::iterator getMachineInstr() const { return MI; }
     int64_t getLocalOffset() const { return LocalOffset; }
+    int64_t getInstrOffset() const { return InstrOffset; }
     int getFrameIndex() const { return FrameIdx; }
   };
 
@@ -335,20 +340,27 @@ bool LocalStackSlotImpl::insertFrameReferenceRegisters(MachineFunction &Fn) {
       // than that, but the increased register pressure makes that a
       // tricky thing to balance. Investigate if re-materializing these
       // becomes an issue.
-      for (const MachineOperand &MO : MI.operands()) {
+      for (unsigned OpIdx = 0, OpEnd = MI.getNumOperands(); OpIdx != OpEnd;
+           ++OpIdx) {
+        const MachineOperand &MO = MI.getOperand(OpIdx);
         // Consider replacing all frame index operands that reference
         // an object allocated in the local block.
-        if (MO.isFI()) {
-          // Don't try this with values not in the local block.
-          if (!MFI.isObjectPreAllocated(MO.getIndex()))
-            break;
-          int Idx = MO.getIndex();
-          int64_t LocalOffset = LocalOffsets[Idx];
-          if (!TRI->needsFrameBaseReg(&MI, LocalOffset))
-            break;
-          FrameReferenceInsns.push_back(FrameRef(&MI, LocalOffset, Idx, Order++));
+        if (!MO.isFI())
+          continue;
+
+        int FrameIdx = MO.getIndex();
+        // Don't try this with values not in the local block.
+        if (!MFI.isObjectPreAllocated(FrameIdx))
           break;
-        }
+
+        int64_t LocalOffset = LocalOffsets[FrameIdx];
+        if (!TRI->needsFrameBaseReg(&MI, LocalOffset))
+          break;
+
+        int64_t InstrOffset = TRI->getFrameIndexInstrOffset(&MI, OpIdx);
+        FrameReferenceInsns.emplace_back(&MI, LocalOffset, InstrOffset,
+                                         FrameIdx, Order++);
+        break;
       }
     }
   }

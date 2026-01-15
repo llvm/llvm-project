@@ -437,6 +437,14 @@ struct RefCountableWithLambdaCapturingThis {
       });
     });
   }
+
+  void method_nested_lambda4() {
+    callAsync([this, protectedThis = RefPtr { this }] {
+      callAsync([this, protectedThis = WTF::move(*protectedThis)] {
+        nonTrivial();
+      });
+    });
+  }
 };
 
 struct NonRefCountableWithLambdaCapturingThis {
@@ -511,6 +519,23 @@ void capture_copy_in_lambda(CheckedObj& checked) {
     ptr->method();
   });
 }
+
+struct TemplateFunctionCallsLambda {
+  void ref() const;
+  void deref() const;
+
+  RefCountable* obj();
+
+  template <typename T>
+  RefPtr<T> method(T* t) {
+    auto ret = ([&]() -> RefPtr<T> {
+      if constexpr (T::isEncodable)
+        return t;
+      return obj() ? t : nullptr;
+    })();
+    return ret;
+  }
+};
 
 class Iterator {
 public:

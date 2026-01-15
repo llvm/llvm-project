@@ -8,10 +8,9 @@ define <4 x i32> @test() {
 ; CHECK-NEXT:    br label %[[BB1:.*]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[TRUNC]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[TRUNC]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 0, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> <i32 poison, i32 0, i32 poison, i32 poison>, i32 [[TRUNC]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 0>
-; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i32> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i32> <i32 -1, i32 0, i32 0, i32 0>, [[TMP2]]
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[OR]] to i64
 ; CHECK-NEXT:    br label %[[BB3:.*]]
 ; CHECK:       [[BB3]]:

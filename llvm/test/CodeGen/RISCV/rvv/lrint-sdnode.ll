@@ -28,7 +28,6 @@ define <vscale x 1 x iXLen> @lrint_nxv1f32(<vscale x 1 x float> %x) {
   %a = call <vscale x 1 x iXLen> @llvm.lrint.nxv1iXLen.nxv1f32(<vscale x 1 x float> %x)
   ret <vscale x 1 x iXLen> %a
 }
-declare <vscale x 1 x iXLen> @llvm.lrint.nxv1iXLen.nxv1f32(<vscale x 1 x float>)
 
 define <vscale x 2 x iXLen> @lrint_nxv2f32(<vscale x 2 x float> %x) {
 ; RV32-LABEL: lrint_nxv2f32:
@@ -52,7 +51,6 @@ define <vscale x 2 x iXLen> @lrint_nxv2f32(<vscale x 2 x float> %x) {
   %a = call <vscale x 2 x iXLen> @llvm.lrint.nxv2iXLen.nxv2f32(<vscale x 2 x float> %x)
   ret <vscale x 2 x iXLen> %a
 }
-declare <vscale x 2 x iXLen> @llvm.lrint.nxv2iXLen.nxv2f32(<vscale x 2 x float>)
 
 define <vscale x 4 x iXLen> @lrint_nxv4f32(<vscale x 4 x float> %x) {
 ; RV32-LABEL: lrint_nxv4f32:
@@ -76,7 +74,6 @@ define <vscale x 4 x iXLen> @lrint_nxv4f32(<vscale x 4 x float> %x) {
   %a = call <vscale x 4 x iXLen> @llvm.lrint.nxv4iXLen.nxv4f32(<vscale x 4 x float> %x)
   ret <vscale x 4 x iXLen> %a
 }
-declare <vscale x 4 x iXLen> @llvm.lrint.nxv4iXLen.nxv4f32(<vscale x 4 x float>)
 
 define <vscale x 8 x iXLen> @lrint_nxv8f32(<vscale x 8 x float> %x) {
 ; RV32-LABEL: lrint_nxv8f32:
@@ -100,7 +97,6 @@ define <vscale x 8 x iXLen> @lrint_nxv8f32(<vscale x 8 x float> %x) {
   %a = call <vscale x 8 x iXLen> @llvm.lrint.nxv8iXLen.nxv8f32(<vscale x 8 x float> %x)
   ret <vscale x 8 x iXLen> %a
 }
-declare <vscale x 8 x iXLen> @llvm.lrint.nxv8iXLen.nxv8f32(<vscale x 8 x float>)
 
 define <vscale x 16 x iXLen> @lrint_nxv16f32(<vscale x 16 x float> %x) {
 ; RV32-LABEL: lrint_nxv16f32:
@@ -125,7 +121,6 @@ define <vscale x 16 x iXLen> @lrint_nxv16f32(<vscale x 16 x float> %x) {
   %a = call <vscale x 16 x iXLen> @llvm.lrint.nxv16iXLen.nxv16f32(<vscale x 16 x float> %x)
   ret <vscale x 16 x iXLen> %a
 }
-declare <vscale x 16 x iXLen> @llvm.lrint.nxv16iXLen.nxv16f32(<vscale x 16 x float>)
 
 define <vscale x 1 x iXLen> @lrint_nxv1f64(<vscale x 1 x double> %x) {
 ; RV32-LABEL: lrint_nxv1f64:
@@ -150,7 +145,6 @@ define <vscale x 1 x iXLen> @lrint_nxv1f64(<vscale x 1 x double> %x) {
   %a = call <vscale x 1 x iXLen> @llvm.lrint.nxv1iXLen.nxv1f64(<vscale x 1 x double> %x)
   ret <vscale x 1 x iXLen> %a
 }
-declare <vscale x 1 x iXLen> @llvm.lrint.nxv1iXLen.nxv1f64(<vscale x 1 x double>)
 
 define <vscale x 2 x iXLen> @lrint_nxv2f64(<vscale x 2 x double> %x) {
 ; RV32-LABEL: lrint_nxv2f64:
@@ -175,7 +169,6 @@ define <vscale x 2 x iXLen> @lrint_nxv2f64(<vscale x 2 x double> %x) {
   %a = call <vscale x 2 x iXLen> @llvm.lrint.nxv2iXLen.nxv2f64(<vscale x 2 x double> %x)
   ret <vscale x 2 x iXLen> %a
 }
-declare <vscale x 2 x iXLen> @llvm.lrint.nxv2iXLen.nxv2f64(<vscale x 2 x double>)
 
 define <vscale x 4 x iXLen> @lrint_nxv4f64(<vscale x 4 x double> %x) {
 ; RV32-LABEL: lrint_nxv4f64:
@@ -200,7 +193,6 @@ define <vscale x 4 x iXLen> @lrint_nxv4f64(<vscale x 4 x double> %x) {
   %a = call <vscale x 4 x iXLen> @llvm.lrint.nxv4iXLen.nxv4f64(<vscale x 4 x double> %x)
   ret <vscale x 4 x iXLen> %a
 }
-declare <vscale x 4 x iXLen> @llvm.lrint.nxv4iXLen.nxv4f64(<vscale x 4 x double>)
 
 define <vscale x 8 x iXLen> @lrint_nxv8f64(<vscale x 8 x double> %x) {
 ; RV32-LABEL: lrint_nxv8f64:
@@ -225,7 +217,6 @@ define <vscale x 8 x iXLen> @lrint_nxv8f64(<vscale x 8 x double> %x) {
   %a = call <vscale x 8 x iXLen> @llvm.lrint.nxv8iXLen.nxv8f64(<vscale x 8 x double> %x)
   ret <vscale x 8 x iXLen> %a
 }
-declare <vscale x 8 x iXLen> @llvm.lrint.nxv8iXLen.nxv8f64(<vscale x 8 x double>)
 
 define <vscale x 1 x iXLen> @lrint_nxv1f16(<vscale x 1 x half> %x) {
 ; RV32-LABEL: lrint_nxv1f16:
@@ -254,7 +245,6 @@ define <vscale x 1 x iXLen> @lrint_nxv1f16(<vscale x 1 x half> %x) {
   %a = call <vscale x 1 x iXLen> @llvm.lrint.nxv1iXLen.nxv1f16(<vscale x 1 x half> %x)
   ret <vscale x 1 x iXLen> %a
 }
-declare <vscale x 1 x iXLen> @llvm.lrint.nxv1iXLen.nxv1f16(<vscale x 1 x half>)
 
 define <vscale x 2 x iXLen> @lrint_nxv2f16(<vscale x 2 x half> %x) {
 ; RV32-LABEL: lrint_nxv2f16:
@@ -283,7 +273,6 @@ define <vscale x 2 x iXLen> @lrint_nxv2f16(<vscale x 2 x half> %x) {
   %a = call <vscale x 2 x iXLen> @llvm.lrint.nxv2iXLen.nxv2f16(<vscale x 2 x half> %x)
   ret <vscale x 2 x iXLen> %a
 }
-declare <vscale x 2 x iXLen> @llvm.lrint.nxv2iXLen.nxv2f16(<vscale x 2 x half>)
 
 define <vscale x 4 x iXLen> @lrint_nxv4f16(<vscale x 4 x half> %x) {
 ; RV32-LABEL: lrint_nxv4f16:
@@ -312,7 +301,6 @@ define <vscale x 4 x iXLen> @lrint_nxv4f16(<vscale x 4 x half> %x) {
   %a = call <vscale x 4 x iXLen> @llvm.lrint.nxv4iXLen.nxv4f16(<vscale x 4 x half> %x)
   ret <vscale x 4 x iXLen> %a
 }
-declare <vscale x 4 x iXLen> @llvm.lrint.nxv4iXLen.nxv4f16(<vscale x 4 x half>)
 
 define <vscale x 8 x iXLen> @lrint_nxv8f16(<vscale x 8 x half> %x) {
 ; RV32-LABEL: lrint_nxv8f16:
@@ -341,7 +329,6 @@ define <vscale x 8 x iXLen> @lrint_nxv8f16(<vscale x 8 x half> %x) {
   %a = call <vscale x 8 x iXLen> @llvm.lrint.nxv8iXLen.nxv8f16(<vscale x 8 x half> %x)
   ret <vscale x 8 x iXLen> %a
 }
-declare <vscale x 8 x iXLen> @llvm.lrint.nxv8iXLen.nxv8f16(<vscale x 8 x half>)
 
 define <vscale x 16 x iXLen> @lrint_nxv16f16(<vscale x 16 x half> %x) {
 ; RV32-LABEL: lrint_nxv16f16:
@@ -372,7 +359,6 @@ define <vscale x 16 x iXLen> @lrint_nxv16f16(<vscale x 16 x half> %x) {
   %a = call <vscale x 16 x iXLen> @llvm.lrint.nxv16iXLen.nxv16f16(<vscale x 16 x half> %x)
   ret <vscale x 16 x iXLen> %a
 }
-declare <vscale x 16 x iXLen> @llvm.lrint.nxv16iXLen.nxv16f16(<vscale x 16 x half>)
 
 define <vscale x 1 x iXLen> @lrint_nxv1bf16(<vscale x 1 x bfloat> %x) {
 ; RV32-LABEL: lrint_nxv1bf16:
@@ -401,7 +387,6 @@ define <vscale x 1 x iXLen> @lrint_nxv1bf16(<vscale x 1 x bfloat> %x) {
   %a = call <vscale x 1 x iXLen> @llvm.lrint.nxv1iXLen.nxv1bf16(<vscale x 1 x bfloat> %x)
   ret <vscale x 1 x iXLen> %a
 }
-declare <vscale x 1 x iXLen> @llvm.lrint.nxv1iXLen.nxv1bf16(<vscale x 1 x bfloat>)
 
 define <vscale x 2 x iXLen> @lrint_nxv2bf16(<vscale x 2 x bfloat> %x) {
 ; RV32-LABEL: lrint_nxv2bf16:
@@ -430,7 +415,6 @@ define <vscale x 2 x iXLen> @lrint_nxv2bf16(<vscale x 2 x bfloat> %x) {
   %a = call <vscale x 2 x iXLen> @llvm.lrint.nxv2iXLen.nxv2bf16(<vscale x 2 x bfloat> %x)
   ret <vscale x 2 x iXLen> %a
 }
-declare <vscale x 2 x iXLen> @llvm.lrint.nxv2iXLen.nxv2bf16(<vscale x 2 x bfloat>)
 
 define <vscale x 4 x iXLen> @lrint_nxv4bf16(<vscale x 4 x bfloat> %x) {
 ; RV32-LABEL: lrint_nxv4bf16:
@@ -459,7 +443,6 @@ define <vscale x 4 x iXLen> @lrint_nxv4bf16(<vscale x 4 x bfloat> %x) {
   %a = call <vscale x 4 x iXLen> @llvm.lrint.nxv4iXLen.nxv4bf16(<vscale x 4 x bfloat> %x)
   ret <vscale x 4 x iXLen> %a
 }
-declare <vscale x 4 x iXLen> @llvm.lrint.nxv4iXLen.nxv4bf16(<vscale x 4 x bfloat>)
 
 define <vscale x 8 x iXLen> @lrint_nxv8bf16(<vscale x 8 x bfloat> %x) {
 ; RV32-LABEL: lrint_nxv8bf16:
@@ -488,7 +471,6 @@ define <vscale x 8 x iXLen> @lrint_nxv8bf16(<vscale x 8 x bfloat> %x) {
   %a = call <vscale x 8 x iXLen> @llvm.lrint.nxv8iXLen.nxv8bf16(<vscale x 8 x bfloat> %x)
   ret <vscale x 8 x iXLen> %a
 }
-declare <vscale x 8 x iXLen> @llvm.lrint.nxv8iXLen.nxv8bf16(<vscale x 8 x bfloat>)
 
 define <vscale x 16 x iXLen> @lrint_nxv16bf16(<vscale x 16 x bfloat> %x) {
 ; RV32-LABEL: lrint_nxv16bf16:
@@ -519,7 +501,6 @@ define <vscale x 16 x iXLen> @lrint_nxv16bf16(<vscale x 16 x bfloat> %x) {
   %a = call <vscale x 16 x iXLen> @llvm.lrint.nxv16iXLen.nxv16bf16(<vscale x 16 x bfloat> %x)
   ret <vscale x 16 x iXLen> %a
 }
-declare <vscale x 16 x iXLen> @llvm.lrint.nxv16iXLen.nxv16bf16(<vscale x 16 x bfloat>)
 
 define <vscale x 32 x iXLen> @lrint_nxv32bf16(<vscale x 32 x bfloat> %x) {
 ; RV32-LABEL: lrint_nxv32bf16:
@@ -636,4 +617,3 @@ define <vscale x 32 x iXLen> @lrint_nxv32bf16(<vscale x 32 x bfloat> %x) {
   %a = call <vscale x 32 x iXLen> @llvm.lrint.nxv32iXLen.nxv32bf16(<vscale x 32 x bfloat> %x)
   ret <vscale x 32 x iXLen> %a
 }
-declare <vscale x 32 x iXLen> @llvm.lrint.nxv32iXLen.nxv32bf16(<vscale x 32 x bfloat>)

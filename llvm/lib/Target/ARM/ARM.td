@@ -38,6 +38,14 @@ include "ARMSchedule.td"
 //===----------------------------------------------------------------------===//
 
 include "ARMInstrInfo.td"
+
+def Thumb1OnlyMode : HwMode<[IsThumb1Only]>;
+def arm_ptr_rc : RegClassByHwMode<
+  [DefaultMode, Thumb1OnlyMode],
+  [GPR, tGPR]>;
+
+defm : RemapAllTargetPseudoPointerOperands<arm_ptr_rc>;
+
 def ARMInstrInfo : InstrInfo;
 
 //===----------------------------------------------------------------------===//

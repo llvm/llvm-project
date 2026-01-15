@@ -77,6 +77,9 @@ void buildGPUPassPipeline(OpPassManager &pm,
     layoutOptions.layoutKind = "lane";
     pm.addNestedPass<gpu::GPUModuleOp>(
         xegpu::createXeGPUPropagateLayout(layoutOptions));
+    pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUPeepHoleOptimizer());
+    pm.addNestedPass<gpu::GPUModuleOp>(
+        xegpu::createXeGPUPropagateLayout(layoutOptions));
     pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUSubgroupDistribute());
     pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
@@ -111,8 +114,11 @@ void buildPostGPUCommonPassPipeline(
     pm.addPass(createGpuToLLVMConversionPass(gpuToLLVMOptions));
   }
   pm.addPass(createLowerAffinePass());
+  pm.addPass(createConvertVectorToLLVMPass());
   pm.addPass(createConvertToLLVMPass());
   pm.addPass(createReconcileUnrealizedCastsPass());
+  pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
+  pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
   // gpu-module-to-binary
   {
     GpuModuleToBinaryPassOptions gpuToModuleBinOptions;

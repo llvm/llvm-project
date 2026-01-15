@@ -33,10 +33,9 @@
   END DO outer
 
   ! Accept directives between parallel do and actual loop.
-  !ERROR: A DO loop must follow the PARALLEL DO directive
   !$OMP PARALLEL DO
   !WARNING: Unrecognized compiler directive was ignored [-Wignored-directive]
-  !ERROR: Compiler directives are not allowed inside OpenMP loop constructs
+  !WARNING: Compiler directives are not allowed inside OpenMP loop constructs
   !DIR$ VECTOR ALIGNED
   DO 20 i=1,N
      a = a + 0.5
@@ -65,6 +64,7 @@
      do 100 j=1, N
         a = 3.14
 100     continue
+    !ERROR: END DO directive is not allowed when the construct does not contain all loops that share a loop-terminating statement
     !$omp enddo
 
   !ERROR: Non-THREADPRIVATE object 'a' in COPYIN clause
@@ -104,7 +104,7 @@
   !$omp parallel do private(c)
   do i = 1, N
      do j = 1, N
-        !ERROR: OpenMP loop construct should contain a DO-loop or a loop-nest-generating OpenMP construct
+        !ERROR: This construct should contain a DO-loop or a loop-nest-generating OpenMP construct
         !$omp parallel do shared(b)
         a = 3.14
      enddo
@@ -124,7 +124,7 @@
   !ERROR: Misplaced OpenMP end-directive
   !$omp end parallel do
 
-  !ERROR: OpenMP loop construct should contain a DO-loop or a loop-nest-generating OpenMP construct
+  !ERROR: This construct should contain a DO-loop or a loop-nest-generating OpenMP construct
   !$omp parallel do private(c)
 5 FORMAT (1PE12.4, I10)
   do i=1, N
@@ -141,7 +141,7 @@
   !ERROR: Misplaced OpenMP end-directive
   !$omp end parallel do simd
 
-  !ERROR: OpenMP loop construct should contain a DO-loop or a loop-nest-generating OpenMP construct
+  !ERROR: This construct should contain a DO-loop or a loop-nest-generating OpenMP construct
   !$omp simd
     a = i + 1
   !ERROR: Misplaced OpenMP end-directive

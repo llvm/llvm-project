@@ -240,9 +240,9 @@ func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
   %2 = fir.declare %1 {uniq_name = "_QFfooEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
   %3 = fir.declare %arg0 dummy_scope %0 {uniq_name = "_QFfooEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
   acc.parallel combined(loop) {
-    %4 = acc.private var(%3 : !fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>> {name = "x"}
-    %5 = acc.private varPtr(%2 : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = "i"}
-    acc.loop combined(parallel) private(@privatization_box_Uxf32 -> %4 : !fir.box<!fir.array<?xf32>>, @privatization_ref_i32 -> %5 : !fir.ref<i32>) control(%arg1 : i32) = (%c1_i32 : i32) to (%c200_i32 : i32)  step (%c1_i32 : i32) {
+    %4 = acc.private var(%3 : !fir.box<!fir.array<?xf32>>) recipe(@privatization_box_Uxf32) -> !fir.box<!fir.array<?xf32>> {name = "x"}
+    %5 = acc.private varPtr(%2 : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+    acc.loop combined(parallel) private(%4, %5 : !fir.box<!fir.array<?xf32>>, !fir.ref<i32>) control(%arg1 : i32) = (%c1_i32 : i32) to (%c200_i32 : i32)  step (%c1_i32 : i32) {
       %6 = fir.dummy_scope : !fir.dscope
       %7 = fir.declare %4 dummy_scope %6 {uniq_name = "_QFfooEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
       %8 = fir.declare %5 {uniq_name = "_QFfooEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
@@ -297,9 +297,9 @@ func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
 // CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.box<!fir.array<?xf32>>
 // CHECK:           fir.store %[[VAL_5]] to %[[VAL_6]] : !fir.ref<!fir.box<!fir.array<?xf32>>>
 // CHECK:           acc.parallel combined(loop) {
-// CHECK:             %[[VAL_7:.*]] = acc.private varPtr(%[[VAL_6]] : !fir.ref<!fir.box<!fir.array<?xf32>>>) -> !fir.ref<!fir.box<!fir.array<?xf32>>> {name = "x"}
-// CHECK:             %[[VAL_8:.*]] = acc.private varPtr(%[[VAL_4]] : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = "i"}
-// CHECK:             acc.loop combined(parallel) private(@privatization_box_Uxf32 -> %[[VAL_7]] : !fir.ref<!fir.box<!fir.array<?xf32>>>, @privatization_ref_i32 -> %[[VAL_8]] : !fir.ref<i32>) control(%[[VAL_9:.*]] : i32) = (%[[VAL_1]] : i32) to (%[[VAL_0]] : i32)  step (%[[VAL_1]] : i32) {
+// CHECK:             %[[VAL_7:.*]] = acc.private varPtr(%[[VAL_6]] : !fir.ref<!fir.box<!fir.array<?xf32>>>) recipe(@privatization_box_Uxf32) -> !fir.ref<!fir.box<!fir.array<?xf32>>> {name = "x"}
+// CHECK:             %[[VAL_8:.*]] = acc.private varPtr(%[[VAL_4]] : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+// CHECK:             acc.loop combined(parallel) private(%[[VAL_7]], %[[VAL_8]] : !fir.ref<!fir.box<!fir.array<?xf32>>>, !fir.ref<i32>) control(%[[VAL_9:.*]] : i32) = (%[[VAL_1]] : i32) to (%[[VAL_0]] : i32)  step (%[[VAL_1]] : i32) {
 // CHECK:               %[[VAL_10:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:               %[[VAL_11:.*]] = fir.load %[[VAL_7]] : !fir.ref<!fir.box<!fir.array<?xf32>>>
 // CHECK:               %[[VAL_12:.*]] = fir.declare %[[VAL_11]] dummy_scope %[[VAL_10]] {uniq_name = "_QFfooEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>

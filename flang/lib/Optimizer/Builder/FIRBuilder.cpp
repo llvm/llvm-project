@@ -859,21 +859,32 @@ mlir::Value fir::FirOpBuilder::genIsNullAddr(mlir::Location loc,
                                   mlir::arith::CmpIPredicate::eq);
 }
 
-mlir::Value fir::FirOpBuilder::genExtentFromTriplet(mlir::Location loc,
-                                                    mlir::Value lb,
-                                                    mlir::Value ub,
-                                                    mlir::Value step,
-                                                    mlir::Type type) {
+template <typename OpTy, typename... Args>
+static mlir::Value createAndMaybeFold(bool fold, fir::FirOpBuilder &builder,
+                                      mlir::Location loc, Args &&...args) {
+  if (fold)
+    return builder.createOrFold<OpTy>(loc, std::forward<Args>(args)...);
+  return OpTy::create(builder, loc, std::forward<Args>(args)...);
+}
+
+mlir::Value
+fir::FirOpBuilder::genExtentFromTriplet(mlir::Location loc, mlir::Value lb,
+                                        mlir::Value ub, mlir::Value step,
+                                        mlir::Type type, bool fold) {
   auto zero = createIntegerConstant(loc, type, 0);
   lb = createConvert(loc, type, lb);
   ub = createConvert(loc, type, ub);
   step = createConvert(loc, type, step);
-  auto diff = mlir::arith::SubIOp::create(*this, loc, ub, lb);
-  auto add = mlir::arith::AddIOp::create(*this, loc, diff, step);
-  auto div = mlir::arith::DivSIOp::create(*this, loc, add, step);
-  auto cmp = mlir::arith::CmpIOp::create(
-      *this, loc, mlir::arith::CmpIPredicate::sgt, div, zero);
-  return mlir::arith::SelectOp::create(*this, loc, cmp, div, zero);
+
+  auto diff = createAndMaybeFold<mlir::arith::SubIOp>(fold, *this, loc, ub, lb);
+  auto add =
+      createAndMaybeFold<mlir::arith::AddIOp>(fold, *this, loc, diff, step);
+  auto div =
+      createAndMaybeFold<mlir::arith::DivSIOp>(fold, *this, loc, add, step);
+  auto cmp = createAndMaybeFold<mlir::arith::CmpIOp>(
+      fold, *this, loc, mlir::arith::CmpIPredicate::sgt, div, zero);
+  return createAndMaybeFold<mlir::arith::SelectOp>(fold, *this, loc, cmp, div,
+                                                   zero);
 }
 
 mlir::Value fir::FirOpBuilder::genAbsentOp(mlir::Location loc,
@@ -1668,6 +1679,26 @@ mlir::Value fir::factory::createZeroValue(fir::FirOpBuilder &builder,
     return complexHelper.createComplex(type, zeroPart, zeroPart);
   }
   fir::emitFatalError(loc, "internal: trying to generate zero value of non "
+                           "numeric or logical type");
+}
+
+mlir::Value fir::factory::createOneValue(fir::FirOpBuilder &builder,
+                                         mlir::Location loc, mlir::Type type) {
+  mlir::Type i1 = builder.getIntegerType(1);
+  if (mlir::isa<fir::LogicalType>(type) || type == i1)
+    return builder.createConvert(loc, type, builder.createBool(loc, true));
+  if (fir::isa_integer(type))
+    return builder.createIntegerConstant(loc, type, 1);
+  if (fir::isa_real(type))
+    return builder.createRealOneConstant(loc, type);
+  if (fir::isa_complex(type)) {
+    fir::factory::Complex complexHelper(builder, loc);
+    mlir::Type partType = complexHelper.getComplexPartType(type);
+    mlir::Value realPart = builder.createRealOneConstant(loc, partType);
+    mlir::Value imagPart = builder.createRealZeroConstant(loc, partType);
+    return complexHelper.createComplex(type, realPart, imagPart);
+  }
+  fir::emitFatalError(loc, "internal: trying to generate one value of non "
                            "numeric or logical type");
 }
 

@@ -44,26 +44,6 @@ struct Mips16IntrinsicHelperType{
 };
 } // namespace
 
-// Libcalls for which no helper is generated. Sorted by name for binary search.
-static const RTLIB::LibcallImpl HardFloatLibCalls[] = {
-    RTLIB::impl___mips16_adddf3,        RTLIB::impl___mips16_addsf3,
-    RTLIB::impl___mips16_divdf3,        RTLIB::impl___mips16_divsf3,
-    RTLIB::impl___mips16_eqdf2,         RTLIB::impl___mips16_eqsf2,
-    RTLIB::impl___mips16_extendsfdf2,   RTLIB::impl___mips16_fix_truncdfsi,
-    RTLIB::impl___mips16_fix_truncsfsi, RTLIB::impl___mips16_floatsidf,
-    RTLIB::impl___mips16_floatsisf,     RTLIB::impl___mips16_floatunsidf,
-    RTLIB::impl___mips16_floatunsisf,   RTLIB::impl___mips16_gedf2,
-    RTLIB::impl___mips16_gesf2,         RTLIB::impl___mips16_gtdf2,
-    RTLIB::impl___mips16_gtsf2,         RTLIB::impl___mips16_ledf2,
-    RTLIB::impl___mips16_lesf2,         RTLIB::impl___mips16_ltdf2,
-    RTLIB::impl___mips16_ltsf2,         RTLIB::impl___mips16_muldf3,
-    RTLIB::impl___mips16_mulsf3,        RTLIB::impl___mips16_nedf2,
-    RTLIB::impl___mips16_nesf2,         RTLIB::impl___mips16_ret_dc,
-    RTLIB::impl___mips16_ret_df,        RTLIB::impl___mips16_ret_sc,
-    RTLIB::impl___mips16_ret_sf,        RTLIB::impl___mips16_subdf3,
-    RTLIB::impl___mips16_subsf3,        RTLIB::impl___mips16_truncdfsf2,
-    RTLIB::impl___mips16_unorddf2,      RTLIB::impl___mips16_unordsf2};
-
 static const Mips16IntrinsicHelperType Mips16IntrinsicHelper[] = {
   {"__fixunsdfsi", "__mips16_call_stub_2" },
   {"ceil",  "__mips16_call_stub_df_2"},
@@ -96,9 +76,6 @@ Mips16TargetLowering::Mips16TargetLowering(const MipsTargetMachine &TM,
 
   // Set up the register classes
   addRegisterClass(MVT::i32, &Mips::CPU16RegsRegClass);
-
-  if (!Subtarget.useSoftFloat())
-    setMips16HardFloatLibCalls();
 
   setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, LibCall);
   setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i32, LibCall);
@@ -216,16 +193,6 @@ bool Mips16TargetLowering::isEligibleForTailCallOptimization(
     const MipsFunctionInfo &FI) const {
   // No tail call optimization for mips16.
   return false;
-}
-
-void Mips16TargetLowering::setMips16HardFloatLibCalls() {
-  for (unsigned I = 0; I != std::size(HardFloatLibCalls); ++I) {
-    assert((I == 0 || HardFloatLibCalls[I - 1] < HardFloatLibCalls[I]) &&
-           "Array not sorted!");
-    RTLIB::Libcall LC =
-        RTLIB::RuntimeLibcallsInfo::getLibcallFromImpl(HardFloatLibCalls[I]);
-    setLibcallImpl(LC, HardFloatLibCalls[I]);
-  }
 }
 
 //
@@ -384,7 +351,8 @@ static bool isMips16HardFloatLibcall(StringRef Name) {
   iota_range<RTLIB::LibcallImpl> ParsedLibcalls =
       RTLIB::RuntimeLibcallsInfo::lookupLibcallImplName(Name);
   return !ParsedLibcalls.empty() &&
-         binary_search(HardFloatLibCalls, *ParsedLibcalls.begin());
+         binary_search(MipsSubtarget::HardFloatLibCalls,
+                       *ParsedLibcalls.begin());
 }
 
 void Mips16TargetLowering::

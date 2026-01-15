@@ -7,11 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/LibcallLoweringInfo.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/InitializePasses.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
 LibcallLoweringInfo::LibcallLoweringInfo(
-    const RTLIB::RuntimeLibcallsInfo &RTLCI)
+    const RTLIB::RuntimeLibcallsInfo &RTLCI,
+    const TargetSubtargetInfo &Subtarget)
     : RTLCI(RTLCI) {
   // TODO: This should be generated with lowering predicates, and assert the
   // call is available.
@@ -23,4 +28,45 @@ LibcallLoweringInfo::LibcallLoweringInfo(
         LibcallImpls[LC] = Impl;
     }
   }
+
+  Subtarget.initLibcallLoweringInfo(*this);
 }
+
+AnalysisKey LibcallLoweringModuleAnalysis::Key;
+
+bool LibcallLoweringModuleAnalysisResult::invalidate(
+    Module &, const PreservedAnalyses &PA,
+    ModuleAnalysisManager::Invalidator &) {
+  // Passes that change the runtime libcall set must explicitly invalidate this
+  // pass.
+  auto PAC = PA.getChecker<LibcallLoweringModuleAnalysis>();
+  return !PAC.preservedWhenStateless();
+}
+
+LibcallLoweringModuleAnalysisResult
+LibcallLoweringModuleAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
+  LibcallLoweringMap.init(&MAM.getResult<RuntimeLibraryAnalysis>(M));
+  return LibcallLoweringMap;
+}
+
+INITIALIZE_PASS_BEGIN(LibcallLoweringInfoWrapper, "libcall-lowering-info",
+                      "Library Function Lowering Analysis", false, true)
+INITIALIZE_PASS_DEPENDENCY(RuntimeLibraryInfoWrapper)
+INITIALIZE_PASS_END(LibcallLoweringInfoWrapper, "libcall-lowering-info",
+                    "Library Function Lowering Analysis", false, true)
+
+char LibcallLoweringInfoWrapper::ID = 0;
+
+LibcallLoweringInfoWrapper::LibcallLoweringInfoWrapper() : ImmutablePass(ID) {}
+
+bool LibcallLoweringInfoWrapper::doInitialization(Module &M) {
+  Result.init(&getAnalysis<RuntimeLibraryInfoWrapper>().getRTLCI(M));
+  return false;
+}
+
+void LibcallLoweringInfoWrapper::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequired<RuntimeLibraryInfoWrapper>();
+  AU.setPreservesAll();
+}
+
+void LibcallLoweringInfoWrapper::releaseMemory() { Result.clear(); }

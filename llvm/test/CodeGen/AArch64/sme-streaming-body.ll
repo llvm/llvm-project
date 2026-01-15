@@ -96,10 +96,8 @@ define <2 x i64> @locally_streaming_caller_no_callee(<2 x i64> %a) "aarch64_psta
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    index z0.d, #0, #1
 ; CHECK-NEXT:    ldr q1, [sp] // 16-byte Reload
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    add z0.d, z0.d, z1.d
 ; CHECK-NEXT:    add z0.d, z0.d, #41 // =0x29
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
