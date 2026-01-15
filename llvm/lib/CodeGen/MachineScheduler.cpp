@@ -436,7 +436,6 @@ void MachineSchedulerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LiveIntervalsWrapperPass>();
   AU.addPreserved<LiveIntervalsWrapperPass>();
   AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-  AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -710,8 +709,7 @@ MachineSchedulerPass::run(MachineFunction &MF,
   return getMachineFunctionPassPreservedAnalyses()
       .preserveSet<CFGAnalyses>()
       .preserve<SlotIndexesAnalysis>()
-      .preserve<LiveIntervalsAnalysis>()
-      .preserve<MachineBlockFrequencyAnalysis>();
+      .preserve<LiveIntervalsAnalysis>();
 }
 
 bool PostMachineSchedulerLegacy::runOnMachineFunction(MachineFunction &MF) {
