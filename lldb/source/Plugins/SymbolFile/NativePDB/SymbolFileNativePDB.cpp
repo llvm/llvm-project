@@ -587,8 +587,10 @@ lldb::FunctionSP SymbolFileNativePDB::CreateFunction(PdbCompilandSymId func_id,
   if (auto err = ts_or_err.takeError())
     return func_sp;
   auto ts = *ts_or_err;
-  if (ts && ts->GetNativePDBParser())
-    ts->GetNativePDBParser()->EnsureFunction(func_id);
+  if (ts) {
+    if (PdbAstBuilder *ast_builder = ts->GetNativePDBParser())
+      ast_builder->EnsureFunction(func_id);
+  }
 
   return func_sp;
 }
@@ -920,9 +922,12 @@ TypeSP SymbolFileNativePDB::CreateAndCacheType(PdbTypeSymId type_id) {
   if (auto err = ts_or_err.takeError())
     return nullptr;
   auto ts = *ts_or_err;
-  if (!ts || !ts->GetNativePDBParser())
+  if (!ts)
     return nullptr;
-  CompilerType ct = ts->GetNativePDBParser()->GetOrCreateType(best_decl_id);
+  PdbAstBuilder *ast_builder = ts->GetNativePDBParser();
+  if (!ast_builder)
+    return nullptr;
+  CompilerType ct = ast_builder->GetOrCreateType(best_decl_id);
   if (!ct)
     return nullptr;
 
@@ -1829,9 +1834,12 @@ void SymbolFileNativePDB::DumpClangAST(Stream &s, llvm::StringRef filter,
     return;
   auto ts = *ts_or_err;
   TypeSystemClang *clang = llvm::dyn_cast_or_null<TypeSystemClang>(ts.get());
-  if (!clang || !clang->GetNativePDBParser())
+  if (!clang)
     return;
-  clang->GetNativePDBParser()->Dump(s, filter, show_color);
+  PdbAstBuilder *ast_builder = clang->GetNativePDBParser();
+  if (!ast_builder)
+    return;
+  ast_builder->Dump(s, filter, show_color);
 }
 
 void SymbolFileNativePDB::CacheGlobalBaseNames() {
@@ -2235,8 +2243,10 @@ VariableSP SymbolFileNativePDB::CreateLocalVariable(PdbCompilandSymId scope_id,
     if (auto err = ts_or_err.takeError())
       return nullptr;
     auto ts = *ts_or_err;
-    if (ts && ts->GetNativePDBParser())
-      ts->GetNativePDBParser()->EnsureVariable(scope_id, var_id);
+    if (ts) {
+      if (PdbAstBuilder *ast_builder = ts->GetNativePDBParser())
+        ast_builder->EnsureVariable(scope_id, var_id);
+    }
   }
   m_local_variables[toOpaqueUid(var_id)] = var_sp;
   return var_sp;
@@ -2263,10 +2273,12 @@ TypeSP SymbolFileNativePDB::CreateTypedef(PdbGlobalSymId id) {
   if (auto err = ts_or_err.takeError())
     return nullptr;
   auto ts = *ts_or_err;
-  if (!ts || !ts->GetNativePDBParser())
+  if (!ts)
     return nullptr;
-
-  CompilerType ct = ts->GetNativePDBParser()->GetOrCreateTypedefType(id);
+  PdbAstBuilder *ast_builder = ts->GetNativePDBParser();
+  if (!ast_builder)
+    return nullptr;
+  CompilerType ct = ast_builder->GetOrCreateTypedefType(id);
   if (!ct)
     ct = target_type->GetForwardCompilerType();
 
@@ -2422,9 +2434,12 @@ CompilerDecl SymbolFileNativePDB::GetDeclForUID(lldb::user_id_t uid) {
   if (auto err = ts_or_err.takeError())
     return CompilerDecl();
   auto ts = *ts_or_err;
-  if (!ts || !ts->GetNativePDBParser())
+  if (!ts)
     return {};
-  return ts->GetNativePDBParser()->GetOrCreateDeclForUid(uid);
+  PdbAstBuilder *ast_builder = ts->GetNativePDBParser();
+  if (!ast_builder)
+    return {};
+  return ast_builder->GetOrCreateDeclForUid(uid);
 }
 
 CompilerDeclContext
@@ -2433,9 +2448,12 @@ SymbolFileNativePDB::GetDeclContextForUID(lldb::user_id_t uid) {
   if (auto err = ts_or_err.takeError())
     return {};
   auto ts = *ts_or_err;
-  if (!ts || !ts->GetNativePDBParser())
+  if (!ts)
     return {};
-  return ts->GetNativePDBParser()->GetOrCreateDeclContextForUid(PdbSymUid(uid));
+  PdbAstBuilder *ast_builder = ts->GetNativePDBParser();
+  if (!ast_builder)
+    return {};
+  return ast_builder->GetOrCreateDeclContextForUid(PdbSymUid(uid));
 }
 
 CompilerDeclContext
@@ -2444,9 +2462,12 @@ SymbolFileNativePDB::GetDeclContextContainingUID(lldb::user_id_t uid) {
   if (auto err = ts_or_err.takeError())
     return CompilerDeclContext();
   auto ts = *ts_or_err;
-  if (!ts || !ts->GetNativePDBParser())
+  if (!ts)
     return {};
-  return ts->GetNativePDBParser()->GetParentDeclContext(PdbSymUid(uid));
+  PdbAstBuilder *ast_builder = ts->GetNativePDBParser();
+  if (!ast_builder)
+    return {};
+  return ast_builder->GetParentDeclContext(PdbSymUid(uid));
 }
 
 Type *SymbolFileNativePDB::ResolveTypeUID(lldb::user_id_t type_uid) {
@@ -2481,10 +2502,13 @@ SymbolFileNativePDB::GetDynamicArrayInfoForUID(
 bool SymbolFileNativePDB::CompleteType(CompilerType &compiler_type) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   auto ts = compiler_type.GetTypeSystem();
-  if (!ts || !ts->GetNativePDBParser())
+  if (!ts)
     return false;
 
-  return ts->GetNativePDBParser()->CompleteType(compiler_type);
+  PdbAstBuilder *ast_builder = ts->GetNativePDBParser();
+  if (!ast_builder)
+    return false;
+  return ast_builder->CompleteType(compiler_type);
 }
 
 void SymbolFileNativePDB::GetTypes(lldb_private::SymbolContextScope *sc_scope,
