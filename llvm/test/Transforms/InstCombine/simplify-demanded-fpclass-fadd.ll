@@ -2024,7 +2024,8 @@ define nofpclass(snan) half @not_nan__fadd__inf_or_nan(half nofpclass(nan) %not.
 ; CHECK-LABEL: define nofpclass(snan) half @not_nan__fadd__inf_or_nan(
 ; CHECK-SAME: half nofpclass(nan) [[NOT_NAN:%.*]]) {
 ; CHECK-NEXT:    [[INF_OR_NAN:%.*]] = call half @returns_inf_or_nan()
-; CHECK-NEXT:    ret half [[INF_OR_NAN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[NOT_NAN]], [[INF_OR_NAN]]
+; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %inf.or.nan = call half @returns_inf_or_nan()
   %result = fadd half %not.nan, %inf.or.nan
@@ -2035,7 +2036,8 @@ define nofpclass(snan) half @inf_or_nan__fadd__not_nan(half nofpclass(nan) %not.
 ; CHECK-LABEL: define nofpclass(snan) half @inf_or_nan__fadd__not_nan(
 ; CHECK-SAME: half nofpclass(nan) [[NOT_NAN:%.*]]) {
 ; CHECK-NEXT:    [[INF_OR_NAN:%.*]] = call half @returns_inf_or_nan()
-; CHECK-NEXT:    ret half [[INF_OR_NAN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[INF_OR_NAN]], [[NOT_NAN]]
+; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %inf.or.nan = call half @returns_inf_or_nan()
   %result = fadd half %inf.or.nan, %not.nan

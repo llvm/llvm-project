@@ -2252,12 +2252,12 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     }
 
     // With nnan: X + {+/-}Inf --> {+/-}Inf
-    if (KnownRHS.isKnownAlways(fcInf | fcNan) &&
+    if (ResultNotNan && KnownRHS.isKnownAlways(fcInf | fcNan) &&
         KnownLHS.isKnownNever(fcNan))
       return I->getOperand(1);
 
     // With nnan: {+/-}Inf + X --> {+/-}Inf
-    if (KnownLHS.isKnownAlways(fcInf | fcNan) &&
+    if (ResultNotNan && KnownLHS.isKnownAlways(fcInf | fcNan) &&
         KnownRHS.isKnownNever(fcNan))
       return I->getOperand(0);
 
