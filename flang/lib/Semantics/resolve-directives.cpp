@@ -1792,8 +1792,7 @@ void AccAttributeVisitor::AddUseDeviceObject(
     const Symbol &object, const parser::Name &name) {
   if (!useDeviceObjects_.insert(object).second) {
     context_.Say(name.source,
-        "'%s' appears in more than one USE_DEVICE clause "
-        "on the same HOST_DATA directive"_err_en_US,
+        "'%s' appears in more than one USE_DEVICE clause on the same HOST_DATA directive"_err_en_US,
         name.ToString());
   }
 }
