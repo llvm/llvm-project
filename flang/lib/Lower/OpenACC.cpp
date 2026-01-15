@@ -1002,12 +1002,17 @@ static void genDeclareDataOperandOperations(
     std::stringstream asFortran;
     mlir::Location operandLocation = genOperandLocation(converter, accObject);
     Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
-    // Handle COMMON/global symbols via module-level ctor/dtor path.
+    // OpenACC `declare` lowering for COMMON/global symbols has two paths:
+    // - Module-level global ctor/dtor: used only for clauses allowed in a
+    //   module declaration section (OpenACC 3.0 3000/3001: create/copyin/
+    //   device_resident/link). This materializes the mapping at program
+    //   start/end via module-level ctor/dtor ops.
+    // - Structured declare: used for all other clauses (e.g.
+    // present/deviceptr),
+    //   whose semantics are scope-dependent and are represented via a
+    //   structured `acc.declare` region.
     if (symbol.detailsIf<Fortran::semantics::CommonBlockDetails>() ||
         Fortran::semantics::FindCommonBlockContaining(symbol)) {
-      // Only certain clauses are valid for module declaration sections (OpenACC
-      // 3.0 3000/3001). All other clauses (including present/deviceptr) must be
-      // handled via structured declare lowering.
       if (isValidClauseForGlobalDeclare(dataClause)) {
         emitCommonGlobal(
             converter, builder, accObject, dataClause,
@@ -1016,19 +1021,11 @@ static void genDeclareDataOperandOperations(
                 [[maybe_unused]] fir::GlobalOp globalOp,
                 [[maybe_unused]] mlir::acc::DataClause clause,
                 std::stringstream &asFortranStr, const std::string &ctorName) {
-              // Compile-time guard: only instantiate the module-level ctor/dtor
-              // lowering for EntryOps that are supported in this path.
-              //
-              // Note: the runtime clause guard above
-              // (isValidClauseForGlobalDeclare) is not sufficient to prevent
-              // template instantiation failures for other EntryOps (e.g.
-              // DevicePtrOp has a different create signature).
               if constexpr (std::is_same_v<EntryOp, mlir::acc::DeclareLinkOp> ||
                             std::is_same_v<EntryOp, mlir::acc::CreateOp> ||
                             std::is_same_v<EntryOp, mlir::acc::CopyinOp> ||
                             std::is_same_v<
                                 EntryOp, mlir::acc::DeclareDeviceResidentOp>) {
-                // Module-level ctor/dtor path for valid global declare clauses.
                 emitCtorDtorPair<EntryOp, ExitOp>(modBuilder, builder, loc,
                                                   globalOp, clause,
                                                   asFortranStr, ctorName);
