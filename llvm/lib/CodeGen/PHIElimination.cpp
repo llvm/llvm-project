@@ -135,7 +135,7 @@ public:
         P->getAnalysisIfAvailable<MachineBranchProbabilityInfoWrapperPass>();
     auto *MBFIWrapper =
         P->getAnalysisIfAvailable<MachineBlockFrequencyInfoWrapperPass>();
-      
+
     LV = LVWrapper ? &LVWrapper->getLV() : nullptr;
     LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
     MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
@@ -152,8 +152,8 @@ public:
         MDT(AM.getCachedResult<MachineDominatorTreeAnalysis>(MF)),
         PDT(AM.getCachedResult<MachinePostDominatorTreeAnalysis>(MF)),
         MBPI(AM.getCachedResult<MachineBranchProbabilityAnalysis>(MF)),
-        MBFI(AM.getCachedResult<MachineBlockFrequencyAnalysis>(MF)),
-        MFAM(&AM) {}
+        MBFI(AM.getCachedResult<MachineBlockFrequencyAnalysis>(MF)), MFAM(&AM) {
+  }
 
   bool run(MachineFunction &MF);
 };
