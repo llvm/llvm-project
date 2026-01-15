@@ -418,7 +418,7 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
         // FIXME(cir): the alloca for the resume expr should be placed in the
         // enclosing cir.scope instead.
         if (forLValue) {
-          assert(!cir::MissingFeatures::coroCoYield());
+          awaitRes.lv = cgf.emitLValue(s.getResumeExpr());
         } else {
           awaitRes.rv =
               cgf.emitAnyExpr(s.getResumeExpr(), aggSlot, ignoreResult);
@@ -483,6 +483,13 @@ RValue CIRGenFunction::emitCoawaitExpr(const CoawaitExpr &e,
                                        AggValueSlot aggSlot,
                                        bool ignoreResult) {
   return emitSuspendExpr(*this, e, curCoro.data->currentAwaitKind, aggSlot,
+                         ignoreResult);
+}
+
+RValue CIRGenFunction::emitCoyieldExpr(const CoyieldExpr &e,
+                                       AggValueSlot aggSlot,
+                                       bool ignoreResult) {
+  return emitSuspendExpr(*this, e, cir::AwaitKind::Yield, aggSlot,
                          ignoreResult);
 }
 
