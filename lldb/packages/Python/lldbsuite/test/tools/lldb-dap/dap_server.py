@@ -1405,7 +1405,6 @@ class DebugCommunication(object):
         return response
 
     def request_completions(self, text, frameId=None):
-
         def code_units(input: str) -> int:
             utf16_bytes = input.encode("utf-16-le")
             # one UTF16 codeunit = 2 bytes.
