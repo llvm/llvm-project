@@ -318,27 +318,20 @@ AMDGPULowerVGPREncoding::handleCoissue(MachineBasicBlock::instr_iterator I) {
   if (I.isEnd())
     return I;
 
-  if (I == I->getParent()->begin())
-    return I;
-
-  MachineBasicBlock::instr_iterator Prev = std::prev(I);
   auto isProgramStateSALU = [this](MachineInstr *MI) {
     return TII->isBarrier(MI->getOpcode()) || TII->isWaitcnt(MI->getOpcode()) ||
            (SIInstrInfo::isProgramStateSALU(*MI) &&
             MI->getOpcode() != AMDGPU::S_SET_VGPR_MSB);
   };
 
-  while (!Prev.isEnd() && (Prev != Prev->getParent()->begin()) &&
-         isProgramStateSALU(&*Prev)) {
-    --Prev;
+  while (!I.isEnd() && I != I->getParent()->begin()) {
+    auto Prev = std::prev(I);
+    if (!isProgramStateSALU(&*Prev))
+      return I;
+    I = Prev;
   }
 
-  // We have to return the next instruction because we will insert before the
-  // iterator we return
-  if (!Prev.isEnd() && !isProgramStateSALU(&*Prev))
-    return std::next(Prev);
-
-  return Prev;
+  return I;
 }
 
 /// Convert mode value from S_SET_VGPR_MSB format to MODE register format.
