@@ -57,7 +57,7 @@ static Value *traverseGEPOffsets(const DataLayout &DL, IRBuilder<> &Builder,
       GEPOffset = *GEP->idx_begin();
     } else if (NumIndices == 2) {
       // If we have two indices, this should be an access through a pointer.
-      auto IndexIt = GEP->idx_begin();
+      auto *IndexIt = GEP->idx_begin();
       assert(cast<ConstantInt>(IndexIt)->getZExtValue() == 0 &&
              "GEP is not indexing through pointer");
       GEPOffset = *(++IndexIt);
