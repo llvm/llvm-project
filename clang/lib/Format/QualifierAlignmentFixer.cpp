@@ -408,11 +408,29 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
       TypeToken->ClosesRequiresClause || TypeToken->ClosesTemplateDeclaration ||
       TypeToken->is(tok::r_square)) {
 
-    // Don't sort past a non-configured qualifier token.
     const FormatToken *FirstQual = Tok;
-    while (isConfiguredQualifier(FirstQual->getPreviousNonComment(),
-                                 ConfiguredQualifierTokens)) {
-      FirstQual = FirstQual->getPreviousNonComment();
+    const FormatToken *Prev = FirstQual->getPreviousNonComment();
+    if (!TypeToken) {
+      // At start of line: include paired qualifiers (long/short with
+      // unsigned/signed) and configured qualifiers, but not unrelated ones.
+      while (Prev &&
+             (isConfiguredQualifier(Prev, ConfiguredQualifierTokens) ||
+              (isQualifier(Prev) &&
+               (((QualifierType == tok::kw_unsigned ||
+                  QualifierType == tok::kw_signed) &&
+                 (Prev->is(tok::kw_long) || Prev->is(tok::kw_short))) ||
+                ((QualifierType == tok::kw_long ||
+                  QualifierType == tok::kw_short) &&
+                 (Prev->is(tok::kw_unsigned) || Prev->is(tok::kw_signed))))))) {
+        FirstQual = Prev;
+        Prev = FirstQual->getPreviousNonComment();
+      }
+    } else {
+      // Not at start: only include configured qualifiers
+      while (Prev && isConfiguredQualifier(Prev, ConfiguredQualifierTokens)) {
+        FirstQual = Prev;
+        Prev = FirstQual->getPreviousNonComment();
+      }
     }
 
     if (FirstQual != Tok)
@@ -440,9 +458,8 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
       TypeToken = Prev;
     }
     const FormatToken *LastSimpleTypeSpecifier = TypeToken;
-    while (isConfiguredQualifierOrType(
-        LastSimpleTypeSpecifier->getPreviousNonComment(),
-        ConfiguredQualifierTokens, LangOpts)) {
+    while (isQualifierOrType(LastSimpleTypeSpecifier->getPreviousNonComment(),
+                             LangOpts)) {
       LastSimpleTypeSpecifier =
           LastSimpleTypeSpecifier->getPreviousNonComment();
     }
