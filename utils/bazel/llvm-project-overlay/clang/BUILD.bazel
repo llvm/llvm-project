@@ -255,6 +255,23 @@ gentbl_cc_library(
 )
 
 td_library(
+    name = "BuiltinsAMDGPUTdFiles",
+    srcs = ["include/clang/Basic/BuiltinsAMDGPU.td"],
+    includes = ["include"],
+)
+
+gentbl_cc_library(
+    name = "basic_builtins_amdgpu_gen",
+    tbl_outs = {"include/clang/Basic/BuiltinsAMDGPU.inc": ["-gen-clang-builtins"]},
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/BuiltinsAMDGPU.td",
+    deps = [
+        ":BuiltinsAMDGPUTdFiles",
+        ":BuiltinsBaseTdFiles",
+    ],
+)
+
+td_library(
     name = "BuiltinsBaseTdFiles",
     srcs = ["include/clang/Basic/BuiltinsBase.td"],
     includes = ["include"],
@@ -1807,8 +1824,8 @@ cc_library(
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
         "//llvm:Core",
-        "//llvm:JITLink",
         "//llvm:ExecutionEngine",
+        "//llvm:JITLink",
         "//llvm:MC",
         "//llvm:Option",
         "//llvm:OrcDebugging",
