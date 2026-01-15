@@ -1417,7 +1417,7 @@ define nofpclass(snan) float @ret_nofpclass_snan__nofpclass_call_only_nan(i1 %co
 ; CHECK-LABEL: define nofpclass(snan) float @ret_nofpclass_snan__nofpclass_call_only_nan
 ; CHECK-SAME: (i1 [[COND:%.*]], float [[Y:%.*]]) {
 ; CHECK-NEXT:    [[MUST_BE_NAN:%.*]] = call nofpclass(inf zero sub norm) float @extern()
-; CHECK-NEXT:    ret float [[MUST_BE_NAN]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %must.be.nan = call nofpclass(inf norm zero sub) float @extern()
   ret float %must.be.nan

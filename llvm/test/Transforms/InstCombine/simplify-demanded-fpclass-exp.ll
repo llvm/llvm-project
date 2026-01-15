@@ -490,7 +490,7 @@ define nofpclass(nzero) float @source_is_known_snan(float nofpclass(inf norm sub
 define nofpclass(nzero) float @source_is_known_qnan(float nofpclass(inf norm sub zero snan) %must.be.qnan) {
 ; CHECK-LABEL: define nofpclass(nzero) float @source_is_known_qnan(
 ; CHECK-SAME: float nofpclass(snan inf zero sub norm) [[MUST_BE_QNAN:%.*]]) {
-; CHECK-NEXT:    ret float [[MUST_BE_QNAN]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %exp = call float @llvm.exp2.f32(float %must.be.qnan)
   ret float %exp

@@ -65,7 +65,7 @@ define nofpclass(nan) half @extractvalue_not_frexp() {
 define nofpclass(snan inf norm sub zero) half @ret_only_qnan__frexp(half %unknown) {
 ; CHECK-LABEL: define nofpclass(snan inf zero sub norm) half @ret_only_qnan__frexp(
 ; CHECK-SAME: half [[UNKNOWN:%.*]]) {
-; CHECK-NEXT:    ret half [[UNKNOWN]]
+; CHECK-NEXT:    ret half 0xH7E00
 ;
   %frexp = call { half, i32 } @llvm.frexp.f16.i32(half %unknown)
   %frexp.mant = extractvalue { half, i32 } %frexp, 0
@@ -316,8 +316,7 @@ define nofpclass(qnan) half @ret_nofpclass_qnan__frexp_select_unknown_qnan(i1 %c
 ; CHECK-LABEL: define nofpclass(qnan) half @ret_nofpclass_qnan__frexp_select_unknown_qnan(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[ONLY_QNAN:%.*]] = call half @returns_qnan()
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[ONLY_QNAN]]
-; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[SELECT]])
+; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[UNKNOWN]])
 ; CHECK-NEXT:    [[FREXP_MANT:%.*]] = extractvalue { half, i32 } [[FREXP]], 0
 ; CHECK-NEXT:    ret half [[FREXP_MANT]]
 ;
@@ -533,7 +532,7 @@ define nofpclass(snan) half @src_only_inf__frexp() {
 define nofpclass(snan) half @src_only_nan__frexp() {
 ; CHECK-LABEL: define nofpclass(snan) half @src_only_nan__frexp() {
 ; CHECK-NEXT:    [[ONLY_NAN:%.*]] = call half @returns_nan()
-; CHECK-NEXT:    ret half [[ONLY_NAN]]
+; CHECK-NEXT:    ret half 0xH7E00
 ;
   %only.nan = call half @returns_nan()
   %frexp = call { half, i32 } @llvm.frexp.f16.i32(half %only.nan)
