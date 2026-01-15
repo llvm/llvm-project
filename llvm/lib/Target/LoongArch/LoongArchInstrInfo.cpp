@@ -916,7 +916,7 @@ LoongArchInstrInfo::emitLdStWithAddr(MachineInstr &MemI,
   default:
     return BuildMI(MBB, MemI, DL, get(MemIOp))
         .addReg(MemI.getOperand(0).getReg(),
-                MemI.mayLoad() ? RegState::Define : 0)
+                getDefRegState(MemI.mayLoad()))
         .addReg(AM.BaseReg)
         .addImm(AM.Displacement)
         .setMemRefs(MemI.memoperands())
