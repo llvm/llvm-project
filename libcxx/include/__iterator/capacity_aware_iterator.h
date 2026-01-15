@@ -37,8 +37,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // __capacity_aware_iterator is an iterator that wraps a contiguous iterator and encodes the maximum number of
 // elements that can appear in a range of such iterators. That maximum number of elements must be known at compile-time.
 //
-// It also embeds a tag type to prevent mixing iterators from e.g. different containers. This also allows for some algorithms
-// to detect this iterator and perform optimizations based on the added semantic information.
+// It also embeds a tag type to prevent mixing iterators from e.g. different containers. This also allows for some
+// algorithms to detect this iterator and perform optimizations based on the added semantic information.
 //
 // As of writing, the only standard library containers which fulfill the requirements are inplace_vector and optional.
 

@@ -737,8 +737,7 @@ public:
         __wrap_iter<__pointer>(__ptr),
         __wrap_iter<__pointer>(__ptr) + (__derived_self.has_value() ? 1 : 0));
 #      else
-    return std::__make_capacity_aware_iterator<__wrap_iter<__pointer>, optional<_Tp>, 1>(
-        __wrap_iter<__pointer>(__ptr));
+    return std::__make_capacity_aware_iterator<__wrap_iter<__pointer>, optional<_Tp>, 1>(__wrap_iter<__pointer>(__ptr));
 #      endif
   }
 
