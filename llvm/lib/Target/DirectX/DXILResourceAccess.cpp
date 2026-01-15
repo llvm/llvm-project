@@ -22,6 +22,7 @@
 #include "llvm/IR/User.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
 #define DEBUG_TYPE "dxil-resource-access"
@@ -525,6 +526,38 @@ static void phiNodeReplacement(IntrinsicInst *II,
   CurrBBDeadInsts.clear();
 }
 
+static bool hoistGetPtrUses(Function &F, DXILResourceTypeMap &DRTM) {
+  SetVector<BasicBlock *> DeadBB;
+  SmallVector<Instruction *> PrevBBDeadInsts;
+
+  for (BasicBlock &BB : make_early_inc_range(F))
+    for (Instruction &I : make_early_inc_range(BB))
+      if (auto *II = dyn_cast<IntrinsicInst>(&I))
+        if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer)
+          phiNodeReplacement(II, PrevBBDeadInsts, DeadBB);
+
+  bool MadeChanges = DeadBB.size() > 0;
+
+  for (auto *Dead : PrevBBDeadInsts)
+    Dead->eraseFromParent();
+  PrevBBDeadInsts.clear();
+  for (auto *Dead : DeadBB)
+    Dead->eraseFromParent();
+  DeadBB.clear();
+
+  return MadeChanges;
+}
+
+static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
+
+  // Undo any InstCombine optimizations that caused a dx.resource.getpointer
+  // ptr to sink. Since a Convergent op can't sink through control flow, we are
+  // guarenteed that the only case this could occur is through GVN. Which is
+  // handled above. We are then safe to use the below transform.
+  bool MadeHoistChanges = hoistGetPtrUses(F, DRTM);
+  return MadeHoistChanges;
+}
+
 static void replaceAccess(IntrinsicInst *II, dxil::ResourceTypeInfo &RTI) {
   SmallVector<User *> Worklist;
   for (User *U : II->users())
@@ -560,27 +593,13 @@ static void replaceAccess(IntrinsicInst *II, dxil::ResourceTypeInfo &RTI) {
 
 static bool transformResourcePointers(Function &F, DXILResourceTypeMap &DRTM) {
   SmallVector<std::pair<IntrinsicInst *, dxil::ResourceTypeInfo>> Resources;
-  SetVector<BasicBlock *> DeadBB;
-  SmallVector<Instruction *> PrevBBDeadInsts;
-  for (BasicBlock &BB : make_early_inc_range(F)) {
-    for (Instruction &I : make_early_inc_range(BB))
-      if (auto *II = dyn_cast<IntrinsicInst>(&I))
-        if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer)
-          phiNodeReplacement(II, PrevBBDeadInsts, DeadBB);
-
+  for (BasicBlock &BB : make_early_inc_range(F))
     for (Instruction &I : BB)
       if (auto *II = dyn_cast<IntrinsicInst>(&I))
         if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer) {
           auto *HandleTy = cast<TargetExtType>(II->getArgOperand(0)->getType());
           Resources.emplace_back(II, DRTM[HandleTy]);
         }
-  }
-  for (auto *Dead : PrevBBDeadInsts)
-    Dead->eraseFromParent();
-  PrevBBDeadInsts.clear();
-  for (auto *Dead : DeadBB)
-    Dead->eraseFromParent();
-  DeadBB.clear();
 
   for (auto &[II, RI] : Resources)
     replaceAccess(II, RI);
@@ -595,8 +614,9 @@ PreservedAnalyses DXILResourceAccess::run(Function &F,
       MAMProxy.getCachedResult<DXILResourceTypeAnalysis>(*F.getParent());
   assert(DRTM && "DXILResourceTypeAnalysis must be available");
 
-  bool MadeChanges = transformResourcePointers(F, *DRTM);
-  if (!MadeChanges)
+  bool MadeHandleChanges = legalizeResourceHandles(F, *DRTM);
+  bool MadeResourceChanges = transformResourcePointers(F, *DRTM);
+  if (!(MadeHandleChanges || MadeResourceChanges))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
@@ -611,7 +631,9 @@ public:
   bool runOnFunction(Function &F) override {
     DXILResourceTypeMap &DRTM =
         getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
-    return transformResourcePointers(F, DRTM);
+    bool MadeHandleChanges = legalizeResourceHandles(F, DRTM);
+    bool MadeResourceChanges = transformResourcePointers(F, DRTM);
+    return MadeHandleChanges || MadeResourceChanges;
   }
   StringRef getPassName() const override { return "DXIL Resource Access"; }
   DXILResourceAccessLegacy() : FunctionPass(ID) {}
