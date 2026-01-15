@@ -380,9 +380,7 @@ KnownFPClass KnownFPClass::fma_square(const KnownFPClass &KnownSquared,
 
   // Since we know the squared input must be positive, the add of opposite sign
   // infinities nan hazard only applies for negative nan.
-  if (KnownAddend.isKnownNever(fcNegInf | fcNan) &&
-      Known.isKnownNever(fcPosInf | fcNan) &&
-      KnownSquared.isKnownNeverLogicalZero(Mode))
+  if (KnownAddend.isKnownNever(fcNegInf | fcNan) && Squared.isKnownNever(fcNan))
     Known.knownNot(fcNan);
 
   return Known;
