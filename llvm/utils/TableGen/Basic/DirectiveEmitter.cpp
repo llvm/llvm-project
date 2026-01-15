@@ -275,9 +275,9 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "#include \"llvm/ADT/StringRef.h\"\n";
   OS << "#include \"llvm/Frontend/Directive/Spelling.h\"\n";
   OS << "#include \"llvm/Support/Compiler.h\"\n";
-  OS << "#include <cstddef>\n";  // for size_t
-  OS << "#include <optional>\n"; // for constexpr functions
-  OS << "#include <utility>\n";  // for std::pair
+  OS << "#include <cstddef>\n";  // Needed for size_t
+  OS << "#include <optional>\n"; // Needed for constexpr functions
+  OS << "#include <utility>\n";  // Needed for std::pair
   OS << "\n";
   NamespaceEmitter LlvmNS(OS, "llvm");
   {
@@ -315,7 +315,7 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
     std::string EnumHelperFuncs;
     generateClauseEnumVal(DirLang.getClauses(), OS, DirLang, EnumHelperFuncs);
 
-    // Constexpr functions
+    // Emit constexpr functions
     emitDirectivesConstexprImpl(DirLang, OS);
 
     // Generic function signatures
