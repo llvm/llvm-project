@@ -131,9 +131,14 @@ bool lldb_private::formatters::swift::SwiftURL_SummaryProvider(
 
   std::string base;
   ValueObjectSP base_url_sp(valobj.GetChildAtNamePath({g__baseURL}));
-  if (base_url_sp && base_url_sp->HasChildren())
-    if (!base_url_sp->GetSummaryAsCString(base, options))
-      return false;
+  if (base_url_sp) {
+    if (ValueObjectSP synth = base_url_sp->GetSyntheticValue()) {
+      if (synth->HasChildren()) {
+        if (!synth->GetSummaryAsCString(base, options))
+          return false;
+      }
+    }
+  }
 
   std::string summary;
   if (!rel_str_sp->GetSummaryAsCString(summary, options))
