@@ -3335,6 +3335,11 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
                "expected 2 parameters for Store method");
         ElementTy = FD->getParamDecl(1)->getType();
       }
+
+      // Reject array types
+      if (ElementTy->isArrayType())
+        return SemaRef.Diag(FD->getPointOfInstantiation(),
+                            diag::err_invalid_use_of_array_type);
     }
     auto ReturnType =
         SemaRef.Context.getAddrSpaceQualType(ElementTy, LangAS::hlsl_device);
@@ -3360,7 +3365,13 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     // ByteAddressBuffer uses the FunctionDecl return type instead of the
     // contained type
     if (ResourceTy->getAttrs().RawBuffer && ReturnType->isChar8Type()) {
-      ReturnType = dyn_cast<FunctionDecl>(SemaRef.CurContext)->getReturnType();
+      FunctionDecl *FD = dyn_cast<FunctionDecl>(SemaRef.CurContext);
+      ReturnType = FD->getReturnType();
+
+      // Reject array types
+      if (ReturnType->isArrayType())
+        return SemaRef.Diag(FD->getPointOfInstantiation(),
+                            diag::err_invalid_use_of_array_type);
     }
     TheCall->setType(ReturnType);
 
