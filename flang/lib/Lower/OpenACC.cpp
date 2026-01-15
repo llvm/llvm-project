@@ -931,9 +931,8 @@ lookupGlobalBySymbolOrEquivalence(Fortran::lower::AbstractConverter &converter,
       Fortran::semantics::FindCommonBlockContaining(sym);
   std::string globalName = commonBlock ? converter.mangleName(*commonBlock)
                                        : converter.mangleName(sym);
-  if (fir::GlobalOp g = builder.getNamedGlobal(globalName)) {
+  if (fir::GlobalOp g = builder.getNamedGlobal(globalName))
     return g;
-  }
   // Not found: if not a COMMON member, try equivalence members
   if (!commonBlock) {
     if (const Fortran::semantics::EquivalenceSet *eqSet =
