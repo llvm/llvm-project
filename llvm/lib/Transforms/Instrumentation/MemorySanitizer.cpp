@@ -6831,6 +6831,25 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                /*BCols=*/2);
       break;
 
+    // <2 x i32> @llvm.aarch64.neon.[us]dot.v2i32.v8i8
+    //               (<2 x i32> %acc, <8 x i8> %a, <8 x i8> %b)
+    // <4 x i32> @llvm.aarch64.neon.[us]dot.v4i32.v16i8
+    //               (<4 x i32> %acc, <16 x i8> %a, <16 x i8> %b)
+    // <2 x float> @llvm.aarch64.neon.bfdot.v2f32.v4bf16
+    //               (<2 x float> %acc, <4 x bfloat> %a, <4 x bfloat> %b)
+    case Intrinsic::aarch64_neon_sdot:
+    case Intrinsic::aarch64_neon_udot:
+      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/4,
+                                 /*ZeroPurifies=*/true);
+      break;
+
+    // <4 x float> @llvm.aarch64.neon.bfdot.v4f32.v8bf16
+    //               (<4 x float> %acc, <8 x bfloat> %a, <8 x bfloat> %b)
+    case Intrinsic::aarch64_neon_bfdot:
+      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2,
+                                 /*ZeroPurifies=*/false);
+      break;
+
     default:
       return false;
     }
