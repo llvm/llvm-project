@@ -215,6 +215,8 @@ private:
   /// basic block sections and basic block labels.
   std::optional<UniqueBBID> BBID;
 
+  SmallVector<unsigned> PrefetchTargets;
+
   /// With basic block sections, this stores the Section ID of the basic block.
   MBBSectionID SectionID{0};
 

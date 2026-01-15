@@ -73,6 +73,8 @@ LLVM_ABI MachineFunctionPass *createBasicBlockPathCloningPass();
 /// and inference when using propeller.
 LLVM_ABI MachineFunctionPass *createBasicBlockMatchingAndInferencePass();
 
+/// createInsertCodePrefetchPass - This pass enables inserting code prefetch
+/// hints based on the basic block section profile.
 LLVM_ABI MachineFunctionPass *createInsertCodePrefetchPass();
 
 /// createMachineBlockHashInfoPass - This pass computes basic block hashes.
