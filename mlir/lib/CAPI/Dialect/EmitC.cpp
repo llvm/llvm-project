@@ -11,6 +11,7 @@
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 
 using namespace mlir;
+using namespace mlir::emitc;
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(EmitC, emitc, mlir::emitc::EmitCDialect)
 
@@ -187,6 +188,10 @@ MlirAttribute mlirEmitCCmpPredicateAttrGet(MlirContext ctx,
       unwrap(ctx), static_cast<emitc::CmpPredicate>(val)));
 }
 
+MlirStringRef mlirEmitCCmpPredicateAttrGetName(void) {
+  return wrap(emitc::CmpPredicateAttr::name);
+}
+
 MlirEmitCCmpPredicate mlirEmitCCmpPredicateAttrGetValue(MlirAttribute attr) {
   return static_cast<MlirEmitCCmpPredicate>(
       llvm::cast<emitc::CmpPredicateAttr>(unwrap(attr)).getValue());
@@ -206,6 +211,10 @@ bool mlirAttributeIsAEmitCOpaque(MlirAttribute attr) {
 
 MlirAttribute mlirEmitCOpaqueAttrGet(MlirContext ctx, MlirStringRef value) {
   return wrap((Attribute)emitc::OpaqueAttr::get(unwrap(ctx), unwrap(value)));
+}
+
+MlirStringRef mlirEmitCOpaqueAttrGetName(void) {
+  return wrap(emitc::OpaqueAttr::name);
 }
 
 MlirStringRef mlirEmitCOpaqueAttrGetValue(MlirAttribute attr) {

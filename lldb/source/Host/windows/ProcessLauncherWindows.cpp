@@ -83,6 +83,29 @@ GetFlattenedWindowsCommandStringW(Args args) {
   return llvm::sys::flattenWindowsCommandLine(args_ref);
 }
 
+llvm::ErrorOr<ProcThreadAttributeList>
+ProcThreadAttributeList::Create(STARTUPINFOEXW &startupinfoex) {
+  SIZE_T attributelist_size = 0;
+  InitializeProcThreadAttributeList(/*lpAttributeList=*/nullptr,
+                                    /*dwAttributeCount=*/1, /*dwFlags=*/0,
+                                    &attributelist_size);
+
+  startupinfoex.lpAttributeList =
+      static_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(malloc(attributelist_size));
+
+  if (!startupinfoex.lpAttributeList)
+    return llvm::mapWindowsError(ERROR_OUTOFMEMORY);
+
+  if (!InitializeProcThreadAttributeList(startupinfoex.lpAttributeList,
+                                         /*dwAttributeCount=*/1,
+                                         /*dwFlags=*/0, &attributelist_size)) {
+    free(startupinfoex.lpAttributeList);
+    return llvm::mapWindowsError(GetLastError());
+  }
+
+  return ProcThreadAttributeList(startupinfoex.lpAttributeList);
+}
+
 HostProcess
 ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
                                       Status &error) {
@@ -109,19 +132,9 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
       ::CloseHandle(stderr_handle);
   });
 
-  SIZE_T attributelist_size = 0;
-  InitializeProcThreadAttributeList(/*lpAttributeList=*/nullptr,
-                                    /*dwAttributeCount=*/1, /*dwFlags=*/0,
-                                    &attributelist_size);
-
-  startupinfoex.lpAttributeList =
-      static_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(malloc(attributelist_size));
-  llvm::scope_exit free_attributelist(
-      [&] { free(startupinfoex.lpAttributeList); });
-  if (!InitializeProcThreadAttributeList(startupinfoex.lpAttributeList,
-                                         /*dwAttributeCount=*/1, /*dwFlags=*/0,
-                                         &attributelist_size)) {
-    error = Status(::GetLastError(), eErrorTypeWin32);
+  auto attributelist_or_err = ProcThreadAttributeList::Create(startupinfoex);
+  if (!attributelist_or_err) {
+    error = attributelist_or_err.getError();
     return HostProcess();
   }
   llvm::scope_exit delete_attributelist(

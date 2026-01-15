@@ -473,6 +473,19 @@ void Instruction::dropPoisonGeneratingFlags() {
   case Instruction::ICmp:
     cast<ICmpInst>(this)->setSameSign(false);
     break;
+
+  case Instruction::Call: {
+    if (auto *II = dyn_cast<IntrinsicInst>(this)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::ctlz:
+      case Intrinsic::cttz:
+      case Intrinsic::abs:
+        II->setOperand(1, ConstantInt::getFalse(getContext()));
+        break;
+      }
+    }
+    break;
+  }
   }
 
   if (isa<FPMathOperator>(this)) {
