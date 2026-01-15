@@ -24572,7 +24572,7 @@ bool SLPVectorizerPass::vectorizeStores(
         CandidateVFs.clear();
         unsigned Limit =
             getFloorFullVectorNumberOfElements(*TTI, StoreTy, MaxTotalNum);
-        if (bit_floor(Limit) == VF)
+        if (bit_floor(Limit) == VF && Limit != VF)
           CandidateVFs.push_back(Limit);
         CandidateVFs.push_back(VF);
       }
