@@ -209,11 +209,15 @@ struct VPConstantInt : public VPIRValue {
   }
 
   bool isOne() const { return getAPInt().isOne(); }
+
   bool isZero() const { return getAPInt().isZero(); }
+
   const APInt &getAPInt() const {
     return cast<ConstantInt>(getValue())->getValue();
   }
+
   unsigned getBitWidth() const { return getAPInt().getBitWidth(); }
+
   uint64_t getZExtValue() const { return getAPInt().getZExtValue(); }
 };
 
