@@ -132,10 +132,9 @@ std::optional<HighlightingKind> kindForDecl(const NamedDecl *D,
   if (auto *VD = dyn_cast<VarDecl>(D)) {
     if (isa<ImplicitParamDecl>(VD)) // e.g. ObjC Self
       return std::nullopt;
-    return VD->isStaticDataMember()
-               ? HighlightingKind::StaticField
-               : VD->isLocalVarDecl() ? HighlightingKind::LocalVariable
-                                      : HighlightingKind::Variable;
+    return VD->isStaticDataMember() ? HighlightingKind::StaticField
+           : VD->isLocalVarDecl()   ? HighlightingKind::LocalVariable
+                                    : HighlightingKind::Variable;
   }
   if (const auto *BD = dyn_cast<BindingDecl>(D))
     return BD->getDeclContext()->isFunctionOrMethod()
@@ -1412,9 +1411,8 @@ llvm::StringRef toSemanticTokenModifier(HighlightingModifier Modifier) {
   llvm_unreachable("unhandled HighlightingModifier");
 }
 
-std::vector<SemanticTokensEdit>
-diffTokens(llvm::ArrayRef<SemanticToken> Old,
-           llvm::ArrayRef<SemanticToken> New) {
+std::vector<SemanticTokensEdit> diffTokens(llvm::ArrayRef<SemanticToken> Old,
+                                           llvm::ArrayRef<SemanticToken> New) {
   // For now, just replace everything from the first-last modification.
   // FIXME: use a real diff instead, this is bad with include-insertion.
 
@@ -1472,7 +1470,6 @@ std::vector<Range> getInactiveRegions(ParsedAST &AST) {
   }
   return InactiveRegions;
 }
-
 
 } // namespace clangd
 } // namespace clang

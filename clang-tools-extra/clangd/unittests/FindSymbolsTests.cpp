@@ -1150,14 +1150,15 @@ TEST(DocumentSymbolsTest, SymbolTags) {
   auto Symbols = getSymbols(TU.build());
   EXPECT_THAT(
       Symbols,
-      ElementsAre(AllOf(
-          withName("A"), withSymbolTags(SymbolTag::Abstract, SymbolTag::Definition, SymbolTag::Declaration),
-          children(AllOf(withName("f"), 
-          withSymbolTags(SymbolTag::ReadOnly,
-            SymbolTag::Virtual,
-            SymbolTag::Abstract,
-            SymbolTag::Declaration,
-            SymbolTag::Private))))));
+      ElementsAre(
+          AllOf(withName("A"),
+                withSymbolTags(SymbolTag::Abstract, SymbolTag::Definition,
+                               SymbolTag::Declaration),
+                children(AllOf(
+                    withName("f"),
+                    withSymbolTags(SymbolTag::ReadOnly, SymbolTag::Virtual,
+                                   SymbolTag::Abstract, SymbolTag::Declaration,
+                                   SymbolTag::Private))))));
 }
 
 } // namespace

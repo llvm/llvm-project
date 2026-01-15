@@ -35,8 +35,6 @@ SymbolTags toSymbolTagBitmask(const SymbolTag ST) {
 }
 } // namespace
 
-
-
 // "Static" means many things in C++, only some get the "static" modifier.
 //
 // Meanings that do:
@@ -94,7 +92,7 @@ bool isConst(const Decl *D) {
       llvm::isa<MSPropertyDecl>(D) || llvm::isa<BindingDecl>(D)) {
     if (isConst(llvm::cast<ValueDecl>(D)->getType()))
       return true;
-      }
+  }
   if (const auto *OCPD = llvm::dyn_cast<ObjCPropertyDecl>(D)) {
     if (OCPD->isReadOnly())
       return true;
@@ -140,7 +138,6 @@ bool isFinal(const Decl *D) {
 
   return false;
 }
-
 
 bool isUniqueDefinition(const NamedDecl *Decl) {
   if (auto *Func = dyn_cast<FunctionDecl>(Decl))
