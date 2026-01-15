@@ -704,3 +704,37 @@ for.body:
   %exitcond.not = icmp eq i64 %indvars.iv.next, 16
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
+
+define void @array_and_lsl2_not_i32(ptr %a, i32 %m) {
+; CHECK-LABEL: array_and_lsl2_not_i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB38_1: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr w9, [x0, x8]
+; CHECK-NEXT:    lsl w9, w9, #2
+; CHECK-NEXT:    bic w9, w9, w1
+; CHECK-NEXT:    str w9, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #4
+; CHECK-NEXT:    cmp x8, #1024
+; CHECK-NEXT:    b.ne .LBB38_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor i32 %m, -1
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %shl = shl i32 %0, 2
+  %and = and i32 %shl, %not
+  store i32 %and, ptr %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 256
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
