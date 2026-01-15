@@ -439,62 +439,41 @@ let RegAltNameIndices = [ABIRegAltName] in {
   }
 }
 
+class FPRRegisterClass<list<ValueType> regTypes, int align, string regSuffix>
+    : RISCVRegisterClass<regTypes, align,
+                         (add (sequence "F%u_" # regSuffix, 15, 10), // fa5-fa0
+                              (sequence "F%u_" # regSuffix, 0, 7),   // ft0-f7
+                              (sequence "F%u_" # regSuffix, 16, 17), // fa6-fa7
+                              (sequence "F%u_" # regSuffix, 28, 31), // ft8-ft11
+                              (sequence "F%u_" # regSuffix, 8, 9),   // fs0-fs1
+                              (sequence "F%u_" # regSuffix, 18, 27)  // fs2-fs11
+)>;
+
+class FPRCRegisterClass<list<ValueType> regTypes, int align, string regSuffix>
+    : RISCVRegisterClass<regTypes, align,
+                         (add (sequence "F%u_" # regSuffix, 15, 10), // fa5-fa0
+                              (sequence "F%u_" # regSuffix, 8, 9)    // ft0-f7
+)>;
+
 // The order of registers represents the preferred allocation sequence,
 // meaning caller-save regs are listed before callee-save.
 // We start by allocating argument registers in reverse order since they are
 // compressible.
-def FPR16 : RISCVRegisterClass<[f16, bf16], 16, (add
-    (sequence "F%u_H", 15, 10), // fa5-fa0
-    (sequence "F%u_H", 0, 7),   // ft0-f7
-    (sequence "F%u_H", 16, 17), // fa6-fa7
-    (sequence "F%u_H", 28, 31), // ft8-ft11
-    (sequence "F%u_H", 8, 9),   // fs0-fs1
-    (sequence "F%u_H", 18, 27)  // fs2-fs11
-)>;
+def FPR16 : FPRRegisterClass<[f16, bf16], 16, "H">;
 
-def FPR16C : RISCVRegisterClass<[f16, bf16], 16, (add
-    (sequence "F%u_H", 15, 10),
-    (sequence "F%u_H", 8, 9)
-)>;
+def FPR16C : FPRCRegisterClass<[f16, bf16], 16, "H">;
 
-def FPR32 : RISCVRegisterClass<[f32], 32, (add
-    (sequence "F%u_F", 15, 10),
-    (sequence "F%u_F", 0, 7),
-    (sequence "F%u_F", 16, 17),
-    (sequence "F%u_F", 28, 31),
-    (sequence "F%u_F", 8, 9),
-    (sequence "F%u_F", 18, 27)
-)>;
+def FPR32 : FPRRegisterClass<[f32], 32, "F">;
 
-def FPR32C : RISCVRegisterClass<[f32], 32, (add
-  (sequence "F%u_F", 15, 10),
-  (sequence "F%u_F", 8, 9)
-)>;
+def FPR32C : FPRCRegisterClass<[f32], 32, "F">;
 
 // The order of registers represents the preferred allocation sequence,
 // meaning caller-save regs are listed before callee-save.
-def FPR64 : RISCVRegisterClass<[f64], 64, (add
-    (sequence "F%u_D", 15, 10),
-    (sequence "F%u_D", 0, 7),
-    (sequence "F%u_D", 16, 17),
-    (sequence "F%u_D", 28, 31),
-    (sequence "F%u_D", 8, 9),
-    (sequence "F%u_D", 18, 27)
-)>;
+def FPR64 : FPRRegisterClass<[f64], 64, "D">;
 
-def FPR64C : RISCVRegisterClass<[f64], 64, (add
-  (sequence "F%u_D", 15, 10),
-  (sequence "F%u_D", 8, 9)
-)>;
+def FPR64C : FPRCRegisterClass<[f64], 64, "D">;
 
-def FPR128 : RISCVRegisterClass<[f128], 128, (add
-    (sequence "F%u_Q", 15, 10),
-    (sequence "F%u_Q", 0, 7),
-    (sequence "F%u_Q", 16, 17),
-    (sequence "F%u_Q", 28, 31),
-    (sequence "F%u_Q", 8, 9),
-    (sequence "F%u_Q", 18, 27)
-)>;
+def FPR128 : FPRRegisterClass<[f128], 128, "Q">;
 
 //===----------------------------------------------------------------------===//
 // GPR Classes for "H/F/D in X"
@@ -922,13 +901,7 @@ let RegAltNameIndices = [ABIRegAltName] in
 
 // The order of registers represents the preferred allocation sequence,
 // meaning caller-save regs are listed before callee-save.
-def FPR256 : RISCVRegisterClass<[v8i32, v8f32], 256,
-                                (add
-                                  (sequence "F%u_Q2", 0, 7),
-                                  (sequence "F%u_Q2", 10, 17),
-                                  (sequence "F%u_Q2", 28, 31),
-                                  (sequence "F%u_Q2", 8, 9),
-                                  (sequence "F%u_Q2", 18, 27))>;
+def FPR256 : FPRRegisterClass<[v8i32, v8f32], 256, "Q2">;
 
 // Mask registers m0 to m7
 foreach Index = 0-7 in
