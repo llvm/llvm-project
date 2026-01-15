@@ -636,7 +636,7 @@ void ModuleDepCollectorPP::EndOfMainFile() {
     handleTopLevelModule(M);
 
   MDC.Consumer.handleContextHash(
-      MDC.ScanInstance.getInvocation().getModuleHash());
+      MDC.ScanInstance.getInvocation().computeContextHash());
 
   MDC.Consumer.handleDependencyOutputOpts(*MDC.Opts);
 
