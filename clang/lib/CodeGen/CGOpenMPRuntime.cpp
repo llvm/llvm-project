@@ -3901,6 +3901,7 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
     PriorityFlag = 0x20,
     DetachableFlag = 0x40,
     FreeAgentFlag = 0x80,
+    TransparentFlag = 0x100,
   };
   unsigned Flags = Data.Tied ? TiedFlag : 0;
   bool NeedsCleanup = false;
@@ -3915,6 +3916,9 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
     if (Kind == OMPC_THREADSET_omp_pool)
       Flags = Flags | FreeAgentFlag;
   }
+  if (D.getSingleClause<OMPTransparentClause>())
+    Flags |= TransparentFlag;
+
   if (Data.Priority.getInt())
     Flags = Flags | PriorityFlag;
   if (D.hasClausesOfKind<OMPDetachClause>())
