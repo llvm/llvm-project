@@ -1514,13 +1514,11 @@ static bool isDeviceDataImpl(mlir::Value var) {
   // Strip casts to find the underlying value.
   mlir::Value currentVal = stripCasts(var, /*stripDeclare=*/false);
 
-  // Handle block arguments (function parameters)
   if (auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(currentVal))
     return hasCUDADeviceAttrOnFuncArg(blockArg);
 
   mlir::Operation *defOp = currentVal.getDefiningOp();
-  if (!defOp)
-    return false;
+  assert(defOp && "expected defining op for non-block-argument value");
 
   // Check for CUDA attributes on the defining operation.
   if (cuf::hasDeviceDataAttr(defOp))
