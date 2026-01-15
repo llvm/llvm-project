@@ -709,12 +709,12 @@ define void @array_and_lsl2_not_i32(ptr %a, i32 %m) {
 ; CHECK-LABEL: array_and_lsl2_not_i32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mvn w9, w1
 ; CHECK-NEXT:  .LBB38_1: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr w9, [x0, x8]
-; CHECK-NEXT:    lsl w9, w9, #2
-; CHECK-NEXT:    bic w9, w9, w1
-; CHECK-NEXT:    str w9, [x0, x8]
+; CHECK-NEXT:    ldr w10, [x0, x8]
+; CHECK-NEXT:    and w10, w9, w10, lsl #2
+; CHECK-NEXT:    str w10, [x0, x8]
 ; CHECK-NEXT:    add x8, x8, #4
 ; CHECK-NEXT:    cmp x8, #1024
 ; CHECK-NEXT:    b.ne .LBB38_1
