@@ -603,6 +603,49 @@ define i32 @test_load_reordered_metadata(ptr addrspace(1) %p) {
   ret i32 %v
 }
 
+;-----------------------------------------------------------------------------
+; nvvm.l2_cache_hint with invalid value - should NOT emit L2::cache_hint
+; These tests verify that when nvvm.l2_cache_hint key exists but the value
+; is not a valid i64 constant, we do NOT emit L2::cache_hint mode.
+;-----------------------------------------------------------------------------
+
+; nvvm.l2_cache_hint with string value instead of i64 - should be ignored
+; CHECK-LABEL: test_load_cache_hint_string_value
+; CHECK: ld.global.L1::evict_first.b32 %r{{[0-9]+}}, [%rd{{[0-9]+}}];
+; CHECK-NOT: L2::cache_hint
+define i32 @test_load_cache_hint_string_value(ptr addrspace(1) %p) {
+  %v = load i32, ptr addrspace(1) %p, !mem.cache_hint !80
+  ret i32 %v
+}
+
+; nvvm.l2_cache_hint with null/missing value - should be ignored
+; CHECK-LABEL: test_load_cache_hint_null_value
+; CHECK: ld.global.L1::evict_last.b32 %r{{[0-9]+}}, [%rd{{[0-9]+}}];
+; CHECK-NOT: L2::cache_hint
+define i32 @test_load_cache_hint_null_value(ptr addrspace(1) %p) {
+  %v = load i32, ptr addrspace(1) %p, !mem.cache_hint !81
+  ret i32 %v
+}
+
+; nvvm.l2_cache_hint with wrong type (i32 instead of i64) - should still work
+; as mdconst::dyn_extract<ConstantInt> accepts any integer type
+; CHECK-LABEL: test_load_cache_hint_i32_value
+; CHECK: mov.b64 [[POLICY:%rd[0-9]+]], 99999
+; CHECK: ld.global.L2::cache_hint.b32 {{%r[0-9]+}}, [{{%rd[0-9]+}}], [[POLICY]]
+define i32 @test_load_cache_hint_i32_value(ptr addrspace(1) %p) {
+  %v = load i32, ptr addrspace(1) %p, !mem.cache_hint !82
+  ret i32 %v
+}
+
+; Store: nvvm.l2_cache_hint with string value - should be ignored
+; CHECK-LABEL: test_store_cache_hint_string_value
+; CHECK: st.global.L1::evict_unchanged.b32 [%rd{{[0-9]+}}], %r{{[0-9]+}};
+; CHECK-NOT: L2::cache_hint
+define void @test_store_cache_hint_string_value(ptr addrspace(1) %p, i32 %v) {
+  store i32 %v, ptr addrspace(1) %p, !mem.cache_hint !83
+  ret void
+}
+
 ; Test "normal" eviction - should not emit any qualifier (default behavior)
 ; CHECK-LABEL: test_load_l1_normal
 ; CHECK: ld.global.b32
@@ -771,3 +814,20 @@ define i32 @test_load_l2_normal(ptr addrspace(1) %p) {
 ; Reordered metadata test (operand_no not first)
 !70 = !{!170}
 !170 = !{!"nvvm.l1_eviction", !"last", !"nvvm.l2_eviction", !"first", !"operand_no", i32 0}
+
+; Invalid nvvm.l2_cache_hint values - should be ignored, no L2::cache_hint emitted
+; String value instead of i64 - invalid, L1 hint should still work
+!80 = !{!180}
+!180 = !{!"operand_no", i32 0, !"nvvm.l1_eviction", !"first", !"nvvm.l2_cache_hint", !"not_a_number"}
+
+; Null/metadata reference instead of constant - invalid
+!81 = !{!181}
+!181 = !{!"operand_no", i32 0, !"nvvm.l1_eviction", !"last", !"nvvm.l2_cache_hint", !{}}
+
+; i32 instead of i64 - still valid, ConstantInt accepts any integer type
+!82 = !{!182}
+!182 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i32 99999}
+
+; Store: string value for nvvm.l2_cache_hint - invalid
+!83 = !{!183}
+!183 = !{!"operand_no", i32 0, !"nvvm.l1_eviction", !"unchanged", !"nvvm.l2_cache_hint", !"invalid"}
