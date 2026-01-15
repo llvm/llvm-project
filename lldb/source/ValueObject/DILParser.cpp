@@ -414,7 +414,7 @@ std::optional<CompilerType> DILParser::ParseTypeId() {
     std::string type_name;
     ParseTypeSpecifierSeq(type_name);
 
-    if (type_name.size() == 0)
+    if (type_name.empty())
       return {};
     type = ResolveTypeByName(type_name, m_ctx_scope);
     if (!type.IsValid())
@@ -493,10 +493,10 @@ std::optional<CompilerType> DILParser::ParseBuiltinType() {
 //
 void DILParser::ParseTypeSpecifierSeq(std::string &type_name) {
   while (true) {
-    bool type_specifier = ParseTypeSpecifier(type_name);
-    if (!type_specifier) {
+    std::optional<std::string> err_or_string = ParseTypeSpecifier();
+    if (!err_or_string)
       break;
-    }
+    type_name = *err_or_string;
   }
 }
 
@@ -507,38 +507,36 @@ void DILParser::ParseTypeSpecifierSeq(std::string &type_name) {
 //
 // Returns TRUE if a type_specifier was successfully parsed at this location.
 //
-bool DILParser::ParseTypeSpecifier(std::string &user_type_name) {
+std::optional<std::string> DILParser::ParseTypeSpecifier() {
   // The type_specifier must be a user-defined type. Try parsing a
   // simple_type_specifier.
-  {
-    // Try parsing optional global scope operator.
-    bool global_scope = false;
-    if (CurToken().Is(Token::coloncolon)) {
-      global_scope = true;
-      m_dil_lexer.Advance();
-    }
 
-    // uint32_t loc = CurToken().GetLocation();
-
-    // Try parsing optional nested_name_specifier.
-    auto nested_name_specifier = ParseNestedNameSpecifier();
-
-    // Try parsing required type_name.
-    auto type_name = ParseTypeName();
-
-    // If there is a type_name, then this is indeed a simple_type_specifier.
-    // Global and qualified (namespace/class) scopes can be empty, since they're
-    // optional. In this case type_name is type we're looking for.
-    if (!type_name.empty()) {
-      // User-defined typenames can't be combined with builtin keywords.
-      user_type_name = llvm::formatv("{0}{1}{2}", global_scope ? "::" : "",
-                                     nested_name_specifier, type_name);
-      return true;
-    }
+  // Try parsing optional global scope operator.
+  bool global_scope = false;
+  if (CurToken().Is(Token::coloncolon)) {
+    global_scope = true;
+    m_dil_lexer.Advance();
   }
 
+  // Try parsing optional nested_name_specifier.
+  auto nested_name_specifier = ParseNestedNameSpecifier();
+
+  // Try parsing required type_name.
+  auto type_name_or_err = ParseTypeName();
+  if (!type_name_or_err)
+    return type_name_or_err;
+  std::string type_name = *type_name_or_err;
+
+  // If there is a type_name, then this is indeed a simple_type_specifier.
+  // Global and qualified (namespace/class) scopes can be empty, since they're
+  // optional. In this case type_name is type we're looking for.
+  if (!type_name.empty())
+    // User-defined typenames can't be combined with builtin keywords.
+    return llvm::formatv("{0}{1}{2}", global_scope ? "::" : "",
+                         nested_name_specifier, type_name);
+
   // No type_specifier was found here.
-  return false;
+  return {};
 }
 
 // Parse a type_name.
@@ -557,10 +555,10 @@ bool DILParser::ParseTypeSpecifier(std::string &user_type_name) {
 //  typedef_name
 //    identifier
 //
-std::string DILParser::ParseTypeName() {
+std::optional<std::string> DILParser::ParseTypeName() {
   // Typename always starts with an identifier.
   if (CurToken().IsNot(Token::identifier)) {
-    return "";
+    return std::nullopt;
   }
 
   // Otherwise look for a class_name, enum_name or a typedef_name.

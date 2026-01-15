@@ -108,8 +108,8 @@ private:
   std::optional<CompilerType> ParseBuiltinType();
   std::optional<CompilerType> ParseTypeId();
   void ParseTypeSpecifierSeq(std::string &type_name);
-  bool ParseTypeSpecifier(std::string &user_type_name);
-  std::string ParseTypeName();
+  std::optional<std::string> ParseTypeSpecifier();
+  std::optional<std::string> ParseTypeName();
   CompilerType ResolveTypeDeclarators(CompilerType type,
                                       const std::vector<Token> &ptr_operators);
 
