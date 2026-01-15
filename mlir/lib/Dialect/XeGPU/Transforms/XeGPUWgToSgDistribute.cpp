@@ -1184,9 +1184,9 @@ struct WgToSgVectorShapeCastOp
   }
 };
 
-static Value createNeutralAccumulator(ConversionPatternRewriter &rewriter,
-                                      Location loc, VectorType type,
-                                      vector::CombiningKind kind) {
+static Value createAccumulator(ConversionPatternRewriter &rewriter,
+                               Location loc, VectorType type,
+                               vector::CombiningKind kind) {
   Type elemTy = type.getElementType();
 
   switch (kind) {
@@ -1384,7 +1384,7 @@ struct WgToSgMultiDimReductionOp
     for (auto sgSrc : adaptor.getSource()) {
       // Create ZERO accumulator for local reduction
       auto neutralLocalAcc =
-          createNeutralAccumulator(rewriter, loc, newDstType, op.getKind());
+          createAccumulator(rewriter, loc, newDstType, op.getKind());
       // Local reduction with ZERO accumulator
       auto localReduce = vector::MultiDimReductionOp::create(
           rewriter, loc, newDstType, op.getKind(), sgSrc, neutralLocalAcc,
@@ -1528,7 +1528,7 @@ struct WgToSgMultiDimReductionOp
     VectorType finalResultType = VectorType::get(finalResultShape, elemTy);
 
     auto neutralFinalAcc =
-        createNeutralAccumulator(rewriter, loc, finalResultType, op.getKind());
+        createAccumulator(rewriter, loc, finalResultType, op.getKind());
 
     auto finalReduce = vector::MultiDimReductionOp::create(
         rewriter, loc, finalResultType, op.getKind(), loadOp.getResult(),

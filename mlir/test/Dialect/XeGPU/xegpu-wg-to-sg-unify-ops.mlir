@@ -782,6 +782,50 @@ gpu.module @test_distribution {
     gpu.return
   }
 
+  // CHECK-LABEL: gpu.func @vector_reduce_multi_dim_nou_unit_local_reduction
+  // CHECK-SAME: (%[[ARG0:.*]]: memref<?xf32>)
+  gpu.func @vector_reduce_multi_dim_nou_unit_local_reduction(%src: memref<?xf32>) {
+    // CHECK-DAG: %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<16x16xf32>
+    // CHECK-DAG: %[[CST_0:.*]] = arith.constant dense<0> : vector<16x16x32x32xindex>
+    // CHECK-DAG: %[[CST_1:.*]] = arith.constant dense<true> : vector<16x16x32x32xi1>
+    // CHECK-DAG: %[[LOAD:.*]] = xegpu.load %[[ARG0]][%[[CST_0]]], %[[CST_1]] <{chunk_size = 1 : i64}> : memref<?xf32>, vector<16x16x32x32xindex>, vector<16x16x32x32xi1> -> vector<16x16x32x32xf32>
+    // CHECK-DAG: %[[CST_2:.*]] = arith.constant dense<0.000000e+00> : vector<16x16xf32>
+    // CHECK-DAG: %[[LOCAL_REDUCE:.*]] = vector.multi_reduction <add>, %[[LOAD]], %[[CST_2]] [2, 3] : vector<16x16x32x32xf32> to vector<16x16xf32>
+    // CHECK-DAG: %[[SHAPE_CAST:.*]] = vector.shape_cast %[[LOCAL_REDUCE]] : vector<16x16xf32> to vector<1x256xf32>
+    // CHECK-DAG: %[[ALLOCA:.*]] = memref.alloca() : memref<65536xi8, 3>
+    // CHECK-DAG: %[[MEM_DESC:.*]] = xegpu.create_mem_desc %[[ALLOCA]] : memref<65536xi8, 3> -> !xegpu.mem_desc<16x1024xf32>
+    // CHECK-DAG: %[[SGID:.*]] = gpu.subgroup_id : index
+    // CHECK-DAG: %[[AFFINE1:.*]] = affine.apply #map()[%[[SGID]]]
+    // CHECK-DAG: %[[AFFINE2:.*]] = affine.apply #map1()[%[[SGID]]]
+    // CHECK-DAG: %[[AFFINE3:.*]] = affine.apply #map5()[%[[SGID]]]
+    // CHECK-DAG: %[[AFFINE4:.*]] = affine.apply #map6()[%[[SGID]]]
+    // CHECK-DAG: %[[AFFINE5:.*]] = affine.apply #map7()[%[[SGID]]]
+    // CHECK-DAG: %[[AFFINE6:.*]] = affine.apply #map4()[%[[SGID]]]
+    // CHECK-DAG: %[[MUL1:.*]] = arith.muli {{.*}}, %[[C1:.*]] : index
+    // CHECK-DAG: %[[ADD1:.*]] = arith.addi %[[C0:.*]], %[[MUL1]] : index
+    // CHECK-DAG: %[[MUL2:.*]] = arith.muli {{.*}}, %[[C4:.*]] : index
+    // CHECK-DAG: %[[ROW_OFFSET:.*]] = arith.addi %[[ADD1]], %[[MUL2]] : index
+    // CHECK-DAG: %[[MUL3:.*]] = arith.muli {{.*}}, %[[C1:.*]] : index
+    // CHECK-DAG: %[[ADD2:.*]] = arith.addi %[[C0:.*]], %[[MUL3]] : index
+    // CHECK-DAG: %[[MUL4:.*]] = arith.muli {{.*}}, %[[C2:.*]] : index
+    // CHECK-DAG: %[[ADD3:.*]] = arith.addi %[[ADD2]], %[[MUL4]] : index
+    // CHECK-DAG: %[[COL_OFFSET:.*]] = arith.muli %[[ADD3]], %[[C256:.*]] : index
+    // CHECK-DAG: xegpu.store_matrix %[[SHAPE_CAST]], %[[MEM_DESC]][%[[ROW_OFFSET]], %[[COL_OFFSET]]] <{layout = #xegpu.slice<#xegpu.layout<>, dims = [2, 3]>}>: vector<1x256xf32>, !xegpu.mem_desc<16x1024xf32>, index, index
+    // CHECK-DAG: gpu.barrier
+    // CHECK-DAG: %[[LOAD_SLM:.*]] = xegpu.load_matrix %[[MEM_DESC]][%[[C0:.*]], %[[COL_OFFSET]]] : !xegpu.mem_desc<16x1024xf32>, index, index -> vector<16x256xf32>
+    // CHECK-DAG: %[[CST_3:.*]] = arith.constant dense<0.000000e+00> : vector<256xf32>
+    // CHECK-DAG: %[[FINAL_REDUCE:.*]] = vector.multi_reduction <add>, %[[LOAD_SLM]], %[[CST_3]] [0] : vector<16x256xf32> to vector<256xf32>
+    // CHECK-DAG: %[[SHAPE_CAST_FINAL:.*]] = vector.shape_cast %[[CST]] : vector<16x16xf32> to vector<256xf32>
+    // CHECK-DAG: %[[FINAL_ADD:.*]] = arith.addf %[[FINAL_REDUCE]], %[[SHAPE_CAST_FINAL]] : vector<256xf32>
+    // CHECK-DAG: gpu.return
+    %cst = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [2, 2, 4, 4], sg_data = [16, 16, 32, 32]>, dims = [2, 3]>} dense<0.0> : vector<32x32xf32>
+    %offset = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [2, 2, 4, 4], sg_data = [16, 16, 32, 32]>} dense<0> : vector<32x32x128x128xindex>
+    %mask = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [2, 2, 4, 4], sg_data = [16, 16, 32, 32]>} dense<true> : vector<32x32x128x128xi1>
+    %load = xegpu.load %src[%offset], %mask {chunk_size = 1, layout = #xegpu.layout<sg_layout = [2, 2, 4, 4], sg_data = [16, 16, 32, 32]>} : memref<?xf32>, vector<32x32x128x128xindex>, vector<32x32x128x128xi1> -> vector<32x32x128x128xf32>
+    %reduce = vector.multi_reduction <add>, %load, %cst {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [2, 2, 4, 4], sg_data = [16, 16, 32, 32]>, dims = [2, 3]>} [2, 3] : vector<32x32x128x128xf32> to vector<32x32xf32>
+    gpu.return
+  }
+
   // CHECK-LABEL: load_nd_tdesc_with_anchor_layout
   gpu.func @load_nd_tdesc_with_anchor_layout(%src: memref<256x128xf32>) {
     //CHECK: %[[TDESC:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<256x128xf32> -> !xegpu.tensor_desc<32x32xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
