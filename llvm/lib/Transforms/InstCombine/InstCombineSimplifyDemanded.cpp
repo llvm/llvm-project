@@ -2014,13 +2014,13 @@ static Constant *getFPClassConstant(Type *Ty, FPClassTest Mask,
   if (Mask == fcPosZero)
     return Constant::getNullValue(Ty);
 
-  // Turn any possible snans into quiet if we can.
-  if (Mask == fcNan && IsCanonicalizing)
-    return ConstantFP::getQNaN(Ty);
-
   // TODO: Support aggregate types that are allowed by FPMathOperator.
   if (Ty->isAggregateType())
     return nullptr;
+
+  // Turn any possible snans into quiet if we can.
+  if (Mask == fcNan && IsCanonicalizing)
+    return ConstantFP::getQNaN(Ty);
 
   switch (Mask) {
   case fcNegZero:
