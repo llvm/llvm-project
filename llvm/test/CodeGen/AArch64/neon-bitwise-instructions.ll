@@ -2874,34 +2874,19 @@ entry:
 }
 
 define void @array_and_not_v16i8(ptr %a, <16 x i8> %m) {
-; CHECK-SD-LABEL: array_and_not_v16i8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mvn v0.16b, v0.16b
-; CHECK-SD-NEXT:    mov x8, xzr
-; CHECK-SD-NEXT:  .LBB185_1: // %vector.body
-; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-SD-NEXT:    ldr q1, [x0, x8]
-; CHECK-SD-NEXT:    and v1.16b, v1.16b, v0.16b
-; CHECK-SD-NEXT:    str q1, [x0, x8]
-; CHECK-SD-NEXT:    add x8, x8, #16
-; CHECK-SD-NEXT:    cmp x8, #256
-; CHECK-SD-NEXT:    b.ne .LBB185_1
-; CHECK-SD-NEXT:  // %bb.2: // %for.cond.cleanup
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: array_and_not_v16i8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov x8, xzr
-; CHECK-GI-NEXT:  .LBB185_1: // %vector.body
-; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-GI-NEXT:    ldr q1, [x0, x8]
-; CHECK-GI-NEXT:    bic v1.16b, v1.16b, v0.16b
-; CHECK-GI-NEXT:    str q1, [x0, x8]
-; CHECK-GI-NEXT:    add x8, x8, #16
-; CHECK-GI-NEXT:    cmp x8, #256
-; CHECK-GI-NEXT:    b.ne .LBB185_1
-; CHECK-GI-NEXT:  // %bb.2: // %for.cond.cleanup
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: array_and_not_v16i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB185_1: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr q1, [x0, x8]
+; CHECK-NEXT:    bic v1.16b, v1.16b, v0.16b
+; CHECK-NEXT:    str q1, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #16
+; CHECK-NEXT:    cmp x8, #256
+; CHECK-NEXT:    b.ne .LBB185_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
 entry:
   %not = xor <16 x i8> %m, splat (i8 -1)
   br label %vector.body
@@ -2921,34 +2906,19 @@ for.cond.cleanup:
 }
 
 define void @array_and_not_v8i16(ptr %a, <8 x i16> %m) {
-; CHECK-SD-LABEL: array_and_not_v8i16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mvn v0.16b, v0.16b
-; CHECK-SD-NEXT:    mov x8, xzr
-; CHECK-SD-NEXT:  .LBB186_1: // %vector.body
-; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-SD-NEXT:    ldr q1, [x0, x8]
-; CHECK-SD-NEXT:    and v1.16b, v1.16b, v0.16b
-; CHECK-SD-NEXT:    str q1, [x0, x8]
-; CHECK-SD-NEXT:    add x8, x8, #16
-; CHECK-SD-NEXT:    cmp x8, #512
-; CHECK-SD-NEXT:    b.ne .LBB186_1
-; CHECK-SD-NEXT:  // %bb.2: // %for.cond.cleanup
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: array_and_not_v8i16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov x8, xzr
-; CHECK-GI-NEXT:  .LBB186_1: // %vector.body
-; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-GI-NEXT:    ldr q1, [x0, x8]
-; CHECK-GI-NEXT:    bic v1.16b, v1.16b, v0.16b
-; CHECK-GI-NEXT:    str q1, [x0, x8]
-; CHECK-GI-NEXT:    add x8, x8, #16
-; CHECK-GI-NEXT:    cmp x8, #512
-; CHECK-GI-NEXT:    b.ne .LBB186_1
-; CHECK-GI-NEXT:  // %bb.2: // %for.cond.cleanup
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: array_and_not_v8i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB186_1: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr q1, [x0, x8]
+; CHECK-NEXT:    bic v1.16b, v1.16b, v0.16b
+; CHECK-NEXT:    str q1, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #16
+; CHECK-NEXT:    cmp x8, #512
+; CHECK-NEXT:    b.ne .LBB186_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
 entry:
   %not = xor <8 x i16> %m, splat (i16 -1)
   br label %vector.body
@@ -2968,34 +2938,19 @@ for.cond.cleanup:
 }
 
 define void @array_and_not_v4i32(ptr %a, <4 x i32> %m) {
-; CHECK-SD-LABEL: array_and_not_v4i32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mvn v0.16b, v0.16b
-; CHECK-SD-NEXT:    mov x8, xzr
-; CHECK-SD-NEXT:  .LBB187_1: // %vector.body
-; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-SD-NEXT:    ldr q1, [x0, x8]
-; CHECK-SD-NEXT:    and v1.16b, v1.16b, v0.16b
-; CHECK-SD-NEXT:    str q1, [x0, x8]
-; CHECK-SD-NEXT:    add x8, x8, #16
-; CHECK-SD-NEXT:    cmp x8, #1024
-; CHECK-SD-NEXT:    b.ne .LBB187_1
-; CHECK-SD-NEXT:  // %bb.2: // %for.cond.cleanup
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: array_and_not_v4i32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov x8, xzr
-; CHECK-GI-NEXT:  .LBB187_1: // %vector.body
-; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-GI-NEXT:    ldr q1, [x0, x8]
-; CHECK-GI-NEXT:    bic v1.16b, v1.16b, v0.16b
-; CHECK-GI-NEXT:    str q1, [x0, x8]
-; CHECK-GI-NEXT:    add x8, x8, #16
-; CHECK-GI-NEXT:    cmp x8, #1024
-; CHECK-GI-NEXT:    b.ne .LBB187_1
-; CHECK-GI-NEXT:  // %bb.2: // %for.cond.cleanup
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: array_and_not_v4i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB187_1: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr q1, [x0, x8]
+; CHECK-NEXT:    bic v1.16b, v1.16b, v0.16b
+; CHECK-NEXT:    str q1, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #16
+; CHECK-NEXT:    cmp x8, #1024
+; CHECK-NEXT:    b.ne .LBB187_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
 entry:
   %not = xor <4 x i32> %m, splat (i32 -1)
   br label %vector.body
@@ -3015,34 +2970,19 @@ for.cond.cleanup:
 }
 
 define void @array_and_not_v2i64(ptr %a, <2 x i64> %m) {
-; CHECK-SD-LABEL: array_and_not_v2i64:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mvn v0.16b, v0.16b
-; CHECK-SD-NEXT:    mov x8, xzr
-; CHECK-SD-NEXT:  .LBB188_1: // %vector.body
-; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-SD-NEXT:    ldr q1, [x0, x8]
-; CHECK-SD-NEXT:    and v1.16b, v1.16b, v0.16b
-; CHECK-SD-NEXT:    str q1, [x0, x8]
-; CHECK-SD-NEXT:    add x8, x8, #16
-; CHECK-SD-NEXT:    cmp x8, #2048
-; CHECK-SD-NEXT:    b.ne .LBB188_1
-; CHECK-SD-NEXT:  // %bb.2: // %for.cond.cleanup
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: array_and_not_v2i64:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov x8, xzr
-; CHECK-GI-NEXT:  .LBB188_1: // %vector.body
-; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-GI-NEXT:    ldr q1, [x0, x8]
-; CHECK-GI-NEXT:    bic v1.16b, v1.16b, v0.16b
-; CHECK-GI-NEXT:    str q1, [x0, x8]
-; CHECK-GI-NEXT:    add x8, x8, #16
-; CHECK-GI-NEXT:    cmp x8, #2048
-; CHECK-GI-NEXT:    b.ne .LBB188_1
-; CHECK-GI-NEXT:  // %bb.2: // %for.cond.cleanup
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: array_and_not_v2i64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB188_1: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr q1, [x0, x8]
+; CHECK-NEXT:    bic v1.16b, v1.16b, v0.16b
+; CHECK-NEXT:    str q1, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #16
+; CHECK-NEXT:    cmp x8, #2048
+; CHECK-NEXT:    b.ne .LBB188_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
 entry:
   %not = xor <2 x i64> %m, splat (i64 -1)
   br label %vector.body
@@ -3062,34 +3002,19 @@ for.cond.cleanup:
 }
 
 define void @array_or_not_v16i8(ptr %a, <16 x i8> %m) {
-; CHECK-SD-LABEL: array_or_not_v16i8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mvn v0.16b, v0.16b
-; CHECK-SD-NEXT:    mov x8, xzr
-; CHECK-SD-NEXT:  .LBB189_1: // %vector.body
-; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-SD-NEXT:    ldr q1, [x0, x8]
-; CHECK-SD-NEXT:    orr v1.16b, v1.16b, v0.16b
-; CHECK-SD-NEXT:    str q1, [x0, x8]
-; CHECK-SD-NEXT:    add x8, x8, #16
-; CHECK-SD-NEXT:    cmp x8, #256
-; CHECK-SD-NEXT:    b.ne .LBB189_1
-; CHECK-SD-NEXT:  // %bb.2: // %for.cond.cleanup
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: array_or_not_v16i8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov x8, xzr
-; CHECK-GI-NEXT:  .LBB189_1: // %vector.body
-; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-GI-NEXT:    ldr q1, [x0, x8]
-; CHECK-GI-NEXT:    orn v1.16b, v1.16b, v0.16b
-; CHECK-GI-NEXT:    str q1, [x0, x8]
-; CHECK-GI-NEXT:    add x8, x8, #16
-; CHECK-GI-NEXT:    cmp x8, #256
-; CHECK-GI-NEXT:    b.ne .LBB189_1
-; CHECK-GI-NEXT:  // %bb.2: // %for.cond.cleanup
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: array_or_not_v16i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB189_1: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr q1, [x0, x8]
+; CHECK-NEXT:    orn v1.16b, v1.16b, v0.16b
+; CHECK-NEXT:    str q1, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #16
+; CHECK-NEXT:    cmp x8, #256
+; CHECK-NEXT:    b.ne .LBB189_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
 entry:
   %not = xor <16 x i8> %m, splat (i8 -1)
   br label %vector.body
@@ -3109,34 +3034,19 @@ for.cond.cleanup:
 }
 
 define void @array_or_not_v8i16(ptr %a, <8 x i16> %m) {
-; CHECK-SD-LABEL: array_or_not_v8i16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mvn v0.16b, v0.16b
-; CHECK-SD-NEXT:    mov x8, xzr
-; CHECK-SD-NEXT:  .LBB190_1: // %vector.body
-; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-SD-NEXT:    ldr q1, [x0, x8]
-; CHECK-SD-NEXT:    orr v1.16b, v1.16b, v0.16b
-; CHECK-SD-NEXT:    str q1, [x0, x8]
-; CHECK-SD-NEXT:    add x8, x8, #16
-; CHECK-SD-NEXT:    cmp x8, #512
-; CHECK-SD-NEXT:    b.ne .LBB190_1
-; CHECK-SD-NEXT:  // %bb.2: // %for.cond.cleanup
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: array_or_not_v8i16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov x8, xzr
-; CHECK-GI-NEXT:  .LBB190_1: // %vector.body
-; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-GI-NEXT:    ldr q1, [x0, x8]
-; CHECK-GI-NEXT:    orn v1.16b, v1.16b, v0.16b
-; CHECK-GI-NEXT:    str q1, [x0, x8]
-; CHECK-GI-NEXT:    add x8, x8, #16
-; CHECK-GI-NEXT:    cmp x8, #512
-; CHECK-GI-NEXT:    b.ne .LBB190_1
-; CHECK-GI-NEXT:  // %bb.2: // %for.cond.cleanup
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: array_or_not_v8i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB190_1: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr q1, [x0, x8]
+; CHECK-NEXT:    orn v1.16b, v1.16b, v0.16b
+; CHECK-NEXT:    str q1, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #16
+; CHECK-NEXT:    cmp x8, #512
+; CHECK-NEXT:    b.ne .LBB190_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
 entry:
   %not = xor <8 x i16> %m, splat (i16 -1)
   br label %vector.body
@@ -3156,34 +3066,19 @@ for.cond.cleanup:
 }
 
 define void @array_or_not_v4i32(ptr %a, <4 x i32> %m) {
-; CHECK-SD-LABEL: array_or_not_v4i32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mvn v0.16b, v0.16b
-; CHECK-SD-NEXT:    mov x8, xzr
-; CHECK-SD-NEXT:  .LBB191_1: // %vector.body
-; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-SD-NEXT:    ldr q1, [x0, x8]
-; CHECK-SD-NEXT:    orr v1.16b, v1.16b, v0.16b
-; CHECK-SD-NEXT:    str q1, [x0, x8]
-; CHECK-SD-NEXT:    add x8, x8, #16
-; CHECK-SD-NEXT:    cmp x8, #1024
-; CHECK-SD-NEXT:    b.ne .LBB191_1
-; CHECK-SD-NEXT:  // %bb.2: // %for.cond.cleanup
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: array_or_not_v4i32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov x8, xzr
-; CHECK-GI-NEXT:  .LBB191_1: // %vector.body
-; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-GI-NEXT:    ldr q1, [x0, x8]
-; CHECK-GI-NEXT:    orn v1.16b, v1.16b, v0.16b
-; CHECK-GI-NEXT:    str q1, [x0, x8]
-; CHECK-GI-NEXT:    add x8, x8, #16
-; CHECK-GI-NEXT:    cmp x8, #1024
-; CHECK-GI-NEXT:    b.ne .LBB191_1
-; CHECK-GI-NEXT:  // %bb.2: // %for.cond.cleanup
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: array_or_not_v4i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB191_1: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr q1, [x0, x8]
+; CHECK-NEXT:    orn v1.16b, v1.16b, v0.16b
+; CHECK-NEXT:    str q1, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #16
+; CHECK-NEXT:    cmp x8, #1024
+; CHECK-NEXT:    b.ne .LBB191_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
 entry:
   %not = xor <4 x i32> %m, splat (i32 -1)
   br label %vector.body
@@ -3203,34 +3098,19 @@ for.cond.cleanup:
 }
 
 define void @array_or_not_v2i64(ptr %a, <2 x i64> %m) {
-; CHECK-SD-LABEL: array_or_not_v2i64:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mvn v0.16b, v0.16b
-; CHECK-SD-NEXT:    mov x8, xzr
-; CHECK-SD-NEXT:  .LBB192_1: // %vector.body
-; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-SD-NEXT:    ldr q1, [x0, x8]
-; CHECK-SD-NEXT:    orr v1.16b, v1.16b, v0.16b
-; CHECK-SD-NEXT:    str q1, [x0, x8]
-; CHECK-SD-NEXT:    add x8, x8, #16
-; CHECK-SD-NEXT:    cmp x8, #2048
-; CHECK-SD-NEXT:    b.ne .LBB192_1
-; CHECK-SD-NEXT:  // %bb.2: // %for.cond.cleanup
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: array_or_not_v2i64:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov x8, xzr
-; CHECK-GI-NEXT:  .LBB192_1: // %vector.body
-; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-GI-NEXT:    ldr q1, [x0, x8]
-; CHECK-GI-NEXT:    orn v1.16b, v1.16b, v0.16b
-; CHECK-GI-NEXT:    str q1, [x0, x8]
-; CHECK-GI-NEXT:    add x8, x8, #16
-; CHECK-GI-NEXT:    cmp x8, #2048
-; CHECK-GI-NEXT:    b.ne .LBB192_1
-; CHECK-GI-NEXT:  // %bb.2: // %for.cond.cleanup
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: array_or_not_v2i64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB192_1: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr q1, [x0, x8]
+; CHECK-NEXT:    orn v1.16b, v1.16b, v0.16b
+; CHECK-NEXT:    str q1, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #16
+; CHECK-NEXT:    cmp x8, #2048
+; CHECK-NEXT:    b.ne .LBB192_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
 entry:
   %not = xor <2 x i64> %m, splat (i64 -1)
   br label %vector.body
