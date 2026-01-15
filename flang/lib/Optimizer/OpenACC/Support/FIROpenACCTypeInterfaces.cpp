@@ -1504,10 +1504,9 @@ static bool hasCUDADeviceDataAttr(mlir::Operation *op) {
     return false;
 
   // Check for CUF data attribute on the operation
-  if (auto dataAttr = cuf::getDataAttr(op)) {
+  if (auto dataAttr = cuf::getDataAttr(op))
     if (isCUDADeviceAttribute(dataAttr.getValue()))
       return true;
-  }
 
   return false;
 }
@@ -1524,12 +1523,10 @@ static bool hasCUDADeviceAttrOnFuncArg(mlir::BlockArgument blockArg) {
 
   if (auto funcLike = mlir::dyn_cast<mlir::FunctionOpInterface>(parentOp)) {
     unsigned argIndex = blockArg.getArgNumber();
-    if (argIndex < funcLike.getNumArguments()) {
-      if (auto attr = funcLike.getArgAttr(argIndex, cuf::getDataAttrName())) {
+    if (argIndex < funcLike.getNumArguments())
+      if (auto attr = funcLike.getArgAttr(argIndex, cuf::getDataAttrName()))
         if (auto cudaAttr = mlir::dyn_cast<cuf::DataAttributeAttr>(attr))
           return isCUDADeviceAttribute(cudaAttr.getValue());
-      }
-    }
   }
   return false;
 }
@@ -1554,10 +1551,9 @@ static bool isDeviceDataImpl(mlir::Value var) {
   // Handle operations that access a partial entity - check if the base entity
   // is device data.
   if (auto partialAccess =
-          mlir::dyn_cast<mlir::acc::PartialEntityAccessOpInterface>(defOp)) {
+          mlir::dyn_cast<mlir::acc::PartialEntityAccessOpInterface>(defOp))
     if (mlir::Value base = partialAccess.getBaseEntity())
       return isDeviceDataImpl(base);
-  }
 
   // Handle fir.rebox - if the underlying box is device data, so is the result.
   if (auto rebox = mlir::dyn_cast<fir::ReboxOp>(defOp))
