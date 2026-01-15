@@ -609,7 +609,7 @@ define  float @fcvtzu_1s1s_simd(float %a) {
 }
 
 ;
-; Intriniscs (scalar_to_vector)
+; Intrinsics (scalar_to_vector)
 ;
 
 define <2 x i32> @fcvtas_v2i32_from_f16_scalar_to_vector_simd(half %a) {
