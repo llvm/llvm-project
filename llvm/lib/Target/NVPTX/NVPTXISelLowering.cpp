@@ -7364,26 +7364,27 @@ void NVPTXTargetLowering::recordTargetMMOInfo(MachineFunction &MF,
   if (!I.mayReadOrWriteMemory())
     return;
 
-  // Get cache hint from metadata using the specified operand number.
+  // Get cache control hint from metadata using the specified operand number.
   // For load/store: operand_no = 0
   // For memcpy: operand_no = 0 (dest/store), operand_no = 1 (src/load)
-  unsigned CacheHint = NVPTX::getCacheHintFromMetadata(&I, OperandNo);
+  unsigned CacheControlHint =
+      NVPTX::getCacheControlHintFromMetadata(&I, OperandNo);
 
-  // Check for cache_policy (L2::cache_hint mode)
+  // Check for cache policy (L2::cache_hint mode)
   uint64_t CachePolicy = 0;
   if (auto Policy = NVPTX::getCachePolicyFromMetadata(&I, OperandNo)) {
     CachePolicy = *Policy;
     // Set the L2CacheHintFlag to indicate policy mode
-    CacheHint |= NVPTX::L2CacheHintFlag;
+    CacheControlHint |= NVPTX::L2CacheHintFlag;
   }
 
   // If no cache hints, nothing to store
-  if (CacheHint == 0 && CachePolicy == 0)
+  if (CacheControlHint == 0 && CachePolicy == 0)
     return;
 
   // Store in MachineFunctionInfo keyed by MMO pointer
   auto *MFI = MF.getInfo<NVPTXMachineFunctionInfo>();
-  MFI->setCachePolicyData(MMO, CachePolicy, CacheHint);
+  MFI->setCachePolicyData(MMO, CachePolicy, CacheControlHint);
 }
 
 NVPTXTargetLowering::AtomicExpansionKind

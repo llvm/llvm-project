@@ -105,14 +105,14 @@ private:
   SDValue getPTXCmpMode(const CondCodeSDNode &CondCode);
   SDValue selectPossiblyImm(SDValue V);
 
-  // Returns the cache hint and policy register for a memory operation.
+  // Returns the cache control hint and policy register for a memory operation.
   // If L2::cache_hint mode is active (SM 80+, PTX 7.4+, global address space),
-  // returns the updated cache hint with L2CacheHintFlag set and a register
-  // containing the 64-bit policy value. Otherwise returns the original hint
-  // and NOREG.
-  std::pair<unsigned, SDValue> getCacheHintAndPolicyReg(const MemSDNode *N,
-                                                        unsigned CodeAddrSpace,
-                                                        const SDLoc &DL);
+  // returns the updated cache control hint with L2CacheHintFlag set and a
+  // register containing the 64-bit policy value. Otherwise returns the original
+  // hint and NOREG.
+  std::pair<unsigned, SDValue>
+  getCacheControlHintAndPolicyReg(const MemSDNode *N, unsigned CodeAddrSpace,
+                                  const SDLoc &DL);
 
   // Returns the Memory Order and Scope that the PTX memory instruction should
   // use, and inserts appropriate fence instruction before the memory

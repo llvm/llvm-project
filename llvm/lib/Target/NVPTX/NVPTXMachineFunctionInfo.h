@@ -24,8 +24,8 @@ namespace llvm {
 // Stored per-MMO to avoid pointer collisions when multiple memops share
 // the same pointer value but have different cache policies.
 struct NVPTXMMOCachePolicyData {
-  uint64_t Policy;    // The 64-bit cache policy value for L2::cache_hint
-  unsigned CacheHint; // Other cache hints (L1 eviction, L2 eviction, prefetch)
+  uint64_t Policy;           // The 64-bit cache policy value for L2::cache_hint
+  unsigned CacheControlHint; // Cache control hints (L1/L2 eviction, prefetch)
 };
 
 class NVPTXMachineFunctionInfo : public MachineFunctionInfo {
@@ -70,8 +70,8 @@ public:
 
   /// Store cache policy data for a MachineMemOperand.
   void setCachePolicyData(MachineMemOperand *MMO, uint64_t Policy,
-                          unsigned CacheHint) {
-    CachePolicyMap[MMO] = {Policy, CacheHint};
+                          unsigned CacheControlHint) {
+    CachePolicyMap[MMO] = {Policy, CacheControlHint};
   }
 
   /// Get cache policy data for a MachineMemOperand.

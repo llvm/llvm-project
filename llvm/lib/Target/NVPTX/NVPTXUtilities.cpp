@@ -419,7 +419,8 @@ static std::optional<L2Prefetch> parseL2Prefetch(StringRef Str) {
 // Each node contains key-value pairs (operand_no can be anywhere):
 // !node = !{!"operand_no", i32 N, !"nvvm.key1", value1, ...}
 // Returns the matching MDNode or nullptr if not found.
-static const MDNode *findCacheHintNode(const MDNode *MD, unsigned OperandNo) {
+static const MDNode *findCacheControlHintNode(const MDNode *MD,
+                                              unsigned OperandNo) {
   if (!MD)
     return nullptr;
 
@@ -459,12 +460,13 @@ static const MDNode *findCacheHintNode(const MDNode *MD, unsigned OperandNo) {
   return nullptr;
 }
 
-unsigned getCacheHintFromMetadata(const Instruction *I, unsigned OperandNo) {
+unsigned getCacheControlHintFromMetadata(const Instruction *I,
+                                         unsigned OperandNo) {
   if (!I)
     return 0;
 
   MDNode *MD = I->getMetadata("mem.cache_hint");
-  const MDNode *Node = findCacheHintNode(MD, OperandNo);
+  const MDNode *Node = findCacheControlHintNode(MD, OperandNo);
   if (!Node)
     return 0;
 
@@ -520,7 +522,7 @@ unsigned getCacheHintFromMetadata(const Instruction *I, unsigned OperandNo) {
     // Unknown keys are silently ignored (may be target-specific extensions)
   }
 
-  return encodeCacheHint(L1, L2, Prefetch);
+  return encodeCacheControlHint(L1, L2, Prefetch);
 }
 
 std::optional<uint64_t> getCachePolicyFromMetadata(const Instruction *I,
@@ -529,7 +531,7 @@ std::optional<uint64_t> getCachePolicyFromMetadata(const Instruction *I,
     return std::nullopt;
 
   MDNode *MD = I->getMetadata("mem.cache_hint");
-  const MDNode *Node = findCacheHintNode(MD, OperandNo);
+  const MDNode *Node = findCacheControlHintNode(MD, OperandNo);
   if (!Node)
     return std::nullopt;
 

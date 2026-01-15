@@ -363,8 +363,9 @@ void NVPTXInstPrinter::printAtomicCode(const MCInst *MI, int OpNum,
   llvm_unreachable(formatv("Unknown Modifier: {}", Modifier).str().c_str());
 }
 
-void NVPTXInstPrinter::printCacheHint(const MCInst *MI, int OpNum,
-                                      raw_ostream &O, StringRef Modifier) {
+void NVPTXInstPrinter::printCacheControlHint(const MCInst *MI, int OpNum,
+                                             raw_ostream &O,
+                                             StringRef Modifier) {
   const MCOperand &MO = MI->getOperand(OpNum);
   unsigned Hint = MO.getImm();
 

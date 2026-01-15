@@ -228,7 +228,7 @@ enum class L2Prefetch : uint8_t {
   Bytes256 = 3, // L2::256B
 };
 
-// Bitfield layout for encoded cache hints (stored in unsigned):
+// Bitfield layout for encoded cache control hints (stored in unsigned):
 // Bits 0-2:  L1 Eviction (3 bits, 5 values)
 // Bits 3-4:  L2 Eviction (2 bits, 3 values)
 // Bits 5-6:  L2 Prefetch (2 bits, 4 values)
@@ -252,7 +252,8 @@ constexpr unsigned L2PrefetchShift = 5;
 constexpr unsigned L2PrefetchMask = 0x3;
 constexpr unsigned L2CacheHintFlag = 0x80; // Bit 7: L2::cache_hint mode
 
-inline unsigned encodeCacheHint(L1Eviction L1, L2Eviction L2, L2Prefetch P) {
+inline unsigned encodeCacheControlHint(L1Eviction L1, L2Eviction L2,
+                                       L2Prefetch P) {
   unsigned Hint = 0;
   Bitfield::set<L1EvictionBits>(Hint, L1);
   Bitfield::set<L2EvictionBits>(Hint, L2);

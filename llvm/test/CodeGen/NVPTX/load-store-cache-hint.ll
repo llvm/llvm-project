@@ -322,6 +322,35 @@ define void @test_store_v2f64_l1_no_allocate(ptr addrspace(1) %p, <2 x double> %
 }
 
 ;-----------------------------------------------------------------------------
+; Invariant loads with cache hints - should NOT use LDG (ld.global.nc)
+;-----------------------------------------------------------------------------
+
+; CHECK-LABEL: test_invariant_load_with_hint
+; CHECK: ld.global.L1::evict_first.b32
+; CHECK-NOT: ld.global.nc
+define i32 @test_invariant_load_with_hint(ptr addrspace(1) %p) {
+  %v = load i32, ptr addrspace(1) %p, !invariant.load !{}, !mem.cache_hint !0
+  ret i32 %v
+}
+
+; CHECK-LABEL: test_invariant_load_with_cache_policy
+; CHECK: mov.b64 [[POLICY:%rd[0-9]+]], 12345
+; CHECK: ld.global.L2::cache_hint.b32 {{%r[0-9]+}}, [{{%rd[0-9]+}}], [[POLICY]]
+; CHECK-NOT: ld.global.nc
+define i32 @test_invariant_load_with_cache_policy(ptr addrspace(1) %p) {
+  %v = load i32, ptr addrspace(1) %p, !invariant.load !{}, !mem.cache_hint !30
+  ret i32 %v
+}
+
+; CHECK-LABEL: test_invariant_load_v2i32_with_hint
+; CHECK: ld.global.L1::evict_last.L2::evict_first.v2.b32
+; CHECK-NOT: ld.global.nc
+define <2 x i32> @test_invariant_load_v2i32_with_hint(ptr addrspace(1) %p) {
+  %v = load <2 x i32>, ptr addrspace(1) %p, !invariant.load !{}, !mem.cache_hint !22
+  ret <2 x i32> %v
+}
+
+;-----------------------------------------------------------------------------
 ; No hint should produce plain load/store
 ;-----------------------------------------------------------------------------
 

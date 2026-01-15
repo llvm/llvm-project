@@ -206,10 +206,11 @@ inline raw_ostream &operator<<(raw_ostream &O, AddressSpace A) {
 }
 
 /// Parse !mem.cache_hint metadata from an instruction.
-/// Returns the encoded cache hint value, or 0 if no valid metadata is present.
-/// The OperandNo parameter specifies which pointer operand to look for
+/// Returns the encoded cache control hint value, or 0 if no valid metadata is
+/// present. The OperandNo parameter specifies which pointer operand to look for
 /// (for instructions with multiple pointer operands like memcpy).
-unsigned getCacheHintFromMetadata(const Instruction *I, unsigned OperandNo = 0);
+unsigned getCacheControlHintFromMetadata(const Instruction *I,
+                                         unsigned OperandNo = 0);
 
 /// Returns the L2::cache_hint value from !mem.cache_hint metadata, or
 /// std::nullopt if no nvvm.l2_cache_hint is specified. The value is a 64-bit

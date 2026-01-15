@@ -1608,7 +1608,9 @@ def AtomicCode : Operand<i32> {
   let PrintMethod = "printAtomicCode";
 }
 
-def CacheHint : Operand<i32> { let PrintMethod = "printCacheHint"; }
+def CacheControlHint : Operand<i32> {
+  let PrintMethod = "printCacheControlHint";
+}
 
 def MmaCode : Operand<i32> {
   let PrintMethod = "printMmaCode";
@@ -1852,15 +1854,17 @@ def Callseq_End :
 def CachePolicy : Operand<i64> { let PrintMethod = "printCachePolicy"; }
 
 class LD<NVPTXRegClass regclass>
-    : NVPTXInst<(outs regclass:$dst),
-                (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp,
-                    AtomicCode:$Sign, i32imm:$fromWidth,
-                    UsedBytesMask:$usedBytes, CacheHint:$cacheHint, ADDR:$addr,
-                    CachePolicy:$policy),
-                "${usedBytes}"
-                "ld${sem:sem}${scope:scope}${addsp:addsp}${cacheHint:l1}${"
-                "cacheHint:l2}${cacheHint:prefetch}.${Sign:sign}$fromWidth "
-                "\t$dst, [$addr]${policy};"> {
+    : NVPTXInst<
+          (outs regclass:$dst),
+          (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp,
+              AtomicCode:$Sign, i32imm:$fromWidth, UsedBytesMask:$usedBytes,
+              CacheControlHint:$cacheControlHint, ADDR:$addr,
+              CachePolicy:$policy),
+          "${usedBytes}"
+          "ld${sem:sem}${scope:scope}${addsp:addsp}${cacheControlHint:l1}${"
+          "cacheControlHint:l2}${cacheControlHint:prefetch}.${Sign:sign}$"
+          "fromWidth "
+          "\t$dst, [$addr]${policy};"> {
   let UseNamedOperandTable = 1;
 }
 
@@ -1871,13 +1875,14 @@ let mayLoad=1, hasSideEffects=0 in {
 }
 
 class ST<DAGOperand O>
-    : NVPTXInst<(outs),
-                (ins O:$src, AtomicCode:$sem, AtomicCode:$scope,
-                    AtomicCode:$addsp, i32imm:$toWidth, CacheHint:$cacheHint,
-                    ADDR:$addr, CachePolicy:$policy),
-                "st${sem:sem}${scope:scope}${addsp:addsp}${cacheHint:l1}${"
-                "cacheHint:l2}${cacheHint:prefetch}.b$toWidth"
-                " \t[$addr], $src${policy};"> {
+    : NVPTXInst<
+          (outs),
+          (ins O:$src, AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp,
+              i32imm:$toWidth, CacheControlHint:$cacheControlHint, ADDR:$addr,
+              CachePolicy:$policy),
+          "st${sem:sem}${scope:scope}${addsp:addsp}${cacheControlHint:l1}${"
+          "cacheControlHint:l2}${cacheControlHint:prefetch}.b$toWidth"
+          " \t[$addr], $src${policy};"> {
   let UseNamedOperandTable = 1;
 }
 
@@ -1897,10 +1902,12 @@ multiclass LD_VEC<NVPTXRegClass regclass, bit support_v8 = false> {
               (outs regclass:$dst1, regclass:$dst2),
               (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp,
                   AtomicCode:$Sign, i32imm:$fromWidth, UsedBytesMask:$usedBytes,
-                  CacheHint:$cacheHint, ADDR:$addr, CachePolicy:$policy),
+                  CacheControlHint:$cacheControlHint, ADDR:$addr,
+                  CachePolicy:$policy),
               "${usedBytes}"
-              "ld${sem:sem}${scope:scope}${addsp:addsp}${cacheHint:l1}${"
-              "cacheHint:l2}${cacheHint:prefetch}.v2.${Sign:sign}$fromWidth "
+              "ld${sem:sem}${scope:scope}${addsp:addsp}${cacheControlHint:l1}${"
+              "cacheControlHint:l2}${cacheControlHint:prefetch}.v2.${Sign:sign}"
+              "$fromWidth "
               "\t{{$dst1, $dst2}}, [$addr]${policy};">;
     def _v4
         : NVPTXInst<
@@ -1908,10 +1915,12 @@ multiclass LD_VEC<NVPTXRegClass regclass, bit support_v8 = false> {
                   regclass:$dst4),
               (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp,
                   AtomicCode:$Sign, i32imm:$fromWidth, UsedBytesMask:$usedBytes,
-                  CacheHint:$cacheHint, ADDR:$addr, CachePolicy:$policy),
+                  CacheControlHint:$cacheControlHint, ADDR:$addr,
+                  CachePolicy:$policy),
               "${usedBytes}"
-              "ld${sem:sem}${scope:scope}${addsp:addsp}${cacheHint:l1}${"
-              "cacheHint:l2}${cacheHint:prefetch}.v4.${Sign:sign}$fromWidth "
+              "ld${sem:sem}${scope:scope}${addsp:addsp}${cacheControlHint:l1}${"
+              "cacheControlHint:l2}${cacheControlHint:prefetch}.v4.${Sign:sign}"
+              "$fromWidth "
               "\t{{$dst1, $dst2, $dst3, $dst4}}, [$addr]${policy};">;
     if support_v8 then
       def _v8
@@ -1921,11 +1930,14 @@ multiclass LD_VEC<NVPTXRegClass regclass, bit support_v8 = false> {
                     regclass:$dst7, regclass:$dst8),
                 (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp,
                     AtomicCode:$Sign, i32imm:$fromWidth,
-                    UsedBytesMask:$usedBytes, CacheHint:$cacheHint, ADDR:$addr,
+                    UsedBytesMask:$usedBytes,
+                    CacheControlHint:$cacheControlHint, ADDR:$addr,
                     CachePolicy:$policy),
                 "${usedBytes}"
-                "ld${sem:sem}${scope:scope}${addsp:addsp}${cacheHint:l1}${"
-                "cacheHint:l2}${cacheHint:prefetch}.v8.${Sign:sign}$fromWidth "
+                "ld${sem:sem}${scope:scope}${addsp:addsp}${cacheControlHint:l1}"
+                "${"
+                "cacheControlHint:l2}${cacheControlHint:prefetch}.v8.${Sign:"
+                "sign}$fromWidth "
                 "\t{{$dst1, $dst2, $dst3, $dst4, $dst5, $dst6, $dst7, $dst8}}, "
                 "[$addr]${policy};">;
   }
@@ -1938,35 +1950,41 @@ let mayLoad=1, hasSideEffects=0 in {
 
 multiclass ST_VEC<DAGOperand O, bit support_v8 = false> {
   def _v2
-      : NVPTXInst<(outs),
-                  (ins O:$src1, O:$src2, AtomicCode:$sem, AtomicCode:$scope,
-                      AtomicCode:$addsp, i32imm:$fromWidth,
-                      CacheHint:$cacheHint, ADDR:$addr, CachePolicy:$policy),
-                  "st${sem:sem}${scope:scope}${addsp:addsp}${cacheHint:l1}${"
-                  "cacheHint:l2}${cacheHint:prefetch}.v2.b$fromWidth "
-                  "\t[$addr], {{$src1, $src2}}${policy};">;
+      : NVPTXInst<
+            (outs),
+            (ins O:$src1, O:$src2, AtomicCode:$sem, AtomicCode:$scope,
+                AtomicCode:$addsp, i32imm:$fromWidth,
+                CacheControlHint:$cacheControlHint, ADDR:$addr,
+                CachePolicy:$policy),
+            "st${sem:sem}${scope:scope}${addsp:addsp}${cacheControlHint:l1}${"
+            "cacheControlHint:l2}${cacheControlHint:prefetch}.v2.b$fromWidth "
+            "\t[$addr], {{$src1, $src2}}${policy};">;
   def _v4
-      : NVPTXInst<(outs),
-                  (ins RegOrSink:$src1, RegOrSink:$src2, RegOrSink:$src3,
-                      RegOrSink:$src4, AtomicCode:$sem, AtomicCode:$scope,
-                      AtomicCode:$addsp, i32imm:$fromWidth,
-                      CacheHint:$cacheHint, ADDR:$addr, CachePolicy:$policy),
-                  "st${sem:sem}${scope:scope}${addsp:addsp}${cacheHint:l1}${"
-                  "cacheHint:l2}${cacheHint:prefetch}.v4.b$fromWidth "
-                  "\t[$addr], {{$src1, $src2, $src3, $src4}}${policy};">;
+      : NVPTXInst<
+            (outs),
+            (ins RegOrSink:$src1, RegOrSink:$src2, RegOrSink:$src3,
+                RegOrSink:$src4, AtomicCode:$sem, AtomicCode:$scope,
+                AtomicCode:$addsp, i32imm:$fromWidth,
+                CacheControlHint:$cacheControlHint, ADDR:$addr,
+                CachePolicy:$policy),
+            "st${sem:sem}${scope:scope}${addsp:addsp}${cacheControlHint:l1}${"
+            "cacheControlHint:l2}${cacheControlHint:prefetch}.v4.b$fromWidth "
+            "\t[$addr], {{$src1, $src2, $src3, $src4}}${policy};">;
   if support_v8 then
     def _v8
-        : NVPTXInst<(outs),
-                    (ins RegOrSink:$src1, RegOrSink:$src2, RegOrSink:$src3,
-                        RegOrSink:$src4, RegOrSink:$src5, RegOrSink:$src6,
-                        RegOrSink:$src7, RegOrSink:$src8, AtomicCode:$sem,
-                        AtomicCode:$scope, AtomicCode:$addsp, i32imm:$fromWidth,
-                        CacheHint:$cacheHint, ADDR:$addr, CachePolicy:$policy),
-                    "st${sem:sem}${scope:scope}${addsp:addsp}${cacheHint:l1}${"
-                    "cacheHint:l2}${cacheHint:prefetch}.v8.b$fromWidth "
-                    "\t[$addr], "
-                    "{{$src1, $src2, $src3, $src4, $src5, $src6, $src7, "
-                    "$src8}}${policy};">;
+        : NVPTXInst<
+              (outs),
+              (ins RegOrSink:$src1, RegOrSink:$src2, RegOrSink:$src3,
+                  RegOrSink:$src4, RegOrSink:$src5, RegOrSink:$src6,
+                  RegOrSink:$src7, RegOrSink:$src8, AtomicCode:$sem,
+                  AtomicCode:$scope, AtomicCode:$addsp, i32imm:$fromWidth,
+                  CacheControlHint:$cacheControlHint, ADDR:$addr,
+                  CachePolicy:$policy),
+              "st${sem:sem}${scope:scope}${addsp:addsp}${cacheControlHint:l1}${"
+              "cacheControlHint:l2}${cacheControlHint:prefetch}.v8.b$fromWidth "
+              "\t[$addr], "
+              "{{$src1, $src2, $src3, $src4, $src5, $src6, $src7, "
+              "$src8}}${policy};">;
 }
 
 let mayStore=1, hasSideEffects=0 in {
