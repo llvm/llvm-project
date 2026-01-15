@@ -98,9 +98,8 @@ bool fn4() {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[M:%.*]] = alloca [4 x i32], align 4
 // CHECK-NEXT:    store <4 x i32> splat (i32 1), ptr [[M]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[M]], align 4
-// CHECK-NEXT:    [[MATINS:%.*]] = insertelement <4 x i32> [[TMP0]], i32 0, i32 3
-// CHECK-NEXT:    store <4 x i32> [[MATINS]], ptr [[M]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <4 x i32>, ptr [[M]], i32 0, i32 3
+// CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4
 // CHECK-NEXT:    ret void
 //
 void fn5() {
@@ -121,10 +120,9 @@ void fn5() {
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[V]], align 4
 // CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i32 [[TMP0]] to i1
 // CHECK-NEXT:    [[BM1:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[S]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[BM1]], align 1
-// CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[LOADEDV]] to i32
-// CHECK-NEXT:    [[MATINS:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[TMP2]], i32 1
-// CHECK-NEXT:    store <4 x i32> [[MATINS]], ptr [[BM1]], align 1
+// CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[LOADEDV]] to i32
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <4 x i32>, ptr [[BM1]], i32 0, i32 1
+// CHECK-NEXT:    store i32 [[TMP1]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
 void fn6() {
@@ -141,9 +139,8 @@ void fn6() {
 // CHECK-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [4 x i32], ptr [[ARR]], i32 1
 // CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[ARRAYINIT_ELEMENT]], align 4
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x [4 x i32]], ptr [[ARR]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[ARRAYIDX]], align 4
-// CHECK-NEXT:    [[MATINS:%.*]] = insertelement <4 x i32> [[TMP0]], i32 0, i32 1
-// CHECK-NEXT:    store <4 x i32> [[MATINS]], ptr [[ARRAYIDX]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <4 x i32>, ptr [[ARRAYIDX]], i32 0, i32 1
+// CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4
 // CHECK-NEXT:    ret void
 //
 void fn7() {

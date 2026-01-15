@@ -65,14 +65,15 @@ void setMatrix2(out int4x4 M, int4 V) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr [[V_ADDR]], align 16
 // CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x i32> [[TMP0]], <3 x i32> poison, <3 x i32> <i32 2, i32 1, i32 0>
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[M_ADDR]], align 4, !nonnull [[META3]], !align [[META4]]
-// CHECK-NEXT:    [[MATRIX_LOAD:%.*]] = load <6 x i32>, ptr [[TMP2]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = extractelement <3 x i32> [[TMP1]], i32 0
-// CHECK-NEXT:    [[TMP4:%.*]] = insertelement <6 x i32> [[MATRIX_LOAD]], i32 [[TMP3]], i32 0
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr <6 x i32>, ptr [[TMP2]], i32 0, i32 0
+// CHECK-NEXT:    store i32 [[TMP3]], ptr [[TMP4]], align 4
 // CHECK-NEXT:    [[TMP5:%.*]] = extractelement <3 x i32> [[TMP1]], i32 1
-// CHECK-NEXT:    [[TMP6:%.*]] = insertelement <6 x i32> [[TMP4]], i32 [[TMP5]], i32 2
+// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr <6 x i32>, ptr [[TMP2]], i32 0, i32 2
+// CHECK-NEXT:    store i32 [[TMP5]], ptr [[TMP6]], align 4
 // CHECK-NEXT:    [[TMP7:%.*]] = extractelement <3 x i32> [[TMP1]], i32 2
-// CHECK-NEXT:    [[TMP8:%.*]] = insertelement <6 x i32> [[TMP6]], i32 [[TMP7]], i32 4
-// CHECK-NEXT:    store <6 x i32> [[TMP8]], ptr [[TMP2]], align 4
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr <6 x i32>, ptr [[TMP2]], i32 0, i32 4
+// CHECK-NEXT:    store i32 [[TMP7]], ptr [[TMP8]], align 4
 // CHECK-NEXT:    ret void
 //
 void setMatrixVectorSwizzle(out int2x3 M, int3 V) {
@@ -116,17 +117,18 @@ void setVectorOnMatrixSwizzle(out int2x3 M, int3 V) {
 // CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <6 x i32> [[TMP0]], <6 x i32> poison, <3 x i32> <i32 3, i32 5, i32 1>
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[M_ADDR]], align 4, !nonnull [[META3]], !align [[META4]]
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[MINDEX_ADDR]], align 4
-// CHECK-NEXT:    [[MATRIX_LOAD:%.*]] = load <6 x i32>, ptr [[TMP2]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = add i32 0, [[TMP3]]
 // CHECK-NEXT:    [[TMP5:%.*]] = extractelement <3 x i32> [[TMP1]], i32 0
-// CHECK-NEXT:    [[TMP6:%.*]] = insertelement <6 x i32> [[MATRIX_LOAD]], i32 [[TMP5]], i32 [[TMP4]]
+// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr <6 x i32>, ptr [[TMP2]], i32 0, i32 [[TMP4]]
+// CHECK-NEXT:    store i32 [[TMP5]], ptr [[TMP6]], align 4
 // CHECK-NEXT:    [[TMP7:%.*]] = add i32 2, [[TMP3]]
 // CHECK-NEXT:    [[TMP8:%.*]] = extractelement <3 x i32> [[TMP1]], i32 1
-// CHECK-NEXT:    [[TMP9:%.*]] = insertelement <6 x i32> [[TMP6]], i32 [[TMP8]], i32 [[TMP7]]
+// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr <6 x i32>, ptr [[TMP2]], i32 0, i32 [[TMP7]]
+// CHECK-NEXT:    store i32 [[TMP8]], ptr [[TMP9]], align 4
 // CHECK-NEXT:    [[TMP10:%.*]] = add i32 4, [[TMP3]]
 // CHECK-NEXT:    [[TMP11:%.*]] = extractelement <3 x i32> [[TMP1]], i32 2
-// CHECK-NEXT:    [[TMP12:%.*]] = insertelement <6 x i32> [[TMP9]], i32 [[TMP11]], i32 [[TMP10]]
-// CHECK-NEXT:    store <6 x i32> [[TMP12]], ptr [[TMP2]], align 4
+// CHECK-NEXT:    [[TMP12:%.*]] = getelementptr <6 x i32>, ptr [[TMP2]], i32 0, i32 [[TMP10]]
+// CHECK-NEXT:    store i32 [[TMP11]], ptr [[TMP12]], align 4
 // CHECK-NEXT:    ret void
 //
 void setMatrixFromMatrix(out int2x3 M, int2x3 N, int MIndex) {
