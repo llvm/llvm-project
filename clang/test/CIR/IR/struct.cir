@@ -68,8 +68,8 @@ module  {
   }
 
   cir.func @structs() {
-    %0 = cir.alloca !cir.ptr<!cir.record<struct "Sc" {!u8i, !u16i, !u32i}>>, !cir.ptr<!cir.ptr<!cir.record<struct "Sc" {!u8i, !u16i, !u32i}>>>, ["sc", init]
-    %1 = cir.alloca !cir.ptr<!cir.record<union "U" incomplete>>, !cir.ptr<!cir.ptr<!cir.record<union "U" incomplete>>>, ["u", init]
+    %0 = cir.alloca !cir.ptr<!cir.record<struct "Sc" {!u8i, !u16i, !u32i}>>, !cir.ptr<!cir.ptr<!cir.record<struct "Sc" {!u8i, !u16i, !u32i}>>>, ["sc", init] {alignment = 8 : i64}
+    %1 = cir.alloca !cir.ptr<!cir.record<union "U" incomplete>>, !cir.ptr<!cir.ptr<!cir.record<union "U" incomplete>>>, ["u", init] {alignment = 8 : i64}
     cir.return
   }
 

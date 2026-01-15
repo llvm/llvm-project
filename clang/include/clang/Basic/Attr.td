@@ -476,7 +476,7 @@ def TargetMips32 : TargetArch<["mips", "mipsel"]>;
 def TargetAnyMips : TargetArch<["mips", "mipsel", "mips64", "mips64el"]>;
 def TargetMSP430 : TargetArch<["msp430"]>;
 def TargetM68k : TargetArch<["m68k"]>;
-def TargetRISCV : TargetArch<["riscv32", "riscv64", "riscv32be", "riscv64be"]>;
+def TargetRISCV : TargetArch<["riscv32", "riscv64"]>;
 def TargetX86 : TargetArch<["x86"]>;
 def TargetX86_64 : TargetArch<["x86_64"]>;
 def TargetAnyX86 : TargetArch<["x86", "x86_64"]>;
@@ -762,6 +762,7 @@ class Attr {
   // Any documentation that should be associated with the attribute. Since an
   // attribute may be documented under multiple categories, more than one
   // Documentation entry may be listed.
+  string comparisonFn = "";
   list<Documentation> Documentation;
 }
 
@@ -886,6 +887,7 @@ def Aligned : InheritableAttr {
                    Accessor<"isAlignas", [CustomKeyword<"alignas">,
                                           CustomKeyword<"_Alignas">]>,
                    Accessor<"isDeclspec",[Declspec<"align">]>];
+  let comparisonFn = "areAlignedAttrsEqual";
   let Documentation = [Undocumented];
 }
 
