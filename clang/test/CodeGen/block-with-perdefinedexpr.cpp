@@ -67,11 +67,11 @@ public:
   }
   void inside_lambda() {
     auto lambda = []() {
-      // CHECK-DAG: @__PRETTY_FUNCTION__.___ZZN12foonamespace3Foo13inside_lambdaEvENKUlvE_clEv_block_invoke = private unnamed_addr constant [92 x i8] c"auto foonamespace::Foo::inside_lambda()::(anonymous class)::operator()() const_block_invoke\00", align 1
+      // CHECK-DAG: @__PRETTY_FUNCTION__.___ZZN12foonamespace3Foo13inside_lambdaEvENKUlvE_clEv_block_invoke = private unnamed_addr constant [83 x i8] c"auto foonamespace::Foo::inside_lambda()::(lambda)::operator()() const_block_invoke\00", align 1
       const char * (^block1)() = ^() {
         return __PRETTY_FUNCTION__;
       };
-      // CHECK-DAG: 	  @__PRETTY_FUNCTION__.___ZZN12foonamespace3Foo13inside_lambdaEvENKUlvE_clEv_block_invoke_2 = private unnamed_addr constant [94 x i8] c"auto foonamespace::Foo::inside_lambda()::(anonymous class)::operator()() const_block_invoke_2\00", align 1
+      // CHECK-DAG: 	  @__PRETTY_FUNCTION__.___ZZN12foonamespace3Foo13inside_lambdaEvENKUlvE_clEv_block_invoke_2 = private unnamed_addr constant [85 x i8] c"auto foonamespace::Foo::inside_lambda()::(lambda)::operator()() const_block_invoke_2\00", align 1
       const char * (^block2)() = ^() {
         return __PRETTY_FUNCTION__;
       };

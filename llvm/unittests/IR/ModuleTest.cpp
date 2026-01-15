@@ -421,8 +421,17 @@ define void @Foo2() {
     auto *GV2 = M2->getNamedValue("GV2");
     ASSERT_TRUE(GV2);
     ASSERT_EQ(GV2->getParent(), &*M2);
+
+    auto *Foo2MD = M2->getNamedMetadata("foo2");
+    auto *Bar2MD = M2->getNamedMetadata("bar2");
     *M1 = std::move(*M2);
     ASSERT_EQ(GV2->getParent(), &*M1);
+    ASSERT_EQ(M1->getNamedMetadata("foo2"), Foo2MD);
+    ASSERT_EQ(M1->getNamedMetadata("bar2"), Bar2MD);
+    ASSERT_EQ(M1->getNamedMetadata("foo1"), nullptr);
+
+    for (const NamedMDNode &NMD : M1->named_metadata())
+      ASSERT_EQ(NMD.getParent(), &*M1);
   }
 
   std::string M1Print;

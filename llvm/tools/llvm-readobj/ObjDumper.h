@@ -130,6 +130,7 @@ public:
   virtual void printGroupSections() {}
   virtual void printHashHistograms() {}
   virtual void printCGProfile() {}
+  virtual void printCallGraphInfo() {}
   // If PrettyPGOAnalysis is true, prints BFI as relative frequency and BPI as
   // percentage. Otherwise raw values are displayed.
   virtual void printBBAddrMaps(bool PrettyPGOAnalysis) {}

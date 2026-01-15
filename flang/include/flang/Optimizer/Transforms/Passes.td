@@ -215,6 +215,15 @@ def MemRefDataFlowOpt : Pass<"fir-memref-dataflow-opt", "::mlir::func::FuncOp"> 
   ];
 }
 
+def FIRToMemRef : Pass<"fir-to-memref", "::mlir::func::FuncOp"> {
+  let summary = "Convert FIR memory operations to MemRef dialect";
+  let description = [{
+    Lower FIR memory operations (`fir.alloca`, `fir.load`, `fir.store`, 'fir.array_coor', and etc.) to MLIR's MemRef core dialect.
+  }];
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::arith::ArithDialect",
+                           "mlir::memref::MemRefDialect"];
+}
+
 // This needs to be a "mlir::ModuleOp" pass, because we are creating debug for
 // the module in this pass.
 def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
@@ -533,6 +542,11 @@ def CUFDeviceFuncTransform
                         /*default=*/"0", "CUDA compute capability version">];
 }
 
+def CUFFunctionRewrite : Pass<"cuf-function-rewrite", ""> {
+  let summary = "Convert some CUDA Fortran specific call";
+  let dependentDialects = ["fir::FIROpsDialect"];
+}
+
 def CUFLaunchAttachAttr : Pass<"cuf-launch-attach-attr", ""> {
   let summary = "Attach CUDA attribute to CUF kernel generated launch";
   let description = [{
@@ -624,6 +638,17 @@ def OptimizeArrayRepacking
 def MIFOpConversion : Pass<"mif-convert", "mlir::ModuleOp"> {
   let summary = "Convert some MIF operations to runtime calls";
   let dependentDialects = ["fir::FIROpsDialect", "mlir::LLVM::LLVMDialect"];
+}
+
+def LoopInvariantCodeMotion : Pass<"flang-licm", "::mlir::func::FuncOp"> {
+  let summary = "Hoist invariants from loops";
+  let description = [{
+    Hoist invariants from loops. This is a FIR-specific version of loop
+    invariant code motion, which relies on FIR types, operations (such as
+    fir.declare) and interfaces such as FortranObjectViewOpInterface.
+    The pass only moves existing operations, so there are no dependent
+    dialects.
+  }];
 }
 
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

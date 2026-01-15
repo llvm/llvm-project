@@ -419,7 +419,7 @@ define void @loop_body_with_dead_blocks(ptr %src) {
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    [[L_2:%.*]] = load i32, ptr [[SRC]], align 8
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i32 [[L_2]], 1
-; CHECK-NEXT:    br i1 [[C_2]], label [[EXIT:%.*]], label [[LOOP_HEADER_1:%.*]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[C_2]], label [[EXIT:%.*]], label [[LOOP_HEADER_1:%.*]]
 ; CHECK:       loop.header.1:
 ; CHECK-NEXT:    br label [[LOOP_BB_1:%.*]]
 ; CHECK:       loop.bb.1:
@@ -429,7 +429,7 @@ define void @loop_body_with_dead_blocks(ptr %src) {
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    [[L_2_1:%.*]] = load i32, ptr [[SRC]], align 8
 ; CHECK-NEXT:    [[C_2_1:%.*]] = icmp eq i32 [[L_2_1]], 1
-; CHECK-NEXT:    br i1 [[C_2_1]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[C_2_1]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -471,7 +471,5 @@ exit:
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
-; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META8:![0-9]+]]}
-; CHECK: [[META8]] = !{!"llvm.loop.unroll.count", i32 2}
-; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]]}
+; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]]}
 ;.

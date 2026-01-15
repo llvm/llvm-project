@@ -1935,6 +1935,7 @@ define amdgpu_ps float @atomic_flat_load_saddr_i32(ptr inreg %sbase, i32 %voffse
 ; GFX1250-NEXT:    flat_load_b32 v0, v0, s[2:3] scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -1950,6 +1951,7 @@ define amdgpu_ps float @atomic_flat_load_saddr_i32_immneg128(ptr inreg %sbase, i
 ; GFX1250-NEXT:    flat_load_b32 v0, v0, s[2:3] offset:-128 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -1966,6 +1968,7 @@ define amdgpu_ps <2 x float> @atomic_flat_load_saddr_i64(ptr inreg %sbase, i32 %
 ; GFX1250-NEXT:    flat_load_b64 v[0:1], v0, s[2:3] scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -1981,6 +1984,7 @@ define amdgpu_ps <2 x float> @atomic_flat_load_saddr_i64_immneg128(ptr inreg %sb
 ; GFX1250-NEXT:    flat_load_b64 v[0:1], v0, s[2:3] offset:-128 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
