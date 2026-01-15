@@ -70,11 +70,7 @@ define i32 @FOR_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC1-NEXT:    [[TMP25:%.*]] = xor <2 x i1> [[TMP2]], splat (i1 true)
 ; VF2IC1-NEXT:    [[TMP26:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP25]], i1 false)
 ; VF2IC1-NEXT:    [[TMP27:%.*]] = sub i64 [[TMP26]], 1
-; VF2IC1-NEXT:    [[TMP28:%.*]] = sub i64 [[TMP27]], 1
-; VF2IC1-NEXT:    [[TMP29:%.*]] = extractelement <2 x i32> [[TMP12]], i64 [[TMP28]]
-; VF2IC1-NEXT:    [[TMP30:%.*]] = extractelement <2 x i32> [[VECTOR_RECUR]], i32 1
-; VF2IC1-NEXT:    [[TMP31:%.*]] = icmp eq i64 [[TMP27]], 0
-; VF2IC1-NEXT:    [[TMP32:%.*]] = select i1 [[TMP31]], i32 [[TMP30]], i32 [[TMP29]]
+; VF2IC1-NEXT:    [[TMP32:%.*]] = extractelement <2 x i32> [[TMP13]], i64 [[TMP27]]
 ; VF2IC1-NEXT:    br label %[[FOR_END:.*]]
 ; VF2IC1:       [[FOR_END]]:
 ; VF2IC1-NEXT:    ret i32 [[TMP32]]
@@ -193,16 +189,12 @@ define i32 @FOR_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC2-NEXT:    [[TMP54:%.*]] = add i64 0, [[TMP53]]
 ; VF2IC2-NEXT:    [[TMP55:%.*]] = icmp ne i64 [[TMP53]], 2
 ; VF2IC2-NEXT:    [[TMP56:%.*]] = select i1 [[TMP55]], i64 [[TMP54]], i64 [[TMP52]]
-; VF2IC2-NEXT:    [[TMP57:%.*]] = sub i64 [[TMP56]], 1
-; VF2IC2-NEXT:    [[TMP58:%.*]] = sub i64 [[TMP57]], 1
-; VF2IC2-NEXT:    [[TMP59:%.*]] = extractelement <2 x i32> [[TMP15]], i64 [[TMP58]]
+; VF2IC2-NEXT:    [[TMP58:%.*]] = sub i64 [[TMP56]], 1
+; VF2IC2-NEXT:    [[TMP59:%.*]] = extractelement <2 x i32> [[TMP26]], i64 [[TMP58]]
 ; VF2IC2-NEXT:    [[TMP60:%.*]] = sub i64 [[TMP58]], 2
-; VF2IC2-NEXT:    [[TMP61:%.*]] = extractelement <2 x i32> [[TMP25]], i64 [[TMP60]]
+; VF2IC2-NEXT:    [[TMP57:%.*]] = extractelement <2 x i32> [[TMP27]], i64 [[TMP60]]
 ; VF2IC2-NEXT:    [[TMP62:%.*]] = icmp uge i64 [[TMP58]], 2
-; VF2IC2-NEXT:    [[TMP63:%.*]] = select i1 [[TMP62]], i32 [[TMP61]], i32 [[TMP59]]
-; VF2IC2-NEXT:    [[TMP64:%.*]] = extractelement <2 x i32> [[VECTOR_RECUR]], i32 1
-; VF2IC2-NEXT:    [[TMP65:%.*]] = icmp eq i64 [[TMP57]], 0
-; VF2IC2-NEXT:    [[TMP66:%.*]] = select i1 [[TMP65]], i32 [[TMP64]], i32 [[TMP63]]
+; VF2IC2-NEXT:    [[TMP66:%.*]] = select i1 [[TMP62]], i32 [[TMP57]], i32 [[TMP59]]
 ; VF2IC2-NEXT:    br label %[[FOR_END:.*]]
 ; VF2IC2:       [[FOR_END]]:
 ; VF2IC2-NEXT:    ret i32 [[TMP66]]
@@ -267,13 +259,10 @@ define i32 @FOR_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF1IC2-NEXT:    [[TMP21:%.*]] = add i64 0, [[TMP20]]
 ; VF1IC2-NEXT:    [[TMP22:%.*]] = icmp ne i64 [[TMP20]], 1
 ; VF1IC2-NEXT:    [[TMP23:%.*]] = select i1 [[TMP22]], i64 [[TMP21]], i64 [[TMP18]]
-; VF1IC2-NEXT:    [[TMP24:%.*]] = sub i64 [[TMP23]], 1
-; VF1IC2-NEXT:    [[TMP25:%.*]] = sub i64 [[TMP24]], 1
+; VF1IC2-NEXT:    [[TMP25:%.*]] = sub i64 [[TMP23]], 1
 ; VF1IC2-NEXT:    [[TMP26:%.*]] = sub i64 [[TMP25]], 1
 ; VF1IC2-NEXT:    [[TMP27:%.*]] = icmp uge i64 [[TMP25]], 1
-; VF1IC2-NEXT:    [[TMP28:%.*]] = select i1 [[TMP27]], i32 [[TMP8]], i32 [[TMP5]]
-; VF1IC2-NEXT:    [[TMP29:%.*]] = icmp eq i64 [[TMP24]], 0
-; VF1IC2-NEXT:    [[TMP30:%.*]] = select i1 [[TMP29]], i32 [[VECTOR_RECUR]], i32 [[TMP28]]
+; VF1IC2-NEXT:    [[TMP30:%.*]] = select i1 [[TMP27]], i32 [[TMP5]], i32 [[VECTOR_RECUR]]
 ; VF1IC2-NEXT:    br label %[[FOR_END:.*]]
 ; VF1IC2:       [[FOR_END]]:
 ; VF1IC2-NEXT:    ret i32 [[TMP30]]
@@ -647,11 +636,7 @@ define i32 @FOR_and_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC1-NEXT:    [[TMP25:%.*]] = xor <2 x i1> [[TMP2]], splat (i1 true)
 ; VF2IC1-NEXT:    [[TMP26:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP25]], i1 false)
 ; VF2IC1-NEXT:    [[TMP27:%.*]] = sub i64 [[TMP26]], 1
-; VF2IC1-NEXT:    [[TMP28:%.*]] = sub i64 [[TMP27]], 1
-; VF2IC1-NEXT:    [[TMP29:%.*]] = extractelement <2 x i32> [[TMP12]], i64 [[TMP28]]
-; VF2IC1-NEXT:    [[TMP30:%.*]] = extractelement <2 x i32> [[VECTOR_RECUR]], i32 1
-; VF2IC1-NEXT:    [[TMP31:%.*]] = icmp eq i64 [[TMP27]], 0
-; VF2IC1-NEXT:    [[TMP32:%.*]] = select i1 [[TMP31]], i32 [[TMP30]], i32 [[TMP29]]
+; VF2IC1-NEXT:    [[TMP32:%.*]] = extractelement <2 x i32> [[TMP13]], i64 [[TMP27]]
 ; VF2IC1-NEXT:    [[TMP33:%.*]] = extractelement <2 x i32> [[TMP12]], i64 [[TMP27]]
 ; VF2IC1-NEXT:    br label %[[FOR_END:.*]]
 ; VF2IC1:       [[FOR_END]]:
@@ -772,20 +757,16 @@ define i32 @FOR_and_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC2-NEXT:    [[TMP54:%.*]] = add i64 0, [[TMP53]]
 ; VF2IC2-NEXT:    [[TMP55:%.*]] = icmp ne i64 [[TMP53]], 2
 ; VF2IC2-NEXT:    [[TMP56:%.*]] = select i1 [[TMP55]], i64 [[TMP54]], i64 [[TMP52]]
-; VF2IC2-NEXT:    [[TMP57:%.*]] = sub i64 [[TMP56]], 1
-; VF2IC2-NEXT:    [[TMP58:%.*]] = sub i64 [[TMP57]], 1
-; VF2IC2-NEXT:    [[TMP59:%.*]] = extractelement <2 x i32> [[TMP15]], i64 [[TMP58]]
+; VF2IC2-NEXT:    [[TMP58:%.*]] = sub i64 [[TMP56]], 1
+; VF2IC2-NEXT:    [[TMP59:%.*]] = extractelement <2 x i32> [[TMP26]], i64 [[TMP58]]
 ; VF2IC2-NEXT:    [[TMP60:%.*]] = sub i64 [[TMP58]], 2
-; VF2IC2-NEXT:    [[TMP61:%.*]] = extractelement <2 x i32> [[TMP25]], i64 [[TMP60]]
+; VF2IC2-NEXT:    [[TMP57:%.*]] = extractelement <2 x i32> [[TMP27]], i64 [[TMP60]]
 ; VF2IC2-NEXT:    [[TMP62:%.*]] = icmp uge i64 [[TMP58]], 2
-; VF2IC2-NEXT:    [[TMP63:%.*]] = select i1 [[TMP62]], i32 [[TMP61]], i32 [[TMP59]]
-; VF2IC2-NEXT:    [[TMP64:%.*]] = extractelement <2 x i32> [[VECTOR_RECUR]], i32 1
-; VF2IC2-NEXT:    [[TMP65:%.*]] = icmp eq i64 [[TMP57]], 0
-; VF2IC2-NEXT:    [[TMP66:%.*]] = select i1 [[TMP65]], i32 [[TMP64]], i32 [[TMP63]]
-; VF2IC2-NEXT:    [[TMP67:%.*]] = extractelement <2 x i32> [[TMP15]], i64 [[TMP57]]
-; VF2IC2-NEXT:    [[TMP68:%.*]] = sub i64 [[TMP57]], 2
+; VF2IC2-NEXT:    [[TMP66:%.*]] = select i1 [[TMP62]], i32 [[TMP57]], i32 [[TMP59]]
+; VF2IC2-NEXT:    [[TMP67:%.*]] = extractelement <2 x i32> [[TMP15]], i64 [[TMP58]]
+; VF2IC2-NEXT:    [[TMP68:%.*]] = sub i64 [[TMP58]], 2
 ; VF2IC2-NEXT:    [[TMP69:%.*]] = extractelement <2 x i32> [[TMP25]], i64 [[TMP68]]
-; VF2IC2-NEXT:    [[TMP70:%.*]] = icmp uge i64 [[TMP57]], 2
+; VF2IC2-NEXT:    [[TMP70:%.*]] = icmp uge i64 [[TMP58]], 2
 ; VF2IC2-NEXT:    [[TMP71:%.*]] = select i1 [[TMP70]], i32 [[TMP69]], i32 [[TMP67]]
 ; VF2IC2-NEXT:    br label %[[FOR_END:.*]]
 ; VF2IC2:       [[FOR_END]]:
@@ -852,15 +833,12 @@ define i32 @FOR_and_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF1IC2-NEXT:    [[TMP21:%.*]] = add i64 0, [[TMP20]]
 ; VF1IC2-NEXT:    [[TMP22:%.*]] = icmp ne i64 [[TMP20]], 1
 ; VF1IC2-NEXT:    [[TMP23:%.*]] = select i1 [[TMP22]], i64 [[TMP21]], i64 [[TMP18]]
-; VF1IC2-NEXT:    [[TMP24:%.*]] = sub i64 [[TMP23]], 1
-; VF1IC2-NEXT:    [[TMP25:%.*]] = sub i64 [[TMP24]], 1
+; VF1IC2-NEXT:    [[TMP25:%.*]] = sub i64 [[TMP23]], 1
 ; VF1IC2-NEXT:    [[TMP26:%.*]] = sub i64 [[TMP25]], 1
 ; VF1IC2-NEXT:    [[TMP27:%.*]] = icmp uge i64 [[TMP25]], 1
-; VF1IC2-NEXT:    [[TMP28:%.*]] = select i1 [[TMP27]], i32 [[TMP8]], i32 [[TMP5]]
-; VF1IC2-NEXT:    [[TMP29:%.*]] = icmp eq i64 [[TMP24]], 0
-; VF1IC2-NEXT:    [[TMP30:%.*]] = select i1 [[TMP29]], i32 [[VECTOR_RECUR]], i32 [[TMP28]]
-; VF1IC2-NEXT:    [[TMP31:%.*]] = sub i64 [[TMP24]], 1
-; VF1IC2-NEXT:    [[TMP32:%.*]] = icmp uge i64 [[TMP24]], 1
+; VF1IC2-NEXT:    [[TMP30:%.*]] = select i1 [[TMP27]], i32 [[TMP5]], i32 [[VECTOR_RECUR]]
+; VF1IC2-NEXT:    [[TMP28:%.*]] = sub i64 [[TMP25]], 1
+; VF1IC2-NEXT:    [[TMP32:%.*]] = icmp uge i64 [[TMP25]], 1
 ; VF1IC2-NEXT:    [[TMP33:%.*]] = select i1 [[TMP32]], i32 [[TMP8]], i32 [[TMP5]]
 ; VF1IC2-NEXT:    br label %[[FOR_END:.*]]
 ; VF1IC2:       [[FOR_END]]:
