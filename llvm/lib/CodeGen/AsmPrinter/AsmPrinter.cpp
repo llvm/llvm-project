@@ -749,8 +749,16 @@ MCSymbol *AsmPrinter::getSymbolPreferLocal(const GlobalValue &GV) const {
   return TM.getSymbol(&GV);
 }
 
-/// EmitGlobalVariable - Emit the specified global variable to the .s file.
 void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
+  MaybeAlign RequiredAlignment = getRequiredGlobalAlignment(*GV);
+  emitGlobalVariable(GV, RequiredAlignment);
+  if (RequiredAlignment)
+    OutStreamer->emitValueToAlignment(*RequiredAlignment);
+}
+
+/// EmitGlobalVariable - Emit the specified global variable to the .s file.
+void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV,
+                                    MaybeAlign OverAlignment) {
   bool IsEmuTLSVar = TM.useEmulatedTLS() && GV->isThreadLocal();
   assert(!(IsEmuTLSVar && GV->hasCommonLinkage()) &&
          "No emulated TLS variables in the common section");
@@ -812,11 +820,20 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
   const DataLayout &DL = GV->getDataLayout();
   uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
+  // In general, we *must* obey the specified alignment it.  Overaligning a
+  // global with a specified alignment is a prompt way to break globals
+  // emitted to sections and expected to be contiguous (e.g. ObjC metadata).
+  //
+  // If we get passed in an explicit overalignment, it is up to the caller
+  // to ensure that is not the case (i.e. that the GV is not in a section).
+  Align Alignment = getGVAlignment(GV, DL);
 
-  // If the alignment is specified, we *must* obey it.  Overaligning a global
-  // with a specified alignment is a prompt way to break globals emitted to
-  // sections and expected to be contiguous (e.g. ObjC metadata).
-  const Align Alignment = getGVAlignment(GV, DL);
+  if (OverAlignment) {
+    assert(!GV->hasSection());
+    Size = alignTo(Size, *OverAlignment);
+    if (Alignment < *OverAlignment)
+      Alignment = *OverAlignment;
+  }
 
   for (auto &Handler : Handlers)
     Handler->setSymbolSize(GVSym, Size);
@@ -2699,37 +2716,6 @@ static bool shouldTagGlobal(const llvm::GlobalVariable &G) {
   return globalSize(G) > 0;
 }
 
-static void tagGlobalDefinition(Module &M, GlobalVariable *G) {
-  uint64_t SizeInBytes = globalSize(*G);
-
-  uint64_t NewSize = alignTo(SizeInBytes, 16);
-  if (SizeInBytes != NewSize) {
-    // Pad the initializer out to the next multiple of 16 bytes.
-    llvm::SmallVector<uint8_t> Init(NewSize - SizeInBytes, 0);
-    Constant *Padding = ConstantDataArray::get(M.getContext(), Init);
-    Constant *Initializer = G->getInitializer();
-    Initializer = ConstantStruct::getAnon({Initializer, Padding});
-    auto *NewGV = new GlobalVariable(
-        M, Initializer->getType(), G->isConstant(), G->getLinkage(),
-        Initializer, "", G, G->getThreadLocalMode(), G->getAddressSpace());
-    NewGV->copyAttributesFrom(G);
-    NewGV->setComdat(G->getComdat());
-    NewGV->copyMetadata(G, 0);
-
-    NewGV->takeName(G);
-    G->replaceAllUsesWith(NewGV);
-    G->eraseFromParent();
-    G = NewGV;
-  }
-
-  if (G->getAlign().valueOrOne() < 16)
-    G->setAlignment(Align(16));
-
-  // Ensure that tagged globals don't get merged by ICF - as they should have
-  // different tags at runtime.
-  G->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
-}
-
 static void removeMemtagFromGlobal(GlobalVariable &G) {
   auto Meta = G.getSanitizerMetadata();
   Meta.Memtag = false;
@@ -2743,7 +2729,6 @@ bool AsmPrinter::doFinalization(Module &M) {
   MF = nullptr;
   const Triple &Target = TM.getTargetTriple();
 
-  std::vector<GlobalVariable *> GlobalsToTag;
   for (GlobalVariable &G : M.globals()) {
     if (G.isDeclaration() || !G.isTagged())
       continue;
@@ -2753,10 +2738,10 @@ bool AsmPrinter::doFinalization(Module &M) {
       assert(!G.isTagged());
       continue;
     }
-    GlobalsToTag.push_back(&G);
+    // Ensure that tagged globals don't get merged by ICF - as they should have
+    // different tags at runtime.
+    G.setUnnamedAddr(GlobalValue::UnnamedAddr::None);
   }
-  for (GlobalVariable *G : GlobalsToTag)
-    tagGlobalDefinition(M, G);
 
   // Gather all GOT equivalent globals in the module. We really need two
   // passes over the globals: one to compute and another to avoid its emission

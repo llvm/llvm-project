@@ -329,6 +329,7 @@ private:
 
   void emitFunctionBodyEnd() override;
   void emitGlobalAlias(const Module &M, const GlobalAlias &GA) override;
+  MaybeAlign getRequiredGlobalAlignment(const GlobalVariable &GV) override;
 
   MCSymbol *GetCPISymbol(unsigned CPID) const override;
   void emitEndOfAsmFile(Module &M) override;
@@ -1488,6 +1489,11 @@ void AArch64AsmPrinter::emitGlobalAlias(const Module &M,
     }
   }
   AsmPrinter::emitGlobalAlias(M, GA);
+}
+
+MaybeAlign
+AArch64AsmPrinter::getRequiredGlobalAlignment(const GlobalVariable &GV) {
+  return GV.isTagged() ? MaybeAlign(16) : std::nullopt;
 }
 
 /// Small jump tables contain an unsigned byte or half, representing the offset
