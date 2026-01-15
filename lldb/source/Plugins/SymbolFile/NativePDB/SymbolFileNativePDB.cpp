@@ -1019,8 +1019,10 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
   if (auto err = ts_or_err.takeError())
     return nullptr;
   auto ts = *ts_or_err;
-  if (ts && ts->GetNativePDBParser())
-    ts->GetNativePDBParser()->EnsureVariable(var_id);
+  if (ts) {
+    if (PdbAstBuilder *ast_builder = ts->GetNativePDBParser())
+      ast_builder->EnsureVariable(var_id);
+  }
 
   ModuleSP module_sp = GetObjectFile()->GetModule();
   DWARFExpressionList location(
@@ -1121,9 +1123,12 @@ Block *SymbolFileNativePDB::GetOrCreateBlock(PdbCompilandSymId block_id) {
 void SymbolFileNativePDB::ParseDeclsForContext(
     lldb_private::CompilerDeclContext decl_ctx) {
   TypeSystem *ts = decl_ctx.GetTypeSystem();
-  if (!ts || !ts->GetNativePDBParser())
+  if (!ts)
     return;
-  ts->GetNativePDBParser()->ParseDeclsForContext(decl_ctx);
+  PdbAstBuilder *ast_builder = ts->GetNativePDBParser();
+  if (!ast_builder)
+    return;
+  ast_builder->ParseDeclsForContext(decl_ctx);
 }
 
 lldb::CompUnitSP SymbolFileNativePDB::ParseCompileUnitAtIndex(uint32_t index) {
