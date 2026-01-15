@@ -379,7 +379,11 @@ KnownFPClass KnownFPClass::fma_square(const KnownFPClass &KnownSquared,
   KnownFPClass Known = fadd_impl(Squared, KnownAddend, Mode);
 
   // Since we know the squared input must be positive, the add of opposite sign
-  // infinities nan hazard only applies for negative nan.
+  // infinities nan hazard only applies for negative inf.
+  //
+  // TODO: Alternatively to proving addend is not -inf, we could know Squared is
+  // not pinf. Other than the degenerate always-subnormal input case, we can't
+  // prove that without a known range.
   if (KnownAddend.isKnownNever(fcNegInf | fcNan) && Squared.isKnownNever(fcNan))
     Known.knownNot(fcNan);
 
