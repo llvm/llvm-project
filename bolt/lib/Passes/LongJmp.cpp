@@ -963,13 +963,18 @@ void LongJmpPass::relaxCalls(BinaryContext &BC) {
   auto estimateFunctionSize = [&](const BinaryFunction &BF) -> uint64_t {
     if (!BC.shouldEmit(BF))
       return 0;
-    uint64_t Size = BF.estimateSize();
-    if (BF.hasValidIndex())
-      Size += BF.getAlignment();
+    uint64_t Size = BF.estimateSize() + BF.getMaxAlignmentBytes();
+
+    // Each additional fragment can attribute extra bytes due to its alignment
+    // requirements.
+    for ([[maybe_unused]] const FunctionFragment &FF :
+         BF.getLayout().getSplitFragments())
+      Size += BF.getMaxColdAlignmentBytes();
 
     if (BF.hasIslandsInfo()) {
-      Size += BF.getConstantIslandAlignment();
       Size += BF.estimateConstantIslandSize();
+      if (BF.getConstantIslandAlignment() > BF.getMinAlignment())
+        Size += BF.getConstantIslandAlignment() - BF.getMinAlignment();
     }
 
     return Size;
