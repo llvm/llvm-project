@@ -266,9 +266,16 @@ static cl::opt<bool> DisableSelectOptimize(
     cl::desc("Disable the select-optimization pass from running"));
 
 /// Enable garbage-collecting empty basic blocks.
-static cl::opt<bool>
-    GCEmptyBlocks("gc-empty-basic-blocks", cl::init(false), cl::Hidden,
-                  cl::desc("Enable garbage-collecting empty basic blocks"));
+static cl::opt<bool> EnableGCEmptyBlocks(
+    "enable-gc-empty-basic-blocks", cl::init(false), cl::Hidden,
+    cl::desc("Enable garbage-collecting empty basic blocks"));
+
+// TODO: remove this once all downstream users have migrated to using
+// enable-gc-empty-basic-blocks.
+static cl::alias
+    EnableGCEmptyBlocksAlias("gc-empty-basic-blocks",
+                             cl::desc("Alias for enable-gc-empty-basic-blocks"),
+                             cl::aliasopt(EnableGCEmptyBlocks));
 
 static cl::opt<bool>
     SplitStaticData("split-static-data", cl::Hidden, cl::init(false),
@@ -510,7 +517,7 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   SET_OPTION(DisableExpandReductions)
   SET_OPTION(PrintAfterISel)
   SET_OPTION(FSProfileFile)
-  SET_OPTION(GCEmptyBlocks)
+  SET_OPTION(EnableGCEmptyBlocks)
 
 #define SET_BOOLEAN_OPTION(Option) Opt.Option = Option;
 
@@ -1249,7 +1256,7 @@ void TargetPassConfig::addMachinePasses() {
       addPass(createMachineOutlinerPass(EnableMachineOutliner));
   }
 
-  if (GCEmptyBlocks)
+  if (EnableGCEmptyBlocks)
     addPass(llvm::createGCEmptyBasicBlocksLegacyPass());
 
   if (EnableFSDiscriminator)

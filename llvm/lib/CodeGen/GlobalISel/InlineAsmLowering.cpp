@@ -368,9 +368,9 @@ bool InlineAsmLowering::lowerInlineAsm(
         Inst.addImm(Flag);
 
         for (Register Reg : OpInfo.Regs) {
-          Inst.addReg(Reg, RegState::Define |
-                               getImplRegState(Reg.isPhysical()) |
-                               getEarlyClobberRegState(OpInfo.isEarlyClobber));
+          Inst.addReg(Reg,
+                      RegState::Define | getImplRegState(Reg.isPhysical()) |
+                          (OpInfo.isEarlyClobber ? RegState::EarlyClobber : 0));
         }
 
         // Remember this output operand for later processing

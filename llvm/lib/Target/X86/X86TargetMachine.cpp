@@ -91,7 +91,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86AvoidSFBLegacyPass(PR);
   initializeX86AvoidTrailingCallLegacyPassPass(PR);
   initializeX86SpeculativeLoadHardeningLegacyPass(PR);
-  initializeX86SpeculativeExecutionSideEffectSuppressionPass(PR);
+  initializeX86SpeculativeExecutionSideEffectSuppressionLegacyPass(PR);
   initializeX86FlagsCopyLoweringLegacyPass(PR);
   initializeX86LoadValueInjectionLoadHardeningPassPass(PR);
   initializeX86LoadValueInjectionRetHardeningPassPass(PR);
@@ -587,7 +587,7 @@ void X86PassConfig::addPreEmitPass2() {
   // passes don't move the code around the LFENCEs in a way that will hurt the
   // correctness of this pass. This placement has been shown to work based on
   // hand inspection of the codegen output.
-  addPass(createX86SpeculativeExecutionSideEffectSuppression());
+  addPass(createX86SpeculativeExecutionSideEffectSuppressionLegacyPass());
   addPass(createX86IndirectThunksPass());
   addPass(createX86ReturnThunksPass());
 
