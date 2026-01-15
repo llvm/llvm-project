@@ -195,9 +195,11 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:vmv0 = IMPLICIT_DEF
-  ; CHECK-NEXT:   early-clobber %5:vrm8nov0 = PseudoVZEXT_VF8_M8_MASK undef [[DEF1]], killed undef [[DEF]], [[DEF2]], 16, 6 /* e64 */, 1 /* ta, mu */
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vrm8nov0 = COPY %5
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vrm8 = COPY killed %5
+  ; CHECK-NEXT:   early-clobber %7:vrm8nov0 = PseudoVZEXT_VF8_M8_MASK undef [[DEF1]], killed undef [[DEF]], [[DEF2]], 16, 6 /* e64 */, 1 /* ta, mu */
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vrm8nov0 = COPY %7
+  ; CHECK-NEXT:   %a123:vrm8 = COPY [[COPY]]
+  ; CHECK-NEXT:   %b123:vrm8nov0 = COPY %a123
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vrm8 = COPY killed %7
   ; CHECK-NEXT:   PseudoRET
   bb.0:
     successors: %bb.1
@@ -210,8 +212,10 @@ body:             |
 
     early-clobber %102:vrm8 = PseudoVZEXT_VF8_M8 undef $noreg, killed undef %326, 16, 6 /* e64 */, 3 /* ta, ma */
     %123:vrm8nov0 = COPY %102
+    %a123:vrm8 = COPY %123
+    %b123:vrm8nov0 = COPY %a123
     %124:vmv0 = IMPLICIT_DEF
-    %121:vrm8nov0 = PseudoVMERGE_VVM_M8 undef $noreg, killed undef %327, killed undef %123, undef %124, 16, 6 /* e64 */
+    %121:vrm8nov0 = PseudoVMERGE_VVM_M8 undef $noreg, killed undef %327, killed undef %b123, undef %124, 16, 6 /* e64 */
     %125:vrm8 = COPY killed %121
     PseudoRET
 ...
