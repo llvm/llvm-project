@@ -28,8 +28,8 @@ const uint8_t LA64StubContent[StubEntrySize] = {
 };
 
 const uint8_t LA32StubContent[StubEntrySize] = {
-    0x14, 0x00, 0x00, 0x1a, // pcalau12i $t8, %page20(imm)
-    0x94, 0x02, 0x80, 0x28, // ld.w $t8, $t8, %pageoff12(imm)
+    0x14, 0x00, 0x00, 0x1c, // pcaddu12i $t8, %pcadd20(imm)
+    0x94, 0x02, 0x80, 0x28, // ld.w $t8, $t8, %pcadd12(.Lpcadd_hi)
     0x80, 0x02, 0x00, 0x4c  // jr $t8
 };
 
