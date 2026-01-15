@@ -99,6 +99,13 @@ func.func @rocdl.math.ops(%a: f32, %b: f16, %c: bf16) {
   %sqrt0 = rocdl.sqrt %a f32 -> f32
   %sqrt1 = rocdl.sqrt %b f16 -> f16
   %sqrt2 = rocdl.sqrt %c bf16 -> bf16
+
+  // CHECK: %{{.*}} = rocdl.rsq %{{.*}} f32 -> f32
+  // CHECK: %{{.*}} = rocdl.rsq %{{.*}} f16 -> f16
+  // CHECK: %{{.*}} = rocdl.rsq %{{.*}} bf16 -> bf16
+  %rsq0 = rocdl.rsq %a f32 -> f32
+  %rsq1 = rocdl.rsq %b f16 -> f16
+  %rsq2 = rocdl.rsq %c bf16 -> bf16
   llvm.return
 }
 
