@@ -8956,6 +8956,15 @@ TreeTransform<Derived>::TransformDependentCoawaitExpr(DependentCoawaitExpr *E) {
 template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformCoyieldExpr(CoyieldExpr *E) {
+  // FINAL FIX: Strict check.
+  // 1. If we are in a function scope, but the CoroutinePromise is missing
+  // (null),
+  //    it means the coroutine setup failed (e.g. valid promise type not found).
+  // 2. If the promise exists but is invalid, we also fail.
+  if (clang::sema::FunctionScopeInfo *FSI = getSema().getCurFunction()) {
+    if (!FSI->CoroutinePromise || FSI->CoroutinePromise->isInvalidDecl())
+      return ExprError();
+  }
   ExprResult Result = getDerived().TransformInitializer(E->getOperand(),
                                                         /*NotCopyInit*/false);
   if (Result.isInvalid())
