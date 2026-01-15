@@ -6,10 +6,10 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -regalloc=fast   < %s | FileCheck --check-prefix=FAST-X86_64 %s
 ; RUN: llc -mtriple=i386-unknown-linux-gnu -regalloc=fast     < %s | FileCheck --check-prefix=FAST-I386 %s
 
-; The Greedy register allocator should use registers when there isn't register
-; pressure.
+; The non-fast register allocators should use registers when there isn't
+; register pressure.
 
-define dso_local i32 @test1(ptr nocapture noundef readonly %ptr) local_unnamed_addr #0 {
+define dso_local i32 @test1(ptr nocapture noundef readonly %ptr) local_unnamed_addr {
 ; GREEDY-X86_64-LABEL: test1:
 ; GREEDY-X86_64:    #APP
 ; GREEDY-X86_64:    # 'rm' input no pressure -> %eax %ecx
@@ -22,12 +22,12 @@ define dso_local i32 @test1(ptr nocapture noundef readonly %ptr) local_unnamed_a
 ;
 ; BASIC-X86_64-LABEL: test1:
 ; BASIC-X86_64:    #APP
-; BASIC-X86_64:    # 'rm' input no pressure -> -{{[0-9]+}}(%rsp) -{{[0-9]+}}(%rsp)
+; BASIC-X86_64:    # 'rm' input no pressure -> %ecx %eax
 ; BASIC-X86_64:    #NO_APP
 ;
 ; BASIC-I386-LABEL: test1:
 ; BASIC-I386:    #APP
-; BASIC-I386:    # 'rm' input no pressure -> {{[0-9]+}}(%esp) (%esp)
+; BASIC-I386:    # 'rm' input no pressure -> %ecx %eax
 ; BASIC-I386:    #NO_APP
 ;
 ; FAST-X86_64-LABEL: test1:
@@ -44,12 +44,12 @@ entry:
   %i = load i32, ptr %b, align 4
   %d = getelementptr inbounds i8, ptr %ptr, i64 12
   %i1 = load i32, ptr %d, align 4
-  tail call void asm sideeffect "# 'rm' input no pressure -> $0 $1", "rm,rm,~{dirflag},~{fpsr},~{flags}"(i32 %i, i32 %i1) #1
+  tail call void asm sideeffect "# 'rm' input no pressure -> $0 $1", "rm,rm,~{dirflag},~{fpsr},~{flags}"(i32 %i, i32 %i1)
   %i2 = load i32, ptr %ptr, align 4
   ret i32 %i2
 }
 
-define dso_local i32 @test2(ptr nocapture noundef readonly %ptr) local_unnamed_addr #0 {
+define dso_local i32 @test2(ptr nocapture noundef readonly %ptr) local_unnamed_addr {
 ; GREEDY-X86_64-LABEL: test2:
 ; GREEDY-X86_64:    #APP # 8-byte Folded Reload
 ; GREEDY-X86_64:    # 'rm' input pressure -> -{{[0-9]+}}(%rsp) -{{[0-9]+}}(%rsp)
@@ -61,13 +61,13 @@ define dso_local i32 @test2(ptr nocapture noundef readonly %ptr) local_unnamed_a
 ; GREEDY-I386:    #NO_APP
 ;
 ; BASIC-X86_64-LABEL: test2:
-; BASIC-X86_64:    #APP
+; BASIC-X86_64:    #APP # 8-byte Folded Reload
 ; BASIC-X86_64:    # 'rm' input pressure -> -{{[0-9]+}}(%rsp) -{{[0-9]+}}(%rsp)
 ; BASIC-X86_64:    #NO_APP
 ;
 ; BASIC-I386-LABEL: test2:
-; BASIC-I386:    #APP
-; BASIC-I386:    # 'rm' input pressure -> {{[0-9]+}}(%esp) (%esp)
+; BASIC-I386:    #APP # 8-byte Folded Reload
+; BASIC-I386:    # 'rm' input pressure -> (%esp) {{[0-9]+}}(%esp)
 ; BASIC-I386:    #NO_APP
 ;
 ; FAST-X86_64-LABEL: test2:
@@ -84,12 +84,12 @@ entry:
   %i = load i32, ptr %b, align 4
   %d = getelementptr inbounds i8, ptr %ptr, i64 12
   %i1 = load i32, ptr %d, align 4
-  tail call void asm sideeffect "# 'rm' input pressure -> $0 $1", "rm,rm,~{ax},~{cx},~{dx},~{si},~{di},~{r8},~{r9},~{r10},~{r11},~{bx},~{bp},~{r14},~{r15},~{r12},~{r13},~{dirflag},~{fpsr},~{flags}"(i32 %i, i32 %i1) #1
+  tail call void asm sideeffect "# 'rm' input pressure -> $0 $1", "rm,rm,~{ax},~{cx},~{dx},~{si},~{di},~{r8},~{r9},~{r10},~{r11},~{bx},~{bp},~{r14},~{r15},~{r12},~{r13},~{dirflag},~{fpsr},~{flags}"(i32 %i, i32 %i1)
   %i2 = load i32, ptr %ptr, align 4
   ret i32 %i2
 }
 
-define dso_local i32 @test3(ptr noundef %ptr) local_unnamed_addr #0 {
+define dso_local i32 @test3(ptr noundef %ptr) local_unnamed_addr {
 ; GREEDY-X86_64-LABEL: test3:
 ; GREEDY-X86_64:    #APP
 ; GREEDY-X86_64:    # 'rm' output no pressure -> %eax %ecx
@@ -102,12 +102,12 @@ define dso_local i32 @test3(ptr noundef %ptr) local_unnamed_addr #0 {
 ;
 ; BASIC-X86_64-LABEL: test3:
 ; BASIC-X86_64:    #APP
-; BASIC-X86_64:    # 'rm' output no pressure -> 4(%rdi) 12(%rdi)
+; BASIC-X86_64:    # 'rm' output no pressure -> %eax %ecx
 ; BASIC-X86_64:    #NO_APP
 ;
 ; BASIC-I386-LABEL: test3:
 ; BASIC-I386:    #APP
-; BASIC-I386:    # 'rm' output no pressure -> 4(%eax) 12(%eax)
+; BASIC-I386:    # 'rm' output no pressure -> %eax %ecx
 ; BASIC-I386:    #NO_APP
 ;
 ; FAST-X86_64-LABEL: test3:
@@ -122,12 +122,12 @@ define dso_local i32 @test3(ptr noundef %ptr) local_unnamed_addr #0 {
 entry:
   %b = getelementptr inbounds i8, ptr %ptr, i64 4
   %d = getelementptr inbounds i8, ptr %ptr, i64 12
-  tail call void asm sideeffect "# 'rm' output no pressure -> $0 $1", "=*rm,=*rm,~{dirflag},~{fpsr},~{flags}"(ptr nonnull elementtype(i32) %b, ptr nonnull elementtype(i32) %d) #1
+  tail call void asm sideeffect "# 'rm' output no pressure -> $0 $1", "=*rm,=*rm,~{dirflag},~{fpsr},~{flags}"(ptr nonnull elementtype(i32) %b, ptr nonnull elementtype(i32) %d)
   %i = load i32, ptr %ptr, align 4
   ret i32 %i
 }
 
-define dso_local i32 @test4(ptr noundef %ptr) local_unnamed_addr #0 {
+define dso_local i32 @test4(ptr noundef %ptr) local_unnamed_addr {
 ; GREEDY-X86_64-LABEL: test4:
 ; GREEDY-X86_64:    #APP
 ; GREEDY-X86_64:    # tied 'rm' no pressure -> %eax %ecx %eax %ecx
@@ -162,12 +162,12 @@ entry:
   %i = load i32, ptr %b, align 4
   %d = getelementptr inbounds i8, ptr %ptr, i64 12
   %i1 = load i32, ptr %d, align 4
-  tail call void asm sideeffect "# tied 'rm' no pressure -> $0 $1 $2 $3", "=*rm,=*rm,0,1,~{dirflag},~{fpsr},~{flags}"(ptr nonnull elementtype(i32) %b, ptr nonnull elementtype(i32) %d, i32 %i, i32 %i1) #1
+  tail call void asm sideeffect "# tied 'rm' no pressure -> $0 $1 $2 $3", "=*rm,=*rm,0,1,~{dirflag},~{fpsr},~{flags}"(ptr nonnull elementtype(i32) %b, ptr nonnull elementtype(i32) %d, i32 %i, i32 %i1)
   %i2 = load i32, ptr %ptr, align 4
   ret i32 %i2
 }
 
-define dso_local i32 @test5(ptr nocapture noundef readonly %ptr) local_unnamed_addr #0 {
+define dso_local i32 @test5(ptr nocapture noundef readonly %ptr) local_unnamed_addr {
 ; GREEDY-X86_64-LABEL: test5:
 ; GREEDY-X86_64:    #APP
 ; GREEDY-X86_64:    # 'rm' input -> %eax
@@ -180,12 +180,12 @@ define dso_local i32 @test5(ptr nocapture noundef readonly %ptr) local_unnamed_a
 ;
 ; BASIC-X86_64-LABEL: test5:
 ; BASIC-X86_64:    #APP
-; BASIC-X86_64:    # 'rm' input -> -{{[0-9]+}}(%rsp)
+; BASIC-X86_64:    # 'rm' input -> %eax
 ; BASIC-X86_64:    #NO_APP
 ;
 ; BASIC-I386-LABEL: test5:
 ; BASIC-I386:    #APP
-; BASIC-I386:    # 'rm' input -> (%esp)
+; BASIC-I386:    # 'rm' input -> %eax
 ; BASIC-I386:    #NO_APP
 ;
 ; FAST-X86_64-LABEL: test5:
@@ -200,12 +200,12 @@ define dso_local i32 @test5(ptr nocapture noundef readonly %ptr) local_unnamed_a
 entry:
   %b = getelementptr inbounds i8, ptr %ptr, i64 4
   %i = load i32, ptr %b, align 4
-  tail call void asm sideeffect "# 'rm' input -> $0", "rm,~{dirflag},~{fpsr},~{flags}"(i32 %i) #1
+  tail call void asm sideeffect "# 'rm' input -> $0", "rm,~{dirflag},~{fpsr},~{flags}"(i32 %i)
   %i1 = load i32, ptr %ptr, align 4
   ret i32 %i1
 }
 
-define dso_local i32 @test6(ptr nocapture noundef readonly %ptr) local_unnamed_addr #0 {
+define dso_local i32 @test6(ptr nocapture noundef readonly %ptr) local_unnamed_addr {
 ; GREEDY-X86_64-LABEL: test6:
 ; GREEDY-X86_64:    #APP
 ; GREEDY-X86_64:    # 'rm' and 'r' input -> %eax %ecx
@@ -218,12 +218,12 @@ define dso_local i32 @test6(ptr nocapture noundef readonly %ptr) local_unnamed_a
 ;
 ; BASIC-X86_64-LABEL: test6:
 ; BASIC-X86_64:    #APP
-; BASIC-X86_64:    # 'rm' and 'r' input -> -{{[0-9]+}}(%rsp) %ecx
+; BASIC-X86_64:    # 'rm' and 'r' input -> %ecx %eax
 ; BASIC-X86_64:    #NO_APP
 ;
 ; BASIC-I386-LABEL: test6:
 ; BASIC-I386:    #APP
-; BASIC-I386:    # 'rm' and 'r' input -> (%esp) %ecx
+; BASIC-I386:    # 'rm' and 'r' input -> %ecx %eax
 ; BASIC-I386:    #NO_APP
 ;
 ; FAST-X86_64-LABEL: test6:
@@ -240,12 +240,12 @@ entry:
   %i = load i32, ptr %b, align 4
   %d = getelementptr inbounds i8, ptr %ptr, i64 12
   %i1 = load i32, ptr %d, align 4
-  tail call void asm sideeffect "# 'rm' and 'r' input -> $0 $1", "rm,r,~{dirflag},~{fpsr},~{flags}"(i32 %i, i32 %i1) #1
+  tail call void asm sideeffect "# 'rm' and 'r' input -> $0 $1", "rm,r,~{dirflag},~{fpsr},~{flags}"(i32 %i, i32 %i1)
   %i2 = load i32, ptr %ptr, align 4
   ret i32 %i2
 }
 
-define dso_local i32 @test7(ptr noundef %ptr) local_unnamed_addr #0 {
+define dso_local i32 @test7(ptr noundef %ptr) local_unnamed_addr {
 ; GREEDY-X86_64-LABEL: test7:
 ; GREEDY-X86_64:    #APP
 ; GREEDY-X86_64:    # 'rm' output -> %eax
@@ -258,12 +258,12 @@ define dso_local i32 @test7(ptr noundef %ptr) local_unnamed_addr #0 {
 ;
 ; BASIC-X86_64-LABEL: test7:
 ; BASIC-X86_64:    #APP
-; BASIC-X86_64:    # 'rm' output -> 4(%rdi)
+; BASIC-X86_64:    # 'rm' output -> %eax
 ; BASIC-X86_64:    #NO_APP
 ;
 ; BASIC-I386-LABEL: test7:
 ; BASIC-I386:    #APP
-; BASIC-I386:    # 'rm' output -> 4(%eax)
+; BASIC-I386:    # 'rm' output -> %eax
 ; BASIC-I386:    #NO_APP
 ;
 ; FAST-X86_64-LABEL: test7:
@@ -277,12 +277,12 @@ define dso_local i32 @test7(ptr noundef %ptr) local_unnamed_addr #0 {
 ; FAST-I386:    #NO_APP
 entry:
   %b = getelementptr inbounds i8, ptr %ptr, i64 4
-  tail call void asm sideeffect "# 'rm' output -> $0", "=*rm,~{dirflag},~{fpsr},~{flags}"(ptr nonnull elementtype(i32) %b) #1
+  tail call void asm sideeffect "# 'rm' output -> $0", "=*rm,~{dirflag},~{fpsr},~{flags}"(ptr nonnull elementtype(i32) %b)
   %i = load i32, ptr %ptr, align 4
   ret i32 %i
 }
 
-define dso_local i32 @test8(ptr noundef %ptr) local_unnamed_addr #0 {
+define dso_local i32 @test8(ptr noundef %ptr) local_unnamed_addr {
 ; GREEDY-X86_64-LABEL: test8:
 ; GREEDY-X86_64:    #APP
 ; GREEDY-X86_64:    # 'rm' tied -> %eax
@@ -315,12 +315,12 @@ define dso_local i32 @test8(ptr noundef %ptr) local_unnamed_addr #0 {
 entry:
   %b = getelementptr inbounds i8, ptr %ptr, i64 4
   %i = load i32, ptr %b, align 4
-  tail call void asm sideeffect "# 'rm' tied -> $0", "=*rm,0,~{dirflag},~{fpsr},~{flags}"(ptr nonnull elementtype(i32) %b, i32 %i) #1
+  tail call void asm sideeffect "# 'rm' tied -> $0", "=*rm,0,~{dirflag},~{fpsr},~{flags}"(ptr nonnull elementtype(i32) %b, i32 %i)
   %i1 = load i32, ptr %ptr, align 4
   ret i32 %i1
 }
 
-define dso_local i32 @test9(ptr nocapture noundef %ptr) local_unnamed_addr #0 {
+define dso_local i32 @test9(ptr nocapture noundef %ptr) local_unnamed_addr {
 ; GREEDY-X86_64-LABEL: test9:
 ; GREEDY-X86_64:    #APP
 ; GREEDY-X86_64:    # 'r' output == input location -> %eax
@@ -353,11 +353,8 @@ define dso_local i32 @test9(ptr nocapture noundef %ptr) local_unnamed_addr #0 {
 entry:
   %b = getelementptr inbounds i8, ptr %ptr, i64 4
   %i = load i32, ptr %b, align 4
-  %i1 = tail call i32 asm sideeffect "# 'r' output == input location -> $0", "=r,0,~{dirflag},~{fpsr},~{flags}"(i32 %i) #1
+  %i1 = tail call i32 asm sideeffect "# 'r' output == input location -> $0", "=r,0,~{dirflag},~{fpsr},~{flags}"(i32 %i)
   store i32 %i1, ptr %b, align 4
   %i2 = load i32, ptr %ptr, align 4
   ret i32 %i2
 }
-
-attributes #0 = { nounwind uwtable "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
-attributes #1 = { nounwind }

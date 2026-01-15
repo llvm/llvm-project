@@ -983,6 +983,9 @@ void TargetPassConfig::addISelPrepare() {
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createObjCARCContractPass());
 
+  if (getOptLevel() == CodeGenOptLevel::None)
+    addPass(createInlineAsmPass());
+
   addPass(createCallBrPass());
 
   // Add both the safe stack and the stack protection passes: each of them will

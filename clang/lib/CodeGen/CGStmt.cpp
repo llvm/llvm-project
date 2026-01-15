@@ -2921,13 +2921,20 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     if (!Constraints.empty())
       Constraints += ',';
 
-    // If this is a register output, then make the inline asm return it
-    // by-value.  If this is a memory result, return the value by-reference.
+    // - If this is a register output, then make the inline asm return it
+    //   by-value.
+    // - If this is an "rm" constraint on x86, then treat it like a register
+    //   output. (We'll correct this before ISel if using the FastRA.)
+    // - If this is a memory result, return the value by-reference.
     QualType QTy = OutExpr->getType();
     const bool IsScalarOrAggregate = hasScalarEvaluationKind(QTy) ||
                                      hasAggregateEvaluationKind(QTy);
-    if (!Info.allowsMemory() && IsScalarOrAggregate) {
+    const bool X86RegisterMemoryConstraints =
+        getTarget().getTriple().isX86() &&
+        (OutputConstraint == "rm" || OutputConstraint == "mr");
 
+    if (IsScalarOrAggregate &&
+        (!Info.allowsMemory() || X86RegisterMemoryConstraints)) {
       Constraints += "=" + OutputConstraint;
       ResultRegQualTys.push_back(QTy);
       ResultRegDests.push_back(Dest);
