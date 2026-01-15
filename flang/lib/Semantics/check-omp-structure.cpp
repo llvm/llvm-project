@@ -1322,7 +1322,8 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
             ContextDirectiveAsFortran());
       } else if (!IsSaved(*name->symbol) &&
           declScope.kind() != Scope::Kind::MainProgram &&
-          declScope.kind() != Scope::Kind::Module) {
+          declScope.kind() != Scope::Kind::Module &&
+          !name->symbol->attrs().test(Attr::EXTERNAL)) {
         context_.Say(name->source,
             "A variable that appears in a %s directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly"_err_en_US,
             ContextDirectiveAsFortran());
