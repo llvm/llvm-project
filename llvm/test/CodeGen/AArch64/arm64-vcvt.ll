@@ -357,7 +357,6 @@ define <2 x i64> @fcvtzs_2d(<2 x double> %A) nounwind {
 	ret <2 x i64> %tmp3
 }
 
-; FIXME: Generate "fcvtzs d0, d0"?
 define <1 x i64> @fcvtzs_1d(<1 x double> %A) nounwind {
 ; CHECK-LABEL: fcvtzs_1d:
 ; CHECK:       // %bb.0:

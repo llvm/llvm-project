@@ -6563,19 +6563,44 @@ multiclass FPToIntegerSIMDScalarPatterns<SDPatternOperator OpN, string INST> {
             (!cast<Instruction>(INST # DHr) FPR16:$Rn)>;
   def : Pat<(f64 (bitconvert (i64 (OpN (f32 FPR32:$Rn))))),
             (!cast<Instruction>(INST # DSr) FPR32:$Rn)>;
-
-  def : Pat<(v1i64 (scalar_to_vector (i64 (OpN (f16 FPR16:$Rn))))),
-            (!cast<Instruction>(INST # DHr) FPR16:$Rn)>;
-  def : Pat<(v1i64 (scalar_to_vector (i64 (OpN (f32 FPR32:$Rn))))),
-            (!cast<Instruction>(INST # DSr) FPR32:$Rn)>;
   }
   def : Pat<(f32 (bitconvert (i32 (OpN (f32 FPR32:$Rn))))),
             (!cast<Instruction>(INST # v1i32) FPR32:$Rn)>;
   def : Pat<(f64 (bitconvert (i64 (OpN (f64 FPR64:$Rn))))),
             (!cast<Instruction>(INST # v1i64) FPR64:$Rn)>;
 
+  foreach ret_type = [v2i32, v4i32] in {
+    let Predicates = [HasFPRCVT] in {
+    def : Pat<(ret_type (scalar_to_vector (i32 (OpN (f64 FPR64:$Rn))))),
+              (INSERT_SUBREG (IMPLICIT_DEF),
+              (!cast<Instruction>(INST # SDr) FPR64:$Rn), ssub)>;
+    def : Pat<(ret_type (scalar_to_vector (i32 (OpN (f16 FPR16:$Rn))))),
+              (INSERT_SUBREG (IMPLICIT_DEF),
+              (!cast<Instruction>(INST # SHr) FPR16:$Rn), ssub)>;
+    }
+    def : Pat<(ret_type (scalar_to_vector (i32 (OpN (f32 FPR32:$Rn))))),
+              (INSERT_SUBREG (IMPLICIT_DEF),
+              (!cast<Instruction>(INST # v1i32) FPR32:$Rn), ssub)>;
+  }
+
+  let Predicates = [HasFPRCVT] in {
+  def : Pat<(v1i64 (scalar_to_vector (i64 (OpN (f16 FPR16:$Rn))))),
+            (!cast<Instruction>(INST # DHr) FPR16:$Rn)>;
+  def : Pat<(v1i64 (scalar_to_vector (i64 (OpN (f32 FPR32:$Rn))))),
+            (!cast<Instruction>(INST # DSr) FPR32:$Rn)>;
+  def : Pat<(v2i64 (scalar_to_vector (i64 (OpN (f16 FPR16:$Rn))))),
+            (INSERT_SUBREG (IMPLICIT_DEF),
+              (!cast<Instruction>(INST # DHr) FPR16:$Rn), dsub)>;
+  def : Pat<(v2i64 (scalar_to_vector (i64 (OpN (f32 FPR32:$Rn))))),
+            (INSERT_SUBREG (IMPLICIT_DEF),
+              (!cast<Instruction>(INST # DSr) FPR32:$Rn), dsub)>;
+  }
+
   def : Pat<(v1i64 (scalar_to_vector (i64 (OpN (f64 FPR64:$Rn))))),
             (!cast<Instruction>(INST # v1i64) FPR64:$Rn)>;
+  def : Pat<(v2i64 (scalar_to_vector (i64 (OpN (f64 FPR64:$Rn))))),
+            (INSERT_SUBREG (IMPLICIT_DEF),
+              (!cast<Instruction>(INST # v1i64) FPR64:$Rn), dsub)>;
 }
 defm: FPToIntegerSIMDScalarPatterns<int_aarch64_neon_fcvtas, "FCVTAS">;
 defm: FPToIntegerSIMDScalarPatterns<int_aarch64_neon_fcvtau, "FCVTAU">;
@@ -6618,19 +6643,44 @@ multiclass FPToIntegerIntPats<Intrinsic round, string INST> {
             (!cast<Instruction>(INST # DSr) $Rn)>;
   def : Pat<(f32 (bitconvert (i32 (round f64:$Rn)))), 
             (!cast<Instruction>(INST # SDr) $Rn)>;
-
-  def : Pat<(v1i64 (scalar_to_vector (i64 (round f16:$Rn)))), 
-            (!cast<Instruction>(INST # DHr) $Rn)>;
-  def : Pat<(v1i64 (scalar_to_vector (i64 (round f32:$Rn)))), 
-            (!cast<Instruction>(INST # DSr) $Rn)>;
   }
   def : Pat<(f32 (bitconvert (i32 (round f32:$Rn)))), 
             (!cast<Instruction>(INST # v1i32) $Rn)>;
   def : Pat<(f64 (bitconvert (i64 (round f64:$Rn)))), 
             (!cast<Instruction>(INST # v1i64) $Rn)>;
 
+  foreach ret_type = [v2i32, v4i32] in {
+    let Predicates = [HasFPRCVT] in {
+    def : Pat<(ret_type (scalar_to_vector (i32 (round f16:$Rn)))), 
+              (INSERT_SUBREG (IMPLICIT_DEF),
+              (!cast<Instruction>(INST # SHr) $Rn), ssub)>;
+    def : Pat<(ret_type (scalar_to_vector (i32 (round f64:$Rn)))), 
+              (INSERT_SUBREG (IMPLICIT_DEF),
+              (!cast<Instruction>(INST # SDr) $Rn), ssub)>;
+    }
+    def : Pat<(ret_type (scalar_to_vector (i32 (round f32:$Rn)))), 
+              (INSERT_SUBREG (IMPLICIT_DEF),
+              (!cast<Instruction>(INST # v1i32) $Rn), ssub)>;
+  }
+
+  let Predicates = [HasFPRCVT] in {
+  def : Pat<(v1i64 (scalar_to_vector (i64 (round f16:$Rn)))), 
+            (!cast<Instruction>(INST # DHr) $Rn)>;
+  def : Pat<(v1i64 (scalar_to_vector (i64 (round f32:$Rn)))), 
+            (!cast<Instruction>(INST # DSr) $Rn)>;
+  def : Pat<(v2i64 (scalar_to_vector (i64 (round f16:$Rn)))), 
+            (INSERT_SUBREG (IMPLICIT_DEF),
+            (!cast<Instruction>(INST # DHr) $Rn), dsub)>;
+  def : Pat<(v2i64 (scalar_to_vector (i64 (round f32:$Rn)))), 
+            (INSERT_SUBREG (IMPLICIT_DEF),
+            (!cast<Instruction>(INST # DSr) $Rn), dsub)>;
+  }
+
   def : Pat<(v1i64 (scalar_to_vector (i64 (round f64:$Rn)))), 
             (!cast<Instruction>(INST # v1i64) $Rn)>;
+  def : Pat<(v2i64 (scalar_to_vector (i64 (round f64:$Rn)))), 
+            (INSERT_SUBREG (IMPLICIT_DEF),
+            (!cast<Instruction>(INST # v1i64) $Rn), dsub)>;
 
   let Predicates = [HasFullFP16] in {
   def : Pat<(i32 (round (fmul f16:$Rn, fixedpoint_f16_i32:$scale))),
