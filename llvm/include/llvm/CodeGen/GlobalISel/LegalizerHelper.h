@@ -60,7 +60,6 @@ private:
   const LegalizerInfo &LI;
   const TargetLowering &TLI;
 
-  // FIXME: Should probably make Libcalls mandatory
   const LibcallLoweringInfo *Libcalls = nullptr;
   GISelValueTracking *VT = nullptr;
 
@@ -84,6 +83,7 @@ public:
   const LibcallLoweringInfo *getLibcallLoweringInfo() { return Libcalls; }
   GISelValueTracking *getValueTracking() const { return VT; }
 
+  // FIXME: Should probably make Libcalls mandatory
   LLVM_ABI LegalizerHelper(MachineFunction &MF, GISelChangeObserver &Observer,
                            MachineIRBuilder &B,
                            const LibcallLoweringInfo *Libcalls = nullptr);
