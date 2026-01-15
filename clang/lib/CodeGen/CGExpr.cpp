@@ -2216,8 +2216,12 @@ llvm::Value *CodeGenFunction::EmitToMemory(llvm::Value *Value, QualType Ty) {
   if (auto *AtomicTy = Ty->getAs<AtomicType>())
     Ty = AtomicTy->getValueType();
 
-  if (Ty->isExtVectorBoolType()) {
+  if (Ty->isExtVectorBoolType() || Ty->isConstantMatrixBoolType()) {
     llvm::Type *StoreTy = convertTypeForLoadStore(Ty, Value->getType());
+
+    if (Value->getType() == StoreTy)
+      return Value;
+
     if (StoreTy->isVectorTy() && StoreTy->getScalarSizeInBits() >
                                      Value->getType()->getScalarSizeInBits())
       return Builder.CreateZExt(Value, StoreTy);
@@ -2471,17 +2475,28 @@ RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
 
     unsigned NumRows = MT->getNumRows();
     unsigned NumCols = MT->getNumColumns();
-
+    unsigned NumLanes = NumCols;
     llvm::Value *MatrixVec = EmitLoadOfScalar(LV, Loc);
     llvm::Value *Row = LV.getMatrixRowIdx();
     llvm::Type *ElemTy = ConvertType(MT->getElementType());
-    llvm::Type *RowTy = llvm::FixedVectorType::get(ElemTy, MT->getNumColumns());
-    llvm::Value *Result = llvm::PoisonValue::get(RowTy); // <NumCols x T>
-
+    llvm::Constant *ColConstsIndices = nullptr;
     llvm::MatrixBuilder MB(Builder);
 
-    for (unsigned Col = 0; Col < NumCols; ++Col) {
-      llvm::Value *ColIdx = llvm::ConstantInt::get(Row->getType(), Col);
+    if (LV.isMatrixRowSwizzle()) {
+      ColConstsIndices = LV.getMatrixRowElts();
+      NumLanes = llvm::cast<llvm::FixedVectorType>(ColConstsIndices->getType())
+                     ->getNumElements();
+    }
+
+    llvm::Type *RowTy = llvm::FixedVectorType::get(ElemTy, NumLanes);
+    llvm::Value *Result = llvm::PoisonValue::get(RowTy); // <NumLanes x T>
+
+    for (unsigned Col = 0; Col < NumLanes; ++Col) {
+      llvm::Value *ColIdx;
+      if (ColConstsIndices)
+        ColIdx = ColConstsIndices->getAggregateElement(Col);
+      else
+        ColIdx = llvm::ConstantInt::get(Row->getType(), Col);
       bool IsMatrixRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
                               LangOptions::MatrixMemoryLayout::MatrixRowMajor;
       llvm::Value *EltIndex =
@@ -2726,16 +2741,43 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
 
       unsigned NumRows = MT->getNumRows();
       unsigned NumCols = MT->getNumColumns();
+      unsigned NumLanes = NumCols;
 
       llvm::Value *MatrixVec =
           Builder.CreateLoad(Dst.getAddress(), "matrix.load");
 
       llvm::Value *Row = Dst.getMatrixRowIdx();
       llvm::Value *RowVal = Src.getScalarVal(); // <NumCols x T>
+
+      if (RowVal->getType()->isIntOrIntVectorTy(1)) {
+        // NOTE: If matrix single subscripting becomes a feature in languages
+        // other than HLSL, the following assert should be removed and the
+        // assert condition should be made part of the enclosing if-statement
+        // condition as is the case for similar logic for Dst.isMatrixElt()
+        assert(getLangOpts().HLSL);
+        auto *RowValVecTy = cast<llvm::FixedVectorType>(RowVal->getType());
+        llvm::Type *StorageElmTy =
+            llvm::FixedVectorType::get(MatrixVec->getType()->getScalarType(),
+                                       RowValVecTy->getNumElements());
+        RowVal = Builder.CreateZExt(RowVal, StorageElmTy);
+      }
+
       llvm::MatrixBuilder MB(Builder);
 
-      for (unsigned Col = 0; Col < NumCols; ++Col) {
-        llvm::Value *ColIdx = llvm::ConstantInt::get(Row->getType(), Col);
+      llvm::Constant *ColConstsIndices = nullptr;
+      if (Dst.isMatrixRowSwizzle()) {
+        ColConstsIndices = Dst.getMatrixRowElts();
+        NumLanes =
+            llvm::cast<llvm::FixedVectorType>(ColConstsIndices->getType())
+                ->getNumElements();
+      }
+
+      for (unsigned Col = 0; Col < NumLanes; ++Col) {
+        llvm::Value *ColIdx;
+        if (ColConstsIndices)
+          ColIdx = ColConstsIndices->getAggregateElement(Col);
+        else
+          ColIdx = llvm::ConstantInt::get(Row->getType(), Col);
         bool IsMatrixRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
                                 LangOptions::MatrixMemoryLayout::MatrixRowMajor;
         llvm::Value *EltIndex =
@@ -4967,11 +5009,9 @@ LValue CodeGenFunction::EmitMatrixSingleSubscriptExpr(
     const MatrixSingleSubscriptExpr *E) {
   LValue Base = EmitLValue(E->getBase());
   llvm::Value *RowIdx = EmitMatrixIndexExpr(E->getRowIdx());
-  const auto *MatTy = E->getBase()->getType()->castAs<ConstantMatrixType>();
   return LValue::MakeMatrixRow(
       MaybeConvertMatrixAddress(Base.getAddress(), *this), RowIdx,
-      MatTy->getNumColumns(), MatTy->getNumRows(), E->getBase()->getType(),
-      Base.getBaseInfo(), TBAAAccessInfo());
+      E->getBase()->getType(), Base.getBaseInfo(), TBAAAccessInfo());
 }
 
 LValue CodeGenFunction::EmitMatrixSubscriptExpr(const MatrixSubscriptExpr *E) {
@@ -5253,8 +5293,10 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
     if (auto *RowIdx =
             llvm::dyn_cast<llvm::ConstantInt>(Base.getMatrixRowIdx())) {
       llvm::SmallVector<llvm::Constant *> MatIndices;
-      unsigned NumCols = Base.getMatrixNumCols();
-      unsigned NumRows = Base.getMatrixNumRows();
+      QualType MatTy = Base.getType();
+      const ConstantMatrixType *MT = MatTy->castAs<ConstantMatrixType>();
+      unsigned NumCols = MT->getNumColumns();
+      unsigned NumRows = MT->getNumRows();
       MatIndices.reserve(NumCols);
 
       unsigned Row = RowIdx->getZExtValue();
@@ -5269,7 +5311,15 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
                                       E->getBase()->getType(),
                                       Base.getBaseInfo(), TBAAAccessInfo());
     }
-    return EmitUnsupportedLValue(E, "Matrix single index swizzle");
+    llvm::Constant *Cols =
+        llvm::ConstantDataVector::get(getLLVMContext(), Indices);
+    // Note: intentionally not using E.getType() so we can reuse isMatrixRow()
+    // implementations in EmitLoadOfLValue & EmitStoreThroughLValue and don't
+    // need the LValue to have its own number of rows and columns when the
+    // type is a vector.
+    return LValue::MakeMatrixRowSwizzle(
+        Base.getMatrixAddress(), Base.getMatrixRowIdx(), Cols, Base.getType(),
+        Base.getBaseInfo(), TBAAAccessInfo());
   }
 
   assert(Base.isExtVectorElt() && "Can only subscript lvalue vec elts here!");
@@ -5874,8 +5924,7 @@ LValue CodeGenFunction::EmitConditionalOperatorLValue(
 /// are permitted with aggregate result, including noop aggregate casts, and
 /// cast from scalar to union.
 LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
-  auto RestoreCurCast =
-      llvm::make_scope_exit([this, Prev = CurCast] { CurCast = Prev; });
+  llvm::scope_exit RestoreCurCast([this, Prev = CurCast] { CurCast = Prev; });
   CurCast = E;
   switch (E->getCastKind()) {
   case CK_ToVoid:
@@ -6172,7 +6221,7 @@ RValue CodeGenFunction::EmitCallExpr(const CallExpr *E,
     CallOrInvoke = &CallOrInvokeStorage;
   }
 
-  auto AddCoroElideSafeOnExit = llvm::make_scope_exit([&] {
+  llvm::scope_exit AddCoroElideSafeOnExit([&] {
     if (E->isCoroElideSafe()) {
       auto *I = *CallOrInvoke;
       if (I)

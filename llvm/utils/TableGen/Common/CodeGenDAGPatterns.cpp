@@ -94,15 +94,17 @@ bool TypeSetByHwMode::isValueTypeByHwMode(bool AllowEmpty) const {
   return true;
 }
 
-ValueTypeByHwMode TypeSetByHwMode::getValueTypeByHwMode() const {
+ValueTypeByHwMode TypeSetByHwMode::getValueTypeByHwMode(bool SkipEmpty) const {
   assert(isValueTypeByHwMode(true) &&
          "The type set has multiple types for at least one HW mode");
   ValueTypeByHwMode VVT;
   VVT.PtrAddrSpace = AddrSpace;
 
   for (const auto &I : *this) {
+    if (SkipEmpty && I.second.empty())
+      continue;
     MVT T = I.second.empty() ? MVT::Other : *I.second.begin();
-    VVT.getOrCreateTypeForMode(I.first, T);
+    VVT.insertTypeForMode(I.first, T);
   }
   return VVT;
 }
@@ -1480,10 +1482,9 @@ static unsigned getPatternSize(const TreePatternNode &P,
   // Count children in the count if they are also nodes.
   for (const TreePatternNode &Child : P.children()) {
     if (!Child.isLeaf() && Child.getNumTypes()) {
-      const TypeSetByHwMode &T0 = Child.getExtType(0);
-      // At this point, all variable type sets should be simple, i.e. only
-      // have a default mode.
-      if (T0.getMachineValueType() != MVT::Other) {
+      // FIXME: Can we assume non-simple VTs should be counted?
+      auto VVT = Child.getType(0);
+      if (llvm::any_of(VVT, [](auto &P) { return P.second != MVT::Other; })) {
         Size += getPatternSize(Child, CGP);
         continue;
       }
@@ -1862,7 +1863,7 @@ bool TreePatternNode::UpdateNodeTypeFromInst(unsigned ResNo,
 
 bool TreePatternNode::ContainsUnresolvedType(TreePattern &TP) const {
   for (const TypeSetByHwMode &Type : Types)
-    if (!TP.getInfer().isConcrete(Type, true))
+    if (!Type.isValueTypeByHwMode(/*AllowEmpty=*/true))
       return true;
   for (const TreePatternNode &Child : children())
     if (Child.ContainsUnresolvedType(TP))
@@ -2367,6 +2368,8 @@ static TypeSetByHwMode getImplicitType(const Record *R, unsigned ResNo,
   }
 
   if (R->isSubClassOf("RegClassByHwMode")) {
+    if (NotRegisters)
+      return TypeSetByHwMode(); // Unknown.
     const CodeGenTarget &T = CDP.getTargetInfo();
     return getTypeForRegClassByHwMode(T, R, TP.getRecord()->getLoc());
   }
@@ -2585,10 +2588,10 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
       // Int inits are always integers. :)
       bool MadeChange = TP.getInfer().EnforceInteger(Types[0]);
 
-      if (!TP.getInfer().isConcrete(Types[0], false))
+      if (!Types[0].isValueTypeByHwMode(/*AllowEmpty=*/false))
         return MadeChange;
 
-      ValueTypeByHwMode VVT = TP.getInfer().getConcrete(Types[0], false);
+      ValueTypeByHwMode VVT = Types[0].getValueTypeByHwMode();
       for (auto &P : VVT) {
         MVT VT = P.second;
         // Can only check for types of a known size
@@ -3319,12 +3322,10 @@ void TreePattern::dump() const { print(errs()); }
 // CodeGenDAGPatterns implementation
 //
 
-CodeGenDAGPatterns::CodeGenDAGPatterns(const RecordKeeper &R,
-                                       PatternRewriterFn PatternRewriter)
+CodeGenDAGPatterns::CodeGenDAGPatterns(const RecordKeeper &R, bool ExpandHwMode)
     : Records(R), Target(R), Intrinsics(R),
       LegalVTS(Target.getLegalValueTypes()),
-      LegalPtrVTS(ComputeLegalPtrTypes()),
-      PatternRewriter(std::move(PatternRewriter)) {
+      LegalPtrVTS(ComputeLegalPtrTypes()) {
   ParseNodeInfo();
   ParseNodeTransforms();
   ParseComplexPatterns();
@@ -3341,7 +3342,8 @@ CodeGenDAGPatterns::CodeGenDAGPatterns(const RecordKeeper &R,
   // Break patterns with parameterized types into a series of patterns,
   // where each one has a fixed type and is predicated on the conditions
   // of the associated HW mode.
-  ExpandHwModeBasedTypes();
+  if (ExpandHwMode)
+    ExpandHwModeBasedTypes();
 
   // Infer instruction flags.  For example, we can detect loads,
   // stores, and side effects in many cases by examining an
@@ -4351,7 +4353,8 @@ static bool ForceArbitraryInstResultType(TreePatternNode &N, TreePattern &TP) {
   // anything.
   TypeInfer &TI = TP.getInfer();
   for (unsigned i = 0, e = N.getNumTypes(); i != e; ++i) {
-    if (N.getExtType(i).empty() || TI.isConcrete(N.getExtType(i), false))
+    if (N.getExtType(i).empty() ||
+        N.getExtType(i).isValueTypeByHwMode(/*AllowEmpty=*/false))
       continue;
 
     // Otherwise, force its type to an arbitrary choice.
@@ -4452,9 +4455,6 @@ void CodeGenDAGPatterns::ParseOnePattern(
 
   const ListInit *Preds = TheDef->getValueAsListInit("Predicates");
   int Complexity = TheDef->getValueAsInt("AddedComplexity");
-
-  if (PatternRewriter)
-    PatternRewriter(&Pattern);
 
   // A pattern may end up with an "impossible" type, i.e. a situation
   // where all types have been eliminated for some node in this pattern.

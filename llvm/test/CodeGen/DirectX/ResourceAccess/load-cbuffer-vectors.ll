@@ -1,14 +1,15 @@
 ; RUN: opt -S -dxil-resource-access -mtriple=dxil %s | FileCheck %s
 
 ; cbuffer CB {
-;   float3 a1;     // offset   0, size 12 (+4)
-;   double3 a2;    // offset  16, size 24
-;   float16_t2 a3; // offset  40, size  4 (+4)
-;   uint64_t3 a4;  // offset  48, size 24 (+8)
-;   int4 a5;       // offset  80, size 16
-;   uint16_t3 a6;  // offset  96, size  6
+;   float3 a1;     // offset    0, size 12 (+4)
+;   double3 a2;    // offset   16, size 24
+;   float16_t2 a3; // offset   40, size  4 (+4)
+;   uint64_t3 a4;  // offset   48, size 24 (+8)
+;   int4 a5;       // offset   80, size 16
+;   uint16_t3 a6;  // offset   96, size  6 (+2)
+;   uint2 a7;      // offset  104, size  8
 ; };
-%__cblayout_CB = type <{ <3 x float>, target("dx.Padding", 4), <3 x double>, <2 x half>, target("dx.Padding", 4), <3 x i64>, target("dx.Padding", 8), <4 x i32>, <3 x i16> }>
+%__cblayout_CB = type <{ <3 x float>, target("dx.Padding", 4), <3 x double>, <2 x half>, target("dx.Padding", 4), <3 x i64>, target("dx.Padding", 8), <4 x i32>, <3 x i16>, target("dx.Padding", 2), <2 x i32> }>
 
 @CB.cb = local_unnamed_addr global target("dx.CBuffer", %__cblayout_CB) poison
 
@@ -116,6 +117,26 @@ entry:
   %a6 = load <3 x i16>, ptr addrspace(2) %a6_gep, align 8
   %a6.i = getelementptr inbounds nuw i8, ptr %dst, i32 88
   store <3 x i16> %a6, ptr %a6.i, align 2
+
+  ;; a7 component-wise
+  ; 
+  ; CHECK: [[LOAD0:%.*]] = call { i32, i32, i32, i32 } @llvm.dx.resource.load.cbufferrow.4.{{.*}}(target("dx.CBuffer", %__cblayout_CB) [[CB]], i32 6)
+  ; CHECK: [[X:%.*]] = extractvalue { i32, i32, i32, i32 } [[LOAD0]], 2
+  ; CHECK: [[PTR0:%.*]] = getelementptr inbounds nuw i8, ptr %dst, i32 96
+  ; CHECK: store i32 [[X]], ptr [[PTR0]]
+  ; CHECK: [[LOAD1:%.*]] = call { i32, i32, i32, i32 } @llvm.dx.resource.load.cbufferrow.4.{{.*}}(target("dx.CBuffer", %__cblayout_CB) [[CB]], i32 6)
+  ; CHECK: [[Y:%.*]] = extractvalue { i32, i32, i32, i32 } [[LOAD1]], 3
+  ; CHECK: [[PTR1:%.*]] = getelementptr inbounds nuw i8, ptr %dst, i32 100
+  ; CHECK: store i32 [[Y]], ptr [[PTR1]]
+  %a7_gep0 = call ptr addrspace(2) @llvm.dx.resource.getpointer(target("dx.CBuffer", %__cblayout_CB) %CB.cb, i32 104)
+  %a7.x = load i32, ptr addrspace(2) %a7_gep0, align 4
+  %a7.i0 = getelementptr inbounds nuw i8, ptr %dst, i32 96
+  store i32 %a7.x, ptr %a7.i0, align 4
+  %a7_gep1 = call ptr addrspace(2) @llvm.dx.resource.getpointer(target("dx.CBuffer", %__cblayout_CB) %CB.cb, i32 104)
+  %a7.y_gep = getelementptr inbounds nuw i8, ptr addrspace(2) %a7_gep1, i32 4
+  %a7.y = load i32, ptr addrspace(2) %a7.y_gep, align 4
+  %a7.i1 = getelementptr inbounds nuw i8, ptr %dst, i32 100
+  store i32 %a7.y, ptr %a7.i1, align 4
 
   ret void
 }
