@@ -5409,9 +5409,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     // We will use ummla to compute the shadow. These are the types it expects.
     // These are also the types of the corresponding shadows.
-    FixedVectorType *ExpectedRTy = FixedVectorType::get(IntegerType::get(*MS.C, 32), 4);
-    FixedVectorType *ExpectedATy = FixedVectorType::get(IntegerType::get(*MS.C, 8), 16);
-    FixedVectorType *ExpectedBTy = FixedVectorType::get(IntegerType::get(*MS.C, 8), 16);
+    FixedVectorType *ExpectedRTy =
+        FixedVectorType::get(IntegerType::get(*MS.C, 32), 4);
+    FixedVectorType *ExpectedATy =
+        FixedVectorType::get(IntegerType::get(*MS.C, 8), 16);
+    FixedVectorType *ExpectedBTy =
+        FixedVectorType::get(IntegerType::get(*MS.C, 8), 16);
 
     if (RTy->getElementType()->isIntegerTy()) {
       // Types of R and A/B are not identical e.g., <4 x i32> %R, <16 x i8> %A
@@ -5441,14 +5444,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // If the value is fully initialized, the shadow will be 000...001.
     // Otherwise, the shadow will be all zero.
     // (This is the opposite of how we typically handle shadows.)
-    ShadowA = IRB.CreateZExt(IRB.CreateICmpEQ(ShadowA, getCleanShadow(ExpectedATy)),
-                             getShadowTy(ExpectedATy));
-    ShadowB = IRB.CreateZExt(IRB.CreateICmpEQ(ShadowB, getCleanShadow(ExpectedBTy)),
-                             getShadowTy(ExpectedBTy));
+    ShadowA =
+        IRB.CreateZExt(IRB.CreateICmpEQ(ShadowA, getCleanShadow(ExpectedATy)),
+                       getShadowTy(ExpectedATy));
+    ShadowB =
+        IRB.CreateZExt(IRB.CreateICmpEQ(ShadowB, getCleanShadow(ExpectedBTy)),
+                       getShadowTy(ExpectedBTy));
 
-    Value *ShadowAB = IRB.CreateIntrinsic(
-        ExpectedRTy, Intrinsic::aarch64_neon_ummla,
-        {getCleanShadow(ExpectedRTy), ShadowA, ShadowB});
+    Value *ShadowAB =
+        IRB.CreateIntrinsic(ExpectedRTy, Intrinsic::aarch64_neon_ummla,
+                            {getCleanShadow(ExpectedRTy), ShadowA, ShadowB});
 
     // ummla multiplies a 2x8 matrix with an 8x2 matrix. If all entries of the
     // input matrices are equal to 0x1, all entries of the output matrix will
@@ -5460,8 +5465,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     ShadowAB = IRB.CreateSExt(IRB.CreateICmpNE(ShadowAB, FullyInit),
                               ShadowAB->getType());
 
-    ShadowR = IRB.CreateSExt(IRB.CreateICmpNE(ShadowR, getCleanShadow(ExpectedRTy)),
-                             ExpectedRTy);
+    ShadowR = IRB.CreateSExt(
+        IRB.CreateICmpNE(ShadowR, getCleanShadow(ExpectedRTy)), ExpectedRTy);
 
     setShadow(&I, IRB.CreateOr(ShadowAB, ShadowR));
     setOriginForNaryOp(I);
