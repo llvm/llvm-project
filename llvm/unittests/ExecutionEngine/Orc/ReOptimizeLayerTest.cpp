@@ -140,22 +140,13 @@ static Function *createRetFunction(Module *M, StringRef Name,
 TEST_F(ReOptimizeLayerTest, BasicReOptimization) {
   MangleAndInterner Mangle(*ES, *DL);
 
-  auto &EPC = ES->getExecutorProcessControl();
-  EXPECT_THAT_ERROR(JD->define(absoluteSymbols(
-                        {{Mangle("__orc_rt_jit_dispatch"),
-                          {EPC.getJITDispatchInfo().JITDispatchFunction,
-                           JITSymbolFlags::Exported}},
-                         {Mangle("__orc_rt_jit_dispatch_ctx"),
-                          {EPC.getJITDispatchInfo().JITDispatchContext,
-                           JITSymbolFlags::Exported}},
-                         {Mangle("__orc_rt_reoptimize_tag"),
-                          {ExecutorAddr(), JITSymbolFlags::Exported}}})),
-                    Succeeded());
-
   auto RM = JITLinkRedirectableSymbolManager::Create(*ObjLinkingLayer);
   EXPECT_THAT_ERROR(RM.takeError(), Succeeded());
 
   ROLayer = std::make_unique<ReOptimizeLayer>(*ES, *DL, *CompileLayer, **RM);
+  if (auto Err = ROLayer->addOrcRTLiteSupport(*JD, *DL))
+    FAIL() << toString(std::move(Err));
+
   ROLayer->setReoptimizeFunc(
       [&](ReOptimizeLayer &Parent,
           ReOptimizeLayer::ReOptMaterializationUnitID MUID, unsigned CurVerison,

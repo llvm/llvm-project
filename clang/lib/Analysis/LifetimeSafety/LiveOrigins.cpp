@@ -165,7 +165,7 @@ public:
 
   // Dump liveness values on all test points in the program.
   void dump(llvm::raw_ostream &OS,
-            llvm::StringMap<ProgramPoint> TestPoints) const {
+            const llvm::StringMap<ProgramPoint> &TestPoints) const {
     llvm::dbgs() << "==========================================\n";
     llvm::dbgs() << getAnalysisName() << " results:\n";
     llvm::dbgs() << "==========================================\n";
@@ -199,8 +199,9 @@ LivenessMap LiveOriginsAnalysis::getLiveOriginsAt(ProgramPoint P) const {
   return PImpl->getLiveOriginsAt(P);
 }
 
-void LiveOriginsAnalysis::dump(llvm::raw_ostream &OS,
-                               llvm::StringMap<ProgramPoint> TestPoints) const {
+void LiveOriginsAnalysis::dump(
+    llvm::raw_ostream &OS,
+    const llvm::StringMap<ProgramPoint> &TestPoints) const {
   PImpl->dump(OS, TestPoints);
 }
 } // namespace clang::lifetimes::internal

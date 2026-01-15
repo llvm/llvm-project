@@ -78,27 +78,27 @@ llvm.mlir.ifunc external protected @ifunc3: !llvm.func<void ()>, !llvm.ptr @ifun
 // HIDDEN:           llvm.comdat_selector @any any
 // HIDDEN:         }
 
-// HIDDEN-LABEL:   llvm.func @func() {
+// HIDDEN-LABEL:   llvm.func hidden @func() {
 // HIDDEN:           llvm.return
 // HIDDEN:         }
 
-// HIDDEN-LABEL:   llvm.func @ifunc_resolver() -> !llvm.ptr {
+// HIDDEN-LABEL:   llvm.func hidden @ifunc_resolver() -> !llvm.ptr {
 // HIDDEN:           %[[MLIR_0:.*]] = llvm.mlir.addressof @func : !llvm.ptr
 // HIDDEN:           llvm.return %[[MLIR_0]] : !llvm.ptr
 // HIDDEN:         }
 
-// HIDDEN-LABEL:   llvm.func @func1() {
+// HIDDEN-LABEL:   llvm.func hidden @func1() {
 // HIDDEN:           llvm.return
 // HIDDEN:         }
-// HIDDEN:         llvm.mlir.global internal constant @global1(0 : i32) {addr_space = 0 : i32} : i32
+// HIDDEN:         llvm.mlir.global internal hidden constant @global1(0 : i32) {addr_space = 0 : i32} : i32
 
-// HIDDEN-LABEL:   llvm.mlir.alias external @func1_alias {addr_space = 0 : i32} : !llvm.ptr {
+// HIDDEN-LABEL:   llvm.mlir.alias external hidden @func1_alias {addr_space = 0 : i32} : !llvm.ptr {
 // HIDDEN:           %[[MLIR_0:.*]] = llvm.mlir.addressof @func1 : !llvm.ptr
 // HIDDEN:           llvm.return %[[MLIR_0]] : !llvm.ptr
 // HIDDEN:         }
-// HIDDEN:         llvm.func @decl1()
-// HIDDEN:         llvm.mlir.global internal constant @comdat1(1 : i64) comdat(@llvm_comdat::@any) {addr_space = 0 : i32} : i64
-// HIDDEN:         llvm.mlir.ifunc external @ifunc1 : !llvm.func<void ()>, !llvm.ptr @ifunc_resolver
+// HIDDEN:         llvm.func hidden @decl1()
+// HIDDEN:         llvm.mlir.global internal hidden constant @comdat1(1 : i64) comdat(@llvm_comdat::@any) {addr_space = 0 : i32} : i64
+// HIDDEN:         llvm.mlir.ifunc external hidden @ifunc1 : !llvm.func<void ()>, !llvm.ptr @ifunc_resolver
 
 // HIDDEN-LABEL:   llvm.func hidden @func2() {
 // HIDDEN:           llvm.return
@@ -130,27 +130,27 @@ llvm.mlir.ifunc external protected @ifunc3: !llvm.func<void ()>, !llvm.ptr @ifun
 // PROTECTED:           llvm.comdat_selector @any any
 // PROTECTED:         }
 
-// PROTECTED-LABEL:   llvm.func @func() {
+// PROTECTED-LABEL:   llvm.func protected @func() {
 // PROTECTED:           llvm.return
 // PROTECTED:         }
 
-// PROTECTED-LABEL:   llvm.func @ifunc_resolver() -> !llvm.ptr {
+// PROTECTED-LABEL:   llvm.func protected @ifunc_resolver() -> !llvm.ptr {
 // PROTECTED:           %[[MLIR_0:.*]] = llvm.mlir.addressof @func : !llvm.ptr
 // PROTECTED:           llvm.return %[[MLIR_0]] : !llvm.ptr
 // PROTECTED:         }
 
-// PROTECTED-LABEL:   llvm.func @func1() {
+// PROTECTED-LABEL:   llvm.func protected @func1() {
 // PROTECTED:           llvm.return
 // PROTECTED:         }
-// PROTECTED:         llvm.mlir.global internal constant @global1(0 : i32) {addr_space = 0 : i32} : i32
+// PROTECTED:         llvm.mlir.global internal protected constant @global1(0 : i32) {addr_space = 0 : i32} : i32
 
-// PROTECTED-LABEL:   llvm.mlir.alias external @func1_alias {addr_space = 0 : i32} : !llvm.ptr {
+// PROTECTED-LABEL:   llvm.mlir.alias external protected @func1_alias {addr_space = 0 : i32} : !llvm.ptr {
 // PROTECTED:           %[[MLIR_0:.*]] = llvm.mlir.addressof @func1 : !llvm.ptr
 // PROTECTED:           llvm.return %[[MLIR_0]] : !llvm.ptr
 // PROTECTED:         }
-// PROTECTED:         llvm.func @decl1()
-// PROTECTED:         llvm.mlir.global internal constant @comdat1(1 : i64) comdat(@llvm_comdat::@any) {addr_space = 0 : i32} : i64
-// PROTECTED:         llvm.mlir.ifunc external @ifunc1 : !llvm.func<void ()>, !llvm.ptr @ifunc_resolver
+// PROTECTED:         llvm.func protected @decl1()
+// PROTECTED:         llvm.mlir.global internal protected constant @comdat1(1 : i64) comdat(@llvm_comdat::@any) {addr_space = 0 : i32} : i64
+// PROTECTED:         llvm.mlir.ifunc external protected @ifunc1 : !llvm.func<void ()>, !llvm.ptr @ifunc_resolver
 
 // PROTECTED-LABEL:   llvm.func hidden @func2() {
 // PROTECTED:           llvm.return

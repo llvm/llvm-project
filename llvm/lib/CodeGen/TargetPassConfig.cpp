@@ -116,6 +116,9 @@ static cl::opt<bool> DisableMergeICmps("disable-mergeicmps",
 static cl::opt<bool>
     PrintISelInput("print-isel-input", cl::Hidden,
                    cl::desc("Print LLVM IR input to isel pass"));
+cl::opt<bool>
+    PrintRegUsage("print-regusage", cl::Hidden,
+                  cl::desc("Print register usage details collected for IPRA"));
 static cl::opt<cl::boolOrDefault>
     VerifyMachineCode("verify-machineinstrs", cl::Hidden,
                       cl::desc("Verify generated machine code"));
@@ -524,6 +527,7 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   SET_BOOLEAN_OPTION(DisablePartialLibcallInlining)
   SET_BOOLEAN_OPTION(DisableSelectOptimize)
   SET_BOOLEAN_OPTION(PrintISelInput)
+  SET_BOOLEAN_OPTION(PrintRegUsage)
   SET_BOOLEAN_OPTION(DebugifyAndStripAll)
   SET_BOOLEAN_OPTION(DebugifyCheckAndStripAll)
   SET_BOOLEAN_OPTION(DisableRAFSProfileLoader)
@@ -1246,7 +1250,7 @@ void TargetPassConfig::addMachinePasses() {
   }
 
   if (GCEmptyBlocks)
-    addPass(llvm::createGCEmptyBasicBlocksPass());
+    addPass(llvm::createGCEmptyBasicBlocksLegacyPass());
 
   if (EnableFSDiscriminator)
     addPass(createMIRAddFSDiscriminatorsPass(
@@ -1298,8 +1302,10 @@ void TargetPassConfig::addMachinePasses() {
           TM->getBBSectionsFuncListBuf()));
       if (BasicBlockSectionMatchInfer)
         addPass(llvm::createBasicBlockMatchingAndInferencePass());
-      else
+      else {
         addPass(llvm::createBasicBlockPathCloningPass());
+        addPass(llvm::createInsertCodePrefetchPass());
+      }
     }
     addPass(llvm::createBasicBlockSectionsPass());
   }

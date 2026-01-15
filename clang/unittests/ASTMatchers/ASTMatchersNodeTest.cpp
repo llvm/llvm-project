@@ -193,8 +193,7 @@ TEST_P(ASTMatchersTest, ExportDecl) {
   if (!GetParam().isCXX20OrLater()) {
     return;
   }
-  const std::string moduleHeader =
-      "module;\n export module ast_matcher_test;\n";
+  const std::string moduleHeader = "module;export module ast_matcher_test;";
   EXPECT_TRUE(matches(moduleHeader + "export void foo();",
                       exportDecl(has(functionDecl()))));
   EXPECT_TRUE(matches(moduleHeader + "export { void foo(); int v; }",
@@ -2372,6 +2371,26 @@ TEST_P(ASTMatchersTest, ArrayTypeLocTest_DoesNotBindToNonArrayTypeLoc) {
   EXPECT_TRUE(notMatches("float x;", matcher));
   EXPECT_TRUE(notMatches("char x;", matcher));
   EXPECT_TRUE(notMatches("void* x;", matcher));
+}
+
+TEST_P(ASTMatchersTest, FunctionTypeLocTest_BindsToAnyFunctionTypeLoc) {
+  auto matcher = functionTypeLoc();
+  EXPECT_TRUE(matches("void f();", matcher));
+  EXPECT_TRUE(matches("void f(void);", matcher));
+  EXPECT_TRUE(matches("void f(int);", matcher));
+  EXPECT_TRUE(matches("typedef double g(char, float);", matcher));
+  EXPECT_TRUE(matches("char (*fn_ptr)();", matcher));
+  if (!GetParam().isCXX11OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(matches("auto f = (void (*)())0;", matcher));
+}
+
+TEST_P(ASTMatchersTest, FunctionTypeLocTest_DoesNotBindToNonFunctionTypeLoc) {
+  auto matcher = functionTypeLoc();
+  EXPECT_TRUE(notMatches("int x;", matcher));
+  EXPECT_TRUE(notMatches("void* x;", matcher));
+  EXPECT_TRUE(notMatches("int x[10];", matcher));
 }
 
 TEST_P(ASTMatchersTest,

@@ -1,15 +1,15 @@
 # RUN: split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t_main.o %t/main.s
-# RUN: llvm-as %S/Inputs/foo.ll -o %t_foo.o
+# RUN: llvm-as %S/Inputs/funcs.ll -o %t_funcs.o
 # RUN: llvm-as %S/Inputs/libcall.ll -o %t_libcall.o
-# RUN: wasm-ld -mllvm -mattr=-bulk-memory,-bulk-memory-opt %t_main.o %t_libcall.o %t_foo.o %p/Inputs/stub.so -o %t.wasm
+# RUN: wasm-ld -mllvm -mattr=-bulk-memory,-bulk-memory-opt %t_main.o %t_libcall.o %t_funcs.o %p/Inputs/stub.so -o %t.wasm
 # RUN: obj2yaml %t.wasm | FileCheck %s
 
 # The function `func_with_libcall` will generate an undefined reference to
 # `memcpy` at LTO time.  `memcpy` itself also declared in stub.so and depends
 # on `foo`
 
-# If %t_foo.o is not included in the link we get an undefined symbol reported
+# If %t_funcs.o is not included in the link we get an undefined symbol reported
 # to the dependency of memcpy on the foo export:
 
 # RUN: not wasm-ld -mllvm -mattr=-bulk-memory,-bulk-memory-opt %t_main.o %t_libcall.o %p/Inputs/stub.so -o %t.wasm 2>&1 | FileCheck --check-prefix=MISSING %s
