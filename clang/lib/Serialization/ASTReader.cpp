@@ -6804,21 +6804,22 @@ PreprocessedEntity *ASTReader::ReadPreprocessedEntity(unsigned Index) {
     bool isBuiltin = Record[0];
     IdentifierInfo *Name = nullptr;
     MacroDefinitionRecord *Def = nullptr;
-    if (isBuiltin)
+    std::optional<std::string> ExpandedText = std::nullopt;
+
+    MacroExpansion *ME;
+    if (isBuiltin) {
       Name = getLocalIdentifier(M, Record[1]);
-    else {
+      ME = new (PPRec) MacroExpansion(Name, Range);
+    } else {
+      unsigned Idx = 1;
       PreprocessedEntityID GlobalID =
-          getGlobalPreprocessedEntityID(M, Record[1]);
+          getGlobalPreprocessedEntityID(M, Record[Idx++]);
       unsigned Index = translatePreprocessedEntityIDToIndex(GlobalID);
       Def =
           cast<MacroDefinitionRecord>(PPRec.getLoadedPreprocessedEntity(Index));
+      auto Expansion = ReadString(Record, Idx);
+      ME = new (PPRec) MacroExpansion(Def, Range, Expansion);
     }
-
-    MacroExpansion *ME;
-    if (isBuiltin)
-      ME = new (PPRec) MacroExpansion(Name, Range);
-    else
-      ME = new (PPRec) MacroExpansion(Def, Range);
 
     return ME;
   }

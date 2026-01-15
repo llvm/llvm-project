@@ -1157,6 +1157,12 @@ SourceRange cxcursor::MacroExpansionCursor::getSourceRange() const {
     return getPseudoLoc();
   return getAsMacroExpansion()->getSourceRange();
 }
+std::optional<std::string>
+cxcursor::MacroExpansionCursor::getExpandedText() const {
+  if (isPseudo())
+    return std::nullopt;
+  return getAsMacroExpansion()->getExpandedText();
+}
 
 CXCursor cxcursor::MakeInclusionDirectiveCursor(InclusionDirective *ID,
                                                 CXTranslationUnit TU) {

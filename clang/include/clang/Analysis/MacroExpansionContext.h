@@ -11,6 +11,7 @@
 
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Lex/PreprocessingRecord.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
@@ -76,6 +77,14 @@ public:
   /// \remark You must call registerForPreprocessor to set the required
   ///         onTokenLexed callback and the PPCallbacks.
   explicit MacroExpansionContext(const LangOptions &LangOpts);
+
+  /// Creates a MacroExpansionContext from a PCH dump. Macro expansions are
+  /// written to the preprocessor detail block when generating using the
+  /// -detailed-preprocessing-record driver flag.
+  explicit MacroExpansionContext(
+      Preprocessor &PP,
+      llvm::iterator_range<PreprocessingRecord::iterator> PPRecords,
+      const LangOptions &LangOpts);
 
   /// Register the necessary callbacks to the Preprocessor to record the
   /// expansion events and the generated tokens. Must ensure that this object

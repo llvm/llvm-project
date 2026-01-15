@@ -2885,10 +2885,12 @@ void ASTWriter::WritePreprocessorDetail(PreprocessingRecord &PPRec,
 
     if (auto *ME = dyn_cast<MacroExpansion>(*E)) {
       Record.push_back(ME->isBuiltinMacro());
-      if (ME->isBuiltinMacro())
+      if (ME->isBuiltinMacro()) {
         AddIdentifierRef(ME->getName(), Record);
-      else
+      } else {
         Record.push_back(MacroDefinitions[ME->getDefinition()]);
+        AddString(ME->getExpandedText().value_or(""), Record);
+      }
       Stream.EmitRecord(PPD_MACRO_EXPANSION, Record);
       continue;
     }

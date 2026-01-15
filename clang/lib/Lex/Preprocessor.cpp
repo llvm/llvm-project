@@ -1669,6 +1669,8 @@ void Preprocessor::createPreprocessingRecord() {
 
   Record = new PreprocessingRecord(getSourceManager());
   addPPCallbacks(std::unique_ptr<PPCallbacks>(Record));
+  setTokenWatcher(
+      [this](const Token &Tok) { Record->onTokenLexed(Tok, this); });
 }
 
 const char *Preprocessor::getCheckPoint(FileID FID, const char *Start) const {

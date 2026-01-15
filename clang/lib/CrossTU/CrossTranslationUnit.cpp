@@ -327,7 +327,7 @@ llvm::Expected<const T *> CrossTranslationUnitContext::getCrossTUDefinitionImpl(
   const auto &LangTo = Context.getLangOpts();
   const auto &LangFrom = Unit->getASTContext().getLangOpts();
 
-  // FIXME: Currenty we do not support CTU across C++ and C and across
+  // FIXME: Currently we do not support CTU across C++ and C and across
   // different dialects of C++.
   if (LangTo.CPlusPlus != LangFrom.CPlusPlus) {
     ++NumLangMismatch;
@@ -601,7 +601,15 @@ CrossTranslationUnitContext::ASTLoader::loadFromDump(StringRef ASTDumpPath) {
       ASTDumpPath, CI.getPCHContainerOperations()->getRawReader(),
       ASTUnit::LoadEverything, CI.getVirtualFileSystemPtr(), DiagOpts, Diags,
       CI.getFileSystemOpts(), CI.getHeaderSearchOpts());
-  return LoadResult(std::move(Unit), nullptr);
+
+  std::unique_ptr<MacroExpansionContext> MacroExpansions;
+  if (Unit) {
+    MacroExpansions.reset(new MacroExpansionContext(
+        Unit->getPreprocessor(), Unit->getLocalPreprocessingEntities(),
+        Unit->getLangOpts()));
+  }
+
+  return LoadResult(std::move(Unit), std::move(MacroExpansions));
 }
 
 /// Load the AST from a source-file, which is supposed to be located inside the
@@ -655,6 +663,8 @@ CrossTranslationUnitContext::ASTLoader::loadFromSource(
         MacroExpansions.reset(new MacroExpansionContext(CI.getLangOpts()));
         MacroExpansions->registerForPreprocessor(CI.getPreprocessor());
       });
+  MacroExpansions->dumpExpansionRanges();
+  MacroExpansions->dumpExpandedTexts();
   return LoadResult(std::move(Unit), std::move(MacroExpansions));
 }
 

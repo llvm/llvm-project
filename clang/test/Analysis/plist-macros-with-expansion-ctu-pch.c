@@ -1,6 +1,6 @@
 // RUN: rm -rf %t && mkdir %t
 // RUN: mkdir -p %t/ctudir
-// RUN: %clang_cc1 -emit-pch -o %t/ctudir/plist-macros-ctu.c.ast %S/Inputs/plist-macros-ctu.c
+// RUN: %clang_cc1 -emit-pch -detailed-preprocessing-record -o %t/ctudir/plist-macros-ctu.c.ast %S/Inputs/plist-macros-ctu.c
 // RUN: cp %S/Inputs/plist-macros-with-expansion-ctu.c.externalDefMap.txt %t/ctudir/externalDefMap.txt
 //
 // RUN: %clang_analyze_cc1 -analyzer-checker=core \
@@ -23,9 +23,19 @@ void test0(void) {
   F3(&X);
   *X = 1; // expected-warning{{Dereference of null pointer}}
 }
-// FIXME: Macro expansion for other TUs should also work.
+
 // CHECK:      <key>macro_expansions</key>
 // CHECK-NEXT: <array>
+// CHECK-NEXT: <dict>
+// CHECK-NEXT:   <key>location</key>
+// CHECK-NEXT:   <dict>
+// CHECK-NEXT:   <key>line</key><integer>20</integer>
+// CHECK-NEXT:   <key>col</key><integer>3</integer>
+// CHECK-NEXT:   <key>file</key><integer>1</integer>
+// CHECK-NEXT:   </dict>
+// CHECK-NEXT:   <key>name</key><string>M1</string>
+// CHECK-NEXT:   <key>expansion</key><string>*Z = (int *)0</string>
+// CHECK-NEXT: </dict>
 // CHECK-NEXT: </array>
 
 void test1(void) {
@@ -36,6 +46,16 @@ void test1(void) {
 
 // CHECK:      <key>macro_expansions</key>
 // CHECK-NEXT: <array>
+// CHECK-NEXT:  <dict>
+// CHECK-NEXT:   <key>location</key>
+// CHECK-NEXT:   <dict>
+// CHECK-NEXT:    <key>line</key><integer>7</integer>
+// CHECK-NEXT:    <key>col</key><integer>3</integer>
+// CHECK-NEXT:    <key>file</key><integer>1</integer>
+// CHECK-NEXT:   </dict>
+// CHECK-NEXT:   <key>name</key><string>M</string>
+// CHECK-NEXT:   <key>expansion</key><string>*X = (int *)0</string>
+// CHECK-NEXT:  </dict>
 // CHECK-NEXT: </array>
 
 void test2(void) {
@@ -46,6 +66,16 @@ void test2(void) {
 
 // CHECK:      <key>macro_expansions</key>
 // CHECK-NEXT: <array>
+// CHECK-NEXT: <dict>
+// CHECK-NEXT:   <key>location</key>
+// CHECK-NEXT:   <dict>
+// CHECK-NEXT:   <key>line</key><integer>14</integer>
+// CHECK-NEXT:   <key>col</key><integer>3</integer>
+// CHECK-NEXT:   <key>file</key><integer>1</integer>
+// CHECK-NEXT:   </dict>
+// CHECK-NEXT:   <key>name</key><string>M</string>
+// CHECK-NEXT:   <key>expansion</key><string>*Y = (int *)0</string>
+// CHECK-NEXT: </dict>
 // CHECK-NEXT: </array>
 
 #define M F1(&X)
@@ -55,18 +85,28 @@ void test3(void) {
   M;
   *X = 1; // expected-warning{{Dereference of null pointer}}
 }
-// Macro expansions for the main TU still works, even in CTU mode.
+
 // CHECK:      <key>macro_expansions</key>
 // CHECK-NEXT: <array>
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>55</integer>
+// CHECK-NEXT:    <key>line</key><integer>85</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>M</string>
 // CHECK-NEXT:   <key>expansion</key><string>F1
+// CHECK-NEXT:  </dict>
+// CHECK-NEXT:  <dict>
+// CHECK-NEXT:    <key>location</key>
+// CHECK-NEXT:    <dict>
+// CHECK-NEXT:    <key>line</key><integer>7</integer>
+// CHECK-NEXT:    <key>col</key><integer>3</integer>
+// CHECK-NEXT:    <key>file</key><integer>1</integer>
+// CHECK-NEXT:    </dict>
+// CHECK-NEXT:    <key>name</key><string>M</string>
+// CHECK-NEXT:    <key>expansion</key><string>*X = (int *)0</string>
 // CHECK-NEXT:  </dict>
 // CHECK-NEXT: </array>
 
@@ -84,12 +124,22 @@ void test4(void) {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>location</key>
 // CHECK-NEXT:   <dict>
-// CHECK-NEXT:    <key>line</key><integer>78</integer>
+// CHECK-NEXT:    <key>line</key><integer>118</integer>
 // CHECK-NEXT:    <key>col</key><integer>3</integer>
 // CHECK-NEXT:    <key>file</key><integer>0</integer>
 // CHECK-NEXT:   </dict>
 // CHECK-NEXT:   <key>name</key><string>M</string>
 // CHECK-NEXT:   <key>expansion</key><string>F2
+// CHECK-NEXT:  </dict>
+// CHECK-NEXT:  <dict>
+// CHECK-NEXT:    <key>location</key>
+// CHECK-NEXT:    <dict>
+// CHECK-NEXT:    <key>line</key><integer>14</integer>
+// CHECK-NEXT:    <key>col</key><integer>3</integer>
+// CHECK-NEXT:    <key>file</key><integer>1</integer>
+// CHECK-NEXT:    </dict>
+// CHECK-NEXT:    <key>name</key><string>M</string>
+// CHECK-NEXT:    <key>expansion</key><string>*Y = (int *)0</string>
 // CHECK-NEXT:  </dict>
 // CHECK-NEXT: </array>
 
@@ -101,4 +151,14 @@ void test_h(void) {
 
 // CHECK:      <key>macro_expansions</key>
 // CHECK-NEXT: <array>
+// CHECK-NEXT: <dict>
+// CHECK-NEXT:   <key>location</key>
+// CHECK-NEXT:   <dict>
+// CHECK-NEXT:   <key>line</key><integer>3</integer>
+// CHECK-NEXT:   <key>col</key><integer>3</integer>
+// CHECK-NEXT:   <key>file</key><integer>2</integer>
+// CHECK-NEXT:   </dict>
+// CHECK-NEXT:   <key>name</key><string>M_H</string>
+// CHECK-NEXT:   <key>expansion</key><string>*A = (int *)0</string>
+// CHECK-NEXT: </dict>
 // CHECK-NEXT: </array>
