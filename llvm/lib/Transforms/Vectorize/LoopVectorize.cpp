@@ -10183,6 +10183,11 @@ LoopVectorizeResult LoopVectorizePass::runImpl(Function &F) {
     // transform.
     Changed |= formLCSSARecursively(*L, *DT, LI, SE);
 
+    // Remove problematic lifetime intrinsics outside the loop.
+    // Avoids the need to merge allocas with a phi.
+    if (cleanupDanglingLifetimeUsers(L, *DT))
+      LLVM_DEBUG(dbgs() << "Vectorizer: removed dangling lifetime users.\n");
+
     Changed |= CFGChanged |= processLoop(L);
 
     if (Changed) {
