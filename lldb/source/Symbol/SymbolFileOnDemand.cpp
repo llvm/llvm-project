@@ -508,7 +508,7 @@ SymbolFileOnDemand::GetUnwindPlan(const Address &address,
 }
 
 llvm::Expected<lldb::addr_t>
-SymbolFileOnDemand::GetParameterStackSize(Symbol &symbol) {
+SymbolFileOnDemand::GetParameterStackSize(const Symbol &symbol) {
   if (!m_debug_info_enabled) {
     Log *log = GetLog();
     LLDB_LOG(log, "[{0}] {1} is skipped", GetSymbolFileName(), __FUNCTION__);
