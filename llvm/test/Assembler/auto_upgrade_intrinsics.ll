@@ -252,6 +252,14 @@ define i32 @cttz_with_isZeroPoison(i32 %A) {
   ret i32 %for.body.i
 }
 
+define <8 x double> @preserve_fmf_on_x86_intrin(<8 x double> %x0, <8 x double> %x1, <8 x double> %x2, i8 %x3){
+; CHECK: %1 = fneg fast
+; CHECK: %2 = call fast
+; CHECK: %4 = select fast
+  %res = call fast <8 x double> @llvm.x86.avx512.mask3.vfmsubadd.pd.512(<8 x double> %x0, <8 x double> %x1, <8 x double> %x2, i8 %x3, i32 4)
+  ret <8 x double> %res
+}
+
 ; This is part of @test.objectsize(), since llvm.objectsize declaration gets
 ; emitted at the end.
 ; CHECK: declare i32 @llvm.objectsize.i32.p0
