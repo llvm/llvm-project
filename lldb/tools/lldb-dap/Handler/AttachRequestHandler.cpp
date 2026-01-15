@@ -30,12 +30,10 @@ namespace lldb_dap {
 Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
   // Initialize DAP debugger and related components if not sharing previously
   // launched debugger.
-  std::optional<int> debugger_id = args.debuggerId;
-  std::optional<lldb::user_id_t> target_id = args.targetId;
+  std::optional<DAPSession> session = args.session;
 
-  if (Error err = debugger_id && target_id
-                      ? dap.InitializeDebugger(*debugger_id, *target_id)
-                      : dap.InitializeDebugger())
+  if (Error err =
+          session ? dap.InitializeDebugger(*session) : dap.InitializeDebugger())
     return err;
 
   dap.SetConfiguration(args.configuration, /*is_attach=*/true);
@@ -59,12 +57,13 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
 
   lldb::SBError error;
   lldb::SBTarget target;
-  if (target_id) {
+  if (session) {
     // Use the unique target ID to get the target.
-    target = dap.debugger.FindTargetByGloballyUniqueID(*target_id);
+    target = dap.debugger.FindTargetByGloballyUniqueID(session->targetId);
     if (!target.IsValid()) {
       error.SetErrorString(
-          llvm::formatv("invalid target_id {0} in attach config", *target_id)
+          llvm::formatv("invalid targetId {0} in attach config",
+                        session->targetId)
               .str()
               .c_str());
     }
@@ -120,7 +119,7 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
       connect_url += std::to_string(args.gdbRemotePort);
       dap.target.ConnectRemote(listener, connect_url.c_str(), "gdb-remote",
                                error);
-    } else if (!target_id.has_value()) {
+    } else if (!session) {
       // Attach by pid or process name.
       lldb::SBAttachInfo attach_info;
       if (args.pid != LLDB_INVALID_PROCESS_ID)
