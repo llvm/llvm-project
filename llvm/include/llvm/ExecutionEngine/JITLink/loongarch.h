@@ -252,7 +252,7 @@ enum EdgeKind_loongarch : Edge::Kind {
 
   /// A 30-bit PC-relative call.
   ///
-  /// Represents a PC-relative call to a target within [-4G, +4G)
+  /// Represents a PC-relative call to a target within [-2G, +2G)
   /// The target must be 4-byte aligned. For adjacent pcaddu12i+jirl
   /// instruction pairs.
   ///
