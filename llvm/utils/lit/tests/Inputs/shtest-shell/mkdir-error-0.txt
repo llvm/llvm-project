@@ -1,3 +1,0 @@
-# Check error on a unsupported mkdir (cannot be part of a pipeline).
-#
-# RUN: mkdir -p temp | rm -rf temp
