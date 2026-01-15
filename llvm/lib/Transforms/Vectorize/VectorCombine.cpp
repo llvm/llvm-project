@@ -2285,10 +2285,8 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
     auto *Extract = cast<ExtractElementInst>(U);
     uint64_t Idx =
         cast<ConstantInt>(Extract->getIndexOperand())->getZExtValue();
-    uint64_t ShiftAmt =
-        DL->isBigEndian()
-            ? (TotalBits - SrcEltSizeInBits - Idx * SrcEltSizeInBits)
-            : (Idx * SrcEltSizeInBits);
+    uint64_t ShiftAmt = DL->getElementBitOffset(Idx * SrcEltSizeInBits,
+                                                SrcEltSizeInBits, TotalBits);
     Value *LShr = Builder.CreateLShr(ScalarV, ShiftAmt);
     Value *And = Builder.CreateAnd(LShr, Mask);
     U->replaceAllUsesWith(And);

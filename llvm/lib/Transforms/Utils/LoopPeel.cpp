@@ -43,6 +43,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <limits>
 #include <optional>
 
 using namespace llvm;
@@ -509,16 +510,12 @@ bool llvm::canPeelLastIteration(const Loop &L, ScalarEvolution &SE) {
                m_scev_AffineAddRec(m_SCEV(), m_scev_One(), m_SpecificLoop(&L)));
 }
 
-/// Returns true if the last iteration can be peeled off and the condition (Pred
-/// LeftAR, RightSCEV) is known at the last iteration and the inverse condition
-/// is known at the second-to-last.
+/// Returns true if the condition (Pred LeftAR, RightSCEV) is known at the last
+/// iteration and the inverse condition is known at the second-to-last.
 static bool shouldPeelLastIteration(Loop &L, CmpPredicate Pred,
                                     const SCEVAddRecExpr *LeftAR,
                                     const SCEV *RightSCEV, ScalarEvolution &SE,
                                     const TargetTransformInfo &TTI) {
-  if (!canPeelLastIteration(L, SE))
-    return false;
-
   const SCEV *BTC = SE.getBackedgeTakenCount(&L);
   SCEVExpander Expander(SE, "loop-peel");
   if (!SE.isKnownNonZero(BTC) &&
@@ -551,7 +548,7 @@ static bool shouldPeelLastIteration(Loop &L, CmpPredicate Pred,
 //   }
 static std::pair<unsigned, unsigned>
 countToEliminateCompares(Loop &L, unsigned MaxPeelCount, ScalarEvolution &SE,
-                         const TargetTransformInfo &TTI) {
+                         const TargetTransformInfo &TTI, bool CanPeelLast) {
   assert(L.isLoopSimplifyForm() && "Loop needs to be in loop simplify form");
   unsigned DesiredPeelCount = 0;
   unsigned DesiredPeelCountLast = 0;
@@ -639,7 +636,8 @@ countToEliminateCompares(Loop &L, unsigned MaxPeelCount, ScalarEvolution &SE,
     const SCEV *Step = LeftAR->getStepRecurrence(SE);
     if (!PeelWhilePredicateIsKnown(NewPeelCount, IterVal, RightSCEV, Step,
                                    Pred)) {
-      if (shouldPeelLastIteration(L, Pred, LeftAR, RightSCEV, SE, TTI))
+      if (CanPeelLast &&
+          shouldPeelLastIteration(L, Pred, LeftAR, RightSCEV, SE, TTI))
         DesiredPeelCountLast = 1;
       return;
     }
@@ -698,7 +696,8 @@ countToEliminateCompares(Loop &L, unsigned MaxPeelCount, ScalarEvolution &SE,
         SE.getConstant(AddRec->getType(), NewPeelCount), SE);
     if (!PeelWhilePredicateIsKnown(NewPeelCount, IterVal, BoundSCEV, Step,
                                    Pred)) {
-      if (shouldPeelLastIteration(L, Pred, AddRec, BoundSCEV, SE, TTI))
+      if (CanPeelLast &&
+          shouldPeelLastIteration(L, Pred, AddRec, BoundSCEV, SE, TTI))
         DesiredPeelCountLast = 1;
       return;
     }
@@ -758,7 +757,7 @@ struct LoadGroup {
   Value *BasePtr;
   // First load instruction in the program order.
   LoadInst *FirstLoad;
-  // Pairs of (load instruction, offset from base).
+  // Pairs of (load instruction, offset from base) sorted by offset.
   SmallVector<std::pair<LoadInst *, APInt>, 4> Loads;
   // An applicable wider integer type to load as.
   Type *WideType;
@@ -768,56 +767,96 @@ struct LoadGroup {
 static std::optional<LoadGroup> tryFormLoadGroupForWidening(
     Value *Base, SmallVectorImpl<std::pair<LoadInst *, APInt>> &Loads, Loop &L,
     ScalarEvolution &SE, const DataLayout &DL, const TargetTransformInfo &TTI) {
-  // Find the span of the loaded data.
-  int64_t Left = INT64_MAX;
-  int64_t Right = INT64_MIN;
+  // Verify all loads use the same address space.
+  unsigned AddrSpace = Loads[0].first->getPointerAddressSpace();
   for (const auto &[Load, Offset] : Loads) {
-    Left = std::min(Left, Offset.getSExtValue());
-    Right = std::max(
-        Right, Offset.getSExtValue() +
-                   static_cast<int64_t>(DL.getTypeStoreSize(Load->getType())));
+    if (Load->getPointerAddressSpace() != AddrSpace)
+      return std::nullopt;
+  }
+
+  // Find the span of the loaded data.
+  int64_t Left = std::numeric_limits<int64_t>::max();
+  int64_t Right = std::numeric_limits<int64_t>::min();
+  for (const auto &[Load, Offset] : Loads) {
+    int64_t OffsetVal = Offset.getSExtValue();
+    int64_t StoreSize =
+        static_cast<int64_t>(DL.getTypeStoreSize(Load->getType()));
+    if (OffsetVal > std::numeric_limits<int64_t>::max() - StoreSize)
+      return std::nullopt;
+    Left = std::min(Left, OffsetVal);
+    Right = std::max(Right, OffsetVal + StoreSize);
   }
   assert((Left < Right) && "Invalid load group span");
   uint64_t TotalBytes = Right - Left;
   uint64_t TotalBits = TotalBytes * 8;
-  // Powers of two are already natural for most targets.
-  if (isPowerOf2_64(TotalBits))
-    return std::nullopt;
   Type *WideType =
       DL.getSmallestLegalIntType(L.getHeader()->getContext(), TotalBits);
   if (!WideType)
     return std::nullopt;
   unsigned WideBits = WideType->getIntegerBitWidth();
-  // Total size is already natural for the target.
+  // Total size is already natural for the target, no benefit from widening.
   if (WideBits == TotalBits)
     return std::nullopt;
   // Peeling doubles dereferenceable bytes, ensure wide type fits.
   if (WideBits > TotalBits * 2)
     return std::nullopt;
-  // Check alignment is unconstrained.
+  // Check alignment is unconstrained and without penalty.
   unsigned Fast = 0;
   if (!TTI.allowsMisalignedMemoryAccesses(L.getHeader()->getContext(), WideBits,
-                                          DL.getDefaultGlobalsAddressSpace(),
-                                          Align(1), &Fast) &&
+                                          AddrSpace, Align(1), &Fast) ||
       !Fast)
     return std::nullopt;
   // Validate pointer stride across iterations.
-  const SCEV *PtrSCEV = SE.getSCEV(Base);
-  const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(PtrSCEV);
-  if (!AR || AR->getLoop() != &L)
-    return std::nullopt;
-  const SCEV *Step = AR->getStepRecurrence(SE);
-  auto *ConstStep = dyn_cast<SCEVConstant>(Step);
-  if (!ConstStep)
+  const SCEVConstant *ConstStep = nullptr;
+  if (!match(SE.getSCEV(Base),
+             m_scev_AffineAddRec(m_SCEV(), m_SCEVConstant(ConstStep),
+                                 m_SpecificLoop(&L))))
     return std::nullopt;
   int64_t StepVal = ConstStep->getValue()->getSExtValue();
   if (StepVal != static_cast<int64_t>(TotalBytes))
     return std::nullopt;
 
   LoadInst *FirstLoad = Loads[0].first;
+  // Cost model: compare cost of individual loads vs wide load + extraction ops.
+  // Sort loads by offset first since we need this for cost calculation.
   llvm::sort(Loads, [](const auto &A, const auto &B) {
     return A.second.slt(B.second);
   });
+  int64_t FirstOffset = Loads[0].second.getSExtValue();
+
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+
+  // Cost of original individual loads.
+  InstructionCost OriginalCost = 0;
+  for (const auto &[Load, Offset] : Loads) {
+    OriginalCost += TTI.getMemoryOpCost(Instruction::Load, Load->getType(),
+                                        Load->getAlign(), AddrSpace, CostKind);
+  }
+
+  // Cost of wide load + extraction operations (shift + trunc for each load).
+  InstructionCost WidenedCost = TTI.getMemoryOpCost(
+      Instruction::Load, WideType, Align(1), AddrSpace, CostKind);
+  for (const auto &[Load, Offset] : Loads) {
+    unsigned LoadBits = Load->getType()->getScalarSizeInBits();
+    uint64_t BitPosition = (Offset.getSExtValue() - FirstOffset) * 8;
+    uint64_t BitOffset =
+        DL.getElementBitOffset(BitPosition, LoadBits, WideBits);
+    if (BitOffset != 0)
+      WidenedCost +=
+          TTI.getArithmeticInstrCost(Instruction::LShr, WideType, CostKind);
+    if (LoadBits < WideBits)
+      WidenedCost +=
+          TTI.getCastInstrCost(Instruction::Trunc, Load->getType(), WideType,
+                               TTI::CastContextHint::None, CostKind);
+  }
+
+  LLVM_DEBUG(dbgs() << "Load widening cost: original=" << OriginalCost
+                    << " widened=" << WidenedCost << "\n");
+
+  // Bail if the wider load and extractions have a greater cost.
+  if (WidenedCost > OriginalCost)
+    return std::nullopt;
+
   return LoadGroup{Base, FirstLoad, std::move(Loads), WideType};
 }
 
@@ -843,46 +882,52 @@ findLoadGroupsForWidening(BasicBlock *BB, Loop &L, ScalarEvolution &SE,
 
   for (Instruction &I : *BB) {
     if (auto *Load = dyn_cast<LoadInst>(&I)) {
+      // Skip volatile/atomic loads. Also skip non-integer types since the
+      // widening uses integer shift/truncate operations to extract bytes.
+      // Supporting floats would require additional bitcasts and consecutive
+      // float loads are less probable to create odd amounts of bytes.
       if (Load->isVolatile() || Load->isAtomic() ||
-          !Load->getType()->isIntegerTy() ||
-          Load->getPointerAddressSpace() != DL.getDefaultGlobalsAddressSpace())
+          !Load->getType()->isIntegerTy())
         continue;
       Value *Ptr = Load->getPointerOperand();
       APInt Offset(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
       Value *ActualBase = Ptr->stripAndAccumulateConstantOffsets(
           DL, Offset, /*AllowNonInbounds=*/false);
       LoadsByBase[ActualBase].emplace_back(Load, Offset);
-    } else if (I.mayHaveSideEffects())
+    } else if (I.mayHaveSideEffects()) {
+      // Side effects may clobber memory, so we can only group loads that
+      // appear between side effects. Process what we've collected so far.
       ProcessCollectedLoads();
+    }
   }
   ProcessCollectedLoads();
   return Groups;
 }
 
-// Returns 1 if peeling the last iteration would enable widening load groups to
-// natural sizes. Returns 0 otherwise.
-static unsigned peelLastForLoadWidening(Loop &L, ScalarEvolution &SE,
-                                        const DataLayout &DL,
-                                        const TargetTransformInfo &TTI,
-                                        DominatorTree &DT) {
+// Returns true if peeling the last iteration would enable widening load groups
+// to natural sizes. Returns false otherwise.
+static bool peelLastForLoadWidening(Loop &L, ScalarEvolution &SE,
+                                    const TargetTransformInfo &TTI,
+                                    DominatorTree &DT) {
   if (!EnablePeelForLoadWidening)
-    return 0;
+    return false;
   if (!L.isInnermost())
-    return 0;
-  if (!canPeelLastIteration(L, SE))
-    return 0;
+    return false;
   BasicBlock *Latch = L.getLoopLatch();
   if (!Latch)
-    return 0;
+    return false;
+  const DataLayout &DL = L.getHeader()->getDataLayout();
   for (BasicBlock *BB : L.blocks()) {
-    // Look for consecutive loads in blocks that execute every iteration.
+    // Only consider blocks that dominate the latch, ensuring they execute on
+    // every iteration that continues the loop. It is guaranteed that the latch
+    // is the only exiting block (no early exits).
     if (!DT.dominates(BB, Latch))
       continue;
     auto Groups = findLoadGroupsForWidening(BB, L, SE, DL, TTI);
     if (!Groups.empty())
-      return 1;
+      return true;
   }
-  return 0;
+  return false;
 }
 } // anonymous namespace
 
@@ -941,6 +986,9 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   // in TTI.getPeelingPreferences or by the flag -unroll-peel-count.
   unsigned DesiredPeelCount = TargetPeelCount;
 
+  // Check once if we can peel the last iteration to avoid repeated checks.
+  bool CanPeelLast = canPeelLastIteration(*L, SE);
+
   // Here we try to get rid of Phis which become invariants or inductions after
   // 1, 2, ..., N iterations of the loop. For this we compute the number for
   // iterations after which every Phi is guaranteed to become an invariant or an
@@ -955,7 +1003,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   }
 
   const auto &[CountToEliminateCmps, CountToEliminateCmpsLast] =
-      countToEliminateCompares(*L, MaxPeelCount, SE, TTI);
+      countToEliminateCompares(*L, MaxPeelCount, SE, TTI, CanPeelLast);
   DesiredPeelCount = std::max(DesiredPeelCount, CountToEliminateCmps);
 
   if (DesiredPeelCount == 0)
@@ -995,19 +1043,15 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   // Check for consecutive load widening opportunity.
   // Skip this when running before vectorization (AllowLoadWideningPeel=false)
   // to avoid peeling loops that could have been vectorized instead.
-  if (PP.PeelCount == 0 && AllowLoadWideningPeel) {
-    const DataLayout &DL = L->getHeader()->getDataLayout();
-    unsigned LoadWideningPeel = peelLastForLoadWidening(*L, SE, DL, TTI, DT);
-    if (LoadWideningPeel > 0) {
-      if (LoadWideningPeel + AlreadyPeeled <= UnrollPeelMaxCount) {
-        LLVM_DEBUG(
-            dbgs() << "Peel last " << LoadWideningPeel
-                   << " iteration(s) to enable consecutive load widening.\n");
-        PP.PeelCount = LoadWideningPeel;
-        PP.PeelProfiledIterations = false;
-        PP.PeelLast = true;
-        return;
-      }
+  if (PP.PeelCount == 0 && AllowLoadWideningPeel && CanPeelLast &&
+      peelLastForLoadWidening(*L, SE, TTI, DT)) {
+    if (1 + AlreadyPeeled <= UnrollPeelMaxCount) {
+      LLVM_DEBUG(dbgs() << "Peel last iteration to enable consecutive load "
+                           "widening.\n");
+      PP.PeelCount = 1;
+      PP.PeelProfiledIterations = false;
+      PP.PeelLast = true;
+      return;
     }
   }
 
@@ -1050,13 +1094,11 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
 }
 
 bool llvm::widenLoadsAfterPeel(Loop &L, ScalarEvolution &SE,
-                               const DataLayout &DL,
                                const TargetTransformInfo &TTI,
                                DominatorTree &DT) {
   BasicBlock *Latch = L.getLoopLatch();
-  if (!Latch)
-    return false;
-
+  assert(Latch && "Loop should have a latch after peeling");
+  const DataLayout &DL = L.getHeader()->getDataLayout();
   bool Changed = false;
 
   for (BasicBlock *BB : L.blocks()) {
@@ -1069,20 +1111,19 @@ bool llvm::widenLoadsAfterPeel(Loop &L, ScalarEvolution &SE,
       IRBuilder<> Builder(InsertPoint);
       Value *BasePtr = Group.BasePtr;
       int64_t FirstOffset = Group.Loads[0].second.getSExtValue();
+      unsigned AddrSpace = Group.FirstLoad->getPointerAddressSpace();
       // If the first load doesn't start at offset 0, we need to adjust.
       if (FirstOffset != 0) {
         Value *OrigPtr = Group.BasePtr;
         BasePtr = Builder.CreatePtrAdd(
             OrigPtr,
-            ConstantInt::get(
-                Builder.getIndexTy(DL, DL.getDefaultGlobalsAddressSpace()),
-                FirstOffset));
+            ConstantInt::get(Builder.getIndexTy(DL, AddrSpace), FirstOffset));
       }
-      // Merge AA metadata from all loads.
+      // Merge AA metadata from all loads using intersection for correctness.
       AAMDNodes AATags = InsertPoint->getAAMetadata();
       for (const auto &[Load, Offset] : Group.Loads) {
         if (Load != InsertPoint)
-          AATags = AATags.concat(Load->getAAMetadata());
+          AATags = AATags.merge(Load->getAAMetadata());
       }
       // Create the wider load.
       LoadInst *WideLoad = Builder.CreateLoad(Group.WideType, BasePtr);
@@ -1091,18 +1132,15 @@ bool llvm::widenLoadsAfterPeel(Loop &L, ScalarEvolution &SE,
         WideLoad->setAAMetadata(AATags);
       // For each original load, extract the corresponding bytes.
       for (const auto &[Load, Offset] : Group.Loads) {
-        unsigned LoadBytes = DL.getTypeStoreSize(Load->getType());
+        unsigned LoadBits = Load->getType()->getScalarSizeInBits();
         Value *Extracted = WideLoad;
-        unsigned BitOffset =
-            DL.isBigEndian()
-                ? SizeInBits -
-                      (Offset.getSExtValue() - FirstOffset + LoadBytes) * 8
-                : (Offset.getSExtValue() - FirstOffset) * 8;
+        uint64_t BitPosition = (Offset.getSExtValue() - FirstOffset) * 8;
+        uint64_t BitOffset =
+            DL.getElementBitOffset(BitPosition, LoadBits, SizeInBits);
         if (BitOffset != 0)
           Extracted = Builder.CreateLShr(
               Extracted, ConstantInt::get(WideLoad->getType(), BitOffset));
-        unsigned TargetBits = Load->getType()->getScalarSizeInBits();
-        if (TargetBits < SizeInBits)
+        if (LoadBits < SizeInBits)
           Extracted = Builder.CreateTrunc(Extracted, Load->getType());
         Load->replaceAllUsesWith(Extracted);
       }

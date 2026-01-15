@@ -1325,10 +1325,8 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
     peelLoop(L, PP.PeelCount, PP.PeelLast, LI, &SE, DT, &AC, PreserveLCSSA,
              VMap);
     // Widen consecutive loads after last-iteration peeling
-    if (PP.PeelLast) {
-      const DataLayout &DL = L->getHeader()->getDataLayout();
-      widenLoadsAfterPeel(*L, SE, DL, TTI, DT);
-    }
+    if (PP.PeelLast)
+      widenLoadsAfterPeel(*L, SE, TTI, DT);
     simplifyLoopAfterUnroll(L, true, LI, &SE, &DT, &AC, &TTI, nullptr);
     // If the loop was peeled, we already "used up" the profile information
     // we had, so we don't want to unroll or peel again.

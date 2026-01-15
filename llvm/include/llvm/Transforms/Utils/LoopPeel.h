@@ -51,7 +51,7 @@ void computePeelCount(Loop *L, unsigned LoopSize,
 
 /// Combine load instructions in a loop into a wider one, given that we peeled
 /// the last iteration and can assume the bytes are dereferenceable.
-bool widenLoadsAfterPeel(Loop &L, ScalarEvolution &SE, const DataLayout &DL,
+bool widenLoadsAfterPeel(Loop &L, ScalarEvolution &SE,
                          const TargetTransformInfo &TTI, DominatorTree &DT);
 
 } // end namespace llvm
