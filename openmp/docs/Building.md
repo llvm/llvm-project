@@ -120,8 +120,10 @@ Enabling support for offloading (i.e. `#pragma omp target`) additionally
 requires the offload runtime. Host offloading (i.e. using the CPU itself as
 an offloading target) should work out of the box, but each GPU architecture
 requires its own runtime. Currently supported GPU architectures are
-`amdgcn-amd-amdhsa` and `nvptx-nvidia-cuda`. A minimal build configuration
-supporting both architectures would be the following.
+`amdgcn-amd-amdhsa` and `nvptx-nvidia-cuda`. Use the aforementioned
+`RUNTIMES_<triple>_<runtimes-parameter>` form to restrict an option
+`<runtimes-parameter>` to only only one of these architectures. A minimal build
+configuration supporting both architectures would be the following.
 
 ```sh
 git clone https://github.com/llvm/llvm-project.git
