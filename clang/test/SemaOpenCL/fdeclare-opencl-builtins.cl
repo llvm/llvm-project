@@ -50,6 +50,7 @@ typedef char char2 __attribute__((ext_vector_type(2)));
 typedef char char4 __attribute__((ext_vector_type(4)));
 typedef uchar uchar4 __attribute__((ext_vector_type(4)));
 typedef uchar uchar16 __attribute__((ext_vector_type(16)));
+typedef float float2 __attribute__((ext_vector_type(2)));
 typedef float float4 __attribute__((ext_vector_type(4)));
 typedef float float16 __attribute__((ext_vector_type(16)));
 typedef half half4 __attribute__((ext_vector_type(4)));
@@ -302,6 +303,62 @@ kernel void basic_image_writeonly(write_only image1d_buffer_t image_write_only_i
 #if __OPENCL_C_VERSION__ <= CL_VERSION_1_2 && !defined(__OPENCL_CPP_VERSION__)
   // expected-error@-2{{no matching function for call to 'write_imagef'}}
 #endif
+}
+
+kernel void basic_image_readwrite_depth(read_write image2d_depth_t image_read_write_image2d_depth) {
+#if __OPENCL_C_VERSION__ < CL_VERSION_2_0 && !defined(__OPENCL_CPP_VERSION__)
+  // expected-error@-2{{access qualifier 'read_write' cannot be used for '__read_write image2d_depth_t' prior to OpenCL C version 2.0 or in version 3.0 and without __opencl_c_read_write_images feature}}
+#endif
+  int2 i2;
+  float f;
+  float2 f2;
+  sampler_t sampler;
+  float resf;
+
+  resf = read_imagef(image_read_write_image2d_depth, i2);
+  resf = read_imagef(image_read_write_image2d_depth, sampler, f2, f);
+  resf = read_imagef(image_read_write_image2d_depth, sampler, f2, f2, f2);
+}
+
+kernel void basic_image_readwrite_array_depth(read_write image2d_array_depth_t image_read_write_image2d_array_depth) {
+#if __OPENCL_C_VERSION__ < CL_VERSION_2_0 && !defined(__OPENCL_CPP_VERSION__)
+  // expected-error@-2{{access qualifier 'read_write' cannot be used for '__read_write image2d_array_depth_t' prior to OpenCL C version 2.0 or in version 3.0 and without __opencl_c_read_write_images feature}}
+#endif
+  int4 i4;
+  float f;
+  float2 f2;
+  float4 f4;
+  sampler_t sampler;
+  float resf;
+
+  resf = read_imagef(image_read_write_image2d_array_depth, i4);
+  resf = read_imagef(image_read_write_image2d_array_depth, sampler, f4, f);
+  resf = read_imagef(image_read_write_image2d_array_depth, sampler, f4, f2, f2);
+}
+
+kernel void basic_image_write_readwrite_depth(read_write image2d_depth_t image_read_write_image2d_depth) {
+#if __OPENCL_C_VERSION__ < CL_VERSION_2_0 && !defined(__OPENCL_CPP_VERSION__)
+  // expected-error@-2{{access qualifier 'read_write' cannot be used for '__read_write image2d_depth_t' prior to OpenCL C version 2.0 or in version 3.0 and without __opencl_c_read_write_images feature}}
+#endif
+  int i;
+  int2 i2;
+  float f;
+
+  write_imagef(image_read_write_image2d_depth, i2, f);
+  write_imagef(image_read_write_image2d_depth, i2, i, f);
+}
+
+kernel void basic_image_write_readwrite_array_depth(read_write image2d_array_depth_t image_read_write_image2d_array_depth) {
+#if __OPENCL_C_VERSION__ < CL_VERSION_2_0 && !defined(__OPENCL_CPP_VERSION__)
+  // expected-error@-2{{access qualifier 'read_write' cannot be used for '__read_write image2d_array_depth_t' prior to OpenCL C version 2.0 or in version 3.0 and without __opencl_c_read_write_images feature}}
+#endif
+  int i;
+  int4 i4;
+  float f;
+  float resf;
+
+  write_imagef(image_read_write_image2d_array_depth, i4, f);
+  write_imagef(image_read_write_image2d_array_depth, i4, i, f);
 }
 
 kernel void basic_subgroup(global uint *out) {

@@ -606,6 +606,8 @@ BitcodeModule &InputFile::getSingleBitcodeModule() {
   return Mods[0];
 }
 
+BitcodeModule &InputFile::getPrimaryBitcodeModule() { return Mods[0]; }
+
 LTO::RegularLTOState::RegularLTOState(unsigned ParallelCodeGenParallelismLevel,
                                       const Config &Conf)
     : ParallelCodeGenParallelismLevel(ParallelCodeGenParallelismLevel),
@@ -804,7 +806,7 @@ LTO::addModule(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
   // If any of the modules inside of a input bitcode file was compiled with
   // ThinLTO, we assume that the whole input file also was compiled with
   // ThinLTO.
-  Input.IsThinLTO = IsThinLTO;
+  Input.IsThinLTO |= IsThinLTO;
 
   auto ModSyms = Input.module_symbols(ModI);
   addModuleToGlobalRes(ModSyms, Res,

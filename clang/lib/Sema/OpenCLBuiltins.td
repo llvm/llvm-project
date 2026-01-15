@@ -1528,7 +1528,7 @@ let Extension = FuncExtOpenCLCDeviceEnqueue in {
 // OpenCL Extension v2.0 s9.18 - Mipmaps
 let Extension = FuncExtKhrMipmapImage in {
   // Added to section 6.13.14.2.
-  foreach aQual = ["RO"] in {
+  foreach aQual = ["RO", "RW"] in {
     foreach imgTy = [Image2d] in {
       foreach name = ["read_imagef"] in {
         def : Builtin<name, [VectorType<Float, 4>, ImageType<imgTy, aQual>, Sampler, VectorType<Float, 2>, Float], Attr.Pure>;
@@ -1630,7 +1630,7 @@ let Extension = FuncExtKhrMipmapImage in {
 // Write functions are enabled using a separate extension.
 let Extension = FuncExtKhrMipmapImageWrites in {
   // Added to section 6.13.14.4.
-  foreach aQual = ["WO"] in {
+  foreach aQual = ["WO", "RW"] in {
     foreach imgTy = [Image2d] in {
       def : Builtin<"write_imagef", [Void, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int, VectorType<Float, 4>]>;
       def : Builtin<"write_imagei", [Void, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int, VectorType<Int, 4>]>;

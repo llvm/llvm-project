@@ -4,7 +4,7 @@
 
 module {
   cir.func @fold_extract_vector_op_test() {
-    %init = cir.alloca !s32i, !cir.ptr<!s32i>, ["e", init]
+    %init = cir.alloca !s32i, !cir.ptr<!s32i>, ["e", init] {alignment = 4 : i64}
     %const_vec = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
     %index = cir.const #cir.int<1> : !s32i
     %ele = cir.vec.extract %const_vec[%index : !s32i] : !cir.vector<4 x !s32i>
@@ -17,7 +17,7 @@ module {
   // CHECK: cir.store %[[VALUE]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
 
   cir.func @fold_extract_vector_op_index_out_of_bounds_test() {
-    %init = cir.alloca !s32i, !cir.ptr<!s32i>, ["e", init]
+    %init = cir.alloca !s32i, !cir.ptr<!s32i>, ["e", init] {alignment = 4 : i64}
     %const_vec = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
     %index = cir.const #cir.int<9> : !s32i
     %ele = cir.vec.extract %const_vec[%index : !s32i] : !cir.vector<4 x !s32i>
