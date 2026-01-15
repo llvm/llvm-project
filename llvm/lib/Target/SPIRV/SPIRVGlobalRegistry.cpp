@@ -1020,6 +1020,14 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeFunction(
     const FunctionType *Ty, SPIRVType *RetType,
     const SmallVectorImpl<SPIRVType *> &ArgTypes,
     MachineIRBuilder &MIRBuilder) {
+  const SPIRVSubtarget *ST =
+      static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
+  if (Ty->isVarArg() && ST->isShader()) {
+    Function &Fn = MIRBuilder.getMF().getFunction();
+    Ty->getContext().diagnose(DiagnosticInfoUnsupported(
+        Fn, "SPIR-V shaders do not support variadic functions",
+        MIRBuilder.getDebugLoc()));
+  }
   return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpTypeFunction)
                    .addDef(createTypeVReg(MIRBuilder))

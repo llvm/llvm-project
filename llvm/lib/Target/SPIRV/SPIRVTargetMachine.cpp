@@ -179,7 +179,11 @@ void SPIRVPassConfig::addIRPasses() {
   addPass(createSPIRVRegularizerPass());
   addPass(createSPIRVPrepareFunctionsPass(TM));
   addPass(createSPIRVPrepareGlobalsPass());
-  addPass(createExpandVariadicsPass(ExpandVariadicsMode::Lowering));
+
+  // Variadic function calls aren't supported in shader code.
+  if (!TM.getSubtargetImpl()->isShader()) {
+    addPass(createExpandVariadicsPass(ExpandVariadicsMode::Lowering));
+  }
 }
 
 void SPIRVPassConfig::addISelPrepare() {
