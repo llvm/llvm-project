@@ -119,6 +119,10 @@ public:
     return Floating(Mem, llvm::APFloatBase::SemanticsToEnum(Sem));
   }
 
+  /// Note that a step has been executed. If there are no more steps remaining,
+  /// diagnoses and returns \c false.
+  bool noteStep(CodePtr OpPC);
+
 private:
   friend class EvaluationResult;
   friend class InterpStateCCOverride;
@@ -150,6 +154,7 @@ public:
   SmallVectorImpl<PartialDiagnosticAt> *PrevDiags = nullptr;
   unsigned SpeculationDepth = 0;
   std::optional<bool> ConstantContextOverride;
+  unsigned StepsLeft;
 
   llvm::SmallVector<
       std::pair<const Expr *, const LifetimeExtendedTemporaryDecl *>>

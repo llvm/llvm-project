@@ -26,6 +26,7 @@ InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
       Parent.CheckingPotentialConstantExpression;
   CheckingForUndefinedBehavior = Parent.CheckingForUndefinedBehavior;
   EvalMode = Parent.EvalMode;
+  StepsLeft = Ctx.getLangOpts().ConstexprStepLimit;
 }
 
 InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
@@ -39,6 +40,7 @@ InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
       Parent.CheckingPotentialConstantExpression;
   CheckingForUndefinedBehavior = Parent.CheckingForUndefinedBehavior;
   EvalMode = Parent.EvalMode;
+  StepsLeft = Ctx.getLangOpts().ConstexprStepLimit;
 }
 
 bool InterpState::inConstantContext() const {
@@ -153,4 +155,13 @@ StdAllocatorCaller InterpState::getStdAllocatorCaller(StringRef Name) const {
   }
 
   return {};
+}
+
+bool InterpState::noteStep(CodePtr OpPC) {
+  --StepsLeft;
+  if (StepsLeft != 0)
+    return true;
+
+  FFDiag(Current->getSource(OpPC), diag::note_constexpr_step_limit_exceeded);
+  return false;
 }
