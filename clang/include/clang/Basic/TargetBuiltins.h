@@ -135,8 +135,9 @@ namespace clang {
   namespace AMDGPU {
   enum {
     LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
-  #define BUILTIN(ID, TYPE, ATTRS) BI##ID,
-  #include "clang/Basic/BuiltinsAMDGPU.def"
+#define GET_BUILTIN_ENUMERATORS
+#include "clang/Basic/BuiltinsAMDGPU.inc"
+#undef GET_BUILTIN_ENUMERATORS
     LastTSBuiltin
   };
   }

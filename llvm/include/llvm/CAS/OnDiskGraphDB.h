@@ -20,6 +20,7 @@
 #include "llvm/CAS/OnDiskCASLogger.h"
 #include "llvm/CAS/OnDiskDataAllocator.h"
 #include "llvm/CAS/OnDiskTrieRawHashMap.h"
+#include <atomic>
 
 namespace llvm::cas::ondisk {
 

@@ -10486,13 +10486,32 @@ struct AANoFPClassImpl : AANoFPClass {
       addKnownBits(Attr.getNoFPClass());
     }
 
-    const DataLayout &DL = A.getDataLayout();
+    Instruction *CtxI = getCtxI();
+
     if (getPositionKind() != IRPosition::IRP_RETURNED) {
-      KnownFPClass KnownFPClass = computeKnownFPClass(&V, DL);
+      const DataLayout &DL = A.getDataLayout();
+      InformationCache &InfoCache = A.getInfoCache();
+
+      const DominatorTree *DT = nullptr;
+      AssumptionCache *AC = nullptr;
+      const TargetLibraryInfo *TLI = nullptr;
+      Function *F = getAssociatedFunction();
+      if (F) {
+        TLI = InfoCache.getTargetLibraryInfoForFunction(*F);
+        if (!F->isDeclaration()) {
+          DT =
+              InfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(*F);
+          AC = InfoCache.getAnalysisResultForFunction<AssumptionAnalysis>(*F);
+        }
+      }
+
+      SimplifyQuery Q(DL, TLI, DT, AC, CtxI);
+
+      KnownFPClass KnownFPClass = computeKnownFPClass(&V, fcAllFlags, Q);
       addKnownBits(~KnownFPClass.KnownFPClasses);
     }
 
-    if (Instruction *CtxI = getCtxI())
+    if (CtxI)
       followUsesInMBEC(*this, A, getState(), *CtxI);
   }
 
@@ -13232,7 +13251,7 @@ struct AAAddressSpaceCallSiteArgument final : AAAddressSpaceImpl {
 
 // TODO: this is similar to AAAddressSpace, most of the code should be merged.
 // But merging it created failing cased on gateway test that cannot be
-// reproduced locally. So should open a seperated PR to hande the merge of
+// reproduced locally. So should open a separated PR to handle the merge of
 // AANoAliasAddrSpace and AAAddressSpace attribute
 
 namespace {

@@ -1278,10 +1278,22 @@ public:
                                                  SDValue Size,
                                                  const CallInst *CI);
 
+  /// Lower a strcpy operation into a target library call and return the
+  /// resulting chain and call result as SelectionDAG SDValues.
+  LLVM_ABI std::pair<SDValue, SDValue> getStrcpy(SDValue Chain, const SDLoc &dl,
+                                                 SDValue Dst, SDValue Src,
+                                                 const CallInst *CI);
+
   /// Lower a strlen operation into a target library call and return the
   /// resulting chain and call result as SelectionDAG SDValues.
   LLVM_ABI std::pair<SDValue, SDValue>
   getStrlen(SDValue Chain, const SDLoc &dl, SDValue Src, const CallInst *CI);
+
+  /// Lower a strstr operation into a target library call and return the
+  /// resulting chain and call result as SelectionDAG SDValues.
+  LLVM_ABI std::pair<SDValue, SDValue> getStrstr(SDValue Chain, const SDLoc &dl,
+                                                 SDValue S0, SDValue S1,
+                                                 const CallInst *CI);
 
   /* \p CI if not null is the memset call being lowered.
    * \p OverrideTailCall is an optional parameter that can be used to override

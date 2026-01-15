@@ -276,11 +276,11 @@ class HeaderSearch {
   /// a system header.
   std::vector<std::pair<std::string, bool>> SystemHeaderPrefixes;
 
-  /// The hash used for module cache paths.
-  std::string ModuleHash;
+  /// The context hash used in SpecificModuleCachePath (unless suppressed).
+  std::string ContextHash;
 
-  /// The path to the module cache.
-  std::string ModuleCachePath;
+  /// The specific module cache path containing ContextHash (unless suppressed).
+  std::string SpecificModuleCachePath;
 
   /// All of the preprocessor-specific data about files that are
   /// included, indexed by the FileEntry's UID.
@@ -433,19 +433,21 @@ public:
     return {};
   }
 
-  /// Set the hash to use for module cache paths.
-  void setModuleHash(StringRef Hash) { ModuleHash = std::string(Hash); }
+  /// Set the context hash to use for module cache paths.
+  void setContextHash(StringRef Hash) { ContextHash = std::string(Hash); }
 
-  /// Set the path to the module cache.
-  void setModuleCachePath(StringRef CachePath) {
-    ModuleCachePath = std::string(CachePath);
+  /// Set the module cache path with the context hash (unless suppressed).
+  void setSpecificModuleCachePath(StringRef Path) {
+    SpecificModuleCachePath = std::string(Path);
   }
 
-  /// Retrieve the module hash.
-  StringRef getModuleHash() const { return ModuleHash; }
+  /// Retrieve the context hash.
+  StringRef getContextHash() const { return ContextHash; }
 
-  /// Retrieve the path to the module cache.
-  StringRef getModuleCachePath() const { return ModuleCachePath; }
+  /// Retrieve the module cache path with the context hash (unless suppressed).
+  StringRef getSpecificModuleCachePath() const {
+    return SpecificModuleCachePath;
+  }
 
   /// Forget everything we know about headers so far.
   void ClearFileInfo() {

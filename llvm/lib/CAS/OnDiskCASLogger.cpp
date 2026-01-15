@@ -187,10 +187,13 @@ void OnDiskCASLogger::logMappedFileRegionArenaCreate(StringRef Path, int FD,
 
   TextLogLine Log(OS);
   Log << "mmap '" << Path << "' " << Region;
-  Log << " dev=" << (EC ? ~0ull : Stat.getUniqueID().getDevice());
-  Log << " inode=" << (EC ? ~0ull : Stat.getUniqueID().getFile());
-  ;
   Log << " size=" << Size << " capacity=" << Capacity;
+  if (EC) {
+    Log << " failed status with error: " << EC.message();
+    return;
+  }
+  Log << " dev=" << format_hex(Stat.getUniqueID().getDevice(), 4);
+  Log << " inode=" << format_hex(Stat.getUniqueID().getFile(), 4);
 }
 
 void OnDiskCASLogger::logMappedFileRegionArenaOom(StringRef Path,
