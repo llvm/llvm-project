@@ -566,7 +566,9 @@ def setupSysPath():
 
     lldbDir = os.path.dirname(lldbtest_config.lldbExec)
 
-    lldbDAPExec = os.path.join(lldbDir, "lldb-dap")
+    lldbDAPExec = os.path.join(
+        lldbDir, "lldb-dap.exe" if sys.platform == "win32" else "lldb-dap"
+    )
     if is_exe(lldbDAPExec):
         os.environ["LLDBDAP_EXEC"] = lldbDAPExec
 

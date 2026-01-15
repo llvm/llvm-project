@@ -54,6 +54,9 @@ using namespace llvm::PatternMatch;
 
 static const char *LLVMLoopDisableNonforced = "llvm.loop.disable_nonforced";
 static const char *LLVMLoopDisableLICM = "llvm.licm.disable";
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // namespace llvm
 
 bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
                                    MemorySSAUpdater *MSSAU,
@@ -967,7 +970,7 @@ bool llvm::setLoopEstimatedTripCount(
     return true;
 
   // Calculate taken and exit weights.
-  unsigned LatchExitWeight = 0;
+  unsigned LatchExitWeight = ProfcheckDisableMetadataFixes ? 0 : 1;
   unsigned BackedgeTakenWeight = 0;
 
   if (EstimatedTripCount != 0) {
@@ -1386,22 +1389,6 @@ Value *llvm::createAnyOfReduction(IRBuilderBase &Builder, Value *Src,
   return Builder.CreateSelect(AnyOf, NewVal, InitVal, "rdx.select");
 }
 
-Value *llvm::createFindLastIVReduction(IRBuilderBase &Builder, Value *Src,
-                                       RecurKind RdxKind, Value *Start,
-                                       Value *Sentinel) {
-  bool IsSigned = RecurrenceDescriptor::isSignedRecurrenceKind(RdxKind);
-  bool IsMaxRdx = RecurrenceDescriptor::isFindLastIVRecurrenceKind(RdxKind);
-  Value *MaxRdx = Src->getType()->isVectorTy()
-                      ? (IsMaxRdx ? Builder.CreateIntMaxReduce(Src, IsSigned)
-                                  : Builder.CreateIntMinReduce(Src, IsSigned))
-                      : Src;
-  // Correct the final reduction result back to the start value if the maximum
-  // reduction is sentinel value.
-  Value *Cmp =
-      Builder.CreateCmp(CmpInst::ICMP_NE, MaxRdx, Sentinel, "rdx.select.cmp");
-  return Builder.CreateSelect(Cmp, MaxRdx, Start, "rdx.select");
-}
-
 Value *llvm::getReductionIdentity(Intrinsic::ID RdxID, Type *Ty,
                                   FastMathFlags Flags) {
   bool Negative = false;
@@ -1493,7 +1480,7 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
 Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
                                    RecurKind Kind, Value *Mask, Value *EVL) {
   assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
-         !RecurrenceDescriptor::isFindIVRecurrenceKind(Kind) &&
+         !RecurrenceDescriptor::isFindRecurrenceKind(Kind) &&
          "AnyOf and FindIV reductions are not supported.");
   Intrinsic::ID Id = getReductionIntrinsicID(Kind);
   auto VPID = VPIntrinsic::getForIntrinsic(Id);
