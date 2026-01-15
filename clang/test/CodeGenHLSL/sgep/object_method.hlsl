@@ -20,8 +20,11 @@ void foo() {
   uint tmp = o.get();
 }
 
+
+
 // CHECK-DXIL: define linkonce_odr hidden noundef i32 @_ZN1O3getEv(ptr noundef nonnull align 1 dereferenceable(4) %this)
 // CHECK-SPIR: define linkonce_odr hidden spir_func noundef i32 @_ZN1O3getEv(ptr noundef nonnull align 1 dereferenceable(4) %this)
-// CHECK-DXIL: %[[#A:]] = call ptr (%struct.O, ptr, ...) @llvm.structured.gep.p0.s_struct.Os(%struct.O poison, ptr %this1, i32 0)
-// CHECK-SPIR: %[[#A:]] = call ptr (%struct.O, ptr, ...) @llvm.structured.gep.p0.s_struct.Os(%struct.O poison, ptr %this1, i64 0)
+// CHECK-DXIL: %[[#A:]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%struct.O) %this1, i32 0)
+// CHECK-SPIR: %[[#A:]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%struct.O) %this1, i64 0)
 // CHECK:      %[[#B:]] = load i32, ptr %[[#A]], align 1
+// CHECK:                 ret i32 %[[#B]]

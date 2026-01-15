@@ -1816,14 +1816,16 @@ public:
 
   Value *getPointerOperand() const { return getOperand(1); }
 
-  Type *getBaseType() const { return getOperand(0)->getType(); }
+  Type *getBaseType() const {
+    return getParamAttr(0, Attribute::ElementType).getValueAsType();
+  }
 
-  unsigned getIndicesCount() const { return getNumOperands() - 3; }
+  unsigned getIndicesCount() const { return getNumOperands() - 2; }
 
   Type *getResultElementType() const {
     Type *CurrentType = getBaseType();
     for (unsigned I = 0; I < getIndicesCount(); I++) {
-      Value *V = getOperand(I + 2);
+      Value *V = getOperand(I + 1);
       ConstantInt *CI = dyn_cast<ConstantInt>(V);
       if (!CI)
         return nullptr;

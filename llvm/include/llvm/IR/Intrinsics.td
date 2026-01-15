@@ -1030,9 +1030,8 @@ def int_callbr_landingpad : Intrinsic<[llvm_any_ty], [LLVMMatchType<0>],
                                       [IntrNoMerge]>;
 
 def int_structured_gep
-    : Intrinsic<[llvm_anyptr_ty],
-                [llvm_any_ty, LLVMMatchType<0>, llvm_vararg_ty],
-                [IntrNoMem, IntrWillReturn]>;
+    : DefaultAttrsIntrinsic<[llvm_anyptr_ty],
+                            [LLVMMatchType<0>, llvm_vararg_ty], [IntrNoMem]>;
 
 //===------------------- Standard C Library Intrinsics --------------------===//
 //

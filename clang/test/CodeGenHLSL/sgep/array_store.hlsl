@@ -7,8 +7,8 @@ void foo() {
 // CHECK: %array = alloca [10 x i32], align 4
   uint array[10];
 
-// CHECK-DXIL: %[[#PTR:]] = call ptr ([10 x i32], ptr, ...) @llvm.structured.gep.p0.a10i32([10 x i32] poison, ptr %array, i32 2)
-// CHECK-SPIR: %[[#PTR:]] = call ptr ([10 x i32], ptr, ...) @llvm.structured.gep.p0.a10i32([10 x i32] poison, ptr %array, i64 2)
+// CHECK-DXIL: %[[#PTR:]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([10 x i32]) %array, i32 2)
+// CHECK-SPIR: %[[#PTR:]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([10 x i32]) %array, i64 2)
 // CHECK: store i32 10, ptr %[[#PTR]], align 4
   array[2] = 10;
 }
@@ -22,10 +22,12 @@ void bar() {
 // CHECK: %array = alloca [3 x %struct.S], align 1
   S array[3] = { { 0, 1 }, { 2, 3 }, { 3, 4 } };
 
-// CHECK-DXIL: %[[#A:]] = call ptr ([3 x %struct.S], ptr, ...) @llvm.structured.gep.p0.a3s_struct.Ss([3 x %struct.S] poison, ptr %array, i32 2)
-// CHECK-DXIL: %[[#B:]] = call ptr (%struct.S, ptr, ...) @llvm.structured.gep.p0.s_struct.Ss(%struct.S poison, ptr %[[#A]], i32 1)
-// CHECK-SPIR: %[[#A:]] = call ptr ([3 x %struct.S], ptr, ...) @llvm.structured.gep.p0.a3s_struct.Ss([3 x %struct.S] poison, ptr %array, i64 2)
-// CHECK-SPIR: %[[#B:]] = call ptr (%struct.S, ptr, ...) @llvm.structured.gep.p0.s_struct.Ss(%struct.S poison, ptr %[[#A]], i64 1)
+// CHECK-DXIL: %[[#A:]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([3 x %struct.S]) %array, i32 2)
+// CHECK-DXIL: %[[#B:]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%struct.S) %[[#A]], i32 1)
+
+// CHECK-SPIR: %[[#A:]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([3 x %struct.S]) %array, i64 2)
+// CHECK-SPIR: %[[#B:]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%struct.S) %[[#A]], i64 1)
+
 // CHECK: store i32 10, ptr %[[#B]], align 1
   array[2].b = 10;
 }
@@ -40,13 +42,13 @@ void baz() {
 // CHECK: %array = alloca [2 x %struct.S2], align 1
   S2 array[2] = { { 0, { 1, 2 }, 3 }, { 4, { 5, 6 }, 7 } };
 
-// CHECK-DXIL: %[[#A:]] = call ptr ([2 x %struct.S2], ptr, ...) @llvm.structured.gep.p0.a2s_struct.S2s([2 x %struct.S2] poison, ptr %array, i32 1)
-// CHECK-DXIL: %[[#B:]] = call ptr (%struct.S2, ptr, ...) @llvm.structured.gep.p0.s_struct.S2s(%struct.S2 poison, ptr %[[#A]], i32 1)
-// CHECK-DXIL: %[[#C:]] = call ptr (%struct.S, ptr, ...) @llvm.structured.gep.p0.s_struct.Ss(%struct.S poison, ptr %[[#B]], i32 0)
+// CHECK-DXIL: %[[#A:]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([2 x %struct.S2]) %array, i32 1)
+// CHECK-DXIL: %[[#B:]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%struct.S2) %[[#A]], i32 1)
+// CHECK-DXIL: %[[#C:]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%struct.S) %[[#B]], i32 0)
 
-// CHECK-SPIR: %[[#A:]] = call ptr ([2 x %struct.S2], ptr, ...) @llvm.structured.gep.p0.a2s_struct.S2s([2 x %struct.S2] poison, ptr %array, i64 1)
-// CHECK-SPIR: %[[#B:]] = call ptr (%struct.S2, ptr, ...) @llvm.structured.gep.p0.s_struct.S2s(%struct.S2 poison, ptr %[[#A]], i64 1)
-// CHECK-SPIR: %[[#C:]] = call ptr (%struct.S, ptr, ...) @llvm.structured.gep.p0.s_struct.Ss(%struct.S poison, ptr %[[#B]], i64 0)
+// CHECK-SPIR: %[[#A:]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([2 x %struct.S2]) %array, i64 1)
+// CHECK-SPIR: %[[#B:]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%struct.S2) %[[#A]], i64 1)
+// CHECK-SPIR: %[[#C:]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%struct.S) %[[#B]], i64 0)
 
 // CHECK: store i32 10, ptr %[[#C]], align 1
   array[1].b.a = 10;

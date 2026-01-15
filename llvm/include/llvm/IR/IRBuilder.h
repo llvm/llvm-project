@@ -1928,13 +1928,14 @@ public:
                                          ArrayRef<llvm::Value *> Indices,
                                          const Twine &Name = "") {
     SmallVector<llvm::Value *, 4> Args;
-    Args.push_back(llvm::PoisonValue::get(BaseType));
     Args.push_back(PtrBase);
     llvm::append_range(Args, Indices);
 
-    return cast<StructuredGEPInst>(
-        CreateIntrinsic(Intrinsic::structured_gep,
-                        {PtrBase->getType(), BaseType}, Args, {}, Name));
+    StructuredGEPInst *Output = cast<StructuredGEPInst>(CreateIntrinsic(
+        Intrinsic::structured_gep, {PtrBase->getType()}, Args, {}, Name));
+    Output->addParamAttr(
+        0, Attribute::get(getContext(), Attribute::ElementType, BaseType));
+    return Output;
   }
 
   Value *CreateGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
