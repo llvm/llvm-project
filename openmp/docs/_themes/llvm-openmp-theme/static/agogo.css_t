@@ -536,3 +536,9 @@ div.body div.math p {
 span.eqno {
     float: right;
 }
+
+/* -- defintion list -------------------------------------------------------- */
+
+dl.simple dt {
+  text-align: left
+}
