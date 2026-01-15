@@ -2134,7 +2134,8 @@ public:
   /// Combine constant ranges from computeConstantRange() and
   /// computeKnownBits().
   LLVM_ABI ConstantRange computeConstantRangeIncludingKnownBits(
-      SDValue Op, const APInt &DemandedElts, unsigned Depth = 0) const;
+      SDValue Op, const APInt &DemandedElts, bool ForSigned,
+      unsigned Depth = 0) const;
 
   /// Used to represent the possible overflow behavior of an operation.
   /// Never: the operation cannot overflow.

@@ -4590,13 +4590,14 @@ ConstantRange SelectionDAG::computeConstantRange(SDValue Op,
 }
 
 ConstantRange SelectionDAG::computeConstantRangeIncludingKnownBits(
-    SDValue Op, const APInt &DemandedElts, unsigned Depth) const {
-  ConstantRange CR = computeConstantRange(Op, DemandedElts, Depth);
-  if (!CR.isFullSet())
-    return CR;
-
+    SDValue Op, const APInt &DemandedElts, bool ForSigned,
+    unsigned Depth) const {
   KnownBits Known = computeKnownBits(Op, DemandedElts, Depth);
-  return ConstantRange::fromKnownBits(Known, false);
+  ConstantRange CR1 = ConstantRange::fromKnownBits(Known, ForSigned);
+  ConstantRange CR2 = computeConstantRange(Op, DemandedElts, Depth);
+  ConstantRange::PreferredRangeType RangeType =
+      ForSigned ? ConstantRange::Signed : ConstantRange::Unsigned;
+  return CR1.intersectWith(CR2, RangeType);
 }
 
 bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth) const {
