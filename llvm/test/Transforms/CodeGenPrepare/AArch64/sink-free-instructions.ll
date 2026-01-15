@@ -1011,6 +1011,7 @@ define i32 @dont_sink_calls(ptr %func_1_a) {
 ; CHECK-NEXT:    [[BYVAL_TEMP:%.*]] = alloca <16 x i16>, align 16
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[BYVAL_TEMP]])
 ; CHECK-NEXT:    store <16 x i16> zeroinitializer, ptr [[BYVAL_TEMP]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @backsmith_pure_3(ptr dead_on_return nonnull [[BYVAL_TEMP]], <8 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 10, i8 0, i8 0>, i32 0)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[BYVAL_TEMP]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[FUNC_1_A:%.*]], align 8
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i64 [[TMP0]], 0
@@ -1018,7 +1019,6 @@ define i32 @dont_sink_calls(ptr %func_1_a) {
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[VQADDQ_V_I:%.*]] = tail call <16 x i8> @llvm.aarch64.neon.uqadd.v16i8(<16 x i8> <i8 3, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <16 x i8> zeroinitializer)
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[VQADDQ_V_I]], <16 x i8> poison, <16 x i32> <i32 0, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @backsmith_pure_3(ptr dead_on_return nonnull [[BYVAL_TEMP]], <8 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 10, i8 0, i8 0>, i32 0)
 ; CHECK-NEXT:    [[VECINIT21:%.*]] = zext <16 x i8> [[TMP1]] to <16 x i64>
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <16 x i64> poison, i64 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[VECINIT38:%.*]] = shufflevector <16 x i64> [[TMP3]], <16 x i64> poison, <16 x i32> <i32 0, i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
@@ -1055,12 +1055,12 @@ cleanup:                                          ; preds = %entry, %if.end
 define i32 @dont_sink_loads(i1 %c, ptr %p1, ptr %p2) {
 ; CHECK-LABEL: @dont_sink_loads(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[P1:%.*]], align 8, !range [[RNG0:![0-9]+]], !noundef [[META1:![0-9]+]]
 ; CHECK-NEXT:    store i64 0, ptr [[P2:%.*]], align 8
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_END:%.*]], label [[CLEANUP:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[VQADDQ_V_I:%.*]] = tail call <16 x i8> @llvm.aarch64.neon.uqadd.v16i8(<16 x i8> <i8 3, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <16 x i8> zeroinitializer)
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <16 x i8> [[VQADDQ_V_I]], <16 x i8> poison, <16 x i32> <i32 0, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[P1:%.*]], align 8, !range [[RNG0:![0-9]+]], !noundef [[META1:![0-9]+]]
 ; CHECK-NEXT:    [[VECINIT21:%.*]] = zext <16 x i8> [[TMP0]] to <16 x i64>
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x i64> poison, i64 [[TMP1]], i64 0
 ; CHECK-NEXT:    [[VECINIT38:%.*]] = shufflevector <16 x i64> [[TMP2]], <16 x i64> poison, <16 x i32> <i32 0, i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
