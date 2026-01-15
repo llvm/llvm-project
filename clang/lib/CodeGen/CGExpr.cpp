@@ -2764,8 +2764,8 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
     }
     if (Dst.isMatrixRow()) {
       // NOTE: Since there are no other languages that implement matrix single
-      // subscripting, the logic here is specific to HLSL which allows stores to
-      // indivdual rows of matrices.
+      // subscripting, the logic here is specific to HLSL which allows
+      // per-element stores to rows of matrices.
       assert(getLangOpts().HLSL &&
              "Store through matrix row LValues is only implemented for HLSL!");
       QualType MatTy = Dst.getType();
