@@ -266,7 +266,7 @@ bool InlineAsmPrepare::runOnFunction(Function &F) {
         // No return value, nothing to replace.
       } else if (isa<StructType>(RetTy)) {
         // Multiple outputs. Reconstruct the struct.
-        Value *Res = UndefValue::get(RetTy);
+        Value *Res = PoisonValue::get(RetTy);
         unsigned NewRetIdx = 0;
         unsigned OriginalOutIdx = 0;
 
