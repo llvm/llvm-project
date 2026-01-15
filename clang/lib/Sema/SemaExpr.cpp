@@ -7916,8 +7916,6 @@ ExprResult Sema::prepareMatrixSplat(QualType MatrixTy, Expr *SplattedExpr) {
   assert(DestElemTy->isFloatingType() ||
          DestElemTy->isIntegralOrEnumerationType());
 
-  // TODO: Add support for boolean matrix once exposed
-  // https://github.com/llvm/llvm-project/issues/170920
   ExprResult CastExprRes = SplattedExpr;
   CastKind CK = PrepareScalarCast(CastExprRes, DestElemTy);
   if (CastExprRes.isInvalid())
