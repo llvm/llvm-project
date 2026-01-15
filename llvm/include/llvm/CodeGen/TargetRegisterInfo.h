@@ -806,6 +806,12 @@ public:
     return nullptr;
   }
 
+  /// Return true if we should add extra register cost when the cost is not 0.
+  virtual unsigned shouldAddExtraCost(const LiveInterval &LI,
+                                      const MachineRegisterInfo *MRI) const {
+    return true;
+  }
+
 protected:
   /// Overridden by TableGen in targets that have sub-registers.
   virtual unsigned composeSubRegIndicesImpl(unsigned, unsigned) const {

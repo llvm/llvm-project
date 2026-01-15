@@ -141,6 +141,9 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   void getOffsetOpcodes(const StackOffset &Offset,
                         SmallVectorImpl<uint64_t> &Ops) const override;
 
+  unsigned shouldAddExtraCost(const LiveInterval &LI,
+                              const MachineRegisterInfo *MRI) const override;
+
   unsigned getRegisterCostTableIndex(const MachineFunction &MF) const override;
 
   float getSpillWeightScaleFactor(const TargetRegisterClass *RC) const override;

@@ -2269,11 +2269,11 @@ define <vscale x 16 x i64> @vp_ctpop_nxv16i64_unmasked(<vscale x 16 x i64> %va, 
 ; RV32-NEXT:    slli a0, a0, 4
 ; RV32-NEXT:    add a0, sp, a0
 ; RV32-NEXT:    addi a0, a0, 16
-; RV32-NEXT:    vl8r.v v0, (a0) # vscale x 64-byte Folded Reload
-; RV32-NEXT:    vand.vv v8, v24, v0
+; RV32-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; RV32-NEXT:    vand.vv v0, v24, v8
 ; RV32-NEXT:    vsrl.vi v24, v24, 2
-; RV32-NEXT:    vand.vv v24, v24, v0
-; RV32-NEXT:    vadd.vv v8, v8, v24
+; RV32-NEXT:    vand.vv v24, v24, v8
+; RV32-NEXT:    vadd.vv v8, v0, v24
 ; RV32-NEXT:    vsrl.vi v24, v8, 4
 ; RV32-NEXT:    vadd.vv v8, v8, v24
 ; RV32-NEXT:    csrr a0, vlenb

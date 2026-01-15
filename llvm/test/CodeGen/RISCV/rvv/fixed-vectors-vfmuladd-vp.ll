@@ -691,8 +691,8 @@ define <32 x double> @vfma_vv_v32f64_unmasked(<32 x double> %va, <32 x double> %
 ; CHECK-NEXT:    vle64.v v8, (a1)
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    vle64.v v24, (a2)
-; CHECK-NEXT:    vle64.v v0, (a0)
+; CHECK-NEXT:    vle64.v v0, (a2)
+; CHECK-NEXT:    vle64.v v24, (a0)
 ; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:    mv a0, a4
 ; CHECK-NEXT:    bltu a4, a1, .LBB51_2
@@ -705,7 +705,7 @@ define <32 x double> @vfma_vv_v32f64_unmasked(<32 x double> %va, <32 x double> %
 ; CHECK-NEXT:    addi a1, a1, 16
 ; CHECK-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-NEXT:    vfmadd.vv v0, v8, v16
+; CHECK-NEXT:    vfmadd.vv v24, v8, v16
 ; CHECK-NEXT:    addi a0, a4, -16
 ; CHECK-NEXT:    sltu a1, a4, a0
 ; CHECK-NEXT:    addi a1, a1, -1
@@ -718,9 +718,9 @@ define <32 x double> @vfma_vv_v32f64_unmasked(<32 x double> %va, <32 x double> %
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-NEXT:    vfmadd.vv v24, v16, v8
-; CHECK-NEXT:    vmv8r.v v8, v0
-; CHECK-NEXT:    vmv.v.v v16, v24
+; CHECK-NEXT:    vfmadd.vv v0, v16, v8
+; CHECK-NEXT:    vmv8r.v v8, v24
+; CHECK-NEXT:    vmv.v.v v16, v0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    li a1, 24
 ; CHECK-NEXT:    mul a0, a0, a1

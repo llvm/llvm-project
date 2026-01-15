@@ -219,6 +219,10 @@ static inline bool elementsDependOnMask(uint64_t TSFlags) {
   return TSFlags & ElementsDependOnMaskMask;
 }
 
+static inline unsigned getDestEEW(uint64_t TSFlags) {
+  return (TSFlags & DestEEWMask) >> DestEEWShift;
+}
+
 /// \returns true if the instruction may read elements past VL, e.g.
 /// vslidedown/vrgather
 static inline bool readsPastVL(uint64_t TSFlags) {
