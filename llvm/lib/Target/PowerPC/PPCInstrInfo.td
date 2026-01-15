@@ -2164,8 +2164,9 @@ def STWCX : XForm_1_memOp<31, 150, (outs), (ins gprc:$RST, (memrr $RA, $RB):$add
 }
 
 let mayStore = 1, mayLoad = 0, hasSideEffects = 0 in
-def STWAT : X_RD5_RS5_IM5<31, 710, (outs), (ins gprc:$RST, ptr_rc_nor0:$RA, u5imm:$RB),
-                          "stwat $RST, $RA, $RB", IIC_LdStStore>,
+def STWAT : XForm_base_r3xo_memOp<31, 710, (outs), (ins gprc:$RST, ptr_rc_nor0:$RA, u5imm:$RB),
+                                  "stwat $RST, $RA, $RB", IIC_LdStStore,
+                                  [(PPCstat i32:$RST, ptr_rc_nor0:$RA, timm:$RB)]>,
             Requires<[IsISA3_0]>;
 
 let isTrap = 1, hasCtrlDep = 1 in
@@ -5612,5 +5613,3 @@ def : Pat<(int_ppc_dcbtt ForceXForm:$dst),
 def : Pat<(int_ppc_stfiw ForceXForm:$dst, f64:$XT),
           (STFIWX f64:$XT, ForceXForm:$dst)>;
 
-def : Pat<(PPCstat i32:$val, ptr_rc_nor0:$ptr, timm:$fc),
-          (STWAT $val, $ptr, $fc)>;
