@@ -100,7 +100,7 @@ cd build-runtimes
 cmake ../runtimes -G Ninja         \
     -DCMAKE_BUILD_TYPE=Release     \
     -DCMAKE_INSTALL_PREFIX=<PATH>  \
-    -DLLVM_BINARY_DIR=../build \
+    -DLLVM_BINARY_DIR=../build     \
     -DLLVM_ENABLE_RUNTIMES=openmp
 ninja              # Build
 ninja check-openmp # Run regression and unit tests
@@ -111,6 +111,8 @@ where `../build` is the path to a completed LLVM and Clang build. It is expected
 to have been built from the same Git commit as OpenMP. It will, however, use the
 compiler detected by CMake, usually gcc. To also make it use Clang, add
 `-DCMAKE_C_COMPILER=../build/bin/clang -DCMAKE_C_COMPILER=../build/bin/clang++`.
+In any case, it will use Clang from `LLVM_BINARY_DIR` for running the regression
+tests.
 
 
 (build_offload_capable_compiler)=
@@ -164,7 +166,7 @@ cmake ../llvm -G Ninja                       \
 
 Building the OpenMP libraries in Windows is not much different than on Linux,
 only accounting for some differences of the shell (`cmd.exe`; for PowerShell
-replace the end-of-line escape character `^` with a backtick `` ` ``)
+replace the end-of-line escape character `^` with a backtick `` ` ``).
 
 ```bat
   git clone https://github.com/llvm/llvm-project.git
@@ -176,15 +178,23 @@ replace the end-of-line escape character `^` with a backtick `` ` ``)
     -DCMAKE_INSTALL_PREFIX=<PATH> ^
     -DLLVM_ENABLE_PROJECTS=clang  ^
     -DLLVM_ENABLE_RUNTIMES=openmp
-  ninja install
   ninja
   ninja check-openmp
   ninja install
 ```
 
-Compiling OpenMP with the MSVC compiler in a
-[runtimes default build](default_runtimes_build) is currently not supported.
-Offloading is not supported on Windows.
+Compiling OpenMP with the MSVC compiler for a
+[runtimes default build](default_runtimes_build) is possible as well:
+
+```bat
+  cmake ..\runtimes -G Ninja      ^
+    -DCMAKE_BUILD_TYPE=Release    ^
+    -DCMAKE_INSTALL_PREFIX=<PATH> ^
+    -DLLVM_BINARY_DIR=../build    ^
+    -DLLVM_ENABLE_RUNTIMES=openmp
+```
+
+However, offloading is not supported on the Windows platform.
 
 
 ### Building on MacOS
@@ -220,13 +230,6 @@ OpenMP libraries.
 
 
 ### Options for All Libraries
-
-**OPENMP_TEST_C_COMPILER**:FILEPATH, **OPENMP_TEST_CXX_COMPILER**:FILEPATH, **OPENMP_TEST_Fortran_COMPILER**:FILEPATH (defaults: same as `CMAKE_*_COMPILER`)
-: Compiler to use for running regression tests. Regression test compile a small
-OpenMP program using this compiler, link it just-build libraries, and run it to
-test whether everything works properly. This test compiler can be different that
-the compiler the libraries are built with, but many tests are only expected to
-work with Clang from the same git commit.
 
 **OPENMP_TEST_FLAGS**:STRING (default: *empty*), **OPENMP_TEST_OPENMP_FLAGS**:STRING (default: `-fopenmp`)
 : Additional command line flags to use in the regression tests.
