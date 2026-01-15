@@ -1735,9 +1735,8 @@ namespace llvm {
 
     // Call lowering helpers.
 
-    /// Check whether the call is eligible for tail call optimization. Targets
-    /// that want to do tail call optimization should implement this function.
-    bool IsEligibleForTailCallOptimization(
+    /// Check whether the call is eligible for sibling call optimization.
+    bool isEligibleForSiblingCallOpt(
         TargetLowering::CallLoweringInfo &CLI, CCState &CCInfo,
         SmallVectorImpl<CCValAssign> &ArgLocs, bool IsCalleePopSRet) const;
     SDValue EmitTailCallLoadRetAddr(SelectionDAG &DAG, SDValue &OutRetAddr,
