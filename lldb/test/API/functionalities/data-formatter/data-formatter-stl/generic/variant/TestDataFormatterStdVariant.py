@@ -78,7 +78,9 @@ class StdVariantDataFormatterTestCase(TestBase):
         )
 
         if self.getDebugInfo() == "pdb":
-            string_name = "std::basic_string<char, std::char_traits<char>, std::allocator<char>>"
+            string_name = (
+                "std::basic_string<char, std::char_traits<char>, std::allocator<char>>"
+            )
         elif self.platformIsDarwin():
             string_name = "std::string"
         else:
