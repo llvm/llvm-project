@@ -853,6 +853,10 @@ def FeatureALULSLFast : SubtargetFeature<
     "alu-lsl-fast", "HasALULSLFast", "true",
     "Add/Sub operations with lsl shift <= 4 are cheap">;
 
+def FeatureFastLD1Single : SubtargetFeature<
+    "fast-ld1-single", "HasFastLD1Single", "true",
+    "Single-element LD1 to vector lane has same performance as regular load">;
+
 def FeatureAggressiveFMA :
   SubtargetFeature<"aggressive-fma",
                    "HasAggressiveFMA",

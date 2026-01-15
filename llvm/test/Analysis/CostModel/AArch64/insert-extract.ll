@@ -5,7 +5,7 @@
 ; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mcpu=neoverse-v1 | FileCheck --check-prefixes=CHECK,GENERIC %s
 ; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mcpu=neoverse-v2 | FileCheck --check-prefixes=CHECK,GENERIC %s
 ; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mcpu=kryo | FileCheck --check-prefixes=CHECK,GENERIC %s
-; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mcpu=apple-m4 | FileCheck --check-prefixes=CHECK,APPLE %s
+; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mattr=+fast-ld1-single | FileCheck --check-prefixes=CHECK,FAST-LD1 %s
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"
@@ -90,10 +90,10 @@ define <8 x i8> @LD1_B(<8 x i8> %vec, ptr noundef %i) {
 ; GENERIC-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:0 Lat:3 SizeLat:3 for: %v2 = insertelement <8 x i8> %vec, i8 %v1, i32 1
 ; GENERIC-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i8> %v2
 ;
-; APPLE-LABEL: 'LD1_B'
-; APPLE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v1 = load i8, ptr %i, align 1
-; APPLE-NEXT:  Cost Model: Found costs of 0 for: %v2 = insertelement <8 x i8> %vec, i8 %v1, i32 1
-; APPLE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i8> %v2
+; FAST-LD1-LABEL: 'LD1_B'
+; FAST-LD1-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v1 = load i8, ptr %i, align 1
+; FAST-LD1-NEXT:  Cost Model: Found costs of 0 for: %v2 = insertelement <8 x i8> %vec, i8 %v1, i32 1
+; FAST-LD1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i8> %v2
 ;
 entry:
   %v1 = load i8, ptr %i, align 1
@@ -107,10 +107,10 @@ define <4 x i16> @LD1_H(<4 x i16> %vec, ptr noundef %i) {
 ; GENERIC-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:0 Lat:3 SizeLat:3 for: %v2 = insertelement <4 x i16> %vec, i16 %v1, i32 2
 ; GENERIC-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i16> %v2
 ;
-; APPLE-LABEL: 'LD1_H'
-; APPLE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v1 = load i16, ptr %i, align 2
-; APPLE-NEXT:  Cost Model: Found costs of 0 for: %v2 = insertelement <4 x i16> %vec, i16 %v1, i32 2
-; APPLE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i16> %v2
+; FAST-LD1-LABEL: 'LD1_H'
+; FAST-LD1-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v1 = load i16, ptr %i, align 2
+; FAST-LD1-NEXT:  Cost Model: Found costs of 0 for: %v2 = insertelement <4 x i16> %vec, i16 %v1, i32 2
+; FAST-LD1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i16> %v2
 ;
 entry:
   %v1 = load i16, ptr %i, align 2
@@ -124,10 +124,10 @@ define <4 x i32> @LD1_W(<4 x i32> %vec, ptr noundef %i) {
 ; GENERIC-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:0 Lat:3 SizeLat:3 for: %v2 = insertelement <4 x i32> %vec, i32 %v1, i32 3
 ; GENERIC-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i32> %v2
 ;
-; APPLE-LABEL: 'LD1_W'
-; APPLE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v1 = load i32, ptr %i, align 4
-; APPLE-NEXT:  Cost Model: Found costs of 0 for: %v2 = insertelement <4 x i32> %vec, i32 %v1, i32 3
-; APPLE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i32> %v2
+; FAST-LD1-LABEL: 'LD1_W'
+; FAST-LD1-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v1 = load i32, ptr %i, align 4
+; FAST-LD1-NEXT:  Cost Model: Found costs of 0 for: %v2 = insertelement <4 x i32> %vec, i32 %v1, i32 3
+; FAST-LD1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i32> %v2
 ;
 entry:
   %v1 = load i32, ptr %i, align 4
@@ -141,10 +141,10 @@ define <2 x i64> @LD1_X(<2 x i64> %vec, ptr noundef %i) {
 ; GENERIC-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:0 Lat:3 SizeLat:3 for: %v2 = insertelement <2 x i64> %vec, i64 %v1, i32 0
 ; GENERIC-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x i64> %v2
 ;
-; APPLE-LABEL: 'LD1_X'
-; APPLE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v1 = load i64, ptr %i, align 8
-; APPLE-NEXT:  Cost Model: Found costs of 0 for: %v2 = insertelement <2 x i64> %vec, i64 %v1, i32 0
-; APPLE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x i64> %v2
+; FAST-LD1-LABEL: 'LD1_X'
+; FAST-LD1-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v1 = load i64, ptr %i, align 8
+; FAST-LD1-NEXT:  Cost Model: Found costs of 0 for: %v2 = insertelement <2 x i64> %vec, i64 %v1, i32 0
+; FAST-LD1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x i64> %v2
 ;
 entry:
   %v1 = load i64, ptr %i, align 8

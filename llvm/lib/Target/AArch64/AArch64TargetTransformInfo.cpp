@@ -4026,7 +4026,7 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
     // and its second operand is a load, then we will generate a LD1, which
     // are expensive instructions on some uArchs.
     if (I && dyn_cast<LoadInst>(I->getOperand(1))) {
-      if (ST->isAppleMLike())
+      if (ST->hasFastLD1Single())
         return 0;
       return CostKind == TTI::TCK_CodeSize
                  ? 0
