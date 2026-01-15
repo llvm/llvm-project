@@ -97,7 +97,8 @@ static bool eliminateMove(MachineInstr &Mov, const MachineRegisterInfo &MRI,
   assert(ParamSymbol->isSymbol());
 
   for (auto *LI : LoadInsts) {
-    int AddrIdx = NVPTX::getNamedOperandIdx(LI->getOpcode(), NVPTX::OpName::addr);
+    int AddrIdx =
+        NVPTX::getNamedOperandIdx(LI->getOpcode(), NVPTX::OpName::addr);
     int AddspIdx =
         NVPTX::getNamedOperandIdx(LI->getOpcode(), NVPTX::OpName::addsp);
     assert(AddrIdx != -1 && AddspIdx != -1 && "Expected LD instruction");

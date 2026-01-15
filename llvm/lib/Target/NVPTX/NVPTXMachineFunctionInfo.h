@@ -35,7 +35,8 @@ private:
   SmallVector<std::string, 8> ImageHandleList;
 
   /// Per-MMO cache policy data for !mem.cache_hint metadata.
-  /// Keyed by MachineMemOperand* for direct lookup during instruction selection.
+  /// Keyed by MachineMemOperand* for direct lookup during instruction
+  /// selection.
   DenseMap<MachineMemOperand *, NVPTXMMOCachePolicyData> CachePolicyMap;
 
 public:
@@ -75,7 +76,8 @@ public:
 
   /// Get cache policy data for a MachineMemOperand.
   /// Returns nullptr if no data exists for this MMO.
-  const NVPTXMMOCachePolicyData *getCachePolicyData(MachineMemOperand *MMO) const {
+  const NVPTXMMOCachePolicyData *
+  getCachePolicyData(MachineMemOperand *MMO) const {
     auto It = CachePolicyMap.find(MMO);
     if (It == CachePolicyMap.end())
       return nullptr;

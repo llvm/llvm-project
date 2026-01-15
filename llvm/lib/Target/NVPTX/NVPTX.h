@@ -239,7 +239,8 @@ enum class L2Prefetch : uint8_t {
 using L1EvictionBits =
     Bitfield::Element<L1Eviction, 0, 3, L1Eviction::NoAllocate>;
 using L2EvictionBits = Bitfield::Element<L2Eviction, 3, 2, L2Eviction::Last>;
-using L2PrefetchBits = Bitfield::Element<L2Prefetch, 5, 2, L2Prefetch::Bytes256>;
+using L2PrefetchBits =
+    Bitfield::Element<L2Prefetch, 5, 2, L2Prefetch::Bytes256>;
 using L2CacheHintBit = Bitfield::Element<bool, 7, 1>;
 
 // Masks for clearing/testing fields (for legacy code and instruction emission)

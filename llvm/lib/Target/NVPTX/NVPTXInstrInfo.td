@@ -1920,8 +1920,9 @@ multiclass LD_VEC<NVPTXRegClass regclass, bit support_v8 = false> {
                     regclass:$dst4, regclass:$dst5, regclass:$dst6,
                     regclass:$dst7, regclass:$dst8),
                 (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp,
-                    AtomicCode:$Sign, i32imm:$fromWidth, UsedBytesMask:$usedBytes,
-                    CacheHint:$cacheHint, ADDR:$addr, CachePolicy:$policy),
+                    AtomicCode:$Sign, i32imm:$fromWidth,
+                    UsedBytesMask:$usedBytes, CacheHint:$cacheHint, ADDR:$addr,
+                    CachePolicy:$policy),
                 "${usedBytes}"
                 "ld${sem:sem}${scope:scope}${addsp:addsp}${cacheHint:l1}${"
                 "cacheHint:l2}${cacheHint:prefetch}.v8.${Sign:sign}$fromWidth "
