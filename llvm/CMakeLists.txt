@@ -232,6 +232,22 @@ if(LIBC_GPU_BUILD)
   list(APPEND RUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES "libc")
 endif()
 
+# Set up Arm64X build of the OpenMP runtime
+option(LIBOMP_ENABLE_ARM64X "Build the OpenMP library as Arm64X for compatibility with both Arm64 and Arm64EC" OFF)
+if(LIBOMP_ENABLE_ARM64X)
+  if(NOT LLVM_HOST_TRIPLE STREQUAL "aarch64-pc-windows-msvc")
+    messsage(FATAL_ERROR "Arm64X builds are only supported on Windows on Arm hosts.")
+  endif()
+  if(NOT LLVM_RUNTIME_TARGETS)
+    set(LLVM_RUNTIME_TARGETS "default")
+  endif()
+
+  if(NOT "arm64ec-pc-windows-msvc" IN_LIST LLVM_RUNTIME_TARGETS)
+    list(APPEND LLVM_RUNTIME_TARGETS "arm64ec-pc-windows-msvc")
+  endif()
+  set(RUNTIMES_arm64ec-pc-windows-msvc_LIBOMP_ENABLE_ARM64X ON)
+endif()
+
 foreach(_name ${LLVM_RUNTIME_TARGETS})
   if("libc" IN_LIST RUNTIMES_${_name}_LLVM_ENABLE_RUNTIMES)
     if("${_name}" STREQUAL "amdgcn-amd-amdhsa" OR "${_name}" STREQUAL "nvptx64-nvidia-cuda")
