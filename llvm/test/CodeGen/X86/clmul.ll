@@ -3,6 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v2 | FileCheck %s --check-prefixes=CHECK,SSE
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v3 | FileCheck %s --check-prefixes=CHECK,AVX
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v4 | FileCheck %s --check-prefixes=CHECK,AVX
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64 -mattr=+pclmul | FileCheck %s --check-prefixes=PCLMUL
 
 define i8 @clmul_i8(i8 %a, i8 %b) nounwind {
 ; CHECK-LABEL: clmul_i8:
@@ -53,6 +54,15 @@ define i8 @clmul_i8(i8 %a, i8 %b) nounwind {
 ; CHECK-NEXT:    mulb %sil
 ; CHECK-NEXT:    xorb %r9b, %al
 ; CHECK-NEXT:    retq
+;
+; PCLMUL-LABEL: clmul_i8:
+; PCLMUL:       # %bb.0:
+; PCLMUL-NEXT:    movd %esi, %xmm0
+; PCLMUL-NEXT:    movd %edi, %xmm1
+; PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; PCLMUL-NEXT:    movq %xmm1, %rax
+; PCLMUL-NEXT:    # kill: def $al killed $al killed $rax
+; PCLMUL-NEXT:    retq
   %res = call i8 @llvm.clmul.i8(i8 %a, i8 %b)
   ret i8 %res
 }
@@ -124,6 +134,15 @@ define i16 @clmul_i16(i16 %a, i16 %b) nounwind {
 ; CHECK-NEXT:    xorl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
+;
+; PCLMUL-LABEL: clmul_i16:
+; PCLMUL:       # %bb.0:
+; PCLMUL-NEXT:    movd %esi, %xmm0
+; PCLMUL-NEXT:    movd %edi, %xmm1
+; PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; PCLMUL-NEXT:    movq %xmm1, %rax
+; PCLMUL-NEXT:    # kill: def $ax killed $ax killed $rax
+; PCLMUL-NEXT:    retq
   %res = call i16 @llvm.clmul.i16(i16 %a, i16 %b)
   ret i16 %res
 }
@@ -258,6 +277,15 @@ define i32 @clmul_i32(i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT:    xorl %esi, %eax
 ; CHECK-NEXT:    xorl %ecx, %eax
 ; CHECK-NEXT:    retq
+;
+; PCLMUL-LABEL: clmul_i32:
+; PCLMUL:       # %bb.0:
+; PCLMUL-NEXT:    movd %esi, %xmm0
+; PCLMUL-NEXT:    movd %edi, %xmm1
+; PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; PCLMUL-NEXT:    movq %xmm1, %rax
+; PCLMUL-NEXT:    # kill: def $eax killed $eax killed $rax
+; PCLMUL-NEXT:    retq
   %res = call i32 @llvm.clmul.i32(i32 %a, i32 %b)
   ret i32 %res
 }
@@ -581,6 +609,14 @@ define i64 @clmul_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
+;
+; PCLMUL-LABEL: clmul_i64:
+; PCLMUL:       # %bb.0:
+; PCLMUL-NEXT:    movq %rsi, %xmm0
+; PCLMUL-NEXT:    movq %rdi, %xmm1
+; PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; PCLMUL-NEXT:    movq %xmm1, %rax
+; PCLMUL-NEXT:    retq
   %res = call i64 @llvm.clmul.i64(i64 %a, i64 %b)
   ret i64 %res
 }
@@ -622,6 +658,18 @@ define i8 @clmulr_i8(i8 %a, i8 %b) nounwind {
 ; CHECK-NEXT:    shrl $7, %eax
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
+;
+; PCLMUL-LABEL: clmulr_i8:
+; PCLMUL:       # %bb.0:
+; PCLMUL-NEXT:    movzbl %sil, %eax
+; PCLMUL-NEXT:    movd %eax, %xmm0
+; PCLMUL-NEXT:    movzbl %dil, %eax
+; PCLMUL-NEXT:    movd %eax, %xmm1
+; PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; PCLMUL-NEXT:    movq %xmm1, %rax
+; PCLMUL-NEXT:    shrl $7, %eax
+; PCLMUL-NEXT:    # kill: def $al killed $al killed $rax
+; PCLMUL-NEXT:    retq
   %a.ext = zext i8 %a to i16
   %b.ext = zext i8 %b to i16
   %clmul = call i16 @llvm.clmul.i16(i16 %a.ext, i16 %b.ext)
@@ -699,6 +747,18 @@ define i16 @clmulr_i16(i16 %a, i16 %b) nounwind {
 ; CHECK-NEXT:    shrl $15, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
+;
+; PCLMUL-LABEL: clmulr_i16:
+; PCLMUL:       # %bb.0:
+; PCLMUL-NEXT:    movzwl %si, %eax
+; PCLMUL-NEXT:    movd %eax, %xmm0
+; PCLMUL-NEXT:    movzwl %di, %eax
+; PCLMUL-NEXT:    movd %eax, %xmm1
+; PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; PCLMUL-NEXT:    movq %xmm1, %rax
+; PCLMUL-NEXT:    shrl $15, %eax
+; PCLMUL-NEXT:    # kill: def $ax killed $ax killed $rax
+; PCLMUL-NEXT:    retq
   %a.ext = zext i16 %a to i32
   %b.ext = zext i16 %b to i32
   %clmul = call i32 @llvm.clmul.i32(i32 %a.ext, i32 %b.ext)
@@ -841,6 +901,16 @@ define i32 @clmulr_i32(i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT:    shrq $31, %rax
 ; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
+;
+; PCLMUL-LABEL: clmulr_i32:
+; PCLMUL:       # %bb.0:
+; PCLMUL-NEXT:    movd %esi, %xmm0
+; PCLMUL-NEXT:    movd %edi, %xmm1
+; PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; PCLMUL-NEXT:    movq %xmm1, %rax
+; PCLMUL-NEXT:    shrq $31, %rax
+; PCLMUL-NEXT:    # kill: def $eax killed $eax killed $rax
+; PCLMUL-NEXT:    retq
   %a.ext = zext i32 %a to i64
   %b.ext = zext i32 %b to i64
   %clmul = call i64 @llvm.clmul.i64(i64 %a.ext, i64 %b.ext)
@@ -886,6 +956,18 @@ define i8 @clmulh_i8(i8 %a, i8 %b) nounwind {
 ; CHECK-NEXT:    shrl $8, %eax
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
+;
+; PCLMUL-LABEL: clmulh_i8:
+; PCLMUL:       # %bb.0:
+; PCLMUL-NEXT:    movzbl %sil, %eax
+; PCLMUL-NEXT:    movd %eax, %xmm0
+; PCLMUL-NEXT:    movzbl %dil, %eax
+; PCLMUL-NEXT:    movd %eax, %xmm1
+; PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; PCLMUL-NEXT:    movq %xmm1, %rax
+; PCLMUL-NEXT:    shrl $8, %eax
+; PCLMUL-NEXT:    # kill: def $al killed $al killed $rax
+; PCLMUL-NEXT:    retq
   %a.ext = zext i8 %a to i16
   %b.ext = zext i8 %b to i16
   %clmul = call i16 @llvm.clmul.i16(i16 %a.ext, i16 %b.ext)
@@ -963,6 +1045,18 @@ define i16 @clmulh_i16(i16 %a, i16 %b) nounwind {
 ; CHECK-NEXT:    shrl $16, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
+;
+; PCLMUL-LABEL: clmulh_i16:
+; PCLMUL:       # %bb.0:
+; PCLMUL-NEXT:    movzwl %si, %eax
+; PCLMUL-NEXT:    movd %eax, %xmm0
+; PCLMUL-NEXT:    movzwl %di, %eax
+; PCLMUL-NEXT:    movd %eax, %xmm1
+; PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; PCLMUL-NEXT:    movq %xmm1, %rax
+; PCLMUL-NEXT:    shrl $16, %eax
+; PCLMUL-NEXT:    # kill: def $ax killed $ax killed $rax
+; PCLMUL-NEXT:    retq
   %a.ext = zext i16 %a to i32
   %b.ext = zext i16 %b to i32
   %clmul = call i32 @llvm.clmul.i32(i32 %a.ext, i32 %b.ext)
@@ -1105,6 +1199,16 @@ define i32 @clmulh_i32(i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT:    shrq $32, %rax
 ; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
+;
+; PCLMUL-LABEL: clmulh_i32:
+; PCLMUL:       # %bb.0:
+; PCLMUL-NEXT:    movd %esi, %xmm0
+; PCLMUL-NEXT:    movd %edi, %xmm1
+; PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; PCLMUL-NEXT:    movq %xmm1, %rax
+; PCLMUL-NEXT:    shrq $32, %rax
+; PCLMUL-NEXT:    # kill: def $eax killed $eax killed $rax
+; PCLMUL-NEXT:    retq
   %a.ext = zext i32 %a to i64
   %b.ext = zext i32 %b to i64
   %clmul = call i64 @llvm.clmul.i64(i64 %a.ext, i64 %b.ext)
@@ -1859,10 +1963,121 @@ define i64 @clmulh_i64(i64 %a, i64 %b) nounwind {
 ; AVX-NEXT:    popq %r15
 ; AVX-NEXT:    popq %rbp
 ; AVX-NEXT:    retq
+;
+; PCLMUL-LABEL: clmulh_i64:
+; PCLMUL:       # %bb.0:
+; PCLMUL-NEXT:    movq %rsi, %xmm0
+; PCLMUL-NEXT:    movq %rdi, %xmm1
+; PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; PCLMUL-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; PCLMUL-NEXT:    movq %xmm0, %rax
+; PCLMUL-NEXT:    retq
   %a.ext = zext i64 %a to i128
   %b.ext = zext i64 %b to i128
   %clmul = call i128 @llvm.clmul.i128(i128 %a.ext, i128 %b.ext)
   %res.ext = lshr i128 %clmul, 64
   %res = trunc i128 %res.ext to i64
   ret i64 %res
+}
+
+define i8 @clmul_i8_noimplicitfloat(i8 %a, i8 %b) nounwind noimplicitfloat {
+; CHECK-LABEL: clmul_i8_noimplicitfloat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %edx
+; CHECK-NEXT:    andb $1, %dl
+; CHECK-NEXT:    movl %esi, %ecx
+; CHECK-NEXT:    andb $2, %cl
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    mulb %cl
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    mulb %dl
+; CHECK-NEXT:    movl %eax, %edx
+; CHECK-NEXT:    xorb %cl, %dl
+; CHECK-NEXT:    movl %esi, %ecx
+; CHECK-NEXT:    andb $4, %cl
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    mulb %cl
+; CHECK-NEXT:    movl %eax, %r8d
+; CHECK-NEXT:    movl %esi, %ecx
+; CHECK-NEXT:    andb $8, %cl
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    mulb %cl
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    xorb %r8b, %cl
+; CHECK-NEXT:    xorb %dl, %cl
+; CHECK-NEXT:    movl %esi, %edx
+; CHECK-NEXT:    andb $16, %dl
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    mulb %dl
+; CHECK-NEXT:    movl %eax, %edx
+; CHECK-NEXT:    movl %esi, %r8d
+; CHECK-NEXT:    andb $32, %r8b
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    mulb %r8b
+; CHECK-NEXT:    movl %eax, %r8d
+; CHECK-NEXT:    movl %esi, %r9d
+; CHECK-NEXT:    andb $64, %r9b
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    mulb %r9b
+; CHECK-NEXT:    movl %eax, %r9d
+; CHECK-NEXT:    xorb %dl, %r8b
+; CHECK-NEXT:    xorb %r8b, %r9b
+; CHECK-NEXT:    xorb %cl, %r9b
+; CHECK-NEXT:    andb $-128, %sil
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    mulb %sil
+; CHECK-NEXT:    xorb %r9b, %al
+; CHECK-NEXT:    retq
+;
+; PCLMUL-LABEL: clmul_i8_noimplicitfloat:
+; PCLMUL:       # %bb.0:
+; PCLMUL-NEXT:    movl %esi, %edx
+; PCLMUL-NEXT:    andb $1, %dl
+; PCLMUL-NEXT:    movl %esi, %ecx
+; PCLMUL-NEXT:    andb $2, %cl
+; PCLMUL-NEXT:    movl %edi, %eax
+; PCLMUL-NEXT:    mulb %cl
+; PCLMUL-NEXT:    movl %eax, %ecx
+; PCLMUL-NEXT:    movl %edi, %eax
+; PCLMUL-NEXT:    mulb %dl
+; PCLMUL-NEXT:    movl %eax, %edx
+; PCLMUL-NEXT:    xorb %cl, %dl
+; PCLMUL-NEXT:    movl %esi, %ecx
+; PCLMUL-NEXT:    andb $4, %cl
+; PCLMUL-NEXT:    movl %edi, %eax
+; PCLMUL-NEXT:    mulb %cl
+; PCLMUL-NEXT:    movl %eax, %r8d
+; PCLMUL-NEXT:    movl %esi, %ecx
+; PCLMUL-NEXT:    andb $8, %cl
+; PCLMUL-NEXT:    movl %edi, %eax
+; PCLMUL-NEXT:    mulb %cl
+; PCLMUL-NEXT:    movl %eax, %ecx
+; PCLMUL-NEXT:    xorb %r8b, %cl
+; PCLMUL-NEXT:    xorb %dl, %cl
+; PCLMUL-NEXT:    movl %esi, %edx
+; PCLMUL-NEXT:    andb $16, %dl
+; PCLMUL-NEXT:    movl %edi, %eax
+; PCLMUL-NEXT:    mulb %dl
+; PCLMUL-NEXT:    movl %eax, %edx
+; PCLMUL-NEXT:    movl %esi, %r8d
+; PCLMUL-NEXT:    andb $32, %r8b
+; PCLMUL-NEXT:    movl %edi, %eax
+; PCLMUL-NEXT:    mulb %r8b
+; PCLMUL-NEXT:    movl %eax, %r8d
+; PCLMUL-NEXT:    movl %esi, %r9d
+; PCLMUL-NEXT:    andb $64, %r9b
+; PCLMUL-NEXT:    movl %edi, %eax
+; PCLMUL-NEXT:    mulb %r9b
+; PCLMUL-NEXT:    movl %eax, %r9d
+; PCLMUL-NEXT:    xorb %dl, %r8b
+; PCLMUL-NEXT:    xorb %r8b, %r9b
+; PCLMUL-NEXT:    xorb %cl, %r9b
+; PCLMUL-NEXT:    andb $-128, %sil
+; PCLMUL-NEXT:    movl %edi, %eax
+; PCLMUL-NEXT:    mulb %sil
+; PCLMUL-NEXT:    xorb %r9b, %al
+; PCLMUL-NEXT:    retq
+  %res = call i8 @llvm.clmul.i8(i8 %a, i8 %b)
+  ret i8 %res
 }

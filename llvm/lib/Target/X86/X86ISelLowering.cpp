@@ -1155,6 +1155,16 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::OR, MVT::i128, Custom);
     setOperationAction(ISD::XOR, MVT::i128, Custom);
 
+    if (Subtarget.hasPCLMUL()) {
+      if (Subtarget.is64Bit()) {
+        setOperationAction(ISD::CLMUL, MVT::i64, Custom);
+        setOperationAction(ISD::CLMULH, MVT::i64, Custom);
+      }
+      setOperationAction(ISD::CLMUL, MVT::i32, Custom);
+      setOperationAction(ISD::CLMUL, MVT::i16, Custom);
+      setOperationAction(ISD::CLMUL, MVT::i8, Custom);
+    }
+
     for (auto VT : { MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64 }) {
       setOperationAction(ISD::SMAX, VT, VT == MVT::v8i16 ? Legal : Custom);
       setOperationAction(ISD::SMIN, VT, VT == MVT::v8i16 ? Legal : Custom);
@@ -33144,6 +33154,51 @@ static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
   return DAG.getNode(ISD::OR, DL, VT, Lo, Hi);
 }
 
+static SDValue LowerCLMUL(SDValue Op, const X86Subtarget &Subtarget,
+                          SelectionDAG &DAG) {
+  assert(Subtarget.hasPCLMUL() && "PCLMUL required for CLMUL lowering");
+
+  if (DAG.getMachineFunction().getFunction().hasFnAttribute(
+          Attribute::NoImplicitFloat))
+    return SDValue();
+
+  bool IsHigh = Op.getOpcode() == ISD::CLMULH;
+  assert((!IsHigh || Subtarget.is64Bit()) && "CLMULH requires 64-bit");
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+
+  // On 64-bit, use i64/v2i64. On 32-bit, i64 is not legal, use i32/v4i32.
+  MVT ScalarVT = Subtarget.is64Bit() ? MVT::i64 : MVT::i32;
+  MVT VecVT = Subtarget.is64Bit() ? MVT::v2i64 : MVT::v4i32;
+
+  if (VT != ScalarVT) {
+    LHS = DAG.getNode(ISD::ANY_EXTEND, DL, ScalarVT, LHS);
+    RHS = DAG.getNode(ISD::ANY_EXTEND, DL, ScalarVT, RHS);
+  }
+
+  LHS = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, LHS);
+  RHS = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, RHS);
+  LHS = DAG.getBitcast(MVT::v2i64, LHS);
+  RHS = DAG.getBitcast(MVT::v2i64, RHS);
+
+  SDValue Result = DAG.getNode(X86ISD::PCLMULQDQ, DL, MVT::v2i64, LHS, RHS,
+                               DAG.getTargetConstant(0, DL, MVT::i8));
+
+  // CLMUL: extract element 0 (low 64 bits)
+  // CLMULH: extract element 1 (high 64 bits)
+  unsigned ExtractIdx = IsHigh ? 1 : 0;
+  Result = DAG.getBitcast(VecVT, Result);
+  Result = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, Result,
+                       DAG.getVectorIdxConstant(ExtractIdx, DL));
+
+  if (VT != ScalarVT)
+    Result = DAG.getNode(ISD::TRUNCATE, DL, VT, Result);
+
+  return Result;
+}
+
 static SDValue LowerPARITY(SDValue Op, const X86Subtarget &Subtarget,
                            SelectionDAG &DAG) {
   SDLoc DL(Op);
@@ -33892,6 +33947,8 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ATOMIC_LOAD_AND:    return lowerAtomicArith(Op, DAG, Subtarget);
   case ISD::ATOMIC_STORE:       return LowerATOMIC_STORE(Op, DAG, Subtarget);
   case ISD::BITREVERSE:         return LowerBITREVERSE(Op, Subtarget, DAG);
+  case ISD::CLMUL:
+  case ISD::CLMULH:             return LowerCLMUL(Op, Subtarget, DAG);
   case ISD::PARITY:             return LowerPARITY(Op, Subtarget, DAG);
   case ISD::BUILD_VECTOR:       return LowerBUILD_VECTOR(Op, DAG);
   case ISD::CONCAT_VECTORS:     return LowerCONCAT_VECTORS(Op, Subtarget, DAG);
@@ -35690,6 +35747,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(GF2P8MULB)
   NODE_NAME_CASE(GF2P8AFFINEQB)
   NODE_NAME_CASE(GF2P8AFFINEINVQB)
+  NODE_NAME_CASE(PCLMULQDQ)
   NODE_NAME_CASE(NT_CALL)
   NODE_NAME_CASE(NT_BRIND)
   NODE_NAME_CASE(UMWAIT)

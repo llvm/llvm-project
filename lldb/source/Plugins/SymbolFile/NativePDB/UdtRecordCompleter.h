@@ -9,7 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_UDTRECORDCOMPLETER_H
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_UDTRECORDCOMPLETER_H
 
-#include "PdbAstBuilder.h"
+#include "PdbAstBuilderClang.h"
 #include "PdbSymUid.h"
 #include "PdbUtil.h"
 #include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
@@ -35,7 +35,6 @@ namespace lldb_private {
 class Type;
 class CompilerType;
 namespace npdb {
-class PdbAstBuilder;
 class PdbIndex;
 
 class UdtRecordCompleter : public llvm::codeview::TypeVisitorCallbacks {
@@ -46,7 +45,7 @@ class UdtRecordCompleter : public llvm::codeview::TypeVisitorCallbacks {
   PdbTypeSymId m_id;
   CompilerType &m_derived_ct;
   clang::TagDecl &m_tag_decl;
-  PdbAstBuilder &m_ast_builder;
+  PdbAstBuilderClang &m_ast_builder;
   PdbIndex &m_index;
   std::vector<IndexedBase> m_bases;
   ClangASTImporter::LayoutInfo m_layout;
@@ -58,7 +57,7 @@ class UdtRecordCompleter : public llvm::codeview::TypeVisitorCallbacks {
 public:
   UdtRecordCompleter(
       PdbTypeSymId id, CompilerType &derived_ct, clang::TagDecl &tag_decl,
-      PdbAstBuilder &ast_builder, PdbIndex &index,
+      PdbAstBuilderClang &ast_builder, PdbIndex &index,
       llvm::DenseMap<clang::Decl *, DeclStatus> &decl_to_status,
       llvm::DenseMap<lldb::opaque_compiler_type_t,
                      llvm::SmallSet<std::pair<llvm::StringRef, CompilerType>,

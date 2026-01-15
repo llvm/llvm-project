@@ -1,6 +1,6 @@
 #include "UdtRecordCompleter.h"
 
-#include "PdbAstBuilder.h"
+#include "PdbAstBuilderClang.h"
 #include "PdbIndex.h"
 #include "PdbSymUid.h"
 #include "PdbUtil.h"
@@ -36,7 +36,7 @@ using Error = llvm::Error;
 
 UdtRecordCompleter::UdtRecordCompleter(
     PdbTypeSymId id, CompilerType &derived_ct, clang::TagDecl &tag_decl,
-    PdbAstBuilder &ast_builder, PdbIndex &index,
+    PdbAstBuilderClang &ast_builder, PdbIndex &index,
     llvm::DenseMap<clang::Decl *, DeclStatus> &decl_to_status,
     llvm::DenseMap<lldb::opaque_compiler_type_t,
                    llvm::SmallSet<std::pair<llvm::StringRef, CompilerType>, 8>>
