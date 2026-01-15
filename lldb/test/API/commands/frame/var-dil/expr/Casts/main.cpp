@@ -62,5 +62,13 @@ int main(int argc, char **argv) {
   int arr_1d[] = {1, 2, 3, 4};
   int arr_2d[2][3] = {{1, 2, 3}, {4, 5, 6}};
 
+  struct myName {
+    int x;
+    int y;
+  };
+
+  struct myName myStruct = { 98, 99 };
+  int myName = 37;
+
   return 0; // Set a breakpoint here
 }

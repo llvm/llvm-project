@@ -259,3 +259,19 @@ class TestFrameVarDILCast(TestBase):
         self.expect_var_path("((int*)arr_2d)[1]", type="int", value="2")
         self.expect_var_path("((int*)arr_2d)[2]", type="int", value="3")
         self.expect_var_path("((int*)arr_2d[1])[1]", type="int", value="5")
+
+        # Test casting to user-defined type with same name as variable.
+
+        self.expect_var_path("myStruct", type="myName")
+        self.expect_var_path("myName", type="int", value="37")
+
+        # Here 'myName' is treated as a variable, not a type, so '(myName)'
+        # is parsed as a variable expression and 'InnerFoo' is unexpected,
+        # and a type cast is not attempted.
+        self.expect(
+            "frame variable '(myName)InnerFoo'",
+            error=True,
+            substrs=[
+                "expected 'eof', got: <'InnerFoo' (identifier)>"
+            ],
+        )
