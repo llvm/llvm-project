@@ -340,17 +340,19 @@ defm "" : SIMDLoadLane<16, 0x55>;
 defm "" : SIMDLoadLane<32, 0x56>;
 defm "" : SIMDLoadLane<64, 0x57>;
 
-// Select loads with no constant offset.
-multiclass LoadLanePatNoOffset<Vec vec, SDPatternOperator kind> {
+// Select loads, possibly including a constant offset.
+multiclass LoadLanePat<Vec vec, SDPatternOperator kind> {
   defvar load_lane_a32 = !cast<NI>("LOAD_LANE_"#vec.lane_bits#"_A32");
   defvar load_lane_a64 = !cast<NI>("LOAD_LANE_"#vec.lane_bits#"_A64");
-  def : Pat<(vec.vt (kind (i32 I32:$addr),
+
+  def : Pat<(vec.vt (kind (AddrOps32 offset32_op:$offset, I32:$addr),
               (vec.vt V128:$vec), (i32 vec.lane_idx:$idx))),
-            (load_lane_a32 0, 0, imm:$idx, $addr, $vec)>,
+            (load_lane_a32 0, $offset, imm:$idx, $addr, $vec)>,
         Requires<[HasAddr32]>;
-  def : Pat<(vec.vt (kind (i64 I64:$addr),
+
+  def : Pat<(vec.vt (kind (AddrOps64 offset64_op:$offset, I64:$addr),
               (vec.vt V128:$vec), (i32 vec.lane_idx:$idx))),
-            (load_lane_a64 0, 0, imm:$idx, $addr, $vec)>,
+            (load_lane_a64 0, $offset, imm:$idx, $addr, $vec)>,
         Requires<[HasAddr64]>;
 }
 
@@ -371,15 +373,12 @@ def load64_lane :
            (vector_insert $vec, (f64 (load $ptr)), $idx)
 ]>;
 
-defm : LoadLanePatNoOffset<I8x16, load8_lane>;
-defm : LoadLanePatNoOffset<I16x8, load16_lane>;
-defm : LoadLanePatNoOffset<I32x4, load32_lane>;
-defm : LoadLanePatNoOffset<I64x2, load64_lane>;
-defm : LoadLanePatNoOffset<F32x4, load32_lane>;
-defm : LoadLanePatNoOffset<F64x2, load64_lane>;
-
-// TODO: Also support the other load patterns for load_lane once the instructions
-// are merged to the proposal.
+defm : LoadLanePat<I8x16, load8_lane>;
+defm : LoadLanePat<I16x8, load16_lane>;
+defm : LoadLanePat<I32x4, load32_lane>;
+defm : LoadLanePat<I64x2, load64_lane>;
+defm : LoadLanePat<F32x4, load32_lane>;
+defm : LoadLanePat<F64x2, load64_lane>;
 
 // Store: v128.store
 let mayStore = 1, UseNamedOperandTable = 1 in {

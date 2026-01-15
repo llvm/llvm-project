@@ -602,8 +602,8 @@ matchConvolutionOpOfType<linalg::Conv1DOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/1, &result.dilations,
                        &result.strides);
@@ -630,8 +630,8 @@ matchConvolutionOpOfType<linalg::Conv1DNwcWcfOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/1, &result.dilations,
                        &result.strides);
@@ -661,8 +661,8 @@ matchConvolutionOpOfType<linalg::Conv1DNcwFcwOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/1, &result.dilations,
                        &result.strides);
@@ -692,8 +692,8 @@ matchConvolutionOpOfType<linalg::Conv2DOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/2, &result.dilations,
                        &result.strides);
@@ -723,8 +723,8 @@ matchConvolutionOpOfType<linalg::Conv2DNhwcHwcfOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/2, &result.dilations,
                        &result.strides);
@@ -758,8 +758,8 @@ matchConvolutionOpOfType<linalg::Conv2DNhwcHwcfQOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/2, &result.dilations,
                        &result.strides);
@@ -795,8 +795,8 @@ matchConvolutionOpOfType<linalg::Conv2DNhwcFhwcOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/2, &result.dilations,
                        &result.strides);
@@ -830,8 +830,8 @@ matchConvolutionOpOfType<linalg::Conv2DNhwcFhwcQOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/2, &result.dilations,
                        &result.strides);
@@ -867,8 +867,8 @@ matchConvolutionOpOfType<linalg::Conv2DNchwFchwOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/2, &result.dilations,
                        &result.strides);
@@ -902,8 +902,8 @@ matchConvolutionOpOfType<linalg::Conv2DNchwFchwQOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/2, &result.dilations,
                        &result.strides);
@@ -939,8 +939,8 @@ matchConvolutionOpOfType<linalg::Conv2DNgchwFgchwOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/2, &result.dilations,
                        &result.strides);
@@ -975,8 +975,8 @@ matchConvolutionOpOfType<linalg::Conv2DNgchwGfchwOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/2, &result.dilations,
                        &result.strides);
@@ -1011,8 +1011,8 @@ matchConvolutionOpOfType<linalg::Conv2DNgchwGfchwQOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/2, &result.dilations,
                        &result.strides);
@@ -1049,8 +1049,8 @@ matchConvolutionOpOfType<linalg::Conv2DNhwgcGfhwcOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/2, &result.dilations,
                        &result.strides);
@@ -1085,8 +1085,8 @@ matchConvolutionOpOfType<linalg::Conv2DNhwgcGfhwcQOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/2, &result.dilations,
                        &result.strides);
@@ -1123,8 +1123,8 @@ matchConvolutionOpOfType<linalg::Conv3DOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/3, &result.dilations,
                        &result.strides);
@@ -1158,8 +1158,8 @@ matchConvolutionOpOfType<linalg::Conv3DNdhwcDhwcfOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/3, &result.dilations,
                        &result.strides);
@@ -1196,8 +1196,8 @@ matchConvolutionOpOfType<linalg::Conv3DNdhwcDhwcfQOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/3, &result.dilations,
                        &result.strides);
@@ -1236,8 +1236,8 @@ matchConvolutionOpOfType<linalg::Conv3DNcdhwFcdhwOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/3, &result.dilations,
                        &result.strides);
@@ -1275,8 +1275,8 @@ matchConvolutionOpOfType<linalg::DepthwiseConv1DNcwCwOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/1, &result.dilations,
                        &result.strides);
@@ -1306,8 +1306,8 @@ matchConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/1, &result.dilations,
                        &result.strides);
@@ -1337,8 +1337,8 @@ matchConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcmOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/1, &result.dilations,
                        &result.strides);
@@ -1369,8 +1369,8 @@ matchConvolutionOpOfType<linalg::DepthwiseConv2DNchwChwOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/2, &result.dilations,
                        &result.strides);
@@ -1404,8 +1404,8 @@ matchConvolutionOpOfType<linalg::DepthwiseConv2DNhwcHwcOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/2, &result.dilations,
                        &result.strides);
@@ -1439,8 +1439,8 @@ matchConvolutionOpOfType<linalg::DepthwiseConv2DNhwcHwcQOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/2, &result.dilations,
                        &result.strides);
@@ -1476,8 +1476,8 @@ matchConvolutionOpOfType<linalg::DepthwiseConv2DNhwcHwcmOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/2, &result.dilations,
                        &result.strides);
@@ -1512,8 +1512,8 @@ matchConvolutionOpOfType<linalg::DepthwiseConv2DNhwcHwcmQOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/2, &result.dilations,
                        &result.strides);
@@ -1550,8 +1550,8 @@ matchConvolutionOpOfType<linalg::DepthwiseConv3DNdhwcDhwcOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/3, &result.dilations,
                        &result.strides);
@@ -1588,8 +1588,8 @@ matchConvolutionOpOfType<linalg::DepthwiseConv3DNcdhwCdhwOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/3, &result.dilations,
                        &result.strides);
@@ -1626,8 +1626,8 @@ matchConvolutionOpOfType<linalg::DepthwiseConv3DNdhwcDhwcmOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/3, &result.dilations,
                        &result.strides);
@@ -1664,8 +1664,8 @@ matchConvolutionOpOfType<linalg::PoolingNhwcMaxOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/2, &result.dilations,
                        &result.strides, PoolingType::MaxSigned);
@@ -1698,8 +1698,8 @@ matchConvolutionOpOfType<linalg::PoolingNhwcMinOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/2, &result.dilations,
                        &result.strides, PoolingType::MinSigned);
@@ -1732,8 +1732,8 @@ matchConvolutionOpOfType<linalg::PoolingNhwcSumOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/2, &result.dilations,
                        &result.strides, PoolingType::Sum);
@@ -1767,8 +1767,8 @@ matchConvolutionOpOfType<linalg::PoolingNhwcMaxUnsignedOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/2, &result.dilations,
                        &result.strides, PoolingType::MaxUnsigned);
@@ -1802,8 +1802,8 @@ matchConvolutionOpOfType<linalg::PoolingNhwcMinUnsignedOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/2, &result.dilations,
                        &result.strides, PoolingType::MinUnsigned);
@@ -1836,8 +1836,8 @@ matchConvolutionOpOfType<linalg::PoolingNchwSumOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/2, &result.dilations,
                        &result.strides, PoolingType::Sum);
@@ -1870,8 +1870,8 @@ matchConvolutionOpOfType<linalg::PoolingNchwMaxOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/2, &result.dilations,
                        &result.strides, PoolingType::MaxSigned);
@@ -1904,8 +1904,8 @@ matchConvolutionOpOfType<linalg::PoolingNwcSumOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/1, &result.dilations,
                        &result.strides, PoolingType::Sum);
@@ -1934,8 +1934,8 @@ matchConvolutionOpOfType<linalg::PoolingNcwSumOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/1, &result.dilations,
                        &result.strides, PoolingType::Sum);
@@ -1964,8 +1964,8 @@ matchConvolutionOpOfType<linalg::PoolingNwcMaxOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/1, &result.dilations,
                        &result.strides, PoolingType::MaxSigned);
@@ -1995,8 +1995,8 @@ matchConvolutionOpOfType<linalg::PoolingNwcMaxUnsignedOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/1, &result.dilations,
                        &result.strides, PoolingType::MaxUnsigned);
@@ -2025,8 +2025,8 @@ matchConvolutionOpOfType<linalg::PoolingNcwMaxOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/1, &result.dilations,
                        &result.strides, PoolingType::MaxSigned);
@@ -2055,8 +2055,8 @@ matchConvolutionOpOfType<linalg::PoolingNwcMinOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/1, &result.dilations,
                        &result.strides, PoolingType::MinSigned);
@@ -2086,8 +2086,8 @@ matchConvolutionOpOfType<linalg::PoolingNwcMinUnsignedOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/1, &result.dilations,
                        &result.strides, PoolingType::MinUnsigned);
@@ -2116,8 +2116,8 @@ matchConvolutionOpOfType<linalg::PoolingNdhwcSumOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/3, &result.dilations,
                        &result.strides, PoolingType::Sum);
@@ -2153,8 +2153,8 @@ matchConvolutionOpOfType<linalg::PoolingNdhwcMaxOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/3, &result.dilations,
                        &result.strides, PoolingType::MaxSigned);
@@ -2190,8 +2190,8 @@ matchConvolutionOpOfType<linalg::PoolingNdhwcMinOp>(LinalgOp op) {
     return result;
   }
 
-  assert(isaConvolutionOpInterface(op) &&
-         "expected op to implement ConvolutionOpInterface");
+  if (!isaConvolutionOpInterface(op))
+    return std::nullopt;
 
   ConvMatcherBuilder m(op, /*spatialRank=*/3, &result.dilations,
                        &result.strides, PoolingType::MinSigned);

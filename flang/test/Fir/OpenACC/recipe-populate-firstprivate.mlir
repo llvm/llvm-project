@@ -8,8 +8,7 @@
 // CHECK: acc.firstprivate.recipe @firstprivate_scalar : !fir.ref<f32> init {
 // CHECK: ^bb0(%{{.*}}: !fir.ref<f32>):
 // CHECK:   %[[ALLOC:.*]] = fir.alloca f32
-// CHECK:   %{{.*}}:2 = hlfir.declare %[[ALLOC]] {uniq_name = "scalar"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-// CHECK:   acc.yield %{{.*}}#0 : !fir.ref<f32>
+// CHECK:   acc.yield %[[ALLOC]] : !fir.ref<f32>
 // CHECK: } copy {
 // CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<f32>, %[[DST:.*]]: !fir.ref<f32>):
 // CHECK:   %[[LOAD:.*]] = fir.load %[[SRC]] : !fir.ref<f32>
@@ -31,8 +30,7 @@ func.func @test_scalar() {
 // CHECK: acc.firstprivate.recipe @firstprivate_int : !fir.ref<i32> init {
 // CHECK: ^bb0(%{{.*}}: !fir.ref<i32>):
 // CHECK:   %[[ALLOC:.*]] = fir.alloca i32
-// CHECK:   %{{.*}}:2 = hlfir.declare %[[ALLOC]] {uniq_name = "int"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-// CHECK:   acc.yield %{{.*}}#0 : !fir.ref<i32>
+// CHECK:   acc.yield %[[ALLOC]] : !fir.ref<i32>
 // CHECK: } copy {
 // CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<i32>, %[[DST:.*]]: !fir.ref<i32>):
 // CHECK:   %[[LOAD:.*]] = fir.load %[[SRC]] : !fir.ref<i32>
@@ -54,8 +52,7 @@ func.func @test_int() {
 // CHECK: acc.firstprivate.recipe @firstprivate_logical : !fir.ref<!fir.logical<4>> init {
 // CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.logical<4>>):
 // CHECK:   %[[ALLOC:.*]] = fir.alloca !fir.logical<4>
-// CHECK:   %{{.*}}:2 = hlfir.declare %[[ALLOC]] {uniq_name = "logical"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
-// CHECK:   acc.yield %{{.*}}#0 : !fir.ref<!fir.logical<4>>
+// CHECK:   acc.yield %[[ALLOC]] : !fir.ref<!fir.logical<4>>
 // CHECK: } copy {
 // CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<!fir.logical<4>>, %[[DST:.*]]: !fir.ref<!fir.logical<4>>):
 // CHECK:   %[[LOAD:.*]] = fir.load %[[SRC]] : !fir.ref<!fir.logical<4>>
@@ -77,8 +74,7 @@ func.func @test_logical() {
 // CHECK: acc.firstprivate.recipe @firstprivate_complex : !fir.ref<complex<f32>> init {
 // CHECK: ^bb0(%{{.*}}: !fir.ref<complex<f32>>):
 // CHECK:   %[[ALLOC:.*]] = fir.alloca complex<f32>
-// CHECK:   %{{.*}}:2 = hlfir.declare %[[ALLOC]] {uniq_name = "complex"} : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
-// CHECK:   acc.yield %{{.*}}#0 : !fir.ref<complex<f32>>
+// CHECK:   acc.yield %[[ALLOC]] : !fir.ref<complex<f32>>
 // CHECK: } copy {
 // CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<complex<f32>>, %[[DST:.*]]: !fir.ref<complex<f32>>):
 // CHECK:   %[[LOAD:.*]] = fir.load %[[SRC]] : !fir.ref<complex<f32>>
@@ -99,11 +95,8 @@ func.func @test_complex() {
 // Test 1D static array
 // CHECK: acc.firstprivate.recipe @firstprivate_array_1d : !fir.ref<!fir.array<100xf32>> init {
 // CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<100xf32>>):
-// CHECK:   %[[C100:.*]] = arith.constant 100 : index
-// CHECK:   %[[SHAPE:.*]] = fir.shape %[[C100]] : (index) -> !fir.shape<1>
 // CHECK:   %[[ALLOC:.*]] = fir.alloca !fir.array<100xf32>
-// CHECK:   %{{.*}}:2 = hlfir.declare %[[ALLOC]](%[[SHAPE]]) {uniq_name = "array_1d"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
-// CHECK:   acc.yield %{{.*}}#0 : !fir.ref<!fir.array<100xf32>>
+// CHECK:   acc.yield %[[ALLOC]] : !fir.ref<!fir.array<100xf32>>
 // CHECK: } copy {
 // CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<!fir.array<100xf32>>, %[[DST:.*]]: !fir.ref<!fir.array<100xf32>>):
 // CHECK:   hlfir.assign %[[SRC]] to %[[DST]] : !fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>
@@ -123,12 +116,8 @@ func.func @test_array_1d() {
 // Test 2D static array
 // CHECK: acc.firstprivate.recipe @firstprivate_array_2d : !fir.ref<!fir.array<10x20xi32>> init {
 // CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<10x20xi32>>):
-// CHECK:   %[[C10:.*]] = arith.constant 10 : index
-// CHECK:   %[[C20:.*]] = arith.constant 20 : index
-// CHECK:   %[[SHAPE:.*]] = fir.shape %[[C10]], %[[C20]] : (index, index) -> !fir.shape<2>
 // CHECK:   %[[ALLOC:.*]] = fir.alloca !fir.array<10x20xi32>
-// CHECK:   %{{.*}}:2 = hlfir.declare %[[ALLOC]](%[[SHAPE]]) {uniq_name = "array_2d"} : (!fir.ref<!fir.array<10x20xi32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<10x20xi32>>, !fir.ref<!fir.array<10x20xi32>>)
-// CHECK:   acc.yield %{{.*}}#0 : !fir.ref<!fir.array<10x20xi32>>
+// CHECK:   acc.yield %[[ALLOC]] : !fir.ref<!fir.array<10x20xi32>>
 // CHECK: } copy {
 // CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<!fir.array<10x20xi32>>, %[[DST:.*]]: !fir.ref<!fir.array<10x20xi32>>):
 // CHECK:   hlfir.assign %[[SRC]] to %[[DST]] : !fir.ref<!fir.array<10x20xi32>>, !fir.ref<!fir.array<10x20xi32>>
@@ -149,8 +138,7 @@ func.func @test_array_2d() {
 // CHECK: acc.firstprivate.recipe @firstprivate_derived : !fir.ref<!fir.type<_QTpoint{x:f32,y:f32,z:f32}>> init {
 // CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.type<_QTpoint{x:f32,y:f32,z:f32}>>):
 // CHECK:   %[[ALLOC:.*]] = fir.alloca !fir.type<_QTpoint{x:f32,y:f32,z:f32}>
-// CHECK:   %{{.*}}:2 = hlfir.declare %[[ALLOC]] {uniq_name = "derived"} : (!fir.ref<!fir.type<_QTpoint{x:f32,y:f32,z:f32}>>) -> (!fir.ref<!fir.type<_QTpoint{x:f32,y:f32,z:f32}>>, !fir.ref<!fir.type<_QTpoint{x:f32,y:f32,z:f32}>>)
-// CHECK:   acc.yield %{{.*}}#0 : !fir.ref<!fir.type<_QTpoint{x:f32,y:f32,z:f32}>>
+// CHECK:   acc.yield %[[ALLOC]] : !fir.ref<!fir.type<_QTpoint{x:f32,y:f32,z:f32}>>
 // CHECK: } copy {
 // CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<!fir.type<_QTpoint{x:f32,y:f32,z:f32}>>, %[[DST:.*]]: !fir.ref<!fir.type<_QTpoint{x:f32,y:f32,z:f32}>>):
 // CHECK:   hlfir.assign %[[SRC]] to %[[DST]] : !fir.ref<!fir.type<_QTpoint{x:f32,y:f32,z:f32}>>, !fir.ref<!fir.type<_QTpoint{x:f32,y:f32,z:f32}>>
