@@ -6343,7 +6343,7 @@ bool DeclarationVisitor::Pre(const parser::DeclarationTypeSpec::Type &) {
 }
 
 void DeclarationVisitor::Post(const parser::DeclarationTypeSpec::Type &type) {
-  const parser::Name &derivedName{std::get<parser::Name>(type.derived.t)};
+  const parser::Name &derivedName{std::get<parser::Name>(type.v.t)};
   if (const Symbol *derivedSymbol{derivedName.symbol}) {
     CheckForAbstractType(*derivedSymbol); // C706
   }
