@@ -479,13 +479,13 @@ inline _LIBCPP_HIDE_FROM_ABI launch& operator^=(launch& __x, launch __y) {
 _LIBCPP_DECLARE_STRONG_ENUM(future_status){ready, timeout, deferred};
 _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(future_status)
 
-_LIBCPP_EXPORTED_FROM_ABI const error_category& future_category() _NOEXCEPT;
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI const error_category& future_category() _NOEXCEPT;
 
-inline _LIBCPP_HIDE_FROM_ABI error_code make_error_code(future_errc __e) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI error_code make_error_code(future_errc __e) _NOEXCEPT {
   return error_code(static_cast<int>(__e), future_category());
 }
 
-inline _LIBCPP_HIDE_FROM_ABI error_condition make_error_condition(future_errc __e) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI error_condition make_error_condition(future_errc __e) _NOEXCEPT {
   return error_condition(static_cast<int>(__e), future_category());
 }
 
@@ -504,7 +504,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI explicit future_error(future_errc __ec) : future_error(std::make_error_code(__ec)) {}
 #    endif
 
-  _LIBCPP_HIDE_FROM_ABI const error_code& code() const _NOEXCEPT { return __ec_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const error_code& code() const _NOEXCEPT { return __ec_; }
 
   _LIBCPP_HIDE_FROM_ABI future_error(const future_error&) _NOEXCEPT = default;
   ~future_error() _NOEXCEPT override;
@@ -942,15 +942,15 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI ~future();
-  _LIBCPP_HIDE_FROM_ABI shared_future<_Rp> share() _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI shared_future<_Rp> share() _NOEXCEPT;
 
   // retrieving the value
-  _LIBCPP_HIDE_FROM_ABI _Rp get();
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _Rp get();
 
   _LIBCPP_HIDE_FROM_ABI void swap(future& __rhs) _NOEXCEPT { std::swap(__state_, __rhs.__state_); }
 
   // functions to check state
-  _LIBCPP_HIDE_FROM_ABI bool valid() const _NOEXCEPT { return __state_ != nullptr; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool valid() const _NOEXCEPT { return __state_ != nullptr; }
 
   _LIBCPP_HIDE_FROM_ABI void wait() const { __state_->wait(); }
   template <class _Rep, class _Period>
@@ -1013,15 +1013,15 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI ~future();
-  _LIBCPP_HIDE_FROM_ABI shared_future<_Rp&> share() _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI shared_future<_Rp&> share() _NOEXCEPT;
 
   // retrieving the value
-  _LIBCPP_HIDE_FROM_ABI _Rp& get();
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _Rp& get();
 
   _LIBCPP_HIDE_FROM_ABI void swap(future& __rhs) _NOEXCEPT { std::swap(__state_, __rhs.__state_); }
 
   // functions to check state
-  _LIBCPP_HIDE_FROM_ABI bool valid() const _NOEXCEPT { return __state_ != nullptr; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool valid() const _NOEXCEPT { return __state_ != nullptr; }
 
   _LIBCPP_HIDE_FROM_ABI void wait() const { __state_->wait(); }
   template <class _Rep, class _Period>
@@ -1088,7 +1088,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void swap(future& __rhs) _NOEXCEPT { std::swap(__state_, __rhs.__state_); }
 
   // functions to check state
-  _LIBCPP_HIDE_FROM_ABI bool valid() const _NOEXCEPT { return __state_ != nullptr; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool valid() const _NOEXCEPT { return __state_ != nullptr; }
 
   _LIBCPP_HIDE_FROM_ABI void wait() const { __state_->wait(); }
   template <class _Rep, class _Period>
@@ -1138,7 +1138,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void swap(promise& __rhs) _NOEXCEPT { std::swap(__state_, __rhs.__state_); }
 
   // retrieving the result
-  _LIBCPP_HIDE_FROM_ABI future<_Rp> get_future();
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI future<_Rp> get_future();
 
   // setting the result
   _LIBCPP_HIDE_FROM_ABI void set_value(const _Rp& __r);
@@ -1255,7 +1255,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void swap(promise& __rhs) _NOEXCEPT { std::swap(__state_, __rhs.__state_); }
 
   // retrieving the result
-  _LIBCPP_HIDE_FROM_ABI future<_Rp&> get_future();
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI future<_Rp&> get_future();
 
   // setting the result
   _LIBCPP_HIDE_FROM_ABI void set_value(_Rp& __r);
@@ -1365,7 +1365,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void swap(promise& __rhs) _NOEXCEPT { std::swap(__state_, __rhs.__state_); }
 
   // retrieving the result
-  future<void> get_future();
+  [[__nodiscard__]] future<void> get_future();
 
   // setting the result
   void set_value();
@@ -1638,10 +1638,10 @@ public:
     __p_.swap(__other.__p_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI bool valid() const _NOEXCEPT { return __p_.__state_ != nullptr; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool valid() const _NOEXCEPT { return __p_.__state_ != nullptr; }
 
   // result retrieval
-  _LIBCPP_HIDE_FROM_ABI future<_Rp> get_future() { return __p_.get_future(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI future<_Rp> get_future() { return __p_.get_future(); }
 
   // execution
   _LIBCPP_HIDE_FROM_ABI void operator()(_ArgTypes... __args);
@@ -1727,10 +1727,10 @@ public:
     __p_.swap(__other.__p_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI bool valid() const _NOEXCEPT { return __p_.__state_ != nullptr; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool valid() const _NOEXCEPT { return __p_.__state_ != nullptr; }
 
   // result retrieval
-  _LIBCPP_HIDE_FROM_ABI future<void> get_future() { return __p_.get_future(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI future<void> get_future() { return __p_.get_future(); }
 
   // execution
   _LIBCPP_HIDE_FROM_ABI void operator()(_ArgTypes... __args);
@@ -1905,12 +1905,12 @@ public:
   }
 
   // retrieving the value
-  _LIBCPP_HIDE_FROM_ABI const _Rp& get() const { return __state_->copy(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const _Rp& get() const { return __state_->copy(); }
 
   _LIBCPP_HIDE_FROM_ABI void swap(shared_future& __rhs) _NOEXCEPT { std::swap(__state_, __rhs.__state_); }
 
   // functions to check state
-  _LIBCPP_HIDE_FROM_ABI bool valid() const _NOEXCEPT { return __state_ != nullptr; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool valid() const _NOEXCEPT { return __state_ != nullptr; }
 
   _LIBCPP_HIDE_FROM_ABI void wait() const { __state_->wait(); }
   template <class _Rep, class _Period>
@@ -1961,12 +1961,12 @@ public:
   }
 
   // retrieving the value
-  _LIBCPP_HIDE_FROM_ABI _Rp& get() const { return __state_->copy(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _Rp& get() const { return __state_->copy(); }
 
   _LIBCPP_HIDE_FROM_ABI void swap(shared_future& __rhs) _NOEXCEPT { std::swap(__state_, __rhs.__state_); }
 
   // functions to check state
-  _LIBCPP_HIDE_FROM_ABI bool valid() const _NOEXCEPT { return __state_ != nullptr; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool valid() const _NOEXCEPT { return __state_ != nullptr; }
 
   _LIBCPP_HIDE_FROM_ABI void wait() const { __state_->wait(); }
   template <class _Rep, class _Period>
@@ -2022,7 +2022,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void swap(shared_future& __rhs) _NOEXCEPT { std::swap(__state_, __rhs.__state_); }
 
   // functions to check state
-  _LIBCPP_HIDE_FROM_ABI bool valid() const _NOEXCEPT { return __state_ != nullptr; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool valid() const _NOEXCEPT { return __state_ != nullptr; }
 
   _LIBCPP_HIDE_FROM_ABI void wait() const { __state_->wait(); }
   template <class _Rep, class _Period>

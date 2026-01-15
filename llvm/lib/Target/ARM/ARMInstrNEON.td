@@ -115,6 +115,13 @@ def VectorIndex64 : Operand<i32>, ImmLeaf<i32, [{
   let PrintMethod = "printVectorIndex";
 }
 
+def VectorIndex32_Hi_XForm  : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() - 2, SDLoc(N), MVT::i32);
+}]>;
+def VectorIndex32_Hi : ImmLeaf<i32, [{
+  return ((uint64_t)Imm) >= 2 && ((uint64_t)Imm) < 4;
+}], VectorIndex32_Hi_XForm>;
+
 // Register list of one D register.
 def VecListOneDAsmOperand : AsmOperandClass {
   let Name = "VecListOneD";
@@ -4879,6 +4886,23 @@ defm VUDOTQI : DOTI<"vudot", "u8", 0b1, 0b1, QPR, v4i32, v16i8,
                     int_arm_neon_udot, (EXTRACT_SUBREG QPR:$Vm, dsub_0)>;
 defm VSDOTQI : DOTI<"vsdot", "s8", 0b1, 0b0, QPR, v4i32, v16i8,
                     int_arm_neon_sdot, (EXTRACT_SUBREG QPR:$Vm, dsub_0)>;
+
+let Predicates = [HasDotProd, IsLE] in {
+  def : Pat<(v4i32 (int_arm_neon_sdot (v4i32 QPR:$Vd),
+                        (v16i8 QPR:$Vn),
+                        (v16i8 (bitconvert (v4i32
+                                    (ARMvduplane (v4i32 QPR:$Vm),
+                                                  VectorIndex32_Hi:$lane)))))),
+            (VSDOTQI QPR:$Vd, QPR:$Vn,
+                      (EXTRACT_SUBREG QPR:$Vm, dsub_1), VectorIndex32_Hi:$lane)>;
+  def : Pat<(v4i32 (int_arm_neon_udot (v4i32 QPR:$Vd),
+                        (v16i8 QPR:$Vn),
+                        (v16i8 (bitconvert (v4i32
+                                    (ARMvduplane (v4i32 QPR:$Vm),
+                                                  VectorIndex32_Hi:$lane)))))),
+            (VUDOTQI QPR:$Vd, QPR:$Vn,
+                      (EXTRACT_SUBREG QPR:$Vm, dsub_1), VectorIndex32_Hi:$lane)>;
+}
 
 // v8.6A matrix multiplication extension
 let Predicates = [HasMatMulInt8] in {
