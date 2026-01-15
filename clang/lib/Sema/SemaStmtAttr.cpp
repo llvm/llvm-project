@@ -16,6 +16,7 @@
 #include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include <optional>
 
 using namespace clang;
@@ -740,7 +741,19 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
 
 void Sema::ProcessStmtAttributes(Stmt *S, const ParsedAttributes &InAttrs,
                                  SmallVectorImpl<const Attr *> &OutAttrs) {
+  // Track standard attributes without arguments to detect duplicates.
+  llvm::SmallPtrSet<const IdentifierInfo *, 8> SeenStdAttrs;
+
   for (const ParsedAttr &AL : InAttrs) {
+    // Check for duplicate standard attributes without arguments.
+    if (AL.isStandardAttributeSyntax() && !AL.getScopeName() &&
+        AL.getNumArgs() == 0 && AL.getAttrName()) {
+      if (!SeenStdAttrs.insert(AL.getAttrName()).second) {
+        Diag(AL.getLoc(), diag::warn_duplicate_attribute_exact) << AL;
+        continue;
+      }
+    }
+
     if (const Attr *A = ProcessStmtAttribute(*this, S, AL, InAttrs.Range))
       OutAttrs.push_back(A);
   }

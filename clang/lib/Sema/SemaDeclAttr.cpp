@@ -2099,6 +2099,12 @@ static void handleStandardNoReturnAttr(Sema &S, Decl *D, const ParsedAttr &A) {
         S.getSourceManager().isInSystemMacro(A.getLoc())))
     S.Diag(A.getLoc(), diag::warn_deprecated_noreturn_spelling) << A.getRange();
 
+  // Check for duplicate attribute - warn if already applied.
+  if (D->hasAttr<CXX11NoReturnAttr>()) {
+    S.Diag(A.getLoc(), diag::warn_duplicate_attribute_exact) << A;
+    return;
+  }
+
   D->addAttr(::new (S.Context) CXX11NoReturnAttr(S.Context, A));
 }
 
@@ -2230,6 +2236,11 @@ static void handleUnusedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!S.getLangOpts().CPlusPlus17 && IsCXX17Attr)
     S.Diag(AL.getLoc(), diag::ext_cxx17_attr) << AL;
 
+  // Check for duplicate attribute - warn if already applied.
+  if (D->hasAttr<UnusedAttr>()) {
+    S.Diag(AL.getLoc(), diag::warn_duplicate_attribute_exact) << AL;
+    return;
+  }
   D->addAttr(::new (S.Context) UnusedAttr(S.Context, AL));
 }
 
