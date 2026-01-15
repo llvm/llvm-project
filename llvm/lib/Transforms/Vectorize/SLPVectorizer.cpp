@@ -24572,7 +24572,7 @@ bool SLPVectorizerPass::vectorizeStores(
           if (P.first != 0)
             P.first = std::max(P.second, P.first);
         }
-        // Last attempt to vectorize max number of elements, if all previous
+        // Attempt again to vectorize even larger chains if all previous
         // attempts were unsuccessful because of the cost issues.
         CandidateVFs.push_back(VF);
       }
