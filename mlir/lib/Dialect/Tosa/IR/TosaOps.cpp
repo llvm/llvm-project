@@ -3594,11 +3594,13 @@ LogicalResult Conv2DBlockScaledOp::inferReturnTypeComponents(
 
 LogicalResult Conv2DBlockScaledOp::verify() {
   if (failed(verifySameElementTypes(*this, getInputData().getType(),
-                                    getWeightData().getType())) ||
+                                    getWeightData().getType(), "input_data",
+                                    "weight_data")) ||
       failed(verifySameElementTypes(*this, getInputScale().getType(),
-                                    getWeightScale().getType())) ||
+                                    getWeightScale().getType(), "input_scale",
+                                    "weight_scale")) ||
       failed(verifySameElementTypes(*this, getBias().getType(),
-                                    getOutput().getType())))
+                                    getOutput().getType(), "bias", "output")))
     return failure();
 
   // Verify input shape compatibility
