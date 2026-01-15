@@ -1856,7 +1856,8 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   buf += sizeof(PEMagic);
 
   // Write COFF header
-  assert(coffHeaderOffset == buf - buffer->getBufferStart());
+  assert(coffHeaderOffset ==
+         static_cast<size_t>(buf - buffer->getBufferStart()));
   auto *coff = reinterpret_cast<coff_file_header *>(buf);
   buf += sizeof(*coff);
   SymbolTable &symtab =
@@ -1882,7 +1883,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
       sizeof(PEHeaderTy) + sizeof(data_directory) * numberOfDataDirectory;
 
   // Write PE header
-  assert(peHeaderOffset == buf - buffer->getBufferStart());
+  assert(peHeaderOffset == static_cast<size_t>(buf - buffer->getBufferStart()));
   auto *pe = reinterpret_cast<PEHeaderTy *>(buf);
   buf += sizeof(*pe);
   pe->Magic = config->is64() ? PE32Header::PE32_PLUS : PE32Header::PE32;
@@ -1949,7 +1950,8 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
 
   // Write data directory
   assert(!ctx.config.is64() ||
-         dataDirOffset64 == buf - buffer->getBufferStart());
+         dataDirOffset64 ==
+             static_cast<size_t>(buf - buffer->getBufferStart()));
   auto *dir = reinterpret_cast<data_directory *>(buf);
   buf += sizeof(*dir) * numberOfDataDirectory;
   if (symtab.edataStart) {
