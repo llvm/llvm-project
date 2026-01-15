@@ -10,7 +10,7 @@
 
 // <ranges>
 
-//   constexpr V base() const& requires copyy_constructible<V>;
+//   constexpr V base() const& requires copy_constructible<V>;
 //   constexpr V base() &&;
 
 #include <array>
