@@ -2117,6 +2117,8 @@ bool Sema::CheckTSBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
     return AMDGPU().CheckAMDGCNBuiltinFunctionCall(BuiltinID, TheCall);
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
     return RISCV().CheckBuiltinFunctionCall(TI, BuiltinID, TheCall);
   case llvm::Triple::loongarch32:
   case llvm::Triple::loongarch64:
