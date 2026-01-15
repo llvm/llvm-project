@@ -2793,6 +2793,10 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
   Operation::operand_range lowerBounds = loopOp.getLoopLowerBounds();
   Operation::operand_range upperBounds = loopOp.getLoopUpperBounds();
   if (loopOp.getCollapseNumLoops() > 1) {
+    // In cases where Collapse is used with Taskloop, the upper bound of the
+    // iteration space needs to be recalculated to cater for the collapsed loop.
+    // The Collapsed Loop UpperBound is the product of all collapsed
+    // loop's tripcount.
     for (uint64_t i = 0; i < loopOp.getCollapseNumLoops(); i++) {
       llvm::Value *lowerBoundMinusOne = builder.CreateSub(
           moduleTranslation.lookupValue(lowerBounds[i]), builder.getInt32(1));
