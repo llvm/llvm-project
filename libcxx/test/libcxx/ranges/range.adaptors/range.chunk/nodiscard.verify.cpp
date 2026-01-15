@@ -10,7 +10,7 @@
 
 // <ranges>
 
-// Test the libc++ extension that std::ranges::chunk_view::iterator<Const>::operator* is marked as [[nodiscard]].
+// Test that functions are marked [[nodiscard]].
 
 #include <ranges>
 #include <utility>
