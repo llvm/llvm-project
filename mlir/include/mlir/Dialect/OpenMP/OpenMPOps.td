@@ -2245,9 +2245,7 @@ def WorkdistributeOp : OpenMP_Op<"workdistribute"> {
 //===----------------------------------------------------------------------===//
 
 def DeclareSimdOp
-    : OpenMP_Op<"declare_simd",
-                traits = [AttrSizedOperandSegments,
-                          DeclareOpInterfaceMethods<MemoryEffectsOpInterface>],
+    : OpenMP_Op<"declare_simd", traits = [AttrSizedOperandSegments],
                 clauses = [OpenMP_AlignedClause, OpenMP_LinearClause,
                            OpenMP_SimdlenClause]> {
   let summary = "declare simd directive";
@@ -2267,11 +2265,8 @@ def DeclareSimdOp
     ```
   }] # clausesDescription;
 
-  let arguments = clausesArgs;
-
-  let assemblyFormat =
-      clausesReqAssemblyFormat#" oilist("#clausesOptAssemblyFormat#") "#"attr-"
-                               "dict";
+  let builders = [OpBuilder<(
+      ins CArg<"const DeclareSimdOperands &">:$clauses)>];
 
   let hasVerifier = 1;
 }

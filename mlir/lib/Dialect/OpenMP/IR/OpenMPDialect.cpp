@@ -4469,27 +4469,16 @@ LogicalResult DeclareSimdOp::verify() {
     return emitOpError()
            << "'omp.declare_simd' must be nested inside a function";
 
-  if (verifyAlignedClause(*this, getAlignments(), getAlignedVars()).failed())
-    return failure();
-
-  return success();
+  return verifyAlignedClause(*this, getAlignments(), getAlignedVars());
 }
 
-namespace mlir {
-namespace omp {
-// A non-default resource to indicate that omp.declare_simd has side effects.
-struct DeclareSimdResource
-    : public SideEffects::Resource::Base<DeclareSimdResource> {
-  StringRef getName() final { return "omp.declare_simd.resource"; }
-};
-} // namespace omp
-} // namespace mlir
-
-void DeclareSimdOp::getEffects(
-    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-        &effects) {
-  effects.emplace_back(MemoryEffects::Allocate::get(),
-                       DeclareSimdResource::get());
+void DeclareSimdOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                          const DeclareSimdOperands &clauses) {
+  MLIRContext *ctx = odsBuilder.getContext();
+  DeclareSimdOp::build(odsBuilder, odsState, clauses.alignedVars,
+                       makeArrayAttr(ctx, clauses.alignments),
+                       clauses.linearVars, clauses.linearStepVars,
+                       clauses.linearVarTypes, clauses.simdlen);
 }
 
 #define GET_ATTRDEF_CLASSES
