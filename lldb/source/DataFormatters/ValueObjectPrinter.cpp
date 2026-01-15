@@ -101,7 +101,7 @@ llvm::Error ValueObjectPrinter::PrintValueObject() {
     llvm::Expected<std::string> object_desc_or_err =
         GetMostSpecializedValue().GetObjectDescription();
     if (!object_desc_or_err) {
-      *m_stream << "warning: `po` was unsuccessful, running `p` instead";
+      *m_stream << "warning: `po` was unsuccessful, running `p` instead\n";
       LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions),
                      object_desc_or_err.takeError(),
                      "Object description fallback due to error: {0}");
