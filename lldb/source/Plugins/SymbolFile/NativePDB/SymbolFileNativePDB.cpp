@@ -2428,10 +2428,7 @@ CompilerDecl SymbolFileNativePDB::GetDeclForUID(lldb::user_id_t uid) {
   auto ts = *ts_or_err;
   if (!ts)
     return {};
-
-  if (auto decl = ts->GetNativePDBParser()->GetOrCreateDeclForUid(uid))
-    return *decl;
-  return CompilerDecl();
+  return ts->GetNativePDBParser()->GetOrCreateDeclForUid(uid);
 }
 
 CompilerDeclContext
