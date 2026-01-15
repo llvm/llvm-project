@@ -936,13 +936,19 @@ class HandleVectorExtractPattern
         auto elemTy = loadTy.getElementType();
         auto firstIndex = mask[0];
         auto newVecTy = VectorType::get(mask.size(), elemTy);
-        auto newPtr = LLVM::GEPOp::create(
-            rewriter, loc,
-            LLVM::LLVMPointerType::get(rewriter.getContext(),
-                                       loadPtr.getType().getAddressSpace()),
-            elemTy, loadPtr, ArrayRef<LLVM::GEPArg>{firstIndex});
-        auto newLoad = LLVM::LoadOp::create(rewriter, loc, newVecTy, newPtr);
-        rewriter.replaceOp(op, newLoad);
+        // GEPOp is needed if first index is not zero
+        if (firstIndex) {
+          auto newPtr = LLVM::GEPOp::create(
+              rewriter, loc,
+              LLVM::LLVMPointerType::get(rewriter.getContext(),
+                                         loadPtr.getType().getAddressSpace()),
+              elemTy, loadPtr, ArrayRef<LLVM::GEPArg>{firstIndex});
+          auto newLoad = LLVM::LoadOp::create(rewriter, loc, newVecTy, newPtr);
+          rewriter.replaceOp(op, newLoad);
+        } else {
+          auto newLoad = LLVM::LoadOp::create(rewriter, loc, newVecTy, loadPtr);
+          rewriter.replaceOp(op, newLoad);
+        }
       } else {
         return failure();
       }
@@ -975,8 +981,10 @@ struct ConvertXeVMToLLVMPass
     {
       RewritePatternSet vectorPatterns(&getContext());
       vectorPatterns.add<HandleVectorExtractPattern>(&getContext());
-      if (failed(
-              applyPatternsGreedily(getOperation(), std::move(vectorPatterns))))
+      GreedyRewriteConfig config{};
+      config.enableFolding(false);
+      if (failed(applyPatternsGreedily(getOperation(),
+                                       std::move(vectorPatterns), config)))
         signalPassFailure();
     }
   }
