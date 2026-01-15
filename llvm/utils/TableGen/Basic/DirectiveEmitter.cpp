@@ -1364,12 +1364,14 @@ static void generateClauseClassMacro(const DirectiveLanguage &DirLang,
 
 static void emitDirectivesConstexprImpl(const DirectiveLanguage &DirLang,
                                         raw_ostream &OS) {
-  OS << "// Constexpr functions\n";
-
-  generateIsAllowedClauseConstexpr(DirLang, OS << "\n");
-  generateGetDirectiveAssociationConstexpr(DirLang, OS << "\n");
-  generateGetDirectiveCategoryConstexpr(DirLang, OS << "\n");
-  generateGetDirectiveLanguagesConstexpr(DirLang, OS << "\n");
+  OS << "\n";
+  generateIsAllowedClauseConstexpr(DirLang, OS);
+  OS << "\n";
+  generateGetDirectiveAssociationConstexpr(DirLang, OS);
+  OS << "\n";
+  generateGetDirectiveCategoryConstexpr(DirLang, OS);
+  OS << "\n";
+  generateGetDirectiveLanguagesConstexpr(DirLang, OS);
 }
 
 // Generate the implemenation for the enumeration in the directive
