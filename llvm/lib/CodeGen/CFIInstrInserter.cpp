@@ -144,6 +144,19 @@ class CFIInstrInserter : public MachineFunctionPass {
     bool operator!=(const CSRSavedLocation &RHS) const {
       return !(*this == RHS);
     }
+    void dump(raw_ostream &OS) const {
+      switch (K) {
+      case Kind::Invalid:
+        OS << "Invalid";
+        break;
+      case Kind::Register:
+        OS << "In Dwarf register: " << Reg;
+        break;
+      case Kind::CFAOffset:
+        OS << "At CFA offset: " << Offset;
+        break;
+      }
+    }
   };
 
   /// Contains cfa offset and register values valid at entry and exit of basic
