@@ -62,6 +62,13 @@ public:
   template <typename Param>
   detail::is_platform_info_desc_t<Param> get_info() const;
 
+  /// Queries this SYCL platform for SYCL backend-specific information.
+  ///
+  /// The return type depends on information being queried.
+  template <typename Param>
+  typename detail::is_backend_info_desc<Param>::return_type
+  get_backend_info() const;
+
   /// Returns all SYCL platforms from all backends that are available in the
   /// system.
   ///
