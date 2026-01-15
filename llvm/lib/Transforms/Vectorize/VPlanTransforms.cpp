@@ -2588,7 +2588,7 @@ static void licm(VPlan &Plan) {
       SmallPtrSet<VPBasicBlock *, 2> UserBBs;
       // Cannot sink the recipe if any user is defined in the same loop or in
       // any nested inner loop region.
-      if (any_of(Def->users(), [&](VPUser *U) {
+      if (any_of(Def->users(), [&UserBBs](VPUser *U) {
             auto *UserR = cast<VPRecipeBase>(U);
             VPBasicBlock *Parent = UserR->getParent();
             // TODO: If the user is a PHI node, we should check the block of
