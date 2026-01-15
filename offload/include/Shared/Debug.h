@@ -45,7 +45,7 @@
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/circular_raw_ostream.h"
+#include "llvm/Support/raw_ostream.h"
 
 /// 32-Bit field data attributes controlling information presented to the user.
 enum OpenMPInfoType : uint32_t {
@@ -168,14 +168,18 @@ public:
 
 private:
   std::string Prefix;
-  raw_ostream &FOs;
+  raw_ostream &Os;
   uint32_t BaseLevel;
   bool ShouldPrefixNextString;
   bool ShouldEmitNewLineOnDestruction;
   bool NeedEndNewLine = false;
 
-  llvm::SmallString<512> Buffer;
-  llvm::raw_svector_ostream Os;
+  /// Small buffer to reduce interference between different threads
+  /// writing at the same time to the underlying stream.
+  static constexpr size_t BufferSize = 256;
+  llvm::SmallString<BufferSize> Buffer;
+  // Stream to write into Buffer. Its flushed to Os upon destruction.
+  llvm::raw_svector_ostream BufferStrm;
 
   /// If the stream is muted, writes to it are ignored
   bool Muted = false;
@@ -206,42 +210,44 @@ private:
       NeedEndNewLine = true;
     }
   }
-  void emitPrefix() { Os.write(Prefix.c_str(), Prefix.size()); }
+  void emitPrefix() { BufferStrm.write(Prefix.c_str(), Prefix.size()); }
   void writeWithPrefix(StringRef Str) {
     if (ShouldPrefixNextString) {
       emitPrefix();
       ShouldPrefixNextString = false;
     }
-    Os.write(Str.data(), Str.size());
+    BufferStrm.write(Str.data(), Str.size());
   }
 
 public:
-  explicit odbg_ostream(std::string Prefix, raw_ostream &FOs, uint32_t BaseLevel,
+  explicit odbg_ostream(std::string Prefix, raw_ostream &Os, uint32_t BaseLevel,
                         bool ShouldPrefixNextString = true,
                         bool ShouldEmitNewLineOnDestruction = true)
-      : Prefix(std::move(Prefix)), FOs(FOs), BaseLevel(BaseLevel),
+      : Prefix(std::move(Prefix)), Os(Os), BaseLevel(BaseLevel),
         ShouldPrefixNextString(ShouldPrefixNextString),
-        ShouldEmitNewLineOnDestruction(ShouldEmitNewLineOnDestruction), Os(Buffer) {
+        ShouldEmitNewLineOnDestruction(ShouldEmitNewLineOnDestruction),
+        BufferStrm(Buffer) {
     SetUnbuffered();
   }
   ~odbg_ostream() final {
     if (ShouldEmitNewLineOnDestruction && NeedEndNewLine)
-      Os << '\n';
-    FOs << Os.str();
+      BufferStrm << '\n';
+    Os << BufferStrm.str();
   }
   odbg_ostream(const odbg_ostream &) = delete;
   odbg_ostream &operator=(const odbg_ostream &) = delete;
-  odbg_ostream(odbg_ostream &&other) : FOs(other.FOs), Os(Buffer) {
+  odbg_ostream(odbg_ostream &&other) : Os(other.Os), BufferStrm(Buffer) {
     Prefix = std::move(other.Prefix);
     BaseLevel = other.BaseLevel;
     ShouldPrefixNextString = other.ShouldPrefixNextString;
     ShouldEmitNewLineOnDestruction = other.ShouldEmitNewLineOnDestruction;
     NeedEndNewLine = other.NeedEndNewLine;
     Muted = other.Muted;
+    BufferStrm << other.BufferStrm.str();
   }
 
   /// Forward the current_pos method to the underlying stream.
-  uint64_t current_pos() const final { return Os.tell(); }
+  uint64_t current_pos() const final { return BufferStrm.tell(); }
 
   /// Some of the `<<` operators expect an lvalue, so we trick the type
   /// system.
@@ -251,7 +257,7 @@ public:
   void shouldMute(const OnlyLevel Filter) { Muted = BaseLevel != Filter; }
 };
 
-/// dbgs - Return a circular-buffered debug stream.
+/// dbgs - Return the debug stream for offload debugging (just llvm::errs()).
 [[maybe_unused]] static llvm::raw_ostream &dbgs() { return llvm::errs(); }
 
 #ifdef OMPTARGET_DEBUG
