@@ -5354,12 +5354,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   }
 
-  // <4 x i32> @llvm.aarch64.neon.smmla.v4i32.v16i8
-  //               (<4 x i32> %R, <16 x i8> %X, <16 x i8> %Y)
-  // <4 x i32> @llvm.aarch64.neon.ummla.v4i32.v16i8
-  //               (<4 x i32> %R, <16 x i8> %X, <16 x i8> %Y)
-  // <4 x i32> @llvm.aarch64.neon.usmmla.v4i32.v16i8
-  //               (<4 x i32> R%, <16 x i8> %X, <16 x i8> %Y)
+  // Integer matrix multiplication:
+  // - <4 x i32> @llvm.aarch64.neon.smmla.v4i32.v16i8
+  //                 (<4 x i32> %R, <16 x i8> %X, <16 x i8> %Y)
+  // - <4 x i32> @llvm.aarch64.neon.ummla.v4i32.v16i8
+  //                 (<4 x i32> %R, <16 x i8> %X, <16 x i8> %Y)
+  // - <4 x i32> @llvm.aarch64.neon.usmmla.v4i32.v16i8
+  //                 (<4 x i32> R%, <16 x i8> %X, <16 x i8> %Y)
   //
   // Note:
   // - < 4 x *> is a 2x2 matrix
@@ -5377,14 +5378,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // TODO: consider allowing multiplication of zero with an uninitialized value
   //       to result in an initialized value.
   //
-  // TODO: handle floating-point matrix multiply using ummla on the shadows:
-  //   case Intrinsic::aarch64_neon_bfmmla:
-  //     handleNEONMatrixMultiply(I, /*ARows=*/ 2, /*ACols=*/ 4,
-  //                                 /*BRows=*/ 4, /*BCols=*/ 2);
-  //
-  void handleNEONMatrixMultiply(IntrinsicInst &I, unsigned int ARows,
-                                unsigned int ACols, unsigned int BRows,
-                                unsigned int BCols) {
+  // Floating-point matrix multiplication:
+  // - <4 x float> @llvm.aarch64.neon.bfmmla
+  //                   (<4 x float> %r, <8 x bfloat> %a, <8 x bfloat> %b)
+  // Although there are half as many elements of %a and %b compared to the
+  // integer case, each element is twice the bit-width. Thus, we can reuse the
+  // shadow propagation logic if we cast the shadows to the same type as the
+  // integer case, and apply ummla to the shadows.
+  void handleNEONMatrixMultiply(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
 
     assert(I.arg_size() == 3);
@@ -5402,47 +5403,65 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     [[maybe_unused]] FixedVectorType *ATy = cast<FixedVectorType>(A->getType());
     [[maybe_unused]] FixedVectorType *BTy = cast<FixedVectorType>(B->getType());
 
-    assert(ACols == BRows);
-    assert(ATy->getNumElements() == ARows * ACols);
-    assert(BTy->getNumElements() == BRows * BCols);
-    assert(RTy->getNumElements() == ARows * BCols);
-
-    LLVM_DEBUG(dbgs() << "### R: " << *RTy->getElementType() << "\n");
-    LLVM_DEBUG(dbgs() << "### A: " << *ATy->getElementType() << "\n");
-    if (RTy->getElementType()->isIntegerTy()) {
-      // Types are not identical e.g., <4 x i32> %R, <16 x i8> %A
-      assert(ATy->getElementType()->isIntegerTy());
-    } else {
-      assert(RTy->getElementType()->isFloatingPointTy());
-      assert(ATy->getElementType()->isFloatingPointTy());
-    }
-    assert(ATy->getElementType() == BTy->getElementType());
-
     Value *ShadowR = getShadow(&I, 0);
     Value *ShadowA = getShadow(&I, 1);
     Value *ShadowB = getShadow(&I, 2);
 
+    // We will use ummla to compute the shadow. These are the types it expects.
+    // These are also the types of the corresponding shadows.
+    FixedVectorType *ExpectedRTy = FixedVectorType::get(IntegerType::get(*MS.C, 32), 4);
+    FixedVectorType *ExpectedATy = FixedVectorType::get(IntegerType::get(*MS.C, 8), 16);
+    FixedVectorType *ExpectedBTy = FixedVectorType::get(IntegerType::get(*MS.C, 8), 16);
+
+    if (RTy->getElementType()->isIntegerTy()) {
+      // Types of R and A/B are not identical e.g., <4 x i32> %R, <16 x i8> %A
+      assert(ATy->getElementType()->isIntegerTy());
+
+      assert(RTy == ExpectedRTy);
+      assert(ATy == ExpectedATy);
+      assert(BTy == ExpectedBTy);
+    } else {
+      assert(ATy->getElementType()->isFloatingPointTy());
+      assert(BTy->getElementType()->isFloatingPointTy());
+
+      // Technically, what we care about is that:
+      //   getShadowTy(RTy)->canLosslesslyBitCastTo(ExpectedRTy)) etc.
+      // but that is equivalent.
+      assert(RTy->canLosslesslyBitCastTo(ExpectedRTy));
+      assert(ATy->canLosslesslyBitCastTo(ExpectedATy));
+      assert(BTy->canLosslesslyBitCastTo(ExpectedBTy));
+
+      ShadowA = IRB.CreateBitCast(ShadowA, getShadowTy(ExpectedATy));
+      ShadowB = IRB.CreateBitCast(ShadowB, getShadowTy(ExpectedBTy));
+    }
+    assert(ATy->getElementType() == BTy->getElementType());
+
+    // From this point on, use Expected{R,A,B}Type.
+
     // If the value is fully initialized, the shadow will be 000...001.
     // Otherwise, the shadow will be all zero.
     // (This is the opposite of how we typically handle shadows.)
-    ShadowA = IRB.CreateZExt(IRB.CreateICmpEQ(ShadowA, getCleanShadow(A)),
-                             ShadowA->getType());
-    ShadowB = IRB.CreateZExt(IRB.CreateICmpEQ(ShadowB, getCleanShadow(B)),
-                             ShadowB->getType());
+    ShadowA = IRB.CreateZExt(IRB.CreateICmpEQ(ShadowA, getCleanShadow(ExpectedATy)),
+                             getShadowTy(ExpectedATy));
+    ShadowB = IRB.CreateZExt(IRB.CreateICmpEQ(ShadowB, getCleanShadow(ExpectedBTy)),
+                             getShadowTy(ExpectedBTy));
 
     Value *ShadowAB = IRB.CreateIntrinsic(
-        I.getType(), I.getIntrinsicID(), {getCleanShadow(R), ShadowA, ShadowB});
+        ExpectedRTy, Intrinsic::aarch64_neon_ummla,
+        {getCleanShadow(ExpectedRTy), ShadowA, ShadowB});
 
+    // ummla multiplies a 2x8 matrix with an 8x2 matrix. If all entries of the
+    // input matrices are equal to 0x1, all entries of the output matrix will
+    // be 0x8.
     Value *FullyInit = ConstantVector::getSplat(
-        RTy->getElementCount(),
-        ConstantInt::get(cast<VectorType>(getShadowTy(R))->getElementType(),
-                         ACols));
+        ExpectedRTy->getElementCount(),
+        ConstantInt::get(ExpectedRTy->getElementType(), 0x8));
 
     ShadowAB = IRB.CreateSExt(IRB.CreateICmpNE(ShadowAB, FullyInit),
                               ShadowAB->getType());
 
-    ShadowR = IRB.CreateSExt(IRB.CreateICmpNE(ShadowR, getCleanShadow(R)),
-                             ShadowR->getType());
+    ShadowR = IRB.CreateSExt(IRB.CreateICmpNE(ShadowR, getCleanShadow(ExpectedRTy)),
+                             ExpectedRTy);
 
     setShadow(&I, IRB.CreateOr(ShadowAB, ShadowR));
     setOriginForNaryOp(I);
@@ -6827,8 +6846,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_smmla:
     case Intrinsic::aarch64_neon_ummla:
     case Intrinsic::aarch64_neon_usmmla:
-      handleNEONMatrixMultiply(I, /*ARows=*/2, /*ACols=*/8, /*BRows=*/8,
-                               /*BCols=*/2);
+    case Intrinsic::aarch64_neon_bfmmla:
+      handleNEONMatrixMultiply(I);
       break;
 
     default:
