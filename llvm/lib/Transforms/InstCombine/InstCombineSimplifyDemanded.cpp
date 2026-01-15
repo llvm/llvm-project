@@ -3015,13 +3015,11 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     break;
   }
   case Instruction::ExtractValue: {
-    ExtractValueInst *Extract = cast<ExtractValueInst>(I);
-    ArrayRef<unsigned> Indices = Extract->getIndices();
-    Value *Src = Extract->getAggregateOperand();
-    if (isa<StructType>(Src->getType()) && Indices.size() == 1 &&
-        Indices[0] == 0) {
-      if (auto *II = dyn_cast<IntrinsicInst>(Src)) {
-        switch (II->getIntrinsicID()) {
+    Value *ExtractSrc;
+    if (match(I, m_ExtractValue<0>(m_Value(ExtractSrc)))) {
+      if (auto *II = dyn_cast<IntrinsicInst>(ExtractSrc)) {
+        const Intrinsic::ID IID = II->getIntrinsicID();
+        switch (IID) {
         case Intrinsic::frexp: {
           FPClassTest SrcDemandedMask = fcNone;
           if (DemandedMask & fcNan)
