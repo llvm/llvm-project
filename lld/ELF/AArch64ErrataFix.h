@@ -36,10 +36,13 @@ private:
   void init();
 
   Ctx &ctx;
-  // A cache of the mapping symbols defined by the InputSection sorted in order
-  // of ascending value with redundant symbols removed. These describe
-  // the ranges of code and data in an executable InputSection.
-  llvm::DenseMap<InputSection *, std::vector<const Defined *>> sectionMap;
+  // A cache mapping InputSections to pairs of section symbols (first) and
+  // the mapping symbols (second) defined by the InputSection sorted in order
+  // of ascending value with redundant symbols removed. These describe the
+  // ranges of code and data in an executable InputSection.
+  llvm::DenseMap<InputSection *,
+                 std::pair<Defined *, SmallVector<Defined *, 0>>>
+      sectionMap;
 
   bool initialized = false;
 };

@@ -5668,6 +5668,13 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
     return DAG.getSetCC(dl, VT, N0.getOperand(0), N1.getOperand(0), Cond);
   }
 
+  // Fold (setcc (sub nsw a, b), zero, s??) -> (setcc a, b, s??)
+  // TODO: Remove that .isVector() check
+  if (VT.isVector() && isZeroOrZeroSplat(N1) && N0.getOpcode() == ISD::SUB &&
+      N0->getFlags().hasNoSignedWrap() && ISD::isSignedIntSetCC(Cond)) {
+    return DAG.getSetCC(dl, VT, N0.getOperand(0), N0.getOperand(1), Cond);
+  }
+
   // Could not fold it.
   return SDValue();
 }
@@ -7553,6 +7560,18 @@ SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
       break;
     Cost = NegatibleCost::Neutral;
     return CFP;
+  }
+  case ISD::SPLAT_VECTOR: {
+    // fold splat_vector(fneg(X)) -> splat_vector(-X)
+    SDValue X = Op.getOperand(0);
+    if (!isOperationLegal(ISD::SPLAT_VECTOR, VT))
+      break;
+
+    SDValue NegX = getCheaperNegatedExpression(X, DAG, LegalOps, OptForSize);
+    if (!NegX)
+      break;
+    Cost = NegatibleCost::Cheaper;
+    return DAG.getNode(ISD::SPLAT_VECTOR, DL, VT, NegX);
   }
   case ISD::BUILD_VECTOR: {
     // Only permit BUILD_VECTOR of constants.
@@ -9710,26 +9729,51 @@ SDValue TargetLowering::expandVectorFindLastActive(SDNode *N,
   if (MaskVT.isScalableVector())
     VScaleRange = getVScaleRange(&DAG.getMachineFunction().getFunction(), 64);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  unsigned EltWidth = TLI.getBitWidthForCttzElements(
+  uint64_t EltWidth = TLI.getBitWidthForCttzElements(
       BoolVT.getTypeForEVT(*DAG.getContext()), MaskVT.getVectorElementCount(),
       /*ZeroIsPoison=*/true, &VScaleRange);
+  // If the step vector element type is smaller than the mask element type,
+  // use the mask type directly to avoid widening issues.
+  EltWidth = std::max(EltWidth, BoolVT.getFixedSizeInBits());
   EVT StepVT = MVT::getIntegerVT(EltWidth);
   EVT StepVecVT = MaskVT.changeVectorElementType(*DAG.getContext(), StepVT);
 
-  // If promotion is required to make the type legal, do it here; promotion
-  // of integers within LegalizeVectorOps is looking for types of the same
-  // size but with a smaller number of larger elements, not the usual larger
-  // size with the same number of larger elements.
-  if (TLI.getTypeAction(StepVecVT.getSimpleVT()) ==
-      TargetLowering::TypePromoteInteger) {
+  // If promotion or widening is required to make the type legal, do it here.
+  // Promotion of integers within LegalizeVectorOps is looking for types of
+  // the same size but with a smaller number of larger elements, not the usual
+  // larger size with the same number of larger elements.
+  TargetLowering::LegalizeTypeAction TypeAction =
+      TLI.getTypeAction(StepVecVT.getSimpleVT());
+  SDValue StepVec;
+  if (TypeAction == TargetLowering::TypePromoteInteger) {
     StepVecVT = TLI.getTypeToTransformTo(*DAG.getContext(), StepVecVT);
     StepVT = StepVecVT.getVectorElementType();
+    StepVec = DAG.getStepVector(DL, StepVecVT);
+  } else if (TypeAction == TargetLowering::TypeWidenVector) {
+    // For widening, the element count changes. Create a step vector with only
+    // the original elements valid and zeros for padding. Also widen the mask.
+    EVT WideVecVT = TLI.getTypeToTransformTo(*DAG.getContext(), StepVecVT);
+    unsigned WideNumElts = WideVecVT.getVectorNumElements();
+
+    // Build widened step vector: <0, 1, ..., OrigNumElts-1, poison, poison, ..>
+    SDValue OrigStepVec = DAG.getStepVector(DL, StepVecVT);
+    SDValue UndefStep = DAG.getPOISON(WideVecVT);
+    StepVec = DAG.getInsertSubvector(DL, UndefStep, OrigStepVec, 0);
+
+    // Widen mask: pad with zeros.
+    EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(), BoolVT, WideNumElts);
+    SDValue ZeroMask = DAG.getConstant(0, DL, WideMaskVT);
+    Mask = DAG.getInsertSubvector(DL, ZeroMask, Mask, 0);
+
+    StepVecVT = WideVecVT;
+    StepVT = WideVecVT.getVectorElementType();
+  } else {
+    StepVec = DAG.getStepVector(DL, StepVecVT);
   }
 
   // Zero out lanes with inactive elements, then find the highest remaining
   // value from the stepvector.
   SDValue Zeroes = DAG.getConstant(0, DL, StepVecVT);
-  SDValue StepVec = DAG.getStepVector(DL, StepVecVT);
   SDValue ActiveElts = DAG.getSelect(DL, StepVecVT, Mask, StepVec, Zeroes);
   SDValue HighestIdx = DAG.getNode(ISD::VECREDUCE_UMAX, DL, StepVT, ActiveElts);
   return DAG.getZExtOrTrunc(HighestIdx, DL, N->getValueType(0));
