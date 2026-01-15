@@ -75,34 +75,18 @@ if ((NOT LIBOMPTEST_BUILD_STANDALONE) OR LIBOMPTEST_BUILD_UNITTESTS)
 
   message(STATUS "omptest build mode: GTest-based")
 
-  # Set and check GTest's source directory.
-  set(OMPTEST_GTEST_PATH ${LLVM_THIRD_PARTY_DIR}/unittest/googletest)
-  if(NOT EXISTS "${OMPTEST_GTEST_PATH}/src/gtest-all.cc")
-    message(FATAL_ERROR "Missing gtest-all.cc under ${OMPTEST_GTEST_PATH}. "
-                        "Make sure LLVM_THIRD_PARTY_DIR is set properly.")
-  endif()
-
-  # Set GTest include directories for omptest
-  target_include_directories(omptest PUBLIC
-    $<BUILD_INTERFACE:${OMPTEST_GTEST_PATH}>
-    $<BUILD_INTERFACE:${OMPTEST_GTEST_PATH}/include>
-  )
-
-  # Avoid including LLVM-specific header files (e.g. raw-ostream) inside GTest.
-  # This prevents required linking against LLVMSupport.
-  # Make definition public, so dependant targets also get it (e.g. unit tests).
-  target_compile_definitions(omptest PUBLIC GTEST_NO_LLVM_SUPPORT=1)
-
-  # Make the targets default_gtest and default_gtest_main available.
-  build_gtest()
-
   # Add GoogleTest-based header and embed GTest symbols into the shared lib.
   # Merging of GTest is desired, such that omptest is self-contained and
-  # independant of external GTest installations.
+  # independent of external GTest installations.
   target_sources(omptest PRIVATE
     ./include/OmptTesterGoogleTest.h
     $<TARGET_OBJECTS:default_gtest>
   )
+
+  # Link against the default GTest which at this point primarily pulls in the
+  # include directories and compile definitions. It is important to make these
+  # available to dependant targets, e.g. for unit tests.
+  target_link_libraries(omptest INTERFACE default_gtest)
 
   # Link against Threads (recommended for GTest).
   find_package(Threads REQUIRED)
