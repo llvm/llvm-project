@@ -1387,7 +1387,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__sync_fetch_and_max:
   case Builtin::BI__sync_fetch_and_umin:
   case Builtin::BI__sync_fetch_and_umax:
-    cgm.errorNYI(e->getSourceRange(), "__sync_fetch_and_* builtins NYI");
+    return errorBuiltinNYI(*this, e, builtinID);
     return getUndefRValue(e->getType());
   case Builtin::BI__sync_add_and_fetch_1:
   case Builtin::BI__sync_add_and_fetch_2:
