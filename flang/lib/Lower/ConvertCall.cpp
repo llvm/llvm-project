@@ -300,10 +300,12 @@ getResultLengthFromElementalOp(fir::FirOpBuilder &builder,
 
 // Go through the args. Any descriptor args that have ignore_tkr(c) cause
 // function type modification to avoid changing the descriptor args.
-static mlir::FunctionType getTypeWithIgnoreTkrC(mlir::FunctionType funcType,
-    Fortran::lower::CallerInterface &caller, mlir::MLIRContext* context) {
+static mlir::FunctionType
+getTypeWithIgnoreTkrC(mlir::FunctionType funcType,
+                      Fortran::lower::CallerInterface &caller,
+                      mlir::MLIRContext *context) {
   llvm::SmallVector<mlir::Type> newInputs =
-    llvm::to_vector(funcType.getInputs());
+      llvm::to_vector(funcType.getInputs());
   bool typeChanged = false;
   for (const auto &arg : caller.getPassedArguments()) {
     if (arg.firArgument >= 0 &&
@@ -334,8 +336,8 @@ static mlir::FunctionType getTypeWithIgnoreTkrC(mlir::FunctionType funcType,
   if (typeChanged) {
     // At least one of the arguments had its type changed, so need to
     // create a new function type to be used in a cast.
-    funcType = mlir::FunctionType::get(context, newInputs,
-        funcType.getResults());
+    funcType =
+        mlir::FunctionType::get(context, newInputs, funcType.getResults());
   }
 
   return funcType;
@@ -1472,8 +1474,9 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       arg.passBy == Fortran::lower::CallerInterface::PassEntityBy::Box &&
       ignoreTKRcontig && actual.isMutableBox();
 
-  hlfir::Entity entity = keepRefToBox ? actual :
-      hlfir::derefPointersAndAllocatables(loc, builder, actual);
+  hlfir::Entity entity =
+      keepRefToBox ? actual
+                   : hlfir::derefPointersAndAllocatables(loc, builder, actual);
   if (entity.isVariable()) {
     // Set dynamic type if needed before any copy-in or copy so that the dummy
     // is contiguous according to the dummy type.
@@ -1549,9 +1552,10 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       entity = hlfir::genVariableBox(loc, builder, entity);
     // Ensures the box has the right attributes and that it holds an
     // addendum if needed.
-    fir::BaseBoxType actualBoxType = keepRefToBox ?
-        mlir::cast<fir::BaseBoxType>(fir::unwrapRefType(entity.getType()))
-        : mlir::cast<fir::BaseBoxType>(entity.getType());
+    fir::BaseBoxType actualBoxType =
+        keepRefToBox
+            ? mlir::cast<fir::BaseBoxType>(fir::unwrapRefType(entity.getType()))
+            : mlir::cast<fir::BaseBoxType>(entity.getType());
     mlir::Type boxEleType = actualBoxType.getEleTy();
     // For now, assume it is not OK to pass the allocatable/pointer
     // descriptor to a non pointer/allocatable dummy. That is a strict
@@ -1571,7 +1575,8 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
         fir::isUnlimitedPolymorphicType(dummyTypeWithActualRank) &&
         !actualBoxHasAddendum;
     if ((needToAddAddendum || actualBoxHasAllocatableOrPointerFlag ||
-        needsZeroLowerBounds) && !ignoreTKRcontig) {
+         needsZeroLowerBounds) &&
+        !ignoreTKRcontig) {
       if (actualIsAssumedRank) {
         auto lbModifier = needsZeroLowerBounds
                               ? fir::LowerBoundModifierAttribute::SetToZeroes
@@ -1604,8 +1609,9 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // descriptors.
   // For TKR dummy characters, the boxchar creation also happens later when
   // creating the fir.call .
-  preparedDummy.dummy = keepRefToBox ? addr
-      : builder.createConvert(loc, dummyTypeWithActualRank, addr);
+  preparedDummy.dummy =
+      keepRefToBox ? addr
+                   : builder.createConvert(loc, dummyTypeWithActualRank, addr);
   return preparedDummy;
 }
 
@@ -1836,7 +1842,7 @@ void prepareUserCallArguments(
       }
       if (fir::isPointerType(argTy) &&
           (!Fortran::evaluate::IsObjectPointer(*expr) || thisIsPassArg) &&
-              !arg.testTKR(Fortran::common::IgnoreTKR::Contiguous)) {
+          !arg.testTKR(Fortran::common::IgnoreTKR::Contiguous)) {
         // Passing a non POINTER actual argument to a POINTER dummy argument.
         // Create a pointer of the dummy argument type and assign the actual
         // argument to it.
