@@ -2,6 +2,7 @@
 ; RUN: opt < %s -passes=loop-unroll -unroll-runtime=true -verify-dom-info -verify-loop-info -S | FileCheck %s
 ; RUN: opt < %s -passes=loop-unroll -unroll-runtime=true -verify-dom-info -verify-loop-info -unroll-runtime-multi-exit=false -S | FileCheck %s -check-prefix=NOUNROLL
 
+; Multi exit loop with predictable exit -- unroll
 define i32 @test1(ptr nocapture %a, i64 %n) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
@@ -385,6 +386,7 @@ otherexit:
 
 declare i32 @llvm.experimental.deoptimize.i32(...)
 
+; multi exit loop where the exits are not predictable -- no unroll
 define i32 @test3(ptr nocapture %a, i64 %n) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
@@ -465,7 +467,7 @@ otherexit:
 
 !2 = !{!"branch_weights", i32 1, i32 2}
 
-
+; multi exit loop with high predictability of exists -- unroll
 define i32 @test4(ptr nocapture %a, i64 %n) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
