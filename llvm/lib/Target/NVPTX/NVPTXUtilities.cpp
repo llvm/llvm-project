@@ -21,6 +21,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
@@ -422,8 +423,8 @@ static const MDNode *findCacheHintNode(const MDNode *MD, unsigned OperandNo) {
   if (!MD)
     return nullptr;
 
-  for (unsigned i = 0, e = MD->getNumOperands(); i < e; ++i) {
-    const MDNode *Node = dyn_cast<MDNode>(MD->getOperand(i));
+  for (const MDOperand &Op : MD->operands()) {
+    const auto *Node = dyn_cast<MDNode>(Op);
     if (!Node || Node->getNumOperands() < 2) {
       LLVM_DEBUG(if (Node) dbgs()
                  << "NVPTX: Skipping malformed cache hint node with "
@@ -432,21 +433,16 @@ static const MDNode *findCacheHintNode(const MDNode *MD, unsigned OperandNo) {
     }
 
     // Search for operand_no in the node (can be at any position)
+    // Key-value pairs require index iteration with stride 2
     std::optional<unsigned> NodeOperandNo;
     for (unsigned j = 0; j + 1 < Node->getNumOperands(); j += 2) {
-      const MDString *Key = dyn_cast<MDString>(Node->getOperand(j));
+      const auto *Key = dyn_cast<MDString>(Node->getOperand(j));
       if (Key && Key->getString() == "operand_no") {
-        if (auto *OpNoMD =
-                dyn_cast<ConstantAsMetadata>(Node->getOperand(j + 1))) {
-          if (auto *OpNoCI = dyn_cast<ConstantInt>(OpNoMD->getValue()))
-            NodeOperandNo = OpNoCI->getZExtValue();
-          else
-            LLVM_DEBUG(dbgs()
-                       << "NVPTX: operand_no value is not ConstantInt\n");
-        } else {
-          LLVM_DEBUG(dbgs()
-                     << "NVPTX: operand_no value is not ConstantAsMetadata\n");
-        }
+        if (auto *OpNoCI =
+                mdconst::dyn_extract<ConstantInt>(Node->getOperand(j + 1)))
+          NodeOperandNo = OpNoCI->getZExtValue();
+        else
+          LLVM_DEBUG(dbgs() << "NVPTX: operand_no value is not ConstantInt\n");
         break;
       }
     }
@@ -477,8 +473,9 @@ unsigned getCacheHintFromMetadata(const Instruction *I, unsigned OperandNo) {
   L2Prefetch Prefetch = L2Prefetch::None;
 
   // Parse all key-value pairs from the matching node
+  // Key-value pairs require index iteration with stride 2
   for (unsigned j = 0; j + 1 < Node->getNumOperands(); j += 2) {
-    const MDString *Key = dyn_cast<MDString>(Node->getOperand(j));
+    const auto *Key = dyn_cast<MDString>(Node->getOperand(j));
     if (!Key) {
       LLVM_DEBUG(dbgs() << "NVPTX: Cache hint key at index " << j
                         << " is not a string\n");
@@ -490,7 +487,7 @@ unsigned getCacheHintFromMetadata(const Instruction *I, unsigned OperandNo) {
       continue; // Already processed by findCacheHintNode
 
     // For eviction and prefetch hints, value should be a string
-    const MDString *Val = dyn_cast<MDString>(Node->getOperand(j + 1));
+    const auto *Val = dyn_cast<MDString>(Node->getOperand(j + 1));
     if (!Val) {
       // nvvm.l2_cache_hint uses i64, not string - skip here
       if (KeyStr != "nvvm.l2_cache_hint") {
@@ -537,26 +534,19 @@ std::optional<uint64_t> getCachePolicyFromMetadata(const Instruction *I,
     return std::nullopt;
 
   // Look for nvvm.l2_cache_hint in the matching node
+  // Key-value pairs require index iteration with stride 2
   for (unsigned j = 0; j + 1 < Node->getNumOperands(); j += 2) {
-    const MDString *Key = dyn_cast<MDString>(Node->getOperand(j));
+    const auto *Key = dyn_cast<MDString>(Node->getOperand(j));
     if (!Key || Key->getString() != "nvvm.l2_cache_hint")
       continue;
 
     // The value should be an i64 constant
-    auto *ValMD = dyn_cast<ConstantAsMetadata>(Node->getOperand(j + 1));
-    if (!ValMD) {
-      LLVM_DEBUG(dbgs() << "NVPTX: nvvm.l2_cache_hint value is not "
-                           "ConstantAsMetadata\n");
-      continue;
-    }
-    auto *ValCI = dyn_cast<ConstantInt>(ValMD->getValue());
-    if (!ValCI) {
-      LLVM_DEBUG(
-          dbgs() << "NVPTX: nvvm.l2_cache_hint value is not ConstantInt\n");
-      continue;
-    }
+    if (auto *ValCI =
+            mdconst::dyn_extract<ConstantInt>(Node->getOperand(j + 1)))
+      return ValCI->getZExtValue();
 
-    return ValCI->getZExtValue();
+    LLVM_DEBUG(
+        dbgs() << "NVPTX: nvvm.l2_cache_hint value is not ConstantInt\n");
   }
 
   return std::nullopt;

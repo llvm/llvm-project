@@ -4773,7 +4773,7 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
     MachineMemOperand *MMO =
         MF.getMachineMemOperand(PtrInfo, MMOFlags | MachineMemOperand::MOLoad,
                                 Size, Alignment, AAInfo, Ranges);
-    TLI.recordTargetMMOInfo(MMO, I);
+    TLI.recordTargetMMOInfo(MF, MMO, I);
 
     SDValue L = DAG.getLoad(MemVTs[i], dl, Root, A, MMO);
     Chains[ChainI] = L.getValue(1);
@@ -4924,7 +4924,7 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
     MachineMemOperand *MMO =
         MF.getMachineMemOperand(PtrInfo, MMOFlags | MachineMemOperand::MOStore,
                                 Size, Alignment, AAInfo);
-    TLI.recordTargetMMOInfo(MMO, I);
+    TLI.recordTargetMMOInfo(MF, MMO, I);
 
     SDValue St = DAG.getStore(Root, dl, Val, Add, MMO);
     Chains[ChainI] = St;

@@ -16,14 +16,12 @@
 
 #include "llvm/CodeGen/ISDOpcodes.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Bitfields.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
-#include <optional>
 
 namespace llvm {
 class Function;
@@ -207,7 +205,7 @@ enum AddressSpace : AddressSpaceUnderlyingType {
 // These correspond to PTX cache control qualifiers
 
 // L1 Eviction Policy - maps to PTX L1::evict_* qualifiers
-enum class L1Eviction : unsigned {
+enum class L1Eviction : uint8_t {
   Normal = 0,     // Default behavior (no qualifier)
   Unchanged = 1,  // L1::evict_unchanged
   First = 2,      // L1::evict_first
@@ -216,26 +214,35 @@ enum class L1Eviction : unsigned {
 };
 
 // L2 Eviction Policy - maps to PTX L2::evict_* qualifiers
-enum class L2Eviction : unsigned {
+enum class L2Eviction : uint8_t {
   Normal = 0, // Default behavior (no qualifier)
   First = 1,  // L2::evict_first
   Last = 2,   // L2::evict_last
 };
 
 // L2 Prefetch Size - maps to PTX L2::*B qualifiers
-enum class L2Prefetch : unsigned {
+enum class L2Prefetch : uint8_t {
   None = 0,     // No prefetch hint
   Bytes64 = 1,  // L2::64B
   Bytes128 = 2, // L2::128B
   Bytes256 = 3, // L2::256B
 };
 
-// Bitfield layout for encoded cache hints:
+// Bitfield layout for encoded cache hints (stored in unsigned):
 // Bits 0-2:  L1 Eviction (3 bits, 5 values)
 // Bits 3-4:  L2 Eviction (2 bits, 3 values)
 // Bits 5-6:  L2 Prefetch (2 bits, 4 values)
 // Bit 7:    L2::cache_hint mode flag (when set, use CachePolicy operand)
 // Bits 8-31: Reserved
+//
+// Using llvm::Bitfield for type-safe access with compile-time validation.
+using L1EvictionBits =
+    Bitfield::Element<L1Eviction, 0, 3, L1Eviction::NoAllocate>;
+using L2EvictionBits = Bitfield::Element<L2Eviction, 3, 2, L2Eviction::Last>;
+using L2PrefetchBits = Bitfield::Element<L2Prefetch, 5, 2, L2Prefetch::Bytes256>;
+using L2CacheHintBit = Bitfield::Element<bool, 7, 1>;
+
+// Masks for clearing/testing fields (for legacy code and instruction emission)
 constexpr unsigned L1EvictionShift = 0;
 constexpr unsigned L1EvictionMask = 0x7;
 constexpr unsigned L2EvictionShift = 3;
@@ -245,79 +252,28 @@ constexpr unsigned L2PrefetchMask = 0x3;
 constexpr unsigned L2CacheHintFlag = 0x80; // Bit 7: L2::cache_hint mode
 
 inline unsigned encodeCacheHint(L1Eviction L1, L2Eviction L2, L2Prefetch P) {
-  return (static_cast<unsigned>(L1) << L1EvictionShift) |
-         (static_cast<unsigned>(L2) << L2EvictionShift) |
-         (static_cast<unsigned>(P) << L2PrefetchShift);
+  unsigned Hint = 0;
+  Bitfield::set<L1EvictionBits>(Hint, L1);
+  Bitfield::set<L2EvictionBits>(Hint, L2);
+  Bitfield::set<L2PrefetchBits>(Hint, P);
+  return Hint;
 }
 
 inline L1Eviction decodeL1Eviction(unsigned Hint) {
-  return static_cast<L1Eviction>((Hint >> L1EvictionShift) & L1EvictionMask);
+  return Bitfield::get<L1EvictionBits>(Hint);
 }
 
 inline L2Eviction decodeL2Eviction(unsigned Hint) {
-  return static_cast<L2Eviction>((Hint >> L2EvictionShift) & L2EvictionMask);
+  return Bitfield::get<L2EvictionBits>(Hint);
 }
 
 inline L2Prefetch decodeL2Prefetch(unsigned Hint) {
-  return static_cast<L2Prefetch>((Hint >> L2PrefetchShift) & L2PrefetchMask);
+  return Bitfield::get<L2PrefetchBits>(Hint);
 }
 
 inline bool isL2CacheHintMode(unsigned Hint) {
-  return (Hint & L2CacheHintFlag) != 0;
+  return Bitfield::get<L2CacheHintBit>(Hint);
 }
-
-// Cache policy data for a single memory operation.
-// Stored per-MMO to avoid pointer collisions when multiple memops share
-// the same pointer value but have different cache policies.
-struct MMOCachePolicyData {
-  uint64_t
-      Policy; // The 64-bit cache policy value for L2::cache_hint (0 if not set)
-  unsigned CacheHint; // Other cache hints (L1 eviction, L2 eviction, prefetch)
-};
-
-// Per-function cache policy data. Keyed by MachineMemOperand* for direct
-// lookup during instruction selection, ensuring each memop gets its own policy.
-struct FunctionCachePolicyData {
-  DenseMap<MachineMemOperand *, MMOCachePolicyData> MMOMap;
-
-  void clear() { MMOMap.clear(); }
-};
-
-// Operand indices for LD (load) machine instructions.
-// These match the operand order in NVPTXInstrInfo.td LD class.
-// Use LDOp::* for getOperand() (includes def), or subtract 1 for uses()
-// iterator.
-namespace LDOp {
-enum : unsigned {
-  Dst = 0,       // Output register (def)
-  Ordering = 1,  // Memory ordering (sem)
-  Scope = 2,     // Memory scope
-  AddrSpace = 3, // Address space
-  Sign = 4,      // Signedness
-  Width = 5,     // Load width in bits
-  UsedBytes = 6, // Used bytes mask
-  CacheHint = 7, // Cache hint flags
-  Base = 8,      // Base pointer (from ADDR)
-  Offset = 9,    // Offset (from ADDR)
-  Policy = 10    // Cache policy register
-};
-} // namespace LDOp
-
-// Operand indices for ST (store) machine instructions.
-// These match the operand order in NVPTXInstrInfo.td ST class.
-namespace STOp {
-enum : unsigned {
-  Value = 0,     // Value to store
-  Ordering = 1,  // Memory ordering (sem)
-  Scope = 2,     // Memory scope
-  AddrSpace = 3, // Address space
-  Width = 4,     // Store width in bits
-  CacheHint = 5, // Cache hint flags
-  Base = 6,      // Base pointer (from ADDR)
-  Offset = 7,    // Offset (from ADDR)
-  Policy = 8     // Cache policy register
-};
-} // namespace STOp
 
 namespace PTXLdStInstCode {
 enum FromType { Unsigned = 0, Signed, Float, Untyped };
@@ -397,6 +353,11 @@ void initializeNVPTXDAGToDAGISelLegacyPass(PassRegistry &);
 // Defines symbolic names for the NVPTX instructions.
 #define GET_INSTRINFO_ENUM
 #define GET_INSTRINFO_MC_HELPER_DECLS
+#include "NVPTXGenInstrInfo.inc"
+
+// Pull in OpName enum and getNamedOperandIdx() for LD/ST instructions.
+// Generated from UseNamedOperandTable=1 in NVPTXInstrInfo.td.
+#define GET_INSTRINFO_OPERAND_ENUM
 #include "NVPTXGenInstrInfo.inc"
 
 #endif

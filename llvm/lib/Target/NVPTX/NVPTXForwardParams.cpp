@@ -96,14 +96,13 @@ static bool eliminateMove(MachineInstr &Mov, const MachineRegisterInfo &MRI,
   const MachineOperand *ParamSymbol = Mov.uses().begin();
   assert(ParamSymbol->isSymbol());
 
-  // uses() iterator skips defs, so subtract 1 from LDOp indices
-  constexpr unsigned LDUsesBasePtrIdx = NVPTX::LDOp::Base - 1;
-  constexpr unsigned LDUsesAddrSpaceIdx = NVPTX::LDOp::AddrSpace - 1;
   for (auto *LI : LoadInsts) {
-    (LI->uses().begin() + LDUsesBasePtrIdx)
-        ->ChangeToES(ParamSymbol->getSymbolName());
-    (LI->uses().begin() + LDUsesAddrSpaceIdx)
-        ->ChangeToImmediate(NVPTX::AddressSpace::Param);
+    int AddrIdx = NVPTX::getNamedOperandIdx(LI->getOpcode(), NVPTX::OpName::addr);
+    int AddspIdx =
+        NVPTX::getNamedOperandIdx(LI->getOpcode(), NVPTX::OpName::addsp);
+    assert(AddrIdx != -1 && AddspIdx != -1 && "Expected LD instruction");
+    LI->getOperand(AddrIdx).ChangeToES(ParamSymbol->getSymbolName());
+    LI->getOperand(AddspIdx).ChangeToImmediate(NVPTX::AddressSpace::Param);
   }
   return true;
 }

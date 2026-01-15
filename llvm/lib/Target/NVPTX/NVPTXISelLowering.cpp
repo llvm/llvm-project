@@ -15,6 +15,7 @@
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "NVPTXISelDAGToDAG.h"
+#include "NVPTXMachineFunctionInfo.h"
 #include "NVPTXSelectionDAGInfo.h"
 #include "NVPTXSubtarget.h"
 #include "NVPTXTargetMachine.h"
@@ -7354,7 +7355,8 @@ NVPTXTargetLowering::getTargetMMOFlags(const Instruction &I) const {
   return MachineMemOperand::MONone;
 }
 
-void NVPTXTargetLowering::recordTargetMMOInfo(MachineMemOperand *MMO,
+void NVPTXTargetLowering::recordTargetMMOInfo(MachineFunction &MF,
+                                              MachineMemOperand *MMO,
                                               const Instruction &I,
                                               unsigned OperandNo) const {
   // Check for !mem.cache_hint metadata on memory-accessing instructions.
@@ -7379,10 +7381,9 @@ void NVPTXTargetLowering::recordTargetMMOInfo(MachineMemOperand *MMO,
   if (CacheHint == 0 && CachePolicy == 0)
     return;
 
-  // Store in per-function map keyed by MMO pointer
-  const Function *F = I.getFunction();
-  auto &Data = nvTM->getCachePolicyData(F);
-  Data.MMOMap[MMO] = {CachePolicy, CacheHint};
+  // Store in MachineFunctionInfo keyed by MMO pointer
+  auto *MFI = MF.getInfo<NVPTXMachineFunctionInfo>();
+  MFI->setCachePolicyData(MMO, CachePolicy, CacheHint);
 }
 
 NVPTXTargetLowering::AtomicExpansionKind

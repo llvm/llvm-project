@@ -179,10 +179,11 @@ public:
 
   /// Record cache policy info for a MachineMemOperand.
   /// Called by SelectionDAGBuilder after creating an MMO from an IR
-  /// instruction. Stores policy/hints in a per-MMO map for lookup during
+  /// instruction. Stores policy/hints in MachineFunctionInfo for lookup during
   /// instruction selection. OperandNo specifies which memory operand (for
   /// memcpy: 0=dest, 1=src).
-  void recordTargetMMOInfo(MachineMemOperand *MMO, const Instruction &I,
+  void recordTargetMMOInfo(MachineFunction &MF, MachineMemOperand *MMO,
+                           const Instruction &I,
                            unsigned OperandNo) const override;
 
   AtomicExpansionKind

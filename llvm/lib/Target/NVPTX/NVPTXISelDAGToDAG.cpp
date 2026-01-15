@@ -12,6 +12,7 @@
 
 #include "NVPTXISelDAGToDAG.h"
 #include "NVPTX.h"
+#include "NVPTXMachineFunctionInfo.h"
 #include "NVPTXUtilities.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -70,13 +71,7 @@ bool NVPTXDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   Subtarget = &MF.getSubtarget<NVPTXSubtarget>();
   Scopes = NVPTXScopes(MF.getFunction().getContext());
 
-  bool Result = SelectionDAGISel::runOnMachineFunction(MF);
-
-  // Clear per-function cache policy data after instruction selection completes
-  // to prevent memory growth over time.
-  TM.clearCachePolicyData(&MF.getFunction());
-
-  return Result;
+  return SelectionDAGISel::runOnMachineFunction(MF);
 }
 
 NVPTX::DivPrecisionLevel
@@ -1119,45 +1114,43 @@ bool NVPTXDAGToDAGISel::SelectADDR(SDValue Addr, SDValue &Base,
 
 // Helper to extract cache hint from a MemSDNode via MMO lookup.
 // The cache hint is stored per-MMO by recordTargetMMOInfo().
-static unsigned getCacheHint(const MemSDNode *N, const Function &F,
-                             const NVPTXTargetMachine &TM) {
+static unsigned getCacheHint(const MemSDNode *N,
+                             const NVPTXMachineFunctionInfo *MFI) {
   MachineMemOperand *MMO = N->getMemOperand();
-  if (!MMO)
+  if (!MMO || !MFI)
     return 0;
 
-  auto &Data = TM.getCachePolicyData(&F);
-  auto It = Data.MMOMap.find(MMO);
-  if (It == Data.MMOMap.end())
+  const auto *Data = MFI->getCachePolicyData(MMO);
+  if (!Data)
     return 0;
 
-  return It->second.CacheHint;
+  return Data->CacheHint;
 }
 
 // Helper to get cache policy value if present (for L2::cache_hint mode).
 // Returns the 64-bit policy descriptor stored per-MMO.
-static std::optional<uint64_t> getCachePolicy(const MemSDNode *N,
-                                              const Function &F,
-                                              const NVPTXTargetMachine &TM) {
+static std::optional<uint64_t>
+getCachePolicy(const MemSDNode *N, const NVPTXMachineFunctionInfo *MFI) {
   MachineMemOperand *MMO = N->getMemOperand();
-  if (!MMO)
+  if (!MMO || !MFI)
     return std::nullopt;
 
-  auto &Data = TM.getCachePolicyData(&F);
-  auto It = Data.MMOMap.find(MMO);
-  if (It == Data.MMOMap.end())
+  const auto *Data = MFI->getCachePolicyData(MMO);
+  if (!Data)
     return std::nullopt;
 
   // Only return policy if L2CacheHintFlag is set (indicating policy mode)
-  if (!(It->second.CacheHint & NVPTX::L2CacheHintFlag))
+  if (!(Data->CacheHint & NVPTX::L2CacheHintFlag))
     return std::nullopt;
 
-  return It->second.Policy;
+  return Data->Policy;
 }
 
 std::pair<unsigned, SDValue> NVPTXDAGToDAGISel::getCacheHintAndPolicyReg(
     const MemSDNode *N, unsigned CodeAddrSpace, const SDLoc &DL) {
   // Extract cache hint from MMO flags
-  unsigned CacheHint = getCacheHint(N, MF->getFunction(), TM);
+  auto *MFI = MF->getInfo<NVPTXMachineFunctionInfo>();
+  unsigned CacheHint = getCacheHint(N, MFI);
   SDValue PolicyReg;
 
   // Apply SM version guards for cache hints (from PTX ISA documentation):
@@ -1206,7 +1199,7 @@ std::pair<unsigned, SDValue> NVPTXDAGToDAGISel::getCacheHintAndPolicyReg(
     CacheHint &= ~NVPTX::L2CacheHintFlag;
   } else if (Subtarget->hasL2CacheHint()) {
     // Check for L2::cache_hint with cache-policy (requires SM 80+ and PTX 7.4+)
-    if (auto CachePolicyVal = getCachePolicy(N, MF->getFunction(), TM)) {
+    if (auto CachePolicyVal = getCachePolicy(N, MFI)) {
       SDValue PolicyConst =
           CurDAG->getTargetConstant(*CachePolicyVal, DL, MVT::i64);
       PolicyReg = SDValue(

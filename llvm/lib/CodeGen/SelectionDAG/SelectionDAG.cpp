@@ -8902,7 +8902,7 @@ getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
         // Call hook for target-specific cache hint recording (operand 0 =
         // dest).
         if (CI)
-          TLI.recordTargetMMOInfo(StoreMMO, *CI, /*OperandNo=*/0);
+          TLI.recordTargetMMOInfo(MF, StoreMMO, *CI, /*OperandNo=*/0);
 
         Store = DAG.getStore(Chain, dl, Value, DstPtrOff, StoreMMO);
         OutChains.push_back(Store);
@@ -8946,7 +8946,7 @@ getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
           commonAlignment(*SrcAlign, SrcOff), NewAAInfo);
       // Call hook for target-specific cache hint recording (operand 1 = src).
       if (CI)
-        TLI.recordTargetMMOInfo(LoadMMO, *CI, /*OperandNo=*/1);
+        TLI.recordTargetMMOInfo(MF, LoadMMO, *CI, /*OperandNo=*/1);
 
       Value =
           DAG.getExtLoad(ISD::EXTLOAD, dl, NVT, Chain, SrcPtrOff, VT, LoadMMO);
@@ -8958,7 +8958,7 @@ getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
                                   VTSize, Alignment, NewAAInfo);
       // Call hook for target-specific cache hint recording (operand 0 = dest).
       if (CI)
-        TLI.recordTargetMMOInfo(StoreMMO, *CI, /*OperandNo=*/0);
+        TLI.recordTargetMMOInfo(MF, StoreMMO, *CI, /*OperandNo=*/0);
 
       Store = DAG.getTruncStore(Chain, dl, Value, DstPtrOff, VT, StoreMMO);
       OutStoreChains.push_back(Store);
