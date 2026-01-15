@@ -1,5 +1,5 @@
 // This test verifies that only strict hashing includes search paths and
-// diagnostics in the module context hash.
+// diagnostics in the context hash.
 
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -fsyntax-only -internal-isystem \
