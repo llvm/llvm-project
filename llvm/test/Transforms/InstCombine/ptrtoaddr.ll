@@ -309,3 +309,53 @@ define i32 @ptrtoaddr_of_gep_of_null_addrsize(i32 %offset) {
   %addr = ptrtoaddr ptr addrspace(1) %gep to i32
   ret i32 %addr
 }
+
+define i1 @ptrtoaddr_knownbits(ptr align 4 %p) {
+; CHECK-LABEL: define i1 @ptrtoaddr_knownbits(
+; CHECK-SAME: ptr align 4 [[P:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %p.addr = ptrtoaddr ptr %p to i64
+  %and = and i64 %p.addr, 3
+  %cmp = icmp eq i64 %and, 0
+  ret i1 %cmp
+}
+
+define i1 @ptrtoaddr_knownbits_mask_too_large(ptr align 4 %p) {
+; CHECK-LABEL: define i1 @ptrtoaddr_knownbits_mask_too_large(
+; CHECK-SAME: ptr align 4 [[P:%.*]]) {
+; CHECK-NEXT:    [[P_ADDR:%.*]] = ptrtoaddr ptr [[P]] to i64
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[P_ADDR]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[AND]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %p.addr = ptrtoaddr ptr %p to i64
+  %and = and i64 %p.addr, 7
+  %cmp = icmp eq i64 %and, 0
+  ret i1 %cmp
+}
+
+define i1 @ptrtoaddr_knownbits_addrsize(ptr addrspace(1) align 4 %p) {
+; CHECK-LABEL: define i1 @ptrtoaddr_knownbits_addrsize(
+; CHECK-SAME: ptr addrspace(1) align 4 [[P:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %p.addr = ptrtoaddr ptr addrspace(1) %p to i32
+  %and = and i32 %p.addr, 3
+  %cmp = icmp eq i32 %and, 0
+  ret i1 %cmp
+}
+
+define i1 @ptrtoaddr_knownbits_addrsize_mask_too_large(ptr addrspace(1) align 4 %p) {
+; CHECK-LABEL: define i1 @ptrtoaddr_knownbits_addrsize_mask_too_large(
+; CHECK-SAME: ptr addrspace(1) align 4 [[P:%.*]]) {
+; CHECK-NEXT:    [[P_ADDR:%.*]] = ptrtoaddr ptr addrspace(1) [[P]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[P_ADDR]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %p.addr = ptrtoaddr ptr addrspace(1) %p to i32
+  %and = and i32 %p.addr, 7
+  %cmp = icmp eq i32 %and, 0
+  ret i1 %cmp
+}

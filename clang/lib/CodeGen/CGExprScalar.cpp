@@ -2130,7 +2130,7 @@ Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
     MB.CreateIndexAssumption(RowIdx, NumRows);
 
   Value *FlatMatrix = Visit(E->getBase());
-  llvm::Type *ElemTy = CGF.ConvertType(MatrixTy->getElementType());
+  llvm::Type *ElemTy = CGF.ConvertTypeForMem(MatrixTy->getElementType());
   auto *ResultTy = llvm::FixedVectorType::get(ElemTy, NumColumns);
   Value *RowVec = llvm::PoisonValue::get(ResultTy);
 
@@ -2146,7 +2146,7 @@ Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
     RowVec = Builder.CreateInsertElement(RowVec, Elt, Lane, "matrix_row_ins");
   }
 
-  return RowVec;
+  return CGF.EmitFromMemory(RowVec, E->getType());
 }
 
 Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
@@ -3333,7 +3333,10 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
       value = EmitOverflowCheckedBinOp(createBinOpInfoFromIncDec(
           E, value, isInc, E->getFPFeaturesInEffect(CGF.getLangOpts())));
     } else {
-      llvm::Value *amt = llvm::ConstantInt::get(value->getType(), amount, true);
+      // Treat positive amount as unsigned to support inc of i1 (needed for
+      // unsigned _BitInt(1)).
+      llvm::Value *amt =
+          llvm::ConstantInt::get(value->getType(), amount, !isInc);
       value = Builder.CreateAdd(value, amt, isInc ? "inc" : "dec");
     }
 

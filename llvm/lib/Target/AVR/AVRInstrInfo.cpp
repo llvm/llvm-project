@@ -160,7 +160,7 @@ void AVRInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MI,
                                         Register DestReg, int FrameIndex,
                                         const TargetRegisterClass *RC,
-                                        Register VReg,
+                                        Register VReg, unsigned SubReg,
                                         MachineInstr::MIFlag Flags) const {
   MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
