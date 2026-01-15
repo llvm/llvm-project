@@ -46,4 +46,6 @@ int main(int, char**) {
         i[-2],
         "__capacity_aware_iterator::operator[]: Attempting to index iterator past its container's possible range");
   }
+
+  return 0;
 }

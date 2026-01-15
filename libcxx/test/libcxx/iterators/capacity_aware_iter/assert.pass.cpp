@@ -12,7 +12,7 @@
 // template <class _Iterator, class _Container, class _ContainerMaxElements>
 // struct __capacity_aware_iterator;
 
-// Check assert failure if advancing, rewinding or indexing iterator past _ContainerMaxElements
+// Check assert failure if advancing, rewinding or indexing iterator past its maximum range size
 
 #include <__iterator/capacity_aware_iterator.h>
 #include <iterator>
@@ -57,7 +57,7 @@ void test() {
 }
 
 int main(int, char**) {
-  test<cpp20_random_access_iterator<int*>>();
+  test<contiguous_iterator<int*>>();
 
   return 0;
 }

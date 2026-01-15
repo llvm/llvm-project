@@ -13,6 +13,14 @@
 
 // Comparison operators
 
+// operator==
+// operator!=
+// operator<
+// operator<=
+// operator>
+// operator>=
+// operator<=>
+
 #include <__iterator/capacity_aware_iterator.h>
 #include <compare>
 #include <iterator>
@@ -86,8 +94,8 @@ constexpr bool test() {
 }
 
 int main(int, char**) {
-  assert(test<cpp20_random_access_iterator<int*>>());
-  static_assert(test<cpp20_random_access_iterator<int*>>());
+  assert(test<contiguous_iterator<int*>>());
+  static_assert(test<contiguous_iterator<int*>>());
 
   return 0;
 }

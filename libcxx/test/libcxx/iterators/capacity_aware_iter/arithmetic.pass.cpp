@@ -13,6 +13,17 @@
 
 // Arithmetic operators
 
+// operator++()
+// operator++(int)
+// operator--()
+// operator--(int)
+// operator+=(difference_type)
+// operator+(__capacity_aware_iterator, difference_type)
+// operator+(difference_type, __capacity_aware_iterator)
+// operator-=(difference_type)
+// operator-(__capacity_aware_iterator, difference_type)
+// operator-(__capacity_aware_iterator, __capacity_aware_iterator)
+
 #include <__iterator/capacity_aware_iterator.h>
 #include <cstddef>
 #include <iterator>
@@ -125,8 +136,8 @@ constexpr bool test() {
 }
 
 int main(int, char**) {
-  assert(test<cpp20_random_access_iterator<int*>>());
-  static_assert(test<cpp20_random_access_iterator<int*>>());
+  assert(test<contiguous_iterator<int*>>());
+  static_assert(test<contiguous_iterator<int*>>());
 
   return 0;
 }

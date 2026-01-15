@@ -717,16 +717,13 @@ private:
   using __pointer _LIBCPP_NODEBUG       = add_pointer_t<_Tp>;
   using __const_pointer _LIBCPP_NODEBUG = add_pointer_t<const _Tp>;
 
-  template <typename _Underlying>
-  using __iter _LIBCPP_NODEBUG = __capacity_aware_iterator<_Underlying, optional<_Tp>, 1>;
-
 public:
 #      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
   using iterator       = __bounded_iter<__wrap_iter<__pointer>>;
   using const_iterator = __bounded_iter<__wrap_iter<__const_pointer>>;
 #      else
-  using iterator       = __iter<__wrap_iter<__pointer>>;
-  using const_iterator = __iter<__wrap_iter<__const_pointer>>;
+  using iterator       = __capacity_aware_iterator<__wrap_iter<__pointer>, optional<_Tp>, 1>;
+  using const_iterator = __capacity_aware_iterator<__wrap_iter<__const_pointer>, optional<_Tp>, 1>;
 #      endif
 
   // [optional.iterators], iterator support
@@ -740,7 +737,8 @@ public:
         __wrap_iter<__pointer>(__ptr),
         __wrap_iter<__pointer>(__ptr) + (__derived_self.has_value() ? 1 : 0));
 #      else
-    return iterator(__wrap_iter<__pointer>(__ptr));
+    return std::__make_capacity_aware_iterator<__wrap_iter<__pointer>, optional<_Tp>, 1>(
+        __wrap_iter<__pointer>(__ptr));
 #      endif
   }
 
@@ -754,7 +752,8 @@ public:
         __wrap_iter<__const_pointer>(__ptr),
         __wrap_iter<__const_pointer>(__ptr) + (__derived_self.has_value() ? 1 : 0));
 #      else
-    return const_iterator(__wrap_iter<__const_pointer>(__ptr));
+    return std::__make_capacity_aware_iterator<__wrap_iter<__const_pointer>, optional<_Tp>, 1>(
+        __wrap_iter<__const_pointer>(__ptr));
 #      endif
   }
 
@@ -769,16 +768,13 @@ public:
 template <class _Tp>
 struct __optional_iterator<_Tp&, enable_if_t<is_object_v<_Tp> && !__is_unbounded_array_v<_Tp> >> {
 private:
-  template <typename _Underlying>
-  using __iter _LIBCPP_NODEBUG = __capacity_aware_iterator<_Underlying, optional<_Tp&>, 1>;
-
   using __pointer _LIBCPP_NODEBUG = add_pointer_t<_Tp>;
 
 public:
 #      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
   using iterator = __bounded_iter<__wrap_iter<__pointer>>;
 #      else
-  using iterator = __iter<__wrap_iter<__pointer>>;
+  using iterator = __capacity_aware_iterator<__wrap_iter<__pointer>, optional<_Tp&>, 1>;
 #      endif
 
   // [optional.ref.iterators], iterator support
@@ -793,7 +789,8 @@ public:
         __wrap_iter<__pointer>(__ptr),
         __wrap_iter<__pointer>(__ptr) + (__derived_self.has_value() ? 1 : 0));
 #      else
-    return iterator(__wrap_iter<__pointer>(__ptr));
+    return std::__make_capacity_aware_iterator<__wrap_iter<__pointer>, optional<_Tp&>, 1>(
+        __wrap_iter<__pointer>(__ptr));
 #      endif
   }
 

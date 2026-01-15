@@ -34,36 +34,27 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// __capacity_aware_iterator is an iterator that wraps an underlying iterator.
-// It stores the underlying container type to prevent mixing iterators, and allow algorithms
-// to optimize based on the underlying container type.
-// It also encodes the container's (known at compile-time) maximum amount of elements as part of the type.
-// As of writing, the only standard library containers which have this property are inplace_vector and optional.
+// __capacity_aware_iterator is an iterator that wraps a contiguous iterator and encodes the maximum number of
+// elements that can appear in a range of such iterators. That maximum number of elements must be known at compile-time.
+//
+// It also embeds a tag type to prevent mixing iterators from e.g. different containers. This also allows for some algorithms
+// to detect this iterator and perform optimizations based on the added semantic information.
+//
+// As of writing, the only standard library containers which fulfill the requirements are inplace_vector and optional.
 
-template <class _Iter, class _Container, std::size_t _ContainerMaxElements>
+template <class _Iter, class _Tag, std::size_t _RangeMaxElements>
 class __capacity_aware_iterator {
 private:
   _Iter __iter_;
 
-  friend _Container;
-
-  _LIBCPP_HIDE_FROM_ABI static constexpr auto __get_iter_concept() {
-    if constexpr (contiguous_iterator<_Iter>) {
-      return contiguous_iterator_tag{};
-    } else if constexpr (random_access_iterator<_Iter>) {
-      return random_access_iterator_tag{};
-    } else if constexpr (bidirectional_iterator<_Iter>) {
-      return bidirectional_iterator_tag{};
-    } else if constexpr (forward_iterator<_Iter>) {
-      return forward_iterator_tag{};
-    } else {
-      return input_iterator_tag{};
-    }
-  }
+  template <class, class, std::size_t>
+  friend class __capacity_aware_iterator;
 
 public:
+  static_assert(contiguous_iterator<_Iter>, "__capacity_aware_iterator can only be used with contiguous iterators");
+
   using iterator_category = iterator_traits<_Iter>::iterator_category;
-  using iterator_concept  = decltype(__get_iter_concept());
+  using iterator_concept  = contiguous_iterator_tag;
   using difference_type   = iter_difference_t<_Iter>;
   using pointer           = iterator_traits<_Iter>::pointer;
   using reference         = iter_reference_t<_Iter>;
@@ -76,20 +67,16 @@ public:
   template <typename _Iter2>
     requires is_convertible_v<_Iter2, _Iter>
   _LIBCPP_HIDE_FROM_ABI constexpr __capacity_aware_iterator(
-      const __capacity_aware_iterator<_Iter2, _Container, _ContainerMaxElements>& __y)
-      : __iter_(__y.base()) {}
+      const __capacity_aware_iterator<_Iter2, _Tag, _RangeMaxElements>& __y)
+      : __iter_(__y.__iter_) {}
+
+  template <class _It, class _Tag2, size_t _RangeMaxElems2>
+  _LIBCPP_HIDE_FROM_ABI friend constexpr auto __make_capacity_aware_iterator(_It __iter);
 
 private:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __capacity_aware_iterator(_Iter __iter) : __iter_(std::move(__iter)) {}
 
-  template <typename _Tp, class>
-  friend struct __optional_iterator;
-
-  template <class _It, class _Container2, size_t _ContainerMaxElems2>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr auto __make_capacity_aware_iterator(_It __iter);
-
 public:
-  _LIBCPP_HIDE_FROM_ABI constexpr _Iter base() const noexcept { return __iter_; }
   _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const { return *__iter_; }
   _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator->() const
     requires requires { __iter_.operator->(); }
@@ -121,7 +108,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr __capacity_aware_iterator& operator+=(difference_type __n) {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        static_cast<size_t>((__n >= 0 ? __n : -__n)) <= _ContainerMaxElements,
+        static_cast<size_t>((__n >= 0 ? __n : -__n)) <= _RangeMaxElements,
         "__capacity_aware_iterator::operator+=: Attempting to move iterator past its container's possible range");
 
     __iter_ += __n;
@@ -130,7 +117,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr __capacity_aware_iterator& operator-=(difference_type __n) {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        static_cast<size_t>((__n >= 0 ? __n : -__n)) <= _ContainerMaxElements,
+        static_cast<size_t>((__n >= 0 ? __n : -__n)) <= _RangeMaxElements,
         "__capacity_aware_iterator::operator-=: Attempting to move iterator past its container's possible range");
 
     __iter_ -= __n;
@@ -139,7 +126,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator[](difference_type __n) const {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        static_cast<size_t>(__n >= 0 ? __n : -__n) < _ContainerMaxElements,
+        static_cast<size_t>(__n >= 0 ? __n : -__n) < _RangeMaxElements,
         "__capacity_aware_iterator::operator[]: Attempting to index iterator past its container's possible range");
     return *(*this + __n);
   }
@@ -186,13 +173,13 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
   operator-(const __capacity_aware_iterator& __x, const __capacity_aware_iterator& __y) {
-    return difference_type(__x.base() - __y.base());
+    return difference_type(__x.__iter_ - __y.__iter_);
   }
 };
 
-template <class _It, class _Container2, size_t _ContainerMaxElems2>
+template <class _It, class _Tag2, size_t _RangeMaxElems2>
 _LIBCPP_HIDE_FROM_ABI constexpr auto __make_capacity_aware_iterator(_It __iter) {
-  return __capacity_aware_iterator<_It, _Container2, _ContainerMaxElems2>(__iter);
+  return __capacity_aware_iterator<_It, _Tag2, _RangeMaxElems2>(__iter);
 }
 
 _LIBCPP_END_NAMESPACE_STD

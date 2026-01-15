@@ -13,6 +13,10 @@
 
 // Dereference operators
 
+// operator[](difference_type)
+// operator*();
+// operator->();
+
 #include <__iterator/capacity_aware_iterator.h>
 
 #include "test_iterators.h"
