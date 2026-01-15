@@ -341,8 +341,7 @@ public:
     for (const auto &accObject : x.v.v) {
       if (const auto *designator{
               std::get_if<parser::Designator>(&accObject.u)}) {
-        if (const auto *name{
-                parser::GetDesignatorNameIfDataRef(*designator)}) {
+        if (const auto *name{parser::GetDesignatorNameIfDataRef(*designator)}) {
           if (name->symbol) {
             if (HasUseDeviceObject(*name->symbol)) {
               context_.Say(name->source,
@@ -403,7 +402,9 @@ private:
       Symbol &, const parser::OpenACCRoutineConstruct &);
 
   // Track use_device variables
-  void AddUseDeviceObject(SymbolRef object) { useDeviceObjects_.insert(object); }
+  void AddUseDeviceObject(SymbolRef object) {
+    useDeviceObjects_.insert(object);
+  }
   void ClearUseDeviceObjects() { useDeviceObjects_.clear(); }
   bool HasUseDeviceObject(const Symbol &object) {
     return useDeviceObjects_.find(object) != useDeviceObjects_.end();
