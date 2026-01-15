@@ -196,7 +196,7 @@
     __attribute__((availability(bridgeos, strict, introduced = 6.0)))                                             \
     __attribute__((availability(driverkit, strict, introduced = 21.3)))
 
-#  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)  && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__  < 101300) || \
+#  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)  && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__  < 110000) || \
       (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 150000) || \
       (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__)     && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__     < 150000) || \
       (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__)  && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__  < 70000)  || \
