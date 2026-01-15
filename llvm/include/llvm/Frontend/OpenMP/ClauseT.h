@@ -1264,7 +1264,7 @@ struct ToT {
   std::tuple<OPT(Expectation), OPT(Mappers), OPT(Iterator), LocatorList> t;
 };
 
-// [6.0:440-441] `transparent` clause
+// [6.0:510:25] `transparent` clause
 template <typename T, typename I, typename E> //
 struct TransparentT {
   using IncompleteTrait = std::true_type;
