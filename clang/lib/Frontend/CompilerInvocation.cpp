@@ -5617,7 +5617,8 @@ static bool isExtHandlingFromDiagsError(DiagnosticsEngine &Diags) {
   return Ext >= diag::Severity::Error;
 }
 
-std::string CompilerInvocation::getModuleHash(DiagnosticsEngine &Diags) const {
+std::string
+CompilerInvocation::computeContextHash(DiagnosticsEngine &Diags) const {
   // FIXME: Consider using SHA1 instead of MD5.
   llvm::HashBuilder<llvm::MD5, llvm::endianness::native> HBuilder;
 
