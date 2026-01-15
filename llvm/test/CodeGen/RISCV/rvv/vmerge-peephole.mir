@@ -128,7 +128,6 @@ body: |
     ; CHECK-NEXT: %passthru:vrnov0 = COPY $v8
     ; CHECK-NEXT: %mask:vmv0 = COPY $v0
     ; CHECK-NEXT: %z:vrnov0 = PseudoVLE32_V_M1_MASK %passthru, $noreg, %mask, %avl, 5 /* e32 */, 0 /* tu, mu */ :: (load unknown-size, align 1)
-    ; CHECK-NEXT: %y:vrnov0 = COPY %z
     %avl:gprnox0 = COPY $x8
     %passthru:vrnov0 = COPY $v8
     %x:vr = PseudoVLE32_V_M1 $noreg, $noreg, %avl, 5 /* e32 */, 2 /* tu, ma */ :: (load unknown-size)
@@ -196,10 +195,7 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:vmv0 = IMPLICIT_DEF
   ; CHECK-NEXT:   early-clobber %7:vrm8nov0 = PseudoVZEXT_VF8_M8_MASK undef [[DEF1]], killed undef [[DEF]], [[DEF2]], 16, 6 /* e64 */, 1 /* ta, mu */
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vrm8nov0 = COPY %7
-  ; CHECK-NEXT:   %a123:vrm8 = COPY [[COPY]]
-  ; CHECK-NEXT:   %b123:vrm8nov0 = COPY %a123
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vrm8 = COPY killed %7
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vrm8 = COPY killed %7
   ; CHECK-NEXT:   PseudoRET
   bb.0:
     successors: %bb.1

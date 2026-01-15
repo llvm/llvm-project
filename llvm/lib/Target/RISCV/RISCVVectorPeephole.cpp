@@ -740,8 +740,7 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
   if (RISCV::getRVVMCOpcode(MI.getOpcode()) != RISCV::VMERGE_VVM)
     return false;
 
-  // Collect chain of COPYs on True's result in case we need to do code motion
-  // later.
+  // Collect chain of COPYs on True's result for later cleanup.
   SmallVector<MachineInstr *, 4> TrueCopies;
   Register PassthruReg = lookThruCopies(MI.getOperand(1).getReg());
   Register FalseReg = lookThruCopies(MI.getOperand(2).getReg());
@@ -834,11 +833,6 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
   // be the same.
   if (!ensureDominates(MaskOp, True))
     return false;
-  for (MachineInstr *TrueCopy : TrueCopies) {
-    [[maybe_unused]] bool CanDominate =
-        ensureDominates(True.getOperand(0), *TrueCopy);
-    assert(CanDominate && "True should always be able to dominate its COPYs");
-  }
 
   if (NeedsCommute) {
     auto [OpIdx1, OpIdx2] = *NeedsCommute;
@@ -874,6 +868,11 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
   // We should clear the IsKill flag since we have a new use now.
   MRI->clearKillFlags(FalseReg);
   MI.eraseFromParent();
+
+  // Cleanup all the COPYs on True's value. We have to manually do this because
+  // sometimes sinking True causes these COPY to be invalid (use before define).
+  for (MachineInstr *TrueCopy : TrueCopies)
+    TrueCopy->eraseFromParent();
 
   return true;
 }
