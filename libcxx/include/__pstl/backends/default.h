@@ -410,7 +410,7 @@ struct __is_sorted<__default_backend_tag, _ExecutionPolicy> {
           std::move(__first2),
           true,
           std::logical_and{},
-          [&](_Ref __first, _Ref __second) -> bool { return !__comp(__second, __first); });
+          [&](_Ref __left, _Ref __right) -> bool { return !__comp(__right, __left); });
     } else {
       // Currently anything outside random access iterators has to be processed serially
       return std::is_sorted(std::move(__first), std::move(__last), std::forward<_Comp>(__comp));
