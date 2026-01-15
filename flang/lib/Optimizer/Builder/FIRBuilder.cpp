@@ -859,21 +859,32 @@ mlir::Value fir::FirOpBuilder::genIsNullAddr(mlir::Location loc,
                                   mlir::arith::CmpIPredicate::eq);
 }
 
-mlir::Value fir::FirOpBuilder::genExtentFromTriplet(mlir::Location loc,
-                                                    mlir::Value lb,
-                                                    mlir::Value ub,
-                                                    mlir::Value step,
-                                                    mlir::Type type) {
+template <typename OpTy, typename... Args>
+static mlir::Value createAndMaybeFold(bool fold, fir::FirOpBuilder &builder,
+                                      mlir::Location loc, Args &&...args) {
+  if (fold)
+    return builder.createOrFold<OpTy>(loc, std::forward<Args>(args)...);
+  return OpTy::create(builder, loc, std::forward<Args>(args)...);
+}
+
+mlir::Value
+fir::FirOpBuilder::genExtentFromTriplet(mlir::Location loc, mlir::Value lb,
+                                        mlir::Value ub, mlir::Value step,
+                                        mlir::Type type, bool fold) {
   auto zero = createIntegerConstant(loc, type, 0);
   lb = createConvert(loc, type, lb);
   ub = createConvert(loc, type, ub);
   step = createConvert(loc, type, step);
-  auto diff = mlir::arith::SubIOp::create(*this, loc, ub, lb);
-  auto add = mlir::arith::AddIOp::create(*this, loc, diff, step);
-  auto div = mlir::arith::DivSIOp::create(*this, loc, add, step);
-  auto cmp = mlir::arith::CmpIOp::create(
-      *this, loc, mlir::arith::CmpIPredicate::sgt, div, zero);
-  return mlir::arith::SelectOp::create(*this, loc, cmp, div, zero);
+
+  auto diff = createAndMaybeFold<mlir::arith::SubIOp>(fold, *this, loc, ub, lb);
+  auto add =
+      createAndMaybeFold<mlir::arith::AddIOp>(fold, *this, loc, diff, step);
+  auto div =
+      createAndMaybeFold<mlir::arith::DivSIOp>(fold, *this, loc, add, step);
+  auto cmp = createAndMaybeFold<mlir::arith::CmpIOp>(
+      fold, *this, loc, mlir::arith::CmpIPredicate::sgt, div, zero);
+  return createAndMaybeFold<mlir::arith::SelectOp>(fold, *this, loc, cmp, div,
+                                                   zero);
 }
 
 mlir::Value fir::FirOpBuilder::genAbsentOp(mlir::Location loc,

@@ -47,8 +47,7 @@ TEST_F(VPUncountableExitTest, FindUncountableExitRecipes) {
   Function *F = M.getFunction("f");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
   auto Plan = buildVPlan(LoopHeader, /*HasUncountableExit=*/true);
-  VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
-      *Plan, [](PHINode *P) { return nullptr; }, *TLI);
+  VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(*Plan, *TLI);
   VPlanTransforms::runPass(VPlanTransforms::optimize, *Plan);
 
   SmallVector<VPRecipeBase *> Recipes;
@@ -84,8 +83,7 @@ TEST_F(VPUncountableExitTest, NoUncountableExit) {
   Function *F = M.getFunction("f");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
   auto Plan = buildVPlan(LoopHeader);
-  VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
-      *Plan, [](PHINode *P) { return nullptr; }, *TLI);
+  VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(*Plan, *TLI);
   VPlanTransforms::runPass(VPlanTransforms::optimize, *Plan);
 
   SmallVector<VPRecipeBase *> Recipes;

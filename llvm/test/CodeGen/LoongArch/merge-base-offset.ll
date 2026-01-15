@@ -11,8 +11,9 @@
 define dso_local signext i8 @load_s8() nounwind {
 ; LA32-LABEL: load_s8:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_i8)
-; LA32-NEXT:    ld.b $a0, $a0, %pc_lo12(g_i8)
+; LA32-NEXT:  .Lpcadd_hi0:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_i8)
+; LA32-NEXT:    ld.b $a0, $a0, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_s8:
@@ -37,8 +38,9 @@ entry:
 define dso_local zeroext i8 @load_u8() nounwind {
 ; LA32-LABEL: load_u8:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_i8)
-; LA32-NEXT:    ld.bu $a0, $a0, %pc_lo12(g_i8)
+; LA32-NEXT:  .Lpcadd_hi1:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_i8)
+; LA32-NEXT:    ld.bu $a0, $a0, %pcadd_lo12(.Lpcadd_hi1)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_u8:
@@ -63,9 +65,10 @@ entry:
 define dso_local void @store_i8() nounwind {
 ; LA32-LABEL: store_i8:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_i8)
+; LA32-NEXT:  .Lpcadd_hi2:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_i8)
 ; LA32-NEXT:    ori $a1, $zero, 1
-; LA32-NEXT:    st.b $a1, $a0, %pc_lo12(g_i8)
+; LA32-NEXT:    st.b $a1, $a0, %pcadd_lo12(.Lpcadd_hi2)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: store_i8:
@@ -94,8 +97,9 @@ entry:
 define dso_local signext i16 @load_s16() nounwind {
 ; LA32-LABEL: load_s16:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_i16)
-; LA32-NEXT:    ld.h $a0, $a0, %pc_lo12(g_i16)
+; LA32-NEXT:  .Lpcadd_hi3:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_i16)
+; LA32-NEXT:    ld.h $a0, $a0, %pcadd_lo12(.Lpcadd_hi3)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_s16:
@@ -120,8 +124,9 @@ entry:
 define dso_local zeroext i16 @load_u16() nounwind {
 ; LA32-LABEL: load_u16:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_i16)
-; LA32-NEXT:    ld.hu $a0, $a0, %pc_lo12(g_i16)
+; LA32-NEXT:  .Lpcadd_hi4:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_i16)
+; LA32-NEXT:    ld.hu $a0, $a0, %pcadd_lo12(.Lpcadd_hi4)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_u16:
@@ -146,9 +151,10 @@ entry:
 define dso_local void @store_i16() nounwind {
 ; LA32-LABEL: store_i16:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_i16)
+; LA32-NEXT:  .Lpcadd_hi5:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_i16)
 ; LA32-NEXT:    ori $a1, $zero, 1
-; LA32-NEXT:    st.h $a1, $a0, %pc_lo12(g_i16)
+; LA32-NEXT:    st.h $a1, $a0, %pcadd_lo12(.Lpcadd_hi5)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: store_i16:
@@ -177,8 +183,9 @@ entry:
 define dso_local signext i32 @load_s32() nounwind {
 ; LA32-LABEL: load_s32:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_i32)
-; LA32-NEXT:    ld.w $a0, $a0, %pc_lo12(g_i32)
+; LA32-NEXT:  .Lpcadd_hi6:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_i32)
+; LA32-NEXT:    ld.w $a0, $a0, %pcadd_lo12(.Lpcadd_hi6)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_s32:
@@ -203,8 +210,9 @@ entry:
 define dso_local zeroext i32 @load_u32() nounwind {
 ; LA32-LABEL: load_u32:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_i32)
-; LA32-NEXT:    ld.w $a0, $a0, %pc_lo12(g_i32)
+; LA32-NEXT:  .Lpcadd_hi7:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_i32)
+; LA32-NEXT:    ld.w $a0, $a0, %pcadd_lo12(.Lpcadd_hi7)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_u32:
@@ -229,9 +237,10 @@ entry:
 define dso_local void @store_i32() nounwind {
 ; LA32-LABEL: store_i32:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_i32)
+; LA32-NEXT:  .Lpcadd_hi8:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_i32)
 ; LA32-NEXT:    ori $a1, $zero, 1
-; LA32-NEXT:    st.w $a1, $a0, %pc_lo12(g_i32)
+; LA32-NEXT:    st.w $a1, $a0, %pcadd_lo12(.Lpcadd_hi8)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: store_i32:
@@ -260,8 +269,9 @@ entry:
 define dso_local i64 @load_i64() nounwind {
 ; LA32-LABEL: load_i64:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_i64)
-; LA32-NEXT:    addi.w $a1, $a0, %pc_lo12(g_i64)
+; LA32-NEXT:  .Lpcadd_hi9:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_i64)
+; LA32-NEXT:    addi.w $a1, $a0, %pcadd_lo12(.Lpcadd_hi9)
 ; LA32-NEXT:    ld.w $a0, $a1, 0
 ; LA32-NEXT:    ld.w $a1, $a1, 4
 ; LA32-NEXT:    ret
@@ -288,8 +298,9 @@ entry:
 define dso_local void @store_i64() nounwind {
 ; LA32-LABEL: store_i64:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_i64)
-; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(g_i64)
+; LA32-NEXT:  .Lpcadd_hi10:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_i64)
+; LA32-NEXT:    addi.w $a0, $a0, %pcadd_lo12(.Lpcadd_hi10)
 ; LA32-NEXT:    st.w $zero, $a0, 4
 ; LA32-NEXT:    ori $a1, $zero, 1
 ; LA32-NEXT:    st.w $a1, $a0, 0
@@ -321,8 +332,9 @@ entry:
 define dso_local float @load_f32() nounwind {
 ; LA32-LABEL: load_f32:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_f32)
-; LA32-NEXT:    fld.s $fa0, $a0, %pc_lo12(g_f32)
+; LA32-NEXT:  .Lpcadd_hi11:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_f32)
+; LA32-NEXT:    fld.s $fa0, $a0, %pcadd_lo12(.Lpcadd_hi11)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_f32:
@@ -347,9 +359,10 @@ entry:
 define dso_local void @store_f32() nounwind {
 ; LA32-LABEL: store_f32:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_f32)
+; LA32-NEXT:  .Lpcadd_hi12:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_f32)
 ; LA32-NEXT:    lu12i.w $a1, 260096
-; LA32-NEXT:    st.w $a1, $a0, %pc_lo12(g_f32)
+; LA32-NEXT:    st.w $a1, $a0, %pcadd_lo12(.Lpcadd_hi12)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: store_f32:
@@ -378,8 +391,9 @@ entry:
 define dso_local double @load_f64() nounwind {
 ; LA32-LABEL: load_f64:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_f64)
-; LA32-NEXT:    fld.d $fa0, $a0, %pc_lo12(g_f64)
+; LA32-NEXT:  .Lpcadd_hi13:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_f64)
+; LA32-NEXT:    fld.d $fa0, $a0, %pcadd_lo12(.Lpcadd_hi13)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_f64:
@@ -404,9 +418,10 @@ entry:
 define dso_local void @store_f64() nounwind {
 ; LA32-LABEL: store_f64:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_f64)
+; LA32-NEXT:  .Lpcadd_hi14:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_f64)
 ; LA32-NEXT:    vldi $vr0, -912
-; LA32-NEXT:    fst.d $fa0, $a0, %pc_lo12(g_f64)
+; LA32-NEXT:    fst.d $fa0, $a0, %pcadd_lo12(.Lpcadd_hi14)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: store_f64:
@@ -435,8 +450,9 @@ entry:
 define dso_local void @store_multi() nounwind {
 ; LA32-LABEL: store_multi:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_m64)
-; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(g_m64)
+; LA32-NEXT:  .Lpcadd_hi15:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_m64)
+; LA32-NEXT:    addi.w $a0, $a0, %pcadd_lo12(.Lpcadd_hi15)
 ; LA32-NEXT:    st.w $zero, $a0, 4
 ; LA32-NEXT:    ori $a1, $zero, 1
 ; LA32-NEXT:    st.w $a1, $a0, 0
@@ -476,9 +492,10 @@ entry:
 define dso_local void @store_sf32() nounwind {
 ; LA32-LABEL: store_sf32:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_sf32)
-; LA32-NEXT:    fld.s $fa0, $a0, %pc_lo12(g_sf32)
-; LA32-NEXT:    fst.s $fa0, $a0, %pc_lo12(g_sf32)
+; LA32-NEXT:  .Lpcadd_hi16:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_sf32)
+; LA32-NEXT:    fld.s $fa0, $a0, %pcadd_lo12(.Lpcadd_hi16)
+; LA32-NEXT:    fst.s $fa0, $a0, %pcadd_lo12(.Lpcadd_hi16)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: store_sf32:
@@ -508,9 +525,10 @@ entry:
 define dso_local void @store_sf64() nounwind {
 ; LA32-LABEL: store_sf64:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_sf64)
-; LA32-NEXT:    fld.d $fa0, $a0, %pc_lo12(g_sf64)
-; LA32-NEXT:    fst.d $fa0, $a0, %pc_lo12(g_sf64)
+; LA32-NEXT:  .Lpcadd_hi17:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_sf64)
+; LA32-NEXT:    fld.d $fa0, $a0, %pcadd_lo12(.Lpcadd_hi17)
+; LA32-NEXT:    fst.d $fa0, $a0, %pcadd_lo12(.Lpcadd_hi17)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: store_sf64:
@@ -541,10 +559,12 @@ entry:
 define dso_local void @copy_i32x4() nounwind {
 ; LA32-LABEL: copy_i32x4:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_i32x4_src)
-; LA32-NEXT:    vld $vr0, $a0, %pc_lo12(g_i32x4_src)
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_i32x4_dst)
-; LA32-NEXT:    vst $vr0, $a0, %pc_lo12(g_i32x4_dst)
+; LA32-NEXT:  .Lpcadd_hi18:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_i32x4_src)
+; LA32-NEXT:    vld $vr0, $a0, %pcadd_lo12(.Lpcadd_hi18)
+; LA32-NEXT:  .Lpcadd_hi19:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_i32x4_dst)
+; LA32-NEXT:    vst $vr0, $a0, %pcadd_lo12(.Lpcadd_hi19)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: copy_i32x4:
@@ -580,10 +600,12 @@ entry:
 define dso_local void @copy_i32x8() nounwind {
 ; LA32-LABEL: copy_i32x8:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_i32x8_src)
-; LA32-NEXT:    xvld $xr0, $a0, %pc_lo12(g_i32x8_src)
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_i32x8_dst)
-; LA32-NEXT:    xvst $xr0, $a0, %pc_lo12(g_i32x8_dst)
+; LA32-NEXT:  .Lpcadd_hi20:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_i32x8_src)
+; LA32-NEXT:    xvld $xr0, $a0, %pcadd_lo12(.Lpcadd_hi20)
+; LA32-NEXT:  .Lpcadd_hi21:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_i32x8_dst)
+; LA32-NEXT:    xvst $xr0, $a0, %pcadd_lo12(.Lpcadd_hi21)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: copy_i32x8:
@@ -618,10 +640,12 @@ entry:
 define void @copy_i8_to_i8x16() {
 ; LA32-LABEL: copy_i8_to_i8x16:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_i8)
-; LA32-NEXT:    vldrepl.b $vr0, $a0, %pc_lo12(g_i8)
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_i8x16)
-; LA32-NEXT:    vst $vr0, $a0, %pc_lo12(g_i8x16)
+; LA32-NEXT:  .Lpcadd_hi22:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_i8)
+; LA32-NEXT:    vldrepl.b $vr0, $a0, %pcadd_lo12(.Lpcadd_hi22)
+; LA32-NEXT:  .Lpcadd_hi23:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_i8x16)
+; LA32-NEXT:    vst $vr0, $a0, %pcadd_lo12(.Lpcadd_hi23)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: copy_i8_to_i8x16:
@@ -657,10 +681,12 @@ entry:
 define void @copy_i8_to_i8x32() {
 ; LA32-LABEL: copy_i8_to_i8x32:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_i8)
-; LA32-NEXT:    xvldrepl.b $xr0, $a0, %pc_lo12(g_i8)
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_i8x32)
-; LA32-NEXT:    xvst $xr0, $a0, %pc_lo12(g_i8x32)
+; LA32-NEXT:  .Lpcadd_hi24:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_i8)
+; LA32-NEXT:    xvldrepl.b $xr0, $a0, %pcadd_lo12(.Lpcadd_hi24)
+; LA32-NEXT:  .Lpcadd_hi25:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_i8x32)
+; LA32-NEXT:    xvst $xr0, $a0, %pcadd_lo12(.Lpcadd_hi25)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: copy_i8_to_i8x32:
@@ -696,8 +722,9 @@ entry:
 define dso_local void @rmw() nounwind {
 ; LA32-LABEL: rmw:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_rmw)
-; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(g_rmw)
+; LA32-NEXT:  .Lpcadd_hi26:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_rmw)
+; LA32-NEXT:    addi.w $a0, $a0, %pcadd_lo12(.Lpcadd_hi26)
 ; LA32-NEXT:    ld.w $a1, $a0, 0
 ; LA32-NEXT:    ld.w $a2, $a0, 4
 ; LA32-NEXT:    addi.w $a1, $a1, 1
@@ -737,9 +764,10 @@ entry:
 define dso_local void @store_a32() nounwind {
 ; LA32-LABEL: store_a32:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_a32+4096)
+; LA32-NEXT:  .Lpcadd_hi27:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_a32+4096)
 ; LA32-NEXT:    ori $a1, $zero, 1
-; LA32-NEXT:    st.w $a1, $a0, %pc_lo12(g_a32+4096)
+; LA32-NEXT:    st.w $a1, $a0, %pcadd_lo12(.Lpcadd_hi27)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: store_a32:
@@ -766,8 +794,9 @@ entry:
 define dso_local void @store_a32_2() nounwind {
 ; LA32-LABEL: store_a32_2:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_a32)
-; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(g_a32)
+; LA32-NEXT:  .Lpcadd_hi28:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_a32)
+; LA32-NEXT:    addi.w $a0, $a0, %pcadd_lo12(.Lpcadd_hi28)
 ; LA32-NEXT:    lu12i.w $a1, 1
 ; LA32-NEXT:    add.w $a2, $a0, $a1
 ; LA32-NEXT:    ori $a3, $zero, 1
@@ -809,12 +838,13 @@ entry:
 define dso_local void @control_flow_with_mem_access() nounwind {
 ; LA32-LABEL: control_flow_with_mem_access:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_a32+4)
-; LA32-NEXT:    ld.w $a1, $a0, %pc_lo12(g_a32+4)
+; LA32-NEXT:  .Lpcadd_hi29:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_a32+4)
+; LA32-NEXT:    ld.w $a1, $a0, %pcadd_lo12(.Lpcadd_hi29)
 ; LA32-NEXT:    blez $a1, .LBB25_2
 ; LA32-NEXT:  # %bb.1: # %if.then
 ; LA32-NEXT:    ori $a1, $zero, 10
-; LA32-NEXT:    st.w $a1, $a0, %pc_lo12(g_a32+4)
+; LA32-NEXT:    st.w $a1, $a0, %pcadd_lo12(.Lpcadd_hi29)
 ; LA32-NEXT:  .LBB25_2: # %if.end
 ; LA32-NEXT:    ret
 ;
@@ -864,8 +894,9 @@ define dso_local ptr @load_ba_1() nounwind {
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:  .Ltmp0: # Block address taken
 ; LA32-NEXT:  # %bb.1: # %label
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.Ltmp0)
-; LA32-NEXT:    ld.w $a0, $a0, %pc_lo12(.Ltmp0)
+; LA32-NEXT:  .Lpcadd_hi30:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(.Ltmp0)
+; LA32-NEXT:    ld.w $a0, $a0, %pcadd_lo12(.Lpcadd_hi30)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_ba_1:
@@ -898,8 +929,9 @@ define dso_local ptr @load_ba_2() nounwind {
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:  .Ltmp1: # Block address taken
 ; LA32-NEXT:  # %bb.1: # %label
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.Ltmp1+8)
-; LA32-NEXT:    ld.w $a0, $a0, %pc_lo12(.Ltmp1+8)
+; LA32-NEXT:  .Lpcadd_hi31:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(.Ltmp1+8)
+; LA32-NEXT:    ld.w $a0, $a0, %pcadd_lo12(.Lpcadd_hi31)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_ba_2:
@@ -932,8 +964,9 @@ label:
 define dso_local ptr @load_addr_offset_1() nounwind {
 ; LA32-LABEL: load_addr_offset_1:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_a64+8)
-; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(g_a64+8)
+; LA32-NEXT:  .Lpcadd_hi32:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_a64+8)
+; LA32-NEXT:    addi.w $a0, $a0, %pcadd_lo12(.Lpcadd_hi32)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_addr_offset_1:
@@ -957,8 +990,9 @@ entry:
 define dso_local ptr @load_addr_offset_257() nounwind {
 ; LA32-LABEL: load_addr_offset_257:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_a64+2056)
-; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(g_a64+2056)
+; LA32-NEXT:  .Lpcadd_hi33:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_a64+2056)
+; LA32-NEXT:    addi.w $a0, $a0, %pcadd_lo12(.Lpcadd_hi33)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_addr_offset_257:
@@ -982,8 +1016,9 @@ entry:
 define dso_local ptr @load_addr_offset_1048576() nounwind {
 ; LA32-LABEL: load_addr_offset_1048576:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_a64+8388608)
-; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(g_a64+8388608)
+; LA32-NEXT:  .Lpcadd_hi34:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_a64+8388608)
+; LA32-NEXT:    addi.w $a0, $a0, %pcadd_lo12(.Lpcadd_hi34)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_addr_offset_1048576:
@@ -1007,8 +1042,9 @@ entry:
 define dso_local ptr @load_addr_offset_1048577() nounwind {
 ; LA32-LABEL: load_addr_offset_1048577:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_a64+8388616)
-; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(g_a64+8388616)
+; LA32-NEXT:  .Lpcadd_hi35:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_a64+8388616)
+; LA32-NEXT:    addi.w $a0, $a0, %pcadd_lo12(.Lpcadd_hi35)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_addr_offset_1048577:
@@ -1032,8 +1068,9 @@ entry:
 define dso_local ptr @load_addr_offset_268432896() nounwind {
 ; LA32-LABEL: load_addr_offset_268432896:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_a64+2147463168)
-; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(g_a64+2147463168)
+; LA32-NEXT:  .Lpcadd_hi36:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_a64+2147463168)
+; LA32-NEXT:    addi.w $a0, $a0, %pcadd_lo12(.Lpcadd_hi36)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_addr_offset_268432896:
@@ -1057,8 +1094,9 @@ entry:
 define dso_local ptr @load_addr_offset_268432897() nounwind {
 ; LA32-LABEL: load_addr_offset_268432897:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_a64+2147463176)
-; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(g_a64+2147463176)
+; LA32-NEXT:  .Lpcadd_hi37:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_a64+2147463176)
+; LA32-NEXT:    addi.w $a0, $a0, %pcadd_lo12(.Lpcadd_hi37)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_addr_offset_268432897:
@@ -1082,8 +1120,9 @@ entry:
 define dso_local ptr @load_addr_offset_281474439839744() nounwind {
 ; LA32-LABEL: load_addr_offset_281474439839744:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_a64)
-; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(g_a64)
+; LA32-NEXT:  .Lpcadd_hi38:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_a64)
+; LA32-NEXT:    addi.w $a0, $a0, %pcadd_lo12(.Lpcadd_hi38)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_addr_offset_281474439839744:
@@ -1110,8 +1149,9 @@ entry:
 define dso_local ptr @load_addr_offset_248792680471040() nounwind {
 ; LA32-LABEL: load_addr_offset_248792680471040:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_a64+2059194368)
-; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(g_a64+2059194368)
+; LA32-NEXT:  .Lpcadd_hi39:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_a64+2059194368)
+; LA32-NEXT:    addi.w $a0, $a0, %pcadd_lo12(.Lpcadd_hi39)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_addr_offset_248792680471040:
@@ -1138,8 +1178,9 @@ entry:
 define dso_local ptr @load_addr_offset_9380351707272() nounwind {
 ; LA32-LABEL: load_addr_offset_9380351707272:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_a64+1145062464)
-; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(g_a64+1145062464)
+; LA32-NEXT:  .Lpcadd_hi40:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_a64+1145062464)
+; LA32-NEXT:    addi.w $a0, $a0, %pcadd_lo12(.Lpcadd_hi40)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_addr_offset_9380351707272:
@@ -1167,8 +1208,9 @@ entry:
 define dso_local ptr @load_addr_offset_562949953421312() nounwind {
 ; LA32-LABEL: load_addr_offset_562949953421312:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_a64)
-; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(g_a64)
+; LA32-NEXT:  .Lpcadd_hi41:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_a64)
+; LA32-NEXT:    addi.w $a0, $a0, %pcadd_lo12(.Lpcadd_hi41)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_addr_offset_562949953421312:
@@ -1194,8 +1236,9 @@ entry:
 define dso_local ptr @load_addr_offset_614749556925924693() nounwind {
 ; LA32-LABEL: load_addr_offset_614749556925924693:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_a64+858794664)
-; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(g_a64+858794664)
+; LA32-NEXT:  .Lpcadd_hi42:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_a64+858794664)
+; LA32-NEXT:    addi.w $a0, $a0, %pcadd_lo12(.Lpcadd_hi42)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_addr_offset_614749556925924693:

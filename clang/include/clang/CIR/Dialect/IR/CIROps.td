@@ -422,6 +422,12 @@ def CIR_ConstantOp : CIR_Op<"const", [
       llvm_unreachable("Expected an IntAttr in ConstantOp");
     }
 
+    llvm::APFloat getFloatValue() {
+      if (const auto fpAttr = getValueAttr<cir::FPAttr>())
+        return fpAttr.getValue();
+      llvm_unreachable("Expected an FPAttr in ConstantOp");
+    }
+
     bool getBoolValue() {
       if (const auto boolAttr = getValueAttr<cir::BoolAttr>())
         return boolAttr.getValue();
@@ -533,7 +539,7 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
     StrAttr:$name,
     UnitAttr:$init,
     UnitAttr:$constant,
-    ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$alignment,
+    ConfinedAttr<I64Attr, [IntMinValue<1>]>:$alignment,
     OptionalAttr<ArrayAttr>:$annotations
   );
 
