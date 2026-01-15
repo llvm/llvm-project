@@ -1531,13 +1531,12 @@ static bool isDeviceDataImpl(mlir::Value var) {
     if (mlir::Value base = partialAccess.getBaseEntity())
       return isDeviceDataImpl(base);
 
-  // Handle fir.rebox - if the underlying box is device data, so is the result.
-  if (auto rebox = mlir::dyn_cast<fir::ReboxOp>(defOp))
-    return isDeviceDataImpl(rebox.getBox());
-
-  // Handle fir.embox - check if the underlying memref is device data.
-  if (auto embox = mlir::dyn_cast<fir::EmboxOp>(defOp))
-    return isDeviceDataImpl(embox.getMemref());
+  // Handle fir.embox, fir.rebox, and similar ops via
+  // FortranObjectViewOpInterface to check if the underlying source is device
+  // data.
+  if (auto viewOp = mlir::dyn_cast<fir::FortranObjectViewOpInterface>(defOp))
+    if (mlir::Value source = viewOp.getViewSource(defOp->getResult(0)))
+      return isDeviceDataImpl(source);
 
   // Handle address_of - check the referenced global.
   if (auto addrOfIface =
