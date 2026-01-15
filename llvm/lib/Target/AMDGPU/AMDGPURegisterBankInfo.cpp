@@ -4882,6 +4882,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       if (Subtarget.hasSALUFloatInsts() && isSALUMapping(MI))
         return getDefaultMappingSOP(MI);
       return getDefaultMappingVOP(MI);
+    case Intrinsic::amdgcn_get_stack_base:
     case Intrinsic::amdgcn_kernarg_segment_ptr:
     case Intrinsic::amdgcn_s_getpc:
     case Intrinsic::amdgcn_groupstaticsize:

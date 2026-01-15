@@ -411,6 +411,7 @@ def : AlwaysUniform<int_amdgcn_s_getpc>;
 def : AlwaysUniform<int_amdgcn_s_getreg>;
 def : AlwaysUniform<int_amdgcn_s_memrealtime>;
 def : AlwaysUniform<int_amdgcn_s_memtime>;
+def : AlwaysUniform<int_amdgcn_get_stack_base>;
 
 def AMDGPUImageDMaskIntrinsicTable : GenericTable {
   let FilterClass = "AMDGPUImageDMaskIntrinsic";
