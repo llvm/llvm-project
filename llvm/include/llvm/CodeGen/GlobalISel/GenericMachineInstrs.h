@@ -797,14 +797,6 @@ public:
   };
 };
 
-/// Represents a logical xor.
-class GXor : public GLogicalBinOp {
-public:
-  static bool classof(const MachineInstr *MI) {
-    return MI->getOpcode() == TargetOpcode::G_XOR;
-  };
-};
-
 /// Represents an extract vector element.
 class GExtractVectorElement : public GenericMachineInstr {
 public:
