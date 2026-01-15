@@ -298,7 +298,8 @@ getResultLengthFromElementalOp(fir::FirOpBuilder &builder,
       lengths.push_back(len);
 }
 
-//
+// Go through the args. Any descriptor args that have ignore_tkr(c) cause
+// function type modification to avoid changing the descriptor args.
 static mlir::FunctionType getTypeWithIgnoreTkrC(mlir::FunctionType funcType,
     Fortran::lower::CallerInterface &caller, mlir::MLIRContext* context) {
   llvm::SmallVector<mlir::Type> newInputs =
@@ -318,16 +319,12 @@ static mlir::FunctionType getTypeWithIgnoreTkrC(mlir::FunctionType funcType,
         continue;
 
       // Handle ignore_tkr(c) for descriptors
-
       mlir::Value actual = caller.getInput(arg);
       if (!actual)
         continue;
-      mlir::Type actualType = actual.getType();
 
+      mlir::Type actualType = actual.getType();
       if (fir::isBoxAddress(actualType)) {
-        newInputs[arg.firArgument] = fir::unwrapRefType(actualType);
-        typeChanged = true;
-      } else if (fir::isa_box_type(actualType)) {
         newInputs[arg.firArgument] = actualType;
         typeChanged = true;
       }
@@ -541,6 +538,25 @@ Fortran::lower::genCallOpAndResult(
 
   mlir::FunctionType funcType =
       funcPointer ? callSiteType : caller.getFuncOp().getFunctionType();
+
+  // If we have any ignore_tkr(c) dummy args, adjust the function type to
+  // have these args match the caller.
+  mlir::FunctionType modifiedFuncType =
+      getTypeWithIgnoreTkrC(funcType, caller, builder.getContext());
+
+  if (!funcPointer && modifiedFuncType != funcType) {
+    // We want to cast the function to a different type, in order to avoid
+    // changing/casting some of the args. The cast will generate a new
+    // function pointer, so that we would make a function call not through
+    // the original function symbol, but through the new function pointer.
+    mlir::SymbolRefAttr symbolAttr =
+        builder.getSymbolRefAttr(caller.getMangledName());
+    // Create pointer to original function. This pointer will be cast later.
+    funcPointer = fir::AddrOfOp::create(builder, loc, funcType, symbolAttr);
+    funcSymbolAttr = {}; // This marks it as indirect call
+  }
+  funcType = modifiedFuncType;
+
   llvm::SmallVector<mlir::Value> operands;
   // First operand of indirect call is the function pointer. Cast it to
   // required function type for the call to handle procedures that have a
@@ -1442,7 +1458,17 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // Step 2: prepare the storage for the dummy arguments, ensuring that it
   // matches the dummy requirements (e.g., must be contiguous or must be
   // a temporary).
-  hlfir::Entity entity =
+
+  const bool ignoreTKRcontig =
+      arg.testTKR(Fortran::common::IgnoreTKR::Contiguous);
+
+  // If IgnoreTKR(C) is set and we are passing by descriptor, we want to
+  // avoid loading the descriptor if it is already a reference to a box.
+  const bool keepRefToBox =
+      arg.passBy == Fortran::lower::CallerInterface::PassEntityBy::Box &&
+      ignoreTKRcontig && actual.isMutableBox();
+
+  hlfir::Entity entity = keepRefToBox ? actual :
       hlfir::derefPointersAndAllocatables(loc, builder, actual);
   if (entity.isVariable()) {
     // Set dynamic type if needed before any copy-in or copy so that the dummy
@@ -1515,11 +1541,13 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
         loc, fir::isa_volatile_type(dummyType), entity)};
     addr = hlfir::genVariableBoxChar(loc, builder, nonVolatileEntity);
   } else if (mlir::isa<fir::BaseBoxType>(dummyTypeWithActualRank)) {
-    entity = hlfir::genVariableBox(loc, builder, entity);
+    if (!keepRefToBox)
+      entity = hlfir::genVariableBox(loc, builder, entity);
     // Ensures the box has the right attributes and that it holds an
     // addendum if needed.
-    fir::BaseBoxType actualBoxType =
-        mlir::cast<fir::BaseBoxType>(entity.getType());
+    fir::BaseBoxType actualBoxType = keepRefToBox ?
+        mlir::cast<fir::BaseBoxType>(fir::unwrapRefType(entity.getType()))
+        : mlir::cast<fir::BaseBoxType>(entity.getType());
     mlir::Type boxEleType = actualBoxType.getEleTy();
     // For now, assume it is not OK to pass the allocatable/pointer
     // descriptor to a non pointer/allocatable dummy. That is a strict
@@ -1538,8 +1566,8 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     const bool needToAddAddendum =
         fir::isUnlimitedPolymorphicType(dummyTypeWithActualRank) &&
         !actualBoxHasAddendum;
-    if (needToAddAddendum || actualBoxHasAllocatableOrPointerFlag ||
-        needsZeroLowerBounds) {
+    if ((needToAddAddendum || actualBoxHasAllocatableOrPointerFlag ||
+        needsZeroLowerBounds) && !ignoreTKRcontig) {
       if (actualIsAssumedRank) {
         auto lbModifier = needsZeroLowerBounds
                               ? fir::LowerBoundModifierAttribute::SetToZeroes
@@ -1572,8 +1600,8 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // descriptors.
   // For TKR dummy characters, the boxchar creation also happens later when
   // creating the fir.call .
-  preparedDummy.dummy =
-      builder.createConvert(loc, dummyTypeWithActualRank, addr);
+  preparedDummy.dummy = keepRefToBox ? addr
+      : builder.createConvert(loc, dummyTypeWithActualRank, addr);
   return preparedDummy;
 }
 
@@ -1803,7 +1831,8 @@ void prepareUserCallArguments(
         continue;
       }
       if (fir::isPointerType(argTy) &&
-          (!Fortran::evaluate::IsObjectPointer(*expr) || thisIsPassArg)) {
+          (!Fortran::evaluate::IsObjectPointer(*expr) || thisIsPassArg) &&
+              !arg.testTKR(Fortran::common::IgnoreTKR::Contiguous)) {
         // Passing a non POINTER actual argument to a POINTER dummy argument.
         // Create a pointer of the dummy argument type and assign the actual
         // argument to it.
