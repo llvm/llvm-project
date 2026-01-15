@@ -91,109 +91,107 @@ parseFormulaInternal(llvm::StringRef &Str, Arena &A,
                      llvm::DenseMap<unsigned, Atom> &AtomMap) {
   std::stack<Operation> ActiveOperations;
 
-  while (!Str.empty()) {
-    char Prefix = Str[0];
-    Str = Str.drop_front();
-
-    switch (Prefix) {
-    // Terminals
-    case 'T':
-    case 'F':
-    case 'V': {
-      const Formula *TerminalFormula;
-      switch (Prefix) {
-      case 'T':
-        TerminalFormula = &A.makeLiteral(true);
-        break;
-      case 'F':
-        TerminalFormula = &A.makeLiteral(false);
-        break;
-      case 'V': {
-        unsigned AtomID;
-        if (Str.consumeInteger(10, AtomID))
-          return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                         "expected atom id");
-        auto [It, Inserted] = AtomMap.try_emplace(AtomID, Atom());
-        if (Inserted)
-          It->second = A.makeAtom();
-        TerminalFormula = &A.makeAtomRef(It->second);
-        break;
-      }
-      default:
-        llvm_unreachable("unexpected terminal character");
-      }
-
-      if (ActiveOperations.empty()) {
-        return TerminalFormula;
-      }
-      Operation *Op = &ActiveOperations.top();
-      Op->Operands.push_back(TerminalFormula);
-      while (Op->Operands.size() == Op->ExpectedNumOperands) {
-        const Formula *OpFormula = nullptr;
-        switch (Op->Kind) {
-        case Formula::Kind::Not:
-          OpFormula = &A.makeNot(*Op->Operands[0]);
-          break;
-        case Formula::Kind::And:
-          OpFormula = &A.makeAnd(*Op->Operands[0], *Op->Operands[1]);
-          break;
-        case Formula::Kind::Or:
-          OpFormula = &A.makeOr(*Op->Operands[0], *Op->Operands[1]);
-          break;
-        case Formula::Kind::Implies:
-          OpFormula = &A.makeImplies(*Op->Operands[0], *Op->Operands[1]);
-          break;
-        case Formula::Kind::Equal:
-          OpFormula = &A.makeEquals(*Op->Operands[0], *Op->Operands[1]);
-          break;
-        default:
-          return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                         "only unary and binary operations are "
-                                         "expected, but got Formula::Kind %u",
-                                         Op->Kind);
-        }
-        ActiveOperations.pop();
-        if (ActiveOperations.empty())
-          return OpFormula;
-        Op = &ActiveOperations.top();
-        Op->Operands.push_back(OpFormula);
-      }
-      if (Op->Operands.size() > Op->ExpectedNumOperands) {
+  while (true) {
+    if (ActiveOperations.empty() ||
+        ActiveOperations.top().ExpectedNumOperands >
+            ActiveOperations.top().Operands.size()) {
+      if (Str.empty()) {
         return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                       "too many operands");
+                                       "unexpected end of input");
       }
-      break;
-    }
-    case '!':
-      ActiveOperations.emplace(Formula::Kind::Not);
-      break;
-    case '&':
-      ActiveOperations.emplace(Formula::Kind::And);
-      break;
-    case '|':
-      ActiveOperations.emplace(Formula::Kind::Or);
-      break;
-    case '>':
-      ActiveOperations.emplace(Formula::Kind::Implies);
-      break;
-    case '=':
-      ActiveOperations.emplace(Formula::Kind::Equal);
-      break;
-    default:
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "unexpected prefix character: %c", Prefix);
+      char Prefix = Str[0];
+      Str = Str.drop_front();
+
+      switch (Prefix) {
+      // Terminals
+      case 'T':
+      case 'F':
+      case 'V': {
+        const Formula *TerminalFormula;
+        switch (Prefix) {
+        case 'T':
+          TerminalFormula = &A.makeLiteral(true);
+          break;
+        case 'F':
+          TerminalFormula = &A.makeLiteral(false);
+          break;
+        case 'V': {
+          unsigned AtomID;
+          if (Str.consumeInteger(10, AtomID))
+            return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                           "expected atom id");
+          auto [It, Inserted] = AtomMap.try_emplace(AtomID, Atom());
+          if (Inserted)
+            It->second = A.makeAtom();
+          TerminalFormula = &A.makeAtomRef(It->second);
+          break;
+        }
+        default:
+          llvm_unreachable("unexpected terminal character");
+        }
+        if (ActiveOperations.empty()) {
+          return TerminalFormula;
+        }
+        Operation *Op = &ActiveOperations.top();
+        Op->Operands.push_back(TerminalFormula);
+      } break;
+      case '!':
+        ActiveOperations.emplace(Formula::Kind::Not);
+        break;
+      case '&':
+        ActiveOperations.emplace(Formula::Kind::And);
+        break;
+      case '|':
+        ActiveOperations.emplace(Formula::Kind::Or);
+        break;
+      case '>':
+        ActiveOperations.emplace(Formula::Kind::Implies);
+        break;
+      case '=':
+        ActiveOperations.emplace(Formula::Kind::Equal);
+        break;
+      default:
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "unexpected prefix character: %c",
+                                       Prefix);
+      }
+    } else if (!ActiveOperations.empty() &&
+               ActiveOperations.top().ExpectedNumOperands ==
+                   ActiveOperations.top().Operands.size()) {
+      Operation *Op = &ActiveOperations.top();
+      const Formula *OpFormula = nullptr;
+      switch (Op->Kind) {
+      case Formula::Kind::Not:
+        OpFormula = &A.makeNot(*Op->Operands[0]);
+        break;
+      case Formula::Kind::And:
+        OpFormula = &A.makeAnd(*Op->Operands[0], *Op->Operands[1]);
+        break;
+      case Formula::Kind::Or:
+        OpFormula = &A.makeOr(*Op->Operands[0], *Op->Operands[1]);
+        break;
+      case Formula::Kind::Implies:
+        OpFormula = &A.makeImplies(*Op->Operands[0], *Op->Operands[1]);
+        break;
+      case Formula::Kind::Equal:
+        OpFormula = &A.makeEquals(*Op->Operands[0], *Op->Operands[1]);
+        break;
+      default:
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "only unary and binary operations are "
+                                       "expected, but got Formula::Kind %u",
+                                       Op->Kind);
+      }
+      ActiveOperations.pop();
+      if (ActiveOperations.empty())
+        return OpFormula;
+      Op = &ActiveOperations.top();
+      Op->Operands.push_back(OpFormula);
+    } else {
+      llvm_unreachable(
+          "we should never have added more operands than expected");
     }
   }
-
-  if (ActiveOperations.empty())
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "unexpected end of input");
-
-  return llvm::createStringError(
-      llvm::inconvertibleErrorCode(),
-      "not enough operands: expected at least %u, but got %lu",
-      ActiveOperations.top().ExpectedNumOperands,
-      ActiveOperations.top().Operands.size());
 }
 
 llvm::Expected<const Formula *>
