@@ -1480,7 +1480,7 @@ private:
 
       __assign_value_sfinae(std::integral_constant<bool, std::is_copy_constructible_v<decltype(__rhs.first)>>(),
                             std::forward<decltype(__lhs)>(__lhs),
-                            std::forward<decltype(__rhs)>(__rhs));
+                            std::forward<const value_type&>(__rhs));
 
     } else
 #endif
