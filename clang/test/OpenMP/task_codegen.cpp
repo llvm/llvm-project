@@ -62,6 +62,12 @@ enum omp_allocator_handle_t {
   KMP_ALLOCATOR_MAX_HANDLE = __UINTPTR_MAX__
 };
 
+typedef void **omp_impex_t;
+extern const omp_impex_t omp_not_impex;
+extern const omp_impex_t omp_import;
+extern const omp_impex_t omp_export;
+extern const omp_impex_t omp_impex;
+
 struct S {
   int a;
   S() : a(0) {}
@@ -230,6 +236,25 @@ void test_threadset()
 #pragma omp task threadset(omp_pool)
   {
   }
+}
+
+void test_transparent()
+{
+#pragma omp task transparent(omp_not_impex)
+  {}
+#pragma omp task transparent(omp_import)
+  {}
+#pragma omp task transparent(omp_export)
+  {}
+#pragma omp task transparent(omp_impex)
+  {}
+  omp_impex_t v;
+#pragma omp task transparent(v)
+  {}
+#pragma omp task transparent(v ? omp_import : omp_export)
+  {}
+#pragma omp task transparent(omp_import + 0)
+  {}
 }
 #endif // OMP60
 
@@ -10276,3 +10301,52 @@ void test_threadset()
 // CHECK6-NEXT:       call i32 @__kmpc_global_thread_num(ptr @[[GLOB_PTR2:[0-9]+]])
 // CHECK6-NEXT:       call i32 @__kmpc_omp_task(ptr @1, i32 %omp_global_thread_num4, ptr %3)
 // CHECK6-NEXT:       ret void
+
+// CHECK6-LABEL: define void @_Z16test_transparentv() #1 {
+// CHECK6-NEXT:  entry:
+// CHECK6-NEXT:       [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON_27:%.*]], align 1
+// CHECK6-NEXT:       [[AGG_CAPTURED2:%.*]] = alloca [[STRUCT_ANON_29:%.*]], align 1
+// CHECK6-NEXT:       [[AGG_CAPTURED5:%.*]] = alloca [[STRUCT_ANON_31:%.*]], align 1
+// CHECK6-NEXT:       [[AGG_CAPTURED8:%.*]] = alloca [[STRUCT_ANON_33:%.*]], align 1
+// CHECK6-NEXT:       [[V:%.*]] = alloca ptr, align 8
+// CHECK6-NEXT:       [[AGG_CAPTURED11:%.*]] = alloca [[STRUCT_ANON_35:%.*]], align 1
+//CHECK6-NEXT:        [[AGG_CAPTURED14:%.*]] = alloca [[STRUCT_ANON_37:%.*]], align 1
+// CHECK6-NEXT:       [[AGG_CAPTURED17:%.*]] = alloca [[STRUCT_ANON_39:%.*]], align 1
+// CHECK6-NEXT:       [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @31)
+// CHECK6-NEXT:       [[TMP0:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 [[OMP_GLOBAL_THREAD_NUM]], i32 257, i64 40, i64 1, ptr @.omp_task_entry..[[ENTRY1:[0-9]+]])
+// CHECK6-NEXT:       [[TMP1:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t_with_privates{{.*}}, ptr [[TMP0]], i32 0, i32 0
+// CHECK6-NEXT:       [[OMP_GLOBAL_THREAD_NUM1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @31)
+// CHECK6-NEXT:       [[TMP2:%.*]] = call i32 @__kmpc_omp_task(ptr @1, i32 [[OMP_GLOBAL_THREAD_NUM1]], ptr [[TMP0]])
+// CHECK6-NEXT:       [[OMP_GLOBAL_THREAD_NUM3:%.*]] = call i32 @__kmpc_global_thread_num(ptr @33)
+// CHECK6-NEXT:       [[TMP3:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 [[OMP_GLOBAL_THREAD_NUM3]], i32 257, i64 40, i64 1, ptr @.omp_task_entry..[[ENTRY2:[0-9]+]])
+// CHECK6-NEXT:       [[TMP4:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t_with_privates{{.*}}, ptr [[TMP3]], i32 0, i32 0
+// CHECK6-NEXT:       [[OMP_GLOBAL_THREAD_NUM4:%.*]] = call i32 @__kmpc_global_thread_num(ptr @33)
+// CHECK6-NEXT:       [[TMP5:%.*]] = call i32 @__kmpc_omp_task(ptr @1, i32 [[OMP_GLOBAL_THREAD_NUM4]], ptr [[TMP3]])
+// CHECK6-NEXT:       [[OMP_GLOBAL_THREAD_NUM6:%.*]] = call i32 @__kmpc_global_thread_num(ptr @35)
+// CHECK6-NEXT:       [[TMP6:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 [[OMP_GLOBAL_THREAD_NUM6]], i32 257, i64 40, i64 1, ptr @.omp_task_entry..[[ENTRY3:[0-9]+]])
+// CHECK6-NEXT:       [[TMP7:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t_with_privates{{.*}}, ptr [[TMP6]], i32 0, i32 0
+// CHECK6-NEXT:       [[OMP_GLOBAL_THREAD_NUM7:%.*]] = call i32 @__kmpc_global_thread_num(ptr @35)
+// CHECK6-NEXT:       [[TMP8:%.*]] = call i32 @__kmpc_omp_task(ptr @1, i32 [[OMP_GLOBAL_THREAD_NUM7]], ptr [[TMP6]])
+// CHECK6-NEXT:       [[OMP_GLOBAL_THREAD_NUM9:%.*]] = call i32 @__kmpc_global_thread_num(ptr @37)
+// CHECK6-NEXT:       [[TMP9:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 [[OMP_GLOBAL_THREAD_NUM9]], i32 257, i64 40, i64 1, ptr @.omp_task_entry..[[ENTRY4:[0-9]+]])
+// CHECK6-NEXT:       [[TMP10:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t_with_privates{{.*}}, ptr [[TMP9]], i32 0, i32 0
+// CHECK6-NEXT:       [[OMP_GLOBAL_THREAD_NUM10:%.*]] = call i32 @__kmpc_global_thread_num(ptr @37)
+// CHECK6-NEXT:       [[TMP11:%.*]] = call i32 @__kmpc_omp_task(ptr @1, i32 [[OMP_GLOBAL_THREAD_NUM10]], ptr [[TMP9]])
+// CHECK6-NEXT:  [[OMP_GLOBAL_THREAD_NUM12:%.*]] = call i32 @__kmpc_global_thread_num(ptr @39)
+// CHECK6-NEXT:       [[TMP12:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 [[OMP_GLOBAL_THREAD_NUM12]], i32 257, i64 40, i64 1, ptr @.omp_task_entry..[[ENTRY37:[0-9]+]])
+// CHECK6-NEXT:       [[TMP13:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t_with_privates{{.*}}, ptr [[TMP12]], i32 0, i32 0
+// CHECK6-NEXT:       [[OMP_GLOBAL_THREAD_NUM13:%.*]] = call i32 @__kmpc_global_thread_num(ptr @39)
+// CHECK6-NEXT:        [[TMP14:%.*]] = call i32 @__kmpc_omp_task(ptr @1, i32 [[OMP_GLOBAL_THREAD_NUM13]], ptr [[TMP12]])
+
+// CHECK6-NEXT:        [[OMP_GLOBAL_THREAD_NUM15:%.*]] = call i32 @__kmpc_global_thread_num(ptr @41)
+// CHECK6-NEXT:        [[TMP15:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 [[OMP_GLOBAL_THREAD_NUM15]], i32 257, i64 40, i64 1, ptr @.omp_task_entry..[[ENTRY39:[0-9]+]])
+// CHECK6-NEXT:        [[TMP16:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t_with_privates{{.*}}, ptr [[TMP15]], i32 0, i32 0
+// CHECK6-NEXT:        [[OMP_GLOBAL_THREAD_NUM16:%.*]] = call i32 @__kmpc_global_thread_num(ptr @41)
+// CHECK6-NEXT:        [[TMP17:%.*]] = call i32 @__kmpc_omp_task(ptr @1, i32 %omp_global_thread_num16, ptr [[TMP15]])
+// CHECK6-NEXT:        [[OMP_GLOBAL_THREAD_NUM18:%.*]] = call i32 @__kmpc_global_thread_num(ptr @43)
+ // CHECK6-NEXT:       [[TMP18:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 [[OMP_GLOBAL_THREAD_NUM18]], i32 257, i64 40, i64 1, ptr @.omp_task_entry..[[ENTRY41:[0-9]+]])
+ // CHECK6-NEXT:       [[TMP19:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t_with_privates{{.*}}, ptr [[TMP18]], i32 0, i32 0
+ // CHECK6-NEXT:       [[OMP_GLOBAL_THREAD_NUM19:%.*]] = call i32 @__kmpc_global_thread_num(ptr @43)
+ // CHECK6-NEXT:       [[TMP20:%.*]] = call i32 @__kmpc_omp_task(ptr @1, i32 [[OMP_GLOBAL_THREAD_NUM19]], ptr [[TMP18]])
+// CHECK6-NEXT:  ret void
+// CHECK6-NEXT:}

@@ -2252,12 +2252,12 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     }
 
     // With nnan: X + {+/-}Inf --> {+/-}Inf
-    if (KnownRHS.isKnownAlways(fcInf | fcNan) &&
+    if (ResultNotNan && KnownRHS.isKnownAlways(fcInf | fcNan) &&
         KnownLHS.isKnownNever(fcNan))
       return I->getOperand(1);
 
     // With nnan: {+/-}Inf + X --> {+/-}Inf
-    if (KnownLHS.isKnownAlways(fcInf | fcNan) &&
+    if (ResultNotNan && KnownLHS.isKnownAlways(fcInf | fcNan) &&
         KnownRHS.isKnownNever(fcNan))
       return I->getOperand(0);
 
@@ -2550,21 +2550,38 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
       auto *FPOp = cast<FPMathOperator>(CI);
 
-      bool ChangedFlags = false;
       FPClassTest ValidResults = DemandedMask & Known.KnownFPClasses;
+      FastMathFlags InferredFMF = FMF;
 
-      // TODO: Add NSZ flag if we know the result will not be sensitive on the
-      // sign of 0.
-      if (!FPOp->hasNoNaNs() &&
+      if (!FMF.noSignedZeros()) {
+        // Add NSZ flag if we know the result will not be sensitive to the sign
+        // of 0.
+        FPClassTest ZeroMask = fcZero;
+
+        Type *EltTy = VTy->getScalarType();
+        DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+        if (Mode != DenormalMode::getIEEE())
+          ZeroMask |= fcSubnormal;
+
+        bool ResultNotLogical0 = (ValidResults & ZeroMask) == fcNone;
+        if (ResultNotLogical0 || ((KnownLHS.isKnownNeverLogicalNegZero(Mode) ||
+                                   KnownRHS.isKnownNeverLogicalPosZero(Mode)) &&
+                                  (KnownLHS.isKnownNeverLogicalPosZero(Mode) ||
+                                   KnownRHS.isKnownNeverLogicalNegZero(Mode))))
+          InferredFMF.setNoSignedZeros(true);
+      }
+
+      if (!FMF.noNaNs() &&
           ((PropagateNaN && (ValidResults & fcNan) == fcNone) ||
            (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN()))) {
         CI->dropUBImplyingAttrsAndMetadata();
-        CI->setHasNoNaNs(true);
-        ChangedFlags = true;
+        InferredFMF.setNoNaNs(true);
       }
 
-      if (ChangedFlags)
+      if (InferredFMF != FMF) {
+        CI->setFastMathFlags(InferredFMF);
         return FPOp;
+      }
 
       return nullptr;
     }
@@ -2938,6 +2955,16 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
     Instruction *I, FPClassTest DemandedMask, KnownFPClass &Known,
     Instruction *CxtI, unsigned Depth) {
+  FastMathFlags FMF;
+  if (auto *FPOp = dyn_cast<FPMathOperator>(I)) {
+    FMF = FPOp->getFastMathFlags();
+    if (FMF.noNaNs())
+      DemandedMask &= ~fcNan;
+
+    if (FMF.noInfs())
+      DemandedMask &= ~fcInf;
+  }
+
   switch (I->getOpcode()) {
   case Instruction::Select: {
     // TODO: Can we infer which side it came from based on adjusted result
@@ -2964,6 +2991,24 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
     const CallInst *CI = cast<CallInst>(I);
     const Intrinsic::ID IID = CI->getIntrinsicID();
     switch (IID) {
+    case Intrinsic::fabs: {
+      Value *Src = CI->getArgOperand(0);
+      KnownFPClass KnownSrc =
+          computeKnownFPClass(Src, fcAllFlags, CxtI, Depth + 1);
+
+      if ((DemandedMask & fcNan) == fcNone)
+        KnownSrc.knownNot(fcNan);
+      if ((DemandedMask & fcInf) == fcNone)
+        KnownSrc.knownNot(fcInf);
+
+      // TODO: If the only sign bit difference is due to -0, look at source if
+      // nsz.
+      if (KnownSrc.SignBit == false || ((DemandedMask & fcNan) == fcNone &&
+                                        KnownSrc.isKnownNever(fcNegative)))
+        return Src;
+      Known = KnownFPClass::fabs(KnownSrc);
+      break;
+    }
     case Intrinsic::maximum:
     case Intrinsic::minimum:
     case Intrinsic::maximumnum:

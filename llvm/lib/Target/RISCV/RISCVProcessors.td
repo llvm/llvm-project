@@ -106,6 +106,7 @@ def GENERIC : RISCVTuneProcessorModel<"generic", NoSchedModel>, GenericTuneInfo;
 def GENERIC_OOO : RISCVTuneProcessorModel<"generic-ooo", GenericOOOModel>,
                   GenericTuneInfo;
 
+// clang-format off
 def MIPS_P8700 : RISCVProcessorModel<"mips-p8700",
                                      MIPSP8700Model,
                                      [Feature64Bit,
@@ -619,10 +620,15 @@ def TENSTORRENT_ASCALON_D8 : RISCVProcessorModel<"tt-ascalon-d8",
                                                  TTAscalonD8Model,
                                                  !listconcat(RVA23S64Features,
                                                  [FeatureStdExtSmaia,
+                                                  FeatureStdExtSmmpm,
+                                                  FeatureStdExtSmnpm,
+                                                  FeatureStdExtSmrnmi,
+                                                  FeatureStdExtSmstateen,
                                                   FeatureStdExtSsaia,
                                                   FeatureStdExtSsstrict,
                                                   FeatureStdExtZfbfmin,
                                                   FeatureStdExtZfh,
+                                                  FeatureStdExtZkr,
                                                   FeatureStdExtZvbc,
                                                   FeatureStdExtZvfbfmin,
                                                   FeatureStdExtZvfbfwma,
@@ -897,3 +903,4 @@ def AINEKKO_ERBIUM : RISCVProcessorModel<"an-erbium",
                                           FeatureStdExtF,
                                           FeatureStdExtC,
                                           FeatureVendorXAIFET]>;
+// clang-format on

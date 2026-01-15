@@ -1361,7 +1361,9 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     // extract.last.active intrinsic.
     auto *RdxResult =
         findUserOf<VPInstruction::ComputeReductionResult>(DataSelect);
-    assert(RdxResult && "Unable to find reduction result recipe");
+    // TODO: Handle tail-folding.
+    if (!RdxResult)
+      return false;
     Builder.setInsertPoint(RdxResult);
     auto *ExtractLastActive =
         Builder.createNaryOp(VPInstruction::ExtractLastActive,
