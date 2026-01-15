@@ -189,11 +189,6 @@ public:
   simpleLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder, unsigned Size,
                 Type *OpType, LostDebugLocObserver &LocObserver) const;
 
-  LLVM_ABI LegalizeResult conversionLibcall(MachineInstr &MI, Type *ToType,
-                                            Type *FromType,
-                                            LostDebugLocObserver &LocObserver,
-                                            bool IsSigned = false) const;
-
   /// Helper function that creates a libcall to the given \p Name using the
   /// given calling convention \p CC.
   LLVM_ABI LegalizeResult createLibcall(const char *Name,
@@ -209,6 +204,11 @@ public:
                                         ArrayRef<CallLowering::ArgInfo> Args,
                                         LostDebugLocObserver &LocObserver,
                                         MachineInstr *MI = nullptr) const;
+
+  LLVM_ABI LegalizeResult conversionLibcall(MachineInstr &MI, Type *ToType,
+                                            Type *FromType,
+                                            LostDebugLocObserver &LocObserver,
+                                            bool IsSigned = false) const;
 
   /// Create a libcall to memcpy et al.
   LLVM_ABI LegalizeResult

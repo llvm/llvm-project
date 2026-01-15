@@ -748,6 +748,22 @@ LegalizerHelper::emitModfLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
   return LegalizerHelper::Legalized;
 }
 
+LegalizerHelper::LegalizeResult LegalizerHelper::conversionLibcall(
+    MachineInstr &MI, Type *ToType, Type *FromType,
+    LostDebugLocObserver &LocObserver, bool IsSigned) const {
+  CallLowering::ArgInfo Arg = {MI.getOperand(1).getReg(), FromType, 0};
+  if (FromType->isIntegerTy()) {
+    if (TLI.shouldSignExtendTypeInLibCall(FromType, IsSigned))
+      Arg.Flags[0].setSExt();
+    else
+      Arg.Flags[0].setZExt();
+  }
+
+  RTLIB::Libcall Libcall = getConvRTLibDesc(MI.getOpcode(), ToType, FromType);
+  return createLibcall(Libcall, {MI.getOperand(0).getReg(), ToType, 0}, Arg,
+                       LocObserver, &MI);
+}
+
 LegalizerHelper::LegalizeResult
 LegalizerHelper::createMemLibcall(MachineRegisterInfo &MRI, MachineInstr &MI,
                                   LostDebugLocObserver &LocObserver) const {
@@ -986,22 +1002,6 @@ static RTLIB::Libcall getConvRTLibDesc(unsigned Opcode, Type *ToType,
     return RTLIB::getUINTTOFP(FromMVT, ToMVT);
   }
   llvm_unreachable("Unsupported libcall function");
-}
-
-LegalizerHelper::LegalizeResult LegalizerHelper::conversionLibcall(
-    MachineInstr &MI, Type *ToType, Type *FromType,
-    LostDebugLocObserver &LocObserver, bool IsSigned) const {
-  CallLowering::ArgInfo Arg = {MI.getOperand(1).getReg(), FromType, 0};
-  if (FromType->isIntegerTy()) {
-    if (TLI.shouldSignExtendTypeInLibCall(FromType, IsSigned))
-      Arg.Flags[0].setSExt();
-    else
-      Arg.Flags[0].setZExt();
-  }
-
-  RTLIB::Libcall Libcall = getConvRTLibDesc(MI.getOpcode(), ToType, FromType);
-  return createLibcall(Libcall, {MI.getOperand(0).getReg(), ToType, 0}, Arg,
-                       LocObserver, &MI);
 }
 
 static RTLIB::Libcall
