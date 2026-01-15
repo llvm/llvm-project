@@ -10,7 +10,7 @@
 
 // GCC has a issue for `Guaranteed copy elision for potentially-overlapping non-static data members`,
 // please refer to: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=98995
-// XFAIL: gcc-14, gcc-15
+// XFAIL: gcc-15
 
 // <expected>
 
