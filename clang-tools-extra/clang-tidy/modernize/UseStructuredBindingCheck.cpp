@@ -196,6 +196,12 @@ static auto getVarInitWithMemberMatcher(
       .bind(BindingName);
 }
 
+static auto typeOrLValueReferenceTo(
+    const ast_matchers::internal::Matcher<QualType> &TypeMatcher) {
+  return qualType(
+      anyOf(TypeMatcher, lValueReferenceType(pointee(TypeMatcher))));
+}
+
 void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
   auto PairType = qualType(unless(isVolatileQualified()),
                            hasUnqualifiedDesugaredType(recordType(
@@ -259,14 +265,13 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       declStmt(
           unless(isInMarco()),
-          hasSingleDecl(
-              varDecl(UnlessShouldBeIgnored, unless(isDirectInitialization()),
-                      hasType(qualType(anyOf(PairType, lValueReferenceType(
-                                                           pointee(PairType))))
-                                  .bind(PairVarTypeName)),
-                      hasInitializer(ignoringCopyCtorAndImplicitCast(
-                          expr().bind(InitExprName))))
-                  .bind(PairDeclName)),
+          hasSingleDecl(varDecl(UnlessShouldBeIgnored,
+                                unless(isDirectInitialization()),
+                                hasType(typeOrLValueReferenceTo(PairType).bind(
+                                    PairVarTypeName)),
+                                hasInitializer(ignoringCopyCtorAndImplicitCast(
+                                    expr().bind(InitExprName))))
+                            .bind(PairDeclName)),
           hasNextTwoVarDecl(
               llvm::SmallVector<ast_matchers::internal::Matcher<VarDecl>>{
                   VarInitWithFirstMember, VarInitWithSecondMember}),
@@ -282,9 +287,8 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
       cxxForRangeStmt(
           unless(isInMarco()),
           hasLoopVariable(
-              varDecl(hasType(qualType(anyOf(PairType, lValueReferenceType(
-                                                           pointee(PairType))))
-                                  .bind(PairVarTypeName)),
+              varDecl(hasType(typeOrLValueReferenceTo(PairType).bind(
+                          PairVarTypeName)),
                       hasInitializer(ignoringCopyCtorAndImplicitCast(
                           expr().bind(InitExprName))))
                   .bind(PairDeclName)),
