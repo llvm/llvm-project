@@ -32,6 +32,8 @@ func.func @rocdl_special_regs() -> i32 {
   %13 = rocdl.grid.dim.y : i32
   // CHECK: rocdl.grid.dim.z : i32
   %14 = rocdl.grid.dim.z : i32
+  // CHECK: rocdl.wave.id : i32
+  %15 = rocdl.wave.id : i32
   llvm.return %0 : i32
 }
 
