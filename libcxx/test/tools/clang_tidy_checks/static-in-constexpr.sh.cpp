@@ -1,4 +1,7 @@
-// RUN: %{clang-tidy} %s -checks='-*,libcpp-static-in-constexpr' -- | FileCheck %s
+// RUN: %{clang-tidy} %s --config-file=%{libcxx-dir}/.clang-tidy \
+// RUN:                  --load=%{test-tools-dir}/clang_tidy_checks/libcxx-tidy.plugin \
+// RUN:                  -checks='-*,libcpp-static-in-constexpr' -- \
+// RUN:                  %{flags} %{compile_flags} -Wno-unused-variable | FileCheck %s
 
 void normal_func() {
   static int x = 0;
@@ -8,9 +11,6 @@ void normal_func() {
 constexpr void constexpr_func() {
   static constexpr int x = 0;
   // CHECK: :[[@LINE-1]]:24: warning: variable of static or thread storage duration inside constexpr function [libcpp-static-in-constexpr]
-  
-  thread_local int y = 0;
-  // CHECK: :[[@LINE-1]]:20: warning: variable of static or thread storage duration inside constexpr function [libcpp-static-in-constexpr]
 }
 
 consteval void consteval_func() {

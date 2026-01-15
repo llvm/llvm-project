@@ -19,6 +19,8 @@ public:
       : clang::tidy::ClangTidyCheck(name, context) {}
   void registerMatchers(clang::ast_matchers::MatchFinder* finder) override;
   void check(const clang::ast_matchers::MatchFinder::MatchResult& result) override;
+
+  bool isLanguageVersionSupported(const clang::LangOptions& lang_opts) const override { return !lang_opts.CPlusPlus23; }
 };
 
 } // namespace libcpp

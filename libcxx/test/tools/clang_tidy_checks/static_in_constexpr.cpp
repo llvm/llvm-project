@@ -14,29 +14,13 @@ using namespace clang::ast_matchers;
 
 namespace libcpp {
 
-void static_in_constexpr::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(varDecl(isStaticLocal()).bind("var"), this);
+void static_in_constexpr::registerMatchers(MatchFinder* finder) {
+  finder->addMatcher(functionDecl(hasDescendant(varDecl(isStaticLocal()).bind("var")), isConstexpr()), this);
 }
 
-void static_in_constexpr::check(const MatchFinder::MatchResult &Result) {
-  const auto *Var = Result.Nodes.getNodeAs<clang::VarDecl>("var");
-  if (!Var)
-      return;
-
-  const clang::DeclContext *DC = Var->getDeclContext();
-
-  while (DC && !DC->isFunctionOrMethod())
-    DC = DC->getParent();
-
-  const auto *FD = llvm::dyn_cast_or_null<clang::FunctionDecl>(DC);
-  if (!FD)
-    return;
-
-  if (FD->isConstexpr()) {
-    diag(Var->getLocation(),
-         "variable of static or thread storage duration inside constexpr "
-         "function");
-  }
+void static_in_constexpr::check(const MatchFinder::MatchResult& result) {
+  if (const auto* var_decl = result.Nodes.getNodeAs<clang::VarDecl>("var"))
+    diag(var_decl->getLocation(), "static variables inside constexpr functions aren't supported by GCC before C++23");
 }
 
 } // namespace libcpp
