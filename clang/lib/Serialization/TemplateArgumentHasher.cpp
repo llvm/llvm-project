@@ -202,6 +202,21 @@ void TemplateArgumentHasher::AddDecl(const Decl *D) {
   }
 
   AddDeclarationName(ND->getDeclName());
+
+  // If this was a specialization we should take into account its template
+  // arguments. This helps to reduce collisions coming when visiting template
+  // specialization types (eg. when processing type template arguments).
+  ArrayRef<TemplateArgument> Args;
+  if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D))
+    Args = CTSD->getTemplateArgs().asArray();
+  else if (auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(D))
+    Args = VTSD->getTemplateArgs().asArray();
+  else if (auto *FD = dyn_cast<FunctionDecl>(D))
+    if (FD->getTemplateSpecializationArgs())
+      Args = FD->getTemplateSpecializationArgs()->asArray();
+
+  for (auto &TA : Args)
+    AddTemplateArgument(TA);
 }
 
 void TemplateArgumentHasher::AddQualType(QualType T) {
