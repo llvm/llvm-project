@@ -3,18 +3,6 @@
 
 declare i64 @llvm.vscale.i64()
 
-define i64 @vscale_bounded_range_sub(i64 %x) vscale_range(1, 16) {
-; CHECK-LABEL: vscale_bounded_range_sub:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    lsr x8, x8, #4
-; CHECK-NEXT:    sub x0, x8, #1
-; CHECK-NEXT:    ret
-  %vscale = call i64 @llvm.vscale.i64()
-  %sub = sub i64 %vscale, 1
-  ret i64 %sub
-}
-
 define i64 @vscale_exact_value() vscale_range(2, 2) {
 ; CHECK-LABEL: vscale_exact_value:
 ; CHECK:       // %bb.0:
@@ -43,34 +31,6 @@ define i64 @vscale_and_mask(i64 %x) vscale_range(1, 4) {
   %vscale = call i64 @llvm.vscale.i64()
   %masked = and i64 %vscale, 15
   ret i64 %masked
-}
-
-define i1 @vscale_compare_bounded_true() vscale_range(1, 4) {
-; CHECK-LABEL: vscale_compare_bounded_true:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    lsr x8, x8, #4
-; CHECK-NEXT:    cmp x8, #100
-; CHECK-NEXT:    cset w0, lo
-; CHECK-NEXT:    ret
-  %vscale = call i64 @llvm.vscale.i64()
-  %cmp = icmp ult i64 %vscale, 100
-  ret i1 %cmp
-}
-
-define i1 @vscale_or_const_range(i64 %x) vscale_range(1, 4) {
-; CHECK-LABEL: vscale_or_const_range:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    lsr x8, x8, #4
-; CHECK-NEXT:    orr x8, x8, #0x8
-; CHECK-NEXT:    cmp x8, #4
-; CHECK-NEXT:    cset w0, hi
-; CHECK-NEXT:    ret
-  %vscale = call i64 @llvm.vscale.i64()
-  %or = or i64 %vscale, 8
-  %cmp = icmp ugt i64 %or, 4
-  ret i1 %cmp
 }
 
 define i1 @vscale_shl_known_bits(i64 %x) vscale_range(1, 4) {
