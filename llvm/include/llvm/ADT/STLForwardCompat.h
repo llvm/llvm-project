@@ -17,7 +17,9 @@
 #ifndef LLVM_ADT_STLFORWARDCOMPAT_H
 #define LLVM_ADT_STLFORWARDCOMPAT_H
 
+#include "llvm/Support/Compiler.h"
 #include <optional>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 
@@ -147,6 +149,15 @@ template <class T> constexpr T *to_address(T *P) {
   return P;
 }
 
+/// C++20 constexpr invoke. This uses `std::apply` (constexpr in C++17) to
+/// achieve constexpr invocation.
+template <typename FnT, typename... ArgsT>
+constexpr std::invoke_result_t<FnT, ArgsT...>
+invoke(FnT &&Fn, ArgsT &&...Args) { // NOLINT(readability-identifier-naming)
+  return std::apply(std::forward<FnT>(Fn),
+                    std::forward_as_tuple(std::forward<ArgsT>(Args)...));
+}
+
 //===----------------------------------------------------------------------===//
 //     Features from C++23
 //===----------------------------------------------------------------------===//
@@ -175,6 +186,140 @@ struct from_range_t {
   explicit from_range_t() = default;
 };
 inline constexpr from_range_t from_range{};
+
+//===----------------------------------------------------------------------===//
+//     Bind functions from C++20 / C++23 / C++26
+//===----------------------------------------------------------------------===//
+
+namespace detail {
+// Tag for constructing with a runtime callable.
+struct RuntimeFnTag {};
+// Tag for constructing with a compile-time constant callable.
+struct ConstantFnTag {};
+
+/// Stores a callable as a data member.
+template <typename FnT> struct FnHolder {
+  FnT Fn;
+
+  template <typename FnArgT>
+  constexpr explicit FnHolder(FnArgT &&F) : Fn(std::forward<FnArgT>(F)) {}
+
+  constexpr FnT &get() { return Fn; }
+  constexpr const FnT &get() const { return Fn; }
+};
+
+/// Holds a compile-time constant callable (empty storage).
+template <auto ConstFn> struct FnConstant {
+  constexpr decltype(auto) get() const { return ConstFn; }
+};
+
+// Storage class for bind_front/bind_back that properly handles const/non-const
+// qualification of the wrapper when invoking the stored callable.
+// If BindFront is true, bound args are prepended; otherwise appended.
+// FnStorageT is either FnHolder<FnT> (runtime) or FnConstant<ConstFn>.
+template <bool BindFront, typename BoundArgsTupleT, typename FnStorageT,
+          typename IndicesT>
+class BindStorage;
+
+template <bool BindFront, typename BoundArgsTupleT, typename FnStorageT,
+          size_t... Indices>
+class BindStorage<BindFront, BoundArgsTupleT, FnStorageT,
+                  std::index_sequence<Indices...>> {
+  BoundArgsTupleT BoundArgs;
+  // This may be empty for const functions, hence the `no_unique_address`.
+  LLVM_NO_UNIQUE_ADDRESS FnStorageT FnStorage;
+
+public:
+  // Constructor for FnHolder (runtime callable).
+  template <typename FnArgT, typename... BoundArgsArgT>
+  constexpr BindStorage(RuntimeFnTag, FnArgT &&F, BoundArgsArgT &&...Args)
+      : BoundArgs(std::forward<BoundArgsArgT>(Args)...),
+        FnStorage(std::forward<FnArgT>(F)) {}
+
+  // Constructor for FnConstant (compile-time callable).
+  template <typename... BoundArgsArgT>
+  constexpr BindStorage(ConstantFnTag, BoundArgsArgT &&...Args)
+      : BoundArgs(std::forward<BoundArgsArgT>(Args)...), FnStorage() {}
+
+  template <typename... CallArgsT>
+  constexpr decltype(auto) operator()(CallArgsT &&...CallArgs) {
+    if constexpr (BindFront)
+      return llvm::invoke(FnStorage.get(), std::get<Indices>(BoundArgs)...,
+                          std::forward<CallArgsT>(CallArgs)...);
+    else
+      return llvm::invoke(FnStorage.get(), std::forward<CallArgsT>(CallArgs)...,
+                          std::get<Indices>(BoundArgs)...);
+  }
+
+  template <typename... CallArgsT>
+  constexpr decltype(auto) operator()(CallArgsT &&...CallArgs) const {
+    if constexpr (BindFront)
+      return llvm::invoke(FnStorage.get(), std::get<Indices>(BoundArgs)...,
+                          std::forward<CallArgsT>(CallArgs)...);
+    else
+      return llvm::invoke(FnStorage.get(), std::forward<CallArgsT>(CallArgs)...,
+                          std::get<Indices>(BoundArgs)...);
+  }
+};
+} // end namespace detail
+
+/// C++20 bind_front. Prepends bound arguments to the callable. All bind
+/// arguments and the callable are forwarded and *stored* by value. If you would
+/// like to pass by reference, use `std::ref` or `std::cref`.
+template <typename FnT, typename... BindArgsT>
+constexpr auto bind_front(FnT &&Fn, // NOLINT(readability-identifier-naming)
+                          BindArgsT &&...BindArgs) {
+  return detail::BindStorage</*BindFront=*/true,
+                             std::tuple<std::decay_t<BindArgsT>...>,
+                             detail::FnHolder<std::decay_t<FnT>>,
+                             std::index_sequence_for<BindArgsT...>>(
+      detail::RuntimeFnTag{}, std::forward<FnT>(Fn),
+      std::forward<BindArgsT>(BindArgs)...);
+}
+
+/// C++26 bind_front with compile-time callable. Prepends bound arguments.
+/// Bound arguments are forwarded and *stored* by value.
+template <auto ConstFn, typename... BindArgsT>
+constexpr auto
+bind_front(BindArgsT &&...BindArgs) { // NOLINT(readability-identifier-naming)
+  if constexpr (std::is_pointer_v<decltype(ConstFn)> ||
+                std::is_member_pointer_v<decltype(ConstFn)>)
+    static_assert(ConstFn != nullptr);
+
+  return detail::BindStorage<
+      /*BindFront=*/true, std::tuple<std::decay_t<BindArgsT>...>,
+      detail::FnConstant<ConstFn>, std::index_sequence_for<BindArgsT...>>(
+      detail::ConstantFnTag{}, std::forward<BindArgsT>(BindArgs)...);
+}
+
+/// C++23 bind_back. Appends bound arguments to the callable. All bind
+/// arguments and the callable are forwarded and *stored* by value. If you would
+/// like to pass by reference, use `std::ref` or `std::cref`.
+template <typename FnT, typename... BindArgsT>
+constexpr auto bind_back(FnT &&Fn, // NOLINT(readability-identifier-naming)
+                         BindArgsT &&...BindArgs) {
+  return detail::BindStorage</*BindFront=*/false,
+                             std::tuple<std::decay_t<BindArgsT>...>,
+                             detail::FnHolder<std::decay_t<FnT>>,
+                             std::index_sequence_for<BindArgsT...>>(
+      detail::RuntimeFnTag{}, std::forward<FnT>(Fn),
+      std::forward<BindArgsT>(BindArgs)...);
+}
+
+/// C++26 bind_back with compile-time callable. Appends bound arguments.
+/// Bound arguments are forwarded and *stored* by value.
+template <auto ConstFn, typename... BindArgsT>
+constexpr auto
+bind_back(BindArgsT &&...BindArgs) { // NOLINT(readability-identifier-naming)
+  if constexpr (std::is_pointer_v<decltype(ConstFn)> ||
+                std::is_member_pointer_v<decltype(ConstFn)>)
+    static_assert(ConstFn != nullptr);
+
+  return detail::BindStorage<
+      /*BindFront=*/false, std::tuple<std::decay_t<BindArgsT>...>,
+      detail::FnConstant<ConstFn>, std::index_sequence_for<BindArgsT...>>(
+      detail::ConstantFnTag{}, std::forward<BindArgsT>(BindArgs)...);
+}
 } // namespace llvm
 
 #endif // LLVM_ADT_STLFORWARDCOMPAT_H

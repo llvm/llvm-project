@@ -70,6 +70,9 @@ enum class RecurKind {
   FindLastIVUMax, ///< FindLast reduction with select(cmp(),x,y) where one of
                   ///< (x,y) is increasing loop induction, and both x and y
                   ///< are integer type, producing a UMax reduction.
+  FindLast,       ///< FindLast reduction with select(cmp(),x,y) where x and y
+                  ///< are an integer type, one is the current recurrence value,
+                  ///< and the other is an arbitrary value.
   // clang-format on
   // TODO: Any_of and FindLast reduction need not be restricted to integer type
   // only.
@@ -180,13 +183,11 @@ public:
   /// Returns a struct describing whether the instruction is either a
   ///   Select(ICmp(A, B), X, Y), or
   ///   Select(FCmp(A, B), X, Y)
-  /// where one of (X, Y) is an increasing (FindLast) or decreasing (FindFirst)
-  /// loop induction variable, and the other is a PHI value.
-  // TODO: Support non-monotonic variable. FindLast does not need be restricted
-  // to increasing loop induction variables.
-  LLVM_ABI static InstDesc isFindIVPattern(RecurKind Kind, Loop *TheLoop,
-                                           PHINode *OrigPhi, Instruction *I,
-                                           ScalarEvolution &SE);
+  /// where one of (X, Y) is an increasing (FindLastIV) or decreasing
+  /// (FindFirstIV) loop induction variable, or an arbitrary integer value
+  /// (FindLast), and the other is a PHI value.
+  LLVM_ABI static InstDesc isFindPattern(Loop *TheLoop, PHINode *OrigPhi,
+                                         Instruction *I, ScalarEvolution &SE);
 
   /// Returns a struct describing if the instruction is a
   /// Select(FCmp(X, Y), (Z = X op PHINode), PHINode) instruction pattern.
@@ -308,6 +309,17 @@ public:
   static bool isFindIVRecurrenceKind(RecurKind Kind) {
     return isFindFirstIVRecurrenceKind(Kind) ||
            isFindLastIVRecurrenceKind(Kind);
+  }
+
+  /// Returns true if the recurrence kind is of the form
+  ///   select(cmp(),x,y) where one of (x,y) is an arbitrary value and the
+  ///   other is a recurrence.
+  static bool isFindLastRecurrenceKind(RecurKind Kind) {
+    return Kind == RecurKind::FindLast;
+  }
+
+  static bool isFindRecurrenceKind(RecurKind Kind) {
+    return isFindLastRecurrenceKind(Kind) || isFindIVRecurrenceKind(Kind);
   }
 
   /// Returns the type of the recurrence. This type can be narrower than the
