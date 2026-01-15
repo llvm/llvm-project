@@ -388,6 +388,7 @@ try {
                                         name: 'CUT',
                                         value: env.BUILD_URL + 'artifact/' + compilerTar
                                     ),
+                                    string(name: 'BRANCH_CONTEXT', value: actualTarget),
                                     string(name: 'CHANGE_ID', value: env.CHANGE_ID ?: ''),
                                     string(name: gitCommitEnv, value: gitVars.GIT_COMMIT ?: '')
                                 ]

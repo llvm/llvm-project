@@ -18,4 +18,5 @@
 ^prj-essentials/devo/aocc/CODEOWNERS\.AOCC\.m4
 ^\.github/\.ai_pr_platform/
 ^\.github/workflows/amd-.*\.yml
+^\.github/workflows/amd-.*\.yaml
 ^CODEOWNERS
