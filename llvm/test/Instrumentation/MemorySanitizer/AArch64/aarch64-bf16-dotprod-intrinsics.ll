@@ -6,7 +6,6 @@
 ; Strictly handled:
 ; - llvm.aarch64.neon.bfdot.v2f32.v4bf16
 ; - llvm.aarch64.neon.bfdot.v4f32.v8bf16
-; - llvm.aarch64.neon.bfmmla
 ; - llvm.aarch64.neon.bfmlalb
 ; - llvm.aarch64.neon.bfmlalt
 ;
