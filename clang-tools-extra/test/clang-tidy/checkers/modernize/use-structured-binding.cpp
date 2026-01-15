@@ -287,6 +287,12 @@ void NotWarnForVarHasSpecifiers() {
     int x = P.first;
     int y = P.second;
   }
+
+  {
+    thread_local auto P = getPair<int, int>();
+    int x = P.first;
+    int y = P.second;
+  }
 }
 
 void NotWarnForMultiUsedPairVar() {
