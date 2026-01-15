@@ -647,12 +647,24 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
   uint64_t ShAmt2;
   Value *X;
   Instruction *L1, *L2;
+  bool IsRoot = (LOps.FoundRoot == false && LOps.Root == nullptr);
 
-  // Go to the last node with loads.
-  if (match(V,
-            m_OneUse(m_c_Or(m_Value(X), m_OneUse(m_ShlOrSelf(
-                                            m_OneUse(m_ZExt(m_Instruction(L2))),
-                                            ShAmt2)))))) {
+  // For the root instruction, allow multiple uses since the final result
+  // may legitimately be used in multiple places. For intermediate values,
+  // require single use to avoid creating duplicate loads.
+  bool Matched = false;
+  if (IsRoot)
+    Matched =
+        match(V, m_c_Or(m_Value(X),
+                        m_OneUse(m_ShlOrSelf(
+                            m_OneUse(m_ZExt(m_Instruction(L2))), ShAmt2))));
+  else
+    Matched = match(
+        V, m_OneUse(m_c_Or(m_Value(X),
+                           m_OneUse(m_ShlOrSelf(
+                               m_OneUse(m_ZExt(m_Instruction(L2))), ShAmt2)))));
+
+  if (Matched) {
     if (!foldLoadsRecursive(X, LOps, DL, AA) && LOps.FoundRoot)
       // Avoid Partial chain merge.
       return false;
