@@ -12,6 +12,12 @@
 #ifndef HEADER
 #define HEADER
 
+typedef void **omp_impex_t;
+extern const omp_impex_t omp_not_impex;
+extern const omp_impex_t omp_import;
+extern const omp_impex_t omp_export;
+extern const omp_impex_t omp_impex;
+
 void foo() {}
 
 template <class T, int N>
@@ -97,12 +103,34 @@ int main(int argc, char **argv) {
     foo();
   }
 }
+
+#pragma omp taskloop transparent(omp_not_impex)
+  for (int i = 0; i < 10; ++i) {
+#pragma omp task transparent(omp_import)
+    for (int i = 0; i < 10; ++i) {
+#pragma omp task transparent(omp_export)
+      for (int i = 0; i < 10; ++i) {
+#pragma omp task transparent(omp_impex)
+	foo();
+      }
+    }
+  }
 #endif
  // CHECK60: #pragma omp taskloop threadset(omp_team)
  // CHECK60-NEXT: for (int i = 0; i < 10; ++i) {
  // CHECK60: #pragma omp taskloop threadset(omp_pool)
  // CHECK60-NEXT: for (int j = 0; j < 10; ++j) {
  // CHECK60-NEXT: foo();
+
+// CHECK60: #pragma omp taskloop transparent(omp_not_impex)
+// CHECK60-NEXT: for (int i = 0; i < 10; ++i) {
+// CHECK60-NEXT: #pragma omp task transparent(omp_import)
+// CHECK60-NEXT: for (int i = 0; i < 10; ++i) {
+// CHECK60-NEXT: #pragma omp task transparent(omp_export)
+// CHECK60-NEXT: for (int i = 0; i < 10; ++i) {
+// CHECK60-NEXT: #pragma omp task transparent(omp_impex)
+// CHECK60-NEXT: foo();
+
   return (tmain<int, 5>(argc) + tmain<char, 1>(argv[0][0]));
 }
 
