@@ -54,7 +54,6 @@ struct OpenACCPointerLikeModel
                 mlir::TypedValue<mlir::acc::PointerLikeType> destPtr) const;
 
   bool isDeviceData(mlir::Type pointer, mlir::Value var) const;
-
 };
 
 template <typename T>

@@ -475,7 +475,6 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
                                   acc::getBounds(op));
   }
 
-
   if (acc::isDeviceValue(var)) {
     // If the variable is device data, use deviceptr clause.
     return acc::DevicePtrOp::create(builder, loc, var,

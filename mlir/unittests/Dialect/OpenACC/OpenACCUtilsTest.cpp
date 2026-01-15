@@ -30,9 +30,9 @@ using namespace mlir::acc;
 class OpenACCUtilsTest : public ::testing::Test {
 protected:
   OpenACCUtilsTest() : b(&context), loc(UnknownLoc::get(&context)) {
-    context.loadDialect<acc::OpenACCDialect, arith::ArithDialect,
-                        gpu::GPUDialect, memref::MemRefDialect,
-                        func::FuncDialect>();
+    context
+        .loadDialect<acc::OpenACCDialect, arith::ArithDialect, gpu::GPUDialect,
+                     memref::MemRefDialect, func::FuncDialect>();
   }
 
   MLIRContext context;
@@ -1378,7 +1378,8 @@ TEST_F(OpenACCUtilsTest, isDeviceValueMemrefGlobalAddressSpace) {
   // Test that a memref with GPU global address space is considered device data
   auto gpuAddressSpace =
       gpu::AddressSpaceAttr::get(&context, gpu::AddressSpace::Global);
-  auto memrefTy = MemRefType::get({10}, b.getI32Type(), AffineMap(), gpuAddressSpace);
+  auto memrefTy =
+      MemRefType::get({10}, b.getI32Type(), AffineMap(), gpuAddressSpace);
 
   OwningOpRef<memref::AllocaOp> allocOp =
       memref::AllocaOp::create(b, loc, memrefTy);
@@ -1393,7 +1394,8 @@ TEST_F(OpenACCUtilsTest, isDeviceValueMemrefWorkgroupAddressSpace) {
   // data
   auto gpuAddressSpace =
       gpu::AddressSpaceAttr::get(&context, gpu::AddressSpace::Workgroup);
-  auto memrefTy = MemRefType::get({10}, b.getI32Type(), AffineMap(), gpuAddressSpace);
+  auto memrefTy =
+      MemRefType::get({10}, b.getI32Type(), AffineMap(), gpuAddressSpace);
 
   OwningOpRef<memref::AllocaOp> allocOp =
       memref::AllocaOp::create(b, loc, memrefTy);
@@ -1408,7 +1410,8 @@ TEST_F(OpenACCUtilsTest, isDeviceValueMemrefPrivateAddressSpace) {
   // data
   auto gpuAddressSpace =
       gpu::AddressSpaceAttr::get(&context, gpu::AddressSpace::Private);
-  auto memrefTy = MemRefType::get({10}, b.getI32Type(), AffineMap(), gpuAddressSpace);
+  auto memrefTy =
+      MemRefType::get({10}, b.getI32Type(), AffineMap(), gpuAddressSpace);
 
   OwningOpRef<memref::AllocaOp> allocOp =
       memref::AllocaOp::create(b, loc, memrefTy);
