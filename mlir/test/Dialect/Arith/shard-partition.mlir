@@ -13,5 +13,6 @@ func.func @test_partition_constant() ->(tensor<1024x1024xf32>)attributes{llvm.em
   %sharding_1 = shard.sharding @grid4x4 split_axes = [[0]] : !shard.sharding
   %sharded_1 = shard.shard %cst to %sharding_1 : tensor<1024x1024xf32>
   %ci = arith.constant 434 : i32
-  return %sharded_1 : tensor<1024x1024xf32>
+  %sharded_r = shard.shard %sharded_1 to %sharding_1 annotate_for_users : tensor<1024x1024xf32>
+  return %sharded_r : tensor<1024x1024xf32>
 }
