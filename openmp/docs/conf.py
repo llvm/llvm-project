@@ -26,7 +26,12 @@ from datetime import date
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ["sphinx.ext.todo", "sphinx.ext.mathjax", "sphinx.ext.intersphinx", "myst_parser"]
+extensions = [
+    "sphinx.ext.todo",
+    "sphinx.ext.mathjax",
+    "sphinx.ext.intersphinx",
+    "myst_parser",
+]
 
 # Add path for llvm_slug module.
 sys.path.insert(0, os.path.abspath(os.path.join("..", "..", "llvm", "docs")))
