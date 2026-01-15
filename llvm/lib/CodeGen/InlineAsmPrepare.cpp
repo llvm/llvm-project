@@ -14,14 +14,14 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/DerivedTypes.h"
 #include <sstream>
 
 using namespace llvm;
@@ -150,7 +150,8 @@ bool InlineAsmPrepare::runOnFunction(Function &F) {
     SmallVector<AllocaInst *, 8> OutputAllocas(Constraints.size(), nullptr);
 
     // Track pairs of Input-Output tied constraints.
-    // TiedOutput[i] = j means Constraint i is an Input tied to Output Constraint j.
+    // TiedOutput[i] = j means Constraint i is an Input tied to Output
+    // Constraint j.
     SmallVector<int, 8> TiedOutput(Constraints.size(), -1);
     for (unsigned I = 0, E = Constraints.size(); I != E; ++I) {
       const auto &C = Constraints[I];
@@ -215,18 +216,18 @@ bool InlineAsmPrepare::runOnFunction(Function &F) {
         }
 
         if (!Handled) {
-            if (C.hasRegMemConstraints()) {
-              // Converted to memory constraint.
-              // Create alloca, store input, pass pointer as argument.
-              AllocaInst *Slot = Builder.CreateAlloca(ArgTy, nullptr, "asm_mem");
-              Builder.CreateStore(ArgVal, Slot);
-              NewArgs.push_back(Slot);
-              NewArgTypes.push_back(Slot->getType());
-            } else {
-              // Unchanged
-              NewArgs.push_back(ArgVal);
-              NewArgTypes.push_back(ArgTy);
-            }
+          if (C.hasRegMemConstraints()) {
+            // Converted to memory constraint.
+            // Create alloca, store input, pass pointer as argument.
+            AllocaInst *Slot = Builder.CreateAlloca(ArgTy, nullptr, "asm_mem");
+            Builder.CreateStore(ArgVal, Slot);
+            NewArgs.push_back(Slot);
+            NewArgTypes.push_back(Slot->getType());
+          } else {
+            // Unchanged
+            NewArgs.push_back(ArgVal);
+            NewArgTypes.push_back(ArgTy);
+          }
         }
         ArgNo++;
       }
@@ -242,10 +243,9 @@ bool InlineAsmPrepare::runOnFunction(Function &F) {
     }
 
     FunctionType *NewFTy = FunctionType::get(NewRetTy, NewArgTypes, false);
-    auto *NewIA = InlineAsm::get(
-        NewFTy, IA->getAsmString(), NewConstraintStr,
-        IA->hasSideEffects(), IA->isAlignStack(), IA->getDialect(),
-        IA->canThrow());
+    auto *NewIA = InlineAsm::get(NewFTy, IA->getAsmString(), NewConstraintStr,
+                                 IA->hasSideEffects(), IA->isAlignStack(),
+                                 IA->getDialect(), IA->canThrow());
 
     CallInst *NewCall = Builder.CreateCall(NewFTy, NewIA, NewArgs);
     NewCall->setCallingConv(CB->getCallingConv());
@@ -253,66 +253,65 @@ bool InlineAsmPrepare::runOnFunction(Function &F) {
     NewCall->setDebugLoc(CB->getDebugLoc());
 
     for (const auto &Item : ElementTypeAttrs)
-      NewCall->addParamAttr(Item.first,
-                            Attribute::get(F.getContext(),
-                                           Attribute::ElementType,
-                                           Item.second));
+      NewCall->addParamAttr(
+          Item.first,
+          Attribute::get(F.getContext(), Attribute::ElementType, Item.second));
 
     // Reconstruct the return value and update users.
     if (!CB->use_empty()) {
-        Value *Replacement = nullptr;
-        Type *RetTy = CB->getType();
+      Value *Replacement = nullptr;
+      Type *RetTy = CB->getType();
 
-        if (RetTy->isVoidTy()) {
-            // No return value, nothing to replace.
-        } else if (isa<StructType>(RetTy)) {
-            // Multiple outputs. Reconstruct the struct.
-            Value *Res = UndefValue::get(RetTy);
-            unsigned NewRetIdx = 0;
-            unsigned OriginalOutIdx = 0;
+      if (RetTy->isVoidTy()) {
+        // No return value, nothing to replace.
+      } else if (isa<StructType>(RetTy)) {
+        // Multiple outputs. Reconstruct the struct.
+        Value *Res = UndefValue::get(RetTy);
+        unsigned NewRetIdx = 0;
+        unsigned OriginalOutIdx = 0;
 
-            for (unsigned I = 0, E = Constraints.size(); I != E; ++I) {
-                if (Constraints[I].Type != InlineAsm::isOutput)
-                    continue;
+        for (unsigned I = 0, E = Constraints.size(); I != E; ++I) {
+          if (Constraints[I].Type != InlineAsm::isOutput)
+            continue;
 
-                Value *Val = nullptr;
-                if (AllocaInst *Slot = OutputAllocas[I]) {
-                    // Converted to memory. Load from alloca.
-                    Val = Builder.CreateLoad(Slot->getAllocatedType(), Slot);
-                } else {
-                    // Not converted. Extract from NewCall return.
-                    if (NewRetTypes.size() == 1) {
-                         Val = NewCall;
-                    } else {
-                         Val = Builder.CreateExtractValue(NewCall, NewRetIdx);
-                    }
-                    NewRetIdx++;
-                }
-
-                Res = Builder.CreateInsertValue(Res, Val, OriginalOutIdx++);
-            }
-            Replacement = Res;
-        } else {
-            // Single output.
-            // Find the output constraint (should be the first one).
-            unsigned OutConstraintIdx = 0;
-            for (unsigned I = 0; I < Constraints.size(); ++I) {
-                 if (Constraints[I].Type == InlineAsm::isOutput) {
-                     OutConstraintIdx = I;
-                     break;
-                 }
-            }
-
-            if (AllocaInst *Slot = OutputAllocas[OutConstraintIdx]) {
-                Replacement = Builder.CreateLoad(Slot->getAllocatedType(), Slot);
+          Value *Val = nullptr;
+          if (AllocaInst *Slot = OutputAllocas[I]) {
+            // Converted to memory. Load from alloca.
+            Val = Builder.CreateLoad(Slot->getAllocatedType(), Slot);
+          } else {
+            // Not converted. Extract from NewCall return.
+            if (NewRetTypes.size() == 1) {
+              Val = NewCall;
             } else {
-                Replacement = NewCall;
+              Val = Builder.CreateExtractValue(NewCall, NewRetIdx);
             }
+            NewRetIdx++;
+          }
+
+          Res = Builder.CreateInsertValue(Res, Val, OriginalOutIdx++);
+        }
+        Replacement = Res;
+      } else {
+        // Single output.
+        // Find the output constraint (should be the first one).
+        unsigned OutConstraintIdx = 0;
+        for (unsigned I = 0; I < Constraints.size(); ++I) {
+          if (Constraints[I].Type == InlineAsm::isOutput) {
+            OutConstraintIdx = I;
+            break;
+          }
         }
 
-        if (Replacement) {
-            CB->replaceAllUsesWith(Replacement);
+        if (AllocaInst *Slot = OutputAllocas[OutConstraintIdx]) {
+          Replacement = Builder.CreateLoad(Slot->getAllocatedType(), Slot);
+        } else {
+          Replacement = NewCall;
         }
+      }
+
+      if (Replacement) {
+        CB->replaceAllUsesWith(Replacement);
+      }
     }
 
     CB->eraseFromParent();
