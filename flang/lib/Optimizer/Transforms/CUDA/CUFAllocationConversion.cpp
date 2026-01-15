@@ -62,28 +62,6 @@ static inline unsigned getMemType(cuf::DataAttribute attr) {
   llvm_unreachable("unsupported memory type");
 }
 
-template <typename OpTy>
-static bool hasDoubleDescriptors(OpTy op) {
-  if (auto declareOp =
-          mlir::dyn_cast_or_null<fir::DeclareOp>(op.getBox().getDefiningOp())) {
-    if (mlir::isa_and_nonnull<fir::AddrOfOp>(
-            declareOp.getMemref().getDefiningOp())) {
-      if (isPinned(declareOp))
-        return false;
-      return true;
-    }
-  } else if (auto declareOp = mlir::dyn_cast_or_null<hlfir::DeclareOp>(
-                 op.getBox().getDefiningOp())) {
-    if (mlir::isa_and_nonnull<fir::AddrOfOp>(
-            declareOp.getMemref().getDefiningOp())) {
-      if (isPinned(declareOp))
-        return false;
-      return true;
-    }
-  }
-  return false;
-}
-
 static bool inDeviceContext(mlir::Operation *op) {
   if (op->getParentOfType<cuf::KernelOp>())
     return true;
@@ -121,7 +99,6 @@ static mlir::LogicalResult convertOpToCall(OpTy op,
 
   mlir::Value hasStat = op.getHasStat() ? builder.createBool(loc, true)
                                         : builder.createBool(loc, false);
-
   mlir::Value errmsg;
   if (op.getErrmsg()) {
     errmsg = op.getErrmsg();
@@ -138,19 +115,27 @@ static mlir::LogicalResult convertOpToCall(OpTy op,
                   loc, fir::ReferenceType::get(
                            mlir::IntegerType::get(op.getContext(), 1)));
     if (op.getSource()) {
+      mlir::Value isDeviceSource = op.getDeviceSource()
+                                       ? builder.createBool(loc, true)
+                                       : builder.createBool(loc, false);
       mlir::Value stream =
           op.getStream() ? op.getStream()
                          : builder.createNullConstant(loc, fTy.getInput(2));
       args = fir::runtime::createArguments(
           builder, loc, fTy, op.getBox(), op.getSource(), stream, pinned,
-          hasStat, errmsg, sourceFile, sourceLine);
+          hasStat, errmsg, sourceFile, sourceLine, isDeviceSource);
     } else {
       mlir::Value stream =
           op.getStream() ? op.getStream()
                          : builder.createNullConstant(loc, fTy.getInput(1));
+      mlir::Value deviceInit =
+          (op.getDataAttrAttr() &&
+           op.getDataAttrAttr().getValue() == cuf::DataAttribute::Device)
+              ? builder.createBool(loc, true)
+              : builder.createBool(loc, false);
       args = fir::runtime::createArguments(builder, loc, fTy, op.getBox(),
                                            stream, pinned, hasStat, errmsg,
-                                           sourceFile, sourceLine);
+                                           sourceFile, sourceLine, deviceInit);
     }
   } else {
     args =
@@ -344,16 +329,8 @@ struct CUFAllocateOpConversion
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
 
-    bool isPointer = false;
-
-    if (auto declareOp =
-            mlir::dyn_cast_or_null<fir::DeclareOp>(op.getBox().getDefiningOp()))
-      if (declareOp.getFortranAttrs() &&
-          bitEnumContainsAny(*declareOp.getFortranAttrs(),
-                             fir::FortranVariableFlagsEnum::pointer))
-        isPointer = true;
-
-    if (hasDoubleDescriptors(op)) {
+    bool isPointer = op.getPointer();
+    if (op.getHasDoubleDescriptor()) {
       // Allocation for module variable are done with custom runtime entry point
       // so the descriptors can be synchronized.
       mlir::func::FuncOp func;
@@ -406,7 +383,7 @@ struct CUFDeallocateOpConversion
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
 
-    if (hasDoubleDescriptors(op)) {
+    if (op.getHasDoubleDescriptor()) {
       // Deallocation for module variable are done with custom runtime entry
       // point so the descriptors can be synchronized.
       mlir::func::FuncOp func =

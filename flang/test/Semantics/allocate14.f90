@@ -2,7 +2,7 @@
 ! Check for semantic errors in ALLOCATE statements
 
 program allocate14
-  
+
   integer, allocatable :: i1, i2
   character(200), allocatable :: msg1, msg2
   type t
@@ -53,4 +53,3 @@ program allocate14
   !TODO: ERRMSG variable in DEALLOCATE must not be the variable being deallocated
   deallocate(ts, stat=ts(1)%i, errmsg=ts(1)%msg)
 end program
-

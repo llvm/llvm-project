@@ -52,7 +52,7 @@ bar:
   .type random, %function
 random:
   adrp x8, foo
-  add  x8, x8, :lo12:goo
+  add  x8, x8, :lo12:foo
   br   x8
 #endif
 

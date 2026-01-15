@@ -40,6 +40,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CmpInstAnalysis.h"
 #include "llvm/Analysis/HashRecognize.h"
+#include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemoryLocation.h"
@@ -1053,7 +1054,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   unsigned DestAS = DestPtr->getType()->getPointerAddressSpace();
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
   IRBuilder<> Builder(Preheader->getTerminator());
-  SCEVExpander Expander(*SE, *DL, "loop-idiom");
+  SCEVExpander Expander(*SE, "loop-idiom");
   SCEVExpanderCleaner ExpCleaner(Expander);
 
   Type *DestInt8PtrTy = Builder.getPtrTy(DestAS);
@@ -1309,7 +1310,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
   // header.  This allows us to insert code for it in the preheader.
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
   IRBuilder<> Builder(Preheader->getTerminator());
-  SCEVExpander Expander(*SE, *DL, "loop-idiom");
+  SCEVExpander Expander(*SE, "loop-idiom");
 
   SCEVExpanderCleaner ExpCleaner(Expander);
 
@@ -1940,8 +1941,7 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
 
   IRBuilder<> Builder(Preheader->getTerminator());
   Builder.SetCurrentDebugLocation(CurLoop->getStartLoc());
-  SCEVExpander Expander(*SE, Preheader->getModule()->getDataLayout(),
-                        "strlen_idiom");
+  SCEVExpander Expander(*SE, "strlen_idiom");
   Value *MaterialzedBase = Expander.expandCodeFor(
       Verifier.LoadBaseEv, Verifier.LoadBaseEv->getType(),
       Builder.GetInsertPoint());
@@ -3181,7 +3181,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
   if (auto *I = dyn_cast<Instruction>(NewXNext))
     I->copyIRFlags(XNext, /*IncludeWrapFlags=*/true);
 
-  // Step 3: Adjust the successor basic block to recieve the computed
+  // Step 3: Adjust the successor basic block to receive the computed
   //         recurrence's final value instead of the recurrence itself.
 
   XCurr->replaceUsesOutsideBlock(NewX, LoopHeaderBB);
@@ -3496,7 +3496,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilZero() {
       Val->getName() + ".numactivebits", /*HasNUW=*/true,
       /*HasNSW=*/Bitwidth != 2);
 
-  SCEVExpander Expander(*SE, *DL, "loop-idiom");
+  SCEVExpander Expander(*SE, "loop-idiom");
   Expander.setInsertPoint(&*Builder.GetInsertPoint());
   Value *ExtraOffset = Expander.expandCodeFor(ExtraOffsetExpr);
 
@@ -3518,7 +3518,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilZero() {
                         CurLoop->getName() + ".tripcount", /*HasNUW=*/true,
                         /*HasNSW=*/Bitwidth != 2);
 
-  // Step 2: Adjust the successor basic block to recieve the original
+  // Step 2: Adjust the successor basic block to receive the original
   //         induction variable's final value instead of the orig. IV itself.
 
   IV->replaceUsesOutsideBlock(IVFinal, LoopHeaderBB);

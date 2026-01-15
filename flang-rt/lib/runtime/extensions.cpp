@@ -449,10 +449,8 @@ float RTNAME(Rand)(int *i, const char *sourceFile, int line) {
   unsigned mask = 0;
   constexpr int radix = std::numeric_limits<float>::radix;
   constexpr int digits = std::numeric_limits<float>::digits;
-  if (radix == 2) {
+  if constexpr (radix == 2) {
     mask = ~(unsigned)0u << (32 - digits + 1);
-  } else if (radix == 16) {
-    mask = ~(unsigned)0u << ((8 - digits) * 4 + 1);
   } else {
     Terminator terminator{sourceFile, line};
     terminator.Crash("Radix unknown value.");
@@ -465,6 +463,14 @@ void FORTRAN_PROCEDURE_NAME(srand)(int *seed) {
   rand_seed_lock.Take();
   _internal_srand(*seed);
   rand_seed_lock.Drop();
+}
+
+void RTNAME(ShowDescriptor)(const Fortran::runtime::Descriptor *descr) {
+  if (descr) {
+    descr->Dump(stderr, /*dumpRawType=*/false);
+  } else {
+    std::fprintf(stderr, "NULL\n");
+  }
 }
 
 // Extension procedures related to I/O

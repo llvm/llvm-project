@@ -932,12 +932,6 @@ public:
                         ompFlag.value_or(Symbol::Flag::OmpMapStorage));
                     AddToContextObjectWithDSA(*name->symbol,
                         ompFlag.value_or(Symbol::Flag::OmpMapStorage));
-                    if (semantics::IsAssumedSizeArray(*name->symbol)) {
-                      context_.Say(designator.source,
-                          "Assumed-size whole arrays may not appear on the %s "
-                          "clause"_err_en_US,
-                          "MAP");
-                    }
                   }
                 }
               },
@@ -2357,7 +2351,7 @@ void OmpAttributeVisitor::CheckPerfectNestAndRectangularLoop(
 //     parallel do, taskloop, or distribute construct is (are) private.
 //   - The loop iteration variable in the associated do-loop of a simd construct
 //     with just one associated do-loop is linear with a linear-step that is the
-//     increment of the associated do-loop.
+//     increment of the associated do-loop (only for OpenMP versions <= 4.5)
 //   - The loop iteration variables in the associated do-loops of a simd
 //     construct with multiple associated do-loops are lastprivate.
 void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
@@ -2367,9 +2361,10 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
     return;
   }
   Symbol::Flag ivDSA;
+  unsigned version{context_.langOptions().OpenMPVersion};
   if (!llvm::omp::allSimdSet.test(GetContext().directive)) {
     ivDSA = Symbol::Flag::OmpPrivate;
-  } else if (level == 1) {
+  } else if (level == 1 && version <= 45) {
     ivDSA = Symbol::Flag::OmpLinear;
   } else {
     ivDSA = Symbol::Flag::OmpLastPrivate;
@@ -2477,7 +2472,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPSectionConstruct &x) {
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPCriticalConstruct &x) {
   const parser::OmpBeginDirective &beginSpec{x.BeginDir()};
-  PushContext(beginSpec.DirName().source, beginSpec.DirName().v);
+  PushContext(beginSpec.DirName().source, beginSpec.DirId());
   GetContext().withinConstruct = true;
   return true;
 }

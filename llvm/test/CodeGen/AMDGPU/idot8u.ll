@@ -1684,7 +1684,7 @@ define amdgpu_kernel void @udot8_multiuses_mul1(ptr addrspace(1) %src1,
 ; GFX9-NEXT:    v_mul_u32_u24_e32 v4, v4, v11
 ; GFX9-NEXT:    v_add3_u32 v2, v2, v7, v6
 ; GFX9-NEXT:    v_add3_u32 v2, v2, v5, v4
-; GFX9-NEXT:    v_add3_u32 v1, v17, v1, v2
+; GFX9-NEXT:    v_add3_u32 v1, v1, v17, v2
 ; GFX9-NEXT:    global_store_dword v0, v1, s[6:7]
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -1735,7 +1735,7 @@ define amdgpu_kernel void @udot8_multiuses_mul1(ptr addrspace(1) %src1,
 ; GFX9-DL-NEXT:    v_mul_u32_u24_e32 v4, v4, v11
 ; GFX9-DL-NEXT:    v_add3_u32 v2, v2, v7, v6
 ; GFX9-DL-NEXT:    v_add3_u32 v2, v2, v5, v4
-; GFX9-DL-NEXT:    v_add3_u32 v1, v17, v1, v2
+; GFX9-DL-NEXT:    v_add3_u32 v1, v1, v17, v2
 ; GFX9-DL-NEXT:    global_store_dword v0, v1, s[6:7]
 ; GFX9-DL-NEXT:    s_endpgm
 ;
@@ -1789,7 +1789,7 @@ define amdgpu_kernel void @udot8_multiuses_mul1(ptr addrspace(1) %src1,
 ; GFX10-DL-NEXT:    v_add3_u32 v0, v0, v6, v5
 ; GFX10-DL-NEXT:    v_add3_u32 v0, v0, v1, v2
 ; GFX10-DL-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10-DL-NEXT:    v_add3_u32 v0, v3, v13, v0
+; GFX10-DL-NEXT:    v_add3_u32 v0, v13, v3, v0
 ; GFX10-DL-NEXT:    global_store_dword v1, v0, s[6:7]
 ; GFX10-DL-NEXT:    s_endpgm
                                                 ptr addrspace(1) %src2,

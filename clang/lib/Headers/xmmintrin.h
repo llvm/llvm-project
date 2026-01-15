@@ -341,9 +341,7 @@ _mm_rsqrt_ps(__m128 __a)
 /// \returns A 128-bit vector of [4 x float] whose lower 32 bits contain the
 ///    minimum value between both operands. The upper 96 bits are copied from
 ///    the upper 96 bits of the first source operand.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_min_ss(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS _mm_min_ss(__m128 __a, __m128 __b) {
   return __builtin_ia32_minss((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -362,9 +360,8 @@ _mm_min_ss(__m128 __a, __m128 __b)
 ///    A 128-bit vector of [4 x float] containing one of the operands.
 /// \returns A 128-bit vector of [4 x float] containing the minimum values
 ///    between both operands.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_min_ps(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_min_ps(__m128 __a,
+                                                                 __m128 __b) {
   return __builtin_ia32_minps((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -387,9 +384,7 @@ _mm_min_ps(__m128 __a, __m128 __b)
 /// \returns A 128-bit vector of [4 x float] whose lower 32 bits contain the
 ///    maximum value between both operands. The upper 96 bits are copied from
 ///    the upper 96 bits of the first source operand.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_max_ss(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS _mm_max_ss(__m128 __a, __m128 __b) {
   return __builtin_ia32_maxss((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -408,9 +403,8 @@ _mm_max_ss(__m128 __a, __m128 __b)
 ///    A 128-bit vector of [4 x float] containing one of the operands.
 /// \returns A 128-bit vector of [4 x float] containing the maximum values
 ///    between both operands.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_max_ps(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_max_ps(__m128 __a,
+                                                                 __m128 __b) {
   return __builtin_ia32_maxps((__v4sf)__a, (__v4sf)__b);
 }
 

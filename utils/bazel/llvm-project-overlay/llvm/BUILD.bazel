@@ -1530,18 +1530,6 @@ td_library(
     ]),
 )
 
-gentbl_cc_library(
-    name = "InstCombineTableGen",
-    strip_include_prefix = "lib/Target/AMDGPU",
-    tbl_outs = {"lib/Target/AMDGPU/InstCombineTables.inc": ["-gen-searchable-tables"]},
-    tblgen = ":llvm-tblgen",
-    td_file = "lib/Target/AMDGPU/InstCombineTables.td",
-    deps = [
-        ":AMDGPUTargetTdFiles",
-        ":CommonTargetTdFiles",
-    ],
-)
-
 cc_library(
     name = "InstCombine",
     srcs = glob([
@@ -2422,7 +2410,6 @@ llvm_target_lib_list = [lib for lib in [
             ),
         ],
         "tbl_deps": [
-            ":InstCombineTableGen",
             ":amdgpu_isel_target_gen",
             ":r600_target_gen",
         ],
@@ -2584,6 +2571,10 @@ llvm_target_lib_list = [lib for lib in [
                     "lib/Target/Hexagon/HexagonGenRegisterInfoHeader.inc",
                     "lib/Target/Hexagon/HexagonGenRegisterInfoTargetDesc.inc",
                 ],
+            ),
+            (
+                ["-gen-sd-node-info"],
+                "lib/Target/Hexagon/HexagonGenSDNodeInfo.inc",
             ),
             (
                 ["-gen-subtarget"],
@@ -2765,6 +2756,12 @@ llvm_target_lib_list = [lib for lib in [
                     "lib/Target/Mips/MipsGenRegisterInfoMCDesc.inc",
                     "lib/Target/Mips/MipsGenRegisterInfoHeader.inc",
                     "lib/Target/Mips/MipsGenRegisterInfoTargetDesc.inc",
+                ],
+            ),
+            (
+                ["-gen-sd-node-info"],
+                [
+                    "lib/Target/Mips/MipsGenSDNodeInfo.inc",
                 ],
             ),
             (
@@ -3334,6 +3331,13 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/X86/X86GenGlobalISel.inc",
             ),
             (
+                [
+                    "-gen-global-isel-combiner",
+                    "-combiners=X86PreLegalizerCombiner",
+                ],
+                "lib/Target/X86/X86GenPreLegalizeGICombiner.inc",
+            ),
+            (
                 ["-gen-callingconv"],
                 "lib/Target/X86/X86GenCallingConv.inc",
             ),
@@ -3406,6 +3410,58 @@ llvm_target_lib_list = [lib for lib in [
             (
                 ["-gen-subtarget"],
                 "lib/Target/XCore/XCoreGenSubtargetInfo.inc",
+            ),
+        ],
+    },
+    {
+        "name": "Xtensa",
+        "short_name": "Xtensa",
+        "tbl_outs": [
+            (
+                ["-gen-asm-writer"],
+                "lib/Target/Xtensa/XtensaGenAsmWriter.inc",
+            ),
+            (
+                ["-gen-asm-matcher"],
+                "lib/Target/Xtensa/XtensaGenAsmMatcher.inc",
+            ),
+            (
+                ["-gen-callingconv"],
+                "lib/Target/Xtensa/XtensaGenCallingConv.inc",
+            ),
+            (
+                ["-gen-dag-isel"],
+                "lib/Target/Xtensa/XtensaGenDAGISel.inc",
+            ),
+            (
+                ["-gen-disassembler"],
+                "lib/Target/Xtensa/XtensaGenDisassemblerTables.inc",
+            ),
+            (
+                ["-gen-instr-info"],
+                "lib/Target/Xtensa/XtensaGenInstrInfo.inc",
+            ),
+            (
+                ["-gen-emitter"],
+                "lib/Target/Xtensa/XtensaGenMCCodeEmitter.inc",
+            ),
+            (
+                ["-gen-register-info"],
+                [
+                    "lib/Target/Xtensa/XtensaGenRegisterInfo.inc",
+                    "lib/Target/Xtensa/XtensaGenRegisterInfoEnums.inc",
+                    "lib/Target/Xtensa/XtensaGenRegisterInfoMCDesc.inc",
+                    "lib/Target/Xtensa/XtensaGenRegisterInfoHeader.inc",
+                    "lib/Target/Xtensa/XtensaGenRegisterInfoTargetDesc.inc",
+                ],
+            ),
+            (
+                ["-gen-sd-node-info"],
+                "lib/Target/Xtensa/XtensaGenSDNodeInfo.inc",
+            ),
+            (
+                ["-gen-subtarget"],
+                "lib/Target/Xtensa/XtensaGenSubtargetInfo.inc",
             ),
         ],
     },
@@ -3853,6 +3909,31 @@ cc_library(
 )
 
 cc_library(
+    name = "Plugins",
+    srcs = ["lib/Plugins/PassPlugin.cpp"],
+    hdrs = ["include/llvm/Plugins/PassPlugin.h"],
+    copts = llvm_copts,
+    includes = ["include"],
+    deps = [
+        ":Support",
+    ],
+)
+
+cc_library(
+    name = "DTLTO",
+    srcs = ["lib/DTLTO/DTLTO.cpp"],
+    hdrs = ["include/llvm/DTLTO/DTLTO.h"],
+    copts = llvm_copts,
+    deps = [
+        ":BinaryFormat",
+        ":Core",
+        ":LTO",
+        ":Object",
+        ":Support",
+    ],
+)
+
+cc_library(
     name = "LTO",
     srcs = glob([
         "lib/LTO/*.cpp",
@@ -3881,6 +3962,7 @@ cc_library(
         ":ObjCARC",
         ":Object",
         ":Passes",
+        ":Plugins",
         ":Remarks",
         ":Scalar",
         ":Support",
@@ -4511,6 +4593,7 @@ cc_binary(
         ":IRReader",
         ":MC",
         ":Passes",
+        ":Plugins",
         ":Remarks",
         ":Scalar",
         ":Support",
@@ -5244,6 +5327,7 @@ cc_binary(
         ":Core",
         ":LTO",
         ":Passes",
+        ":Plugins",
         ":Remarks",
         ":Support",
     ],
@@ -6032,6 +6116,7 @@ cc_library(
         ":Instrumentation",
         ":MC",
         ":Passes",
+        ":Plugins",
         ":Remarks",
         ":Scalar",
         ":Support",
@@ -6270,6 +6355,7 @@ cc_binary(
         ":IRReader",
         ":Linker",
         ":Passes",
+        ":Plugins",
         ":Scalar",
         ":Support",
         ":TargetParser",
@@ -6346,6 +6432,7 @@ cc_binary(
         ":Object",
         ":OrcJIT",
         ":Passes",
+        ":Plugins",
         ":Remarks",
         ":Scalar",
         ":Support",
@@ -6540,6 +6627,7 @@ cc_binary(
     testonly = True,
     srcs = glob([
         "tools/llvm-ir2vec/*.cpp",
+        "tools/llvm-ir2vec/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,

@@ -74,8 +74,6 @@ public:
   /// Customize the preferred legalization strategy for certain types.
   LegalizeTypeAction getPreferredVectorAction(MVT VT) const override;
 
-  bool softPromoteHalfType() const override { return true; }
-
   /// Return the register type for a given MVT, ensuring vectors are treated
   /// as a series of gpr sized integers.
   MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
@@ -91,12 +89,6 @@ public:
   unsigned getNumRegistersForCallingConv(LLVMContext &Context,
                                          CallingConv::ID CC,
                                          EVT VT) const override;
-
-  unsigned getVectorTypeBreakdownForCallingConv(LLVMContext &Context,
-                                                CallingConv::ID CC, EVT VT,
-                                                EVT &IntermediateVT,
-                                                unsigned &NumIntermediates,
-                                                MVT &RegisterVT) const override;
 
   bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode, EVT VT,
                                             unsigned SelectOpcode, SDValue X,
@@ -557,7 +549,6 @@ private:
   SDValue lowerVPExtMaskOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPSetCCMaskOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPMergeMask(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVPSplatExperimental(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPSpliceExperimental(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPReverseExperimental(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPFPIntConvOp(SDValue Op, SelectionDAG &DAG) const;

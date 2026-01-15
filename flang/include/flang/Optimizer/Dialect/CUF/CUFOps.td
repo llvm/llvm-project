@@ -100,7 +100,9 @@ def cuf_AllocateOp : cuf_Op<"allocate", [AttrSizedOperandSegments,
       Optional<fir_ReferenceType>:$stream,
       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$pinned,
       Arg<Optional<AnyRefOrBoxType>, "", [MemRead]>:$source,
-      cuf_DataAttributeAttr:$data_attr, UnitAttr:$hasStat);
+      OptionalAttr<cuf_DataAttributeAttr>:$data_attr, UnitAttr:$hasStat,
+      UnitAttr:$hasDoubleDescriptor, UnitAttr:$pointer,
+      UnitAttr:$device_source);
 
   let results = (outs AnyIntegerType:$stat);
 
@@ -126,9 +128,9 @@ def cuf_DeallocateOp : cuf_Op<"deallocate",
   }];
 
   let arguments = (ins Arg<fir_ReferenceType, "", [MemRead, MemWrite]>:$box,
-                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg,
-                       cuf_DataAttributeAttr:$data_attr,
-                       UnitAttr:$hasStat);
+      Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg,
+      cuf_DataAttributeAttr:$data_attr, UnitAttr:$hasStat,
+      UnitAttr:$hasDoubleDescriptor, UnitAttr:$pointer);
 
   let results = (outs AnyIntegerType:$stat);
 

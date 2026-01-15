@@ -53,6 +53,7 @@
 
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopNestAnalysis.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
@@ -862,7 +863,7 @@ static bool CanWidenIV(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
     return false;
   }
 
-  SCEVExpander Rewriter(*SE, DL, "loopflatten");
+  SCEVExpander Rewriter(*SE, "loopflatten");
   SmallVector<WeakTrackingVH, 4> DeadInsts;
   unsigned ElimExt = 0;
   unsigned Widened = 0;

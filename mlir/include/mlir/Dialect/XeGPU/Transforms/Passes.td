@@ -50,6 +50,10 @@ def XeGPUPropagateLayout : Pass<"xegpu-propagate-layout"> {
     - `lane`
       Propagate the `lane_layout` and `lane_data` fields of the layout attribute.
       Default values are selected to align with hardware.
+
+    - `subgroup`
+      Propagate the `sg_layout` and `sg_data` fields of the layout attribute.
+      Default values are selected to align with hardware.
   }];
   let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect",
                            "vector::VectorDialect"];
@@ -60,7 +64,7 @@ def XeGPUPropagateLayout : Pass<"xegpu-propagate-layout"> {
     Option<
     "layoutKind", "layout-kind", "std::string",
     /*default=*/"\"lane\"",
-    "Propagate `inst` / `lane` level of xegpu layouts.">
+    "Propagate `subgroup` / `inst` / `lane` level of xegpu layouts.">
   ];
 }
 
@@ -98,7 +102,7 @@ def XeGPUVectorLinearize : Pass<"xegpu-vector-linearize"> {
                            "scf::SCFDialect", "ub::UBDialect", "vector::VectorDialect"];
 }
 
-def XeGPUOptimizeBlockLoads : Pass<"xegpu-optimize-block-loads"> {
+def XeGPUPeepHoleOptimizer : Pass<"xegpu-optimize-peephole"> {
   let summary = "Optimize XeGPU block load operations";
   let description = [{
     This pass rewrites XeGPU loadNd operations into more optimal forms
