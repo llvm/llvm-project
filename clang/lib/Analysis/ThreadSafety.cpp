@@ -1682,7 +1682,7 @@ void ThreadSafetyAnalyzer::getEdgeLockset(FactSet& Result,
           return LocalVarMap.lookupExpr(D, Ctx);
         });
   }
-  auto Cleanup = llvm::make_scope_exit(
+  llvm::scope_exit Cleanup(
       [this] { SxBuilder.setLookupLocalVarExpr(nullptr); });
 
   const auto *Exp = getTrylockCallExpr(Cond, LVarCtx, Negate);

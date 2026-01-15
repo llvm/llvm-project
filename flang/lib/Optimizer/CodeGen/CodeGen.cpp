@@ -3359,6 +3359,26 @@ private:
   }
 };
 
+/// `fir.prefetch` --> `llvm.prefetch`
+struct PrefetchOpConversion : public fir::FIROpConversion<fir::PrefetchOp> {
+  using FIROpConversion::FIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::PrefetchOp prefetch, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::IntegerAttr rw = mlir::IntegerAttr::get(rewriter.getI32Type(),
+                                                  prefetch.getRwAttr() ? 1 : 0);
+    mlir::IntegerAttr localityHint = prefetch.getLocalityHintAttr();
+    mlir::IntegerAttr cacheType = mlir::IntegerAttr::get(
+        rewriter.getI32Type(), prefetch.getCacheTypeAttr() ? 1 : 0);
+    mlir::LLVM::Prefetch::create(rewriter, prefetch.getLoc(),
+                                 adaptor.getOperands().front(), rw,
+                                 localityHint, cacheType);
+    rewriter.eraseOp(prefetch);
+    return mlir::success();
+  }
+};
+
 /// `fir.load` --> `llvm.load`
 struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
   using FIROpConversion::FIROpConversion;
@@ -3546,6 +3566,11 @@ struct SelectCaseOpConversion : public fir::FIROpConversion<fir::SelectCaseOp> {
       mlir::Block *dest = caseOp.getSuccessor(t);
       std::optional<mlir::ValueRange> destOps =
           caseOp.getSuccessorOperands(adaptor.getOperands(), t);
+      // Convert block signature if needed
+      if (destOps && !destOps->empty())
+        if (auto conversion = getTypeConverter()->convertBlockSignature(dest))
+          dest = rewriter.applySignatureConversion(dest, *conversion,
+                                                   getTypeConverter());
       std::optional<mlir::ValueRange> cmpOps =
           *caseOp.getCompareOperands(adaptor.getOperands(), t);
       mlir::Attribute attr = cases[t];
@@ -4457,15 +4482,15 @@ void fir::populateFIRToLLVMConversionPatterns(
       FirEndOpConversion, FreeMemOpConversion, GlobalLenOpConversion,
       GlobalOpConversion, InsertOnRangeOpConversion, IsPresentOpConversion,
       LenParamIndexOpConversion, LoadOpConversion, MulcOpConversion,
-      NegcOpConversion, NoReassocOpConversion, SelectCaseOpConversion,
-      SelectOpConversion, SelectRankOpConversion, SelectTypeOpConversion,
-      ShapeOpConversion, ShapeShiftOpConversion, ShiftOpConversion,
-      SliceOpConversion, StoreOpConversion, StringLitOpConversion,
-      SubcOpConversion, TypeDescOpConversion, TypeInfoOpConversion,
-      UnboxCharOpConversion, UnboxProcOpConversion, UndefOpConversion,
-      UnreachableOpConversion, UseStmtOpConversion, XArrayCoorOpConversion,
-      XEmboxOpConversion, XReboxOpConversion, ZeroOpConversion>(converter,
-                                                                options);
+      NegcOpConversion, NoReassocOpConversion, PrefetchOpConversion,
+      SelectCaseOpConversion, SelectOpConversion, SelectRankOpConversion,
+      SelectTypeOpConversion, ShapeOpConversion, ShapeShiftOpConversion,
+      ShiftOpConversion, SliceOpConversion, StoreOpConversion,
+      StringLitOpConversion, SubcOpConversion, TypeDescOpConversion,
+      TypeInfoOpConversion, UnboxCharOpConversion, UnboxProcOpConversion,
+      UndefOpConversion, UnreachableOpConversion, UseStmtOpConversion,
+      XArrayCoorOpConversion, XEmboxOpConversion, XReboxOpConversion,
+      ZeroOpConversion>(converter, options);
 
   // Patterns that are populated without a type converter do not trigger
   // target materializations for the operands of the root op.
