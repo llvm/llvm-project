@@ -250,6 +250,35 @@ struct TestXeGPUSGDistribute
   }
 };
 
+static FailureOr<VectorType>
+getDistVecTypeBasedOnLaneLayout(xegpu::DistributeLayoutAttr layout,
+                                VectorType originalType) {
+  if (!layout)
+    return failure();
+  assert((isa<xegpu::LayoutAttr>(layout) || isa<xegpu::SliceAttr>(layout)) &&
+         "Expecting a valid layout.");
+  SmallVector<int64_t> effectiveLaneLayout =
+      layout.getEffectiveLaneLayoutAsInt();
+  assert(static_cast<size_t>(originalType.getRank()) >=
+             effectiveLaneLayout.size() &&
+         "Rank of the original vector type should be greater or equal to the "
+         "size of the lane layout to distribute the vector type.");
+  SmallVector<int64_t> distributedShape(originalType.getShape());
+  // Only distribute the last `laneLayout.size()` dimensions. The remaining
+  // dimensions are not distributed.
+  unsigned distributionStart =
+      originalType.getRank() - effectiveLaneLayout.size();
+  for (auto [i, dim] : llvm::enumerate(originalType.getShape())) {
+    if (i < distributionStart)
+      continue;
+    // Check if the dimension can be distributed evenly.
+    if (dim % effectiveLaneLayout[i - distributionStart] != 0)
+      return failure();
+    distributedShape[i] = dim / effectiveLaneLayout[i - distributionStart];
+  }
+  return VectorType::get(distributedShape, originalType.getElementType());
+}
+
 struct TestXeGPUSgToWiDistributeExperimental
     : public PassWrapper<TestXeGPUSgToWiDistributeExperimental,
                          OperationPass<gpu::GPUModuleOp>> {
@@ -289,38 +318,65 @@ struct TestXeGPUSgToWiDistributeExperimental
       }
       return type;
     });
+    typeConverter.addConversion([](Value v) -> std::optional<Type> {
+      auto type = v.getType();
+      auto layout = xegpu::getDistributeLayoutAttr(v);
+      // If no valid layout, nothing to do.
+      if (!layout || !layout.isForSubgroup())
+        return std::nullopt;
+      Operation *op = v.getDefiningOp();
+      if (isa<LoadNdOp>(op)) {
+        auto loadNdOp = cast<LoadNdOp>(op);
+        layout = loadNdOp.getAnchorLayout();
+        auto newTyOrFailure =
+            getDistributedVectorType(loadNdOp.getTensorDescType());
+        if (succeeded(newTyOrFailure))
+          return *newTyOrFailure;
+        return std::nullopt;
+      }
+      // For other vector types, distribute based on the lane layout.
+      if (isa<VectorType>(type)) {
+        auto newTyOrFailure =
+            getDistVecTypeBasedOnLaneLayout(layout, cast<VectorType>(type));
+        if (succeeded(newTyOrFailure))
+          return *newTyOrFailure;
+      }
+      return std::nullopt;
+    });
     auto materializeCast = [&](mlir::OpBuilder &builder, mlir::Type type,
                                mlir::ValueRange inputs,
                                mlir::Location loc) -> mlir::Value {
       return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
           .getResult(0);
     };
-    // Define a vector materialization cast. If the input and output have same
-    // number of elements, perform a shape cast. Otherwise, use
-    // UnrealizedConversionCastOp to handle the conversion.
-    auto vectorMaterializationCast = [](OpBuilder &builder, Type type,
-                                        ValueRange inputs,
-                                        Location loc) -> Value {
-      if (inputs.size() != 1)
-        return {};
-      auto input = inputs.front();
-      auto inputVecTy = dyn_cast<VectorType>(input.getType());
-      auto targetVecTy = dyn_cast<VectorType>(type);
-      if (inputVecTy && targetVecTy) {
-        if (inputVecTy.getNumElements() == targetVecTy.getNumElements()) {
-          return vector::ShapeCastOp::create(builder, loc, targetVecTy, input)
-              .getResult();
-        }
-        return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
-            .getResult(0);
-      }
+    // // Define a vector materialization cast. If the input and output have
+    // same
+    // // number of elements, perform a shape cast. Otherwise, use
+    // // UnrealizedConversionCastOp to handle the conversion.
+    // auto vectorMaterializationCast = [](OpBuilder &builder, Type type,
+    //                                     ValueRange inputs,
+    //                                     Location loc) -> Value {
+    //   if (inputs.size() != 1)
+    //     return {};
+    //   auto input = inputs.front();
+    //   auto inputVecTy = dyn_cast<VectorType>(input.getType());
+    //   auto targetVecTy = dyn_cast<VectorType>(type);
+    //   if (inputVecTy && targetVecTy) {
+    //     if (inputVecTy.getNumElements() == targetVecTy.getNumElements()) {
+    //       return vector::ShapeCastOp::create(builder, loc, targetVecTy,
+    //       input)
+    //           .getResult();
+    //     }
+    //     return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
+    //         .getResult(0);
+    //   }
 
-      return {};
-    };
+    //   return {};
+    // };
     typeConverter.addSourceMaterialization(materializeCast);
     typeConverter.addTargetMaterialization(materializeCast);
-    typeConverter.addSourceMaterialization(vectorMaterializationCast);
-    typeConverter.addTargetMaterialization(vectorMaterializationCast);
+    // typeConverter.addSourceMaterialization(vectorMaterializationCast);
+    // typeConverter.addTargetMaterialization(vectorMaterializationCast);
 
     ConversionTarget target(*ctx);
     // CreateNdDescOp is legal only if its result type has no layout attribute.

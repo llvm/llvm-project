@@ -15,6 +15,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/LogicalResult.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace mlir {
 namespace xegpu {
@@ -67,13 +68,45 @@ struct LoadNdOpPattern : public OpConversionPattern<xegpu::LoadNdOp> {
     if (failed(distributedVectorTypeOrFailure))
       return rewriter.notifyMatchFailure(
           op, "unable to compute distributed vector type from the layout");
-    llvm::errs() << "adaptor tensor desc: " << adaptor.getTensorDesc() << "\n";
     auto newOp = xegpu::LoadNdOp::create(
         rewriter, op.getLoc(), distributedVectorTypeOrFailure.value(),
         adaptor.getTensorDesc(), op.getMixedOffsets(), op.getPackedAttr(),
         op.getTransposeAttr(), op.getL1HintAttr(), op.getL2HintAttr(),
         op.getL3HintAttr(), /**layout**/ nullptr);
     rewriter.replaceOp(op, newOp.getResult());
+    return success();
+  }
+};
+
+struct StoreNdOpPattern : public OpConversionPattern<xegpu::StoreNdOp> {
+  using OpConversionPattern<xegpu::StoreNdOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(xegpu::StoreNdOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    xegpu::DistributeLayoutAttr layout = op.getAnchorLayout();
+    // If no layout, nothing to do.
+    if (!layout)
+      return failure();
+    // Check if the layout attached to the tensor descriptor and value layout is
+    // same as the anchor layout. Otherwise, this is a conflict.
+    if (op.getTensorDescType().getLayout() != layout)
+      return rewriter.notifyMatchFailure(
+          op, "conflicting layout attributes on tensor descriptor and anchor");
+    auto valueLayout = xegpu::getDistributeLayoutAttr(op->getOpOperand(0));
+    if (valueLayout != layout)
+      return rewriter.notifyMatchFailure(
+          op, "conflicting layout attributes on value and anchor");
+    auto distributedVectorTypeOrFailure =
+        xegpu::getDistributedVectorType(op.getTensorDescType());
+    if (failed(distributedVectorTypeOrFailure))
+      return rewriter.notifyMatchFailure(
+          op, "unable to compute distributed vector type from the layout");
+    xegpu::StoreNdOp::create(rewriter, op.getLoc(), adaptor.getValue(),
+                             adaptor.getTensorDesc(), op.getMixedOffsets(),
+                             op.getL1HintAttr(), op.getL2HintAttr(),
+                             op.getL3HintAttr(), /**layout**/ nullptr);
+    rewriter.eraseOp(op);
     return success();
   }
 };
@@ -108,6 +141,6 @@ void XeGPUSgToWiDistributeExperimentalPass::runOnOperation() {
 
 void xegpu::populateXeGPUSgToWiDistributeExperimentalPatterns(
     RewritePatternSet &patterns, TypeConverter &typeConverter) {
-  patterns.add<CreateNdDescOpPattern, LoadNdOpPattern>(typeConverter,
-                                                       patterns.getContext());
+  patterns.add<CreateNdDescOpPattern, LoadNdOpPattern, StoreNdOpPattern>(
+      typeConverter, patterns.getContext());
 }
