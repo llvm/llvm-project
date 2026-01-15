@@ -3,7 +3,7 @@
 
 # Register coalescer is going to eliminate %2:sgpr_32 = COPY %1.sub0 from bb.1
 # by joining %2 and %1.sub0 into %0.sub0 register. Check that when this happen
-# the implicit intialization of %0.sub0 in the bb.2 have undef flag
+# the implicit initialization of %0.sub0 in the bb.2 have undef flag
 # for the MIR to be valid.
 
 ---

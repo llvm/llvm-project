@@ -39,11 +39,17 @@ llvm.func @rocdl_special_regs() -> i32 {
   // CHECK: call range(i64 1, 65) i64 @__ockl_get_local_size(i32 0)
   %17 = rocdl.workgroup.dim.x range <i32, 1, 65> : i64
 
+  // CHECK: call i32 @llvm.amdgcn.wave.id()
+  %18 = rocdl.wave.id : i32
+
+  // CHECK: call range(i32 32, 65) i32 @llvm.amdgcn.wave.id()
+  %19 = rocdl.wave.id range <i32, 32, 65> : i32
+
   // CHECK: call i32 @llvm.amdgcn.wavefrontsize()
-  %18 = rocdl.wavefrontsize : i32
+  %20 = rocdl.wavefrontsize : i32
 
   // CHECK: call range(i32 32, 65) i32 @llvm.amdgcn.wavefrontsize()
-  %19 = rocdl.wavefrontsize range <i32, 32, 65> : i32
+  %21 = rocdl.wavefrontsize range <i32, 32, 65> : i32
 
   llvm.return %1 : i32
 }
@@ -111,6 +117,13 @@ llvm.func @kernel_math_ops(%a: f32, %b: f16, %c: bf16) {
   %sqrt0 = rocdl.sqrt %a f32 -> f32
   %sqrt1 = rocdl.sqrt %b f16 -> f16
   %sqrt2 = rocdl.sqrt %c bf16 -> bf16
+
+  // CHECK: call float @llvm.amdgcn.rsq.f32(float %{{.*}})
+  // CHECK: call half @llvm.amdgcn.rsq.f16(half %{{.*}})
+  // CHECK: call bfloat @llvm.amdgcn.rsq.bf16(bfloat %{{.*}})
+  %rsq0 = rocdl.rsq %a f32 -> f32
+  %rsq1 = rocdl.rsq %b f16 -> f16
+  %rsq2 = rocdl.rsq %c bf16 -> bf16
   llvm.return
 }
 
