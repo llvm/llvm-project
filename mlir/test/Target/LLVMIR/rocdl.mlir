@@ -111,6 +111,13 @@ llvm.func @kernel_math_ops(%a: f32, %b: f16, %c: bf16) {
   %sqrt0 = rocdl.sqrt %a f32 -> f32
   %sqrt1 = rocdl.sqrt %b f16 -> f16
   %sqrt2 = rocdl.sqrt %c bf16 -> bf16
+
+  // CHECK: call float @llvm.amdgcn.rsq.f32(float %{{.*}})
+  // CHECK: call half @llvm.amdgcn.rsq.f16(half %{{.*}})
+  // CHECK: call bfloat @llvm.amdgcn.rsq.bf16(bfloat %{{.*}})
+  %rsq0 = rocdl.rsq %a f32 -> f32
+  %rsq1 = rocdl.rsq %b f16 -> f16
+  %rsq2 = rocdl.rsq %c bf16 -> bf16
   llvm.return
 }
 
