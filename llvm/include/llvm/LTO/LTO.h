@@ -16,6 +16,7 @@
 #define LLVM_LTO_LTO_H
 
 #include "llvm/IR/LLVMRemarkStreamer.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/Support/Compiler.h"
 #include <memory>
 
@@ -167,6 +168,8 @@ public:
     using irsymtab::Symbol::getSectionName;
     using irsymtab::Symbol::isExecutable;
     using irsymtab::Symbol::isUsed;
+
+    bool isPreserved(const RTLIB::RuntimeLibcallsInfo &Libcalls) const;
   };
 
   /// A range over the symbols in this InputFile.
@@ -574,7 +577,7 @@ private:
 
   void addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
                             ArrayRef<SymbolResolution> Res, unsigned Partition,
-                            bool InSummary);
+                            bool InSummary, const Triple &TT);
 
   // These functions take a range of symbol resolutions and consume the
   // resolutions used by a single input module. Functions return ranges refering
