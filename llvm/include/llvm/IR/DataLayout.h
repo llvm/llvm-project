@@ -220,6 +220,14 @@ public:
   /// Whether vectors are element aligned, rather than naturally aligned.
   bool vectorsAreElementAligned() const { return VectorsAreElementAligned; }
 
+  /// Compute the bit offset to extract an element from a packed integer,
+  /// accounting for endianness.
+  uint64_t getElementBitOffset(uint64_t BitPosition, uint64_t ElementBits,
+                               uint64_t ContainerBits) const {
+    return isBigEndian() ? ContainerBits - ElementBits - BitPosition
+                         : BitPosition;
+  }
+
   /// Returns the string representation of the DataLayout.
   ///
   /// This representation is in the same format accepted by the string
