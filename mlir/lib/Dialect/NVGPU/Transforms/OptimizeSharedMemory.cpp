@@ -166,7 +166,7 @@ mlir::nvgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
   // Check if this is necessary given the assumption of 128b accesses:
   // If dim[rank-1] is small enough to fit 8 rows in a 128B line.
   const int64_t rowSize = memRefType.getDimSize(memRefType.getRank() - 1);
-  if (rowSize == ShapedType::kDynamic || rowSize == 0)
+  if (ShapedType::isDynamic(rowSize) || rowSize == 0)
     return failure();
 
   const int64_t rowsPerLine =
