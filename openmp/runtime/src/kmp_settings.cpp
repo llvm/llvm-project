@@ -23,6 +23,7 @@
 #include "kmp_lock.h"
 #include "kmp_settings.h"
 #include "kmp_str.h"
+#include "kmp_traits.h"
 #include "kmp_wrapper_getpid.h"
 #include <ctype.h> // toupper()
 #if OMPD_SUPPORT
@@ -1415,8 +1416,8 @@ static void __kmp_stg_print_max_active_levels(kmp_str_buf_t *buffer,
 // OpenMP 4.0: OMP_DEFAULT_DEVICE
 static void __kmp_stg_parse_default_device(char const *name, char const *value,
                                            void *data) {
-  __kmp_stg_parse_int(name, value, 0, KMP_MAX_DEFAULT_DEVICE_LIMIT,
-                      &__kmp_default_device);
+  __kmp_default_device = kmp_trait_context::parse_single_device(
+      value, KMP_MAX_DEFAULT_DEVICE_LIMIT, name);
 } // __kmp_stg_parse_default_device
 
 static void __kmp_stg_print_default_device(kmp_str_buf_t *buffer,
