@@ -544,11 +544,15 @@ Fortran::lower::genCallOpAndResult(
   mlir::FunctionType modifiedFuncType =
       getTypeWithIgnoreTkrC(funcType, caller, builder.getContext());
 
+  // Note: funcPointer would only be non-null in this case, if we are already
+  // processing indirect function call. In such case we can re-use the same
+  // funcPointer and we'll cast it below the the modified funcType.
   if (!funcPointer && modifiedFuncType != funcType) {
     // We want to cast the function to a different type, in order to avoid
     // changing/casting some of the args. The cast will generate a new
     // function pointer, so that we would make a function call not through
-    // the original function symbol, but through the new function pointer.
+    // the original function symbol, but through the new function pointer
+    // (an indirect function call).
     mlir::SymbolRefAttr symbolAttr =
         builder.getSymbolRefAttr(caller.getMangledName());
     // Create pointer to original function. This pointer will be cast later.
