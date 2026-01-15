@@ -293,6 +293,12 @@ void NotWarnForVarHasSpecifiers() {
     int x = P.first;
     int y = P.second;
   }
+
+  {
+    extern int a;
+    int b = 0;
+    std::tie(a, b) = getPair<int, int>();
+  }
 }
 
 void NotWarnForMultiUsedPairVar() {

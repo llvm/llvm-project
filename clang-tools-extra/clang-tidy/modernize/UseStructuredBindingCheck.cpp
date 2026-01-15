@@ -148,7 +148,8 @@ AST_MATCHER_P(CompoundStmt, hasFirstTwoVarDecl,
 /// pair, so we ignore these cases.
 AST_MATCHER(VarDecl, hasAnySpecifiersShouldBeIgnored) {
   return Node.isStaticLocal() || Node.isConstexpr() || Node.hasAttrs() ||
-         Node.isInlineSpecified() || Node.getTSCSpec() != TSCS_unspecified;
+         Node.isInlineSpecified() || Node.getStorageClass() != SC_None ||
+         Node.getTSCSpec() != TSCS_unspecified;
 }
 
 // Ignore nodes inside macros.
