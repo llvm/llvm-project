@@ -317,6 +317,10 @@ Changes to LLDB
 Changes to BOLT
 ---------------------------------
 
+*	Added support for lite mode on AArch64. It can be enabled with -lite=1. When
+  used, BOLT avoids duplicating cold code by reusing the original code, which
+  reduces output binary size.
+
 Changes to Sanitizers
 ---------------------
 
